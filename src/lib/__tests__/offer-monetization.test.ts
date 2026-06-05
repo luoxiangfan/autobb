@@ -27,14 +27,18 @@ describe('offer monetization helpers', () => {
   it('resolveLegacyBareNumericMode uses percent for payout-only and undefined for structured', () => {
     expect(resolveLegacyBareNumericMode({ commissionPayout: '30' })).toBe('percent')
     expect(resolveLegacyBareNumericMode({ commissionPayout: '105.00' })).toBe('percent')
-    expect(resolveLegacyBareNumericMode({
-      numericCommissionMode: 'amount',
-      commissionPayout: '105.00',
-    })).toBe('amount')
-    expect(resolveLegacyBareNumericMode({
-      commissionType: 'percent',
-      commissionValue: '7.5',
-    })).toBeUndefined()
+    expect(
+      resolveLegacyBareNumericMode({
+        numericCommissionMode: 'amount',
+        commissionPayout: '105.00',
+      })
+    ).toBe('amount')
+    expect(
+      resolveLegacyBareNumericMode({
+        commissionType: 'percent',
+        commissionValue: '7.5',
+      })
+    ).toBeUndefined()
   })
 
   it('normalizes commission payout in percent and absolute modes', () => {
@@ -77,85 +81,101 @@ describe('offer monetization helpers', () => {
   })
 
   it('normalizes structured commission input and validates conflicts', () => {
-    expect(normalizeOfferCommissionInput({
-      targetCountry: 'US',
-      commissionType: 'percent',
-      commissionValue: '7.5',
-    })).toEqual({
+    expect(
+      normalizeOfferCommissionInput({
+        targetCountry: 'US',
+        commissionType: 'percent',
+        commissionValue: '7.5',
+      })
+    ).toEqual({
       commissionType: 'percent',
       commissionValue: '7.5',
       commissionCurrency: null,
       commissionPayout: '7.5%',
     })
 
-    expect(normalizeOfferCommissionInput({
-      targetCountry: 'US',
-      commissionType: 'amount',
-      commissionValue: '22.5',
-      commissionCurrency: 'USD',
-    })).toEqual({
+    expect(
+      normalizeOfferCommissionInput({
+        targetCountry: 'US',
+        commissionType: 'amount',
+        commissionValue: '22.5',
+        commissionCurrency: 'USD',
+      })
+    ).toEqual({
       commissionType: 'amount',
       commissionValue: '22.5',
       commissionCurrency: 'USD',
       commissionPayout: '$22.5',
     })
 
-    expect(normalizeOfferCommissionInput({
-      targetCountry: 'US',
-      commissionPayout: '11.25%',
-    })).toEqual({
+    expect(
+      normalizeOfferCommissionInput({
+        targetCountry: 'US',
+        commissionPayout: '11.25%',
+      })
+    ).toEqual({
       commissionType: 'percent',
       commissionValue: '11.25',
       commissionCurrency: null,
       commissionPayout: '11.25%',
     })
 
-    expect(normalizeOfferCommissionInput({
-      targetCountry: 'US',
-      commissionPayout: '11.25',
-    })).toEqual({
+    expect(
+      normalizeOfferCommissionInput({
+        targetCountry: 'US',
+        commissionPayout: '11.25',
+      })
+    ).toEqual({
       commissionType: 'amount',
       commissionValue: '11.25',
       commissionCurrency: 'USD',
       commissionPayout: '$11.25',
     })
 
-    expect(normalizeOfferCommissionInput({
-      targetCountry: 'US',
-      commissionPayout: '30',
-      legacyBareNumericMode: 'percent',
-    })).toEqual({
+    expect(
+      normalizeOfferCommissionInput({
+        targetCountry: 'US',
+        commissionPayout: '30',
+        legacyBareNumericMode: 'percent',
+      })
+    ).toEqual({
       commissionType: null,
       commissionValue: null,
       commissionCurrency: null,
       commissionPayout: '30',
     })
 
-    expect(() => normalizeOfferCommissionInput({
-      targetCountry: 'US',
-      commissionType: 'percent',
-      commissionValue: '7.5',
-      commissionPayout: '$7.5',
-    })).toThrow('语义冲突')
+    expect(() =>
+      normalizeOfferCommissionInput({
+        targetCountry: 'US',
+        commissionType: 'percent',
+        commissionValue: '7.5',
+        commissionPayout: '$7.5',
+      })
+    ).toThrow('语义冲突')
   })
 
   it('computes commission per conversion for percent and absolute payout', () => {
-    expect(getCommissionPerConversion({
-      productPrice: '$100',
-      commissionPayout: '10%',
-      targetCountry: 'US',
-    })).toEqual({
+    expect(
+      getCommissionPerConversion({
+        productPrice: '$100',
+        commissionPayout: '10%',
+        targetCountry: 'US',
+      })
+    ).toEqual({
       amount: 10,
       currency: 'USD',
       mode: 'percent',
       rate: 0.1,
     })
 
-    expect(getCommissionPerConversion({
-      productPrice: '$100',
-      commissionPayout: '$15',
-      targetCountry: 'US',
-    })).toEqual({
+    expect(
+      getCommissionPerConversion({
+        productPrice: '$100',
+        commissionPayout: '$15',
+        targetCountry: 'US',
+      })
+    ).toEqual({
       amount: 15,
       currency: 'USD',
       mode: 'amount',

@@ -13,10 +13,7 @@ import {
   type OfferExtractionMode,
 } from '@/lib/offer-extraction-mode'
 import { normalizeOfferTargetCountry } from '@/lib/offer-utils'
-import {
-  resolveExtractPageInput,
-  type OfferPageType,
-} from '@/lib/offer-extraction-task'
+import { resolveExtractPageInput, type OfferPageType } from '@/lib/offer-extraction-task'
 
 export class OfferExtractRequestError extends Error {
   constructor(
@@ -95,11 +92,8 @@ export function offerExtractApiErrorBody(
   fallbackError = 'Invalid data'
 ): { status: number; error: string; message: string } | null {
   if (error instanceof OfferExtractRequestError) {
-    const errorLabel = error.status === 401
-      ? 'Unauthorized'
-      : error.status === 409
-        ? 'Conflict'
-        : fallbackError
+    const errorLabel =
+      error.status === 401 ? 'Unauthorized' : error.status === 409 ? 'Conflict' : fallbackError
     return {
       status: error.status,
       error: errorLabel,
@@ -116,18 +110,16 @@ export function parseNewOfferExtractRequest(
 ): ParsedNewOfferExtractRequest {
   const modeFromBody = getExtractionModeFromRequestBody(rawBody)
   if ('invalid' in modeFromBody && modeFromBody.invalid) {
-    throw new OfferExtractRequestError(
-      400,
-      '无效的提取模式，可选：fast、balanced、original'
-    )
+    throw new OfferExtractRequestError(400, '无效的提取模式，可选：fast、balanced、original')
   }
 
   let body: Record<string, unknown>
   try {
-    body = normalizeOfferExtractRequestBody(rawBody, {
-      strictMonetization: true,
-      ...normalizeOptions,
-    }) || (rawBody as Record<string, unknown>)
+    body =
+      normalizeOfferExtractRequestBody(rawBody, {
+        strictMonetization: true,
+        ...normalizeOptions,
+      }) || (rawBody as Record<string, unknown>)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '佣金参数格式错误'
     throw new OfferExtractRequestError(400, message)
@@ -177,8 +169,9 @@ export function parseNewOfferExtractRequest(
     throw new OfferExtractRequestError(400, pageInput.error)
   }
 
-  const extractionMode = ('mode' in modeFromBody ? modeFromBody.mode : undefined)
-    ?? (body.extraction_mode
+  const extractionMode =
+    ('mode' in modeFromBody ? modeFromBody.mode : undefined) ??
+    (body.extraction_mode
       ? normalizeOfferExtractionMode(body.extraction_mode)
       : getDefaultOfferExtractionMode())
 
@@ -187,16 +180,14 @@ export function parseNewOfferExtractRequest(
     targetCountry: target_country.trim(),
     productPrice: product_price != null ? String(product_price) : null,
     commissionPayout: commission_payout != null ? String(commission_payout) : null,
-    commissionType: commission_type === 'percent' || commission_type === 'amount'
-      ? commission_type
-      : undefined,
+    commissionType:
+      commission_type === 'percent' || commission_type === 'amount' ? commission_type : undefined,
     commissionValue: commission_value != null ? String(commission_value) : undefined,
     commissionCurrency: commission_currency != null ? String(commission_currency) : undefined,
     brandName: typeof brand_name === 'string' ? brand_name.trim() : undefined,
     pageType: pageInput.pageType,
-    storeProductLinks: pageInput.storeProductLinks.length > 0
-      ? pageInput.storeProductLinks
-      : undefined,
+    storeProductLinks:
+      pageInput.storeProductLinks.length > 0 ? pageInput.storeProductLinks : undefined,
     skipCache: Boolean(skipCache),
     skipWarmup: Boolean(skipWarmup),
     extractionMode,

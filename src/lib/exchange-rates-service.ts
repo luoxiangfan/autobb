@@ -25,14 +25,18 @@ export function getExchangeRateApiKey(): string | undefined {
 }
 
 function normalizeCurrencyCode(code: string): string | null {
-  const c = String(code || '').trim().toUpperCase()
+  const c = String(code || '')
+    .trim()
+    .toUpperCase()
   if (c.length !== 3 || !/^[A-Z]{3}$/.test(c)) return null
   return c
 }
 
 export async function countUsdExchangeRateRows(): Promise<number> {
   const db = getDatabase()
-  const rows = await db.query<{ n: number | string }>('SELECT COUNT(*) AS n FROM usd_exchange_rates')
+  const rows = await db.query<{ n: number | string }>(
+    'SELECT COUNT(*) AS n FROM usd_exchange_rates'
+  )
   return Number(rows[0]?.n || 0)
 }
 
@@ -81,7 +85,7 @@ export async function replaceUsdExchangeRatesInDb(params: {
     await db.exec('DELETE FROM usd_exchange_rates')
     for (const [currency, rate] of entries) {
       await db.exec(
-        'INSERT INTO usd_exchange_rates (currency, rate, updated_at) VALUES (?, ?, datetime(\'now\'))',
+        "INSERT INTO usd_exchange_rates (currency, rate, updated_at) VALUES (?, ?, datetime('now'))",
         [currency, rate]
       )
     }
@@ -155,7 +159,9 @@ export async function fetchLatestUsdRatesFromApi(): Promise<ExchangeRateApiPaylo
   }
 }
 
-export async function syncExchangeRatesFromRemote(): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function syncExchangeRatesFromRemote(): Promise<
+  { ok: true } | { ok: false; message: string }
+> {
   try {
     const payload = await fetchLatestUsdRatesFromApi()
     if (payload.result !== 'success' || !payload.conversion_rates) {
@@ -183,7 +189,10 @@ export async function ensureExchangeRatesOnStartup(): Promise<void> {
   try {
     await loadUsdRatesFromDatabase()
   } catch (e) {
-    console.warn('[exchange-rates] load from DB failed (tables may not exist yet):', e instanceof Error ? e.message : e)
+    console.warn(
+      '[exchange-rates] load from DB failed (tables may not exist yet):',
+      e instanceof Error ? e.message : e
+    )
     return
   }
 
@@ -200,7 +209,9 @@ export async function ensureExchangeRatesOnStartup(): Promise<void> {
 
   const key = getExchangeRateApiKey()
   if (!key) {
-    console.warn('[exchange-rates] usd_exchange_rates is empty and EXCHANGE_RATE_API_KEY is unset; using static fallback rates')
+    console.warn(
+      '[exchange-rates] usd_exchange_rates is empty and EXCHANGE_RATE_API_KEY is unset; using static fallback rates'
+    )
     return
   }
 

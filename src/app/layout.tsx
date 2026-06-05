@@ -23,7 +23,11 @@ const bodyFont = localFont({
 })
 const webVitalsMonitoringEnabled = isPerformanceReleaseEnabled('webVitalsMonitoring')
 const frontendErrorMonitoringEnabled = isPerformanceReleaseEnabled('frontendErrorMonitoring')
-const buildId = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.NEXT_PUBLIC_BUILD_ID || 'local').slice(0, 64)
+const buildId = (
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.NEXT_PUBLIC_BUILD_ID ||
+  'local'
+).slice(0, 64)
 const flagSnapshot = (() => {
   const snapshot = getPerformanceReleaseSnapshot()
   const enabledMap: Record<string, boolean> = {}
@@ -36,7 +40,8 @@ const flagSnapshot = (() => {
 export const metadata: Metadata = {
   // P0-4: SEO优化 - 更精准的标题和描述
   title: 'AutoAds - Google Ads快速测试和一键优化营销平台 | AI自动生成高质量广告文案',
-  description: 'AutoAds - AI驱动的Google Ads自动化投放平台。自动生成高质量广告文案、获取真实Keyword Planner数据、数据驱动持续优化、构建"印钞机"增长飞轮。适合BB新人和独立工作室，最大化投放ROI。',
+  description:
+    'AutoAds - AI驱动的Google Ads自动化投放平台。自动生成高质量广告文案、获取真实Keyword Planner数据、数据驱动持续优化、构建"印钞机"增长飞轮。适合BB新人和独立工作室，最大化投放ROI。',
   keywords: [
     'Google Ads',
     'Google Ads自动化',
@@ -107,18 +112,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
       <body className={`${bodyFont.variable} font-body`}>
         {children}
         <ToasterProvider />
-        {webVitalsMonitoringEnabled ? <WebVitalsReporter enabled={true} buildId={buildId} flagSnapshot={flagSnapshot} /> : null}
-        {frontendErrorMonitoringEnabled ? <FrontendErrorReporter enabled={true} buildId={buildId} flagSnapshot={flagSnapshot} /> : null}
+        {webVitalsMonitoringEnabled ? (
+          <WebVitalsReporter enabled={true} buildId={buildId} flagSnapshot={flagSnapshot} />
+        ) : null}
+        {frontendErrorMonitoringEnabled ? (
+          <FrontendErrorReporter enabled={true} buildId={buildId} flagSnapshot={flagSnapshot} />
+        ) : null}
       </body>
     </html>
   )

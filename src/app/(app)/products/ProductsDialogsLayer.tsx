@@ -160,8 +160,13 @@ export default function ProductsDialogsLayer({
                 <div>1. 点击"下载扩展包"，解压后得到扩展目录。</div>
                 <div>2. Chrome 打开 chrome://extensions 或 Edge 打开 edge://extensions。</div>
                 <div>3. 打开"开发者模式"后，点"加载已解压的扩展程序"，选择解压后的目录。</div>
-                <div>4. 保持当前 AutoAds /products 页面已登录，再打开 yeahpromos.com 完成登录。</div>
-                <div>5. 切回 AutoAds /products 标签页，点击浏览器右上角扩展图标，执行"回传 YeahPromos 登录态"。</div>
+                <div>
+                  4. 保持当前 AutoAds /products 页面已登录，再打开 yeahpromos.com 完成登录。
+                </div>
+                <div>
+                  5. 切回 AutoAds /products 标签页，点击浏览器右上角扩展图标，执行"回传 YeahPromos
+                  登录态"。
+                </div>
                 <div>6. 回到本页点"刷新登录态"，状态变为"已就绪"后即可同步 YP。</div>
               </div>
 
@@ -170,7 +175,9 @@ export default function ProductsDialogsLayer({
                 <div className="mt-1">
                   {ypSessionStatus.hasSession
                     ? `已就绪（会话 ${ypSessionStatus.maskedPhpSessionId || '-'}，到期 ${ypSessionStatus.expiresAt ? formatMonthDayTime(ypSessionStatus.expiresAt) : '-'}）`
-                    : (ypSessionStatus.isExpired ? '已过期，请重新采集' : '未采集')}
+                    : ypSessionStatus.isExpired
+                      ? '已过期，请重新采集'
+                      : '未采集'}
                 </div>
               </div>
             </div>
@@ -204,19 +211,28 @@ export default function ProductsDialogsLayer({
           <DialogHeader>
             <DialogTitle>确认创建 Offer</DialogTitle>
             <DialogDescription>
-              确认为商品 <strong className="text-foreground">{pendingCreateOfferProduct?.mid || '-'}</strong> 创建 Offer？
-              系统将使用当前商品推广链接生成 Offer，创建后可在 Offer 页面继续编辑。
+              确认为商品{' '}
+              <strong className="text-foreground">{pendingCreateOfferProduct?.mid || '-'}</strong>{' '}
+              创建 Offer？ 系统将使用当前商品推广链接生成 Offer，创建后可在 Offer 页面继续编辑。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={onCreateOfferCancel} disabled={creatingOfferId !== null}>
+            <Button
+              variant="outline"
+              onClick={onCreateOfferCancel}
+              disabled={creatingOfferId !== null}
+            >
               取消
             </Button>
             <Button
               onClick={onSubmitCreateOffer}
               disabled={!pendingCreateOfferProduct || creatingOfferId !== null}
             >
-              {creatingOfferId !== null ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {creatingOfferId !== null ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
               确认创建
             </Button>
           </DialogFooter>
@@ -228,12 +244,17 @@ export default function ProductsDialogsLayer({
           <DialogHeader>
             <DialogTitle>确认手动下线商品</DialogTitle>
             <DialogDescription>
-              确认手动下线商品 <strong className="text-foreground">{offlineProduct?.mid || '-'}</strong>？
+              确认手动下线商品{' '}
+              <strong className="text-foreground">{offlineProduct?.mid || '-'}</strong>？
               此操作不可撤销，系统会删除该商品所有关联Offer，并自动附带删除对应广告系列。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={onSingleOfflineCancel} disabled={offliningProductId !== null}>
+            <Button
+              variant="outline"
+              onClick={onSingleOfflineCancel}
+              disabled={offliningProductId !== null}
+            >
               取消
             </Button>
             <Button
@@ -241,7 +262,11 @@ export default function ProductsDialogsLayer({
               onClick={onSubmitSingleOffline}
               disabled={!offlineProduct || offliningProductId !== null}
             >
-              {offliningProductId !== null ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PowerOff className="mr-2 h-4 w-4" />}
+              {offliningProductId !== null ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <PowerOff className="mr-2 h-4 w-4" />
+              )}
               确认手动下线
             </Button>
           </DialogFooter>
@@ -270,7 +295,11 @@ export default function ProductsDialogsLayer({
               onClick={onSubmitBatchOffline}
               disabled={!canBatchOffline || batchOfflining}
             >
-              {batchOfflining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PowerOff className="mr-2 h-4 w-4" />}
+              {batchOfflining ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <PowerOff className="mr-2 h-4 w-4" />
+              )}
               确认批量手动下线
             </Button>
           </DialogFooter>
@@ -314,7 +343,9 @@ export default function ProductsDialogsLayer({
                       <TableCell>
                         <Select
                           value={value}
-                          onValueChange={(country) => onUpdateBatchRowCountry(row.productId, country)}
+                          onValueChange={(country) =>
+                            onUpdateBatchRowCountry(row.productId, country)
+                          }
                         >
                           <SelectTrigger className="w-[104px]">
                             <SelectValue placeholder="国家" />
@@ -338,18 +369,32 @@ export default function ProductsDialogsLayer({
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => onBatchDialogOpenChange(false)} disabled={batchCreating}>
+            <Button
+              variant="outline"
+              onClick={() => onBatchDialogOpenChange(false)}
+              disabled={batchCreating}
+            >
               取消
             </Button>
-            <Button onClick={onSubmitBatchCreate} disabled={batchCreating || batchRows.length === 0}>
-              {batchCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            <Button
+              onClick={onSubmitBatchCreate}
+              disabled={batchCreating || batchRows.length === 0}
+            >
+              {batchCreating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
               确认批量创建
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={calculateScoresConfirmOpen} onOpenChange={onCalculateScoresConfirmOpenChange}>
+      <AlertDialog
+        open={calculateScoresConfirmOpen}
+        onOpenChange={onCalculateScoresConfirmOpenChange}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>确认计算推荐指数？</AlertDialogTitle>
@@ -361,12 +406,14 @@ export default function ProductsDialogsLayer({
               )}
               {selectedProductsCount > 0 ? (
                 <>
-                  已选择 <strong className="text-foreground">{selectedProductsCount}</strong> 个商品，将仅计算选中商品。
-                  若不选择商品则会执行全量计算，全量计算耗时较长且会消耗 AI token。
+                  已选择 <strong className="text-foreground">{selectedProductsCount}</strong>{' '}
+                  个商品，将仅计算选中商品。 若不选择商品则会执行全量计算，全量计算耗时较长且会消耗
+                  AI token。
                 </>
               ) : (
                 <>
-                  当前未选择商品，确认后将执行全量推荐指数计算。全量计算耗时较长且会消耗 AI token，请确认继续。
+                  当前未选择商品，确认后将执行全量推荐指数计算。全量计算耗时较长且会消耗 AI
+                  token，请确认继续。
                 </>
               )}
             </AlertDialogDescription>
@@ -375,7 +422,9 @@ export default function ProductsDialogsLayer({
             <AlertDialogCancel disabled={calculatingScores}>取消</AlertDialogCancel>
             <AlertDialogAction
               onClick={onHandleCalculateScores}
-              disabled={calculatingScores || (scoreCalculationPaused && selectedProductsCount === 0)}
+              disabled={
+                calculatingScores || (scoreCalculationPaused && selectedProductsCount === 0)
+              }
             >
               {calculatingScores ? '提交中...' : '确认计算'}
             </AlertDialogAction>
@@ -388,8 +437,8 @@ export default function ProductsDialogsLayer({
           <AlertDialogHeader>
             <AlertDialogTitle>确认清空全部商品？</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作会清空你在“商品管理”中已同步的全部商家/商品数据（共 <strong className="text-foreground">{total}</strong> 条）。
-              不会删除已经创建的 Offer。
+              此操作会清空你在“商品管理”中已同步的全部商家/商品数据（共{' '}
+              <strong className="text-foreground">{total}</strong> 条）。 不会删除已经创建的 Offer。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

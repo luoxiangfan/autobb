@@ -15,11 +15,7 @@
  */
 
 import { getUserOnlySetting } from './settings'
-import {
-  GEMINI_ACTIVE_MODEL,
-  type AIModel,
-  normalizeModelForProvider,
-} from './gemini-models'
+import { GEMINI_ACTIVE_MODEL, type AIModel, normalizeModelForProvider } from './gemini-models'
 
 // 支持的AI模型（官方/中转）
 export type ModelType = AIModel
@@ -92,24 +88,24 @@ const FLASH_OPERATIONS = new Set<string>([
 const PRO_OPERATIONS = new Set<string>([
   // 🔴 关键词生成（2个）- Pro（复杂语义理解）
   'keyword_generation', // 必须保持maxOutputTokens
-  'keyword_expansion',  // 必须保持maxOutputTokens
+  'keyword_expansion', // 必须保持maxOutputTokens
 
   // 🔴 复杂分析任务 - Pro
-  'review_analysis',              // 深度情感和语义分析
-  'competitor_analysis',          // 复杂的对比分析
-  'competitor_summary',           // 🔴 竞品摘要 - 需要Pro模型准确理解和总结
-  'launch_score_calculation',     // 多维度综合评估
-  'ad_creative_generation_main',  // 核心创意生成
-  'product_page_analysis',        // 产品页面深度分析
-  'store_highlights_synthesis',   // 🔴 店铺产品亮点整合 - 需要创造性语义理解
+  'review_analysis', // 深度情感和语义分析
+  'competitor_analysis', // 复杂的对比分析
+  'competitor_summary', // 🔴 竞品摘要 - 需要Pro模型准确理解和总结
+  'launch_score_calculation', // 多维度综合评估
+  'ad_creative_generation_main', // 核心创意生成
+  'product_page_analysis', // 产品页面深度分析
+  'store_highlights_synthesis', // 🔴 店铺产品亮点整合 - 需要创造性语义理解
 
   // 🔴 创意生成任务 - Pro
-  'headline_generation',          // 标题创意生成（需要准确性和创造力）
-  'description_generation',       // 描述创意生成（需要准确性和创造力）
+  'headline_generation', // 标题创意生成（需要准确性和创造力）
+  'description_generation', // 描述创意生成（需要准确性和创造力）
 
   // 🔴 Admin分析 - Pro
-  'admin_performance_analysis',   // 复杂数据分析和洞察
-  'admin_feedback_analysis',      // 多轮对话和深度分析
+  'admin_performance_analysis', // 复杂数据分析和洞察
+  'admin_feedback_analysis', // 多轮对话和深度分析
 ])
 
 /**
@@ -184,7 +180,9 @@ export async function selectOptimalModel(
   }
 
   // 未知operationType：默认使用用户的Pro模型（安全第一）
-  console.warn(`⚠️ Unknown operationType: ${operationType}, defaulting to user's model: ${userProModel}`)
+  console.warn(
+    `⚠️ Unknown operationType: ${operationType}, defaulting to user's model: ${userProModel}`
+  )
   return {
     model: userProModel,
     reason: '未知操作类型，使用用户选择的模型确保质量',

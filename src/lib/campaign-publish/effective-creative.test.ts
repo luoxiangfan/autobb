@@ -10,9 +10,11 @@ describe('buildEffectiveCreative', () => {
         keywords: JSON.stringify(['db kw']),
         negativeKeywords: JSON.stringify(['db neg']),
         callouts: JSON.stringify(['DB C1']),
-        sitelinks: JSON.stringify([{ text: 'DB SL', url: 'https://db.example', description: 'db' }]),
+        sitelinks: JSON.stringify([
+          { text: 'DB SL', url: 'https://db.example', description: 'db' },
+        ]),
         finalUrl: 'https://db.final',
-        finalUrlSuffix: 'db_suffix'
+        finalUrlSuffix: 'db_suffix',
       },
       campaignConfig: {
         headlines: ['  OV H1  ', ''],
@@ -22,9 +24,9 @@ describe('buildEffectiveCreative', () => {
         callouts: ['OV C1', 'OV C2'],
         sitelinks: [{ text: 'OV SL', url: 'https://ov.example', description: 'ov' }],
         finalUrls: ['https://ov.final'],
-        finalUrlSuffix: 'ov_suffix'
+        finalUrlSuffix: 'ov_suffix',
       },
-      offerUrlFallback: 'https://offer.fallback'
+      offerUrlFallback: 'https://offer.fallback',
     })
 
     expect(result.headlines).toEqual(['OV H1'])
@@ -32,7 +34,9 @@ describe('buildEffectiveCreative', () => {
     expect(result.keywords).toEqual(['kw1', 'kw2'])
     expect(result.negativeKeywords).toEqual(['neg1'])
     expect(result.callouts).toEqual(['OV C1', 'OV C2'])
-    expect(result.sitelinks).toEqual([{ text: 'OV SL', url: 'https://ov.example', description: 'ov' }])
+    expect(result.sitelinks).toEqual([
+      { text: 'OV SL', url: 'https://ov.example', description: 'ov' },
+    ])
     expect(result.finalUrl).toBe('https://ov.final')
     expect(result.finalUrlSuffix).toBe('ov_suffix')
   })
@@ -45,9 +49,11 @@ describe('buildEffectiveCreative', () => {
         keywords: JSON.stringify(['db kw']),
         negativeKeywords: JSON.stringify(['db neg']),
         callouts: JSON.stringify(['DB C1']),
-        sitelinks: JSON.stringify([{ text: 'DB SL', url: 'https://db.example', description: 'db' }]),
+        sitelinks: JSON.stringify([
+          { text: 'DB SL', url: 'https://db.example', description: 'db' },
+        ]),
         finalUrl: 'https://db.final',
-        finalUrlSuffix: 'db_suffix'
+        finalUrlSuffix: 'db_suffix',
       },
       campaignConfig: {
         headlines: ['   ', ''],
@@ -56,8 +62,8 @@ describe('buildEffectiveCreative', () => {
         negativeKeywords: [],
         callouts: [],
         sitelinks: [],
-        finalUrls: ['   ']
-      }
+        finalUrls: ['   '],
+      },
     })
 
     expect(result.headlines).toEqual(['DB H1'])
@@ -65,7 +71,9 @@ describe('buildEffectiveCreative', () => {
     expect(result.keywords).toEqual(['db kw'])
     expect(result.negativeKeywords).toEqual(['db neg'])
     expect(result.callouts).toEqual(['DB C1'])
-    expect(result.sitelinks).toEqual([{ text: 'DB SL', url: 'https://db.example', description: 'db' }])
+    expect(result.sitelinks).toEqual([
+      { text: 'DB SL', url: 'https://db.example', description: 'db' },
+    ])
     expect(result.finalUrl).toBe('https://db.final')
     expect(result.finalUrlSuffix).toBe('db_suffix')
   })

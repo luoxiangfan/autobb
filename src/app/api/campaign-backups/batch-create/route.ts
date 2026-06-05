@@ -10,14 +10,14 @@ const MAX_BATCH_BACKUP_COUNT = 50
 /**
  * POST /api/campaign-backups/batch-create
  * 批量从备份创建广告系列（异步队列）
- * 
+ *
  * 请求体：
  * {
  *   backupIds: number[]
  *   googleAdsAccountId?: number
  *   regenerateCreativeMap?: Record<number, boolean>
  * }
- * 
+ *
  * 响应：
  * {
  *   success: true
@@ -34,27 +34,17 @@ export async function POST(request: NextRequest) {
 
     const userId = authResult.user.userId
     const body = await request.json()
-    const { 
-      backupIds, 
-      googleAdsAccountId,
-      regenerateCreativeMap 
-    } = body
+    const { backupIds, googleAdsAccountId, regenerateCreativeMap } = body
 
     if (!backupIds || !Array.isArray(backupIds) || backupIds.length === 0) {
-      return NextResponse.json(
-        { error: '请选择至少一个备份' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '请选择至少一个备份' }, { status: 400 })
     }
 
     const numericBackupIds: number[] = []
     for (const id of backupIds) {
       const parsed = Number(id)
       if (!Number.isInteger(parsed) || parsed <= 0) {
-        return NextResponse.json(
-          { error: '备份 ID 无效' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: '备份 ID 无效' }, { status: 400 })
       }
       numericBackupIds.push(parsed)
     }
@@ -68,24 +58,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (!googleAdsAccountId) {
-      return NextResponse.json(
-        { error: '请选择 Google Ads 账号' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '请选择 Google Ads 账号' }, { status: 400 })
     }
 
     const db = await getDatabase()
-    
+
     // 验证所有备份都存在且属于当前用户
     const placeholders = uniqueBackupIds.map(() => '?').join(',')
     const validationQuery = `
       SELECT id FROM campaign_backups
       WHERE id IN (${placeholders}) AND user_id = ?
     `
-    const validBackups = await db.query(validationQuery, [...uniqueBackupIds, userId]) as Array<{ id: number }>
-    const validBackupIds = new Set(validBackups.map(b => b.id))
+    const validBackups = (await db.query(validationQuery, [...uniqueBackupIds, userId])) as Array<{
+      id: number
+    }>
+    const validBackupIds = new Set(validBackups.map((b) => b.id))
 
-    const invalidBackups = uniqueBackupIds.filter(id => !validBackupIds.has(id))
+    const invalidBackups = uniqueBackupIds.filter((id) => !validBackupIds.has(id))
     if (invalidBackups.length > 0) {
       return NextResponse.json(
         { error: `以下备份不存在或无权访问：${invalidBackups.join(', ')}` },
@@ -111,7 +100,8 @@ export async function POST(request: NextRequest) {
     const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
     // 创建 batch_tasks 记录
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO batch_tasks (
         id,
         user_id,
@@ -121,7 +111,9 @@ export async function POST(request: NextRequest) {
         created_at,
         updated_at
       ) VALUES (?, ?, 'campaign-batch-create', 'pending', ?, ${nowFunc}, ${nowFunc})
-    `, [batchId, userId, uniqueBackupIds.length])
+    `,
+      [batchId, userId, uniqueBackupIds.length]
+    )
 
     // 创建任务数据
     const taskData = {
@@ -166,9 +158,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('批量创建任务失败:', error)
-    return NextResponse.json(
-      { error: error.message || '批量创建失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '批量创建失败' }, { status: 500 })
   }
 }

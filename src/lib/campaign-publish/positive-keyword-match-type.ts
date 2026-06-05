@@ -17,7 +17,9 @@ function isPureBrandKeyword(keyword: string, brandName: string): boolean {
 }
 
 export function normalizePositiveKeywordMatchType(value: unknown): PositiveKeywordMatchType | null {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   if (!normalized) return null
 
   if (normalized === 'BROAD_MATCH_MODIFIER' || normalized === 'BMM') return 'BROAD'

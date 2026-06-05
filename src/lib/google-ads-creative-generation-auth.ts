@@ -6,7 +6,10 @@ import {
 } from './google-ads-api-prepare'
 import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import { getGoogleAdsAuthContextGenerationForHydrate } from './google-ads-auth-context'
-import { resolveLinkedServiceAccountIdForOffer, queryGoogleAdsAccountForOfferExpand } from './google-ads-keyword-planner-auth'
+import {
+  resolveLinkedServiceAccountIdForOffer,
+  queryGoogleAdsAccountForOfferExpand,
+} from './google-ads-keyword-planner-auth'
 import type {
   CreativeGenerationAuthCache,
   CreativeGenerationGoogleAdsValidationResult,
@@ -121,11 +124,7 @@ async function validateGoogleAdsConfigForCreativeGenerationInternal(
   const linkedSa =
     offerId != null ? await resolveLinkedServiceAccountIdForOffer(userId, offerId) : null
 
-  const prepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
-    userId,
-    linkedSa,
-    cache
-  )
+  const prepared = await prepareGoogleAdsApiCallForLinkedAccountCached(userId, linkedSa, cache)
   if (!prepared.ok) {
     return { result: { ok: false, message: prepared.message } }
   }
@@ -236,11 +235,7 @@ export async function validateGoogleAdsConfigForCreativeGeneration(
   const { result, ownerUserId: ownerUserIdHint } =
     await validateGoogleAdsConfigForCreativeGenerationInternal(userId, offerId, cache)
 
-  const ownerUserId = await resolveOwnerUserIdForValidationCache(
-    userId,
-    result,
-    ownerUserIdHint
-  )
+  const ownerUserId = await resolveOwnerUserIdForValidationCache(userId, result, ownerUserIdHint)
   const cacheEntry = toValidationCacheEntry(userId, ownerUserId, result)
   if (offerId != null) {
     cache?.validationByOfferId.set(offerId, cacheEntry)

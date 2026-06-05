@@ -13,7 +13,13 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 
@@ -163,9 +169,7 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Google Ads 认证配置</DialogTitle>
-          <DialogDescription>
-            为用户 {user?.username} 配置 OAuth 或服务账号认证
-          </DialogDescription>
+          <DialogDescription>为用户 {user?.username} 配置 OAuth 或服务账号认证</DialogDescription>
         </DialogHeader>
 
         {loading ? (
@@ -179,7 +183,8 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                   {status.authConfigWarning}
                 </p>
                 <p className="text-sm text-amber-900">
-                  凭证所有者须删除 OAuth 或服务账号其中一种后，该用户的 Google Ads API 才能正常使用。
+                  凭证所有者须删除 OAuth 或服务账号其中一种后，该用户的 Google Ads API
+                  才能正常使用。
                   {status.dualStack && isAuthConfigured(status) && (
                     <>
                       {' '}
@@ -198,14 +203,23 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                   <span className="font-medium">当前状态</span>
                   {status.dualStack ? (
                     <Badge variant="destructive">双栈冲突</Badge>
-                  ) : status.hasConfigured === false && (status.hasOAuth || status.hasServiceAccount) ? (
+                  ) : status.hasConfigured === false &&
+                    (status.hasOAuth || status.hasServiceAccount) ? (
                     <Badge variant="outline" className="text-muted-foreground">
                       未就绪
                     </Badge>
                   ) : isAuthConfigured(status) ? (
                     <>
-                      <Badge variant={status.assignment.assignmentMode === 'shared_admin' ? 'secondary' : 'outline'}>
-                        {status.assignment.assignmentMode === 'shared_admin' ? '共享管理员' : '独立配置'}
+                      <Badge
+                        variant={
+                          status.assignment.assignmentMode === 'shared_admin'
+                            ? 'secondary'
+                            : 'outline'
+                        }
+                      >
+                        {status.assignment.assignmentMode === 'shared_admin'
+                          ? '共享管理员'
+                          : '独立配置'}
                       </Badge>
                       <Badge variant="outline">
                         {status.authType === 'oauth'
@@ -223,16 +237,23 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                     </Badge>
                   )}
                 </div>
-                {isAuthConfigured(status) && status.assignment.assignmentMode === 'shared_admin' && status.assignment.sharedAdminEmail && (
-                  <p className="text-muted-foreground">
-                    共享自：{status.assignment.sharedAdminUsername}
-                    {status.assignment.sharedAdminEmail ? ` (${status.assignment.sharedAdminEmail})` : ''}
-                  </p>
-                )}
+                {isAuthConfigured(status) &&
+                  status.assignment.assignmentMode === 'shared_admin' &&
+                  status.assignment.sharedAdminEmail && (
+                    <p className="text-muted-foreground">
+                      共享自：{status.assignment.sharedAdminUsername}
+                      {status.assignment.sharedAdminEmail
+                        ? ` (${status.assignment.sharedAdminEmail})`
+                        : ''}
+                    </p>
+                  )}
                 {(status.hasOAuth || status.hasServiceAccount) && (
                   <p className="text-muted-foreground">
-                    OAuth：{status.hasOAuth ? '已配置' : '未配置'} · 服务账号：{status.hasServiceAccount ? '已配置' : '未配置'}
-                    {status.hasConfigured === false && !status.dualStack && ' · 尚未满足「二选一」可用条件'}
+                    OAuth：{status.hasOAuth ? '已配置' : '未配置'} · 服务账号：
+                    {status.hasServiceAccount ? '已配置' : '未配置'}
+                    {status.hasConfigured === false &&
+                      !status.dualStack &&
+                      ' · 尚未满足「二选一」可用条件'}
                   </p>
                 )}
               </div>
@@ -241,8 +262,13 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>配置方式</Label>
-                <Select value={assignmentMode} onValueChange={(v) => setAssignmentMode(v as 'own' | 'shared_admin')}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={assignmentMode}
+                  onValueChange={(v) => setAssignmentMode(v as 'own' | 'shared_admin')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="shared_admin">共享管理员配置</SelectItem>
                     <SelectItem value="own">单独配置</SelectItem>
@@ -251,8 +277,13 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
               </div>
               <div>
                 <Label>认证方式</Label>
-                <Select value={authType} onValueChange={(v) => setAuthType(v as 'oauth' | 'service_account')}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                <Select
+                  value={authType}
+                  onValueChange={(v) => setAuthType(v as 'oauth' | 'service_account')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="oauth">OAuth 用户授权</SelectItem>
                     <SelectItem value="service_account">服务账号</SelectItem>
@@ -263,14 +294,23 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
 
             {assignmentMode === 'shared_admin' ? (
               <p className="text-sm text-muted-foreground rounded-md bg-muted p-3">
-                将使用当前登录管理员的 {authType === 'oauth' ? 'OAuth' : '服务账号'} 配置。请确保管理员自身已完成对应认证配置。
+                将使用当前登录管理员的 {authType === 'oauth' ? 'OAuth' : '服务账号'}{' '}
+                配置。请确保管理员自身已完成对应认证配置。
               </p>
             ) : authType === 'oauth' ? (
               <div className="space-y-3">
                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-3">
                   单独配置的凭证必须与管理员的配置不同，且需包含有效的 refresh_token。
                 </p>
-                {(['client_id', 'client_secret', 'developer_token', 'login_customer_id', 'refresh_token'] as const).map((key) => (
+                {(
+                  [
+                    'client_id',
+                    'client_secret',
+                    'developer_token',
+                    'login_customer_id',
+                    'refresh_token',
+                  ] as const
+                ).map((key) => (
                   <div key={key}>
                     <Label>{key}</Label>
                     <Input
@@ -288,19 +328,39 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                 </p>
                 <div>
                   <Label>配置名称</Label>
-                  <Input value={serviceAccountForm.name} onChange={(e) => setServiceAccountForm((p) => ({ ...p, name: e.target.value }))} />
+                  <Input
+                    value={serviceAccountForm.name}
+                    onChange={(e) => setServiceAccountForm((p) => ({ ...p, name: e.target.value }))}
+                  />
                 </div>
                 <div>
                   <Label>MCC Customer ID</Label>
-                  <Input value={serviceAccountForm.mccCustomerId} onChange={(e) => setServiceAccountForm((p) => ({ ...p, mccCustomerId: e.target.value }))} />
+                  <Input
+                    value={serviceAccountForm.mccCustomerId}
+                    onChange={(e) =>
+                      setServiceAccountForm((p) => ({ ...p, mccCustomerId: e.target.value }))
+                    }
+                  />
                 </div>
                 <div>
                   <Label>Developer Token</Label>
-                  <Input type="password" value={serviceAccountForm.developerToken} onChange={(e) => setServiceAccountForm((p) => ({ ...p, developerToken: e.target.value }))} />
+                  <Input
+                    type="password"
+                    value={serviceAccountForm.developerToken}
+                    onChange={(e) =>
+                      setServiceAccountForm((p) => ({ ...p, developerToken: e.target.value }))
+                    }
+                  />
                 </div>
                 <div>
                   <Label>Service Account JSON</Label>
-                  <Textarea rows={6} value={serviceAccountForm.serviceAccountJson} onChange={(e) => setServiceAccountForm((p) => ({ ...p, serviceAccountJson: e.target.value }))} />
+                  <Textarea
+                    rows={6}
+                    value={serviceAccountForm.serviceAccountJson}
+                    onChange={(e) =>
+                      setServiceAccountForm((p) => ({ ...p, serviceAccountJson: e.target.value }))
+                    }
+                  />
                 </div>
               </div>
             )}
@@ -313,7 +373,12 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
               清除配置
             </Button>
           )}
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             取消
           </Button>
           <Button

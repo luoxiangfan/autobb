@@ -172,7 +172,9 @@ export function normalizeNegativeKeywordMatchTypeMap(
   if (!input || typeof input !== 'object') return result
 
   for (const [rawKeyword, rawMatchType] of Object.entries(input)) {
-    const keyword = String(rawKeyword ?? '').trim().toLowerCase()
+    const keyword = String(rawKeyword ?? '')
+      .trim()
+      .toLowerCase()
     const matchType = normalizeMatchType(typeof rawMatchType === 'string' ? rawMatchType : null)
     if (keyword && matchType) {
       result.set(keyword, matchType)

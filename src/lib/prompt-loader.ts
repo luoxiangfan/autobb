@@ -43,7 +43,10 @@ function clearExpiredCache(): void {
   }
 }
 
-async function queryCurrentPromptVersion(db: DatabaseAdapter, promptId: string): Promise<string | undefined> {
+async function queryCurrentPromptVersion(
+  db: DatabaseAdapter,
+  promptId: string
+): Promise<string | undefined> {
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const active = await db.queryOne<{ version: string }>(
     `SELECT version
@@ -158,23 +161,28 @@ export async function loadPrompt(promptId: string): Promise<string> {
   }
 
   if (resolvedPrompt.source === 'latest') {
-    console.warn(`⚠️ Prompt ${promptId} 没有激活版本，已回退使用最新版本: ${resolvedPrompt.prompt.version}`)
+    console.warn(
+      `⚠️ Prompt ${promptId} 没有激活版本，已回退使用最新版本: ${resolvedPrompt.prompt.version}`
+    )
   }
 
   // 3. 处理Buffer类型（SQLite可能返回Buffer）
-  const content = typeof resolvedPrompt.prompt.prompt_content === 'string'
-    ? resolvedPrompt.prompt.prompt_content
-    : resolvedPrompt.prompt.prompt_content.toString('utf-8')
+  const content =
+    typeof resolvedPrompt.prompt.prompt_content === 'string'
+      ? resolvedPrompt.prompt.prompt_content
+      : resolvedPrompt.prompt.prompt_content.toString('utf-8')
 
   // 4. 缓存并返回
   promptCache.set(promptId, {
     content,
     timestamp: Date.now(),
     version: resolvedPrompt.prompt.version,
-    lastVerifiedAt: Date.now()
+    lastVerifiedAt: Date.now(),
   })
 
-  console.log(`📦 Loaded prompt from database: ${resolvedPrompt.prompt.name} (${promptId} ${resolvedPrompt.prompt.version})`)
+  console.log(
+    `📦 Loaded prompt from database: ${resolvedPrompt.prompt.name} (${promptId} ${resolvedPrompt.prompt.version})`
+  )
 
   return content
 }
@@ -203,12 +211,12 @@ export function getPromptCacheStats(): {
   const entries = Array.from(promptCache.entries()).map(([promptId, entry]) => ({
     promptId,
     version: entry.version,
-    age: Math.floor((now - entry.timestamp) / 1000) // 秒
+    age: Math.floor((now - entry.timestamp) / 1000), // 秒
   }))
 
   return {
     size: promptCache.size,
-    entries
+    entries,
   }
 }
 

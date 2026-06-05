@@ -22,12 +22,13 @@ export async function GET(request: NextRequest) {
 
     const userId = authResult.user.userId
 
-    const [mccSetting, clientIdSetting, clientSecretSetting, developerTokenSetting] = await Promise.all([
-      getUserOnlySetting('google_ads', 'test_login_customer_id', userId),
-      getUserOnlySetting('google_ads', 'test_client_id', userId),
-      getUserOnlySetting('google_ads', 'test_client_secret', userId),
-      getUserOnlySetting('google_ads', 'test_developer_token', userId),
-    ])
+    const [mccSetting, clientIdSetting, clientSecretSetting, developerTokenSetting] =
+      await Promise.all([
+        getUserOnlySetting('google_ads', 'test_login_customer_id', userId),
+        getUserOnlySetting('google_ads', 'test_client_id', userId),
+        getUserOnlySetting('google_ads', 'test_client_secret', userId),
+        getUserOnlySetting('google_ads', 'test_developer_token', userId),
+      ])
 
     const loginCustomerIdRaw = mccSetting?.value || ''
     const clientId = clientIdSetting?.value || ''
@@ -36,19 +37,27 @@ export async function GET(request: NextRequest) {
 
     if (!loginCustomerIdRaw || !clientId || !clientSecret || !developerToken) {
       return NextResponse.json(
-        { error: '请先在设置页面填写并保存测试配置（测试MCC ID、测试Client ID/Secret、测试Developer Token）' },
+        {
+          error:
+            '请先在设置页面填写并保存测试配置（测试MCC ID、测试Client ID/Secret、测试Developer Token）',
+        },
         { status: 400 }
       )
     }
 
     // 格式校验：10位数字 MCC ID
-    const loginCustomerId = formatAndValidateLoginCustomerId(loginCustomerIdRaw, 'test_login_customer_id')
+    const loginCustomerId = formatAndValidateLoginCustomerId(
+      loginCustomerIdRaw,
+      'test_login_customer_id'
+    )
 
-    const state = Buffer.from(JSON.stringify({
-      user_id: userId,
-      timestamp: Date.now(),
-      purpose: 'google_ads_test'
-    })).toString('base64url')
+    const state = Buffer.from(
+      JSON.stringify({
+        user_id: userId,
+        timestamp: Date.now(),
+        purpose: 'google_ads_test',
+      })
+    ).toString('base64url')
 
     const redirectUri = `${getBaseUrl()}/api/google-ads/test-oauth/callback`
     const authUrl = generateOAuthUrl(clientId, redirectUri, state)
@@ -59,7 +68,7 @@ export async function GET(request: NextRequest) {
         auth_url: authUrl,
         redirect_uri: redirectUri,
         login_customer_id: loginCustomerId,
-      }
+      },
     })
   } catch (error: any) {
     return NextResponse.json(
@@ -68,4 +77,3 @@ export async function GET(request: NextRequest) {
     )
   }
 }
-

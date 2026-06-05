@@ -119,10 +119,7 @@ export default function AdminScheduledTasksPage() {
 
   // 手动触发备份
   const triggerManualBackup = async () => {
-    const confirmed = await showConfirm(
-      '确认备份',
-      '确定要立即备份数据库吗？'
-    )
+    const confirmed = await showConfirm('确认备份', '确定要立即备份数据库吗？')
 
     if (!confirmed) {
       return
@@ -193,7 +190,9 @@ export default function AdminScheduledTasksPage() {
       running: '进行中',
     }
     return (
-      <span className={`px-2 py-1 text-xs rounded ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+      <span
+        className={`px-2 py-1 text-xs rounded ${styles[status] || 'bg-gray-100 text-gray-800'}`}
+      >
         {labels[status] || status}
       </span>
     )
@@ -245,9 +244,10 @@ export default function AdminScheduledTasksPage() {
         throw new Error(data.error || '清理失败')
       }
 
-      const success = mode === 'preview'
-        ? data.summary.totalRecordsToDelete > 0
-        : data.summary.totalRecordsDeleted > 0
+      const success =
+        mode === 'preview'
+          ? data.summary.totalRecordsToDelete > 0
+          : data.summary.totalRecordsDeleted > 0
 
       setCleanupResult({
         success,
@@ -291,9 +291,7 @@ export default function AdminScheduledTasksPage() {
         {/* 标题栏 */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">备份与定时任务</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            查看和管理系统定时任务执行历史
-          </p>
+          <p className="mt-2 text-sm text-gray-600">查看和管理系统定时任务执行历史</p>
         </div>
 
         {/* Tab切换 */}
@@ -340,15 +338,20 @@ export default function AdminScheduledTasksPage() {
                       <div key={index} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-medium text-gray-900">{task.name}</h3>
-                          <span className={`px-2 py-1 text-xs rounded ${
-                            task.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded ${
+                              task.enabled
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
                             {task.enabled ? '已启用' : '已禁用'}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600 mb-2">{task.description}</p>
                         <p className="text-xs text-gray-500">
-                          <span className="font-medium">执行时间：</span>{task.schedule}
+                          <span className="font-medium">执行时间：</span>
+                          {task.schedule}
                         </p>
                       </div>
                     ))}
@@ -364,7 +367,9 @@ export default function AdminScheduledTasksPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <div className="text-sm text-gray-500">总备份数</div>
-                          <div className="text-2xl font-bold text-gray-900">{stats.backup.total}</div>
+                          <div className="text-2xl font-bold text-gray-900">
+                            {stats.backup.total}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">成功率</div>
@@ -435,11 +440,18 @@ export default function AdminScheduledTasksPage() {
                       })
                       .slice(0, 10)
                       .map((item, _index) => (
-                        <div key={`${item.taskType}-${item.id}`} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <div
+                          key={`${item.taskType}-${item.id}`}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                        >
                           <div className="flex items-center space-x-4">
-                            <span className={`px-2 py-1 text-xs rounded ${
-                              item.taskType === 'backup' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                            }`}>
+                            <span
+                              className={`px-2 py-1 text-xs rounded ${
+                                item.taskType === 'backup'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}
+                            >
                               {item.taskType === 'backup' ? '备份' : '同步'}
                             </span>
                             <div>
@@ -449,7 +461,9 @@ export default function AdminScheduledTasksPage() {
                                   : `用户 ${(item as SyncLog).username || (item as SyncLog).userId} - ${(item as SyncLog).recordCount} 条记录`}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {'createdAt' in item ? formatDateTime(item.createdAt) : formatDateTime((item as SyncLog).startedAt)}
+                                {'createdAt' in item
+                                  ? formatDateTime(item.createdAt)
+                                  : formatDateTime((item as SyncLog).startedAt)}
                               </p>
                             </div>
                           </div>
@@ -469,15 +483,21 @@ export default function AdminScheduledTasksPage() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">总备份数</div>
-                      <div className="mt-2 text-3xl font-bold text-gray-900">{stats.backup.total}</div>
+                      <div className="mt-2 text-3xl font-bold text-gray-900">
+                        {stats.backup.total}
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">成功备份</div>
-                      <div className="mt-2 text-3xl font-bold text-green-600">{stats.backup.success}</div>
+                      <div className="mt-2 text-3xl font-bold text-green-600">
+                        {stats.backup.success}
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">失败备份</div>
-                      <div className="mt-2 text-3xl font-bold text-red-600">{stats.backup.failed}</div>
+                      <div className="mt-2 text-3xl font-bold text-red-600">
+                        {stats.backup.failed}
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">总备份大小</div>
@@ -540,20 +560,22 @@ export default function AdminScheduledTasksPage() {
                               )}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`px-2 py-1 text-xs rounded ${
-                                backup.backupType === 'manual'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
+                              <span
+                                className={`px-2 py-1 text-xs rounded ${
+                                  backup.backupType === 'manual'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
                                 {backup.backupType === 'manual' ? '手动' : '自动'}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
-                              {backup.status === 'success' ? formatFileSize(backup.fileSizeBytes) : 'N/A'}
+                              {backup.status === 'success'
+                                ? formatFileSize(backup.fileSizeBytes)
+                                : 'N/A'}
                             </td>
-                            <td className="px-6 py-4">
-                              {renderStatusBadge(backup.status)}
-                            </td>
+                            <td className="px-6 py-4">{renderStatusBadge(backup.status)}</td>
                             <td className="px-6 py-4 text-sm text-gray-900">
                               {formatDateTime(backup.createdAt)}
                             </td>
@@ -585,15 +607,21 @@ export default function AdminScheduledTasksPage() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">总同步次数</div>
-                      <div className="mt-2 text-3xl font-bold text-gray-900">{stats.sync.total}</div>
+                      <div className="mt-2 text-3xl font-bold text-gray-900">
+                        {stats.sync.total}
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">成功同步</div>
-                      <div className="mt-2 text-3xl font-bold text-green-600">{stats.sync.success}</div>
+                      <div className="mt-2 text-3xl font-bold text-green-600">
+                        {stats.sync.success}
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">失败同步</div>
-                      <div className="mt-2 text-3xl font-bold text-red-600">{stats.sync.failed}</div>
+                      <div className="mt-2 text-3xl font-bold text-red-600">
+                        {stats.sync.failed}
+                      </div>
                     </div>
                     <div className="bg-white rounded-lg shadow-sm p-6">
                       <div className="text-sm text-gray-500">平均耗时</div>
@@ -649,11 +677,13 @@ export default function AdminScheduledTasksPage() {
                               {log.customerId || '-'}
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`px-2 py-1 text-xs rounded ${
-                                log.syncType === 'manual'
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
+                              <span
+                                className={`px-2 py-1 text-xs rounded ${
+                                  log.syncType === 'manual'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
                                 {log.syncType === 'manual' ? '手动' : '自动'}
                               </span>
                             </td>
@@ -666,7 +696,10 @@ export default function AdminScheduledTasksPage() {
                             <td className="px-6 py-4">
                               {renderStatusBadge(log.status)}
                               {log.errorMessage && (
-                                <div className="text-xs text-red-600 mt-1 max-w-xs truncate" title={log.errorMessage}>
+                                <div
+                                  className="text-xs text-red-600 mt-1 max-w-xs truncate"
+                                  title={log.errorMessage}
+                                >
                                   {log.errorMessage}
                                 </div>
                               )}
@@ -686,10 +719,22 @@ export default function AdminScheduledTasksPage() {
                   <h3 className="text-sm font-medium text-purple-900 mb-3">数据同步说明</h3>
                   <ul className="text-sm text-purple-700 space-y-2">
                     <li>• 同步会拉取最近7天的广告性能数据（展示、点击、转化、花费等）</li>
-                    <li>• 在 <a href="/settings" className="underline hover:text-purple-900">系统设置</a> 中可以配置自动同步的间隔时间（建议6-24小时）</li>
+                    <li>
+                      • 在{' '}
+                      <a href="/settings" className="underline hover:text-purple-900">
+                        系统设置
+                      </a>{' '}
+                      中可以配置自动同步的间隔时间（建议6-24小时）
+                    </li>
                     <li>• 在 Offer 详情页可以手动触发数据同步</li>
                     <li>• 同步日志保留90天，超过90天的日志会自动清理</li>
-                    <li>• 同步任务通过队列系统执行，可在 <a href="/admin/queue" className="underline hover:text-purple-900">任务队列</a> 中查看执行状态</li>
+                    <li>
+                      • 同步任务通过队列系统执行，可在{' '}
+                      <a href="/admin/queue" className="underline hover:text-purple-900">
+                        任务队列
+                      </a>{' '}
+                      中查看执行状态
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -705,9 +750,15 @@ export default function AdminScheduledTasksPage() {
                     清理系统中已软删除的记录。软删除的数据会保留90天，超过90天后将被永久删除。
                   </p>
                   <ul className="text-sm text-blue-700 space-y-1">
-                    <li>• <strong>预览模式</strong>：查看可清理的记录数量，不实际删除</li>
-                    <li>• <strong>执行清理</strong>：删除超过90天的软删除记录</li>
-                    <li>• <strong>清理范围</strong>：抓取产品、广告创意、Google Ads账户</li>
+                    <li>
+                      • <strong>预览模式</strong>：查看可清理的记录数量，不实际删除
+                    </li>
+                    <li>
+                      • <strong>执行清理</strong>：删除超过90天的软删除记录
+                    </li>
+                    <li>
+                      • <strong>清理范围</strong>：抓取产品、广告创意、Google Ads账户
+                    </li>
                   </ul>
                 </div>
 
@@ -774,16 +825,22 @@ export default function AdminScheduledTasksPage() {
 
                   {/* 清理结果 */}
                   {cleanupResult && (
-                    <div className={`mt-6 p-4 rounded-lg ${
-                      cleanupResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-                    }`}>
+                    <div
+                      className={`mt-6 p-4 rounded-lg ${
+                        cleanupResult.success
+                          ? 'bg-green-50 border border-green-200'
+                          : 'bg-red-50 border border-red-200'
+                      }`}
+                    >
                       <div className="flex items-center mb-2">
                         {cleanupResult.success ? (
                           <span className="text-green-600 text-lg mr-2">✅</span>
                         ) : (
                           <span className="text-red-600 text-lg mr-2">❌</span>
                         )}
-                        <span className={`font-medium ${cleanupResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                        <span
+                          className={`font-medium ${cleanupResult.success ? 'text-green-800' : 'text-red-800'}`}
+                        >
                           {cleanupResult.message}
                         </span>
                       </div>
@@ -794,15 +851,21 @@ export default function AdminScheduledTasksPage() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                             <div>
                               <span className="text-gray-500">抓取产品：</span>
-                              <span className="font-medium">{cleanupResult.details.scraped_products}</span>
+                              <span className="font-medium">
+                                {cleanupResult.details.scraped_products}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-500">广告创意：</span>
-                              <span className="font-medium">{cleanupResult.details.ad_creatives}</span>
+                              <span className="font-medium">
+                                {cleanupResult.details.ad_creatives}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-500">Google账户：</span>
-                              <span className="font-medium">{cleanupResult.details.google_ads_accounts}</span>
+                              <span className="font-medium">
+                                {cleanupResult.details.google_ads_accounts}
+                              </span>
                             </div>
                             <div>
                               <span className="text-gray-500">总计：</span>

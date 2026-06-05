@@ -19,8 +19,12 @@ import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/currency'
 export const ROITrendChart = memo(function ROITrendChart({
   data,
   currency = 'CNY',
-  height = 300
-}: { data: any[]; currency?: string; height?: number }) {
+  height = 300,
+}: {
+  data: any[]
+  currency?: string
+  height?: number
+}) {
   const chartData = useMemo(() => {
     return data.map((item) => ({
       ...item,
@@ -35,7 +39,10 @@ export const ROITrendChart = memo(function ROITrendChart({
       <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis dataKey="date" />
-        <YAxis yAxisId="left" label={{ value: `金额 (${currencySymbol})`, angle: -90, position: 'insideLeft' }} />
+        <YAxis
+          yAxisId="left"
+          label={{ value: `金额 (${currencySymbol})`, angle: -90, position: 'insideLeft' }}
+        />
         <YAxis
           yAxisId="right"
           orientation="right"
@@ -106,17 +113,22 @@ export const ROITrendChart = memo(function ROITrendChart({
 export const CampaignROIChart = memo(function CampaignROIChart({
   data,
   currency = 'CNY',
-  height = 400
-}: { data: any[]; currency?: string; height?: number }) {
+  height = 400,
+}: {
+  data: any[]
+  currency?: string
+  height?: number
+}) {
   const sortedData = useMemo(() => {
     return [...data]
       .sort((a, b) => b.roi - a.roi)
       .slice(0, 10)
       .map((item) => ({
         ...item,
-        name: item.campaignName.length > 20
-          ? item.campaignName.substring(0, 20) + '...'
-          : item.campaignName,
+        name:
+          item.campaignName.length > 20
+            ? item.campaignName.substring(0, 20) + '...'
+            : item.campaignName,
       }))
   }, [data])
 
@@ -143,16 +155,26 @@ export const CampaignROIChart = memo(function CampaignROIChart({
                   <p className="text-sm text-gray-600">{data.offerBrand}</p>
                   <div className="mt-2 space-y-1 text-sm">
                     <p>
-                      ROI: <span className="font-semibold">{(Number(data.roi) || 0).toFixed(2)}%</span>
+                      ROI:{' '}
+                      <span className="font-semibold">{(Number(data.roi) || 0).toFixed(2)}%</span>
                     </p>
                     <p>
-                      收入: <span className="font-semibold">{formatCurrency(Number(data.revenue) || 0, currency)}</span>
+                      收入:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.revenue) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      花费: <span className="font-semibold">{formatCurrency(Number(data.cost) || 0, currency)}</span>
+                      花费:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.cost) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      利润: <span className="font-semibold">{formatCurrency(Number(data.profit) || 0, currency)}</span>
+                      利润:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.profit) || 0, currency)}
+                      </span>
                     </p>
                     <p>
                       转化: <span className="font-semibold">{data.conversions}</span>
@@ -178,25 +200,41 @@ export const CampaignROIChart = memo(function CampaignROIChart({
 export const OfferROIChart = memo(function OfferROIChart({
   data,
   currency = 'CNY',
-  height = 350
-}: { data: any[]; currency?: string; height?: number }) {
+  height = 350,
+}: {
+  data: any[]
+  currency?: string
+  height?: number
+}) {
   const chartData = useMemo(() => {
     return [...data]
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 8)
       .map((item) => ({
         ...item,
-        name: `${item.brand} - ${item.offerName}`.length > 25
-          ? `${item.brand} - ${item.offerName}`.substring(0, 25) + '...'
-          : `${item.brand} - ${item.offerName}`,
+        name:
+          `${item.brand} - ${item.offerName}`.length > 25
+            ? `${item.brand} - ${item.offerName}`.substring(0, 25) + '...'
+            : `${item.brand} - ${item.offerName}`,
       }))
   }, [data])
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={chartData} layout="horizontal" margin={{ top: 5, right: 30, left: 100, bottom: 5 }}>
+      <BarChart
+        data={chartData}
+        layout="horizontal"
+        margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+      >
         <CartesianGrid strokeDasharray="3 3" />
-        <XAxis type="number" label={{ value: `金额 (${CURRENCY_SYMBOLS[currency] || currency})`, position: 'insideBottom', offset: -5 }} />
+        <XAxis
+          type="number"
+          label={{
+            value: `金额 (${CURRENCY_SYMBOLS[currency] || currency})`,
+            position: 'insideBottom',
+            offset: -5,
+          }}
+        />
         <YAxis type="category" dataKey="name" width={90} />
         <Tooltip
           content={({ active, payload }) => {
@@ -208,16 +246,26 @@ export const OfferROIChart = memo(function OfferROIChart({
                   <p className="text-sm text-gray-600 mb-2">{data.offerName}</p>
                   <div className="space-y-1 text-sm">
                     <p>
-                      收入: <span className="font-semibold">{formatCurrency(Number(data.revenue) || 0, currency)}</span>
+                      收入:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.revenue) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      花费: <span className="font-semibold">{formatCurrency(Number(data.cost) || 0, currency)}</span>
+                      花费:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.cost) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      利润: <span className="font-semibold">{formatCurrency(Number(data.profit) || 0, currency)}</span>
+                      利润:{' '}
+                      <span className="font-semibold">
+                        {formatCurrency(Number(data.profit) || 0, currency)}
+                      </span>
                     </p>
                     <p>
-                      ROI: <span className="font-semibold">{(Number(data.roi) || 0).toFixed(2)}%</span>
+                      ROI:{' '}
+                      <span className="font-semibold">{(Number(data.roi) || 0).toFixed(2)}%</span>
                     </p>
                     <p className="text-xs text-gray-500 mt-2">
                       {data.campaignCount} 个Campaign · {data.conversions} 次转化

@@ -27,7 +27,9 @@ describe('offer batch csv header', () => {
     expect(canonicalizeOfferBatchCsvHeader('佣金比例｜commission_payout')).toBe('commission_payout')
     expect(canonicalizeOfferBatchCsvHeader('佣金类型 / commission_type')).toBe('commission_type')
     expect(canonicalizeOfferBatchCsvHeader('佣金值（commission_value）')).toBe('commission_value')
-    expect(canonicalizeOfferBatchCsvHeader('佣金货币｜commission_currency')).toBe('commission_currency')
+    expect(canonicalizeOfferBatchCsvHeader('佣金货币｜commission_currency')).toBe(
+      'commission_currency'
+    )
     expect(canonicalizeOfferBatchCsvHeader('链接类型 / page_type')).toBe('page_type')
     expect(canonicalizeOfferBatchCsvHeader('单品链接1 / product_link_1')).toBe('product_link_1')
   })
@@ -54,11 +56,43 @@ describe('offer batch csv header', () => {
 
   it('decodes GBK/GB18030 CSV exported by Excel', () => {
     const gb18030HeaderBytes = Uint8Array.from([
-      0xcd, 0xc6, 0xb9, 0xe3, 0xc1, 0xb4, 0xbd, 0xd3, 0x2c, // 推广链接,
-      0xcd, 0xc6, 0xb9, 0xe3, 0xb9, 0xfa, 0xbc, 0xd2, 0x2c, // 推广国家,
-      0xb2, 0xfa, 0xc6, 0xb7, 0xbc, 0xdb, 0xb8, 0xf1, 0x2c, // 产品价格,
-      0xd3, 0xb6, 0xbd, 0xf0, 0xb1, 0xc8, 0xc0, 0xfd, // 佣金比例
-      0x0d, 0x0a,
+      0xcd,
+      0xc6,
+      0xb9,
+      0xe3,
+      0xc1,
+      0xb4,
+      0xbd,
+      0xd3,
+      0x2c, // 推广链接,
+      0xcd,
+      0xc6,
+      0xb9,
+      0xe3,
+      0xb9,
+      0xfa,
+      0xbc,
+      0xd2,
+      0x2c, // 推广国家,
+      0xb2,
+      0xfa,
+      0xc6,
+      0xb7,
+      0xbc,
+      0xdb,
+      0xb8,
+      0xf1,
+      0x2c, // 产品价格,
+      0xd3,
+      0xb6,
+      0xbd,
+      0xf0,
+      0xb1,
+      0xc8,
+      0xc0,
+      0xfd, // 佣金比例
+      0x0d,
+      0x0a,
     ])
 
     const text = decodeCsvTextSmart(gb18030HeaderBytes)

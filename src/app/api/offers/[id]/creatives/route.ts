@@ -22,8 +22,9 @@ function resolveCreativeIdentity(creative: any): {
     theme: creative.theme,
     bucketIntent: creative.bucket_intent ?? creative.bucketIntent,
   })
-  const keywordBucket = mapCreativeTypeToBucketSlot(creativeType)
-    || normalizeCreativeBucketSlot(creative.keyword_bucket ?? creative.keywordBucket)
+  const keywordBucket =
+    mapCreativeTypeToBucketSlot(creativeType) ||
+    normalizeCreativeBucketSlot(creative.keyword_bucket ?? creative.keywordBucket)
 
   return { creativeType, keywordBucket }
 }
@@ -35,7 +36,7 @@ function resolveCreativeIdentity(creative: any): {
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 
@@ -53,10 +54,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     // 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
     }
 
     // 获取所有创意
@@ -110,9 +108,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     })
   } catch (error: any) {
     console.error('获取Creatives失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取Creatives失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取Creatives失败' }, { status: 500 })
   }
 }

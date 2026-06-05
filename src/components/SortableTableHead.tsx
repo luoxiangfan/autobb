@@ -35,7 +35,9 @@ export function SortableTableHead({
       className={`cursor-pointer hover:bg-accent transition-colors ${alignClass} ${className}`}
       onClick={() => onSort(field)}
     >
-      <div className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''}`}>
+      <div
+        className={`flex items-center gap-2 ${align === 'right' ? 'justify-end' : align === 'center' ? 'justify-center' : ''}`}
+      >
         <span>{children}</span>
         <div className="w-4 h-4 flex items-center justify-center">
           {isSorting ? (

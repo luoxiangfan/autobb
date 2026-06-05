@@ -6,9 +6,30 @@ function normalizeBrandNameLight(brand: string): string {
 
   // Keep common all-caps abbreviations (subset of offer-utils normalization).
   const ABBREVIATIONS = new Set([
-    'IBM', 'HP', 'LG', 'BMW', 'ASUS', 'DELL', 'AMD', 'AT&T',
-    'USA', 'UK', 'EU', 'NASA', 'FBI', 'CIA', 'DVD', 'LCD',
-    'LED', 'USB', 'GPS', 'API', 'SEO', 'CEO', 'CTO', 'CFO',
+    'IBM',
+    'HP',
+    'LG',
+    'BMW',
+    'ASUS',
+    'DELL',
+    'AMD',
+    'AT&T',
+    'USA',
+    'UK',
+    'EU',
+    'NASA',
+    'FBI',
+    'CIA',
+    'DVD',
+    'LCD',
+    'LED',
+    'USB',
+    'GPS',
+    'API',
+    'SEO',
+    'CEO',
+    'CTO',
+    'CFO',
   ])
 
   if (ABBREVIATIONS.has(trimmed.toUpperCase())) return trimmed.toUpperCase()
@@ -53,7 +74,11 @@ function looksLikeBylineBoilerplate(value: string): boolean {
   const trimmed = value.trim()
   if (!trimmed) return true
 
-  if (/^(consulter|consultez|visitez|visiter|visit|besuchen|besuche|visita|bezoek|odwiedź)\b/i.test(trimmed)) {
+  if (
+    /^(consulter|consultez|visitez|visiter|visit|besuchen|besuche|visita|bezoek|odwiedź)\b/i.test(
+      trimmed
+    )
+  ) {
     return true
   }
   if (/^(store|shop|boutique|magasin|tienda|negozio|loja|winkel|sklep)$/i.test(trimmed)) {
@@ -121,11 +146,16 @@ function stripBylineBoilerplate(text: string): string {
   if (!brand) return ''
 
   // Drop leading articles / prepositions that may remain after partial stripping.
-  brand = brand.replace(/^(the|a|an|den|die|das|der|la|le|les|lo|il|el|de|di|da|du|von|van)\b\s*/i, '').trim()
+  brand = brand
+    .replace(/^(the|a|an|den|die|das|der|la|le|les|lo|il|el|de|di|da|du|von|van)\b\s*/i, '')
+    .trim()
 
   // Strip store suffixes (e.g. "Comfyer-Store", "Comfyer Store").
   brand = brand
-    .replace(/^(Store|Shop|Boutique|Magasin|Tienda|Negozio|Loja|Winkel|Sklep)\s+(de\s+|du\s+|da\s+|di\s+)?/i, '')
+    .replace(
+      /^(Store|Shop|Boutique|Magasin|Tienda|Negozio|Loja|Winkel|Sklep)\s+(de\s+|du\s+|da\s+|di\s+)?/i,
+      ''
+    )
     .replace(/-(Store|Shop|Boutique|Magasin|Tienda|Negozio|Loja|Winkel|Sklep)\b$/i, '')
     .replace(/\s+(Store|Shop|Boutique|Magasin|Tienda|Negozio|Loja|Winkel|Sklep)\b$/i, '')
     .trim()

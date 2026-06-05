@@ -4,14 +4,12 @@
 import dynamic from 'next/dynamic'
 import { Skeleton } from '@/components/ui/skeleton'
 
-const ChartSkeleton = () => (
-  <Skeleton className="h-[400px] w-full" />
-)
+const ChartSkeleton = () => <Skeleton className="h-[400px] w-full" />
 
 export const TrendChartDynamic = dynamic(
-  () => import('./TrendChart').then(mod => mod.TrendChart),
+  () => import('./TrendChart').then((mod) => mod.TrendChart),
   {
     loading: () => <ChartSkeleton />,
-    ssr: false
+    ssr: false,
   }
 )

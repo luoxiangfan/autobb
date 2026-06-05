@@ -3,13 +3,7 @@
 import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -95,15 +89,21 @@ function getPlatformSyncStrategyLabel(strategy: PlatformSyncStrategy): string {
   return strategy === 'light' ? '快速刷新' : '全量补齐'
 }
 
-function getPlatformSyncActionLabel(strategy: PlatformSyncStrategy, options?: PlatformSyncOptions): string {
+function getPlatformSyncActionLabel(
+  strategy: PlatformSyncStrategy,
+  options?: PlatformSyncOptions
+): string {
   if (strategy !== 'full') {
     return getPlatformSyncStrategyLabel(strategy)
   }
-  return options?.resumeFailedRun
-    ? '全量补齐（续传失败任务）'
-    : '全量补齐（从头）'
+  return options?.resumeFailedRun ? '全量补齐（续传失败任务）' : '全量补齐（从头）'
 }
-type LandingPageType = 'amazon_product' | 'amazon_store' | 'independent_product' | 'independent_store' | 'unknown'
+type LandingPageType =
+  | 'amazon_product'
+  | 'amazon_store'
+  | 'independent_product'
+  | 'independent_store'
+  | 'unknown'
 type LandingPageTypeFilter = LandingPageType | 'all'
 type ProductLifecycleStatus = 'active' | 'invalid' | 'sync_missing' | 'unknown'
 type ProductStatusFilter = ProductLifecycleStatus | 'all'
@@ -173,18 +173,21 @@ type ProductListResponse = {
   syncMissingProductsCount: number
   unknownProductsCount: number
   blacklistedCount: number
-  platformStats?: Record<ProductPlatform, {
-    total: number
-    visibleCount: number
-    productCount: number
-    storeCount: number
-    productsWithLinkCount: number
-    activeProductsCount: number
-    invalidProductsCount: number
-    syncMissingProductsCount: number
-    unknownProductsCount: number
-    blacklistedCount: number
-  }>
+  platformStats?: Record<
+    ProductPlatform,
+    {
+      total: number
+      visibleCount: number
+      productCount: number
+      storeCount: number
+      productsWithLinkCount: number
+      activeProductsCount: number
+      invalidProductsCount: number
+      syncMissingProductsCount: number
+      unknownProductsCount: number
+      blacklistedCount: number
+    }
+  >
   page: number
   pageSize: number
 }
@@ -207,18 +210,21 @@ type ProductSummaryResponse = {
     effectiveCount: number
     lastCalculatedAt: string | null
   }
-  platformStats?: Record<ProductPlatform, {
-    total: number
-    visibleCount: number
-    productCount: number
-    storeCount: number
-    productsWithLinkCount: number
-    activeProductsCount: number
-    invalidProductsCount: number
-    syncMissingProductsCount: number
-    unknownProductsCount: number
-    blacklistedCount: number
-  }>
+  platformStats?: Record<
+    ProductPlatform,
+    {
+      total: number
+      visibleCount: number
+      productCount: number
+      storeCount: number
+      productsWithLinkCount: number
+      activeProductsCount: number
+      invalidProductsCount: number
+      syncMissingProductsCount: number
+      unknownProductsCount: number
+      blacklistedCount: number
+    }
+  >
 }
 
 type YeahPromosSessionStatus = {
@@ -346,7 +352,16 @@ const PLATFORM_SHORT_LABEL: Record<ProductPlatform, string> = {
   partnerboost: 'PB',
 }
 
-const PRODUCT_TARGET_COUNTRY_FILTER_OPTIONS = ['US', 'MX', 'CA', 'DE', 'UK', 'ES', 'FR', 'IT'] as const
+const PRODUCT_TARGET_COUNTRY_FILTER_OPTIONS = [
+  'US',
+  'MX',
+  'CA',
+  'DE',
+  'UK',
+  'ES',
+  'FR',
+  'IT',
+] as const
 const LANDING_PAGE_TYPE_FILTER_OPTIONS: LandingPageType[] = [
   'amazon_product',
   'amazon_store',
@@ -360,10 +375,13 @@ const PLATFORM_CARD_ACCENT_CLASS: Record<ProductPlatform, string> = {
   partnerboost: 'text-emerald-600',
 }
 
-const LANDING_PAGE_TYPE_META: Record<LandingPageType, {
-  label: string
-  badgeClassName: string
-}> = {
+const LANDING_PAGE_TYPE_META: Record<
+  LandingPageType,
+  {
+    label: string
+    badgeClassName: string
+  }
+> = {
   amazon_product: {
     label: 'Amazon商品',
     badgeClassName: 'border-amber-300 bg-amber-50 text-amber-700',
@@ -528,9 +546,8 @@ function normalizeLandingPageStats(value: unknown): LandingPageStats {
 function normalizeRecommendationScoreSummary(value: unknown): RecommendationScoreSummary {
   if (!value || typeof value !== 'object') return createEmptyRecommendationScoreSummary()
   const record = value as Record<string, unknown>
-  const lastCalculatedAt = typeof record.lastCalculatedAt === 'string'
-    ? record.lastCalculatedAt
-    : null
+  const lastCalculatedAt =
+    typeof record.lastCalculatedAt === 'string' ? record.lastCalculatedAt : null
 
   return {
     effectiveCount: toSafeCount(record.effectiveCount),
@@ -570,11 +587,12 @@ function resolveDisplayCurrency(product: ProductListItem): string | null {
   return null
 }
 
-
 function normalizeCountries(countries: string[]): string[] {
   const deduped = new Set<string>()
   for (const code of countries || []) {
-    const normalized = String(code || '').trim().toUpperCase()
+    const normalized = String(code || '')
+      .trim()
+      .toUpperCase()
     if (!normalized) continue
     deduped.add(normalized)
   }
@@ -609,7 +627,9 @@ function resolveMidTargetUrl(product: ProductListItem): string | null {
   return url.toString()
 }
 
-function getSyncRunBadgeVariant(status: SyncRunItem['status']): 'default' | 'destructive' | 'outline' {
+function getSyncRunBadgeVariant(
+  status: SyncRunItem['status']
+): 'default' | 'destructive' | 'outline' {
   if (status === 'completed') return 'default'
   if (status === 'failed') return 'destructive'
   return 'outline'
@@ -643,13 +663,16 @@ function getSyncRunMetricsText(run: SyncRunItem): string {
   const failed = Number.isFinite(run.failed_count) ? Math.max(0, run.failed_count) : 0
   const total = Number.isFinite(run.total_items) ? Math.max(0, run.total_items) : 0
 
-  if ((run.status === 'queued' || run.status === 'running') && created === 0 && updated === 0 && failed === 0) {
+  if (
+    (run.status === 'queued' || run.status === 'running') &&
+    created === 0 &&
+    updated === 0 &&
+    failed === 0
+  ) {
     if (total > 0) {
       return `已抓取 ${total} 条 · 正在补全推广链接并写入数据库`
     }
-    return run.status === 'queued'
-      ? '任务排队中...'
-      : '正在抓取商品数据...'
+    return run.status === 'queued' ? '任务排队中...' : '正在抓取商品数据...'
   }
 
   return `新增 ${created} · 更新 ${updated} · 失败 ${failed}`
@@ -725,7 +748,9 @@ function getSyncRunStartedAtText(run: SyncRunItem): string {
   return formatSyncRunDateTime(run.created_at)
 }
 
-function getProductStatusBadgeVariant(status: ProductLifecycleStatus): 'default' | 'secondary' | 'outline' {
+function getProductStatusBadgeVariant(
+  status: ProductLifecycleStatus
+): 'default' | 'secondary' | 'outline' {
   if (status === 'active') return 'default'
   if (status === 'invalid') return 'secondary'
   return 'outline'
@@ -764,16 +789,16 @@ function buildNumericRangeFiltersFromDraft(drafts: NumericRangeFilterDrafts): Nu
 
 function isNumericRangeFiltersEqual(a: NumericRangeFilters, b: NumericRangeFilters): boolean {
   return (
-    a.reviewCountMin === b.reviewCountMin
-    && a.reviewCountMax === b.reviewCountMax
-    && a.priceAmountMin === b.priceAmountMin
-    && a.priceAmountMax === b.priceAmountMax
-    && a.commissionRateMin === b.commissionRateMin
-    && a.commissionRateMax === b.commissionRateMax
-    && a.commissionAmountMin === b.commissionAmountMin
-    && a.commissionAmountMax === b.commissionAmountMax
-    && a.recommendationScoreMin === b.recommendationScoreMin
-    && a.recommendationScoreMax === b.recommendationScoreMax
+    a.reviewCountMin === b.reviewCountMin &&
+    a.reviewCountMax === b.reviewCountMax &&
+    a.priceAmountMin === b.priceAmountMin &&
+    a.priceAmountMax === b.priceAmountMax &&
+    a.commissionRateMin === b.commissionRateMin &&
+    a.commissionRateMax === b.commissionRateMax &&
+    a.commissionAmountMin === b.commissionAmountMin &&
+    a.commissionAmountMax === b.commissionAmountMax &&
+    a.recommendationScoreMin === b.recommendationScoreMin &&
+    a.recommendationScoreMax === b.recommendationScoreMax
   )
 }
 
@@ -793,17 +818,24 @@ export default function ProductsPage() {
   const periodicRefreshInFlightRef = useRef(false)
   const scorePauseInFlightRef = useRef(false)
   const fetchProductsRef = useRef<
-    (options?: { forceNoCache?: boolean; silent?: boolean; suppressErrorToast?: boolean }) => Promise<void>
+    (options?: {
+      forceNoCache?: boolean
+      silent?: boolean
+      suppressErrorToast?: boolean
+    }) => Promise<void>
   >(async () => {})
   const fetchSyncRunsRef = useRef<() => Promise<void>>(async () => {})
   const loadYeahPromosSessionStatusRef = useRef<() => Promise<void>>(async () => {})
   const [items, setItems] = useState<ProductListItem[]>([])
   const [total, setTotal] = useState(0)
-  const [landingPageStats, setLandingPageStats] = useState<LandingPageStats>(() => createEmptyLandingPageStats())
-  const [platformStats, setPlatformStats] = useState<PlatformStatsMap>(() => createEmptyPlatformStatsMap())
-  const [recommendationScoreSummary, setRecommendationScoreSummary] = useState<RecommendationScoreSummary>(
-    () => createEmptyRecommendationScoreSummary()
+  const [landingPageStats, setLandingPageStats] = useState<LandingPageStats>(() =>
+    createEmptyLandingPageStats()
   )
+  const [platformStats, setPlatformStats] = useState<PlatformStatsMap>(() =>
+    createEmptyPlatformStatsMap()
+  )
+  const [recommendationScoreSummary, setRecommendationScoreSummary] =
+    useState<RecommendationScoreSummary>(() => createEmptyRecommendationScoreSummary())
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [searchText, setSearchText] = useState('')
@@ -833,7 +865,9 @@ export default function ProductsPage() {
   } | null>(null)
   const [syncInsightsMounted, setSyncInsightsMounted] = useState(false)
   const [latestRuns, setLatestRuns] = useState<SyncRunItem[]>([])
-  const [ypSyncMonitor, setYpSyncMonitor] = useState<YeahPromosSyncMonitorItem>(() => createEmptyYeahPromosSyncMonitor())
+  const [ypSyncMonitor, setYpSyncMonitor] = useState<YeahPromosSyncMonitorItem>(() =>
+    createEmptyYeahPromosSyncMonitor()
+  )
   const [syncingProductId, setSyncingProductId] = useState<number | null>(null)
   const [creatingOfferId, setCreatingOfferId] = useState<number | null>(null)
   const [offliningProductId, setOffliningProductId] = useState<number | null>(null)
@@ -850,14 +884,17 @@ export default function ProductsPage() {
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false)
   const [clearingAll, setClearingAll] = useState(false)
   const [ypSessionStatusLoading, setYpSessionStatusLoading] = useState(false)
-  const [ypSessionStatus, setYpSessionStatus] = useState<YeahPromosSessionStatus>(() => createEmptyYeahPromosSessionStatus())
+  const [ypSessionStatus, setYpSessionStatus] = useState<YeahPromosSessionStatus>(() =>
+    createEmptyYeahPromosSessionStatus()
+  )
   const [ypCaptureDialogOpen, setYpCaptureDialogOpen] = useState(false)
   const [ypPreparingCapture, setYpPreparingCapture] = useState(false)
   const [ypSessionStatusWhenDialogOpened, setYpSessionStatusWhenDialogOpened] = useState(false)
 
   const [batchRows, setBatchRows] = useState<BatchRow[]>([])
   const [offlineProduct, setOfflineProduct] = useState<ProductListItem | null>(null)
-  const [pendingCreateOfferProduct, setPendingCreateOfferProduct] = useState<ProductListItem | null>(null)
+  const [pendingCreateOfferProduct, setPendingCreateOfferProduct] =
+    useState<ProductListItem | null>(null)
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
@@ -880,15 +917,16 @@ export default function ProductsPage() {
 
   const canBatchCreate = creatableSelectedProducts.length > 0
   const canBatchOffline = selectedProducts.length > 0
-  const hasFilters = searchQuery.length > 0
-    || midQuery.length > 0
-    || platformFilter !== 'all'
-    || statusFilter !== 'all'
-    || targetCountryFilter !== 'all'
-    || landingPageTypeFilter !== 'all'
-    || createdAtFrom.length > 0
-    || createdAtTo.length > 0
-    || Object.values(numericRangeFilters).some((value) => value !== null)
+  const hasFilters =
+    searchQuery.length > 0 ||
+    midQuery.length > 0 ||
+    platformFilter !== 'all' ||
+    statusFilter !== 'all' ||
+    targetCountryFilter !== 'all' ||
+    landingPageTypeFilter !== 'all' ||
+    createdAtFrom.length > 0 ||
+    createdAtTo.length > 0 ||
+    Object.values(numericRangeFilters).some((value) => value !== null)
 
   const numericRangeFilterCards: Array<{
     label: string
@@ -940,8 +978,9 @@ export default function ProductsPage() {
     { key: '30d', label: '过去30天（含当天）', days: 30 },
     { key: '90d', label: '过去90天（含当天）', days: 90 },
   ]
-  const isCreatedDateCustomActive = Boolean(createdAtFrom || createdAtTo)
-    && !createdDateQuickFilters.some((filter) => {
+  const isCreatedDateCustomActive =
+    Boolean(createdAtFrom || createdAtTo) &&
+    !createdDateQuickFilters.some((filter) => {
       const range = resolveRecentDateRange(filter.days)
       return createdAtFrom === range.from && createdAtTo === range.to
     })
@@ -1008,11 +1047,13 @@ export default function ProductsPage() {
     return () => window.clearTimeout(timer)
   }, [numericRangeDrafts, numericRangeFilters])
 
-  const fetchProducts = async (options: {
-    forceNoCache?: boolean
-    silent?: boolean
-    suppressErrorToast?: boolean
-  } = {}) => {
+  const fetchProducts = async (
+    options: {
+      forceNoCache?: boolean
+      silent?: boolean
+      suppressErrorToast?: boolean
+    } = {}
+  ) => {
     const { forceNoCache = false, silent = false, suppressErrorToast = false } = options
     // 后台静默刷新不应打断前台显式加载（筛选/排序/分页），否则会导致 loading 无法收敛。
     if (silent && foregroundProductsRequestSeqRef.current !== null) {
@@ -1036,7 +1077,8 @@ export default function ProductsPage() {
       if (platformFilter !== 'all') filterParams.set('platform', platformFilter)
       if (statusFilter !== 'all') filterParams.set('status', statusFilter)
       if (targetCountryFilter !== 'all') filterParams.set('targetCountry', targetCountryFilter)
-      if (landingPageTypeFilter !== 'all') filterParams.set('landingPageType', landingPageTypeFilter)
+      if (landingPageTypeFilter !== 'all')
+        filterParams.set('landingPageType', landingPageTypeFilter)
       if (createdAtFrom) filterParams.set('createdAtFrom', createdAtFrom)
       if (createdAtTo) filterParams.set('createdAtTo', createdAtTo)
 
@@ -1067,9 +1109,8 @@ export default function ProductsPage() {
       const summaryRequestKey = filterParams.toString()
       const summaryParams = new URLSearchParams(filterParams)
       if (forceNoCache) summaryParams.set('noCache', 'true')
-      const shouldRefreshSummary = !silent && (
-        forceNoCache || loadedSummaryKeyRef.current !== summaryRequestKey
-      )
+      const shouldRefreshSummary =
+        !silent && (forceNoCache || loadedSummaryKeyRef.current !== summaryRequestKey)
 
       if (shouldRefreshSummary) {
         summaryAbortControllerRef.current?.abort()
@@ -1088,7 +1129,7 @@ export default function ProductsPage() {
         return
       }
 
-      const data = await response.json() as ProductListResponse
+      const data = (await response.json()) as ProductListResponse
       if (!response.ok || !data.success) {
         throw new Error((data as any)?.error || '加载商品列表失败')
       }
@@ -1100,12 +1141,11 @@ export default function ProductsPage() {
       const nextTotal = Number(data.total || 0)
       const nextLandingPageStats = normalizeLandingPageStats(data.landingPageStats)
       const nextPlatformStats = normalizePlatformStatsMap(data.platformStats)
-      const shouldBackfillLandingSummary = (
-        nextTotal > 0
-        && nextLandingPageStats.productCount === 0
-        && nextLandingPageStats.storeCount === 0
-        && nextLandingPageStats.unknownCount >= nextTotal
-      )
+      const shouldBackfillLandingSummary =
+        nextTotal > 0 &&
+        nextLandingPageStats.productCount === 0 &&
+        nextLandingPageStats.storeCount === 0 &&
+        nextLandingPageStats.unknownCount >= nextTotal
 
       setItems(data.items || [])
       setTotal(nextTotal)
@@ -1131,18 +1171,21 @@ export default function ProductsPage() {
         summaryRequestKeyRef.current = summaryRequestKey
         void (async () => {
           try {
-            const summaryResponse = await fetch(`/api/products/summary?${summaryParams.toString()}`, {
-              credentials: 'include',
-              cache: 'no-store',
-              signal: summaryController.signal,
-            })
+            const summaryResponse = await fetch(
+              `/api/products/summary?${summaryParams.toString()}`,
+              {
+                credentials: 'include',
+                cache: 'no-store',
+                signal: summaryController.signal,
+              }
+            )
 
             if (summaryResponse.status === 401) {
               router.push('/login')
               return
             }
 
-            const summaryData = await summaryResponse.json() as ProductSummaryResponse
+            const summaryData = (await summaryResponse.json()) as ProductSummaryResponse
             if (!summaryResponse.ok || !summaryData.success) return
             if (summaryRequestKeyRef.current !== summaryRequestKey) return
 
@@ -1150,7 +1193,9 @@ export default function ProductsPage() {
             if (typeof summaryData.total === 'number' && Number.isFinite(summaryData.total)) {
               setTotal(Math.max(0, Number(summaryData.total)))
             }
-            setRecommendationScoreSummary(normalizeRecommendationScoreSummary(summaryData.recommendationScoreSummary))
+            setRecommendationScoreSummary(
+              normalizeRecommendationScoreSummary(summaryData.recommendationScoreSummary)
+            )
             setLandingPageStats(normalizeLandingPageStats(summaryData.landingPageStats))
             setPlatformStats(normalizePlatformStatsMap(summaryData.platformStats))
           } catch (summaryError: any) {
@@ -1191,7 +1236,7 @@ export default function ProductsPage() {
         cache: 'no-store',
       })
       if (!response.ok) return
-      const data = await response.json() as {
+      const data = (await response.json()) as {
         success?: boolean
         runs?: SyncRunItem[]
         ypMonitor?: YeahPromosSyncMonitorItem
@@ -1217,7 +1262,7 @@ export default function ProductsPage() {
       })
       if (!response.ok) return
 
-      const data = await response.json().catch(() => ({})) as {
+      const data = (await response.json().catch(() => ({}))) as {
         success?: boolean
         paused?: boolean
       }
@@ -1243,7 +1288,7 @@ export default function ProductsPage() {
         router.push('/login')
         return
       }
-      const data = await response.json().catch(() => ({})) as YeahPromosSessionStatusResponse
+      const data = (await response.json().catch(() => ({}))) as YeahPromosSessionStatusResponse
       if (!response.ok || !data.success || !data.session) {
         throw new Error(data.error || '加载YP登录态失败')
       }
@@ -1279,9 +1324,12 @@ export default function ProductsPage() {
     }
 
     if (typeof idleWindow.requestIdleCallback === 'function') {
-      auxiliaryBootstrapIdleRef.current = idleWindow.requestIdleCallback(() => {
-        runBootstrap()
-      }, { timeout: 1200 })
+      auxiliaryBootstrapIdleRef.current = idleWindow.requestIdleCallback(
+        () => {
+          runBootstrap()
+        },
+        { timeout: 1200 }
+      )
       return
     }
 
@@ -1317,11 +1365,13 @@ export default function ProductsPage() {
         return
       }
 
-      const data = await response.json().catch(() => ({})) as Partial<YeahPromosCapturePrepareResponse>
+      const data = (await response
+        .json()
+        .catch(() => ({}))) as Partial<YeahPromosCapturePrepareResponse>
       console.log('[YP采集] API返回数据:', {
         success: data.success,
         hasBookmarklet: !!data.bookmarklet,
-        hasLoginUrl: !!data.loginUrl
+        hasLoginUrl: !!data.loginUrl,
       })
 
       if (!response.ok || !data.success || !data.bookmarklet || !data.loginUrl) {
@@ -1329,7 +1379,7 @@ export default function ProductsPage() {
           responseOk: response.ok,
           dataSuccess: data.success,
           hasBookmarklet: !!data.bookmarklet,
-          hasLoginUrl: !!data.loginUrl
+          hasLoginUrl: !!data.loginUrl,
         })
         newWindow?.close()
         throw new Error(data.error || '生成YP登录态采集脚本失败')
@@ -1357,7 +1407,10 @@ export default function ProductsPage() {
         safeOpenExternal(data.loginUrl)
       }
 
-      showSuccess('请完成登录', '已打开YP登录页。登录后请优先使用浏览器扩展回传登录态；书签脚本可在弹窗中按备用流程执行。')
+      showSuccess(
+        '请完成登录',
+        '已打开YP登录页。登录后请优先使用浏览器扩展回传登录态；书签脚本可在弹窗中按备用流程执行。'
+      )
       console.log('[YP采集] 流程完成')
     } catch (error: any) {
       console.error('[YP采集] 错误:', error)
@@ -1391,7 +1444,21 @@ export default function ProductsPage() {
 
   useEffect(() => {
     void fetchProductsRef.current()
-  }, [page, pageSize, searchQuery, midQuery, platformFilter, statusFilter, targetCountryFilter, landingPageTypeFilter, numericRangeFilters, createdAtFrom, createdAtTo, sortBy, sortOrder])
+  }, [
+    page,
+    pageSize,
+    searchQuery,
+    midQuery,
+    platformFilter,
+    statusFilter,
+    targetCountryFilter,
+    landingPageTypeFilter,
+    numericRangeFilters,
+    createdAtFrom,
+    createdAtTo,
+    sortBy,
+    sortOrder,
+  ])
 
   useEffect(() => {
     if (!hasActiveSyncRuns) return
@@ -1402,7 +1469,9 @@ export default function ProductsPage() {
       const tasks: Array<Promise<void>> = [fetchSyncRunsRef.current()]
       // 用户正在筛选时固定结果集，避免被后台同步过程中的数据波动干扰。
       if (!hasFilters) {
-        tasks.push(fetchProductsRef.current({ forceNoCache: true, silent: true, suppressErrorToast: true }))
+        tasks.push(
+          fetchProductsRef.current({ forceNoCache: true, silent: true, suppressErrorToast: true })
+        )
       }
       Promise.all(tasks).finally(() => {
         periodicRefreshInFlightRef.current = false
@@ -1533,10 +1602,10 @@ export default function ProductsPage() {
     options?: PlatformSyncOptions
   ) => {
     if (syncingPlatform) return
-    const resolvedStrategy: PlatformSyncStrategy = strategy || getDefaultPlatformSyncStrategy(platform)
-    const resumeFailedRun = resolvedStrategy === 'full'
-      ? Boolean(options?.resumeFailedRun)
-      : undefined
+    const resolvedStrategy: PlatformSyncStrategy =
+      strategy || getDefaultPlatformSyncStrategy(platform)
+    const resumeFailedRun =
+      resolvedStrategy === 'full' ? Boolean(options?.resumeFailedRun) : undefined
     setSyncingPlatform({ platform, strategy: resolvedStrategy, resumeFailedRun })
     try {
       const requestBody: Record<string, unknown> = {
@@ -1701,9 +1770,7 @@ export default function ProductsPage() {
 
       showSuccess(
         paused ? '已暂停计算' : '已恢复计算',
-        paused
-          ? '后续推荐指数任务将停止调度与续跑'
-          : '可以继续提交推荐指数计算任务'
+        paused ? '后续推荐指数任务将停止调度与续跑' : '可以继续提交推荐指数计算任务'
       )
     } catch (error: any) {
       showError('操作失败', error?.message || '更新暂停状态失败')
@@ -1712,7 +1779,10 @@ export default function ProductsPage() {
     }
   }
 
-  const handleCreateOffer = async (product: ProductListItem, targetCountry?: string): Promise<boolean> => {
+  const handleCreateOffer = async (
+    product: ProductListItem,
+    targetCountry?: string
+  ): Promise<boolean> => {
     setCreatingOfferId(product.id)
     try {
       const response = await fetch(`/api/products/${product.id}/create-offer`, {
@@ -1829,7 +1899,10 @@ export default function ProductsPage() {
 
       const failedIds = new Set<number>(
         Array.isArray(data?.results)
-          ? data.results.filter((item: any) => !item?.success).map((item: any) => Number(item?.productId)).filter((id: number) => Number.isFinite(id) && id > 0)
+          ? data.results
+              .filter((item: any) => !item?.success)
+              .map((item: any) => Number(item?.productId))
+              .filter((id: number) => Number.isFinite(id) && id > 0)
           : []
       )
 
@@ -1855,9 +1928,10 @@ export default function ProductsPage() {
         targetCountry: defaultCountryFromProduct(product),
         availableCountries: normalizeCountries(product.allowedCountries),
         productPrice: formatCurrency(product.priceAmount, product.priceCurrency || displayCurrency),
-        commissionRate: product.commissionRateMode === 'amount'
-          ? formatCurrency(product.commissionRate, displayCurrency)
-          : formatPercent(product.commissionRate),
+        commissionRate:
+          product.commissionRateMode === 'amount'
+            ? formatCurrency(product.commissionRate, displayCurrency)
+            : formatPercent(product.commissionRate),
       }
     })
     setBatchRows(rows)
@@ -1902,10 +1976,12 @@ export default function ProductsPage() {
   }
 
   const updateBatchRowCountry = (productId: number, country: string) => {
-    setBatchRows((prev) => prev.map((row) => {
-      if (row.productId !== productId) return row
-      return { ...row, targetCountry: country }
-    }))
+    setBatchRows((prev) =>
+      prev.map((row) => {
+        if (row.productId !== productId) return row
+        return { ...row, targetCountry: country }
+      })
+    )
   }
 
   const submitBatchCreate = async () => {
@@ -1965,16 +2041,34 @@ export default function ProductsPage() {
               />
             </TableHead>
             <TableHead className="w-[68px] whitespace-nowrap">序号</TableHead>
-            <SortableTableHead field="serial" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[150px] whitespace-nowrap">
+            <SortableTableHead
+              field="serial"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[150px] whitespace-nowrap"
+            >
               主键ID（非连续）
             </SortableTableHead>
-            <SortableTableHead field="platform" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[96px] whitespace-nowrap">
+            <SortableTableHead
+              field="platform"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[96px] whitespace-nowrap"
+            >
               联盟平台
             </SortableTableHead>
             <TableHead className="w-[108px] whitespace-nowrap">状态</TableHead>
             <TableHead className="w-[140px] whitespace-nowrap">MID</TableHead>
             <TableHead className="w-[136px] whitespace-nowrap">品牌名</TableHead>
-            <SortableTableHead field="asin" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[122px] whitespace-nowrap">
+            <SortableTableHead
+              field="asin"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[122px] whitespace-nowrap"
+            >
               <span className="inline-flex items-center gap-1">
                 ASIN
                 <TooltipProvider>
@@ -1997,31 +2091,85 @@ export default function ProductsPage() {
               </span>
             </SortableTableHead>
             <TableHead className="w-[146px] whitespace-nowrap">落地页类型</TableHead>
-            <SortableTableHead field="reviewCount" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[114px] whitespace-nowrap">
+            <SortableTableHead
+              field="reviewCount"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[114px] whitespace-nowrap"
+            >
               商品评论数
             </SortableTableHead>
-            <SortableTableHead field="recommendationScore" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[120px] whitespace-nowrap">
+            <SortableTableHead
+              field="recommendationScore"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[120px] whitespace-nowrap"
+            >
               推荐指数
             </SortableTableHead>
-            <SortableTableHead field="allowedCountries" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[128px] whitespace-nowrap">
+            <SortableTableHead
+              field="allowedCountries"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[128px] whitespace-nowrap"
+            >
               允许投放国家
             </SortableTableHead>
-            <SortableTableHead field="priceAmount" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[108px] whitespace-nowrap">
+            <SortableTableHead
+              field="priceAmount"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[108px] whitespace-nowrap"
+            >
               商品价格
             </SortableTableHead>
-            <SortableTableHead field="commissionRate" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[104px] whitespace-nowrap">
+            <SortableTableHead
+              field="commissionRate"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[104px] whitespace-nowrap"
+            >
               佣金比例
             </SortableTableHead>
-            <SortableTableHead field="commissionAmount" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[108px] whitespace-nowrap">
+            <SortableTableHead
+              field="commissionAmount"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[108px] whitespace-nowrap"
+            >
               佣金金额
             </SortableTableHead>
-            <SortableTableHead field="promoLink" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[102px] whitespace-nowrap">
+            <SortableTableHead
+              field="promoLink"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[102px] whitespace-nowrap"
+            >
               推广链接
             </SortableTableHead>
-            <SortableTableHead field="relatedOfferCount" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[172px] whitespace-nowrap">
+            <SortableTableHead
+              field="relatedOfferCount"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[172px] whitespace-nowrap"
+            >
               Offer数量（投放中/历史）
             </SortableTableHead>
-            <SortableTableHead field="createdAt" currentSortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} className="w-[118px] whitespace-nowrap">
+            <SortableTableHead
+              field="createdAt"
+              currentSortBy={sortBy}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              className="w-[118px] whitespace-nowrap"
+            >
               添加日期
             </SortableTableHead>
             <TableHead className="w-[118px] whitespace-nowrap">操作</TableHead>
@@ -2034,22 +2182,31 @@ export default function ProductsPage() {
             const midTargetUrl = resolveMidTargetUrl(item)
             const merchantIdText = item.merchantId || '-'
             const asinText = item.asin || '-'
-            const landingPageTypeMeta = LANDING_PAGE_TYPE_META[item.landingPageType] || LANDING_PAGE_TYPE_META.unknown
+            const landingPageTypeMeta =
+              LANDING_PAGE_TYPE_META[item.landingPageType] || LANDING_PAGE_TYPE_META.unknown
             const brandText = item.brand || '-'
-            const allowedCountriesText = item.allowedCountries.length > 0 ? item.allowedCountries.join(', ') : '-'
+            const allowedCountriesText =
+              item.allowedCountries.length > 0 ? item.allowedCountries.join(', ') : '-'
             const displayCurrency = resolveDisplayCurrency(item)
-            const priceText = formatCurrency(item.priceAmount, item.priceCurrency || displayCurrency)
+            const priceText = formatCurrency(
+              item.priceAmount,
+              item.priceCurrency || displayCurrency
+            )
             const commissionAmountText = formatCurrency(item.commissionAmount, displayCurrency)
-            const commissionRateText = item.commissionRateMode === 'amount'
-              ? formatCurrency(item.commissionRate, displayCurrency)
-              : formatPercent(item.commissionRate)
+            const commissionRateText =
+              item.commissionRateMode === 'amount'
+                ? formatCurrency(item.commissionRate, displayCurrency)
+                : formatPercent(item.commissionRate)
             const reviewCountText = formatReviewCount(item.reviewCount)
             const relatedOfferCountText = `${Math.max(0, Number(item.activeOfferCount || 0))}/${Math.max(0, Number(item.historicalOfferCount || 0))}`
             const createdAtDateText = formatProductAddedDate(item.createdAt)
             const createdAtDateTimeText = formatSyncRunDateTime(item.createdAt)
 
             return (
-              <TableRow key={item.id} className={`hover:bg-gray-50/50 ${item.isBlacklisted ? 'bg-gray-100' : ''}`}>
+              <TableRow
+                key={item.id}
+                className={`hover:bg-gray-50/50 ${item.isBlacklisted ? 'bg-gray-100' : ''}`}
+              >
                 <TableCell>
                   <Checkbox
                     checked={selected}
@@ -2058,12 +2215,18 @@ export default function ProductsPage() {
                   />
                 </TableCell>
                 <TableCell className="font-medium">
-                  <div className={`max-w-[54px] truncate ${item.isBlacklisted ? 'opacity-50' : ''}`} title={String(item.serial)}>
+                  <div
+                    className={`max-w-[54px] truncate ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={String(item.serial)}
+                  >
                     {item.serial}
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">
-                  <div className={`max-w-[138px] truncate ${item.isBlacklisted ? 'opacity-50' : ''}`} title={String(item.id)}>
+                  <div
+                    className={`max-w-[138px] truncate ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={String(item.id)}
+                  >
                     {item.id}
                   </div>
                 </TableCell>
@@ -2099,19 +2262,30 @@ export default function ProductsPage() {
                         <ExternalLink className="h-3.5 w-3.5" />
                       </button>
                     ) : (
-                      <div className="max-w-[132px] truncate whitespace-nowrap" title={merchantIdText}>
+                      <div
+                        className="max-w-[132px] truncate whitespace-nowrap"
+                        title={merchantIdText}
+                      >
                         {merchantIdText}
                       </div>
                     )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[130px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={brandText}>
+                  <div
+                    className={`max-w-[130px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={brandText}
+                  >
                     {brandText}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[108px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={asinText}>{asinText}</div>
+                  <div
+                    className={`max-w-[108px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={asinText}
+                  >
+                    {asinText}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className={item.isBlacklisted ? 'opacity-50' : ''}>
@@ -2126,17 +2300,24 @@ export default function ProductsPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[84px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={reviewCountText}>
+                  <div
+                    className={`max-w-[84px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={reviewCountText}
+                  >
                     {reviewCountText}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`flex items-center gap-2 ${item.isBlacklisted ? 'opacity-50' : ''}`}>
+                  <div
+                    className={`flex items-center gap-2 ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                  >
                     {item.recommendationScore ? (
                       <>
                         <div className="flex items-center gap-1">
                           <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">{item.recommendationScore.toFixed(1)}</span>
+                          <span className="text-sm font-medium">
+                            {item.recommendationScore.toFixed(1)}
+                          </span>
                         </div>
                         {item.recommendationReasons && item.recommendationReasons.length > 0 && (
                           <TooltipProvider>
@@ -2161,21 +2342,42 @@ export default function ProductsPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[116px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={allowedCountriesText}>
+                  <div
+                    className={`max-w-[116px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={allowedCountriesText}
+                  >
                     {allowedCountriesText}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[100px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={priceText}>{priceText}</div>
+                  <div
+                    className={`max-w-[100px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={priceText}
+                  >
+                    {priceText}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[96px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={commissionRateText}>{commissionRateText}</div>
+                  <div
+                    className={`max-w-[96px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={commissionRateText}
+                  >
+                    {commissionRateText}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[100px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={commissionAmountText}>{commissionAmountText}</div>
+                  <div
+                    className={`max-w-[100px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={commissionAmountText}
+                  >
+                    {commissionAmountText}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[98px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={promoLink || '-'}>
+                  <div
+                    className={`max-w-[98px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={promoLink || '-'}
+                  >
                     {promoLink ? (
                       <button
                         className="inline-flex max-w-[92px] items-center gap-1 truncate text-blue-600 hover:underline"
@@ -2191,12 +2393,18 @@ export default function ProductsPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[120px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={relatedOfferCountText}>
+                  <div
+                    className={`max-w-[120px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={relatedOfferCountText}
+                  >
                     {relatedOfferCountText}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className={`max-w-[108px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`} title={createdAtDateTimeText}>
+                  <div
+                    className={`max-w-[108px] truncate whitespace-nowrap ${item.isBlacklisted ? 'opacity-50' : ''}`}
+                    title={createdAtDateTimeText}
+                  >
                     {createdAtDateText}
                   </div>
                 </TableCell>
@@ -2209,7 +2417,11 @@ export default function ProductsPage() {
                       disabled={creatingOfferId !== null || !item.promoLink || item.isBlacklisted}
                       title={item.isBlacklisted ? '商品已下线，无法创建Offer' : '创建Offer'}
                     >
-                      {creatingOfferId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      {creatingOfferId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       size="icon"
@@ -2218,7 +2430,11 @@ export default function ProductsPage() {
                       disabled={syncingProductId !== null}
                       title="同步数据"
                     >
-                      {syncingProductId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      {syncingProductId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       size="icon"
@@ -2226,9 +2442,17 @@ export default function ProductsPage() {
                       onClick={() => openSingleOfflineDialog(item)}
                       disabled={offliningProductId !== null || item.isBlacklisted}
                       title={item.isBlacklisted ? '商品已手动下线' : '手动下线商品'}
-                      className={item.isBlacklisted ? 'text-muted-foreground' : 'text-red-600 hover:text-red-600'}
+                      className={
+                        item.isBlacklisted
+                          ? 'text-muted-foreground'
+                          : 'text-red-600 hover:text-red-600'
+                      }
                     >
-                      {offliningProductId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <PowerOff className="h-4 w-4" />}
+                      {offliningProductId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <PowerOff className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </TableCell>
@@ -2240,14 +2464,16 @@ export default function ProductsPage() {
     </div>
   )
 
-  const hasSyncInsightsData = latestRuns.length > 0 || ypSyncMonitor.runId !== null || ypSyncMonitor.targetItems !== null
-  const shouldRenderProductsDialogsLayer = ypCaptureDialogOpen
-    || createOfferDialogOpen
-    || singleOfflineDialogOpen
-    || batchOfflineDialogOpen
-    || batchDialogOpen
-    || calculateScoresConfirmOpen
-    || clearAllConfirmOpen
+  const hasSyncInsightsData =
+    latestRuns.length > 0 || ypSyncMonitor.runId !== null || ypSyncMonitor.targetItems !== null
+  const shouldRenderProductsDialogsLayer =
+    ypCaptureDialogOpen ||
+    createOfferDialogOpen ||
+    singleOfflineDialogOpen ||
+    batchOfflineDialogOpen ||
+    batchDialogOpen ||
+    calculateScoresConfirmOpen ||
+    clearAllConfirmOpen
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -2276,9 +2502,11 @@ export default function ProductsPage() {
                     ? '检测中'
                     : ypSessionStatus.hasSession
                       ? '已就绪'
-                      : (ypSessionStatus.isExpired ? '已过期' : '未采集')}
+                      : ypSessionStatus.isExpired
+                        ? '已过期'
+                        : '未采集'}
                 </Badge>
-                {(!ypSessionStatusLoading && ypSessionStatus.hasSession) && (
+                {!ypSessionStatusLoading && ypSessionStatus.hasSession && (
                   <div className="pl-1 text-[11px] leading-none text-muted-foreground">
                     过期时间：{formatMonthDayTime(ypSessionStatus.expiresAt)}
                   </div>
@@ -2291,28 +2519,37 @@ export default function ProductsPage() {
                 disabled={ypPreparingCapture}
                 title="打开YP登录页并生成书签脚本，登录后点击书签自动回传登录态"
               >
-                {ypPreparingCapture ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ExternalLink className="mr-2 h-4 w-4" />}
+                {ypPreparingCapture ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                )}
                 采集YP登录态
               </Button>
 
               {(['yeahpromos', 'partnerboost'] as const).map((platform) => {
                 const defaultStrategy = getDefaultPlatformSyncStrategy(platform)
                 const defaultStrategyLabel = getPlatformSyncStrategyLabel(defaultStrategy)
-                const alternateStrategy: PlatformSyncStrategy = defaultStrategy === 'light' ? 'full' : 'light'
+                const alternateStrategy: PlatformSyncStrategy =
+                  defaultStrategy === 'light' ? 'full' : 'light'
                 const alternateStrategyLabel = getPlatformSyncStrategyLabel(alternateStrategy)
                 const isPlatformSyncing = syncingPlatform?.platform === platform
-                const isFullFromScratchSyncing = isPlatformSyncing
-                  && syncingPlatform?.strategy === 'full'
-                  && syncingPlatform?.resumeFailedRun !== true
-                const isFullResumeSyncing = isPlatformSyncing
-                  && syncingPlatform?.strategy === 'full'
-                  && syncingPlatform?.resumeFailedRun === true
-                const isPrimarySyncing = defaultStrategy === 'full'
-                  ? isFullFromScratchSyncing
-                  : (isPlatformSyncing && syncingPlatform?.strategy === defaultStrategy)
-                const isAlternateSyncing = alternateStrategy === 'full'
-                  ? isFullFromScratchSyncing
-                  : (isPlatformSyncing && syncingPlatform?.strategy === alternateStrategy)
+                const isFullFromScratchSyncing =
+                  isPlatformSyncing &&
+                  syncingPlatform?.strategy === 'full' &&
+                  syncingPlatform?.resumeFailedRun !== true
+                const isFullResumeSyncing =
+                  isPlatformSyncing &&
+                  syncingPlatform?.strategy === 'full' &&
+                  syncingPlatform?.resumeFailedRun === true
+                const isPrimarySyncing =
+                  defaultStrategy === 'full'
+                    ? isFullFromScratchSyncing
+                    : isPlatformSyncing && syncingPlatform?.strategy === defaultStrategy
+                const isAlternateSyncing =
+                  alternateStrategy === 'full'
+                    ? isFullFromScratchSyncing
+                    : isPlatformSyncing && syncingPlatform?.strategy === alternateStrategy
                 const isDropdownSyncing = isAlternateSyncing || isFullResumeSyncing
                 const isBlockedBySession = platform === 'yeahpromos' && !ypSessionStatus.hasSession
                 const triggerDefaultSync = () => {
@@ -2321,9 +2558,8 @@ export default function ProductsPage() {
                   }
                   return handlePlatformSync(platform, defaultStrategy)
                 }
-                const defaultButtonLabel = defaultStrategy === 'full'
-                  ? '全量补齐（从头）'
-                  : defaultStrategyLabel
+                const defaultButtonLabel =
+                  defaultStrategy === 'full' ? '全量补齐（从头）' : defaultStrategyLabel
                 return (
                   <div key={platform} className="inline-flex">
                     <Button
@@ -2333,7 +2569,11 @@ export default function ProductsPage() {
                       className="rounded-r-none border-r-0 bg-white"
                       title={isBlockedBySession ? '请先完成YP登录态采集' : undefined}
                     >
-                      {isPrimarySyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                      {isPrimarySyncing ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                      )}
                       {PLATFORM_SHORT_LABEL[platform]} {defaultButtonLabel}
                     </Button>
                     <DropdownMenu>
@@ -2346,31 +2586,61 @@ export default function ProductsPage() {
                           aria-label={`选择${PLATFORM_SHORT_LABEL[platform]}同步模式`}
                           title={isBlockedBySession ? '请先完成YP登录态采集' : undefined}
                         >
-                          {isDropdownSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+                          {isDropdownSyncing ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
                         {defaultStrategy === 'full' ? (
                           <>
-                            <DropdownMenuItem onClick={() => handlePlatformSync(platform, 'full', { resumeFailedRun: false })} disabled={syncingPlatform !== null}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handlePlatformSync(platform, 'full', { resumeFailedRun: false })
+                              }
+                              disabled={syncingPlatform !== null}
+                            >
                               全量补齐（从头，默认）
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePlatformSync(platform, 'full', { resumeFailedRun: true })} disabled={syncingPlatform !== null}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handlePlatformSync(platform, 'full', { resumeFailedRun: true })
+                              }
+                              disabled={syncingPlatform !== null}
+                            >
                               全量补齐（续传失败任务）
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePlatformSync(platform, alternateStrategy)} disabled={syncingPlatform !== null}>
+                            <DropdownMenuItem
+                              onClick={() => handlePlatformSync(platform, alternateStrategy)}
+                              disabled={syncingPlatform !== null}
+                            >
                               {alternateStrategyLabel}
                             </DropdownMenuItem>
                           </>
                         ) : (
                           <>
-                            <DropdownMenuItem onClick={() => handlePlatformSync(platform, defaultStrategy)} disabled={syncingPlatform !== null}>
+                            <DropdownMenuItem
+                              onClick={() => handlePlatformSync(platform, defaultStrategy)}
+                              disabled={syncingPlatform !== null}
+                            >
                               {defaultStrategyLabel}（默认）
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePlatformSync(platform, 'full', { resumeFailedRun: false })} disabled={syncingPlatform !== null}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handlePlatformSync(platform, 'full', { resumeFailedRun: false })
+                              }
+                              disabled={syncingPlatform !== null}
+                            >
                               全量补齐（从头）
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handlePlatformSync(platform, 'full', { resumeFailedRun: true })} disabled={syncingPlatform !== null}>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handlePlatformSync(platform, 'full', { resumeFailedRun: true })
+                              }
+                              disabled={syncingPlatform !== null}
+                            >
                               全量补齐（续传失败任务）
                             </DropdownMenuItem>
                           </>
@@ -2431,7 +2701,9 @@ export default function ProductsPage() {
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
                 商品 {landingPageStats.productCount} · 店铺 {landingPageStats.storeCount}
-                {landingPageStats.unknownCount > 0 ? ` · 其他 ${landingPageStats.unknownCount}` : ''}
+                {landingPageStats.unknownCount > 0
+                  ? ` · 其他 ${landingPageStats.unknownCount}`
+                  : ''}
               </div>
             </CardContent>
           </Card>
@@ -2445,8 +2717,12 @@ export default function ProductsPage() {
                     <Building2 className={`h-4 w-4 ${PLATFORM_CARD_ACCENT_CLASS[platform]}`} />
                     <span className="text-xl font-semibold">{statsItem.visibleCount}</span>
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">商品 {statsItem.productCount} · 店铺 {statsItem.storeCount}</div>
-                  <div className="text-[11px] text-muted-foreground">平台总条目 {statsItem.total}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    商品 {statsItem.productCount} · 店铺 {statsItem.storeCount}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    平台总条目 {statsItem.total}
+                  </div>
                 </CardContent>
               </Card>
             )
@@ -2456,7 +2732,9 @@ export default function ProductsPage() {
               <div className="text-xs text-muted-foreground">推荐指数</div>
               <div className="mt-1 flex items-center gap-2">
                 <Star className="h-4 w-4 text-amber-500" />
-                <span className="text-xl font-semibold">{recommendationScoreSummary.effectiveCount}</span>
+                <span className="text-xl font-semibold">
+                  {recommendationScoreSummary.effectiveCount}
+                </span>
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
                 占总商品 {recommendationScoreCoveragePercent.toFixed(1)}%
@@ -2488,7 +2766,10 @@ export default function ProductsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">商品列表</CardTitle>
             <CardDescription className="flex flex-wrap items-center gap-2">
-              <span>共 {total} 个商品，支持排序、单商品同步、推荐指数计算、创建 Offer、手动下线商品和批量操作</span>
+              <span>
+                共 {total} 个商品，支持排序、单商品同步、推荐指数计算、创建
+                Offer、手动下线商品和批量操作
+              </span>
               {hasActiveSyncRuns && (
                 <span className="inline-flex items-center text-xs text-muted-foreground">
                   <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
@@ -2500,7 +2781,10 @@ export default function ProductsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/25 px-3 py-2 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>同一 ASIN 可能对应多个推广条目（不同链接/佣金/策略），列表按推广条目展示。同步未命中不会自动计入失效或执行手动下线。</span>
+              <span>
+                同一 ASIN
+                可能对应多个推广条目（不同链接/佣金/策略），列表按推广条目展示。同步未命中不会自动计入失效或执行手动下线。
+              </span>
             </div>
             <div className="space-y-3">
               <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_146px_128px_128px_122px_152px] lg:items-center">
@@ -2519,10 +2803,13 @@ export default function ProductsPage() {
                   placeholder="MID筛选（商家ID）"
                   className="w-full lg:w-[146px]"
                 />
-                <Select value={platformFilter} onValueChange={(value) => {
-                  setPlatformFilter(value as typeof platformFilter)
-                  setPage(1)
-                }}>
+                <Select
+                  value={platformFilter}
+                  onValueChange={(value) => {
+                    setPlatformFilter(value as typeof platformFilter)
+                    setPage(1)
+                  }}
+                >
                   <SelectTrigger className="w-full lg:w-[128px]">
                     <SelectValue placeholder="联盟平台" />
                   </SelectTrigger>
@@ -2532,10 +2819,13 @@ export default function ProductsPage() {
                     <SelectItem value="partnerboost">PartnerBoost</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={statusFilter} onValueChange={(value) => {
-                  setStatusFilter(value as ProductStatusFilter)
-                  setPage(1)
-                }}>
+                <Select
+                  value={statusFilter}
+                  onValueChange={(value) => {
+                    setStatusFilter(value as ProductStatusFilter)
+                    setPage(1)
+                  }}
+                >
                   <SelectTrigger className="w-full lg:w-[128px]">
                     <SelectValue placeholder="状态" />
                   </SelectTrigger>
@@ -2547,10 +2837,13 @@ export default function ProductsPage() {
                     <SelectItem value="unknown">状态未知</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={targetCountryFilter} onValueChange={(value) => {
-                  setTargetCountryFilter(value)
-                  setPage(1)
-                }}>
+                <Select
+                  value={targetCountryFilter}
+                  onValueChange={(value) => {
+                    setTargetCountryFilter(value)
+                    setPage(1)
+                  }}
+                >
                   <SelectTrigger className="w-full lg:w-[122px]">
                     <SelectValue placeholder="投放国家" />
                   </SelectTrigger>
@@ -2563,10 +2856,13 @@ export default function ProductsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={landingPageTypeFilter} onValueChange={(value) => {
-                  setLandingPageTypeFilter(value as LandingPageTypeFilter)
-                  setPage(1)
-                }}>
+                <Select
+                  value={landingPageTypeFilter}
+                  onValueChange={(value) => {
+                    setLandingPageTypeFilter(value as LandingPageTypeFilter)
+                    setPage(1)
+                  }}
+                >
                   <SelectTrigger className="w-full lg:w-[152px]">
                     <SelectValue placeholder="落地页类型" />
                   </SelectTrigger>
@@ -2588,10 +2884,18 @@ export default function ProductsPage() {
                 <Button
                   variant="outline"
                   onClick={() => setCalculateScoresConfirmOpen(true)}
-                  disabled={calculatingScores || scorePauseUpdating || (scoreCalculationPaused && selectedProducts.length === 0)}
-                  title={scoreCalculationPaused
-                    ? (selectedProducts.length > 0 ? '全局暂停中：支持对选中商品手动重算' : '全局暂停中：请先勾选要重算的商品')
-                    : undefined}
+                  disabled={
+                    calculatingScores ||
+                    scorePauseUpdating ||
+                    (scoreCalculationPaused && selectedProducts.length === 0)
+                  }
+                  title={
+                    scoreCalculationPaused
+                      ? selectedProducts.length > 0
+                        ? '全局暂停中：支持对选中商品手动重算'
+                        : '全局暂停中：请先勾选要重算的商品'
+                      : undefined
+                  }
                 >
                   {calculatingScores ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -2684,11 +2988,7 @@ export default function ProductsPage() {
                   className="max-w-[190px]"
                 />
                 {(createdAtFrom || createdAtTo) && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={clearCreatedDateFilter}
-                  >
+                  <Button size="sm" variant="ghost" onClick={clearCreatedDateFilter}>
                     清空日期
                   </Button>
                 )}
@@ -2725,78 +3025,87 @@ export default function ProductsPage() {
             ) : items.length === 0 ? (
               hasFilters ? (
                 <NoResultsState description="当前筛选条件下暂无商品，试试清除筛选后再查看。" />
-              ) : (
-                platformFilter === 'all' ? (
-                  <div className="space-y-3">
-                    <NoDataState
-                      title="暂无商品数据"
-                      description="请先执行联盟平台同步，系统会自动拉取可推广商品。"
-                      actionLabel="同步 PB(快速刷新)"
-                      onAction={() => handlePlatformSync('partnerboost', 'light')}
-                    />
-                    <div className="flex justify-center">
-                      <div className="inline-flex">
-                        <Button
-                          variant="outline"
-                          className="rounded-r-none border-r-0 bg-white"
-                          onClick={() => handlePlatformSync('yeahpromos', 'full', { resumeFailedRun: false })}
-                          disabled={syncingPlatform !== null || !ypSessionStatus.hasSession}
-                          title={!ypSessionStatus.hasSession ? '请先完成YP登录态采集' : undefined}
-                        >
-                          {syncingPlatform?.platform === 'yeahpromos'
-                            && syncingPlatform.strategy === 'full'
-                            && syncingPlatform.resumeFailedRun !== true ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                          )}
-                          同步 YP(全量补齐-从头)
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-10 w-10 rounded-l-none bg-white"
-                              disabled={syncingPlatform !== null || !ypSessionStatus.hasSession}
-                              aria-label="选择 YP 全量同步方式"
-                              title={!ypSessionStatus.hasSession ? '请先完成YP登录态采集' : undefined}
-                            >
-                              {syncingPlatform?.platform === 'yeahpromos'
-                                && syncingPlatform.strategy === 'full'
-                                && syncingPlatform.resumeFailedRun === true ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuItem
-                              onClick={() => handlePlatformSync('yeahpromos', 'full', { resumeFailedRun: false })}
-                              disabled={syncingPlatform !== null}
-                            >
-                              全量补齐（从头，默认）
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handlePlatformSync('yeahpromos', 'full', { resumeFailedRun: true })}
-                              disabled={syncingPlatform !== null}
-                            >
-                              全量补齐（续传失败任务）
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
+              ) : platformFilter === 'all' ? (
+                <div className="space-y-3">
                   <NoDataState
                     title="暂无商品数据"
                     description="请先执行联盟平台同步，系统会自动拉取可推广商品。"
-                    actionLabel={`立即同步${platformFilter === 'yeahpromos' ? 'YP' : 'PB'}商品（${getPlatformSyncStrategyLabel(getDefaultPlatformSyncStrategy(platformFilter))}）`}
-                    onAction={() => handlePlatformSync(platformFilter, getDefaultPlatformSyncStrategy(platformFilter))}
+                    actionLabel="同步 PB(快速刷新)"
+                    onAction={() => handlePlatformSync('partnerboost', 'light')}
                   />
-                )
+                  <div className="flex justify-center">
+                    <div className="inline-flex">
+                      <Button
+                        variant="outline"
+                        className="rounded-r-none border-r-0 bg-white"
+                        onClick={() =>
+                          handlePlatformSync('yeahpromos', 'full', { resumeFailedRun: false })
+                        }
+                        disabled={syncingPlatform !== null || !ypSessionStatus.hasSession}
+                        title={!ypSessionStatus.hasSession ? '请先完成YP登录态采集' : undefined}
+                      >
+                        {syncingPlatform?.platform === 'yeahpromos' &&
+                        syncingPlatform.strategy === 'full' &&
+                        syncingPlatform.resumeFailedRun !== true ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                        )}
+                        同步 YP(全量补齐-从头)
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 rounded-l-none bg-white"
+                            disabled={syncingPlatform !== null || !ypSessionStatus.hasSession}
+                            aria-label="选择 YP 全量同步方式"
+                            title={!ypSessionStatus.hasSession ? '请先完成YP登录态采集' : undefined}
+                          >
+                            {syncingPlatform?.platform === 'yeahpromos' &&
+                            syncingPlatform.strategy === 'full' &&
+                            syncingPlatform.resumeFailedRun === true ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handlePlatformSync('yeahpromos', 'full', { resumeFailedRun: false })
+                            }
+                            disabled={syncingPlatform !== null}
+                          >
+                            全量补齐（从头，默认）
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              handlePlatformSync('yeahpromos', 'full', { resumeFailedRun: true })
+                            }
+                            disabled={syncingPlatform !== null}
+                          >
+                            全量补齐（续传失败任务）
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <NoDataState
+                  title="暂无商品数据"
+                  description="请先执行联盟平台同步，系统会自动拉取可推广商品。"
+                  actionLabel={`立即同步${platformFilter === 'yeahpromos' ? 'YP' : 'PB'}商品（${getPlatformSyncStrategyLabel(getDefaultPlatformSyncStrategy(platformFilter))}）`}
+                  onAction={() =>
+                    handlePlatformSync(
+                      platformFilter,
+                      getDefaultPlatformSyncStrategy(platformFilter)
+                    )
+                  }
+                />
               )
             ) : (
               renderProductTable()
@@ -2884,7 +3193,6 @@ export default function ProductsPage() {
           onSubmitClearAll={() => void submitClearAll()}
         />
       )}
-
     </div>
   )
 }

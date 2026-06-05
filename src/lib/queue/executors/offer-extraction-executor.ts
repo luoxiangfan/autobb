@@ -27,7 +27,11 @@ import { extractScenariosFromReviews } from '@/lib/scenario-extractor'
 import { syncScrapedProductsFromExtractData } from '@/lib/offer-scraped-products-sync'
 import { stripTrailingCountryCodeSuffix } from '@/lib/brand-suffix-utils'
 
-function mergeUniqueStrings(primary: string[] | null | undefined, secondary: string[] | null | undefined, limit: number): string[] | null {
+function mergeUniqueStrings(
+  primary: string[] | null | undefined,
+  secondary: string[] | null | undefined,
+  limit: number
+): string[] | null {
   const out: string[] = []
   const seen = new Set<string>()
   for (const list of [primary, secondary]) {
@@ -46,7 +50,11 @@ function mergeUniqueStrings(primary: string[] | null | undefined, secondary: str
   return out.length > 0 ? out : null
 }
 
-function mergeUniqueSitelinks(primary: SerpSitelink[] | null | undefined, secondary: SerpSitelink[] | null | undefined, limit: number): SerpSitelink[] | null {
+function mergeUniqueSitelinks(
+  primary: SerpSitelink[] | null | undefined,
+  secondary: SerpSitelink[] | null | undefined,
+  limit: number
+): SerpSitelink[] | null {
   const out: SerpSitelink[] = []
   const seen = new Set<string>()
   for (const list of [primary, secondary]) {
@@ -125,7 +133,12 @@ function sanitizeResolvedFinalUrl(value: unknown): string | undefined {
   if (!trimmed) return undefined
 
   const lower = trimmed.toLowerCase()
-  if (lower === 'null' || lower === 'null/' || lower === 'undefined' || lower.startsWith('chrome-error://')) {
+  if (
+    lower === 'null' ||
+    lower === 'null/' ||
+    lower === 'undefined' ||
+    lower.startsWith('chrome-error://')
+  ) {
     return undefined
   }
 
@@ -167,16 +180,18 @@ function deriveFallbackProductInfoFromExtractData(extractData: any): {
   const isStorePage = (() => {
     if (extractData.pageType === 'store') return true
     const productsLen = Array.isArray(extractData.products) ? extractData.products.length : 0
-    const hasStoreName = typeof extractData.storeName === 'string' && extractData.storeName.trim().length > 0
+    const hasStoreName =
+      typeof extractData.storeName === 'string' && extractData.storeName.trim().length > 0
     const hasDeep = !!extractData.deepScrapeResults
     return hasStoreName || hasDeep || productsLen >= 2
   })()
 
-  const brandDescription = pickNonEmptyString(
-    extractData.productDescription,
-    extractData.storeDescription,
-    extractData.metaDescription
-  ) || undefined
+  const brandDescription =
+    pickNonEmptyString(
+      extractData.productDescription,
+      extractData.storeDescription,
+      extractData.metaDescription
+    ) || undefined
 
   const deepTopProducts = Array.isArray(extractData?.deepScrapeResults?.topProducts)
     ? extractData.deepScrapeResults.topProducts
@@ -219,11 +234,17 @@ function deriveFallbackProductInfoFromExtractData(extractData: any): {
     const category = (p as any)?.category
     if (typeof category === 'string') storeCatalogCandidatesRaw.push(category)
   }
-  const storeCatalogCandidates = filterNavigationLabels(storeCatalogCandidatesRaw).filter((line) => line.length <= 120)
+  const storeCatalogCandidates = filterNavigationLabels(storeCatalogCandidatesRaw).filter(
+    (line) => line.length <= 120
+  )
   const storeCatalogLines = pickTopUniqueLines(storeCatalogCandidates, 8)
 
   const valueLine = (() => {
-    const desc = pickNonEmptyString(extractData.storeDescription, extractData.productDescription, extractData.metaDescription)
+    const desc = pickNonEmptyString(
+      extractData.storeDescription,
+      extractData.productDescription,
+      extractData.metaDescription
+    )
     if (!desc) return null
     const lower = desc.toLowerCase()
     if (lower.includes('great value')) return 'Great value across key departments.'
@@ -265,7 +286,11 @@ function deriveFallbackProductInfoFromExtractData(extractData: any): {
       targetAudience = 'Usuarios domésticos y familias que buscan protección de ciberseguridad.'
     } else if (s.includes('empresa')) {
       targetAudience = 'Empresas que buscan protección de ciberseguridad.'
-    } else if (s.includes('entire family') || s.includes('whole family') || s.includes('for the family')) {
+    } else if (
+      s.includes('entire family') ||
+      s.includes('whole family') ||
+      s.includes('for the family')
+    ) {
       targetAudience = 'Families shopping for everyday essentials.'
     }
   }
@@ -304,9 +329,7 @@ export interface OfferExtractionTaskData {
 /**
  * Offer提取任务执行器
  */
-export async function executeOfferExtraction(
-  task: Task<OfferExtractionTaskData>
-): Promise<any> {
+export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>): Promise<any> {
   const {
     affiliateLink,
     targetCountry,
@@ -338,11 +361,14 @@ export async function executeOfferExtraction(
 
   try {
     // 更新任务状态为运行中
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE offer_tasks
       SET status = 'running', started_at = ${nowFunc}, message = '开始提取Offer信息'
       WHERE id = ?
-    `, [task.id])
+    `,
+      [task.id]
+    )
 
     if (linkedOfferId) {
       await updateOfferScrapeStatus(linkedOfferId, task.userId, 'in_progress')
@@ -379,11 +405,14 @@ export async function executeOfferExtraction(
         const progress = progressMap[stage] || 0
 
         // 更新数据库
-        await db.exec(`
+        await db.exec(
+          `
           UPDATE offer_tasks
           SET stage = ?, message = ?, progress = ?, updated_at = ${nowFunc}
           WHERE id = ?
-        `, [stage, message, progress, task.id])
+        `,
+          [stage, message, progress, task.id]
+        )
 
         console.log(`  📊 进度更新: ${task.id} - ${stage} (${progress}%) - ${message}`)
       },
@@ -396,9 +425,15 @@ export async function executeOfferExtraction(
 
     const resolvedFinalUrl = sanitizeResolvedFinalUrl(extractResult.data.finalUrl)
     const resolvedFinalUrlSuffix = resolvedFinalUrl
-      ? (typeof extractResult.data.finalUrlSuffix === 'string' ? extractResult.data.finalUrlSuffix : undefined)
+      ? typeof extractResult.data.finalUrlSuffix === 'string'
+        ? extractResult.data.finalUrlSuffix
+        : undefined
       : undefined
-    if (!resolvedFinalUrl && typeof extractResult.data.finalUrl === 'string' && extractResult.data.finalUrl.trim()) {
+    if (
+      !resolvedFinalUrl &&
+      typeof extractResult.data.finalUrl === 'string' &&
+      extractResult.data.finalUrl.trim()
+    ) {
       console.warn(`⚠️ 检测到无效finalUrl，已跳过持久化: ${extractResult.data.finalUrl}`)
     }
 
@@ -406,27 +441,39 @@ export async function executeOfferExtraction(
     // 问题：之前等到SSE流程完全结束才创建Offer，如果AI分析失败或用户刷新页面，数据全部丢失
     // 修复：提取完成后立即创建Offer，AI分析结果后续增量更新
     let createdOfferId: number | null = null
-    const taskRow = await db.queryOne<{ batch_id: string | null; offer_id: number | null }>(`
+    const taskRow = await db.queryOne<{ batch_id: string | null; offer_id: number | null }>(
+      `
       SELECT batch_id, offer_id FROM offer_tasks WHERE id = ?
-    `, [task.id])
+    `,
+      [task.id]
+    )
 
-    const extractedPageType = (extractResult.data.pageType === 'store' || extractResult.data.pageType === 'product')
-      ? extractResult.data.pageType
-      : null
-    const pageTypeOverride = (pageType === 'store' || pageType === 'product') ? pageType : null
+    const extractedPageType =
+      extractResult.data.pageType === 'store' || extractResult.data.pageType === 'product'
+        ? extractResult.data.pageType
+        : null
+    const pageTypeOverride = pageType === 'store' || pageType === 'product' ? pageType : null
     const pageTypeAdjusted = extractResult.data.pageTypeAdjusted === true
-    if (pageTypeAdjusted && pageTypeOverride && extractedPageType && pageTypeOverride !== extractedPageType) {
-      console.warn(`⚠️ page_type已被系统修正: override=${pageTypeOverride} → detected=${extractedPageType}`)
+    if (
+      pageTypeAdjusted &&
+      pageTypeOverride &&
+      extractedPageType &&
+      pageTypeOverride !== extractedPageType
+    ) {
+      console.warn(
+        `⚠️ page_type已被系统修正: override=${pageTypeOverride} → detected=${extractedPageType}`
+      )
     }
     const pageTypeToPersist = pageTypeAdjusted
-      ? (extractedPageType || pageTypeOverride || 'product')
-      : (pageTypeOverride || extractedPageType || 'product')
+      ? extractedPageType || pageTypeOverride || 'product'
+      : pageTypeOverride || extractedPageType || 'product'
     const supplementalPrices = Array.isArray((extractResult.data as any).supplementalProducts)
       ? (extractResult.data as any).supplementalProducts.map((p: any) => p?.productPrice)
       : []
-    const derivedAverageProductPrice = (!productPrice && pageTypeToPersist === 'store')
-      ? computeAveragePriceFromStrings(supplementalPrices)
-      : undefined
+    const derivedAverageProductPrice =
+      !productPrice && pageTypeToPersist === 'store'
+        ? computeAveragePriceFromStrings(supplementalPrices)
+        : undefined
     const extractedBrand = normalizePersistedBrand(extractResult.data.brand)
     const fallbackTaskBrand = normalizePersistedBrand(brandName)
     const brandForPersistence = extractedBrand || fallbackTaskBrand
@@ -457,13 +504,20 @@ export async function executeOfferExtraction(
         brand: brandForCreation,
         target_country: targetCountry,
         affiliate_link: affiliateLink,
-        store_product_links: storeProductLinks && storeProductLinks.length > 0 ? JSON.stringify(storeProductLinks) : undefined,
+        store_product_links:
+          storeProductLinks && storeProductLinks.length > 0
+            ? JSON.stringify(storeProductLinks)
+            : undefined,
         final_url: resolvedFinalUrl || undefined,
         // 🔥 2025-12-16修复：保存final_url_suffix到数据库
         final_url_suffix: resolvedFinalUrlSuffix,
         // 🔥 2025-12-16修复：保存product_name到数据库
         product_name: extractResult.data.productName || undefined,
-        product_price: productPrice || derivedAverageProductPrice || extractResult.data.productPrice || undefined,
+        product_price:
+          productPrice ||
+          derivedAverageProductPrice ||
+          extractResult.data.productPrice ||
+          undefined,
         commission_payout: commissionPayout || undefined,
         commission_type: commissionType || undefined,
         commission_value: commissionValue || undefined,
@@ -487,13 +541,20 @@ export async function executeOfferExtraction(
         brand: brandForCreation,
         target_country: targetCountry,
         affiliate_link: affiliateLink,
-        store_product_links: storeProductLinks && storeProductLinks.length > 0 ? JSON.stringify(storeProductLinks) : undefined,
+        store_product_links:
+          storeProductLinks && storeProductLinks.length > 0
+            ? JSON.stringify(storeProductLinks)
+            : undefined,
         final_url: resolvedFinalUrl || undefined,
         // 🔥 2025-12-16修复：保存final_url_suffix到数据库
         final_url_suffix: resolvedFinalUrlSuffix,
         // 🔥 2025-12-16修复：保存product_name到数据库
         product_name: extractResult.data.productName || undefined,
-        product_price: productPrice || derivedAverageProductPrice || extractResult.data.productPrice || undefined,
+        product_price:
+          productPrice ||
+          derivedAverageProductPrice ||
+          extractResult.data.productPrice ||
+          undefined,
         commission_payout: commissionPayout || undefined,
         commission_type: commissionType || undefined,
         commission_value: commissionValue || undefined,
@@ -515,7 +576,10 @@ export async function executeOfferExtraction(
       try {
         await syncScrapedProductsFromExtractData(createdOfferId, task.userId, extractResult.data)
       } catch (syncError: any) {
-        console.warn(`⚠️ scraped_products 提前同步失败（非致命） offer_id=${createdOfferId}:`, syncError?.message || syncError)
+        console.warn(
+          `⚠️ scraped_products 提前同步失败（非致命） offer_id=${createdOfferId}:`,
+          syncError?.message || syncError
+        )
       }
     }
 
@@ -523,11 +587,14 @@ export async function executeOfferExtraction(
     console.log(`🤖 开始AI分析: ${task.id}`)
 
     // 更新进度到ai_analysis阶段
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE offer_tasks
       SET stage = 'ai_analysis', message = '正在进行AI分析...', progress = 90, updated_at = ${nowFunc}
       WHERE id = ?
-    `, [task.id])
+    `,
+      [task.id]
+    )
 
     let aiAnalysisResult = null
     const aiAnalysisTimeoutMs = parsePositiveIntEnv(
@@ -543,21 +610,27 @@ export async function executeOfferExtraction(
 
     const updateAiAnalysisHeartbeat = async () => {
       const elapsedSeconds = Math.floor((Date.now() - aiAnalysisStartedAt) / 1000)
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE offer_tasks
         SET stage = 'ai_analysis',
             message = ?,
             progress = 90,
             updated_at = ${nowFunc}
         WHERE id = ?
-      `, [`正在进行AI分析... (${elapsedSeconds}s)`, task.id])
+      `,
+        [`正在进行AI分析... (${elapsedSeconds}s)`, task.id]
+      )
     }
 
     try {
       await updateAiAnalysisHeartbeat()
       aiAnalysisHeartbeatTimer = setInterval(() => {
         void updateAiAnalysisHeartbeat().catch((heartbeatError: any) => {
-          console.warn(`⚠️ AI分析心跳更新失败: ${task.id}:`, heartbeatError?.message || heartbeatError)
+          console.warn(
+            `⚠️ AI分析心跳更新失败: ${task.id}:`,
+            heartbeatError?.message || heartbeatError
+          )
         })
       }, aiAnalysisHeartbeatMs)
 
@@ -641,7 +714,8 @@ export async function executeOfferExtraction(
       extractedKeywords: aiAnalysisResult?.extractedKeywords || null,
       extractedHeadlines: mergedExtractedHeadlines,
       extractedDescriptions: mergedExtractedDescriptions,
-      extractionMetadata: Object.keys(mergedExtractionMetadata).length > 0 ? mergedExtractionMetadata : null,
+      extractionMetadata:
+        Object.keys(mergedExtractionMetadata).length > 0 ? mergedExtractionMetadata : null,
     }
 
     // ========== 🔥 2025-12-16重构：AI分析完成后更新Offer（增量保存第二阶段）==========
@@ -653,11 +727,13 @@ export async function executeOfferExtraction(
         // 🔥 2026-01-04修复：将AI生成的关键词持久化到offers.ai_keywords
         // 关键词池生成依赖 ai_keywords / extracted_keywords；若不保存，独立站等场景可能出现“无可用关键词”
         const aiKeywordSeeds: string[] | null =
-          Array.isArray((aiProductInfo as any)?.keywords) && (aiProductInfo as any).keywords.length > 0
+          Array.isArray((aiProductInfo as any)?.keywords) &&
+          (aiProductInfo as any).keywords.length > 0
             ? (aiProductInfo as any).keywords
-            : (Array.isArray(aiAnalysisResult?.extractedKeywords) && aiAnalysisResult.extractedKeywords.length > 0
-                ? aiAnalysisResult.extractedKeywords
-                : null)
+            : Array.isArray(aiAnalysisResult?.extractedKeywords) &&
+                aiAnalysisResult.extractedKeywords.length > 0
+              ? aiAnalysisResult.extractedKeywords
+              : null
 
         await updateOfferScrapeStatus(createdOfferId, task.userId, 'completed', undefined, {
           brand: brandForPersistence,
@@ -666,31 +742,46 @@ export async function executeOfferExtraction(
           final_url_suffix: resolvedFinalUrlSuffix,
           // 🔥 2025-12-16修复：保存product_name到数据库
           product_name: extractResult.data.productName || undefined,
-          brand_description: aiProductInfo.brandDescription || fallbackProductInfo.brandDescription || undefined,
-          unique_selling_points: aiProductInfo.uniqueSellingPoints ?
-            (Array.isArray(aiProductInfo.uniqueSellingPoints)
+          brand_description:
+            aiProductInfo.brandDescription || fallbackProductInfo.brandDescription || undefined,
+          unique_selling_points: aiProductInfo.uniqueSellingPoints
+            ? Array.isArray(aiProductInfo.uniqueSellingPoints)
               ? aiProductInfo.uniqueSellingPoints.join('\n')
-              : String(aiProductInfo.uniqueSellingPoints)) : undefined,
-          product_highlights: aiProductInfo.productHighlights ?
-            (Array.isArray(aiProductInfo.productHighlights)
+              : String(aiProductInfo.uniqueSellingPoints)
+            : undefined,
+          product_highlights: aiProductInfo.productHighlights
+            ? Array.isArray(aiProductInfo.productHighlights)
               ? aiProductInfo.productHighlights.join('\n')
-              : String(aiProductInfo.productHighlights)) : undefined,
-          ...(aiProductInfo.uniqueSellingPoints ? {} : { unique_selling_points: fallbackProductInfo.uniqueSellingPoints }),
-          ...(aiProductInfo.productHighlights ? {} : { product_highlights: fallbackProductInfo.productHighlights }),
-          target_audience: aiProductInfo.targetAudience || fallbackProductInfo.targetAudience || undefined,
+              : String(aiProductInfo.productHighlights)
+            : undefined,
+          ...(aiProductInfo.uniqueSellingPoints
+            ? {}
+            : { unique_selling_points: fallbackProductInfo.uniqueSellingPoints }),
+          ...(aiProductInfo.productHighlights
+            ? {}
+            : { product_highlights: fallbackProductInfo.productHighlights }),
+          target_audience:
+            aiProductInfo.targetAudience || fallbackProductInfo.targetAudience || undefined,
           category: aiProductInfo.category || fallbackProductInfo.category || undefined,
-          review_analysis: aiAnalysisResult?.reviewAnalysis ?
-            JSON.stringify(aiAnalysisResult.reviewAnalysis) : undefined,
-          competitor_analysis: aiAnalysisResult?.competitorAnalysis ?
-            JSON.stringify(aiAnalysisResult.competitorAnalysis) : undefined,
-          extracted_keywords: aiAnalysisResult?.extractedKeywords ?
-            JSON.stringify(aiAnalysisResult.extractedKeywords) : undefined,
-          extracted_headlines: mergedExtractedHeadlines ?
-            JSON.stringify(mergedExtractedHeadlines) : undefined,
-          extracted_descriptions: mergedExtractedDescriptions ?
-            JSON.stringify(mergedExtractedDescriptions) : undefined,
-          extraction_metadata: Object.keys(mergedExtractionMetadata).length > 0 ?
-            JSON.stringify(mergedExtractionMetadata) : undefined,
+          review_analysis: aiAnalysisResult?.reviewAnalysis
+            ? JSON.stringify(aiAnalysisResult.reviewAnalysis)
+            : undefined,
+          competitor_analysis: aiAnalysisResult?.competitorAnalysis
+            ? JSON.stringify(aiAnalysisResult.competitorAnalysis)
+            : undefined,
+          extracted_keywords: aiAnalysisResult?.extractedKeywords
+            ? JSON.stringify(aiAnalysisResult.extractedKeywords)
+            : undefined,
+          extracted_headlines: mergedExtractedHeadlines
+            ? JSON.stringify(mergedExtractedHeadlines)
+            : undefined,
+          extracted_descriptions: mergedExtractedDescriptions
+            ? JSON.stringify(mergedExtractedDescriptions)
+            : undefined,
+          extraction_metadata:
+            Object.keys(mergedExtractionMetadata).length > 0
+              ? JSON.stringify(mergedExtractionMetadata)
+              : undefined,
           extracted_at: new Date().toISOString(),
           ai_keywords: aiKeywordSeeds || undefined,
           scraped_data: JSON.stringify(extractResult.data),
@@ -705,16 +796,20 @@ export async function executeOfferExtraction(
             const extractedScenarios = extractScenariosFromReviews(reviewAnalysisJson)
 
             // Only update if we extracted meaningful data
-            if (extractedScenarios.scenarios.length > 0 ||
-                extractedScenarios.painPoints.length > 0 ||
-                extractedScenarios.userQuestions.length > 0) {
+            if (
+              extractedScenarios.scenarios.length > 0 ||
+              extractedScenarios.painPoints.length > 0 ||
+              extractedScenarios.userQuestions.length > 0
+            ) {
               await updateOffer(createdOfferId, task.userId, {
                 user_scenarios: JSON.stringify(extractedScenarios.scenarios),
                 pain_points: JSON.stringify(extractedScenarios.painPoints),
                 user_questions: JSON.stringify(extractedScenarios.userQuestions),
-                scenario_analyzed_at: new Date().toISOString()
+                scenario_analyzed_at: new Date().toISOString(),
               })
-              console.log(`✅ 场景数据已提取: offer_id=${createdOfferId}, scenarios=${extractedScenarios.scenarios.length}, questions=${extractedScenarios.userQuestions.length}`)
+              console.log(
+                `✅ 场景数据已提取: offer_id=${createdOfferId}, scenarios=${extractedScenarios.scenarios.length}, questions=${extractedScenarios.userQuestions.length}`
+              )
             }
           } catch (scenarioError: any) {
             console.error(`⚠️ 场景提取失败（非致命）: ${scenarioError.message}`)
@@ -736,7 +831,8 @@ export async function executeOfferExtraction(
     }
 
     // 更新任务为完成状态（包含创建的offer_id）
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE offer_tasks
       SET
         status = 'completed',
@@ -747,7 +843,9 @@ export async function executeOfferExtraction(
         completed_at = ${nowFunc},
         updated_at = ${nowFunc}
       WHERE id = ?
-    `, [toDbJson(resultWithOfferId), createdOfferId, task.id])
+    `,
+      [toDbJson(resultWithOfferId), createdOfferId, task.id]
+    )
 
     console.log(`✅ Offer提取任务完成: ${task.id}, offerId=${createdOfferId}`)
 
@@ -756,7 +854,8 @@ export async function executeOfferExtraction(
     console.error(`❌ Offer提取任务失败: ${task.id}:`, error.message)
 
     // 更新任务为失败状态
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE offer_tasks
       SET
         status = 'failed',
@@ -765,11 +864,9 @@ export async function executeOfferExtraction(
         completed_at = ${nowFunc},
         updated_at = ${nowFunc}
       WHERE id = ?
-    `, [
-      error.message,
-      toDbJson({ message: error.message, stack: error.stack }),
-      task.id
-    ])
+    `,
+      [error.message, toDbJson({ message: error.message, stack: error.stack }), task.id]
+    )
 
     if (linkedOfferId) {
       try {

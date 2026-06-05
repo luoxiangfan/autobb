@@ -8,7 +8,7 @@ describe('normalizeBrandName', () => {
     expect(normalizeBrandName('bjs')).toBe('BJs')
     expect(normalizeBrandName("BJ's")).toBe('BJs')
     expect(normalizeBrandName('BJ’S')).toBe('BJs')
-    expect(normalizeBrandName("BJ’S")).toBe('BJs')
+    expect(normalizeBrandName('BJ’S')).toBe('BJs')
     expect(normalizeBrandName("BJ'S")).toBe('BJs')
     expect(normalizeBrandName('BJs')).toBe('BJs')
   })

@@ -53,9 +53,40 @@ export interface CreativeRuleGateDecision {
 }
 
 const TOKEN_STOPWORDS = new Set([
-  'a', 'an', 'the', 'and', 'or', 'of', 'for', 'to', 'in', 'on', 'at', 'by', 'from',
-  'with', 'without', 'your', 'our', 'you', 'us', 'is', 'are', 'be', 'this', 'that',
-  'it', 'its', 'as', 'now', 'new', 'best', 'top', 'today', 'shop', 'buy'
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'of',
+  'for',
+  'to',
+  'in',
+  'on',
+  'at',
+  'by',
+  'from',
+  'with',
+  'without',
+  'your',
+  'our',
+  'you',
+  'us',
+  'is',
+  'are',
+  'be',
+  'this',
+  'that',
+  'it',
+  'its',
+  'as',
+  'now',
+  'new',
+  'best',
+  'top',
+  'today',
+  'shop',
+  'buy',
 ])
 
 // 可穷举的噪声词清单：用于识别“工具/维修类”偏题表达。
@@ -79,7 +110,7 @@ export const CREATIVE_RELEVANCE_NOISE_TERMS: string[] = [
   'hardware',
   'contractor',
   'plumbing',
-  'electrical'
+  'electrical',
 ]
 
 const CREATIVE_RELEVANCE_NOISE_PATTERNS: RegExp[] = [
@@ -131,7 +162,7 @@ function tokenize(value: string): string[] {
   return normalizePhrase(value)
     .split(/\s+/)
     .map(normalizeWord)
-    .filter(token => token.length >= 2 && !TOKEN_STOPWORDS.has(token))
+    .filter((token) => token.length >= 2 && !TOKEN_STOPWORDS.has(token))
 }
 
 function toNormalizedUnique(values: string[]): string[] {
@@ -152,7 +183,9 @@ function isEnglishLike(language: string): boolean {
 }
 
 function isRuleGateBooleanEnvEnabled(name: string, fallback: boolean): boolean {
-  const normalized = String(process.env[name] || '').trim().toLowerCase()
+  const normalized = String(process.env[name] || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return fallback
   if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'off'].includes(normalized)) return false
@@ -168,7 +201,7 @@ function buildAnchorTokens(input: CreativeRuleContextInput): Set<string> {
     input.productDescription,
     input.uniqueSellingPoints,
   ]
-    .map(value => String(value || '').trim())
+    .map((value) => String(value || '').trim())
     .filter(Boolean)
     .join(' ')
 
@@ -176,10 +209,7 @@ function buildAnchorTokens(input: CreativeRuleContextInput): Set<string> {
 }
 
 function buildKeywordTokens(input: CreativeRuleContextInput): Set<string> {
-  return new Set(
-    (input.keywords || [])
-      .flatMap(keyword => tokenize(keyword))
-  )
+  return new Set((input.keywords || []).flatMap((keyword) => tokenize(keyword)))
 }
 
 function toAssetTexts(creative: GeneratedAdCreativeData): string[] {
@@ -191,9 +221,7 @@ function toAssetTexts(creative: GeneratedAdCreativeData): string[] {
     texts.push(sitelink.text || '')
     if (sitelink.description) texts.push(sitelink.description)
   }
-  return texts
-    .map(text => String(text || '').trim())
-    .filter(Boolean)
+  return texts.map((text) => String(text || '').trim()).filter(Boolean)
 }
 
 function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
@@ -208,7 +236,7 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
 }
 
 function hasTokenOverlap(tokens: string[], anchorTokens: Set<string>): boolean {
-  return tokens.some(token => anchorTokens.has(token))
+  return tokens.some((token) => anchorTokens.has(token))
 }
 
 function findOffTopicNoiseTerms(
@@ -223,7 +251,8 @@ function findOffTopicNoiseTerms(
     if (contextTokens.has(token)) return true
 
     // Handle simple singular/plural forms so "tool" and "tools" are treated as related.
-    if (token.endsWith('s') && token.length > 3 && contextTokens.has(token.slice(0, -1))) return true
+    if (token.endsWith('s') && token.length > 3 && contextTokens.has(token.slice(0, -1)))
+      return true
     if (!token.endsWith('s') && contextTokens.has(`${token}s`)) return true
 
     return false
@@ -239,7 +268,7 @@ function findOffTopicNoiseTerms(
       if (!normalized.includes(normalizedTerm)) continue
 
       const termTokens = tokenize(normalizedTerm)
-      const inContext = termTokens.some(token => hasContextToken(token))
+      const inContext = termTokens.some((token) => hasContextToken(token))
       if (!inContext) {
         hits.add(term)
       }
@@ -249,7 +278,7 @@ function findOffTopicNoiseTerms(
       const match = normalized.match(pattern)
       if (!match?.[0]) continue
       const termTokens = tokenize(match[0])
-      const inContext = termTokens.some(token => hasContextToken(token))
+      const inContext = termTokens.some((token) => hasContextToken(token))
       if (!inContext) {
         hits.add(match[0].toLowerCase())
       }
@@ -314,7 +343,7 @@ function evaluateRelevance(
       passed: false,
       reasons: ['creative has no text assets'],
       anchorCoverage: 0,
-      offTopicHits: []
+      offTopicHits: [],
     }
   }
 
@@ -327,10 +356,13 @@ function evaluateRelevance(
   const minCoverage = texts.length >= 8 ? 0.4 : 0.34
 
   if (anchorCoverage < minCoverage) {
-    reasons.push(`anchor coverage ${(anchorCoverage * 100).toFixed(1)}% < ${(minCoverage * 100).toFixed(0)}%`)
+    reasons.push(
+      `anchor coverage ${(anchorCoverage * 100).toFixed(1)}% < ${(minCoverage * 100).toFixed(0)}%`
+    )
   }
 
-  const skipOffTopicNoiseForStoreBrandBucket = context.pageType === 'store' && context.bucket === 'A'
+  const skipOffTopicNoiseForStoreBrandBucket =
+    context.pageType === 'store' && context.bucket === 'A'
   const offTopicNoiseHits = skipOffTopicNoiseForStoreBrandBucket
     ? []
     : findOffTopicNoiseTerms(texts, context.anchorTokens, context.keywordTokens)
@@ -354,7 +386,7 @@ function evaluateRelevance(
     passed: reasons.length === 0,
     reasons,
     anchorCoverage,
-    offTopicHits
+    offTopicHits,
   }
 }
 
@@ -369,12 +401,12 @@ function evaluateDiversity(creative: GeneratedAdCreativeData): CreativeDiversity
   const uniqueHeadlines = toNormalizedUnique(normalizedHeadlines)
   const uniqueDescriptions = toNormalizedUnique(normalizedDescriptions)
 
-  const headlineUniqueRatio = normalizedHeadlines.length > 0
-    ? uniqueHeadlines.length / normalizedHeadlines.length
-    : 0
-  const descriptionUniqueRatio = normalizedDescriptions.length > 0
-    ? uniqueDescriptions.length / normalizedDescriptions.length
-    : 0
+  const headlineUniqueRatio =
+    normalizedHeadlines.length > 0 ? uniqueHeadlines.length / normalizedHeadlines.length : 0
+  const descriptionUniqueRatio =
+    normalizedDescriptions.length > 0
+      ? uniqueDescriptions.length / normalizedDescriptions.length
+      : 0
 
   if (normalizedHeadlines.length >= 8 && headlineUniqueRatio < 0.7) {
     reasons.push(`headline uniqueness ${(headlineUniqueRatio * 100).toFixed(1)}% < 70%`)
@@ -401,7 +433,7 @@ function evaluateDiversity(creative: GeneratedAdCreativeData): CreativeDiversity
     reasons,
     headlineUniqueRatio,
     descriptionUniqueRatio,
-    nearDuplicateHeadlinePairs
+    nearDuplicateHeadlinePairs,
   }
 }
 
@@ -413,9 +445,9 @@ function evaluateConversion(
   const texts = [
     ...(creative.descriptions || []),
     ...(creative.callouts || []),
-    ...((creative.sitelinks || []).map(s => `${s.text || ''} ${s.description || ''}`))
+    ...(creative.sitelinks || []).map((s) => `${s.text || ''} ${s.description || ''}`),
   ]
-    .map(text => String(text || '').trim())
+    .map((text) => String(text || '').trim())
     .filter(Boolean)
 
   const mergedText = texts.join(' ')
@@ -439,9 +471,10 @@ function evaluateConversion(
     ...(creative.headlines || []),
     ...(creative.descriptions || []),
     ...(creative.callouts || []),
-    ...((creative.sitelinks || []).map(s => `${s.text || ''} ${s.description || ''}`))
+    ...(creative.sitelinks || []).map((s) => `${s.text || ''} ${s.description || ''}`),
   ].join(' ')
-  const strongNegativeMatches = allAssetText.match(new RegExp(STRONG_NEGATIVE_PATTERN.source, 'gi')) || []
+  const strongNegativeMatches =
+    allAssetText.match(new RegExp(STRONG_NEGATIVE_PATTERN.source, 'gi')) || []
 
   if ((context.bucket === 'A' || context.bucket === 'D') && strongNegativeMatches.length > 0) {
     reasons.push(`bucket ${context.bucket} should avoid strong negative emotion language`)
@@ -469,7 +502,7 @@ function evaluateConversion(
     reasons,
     hasCta,
     hasTrust,
-    hasValue
+    hasValue,
   }
 }
 
@@ -484,7 +517,9 @@ export function createCreativeRuleContext(input: CreativeRuleContextInput): Crea
     return null
   })()
   const normalizedPageType = (() => {
-    const normalized = String(input.pageType || '').trim().toLowerCase()
+    const normalized = String(input.pageType || '')
+      .trim()
+      .toLowerCase()
     if (normalized === 'store') return 'store'
     if (normalized === 'product') return 'product'
     return null
@@ -494,7 +529,7 @@ export function createCreativeRuleContext(input: CreativeRuleContextInput): Crea
     keywordTokens,
     targetLanguage: String(input.targetLanguage || 'en'),
     bucket: normalizedBucket,
-    pageType: normalizedPageType
+    pageType: normalizedPageType,
   }
 }
 
@@ -502,25 +537,22 @@ export function evaluateCreativeRuleGate(
   creative: GeneratedAdCreativeData,
   contextInput: CreativeRuleContextInput | CreativeRuleContext
 ): CreativeRuleGateDecision {
-  const context = (contextInput as CreativeRuleContext).anchorTokens instanceof Set
-    ? contextInput as CreativeRuleContext
-    : createCreativeRuleContext(contextInput as CreativeRuleContextInput)
+  const context =
+    (contextInput as CreativeRuleContext).anchorTokens instanceof Set
+      ? (contextInput as CreativeRuleContext)
+      : createCreativeRuleContext(contextInput as CreativeRuleContextInput)
 
   const relevance = evaluateRelevance(creative, context)
   const diversity = evaluateDiversity(creative)
   const conversion = evaluateConversion(creative, context)
-  const reasons = [
-    ...relevance.reasons,
-    ...diversity.reasons,
-    ...conversion.reasons,
-  ]
+  const reasons = [...relevance.reasons, ...diversity.reasons, ...conversion.reasons]
 
   return {
     passed: reasons.length === 0,
     reasons,
     relevance,
     diversity,
-    conversion
+    conversion,
   }
 }
 
@@ -528,9 +560,10 @@ export function filterPromptExtrasByRelevance(
   extras: string[],
   contextInput: CreativeRuleContextInput | CreativeRuleContext
 ): { filtered: string[]; removed: string[] } {
-  const context = (contextInput as CreativeRuleContext).anchorTokens instanceof Set
-    ? contextInput as CreativeRuleContext
-    : createCreativeRuleContext(contextInput as CreativeRuleContextInput)
+  const context =
+    (contextInput as CreativeRuleContext).anchorTokens instanceof Set
+      ? (contextInput as CreativeRuleContext)
+      : createCreativeRuleContext(contextInput as CreativeRuleContextInput)
   const filtered: string[] = []
   const removed: string[] = []
 

@@ -45,9 +45,7 @@ export interface BatchCreationTaskData {
  * 这样父任务重试不会重复创建新的 offer_tasks 记录。
  */
 function buildBatchChildTaskId(batchId: string, rowIndex: number): string {
-  const digest = createHash('sha256')
-    .update(`${batchId}:${rowIndex}`)
-    .digest('hex')
+  const digest = createHash('sha256').update(`${batchId}:${rowIndex}`).digest('hex')
 
   return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-${digest.slice(12, 16)}-${digest.slice(16, 20)}-${digest.slice(20, 32)}`
 }
@@ -55,9 +53,7 @@ function buildBatchChildTaskId(batchId: string, rowIndex: number): string {
 /**
  * 批量Offer创建执行器
  */
-export async function executeBatchCreation(
-  task: Task<BatchCreationTaskData>
-): Promise<void> {
+export async function executeBatchCreation(task: Task<BatchCreationTaskData>): Promise<void> {
   const { batchId, rows } = task.data
   const db = getDatabase()
   const queue = getQueueManager()
@@ -69,17 +65,23 @@ export async function executeBatchCreation(
 
   try {
     // 1. 更新batch_tasks和upload_records状态为running
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE batch_tasks
       SET status = 'running', started_at = ${nowFunc}, updated_at = ${nowFunc}
       WHERE id = ?
-    `, [batchId])
+    `,
+      [batchId]
+    )
 
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE upload_records
       SET status = 'processing', updated_at = ${nowFunc}
       WHERE batch_id = ?
-    `, [batchId])
+    `,
+      [batchId]
+    )
 
     // 2. 为每行数据创建offer_task并加入队列（幂等）
     const childTaskIds: string[] = []
@@ -87,11 +89,14 @@ export async function executeBatchCreation(
     let reusedTaskCount = 0
     let enqueuedTaskCount = 0
 
-    const existingTasks = await db.query<{ id: string; status: string }>(`
+    const existingTasks = await db.query<{ id: string; status: string }>(
+      `
       SELECT id, status
       FROM offer_tasks
       WHERE batch_id = ?
-    `, [batchId])
+    `,
+      [batchId]
+    )
     const existingTaskStatus = new Map(existingTasks.map((t) => [t.id, t.status]))
 
     for (const [rowIndex, row] of rows.entries()) {
@@ -101,7 +106,8 @@ export async function executeBatchCreation(
 
       if (!currentStatus) {
         // 仅在不存在时插入，避免父任务重试导致重复子任务
-        await db.exec(`
+        await db.exec(
+          `
           INSERT INTO offer_tasks (
             id,
             user_id,
@@ -119,20 +125,22 @@ export async function executeBatchCreation(
             created_at,
             updated_at
           ) VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, false, false, ${nowFunc}, ${nowFunc})
-        `, [
-          childTaskId,
-          task.userId,
-          batchId,
-          row.affiliate_link,
-          row.target_country,
-          row.page_type || null,
-          row.store_product_links && row.store_product_links.length > 0
-            ? JSON.stringify(row.store_product_links)
-            : null,
-          row.brand_name || null,
-          row.product_price || null,
-          row.commission_payout || null,
-        ])
+        `,
+          [
+            childTaskId,
+            task.userId,
+            batchId,
+            row.affiliate_link,
+            row.target_country,
+            row.page_type || null,
+            row.store_product_links && row.store_product_links.length > 0
+              ? JSON.stringify(row.store_product_links)
+              : null,
+            row.brand_name || null,
+            row.product_price || null,
+            row.commission_payout || null,
+          ]
+        )
         existingTaskStatus.set(childTaskId, 'pending')
         createdTaskCount++
       } else {
@@ -157,19 +165,15 @@ export async function executeBatchCreation(
       }
 
       const statusForEnqueue = existingTaskStatus.get(childTaskId)
-      const shouldEnqueue = !statusForEnqueue || statusForEnqueue === 'pending' || statusForEnqueue === 'failed'
+      const shouldEnqueue =
+        !statusForEnqueue || statusForEnqueue === 'pending' || statusForEnqueue === 'failed'
       if (shouldEnqueue) {
-        await queue.enqueue(
-          'offer-extraction',
-          taskData,
-          task.userId,
-          {
-            priority: 'normal',
-            requireProxy: true,
-            maxRetries: 2,
-            taskId: childTaskId  // 关键：传递预定义的taskId，确保队列任务ID与offer_tasks记录ID一致
-          }
-        )
+        await queue.enqueue('offer-extraction', taskData, task.userId, {
+          priority: 'normal',
+          requireProxy: true,
+          maxRetries: 2,
+          taskId: childTaskId, // 关键：传递预定义的taskId，确保队列任务ID与offer_tasks记录ID一致
+        })
         enqueuedTaskCount++
       } else {
         console.log(`⏭️ 跳过重复入队: childTask=${childTaskId}, status=${statusForEnqueue}`)
@@ -189,12 +193,15 @@ export async function executeBatchCreation(
         const stats = await db.query<{
           status: string
           count: number
-        }>(`
+        }>(
+          `
           SELECT status, COUNT(*) as count
           FROM offer_tasks
           WHERE batch_id = ?
           GROUP BY status
-        `, [batchId])
+        `,
+          [batchId]
+        )
 
         const statsMap: Record<string, number> = {}
         for (const row of stats) {
@@ -206,23 +213,29 @@ export async function executeBatchCreation(
         const total = rows.length
 
         // 更新batch_tasks和upload_records进度
-        await db.exec(`
+        await db.exec(
+          `
           UPDATE batch_tasks
           SET
             completed_count = ?,
             failed_count = ?,
             updated_at = ${nowFunc}
           WHERE id = ?
-        `, [completed, failed, batchId])
+        `,
+          [completed, failed, batchId]
+        )
 
-        await db.exec(`
+        await db.exec(
+          `
           UPDATE upload_records
           SET
             processed_count = ?,
             failed_count = ?,
             updated_at = ${nowFunc}
           WHERE batch_id = ?
-        `, [completed, failed, batchId])
+        `,
+          [completed, failed, batchId]
+        )
 
         // 检查是否全部完成
         if (completed + failed >= total) {
@@ -239,25 +252,33 @@ export async function executeBatchCreation(
           }
 
           // 更新batch_tasks和upload_records最终状态
-          await db.exec(`
+          await db.exec(
+            `
             UPDATE batch_tasks
             SET
               status = ?,
               completed_at = ${nowFunc},
               updated_at = ${nowFunc}
             WHERE id = ?
-          `, [finalStatus, batchId])
+          `,
+            [finalStatus, batchId]
+          )
 
-          await db.exec(`
+          await db.exec(
+            `
             UPDATE upload_records
             SET
               status = ?,
               completed_at = ${nowFunc},
               updated_at = ${nowFunc}
             WHERE batch_id = ?
-          `, [finalStatus, batchId])
+          `,
+            [finalStatus, batchId]
+          )
 
-          console.log(`✅ 批量任务完成: batch=${batchId}, status=${finalStatus}, completed=${completed}, failed=${failed}`)
+          console.log(
+            `✅ 批量任务完成: batch=${batchId}, status=${finalStatus}, completed=${completed}, failed=${failed}`
+          )
         }
       } catch (error: any) {
         console.error('❌ 批量任务监控错误:', error)
@@ -270,7 +291,6 @@ export async function executeBatchCreation(
       clearInterval(monitorInterval)
       console.log(`⏱️ 批量任务监控超时: batch=${batchId}`)
     }, 600000)
-
   } catch (error: any) {
     console.error(`❌ 批量创建任务失败: batch=${batchId}:`, error.message)
 
@@ -278,23 +298,29 @@ export async function executeBatchCreation(
     const nowFuncErr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
     // 更新batch_tasks和upload_records为失败状态
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE batch_tasks
       SET
         status = 'failed',
         completed_at = ${nowFuncErr},
         updated_at = ${nowFuncErr}
       WHERE id = ?
-    `, [batchId])
+    `,
+      [batchId]
+    )
 
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE upload_records
       SET
         status = 'failed',
         completed_at = ${nowFuncErr},
         updated_at = ${nowFuncErr}
       WHERE batch_id = ?
-    `, [batchId])
+    `,
+      [batchId]
+    )
 
     throw error
   }

@@ -5,10 +5,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createOfferExtractionTaskForNewOffer } from '@/lib/offer-extraction-task'
-import {
-  OfferExtractRequestError,
-  parseNewOfferExtractRequest,
-} from '@/lib/offer-extract-request'
+import { OfferExtractRequestError, parseNewOfferExtractRequest } from '@/lib/offer-extract-request'
 
 export const maxDuration = 120
 
@@ -18,10 +15,7 @@ export async function POST(req: NextRequest) {
   try {
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -80,9 +74,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    return NextResponse.json(
-      { error: 'Internal server error', message },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error', message }, { status: 500 })
   }
 }

@@ -19,7 +19,7 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -34,10 +34,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     const offer = await findOfferById(offerId, userId)
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -93,9 +90,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     })
   } catch (error: any) {
     console.error('Get offer trends error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取趋势数据失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取趋势数据失败' }, { status: 500 })
   }
 }

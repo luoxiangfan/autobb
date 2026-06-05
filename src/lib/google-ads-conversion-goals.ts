@@ -27,7 +27,10 @@ function getErrorText(error: any): string {
     // ignore
   }
   if (Array.isArray(error?.errors) && error.errors.length > 0) {
-    const msg = error.errors.map((e: any) => e?.message).filter(Boolean).join('; ')
+    const msg = error.errors
+      .map((e: any) => e?.message)
+      .filter(Boolean)
+      .join('; ')
     if (msg) return msg
   }
   return ''
@@ -92,8 +95,8 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
     // 构建 CampaignConversionGoal 的 resource_name
     // 格式: customers/{customer_id}/campaignConversionGoals/{campaign_id}~{category}~{origin}
     // 注意：category 和 origin 必须使用字符串名称，不能使用枚举数字
-    const category = 'PAGE_VIEW'  // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
-    const origin = 'WEBSITE'      // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
+    const category = 'PAGE_VIEW' // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
+    const origin = 'WEBSITE' // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
     const goalResourceName = `customers/${customerId}/campaignConversionGoals/${campaignId}~${category}~${origin}`
 
     console.log(`   Goal Resource: ${goalResourceName}`)
@@ -101,27 +104,23 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
     // 更新 CampaignConversionGoal，将 biddable 设置为 true
     const campaignConversionGoal: any = {
       resource_name: goalResourceName,
-      biddable: true  // 启用该转化目标用于竞价优化
+      biddable: true, // 启用该转化目标用于竞价优化
     }
 
-    await withRetry(
-      () => customer.campaignConversionGoals.update([campaignConversionGoal]),
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        // 🔧 性能优化：NOT_FOUND / 权限类错误通常不可通过重试恢复，避免无意义的指数退避等待
-        shouldRetry: (error) => {
-          if (isNotFoundLikeError(error)) return false
-          if (isPermissionLikeError(error)) return false
-          return true
-        },
-        operationName: `Set PAGE_VIEW goal for campaign ${campaignId}`
-      }
-    )
+    await withRetry(() => customer.campaignConversionGoals.update([campaignConversionGoal]), {
+      maxRetries: 3,
+      initialDelay: 1000,
+      // 🔧 性能优化：NOT_FOUND / 权限类错误通常不可通过重试恢复，避免无意义的指数退避等待
+      shouldRetry: (error) => {
+        if (isNotFoundLikeError(error)) return false
+        if (isPermissionLikeError(error)) return false
+        return true
+      },
+      operationName: `Set PAGE_VIEW goal for campaign ${campaignId}`,
+    })
 
     console.log(`✅ Campaign转化目标配置成功 (网页浏览)`)
     return true
-
   } catch (error: any) {
     // 如果错误是因为 CampaignConversionGoal 不存在
     if (isNotFoundLikeError(error)) {
@@ -166,8 +165,8 @@ export async function setCampaignPageViewGoal(
     // 🔧 修复(2025-12-30): 使用字符串名称而非枚举数字值
     // 构建 CampaignConversionGoal 的 resource_name
     // 格式: customers/{customer_id}/campaignConversionGoals/{campaign_id}~{category}~{origin}
-    const category = 'PAGE_VIEW'  // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
-    const origin = 'WEBSITE'      // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
+    const category = 'PAGE_VIEW' // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
+    const origin = 'WEBSITE' // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
     const goalResourceName = `customers/${customerId}/campaignConversionGoals/${campaignId}~${category}~${origin}`
 
     console.log(`🎯 配置Campaign转化目标:`)
@@ -178,21 +177,17 @@ export async function setCampaignPageViewGoal(
     // 更新 CampaignConversionGoal，将 biddable 设置为 true
     const campaignConversionGoal: any = {
       resource_name: goalResourceName,
-      biddable: true  // 启用该转化目标用于竞价优化
+      biddable: true, // 启用该转化目标用于竞价优化
     }
 
-    await withRetry(
-      () => customer.campaignConversionGoals.update([campaignConversionGoal]),
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        operationName: `Set PAGE_VIEW goal for campaign ${campaignId}`
-      }
-    )
+    await withRetry(() => customer.campaignConversionGoals.update([campaignConversionGoal]), {
+      maxRetries: 3,
+      initialDelay: 1000,
+      operationName: `Set PAGE_VIEW goal for campaign ${campaignId}`,
+    })
 
     console.log(`✅ Campaign转化目标配置成功`)
     return true
-
   } catch (error: any) {
     // 如果错误是因为 CampaignConversionGoal 不存在，可能需要先创建
     if (error.message?.includes('NOT_FOUND') || error.message?.includes('does not exist')) {
@@ -225,8 +220,8 @@ export async function setCustomerPageViewGoal(
     // 🔧 修复(2025-12-30): 使用字符串名称而非枚举数字值
     // 构建 CustomerConversionGoal 的 resource_name
     // 格式: customers/{customer_id}/customerConversionGoals/{category}~{origin}
-    const category = 'PAGE_VIEW'  // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
-    const origin = 'WEBSITE'      // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
+    const category = 'PAGE_VIEW' // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
+    const origin = 'WEBSITE' // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
     const goalResourceName = `customers/${customerId}/customerConversionGoals/${category}~${origin}`
 
     console.log(`🎯 配置账号级别转化目标:`)
@@ -237,21 +232,17 @@ export async function setCustomerPageViewGoal(
     // 更新 CustomerConversionGoal，将 biddable 设置为 true
     const customerConversionGoal: any = {
       resource_name: goalResourceName,
-      biddable: true  // 启用该转化目标用于竞价优化
+      biddable: true, // 启用该转化目标用于竞价优化
     }
 
-    await withRetry(
-      () => customer.customerConversionGoals.update([customerConversionGoal]),
-      {
-        maxRetries: 3,
-        initialDelay: 1000,
-        operationName: `Set PAGE_VIEW goal for customer ${customerId}`
-      }
-    )
+    await withRetry(() => customer.customerConversionGoals.update([customerConversionGoal]), {
+      maxRetries: 3,
+      initialDelay: 1000,
+      operationName: `Set PAGE_VIEW goal for customer ${customerId}`,
+    })
 
     console.log(`✅ 账号级别转化目标配置成功`)
     return true
-
   } catch (error: any) {
     console.error(`❌ 配置账号级别转化目标失败:`, error.message)
     console.error(`   错误详情:`, JSON.stringify(error, null, 2))

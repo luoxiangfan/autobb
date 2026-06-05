@@ -14,7 +14,9 @@ export const EMPTY_IDENTITY_VERIFICATION: IdentityVerificationSnapshot = {
   overdue: false,
 }
 
-export function extractIdentityVerificationSnapshot(rawResponse: any): IdentityVerificationSnapshot {
+export function extractIdentityVerificationSnapshot(
+  rawResponse: any
+): IdentityVerificationSnapshot {
   const identityVerificationList =
     rawResponse?.identity_verification ||
     rawResponse?.identityVerification ||
@@ -26,13 +28,17 @@ export function extractIdentityVerificationSnapshot(rawResponse: any): IdentityV
     return { ...EMPTY_IDENTITY_VERIFICATION }
   }
 
-  const advertiserIdentity = identityVerificationList.find((item: any) => {
-    const program = item?.verification_program ?? item?.verificationProgram
-    return program === 'ADVERTISER_IDENTITY_VERIFICATION' || program === 2 || program === '2'
-  }) ?? identityVerificationList[0]
+  const advertiserIdentity =
+    identityVerificationList.find((item: any) => {
+      const program = item?.verification_program ?? item?.verificationProgram
+      return program === 'ADVERTISER_IDENTITY_VERIFICATION' || program === 2 || program === '2'
+    }) ?? identityVerificationList[0]
 
-  const requirement = advertiserIdentity?.identity_verification_requirement ?? advertiserIdentity?.identityVerificationRequirement
-  const progress = advertiserIdentity?.verification_progress ?? advertiserIdentity?.verificationProgress
+  const requirement =
+    advertiserIdentity?.identity_verification_requirement ??
+    advertiserIdentity?.identityVerificationRequirement
+  const progress =
+    advertiserIdentity?.verification_progress ?? advertiserIdentity?.verificationProgress
 
   const programStatusRaw = progress?.program_status ?? progress?.programStatus ?? null
   const programStatus = programStatusRaw ? String(programStatusRaw).toUpperCase() : null
@@ -46,7 +52,9 @@ export function extractIdentityVerificationSnapshot(rawResponse: any): IdentityV
     requirement?.verificationCompletionDeadlineTime ??
     null
 
-  const completionDeadlineMs = verificationCompletionDeadlineTime ? Date.parse(String(verificationCompletionDeadlineTime)) : NaN
+  const completionDeadlineMs = verificationCompletionDeadlineTime
+    ? Date.parse(String(verificationCompletionDeadlineTime))
+    : NaN
   const deadlinePassed = !Number.isNaN(completionDeadlineMs) && completionDeadlineMs < Date.now()
 
   const overdue =
@@ -56,8 +64,12 @@ export function extractIdentityVerificationSnapshot(rawResponse: any): IdentityV
 
   return {
     programStatus,
-    verificationStartDeadlineTime: verificationStartDeadlineTime ? String(verificationStartDeadlineTime) : null,
-    verificationCompletionDeadlineTime: verificationCompletionDeadlineTime ? String(verificationCompletionDeadlineTime) : null,
+    verificationStartDeadlineTime: verificationStartDeadlineTime
+      ? String(verificationStartDeadlineTime)
+      : null,
+    verificationCompletionDeadlineTime: verificationCompletionDeadlineTime
+      ? String(verificationCompletionDeadlineTime)
+      : null,
     overdue,
   }
 }

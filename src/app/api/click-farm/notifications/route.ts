@@ -2,33 +2,33 @@
 // src/app/api/click-farm/notifications/route.ts
 
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserNotifications } from '@/lib/click-farm/notifications';
+import { NextRequest, NextResponse } from 'next/server'
+import { getUserNotifications } from '@/lib/click-farm/notifications'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const notifications = await getUserNotifications(userId);
+    const notifications = await getUserNotifications(userId)
 
     return NextResponse.json({
       success: true,
-      data: { notifications, count: notifications.length }
-    });
+      data: { notifications, count: notifications.length },
+    })
   } catch (error: any) {
-    console.error('Failed to fetch notifications:', error);
+    console.error('Failed to fetch notifications:', error)
     return NextResponse.json(
       { error: 'Failed to fetch notifications', message: error.message },
       { status: 500 }
-    );
+    )
   }
 }

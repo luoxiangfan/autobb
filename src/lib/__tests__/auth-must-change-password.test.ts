@@ -80,7 +80,9 @@ describe('loginWithPassword mustChangePassword', () => {
 
     expect(resp.token).toBe('token')
     expect(resp.mustChangePassword).toBe(false)
-    expect(generateTokenMock).toHaveBeenCalledWith(expect.objectContaining({ mustChangePassword: false }))
+    expect(generateTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ mustChangePassword: false })
+    )
   })
 
   it('非管理员账号会强制修改密码', async () => {
@@ -89,7 +91,8 @@ describe('loginWithPassword mustChangePassword', () => {
     const resp = await loginWithPassword('user', 'pw')
 
     expect(resp.mustChangePassword).toBe(true)
-    expect(generateTokenMock).toHaveBeenCalledWith(expect.objectContaining({ mustChangePassword: true }))
+    expect(generateTokenMock).toHaveBeenCalledWith(
+      expect.objectContaining({ mustChangePassword: true })
+    )
   })
 })
-

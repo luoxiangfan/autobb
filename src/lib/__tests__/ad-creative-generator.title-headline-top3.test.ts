@@ -34,8 +34,12 @@ describe('ad-creative-generator enforceTitlePriorityTopHeadlines', () => {
 
     const result = enforceTitlePriorityTopHeadlines(creative, {
       brandName: 'Sunco',
-      productTitle: 'Sunco LED Shop Lights for Workshop 4FT, Linkable Garage Lighting, 4500 LM, 40W(150W Equivalent), 5000K Daylight, Surface + Suspension Mount, 48 Inch Integrated Fixture, White 4 Pack.',
-      aboutItems: ['V-shape design with wide lighting coverage', 'Easy installation and mounting options'],
+      productTitle:
+        'Sunco LED Shop Lights for Workshop 4FT, Linkable Garage Lighting, 4500 LM, 40W(150W Equivalent), 5000K Daylight, Surface + Suspension Mount, 48 Inch Integrated Fixture, White 4 Pack.',
+      aboutItems: [
+        'V-shape design with wide lighting coverage',
+        'Easy installation and mounting options',
+      ],
       targetLanguage: 'English',
     })
 
@@ -46,7 +50,9 @@ describe('ad-creative-generator enforceTitlePriorityTopHeadlines', () => {
     expect(top3.every((headline) => headline.length <= 30)).toBe(true)
     expect(top3.every((headline) => /sunco/i.test(headline))).toBe(true)
     expect(new Set(top3.map((headline) => headline.toLowerCase())).size).toBe(3)
-    expect((creative.headlinesWithMetadata || []).slice(1, 4).every((asset) => asset.text.length <= 30)).toBe(true)
+    expect(
+      (creative.headlinesWithMetadata || []).slice(1, 4).every((asset) => asset.text.length <= 30)
+    ).toBe(true)
   })
 
   it('falls back to about/features only when title cannot provide 3 qualified headlines', () => {
@@ -55,7 +61,11 @@ describe('ad-creative-generator enforceTitlePriorityTopHeadlines', () => {
     const result = enforceTitlePriorityTopHeadlines(creative, {
       brandName: 'Acme',
       productTitle: 'Acme Pro',
-      aboutItems: ['Waterproof outdoor design', '20-hour battery life', 'Fast USB-C charging support'],
+      aboutItems: [
+        'Waterproof outdoor design',
+        '20-hour battery life',
+        'Fast USB-C charging support',
+      ],
       targetLanguage: 'English',
     })
 

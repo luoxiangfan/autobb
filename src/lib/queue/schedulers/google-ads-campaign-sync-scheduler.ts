@@ -29,8 +29,8 @@ import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 interface GoogleAdsCampaignSyncTaskData {
   userId: number
   syncType: 'manual' | 'auto'
-  customerId?: string  // 指定同步特定账户
-  dryRun?: boolean     // 仅预览，不实际写入
+  customerId?: string // 指定同步特定账户
+  dryRun?: boolean // 仅预览，不实际写入
 }
 
 function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
@@ -65,7 +65,7 @@ export class GoogleAdsCampaignSyncScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false
-  private readonly CHECK_INTERVAL_MS = 60 * 1000  // 每分钟检查一次
+  private readonly CHECK_INTERVAL_MS = 60 * 1000 // 每分钟检查一次
   private readonly RUN_ON_START = parseBooleanEnv(
     process.env.QUEUE_GOOGLE_ADS_SYNC_RUN_ON_START,
     true
@@ -100,7 +100,9 @@ export class GoogleAdsCampaignSyncScheduler {
       if (this.STARTUP_DELAY_MS === 0) {
         void this.checkAndScheduleSync()
       } else {
-        console.log(`⏳ Google Ads 同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
+        console.log(
+          `⏳ Google Ads 同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`
+        )
         this.startupTimeoutHandle = setTimeout(() => {
           this.startupTimeoutHandle = null
           void this.checkAndScheduleSync()
@@ -115,7 +117,9 @@ export class GoogleAdsCampaignSyncScheduler {
       this.checkAndScheduleSync()
     }, this.CHECK_INTERVAL_MS)
 
-    console.log(`✅ Google Ads 广告系列同步调度器已启动 (检查间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟，同步间隔：${this.SYNC_INTERVAL_HOURS}小时)`)
+    console.log(
+      `✅ Google Ads 广告系列同步调度器已启动 (检查间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟，同步间隔：${this.SYNC_INTERVAL_HOURS}小时)`
+    )
   }
 
   /**
@@ -158,7 +162,10 @@ export class GoogleAdsCampaignSyncScheduler {
 
       const db = await getDatabase()
       const now = new Date()
-      const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+      const userEligibleCondition = buildUserExecutionEligibleSql({
+        dbType: db.type,
+        userAlias: 'u',
+      })
 
       // 查询所有启用了自动同步的用户
       const configs = await db.query<UserSyncConfig>(
@@ -209,8 +216,11 @@ export class GoogleAdsCampaignSyncScheduler {
 
       for (const config of configs) {
         const userId = config.user_id
-        const intervalHours = parseInt(String(config.google_ads_sync_interval_hours)) || this.SYNC_INTERVAL_HOURS
-        const lastSyncAt = config.last_campaign_sync_at ? new Date(config.last_campaign_sync_at) : null
+        const intervalHours =
+          parseInt(String(config.google_ads_sync_interval_hours)) || this.SYNC_INTERVAL_HOURS
+        const lastSyncAt = config.last_campaign_sync_at
+          ? new Date(config.last_campaign_sync_at)
+          : null
 
         // 计算距离上次同步的小时数
         const hoursSinceLastSync = lastSyncAt
@@ -249,9 +259,7 @@ export class GoogleAdsCampaignSyncScheduler {
 
           const hasMcc = await userHasGoogleAdsMccAssignments(userId)
           if (!hasMcc) {
-            console.log(
-              `  ⏭️  用户 #${userId}: 未分配 MCC，无法同步 Google Ads 广告系列，跳过入队`
-            )
+            console.log(`  ⏭️  用户 #${userId}: 未分配 MCC，无法同步 Google Ads 广告系列，跳过入队`)
             noMccCount++
             skippedCount++
             continue
@@ -274,9 +282,7 @@ export class GoogleAdsCampaignSyncScheduler {
           }
         } else {
           const hoursUntilNext = intervalHours - hoursSinceLastSync
-          console.log(
-            `  ⏰ 用户 #${userId}: 距离下次同步还有 ${hoursUntilNext.toFixed(1)} 小时`
-          )
+          console.log(`  ⏰ 用户 #${userId}: 距离下次同步还有 ${hoursUntilNext.toFixed(1)} 小时`)
         }
       }
 
@@ -312,15 +318,10 @@ export class GoogleAdsCampaignSyncScheduler {
       dryRun: options.dryRun,
     }
 
-    const taskId = await queue.enqueue(
-      'google-ads-campaign-sync',
-      taskData,
-      userId,
-      {
-        priority: options.syncType === 'manual' ? 'high' : 'normal',
-        maxRetries: 3
-      }
-    )
+    const taskId = await queue.enqueue('google-ads-campaign-sync', taskData, userId, {
+      priority: options.syncType === 'manual' ? 'high' : 'normal',
+      maxRetries: 3,
+    })
 
     console.log(
       `📥 [GoogleAdsSyncTrigger] 同步任务已入队：${taskId}, 用户 #${userId}, 类型：${taskData.syncType}`
@@ -332,12 +333,15 @@ export class GoogleAdsCampaignSyncScheduler {
   /**
    * 手动触发同步（用于 API 调用）
    */
-  async triggerManualSync(userId: number, options?: {
-    customerId?: string
-    dryRun?: boolean
-  }): Promise<string> {
+  async triggerManualSync(
+    userId: number,
+    options?: {
+      customerId?: string
+      dryRun?: boolean
+    }
+  ): Promise<string> {
     console.log(`🔧 [GoogleAdsSyncScheduler] 手动触发用户 #${userId} 的同步任务`)
-    
+
     const taskId = await this.triggerGoogleAdsCampaignSync(userId, {
       syncType: 'manual',
       ...options,

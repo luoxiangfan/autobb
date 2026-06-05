@@ -26,8 +26,7 @@ vi.mock('@/lib/click-farm/queue-cleanup', () => ({
 }))
 
 vi.mock('@/lib/url-swap/queue-cleanup', () => ({
-  removePendingUrlSwapQueueTasksByTaskIds:
-    queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds,
+  removePendingUrlSwapQueueTasksByTaskIds: queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds,
 }))
 
 import {
@@ -89,9 +88,7 @@ describe('pauseOfferTasks', () => {
   })
 
   it('only disables url swap tasks in enabled or error status', async () => {
-    dbFns.query
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 'us-1' }])
+    dbFns.query.mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 'us-1' }])
 
     await pauseOfferTasks(123, 7)
 
@@ -105,9 +102,7 @@ describe('pauseOfferTasks', () => {
   })
 
   it('returns no-op when no tasks need update', async () => {
-    dbFns.query
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+    dbFns.query.mockResolvedValueOnce([]).mockResolvedValueOnce([])
 
     const result = await pauseOfferTasks(123, 7)
 
@@ -126,9 +121,7 @@ describe('pauseOfferTasks', () => {
     const largeClickFarmIds = Array.from({ length: 1205 }, (_, index) => ({
       id: `cf-${index + 1}`,
     }))
-    dbFns.query
-      .mockResolvedValueOnce(largeClickFarmIds)
-      .mockResolvedValueOnce([])
+    dbFns.query.mockResolvedValueOnce(largeClickFarmIds).mockResolvedValueOnce([])
 
     const result = await pauseOfferTasks(123, 7)
 
@@ -424,9 +417,7 @@ describe('pauseOfferTasks (postgres returning)', () => {
   })
 
   it('returns no-op when postgres returning has no matched rows', async () => {
-    dbFns.query
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
+    dbFns.query.mockResolvedValueOnce([]).mockResolvedValueOnce([])
 
     const result = await pauseOfferTasks(123, 7)
 

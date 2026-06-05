@@ -33,7 +33,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Link2, CheckCircle2, AlertCircle, Plus, RefreshCw, ExternalLink, Loader2, Info } from 'lucide-react'
+import {
+  Link2,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  RefreshCw,
+  ExternalLink,
+  Loader2,
+  Info,
+} from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   appendAccountsAuthToSearchParams,
@@ -71,7 +80,7 @@ interface GoogleAdsAccount {
   parentMccName?: string
   dbAccountId: number | null
   lastSyncAt?: string
-  accountBalance?: number | null  // 账户余额（微单位，需除以1000000）
+  accountBalance?: number | null // 账户余额（微单位，需除以1000000）
   linkedOffers?: Array<{
     id: number
     offerName: string | null
@@ -94,7 +103,7 @@ const formatBalance = (balance: number | null | undefined, currency: string): st
     style: 'currency',
     currency: currency || 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2
+    maximumFractionDigits: 2,
   }).format(amount)
 }
 
@@ -134,7 +143,9 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     filteredManager: 0,
     filteredClosed: 0,
   })
-  const [selectedIds, setSelectedIds] = useState<string[]>(selectedAccounts.map(account => account.customerId))
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    selectedAccounts.map((account) => account.customerId)
+  )
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const refreshPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -157,10 +168,12 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   })
 
   useEffect(() => {
-    setSelectedIds(selectedAccounts.map(account => account.customerId))
+    setSelectedIds(selectedAccounts.map((account) => account.customerId))
   }, [selectedAccounts])
 
-  const fetchAccountsRef = useRef<(forceRefresh?: boolean, isPoll?: boolean) => Promise<void>>(async () => {})
+  const fetchAccountsRef = useRef<(forceRefresh?: boolean, isPoll?: boolean) => Promise<void>>(
+    async () => {}
+  )
 
   const scheduleRefreshPoll = useCallback(() => {
     if (refreshPollTimerRef.current) clearTimeout(refreshPollTimerRef.current)
@@ -169,150 +182,166 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     }, 2000)
   }, [])
 
-  const fetchAccounts = useCallback(async (forceRefresh: boolean = false, isPoll: boolean = false) => {
-    try {
-      if (forceRefresh) {
-        setRefreshing(true)
-      } else if (!isPoll) {
-        setLoading(true)
-      }
-      if (!isPoll) {
-        setRefreshFailed(false)
-      }
-      if (forceRefresh) {
-        setNeedsReauth(false)
-      }
-
-      const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
-
-      const resolved = resolveAccountsRequestAuth(auth)
-      if (!resolved.ok) {
-        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
-        if (effects.authConfigWarning) {
-          setAuthConfigWarning(effects.authConfigWarning)
-        }
-        if (effects.errorMessage) {
-          showError(effects.errorMessage)
-        }
-        if (effects.clearForceRefreshState) {
-          setRefreshing(false)
-        }
-        return
-      }
-      const authForRequest = resolved.authForRequest
-
-      const params = new URLSearchParams({
-        refresh: forceRefresh ? 'true' : 'false',
-        offerId: offer.id.toString(),
-      })
-      if (forceRefresh) {
-        params.append('async', 'true')
-      }
-      appendAccountsAuthToSearchParams(params, authForRequest)
-
-      // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
-      // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
-      const response = await fetch(`/api/google-ads/credentials/accounts?${params}&filterByUserMcc=true`, {
-        credentials: 'include'
-      })
-
-      if (!response.ok) {
-        const errorData = await safeReadJson(response)
-        try {
-          throwAccountsListFetchError(response, errorData, { fallbackMessage: '获取账号列表失败' })
-        } catch (error) {
-          if (error instanceof Error) {
-            const enriched = error as Error & {
-              needsReauth?: boolean
-              authConfigWarning?: string | null
-            }
-            if (enriched.needsReauth) {
-              setNeedsReauth(true)
-            }
-            if (enriched.authConfigWarning) {
-              setAuthConfigWarning(enriched.authConfigWarning)
-            }
-          }
-          throw error
-        }
-      }
-
-      const data = await response.json()
-      setAuthConfigWarning(formatNullableErrorMessage(data.data?.authConfigWarning))
-      setNeedsReauth(false)
-
-      if (data.success && data.data?.accounts) {
-        setIsCached(Boolean(data.data.cached))
-        setCacheStale(Boolean(data.data.cacheStale))
-        setRefreshFailed(Boolean(data.data.refreshFailed))
-        setLastSyncAt(data.data.lastSyncAt || null)
-        setRefreshInProgress(Boolean(data.data.refreshInProgress))
-        setRefreshError(data.data.refreshError || null)
-
-        const allAccounts = data.data.accounts as GoogleAdsAccount[]
-        const isClosedOrCanceled = (status: string | null | undefined) => {
-          const normalizedStatus = String(status || '').toUpperCase()
-          return normalizedStatus === 'CANCELED' || normalizedStatus === 'CANCELLED' || normalizedStatus === 'CLOSED'
-        }
-        const filteredManagerCount = allAccounts.filter(account => account.manager === true).length
-        const filteredClosedCount = allAccounts.filter(account => isClosedOrCanceled(account.status)).length
-
-        // 🔓 KISS优化(2025-12-12): 移除独占约束，只筛选基本条件
-        // 筛选可用账号：
-        // 1. 不能是 MCC 账号
-        // 2. 过滤明显不可用（取消/关闭）的账号
-        const availableAccounts = allAccounts.filter(account => {
-          // 条件1：不能是 MCC 账号
-          if (account.manager === true) return false
-
-          // 条件2：明确不可用的账号不展示（一般不可恢复/不可操作）
-          if (isClosedOrCanceled(account.status)) return false
-
-          return true
-        })
-
-        setAccountStats({
-          total: allAccounts.length,
-          available: availableAccounts.length,
-          filteredManager: filteredManagerCount,
-          filteredClosed: filteredClosedCount,
-        })
-
-        // API已按优先级排序，直接使用
-        setAccounts(availableAccounts)
-
+  const fetchAccounts = useCallback(
+    async (forceRefresh: boolean = false, isPoll: boolean = false) => {
+      try {
         if (forceRefresh) {
-          if (data.data.refreshInProgress) {
-            showSuccess('已开始刷新', '后台同步中，列表将自动更新')
-            scheduleRefreshPoll()
-          } else {
-            showSuccess('已刷新', `已同步 ${allAccounts.length} 个账号`)
+          setRefreshing(true)
+        } else if (!isPoll) {
+          setLoading(true)
+        }
+        if (!isPoll) {
+          setRefreshFailed(false)
+        }
+        if (forceRefresh) {
+          setNeedsReauth(false)
+        }
+
+        const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
+
+        const resolved = resolveAccountsRequestAuth(auth)
+        if (!resolved.ok) {
+          const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
+          if (effects.authConfigWarning) {
+            setAuthConfigWarning(effects.authConfigWarning)
+          }
+          if (effects.errorMessage) {
+            showError(effects.errorMessage)
+          }
+          if (effects.clearForceRefreshState) {
             setRefreshing(false)
           }
-        } else if (isPoll) {
-          if (data.data.refreshInProgress) {
-            scheduleRefreshPoll()
-          } else {
-            setRefreshing(false)
+          return
+        }
+        const authForRequest = resolved.authForRequest
+
+        const params = new URLSearchParams({
+          refresh: forceRefresh ? 'true' : 'false',
+          offerId: offer.id.toString(),
+        })
+        if (forceRefresh) {
+          params.append('async', 'true')
+        }
+        appendAccountsAuthToSearchParams(params, authForRequest)
+
+        // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
+        // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
+        const response = await fetch(
+          `/api/google-ads/credentials/accounts?${params}&filterByUserMcc=true`,
+          {
+            credentials: 'include',
+          }
+        )
+
+        if (!response.ok) {
+          const errorData = await safeReadJson(response)
+          try {
+            throwAccountsListFetchError(response, errorData, {
+              fallbackMessage: '获取账号列表失败',
+            })
+          } catch (error) {
+            if (error instanceof Error) {
+              const enriched = error as Error & {
+                needsReauth?: boolean
+                authConfigWarning?: string | null
+              }
+              if (enriched.needsReauth) {
+                setNeedsReauth(true)
+              }
+              if (enriched.authConfigWarning) {
+                setAuthConfigWarning(enriched.authConfigWarning)
+              }
+            }
+            throw error
           }
         }
-      } else {
-        setAccounts([])
+
+        const data = await response.json()
+        setAuthConfigWarning(formatNullableErrorMessage(data.data?.authConfigWarning))
+        setNeedsReauth(false)
+
+        if (data.success && data.data?.accounts) {
+          setIsCached(Boolean(data.data.cached))
+          setCacheStale(Boolean(data.data.cacheStale))
+          setRefreshFailed(Boolean(data.data.refreshFailed))
+          setLastSyncAt(data.data.lastSyncAt || null)
+          setRefreshInProgress(Boolean(data.data.refreshInProgress))
+          setRefreshError(data.data.refreshError || null)
+
+          const allAccounts = data.data.accounts as GoogleAdsAccount[]
+          const isClosedOrCanceled = (status: string | null | undefined) => {
+            const normalizedStatus = String(status || '').toUpperCase()
+            return (
+              normalizedStatus === 'CANCELED' ||
+              normalizedStatus === 'CANCELLED' ||
+              normalizedStatus === 'CLOSED'
+            )
+          }
+          const filteredManagerCount = allAccounts.filter(
+            (account) => account.manager === true
+          ).length
+          const filteredClosedCount = allAccounts.filter((account) =>
+            isClosedOrCanceled(account.status)
+          ).length
+
+          // 🔓 KISS优化(2025-12-12): 移除独占约束，只筛选基本条件
+          // 筛选可用账号：
+          // 1. 不能是 MCC 账号
+          // 2. 过滤明显不可用（取消/关闭）的账号
+          const availableAccounts = allAccounts.filter((account) => {
+            // 条件1：不能是 MCC 账号
+            if (account.manager === true) return false
+
+            // 条件2：明确不可用的账号不展示（一般不可恢复/不可操作）
+            if (isClosedOrCanceled(account.status)) return false
+
+            return true
+          })
+
+          setAccountStats({
+            total: allAccounts.length,
+            available: availableAccounts.length,
+            filteredManager: filteredManagerCount,
+            filteredClosed: filteredClosedCount,
+          })
+
+          // API已按优先级排序，直接使用
+          setAccounts(availableAccounts)
+
+          if (forceRefresh) {
+            if (data.data.refreshInProgress) {
+              showSuccess('已开始刷新', '后台同步中，列表将自动更新')
+              scheduleRefreshPoll()
+            } else {
+              showSuccess('已刷新', `已同步 ${allAccounts.length} 个账号`)
+              setRefreshing(false)
+            }
+          } else if (isPoll) {
+            if (data.data.refreshInProgress) {
+              scheduleRefreshPoll()
+            } else {
+              setRefreshing(false)
+            }
+          }
+        } else {
+          setAccounts([])
+          setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+        }
+      } catch (error: any) {
+        console.error('获取账号列表失败:', error)
+        showError('加载失败', error.message || '获取账号列表失败')
+        setRefreshing(false)
+        setRefreshInProgress(false)
+        setRefreshError(null)
         setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+      } finally {
+        if (!isPoll) {
+          setLoading(false)
+        }
       }
-    } catch (error: any) {
-      console.error('获取账号列表失败:', error)
-      showError('加载失败', error.message || '获取账号列表失败')
-      setRefreshing(false)
-      setRefreshInProgress(false)
-      setRefreshError(null)
-      setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
-    } finally {
-      if (!isPoll) {
-        setLoading(false)
-      }
-    }
-  }, [offer.id, prepareAuthForAccountsFetch, scheduleRefreshPoll])
+    },
+    [offer.id, prepareAuthForAccountsFetch, scheduleRefreshPoll]
+  )
 
   fetchAccountsRef.current = fetchAccounts
 
@@ -333,11 +362,13 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   }
 
   const normalizeCurrencyCode = (currencyCode: string | null | undefined): string => {
-    return String(currencyCode || '').trim().toUpperCase()
+    return String(currencyCode || '')
+      .trim()
+      .toUpperCase()
   }
 
   const getSelectedCurrencyCode = (): string | null => {
-    const selectedInFetchedList = accounts.find(item => {
+    const selectedInFetchedList = accounts.find((item) => {
       if (!selectedIds.includes(item.customerId)) return false
       return normalizeCurrencyCode(item.currencyCode).length > 0
     })
@@ -345,7 +376,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       return normalizeCurrencyCode(selectedInFetchedList.currencyCode)
     }
 
-    const selectedInProps = selectedAccounts.find(item => {
+    const selectedInProps = selectedAccounts.find((item) => {
       if (!selectedIds.includes(item.customerId)) return false
       return normalizeCurrencyCode(item.currencyCode).length > 0
     })
@@ -364,12 +395,16 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
     const isAlreadySelected = selectedIds.includes(account.customerId)
     const nextSelectedIds = isAlreadySelected
-      ? selectedIds.filter(id => id !== account.customerId)
+      ? selectedIds.filter((id) => id !== account.customerId)
       : [...selectedIds, account.customerId]
 
     const selectedCurrencyCode = getSelectedCurrencyCode()
     const accountCurrencyCode = normalizeCurrencyCode(account.currencyCode)
-    if (!isAlreadySelected && selectedCurrencyCode && accountCurrencyCode !== selectedCurrencyCode) {
+    if (
+      !isAlreadySelected &&
+      selectedCurrencyCode &&
+      accountCurrencyCode !== selectedCurrencyCode
+    ) {
       showError(
         '币种不一致',
         `仅支持同币种批量发布。当前已选币种为 ${selectedCurrencyCode}，该账号币种为 ${accountCurrencyCode || '未知'}`
@@ -385,20 +420,21 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     setSelectedIds(nextSelectedIds)
 
     const transformedAccounts = accounts
-      .filter(item => nextSelectedIds.includes(item.customerId) && item.dbAccountId !== null)
-      .map(item => ({
-        id: item.dbAccountId!,  // Database ID used in Step4
+      .filter((item) => nextSelectedIds.includes(item.customerId) && item.dbAccountId !== null)
+      .map((item) => ({
+        id: item.dbAccountId!, // Database ID used in Step4
         customerId: item.customerId,
         accountName: item.descriptiveName,
         isActive: item.status === 'ENABLED',
         currencyCode: item.currencyCode,
-        status: item.status
+        status: item.status,
       }))
 
     onAccountsLinked(transformedAccounts)
-    const message = transformedAccounts.length > 0
-      ? `已选择 ${transformedAccounts.length} 个账号`
-      : '已取消所有账号选择'
+    const message =
+      transformedAccounts.length > 0
+        ? `已选择 ${transformedAccounts.length} 个账号`
+        : '已取消所有账号选择'
     showSuccess('账号选择已更新', message)
   }
 
@@ -424,9 +460,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
             <Link2 className="w-5 h-5 text-green-600" />
             关联Google Ads账号
           </CardTitle>
-          <CardDescription>
-            选择或连接Google Ads账号，用于发布广告系列
-          </CardDescription>
+          <CardDescription>选择或连接Google Ads账号，用于发布广告系列</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap gap-2">
@@ -434,11 +468,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
               <Plus className="w-4 h-4 mr-2" />
               连接新账号
             </Button>
-            <Button
-              onClick={() => fetchAccounts(true)}
-              variant="outline"
-              disabled={refreshing}
-            >
+            <Button onClick={() => fetchAccounts(true)} variant="outline" disabled={refreshing}>
               {refreshing ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
@@ -449,7 +479,9 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           </div>
 
           <div className="text-xs text-gray-500">
-            {lastSyncAt ? `上次同步：${new Date(lastSyncAt).toLocaleString('zh-CN')}` : '上次同步：-'}
+            {lastSyncAt
+              ? `上次同步：${new Date(lastSyncAt).toLocaleString('zh-CN')}`
+              : '上次同步：-'}
             {isCached ? '（来自缓存）' : '（已实时同步）'}
             {cacheStale ? '（缓存已过期）' : ''}
             {refreshFailed ? '（本次刷新失败，已回退缓存）' : ''}
@@ -457,8 +489,10 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
           {accountStats.total > 0 && (
             <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
-              口径说明：`/google-ads` 显示可访问账号总数 {accountStats.total}；本步骤展示可选账号 {accountStats.available}
-              （已过滤 MCC {accountStats.filteredManager} 个、已关闭账号 {accountStats.filteredClosed} 个）。
+              口径说明：`/google-ads` 显示可访问账号总数 {accountStats.total}；本步骤展示可选账号{' '}
+              {accountStats.available}
+              （已过滤 MCC {accountStats.filteredManager} 个、已关闭账号{' '}
+              {accountStats.filteredClosed} 个）。
             </div>
           )}
         </CardContent>
@@ -503,7 +537,15 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           <AlertDescription className="text-yellow-900">
             <strong>尚未配置Google Ads凭证</strong>
             <p className="mt-2">
-              您需要先在<Link href="/settings" className="text-blue-600 hover:underline">设置页面</Link>配置Google Ads OAuth凭证（Client ID、Client Secret、Developer Token、MCC账号），然后在<Link href="/google-ads" className="text-blue-600 hover:underline">Google Ads管理页面</Link>刷新账户列表。
+              您需要先在
+              <Link href="/settings" className="text-blue-600 hover:underline">
+                设置页面
+              </Link>
+              配置Google Ads OAuth凭证（Client ID、Client Secret、Developer Token、MCC账号），然后在
+              <Link href="/google-ads" className="text-blue-600 hover:underline">
+                Google Ads管理页面
+              </Link>
+              刷新账户列表。
             </p>
           </AlertDescription>
         </Alert>
@@ -515,29 +557,28 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           <CardContent className="py-12 text-center">
             <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">暂无可用的Google Ads账号</p>
-            <p className="text-sm text-gray-400 mt-2">
-              点击"连接新账号"查看添加账号的操作指南
-            </p>
+            <p className="text-sm text-gray-400 mt-2">点击"连接新账号"查看添加账号的操作指南</p>
           </CardContent>
         </Card>
       ) : (
         <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">可用账号列表</CardTitle>
-          <CardDescription>
-            最多选择 {MAX_SELECTABLE_ACCOUNTS} 个账号用于同步发布（仅支持同一货币，已按推荐优先级排序）
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {selectedCurrencyCode && (
-            <div className="mb-2 text-xs text-amber-700">
-              已锁定币种：{selectedCurrencyCode}（仅可继续选择相同币种账号）
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">可用账号列表</CardTitle>
+            <CardDescription>
+              最多选择 {MAX_SELECTABLE_ACCOUNTS}{' '}
+              个账号用于同步发布（仅支持同一货币，已按推荐优先级排序）
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedCurrencyCode && (
+              <div className="mb-2 text-xs text-amber-700">
+                已锁定币种：{selectedCurrencyCode}（仅可继续选择相同币种账号）
+              </div>
+            )}
+            <div className="mb-3 text-xs text-gray-600">
+              已选择 {selectedIds.length}/{MAX_SELECTABLE_ACCOUNTS}
             </div>
-          )}
-          <div className="mb-3 text-xs text-gray-600">
-            已选择 {selectedIds.length}/{MAX_SELECTABLE_ACCOUNTS}
-          </div>
-          <Table className="table-fixed min-w-[1120px] [&_thead_th]:bg-white">
+            <Table className="table-fixed min-w-[1120px] [&_thead_th]:bg-white">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[50px]">选择</TableHead>
@@ -555,9 +596,10 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
                 {accounts.map((account) => {
                   const isSelected = selectedIds.includes(account.customerId)
                   const accountCurrencyCode = normalizeCurrencyCode(account.currencyCode)
-                  const isCurrencyCompatible = isSelected
-                    || !selectedCurrencyCode
-                    || (accountCurrencyCode.length > 0 && accountCurrencyCode === selectedCurrencyCode)
+                  const isCurrencyCompatible =
+                    isSelected ||
+                    !selectedCurrencyCode ||
+                    (accountCurrencyCode.length > 0 && accountCurrencyCode === selectedCurrencyCode)
                   const isSelectable = account.dbAccountId !== null && isCurrencyCompatible
 
                   return (
@@ -570,19 +612,27 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
                       }}
                     >
                       <TableCell>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          isSelected ? 'border-green-600 bg-green-600' : 'border-gray-300'
-                        }`}>
+                        <div
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            isSelected ? 'border-green-600 bg-green-600' : 'border-gray-300'
+                          }`}
+                        >
                           {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
                         </div>
                       </TableCell>
                       <TableCell className="w-[220px]">
                         <div className="flex min-w-0 items-center gap-2">
-                          <span className="block truncate font-medium" title={account.descriptiveName}>
+                          <span
+                            className="block truncate font-medium"
+                            title={account.descriptiveName}
+                          >
                             {account.descriptiveName}
                           </span>
                           {account.testAccount && (
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
+                            <Badge
+                              variant="secondary"
+                              className="bg-yellow-100 text-yellow-800 text-xs"
+                            >
                               测试
                             </Badge>
                           )}
@@ -610,9 +660,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
                             同品牌
                           </Badge>
                         )}
-                        {account.priority === 'none' && (
-                          <span className="text-gray-400">-</span>
-                        )}
+                        {account.priority === 'none' && <span className="text-gray-400">-</span>}
                       </TableCell>
                       <TableCell className="text-sm">
                         {formatBalance(account.accountBalance, account.currencyCode)}
@@ -624,7 +672,11 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
                               <Badge
                                 key={linkedOffer.id}
                                 variant="outline"
-                                className={linkedOffer.id === offer.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-gray-50'}
+                                className={
+                                  linkedOffer.id === offer.id
+                                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                    : 'bg-gray-50'
+                                }
                               >
                                 #{linkedOffer.id}
                               </Badge>
@@ -663,8 +715,8 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {accounts
-                    .filter(account => selectedIds.includes(account.customerId))
-                    .map(account => (
+                    .filter((account) => selectedIds.includes(account.customerId))
+                    .map((account) => (
                       <Badge key={account.customerId} variant="secondary">
                         {account.descriptiveName} ({account.customerId})
                       </Badge>
@@ -697,9 +749,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
               <Info className="w-5 h-5 text-blue-600" />
               如何添加新的Google Ads账号
             </DialogTitle>
-            <DialogDescription>
-              请按照以下步骤操作，完成后返回此页面选择账号
-            </DialogDescription>
+            <DialogDescription>请按照以下步骤操作，完成后返回此页面选择账号</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">

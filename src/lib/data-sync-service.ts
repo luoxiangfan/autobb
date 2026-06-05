@@ -135,7 +135,9 @@ export class DataSyncService {
   private syncStatus: Map<number, SyncStatus> = new Map()
 
   private normalizeCurrency(value: unknown): string {
-    const normalized = String(value ?? '').trim().toUpperCase()
+    const normalized = String(value ?? '')
+      .trim()
+      .toUpperCase()
     return normalized || 'USD'
   }
 
@@ -151,7 +153,9 @@ export class DataSyncService {
   }
 
   private normalizeSearchTermMatchType(raw: unknown): 'EXACT' | 'PHRASE' | 'BROAD' | 'UNKNOWN' {
-    const value = String(raw ?? '').trim().toUpperCase()
+    const value = String(raw ?? '')
+      .trim()
+      .toUpperCase()
     if (!value) return 'UNKNOWN'
 
     if (value.includes('EXACT')) return 'EXACT'
@@ -215,30 +219,28 @@ export class DataSyncService {
    * 获取同步状态
    */
   getSyncStatus(userId: number): SyncStatus {
-    return this.syncStatus.get(userId) || {
-      isRunning: false,
-      lastSyncAt: null,
-      nextSyncAt: null,
-      lastSyncDuration: null,
-      lastSyncRecordCount: 0,
-      lastSyncError: null,
-    }
+    return (
+      this.syncStatus.get(userId) || {
+        isRunning: false,
+        lastSyncAt: null,
+        nextSyncAt: null,
+        lastSyncDuration: null,
+        lastSyncRecordCount: 0,
+        lastSyncError: null,
+      }
+    )
   }
 
   /**
    * 获取指定Campaign在过去N天内已同步的日期列表
    */
-  async getSyncedDates(
-    userId: number,
-    campaignId: number,
-    days: number = 7
-  ): Promise<string[]> {
+  async getSyncedDates(userId: number, campaignId: number, days: number = 7): Promise<string[]> {
     const db = await getDatabase()
 
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - days)
 
-    const rows = await db.query(
+    const rows = (await db.query(
       `
       SELECT DISTINCT date
       FROM campaign_performance
@@ -246,9 +248,9 @@ export class DataSyncService {
       ORDER BY date
     `,
       [userId, campaignId, this.formatDate(cutoffDate)]
-    ) as Array<{ date: string }>
+    )) as Array<{ date: string }>
 
-    return rows.map(r => r.date)
+    return rows.map((r) => r.date)
   }
 
   /**
@@ -271,16 +273,12 @@ export class DataSyncService {
    * 检测缺失的日期
    * @returns 缺失的日期列表
    */
-  async getMissingDates(
-    userId: number,
-    campaignId: number,
-    days: number = 7
-  ): Promise<string[]> {
+  async getMissingDates(userId: number, campaignId: number, days: number = 7): Promise<string[]> {
     const syncedDates = await this.getSyncedDates(userId, campaignId, days)
     const syncedSet = new Set(syncedDates)
     const allDates = this.getDateRange(days)
 
-    return allDates.filter(date => !syncedSet.has(date))
+    return allDates.filter((date) => !syncedSet.has(date))
   }
 
   /**
@@ -295,8 +293,8 @@ export class DataSyncService {
     _options?: {
       startDate?: string
       endDate?: string
-      forceFullSync?: boolean  // 强制全量补齐（过去7天）
-      smartFillMissing?: boolean  // 智能补齐缺失数据（默认true）
+      forceFullSync?: boolean // 强制全量补齐（过去7天）
+      smartFillMissing?: boolean // 智能补齐缺失数据（默认true）
     }
   ): Promise<SyncLog> {
     const db = await getDatabase()
@@ -305,7 +303,8 @@ export class DataSyncService {
 
     // 🔧 修复(2025-12-28): 清理僵尸任务（超过2小时仍为running状态的任务）
     const zombieThreshold = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE sync_logs
       SET status = 'failed',
           error_message = '任务超时被系统取消（僵尸任务清理）',
@@ -313,7 +312,9 @@ export class DataSyncService {
       WHERE user_id = ?
         AND status = 'running'
         AND started_at < ?
-    `, [startedAt, userId, zombieThreshold])
+    `,
+      [startedAt, userId, zombieThreshold]
+    )
     console.log(`🧹 已清理用户 ${userId} 的僵尸同步任务`)
 
     // 更新同步状态为运行中
@@ -365,14 +366,14 @@ export class DataSyncService {
       // 1. 获取用户的所有Google Ads账户
       // 🔧 修复(2025-12-30): 添加currency字段以支持多货币账户
       // 🔧 修复(2026-01-03): 添加account_name字段用于风险警报显示
-      const accounts = await db.query(
+      const accounts = (await db.query(
         `
         SELECT id, customer_id, parent_mcc_id, account_name, user_id, service_account_id, currency
         FROM google_ads_accounts
         WHERE user_id = ? AND ${isActiveCondition}
       `,
         [userId]
-      ) as Array<{
+      )) as Array<{
         id: number
         customer_id: string
         parent_mcc_id: string | null
@@ -404,7 +405,7 @@ export class DataSyncService {
           )
 
           accountSyncLogId = getInsertedId(logResult, db.type)
-          syncLogId = accountSyncLogId  // 保留最后一个syncLogId用于整体同步日志
+          syncLogId = accountSyncLogId // 保留最后一个syncLogId用于整体同步日志
 
           const quotaBackoffRemaining = this.getGoogleAdsQuotaBackoffSecondsRemaining()
           if (quotaBackoffRemaining > 0) {
@@ -422,7 +423,7 @@ export class DataSyncService {
           }
 
           // 查询该账户下的所有Campaigns
-          const campaigns = await db.query(
+          const campaigns = (await db.query(
             `
             SELECT
               c.id,
@@ -439,7 +440,7 @@ export class DataSyncService {
               AND c.google_campaign_id IS NOT NULL
           `,
             [userId, account.id]
-          ) as Array<{
+          )) as Array<{
             id: number
             google_campaign_id: string
             campaign_name: string
@@ -505,12 +506,9 @@ export class DataSyncService {
           const refreshToken =
             accountApiAuth.authType === 'oauth' ? accountPrepared.refreshToken : undefined
           const accountSyncCredentials =
-            syncUserCredentialsFromPrepared(accountPrepared) ??
-            serviceAccountJobCredentials
+            syncUserCredentialsFromPrepared(accountPrepared) ?? serviceAccountJobCredentials
           if (!accountSyncCredentials) {
-            console.warn(
-              `⚠️ 用户 ${userId} 账户 ${account.customer_id} 缺少 API 客户端凭证，跳过`
-            )
+            console.warn(`⚠️ 用户 ${userId} 账户 ${account.customer_id} 缺少 API 客户端凭证，跳过`)
             await db.exec(
               `
                 UPDATE sync_logs
@@ -528,22 +526,24 @@ export class DataSyncService {
           }
 
           if (accountApiAuth.authType === 'oauth' && !refreshToken) {
-              console.warn(`⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`)
-              // 🔧 修复(2025-12-28): 清理因凭证缺失而无法同步的sync_log
-              await db.exec(
-                `
+            console.warn(
+              `⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`
+            )
+            // 🔧 修复(2025-12-28): 清理因凭证缺失而无法同步的sync_log
+            await db.exec(
+              `
                 UPDATE sync_logs
                 SET status = 'failed', error_message = ?, duration_ms = ?, completed_at = ?
                 WHERE id = ?
                 `,
-                [
-                  `OAuth模式下缺少refresh_token，无法同步`,
-                  Date.now() - startTime,
-                  new Date().toISOString(),
-                  accountSyncLogId
-                ]
-              )
-              continue
+              [
+                `OAuth模式下缺少refresh_token，无法同步`,
+                Date.now() - startTime,
+                new Date().toISOString(),
+                accountSyncLogId,
+              ]
+            )
+            continue
           }
 
           const startDateStr = this.formatDate(startDate)
@@ -565,7 +565,9 @@ export class DataSyncService {
 
           // 🔧 修复(2026-01-15): 从 Google Ads API 获取账户真实币种/时区并回写到google_ads_accounts
           // 避免账号初次创建时默认USD导致全站显示"$"
-          const derivedCurrency = this.normalizeCurrency(performanceData[0]?.currency_code || account.currency)
+          const derivedCurrency = this.normalizeCurrency(
+            performanceData[0]?.currency_code || account.currency
+          )
           const derivedTimeZone = String(performanceData[0]?.time_zone || '').trim() || null
 
           try {
@@ -601,8 +603,7 @@ export class DataSyncService {
                 continue
               }
 
-              const cpa =
-                record.conversions > 0 ? record.cost / record.conversions : 0
+              const cpa = record.conversions > 0 ? record.cost / record.conversions : 0
 
               // 🔧 修复(2025-12-30): 支持多货币账户
               // Google Ads API返回的cost_micros是账户货币的微单位，需要保存原始货币信息
@@ -679,10 +680,10 @@ export class DataSyncService {
           }
 
           // 更新账户的last_sync_at
-          await db.exec(
-            `UPDATE google_ads_accounts SET last_sync_at = ? WHERE id = ?`,
-            [new Date().toISOString(), account.id]
-          )
+          await db.exec(`UPDATE google_ads_accounts SET last_sync_at = ? WHERE id = ?`, [
+            new Date().toISOString(),
+            account.id,
+          ])
 
           // 🔧 修复(2025-12-28): 更新该账户的sync_log为success
           await db.exec(
@@ -738,8 +739,8 @@ export class DataSyncService {
                     errorType: 'invalid_grant',
                     errorMessage: errorMessage.substring(0, 200), // 截取前200字符
                     actionRequired: '重新授权Google Ads',
-                    actionUrl: '/settings'
-                  }
+                    actionUrl: '/settings',
+                  },
                 }
               )
               console.log(`✅ 已创建OAuth token过期风险警报`)
@@ -836,9 +837,7 @@ export class DataSyncService {
    * 🔧 修复(2025-12-12): 独立账号模式 - 传递用户凭证
    * 🔧 修复(2025-12-24): 服务账号模式支持
    */
-  private async queryPerformanceData(
-    params: GAQLQueryParams
-  ): Promise<CampaignPerformanceData[]> {
+  private async queryPerformanceData(params: GAQLQueryParams): Promise<CampaignPerformanceData[]> {
     const {
       customerId,
       refreshToken,
@@ -882,8 +881,7 @@ export class DataSyncService {
           const cost = costMicros / 1_000_000 // 转换为标准货币单位
           const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0
           const cpc = clicks > 0 ? cost / clicks : 0
-          const conversion_rate =
-            clicks > 0 ? (conversions / clicks) * 100 : 0
+          const conversion_rate = clicks > 0 ? (conversions / clicks) * 100 : 0
 
           return {
             campaign_id: row.campaign?.id?.toString() || '',
@@ -908,7 +906,9 @@ export class DataSyncService {
           throw new Error('未找到服务账号配置')
         }
 
-        const results = (await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })).results || []
+        const results =
+          (await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })).results ||
+          []
         return toPerformanceData(results)
       }
 
@@ -939,22 +939,20 @@ export class DataSyncService {
       )
       const errorMessage = this.buildSyncErrorMessage(error)
       if (quotaBackoffRemaining > 0) {
-        console.error(`GAQL查询失败(效果，配额冷却剩余约${quotaBackoffRemaining}s): ${errorMessage}`)
+        console.error(
+          `GAQL查询失败(效果，配额冷却剩余约${quotaBackoffRemaining}s): ${errorMessage}`
+        )
       } else {
         console.error(`GAQL查询失败(效果): ${errorMessage}`)
       }
-      throw new Error(
-        `Google Ads API查询失败: ${errorMessage}`
-      )
+      throw new Error(`Google Ads API查询失败: ${errorMessage}`)
     }
   }
 
   /**
    * 使用GAQL查询搜索词报告数据
    */
-  private async querySearchTermData(
-    params: GAQLQueryParams
-  ): Promise<SearchTermPerformanceData[]> {
+  private async querySearchTermData(params: GAQLQueryParams): Promise<SearchTermPerformanceData[]> {
     const {
       customerId,
       refreshToken,
@@ -1013,9 +1011,10 @@ export class DataSyncService {
           return await primaryQuery()
         } catch (error: any) {
           const message = String(error?.message || '')
-          const canFallback = message.includes('search_term_match_type')
-            || message.includes('Unrecognized field')
-            || message.includes('Invalid field name')
+          const canFallback =
+            message.includes('search_term_match_type') ||
+            message.includes('Unrecognized field') ||
+            message.includes('Invalid field name')
           if (!canFallback) {
             throw error
           }
@@ -1033,22 +1032,24 @@ export class DataSyncService {
         }
 
         results = await runQueryWithSchemaFallback(
-          async () => (
-            (await executeGAQLQueryPython({
-              userId,
-              serviceAccountId,
-              customerId,
-              query: queryWithMatchType,
-            })).results || []
-          ),
-          async () => (
-            (await executeGAQLQueryPython({
-              userId,
-              serviceAccountId,
-              customerId,
-              query: queryFallback,
-            })).results || []
-          )
+          async () =>
+            (
+              await executeGAQLQueryPython({
+                userId,
+                serviceAccountId,
+                customerId,
+                query: queryWithMatchType,
+              })
+            ).results || [],
+          async () =>
+            (
+              await executeGAQLQueryPython({
+                userId,
+                serviceAccountId,
+                customerId,
+                query: queryFallback,
+              })
+            ).results || []
         )
       } else {
         results = await this.runOAuthGaqlWithLoginCustomerFallback({
@@ -1106,13 +1107,13 @@ export class DataSyncService {
       )
       const errorMessage = this.buildSyncErrorMessage(error)
       if (quotaBackoffRemaining > 0) {
-        console.error(`GAQL查询搜索词报告失败(配额冷却剩余约${quotaBackoffRemaining}s): ${errorMessage}`)
+        console.error(
+          `GAQL查询搜索词报告失败(配额冷却剩余约${quotaBackoffRemaining}s): ${errorMessage}`
+        )
       } else {
         console.error(`GAQL查询搜索词报告失败: ${errorMessage}`)
       }
-      throw new Error(
-        `Google Ads API查询失败(搜索词报告): ${errorMessage}`
-      )
+      throw new Error(`Google Ads API查询失败(搜索词报告): ${errorMessage}`)
     }
   }
 
@@ -1161,7 +1162,9 @@ export class DataSyncService {
         if (!config) {
           throw new Error('未找到服务账号配置')
         }
-        results = (await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })).results || []
+        results =
+          (await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query })).results ||
+          []
       } else {
         results = await this.runOAuthGaqlWithLoginCustomerFallback({
           userId,
@@ -1187,9 +1190,7 @@ export class DataSyncService {
         const impressions = row.metrics?.impressions || 0
         const clicks = row.metrics?.clicks || 0
         const keywordText =
-          row.ad_group_criterion?.keyword?.text ||
-          row.keyword_view?.keyword?.text ||
-          ''
+          row.ad_group_criterion?.keyword?.text || row.keyword_view?.keyword?.text || ''
 
         return {
           campaign_id: row.campaign?.id?.toString() || '',
@@ -1206,13 +1207,13 @@ export class DataSyncService {
       )
       const errorMessage = this.buildSyncErrorMessage(error)
       if (quotaBackoffRemaining > 0) {
-        console.error(`GAQL查询关键词表现失败(配额冷却剩余约${quotaBackoffRemaining}s): ${errorMessage}`)
+        console.error(
+          `GAQL查询关键词表现失败(配额冷却剩余约${quotaBackoffRemaining}s): ${errorMessage}`
+        )
       } else {
         console.error(`GAQL查询关键词表现失败: ${errorMessage}`)
       }
-      throw new Error(
-        `Google Ads API查询失败(关键词表现): ${errorMessage}`
-      )
+      throw new Error(`Google Ads API查询失败(关键词表现): ${errorMessage}`)
     }
   }
 
@@ -1369,15 +1370,18 @@ export class DataSyncService {
       target_country: string
       target_language: string | null
     }>
-    campaignMap: Map<string, {
-      id: number
-      google_campaign_id: string
-      is_test_variant: boolean | number
-      offer_id: number
-      brand: string
-      target_country: string
-      target_language: string | null
-    }>
+    campaignMap: Map<
+      string,
+      {
+        id: number
+        google_campaign_id: string
+        is_test_variant: boolean | number
+        offer_id: number
+        brand: string
+        target_country: string
+        target_language: string | null
+      }
+    >
   }): Promise<void> {
     const {
       userId,
@@ -1427,7 +1431,7 @@ export class DataSyncService {
     const db = await getDatabase()
     const nowSql = nowFunc(db.type)
 
-    const campaignIds = campaigns.map(c => c.id)
+    const campaignIds = campaigns.map((c) => c.id)
     if (campaignIds.length > 0) {
       const placeholders = campaignIds.map(() => '?').join(',')
       await db.exec(
@@ -1457,7 +1461,10 @@ export class DataSyncService {
     const dailyMap = new Map<string, DailyAggregate>()
     const keywordDisplayMap = new Map<string, string>()
     const brandDisplayMap = new Map<string, string>()
-    const affectedScopes = new Map<string, { brandKey: string; country: string; language: string }>()
+    const affectedScopes = new Map<
+      string,
+      { brandKey: string; country: string; language: string }
+    >()
 
     for (const campaign of campaigns) {
       const isTestVariant = campaign.is_test_variant === true || campaign.is_test_variant === 1
@@ -1673,7 +1680,9 @@ export class DataSyncService {
 
       await db.transaction(async () => {
         for (const entry of dailyMap.values()) {
-          const impressions = entry.hasKeywordPerf ? entry.keywordPerfImpressions : entry.searchTermImpressions
+          const impressions = entry.hasKeywordPerf
+            ? entry.keywordPerfImpressions
+            : entry.searchTermImpressions
           const clicks = entry.hasKeywordPerf ? entry.keywordPerfClicks : entry.searchTermClicks
           const sourceMask = buildSourceMask(entry.hasSearchTerm, entry.hasKeywordPerf)
 
@@ -1707,7 +1716,7 @@ export class DataSyncService {
     const cutoffDate = this.formatDate(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))
 
     for (const scope of affectedScopes.values()) {
-      const aggregated = await db.query(
+      const aggregated = (await db.query(
         `
         SELECT
           keyword_norm,
@@ -1721,7 +1730,7 @@ export class DataSyncService {
         GROUP BY keyword_norm
       `,
         [scope.brandKey, scope.country, scope.language, cutoffDate]
-      ) as Array<{
+      )) as Array<{
         keyword_norm: string
         impressions_total: number
         clicks_total: number
@@ -1734,9 +1743,12 @@ export class DataSyncService {
         for (const row of aggregated) {
           const hasSearchTerm = Number(row.has_search_term || 0) > 0
           const hasKeywordPerf = Number(row.has_keyword_perf || 0) > 0
-          const sourceMask = hasSearchTerm && hasKeywordPerf
-            ? 'search_term|keyword_perf'
-            : (hasKeywordPerf ? 'keyword_perf' : 'search_term')
+          const sourceMask =
+            hasSearchTerm && hasKeywordPerf
+              ? 'search_term|keyword_perf'
+              : hasKeywordPerf
+                ? 'keyword_perf'
+                : 'search_term'
 
           const scopeKey = `${scope.brandKey}||${scope.country}||${scope.language}`
           const displayKey = `${scopeKey}||${row.keyword_norm}`
@@ -1816,7 +1828,7 @@ export class DataSyncService {
   async getSyncLogs(userId: number, limit: number = 20): Promise<SyncLog[]> {
     const db = await getDatabase()
 
-    return await db.query(
+    return (await db.query(
       `
       SELECT
         id,
@@ -1835,7 +1847,7 @@ export class DataSyncService {
       LIMIT ?
     `,
       [userId, limit]
-    ) as SyncLog[]
+    )) as SyncLog[]
   }
 
   /**

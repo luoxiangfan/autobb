@@ -25,17 +25,19 @@ export function normalizeGoogleAdsKeyword(keyword: string): string {
     return ''
   }
 
-  return keyword
-    .trim()
-    .toLowerCase()
-    .normalize('NFKC')
-    // 常见分隔符统一为空格（避免 "dr.mercola" / "dr-mercola" / "dr_mercola" 不命中）
-    .replace(/[._\-\/]+/g, ' ')
-    // 其他符号也替换为空格（保留字母/数字/空格）
-    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
-    // 多空格归一
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    keyword
+      .trim()
+      .toLowerCase()
+      .normalize('NFKC')
+      // 常见分隔符统一为空格（避免 "dr.mercola" / "dr-mercola" / "dr_mercola" 不命中）
+      .replace(/[._\-\/]+/g, ' ')
+      // 其他符号也替换为空格（保留字母/数字/空格）
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      // 多空格归一
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**
@@ -47,7 +49,7 @@ export function normalizeGoogleAdsKeyword(keyword: string): string {
 export function normalizeKeywordArray(keywords: string[]): Map<string, string[]> {
   const normalizedMap = new Map<string, string[]>()
 
-  keywords.forEach(keyword => {
+  keywords.forEach((keyword) => {
     const normalized = normalizeGoogleAdsKeyword(keyword)
     if (!normalizedMap.has(normalized)) {
       normalizedMap.set(normalized, [])
@@ -83,7 +85,7 @@ export function deduplicateKeywordsWithPriority<T>(
     } else if (getPriority) {
       // 如果有重复，检查优先级
       const existingIndex = result.findIndex(
-        existingItem => normalizeGoogleAdsKeyword(getKeyword(existingItem)) === normalized
+        (existingItem) => normalizeGoogleAdsKeyword(getKeyword(existingItem)) === normalized
       )
 
       if (existingIndex >= 0) {
@@ -93,7 +95,9 @@ export function deduplicateKeywordsWithPriority<T>(
         // 如果当前优先级更高，替换已存在的
         if (currentPriority > existingPriority) {
           result[existingIndex] = item
-          console.log(`🔄 替换重复关键词 "${keyword}" (优先级: ${currentPriority} > ${existingPriority})`)
+          console.log(
+            `🔄 替换重复关键词 "${keyword}" (优先级: ${currentPriority} > ${existingPriority})`
+          )
         }
       }
     }
@@ -131,7 +135,7 @@ export function getDuplicateKeywordsInfo(keywords: string[]): Array<{
     .map(([normalized, variants]) => ({
       normalized,
       variants,
-      count: variants.length
+      count: variants.length,
     }))
     .sort((a, b) => b.count - a.count)
 }

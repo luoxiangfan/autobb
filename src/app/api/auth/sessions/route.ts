@@ -5,7 +5,7 @@ import {
   revokeSession,
   revokeAllSessions,
   getTrustedDevices,
-  getUserAlerts
+  getUserAlerts,
 } from '@/lib/user-sessions'
 
 /**
@@ -18,7 +18,7 @@ const getHandler: AuthenticatedHandler = async (request, user) => {
   const alerts = await getUserAlerts(user.userId, false)
 
   return NextResponse.json({
-    sessions: sessions.map(s => ({
+    sessions: sessions.map((s) => ({
       id: s.id,
       ipAddress: s.ipAddress,
       userAgent: s.userAgent,
@@ -29,13 +29,13 @@ const getHandler: AuthenticatedHandler = async (request, user) => {
       lastActivityAt: s.lastActivityAt,
       expiresAt: s.expiresAt,
     })),
-    trustedDevices: trustedDevices.map(d => ({
+    trustedDevices: trustedDevices.map((d) => ({
       id: d.id,
       deviceFingerprint: d.deviceFingerprint,
       deviceName: d.deviceName,
       lastUsedAt: d.lastUsedAt,
     })),
-    alerts: alerts.map(a => ({
+    alerts: alerts.map((a) => ({
       id: a.id,
       alertType: a.alertType,
       severity: a.severity,
@@ -72,16 +72,10 @@ const deleteHandler: AuthenticatedHandler = async (request, user) => {
         message: '会话已撤销',
       })
     }
-    return NextResponse.json(
-      { error: '会话不存在或已被撤销' },
-      { status: 404 }
-    )
+    return NextResponse.json({ error: '会话不存在或已被撤销' }, { status: 404 })
   }
 
-  return NextResponse.json(
-    { error: '请提供 sessionToken 或 revokeAll=true' },
-    { status: 400 }
-  )
+  return NextResponse.json({ error: '请提供 sessionToken 或 revokeAll=true' }, { status: 400 })
 }
 
 export const GET = withAuth(getHandler)

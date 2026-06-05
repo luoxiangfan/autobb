@@ -29,11 +29,16 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
   })
 
   it('no-ops when retirement control table is missing', async () => {
-    const queryOne = vi.fn().mockRejectedValue(new Error('relation "affiliate_product_raw_json_retirement" does not exist'))
+    const queryOne = vi
+      .fn()
+      .mockRejectedValue(
+        new Error('relation "affiliate_product_raw_json_retirement" does not exist')
+      )
     const db = createMockDb({ queryOne })
     dbFns.getDatabase.mockResolvedValue(db)
 
-    const { runAffiliateProductsRawJsonRetirementMaintenance } = await import('@/lib/affiliate-products')
+    const { runAffiliateProductsRawJsonRetirementMaintenance } =
+      await import('@/lib/affiliate-products')
 
     await expect(runAffiliateProductsRawJsonRetirementMaintenance()).resolves.toBeUndefined()
     expect(queryOne).toHaveBeenCalledTimes(1)
@@ -41,7 +46,8 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
   })
 
   it('clears raw_json in batches when cleanup is pending', async () => {
-    const queryOne = vi.fn()
+    const queryOne = vi
+      .fn()
       .mockResolvedValueOnce({
         drop_after_at: '2099-01-01T00:00:00.000Z',
         cleanup_completed_at: null,
@@ -53,7 +59,8 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     const db = createMockDb({ queryOne, exec })
     dbFns.getDatabase.mockResolvedValue(db)
 
-    const { runAffiliateProductsRawJsonRetirementMaintenance } = await import('@/lib/affiliate-products')
+    const { runAffiliateProductsRawJsonRetirementMaintenance } =
+      await import('@/lib/affiliate-products')
 
     await runAffiliateProductsRawJsonRetirementMaintenance({ batchSize: 500 })
 
@@ -63,7 +70,8 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
   })
 
   it('drops raw_json column after drop_after_at deadline', async () => {
-    const queryOne = vi.fn()
+    const queryOne = vi
+      .fn()
       .mockResolvedValueOnce({
         drop_after_at: '2020-01-01T00:00:00.000Z',
         cleanup_completed_at: '2019-12-31T00:00:00.000Z',
@@ -73,7 +81,8 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
       .mockResolvedValueOnce({ acquired: true })
       .mockResolvedValueOnce({ exists: false })
       .mockResolvedValueOnce({ exists: false })
-    const exec = vi.fn()
+    const exec = vi
+      .fn()
       .mockResolvedValueOnce({ changes: 1 })
       .mockResolvedValueOnce({ changes: 1 })
       .mockResolvedValueOnce({ changes: 1 })
@@ -82,18 +91,30 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     const db = createMockDb({ queryOne, exec })
     dbFns.getDatabase.mockResolvedValue(db)
 
-    const { runAffiliateProductsRawJsonRetirementMaintenance } = await import('@/lib/affiliate-products')
+    const { runAffiliateProductsRawJsonRetirementMaintenance } =
+      await import('@/lib/affiliate-products')
 
     await runAffiliateProductsRawJsonRetirementMaintenance({ allowDropOutsideWindow: true })
 
     expect(exec).toHaveBeenCalledTimes(5)
-    expect(exec.mock.calls.some((call) => String(call[0] || '').includes("SET LOCAL lock_timeout"))).toBe(true)
-    expect(exec.mock.calls.some((call) => String(call[0] || '').includes("SET LOCAL statement_timeout"))).toBe(true)
-    expect(exec.mock.calls.some((call) => String(call[0] || '').includes('ALTER TABLE affiliate_products DROP COLUMN IF EXISTS raw_json'))).toBe(true)
+    expect(
+      exec.mock.calls.some((call) => String(call[0] || '').includes('SET LOCAL lock_timeout'))
+    ).toBe(true)
+    expect(
+      exec.mock.calls.some((call) => String(call[0] || '').includes('SET LOCAL statement_timeout'))
+    ).toBe(true)
+    expect(
+      exec.mock.calls.some((call) =>
+        String(call[0] || '').includes(
+          'ALTER TABLE affiliate_products DROP COLUMN IF EXISTS raw_json'
+        )
+      )
+    ).toBe(true)
   })
 
   it('defers raw_json drop outside low-traffic window', async () => {
-    const queryOne = vi.fn()
+    const queryOne = vi
+      .fn()
       .mockResolvedValueOnce({
         drop_after_at: '2020-01-01T00:00:00.000Z',
         cleanup_completed_at: '2019-12-31T00:00:00.000Z',
@@ -105,7 +126,8 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     const db = createMockDb({ queryOne, exec })
     dbFns.getDatabase.mockResolvedValue(db)
 
-    const { runAffiliateProductsRawJsonRetirementMaintenance } = await import('@/lib/affiliate-products')
+    const { runAffiliateProductsRawJsonRetirementMaintenance } =
+      await import('@/lib/affiliate-products')
 
     await runAffiliateProductsRawJsonRetirementMaintenance({
       now: new Date('2026-01-01T00:00:00.000Z'),

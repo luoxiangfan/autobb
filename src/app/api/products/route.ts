@@ -100,11 +100,14 @@ export async function GET(request: NextRequest) {
     const mid = (searchParams.get('mid') || '').trim()
     const sortByRaw = (searchParams.get('sortBy') || 'serial') as ProductSortField
     const sortBy = ALLOWED_SORT_FIELDS.has(sortByRaw) ? sortByRaw : 'serial'
-    const sortOrder = (searchParams.get('sortOrder') || 'desc').toLowerCase() === 'asc'
-      ? 'asc'
-      : 'desc' as ProductSortOrder
+    const sortOrder =
+      (searchParams.get('sortOrder') || 'desc').toLowerCase() === 'asc'
+        ? 'asc'
+        : ('desc' as ProductSortOrder)
     const platform = normalizeAffiliatePlatform(searchParams.get('platform')) || 'all'
-    const landingPageType = normalizeAffiliateLandingPageTypeFilter(searchParams.get('landingPageType'))
+    const landingPageType = normalizeAffiliateLandingPageTypeFilter(
+      searchParams.get('landingPageType')
+    )
     const targetCountry = parseCountryFilter(searchParams, 'targetCountry')
     const status = normalizeAffiliateProductStatusFilter(searchParams.get('status'))
 
@@ -242,7 +245,9 @@ export async function GET(request: NextRequest) {
         userId,
         productIds: listedProductIds,
       }).catch((repairError: any) => {
-        console.warn(`[GET /api/products] affiliate link repair skipped: ${repairError?.message || repairError}`)
+        console.warn(
+          `[GET /api/products] affiliate link repair skipped: ${repairError?.message || repairError}`
+        )
       })
     }
 
@@ -282,9 +287,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responsePayload)
   } catch (error: any) {
     console.error('[GET /api/products] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '获取商品列表失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '获取商品列表失败' }, { status: 500 })
   }
 }

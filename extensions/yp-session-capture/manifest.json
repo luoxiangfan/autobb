@@ -3,15 +3,8 @@
   "name": "AutoAds YP Session Capture",
   "description": "Capture YeahPromos cookies and send them to AutoAds products session endpoint.",
   "version": "1.0.2",
-  "permissions": [
-    "cookies",
-    "tabs",
-    "scripting",
-    "activeTab"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
+  "permissions": ["cookies", "tabs", "scripting", "activeTab"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },

@@ -14,7 +14,17 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import type { ReactNode } from 'react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Legend, BarChart, Bar, ComposedChart } from 'recharts'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Legend,
+  BarChart,
+  Bar,
+  ComposedChart,
+} from 'recharts'
 import { TrendingUp, Calendar } from 'lucide-react'
 
 export interface TrendChartData {
@@ -164,92 +174,98 @@ export function TrendChart({
   }, {} as ChartConfig)
 
   // 计算Y轴domain
-  let leftDomain: [number, number] | undefined = undefined;
-  let rightDomain: [number, number] | undefined = undefined;
+  let leftDomain: [number, number] | undefined = undefined
+  let rightDomain: [number, number] | undefined = undefined
 
   if (data.length > 0) {
     if (dualYAxis) {
       // 双Y轴模式：分别计算左右轴的domain
-      const leftMetrics = metrics.filter(m => m.yAxisId === 'left' || !m.yAxisId);
-      const rightMetrics = metrics.filter(m => m.yAxisId === 'right');
+      const leftMetrics = metrics.filter((m) => m.yAxisId === 'left' || !m.yAxisId)
+      const rightMetrics = metrics.filter((m) => m.yAxisId === 'right')
 
       // 计算左轴domain
       if (leftMetrics.length > 0) {
-        const leftMaxValues = leftMetrics.map(m =>
-          Math.max(...data.map(d => {
-            const val = d[m.key];
-            return toNumberSafe(val);
-          }))
-        );
-        const leftMax = Math.max(...leftMaxValues);
+        const leftMaxValues = leftMetrics.map((m) =>
+          Math.max(
+            ...data.map((d) => {
+              const val = d[m.key]
+              return toNumberSafe(val)
+            })
+          )
+        )
+        const leftMax = Math.max(...leftMaxValues)
         if (leftMax > 0) {
           // 🔥 2026-01-02 修复：根据最大值智能计算合适的Y轴范围
           // 确保Y轴最大值至少比数据最大值大20%
-          const targetMax = leftMax * 1.2;
+          const targetMax = leftMax * 1.2
           if (leftMax < 10) {
-            leftDomain = [0, Math.ceil(targetMax)];
+            leftDomain = [0, Math.ceil(targetMax)]
           } else if (leftMax < 100) {
-            leftDomain = [0, Math.ceil(targetMax / 10) * 10];
+            leftDomain = [0, Math.ceil(targetMax / 10) * 10]
           } else if (leftMax < 1000) {
             // 🔥 修复：使用50为单位，避免500被四舍五入到600的问题
-            leftDomain = [0, Math.ceil(targetMax / 50) * 50];
+            leftDomain = [0, Math.ceil(targetMax / 50) * 50]
           } else if (leftMax < 10000) {
-            leftDomain = [0, Math.ceil(targetMax / 500) * 500];
+            leftDomain = [0, Math.ceil(targetMax / 500) * 500]
           } else {
-            leftDomain = [0, Math.ceil(targetMax / 1000) * 1000];
+            leftDomain = [0, Math.ceil(targetMax / 1000) * 1000]
           }
         }
       }
 
       // 计算右轴domain
       if (rightMetrics.length > 0) {
-        const rightMaxValues = rightMetrics.map(m =>
-          Math.max(...data.map(d => {
-            const val = d[m.key];
-            return toNumberSafe(val);
-          }))
-        );
-        const rightMax = Math.max(...rightMaxValues);
+        const rightMaxValues = rightMetrics.map((m) =>
+          Math.max(
+            ...data.map((d) => {
+              const val = d[m.key]
+              return toNumberSafe(val)
+            })
+          )
+        )
+        const rightMax = Math.max(...rightMaxValues)
         if (rightMax > 0) {
           // 🔥 2026-01-02 修复：根据最大值智能计算合适的Y轴范围
-          const targetMax = rightMax * 1.2;
+          const targetMax = rightMax * 1.2
           if (rightMax < 10) {
-            rightDomain = [0, Math.ceil(targetMax)];
+            rightDomain = [0, Math.ceil(targetMax)]
           } else if (rightMax < 100) {
-            rightDomain = [0, Math.ceil(targetMax / 10) * 10];
+            rightDomain = [0, Math.ceil(targetMax / 10) * 10]
           } else if (rightMax < 1000) {
             // 🔥 修复：使用50为单位
-            rightDomain = [0, Math.ceil(targetMax / 50) * 50];
+            rightDomain = [0, Math.ceil(targetMax / 50) * 50]
           } else if (rightMax < 10000) {
-            rightDomain = [0, Math.ceil(targetMax / 500) * 500];
+            rightDomain = [0, Math.ceil(targetMax / 500) * 500]
           } else {
-            rightDomain = [0, Math.ceil(targetMax / 1000) * 1000];
+            rightDomain = [0, Math.ceil(targetMax / 1000) * 1000]
           }
         }
       }
     } else {
       // 单Y轴模式：所有metrics使用同一个自适应domain
-      const allMaxValues = metrics.map(m =>
-        Math.max(...data.map(d => {
-          const val = d[m.key];
-          return toNumberSafe(val);
-        }))
-      );
-      const maxValue = Math.max(...allMaxValues);
+      const allMaxValues = metrics.map((m) =>
+        Math.max(
+          ...data.map((d) => {
+            const val = d[m.key]
+            return toNumberSafe(val)
+          })
+        )
+      )
+      const maxValue = Math.max(...allMaxValues)
       if (maxValue > 0) {
         // 🔥 2026-01-02 修复：根据最大值智能计算合适的Y轴范围
-        const targetMax = maxValue * 1.2;
+        const targetMax = maxValue * 1.2
         if (maxValue < 10) {
-          leftDomain = [0, Math.ceil(targetMax)];
+          leftDomain = [0, Math.ceil(targetMax)]
         } else if (maxValue < 100) {
-          leftDomain = [0, Math.ceil(targetMax / 10) * 10];
+          leftDomain = [0, Math.ceil(targetMax / 10) * 10]
         } else if (maxValue < 1000) {
           // 🔥 修复：使用50为单位
-          leftDomain = [0, Math.ceil(targetMax / 50) * 50];
+          leftDomain = [0, Math.ceil(targetMax / 50) * 50]
         } else if (maxValue < 10000) {
-          leftDomain = [0, Math.ceil(targetMax / 500) * 500];
+          leftDomain = [0, Math.ceil(targetMax / 500) * 500]
         } else {
-          leftDomain = [0, Math.ceil(targetMax / 1000) * 1000];
+          leftDomain = [0, Math.ceil(targetMax / 1000) * 1000]
         }
       }
     }
@@ -258,7 +274,15 @@ export function TrendChart({
   const isBar = chartType === 'bar'
   const isMixed = chartType === 'mixed'
   const hasBarMetrics = isBar || (isMixed && metrics.some((metric) => metric.chartType !== 'line'))
-  const barSize = !hasBarMetrics ? undefined : data.length > 60 ? 4 : data.length > 30 ? 6 : data.length > 14 ? 10 : 14
+  const barSize = !hasBarMetrics
+    ? undefined
+    : data.length > 60
+      ? 4
+      : data.length > 30
+        ? 6
+        : data.length > 14
+          ? 10
+          : 14
   const enableHorizontalScroll = hasBarMetrics && data.length > 20
   const minChartWidth = enableHorizontalScroll
     ? Math.max(640, data.length * (12 + (barSize ?? 10) * metrics.length))
@@ -279,7 +303,8 @@ export function TrendChart({
           </div>
 
           {/* Time range selector */}
-          {(headerActions || (!hideTimeRangeSelector && onTimeRangeChange && selectedTimeRange !== undefined)) && (
+          {(headerActions ||
+            (!hideTimeRangeSelector && onTimeRangeChange && selectedTimeRange !== undefined)) && (
             <div className="flex items-center gap-2">
               {!hideTimeRangeSelector && onTimeRangeChange && selectedTimeRange !== undefined && (
                 <>
@@ -307,7 +332,10 @@ export function TrendChart({
 
       <CardContent>
         {hasNoData ? (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-center" style={{ height: `${height}px` }}>
+          <div
+            className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-center"
+            style={{ height: `${height}px` }}
+          >
             <div className="flex items-start gap-3">
               <svg className="w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                 <path
@@ -329,10 +357,16 @@ export function TrendChart({
             <ChartContainer
               config={chartConfig}
               className="aspect-auto w-full"
-              style={{ height: `${height}px`, minWidth: minChartWidth ? `${minChartWidth}px` : undefined }}
+              style={{
+                height: `${height}px`,
+                minWidth: minChartWidth ? `${minChartWidth}px` : undefined,
+              }}
             >
               {chartType === 'line' ? (
-                <LineChart data={data} margin={{ top: 5, right: dualYAxis ? 60 : 30, left: 20, bottom: 5 }}>
+                <LineChart
+                  data={data}
+                  margin={{ top: 5, right: dualYAxis ? 60 : 30, left: 20, bottom: 5 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis
                     dataKey="date"
@@ -352,29 +386,10 @@ export function TrendChart({
                       return `${date.getMonth() + 1}/${date.getDate()}`
                     }}
                   />
-                {/* 左侧Y轴 */}
-                <YAxis
-                  yAxisId="left"
-                  domain={leftDomain}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) {
-                      return `${(value / 1000000).toFixed(1)}M`
-                    }
-                    if (value >= 1000) {
-                      return `${(value / 1000).toFixed(1)}K`
-                    }
-                    return value.toString()
-                  }}
-                />
-                {/* 右侧Y轴（仅在dualYAxis启用时显示） */}
-                {dualYAxis && (
+                  {/* 左侧Y轴 */}
                   <YAxis
-                    yAxisId="right"
-                    domain={rightDomain}
-                    orientation="right"
+                    yAxisId="left"
+                    domain={leftDomain}
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
@@ -388,263 +403,282 @@ export function TrendChart({
                       return value.toString()
                     }}
                   />
-                )}
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
-                      formatter={(value, name, _item, _index, _payload) => {
-                        const metric = metrics.find(m => m.key === name)
-                        const label = metric?.label || name
-                        const formattedValue = metric?.formatter
-                          ? metric.formatter(value as number)
-                          : (value as number).toLocaleString()
-                        return (
-                          <div className="flex flex-1 justify-between items-center leading-none gap-4">
-                            <span className="text-muted-foreground">{label}</span>
-                            <span className="font-mono font-medium tabular-nums text-foreground">
-                              {formattedValue}
-                            </span>
-                          </div>
-                        )
+                  {/* 右侧Y轴（仅在dualYAxis启用时显示） */}
+                  {dualYAxis && (
+                    <YAxis
+                      yAxisId="right"
+                      domain={rightDomain}
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => {
+                        if (value >= 1000000) {
+                          return `${(value / 1000000).toFixed(1)}M`
+                        }
+                        if (value >= 1000) {
+                          return `${(value / 1000).toFixed(1)}K`
+                        }
+                        return value.toString()
                       }}
                     />
-                  }
-                />
-                {showLegend && <Legend />}
-                {metrics.map((metric) => (
-                  <Line
-                    key={metric.key}
-                    type="monotone"
-                    dataKey={metric.key}
-                    stroke={metric.color}
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                    name={metric.label}
-                    yAxisId={dualYAxis ? (metric.yAxisId || 'left') : 'left'}
-                  />
-                ))}
-              </LineChart>
-            ) : chartType === 'bar' ? (
-              <BarChart
-                data={data}
-                margin={{ top: 5, right: dualYAxis ? 60 : 30, left: 20, bottom: 5 }}
-                barGap={2}
-                barCategoryGap={enableHorizontalScroll ? 8 : '20%'}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => {
-                    // 解析日期，处理 "YYYY-MM-DD" 格式
-                    let date: Date
-                    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                      // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
-                      const [year, month, day] = value.split('-').map(Number)
-                      date = new Date(year, month - 1, day)
-                    } else {
-                      date = new Date(value)
-                    }
-                    return `${date.getMonth() + 1}/${date.getDate()}`
-                  }}
-                />
-                {/* 左侧Y轴 */}
-                <YAxis
-                  yAxisId="left"
-                  domain={leftDomain}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) {
-                      return `${(value / 1000000).toFixed(1)}M`
-                    }
-                    if (value >= 1000) {
-                      return `${(value / 1000).toFixed(1)}K`
-                    }
-                    return value.toString()
-                  }}
-                />
-                {/* 右侧Y轴（仅在dualYAxis启用时显示） */}
-                {dualYAxis && (
-                  <YAxis
-                    yAxisId="right"
-                    domain={rightDomain}
-                    orientation="right"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) {
-                        return `${(value / 1000000).toFixed(1)}M`
-                      }
-                      if (value >= 1000) {
-                        return `${(value / 1000).toFixed(1)}K`
-                      }
-                      return value.toString()
-                    }}
-                  />
-                )}
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
-                      formatter={(value, name, _item, _index, _payload) => {
-                        const metric = metrics.find(m => m.key === name)
-                        const label = metric?.label || name
-                        const formattedValue = metric?.formatter
-                          ? metric.formatter(value as number)
-                          : (value as number).toLocaleString()
-                        return (
-                          <div className="flex flex-1 justify-between items-center leading-none gap-4">
-                            <span className="text-muted-foreground">{label}</span>
-                            <span className="font-mono font-medium tabular-nums text-foreground">
-                              {formattedValue}
-                            </span>
-                          </div>
-                        )
-                      }}
-                    />
-                  }
-                />
-                {showLegend && <Legend />}
-                {metrics.map((metric) => (
-                  <Bar
-                    key={metric.key}
-                    dataKey={metric.key}
-                    fill={metric.color}
-                    name={metric.label}
-                    yAxisId={dualYAxis ? (metric.yAxisId || 'left') : 'left'}
-                    stackId={metric.stackId}
-                    radius={[4, 4, 0, 0]}
-                    barSize={barSize}
-                  />
-                ))}
-              </BarChart>
-            ) : (
-              <ComposedChart
-                data={data}
-                margin={{ top: 5, right: dualYAxis ? 60 : 30, left: 20, bottom: 5 }}
-                barGap={2}
-                barCategoryGap={enableHorizontalScroll ? 8 : '20%'}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="date"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => {
-                    // 解析日期，处理 "YYYY-MM-DD" 格式
-                    let date: Date
-                    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                      // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
-                      const [year, month, day] = value.split('-').map(Number)
-                      date = new Date(year, month - 1, day)
-                    } else {
-                      date = new Date(value)
-                    }
-                    return `${date.getMonth() + 1}/${date.getDate()}`
-                  }}
-                />
-                {/* 左侧Y轴 */}
-                <YAxis
-                  yAxisId="left"
-                  domain={leftDomain}
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => {
-                    if (value >= 1000000) {
-                      return `${(value / 1000000).toFixed(1)}M`
-                    }
-                    if (value >= 1000) {
-                      return `${(value / 1000).toFixed(1)}K`
-                    }
-                    return value.toString()
-                  }}
-                />
-                {/* 右侧Y轴（仅在dualYAxis启用时显示） */}
-                {dualYAxis && (
-                  <YAxis
-                    yAxisId="right"
-                    domain={rightDomain}
-                    orientation="right"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => {
-                      if (value >= 1000000) {
-                        return `${(value / 1000000).toFixed(1)}M`
-                      }
-                      if (value >= 1000) {
-                        return `${(value / 1000).toFixed(1)}K`
-                      }
-                      return value.toString()
-                    }}
-                  />
-                )}
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
-                      formatter={(value, name, _item, _index, _payload) => {
-                        const metric = metrics.find(m => m.key === name)
-                        const label = metric?.label || name
-                        const formattedValue = metric?.formatter
-                          ? metric.formatter(value as number)
-                          : (value as number).toLocaleString()
-                        return (
-                          <div className="flex flex-1 justify-between items-center leading-none gap-4">
-                            <span className="text-muted-foreground">{label}</span>
-                            <span className="font-mono font-medium tabular-nums text-foreground">
-                              {formattedValue}
-                            </span>
-                          </div>
-                        )
-                      }}
-                    />
-                  }
-                />
-                {showLegend && <Legend />}
-                {metrics.map((metric) => {
-                  const metricChartType = metric.chartType || 'bar'
-
-                  if (metricChartType === 'line') {
-                    return (
-                      <Line
-                        key={metric.key}
-                        type="monotone"
-                        dataKey={metric.key}
-                        stroke={metric.color}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        activeDot={{ r: 6 }}
-                        name={metric.label}
-                        yAxisId={dualYAxis ? (metric.yAxisId || 'left') : 'left'}
+                  )}
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
+                        formatter={(value, name, _item, _index, _payload) => {
+                          const metric = metrics.find((m) => m.key === name)
+                          const label = metric?.label || name
+                          const formattedValue = metric?.formatter
+                            ? metric.formatter(value as number)
+                            : (value as number).toLocaleString()
+                          return (
+                            <div className="flex flex-1 justify-between items-center leading-none gap-4">
+                              <span className="text-muted-foreground">{label}</span>
+                              <span className="font-mono font-medium tabular-nums text-foreground">
+                                {formattedValue}
+                              </span>
+                            </div>
+                          )
+                        }}
                       />
-                    )
-                  }
-
-                  return (
+                    }
+                  />
+                  {showLegend && <Legend />}
+                  {metrics.map((metric) => (
+                    <Line
+                      key={metric.key}
+                      type="monotone"
+                      dataKey={metric.key}
+                      stroke={metric.color}
+                      strokeWidth={2}
+                      dot={{ r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name={metric.label}
+                      yAxisId={dualYAxis ? metric.yAxisId || 'left' : 'left'}
+                    />
+                  ))}
+                </LineChart>
+              ) : chartType === 'bar' ? (
+                <BarChart
+                  data={data}
+                  margin={{ top: 5, right: dualYAxis ? 60 : 30, left: 20, bottom: 5 }}
+                  barGap={2}
+                  barCategoryGap={enableHorizontalScroll ? 8 : '20%'}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      // 解析日期，处理 "YYYY-MM-DD" 格式
+                      let date: Date
+                      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
+                        const [year, month, day] = value.split('-').map(Number)
+                        date = new Date(year, month - 1, day)
+                      } else {
+                        date = new Date(value)
+                      }
+                      return `${date.getMonth() + 1}/${date.getDate()}`
+                    }}
+                  />
+                  {/* 左侧Y轴 */}
+                  <YAxis
+                    yAxisId="left"
+                    domain={leftDomain}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) {
+                        return `${(value / 1000000).toFixed(1)}M`
+                      }
+                      if (value >= 1000) {
+                        return `${(value / 1000).toFixed(1)}K`
+                      }
+                      return value.toString()
+                    }}
+                  />
+                  {/* 右侧Y轴（仅在dualYAxis启用时显示） */}
+                  {dualYAxis && (
+                    <YAxis
+                      yAxisId="right"
+                      domain={rightDomain}
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => {
+                        if (value >= 1000000) {
+                          return `${(value / 1000000).toFixed(1)}M`
+                        }
+                        if (value >= 1000) {
+                          return `${(value / 1000).toFixed(1)}K`
+                        }
+                        return value.toString()
+                      }}
+                    />
+                  )}
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
+                        formatter={(value, name, _item, _index, _payload) => {
+                          const metric = metrics.find((m) => m.key === name)
+                          const label = metric?.label || name
+                          const formattedValue = metric?.formatter
+                            ? metric.formatter(value as number)
+                            : (value as number).toLocaleString()
+                          return (
+                            <div className="flex flex-1 justify-between items-center leading-none gap-4">
+                              <span className="text-muted-foreground">{label}</span>
+                              <span className="font-mono font-medium tabular-nums text-foreground">
+                                {formattedValue}
+                              </span>
+                            </div>
+                          )
+                        }}
+                      />
+                    }
+                  />
+                  {showLegend && <Legend />}
+                  {metrics.map((metric) => (
                     <Bar
                       key={metric.key}
                       dataKey={metric.key}
                       fill={metric.color}
                       name={metric.label}
-                      yAxisId={dualYAxis ? (metric.yAxisId || 'left') : 'left'}
+                      yAxisId={dualYAxis ? metric.yAxisId || 'left' : 'left'}
                       stackId={metric.stackId}
                       radius={[4, 4, 0, 0]}
                       barSize={barSize}
                     />
-                  )
-                })}
-              </ComposedChart>
-            )}
+                  ))}
+                </BarChart>
+              ) : (
+                <ComposedChart
+                  data={data}
+                  margin={{ top: 5, right: dualYAxis ? 60 : 30, left: 20, bottom: 5 }}
+                  barGap={2}
+                  barCategoryGap={enableHorizontalScroll ? 8 : '20%'}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      // 解析日期，处理 "YYYY-MM-DD" 格式
+                      let date: Date
+                      if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                        // 手动解析 "YYYY-MM-DD" 格式，避免时区问题
+                        const [year, month, day] = value.split('-').map(Number)
+                        date = new Date(year, month - 1, day)
+                      } else {
+                        date = new Date(value)
+                      }
+                      return `${date.getMonth() + 1}/${date.getDate()}`
+                    }}
+                  />
+                  {/* 左侧Y轴 */}
+                  <YAxis
+                    yAxisId="left"
+                    domain={leftDomain}
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tickFormatter={(value) => {
+                      if (value >= 1000000) {
+                        return `${(value / 1000000).toFixed(1)}M`
+                      }
+                      if (value >= 1000) {
+                        return `${(value / 1000).toFixed(1)}K`
+                      }
+                      return value.toString()
+                    }}
+                  />
+                  {/* 右侧Y轴（仅在dualYAxis启用时显示） */}
+                  {dualYAxis && (
+                    <YAxis
+                      yAxisId="right"
+                      domain={rightDomain}
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => {
+                        if (value >= 1000000) {
+                          return `${(value / 1000000).toFixed(1)}M`
+                        }
+                        if (value >= 1000) {
+                          return `${(value / 1000).toFixed(1)}K`
+                        }
+                        return value.toString()
+                      }}
+                    />
+                  )}
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        labelFormatter={(value) => formatTrendChartTooltipLabel(value)}
+                        formatter={(value, name, _item, _index, _payload) => {
+                          const metric = metrics.find((m) => m.key === name)
+                          const label = metric?.label || name
+                          const formattedValue = metric?.formatter
+                            ? metric.formatter(value as number)
+                            : (value as number).toLocaleString()
+                          return (
+                            <div className="flex flex-1 justify-between items-center leading-none gap-4">
+                              <span className="text-muted-foreground">{label}</span>
+                              <span className="font-mono font-medium tabular-nums text-foreground">
+                                {formattedValue}
+                              </span>
+                            </div>
+                          )
+                        }}
+                      />
+                    }
+                  />
+                  {showLegend && <Legend />}
+                  {metrics.map((metric) => {
+                    const metricChartType = metric.chartType || 'bar'
+
+                    if (metricChartType === 'line') {
+                      return (
+                        <Line
+                          key={metric.key}
+                          type="monotone"
+                          dataKey={metric.key}
+                          stroke={metric.color}
+                          strokeWidth={2}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                          name={metric.label}
+                          yAxisId={dualYAxis ? metric.yAxisId || 'left' : 'left'}
+                        />
+                      )
+                    }
+
+                    return (
+                      <Bar
+                        key={metric.key}
+                        dataKey={metric.key}
+                        fill={metric.color}
+                        name={metric.label}
+                        yAxisId={dualYAxis ? metric.yAxisId || 'left' : 'left'}
+                        stackId={metric.stackId}
+                        radius={[4, 4, 0, 0]}
+                        barSize={barSize}
+                      />
+                    )
+                  })}
+                </ComposedChart>
+              )}
             </ChartContainer>
           </div>
         )}

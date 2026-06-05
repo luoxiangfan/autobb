@@ -47,7 +47,10 @@ vi.mock('../openclaw/commands/confirm-service', () => ({
   recordOpenclawCallbackEvent: vi.fn(),
 }))
 
-import { confirmOpenclawCommandByOwner, executeOpenclawCommand } from '../openclaw/commands/command-service'
+import {
+  confirmOpenclawCommandByOwner,
+  executeOpenclawCommand,
+} from '../openclaw/commands/command-service'
 
 describe('openclaw command service confirmation guard', () => {
   let db: {
@@ -151,9 +154,7 @@ describe('openclaw command service confirmation guard', () => {
       method: 'PUT',
       path: '/api/settings',
       body: {
-        updates: [
-          { category: 'ai', key: 'gemini_provider', value: 'official' },
-        ],
+        updates: [{ category: 'ai', key: 'gemini_provider', value: 'official' }],
       },
     },
     {
@@ -235,7 +236,9 @@ describe('openclaw command service confirmation guard', () => {
       decision: 'confirm',
     })
     expect(
-      db.exec.mock.calls.some((call) => String(call[0]).includes('INSERT INTO openclaw_command_runs'))
+      db.exec.mock.calls.some((call) =>
+        String(call[0]).includes('INSERT INTO openclaw_command_runs')
+      )
     ).toBe(false)
   })
 
@@ -912,5 +915,4 @@ describe('openclaw command service confirmation guard', () => {
     })
     expect(queueManager.enqueue).not.toHaveBeenCalled()
   })
-
 })

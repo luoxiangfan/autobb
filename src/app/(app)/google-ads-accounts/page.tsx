@@ -33,7 +33,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, RefreshCw, CheckCircle2, XCircle, Clock, Edit, Trash2, Key, AlertTriangle } from 'lucide-react'
+import {
+  Plus,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Edit,
+  Trash2,
+  Key,
+  AlertTriangle,
+} from 'lucide-react'
 
 interface GoogleAdsAccount {
   id: number
@@ -74,7 +84,9 @@ export default function GoogleAdsAccountsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState<GoogleAdsAccount | null>(null)
   const [removeGoogleAdsCampaignsOnDelete, setRemoveGoogleAdsCampaignsOnDelete] = useState(false)
-  const [deletableRemoteCampaignCount, setDeletableRemoteCampaignCount] = useState<number | null>(null)
+  const [deletableRemoteCampaignCount, setDeletableRemoteCampaignCount] = useState<number | null>(
+    null
+  )
   const [remoteDeleteMaxCampaigns, setRemoteDeleteMaxCampaigns] = useState<number | null>(null)
   const [remoteDeleteWillTruncate, setRemoteDeleteWillTruncate] = useState(false)
   const [loadingDeletableCount, setLoadingDeletableCount] = useState(false)
@@ -255,7 +267,8 @@ export default function GoogleAdsAccountsPage() {
         .filter((item, index, arr) => item && arr.indexOf(item) === index)
         .join('；')
       const hasFailures = (googleAds?.failures?.length ?? 0) > 0
-      const hasIssues = !localDeleted || hasFailures || apiWarnings.length > 0 || remoteResult.tone === 'warning'
+      const hasIssues =
+        !localDeleted || hasFailures || apiWarnings.length > 0 || remoteResult.tone === 'warning'
 
       if (!response.ok) {
         if (googleAds || apiWarnings.length > 0) {
@@ -359,7 +372,10 @@ export default function GoogleAdsAccountsPage() {
     }
 
     return (
-      <Badge variant="default" className="bg-green-600 hover:bg-green-700 flex items-center gap-1 w-fit">
+      <Badge
+        variant="default"
+        className="bg-green-600 hover:bg-green-700 flex items-center gap-1 w-fit"
+      >
         <CheckCircle2 className="w-3 h-3" />
         正常
       </Badge>
@@ -401,18 +417,11 @@ export default function GoogleAdsAccountsPage() {
               </Badge>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchAccounts}
-              >
+              <Button variant="outline" size="sm" onClick={fetchAccounts}>
                 <RefreshCw className="w-4 h-4 mr-1" />
                 刷新
               </Button>
-              <Button
-                onClick={() => setShowAddDialog(true)}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={() => setShowAddDialog(true)} className="flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 添加账号
               </Button>
@@ -427,10 +436,7 @@ export default function GoogleAdsAccountsPage() {
             <CardContent className="pt-6 text-center py-12">
               <Key className="w-12 h-12 mx-auto mb-4 opacity-50 text-gray-400" />
               <p className="text-gray-500 mb-4">暂无Google Ads账号</p>
-              <Button
-                onClick={() => setShowAddDialog(true)}
-                variant="outline"
-              >
+              <Button onClick={() => setShowAddDialog(true)} variant="outline">
                 <Plus className="w-4 h-4 mr-2" />
                 添加第一个账号
               </Button>
@@ -456,9 +462,7 @@ export default function GoogleAdsAccountsPage() {
                   <TableBody>
                     {accounts.map((account) => (
                       <TableRow key={account.id}>
-                        <TableCell className="font-mono text-sm">
-                          {account.customerId}
-                        </TableCell>
+                        <TableCell className="font-mono text-sm">{account.customerId}</TableCell>
                         <TableCell>
                           {account.accountName || <span className="text-gray-400">未命名</span>}
                         </TableCell>
@@ -472,9 +476,7 @@ export default function GoogleAdsAccountsPage() {
                         <TableCell className="text-sm text-gray-600">
                           {account.currency} / {account.timezone}
                         </TableCell>
-                        <TableCell>
-                          {getStatusBadge(account)}
-                        </TableCell>
+                        <TableCell>{getStatusBadge(account)}</TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {formatDate(account.lastSyncAt)}
                         </TableCell>
@@ -522,9 +524,7 @@ export default function GoogleAdsAccountsPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>添加Google Ads账号</DialogTitle>
-            <DialogDescription>
-              输入您的Google Ads账号信息进行绑定
-            </DialogDescription>
+            <DialogDescription>输入您的Google Ads账号信息进行绑定</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
@@ -535,9 +535,7 @@ export default function GoogleAdsAccountsPage() {
                 value={formData.customerId}
                 onChange={(e) => setFormData({ ...formData, customerId: e.target.value })}
               />
-              <p className="text-xs text-gray-500">
-                10位数字的Google Ads客户ID
-              </p>
+              <p className="text-xs text-gray-500">10位数字的Google Ads客户ID</p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="accountName">账号名称</Label>
@@ -635,12 +633,17 @@ export default function GoogleAdsAccountsPage() {
                 <Checkbox
                   id="delete-account-remove-ads"
                   checked={removeGoogleAdsCampaignsOnDelete}
-                  onCheckedChange={(checked) => setRemoveGoogleAdsCampaignsOnDelete(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setRemoveGoogleAdsCampaignsOnDelete(checked === true)
+                  }
                   disabled={deletableRemoteCampaignCount === 0}
                   className="mt-0.5"
                 />
                 <div className="flex-1">
-                  <Label htmlFor="delete-account-remove-ads" className="text-sm font-medium cursor-pointer text-orange-900">
+                  <Label
+                    htmlFor="delete-account-remove-ads"
+                    className="text-sm font-medium cursor-pointer text-orange-900"
+                  >
                     同时在 Google Ads 远端删除该账号下已同步的广告系列（不可恢复）
                   </Label>
                   <p className="text-xs text-orange-700 mt-1">
@@ -660,8 +663,9 @@ export default function GoogleAdsAccountsPage() {
               </div>
               {deleteFeedback.googleAds && removeGoogleAdsCampaignsOnDelete && (
                 <p className="text-gray-700">
-                  远端：计划 {deleteFeedback.googleAds.planned}，成功删除 {deleteFeedback.googleAds.removed}，
-                  降级暂停 {deleteFeedback.googleAds.pausedFallback}，失败 {deleteFeedback.googleAds.failed}
+                  远端：计划 {deleteFeedback.googleAds.planned}，成功删除{' '}
+                  {deleteFeedback.googleAds.removed}， 降级暂停{' '}
+                  {deleteFeedback.googleAds.pausedFallback}，失败 {deleteFeedback.googleAds.failed}
                   {deleteFeedback.googleAds.truncated > 0
                     ? `；另有 ${deleteFeedback.googleAds.truncated} 个仅本地删除`
                     : ''}
@@ -688,7 +692,10 @@ export default function GoogleAdsAccountsPage() {
                       </thead>
                       <tbody>
                         {deleteFeedback.googleAds!.failures.map((item) => (
-                          <tr key={`${item.campaignId}-${item.reason}`} className="border-t border-gray-100">
+                          <tr
+                            key={`${item.campaignId}-${item.reason}`}
+                            className="border-t border-gray-100"
+                          >
                             <td className="p-2 align-top font-mono">{item.campaignId}</td>
                             <td className="p-2 align-top text-red-700 break-all">{item.reason}</td>
                           </tr>
@@ -706,18 +713,10 @@ export default function GoogleAdsAccountsPage() {
               <Button onClick={closeDeleteDialog}>关闭</Button>
             ) : (
               <>
-                <Button
-                  variant="outline"
-                  onClick={closeDeleteDialog}
-                  disabled={deleting}
-                >
+                <Button variant="outline" onClick={closeDeleteDialog} disabled={deleting}>
                   取消
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
+                <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
                   {deleting ? '删除中...' : '确认删除'}
                 </Button>
               </>
@@ -731,21 +730,13 @@ export default function GoogleAdsAccountsPage() {
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>编辑账号信息</DialogTitle>
-            <DialogDescription>
-              更新您的Google Ads账号配置
-            </DialogDescription>
+            <DialogDescription>更新您的Google Ads账号配置</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label>Customer ID</Label>
-              <Input
-                value={formData.customerId}
-                disabled
-                className="bg-gray-100"
-              />
-              <p className="text-xs text-gray-500">
-                Customer ID不可修改
-              </p>
+              <Input value={formData.customerId} disabled className="bg-gray-100" />
+              <p className="text-xs text-gray-500">Customer ID不可修改</p>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-accountName">账号名称</Label>
@@ -799,9 +790,7 @@ export default function GoogleAdsAccountsPage() {
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               取消
             </Button>
-            <Button onClick={handleEdit}>
-              保存
-            </Button>
+            <Button onClick={handleEdit}>保存</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

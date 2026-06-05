@@ -68,7 +68,7 @@ export async function checkLink(
       US: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       CN: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
       UK: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      default: 'Mozilla/5.0 (compatible; GoogleBot/2.1; +http://www.google.com/bot.html)'
+      default: 'Mozilla/5.0 (compatible; GoogleBot/2.1; +http://www.google.com/bot.html)',
     }
 
     // 使用统一的代理axios客户端发送HEAD请求
@@ -77,17 +77,17 @@ export async function checkLink(
       {
         headers: {
           'User-Agent': userAgents[country] || userAgents.default,
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'Accept-Language': country === 'CN' ? 'zh-CN,zh;q=0.9' : 'en-US,en;q=0.9'
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': country === 'CN' ? 'zh-CN,zh;q=0.9' : 'en-US,en;q=0.9',
         },
         maxRedirects: 5, // 允许自动重定向
         validateStatus: (status) => status >= 200 && status < 600, // 接受所有HTTP状态码
-        timeout
+        timeout,
       },
       {
         customProxyUrl: proxyUrl,
         timeout,
-        useCache: true
+        useCache: true,
       }
     )
 
@@ -106,7 +106,7 @@ export async function checkLink(
       responseTime,
       isRedirected: !!isRedirected,
       finalUrl: isRedirected ? finalUrl : null,
-      errorMessage: !isAccessible ? `HTTP ${response.status}` : null
+      errorMessage: !isAccessible ? `HTTP ${response.status}` : null,
     }
   } catch (error: any) {
     const responseTime = Date.now() - startTime
@@ -122,7 +122,7 @@ export async function checkLink(
       finalUrl: null,
       errorMessage: isTimeout
         ? 'Request timeout'
-        : error.response?.statusText || error.message || 'Network error'
+        : error.response?.statusText || error.message || 'Network error',
     }
   }
 }
@@ -162,8 +162,8 @@ export async function saveLinkCheckResult(
       result.statusCode,
       result.responseTime,
       // 🔧 PostgreSQL兼容性：确保boolean转换为正确的值
-      db.type === 'postgres' ? result.isAccessible : (result.isAccessible ? 1 : 0),
-      db.type === 'postgres' ? result.isRedirected : (result.isRedirected ? 1 : 0),
+      db.type === 'postgres' ? result.isAccessible : result.isAccessible ? 1 : 0,
+      db.type === 'postgres' ? result.isRedirected : result.isRedirected ? 1 : 0,
       result.finalUrl,
       country,
       result.errorMessage,
@@ -341,9 +341,9 @@ export async function getUserRiskAlerts(
     params.push(normalizedLimit)
   }
 
-  const alerts = await db.query(query, params) as any[]
+  const alerts = (await db.query(query, params)) as any[]
 
-  return alerts.map(a => ({
+  return alerts.map((a) => ({
     id: a.id,
     userId: a.user_id,
     alertType: a.alert_type,
@@ -357,7 +357,7 @@ export async function getUserRiskAlerts(
     createdAt: a.created_at,
     acknowledgedAt: a.acknowledged_at,
     resolvedAt: a.resolved_at,
-    resolutionNote: a.resolution_note
+    resolutionNote: a.resolution_note,
   }))
 }
 
@@ -402,7 +402,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
   const isDeletedFalse = db.type === 'postgres' ? false : 0
 
   // 获取用户的所有活跃Offers（包含目标国家）
-  const offers = await db.query(
+  const offers = (await db.query(
     `
     SELECT id, affiliate_link, url, brand, target_country
     FROM offers
@@ -412,7 +412,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
       AND (is_deleted = ? OR is_deleted IS NULL)
   `,
     [userId, isDeletedFalse]
-  ) as any[]
+  )) as any[]
 
   let totalChecked = 0
   let accessible = 0
@@ -451,8 +451,8 @@ export async function checkAllUserLinks(userId: number): Promise<{
             details: {
               originalUrl: url,
               finalUrl: result.finalUrl,
-              country
-            }
+              country,
+            },
           }
         )
         newAlerts++
@@ -461,9 +461,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
       broken++
 
       // 创建链接失效提示
-      const severity = result.errorMessage?.includes('timeout')
-        ? 'warning'
-        : 'critical'
+      const severity = result.errorMessage?.includes('timeout') ? 'warning' : 'critical'
 
       await createRiskAlert(
         userId,
@@ -478,8 +476,8 @@ export async function checkAllUserLinks(userId: number): Promise<{
             url,
             statusCode: result.statusCode,
             errorMessage: result.errorMessage,
-            country
-          }
+            country,
+          },
         }
       )
       newAlerts++
@@ -491,7 +489,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
     accessible,
     broken,
     redirected,
-    newAlerts
+    newAlerts,
   }
 }
 
@@ -511,7 +509,7 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
   // 获取用户的所有活跃Ads账号
-  const accounts = await db.query(
+  const accounts = (await db.query(
     `
     SELECT id, customer_id, account_name, is_active
     FROM google_ads_accounts
@@ -519,14 +517,14 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
       AND ${isActiveCondition}
   `,
     [userId]
-  ) as any[]
+  )) as any[]
 
   if (accounts.length === 0) {
     return {
       totalChecked: 0,
       activeAccounts: 0,
       problemAccounts: 0,
-      newAlerts: 0
+      newAlerts: 0,
     }
   }
 
@@ -534,11 +532,11 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
   // 原问题: 循环N个accounts，每个执行3次查询 = 3N次查询
   // 优化后: 3次批量查询，使用Map分组 = 3次查询（与accounts数量无关）
 
-  const accountIds = accounts.map(a => a.id)
+  const accountIds = accounts.map((a) => a.id)
   const placeholders = accountIds.map(() => '?').join(',')
 
   // 批量查询1: 所有账号的campaigns count（单次查询）
-  const campaignCounts = await db.query(
+  const campaignCounts = (await db.query(
     `
     SELECT
       google_ads_account_id,
@@ -550,14 +548,14 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
     GROUP BY google_ads_account_id
   `,
     [...accountIds, userId]
-  ) as any[]
+  )) as any[]
   const campaignCountMap = new Map<number, number>()
   for (const row of campaignCounts) {
     campaignCountMap.set(row.google_ads_account_id, row.count)
   }
 
   // 批量查询2: 所有账号的sync errors count（单次查询）
-  const syncErrorsData = await db.query(
+  const syncErrorsData = (await db.query(
     `
     SELECT
       google_ads_account_id,
@@ -570,14 +568,14 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
     GROUP BY google_ads_account_id
   `,
     [...accountIds, userId]
-  ) as any[]
+  )) as any[]
   const syncErrorsMap = new Map<number, number>()
   for (const row of syncErrorsData) {
     syncErrorsMap.set(row.google_ads_account_id, row.count)
   }
 
   // 批量查询3: 所有账号的last sync time（单次查询）
-  const lastSyncData = await db.query(
+  const lastSyncData = (await db.query(
     `
     SELECT
       google_ads_account_id,
@@ -589,7 +587,7 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
     GROUP BY google_ads_account_id
   `,
     [...accountIds, userId]
-  ) as any[]
+  )) as any[]
   const lastSyncMap = new Map<number, string | null>()
   for (const row of lastSyncData) {
     lastSyncMap.set(row.google_ads_account_id, row.lastSync)
@@ -621,8 +619,8 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
           details: {
             customerId: account.customer_id,
             syncErrors,
-            campaignCount
-          }
+            campaignCount,
+          },
         }
       )
       newAlerts++
@@ -651,8 +649,8 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
             details: {
               customerId: account.customer_id,
               lastSync,
-              daysSinceSync
-            }
+              daysSinceSync,
+            },
           }
         )
         newAlerts++
@@ -664,7 +662,7 @@ export async function checkAdsAccountStatus(userId: number): Promise<{
     totalChecked,
     activeAccounts,
     problemAccounts,
-    newAlerts
+    newAlerts,
   }
 }
 
@@ -689,7 +687,7 @@ export async function dailyLinkCheck(): Promise<{
   const isDeletedFalse = db.type === 'postgres' ? false : 0
 
   // 获取所有有Offers的用户
-  const users = await db.query(
+  const users = (await db.query(
     `
     SELECT DISTINCT o.user_id
     FROM offers o
@@ -700,7 +698,7 @@ export async function dailyLinkCheck(): Promise<{
       AND ${userEligibleCondition}
   `,
     [isDeletedFalse]
-  ) as { user_id: number }[]
+  )) as { user_id: number }[]
 
   const results: Record<number, Awaited<ReturnType<typeof checkAllUserLinks>>> = {}
   let totalLinks = 0
@@ -728,9 +726,9 @@ export async function dailyLinkCheck(): Promise<{
     totalAlerts,
     accountChecks: {
       totalAccounts,
-      problemAccounts
+      problemAccounts,
     },
-    results
+    results,
   }
 }
 
@@ -759,9 +757,9 @@ export async function getLinkCheckHistory(
   query += ` ORDER BY checked_at DESC LIMIT ?`
   params.push(limit)
 
-  const history = await db.query(query, params) as any[]
+  const history = (await db.query(query, params)) as any[]
 
-  return history.map(h => ({
+  return history.map((h) => ({
     id: h.id,
     offerId: h.offer_id,
     url: h.url,
@@ -772,7 +770,7 @@ export async function getLinkCheckHistory(
     finalUrl: h.final_url,
     checkCountry: h.check_country,
     errorMessage: h.error_message,
-    checkedAt: h.checked_at
+    checkedAt: h.checked_at,
   }))
 }
 
@@ -791,7 +789,7 @@ export async function getRiskStatistics(userId: number): Promise<{
   const recentCutoffExpr = dateMinusDays(30, db.type)
   const createdAtExpr = db.type === 'postgres' ? `created_at::timestamp` : 'created_at'
 
-  const rows = await db.query(
+  const rows = (await db.query(
     `
     SELECT
       COUNT(*) as total,
@@ -807,7 +805,7 @@ export async function getRiskStatistics(userId: number): Promise<{
     GROUP BY alert_type
   `,
     [userId]
-  ) as any[]
+  )) as any[]
 
   const byType: Record<string, number> = {}
   let total = 0
@@ -816,7 +814,7 @@ export async function getRiskStatistics(userId: number): Promise<{
   let warning = 0
   let info = 0
 
-  rows.forEach(row => {
+  rows.forEach((row) => {
     byType[row.alert_type] = row.type_count
     total += row.total
     active += row.active
@@ -831,6 +829,6 @@ export async function getRiskStatistics(userId: number): Promise<{
     critical,
     warning,
     info,
-    byType
+    byType,
   }
 }

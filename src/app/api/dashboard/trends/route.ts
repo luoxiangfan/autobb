@@ -79,7 +79,8 @@ export async function GET(request: NextRequest) {
     // 查询货币分布：
     // - 先按最近有数据的日期排序，避免默认命中“高花费但已停更”的旧币种
     // - 再按花费排序作为同日并列时的次级依据
-    const currencyRows = await db.query<any>(`
+    const currencyRows = await db.query<any>(
+      `
       SELECT
         COALESCE(currency, 'USD') as currency,
         COALESCE(SUM(cost), 0) as total_cost,
@@ -90,22 +91,29 @@ export async function GET(request: NextRequest) {
         AND date <= ?
       GROUP BY COALESCE(currency, 'USD')
       ORDER BY latest_date DESC, total_cost DESC, currency ASC
-    `, [userId, startDateStr, endDateStr])
+    `,
+      [userId, startDateStr, endDateStr]
+    )
 
     const currencies = Array.from(
       new Set(
         (currencyRows || [])
-          .map((r: any) => String(r.currency || '').trim().toUpperCase())
+          .map((r: any) =>
+            String(r.currency || '')
+              .trim()
+              .toUpperCase()
+          )
           .filter(Boolean)
       )
     )
     const hasMixedCurrency = currencies.length > 1
-    const summaryCurrency = hasMixedCurrency
-      ? 'MIXED'
-      : (currencies[0] || 'USD')
+    const summaryCurrency = hasMixedCurrency ? 'MIXED' : currencies[0] || 'USD'
     const costs = (currencyRows || [])
       .map((row: any) => ({
-        currency: String(row.currency || '').trim().toUpperCase() || 'USD',
+        currency:
+          String(row.currency || '')
+            .trim()
+            .toUpperCase() || 'USD',
         amount: Number(row.total_cost) || 0,
       }))
       .filter((item: { currency: string; amount: number }) => Number.isFinite(item.amount))
@@ -150,22 +158,22 @@ export async function GET(request: NextRequest) {
       ORDER BY report_date ASC
     `
 
-    const performanceRows = await db.query(performanceQuery, [
+    const performanceRows = (await db.query(performanceQuery, [
       userId,
       startDateStr,
       endDateStr,
-    ]) as Array<{
+    ])) as Array<{
       date: string
       impressions: number
       clicks: number
       cost: number
     }>
 
-    const attributedCommissionRows = await db.query(attributedCommissionQuery, [
+    const attributedCommissionRows = (await db.query(attributedCommissionQuery, [
       userId,
       startDateStr,
       endDateStr,
-    ]) as Array<{
+    ])) as Array<{
       date: string
       commission: number
     }>
@@ -175,32 +183,35 @@ export async function GET(request: NextRequest) {
       commission: number
     }> = []
     try {
-      unattributedCommissionRows = await db.query(unattributedCommissionQuery, [
+      unattributedCommissionRows = (await db.query(unattributedCommissionQuery, [
         userId,
         startDateStr,
         endDateStr,
         ...unattributedFailureFilter.values,
-      ]) as Array<{
+      ])) as Array<{
         date: string
         commission: number
       }>
     } catch (error: any) {
       const message = String(error?.message || '')
       if (
-        !/openclaw_affiliate_attribution_failures/i.test(message)
-        || !/(no such table|does not exist)/i.test(message)
+        !/openclaw_affiliate_attribution_failures/i.test(message) ||
+        !/(no such table|does not exist)/i.test(message)
       ) {
         throw error
       }
     }
 
     // 按日期补齐空缺，避免“无消耗日”导致曲线提前截止。
-    const rowsByDate = new Map<string, {
-      impressions: number
-      clicks: number
-      cost: number
-      commission: number
-    }>()
+    const rowsByDate = new Map<
+      string,
+      {
+        impressions: number
+        clicks: number
+        cost: number
+        commission: number
+      }
+    >()
 
     for (const row of performanceRows) {
       const date = normalizeDateToYmd(row.date)

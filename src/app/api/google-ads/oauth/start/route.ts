@@ -22,10 +22,7 @@ export async function GET(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -49,22 +46,33 @@ export async function GET(request: NextRequest) {
         dataType: setting.dataType,
         isSensitive: setting.isSensitive,
         isRequired: setting.isRequired,
-        value:
-          setting.isSensitive
-            ? (rawValue ? `***redacted*** (len=${rawValue.length}, prefix=${prefix})` : '')
-            : rawValue,
+        value: setting.isSensitive
+          ? rawValue
+            ? `***redacted*** (len=${rawValue.length}, prefix=${prefix})`
+            : ''
+          : rawValue,
       }
     }
 
     // 校验: login_customer_id 必须由用户自己配置（不使用 getSetting，避免回退到全局配置）
-    const loginCustomerIdSetting = await getUserOnlySetting('google_ads', 'login_customer_id', userId)
-    console.log(`🔐 [OAuth Start] login_customer_id 查询结果:`, summarizeSetting(loginCustomerIdSetting))
+    const loginCustomerIdSetting = await getUserOnlySetting(
+      'google_ads',
+      'login_customer_id',
+      userId
+    )
+    console.log(
+      `🔐 [OAuth Start] login_customer_id 查询结果:`,
+      summarizeSetting(loginCustomerIdSetting)
+    )
 
     const userLoginCustomerId = loginCustomerIdSetting?.value || ''
     if (!userLoginCustomerId) {
       console.log(`🔐 [OAuth Start] 用户 ${userId} 未配置 login_customer_id`)
       return NextResponse.json(
-        { error: '请先在设置页面配置 Login Customer ID (MCC账户ID)，这是使用 Google Ads API 的必填项' },
+        {
+          error:
+            '请先在设置页面配置 Login Customer ID (MCC账户ID)，这是使用 Google Ads API 的必填项',
+        },
         { status: 400 }
       )
     }
@@ -72,11 +80,21 @@ export async function GET(request: NextRequest) {
     // 🔧 修复(2025-12-12): 独立账号模式 - 必须获取用户自己的OAuth配置
     const userClientIdSetting = await getUserOnlySetting('google_ads', 'client_id', userId)
     const userClientSecretSetting = await getUserOnlySetting('google_ads', 'client_secret', userId)
-    const userDeveloperTokenSetting = await getUserOnlySetting('google_ads', 'developer_token', userId)
+    const userDeveloperTokenSetting = await getUserOnlySetting(
+      'google_ads',
+      'developer_token',
+      userId
+    )
 
     console.log(`🔐 [OAuth Start] client_id 查询结果:`, summarizeSetting(userClientIdSetting))
-    console.log(`🔐 [OAuth Start] client_secret 查询结果:`, summarizeSetting(userClientSecretSetting))
-    console.log(`🔐 [OAuth Start] developer_token 查询结果:`, summarizeSetting(userDeveloperTokenSetting))
+    console.log(
+      `🔐 [OAuth Start] client_secret 查询结果:`,
+      summarizeSetting(userClientSecretSetting)
+    )
+    console.log(
+      `🔐 [OAuth Start] developer_token 查询结果:`,
+      summarizeSetting(userDeveloperTokenSetting)
+    )
 
     const userClientId = userClientIdSetting?.value || ''
     const userClientSecret = userClientSecretSetting?.value || ''
@@ -85,13 +103,19 @@ export async function GET(request: NextRequest) {
     // 🔧 修复(2025-12-12): 独立账号模式 - 必须有完整的OAuth配置，不再回退到共享配置
     if (!userClientId || !userClientSecret || !userDeveloperToken) {
       return NextResponse.json(
-        { error: '请先在设置页面完成 Google Ads API 配置（Client ID、Client Secret、Developer Token 都是必填项）' },
+        {
+          error:
+            '请先在设置页面完成 Google Ads API 配置（Client ID、Client Secret、Developer Token 都是必填项）',
+        },
         { status: 400 }
       )
     }
 
     // 🧯 防误填：developer_token 被错误填写为 client_secret（常见前缀 GOCSPX-）
-    if (userDeveloperToken.trim() === userClientSecret.trim() || looksLikeOAuthClientSecret(userDeveloperToken)) {
+    if (
+      userDeveloperToken.trim() === userClientSecret.trim() ||
+      looksLikeOAuthClientSecret(userDeveloperToken)
+    ) {
       return NextResponse.json(
         {
           error:
@@ -115,7 +139,7 @@ export async function GET(request: NextRequest) {
     const state = Buffer.from(
       JSON.stringify({
         user_id: userId,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       })
     ).toString('base64url')
 
@@ -134,17 +158,16 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         auth_url: authUrl,
-        redirect_uri: redirectUri
-      }
+        redirect_uri: redirectUri,
+      },
     })
-
   } catch (error: any) {
     console.error('启动OAuth流程失败:', error)
 
     return NextResponse.json(
       {
         error: '启动OAuth流程失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )

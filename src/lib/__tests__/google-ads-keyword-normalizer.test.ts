@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   areKeywordsDuplicates,
   deduplicateKeywordsWithPriority,
-  normalizeGoogleAdsKeyword
+  normalizeGoogleAdsKeyword,
 } from '../google-ads-keyword-normalizer'
 
 describe('google-ads-keyword-normalizer', () => {
@@ -26,8 +26,7 @@ describe('google-ads-keyword-normalizer', () => {
 
   it('deduplicates using normalized form', () => {
     const input = ['dr. mercola', 'dr mercola', 'dr-mercola', 'probiotics for women']
-    const deduped = deduplicateKeywordsWithPriority(input, kw => kw)
+    const deduped = deduplicateKeywordsWithPriority(input, (kw) => kw)
     expect(deduped).toEqual(['dr. mercola', 'probiotics for women'])
   })
 })
-

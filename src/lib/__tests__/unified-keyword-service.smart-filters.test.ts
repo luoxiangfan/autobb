@@ -17,7 +17,7 @@ function kw(keyword: string, searchVolume: number): UnifiedKeywordData {
 describe('applySmartFilters', () => {
   it('keeps keywords when search volume data is unavailable (all volumes are 0)', () => {
     const out = applySmartFilters([kw('foo', 0), kw('bar review', 0)], 500, 15)
-    expect(out.map(k => k.keyword)).toEqual(['foo'])
+    expect(out.map((k) => k.keyword)).toEqual(['foo'])
   })
 
   it('can disable volume threshold filtering explicitly', () => {
@@ -27,7 +27,9 @@ describe('applySmartFilters', () => {
     const defaultOut = applySmartFilters([...high, ...low], 500, 15)
     expect(defaultOut).toHaveLength(20)
 
-    const disabledOut = applySmartFilters([...high, ...low], 500, 15, { disableSearchVolumeFilter: true })
+    const disabledOut = applySmartFilters([...high, ...low], 500, 15, {
+      disableSearchVolumeFilter: true,
+    })
     expect(disabledOut).toHaveLength(40)
   })
 
@@ -39,6 +41,6 @@ describe('applySmartFilters', () => {
       { pureBrandKeywords: ['eufy'] }
     )
 
-    expect(out.map(k => k.keyword)).toEqual(['eufy', 'camera'])
+    expect(out.map((k) => k.keyword)).toEqual(['eufy', 'camera'])
   })
 })

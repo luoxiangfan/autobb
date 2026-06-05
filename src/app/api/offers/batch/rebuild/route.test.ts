@@ -36,7 +36,8 @@ vi.mock('@/lib/offer-extraction-task', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/offer-extraction-task')>()
   return {
     ...actual,
-    enqueueExistingOfferExtractionAndMarkQueued: extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
+    enqueueExistingOfferExtractionAndMarkQueued:
+      extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
   }
 })
 
@@ -51,9 +52,7 @@ describe('POST /api/offers/batch/rebuild', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.getDatabase.mockReturnValue({ type: 'sqlite', query: dbFns.query })
-    dbFns.query
-      .mockResolvedValueOnce([{ id: 10 }])
-      .mockResolvedValueOnce([])
+    dbFns.query.mockResolvedValueOnce([{ id: 10 }]).mockResolvedValueOnce([])
     offerFns.findOfferById.mockResolvedValue({
       id: 10,
       affiliate_link: 'https://aff.example.com/10',

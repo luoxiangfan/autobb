@@ -86,7 +86,16 @@ if [ -n "$LARGE_FILES" ]; then
   echo "To proceed anyway: git commit --no-verify"
 fi
 
-# 5. 运行代码检查（如果配置了）
+# 5. 运行 Prettier 与代码检查（如果配置了）
+if [ -f "package.json" ] && grep -q "lint-staged" package.json; then
+  echo "✨ Running Prettier on staged files..."
+  npx lint-staged || {
+    echo "❌ Prettier found formatting issues. Staged files were auto-formatted."
+    echo "Please review changes and commit again."
+    exit 1
+  }
+fi
+
 if [ -f "package.json" ] && grep -q "lint" package.json; then
   echo "🔍 Running linter..."
   npm run lint --silent || {

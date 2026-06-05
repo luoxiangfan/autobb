@@ -154,7 +154,7 @@ export async function executeClickFarmBatchTask(
       heapLimit: `${(heap.heap_size_limit / 1024 / 1024).toFixed(2)} MB`,
       percentage: `${pct}%`,
       threshold: `${CLICK_FARM_BATCH_HEAP_PRESSURE_PCT}%`,
-      delayMs: Math.max(1000, NEXT_BATCH_DELAY_MS)
+      delayMs: Math.max(1000, NEXT_BATCH_DELAY_MS),
     })
     await requeueBatchTask(
       task,
@@ -207,7 +207,7 @@ export async function executeClickFarmBatchTask(
     dispatchedThisBatch: dispatched,
     totalDispatched: newDispatched,
     remaining,
-    progress: `${((newDispatched / totalClicks) * 100).toFixed(1)}%`
+    progress: `${((newDispatched / totalClicks) * 100).toFixed(1)}%`,
   })
 
   if (remaining > 0) {
@@ -229,4 +229,3 @@ export async function executeClickFarmBatchTask(
 
   return { dispatched, remaining, status: 'queued' }
 }
-

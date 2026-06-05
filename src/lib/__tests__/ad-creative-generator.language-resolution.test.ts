@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { GeneratedAdCreativeData } from '../ad-creative'
-import {
-  enforceLanguagePurityGate,
-  resolveCreativeTargetLanguage,
-} from '../ad-creative-generator'
+import { enforceLanguagePurityGate, resolveCreativeTargetLanguage } from '../ad-creative-generator'
 
 describe('ad-creative-generator language resolution', () => {
   it('falls back to country-language mapping when target language is missing', () => {
@@ -36,14 +33,8 @@ describe('ad-creative-generator language resolution', () => {
         'Best Vacuum Deals',
         'Top Rated Choice',
       ],
-      descriptions: [
-        'Shop now and save big.',
-        'Fast shipping and support.',
-      ],
-      keywords: [
-        'ブランドx 掃除機',
-        'ブランドx 公式',
-      ],
+      descriptions: ['Shop now and save big.', 'Fast shipping and support.'],
+      keywords: ['ブランドx 掃除機', 'ブランドx 公式'],
       callouts: [],
       sitelinks: [],
       theme: 'test',

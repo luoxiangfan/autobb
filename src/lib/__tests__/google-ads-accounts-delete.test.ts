@@ -27,7 +27,10 @@ const constraintFns = vi.hoisted(() => ({
 }))
 
 const stateMachineFns = vi.hoisted(() => ({
-  applyCampaignTransitionByIds: vi.fn(async () => ({ updatedCount: 2, matchedCampaignIds: [1, 2] })),
+  applyCampaignTransitionByIds: vi.fn(async () => ({
+    updatedCount: 2,
+    matchedCampaignIds: [1, 2],
+  })),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -102,7 +105,9 @@ describe('deleteGoogleAdsAccount', () => {
   })
 
   it('does not pause offer tasks when the offer still has active campaigns on another account', async () => {
-    constraintFns.hasActiveCampaignForOffer.mockImplementation(async (offerId: number) => offerId === 20)
+    constraintFns.hasActiveCampaignForOffer.mockImplementation(
+      async (offerId: number) => offerId === 20
+    )
 
     await deleteGoogleAdsAccount(9, 7)
 

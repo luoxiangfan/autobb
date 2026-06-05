@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -20,7 +26,23 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { Info, ExternalLink, Shield, Zap, Globe, Settings as SettingsIcon, Plus, Trash2, Key, CheckCircle2, AlertCircle, ChevronDown, ChevronUp, BookOpen, Star } from 'lucide-react'
+import {
+  Info,
+  ExternalLink,
+  Shield,
+  Zap,
+  Globe,
+  Settings as SettingsIcon,
+  Plus,
+  Trash2,
+  Key,
+  CheckCircle2,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  BookOpen,
+  Star,
+} from 'lucide-react'
 import { getCountryOptionsForUI } from '@/lib/language-country-codes'
 import {
   GEMINI_ACTIVE_MODEL,
@@ -50,7 +72,7 @@ import {
 interface ProxyUrlConfig {
   country: string
   url: string
-  error?: string  // 验证错误信息
+  error?: string // 验证错误信息
 }
 
 // 简单的客户端代理URL格式验证
@@ -81,7 +103,7 @@ function validateProxyUrlFormat(url: string): { isValid: boolean; error?: string
 
   return {
     isValid: false,
-    error: '不支持的代理URL格式。当前仅支持：IPRocket、Oxylabs、Kookeey、Cliproxy'
+    error: '不支持的代理URL格式。当前仅支持：IPRocket、Oxylabs、Kookeey、Cliproxy',
   }
 }
 
@@ -121,7 +143,7 @@ interface GoogleAdsCredentialStatus {
 // 代理配置支持的国家列表（使用全局映射 + ROW其他地区选项）
 const SUPPORTED_COUNTRIES = [
   ...getCountryOptionsForUI(),
-  { code: 'ROW', name: '其他地区 (ROW)' },  // 代理配置专用的"其他地区"选项
+  { code: 'ROW', name: '其他地区 (ROW)' }, // 代理配置专用的"其他地区"选项
 ]
 
 interface Setting {
@@ -146,37 +168,41 @@ function resolveGeminiEndpoint(providerValue?: string, modelValue?: string): str
 }
 
 // 设置项的详细说明和配置
-const SETTING_METADATA: Record<string, {
-  label: string
-  description: string
-  placeholder?: string
-  helpLink?: string
-  options?: { value: string; label: string }[]
-  defaultValue?: string
-}> = {
+const SETTING_METADATA: Record<
+  string,
+  {
+    label: string
+    description: string
+    placeholder?: string
+    helpLink?: string
+    options?: { value: string; label: string }[]
+    defaultValue?: string
+  }
+> = {
   // Google Ads - 所有参数必填
   'google_ads.login_customer_id': {
     label: 'Login Customer ID (MCC账户ID)',
     description: '您的MCC管理账户ID，用于访问您管理的广告账户。格式：10位数字（不含连字符）',
     placeholder: '例如: 1234567890',
-    helpLink: '/help/google-ads-setup?tab=oauth'
+    helpLink: '/help/google-ads-setup?tab=oauth',
   },
   'google_ads.client_id': {
     label: 'OAuth Client ID',
     description: 'Google Cloud Console 中创建的 OAuth 2.0 客户端 ID',
     placeholder: '例如: 123456789-xxx.apps.googleusercontent.com',
-    helpLink: '/help/google-ads-setup?tab=oauth#oauth-client-id'
+    helpLink: '/help/google-ads-setup?tab=oauth#oauth-client-id',
   },
   'google_ads.client_secret': {
     label: 'OAuth Client Secret',
     description: 'OAuth 2.0 客户端密钥，与 Client ID 配对使用',
-    placeholder: '输入 Client Secret'
+    placeholder: '输入 Client Secret',
   },
   'google_ads.developer_token': {
     label: 'Developer Token',
-    description: 'Google Ads API 开发者令牌。必须与 Client ID 在同一个 GCP Project 中申请，否则会报错',
+    description:
+      'Google Ads API 开发者令牌。必须与 Client ID 在同一个 GCP Project 中申请，否则会报错',
     placeholder: '输入 Developer Token',
-    helpLink: '/help/google-ads-setup?tab=oauth#oauth-developer-token'
+    helpLink: '/help/google-ads-setup?tab=oauth#oauth-developer-token',
   },
 
   // AI - Gemini 服务商选择
@@ -185,28 +211,28 @@ const SETTING_METADATA: Record<string, {
     description: '第1步：先选择服务商。官方适合海外网络；第三方中转适合国内网络',
     options: [
       { value: 'official', label: '🌐 Gemini 官方' },
-      { value: 'relay', label: '⚡ 第三方中转' }
+      { value: 'relay', label: '⚡ 第三方中转' },
     ],
-    defaultValue: 'official'
+    defaultValue: 'official',
   },
   // AI - Gemini API端点（只读）
   'ai.gemini_endpoint': {
     label: 'API端点',
     description: '根据当前服务商 + AI模型自动计算，不可手动修改',
-    placeholder: '系统自动设置'
+    placeholder: '系统自动设置',
   },
   // AI - Gemini API配置
   'ai.gemini_api_key': {
     label: 'Gemini 官方 API Key',
     description: 'Google Gemini 官方 API 密钥，用于 AI 创意生成',
     placeholder: '输入官方 API Key',
-    helpLink: 'https://aistudio.google.com/app/api-keys'
+    helpLink: 'https://aistudio.google.com/app/api-keys',
   },
   'ai.gemini_relay_api_key': {
     label: '第三方中转 API Key',
     description: '第三方中转服务 API 密钥，适合国内用户访问',
     placeholder: '输入中转服务 API Key',
-    helpLink: 'https://aicode.cat/register?ref=T6S73C2U'
+    helpLink: 'https://aicode.cat/register?ref=T6S73C2U',
   },
   'ai.gemini_model': {
     label: 'AI模型',
@@ -215,14 +241,14 @@ const SETTING_METADATA: Record<string, {
       { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview（最新，高效）' },
       { value: RELAY_GPT_52_MODEL, label: 'GPT-5.2（第三方中转专用）' },
     ],
-    defaultValue: GEMINI_ACTIVE_MODEL
+    defaultValue: GEMINI_ACTIVE_MODEL,
   },
 
   // Proxy - 新的多URL配置
   'proxy.urls': {
     label: '代理URL配置',
     description: '配置不同国家的代理URL，第一个URL将作为未配置国家的默认兜底值',
-    placeholder: '输入代理URL（例如：https://api.iprocket.io/api?username=...）'
+    placeholder: '输入代理URL（例如：https://api.iprocket.io/api?username=...）',
   },
 
   // Affiliate Sync
@@ -271,68 +297,71 @@ const SETTING_METADATA: Record<string, {
       { value: 'CNY', label: '人民币 (CNY)' },
       { value: 'USD', label: '美元 (USD)' },
       { value: 'EUR', label: '欧元 (EUR)' },
-      { value: 'JPY', label: '日元 (JPY)' }
+      { value: 'JPY', label: '日元 (JPY)' },
     ],
-    defaultValue: 'CNY'
+    defaultValue: 'CNY',
   },
   'system.language': {
     label: '系统语言',
     description: '界面显示的语言',
     options: [
       { value: 'zh-CN', label: '简体中文' },
-      { value: 'en-US', label: 'English' }
+      { value: 'en-US', label: 'English' },
     ],
-    defaultValue: 'zh-CN'
+    defaultValue: 'zh-CN',
   },
   'system.link_check_enabled': {
     label: '启用链接检查',
     description: '是否每日自动检查Offer链接的有效性',
     options: [
       { value: 'true', label: '启用' },
-      { value: 'false', label: '禁用' }
+      { value: 'false', label: '禁用' },
     ],
-    defaultValue: 'true'
+    defaultValue: 'true',
   },
   'system.link_check_time': {
     label: '链接检查时间',
     description: '每日链接检查的执行时间（24小时制）',
     placeholder: '例如: 02:00',
-    defaultValue: '02:00'
+    defaultValue: '02:00',
   },
   'system.data_sync_enabled': {
     label: '启用广告数据自动同步',
     description: '是否自动从Google Ads同步广告投放数据（展示、点击、转化等）',
     options: [
       { value: 'true', label: '启用' },
-      { value: 'false', label: '禁用' }
+      { value: 'false', label: '禁用' },
     ],
-    defaultValue: 'true'
+    defaultValue: 'true',
   },
   'system.data_sync_interval_hours': {
     label: '数据同步间隔（小时）',
     description: '自动同步的时间间隔，默认4小时，建议4-24小时',
     placeholder: '例如: 4',
-    defaultValue: '4'
+    defaultValue: '4',
   },
   'system.data_sync_mode': {
     label: '默认同步模式',
     description: '手动触发同步时使用的默认模式',
     options: [
       { value: 'incremental', label: '快速刷新（仅今天）' },
-      { value: 'full', label: '全量补齐（过去7天）' }
+      { value: 'full', label: '全量补齐（过去7天）' },
     ],
-    defaultValue: 'incremental'
+    defaultValue: 'incremental',
   },
 }
 
 // 定义每个分类包含的字段及其属性
 // 这确保即使数据库中没有数据，前端仍能显示所有配置字段
-const CATEGORY_FIELDS: Record<string, {
-  key: string
-  dataType: string
-  isSensitive: boolean
-  isRequired: boolean
-}[]> = {
+const CATEGORY_FIELDS: Record<
+  string,
+  {
+    key: string
+    dataType: string
+    isSensitive: boolean
+    isRequired: boolean
+  }[]
+> = {
   google_ads: [
     // 🔧 修复(2025-12-12): 所有 Google Ads 参数都是必填的（独立账号模式）
     { key: 'login_customer_id', dataType: 'string', isSensitive: false, isRequired: true },
@@ -347,16 +376,24 @@ const CATEGORY_FIELDS: Record<string, {
     { key: 'gemini_api_key', dataType: 'string', isSensitive: true, isRequired: false },
     { key: 'gemini_relay_api_key', dataType: 'string', isSensitive: true, isRequired: false },
   ],
-  proxy: [
-    { key: 'urls', dataType: 'json', isSensitive: false, isRequired: false },
-  ],
+  proxy: [{ key: 'urls', dataType: 'json', isSensitive: false, isRequired: false }],
   affiliate_sync: [
     { key: 'yeahpromos_token', dataType: 'string', isSensitive: true, isRequired: false },
     { key: 'yeahpromos_site_id', dataType: 'string', isSensitive: false, isRequired: false },
     { key: 'partnerboost_token', dataType: 'string', isSensitive: true, isRequired: false },
     { key: 'partnerboost_base_url', dataType: 'string', isSensitive: false, isRequired: false },
-    { key: 'openclaw_affiliate_sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: false },
-    { key: 'openclaw_affiliate_sync_mode', dataType: 'string', isSensitive: false, isRequired: false },
+    {
+      key: 'openclaw_affiliate_sync_interval_hours',
+      dataType: 'number',
+      isSensitive: false,
+      isRequired: false,
+    },
+    {
+      key: 'openclaw_affiliate_sync_mode',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: false,
+    },
   ],
   system: [
     { key: 'currency', dataType: 'string', isSensitive: false, isRequired: false },
@@ -381,9 +418,9 @@ const AFFILIATE_SYNC_DELETABLE_KEYS = [
 // 合并后端数据和前端定义的字段，确保所有字段都能显示
 const getMergedCategorySettings = (category: string, backendSettings: Setting[]): Setting[] => {
   const definedFields = CATEGORY_FIELDS[category] || []
-  const backendMap = new Map(backendSettings.map(s => [s.key, s]))
+  const backendMap = new Map(backendSettings.map((s) => [s.key, s]))
 
-  return definedFields.map(field => {
+  return definedFields.map((field) => {
     const backendSetting = backendMap.get(field.key)
     return {
       key: field.key,
@@ -399,42 +436,45 @@ const getMergedCategorySettings = (category: string, backendSettings: Setting[])
 }
 
 // 分类配置
-const CATEGORY_CONFIG: Record<string, {
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  description: string
-  color: string
-}> = {
+const CATEGORY_CONFIG: Record<
+  string,
+  {
+    label: string
+    icon: React.ComponentType<{ className?: string }>
+    description: string
+    color: string
+  }
+> = {
   google_ads: {
     label: 'Google Ads API',
     icon: Shield,
     description: '配置Google Ads API凭证，用于广告系列管理和数据同步',
-    color: 'text-blue-600'
+    color: 'text-blue-600',
   },
   ai: {
     label: 'AI引擎',
     icon: Zap,
     description: '配置AI模型API密钥，用于智能创意生成',
-    color: 'text-purple-600'
+    color: 'text-purple-600',
   },
   proxy: {
     label: '代理设置',
     icon: Globe,
     description: '配置网络代理，解决API访问受限问题',
-    color: 'text-green-600'
+    color: 'text-green-600',
   },
   affiliate_sync: {
     label: '联盟同步',
     icon: Key,
     description: '配置联盟平台凭证与佣金同步策略',
-    color: 'text-amber-600'
+    color: 'text-amber-600',
   },
   system: {
     label: '系统设置',
     icon: SettingsIcon,
     description: '系统基础配置和自动化任务设置',
-    color: 'text-slate-600'
-  }
+    color: 'text-slate-600',
+  },
 }
 
 export default function SettingsPage() {
@@ -462,19 +502,22 @@ export default function SettingsPage() {
   const [savedProxyUrls, setSavedProxyUrls] = useState<ProxyUrlConfig[]>([])
 
   // Google Ads 凭证和账户状态
-  const [googleAdsCredentialStatus, setGoogleAdsCredentialStatus] = useState<GoogleAdsCredentialStatus | null>(null)
+  const [googleAdsCredentialStatus, setGoogleAdsCredentialStatus] =
+    useState<GoogleAdsCredentialStatus | null>(null)
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([])
   const [loadingGoogleAdsAccounts, setLoadingGoogleAdsAccounts] = useState(false)
   const [showGoogleAdsAccounts, setShowGoogleAdsAccounts] = useState(false)
   const [startingOAuth, setStartingOAuth] = useState(false)
-  const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>('oauth')
+  const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>(
+    'oauth'
+  )
   const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth()
   const googleAdsAccountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [serviceAccountForm, setServiceAccountForm] = useState({
     name: '',
     mccCustomerId: '',
     developerToken: '',
-    serviceAccountJson: ''
+    serviceAccountJson: '',
   })
   const [savingServiceAccount, setSavingServiceAccount] = useState(false)
   const [serviceAccounts, setServiceAccounts] = useState<any[]>([])
@@ -482,9 +525,7 @@ export default function SettingsPage() {
   const [deletingServiceAccountId, setDeletingServiceAccountId] = useState<string | null>(null)
   const [deletingOAuthConfig, setDeletingOAuthConfig] = useState(false)
   const [deleteConfirmState, setDeleteConfirmState] = useState<
-    | { kind: 'oauth' }
-    | { kind: 'service_account'; serviceAccountId: string }
-    | null
+    { kind: 'oauth' } | { kind: 'service_account'; serviceAccountId: string } | null
   >(null)
   const [permissionError, setPermissionError] = useState<any | null>(null)
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
@@ -512,12 +553,13 @@ export default function SettingsPage() {
       window.history.replaceState({}, '', '/settings?category=google_ads')
     } else if (errorParam) {
       const errorMessages: Record<string, string> = {
-        'missing_code': 'OAuth 授权失败：缺少授权码',
-        'missing_state': 'OAuth 授权失败：缺少状态参数',
-        'invalid_state': 'OAuth 授权失败：无效的状态参数',
-        'state_expired': 'OAuth 授权失败：状态参数已过期',
-        'missing_google_ads_config': 'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
-        'shared_auth_readonly': '当前使用管理员共享认证，无法自行完成 OAuth 授权',
+        missing_code: 'OAuth 授权失败：缺少授权码',
+        missing_state: 'OAuth 授权失败：缺少状态参数',
+        invalid_state: 'OAuth 授权失败：无效的状态参数',
+        state_expired: 'OAuth 授权失败：状态参数已过期',
+        missing_google_ads_config:
+          'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
+        shared_auth_readonly: '当前使用管理员共享认证，无法自行完成 OAuth 授权',
       }
       toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
       // 清除 URL 参数
@@ -527,19 +569,23 @@ export default function SettingsPage() {
       window.history.replaceState({}, '', '/settings?category=google_ads')
     } else if (testOauthError) {
       const testErrorMessages: Record<string, string> = {
-        'missing_code': '测试 OAuth 授权失败：缺少授权码',
-        'missing_state': '测试 OAuth 授权失败：缺少状态参数',
-        'invalid_state': '测试 OAuth 授权失败：无效的状态参数',
-        'invalid_purpose': '测试 OAuth 授权失败：状态参数用途不匹配',
-        'state_expired': '测试 OAuth 授权失败：状态参数已过期',
-        'missing_test_config': '测试 OAuth 授权失败：请先保存测试配置（测试Client ID/Secret、测试Developer Token、测试MCC ID）',
+        missing_code: '测试 OAuth 授权失败：缺少授权码',
+        missing_state: '测试 OAuth 授权失败：缺少状态参数',
+        invalid_state: '测试 OAuth 授权失败：无效的状态参数',
+        invalid_purpose: '测试 OAuth 授权失败：状态参数用途不匹配',
+        state_expired: '测试 OAuth 授权失败：状态参数已过期',
+        missing_test_config:
+          '测试 OAuth 授权失败：请先保存测试配置（测试Client ID/Secret、测试Developer Token、测试MCC ID）',
       }
       toast.error(testErrorMessages[testOauthError] || `测试 OAuth 授权失败：${testOauthError}`)
       window.history.replaceState({}, '', '/settings?category=google_ads')
     }
   }, [])
 
-  const buildCategoryFormValues = (category: string, backendSettings: Setting[]): Record<string, string> => {
+  const buildCategoryFormValues = (
+    category: string,
+    backendSettings: Setting[]
+  ): Record<string, string> => {
     const categoryFormValues: Record<string, string> = {}
     const backendMap = new Map<string, Setting>(backendSettings.map((s: Setting) => [s.key, s]))
 
@@ -552,7 +598,12 @@ export default function SettingsPage() {
     }
 
     if (category === 'google_ads') {
-      const testKeys = ['test_login_customer_id', 'test_client_id', 'test_client_secret', 'test_developer_token']
+      const testKeys = [
+        'test_login_customer_id',
+        'test_client_id',
+        'test_client_secret',
+        'test_developer_token',
+      ]
       for (const key of testKeys) {
         const metaKey = `${category}.${key}`
         const metadata = SETTING_METADATA[metaKey]
@@ -573,7 +624,7 @@ export default function SettingsPage() {
   }
 
   const applyCategorySettings = (category: string, backendSettings: Setting[]) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       [category]: backendSettings,
     }))
@@ -592,8 +643,8 @@ export default function SettingsPage() {
     }
 
     const categoryFormValues = buildCategoryFormValues(category, backendSettings)
-    setFormData(prev => ({ ...prev, [category]: categoryFormValues }))
-    setSavedFormData(prev => ({ ...prev, [category]: categoryFormValues }))
+    setFormData((prev) => ({ ...prev, [category]: categoryFormValues }))
+    setSavedFormData((prev) => ({ ...prev, [category]: categoryFormValues }))
   }
 
   const refreshCategorySettings = async (category: string) => {
@@ -669,7 +720,7 @@ export default function SettingsPage() {
   }, [fetchSettings])
 
   const handleInputChange = (category: string, key: string, value: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const updated = {
         ...prev,
         [category]: {
@@ -711,8 +762,8 @@ export default function SettingsPage() {
   // 代理URL操作函数
   const addProxyUrl = () => {
     // 🔥 检查是否所有支持的国家都已配置
-    const usedCountries = new Set(proxyUrls.map(p => p.country))
-    const availableCountries = SUPPORTED_COUNTRIES.filter(c => !usedCountries.has(c.code))
+    const usedCountries = new Set(proxyUrls.map((p) => p.country))
+    const availableCountries = SUPPORTED_COUNTRIES.filter((c) => !usedCountries.has(c.code))
 
     if (availableCountries.length === 0) {
       toast.error('所有支持的国家都已配置代理URL，无法添加更多')
@@ -720,11 +771,11 @@ export default function SettingsPage() {
     }
 
     // 使用第一个未配置的国家
-    setProxyUrls(prev => [...prev, { country: availableCountries[0].code, url: '' }])
+    setProxyUrls((prev) => [...prev, { country: availableCountries[0].code, url: '' }])
   }
 
   const removeProxyUrl = (index: number) => {
-    setProxyUrls(prev => prev.filter((_, i) => i !== index))
+    setProxyUrls((prev) => prev.filter((_, i) => i !== index))
   }
 
   const updateProxyUrl = (index: number, field: 'country' | 'url', value: string) => {
@@ -740,21 +791,21 @@ export default function SettingsPage() {
     // 🔥 验证代理URL格式（使用简单客户端验证，避免打包playwright）
     if (field === 'url' && value.trim()) {
       const validation = validateProxyUrlFormat(value)
-      setProxyUrls(prev => prev.map((item, i) =>
-        i === index ? { ...item, error: validation.error } : item
-      ))
+      setProxyUrls((prev) =>
+        prev.map((item, i) => (i === index ? { ...item, error: validation.error } : item))
+      )
     }
 
-    setProxyUrls(prev => prev.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
-    ))
+    setProxyUrls((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item))
+    )
   }
 
   const fetchServiceAccounts = useCallback(async () => {
     setLoadingServiceAccounts(true)
     try {
       const response = await fetch('/api/google-ads/service-account', {
-        credentials: 'include'
+        credentials: 'include',
       })
       const data = await response.json()
       if (response.ok) {
@@ -831,10 +882,10 @@ export default function SettingsPage() {
       try {
         const params = new URLSearchParams()
         appendAccountsAuthToSearchParams(params, authForRequest)
-        const response = await fetch(
-          `/api/google-ads/credentials/accounts?${params.toString()}`,
-          { credentials: 'include', cache: 'no-store' }
-        )
+        const response = await fetch(`/api/google-ads/credentials/accounts?${params.toString()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+        })
         if (!response.ok) return
 
         const data = await response.json()
@@ -878,9 +929,7 @@ export default function SettingsPage() {
           )
         }
         throw new Error(
-          effects.errorMessage ??
-            effects.authConfigWarning ??
-            GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
+          effects.errorMessage ?? effects.authConfigWarning ?? GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
         )
       }
       const authForRequest = resolved.authForRequest
@@ -911,15 +960,13 @@ export default function SettingsPage() {
           fallbackMessage: '获取账户列表失败',
         })
         if (authConfigWarning) {
-          setGoogleAdsCredentialStatus((prev) =>
-            prev ? { ...prev, authConfigWarning } : prev
-          )
+          setGoogleAdsCredentialStatus((prev) => (prev ? { ...prev, authConfigWarning } : prev))
         }
         throw new Error(message)
       }
 
       const data = await response.json()
-      setPermissionError(null)  // 清除之前的权限错误
+      setPermissionError(null) // 清除之前的权限错误
       setGoogleAdsAccounts(data.data.accounts || [])
       if (data.data?.refreshInProgress) {
         toast.message('账号正在后台同步，列表将逐步更新')
@@ -1000,7 +1047,11 @@ export default function SettingsPage() {
           }
         } else if (geminiProvider === 'relay') {
           const geminiRelayApiKey = formData.ai?.['gemini_relay_api_key']
-          if (!geminiRelayApiKey || geminiRelayApiKey.trim() === '' || geminiRelayApiKey === '············') {
+          if (
+            !geminiRelayApiKey ||
+            geminiRelayApiKey.trim() === '' ||
+            geminiRelayApiKey === '············'
+          ) {
             toast.error('使用第三方中转服务商时，必须填写中转 API Key')
             setSaving(false)
             return
@@ -1010,12 +1061,13 @@ export default function SettingsPage() {
 
       // 代理配置验证
       if (category === 'proxy') {
-        const validProxyUrls = proxyUrls.filter(item =>
-          item &&
-          typeof item.url === 'string' &&
-          typeof item.country === 'string' &&
-          item.url.trim() !== '' &&
-          item.country.trim() !== ''
+        const validProxyUrls = proxyUrls.filter(
+          (item) =>
+            item &&
+            typeof item.url === 'string' &&
+            typeof item.country === 'string' &&
+            item.url.trim() !== '' &&
+            item.country.trim() !== ''
         )
 
         if (validProxyUrls.length === 0) {
@@ -1025,7 +1077,7 @@ export default function SettingsPage() {
         }
 
         // 🔥 检查是否有验证错误
-        const proxyWithErrors = proxyUrls.filter(item => item.error)
+        const proxyWithErrors = proxyUrls.filter((item) => item.error)
         if (proxyWithErrors.length > 0) {
           toast.error(`存在不支持的代理URL格式，请修改后保存`)
           setSaving(false)
@@ -1038,18 +1090,21 @@ export default function SettingsPage() {
       // 特殊处理代理配置
       if (category === 'proxy') {
         // 过滤掉空URL或空国家的配置，添加安全检查避免undefined
-        const validProxyUrls = proxyUrls.filter(item =>
-          item &&
-          typeof item.url === 'string' &&
-          typeof item.country === 'string' &&
-          item.url.trim() !== '' &&
-          item.country.trim() !== ''
+        const validProxyUrls = proxyUrls.filter(
+          (item) =>
+            item &&
+            typeof item.url === 'string' &&
+            typeof item.country === 'string' &&
+            item.url.trim() !== '' &&
+            item.country.trim() !== ''
         )
-        updates = [{
-          category: 'proxy',
-          key: 'urls',
-          value: JSON.stringify(validProxyUrls),
-        }]
+        updates = [
+          {
+            category: 'proxy',
+            key: 'urls',
+            value: JSON.stringify(validProxyUrls),
+          },
+        ]
       } else {
         // 过滤掉空值字段，避免提交未填写的配置项
         // 但需要保留占位符（············）的字段，因为这些是已配置的敏感字段
@@ -1117,12 +1172,13 @@ export default function SettingsPage() {
       // 代理分类需要从 proxyUrls 状态获取数据
       if (category === 'proxy') {
         // 过滤掉空URL或空国家的配置，添加安全检查避免undefined
-        const validProxyUrls = proxyUrls.filter(item =>
-          item &&
-          typeof item.url === 'string' &&
-          typeof item.country === 'string' &&
-          item.url.trim() !== '' &&
-          item.country.trim() !== ''
+        const validProxyUrls = proxyUrls.filter(
+          (item) =>
+            item &&
+            typeof item.url === 'string' &&
+            typeof item.country === 'string' &&
+            item.url.trim() !== '' &&
+            item.country.trim() !== ''
         )
 
         if (validProxyUrls.length === 0 && proxyUrls.length > 0) {
@@ -1132,7 +1188,7 @@ export default function SettingsPage() {
         }
 
         config = {
-          urls: JSON.stringify(validProxyUrls)
+          urls: JSON.stringify(validProxyUrls),
         }
       }
 
@@ -1178,7 +1234,7 @@ export default function SettingsPage() {
   const hasAIConfigToDelete = (() => {
     const aiSettings = settings.ai || []
     const getBackendValue = (key: string): string | null | undefined =>
-      aiSettings.find(s => s.key === key)?.value
+      aiSettings.find((s) => s.key === key)?.value
 
     const target = getAIConfigDeleteTarget()
     if (target === 'gemini-relay') {
@@ -1291,7 +1347,12 @@ export default function SettingsPage() {
   }
 
   const handleSaveServiceAccount = async () => {
-    if (!serviceAccountForm.name || !serviceAccountForm.mccCustomerId || !serviceAccountForm.developerToken || !serviceAccountForm.serviceAccountJson) {
+    if (
+      !serviceAccountForm.name ||
+      !serviceAccountForm.mccCustomerId ||
+      !serviceAccountForm.developerToken ||
+      !serviceAccountForm.serviceAccountJson
+    ) {
       toast.error('请填写所有必填字段')
       return
     }
@@ -1302,14 +1363,19 @@ export default function SettingsPage() {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serviceAccountForm)
+        body: JSON.stringify(serviceAccountForm),
       })
 
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || '保存失败')
 
       toast.success('服务账号配置已保存')
-      setServiceAccountForm({ name: '', mccCustomerId: '', developerToken: '', serviceAccountJson: '' })
+      setServiceAccountForm({
+        name: '',
+        mccCustomerId: '',
+        developerToken: '',
+        serviceAccountJson: '',
+      })
       fetchServiceAccounts()
     } catch (err: any) {
       toast.error(err.message)
@@ -1323,7 +1389,7 @@ export default function SettingsPage() {
     try {
       const response = await fetch(`/api/google-ads/service-account?id=${id}`, {
         method: 'DELETE',
-        credentials: 'include'
+        credentials: 'include',
       })
 
       const data = await response.json()
@@ -1339,7 +1405,7 @@ export default function SettingsPage() {
   }
 
   const clearGoogleAdsFormFields = (keys: string[]) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const next = { ...prev }
       next.google_ads = { ...(next.google_ads || {}) }
       for (const key of keys) {
@@ -1359,7 +1425,13 @@ export default function SettingsPage() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.message || data.error || '删除失败')
 
-      clearGoogleAdsFormFields(['client_id', 'client_secret', 'developer_token', 'login_customer_id', 'use_service_account'])
+      clearGoogleAdsFormFields([
+        'client_id',
+        'client_secret',
+        'developer_token',
+        'login_customer_id',
+        'use_service_account',
+      ])
       toast.success('OAuth 配置已删除')
       await fetchGoogleAdsCredentialStatus()
     } catch (err: any) {
@@ -1382,8 +1454,10 @@ export default function SettingsPage() {
       return raw.trim().length > 0
     }
 
-    return Boolean(googleAdsCredentialStatus?.hasRefreshToken) ||
+    return (
+      Boolean(googleAdsCredentialStatus?.hasRefreshToken) ||
       ['login_customer_id', 'client_id', 'client_secret', 'developer_token'].some(isSet)
+    )
   })()
 
   const hasServiceAccountConfigToDelete = Boolean(googleAdsCredentialStatus?.serviceAccountId)
@@ -1412,7 +1486,9 @@ export default function SettingsPage() {
     return category === 'affiliate_sync' && getFixedAffiliateSyncSettingValue(key) !== undefined
   }
 
-  const normalizeComparableRecord = (record: Record<string, string> | undefined): Record<string, string> => {
+  const normalizeComparableRecord = (
+    record: Record<string, string> | undefined
+  ): Record<string, string> => {
     const normalized: Record<string, string> = {}
     for (const [key, rawValue] of Object.entries(record || {})) {
       normalized[key] = String(rawValue || '')
@@ -1420,7 +1496,9 @@ export default function SettingsPage() {
     return normalized
   }
 
-  const normalizeComparableProxyUrls = (items: ProxyUrlConfig[]): Array<{ country: string; url: string }> => {
+  const normalizeComparableProxyUrls = (
+    items: ProxyUrlConfig[]
+  ): Array<{ country: string; url: string }> => {
     return items.map((item) => ({
       country: String(item?.country || ''),
       url: String(item?.url || ''),
@@ -1429,10 +1507,16 @@ export default function SettingsPage() {
 
   const hasUnsavedChanges = (category: string): boolean => {
     if (category === 'proxy') {
-      return JSON.stringify(normalizeComparableProxyUrls(proxyUrls)) !== JSON.stringify(normalizeComparableProxyUrls(savedProxyUrls))
+      return (
+        JSON.stringify(normalizeComparableProxyUrls(proxyUrls)) !==
+        JSON.stringify(normalizeComparableProxyUrls(savedProxyUrls))
+      )
     }
 
-    return JSON.stringify(normalizeComparableRecord(formData[category])) !== JSON.stringify(normalizeComparableRecord(savedFormData[category]))
+    return (
+      JSON.stringify(normalizeComparableRecord(formData[category])) !==
+      JSON.stringify(normalizeComparableRecord(savedFormData[category]))
+    )
   }
 
   const getValidateDisabledReason = (category: string): string | null => {
@@ -1442,7 +1526,8 @@ export default function SettingsPage() {
     return null
   }
 
-  const canValidateCategory = (category: string): boolean => getValidateDisabledReason(category) === null
+  const canValidateCategory = (category: string): boolean =>
+    getValidateDisabledReason(category) === null
 
   const renderInput = (category: string, setting: Setting) => {
     const metaKey = `${category}.${setting.key}`
@@ -1467,7 +1552,7 @@ export default function SettingsPage() {
     if (setting.dataType === 'boolean' || metadata?.options) {
       let options = metadata?.options || [
         { value: 'true', label: '是' },
-        { value: 'false', label: '否' }
+        { value: 'false', label: '否' },
       ]
 
       if (category === 'ai' && setting.key === 'gemini_model') {
@@ -1550,7 +1635,7 @@ export default function SettingsPage() {
       const fieldKey = `${category}.${setting.key}`
       const isEditing = editingField === fieldKey
       const hasValue = value && value.trim() !== ''
-      const displayValue = isEditing ? value : (hasValue ? '············' : '')
+      const displayValue = isEditing ? value : hasValue ? '············' : ''
 
       return (
         <div className="space-y-1">
@@ -1588,7 +1673,9 @@ export default function SettingsPage() {
         placeholder={metadata?.placeholder}
         readOnly={isReadOnlySetting(category, setting.key)}
         disabled={isReadOnlySetting(category, setting.key)}
-        className={isReadOnlySetting(category, setting.key) ? 'bg-gray-100 cursor-not-allowed' : undefined}
+        className={
+          isReadOnlySetting(category, setting.key) ? 'bg-gray-100 cursor-not-allowed' : undefined
+        }
       />
     )
   }
@@ -1617,7 +1704,9 @@ export default function SettingsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {deleteConfirmState?.kind === 'oauth' ? '确认删除 OAuth 配置？' : '确认删除服务账号配置？'}
+                {deleteConfirmState?.kind === 'oauth'
+                  ? '确认删除 OAuth 配置？'
+                  : '确认删除服务账号配置？'}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {deleteConfirmState?.kind === 'oauth'
@@ -1656,11 +1745,13 @@ export default function SettingsPage() {
                 }}
               >
                 {deleteConfirmState?.kind === 'oauth'
-                  ? (deletingOAuthConfig ? '删除中...' : '确认删除')
-                  : (deleteConfirmState?.kind === 'service_account' &&
+                  ? deletingOAuthConfig
+                    ? '删除中...'
+                    : '确认删除'
+                  : deleteConfirmState?.kind === 'service_account' &&
                       deletingServiceAccountId === deleteConfirmState.serviceAccountId
-                      ? '删除中...'
-                      : '确认删除')}
+                    ? '删除中...'
+                    : '确认删除'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1715,7 +1806,8 @@ export default function SettingsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>确认删除联盟同步配置？</AlertDialogTitle>
               <AlertDialogDescription>
-                将清空 PartnerBoost / YeahPromos 的凭证与同步参数。删除后需要重新填写并保存，才能继续进行联盟同步与配置验证。
+                将清空 PartnerBoost / YeahPromos
+                的凭证与同步参数。删除后需要重新填写并保存，才能继续进行联盟同步与配置验证。
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1748,8 +1840,14 @@ export default function SettingsPage() {
               <ul className="space-y-1 text-body-sm text-blue-700">
                 <li>• 敏感数据（如 API 密钥、服务账号 JSON）使用 AES-256-GCM 加密存储</li>
                 <li>• 标记为"必填"的配置项需要填写完整才能使用对应功能</li>
-                <li>• <strong>Google Ads</strong>：支持 OAuth 用户授权和服务账号认证两种方式，配置完成后可使用广告管理功能</li>
-                <li>• <strong>AI 引擎</strong>：统一使用 Gemini API，按"服务商 → 模型 → API Key"完成配置</li>
+                <li>
+                  • <strong>Google Ads</strong>：支持 OAuth
+                  用户授权和服务账号认证两种方式，配置完成后可使用广告管理功能
+                </li>
+                <li>
+                  • <strong>AI 引擎</strong>：统一使用 Gemini API，按"服务商 → 模型 → API
+                  Key"完成配置
+                </li>
                 <li>• 如遇 API 访问问题，可尝试启用代理设置或检查配置是否正确</li>
               </ul>
             </div>
@@ -1769,7 +1867,7 @@ export default function SettingsPage() {
               label: category,
               icon: SettingsIcon,
               description: '',
-              color: 'text-slate-600'
+              color: 'text-slate-600',
             }
             const IconComponent = config.icon
 
@@ -1781,9 +1879,7 @@ export default function SettingsPage() {
                       <IconComponent className="w-5 h-5" />
                     </div>
                     <div>
-                      <h2 className="card-title">
-                        {config.label}
-                      </h2>
+                      <h2 className="card-title">{config.label}</h2>
                       <p className="text-body-sm text-muted-foreground mt-1">
                         {config.description}
                       </p>
@@ -1806,9 +1902,12 @@ export default function SettingsPage() {
                   <div className="space-y-6">
                     {googleAdsAuthReadOnly && (
                       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800 font-medium">当前使用管理员共享的 Google Ads 认证配置</p>
+                        <p className="text-sm text-blue-800 font-medium">
+                          当前使用管理员共享的 Google Ads 认证配置
+                        </p>
                         <p className="text-sm text-blue-700 mt-1">
-                          {googleAdsCredentialStatus?.sharedAdminUsername || googleAdsCredentialStatus?.sharedAdminEmail
+                          {googleAdsCredentialStatus?.sharedAdminUsername ||
+                          googleAdsCredentialStatus?.sharedAdminEmail
                             ? `共享自：${googleAdsCredentialStatus?.sharedAdminUsername ?? ''}${googleAdsCredentialStatus?.sharedAdminEmail ? ` (${googleAdsCredentialStatus.sharedAdminEmail})` : ''}`
                             : '您无法自行修改或删除此配置，如需变更请联系管理员。'}
                         </p>
@@ -1835,16 +1934,37 @@ export default function SettingsPage() {
                           </div>
                           {googleAdsCredentialStatus.loginCustomerId && (
                             <p className="text-sm text-green-700">
-                              MCC ID: <span className="font-mono">{googleAdsCredentialStatus.loginCustomerId}</span>
+                              MCC ID:{' '}
+                              <span className="font-mono">
+                                {googleAdsCredentialStatus.loginCustomerId}
+                              </span>
                             </p>
                           )}
                           {googleAdsCredentialStatus.lastVerifiedAt && (
                             <>
                               <p className="text-sm text-green-700">
-                                验证时间: {new Date(googleAdsCredentialStatus.lastVerifiedAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                验证时间:{' '}
+                                {new Date(googleAdsCredentialStatus.lastVerifiedAt).toLocaleString(
+                                  'zh-CN',
+                                  {
+                                    month: 'numeric',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )}
                               </p>
                               <p className="text-sm text-green-700">
-                                过期时间: {new Date(new Date(googleAdsCredentialStatus.lastVerifiedAt).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                过期时间:{' '}
+                                {new Date(
+                                  new Date(googleAdsCredentialStatus.lastVerifiedAt).getTime() +
+                                    7 * 24 * 60 * 60 * 1000
+                                ).toLocaleString('zh-CN', {
+                                  month: 'numeric',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </p>
                             </>
                           )}
@@ -1868,16 +1988,19 @@ export default function SettingsPage() {
                         <div className="mb-4">
                           <Label className="label-text mb-2 block">Google Ads API 访问级别</Label>
                           <p className="text-sm text-gray-600 mb-3">
-                            系统会自动检测您的 Developer Token 权限级别，并据此显示每日API调用次数上限
+                            系统会自动检测您的 Developer Token
+                            权限级别，并据此显示每日API调用次数上限
                           </p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                           {/* Test Access */}
-                          <div className={`p-4 border-2 rounded-lg ${
-                            googleAdsCredentialStatus.apiAccessLevel === 'test'
-                              ? 'border-red-500 bg-red-50'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}>
+                          <div
+                            className={`p-4 border-2 rounded-lg ${
+                              googleAdsCredentialStatus.apiAccessLevel === 'test'
+                                ? 'border-red-500 bg-red-50'
+                                : 'border-gray-200 bg-gray-50'
+                            }`}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <div className="font-semibold text-gray-900">Test Access</div>
                               {googleAdsCredentialStatus.apiAccessLevel === 'test' && (
@@ -1885,19 +2008,20 @@ export default function SettingsPage() {
                               )}
                             </div>
                             <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：<span className="font-semibold text-gray-900">0 次</span>
+                              每日调用上限：
+                              <span className="font-semibold text-gray-900">0 次</span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              仅限测试账号，需升级权限
-                            </div>
+                            <div className="text-xs text-gray-500">仅限测试账号，需升级权限</div>
                           </div>
 
                           {/* Explorer Access */}
-                          <div className={`p-4 border-2 rounded-lg ${
-                            googleAdsCredentialStatus.apiAccessLevel === 'explorer'
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}>
+                          <div
+                            className={`p-4 border-2 rounded-lg ${
+                              googleAdsCredentialStatus.apiAccessLevel === 'explorer'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 bg-gray-50'
+                            }`}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <div className="font-semibold text-gray-900">Explorer Access</div>
                               {googleAdsCredentialStatus.apiAccessLevel === 'explorer' && (
@@ -1905,19 +2029,20 @@ export default function SettingsPage() {
                               )}
                             </div>
                             <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：<span className="font-semibold text-gray-900">2,880 次</span>
+                              每日调用上限：
+                              <span className="font-semibold text-gray-900">2,880 次</span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              默认权限级别
-                            </div>
+                            <div className="text-xs text-gray-500">默认权限级别</div>
                           </div>
 
                           {/* Basic Access */}
-                          <div className={`p-4 border-2 rounded-lg ${
-                            googleAdsCredentialStatus.apiAccessLevel === 'basic'
-                              ? 'border-green-500 bg-green-50'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}>
+                          <div
+                            className={`p-4 border-2 rounded-lg ${
+                              googleAdsCredentialStatus.apiAccessLevel === 'basic'
+                                ? 'border-green-500 bg-green-50'
+                                : 'border-gray-200 bg-gray-50'
+                            }`}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <div className="font-semibold text-gray-900">Basic Access</div>
                               {googleAdsCredentialStatus.apiAccessLevel === 'basic' && (
@@ -1925,19 +2050,20 @@ export default function SettingsPage() {
                               )}
                             </div>
                             <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：<span className="font-semibold text-gray-900">15,000 次</span>
+                              每日调用上限：
+                              <span className="font-semibold text-gray-900">15,000 次</span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              生产环境推荐
-                            </div>
+                            <div className="text-xs text-gray-500">生产环境推荐</div>
                           </div>
 
                           {/* Standard Access */}
-                          <div className={`p-4 border-2 rounded-lg ${
-                            googleAdsCredentialStatus.apiAccessLevel === 'standard'
-                              ? 'border-purple-500 bg-purple-50'
-                              : 'border-gray-200 bg-gray-50'
-                          }`}>
+                          <div
+                            className={`p-4 border-2 rounded-lg ${
+                              googleAdsCredentialStatus.apiAccessLevel === 'standard'
+                                ? 'border-purple-500 bg-purple-50'
+                                : 'border-gray-200 bg-gray-50'
+                            }`}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <div className="font-semibold text-gray-900">Standard Access</div>
                               {googleAdsCredentialStatus.apiAccessLevel === 'standard' && (
@@ -1945,11 +2071,10 @@ export default function SettingsPage() {
                               )}
                             </div>
                             <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：<span className="font-semibold text-gray-900">无限次</span>
+                              每日调用上限：
+                              <span className="font-semibold text-gray-900">无限次</span>
                             </div>
-                            <div className="text-xs text-gray-500">
-                              大规模生产环境
-                            </div>
+                            <div className="text-xs text-gray-500">大规模生产环境</div>
                           </div>
                         </div>
 
@@ -1959,8 +2084,23 @@ export default function SettingsPage() {
                             <div className="flex items-start gap-2">
                               <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                               <div className="text-xs text-blue-700">
-                                <p className="font-medium mb-1">💡 当前为测试权限 - 可以立即开始测试</p>
-                                <p>您的 Developer Token 目前仅限测试账号使用。<strong>建议立即开始测试产品功能</strong>，同时访问 <a href="https://ads.google.com/aw/apicenter" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-800 font-semibold">Google Ads API Center</a> 申请升级到 Basic 或 Standard 权限（审核 1-3 个工作日）。真实的 API 调用记录有助于提高审批通过率，权限升级后自动生效，无需重新配置。</p>
+                                <p className="font-medium mb-1">
+                                  💡 当前为测试权限 - 可以立即开始测试
+                                </p>
+                                <p>
+                                  您的 Developer Token 目前仅限测试账号使用。
+                                  <strong>建议立即开始测试产品功能</strong>，同时访问{' '}
+                                  <a
+                                    href="https://ads.google.com/aw/apicenter"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline hover:text-blue-800 font-semibold"
+                                  >
+                                    Google Ads API Center
+                                  </a>{' '}
+                                  申请升级到 Basic 或 Standard 权限（审核 1-3 个工作日）。真实的 API
+                                  调用记录有助于提高审批通过率，权限升级后自动生效，无需重新配置。
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -1971,7 +2111,10 @@ export default function SettingsPage() {
                             <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                             <div className="text-xs text-blue-700">
                               <p className="font-medium mb-1">🔍 自动检测说明</p>
-                              <p>系统会在验证凭证或API调用时自动检测您的访问级别。如果权限发生变化（如从 Test 升级到 Basic/Standard），系统会自动更新。</p>
+                              <p>
+                                系统会在验证凭证或API调用时自动检测您的访问级别。如果权限发生变化（如从
+                                Test 升级到 Basic/Standard），系统会自动更新。
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -2010,7 +2153,9 @@ export default function SettingsPage() {
                                 强烈推荐
                               </Badge>
                             </div>
-                            <div className="text-sm text-gray-600">适合管理自己的 Google Ads 账号</div>
+                            <div className="text-sm text-gray-600">
+                              适合管理自己的 Google Ads 账号
+                            </div>
                           </button>
                           <button
                             type="button"
@@ -2026,7 +2171,12 @@ export default function SettingsPage() {
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <div className="font-semibold">服务账号认证</div>
-                              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">即将下线</Badge>
+                              <Badge
+                                variant="outline"
+                                className="bg-amber-100 text-amber-700 border-amber-300"
+                              >
+                                即将下线
+                              </Badge>
                             </div>
                             <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
                           </button>
@@ -2069,7 +2219,6 @@ export default function SettingsPage() {
                                 </p>
                                 {renderInput(category, setting)}
                               </div>
-
                             </div>
                           )
                         })}
@@ -2090,7 +2239,9 @@ export default function SettingsPage() {
                           </p>
                           <Input
                             value={serviceAccountForm.name}
-                            onChange={(e) => setServiceAccountForm(prev => ({ ...prev, name: e.target.value }))}
+                            onChange={(e) =>
+                              setServiceAccountForm((prev) => ({ ...prev, name: e.target.value }))
+                            }
                             placeholder="例如: 生产环境MCC"
                             className="mt-2"
                           />
@@ -2118,7 +2269,12 @@ export default function SettingsPage() {
                           </p>
                           <Input
                             value={serviceAccountForm.mccCustomerId}
-                            onChange={(e) => setServiceAccountForm(prev => ({ ...prev, mccCustomerId: e.target.value }))}
+                            onChange={(e) =>
+                              setServiceAccountForm((prev) => ({
+                                ...prev,
+                                mccCustomerId: e.target.value,
+                              }))
+                            }
                             placeholder="例如: 1234567890"
                             className="mt-2"
                           />
@@ -2146,7 +2302,12 @@ export default function SettingsPage() {
                           </p>
                           <Input
                             value={serviceAccountForm.developerToken}
-                            onChange={(e) => setServiceAccountForm(prev => ({ ...prev, developerToken: e.target.value }))}
+                            onChange={(e) =>
+                              setServiceAccountForm((prev) => ({
+                                ...prev,
+                                developerToken: e.target.value,
+                              }))
+                            }
                             placeholder="输入 Developer Token"
                             type="password"
                             className="mt-2"
@@ -2175,7 +2336,12 @@ export default function SettingsPage() {
                           </p>
                           <Textarea
                             value={serviceAccountForm.serviceAccountJson}
-                            onChange={(e) => setServiceAccountForm(prev => ({ ...prev, serviceAccountJson: e.target.value }))}
+                            onChange={(e) =>
+                              setServiceAccountForm((prev) => ({
+                                ...prev,
+                                serviceAccountJson: e.target.value,
+                              }))
+                            }
                             placeholder='粘贴JSON内容，例如: {"type":"service_account","project_id":"...","private_key":"..."}'
                             rows={6}
                             className="mt-2 font-mono text-xs"
@@ -2190,15 +2356,27 @@ export default function SettingsPage() {
                         <h3 className="font-semibold mb-4">已配置的服务账号</h3>
                         <div className="space-y-3">
                           {serviceAccounts.map((account) => (
-                            <div key={account.id} className="p-4 border rounded-lg hover:bg-gray-50">
+                            <div
+                              key={account.id}
+                              className="p-4 border rounded-lg hover:bg-gray-50"
+                            >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="font-semibold text-gray-900">{account.name}</div>
                                   <div className="text-sm text-gray-600 mt-1 space-y-1">
-                                    <div>MCC ID: <span className="font-mono">{account.mcc_customer_id}</span></div>
-                                    <div>服务账号: <span className="font-mono text-xs">{account.service_account_email}</span></div>
+                                    <div>
+                                      MCC ID:{' '}
+                                      <span className="font-mono">{account.mcc_customer_id}</span>
+                                    </div>
+                                    <div>
+                                      服务账号:{' '}
+                                      <span className="font-mono text-xs">
+                                        {account.service_account_email}
+                                      </span>
+                                    </div>
                                     <div className="text-xs text-gray-500">
-                                      创建时间: {new Date(account.created_at).toLocaleString('zh-CN')}
+                                      创建时间:{' '}
+                                      {new Date(account.created_at).toLocaleString('zh-CN')}
                                     </div>
                                   </div>
                                 </div>
@@ -2272,10 +2450,8 @@ export default function SettingsPage() {
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                                 <p className="mt-2 text-sm text-gray-600">加载账户列表...</p>
                               </div>
-                            ) : permissionError ? (
-                              // 有权限错误时不显示"未找到账户"提示
-                              null
-                            ) : googleAdsAccounts.length === 0 ? (
+                            ) : permissionError ? // 有权限错误时不显示"未找到账户"提示
+                            null : googleAdsAccounts.length === 0 ? (
                               <div className="text-center py-8 bg-gray-50 rounded-lg">
                                 <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                                 <p className="text-gray-600">未找到可访问的账户</p>
@@ -2313,10 +2489,12 @@ export default function SettingsPage() {
                                         <span className="font-mono">{account.customerId}</span>
                                       </div>
                                       <div>
-                                        <span className="font-medium">货币:</span> {account.currencyCode}
+                                        <span className="font-medium">货币:</span>{' '}
+                                        {account.currencyCode}
                                       </div>
                                       <div>
-                                        <span className="font-medium">时区:</span> {account.timeZone}
+                                        <span className="font-medium">时区:</span>{' '}
+                                        {account.timeZone}
                                       </div>
                                     </div>
                                   </div>
@@ -2346,7 +2524,10 @@ export default function SettingsPage() {
 
                       {/* IPRocket推荐说明 - 简洁版 */}
                       <p className="mt-2 text-sm text-amber-900 bg-amber-50 border border-amber-400 rounded px-3 py-2 flex items-center gap-1">
-                        <span>💡 <strong>推荐使用IPRocket</strong>（稳定便宜），请联系管理员购买，<span className="text-red-700 font-semibold">千万不要买官网套餐</span></span>
+                        <span>
+                          💡 <strong>推荐使用IPRocket</strong>（稳定便宜），请联系管理员购买，
+                          <span className="text-red-700 font-semibold">千万不要买官网套餐</span>
+                        </span>
                       </p>
 
                       {/* 代理URL格式说明 */}
@@ -2359,8 +2540,12 @@ export default function SettingsPage() {
                           {/* IPRocket格式 */}
                           <div className="bg-white p-3 rounded border border-blue-200">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">IPRocket</span>
-                              <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">推荐</span>
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                IPRocket
+                              </span>
+                              <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                推荐
+                              </span>
                               <span className="text-slate-600">API格式 - 需调用API获取代理IP</span>
                             </div>
                             <div className="font-mono text-xs text-slate-700 bg-slate-100 p-2 rounded break-all">
@@ -2371,26 +2556,33 @@ export default function SettingsPage() {
                           {/* Oxylabs格式 */}
                           <div className="bg-white p-3 rounded border border-green-200">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Oxylabs</span>
+                              <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                Oxylabs
+                              </span>
                               <span className="text-slate-600">直接格式 - 直接代理服务器地址</span>
                             </div>
-                          <div className="font-mono text-xs text-slate-700 bg-slate-100 p-2 rounded break-all">
-                            https://用户名:密码@pr.oxylabs.io:端口
-                          </div>
+                            <div className="font-mono text-xs text-slate-700 bg-slate-100 p-2 rounded break-all">
+                              https://用户名:密码@pr.oxylabs.io:端口
+                            </div>
                           </div>
 
                           {/* Kookeey / Cliproxy 直连格式 */}
                           <div className="bg-white p-3 rounded border border-violet-200">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-medium rounded">Kookeey</span>
-                              <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-medium rounded">Cliproxy</span>
+                              <span className="px-2 py-0.5 bg-violet-100 text-violet-700 text-xs font-medium rounded">
+                                Kookeey
+                              </span>
+                              <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 text-xs font-medium rounded">
+                                Cliproxy
+                              </span>
                               <span className="text-slate-600">直连格式 - 无需调用API</span>
                             </div>
                             <div className="font-mono text-xs text-slate-700 bg-slate-100 p-2 rounded break-all">
                               host:port:username:password
                             </div>
                             <p className="mt-2 text-xs text-slate-500">
-                              建议统一不带 <span className="font-mono">http(s)://</span> 前缀，直接填写上述格式
+                              建议统一不带 <span className="font-mono">http(s)://</span>{' '}
+                              前缀，直接填写上述格式
                             </p>
                           </div>
                         </div>
@@ -2420,10 +2612,14 @@ export default function SettingsPage() {
                     ) : (
                       <div className="space-y-3">
                         {proxyUrls.map((item, index) => (
-                          <div key={index} className="flex gap-3 items-start p-3 bg-slate-50 rounded-lg">
+                          <div
+                            key={index}
+                            className="flex gap-3 items-start p-3 bg-slate-50 rounded-lg"
+                          >
                             <div className="shrink-0 w-40">
                               <Label className="text-caption text-muted-foreground mb-1.5 block">
-                                国家/地区 {index === 0 && <span className="text-amber-600">(默认)</span>}
+                                国家/地区{' '}
+                                {index === 0 && <span className="text-amber-600">(默认)</span>}
                               </Label>
                               <Select
                                 value={item.country}
@@ -2442,7 +2638,9 @@ export default function SettingsPage() {
                               </Select>
                             </div>
                             <div className="flex-1">
-                              <Label className="text-caption text-muted-foreground mb-1.5 block">代理URL</Label>
+                              <Label className="text-caption text-muted-foreground mb-1.5 block">
+                                代理URL
+                              </Label>
                               <Input
                                 value={item.url}
                                 onChange={(e) => updateProxyUrl(index, 'url', e.target.value)}
@@ -2492,7 +2690,10 @@ export default function SettingsPage() {
                           <p className="font-semibold text-body-sm text-purple-800">AI配置顺序</p>
                         </div>
                         <div className="space-y-2 text-body-sm text-purple-700">
-                          <p>1. 先选服务商 2. 再选AI模型 3. 系统自动计算API端点 4. 填写当前服务商对应的API Key</p>
+                          <p>
+                            1. 先选服务商 2. 再选AI模型 3. 系统自动计算API端点 4.
+                            填写当前服务商对应的API Key
+                          </p>
                           <p className="text-purple-600">仅当前服务商对应的 API Key 会生效。</p>
                         </div>
                       </div>
@@ -2502,11 +2703,16 @@ export default function SettingsPage() {
                       <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                         <div className="flex items-start gap-2 mb-2">
                           <Info className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
-                          <p className="font-semibold text-body-sm text-emerald-800">联盟同步配置说明</p>
+                          <p className="font-semibold text-body-sm text-emerald-800">
+                            联盟同步配置说明
+                          </p>
                         </div>
                         <div className="space-y-1 text-body-sm text-emerald-700">
                           <p>支持只配置一个联盟，也支持同时配置 PartnerBoost 与 YeahPromos。</p>
-                          <p>点击"验证配置"会分别实调已配置联盟的真实 API，确认 Token / Site ID 是否可用。</p>
+                          <p>
+                            点击"验证配置"会分别实调已配置联盟的真实 API，确认 Token / Site ID
+                            是否可用。
+                          </p>
                         </div>
                       </div>
                     )}
@@ -2514,7 +2720,13 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
                       {(category === 'ai'
                         ? [...categorySettings].sort((a, b) => {
-                            const aiOrder = ['gemini_provider', 'gemini_model', 'gemini_endpoint', 'gemini_api_key', 'gemini_relay_api_key']
+                            const aiOrder = [
+                              'gemini_provider',
+                              'gemini_model',
+                              'gemini_endpoint',
+                              'gemini_api_key',
+                              'gemini_relay_api_key',
+                            ]
                             return aiOrder.indexOf(a.key) - aiOrder.indexOf(b.key)
                           })
                         : categorySettings
@@ -2525,65 +2737,85 @@ export default function SettingsPage() {
                         // AI配置按服务商显示对应 API Key
                         if (category === 'ai') {
                           const provider = formData.ai?.gemini_provider || 'official'
-                          const allowedKeys = provider === 'relay'
-                            ? ['gemini_provider', 'gemini_model', 'gemini_endpoint', 'gemini_relay_api_key']
-                            : ['gemini_provider', 'gemini_model', 'gemini_endpoint', 'gemini_api_key']
+                          const allowedKeys =
+                            provider === 'relay'
+                              ? [
+                                  'gemini_provider',
+                                  'gemini_model',
+                                  'gemini_endpoint',
+                                  'gemini_relay_api_key',
+                                ]
+                              : [
+                                  'gemini_provider',
+                                  'gemini_model',
+                                  'gemini_endpoint',
+                                  'gemini_api_key',
+                                ]
 
                           if (!allowedKeys.includes(setting.key)) {
                             return null
                           }
                         }
 
-                      // 动态必填逻辑
-                      const isRequired = (() => {
-                        if (category === 'ai') {
-                          if (setting.key === 'gemini_provider' || setting.key === 'gemini_model') return true
-                          const provider = formData.ai?.gemini_provider || 'official'
-                          if (provider === 'official' && setting.key === 'gemini_api_key') return true
-                          if (provider === 'relay' && setting.key === 'gemini_relay_api_key') return true
-                        }
-                        return setting.isRequired
-                      })()
+                        // 动态必填逻辑
+                        const isRequired = (() => {
+                          if (category === 'ai') {
+                            if (setting.key === 'gemini_provider' || setting.key === 'gemini_model')
+                              return true
+                            const provider = formData.ai?.gemini_provider || 'official'
+                            if (provider === 'official' && setting.key === 'gemini_api_key')
+                              return true
+                            if (provider === 'relay' && setting.key === 'gemini_relay_api_key')
+                              return true
+                          }
+                          return setting.isRequired
+                        })()
 
-                      return (
-                        <div key={setting.key} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="label-text flex items-center gap-2">
-                              {metadata?.label || setting.key}
-                              {category === 'affiliate_sync' && isReadOnlySetting(category, setting.key) && (
-                                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-300">固定默认</Badge>
-                              )}
-                              {isRequired && (
-                                <span className="text-caption text-red-500">*必填</span>
-                              )}
-                              {/* 🔧 修复(2025-12-30): 移除持久化验证状态图标
+                        return (
+                          <div key={setting.key} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="label-text flex items-center gap-2">
+                                {metadata?.label || setting.key}
+                                {category === 'affiliate_sync' &&
+                                  isReadOnlySetting(category, setting.key) && (
+                                    <Badge
+                                      variant="outline"
+                                      className="bg-slate-100 text-slate-600 border-slate-300"
+                                    >
+                                      固定默认
+                                    </Badge>
+                                  )}
+                                {isRequired && (
+                                  <span className="text-caption text-red-500">*必填</span>
+                                )}
+                                {/* 🔧 修复(2025-12-30): 移除持久化验证状态图标
                                   验证结果应该是临时反馈（通过toast），不应该在刷新页面、切换模型后仍然显示
                                   {setting.validationStatus && (
                                     <span>{getValidationIcon(setting.validationStatus)}</span>
                                   )}
                               */}
-                            </Label>
-                            {metadata?.helpLink && (
-                              <a
-                                href={metadata.helpLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                              >
-                                获取方式
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            )}
-                          </div>
+                              </Label>
+                              {metadata?.helpLink && (
+                                <a
+                                  href={metadata.helpLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                                >
+                                  获取方式
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
 
-                          <p className="helper-text flex items-start gap-1">
-                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                            {metadata?.description || setting.description || '无描述'}
-                          </p>
+                            <p className="helper-text flex items-start gap-1">
+                              <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                              {metadata?.description || setting.description || '无描述'}
+                            </p>
 
-                          {renderInput(category, setting)}
+                            {renderInput(category, setting)}
 
-                          {/* 🔧 修复(2025-12-30): 移除持久化验证消息的显示
+                            {/* 🔧 修复(2025-12-30): 移除持久化验证消息的显示
                               验证结果应该是临时反馈（通过toast），不应该在刷新页面、切换模型后仍然显示
                               {setting.validationMessage && (
                                 <p className={`text-caption ${setting.validationStatus === 'valid' ? 'text-green-600' : 'text-red-600'}`}>
@@ -2591,7 +2823,7 @@ export default function SettingsPage() {
                                 </p>
                               )}
                           */}
-                        </div>
+                          </div>
                         )
                       })}
                     </div>
@@ -2607,9 +2839,13 @@ export default function SettingsPage() {
                         handleSave(category)
                       }
                     }}
-                    disabled={saving || savingServiceAccount || (category === 'google_ads' && googleAdsAuthReadOnly)}
+                    disabled={
+                      saving ||
+                      savingServiceAccount ||
+                      (category === 'google_ads' && googleAdsAuthReadOnly)
+                    }
                   >
-                  {(saving || savingServiceAccount) ? '保存中...' : '保存配置'}
+                    {saving || savingServiceAccount ? '保存中...' : '保存配置'}
                   </Button>
 
                   {category === 'google_ads' && (
@@ -2691,12 +2927,13 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                {['ai', 'proxy', 'affiliate_sync'].includes(category) && getValidateDisabledReason(category)?.includes('未保存') && (
-                  <p className="mt-2 text-caption text-amber-600 flex items-center gap-1">
-                    <Info className="w-3 h-3" />
-                    {getValidateDisabledReason(category)}
-                  </p>
-                )}
+                {['ai', 'proxy', 'affiliate_sync'].includes(category) &&
+                  getValidateDisabledReason(category)?.includes('未保存') && (
+                    <p className="mt-2 text-caption text-amber-600 flex items-center gap-1">
+                      <Info className="w-3 h-3" />
+                      {getValidateDisabledReason(category)}
+                    </p>
+                  )}
               </Card>
             )
           })}

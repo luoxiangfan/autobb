@@ -95,14 +95,8 @@ export async function runCompetitorCompressionABTest(
 
   const uspMatchRate = average(uspRetentions)
   const featureMatchRate = average(featureRetentions)
-  const uspSimilarity = average([
-    average(uspRetentions),
-    average(featureRetentions),
-  ])
-  const competitivenessCorrelation = average([
-    average(priceAccuracies),
-    average(ratingAccuracies),
-  ])
+  const uspSimilarity = average([average(uspRetentions), average(featureRetentions)])
+  const competitivenessCorrelation = average([average(priceAccuracies), average(ratingAccuracies)])
   const avgTokenSavings = average(tokenSavings)
   const avgTokenSavingsPercent = average(compressionPercents)
 

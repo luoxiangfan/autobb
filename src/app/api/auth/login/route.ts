@@ -50,11 +50,7 @@ export async function POST(request: NextRequest) {
     const result = await loginWithPassword(username, password, ipAddress, userAgent)
 
     // KISS账户共享检测：创建会话并检查可疑活动
-    const { session } = await createUserSession(
-      result.user.id!,
-      ipAddress,
-      userAgent
-    )
+    const { session } = await createUserSession(result.user.id!, ipAddress, userAgent)
 
     // 获取用户未解决的安全告警
     const userAlerts = await getUserAlerts(result.user.id!, false)

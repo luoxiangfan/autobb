@@ -6,7 +6,7 @@ export interface JWTPayload {
   email: string
   role: string
   packageType: string
-  mustChangePassword?: boolean  // 用户是否需要强制修改密码
+  mustChangePassword?: boolean // 用户是否需要强制修改密码
   iat?: number
   exp?: number
 }

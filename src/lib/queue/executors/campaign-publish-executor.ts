@@ -90,9 +90,7 @@ const MIN_FORCE_PUBLISH_DESCRIPTION_COUNT = 2
 
 function normalizeCreativeTextAssets(rawAssets: unknown): string[] {
   if (!Array.isArray(rawAssets)) return []
-  return rawAssets
-    .map((asset) => String(asset || '').trim())
-    .filter((asset) => asset.length > 0)
+  return rawAssets.map((asset) => String(asset || '').trim()).filter((asset) => asset.length > 0)
 }
 
 function assertRequiredRsaAssetCounts(creative: CampaignPublishTaskData['creative']) {
@@ -145,9 +143,7 @@ function resolvePublishRsaAssets(
     padded.push(normalized[index % normalized.length])
   }
 
-  console.warn(
-    `[Publish] 强制发布资产补齐: ${assetLabel} ${normalized.length} -> ${requiredCount}`
-  )
+  console.warn(`[Publish] 强制发布资产补齐: ${assetLabel} ${normalized.length} -> ${requiredCount}`)
 
   return padded
 }
@@ -159,13 +155,13 @@ export { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign-
 
 export interface CampaignPublishTaskData {
   // 基础信息
-  campaignId: number              // 数据库中已创建的campaign记录ID
+  campaignId: number // 数据库中已创建的campaign记录ID
   offerId: number
   googleAdsAccountId: number
   userId: number
 
   // 命名规范
-  naming?: NamingScheme  // 🔥 使用NamingScheme类型，包含associativeCampaignName
+  naming?: NamingScheme // 🔥 使用NamingScheme类型，包含associativeCampaignName
 
   // 配置信息
   campaignConfig: {
@@ -185,9 +181,15 @@ export interface CampaignPublishTaskData {
     >
     negativeKeywords?: string[]
     // 可选：按关键词指定否定词匹配类型（优先级高于自动推断）
-    negativeKeywordMatchType?: Record<string, 'EXACT' | 'PHRASE' | 'BROAD' | 'BROAD_MATCH_MODIFIER' | 'BMM'>
+    negativeKeywordMatchType?: Record<
+      string,
+      'EXACT' | 'PHRASE' | 'BROAD' | 'BROAD_MATCH_MODIFIER' | 'BMM'
+    >
     // 兼容历史字段命名
-    negativeKeywordsMatchType?: Record<string, 'EXACT' | 'PHRASE' | 'BROAD' | 'BROAD_MATCH_MODIFIER' | 'BMM'>
+    negativeKeywordsMatchType?: Record<
+      string,
+      'EXACT' | 'PHRASE' | 'BROAD' | 'BROAD_MATCH_MODIFIER' | 'BMM'
+    >
   }
 
   // 创意信息
@@ -216,8 +218,8 @@ export interface CampaignPublishTaskData {
   brandName: string
 
   // 可选标志
-  forcePublish?: boolean               // 是否强制发布（允许非15/4创意）
-  enableCampaignImmediately?: boolean  // 是否立即启用Campaign
+  forcePublish?: boolean // 是否强制发布（允许非15/4创意）
+  enableCampaignImmediately?: boolean // 是否立即启用Campaign
   /** 续发：复用上次失败/未完成发布创建的远端资源 */
   resumePublish?: boolean
   /** @deprecated 暂停旧系列由 publish API 在入队前处理，执行器不再读取 */
@@ -229,9 +231,7 @@ export interface CampaignPublishTaskData {
 /**
  * 广告系列发布任务执行器
  */
-export async function executeCampaignPublish(
-  task: Task<CampaignPublishTaskData>
-): Promise<{
+export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>): Promise<{
   success: boolean
   googleCampaignId?: string
   googleAdGroupId?: string
@@ -273,14 +273,15 @@ export async function executeCampaignPublish(
     ])
 
     const redactString = (s: string): string => {
-      if (s.includes('-----BEGIN PRIVATE KEY-----') || s.includes('BEGIN PRIVATE KEY')) return '[REDACTED_PRIVATE_KEY]'
+      if (s.includes('-----BEGIN PRIVATE KEY-----') || s.includes('BEGIN PRIVATE KEY'))
+        return '[REDACTED_PRIVATE_KEY]'
       if (s.length > 6000) return `[TRUNCATED_STRING len=${s.length}]`
       return s
     }
 
     if (typeof value === 'string') return redactString(value)
     if (typeof value !== 'object' || value === null) return value
-    if (Array.isArray(value)) return value.map(v => redactSecrets(v, depth + 1))
+    if (Array.isArray(value)) return value.map((v) => redactSecrets(v, depth + 1))
 
     const obj = value as Record<string, unknown>
     const out: Record<string, unknown> = {}
@@ -352,13 +353,15 @@ export async function executeCampaignPublish(
   }
 
   const db = await getDatabase()
-  const legacyVariants = (task.data as {
-    variants?: Array<{
-      creative?: CampaignPublishTaskData['creative']
-      campaignConfig?: CampaignPublishTaskData['campaignConfig']
-      naming?: CampaignPublishTaskData['naming']
-    }>
-  }).variants
+  const legacyVariants = (
+    task.data as {
+      variants?: Array<{
+        creative?: CampaignPublishTaskData['creative']
+        campaignConfig?: CampaignPublishTaskData['campaignConfig']
+        naming?: CampaignPublishTaskData['naming']
+      }>
+    }
+  ).variants
 
   let creative = task.data.creative
   let campaignConfig = task.data.campaignConfig
@@ -448,12 +451,16 @@ export async function executeCampaignPublish(
     try {
       await touchCampaignHeartbeat(stage)
     } catch (heartbeatError: any) {
-      console.warn(`⚠️ Campaign发布初始心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
+      console.warn(
+        `⚠️ Campaign发布初始心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`
+      )
     }
 
     heartbeatTimer = setInterval(() => {
       void touchCampaignHeartbeat(stage).catch((heartbeatError: any) => {
-        console.warn(`⚠️ Campaign发布心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
+        console.warn(
+          `⚠️ Campaign发布心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`
+        )
       })
     }, campaignPublishHeartbeatMs)
 
@@ -478,8 +485,7 @@ export async function executeCampaignPublish(
         return await operation()
       } catch (error: any) {
         const shouldRetry =
-          isGoogleAdsQuotaRateError(error)
-          && attempt < campaignPublishQuotaRetryMaxRetries
+          isGoogleAdsQuotaRateError(error) && attempt < campaignPublishQuotaRetryMaxRetries
 
         if (!shouldRetry) {
           throw error
@@ -501,10 +507,10 @@ export async function executeCampaignPublish(
         const retryDelayDisplaySeconds = Math.ceil(retryDelayMs / 1000)
         console.warn(
           `⚠️ ${stage} 命中Google Ads配额限流，${retryDelayDisplaySeconds}s 后重试 ` +
-          `(尝试 ${attempt + 1}/${totalAttempts})`
+            `(尝试 ${attempt + 1}/${totalAttempts})`
         )
 
-        await new Promise(resolve => setTimeout(resolve, retryDelayMs))
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
       }
     }
   }
@@ -526,11 +532,14 @@ export async function executeCampaignPublish(
     )
 
     const campaignAlreadyRemoved =
-      (campaignSnapshot?.is_deleted === true || campaignSnapshot?.is_deleted === 1)
-      || String(campaignSnapshot?.status || '').toUpperCase() === 'REMOVED'
+      campaignSnapshot?.is_deleted === true ||
+      campaignSnapshot?.is_deleted === 1 ||
+      String(campaignSnapshot?.status || '').toUpperCase() === 'REMOVED'
 
     if (!campaignSnapshot || campaignAlreadyRemoved) {
-      console.log(`⏭️ 跳过Campaign发布任务：campaign已下线或不存在（campaignId=${campaignId}, taskId=${task.id}）`)
+      console.log(
+        `⏭️ 跳过Campaign发布任务：campaign已下线或不存在（campaignId=${campaignId}, taskId=${task.id}）`
+      )
       apiSuccess = true
       return { success: true }
     }
@@ -548,8 +557,8 @@ export async function executeCampaignPublish(
       const headlineCount = normalizeCreativeTextAssets(creative.headlines).length
       const descriptionCount = normalizeCreativeTextAssets(creative.descriptions).length
       if (
-        headlineCount < MIN_FORCE_PUBLISH_HEADLINE_COUNT
-        || descriptionCount < MIN_FORCE_PUBLISH_DESCRIPTION_COUNT
+        headlineCount < MIN_FORCE_PUBLISH_HEADLINE_COUNT ||
+        descriptionCount < MIN_FORCE_PUBLISH_DESCRIPTION_COUNT
       ) {
         throw new Error(
           `强制发布失败：Headlines=${headlineCount}，Descriptions=${descriptionCount}。至少需要${MIN_FORCE_PUBLISH_HEADLINE_COUNT}个标题和${MIN_FORCE_PUBLISH_DESCRIPTION_COUNT}个描述。`
@@ -561,12 +570,12 @@ export async function executeCampaignPublish(
     }
 
     // 1. 获取Google Ads账号（包含currency信息）
-    const adsAccount = await db.queryOne(
+    const adsAccount = (await db.queryOne(
       `SELECT id, customer_id, currency, parent_mcc_id, service_account_id, is_active
        FROM google_ads_accounts
        WHERE id = ? AND user_id = ? AND is_active = ?`,
       [Number(googleAdsAccountId), Number(userId), 1]
-    ) as any
+    )) as any
 
     if (!adsAccount) {
       throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
@@ -586,8 +595,7 @@ export async function executeCampaignPublish(
     const refreshToken = prepared.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
     const oauthCredentials = prepared.oauthCredentials
-    const oauthLoginCustomerId =
-      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     let preferredLoginCustomerId: string | undefined
 
@@ -618,11 +626,9 @@ export async function executeCampaignPublish(
       actionName: string,
       callback: (loginCustomerId: string | undefined) => Promise<T>
     ): Promise<T> => {
-      return runWithCampaignHeartbeat(
-        actionName,
-        () => runWithGoogleAdsQuotaRetry(
-          actionName,
-          () => runWithLoginCustomerFallback(actionName, callback)
+      return runWithCampaignHeartbeat(actionName, () =>
+        runWithGoogleAdsQuotaRetry(actionName, () =>
+          runWithLoginCustomerFallback(actionName, callback)
         )
       )
     }
@@ -641,7 +647,7 @@ export async function executeCampaignPublish(
 
     const resumableCampaignRow = resumePublish
       ? await db.queryOne<ResumablePublishCampaignRow>(
-        `
+          `
           SELECT
             id,
             campaign_name,
@@ -661,8 +667,8 @@ export async function executeCampaignPublish(
           WHERE id = ? AND user_id = ? AND offer_id = ?
           LIMIT 1
         `,
-        [campaignId, userId, offerId]
-      )
+          [campaignId, userId, offerId]
+        )
       : null
     const resumePlan: PublishResumePlan = buildPublishResumePlan({
       stored: resumableCampaignRow ?? null,
@@ -683,8 +689,8 @@ export async function executeCampaignPublish(
     if (resumePlan.resumeMode) {
       console.log(
         `[Publish] 续发模式: discoverRemote=${resumePlan.discoverRemoteByName}, ` +
-        `campaign=${resumePlan.googleCampaignId || '-'}, ` +
-        `adGroup=${resumePlan.googleAdGroupId || '-'}, ad=${resumePlan.googleAdId || '-'}`
+          `campaign=${resumePlan.googleCampaignId || '-'}, ` +
+          `adGroup=${resumePlan.googleAdGroupId || '-'}, ad=${resumePlan.googleAdId || '-'}`
       )
     }
 
@@ -756,33 +762,32 @@ export async function executeCampaignPublish(
     totalApiOperations++ // Campaign creation = 1 operation
     // 🔧 修复(2025-12-26): 确保CPC是计费单位的倍数（10000微单位）
     const rawCpcBid = campaignConfig.maxCpcBid || getDefaultCPC(adsAccount.currency)
-    const effectiveMaxCpcBid = Math.round(rawCpcBid * 100) / 100  // 四舍五入到0.01
+    const effectiveMaxCpcBid = Math.round(rawCpcBid * 100) / 100 // 四舍五入到0.01
     // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
-    const cpcBidMicros = Math.round(effectiveMaxCpcBid * 100) * 10000  // 转换为micros并确保是10000的倍数
+    const cpcBidMicros = Math.round(effectiveMaxCpcBid * 100) * 10000 // 转换为micros并确保是10000的倍数
 
     const storedCampaignConfig = resumableCampaignRow?.campaign_config
       ? (() => {
-        try {
-          const parsed = JSON.parse(String(resumableCampaignRow.campaign_config))
-          return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-            ? parsed as Record<string, unknown>
-            : {}
-        } catch {
-          return {}
-        }
-      })()
+          try {
+            const parsed = JSON.parse(String(resumableCampaignRow.campaign_config))
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+              ? (parsed as Record<string, unknown>)
+              : {}
+          } catch {
+            return {}
+          }
+        })()
       : {}
 
     const storedCampaignName = String(
-      storedCampaignConfig.campaignName
-      || storedCampaignConfig.associativeCampaignName
-      || ''
+      storedCampaignConfig.campaignName || storedCampaignConfig.associativeCampaignName || ''
     ).trim()
 
-    const campaignName = naming?.associativeCampaignName
-      || naming?.campaignName
-      || storedCampaignName
-      || `Campaign_${creative.id}`
+    const campaignName =
+      naming?.associativeCampaignName ||
+      naming?.campaignName ||
+      storedCampaignName ||
+      `Campaign_${creative.id}`
 
     let googleCampaignId = resumePlan.googleCampaignId || ''
 
@@ -813,9 +818,7 @@ export async function executeCampaignPublish(
 
         if (discovered?.campaignId) {
           googleCampaignId = discovered.campaignId
-          console.log(
-            `🔍 续发：按名称匹配到远端 Campaign ${googleCampaignId}（${candidateName}）`
-          )
+          console.log(`🔍 续发：按名称匹配到远端 Campaign ${googleCampaignId}（${candidateName}）`)
           await flushPublishGoogleIds({ googleCampaignId })
           break
         }
@@ -826,23 +829,21 @@ export async function executeCampaignPublish(
       console.log(`♻️ 续发复用 Campaign (Google ID: ${googleCampaignId})`)
       if (resumePlan.campaignSettingsChanged) {
         totalApiOperations++
-        await runWithLoginCustomerFallbackAndHeartbeat(
-          '更新Campaign预算',
-          (loginCustomerId) =>
-            updateGoogleAdsCampaignBudget({
-              customerId: adsAccount.customer_id,
-              refreshToken,
-              campaignId: googleCampaignId,
-              budgetAmount: campaignConfig.budgetAmount,
-              budgetType: campaignConfig.budgetType,
-              accountId: adsAccount.id,
-              userId,
-              loginCustomerId,
-              authType: apiAuth.authType,
-              serviceAccountId,
-              credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-            })
+        await runWithLoginCustomerFallbackAndHeartbeat('更新Campaign预算', (loginCustomerId) =>
+          updateGoogleAdsCampaignBudget({
+            customerId: adsAccount.customer_id,
+            refreshToken,
+            campaignId: googleCampaignId,
+            budgetAmount: campaignConfig.budgetAmount,
+            budgetType: campaignConfig.budgetType,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
         )
         console.log(`✅ Campaign预算已更新 (Google ID: ${googleCampaignId})`)
       } else {
@@ -870,7 +871,7 @@ export async function executeCampaignPublish(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
+            ...preparedAuthContextField(prepared),
           })
       )
       googleCampaignId = createdCampaign.campaignId
@@ -886,19 +887,20 @@ export async function executeCampaignPublish(
     try {
       const campaignDetails = await runWithLoginCustomerFallbackAndHeartbeat(
         '查询Campaign名称',
-        (loginCustomerId) => getGoogleAdsCampaign({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          campaignId: googleCampaignId,
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-          skipCache: true,
-        })
+        (loginCustomerId) =>
+          getGoogleAdsCampaign({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            campaignId: googleCampaignId,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+            skipCache: true,
+          })
       )
 
       const remoteCampaignName = String(campaignDetails?.campaign?.name || '').trim()
@@ -909,44 +911,49 @@ export async function executeCampaignPublish(
         console.log(`🔁 远端名称校准: ${campaignName} -> ${authoritativeCampaignName}`)
       }
     } catch (readNameError: any) {
-      console.warn(`⚠️ 回读远端Campaign名称失败，沿用本地生成名称: ${readNameError?.message || readNameError}`)
+      console.warn(
+        `⚠️ 回读远端Campaign名称失败，沿用本地生成名称: ${readNameError?.message || readNameError}`
+      )
     }
 
     const extractExplicitMatchType = (value: unknown): unknown => {
       if (!value || typeof value !== 'object') return undefined
       const row = value as Record<string, unknown>
       return (
-        row.matchType
-        ?? row.match_type
-        ?? row.recommendedMatchType
-        ?? row.recommended_match_type
-        ?? row.currentMatchType
-        ?? row.current_match_type
-        ?? row.suggestedMatchType
-        ?? row.suggested_match_type
+        row.matchType ??
+        row.match_type ??
+        row.recommendedMatchType ??
+        row.recommended_match_type ??
+        row.currentMatchType ??
+        row.current_match_type ??
+        row.suggestedMatchType ??
+        row.suggested_match_type
       )
     }
 
-    function generateSitelinkDescriptions(text: string, baseDescription: string = ''): { desc1: string, desc2: string } {
+    function generateSitelinkDescriptions(
+      text: string,
+      baseDescription: string = ''
+    ): { desc1: string; desc2: string } {
       const predefinedDescriptions: Record<string, [string, string]> = {
-        'products': ['Browse our full catalog', 'Latest security solutions'],
+        products: ['Browse our full catalog', 'Latest security solutions'],
         '4k': ['8, 16, & 32 channel kits', 'Professional security solutions'],
         'security systems': ['Complete surveillance kits', 'Easy DIY installation'],
-        'about': ['Learn about our mission', 'Trusted by millions worldwide'],
-        'company': ['Our story & values', 'Industry leader since 2012'],
-        'compare': ['Compare features & prices', 'Find your perfect match'],
-        'poe': ['Wired vs wireless options', 'Expert buying guide'],
-        'wifi': ['No cables, easy setup', 'Flexible placement'],
-        'cameras': ['Indoor & outdoor models', 'HD & 4K resolution'],
-        'review': ['See customer reviews', '4.5+ star average rating'],
-        'rating': ['Real user feedback', 'Join 1M+ happy customers'],
-        'testimonial': ['What customers say', 'Proven track record'],
-        'support': ['Get help and manuals', '24/7 technical assistance'],
-        'help': ['Step-by-step guides', 'Video tutorials included'],
-        'faq': ['Common questions answered', 'Quick solutions'],
-        'contact': ['Have questions? Get in touch', 'Expert team ready to help'],
-        'call': ['Speak to an expert', 'Free consultation'],
-        'email': ['Send us a message', 'Fast response time']
+        about: ['Learn about our mission', 'Trusted by millions worldwide'],
+        company: ['Our story & values', 'Industry leader since 2012'],
+        compare: ['Compare features & prices', 'Find your perfect match'],
+        poe: ['Wired vs wireless options', 'Expert buying guide'],
+        wifi: ['No cables, easy setup', 'Flexible placement'],
+        cameras: ['Indoor & outdoor models', 'HD & 4K resolution'],
+        review: ['See customer reviews', '4.5+ star average rating'],
+        rating: ['Real user feedback', 'Join 1M+ happy customers'],
+        testimonial: ['What customers say', 'Proven track record'],
+        support: ['Get help and manuals', '24/7 technical assistance'],
+        help: ['Step-by-step guides', 'Video tutorials included'],
+        faq: ['Common questions answered', 'Quick solutions'],
+        contact: ['Have questions? Get in touch', 'Expert team ready to help'],
+        call: ['Speak to an expert', 'Free consultation'],
+        email: ['Send us a message', 'Fast response time'],
       }
 
       const safeText = typeof text === 'string' ? text : ''
@@ -984,7 +991,7 @@ export async function executeCampaignPublish(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
+            ...preparedAuthContextField(prepared),
           })
       )
 
@@ -1005,21 +1012,22 @@ export async function executeCampaignPublish(
       totalApiOperations++
       const { adGroupId: createdAdGroupId } = await runWithLoginCustomerFallbackAndHeartbeat(
         '创建Ad Group',
-        (loginCustomerId) => createGoogleAdsAdGroup({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          campaignId: googleCampaignId,
-          adGroupName,
-          cpcBidMicros: cpcBidMicros,
-          status: 'ENABLED',
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-        })
+        (loginCustomerId) =>
+          createGoogleAdsAdGroup({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            campaignId: googleCampaignId,
+            adGroupName,
+            cpcBidMicros: cpcBidMicros,
+            status: 'ENABLED',
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
       )
 
       googleAdGroupId = createdAdGroupId
@@ -1029,32 +1037,36 @@ export async function executeCampaignPublish(
 
     const keywordMatchTypeMap = new Map<string, PositiveKeywordMatchType>()
     if (creative.keywordsWithVolume) {
-      creative.keywordsWithVolume.forEach(kw => {
-          const rawKeyword = typeof kw?.keyword === 'string'
+      creative.keywordsWithVolume.forEach((kw) => {
+        const rawKeyword =
+          typeof kw?.keyword === 'string'
             ? kw.keyword
-            : (typeof (kw as any)?.text === 'string' ? (kw as any).text : '')
-          const normalizedKeyword = normalizeGoogleAdsKeyword(rawKeyword)
-          const normalizedMatchType = normalizePositiveKeywordMatchType(
-            (kw as any)?.matchType
-            ?? (kw as any)?.match_type
-            ?? (kw as any)?.suggestedMatchType
-            ?? (kw as any)?.suggested_match_type
-          )
-          if (normalizedKeyword && normalizedMatchType) {
-            keywordMatchTypeMap.set(normalizedKeyword, normalizedMatchType)
-          }
-        })
-      }
+            : typeof (kw as any)?.text === 'string'
+              ? (kw as any).text
+              : ''
+        const normalizedKeyword = normalizeGoogleAdsKeyword(rawKeyword)
+        const normalizedMatchType = normalizePositiveKeywordMatchType(
+          (kw as any)?.matchType ??
+            (kw as any)?.match_type ??
+            (kw as any)?.suggestedMatchType ??
+            (kw as any)?.suggested_match_type
+        )
+        if (normalizedKeyword && normalizedMatchType) {
+          keywordMatchTypeMap.set(normalizedKeyword, normalizedMatchType)
+        }
+      })
+    }
 
     const keywordOperations = (campaignConfig.keywords || [])
       .map((keyword: any) => {
-        const keywordStr = typeof keyword === 'string'
-          ? keyword
-          : (keyword?.text || keyword?.keyword || '')
+        const keywordStr =
+          typeof keyword === 'string' ? keyword : keyword?.text || keyword?.keyword || ''
         const normalizedKeyword = keywordStr.trim()
         if (!normalizedKeyword) return null
         const explicitMatchType = extractExplicitMatchType(keyword)
-        const mappedMatchType = keywordMatchTypeMap.get(normalizeGoogleAdsKeyword(normalizedKeyword))
+        const mappedMatchType = keywordMatchTypeMap.get(
+          normalizeGoogleAdsKeyword(normalizedKeyword)
+        )
         return {
           keywordText: normalizedKeyword,
           matchType: resolvePositiveKeywordMatchType({
@@ -1063,14 +1075,13 @@ export async function executeCampaignPublish(
             explicitMatchType,
             mappedMatchType,
           }),
-          status: 'ENABLED' as const
+          status: 'ENABLED' as const,
         }
       })
       .filter((op): op is NonNullable<typeof op> => op !== null)
 
     const negativeKeywordMatchTypeMap = normalizeNegativeKeywordMatchTypeMap(
-      campaignConfig.negativeKeywordMatchType ||
-      campaignConfig.negativeKeywordsMatchType
+      campaignConfig.negativeKeywordMatchType || campaignConfig.negativeKeywordsMatchType
     )
 
     const rawNegativeKeywords = Array.isArray(campaignConfig.negativeKeywords)
@@ -1079,9 +1090,8 @@ export async function executeCampaignPublish(
     const uniqueNegativeKeywords: string[] = []
     const seenNegativeKeywords = new Set<string>()
     for (const rawKeyword of rawNegativeKeywords) {
-      const keywordText = typeof rawKeyword === 'string'
-        ? rawKeyword.trim().replace(/\s+/g, ' ')
-        : ''
+      const keywordText =
+        typeof rawKeyword === 'string' ? rawKeyword.trim().replace(/\s+/g, ' ') : ''
       if (!keywordText) continue
 
       const normalizedKey = keywordText.toLowerCase()
@@ -1109,19 +1119,20 @@ export async function executeCampaignPublish(
       totalApiOperations += keywordOperations.length
       await runWithLoginCustomerFallbackAndHeartbeat(
         resumePlan.keywordsChanged ? '创建正向关键词' : '补全正向关键词',
-        (loginCustomerId) => createGoogleAdsKeywordsBatchAllowingDuplicates({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          adGroupId: googleAdGroupId,
-          keywords: keywordOperations,
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-        })
+        (loginCustomerId) =>
+          createGoogleAdsKeywordsBatchAllowingDuplicates({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            adGroupId: googleAdGroupId,
+            keywords: keywordOperations,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
       )
     }
 
@@ -1129,26 +1140,31 @@ export async function executeCampaignPublish(
       totalApiOperations += negativeKeywordOperations.length
       await runWithLoginCustomerFallbackAndHeartbeat(
         resumePlan.keywordsChanged ? '创建否定关键词' : '补全否定关键词',
-        (loginCustomerId) => createGoogleAdsKeywordsBatchAllowingDuplicates({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          adGroupId: googleAdGroupId,
-          keywords: negativeKeywordOperations,
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-        })
+        (loginCustomerId) =>
+          createGoogleAdsKeywordsBatchAllowingDuplicates({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            adGroupId: googleAdGroupId,
+            keywords: negativeKeywordOperations,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
       )
     }
 
-    const originalHeadlines = normalizeCreativeTextAssets(creative.headlines)
-      .slice(0, REQUIRED_RSA_HEADLINE_COUNT)
+    const originalHeadlines = normalizeCreativeTextAssets(creative.headlines).slice(
+      0,
+      REQUIRED_RSA_HEADLINE_COUNT
+    )
     const keywordsForOptimization = (campaignConfig.keywords || [])
-      .map((keyword: any) => typeof keyword === 'string' ? keyword : (keyword?.text || keyword?.keyword || ''))
+      .map((keyword: any) =>
+        typeof keyword === 'string' ? keyword : keyword?.text || keyword?.keyword || ''
+      )
       .map((keyword: any) => String(keyword ?? '').trim())
       .filter((keyword: string) => keyword.length > 0)
     const optimizedHeadlines = ensureKeywordsInHeadlines(
@@ -1179,37 +1195,42 @@ export async function executeCampaignPublish(
       totalApiOperations++
       const adResult = await runWithLoginCustomerFallbackAndHeartbeat(
         resumePlan.googleAdId ? '更新RSA广告（新建）' : '创建RSA广告',
-        (loginCustomerId) => createGoogleAdsResponsiveSearchAd({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          adGroupId: googleAdGroupId,
-          headlines: headlinesForPublish,
-          descriptions: descriptionsForPublish,
-          finalUrls: [creative.finalUrl],
-          path1: creative.path1 || undefined,
-          path2: creative.path2 || undefined,
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-        })
+        (loginCustomerId) =>
+          createGoogleAdsResponsiveSearchAd({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            adGroupId: googleAdGroupId,
+            headlines: headlinesForPublish,
+            descriptions: descriptionsForPublish,
+            finalUrls: [creative.finalUrl],
+            path1: creative.path1 || undefined,
+            path2: creative.path2 || undefined,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
       )
 
       googleAdId = adResult.adId
       await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId, googleAdId })
     }
-    console.log(`✅ Ad Group + RSA 发布完成 (AdGroup=${googleAdGroupId}, Ad=${googleAdId})，耗时: ${Date.now() - adGroupStartTime}ms`)
+    console.log(
+      `✅ Ad Group + RSA 发布完成 (AdGroup=${googleAdGroupId}, Ad=${googleAdId})，耗时: ${Date.now() - adGroupStartTime}ms`
+    )
 
     const extensionCreative = creative
     let finalCallouts = extensionCreative.callouts || []
-    finalCallouts = finalCallouts.map((c: any) => {
-      if (typeof c === 'string') return c
-      if (typeof c === 'object' && c?.text) return c.text
-      return null
-    }).filter((c: string | null): c is string => c !== null && c.trim().length > 0)
+    finalCallouts = finalCallouts
+      .map((c: any) => {
+        if (typeof c === 'string') return c
+        if (typeof c === 'object' && c?.text) return c.text
+        return null
+      })
+      .filter((c: string | null): c is string => c !== null && c.trim().length > 0)
 
     if (finalCallouts.length === 0) {
       finalCallouts = ['Free Shipping', '24/7 Support', 'Quality Guaranteed']
@@ -1220,14 +1241,19 @@ export async function executeCampaignPublish(
         if (typeof link === 'string') {
           const text = link.trim()
           if (!text) return null
-          return { text, url: extensionCreative.finalUrl, description: undefined as string | undefined }
+          return {
+            text,
+            url: extensionCreative.finalUrl,
+            description: undefined as string | undefined,
+          }
         }
         if (typeof link !== 'object' || link === null) return null
         const rawText = typeof link.text === 'string' ? link.text.trim() : ''
         const rawUrl = typeof link.url === 'string' ? link.url.trim() : ''
         const url = rawUrl || extensionCreative.finalUrl
         if (!rawText || !url) return null
-        const description = typeof link.description === 'string' ? link.description.trim() : undefined
+        const description =
+          typeof link.description === 'string' ? link.description.trim() : undefined
         return { text: rawText, url, description }
       })
       .filter((l): l is NonNullable<typeof l> => l !== null)
@@ -1240,7 +1266,7 @@ export async function executeCampaignPublish(
       ]
     }
 
-    const formattedSitelinks = finalSitelinks.map(link => {
+    const formattedSitelinks = finalSitelinks.map((link) => {
       const descriptions = generateSitelinkDescriptions(link.text, link.description)
       return {
         text: link.text,
@@ -1265,24 +1291,23 @@ export async function executeCampaignPublish(
       if (!shouldCreateExtensions) {
         console.log('⏭️ 续发：扩展未变化，跳过 Callout')
       } else {
-      totalApiOperations += finalCallouts.length + 1
-      await runWithLoginCustomerFallbackAndHeartbeat(
-        '创建Callout扩展',
-        (loginCustomerId) => createGoogleAdsCalloutExtensions({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          campaignId: googleCampaignId,
-          callouts: finalCallouts,
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-        })
-      )
-      console.log(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
+        totalApiOperations += finalCallouts.length + 1
+        await runWithLoginCustomerFallbackAndHeartbeat('创建Callout扩展', (loginCustomerId) =>
+          createGoogleAdsCalloutExtensions({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            campaignId: googleCampaignId,
+            callouts: finalCallouts,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
+        )
+        console.log(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
       }
     } catch (calloutError: any) {
       const errorMsg = calloutError.message || String(calloutError)
@@ -1295,24 +1320,23 @@ export async function executeCampaignPublish(
       if (!shouldCreateExtensions) {
         console.log('⏭️ 续发：扩展未变化，跳过 Sitelink')
       } else {
-      totalApiOperations += formattedSitelinks.length + 1
-      await runWithLoginCustomerFallbackAndHeartbeat(
-        '创建Sitelink扩展',
-        (loginCustomerId) => createGoogleAdsSitelinkExtensions({
-          customerId: adsAccount.customer_id,
-          refreshToken: refreshToken,
-          campaignId: googleCampaignId,
-          sitelinks: formattedSitelinks,
-          accountId: adsAccount.id,
-          userId,
-          loginCustomerId,
-          authType: apiAuth.authType,
-          serviceAccountId,
-          credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
-        })
-      )
-      console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
+        totalApiOperations += formattedSitelinks.length + 1
+        await runWithLoginCustomerFallbackAndHeartbeat('创建Sitelink扩展', (loginCustomerId) =>
+          createGoogleAdsSitelinkExtensions({
+            customerId: adsAccount.customer_id,
+            refreshToken: refreshToken,
+            campaignId: googleCampaignId,
+            sitelinks: formattedSitelinks,
+            accountId: adsAccount.id,
+            userId,
+            loginCustomerId,
+            authType: apiAuth.authType,
+            serviceAccountId,
+            credentials: oauthCredentials,
+            ...preparedAuthContextField(prepared),
+          })
+        )
+        console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
       }
     } catch (sitelinkError: any) {
       const errorMsg = sitelinkError.message || String(sitelinkError)
@@ -1326,9 +1350,8 @@ export async function executeCampaignPublish(
     // 14. 配置Campaign转化目标为"网页浏览"（非阻塞操作）
     console.log(`\n🎯 配置Campaign转化目标...`)
     try {
-      await runWithLoginCustomerFallbackAndHeartbeat(
-        '配置Page View目标',
-        (loginCustomerId) => setCampaignPageViewGoalWithCredentials({
+      await runWithLoginCustomerFallbackAndHeartbeat('配置Page View目标', (loginCustomerId) =>
+        setCampaignPageViewGoalWithCredentials({
           customerId: adsAccount.customer_id,
           refreshToken: refreshToken,
           campaignId: googleCampaignId,
@@ -1337,7 +1360,7 @@ export async function executeCampaignPublish(
           authType: apiAuth.authType,
           serviceAccountId,
           credentials: oauthCredentials,
-            ...preparedAuthContextField(prepared),
+          ...preparedAuthContextField(prepared),
         })
       )
     } catch (goalError: any) {
@@ -1349,9 +1372,8 @@ export async function executeCampaignPublish(
     if (enableCampaignImmediately) {
       try {
         totalApiOperations++
-        await runWithLoginCustomerFallbackAndHeartbeat(
-          '启用Campaign',
-          (loginCustomerId) => updateGoogleAdsCampaignStatus({
+        await runWithLoginCustomerFallbackAndHeartbeat('启用Campaign', (loginCustomerId) =>
+          updateGoogleAdsCampaignStatus({
             customerId: adsAccount.customer_id,
             refreshToken: refreshToken,
             campaignId: googleCampaignId,
@@ -1362,7 +1384,7 @@ export async function executeCampaignPublish(
             authType: apiAuth.authType,
             serviceAccountId,
             credentials: oauthCredentials,
-              ...preparedAuthContextField(prepared),
+            ...preparedAuthContextField(prepared),
           })
         )
         finalCampaignStatus = 'ENABLED'
@@ -1395,8 +1417,9 @@ export async function executeCampaignPublish(
     )
 
     const wasOfflinedDuringPublish =
-      (campaignStateBeforePersist?.is_deleted === true || campaignStateBeforePersist?.is_deleted === 1)
-      || String(campaignStateBeforePersist?.status || '').toUpperCase() === 'REMOVED'
+      campaignStateBeforePersist?.is_deleted === true ||
+      campaignStateBeforePersist?.is_deleted === 1 ||
+      String(campaignStateBeforePersist?.status || '').toUpperCase() === 'REMOVED'
 
     const buildBackupSyncSnapshot = () =>
       buildPublishedCampaignBackupSnapshot({
@@ -1420,26 +1443,31 @@ export async function executeCampaignPublish(
       })
 
     if (wasOfflinedDuringPublish) {
-      console.warn(`⚠️ Campaign在发布过程中已下线，跳过成功回写（campaignId=${campaignId}, googleCampaignId=${googleCampaignId}）`)
+      console.warn(
+        `⚠️ Campaign在发布过程中已下线，跳过成功回写（campaignId=${campaignId}, googleCampaignId=${googleCampaignId}）`
+      )
       try {
         await runWithLoginCustomerFallbackAndHeartbeat(
           '发布后兜底暂停Campaign',
-          (loginCustomerId) => updateGoogleAdsCampaignStatus({
-            customerId: adsAccount.customer_id,
-            refreshToken,
-            campaignId: googleCampaignId,
-            status: 'PAUSED',
-            accountId: adsAccount.id,
-            userId,
-            loginCustomerId,
-            authType: apiAuth.authType,
-            serviceAccountId,
-            credentials: oauthCredentials,
+          (loginCustomerId) =>
+            updateGoogleAdsCampaignStatus({
+              customerId: adsAccount.customer_id,
+              refreshToken,
+              campaignId: googleCampaignId,
+              status: 'PAUSED',
+              accountId: adsAccount.id,
+              userId,
+              loginCustomerId,
+              authType: apiAuth.authType,
+              serviceAccountId,
+              credentials: oauthCredentials,
               ...preparedAuthContextField(prepared),
-          })
+            })
         )
       } catch (pauseError: any) {
-        console.warn(`⚠️ 发布后兜底暂停失败（不影响本地下线状态）: ${pauseError?.message || pauseError}`)
+        console.warn(
+          `⚠️ 发布后兜底暂停失败（不影响本地下线状态）: ${pauseError?.message || pauseError}`
+        )
       }
       orphanGoogleCampaignId = undefined
       apiSuccess = true
@@ -1502,7 +1530,9 @@ export async function executeCampaignPublish(
         params
       )
     } catch (syncNameError: any) {
-      console.warn(`⚠️ 本地Campaign名称回写失败（不影响发布成功）: ${syncNameError?.message || syncNameError}`)
+      console.warn(
+        `⚠️ 本地Campaign名称回写失败（不影响发布成功）: ${syncNameError?.message || syncNameError}`
+      )
     }
 
     await applyCampaignTransition({
@@ -1551,7 +1581,7 @@ export async function executeCampaignPublish(
           userId,
           googleAdsAccountId: adsAccount.id,
           googleCustomerId: adsAccount.customer_id,
-          googleCampaignId
+          googleCampaignId,
         })
         if (added) {
           console.log(`🔗 已追加换链接任务目标: offer=${offerId}, campaign=${googleCampaignId}`)
@@ -1576,13 +1606,17 @@ export async function executeCampaignPublish(
       console.log(`\n🎉 Campaign发布成功完成！`)
       console.log(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)
       console.log(`   💰 货币: ${adsAccount.currency}, CPC: ${effectiveMaxCpcBid}`)
-      console.log(`   🔗 Google IDs: Campaign=${googleCampaignId}, AdGroup=${googleAdGroupId}, Ad=${googleAdId}`)
+      console.log(
+        `   🔗 Google IDs: Campaign=${googleCampaignId}, AdGroup=${googleAdGroupId}, Ad=${googleAdId}`
+      )
       console.log(`   📊 总计 ${totalApiOperations} 个API操作`)
     } else {
       console.log(`\n⚠️ Campaign核心发布成功，但部分扩展失败`)
       console.log(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)
       console.log(`   💰 货币: ${adsAccount.currency}, CPC: ${effectiveMaxCpcBid}`)
-      console.log(`   🔗 Google IDs: Campaign=${googleCampaignId}, AdGroup=${googleAdGroupId}, Ad=${googleAdId}`)
+      console.log(
+        `   🔗 Google IDs: Campaign=${googleCampaignId}, AdGroup=${googleAdGroupId}, Ad=${googleAdId}`
+      )
       console.log(`   📊 总计 ${totalApiOperations} 个API操作`)
       console.log(`   ⚠️ 扩展失败: ${extensionsErrors.length}项`)
       extensionsErrors.forEach((err, i) => {
@@ -1594,9 +1628,8 @@ export async function executeCampaignPublish(
       success: true,
       googleCampaignId,
       googleAdGroupId,
-      googleAdId
+      googleAdId,
     }
-
   } catch (error: any) {
     apiSuccess = false
 
@@ -1634,9 +1667,8 @@ export async function executeCampaignPublish(
 
     return {
       success: false,
-      error: apiErrorMessage
+      error: apiErrorMessage,
     }
-
   } finally {
     // 记录API使用
     if (userId) {
@@ -1649,7 +1681,7 @@ export async function executeCampaignPublish(
           requestCount: totalApiOperations,
           responseTimeMs: Date.now() - apiStartTime,
           isSuccess: apiSuccess,
-          errorMessage: apiErrorMessage
+          errorMessage: apiErrorMessage,
         })
       } catch (trackError: any) {
         console.warn(`⚠️ API追踪失败: ${trackError.message}`)

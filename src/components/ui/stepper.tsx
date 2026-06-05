@@ -32,7 +32,7 @@ export default function Stepper({ steps, currentStep, className }: StepperProps)
         <div
           className="absolute top-5 left-8 h-[2px] bg-blue-600 transition-all duration-500 ease-in-out -z-10"
           style={{
-            width: `calc(${((currentStep - 1) / (steps.length - 1)) * 100}% - ${((currentStep - 1) / (steps.length - 1)) * 4}rem)`
+            width: `calc(${((currentStep - 1) / (steps.length - 1)) * 100}% - ${((currentStep - 1) / (steps.length - 1)) * 4}rem)`,
             // Calculation: Percentage of total width minus percentage of total padding (4rem = 64px approx for left+right padding compensation?)
             // Actually, simpler: width is percentage of the *content box*.
             // If line is inside ol (which has padding), and we want it to span between steps.
@@ -55,7 +55,7 @@ export default function Stepper({ steps, currentStep, className }: StepperProps)
             <li
               key={step.id}
               className={cn(
-                'relative flex flex-col items-center group',
+                'relative flex flex-col items-center group'
                 // Adjust width distribution if needed, but justify-between handles spacing
               )}
             >
@@ -63,15 +63,19 @@ export default function Stepper({ steps, currentStep, className }: StepperProps)
               <div
                 className={cn(
                   'relative flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all duration-300 z-10 bg-white',
-                  isCompleted && 'border-blue-600 bg-blue-600 text-white scale-105 shadow-md shadow-blue-200',
-                  isCurrent && 'border-blue-600 text-blue-600 ring-4 ring-blue-50 scale-110 shadow-lg',
+                  isCompleted &&
+                    'border-blue-600 bg-blue-600 text-white scale-105 shadow-md shadow-blue-200',
+                  isCurrent &&
+                    'border-blue-600 text-blue-600 ring-4 ring-blue-50 scale-110 shadow-lg',
                   isUpcoming && 'border-gray-200 text-gray-400 bg-white'
                 )}
               >
                 {isCompleted ? (
                   <Check className="h-5 w-5 animate-in zoom-in duration-300" />
                 ) : (
-                  <span className={cn("text-sm font-bold", isCurrent && "animate-pulse")}>{step.id}</span>
+                  <span className={cn('text-sm font-bold', isCurrent && 'animate-pulse')}>
+                    {step.id}
+                  </span>
                 )}
               </div>
 
@@ -88,10 +92,12 @@ export default function Stepper({ steps, currentStep, className }: StepperProps)
                   {step.label}
                 </p>
                 {step.description && (
-                  <p className={cn(
-                    "text-xs transition-colors duration-300 hidden md:block",
-                    isCurrent ? "text-blue-400" : "text-gray-400"
-                  )}>
+                  <p
+                    className={cn(
+                      'text-xs transition-colors duration-300 hidden md:block',
+                      isCurrent ? 'text-blue-400' : 'text-gray-400'
+                    )}
+                  >
                     {step.description}
                   </p>
                 )}

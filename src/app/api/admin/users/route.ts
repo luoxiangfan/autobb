@@ -38,14 +38,16 @@ function transformUserToApiResponse(user: any, now: Date) {
     // PostgreSQL返回boolean，SQLite返回0/1，统一转为boolean
     isActive,
     openclawEnabled: user.openclaw_enabled === true || user.openclaw_enabled === 1,
-    productManagementEnabled: user.product_management_enabled === true || user.product_management_enabled === 1,
-    strategyCenterEnabled: user.strategy_center_enabled === true || user.strategy_center_enabled === 1,
+    productManagementEnabled:
+      user.product_management_enabled === true || user.product_management_enabled === 1,
+    strategyCenterEnabled:
+      user.strategy_center_enabled === true || user.strategy_center_enabled === 1,
     disableSuggested,
     disableSuggestedReason: disableSuggested ? 'expired_over_30d' : null,
     lastLoginAt: user.last_login_at,
     createdAt: user.created_at,
     lockedUntil: user.locked_until,
-    failedLoginCount: user.failed_login_count
+    failedLoginCount: user.failed_login_count,
   }
 }
 
@@ -119,7 +121,7 @@ export async function GET(request: NextRequest) {
       query += statusCondition
       countQuery += statusCondition
       // 🔧 修复(2025-12-30): PostgreSQL兼容性 - 发送boolean值
-      params.push(db.type === 'postgres' ? (status === 'active') : (status === 'active' ? 1 : 0))
+      params.push(db.type === 'postgres' ? status === 'active' : status === 'active' ? 1 : 0)
     }
 
     // Package type filter
@@ -141,7 +143,7 @@ export async function GET(request: NextRequest) {
     query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`
 
     // Get total count
-    const total = await db.queryOne(countQuery, [...params]) as { count: number }
+    const total = (await db.queryOne(countQuery, [...params])) as { count: number }
 
     // Get users
     const users = await db.query(query, [...params, limit, offset])
@@ -154,8 +156,8 @@ export async function GET(request: NextRequest) {
         total: total.count,
         page,
         limit,
-        totalPages: Math.ceil(total.count / limit)
-      }
+        totalPages: Math.ceil(total.count / limit),
+      },
     })
   } catch (error: any) {
     console.error('[admin/users] list users failed', {
@@ -182,7 +184,7 @@ export async function POST(request: NextRequest) {
       packageType,
       packageExpiresAt,
       validUntil, // 前端可能发送此字段
-      role
+      role,
     } = body
 
     // 支持前端发送 validUntil 或 packageExpiresAt
@@ -212,12 +214,14 @@ export async function POST(request: NextRequest) {
       role: role || 'user',
       packageType: packageType || 'trial',
       packageExpiresAt: expiresAt,
-      mustChangePassword: 1 // Force password change
+      mustChangePassword: 1, // Force password change
     })
 
     // 获取操作者的username（从数据库查询）
     const db = getDatabase()
-    const operator = await db.queryOne('SELECT username FROM users WHERE id = ?', [auth.user!.userId]) as { username: string } | undefined
+    const operator = (await db.queryOne('SELECT username FROM users WHERE id = ?', [
+      auth.user!.userId,
+    ])) as { username: string } | undefined
 
     // 记录审计日志
     const auditContext: UserManagementContext = {
@@ -242,10 +246,9 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         user: newUser,
-        defaultPassword // Return this so admin can share it with the user
-      }
+        defaultPassword, // Return this so admin can share it with the user
+      },
     })
-
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

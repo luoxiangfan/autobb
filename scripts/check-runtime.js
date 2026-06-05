@@ -21,8 +21,7 @@ const platform = process.platform
 
 function readCommand(bin, args) {
   try {
-    const shouldForceArch =
-      platform === 'darwin' && (nodeArch === 'arm64' || nodeArch === 'x64')
+    const shouldForceArch = platform === 'darwin' && (nodeArch === 'arm64' || nodeArch === 'x64')
     const command = shouldForceArch ? 'arch' : bin
     const commandArgs = shouldForceArch
       ? [`-${nodeArch === 'arm64' ? 'arm64' : 'x86_64'}`, bin, ...args]
@@ -60,9 +59,9 @@ if (nodeMajor !== 24) {
 if (platform === 'darwin' && hardwareArm64 === '1' && nodeArch === 'x64') {
   console.warn(
     '\n⚠️ 检测到 Apple Silicon + x86_64（Rosetta）Node。\n' +
-    '   这在“依赖由 x86_64 Node 安装、运行也用 x86_64 Node”时是可用的；\n' +
-    '   但非常容易出现 better-sqlite3 架构不匹配（依赖是 x86_64，而你用 arm64 Node 运行，或反之）。\n' +
-    '   推荐：使用 arm64 Node 24，并执行 `npm run bootstrap` 统一重装依赖。\n'
+      '   这在“依赖由 x86_64 Node 安装、运行也用 x86_64 Node”时是可用的；\n' +
+      '   但非常容易出现 better-sqlite3 架构不匹配（依赖是 x86_64，而你用 arm64 Node 运行，或反之）。\n' +
+      '   推荐：使用 arm64 Node 24，并执行 `npm run bootstrap` 统一重装依赖。\n'
   )
 }
 
@@ -80,23 +79,27 @@ try {
     const nodeBinDir = path.dirname(process.execPath)
     fail(
       `better-sqlite3 架构不匹配（常见：之前用 x86_64 Node/npm 安装过依赖，现在切到 arm64 Node）。\n` +
-      `建议用当前 Node 一键修复：\n` +
-      `  npm run bootstrap\n` +
-      `\n` +
-      `或手动修复（确保 npm 用的是同一个 Node）：\n` +
-      `  1) export PATH="${nodeBinDir}:$PATH"\n` +
-      `  2) rm -rf node_modules .next && npm ci`
+        `建议用当前 Node 一键修复：\n` +
+        `  npm run bootstrap\n` +
+        `\n` +
+        `或手动修复（确保 npm 用的是同一个 Node）：\n` +
+        `  1) export PATH="${nodeBinDir}:$PATH"\n` +
+        `  2) rm -rf node_modules .next && npm ci`
     )
   }
 
-  fail('better-sqlite3 原生模块加载失败。请在 Node 24 下执行：`rm -rf node_modules .next && npm ci`。')
+  fail(
+    'better-sqlite3 原生模块加载失败。请在 Node 24 下执行：`rm -rf node_modules .next && npm ci`。'
+  )
 }
 
 try {
   const reactIsPath = require.resolve('react-is')
   const exists = fs.existsSync(reactIsPath)
   if (!exists) {
-    fail(`依赖解析异常：\`${reactIsPath}\` 不存在。请执行 \`rm -rf node_modules .next && npm ci\`。`)
+    fail(
+      `依赖解析异常：\`${reactIsPath}\` 不存在。请执行 \`rm -rf node_modules .next && npm ci\`。`
+    )
   }
   info('react-is', path.relative(process.cwd(), reactIsPath))
 } catch (err) {

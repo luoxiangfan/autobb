@@ -194,11 +194,7 @@ export default function SyncSettingsPage() {
               <h1 className="text-xl font-bold text-gray-900">自动同步设置</h1>
             </div>
             <div className="flex items-center">
-              <Button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2"
-              >
+              <Button onClick={handleSave} disabled={saving} className="flex items-center gap-2">
                 <Save className="h-4 w-4" />
                 {saving ? '保存中...' : '保存设置'}
               </Button>
@@ -241,9 +237,7 @@ export default function SyncSettingsPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">上次自动同步</p>
-                  <p className="text-sm font-medium">
-                    {formatDateTime(config.lastAutoSyncAt)}
-                  </p>
+                  <p className="text-sm font-medium">{formatDateTime(config.lastAutoSyncAt)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">下次计划同步</p>
@@ -283,9 +277,7 @@ export default function SyncSettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="auto-sync">启用自动同步</Label>
-                  <p className="text-sm text-gray-500">
-                    后台自动同步Google Ads性能数据
-                  </p>
+                  <p className="text-sm text-gray-500">后台自动同步Google Ads性能数据</p>
                 </div>
                 <Switch
                   id="auto-sync"
@@ -327,9 +319,7 @@ export default function SyncSettingsPage() {
                   value={maxRetries}
                   onChange={(e) => setMaxRetries(parseInt(e.target.value) || 0)}
                 />
-                <p className="text-sm text-gray-500">
-                  同步失败后的重试次数，0表示不重试
-                </p>
+                <p className="text-sm text-gray-500">同步失败后的重试次数，0表示不重试</p>
               </div>
 
               {/* Retry Delay */}
@@ -343,9 +333,7 @@ export default function SyncSettingsPage() {
                   value={retryDelay}
                   onChange={(e) => setRetryDelay(parseInt(e.target.value) || 15)}
                 />
-                <p className="text-sm text-gray-500">
-                  失败后等待多久再重试，范围: 5-120分钟
-                </p>
+                <p className="text-sm text-gray-500">失败后等待多久再重试，范围: 5-120分钟</p>
               </div>
             </CardContent>
           </Card>
@@ -364,9 +352,7 @@ export default function SyncSettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="notify-success">成功时通知</Label>
-                  <p className="text-sm text-gray-500">
-                    同步成功时发送通知
-                  </p>
+                  <p className="text-sm text-gray-500">同步成功时发送通知</p>
                 </div>
                 <Switch
                   id="notify-success"
@@ -379,9 +365,7 @@ export default function SyncSettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="notify-failure">失败时通知</Label>
-                  <p className="text-sm text-gray-500">
-                    同步失败时发送通知（推荐）
-                  </p>
+                  <p className="text-sm text-gray-500">同步失败时发送通知（推荐）</p>
                 </div>
                 <Switch
                   id="notify-failure"
@@ -400,9 +384,7 @@ export default function SyncSettingsPage() {
                   value={notificationEmail}
                   onChange={(e) => setNotificationEmail(e.target.value)}
                 />
-                <p className="text-sm text-gray-500">
-                  接收同步通知的邮箱地址（功能开发中）
-                </p>
+                <p className="text-sm text-gray-500">接收同步通知的邮箱地址（功能开发中）</p>
               </div>
             </CardContent>
           </Card>

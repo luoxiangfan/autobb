@@ -7,10 +7,10 @@
  * - 自动换行布局，避免溢出
  */
 
-import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import * as React from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface ResponsivePaginationProps {
   currentPage: number
@@ -59,7 +59,7 @@ export function ResponsivePagination({
       if (totalPages <= 7) {
         return Array.from({ length: totalPages }, (_, i) => i + 1)
       }
-      return Array.from({ length: totalPages }, (_, i) => i + 1).filter(page => {
+      return Array.from({ length: totalPages }, (_, i) => i + 1).filter((page) => {
         if (page === 1 || page === totalPages) return true
         if (Math.abs(page - currentPage) <= 1) return true
         if (page === 2 && currentPage <= 3) return true
@@ -76,10 +76,7 @@ export function ResponsivePagination({
   const showPageNumbers = pageNumbers.length > 0 && !isMobile
 
   return (
-    <div className={cn(
-      "w-full",
-      className
-    )}>
+    <div className={cn('w-full', className)}>
       {/* 移动端：垂直布局 */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         {/* 左侧：分页信息 */}
@@ -93,17 +90,17 @@ export function ResponsivePagination({
                 onChange={(e) => onPageSizeChange(Number(e.target.value))}
                 className="h-8 px-2 rounded border border-gray-200 text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               >
-                {pageSizeOptions.map(size => (
-                  <option key={size} value={size}>{size}</option>
+                {pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
                 ))}
               </select>
               <span className="whitespace-nowrap">条</span>
             </div>
           )}
           {/* 分页信息 */}
-          <span className="whitespace-nowrap">
-            共 {totalItems} 条
-          </span>
+          <span className="whitespace-nowrap">共 {totalItems} 条</span>
         </div>
 
         {/* 右侧：分页控件 */}
@@ -139,12 +136,12 @@ export function ResponsivePagination({
                     <span className="px-2 text-gray-400">...</span>
                   )}
                   <Button
-                    variant={currentPage === page ? "default" : "outline"}
+                    variant={currentPage === page ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => onPageChange(page)}
                     className={cn(
-                      "h-8 w-8 p-0",
-                      currentPage === page && "bg-blue-600 hover:bg-blue-700"
+                      'h-8 w-8 p-0',
+                      currentPage === page && 'bg-blue-600 hover:bg-blue-700'
                     )}
                   >
                     {page}
@@ -167,11 +164,7 @@ export function ResponsivePagination({
           </Button>
 
           {/* 移动端：当前页码显示 */}
-          {isMobile && (
-            <span className="text-sm text-gray-600 ml-1">
-              / {totalPages}
-            </span>
-          )}
+          {isMobile && <span className="text-sm text-gray-600 ml-1">/ {totalPages}</span>}
         </div>
       </div>
     </div>
@@ -196,7 +189,7 @@ export function PaginationInfo({
   const endItem = Math.min(currentPage * pageSize, totalItems)
 
   return (
-    <span className={cn("text-sm text-gray-500 whitespace-nowrap", className)}>
+    <span className={cn('text-sm text-gray-500 whitespace-nowrap', className)}>
       显示第 {startItem} - {endItem} 条，共 {totalItems} 条
     </span>
   )

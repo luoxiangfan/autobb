@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
 
     // 获取用户的所有Offers
-    const offers = await db.query(`
+    const offers = (await db.query(
+      `
       SELECT
         id,
         product_name,
@@ -47,7 +48,9 @@ export async function GET(request: NextRequest) {
       FROM offers
       WHERE user_id = ?
       ORDER BY created_at DESC
-    `, [userId]) as any[]
+    `,
+      [userId]
+    )) as any[]
 
     if (format === 'csv') {
       // 生成CSV
@@ -69,7 +72,7 @@ export async function GET(request: NextRequest) {
         'is_active',
         'scrape_status',
         'created_at',
-        'updated_at'
+        'updated_at',
       ]
 
       const escapeCSV = (value: any) => {
@@ -83,9 +86,7 @@ export async function GET(request: NextRequest) {
 
       const csvLines = [
         headers.join(','),
-        ...offers.map(offer =>
-          headers.map(h => escapeCSV(offer[h])).join(',')
-        )
+        ...offers.map((offer) => headers.map((h) => escapeCSV(offer[h])).join(',')),
       ]
 
       const csvContent = csvLines.join('\n')
@@ -107,9 +108,6 @@ export async function GET(request: NextRequest) {
     }
   } catch (error: any) {
     console.error('导出Offers失败:', error)
-    return NextResponse.json(
-      { error: error.message || '导出失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '导出失败' }, { status: 500 })
   }
 }

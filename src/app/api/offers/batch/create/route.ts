@@ -30,7 +30,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue/unified-queue-manager'
 import type { BatchCreationTaskData } from '@/lib/queue/executors/batch-creation-executor'
-import { canonicalizeOfferBatchCsvHeader, decodeCsvTextSmart, normalizeCsvHeaderCell } from '@/lib/offers/batch-offer-csv'
+import {
+  canonicalizeOfferBatchCsvHeader,
+  decodeCsvTextSmart,
+  normalizeCsvHeaderCell,
+} from '@/lib/offers/batch-offer-csv'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import { normalizeOfferCommissionInput } from '@/lib/offer-monetization'
 import { resolveExtractionModeInput } from '@/lib/offer-extraction-mode'
@@ -50,10 +54,7 @@ export async function POST(req: NextRequest) {
     // 1. 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -93,10 +94,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 解析标题行（支持中英文表头）
-    const rawHeaders = lines[0].map(h => normalizeCsvHeaderCell(h))
+    const rawHeaders = lines[0].map((h) => normalizeCsvHeaderCell(h))
 
     // 映射后的英文字段名（兼容：中文/英文/带括号说明/带BOM等）
-    const headers = rawHeaders.map(h => canonicalizeOfferBatchCsvHeader(h))
+    const headers = rawHeaders.map((h) => canonicalizeOfferBatchCsvHeader(h))
 
     // 查找必填列索引
     const affiliateLinkIdx = headers.indexOf('affiliate_link')
@@ -159,13 +160,18 @@ export async function POST(req: NextRequest) {
     const commissionValidationErrors: Array<{ row: number; message: string }> = []
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].map(v => v.trim())
+      const values = lines[i].map((v) => v.trim())
       const affiliateLink = values[affiliateLinkIdx]
       const targetCountry = values[targetCountryIdx]
 
       // 校验必填参数
       // 🔥 2025-12-12修复：加强验证，确保不是空字符串，target_country至少2个字符
-      if (!affiliateLink || affiliateLink.trim() === '' || !targetCountry || targetCountry.trim().length < 2) {
+      if (
+        !affiliateLink ||
+        affiliateLink.trim() === '' ||
+        !targetCountry ||
+        targetCountry.trim().length < 2
+      ) {
         skippedCount++
         const reason = `缺少必填参数 (推广链接=${affiliateLink || ''}, 推广国家=${targetCountry || ''})`
         skipReasons.push({ row: i + 1, reason })
@@ -175,7 +181,11 @@ export async function POST(req: NextRequest) {
 
       // 🔧 修复：检测无效的推广链接值（如 'null/', 'null' 等）
       const normalizedAffiliateLink = affiliateLink.trim()
-      if (normalizedAffiliateLink === 'null' || normalizedAffiliateLink === 'null/' || normalizedAffiliateLink === 'undefined') {
+      if (
+        normalizedAffiliateLink === 'null' ||
+        normalizedAffiliateLink === 'null/' ||
+        normalizedAffiliateLink === 'undefined'
+      ) {
         skippedCount++
         const reason = `推广链接无效 (${normalizedAffiliateLink})`
         skipReasons.push({ row: i + 1, reason })
@@ -192,10 +202,18 @@ export async function POST(req: NextRequest) {
       const normalizedPageType = rawPageType.toLowerCase()
       const parsedPageType: 'store' | 'product' | undefined = (() => {
         if (!normalizedPageType) return undefined
-        if (['store', 'shop', 'shopify', 'storefront', '店铺', '店铺页', '店铺类型'].includes(normalizedPageType)) {
+        if (
+          ['store', 'shop', 'shopify', 'storefront', '店铺', '店铺页', '店铺类型'].includes(
+            normalizedPageType
+          )
+        ) {
           return 'store'
         }
-        if (['product', 'item', 'single', '单品', '产品', '商品', '单品页'].includes(normalizedPageType)) {
+        if (
+          ['product', 'item', 'single', '单品', '产品', '商品', '单品页'].includes(
+            normalizedPageType
+          )
+        ) {
           return 'product'
         }
         return undefined
@@ -217,13 +235,19 @@ export async function POST(req: NextRequest) {
         row.product_price = values[productPriceIdx]
       }
 
-      const rawCommissionPayout = commissionPayoutIdx !== -1 ? values[commissionPayoutIdx] : undefined
+      const rawCommissionPayout =
+        commissionPayoutIdx !== -1 ? values[commissionPayoutIdx] : undefined
       const rawCommissionType = commissionTypeIdx !== -1 ? values[commissionTypeIdx] : undefined
       const rawCommissionValue = commissionValueIdx !== -1 ? values[commissionValueIdx] : undefined
-      const rawCommissionCurrency = commissionCurrencyIdx !== -1 ? values[commissionCurrencyIdx] : undefined
+      const rawCommissionCurrency =
+        commissionCurrencyIdx !== -1 ? values[commissionCurrencyIdx] : undefined
 
-      const hasCommissionInput = [rawCommissionPayout, rawCommissionType, rawCommissionValue, rawCommissionCurrency]
-        .some((value) => value !== undefined && String(value).trim() !== '')
+      const hasCommissionInput = [
+        rawCommissionPayout,
+        rawCommissionType,
+        rawCommissionValue,
+        rawCommissionCurrency,
+      ].some((value) => value !== undefined && String(value).trim() !== '')
 
       if (hasCommissionInput) {
         try {
@@ -274,7 +298,6 @@ export async function POST(req: NextRequest) {
       if (resolvedPageType === 'store') {
         const invalidLink = uniqueProductLinks.find((link) => {
           try {
-             
             new URL(link)
             return false
           } catch {
@@ -334,9 +357,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: 'Invalid CSV',
-          message: skippedCount > 0
-            ? `CSV文件中所有${skippedCount}行数据都缺少必填参数（推广链接、推广国家）`
-            : 'CSV文件中没有有效数据'
+          message:
+            skippedCount > 0
+              ? `CSV文件中所有${skippedCount}行数据都缺少必填参数（推广链接、推广国家）`
+              : 'CSV文件中没有有效数据',
         },
         { status: 400 }
       )
@@ -349,12 +373,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log(`📁 CSV解析完成: ${rows.length} 行有效数据${skippedCount > 0 ? ` (跳过${skippedCount}行)` : ''}`)
+    console.log(
+      `📁 CSV解析完成: ${rows.length} 行有效数据${skippedCount > 0 ? ` (跳过${skippedCount}行)` : ''}`
+    )
 
     // 4. 创建batch_tasks记录
     const batchId = crypto.randomUUID()
 
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO batch_tasks (
         id,
         user_id,
@@ -366,26 +393,31 @@ export async function POST(req: NextRequest) {
         created_at,
         updated_at
       ) VALUES (?, ?, 'offer-creation', 'pending', ?, ?, ?, ${nowFunc}, ${nowFunc})
-    `, [
-      batchId,
-      userIdNum,
-      rows.length,
-      file.name,
-      toDbJsonObjectField(
-        {
-          skipped_rows: skippedCount,
-          valid_rows: rows.length,
-        },
-        db.type,
-        { skipped_rows: skippedCount, valid_rows: rows.length }
-      )
-    ])
+    `,
+      [
+        batchId,
+        userIdNum,
+        rows.length,
+        file.name,
+        toDbJsonObjectField(
+          {
+            skipped_rows: skippedCount,
+            valid_rows: rows.length,
+          },
+          db.type,
+          { skipped_rows: skippedCount, valid_rows: rows.length }
+        ),
+      ]
+    )
 
-    console.log(`📝 批量任务已创建: ${batchId} (${rows.length} 个Offer${skippedCount > 0 ? `，跳过${skippedCount}行` : ''})`)
+    console.log(
+      `📝 批量任务已创建: ${batchId} (${rows.length} 个Offer${skippedCount > 0 ? `，跳过${skippedCount}行` : ''})`
+    )
 
     // 4.5 创建upload_records记录
     const uploadRecordId = crypto.randomUUID()
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO upload_records (
         id,
         user_id,
@@ -400,42 +432,39 @@ export async function POST(req: NextRequest) {
         created_at,
         updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ${nowFunc}, ${nowFunc}, ${nowFunc})
-    `, [
-      uploadRecordId,
-      userIdNum,
-      batchId,
-      file.name,
-      file.size,
-      rows.length,
-      skippedCount,
-      toDbJsonObjectField(
-        {
-          skipped_rows: skippedCount,
-          valid_rows: rows.length,
-        },
-        db.type,
-        { skipped_rows: skippedCount, valid_rows: rows.length }
-      )
-    ])
+    `,
+      [
+        uploadRecordId,
+        userIdNum,
+        batchId,
+        file.name,
+        file.size,
+        rows.length,
+        skippedCount,
+        toDbJsonObjectField(
+          {
+            skipped_rows: skippedCount,
+            valid_rows: rows.length,
+          },
+          db.type,
+          { skipped_rows: skippedCount, valid_rows: rows.length }
+        ),
+      ]
+    )
 
     console.log(`📋 上传记录已创建: ${uploadRecordId}`)
 
     // 5. 将batch-offer-creation任务加入队列
     const taskData: BatchCreationTaskData = {
       batchId,
-      rows
+      rows,
     }
 
-    await queue.enqueue(
-      'batch-offer-creation',
-      taskData,
-      userIdNum,
-      {
-        parentRequestId,
-        priority: 'normal',
-        maxRetries: 1 // 批量任务本身不重试，由子任务重试
-      }
-    )
+    await queue.enqueue('batch-offer-creation', taskData, userIdNum, {
+      parentRequestId,
+      priority: 'normal',
+      maxRetries: 1, // 批量任务本身不重试，由子任务重试
+    })
 
     console.log(`🚀 批量任务已加入队列: ${batchId}`)
 
@@ -448,14 +477,13 @@ export async function POST(req: NextRequest) {
       skipReasons: skipReasons.length > 0 ? skipReasons.slice(0, 50) : undefined,
       message: `批量任务已创建，共${rows.length}个Offer${skippedCount > 0 ? `（跳过 ${skippedCount} 行）` : ''}`,
     })
-
   } catch (error: any) {
     console.error('❌ 批量创建任务失败:', error)
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '创建批量任务失败'
+        message: error.message || '创建批量任务失败',
       },
       { status: 500 }
     )

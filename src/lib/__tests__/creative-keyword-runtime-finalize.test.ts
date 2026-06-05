@@ -81,16 +81,18 @@ describe('finalizeCreativeKeywordSet', () => {
       seedCandidates: [{ keyword: 'brandx x200 replacement filter' }],
     })
 
-    expect(builderFns.buildCreativeKeywordSet).toHaveBeenCalledWith(expect.objectContaining({
-      creativeType: 'model_intent',
-      bucket: 'B',
-      scopeLabel: 'unit-finalize',
-      keywords: ['brandx x200 vacuum', 'brandx official store'],
-      promptKeywords: ['brandx x200 vacuum'],
-      seedCandidates: [{ keyword: 'brandx x200 replacement filter' }],
-      enableSupplementation: false,
-      continueOnSupplementError: true,
-    }))
+    expect(builderFns.buildCreativeKeywordSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creativeType: 'model_intent',
+        bucket: 'B',
+        scopeLabel: 'unit-finalize',
+        keywords: ['brandx x200 vacuum', 'brandx official store'],
+        promptKeywords: ['brandx x200 vacuum'],
+        seedCandidates: [{ keyword: 'brandx x200 replacement filter' }],
+        enableSupplementation: false,
+        continueOnSupplementError: true,
+      })
+    )
     expect(result.keywords).toEqual(['brandx x200 vacuum'])
     expect(result.keywordsWithVolume).toEqual([
       expect.objectContaining({

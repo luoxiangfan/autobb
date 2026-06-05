@@ -25,7 +25,7 @@ export default function UploadSuccessModal({
   onClose,
   fileName,
   validCount,
-  skippedCount
+  skippedCount,
 }: UploadSuccessModalProps) {
   // 锁定背景滚动
   useEffect(() => {
@@ -44,10 +44,7 @@ export default function UploadSuccessModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* 遮罩层 */}
-      <div
-        className="fixed inset-0 bg-black bg-opacity-25 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black bg-opacity-25 transition-opacity" onClick={onClose} />
 
       {/* 弹窗内容 */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -66,9 +63,7 @@ export default function UploadSuccessModal({
             </div>
 
             <div className="ml-4 flex-1">
-              <h3 className="text-lg font-medium leading-6 text-gray-900">
-                文件上传成功
-              </h3>
+              <h3 className="text-lg font-medium leading-6 text-gray-900">文件上传成功</h3>
 
               <div className="mt-4 space-y-3">
                 <div className="text-sm text-gray-600">
@@ -77,9 +72,7 @@ export default function UploadSuccessModal({
                     有效数据：<span className="font-semibold text-blue-600">{validCount}</span> 行
                   </p>
                   {skippedCount > 0 && (
-                    <p className="text-yellow-600">
-                      跳过：{skippedCount} 行（缺少必填参数）
-                    </p>
+                    <p className="text-yellow-600">跳过：{skippedCount} 行（缺少必填参数）</p>
                   )}
                 </div>
 

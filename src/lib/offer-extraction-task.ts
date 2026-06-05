@@ -22,9 +22,7 @@ import {
 /** offer_tasks 中视为“占用中”、不可重复入队的状态 */
 export const ACTIVE_OFFER_EXTRACTION_TASK_STATUSES = ['pending', 'running'] as const
 
-export function isOfferScrapeStatusBusy(
-  scrapeStatus: string | null | undefined
-): boolean {
+export function isOfferScrapeStatusBusy(scrapeStatus: string | null | undefined): boolean {
   return scrapeStatus === 'queued' || scrapeStatus === 'in_progress'
 }
 
@@ -159,9 +157,7 @@ export function parseStoreProductLinksInput(
   }
   const links = Array.from(
     new Set(
-      storeProductLinks
-        .map((link) => (typeof link === 'string' ? link.trim() : ''))
-        .filter(Boolean)
+      storeProductLinks.map((link) => (typeof link === 'string' ? link.trim() : '')).filter(Boolean)
     )
   ).slice(0, 3)
   for (const link of links) {
@@ -186,8 +182,7 @@ export function resolveExtractPageInput(params: {
   }
 
   const pageType = inferOfferPageType({
-    pageType:
-      params.pageType === 'store' || params.pageType === 'product' ? params.pageType : null,
+    pageType: params.pageType === 'store' || params.pageType === 'product' ? params.pageType : null,
     affiliateLink: params.affiliateLink,
     storeProductLinks: parsed.links.length > 0 ? parsed.links : undefined,
   })
@@ -206,14 +201,9 @@ export function buildExtractionTaskParamsFromOffer(
     offerId?: number
   }
 ): CreateOfferExtractionTaskForExistingOfferParams {
-  const affiliateLink = (
-    overrides.affiliateLink
-    ?? offer.affiliate_link
-    ?? offer.url
-    ?? ''
-  ).trim()
-  const storeProductLinks = overrides.storeProductLinks
-    ?? parseStoreProductLinks(offer.store_product_links)
+  const affiliateLink = (overrides.affiliateLink ?? offer.affiliate_link ?? offer.url ?? '').trim()
+  const storeProductLinks =
+    overrides.storeProductLinks ?? parseStoreProductLinks(offer.store_product_links)
   const pageType = inferOfferPageType({
     pageType: overrides.pageType ?? offer.page_type,
     affiliateLink,
@@ -227,10 +217,10 @@ export function buildExtractionTaskParamsFromOffer(
   const targetCountry = overrides.targetCountry?.trim()
     ? resolveValidatedTargetCountry(overrides.targetCountry)
     : validateExistingOfferForExtraction({
-      affiliate_link: offer.affiliate_link,
-      url: offer.url,
-      target_country: offer.target_country,
-    }).targetCountry
+        affiliate_link: offer.affiliate_link,
+        url: offer.url,
+        target_country: offer.target_country,
+      }).targetCountry
 
   return {
     userId: overrides.userId,
@@ -268,13 +258,12 @@ async function upsertOfferTaskRow(params: {
 }): Promise<void> {
   const db = await getDatabase()
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const skipCacheVal = db.type === 'postgres' ? params.skipCache : (params.skipCache ? 1 : 0)
-  const skipWarmupVal = db.type === 'postgres' ? params.skipWarmup : (params.skipWarmup ? 1 : 0)
+  const skipCacheVal = db.type === 'postgres' ? params.skipCache : params.skipCache ? 1 : 0
+  const skipWarmupVal = db.type === 'postgres' ? params.skipWarmup : params.skipWarmup ? 1 : 0
 
-  const existing = await db.queryOne<{ id: string }>(
-    'SELECT id FROM offer_tasks WHERE id = ?',
-    [params.taskId]
-  )
+  const existing = await db.queryOne<{ id: string }>('SELECT id FROM offer_tasks WHERE id = ?', [
+    params.taskId,
+  ])
 
   if (existing) {
     await db.exec(
@@ -423,10 +412,7 @@ export async function compensateOfferExtractionEnqueueFailure(params: {
   try {
     await queue.removeTask(params.taskId)
   } catch (removeError) {
-    console.warn(
-      `⚠️ 补偿时移除队列任务失败 task_id=${params.taskId}:`,
-      removeError
-    )
+    console.warn(`⚠️ 补偿时移除队列任务失败 task_id=${params.taskId}:`, removeError)
   }
 
   try {
@@ -450,24 +436,13 @@ export async function compensateOfferExtractionEnqueueFailure(params: {
       ]
     )
   } catch (taskError) {
-    console.warn(
-      `⚠️ 补偿时标记 offer_tasks 失败失败 task_id=${params.taskId}:`,
-      taskError
-    )
+    console.warn(`⚠️ 补偿时标记 offer_tasks 失败失败 task_id=${params.taskId}:`, taskError)
   }
 
   try {
-    await updateOfferScrapeStatus(
-      params.offerId,
-      params.userId,
-      'failed',
-      params.failMessage
-    )
+    await updateOfferScrapeStatus(params.offerId, params.userId, 'failed', params.failMessage)
   } catch (statusError) {
-    console.warn(
-      `⚠️ 补偿时同步 scrape_status 失败 offer_id=${params.offerId}:`,
-      statusError
-    )
+    console.warn(`⚠️ 补偿时同步 scrape_status 失败 offer_id=${params.offerId}:`, statusError)
   }
 }
 
@@ -527,9 +502,8 @@ export async function createOfferExtractionTaskForExistingOffer(
     affiliateLink,
     storeProductLinks: params.storeProductLinks,
   })
-  const normalizedStoreProductLinks = pageType === 'store'
-    ? normalizeLinks(params.storeProductLinks)
-    : undefined
+  const normalizedStoreProductLinks =
+    pageType === 'store' ? normalizeLinks(params.storeProductLinks) : undefined
 
   const skipCache = params.skipCache ?? false
   const skipWarmup = params.skipWarmup ?? false
@@ -538,11 +512,7 @@ export async function createOfferExtractionTaskForExistingOffer(
   )
   const taskId = params.taskId ?? crypto.randomUUID()
 
-  if (
-    params.offerId
-    && params.userId
-    && !params.skipExtractionModePersist
-  ) {
+  if (params.offerId && params.userId && !params.skipExtractionModePersist) {
     await updateOffer(params.offerId, params.userId, { extraction_mode: extractionMode })
   }
 
@@ -593,18 +563,13 @@ export async function createOfferExtractionTaskForExistingOffer(
   }
 
   try {
-    await queue.enqueue(
-      'offer-extraction',
-      taskData,
-      params.userId,
-      {
-        parentRequestId: params.parentRequestId,
-        priority: params.priority || 'normal',
-        requireProxy: true,
-        maxRetries: 2,
-        taskId,
-      }
-    )
+    await queue.enqueue('offer-extraction', taskData, params.userId, {
+      parentRequestId: params.parentRequestId,
+      priority: params.priority || 'normal',
+      requireProxy: true,
+      maxRetries: 2,
+      taskId,
+    })
   } catch (error: any) {
     const failMessage = error?.message || '任务入队失败'
     await db.exec(
@@ -678,9 +643,8 @@ export async function createOfferExtractionTaskForNewOffer(
     affiliateLink,
     storeProductLinks: params.storeProductLinks,
   })
-  const normalizedStoreProductLinks = pageType === 'store'
-    ? normalizeLinks(params.storeProductLinks)
-    : undefined
+  const normalizedStoreProductLinks =
+    pageType === 'store' ? normalizeLinks(params.storeProductLinks) : undefined
 
   const skipCache = params.skipCache ?? false
   const skipWarmup = params.skipWarmup ?? false
@@ -689,8 +653,8 @@ export async function createOfferExtractionTaskForNewOffer(
   )
   const taskId = crypto.randomUUID()
 
-  const skipCacheVal = db.type === 'postgres' ? skipCache : (skipCache ? 1 : 0)
-  const skipWarmupVal = db.type === 'postgres' ? skipWarmup : (skipWarmup ? 1 : 0)
+  const skipCacheVal = db.type === 'postgres' ? skipCache : skipCache ? 1 : 0
+  const skipWarmupVal = db.type === 'postgres' ? skipWarmup : skipWarmup ? 1 : 0
 
   await db.exec(
     `
@@ -746,18 +710,13 @@ export async function createOfferExtractionTaskForNewOffer(
   }
 
   try {
-    await queue.enqueue(
-      'offer-extraction',
-      taskData,
-      params.userId,
-      {
-        parentRequestId: params.parentRequestId,
-        priority: params.priority || 'normal',
-        requireProxy: true,
-        maxRetries: params.maxRetries ?? 2,
-        taskId,
-      }
-    )
+    await queue.enqueue('offer-extraction', taskData, params.userId, {
+      parentRequestId: params.parentRequestId,
+      priority: params.priority || 'normal',
+      requireProxy: true,
+      maxRetries: params.maxRetries ?? 2,
+      taskId,
+    })
   } catch (error: any) {
     const failMessage = error?.message || '任务入队失败'
     await db.exec(

@@ -34,13 +34,13 @@ export class ProxyProviderRegistry {
    * @throws 如果没有找到匹配的Provider
    */
   static getProvider(url: string): ProxyProvider {
-    const provider = this.providers.find(p => p.canHandle(url))
+    const provider = this.providers.find((p) => p.canHandle(url))
 
     if (!provider) {
-      const supportedFormats = this.providers.map(p => p.name).join(', ')
+      const supportedFormats = this.providers.map((p) => p.name).join(', ')
       throw new Error(
         `不支持的代理URL格式。当前仅支持以下格式：${supportedFormats}。\n` +
-        `请使用对应的代理服务商URL格式。`
+          `请使用对应的代理服务商URL格式。`
       )
     }
 
@@ -61,6 +61,6 @@ export class ProxyProviderRegistry {
    * @returns true if URL format is supported
    */
   static isSupported(url: string): boolean {
-    return this.providers.some(p => p.canHandle(url))
+    return this.providers.some((p) => p.canHandle(url))
   }
 }

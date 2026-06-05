@@ -17,10 +17,10 @@ import {
 } from './google-ads-auth-assignment'
 
 const QUOTA_LIMITS = {
-  test: 0,        // Test access: 只能访问测试账号，生产环境配额为0
+  test: 0, // Test access: 只能访问测试账号，生产环境配额为0
   explorer: 2880,
   basic: 15000,
-  standard: -1,   // -1 表示无限配额
+  standard: -1, // -1 表示无限配额
 } as const
 
 const DEFAULT_EXPLORER_DAILY_QUOTA_LIMIT = QUOTA_LIMITS.explorer
@@ -46,7 +46,8 @@ async function resolveDailyQuotaLimit(userId: number): Promise<number> {
     }
 
     const db = getDatabase()
-    const row = await db.queryOne(`
+    const row = (await db.queryOne(
+      `
       SELECT value
       FROM system_settings
       WHERE category = 'google_ads'
@@ -56,7 +57,9 @@ async function resolveDailyQuotaLimit(userId: number): Promise<number> {
         CASE WHEN user_id = ? THEN 0 ELSE 1 END,
         created_at DESC
       LIMIT 1
-    `, [ownerUserId, ownerUserId]) as { value?: unknown } | undefined
+    `,
+      [ownerUserId, ownerUserId]
+    )) as { value?: unknown } | undefined
 
     const settingsLimit = parsePositiveInt(row?.value)
     if (settingsLimit) return settingsLimit
@@ -114,9 +117,10 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
     // PostgreSQL需要true/false，SQLite需要1/0
-    const isSuccessValue = db.type === 'postgres' ? record.isSuccess : (record.isSuccess ? 1 : 0)
+    const isSuccessValue = db.type === 'postgres' ? record.isSuccess : record.isSuccess ? 1 : 0
 
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO google_ads_api_usage (
         user_id,
         operation_type,
@@ -128,17 +132,19 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
         error_message,
         date
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      record.userId,
-      record.operationType,
-      record.endpoint,
-      record.customerId || null,
-      record.requestCount || 1,
-      record.responseTimeMs || null,
-      isSuccessValue,
-      record.errorMessage || null,
-      today
-    ])
+    `,
+      [
+        record.userId,
+        record.operationType,
+        record.endpoint,
+        record.customerId || null,
+        record.requestCount || 1,
+        record.responseTimeMs || null,
+        isSuccessValue,
+        record.errorMessage || null,
+        today,
+      ]
+    )
 
     // 🆕 如果API调用失败且有错误消息，尝试检测访问级别
     if (!record.isSuccess && record.errorMessage) {
@@ -191,16 +197,19 @@ export async function getDailyUsageStats(userId: number, date?: string): Promise
   const targetDate = date || new Date().toISOString().split('T')[0]
 
   // 根据数据库类型调整 SQL（PostgreSQL 使用 BOOLEAN，SQLite 使用 INTEGER）
-  const isSuccessCondition = db.type === 'postgres'
-    ? "CASE WHEN is_success = true THEN 1 ELSE 0 END"
-    : "CASE WHEN is_success = 1 THEN 1 ELSE 0 END"
+  const isSuccessCondition =
+    db.type === 'postgres'
+      ? 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
+      : 'CASE WHEN is_success = 1 THEN 1 ELSE 0 END'
 
-  const isFailureCondition = db.type === 'postgres'
-    ? "CASE WHEN is_success = false THEN 1 ELSE 0 END"
-    : "CASE WHEN is_success = 0 THEN 1 ELSE 0 END"
+  const isFailureCondition =
+    db.type === 'postgres'
+      ? 'CASE WHEN is_success = false THEN 1 ELSE 0 END'
+      : 'CASE WHEN is_success = 0 THEN 1 ELSE 0 END'
 
   // 获取汇总统计
-  const summary = await db.queryOne(`
+  const summary = (await db.queryOne(
+    `
     SELECT
       SUM(request_count) as total_requests,
       COUNT(*) as total_operations,
@@ -210,20 +219,25 @@ export async function getDailyUsageStats(userId: number, date?: string): Promise
       MAX(response_time_ms) as max_response_time_ms
     FROM google_ads_api_usage
     WHERE user_id = ? AND date = ?
-  `, [userId, targetDate]) as any
+  `,
+    [userId, targetDate]
+  )) as any
 
   // 获取操作类型分布
-  const breakdownRows = await db.query(`
+  const breakdownRows = (await db.query(
+    `
     SELECT
       operation_type,
       SUM(request_count) as count
     FROM google_ads_api_usage
     WHERE user_id = ? AND date = ?
     GROUP BY operation_type
-  `, [userId, targetDate]) as any[]
+  `,
+    [userId, targetDate]
+  )) as any[]
 
   const operationBreakdown: { [key: string]: number } = {}
-  breakdownRows.forEach(row => {
+  breakdownRows.forEach((row) => {
     operationBreakdown[row.operation_type] = Number(row.count) || 0
   })
 
@@ -233,7 +247,9 @@ export async function getDailyUsageStats(userId: number, date?: string): Promise
   const quotaUsagePercent = isUnlimitedQuota
     ? 0
     : quotaLimit === 0
-      ? (totalRequests > 0 ? 100 : 0)
+      ? totalRequests > 0
+        ? 100
+        : 0
       : (totalRequests / quotaLimit) * 100
   const quotaRemaining = isUnlimitedQuota ? -1 : Math.max(0, quotaLimit - totalRequests)
 
@@ -248,7 +264,7 @@ export async function getDailyUsageStats(userId: number, date?: string): Promise
     quotaUsagePercent,
     quotaLimit,
     quotaRemaining,
-    operationBreakdown
+    operationBreakdown,
   }
 }
 
@@ -265,17 +281,20 @@ export async function getUsageTrend(userId: number, days: number = 7): Promise<U
   const db = getDatabase()
 
   // 根据数据库类型调整 SQL
-  const isSuccessCondition = db.type === 'postgres'
-    ? "CASE WHEN is_success = true THEN 1 ELSE 0 END"
-    : "CASE WHEN is_success = 1 THEN 1 ELSE 0 END"
+  const isSuccessCondition =
+    db.type === 'postgres'
+      ? 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
+      : 'CASE WHEN is_success = 1 THEN 1 ELSE 0 END'
 
   // PostgreSQL 和 SQLite 的日期函数不同
   // 由于 date 字段是 TEXT 类型（存储 'YYYY-MM-DD' 格式），需要返回相同格式进行比较
-  const dateCondition = db.type === 'postgres'
-    ? `date >= to_char(CURRENT_DATE - INTERVAL '${days} days', 'YYYY-MM-DD')`
-    : `date >= date('now', '-${days} days')`
+  const dateCondition =
+    db.type === 'postgres'
+      ? `date >= to_char(CURRENT_DATE - INTERVAL '${days} days', 'YYYY-MM-DD')`
+      : `date >= date('now', '-${days} days')`
 
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT
       date,
       SUM(request_count) as total_requests,
@@ -285,19 +304,24 @@ export async function getUsageTrend(userId: number, days: number = 7): Promise<U
       AND ${dateCondition}
     GROUP BY date
     ORDER BY date DESC
-  `, [userId]) as any[]
+  `,
+    [userId]
+  )) as any[]
 
-  return rows.map(row => ({
+  return rows.map((row) => ({
     date: row.date,
     totalRequests: Number(row.total_requests) || 0,
-    successRate: Number(row.success_rate) || 0
+    successRate: Number(row.success_rate) || 0,
   }))
 }
 
 /**
  * 检查是否接近配额限制
  */
-export async function checkQuotaLimit(userId: number, warningThreshold: number = 0.8): Promise<{
+export async function checkQuotaLimit(
+  userId: number,
+  warningThreshold: number = 0.8
+): Promise<{
   isNearLimit: boolean
   isOverLimit: boolean
   currentUsage: number
@@ -309,14 +333,16 @@ export async function checkQuotaLimit(userId: number, warningThreshold: number =
   const percentUsed = isUnlimitedQuota
     ? 0
     : stats.quotaLimit === 0
-      ? (stats.totalRequests > 0 ? 1 : 0)
-      : (stats.quotaUsagePercent / 100)
+      ? stats.totalRequests > 0
+        ? 1
+        : 0
+      : stats.quotaUsagePercent / 100
 
   return {
     isNearLimit: !isUnlimitedQuota && percentUsed >= warningThreshold,
     isOverLimit: !isUnlimitedQuota && percentUsed >= 1.0,
     currentUsage: stats.totalRequests,
     limit: stats.quotaLimit,
-    percentUsed: stats.quotaUsagePercent
+    percentUsed: stats.quotaUsagePercent,
   }
 }

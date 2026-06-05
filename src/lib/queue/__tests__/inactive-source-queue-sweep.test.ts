@@ -39,9 +39,8 @@ describe('sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap', () => {
     removeClickFarm.mockResolvedValue({ removedCount: 2, scannedCount: 10 })
     removeUrlSwap.mockResolvedValue({ removedCount: 1, scannedCount: 4 })
 
-    const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } = await import(
-      '../inactive-source-queue-sweep'
-    )
+    const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } =
+      await import('../inactive-source-queue-sweep')
     const result = await sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap()
 
     expect(removeClickFarm).toHaveBeenCalledWith(['cf-1', 'cf-2'])
@@ -58,9 +57,8 @@ describe('sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap', () => {
 
   it('skips cleanup helpers when no ids', async () => {
     query.mockResolvedValue([])
-    const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } = await import(
-      '../inactive-source-queue-sweep'
-    )
+    const { sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap } =
+      await import('../inactive-source-queue-sweep')
     await sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap()
 
     expect(removeClickFarm).not.toHaveBeenCalled()

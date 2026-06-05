@@ -65,13 +65,16 @@ describe('formatGoogleAdsApiError', () => {
       request_id: 'req-acc-001',
       errors: [
         {
-          message: "The customer account can't be accessed because it is not yet enabled or has been deactivated.",
+          message:
+            "The customer account can't be accessed because it is not yet enabled or has been deactivated.",
           error_code: { authorization_error: 'CUSTOMER_NOT_ENABLED' },
         },
       ],
     })
 
-    expect(message).toContain('账号状态异常（未启用/已停用），请联系管理员或在 Google Ads 中恢复后重试。')
+    expect(message).toContain(
+      '账号状态异常（未启用/已停用），请联系管理员或在 Google Ads 中恢复后重试。'
+    )
     expect(message).toContain('RequestId=req-acc-001')
   })
 

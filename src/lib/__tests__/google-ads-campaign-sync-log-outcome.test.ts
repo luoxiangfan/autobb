@@ -15,7 +15,10 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-import { resolveGoogleAdsCampaignSyncLogOutcome, userHasGoogleAdsMccAssignments } from '@/lib/google-ads-campaign-sync'
+import {
+  resolveGoogleAdsCampaignSyncLogOutcome,
+  userHasGoogleAdsMccAssignments,
+} from '@/lib/google-ads-campaign-sync'
 
 describe('resolveGoogleAdsCampaignSyncLogOutcome', () => {
   it('marks no-MCC skip as partial with warning message', () => {

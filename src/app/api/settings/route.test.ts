@@ -108,7 +108,10 @@ describe('settings route affiliate sync safeguards', () => {
     expect(res.status).toBe(200)
     expect(affiliateSettings).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ key: 'partnerboost_base_url', value: 'https://app.partnerboost.com' }),
+        expect.objectContaining({
+          key: 'partnerboost_base_url',
+          value: 'https://app.partnerboost.com',
+        }),
         expect.objectContaining({ key: 'openclaw_affiliate_sync_interval_hours', value: '1' }),
       ])
     )
@@ -138,7 +141,10 @@ describe('settings route affiliate sync safeguards', () => {
     expect(settingsFns.getSettingsByCategory).not.toHaveBeenCalled()
     expect(payload.settings.affiliate_sync).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ key: 'partnerboost_base_url', value: 'https://app.partnerboost.com' }),
+        expect.objectContaining({
+          key: 'partnerboost_base_url',
+          value: 'https://app.partnerboost.com',
+        }),
       ])
     )
   })
@@ -152,8 +158,16 @@ describe('settings route affiliate sync safeguards', () => {
       },
       body: JSON.stringify({
         updates: [
-          { category: 'affiliate_sync', key: 'partnerboost_base_url', value: 'https://custom.example.com' },
-          { category: 'affiliate_sync', key: 'openclaw_affiliate_sync_interval_hours', value: '12' },
+          {
+            category: 'affiliate_sync',
+            key: 'partnerboost_base_url',
+            value: 'https://custom.example.com',
+          },
+          {
+            category: 'affiliate_sync',
+            key: 'openclaw_affiliate_sync_interval_hours',
+            value: '12',
+          },
           { category: 'affiliate_sync', key: 'openclaw_affiliate_sync_mode', value: 'realtime' },
         ],
       }),
@@ -164,11 +178,18 @@ describe('settings route affiliate sync safeguards', () => {
 
     expect(res.status).toBe(200)
     expect(payload.success).toBe(true)
-    expect(settingsFns.updateSettings).toHaveBeenCalledWith([
-      { category: 'affiliate_sync', key: 'partnerboost_base_url', value: 'https://app.partnerboost.com' },
-      { category: 'affiliate_sync', key: 'openclaw_affiliate_sync_interval_hours', value: '1' },
-      { category: 'affiliate_sync', key: 'openclaw_affiliate_sync_mode', value: 'realtime' },
-    ], 7)
+    expect(settingsFns.updateSettings).toHaveBeenCalledWith(
+      [
+        {
+          category: 'affiliate_sync',
+          key: 'partnerboost_base_url',
+          value: 'https://app.partnerboost.com',
+        },
+        { category: 'affiliate_sync', key: 'openclaw_affiliate_sync_interval_hours', value: '1' },
+        { category: 'affiliate_sync', key: 'openclaw_affiliate_sync_mode', value: 'realtime' },
+      ],
+      7
+    )
   })
 
   it('rejects affiliate_sync updates when user context is missing', async () => {
@@ -178,9 +199,7 @@ describe('settings route affiliate sync safeguards', () => {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        updates: [
-          { category: 'affiliate_sync', key: 'yeahpromos_site_id', value: '11282' },
-        ],
+        updates: [{ category: 'affiliate_sync', key: 'yeahpromos_site_id', value: '11282' }],
       }),
     })
 

@@ -49,14 +49,14 @@ async function isDatabaseInitialized(): Promise<boolean> {
 
   // 定义关键表列表 - 这些表必须全部存在才认为数据库已初始化
   const criticalTables = [
-    'users',              // 用户表
-    'offers',             // Offer 表
-    'campaigns',          // Campaign 表
-    'system_settings',    // 系统设置表
+    'users', // 用户表
+    'offers', // Offer 表
+    'campaigns', // Campaign 表
+    'system_settings', // 系统设置表
     'industry_benchmarks', // 行业基准表
-    'batch_tasks',        // 批量任务表
-    'upload_records',     // 上传记录表
-    'offer_tasks',        // Offer提取任务表
+    'batch_tasks', // 批量任务表
+    'upload_records', // 上传记录表
+    'offer_tasks', // Offer提取任务表
   ]
 
   if (db.type === 'sqlite') {
@@ -83,7 +83,7 @@ async function isDatabaseInitialized(): Promise<boolean> {
     try {
       for (const table of criticalTables) {
         const result = await db.query<{ exists: boolean }>(
-          "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+          'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
           [table]
         )
         if (!result[0].exists) {
@@ -192,15 +192,15 @@ async function createDefaultAdmin(): Promise<void> {
     let existingAdmin: any
 
     if (db.type === 'sqlite') {
-      existingAdmin = await db.queryOne(
-        'SELECT id FROM users WHERE username = ? OR role = ?',
-        [DEFAULT_ADMIN.username, 'admin']
-      )
+      existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
+        DEFAULT_ADMIN.username,
+        'admin',
+      ])
     } else {
-      const result = await asyncDb!.query(
-        'SELECT id FROM users WHERE username = $1 OR role = $2',
-        [DEFAULT_ADMIN.username, 'admin']
-      )
+      const result = await asyncDb!.query('SELECT id FROM users WHERE username = $1 OR role = $2', [
+        DEFAULT_ADMIN.username,
+        'admin',
+      ])
       existingAdmin = result[0]
     }
 
@@ -296,15 +296,15 @@ async function ensureAdminAccount(): Promise<void> {
     let existingAdmin: any
 
     if (db.type === 'sqlite') {
-      existingAdmin = await db.queryOne(
-        'SELECT id FROM users WHERE username = ? OR role = ?',
-        [DEFAULT_ADMIN.username, 'admin']
-      )
+      existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
+        DEFAULT_ADMIN.username,
+        'admin',
+      ])
     } else {
-      const result = await asyncDb!.query(
-        'SELECT id FROM users WHERE username = $1 OR role = $2',
-        [DEFAULT_ADMIN.username, 'admin']
-      )
+      const result = await asyncDb!.query('SELECT id FROM users WHERE username = $1 OR role = $2', [
+        DEFAULT_ADMIN.username,
+        'admin',
+      ])
       existingAdmin = result[0]
     }
 
@@ -409,28 +409,148 @@ async function insertDefaultSystemSettings(): Promise<void> {
 
   const defaultSettings = [
     // Google Ads API配置
-    { category: 'google_ads', key: 'login_customer_id', dataType: 'string', isSensitive: false, isRequired: true, description: 'Google Ads Login Customer ID (MCC账户ID)' },
-    { category: 'google_ads', key: 'client_id', dataType: 'string', isSensitive: true, isRequired: false, description: 'Google Ads API Client ID（可选）' },
-    { category: 'google_ads', key: 'client_secret', dataType: 'string', isSensitive: true, isRequired: false, description: 'Google Ads API Client Secret（可选）' },
-    { category: 'google_ads', key: 'developer_token', dataType: 'string', isSensitive: true, isRequired: false, description: 'Google Ads Developer Token（可选）' },
+    {
+      category: 'google_ads',
+      key: 'login_customer_id',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: true,
+      description: 'Google Ads Login Customer ID (MCC账户ID)',
+    },
+    {
+      category: 'google_ads',
+      key: 'client_id',
+      dataType: 'string',
+      isSensitive: true,
+      isRequired: false,
+      description: 'Google Ads API Client ID（可选）',
+    },
+    {
+      category: 'google_ads',
+      key: 'client_secret',
+      dataType: 'string',
+      isSensitive: true,
+      isRequired: false,
+      description: 'Google Ads API Client Secret（可选）',
+    },
+    {
+      category: 'google_ads',
+      key: 'developer_token',
+      dataType: 'string',
+      isSensitive: true,
+      isRequired: false,
+      description: 'Google Ads Developer Token（可选）',
+    },
 
     // AI配置 - Gemini API模式（支持多服务商）
-    { category: 'ai', key: 'gemini_provider', dataType: 'string', isSensitive: false, isRequired: false, description: 'Gemini API 服务商', defaultValue: 'official' },
-    { category: 'ai', key: 'gemini_endpoint', dataType: 'string', isSensitive: false, isRequired: false, description: 'Gemini API 端点（系统自动计算）' },
-    { category: 'ai', key: 'gemini_api_key', dataType: 'string', isSensitive: true, isRequired: false, description: 'Gemini 官方 API Key' },
-    { category: 'ai', key: 'gemini_relay_api_key', dataType: 'string', isSensitive: true, isRequired: false, description: '第三方中转服务 API Key' },
-    { category: 'ai', key: 'gemini_model', dataType: 'string', isSensitive: false, isRequired: false, description: 'AI模型', defaultValue: 'gemini-3-flash-preview' },
+    {
+      category: 'ai',
+      key: 'gemini_provider',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: false,
+      description: 'Gemini API 服务商',
+      defaultValue: 'official',
+    },
+    {
+      category: 'ai',
+      key: 'gemini_endpoint',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: false,
+      description: 'Gemini API 端点（系统自动计算）',
+    },
+    {
+      category: 'ai',
+      key: 'gemini_api_key',
+      dataType: 'string',
+      isSensitive: true,
+      isRequired: false,
+      description: 'Gemini 官方 API Key',
+    },
+    {
+      category: 'ai',
+      key: 'gemini_relay_api_key',
+      dataType: 'string',
+      isSensitive: true,
+      isRequired: false,
+      description: '第三方中转服务 API Key',
+    },
+    {
+      category: 'ai',
+      key: 'gemini_model',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: false,
+      description: 'AI模型',
+      defaultValue: 'gemini-3-flash-preview',
+    },
 
     // 代理配置
-    { category: 'proxy', key: 'urls', dataType: 'json', isSensitive: false, isRequired: false, description: '代理URL配置列表（JSON格式）' },
+    {
+      category: 'proxy',
+      key: 'urls',
+      dataType: 'json',
+      isSensitive: false,
+      isRequired: false,
+      description: '代理URL配置列表（JSON格式）',
+    },
 
     // 系统配置
-    { category: 'system', key: 'currency', dataType: 'string', isSensitive: false, isRequired: true, description: '默认货币', defaultValue: 'CNY' },
-    { category: 'system', key: 'language', dataType: 'string', isSensitive: false, isRequired: true, description: '系统语言', defaultValue: 'zh-CN' },
-    { category: 'system', key: 'sync_interval_hours', dataType: 'number', isSensitive: false, isRequired: true, description: '数据同步间隔(小时)', defaultValue: '4' },
-    { category: 'system', key: 'link_check_enabled', dataType: 'boolean', isSensitive: false, isRequired: true, description: '是否启用链接检查', defaultValue: 'true' },
-    { category: 'system', key: 'link_check_time', dataType: 'string', isSensitive: false, isRequired: true, description: '链接检查时间', defaultValue: '02:00' },
-    { category: 'system', key: 'data_sync_mode', dataType: 'string', isSensitive: false, isRequired: false, description: '手动同步默认模式（incremental/full）', defaultValue: 'incremental' },
+    {
+      category: 'system',
+      key: 'currency',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: true,
+      description: '默认货币',
+      defaultValue: 'CNY',
+    },
+    {
+      category: 'system',
+      key: 'language',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: true,
+      description: '系统语言',
+      defaultValue: 'zh-CN',
+    },
+    {
+      category: 'system',
+      key: 'sync_interval_hours',
+      dataType: 'number',
+      isSensitive: false,
+      isRequired: true,
+      description: '数据同步间隔(小时)',
+      defaultValue: '4',
+    },
+    {
+      category: 'system',
+      key: 'link_check_enabled',
+      dataType: 'boolean',
+      isSensitive: false,
+      isRequired: true,
+      description: '是否启用链接检查',
+      defaultValue: 'true',
+    },
+    {
+      category: 'system',
+      key: 'link_check_time',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: true,
+      description: '链接检查时间',
+      defaultValue: '02:00',
+    },
+    {
+      category: 'system',
+      key: 'data_sync_mode',
+      dataType: 'string',
+      isSensitive: false,
+      isRequired: false,
+      description: '手动同步默认模式（incremental/full）',
+      defaultValue: 'incremental',
+    },
   ]
 
   try {
@@ -581,52 +701,213 @@ async function insertIndustryBenchmarks(): Promise<void> {
   // 行业基准数据（30个二级分类）
   const benchmarks = [
     // E-commerce 电商（6个子类）
-    { l1: 'E-commerce', l2: 'Fashion & Apparel', code: 'ecom_fashion', ctr: 2.41, cpc: 0.45, cvr: 2.77 },
-    { l1: 'E-commerce', l2: 'Electronics & Gadgets', code: 'ecom_electronics', ctr: 2.04, cpc: 0.68, cvr: 1.91 },
+    {
+      l1: 'E-commerce',
+      l2: 'Fashion & Apparel',
+      code: 'ecom_fashion',
+      ctr: 2.41,
+      cpc: 0.45,
+      cvr: 2.77,
+    },
+    {
+      l1: 'E-commerce',
+      l2: 'Electronics & Gadgets',
+      code: 'ecom_electronics',
+      ctr: 2.04,
+      cpc: 0.68,
+      cvr: 1.91,
+    },
     { l1: 'E-commerce', l2: 'Home & Garden', code: 'ecom_home', ctr: 2.53, cpc: 0.52, cvr: 2.23 },
-    { l1: 'E-commerce', l2: 'Health & Beauty', code: 'ecom_beauty', ctr: 2.78, cpc: 0.41, cvr: 3.19 },
-    { l1: 'E-commerce', l2: 'Sports & Outdoors', code: 'ecom_sports', ctr: 2.35, cpc: 0.58, cvr: 2.01 },
+    {
+      l1: 'E-commerce',
+      l2: 'Health & Beauty',
+      code: 'ecom_beauty',
+      ctr: 2.78,
+      cpc: 0.41,
+      cvr: 3.19,
+    },
+    {
+      l1: 'E-commerce',
+      l2: 'Sports & Outdoors',
+      code: 'ecom_sports',
+      ctr: 2.35,
+      cpc: 0.58,
+      cvr: 2.01,
+    },
     { l1: 'E-commerce', l2: 'Food & Beverage', code: 'ecom_food', ctr: 2.67, cpc: 0.38, cvr: 2.85 },
 
     // Travel 旅游（4个子类）
-    { l1: 'Travel', l2: 'Luggage & Travel Gear', code: 'travel_luggage', ctr: 3.18, cpc: 0.95, cvr: 2.47 },
-    { l1: 'Travel', l2: 'Hotels & Accommodation', code: 'travel_hotels', ctr: 4.68, cpc: 1.22, cvr: 2.57 },
-    { l1: 'Travel', l2: 'Flights & Transportation', code: 'travel_flights', ctr: 4.29, cpc: 0.84, cvr: 2.14 },
-    { l1: 'Travel', l2: 'Tours & Activities', code: 'travel_tours', ctr: 3.87, cpc: 0.76, cvr: 3.01 },
+    {
+      l1: 'Travel',
+      l2: 'Luggage & Travel Gear',
+      code: 'travel_luggage',
+      ctr: 3.18,
+      cpc: 0.95,
+      cvr: 2.47,
+    },
+    {
+      l1: 'Travel',
+      l2: 'Hotels & Accommodation',
+      code: 'travel_hotels',
+      ctr: 4.68,
+      cpc: 1.22,
+      cvr: 2.57,
+    },
+    {
+      l1: 'Travel',
+      l2: 'Flights & Transportation',
+      code: 'travel_flights',
+      ctr: 4.29,
+      cpc: 0.84,
+      cvr: 2.14,
+    },
+    {
+      l1: 'Travel',
+      l2: 'Tours & Activities',
+      code: 'travel_tours',
+      ctr: 3.87,
+      cpc: 0.76,
+      cvr: 3.01,
+    },
 
     // Technology 科技（4个子类）
-    { l1: 'Technology', l2: 'Software & SaaS', code: 'tech_saas', ctr: 2.41, cpc: 3.50, cvr: 3.04 },
-    { l1: 'Technology', l2: 'Consumer Electronics', code: 'tech_consumer', ctr: 2.18, cpc: 0.72, cvr: 1.84 },
-    { l1: 'Technology', l2: 'B2B Tech Services', code: 'tech_b2b', ctr: 2.09, cpc: 4.21, cvr: 2.58 },
+    { l1: 'Technology', l2: 'Software & SaaS', code: 'tech_saas', ctr: 2.41, cpc: 3.5, cvr: 3.04 },
+    {
+      l1: 'Technology',
+      l2: 'Consumer Electronics',
+      code: 'tech_consumer',
+      ctr: 2.18,
+      cpc: 0.72,
+      cvr: 1.84,
+    },
+    {
+      l1: 'Technology',
+      l2: 'B2B Tech Services',
+      code: 'tech_b2b',
+      ctr: 2.09,
+      cpc: 4.21,
+      cvr: 2.58,
+    },
     { l1: 'Technology', l2: 'Mobile Apps', code: 'tech_apps', ctr: 3.24, cpc: 0.52, cvr: 4.12 },
 
     // Finance 金融（4个子类）
-    { l1: 'Finance', l2: 'Banking & Credit', code: 'finance_banking', ctr: 2.91, cpc: 3.77, cvr: 4.19 },
+    {
+      l1: 'Finance',
+      l2: 'Banking & Credit',
+      code: 'finance_banking',
+      ctr: 2.91,
+      cpc: 3.77,
+      cvr: 4.19,
+    },
     { l1: 'Finance', l2: 'Insurance', code: 'finance_insurance', ctr: 2.13, cpc: 4.52, cvr: 1.87 },
-    { l1: 'Finance', l2: 'Investment & Trading', code: 'finance_investment', ctr: 1.92, cpc: 5.14, cvr: 2.23 },
-    { l1: 'Finance', l2: 'Cryptocurrency', code: 'finance_crypto', ctr: 2.47, cpc: 2.89, cvr: 1.56 },
+    {
+      l1: 'Finance',
+      l2: 'Investment & Trading',
+      code: 'finance_investment',
+      ctr: 1.92,
+      cpc: 5.14,
+      cvr: 2.23,
+    },
+    {
+      l1: 'Finance',
+      l2: 'Cryptocurrency',
+      code: 'finance_crypto',
+      ctr: 2.47,
+      cpc: 2.89,
+      cvr: 1.56,
+    },
 
     // Education 教育（3个子类）
     { l1: 'Education', l2: 'Online Courses', code: 'edu_online', ctr: 3.39, cpc: 2.13, cvr: 3.67 },
-    { l1: 'Education', l2: 'Academic Programs', code: 'edu_academic', ctr: 2.87, cpc: 3.42, cvr: 2.94 },
-    { l1: 'Education', l2: 'Professional Training', code: 'edu_professional', ctr: 2.65, cpc: 2.78, cvr: 3.21 },
+    {
+      l1: 'Education',
+      l2: 'Academic Programs',
+      code: 'edu_academic',
+      ctr: 2.87,
+      cpc: 3.42,
+      cvr: 2.94,
+    },
+    {
+      l1: 'Education',
+      l2: 'Professional Training',
+      code: 'edu_professional',
+      ctr: 2.65,
+      cpc: 2.78,
+      cvr: 3.21,
+    },
 
     // Healthcare 医疗健康（3个子类）
-    { l1: 'Healthcare', l2: 'Medical Services', code: 'health_medical', ctr: 3.12, cpc: 2.89, cvr: 3.78 },
-    { l1: 'Healthcare', l2: 'Pharmaceuticals', code: 'health_pharma', ctr: 2.68, cpc: 1.95, cvr: 2.47 },
-    { l1: 'Healthcare', l2: 'Wellness & Fitness', code: 'health_wellness', ctr: 3.45, cpc: 0.89, cvr: 3.92 },
+    {
+      l1: 'Healthcare',
+      l2: 'Medical Services',
+      code: 'health_medical',
+      ctr: 3.12,
+      cpc: 2.89,
+      cvr: 3.78,
+    },
+    {
+      l1: 'Healthcare',
+      l2: 'Pharmaceuticals',
+      code: 'health_pharma',
+      ctr: 2.68,
+      cpc: 1.95,
+      cvr: 2.47,
+    },
+    {
+      l1: 'Healthcare',
+      l2: 'Wellness & Fitness',
+      code: 'health_wellness',
+      ctr: 3.45,
+      cpc: 0.89,
+      cvr: 3.92,
+    },
 
     // Automotive 汽车（2个子类）
     { l1: 'Automotive', l2: 'Vehicle Sales', code: 'auto_sales', ctr: 2.14, cpc: 2.46, cvr: 2.53 },
-    { l1: 'Automotive', l2: 'Auto Parts & Services', code: 'auto_parts', ctr: 2.67, cpc: 1.24, cvr: 3.14 },
+    {
+      l1: 'Automotive',
+      l2: 'Auto Parts & Services',
+      code: 'auto_parts',
+      ctr: 2.67,
+      cpc: 1.24,
+      cvr: 3.14,
+    },
 
     // Real Estate 房地产（2个子类）
-    { l1: 'Real Estate', l2: 'Residential', code: 'realestate_residential', ctr: 2.03, cpc: 1.89, cvr: 1.94 },
-    { l1: 'Real Estate', l2: 'Commercial', code: 'realestate_commercial', ctr: 1.87, cpc: 2.67, cvr: 1.72 },
+    {
+      l1: 'Real Estate',
+      l2: 'Residential',
+      code: 'realestate_residential',
+      ctr: 2.03,
+      cpc: 1.89,
+      cvr: 1.94,
+    },
+    {
+      l1: 'Real Estate',
+      l2: 'Commercial',
+      code: 'realestate_commercial',
+      ctr: 1.87,
+      cpc: 2.67,
+      cvr: 1.72,
+    },
 
     // Entertainment 娱乐（2个子类）
-    { l1: 'Entertainment', l2: 'Gaming', code: 'entertainment_gaming', ctr: 3.56, cpc: 0.47, cvr: 2.87 },
-    { l1: 'Entertainment', l2: 'Streaming & Media', code: 'entertainment_media', ctr: 3.21, cpc: 0.65, cvr: 2.34 },
+    {
+      l1: 'Entertainment',
+      l2: 'Gaming',
+      code: 'entertainment_gaming',
+      ctr: 3.56,
+      cpc: 0.47,
+      cvr: 2.87,
+    },
+    {
+      l1: 'Entertainment',
+      l2: 'Streaming & Media',
+      code: 'entertainment_media',
+      ctr: 3.21,
+      cpc: 0.65,
+      cvr: 2.34,
+    },
   ]
 
   try {
@@ -801,9 +1082,10 @@ async function runPendingMigrations(): Promise<void> {
   await alignPostgresSequences()
 
   // 🎯 根据数据库类型选择迁移目录
-  const migrationsDir = db.type === 'postgres'
-    ? path.join(process.cwd(), 'pg-migrations')
-    : path.join(process.cwd(), 'migrations')
+  const migrationsDir =
+    db.type === 'postgres'
+      ? path.join(process.cwd(), 'pg-migrations')
+      : path.join(process.cwd(), 'migrations')
 
   console.log(`🔍 Checking migrations in: ${migrationsDir} (DB type: ${db.type})`)
 
@@ -857,17 +1139,17 @@ async function runPendingMigrations(): Promise<void> {
   }
 
   // 统计并显示待执行的迁移
-  const newMigrations = pendingMigrations.filter(m => m.reason === 'new')
-  const changedMigrations = pendingMigrations.filter(m => m.reason === 'changed')
+  const newMigrations = pendingMigrations.filter((m) => m.reason === 'new')
+  const changedMigrations = pendingMigrations.filter((m) => m.reason === 'changed')
 
   console.log(`\n📦 Found ${pendingMigrations.length} migrations to execute:`)
   if (newMigrations.length > 0) {
     console.log(`   🆕 New: ${newMigrations.length}`)
-    newMigrations.forEach(m => console.log(`      - ${m.file}`))
+    newMigrations.forEach((m) => console.log(`      - ${m.file}`))
   }
   if (changedMigrations.length > 0) {
     console.log(`   🔄 Changed: ${changedMigrations.length}`)
-    changedMigrations.forEach(m => console.log(`      - ${m.file}`))
+    changedMigrations.forEach((m) => console.log(`      - ${m.file}`))
   }
   console.log('')
 
@@ -923,7 +1205,7 @@ async function ensureMigrationHistoryTable(): Promise<void> {
     `)
     // 添加 file_hash 列（如果不存在）
     const columns = await db.query<{ name: string }>(`PRAGMA table_info(migration_history)`)
-    const hasFileHash = columns.some(col => col.name === 'file_hash')
+    const hasFileHash = columns.some((col) => col.name === 'file_hash')
     if (!hasFileHash) {
       await db.exec(`ALTER TABLE migration_history ADD COLUMN file_hash TEXT`)
     }
@@ -965,7 +1247,7 @@ async function getExecutedMigrations(): Promise<Map<string, string | null>> {
     )
 
     // 存储迁移名称和对应的hash
-    results.forEach(row => {
+    results.forEach((row) => {
       const name = row.migration_name
       executed.set(name, row.file_hash)
       // 标准化：同时添加基础名称（去除 .sql 和 .pg.sql 后缀）
@@ -990,7 +1272,10 @@ async function getExecutedMigrations(): Promise<Map<string, string | null>> {
 /**
  * SQLite 单条语句执行（区分 query / exec）
  */
-async function executeSingleSqliteStatement(db: Awaited<ReturnType<typeof getDatabase>>, stmt: string): Promise<void> {
+async function executeSingleSqliteStatement(
+  db: Awaited<ReturnType<typeof getDatabase>>,
+  stmt: string
+): Promise<void> {
   if (/^SELECT\b/i.test(stmt)) {
     await db.query(stmt)
     return
@@ -1053,7 +1338,8 @@ async function executeMigration(name: string, sql: string): Promise<void> {
               // - PRAGMA 既可能返回结果（如 PRAGMA table_info），也可能仅设置参数（如 PRAGMA foreign_keys=ON）
               await executeSingleSqliteStatement(db, stmtForExecution)
             } catch (firstError) {
-              const firstErrorMsg = firstError instanceof Error ? firstError.message : String(firstError)
+              const firstErrorMsg =
+                firstError instanceof Error ? firstError.message : String(firstError)
               if (!isSqliteAddColumnIfNotExistsSyntaxError(stmtForExecution, firstErrorMsg)) {
                 throw firstError
               }
@@ -1061,7 +1347,9 @@ async function executeMigration(name: string, sql: string): Promise<void> {
               // 兼容旧版 SQLite：不支持 ADD COLUMN IF NOT EXISTS，回退为 ADD COLUMN，
               // 若列已存在会进入幂等错误分支被跳过。
               stmtForExecution = rewriteSqliteAddColumnIfNotExists(stmtForExecution)
-              console.log(`   🔧 Rewritten for SQLite compatibility: ${stmtForExecution.substring(0, 80)}...`)
+              console.log(
+                `   🔧 Rewritten for SQLite compatibility: ${stmtForExecution.substring(0, 80)}...`
+              )
               try {
                 await executeSingleSqliteStatement(db, stmtForExecution)
               } catch (retryError) {
@@ -1072,7 +1360,9 @@ async function executeMigration(name: string, sql: string): Promise<void> {
             // 忽略 "column already exists" 等幂等性错误
             const errorMsg = error instanceof Error ? error.message : String(error)
             const isPromptVersionsUniqueConflict =
-              errorMsg.includes('UNIQUE constraint failed: prompt_versions.prompt_id, prompt_versions.version') &&
+              errorMsg.includes(
+                'UNIQUE constraint failed: prompt_versions.prompt_id, prompt_versions.version'
+              ) &&
               (/\bINSERT\s+INTO\s+prompt_versions\b/i.test(stmtForExecution) ||
                 /\bUPDATE\s+prompt_versions\b/i.test(stmtForExecution))
 
@@ -1089,7 +1379,9 @@ async function executeMigration(name: string, sql: string): Promise<void> {
               throw new Error(context)
             }
 
-            const reason = isPromptVersionsUniqueConflict ? 'prompt version already exists' : 'already exists'
+            const reason = isPromptVersionsUniqueConflict
+              ? 'prompt version already exists'
+              : 'already exists'
             console.log(`   ⏭️  Skipped (${reason}): ${stmtForExecution.substring(0, 60)}...`)
           }
         }
@@ -1163,20 +1455,21 @@ async function recordMigration(name: string, fileHash: string): Promise<void> {
 
 // 全局标记：是否需要恢复队列任务（声明在全局作用域）
 declare global {
-   
   var __queueRecoveryPending: boolean | undefined
-   
-  var __queueRecoveryData: Array<{
-    id: number | string
-    user_id: number
-    url?: string
-    brand?: string | null
-    task_type?: string
-    status: string
-    retry_count?: number
-    offer_id?: number
-    data?: any
-  }> | undefined
+
+  var __queueRecoveryData:
+    | Array<{
+        id: number | string
+        user_id: number
+        url?: string
+        brand?: string | null
+        task_type?: string
+        status: string
+        retry_count?: number
+        offer_id?: number
+        data?: any
+      }>
+    | undefined
 }
 
 /**
@@ -1282,7 +1575,6 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
   }
 }
 
-
 /**
  * 清空Redis中的所有未完成任务
  *
@@ -1302,7 +1594,11 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
     userQueuesCleared: number
   }
 }> {
-  async function scanKeysByPattern(redisClient: any, pattern: string, scanCount = 200): Promise<string[]> {
+  async function scanKeysByPattern(
+    redisClient: any,
+    pattern: string,
+    scanCount = 200
+  ): Promise<string[]> {
     const matched: string[] = []
     let cursor = '0'
 
@@ -1328,7 +1624,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
     if (!redisClient) {
       return {
         clearedCount: 0,
-        details: { pendingCleared: 0, runningCleared: 0, userQueuesCleared: 0 }
+        details: { pendingCleared: 0, runningCleared: 0, userQueuesCleared: 0 },
       }
     }
 
@@ -1351,7 +1647,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
     const userPendingKeys = await scanKeysByPattern(redisClient, `${redisKeyPrefix}user:*:pending`)
     userQueuesCleared = userPendingKeys.length
 
-    const allTaskIds = [...new Set([...pendingTaskIds, ...runningTaskIds])]  // 去重
+    const allTaskIds = [...new Set([...pendingTaskIds, ...runningTaskIds])] // 去重
 
     // 使用pipeline批量删除，提高效率
     const pipeline = redisClient.pipeline()
@@ -1369,7 +1665,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
       'export',
       'email',
       'link-check',
-      'cleanup'
+      'cleanup',
     ]
     for (const taskType of taskTypes) {
       pipeline.del(`${redisKeyPrefix}pending:${taskType}`)
@@ -1405,13 +1701,13 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
 
     return {
       clearedCount,
-      details: { pendingCleared, runningCleared, userQueuesCleared }
+      details: { pendingCleared, runningCleared, userQueuesCleared },
     }
   } catch (error) {
     console.error('❌ Redis清空失败:', error)
     return {
       clearedCount: 0,
-      details: { pendingCleared: 0, runningCleared: 0, userQueuesCleared: 0 }
+      details: { pendingCleared: 0, runningCleared: 0, userQueuesCleared: 0 },
     }
   }
 }
@@ -1426,4 +1722,3 @@ async function getRedisClient(): Promise<any> {
     return null
   }
 }
-

@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
     const userIdNum = userId
 
     // 获取用户的配置（优先用户配置，其次全局配置）
-    const settings = await db.query(`
+    const settings = (await db.query(
+      `
       SELECT
         category,
         key,
@@ -38,7 +39,9 @@ export async function GET(request: NextRequest) {
       FROM system_settings
       WHERE user_id IS NULL OR user_id = ?
       ORDER BY category, key
-    `, [userIdNum]) as any[]
+    `,
+      [userIdNum]
+    )) as any[]
 
     // 去重：对于同一个 (category, key) 组合，优先使用用户配置
     const settingsMap = new Map<string, any>()
@@ -73,7 +76,8 @@ export async function GET(request: NextRequest) {
             try {
               const decrypted = decrypt(setting.encrypted_value)
               if (decrypted && decrypted.length > 8) {
-                value = decrypted.substring(0, 4) + '****' + decrypted.substring(decrypted.length - 4)
+                value =
+                  decrypted.substring(0, 4) + '****' + decrypted.substring(decrypted.length - 4)
               } else {
                 value = '****'
               }
@@ -111,9 +115,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('导出配置失败:', error)
-    return NextResponse.json(
-      { error: error.message || '导出失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '导出失败' }, { status: 500 })
   }
 }

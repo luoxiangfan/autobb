@@ -30,7 +30,9 @@ async function waitFor(
 describe('UnifiedQueueManager user execution gate', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    mockedEligibility.isUserExecutionSuspendedError.mockImplementation((error: any) => error?.code === 'USER_EXECUTION_SUSPENDED')
+    mockedEligibility.isUserExecutionSuspendedError.mockImplementation(
+      (error: any) => error?.code === 'USER_EXECUTION_SUSPENDED'
+    )
   })
 
   it('fails task without retry when user execution is suspended', async () => {

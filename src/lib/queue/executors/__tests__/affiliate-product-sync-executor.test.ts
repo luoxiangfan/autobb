@@ -50,14 +50,16 @@ vi.mock('@/lib/queue/queue-routing', () => ({
 
 import { executeAffiliateProductSync } from '../affiliate-product-sync-executor'
 
-function createTask(data: Partial<{
-  userId: number
-  platform: 'partnerboost' | 'yeahpromos'
-  mode: 'platform' | 'delta' | 'single'
-  runId: number
-  productId: number
-  trigger: 'manual' | 'retry' | 'schedule'
-}> = {}) {
+function createTask(
+  data: Partial<{
+    userId: number
+    platform: 'partnerboost' | 'yeahpromos'
+    mode: 'platform' | 'delta' | 'single'
+    runId: number
+    productId: number
+    trigger: 'manual' | 'retry' | 'schedule'
+  }> = {}
+) {
   return {
     id: `task-${data.runId || 99}`,
     type: 'affiliate-product-sync',
@@ -381,17 +383,14 @@ describe('affiliate-product-sync executor resume behavior', () => {
   })
 
   it('retries platform sync when PostgreSQL reports recovery mode', async () => {
-    const recoveryError = Object.assign(
-      new Error('the database system is in recovery mode'),
-      { code: '57P03' }
-    )
-    mocks.syncAffiliateProducts
-      .mockRejectedValueOnce(recoveryError)
-      .mockResolvedValueOnce({
-        totalFetched: 10,
-        createdCount: 1,
-        updatedCount: 9,
-      })
+    const recoveryError = Object.assign(new Error('the database system is in recovery mode'), {
+      code: '57P03',
+    })
+    mocks.syncAffiliateProducts.mockRejectedValueOnce(recoveryError).mockResolvedValueOnce({
+      totalFetched: 10,
+      createdCount: 1,
+      updatedCount: 9,
+    })
 
     const task = createTask({
       runId: 505,
@@ -416,13 +415,11 @@ describe('affiliate-product-sync executor resume behavior', () => {
       new Error('write CONNECTION_CLOSED dbprovider.sg-members-1.clawcloudrun.com:32243'),
       { code: 'CONNECTION_CLOSED' }
     )
-    mocks.syncAffiliateProducts
-      .mockRejectedValueOnce(transientError)
-      .mockResolvedValueOnce({
-        totalFetched: 8,
-        createdCount: 1,
-        updatedCount: 7,
-      })
+    mocks.syncAffiliateProducts.mockRejectedValueOnce(transientError).mockResolvedValueOnce({
+      totalFetched: 8,
+      createdCount: 1,
+      updatedCount: 7,
+    })
 
     const task = createTask({
       runId: 506,
@@ -443,17 +440,14 @@ describe('affiliate-product-sync executor resume behavior', () => {
   })
 
   it('retries platform sync when PostgreSQL reports ECONNRESET', async () => {
-    const transientError = Object.assign(
-      new Error('socket hang up: ECONNRESET'),
-      { code: 'ECONNRESET' }
-    )
-    mocks.syncAffiliateProducts
-      .mockRejectedValueOnce(transientError)
-      .mockResolvedValueOnce({
-        totalFetched: 7,
-        createdCount: 2,
-        updatedCount: 5,
-      })
+    const transientError = Object.assign(new Error('socket hang up: ECONNRESET'), {
+      code: 'ECONNRESET',
+    })
+    mocks.syncAffiliateProducts.mockRejectedValueOnce(transientError).mockResolvedValueOnce({
+      totalFetched: 7,
+      createdCount: 2,
+      updatedCount: 5,
+    })
 
     const task = createTask({
       runId: 507,
@@ -474,17 +468,12 @@ describe('affiliate-product-sync executor resume behavior', () => {
   })
 
   it('retries platform sync when PostgreSQL reports ETIMEDOUT', async () => {
-    const transientError = Object.assign(
-      new Error('timeout: ETIMEDOUT'),
-      { code: 'ETIMEDOUT' }
-    )
-    mocks.syncAffiliateProducts
-      .mockRejectedValueOnce(transientError)
-      .mockResolvedValueOnce({
-        totalFetched: 6,
-        createdCount: 1,
-        updatedCount: 5,
-      })
+    const transientError = Object.assign(new Error('timeout: ETIMEDOUT'), { code: 'ETIMEDOUT' })
+    mocks.syncAffiliateProducts.mockRejectedValueOnce(transientError).mockResolvedValueOnce({
+      totalFetched: 6,
+      createdCount: 1,
+      updatedCount: 5,
+    })
 
     const task = createTask({
       runId: 508,

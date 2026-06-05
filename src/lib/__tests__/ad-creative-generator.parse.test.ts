@@ -56,19 +56,29 @@ describe('ad-creative-generator.parseAIResponse', () => {
   })
 
   it('routes runaway MAX_TOKENS failures to the emergency retry path', () => {
-    expect(resolveAdCreativeRetryPlan({
-      code: 'MAX_TOKENS',
-      isRunawayCandidate: true,
-      message: 'Gemini API 输出达到token限制被截断。',
-    }, false)).toEqual({
+    expect(
+      resolveAdCreativeRetryPlan(
+        {
+          code: 'MAX_TOKENS',
+          isRunawayCandidate: true,
+          message: 'Gemini API 输出达到token限制被截断。',
+        },
+        false
+      )
+    ).toEqual({
       mode: 'emergency',
       reason: 'max_tokens_runaway',
     })
 
-    expect(resolveAdCreativeRetryPlan({
-      code: 'MAX_TOKENS',
-      message: 'Gemini API 输出达到token限制被截断。',
-    }, false)).toEqual({
+    expect(
+      resolveAdCreativeRetryPlan(
+        {
+          code: 'MAX_TOKENS',
+          message: 'Gemini API 输出达到token限制被截断。',
+        },
+        false
+      )
+    ).toEqual({
       mode: 'simplified',
       reason: 'max_tokens',
     })
@@ -97,42 +107,47 @@ describe('ad-creative-generator.parseAIResponse', () => {
   })
 
   it('throws when business-limit minimums are missing', () => {
-    expect(() => validateGeneratedAdCreativeBusinessLimits({
-      headlines: ['H1', 'H2', 'H3'],
-      descriptions: ['D1', 'D2'],
-      keywords: ['k1', 'k2', 'k3'],
-      callouts: ['c1'],
-      sitelinks: [{ text: 'Link', url: '/' }],
-      theme: 'Theme',
-      explanation: 'Explanation',
-    })).toThrow('广告创意业务约束未满足')
+    expect(() =>
+      validateGeneratedAdCreativeBusinessLimits({
+        headlines: ['H1', 'H2', 'H3'],
+        descriptions: ['D1', 'D2'],
+        keywords: ['k1', 'k2', 'k3'],
+        callouts: ['c1'],
+        sitelinks: [{ text: 'Link', url: '/' }],
+        theme: 'Theme',
+        explanation: 'Explanation',
+      })
+    ).toThrow('广告创意业务约束未满足')
   })
 
   it('filters transactional+model template keywords for model_intent bucket', () => {
-    const result = filterModelIntentGeneratedKeywords({
-      headlines: Array.from({ length: 15 }, (_, i) => `Headline ${i + 1}`),
-      descriptions: Array.from({ length: 4 }, (_, i) => `Description ${i + 1}`),
-      keywords: [
-        'brandx x200 vacuum',
-        'buy brandx x200 vacuum',
-        'brandx gen 2 ring price',
-        'brandx x300 vacuum',
-        'brandx x400 vacuum',
-        'brandx x500 vacuum',
-        'brandx x600 vacuum',
-        'brandx x700 vacuum',
-        'brandx x800 vacuum',
-        'brandx x900 vacuum',
-      ],
-      callouts: Array.from({ length: 6 }, (_, i) => `Callout ${i + 1}`),
-      sitelinks: Array.from({ length: 6 }, (_, i) => ({
-        text: `Link ${i + 1}`,
-        url: '/',
-        description: `Description ${i + 1}`,
-      })),
-      theme: 'Theme',
-      explanation: 'Explanation',
-    }, 'B')
+    const result = filterModelIntentGeneratedKeywords(
+      {
+        headlines: Array.from({ length: 15 }, (_, i) => `Headline ${i + 1}`),
+        descriptions: Array.from({ length: 4 }, (_, i) => `Description ${i + 1}`),
+        keywords: [
+          'brandx x200 vacuum',
+          'buy brandx x200 vacuum',
+          'brandx gen 2 ring price',
+          'brandx x300 vacuum',
+          'brandx x400 vacuum',
+          'brandx x500 vacuum',
+          'brandx x600 vacuum',
+          'brandx x700 vacuum',
+          'brandx x800 vacuum',
+          'brandx x900 vacuum',
+        ],
+        callouts: Array.from({ length: 6 }, (_, i) => `Callout ${i + 1}`),
+        sitelinks: Array.from({ length: 6 }, (_, i) => ({
+          text: `Link ${i + 1}`,
+          url: '/',
+          description: `Description ${i + 1}`,
+        })),
+        theme: 'Theme',
+        explanation: 'Explanation',
+      },
+      'B'
+    )
 
     expect(result.keywords).toEqual([
       'brandx x200 vacuum',
@@ -218,8 +233,14 @@ describe('ad-creative-generator.parseAIResponse', () => {
 
     const payload = {
       responsive_search_ads: {
-        headlines: Array.from({ length: 16 }, (_, i) => ({ group: 'Test', text: `Headline ${i + 1}` })),
-        descriptions: Array.from({ length: 5 }, (_, i) => ({ group: 'Test', text: `Description ${i + 1}` })),
+        headlines: Array.from({ length: 16 }, (_, i) => ({
+          group: 'Test',
+          text: `Headline ${i + 1}`,
+        })),
+        descriptions: Array.from({ length: 5 }, (_, i) => ({
+          group: 'Test',
+          text: `Description ${i + 1}`,
+        })),
         keywords: ['kw1', 'kw2'],
         callouts: ['Callout 1'],
         sitelinks: [{ text: 'Sitelink 1', url: 'https://example.com', description: 'Desc' }],
@@ -311,8 +332,10 @@ line2", "type": "feature-benefit-cta", "length": 10},
       ...result.descriptions,
       ...(result.callouts || []),
       ...(result.sitelinks || []).map((s) => `${s.text} ${s.description || ''}`),
-      ...result.keywords
-    ].join(' ').toLowerCase()
+      ...result.keywords,
+    ]
+      .join(' ')
+      .toLowerCase()
 
     expect(combinedText).not.toContain('sleep apnea')
     expect(combinedText).not.toContain('diagnos')
@@ -345,7 +368,9 @@ line2", "type": "feature-benefit-cta", "length": 10},
     expect(result.headlines.every((h) => h.length <= 30)).toBe(true)
     expect(result.descriptions.every((d) => d.length <= 90)).toBe(true)
     expect(result.descriptions[0].toLowerCase().endsWith('shop no')).toBe(false)
-    expect(result.headlines[1].split('(').length - 1).toBe(result.headlines[1].split(')').length - 1)
+    expect(result.headlines[1].split('(').length - 1).toBe(
+      result.headlines[1].split(')').length - 1
+    )
   })
 
   it('preserves optional structured metadata fields for auditability', () => {

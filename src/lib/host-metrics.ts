@@ -152,14 +152,15 @@ function parseProcNetDev(text: string | null) {
 }
 
 async function readCgroupV2Sample(): Promise<RawSample | null> {
-  const [cpuStatText, cpuMaxText, memCurrentText, memMaxText, ioStatText, netDevText] = await Promise.all([
-    readFileText('/sys/fs/cgroup/cpu.stat'),
-    readFileText('/sys/fs/cgroup/cpu.max'),
-    readFileText('/sys/fs/cgroup/memory.current'),
-    readFileText('/sys/fs/cgroup/memory.max'),
-    readFileText('/sys/fs/cgroup/io.stat'),
-    readFileText('/proc/net/dev'),
-  ])
+  const [cpuStatText, cpuMaxText, memCurrentText, memMaxText, ioStatText, netDevText] =
+    await Promise.all([
+      readFileText('/sys/fs/cgroup/cpu.stat'),
+      readFileText('/sys/fs/cgroup/cpu.max'),
+      readFileText('/sys/fs/cgroup/memory.current'),
+      readFileText('/sys/fs/cgroup/memory.max'),
+      readFileText('/sys/fs/cgroup/io.stat'),
+      readFileText('/proc/net/dev'),
+    ])
 
   if (!cpuStatText || !memCurrentText) return null
 
@@ -222,7 +223,12 @@ function computeSnapshot(prev: RawSample | null, curr: RawSample): HostMetricsSn
     const quotaCores = curr.cpuQuotaCores || 1
     cpuUsagePct = clampPct((deltaUsec / (intervalSec * 1_000_000 * quotaCores)) * 100)
   }
-  if (prev && curr.cpuThrottledUsec !== null && prev.cpuThrottledUsec !== null && intervalSec !== null) {
+  if (
+    prev &&
+    curr.cpuThrottledUsec !== null &&
+    prev.cpuThrottledUsec !== null &&
+    intervalSec !== null
+  ) {
     const deltaUsec = Math.max(0, curr.cpuThrottledUsec - prev.cpuThrottledUsec)
     throttledPct = clampPct((deltaUsec / (intervalSec * 1_000_000)) * 100)
   }
@@ -392,7 +398,6 @@ class HostMetricsCollector {
 }
 
 declare global {
-   
   var __hostMetricsCollector: HostMetricsCollector | undefined
 }
 

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { getQueueManagerForTaskType, isBackgroundQueueSplitEnabled } from '@/lib/queue/queue-routing'
+import {
+  getQueueManagerForTaskType,
+  isBackgroundQueueSplitEnabled,
+} from '@/lib/queue/queue-routing'
 import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue/unified-queue-manager'
 
 describe('openclaw-strategy queue routing', () => {

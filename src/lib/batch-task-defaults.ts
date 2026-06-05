@@ -39,7 +39,7 @@ export function batchDefaultBalancedHourlyDistribution(): number[] {
   return balanceDistribution(
     BATCH_CLICK_FARM_TASK_DEFAULTS.dailyClickCount,
     BATCH_CLICK_FARM_TASK_DEFAULTS.startTime,
-    BATCH_CLICK_FARM_TASK_DEFAULTS.endTime,
+    BATCH_CLICK_FARM_TASK_DEFAULTS.endTime
   )
 }
 
@@ -49,9 +49,7 @@ function hourlyDistributionsEqual(left: number[], right: number[]): boolean {
   return left.every((value, index) => value === right[index])
 }
 
-function parseRefererType(
-  referer: { type?: string } | string | null | undefined
-): string | null {
+function parseRefererType(referer: { type?: string } | string | null | undefined): string | null {
   if (!referer) return null
   if (typeof referer === 'string') {
     try {
@@ -72,18 +70,16 @@ export function isClickFarmTaskUsingBatchDefaults(task: {
   hourly_distribution: number[] | string | null | undefined
   referer_config?: { type?: string } | string | null
 }): boolean {
-  const hourlyDistribution = Array.isArray(task.hourly_distribution)
-    ? task.hourly_distribution
-    : []
+  const hourlyDistribution = Array.isArray(task.hourly_distribution) ? task.hourly_distribution : []
   const refererType = parseRefererType(task.referer_config)
 
   return (
-    task.daily_click_count === BATCH_CLICK_FARM_TASK_DEFAULTS.dailyClickCount
-    && task.start_time === BATCH_CLICK_FARM_TASK_DEFAULTS.startTime
-    && task.end_time === BATCH_CLICK_FARM_TASK_DEFAULTS.endTime
-    && task.duration_days === BATCH_CLICK_FARM_TASK_DEFAULTS.durationDays
-    && hourlyDistributionsEqual(hourlyDistribution, batchDefaultBalancedHourlyDistribution())
-    && (refererType === null || refererType === 'none')
+    task.daily_click_count === BATCH_CLICK_FARM_TASK_DEFAULTS.dailyClickCount &&
+    task.start_time === BATCH_CLICK_FARM_TASK_DEFAULTS.startTime &&
+    task.end_time === BATCH_CLICK_FARM_TASK_DEFAULTS.endTime &&
+    task.duration_days === BATCH_CLICK_FARM_TASK_DEFAULTS.durationDays &&
+    hourlyDistributionsEqual(hourlyDistribution, batchDefaultBalancedHourlyDistribution()) &&
+    (refererType === null || refererType === 'none')
   )
 }
 
@@ -92,11 +88,13 @@ export function isUrlSwapTaskUsingBatchDefaults(task: {
   swap_interval_minutes: number
   duration_days: number
 }): boolean {
-  const swapMode = String(task.swap_mode || '').trim().toLowerCase()
+  const swapMode = String(task.swap_mode || '')
+    .trim()
+    .toLowerCase()
   return (
-    swapMode === BATCH_URL_SWAP_TASK_DEFAULTS.swapMode
-    && task.swap_interval_minutes === BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes
-    && task.duration_days === BATCH_URL_SWAP_TASK_DEFAULTS.durationDays
+    swapMode === BATCH_URL_SWAP_TASK_DEFAULTS.swapMode &&
+    task.swap_interval_minutes === BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes &&
+    task.duration_days === BATCH_URL_SWAP_TASK_DEFAULTS.durationDays
   )
 }
 

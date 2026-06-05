@@ -24,7 +24,7 @@ interface GoogleAdsAccount {
   manager: boolean
   testAccount: boolean
   status: string
-  accountBalance?: number | null  // 账户预算余额（单位：微货币，即实际金额×1,000,000）
+  accountBalance?: number | null // 账户预算余额（单位：微货币，即实际金额×1,000,000）
   parentMcc?: string
   parentMccName?: string
   identityVerification?: {
@@ -96,7 +96,7 @@ export default function GoogleAdsPage() {
   const [error, setError] = useState('')
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [success, setSuccess] = useState('')
-  const [needsReauth, setNeedsReauth] = useState(false)  // 是否需要重新授权
+  const [needsReauth, setNeedsReauth] = useState(false) // 是否需要重新授权
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [expandedOffers, setExpandedOffers] = useState<Set<string>>(new Set())
@@ -308,9 +308,7 @@ export default function GoogleAdsPage() {
 
       if (!response.ok) {
         const errorData = await safeReadJson(response)
-        throw new Error(
-          buildGoogleAdsApiErrorMessage(response, errorData, '获取凭证状态失败')
-        )
+        throw new Error(buildGoogleAdsApiErrorMessage(response, errorData, '获取凭证状态失败'))
       }
 
       const data = await response.json()
@@ -416,7 +414,11 @@ export default function GoogleAdsPage() {
       account.identityVerification.programStatus !== 'SUCCESS' &&
       status === 'ENABLED'
     ) {
-      return { key: 'VERIFICATION_REQUIRED', label: '需验证', color: 'bg-orange-100 text-orange-800' }
+      return {
+        key: 'VERIFICATION_REQUIRED',
+        label: '需验证',
+        color: 'bg-orange-100 text-orange-800',
+      }
     }
 
     switch (status) {
@@ -439,7 +441,11 @@ export default function GoogleAdsPage() {
       case 'CLOSED':
         return { key: 'CLOSED', label: '已关闭', color: 'bg-gray-100 text-gray-800' }
       default:
-        return { key: status || 'UNKNOWN', label: status || '未知', color: 'bg-gray-100 text-gray-600' }
+        return {
+          key: status || 'UNKNOWN',
+          label: status || '未知',
+          color: 'bg-gray-100 text-gray-600',
+        }
     }
   }
 
@@ -476,7 +482,9 @@ export default function GoogleAdsPage() {
   }, new Map())
 
   if (statusFilter !== 'ALL' && !statusOptionsMap.has(statusFilter)) {
-    const selectedStatusAccount = accounts.find((account) => getStatusConfig(account).key === statusFilter)
+    const selectedStatusAccount = accounts.find(
+      (account) => getStatusConfig(account).key === statusFilter
+    )
     const selectedStatusLabel = selectedStatusAccount
       ? getStatusConfig(selectedStatusAccount).label
       : statusFilter
@@ -636,8 +644,18 @@ export default function GoogleAdsPage() {
             <div className="mb-4 bg-red-50 border-2 border-red-500 rounded-lg p-6">
               <div className="flex items-start">
                 <div className="shrink-0">
-                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <svg
+                    className="h-6 w-6 text-red-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
                   </svg>
                 </div>
                 <div className="ml-3 flex-1">
@@ -645,7 +663,8 @@ export default function GoogleAdsPage() {
                     ⚠️ Google OAuth 授权已过期
                   </h3>
                   <p className="text-sm text-red-700 mb-4">
-                    您的 Google Ads API 授权已失效。这通常是因为 OAuth refresh token 已过期、被撤销或 Google 账号密码已修改。
+                    您的 Google Ads API 授权已失效。这通常是因为 OAuth refresh token
+                    已过期、被撤销或 Google 账号密码已修改。
                   </p>
                   <div className="bg-white border border-red-200 rounded p-4 mb-4">
                     <p className="text-sm font-semibold text-gray-800 mb-2">解决方法：</p>
@@ -662,8 +681,18 @@ export default function GoogleAdsPage() {
                       href="/settings"
                       className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
-                      <svg className="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      <svg
+                        className="mr-2 h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                        />
                       </svg>
                       立即重新授权
                     </a>
@@ -715,13 +744,20 @@ export default function GoogleAdsPage() {
 
           {!isConfigured && (
             <div className="mb-6 bg-amber-50 border border-amber-200 rounded-md p-4">
-              <p className="text-sm text-amber-800 font-semibold mb-2">⚠️ 未完成 Google Ads API 配置</p>
+              <p className="text-sm text-amber-800 font-semibold mb-2">
+                ⚠️ 未完成 Google Ads API 配置
+              </p>
               <p className="text-sm text-amber-700 mb-3">
                 使用 Google Ads 功能前，需要完成以下配置之一：
               </p>
               <ol className="text-sm text-amber-700 list-decimal list-inside space-y-1 mb-3">
-                <li><strong>OAuth 模式</strong>: 在系统设置中填写所有 Google Ads API 必填参数，并完成 OAuth 授权</li>
-                <li><strong>服务账号模式</strong>: 在服务账号配置中添加有效的服务账号凭证</li>
+                <li>
+                  <strong>OAuth 模式</strong>: 在系统设置中填写所有 Google Ads API 必填参数，并完成
+                  OAuth 授权
+                </li>
+                <li>
+                  <strong>服务账号模式</strong>: 在服务账号配置中添加有效的服务账号凭证
+                </li>
               </ol>
               <div className="flex gap-3">
                 <a
@@ -747,13 +783,15 @@ export default function GoogleAdsPage() {
                   <h2 className="text-xl font-semibold text-gray-900">可访问的账户</h2>
                   {lastSyncAt && (
                     <p className="text-sm text-gray-500 mt-1">
-                      {isCached ? '缓存数据' : '已刷新'} · 同步时间: {new Date(lastSyncAt).toLocaleString('zh-CN')}
+                      {isCached ? '缓存数据' : '已刷新'} · 同步时间:{' '}
+                      {new Date(lastSyncAt).toLocaleString('zh-CN')}
                     </p>
                   )}
                 </div>
                 {accounts.length > 0 && (
                   <span className="text-base text-gray-600 font-medium">
-                    显示 {sortedAccounts.length} / {accounts.length} 个账户（可发布 {publishableAccountsCount} 个）
+                    显示 {sortedAccounts.length} / {accounts.length} 个账户（可发布{' '}
+                    {publishableAccountsCount} 个）
                   </span>
                 )}
               </div>
@@ -762,20 +800,26 @@ export default function GoogleAdsPage() {
                 <div className="mb-4 bg-white shadow-sm rounded-lg p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-end">
                     <div className="w-full md:flex-1">
-                      <label htmlFor="ads-account-search" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label
+                        htmlFor="ads-account-search"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
                         搜索账号
                       </label>
-                        <input
-                          id="ads-account-search"
-                          type="text"
-                          value={searchKeyword}
-                          onChange={(e) => setSearchKeyword(e.target.value)}
-                          placeholder="按账户名称 / Customer ID 搜索"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                        />
+                      <input
+                        id="ads-account-search"
+                        type="text"
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        placeholder="按账户名称 / Customer ID 搜索"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                      />
                     </div>
                     <div className="w-full md:w-56">
-                      <label htmlFor="ads-account-status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label
+                        htmlFor="ads-account-status-filter"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
                         状态筛选
                       </label>
                       <select
@@ -817,14 +861,14 @@ export default function GoogleAdsPage() {
                     />
                   </svg>
                   <h3 className="mt-2 text-sm font-medium text-gray-900">未找到可访问的账户</h3>
-                  <p className="mt-1 text-sm text-gray-500">您的 Google 账号可能没有关联任何 Google Ads 账户</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    您的 Google 账号可能没有关联任何 Google Ads 账户
+                  </p>
                 </div>
               ) : sortedAccounts.length === 0 ? (
                 <div className="bg-white shadow-sm rounded-lg p-8 text-center">
                   <h3 className="text-base font-medium text-gray-900">没有匹配的账户</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    请调整搜索关键词或状态筛选条件后重试
-                  </p>
+                  <p className="mt-1 text-sm text-gray-500">请调整搜索关键词或状态筛选条件后重试</p>
                   <button
                     onClick={() => {
                       setSearchKeyword('')
@@ -959,12 +1003,14 @@ export default function GoogleAdsPage() {
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              {account.accountBalance !== null && account.accountBalance !== undefined ? (
+                              {account.accountBalance !== null &&
+                              account.accountBalance !== undefined ? (
                                 <div className="text-sm">
                                   <div className="font-medium text-gray-900">
-                                    {account.currencyCode} {(account.accountBalance / 1000000).toLocaleString('zh-CN', {
+                                    {account.currencyCode}{' '}
+                                    {(account.accountBalance / 1000000).toLocaleString('zh-CN', {
                                       minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2
+                                      maximumFractionDigits: 2,
                                     })}
                                   </div>
                                   <div className="text-xs text-gray-500">预算余额</div>
@@ -977,7 +1023,9 @@ export default function GoogleAdsPage() {
                               {(() => {
                                 const config = getStatusConfig(account)
                                 return (
-                                  <span className={`px-2 py-1 text-sm font-semibold rounded-full ${config.color}`}>
+                                  <span
+                                    className={`px-2 py-1 text-sm font-semibold rounded-full ${config.color}`}
+                                  >
                                     {config.label}
                                   </span>
                                 )
@@ -1049,7 +1097,8 @@ export default function GoogleAdsPage() {
                           <span>条</span>
                         </div>
                         <div>
-                          显示第 {startIndex + 1} - {Math.min(endIndex, sortedAccounts.length)} 条，共 {sortedAccounts.length} 条
+                          显示第 {startIndex + 1} - {Math.min(endIndex, sortedAccounts.length)}{' '}
+                          条，共 {sortedAccounts.length} 条
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1120,10 +1169,15 @@ export default function GoogleAdsPage() {
             <p className="font-semibold">使用说明：</p>
             <ul className="mt-2 text-sm space-y-1">
               <li>
-                • <strong>配置要求</strong>: 在 <a href="/settings" className="underline text-indigo-600 hover:text-indigo-800">系统设置</a> 中完成 Google Ads API 所有必填参数配置，并完成 OAuth 授权
+                • <strong>配置要求</strong>: 在{' '}
+                <a href="/settings" className="underline text-indigo-600 hover:text-indigo-800">
+                  系统设置
+                </a>{' '}
+                中完成 Google Ads API 所有必填参数配置，并完成 OAuth 授权
               </li>
               <li>
-                • <strong>MCC 账户</strong>: 配置您的 MCC（Manager Account）ID，系统将自动获取您管理的所有子账户
+                • <strong>MCC 账户</strong>: 配置您的 MCC（Manager
+                Account）ID，系统将自动获取您管理的所有子账户
               </li>
               <li>
                 • <strong>所属 MCC</strong>: 显示该账户归属的 MCC 管理账户名称和 ID

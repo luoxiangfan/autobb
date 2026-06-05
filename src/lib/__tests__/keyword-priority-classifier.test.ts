@@ -6,19 +6,14 @@ import {
   classifyKeywordPriority,
   validatePriorityDistribution,
   suggestKeywordsForMissingPriority,
-  generatePriorityDistributionSummary
+  generatePriorityDistributionSummary,
 } from '../keyword-priority-classifier'
 import { mockKeywords, mockOffers } from './test-utils'
 
 describe('KeywordPriorityClassifier', () => {
   describe('classifyKeywordPriority', () => {
     it('should classify Brand keywords correctly', () => {
-      const keywords = [
-        'eufy',
-        'eufy robot vacuum',
-        'eufy official',
-        'eufy store'
-      ]
+      const keywords = ['eufy', 'eufy robot vacuum', 'eufy official', 'eufy store']
 
       for (const keyword of keywords) {
         const result = classifyKeywordPriority(keyword, mockOffers.eufy)
@@ -28,12 +23,7 @@ describe('KeywordPriorityClassifier', () => {
     })
 
     it('should classify Core keywords correctly', () => {
-      const keywords = [
-        'robot vacuum',
-        'smart vacuum',
-        'automated cleaning',
-        'robot cleaner'
-      ]
+      const keywords = ['robot vacuum', 'smart vacuum', 'automated cleaning', 'robot cleaner']
 
       for (const keyword of keywords) {
         const result = classifyKeywordPriority(keyword)
@@ -46,7 +36,7 @@ describe('KeywordPriorityClassifier', () => {
         'best robot vacuum',
         'cheap robot vacuum',
         'affordable robot vacuum',
-        'robot vacuum for pets'
+        'robot vacuum for pets',
       ]
 
       for (const keyword of keywords) {
@@ -60,7 +50,7 @@ describe('KeywordPriorityClassifier', () => {
         'best robot vacuum for pet hair',
         'robot vacuum with app control',
         'quiet robot vacuum for small apartments',
-        'robot vacuum with mopping'
+        'robot vacuum with mopping',
       ]
 
       for (const keyword of keywords) {
@@ -125,13 +115,10 @@ describe('KeywordPriorityClassifier', () => {
     })
 
     it('should detect excess priorities', () => {
-      const excessKeywords = [
-        ...mockKeywords.complete,
-        ...mockKeywords.complete.slice(0, 5)
-      ]
+      const excessKeywords = [...mockKeywords.complete, ...mockKeywords.complete.slice(0, 5)]
       const report = validatePriorityDistribution(excessKeywords, mockOffers.eufy)
       if (report.excess.length > 0) {
-        expect(report.recommendations.some(r => r.includes('Too many'))).toBe(true)
+        expect(report.recommendations.some((r) => r.includes('Too many'))).toBe(true)
       }
     })
 
@@ -150,7 +137,10 @@ describe('KeywordPriorityClassifier', () => {
     })
 
     it('should handle single keyword', () => {
-      const report = validatePriorityDistribution([{ keyword: 'eufy', searchVolume: 5000 }], mockOffers.eufy)
+      const report = validatePriorityDistribution(
+        [{ keyword: 'eufy', searchVolume: 5000 }],
+        mockOffers.eufy
+      )
       expect(report.details.length).toBe(1)
     })
 
@@ -182,26 +172,38 @@ describe('KeywordPriorityClassifier', () => {
     })
 
     it('should suggest LongTail keywords', () => {
-      const suggestions = suggestKeywordsForMissingPriority(['LongTail'], 'Eufy', 'Robot Vacuum', ['4K', 'Battery'])
+      const suggestions = suggestKeywordsForMissingPriority(['LongTail'], 'Eufy', 'Robot Vacuum', [
+        '4K',
+        'Battery',
+      ])
       expect(suggestions.LongTail.length).toBeGreaterThan(0)
       expect(suggestions.LongTail[0].split(' ').length).toBeGreaterThanOrEqual(4)
     })
 
     it('should suggest multiple missing priorities', () => {
-      const suggestions = suggestKeywordsForMissingPriority(['Brand', 'Core', 'Intent'], 'Eufy', 'Robot Vacuum')
+      const suggestions = suggestKeywordsForMissingPriority(
+        ['Brand', 'Core', 'Intent'],
+        'Eufy',
+        'Robot Vacuum'
+      )
       expect(suggestions.Brand.length).toBeGreaterThan(0)
       expect(suggestions.Core.length).toBeGreaterThan(0)
       expect(suggestions.Intent.length).toBeGreaterThan(0)
     })
 
     it('should include product features in suggestions', () => {
-      const suggestions = suggestKeywordsForMissingPriority(['LongTail'], 'Eufy', 'Robot Vacuum', ['4K', 'Battery'])
-      expect(suggestions.LongTail.some(kw => kw.includes('4K') || kw.includes('Battery'))).toBe(true)
+      const suggestions = suggestKeywordsForMissingPriority(['LongTail'], 'Eufy', 'Robot Vacuum', [
+        '4K',
+        'Battery',
+      ])
+      expect(suggestions.LongTail.some((kw) => kw.includes('4K') || kw.includes('Battery'))).toBe(
+        true
+      )
     })
 
     it('should handle empty missing priorities', () => {
       const suggestions = suggestKeywordsForMissingPriority([], 'Eufy', 'Robot Vacuum')
-      expect(Object.values(suggestions).every(arr => arr.length === 0)).toBe(true)
+      expect(Object.values(suggestions).every((arr) => arr.length === 0)).toBe(true)
     })
   })
 
@@ -287,11 +289,7 @@ describe('KeywordPriorityClassifier', () => {
     })
 
     it('should handle mixed case keywords', () => {
-      const keywords = [
-        'ROBOT VACUUM',
-        'robot vacuum',
-        'Robot Vacuum'
-      ]
+      const keywords = ['ROBOT VACUUM', 'robot vacuum', 'Robot Vacuum']
 
       for (const keyword of keywords) {
         const result = classifyKeywordPriority(keyword)
@@ -320,7 +318,7 @@ describe('KeywordPriorityClassifier', () => {
     it('should handle large keyword sets', () => {
       const largeKeywordSet = Array.from({ length: 100 }, (_, i) => ({
         keyword: `keyword ${i}`,
-        searchVolume: Math.random() * 5000
+        searchVolume: Math.random() * 5000,
       }))
 
       const start = performance.now()

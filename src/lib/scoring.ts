@@ -7,12 +7,10 @@ import type { AdCreative, HeadlineAsset, DescriptionAsset } from './ad-creative'
 import {
   evaluateAdStrength,
   type AdStrengthEvaluation,
-  type AdStrengthRating
+  type AdStrengthRating,
 } from './ad-strength-evaluator'
 import type { CanonicalCreativeType } from './creative-type'
-import {
-  validateExcellentStandard
-} from './google-ads-strength-api'
+import { validateExcellentStandard } from './google-ads-strength-api'
 import { detectAmazonPageTypeFromUrl } from './amazon-url-utils'
 import {
   buildUntrustedInputGuardrail,
@@ -113,9 +111,13 @@ export async function calculateLaunchScore(
   scoreAnalysis: ScoreAnalysis
 }> {
   try {
-    const resolvedPageType = offer.page_type === 'store' || offer.page_type === 'product'
-      ? offer.page_type
-      : (detectAmazonPageTypeFromUrl(creative.final_url || offer.final_url || offer.url || '') === 'store' ? 'store' : 'product')
+    const resolvedPageType =
+      offer.page_type === 'store' || offer.page_type === 'product'
+        ? offer.page_type
+        : detectAmazonPageTypeFromUrl(creative.final_url || offer.final_url || offer.url || '') ===
+            'store'
+          ? 'store'
+          : 'product'
 
     // 🎯 获取创意中的关键词数据
     const creativeKeywords = creative.keywords || []
@@ -126,25 +128,28 @@ export async function calculateLaunchScore(
     console.log(`[LaunchScore] 创意ID: ${(creative as any).id || 'N/A'}`)
     console.log(`[LaunchScore] 否定关键词数量: ${negativeKeywords.length}`)
     console.log(`[LaunchScore] 否定关键词示例: ${negativeKeywords.slice(0, 5).join(', ')}`)
-    console.log(`[LaunchScore] creative.negativeKeywords存在: ${!!(creative as any).negativeKeywords}`)
+    console.log(
+      `[LaunchScore] creative.negativeKeywords存在: ${!!(creative as any).negativeKeywords}`
+    )
     console.log(`[LaunchScore] creative完整字段: ${Object.keys(creative).join(', ')}`)
 
     // 🎯 计算品牌词搜索量（从keywordsWithVolume中提取品牌相关词）
     const brandKeywords = keywordsWithVolume.filter((kw: any) =>
       kw.keyword?.toLowerCase().includes(offer.brand?.toLowerCase() || '')
     )
-    const brandSearchVolume = brandKeywords.length > 0
-      ? Math.max(...brandKeywords.map((kw: any) => kw.searchVolume || 0))
-      : 0
-    const brandCompetition = brandKeywords.length > 0
-      ? brandKeywords[0]?.competition || 'MEDIUM'
-      : 'MEDIUM'
+    const brandSearchVolume =
+      brandKeywords.length > 0
+        ? Math.max(...brandKeywords.map((kw: any) => kw.searchVolume || 0))
+        : 0
+    const brandCompetition =
+      brandKeywords.length > 0 ? brandKeywords[0]?.competition || 'MEDIUM' : 'MEDIUM'
 
     // 🎯 计算投放可行性评估（基于用户配置，不依赖Offer可选字段）
     // 评估预算是否合理（CPC vs 预算比例）
     const budgetAmount = campaignConfig?.budgetAmount || 10
     const maxCpcBid = campaignConfig?.maxCpcBid || 0.17
-    const campaignCurrencyCode = normalizeCurrencyCode(campaignConfig?.currencyCode || USD_BASE_CURRENCY) || USD_BASE_CURRENCY
+    const campaignCurrencyCode =
+      normalizeCurrencyCode(campaignConfig?.currencyCode || USD_BASE_CURRENCY) || USD_BASE_CURRENCY
     const dailyBudget = budgetAmount
 
     // 预算合理性评估：日预算应该支持足够的点击数
@@ -158,9 +163,8 @@ export async function calculateLaunchScore(
     // 🎯 计算标题多样性
     const headlines = creative.headlines || []
     const uniqueHeadlines = new Set(headlines.map((h: string) => h.toLowerCase().trim()))
-    const headlineDiversity = headlines.length > 0
-      ? Math.round((uniqueHeadlines.size / headlines.length) * 100)
-      : 0
+    const headlineDiversity =
+      headlines.length > 0 ? Math.round((uniqueHeadlines.size / headlines.length) * 100) : 0
 
     // 🎯 获取Ad Strength（优先使用已有的，否则评估）
     let adStrength: AdStrengthRating = 'AVERAGE'
@@ -181,8 +185,14 @@ export async function calculateLaunchScore(
       }
 
       // 快速评估Ad Strength（传递品牌信息）
-      const headlineAssets: HeadlineAsset[] = headlines.map((h: string) => ({ text: h, length: h.length }))
-      const descAssets: DescriptionAsset[] = creative.descriptions.map((d: string) => ({ text: d, length: d.length }))
+      const headlineAssets: HeadlineAsset[] = headlines.map((h: string) => ({
+        text: h,
+        length: h.length,
+      }))
+      const descAssets: DescriptionAsset[] = creative.descriptions.map((d: string) => ({
+        text: d,
+        length: d.length,
+      }))
       adStrength = await getQuickAdStrength(headlineAssets, descAssets, creativeKeywords, {
         brandName: offer.brand || undefined,
         targetCountry: offer.target_country || undefined,
@@ -196,12 +206,16 @@ export async function calculateLaunchScore(
     }
 
     // 🎯 准备关键词搜索量文本（包含matchType信息）
-    const keywordsWithVolumeText = keywordsWithVolume.length > 0
-      ? keywordsWithVolume.slice(0, 15).map((kw: any) => {
-          const matchType = kw.matchType || 'PHRASE'
-          return `- ${kw.keyword} (${matchType}): ${kw.searchVolume || 0}/月, 竞争度:${kw.competition || '未知'}`
-        }).join('\n')
-      : '暂无关键词搜索量数据'
+    const keywordsWithVolumeText =
+      keywordsWithVolume.length > 0
+        ? keywordsWithVolume
+            .slice(0, 15)
+            .map((kw: any) => {
+              const matchType = kw.matchType || 'PHRASE'
+              return `- ${kw.keyword} (${matchType}): ${kw.searchVolume || 0}/月, 竞争度:${kw.competition || '未知'}`
+            })
+            .join('\n')
+        : '暂无关键词搜索量数据'
 
     // 🔥 新增(2025-12-18)：检查keywordsWithVolume中是否有competition数据
     const keywordsWithCompetition = keywordsWithVolume.filter((kw: any) => kw.competition)
@@ -209,19 +223,22 @@ export async function calculateLaunchScore(
     console.log(`   - 总关键词数: ${keywordsWithVolume.length}`)
     console.log(`   - 有competition数据的关键词: ${keywordsWithCompetition.length}`)
     if (keywordsWithVolume.length > 0) {
-      console.log(`   - 第一个关键词的competition: ${keywordsWithVolume[0].competition || '(缺失)'}`)
+      console.log(
+        `   - 第一个关键词的competition: ${keywordsWithVolume[0].competition || '(缺失)'}`
+      )
       console.log(`   - 第一个关键词的完整字段: ${JSON.stringify(keywordsWithVolume[0])}`)
     }
 
     // 🎯 计算匹配类型分布
     const matchTypes: Record<string, number> = {}
     keywordsWithVolume.forEach((kw: any) => {
-      const type = kw.matchType || 'PHRASE'  // 缺失matchType时按PHRASE统计，避免误判为BROAD
+      const type = kw.matchType || 'PHRASE' // 缺失matchType时按PHRASE统计，避免误判为BROAD
       matchTypes[type] = (matchTypes[type] || 0) + 1
     })
-    const matchTypeDistribution = Object.entries(matchTypes)
-      .map(([type, count]) => `${type}: ${count}`)
-      .join(', ') || 'Not specified'
+    const matchTypeDistribution =
+      Object.entries(matchTypes)
+        .map(([type, count]) => `${type}: ${count}`)
+        .join(', ') || 'Not specified'
 
     // 🔥 新增(2025-12-18)：调试日志 - 追踪匹配类型分布
     console.log(`[LaunchScore] 关键词匹配类型分布:`)
@@ -235,7 +252,9 @@ export async function calculateLaunchScore(
 
     // 🔥 新增：调试日志 - 追踪prompt中的否定关键词
     console.log(`[LaunchScore] 准备替换到prompt中的否定关键词数量: ${negativeKeywords.length}`)
-    console.log(`[LaunchScore] 否定关键词内容: ${negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE'}`)
+    console.log(
+      `[LaunchScore] 否定关键词内容: ${negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE'}`
+    )
 
     // 📦 加载 Launch Score prompt（放在 Ad Strength 之后，已有 ad_strength 时可跳过）
     const promptTemplate = await loadPrompt('launch_score')
@@ -273,14 +292,18 @@ export async function calculateLaunchScore(
       budget: sanitizePromptInlineValue(
         reviewedInputs,
         'launch_score_budget',
-        campaignConfig?.budgetAmount ? `${campaignConfig.budgetAmount} ${campaignCurrencyCode}/day` : `10 ${campaignCurrencyCode}/day`,
+        campaignConfig?.budgetAmount
+          ? `${campaignConfig.budgetAmount} ${campaignCurrencyCode}/day`
+          : `10 ${campaignCurrencyCode}/day`,
         60,
         '10/day'
       ),
       maxCpc: sanitizePromptInlineValue(
         reviewedInputs,
         'launch_score_max_cpc',
-        campaignConfig?.maxCpcBid ? `${campaignConfig.maxCpcBid} ${campaignCurrencyCode}` : `0.17 ${campaignCurrencyCode}`,
+        campaignConfig?.maxCpcBid
+          ? `${campaignConfig.maxCpcBid} ${campaignCurrencyCode}`
+          : `0.17 ${campaignCurrencyCode}`,
         60,
         '0.17'
       ),
@@ -291,14 +314,14 @@ export async function calculateLaunchScore(
         240,
         'Unavailable'
       ),
-      'budget合理性': sanitizePromptInlineValue(
+      budget合理性: sanitizePromptInlineValue(
         reviewedInputs,
         'launch_score_budget_reasonable',
         isBudgetReasonable ? 'Reasonable' : 'Low',
         20,
         'Low'
       ),
-      'cpc合理性': sanitizePromptInlineValue(
+      cpc合理性: sanitizePromptInlineValue(
         reviewedInputs,
         'launch_score_cpc_reasonable',
         isCpcReasonable ? 'Reasonable' : 'High',
@@ -381,12 +404,15 @@ export async function calculateLaunchScore(
     })
 
     // 🤖 调用AI评分
-    const aiResponse = await generateContent({
-      operationType: 'launch_score_calculation',
-      prompt,
-      temperature: 0.5,
-      maxOutputTokens: 8192,
-    }, userId)
+    const aiResponse = await generateContent(
+      {
+        operationType: 'launch_score_calculation',
+        prompt,
+        temperature: 0.5,
+        maxOutputTokens: 8192,
+      },
+      userId
+    )
 
     // 记录token使用
     if (aiResponse.usage) {
@@ -403,7 +429,7 @@ export async function calculateLaunchScore(
         outputTokens: aiResponse.usage.outputTokens,
         totalTokens: aiResponse.usage.totalTokens,
         cost,
-        apiType: aiResponse.apiType
+        apiType: aiResponse.apiType,
       })
     }
 
@@ -422,10 +448,16 @@ export async function calculateLaunchScore(
     const rawAnalysis = JSON.parse(jsonString) as ScoreAnalysis
 
     // 验证必需字段存在
-    if (!rawAnalysis.launchViability || !rawAnalysis.adQuality ||
-        !rawAnalysis.keywordStrategy || !rawAnalysis.basicConfig) {
+    if (
+      !rawAnalysis.launchViability ||
+      !rawAnalysis.adQuality ||
+      !rawAnalysis.keywordStrategy ||
+      !rawAnalysis.basicConfig
+    ) {
       console.error('AI返回的JSON结构不完整:', JSON.stringify(rawAnalysis, null, 2))
-      throw new Error(`AI返回的JSON缺少必需的分析字段。已有字段: ${Object.keys(rawAnalysis).join(', ')}`)
+      throw new Error(
+        `AI返回的JSON缺少必需的分析字段。已有字段: ${Object.keys(rawAnalysis).join(', ')}`
+      )
     }
 
     // 🔥 调试日志 - v4.16: 显示所有4个维度的评分（版本由prompt_loader自动确定）
@@ -438,7 +470,9 @@ export async function calculateLaunchScore(
     console.log(`   - 竞争度级别: ${rawAnalysis.launchViability.competitionLevel}`)
 
     console.log(`[LaunchScore] 2️⃣ 广告质量: ${rawAnalysis.adQuality.score}/30`)
-    console.log(`   - Ad Strength得分: ${rawAnalysis.adQuality.adStrengthScore}/15 (${rawAnalysis.adQuality.adStrength})`)
+    console.log(
+      `   - Ad Strength得分: ${rawAnalysis.adQuality.adStrengthScore}/15 (${rawAnalysis.adQuality.adStrength})`
+    )
     console.log(`   - 标题多样性得分: ${rawAnalysis.adQuality.headlineDiversityScore}/8`)
     console.log(`   - 描述质量得分: ${rawAnalysis.adQuality.descriptionQualityScore}/7`)
 
@@ -468,23 +502,44 @@ export async function calculateLaunchScore(
     validateScoresV4(rawAnalysis)
 
     // 🎯 补充缺失数据
-    rawAnalysis.launchViability.brandSearchVolume = rawAnalysis.launchViability.brandSearchVolume || brandSearchVolume
+    rawAnalysis.launchViability.brandSearchVolume =
+      rawAnalysis.launchViability.brandSearchVolume || brandSearchVolume
     // v4.15: 确保新增字段有默认值
-    rawAnalysis.launchViability.marketPotentialScore = rawAnalysis.launchViability.marketPotentialScore ?? 0
+    rawAnalysis.launchViability.marketPotentialScore =
+      rawAnalysis.launchViability.marketPotentialScore ?? 0
     // 修复(2025-12-19): 如果AI返回无效值或为空，用本地计算的值覆盖
-    rawAnalysis.adQuality.adStrength = (!rawAnalysis.adQuality.adStrength || !['POOR', 'AVERAGE', 'GOOD', 'EXCELLENT', 'PENDING'].includes(rawAnalysis.adQuality.adStrength)) ? adStrength as 'POOR' | 'AVERAGE' | 'GOOD' | 'EXCELLENT' : rawAnalysis.adQuality.adStrength
-    rawAnalysis.launchViability.competitionLevel = (!rawAnalysis.launchViability.competitionLevel || !['LOW', 'MEDIUM', 'HIGH'].includes(rawAnalysis.launchViability.competitionLevel)) ? brandCompetition : rawAnalysis.launchViability.competitionLevel
-    rawAnalysis.adQuality.headlineDiversity = rawAnalysis.adQuality.headlineDiversity || headlineDiversity
-    rawAnalysis.keywordStrategy.totalKeywords = rawAnalysis.keywordStrategy.totalKeywords || creativeKeywords.length
-    rawAnalysis.keywordStrategy.negativeKeywordsCount = rawAnalysis.keywordStrategy.negativeKeywordsCount || negativeKeywords.length
-    rawAnalysis.basicConfig.targetCountry = rawAnalysis.basicConfig.targetCountry || offer.target_country
-    rawAnalysis.basicConfig.targetLanguage = rawAnalysis.basicConfig.targetLanguage || offer.target_language || 'English'
+    rawAnalysis.adQuality.adStrength =
+      !rawAnalysis.adQuality.adStrength ||
+      !['POOR', 'AVERAGE', 'GOOD', 'EXCELLENT', 'PENDING'].includes(
+        rawAnalysis.adQuality.adStrength
+      )
+        ? (adStrength as 'POOR' | 'AVERAGE' | 'GOOD' | 'EXCELLENT')
+        : rawAnalysis.adQuality.adStrength
+    rawAnalysis.launchViability.competitionLevel =
+      !rawAnalysis.launchViability.competitionLevel ||
+      !['LOW', 'MEDIUM', 'HIGH'].includes(rawAnalysis.launchViability.competitionLevel)
+        ? brandCompetition
+        : rawAnalysis.launchViability.competitionLevel
+    rawAnalysis.adQuality.headlineDiversity =
+      rawAnalysis.adQuality.headlineDiversity || headlineDiversity
+    rawAnalysis.keywordStrategy.totalKeywords =
+      rawAnalysis.keywordStrategy.totalKeywords || creativeKeywords.length
+    rawAnalysis.keywordStrategy.negativeKeywordsCount =
+      rawAnalysis.keywordStrategy.negativeKeywordsCount || negativeKeywords.length
+    rawAnalysis.basicConfig.targetCountry =
+      rawAnalysis.basicConfig.targetCountry || offer.target_country
+    rawAnalysis.basicConfig.targetLanguage =
+      rawAnalysis.basicConfig.targetLanguage || offer.target_language || 'English'
     rawAnalysis.basicConfig.finalUrl = rawAnalysis.basicConfig.finalUrl || creative.final_url || ''
-    rawAnalysis.basicConfig.dailyBudget = rawAnalysis.basicConfig.dailyBudget || campaignConfig?.budgetAmount || 10
-    rawAnalysis.basicConfig.maxCpc = rawAnalysis.basicConfig.maxCpc || campaignConfig?.maxCpcBid || 0.17
-    ;(rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string }).currencyCode =
-      (rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string }).currencyCode
-      || campaignCurrencyCode
+    rawAnalysis.basicConfig.dailyBudget =
+      rawAnalysis.basicConfig.dailyBudget || campaignConfig?.budgetAmount || 10
+    rawAnalysis.basicConfig.maxCpc =
+      rawAnalysis.basicConfig.maxCpc || campaignConfig?.maxCpcBid || 0.17
+    ;(
+      rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string }
+    ).currencyCode =
+      (rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string })
+        .currencyCode || campaignCurrencyCode
 
     // 🎯 计算总分
     const totalScore =
@@ -502,7 +557,7 @@ export async function calculateLaunchScore(
         basicConfig: rawAnalysis.basicConfig,
       },
       recommendations: rawAnalysis.overallRecommendations || [],
-      scoreAnalysis: rawAnalysis
+      scoreAnalysis: rawAnalysis,
     }
   } catch (error: any) {
     console.error('计算Launch Score失败:', error)
@@ -638,18 +693,14 @@ function buildRsaQualityGate(localEvaluation: AdStrengthEvaluation): {
     Math.min(
       100,
       Math.round(
-        localEvaluation.copyIntentMetrics?.typeIntentAlignmentScore ??
-          (relevance.score / 22) * 100
+        localEvaluation.copyIntentMetrics?.typeIntentAlignmentScore ?? (relevance.score / 22) * 100
       )
     )
   )
 
   const evidenceAlignmentScore = Math.max(
     0,
-    Math.min(
-      100,
-      Math.round((compliance.score / 8) * 100)
-    )
+    Math.min(100, Math.round((compliance.score / 8) * 100))
   )
 
   const keywordCoveragePct = Math.max(
@@ -665,13 +716,19 @@ function buildRsaQualityGate(localEvaluation: AdStrengthEvaluation): {
   const thresholds = resolveRsaQualityThresholds(localEvaluation)
   const reasons: string[] = []
   if (intentAlignmentScore < thresholds.intentAlignmentScore) {
-    reasons.push(`intentAlignmentScore ${intentAlignmentScore} < ${thresholds.intentAlignmentScore}`)
+    reasons.push(
+      `intentAlignmentScore ${intentAlignmentScore} < ${thresholds.intentAlignmentScore}`
+    )
   }
   if (evidenceAlignmentScore < thresholds.evidenceAlignmentScore) {
-    reasons.push(`evidenceAlignmentScore ${evidenceAlignmentScore} < ${thresholds.evidenceAlignmentScore}`)
+    reasons.push(
+      `evidenceAlignmentScore ${evidenceAlignmentScore} < ${thresholds.evidenceAlignmentScore}`
+    )
   }
   if (queryLandingAlignmentScore < thresholds.queryLandingAlignmentScore) {
-    reasons.push(`queryLandingAlignmentScore ${queryLandingAlignmentScore} < ${thresholds.queryLandingAlignmentScore}`)
+    reasons.push(
+      `queryLandingAlignmentScore ${queryLandingAlignmentScore} < ${thresholds.queryLandingAlignmentScore}`
+    )
   }
 
   return {
@@ -749,17 +806,13 @@ export async function evaluateCreativeAdStrength(
 
       const { customerId, campaignId, userId } = options.googleValidation
 
-      const validationResult = await validateExcellentStandard(
-        customerId,
-        campaignId,
-        userId
-      )
+      const validationResult = await validateExcellentStandard(customerId, campaignId, userId)
 
       googleValidation = {
         adStrength: validationResult.currentStrength,
         isExcellent: validationResult.isExcellent,
         recommendations: validationResult.recommendations,
-        assetPerformance: validationResult.assetPerformance
+        assetPerformance: validationResult.assetPerformance,
       }
 
       console.log(`✅ Google API验证: ${validationResult.currentStrength}`)
@@ -776,7 +829,7 @@ export async function evaluateCreativeAdStrength(
   // 4. 合并建议
   const combinedSuggestions = [
     ...localEvaluation.suggestions,
-    ...(googleValidation?.recommendations || [])
+    ...(googleValidation?.recommendations || []),
   ]
 
   // 去重建议
@@ -794,7 +847,7 @@ export async function evaluateCreativeAdStrength(
     googleValidation,
     finalRating,
     finalScore,
-    combinedSuggestions: uniqueSuggestions
+    combinedSuggestions: uniqueSuggestions,
   }
 }
 
@@ -846,7 +899,7 @@ function extractKeywordsFromSuggestion(suggestion: string): string[] {
   // Pattern 1: Single quotes 'keyword'
   const singleQuoteMatches = suggestion.match(/'([^']+)'/g)
   if (singleQuoteMatches) {
-    singleQuoteMatches.forEach(match => {
+    singleQuoteMatches.forEach((match) => {
       const keyword = match.replace(/'/g, '').trim()
       if (keyword) keywords.push(keyword)
     })
@@ -855,7 +908,7 @@ function extractKeywordsFromSuggestion(suggestion: string): string[] {
   // Pattern 2: Double quotes "keyword"
   const doubleQuoteMatches = suggestion.match(/"([^"]+)"/g)
   if (doubleQuoteMatches) {
-    doubleQuoteMatches.forEach(match => {
+    doubleQuoteMatches.forEach((match) => {
       const keyword = match.replace(/"/g, '').trim()
       if (keyword) keywords.push(keyword)
     })
@@ -864,7 +917,7 @@ function extractKeywordsFromSuggestion(suggestion: string): string[] {
   // Pattern 3: Chinese quotes 「keyword」
   const chineseQuoteMatches = suggestion.match(/「([^」]+)」/g)
   if (chineseQuoteMatches) {
-    chineseQuoteMatches.forEach(match => {
+    chineseQuoteMatches.forEach((match) => {
       const keyword = match.replace(/[「」]/g, '').trim()
       if (keyword) keywords.push(keyword)
     })
@@ -873,7 +926,7 @@ function extractKeywordsFromSuggestion(suggestion: string): string[] {
   // Pattern 4: Parentheses (keyword) - but only if it looks like a keyword (2-6 words)
   const parenMatches = suggestion.match(/\(([^)]+)\)/g)
   if (parenMatches) {
-    parenMatches.forEach(match => {
+    parenMatches.forEach((match) => {
       const keyword = match.replace(/[()]/g, '').trim()
       const wordCount = keyword.split(/\s+/).length
       if (keyword && wordCount >= 2 && wordCount <= 6) {
@@ -966,7 +1019,7 @@ export async function analyzeKeywordGapsPreGeneration(params: {
 
     // 构建关键词缺口分析 prompt
     const existingKeywordsList = params.existingKeywords
-      .map(kw => `- ${kw.keyword}${kw.searchVolume ? ` (${kw.searchVolume} 搜索量)` : ''}`)
+      .map((kw) => `- ${kw.keyword}${kw.searchVolume ? ` (${kw.searchVolume} 搜索量)` : ''}`)
       .join('\n')
 
     const reviewedInputs: InputReview[] = []
@@ -1021,12 +1074,15 @@ export async function analyzeKeywordGapsPreGeneration(params: {
     })
 
     console.log('[Gap Analysis] 调用 AI 提取关键词...')
-    const response = await generateContent({
-      operationType: 'keyword_gap_analysis',
-      prompt,
-      temperature: 0.3,
-      maxOutputTokens: 2048
-    }, params.userId)
+    const response = await generateContent(
+      {
+        operationType: 'keyword_gap_analysis',
+        prompt,
+        temperature: 0.3,
+        maxOutputTokens: 2048,
+      },
+      params.userId
+    )
 
     if (response.usage) {
       const cost = estimateTokenCost(
@@ -1061,14 +1117,14 @@ export async function analyzeKeywordGapsPreGeneration(params: {
       const keywords = extractKeywordsFromSuggestion(response.text)
       return {
         suggestedKeywords: keywords.slice(0, 10),
-        analysisUsed: true
+        analysisUsed: true,
       }
     }
 
     // 提取高优先级和中优先级的关键词
     const extractedKeywords = new Set<string>()
     const existingKeywordsLower = new Set(
-      params.existingKeywords.map(kw => kw.keyword.toLowerCase().trim())
+      params.existingKeywords.map((kw) => kw.keyword.toLowerCase().trim())
     )
 
     if (parsedResponse.missing_keywords && Array.isArray(parsedResponse.missing_keywords)) {
@@ -1079,10 +1135,12 @@ export async function analyzeKeywordGapsPreGeneration(params: {
         const normalizedKeyword = keyword.toLowerCase()
 
         // 验证关键词（传入上下文以放宽限制）
-        if (!isValidExtractedKeyword(keyword, {
-          source: 'SCORING_SUGGESTION',
-          brandName: params.brandName
-        })) {
+        if (
+          !isValidExtractedKeyword(keyword, {
+            source: 'SCORING_SUGGESTION',
+            brandName: params.brandName,
+          })
+        ) {
           console.log(`[Gap Analysis] 跳过无效关键词: ${keyword}`)
           continue
         }
@@ -1108,21 +1166,23 @@ export async function analyzeKeywordGapsPreGeneration(params: {
     const limitedKeywords = suggestedKeywords.slice(0, MAX_GAP_KEYWORDS)
 
     if (suggestedKeywords.length > MAX_GAP_KEYWORDS) {
-      console.log(`[Gap Analysis] 提取了 ${suggestedKeywords.length} 个关键词，限制为前 ${MAX_GAP_KEYWORDS} 个`)
+      console.log(
+        `[Gap Analysis] 提取了 ${suggestedKeywords.length} 个关键词，限制为前 ${MAX_GAP_KEYWORDS} 个`
+      )
     } else {
       console.log(`[Gap Analysis] 完成，提取 ${limitedKeywords.length} 个建议关键词`)
     }
 
     return {
       suggestedKeywords: limitedKeywords,
-      analysisUsed: true
+      analysisUsed: true,
     }
   } catch (error: any) {
     console.error('[Gap Analysis] 分析失败:', error)
     return {
       suggestedKeywords: [],
       analysisUsed: false,
-      error: error.message
+      error: error.message,
     }
   }
 }

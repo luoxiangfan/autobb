@@ -14,11 +14,7 @@ export const metadata = createMetadata({
   noIndex: true, // 应用内页面不需要被搜索引擎索引
 })
 
-export default async function AuthenticatedLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const navLinkEnabled = isPerformanceReleaseEnabled('navLink')
   const exchangeRates = await loadAndGetUsdExchangeRates()
 

@@ -25,9 +25,8 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
     ...actual,
     getGoogleAdsAuthContext: contextFns.getGoogleAdsAuthContext,
     getGoogleAdsAuthContextMetadata: async (userId: number) => {
-      const { stripGoogleAdsAuthContextForCache } = await import(
-        '@/lib/google-ads-auth-context-cache'
-      )
+      const { stripGoogleAdsAuthContextForCache } =
+        await import('@/lib/google-ads-auth-context-cache')
       const ctx = await contextFns.getGoogleAdsAuthContext(userId)
       return stripGoogleAdsAuthContextForCache(ctx)
     },

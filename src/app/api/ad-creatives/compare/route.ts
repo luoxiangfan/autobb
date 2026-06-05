@@ -11,10 +11,7 @@ export async function POST(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     // 解析请求参数
@@ -22,17 +19,11 @@ export async function POST(request: NextRequest) {
     const { creative_ids } = body
 
     if (!Array.isArray(creative_ids) || creative_ids.length < 2) {
-      return NextResponse.json(
-        { error: '至少需要2个广告创意进行对比' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '至少需要2个广告创意进行对比' }, { status: 400 })
     }
 
     if (creative_ids.length > 3) {
-      return NextResponse.json(
-        { error: '最多对比3个广告创意' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '最多对比3个广告创意' }, { status: 400 })
     }
 
     // 对比广告创意
@@ -43,16 +34,15 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: result
+      data: result,
     })
-
   } catch (error: any) {
     console.error('对比广告创意失败:', error)
 
     return NextResponse.json(
       {
         error: '对比广告创意失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )

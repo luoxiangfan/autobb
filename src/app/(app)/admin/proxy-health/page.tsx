@@ -58,14 +58,18 @@ export default function ProxyHealthPage() {
     setError('')
 
     try {
-      const result = await fetchWithRetry('/api/admin/proxy-health', {
-        credentials: 'include',
-        cache: 'no-store',
-      }, {
-        maxRetries: 2,
-        retryDelay: 2000,
-        retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE']
-      })
+      const result = await fetchWithRetry(
+        '/api/admin/proxy-health',
+        {
+          credentials: 'include',
+          cache: 'no-store',
+        },
+        {
+          maxRetries: 2,
+          retryDelay: 2000,
+          retryOnErrors: ['SERVICE_UNAVAILABLE', 'HTML_RESPONSE'],
+        }
+      )
 
       if (!result.success) {
         setError(result.userMessage)
@@ -135,7 +139,11 @@ export default function ProxyHealthPage() {
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp)
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return date.toLocaleTimeString('zh-CN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
   }
 
   if (loading) {
@@ -156,11 +164,7 @@ export default function ProxyHealthPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4 h-16">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-              >
+              <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard')}>
                 ← 返回Dashboard
               </Button>
               <h1 className="page-title flex items-center gap-2">
@@ -219,7 +223,7 @@ export default function ProxyHealthPage() {
                 <div>
                   <p className="text-sm text-gray-600">健康代理</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {proxies.filter(p => p.isHealthy).length}
+                    {proxies.filter((p) => p.isHealthy).length}
                   </p>
                 </div>
                 <CheckCircle2 className="w-8 h-8 text-green-600" />
@@ -233,7 +237,7 @@ export default function ProxyHealthPage() {
                 <div>
                   <p className="text-sm text-gray-600">不健康代理</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {proxies.filter(p => !p.isHealthy).length}
+                    {proxies.filter((p) => !p.isHealthy).length}
                   </p>
                 </div>
                 <XCircle className="w-8 h-8 text-red-600" />
@@ -249,12 +253,13 @@ export default function ProxyHealthPage() {
                   <p className="text-2xl font-bold text-gray-900">
                     {proxies.length > 0
                       ? (
-                          (proxies.reduce((sum, p) => {
+                          proxies.reduce((sum, p) => {
                             const total = p.successCount + p.failureCount
                             return sum + (total > 0 ? (p.successCount / total) * 100 : 0)
-                          }, 0) / proxies.length)
+                          }, 0) / proxies.length
                         ).toFixed(1)
-                      : 'N/A'}%
+                      : 'N/A'}
+                    %
                   </p>
                 </div>
                 <Activity className="w-8 h-8 text-purple-600" />
@@ -267,9 +272,7 @@ export default function ProxyHealthPage() {
         <Card>
           <CardHeader>
             <CardTitle>代理详情</CardTitle>
-            <CardDescription>
-              查看所有代理的实时健康状态、成功/失败次数
-            </CardDescription>
+            <CardDescription>查看所有代理的实时健康状态、成功/失败次数</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -295,7 +298,10 @@ export default function ProxyHealthPage() {
                   ) : (
                     proxies.map((proxy, index) => (
                       <TableRow key={index} className="hover:bg-gray-50/50">
-                        <TableCell className="font-mono text-sm max-w-xs truncate" title={proxy.url}>
+                        <TableCell
+                          className="font-mono text-sm max-w-xs truncate"
+                          title={proxy.url}
+                        >
                           {proxy.url}
                         </TableCell>
                         <TableCell>

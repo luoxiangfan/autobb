@@ -15,22 +15,17 @@ interface Message {
 export async function POST(request: NextRequest) {
   try {
     // 验证管理员权限
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId || authResult.user.role !== 'admin') {
       return NextResponse.json({ error: '无权访问' }, { status: 403 })
     }
 
     const body = await request.json()
-    const {
-      feedback,
-      scrapeData,
-      creativeData,
-      conversationHistory = []
-    } = body
+    const { feedback, scrapeData, creativeData, conversationHistory = [] } = body
 
     // 构建对话上下文
     let systemPrompt = `你是AutoAds系统的优化顾问，专门负责分析用户反馈并提供具体的优化方案。
@@ -101,12 +96,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 调用AI生成分析（使用用户级AI配置）
-    const analysis = await generateContent({
-      operationType: 'admin_feedback_analysis',
-      prompt: conversationContext,
-      temperature: 0.8,
-      maxOutputTokens: 8192,  // 🔴 Pro模型统一使用8192
-    }, userId)
+    const analysis = await generateContent(
+      {
+        operationType: 'admin_feedback_analysis',
+        prompt: conversationContext,
+        temperature: 0.8,
+        maxOutputTokens: 8192, // 🔴 Pro模型统一使用8192
+      },
+      userId
+    )
 
     // 记录token使用
     if (analysis.usage) {
@@ -123,20 +121,17 @@ export async function POST(request: NextRequest) {
         outputTokens: analysis.usage.outputTokens,
         totalTokens: analysis.usage.totalTokens,
         cost,
-        apiType: analysis.apiType
+        apiType: analysis.apiType,
       })
     }
 
     return NextResponse.json({
       success: true,
       analysis,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   } catch (error: any) {
     console.error('AI反馈分析失败:', error)
-    return NextResponse.json(
-      { error: error.message || 'AI反馈分析失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || 'AI反馈分析失败' }, { status: 500 })
   }
 }

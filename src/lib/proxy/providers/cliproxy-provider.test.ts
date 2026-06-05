@@ -22,7 +22,9 @@ describe('CliproxyProvider', () => {
 
 describe('ProxyProviderRegistry with Cliproxy', () => {
   it('routes Cliproxy format to Cliproxy provider', () => {
-    const provider = ProxyProviderRegistry.getProvider('us.cliproxy.io:3010:username-region-US:passowrd')
+    const provider = ProxyProviderRegistry.getProvider(
+      'us.cliproxy.io:3010:username-region-US:passowrd'
+    )
     expect(provider.name).toBe('Cliproxy')
   })
 })

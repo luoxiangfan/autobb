@@ -88,13 +88,16 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
       login_customer_id: '5010618892',
     })
 
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        access_token: 'new-access-token',
-        expires_in: 3600,
-      }),
-    })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          access_token: 'new-access-token',
+          expires_in: 3600,
+        }),
+      }))
+    )
   })
 
   let getCustomerWithCredentials: typeof import('@/lib/google-ads-api').getCustomerWithCredentials
@@ -104,7 +107,6 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
   })
 
   it('omits login_customer_id when caller passes explicit undefined', async () => {
-
     await getCustomerWithCredentials({
       customerId: '3178223819',
       refreshToken: 'refresh-token',
@@ -314,13 +316,16 @@ describe('findGoogleAdsCampaignByName auth reuse', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     pythonAdsFns.executeGAQLQueryPython.mockResolvedValue({ results: [] })
-    vi.stubGlobal('fetch', vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        access_token: 'new-access-token',
-        expires_in: 3600,
-      }),
-    })))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          access_token: 'new-access-token',
+          expires_in: 3600,
+        }),
+      }))
+    )
   })
 
   it('infers service_account without explicit authType when authContext is SA', async () => {

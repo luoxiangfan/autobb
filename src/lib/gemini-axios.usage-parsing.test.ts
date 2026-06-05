@@ -24,11 +24,13 @@ describe('gemini-axios usage parsing', () => {
     vi.resetModules()
     createMock.mockReset().mockReturnValue({ post: postMock })
     postMock.mockReset()
-    getUserOnlySettingMock.mockReset().mockImplementation(async (_category: string, key: string) => {
-      if (key === 'gemini_provider') return { value: 'relay' }
-      if (key === 'gemini_relay_api_key') return { value: 'relay-key' }
-      return null
-    })
+    getUserOnlySettingMock
+      .mockReset()
+      .mockImplementation(async (_category: string, key: string) => {
+        if (key === 'gemini_provider') return { value: 'relay' }
+        if (key === 'gemini_relay_api_key') return { value: 'relay-key' }
+        return null
+      })
   })
 
   it('parses camelCase usage from relay /v1/messages responses', async () => {
@@ -113,5 +115,4 @@ describe('gemini-axios usage parsing', () => {
       totalTokens: 13,
     })
   })
-
 })

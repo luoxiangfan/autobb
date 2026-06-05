@@ -146,17 +146,21 @@ interface Summary {
 
 type CreativesTimeRange = '7' | '14' | '30' | 'custom'
 
-const getCreativeTypeMeta = (creative: Creative): {
+const getCreativeTypeMeta = (
+  creative: Creative
+): {
   label: string
   shortLabel?: string
   className: string
 } => {
-  const normalizedCreativeType = String(creative.creativeType || '').trim().toLowerCase()
+  const normalizedCreativeType = String(creative.creativeType || '')
+    .trim()
+    .toLowerCase()
   if (normalizedCreativeType === 'brand_intent') {
     return {
       label: '品牌意图',
       shortLabel: 'A',
-      className: 'bg-blue-50 text-blue-700 border-blue-200'
+      className: 'bg-blue-50 text-blue-700 border-blue-200',
     }
   }
 
@@ -164,7 +168,7 @@ const getCreativeTypeMeta = (creative: Creative): {
     return {
       label: '商品型号',
       shortLabel: 'B',
-      className: 'bg-green-50 text-green-700 border-green-200'
+      className: 'bg-green-50 text-green-700 border-green-200',
     }
   }
 
@@ -172,7 +176,7 @@ const getCreativeTypeMeta = (creative: Creative): {
     return {
       label: '商品需求',
       shortLabel: 'D',
-      className: 'bg-amber-50 text-amber-700 border-amber-200'
+      className: 'bg-amber-50 text-amber-700 border-amber-200',
     }
   }
 
@@ -182,7 +186,7 @@ const getCreativeTypeMeta = (creative: Creative): {
     return {
       label: '品牌意图',
       shortLabel: 'A',
-      className: 'bg-blue-50 text-blue-700 border-blue-200'
+      className: 'bg-blue-50 text-blue-700 border-blue-200',
     }
   }
 
@@ -190,7 +194,7 @@ const getCreativeTypeMeta = (creative: Creative): {
     return {
       label: '商品型号',
       shortLabel: 'B',
-      className: 'bg-green-50 text-green-700 border-green-200'
+      className: 'bg-green-50 text-green-700 border-green-200',
     }
   }
 
@@ -198,20 +202,20 @@ const getCreativeTypeMeta = (creative: Creative): {
     return {
       label: '商品需求',
       shortLabel: 'D',
-      className: 'bg-amber-50 text-amber-700 border-amber-200'
+      className: 'bg-amber-50 text-amber-700 border-amber-200',
     }
   }
 
   if (creative.theme && creative.theme.trim().length > 0) {
     return {
       label: creative.theme.trim(),
-      className: 'bg-gray-50 text-gray-700 border-gray-200'
+      className: 'bg-gray-50 text-gray-700 border-gray-200',
     }
   }
 
   return {
     label: '未分类',
-    className: 'bg-gray-50 text-gray-500 border-gray-200'
+    className: 'bg-gray-50 text-gray-500 border-gray-200',
   }
 }
 
@@ -275,8 +279,8 @@ export default function CreativesPage() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [differentiating, setDifferentiating] = useState(false)
-  const [generationMode, setGenerationMode] = useState<AdCreativeGenerationMode>(
-    () => loadStoredAdCreativeGenerationMode()
+  const [generationMode, setGenerationMode] = useState<AdCreativeGenerationMode>(() =>
+    loadStoredAdCreativeGenerationMode()
   )
   const handleGenerationModeChange = (mode: AdCreativeGenerationMode) => {
     setGenerationMode(mode)
@@ -291,7 +295,10 @@ export default function CreativesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [timeRange, setTimeRange] = useState<CreativesTimeRange>('7')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
+  const [appliedCustomRange, setAppliedCustomRange] = useState<{
+    startDate: string
+    endDate: string
+  } | null>(null)
 
   // Trend data states - 创意维度统计
   const [trendsData, setTrendsData] = useState<TrendChartData[]>([])
@@ -353,9 +360,9 @@ export default function CreativesPage() {
   const calculateSummary = useCallback((data: Creative[]) => {
     setSummary({
       total: data.length,
-      synced: data.filter(c => c.creationStatus === 'synced').length,
-      pending: data.filter(c => c.creationStatus === 'pending').length,
-      draft: data.filter(c => c.creationStatus === 'draft').length,
+      synced: data.filter((c) => c.creationStatus === 'synced').length,
+      pending: data.filter((c) => c.creationStatus === 'pending').length,
+      draft: data.filter((c) => c.creationStatus === 'draft').length,
     })
   }, [])
 
@@ -493,8 +500,8 @@ export default function CreativesPage() {
       const query = searchQuery.toLowerCase()
       result = result.filter(
         (c) =>
-          c.headlines.some(h => getTextContent(h).toLowerCase().includes(query)) ||
-          c.descriptions.some(d => getTextContent(d).toLowerCase().includes(query)) ||
+          c.headlines.some((h) => getTextContent(h).toLowerCase().includes(query)) ||
+          c.descriptions.some((d) => getTextContent(d).toLowerCase().includes(query)) ||
           c.finalUrl.toLowerCase().includes(query)
       )
     }
@@ -715,7 +722,14 @@ export default function CreativesPage() {
   }
 
   const getStatusBadge = (status: string) => {
-    const configs: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
+    const configs: Record<
+      string,
+      {
+        label: string
+        variant: 'default' | 'secondary' | 'destructive' | 'outline'
+        className: string
+      }
+    > = {
       draft: { label: '草稿', variant: 'secondary', className: 'bg-gray-100 text-gray-600' },
       pending: { label: '同步中', variant: 'secondary', className: 'bg-blue-100 text-blue-700' },
       synced: { label: '已同步', variant: 'default', className: 'bg-green-600 hover:bg-green-700' },
@@ -755,7 +769,10 @@ export default function CreativesPage() {
       }
     }
 
-    return keywordsWithVolume || (Array.isArray(keywords) ? keywords.map(k => ({ keyword: k, searchVolume: 0 })) : [])
+    return (
+      keywordsWithVolume ||
+      (Array.isArray(keywords) ? keywords.map((k) => ({ keyword: k, searchVolume: 0 })) : [])
+    )
   }
 
   // 排序处理函数
@@ -778,14 +795,29 @@ export default function CreativesPage() {
   }
 
   // 可排序表头组件
-  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => {
+  const SortableHeader = ({
+    field,
+    children,
+    className = '',
+  }: {
+    field: SortField
+    children: React.ReactNode
+    className?: string
+  }) => {
     const isActive = sortField === field
     return (
-      <TableHead className={`cursor-pointer select-none hover:bg-gray-50 ${className}`} onClick={() => handleSort(field)}>
+      <TableHead
+        className={`cursor-pointer select-none hover:bg-gray-50 ${className}`}
+        onClick={() => handleSort(field)}
+      >
         <div className="flex items-center gap-1">
           {children}
           {isActive ? (
-            sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
+            sortDirection === 'asc' ? (
+              <ArrowUp className="w-4 h-4" />
+            ) : (
+              <ArrowDown className="w-4 h-4" />
+            )
           ) : (
             <ArrowUpDown className="w-4 h-4 text-gray-400" />
           )}
@@ -795,17 +827,20 @@ export default function CreativesPage() {
   }
 
   // 分页后的创意列表
-  const paginatedCreatives = filteredCreatives.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedCreatives = filteredCreatives.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  )
 
   // 批量选择处理
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const newSelected = new Set(selectedCreativeIds)
-      paginatedCreatives.forEach(c => newSelected.add(c.id))
+      paginatedCreatives.forEach((c) => newSelected.add(c.id))
       setSelectedCreativeIds(newSelected)
     } else {
       const newSelected = new Set(selectedCreativeIds)
-      paginatedCreatives.forEach(c => newSelected.delete(c.id))
+      paginatedCreatives.forEach((c) => newSelected.delete(c.id))
       setSelectedCreativeIds(newSelected)
     }
   }
@@ -829,35 +864,42 @@ export default function CreativesPage() {
       setBatchDeleteError(null)
 
       // 检查是否有关联了已同步到Google Ads的创意（有ad_id的不能删除）
-      const creativesToDelete = creatives.filter(c => selectedCreativeIds.has(c.id))
-      const creativesWithAdId = creativesToDelete.filter(c => c.adId !== null)
+      const creativesToDelete = creatives.filter((c) => selectedCreativeIds.has(c.id))
+      const creativesWithAdId = creativesToDelete.filter((c) => c.adId !== null)
 
       if (creativesWithAdId.length > 0) {
-        setBatchDeleteError(`以下 ${creativesWithAdId.length} 个创意已同步到Google Ads，无法删除：\n${creativesWithAdId.map(c => `创意 #${c.id}`).join('\n')}`)
+        setBatchDeleteError(
+          `以下 ${creativesWithAdId.length} 个创意已同步到Google Ads，无法删除：\n${creativesWithAdId.map((c) => `创意 #${c.id}`).join('\n')}`
+        )
         setBatchDeleting(false)
         return
       }
 
       // 执行批量删除
-      const deletePromises = Array.from(selectedCreativeIds).map(id =>
+      const deletePromises = Array.from(selectedCreativeIds).map((id) =>
         fetch(`/api/creatives/${id}`, {
           method: 'DELETE',
           credentials: 'include',
-        }).then(res => {
-          if (!res.ok) throw new Error(`删除创意 #${id} 失败`)
-          return { id, success: true }
-        }).catch(err => ({ id, success: false, error: err.message }))
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error(`删除创意 #${id} 失败`)
+            return { id, success: true }
+          })
+          .catch((err) => ({ id, success: false, error: err.message }))
       )
 
       const results = await Promise.allSettled(deletePromises)
       const failures = results
-        .filter((r): r is PromiseFulfilledResult<{ id: number; success: false; error: string }> =>
-          r.status === 'fulfilled' && !r.value.success
+        .filter(
+          (r): r is PromiseFulfilledResult<{ id: number; success: false; error: string }> =>
+            r.status === 'fulfilled' && !r.value.success
         )
-        .map(r => r.value)
+        .map((r) => r.value)
 
       if (failures.length > 0) {
-        setBatchDeleteError(`以下创意删除失败：\n${failures.map(f => `创意 #${f.id}: ${f.error}`).join('\n')}`)
+        setBatchDeleteError(
+          `以下创意删除失败：\n${failures.map((f) => `创意 #${f.id}: ${f.error}`).join('\n')}`
+        )
       } else {
         showSuccess('批量删除成功', `已删除 ${selectedCreativeIds.size} 个创意`)
         setIsBatchDeleteDialogOpen(false)
@@ -1107,9 +1149,7 @@ export default function CreativesPage() {
             )}
             {!offerId && (
               <div className="mt-6">
-                <Button onClick={() => router.push('/offers')}>
-                  前往Offer列表
-                </Button>
+                <Button onClick={() => router.push('/offers')}>前往Offer列表</Button>
               </div>
             )}
           </div>
@@ -1122,16 +1162,27 @@ export default function CreativesPage() {
                     <TableRow>
                       <TableHead className="w-[40px]">
                         <Checkbox
-                          checked={paginatedCreatives.length > 0 && paginatedCreatives.every(c => selectedCreativeIds.has(c.id))}
+                          checked={
+                            paginatedCreatives.length > 0 &&
+                            paginatedCreatives.every((c) => selectedCreativeIds.has(c.id))
+                          }
                           onCheckedChange={handleSelectAll}
                         />
                       </TableHead>
-                      <SortableHeader field="id" className="w-[60px]">ID</SortableHeader>
+                      <SortableHeader field="id" className="w-[60px]">
+                        ID
+                      </SortableHeader>
                       <TableHead className="w-[140px]">创意类型</TableHead>
                       <TableHead className="min-w-[300px]">标题预览</TableHead>
-                      <SortableHeader field="score" className="w-[100px]">质量评分</SortableHeader>
-                      <SortableHeader field="creationStatus" className="w-[100px]">同步状态</SortableHeader>
-                      <SortableHeader field="createdAt" className="w-[150px]">创建时间</SortableHeader>
+                      <SortableHeader field="score" className="w-[100px]">
+                        质量评分
+                      </SortableHeader>
+                      <SortableHeader field="creationStatus" className="w-[100px]">
+                        同步状态
+                      </SortableHeader>
+                      <SortableHeader field="createdAt" className="w-[150px]">
+                        创建时间
+                      </SortableHeader>
                       <TableHead className="w-[120px]">操作</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1141,104 +1192,120 @@ export default function CreativesPage() {
 
                       return (
                         <TableRow key={creative.id} className="hover:bg-gray-50/50">
-                        <TableCell>
-                          <Checkbox
-                            checked={selectedCreativeIds.has(creative.id)}
-                            onCheckedChange={(checked) => handleSelectCreative(creative.id, checked as boolean)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-gray-500">
-                          #{creative.id}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1.5 items-start">
-                            <Badge variant="outline" className={creativeType.className}>
-                              {creativeType.shortLabel ? `${creativeType.shortLabel} · ` : ''}
-                              {creativeType.label}
-                            </Badge>
-                            {creative.generationMode && (
-                              <Badge variant="secondary" className="text-[10px] font-normal">
-                                {getAdCreativeGenerationModeLabel(creative.generationMode)}
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedCreativeIds.has(creative.id)}
+                              onCheckedChange={(checked) =>
+                                handleSelectCreative(creative.id, checked as boolean)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell className="font-mono text-xs text-gray-500">
+                            #{creative.id}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <Badge variant="outline" className={creativeType.className}>
+                                {creativeType.shortLabel ? `${creativeType.shortLabel} · ` : ''}
+                                {creativeType.label}
                               </Badge>
+                              {creative.generationMode && (
+                                <Badge variant="secondary" className="text-[10px] font-normal">
+                                  {getAdCreativeGenerationModeLabel(creative.generationMode)}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium text-gray-900 line-clamp-1">
+                                {creative.headlines
+                                  .slice(0, 2)
+                                  .map((h) => getTextContent(h))
+                                  .join(' | ')}
+                              </div>
+                              <div className="text-xs text-gray-500 line-clamp-1">
+                                {creative.descriptions
+                                  .slice(0, 1)
+                                  .map((d) => getTextContent(d))
+                                  .join('')}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {creative.score ? (
+                              <div className="flex items-center gap-1">
+                                <span
+                                  className={`font-bold ${
+                                    creative.score >= 80
+                                      ? 'text-green-600'
+                                      : creative.score >= 60
+                                        ? 'text-yellow-600'
+                                        : 'text-red-600'
+                                  }`}
+                                >
+                                  {creative.score}
+                                </span>
+                                <span className="text-gray-400">/100</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="font-medium text-gray-900 line-clamp-1">
-                              {creative.headlines.slice(0, 2).map(h => getTextContent(h)).join(' | ')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              {getStatusBadge(creative.creationStatus)}
+                              {creative.creationError && (
+                                <span
+                                  className="text-xs text-red-600 max-w-[100px] truncate"
+                                  title={creative.creationError}
+                                >
+                                  {creative.creationError}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-xs text-gray-500 line-clamp-1">
-                              {creative.descriptions.slice(0, 1).map(d => getTextContent(d)).join('')}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {creative.score ? (
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-500">
+                            {new Date(creative.createdAt).toLocaleDateString('zh-CN')}
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-1">
-                              <span className={`font-bold ${
-                                creative.score >= 80 ? 'text-green-600' :
-                                creative.score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                              }`}>
-                                {creative.score}
-                              </span>
-                              <span className="text-gray-400">/100</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-1">
-                            {getStatusBadge(creative.creationStatus)}
-                            {creative.creationError && (
-                              <span className="text-xs text-red-600 max-w-[100px] truncate" title={creative.creationError}>
-                                {creative.creationError}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-500">
-                          {new Date(creative.createdAt).toLocaleDateString('zh-CN')}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {/* View Detail */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openDetailDialog(creative)}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="查看创意详情"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-
-                            {/* View Offer Detail */}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => router.push(`/offers/${creative.offerId}`)}
-                              className="text-green-600 hover:text-green-800"
-                              title="查看关联的Offer详情页"
-                            >
-                              <Package className="w-4 h-4" />
-                            </Button>
-
-                            {/* Delete */}
-                            {creative.adId === null && (
+                              {/* View Detail */}
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => openDeleteDialog(creative)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="删除创意"
+                                onClick={() => openDetailDialog(creative)}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="查看创意详情"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Eye className="w-4 h-4" />
                               </Button>
-                            )}
-                          </div>
-                        </TableCell>
+
+                              {/* View Offer Detail */}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => router.push(`/offers/${creative.offerId}`)}
+                                className="text-green-600 hover:text-green-800"
+                                title="查看关联的Offer详情页"
+                              >
+                                <Package className="w-4 h-4" />
+                              </Button>
+
+                              {/* Delete */}
+                              {creative.adId === null && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => openDeleteDialog(creative)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  title="删除创意"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
                         </TableRow>
                       )
                     })}
@@ -1254,7 +1321,10 @@ export default function CreativesPage() {
                     totalItems={filteredCreatives.length}
                     pageSize={pageSize}
                     onPageChange={setCurrentPage}
-                    onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                    onPageSizeChange={(size) => {
+                      setPageSize(size)
+                      setCurrentPage(1)
+                    }}
                     pageSizeOptions={[10, 20, 50, 100]}
                   />
                 </div>
@@ -1270,16 +1340,17 @@ export default function CreativesPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               创意详情 #{selectedCreative?.id}
-              {selectedCreative && (() => {
-                const creativeType = getCreativeTypeMeta(selectedCreative)
+              {selectedCreative &&
+                (() => {
+                  const creativeType = getCreativeTypeMeta(selectedCreative)
 
-                return (
-                  <Badge variant="outline" className={creativeType.className}>
-                    {creativeType.shortLabel ? `${creativeType.shortLabel} · ` : ''}
-                    {creativeType.label}
-                  </Badge>
-                )
-              })()}
+                  return (
+                    <Badge variant="outline" className={creativeType.className}>
+                      {creativeType.shortLabel ? `${creativeType.shortLabel} · ` : ''}
+                      {creativeType.label}
+                    </Badge>
+                  )
+                })()}
               {selectedCreative?.generationMode && (
                 <Badge variant="secondary">
                   {getAdCreativeGenerationModeLabel(selectedCreative.generationMode)}
@@ -1290,7 +1361,8 @@ export default function CreativesPage() {
               )}
             </DialogTitle>
             <DialogDescription>
-              创建于 {selectedCreative && new Date(selectedCreative.createdAt).toLocaleString('zh-CN')}
+              创建于{' '}
+              {selectedCreative && new Date(selectedCreative.createdAt).toLocaleString('zh-CN')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1300,9 +1372,14 @@ export default function CreativesPage() {
               <div className="border border-gray-300 rounded-lg p-4 bg-white">
                 <p className="text-xs text-gray-500 mb-2">📱 广告预览 (Google Search)</p>
                 <div className="bg-gray-50 p-3 rounded">
-                  <div className="text-xs text-green-700 mb-1">广告 · {offer?.url || selectedCreative.finalUrl}</div>
+                  <div className="text-xs text-green-700 mb-1">
+                    广告 · {offer?.url || selectedCreative.finalUrl}
+                  </div>
                   <div className="text-lg text-blue-600 font-normal leading-snug mb-1">
-                    {selectedCreative.headlines.slice(0, 3).map(h => getTextContent(h)).join(' | ')}
+                    {selectedCreative.headlines
+                      .slice(0, 3)
+                      .map((h) => getTextContent(h))
+                      .join(' | ')}
                   </div>
                   <div className="text-xs text-gray-600 mb-1">
                     {new URL(selectedCreative.finalUrl).hostname}
@@ -1310,7 +1387,7 @@ export default function CreativesPage() {
                     {selectedCreative.path2 && ` › ${selectedCreative.path2}`}
                   </div>
                   <div className="text-sm text-gray-800 leading-relaxed">
-                    {selectedCreative.descriptions.map(d => getTextContent(d)).join(' ')}
+                    {selectedCreative.descriptions.map((d) => getTextContent(d)).join(' ')}
                   </div>
                 </div>
               </div>
@@ -1318,12 +1395,17 @@ export default function CreativesPage() {
               {/* Headlines & Descriptions */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">📝 标题 ({selectedCreative.headlines.length})</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    📝 标题 ({selectedCreative.headlines.length})
+                  </h4>
                   <div className="space-y-2">
                     {selectedCreative.headlines.map((headline, index) => {
                       const text = getTextContent(headline)
                       return (
-                        <div key={index} className="flex justify-between items-center bg-white p-2 rounded border">
+                        <div
+                          key={index}
+                          className="flex justify-between items-center bg-white p-2 rounded border"
+                        >
                           <span className="text-sm text-gray-900">{text}</span>
                           <span className="text-xs text-gray-400">{text.length}/30</span>
                         </div>
@@ -1333,12 +1415,17 @@ export default function CreativesPage() {
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">📄 描述 ({selectedCreative.descriptions.length})</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    📄 描述 ({selectedCreative.descriptions.length})
+                  </h4>
                   <div className="space-y-2">
                     {selectedCreative.descriptions.map((description, index) => {
                       const text = getTextContent(description)
                       return (
-                        <div key={index} className="flex justify-between items-start bg-white p-2 rounded border">
+                        <div
+                          key={index}
+                          className="flex justify-between items-start bg-white p-2 rounded border"
+                        >
                           <span className="text-sm text-gray-900 flex-1">{text}</span>
                           <span className="text-xs text-gray-400 ml-2">{text.length}/90</span>
                         </div>
@@ -1368,10 +1455,16 @@ export default function CreativesPage() {
               {/* Callouts */}
               {selectedCreative.callouts && selectedCreative.callouts.length > 0 && (
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">✨ Callouts ({selectedCreative.callouts.length})</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    ✨ Callouts ({selectedCreative.callouts.length})
+                  </h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedCreative.callouts.map((callout, index) => (
-                      <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="bg-green-100 text-green-800"
+                      >
                         {getTextContent(callout)}
                       </Badge>
                     ))}
@@ -1382,14 +1475,22 @@ export default function CreativesPage() {
               {/* Sitelinks */}
               {selectedCreative.sitelinks && selectedCreative.sitelinks.length > 0 && (
                 <div className="bg-purple-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">🔗 Sitelinks ({selectedCreative.sitelinks.length})</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">
+                    🔗 Sitelinks ({selectedCreative.sitelinks.length})
+                  </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {selectedCreative.sitelinks.map((sitelink, index) => (
                       <div key={index} className="bg-white p-3 rounded border border-purple-200">
-                        <p className="text-sm font-medium text-purple-700">{getTextContent(sitelink.text)}</p>
-                        <p className="text-xs text-gray-500 truncate">{String(sitelink.url ?? '')}</p>
+                        <p className="text-sm font-medium text-purple-700">
+                          {getTextContent(sitelink.text)}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {String(sitelink.url ?? '')}
+                        </p>
                         {getTextContent(sitelink.description).trim() && (
-                          <p className="text-xs text-gray-600 mt-1">{getTextContent(sitelink.description)}</p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {getTextContent(sitelink.description)}
+                          </p>
                         )}
                       </div>
                     ))}
@@ -1414,10 +1515,15 @@ export default function CreativesPage() {
                 {selectedCreative.score && (
                   <div className="text-right">
                     <p className="text-sm font-semibold text-gray-700">质量评分</p>
-                    <p className={`text-2xl font-bold ${
-                      selectedCreative.score >= 80 ? 'text-green-600' :
-                      selectedCreative.score >= 60 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
+                    <p
+                      className={`text-2xl font-bold ${
+                        selectedCreative.score >= 80
+                          ? 'text-green-600'
+                          : selectedCreative.score >= 60
+                            ? 'text-yellow-600'
+                            : 'text-red-600'
+                      }`}
+                    >
                       {selectedCreative.score}/100
                     </p>
                   </div>
@@ -1456,9 +1562,7 @@ export default function CreativesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>关联 Ad Group</DialogTitle>
-            <DialogDescription>
-              选择一个 Ad Group 来关联此创意
-            </DialogDescription>
+            <DialogDescription>选择一个 Ad Group 来关联此创意</DialogDescription>
           </DialogHeader>
 
           <div className="py-4">
@@ -1544,7 +1648,9 @@ export default function CreativesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认批量删除</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>您确定要删除选中的 <strong>{selectedCreativeIds.size}</strong> 个创意吗？</p>
+              <p>
+                您确定要删除选中的 <strong>{selectedCreativeIds.size}</strong> 个创意吗？
+              </p>
               <p className="text-red-600">此操作无法撤销！</p>
               {batchDeleteError && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -1555,11 +1661,7 @@ export default function CreativesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setBatchDeleteError(null)}>取消</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={handleBatchDelete}
-              disabled={batchDeleting}
-            >
+            <Button variant="destructive" onClick={handleBatchDelete} disabled={batchDeleting}>
               {batchDeleting ? '删除中...' : '确认删除'}
             </Button>
           </AlertDialogFooter>

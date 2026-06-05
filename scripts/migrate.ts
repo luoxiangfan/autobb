@@ -69,7 +69,9 @@ async function migrateSQLite() {
 
   // 获取已执行的迁移
   const appliedMigrations = new Set(
-    db.prepare('SELECT migration_name FROM migration_history').all()
+    db
+      .prepare('SELECT migration_name FROM migration_history')
+      .all()
       .map((row: any) => row.migration_name)
   )
 
@@ -82,7 +84,9 @@ async function migrateSQLite() {
     if (msg.includes('duplicate column name')) return true
     if (msg.includes('already exists')) return true
     if (
-      msg.includes('unique constraint failed: prompt_versions.prompt_id, prompt_versions.version') &&
+      msg.includes(
+        'unique constraint failed: prompt_versions.prompt_id, prompt_versions.version'
+      ) &&
       /insert\s+into\s+prompt_versions\b/i.test(statement)
     ) {
       return true
@@ -164,7 +168,7 @@ async function migratePostgres() {
 
     // 获取已执行的迁移
     const appliedRows = await sql`SELECT migration_name FROM migration_history`
-    const appliedMigrations = new Set(appliedRows.map(row => row.migration_name))
+    const appliedMigrations = new Set(appliedRows.map((row) => row.migration_name))
 
     // 读取迁移文件（含 archived_* 子目录）
     const migrationsPath = path.join(process.cwd(), MIGRATIONS_DIR)
@@ -194,7 +198,7 @@ async function migratePostgres() {
         const statements = splitSqlStatements(sqlContent)
 
         // 在事务中执行迁移
-        await sql.begin(async tx => {
+        await sql.begin(async (tx) => {
           for (const stmt of statements) {
             const trimmed = stmt.trim()
             if (!trimmed) continue
@@ -237,9 +241,7 @@ async function migratePostgres() {
 
 async function main() {
   try {
-    const executedCount = DB_TYPE === 'postgres'
-      ? await migratePostgres()
-      : await migrateSQLite()
+    const executedCount = DB_TYPE === 'postgres' ? await migratePostgres() : await migrateSQLite()
 
     console.log('═'.repeat(60))
     if (executedCount > 0) {

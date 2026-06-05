@@ -20,8 +20,7 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 const { DUAL_STACK_WARNING } = vi.hoisted(() => ({
-  DUAL_STACK_WARNING:
-    '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。',
+  DUAL_STACK_WARNING: '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。',
 }))
 
 vi.mock('@/lib/google-ads-auth-context', () => ({

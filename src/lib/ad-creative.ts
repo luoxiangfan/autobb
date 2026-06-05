@@ -24,7 +24,10 @@ import {
   normalizeKeywordSourceSubtype,
 } from './creative-keyword-source-priority'
 import { isCreativeKeywordAiSourceSubtypeEnabled } from './creative-keyword-feature-flags'
-import type { CreativeKeywordAudit, CreativeKeywordSourceAudit } from './creative-keyword-set-builder'
+import type {
+  CreativeKeywordAudit,
+  CreativeKeywordSourceAudit,
+} from './creative-keyword-set-builder'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import {
   getSearchTermAutoNegativeConfigFromEnv,
@@ -59,58 +62,59 @@ export interface AdCreative {
   user_id: number
 
   // 广告创意内容
-  headlines: string[]           // 最多15个headline，每个最多30字符
-  descriptions: string[]        // 最多4个description，每个最多90字符
-  keywords: string[]            // 关键词列表（向后兼容）
-  keywordsWithVolume?: KeywordWithVolume[]  // 带搜索量的关键词数据
-  negativeKeywords?: string[]   // 🎯 新增：否定关键词列表
-  callouts?: string[]           // 标注（每个最多25字符）
-  sitelinks?: Array<{           // 站点链接
-    text: string                // 链接文本（最多25字符）
-    url: string                 // 链接URL
-    description?: string        // 链接描述（最多35字符）
+  headlines: string[] // 最多15个headline，每个最多30字符
+  descriptions: string[] // 最多4个description，每个最多90字符
+  keywords: string[] // 关键词列表（向后兼容）
+  keywordsWithVolume?: KeywordWithVolume[] // 带搜索量的关键词数据
+  negativeKeywords?: string[] // 🎯 新增：否定关键词列表
+  callouts?: string[] // 标注（每个最多25字符）
+  sitelinks?: Array<{
+    // 站点链接
+    text: string // 链接文本（最多25字符）
+    url: string // 链接URL
+    description?: string // 链接描述（最多35字符）
   }>
 
   // URL配置
   final_url: string
   final_url_suffix?: string
-  path_1?: string               // URL路径1
-  path_2?: string               // URL路径2
+  path_1?: string // URL路径1
+  path_2?: string // URL路径2
 
   // 评分信息 (Ad Strength 7维度评分体系)
-  score: number                      // 总评分 (0-100)
+  score: number // 总评分 (0-100)
   score_breakdown: {
-    relevance: number                // 相关性 (0-18)
-    quality: number                  // 质量 (0-14)
-    engagement: number               // 吸引力/完整性 (0-14)
-    diversity: number                // 多样性 (0-18)
-    clarity: number                  // 清晰度/合规性 (0-8)
-    brandSearchVolume: number        // 品牌搜索量 (0-18)
-    competitivePositioning: number   // 竞争定位 (0-10)
+    relevance: number // 相关性 (0-18)
+    quality: number // 质量 (0-14)
+    engagement: number // 吸引力/完整性 (0-14)
+    diversity: number // 多样性 (0-18)
+    clarity: number // 清晰度/合规性 (0-8)
+    brandSearchVolume: number // 品牌搜索量 (0-18)
+    competitivePositioning: number // 竞争定位 (0-10)
   }
   score_explanation: string
 
   // 生成信息
-  version: number               // 版本号
-  generation_round: number      // 第几轮生成
-  generation_prompt?: string    // 生成提示词
-  theme: string                 // 广告主题
-  ai_model: string             // 使用的AI模型
+  version: number // 版本号
+  generation_round: number // 第几轮生成
+  generation_prompt?: string // 生成提示词
+  theme: string // 广告主题
+  ai_model: string // 使用的AI模型
   generation_mode?: AdCreativeGenerationMode | string | null
   /** camelCase 展示字段，与 generation_mode 同步 */
   generationMode?: AdCreativeGenerationMode | string | null
-  is_selected: number          // 是否被用户选中
+  is_selected: number // 是否被用户选中
   creative_type?: CanonicalCreativeType | null
   keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
   keywordBucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
   bucket_intent?: string | null
 
   // Google Ads同步信息
-  ad_group_id?: number         // 关联的Ad Group ID
-  ad_id?: string               // Google Ads中的Ad ID
-  creation_status: string      // 创建状态: draft/pending/synced/failed
-  creation_error?: string      // 创建错误信息
-  last_sync_at?: string        // 最后同步时间
+  ad_group_id?: number // 关联的Ad Group ID
+  ad_id?: string // Google Ads中的Ad ID
+  creation_status: string // 创建状态: draft/pending/synced/failed
+  creation_error?: string // 创建错误信息
+  last_sync_at?: string // 最后同步时间
 
   created_at: string
   updated_at: string
@@ -121,9 +125,10 @@ export interface AdCreative {
  */
 export interface GenerateAdCreativeInput {
   offer_id: number
-  generation_round?: number     // 第几轮生成，默认1
-  theme?: string                // 指定主题（可选）
-  reference_performance?: {     // 参考历史表现数据（用于优化）
+  generation_round?: number // 第几轮生成，默认1
+  theme?: string // 指定主题（可选）
+  reference_performance?: {
+    // 参考历史表现数据（用于优化）
     best_headlines?: string[]
     best_descriptions?: string[]
     top_keywords?: string[]
@@ -136,20 +141,35 @@ export interface GenerateAdCreativeInput {
 // 资产标注接口（用于Ad Strength评估）
 export interface HeadlineAsset {
   text: string
-  type?: 'brand' | 'product' | 'promo' | 'cta' | 'urgency' | 'feature' | 'social_proof' | 'question' | 'emotional'  // 资产类型
-  length?: number                                           // 字符长度
-  keywords?: string[]                                       // 包含的关键词
-  hasNumber?: boolean                                       // 是否包含数字
-  hasUrgency?: boolean                                      // 是否体现紧迫感
+  type?:
+    | 'brand'
+    | 'product'
+    | 'promo'
+    | 'cta'
+    | 'urgency'
+    | 'feature'
+    | 'social_proof'
+    | 'question'
+    | 'emotional' // 资产类型
+  length?: number // 字符长度
+  keywords?: string[] // 包含的关键词
+  hasNumber?: boolean // 是否包含数字
+  hasUrgency?: boolean // 是否体现紧迫感
   // 非破坏式扩展：仅用于意图分析与建议，不影响既有评分与发布逻辑
   intentTag?: 'brand' | 'scenario' | 'solution' | 'transactional' | 'other'
 }
 
 export interface DescriptionAsset {
   text: string
-  type?: 'value' | 'cta' | 'feature-benefit-cta' | 'problem-solution-proof' | 'offer-urgency-trust' | 'usp-differentiation'  // 价值主张 或 行动召唤
+  type?:
+    | 'value'
+    | 'cta'
+    | 'feature-benefit-cta'
+    | 'problem-solution-proof'
+    | 'offer-urgency-trust'
+    | 'usp-differentiation' // 价值主张 或 行动召唤
   length?: number
-  hasCTA?: boolean        // 是否包含CTA
+  hasCTA?: boolean // 是否包含CTA
   keywords?: string[]
   // 非破坏式扩展：仅用于意图分析与建议，不影响既有评分与发布逻辑
   intentTag?: 'brand' | 'scenario' | 'solution' | 'transactional' | 'other'
@@ -157,8 +177,8 @@ export interface DescriptionAsset {
 }
 
 export interface QualityMetrics {
-  headline_diversity_score?: number  // 0-100
-  keyword_relevance_score?: number   // 0-100
+  headline_diversity_score?: number // 0-100
+  keyword_relevance_score?: number // 0-100
 }
 
 export interface GeneratedKeywordCandidateMetadata {
@@ -189,8 +209,8 @@ export interface GeneratedAdCreativeData {
   descriptions: string[]
   keywords: string[]
   executableKeywords?: string[]
-  keywordsWithVolume?: KeywordWithVolume[]  // 带搜索量的关键词
-  negativeKeywords?: string[]               // 🎯 新增：否定关键词列表
+  keywordsWithVolume?: KeywordWithVolume[] // 带搜索量的关键词
+  negativeKeywords?: string[] // 🎯 新增：否定关键词列表
   callouts?: string[]
   sitelinks?: Array<{
     text: string
@@ -198,14 +218,14 @@ export interface GeneratedAdCreativeData {
     description?: string
   }>
   theme: string
-  explanation: string           // 创意说明
-  ai_model?: string              // 🎯 新增：实际使用的AI模型
+  explanation: string // 创意说明
+  ai_model?: string // 🎯 新增：实际使用的AI模型
   keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
   bucket_intent?: string | null
 
   // 🆕 v4.7: RSA Display Path (展示URL路径)
-  path1?: string                // RSA Display URL路径1，最多15字符
-  path2?: string                // RSA Display URL路径2，最多15字符
+  path1?: string // RSA Display URL路径1，最多15字符
+  path2?: string // RSA Display URL路径2，最多15字符
 
   // 新增：带标注的资产（可选，用于Ad Strength评估）
   headlinesWithMetadata?: HeadlineAsset[]
@@ -281,11 +301,9 @@ function normalizeOptionalStringArray(value: unknown): string[] | undefined {
   const parsed = parsePossiblyNestedJson(value)
   if (!Array.isArray(parsed)) return undefined
 
-  const normalized = Array.from(new Set(
-    parsed
-      .map((item) => String(item ?? '').trim())
-      .filter(Boolean)
-  ))
+  const normalized = Array.from(
+    new Set(parsed.map((item) => String(item ?? '').trim()).filter(Boolean))
+  )
 
   return normalized.length > 0 ? normalized : undefined
 }
@@ -318,7 +336,9 @@ function normalizeKeywordContractRole(value: unknown): KeywordAuditMetadata['con
   return undefined
 }
 
-function normalizeKeywordEvidenceStrength(value: unknown): KeywordAuditMetadata['evidenceStrength'] {
+function normalizeKeywordEvidenceStrength(
+  value: unknown
+): KeywordAuditMetadata['evidenceStrength'] {
   const normalized = normalizeOptionalString(value)?.toLowerCase()
   if (normalized === 'high' || normalized === 'medium' || normalized === 'low') {
     return normalized as KeywordAuditMetadata['evidenceStrength']
@@ -329,11 +349,11 @@ function normalizeKeywordEvidenceStrength(value: unknown): KeywordAuditMetadata[
 function normalizeKeywordFamilyMatchType(value: unknown): KeywordAuditMetadata['familyMatchType'] {
   const normalized = normalizeOptionalString(value)?.toLowerCase()
   if (
-    normalized === 'hard_model'
-    || normalized === 'soft_family'
-    || normalized === 'product_demand'
-    || normalized === 'brand'
-    || normalized === 'mixed'
+    normalized === 'hard_model' ||
+    normalized === 'soft_family' ||
+    normalized === 'product_demand' ||
+    normalized === 'brand' ||
+    normalized === 'mixed'
   ) {
     return normalized as KeywordAuditMetadata['familyMatchType']
   }
@@ -343,9 +363,9 @@ function normalizeKeywordFamilyMatchType(value: unknown): KeywordAuditMetadata['
 function normalizeKeywordRescueStage(value: unknown): KeywordAuditMetadata['rescueStage'] {
   const normalized = normalizeOptionalString(value)?.toLowerCase()
   if (
-    normalized === 'context_filter'
-    || normalized === 'post_selection'
-    || normalized === 'final_invariant'
+    normalized === 'context_filter' ||
+    normalized === 'post_selection' ||
+    normalized === 'final_invariant'
   ) {
     return normalized as KeywordAuditMetadata['rescueStage']
   }
@@ -375,17 +395,17 @@ function normalizeOptionalFiniteNumber(value: unknown): number | undefined {
 function normalizeKeywordSourceTier(value: unknown): KeywordAuditMetadata['sourceTier'] {
   const normalized = normalizeOptionalString(value)?.toUpperCase()
   if (
-    normalized === 'T0'
-    || normalized === 'T1'
-    || normalized === 'T2'
-    || normalized === 'T3A'
-    || normalized === 'T3B'
-    || normalized === 'T4A'
-    || normalized === 'T4B'
-    || normalized === 'DERIVED_TRUSTED'
-    || normalized === 'DERIVED_RESCUE'
-    || normalized === 'DERIVED_SYNTHETIC'
-    || normalized === 'UNKNOWN'
+    normalized === 'T0' ||
+    normalized === 'T1' ||
+    normalized === 'T2' ||
+    normalized === 'T3A' ||
+    normalized === 'T3B' ||
+    normalized === 'T4A' ||
+    normalized === 'T4B' ||
+    normalized === 'DERIVED_TRUSTED' ||
+    normalized === 'DERIVED_RESCUE' ||
+    normalized === 'DERIVED_SYNTHETIC' ||
+    normalized === 'UNKNOWN'
   ) {
     return normalized as KeywordAuditMetadata['sourceTier']
   }
@@ -397,26 +417,22 @@ function normalizeKeywordSourceGovernanceBucket(
 ): KeywordAuditMetadata['sourceGovernanceBucket'] {
   const normalized = normalizeOptionalString(value)?.toLowerCase()
   if (
-    normalized === 'primary'
-    || normalized === 'conditional'
-    || normalized === 'rescue'
-    || normalized === 'synthetic'
-    || normalized === 'unknown'
+    normalized === 'primary' ||
+    normalized === 'conditional' ||
+    normalized === 'rescue' ||
+    normalized === 'synthetic' ||
+    normalized === 'unknown'
   ) {
     return normalized as KeywordAuditMetadata['sourceGovernanceBucket']
   }
   return undefined
 }
 
-function normalizeKeywordLanguageSignals(
-  value: unknown
-): KeywordAuditMetadata['languageSignals'] {
+function normalizeKeywordLanguageSignals(value: unknown): KeywordAuditMetadata['languageSignals'] {
   const parsed = ensureJsonObject(value)
   if (!parsed) return undefined
 
-  const targetLanguage = normalizeOptionalString(
-    parsed.targetLanguage ?? parsed.target_language
-  )
+  const targetLanguage = normalizeOptionalString(parsed.targetLanguage ?? parsed.target_language)
   const allowedLanguageHints = normalizeOptionalStringArray(
     parsed.allowedLanguageHints ?? parsed.allowed_language_hints
   )
@@ -435,19 +451,17 @@ function normalizeKeywordLanguageSignals(
   const unauthorizedHeadToken = normalizeOptionalString(
     parsed.unauthorizedHeadToken ?? parsed.unauthorized_head_token
   )
-  const softDemote = normalizeOptionalBoolean(
-    parsed.softDemote ?? parsed.soft_demote
-  )
+  const softDemote = normalizeOptionalBoolean(parsed.softDemote ?? parsed.soft_demote)
 
   if (
-    !targetLanguage
-    && !allowedLanguageHints
-    && !detectedLanguageHints
-    && contentTokenCount === undefined
-    && unauthorizedContentTokenCount === undefined
-    && unauthorizedContentRatio === undefined
-    && !unauthorizedHeadToken
-    && softDemote === undefined
+    !targetLanguage &&
+    !allowedLanguageHints &&
+    !detectedLanguageHints &&
+    contentTokenCount === undefined &&
+    unauthorizedContentTokenCount === undefined &&
+    unauthorizedContentRatio === undefined &&
+    !unauthorizedHeadToken &&
+    softDemote === undefined
   ) {
     return undefined
   }
@@ -464,9 +478,7 @@ function normalizeKeywordLanguageSignals(
   }
 }
 
-function normalizeKeywordDecisionTrace(
-  value: unknown
-): KeywordAuditMetadata['decisionTrace'] {
+function normalizeKeywordDecisionTrace(value: unknown): KeywordAuditMetadata['decisionTrace'] {
   const parsed = parsePossiblyNestedJson(value)
   if (!Array.isArray(parsed)) return undefined
 
@@ -478,9 +490,9 @@ function normalizeKeywordDecisionTrace(
     const stage = normalizeOptionalString((item as any).stage)?.toLowerCase()
     const outcome = normalizeOptionalString((item as any).outcome)
     if (
-      !stage
-      || !outcome
-      || ![
+      !stage ||
+      !outcome ||
+      ![
         'global_validity',
         'source_governance',
         'slot_contract',
@@ -504,9 +516,7 @@ function normalizeKeywordDecisionTrace(
   return normalized.length > 0 ? normalized : undefined
 }
 
-function normalizeKeywordsWithVolume(
-  value: unknown
-): KeywordWithVolume[] | undefined {
+function normalizeKeywordsWithVolume(value: unknown): KeywordWithVolume[] | undefined {
   const parsed = parsePossiblyNestedJson(value)
   if (!Array.isArray(parsed)) return undefined
   const aiSourceSubtypeEnabled = isCreativeKeywordAiSourceSubtypeEnabled()
@@ -543,9 +553,7 @@ function normalizeKeywordsWithVolume(
 
     const sourceRaw = normalizeOptionalString((item as any).source)?.toUpperCase()
     const source = sourceRaw || undefined
-    const matchType = normalizeKeywordMatchType(
-      (item as any).matchType ?? (item as any).match_type
-    )
+    const matchType = normalizeKeywordMatchType((item as any).matchType ?? (item as any).match_type)
 
     const volumeUnavailableReasonRaw =
       typeof (item as any).volumeUnavailableReason === 'string'
@@ -553,9 +561,7 @@ function normalizeKeywordsWithVolume(
         : undefined
     const volumeUnavailableReason =
       volumeUnavailableReasonRaw &&
-      ['DEV_TOKEN_INSUFFICIENT_ACCESS'].includes(
-        volumeUnavailableReasonRaw
-      )
+      ['DEV_TOKEN_INSUFFICIENT_ACCESS'].includes(volumeUnavailableReasonRaw)
         ? (volumeUnavailableReasonRaw as KeywordWithVolume['volumeUnavailableReason'])
         : undefined
 
@@ -566,23 +572,17 @@ function normalizeKeywordsWithVolume(
       (item as any).sourceSubtype ?? (item as any).source_subtype
     )?.toUpperCase()
     const sourceSubtype = aiSourceSubtypeEnabled
-      ? (
-        explicitSourceSubtype
-        || sourceType
-        || normalizeKeywordSourceSubtype({ source, sourceType })
-      )
+      ? explicitSourceSubtype || sourceType || normalizeKeywordSourceSubtype({ source, sourceType })
       : normalizeKeywordSourceSubtype({ source })
     const rawSource =
-      normalizeOptionalString(
-        (item as any).rawSource ?? (item as any).raw_source
-      )?.toUpperCase()
-      || inferKeywordRawSource({
+      normalizeOptionalString((item as any).rawSource ?? (item as any).raw_source)?.toUpperCase() ||
+      inferKeywordRawSource({
         source,
         sourceType: sourceSubtype || sourceType,
       })
     const derivedTags =
-      normalizeAuditTags((item as any).derivedTags ?? (item as any).derived_tags)
-      || inferKeywordDerivedTags({
+      normalizeAuditTags((item as any).derivedTags ?? (item as any).derived_tags) ||
+      inferKeywordDerivedTags({
         source,
         sourceType: sourceSubtype || sourceType,
       })
@@ -591,9 +591,7 @@ function normalizeKeywordsWithVolume(
       keyword,
       searchVolume: Number.isFinite(parsedSearchVolume) ? parsedSearchVolume : 0,
       competition:
-        typeof (item as any).competition === 'string'
-          ? (item as any).competition
-          : undefined,
+        typeof (item as any).competition === 'string' ? (item as any).competition : undefined,
       competitionIndex: Number.isFinite(parsedCompetitionIndex)
         ? parsedCompetitionIndex
         : undefined,
@@ -601,9 +599,7 @@ function normalizeKeywordsWithVolume(
       matchType,
       sourceType: sourceType || sourceSubtype,
       sourceSubtype,
-      sourceTier: normalizeKeywordSourceTier(
-        (item as any).sourceTier ?? (item as any).source_tier
-      ),
+      sourceTier: normalizeKeywordSourceTier((item as any).sourceTier ?? (item as any).source_tier),
       sourceGovernanceBucket: normalizeKeywordSourceGovernanceBucket(
         (item as any).sourceGovernanceBucket ?? (item as any).source_governance_bucket
       ),
@@ -615,18 +611,10 @@ function normalizeKeywordsWithVolume(
       ),
       rawSource,
       derivedTags,
-      isDerived: normalizeOptionalBoolean(
-        (item as any).isDerived ?? (item as any).is_derived
-      ),
-      isFallback: normalizeOptionalBoolean(
-        (item as any).isFallback ?? (item as any).is_fallback
-      ),
-      sourceField: normalizeOptionalString(
-        (item as any).sourceField ?? (item as any).source_field
-      ),
-      anchorType: normalizeOptionalString(
-        (item as any).anchorType ?? (item as any).anchor_type
-      ),
+      isDerived: normalizeOptionalBoolean((item as any).isDerived ?? (item as any).is_derived),
+      isFallback: normalizeOptionalBoolean((item as any).isFallback ?? (item as any).is_fallback),
+      sourceField: normalizeOptionalString((item as any).sourceField ?? (item as any).source_field),
+      anchorType: normalizeOptionalString((item as any).anchorType ?? (item as any).anchor_type),
       anchorKinds: normalizeOptionalStringArray(
         (item as any).anchorKinds ?? (item as any).anchor_kinds
       ),
@@ -700,17 +688,12 @@ function resolveProvidedCreativeAudit(data: {
   keywordSourceAudit?: unknown
   adStrength?: unknown
 }): CreativeKeywordSourceAudit | undefined {
-  const adStrengthAudit = (
-    data.adStrength
-    && typeof data.adStrength === 'object'
-    && !Array.isArray(data.adStrength)
-  )
-    ? ((data.adStrength as any).audit || (data.adStrength as any).keywordSourceAudit)
-    : undefined
+  const adStrengthAudit =
+    data.adStrength && typeof data.adStrength === 'object' && !Array.isArray(data.adStrength)
+      ? (data.adStrength as any).audit || (data.adStrength as any).keywordSourceAudit
+      : undefined
 
-  return normalizeCreativeAuditForCompat(
-    data.audit || data.keywordSourceAudit || adStrengthAudit
-  )
+  return normalizeCreativeAuditForCompat(data.audit || data.keywordSourceAudit || adStrengthAudit)
 }
 
 function isOfferBucketUniqueConflict(error: unknown): boolean {
@@ -725,10 +708,8 @@ function isOfferBucketUniqueConflict(error: unknown): boolean {
 
   if (
     message.includes('duplicate key value violates unique constraint') &&
-    (
-      message.includes('uq_ad_creatives_offer_bucket_active') ||
-      message.includes('idx_ad_creatives_offer_bucket_unique_active')
-    )
+    (message.includes('uq_ad_creatives_offer_bucket_active') ||
+      message.includes('idx_ad_creatives_offer_bucket_unique_active'))
   ) {
     return true
   }
@@ -769,7 +750,7 @@ export async function createAdCreative(
       keywordSourceAudit?: CreativeKeywordSourceAudit
     }
     // 🆕 v4.10: 关键词池桶信息
-    keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S'  // A/B/C/D=关键词桶, S=兼容旧综合创意 key（运行时归一化到 D）
+    keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' // A/B/C/D=关键词桶, S=兼容旧综合创意 key（运行时归一化到 D）
     keyword_pool_id?: number
     bucket_intent?: string
     creative_type?: CanonicalCreativeType
@@ -781,13 +762,9 @@ export async function createAdCreative(
   const normalizedHeadlines = ensureStringArray(data.headlines)
   const normalizedDescriptions = ensureStringArray(data.descriptions)
   const normalizedKeywords = ensureStringArray(data.keywords)
-  const normalizedKeywordsWithVolume = normalizeKeywordsWithVolume(
-    data.keywordsWithVolume
-  ) || []
+  const normalizedKeywordsWithVolume = normalizeKeywordsWithVolume(data.keywordsWithVolume) || []
   const normalizedNegativeKeywords = ensureStringArray(data.negativeKeywords)
-  const normalizedCallouts = normalizeCallouts(
-    parsePossiblyNestedJson(data.callouts)
-  )
+  const normalizedCallouts = normalizeCallouts(parsePossiblyNestedJson(data.callouts))
   const normalizedSitelinks = normalizeSitelinks(
     parsePossiblyNestedJson(data.sitelinks),
     data.final_url
@@ -799,24 +776,27 @@ export async function createAdCreative(
   )
   const offerBrand = String(offerBrandRow?.brand || '').trim()
   const offerTargetLanguage = String(offerBrandRow?.target_language || '').trim() || undefined
-  const creativeKeywordBrandOnly = ['1', 'true', 'yes', 'y', 'on']
-    .includes(String(process.env.CREATIVE_KEYWORD_BRAND_ONLY || '').trim().toLowerCase())
+  const creativeKeywordBrandOnly = ['1', 'true', 'yes', 'y', 'on'].includes(
+    String(process.env.CREATIVE_KEYWORD_BRAND_ONLY || '')
+      .trim()
+      .toLowerCase()
+  )
   const bucketForStorage = normalizeBucketSlot(data.keyword_bucket)
   const creativeType = deriveCanonicalCreativeType({
     creativeType: data.creative_type,
     keywordBucket: bucketForStorage,
-    keywords:
-      normalizedKeywordsWithVolume.map((item) => item.keyword)
-      || normalizedKeywords,
+    keywords: normalizedKeywordsWithVolume.map((item) => item.keyword) || normalizedKeywords,
     theme: data.theme,
     bucketIntent: data.bucket_intent,
   })
   const executableKeywords = ensureStringArray((data as any).executableKeywords)
-  const hasExplicitExecutableKeywords = Object.prototype.hasOwnProperty.call(data, 'executableKeywords')
+  const hasExplicitExecutableKeywords = Object.prototype.hasOwnProperty.call(
+    data,
+    'executableKeywords'
+  )
   const providedCreativeAudit = resolveProvidedCreativeAudit(data)
-  let normalizedAdStrength = data.adStrength && typeof data.adStrength === 'object'
-    ? { ...data.adStrength }
-    : undefined
+  let normalizedAdStrength =
+    data.adStrength && typeof data.adStrength === 'object' ? { ...data.adStrength } : undefined
   if (normalizedAdStrength && providedCreativeAudit) {
     ;(normalizedAdStrength as any).audit = providedCreativeAudit
     ;(normalizedAdStrength as any).keywordSourceAudit = providedCreativeAudit
@@ -829,27 +809,20 @@ export async function createAdCreative(
 
   const callerSelectedKeywords = hasExplicitExecutableKeywords
     ? executableKeywords
-    : (
-      executableKeywords.length > 0
-        ? executableKeywords
-        : normalizedKeywords
-    )
+    : executableKeywords.length > 0
+      ? executableKeywords
+      : normalizedKeywords
   const callerAlignedKeywordsWithVolume = alignKeywordsWithVolumeToKeywordOrder(
     callerSelectedKeywords,
     normalizedKeywordsWithVolume
   )
   const callerKeywordSet = new Set(
-    callerSelectedKeywords
-      .map((keyword) => normalizeKeywordKey(keyword))
-      .filter(Boolean)
+    callerSelectedKeywords.map((keyword) => normalizeKeywordKey(keyword)).filter(Boolean)
   )
   const hasBuilderValidatedSelection = Boolean(
-    providedCreativeAudit
-    && callerAlignedKeywordsWithVolume.length === callerKeywordSet.size
-    && (
-      hasExplicitExecutableKeywords
-      || callerKeywordSet.size > 0
-    )
+    providedCreativeAudit &&
+    callerAlignedKeywordsWithVolume.length === callerKeywordSet.size &&
+    (hasExplicitExecutableKeywords || callerKeywordSet.size > 0)
   )
 
   if (executableKeywords.length > 0 && !providedCreativeAudit) {
@@ -862,39 +835,40 @@ export async function createAdCreative(
   const selectedKeywords = hasBuilderValidatedSelection
     ? undefined
     : selectCreativeKeywords({
-      keywords: normalizedKeywords,
-      keywordsWithVolume: normalizedKeywordsWithVolume,
-      brandName: offerBrand,
-      targetLanguage: offerTargetLanguage,
-      creativeType,
-      bucket: bucketForStorage || null,
-      maxKeywords: CREATIVE_KEYWORD_MAX_COUNT,
-      brandReserve: CREATIVE_BRAND_KEYWORD_RESERVE,
-      minBrandKeywords: CREATIVE_BRAND_KEYWORD_RESERVE,
-      brandOnly: creativeKeywordBrandOnly,
-    })
+        keywords: normalizedKeywords,
+        keywordsWithVolume: normalizedKeywordsWithVolume,
+        brandName: offerBrand,
+        targetLanguage: offerTargetLanguage,
+        creativeType,
+        bucket: bucketForStorage || null,
+        maxKeywords: CREATIVE_KEYWORD_MAX_COUNT,
+        brandReserve: CREATIVE_BRAND_KEYWORD_RESERVE,
+        minBrandKeywords: CREATIVE_BRAND_KEYWORD_RESERVE,
+        brandOnly: creativeKeywordBrandOnly,
+      })
   const finalKeywords = hasBuilderValidatedSelection
     ? callerSelectedKeywords
-    : (selectedKeywords?.keywords || normalizedKeywords)
+    : selectedKeywords?.keywords || normalizedKeywords
   const finalKeywordsWithVolume: KeywordWithVolume[] = hasBuilderValidatedSelection
     ? callerAlignedKeywordsWithVolume
-    : (
-      alignKeywordsWithVolumeToKeywordOrder(
+    : alignKeywordsWithVolumeToKeywordOrder(
         selectedKeywords?.keywords || normalizedKeywords,
-        (selectedKeywords?.keywordsWithVolume as KeywordWithVolume[] | undefined)
-          || normalizedKeywordsWithVolume
+        (selectedKeywords?.keywordsWithVolume as KeywordWithVolume[] | undefined) ||
+          normalizedKeywordsWithVolume
       )
-    )
   if (finalKeywords.length === 0 || finalKeywordsWithVolume.length === 0) {
-    throw new Error(`关键词 contract 校验失败，拒绝落库（creativeType=${creativeType || 'unknown'}）`)
+    throw new Error(
+      `关键词 contract 校验失败，拒绝落库（creativeType=${creativeType || 'unknown'}）`
+    )
   }
-  if (alignKeywordsWithVolumeToKeywordOrder(finalKeywords, finalKeywordsWithVolume).length !== finalKeywords.length) {
+  if (
+    alignKeywordsWithVolumeToKeywordOrder(finalKeywords, finalKeywordsWithVolume).length !==
+    finalKeywords.length
+  ) {
     throw new Error('关键词与 keywordsWithVolume 未能一一对齐，拒绝落库')
   }
   const serializedKeywordsWithVolume =
-    finalKeywordsWithVolume.length > 0
-      ? JSON.stringify(finalKeywordsWithVolume)
-      : null
+    finalKeywordsWithVolume.length > 0 ? JSON.stringify(finalKeywordsWithVolume) : null
 
   if (data.score == null || !data.score_breakdown) {
     throw new Error(
@@ -921,20 +895,20 @@ export async function createAdCreative(
     JSON.stringify(normalizedDescriptions),
     JSON.stringify(finalKeywords),
     serializedKeywordsWithVolume,
-    normalizedNegativeKeywords.length > 0 ? JSON.stringify(normalizedNegativeKeywords) : null,  // 🎯 新增：保存否定关键词
+    normalizedNegativeKeywords.length > 0 ? JSON.stringify(normalizedNegativeKeywords) : null, // 🎯 新增：保存否定关键词
     normalizedCallouts ? JSON.stringify(normalizedCallouts) : null,
     normalizedSitelinks ? JSON.stringify(normalizedSitelinks) : null,
     data.final_url,
     data.final_url_suffix || null,
-    data.path1 || null,  // 🆕 v4.7: RSA Display Path
-    data.path2 || null,  // 🆕 v4.7: RSA Display Path
+    data.path1 || null, // 🆕 v4.7: RSA Display Path
+    data.path2 || null, // 🆕 v4.7: RSA Display Path
     scoreResult.total_score,
     JSON.stringify(scoreResult.breakdown),
     scoreResult.explanation,
     data.generation_round || 1,
     data.theme,
     data.ai_model || GEMINI_ACTIVE_MODEL,
-    normalizedAdStrength ? JSON.stringify(normalizedAdStrength) : null,  // 🔧 保存完整的 Ad Strength 数据
+    normalizedAdStrength ? JSON.stringify(normalizedAdStrength) : null, // 🔧 保存完整的 Ad Strength 数据
     creativeType,
     // 🆕 v4.10: 关键词池桶信息
     bucketForStorage,
@@ -946,7 +920,8 @@ export async function createAdCreative(
   const findExistingCreativeIdByBucket = async (): Promise<number | null> => {
     if (!bucketForStorage) return null
 
-    const existing = await db.queryOne<{ id: number }>(`
+    const existing = await db.queryOne<{ id: number }>(
+      `
       SELECT id
       FROM ad_creatives
       WHERE offer_id = ?
@@ -956,13 +931,16 @@ export async function createAdCreative(
         AND ${isDeletedFalseSql}
       ORDER BY updated_at DESC, id DESC
       LIMIT 1
-    `, [offerId, userId, bucketForStorage])
+    `,
+      [offerId, userId, bucketForStorage]
+    )
 
     return existing?.id ? Number(existing.id) : null
   }
 
   const updateCreativeById = async (creativeId: number): Promise<void> => {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE ad_creatives
       SET
         headlines = ?,
@@ -994,33 +972,35 @@ export async function createAdCreative(
         deleted_at = NULL,
         updated_at = ${nowSql}
       WHERE id = ? AND user_id = ?
-    `, [
-      insertParams[2],
-      insertParams[3],
-      insertParams[4],
-      insertParams[5],
-      insertParams[6],
-      insertParams[7],
-      insertParams[8],
-      insertParams[9],
-      insertParams[10],
-      insertParams[11],
-      insertParams[12],
-      insertParams[13],
-      insertParams[14],
-      insertParams[15],
-      insertParams[16],
-      insertParams[17],
-      insertParams[18],
-      insertParams[19],
-      insertParams[20],
-      insertParams[21],
-      insertParams[22],
-      insertParams[23],
-      insertParams[24],
-      creativeId,
-      userId,
-    ])
+    `,
+      [
+        insertParams[2],
+        insertParams[3],
+        insertParams[4],
+        insertParams[5],
+        insertParams[6],
+        insertParams[7],
+        insertParams[8],
+        insertParams[9],
+        insertParams[10],
+        insertParams[11],
+        insertParams[12],
+        insertParams[13],
+        insertParams[14],
+        insertParams[15],
+        insertParams[16],
+        insertParams[17],
+        insertParams[18],
+        insertParams[19],
+        insertParams[20],
+        insertParams[21],
+        insertParams[22],
+        insertParams[23],
+        insertParams[24],
+        creativeId,
+        userId,
+      ]
+    )
   }
 
   let creativeId = await findExistingCreativeIdByBucket()
@@ -1029,7 +1009,8 @@ export async function createAdCreative(
     await updateCreativeById(creativeId)
   } else {
     try {
-      const result = await db.exec(`
+      const result = await db.exec(
+        `
         INSERT INTO ad_creatives (
           offer_id, user_id,
           headlines, descriptions, keywords, keywords_with_volume, negative_keywords, callouts, sitelinks,
@@ -1041,7 +1022,9 @@ export async function createAdCreative(
           keyword_bucket, keyword_pool_id, bucket_intent,
           generation_mode
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, insertParams)
+      `,
+        insertParams
+      )
       creativeId = getInsertedId(result, db.type)
     } catch (error) {
       if (!bucketForStorage || !isOfferBucketUniqueConflict(error)) {
@@ -1113,10 +1096,13 @@ export async function createAdCreative(
 export async function findAdCreativeById(id: number, userId: number): Promise<AdCreative | null> {
   const db = await getDatabase()
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
-  const row = await db.queryOne(`
+  const row = (await db.queryOne(
+    `
     SELECT * FROM ad_creatives
     WHERE id = ? AND user_id = ? AND ${isDeletedCheck}
-  `, [id, userId]) as any
+  `,
+    [id, userId]
+  )) as any
 
   if (!row) return null
 
@@ -1124,7 +1110,9 @@ export async function findAdCreativeById(id: number, userId: number): Promise<Ad
 }
 
 function normalizeBucketSlot(value: unknown): 'A' | 'B' | 'D' | null {
-  const upper = String(value || '').trim().toUpperCase()
+  const upper = String(value || '')
+    .trim()
+    .toUpperCase()
   if (!upper) return null
   if (upper === 'A') return 'A'
   if (upper === 'B' || upper === 'C') return 'B'
@@ -1137,16 +1125,16 @@ function isGeneratingPlaceholderCreative(creative: AdCreative): boolean {
   const headlines = Array.isArray(creative.headlines) ? creative.headlines : []
   const descriptions = Array.isArray(creative.descriptions) ? creative.descriptions : []
   return (
-    headlines.some(text => String(text || '').includes('生成中')) ||
-    descriptions.some(text => String(text || '').includes('正在生成'))
+    headlines.some((text) => String(text || '').includes('生成中')) ||
+    descriptions.some((text) => String(text || '').includes('正在生成'))
   )
 }
 
 function filterSupersededGeneratingPlaceholders(creatives: AdCreative[]): AdCreative[] {
   const finalizedBuckets = new Set<'A' | 'B' | 'D'>(
     creatives
-      .filter(creative => String(creative.creation_status || '').toLowerCase() !== 'generating')
-      .map(creative => normalizeBucketSlot((creative as any).keyword_bucket))
+      .filter((creative) => String(creative.creation_status || '').toLowerCase() !== 'generating')
+      .map((creative) => normalizeBucketSlot((creative as any).keyword_bucket))
       .filter((slot): slot is 'A' | 'B' | 'D' => slot !== null)
   )
 
@@ -1187,11 +1175,14 @@ export async function listAdCreativesByOffer(
     params.push(options.is_selected ? 1 : 0)
   }
 
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT * FROM ad_creatives
     WHERE ${whereConditions.join(' AND ')}
     ORDER BY score DESC, created_at DESC
-  `, params) as any[]
+  `,
+    params
+  )) as any[]
 
   const parsed = rows.map(parseAdCreativeRow)
   return filterSupersededGeneratingPlaceholders(parsed)
@@ -1213,20 +1204,26 @@ export async function selectAdCreative(id: number, userId: number): Promise<void
   const isSelectedTrue = db.type === 'postgres' ? 'is_selected = true' : 'is_selected = 1'
   const isSelectedFalse = db.type === 'postgres' ? 'is_selected = false' : 'is_selected = 0'
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE ad_creatives
     SET ${isSelectedFalse},
         updated_at = ${nowFunc(db.type)}
     WHERE offer_id = ? AND user_id = ? AND ${isSelectedTrue}
-  `, [creative.offer_id, userId])
+  `,
+    [creative.offer_id, userId]
+  )
 
   // 标记当前创意为已选中
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE ad_creatives
     SET ${isSelectedTrue},
         updated_at = ${nowFunc(db.type)}
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 }
 
 function normalizeSitelinks(
@@ -1301,12 +1298,14 @@ function parseAdCreativeRow(row: any): AdCreative {
   )
   const normalizedAdStrength = parsedAdStrength
     ? {
-      ...parsedAdStrength,
-      ...(parsedAdStrengthAudit ? {
-        audit: parsedAdStrengthAudit,
-        keywordSourceAudit: parsedAdStrengthAudit,
-      } : {}),
-    }
+        ...parsedAdStrength,
+        ...(parsedAdStrengthAudit
+          ? {
+              audit: parsedAdStrengthAudit,
+              keywordSourceAudit: parsedAdStrengthAudit,
+            }
+          : {}),
+      }
     : undefined
   const normalizedCreativeType = deriveCanonicalCreativeType({
     creativeType: row.creative_type,
@@ -1319,8 +1318,8 @@ function parseAdCreativeRow(row: any): AdCreative {
   })
 
   const storedGenerationMode = resolveStoredGenerationMode(row.generation_mode)
-  const keywordBucket = mapCreativeTypeToBucketSlot(normalizedCreativeType)
-    || normalizeBucketSlot(row.keyword_bucket)
+  const keywordBucket =
+    mapCreativeTypeToBucketSlot(normalizedCreativeType) || normalizeBucketSlot(row.keyword_bucket)
 
   return {
     ...row,
@@ -1333,7 +1332,7 @@ function parseAdCreativeRow(row: any): AdCreative {
     descriptions: ensureStringArray(row.descriptions),
     keywords: ensureStringArray(row.keywords),
     keywordsWithVolume: normalizeKeywordsWithVolume(row.keywords_with_volume),
-    negativeKeywords: ensureStringArray(row.negative_keywords),  // 🎯 新增：解析否定关键词
+    negativeKeywords: ensureStringArray(row.negative_keywords), // 🎯 新增：解析否定关键词
     callouts: normalizeCallouts(parsePossiblyNestedJson(row.callouts)),
     // 兼容：历史/AI不稳定输出可能产生 description1/description_1 等字段
     sitelinks: normalizeSitelinks(parsePossiblyNestedJson(row.sitelinks), row.final_url),
@@ -1374,19 +1373,22 @@ export function normalizeCallouts(input: unknown): string[] | undefined {
 /**
  * 对比多个广告创意
  */
-export async function compareAdCreatives(creativeIds: number[], userId: number): Promise<{
+export async function compareAdCreatives(
+  creativeIds: number[],
+  userId: number
+): Promise<{
   creatives: AdCreative[]
   comparison: {
-    best_overall: number          // 综合得分最高的ID
-    best_relevance: number        // 相关性最高的ID
-    best_engagement: number       // 吸引力最高的ID
-    recommendation: string        // 推荐说明
+    best_overall: number // 综合得分最高的ID
+    best_relevance: number // 相关性最高的ID
+    best_engagement: number // 吸引力最高的ID
+    recommendation: string // 推荐说明
   }
 }> {
   const creativesResults = await Promise.all(
-    creativeIds.map(id => findAdCreativeById(id, userId))
+    creativeIds.map((id) => findAdCreativeById(id, userId))
   )
-  const creatives = creativesResults.filter(c => c !== null) as AdCreative[]
+  const creatives = creativesResults.filter((c) => c !== null) as AdCreative[]
 
   if (creatives.length === 0) {
     throw new Error('未找到有效的广告创意')
@@ -1422,8 +1424,8 @@ export async function compareAdCreatives(creativeIds: number[], userId: number):
       best_overall: bestOverall.id,
       best_relevance: bestRelevance.id,
       best_engagement: bestEngagement.id,
-      recommendation
-    }
+      recommendation,
+    },
   }
 }
 
@@ -1517,14 +1519,17 @@ export async function updateAdCreative(
     return creative
   }
 
-  fields.push('updated_at = datetime(\'now\')')
+  fields.push("updated_at = datetime('now')")
   values.push(id, userId)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE ad_creatives
     SET ${fields.join(', ')}
     WHERE id = ? AND user_id = ?
-  `, values)
+  `,
+    values
+  )
 
   return await findAdCreativeById(id, userId)
 }
@@ -1538,12 +1543,15 @@ export async function updateAdCreative(
 export async function deleteAdCreative(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE ad_creatives
     SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
         deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   return result.changes > 0
 }
@@ -1551,14 +1559,20 @@ export async function deleteAdCreative(id: number, userId: number): Promise<bool
 /**
  * 获取Offer的所有创意（兼容creatives.ts API）
  */
-export async function findAdCreativesByOfferId(offerId: number, userId: number): Promise<AdCreative[]> {
+export async function findAdCreativesByOfferId(
+  offerId: number,
+  userId: number
+): Promise<AdCreative[]> {
   return await listAdCreativesByOffer(offerId, userId)
 }
 
 /**
  * 获取用户的所有创意（兼容creatives.ts API）
  */
-export async function findAdCreativesByUserId(userId: number, limit?: number): Promise<AdCreative[]> {
+export async function findAdCreativesByUserId(
+  userId: number,
+  limit?: number
+): Promise<AdCreative[]> {
   const db = await getDatabase()
 
   const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
@@ -1572,6 +1586,6 @@ export async function findAdCreativesByUserId(userId: number, limit?: number): P
     sql += ` LIMIT ${limit}`
   }
 
-  const rows = await db.query(sql, [userId]) as any[]
+  const rows = (await db.query(sql, [userId])) as any[]
   return rows.map(parseAdCreativeRow)
 }

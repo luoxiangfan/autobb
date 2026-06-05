@@ -18,7 +18,12 @@ export function resolveEffectiveUserIdsForCampaignScope(params: {
   const { authUserId, isAdmin, requestedUserIds, userIdFilterParam, userIdFilter } = params
   if (!isAdmin) return [authUserId]
   if (requestedUserIds.length > 0) return requestedUserIds
-  if (userIdFilterParam && userIdFilterParam !== 'all' && userIdFilter && Number.isFinite(userIdFilter)) {
+  if (
+    userIdFilterParam &&
+    userIdFilterParam !== 'all' &&
+    userIdFilter &&
+    Number.isFinite(userIdFilter)
+  ) {
     return [userIdFilter]
   }
   return null
@@ -58,7 +63,8 @@ export async function queryCampaignRowsForTrendsScope(
     createdAtEndParam: string | null
   }
 ): Promise<CampaignRowForScope[]> {
-  const { effectiveUserIds, affiliateDomainKeywords, createdAtStartParam, createdAtEndParam } = params
+  const { effectiveUserIds, affiliateDomainKeywords, createdAtStartParam, createdAtEndParam } =
+    params
   const userScopeClause = buildUserScopeClause('c.user_id', effectiveUserIds)
   const userScopeValues = effectiveUserIds ?? []
   const hasAffiliate = affiliateDomainKeywords.length > 0
@@ -70,7 +76,7 @@ export async function queryCampaignRowsForTrendsScope(
     : ''
   const affiliateBinds = hasAffiliate ? affiliateDomainKeywords.map((k) => `%${k}%`) : []
 
-  const rows = await db.query(
+  const rows = (await db.query(
     `
         SELECT
           c.id,
@@ -100,7 +106,7 @@ export async function queryCampaignRowsForTrendsScope(
       ...(createdAtStartParam ? [createdAtStartParam] : []),
       ...(createdAtEndParam ? [createdAtEndParam] : []),
     ]
-  ) as CampaignRowForScope[]
+  )) as CampaignRowForScope[]
 
   return Array.isArray(rows) ? rows : []
 }
@@ -164,9 +170,7 @@ export function filterCampaignRowIdsForTrendsScope(
     list = list.filter((row) => (row.status_category || 'pending') === statusCategoryFilter)
   }
 
-  return list
-    .map((row) => Number(row.id))
-    .filter((id) => Number.isFinite(id) && id > 0)
+  return list.map((row) => Number(row.id)).filter((id) => Number.isFinite(id) && id > 0)
 }
 
 export function parseAffiliateTrendsParam(affiliateFilterParam: string | null): {
@@ -178,11 +182,15 @@ export function parseAffiliateTrendsParam(affiliateFilterParam: string | null): 
   }
   try {
     const affiliateFilter = decodeURIComponent(affiliateFilterParam).trim() || null
-    const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
+    const affiliateDomainKeywords = affiliateFilter
+      ? getAffiliateDomainKeywords(affiliateFilter)
+      : []
     return { affiliateFilter, affiliateDomainKeywords }
   } catch {
     const affiliateFilter = affiliateFilterParam.trim() || null
-    const affiliateDomainKeywords = affiliateFilter ? getAffiliateDomainKeywords(affiliateFilter) : []
+    const affiliateDomainKeywords = affiliateFilter
+      ? getAffiliateDomainKeywords(affiliateFilter)
+      : []
     return { affiliateFilter, affiliateDomainKeywords }
   }
 }

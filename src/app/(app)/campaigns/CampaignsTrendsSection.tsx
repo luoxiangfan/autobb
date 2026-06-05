@@ -1,7 +1,11 @@
 'use client'
 
 import { Maximize2 } from 'lucide-react'
-import { TrendChart, type TrendChartData, type TrendChartMetric } from '@/components/charts/TrendChart'
+import {
+  TrendChart,
+  type TrendChartData,
+  type TrendChartMetric,
+} from '@/components/charts/TrendChart'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
@@ -190,21 +194,27 @@ export default function CampaignsTrendsSection({
                       <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
                       <span className="text-xs text-gray-600">投放中</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{enabledCampaignCount}</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {enabledCampaignCount}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
                       <span className="text-xs text-gray-600">已暂停</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{pausedCampaignCount}</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {pausedCampaignCount}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
                       <span className="text-xs text-gray-600">已移除</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-900">{removedCampaignCount}</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {removedCampaignCount}
+                    </span>
                   </div>
                   <div className="mt-2 flex items-center justify-between border-t pt-2">
                     <span className="text-xs font-medium text-gray-700">总计</span>
@@ -225,7 +235,9 @@ export default function CampaignsTrendsSection({
       >
         <DialogContent className="max-h-[88vh] w-[96vw] max-w-[96vw] overflow-y-auto sm:max-w-[96vw] lg:max-w-[1280px] xl:max-w-[1440px]">
           <DialogHeader>
-            <DialogTitle>{expandedTrendChart === 'traffic' ? '流量趋势（放大）' : '成本趋势（放大）'}</DialogTitle>
+            <DialogTitle>
+              {expandedTrendChart === 'traffic' ? '流量趋势（放大）' : '成本趋势（放大）'}
+            </DialogTitle>
           </DialogHeader>
           {expandedTrendChart === 'traffic' && (
             <TrendChart

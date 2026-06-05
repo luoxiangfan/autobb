@@ -243,9 +243,7 @@ describe('POST /api/offers/batch-start-tasks', () => {
   })
 
   it('exposes unmatchedIdsCount when some offer ids are not found', async () => {
-    dbFns.query.mockResolvedValue([
-      { id: 101, target_country: 'US' },
-    ])
+    dbFns.query.mockResolvedValue([{ id: 101, target_country: 'US' }])
     clickFarmFns.getClickFarmTaskByOfferId.mockResolvedValue(null)
     urlSwapFns.getUrlSwapTaskByOfferId.mockResolvedValue(null)
     clickFarmFns.createClickFarmTask.mockResolvedValue({})

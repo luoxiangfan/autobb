@@ -42,4 +42,3 @@ export function isInvalidKeyword(keyword: string): boolean {
 
   return false
 }
-

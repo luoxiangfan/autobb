@@ -81,4 +81,3 @@ describe('parseClickFarmTask', () => {
     expect(task.updated_at).toBe('2026-01-17T03:26:49.053Z')
   })
 })
-

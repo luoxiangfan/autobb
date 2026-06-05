@@ -167,9 +167,10 @@ export async function POST(request: NextRequest) {
           failed: pauseResult.failedCount,
         }),
         status: pauseResult.failedCount > 0 ? 'error' : 'success',
-        errorMessage: pauseResult.failedCount > 0
-          ? pauseResult.failures.map((failure) => `${failure.id}:${failure.error}`).join('; ')
-          : null,
+        errorMessage:
+          pauseResult.failedCount > 0
+            ? pauseResult.failures.map((failure) => `${failure.id}:${failure.error}`).join('; ')
+            : null,
       })
     } catch {
       // ignore audit log failure
@@ -194,9 +195,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('执行一键熔断失败:', error)
-    return NextResponse.json(
-      { error: error?.message || '执行一键熔断失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '执行一键熔断失败' }, { status: 500 })
   }
 }

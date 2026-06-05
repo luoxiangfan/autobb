@@ -22,16 +22,18 @@ async function maybeShowBindings(databaseUrl: string, sender: string, tenantKey?
   })
 
   try {
-    const rows = await sql<{
-      id: number
-      user_id: number
-      channel: string
-      tenant_key: string | null
-      open_id: string | null
-      union_id: string | null
-      status: string
-      updated_at: string | null
-    }[]>`
+    const rows = await sql<
+      {
+        id: number
+        user_id: number
+        channel: string
+        tenant_key: string | null
+        open_id: string | null
+        union_id: string | null
+        status: string
+        updated_at: string | null
+      }[]
+    >`
       SELECT id, user_id, channel, tenant_key, open_id, union_id, status, updated_at
       FROM openclaw_user_bindings
       WHERE channel = 'feishu'

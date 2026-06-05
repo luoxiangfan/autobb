@@ -185,7 +185,10 @@ export async function checkCreativePublishTimeouts(
     stalledOffers += 1
     stalledOfferIds.push(row.offer_id)
 
-    const elapsedMinutes = Math.max(0, Math.floor((Date.now() - completedAt.getTime()) / (1000 * 60)))
+    const elapsedMinutes = Math.max(
+      0,
+      Math.floor((Date.now() - completedAt.getTime()) / (1000 * 60))
+    )
     const alertId = await createRiskAlert(
       row.user_id,
       'creative_publish_timeout',

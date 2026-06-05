@@ -37,11 +37,7 @@ export async function executeCampaignBatchCreate(
     throw new Error('批量创建需要指定 googleAdsAccountId')
   }
 
-  const accountCheck = await validateGoogleAdsAccountForRestore(
-    db,
-    googleAdsAccountId,
-    task.userId
-  )
+  const accountCheck = await validateGoogleAdsAccountForRestore(db, googleAdsAccountId, task.userId)
   if (!accountCheck.ok) {
     throw new Error(accountCheck.message)
   }
@@ -78,10 +74,7 @@ export async function executeCampaignBatchCreate(
 
     const uniqueOfferIds = [...new Set([...backupById.values()].map((b) => b.offerId))]
     await abandonStalePendingCampaignsForOffers(uniqueOfferIds, task.userId)
-    const initialConflicts = await getActiveCampaignConflictsForOffers(
-      uniqueOfferIds,
-      task.userId
-    )
+    const initialConflicts = await getActiveCampaignConflictsForOffers(uniqueOfferIds, task.userId)
     const blockedOfferIds = new Set(initialConflicts.keys())
 
     for (const backupId of backupIds) {
@@ -159,9 +152,7 @@ export async function executeCampaignBatchCreate(
           if (publishDetail.warning) {
             warnings.push({ backupId, message: publishDetail.warning })
           }
-          console.log(
-            `✅ 创建并入队发布：backupId=${backupId}, campaignId=${dbDetail.campaignId}`
-          )
+          console.log(`✅ 创建并入队发布：backupId=${backupId}, campaignId=${dbDetail.campaignId}`)
         }
 
         await db.exec(

@@ -125,13 +125,15 @@ describe('Gemini relay model lock', () => {
 
     const { generateContent } = await import('./gemini')
 
-    await expect(generateContent(
-      {
-        prompt: 'user-b-request',
-        enableAutoModelSelection: false,
-      },
-      userB
-    )).rejects.toThrow('AI配置缺失')
+    await expect(
+      generateContent(
+        {
+          prompt: 'user-b-request',
+          enableAutoModelSelection: false,
+        },
+        userB
+      )
+    ).rejects.toThrow('AI配置缺失')
 
     expect(axiosGenerate).toHaveBeenCalledTimes(0)
   })

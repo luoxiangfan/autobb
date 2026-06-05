@@ -46,7 +46,7 @@ export async function recoverBatchTaskStatus(): Promise<void> {
         tableExists = result[0].count > 0
       } else {
         const result = await db.query<{ exists: boolean }>(
-          "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+          'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
           ['upload_records']
         )
         tableExists = result[0].exists
@@ -98,7 +98,6 @@ export async function recoverBatchTaskStatus(): Promise<void> {
     }
 
     console.log(`✅ 批量任务状态同步完成: 成功=${recoveredCount}, 跳过=${skippedCount}`)
-
   } catch (error: any) {
     console.error('❌ 批量任务状态同步失败:', error)
     throw error
@@ -128,12 +127,15 @@ async function recoverSingleBatchTask(
   const childStats = await db.query<{
     status: string
     count: number
-  }>(`
+  }>(
+    `
     SELECT status, COUNT(*) as count
     FROM offer_tasks
     WHERE batch_id = ?
     GROUP BY status
-  `, [batchId])
+  `,
+    [batchId]
+  )
 
   // 2. 统计子任务状态
   const statsMap: Record<string, number> = {}
@@ -147,7 +149,9 @@ async function recoverSingleBatchTask(
   const running = statsMap['running'] || 0
   const total = validCount // 使用upload_records中的valid_count作为总数
 
-  console.log(`📊 批量任务状态统计: batch_id=${batchId}, total=${total}, completed=${completed}, failed=${failed}, pending=${pending}, running=${running}`)
+  console.log(
+    `📊 批量任务状态统计: batch_id=${batchId}, total=${total}, completed=${completed}, failed=${failed}, pending=${pending}, running=${running}`
+  )
 
   // 3. 判断最终状态
   let finalStatus: 'completed' | 'failed' | 'partial'
@@ -171,14 +175,17 @@ async function recoverSingleBatchTask(
   } else {
     // 部分任务未完成：由于队列已清理，剩余任务不会执行，标记为partial
     finalStatus = 'partial'
-    console.log(`⚠️ 批量任务部分完成: batch_id=${batchId}, completed=${completed}, failed=${failed}, unfinished=${total - completed - failed}`)
+    console.log(
+      `⚠️ 批量任务部分完成: batch_id=${batchId}, completed=${completed}, failed=${failed}, unfinished=${total - completed - failed}`
+    )
   }
 
   // 4. 计算成功率
   const successRate = total > 0 ? Math.round((completed / total) * 1000) / 10 : 0
 
   // 5. 更新batch_tasks状态
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE batch_tasks
     SET
       status = ?,
@@ -187,10 +194,13 @@ async function recoverSingleBatchTask(
       completed_at = COALESCE(completed_at, ${nowFunc}),
       updated_at = ${nowFunc}
     WHERE id = ?
-  `, [finalStatus, completed, failed, batchId])
+  `,
+    [finalStatus, completed, failed, batchId]
+  )
 
   // 6. 更新upload_records状态
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE upload_records
     SET
       status = ?,
@@ -200,9 +210,13 @@ async function recoverSingleBatchTask(
       completed_at = COALESCE(completed_at, ${nowFunc}),
       updated_at = ${nowFunc}
     WHERE id = ?
-  `, [finalStatus, completed, failed, successRate, uploadRecordId])
+  `,
+    [finalStatus, completed, failed, successRate, uploadRecordId]
+  )
 
-  console.log(`✅ 批量任务状态已同步: batch_id=${batchId}, status=${finalStatus}, completed=${completed}/${total}, success_rate=${successRate}%`)
+  console.log(
+    `✅ 批量任务状态已同步: batch_id=${batchId}, status=${finalStatus}, completed=${completed}/${total}, success_rate=${successRate}%`
+  )
 }
 
 /**

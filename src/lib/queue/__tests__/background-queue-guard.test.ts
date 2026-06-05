@@ -71,4 +71,3 @@ describe.sequential('background queue guard', () => {
     expect(routed.getConfig().autoStartOnEnqueue).toBe(false)
   })
 })
-

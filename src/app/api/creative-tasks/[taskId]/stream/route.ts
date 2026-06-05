@@ -13,22 +13,25 @@ import {
   shouldPushCreativeTaskUpdate,
   type CreativeTaskStreamRow,
 } from '@/lib/creative-task-stream'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creative-task-error'
+import {
+  normalizeCreativeTaskError,
+  toCreativeTaskErrorResponseFields,
+} from '@/lib/creative-task-error'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 1200  // 20分钟
+export const maxDuration = 1200 // 20分钟
 
 export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const db = getDatabase()
   const { taskId } = params
 
   const authResult = await verifyAuth(req)
   if (!authResult.authenticated || !authResult.user) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
   const userIdNum = authResult.user.userId
 
@@ -143,26 +146,29 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
           closeStream(pollInterval)
         })
 
-        setTimeout(() => {
-          console.log(`⏱️ SSE timeout for task: ${taskId}`)
-          if (!isClosed) {
-            const timeoutError = normalizeCreativeTaskError({
-              code: 'CREATIVE_TASK_STREAM_TIMEOUT',
-              category: 'network',
-              message: 'SSE timeout',
-              userMessage: '实时连接超时，任务可能仍在后台运行。请刷新查看最新状态。',
-              retryable: true,
-            })
-            sendSSE({
-              type: 'error',
-              error: timeoutError.userMessage,
-              message: timeoutError.userMessage,
-              details: timeoutError.details || {},
-              ...toCreativeTaskErrorResponseFields(timeoutError),
-            })
-            closeStream(pollInterval)
-          }
-        }, 20 * 60 * 1000)
+        setTimeout(
+          () => {
+            console.log(`⏱️ SSE timeout for task: ${taskId}`)
+            if (!isClosed) {
+              const timeoutError = normalizeCreativeTaskError({
+                code: 'CREATIVE_TASK_STREAM_TIMEOUT',
+                category: 'network',
+                message: 'SSE timeout',
+                userMessage: '实时连接超时，任务可能仍在后台运行。请刷新查看最新状态。',
+                retryable: true,
+              })
+              sendSSE({
+                type: 'error',
+                error: timeoutError.userMessage,
+                message: timeoutError.userMessage,
+                details: timeoutError.details || {},
+                ...toCreativeTaskErrorResponseFields(timeoutError),
+              })
+              closeStream(pollInterval)
+            }
+          },
+          20 * 60 * 1000
+        )
       },
     })
 
@@ -176,9 +182,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'SSE initialization error'
     console.error('SSE initialization error:', error)
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

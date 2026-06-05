@@ -36,7 +36,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     const body = await request.json().catch(() => null)
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || '参数错误' }, { status: 400 })
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || '参数错误' },
+        { status: 400 }
+      )
     }
 
     const result = await linkOfferToAffiliateProduct({

@@ -31,10 +31,13 @@ interface Alert {
   threshold: number
 }
 
-async function checkUnattributedCommission(userId: number): Promise<{ amount: number; count: number }> {
+async function checkUnattributedCommission(
+  userId: number
+): Promise<{ amount: number; count: number }> {
   const db = await getDatabase()
 
-  const result = await db.queryOne<{ total: number; count: number }>(`
+  const result = await db.queryOne<{ total: number; count: number }>(
+    `
     SELECT
       COALESCE(SUM(commission_amount), 0) as total,
       COUNT(*) as count
@@ -42,7 +45,9 @@ async function checkUnattributedCommission(userId: number): Promise<{ amount: nu
     WHERE user_id = ?
       AND report_date >= DATE('now', '-7 days')
       AND reason_code NOT IN ('campaign_mapping_miss')
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return {
     amount: Number(result?.total || 0),
@@ -53,14 +58,17 @@ async function checkUnattributedCommission(userId: number): Promise<{ amount: nu
 async function checkProductLinkCoverage(userId: number): Promise<number> {
   const db = await getDatabase()
 
-  const result = await db.queryOne<{ total: number; linked: number }>(`
+  const result = await db.queryOne<{ total: number; linked: number }>(
+    `
     SELECT
       COUNT(*) as total,
       COUNT(DISTINCT apol.product_id) as linked
     FROM affiliate_products ap
     LEFT JOIN affiliate_product_offer_links apol ON apol.product_id = ap.id
     WHERE ap.user_id = ?
-  `, [userId])
+  `,
+    [userId]
+  )
 
   const total = Number(result?.total || 0)
   const linked = Number(result?.linked || 0)
@@ -71,7 +79,8 @@ async function checkProductLinkCoverage(userId: number): Promise<number> {
 async function checkAttributionSuccessRate(userId: number): Promise<number> {
   const db = await getDatabase()
 
-  const result = await db.queryOne<{ total: number; attributed: number }>(`
+  const result = await db.queryOne<{ total: number; attributed: number }>(
+    `
     SELECT
       SUM(commission_amount) as total,
       SUM(CASE WHEN campaign_id IS NOT NULL THEN commission_amount ELSE 0 END) as attributed
@@ -82,7 +91,9 @@ async function checkAttributionSuccessRate(userId: number): Promise<number> {
       SELECT commission_amount, NULL as campaign_id FROM openclaw_affiliate_attribution_failures
       WHERE user_id = ? AND report_date >= DATE('now', '-7 days')
     )
-  `, [userId, userId])
+  `,
+    [userId, userId]
+  )
 
   const total = Number(result?.total || 0)
   const attributed = Number(result?.attributed || 0)
@@ -94,7 +105,8 @@ async function checkExpiredPending(userId: number): Promise<{ count: number; amo
   const db = await getDatabase()
   const graceDays = getAffiliateAttributionPendingGraceDays()
 
-  const result = await db.queryOne<{ count: number; total: number }>(`
+  const result = await db.queryOne<{ count: number; total: number }>(
+    `
     SELECT
       COUNT(*) as count,
       COALESCE(SUM(commission_amount), 0) as total
@@ -102,7 +114,9 @@ async function checkExpiredPending(userId: number): Promise<{ count: number; amo
     WHERE user_id = ?
       AND reason_code IN ('pending_offer_mapping_miss', 'pending_product_mapping_miss')
       AND report_date < DATE('now', '-${graceDays} days')
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return {
     count: Number(result?.count || 0),
@@ -203,16 +217,20 @@ function evaluateMetrics(metrics: HealthMetrics): Alert[] {
 function formatMetricsReport(metrics: HealthMetrics, alerts: Alert[]): string {
   const lines: string[] = []
 
-  lines.push('=' .repeat(60))
+  lines.push('='.repeat(60))
   lines.push('📊 Commission Attribution Health Report')
-  lines.push('=' .repeat(60))
+  lines.push('='.repeat(60))
   lines.push('')
 
   lines.push('📈 Metrics (Last 7 Days):')
-  lines.push(`   Unattributed Commission: $${metrics.unattributedCommission.toFixed(2)} (${metrics.failureCount} failures)`)
+  lines.push(
+    `   Unattributed Commission: $${metrics.unattributedCommission.toFixed(2)} (${metrics.failureCount} failures)`
+  )
   lines.push(`   Product Link Coverage: ${metrics.productLinkCoverage.toFixed(1)}%`)
   lines.push(`   Attribution Success Rate: ${metrics.attributionSuccessRate.toFixed(1)}%`)
-  lines.push(`   Expired Pending: ${metrics.expiredPendingCount} failures ($${metrics.expiredPendingAmount.toFixed(2)})`)
+  lines.push(
+    `   Expired Pending: ${metrics.expiredPendingCount} failures ($${metrics.expiredPendingAmount.toFixed(2)})`
+  )
   lines.push('')
 
   if (alerts.length === 0) {
@@ -230,7 +248,7 @@ function formatMetricsReport(metrics: HealthMetrics, alerts: Alert[]): string {
     }
   }
 
-  lines.push('=' .repeat(60))
+  lines.push('='.repeat(60))
 
   return lines.join('\n')
 }
@@ -239,7 +257,9 @@ async function main() {
   const db = await getDatabase()
 
   // Get all users (in production, you might want to filter active users)
-  const users = await db.query<{ id: number }>('SELECT DISTINCT user_id as id FROM affiliate_products')
+  const users = await db.query<{ id: number }>(
+    'SELECT DISTINCT user_id as id FROM affiliate_products'
+  )
 
   console.log(`🔍 Checking attribution health for ${users.length} user(s)...\n`)
 

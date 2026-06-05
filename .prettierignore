@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+coverage/
+openclaw/
+openclaw-v1/
+openclaw-prebuilt/
+package-lock.json
+*.min.js
+*.min.css

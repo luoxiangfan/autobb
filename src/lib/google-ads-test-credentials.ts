@@ -21,14 +21,19 @@ function isActiveFlag(value: number | boolean | null | undefined): boolean {
   return value === true || value === 1
 }
 
-export async function getGoogleAdsTestCredentials(userId: number): Promise<GoogleAdsTestCredentials | null> {
+export async function getGoogleAdsTestCredentials(
+  userId: number
+): Promise<GoogleAdsTestCredentials | null> {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
-  const credentials = await db.queryOne<GoogleAdsTestCredentials>(`
+  const credentials = await db.queryOne<GoogleAdsTestCredentials>(
+    `
     SELECT * FROM google_ads_test_credentials
     WHERE user_id = ? AND ${isActiveCondition}
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return credentials || null
 }
@@ -47,16 +52,23 @@ export async function saveGoogleAdsTestCredentials(
 ): Promise<GoogleAdsTestCredentials> {
   const db = await getDatabase()
 
-  const formattedLoginCustomerId = formatAndValidateLoginCustomerId(credentials.login_customer_id, 'test_login_customer_id')
+  const formattedLoginCustomerId = formatAndValidateLoginCustomerId(
+    credentials.login_customer_id,
+    'test_login_customer_id'
+  )
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
   const isActiveValue = db.type === 'postgres' ? true : 1
 
-  const existing = await db.queryOne<GoogleAdsTestCredentials>(`
+  const existing = await db.queryOne<GoogleAdsTestCredentials>(
+    `
     SELECT * FROM google_ads_test_credentials WHERE user_id = ?
-  `, [userId])
+  `,
+    [userId]
+  )
 
   if (existing) {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE google_ads_test_credentials
       SET client_id = ?,
           client_secret = ?,
@@ -69,34 +81,39 @@ export async function saveGoogleAdsTestCredentials(
           last_verified_at = ${nowFunc},
           updated_at = ${nowFunc}
       WHERE user_id = ?
-    `, [
-      credentials.client_id,
-      credentials.client_secret,
-      credentials.refresh_token,
-      credentials.developer_token,
-      formattedLoginCustomerId,
-      credentials.access_token || null,
-      credentials.access_token_expires_at || null,
-      isActiveValue,
-      userId
-    ])
+    `,
+      [
+        credentials.client_id,
+        credentials.client_secret,
+        credentials.refresh_token,
+        credentials.developer_token,
+        formattedLoginCustomerId,
+        credentials.access_token || null,
+        credentials.access_token_expires_at || null,
+        isActiveValue,
+        userId,
+      ]
+    )
   } else {
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO google_ads_test_credentials (
         user_id, client_id, client_secret, refresh_token,
         developer_token, login_customer_id, access_token, access_token_expires_at,
         last_verified_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc})
-    `, [
-      userId,
-      credentials.client_id,
-      credentials.client_secret,
-      credentials.refresh_token,
-      credentials.developer_token,
-      formattedLoginCustomerId,
-      credentials.access_token || null,
-      credentials.access_token_expires_at || null
-    ])
+    `,
+      [
+        userId,
+        credentials.client_id,
+        credentials.client_secret,
+        credentials.refresh_token,
+        credentials.developer_token,
+        formattedLoginCustomerId,
+        credentials.access_token || null,
+        credentials.access_token_expires_at || null,
+      ]
+    )
   }
 
   const updated = await getGoogleAdsTestCredentials(userId)
@@ -112,7 +129,8 @@ export async function deleteGoogleAdsTestCredentials(userId: number): Promise<vo
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
   const isActiveValue = db.type === 'postgres' ? false : 0
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE google_ads_test_credentials
     SET is_active = ?,
         refresh_token = ?,
@@ -125,7 +143,9 @@ export async function deleteGoogleAdsTestCredentials(userId: number): Promise<vo
         login_customer_id = NULL,
         updated_at = ${nowFunc}
     WHERE user_id = ?
-  `, [isActiveValue, '', '', '', '', userId])
+  `,
+    [isActiveValue, '', '', '', '', userId]
+  )
 }
 
 export async function getGoogleAdsTestCredentialStatus(userId: number): Promise<{

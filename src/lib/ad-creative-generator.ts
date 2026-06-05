@@ -4,7 +4,7 @@ import type {
   GeneratedAdCreativeData,
   GeneratedKeywordCandidateMetadata,
   HeadlineAsset,
-  DescriptionAsset
+  DescriptionAsset,
 } from './ad-creative'
 import type { Offer } from './offers'
 import { creativeCache, generateCreativeCacheKey } from './cache'
@@ -21,21 +21,18 @@ import {
   resolveKeywordPoolForCreativeGeneration,
   type OfferKeywordPool,
   type PoolKeywordData,
-} from './offer-keyword-pool'  // 🔥 AI语义分类
+} from './offer-keyword-pool' // 🔥 AI语义分类
 import { generateContent, getGeminiMode, type ResponseSchema } from './gemini'
-import { generateNegativeKeywords } from './keyword-generator'  // 🎯 新增：导入否定关键词生成函数
-import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'  // 🎯 新增：导入token追踪函数
-import { loadPrompt, interpolateTemplate } from './prompt-loader'  // 🎯 v3.0: 导入数据库prompt加载函数
-import { calculateIntentScore, getIntentLevel } from './keyword-priority-classifier'  // 🎯 购买意图评分
+import { generateNegativeKeywords } from './keyword-generator' // 🎯 新增：导入否定关键词生成函数
+import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker' // 🎯 新增：导入token追踪函数
+import { loadPrompt, interpolateTemplate } from './prompt-loader' // 🎯 v3.0: 导入数据库prompt加载函数
+import { calculateIntentScore, getIntentLevel } from './keyword-priority-classifier' // 🎯 购买意图评分
 import {
   normalizeGoogleAdsKeyword,
   deduplicateKeywordsWithPriority,
-  logDuplicateKeywords
-} from './google-ads-keyword-normalizer'  // 🔥 优化：Google Ads关键词标准化去重
-import type {
-  CreativeKeywordMatchType,
-  KeywordAuditMetadata,
-} from './creative-keyword-selection'
+  logDuplicateKeywords,
+} from './google-ads-keyword-normalizer' // 🔥 优化：Google Ads关键词标准化去重
+import type { CreativeKeywordMatchType, KeywordAuditMetadata } from './creative-keyword-selection'
 import { hasModelAnchorEvidence } from './creative-type'
 import {
   getKeywordSourcePriorityScoreFromInput,
@@ -47,15 +44,24 @@ import {
   isCreativeKeywordAiSourceSubtypeEnabled,
   isCreativeKeywordSupplementThresholdGateEnabled,
 } from './creative-keyword-feature-flags'
-import { containsPureBrand, filterKeywordQuality, generateFilterReport, getPureBrandKeywords, shouldUseExactMatch, isBrandConcatenation, isBrandVariant, isSemanticQuery } from './keyword-quality-filter'  // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-import { isPureBrandKeyword } from './brand-keyword-utils'  // 🔥 2026-03-13: 导入纯品牌词判断函数
+import {
+  containsPureBrand,
+  filterKeywordQuality,
+  generateFilterReport,
+  getPureBrandKeywords,
+  shouldUseExactMatch,
+  isBrandConcatenation,
+  isBrandVariant,
+  isSemanticQuery,
+} from './keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
+import { isPureBrandKeyword } from './brand-keyword-utils' // 🔥 2026-03-13: 导入纯品牌词判断函数
 import { getMinContextTokenMatchesForKeywordQualityFilter } from './keyword-context-filter'
 import {
   LANGUAGE_CODE_MAP,
   getLanguageName,
   getLanguageNameForCountry,
   normalizeCountryCode,
-  normalizeLanguageCode
+  normalizeLanguageCode,
 } from './language-country-codes'
 import { repairJsonText } from './ai-json'
 import { parsePrice } from './pricing-utils'
@@ -66,7 +72,11 @@ import {
 } from './google-ads-ad-text'
 import { getLocalizedDkiOfficialSuffix, type DkiLocaleOptions } from './dki-localization'
 import { classifyKeywordIntent } from './keyword-intent'
-import { KEYWORD_POLICY, getRatioCappedCount, resolveNonBrandMinSearchVolumeByBrandKeywordCount } from './keyword-policy'
+import {
+  KEYWORD_POLICY,
+  getRatioCappedCount,
+  resolveNonBrandMinSearchVolumeByBrandKeywordCount,
+} from './keyword-policy'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import {
   type GoogleAdsPolicyGuardMode,
@@ -75,7 +85,7 @@ import {
   resolveGoogleAdsPolicyGuardMode,
   sanitizeGoogleAdsPolicyText,
   sanitizeKeywordListForGoogleAdsPolicy,
-  sanitizeKeywordObjectsForGoogleAdsPolicy
+  sanitizeKeywordObjectsForGoogleAdsPolicy,
 } from './google-ads-policy-guard'
 import { createCreativeRuleContext, filterPromptExtrasByRelevance } from './ad-creative-rule-gate'
 
@@ -84,16 +94,16 @@ import { createCreativeRuleContext, filterPromptExtrasByRelevance } from './ad-c
  * 处理 PostgreSQL jsonb 类型（自动解析为JS对象/数组）和 SQLite text 类型（需要JSON.parse）
  */
 function safeParseJson(value: any, defaultValue: any = null): any {
-  if (value === null || value === undefined) return defaultValue;
+  if (value === null || value === undefined) return defaultValue
   if (typeof value === 'string') {
     try {
-      return JSON.parse(value);
+      return JSON.parse(value)
     } catch (_e) {
-      console.warn('[safeParseJson] 解析失败:', value);
-      return defaultValue;
+      console.warn('[safeParseJson] 解析失败:', value)
+      return defaultValue
     }
   }
-  return value; // 已经是对象/数组（PostgreSQL jsonb）
+  return value // 已经是对象/数组（PostgreSQL jsonb）
 }
 
 function deriveLinkTypeFromScrapedData(scrapedData: any): 'store' | 'product' | null {
@@ -101,7 +111,8 @@ function deriveLinkTypeFromScrapedData(scrapedData: any): 'store' | 'product' | 
   const explicit = typeof scrapedData.pageType === 'string' ? scrapedData.pageType : null
   if (explicit === 'store' || explicit === 'product') return explicit
   const productsLen = Array.isArray(scrapedData.products) ? scrapedData.products.length : 0
-  const hasStoreName = typeof scrapedData.storeName === 'string' && scrapedData.storeName.trim().length > 0
+  const hasStoreName =
+    typeof scrapedData.storeName === 'string' && scrapedData.storeName.trim().length > 0
   const hasDeep = !!scrapedData.deepScrapeResults
   if (hasStoreName || hasDeep || productsLen >= 2) return 'store'
   return null
@@ -190,7 +201,7 @@ export function resolveCreativeSalesRankSignal(value: unknown): CreativeSalesRan
       normalizedRankText: null,
       rankNumber: null,
       eligibleForPrompt: false,
-      strongSignal: false
+      strongSignal: false,
     }
   }
 
@@ -201,7 +212,7 @@ export function resolveCreativeSalesRankSignal(value: unknown): CreativeSalesRan
       normalizedRankText: null,
       rankNumber: null,
       eligibleForPrompt: false,
-      strongSignal: false
+      strongSignal: false,
     }
   }
 
@@ -212,7 +223,7 @@ export function resolveCreativeSalesRankSignal(value: unknown): CreativeSalesRan
       normalizedRankText: null,
       rankNumber: null,
       eligibleForPrompt: false,
-      strongSignal: false
+      strongSignal: false,
     }
   }
 
@@ -221,23 +232,20 @@ export function resolveCreativeSalesRankSignal(value: unknown): CreativeSalesRan
     normalizedRankText: `#${rankNumber.toLocaleString('en-US')}`,
     rankNumber,
     eligibleForPrompt: rankNumber <= SALES_RANK_PROMPT_MAX,
-    strongSignal: rankNumber <= SALES_RANK_STRONG_SIGNAL_MAX
+    strongSignal: rankNumber <= SALES_RANK_STRONG_SIGNAL_MAX,
   }
 }
 
 function sanitizeReviewSnippetForPrompt(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  const normalized = value
-    .replace(/\s+/g, ' ')
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .trim()
+  const normalized = value.replace(/\s+/g, ' ').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").trim()
 
   if (normalized.length < REVIEW_QUOTE_MIN_LENGTH) return null
 
-  const truncated = normalized.length > REVIEW_QUOTE_MAX_LENGTH
-    ? `${normalized.slice(0, REVIEW_QUOTE_MAX_LENGTH - 3).trim()}...`
-    : normalized
+  const truncated =
+    normalized.length > REVIEW_QUOTE_MAX_LENGTH
+      ? `${normalized.slice(0, REVIEW_QUOTE_MAX_LENGTH - 3).trim()}...`
+      : normalized
 
   if (REVIEW_QUOTE_BLOCKLIST_PATTERN.test(truncated)) return null
   if (RISKY_SOCIAL_PROOF_PERCENT_PATTERN.test(truncated)) return null
@@ -275,11 +283,7 @@ export function resolveCreativePriceEvidence(offer: any): CreativePriceEvidenceR
   const offerPriceAmount = parsePriceAmount(currentFromOffer)
   const scrapedPriceAmount = parsePriceAmount(scrapedCurrentPrice)
 
-  if (
-    offerPriceAmount !== null &&
-    scrapedPriceAmount !== null &&
-    offerPriceAmount > 0
-  ) {
+  if (offerPriceAmount !== null && scrapedPriceAmount !== null && offerPriceAmount > 0) {
     const ratio = Math.abs(scrapedPriceAmount - offerPriceAmount) / offerPriceAmount
     if (ratio > PRICE_EVIDENCE_MISMATCH_THRESHOLD) {
       const deviationPercent = Math.round(ratio * 100)
@@ -324,9 +328,29 @@ const RETAINED_KEYWORD_HEADLINE_MAX_LENGTH = 30
 const RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH = 90
 const RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT = 4
 const RETAINED_KEYWORD_PROTECTED_SIMILARITY_THRESHOLD = 0.82
-const GOOGLE_ADS_HEADLINE_UNIQUENESS_SUFFIXES = ['Now', 'Today', 'Deals', 'Official', 'Shop'] as const
+const GOOGLE_ADS_HEADLINE_UNIQUENESS_SUFFIXES = [
+  'Now',
+  'Today',
+  'Deals',
+  'Official',
+  'Shop',
+] as const
 const LATIN_HEADLINE_STOPWORDS = new Set([
-  'a', 'an', 'and', 'as', 'at', 'by', 'for', 'from', 'in', 'of', 'on', 'or', 'the', 'to', 'with'
+  'a',
+  'an',
+  'and',
+  'as',
+  'at',
+  'by',
+  'for',
+  'from',
+  'in',
+  'of',
+  'on',
+  'or',
+  'the',
+  'to',
+  'with',
 ])
 
 type HeadlineCandidateSource = 'title' | 'about'
@@ -356,7 +380,11 @@ function truncateSnippetByWords(value: string, maxLength: number): string {
   return out.length >= 4 ? out : text.slice(0, maxLength).trim()
 }
 
-function isUsefulCreativePhrase(value: string, minLength: number = 4, maxLength: number = 90): boolean {
+function isUsefulCreativePhrase(
+  value: string,
+  minLength: number = 4,
+  maxLength: number = 90
+): boolean {
   const text = normalizeSnippetText(value)
   if (!text || text.length < minLength || text.length > maxLength) return false
   const lower = text.toLowerCase()
@@ -397,7 +425,9 @@ function filterHighIntentKeywordSeeds(keywords: string[], language: string): str
 function getSeedCapByRatio(validatedKeywordCount: number): number {
   if (validatedKeywordCount <= 0) return 0
   // seed/(validated+seed) <= 20%  => seed <= validated * 0.25
-  return Math.floor(validatedKeywordCount * (TITLE_ABOUT_SEED_RATIO_CAP / (1 - TITLE_ABOUT_SEED_RATIO_CAP)))
+  return Math.floor(
+    validatedKeywordCount * (TITLE_ABOUT_SEED_RATIO_CAP / (1 - TITLE_ABOUT_SEED_RATIO_CAP))
+  )
 }
 
 function filterPhrasesByTargetLanguageGate(params: {
@@ -455,23 +485,19 @@ export function resolveAdCreativePromptKeywordPlan(input: {
   const brandFilter = (keyword: string) =>
     brandGateKeywords.length === 0 || containsPureBrand(keyword, brandGateKeywords)
 
-  const extractedKeywords = Array.isArray(input.extractedKeywords)
-    ? input.extractedKeywords
-    : []
-  const aiKeywords = Array.isArray(input.aiKeywords)
-    ? input.aiKeywords
-    : []
+  const extractedKeywords = Array.isArray(input.extractedKeywords) ? input.extractedKeywords : []
+  const aiKeywords = Array.isArray(input.aiKeywords) ? input.aiKeywords : []
   const titleAboutKeywordSeeds = Array.isArray(input.titleAboutKeywordSeeds)
     ? input.titleAboutKeywordSeeds
     : []
 
-  const rawBaseKeywordsForPrompt = extractedKeywords.length > 0
-    ? extractedKeywords.map((item: any) => typeof item === 'string' ? item : item?.keyword)
-    : aiKeywords.filter(brandFilter).slice(0, 15)
-  const baseKeywordsPolicySafe = sanitizeKeywordListForGoogleAdsPolicy(
-    rawBaseKeywordsForPrompt,
-    { mode: policyGuardMode }
-  )
+  const rawBaseKeywordsForPrompt =
+    extractedKeywords.length > 0
+      ? extractedKeywords.map((item: any) => (typeof item === 'string' ? item : item?.keyword))
+      : aiKeywords.filter(brandFilter).slice(0, 15)
+  const baseKeywordsPolicySafe = sanitizeKeywordListForGoogleAdsPolicy(rawBaseKeywordsForPrompt, {
+    mode: policyGuardMode,
+  })
   const baseKeywordsLanguageSafe = filterPhrasesByTargetLanguageGate({
     phrases: baseKeywordsPolicySafe.items,
     targetLanguage: input.targetLanguage,
@@ -482,10 +508,9 @@ export function resolveAdCreativePromptKeywordPlan(input: {
     baseKeywordsLanguageSafe.phrases,
     PROMPT_KEYWORD_LIMIT
   )
-  const titleAboutSeedsPolicySafe = sanitizeKeywordListForGoogleAdsPolicy(
-    titleAboutKeywordSeeds,
-    { mode: policyGuardMode }
-  )
+  const titleAboutSeedsPolicySafe = sanitizeKeywordListForGoogleAdsPolicy(titleAboutKeywordSeeds, {
+    mode: policyGuardMode,
+  })
   const titleAboutSeedsLanguageSafe = filterPhrasesByTargetLanguageGate({
     phrases: titleAboutSeedsPolicySafe.items,
     targetLanguage: input.targetLanguage,
@@ -513,10 +538,9 @@ export function resolveAdCreativePromptKeywordPlan(input: {
     ),
     validatedPromptKeywords,
     contextualPromptKeywords,
-    policyMatchedTerms: Array.from(new Set([
-      ...baseKeywordsPolicySafe.matchedTerms,
-      ...titleAboutSeedsPolicySafe.matchedTerms
-    ])).slice(0, 12),
+    policyMatchedTerms: Array.from(
+      new Set([...baseKeywordsPolicySafe.matchedTerms, ...titleAboutSeedsPolicySafe.matchedTerms])
+    ).slice(0, 12),
   }
 }
 
@@ -530,7 +554,11 @@ function countBrandContainingKeywords(
     const keyword = String(kw.keyword || '').trim()
     if (!keyword) return false
     if (containsPureBrand(keyword, brandTokensToMatch)) return true
-    return typeof kw.searchVolume === 'number' && kw.searchVolume > 0 && isBrandConcatenation(keyword, brandName)
+    return (
+      typeof kw.searchVolume === 'number' &&
+      kw.searchVolume > 0 &&
+      isBrandConcatenation(keyword, brandName)
+    )
   }).length
 }
 
@@ -549,11 +577,17 @@ function extractTitleAndAboutSignals(
   const calloutIdeas: string[] = []
   const sitelinkIdeas: Array<{ text: string; description: string }> = []
 
-  const addUniquePhrase = (target: string[], value: string, maxItems: number, minLength: number = 4, maxLength: number = 90) => {
+  const addUniquePhrase = (
+    target: string[],
+    value: string,
+    maxItems: number,
+    minLength: number = 4,
+    maxLength: number = 90
+  ) => {
     const normalized = normalizeSnippetText(value)
     if (!isUsefulCreativePhrase(normalized, minLength, maxLength)) return
     const key = normalized.toLowerCase()
-    if (target.some(item => item.toLowerCase() === key)) return
+    if (target.some((item) => item.toLowerCase() === key)) return
     target.push(normalized)
     if (target.length > maxItems) target.length = maxItems
   }
@@ -567,9 +601,15 @@ function extractTitleAndAboutSignals(
   const addSitelinkIdea = (text: string, description: string) => {
     const linkText = truncateSnippetByWords(text, 25)
     const linkDescription = truncateSnippetByWords(description, 35)
-    if (!isUsefulCreativePhrase(linkText, 3, 25) || !isUsefulCreativePhrase(linkDescription, 4, 35)) return
+    if (!isUsefulCreativePhrase(linkText, 3, 25) || !isUsefulCreativePhrase(linkDescription, 4, 35))
+      return
     const key = `${linkText.toLowerCase()}__${linkDescription.toLowerCase()}`
-    if (sitelinkIdeas.some(item => `${item.text.toLowerCase()}__${item.description.toLowerCase()}` === key)) return
+    if (
+      sitelinkIdeas.some(
+        (item) => `${item.text.toLowerCase()}__${item.description.toLowerCase()}` === key
+      )
+    )
+      return
     sitelinkIdeas.push({ text: linkText, description: linkDescription })
   }
 
@@ -579,7 +619,7 @@ function extractTitleAndAboutSignals(
 
     const titleSegments = productTitle
       .split(/\s*[|:,\-–—]\s*/g)
-      .map(segment => truncateSnippetByWords(segment, 60))
+      .map((segment) => truncateSnippetByWords(segment, 60))
       .filter(Boolean)
 
     for (const segment of titleSegments) {
@@ -617,11 +657,12 @@ function extractTitleAndAboutSignals(
   }
 
   const pureBrandKeywords = getPureBrandKeywords(options?.brandName || '')
-  const languageSafeTitle = filterPhrasesByTargetLanguageGate({
-    phrases: productTitle ? [productTitle] : [],
-    targetLanguage: options?.targetLanguage,
-    pureBrandKeywords,
-  }).phrases[0] || ''
+  const languageSafeTitle =
+    filterPhrasesByTargetLanguageGate({
+      phrases: productTitle ? [productTitle] : [],
+      targetLanguage: options?.targetLanguage,
+      pureBrandKeywords,
+    }).phrases[0] || ''
   const languageSafeTitlePhrases = filterPhrasesByTargetLanguageGate({
     phrases: titlePhrases,
     targetLanguage: options?.targetLanguage,
@@ -642,21 +683,21 @@ function extractTitleAndAboutSignals(
     targetLanguage: options?.targetLanguage,
     pureBrandKeywords,
   }).phrases
-  const languageSafeSitelinks = sitelinkIdeas
-    .slice(0, 6)
-    .filter((item) => {
-      const textSafe = filterPhrasesByTargetLanguageGate({
+  const languageSafeSitelinks = sitelinkIdeas.slice(0, 6).filter((item) => {
+    const textSafe =
+      filterPhrasesByTargetLanguageGate({
         phrases: [item.text],
         targetLanguage: options?.targetLanguage,
         pureBrandKeywords,
       }).phrases.length > 0
-      const descriptionSafe = filterPhrasesByTargetLanguageGate({
+    const descriptionSafe =
+      filterPhrasesByTargetLanguageGate({
         phrases: [item.description],
         targetLanguage: options?.targetLanguage,
         pureBrandKeywords,
       }).phrases.length > 0
-      return textSafe && descriptionSafe
-    })
+    return textSafe && descriptionSafe
+  })
 
   return {
     productTitle: languageSafeTitle,
@@ -708,7 +749,9 @@ function splitTitleSegmentsSafely(title: string): string[] {
 }
 
 function trimTextToWordBoundary(text: string, maxLength: number): string {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (normalized.length <= maxLength) return normalized
   if (maxLength <= 0) return ''
 
@@ -722,7 +765,9 @@ function trimTextToWordBoundary(text: string, maxLength: number): string {
 }
 
 function dropDanglingTailFragment(text: string): string {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return normalized
   const parts = normalized.split(' ')
   if (parts.length < 2) return normalized
@@ -736,7 +781,9 @@ function dropDanglingTailFragment(text: string): string {
 }
 
 function balanceHeadlineParentheses(text: string): string {
-  let normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  let normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return normalized
 
   let open = (normalized.match(/\(/g) || []).length
@@ -778,9 +825,7 @@ function trimDanglingHeadlineTailToken(text: string): string {
     const parts = normalized.split(/\s+/).filter(Boolean)
     if (parts.length < 2) break
 
-    const tailToken = parts[parts.length - 1]
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}]/gu, '')
+    const tailToken = parts[parts.length - 1].toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
 
     if (!tailToken || !HEADLINE_DANGLING_TAIL_TOKENS.has(tailToken)) {
       break
@@ -793,7 +838,9 @@ function trimDanglingHeadlineTailToken(text: string): string {
 }
 
 function applyHeadlineTextGuardrail(text: string, maxLength: number): string {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return normalized
 
   const hasDki = /\{KeyWord:[^}]*\}/i.test(normalized)
@@ -820,7 +867,9 @@ function applyHeadlineTextGuardrail(text: string, maxLength: number): string {
 }
 
 function stripHeadlineNumericSuffixArtifact(text: string): string {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return normalized
   // Historical dedupe fallback used one-digit numeric suffixes (e.g. "Headline 2").
   // Keep legitimate product specs like "12 inch" / "14 inch" intact.
@@ -832,7 +881,9 @@ function stripHeadlineNumericSuffixArtifact(text: string): string {
 }
 
 function applyDescriptionTextGuardrail(text: string, maxLength: number): string {
-  let normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  let normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return normalized
   if (normalized.length > maxLength) {
     normalized = trimTextToWordBoundary(normalized, maxLength)
@@ -849,7 +900,10 @@ function applyDescriptionTextGuardrail(text: string, maxLength: number): string 
   return normalized.replace(/\s+/g, ' ').trim()
 }
 
-function isHeadlineCompatibleWithTargetLanguage(text: string, targetLanguage: string | null | undefined): boolean {
+function isHeadlineCompatibleWithTargetLanguage(
+  text: string,
+  targetLanguage: string | null | undefined
+): boolean {
   const language = normalizeLanguageCode(targetLanguage || 'en')
   if (!text) return false
   if (language === 'zh') return /[\p{Script=Han}]/u.test(text)
@@ -857,7 +911,10 @@ function isHeadlineCompatibleWithTargetLanguage(text: string, targetLanguage: st
   if (language === 'ko') return /[\p{Script=Hangul}]/u.test(text)
   if (language === 'ar') return /[\p{Script=Arabic}]/u.test(text)
   if (language === 'ru') return /[\p{Script=Cyrillic}]/u.test(text)
-  if (LATIN_SOFT_COPY_LANGUAGES.includes(language as SupportedSoftCopyLanguage) && language !== 'en') {
+  if (
+    LATIN_SOFT_COPY_LANGUAGES.includes(language as SupportedSoftCopyLanguage) &&
+    language !== 'en'
+  ) {
     if (isLikelyCrossLanguageLatinAsset(text, language as SupportedSoftCopyLanguage)) {
       return false
     }
@@ -871,7 +928,11 @@ function normalizeBrandNameForHeadline(brandName: string): string {
     .trim()
 }
 
-function hasBrandAnchorInHeadline(text: string, brandName: string, brandTokensToMatch: string[]): boolean {
+function hasBrandAnchorInHeadline(
+  text: string,
+  brandName: string,
+  brandTokensToMatch: string[]
+): boolean {
   if (!text) return false
   if (brandTokensToMatch.length > 0) {
     return containsPureBrand(text, brandTokensToMatch)
@@ -958,7 +1019,10 @@ function fitBrandAnchoredHeadline(
     candidate = stripRepeatedBrandPrefix(candidate, normalizedBrand)
     if (!candidate || candidate.length > maxLength) continue
 
-    if (!hasBrandAnchorInHeadline(candidate, normalizedBrand, brandTokensToMatch) && normalizedBrand) {
+    if (
+      !hasBrandAnchorInHeadline(candidate, normalizedBrand, brandTokensToMatch) &&
+      normalizedBrand
+    ) {
       candidate = fitLocalizedHeadline(`${normalizedBrand} ${candidate}`, maxLength)
       candidate = stripRepeatedBrandPrefix(candidate, normalizedBrand)
     }
@@ -972,12 +1036,20 @@ function fitBrandAnchoredHeadline(
   return null
 }
 
-function isSemanticallyDuplicateHeadline(candidate: string, existing: string[], brandName: string): boolean {
-  const candidateCore = normalizeGoogleAdsKeyword(normalizeBrandFreeText(candidate, brandName) || candidate)
+function isSemanticallyDuplicateHeadline(
+  candidate: string,
+  existing: string[],
+  brandName: string
+): boolean {
+  const candidateCore = normalizeGoogleAdsKeyword(
+    normalizeBrandFreeText(candidate, brandName) || candidate
+  )
   if (!candidateCore) return false
 
   for (const current of existing) {
-    const currentCore = normalizeGoogleAdsKeyword(normalizeBrandFreeText(current, brandName) || current)
+    const currentCore = normalizeGoogleAdsKeyword(
+      normalizeBrandFreeText(current, brandName) || current
+    )
     if (!currentCore) continue
     if (candidateCore === currentCore) return true
     if (
@@ -986,7 +1058,10 @@ function isSemanticallyDuplicateHeadline(candidate: string, existing: string[], 
     ) {
       return true
     }
-    if (calculateTextSimilarity(candidateCore, currentCore) >= TOP_HEADLINE_SEMANTIC_DUPLICATE_THRESHOLD) {
+    if (
+      calculateTextSimilarity(candidateCore, currentCore) >=
+      TOP_HEADLINE_SEMANTIC_DUPLICATE_THRESHOLD
+    ) {
       return true
     }
   }
@@ -1009,13 +1084,27 @@ function collectUniqueHeadlineCandidates(
   const seen = new Set<string>()
 
   for (const raw of rawCandidates) {
-    const fitted = fitBrandAnchoredHeadline(raw, options.brandName, options.brandTokensToMatch, options.maxLength)
+    const fitted = fitBrandAnchoredHeadline(
+      raw,
+      options.brandName,
+      options.brandTokensToMatch,
+      options.maxLength
+    )
     if (!fitted) continue
     if (!isHeadlineCompatibleWithTargetLanguage(fitted, options.targetLanguage)) continue
 
-    const normalized = normalizeGoogleAdsKeyword(normalizeBrandFreeText(fitted, options.brandName) || fitted)
+    const normalized = normalizeGoogleAdsKeyword(
+      normalizeBrandFreeText(fitted, options.brandName) || fitted
+    )
     if (!normalized || seen.has(normalized)) continue
-    if (isSemanticallyDuplicateHeadline(fitted, out.map((item) => item.text), options.brandName)) continue
+    if (
+      isSemanticallyDuplicateHeadline(
+        fitted,
+        out.map((item) => item.text),
+        options.brandName
+      )
+    )
+      continue
 
     seen.add(normalized)
     out.push({ text: fitted, source })
@@ -1044,8 +1133,9 @@ function extractTitlePriorityHeadlineCandidates(options: {
     }
   }
 
-  const titleSegments = splitTitleSegmentsSafely(title)
-    .filter((segment) => isUsefulCreativePhrase(segment, 4, 140))
+  const titleSegments = splitTitleSegmentsSafely(title).filter((segment) =>
+    isUsefulCreativePhrase(segment, 4, 140)
+  )
 
   for (const segment of titleSegments) {
     rawCandidates.push(segment)
@@ -1126,7 +1216,14 @@ function buildBrandAnchoredTopHeadlines(options: {
   })
 
   for (const candidate of titleCandidates) {
-    if (isSemanticallyDuplicateHeadline(candidate.text, selected.map((item) => item.text), options.brandName)) continue
+    if (
+      isSemanticallyDuplicateHeadline(
+        candidate.text,
+        selected.map((item) => item.text),
+        options.brandName
+      )
+    )
+      continue
     selected.push(candidate)
     if (selected.length >= options.targetCount) {
       return selected.slice(0, options.targetCount)
@@ -1143,7 +1240,14 @@ function buildBrandAnchoredTopHeadlines(options: {
   })
 
   for (const candidate of aboutCandidates) {
-    if (isSemanticallyDuplicateHeadline(candidate.text, selected.map((item) => item.text), options.brandName)) continue
+    if (
+      isSemanticallyDuplicateHeadline(
+        candidate.text,
+        selected.map((item) => item.text),
+        options.brandName
+      )
+    )
+      continue
     selected.push(candidate)
     if (selected.length >= options.targetCount) break
   }
@@ -1219,9 +1323,10 @@ export function enforceTitlePriorityTopHeadlines(
   const maxLength = Math.max(10, options.maxLength ?? TOP_HEADLINE_MAX_LENGTH)
   const slotEndExclusive = Math.min(headlines.length, slotStartIndex + slotCount)
   const normalizedBrand = normalizeBrandNameForHeadline(options.brandName)
-  const brandTokensToMatch = Array.isArray(options.brandTokensToMatch) && options.brandTokensToMatch.length > 0
-    ? options.brandTokensToMatch
-    : getPureBrandKeywords(normalizedBrand)
+  const brandTokensToMatch =
+    Array.isArray(options.brandTokensToMatch) && options.brandTokensToMatch.length > 0
+      ? options.brandTokensToMatch
+      : getPureBrandKeywords(normalizedBrand)
 
   if (!normalizedBrand || slotEndExclusive <= slotStartIndex) {
     return { replaced: 0, selected: [], titleCount: 0, aboutCount: 0 }
@@ -1262,7 +1367,18 @@ export function enforceTitlePriorityTopHeadlines(
   }
 }
 
-type SupportedSoftCopyLanguage = 'en' | 'fr' | 'de' | 'es' | 'it' | 'pt' | 'zh' | 'ja' | 'ko' | 'ru' | 'ar'
+type SupportedSoftCopyLanguage =
+  | 'en'
+  | 'fr'
+  | 'de'
+  | 'es'
+  | 'it'
+  | 'pt'
+  | 'zh'
+  | 'ja'
+  | 'ko'
+  | 'ru'
+  | 'ar'
 
 interface CopyPatternSet {
   transactional: RegExp
@@ -1283,157 +1399,125 @@ const EN_CTA_PHRASES = [
   'Get Yours',
   'Try Now',
   'Start Now',
-  'Sign Up'
+  'Sign Up',
 ]
 
-const FR_CTA_REGEX = /acheter maintenant|acheter|commander|en savoir plus|inscrivez-vous|essayer|commencer|obtenir|découvrir|magasiner/i
-const FR_CTA_PHRASES = [
-  'Acheter maintenant',
-  'Commander',
-  'En savoir plus',
-  'Découvrir',
-  'Obtenir'
-]
+const FR_CTA_REGEX =
+  /acheter maintenant|acheter|commander|en savoir plus|inscrivez-vous|essayer|commencer|obtenir|découvrir|magasiner/i
+const FR_CTA_PHRASES = ['Acheter maintenant', 'Commander', 'En savoir plus', 'Découvrir', 'Obtenir']
 
-const DE_CTA_REGEX = /jetzt kaufen|kaufen|bestellen|mehr erfahren|anmelden|testen|starten|entdecken|sparen|sichern|holen/i
-const DE_CTA_PHRASES = [
-  'Jetzt kaufen',
-  'Bestellen',
-  'Mehr erfahren',
-  'Entdecken',
-  'Sichern'
-]
+const DE_CTA_REGEX =
+  /jetzt kaufen|kaufen|bestellen|mehr erfahren|anmelden|testen|starten|entdecken|sparen|sichern|holen/i
+const DE_CTA_PHRASES = ['Jetzt kaufen', 'Bestellen', 'Mehr erfahren', 'Entdecken', 'Sichern']
 
-const ES_CTA_REGEX = /comprar ahora|comprar|pedir|más información|mas informacion|registrarse|probar|empezar|descubrir|ahorrar|obtener|solicitar/i
-const ES_CTA_PHRASES = [
-  'Comprar ahora',
-  'Pedir',
-  'Más información',
-  'Descubrir',
-  'Obtener'
-]
+const ES_CTA_REGEX =
+  /comprar ahora|comprar|pedir|más información|mas informacion|registrarse|probar|empezar|descubrir|ahorrar|obtener|solicitar/i
+const ES_CTA_PHRASES = ['Comprar ahora', 'Pedir', 'Más información', 'Descubrir', 'Obtener']
 
-const IT_CTA_REGEX = /acquista ora|acquista|compra|ordina|scopri di più|scopri di piu|iscriviti|prova|inizia|scopri|risparmia|ottieni|richiedi/i
-const IT_CTA_PHRASES = [
-  'Acquista ora',
-  'Ordina',
-  'Scopri di più',
-  'Scopri',
-  'Ottieni'
-]
+const IT_CTA_REGEX =
+  /acquista ora|acquista|compra|ordina|scopri di più|scopri di piu|iscriviti|prova|inizia|scopri|risparmia|ottieni|richiedi/i
+const IT_CTA_PHRASES = ['Acquista ora', 'Ordina', 'Scopri di più', 'Scopri', 'Ottieni']
 
-const PT_CTA_REGEX = /comprar agora|comprar|pedir|saiba mais|inscreva-se|experimentar|começar|comecar|descobrir|economizar|obter/i
-const PT_CTA_PHRASES = [
-  'Comprar agora',
-  'Pedir',
-  'Saiba mais',
-  'Descobrir',
-  'Obter'
-]
+const PT_CTA_REGEX =
+  /comprar agora|comprar|pedir|saiba mais|inscreva-se|experimentar|começar|comecar|descobrir|economizar|obter/i
+const PT_CTA_PHRASES = ['Comprar agora', 'Pedir', 'Saiba mais', 'Descobrir', 'Obter']
 
-const ZH_CTA_REGEX = /立即购买|马上购买|立刻购买|立即下单|马上下单|了解更多|获取|立即开始|注册|立即查看|马上行动/i
-const ZH_CTA_PHRASES = [
-  '立即购买',
-  '了解更多',
-  '立即下单',
-  '马上行动',
-  '立即查看'
-]
+const ZH_CTA_REGEX =
+  /立即购买|马上购买|立刻购买|立即下单|马上下单|了解更多|获取|立即开始|注册|立即查看|马上行动/i
+const ZH_CTA_PHRASES = ['立即购买', '了解更多', '立即下单', '马上行动', '立即查看']
 
-const JA_CTA_REGEX = /今すぐ購入|購入する|ご注文|詳しく見る|詳細を見る|今すぐ開始|登録|今すぐチェック/i
+const JA_CTA_REGEX =
+  /今すぐ購入|購入する|ご注文|詳しく見る|詳細を見る|今すぐ開始|登録|今すぐチェック/i
 const JA_CTA_PHRASES = [
   '今すぐ購入',
   '詳しく見る',
   'ご注文はこちら',
   '今すぐ開始',
-  '今すぐチェック'
+  '今すぐチェック',
 ]
 
-const KO_CTA_REGEX = /지금 구매|구매하기|주문하기|자세히 보기|더 알아보기|지금 시작|지금 신청|지금 확인/i
-const KO_CTA_PHRASES = [
-  '지금 구매',
-  '자세히 보기',
-  '지금 주문',
-  '지금 시작',
-  '지금 확인'
-]
+const KO_CTA_REGEX =
+  /지금 구매|구매하기|주문하기|자세히 보기|더 알아보기|지금 시작|지금 신청|지금 확인/i
+const KO_CTA_PHRASES = ['지금 구매', '자세히 보기', '지금 주문', '지금 시작', '지금 확인']
 
-const RU_CTA_REGEX = /купить сейчас|купить|заказать|узнать больше|подробнее|начать|получить|смотреть/i
-const RU_CTA_PHRASES = [
-  'Купить сейчас',
-  'Узнать больше',
-  'Заказать',
-  'Начать',
-  'Получить'
-]
+const RU_CTA_REGEX =
+  /купить сейчас|купить|заказать|узнать больше|подробнее|начать|получить|смотреть/i
+const RU_CTA_PHRASES = ['Купить сейчас', 'Узнать больше', 'Заказать', 'Начать', 'Получить']
 
-const AR_CTA_REGEX = /اشتري الآن|اشتر الآن|اطلب الآن|اعرف المزيد|اكتشف المزيد|ابدأ الآن|سجل الآن|احصل الآن/i
-const AR_CTA_PHRASES = [
-  'اشتري الآن',
-  'اعرف المزيد',
-  'اطلب الآن',
-  'ابدأ الآن',
-  'احصل الآن'
-]
+const AR_CTA_REGEX =
+  /اشتري الآن|اشتر الآن|اطلب الآن|اعرف المزيد|اكتشف المزيد|ابدأ الآن|سجل الآن|احصل الآن/i
+const AR_CTA_PHRASES = ['اشتري الآن', 'اعرف المزيد', 'اطلب الآن', 'ابدأ الآن', 'احصل الآن']
 
 const EN_COPY_PATTERNS: CopyPatternSet = {
   transactional: /\b(buy|shop|order|save|deal|offer|discount|price|quote|get)\b/i,
   trust: /\b(official|authentic|trusted|certified|warranty|support|guarantee)\b/i,
-  scenario: /\b(for|when|during|project|repair|install|build|fix|home|garden|yard|fence|deck|job)\b/i,
-  solution: /\b(solution|solve|built|designed|helps|easy|durable|powerful|reliable|heavy[-\s]?duty|lightweight)\b/i,
+  scenario:
+    /\b(for|when|during|project|repair|install|build|fix|home|garden|yard|fence|deck|job)\b/i,
+  solution:
+    /\b(solution|solve|built|designed|helps|easy|durable|powerful|reliable|heavy[-\s]?duty|lightweight)\b/i,
   pain: /\b(problem|struggle|frustrat|tired|hard|issue|worry|difficult|stuck|slow)\b/i,
   cta: EN_CTA_REGEX,
-  ctaPhrases: EN_CTA_PHRASES
+  ctaPhrases: EN_CTA_PHRASES,
 }
 
 const FR_COPY_PATTERNS: CopyPatternSet = {
-  transactional: /(acheter|commander|prix|devis|offre|promo|promotion|remise|économiser|obtenir|magasiner)/i,
+  transactional:
+    /(acheter|commander|prix|devis|offre|promo|promotion|remise|économiser|obtenir|magasiner)/i,
   trust: /(officiel|authentique|fiable|certifi|garantie|assistance|support|confiance)/i,
-  scenario: /(pour|quand|pendant|projet|réparation|installer|installation|construire|bricolage|maison|jardin|terrasse|clôture|chantier)/i,
+  scenario:
+    /(pour|quand|pendant|projet|réparation|installer|installation|construire|bricolage|maison|jardin|terrasse|clôture|chantier)/i,
   solution: /(solution|résout|résoudre|conçu|aide|facile|durable|puissant|fiable|robuste|léger)/i,
   pain: /(problème|difficile|galère|frustr|fatigu|lent|bloqué|inquiét|souci)/i,
   cta: FR_CTA_REGEX,
-  ctaPhrases: FR_CTA_PHRASES
+  ctaPhrases: FR_CTA_PHRASES,
 }
 
 const DE_COPY_PATTERNS: CopyPatternSet = {
   transactional: /(kaufen|bestellen|preis|angebot|rabatt|sparen|holen|deal)/i,
   trust: /(offiziell|authentisch|vertrau|zertifiz|garantie|support|zuverlässig|zuverlaessig)/i,
-  scenario: /(für|fuer|wenn|während|waehrend|projekt|reparatur|installation|bauen|haus|garten|zaun|terrasse|job)/i,
-  solution: /(lösung|loesung|löst|loest|entwickelt|hilft|einfach|robust|leistungsstark|zuverlässig|zuverlaessig|langlebig|leicht)/i,
+  scenario:
+    /(für|fuer|wenn|während|waehrend|projekt|reparatur|installation|bauen|haus|garten|zaun|terrasse|job)/i,
+  solution:
+    /(lösung|loesung|löst|loest|entwickelt|hilft|einfach|robust|leistungsstark|zuverlässig|zuverlaessig|langlebig|leicht)/i,
   pain: /(problem|schwierig|frust|müde|muede|langsam|steck|sorge|hürde|huerde)/i,
   cta: DE_CTA_REGEX,
-  ctaPhrases: DE_CTA_PHRASES
+  ctaPhrases: DE_CTA_PHRASES,
 }
 
 const ES_COPY_PATTERNS: CopyPatternSet = {
   transactional: /(comprar|pedido|pedir|precio|oferta|descuento|ahorrar|obtener)/i,
   trust: /(oficial|auténtico|autentico|confiable|certific|garantía|garantia|soporte|confianza)/i,
-  scenario: /(para|cuando|durante|proyecto|reparaci|instal|constru|hogar|jardín|jardin|patio|valla|trabajo)/i,
-  solution: /(solución|solucion|resuelve|diseñado|disenado|ayuda|fácil|facil|duradero|potente|fiable|ligero|robusto)/i,
+  scenario:
+    /(para|cuando|durante|proyecto|reparaci|instal|constru|hogar|jardín|jardin|patio|valla|trabajo)/i,
+  solution:
+    /(solución|solucion|resuelve|diseñado|disenado|ayuda|fácil|facil|duradero|potente|fiable|ligero|robusto)/i,
   pain: /(problema|difícil|dificil|frustr|cansad|lento|atasc|preocup|complic)/i,
   cta: ES_CTA_REGEX,
-  ctaPhrases: ES_CTA_PHRASES
+  ctaPhrases: ES_CTA_PHRASES,
 }
 
 const IT_COPY_PATTERNS: CopyPatternSet = {
   transactional: /(acquista|compra|ordina|prezzo|offerta|sconto|risparmia|ottieni)/i,
   trust: /(ufficiale|autentico|affidabile|certificat|garanzia|supporto|fiducia)/i,
-  scenario: /(per|quando|durante|progetto|ripar|install|costru|casa|giardino|cortile|recinzione|lavoro)/i,
+  scenario:
+    /(per|quando|durante|progetto|ripar|install|costru|casa|giardino|cortile|recinzione|lavoro)/i,
   solution: /(soluzione|risolve|progett|aiuta|facile|duraturo|potente|affidabile|leggero|robusto)/i,
   pain: /(problema|difficile|frustr|stanco|lento|blocc|preoccup|fatica)/i,
   cta: IT_CTA_REGEX,
-  ctaPhrases: IT_CTA_PHRASES
+  ctaPhrases: IT_CTA_PHRASES,
 }
 
 const PT_COPY_PATTERNS: CopyPatternSet = {
   transactional: /(comprar|pedir|preço|preco|oferta|desconto|economizar|obter)/i,
-  trust: /(oficial|autêntico|autentico|confiável|confiavel|certific|garantia|suporte|confiança|confianca)/i,
-  scenario: /(para|quando|durante|projeto|reparo|instala|constru|casa|jardim|quintal|cerca|trabalho)/i,
-  solution: /(solução|solucao|resolve|projetado|ajuda|fácil|facil|durável|duravel|potente|confiável|confiavel|leve|robusto)/i,
+  trust:
+    /(oficial|autêntico|autentico|confiável|confiavel|certific|garantia|suporte|confiança|confianca)/i,
+  scenario:
+    /(para|quando|durante|projeto|reparo|instala|constru|casa|jardim|quintal|cerca|trabalho)/i,
+  solution:
+    /(solução|solucao|resolve|projetado|ajuda|fácil|facil|durável|duravel|potente|confiável|confiavel|leve|robusto)/i,
   pain: /(problema|difícil|dificil|frustr|cansad|lento|pres|preocup|trav)/i,
   cta: PT_CTA_REGEX,
-  ctaPhrases: PT_CTA_PHRASES
+  ctaPhrases: PT_CTA_PHRASES,
 }
 
 const ZH_COPY_PATTERNS: CopyPatternSet = {
@@ -1443,7 +1527,7 @@ const ZH_COPY_PATTERNS: CopyPatternSet = {
   solution: /(解决|帮助|轻松|耐用|强劲|高效|可靠|省力|便捷|稳固)/i,
   pain: /(问题|困扰|费力|麻烦|卡住|慢|担心|难|痛点)/i,
   cta: ZH_CTA_REGEX,
-  ctaPhrases: ZH_CTA_PHRASES
+  ctaPhrases: ZH_CTA_PHRASES,
 }
 
 const JA_COPY_PATTERNS: CopyPatternSet = {
@@ -1453,7 +1537,7 @@ const JA_COPY_PATTERNS: CopyPatternSet = {
   solution: /(解決|サポート|簡単|耐久|強力|高性能|信頼性|軽量|効率)/i,
   pain: /(問題|悩み|大変|難しい|不安|遅い|困る|手間)/i,
   cta: JA_CTA_REGEX,
-  ctaPhrases: JA_CTA_PHRASES
+  ctaPhrases: JA_CTA_PHRASES,
 }
 
 const KO_COPY_PATTERNS: CopyPatternSet = {
@@ -1463,7 +1547,7 @@ const KO_COPY_PATTERNS: CopyPatternSet = {
   solution: /(해결|도움|간편|내구성|강력|효율|신뢰성|경량|튼튼)/i,
   pain: /(문제|고민|어려움|불편|느림|막힘|걱정|번거로움)/i,
   cta: KO_CTA_REGEX,
-  ctaPhrases: KO_CTA_PHRASES
+  ctaPhrases: KO_CTA_PHRASES,
 }
 
 const RU_COPY_PATTERNS: CopyPatternSet = {
@@ -1473,7 +1557,7 @@ const RU_COPY_PATTERNS: CopyPatternSet = {
   solution: /(решен|помога|легко|прочн|мощн|надежн|эффектив|удобн|долговеч)/i,
   pain: /(проблем|сложно|трудно|медлен|застр|беспоко|неудоб)/i,
   cta: RU_CTA_REGEX,
-  ctaPhrases: RU_CTA_PHRASES
+  ctaPhrases: RU_CTA_PHRASES,
 }
 
 const AR_COPY_PATTERNS: CopyPatternSet = {
@@ -1483,11 +1567,21 @@ const AR_COPY_PATTERNS: CopyPatternSet = {
   solution: /(حل|يساعد|سهل|متين|قوي|فعال|موثوق|خفيف|عملي)/i,
   pain: /(مشكلة|صعب|معاناة|بطيء|عالق|قلق|متعب)/i,
   cta: AR_CTA_REGEX,
-  ctaPhrases: AR_CTA_PHRASES
+  ctaPhrases: AR_CTA_PHRASES,
 }
 
 const SUPPORTED_SOFT_COPY_LANGUAGES = new Set<SupportedSoftCopyLanguage>([
-  'en', 'fr', 'de', 'es', 'it', 'pt', 'zh', 'ja', 'ko', 'ru', 'ar'
+  'en',
+  'fr',
+  'de',
+  'es',
+  'it',
+  'pt',
+  'zh',
+  'ja',
+  'ko',
+  'ru',
+  'ar',
 ])
 
 function resolveSoftCopyLanguage(languageCode: string): SupportedSoftCopyLanguage | null {
@@ -1516,7 +1610,7 @@ function resolveSoftCopyLanguage(languageCode: string): SupportedSoftCopyLanguag
   const fallbackNormalized = normalizeLanguageCode(raw)
   const fallbackCandidate = fallbackNormalized === 'de-ch' ? 'de' : fallbackNormalized
   return SUPPORTED_SOFT_COPY_LANGUAGES.has(fallbackCandidate as SupportedSoftCopyLanguage)
-    ? fallbackCandidate as SupportedSoftCopyLanguage
+    ? (fallbackCandidate as SupportedSoftCopyLanguage)
     : null
 }
 
@@ -1540,7 +1634,15 @@ const LATIN_SOFT_COPY_LANGUAGES: SupportedSoftCopyLanguage[] = ['en', 'fr', 'de'
 const LANGUAGE_PURITY_MARKERS: Record<SupportedSoftCopyLanguage, string[]> = {
   en: ['shop now', 'learn more', 'official', 'buy now', 'order now'],
   fr: ['acheter', 'commander', 'officiel', 'découvrir', 'en savoir plus', 'fiable', 'garantie'],
-  de: ['jetzt kaufen', 'bestellen', 'offiziell', 'zertifiz', 'alkalisch', 'umkehrosmose', 'zuverlässig'],
+  de: [
+    'jetzt kaufen',
+    'bestellen',
+    'offiziell',
+    'zertifiz',
+    'alkalisch',
+    'umkehrosmose',
+    'zuverlässig',
+  ],
   es: ['comprar ahora', 'oficial', 'descubrir', 'más información', 'pedir', 'confiable'],
   it: ['acquista ora', 'ufficiale', 'ordina', 'scopri', 'acqua', 'affidabile', 'certificato'],
   pt: ['comprar agora', 'oficial', 'saiba mais', 'pedir', 'descobrir', 'confiável'],
@@ -1563,7 +1665,10 @@ const LATIN_LANGUAGE_SIGNATURE_MARKERS: Partial<Record<SupportedSoftCopyLanguage
 function countMarkerHits(text: string, markers: string[]): number {
   const normalized = String(text || '').toLowerCase()
   if (!normalized) return 0
-  return markers.reduce((sum, marker) => (normalized.includes(marker.toLowerCase()) ? sum + 1 : sum), 0)
+  return markers.reduce(
+    (sum, marker) => (normalized.includes(marker.toLowerCase()) ? sum + 1 : sum),
+    0
+  )
 }
 
 function countSignatureHits(text: string, languageCode: SupportedSoftCopyLanguage): number {
@@ -1586,14 +1691,20 @@ function getLanguagePatternHitCount(text: string, languageCode: SupportedSoftCop
   return checks.reduce((sum, pattern) => (pattern.test(normalized) ? sum + 1 : sum), 0)
 }
 
-function isLikelyCrossLanguageLatinAsset(text: string, targetLanguage: SupportedSoftCopyLanguage): boolean {
+function isLikelyCrossLanguageLatinAsset(
+  text: string,
+  targetLanguage: SupportedSoftCopyLanguage
+): boolean {
   if (!LATIN_SOFT_COPY_LANGUAGES.includes(targetLanguage)) return false
   if (targetLanguage === 'en') return false
 
   const normalized = String(text || '').trim()
   if (!normalized) return false
 
-  const targetMarkerHits = countMarkerHits(normalized, LANGUAGE_PURITY_MARKERS[targetLanguage] || [])
+  const targetMarkerHits = countMarkerHits(
+    normalized,
+    LANGUAGE_PURITY_MARKERS[targetLanguage] || []
+  )
   const targetPatternHits = getLanguagePatternHitCount(normalized, targetLanguage)
   const targetSignatureHits = countSignatureHits(normalized, targetLanguage)
 
@@ -1602,7 +1713,10 @@ function isLikelyCrossLanguageLatinAsset(text: string, targetLanguage: Supported
   let otherSignatureMax = 0
   for (const lang of LATIN_SOFT_COPY_LANGUAGES) {
     if (lang === targetLanguage) continue
-    otherMarkerMax = Math.max(otherMarkerMax, countMarkerHits(normalized, LANGUAGE_PURITY_MARKERS[lang] || []))
+    otherMarkerMax = Math.max(
+      otherMarkerMax,
+      countMarkerHits(normalized, LANGUAGE_PURITY_MARKERS[lang] || [])
+    )
     otherPatternMax = Math.max(otherPatternMax, getLanguagePatternHitCount(normalized, lang))
     otherSignatureMax = Math.max(otherSignatureMax, countSignatureHits(normalized, lang))
   }
@@ -1623,7 +1737,9 @@ function getCtaPhrasesForLanguage(languageCode: string): string[] {
 
 function textContainsKeyword(text: string, keyword: string): boolean {
   const normalizedText = String(text || '').toLowerCase()
-  const normalizedKeyword = String(keyword || '').toLowerCase().trim()
+  const normalizedKeyword = String(keyword || '')
+    .toLowerCase()
+    .trim()
   if (!normalizedText || !normalizedKeyword) return false
   if (normalizedText.includes(normalizedKeyword)) return true
   const keywordRoot = normalizedKeyword.replace(/s$|ing$|ed$/g, '')
@@ -1635,9 +1751,7 @@ function headlineContainsKeyword(headline: string, keywords: string[]): boolean 
 }
 
 function cycleKeywordTargets(keywords: string[], count: number): string[] {
-  const normalizedKeywords = keywords
-    .map((keyword) => String(keyword || '').trim())
-    .filter(Boolean)
+  const normalizedKeywords = keywords.map((keyword) => String(keyword || '').trim()).filter(Boolean)
   if (normalizedKeywords.length === 0 || count <= 0) return []
 
   const targets: string[] = []
@@ -1648,7 +1762,9 @@ function cycleKeywordTargets(keywords: string[], count: number): string[] {
 }
 
 function getContractRoleScore(role: unknown): number {
-  const normalized = String(role || '').trim().toLowerCase()
+  const normalized = String(role || '')
+    .trim()
+    .toLowerCase()
   if (normalized === 'required') return 240
   if (normalized === 'optional') return 120
   if (normalized === 'fallback') return 0
@@ -1656,7 +1772,9 @@ function getContractRoleScore(role: unknown): number {
 }
 
 function getEvidenceStrengthScore(strength: unknown): number {
-  const normalized = String(strength || '').trim().toLowerCase()
+  const normalized = String(strength || '')
+    .trim()
+    .toLowerCase()
   if (normalized === 'high') return 60
   if (normalized === 'medium') return 30
   if (normalized === 'low') return 10
@@ -1673,7 +1791,10 @@ function getKeywordFitScore(keyword: string, maxLength: number): number {
   return 20
 }
 
-function extractCreativeSlotSemanticTokens(keyword: string, brandName: string | null | undefined): string[] {
+function extractCreativeSlotSemanticTokens(
+  keyword: string,
+  brandName: string | null | undefined
+): string[] {
   const semanticCore = normalizeBrandFreeText(keyword, String(brandName || ''))
   return tokenizeHeadline2Keyword(semanticCore)
     .filter((token) => token.length >= 2)
@@ -1693,12 +1814,13 @@ function isKeywordEligibleForCreativeSlotContract(
     return false
   }
 
-  const trailingToken = normalizedKeyword
-    .split(/\s+/)
-    .filter(Boolean)
-    .pop()
-    ?.toLowerCase()
-    .replace(/[^\p{L}\p{N}]/gu, '') || ''
+  const trailingToken =
+    normalizedKeyword
+      .split(/\s+/)
+      .filter(Boolean)
+      .pop()
+      ?.toLowerCase()
+      .replace(/[^\p{L}\p{N}]/gu, '') || ''
   if (trailingToken && HEADLINE_DANGLING_TAIL_TOKENS.has(trailingToken)) {
     return false
   }
@@ -1723,16 +1845,19 @@ function isKeywordEligibleForCreativeSlotContract(
   }
 
   if (
-    semanticTokens.every((token) => /^\d+$/.test(token))
-    || semanticTokens.every((token) => token.length <= 2 && !isLikelyModelCodeToken(token))
+    semanticTokens.every((token) => /^\d+$/.test(token)) ||
+    semanticTokens.every((token) => token.length <= 2 && !isLikelyModelCodeToken(token))
   ) {
     return false
   }
 
-  return semanticTokens.some((token) =>
-    token.length >= 3
-    || /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Cyrillic}]/u.test(token)
-    || isLikelyModelCodeToken(token)
+  return semanticTokens.some(
+    (token) =>
+      token.length >= 3 ||
+      /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Cyrillic}]/u.test(
+        token
+      ) ||
+      isLikelyModelCodeToken(token)
   )
 }
 
@@ -1746,19 +1871,20 @@ function scoreKeywordUsageCandidate(
   })
   const volume = Number(candidate.searchVolume || 0)
   const volumeScore = volume > 0 ? Math.min(90, Math.round(Math.log10(volume + 1) * 24)) : 0
-  const confidenceScore = typeof candidate.confidence === 'number'
-    ? Math.max(0, Math.min(20, Math.round(candidate.confidence * 20)))
-    : 0
+  const confidenceScore =
+    typeof candidate.confidence === 'number'
+      ? Math.max(0, Math.min(20, Math.round(candidate.confidence * 20)))
+      : 0
   const exactBonus = candidate.matchType === 'EXACT' ? 16 : candidate.matchType === 'PHRASE' ? 8 : 0
 
   return (
-    getContractRoleScore(candidate.contractRole)
-    + sourceScore * 4
-    + getEvidenceStrengthScore(candidate.evidenceStrength)
-    + volumeScore
-    + confidenceScore
-    + exactBonus
-    + getKeywordFitScore(candidate.keyword, maxLength)
+    getContractRoleScore(candidate.contractRole) +
+    sourceScore * 4 +
+    getEvidenceStrengthScore(candidate.evidenceStrength) +
+    volumeScore +
+    confidenceScore +
+    exactBonus +
+    getKeywordFitScore(candidate.keyword, maxLength)
   )
 }
 
@@ -1769,20 +1895,30 @@ function dedupeKeywordUsageCandidates(
   const fromKeywordObjects = Array.isArray(precomputedKeywordSet?.keywordsWithVolume)
     ? precomputedKeywordSet?.keywordsWithVolume || []
     : []
-  const fallbackKeywords = Array.from(new Set([
-    ...((precomputedKeywordSet?.executableKeywords || []).map((keyword) => String(keyword || '').trim())),
-    ...((precomputedKeywordSet?.promptKeywords || []).map((keyword) => String(keyword || '').trim())),
-  ])).filter(Boolean)
+  const fallbackKeywords = Array.from(
+    new Set([
+      ...(precomputedKeywordSet?.executableKeywords || []).map((keyword) =>
+        String(keyword || '').trim()
+      ),
+      ...(precomputedKeywordSet?.promptKeywords || []).map((keyword) =>
+        String(keyword || '').trim()
+      ),
+    ])
+  ).filter(Boolean)
 
-  const combined: NonNullable<PrecomputedCreativeKeywordSet['keywordsWithVolume']> = fromKeywordObjects.length > 0
-    ? fromKeywordObjects
-    : fallbackKeywords.map((keyword) => ({
-      keyword,
-      searchVolume: 0,
-    }))
+  const combined: NonNullable<PrecomputedCreativeKeywordSet['keywordsWithVolume']> =
+    fromKeywordObjects.length > 0
+      ? fromKeywordObjects
+      : fallbackKeywords.map((keyword) => ({
+          keyword,
+          searchVolume: 0,
+        }))
 
   const pureBrandKeywords = getPureBrandKeywords(brandName || '')
-  const seen = new Map<string, NonNullable<PrecomputedCreativeKeywordSet['keywordsWithVolume']>[number]>()
+  const seen = new Map<
+    string,
+    NonNullable<PrecomputedCreativeKeywordSet['keywordsWithVolume']>[number]
+  >()
 
   for (const item of combined) {
     const keyword = String(item?.keyword || '').trim()
@@ -1810,8 +1946,14 @@ function dedupeKeywordUsageCandidates(
       continue
     }
 
-    const existingScore = scoreKeywordUsageCandidate(existing, RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH)
-    const currentScore = scoreKeywordUsageCandidate(current, RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH)
+    const existingScore = scoreKeywordUsageCandidate(
+      existing,
+      RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH
+    )
+    const currentScore = scoreKeywordUsageCandidate(
+      current,
+      RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH
+    )
     if (currentScore > existingScore) {
       seen.set(normalized, current)
     }
@@ -1826,39 +1968,50 @@ export function buildCreativeKeywordUsagePlan(input: {
   headlineSlotCount?: number
   descriptionSlotCount?: number
 }): CreativeKeywordUsagePlan {
-  const headlineSlotCount = Math.max(1, input.headlineSlotCount ?? RETAINED_KEYWORD_HEADLINE_SLOT_COUNT)
-  const descriptionSlotCount = Math.max(1, input.descriptionSlotCount ?? RETAINED_KEYWORD_DESCRIPTION_SLOT_COUNT)
+  const headlineSlotCount = Math.max(
+    1,
+    input.headlineSlotCount ?? RETAINED_KEYWORD_HEADLINE_SLOT_COUNT
+  )
+  const descriptionSlotCount = Math.max(
+    1,
+    input.descriptionSlotCount ?? RETAINED_KEYWORD_DESCRIPTION_SLOT_COUNT
+  )
   const candidates = dedupeKeywordUsageCandidates(input.brandName, input.precomputedKeywordSet)
 
   const rankedForHeadline = [...candidates].sort((left, right) => {
     const scoreDelta =
-      scoreKeywordUsageCandidate(right, RETAINED_KEYWORD_HEADLINE_MAX_LENGTH)
-      - scoreKeywordUsageCandidate(left, RETAINED_KEYWORD_HEADLINE_MAX_LENGTH)
+      scoreKeywordUsageCandidate(right, RETAINED_KEYWORD_HEADLINE_MAX_LENGTH) -
+      scoreKeywordUsageCandidate(left, RETAINED_KEYWORD_HEADLINE_MAX_LENGTH)
     if (scoreDelta !== 0) return scoreDelta
     return left.keyword.localeCompare(right.keyword)
   })
   const rankedForDescription = [...candidates].sort((left, right) => {
     const scoreDelta =
-      scoreKeywordUsageCandidate(right, RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH)
-      - scoreKeywordUsageCandidate(left, RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH)
+      scoreKeywordUsageCandidate(right, RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH) -
+      scoreKeywordUsageCandidate(left, RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH)
     if (scoreDelta !== 0) return scoreDelta
     return left.keyword.localeCompare(right.keyword)
   })
 
   const retainedNonBrandKeywords = rankedForDescription.map((item) => item.keyword)
-  const headlineCoverageMode = retainedNonBrandKeywords.length < headlineSlotCount
-    ? 'exhaustive_under_5'
-    : 'top_5'
+  const headlineCoverageMode =
+    retainedNonBrandKeywords.length < headlineSlotCount ? 'exhaustive_under_5' : 'top_5'
 
-  const headlineTargets = headlineCoverageMode === 'exhaustive_under_5'
-    ? cycleKeywordTargets(retainedNonBrandKeywords, headlineSlotCount)
-    : rankedForHeadline.slice(0, headlineSlotCount).map((item) => item.keyword)
+  const headlineTargets =
+    headlineCoverageMode === 'exhaustive_under_5'
+      ? cycleKeywordTargets(retainedNonBrandKeywords, headlineSlotCount)
+      : rankedForHeadline.slice(0, headlineSlotCount).map((item) => item.keyword)
 
-  const descriptionCandidates = rankedForDescription.filter((item) =>
-    !headlineTargets.some((target) => normalizeGoogleAdsKeyword(target) === normalizeGoogleAdsKeyword(item.keyword))
+  const descriptionCandidates = rankedForDescription.filter(
+    (item) =>
+      !headlineTargets.some(
+        (target) => normalizeGoogleAdsKeyword(target) === normalizeGoogleAdsKeyword(item.keyword)
+      )
   )
   const descriptionTargets = cycleKeywordTargets(
-    (descriptionCandidates.length > 0 ? descriptionCandidates : rankedForDescription).map((item) => item.keyword),
+    (descriptionCandidates.length > 0 ? descriptionCandidates : rankedForDescription).map(
+      (item) => item.keyword
+    ),
     descriptionSlotCount
   )
 
@@ -1885,13 +2038,12 @@ function resolveEffectiveKeywordUsagePlan(input: {
     return primary
   }
 
-  const fallbackKeywordsWithVolume =
-    (input.keywordsWithVolume || [])
-      .map((item) => ({
-        keyword: String(item?.keyword || '').trim(),
-        searchVolume: Number(item?.searchVolume || 0),
-      }))
-      .filter((item) => item.keyword.length > 0)
+  const fallbackKeywordsWithVolume = (input.keywordsWithVolume || [])
+    .map((item) => ({
+      keyword: String(item?.keyword || '').trim(),
+      searchVolume: Number(item?.searchVolume || 0),
+    }))
+    .filter((item) => item.keyword.length > 0)
 
   const fallbackFromKeywords =
     fallbackKeywordsWithVolume.length > 0
@@ -1918,11 +2070,13 @@ function buildRetainedKeywordSlotSection(plan: CreativeKeywordUsagePlan): string
     return '- No retained non-brand keywords were safe for forced slot coverage. Do not force awkward, low-quality, or semantically empty keywords into headlines or descriptions.'
   }
 
-  const headlineLines = plan.headlineKeywordTargets.map((keyword, index) =>
-    `- Headline #${RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + index + 1}: must contain "${keyword}"`
+  const headlineLines = plan.headlineKeywordTargets.map(
+    (keyword, index) =>
+      `- Headline #${RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + index + 1}: must contain "${keyword}"`
   )
-  const descriptionLines = plan.descriptionKeywordTargets.map((keyword, index) =>
-    `- Description #${RETAINED_KEYWORD_DESCRIPTION_SLOT_START_INDEX + index + 1}: must contain "${keyword}"`
+  const descriptionLines = plan.descriptionKeywordTargets.map(
+    (keyword, index) =>
+      `- Description #${RETAINED_KEYWORD_DESCRIPTION_SLOT_START_INDEX + index + 1}: must contain "${keyword}"`
   )
 
   return [
@@ -1944,16 +2098,21 @@ function fitKeywordIntoHeadline(text: string, keyword: string, maxLength: number
   if (textContainsKeyword(text, trimmedKeyword)) return text
   if (getGoogleAdsTextEffectiveLength(trimmedKeyword) > maxLength) return null
 
-  const base = String(text || '').trim().replace(/[.!?]+$/g, '').trim()
+  const base = String(text || '')
+    .trim()
+    .replace(/[.!?]+$/g, '')
+    .trim()
   const candidates = [
     `${trimmedKeyword} ${base}`.trim(),
     `${base} ${trimmedKeyword}`.trim(),
     trimmedKeyword,
   ]
 
-  return candidates.find((candidate) =>
-    Boolean(candidate) && getGoogleAdsTextEffectiveLength(candidate) <= maxLength
-  ) || null
+  return (
+    candidates.find(
+      (candidate) => Boolean(candidate) && getGoogleAdsTextEffectiveLength(candidate) <= maxLength
+    ) || null
+  )
 }
 
 function canonicalizeHeadlineActionPhrases(text: string, languageCode: string): string {
@@ -1965,19 +2124,30 @@ function canonicalizeHeadlineActionPhrases(text: string, languageCode: string): 
     if (!normalizedPhrase) continue
 
     const withoutNow = normalizedPhrase.replace(/\bnow\b/gi, '').trim()
-    const canonical = (withoutNow.split(/\s+/).filter(Boolean)[0] || withoutNow || normalizedPhrase).trim()
+    const canonical = (
+      withoutNow.split(/\s+/).filter(Boolean)[0] ||
+      withoutNow ||
+      normalizedPhrase
+    ).trim()
     if (!canonical) continue
 
     replacements.set(normalizedPhrase, canonical)
     if (withoutNow) replacements.set(withoutNow, canonical)
   }
 
-  const orderedSources = Array.from(replacements.keys()).sort((left, right) => right.length - left.length)
+  const orderedSources = Array.from(replacements.keys()).sort(
+    (left, right) => right.length - left.length
+  )
   for (const source of orderedSources) {
-    normalized = normalized.replace(new RegExp(escapeRegex(source), 'gi'), replacements.get(source) || source)
+    normalized = normalized.replace(
+      new RegExp(escapeRegex(source), 'gi'),
+      replacements.get(source) || source
+    )
   }
 
-  const canonicalRoots = Array.from(new Set(replacements.values())).sort((left, right) => right.length - left.length)
+  const canonicalRoots = Array.from(new Set(replacements.values())).sort(
+    (left, right) => right.length - left.length
+  )
   for (const root of canonicalRoots) {
     const trailingPattern = new RegExp(`^(.*?)\\s+${escapeRegex(root)}$`, 'i')
     const trailingMatch = normalized.match(trailingPattern)
@@ -1989,12 +2159,15 @@ function canonicalizeHeadlineActionPhrases(text: string, languageCode: string): 
   return normalized.replace(/\s+/g, ' ').trim()
 }
 
-function normalizeHeadlineForProtectedSimilarity(text: string, brandName: string, languageCode: string): string {
-  const normalized = normalizeHeadline2KeywordCandidate(normalizeBrandFreeText(text, brandName) || text)
-    .toLowerCase()
-  return canonicalizeHeadlineActionPhrases(normalized, languageCode)
-    .replace(/\s+/g, ' ')
-    .trim()
+function normalizeHeadlineForProtectedSimilarity(
+  text: string,
+  brandName: string,
+  languageCode: string
+): string {
+  const normalized = normalizeHeadline2KeywordCandidate(
+    normalizeBrandFreeText(text, brandName) || text
+  ).toLowerCase()
+  return canonicalizeHeadlineActionPhrases(normalized, languageCode).replace(/\s+/g, ' ').trim()
 }
 
 function isHeadlineTooSimilarToProtectedSlots(
@@ -2003,14 +2176,25 @@ function isHeadlineTooSimilarToProtectedSlots(
   brandName: string,
   languageCode: string
 ): boolean {
-  const normalizedCandidate = normalizeHeadlineForProtectedSimilarity(candidate, brandName, languageCode)
+  const normalizedCandidate = normalizeHeadlineForProtectedSimilarity(
+    candidate,
+    brandName,
+    languageCode
+  )
   if (!normalizedCandidate) return false
 
   return protectedHeadlines.some((headline) => {
-    const normalizedProtected = normalizeHeadlineForProtectedSimilarity(headline, brandName, languageCode)
+    const normalizedProtected = normalizeHeadlineForProtectedSimilarity(
+      headline,
+      brandName,
+      languageCode
+    )
     if (!normalizedProtected) return false
     if (normalizedCandidate === normalizedProtected) return true
-    return calculateTextSimilarity(normalizedCandidate, normalizedProtected) >= RETAINED_KEYWORD_PROTECTED_SIMILARITY_THRESHOLD
+    return (
+      calculateTextSimilarity(normalizedCandidate, normalizedProtected) >=
+      RETAINED_KEYWORD_PROTECTED_SIMILARITY_THRESHOLD
+    )
   })
 }
 
@@ -2057,7 +2241,10 @@ function fitKeywordIntoDiverseHeadline(
     if (!candidate || seen.has(candidate)) continue
     seen.add(candidate)
     if (getGoogleAdsTextEffectiveLength(candidate) > maxLength) continue
-    if (isHeadlineTooSimilarToProtectedSlots(candidate, protectedHeadlines, brandName, languageCode)) continue
+    if (
+      isHeadlineTooSimilarToProtectedSlots(candidate, protectedHeadlines, brandName, languageCode)
+    )
+      continue
     return candidate
   }
 
@@ -2075,7 +2262,10 @@ function fitKeywordIntoDescription(
   if (textContainsKeyword(text, trimmedKeyword)) return text
   if (getGoogleAdsTextEffectiveLength(trimmedKeyword) > maxLength) return null
 
-  const base = String(text || '').trim().replace(/[.!?]+$/g, '').trim()
+  const base = String(text || '')
+    .trim()
+    .replace(/[.!?]+$/g, '')
+    .trim()
   const cta = getCtaPhrasesForLanguage(languageCode)[0] || 'Shop Now'
   const candidates = [
     `${trimmedKeyword}. ${base}`.trim(),
@@ -2084,9 +2274,11 @@ function fitKeywordIntoDescription(
     `${cta} ${trimmedKeyword}`.trim(),
   ]
 
-  return candidates.find((candidate) =>
-    Boolean(candidate) && getGoogleAdsTextEffectiveLength(candidate) <= maxLength
-  ) || null
+  return (
+    candidates.find(
+      (candidate) => Boolean(candidate) && getGoogleAdsTextEffectiveLength(candidate) <= maxLength
+    ) || null
+  )
 }
 
 export function enforceRetainedKeywordSlotCoverage(
@@ -2101,7 +2293,10 @@ export function enforceRetainedKeywordSlotCoverage(
 
   const headlines = [...(result.headlines || [])]
   const descriptions = [...(result.descriptions || [])]
-  const protectedHeadlines = headlines.slice(0, Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length))
+  const protectedHeadlines = headlines.slice(
+    0,
+    Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length)
+  )
   let headlineFixes = 0
   let descriptionFixes = 0
 
@@ -2111,8 +2306,13 @@ export function enforceRetainedKeywordSlotCoverage(
     const keywordTarget = usagePlan.headlineKeywordTargets[index]
     const currentHeadline = headlines[slotIndex]
     if (
-      textContainsKeyword(currentHeadline, keywordTarget)
-      && !isHeadlineTooSimilarToProtectedSlots(currentHeadline, protectedHeadlines, brandName, languageCode)
+      textContainsKeyword(currentHeadline, keywordTarget) &&
+      !isHeadlineTooSimilarToProtectedSlots(
+        currentHeadline,
+        protectedHeadlines,
+        brandName,
+        languageCode
+      )
     ) {
       continue
     }
@@ -2153,10 +2353,16 @@ export function enforceRetainedKeywordSlotCoverage(
       result.headlinesWithMetadata = result.headlinesWithMetadata.map((asset, index) => ({
         ...asset,
         text: headlines[index] ?? asset.text,
-        length: Math.min(RETAINED_KEYWORD_HEADLINE_MAX_LENGTH, (headlines[index] ?? asset.text).length),
-        keywords: index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX && index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
-          ? [usagePlan.headlineKeywordTargets[index - RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX]]
-          : asset.keywords,
+        length: Math.min(
+          RETAINED_KEYWORD_HEADLINE_MAX_LENGTH,
+          (headlines[index] ?? asset.text).length
+        ),
+        keywords:
+          index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX &&
+          index <
+            RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
+            ? [usagePlan.headlineKeywordTargets[index - RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX]]
+            : asset.keywords,
       }))
     }
   }
@@ -2167,10 +2373,14 @@ export function enforceRetainedKeywordSlotCoverage(
       result.descriptionsWithMetadata = result.descriptionsWithMetadata.map((asset, index) => ({
         ...asset,
         text: descriptions[index] ?? asset.text,
-        length: Math.min(RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH, (descriptions[index] ?? asset.text).length),
-        keywords: index < usagePlan.descriptionKeywordTargets.length
-          ? [usagePlan.descriptionKeywordTargets[index]]
-          : asset.keywords,
+        length: Math.min(
+          RETAINED_KEYWORD_DESCRIPTION_MAX_LENGTH,
+          (descriptions[index] ?? asset.text).length
+        ),
+        keywords:
+          index < usagePlan.descriptionKeywordTargets.length
+            ? [usagePlan.descriptionKeywordTargets[index]]
+            : asset.keywords,
       }))
     }
   }
@@ -2198,7 +2408,7 @@ async function recordAdCreativeOperationTokenUsage(input: {
     outputTokens: input.aiResponse.usage.outputTokens,
     totalTokens: input.aiResponse.usage.totalTokens,
     cost,
-    apiType: input.aiResponse.apiType
+    apiType: input.aiResponse.apiType,
   })
 }
 
@@ -2211,7 +2421,7 @@ function enforceLanguageCtas(
   const updated = [...descriptions]
   const ctaRegex = getCtaRegexForLanguage(languageCode)
   const ctaPhrases = getCtaPhrasesForLanguage(languageCode)
-  let ctaCount = updated.filter(d => ctaRegex.test(d)).length
+  let ctaCount = updated.filter((d) => ctaRegex.test(d)).length
   let fixed = 0
 
   for (let i = 0; i < updated.length && ctaCount < minCount; i += 1) {
@@ -2244,7 +2454,7 @@ function enforceKeywordEmbedding(
   protectedIndexes: number[] = [0]
 ): { updated: string[]; fixed: number } {
   const updated = [...headlines]
-  let embeddedCount = updated.filter(h => headlineContainsKeyword(h, keywords)).length
+  let embeddedCount = updated.filter((h) => headlineContainsKeyword(h, keywords)).length
   let fixed = 0
 
   if (embeddedCount >= minCount) {
@@ -2252,8 +2462,8 @@ function enforceKeywordEmbedding(
   }
 
   const candidateKeywords = keywords
-    .map(k => k.trim())
-    .filter(k => k.length > 0 && k.length <= 14)
+    .map((k) => k.trim())
+    .filter((k) => k.length > 0 && k.length <= 14)
     .sort((a, b) => a.length - b.length)
 
   if (candidateKeywords.length === 0) {
@@ -2293,7 +2503,12 @@ function enforceKeywordEmbedding(
 type NormalizedCreativeBucket = 'A' | 'B' | 'D' | null
 type CopyIntentTag = 'brand' | 'scenario' | 'solution' | 'transactional' | 'other'
 type ComplementarityTag = 'brand' | 'scenario' | 'transactional' | 'other'
-type DescriptionStructureTag = 'pain_solution_cta' | 'benefit_cta' | 'trust_cta' | 'value_cta' | 'other'
+type DescriptionStructureTag =
+  | 'pain_solution_cta'
+  | 'benefit_cta'
+  | 'trust_cta'
+  | 'value_cta'
+  | 'other'
 const MODEL_INTENT_TRANSACTIONAL_MODIFIER_PATTERN =
   /\b(buy|purchase|order|shop|shopping|shops|price|pricing|cost|deal|deals|discount|sale|offer|coupon|promo|store)\b/i
 
@@ -2314,26 +2529,39 @@ export function resolveCreativeBucketPoolKeywords(
   return getBucketInfo(pool, normalizedBucket).keywords
 }
 
-function normalizeLocalizationPayload(localization: any):
-  | { currency?: string; culturalNotes?: string[]; localKeywords?: string[] }
-  | undefined {
+function normalizeLocalizationPayload(
+  localization: any
+): { currency?: string; culturalNotes?: string[]; localKeywords?: string[] } | undefined {
   if (!localization || typeof localization !== 'object') return undefined
 
-  if ('currency' in localization || 'culturalNotes' in localization || 'localKeywords' in localization) {
+  if (
+    'currency' in localization ||
+    'culturalNotes' in localization ||
+    'localKeywords' in localization
+  ) {
     return {
       currency: typeof localization.currency === 'string' ? localization.currency : undefined,
       culturalNotes: Array.isArray(localization.culturalNotes)
-        ? localization.culturalNotes.map((v: any) => String(v || '').trim()).filter((v: string) => v.length > 0).slice(0, 8)
+        ? localization.culturalNotes
+            .map((v: any) => String(v || '').trim())
+            .filter((v: string) => v.length > 0)
+            .slice(0, 8)
         : undefined,
       localKeywords: Array.isArray(localization.localKeywords)
-        ? localization.localKeywords.map((v: any) => String(v || '').trim()).filter((v: string) => v.length > 0).slice(0, 12)
-        : undefined
+        ? localization.localKeywords
+            .map((v: any) => String(v || '').trim())
+            .filter((v: string) => v.length > 0)
+            .slice(0, 12)
+        : undefined,
     }
   }
 
-  const pricingCurrency = typeof localization.pricing?.currency === 'string' ? localization.pricing.currency : undefined
+  const pricingCurrency =
+    typeof localization.pricing?.currency === 'string' ? localization.pricing.currency : undefined
   const contentNotes: string[] = Array.isArray(localization.content?.culturalNotes)
-    ? localization.content.culturalNotes.map((v: any) => String(v || '').trim()).filter((v: string) => v.length > 0)
+    ? localization.content.culturalNotes
+        .map((v: any) => String(v || '').trim())
+        .filter((v: string) => v.length > 0)
     : []
   const keywordNotes: string[] = Array.isArray(localization.keywords)
     ? localization.keywords
@@ -2356,7 +2584,7 @@ function normalizeLocalizationPayload(localization: any):
   return {
     currency: pricingCurrency,
     culturalNotes: mergedNotes.length > 0 ? mergedNotes : undefined,
-    localKeywords: mergedLocalKeywords.length > 0 ? mergedLocalKeywords : undefined
+    localKeywords: mergedLocalKeywords.length > 0 ? mergedLocalKeywords : undefined,
   }
 }
 
@@ -2405,7 +2633,7 @@ function detectKeywordIntentsForPrompt(
     transactional: result.transactional.slice(0, 6),
     scenario: result.scenario.slice(0, 6),
     solution: result.solution.slice(0, 6),
-    other: result.other.slice(0, 6)
+    other: result.other.slice(0, 6),
   }
 }
 
@@ -2447,7 +2675,9 @@ function getStoreProductNameCandidate(product: any): string {
   ]
 
   for (const candidate of candidates) {
-    const normalized = String(candidate || '').replace(/\s+/g, ' ').trim()
+    const normalized = String(candidate || '')
+      .replace(/\s+/g, ' ')
+      .trim()
     if (normalized.length >= 3) {
       return normalized
     }
@@ -2461,7 +2691,9 @@ function collectStoreProductEvidenceTexts(product: any): string[] {
   const seen = new Set<string>()
 
   const push = (value: unknown) => {
-    const normalized = String(value || '').replace(/\s+/g, ' ').trim()
+    const normalized = String(value || '')
+      .replace(/\s+/g, ' ')
+      .trim()
     if (normalized.length < 3) return
     const key = normalized.toLowerCase()
     if (seen.has(key)) return
@@ -2508,7 +2740,7 @@ function collectStoreProductEvidenceTexts(product: any): string[] {
     product?.features,
   ]) {
     if (!Array.isArray(value)) continue
-    value.slice(0, 5).forEach(item => push(item))
+    value.slice(0, 5).forEach((item) => push(item))
   }
 
   appendRecord(product?.productData?.specifications)
@@ -2612,16 +2844,14 @@ function extractStoreProductNameCandidatesFromLink(rawLink: string): string[] {
     }
   }
 
-  return candidates.sort((a, b) => scoreStoreProductNameCandidate(b) - scoreStoreProductNameCandidate(a))
+  return candidates.sort(
+    (a, b) => scoreStoreProductNameCandidate(b) - scoreStoreProductNameCandidate(a)
+  )
 }
 
 function buildStoreProductCandidatesFromLinks(rawStoreProductLinks: unknown): any[] {
   const parsed = safeParseJson(rawStoreProductLinks, rawStoreProductLinks)
-  const rawItems = Array.isArray(parsed)
-    ? parsed
-    : parsed
-      ? [parsed]
-      : []
+  const rawItems = Array.isArray(parsed) ? parsed : parsed ? [parsed] : []
   const candidates: any[] = []
 
   for (const rawItem of rawItems) {
@@ -2642,12 +2872,12 @@ function buildStoreProductCandidatesFromLinks(rawStoreProductLinks: unknown): an
     if (!rawItem || typeof rawItem !== 'object') continue
     const item = rawItem as any
     const linkCandidate =
-      (typeof item.url === 'string' && item.url.trim())
-      || (typeof item.link === 'string' && item.link.trim())
-      || (typeof item.href === 'string' && item.href.trim())
-      || (typeof item.productUrl === 'string' && item.productUrl.trim())
-      || (typeof item.productLink === 'string' && item.productLink.trim())
-      || ''
+      (typeof item.url === 'string' && item.url.trim()) ||
+      (typeof item.link === 'string' && item.link.trim()) ||
+      (typeof item.href === 'string' && item.href.trim()) ||
+      (typeof item.productUrl === 'string' && item.productUrl.trim()) ||
+      (typeof item.productLink === 'string' && item.productLink.trim()) ||
+      ''
     const names = extractStoreProductNameCandidatesFromLink(linkCandidate)
     const explicitName = getStoreProductNameCandidate(item)
     const primaryName = explicitName || names[0] || ''
@@ -2670,7 +2900,9 @@ function dedupeStoreProductNames(productNames: string[], limit = 3): string[] {
   const seen = new Set<string>()
 
   for (const productName of productNames) {
-    const normalized = String(productName || '').replace(/\s+/g, ' ').trim()
+    const normalized = String(productName || '')
+      .replace(/\s+/g, ' ')
+      .trim()
     if (normalized.length < 3) continue
     const key = normalized.toLowerCase()
     if (seen.has(key)) continue
@@ -2712,9 +2944,7 @@ export function evaluateStoreModelIntentReadiness(params: {
 
   const appendNames = (items: any[], source: string) => {
     if (!Array.isArray(items) || items.length === 0) return
-    const names = items
-      .map((item) => getStoreProductNameCandidate(item))
-      .filter(Boolean)
+    const names = items.map((item) => getStoreProductNameCandidate(item)).filter(Boolean)
     const evidenceTexts = items.flatMap((item) => collectStoreProductEvidenceTexts(item))
     if (names.length === 0 && evidenceTexts.length === 0) return
     hotProductCandidates.push(...names)
@@ -2726,7 +2956,10 @@ export function evaluateStoreModelIntentReadiness(params: {
   appendNames(brandAnalysis?.hotProducts, 'brandAnalysis.hotProducts')
   appendNames(scrapedData?.products, 'scrapedData.products')
   appendNames(scrapedData?.supplementalProducts, 'scrapedData.supplementalProducts')
-  appendNames(buildStoreProductCandidatesFromLinks(params.storeProductLinks), 'offer.store_product_links')
+  appendNames(
+    buildStoreProductCandidatesFromLinks(params.storeProductLinks),
+    'offer.store_product_links'
+  )
 
   const verifiedHotProducts = dedupeStoreProductNames(hotProductCandidates, 3)
   if (verifiedHotProducts.length === 0) {
@@ -2735,7 +2968,8 @@ export function evaluateStoreModelIntentReadiness(params: {
       verifiedHotProducts,
       hotProductModelAnchors: [],
       evidenceSources,
-      reason: '店铺热门商品信息不足，无法生成商品型号/产品族意图创意：未获取到可验证的热门商品，请先重抓或补充店铺商品数据。',
+      reason:
+        '店铺热门商品信息不足，无法生成商品型号/产品族意图创意：未获取到可验证的热门商品，请先重抓或补充店铺商品数据。',
     }
   }
 
@@ -2749,7 +2983,8 @@ export function evaluateStoreModelIntentReadiness(params: {
       verifiedHotProducts,
       hotProductModelAnchors,
       evidenceSources,
-      reason: '店铺热门商品信息不足，无法生成商品型号/产品族意图创意：未提取到可验证的型号/产品族锚点，请先重抓或补充店铺商品数据。',
+      reason:
+        '店铺热门商品信息不足，无法生成商品型号/产品族意图创意：未提取到可验证的型号/产品族锚点，请先重抓或补充店铺商品数据。',
     }
   }
 
@@ -2790,13 +3025,14 @@ function buildCreativeTypeConstraintSection(params: {
   topProducts: string[]
   keywords: string[]
 }): string {
-  const creativeType = params.bucket === 'A'
-    ? 'brand_intent'
-    : params.bucket === 'B'
-      ? 'model_intent'
-      : params.bucket === 'D'
-        ? 'product_intent'
-        : 'unclassified'
+  const creativeType =
+    params.bucket === 'A'
+      ? 'brand_intent'
+      : params.bucket === 'B'
+        ? 'model_intent'
+        : params.bucket === 'D'
+          ? 'product_intent'
+          : 'unclassified'
 
   const modelAnchors = extractModelAnchorsForPrompt(params.keywords)
   const lines: string[] = [
@@ -2820,7 +3056,9 @@ function buildCreativeTypeConstraintSection(params: {
     if (params.topProducts.length > 0) {
       lines.push(`- verified hot products: ${params.topProducts.join(' | ')}`)
     } else {
-      lines.push('- verified hot products: none provided; do NOT invent hero SKUs, model names, or product lines.')
+      lines.push(
+        '- verified hot products: none provided; do NOT invent hero SKUs, model names, or product lines.'
+      )
     }
   }
 
@@ -2828,23 +3066,43 @@ function buildCreativeTypeConstraintSection(params: {
     lines.push(`- verified model/series anchors: ${modelAnchors.join(' | ')}`)
   }
 
-  lines.push('- Use only verified products, verified hot products, verified facts, and provided keywords. Do NOT invent new models, new series, or unsupported product relationships.')
+  lines.push(
+    '- Use only verified products, verified hot products, verified facts, and provided keywords. Do NOT invent new models, new series, or unsupported product relationships.'
+  )
 
   if (params.bucket === 'A') {
-    lines.push('- brand_intent rule: every headline, description, and keyword must stay tied to BOTH the brand and a real product/category anchor.')
-    lines.push('- brand_intent rule: trust language is supportive only; forbid pure brand-navigation copy such as "official store" without product context.')
-    lines.push('- brand_intent keyword priority: brand + product > brand + category > brand + model > model + category.')
+    lines.push(
+      '- brand_intent rule: every headline, description, and keyword must stay tied to BOTH the brand and a real product/category anchor.'
+    )
+    lines.push(
+      '- brand_intent rule: trust language is supportive only; forbid pure brand-navigation copy such as "official store" without product context.'
+    )
+    lines.push(
+      '- brand_intent keyword priority: brand + product > brand + category > brand + model > model + category.'
+    )
   } else if (params.bucket === 'B') {
-    lines.push('- model_intent rule: every headline, description, and keyword must stay tightly tied to a verified model/series or verified hot product model.')
-    lines.push('- model_intent rule: use exact-match purchase intent framing; forbid generic brand-only, category-only, or scenario-only copy.')
-    lines.push('- model_intent keyword hard-ban: DO NOT generate template keyword strings that combine transactional modifiers with model anchors (e.g., "buy brandx x200", "brandx x200 price", "order gen 2 ring").')
-    lines.push(params.linkType === 'store'
-      ? '- model_intent store rule: cover multiple verified hot products when available; do not collapse into a single generic store headline.'
-      : '- model_intent product rule: stay on the current product model only; do not drift into other SKUs or store-level assortment copy.')
+    lines.push(
+      '- model_intent rule: every headline, description, and keyword must stay tightly tied to a verified model/series or verified hot product model.'
+    )
+    lines.push(
+      '- model_intent rule: use exact-match purchase intent framing; forbid generic brand-only, category-only, or scenario-only copy.'
+    )
+    lines.push(
+      '- model_intent keyword hard-ban: DO NOT generate template keyword strings that combine transactional modifiers with model anchors (e.g., "buy brandx x200", "brandx x200 price", "order gen 2 ring").'
+    )
+    lines.push(
+      params.linkType === 'store'
+        ? '- model_intent store rule: cover multiple verified hot products when available; do not collapse into a single generic store headline.'
+        : '- model_intent product rule: stay on the current product model only; do not drift into other SKUs or store-level assortment copy.'
+    )
   } else if (params.bucket === 'D') {
     lines.push('- product_intent rule: keep the first anchor on product demand, not brand trust.')
-    lines.push('- product_intent rule: headlines/descriptions should prioritize category, function, scenario, product line, or use-case coverage grounded in the brand.')
-    lines.push('- product_intent rule: forbid generic brand slogans that do not point back to a concrete product demand or product family.')
+    lines.push(
+      '- product_intent rule: headlines/descriptions should prioritize category, function, scenario, product line, or use-case coverage grounded in the brand.'
+    )
+    lines.push(
+      '- product_intent rule: forbid generic brand slogans that do not point back to a concrete product demand or product family.'
+    )
   }
 
   return `\n${lines.join('\n')}\n`
@@ -2856,7 +3114,8 @@ function buildTypeIntentGuidanceSection(
   languageCode: string
 ): string {
   const intents = detectKeywordIntentsForPrompt(keywords, languageCode)
-  const transactionalLine = intents.transactional.length > 0 ? intents.transactional.join(', ') : 'N/A'
+  const transactionalLine =
+    intents.transactional.length > 0 ? intents.transactional.join(', ') : 'N/A'
   const scenarioLine = intents.scenario.length > 0 ? intents.scenario.join(', ') : 'N/A'
   const solutionLine = intents.solution.length > 0 ? intents.solution.join(', ') : 'N/A'
 
@@ -2905,7 +3164,11 @@ function buildTypeIntentGuidanceSection(
 - Solution keyword candidates: ${solutionLine}`
 }
 
-function normalizePersonaOrScenarioPhrase(value: string, maxWords: number, maxChars: number): string {
+function normalizePersonaOrScenarioPhrase(
+  value: string,
+  maxWords: number,
+  maxChars: number
+): string {
   const cleaned = String(value || '')
     .replace(/[|/]+/g, ' ')
     .replace(/\s+/g, ' ')
@@ -2923,7 +3186,7 @@ function splitAudienceCandidates(targetAudience: string): string[] {
   if (!raw) return []
   return raw
     .split(/[;,|/]/g)
-    .map(segment => normalizePersonaOrScenarioPhrase(segment, 6, 40))
+    .map((segment) => normalizePersonaOrScenarioPhrase(segment, 6, 40))
     .filter(Boolean)
 }
 
@@ -2947,20 +3210,32 @@ function buildPersonaScenarioGuidanceSection(params: {
   userProfiles: Array<{ profile: string; indicators?: string[] }>
   linkType: 'store' | 'product'
 }): string {
-  const personaCandidates = dedupePhrases([
-    ...params.userProfiles.map(profile => normalizePersonaOrScenarioPhrase(profile?.profile || '', 6, 40)),
-    ...splitAudienceCandidates(params.targetAudience),
-  ], 4)
+  const personaCandidates = dedupePhrases(
+    [
+      ...params.userProfiles.map((profile) =>
+        normalizePersonaOrScenarioPhrase(profile?.profile || '', 6, 40)
+      ),
+      ...splitAudienceCandidates(params.targetAudience),
+    ],
+    4
+  )
   const scenarioCandidates = dedupePhrases(
-    (params.useCases || []).map(useCase => normalizePersonaOrScenarioPhrase(useCase, 8, 55)),
+    (params.useCases || []).map((useCase) => normalizePersonaOrScenarioPhrase(useCase, 8, 55)),
     5
   )
 
-  const personaLine = personaCandidates.length > 0 ? personaCandidates.join(' | ') : 'Use inferred buyer persona from audience intent'
-  const scenarioLine = scenarioCandidates.length > 0 ? scenarioCandidates.join(' | ') : 'Use one concrete real-world use scenario'
-  const linkTypeHint = params.linkType === 'store'
-    ? 'Store page: persona/scenario should guide exploration and trust, not only hard sell.'
-    : 'Product page: persona/scenario must stay focused on the single product.'
+  const personaLine =
+    personaCandidates.length > 0
+      ? personaCandidates.join(' | ')
+      : 'Use inferred buyer persona from audience intent'
+  const scenarioLine =
+    scenarioCandidates.length > 0
+      ? scenarioCandidates.join(' | ')
+      : 'Use one concrete real-world use scenario'
+  const linkTypeHint =
+    params.linkType === 'store'
+      ? 'Store page: persona/scenario should guide exploration and trust, not only hard sell.'
+      : 'Product page: persona/scenario must stay focused on the single product.'
 
   const baseRules = `
 ## 👤 PERSONA + SCENARIO COPY MODE (KISS)
@@ -3044,9 +3319,12 @@ function buildRetryFailureGuidanceSection(retryFailureType?: RetryFailureType): 
 - Keep descriptions concise, direct, and CTA-complete with no formatting violations.`
 }
 
-function buildSearchTermFeedbackGuidanceSection(
-  hints?: SearchTermFeedbackHintsInput
-): { hardTerms: string[]; softTerms: string[]; highTerms: string[]; section: string } {
+function buildSearchTermFeedbackGuidanceSection(hints?: SearchTermFeedbackHintsInput): {
+  hardTerms: string[]
+  softTerms: string[]
+  highTerms: string[]
+  section: string
+} {
   const hardTerms = normalizeSearchTermHintsTerms(hints?.hardNegativeTerms, 12)
   const softTerms = normalizeSearchTermHintsTerms(hints?.softSuppressTerms, 12)
   const highTerms = normalizeSearchTermHintsTerms(hints?.highPerformingTerms, 12)
@@ -3057,28 +3335,38 @@ function buildSearchTermFeedbackGuidanceSection(
 
   const lines: string[] = [
     '## 🔁 SEARCH-TERM FEEDBACK (RECENT PERFORMANCE)',
-    '- Use this feedback to improve relevance and keyword selection.'
+    '- Use this feedback to improve relevance and keyword selection.',
   ]
 
   if (highTerms.length > 0) {
-    lines.push(`- ✅ HIGH-PERFORMING TERMS: ${highTerms.join(', ')} (prioritize these themes and related keywords).`)
+    lines.push(
+      `- ✅ HIGH-PERFORMING TERMS: ${highTerms.join(', ')} (prioritize these themes and related keywords).`
+    )
   }
   if (hardTerms.length > 0) {
-    lines.push(`- ❌ HARD EXCLUDE TERMS: ${hardTerms.join(', ')} (do not use in copy or generated keywords).`)
+    lines.push(
+      `- ❌ HARD EXCLUDE TERMS: ${hardTerms.join(', ')} (do not use in copy or generated keywords).`
+    )
   }
   if (softTerms.length > 0) {
-    lines.push(`- ⚠️ SOFT SUPPRESS TERMS: ${softTerms.join(', ')} (deprioritize unless absolutely necessary).`)
+    lines.push(
+      `- ⚠️ SOFT SUPPRESS TERMS: ${softTerms.join(', ')} (deprioritize unless absolutely necessary).`
+    )
   }
 
   return {
     hardTerms,
     softTerms,
     highTerms,
-    section: lines.join('\n')
+    section: lines.join('\n'),
   }
 }
 
-function classifyCopyIntentFromText(text: string, languageCode: string, keywords: string[] = []): CopyIntentTag {
+function classifyCopyIntentFromText(
+  text: string,
+  languageCode: string,
+  keywords: string[] = []
+): CopyIntentTag {
   const normalized = String(text || '').toLowerCase()
   if (!normalized) return 'other'
   const patterns = getCopyPatterns(languageCode)
@@ -3112,7 +3400,11 @@ function mapToComplementarityTag(tag: CopyIntentTag): ComplementarityTag {
   return 'other'
 }
 
-function classifyDescriptionStructure(text: string, intentTag: CopyIntentTag, languageCode: string): DescriptionStructureTag {
+function classifyDescriptionStructure(
+  text: string,
+  intentTag: CopyIntentTag,
+  languageCode: string
+): DescriptionStructureTag {
   const normalized = String(text || '').toLowerCase()
   if (!normalized) return 'other'
   const patterns = getCopyPatterns(languageCode)
@@ -3130,7 +3422,10 @@ function classifyDescriptionStructure(text: string, intentTag: CopyIntentTag, la
 }
 
 function fitLocalizedDescription(base: string, cta: string, maxLength: number): string {
-  const cleanBase = String(base || '').replace(/\s+/g, ' ').trim().replace(/[.!?]+$/, '')
+  const cleanBase = String(base || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.!?]+$/, '')
   if (!cleanBase) return cta
   let candidate = `${cleanBase}. ${cta}`.trim()
   if (candidate.length <= maxLength) return candidate
@@ -3143,7 +3438,9 @@ function fitLocalizedDescription(base: string, cta: string, maxLength: number): 
 }
 
 function fitLocalizedHeadline(base: string, maxLength: number): string {
-  const cleaned = String(base || '').replace(/\s+/g, ' ').trim()
+  const cleaned = String(base || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (cleaned.length <= maxLength) return cleaned
   return truncateSnippetByWords(cleaned, maxLength)
 }
@@ -3174,28 +3471,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} avec support officiel et qualité fiable`,
-          cta: 'En savoir plus'
+          cta: 'En savoir plus',
         },
-        brandHeadline: `Support officiel ${brandSeed}`
+        brandHeadline: `Support officiel ${brandSeed}`,
       },
       b: {
         painSolution1: {
           base: `Besoin de résultats fiables au quotidien ? ${preferredKeyword} vous aide à avancer sereinement`,
-          cta: 'En savoir plus'
+          cta: 'En savoir plus',
         },
         painSolution2: {
           base: `${preferredKeyword} offre une performance stable pour vos besoins quotidiens`,
-          cta: 'Acheter maintenant'
+          cta: 'Acheter maintenant',
         },
-        scenarioHeadline: 'Meilleurs résultats au quotidien ?'
+        scenarioHeadline: 'Meilleurs résultats au quotidien ?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} offre un excellent rapport qualité-prix et une performance fiable`,
-          cta: 'Acheter maintenant'
+          cta: 'Acheter maintenant',
         },
-        transactionalHeadline: `Achetez ${preferredKeyword} aujourd'hui`
-      }
+        transactionalHeadline: `Achetez ${preferredKeyword} aujourd'hui`,
+      },
     }
   }
 
@@ -3204,28 +3501,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} mit offiziellem Support und zuverlässiger Qualität`,
-          cta: 'Mehr erfahren'
+          cta: 'Mehr erfahren',
         },
-        brandHeadline: `Offizieller ${brandSeed} Support`
+        brandHeadline: `Offizieller ${brandSeed} Support`,
       },
       b: {
         painSolution1: {
           base: `Brauchen Sie verlässliche Ergebnisse im Alltag? ${preferredKeyword} unterstützt Sie zuverlässig`,
-          cta: 'Mehr erfahren'
+          cta: 'Mehr erfahren',
         },
         painSolution2: {
           base: `${preferredKeyword} liefert stabile Leistung für tägliche Anforderungen`,
-          cta: 'Jetzt kaufen'
+          cta: 'Jetzt kaufen',
         },
-        scenarioHeadline: 'Bessere Ergebnisse im Alltag?'
+        scenarioHeadline: 'Bessere Ergebnisse im Alltag?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} bietet starken Alltagswert und zuverlässige Leistung`,
-          cta: 'Jetzt kaufen'
+          cta: 'Jetzt kaufen',
         },
-        transactionalHeadline: `Kaufen Sie ${preferredKeyword} heute`
-      }
+        transactionalHeadline: `Kaufen Sie ${preferredKeyword} heute`,
+      },
     }
   }
 
@@ -3234,28 +3531,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} con soporte oficial y calidad confiable`,
-          cta: 'Más información'
+          cta: 'Más información',
         },
-        brandHeadline: `Soporte oficial ${brandSeed}`
+        brandHeadline: `Soporte oficial ${brandSeed}`,
       },
       b: {
         painSolution1: {
           base: `¿Necesitas resultados fiables cada día? ${preferredKeyword} te ayuda con rendimiento constante`,
-          cta: 'Más información'
+          cta: 'Más información',
         },
         painSolution2: {
           base: `${preferredKeyword} ofrece confianza y desempeño para necesidades diarias`,
-          cta: 'Comprar ahora'
+          cta: 'Comprar ahora',
         },
-        scenarioHeadline: '¿Mejores resultados diarios?'
+        scenarioHeadline: '¿Mejores resultados diarios?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} ofrece valor diario y rendimiento confiable`,
-          cta: 'Comprar ahora'
+          cta: 'Comprar ahora',
         },
-        transactionalHeadline: `Compra ${preferredKeyword} hoy`
-      }
+        transactionalHeadline: `Compra ${preferredKeyword} hoy`,
+      },
     }
   }
 
@@ -3264,28 +3561,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} con supporto ufficiale e qualità affidabile`,
-          cta: 'Scopri di più'
+          cta: 'Scopri di più',
         },
-        brandHeadline: `Supporto ufficiale ${brandSeed}`
+        brandHeadline: `Supporto ufficiale ${brandSeed}`,
       },
       b: {
         painSolution1: {
           base: `Vuoi risultati affidabili ogni giorno? ${preferredKeyword} ti aiuta con prestazioni costanti`,
-          cta: 'Scopri di più'
+          cta: 'Scopri di più',
         },
         painSolution2: {
           base: `${preferredKeyword} offre affidabilità e performance per esigenze quotidiane`,
-          cta: 'Acquista ora'
+          cta: 'Acquista ora',
         },
-        scenarioHeadline: 'Risultati migliori ogni giorno?'
+        scenarioHeadline: 'Risultati migliori ogni giorno?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} offre valore quotidiano e prestazioni affidabili`,
-          cta: 'Acquista ora'
+          cta: 'Acquista ora',
         },
-        transactionalHeadline: `Acquista ${preferredKeyword} oggi`
-      }
+        transactionalHeadline: `Acquista ${preferredKeyword} oggi`,
+      },
     }
   }
 
@@ -3294,28 +3591,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} com suporte oficial e qualidade confiável`,
-          cta: 'Saiba mais'
+          cta: 'Saiba mais',
         },
-        brandHeadline: `Suporte oficial ${brandSeed}`
+        brandHeadline: `Suporte oficial ${brandSeed}`,
       },
       b: {
         painSolution1: {
           base: `Precisa de resultados confiáveis no dia a dia? ${preferredKeyword} ajuda com desempenho estável`,
-          cta: 'Saiba mais'
+          cta: 'Saiba mais',
         },
         painSolution2: {
           base: `${preferredKeyword} oferece confiança e performance para necessidades diárias`,
-          cta: 'Comprar agora'
+          cta: 'Comprar agora',
         },
-        scenarioHeadline: 'Melhores resultados no dia a dia?'
+        scenarioHeadline: 'Melhores resultados no dia a dia?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} oferece valor diário e desempenho confiável`,
-          cta: 'Comprar agora'
+          cta: 'Comprar agora',
         },
-        transactionalHeadline: `Compre ${preferredKeyword} hoje`
-      }
+        transactionalHeadline: `Compre ${preferredKeyword} hoje`,
+      },
     }
   }
 
@@ -3324,28 +3621,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} 官方支持，品质可靠`,
-          cta: '了解更多'
+          cta: '了解更多',
         },
-        brandHeadline: `${brandSeed} 官方支持`
+        brandHeadline: `${brandSeed} 官方支持`,
       },
       b: {
         painSolution1: {
           base: `需要稳定可靠的日常表现吗？${preferredKeyword} 助你持续发挥更好`,
-          cta: '了解更多'
+          cta: '了解更多',
         },
         painSolution2: {
           base: `${preferredKeyword} 为日常需求带来稳定表现与信心`,
-          cta: '立即购买'
+          cta: '立即购买',
         },
-        scenarioHeadline: '想要更好的日常表现吗？'
+        scenarioHeadline: '想要更好的日常表现吗？',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} 兼顾价值与性能，日常使用更放心`,
-          cta: '立即购买'
+          cta: '立即购买',
         },
-        transactionalHeadline: `今日选购 ${preferredKeyword}`
-      }
+        transactionalHeadline: `今日选购 ${preferredKeyword}`,
+      },
     }
   }
 
@@ -3354,28 +3651,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} は公式サポート付きで安心品質`,
-          cta: '詳しく見る'
+          cta: '詳しく見る',
         },
-        brandHeadline: `公式 ${brandSeed} サポート`
+        brandHeadline: `公式 ${brandSeed} サポート`,
       },
       b: {
         painSolution1: {
           base: `毎日の成果を安定させたいですか？${preferredKeyword} がしっかり支えます`,
-          cta: '詳しく見る'
+          cta: '詳しく見る',
         },
         painSolution2: {
           base: `${preferredKeyword} は日常ニーズに安定したパフォーマンスを提供します`,
-          cta: '今すぐ購入'
+          cta: '今すぐ購入',
         },
-        scenarioHeadline: '日々の成果を高めたいですか？'
+        scenarioHeadline: '日々の成果を高めたいですか？',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} は毎日の作業で価値と性能を両立`,
-          cta: '今すぐ購入'
+          cta: '今すぐ購入',
         },
-        transactionalHeadline: `${preferredKeyword} を今日購入`
-      }
+        transactionalHeadline: `${preferredKeyword} を今日購入`,
+      },
     }
   }
 
@@ -3384,28 +3681,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} 공식 지원으로 믿을 수 있는 품질`,
-          cta: '자세히 보기'
+          cta: '자세히 보기',
         },
-        brandHeadline: `${brandSeed} 공식 지원`
+        brandHeadline: `${brandSeed} 공식 지원`,
       },
       b: {
         painSolution1: {
           base: `매일 더 안정적인 결과가 필요하신가요? ${preferredKeyword} 가 꾸준히 도와줍니다`,
-          cta: '자세히 보기'
+          cta: '자세히 보기',
         },
         painSolution2: {
           base: `${preferredKeyword} 는 일상 니즈에 안정적인 성능과 신뢰를 제공합니다`,
-          cta: '지금 구매'
+          cta: '지금 구매',
         },
-        scenarioHeadline: '일상 성과를 더 높이고 싶나요?'
+        scenarioHeadline: '일상 성과를 더 높이고 싶나요?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} 는 일상 작업에서 가치와 성능을 제공합니다`,
-          cta: '지금 구매'
+          cta: '지금 구매',
         },
-        transactionalHeadline: `오늘 ${preferredKeyword} 구매`
-      }
+        transactionalHeadline: `오늘 ${preferredKeyword} 구매`,
+      },
     }
   }
 
@@ -3414,28 +3711,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} с официальной поддержкой и надежным качеством`,
-          cta: 'Узнать больше'
+          cta: 'Узнать больше',
         },
-        brandHeadline: `Официальная поддержка ${brandSeed}`
+        brandHeadline: `Официальная поддержка ${brandSeed}`,
       },
       b: {
         painSolution1: {
           base: `Нужны стабильные результаты каждый день? ${preferredKeyword} помогает уверенно двигаться дальше`,
-          cta: 'Узнать больше'
+          cta: 'Узнать больше',
         },
         painSolution2: {
           base: `${preferredKeyword} обеспечивает надежную работу для ежедневных задач`,
-          cta: 'Купить сейчас'
+          cta: 'Купить сейчас',
         },
-        scenarioHeadline: 'Лучшие результаты каждый день?'
+        scenarioHeadline: 'Лучшие результаты каждый день?',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} дает отличную ценность и надежную работу каждый день`,
-          cta: 'Купить сейчас'
+          cta: 'Купить сейчас',
         },
-        transactionalHeadline: `Купите ${preferredKeyword} сегодня`
-      }
+        transactionalHeadline: `Купите ${preferredKeyword} сегодня`,
+      },
     }
   }
 
@@ -3444,28 +3741,28 @@ function getSoftCopyTemplates(
       a: {
         trustDescription: {
           base: `${preferredKeyword} مع دعم رسمي وجودة موثوقة`,
-          cta: 'اعرف المزيد'
+          cta: 'اعرف المزيد',
         },
-        brandHeadline: `دعم رسمي ${brandSeed}`
+        brandHeadline: `دعم رسمي ${brandSeed}`,
       },
       b: {
         painSolution1: {
           base: `هل تحتاج نتائج موثوقة كل يوم؟ ${preferredKeyword} يساعدك بأداء ثابت`,
-          cta: 'اعرف المزيد'
+          cta: 'اعرف المزيد',
         },
         painSolution2: {
           base: `${preferredKeyword} يمنحك ثباتًا وثقة لاحتياجاتك اليومية`,
-          cta: 'اشتري الآن'
+          cta: 'اشتري الآن',
         },
-        scenarioHeadline: 'تريد نتائج يومية أفضل؟'
+        scenarioHeadline: 'تريد نتائج يومية أفضل؟',
       },
       d: {
         valueDescription: {
           base: `${preferredKeyword} يمنحك قيمة يومية وأداءً موثوقًا`,
-          cta: 'اشتري الآن'
+          cta: 'اشتري الآن',
         },
-        transactionalHeadline: `اشتر ${preferredKeyword} اليوم`
-      }
+        transactionalHeadline: `اشتر ${preferredKeyword} اليوم`,
+      },
     }
   }
 
@@ -3473,28 +3770,28 @@ function getSoftCopyTemplates(
     a: {
       trustDescription: {
         base: `${preferredKeyword} with official support and trusted quality`,
-        cta: 'Learn More'
+        cta: 'Learn More',
       },
-      brandHeadline: `Official ${brandSeed} Support`
+      brandHeadline: `Official ${brandSeed} Support`,
     },
     b: {
       painSolution1: {
         base: `Need dependable results every day? ${preferredKeyword} helps you stay confident and efficient`,
-        cta: 'Learn More'
+        cta: 'Learn More',
       },
       painSolution2: {
         base: `Get reliable everyday performance with ${preferredKeyword} designed for daily use`,
-        cta: 'Shop Now'
+        cta: 'Shop Now',
       },
-      scenarioHeadline: 'Need Better Everyday Results?'
+      scenarioHeadline: 'Need Better Everyday Results?',
     },
     d: {
       valueDescription: {
         base: `${preferredKeyword} delivers everyday value with trusted performance`,
-        cta: 'Shop Now'
+        cta: 'Shop Now',
       },
-      transactionalHeadline: `Buy ${preferredKeyword} Today`
-    }
+      transactionalHeadline: `Buy ${preferredKeyword} Today`,
+    },
   }
 }
 
@@ -3593,18 +3890,24 @@ export function softlyReinforceTypeCopy(
   const descriptions = [...(result.descriptions || [])]
   const keywords = [...(result.keywords || [])]
 
-  if (headlines.length === 0 || descriptions.length === 0) return { headlineFixes: 0, descriptionFixes: 0 }
+  if (headlines.length === 0 || descriptions.length === 0)
+    return { headlineFixes: 0, descriptionFixes: 0 }
 
   let headlineFixes = 0
   let descriptionFixes = 0
   const patterns = getCopyPatterns(softLanguage)
-  const preferredKeyword = keywords.find((kw) => kw.length <= 24) || brandName || getDefaultProductNoun(softLanguage)
+  const preferredKeyword =
+    keywords.find((kw) => kw.length <= 24) || brandName || getDefaultProductNoun(softLanguage)
   const brandSeed = String(brandName || preferredKeyword).trim() || preferredKeyword
   const templates = getSoftCopyTemplates(softLanguage, preferredKeyword, brandSeed)
 
   const headlineTags = headlines.map((h) => classifyCopyIntentFromText(h, languageCode, keywords))
-  const descriptionTags = descriptions.map((d) => classifyCopyIntentFromText(d, languageCode, keywords))
-  const descriptionStructures = descriptions.map((d, idx) => classifyDescriptionStructure(d, descriptionTags[idx], languageCode))
+  const descriptionTags = descriptions.map((d) =>
+    classifyCopyIntentFromText(d, languageCode, keywords)
+  )
+  const descriptionStructures = descriptions.map((d, idx) =>
+    classifyDescriptionStructure(d, descriptionTags[idx], languageCode)
+  )
 
   const replaceHeadline = (index: number, text: string) => {
     if (index < 0 || index >= headlines.length) return
@@ -3635,7 +3938,9 @@ export function softlyReinforceTypeCopy(
       replaceHeadline(headlines.length - 1, templates.a.brandHeadline)
     }
   } else if (bucket === 'B') {
-    const painSolutionCount = descriptionStructures.filter((tag) => tag === 'pain_solution_cta').length
+    const painSolutionCount = descriptionStructures.filter(
+      (tag) => tag === 'pain_solution_cta'
+    ).length
     if (painSolutionCount < 2) {
       replaceDescription(
         Math.max(0, descriptions.length - 2),
@@ -3689,15 +3994,19 @@ export function enforceHeadlineComplementarity(
     return { fixes: 0, brandCount: 0, scenarioCount: 0, transactionalCount: 0 }
   }
 
-  const preferredKeyword = keywords.find((kw) => kw.length <= 24) || brandName || getDefaultProductNoun(softLanguage)
+  const preferredKeyword =
+    keywords.find((kw) => kw.length <= 24) || brandName || getDefaultProductNoun(softLanguage)
   const brandSeed = String(brandName || preferredKeyword).trim() || preferredKeyword
   const templates = getSoftCopyTemplates(softLanguage, preferredKeyword, brandSeed)
   let fixes = 0
 
   const classifyTags = () =>
-    headlines.map((h) => mapToComplementarityTag(classifyCopyIntentFromText(h, languageCode, keywords)))
+    headlines.map((h) =>
+      mapToComplementarityTag(classifyCopyIntentFromText(h, languageCode, keywords))
+    )
   let tags = classifyTags()
-  const countTag = (tag: 'brand' | 'scenario' | 'transactional') => tags.filter((t) => t === tag).length
+  const countTag = (tag: 'brand' | 'scenario' | 'transactional') =>
+    tags.filter((t) => t === tag).length
   const topWindowStart = 1 // index 0 is reserved for DKI headline and must not be modified.
   const topWindowEndExclusive = Math.min(9, headlines.length) // editable top-8 window: [1, 8]
   const keywordIntents = detectKeywordIntentsForPrompt(keywords, languageCode)
@@ -3736,7 +4045,9 @@ export function enforceHeadlineComplementarity(
       for (let i = start; i >= end; i -= 1) {
         if (i <= 0 || i >= headlines.length) continue
         if (tags[i] === targetTag) continue
-        const duplicated = headlines.some((h, idx) => idx !== i && h.toLowerCase() === fitted.toLowerCase())
+        const duplicated = headlines.some(
+          (h, idx) => idx !== i && h.toLowerCase() === fitted.toLowerCase()
+        )
         if (duplicated) continue
         if (headlines[i] === fitted) continue
         headlines[i] = fitted
@@ -3781,21 +4092,29 @@ export function enforceHeadlineComplementarity(
   }, {})
   const dominantEntry = Object.entries(distribution).sort((a, b) => b[1] - a[1])[0]
   if (dominantEntry && dominantEntry[1] >= 6) {
-    const candidateOrderByDominant: Record<string, Array<'brand' | 'scenario' | 'transactional'>> = {
+    const candidateOrderByDominant: Record<
+      string,
+      Array<'brand' | 'scenario' | 'transactional'>
+    > = {
       brand: ['scenario', 'transactional'],
       scenario: ['transactional', 'brand'],
-      transactional: ['scenario', 'brand']
+      transactional: ['scenario', 'brand'],
     }
-    const candidateOrder = candidateOrderByDominant[dominantEntry[0]] || ['scenario', 'transactional', 'brand']
+    const candidateOrder = candidateOrderByDominant[dominantEntry[0]] || [
+      'scenario',
+      'transactional',
+      'brand',
+    ]
     for (const candidate of candidateOrder) {
       if (candidate === 'scenario' && minScenario <= 0) continue
       if (candidate === 'transactional' && minTransactional <= 0) continue
       if (candidate === 'brand' && minBrand <= 0) continue
-      const template = candidate === 'brand'
-        ? templates.a.brandHeadline
-        : candidate === 'scenario'
-          ? templates.b.scenarioHeadline
-          : templates.d.transactionalHeadline
+      const template =
+        candidate === 'brand'
+          ? templates.a.brandHeadline
+          : candidate === 'scenario'
+            ? templates.b.scenarioHeadline
+            : templates.d.transactionalHeadline
       const replaced = replaceHeadlineByTag(candidate, template, { topWindowOnly: true })
       if (replaced) break
     }
@@ -3807,7 +4126,7 @@ export function enforceHeadlineComplementarity(
     fixes,
     brandCount: tags.filter((t) => t === 'brand').length,
     scenarioCount: tags.filter((t) => t === 'scenario').length,
-    transactionalCount: tags.filter((t) => t === 'transactional').length
+    transactionalCount: tags.filter((t) => t === 'transactional').length,
   }
 }
 
@@ -3825,25 +4144,30 @@ export function enforceLanguagePurityGate(
   const headlines = [...(result.headlines || [])]
   const descriptions = [...(result.descriptions || [])]
   const keywords = [...(result.keywords || [])]
-  const languageSafeKeywords = keywords.filter((keyword) => isKeywordCompatibleWithCreativeLanguage(keyword, languageCode))
-  const preferredKeyword = languageSafeKeywords.find((kw) => kw.length <= 24)
-    || languageSafeKeywords[0]
-    || keywords.find((kw) => kw.length <= 24)
-    || brandName
-    || getDefaultProductNoun(softLanguage)
+  const languageSafeKeywords = keywords.filter((keyword) =>
+    isKeywordCompatibleWithCreativeLanguage(keyword, languageCode)
+  )
+  const preferredKeyword =
+    languageSafeKeywords.find((kw) => kw.length <= 24) ||
+    languageSafeKeywords[0] ||
+    keywords.find((kw) => kw.length <= 24) ||
+    brandName ||
+    getDefaultProductNoun(softLanguage)
   const brandSeed = String(brandName || preferredKeyword).trim() || preferredKeyword
   const templates = getSoftCopyTemplates(softLanguage, preferredKeyword, brandSeed)
 
-  const fallbackHeadline = bucket === 'A'
-    ? templates.a.brandHeadline
-    : bucket === 'B'
-      ? templates.b.scenarioHeadline
-      : templates.d.transactionalHeadline
-  const fallbackDescription = bucket === 'A'
-    ? templates.a.trustDescription
-    : bucket === 'B'
-      ? templates.b.painSolution1
-      : templates.d.valueDescription
+  const fallbackHeadline =
+    bucket === 'A'
+      ? templates.a.brandHeadline
+      : bucket === 'B'
+        ? templates.b.scenarioHeadline
+        : templates.d.transactionalHeadline
+  const fallbackDescription =
+    bucket === 'A'
+      ? templates.a.trustDescription
+      : bucket === 'B'
+        ? templates.b.painSolution1
+        : templates.d.valueDescription
 
   let headlineFixes = 0
   for (let index = 1; index < headlines.length; index += 1) {
@@ -3884,17 +4208,21 @@ export function enforceHeadlineUniquenessGate(
   if (headlines.length <= 1) return { fixes: 0 }
 
   const keywords = [...(result.keywords || [])]
-  const protectedHeadlines = headlines.slice(0, Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length))
+  const protectedHeadlines = headlines.slice(
+    0,
+    Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length)
+  )
   const seen = new Set<string>()
   const softLanguage = resolveSoftCopyLanguage(languageCode) || 'en'
   let fixes = 0
 
-  const normalize = (value: string) => normalizeHeadlineForProtectedSimilarity(value, brandName, languageCode)
+  const normalize = (value: string) =>
+    normalizeHeadlineForProtectedSimilarity(value, brandName, languageCode)
   const pickKeywordTarget = (index: number): string => {
     if (
-      usagePlan
-      && index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX
-      && index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
+      usagePlan &&
+      index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX &&
+      index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
     ) {
       return usagePlan.headlineKeywordTargets[index - RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX]
     }
@@ -3912,7 +4240,14 @@ export function enforceHeadlineUniquenessGate(
 
     const keywordTarget = pickKeywordTarget(index)
     let replacement = keywordTarget
-      ? fitKeywordIntoDiverseHeadline(current, keywordTarget, 30, languageCode, protectedHeadlines, brandName)
+      ? fitKeywordIntoDiverseHeadline(
+          current,
+          keywordTarget,
+          30,
+          languageCode,
+          protectedHeadlines,
+          brandName
+        )
       : null
 
     if (!replacement) {
@@ -3924,13 +4259,16 @@ export function enforceHeadlineUniquenessGate(
         `${brandName} ${base}`.trim(),
         base,
       ]
-      replacement = rawCandidates
-        .map((candidate) => applyHeadlineTextGuardrail(fitLocalizedHeadline(candidate, 30), 30))
-        .map((candidate) => stripHeadlineNumericSuffixArtifact(candidate))
-        .find((candidate) => {
-          const normalizedCandidate = normalize(candidate)
-          return Boolean(candidate) && Boolean(normalizedCandidate) && !seen.has(normalizedCandidate)
-        }) || null
+      replacement =
+        rawCandidates
+          .map((candidate) => applyHeadlineTextGuardrail(fitLocalizedHeadline(candidate, 30), 30))
+          .map((candidate) => stripHeadlineNumericSuffixArtifact(candidate))
+          .find((candidate) => {
+            const normalizedCandidate = normalize(candidate)
+            return (
+              Boolean(candidate) && Boolean(normalizedCandidate) && !seen.has(normalizedCandidate)
+            )
+          }) || null
     }
 
     replacement = stripHeadlineNumericSuffixArtifact(
@@ -3952,7 +4290,9 @@ export function enforceHeadlineUniquenessGate(
 }
 
 function normalizeHeadlineAssetKeyForGoogleAds(text: string): string {
-  return sanitizeGoogleAdsAdText(String(text || ''), 30).trim().toLowerCase()
+  return sanitizeGoogleAdsAdText(String(text || ''), 30)
+    .trim()
+    .toLowerCase()
 }
 
 function buildUniqueHeadlineVariantForGoogleAds(params: {
@@ -3975,10 +4315,12 @@ function buildUniqueHeadlineVariantForGoogleAds(params: {
   const preferredSeed = preferredHeadlineSeed(currentHeadline, brandName, softLanguage)
   const normalizedBrand = normalizeBrandNameForHeadline(brandName)
   const brandTokensToMatch = getPureBrandKeywords(brandName)
-  const actionVariants = Array.from(new Set([
-    ...getHeadlineActionVariants(languageCode),
-    ...GOOGLE_ADS_HEADLINE_UNIQUENESS_SUFFIXES,
-  ]))
+  const actionVariants = Array.from(
+    new Set([
+      ...getHeadlineActionVariants(languageCode),
+      ...GOOGLE_ADS_HEADLINE_UNIQUENESS_SUFFIXES,
+    ])
+  )
 
   const rawCandidates = [
     keywordTarget
@@ -4003,12 +4345,15 @@ function buildUniqueHeadlineVariantForGoogleAds(params: {
       applyHeadlineTextGuardrail(String(rawCandidate || ''), RETAINED_KEYWORD_HEADLINE_MAX_LENGTH)
     )
     if (
-      candidate
-      && normalizedBrand
-      && !hasBrandAnchorInHeadline(candidate, normalizedBrand, brandTokensToMatch)
+      candidate &&
+      normalizedBrand &&
+      !hasBrandAnchorInHeadline(candidate, normalizedBrand, brandTokensToMatch)
     ) {
       candidate = stripHeadlineNumericSuffixArtifact(
-        applyHeadlineTextGuardrail(`${normalizedBrand} ${candidate}`, RETAINED_KEYWORD_HEADLINE_MAX_LENGTH)
+        applyHeadlineTextGuardrail(
+          `${normalizedBrand} ${candidate}`,
+          RETAINED_KEYWORD_HEADLINE_MAX_LENGTH
+        )
       )
     }
     const normalizedKey = normalizeHeadlineAssetKeyForGoogleAds(candidate)
@@ -4027,9 +4372,9 @@ function resolveKeywordTargetForHeadlineSlot(params: {
 }): string {
   const { index, usagePlan, keywords } = params
   if (
-    usagePlan
-    && index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX
-    && index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
+    usagePlan &&
+    index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX &&
+    index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
   ) {
     return usagePlan.headlineKeywordTargets[index - RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX]
   }
@@ -4046,7 +4391,10 @@ export function enforceGoogleAdsHeadlineAssetUniqueness(
   if (headlines.length <= 1) return { fixes: 0 }
 
   const keywords = [...(result.keywords || [])]
-  const protectedHeadlines = headlines.slice(0, Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length))
+  const protectedHeadlines = headlines.slice(
+    0,
+    Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length)
+  )
   const usedAssetKeys = new Set<string>()
   let fixes = 0
   let changed = false
@@ -4110,9 +4458,10 @@ function preferredHeadlineSeed(
   return getDefaultProductNoun(languageCode)
 }
 
-function normalizeCreativeAssetText(
-  result: GeneratedAdCreativeData
-): { headlineFixes: number; descriptionFixes: number } {
+function normalizeCreativeAssetText(result: GeneratedAdCreativeData): {
+  headlineFixes: number
+  descriptionFixes: number
+} {
   const headlines = [...(result.headlines || [])]
   const descriptions = [...(result.descriptions || [])]
   let headlineFixes = 0
@@ -4212,11 +4561,14 @@ function buildLanguageSafeUsagePlan(
   if (!usagePlan) return null
 
   const headlineKeywordTargets = resolveHeadlineKeywordTargets(usagePlan, keywords, languageCode)
-  const descriptionKeywordTargets = resolveDescriptionKeywordTargets(usagePlan, keywords, languageCode)
-  const retainedNonBrandKeywords = Array.from(new Set([
-    ...headlineKeywordTargets,
-    ...descriptionKeywordTargets,
-  ]))
+  const descriptionKeywordTargets = resolveDescriptionKeywordTargets(
+    usagePlan,
+    keywords,
+    languageCode
+  )
+  const retainedNonBrandKeywords = Array.from(
+    new Set([...headlineKeywordTargets, ...descriptionKeywordTargets])
+  )
 
   if (headlineKeywordTargets.length === 0 && descriptionKeywordTargets.length === 0) {
     return usagePlan
@@ -4224,15 +4576,16 @@ function buildLanguageSafeUsagePlan(
 
   return {
     ...usagePlan,
-    retainedNonBrandKeywords: retainedNonBrandKeywords.length > 0
-      ? retainedNonBrandKeywords
-      : usagePlan.retainedNonBrandKeywords,
-    headlineKeywordTargets: headlineKeywordTargets.length > 0
-      ? headlineKeywordTargets
-      : usagePlan.headlineKeywordTargets,
-    descriptionKeywordTargets: descriptionKeywordTargets.length > 0
-      ? descriptionKeywordTargets
-      : usagePlan.descriptionKeywordTargets,
+    retainedNonBrandKeywords:
+      retainedNonBrandKeywords.length > 0
+        ? retainedNonBrandKeywords
+        : usagePlan.retainedNonBrandKeywords,
+    headlineKeywordTargets:
+      headlineKeywordTargets.length > 0 ? headlineKeywordTargets : usagePlan.headlineKeywordTargets,
+    descriptionKeywordTargets:
+      descriptionKeywordTargets.length > 0
+        ? descriptionKeywordTargets
+        : usagePlan.descriptionKeywordTargets,
   }
 }
 
@@ -4260,7 +4613,10 @@ function buildHardKeywordHeadlineCandidate(keyword: string, languageCode: string
   return null
 }
 
-function buildHardKeywordDescriptionCandidate(keyword: string, languageCode: string): string | null {
+function buildHardKeywordDescriptionCandidate(
+  keyword: string,
+  languageCode: string
+): string | null {
   const normalizedKeyword = String(keyword || '').trim()
   if (!normalizedKeyword) return null
   const fitted = fitKeywordIntoDescription('', normalizedKeyword, 90, languageCode)
@@ -4280,10 +4636,22 @@ function enforceHardRetainedKeywordContract(
     return { headlineFixes: 0, descriptionFixes: 0 }
   }
 
-  const headlineTargets = resolveHeadlineKeywordTargets(usagePlan, result.keywords || [], languageCode)
-  const descriptionTargets = resolveDescriptionKeywordTargets(usagePlan, result.keywords || [], languageCode)
-  const protectedHeadlines = headlines.slice(0, Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length))
-  const normalize = (value: string) => normalizeHeadlineForProtectedSimilarity(value, brandName, languageCode)
+  const headlineTargets = resolveHeadlineKeywordTargets(
+    usagePlan,
+    result.keywords || [],
+    languageCode
+  )
+  const descriptionTargets = resolveDescriptionKeywordTargets(
+    usagePlan,
+    result.keywords || [],
+    languageCode
+  )
+  const protectedHeadlines = headlines.slice(
+    0,
+    Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length)
+  )
+  const normalize = (value: string) =>
+    normalizeHeadlineForProtectedSimilarity(value, brandName, languageCode)
 
   let headlineFixes = 0
   for (let offset = 0; offset < headlineTargets.length; offset += 1) {
@@ -4292,7 +4660,10 @@ function enforceHardRetainedKeywordContract(
 
     const targetKeyword = headlineTargets[offset]
     const current = headlines[slotIndex]
-    if (textContainsKeyword(current, targetKeyword) && isHeadlineCompatibleWithTargetLanguage(current, languageCode)) {
+    if (
+      textContainsKeyword(current, targetKeyword) &&
+      isHeadlineCompatibleWithTargetLanguage(current, languageCode)
+    ) {
       continue
     }
 
@@ -4315,15 +4686,21 @@ function enforceHardRetainedKeywordContract(
       fitKeywordIntoHeadline('', targetKeyword, 30),
     ]
 
-    const replacement = candidatePool
-      .map((candidate) => applyHeadlineTextGuardrail(stripHeadlineNumericSuffixArtifact(String(candidate || '')), 30))
-      .find((candidate) => {
-        const normalized = normalize(candidate)
-        if (!candidate || !normalized) return false
-        if (!textContainsKeyword(candidate, targetKeyword)) return false
-        if (!isHeadlineCompatibleWithTargetLanguage(candidate, languageCode)) return false
-        return !seenNormalized.has(normalized)
-      }) || null
+    const replacement =
+      candidatePool
+        .map((candidate) =>
+          applyHeadlineTextGuardrail(
+            stripHeadlineNumericSuffixArtifact(String(candidate || '')),
+            30
+          )
+        )
+        .find((candidate) => {
+          const normalized = normalize(candidate)
+          if (!candidate || !normalized) return false
+          if (!textContainsKeyword(candidate, targetKeyword)) return false
+          if (!isHeadlineCompatibleWithTargetLanguage(candidate, languageCode)) return false
+          return !seenNormalized.has(normalized)
+        }) || null
 
     if (!replacement || replacement === current) continue
     headlines[slotIndex] = replacement
@@ -4345,9 +4722,11 @@ function enforceHardRetainedKeywordContract(
       fitKeywordIntoDescription('', targetKeyword, 90, languageCode),
     ]
 
-    const replacement = candidatePool
-      .map((candidate) => applyDescriptionTextGuardrail(String(candidate || ''), 90))
-      .find((candidate) => Boolean(candidate) && textContainsKeyword(candidate, targetKeyword)) || null
+    const replacement =
+      candidatePool
+        .map((candidate) => applyDescriptionTextGuardrail(String(candidate || ''), 90))
+        .find((candidate) => Boolean(candidate) && textContainsKeyword(candidate, targetKeyword)) ||
+      null
     if (!replacement || replacement === descriptions[slotIndex]) continue
     descriptions[slotIndex] = replacement
     syncDescriptionMetadataSlot(result, slotIndex, replacement)
@@ -4396,7 +4775,12 @@ export function enforceFinalCreativeContract(
   )
 
   const normalizedFix = normalizeCreativeAssetText(result)
-  const languageFixesBefore = enforceLanguagePurityGate(result, options.bucket, options.languageCode, options.brandName)
+  const languageFixesBefore = enforceLanguagePurityGate(
+    result,
+    options.bucket,
+    options.languageCode,
+    options.brandName
+  )
   const titleFix = enforceTitlePriorityTopHeadlines(result, {
     brandName: options.brandName,
     brandTokensToMatch: options.brandTokensToMatch,
@@ -4407,11 +4791,36 @@ export function enforceFinalCreativeContract(
     slotCount: TOP_HEADLINE_SLOT_COUNT,
     maxLength: TOP_HEADLINE_MAX_LENGTH,
   })
-  const retainedFix = enforceRetainedKeywordSlotCoverage(result, languageSafeUsagePlan, options.languageCode, options.brandName)
-  const uniquenessFix = enforceHeadlineUniquenessGate(result, options.languageCode, options.brandName, languageSafeUsagePlan)
-  const hardRetainedFix = enforceHardRetainedKeywordContract(result, languageSafeUsagePlan, options.languageCode, options.brandName)
-  const languageFixesAfter = enforceLanguagePurityGate(result, options.bucket, options.languageCode, options.brandName)
-  const finalUniquenessFix = enforceHeadlineUniquenessGate(result, options.languageCode, options.brandName, languageSafeUsagePlan)
+  const retainedFix = enforceRetainedKeywordSlotCoverage(
+    result,
+    languageSafeUsagePlan,
+    options.languageCode,
+    options.brandName
+  )
+  const uniquenessFix = enforceHeadlineUniquenessGate(
+    result,
+    options.languageCode,
+    options.brandName,
+    languageSafeUsagePlan
+  )
+  const hardRetainedFix = enforceHardRetainedKeywordContract(
+    result,
+    languageSafeUsagePlan,
+    options.languageCode,
+    options.brandName
+  )
+  const languageFixesAfter = enforceLanguagePurityGate(
+    result,
+    options.bucket,
+    options.languageCode,
+    options.brandName
+  )
+  const finalUniquenessFix = enforceHeadlineUniquenessGate(
+    result,
+    options.languageCode,
+    options.brandName,
+    languageSafeUsagePlan
+  )
   const finalNormalizeFix = normalizeCreativeAssetText(result)
   const googleAdsUniquenessFix = enforceGoogleAdsHeadlineAssetUniqueness(
     result,
@@ -4431,12 +4840,8 @@ export function enforceFinalCreativeContract(
   }
 
   return {
-    headlineFixes:
-      normalizedFix.headlineFixes
-      + finalNormalizeFix.headlineFixes,
-    descriptionFixes:
-      normalizedFix.descriptionFixes
-      + finalNormalizeFix.descriptionFixes,
+    headlineFixes: normalizedFix.headlineFixes + finalNormalizeFix.headlineFixes,
+    descriptionFixes: normalizedFix.descriptionFixes + finalNormalizeFix.descriptionFixes,
     titleFixes: titleFix.replaced,
     retainedFixes: {
       headlineFixes: retainedFix.headlineFixes + hardRetainedFix.headlineFixes,
@@ -4459,19 +4864,21 @@ function annotateCopyIntentMetadata(
   const descriptions = result.descriptions || []
   const ctaRegex = getCtaRegexForLanguage(languageCode)
 
-  const headlineMetadata: HeadlineAsset[] = (result.headlinesWithMetadata && result.headlinesWithMetadata.length > 0)
-    ? result.headlinesWithMetadata.map((h, idx) => ({
-        ...h,
-        text: headlines[idx] ?? h.text
-      }))
-    : headlines.map((text) => ({ text, length: text.length }))
+  const headlineMetadata: HeadlineAsset[] =
+    result.headlinesWithMetadata && result.headlinesWithMetadata.length > 0
+      ? result.headlinesWithMetadata.map((h, idx) => ({
+          ...h,
+          text: headlines[idx] ?? h.text,
+        }))
+      : headlines.map((text) => ({ text, length: text.length }))
 
-  const descriptionMetadata: DescriptionAsset[] = (result.descriptionsWithMetadata && result.descriptionsWithMetadata.length > 0)
-    ? result.descriptionsWithMetadata.map((d, idx) => ({
-        ...d,
-        text: descriptions[idx] ?? d.text
-      }))
-    : descriptions.map((text) => ({ text, length: text.length, hasCTA: ctaRegex.test(text) }))
+  const descriptionMetadata: DescriptionAsset[] =
+    result.descriptionsWithMetadata && result.descriptionsWithMetadata.length > 0
+      ? result.descriptionsWithMetadata.map((d, idx) => ({
+          ...d,
+          text: descriptions[idx] ?? d.text,
+        }))
+      : descriptions.map((text) => ({ text, length: text.length, hasCTA: ctaRegex.test(text) }))
 
   result.headlinesWithMetadata = headlineMetadata.map((headline) => ({
     ...headline,
@@ -4486,7 +4893,7 @@ function annotateCopyIntentMetadata(
       length: Math.min(90, description.text.length),
       hasCTA: description.hasCTA ?? ctaRegex.test(description.text),
       intentTag,
-      structureTag: classifyDescriptionStructure(description.text, intentTag, languageCode)
+      structureTag: classifyDescriptionStructure(description.text, intentTag, languageCode),
     }
   })
 }
@@ -4503,7 +4910,10 @@ function normalizeBrandFreeText(text: string, brandName: string): string {
   const brand = String(brandName || '').trim()
   if (!brand) return String(text).trim()
   const pattern = new RegExp(escapeRegex(brand), 'ig')
-  return String(text).replace(pattern, '').replace(/\s{2,}/g, ' ').trim()
+  return String(text)
+    .replace(pattern, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
 }
 
 function normalizeHeadline2KeywordCandidate(text: string): string {
@@ -4515,9 +4925,7 @@ function normalizeHeadline2KeywordCandidate(text: string): string {
 }
 
 function tokenizeHeadline2Keyword(text: string): string[] {
-  const normalized = normalizeHeadline2KeywordCandidate(text)
-    .toLowerCase()
-    .normalize('NFKC')
+  const normalized = normalizeHeadline2KeywordCandidate(text).toLowerCase().normalize('NFKC')
   // Unicode-aware tokenization (letters+numbers). Keep it permissive for non-English.
   return normalized.split(/[^\p{L}\p{N}]+/u).filter(Boolean)
 }
@@ -4529,28 +4937,83 @@ function isLikelyModelCodeToken(token: string): boolean {
 }
 
 const HEADLINE2_INTENT_TOKENS = new Set([
-  'buy', 'purchase', 'order', 'shop', 'get', 'need',
-  'price', 'cost', 'deal', 'discount', 'coupon', 'promo',
-  'best', 'top', 'cheap', 'affordable', 'sale',
+  'buy',
+  'purchase',
+  'order',
+  'shop',
+  'get',
+  'need',
+  'price',
+  'cost',
+  'deal',
+  'discount',
+  'coupon',
+  'promo',
+  'best',
+  'top',
+  'cheap',
+  'affordable',
+  'sale',
 ])
 
 const HEADLINE2_BANNED_TOKENS = new Set([
   // Navigational / irrelevant for a product-category keyword defaultText
-  'official', 'store', 'website', 'site', 'amazon', 'ebay',
+  'official',
+  'store',
+  'website',
+  'site',
+  'amazon',
+  'ebay',
   // Local intent noise (commonly appears in brand query keywords)
-  'near', 'nearby', 'me',
+  'near',
+  'nearby',
+  'me',
 ])
 
 const HEADLINE2_STOPWORDS = new Set([
-  'a', 'an', 'the', 'and', 'or', 'of', 'to', 'for', 'with', 'in', 'on', 'at', 'by', 'from',
-  'your', 'our', 'my', 'their', 'this', 'that', 'these', 'those',
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'of',
+  'to',
+  'for',
+  'with',
+  'in',
+  'on',
+  'at',
+  'by',
+  'from',
+  'your',
+  'our',
+  'my',
+  'their',
+  'this',
+  'that',
+  'these',
+  'those',
 ])
 
 const HEADLINE_DANGLING_TAIL_TOKENS = new Set([
-  'a', 'an', 'the',
-  'and', 'or',
-  'of', 'to', 'for', 'with', 'in', 'on', 'at', 'by', 'from',
-  'your', 'our', 'my', 'their',
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'of',
+  'to',
+  'for',
+  'with',
+  'in',
+  'on',
+  'at',
+  'by',
+  'from',
+  'your',
+  'our',
+  'my',
+  'their',
 ])
 
 /**
@@ -4619,25 +5082,47 @@ function validateOfferDataQuality(offer: {
     }
 
     // 检查品牌描述是否以其他品牌名开头
-    const brandStartMatch = descLower.match(/^([a-z][a-z0-9\-\s]{1,20})\s+(is|specializes|focuses|offers|provides)/i)
+    const brandStartMatch = descLower.match(
+      /^([a-z][a-z0-9\-\s]{1,20})\s+(is|specializes|focuses|offers|provides)/i
+    )
     if (brandStartMatch) {
       const detectedBrand = brandStartMatch[1].trim()
       // 标准化品牌名：统一连字符和空格，便于比较 "k-swiss" vs "k swiss"
       const normalize = (s: string) => s.replace(/[-\s]+/g, '').toLowerCase()
       const detectedNorm = normalize(detectedBrand)
       const brandNorm = normalize(brandLower)
-      if (detectedNorm !== brandNorm && !brandNorm.includes(detectedNorm) && !detectedNorm.includes(brandNorm)) {
+      if (
+        detectedNorm !== brandNorm &&
+        !brandNorm.includes(detectedNorm) &&
+        !detectedNorm.includes(brandNorm)
+      ) {
         issues.push(`品牌描述以 "${detectedBrand}" 开头，但录入品牌是 "${offer.brand}"`)
       }
     }
   }
 
   // 3. 检查类别是否与电子产品品牌明显不匹配
-  const electronicsBrands = ['anker', 'reolink', 'eufy', 'soundcore', 'nebula', 'ecoflow', 'jackery']
+  const electronicsBrands = [
+    'anker',
+    'reolink',
+    'eufy',
+    'soundcore',
+    'nebula',
+    'ecoflow',
+    'jackery',
+  ]
   const nonElectronicsCategories = [
-    'pajama', 'sleepwear', 'clothing', 'apparel',
-    'picture frame', 'photo frame', 'home decor', 'furniture',
-    'jewelry', 'cosmetics', 'beauty'
+    'pajama',
+    'sleepwear',
+    'clothing',
+    'apparel',
+    'picture frame',
+    'photo frame',
+    'home decor',
+    'furniture',
+    'jewelry',
+    'cosmetics',
+    'beauty',
   ]
 
   if (offer.brand && offer.category) {
@@ -4661,7 +5146,7 @@ function validateOfferDataQuality(offer: {
 
   return {
     isValid: issues.length === 0,
-    issues
+    issues,
   }
 }
 
@@ -4670,35 +5155,39 @@ export function selectPrimaryKeywordForHeadline2(
   brandName: string,
   fallbackTexts: string[]
 ): string {
-  const brandLower = String(brandName || '').toLowerCase().trim()
+  const brandLower = String(brandName || '')
+    .toLowerCase()
+    .trim()
   const rawCandidates = (keywords || [])
-    .map(k => ({
+    .map((k) => ({
       keyword: normalizeHeadline2KeywordCandidate(String((k as any).keyword || '')),
-      searchVolume: Number((k as any).searchVolume || 0)
+      searchVolume: Number((k as any).searchVolume || 0),
     }))
-    .filter(k => k.keyword.length > 0)
-    .filter(k => k.keyword.length <= 60)
+    .filter((k) => k.keyword.length > 0)
+    .filter((k) => k.keyword.length <= 60)
 
   const fallbackTokenSet = new Set(
     fallbackTexts
-      .map(t => normalizeBrandFreeText(t, brandName))
-      .flatMap(t => tokenizeHeadline2Keyword(t))
-      .filter(t => t.length > 1)
-      .filter(t => !HEADLINE2_STOPWORDS.has(t))
+      .map((t) => normalizeBrandFreeText(t, brandName))
+      .flatMap((t) => tokenizeHeadline2Keyword(t))
+      .filter((t) => t.length > 1)
+      .filter((t) => !HEADLINE2_STOPWORDS.has(t))
   )
 
   // Headline #2 必须不含品牌：所有候选统一做去品牌处理（非品牌关键词保持不变）
   const cleanedCandidates = rawCandidates
-    .map(k => {
-      const cleaned = normalizeHeadline2KeywordCandidate(normalizeBrandFreeText(k.keyword, brandName))
+    .map((k) => {
+      const cleaned = normalizeHeadline2KeywordCandidate(
+        normalizeBrandFreeText(k.keyword, brandName)
+      )
       return { keyword: cleaned, searchVolume: k.searchVolume }
     })
-    .filter(k => k.keyword.length > 0)
-    .filter(k => k.keyword.length <= 60)
-    .filter(k => brandLower ? !k.keyword.toLowerCase().includes(brandLower) : true)
+    .filter((k) => k.keyword.length > 0)
+    .filter((k) => k.keyword.length <= 60)
+    .filter((k) => (brandLower ? !k.keyword.toLowerCase().includes(brandLower) : true))
 
   const scored = cleanedCandidates
-    .map(c => {
+    .map((c) => {
       const tokens = tokenizeHeadline2Keyword(c.keyword)
       const overlap = tokens.reduce((acc, t) => acc + (fallbackTokenSet.has(t) ? 1 : 0), 0)
       return {
@@ -4708,23 +5197,25 @@ export function selectPrimaryKeywordForHeadline2(
         intent: calculateIntentScore(c.keyword, brandName),
       }
     })
-    .filter(c => c.tokens.length > 0)
+    .filter((c) => c.tokens.length > 0)
     // Filter out generic/navigational candidates like "shop" / "official store" / "store near me"
-    .filter(c => !c.tokens.some(t => HEADLINE2_BANNED_TOKENS.has(t)))
+    .filter((c) => !c.tokens.some((t) => HEADLINE2_BANNED_TOKENS.has(t)))
     // Avoid defaultText that is only intent words (e.g. "shop", "buy", "price")
-    .filter(c => c.tokens.some(t => !HEADLINE2_INTENT_TOKENS.has(t) && !HEADLINE2_STOPWORDS.has(t)))
+    .filter((c) =>
+      c.tokens.some((t) => !HEADLINE2_INTENT_TOKENS.has(t) && !HEADLINE2_STOPWORDS.has(t))
+    )
     // Avoid naked model codes unless they are actually relevant to the offer text
-    .filter(c => {
+    .filter((c) => {
       if (c.tokens.length !== 1) return true
       const t = c.tokens[0]
       if (!isLikelyModelCodeToken(t)) return true
       return fallbackTokenSet.has(t)
     })
     // Require relevance when we have offer context; prevents selecting "shop" over category terms
-    .filter(c => fallbackTokenSet.size === 0 ? true : c.overlap > 0)
+    .filter((c) => (fallbackTokenSet.size === 0 ? true : c.overlap > 0))
 
   if (scored.length > 0) {
-    const hasAnyVolume = scored.some(c => c.searchVolume > 0)
+    const hasAnyVolume = scored.some((c) => c.searchVolume > 0)
     scored.sort((a, b) => {
       if (b.intent !== a.intent) return b.intent - a.intent
       if (b.overlap !== a.overlap) return b.overlap - a.overlap
@@ -4735,7 +5226,9 @@ export function selectPrimaryKeywordForHeadline2(
   }
 
   for (const fallback of fallbackTexts) {
-    const cleaned = normalizeHeadline2KeywordCandidate(normalizeBrandFreeText(String(fallback || ''), brandName))
+    const cleaned = normalizeHeadline2KeywordCandidate(
+      normalizeBrandFreeText(String(fallback || ''), brandName)
+    )
     if (cleaned) return cleaned
   }
 
@@ -4777,7 +5270,7 @@ interface ApplyKeywordSupplementationOnceInput {
   poolCandidates?: string[]
   triggerThreshold?: number
   supplementCap?: number
-  bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null  // 🔥 优化(2026-03-13): 添加 bucket 字段用于意图一致性检查
+  bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null // 🔥 优化(2026-03-13): 添加 bucket 字段用于意图一致性检查
   skipAiRanking?: boolean
 }
 
@@ -4832,14 +5325,58 @@ Output JSON only with this structure:
 { "assessments": [ { "candidate": "...", "score": 0-100, "keep": true|false, "reason": "..." } ] }
 Include every candidate exactly once in assessments.`
 const KEYWORD_SUPPLEMENT_STOPWORDS_EN = new Set([
-  'a', 'an', 'the', 'and', 'or', 'of', 'to', 'for', 'with', 'in', 'on', 'at', 'by', 'from', 'as',
-  'this', 'that', 'these', 'those', 'it', 'its', 'is', 'are', 'be', 'can', 'will', 'you', 'your', 'our',
-  'because'
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'of',
+  'to',
+  'for',
+  'with',
+  'in',
+  'on',
+  'at',
+  'by',
+  'from',
+  'as',
+  'this',
+  'that',
+  'these',
+  'those',
+  'it',
+  'its',
+  'is',
+  'are',
+  'be',
+  'can',
+  'will',
+  'you',
+  'your',
+  'our',
+  'because',
 ])
 const KEYWORD_SUPPLEMENT_GENERIC_TOKENS_EN = new Set([
-  'easy', 'clean', 'wide', 'use', 'quality', 'premium', 'durable', 'reliable', 'best',
-  'new', 'hot', 'top', 'great', 'good', 'nice', 'perfect', 'ultimate', 'professional',
-  'advanced', 'improved'
+  'easy',
+  'clean',
+  'wide',
+  'use',
+  'quality',
+  'premium',
+  'durable',
+  'reliable',
+  'best',
+  'new',
+  'hot',
+  'top',
+  'great',
+  'good',
+  'nice',
+  'perfect',
+  'ultimate',
+  'professional',
+  'advanced',
+  'improved',
 ])
 const KEYWORD_SUPPLEMENT_BANNED_PHRASES_EN = new Set([
   'easy clean',
@@ -4901,11 +5438,17 @@ function hasKeywordSupplementCoverageGap(input: {
   if (effectiveCount < KEYWORD_SUPPLEMENT_MIN_EFFECTIVE) return true
   if (nonPureBrandCount < KEYWORD_SUPPLEMENT_MIN_NON_BRAND) return true
 
-  if ((input.bucket === 'B' || input.bucket === 'C') && modelAnchorCount < KEYWORD_SUPPLEMENT_MIN_B_MODEL_ANCHOR) {
+  if (
+    (input.bucket === 'B' || input.bucket === 'C') &&
+    modelAnchorCount < KEYWORD_SUPPLEMENT_MIN_B_MODEL_ANCHOR
+  ) {
     return true
   }
 
-  if ((input.bucket === 'D' || input.bucket === 'S') && demandIntentCount < KEYWORD_SUPPLEMENT_MIN_D_DEMAND) {
+  if (
+    (input.bucket === 'D' || input.bucket === 'S') &&
+    demandIntentCount < KEYWORD_SUPPLEMENT_MIN_D_DEMAND
+  ) {
     return true
   }
 
@@ -4925,7 +5468,9 @@ function matchesTargetLanguageScriptForKeyword(keyword: string, targetLanguage: 
 
   const hasLatin = /[\p{Script=Latin}]/u.test(text)
   if (!hasLatin) return false
-  return !/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Cyrillic}]/u.test(text)
+  return !/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Arabic}\p{Script=Cyrillic}]/u.test(
+    text
+  )
 }
 
 function normalizeSupplementCandidate(raw: string): string {
@@ -4940,7 +5485,7 @@ function normalizeSupplementCandidate(raw: string): string {
 function tokenizeSupplementCandidate(raw: string): string[] {
   return normalizeSupplementCandidate(raw)
     .split(/\s+/)
-    .map(part => part.trim())
+    .map((part) => part.trim())
     .filter(Boolean)
 }
 
@@ -4961,10 +5506,10 @@ function composeBrandedSupplementKeyword(rawKeyword: string, brandName: string):
   const candidateTokens = tokenizeSupplementCandidate(cleaned)
   if (candidateTokens.length === 0) return null
 
-  const lowerTokens = candidateTokens.map(token => token.toLowerCase())
+  const lowerTokens = candidateTokens.map((token) => token.toLowerCase())
   const withoutBrandTokens: string[] = []
 
-  for (let i = 0; i < lowerTokens.length;) {
+  for (let i = 0; i < lowerTokens.length; ) {
     let matchesBrand = true
     for (let j = 0; j < brandTokens.length; j += 1) {
       if (lowerTokens[i + j] !== brandTokens[j]) {
@@ -4983,7 +5528,9 @@ function composeBrandedSupplementKeyword(rawKeyword: string, brandName: string):
   }
 
   const recomposedCandidate = withoutBrandTokens.join(' ').trim()
-  const combined = recomposedCandidate ? `${normalizedBrand} ${recomposedCandidate}` : normalizedBrand
+  const combined = recomposedCandidate
+    ? `${normalizedBrand} ${recomposedCandidate}`
+    : normalizedBrand
   const combinedTokens = tokenizeSupplementCandidate(combined)
   if (combinedTokens.length < 2 || combinedTokens.length > 5) {
     return null
@@ -5007,22 +5554,27 @@ function isStructuredSupplementKeyword(keyword: string, targetLanguage: string):
   }
   if (words.length < 2 || words.length > 6) return false
 
-  const lowerWords = words.map(word => word.toLowerCase())
+  const lowerWords = words.map((word) => word.toLowerCase())
   const normalizedPhrase = lowerWords.join(' ')
   if (KEYWORD_SUPPLEMENT_BANNED_PHRASES_EN.has(normalizedPhrase)) return false
-  const allStopwords = lowerWords.every(word => KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(word))
+  const allStopwords = lowerWords.every((word) => KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(word))
   if (allStopwords) return false
 
   const startsWithStopword = KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(lowerWords[0])
   const endsWithStopword = KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(lowerWords[lowerWords.length - 1])
-  const secondTokenIsStopword = lowerWords.length >= 3 && KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(lowerWords[1])
+  const secondTokenIsStopword =
+    lowerWords.length >= 3 && KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(lowerWords[1])
   if (startsWithStopword || endsWithStopword || secondTokenIsStopword) return false
 
-  const stopwordCount = lowerWords.filter(word => KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(word)).length
+  const stopwordCount = lowerWords.filter((word) =>
+    KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(word)
+  ).length
   if (stopwordCount / lowerWords.length >= 0.4) return false
-  const nonStopwords = lowerWords.filter(word => !KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(word))
+  const nonStopwords = lowerWords.filter((word) => !KEYWORD_SUPPLEMENT_STOPWORDS_EN.has(word))
   if (nonStopwords.length === 0) return false
-  const genericTokenCount = nonStopwords.filter(word => KEYWORD_SUPPLEMENT_GENERIC_TOKENS_EN.has(word)).length
+  const genericTokenCount = nonStopwords.filter((word) =>
+    KEYWORD_SUPPLEMENT_GENERIC_TOKENS_EN.has(word)
+  ).length
   if (genericTokenCount === nonStopwords.length && nonStopwords.length <= 3) return false
 
   return true
@@ -5032,10 +5584,7 @@ function buildSupplementContextTokens(
   title: string,
   existingKeywords: KeywordWithVolume[]
 ): Set<string> {
-  const seedTexts = [
-    title,
-    ...existingKeywords.map(kw => kw.keyword),
-  ]
+  const seedTexts = [title, ...existingKeywords.map((kw) => kw.keyword)]
 
   const tokens = new Set<string>()
   for (const seed of seedTexts) {
@@ -5125,19 +5674,19 @@ async function rankSupplementCandidatesWithModel(
   }
 
   const existingKeywordTexts = input.existingKeywords
-    .map(kw => normalizeSupplementCandidate(kw.keyword))
+    .map((kw) => normalizeSupplementCandidate(kw.keyword))
     .filter(Boolean)
     .slice(0, 20)
 
   const titleLine = input.title || 'N/A'
   const aboutLines = (input.about || []).slice(0, 8)
   const candidateLines = uniqueCandidates.map((kw, idx) => `${idx + 1}. ${kw}`).join('\n')
-  const existingLines = existingKeywordTexts.length > 0
-    ? existingKeywordTexts.map((kw, idx) => `${idx + 1}. ${kw}`).join('\n')
-    : 'N/A'
-  const aboutBlock = aboutLines.length > 0
-    ? aboutLines.map((line, idx) => `${idx + 1}. ${line}`).join('\n')
-    : 'N/A'
+  const existingLines =
+    existingKeywordTexts.length > 0
+      ? existingKeywordTexts.map((kw, idx) => `${idx + 1}. ${kw}`).join('\n')
+      : 'N/A'
+  const aboutBlock =
+    aboutLines.length > 0 ? aboutLines.map((line, idx) => `${idx + 1}. ${line}`).join('\n') : 'N/A'
   const prompt = await buildKeywordSupplementScoringPrompt({
     source: input.source,
     brandName: input.brandName,
@@ -5169,14 +5718,17 @@ async function rankSupplementCandidatesWithModel(
   }
 
   try {
-    const aiResponse = await generateContent({
-      operationType: 'keyword_supplement_relevance_scoring',
-      prompt,
-      temperature: 0.1,
-      maxOutputTokens: 4096,
-      responseSchema,
-      responseMimeType: 'application/json',
-    }, input.userId)
+    const aiResponse = await generateContent(
+      {
+        operationType: 'keyword_supplement_relevance_scoring',
+        prompt,
+        temperature: 0.1,
+        maxOutputTokens: 4096,
+        responseSchema,
+        responseMimeType: 'application/json',
+      },
+      input.userId
+    )
 
     if (aiResponse.usage) {
       const cost = estimateTokenCost(
@@ -5192,7 +5744,7 @@ async function rankSupplementCandidatesWithModel(
         outputTokens: aiResponse.usage.outputTokens,
         totalTokens: aiResponse.usage.totalTokens,
         cost,
-        apiType: aiResponse.apiType
+        apiType: aiResponse.apiType,
       })
     }
 
@@ -5233,9 +5785,9 @@ async function rankSupplementCandidatesWithModel(
           keep: scored?.keep ?? false,
         }
       })
-      .filter(item => item.keep || item.score >= KEYWORD_SUPPLEMENT_MODEL_PASS_SCORE)
+      .filter((item) => item.keep || item.score >= KEYWORD_SUPPLEMENT_MODEL_PASS_SCORE)
       .sort((a, b) => b.score - a.score)
-      .map(item => item.candidate)
+      .map((item) => item.candidate)
 
     if (ranked.length > 0) {
       return ranked
@@ -5250,16 +5802,13 @@ async function rankSupplementCandidatesWithModel(
 function extractRawTitleAndAboutForSupplement(offer: any): { title: string; about: string[] } {
   const scrapedData = safeParseJson(offer?.scraped_data, {}) || {}
   const title = normalizeSnippetText(
-    scrapedData?.rawProductTitle ||
-    scrapedData?.productName ||
-    offer?.product_name ||
-    ''
+    scrapedData?.rawProductTitle || scrapedData?.productName || offer?.product_name || ''
   )
 
   const normalizeList = (input: unknown): string[] => {
     if (!Array.isArray(input)) return []
     return input
-      .map(item => normalizeSnippetText(String(item || '')))
+      .map((item) => normalizeSnippetText(String(item || '')))
       .filter(Boolean)
       .slice(0, 8)
   }
@@ -5369,7 +5918,7 @@ async function loadPoolCandidatesForSupplement(offerId: number): Promise<string[
     let semanticFiltered = 0
     let nonBrandFiltered = 0
 
-    const filteredKeywords = rawKeywords.filter(keyword => {
+    const filteredKeywords = rawKeywords.filter((keyword) => {
       const normalized = normalizeGoogleAdsKeyword(keyword)
       if (!normalized) {
         filteredCount++
@@ -5405,7 +5954,7 @@ async function loadPoolCandidatesForSupplement(offerId: number): Promise<string[
     if (filteredCount > 0) {
       console.log(
         `[KeywordSupplement] 关键词池二次过滤: ${rawKeywords.length} → ${filteredKeywords.length} ` +
-        `(品牌变体:${brandVariantFiltered}, 语义查询:${semanticFiltered}, 不含品牌:${nonBrandFiltered})`
+          `(品牌变体:${brandVariantFiltered}, 语义查询:${semanticFiltered}, 不含品牌:${nonBrandFiltered})`
       )
     }
 
@@ -5432,7 +5981,7 @@ export async function applyKeywordSupplementationOnce(
   if (thresholdGateEnabled && beforeCount >= triggerThreshold) {
     return {
       keywordsWithVolume: beforeKeywords,
-      keywords: beforeKeywords.map(kw => kw.keyword),
+      keywords: beforeKeywords.map((kw) => kw.keyword),
       keywordSupplementation: {
         triggered: false,
         beforeCount,
@@ -5452,7 +6001,7 @@ export async function applyKeywordSupplementationOnce(
   if (!hasCoverageGap) {
     return {
       keywordsWithVolume: beforeKeywords,
-      keywords: beforeKeywords.map(kw => kw.keyword),
+      keywords: beforeKeywords.map((kw) => kw.keyword),
       keywordSupplementation: {
         triggered: false,
         beforeCount,
@@ -5468,7 +6017,7 @@ export async function applyKeywordSupplementationOnce(
   if (maxAddCount <= 0) {
     return {
       keywordsWithVolume: beforeKeywords,
-      keywords: beforeKeywords.map(kw => kw.keyword),
+      keywords: beforeKeywords.map((kw) => kw.keyword),
       keywordSupplementation: {
         triggered: false,
         beforeCount,
@@ -5479,9 +6028,7 @@ export async function applyKeywordSupplementationOnce(
     }
   }
   const seen = new Set(
-    beforeKeywords
-      .map(kw => normalizeGoogleAdsKeyword(kw.keyword))
-      .filter(Boolean)
+    beforeKeywords.map((kw) => normalizeGoogleAdsKeyword(kw.keyword)).filter(Boolean)
   )
 
   const added: Array<{ keyword: string; source: 'keyword_pool' | 'title_about' }> = []
@@ -5492,11 +6039,11 @@ export async function applyKeywordSupplementationOnce(
   // 🔥 优化(2026-03-13): 定义 bucket 与意图类型的兼容性（基于意图权重）
   // 使用软过滤策略：只过滤明确不兼容的意图，而不是硬编码允许列表
   const BUCKET_INCOMPATIBLE_INTENTS: Record<string, Set<string>> = {
-    A: new Set(['SUPPORT', 'DOWNLOAD', 'JOBS', 'PIRACY']),  // 品牌商品锚点：排除支持、下载、招聘、盗版
-    B: new Set(['JOBS', 'PIRACY', 'DOWNLOAD']),             // 商品需求场景：排除招聘、盗版、下载
-    C: new Set(['JOBS', 'PIRACY', 'DOWNLOAD']),             // 功能规格/需求扩展：排除招聘、盗版、下载
-    D: new Set(['SUPPORT', 'JOBS', 'PIRACY', 'DOWNLOAD']),  // 商品需求/行动：排除支持、招聘、盗版、下载
-    S: new Set(['JOBS', 'PIRACY'])                          // 综合需求：只排除招聘、盗版
+    A: new Set(['SUPPORT', 'DOWNLOAD', 'JOBS', 'PIRACY']), // 品牌商品锚点：排除支持、下载、招聘、盗版
+    B: new Set(['JOBS', 'PIRACY', 'DOWNLOAD']), // 商品需求场景：排除招聘、盗版、下载
+    C: new Set(['JOBS', 'PIRACY', 'DOWNLOAD']), // 功能规格/需求扩展：排除招聘、盗版、下载
+    D: new Set(['SUPPORT', 'JOBS', 'PIRACY', 'DOWNLOAD']), // 商品需求/行动：排除支持、招聘、盗版、下载
+    S: new Set(['JOBS', 'PIRACY']), // 综合需求：只排除招聘、盗版
   }
 
   // 🔥 优化(2026-03-13): 监控统计
@@ -5504,11 +6051,11 @@ export async function applyKeywordSupplementationOnce(
     total: 0,
     structured: 0,
     hardNegative: 0,
-    intentIncompatible: 0,  // 改名：意图不兼容（而非不匹配）
+    intentIncompatible: 0, // 改名：意图不兼容（而非不匹配）
     contextMismatch: 0,
     brandingFailed: 0,
     duplicate: 0,
-    added: 0
+    added: 0,
   }
 
   const tryAdd = (rawKeyword: string, source: 'keyword_pool' | 'title_about') => {
@@ -5537,7 +6084,9 @@ export async function applyKeywordSupplementationOnce(
       if (incompatibleIntents.has(intent.intent)) {
         filterStats.intentIncompatible++
         if (filterStats.intentIncompatible <= 3) {
-          console.log(`[KeywordSupplement] ❌ 意图不兼容: "${cleaned}" (${intent.intent}) 不适合 bucket ${input.bucket}`)
+          console.log(
+            `[KeywordSupplement] ❌ 意图不兼容: "${cleaned}" (${intent.intent}) 不适合 bucket ${input.bucket}`
+          )
         }
         return
       }
@@ -5545,9 +6094,9 @@ export async function applyKeywordSupplementationOnce(
 
     if (source === 'title_about' && contextTokens.size > 0) {
       const candidateTokens = tokenizeSupplementCandidate(cleaned)
-        .map(token => token.toLowerCase())
-        .filter(token => token.length >= 3)
-      const hasContextOverlap = candidateTokens.some(token => contextTokens.has(token))
+        .map((token) => token.toLowerCase())
+        .filter((token) => token.length >= 3)
+      const hasContextOverlap = candidateTokens.some((token) => contextTokens.has(token))
       if (!hasContextOverlap) {
         filterStats.contextMismatch++
         return
@@ -5581,10 +6130,7 @@ export async function applyKeywordSupplementationOnce(
   }
 
   const dbPoolCandidates = await loadPoolCandidatesForSupplement(Number(input.offer?.id || 0))
-  const orderedPoolCandidatesRaw = [
-    ...(input.poolCandidates || []),
-    ...dbPoolCandidates,
-  ]
+  const orderedPoolCandidatesRaw = [...(input.poolCandidates || []), ...dbPoolCandidates]
   const orderedPoolCandidates = await rankSupplementCandidatesWithModel({
     source: 'keyword_pool',
     candidates: orderedPoolCandidatesRaw,
@@ -5635,29 +6181,30 @@ export async function applyKeywordSupplementationOnce(
   )
 
   // 输出过滤统计
-  const filterRate = filterStats.total > 0
-    ? ((filterStats.total - filterStats.added) / filterStats.total * 100).toFixed(1)
-    : '0.0'
+  const filterRate =
+    filterStats.total > 0
+      ? (((filterStats.total - filterStats.added) / filterStats.total) * 100).toFixed(1)
+      : '0.0'
   console.log(
     `[KeywordSupplement] 📊 过滤统计: 总候选=${filterStats.total} ` +
-    `过滤=${filterStats.total - filterStats.added} (${filterRate}%) ` +
-    `添加=${filterStats.added}`
+      `过滤=${filterStats.total - filterStats.added} (${filterRate}%) ` +
+      `添加=${filterStats.added}`
   )
   console.log(
     `[KeywordSupplement] 📋 过滤原因: ` +
-    `结构化=${filterStats.structured} ` +
-    `硬负面=${filterStats.hardNegative} ` +
-    `意图不兼容=${filterStats.intentIncompatible} ` +
-    `上下文不匹配=${filterStats.contextMismatch} ` +
-    `品牌化失败=${filterStats.brandingFailed} ` +
-    `重复=${filterStats.duplicate}`
+      `结构化=${filterStats.structured} ` +
+      `硬负面=${filterStats.hardNegative} ` +
+      `意图不兼容=${filterStats.intentIncompatible} ` +
+      `上下文不匹配=${filterStats.contextMismatch} ` +
+      `品牌化失败=${filterStats.brandingFailed} ` +
+      `重复=${filterStats.duplicate}`
   )
 
   // 如果意图不兼容过滤较多，输出警告
   if (filterStats.intentIncompatible > filterStats.added * 0.5) {
     console.warn(
       `[KeywordSupplement] ⚠️ 意图不兼容过滤较多 (${filterStats.intentIncompatible}/${filterStats.total})，` +
-      `可能需要调整 bucket ${input.bucket} 的不兼容意图定义`
+        `可能需要调整 bucket ${input.bucket} 的不兼容意图定义`
     )
   }
 
@@ -5665,19 +6212,22 @@ export async function applyKeywordSupplementationOnce(
   if (added.length < maxAddCount * 0.5 && maxAddCount > 10) {
     console.warn(
       `[KeywordSupplement] ⚠️ 补充数量不足 (${added.length}/${maxAddCount})，` +
-      `最终关键词数=${afterCount}，目标=${supplementCap}`
+        `最终关键词数=${afterCount}，目标=${supplementCap}`
     )
   }
 
   if (added.length > 0) {
     console.log(
-      `[KeywordSupplement] added: ${added.map(item => `${item.keyword} [${item.source}]`).slice(0, 12).join(' | ')}`
+      `[KeywordSupplement] added: ${added
+        .map((item) => `${item.keyword} [${item.source}]`)
+        .slice(0, 12)
+        .join(' | ')}`
     )
   }
 
   return {
     keywordsWithVolume: merged,
-    keywords: merged.map(kw => kw.keyword),
+    keywords: merged.map((kw) => kw.keyword),
     keywordSupplementation: {
       triggered: true,
       beforeCount,
@@ -5731,22 +6281,28 @@ function isKeywordPlannerVolumePermissionError(error: unknown): boolean {
   if (!text) return false
 
   return (
-    text.includes('DEV_TOKEN_INSUFFICIENT_ACCESS')
-    || text.includes('INSUFFICIENT')
-    || text.includes('EXPLORER')
-    || text.includes('PERMISSION_DENIED')
-    || text.includes('USER_PERMISSION_DENIED')
-    || text.includes('NOT AUTHORIZED')
+    text.includes('DEV_TOKEN_INSUFFICIENT_ACCESS') ||
+    text.includes('INSUFFICIENT') ||
+    text.includes('EXPLORER') ||
+    text.includes('PERMISSION_DENIED') ||
+    text.includes('USER_PERMISSION_DENIED') ||
+    text.includes('NOT AUTHORIZED')
   )
 }
 
 function normalizeKeywordSourceTags(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined
-  const normalized = Array.from(new Set(
-    value
-      .map((item) => String(item || '').trim().toUpperCase())
-      .filter(Boolean)
-  )).slice(0, 8)
+  const normalized = Array.from(
+    new Set(
+      value
+        .map((item) =>
+          String(item || '')
+            .trim()
+            .toUpperCase()
+        )
+        .filter(Boolean)
+    )
+  ).slice(0, 8)
   return normalized.length > 0 ? normalized : undefined
 }
 
@@ -5756,34 +6312,33 @@ export function normalizeKeywordSourceAuditForGeneratorList(
   const aiSourceSubtypeEnabled = isCreativeKeywordAiSourceSubtypeEnabled()
   return (keywords || []).map((item) => {
     const source = typeof item?.source === 'string' ? item.source.trim().toUpperCase() : undefined
-    const explicitSourceType = typeof item?.sourceType === 'string'
-      ? item.sourceType.trim().toUpperCase()
-      : undefined
-    const explicitSourceSubtype = typeof (item as any)?.sourceSubtype === 'string'
-      ? (item as any).sourceSubtype.trim().toUpperCase()
-      : undefined
+    const explicitSourceType =
+      typeof item?.sourceType === 'string' ? item.sourceType.trim().toUpperCase() : undefined
+    const explicitSourceSubtype =
+      typeof (item as any)?.sourceSubtype === 'string'
+        ? (item as any).sourceSubtype.trim().toUpperCase()
+        : undefined
     const sourceSubtype = aiSourceSubtypeEnabled
-      ? (
-        explicitSourceSubtype
-        || explicitSourceType
-        || normalizeKeywordSourceSubtype({
+      ? explicitSourceSubtype ||
+        explicitSourceType ||
+        normalizeKeywordSourceSubtype({
           source,
           sourceType: explicitSourceType,
         })
-      )
       : normalizeKeywordSourceSubtype({ source })
 
-    const rawSource = (
-      typeof (item as any)?.rawSource === 'string'
+    const rawSource =
+      (typeof (item as any)?.rawSource === 'string'
         ? (item as any).rawSource.trim().toUpperCase()
-        : undefined
-    ) || inferKeywordRawSource({
-      source,
-      sourceType: sourceSubtype || item?.sourceType,
-    })
+        : undefined) ||
+      inferKeywordRawSource({
+        source,
+        sourceType: sourceSubtype || item?.sourceType,
+      })
 
-    const derivedTags = normalizeKeywordSourceTags((item as any)?.derivedTags)
-      || inferKeywordDerivedTags({
+    const derivedTags =
+      normalizeKeywordSourceTags((item as any)?.derivedTags) ||
+      inferKeywordDerivedTags({
         source,
         sourceType: sourceSubtype || item?.sourceType,
       })
@@ -5791,7 +6346,7 @@ export function normalizeKeywordSourceAuditForGeneratorList(
     return {
       ...item,
       source: source || item.source,
-      sourceType: (explicitSourceType || sourceSubtype || source),
+      sourceType: explicitSourceType || sourceSubtype || source,
       sourceSubtype,
       rawSource,
       derivedTags,
@@ -5803,10 +6358,14 @@ export function normalizeSourceTypeFromLegacySource(input: {
   source?: string
   sourceType?: string
 }): string | undefined {
-  const sourceType = String(input.sourceType || '').trim().toUpperCase()
+  const sourceType = String(input.sourceType || '')
+    .trim()
+    .toUpperCase()
   if (sourceType) return sourceType
 
-  const source = String(input.source || '').trim().toUpperCase()
+  const source = String(input.source || '')
+    .trim()
+    .toUpperCase()
   if (!source) return undefined
 
   if (source === 'AI_ENHANCED') return 'AI_ENHANCED_PERSISTED'
@@ -5841,7 +6400,9 @@ export function shouldAllowZeroVolumeKeywordForMerge(input: {
       source: input.source,
       sourceType: input.sourceType,
     }) || ''
-  ).trim().toUpperCase()
+  )
+    .trim()
+    .toUpperCase()
   if (!normalizedSource) return false
 
   // DERIVED_VIEW 来源永不放行 zero-volume（避免 KEYWORD_POOL 派生词直通）。
@@ -5898,9 +6459,9 @@ export function shouldAllowZeroVolumeKeywordForMerge(input: {
 
   // 低置信 AI 词仅在 fallback 或 product_intent 下放行，并保持品牌/商业意图门禁。
   if (
-    normalizedSource === 'AI_GENERATED'
-    || normalizedSource === 'AI_LLM_RAW'
-    || normalizedSource === 'AI_FALLBACK_PLACEHOLDER'
+    normalizedSource === 'AI_GENERATED' ||
+    normalizedSource === 'AI_LLM_RAW' ||
+    normalizedSource === 'AI_FALLBACK_PLACEHOLDER'
   ) {
     if (creativeType === 'model_intent' && !hasModelAnchor) return false
     if (creativeType !== 'product_intent' && !fallbackMode) return false
@@ -5933,9 +6494,7 @@ async function mergeExtractedKeywordsWithSingleExit(
     console.log(`\n🔗 合并extracted_keywords到关键词列表...`)
 
     const existingKeywordsLower = new Set(
-      mergedKeywordsWithVolume
-        .filter(k => k.keyword)
-        .map(k => k.keyword.toLowerCase())
+      mergedKeywordsWithVolume.filter((k) => k.keyword).map((k) => k.keyword.toLowerCase())
     )
     const brandNameLowerForMerge = brandName?.toLowerCase() || ''
     const pureBrandKeywordsForMerge = getPureBrandKeywords(brandName || '')
@@ -5944,8 +6503,9 @@ async function mergeExtractedKeywordsWithSingleExit(
       brandName,
       pureBrandKeywordsForMerge
     )
-    const dynamicNonBrandMinSearchVolume =
-      resolveNonBrandMinSearchVolumeByBrandKeywordCount(brandKeywordCountForThreshold)
+    const dynamicNonBrandMinSearchVolume = resolveNonBrandMinSearchVolumeByBrandKeywordCount(
+      brandKeywordCountForThreshold
+    )
     console.log(
       `   🎚️ 动态非品牌搜索量阈值: >= ${dynamicNonBrandMinSearchVolume} (品牌相关词 ${brandKeywordCountForThreshold} 个)`
     )
@@ -5953,18 +6513,19 @@ async function mergeExtractedKeywordsWithSingleExit(
 
     // 🐛 修复(2026-03-14): 排除 GLOBAL_CATEGORY_BRANDED 来源的关键词
     // 这些关键词是品牌前置生成的组合词，不需要查询 Keyword Planner
-    const keywordsNeedVolume = extractedKeywords.filter(kw =>
-      kw.keyword &&
-      kw.searchVolume === 0 &&
-      kw.source !== 'GLOBAL_CATEGORY_BRANDED' &&
-      !existingKeywordsLower.has(kw.keyword.toLowerCase())
+    const keywordsNeedVolume = extractedKeywords.filter(
+      (kw) =>
+        kw.keyword &&
+        kw.searchVolume === 0 &&
+        kw.source !== 'GLOBAL_CATEGORY_BRANDED' &&
+        !existingKeywordsLower.has(kw.keyword.toLowerCase())
     )
 
     if (keywordsNeedVolume.length > 0) {
       console.log(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
       try {
         const keywordsForVolumeLookup = keywordsNeedVolume
-          .map(k => k.keyword)
+          .map((k) => k.keyword)
           .filter((keyword): keyword is string => Boolean(keyword))
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
@@ -5979,9 +6540,11 @@ async function mergeExtractedKeywordsWithSingleExit(
         }
         const volumes = volumeResult.volumes
 
-        keywordsNeedVolume.forEach(kw => {
+        keywordsNeedVolume.forEach((kw) => {
           if (!kw.keyword) return
-          const volumeData = volumes.find((v: any) => v.keyword.toLowerCase() === kw.keyword?.toLowerCase())
+          const volumeData = volumes.find(
+            (v: any) => v.keyword.toLowerCase() === kw.keyword?.toLowerCase()
+          )
           if (volumeData) {
             kw.searchVolume = volumeData.avgMonthlySearches
             kw.volumeUnavailableReason = volumeData.volumeUnavailableReason
@@ -5995,7 +6558,9 @@ async function mergeExtractedKeywordsWithSingleExit(
         console.warn(`   ⚠️ 搜索量查询失败，使用默认值0:`, volumeError)
         if (isKeywordPlannerVolumePermissionError(volumeError)) {
           volumeUnavailable = true
-          console.warn('   ⚠️ Keyword Planner 搜索量权限不足（Explorer/Test），切换 no-volume 语义门禁模式')
+          console.warn(
+            '   ⚠️ Keyword Planner 搜索量权限不足（Explorer/Test），切换 no-volume 语义门禁模式'
+          )
         }
       }
     }
@@ -6004,7 +6569,7 @@ async function mergeExtractedKeywordsWithSingleExit(
       console.log('   ℹ️ 搜索量不可用：使用 sourceType + creativeType + fallback 的匹配门禁')
     }
 
-    const keywordsToMerge = extractedKeywords.filter(kw => {
+    const keywordsToMerge = extractedKeywords.filter((kw) => {
       if (!kw.keyword) return false
       const kwLower = kw.keyword.toLowerCase()
       if (existingKeywordsLower.has(kwLower)) return false
@@ -6027,7 +6592,12 @@ async function mergeExtractedKeywordsWithSingleExit(
       const isBrandKeywordCandidate =
         containsPureBrand(kw.keyword, pureBrandKeywordsForMerge) ||
         isBrandConcatenation(kw.keyword, brandName)
-      if (!volumeUnavailable && !isBrandKeywordCandidate && kw.searchVolume < dynamicNonBrandMinSearchVolume) return false
+      if (
+        !volumeUnavailable &&
+        !isBrandKeywordCandidate &&
+        kw.searchVolume < dynamicNonBrandMinSearchVolume
+      )
+        return false
       return true
     })
     const skippedCount = extractedKeywords.length - keywordsToMerge.length
@@ -6039,7 +6609,7 @@ async function mergeExtractedKeywordsWithSingleExit(
       try {
         console.log(`   🤖 调用AI语义分类: ${keywordsToMerge.length} 个关键词`)
         const buckets = await clusterKeywordsByIntent(
-          keywordsToMerge.map(k => k.keyword).filter(Boolean) as string[],
+          keywordsToMerge.map((k) => k.keyword).filter(Boolean) as string[],
           brandName || '',
           productCategory,
           userId,
@@ -6048,9 +6618,15 @@ async function mergeExtractedKeywordsWithSingleExit(
           'product'
         )
 
-        buckets.bucketA.keywords.filter(Boolean).forEach(k => intentMap.set(k.toLowerCase(), 'brand'))
-        buckets.bucketB.keywords.filter(Boolean).forEach(k => intentMap.set(k.toLowerCase(), 'scenario'))
-        buckets.bucketC.keywords.filter(Boolean).forEach(k => intentMap.set(k.toLowerCase(), 'function'))
+        buckets.bucketA.keywords
+          .filter(Boolean)
+          .forEach((k) => intentMap.set(k.toLowerCase(), 'brand'))
+        buckets.bucketB.keywords
+          .filter(Boolean)
+          .forEach((k) => intentMap.set(k.toLowerCase(), 'scenario'))
+        buckets.bucketC.keywords
+          .filter(Boolean)
+          .forEach((k) => intentMap.set(k.toLowerCase(), 'function'))
 
         console.log(`   ✅ AI分类完成:`)
         console.log(`      品牌商品锚点: ${buckets.bucketA.keywords.length} 个`)
@@ -6058,15 +6634,16 @@ async function mergeExtractedKeywordsWithSingleExit(
         console.log(`      功能规格/需求扩展: ${buckets.bucketC.keywords.length} 个`)
       } catch (clusterError: any) {
         console.warn(`   ⚠️ AI语义分类失败，使用默认分类: ${clusterError.message}`)
-        keywordsToMerge.forEach(kw => {
+        keywordsToMerge.forEach((kw) => {
           if (kw.keyword) intentMap.set(kw.keyword.toLowerCase(), 'function')
         })
       }
 
-      keywordsToMerge.forEach(kw => {
+      keywordsToMerge.forEach((kw) => {
         if (!kw.keyword) return
         const kwLower = kw.keyword.toLowerCase()
-        const isBrandKeyword = kwLower === brandNameLowerForMerge || kwLower.startsWith(brandNameLowerForMerge + ' ')
+        const isBrandKeyword =
+          kwLower === brandNameLowerForMerge || kwLower.startsWith(brandNameLowerForMerge + ' ')
         const wordCount = kw.keyword.split(' ').length
         let matchType: 'BROAD' | 'PHRASE' | 'EXACT'
 
@@ -6094,13 +6671,23 @@ async function mergeExtractedKeywordsWithSingleExit(
         mergedCount++
       })
 
-      console.log(`   ✅ 合并完成: 新增 ${mergedCount} 个关键词 (跳过 ${skippedCount} 个重复/低质量)`)
+      console.log(
+        `   ✅ 合并完成: 新增 ${mergedCount} 个关键词 (跳过 ${skippedCount} 个重复/低质量)`
+      )
       console.log(`   📊 当前关键词总数: ${mergedKeywordsWithVolume.length} 个`)
 
-      const brandCount = keywordsToMerge.filter(k => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'brand').length
-      const scenarioCount = keywordsToMerge.filter(k => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'scenario').length
-      const functionCount = keywordsToMerge.filter(k => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'function').length
-      console.log(`   📊 意图分类: 品牌=${brandCount}, 场景=${scenarioCount}, 功能=${functionCount}`)
+      const brandCount = keywordsToMerge.filter(
+        (k) => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'brand'
+      ).length
+      const scenarioCount = keywordsToMerge.filter(
+        (k) => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'scenario'
+      ).length
+      const functionCount = keywordsToMerge.filter(
+        (k) => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'function'
+      ).length
+      console.log(
+        `   📊 意图分类: 品牌=${brandCount}, 场景=${scenarioCount}, 功能=${functionCount}`
+      )
     }
   }
 
@@ -6129,7 +6716,9 @@ interface KeywordFinalizeOutput {
   keywords: string[]
 }
 
-async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Promise<KeywordFinalizeOutput> {
+async function finalizeKeywordsWithSingleExit(
+  input: KeywordFinalizeInput
+): Promise<KeywordFinalizeOutput> {
   let keywordsWithVolume = [...input.keywordsWithVolume]
   const {
     offerBrand,
@@ -6161,7 +6750,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   const brandRelatedKeywords: typeof keywordsWithVolume = []
   const nonBrandKeywords: typeof keywordsWithVolume = []
 
-  keywordsWithVolume.forEach(kw => {
+  keywordsWithVolume.forEach((kw) => {
     const isPureBrand = shouldUseExactMatch(kw.keyword, pureBrandKeywordsList)
     const isBrandRelated = !isPureBrand && containsBrand(kw.keyword, kw.searchVolume)
 
@@ -6174,24 +6763,26 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
     }
   })
 
-  console.log(`   📊 关键词分类结果 (使用纯品牌词列表: [${pureBrandKeywordsList.slice(0, 3).join(', ')}${pureBrandKeywordsList.length > 3 ? '...' : ''}])`)
+  console.log(
+    `   📊 关键词分类结果 (使用纯品牌词列表: [${pureBrandKeywordsList.slice(0, 3).join(', ')}${pureBrandKeywordsList.length > 3 ? '...' : ''}])`
+  )
   console.log(`      🏷️ 纯品牌词: ${pureBrandKeywords.length} 个`)
   console.log(`      🔗 品牌相关词: ${brandRelatedKeywords.length} 个`)
   console.log(`      📝 非品牌词: ${nonBrandKeywords.length} 个`)
 
   // 自动分配matchType（品牌词策略）
   console.log(`\n📌 自动分配matchType（品牌词策略）`)
-  pureBrandKeywords.forEach(kw => {
+  pureBrandKeywords.forEach((kw) => {
     kw.matchType = 'EXACT'
   })
   console.log(`   ✅ 纯品牌词(${pureBrandKeywords.length}个) → EXACT 精准匹配`)
 
-  brandRelatedKeywords.forEach(kw => {
+  brandRelatedKeywords.forEach((kw) => {
     kw.matchType = 'PHRASE'
   })
   console.log(`   ✅ 品牌相关词(${brandRelatedKeywords.length}个) → PHRASE 词组匹配`)
 
-  nonBrandKeywords.forEach(kw => {
+  nonBrandKeywords.forEach((kw) => {
     kw.matchType = 'PHRASE'
   })
   console.log(`   ✅ 非品牌词(${nonBrandKeywords.length}个) → PHRASE 词组匹配（暂不使用BROAD）`)
@@ -6204,13 +6795,13 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
     offerBrand,
     []
   )
-  extractedGenericKeywords.forEach(kw => {
+  extractedGenericKeywords.forEach((kw) => {
     if (!kw.matchType) kw.matchType = 'PHRASE'
   })
   console.log(`   🎯 提取到 ${extractedGenericKeywords.length} 个高价值通用词 (matchType=PHRASE)`)
 
-  const volumeDataUnavailable = keywordsWithVolume.some(kw =>
-    kw.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+  const volumeDataUnavailable = keywordsWithVolume.some(
+    (kw) => kw.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
   )
   if (volumeDataUnavailable) {
     console.log(`   ⚠️ 搜索量数据不可用（developer token 为 Test/Explorer 权限），跳过搜索量过滤`)
@@ -6224,20 +6815,22 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   )
 
   // 过滤非品牌词（按动态阈值保留）
-  const hasAnyVolume = nonBrandKeywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = nonBrandKeywords.some((kw) => kw.searchVolume > 0)
   const canUseVolumeFilter = hasAnyVolume && !volumeDataUnavailable
   const filteredNonBrandKeywords = canUseVolumeFilter
-    ? nonBrandKeywords.filter(kw => kw.searchVolume >= dynamicNonBrandMinSearchVolume)
+    ? nonBrandKeywords.filter((kw) => kw.searchVolume >= dynamicNonBrandMinSearchVolume)
     : nonBrandKeywords
 
   const enhancedNonBrandKeywords = [...filteredNonBrandKeywords, ...extractedGenericKeywords]
 
   // 强制约束1：纯品牌词必须添加
   console.log(`\n📌 强制约束1: 纯品牌词 "${offerBrand}" 必须添加`)
-  const existingPureBrand = pureBrandKeywords.find(kw => kw.searchVolume > 0)
+  const existingPureBrand = pureBrandKeywords.find((kw) => kw.searchVolume > 0)
 
   if (existingPureBrand) {
-    console.log(`   ✅ 纯品牌词已存在: "${existingPureBrand.keyword}" (${existingPureBrand.searchVolume}/月)`)
+    console.log(
+      `   ✅ 纯品牌词已存在: "${existingPureBrand.keyword}" (${existingPureBrand.searchVolume}/月)`
+    )
   } else {
     console.log(`   ⚠️ 纯品牌词 "${offerBrand}" 需要查询搜索量...`)
     let brandSearchVolume = 0
@@ -6247,13 +6840,16 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
       const db = await getDatabase()
       const langCode = (targetLanguage || 'English').toLowerCase().substring(0, 2)
 
-      const row = await db.queryOne(`
+      const row = (await db.queryOne(
+        `
         SELECT keyword, search_volume
         FROM global_keywords
         WHERE LOWER(keyword) = LOWER(?) AND country = ?
         ORDER BY search_volume DESC
         LIMIT 1
-      `, [offerBrand, targetCountry]) as { keyword: string; search_volume: number } | undefined
+      `,
+        [offerBrand, targetCountry]
+      )) as { keyword: string; search_volume: number } | undefined
 
       if (row && row.search_volume > 0) {
         brandSearchVolume = row.search_volume
@@ -6286,7 +6882,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
     pureBrandKeywords.push({
       keyword: offerBrand,
       searchVolume: brandSearchVolume,
-      matchType: 'EXACT'
+      matchType: 'EXACT',
     })
 
     if (brandSearchVolume > 0) {
@@ -6297,32 +6893,36 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   }
 
   // 强制约束2：非品牌词阈值
-  console.log(`\n📌 强制约束2: 非品牌词搜索量 >= ${dynamicNonBrandMinSearchVolume} 或来自高价值词提取`)
+  console.log(
+    `\n📌 强制约束2: 非品牌词搜索量 >= ${dynamicNonBrandMinSearchVolume} 或来自高价值词提取`
+  )
   console.log(`   - 搜索量达标的非品牌词: ${filteredNonBrandKeywords.length} 个`)
   console.log(`   - 提取的高价值词 (>10000): ${extractedGenericKeywords.length} 个`)
   console.log(`   - 合计非品牌词: ${enhancedNonBrandKeywords.length} 个`)
 
-  const hasAnyVolumeBrand = brandRelatedKeywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolumeBrand = brandRelatedKeywords.some((kw) => kw.searchVolume > 0)
   const shouldFilterBrandByVolume = hasAnyVolumeBrand && !volumeDataUnavailable
   const allBrandKeywords = [
     ...pureBrandKeywords,
-    ...brandRelatedKeywords.filter(kw => shouldFilterBrandByVolume ? kw.searchVolume > 0 : true)
+    ...brandRelatedKeywords.filter((kw) =>
+      shouldFilterBrandByVolume ? kw.searchVolume > 0 : true
+    ),
   ]
   let finalKeywords = [...allBrandKeywords, ...enhancedNonBrandKeywords]
-  console.log(`   📊 初始合并: ${allBrandKeywords.length} 品牌词 + ${enhancedNonBrandKeywords.length} 非品牌词 = ${finalKeywords.length} 个`)
+  console.log(
+    `   📊 初始合并: ${allBrandKeywords.length} 品牌词 + ${enhancedNonBrandKeywords.length} 非品牌词 = ${finalKeywords.length} 个`
+  )
 
   // 强制约束3：移除无搜索量关键词（纯品牌词豁免）
   console.log(`\n📌 强制约束3: 移除所有搜索量为0或null的关键词（品牌词除外）`)
   const beforeFinalFilter = finalKeywords.length
-  const hasAnyVolumeData = finalKeywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolumeData = finalKeywords.some((kw) => kw.searchVolume > 0)
   const pureBrandKeywordNormalized = new Set(
-    pureBrandKeywords
-      .map(kw => normalizeGoogleAdsKeyword(kw.keyword))
-      .filter(Boolean)
+    pureBrandKeywords.map((kw) => normalizeGoogleAdsKeyword(kw.keyword)).filter(Boolean)
   )
 
   if (hasAnyVolumeData && !volumeDataUnavailable) {
-    finalKeywords = finalKeywords.filter(kw => {
+    finalKeywords = finalKeywords.filter((kw) => {
       const kwNorm = normalizeGoogleAdsKeyword(kw.keyword)
       return kw.searchVolume > 0 || (kwNorm && pureBrandKeywordNormalized.has(kwNorm))
     })
@@ -6333,19 +6933,22 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
     }
   } else {
     if (volumeDataUnavailable) {
-      console.log(`   ⚠️ 搜索量数据不可用（developer token 无 Basic/Standard access 或 服务账号限制），跳过搜索量过滤`)
+      console.log(
+        `   ⚠️ 搜索量数据不可用（developer token 无 Basic/Standard access 或 服务账号限制），跳过搜索量过滤`
+      )
     } else {
       console.log(`   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤`)
     }
   }
   console.log(`   ✅ 最终保留 ${finalKeywords.length} 个关键词（含搜索量数据或品牌词）`)
 
-  const retainedBrandWithZeroVolume = finalKeywords.filter(kw =>
-    kw.searchVolume === 0 && pureBrandKeywordNormalized.has(normalizeGoogleAdsKeyword(kw.keyword))
+  const retainedBrandWithZeroVolume = finalKeywords.filter(
+    (kw) =>
+      kw.searchVolume === 0 && pureBrandKeywordNormalized.has(normalizeGoogleAdsKeyword(kw.keyword))
   )
   if (retainedBrandWithZeroVolume.length > 0) {
     console.log(`   ℹ️ 保留 ${retainedBrandWithZeroVolume.length} 个搜索量为0的品牌词:`)
-    retainedBrandWithZeroVolume.forEach(kw => {
+    retainedBrandWithZeroVolume.forEach((kw) => {
       console.log(`      - "${kw.keyword}" (品牌词，搜索量未知)`)
     })
   }
@@ -6360,25 +6963,32 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   )
   const beforeIntentFilter = finalKeywords.length
 
-  const keywordsWithIntent = finalKeywords.map(kw => ({
+  const keywordsWithIntent = finalKeywords.map((kw) => ({
     ...kw,
     intentScore: calculateIntentScore(kw.keyword, brandName),
-    intentLevel: getIntentLevel(calculateIntentScore(kw.keyword, brandName))
+    intentLevel: getIntentLevel(calculateIntentScore(kw.keyword, brandName)),
   }))
   const isPureBrandInFinal = (kw: { keyword: string }) => {
     const normalized = normalizeGoogleAdsKeyword(kw.keyword)
     return normalized ? pureBrandKeywordNormalized.has(normalized) : false
   }
 
-  const highIntentKws = keywordsWithIntent.filter(kw => kw.intentScore >= 80)
-  const mediumIntentKws = keywordsWithIntent.filter(kw => kw.intentScore >= 50 && kw.intentScore < 80)
-  const lowIntentKws = keywordsWithIntent.filter(kw => kw.intentScore >= MIN_INTENT_SCORE && kw.intentScore < 50)
-  const infoIntentKws = keywordsWithIntent.filter(kw => kw.intentScore < MIN_INTENT_SCORE && !isPureBrandInFinal(kw))
+  const highIntentKws = keywordsWithIntent.filter((kw) => kw.intentScore >= 80)
+  const mediumIntentKws = keywordsWithIntent.filter(
+    (kw) => kw.intentScore >= 50 && kw.intentScore < 80
+  )
+  const lowIntentKws = keywordsWithIntent.filter(
+    (kw) => kw.intentScore >= MIN_INTENT_SCORE && kw.intentScore < 50
+  )
+  const infoIntentKws = keywordsWithIntent.filter(
+    (kw) => kw.intentScore < MIN_INTENT_SCORE && !isPureBrandInFinal(kw)
+  )
   const exploreIntentCandidates = keywordsWithIntent
-    .filter(kw =>
-      kw.intentScore >= EXPLORE_MIN_INTENT_SCORE &&
-      kw.intentScore < EXPLORE_MAX_INTENT_SCORE &&
-      !isPureBrandInFinal(kw)
+    .filter(
+      (kw) =>
+        kw.intentScore >= EXPLORE_MIN_INTENT_SCORE &&
+        kw.intentScore < EXPLORE_MAX_INTENT_SCORE &&
+        !isPureBrandInFinal(kw)
     )
     .sort((a, b) => (b.searchVolume || 0) - (a.searchVolume || 0))
 
@@ -6390,7 +7000,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
 
   if (infoIntentKws.length > 0) {
     console.log(`\n   ⚠️ 将移除 ${infoIntentKws.length} 个信息查询类关键词:`)
-    infoIntentKws.slice(0, 5).forEach(kw => {
+    infoIntentKws.slice(0, 5).forEach((kw) => {
       console.log(`      - "${kw.keyword}" (意图分数: ${kw.intentScore}, ${kw.intentLevel.label})`)
     })
     if (infoIntentKws.length > 5) {
@@ -6399,7 +7009,7 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   }
 
   const primaryKeywords = keywordsWithIntent
-    .filter(kw => isPureBrandInFinal(kw) || kw.intentScore >= MIN_INTENT_SCORE)
+    .filter((kw) => isPureBrandInFinal(kw) || kw.intentScore >= MIN_INTENT_SCORE)
     .map(({ _intentScore, _intentLevel, ...rest }) => rest)
 
   const exploreQuota = getRatioCappedCount(
@@ -6408,12 +7018,10 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
     KEYWORD_POLICY.creative.explore.maxCount
   )
   const primaryNormSet = new Set(
-    primaryKeywords
-      .map(kw => normalizeGoogleAdsKeyword(kw.keyword))
-      .filter(Boolean)
+    primaryKeywords.map((kw) => normalizeGoogleAdsKeyword(kw.keyword)).filter(Boolean)
   )
   const exploreKeywords = exploreIntentCandidates
-    .filter(kw => {
+    .filter((kw) => {
       const norm = normalizeGoogleAdsKeyword(kw.keyword)
       return norm ? !primaryNormSet.has(norm) : false
     })
@@ -6423,16 +7031,22 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   finalKeywords = [...primaryKeywords, ...exploreKeywords]
 
   const removedByIntent = beforeIntentFilter - primaryKeywords.length
-  console.log(`   ✅ 意图过滤完成: 主池保留 ${primaryKeywords.length} 个，移除 ${removedByIntent} 个低意图词`)
+  console.log(
+    `   ✅ 意图过滤完成: 主池保留 ${primaryKeywords.length} 个，移除 ${removedByIntent} 个低意图词`
+  )
   if (exploreKeywords.length > 0) {
-    console.log(`   ➕ 覆盖度补齐: 追加 ${exploreKeywords.length}/${exploreQuota} 个探索词 (intent ${EXPLORE_MIN_INTENT_SCORE}-${EXPLORE_MAX_INTENT_SCORE - 1})`)
+    console.log(
+      `   ➕ 覆盖度补齐: 追加 ${exploreKeywords.length}/${exploreQuota} 个探索词 (intent ${EXPLORE_MIN_INTENT_SCORE}-${EXPLORE_MAX_INTENT_SCORE - 1})`
+    )
   }
 
   if (mustContainBrand) {
     const preview = brandTokensToMatch.slice(0, 3).join(', ')
-    console.log(`\n🔒 强制约束: 只保留包含纯品牌词的关键词 (tokens: [${preview}${brandTokensToMatch.length > 3 ? '...' : ''}])`)
+    console.log(
+      `\n🔒 强制约束: 只保留包含纯品牌词的关键词 (tokens: [${preview}${brandTokensToMatch.length > 3 ? '...' : ''}])`
+    )
     const before = finalKeywords.length
-    finalKeywords = finalKeywords.filter(kw => containsBrand(kw.keyword, kw.searchVolume))
+    finalKeywords = finalKeywords.filter((kw) => containsBrand(kw.keyword, kw.searchVolume))
     console.log(`   ✅ 品牌强制过滤完成: ${before} → ${finalKeywords.length}`)
   }
 
@@ -6448,8 +7062,11 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   }
 
   const afterFilterCount = finalKeywords.length
-  const finalBrandCount = finalKeywords.filter(kw => containsBrand(kw.keyword, kw.searchVolume)).length
-  const brandRatio = afterFilterCount > 0 ? Math.round(finalBrandCount / afterFilterCount * 100) : 0
+  const finalBrandCount = finalKeywords.filter((kw) =>
+    containsBrand(kw.keyword, kw.searchVolume)
+  ).length
+  const brandRatio =
+    afterFilterCount > 0 ? Math.round((finalBrandCount / afterFilterCount) * 100) : 0
   console.log(`\n✅ 过滤完成:`)
   console.log(`   原始关键词: ${beforeFilterCount} 个`)
   console.log(`   最终保留: ${afterFilterCount} 个`)
@@ -6459,32 +7076,41 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
   // 单一出口前去重
   const beforeFinalDedupe = finalKeywords.length
   const seenForFinal = new Set<string>()
-  finalKeywords = finalKeywords.filter(kw => {
+  finalKeywords = finalKeywords.filter((kw) => {
     const normalized = kw.keyword.toLowerCase().trim()
     if (seenForFinal.has(normalized)) return false
     seenForFinal.add(normalized)
     return true
   })
   if (beforeFinalDedupe !== finalKeywords.length) {
-    console.warn(`⚠️ 最终关键词去重: ${beforeFinalDedupe} → ${finalKeywords.length} (移除 ${beforeFinalDedupe - finalKeywords.length} 个重复)`)
+    console.warn(
+      `⚠️ 最终关键词去重: ${beforeFinalDedupe} → ${finalKeywords.length} (移除 ${beforeFinalDedupe - finalKeywords.length} 个重复)`
+    )
   }
 
-  const keywordTexts = finalKeywords.map(kw => kw.keyword)
+  const keywordTexts = finalKeywords.map((kw) => kw.keyword)
   const finalKeywordCount = keywordTexts.length
-  const allHaveVolume = finalKeywords.every(kw => kw.searchVolume > 0)
+  const allHaveVolume = finalKeywords.every((kw) => kw.searchVolume > 0)
   const hasBrandKeyword = canonicalBrandKeyword
-    ? finalKeywords.some(kw => normalizeGoogleAdsKeyword(kw.keyword) === canonicalBrandKeyword && kw.searchVolume > 0)
-    : finalKeywords.some(kw => kw.keyword.toLowerCase() === brandKeywordLower && kw.searchVolume > 0)
+    ? finalKeywords.some(
+        (kw) =>
+          normalizeGoogleAdsKeyword(kw.keyword) === canonicalBrandKeyword && kw.searchVolume > 0
+      )
+    : finalKeywords.some(
+        (kw) => kw.keyword.toLowerCase() === brandKeywordLower && kw.searchVolume > 0
+      )
 
   console.log(`\n🎯 最终验证:`)
   console.log(`   ✅ 关键词总数: ${finalKeywordCount} 个`)
   console.log(`   ${allHaveVolume ? '✅' : '❌'} 所有关键词都有搜索量数据 (searchVolume > 0)`)
-  console.log(`   ${hasBrandKeyword ? '✅' : 'ℹ️'} 品牌词 "${offerBrand}" ${hasBrandKeyword ? '有搜索量' : '无搜索量数据，已排除'}`)
+  console.log(
+    `   ${hasBrandKeyword ? '✅' : 'ℹ️'} 品牌词 "${offerBrand}" ${hasBrandKeyword ? '有搜索量' : '无搜索量数据，已排除'}`
+  )
 
   if (!allHaveVolume) {
-    const zeroVolumeKeywords = finalKeywords.filter(kw => kw.searchVolume <= 0)
+    const zeroVolumeKeywords = finalKeywords.filter((kw) => kw.searchVolume <= 0)
     console.warn(`⚠️ 警告: 仍有 ${zeroVolumeKeywords.length} 个关键词搜索量为0`)
-    zeroVolumeKeywords.forEach(kw => console.warn(`   - "${kw.keyword}"`))
+    zeroVolumeKeywords.forEach((kw) => console.warn(`   - "${kw.keyword}"`))
   }
   if (finalKeywordCount < 5) {
     console.warn(`⚠️ 警告: 关键词数量 ${finalKeywordCount} < 5，可能影响广告效果`)
@@ -6498,7 +7124,10 @@ async function finalizeKeywordsWithSingleExit(input: KeywordFinalizeInput): Prom
 
 function truncateDkiDefaultText(defaultText: string, maxLength: number): string {
   let candidate = defaultText
-  while (candidate.length > 0 && getGoogleAdsTextEffectiveLength(`{KeyWord:${candidate}}`) > maxLength) {
+  while (
+    candidate.length > 0 &&
+    getGoogleAdsTextEffectiveLength(`{KeyWord:${candidate}}`) > maxLength
+  ) {
     candidate = candidate.slice(0, -1)
   }
   return candidate || 'Keyword'
@@ -6576,11 +7205,9 @@ export function resolveCreativeTargetLanguage(
   const rawTargetLanguage = String(targetLanguageInput || '').trim()
   const normalizedRawLanguage = rawTargetLanguage.toLowerCase()
   const hasRecognizedLanguageInput = Boolean(
-    rawTargetLanguage
-    && (
-      LANGUAGE_CODE_MAP[normalizedRawLanguage]
-      || /^[a-z]{2}(?:[-_][a-z]{2})?$/i.test(normalizedRawLanguage)
-    )
+    rawTargetLanguage &&
+    (LANGUAGE_CODE_MAP[normalizedRawLanguage] ||
+      /^[a-z]{2}(?:[-_][a-z]{2})?$/i.test(normalizedRawLanguage))
   )
 
   const languageCode = hasRecognizedLanguageInput
@@ -6691,24 +7318,43 @@ async function buildAdCreativePrompt(
   const policyGuardMode = resolveGoogleAdsPolicyGuardMode(runtimeGuidance?.policyGuardMode)
   const rawProductTitle = offer.product_title || offer.name || offer.title || 'Product'
   const rawProductName = offer.product_name || offer.product_title || offer.name || offer.brand
-  const rawProductDescription = offer.brand_description || offer.unique_selling_points || 'Quality product'
-  const rawUniqueSellingPoints = offer.unique_selling_points || offer.product_highlights || 'Premium quality'
-  const policySafeProductTitle = sanitizeGoogleAdsPolicyText(String(rawProductTitle || ''), { maxLength: 120, mode: policyGuardMode })
-  const policySafeProductName = sanitizeGoogleAdsPolicyText(String(rawProductName || ''), { maxLength: 120, mode: policyGuardMode })
-  const policySafeProductDescription = sanitizeGoogleAdsPolicyText(String(rawProductDescription || ''), { maxLength: 240, mode: policyGuardMode })
-  const policySafeUniqueSellingPoints = sanitizeGoogleAdsPolicyText(String(rawUniqueSellingPoints || ''), { maxLength: 240, mode: policyGuardMode })
-  const policySignalTerms = extractGoogleAdsPolicySensitiveTerms([
-    String(rawProductTitle || ''),
-    String(rawProductName || ''),
+  const rawProductDescription =
+    offer.brand_description || offer.unique_selling_points || 'Quality product'
+  const rawUniqueSellingPoints =
+    offer.unique_selling_points || offer.product_highlights || 'Premium quality'
+  const policySafeProductTitle = sanitizeGoogleAdsPolicyText(String(rawProductTitle || ''), {
+    maxLength: 120,
+    mode: policyGuardMode,
+  })
+  const policySafeProductName = sanitizeGoogleAdsPolicyText(String(rawProductName || ''), {
+    maxLength: 120,
+    mode: policyGuardMode,
+  })
+  const policySafeProductDescription = sanitizeGoogleAdsPolicyText(
     String(rawProductDescription || ''),
-    String(rawUniqueSellingPoints || '')
-  ], { mode: policyGuardMode })
+    { maxLength: 240, mode: policyGuardMode }
+  )
+  const policySafeUniqueSellingPoints = sanitizeGoogleAdsPolicyText(
+    String(rawUniqueSellingPoints || ''),
+    { maxLength: 240, mode: policyGuardMode }
+  )
+  const policySignalTerms = extractGoogleAdsPolicySensitiveTerms(
+    [
+      String(rawProductTitle || ''),
+      String(rawProductName || ''),
+      String(rawProductDescription || ''),
+      String(rawUniqueSellingPoints || ''),
+    ],
+    { mode: policyGuardMode }
+  )
 
   // 🆕 v4.16: 确定链接类型（含scraped_data兜底）
   const scrapedDataForLinkType = safeParseJson(offer.scraped_data, null)
   const derivedLinkType = deriveLinkTypeFromScrapedData(scrapedDataForLinkType)
   if (offer.page_type && derivedLinkType && offer.page_type !== derivedLinkType) {
-    console.warn(`⚠️ page_type不一致: offer.page_type=${offer.page_type}, scraped_data.pageType=${derivedLinkType}。将使用 ${derivedLinkType} 作为链接类型。`)
+    console.warn(
+      `⚠️ page_type不一致: offer.page_type=${offer.page_type}, scraped_data.pageType=${derivedLinkType}。将使用 ${derivedLinkType} 作为链接类型。`
+    )
   }
   const linkType = (() => {
     const explicit = offer.page_type as 'product' | 'store' | null
@@ -6723,8 +7369,10 @@ async function buildAdCreativePrompt(
     category: offer.category || 'product',
     product_title: policySafeProductTitle.text || String(rawProductTitle || 'Product'),
     product_name: policySafeProductName.text || String(rawProductName || offer.brand || 'Product'),
-    product_description: policySafeProductDescription.text || String(rawProductDescription || 'Quality product'),
-    unique_selling_points: policySafeUniqueSellingPoints.text || String(rawUniqueSellingPoints || 'Premium quality'),
+    product_description:
+      policySafeProductDescription.text || String(rawProductDescription || 'Quality product'),
+    unique_selling_points:
+      policySafeUniqueSellingPoints.text || String(rawUniqueSellingPoints || 'Premium quality'),
     target_audience: offer.target_audience || 'General',
     target_country: offer.target_country,
     target_language: targetLanguage,
@@ -6734,7 +7382,7 @@ async function buildAdCreativePrompt(
     // 🆕 证据约束：仅允许使用此处可验证事实（避免“编造数字/承诺”）
     verified_facts_section: '',
     // 🆕 非破坏式意图增强：只指导文案，不改变关键词列表
-    type_intent_guidance_section: ''
+    type_intent_guidance_section: '',
   }
 
   // Build conditional sections as complete strings
@@ -6794,23 +7442,25 @@ async function buildAdCreativePrompt(
     // 🆕 v4.16: 店铺链接特殊桶处理
     if (linkType === 'store') {
       const storeBucketInstructions: Record<string, string> = {
-        'A': `
+        A: `
 **🏪 店铺桶A - 品牌意图导向**
 - 核心主题: 品牌背书 + 真实商品集合
 - 关键词策略: 品牌词优先，但必须同时覆盖商品/品类锚点
 - 创意重点: 强调品牌优势、核心品类、热门商品线`,
-        'B': `
+        B: `
 **🏪 店铺桶B - 热门商品型号/产品族意图导向**
 - 核心主题: 热门商品型号/产品族购买意图
 - 关键词策略: 品牌 + 热门商品型号/产品族 + 品类，统一完全匹配
 - 创意重点: 默认覆盖多个热门商品，不得退化为泛店铺文案`,
-        'D': `
+        D: `
 **🏪 店铺桶D - 商品需求意图导向**
 - 核心主题: 品牌下商品需求、功能、场景和产品线覆盖
 - 关键词策略: 品牌 + 品类 + 功能/场景/热门商品线词
-- 创意重点: 商品需求覆盖优先，不得退化为纯品牌导航词`
+- 创意重点: 商品需求覆盖优先，不得退化为纯品牌导航词`,
       }
-      keyword_bucket_section = storeBucketInstructions[kissBucket] || `
+      keyword_bucket_section =
+        storeBucketInstructions[kissBucket] ||
+        `
 **📦 STORE KEYWORD POOL BUCKET ${kissBucket} - ${intent || intentEn}**
 This store creative focuses on "${intent || intentEn}" user intent.
 - ${keywordCount} pre-selected keywords for this intent
@@ -6827,7 +7477,7 @@ This store creative focuses on "${intent || intentEn}" user intent.
     } else {
       // 🆕 v4.18: 为每个产品链接桶添加单品聚焦约束
       const productBucketInstructions: Record<string, string> = {
-        'A': `
+        A: `
 **📦 产品桶A - 品牌意图导向 (Brand Intent)**
 **🎯 核心主题**: 建立品牌可信度 + 强化“品牌与当前商品强相关”
 **⚠️ 单品聚焦规则 (CRITICAL)**:
@@ -6837,7 +7487,7 @@ This store creative focuses on "${intent || intentEn}" user intent.
 - ❌ 禁止: "Shop All Products", "Browse Collection", "Cameras & Doorbells"
 - ❌ 禁止: 提及同品牌其他品类产品
 - 创意重点: 品牌优先，但必须回到当前商品`,
-        'B': `
+        B: `
 **📦 产品桶B - 商品型号/产品族意图导向 (Model Intent)**
 **🎯 核心主题**: 当前商品型号/产品族购买意图
 **⚠️ 单品聚焦规则 (CRITICAL)**:
@@ -6847,7 +7497,7 @@ This store creative focuses on "${intent || intentEn}" user intent.
 - ❌ 禁止: 退化成泛品类词、场景词或纯品牌词
 - ❌ 禁止: 暗示多产品选择或店铺级文案
 - 创意重点: 精准、可投放、强购买意图`,
-        'D': `
+        D: `
 **📦 产品桶D - 商品需求意图导向 (Product Demand Intent)**
 **🎯 核心主题**: 品牌下商品需求、功能、场景和产品线覆盖
 **⚠️ 单品聚焦规则 (CRITICAL)**:
@@ -6856,9 +7506,11 @@ This store creative focuses on "${intent || intentEn}" user intent.
 - ✅ 明确CTA: "Buy Now", "Shop Now", "Learn More"
 - ❌ 禁止: 只有品牌没有商品需求锚点
 - ❌ 禁止: 变成店铺级文案或纯促销口号
-- 创意重点: 需求覆盖清晰 + 行动明确`
+- 创意重点: 需求覆盖清晰 + 行动明确`,
       }
-      keyword_bucket_section = productBucketInstructions[kissBucket] || `
+      keyword_bucket_section =
+        productBucketInstructions[kissBucket] ||
+        `
 **📦 KEYWORD POOL BUCKET ${kissBucket} - ${intent || intentEn}**
 **⚠️ 单品聚焦规则 (CRITICAL)**:
 - This creative MUST focus on ONE specific product: {{product_name}}
@@ -6895,13 +7547,13 @@ This creative focuses on "${intent || intentEn}" user intent.
     if (currency) {
       // 🔥 修复（2025-12-23）：明确指定货币符号，确保AI生成正确格式
       const currencySymbolMap: Record<string, string> = {
-        'GBP': '£ (British Pound Sterling - UK market)',
-        'USD': '$ (US Dollar)',
-        'EUR': '€ (Euro)',
-        'JPY': '¥ (Japanese Yen)',
-        'AUD': 'A$ (Australian Dollar)',
-        'CAD': 'C$ (Canadian Dollar)',
-        'CHF': 'CHF (Swiss Franc)',
+        GBP: '£ (British Pound Sterling - UK market)',
+        USD: '$ (US Dollar)',
+        EUR: '€ (Euro)',
+        JPY: '¥ (Japanese Yen)',
+        AUD: 'A$ (Australian Dollar)',
+        CAD: 'C$ (Canadian Dollar)',
+        CHF: 'CHF (Swiss Franc)',
       }
       const currencySymbol = currencySymbolMap[currency] || currency
       localization_section += `\n**🌍 LOCAL CURRENCY**: ${currencySymbol}`
@@ -6919,7 +7571,14 @@ This creative focuses on "${intent || intentEn}" user intent.
 
   // 🎯 P3优化：使用品牌分析数据
   if (extractedElements?.brandAnalysis) {
-    const { positioning, voice, competitors, hotProducts, reviewAnalysis: storeReviewAnalysis, sellingPoints } = extractedElements.brandAnalysis
+    const {
+      positioning,
+      voice,
+      competitors,
+      hotProducts,
+      reviewAnalysis: storeReviewAnalysis,
+      sellingPoints,
+    } = extractedElements.brandAnalysis
     if (positioning) {
       brand_analysis_section += `\n**🏷️ BRAND POSITIONING**: ${positioning}`
     }
@@ -6936,7 +7595,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     // 🔥 修复（2025-12-11）：添加热销商品产品亮点
     if (hotProducts && hotProducts.length > 0) {
       const allHighlights: string[] = []
-      hotProducts.slice(0, 3).forEach(p => {
+      hotProducts.slice(0, 3).forEach((p) => {
         if (p.productHighlights && p.productHighlights.length > 0) {
           allHighlights.push(...p.productHighlights.slice(0, 3))
         }
@@ -7002,9 +7661,12 @@ This creative focuses on "${intent || intentEn}" user intent.
 
   if (priceEvidenceWarning) {
     console.warn(priceEvidenceWarning)
-    localization_section += '\n**⚠️ PRICE SAFETY RULE**: Conflicting price signals were detected. Do NOT mention any exact price amount in headlines or descriptions.'
+    localization_section +=
+      '\n**⚠️ PRICE SAFETY RULE**: Conflicting price signals were detected. Do NOT mention any exact price amount in headlines or descriptions.'
   } else if (currentPrice) {
-    console.log(`[PriceEvidence] Offer ${offer.id}: using price source=${priceSource}, value=${currentPrice}`)
+    console.log(
+      `[PriceEvidence] Offer ${offer.id}: using price source=${priceSource}, value=${currentPrice}`
+    )
   }
 
   if (currentPrice) {
@@ -7067,12 +7729,8 @@ This creative focuses on "${intent || intentEn}" user intent.
     } catch {}
   }
   const salesRankSignal = resolveCreativeSalesRankSignal(salesRank)
-  const salesRankForPrompt = salesRankSignal.eligibleForPrompt
-    ? salesRankSignal.raw
-    : null
-  const featuredSalesRank = salesRankSignal.strongSignal
-    ? salesRankSignal.raw
-    : null
+  const salesRankForPrompt = salesRankSignal.eligibleForPrompt ? salesRankSignal.raw : null
+  const featuredSalesRank = salesRankSignal.strongSignal ? salesRankSignal.raw : null
 
   if (salesRankSignal.eligibleForPrompt && salesRankSignal.normalizedRankText) {
     extras.push(`SALES RANK: ${salesRankSignal.normalizedRankText}`)
@@ -7119,13 +7777,17 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (offer.scraped_data) {
     try {
       const scrapedData = JSON.parse(offer.scraped_data)
-      const rawTopReviews: unknown[] = Array.isArray(scrapedData.topReviews) ? scrapedData.topReviews : []
+      const rawTopReviews: unknown[] = Array.isArray(scrapedData.topReviews)
+        ? scrapedData.topReviews
+        : []
       topReviews = rawTopReviews
         .map((review: unknown) => sanitizeReviewSnippetForPrompt(review))
         .filter((review): review is string => !!review)
       const droppedTopReviews = rawTopReviews.length - topReviews.length
       if (droppedTopReviews > 0) {
-        console.log(`[ReviewQuoteGuard] Offer ${offer.id}: dropped ${droppedTopReviews} low-trust top reviews`)
+        console.log(
+          `[ReviewQuoteGuard] Offer ${offer.id}: dropped ${droppedTopReviews} low-trust top reviews`
+        )
       }
     } catch {}
   }
@@ -7136,24 +7798,28 @@ This creative focuses on "${intent || intentEn}" user intent.
     // 🔥 v4.1优化：提取用户语言模式（常用表达词汇）
     // 从评论中提取2-4词的短语作为自然语言参考
     const userPhrases: string[] = []
-    topReviews.slice(0, 5).forEach(review => {
+    topReviews.slice(0, 5).forEach((review) => {
       // 匹配常见的用户表达模式
       const patterns = [
-        /very ([\w\s]+)/gi,           // "very easy to use"
-        /really ([\w\s]+)/gi,         // "really quiet"
-        /so ([\w]+)/gi,               // "so powerful"
-        /love the ([\w\s]+)/gi,       // "love the design"
-        /great ([\w\s]+)/gi,          // "great battery life"
-        /perfect for ([\w\s]+)/gi,    // "perfect for pets"
-        /works ([\w\s]+)/gi,          // "works perfectly"
-        /easy to ([\w]+)/gi,          // "easy to clean"
+        /very ([\w\s]+)/gi, // "very easy to use"
+        /really ([\w\s]+)/gi, // "really quiet"
+        /so ([\w]+)/gi, // "so powerful"
+        /love the ([\w\s]+)/gi, // "love the design"
+        /great ([\w\s]+)/gi, // "great battery life"
+        /perfect for ([\w\s]+)/gi, // "perfect for pets"
+        /works ([\w\s]+)/gi, // "works perfectly"
+        /easy to ([\w]+)/gi, // "easy to clean"
       ]
-      patterns.forEach(pattern => {
+      patterns.forEach((pattern) => {
         const matches = review.match(pattern)
         if (matches) {
-          matches.slice(0, 2).forEach(m => {
+          matches.slice(0, 2).forEach((m) => {
             const cleaned = m.toLowerCase().trim()
-            if (cleaned.length > 5 && cleaned.length < 30 && !REVIEW_QUOTE_BLOCKLIST_PATTERN.test(cleaned)) {
+            if (
+              cleaned.length > 5 &&
+              cleaned.length < 30 &&
+              !REVIEW_QUOTE_BLOCKLIST_PATTERN.test(cleaned)
+            ) {
               userPhrases.push(cleaned)
             }
           })
@@ -7172,14 +7838,14 @@ This creative focuses on "${intent || intentEn}" user intent.
   let useCases: string[] = []
   let commonPainPoints: string[] = []
   // 🆕 新增字段
-  let topPositiveKeywords: Array<{keyword: string; frequency: number; context?: string}> = []
-  let userProfiles: Array<{profile: string; indicators?: string[]}> = []
-  let sentimentDistribution: {positive: number; neutral: number; negative: number} | null = null
+  let topPositiveKeywords: Array<{ keyword: string; frequency: number; context?: string }> = []
+  let userProfiles: Array<{ profile: string; indicators?: string[] }> = []
+  let sentimentDistribution: { positive: number; neutral: number; negative: number } | null = null
   let totalReviews: number = 0
   let averageRating: number = 0
   // 🔥 v3.2新增：量化数据亮点
-  let quantitativeHighlights: Array<{metric: string; value: string; adCopy: string}> = []
-  let competitorMentions: Array<{brand: string; comparison: string; sentiment: string}> = []
+  let quantitativeHighlights: Array<{ metric: string; value: string; adCopy: string }> = []
+  let competitorMentions: Array<{ brand: string; comparison: string; sentiment: string }> = []
 
   // 🎯 合并基础和增强评论分析数据
   if (offer.review_analysis) {
@@ -7225,7 +7891,7 @@ This creative focuses on "${intent || intentEn}" user intent.
       const sentimentMap: any = {
         positive: { positive: 70, neutral: 20, negative: 10 },
         negative: { positive: 10, neutral: 20, negative: 70 },
-        neutral: { positive: 30, neutral: 50, negative: 20 }
+        neutral: { positive: 30, neutral: 50, negative: 20 },
       }
       sentimentDistribution = sentimentMap[enhanced.sentiment.toLowerCase()] || null
     }
@@ -7249,7 +7915,7 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (topPositiveKeywords.length > 0) {
     const positiveKWs = topPositiveKeywords
       .slice(0, 5)
-      .map(k => `"${k.keyword}"(${k.frequency}x)`)
+      .map((k) => `"${k.keyword}"(${k.frequency}x)`)
       .join(', ')
     extras.push(`POSITIVE KEYWORDS: ${positiveKWs}`)
   }
@@ -7258,15 +7924,22 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (sentimentDistribution && totalReviews > 0) {
     const positiveRate = sentimentDistribution.positive
     if (positiveRate >= 80) {
-      extras.push(`SOCIAL PROOF: Strong positive review sentiment from ${totalReviews} customers${averageRating ? `, ${averageRating} stars` : ''}`)
+      extras.push(
+        `SOCIAL PROOF: Strong positive review sentiment from ${totalReviews} customers${averageRating ? `, ${averageRating} stars` : ''}`
+      )
     } else if (positiveRate >= 60) {
-      extras.push(`REVIEWS: ${totalReviews} customer reviews${averageRating ? `, ${averageRating} avg rating` : ''}`)
+      extras.push(
+        `REVIEWS: ${totalReviews} customer reviews${averageRating ? `, ${averageRating} avg rating` : ''}`
+      )
     }
   }
 
   // 🆕 新增：用户画像用于受众定制
   if (userProfiles.length > 0) {
-    const profiles = userProfiles.slice(0, 3).map(p => p.profile).join(', ')
+    const profiles = userProfiles
+      .slice(0, 3)
+      .map((p) => p.profile)
+      .join(', ')
     extras.push(`TARGET PERSONAS: ${profiles}`)
   }
 
@@ -7275,7 +7948,7 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (quantitativeHighlights.length > 0) {
     const topHighlights = quantitativeHighlights
       .slice(0, 5)
-      .map(q => q.adCopy)
+      .map((q) => q.adCopy)
       .join(' | ')
     extras.push(`PROVEN CLAIMS: ${topHighlights}`)
   }
@@ -7284,9 +7957,9 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (competitorMentions.length > 0) {
     // 只提取正面对比（用户认为我们比竞品更好的地方）
     const positiveComparisons = competitorMentions
-      .filter(c => c.sentiment === 'positive')
+      .filter((c) => c.sentiment === 'positive')
       .slice(0, 3)
-      .map(c => `vs ${c.brand}: ${c.comparison}`)
+      .map((c) => `vs ${c.brand}: ${c.comparison}`)
       .join(' | ')
     if (positiveComparisons) {
       extras.push(`COMPETITIVE EDGE: ${positiveComparisons}`)
@@ -7319,24 +7992,25 @@ This creative focuses on "${intent || intentEn}" user intent.
       const scrapedData = JSON.parse(offer.scraped_data)
       productFeatures = scrapedData.features || []
       aboutThisItem = scrapedData.aboutThisItem || []
-      scrapedProductTitle = typeof scrapedData.productName === 'string'
-        ? scrapedData.productName
-        : (typeof scrapedData.title === 'string' ? scrapedData.title : '')
+      scrapedProductTitle =
+        typeof scrapedData.productName === 'string'
+          ? scrapedData.productName
+          : typeof scrapedData.title === 'string'
+            ? scrapedData.title
+            : ''
     } catch {}
   }
   if (!scrapedProductTitle) {
-    scrapedProductTitle = String(offer.product_name || offer.product_title || offer.name || '').trim()
+    scrapedProductTitle = String(
+      offer.product_name || offer.product_title || offer.name || ''
+    ).trim()
   }
   // 优先使用aboutThisItem（更详细），其次使用features
   const featureSource = aboutThisItem.length > 0 ? aboutThisItem : productFeatures
-  const titleAndAboutSignals = extractTitleAndAboutSignals(
-    scrapedProductTitle,
-    featureSource,
-    {
-      targetLanguage: resolvedLanguage.languageCode,
-      brandName: offer.brand,
-    }
-  )
+  const titleAndAboutSignals = extractTitleAndAboutSignals(scrapedProductTitle, featureSource, {
+    targetLanguage: resolvedLanguage.languageCode,
+    brandName: offer.brand,
+  })
 
   if (titleAndAboutSignals.productTitle) {
     extras.push(`AMAZON TITLE: ${truncateSnippetByWords(titleAndAboutSignals.productTitle, 180)}`)
@@ -7348,7 +8022,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     // 提取前5个最重要的产品特点（限制每条100字符避免过长）
     const topFeatures = featureSource
       .slice(0, 5)
-      .map((f: string) => f.length > 100 ? f.substring(0, 100) + '...' : f)
+      .map((f: string) => (f.length > 100 ? f.substring(0, 100) + '...' : f))
       .join(' | ')
     extras.push(`PRODUCT FEATURES: ${topFeatures}`)
   }
@@ -7370,7 +8044,8 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (offer.scraped_data) {
     try {
       const scrapedData = JSON.parse(offer.scraped_data)
-      const storeDescription = typeof scrapedData.storeDescription === 'string' ? scrapedData.storeDescription : ''
+      const storeDescription =
+        typeof scrapedData.storeDescription === 'string' ? scrapedData.storeDescription : ''
       if (storeDescription) {
         const descLower = storeDescription.toLowerCase()
         if (/free\\s+uk\\s+(delivery|shipping)/i.test(descLower)) {
@@ -7395,7 +8070,7 @@ This creative focuses on "${intent || intentEn}" user intent.
           .slice(0, 3)
           .map((p: any) => ({
             name: p.name || p.productName,
-            price: p.price
+            price: p.price,
           }))
         storePriceSamples = priceSamples
 
@@ -7419,9 +8094,10 @@ This creative focuses on "${intent || intentEn}" user intent.
           const minPrice = Math.min(...storePriceValues)
           const maxPrice = Math.max(...storePriceValues)
           if (minPrice > 0 && maxPrice > 0) {
-            storePriceRange = minPrice === maxPrice
-              ? `${minPrice.toFixed(2)}`
-              : `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`
+            storePriceRange =
+              minPrice === maxPrice
+                ? `${minPrice.toFixed(2)}`
+                : `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`
           }
         }
       }
@@ -7477,25 +8153,33 @@ This creative focuses on "${intent || intentEn}" user intent.
         // 收集可验证事实（仅单品链接来源）
         supplementalItems.slice(0, 3).forEach((item: any) => {
           const name = formatSupplementalName(item.name)
-          if (item.price) supplementalVerifiedFacts.push(`- SUPPLEMENTAL ${name} PRICE: ${item.price}`)
-          if (item.rating) supplementalVerifiedFacts.push(`- SUPPLEMENTAL ${name} RATING: ${item.rating}`)
-          if (item.reviewCount) supplementalVerifiedFacts.push(`- SUPPLEMENTAL ${name} REVIEW COUNT: ${item.reviewCount}`)
+          if (item.price)
+            supplementalVerifiedFacts.push(`- SUPPLEMENTAL ${name} PRICE: ${item.price}`)
+          if (item.rating)
+            supplementalVerifiedFacts.push(`- SUPPLEMENTAL ${name} RATING: ${item.rating}`)
+          if (item.reviewCount)
+            supplementalVerifiedFacts.push(
+              `- SUPPLEMENTAL ${name} REVIEW COUNT: ${item.reviewCount}`
+            )
         })
 
         const supplementalPriceValues = supplementalItems
           .map((p: any) => parsePrice(p?.price))
           .filter((v: any) => typeof v === 'number' && !Number.isNaN(v)) as number[]
         const storePriceValues = Array.isArray(scrapedData.products)
-          ? scrapedData.products.map((p: any) => parsePrice(p?.price)).filter((v: any) => typeof v === 'number' && !Number.isNaN(v)) as number[]
+          ? (scrapedData.products
+              .map((p: any) => parsePrice(p?.price))
+              .filter((v: any) => typeof v === 'number' && !Number.isNaN(v)) as number[])
           : []
         const allPriceValues = [...supplementalPriceValues, ...storePriceValues]
         if (allPriceValues.length > 0) {
           const minPrice = Math.min(...allPriceValues)
           const maxPrice = Math.max(...allPriceValues)
           if (minPrice > 0 && maxPrice > 0) {
-            storePriceRange = minPrice === maxPrice
-              ? `${minPrice.toFixed(2)}`
-              : `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`
+            storePriceRange =
+              minPrice === maxPrice
+                ? `${minPrice.toFixed(2)}`
+                : `${minPrice.toFixed(2)}-${maxPrice.toFixed(2)}`
           }
         }
       }
@@ -7507,7 +8191,9 @@ This creative focuses on "${intent || intentEn}" user intent.
   }
   // 如果是Store页面，添加热销洞察到Prompt
   if (hotInsights && topProducts.length > 0) {
-    extras.push(`STORE HOT PRODUCTS: ${topProducts.slice(0, 3).join(', ')} (Avg: ${hotInsights.avgRating.toFixed(1)} stars, ${hotInsights.avgReviews} reviews)`)
+    extras.push(
+      `STORE HOT PRODUCTS: ${topProducts.slice(0, 3).join(', ')} (Avg: ${hotInsights.avgRating.toFixed(1)} stars, ${hotInsights.avgReviews} reviews)`
+    )
   }
 
   // 🔥 2025-12-10优化：添加销售热度数据到Prompt（强社会证明信号）
@@ -7565,13 +8251,13 @@ This creative focuses on "${intent || intentEn}" user intent.
 
       if (supplementalProducts.length > 0) {
         const supplementalFeatures = supplementalProducts
-          .flatMap((p: any) => Array.isArray(p.productFeatures) ? p.productFeatures : [])
+          .flatMap((p: any) => (Array.isArray(p.productFeatures) ? p.productFeatures : []))
           .filter(Boolean)
         const supplementalReviews = supplementalProducts
-          .flatMap((p: any) => Array.isArray(p.reviewHighlights) ? p.reviewHighlights : [])
+          .flatMap((p: any) => (Array.isArray(p.reviewHighlights) ? p.reviewHighlights : []))
           .filter(Boolean)
         const supplementalTopReviews = supplementalProducts
-          .flatMap((p: any) => Array.isArray(p.topReviews) ? p.topReviews : [])
+          .flatMap((p: any) => (Array.isArray(p.topReviews) ? p.topReviews : []))
           .filter(Boolean)
         const supplementalCategories = supplementalProducts
           .map((p: any) => p.category)
@@ -7588,10 +8274,7 @@ This creative focuses on "${intent || intentEn}" user intent.
           ]
         }
         if (supplementalCategories.length > 0) {
-          storeCategoryKeywords = [
-            ...storeCategoryKeywords,
-            ...supplementalCategories,
-          ]
+          storeCategoryKeywords = [...storeCategoryKeywords, ...supplementalCategories]
         }
       }
     } catch {}
@@ -7613,8 +8296,8 @@ This creative focuses on "${intent || intentEn}" user intent.
 
   if (linkType === 'store') {
     const uniqueClaims = [...new Set(storeDescriptionClaims)]
-    uniqueClaims.forEach(claim => supplementalVerifiedFacts.push(`- STORE CLAIM: ${claim}`))
-    storePriceSamples.slice(0, 2).forEach(sample => {
+    uniqueClaims.forEach((claim) => supplementalVerifiedFacts.push(`- STORE CLAIM: ${claim}`))
+    storePriceSamples.slice(0, 2).forEach((sample) => {
       const name = formatSupplementalName(sample.name)
       if (name && sample.price) {
         supplementalVerifiedFacts.push(`- STORE ITEM PRICE: ${name} ${sample.price}`)
@@ -7627,7 +8310,10 @@ This creative focuses on "${intent || intentEn}" user intent.
 
   // 🆕 多单品卖点混合（店铺模式）：强约束提示
   if (linkType === 'store' && supplementalHookLines.length > 0) {
-    const hooksList = supplementalHookLines.slice(0, 6).map(h => `- ${h}`).join('\n')
+    const hooksList = supplementalHookLines
+      .slice(0, 6)
+      .map((h) => `- ${h}`)
+      .join('\n')
     store_creative_instructions += `
 
 ### 🧩 多单品卖点混合（必须）
@@ -7644,7 +8330,13 @@ ${hooksList}
   let v32Analysis: {
     storeQualityLevel?: string
     categoryDiversification?: { level: string; categories?: string[]; primaryCategory?: string }
-    hotInsights?: { avgRating?: number; avgReviews?: number; topProductsCount?: number; bestSeller?: string; priceRange?: { min: number; max: number } }
+    hotInsights?: {
+      avgRating?: number
+      avgReviews?: number
+      topProductsCount?: number
+      bestSeller?: string
+      priceRange?: { min: number; max: number }
+    }
     marketFit?: { score: number; level: string; strengths?: string[]; gaps?: string[] }
     credibilityLevel?: { score: number; level: string; factors?: string[] }
     categoryPosition?: { rank?: string; percentile?: number; competitors?: number }
@@ -7668,7 +8360,9 @@ ${hooksList}
     // 分类多样化
     if (v32Analysis.categoryDiversification) {
       const catDiv = v32Analysis.categoryDiversification
-      extras.push(`CATEGORY FOCUS: ${catDiv.level}${catDiv.primaryCategory ? ` - Primary: ${catDiv.primaryCategory}` : ''}`)
+      extras.push(
+        `CATEGORY FOCUS: ${catDiv.level}${catDiv.primaryCategory ? ` - Primary: ${catDiv.primaryCategory}` : ''}`
+      )
       if (catDiv.categories && catDiv.categories.length > 0) {
         extras.push(`PRODUCT RANGE: ${catDiv.categories.slice(0, 4).join(', ')}`)
       }
@@ -7753,10 +8447,14 @@ ${hooksList}
         const ratingPos = compAnalysis.ratingPosition
         switch (ratingPos.ratingAdvantage) {
           case 'top_rated':
-            extras.push(`RATING ADVANTAGE: [TOP RATED] Highest customer satisfaction (${ratingPos.ourRating} stars)`)
+            extras.push(
+              `RATING ADVANTAGE: [TOP RATED] Highest customer satisfaction (${ratingPos.ourRating} stars)`
+            )
             break
           case 'above_average':
-            extras.push(`RATING ADVANTAGE: [HIGHLY RATED] Above average at ${ratingPos.ourRating} stars`)
+            extras.push(
+              `RATING ADVANTAGE: [HIGHLY RATED] Above average at ${ratingPos.ourRating} stars`
+            )
             break
         }
       }
@@ -7801,7 +8499,9 @@ ${hooksList}
           .map((w: any) => w.adCopy)
           .filter((ad: string) => ad && ad.length > 0)
         if (highFreqWeaknesses.length > 0) {
-          extras.push(`COMPETITOR WEAKNESSES (use to differentiate): ${highFreqWeaknesses.join(' | ')}`)
+          extras.push(
+            `COMPETITOR WEAKNESSES (use to differentiate): ${highFreqWeaknesses.join(' | ')}`
+          )
         }
 
         // 单独提取详细弱点描述，用于更深度的广告创意
@@ -7825,7 +8525,9 @@ ${hooksList}
         // 去重并取前10个
         const uniqueCompFeatures = [...new Set(competitorFeatures)].slice(0, 10)
         if (uniqueCompFeatures.length > 0) {
-          extras.push(`COMPETITOR FEATURES (for differentiation): ${uniqueCompFeatures.join(' | ')}`)
+          extras.push(
+            `COMPETITOR FEATURES (for differentiation): ${uniqueCompFeatures.join(' | ')}`
+          )
         }
       }
 
@@ -7842,10 +8544,17 @@ ${hooksList}
       const scrapedData = JSON.parse(offer.scraped_data)
 
       // 1. User Reviews（真实用户评论）
-      if (scrapedData.reviews && Array.isArray(scrapedData.reviews) && scrapedData.reviews.length > 0) {
-        const reviewSummaries = scrapedData.reviews.slice(0, 5).map((r: any) =>
-          `${r.rating}★ - ${r.author}: ${r.title}${r.body ? `. ${r.body.substring(0, 80)}${r.body.length > 80 ? '...' : ''}` : ''}`
-        )
+      if (
+        scrapedData.reviews &&
+        Array.isArray(scrapedData.reviews) &&
+        scrapedData.reviews.length > 0
+      ) {
+        const reviewSummaries = scrapedData.reviews
+          .slice(0, 5)
+          .map(
+            (r: any) =>
+              `${r.rating}★ - ${r.author}: ${r.title}${r.body ? `. ${r.body.substring(0, 80)}${r.body.length > 80 ? '...' : ''}` : ''}`
+          )
         extras.push(`REAL USER REVIEWS: ${reviewSummaries.join(' | ')}`)
 
         // 从评论中提取用户常用表达模式
@@ -7853,10 +8562,15 @@ ${hooksList}
         scrapedData.reviews.slice(0, 5).forEach((r: any) => {
           if (r.body) {
             const patterns = [
-              /very ([\w\s]+)/gi, /really ([\w\s]+)/gi, /love(s?)( the)?/gi,
-              /great ([\w\s]+)/gi, /perfect for/gi, /easy to/gi, /highly recommend/gi
+              /very ([\w\s]+)/gi,
+              /really ([\w\s]+)/gi,
+              /love(s?)( the)?/gi,
+              /great ([\w\s]+)/gi,
+              /perfect for/gi,
+              /easy to/gi,
+              /highly recommend/gi,
             ]
-            patterns.forEach(pattern => {
+            patterns.forEach((pattern) => {
               const matches = r.body.match(pattern)
               if (matches) {
                 matches.slice(0, 2).forEach((m: string) => {
@@ -7876,9 +8590,11 @@ ${hooksList}
       // 2. FAQs（常见问题）
       if (scrapedData.faqs && Array.isArray(scrapedData.faqs) && scrapedData.faqs.length > 0) {
         // 将FAQ转化为广告创意素材：回答用户关心的问题
-        const faqHighlights = scrapedData.faqs.slice(0, 4).map((f: any) =>
-          `Q: ${f.question.substring(0, 50)}${f.question.length > 50 ? '...' : ''}`
-        )
+        const faqHighlights = scrapedData.faqs
+          .slice(0, 4)
+          .map(
+            (f: any) => `Q: ${f.question.substring(0, 50)}${f.question.length > 50 ? '...' : ''}`
+          )
         extras.push(`CUSTOMER FAQs: ${faqHighlights.join(' | ')}`)
       }
 
@@ -7892,28 +8608,47 @@ ${hooksList}
       }
 
       // 4. Package Options（套餐选项）
-      if (scrapedData.packages && Array.isArray(scrapedData.packages) && scrapedData.packages.length > 0) {
-        const packageInfo = scrapedData.packages.slice(0, 3).map((p: any) =>
-          `${p.name || 'Package'}${p.price ? ` (${p.price})` : ''}: ${(p.includes || []).slice(0, 3).join(', ')}`
-        )
+      if (
+        scrapedData.packages &&
+        Array.isArray(scrapedData.packages) &&
+        scrapedData.packages.length > 0
+      ) {
+        const packageInfo = scrapedData.packages
+          .slice(0, 3)
+          .map(
+            (p: any) =>
+              `${p.name || 'Package'}${p.price ? ` (${p.price})` : ''}: ${(p.includes || []).slice(0, 3).join(', ')}`
+          )
         extras.push(`PACKAGE OPTIONS: ${packageInfo.join(' | ')}`)
       }
 
       // 5. Social Proof（社会证明）
-      if (scrapedData.socialProof && Array.isArray(scrapedData.socialProof) && scrapedData.socialProof.length > 0) {
-        const socialMetrics = scrapedData.socialProof.map((sp: any) =>
-          `${sp.metric}: ${sp.value}`
-        ).join(' | ')
+      if (
+        scrapedData.socialProof &&
+        Array.isArray(scrapedData.socialProof) &&
+        scrapedData.socialProof.length > 0
+      ) {
+        const socialMetrics = scrapedData.socialProof
+          .map((sp: any) => `${sp.metric}: ${sp.value}`)
+          .join(' | ')
         extras.push(`SOCIAL PROOF METRICS: ${socialMetrics}`)
       }
 
       // 6. Core Features（核心卖点）
-      if (scrapedData.coreFeatures && Array.isArray(scrapedData.coreFeatures) && scrapedData.coreFeatures.length > 0) {
+      if (
+        scrapedData.coreFeatures &&
+        Array.isArray(scrapedData.coreFeatures) &&
+        scrapedData.coreFeatures.length > 0
+      ) {
         extras.push(`CORE FEATURES: ${scrapedData.coreFeatures.slice(0, 5).join(', ')}`)
       }
 
       // 7. Secondary Features（次要特性）
-      if (scrapedData.secondaryFeatures && Array.isArray(scrapedData.secondaryFeatures) && scrapedData.secondaryFeatures.length > 0) {
+      if (
+        scrapedData.secondaryFeatures &&
+        Array.isArray(scrapedData.secondaryFeatures) &&
+        scrapedData.secondaryFeatures.length > 0
+      ) {
         extras.push(`ADDITIONAL FEATURES: ${scrapedData.secondaryFeatures.slice(0, 5).join(', ')}`)
       }
 
@@ -7951,7 +8686,9 @@ ${hooksList}
   if (offer.ai_reviews) {
     aiReviews = safeParseJson(offer.ai_reviews, null)
     if (aiReviews) {
-      console.log(`[AdCreativeGenerator] ⭐ 使用AI评论洞察: rating=${aiReviews.rating}, sentiment=${aiReviews.sentiment}`)
+      console.log(
+        `[AdCreativeGenerator] ⭐ 使用AI评论洞察: rating=${aiReviews.rating}, sentiment=${aiReviews.sentiment}`
+      )
     }
   }
 
@@ -7963,7 +8700,8 @@ ${hooksList}
 
   const promptKeywordPlan = resolveAdCreativePromptKeywordPlan({
     extractedKeywords:
-      Array.isArray(precomputedKeywordSet?.keywordsWithVolume) && precomputedKeywordSet.keywordsWithVolume.length > 0
+      Array.isArray(precomputedKeywordSet?.keywordsWithVolume) &&
+      precomputedKeywordSet.keywordsWithVolume.length > 0
         ? precomputedKeywordSet.keywordsWithVolume
         : extractedElements?.keywords,
     aiKeywords,
@@ -7987,7 +8725,7 @@ ${hooksList}
     productDescription: rawProductDescription,
     uniqueSellingPoints: rawUniqueSellingPoints,
     keywords: promptKeywordPlan.promptKeywords,
-    targetLanguage
+    targetLanguage,
   })
 
   // Build extras_data section（去噪，避免无关维修/工具类噪声污染Prompt）
@@ -8005,9 +8743,13 @@ ${hooksList}
   // 只使用“产品数据”来源，避免把prompt中的示例数字误当作证据
   const verifiedFacts: string[] = []
   if (priceEvidenceBlocked) {
-    verifiedFacts.push('- PRICE EVIDENCE BLOCKED: Conflicting price signals detected. Do NOT mention any exact price amount.')
+    verifiedFacts.push(
+      '- PRICE EVIDENCE BLOCKED: Conflicting price signals detected. Do NOT mention any exact price amount.'
+    )
   }
-  const verifiedPrimaryProduct = formatSupplementalName(policySafeProductName.text || String(rawProductName || ''))
+  const verifiedPrimaryProduct = formatSupplementalName(
+    policySafeProductName.text || String(rawProductName || '')
+  )
   if (verifiedPrimaryProduct) verifiedFacts.push(`- PRIMARY PRODUCT: ${verifiedPrimaryProduct}`)
   if (offer.category) verifiedFacts.push(`- PRIMARY CATEGORY: ${offer.category}`)
   if (currentPrice) verifiedFacts.push(`- PRICE: ${currentPrice}`)
@@ -8015,7 +8757,9 @@ ${hooksList}
   if (discount) verifiedFacts.push(`- DISCOUNT: ${discount}`)
   if (activePromotions.length > 0) {
     const p = activePromotions[0]
-    verifiedFacts.push(`- PROMOTION: ${p.description}${p.code ? ` (Code: ${p.code})` : ''}${p.validUntil ? ` (Until: ${p.validUntil})` : ''}`)
+    verifiedFacts.push(
+      `- PROMOTION: ${p.description}${p.code ? ` (Code: ${p.code})` : ''}${p.validUntil ? ` (Until: ${p.validUntil})` : ''}`
+    )
   }
   if (salesRankForPrompt) verifiedFacts.push(`- SALES RANK: ${salesRankForPrompt}`)
   if (badge) verifiedFacts.push(`- BADGE: ${badge}`)
@@ -8024,7 +8768,9 @@ ${hooksList}
   if (totalReviews > 0) verifiedFacts.push(`- TOTAL REVIEWS: ${totalReviews}`)
   if (averageRating > 0) verifiedFacts.push(`- AVERAGE RATING: ${averageRating}`)
   if (linkType === 'store' && topProducts.length > 0) {
-    verifiedFacts.push(`- VERIFIED HOT PRODUCTS: ${topProducts.slice(0, 3).map(formatSupplementalName).filter(Boolean).join(', ')}`)
+    verifiedFacts.push(
+      `- VERIFIED HOT PRODUCTS: ${topProducts.slice(0, 3).map(formatSupplementalName).filter(Boolean).join(', ')}`
+    )
   }
   if (supplementalVerifiedFacts.length > 0) {
     const filteredSupplementalFacts = filterPromptExtrasByRelevance(
@@ -8039,14 +8785,24 @@ ${hooksList}
     verifiedFacts.push(...filteredSupplementalFacts.filtered.slice(0, 6))
   }
   if (quantitativeHighlights.length > 0) {
-    verifiedFacts.push(`- QUANTITATIVE HIGHLIGHTS: ${quantitativeHighlights.slice(0, 3).map(h => `${h.metric}=${h.value}`).join(', ')}`)
+    verifiedFacts.push(
+      `- QUANTITATIVE HIGHLIGHTS: ${quantitativeHighlights
+        .slice(0, 3)
+        .map((h) => `${h.metric}=${h.value}`)
+        .join(', ')}`
+    )
   }
 
   variables.verified_facts_section = verifiedFacts.length
     ? `\n## ✅ VERIFIED FACTS (Only use these claims; do NOT invent)\n${verifiedFacts.join('\n')}\n`
     : `\n## ✅ VERIFIED FACTS (Only use these claims; do NOT invent)\n- (No verified facts provided. Do NOT use numbers, discounts, or guarantees.)\n`
   const hasVerifiedFacts = verifiedFacts.length > 0
-  const hasPromoEvidence = !!(discount || activePromotions.length > 0 || currentPrice || originalPrice)
+  const hasPromoEvidence = !!(
+    discount ||
+    activePromotions.length > 0 ||
+    currentPrice ||
+    originalPrice
+  )
   const hasUrgencyEvidence = !!availability || activePromotions.some((p: any) => !!p?.validUntil)
 
   // 🔥 Build promotion_section（v2.1新增）
@@ -8126,19 +8882,19 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
       const promptBrandTokens = getPureBrandKeywords(offer.brand || '')
       const promptBrandKeywordCount = countBrandContainingKeywords(
         extractedElements.keywords
-          .filter(k => !!k?.keyword)
-          .map(k => ({ keyword: k.keyword, searchVolume: k.searchVolume })),
+          .filter((k) => !!k?.keyword)
+          .map((k) => ({ keyword: k.keyword, searchVolume: k.searchVolume })),
         offer.brand || '',
         promptBrandTokens
       )
       const promptDynamicNonBrandMinSearchVolume =
         resolveNonBrandMinSearchVolumeByBrandKeywordCount(promptBrandKeywordCount)
-      const hasAnyVolume = extractedElements.keywords.some(k => k.searchVolume > 0)
+      const hasAnyVolume = extractedElements.keywords.some((k) => k.searchVolume > 0)
       const promptVolumeUnavailable = extractedElements.keywords.some((k: any) =>
         isSearchVolumeUnavailableReason(k?.volumeUnavailableReason)
       )
       const topKeywords = extractedElements.keywords
-        .filter(k => {
+        .filter((k) => {
           if (!hasAnyVolume || promptVolumeUnavailable) return true
           const keywordText = String(k.keyword || '')
           const isBrandKeyword =
@@ -8148,7 +8904,9 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
           return k.searchVolume >= promptDynamicNonBrandMinSearchVolume
         })
         .slice(0, 30)
-        .map(k => (k.searchVolume > 0 ? `"${k.keyword}" (${k.searchVolume}/mo)` : `"${k.keyword}"`))
+        .map((k) =>
+          k.searchVolume > 0 ? `"${k.keyword}" (${k.searchVolume}/mo)` : `"${k.keyword}"`
+        )
       if (topKeywords.length > 0) {
         extracted_elements_section += `\n**EXTRACTED KEYWORDS** (from product data, validated by Keyword Planner):\n${topKeywords.join(', ')}\n`
       }
@@ -8169,22 +8927,22 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     if (titleAndAboutSignals.sitelinkIdeas.length > 0) {
       const sitelinkHints = titleAndAboutSignals.sitelinkIdeas
         .slice(0, 6)
-        .map(item => `${item.text} - ${item.description}`)
+        .map((item) => `${item.text} - ${item.description}`)
       extracted_elements_section += `\n**ABOUT-DERIVED SITELINK IDEAS** (text/desc style):\n${sitelinkHints.join(' | ')}\n`
     }
 
     // 🔥 独立站增强：从extraction_metadata中读取SERP补充的callout/sitelink（如果有）
     const extractionMetadata = safeParseJson((offer as any).extraction_metadata, null)
-    const serpCalloutsRaw =
-      Array.isArray(extractionMetadata?.serpCallouts) ? extractionMetadata.serpCallouts
-        : (Array.isArray(extractionMetadata?.brandSearchSupplement?.extracted?.callouts)
-            ? extractionMetadata.brandSearchSupplement.extracted.callouts
-            : [])
-    const serpSitelinksRaw =
-      Array.isArray(extractionMetadata?.serpSitelinks) ? extractionMetadata.serpSitelinks
-        : (Array.isArray(extractionMetadata?.brandSearchSupplement?.extracted?.sitelinks)
-            ? extractionMetadata.brandSearchSupplement.extracted.sitelinks
-            : [])
+    const serpCalloutsRaw = Array.isArray(extractionMetadata?.serpCallouts)
+      ? extractionMetadata.serpCallouts
+      : Array.isArray(extractionMetadata?.brandSearchSupplement?.extracted?.callouts)
+        ? extractionMetadata.brandSearchSupplement.extracted.callouts
+        : []
+    const serpSitelinksRaw = Array.isArray(extractionMetadata?.serpSitelinks)
+      ? extractionMetadata.serpSitelinks
+      : Array.isArray(extractionMetadata?.brandSearchSupplement?.extracted?.sitelinks)
+        ? extractionMetadata.brandSearchSupplement.extracted.sitelinks
+        : []
 
     const serpCallouts = serpCalloutsRaw
       .filter((c: any) => typeof c === 'string' && c.trim().length > 0)
@@ -8219,16 +8977,45 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   variables.brand_analysis_section = brand_analysis_section
 
   // Build all dynamic guidance sections
-  variables.headline_brand_guidance = buildHeadlineBrandGuidance(badge, featuredSalesRank, offer, hotInsights, topProducts, sentimentDistribution, averageRating)
-  variables.headline_feature_guidance = buildHeadlineFeatureGuidance(technicalDetails, reviewHighlights, commonPraises, topPositiveKeywords, featureSource)
-  variables.headline_promo_guidance = buildHeadlinePromoGuidance(discount, activePromotions, hasPromoEvidence, priceEvidenceBlocked)
+  variables.headline_brand_guidance = buildHeadlineBrandGuidance(
+    badge,
+    featuredSalesRank,
+    offer,
+    hotInsights,
+    topProducts,
+    sentimentDistribution,
+    averageRating
+  )
+  variables.headline_feature_guidance = buildHeadlineFeatureGuidance(
+    technicalDetails,
+    reviewHighlights,
+    commonPraises,
+    topPositiveKeywords,
+    featureSource
+  )
+  variables.headline_promo_guidance = buildHeadlinePromoGuidance(
+    discount,
+    activePromotions,
+    hasPromoEvidence,
+    priceEvidenceBlocked
+  )
   variables.headline_cta_guidance = buildHeadlineCTAGuidance(primeEligible, purchaseReasons)
-  variables.headline_urgency_guidance = buildHeadlineUrgencyGuidance(availability, hasUrgencyEvidence)
+  variables.headline_urgency_guidance = buildHeadlineUrgencyGuidance(
+    availability,
+    hasUrgencyEvidence
+  )
 
   variables.description_1_guidance = buildDescription1Guidance(badge, featuredSalesRank)
   variables.description_2_guidance = buildDescription2Guidance(primeEligible, activePromotions)
   variables.description_3_guidance = buildDescription3Guidance(useCases, userProfiles)
-  variables.description_4_guidance = buildDescription4Guidance(topReviews, hotInsights, topProducts, sentimentDistribution, totalReviews, averageRating)
+  variables.description_4_guidance = buildDescription4Guidance(
+    topReviews,
+    hotInsights,
+    topProducts,
+    sentimentDistribution,
+    totalReviews,
+    averageRating
+  )
 
   // 优先使用AI增强数据，fallback到原有数据
   variables.review_data_summary = buildReviewDataSummary(
@@ -8239,8 +9026,17 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     aiReviews
   )
 
-  variables.callout_guidance = buildCalloutGuidance(salesRankForPrompt, primeEligible, availability, badge, activePromotions, hasVerifiedFacts)
-  const searchTermFeedbackGuidance = buildSearchTermFeedbackGuidanceSection(runtimeGuidance?.searchTermFeedbackHints)
+  variables.callout_guidance = buildCalloutGuidance(
+    salesRankForPrompt,
+    primeEligible,
+    availability,
+    badge,
+    activePromotions,
+    hasVerifiedFacts
+  )
+  const searchTermFeedbackGuidance = buildSearchTermFeedbackGuidanceSection(
+    runtimeGuidance?.searchTermFeedbackHints
+  )
   const excludeKeywordLines: string[] = []
   const retainedKeywordProtectionSet = new Set(
     keywordUsagePlan.retainedNonBrandKeywords
@@ -8249,9 +9045,9 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   )
   const filteredExcludeKeywords = Array.isArray(excludeKeywords)
     ? excludeKeywords.filter((keyword) => {
-      const normalized = normalizeGoogleAdsKeyword(String(keyword || ''))
-      return normalized ? !retainedKeywordProtectionSet.has(normalized) : false
-    })
+        const normalized = normalizeGoogleAdsKeyword(String(keyword || ''))
+        return normalized ? !retainedKeywordProtectionSet.has(normalized) : false
+      })
     : []
   if (filteredExcludeKeywords.length > 0) {
     excludeKeywordLines.push(`- 已用关键词: ${filteredExcludeKeywords.slice(0, 10).join(', ')}`)
@@ -8267,10 +9063,9 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   const validatedKeywordsForPrompt = promptKeywordPlan.validatedPromptKeywords
   const titleAboutKeywordSeeds = promptKeywordPlan.contextualPromptKeywords
   const keywordsForPrompt = promptKeywordPlan.promptKeywords
-  const policyMatchedTerms = Array.from(new Set([
-    ...policySignalTerms,
-    ...promptKeywordPlan.policyMatchedTerms
-  ])).slice(0, 12)
+  const policyMatchedTerms = Array.from(
+    new Set([...policySignalTerms, ...promptKeywordPlan.policyMatchedTerms])
+  ).slice(0, 12)
   if (policyMatchedTerms.length > 0) {
     excludeKeywordLines.push(`- 政策敏感词硬排除: ${policyMatchedTerms.join(', ')}`)
   }
@@ -8300,10 +9095,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     productName: verifiedPrimaryProduct,
     targetCountry: String(offer.target_country || ''),
     targetLanguage,
-    topProducts: topProducts
-      .slice(0, 3)
-      .map(formatSupplementalName)
-      .filter(Boolean),
+    topProducts: topProducts.slice(0, 3).map(formatSupplementalName).filter(Boolean),
     keywords: keywordsForPrompt,
   })
   const typeIntentGuidanceSection = buildTypeIntentGuidanceSection(
@@ -8314,23 +9106,37 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   const personaScenarioGuidanceSection = buildPersonaScenarioGuidanceSection({
     bucket: normalizedPromptBucket,
     targetAudience: String(offer.target_audience || ''),
-    useCases: Array.from(new Set([
-      ...useCases,
-      ...((extractedElements?.productInfo?.useCases || []).map((item: any) => String(item || '').trim()))
-    ])).filter(Boolean).slice(0, 6),
+    useCases: Array.from(
+      new Set([
+        ...useCases,
+        ...(extractedElements?.productInfo?.useCases || []).map((item: any) =>
+          String(item || '').trim()
+        ),
+      ])
+    )
+      .filter(Boolean)
+      .slice(0, 6),
     userProfiles,
-    linkType
+    linkType,
   })
-  const policyGuidanceSection = buildGoogleAdsPolicyPromptGuardrails(targetLanguage, policyMatchedTerms, { mode: policyGuardMode })
-  const retryFailureGuidanceSection = buildRetryFailureGuidanceSection(runtimeGuidance?.retryFailureType)
+  const policyGuidanceSection = buildGoogleAdsPolicyPromptGuardrails(
+    targetLanguage,
+    policyMatchedTerms,
+    { mode: policyGuardMode }
+  )
+  const retryFailureGuidanceSection = buildRetryFailureGuidanceSection(
+    runtimeGuidance?.retryFailureType
+  )
   variables.type_intent_guidance_section = [
     creativeTypeConstraintSection,
     typeIntentGuidanceSection,
     personaScenarioGuidanceSection,
     policyGuidanceSection,
     searchTermFeedbackGuidance.section,
-    retryFailureGuidanceSection
-  ].filter(Boolean).join('\n')
+    retryFailureGuidanceSection,
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   // 🎯 新增：AI竞争优势section
   let ai_competitive_section = ''
@@ -8535,19 +9341,20 @@ export type BucketType = 'A' | 'B' | 'C' | 'D' | 'S'
  * @returns theme 描述字符串
  */
 export function getThemeByBucket(bucket: BucketType, linkType: 'product' | 'store'): string {
-  const normalizedBucket: 'A' | 'B' | 'D' = bucket === 'C' ? 'B' : bucket === 'S' ? 'D' : bucket as 'A' | 'B' | 'D'
+  const normalizedBucket: 'A' | 'B' | 'D' =
+    bucket === 'C' ? 'B' : bucket === 'S' ? 'D' : (bucket as 'A' | 'B' | 'D')
   if (linkType === 'store') {
     const themes: Record<'A' | 'B' | 'D', string> = {
-      'A': '品牌意图导向 - 广告语和关键词必须同时关联品牌与真实商品集合',
-      'B': '热门商品型号/产品族意图导向 - 聚焦店铺热门商品型号/产品族，关键词统一完全匹配',
-      'D': '商品需求意图导向 - 聚焦品牌下商品需求、功能、场景和产品线覆盖',
+      A: '品牌意图导向 - 广告语和关键词必须同时关联品牌与真实商品集合',
+      B: '热门商品型号/产品族意图导向 - 聚焦店铺热门商品型号/产品族，关键词统一完全匹配',
+      D: '商品需求意图导向 - 聚焦品牌下商品需求、功能、场景和产品线覆盖',
     }
     return themes[normalizedBucket]
   } else {
     const themes: Record<'A' | 'B' | 'D', string> = {
-      'A': '品牌意图导向 - 广告语和关键词必须同时关联品牌与当前商品',
-      'B': '商品型号/产品族意图导向 - 聚焦当前商品型号/产品族，关键词统一完全匹配',
-      'D': '商品需求意图导向 - 聚焦品牌下商品需求、功能、场景和产品线覆盖',
+      A: '品牌意图导向 - 广告语和关键词必须同时关联品牌与当前商品',
+      B: '商品型号/产品族意图导向 - 聚焦当前商品型号/产品族，关键词统一完全匹配',
+      D: '商品需求意图导向 - 聚焦品牌下商品需求、功能、场景和产品线覆盖',
     }
     return themes[normalizedBucket]
   }
@@ -8556,7 +9363,15 @@ export function getThemeByBucket(bucket: BucketType, linkType: 'product' | 'stor
 /**
  * Helper functions to build dynamic guidance sections
  */
-function buildHeadlineBrandGuidance(badge: string | null, featuredSalesRank: string | null, offer: any, hotInsights: any, topProducts: string[], sentimentDistribution: any, averageRating: number): string {
+function buildHeadlineBrandGuidance(
+  badge: string | null,
+  featuredSalesRank: string | null,
+  offer: any,
+  hotInsights: any,
+  topProducts: string[],
+  sentimentDistribution: any,
+  averageRating: number
+): string {
   const rankHint = featuredSalesRank
     ? `Optional social proof: use SALES RANK only when truly top-tier (e.g., "${featuredSalesRank}")`
     : 'Do NOT invent ranking claims such as "#1" or "Best Seller" without strong evidence'
@@ -8567,12 +9382,29 @@ function buildHeadlineBrandGuidance(badge: string | null, featuredSalesRank: str
 `
 }
 
-function buildHeadlineFeatureGuidance(technicalDetails: Record<string, string>, reviewHighlights: string[], commonPraises: string[], topPositiveKeywords: Array<{keyword: string; frequency: number}>, productFeatures: string[] = []): string {
+function buildHeadlineFeatureGuidance(
+  technicalDetails: Record<string, string>,
+  reviewHighlights: string[],
+  commonPraises: string[],
+  topPositiveKeywords: Array<{ keyword: string; frequency: number }>,
+  productFeatures: string[] = []
+): string {
   // 🔥 2025-12-10优化：整合productFeatures到guidance中
-  const featureExamples = productFeatures.length > 0
-    ? `\n  * **SCRAPED FEATURES** (use these for authentic headlines): ${productFeatures.slice(0, 3).map(f => `"${f.substring(0, 30)}..."`).join(', ')}`
-    : ''
-  return `- Feature (4): ${Object.keys(technicalDetails).length > 0 ? 'Use SPECS data for technical features' : 'Core product benefits'}${reviewHighlights.length > 0 ? `, incorporate REVIEW INSIGHTS (e.g., "${reviewHighlights[0]}")` : ''}${commonPraises.length > 0 ? `. **USER PRAISES**: Use authentic features: ${commonPraises.slice(0, 2).join(', ')}` : ''}${topPositiveKeywords.length > 0 ? `. **POSITIVE KEYWORDS**: Incorporate high-frequency praise words: ${topPositiveKeywords.slice(0, 3).map(k => k.keyword).join(', ')}` : ''}${featureExamples}
+  const featureExamples =
+    productFeatures.length > 0
+      ? `\n  * **SCRAPED FEATURES** (use these for authentic headlines): ${productFeatures
+          .slice(0, 3)
+          .map((f) => `"${f.substring(0, 30)}..."`)
+          .join(', ')}`
+      : ''
+  return `- Feature (4): ${Object.keys(technicalDetails).length > 0 ? 'Use SPECS data for technical features' : 'Core product benefits'}${reviewHighlights.length > 0 ? `, incorporate REVIEW INSIGHTS (e.g., "${reviewHighlights[0]}")` : ''}${commonPraises.length > 0 ? `. **USER PRAISES**: Use authentic features: ${commonPraises.slice(0, 2).join(', ')}` : ''}${
+    topPositiveKeywords.length > 0
+      ? `. **POSITIVE KEYWORDS**: Incorporate high-frequency praise words: ${topPositiveKeywords
+          .slice(0, 3)
+          .map((k) => k.keyword)
+          .join(', ')}`
+      : ''
+  }${featureExamples}
   * IMPORTANT: Each of the 4 feature headlines must focus on a DIFFERENT feature or benefit
   * Example 1: "4K Resolution Display" (technical spec)
   * Example 2: "Extended Battery Life" (performance benefit)
@@ -8653,7 +9485,10 @@ function buildHeadlineCTAGuidance(primeEligible: boolean, purchaseReasons: strin
 `
 }
 
-function buildHeadlineUrgencyGuidance(availability: string | null, hasUrgencyEvidence: boolean): string {
+function buildHeadlineUrgencyGuidance(
+  availability: string | null,
+  hasUrgencyEvidence: boolean
+): string {
   let urgencyText = ''
   let isCritical = false
 
@@ -8667,8 +9502,16 @@ function buildHeadlineUrgencyGuidance(availability: string | null, hasUrgencyEvi
       }
     }
     if (!isCritical) {
-      const lowStockKeywords = ['low stock', 'limited quantity', 'almost gone', 'running low', 'few left']
-      const hasLowStockKeyword = lowStockKeywords.some(kw => availability.toLowerCase().includes(kw))
+      const lowStockKeywords = [
+        'low stock',
+        'limited quantity',
+        'almost gone',
+        'running low',
+        'few left',
+      ]
+      const hasLowStockKeyword = lowStockKeywords.some((kw) =>
+        availability.toLowerCase().includes(kw)
+      )
       if (hasLowStockKeyword) {
         urgencyText = `🎯 **P1 CRITICAL - MUST use URGENCY**: "${availability}" or "Limited Stock - Act Fast"`
         isCritical = true
@@ -8706,16 +9549,40 @@ function buildDescription2Guidance(primeEligible: boolean, activePromotions: any
 `
 }
 
-function buildDescription3Guidance(useCases: string[], userProfiles: Array<{profile: string; indicators?: string[]}>): string {
-  return `- **Description 3 (Feature-Rich)**: Specific product features or use cases${useCases.length > 0 ? `. **USE CASES**: Reference real scenarios: ${useCases.slice(0, 2).join(', ')}` : ''}${userProfiles.length > 0 ? `. **TARGET PERSONAS**: Speak to: ${userProfiles.slice(0, 2).map(p => p.profile).join(', ')}` : ''}
+function buildDescription3Guidance(
+  useCases: string[],
+  userProfiles: Array<{ profile: string; indicators?: string[] }>
+): string {
+  return `- **Description 3 (Feature-Rich)**: Specific product features or use cases${useCases.length > 0 ? `. **USE CASES**: Reference real scenarios: ${useCases.slice(0, 2).join(', ')}` : ''}${
+    userProfiles.length > 0
+      ? `. **TARGET PERSONAS**: Speak to: ${userProfiles
+          .slice(0, 2)
+          .map((p) => p.profile)
+          .join(', ')}`
+      : ''
+  }
   * Focus: Technical specs, capabilities, or versatility (feature-focused)
   * Example: "Sleek finishes. Smart storage. Designed for modern homes."
   * ❌ AVOID: Mentioning "award", "rated", "trusted" from other descriptions
 `
 }
 
-function buildDescription4Guidance(topReviews: string[], hotInsights: any, topProducts: string[], sentimentDistribution: any, totalReviews: number, averageRating: number): string {
-  return `- **Description 4 (Trust + Social Proof)**: Customer validation or support${topReviews.length > 0 ? `. 🎯 **P0 OPTIMIZATION - TOP REVIEWS**: Prefer concise, policy-safe review-backed phrasing (quote or paraphrase): ${topReviews.slice(0, 2).map(r => `"${r.length > 50 ? r.substring(0, 47) + '...' : r}"`).join(' or ')}` : ''}${hotInsights && topProducts.length > 0 ? `. **STORE SPECIAL**: Mention product variety and quality (Avg: ${hotInsights.avgRating.toFixed(1)} stars from ${hotInsights.avgReviews}+ reviews)` : ''}${sentimentDistribution && totalReviews > 0 ? `. **SOCIAL PROOF DATA**: Strong positive review sentiment from ${totalReviews} reviews${averageRating ? `, ${averageRating} stars` : ''}. Avoid "% of people" claims.` : ''}
+function buildDescription4Guidance(
+  topReviews: string[],
+  hotInsights: any,
+  topProducts: string[],
+  sentimentDistribution: any,
+  totalReviews: number,
+  averageRating: number
+): string {
+  return `- **Description 4 (Trust + Social Proof)**: Customer validation or support${
+    topReviews.length > 0
+      ? `. 🎯 **P0 OPTIMIZATION - TOP REVIEWS**: Prefer concise, policy-safe review-backed phrasing (quote or paraphrase): ${topReviews
+          .slice(0, 2)
+          .map((r) => `"${r.length > 50 ? r.substring(0, 47) + '...' : r}"`)
+          .join(' or ')}`
+      : ''
+  }${hotInsights && topProducts.length > 0 ? `. **STORE SPECIAL**: Mention product variety and quality (Avg: ${hotInsights.avgRating.toFixed(1)} stars from ${hotInsights.avgReviews}+ reviews)` : ''}${sentimentDistribution && totalReviews > 0 ? `. **SOCIAL PROOF DATA**: Strong positive review sentiment from ${totalReviews} reviews${averageRating ? `, ${averageRating} stars` : ''}. Avoid "% of people" claims.` : ''}
   * 🎯 **P0 CRITICAL**: If TOP REVIEWS available, use clean and trustworthy wording; avoid slang/colloquial quotes
   * Focus: Reviews, ratings, guarantees, customer service (proof-focused)
   * Example with review: "Works perfectly!" - Customer Review. Shop with confidence.
@@ -8727,7 +9594,7 @@ function buildDescription4Guidance(topReviews: string[], hotInsights: any, topPr
 function buildReviewDataSummary(
   reviewHighlights: string[],
   commonPraises: string[],
-  topPositiveKeywords: Array<{keyword: string; frequency: number}>,
+  topPositiveKeywords: Array<{ keyword: string; frequency: number }>,
   commonPainPoints: string[],
   aiReviews?: any
 ): string {
@@ -8753,15 +9620,32 @@ function buildReviewDataSummary(
   }
 
   // Fallback到原有数据（向后兼容）
-  if (reviewHighlights.length > 0) parts.push(`Review insights: ${reviewHighlights.slice(0, 3).join(', ')}`)
+  if (reviewHighlights.length > 0)
+    parts.push(`Review insights: ${reviewHighlights.slice(0, 3).join(', ')}`)
   if (commonPraises.length > 0) parts.push(`User praises: ${commonPraises.slice(0, 2).join(', ')}`)
-  if (topPositiveKeywords.length > 0) parts.push(`Positive keywords: ${topPositiveKeywords.slice(0, 3).map(k => k.keyword).join(', ')}`)
-  if (commonPainPoints.length > 0) parts.push(`(Address pain points indirectly - don't highlight negatives): ${commonPainPoints.slice(0, 2).join(', ')}`)
+  if (topPositiveKeywords.length > 0)
+    parts.push(
+      `Positive keywords: ${topPositiveKeywords
+        .slice(0, 3)
+        .map((k) => k.keyword)
+        .join(', ')}`
+    )
+  if (commonPainPoints.length > 0)
+    parts.push(
+      `(Address pain points indirectly - don't highlight negatives): ${commonPainPoints.slice(0, 2).join(', ')}`
+    )
 
   return parts.length > 0 ? parts.join('; ') : ''
 }
 
-function buildCalloutGuidance(salesRank: string | null, primeEligible: boolean, availability: string | null, badge: string | null, activePromotions: any[], hasVerifiedFacts: boolean): string {
+function buildCalloutGuidance(
+  salesRank: string | null,
+  primeEligible: boolean,
+  availability: string | null,
+  badge: string | null,
+  activePromotions: any[],
+  hasVerifiedFacts: boolean
+): string {
   const parts: string[] = []
 
   if (salesRank) {
@@ -8769,7 +9653,9 @@ function buildCalloutGuidance(salesRank: string | null, primeEligible: boolean, 
     if (rankMatch) {
       const rankNum = parseInt(rankMatch[1].replace(/,/g, ''))
       if (rankNum < 100) {
-        parts.push(`- 🎯 **P0 CRITICAL - MUST include**: "Best Seller" or "#1 in Category" or "Top Rated" (salesRank ${salesRank} indicates top product)`)
+        parts.push(
+          `- 🎯 **P0 CRITICAL - MUST include**: "Best Seller" or "#1 in Category" or "Top Rated" (salesRank ${salesRank} indicates top product)`
+        )
       }
     }
   }
@@ -8787,20 +9673,27 @@ function buildCalloutGuidance(salesRank: string | null, primeEligible: boolean, 
   }
 
   if (activePromotions.length > 0) {
-    parts.push(`- 🎯 **P2 CRITICAL - MUST include**: Promotion callout (e.g., "${activePromotions[0].description.substring(0, 22)}..." or "Limited Deal")`)
+    parts.push(
+      `- 🎯 **P2 CRITICAL - MUST include**: Promotion callout (e.g., "${activePromotions[0].description.substring(0, 22)}..." or "Limited Deal")`
+    )
   }
 
   if (!hasVerifiedFacts) {
-    parts.push('- ⚠️ No verified facts: avoid numbers, discounts, guarantees, shipping promises, or time claims.')
+    parts.push(
+      '- ⚠️ No verified facts: avoid numbers, discounts, guarantees, shipping promises, or time claims.'
+    )
   }
 
-  parts.push('- Safe alternatives (non-numeric): "Modern Designs", "Curated Collections", "Quality Materials", "Shop New Arrivals", "Easy Browsing", "Top Rated Products"')
+  parts.push(
+    '- Safe alternatives (non-numeric): "Modern Designs", "Curated Collections", "Quality Materials", "Shop New Arrivals", "Easy Browsing", "Top Rated Products"'
+  )
 
   return parts.join('\n')
 }
 
 function buildCompetitiveGuidance(compAnalysis: any): string {
-  let guidance = '\n**🎯 COMPETITIVE POSITIONING GUIDANCE (CRITICAL - Use competitor analysis data)**:\n'
+  let guidance =
+    '\n**🎯 COMPETITIVE POSITIONING GUIDANCE (CRITICAL - Use competitor analysis data)**:\n'
 
   if (compAnalysis.pricePosition && compAnalysis.pricePosition.priceAdvantage === 'below_average') {
     guidance += `- **PRICE ADVANTAGE**: Emphasize value and affordability. Use phrases like "Best Value", "Affordable Premium", "Save vs Competitors"\n`
@@ -8824,7 +9717,9 @@ function buildCompetitiveGuidance(compAnalysis: any): string {
   }
 
   if (compAnalysis.featureComparison) {
-    const ourAdvantages = compAnalysis.featureComparison.filter((f: any) => f.weHave && f.ourAdvantage)
+    const ourAdvantages = compAnalysis.featureComparison.filter(
+      (f: any) => f.weHave && f.ourAdvantage
+    )
     if (ourAdvantages.length > 0) {
       guidance += `- **COMPETITIVE FEATURES**: Emphasize these features where we lead:\n`
       ourAdvantages.slice(0, 3).forEach((f: any) => {
@@ -8843,7 +9738,10 @@ function substitutePlaceholders(template: string, variables: Record<string, stri
   let result = template
   for (const [key, value] of Object.entries(variables)) {
     const placeholder = `{{${key}}}`
-    result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value)
+    result = result.replace(
+      new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+      value
+    )
   }
   return result
 }
@@ -8856,17 +9754,49 @@ function normalizeDigits(text: string): string {
   // 映射：非ASCII数字 → ASCII数字
   const digitMap: Record<string, string> = {
     // Bengali digits (০-৯)
-    '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
-    '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9',
+    '০': '0',
+    '১': '1',
+    '২': '2',
+    '৩': '3',
+    '৪': '4',
+    '৫': '5',
+    '৬': '6',
+    '৭': '7',
+    '৮': '8',
+    '৯': '9',
     // Arabic-Indic digits (٠-٩)
-    '٠': '0', '١': '1', '٢': '2', '٣': '3', '٤': '4',
-    '٥': '5', '٦': '6', '٧': '7', '٨': '8', '٩': '9',
+    '٠': '0',
+    '١': '1',
+    '٢': '2',
+    '٣': '3',
+    '٤': '4',
+    '٥': '5',
+    '٦': '6',
+    '٧': '7',
+    '٨': '8',
+    '٩': '9',
     // Persian/Extended Arabic-Indic digits (۰-۹)
-    '۰': '0', '۱': '1', '۲': '2', '۳': '3', '۴': '4',
-    '۵': '5', '۶': '6', '۷': '7', '۸': '8', '۹': '9',
+    '۰': '0',
+    '۱': '1',
+    '۲': '2',
+    '۳': '3',
+    '۴': '4',
+    '۵': '5',
+    '۶': '6',
+    '۷': '7',
+    '۸': '8',
+    '۹': '9',
     // Devanagari digits (०-९)
-    '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
-    '५': '5', '६': '6', '७': '7', '८': '8', '९': '9'
+    '०': '0',
+    '१': '1',
+    '२': '2',
+    '३': '3',
+    '४': '4',
+    '५': '5',
+    '६': '6',
+    '७': '7',
+    '८': '8',
+    '९': '9',
   }
 
   let normalized = text
@@ -8997,13 +9927,22 @@ export const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
           text: { type: 'STRING' },
           type: {
             type: 'STRING',
-            enum: ['brand', 'feature', 'promo', 'cta', 'urgency', 'social_proof', 'question', 'emotional']
+            enum: [
+              'brand',
+              'feature',
+              'promo',
+              'cta',
+              'urgency',
+              'social_proof',
+              'question',
+              'emotional',
+            ],
           },
           length: { type: 'INTEGER' },
-          group: { type: 'STRING' }
+          group: { type: 'STRING' },
         },
-        required: ['text']
-      }
+        required: ['text'],
+      },
     },
     descriptions: {
       type: 'ARRAY',
@@ -9013,21 +9952,26 @@ export const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
           text: { type: 'STRING' },
           type: {
             type: 'STRING',
-            enum: ['feature-benefit-cta', 'problem-solution-proof', 'offer-urgency-trust', 'usp-differentiation']
+            enum: [
+              'feature-benefit-cta',
+              'problem-solution-proof',
+              'offer-urgency-trust',
+              'usp-differentiation',
+            ],
           },
           length: { type: 'INTEGER' },
-          group: { type: 'STRING' }
+          group: { type: 'STRING' },
         },
-        required: ['text']
-      }
+        required: ['text'],
+      },
     },
     keywords: {
       type: 'ARRAY',
-      items: { type: 'STRING' }
+      items: { type: 'STRING' },
     },
     callouts: {
       type: 'ARRAY',
-      items: { type: 'STRING' }
+      items: { type: 'STRING' },
     },
     sitelinks: {
       type: 'ARRAY',
@@ -9036,10 +9980,10 @@ export const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
         properties: {
           text: { type: 'STRING' },
           url: { type: 'STRING' },
-          description: { type: 'STRING' }
+          description: { type: 'STRING' },
         },
-        required: ['text']
-      }
+        required: ['text'],
+      },
     },
     path1: { type: 'STRING' },
     path2: { type: 'STRING' },
@@ -9049,11 +9993,11 @@ export const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
       type: 'OBJECT',
       properties: {
         headline_diversity_score: { type: 'NUMBER' },
-        keyword_relevance_score: { type: 'NUMBER' }
-      }
-    }
+        keyword_relevance_score: { type: 'NUMBER' },
+      },
+    },
   },
-  required: ['headlines', 'descriptions', 'keywords']
+  required: ['headlines', 'descriptions', 'keywords'],
 }
 
 export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
@@ -9067,13 +10011,22 @@ export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
           text: { type: 'STRING' },
           type: {
             type: 'STRING',
-            enum: ['brand', 'feature', 'promo', 'cta', 'urgency', 'social_proof', 'question', 'emotional']
+            enum: [
+              'brand',
+              'feature',
+              'promo',
+              'cta',
+              'urgency',
+              'social_proof',
+              'question',
+              'emotional',
+            ],
           },
           length: { type: 'INTEGER' },
-          group: { type: 'STRING' }
+          group: { type: 'STRING' },
         },
-        required: ['text']
-      }
+        required: ['text'],
+      },
     },
     descriptions: {
       type: 'ARRAY',
@@ -9083,21 +10036,26 @@ export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
           text: { type: 'STRING' },
           type: {
             type: 'STRING',
-            enum: ['feature-benefit-cta', 'problem-solution-proof', 'offer-urgency-trust', 'usp-differentiation']
+            enum: [
+              'feature-benefit-cta',
+              'problem-solution-proof',
+              'offer-urgency-trust',
+              'usp-differentiation',
+            ],
           },
           length: { type: 'INTEGER' },
-          group: { type: 'STRING' }
+          group: { type: 'STRING' },
         },
-        required: ['text']
-      }
+        required: ['text'],
+      },
     },
     keywords: {
       type: 'ARRAY',
-      items: { type: 'STRING' }
+      items: { type: 'STRING' },
     },
     callouts: {
       type: 'ARRAY',
-      items: { type: 'STRING' }
+      items: { type: 'STRING' },
     },
     sitelinks: {
       type: 'ARRAY',
@@ -9106,16 +10064,16 @@ export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
         properties: {
           text: { type: 'STRING' },
           url: { type: 'STRING' },
-          description: { type: 'STRING' }
+          description: { type: 'STRING' },
         },
-        required: ['text']
-      }
+        required: ['text'],
+      },
     },
     path1: { type: 'STRING' },
     path2: { type: 'STRING' },
-    theme: { type: 'STRING' }
+    theme: { type: 'STRING' },
   },
-  required: ['headlines', 'descriptions', 'keywords']
+  required: ['headlines', 'descriptions', 'keywords'],
 }
 
 export const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
@@ -9131,11 +10089,20 @@ export const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
           text: { type: 'STRING' },
           type: {
             type: 'STRING',
-            enum: ['brand', 'feature', 'promo', 'cta', 'urgency', 'social_proof', 'question', 'emotional']
+            enum: [
+              'brand',
+              'feature',
+              'promo',
+              'cta',
+              'urgency',
+              'social_proof',
+              'question',
+              'emotional',
+            ],
           },
         },
-        required: ['text', 'type']
-      }
+        required: ['text', 'type'],
+      },
     },
     descriptions: {
       type: 'ARRAY',
@@ -9147,23 +10114,28 @@ export const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
           text: { type: 'STRING' },
           type: {
             type: 'STRING',
-            enum: ['feature-benefit-cta', 'problem-solution-proof', 'offer-urgency-trust', 'usp-differentiation']
+            enum: [
+              'feature-benefit-cta',
+              'problem-solution-proof',
+              'offer-urgency-trust',
+              'usp-differentiation',
+            ],
           },
         },
-        required: ['text', 'type']
-      }
+        required: ['text', 'type'],
+      },
     },
     keywords: {
       type: 'ARRAY',
       minItems: 10,
       maxItems: 20,
-      items: { type: 'STRING' }
+      items: { type: 'STRING' },
     },
     callouts: {
       type: 'ARRAY',
       minItems: 6,
       maxItems: 6,
-      items: { type: 'STRING' }
+      items: { type: 'STRING' },
     },
     sitelinks: {
       type: 'ARRAY',
@@ -9174,13 +10146,13 @@ export const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
         properties: {
           text: { type: 'STRING' },
           url: { type: 'STRING' },
-          description: { type: 'STRING' }
+          description: { type: 'STRING' },
         },
-        required: ['text', 'url']
-      }
+        required: ['text', 'url'],
+      },
     },
   },
-  required: ['headlines', 'descriptions', 'keywords', 'callouts', 'sitelinks']
+  required: ['headlines', 'descriptions', 'keywords', 'callouts', 'sitelinks'],
 }
 
 const AD_CREATIVE_REQUIRED_COUNTS = {
@@ -9227,12 +10199,15 @@ export function filterModelIntentGeneratedKeywords(
     .filter(Boolean)
   if (originalKeywords.length === 0) return creative
 
-  const filteredKeywords = originalKeywords
-    .filter((keyword) => !isModelIntentTransactionalTemplateKeyword(keyword))
+  const filteredKeywords = originalKeywords.filter(
+    (keyword) => !isModelIntentTransactionalTemplateKeyword(keyword)
+  )
   if (filteredKeywords.length === originalKeywords.length) return creative
 
   const removed = originalKeywords.length - filteredKeywords.length
-  console.warn(`[AdCreative] model_intent 关键词生成过滤: 移除 ${removed} 个交易修饰词+型号锚点模板词`)
+  console.warn(
+    `[AdCreative] model_intent 关键词生成过滤: 移除 ${removed} 个交易修饰词+型号锚点模板词`
+  )
 
   return {
     ...creative,
@@ -9240,7 +10215,11 @@ export function filterModelIntentGeneratedKeywords(
   }
 }
 
-function normalizeBusinessLimitedStringArray(items: string[] | undefined, maxLength: number, limit: number): string[] {
+function normalizeBusinessLimitedStringArray(
+  items: string[] | undefined,
+  maxLength: number,
+  limit: number
+): string[] {
   return (items || [])
     .map((item) => String(item || '').trim())
     .filter(Boolean)
@@ -9282,11 +10261,12 @@ export function validateGeneratedAdCreativeBusinessLimits(
   const sitelinks = (creative.sitelinks || [])
     .map((raw) => {
       if (!raw) return null
-      const text = String(raw.text || '').trim().substring(0, 25)
+      const text = String(raw.text || '')
+        .trim()
+        .substring(0, 25)
       const url = String(raw.url || '/').trim() || '/'
-      const description = typeof raw.description === 'string'
-        ? raw.description.trim().substring(0, 35)
-        : undefined
+      const description =
+        typeof raw.description === 'string' ? raw.description.trim().substring(0, 35) : undefined
       if (!text) return null
       return { text, url, description }
     })
@@ -9321,16 +10301,31 @@ export function validateGeneratedAdCreativeBusinessLimits(
     keywords,
     callouts,
     sitelinks,
-    theme: String(creative.theme || '通用广告').trim().substring(0, 60) || '通用广告',
-    explanation: String(creative.explanation || '基于产品信息生成的广告创意').trim().substring(0, 180) || '基于产品信息生成的广告创意',
+    theme:
+      String(creative.theme || '通用广告')
+        .trim()
+        .substring(0, 60) || '通用广告',
+    explanation:
+      String(creative.explanation || '基于产品信息生成的广告创意')
+        .trim()
+        .substring(0, 180) || '基于产品信息生成的广告创意',
     path1: creative.path1 ? String(creative.path1).trim().substring(0, 15) : undefined,
     path2: creative.path2 ? String(creative.path2).trim().substring(0, 15) : undefined,
-    headlinesWithMetadata: creative.headlinesWithMetadata?.slice(0, AD_CREATIVE_REQUIRED_COUNTS.headlines),
-    descriptionsWithMetadata: creative.descriptionsWithMetadata?.slice(0, AD_CREATIVE_REQUIRED_COUNTS.descriptions),
+    headlinesWithMetadata: creative.headlinesWithMetadata?.slice(
+      0,
+      AD_CREATIVE_REQUIRED_COUNTS.headlines
+    ),
+    descriptionsWithMetadata: creative.descriptionsWithMetadata?.slice(
+      0,
+      AD_CREATIVE_REQUIRED_COUNTS.descriptions
+    ),
   }
 }
 
-function shouldRetryAdCreativeWithSimplifiedPrompt(error: any, alreadySimplified: boolean): boolean {
+function shouldRetryAdCreativeWithSimplifiedPrompt(
+  error: any,
+  alreadySimplified: boolean
+): boolean {
   if (alreadySimplified) return false
 
   const message = String(error?.message || '')
@@ -9340,7 +10335,10 @@ function shouldRetryAdCreativeWithSimplifiedPrompt(error: any, alreadySimplified
   return false
 }
 
-export function resolveAdCreativeRetryPlan(error: any, alreadySimplified: boolean): AdCreativeRetryPlan | null {
+export function resolveAdCreativeRetryPlan(
+  error: any,
+  alreadySimplified: boolean
+): AdCreativeRetryPlan | null {
   if (alreadySimplified) return null
 
   if (error?.code === 'MAX_TOKENS' && error?.isRunawayCandidate) {
@@ -9494,7 +10492,10 @@ export function parseAIResponse(
 
     if (jsonObjectMatch && jsonArrayMatch) {
       // 两者都存在时，选择更长的那个
-      jsonText = jsonObjectMatch[0].length > jsonArrayMatch[0].length ? jsonObjectMatch[0] : jsonArrayMatch[0]
+      jsonText =
+        jsonObjectMatch[0].length > jsonArrayMatch[0].length
+          ? jsonObjectMatch[0]
+          : jsonArrayMatch[0]
     } else if (jsonObjectMatch) {
       jsonText = jsonObjectMatch[0]
     } else if (jsonArrayMatch) {
@@ -9518,9 +10519,7 @@ export function parseAIResponse(
 
   try {
     const raw = JSON.parse(jsonText)
-    const responsiveSearchAds =
-      raw?.responsive_search_ads ??
-      raw?.responsiveSearchAds
+    const responsiveSearchAds = raw?.responsive_search_ads ?? raw?.responsiveSearchAds
 
     // 🔧 兼容新格式：AI 可能返回 { responsive_search_ads: { ... } }
     // 旧解析器要求顶层字段 headlines/descriptions/keywords/callouts/sitelinks
@@ -9529,20 +10528,28 @@ export function parseAIResponse(
         ? { ...raw, ...responsiveSearchAds }
         : raw
 
-    const copyAngle = typeof data.copyAngle === 'string'
-      ? data.copyAngle.trim()
-      : typeof data.copy_angle === 'string'
-        ? data.copy_angle.trim()
-        : undefined
-    const cannotGenerateReason = typeof data.cannotGenerateReason === 'string'
-      ? data.cannotGenerateReason.trim()
-      : typeof data.cannot_generate_reason === 'string'
-        ? data.cannot_generate_reason.trim()
-        : undefined
+    const copyAngle =
+      typeof data.copyAngle === 'string'
+        ? data.copyAngle.trim()
+        : typeof data.copy_angle === 'string'
+          ? data.copy_angle.trim()
+          : undefined
+    const cannotGenerateReason =
+      typeof data.cannotGenerateReason === 'string'
+        ? data.cannotGenerateReason.trim()
+        : typeof data.cannot_generate_reason === 'string'
+          ? data.cannot_generate_reason.trim()
+          : undefined
     const evidenceProducts = Array.isArray(data.evidenceProducts)
-      ? data.evidenceProducts.map((item: any) => String(item || '').trim()).filter(Boolean).slice(0, 8)
+      ? data.evidenceProducts
+          .map((item: any) => String(item || '').trim())
+          .filter(Boolean)
+          .slice(0, 8)
       : Array.isArray(data.evidence_products)
-        ? data.evidence_products.map((item: any) => String(item || '').trim()).filter(Boolean).slice(0, 8)
+        ? data.evidence_products
+            .map((item: any) => String(item || '').trim())
+            .filter(Boolean)
+            .slice(0, 8)
         : []
     const keywordCandidatesRaw: unknown[] = Array.isArray(data.keywordCandidates)
       ? data.keywordCandidates
@@ -9559,16 +10566,15 @@ export function parseAIResponse(
       return undefined
     }
     const normalizeConfidence = (value: unknown): number | undefined => {
-      const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
+      const parsed =
+        typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN
       return Number.isFinite(parsed) ? parsed : undefined
     }
     const normalizeDerivedTags = (value: unknown): string[] | undefined => {
       if (!Array.isArray(value)) return undefined
-      const tags = Array.from(new Set(
-        value
-          .map((entry: any) => String(entry || '').trim())
-          .filter(Boolean)
-      )).slice(0, 8)
+      const tags = Array.from(
+        new Set(value.map((entry: any) => String(entry || '').trim()).filter(Boolean))
+      ).slice(0, 8)
       return tags.length > 0 ? tags : undefined
     }
     const keywordCandidates: GeneratedKeywordCandidateMetadata[] = keywordCandidatesRaw
@@ -9578,55 +10584,73 @@ export function parseAIResponse(
         if (!candidateText) return null
         return {
           text: candidateText,
-          sourceType: typeof item.sourceType === 'string'
-            ? item.sourceType.trim()
-            : typeof item.source_type === 'string'
-              ? item.source_type.trim()
-              : undefined,
-          sourceSubtype: typeof item.sourceSubtype === 'string'
-            ? item.sourceSubtype.trim()
-            : typeof item.source_subtype === 'string'
-              ? item.source_subtype.trim()
-              : undefined,
-          rawSource: typeof item.rawSource === 'string'
-            ? item.rawSource.trim()
-            : typeof item.raw_source === 'string'
-              ? item.raw_source.trim()
-              : undefined,
+          sourceType:
+            typeof item.sourceType === 'string'
+              ? item.sourceType.trim()
+              : typeof item.source_type === 'string'
+                ? item.source_type.trim()
+                : undefined,
+          sourceSubtype:
+            typeof item.sourceSubtype === 'string'
+              ? item.sourceSubtype.trim()
+              : typeof item.source_subtype === 'string'
+                ? item.source_subtype.trim()
+                : undefined,
+          rawSource:
+            typeof item.rawSource === 'string'
+              ? item.rawSource.trim()
+              : typeof item.raw_source === 'string'
+                ? item.raw_source.trim()
+                : undefined,
           derivedTags: normalizeDerivedTags(item.derivedTags ?? item.derived_tags),
-          sourceField: typeof item.sourceField === 'string'
-            ? item.sourceField.trim()
-            : typeof item.source_field === 'string'
-              ? item.source_field.trim()
-              : undefined,
-          anchorType: typeof item.anchorType === 'string'
-            ? item.anchorType.trim()
-            : typeof item.anchor_type === 'string'
-              ? item.anchor_type.trim()
-              : undefined,
+          sourceField:
+            typeof item.sourceField === 'string'
+              ? item.sourceField.trim()
+              : typeof item.source_field === 'string'
+                ? item.source_field.trim()
+                : undefined,
+          anchorType:
+            typeof item.anchorType === 'string'
+              ? item.anchorType.trim()
+              : typeof item.anchor_type === 'string'
+                ? item.anchor_type.trim()
+                : undefined,
           evidence: Array.isArray(item.evidence)
-            ? item.evidence.map((entry: any) => String(entry || '').trim()).filter(Boolean).slice(0, 6)
+            ? item.evidence
+                .map((entry: any) => String(entry || '').trim())
+                .filter(Boolean)
+                .slice(0, 6)
             : Array.isArray(item.evidence_list)
-              ? item.evidence_list.map((entry: any) => String(entry || '').trim()).filter(Boolean).slice(0, 6)
+              ? item.evidence_list
+                  .map((entry: any) => String(entry || '').trim())
+                  .filter(Boolean)
+                  .slice(0, 6)
               : undefined,
-          suggestedMatchType: normalizeSuggestedMatchType(item.suggestedMatchType ?? item.suggested_match_type),
+          suggestedMatchType: normalizeSuggestedMatchType(
+            item.suggestedMatchType ?? item.suggested_match_type
+          ),
           confidence: normalizeConfidence(item.confidence),
-          qualityReason: typeof item.qualityReason === 'string'
-            ? item.qualityReason.trim()
-            : typeof item.quality_reason === 'string'
-              ? item.quality_reason.trim()
-              : undefined,
-          rejectionReason: typeof item.rejectionReason === 'string'
-            ? item.rejectionReason.trim()
-            : typeof item.rejection_reason === 'string'
-              ? item.rejection_reason.trim()
-              : undefined,
+          qualityReason:
+            typeof item.qualityReason === 'string'
+              ? item.qualityReason.trim()
+              : typeof item.quality_reason === 'string'
+                ? item.quality_reason.trim()
+                : undefined,
+          rejectionReason:
+            typeof item.rejectionReason === 'string'
+              ? item.rejectionReason.trim()
+              : typeof item.rejection_reason === 'string'
+                ? item.rejection_reason.trim()
+                : undefined,
         }
       })
       .filter((item): item is GeneratedKeywordCandidateMetadata => item !== null)
       .slice(0, 20)
 
-    if ((!data.headlines || !Array.isArray(data.headlines) || data.headlines.length < 3) && cannotGenerateReason) {
+    if (
+      (!data.headlines || !Array.isArray(data.headlines) || data.headlines.length < 3) &&
+      cannotGenerateReason
+    ) {
       throw new Error(cannotGenerateReason)
     }
 
@@ -9653,7 +10677,7 @@ export function parseAIResponse(
     if (isNewFormat) {
       // 新格式：对象数组（带metadata）
       headlinesWithMetadata = data.headlines as HeadlineAsset[]
-      headlinesArray = headlinesWithMetadata.map(h => h.text)
+      headlinesArray = headlinesWithMetadata.map((h) => h.text)
       console.log('✅ 检测到新格式headlines（带metadata）')
     } else {
       // 旧格式：字符串数组
@@ -9669,7 +10693,7 @@ export function parseAIResponse(
 
     if (isDescNewFormat) {
       descriptionsWithMetadata = data.descriptions as DescriptionAsset[]
-      descriptionsArray = descriptionsWithMetadata.map(d => d.text)
+      descriptionsArray = descriptionsWithMetadata.map((d) => d.text)
       console.log('✅ 检测到新格式descriptions（带metadata）')
     } else {
       descriptionsArray = data.descriptions as string[]
@@ -9709,7 +10733,9 @@ export function parseAIResponse(
           } else {
             // 默认文本过长或为空，移除整个DKI标签
             const fixedText = text.replace(unclosedPattern, match[1].trim() || '')
-            console.log(`🔧 移除无效DKI标签（defaultText长度${defaultText.length}）: "${text}" → "${fixedText}"`)
+            console.log(
+              `🔧 移除无效DKI标签（defaultText长度${defaultText.length}）: "${text}" → "${fixedText}"`
+            )
             return fixedText
           }
         }
@@ -9729,7 +10755,9 @@ export function parseAIResponse(
     const sanitizePolicySensitiveText = (text: string, maxLength: number): string => {
       const policySafe = sanitizeGoogleAdsPolicyText(text, { maxLength, mode: policyGuardMode })
       if (policySafe.changed) {
-        console.log(`🛡️ 政策敏感词净化: "${text}" → "${policySafe.text}" (命中: ${policySafe.matchedTerms.join(', ')})`)
+        console.log(
+          `🛡️ 政策敏感词净化: "${text}" → "${policySafe.text}" (命中: ${policySafe.matchedTerms.join(', ')})`
+        )
       }
       return policySafe.text
     }
@@ -9737,7 +10765,9 @@ export function parseAIResponse(
     // 应用DKI修复到所有headlines
     const originalHeadlines = [...headlinesArray]
     headlinesArray = headlinesArray.map((h: string) => fixDKISyntax(h))
-    const fixedCount = headlinesArray.filter((h: string, i: number) => h !== originalHeadlines[i]).length
+    const fixedCount = headlinesArray.filter(
+      (h: string, i: number) => h !== originalHeadlines[i]
+    ).length
     if (fixedCount > 0) {
       console.log(`✅ 修复了${fixedCount}个DKI标签格式问题`)
     }
@@ -9749,10 +10779,18 @@ export function parseAIResponse(
     descriptionsArray = descriptionsArray.map((d: string) => sanitizePolicySensitiveText(d, 90))
 
     // 兜底：政策净化后再次执行文本护栏，确保无断词断句
-    const headlineGuardedAfterPolicy = headlinesArray.map((h: string) => applyHeadlineTextGuardrail(h, 30))
-    const descriptionGuardedAfterPolicy = descriptionsArray.map((d: string) => applyDescriptionTextGuardrail(d, 90))
-    const headlineGuardFixesAfterPolicy = headlineGuardedAfterPolicy.filter((h, idx) => h !== headlinesArray[idx]).length
-    const descriptionGuardFixesAfterPolicy = descriptionGuardedAfterPolicy.filter((d, idx) => d !== descriptionsArray[idx]).length
+    const headlineGuardedAfterPolicy = headlinesArray.map((h: string) =>
+      applyHeadlineTextGuardrail(h, 30)
+    )
+    const descriptionGuardedAfterPolicy = descriptionsArray.map((d: string) =>
+      applyDescriptionTextGuardrail(d, 90)
+    )
+    const headlineGuardFixesAfterPolicy = headlineGuardedAfterPolicy.filter(
+      (h, idx) => h !== headlinesArray[idx]
+    ).length
+    const descriptionGuardFixesAfterPolicy = descriptionGuardedAfterPolicy.filter(
+      (d, idx) => d !== descriptionsArray[idx]
+    ).length
     if (headlineGuardFixesAfterPolicy > 0 || descriptionGuardFixesAfterPolicy > 0) {
       console.log(
         `🔧 文本护栏(政策后): headlines ${headlineGuardFixesAfterPolicy} 条, descriptions ${descriptionGuardFixesAfterPolicy} 条`
@@ -9802,7 +10840,7 @@ export function parseAIResponse(
       return letters.length >= 3 && letters === letters.toUpperCase()
     }
     const toTitleCase = (s: string): string => {
-      return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase())
+      return s.toLowerCase().replace(/(?:^|\s)\S/g, (c) => c.toUpperCase())
     }
 
     // ============================================================================
@@ -9812,7 +10850,9 @@ export function parseAIResponse(
     const invalidCallouts = calloutsArray.filter((c: string) => c && c.length > 25)
     if (invalidCallouts.length > 0) {
       console.warn(`警告: ${invalidCallouts.length}个callout超过25字符限制`)
-      console.warn(`  超长callouts: ${invalidCallouts.map((c: string) => `"${c}"(${c.length}字符)`).join(', ')}`)
+      console.warn(
+        `  超长callouts: ${invalidCallouts.map((c: string) => `"${c}"(${c.length}字符)`).join(', ')}`
+      )
       // 截断过长的callouts
       calloutsArray = calloutsArray.map((c: string) => {
         if (c && c.length > 25) {
@@ -9823,7 +10863,9 @@ export function parseAIResponse(
         return c
       })
     }
-    calloutsArray = calloutsArray.map((c: string) => sanitizePolicySensitiveText(String(c || ''), 25))
+    calloutsArray = calloutsArray.map((c: string) =>
+      sanitizePolicySensitiveText(String(c || ''), 25)
+    )
 
     // 🔧 修复：检测并修正全大写的 callout 文案（与 sitelink 同理）
     calloutsArray = calloutsArray.map((c: string) => {
@@ -9883,9 +10925,7 @@ export function parseAIResponse(
       return { text, url, description }
     }
 
-    sitelinksArray = sitelinksArray
-      .map(normalizeSitelink)
-      .filter((v: any) => v !== null)
+    sitelinksArray = sitelinksArray.map(normalizeSitelink).filter((v: any) => v !== null)
 
     // 🔧 修复：检测并修正全大写的 sitelink 文案
     sitelinksArray = sitelinksArray.map((s: any) => {
@@ -9907,8 +10947,8 @@ export function parseAIResponse(
       return changed ? { ...s, text, description } : s
     })
 
-    const invalidSitelinks = sitelinksArray.filter((s: any) =>
-      s && (s.text?.length > 25 || s.description?.length > 35)
+    const invalidSitelinks = sitelinksArray.filter(
+      (s: any) => s && (s.text?.length > 25 || s.description?.length > 35)
     )
     if (invalidSitelinks.length > 0) {
       // 理论上已在 normalize 中截断，这里仅用于兜底日志
@@ -9918,7 +10958,8 @@ export function parseAIResponse(
         return {
           ...s,
           text: typeof s.text === 'string' ? s.text.substring(0, 25) : s.text,
-          description: typeof s.description === 'string' ? s.description.substring(0, 35) : s.description
+          description:
+            typeof s.description === 'string' ? s.description.substring(0, 35) : s.description,
         }
       })
     }
@@ -9928,10 +10969,16 @@ export function parseAIResponse(
     // 🔧 修复(2025-12-25): 放宽到10个单词，符合Google Ads实际限制
     // Google Ads允许最多10个单词的关键词
     // ============================================================================
-    let keywordsArray = Array.isArray(data.keywords) ? data.keywords.map((k: any) => String(k || '').trim()).filter(Boolean) : []
-    const policySafeKeywords = sanitizeKeywordListForGoogleAdsPolicy(keywordsArray, { mode: policyGuardMode })
+    let keywordsArray = Array.isArray(data.keywords)
+      ? data.keywords.map((k: any) => String(k || '').trim()).filter(Boolean)
+      : []
+    const policySafeKeywords = sanitizeKeywordListForGoogleAdsPolicy(keywordsArray, {
+      mode: policyGuardMode,
+    })
     if (policySafeKeywords.changedCount > 0 || policySafeKeywords.droppedCount > 0) {
-      console.log(`🛡️ 关键词政策净化: 替换${policySafeKeywords.changedCount}个, 丢弃${policySafeKeywords.droppedCount}个`)
+      console.log(
+        `🛡️ 关键词政策净化: 替换${policySafeKeywords.changedCount}个, 丢弃${policySafeKeywords.droppedCount}个`
+      )
     }
     keywordsArray = policySafeKeywords.items
     const invalidKeywords = keywordsArray.filter((k: string) => {
@@ -9967,14 +11014,18 @@ export function parseAIResponse(
       return true
     })
     if (keywordsArray.length < originalKeywordCount) {
-      console.warn(`⚠️ 关键词去重: ${originalKeywordCount} → ${keywordsArray.length}个关键词 (移除 ${originalKeywordCount - keywordsArray.length} 个重复)`)
+      console.warn(
+        `⚠️ 关键词去重: ${originalKeywordCount} → ${keywordsArray.length}个关键词 (移除 ${originalKeywordCount - keywordsArray.length} 个重复)`
+      )
     }
 
     // 解析quality_metrics（如果存在）
-    const qualityMetrics = data.quality_metrics ? {
-      headline_diversity_score: data.quality_metrics.headline_diversity_score,
-      keyword_relevance_score: data.quality_metrics.keyword_relevance_score
-    } : undefined
+    const qualityMetrics = data.quality_metrics
+      ? {
+          headline_diversity_score: data.quality_metrics.headline_diversity_score,
+          keyword_relevance_score: data.quality_metrics.keyword_relevance_score,
+        }
+      : undefined
 
     if (qualityMetrics) {
       console.log('📊 Headline多样性:', qualityMetrics.headline_diversity_score)
@@ -10030,7 +11081,7 @@ export function parseAIResponse(
       cannotGenerateReason,
       headlinesWithMetadata,
       descriptionsWithMetadata,
-      qualityMetrics
+      qualityMetrics,
     }
   } catch (error) {
     console.error('解析AI响应失败:', error)
@@ -10054,18 +11105,21 @@ async function runAdCreativeModelAttempt(params: {
   const retryMode = params.retryMode
   const isSimplified = retryMode === 'simplified'
   const isEmergency = retryMode === 'emergency'
-  const aiResponse = await generateContent({
-    operationType: 'ad_creative_generation_main',
-    prompt: params.prompt,
-    temperature: isEmergency ? AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE : 0.7,
-    maxOutputTokens: retryMode ? AD_CREATIVE_SIMPLIFIED_RETRY_MAX_OUTPUT_TOKENS : 16384,
-    responseSchema: isEmergency
-      ? AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA
-      : isSimplified
-        ? AD_CREATIVE_RETRY_RESPONSE_SCHEMA
-        : AD_CREATIVE_RESPONSE_SCHEMA,
-    responseMimeType: 'application/json'
-  }, params.userId)
+  const aiResponse = await generateContent(
+    {
+      operationType: 'ad_creative_generation_main',
+      prompt: params.prompt,
+      temperature: isEmergency ? AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE : 0.7,
+      maxOutputTokens: retryMode ? AD_CREATIVE_SIMPLIFIED_RETRY_MAX_OUTPUT_TOKENS : 16384,
+      responseSchema: isEmergency
+        ? AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA
+        : isSimplified
+          ? AD_CREATIVE_RETRY_RESPONSE_SCHEMA
+          : AD_CREATIVE_RESPONSE_SCHEMA,
+      responseMimeType: 'application/json',
+    },
+    params.userId
+  )
 
   await recordAdCreativeOperationTokenUsage({
     userId: params.userId,
@@ -10074,7 +11128,7 @@ async function runAdCreativeModelAttempt(params: {
       : isSimplified
         ? 'ad_creative_generation_retry_simplified'
         : 'ad_creative_generation_main',
-    aiResponse
+    aiResponse,
   })
 
   const parsed = parseAIResponse(aiResponse.text, { policyGuardMode: params.policyGuardMode })
@@ -10091,7 +11145,7 @@ async function runAdCreativeModelAttempt(params: {
  */
 export async function generateAdCreative(
   offerId: number,
-  userId: number,  // ✅ 修复：改为必需参数
+  userId: number, // ✅ 修复：改为必需参数
   options?: {
     theme?: string
     referencePerformance?: any
@@ -10101,8 +11155,8 @@ export async function generateAdCreative(
     searchTermFeedbackHints?: SearchTermFeedbackHintsInput
     policyGuardMode?: GoogleAdsPolicyGuardMode
     // 🆕 v4.10: 关键词池参数
-    keywordPool?: any  // OfferKeywordPool
-    bucket?: 'A' | 'B' | 'C' | 'S' | 'D'  // 🔥 2025-12-22: 添加D（高购买意图）桶支持
+    keywordPool?: any // OfferKeywordPool
+    bucket?: 'A' | 'B' | 'C' | 'S' | 'D' // 🔥 2025-12-22: 添加D（高购买意图）桶支持
     bucketKeywords?: string[]
     bucketIntent?: string
     bucketIntentEn?: string
@@ -10139,9 +11193,12 @@ export async function generateAdCreative(
   const db = await getDatabase()
 
   // ✅ 安全修复：获取Offer数据时验证user_id，防止跨用户访问
-  const offer = await db.queryOne(`
+  const offer = await db.queryOne(
+    `
     SELECT * FROM offers WHERE id = ? AND user_id = ?
-  `, [offerId, userId])
+  `,
+    [offerId, userId]
+  )
 
   if (!offer) {
     throw new Error('Offer不存在或无权访问')
@@ -10151,7 +11208,7 @@ export async function generateAdCreative(
   const preGenerationValidation = validateOfferDataQuality(offer as any)
   if (!preGenerationValidation.isValid) {
     console.error(`[generateAdCreative] ❌ 前置校验失败，阻止创意生成:`)
-    preGenerationValidation.issues.forEach(issue => console.error(`   - ${issue}`))
+    preGenerationValidation.issues.forEach((issue) => console.error(`   - ${issue}`))
     throw new Error(`创意生成前置校验失败: ${preGenerationValidation.issues.join('; ')}`)
   }
 
@@ -10173,7 +11230,9 @@ export async function generateAdCreative(
   const brandTokensToMatch =
     pureBrandKeywordsList.length > 0
       ? pureBrandKeywordsList
-      : (canonicalBrandKeyword ? [canonicalBrandKeyword] : [])
+      : canonicalBrandKeyword
+        ? [canonicalBrandKeyword]
+        : []
   const mustContainBrand = brandTokensToMatch.length > 0
 
   const containsBrand = (keyword: string, _searchVolume?: number): boolean => {
@@ -10186,7 +11245,13 @@ export async function generateAdCreative(
 
   // 🎯 需求34: 读取已提取的广告元素（从爬虫阶段保存的数据）
   let extractedElements: {
-    keywords?: Array<{ keyword: string; searchVolume: number; source: string; sourceType?: string; priority: string }>
+    keywords?: Array<{
+      keyword: string
+      searchVolume: number
+      source: string
+      sourceType?: string
+      priority: string
+    }>
     headlines?: string[]
     descriptions?: string[]
   } = {}
@@ -10226,8 +11291,8 @@ export async function generateAdCreative(
     // 关键词池已经过Keyword Planner扩展验证，包含高质量关键词
     const { getKeywordPoolByOfferId } = await import('./offer-keyword-pool')
     const keywordPool =
-      (options?.keywordPool as OfferKeywordPool | undefined)
-      || await getKeywordPoolByOfferId(offer.id)
+      (options?.keywordPool as OfferKeywordPool | undefined) ||
+      (await getKeywordPoolByOfferId(offer.id))
 
     if (keywordPool && keywordPool.totalKeywords > 0) {
       // 统一走 canonical creative bucket 视图：
@@ -10236,43 +11301,46 @@ export async function generateAdCreative(
 
       // 转换为extractedElements格式
       // 🔧 修复(2026-01-21): 保留原始 source 字段，用于后续过滤 CLUSTERED 关键词
-      extractedElements.keywords = poolKeywords.map(kw => ({
+      extractedElements.keywords = poolKeywords.map((kw) => ({
         keyword: kw.keyword,
         searchVolume: kw.searchVolume || 0,
-        source: kw.source || 'KEYWORD_POOL',  // 保留原始 source（CLUSTERED/KEYWORD_PLANNER）
+        source: kw.source || 'KEYWORD_POOL', // 保留原始 source（CLUSTERED/KEYWORD_PLANNER）
         sourceType: normalizeSourceTypeFromLegacySource({
           source: kw.source || 'KEYWORD_POOL',
           sourceType: (kw as any).sourceType,
         }),
         priority: 'HIGH' as const,
-        isPureBrand: kw.isPureBrand  // 🔧 保留纯品牌词标记
+        isPureBrand: kw.isPureBrand, // 🔧 保留纯品牌词标记
       }))
 
-	      // 🔥 2025-12-28: 关键词质量过滤
-	      // 从关键词池获取关键词后再次过滤，确保移除品牌变体词和语义查询词
-	      // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
-	      const keywordFilterResult = filterKeywordQuality(extractedElements.keywords, {
-	        brandName: offerBrand,
-	        category: offer.category || undefined,
-	        productName: (offer as any).product_name || undefined,
-	        targetCountry: offer.target_country || undefined,
-	        targetLanguage: offer.target_language || undefined,
-	        productUrl: offer.final_url || offer.url || undefined,
-	        minWordCount: 1,
-	        maxWordCount: 8,
-	        mustContainBrand,
-	        // 过滤歧义品牌的无关主题（例如 rove beetle / rove concept）
-	        minContextTokenMatches: getMinContextTokenMatchesForKeywordQualityFilter({
-	          pageType: (offer as any).page_type || null
-	        }),
-	      })
+      // 🔥 2025-12-28: 关键词质量过滤
+      // 从关键词池获取关键词后再次过滤，确保移除品牌变体词和语义查询词
+      // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
+      const keywordFilterResult = filterKeywordQuality(extractedElements.keywords, {
+        brandName: offerBrand,
+        category: offer.category || undefined,
+        productName: (offer as any).product_name || undefined,
+        targetCountry: offer.target_country || undefined,
+        targetLanguage: offer.target_language || undefined,
+        productUrl: offer.final_url || offer.url || undefined,
+        minWordCount: 1,
+        maxWordCount: 8,
+        mustContainBrand,
+        // 过滤歧义品牌的无关主题（例如 rove beetle / rove concept）
+        minContextTokenMatches: getMinContextTokenMatchesForKeywordQualityFilter({
+          pageType: (offer as any).page_type || null,
+        }),
+      })
 
       // 生成过滤报告
-      const filterReport = generateFilterReport(extractedElements.keywords.length, keywordFilterResult.removed)
+      const filterReport = generateFilterReport(
+        extractedElements.keywords.length,
+        keywordFilterResult.removed
+      )
       console.log(filterReport)
 
       // 将 PoolKeywordData[] 转换为标准关键词格式并赋值
-      extractedElements.keywords = keywordFilterResult.filtered.map(kw => ({
+      extractedElements.keywords = keywordFilterResult.filtered.map((kw) => ({
         keyword: kw.keyword,
         searchVolume: kw.searchVolume || 0,
         source: kw.source || 'KEYWORD_POOL',
@@ -10280,9 +11348,11 @@ export async function generateAdCreative(
           source: kw.source || 'KEYWORD_POOL',
           sourceType: (kw as any).sourceType,
         }),
-        priority: 'HIGH' as const
+        priority: 'HIGH' as const,
       }))
-	      console.log(`🎯 从关键词池#${keywordPool.id} 获取 ${poolKeywords.length} 个关键词，过滤后剩余 ${extractedElements.keywords.length} 个 (bucket ${normalizedBucket || 'A'})`)
+      console.log(
+        `🎯 从关键词池#${keywordPool.id} 获取 ${poolKeywords.length} 个关键词，过滤后剩余 ${extractedElements.keywords.length} 个 (bucket ${normalizedBucket || 'A'})`
+      )
     } else if ((offer as any).extracted_keywords) {
       // Fallback: 关键词池不存在时，使用旧的extracted_keywords
       const rawKeywords = JSON.parse((offer as any).extracted_keywords)
@@ -10293,14 +11363,16 @@ export async function generateAdCreative(
       if (Array.isArray(rawKeywords) && rawKeywords.length > 0) {
         if (typeof rawKeywords[0] === 'string') {
           // 字符串数组 → 转换为对象数组（searchVolume设为0，后续会查询真实数据）
-          extractedElements.keywords = rawKeywords.map(kw => ({
+          extractedElements.keywords = rawKeywords.map((kw) => ({
             keyword: kw,
             searchVolume: 0,
             source: 'EXTRACTED',
             sourceType: normalizeSourceTypeFromLegacySource({ source: 'EXTRACTED' }),
-            priority: 'MEDIUM'
+            priority: 'MEDIUM',
           }))
-          console.log(`📦 读取到 ${extractedElements.keywords?.length || 0} 个提取的关键词（字符串格式，待查询搜索量）`)
+          console.log(
+            `📦 读取到 ${extractedElements.keywords?.length || 0} 个提取的关键词（字符串格式，待查询搜索量）`
+          )
         } else if (rawKeywords[0]?.keyword !== undefined) {
           // 对象数组 → 直接使用
           extractedElements.keywords = rawKeywords
@@ -10309,28 +11381,31 @@ export async function generateAdCreative(
           console.warn(`⚠️ extracted_keywords格式未知，跳过`)
         }
 
-	        // 🔥 2025-12-28: 关键词质量过滤（Fallback路径也需要过滤）
-	        // 只有当 keywords 存在且非空时才进行过滤
-	        // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
-	        if (extractedElements.keywords && extractedElements.keywords.length > 0) {
-	          const keywordFilterResult = filterKeywordQuality(extractedElements.keywords, {
-	            brandName: offerBrand,
-	            category: offer.category || undefined,
-	            productName: (offer as any).product_name || undefined,
-	            targetCountry: offer.target_country || undefined,
-	            targetLanguage: offer.target_language || undefined,
-	            productUrl: offer.final_url || offer.url || undefined,
-	            minWordCount: 1,
-	            maxWordCount: 8,
-	            mustContainBrand,
-	            minContextTokenMatches: getMinContextTokenMatchesForKeywordQualityFilter({
-	              pageType: (offer as any).page_type || null
-	            }),
-	          })
-          const filterReport = generateFilterReport(extractedElements.keywords.length, keywordFilterResult.removed)
+        // 🔥 2025-12-28: 关键词质量过滤（Fallback路径也需要过滤）
+        // 只有当 keywords 存在且非空时才进行过滤
+        // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
+        if (extractedElements.keywords && extractedElements.keywords.length > 0) {
+          const keywordFilterResult = filterKeywordQuality(extractedElements.keywords, {
+            brandName: offerBrand,
+            category: offer.category || undefined,
+            productName: (offer as any).product_name || undefined,
+            targetCountry: offer.target_country || undefined,
+            targetLanguage: offer.target_language || undefined,
+            productUrl: offer.final_url || offer.url || undefined,
+            minWordCount: 1,
+            maxWordCount: 8,
+            mustContainBrand,
+            minContextTokenMatches: getMinContextTokenMatchesForKeywordQualityFilter({
+              pageType: (offer as any).page_type || null,
+            }),
+          })
+          const filterReport = generateFilterReport(
+            extractedElements.keywords.length,
+            keywordFilterResult.removed
+          )
           console.log(filterReport)
           // 将 PoolKeywordData[] 转换为标准关键词格式
-          extractedElements.keywords = keywordFilterResult.filtered.map(kw => ({
+          extractedElements.keywords = keywordFilterResult.filtered.map((kw) => ({
             keyword: kw.keyword,
             searchVolume: kw.searchVolume || 0,
             source: kw.source || 'EXTRACTED',
@@ -10338,7 +11413,7 @@ export async function generateAdCreative(
               source: kw.source || 'EXTRACTED',
               sourceType: (kw as any).sourceType,
             }),
-            priority: 'MEDIUM' as const
+            priority: 'MEDIUM' as const,
           }))
         }
       }
@@ -10354,17 +11429,22 @@ export async function generateAdCreative(
 
     // 🎯 读取增强数据（优先使用，因为质量更高）
     if ((offer as any).enhanced_keywords) {
-      let rawKeywords: Array<{ keyword: string; volume?: number; competition?: string; score?: number }> = JSON.parse((offer as any).enhanced_keywords)
+      let rawKeywords: Array<{
+        keyword: string
+        volume?: number
+        competition?: string
+        score?: number
+      }> = JSON.parse((offer as any).enhanced_keywords)
       console.log(`✨ 读取到 ${rawKeywords?.length || 0} 个增强关键词`)
 
       // 🔥 2026-01-02: 移除品类过滤 - 避免误杀有效关键词
       // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
       // 保留其他过滤机制：竞品品牌、品牌变体、语义查询、搜索量过滤
-      enhancedData.keywords = rawKeywords.map(kw => ({
+      enhancedData.keywords = rawKeywords.map((kw) => ({
         keyword: kw.keyword,
         volume: (kw as any).volume || 0,
         competition: (kw as any).competition || '',
-        score: (kw as any).score || 0
+        score: (kw as any).score || 0,
       }))
       console.log(`✅ 关键词处理完成，共 ${enhancedData.keywords?.length || 0} 个增强关键词`)
     }
@@ -10391,7 +11471,9 @@ export async function generateAdCreative(
     if ((offer as any).localization_adapt) {
       const rawLocalization = JSON.parse((offer as any).localization_adapt)
       enhancedData.localization = normalizeLocalizationPayload(rawLocalization)
-      console.log(`✨ 读取到本地化适配数据${enhancedData.localization ? '（已标准化）' : '（结构不兼容，跳过）'}`)
+      console.log(
+        `✨ 读取到本地化适配数据${enhancedData.localization ? '（已标准化）' : '（结构不兼容，跳过）'}`
+      )
     }
     if ((offer as any).brand_analysis) {
       enhancedData.brandAnalysis = JSON.parse((offer as any).brand_analysis)
@@ -10403,14 +11485,17 @@ export async function generateAdCreative(
 
   // 🎯 合并数据：将enhanced和extracted数据合并（去重）
   // 统一关键词格式为extracted格式（因为buildAdCreativePrompt期望这个格式）
-  let normalizedEnhancedKeywords = (enhancedData.keywords || []).map(kw => ({
+  let normalizedEnhancedKeywords = (enhancedData.keywords || []).map((kw) => ({
     keyword: kw.keyword,
     searchVolume: kw.volume || 0,
     source: 'AI_ENHANCED',
     sourceType: 'AI_ENHANCED_PERSISTED',
-    priority: kw.score > 80 ? 'HIGH' : kw.score > 60 ? 'MEDIUM' : 'LOW'
+    priority: kw.score > 80 ? 'HIGH' : kw.score > 60 ? 'MEDIUM' : 'LOW',
   }))
-  const policySafeEnhancedKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(normalizedEnhancedKeywords, { mode: policyGuardMode })
+  const policySafeEnhancedKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(
+    normalizedEnhancedKeywords,
+    { mode: policyGuardMode }
+  )
   if (policySafeEnhancedKeywords.changedCount > 0 || policySafeEnhancedKeywords.droppedCount > 0) {
     console.log(
       `[PolicyGuard] 增强关键词净化: 替换${policySafeEnhancedKeywords.changedCount}个, 丢弃${policySafeEnhancedKeywords.droppedCount}个`
@@ -10419,40 +11504,58 @@ export async function generateAdCreative(
   normalizedEnhancedKeywords = policySafeEnhancedKeywords.items
 
   // 🆕 v4.10: 如果传入了桶关键词，将其作为最高优先级关键词
-  let bucketKeywordsNormalized: Array<{ keyword: string; searchVolume: number; source: string; priority: string }> = []
+  let bucketKeywordsNormalized: Array<{
+    keyword: string
+    searchVolume: number
+    source: string
+    priority: string
+  }> = []
 
   // 🆕 v4.16: 如果没有传入桶关键词，根据链接类型和bucket自动获取
   if (options?.bucketKeywords && options.bucketKeywords.length > 0) {
-    bucketKeywordsNormalized = options.bucketKeywords.map(kw => ({
+    bucketKeywordsNormalized = options.bucketKeywords.map((kw) => ({
       keyword: kw,
       searchVolume: 0, // 搜索量会在后续步骤中填充
       source: 'KEYWORD_POOL',
       sourceType: 'CANONICAL_BUCKET_VIEW',
-      priority: 'HIGH' // 桶关键词优先级最高
+      priority: 'HIGH', // 桶关键词优先级最高
     }))
-    console.log(`📦 v4.10 关键词池: 使用桶 ${options.bucket} (${options.bucketIntent}) 的 ${bucketKeywordsNormalized.length} 个关键词`)
+    console.log(
+      `📦 v4.10 关键词池: 使用桶 ${options.bucket} (${options.bucketIntent}) 的 ${bucketKeywordsNormalized.length} 个关键词`
+    )
   } else if (options?.bucket) {
     // 🆕 v4.16: 自动根据链接类型和bucket获取关键词
     const { getKeywordsByLinkTypeAndBucket } = await import('./offer-keyword-pool')
 
     const bucketType = options.bucket as 'A' | 'B' | 'C' | 'D' | 'S'
 
-    const keywordResult = await getKeywordsByLinkTypeAndBucket(offerId, effectiveLinkType, bucketType)
+    const keywordResult = await getKeywordsByLinkTypeAndBucket(
+      offerId,
+      effectiveLinkType,
+      bucketType
+    )
 
     if (keywordResult.keywords.length > 0) {
-      bucketKeywordsNormalized = keywordResult.keywords.map(kw => ({
+      bucketKeywordsNormalized = keywordResult.keywords.map((kw) => ({
         keyword: kw.keyword,
         searchVolume: kw.searchVolume || 0,
         source: 'KEYWORD_POOL',
         sourceType: 'CANONICAL_BUCKET_VIEW',
-        priority: 'HIGH'
+        priority: 'HIGH',
       }))
-      console.log(`📦 v4.16 关键词池: ${effectiveLinkType}链接 - 桶 ${bucketType} (${keywordResult.intent}) 的 ${bucketKeywordsNormalized.length} 个关键词`)
+      console.log(
+        `📦 v4.16 关键词池: ${effectiveLinkType}链接 - 桶 ${bucketType} (${keywordResult.intent}) 的 ${bucketKeywordsNormalized.length} 个关键词`
+      )
     } else {
-      console.log(`📦 v4.16 关键词池: ${effectiveLinkType}链接 - 桶 ${bucketType} 暂无关键词，将使用默认关键词`)
+      console.log(
+        `📦 v4.16 关键词池: ${effectiveLinkType}链接 - 桶 ${bucketType} 暂无关键词，将使用默认关键词`
+      )
     }
   }
-  const policySafeBucketKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(bucketKeywordsNormalized, { mode: policyGuardMode })
+  const policySafeBucketKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(
+    bucketKeywordsNormalized,
+    { mode: policyGuardMode }
+  )
   if (policySafeBucketKeywords.changedCount > 0 || policySafeBucketKeywords.droppedCount > 0) {
     console.log(
       `[PolicyGuard] 桶关键词净化: 替换${policySafeBucketKeywords.changedCount}个, 丢弃${policySafeBucketKeywords.droppedCount}个`
@@ -10461,31 +11564,39 @@ export async function generateAdCreative(
   bucketKeywordsNormalized = policySafeBucketKeywords.items
 
   // 🔥 2025-12-16修复：统一extracted关键词格式（可能是字符串数组或对象数组）
-  let normalizedExtractedKeywords = (extractedElements.keywords || []).map((kw: any) => {
-    // 如果是字符串，转换为对象格式
-    if (typeof kw === 'string') {
-      return {
-        keyword: kw,
-        searchVolume: 0,
-        source: 'EXTRACTED',
-        sourceType: normalizeSourceTypeFromLegacySource({ source: 'EXTRACTED' }),
-        priority: 'MEDIUM'
+  let normalizedExtractedKeywords = (extractedElements.keywords || [])
+    .map((kw: any) => {
+      // 如果是字符串，转换为对象格式
+      if (typeof kw === 'string') {
+        return {
+          keyword: kw,
+          searchVolume: 0,
+          source: 'EXTRACTED',
+          sourceType: normalizeSourceTypeFromLegacySource({ source: 'EXTRACTED' }),
+          priority: 'MEDIUM',
+        }
       }
-    }
-    // 已经是对象格式
-    return {
-      keyword: String(kw.keyword || ''),
-      searchVolume: kw.searchVolume || kw.volume || 0,
-      source: kw.source || 'EXTRACTED',
-      sourceType: normalizeSourceTypeFromLegacySource({
+      // 已经是对象格式
+      return {
+        keyword: String(kw.keyword || ''),
+        searchVolume: kw.searchVolume || kw.volume || 0,
         source: kw.source || 'EXTRACTED',
-        sourceType: kw.sourceType,
-      }),
-      priority: kw.priority || 'MEDIUM'
-    }
-  }).filter((kw: { keyword: string }) => kw.keyword.length > 0)
-  const policySafeExtractedKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(normalizedExtractedKeywords, { mode: policyGuardMode })
-  if (policySafeExtractedKeywords.changedCount > 0 || policySafeExtractedKeywords.droppedCount > 0) {
+        sourceType: normalizeSourceTypeFromLegacySource({
+          source: kw.source || 'EXTRACTED',
+          sourceType: kw.sourceType,
+        }),
+        priority: kw.priority || 'MEDIUM',
+      }
+    })
+    .filter((kw: { keyword: string }) => kw.keyword.length > 0)
+  const policySafeExtractedKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(
+    normalizedExtractedKeywords,
+    { mode: policyGuardMode }
+  )
+  if (
+    policySafeExtractedKeywords.changedCount > 0 ||
+    policySafeExtractedKeywords.droppedCount > 0
+  ) {
     console.log(
       `[PolicyGuard] 提取关键词净化: 替换${policySafeExtractedKeywords.changedCount}个, 丢弃${policySafeExtractedKeywords.droppedCount}个`
     )
@@ -10493,22 +11604,37 @@ export async function generateAdCreative(
   normalizedExtractedKeywords = policySafeExtractedKeywords.items
 
   // 🆕 处理高性能搜索词（从实际广告表现中学习）
-  let searchTermKeywords: Array<{ keyword: string; searchVolume: number; source: string; priority: string }> = []
-  if (options?.searchTermFeedbackHints?.highPerformingTerms && options.searchTermFeedbackHints.highPerformingTerms.length > 0) {
-    searchTermKeywords = options.searchTermFeedbackHints.highPerformingTerms.map(term => ({
+  let searchTermKeywords: Array<{
+    keyword: string
+    searchVolume: number
+    source: string
+    priority: string
+  }> = []
+  if (
+    options?.searchTermFeedbackHints?.highPerformingTerms &&
+    options.searchTermFeedbackHints.highPerformingTerms.length > 0
+  ) {
+    searchTermKeywords = options.searchTermFeedbackHints.highPerformingTerms.map((term) => ({
       keyword: term,
       searchVolume: 0, // 搜索词没有预估搜索量，但有真实表现数据
-        source: 'SEARCH_TERM_HIGH_PERFORMING',
-        sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
-        priority: 'HIGH' // 高性能搜索词优先级高
-      }))
+      source: 'SEARCH_TERM_HIGH_PERFORMING',
+      sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+      priority: 'HIGH', // 高性能搜索词优先级高
+    }))
     console.log(`🔍 添加 ${searchTermKeywords.length} 个高性能搜索词作为关键词候选`)
   }
 
   // 🆕 v4.10: 桶关键词优先，然后是高性能搜索词，增强关键词，最后是基础关键词
   // 🔥 优化(2025-12-22): 使用Google Ads标准化规则去重
-  let mergedKeywords = [...bucketKeywordsNormalized, ...searchTermKeywords, ...normalizedEnhancedKeywords, ...normalizedExtractedKeywords]
-  const policySafeMergedKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(mergedKeywords, { mode: policyGuardMode })
+  let mergedKeywords = [
+    ...bucketKeywordsNormalized,
+    ...searchTermKeywords,
+    ...normalizedEnhancedKeywords,
+    ...normalizedExtractedKeywords,
+  ]
+  const policySafeMergedKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(mergedKeywords, {
+    mode: policyGuardMode,
+  })
   if (policySafeMergedKeywords.changedCount > 0 || policySafeMergedKeywords.droppedCount > 0) {
     console.log(
       `[PolicyGuard] 合并关键词兜底净化: 替换${policySafeMergedKeywords.changedCount}个, 丢弃${policySafeMergedKeywords.droppedCount}个`
@@ -10517,11 +11643,13 @@ export async function generateAdCreative(
   mergedKeywords = policySafeMergedKeywords.items
 
   // 🆕 2026-03-13: 关键词缺口分析 - 在创意生成前识别缺失的行业标准关键词
-  if (shouldRunGapAnalysisForCreative({
-    bucket: normalizedBucket,
-    isCoverageCreative,
-    deferKeywordSupplementation: options?.deferKeywordSupplementation,
-  })) {
+  if (
+    shouldRunGapAnalysisForCreative({
+      bucket: normalizedBucket,
+      isCoverageCreative,
+      deferKeywordSupplementation: options?.deferKeywordSupplementation,
+    })
+  ) {
     try {
       console.log('[Gap Analysis] 开始关键词缺口分析...')
       const { analyzeKeywordGapsPreGeneration } = await import('./scoring')
@@ -10532,11 +11660,13 @@ export async function generateAdCreative(
         brandName: offerBrand,
         userId,
         targetCountry: offer.target_country,
-        targetLanguage: offer.target_language
+        targetLanguage: offer.target_language,
       })
 
       if (gapAnalysis.suggestedKeywords.length > 0) {
-        console.log(`[Gap Analysis] 发现 ${gapAnalysis.suggestedKeywords.length} 个建议关键词（最多添加10个）`)
+        console.log(
+          `[Gap Analysis] 发现 ${gapAnalysis.suggestedKeywords.length} 个建议关键词（最多添加10个）`
+        )
 
         // 应用品牌前缀
         const { composeGlobalCoreBrandedKeyword } = await import('./offer-keyword-pool')
@@ -10545,7 +11675,7 @@ export async function generateAdCreative(
 
         // 构建现有关键词的标准化集合（用于去重）
         const existingKeywordsNormalized = new Set(
-          mergedKeywords.map(kw => normalizeGoogleAdsKeyword(kw.keyword))
+          mergedKeywords.map((kw) => normalizeGoogleAdsKeyword(kw.keyword))
         )
 
         let skippedExistingCount = 0
@@ -10578,22 +11708,26 @@ export async function generateAdCreative(
         }
 
         if (brandingFailedCount > 0) {
-          console.log(`[Gap Analysis] 丢弃了 ${brandingFailedCount} 个品牌化失败的关键词（品牌化后超过5词）`)
+          console.log(
+            `[Gap Analysis] 丢弃了 ${brandingFailedCount} 个品牌化失败的关键词（品牌化后超过5词）`
+          )
         }
 
         // 添加到关键词池，标记为SCORING_SUGGESTION源
-        const gapKeywordsNormalized = brandedGapKeywords.map(kw => ({
+        const gapKeywordsNormalized = brandedGapKeywords.map((kw) => ({
           keyword: kw,
           searchVolume: 0, // 绕过搜索量过滤
           source: 'SCORING_SUGGESTION',
           sourceType: 'GAP_INDUSTRY_BRANDED',
           priority: 'HIGH',
-          matchType: 'PHRASE' as const // 🎯 需求：默认词组匹配
+          matchType: 'PHRASE' as const, // 🎯 需求：默认词组匹配
         }))
 
         // 合并到现有关键词
         mergedKeywords.push(...gapKeywordsNormalized)
-        console.log(`[Gap Analysis] ✅ 最终添加 ${gapKeywordsNormalized.length} 个缺口关键词到关键词池`)
+        console.log(
+          `[Gap Analysis] ✅ 最终添加 ${gapKeywordsNormalized.length} 个缺口关键词到关键词池`
+        )
       } else {
         console.log('[Gap Analysis] 未发现关键词缺口')
       }
@@ -10605,8 +11739,8 @@ export async function generateAdCreative(
   // 🔥 优化：使用Google Ads标准化进行去重，保留最高优先级的关键词
   const uniqueKeywords = deduplicateKeywordsWithPriority(
     mergedKeywords,
-    kw => kw.keyword,
-    kw => {
+    (kw) => kw.keyword,
+    (kw) => {
       // 统一来源优先级：使用共享配置，避免多处硬编码冲突。
       const sourceScore = getKeywordSourcePriorityScoreFromInput({
         source: kw.source,
@@ -10631,27 +11765,36 @@ export async function generateAdCreative(
 
   if (finalKeywordFilter.removed.length > 0) {
     console.log(`🧹 最终关键词过滤: 移除 ${finalKeywordFilter.removed.length} 个低质量关键词`)
-    finalKeywordFilter.removed.slice(0, 5).forEach(item => {
+    finalKeywordFilter.removed.slice(0, 5).forEach((item) => {
       const kw = typeof item.keyword === 'string' ? item.keyword : item.keyword.keyword
       console.log(`   - "${kw}": ${item.reason}`)
     })
   }
 
   // 将 PoolKeywordData[] 转换为标准关键词格式
-  const filteredKeywords = finalKeywordFilter.filtered.map(kw => ({
+  const filteredKeywords = finalKeywordFilter.filtered.map((kw) => ({
     keyword: kw.keyword,
     searchVolume: kw.searchVolume || 0,
     source: kw.source || 'FILTERED',
     sourceType: (kw as any).sourceType,
-    priority: 'MEDIUM' as const
+    priority: 'MEDIUM' as const,
   }))
 
   // 🔥 调试：打印去重信息
-  logDuplicateKeywords(mergedKeywords.map(kw => kw.keyword), '合并前关键词')
+  logDuplicateKeywords(
+    mergedKeywords.map((kw) => kw.keyword),
+    '合并前关键词'
+  )
 
   // 标题和描述合并
-  const mergedHeadlines = [...(enhancedData.headlines || []), ...(extractedElements.headlines || [])]
-  const mergedDescriptions = [...(enhancedData.descriptions || []), ...(extractedElements.descriptions || [])]
+  const mergedHeadlines = [
+    ...(enhancedData.headlines || []),
+    ...(extractedElements.headlines || []),
+  ]
+  const mergedDescriptions = [
+    ...(enhancedData.descriptions || []),
+    ...(extractedElements.descriptions || []),
+  ]
 
   // 标题和描述去重
   const uniqueHeadlines = [...new Set(mergedHeadlines)]
@@ -10667,12 +11810,14 @@ export async function generateAdCreative(
     brandAnalysis: enhancedData.brandAnalysis,
     qualityScore: enhancedData.qualityScore,
     // 🆕 v4.10: 添加桶信息到合并数据中
-    bucketInfo: options?.bucket ? {
-      bucket: options.bucket,
-      intent: options.bucketIntent,
-      intentEn: options.bucketIntentEn,
-      keywordCount: bucketKeywordsNormalized.length
-    } : undefined
+    bucketInfo: options?.bucket
+      ? {
+          bucket: options.bucket,
+          intent: options.bucketIntent,
+          intentEn: options.bucketIntentEn,
+          keywordCount: bucketKeywordsNormalized.length,
+        }
+      : undefined,
   }
 
   const storeModelIntentReadiness = evaluateStoreModelIntentReadiness({
@@ -10698,12 +11843,20 @@ export async function generateAdCreative(
   console.log('📊 合并后的数据:')
   if (options?.bucket) {
     console.log(`   - 🆕 关键词池桶: ${options.bucket} (${options.bucketIntent})`)
-    console.log(`   - 关键词: ${mergedData.keywords?.length || 0}个 (桶${bucketKeywordsNormalized.length} + 增强${enhancedData.keywords?.length || 0} + 基础${extractedElements.keywords?.length || 0})`)
+    console.log(
+      `   - 关键词: ${mergedData.keywords?.length || 0}个 (桶${bucketKeywordsNormalized.length} + 增强${enhancedData.keywords?.length || 0} + 基础${extractedElements.keywords?.length || 0})`
+    )
   } else {
-    console.log(`   - 关键词: ${mergedData.keywords?.length || 0}个 (基础${extractedElements.keywords?.length || 0} + 增强${enhancedData.keywords?.length || 0})`)
+    console.log(
+      `   - 关键词: ${mergedData.keywords?.length || 0}个 (基础${extractedElements.keywords?.length || 0} + 增强${enhancedData.keywords?.length || 0})`
+    )
   }
-  console.log(`   - 标题: ${mergedData.headlines?.length || 0}个 (基础${extractedElements.headlines?.length || 0} + 增强${enhancedData.headlines?.length || 0})`)
-  console.log(`   - 描述: ${mergedData.descriptions?.length || 0}个 (基础${extractedElements.descriptions?.length || 0} + 增强${enhancedData.descriptions?.length || 0})`)
+  console.log(
+    `   - 标题: ${mergedData.headlines?.length || 0}个 (基础${extractedElements.headlines?.length || 0} + 增强${enhancedData.headlines?.length || 0})`
+  )
+  console.log(
+    `   - 描述: ${mergedData.descriptions?.length || 0}个 (基础${extractedElements.descriptions?.length || 0} + 增强${enhancedData.descriptions?.length || 0})`
+  )
   console.log(`   - 产品信息: ${mergedData.productInfo ? '有✨' : '无'}`)
   console.log(`   - 本地化: ${mergedData.localization ? '有✨' : '无'}`)
   console.log(`   - 品牌分析: ${mergedData.brandAnalysis ? '有✨' : '无'}`)
@@ -10720,7 +11873,7 @@ export async function generateAdCreative(
     options?.theme,
     options?.referencePerformance,
     options?.excludeKeywords,
-    mergedData,  // 🎯 传入合并后的增强数据
+    mergedData, // 🎯 传入合并后的增强数据
     {
       retryFailureType: options?.retryFailureType,
       searchTermFeedbackHints: options?.searchTermFeedbackHints,
@@ -10758,11 +11911,12 @@ export async function generateAdCreative(
 
       console.warn(
         `[AdCreative] 标准尝试失败，开始 ${retryPlan.mode} retry: ` +
-        `${error?.code || 'UNKNOWN'} ${String(error?.message || '')} (reason=${retryPlan.reason})`
+          `${error?.code || 'UNKNOWN'} ${String(error?.message || '')} (reason=${retryPlan.reason})`
       )
-      const retryPrompt = retryPlan.mode === 'emergency'
-        ? buildEmergencyAdCreativeRetryPrompt(prompt)
-        : buildSimplifiedAdCreativeRetryPrompt(prompt)
+      const retryPrompt =
+        retryPlan.mode === 'emergency'
+          ? buildEmergencyAdCreativeRetryPrompt(prompt)
+          : buildSimplifiedAdCreativeRetryPrompt(prompt)
       const retryAttempt = await runAdCreativeModelAttempt({
         userId,
         prompt: retryPrompt,
@@ -10783,8 +11937,13 @@ export async function generateAdCreative(
   // 🔧 修复(2025-12-27): 对AI生成的关键词进行质量过滤（移除品牌变体词和语义查询词）
   const brandName = offerBrand || 'Brand'
   if (result.keywords && result.keywords.length > 0) {
-    const policySafeGeneratedKeywords = sanitizeKeywordListForGoogleAdsPolicy(result.keywords, { mode: policyGuardMode })
-    if (policySafeGeneratedKeywords.changedCount > 0 || policySafeGeneratedKeywords.droppedCount > 0) {
+    const policySafeGeneratedKeywords = sanitizeKeywordListForGoogleAdsPolicy(result.keywords, {
+      mode: policyGuardMode,
+    })
+    if (
+      policySafeGeneratedKeywords.changedCount > 0 ||
+      policySafeGeneratedKeywords.droppedCount > 0
+    ) {
       console.log(
         `[PolicyGuard] AI生成关键词净化: 替换${policySafeGeneratedKeywords.changedCount}个, 丢弃${policySafeGeneratedKeywords.droppedCount}个`
       )
@@ -10792,7 +11951,7 @@ export async function generateAdCreative(
     result.keywords = policySafeGeneratedKeywords.items
 
     const { filterKeywordQuality } = await import('./keyword-quality-filter')
-    const keywordData = result.keywords.map(kw => ({
+    const keywordData = result.keywords.map((kw) => ({
       keyword: kw,
       searchVolume: 0,
       source: 'AI_GENERATED' as const,
@@ -10808,12 +11967,12 @@ export async function generateAdCreative(
 
     if (filtered.removed.length > 0) {
       console.warn(`⚠️ 关键词质量过滤: 移除 ${filtered.removed.length} 个低质量关键词`)
-      filtered.removed.slice(0, 5).forEach(item => {
+      filtered.removed.slice(0, 5).forEach((item) => {
         console.warn(`   - "${item.keyword.keyword}": ${item.reason}`)
       })
     }
 
-    result.keywords = filtered.filtered.map(kw => kw.keyword)
+    result.keywords = filtered.filtered.map((kw) => kw.keyword)
 
     // 🔥 2026-01-02: 移除品类过滤 - 避免误杀有效关键词
     // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
@@ -10823,8 +11982,8 @@ export async function generateAdCreative(
     const { deduplicateKeywordsWithPriority } = await import('./google-ads-keyword-normalizer')
     const keywordsAfterDedup = deduplicateKeywordsWithPriority(
       result.keywords,
-      kw => kw,
-      () => 0  // 所有AI生成关键词优先级相同
+      (kw) => kw,
+      () => 0 // 所有AI生成关键词优先级相同
     )
 
     const removedDuplicates = result.keywords.length - keywordsAfterDedup.length
@@ -10847,18 +12006,18 @@ export async function generateAdCreative(
   const titlePriorityProductTitle = (() => {
     const scrapedTitle =
       scrapedDataForOffer && typeof scrapedDataForOffer === 'object'
-        ? (
-          typeof (scrapedDataForOffer as any).productName === 'string'
-            ? (scrapedDataForOffer as any).productName
-            : (typeof (scrapedDataForOffer as any).title === 'string' ? (scrapedDataForOffer as any).title : '')
-        )
+        ? typeof (scrapedDataForOffer as any).productName === 'string'
+          ? (scrapedDataForOffer as any).productName
+          : typeof (scrapedDataForOffer as any).title === 'string'
+            ? (scrapedDataForOffer as any).title
+            : ''
         : ''
     return String(
-      scrapedTitle
-      || (offer as any).product_title
-      || (offer as any).product_name
-      || (offer as any).name
-      || ''
+      scrapedTitle ||
+        (offer as any).product_title ||
+        (offer as any).product_name ||
+        (offer as any).name ||
+        ''
     ).trim()
   })()
   const titlePriorityAboutItems = (() => {
@@ -10874,14 +12033,19 @@ export async function generateAdCreative(
     const enhancedBenefits = Array.isArray(mergedData.productInfo?.benefits)
       ? mergedData.productInfo.benefits
       : []
-    const primary = scrapedAbout.length > 0
-      ? scrapedAbout
-      : (scrapedFeatures.length > 0 ? scrapedFeatures : enhancedFeatures)
-    return Array.from(new Set(
-      [...primary, ...enhancedBenefits]
-        .map((item: any) => String(item || '').trim())
-        .filter(Boolean)
-    )).slice(0, 12)
+    const primary =
+      scrapedAbout.length > 0
+        ? scrapedAbout
+        : scrapedFeatures.length > 0
+          ? scrapedFeatures
+          : enhancedFeatures
+    return Array.from(
+      new Set(
+        [...primary, ...enhancedBenefits]
+          .map((item: any) => String(item || '').trim())
+          .filter(Boolean)
+      )
+    ).slice(0, 12)
   })()
 
   const finalFirstHeadline = buildDkiFirstHeadline(brandName, HEADLINE_MAX_LENGTH, {
@@ -10899,7 +12063,7 @@ export async function generateAdCreative(
         result.headlinesWithMetadata[0] = {
           ...result.headlinesWithMetadata[0],
           text: finalFirstHeadline,
-          length: finalFirstHeadline.length
+          length: finalFirstHeadline.length,
         }
       }
     } else {
@@ -10941,7 +12105,9 @@ export async function generateAdCreative(
   const language = resolvedCreativeLanguage.languageCode
 
   try {
-    console.log(`🔍 获取关键词精确搜索量: ${result.keywords.length}个关键词, 国家=${targetCountry}, 语言=${language} (${resolvedTargetLanguage})`)
+    console.log(
+      `🔍 获取关键词精确搜索量: ${result.keywords.length}个关键词, 国家=${targetCountry}, 语言=${language} (${resolvedTargetLanguage})`
+    )
 
     // 🎯 使用统一服务：确保所有搜索量来自Historical Metrics API（精确匹配）
     const { getKeywordVolumesForExisting } = await import('@/lib/unified-keyword-service')
@@ -10950,12 +12116,12 @@ export async function generateAdCreative(
       country: targetCountry,
       language,
       userId,
-      brandName
+      brandName,
     })
 
     // 🎯 修复：添加matchType字段（智能分配）+ lowTopPageBid/highTopPageBid竞价数据
     // 注意：这里仅做初始化，会在v4.16优化逻辑（行~2730）中根据品牌/非品牌/品牌相关分类重新分配
-    keywordsWithVolume = unifiedData.map(v => {
+    keywordsWithVolume = unifiedData.map((v) => {
       // 🔥 修复(2025-12-18): 不在初始阶段做复杂的品牌分类，改为统一使用PHRASE
       // 这样可以在v4.16优化阶段（行2708-2758）准确地重新分配matchType
       // 纯品牌词 → EXACT
@@ -10968,26 +12134,26 @@ export async function generateAdCreative(
         searchVolume: v.searchVolume,
         competition: v.competition,
         competitionIndex: v.competitionIndex,
-        lowTopPageBid: v.lowTopPageBid || 0,  // 🆕 添加页首最低出价
+        lowTopPageBid: v.lowTopPageBid || 0, // 🆕 添加页首最低出价
         highTopPageBid: v.highTopPageBid || 0, // 🆕 添加页首最高出价
         volumeUnavailableReason: v.volumeUnavailableReason,
-        matchType
+        matchType,
       }
     })
     console.log(`✅ 关键词精确搜索量获取完成（来源: Historical Metrics API）`)
   } catch (error) {
     console.warn('⚠️ 获取关键词搜索量失败，使用默认值:', error)
     // 🎯 修复：即使失败也要添加matchType和竞价数据
-    keywordsWithVolume = result.keywords.map(kw => {
+    keywordsWithVolume = result.keywords.map((kw) => {
       // 🔥 修复(2025-12-18): 同上，初始化时统一使用PHRASE，让v4.16优化逻辑处理分类
       let matchType: 'BROAD' | 'PHRASE' | 'EXACT' = 'PHRASE'
 
       return {
         keyword: kw,
         searchVolume: 0,
-        lowTopPageBid: 0,  // 🆕 默认为0
+        lowTopPageBid: 0, // 🆕 默认为0
         highTopPageBid: 0, // 🆕 默认为0
-        matchType
+        matchType,
       }
     })
   }
@@ -10995,7 +12161,9 @@ export async function generateAdCreative(
 
   // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
   const originalKeywordCount = keywordsWithVolume.length
-  const validKeywords = keywordsWithVolume.filter(kw => containsBrand(kw.keyword, kw.searchVolume))
+  const validKeywords = keywordsWithVolume.filter((kw) =>
+    containsBrand(kw.keyword, kw.searchVolume)
+  )
 
   // 更新关键词列表
   const removedCount = originalKeywordCount - validKeywords.length
@@ -11008,7 +12176,7 @@ export async function generateAdCreative(
   // 按搜索量从高到低排序
   validKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
 
-  result.keywords = validKeywords.map(kw => kw.keyword)
+  result.keywords = validKeywords.map((kw) => kw.keyword)
   keywordsWithVolume = validKeywords
 
   // 🎯 通过Keyword Planner扩展高搜索量关键词（多角度3轮查询策略）
@@ -11022,7 +12190,8 @@ export async function generateAdCreative(
       let preparedExpandForPool: KeywordPoolExpandLoadResult | undefined = options?.preparedExpand
       if (!plannerSessionForCreative) {
         const expandLoad =
-          preparedExpandForPool ?? (await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id))
+          preparedExpandForPool ??
+          (await loadKeywordPoolExpandCredentialsForOffer(userId, offer.id))
         if (expandLoad.ok) {
           plannerSessionForCreative = expandLoad.plannerSession
           preparedExpandForPool = expandLoad
@@ -11034,68 +12203,81 @@ export async function generateAdCreative(
       }
 
       if (plannerSessionForCreative) {
-          const country = (offer as { target_country?: string }).target_country || 'US'
-          const plannerLanguage = resolveCreativeTargetLanguage(
-            (offer as { target_language?: string }).target_language || null,
-            country
+        const country = (offer as { target_country?: string }).target_country || 'US'
+        const plannerLanguage = resolveCreativeTargetLanguage(
+          (offer as { target_language?: string }).target_language || null,
+          country
+        )
+        const targetLanguage = plannerLanguage.languageName
+        const language = plannerLanguage.languageCode
+
+        console.log(`🌍 Keyword Planner 查询语言: ${language} (${targetLanguage})`)
+
+        // 🔧 2025-12-17: 如果已传入特定桶的关键词，跳过从关键词池获取所有关键词
+        // 这确保差异化创意只使用对应桶的关键词，而不是所有桶的关键词混合
+        if (options?.bucketKeywords && options.bucketKeywords.length > 0) {
+          console.log(
+            `📦 已有桶 ${options.bucket} (${options.bucketIntent}) 的 ${options.bucketKeywords.length} 个关键词，跳过关键词池合并`
           )
-          const targetLanguage = plannerLanguage.languageName
-          const language = plannerLanguage.languageCode
+        } else {
+          // 🔥 统一架构(2025-12-16): 使用关键词池替代3轮Keyword Planner扩展
+          console.log(`\n🔍 从关键词池获取关键词...`)
+          const { getOrCreateKeywordPool } = await import('@/lib/offer-keyword-pool')
 
-          console.log(`🌍 Keyword Planner 查询语言: ${language} (${targetLanguage})`)
+          const keywordPool =
+            (options?.keywordPool as OfferKeywordPool | undefined) ||
+            (await getOrCreateKeywordPool(
+              offer.id,
+              userId,
+              false,
+              undefined,
+              preparedExpandForPool?.ok ? preparedExpandForPool : undefined
+            ))
 
-          // 🔧 2025-12-17: 如果已传入特定桶的关键词，跳过从关键词池获取所有关键词
-          // 这确保差异化创意只使用对应桶的关键词，而不是所有桶的关键词混合
-	          if (options?.bucketKeywords && options.bucketKeywords.length > 0) {
-	            console.log(`📦 已有桶 ${options.bucket} (${options.bucketIntent}) 的 ${options.bucketKeywords.length} 个关键词，跳过关键词池合并`)
-	          } else {
-	            // 🔥 统一架构(2025-12-16): 使用关键词池替代3轮Keyword Planner扩展
-	            console.log(`\n🔍 从关键词池获取关键词...`)
-	            const { getOrCreateKeywordPool } = await import('@/lib/offer-keyword-pool')
+          if (keywordPool) {
+            const poolKeywords = resolveCreativeBucketPoolKeywords(
+              keywordPool,
+              normalizedBucket,
+              'D'
+            )
 
-	            const keywordPool =
-	              (options?.keywordPool as OfferKeywordPool | undefined)
-	              || await getOrCreateKeywordPool(
-	                offer.id,
-	                userId,
-	                false,
-	                undefined,
-	                preparedExpandForPool?.ok ? preparedExpandForPool : undefined
-	              )
+            // 🔥 优化(2025-12-22): 使用Google Ads标准化去重
+            const existingKeywordsSet = new Set(
+              result.keywords.map((kw) => normalizeGoogleAdsKeyword(kw))
+            )
+            const newKeywords = poolKeywords.filter(
+              (kw) => !existingKeywordsSet.has(normalizeGoogleAdsKeyword(kw.keyword))
+            )
 
-	            if (keywordPool) {
-	              const poolKeywords = resolveCreativeBucketPoolKeywords(
-	                keywordPool,
-	                normalizedBucket,
-	                'D'
-	              )
-
-	              // 🔥 优化(2025-12-22): 使用Google Ads标准化去重
-	              const existingKeywordsSet = new Set(result.keywords.map(kw => normalizeGoogleAdsKeyword(kw)))
-              const newKeywords = poolKeywords.filter(kw => !existingKeywordsSet.has(normalizeGoogleAdsKeyword(kw.keyword)))
-
-              console.log(`📊 关键词池去重: ${poolKeywords.length} → ${newKeywords.length} (过滤掉 ${poolKeywords.length - newKeywords.length} 个重复)`)
+            console.log(
+              `📊 关键词池去重: ${poolKeywords.length} → ${newKeywords.length} (过滤掉 ${poolKeywords.length - newKeywords.length} 个重复)`
+            )
 
             keywordsWithVolume = [
               ...keywordsWithVolume,
-	              ...newKeywords.map(kw => ({
-	                keyword: kw.keyword,
-	                searchVolume: kw.searchVolume,
-	                competition: kw.competition,
-	                competitionIndex: kw.competitionIndex,
-	                source: (kw.source === 'AI_GENERATED' || kw.source === 'KEYWORD_EXPANSION' || kw.source === 'MERGED') ? kw.source as 'AI_GENERATED' | 'KEYWORD_EXPANSION' | 'MERGED' : undefined,
-	                sourceType: (kw as any).sourceType,
-	                matchType: kw.matchType
-	              }))
-	            ]
+              ...newKeywords.map((kw) => ({
+                keyword: kw.keyword,
+                searchVolume: kw.searchVolume,
+                competition: kw.competition,
+                competitionIndex: kw.competitionIndex,
+                source:
+                  kw.source === 'AI_GENERATED' ||
+                  kw.source === 'KEYWORD_EXPANSION' ||
+                  kw.source === 'MERGED'
+                    ? (kw.source as 'AI_GENERATED' | 'KEYWORD_EXPANSION' | 'MERGED')
+                    : undefined,
+                sourceType: (kw as any).sourceType,
+                matchType: kw.matchType,
+              })),
+            ]
 
-            result.keywords = [...result.keywords, ...newKeywords.map(kw => kw.keyword)]
+            result.keywords = [...result.keywords, ...newKeywords.map((kw) => kw.keyword)]
             console.log(`   ✅ 从关键词池获取 ${newKeywords.length} 个新关键词`)
             console.log(`   📊 当前关键词总数: ${keywordsWithVolume.length} 个`)
           } else {
             console.warn('   ⚠️ 关键词池不存在，跳过关键词扩展')
           }
-          } // 闭合 bucketKeywords 条件检查的 else 块
+        } // 闭合 bucketKeywords 条件检查的 else 块
       } else {
         console.warn('⚠️ Google Ads 认证不可用，跳过 Keyword Planner 扩展')
       }
@@ -11117,7 +12299,7 @@ export async function generateAdCreative(
   if (options?.deferKeywordPostProcessingToBuilder) {
     console.log('[KeywordPipeline] defer legacy keyword post-processing to builder')
     keywordsWithVolume = normalizeKeywordSourceAuditForGeneratorList(keywordsWithVolume)
-    result.keywords = keywordsWithVolume.map(kw => kw.keyword)
+    result.keywords = keywordsWithVolume.map((kw) => kw.keyword)
   } else {
     // 🔥 方案A优化(2025-12-16): 合并extracted_keywords到最终关键词列表
     // 原问题：31个高质量Google下拉词仅作为prompt参考，未直接使用
@@ -11163,7 +12345,7 @@ export async function generateAdCreative(
         targetLanguage: resolvedTargetLanguage,
         keywordsWithVolume,
         poolCandidates: Array.isArray(options?.bucketKeywords) ? options.bucketKeywords : undefined,
-        bucket: options?.bucket || null,  // 🔥 优化(2026-03-13): 传递 bucket 用于意图一致性检查
+        bucket: options?.bucket || null, // 🔥 优化(2026-03-13): 传递 bucket 用于意图一致性检查
       })
       keywordsWithVolume = supplemented.keywordsWithVolume
       result.keywords = supplemented.keywords
@@ -11171,14 +12353,16 @@ export async function generateAdCreative(
       result.keywordSupplementation = keywordSupplementationReport
     }
 
-    const policySafeFinalKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(keywordsWithVolume, { mode: policyGuardMode })
+    const policySafeFinalKeywords = sanitizeKeywordObjectsForGoogleAdsPolicy(keywordsWithVolume, {
+      mode: policyGuardMode,
+    })
     if (policySafeFinalKeywords.changedCount > 0 || policySafeFinalKeywords.droppedCount > 0) {
       console.log(
         `[PolicyGuard] 最终关键词兜底净化: 替换${policySafeFinalKeywords.changedCount}个, 丢弃${policySafeFinalKeywords.droppedCount}个`
       )
     }
     keywordsWithVolume = normalizeKeywordSourceAuditForGeneratorList(policySafeFinalKeywords.items)
-    result.keywords = keywordsWithVolume.map(kw => kw.keyword)
+    result.keywords = keywordsWithVolume.map((kw) => kw.keyword)
   }
 
   const effectiveKeywordUsagePlan = resolveEffectiveKeywordUsagePlan({
@@ -11201,7 +12385,7 @@ export async function generateAdCreative(
         result.descriptionsWithMetadata = result.descriptionsWithMetadata.map((d, idx) => ({
           ...d,
           text: result.descriptions[idx],
-          length: result.descriptions[idx]?.length || d.length
+          length: result.descriptions[idx]?.length || d.length,
         }))
       }
     }
@@ -11216,19 +12400,30 @@ export async function generateAdCreative(
         result.headlinesWithMetadata = result.headlinesWithMetadata.map((h, idx) => ({
           ...h,
           text: result.headlines[idx],
-          length: result.headlines[idx]?.length || h.length
+          length: result.headlines[idx]?.length || h.length,
         }))
       }
     }
   }
 
   // 🆕 非破坏式A/B/D文案补强：仅调整标题/描述表达，不修改关键词策略
-  const softFix = softlyReinforceTypeCopy(result, normalizedBucket, targetLanguage || resolvedLanguage, brandName)
+  const softFix = softlyReinforceTypeCopy(
+    result,
+    normalizedBucket,
+    targetLanguage || resolvedLanguage,
+    brandName
+  )
   if (softFix.headlineFixes > 0 || softFix.descriptionFixes > 0) {
-    console.log(`🔧 类型化文案补强: headlines ${softFix.headlineFixes} 条, descriptions ${softFix.descriptionFixes} 条`)
+    console.log(
+      `🔧 类型化文案补强: headlines ${softFix.headlineFixes} 条, descriptions ${softFix.descriptionFixes} 条`
+    )
   }
 
-  const emotionFix = enforceEmotionBoundaryByBucket(result, normalizedBucket, targetLanguage || resolvedLanguage)
+  const emotionFix = enforceEmotionBoundaryByBucket(
+    result,
+    normalizedBucket,
+    targetLanguage || resolvedLanguage
+  )
   if (emotionFix.fixes > 0) {
     console.log(`🔧 情绪边界补强: 中和强负面表达 ${emotionFix.fixes} 处`)
   }
@@ -11308,23 +12503,23 @@ export async function generateAdCreative(
     usagePlan: effectiveKeywordUsagePlan,
   })
   if (
-    finalContractFix.headlineFixes > 0
-    || finalContractFix.descriptionFixes > 0
-    || finalContractFix.titleFixes > 0
-    || finalContractFix.retainedFixes.headlineFixes > 0
-    || finalContractFix.retainedFixes.descriptionFixes > 0
-    || finalContractFix.languageFixes.headlineFixes > 0
-    || finalContractFix.languageFixes.descriptionFixes > 0
-    || finalContractFix.uniquenessFixes > 0
+    finalContractFix.headlineFixes > 0 ||
+    finalContractFix.descriptionFixes > 0 ||
+    finalContractFix.titleFixes > 0 ||
+    finalContractFix.retainedFixes.headlineFixes > 0 ||
+    finalContractFix.retainedFixes.descriptionFixes > 0 ||
+    finalContractFix.languageFixes.headlineFixes > 0 ||
+    finalContractFix.languageFixes.descriptionFixes > 0 ||
+    finalContractFix.uniquenessFixes > 0
   ) {
     console.log(
       `🔧 最终硬约束收敛: ` +
-      `headline=${finalContractFix.headlineFixes}, ` +
-      `description=${finalContractFix.descriptionFixes}, ` +
-      `title=${finalContractFix.titleFixes}, ` +
-      `retained(h=${finalContractFix.retainedFixes.headlineFixes},d=${finalContractFix.retainedFixes.descriptionFixes}), ` +
-      `purity(h=${finalContractFix.languageFixes.headlineFixes},d=${finalContractFix.languageFixes.descriptionFixes}), ` +
-      `dedupe=${finalContractFix.uniquenessFixes}`
+        `headline=${finalContractFix.headlineFixes}, ` +
+        `description=${finalContractFix.descriptionFixes}, ` +
+        `title=${finalContractFix.titleFixes}, ` +
+        `retained(h=${finalContractFix.retainedFixes.headlineFixes},d=${finalContractFix.retainedFixes.descriptionFixes}), ` +
+        `purity(h=${finalContractFix.languageFixes.headlineFixes},d=${finalContractFix.languageFixes.descriptionFixes}), ` +
+        `dedupe=${finalContractFix.uniquenessFixes}`
     )
   }
 
@@ -11339,19 +12534,25 @@ export async function generateAdCreative(
     const rawFinalUrl = (offer as { final_url?: string; url?: string }).final_url
     const offerUrlRaw = (offer as { url?: string }).url
     // 只有当final_url是有效的URL时才使用，否则fallback到url字段
-    const isFinalUrlValid = rawFinalUrl && rawFinalUrl !== 'null' && rawFinalUrl !== 'null/' && rawFinalUrl !== 'undefined'
+    const isFinalUrlValid =
+      rawFinalUrl &&
+      rawFinalUrl !== 'null' &&
+      rawFinalUrl !== 'null/' &&
+      rawFinalUrl !== 'undefined'
     const offerUrl = isFinalUrlValid ? rawFinalUrl : offerUrlRaw
     if (offerUrl) {
-      result.sitelinks = result.sitelinks.map(link => {
+      result.sitelinks = result.sitelinks.map((link) => {
         // 所有sitelinks统一使用offer的主URL（不拼接子路径）
         // 这确保所有链接都是真实可访问的
         return {
           ...link,
-          url: offerUrl  // 优先使用final_url，避免推广链接
+          url: offerUrl, // 优先使用final_url，避免推广链接
         }
       })
 
-      console.log(`🔗 修正 ${result.sitelinks.length} 个附加链接URL为真实offer URL (${offerUrl.substring(0, 50)}...)`)
+      console.log(
+        `🔗 修正 ${result.sitelinks.length} 个附加链接URL为真实offer URL (${offerUrl.substring(0, 50)}...)`
+      )
     }
   }
 
@@ -11362,7 +12563,11 @@ export async function generateAdCreative(
     console.time('⏱️ 否定关键词生成')
     negativeKeywords = await generateNegativeKeywords(offer as Offer, userId)
     console.timeEnd('⏱️ 否定关键词生成')
-    console.log(`✅ 生成${negativeKeywords.length}个否定关键词:`, negativeKeywords.slice(0, 5).join(', '), '...')
+    console.log(
+      `✅ 生成${negativeKeywords.length}个否定关键词:`,
+      negativeKeywords.slice(0, 5).join(', '),
+      '...'
+    )
   } catch (negError: any) {
     // 否定关键词生成失败不影响主流程
     console.warn('⚠️ 否定关键词生成失败（非致命错误）:', negError.message)
@@ -11371,9 +12576,9 @@ export async function generateAdCreative(
   const fullResult = {
     ...result,
     keywordsWithVolume,
-    negativeKeywords,  // 🎯 新增：添加否定关键词到结果
+    negativeKeywords, // 🎯 新增：添加否定关键词到结果
     keywordSupplementation: keywordSupplementationReport,
-    ai_model: aiModel
+    ai_model: aiModel,
   }
 
   // 缓存结果（1小时TTL）
@@ -11396,7 +12601,7 @@ export async function generateAdCreative(
  */
 export async function generateAdCreativesBatch(
   offerId: number,
-  userId: number,  // ✅ 修复：改为必需参数
+  userId: number, // ✅ 修复：改为必需参数
   count: number = 3,
   options?: {
     theme?: string
@@ -11424,7 +12629,7 @@ export async function generateAdCreativesBatch(
     : [
         'Brand Intent - 强调品牌背书 + 真实商品锚点。Headlines必须同时体现品牌与商品/品类，不得退化成纯品牌导航文案。',
         'Model Intent - 强调型号/产品族购买意图。Headlines优先体现型号、产品族或规格锚点，Descriptions突出精准适配与购买动作。',
-        'Product Demand Intent - 强调商品需求、功能、场景和产品线覆盖。Headlines突出功能/场景，Descriptions说明需求解法与CTA。'
+        'Product Demand Intent - 强调商品需求、功能、场景和产品线覆盖。Headlines突出功能/场景，Descriptions说明需求解法与CTA。',
       ]
 
   // 创建并行生成任务
@@ -11432,7 +12637,7 @@ export async function generateAdCreativesBatch(
     const taskOptions = {
       ...options,
       theme: themes[index % themes.length],
-      skipCache: options?.skipCache || false
+      skipCache: options?.skipCache || false,
     }
 
     return generateAdCreative(offerId, userId, taskOptions)
@@ -11466,7 +12671,7 @@ export async function generateAdCreativesBatch(
 export async function generateSyntheticCreative(
   offerId: number,
   userId: number,
-  keywordPool: any,  // OfferKeywordPool
+  keywordPool: any, // OfferKeywordPool
   options?: {
     skipCache?: boolean
     maxNonBrandKeywords?: number
@@ -11488,11 +12693,13 @@ export async function generateSyntheticCreative(
   }
 
   // 2. 使用关键词池服务获取商品需求 coverage 关键词
-  const { getCoverageBucketKeywords, DEFAULT_COVERAGE_KEYWORD_CONFIG } = await import('./offer-keyword-pool')
+  const { getCoverageBucketKeywords, DEFAULT_COVERAGE_KEYWORD_CONFIG } =
+    await import('./offer-keyword-pool')
 
   const config = {
     ...DEFAULT_COVERAGE_KEYWORD_CONFIG,
-    maxNonBrandKeywords: options?.maxNonBrandKeywords || DEFAULT_COVERAGE_KEYWORD_CONFIG.maxNonBrandKeywords,
+    maxNonBrandKeywords:
+      options?.maxNonBrandKeywords || DEFAULT_COVERAGE_KEYWORD_CONFIG.maxNonBrandKeywords,
     minSearchVolume: options?.minSearchVolume || DEFAULT_COVERAGE_KEYWORD_CONFIG.minSearchVolume,
     language: normalizeLanguageCode((offer as any).target_language || 'en'),
   }
@@ -11506,9 +12713,9 @@ export async function generateSyntheticCreative(
   )
 
   // 3. 提取关键词列表
-  const bucketKeywords = coverageKeywords.map(k => k.keyword)
-  const brandKeywordCount = coverageKeywords.filter(k => k.isBrand).length
-  const nonBrandKeywordCount = coverageKeywords.filter(k => !k.isBrand).length
+  const bucketKeywords = coverageKeywords.map((k) => k.keyword)
+  const brandKeywordCount = coverageKeywords.filter((k) => k.isBrand).length
+  const nonBrandKeywordCount = coverageKeywords.filter((k) => !k.isBrand).length
 
   console.log(`📊 Coverage 关键词准备完成:`)
   console.log(`   - 品牌词: ${brandKeywordCount}个`)
@@ -11558,13 +12765,23 @@ function calculateTextSimilarity(text1: string, text2: string): number {
   if (!text1 || !text2) return 0
 
   // 1. Jaccard 相似度 (词集合) - 30%
-  const words1 = new Set(text1.toLowerCase().split(/\s+/).filter(w => w.length > 0))
-  const words2 = new Set(text2.toLowerCase().split(/\s+/).filter(w => w.length > 0))
+  const words1 = new Set(
+    text1
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 0)
+  )
+  const words2 = new Set(
+    text2
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length > 0)
+  )
 
   if (words1.size === 0 && words2.size === 0) return 1
   if (words1.size === 0 || words2.size === 0) return 0
 
-  const intersection = new Set([...words1].filter(word => words2.has(word)))
+  const intersection = new Set([...words1].filter((word) => words2.has(word)))
   const union = new Set([...words1, ...words2])
   const jaccardSimilarity = union.size > 0 ? intersection.size / union.size : 0
 
@@ -11582,7 +12799,8 @@ function calculateTextSimilarity(text1: string, text2: string): number {
     mag2 += count2 * count2
   }
 
-  const cosineSimilarity = mag1 > 0 && mag2 > 0 ? dotProduct / (Math.sqrt(mag1) * Math.sqrt(mag2)) : 0
+  const cosineSimilarity =
+    mag1 > 0 && mag2 > 0 ? dotProduct / (Math.sqrt(mag1) * Math.sqrt(mag2)) : 0
 
   // 3. 编辑距离相似度 - 20%
   const maxLen = Math.max(text1.length, text2.length)
@@ -11592,7 +12810,7 @@ function calculateTextSimilarity(text1: string, text2: string): number {
   // 4. N-gram 相似度 - 20%
   const ngrams1 = getNgrams(text1, 2)
   const ngrams2 = getNgrams(text2, 2)
-  const ngramIntersection = ngrams1.filter(ng => ngrams2.includes(ng)).length
+  const ngramIntersection = ngrams1.filter((ng) => ngrams2.includes(ng)).length
   const ngramUnion = new Set([...ngrams1, ...ngrams2]).size
   const ngramSimilarity = ngramUnion > 0 ? ngramIntersection / ngramUnion : 0
 
@@ -11641,7 +12859,10 @@ function calculateEditDistance(str1: string, str2: string): number {
  * 提取 N-gram
  */
 function getNgrams(text: string, n: number): string[] {
-  const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 0)
+  const words = text
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
   const ngrams: string[] = []
 
   for (let i = 0; i <= words.length - n; i++) {
@@ -11687,7 +12908,7 @@ function validateCreativeDiversity(
           creative1Index: i,
           creative2Index: j,
           similarity: headlineSimilarity,
-          type: 'headline'
+          type: 'headline',
         })
       }
 
@@ -11705,7 +12926,7 @@ function validateCreativeDiversity(
           creative1Index: i,
           creative2Index: j,
           similarity: descriptionSimilarity,
-          type: 'description'
+          type: 'description',
         })
       }
 
@@ -11723,7 +12944,7 @@ function validateCreativeDiversity(
           creative1Index: i,
           creative2Index: j,
           similarity: keywordSimilarity,
-          type: 'keyword'
+          type: 'keyword',
         })
       }
     }
@@ -11732,17 +12953,14 @@ function validateCreativeDiversity(
   return {
     valid: issues.length === 0,
     issues,
-    similarities
+    similarities,
   }
 }
 
 /**
  * 计算两个创意的标题相似度
  */
-function calculateCreativeHeadlineSimilarity(
-  headlines1: string[],
-  headlines2: string[]
-): number {
+function calculateCreativeHeadlineSimilarity(headlines1: string[], headlines2: string[]): number {
   let totalSimilarity = 0
   let comparisons = 0
 
@@ -11779,14 +12997,11 @@ function calculateCreativeDescriptionSimilarity(
 /**
  * 计算两个创意的关键词相似度
  */
-function calculateCreativeKeywordSimilarity(
-  keywords1: string[],
-  keywords2: string[]
-): number {
-  const set1 = new Set(keywords1.map(k => k.toLowerCase()))
-  const set2 = new Set(keywords2.map(k => k.toLowerCase()))
+function calculateCreativeKeywordSimilarity(keywords1: string[], keywords2: string[]): number {
+  const set1 = new Set(keywords1.map((k) => k.toLowerCase()))
+  const set2 = new Set(keywords2.map((k) => k.toLowerCase()))
 
-  const intersection = new Set([...set1].filter(k => set2.has(k)))
+  const intersection = new Set([...set1].filter((k) => set2.has(k)))
   const union = new Set([...set1, ...set2])
 
   return union.size > 0 ? intersection.size / union.size : 0
@@ -11801,7 +13016,7 @@ function calculateCreativeKeywordSimilarity(
  */
 export async function generateMultipleCreativesWithDiversityCheck(
   offerId: number,
-  userId: number,  // ✅ 修复：改为必需参数
+  userId: number, // ✅ 修复：改为必需参数
   count: number = 3,
   maxSimilarity: number = 0.2,
   maxRetries: number = 3,
@@ -11886,7 +13101,7 @@ export async function generateMultipleCreativesWithDiversityCheck(
           // 未通过多样性检查
           failedAttempts++
           console.warn(`⚠️  创意未通过多样性检查，原因:`)
-          diversityCheck.issues.forEach(issue => {
+          diversityCheck.issues.forEach((issue) => {
             console.warn(`   - ${issue}`)
           })
 
@@ -11920,7 +13135,7 @@ export async function generateMultipleCreativesWithDiversityCheck(
     console.log(`\n✅ 所有创意通过多样性检查！`)
   } else {
     console.log(`\n⚠️  部分创意未通过多样性检查:`)
-    finalDiversityCheck.issues.forEach(issue => {
+    finalDiversityCheck.issues.forEach((issue) => {
       console.log(`   - ${issue}`)
     })
   }
@@ -11932,7 +13147,7 @@ export async function generateMultipleCreativesWithDiversityCheck(
       totalAttempts,
       successfulCreatives: creatives.length,
       failedAttempts,
-      totalTime
-    }
+      totalTime,
+    },
   }
 }

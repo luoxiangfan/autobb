@@ -20,10 +20,7 @@ export async function GET(request: NextRequest) {
     const offerId = searchParams.get('offer_id')
 
     if (!offerId) {
-      return NextResponse.json(
-        { error: 'offer_id参数不能为空' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'offer_id参数不能为空' }, { status: 400 })
     }
 
     const db = await getDatabase()

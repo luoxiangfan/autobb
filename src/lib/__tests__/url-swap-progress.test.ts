@@ -96,4 +96,3 @@ describe('url-swap progress', () => {
     expect(task?.progress).toBe(100)
   })
 })
-

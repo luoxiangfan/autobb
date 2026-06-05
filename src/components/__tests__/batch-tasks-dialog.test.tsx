@@ -34,7 +34,6 @@ describe('BatchTasksDialog', () => {
         dispatchEvent: vi.fn(),
       })),
     })
-
     ;(globalThis as any).ResizeObserver =
       (globalThis as any).ResizeObserver ||
       class ResizeObserver {
@@ -71,9 +70,7 @@ describe('BatchTasksDialog', () => {
             urlSwap: 1,
             general: 0,
           },
-          errors: [
-            { offerId: 102, type: 'urlSwap', error: '缺少 Campaign 关联' },
-          ],
+          errors: [{ offerId: 102, type: 'urlSwap', error: '缺少 Campaign 关联' }],
         },
       }),
     })
@@ -229,12 +226,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101, 102]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101, 102]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -268,12 +260,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101, 102]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101, 102]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -311,12 +298,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -351,12 +333,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -369,14 +346,7 @@ describe('BatchTasksDialog', () => {
   })
 
   it('shows zero-selection guidance in dialog description', () => {
-    render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[]}
-      />
-    )
+    render(<BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[]} />)
 
     expect(document.body.textContent).toMatch(/请先在列表中勾选至少一项有效数据/)
     expect(document.body.textContent).toMatch(/关闭本窗口后回到列表重新勾选即可/)
@@ -410,12 +380,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101, 102]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101, 102]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -455,12 +420,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101, 102]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101, 102]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -502,12 +462,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101, 102]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101, 102]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))
@@ -549,12 +504,7 @@ describe('BatchTasksDialog', () => {
     )
 
     render(
-      <BatchTasksDialog
-        open={true}
-        onOpenChange={vi.fn()}
-        variant="offers"
-        offerIds={[101, 102]}
-      />
+      <BatchTasksDialog open={true} onOpenChange={vi.fn()} variant="offers" offerIds={[101, 102]} />
     )
 
     fireEvent.click(screen.getByRole('button', { name: '一键开启' }))

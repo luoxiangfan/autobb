@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     // 🔄 通过队列系统触发同步（替代直接调用）
     const taskId = await triggerDataSync(userId, {
       syncType: 'manual',
-      priority: 'high',  // 手动触发优先级高
+      priority: 'high', // 手动触发优先级高
     })
 
     return NextResponse.json({

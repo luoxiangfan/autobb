@@ -1,7 +1,12 @@
 import crypto from 'crypto'
 import { getDatabase } from './db'
 import { applyCampaignTransition } from './campaign-state-machine'
-import { computeCampaignConfigHash, computeContentHash, type CampaignConfigData, type CreativeContentData } from './launch-scores'
+import {
+  computeCampaignConfigHash,
+  computeContentHash,
+  type CampaignConfigData,
+  type CreativeContentData,
+} from './launch-scores'
 
 export type ResumablePublishCampaignRow = {
   id: number
@@ -36,8 +41,11 @@ export type PublishResumePlan = {
 
 const DEFAULT_RESUME_FAILED_LOOKBACK_DAYS = 14
 
-export function getResumableFailedLookbackIso(days: number = DEFAULT_RESUME_FAILED_LOOKBACK_DAYS): string {
-  const safeDays = Number.isFinite(days) && days > 0 ? Math.floor(days) : DEFAULT_RESUME_FAILED_LOOKBACK_DAYS
+export function getResumableFailedLookbackIso(
+  days: number = DEFAULT_RESUME_FAILED_LOOKBACK_DAYS
+): string {
+  const safeDays =
+    Number.isFinite(days) && days > 0 ? Math.floor(days) : DEFAULT_RESUME_FAILED_LOOKBACK_DAYS
   return new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000).toISOString()
 }
 
@@ -76,11 +84,14 @@ function normalizeKeywordList(value: unknown): string[] {
   const seen = new Set<string>()
   const result: string[] = []
   for (const item of value) {
-    const text = typeof item === 'string'
-      ? item
-      : String((item as { text?: string; keyword?: string })?.text
-        || (item as { keyword?: string })?.keyword
-        || '')
+    const text =
+      typeof item === 'string'
+        ? item
+        : String(
+            (item as { text?: string; keyword?: string })?.text ||
+              (item as { keyword?: string })?.keyword ||
+              ''
+          )
     const normalized = text.trim().replace(/\s+/g, ' ')
     if (!normalized) continue
     const key = normalized.toLowerCase()
@@ -124,18 +135,22 @@ function buildKeywordsFingerprint(config: ParsedCampaignConfig): string {
   return hashValue({
     keywords: normalizeKeywordList(config.keywords),
     negativeKeywords: normalizeKeywordList(config.negativeKeywords || config.negative_keywords),
-    negativeKeywordMatchType: config.negativeKeywordMatchType || config.negative_keywords_match_type || null,
+    negativeKeywordMatchType:
+      config.negativeKeywordMatchType || config.negative_keywords_match_type || null,
   })
 }
 
-function buildRsaFingerprint(config: ParsedCampaignConfig, creative?: {
-  headlines?: string[]
-  descriptions?: string[]
-  finalUrl?: string
-  finalUrlSuffix?: string
-  path1?: string
-  path2?: string
-}): string {
+function buildRsaFingerprint(
+  config: ParsedCampaignConfig,
+  creative?: {
+    headlines?: string[]
+    descriptions?: string[]
+    finalUrl?: string
+    finalUrlSuffix?: string
+    path1?: string
+    path2?: string
+  }
+): string {
   const headlines = normalizeTextAssets(creative?.headlines ?? config.headlines)
   const descriptions = normalizeTextAssets(creative?.descriptions ?? config.descriptions)
   const payload: CreativeContentData = {
@@ -144,11 +159,13 @@ function buildRsaFingerprint(config: ParsedCampaignConfig, creative?: {
     keywords: normalizeKeywordList(config.keywords),
     negativeKeywords: normalizeKeywordList(config.negativeKeywords || config.negative_keywords),
     finalUrl: String(
-      creative?.finalUrl
-      || config.finalUrl
-      || (Array.isArray(config.finalUrls) ? config.finalUrls[0] : '')
-      || ''
-    ).toLowerCase().trim(),
+      creative?.finalUrl ||
+        config.finalUrl ||
+        (Array.isArray(config.finalUrls) ? config.finalUrls[0] : '') ||
+        ''
+    )
+      .toLowerCase()
+      .trim(),
   }
   const base = computeContentHash(payload)
   return hashValue({
@@ -159,10 +176,13 @@ function buildRsaFingerprint(config: ParsedCampaignConfig, creative?: {
   })
 }
 
-function buildExtensionsFingerprint(config: ParsedCampaignConfig, creative?: {
-  callouts?: string[]
-  sitelinks?: unknown[]
-}): string {
+function buildExtensionsFingerprint(
+  config: ParsedCampaignConfig,
+  creative?: {
+    callouts?: string[]
+    sitelinks?: unknown[]
+  }
+): string {
   return hashValue({
     callouts: normalizeTextAssets(creative?.callouts ?? config.callouts),
     sitelinks: Array.isArray(creative?.sitelinks ?? config.sitelinks)
@@ -192,7 +212,7 @@ export async function findResumablePublishCampaignForOffer(
   const failedLookbackIso = getResumableFailedLookbackIso()
   const escapedFailedLookback = failedLookbackIso.replace(/'/g, "''")
 
-  const row = await db.queryOne(
+  const row = (await db.queryOne(
     `
       SELECT
         id,
@@ -232,7 +252,7 @@ export async function findResumablePublishCampaignForOffer(
       LIMIT 1
     `,
     [offerId, userId]
-  ) as ResumablePublishCampaignRow | undefined
+  )) as ResumablePublishCampaignRow | undefined
 
   return row ?? null
 }
@@ -278,18 +298,18 @@ export function buildPublishResumePlan(params: {
   }
 
   const campaignSettingsChanged =
-    buildCampaignSettingsFingerprint(storedConfig)
-    !== buildCampaignSettingsFingerprint(params.nextCampaignConfig)
+    buildCampaignSettingsFingerprint(storedConfig) !==
+    buildCampaignSettingsFingerprint(params.nextCampaignConfig)
   const adGroupSettingsChanged =
     buildAdGroupFingerprint(storedConfig) !== buildAdGroupFingerprint(params.nextCampaignConfig)
   const keywordsChanged =
     buildKeywordsFingerprint(storedConfig) !== buildKeywordsFingerprint(params.nextCampaignConfig)
   const rsaChanged =
-    buildRsaFingerprint(storedConfig)
-    !== buildRsaFingerprint(params.nextCampaignConfig, params.nextCreative)
+    buildRsaFingerprint(storedConfig) !==
+    buildRsaFingerprint(params.nextCampaignConfig, params.nextCreative)
   const extensionsChanged =
-    buildExtensionsFingerprint(storedConfig)
-    !== buildExtensionsFingerprint(params.nextCampaignConfig, params.nextCreative)
+    buildExtensionsFingerprint(storedConfig) !==
+    buildExtensionsFingerprint(params.nextCampaignConfig, params.nextCreative)
 
   return {
     resumeMode: true,
@@ -450,10 +470,10 @@ export async function reactivateCampaignForPublishResume(params: {
 export function isDuplicateGoogleAdsResourceError(error: unknown): boolean {
   const message = String((error as { message?: string })?.message || error || '').toLowerCase()
   if (
-    message.includes('already exists')
-    || message.includes('resource_already_exists')
-    || message.includes('duplicate')
-    || message.includes('重复')
+    message.includes('already exists') ||
+    message.includes('resource_already_exists') ||
+    message.includes('duplicate') ||
+    message.includes('重复')
   ) {
     return true
   }

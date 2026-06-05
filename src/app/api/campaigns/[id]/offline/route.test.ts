@@ -60,11 +60,17 @@ vi.mock('@/lib/api-cache', () => ({
 }))
 
 vi.mock('@/lib/click-farm/queue-cleanup', () => ({
-  removePendingClickFarmQueueTasksByTaskIds: vi.fn(async () => ({ removedCount: 2, scannedCount: 10 })),
+  removePendingClickFarmQueueTasksByTaskIds: vi.fn(async () => ({
+    removedCount: 2,
+    scannedCount: 10,
+  })),
 }))
 
 vi.mock('@/lib/url-swap/queue-cleanup', () => ({
-  removePendingUrlSwapQueueTasksByTaskIds: vi.fn(async () => ({ removedCount: 1, scannedCount: 6 })),
+  removePendingUrlSwapQueueTasksByTaskIds: vi.fn(async () => ({
+    removedCount: 1,
+    scannedCount: 6,
+  })),
 }))
 
 vi.mock('@/lib/queue/init-queue', () => ({
@@ -104,7 +110,8 @@ const { invalidateOfferCache } = await import('@/lib/api-cache')
 const { removePendingClickFarmQueueTasksByTaskIds } = await import('@/lib/click-farm/queue-cleanup')
 const { removePendingUrlSwapQueueTasksByTaskIds } = await import('@/lib/url-swap/queue-cleanup')
 const { applyCampaignTransition } = await import('@/lib/campaign-state-machine')
-const { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } = await import('@/lib/google-ads-api')
+const { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } =
+  await import('@/lib/google-ads-api')
 describe('POST /api/campaigns/:id/offline', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -141,17 +148,15 @@ describe('POST /api/campaigns/:id/offline', () => {
     })
 
     dbFns.query.mockImplementation(async (sql: string) => {
-      if (sql.includes('FROM click_farm_tasks') && sql.includes("status = 'paused'") && sql.includes("pause_reason = 'offline'")) {
-        return [
-          { id: 'cf-task-1' },
-          { id: 'cf-task-2' },
-        ]
+      if (
+        sql.includes('FROM click_farm_tasks') &&
+        sql.includes("status = 'paused'") &&
+        sql.includes("pause_reason = 'offline'")
+      ) {
+        return [{ id: 'cf-task-1' }, { id: 'cf-task-2' }]
       }
       if (sql.includes('FROM url_swap_tasks') && sql.includes("status = 'disabled'")) {
-        return [
-          { id: 'us-task-1' },
-          { id: 'us-task-2' },
-        ]
+        return [{ id: 'us-task-1' }, { id: 'us-task-2' }]
       }
       return []
     })
@@ -178,7 +183,10 @@ describe('POST /api/campaigns/:id/offline', () => {
       action: 'OFFLINE',
     })
     expect(vi.mocked(invalidateOfferCache)).toHaveBeenCalledWith(1, 777)
-    expect(vi.mocked(removePendingClickFarmQueueTasksByTaskIds)).toHaveBeenCalledWith(['cf-task-1', 'cf-task-2'], 1)
+    expect(vi.mocked(removePendingClickFarmQueueTasksByTaskIds)).toHaveBeenCalledWith(
+      ['cf-task-1', 'cf-task-2'],
+      1
+    )
   })
 
   it('cleans url-swap queue by task IDs when pauseUrlSwapTasks is true', async () => {
@@ -196,7 +204,10 @@ describe('POST /api/campaigns/:id/offline', () => {
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
     expect(data.data.urlSwapPaused).toBe(1)
-    expect(vi.mocked(removePendingUrlSwapQueueTasksByTaskIds)).toHaveBeenCalledWith(['us-task-1', 'us-task-2'], 1)
+    expect(vi.mocked(removePendingUrlSwapQueueTasksByTaskIds)).toHaveBeenCalledWith(
+      ['us-task-1', 'us-task-2'],
+      1
+    )
   })
 
   it('waitRemote=true executes google ads update synchronously and returns completed summary', async () => {

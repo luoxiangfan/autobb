@@ -53,7 +53,9 @@ describe('ad-creative-generation-mode', () => {
       enableSupplementation: true,
       skipSupplementAiRanking: true,
     })
-    expect(getAdCreativeGenerationModeProfile('original').maxRetries).toBe(AD_CREATIVE_MAX_AUTO_RETRIES)
+    expect(getAdCreativeGenerationModeProfile('original').maxRetries).toBe(
+      AD_CREATIVE_MAX_AUTO_RETRIES
+    )
   })
 
   it('resolveCreativeGenerationRuntime defaults to original when mode omitted', () => {
@@ -68,7 +70,10 @@ describe('ad-creative-generation-mode', () => {
     expect(fast.invalidMode).toBe(false)
     expect(fast.runtime.maxRetries).toBe(0)
 
-    const balanced = resolveCreativeGenerationRuntime({ generation_mode: 'balanced', maxRetries: 99 })
+    const balanced = resolveCreativeGenerationRuntime({
+      generation_mode: 'balanced',
+      maxRetries: 99,
+    })
     expect(balanced.runtime.maxRetries).toBe(1)
 
     const invalid = resolveCreativeGenerationRuntime({ generationMode: 'nope' })
@@ -91,7 +96,10 @@ describe('ad-creative-generation-mode', () => {
   })
 
   it('resolveCreativeGenerationRuntime applies balanced profile caps', () => {
-    const balanced = resolveCreativeGenerationRuntime({ generationMode: 'balanced', maxRetries: 99 })
+    const balanced = resolveCreativeGenerationRuntime({
+      generationMode: 'balanced',
+      maxRetries: 99,
+    })
     expect(balanced.invalidMode).toBe(false)
     expect(balanced.runtime.mode).toBe('balanced')
     expect(balanced.runtime.maxRetries).toBe(1)

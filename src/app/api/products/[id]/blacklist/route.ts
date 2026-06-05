@@ -49,10 +49,7 @@ export async function POST(request: NextRequest, props: { params: Promise<RouteP
     })
   } catch (error: any) {
     console.error('[POST /api/products/:id/blacklist] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '拉黑失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '拉黑失败' }, { status: 500 })
   }
 }
 
@@ -76,9 +73,6 @@ export async function DELETE(request: NextRequest, props: { params: Promise<Rout
     })
   } catch (error: any) {
     console.error('[DELETE /api/products/:id/blacklist] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '取消拉黑失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '取消拉黑失败' }, { status: 500 })
   }
 }

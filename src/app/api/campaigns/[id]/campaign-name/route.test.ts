@@ -94,12 +94,16 @@ describe('PUT /api/campaigns/:id/campaign-name', () => {
   })
 
   it('returns 400 when campaign name is empty', async () => {
-    const response = await PUT(makeRequest({ campaignName: '   ' }), { params: Promise.resolve({ id: '10' }) })
+    const response = await PUT(makeRequest({ campaignName: '   ' }), {
+      params: Promise.resolve({ id: '10' }),
+    })
     expect(response.status).toBe(400)
   })
 
   it('updates local campaign name for unpublished campaign', async () => {
-    const response = await PUT(makeRequest({ campaignName: 'New Name' }), { params: Promise.resolve({ id: '10' }) })
+    const response = await PUT(makeRequest({ campaignName: 'New Name' }), {
+      params: Promise.resolve({ id: '10' }),
+    })
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -115,7 +119,9 @@ describe('PUT /api/campaigns/:id/campaign-name', () => {
       campaignName: 'Same Name',
     })
 
-    const response = await PUT(makeRequest({ campaignName: 'Same Name' }), { params: Promise.resolve({ id: '10' }) })
+    const response = await PUT(makeRequest({ campaignName: 'Same Name' }), {
+      params: Promise.resolve({ id: '10' }),
+    })
     const data = await response.json()
 
     expect(response.status).toBe(200)

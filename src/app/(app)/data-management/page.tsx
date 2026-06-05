@@ -49,9 +49,7 @@ export default function DataManagementPage() {
             <Database className="h-8 w-8 text-indigo-600" />
             数据管理
           </h1>
-          <p className="mt-2 text-gray-600">
-            导出和管理您的广告数据与系统配置
-          </p>
+          <p className="mt-2 text-gray-600">导出和管理您的广告数据与系统配置</p>
         </div>
 
         {/* 数据统计卡片 */}
@@ -112,8 +110,12 @@ export default function DataManagementPage() {
               数据导出说明
             </h3>
             <ul className="text-sm text-blue-700 space-y-2">
-              <li>• <strong>Offers/Campaigns</strong>: 支持JSON和CSV格式</li>
-              <li>• <strong>Settings</strong>: 仅支持JSON格式</li>
+              <li>
+                • <strong>Offers/Campaigns</strong>: 支持JSON和CSV格式
+              </li>
+              <li>
+                • <strong>Settings</strong>: 仅支持JSON格式
+              </li>
               <li>• 敏感信息默认脱敏（如API密钥）</li>
               <li>• 勾选"包含敏感信息"可导出完整配置</li>
             </ul>
@@ -149,23 +151,33 @@ export default function DataManagementPage() {
               <tbody className="divide-y divide-gray-200">
                 <tr>
                   <td className="px-4 py-2 font-mono text-indigo-600">google_ads</td>
-                  <td className="px-4 py-2 text-gray-500">Google Ads API配置（客户ID、开发者令牌等）</td>
-                  <td className="px-4 py-2"><span className="text-amber-600">部分</span></td>
+                  <td className="px-4 py-2 text-gray-500">
+                    Google Ads API配置（客户ID、开发者令牌等）
+                  </td>
+                  <td className="px-4 py-2">
+                    <span className="text-amber-600">部分</span>
+                  </td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 font-mono text-indigo-600">ai</td>
                   <td className="px-4 py-2 text-gray-500">AI服务配置（API密钥、模型选择等）</td>
-                  <td className="px-4 py-2"><span className="text-green-600">是</span></td>
+                  <td className="px-4 py-2">
+                    <span className="text-green-600">是</span>
+                  </td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 font-mono text-indigo-600">proxy</td>
                   <td className="px-4 py-2 text-gray-500">代理服务器配置</td>
-                  <td className="px-4 py-2"><span className="text-green-600">是</span></td>
+                  <td className="px-4 py-2">
+                    <span className="text-green-600">是</span>
+                  </td>
                 </tr>
                 <tr>
                   <td className="px-4 py-2 font-mono text-indigo-600">system</td>
                   <td className="px-4 py-2 text-gray-500">系统通用配置</td>
-                  <td className="px-4 py-2"><span className="text-green-600">是</span></td>
+                  <td className="px-4 py-2">
+                    <span className="text-green-600">是</span>
+                  </td>
                 </tr>
               </tbody>
             </table>

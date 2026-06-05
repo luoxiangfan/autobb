@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
     const fourteenDaysAgoStr = fourteenDaysAgo.toISOString().split('T')[0]
 
     // 获取最近7天的汇总数据
-    const recentStats = await db.queryOne(`
+    const recentStats = (await db.queryOne(
+      `
       SELECT
         COALESCE(SUM(cp.clicks), 0) as clicks,
         COALESCE(SUM(cp.impressions), 0) as impressions,
@@ -52,10 +53,13 @@ export async function GET(request: NextRequest) {
       WHERE c.user_id = ?
         AND cp.date >= ?
         AND cp.date <= ?
-    `, [userId, sevenDaysAgoStr, todayStr]) as any
+    `,
+      [userId, sevenDaysAgoStr, todayStr]
+    )) as any
 
     // 获取前7天的汇总数据
-    const previousStats = await db.queryOne(`
+    const previousStats = (await db.queryOne(
+      `
       SELECT
         COALESCE(SUM(cp.clicks), 0) as clicks,
         COALESCE(SUM(cp.impressions), 0) as impressions,
@@ -75,10 +79,15 @@ export async function GET(request: NextRequest) {
       WHERE c.user_id = ?
         AND cp.date >= ?
         AND cp.date < ?
-    `, [userId, fourteenDaysAgoStr, sevenDaysAgoStr]) as any
+    `,
+      [userId, fourteenDaysAgoStr, sevenDaysAgoStr]
+    )) as any
 
     // 计算变化率（确保返回数字，不是null）
-    const calcChange = (recent: number | null | undefined, previous: number | null | undefined): number => {
+    const calcChange = (
+      recent: number | null | undefined,
+      previous: number | null | undefined
+    ): number => {
       const r = toNumber(recent, 0)
       const p = toNumber(previous, 0)
       if (p === 0) return r > 0 ? 100 : 0
@@ -100,17 +109,20 @@ export async function GET(request: NextRequest) {
     const clicksChange = calcChange(recentClicks, previousClicks)
 
     // 获取优化任务统计（user_id 隔离）
-    const taskStats = await db.queryOne(`
+    const taskStats = (await db.queryOne(
+      `
       SELECT
         COUNT(CASE WHEN status = 'pending' OR status = 'in_progress' THEN 1 END) as pending_tasks,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_tasks
       FROM optimization_tasks
       WHERE user_id = ?
-    `, [userId]) as any
+    `,
+      [userId]
+    )) as any
 
     // 计算成本节省（基于CPC下降）
     const recentCost = toNumber(recentStats?.cost, 0)
-    const costSavings = cpcChange < 0 ? Math.abs(cpcChange) * recentCost / 100 : 0
+    const costSavings = cpcChange < 0 ? (Math.abs(cpcChange) * recentCost) / 100 : 0
     const pendingTasks = toNumber(taskStats?.pending_tasks, 0)
     const completedTasks = toNumber(taskStats?.completed_tasks, 0)
 
@@ -124,14 +136,11 @@ export async function GET(request: NextRequest) {
         pendingTasks,
         completedTasks,
         costSavings: parseFloat(costSavings.toFixed(2)),
-        lastUpdated: new Date().toISOString()
-      }
+        lastUpdated: new Date().toISOString(),
+      },
     })
   } catch (error: any) {
     console.error('获取优化指标失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取优化指标失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取优化指标失败' }, { status: 500 })
   }
 }

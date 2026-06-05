@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { parseJsonField, toDbJsonArrayField, toDbJsonField, toDbJsonObjectField } from '@/lib/json-field'
+import {
+  parseJsonField,
+  toDbJsonArrayField,
+  toDbJsonField,
+  toDbJsonObjectField,
+} from '@/lib/json-field'
 
 describe('parseJsonField', () => {
   it('returns object/array directly for native jsonb values', () => {

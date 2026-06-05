@@ -7,7 +7,7 @@ describe('resolveTaskCampaignKeywords', () => {
     const result = resolveTaskCampaignKeywords({
       configuredKeywords: [
         { text: 'soocas', matchType: 'EXACT' },
-        { keyword: 'soocas toothbrush', matchType: 'PHRASE' }
+        { keyword: 'soocas toothbrush', matchType: 'PHRASE' },
       ],
       configuredNegativeKeywords: ['free', ' trial '],
       fallbackKeywords: ['fallback kw'],
@@ -64,10 +64,16 @@ describe('resolveTaskCampaignKeywords', () => {
 
     expect(result.usedKeywordFallback).toBe(false)
     expect(result.keywords).toHaveLength(2)
-    expect((result.keywords[0] as { text?: string }).text?.toLowerCase()).not.toContain('pain relief')
-    expect((result.keywords[0] as { text?: string }).text?.toLowerCase()).not.toContain('spinal support')
+    expect((result.keywords[0] as { text?: string }).text?.toLowerCase()).not.toContain(
+      'pain relief'
+    )
+    expect((result.keywords[0] as { text?: string }).text?.toLowerCase()).not.toContain(
+      'spinal support'
+    )
     expect((result.keywords[0] as { matchType?: string }).matchType).toBe('EXACT')
-    expect((result.keywords[1] as { keyword?: string }).keyword).toBe('novilla memory foam mattress')
+    expect((result.keywords[1] as { keyword?: string }).keyword).toBe(
+      'novilla memory foam mattress'
+    )
   })
 
   it('falls back to creative keywords when configured keywords are all dropped by policy hard blocks', () => {

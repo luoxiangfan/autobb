@@ -93,7 +93,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('solarbrand best garden lights')
@@ -122,7 +122,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     // 查询 Offer 1（应该回退到 Offer 2 的数据）
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('solarbrand street lights')
@@ -151,7 +151,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     // 查询 Offer 1（应该回退到全局品牌级别）
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('solarbrand outdoor lights')
@@ -192,11 +192,11 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     // 应该只出现一次
-    const count = result.highPerformingTerms.filter(t => t === 'solarbrand lights outdoor').length
+    const count = result.highPerformingTerms.filter((t) => t === 'solarbrand lights outdoor').length
     expect(count).toBe(1)
   })
 
@@ -228,7 +228,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
       'solarbrand patio lights',
       'solarbrand yard lights',
       'solarbrand pathway lights',
-      'solarbrand deck lights'
+      'solarbrand deck lights',
     ]
 
     for (const term of offerTerms) {
@@ -255,7 +255,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('solarbrand amazon')
@@ -305,18 +305,38 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
       `INSERT INTO search_term_reports
        (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, campaign1Id, 'solarbrand global priority phrase', 'BROAD', 1300, 65, 6, 32, recentDate]
+      [
+        userId,
+        campaign1Id,
+        'solarbrand global priority phrase',
+        'BROAD',
+        1300,
+        65,
+        6,
+        32,
+        recentDate,
+      ]
     )
     await db.exec(
       `INSERT INTO search_term_reports
        (user_id, campaign_id, search_term, match_type, impressions, clicks, conversions, cost, date)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user2Id, campaign3Id, 'solarbrand global priority phrase', 'BROAD', 1250, 62, 6, 31, recentDate]
+      [
+        user2Id,
+        campaign3Id,
+        'solarbrand global priority phrase',
+        'BROAD',
+        1250,
+        62,
+        6,
+        31,
+        recentDate,
+      ]
     )
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     const globalIndex = result.highPerformingTerms.indexOf('solarbrand global priority phrase')
@@ -353,7 +373,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('solarbrand best garden lights')
@@ -377,7 +397,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('solarbrand historical lights')
@@ -407,7 +427,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: ourPlaceOfferId,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).toContain('always pan 2.0')
@@ -430,7 +450,7 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
 
     const result = await getSearchTermFeedbackHints({
       offerId: offer1Id,
-      userId
+      userId,
     })
 
     expect(result.highPerformingTerms).not.toContain('solarbrand 中文 高转化词')

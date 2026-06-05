@@ -36,7 +36,10 @@ describe('GET /api/dashboard/trends', () => {
       if (sql.includes('MAX(date) as latest_date')) {
         return [{ currency: 'USD', total_cost: 60, latest_date: '2026-04-06' }]
       }
-      if (sql.includes('SUM(impressions) as impressions') && sql.includes('FROM campaign_performance')) {
+      if (
+        sql.includes('SUM(impressions) as impressions') &&
+        sql.includes('FROM campaign_performance')
+      ) {
         return [
           { date: '2026-04-05', impressions: 1000, clicks: 100, cost: 50 },
           { date: '2026-04-06', impressions: 500, clicks: 50, cost: 10 },
@@ -49,9 +52,7 @@ describe('GET /api/dashboard/trends', () => {
         ]
       }
       if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        return [
-          { date: '2026-04-06', commission: 2 },
-        ]
+        return [{ date: '2026-04-06', commission: 2 }]
       }
 
       throw new Error(`unexpected sql: ${sql}`)
@@ -76,7 +77,10 @@ describe('GET /api/dashboard/trends', () => {
       if (sql.includes('MAX(date) as latest_date')) {
         return [{ currency: 'USD', total_cost: 50, latest_date: '2026-04-06' }]
       }
-      if (sql.includes('SUM(impressions) as impressions') && sql.includes('FROM campaign_performance')) {
+      if (
+        sql.includes('SUM(impressions) as impressions') &&
+        sql.includes('FROM campaign_performance')
+      ) {
         return [{ date: '2026-04-06', impressions: 100, clicks: 10, cost: 5 }]
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {

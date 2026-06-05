@@ -43,10 +43,7 @@ describe('buildCreativeKeywordUsagePlan', () => {
       },
     })
 
-    expect(plan.retainedNonBrandKeywords).toEqual([
-      'brandx x200 vacuum',
-      'brandx robot vacuum',
-    ])
+    expect(plan.retainedNonBrandKeywords).toEqual(['brandx x200 vacuum', 'brandx robot vacuum'])
     expect(plan.headlineCoverageMode).toBe('exhaustive_under_5')
     expect(plan.headlineKeywordTargets).toEqual([
       'brandx x200 vacuum',
@@ -60,12 +57,42 @@ describe('buildCreativeKeywordUsagePlan', () => {
       brandName: 'BrandX',
       precomputedKeywordSet: {
         keywordsWithVolume: [
-          { keyword: 'brandx robot vacuum', searchVolume: 9600, contractRole: 'required', evidenceStrength: 'high' },
-          { keyword: 'brandx x200 vacuum', searchVolume: 9100, contractRole: 'required', evidenceStrength: 'high' },
-          { keyword: 'brandx cordless vacuum', searchVolume: 8700, contractRole: 'required', evidenceStrength: 'medium' },
-          { keyword: 'brandx smart vacuum', searchVolume: 8200, contractRole: 'optional', evidenceStrength: 'medium' },
-          { keyword: 'brandx vacuum cleaner', searchVolume: 7800, contractRole: 'optional', evidenceStrength: 'medium' },
-          { keyword: 'brandx home vacuum', searchVolume: 1100, contractRole: 'fallback', evidenceStrength: 'low' },
+          {
+            keyword: 'brandx robot vacuum',
+            searchVolume: 9600,
+            contractRole: 'required',
+            evidenceStrength: 'high',
+          },
+          {
+            keyword: 'brandx x200 vacuum',
+            searchVolume: 9100,
+            contractRole: 'required',
+            evidenceStrength: 'high',
+          },
+          {
+            keyword: 'brandx cordless vacuum',
+            searchVolume: 8700,
+            contractRole: 'required',
+            evidenceStrength: 'medium',
+          },
+          {
+            keyword: 'brandx smart vacuum',
+            searchVolume: 8200,
+            contractRole: 'optional',
+            evidenceStrength: 'medium',
+          },
+          {
+            keyword: 'brandx vacuum cleaner',
+            searchVolume: 7800,
+            contractRole: 'optional',
+            evidenceStrength: 'medium',
+          },
+          {
+            keyword: 'brandx home vacuum',
+            searchVolume: 1100,
+            contractRole: 'fallback',
+            evidenceStrength: 'low',
+          },
         ],
       },
     })
@@ -74,11 +101,13 @@ describe('buildCreativeKeywordUsagePlan', () => {
     expect(plan.retainedNonBrandKeywords).toContain('brandx home vacuum')
     expect(plan.headlineKeywordTargets).toHaveLength(3)
     expect(plan.headlineKeywordTargets).not.toContain('brandx home vacuum')
-    expect(plan.headlineKeywordTargets).toEqual(expect.arrayContaining([
-      'brandx robot vacuum',
-      'brandx x200 vacuum',
-      'brandx cordless vacuum',
-    ]))
+    expect(plan.headlineKeywordTargets).toEqual(
+      expect.arrayContaining([
+        'brandx robot vacuum',
+        'brandx x200 vacuum',
+        'brandx cordless vacuum',
+      ])
+    )
     expect(plan.headlineKeywordTargets).not.toContain('brandx smart vacuum')
     expect(plan.headlineKeywordTargets).not.toContain('brandx vacuum cleaner')
   })
@@ -103,10 +132,7 @@ describe('buildCreativeKeywordUsagePlan', () => {
       'brandx x200 vacuum',
       'brandx x200 vacuum',
     ])
-    expect(plan.descriptionKeywordTargets).toEqual([
-      'brandx x200 vacuum',
-      'brandx x200 vacuum',
-    ])
+    expect(plan.descriptionKeywordTargets).toEqual(['brandx x200 vacuum', 'brandx x200 vacuum'])
   })
 
   it('filters dangling-tail keywords that would produce broken retained-slot headlines', () => {
@@ -116,8 +142,16 @@ describe('buildCreativeKeywordUsagePlan', () => {
         keywordsWithVolume: [
           { keyword: 'novilla mattress full', searchVolume: 5200, contractRole: 'required' },
           { keyword: 'novilla full size mattress', searchVolume: 4100, contractRole: 'required' },
-          { keyword: 'novilla full mattress box your', searchVolume: 3900, contractRole: 'required' },
-          { keyword: 'novilla medium plush feel with', searchVolume: 3600, contractRole: 'required' },
+          {
+            keyword: 'novilla full mattress box your',
+            searchVolume: 3900,
+            contractRole: 'required',
+          },
+          {
+            keyword: 'novilla medium plush feel with',
+            searchVolume: 3600,
+            contractRole: 'required',
+          },
         ],
       },
     })

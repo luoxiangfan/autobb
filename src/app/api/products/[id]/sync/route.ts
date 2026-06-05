@@ -90,9 +90,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     }
 
     console.error('[POST /api/products/:id/sync] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '提交同步任务失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '提交同步任务失败' }, { status: 500 })
   }
 }

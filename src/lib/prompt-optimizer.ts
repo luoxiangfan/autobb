@@ -30,11 +30,13 @@ let performanceInsights: PerformanceInsight[] = []
 /**
  * 添加优化规则
  */
-export function addOptimizationRule(rule: Omit<OptimizationRule, 'id' | 'createdAt'>): OptimizationRule {
+export function addOptimizationRule(
+  rule: Omit<OptimizationRule, 'id' | 'createdAt'>
+): OptimizationRule {
   const newRule: OptimizationRule = {
     ...rule,
     id: `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   }
 
   optimizationRules.push(newRule)
@@ -45,7 +47,7 @@ export function addOptimizationRule(rule: Omit<OptimizationRule, 'id' | 'created
  * 获取所有启用的优化规则
  */
 export function getActiveOptimizationRules(): OptimizationRule[] {
-  return optimizationRules.filter(rule => rule.enabled)
+  return optimizationRules.filter((rule) => rule.enabled)
 }
 
 /**
@@ -68,28 +70,28 @@ export function applyOptimizationsToPrompt(
   optimizedPrompt += '\n\n## 🎯 数据驱动的优化规则（基于实际投放表现）\n'
 
   // 应该增强的要素
-  const enhanceRules = activeRules.filter(r => r.type === 'enhance' && r.impact === 'high')
+  const enhanceRules = activeRules.filter((r) => r.type === 'enhance' && r.impact === 'high')
   if (enhanceRules.length > 0) {
     optimizedPrompt += '\n### ✅ 已验证的高效要素（必须包含）\n'
-    enhanceRules.forEach(rule => {
+    enhanceRules.forEach((rule) => {
       optimizedPrompt += `- ${rule.rule} （原因：${rule.reason}）\n`
     })
   }
 
   // 应该避免的要素
-  const avoidRules = activeRules.filter(r => r.type === 'avoid')
+  const avoidRules = activeRules.filter((r) => r.type === 'avoid')
   if (avoidRules.length > 0) {
     optimizedPrompt += '\n### ❌ 低效要素（必须避免）\n'
-    avoidRules.forEach(rule => {
+    avoidRules.forEach((rule) => {
       optimizedPrompt += `- ${rule.rule} （原因：${rule.reason}）\n`
     })
   }
 
   // 调整建议
-  const adjustRules = activeRules.filter(r => r.type === 'adjust')
+  const adjustRules = activeRules.filter((r) => r.type === 'adjust')
   if (adjustRules.length > 0) {
     optimizedPrompt += '\n### ⚙️ 优化调整建议\n'
-    adjustRules.forEach(rule => {
+    adjustRules.forEach((rule) => {
       optimizedPrompt += `- ${rule.rule} （原因：${rule.reason}）\n`
     })
   }
@@ -98,10 +100,10 @@ export function applyOptimizationsToPrompt(
   if (performanceInsights.length > 0) {
     optimizedPrompt += '\n### 📊 性能数据洞察\n'
     const relevantInsights = performanceInsights
-      .filter(insight => insight.confidence === 'high')
+      .filter((insight) => insight.confidence === 'high')
       .slice(0, 5)
 
-    relevantInsights.forEach(insight => {
+    relevantInsights.forEach((insight) => {
       optimizedPrompt += `- "${insight.pattern}" - CTR ${(insight.avgCtr * 100).toFixed(2)}%, 转化率 ${(insight.avgConversionRate * 100).toFixed(2)}% (${insight.sampleSize}个样本)\n`
     })
   }
@@ -124,8 +126,10 @@ export function learnFromPerformanceData(performanceData: any[]): OptimizationRu
 
   // 按综合表现排序
   const sorted = [...performanceData].sort((a, b) => {
-    const scoreA = (a.ctr || 0) * 0.4 + (a.conversionRate || 0) * 0.4 + ((a.qualityScore || 0) / 10) * 0.2
-    const scoreB = (b.ctr || 0) * 0.4 + (b.conversionRate || 0) * 0.4 + ((b.qualityScore || 0) / 10) * 0.2
+    const scoreA =
+      (a.ctr || 0) * 0.4 + (a.conversionRate || 0) * 0.4 + ((a.qualityScore || 0) / 10) * 0.2
+    const scoreB =
+      (b.ctr || 0) * 0.4 + (b.conversionRate || 0) * 0.4 + ((b.qualityScore || 0) / 10) * 0.2
     return scoreB - scoreA
   })
 
@@ -133,11 +137,11 @@ export function learnFromPerformanceData(performanceData: any[]): OptimizationRu
   const bottomThird = sorted.slice(-Math.ceil(sorted.length / 3))
 
   // 分析高表现创意的共同特征
-  const topOrientations = topThird.map(ad => ad.orientation)
+  const topOrientations = topThird.map((ad) => ad.orientation)
   const dominantOrientation = getMostFrequent(topOrientations)
 
   if (dominantOrientation) {
-    const orientationCount = topOrientations.filter(o => o === dominantOrientation).length
+    const orientationCount = topOrientations.filter((o) => o === dominantOrientation).length
     const confidence = orientationCount / topThird.length
 
     if (confidence > 0.6) {
@@ -150,17 +154,18 @@ export function learnFromPerformanceData(performanceData: any[]): OptimizationRu
         impact: 'high',
         source: 'performance_data',
         createdAt: new Date().toISOString(),
-        enabled: true
+        enabled: true,
       })
     }
   }
 
   // 分析标题长度
-  const topHeadlineLengths = topThird.map(ad => ad.headline1?.length || 0)
+  const topHeadlineLengths = topThird.map((ad) => ad.headline1?.length || 0)
   const avgTopLength = topHeadlineLengths.reduce((a, b) => a + b, 0) / topHeadlineLengths.length
 
-  const bottomHeadlineLengths = bottomThird.map(ad => ad.headline1?.length || 0)
-  const avgBottomLength = bottomHeadlineLengths.reduce((a, b) => a + b, 0) / bottomHeadlineLengths.length
+  const bottomHeadlineLengths = bottomThird.map((ad) => ad.headline1?.length || 0)
+  const avgBottomLength =
+    bottomHeadlineLengths.reduce((a, b) => a + b, 0) / bottomHeadlineLengths.length
 
   if (Math.abs(avgTopLength - avgBottomLength) > 5) {
     newRules.push({
@@ -172,15 +177,15 @@ export function learnFromPerformanceData(performanceData: any[]): OptimizationRu
       impact: 'medium',
       source: 'performance_data',
       createdAt: new Date().toISOString(),
-      enabled: true
+      enabled: true,
     })
   }
 
   // 存储新规则
-  newRules.forEach(rule => {
+  newRules.forEach((rule) => {
     // 检查是否已存在类似规则
-    const existingRule = optimizationRules.find(r =>
-      r.category === rule.category && r.rule.includes(rule.rule.split(' ')[0])
+    const existingRule = optimizationRules.find(
+      (r) => r.category === rule.category && r.rule.includes(rule.rule.split(' ')[0])
     )
 
     if (existingRule) {
@@ -206,7 +211,7 @@ function getMostFrequent<T>(arr: T[]): T | null {
   let maxFreq = 0
   let result: T | null = null
 
-  arr.forEach(item => {
+  arr.forEach((item) => {
     const key = String(item)
     frequency[key] = (frequency[key] || 0) + 1
     if (frequency[key] > maxFreq) {

@@ -5,4 +5,3 @@ export function getMinContextTokenMatchesForKeywordQualityFilter(params: {
   // as a hard relevance gate will over-filter valid brand keywords.
   return params.pageType === 'store' ? 0 : 1
 }
-

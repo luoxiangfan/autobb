@@ -27,13 +27,22 @@ function classifyErrorMessage(message: string): { code: string; hint?: string } 
   const msg = (message || '').toLowerCase()
 
   if (msg.includes('developer token is not allowed with project')) {
-    return { code: 'DEVELOPER_TOKEN_PROJECT_MISMATCH', hint: 'Developer Token 与 OAuth Client 所属 GCP Project 不匹配' }
+    return {
+      code: 'DEVELOPER_TOKEN_PROJECT_MISMATCH',
+      hint: 'Developer Token 与 OAuth Client 所属 GCP Project 不匹配',
+    }
   }
   if (msg.includes('developer_token_not_approved') || msg.includes('not approved')) {
-    return { code: 'DEVELOPER_TOKEN_NOT_APPROVED', hint: 'Developer Token 可能仍处于测试权限（Test access）或未通过审核' }
+    return {
+      code: 'DEVELOPER_TOKEN_NOT_APPROVED',
+      hint: 'Developer Token 可能仍处于测试权限（Test access）或未通过审核',
+    }
   }
   if (msg.includes('permission_denied')) {
-    return { code: 'PERMISSION_DENIED', hint: '权限不足（测试权限的 Token 只能访问测试账号，或MCC/客户未授权）' }
+    return {
+      code: 'PERMISSION_DENIED',
+      hint: '权限不足（测试权限的 Token 只能访问测试账号，或MCC/客户未授权）',
+    }
   }
   if (msg.includes('invalid_grant')) {
     return { code: 'INVALID_GRANT', hint: 'Refresh Token 失效（需要重新授权）' }
@@ -72,7 +81,11 @@ async function queryCustomerBasicInfo(params: {
   for (const lcId of attempts) {
     try {
       const customer = lcId
-        ? client.Customer({ customer_id: customerId, refresh_token: refreshToken, login_customer_id: lcId })
+        ? client.Customer({
+            customer_id: customerId,
+            refresh_token: refreshToken,
+            login_customer_id: lcId,
+          })
         : client.Customer({ customer_id: customerId, refresh_token: refreshToken })
 
       const searchResult = await customer.query(query)
@@ -87,7 +100,7 @@ async function queryCustomerBasicInfo(params: {
   const classified = classifyErrorMessage(message)
   return {
     usedLoginCustomerId: null,
-    error: { message, code: classified.code, hint: classified.hint }
+    error: { message, code: classified.code, hint: classified.hint },
   }
 }
 
@@ -112,35 +125,49 @@ export async function POST(request: NextRequest) {
     }
 
     const maxCustomers = Math.min(Math.max(Number(body.maxCustomers || 20), 1), 100)
-    const probeCustomerId = body.probeCustomerId ? normalizeCustomerId(body.probeCustomerId) : undefined
+    const probeCustomerId = body.probeCustomerId
+      ? normalizeCustomerId(body.probeCustomerId)
+      : undefined
 
     const testCredentials = await getGoogleAdsTestCredentials(userId)
     if (!testCredentials) {
-      return NextResponse.json({
-        error: '未配置测试OAuth凭证',
-        message: '请先在设置页面完成“测试OAuth授权”',
-        code: 'TEST_CREDENTIALS_NOT_CONFIGURED'
-      }, { status: 404 })
+      return NextResponse.json(
+        {
+          error: '未配置测试OAuth凭证',
+          message: '请先在设置页面完成“测试OAuth授权”',
+          code: 'TEST_CREDENTIALS_NOT_CONFIGURED',
+        },
+        { status: 404 }
+      )
     }
 
     if (!testCredentials.refresh_token) {
-      return NextResponse.json({
-        error: '未找到测试Refresh Token',
-        message: '请先完成“测试OAuth授权”',
-        code: 'TEST_REFRESH_TOKEN_MISSING'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: '未找到测试Refresh Token',
+          message: '请先完成“测试OAuth授权”',
+          code: 'TEST_REFRESH_TOKEN_MISSING',
+        },
+        { status: 400 }
+      )
     }
 
     const loginCustomerId = testCredentials.login_customer_id
-      ? formatAndValidateLoginCustomerId(testCredentials.login_customer_id, 'test_login_customer_id')
+      ? formatAndValidateLoginCustomerId(
+          testCredentials.login_customer_id,
+          'test_login_customer_id'
+        )
       : ''
 
     if (!loginCustomerId) {
-      return NextResponse.json({
-        error: '缺少测试 Login Customer ID',
-        message: '请先在设置页面填写 test_login_customer_id 并重新完成测试OAuth授权',
-        code: 'TEST_LOGIN_CUSTOMER_ID_MISSING'
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          error: '缺少测试 Login Customer ID',
+          message: '请先在设置页面填写 test_login_customer_id 并重新完成测试OAuth授权',
+          code: 'TEST_LOGIN_CUSTOMER_ID_MISSING',
+        },
+        { status: 400 }
+      )
     }
 
     const client = getGoogleAdsClient({
@@ -152,9 +179,7 @@ export async function POST(request: NextRequest) {
     // 1) listAccessibleCustomers
     const listResp = await client.listAccessibleCustomers(testCredentials.refresh_token)
     const resourceNames: string[] = listResp?.resource_names || []
-    const customerIds = resourceNames
-      .map(rn => rn.split('/').pop() || '')
-      .filter(Boolean)
+    const customerIds = resourceNames.map((rn) => rn.split('/').pop() || '').filter(Boolean)
 
     // 2) 对可访问客户做只读 GAQL 探测
     const sampledCustomerIds = customerIds.slice(0, maxCustomers)
@@ -189,9 +214,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const testAccountTrue = customers.filter(c => c.ok && c.testAccount === true).length
-    const testAccountFalse = customers.filter(c => c.ok && c.testAccount === false).length
-    const okCount = customers.filter(c => c.ok).length
+    const testAccountTrue = customers.filter((c) => c.ok && c.testAccount === true).length
+    const testAccountFalse = customers.filter((c) => c.ok && c.testAccount === false).length
+    const okCount = customers.filter((c) => c.ok).length
     const errorCount = customers.length - okCount
 
     // 3) 可选：对用户提供的 probeCustomerId 做一次探测（预期在 test-only token 下可能失败）
@@ -220,8 +245,8 @@ export async function POST(request: NextRequest) {
           errorCount,
           testAccountTrue,
           testAccountFalse,
-        }
-      }
+        },
+      },
     })
   } catch (error: any) {
     const message = error.message || '未知错误'
@@ -231,10 +256,9 @@ export async function POST(request: NextRequest) {
         error: '测试MCC诊断失败',
         message,
         code: classified.code,
-        hint: classified.hint
+        hint: classified.hint,
       },
       { status: 500 }
     )
   }
 }
-

@@ -79,7 +79,6 @@ describe('Step3CampaignConfig', () => {
         dispatchEvent: vi.fn(),
       })),
     })
-
     ;(globalThis as typeof globalThis & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver =
       class ResizeObserver {
         observe() {}

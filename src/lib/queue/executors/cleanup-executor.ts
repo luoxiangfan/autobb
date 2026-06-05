@@ -21,8 +21,8 @@ import path from 'path'
  */
 export interface CleanupTaskData {
   cleanupType: 'daily' | 'manual'
-  retentionDays?: number  // 数据保留天数，默认90天
-  backupRetentionDays?: number  // 备份保留天数，默认7天
+  retentionDays?: number // 数据保留天数，默认90天
+  backupRetentionDays?: number // 备份保留天数，默认7天
   targets?: Array<'performance' | 'sync_logs' | 'backups' | 'link_check_history'>
 }
 
@@ -36,7 +36,7 @@ export interface CleanupTaskResult {
   deletedBackupFiles: number
   deletedLinkCheckHistory: number
   errorMessage?: string
-  duration: number  // 清理耗时（毫秒）
+  duration: number // 清理耗时（毫秒）
 }
 
 /**
@@ -81,10 +81,12 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
       cleanupType,
       retentionDays = 90,
       backupRetentionDays = 7,
-      targets = ['performance', 'sync_logs', 'backups', 'link_check_history']
+      targets = ['performance', 'sync_logs', 'backups', 'link_check_history'],
     } = task.data
 
-    console.log(`🗑️ [CleanupExecutor] 开始数据清理任务: 类型=${cleanupType}, 保留天数=${retentionDays}`)
+    console.log(
+      `🗑️ [CleanupExecutor] 开始数据清理任务: 类型=${cleanupType}, 保留天数=${retentionDays}`
+    )
 
     const startTime = Date.now()
 
@@ -103,30 +105,25 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
 
       // 清理campaign_performance表
       if (targets.includes('performance')) {
-        const result = await db.exec(
-          'DELETE FROM campaign_performance WHERE date < ?',
-          [cutoffDateStr]
-        )
+        const result = await db.exec('DELETE FROM campaign_performance WHERE date < ?', [
+          cutoffDateStr,
+        ])
         deletedPerformanceRows = result.changes || 0
         console.log(`   ✅ 删除 ${deletedPerformanceRows} 条性能数据`)
       }
 
       // 清理sync_logs表
       if (targets.includes('sync_logs')) {
-        const result = await db.exec(
-          'DELETE FROM sync_logs WHERE started_at < ?',
-          [cutoffDateStr]
-        )
+        const result = await db.exec('DELETE FROM sync_logs WHERE started_at < ?', [cutoffDateStr])
         deletedSyncLogs = result.changes || 0
         console.log(`   ✅ 删除 ${deletedSyncLogs} 条同步日志`)
       }
 
       // 清理link_check_history表
       if (targets.includes('link_check_history')) {
-        const result = await db.exec(
-          'DELETE FROM link_check_history WHERE checked_at < ?',
-          [cutoffDateStr]
-        )
+        const result = await db.exec('DELETE FROM link_check_history WHERE checked_at < ?', [
+          cutoffDateStr,
+        ])
         deletedLinkCheckHistory = result.changes || 0
         console.log(`   ✅ 删除 ${deletedLinkCheckHistory} 条链接检查历史`)
       }
@@ -139,7 +136,9 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
 
       const duration = Date.now() - startTime
 
-      console.log(`✅ [CleanupExecutor] 数据清理完成: 性能数据=${deletedPerformanceRows}, 同步日志=${deletedSyncLogs}, 备份文件=${deletedBackupFiles}, 链接历史=${deletedLinkCheckHistory}, 耗时=${duration}ms`)
+      console.log(
+        `✅ [CleanupExecutor] 数据清理完成: 性能数据=${deletedPerformanceRows}, 同步日志=${deletedSyncLogs}, 备份文件=${deletedBackupFiles}, 链接历史=${deletedLinkCheckHistory}, 耗时=${duration}ms`
+      )
 
       return {
         success: true,
@@ -147,7 +146,7 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
         deletedSyncLogs,
         deletedBackupFiles,
         deletedLinkCheckHistory,
-        duration
+        duration,
       }
     } catch (error: any) {
       const duration = Date.now() - startTime
@@ -160,7 +159,7 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
         deletedBackupFiles: 0,
         deletedLinkCheckHistory: 0,
         errorMessage: error.message,
-        duration
+        duration,
       }
     }
   }

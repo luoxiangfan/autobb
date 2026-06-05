@@ -11,7 +11,7 @@ export interface OfferListItem {
   targetCountry: string
   affiliateLink: string | null
   brandDescription: string | null
-  scrapeStatus: string  // 🔧 修复(2025-12-11): snake_case → camelCase
+  scrapeStatus: string // 🔧 修复(2025-12-11): snake_case → camelCase
   scrapeError?: string | null
   isActive: boolean
   createdAt: string
@@ -37,7 +37,7 @@ export interface OfferListItem {
   campaignId?: number | null
 }
 
-export type SortField = 'brand' | 'targetCountry' | 'scrapeStatus' | 'createdAt' | ''  // 🔧 修复
+export type SortField = 'brand' | 'targetCountry' | 'scrapeStatus' | 'createdAt' | '' // 🔧 修复
 export type SortOrder = 'asc' | 'desc'
 
 export interface OfferFilters {

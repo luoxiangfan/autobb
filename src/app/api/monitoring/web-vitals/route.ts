@@ -62,7 +62,9 @@ const postHandler = async (request: NextRequest) => {
   }
 
   const body = (await request.json().catch(() => ({}))) as WebVitalPayload
-  const name = String(body.name || '').trim().toUpperCase()
+  const name = String(body.name || '')
+    .trim()
+    .toUpperCase()
   if (!name || name.length > 32) {
     return NextResponse.json({ error: '无效的指标名称' }, { status: 400 })
   }
@@ -83,9 +85,7 @@ const postHandler = async (request: NextRequest) => {
     delta: delta === null ? undefined : delta,
     rating: normalizeRating(body.rating),
     navigationType:
-      typeof body.navigationType === 'string'
-        ? body.navigationType.trim().slice(0, 32)
-        : undefined,
+      typeof body.navigationType === 'string' ? body.navigationType.trim().slice(0, 32) : undefined,
     path: normalizePath(body.path),
     buildId: normalizeBuildId(body.buildId),
     flagSnapshot: normalizeFlagSnapshot(body.flagSnapshot),

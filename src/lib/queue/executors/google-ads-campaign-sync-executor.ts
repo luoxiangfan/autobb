@@ -7,7 +7,10 @@
 
 import { getDatabase } from '../../db'
 import type { Task } from '../types'
-import { syncCampaignsFromGoogleAds, resolveGoogleAdsCampaignSyncLogOutcome } from '../../google-ads-campaign-sync'
+import {
+  syncCampaignsFromGoogleAds,
+  resolveGoogleAdsCampaignSyncLogOutcome,
+} from '../../google-ads-campaign-sync'
 import { markStaleGoogleAdsCampaignSyncLogs } from '../../google-ads-campaign-sync-pipeline-status'
 import { createRiskAlert } from '../../risk-alerts'
 import { utcNowIso } from '../../db-datetime'
@@ -41,7 +44,7 @@ export async function executeGoogleAdsCampaignSyncTask(
   const { syncType, customerId, dryRun } = taskData
   const isManualSync = syncType === 'manual'
   let syncLogId: number | null = null
-  
+
   console.log(
     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`
   )
@@ -61,7 +64,17 @@ export async function executeGoogleAdsCampaignSyncTask(
       const logResult = await db.exec(
         `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, 'google_ads_campaign_sync', 'running', 0, 0, startedAt, null, startedAt, isManualSync]
+        [
+          userId,
+          'google_ads_campaign_sync',
+          'running',
+          0,
+          0,
+          startedAt,
+          null,
+          startedAt,
+          isManualSync,
+        ]
       )
       // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
       syncLogId = logResult.lastInsertRowid || null
@@ -134,7 +147,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       try {
         const errorMessage = result.errors
           .slice(0, 3)
-          .map(e => `${e.campaignName}: ${e.error}`)
+          .map((e) => `${e.campaignName}: ${e.error}`)
           .join('; ')
 
         await createRiskAlert(
@@ -171,17 +184,14 @@ export async function executeGoogleAdsCampaignSyncTask(
     }
 
     // 4. 输出统计信息
-    console.log(
-      `✅ [GoogleAdsSyncExecutor] 同步任务完成：${taskId}`,
-      {
-        duration: `${duration}ms`,
-        synced: result.syncedCount,
-        created: result.createdOffersCount,
-        updated: result.updatedOffersCount,
-        skipped: result.skippedOffersCount,
-        errors: result.errors.length,
-      }
-    )
+    console.log(`✅ [GoogleAdsSyncExecutor] 同步任务完成：${taskId}`, {
+      duration: `${duration}ms`,
+      synced: result.syncedCount,
+      created: result.createdOffersCount,
+      updated: result.updatedOffersCount,
+      skipped: result.skippedOffersCount,
+      errors: result.errors.length,
+    })
 
     return {
       success: logOutcome.status === 'success',
@@ -194,10 +204,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     const completedAt = utcNowIso()
     const errorMessage = error.message || '未知错误'
 
-    console.error(
-      `❌ [GoogleAdsSyncExecutor] 同步任务失败：${taskId}`,
-      error
-    )
+    console.error(`❌ [GoogleAdsSyncExecutor] 同步任务失败：${taskId}`, error)
 
     // 🔧 优化：同步失败时更新记录
     if (syncLogId !== null) {
@@ -212,7 +219,7 @@ export async function executeGoogleAdsCampaignSyncTask(
            WHERE id = ?`,
           ['failed', 0, duration, completedAt, errorMessage, syncLogId]
         )
-        console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId} (failed)`);
+        console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId} (failed)`)
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 更新同步日志失败:`, logError)
       }

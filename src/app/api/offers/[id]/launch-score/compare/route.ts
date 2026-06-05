@@ -15,10 +15,7 @@ import {
   parseLaunchScoreHashCampaignConfig,
   toLaunchScoreScoringCampaignConfig,
 } from '@/lib/launch-score-campaign-config'
-import {
-  parsePositiveIntegerOfferId,
-  parseUniquePositiveIntegerIds,
-} from '@/lib/parse-offer-id'
+import { parsePositiveIntegerOfferId, parseUniquePositiveIntegerIds } from '@/lib/parse-offer-id'
 import { calculateLaunchScoresForCreatives } from '@/lib/scoring'
 import type { LaunchScoreResult } from '@/lib/scoring'
 
@@ -31,10 +28,7 @@ import type { LaunchScoreResult } from '@/lib/scoring'
  * - autoCalculate?: boolean — 默认 true；为 true 时现场计算（共享 Planner expand），命中 contentHash 缓存则跳过 AI
  * - campaignConfig?: { budgetAmount?, maxCpcBid?, targetCountry?, targetLanguage? } — 与 hash/计分一致
  */
-function buildCompareScoreFromStored(
-  score: LaunchScore,
-  options?: { fromCache?: boolean }
-) {
+function buildCompareScoreFromStored(score: LaunchScore, options?: { fromCache?: boolean }) {
   const analysis = parseLaunchScoreAnalysis(score)
   return {
     totalScore: score.totalScore,
@@ -91,26 +85,20 @@ function buildCreativeSummary(creative: AdCreative) {
 }
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
-      return NextResponse.json(
-        { error: 'Offer ID无效' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
     const body = await request.json()
@@ -119,17 +107,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const hashCampaignConfig = parseLaunchScoreHashCampaignConfig(body.campaignConfig)
 
     if (!Array.isArray(creativeIds) || creativeIds.length === 0) {
-      return NextResponse.json(
-        { error: 'creativeIds必须是非空数组' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'creativeIds必须是非空数组' }, { status: 400 })
     }
 
     if (creativeIds.length > 5) {
-      return NextResponse.json(
-        { error: '最多对比5个Creative' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '最多对比5个Creative' }, { status: 400 })
     }
 
     const parsedIds = parseUniquePositiveIntegerIds(creativeIds)
@@ -137,9 +119,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       return NextResponse.json(
         {
           error:
-            parsedIds.reason === 'duplicate'
-              ? 'creativeIds 含重复 ID'
-              : 'creativeIds 含无效 ID',
+            parsedIds.reason === 'duplicate' ? 'creativeIds 含重复 ID' : 'creativeIds 含无效 ID',
         },
         { status: 400 }
       )
@@ -178,10 +158,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const storedByCreativeId = new Map<number, LaunchScore>()
     const staleCreativeIds = new Set<number>()
 
-    const storedMetaByCreativeId = new Map<
-      number,
-      { fromCache?: boolean }
-    >()
+    const storedMetaByCreativeId = new Map<number, { fromCache?: boolean }>()
 
     if (autoCalculate) {
       const cachedById = await findCachedLaunchScoresForCreatives(
@@ -300,12 +277,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         ...(hashCampaignConfig ? { campaignConfig: hashCampaignConfig } : {}),
       },
     })
-
   } catch (error: any) {
     console.error('对比Creative评分失败:', error)
-    return NextResponse.json(
-      { error: error.message || '对比评分失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '对比评分失败' }, { status: 500 })
   }
 }

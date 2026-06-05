@@ -52,10 +52,7 @@ describe('buildLaunchScoreHashes', () => {
 
   it('changes content hash when headlines change', () => {
     const base = buildLaunchScoreHashes(creative, offer)
-    const changed = buildLaunchScoreHashes(
-      { ...creative, headlines: ['H1', 'H3'] },
-      offer
-    )
+    const changed = buildLaunchScoreHashes({ ...creative, headlines: ['H1', 'H3'] }, offer)
     expect(changed.contentHash).not.toBe(base.contentHash)
   })
 

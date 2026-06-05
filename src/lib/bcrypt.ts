@@ -4,11 +4,7 @@ type BcryptLike = {
     saltOrRounds: string | number,
     callback: (err: unknown, encrypted: string) => void
   ): void
-  compare(
-    data: string,
-    encrypted: string,
-    callback: (err: unknown, same: boolean) => void
-  ): void
+  compare(data: string, encrypted: string, callback: (err: unknown, same: boolean) => void): void
 }
 
 let bcryptPromise: Promise<BcryptLike> | undefined
@@ -47,4 +43,3 @@ export async function compare(data: string, encrypted: string): Promise<boolean>
     })
   })
 }
-

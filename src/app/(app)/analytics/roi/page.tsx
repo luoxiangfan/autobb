@@ -12,12 +12,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { LazyROITrendChart, LazyCampaignROIChart, LazyOfferROIChart } from '@/components/LazyChartLoader'
-import { Download, TrendingUp, TrendingDown, DollarSign, Target, Percent, RefreshCw, Coins } from 'lucide-react'
+import {
+  LazyROITrendChart,
+  LazyCampaignROIChart,
+  LazyOfferROIChart,
+} from '@/components/LazyChartLoader'
+import {
+  Download,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Target,
+  Percent,
+  RefreshCw,
+  Coins,
+} from 'lucide-react'
 import { useROIAnalytics } from '@/lib/hooks/useAnalytics'
 import { formatCurrency } from '@/lib/currency'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-
 
 type ROIAnalyticsTimeRange = '7' | '14' | '30' | 'custom'
 
@@ -82,11 +94,20 @@ export default function ROIAnalyticsPage() {
   })
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0])
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
+  const [appliedCustomRange, setAppliedCustomRange] = useState<{
+    startDate: string
+    endDate: string
+  } | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
 
   // Use SWR for data fetching with automatic caching
-  const { data, currencyInfo, error, isLoading: loading, refresh } = useROIAnalytics(startDate, endDate, reportCurrency)
+  const {
+    data,
+    currencyInfo,
+    error,
+    isLoading: loading,
+    refresh,
+  } = useROIAnalytics(startDate, endDate, reportCurrency)
 
   const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
   const availableCurrencies = currencyInfo?.currencies ?? []
@@ -180,7 +201,9 @@ export default function ROIAnalyticsPage() {
     csvRows.push('Campaign ROAS排名')
     csvRows.push('Campaign名称,品牌,花费,佣金,ROAS,转化次数')
     data.byCampaign.forEach((row: ROIData['byCampaign'][0]) => {
-      csvRows.push(`${row.campaignName},${row.offerBrand},${row.cost},${row.revenue},${row.roi},${row.conversions}`)
+      csvRows.push(
+        `${row.campaignName},${row.offerBrand},${row.cost},${row.revenue},${row.roi},${row.conversions}`
+      )
     })
     csvRows.push('')
 
@@ -188,7 +211,9 @@ export default function ROIAnalyticsPage() {
     csvRows.push('Offer ROAS分析')
     csvRows.push('品牌,产品名称,花费,佣金,ROAS,转化次数')
     data.byOffer.forEach((row: ROIData['byOffer'][0]) => {
-      csvRows.push(`${row.brand},${row.offerName},${row.cost},${row.revenue},${row.roi},${row.conversions}`)
+      csvRows.push(
+        `${row.brand},${row.offerName},${row.cost},${row.revenue},${row.roi},${row.conversions}`
+      )
     })
 
     // Create and download file
@@ -241,12 +266,7 @@ export default function ROIAnalyticsPage() {
             </div>
             <div className="flex items-center gap-3">
               {/* 刷新按钮 */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => refresh()}
-                disabled={loading}
-              >
+              <Button variant="ghost" size="sm" onClick={() => refresh()} disabled={loading}>
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
               {/* 时间范围 */}
@@ -284,7 +304,9 @@ export default function ROIAnalyticsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableCurrencies.map((c: string) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -312,12 +334,12 @@ export default function ROIAnalyticsPage() {
                 )}
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${data.overall.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div
+                  className={`text-2xl font-bold ${data.overall.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
                   {(Number(data.overall.roi) || 0).toFixed(2)}x
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  广告支出回报率
-                </p>
+                <p className="text-xs text-gray-600 mt-1">广告支出回报率</p>
               </CardContent>
             </Card>
 
@@ -342,9 +364,7 @@ export default function ROIAnalyticsPage() {
                 <Target className="h-4 w-4 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-gray-900">
-                  {data.overall.conversions}
-                </div>
+                <div className="text-2xl font-bold text-gray-900">{data.overall.conversions}</div>
                 <p className="text-xs text-gray-600 mt-1">
                   总转化次数 · {money(Number(data.efficiency.costPerConversion) || 0)}/次
                 </p>
@@ -357,12 +377,12 @@ export default function ROIAnalyticsPage() {
                 <Percent className="h-4 w-4 text-indigo-600" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${data.efficiency.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div
+                  className={`text-2xl font-bold ${data.efficiency.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                >
                   {(Number(data.efficiency.profitMargin) || 0).toFixed(2)}%
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  佣金占花费比例
-                </p>
+                <p className="text-xs text-gray-600 mt-1">佣金占花费比例</p>
               </CardContent>
             </Card>
 
@@ -390,9 +410,7 @@ export default function ROIAnalyticsPage() {
                 <div className="text-2xl font-bold text-gray-900">
                   {data.efficiency.breakEvenPoint}
                 </div>
-                <p className="text-xs text-gray-600 mt-1">
-                  需要转化次数
-                </p>
+                <p className="text-xs text-gray-600 mt-1">需要转化次数</p>
               </CardContent>
             </Card>
           </div>
@@ -413,7 +431,11 @@ export default function ROIAnalyticsPage() {
               <CardTitle>Campaign ROAS排名 (Top 10)</CardTitle>
             </CardHeader>
             <CardContent>
-              <LazyCampaignROIChart data={data.byCampaign} currency={selectedCurrency} height={450} />
+              <LazyCampaignROIChart
+                data={data.byCampaign}
+                currency={selectedCurrency}
+                height={450}
+              />
             </CardContent>
           </Card>
 
@@ -474,7 +496,9 @@ export default function ROIAnalyticsPage() {
                         <td className="px-4 py-3 text-sm text-right text-green-600">
                           {money(Number(campaign.revenue) || 0)}
                         </td>
-                        <td className={`px-4 py-3 text-sm text-right font-bold ${campaign.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <td
+                          className={`px-4 py-3 text-sm text-right font-bold ${campaign.roi >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                        >
                           {(Number(campaign.roi) || 0).toFixed(2)}x
                         </td>
                         <td className="px-4 py-3 text-sm text-right text-gray-900">

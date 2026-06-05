@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -8,40 +8,43 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem } from '@/components/ui/select';
-import { Alert } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, AlertCircle, Link, Globe, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
-import type { UrlSwapTask } from '@/lib/url-swap-types';
-import { URL_SWAP_INTERVAL_OPTIONS, URL_SWAP_ALLOWED_INTERVALS_MINUTES } from '@/lib/url-swap-intervals';
-import { parseAffiliateLinksText, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils';
-import { BATCH_URL_SWAP_TASK_DEFAULTS } from '@/lib/batch-task-defaults';
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem } from '@/components/ui/select'
+import { Alert } from '@/components/ui/alert'
+import { Textarea } from '@/components/ui/textarea'
+import { Loader2, AlertCircle, Link, Globe, ExternalLink } from 'lucide-react'
+import { toast } from 'sonner'
+import type { UrlSwapTask } from '@/lib/url-swap-types'
+import {
+  URL_SWAP_INTERVAL_OPTIONS,
+  URL_SWAP_ALLOWED_INTERVALS_MINUTES,
+} from '@/lib/url-swap-intervals'
+import { parseAffiliateLinksText, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils'
+import { BATCH_URL_SWAP_TASK_DEFAULTS } from '@/lib/batch-task-defaults'
 
 interface UrlSwapTaskModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
-  offerId?: number;  // 创建模式下必填
-  editTaskId?: string;  // 编辑模式下必填（二选一）
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess?: () => void
+  offerId?: number // 创建模式下必填
+  editTaskId?: string // 编辑模式下必填（二选一）
 }
 
 interface Offer {
-  id: number;
-  offerName?: string;
-  name?: string;
-  brand?: string;
-  brand_name?: string;
-  targetCountry: string;
-  affiliateLink?: string;
+  id: number
+  offerName?: string
+  name?: string
+  brand?: string
+  brand_name?: string
+  targetCountry: string
+  affiliateLink?: string
   // 🆕 关联的Google Ads信息（从Campaign获取）
-  googleCustomerId?: string;
-  googleCampaignId?: string;
+  googleCustomerId?: string
+  googleCampaignId?: string
 }
 
 const DURATION_OPTIONS = [
@@ -51,7 +54,7 @@ const DURATION_OPTIONS = [
   { value: 60, label: '60 天' },
   { value: 90, label: '90 天' },
   { value: -1, label: '不限期' },
-];
+]
 
 export default function UrlSwapTaskModal({
   open,
@@ -60,207 +63,219 @@ export default function UrlSwapTaskModal({
   offerId,
   editTaskId,
 }: UrlSwapTaskModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [offer, setOffer] = useState<Offer | null>(null);
-  const [loadingOffer, setLoadingOffer] = useState(true);
-  const [taskData, setTaskData] = useState<UrlSwapTask | null>(null);
-  const [proxyWarning, setProxyWarning] = useState('');
-  const [enabling, setEnabling] = useState(false);
+  const [loading, setLoading] = useState(false)
+  const [offer, setOffer] = useState<Offer | null>(null)
+  const [loadingOffer, setLoadingOffer] = useState(true)
+  const [taskData, setTaskData] = useState<UrlSwapTask | null>(null)
+  const [proxyWarning, setProxyWarning] = useState('')
+  const [enabling, setEnabling] = useState(false)
 
   // Form state
-  const [swapIntervalMinutes, setSwapIntervalMinutes] = useState(BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes);
-  const [durationDays, setDurationDays] = useState(BATCH_URL_SWAP_TASK_DEFAULTS.durationDays);
-  const [googleCustomerId, setGoogleCustomerId] = useState('');
-  const [googleCampaignId, setGoogleCampaignId] = useState('');
-  const [swapMode, setSwapMode] = useState<'auto' | 'manual'>('auto');
-  const [manualLinksText, setManualLinksText] = useState('');
+  const [swapIntervalMinutes, setSwapIntervalMinutes] = useState(
+    BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes
+  )
+  const [durationDays, setDurationDays] = useState(BATCH_URL_SWAP_TASK_DEFAULTS.durationDays)
+  const [googleCustomerId, setGoogleCustomerId] = useState('')
+  const [googleCampaignId, setGoogleCampaignId] = useState('')
+  const [swapMode, setSwapMode] = useState<'auto' | 'manual'>('auto')
+  const [manualLinksText, setManualLinksText] = useState('')
 
-  const isEditMode = !!editTaskId;
-  const canEnableTask = isEditMode && !!taskData && (taskData.status === 'disabled' || taskData.status === 'error');
+  const isEditMode = !!editTaskId
+  const canEnableTask =
+    isEditMode && !!taskData && (taskData.status === 'disabled' || taskData.status === 'error')
 
-  const loadOfferById = useCallback(async (id: number) => {
-    try {
-      setLoadingOffer(true);
+  const loadOfferById = useCallback(
+    async (id: number) => {
+      try {
+        setLoadingOffer(true)
 
-      // 获取Offer信息
-      const response = await fetch(`/api/offers/${id}`);
-      if (!response.ok) throw new Error('加载Offer失败');
+        // 获取Offer信息
+        const response = await fetch(`/api/offers/${id}`)
+        if (!response.ok) throw new Error('加载Offer失败')
 
-      const data = await response.json();
-      const offerData = data.offer || data.data;
+        const data = await response.json()
+        const offerData = data.offer || data.data
 
-      if (offerData) {
-        // 🆕 从本地DB获取该Offer关联的Google Ads信息（不依赖Google Ads API）
-        try {
-          const idsResponse = await fetch(`/api/offers/${id}/google-ads-ids`);
-          if (idsResponse.ok) {
-            const idsResult = await idsResponse.json();
-            const ids = idsResult?.data;
+        if (offerData) {
+          // 🆕 从本地DB获取该Offer关联的Google Ads信息（不依赖Google Ads API）
+          try {
+            const idsResponse = await fetch(`/api/offers/${id}/google-ads-ids`)
+            if (idsResponse.ok) {
+              const idsResult = await idsResponse.json()
+              const ids = idsResult?.data
 
-            if (ids?.googleCustomerId) {
-              offerData.googleCustomerId = ids.googleCustomerId;
-              if (!isEditMode || !googleCustomerId) {
-                setGoogleCustomerId(ids.googleCustomerId);
+              if (ids?.googleCustomerId) {
+                offerData.googleCustomerId = ids.googleCustomerId
+                if (!isEditMode || !googleCustomerId) {
+                  setGoogleCustomerId(ids.googleCustomerId)
+                }
+              }
+
+              if (ids?.googleCampaignId) {
+                offerData.googleCampaignId = ids.googleCampaignId
+                if (!isEditMode || !googleCampaignId) {
+                  setGoogleCampaignId(ids.googleCampaignId)
+                }
               }
             }
-
-            if (ids?.googleCampaignId) {
-              offerData.googleCampaignId = ids.googleCampaignId;
-              if (!isEditMode || !googleCampaignId) {
-                setGoogleCampaignId(ids.googleCampaignId);
-              }
-            }
+          } catch (idsError) {
+            console.warn('获取Offer关联Google Ads信息失败:', idsError)
+            // 不影响主流程，继续执行
           }
-        } catch (idsError) {
-          console.warn('获取Offer关联Google Ads信息失败:', idsError);
-          // 不影响主流程，继续执行
-        }
 
-        setOffer(offerData);
-        checkProxy(offerData);
+          setOffer(offerData)
+          checkProxy(offerData)
+        }
+      } catch (error) {
+        console.error('加载Offer失败:', error)
+        toast.error('加载Offer失败')
+      } finally {
+        setLoadingOffer(false)
       }
-    } catch (error) {
-      console.error('加载Offer失败:', error);
-      toast.error('加载Offer失败');
-    } finally {
-      setLoadingOffer(false);
-    }
-  }, [isEditMode, googleCustomerId, googleCampaignId]);
+    },
+    [isEditMode, googleCustomerId, googleCampaignId]
+  )
 
   const loadTaskData = useCallback(async () => {
     try {
-      const response = await fetch(`/api/url-swap/tasks/${editTaskId}`);
-      if (!response.ok) throw new Error('加载任务失败');
+      const response = await fetch(`/api/url-swap/tasks/${editTaskId}`)
+      if (!response.ok) throw new Error('加载任务失败')
 
-      const { data: task } = await response.json();
-      setTaskData(task);
-      setSwapIntervalMinutes(task.swap_interval_minutes);
-      setDurationDays(task.duration_days);
-      setGoogleCustomerId(task.google_customer_id || '');
-      setGoogleCampaignId(task.google_campaign_id || '');
-      setSwapMode((task as any).swap_mode === 'manual' ? 'manual' : 'auto');
-      setManualLinksText(Array.isArray((task as any).manual_affiliate_links) ? (task as any).manual_affiliate_links.join('\n') : '');
+      const { data: task } = await response.json()
+      setTaskData(task)
+      setSwapIntervalMinutes(task.swap_interval_minutes)
+      setDurationDays(task.duration_days)
+      setGoogleCustomerId(task.google_customer_id || '')
+      setGoogleCampaignId(task.google_campaign_id || '')
+      setSwapMode((task as any).swap_mode === 'manual' ? 'manual' : 'auto')
+      setManualLinksText(
+        Array.isArray((task as any).manual_affiliate_links)
+          ? (task as any).manual_affiliate_links.join('\n')
+          : ''
+      )
 
       // 加载关联的Offer信息
       if (task.offer_id) {
-        loadOfferById(task.offer_id);
+        loadOfferById(task.offer_id)
       }
     } catch (error) {
-      console.error('加载任务失败:', error);
-      toast.error('加载任务失败');
-      onOpenChange(false);
+      console.error('加载任务失败:', error)
+      toast.error('加载任务失败')
+      onOpenChange(false)
     }
-  }, [editTaskId, loadOfferById, onOpenChange]);
+  }, [editTaskId, loadOfferById, onOpenChange])
 
   // Load existing task data (edit mode)
   useEffect(() => {
     if (open && editTaskId) {
-      void loadTaskData();
+      void loadTaskData()
     }
-  }, [open, editTaskId, loadTaskData]);
+  }, [open, editTaskId, loadTaskData])
 
   // Load offer (create mode)
   useEffect(() => {
     if (open && !editTaskId && offerId) {
-      void loadOfferById(offerId);
+      void loadOfferById(offerId)
     }
-  }, [open, offerId, editTaskId, loadOfferById]);
+  }, [open, offerId, editTaskId, loadOfferById])
 
   const handleEnableTask = async () => {
-    if (!editTaskId) return;
-    setEnabling(true);
+    if (!editTaskId) return
+    setEnabling(true)
     try {
       const response = await fetch(`/api/url-swap/tasks/${editTaskId}/enable`, {
         method: 'POST',
-      });
+      })
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData?.message || '启用任务失败');
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData?.message || '启用任务失败')
       }
-      toast.success('任务已启用');
-      setTaskData(prev => (prev ? { ...prev, status: 'enabled' } : prev));
+      toast.success('任务已启用')
+      setTaskData((prev) => (prev ? { ...prev, status: 'enabled' } : prev))
     } catch (error: any) {
-      console.error('启用任务失败:', error);
-      toast.error(error?.message || '启用任务失败');
+      console.error('启用任务失败:', error)
+      toast.error(error?.message || '启用任务失败')
     } finally {
-      setEnabling(false);
+      setEnabling(false)
     }
-  };
+  }
 
   const checkProxy = async (offerData: Offer) => {
     try {
-      const response = await fetch(`/api/settings/proxy?country=${offerData.targetCountry.toLowerCase()}`);
+      const response = await fetch(
+        `/api/settings/proxy?country=${offerData.targetCountry.toLowerCase()}`
+      )
       if (!response.ok) {
-        setProxyWarning(`未配置 ${offerData.targetCountry} 代理，请先前往设置页面配置`);
-        return;
+        setProxyWarning(`未配置 ${offerData.targetCountry} 代理，请先前往设置页面配置`)
+        return
       }
-      const data = await response.json();
+      const data = await response.json()
       if (!data.data?.proxy_url) {
-        setProxyWarning(`未配置 ${offerData.targetCountry} 代理，请先前往设置页面配置`);
+        setProxyWarning(`未配置 ${offerData.targetCountry} 代理，请先前往设置页面配置`)
       } else {
-        setProxyWarning('');
+        setProxyWarning('')
       }
     } catch {
-      setProxyWarning('检查代理配置失败');
+      setProxyWarning('检查代理配置失败')
     }
-  };
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // Validation
     if (!offer) {
-      toast.error('无法获取Offer信息');
-      return;
+      toast.error('无法获取Offer信息')
+      return
     }
 
     if (!offer.affiliateLink) {
       if (swapMode === 'auto') {
-        toast.error('Offer未配置联盟推广链接，无法创建换链任务');
-        return;
+        toast.error('Offer未配置联盟推广链接，无法创建换链任务')
+        return
       }
     }
 
     if (proxyWarning) {
-      toast.error('请先配置代理');
-      return;
+      toast.error('请先配置代理')
+      return
     }
 
     // 缺少Customer/Campaign ID会导致任务执行失败（无法更新Google Ads）
     if (!googleCustomerId.trim() || !googleCampaignId.trim()) {
-      toast.error('请填写 Customer ID 与 Campaign ID（用于更新 Google Ads Final URL suffix）');
-      return;
+      toast.error('请填写 Customer ID 与 Campaign ID（用于更新 Google Ads Final URL suffix）')
+      return
     }
 
-    let manualAffiliateLinks: string[] = [];
+    let manualAffiliateLinks: string[] = []
     if (swapMode === 'manual') {
-      manualAffiliateLinks = parseAffiliateLinksText(manualLinksText);
+      manualAffiliateLinks = parseAffiliateLinksText(manualLinksText)
 
       if (manualAffiliateLinks.length === 0) {
-        toast.error('方式二需要至少配置 1 个推广链接');
-        return;
+        toast.error('方式二需要至少配置 1 个推广链接')
+        return
       }
 
-      const invalidLinks = findInvalidAffiliateLinks(manualAffiliateLinks);
+      const invalidLinks = findInvalidAffiliateLinks(manualAffiliateLinks)
       if (invalidLinks.length > 0) {
-        toast.error('推广链接需包含 http/https 协议，请检查输入');
-        return;
+        toast.error('推广链接需包含 http/https 协议，请检查输入')
+        return
       }
     }
 
-    const validIntervals = [...URL_SWAP_ALLOWED_INTERVALS_MINUTES];
+    const validIntervals = [...URL_SWAP_ALLOWED_INTERVALS_MINUTES]
     if (!validIntervals.includes(swapIntervalMinutes)) {
-      toast.error(`换链间隔必须是以下值之一：${validIntervals.join(', ')} 分钟`);
-      return;
+      toast.error(`换链间隔必须是以下值之一：${validIntervals.join(', ')} 分钟`)
+      return
     }
 
     if (durationDays !== -1 && (durationDays < 1 || durationDays > 365)) {
-      toast.error('任务持续天数必须在1-365天之间，或选择"不限期"');
-      return;
+      toast.error('任务持续天数必须在1-365天之间，或选择"不限期"')
+      return
     }
 
     try {
-      setLoading(true);
+      setLoading(true)
 
       const requestData = {
         offer_id: offer.id,
@@ -270,54 +285,52 @@ export default function UrlSwapTaskModal({
         google_campaign_id: googleCampaignId || null,
         swap_mode: swapMode,
         manual_affiliate_links: swapMode === 'manual' ? manualAffiliateLinks : undefined,
-      };
+      }
 
-      const url = isEditMode
-        ? `/api/url-swap/tasks/${editTaskId}`
-        : '/api/url-swap/tasks';
+      const url = isEditMode ? `/api/url-swap/tasks/${editTaskId}` : '/api/url-swap/tasks'
 
       const response = await fetch(url, {
         method: isEditMode ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData),
-      });
+      })
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || `${isEditMode ? '更新' : '创建'}任务失败`);
+        const error = await response.json()
+        throw new Error(error.message || `${isEditMode ? '更新' : '创建'}任务失败`)
       }
 
-      toast.success(`换链任务${isEditMode ? '更新' : '创建'}成功`);
-      onOpenChange(false);
-      onSuccess?.();
-      resetFormState();
+      toast.success(`换链任务${isEditMode ? '更新' : '创建'}成功`)
+      onOpenChange(false)
+      onSuccess?.()
+      resetFormState()
     } catch (error: any) {
-      console.error('创建任务失败:', error);
-      toast.error(error.message || '创建任务失败');
+      console.error('创建任务失败:', error)
+      toast.error(error.message || '创建任务失败')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const resetFormState = () => {
-    setSwapIntervalMinutes(BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes);
-    setDurationDays(BATCH_URL_SWAP_TASK_DEFAULTS.durationDays);
-    setGoogleCustomerId('');
-    setGoogleCampaignId('');
-    setSwapMode('auto');
-    setManualLinksText('');
-    setProxyWarning('');
-    setTaskData(null);
-  };
+    setSwapIntervalMinutes(BATCH_URL_SWAP_TASK_DEFAULTS.swapIntervalMinutes)
+    setDurationDays(BATCH_URL_SWAP_TASK_DEFAULTS.durationDays)
+    setGoogleCustomerId('')
+    setGoogleCampaignId('')
+    setSwapMode('auto')
+    setManualLinksText('')
+    setProxyWarning('')
+    setTaskData(null)
+  }
 
   const handleDialogOpenChange = (newOpen: boolean) => {
     if (!newOpen && !loading) {
       setTimeout(() => {
-        resetFormState();
-      }, 200);
+        resetFormState()
+      }, 200)
     }
-    onOpenChange(newOpen);
-  };
+    onOpenChange(newOpen)
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
@@ -347,7 +360,11 @@ export default function UrlSwapTaskModal({
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground">产品:</span>
                   <Badge variant="outline">
-                    {offer.offerName || offer.brand || offer.name || offer.brand_name || `Offer #${offer.id}`}
+                    {offer.offerName ||
+                      offer.brand ||
+                      offer.name ||
+                      offer.brand_name ||
+                      `Offer #${offer.id}`}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
@@ -376,9 +393,7 @@ export default function UrlSwapTaskModal({
                 )}
               </div>
             ) : (
-              <div className="text-sm text-muted-foreground italic">
-                加载失败，请重试
-              </div>
+              <div className="text-sm text-muted-foreground italic">加载失败，请重试</div>
             )}
           </div>
 
@@ -417,11 +432,13 @@ export default function UrlSwapTaskModal({
             </Select>
             {swapMode === 'auto' ? (
               <p className="text-xs text-muted-foreground">
-                适用于：同一个推广链接多次访问最终参数会变化或联盟更换链接。系统自动访问当前推广链接获取最新 Final URL/Suffix，需要配置对应国家代理。
+                适用于：同一个推广链接多次访问最终参数会变化或联盟更换链接。系统自动访问当前推广链接获取最新
+                Final URL/Suffix，需要配置对应国家代理。
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                适用于：同一Offer不同联盟账号有不同推广链接，需要在账号间轮换。系统会按顺序访问列表中的推广链接并提取 Final URL/Suffix，需要配置代理。
+                适用于：同一Offer不同联盟账号有不同推广链接，需要在账号间轮换。系统会按顺序访问列表中的推广链接并提取
+                Final URL/Suffix，需要配置代理。
               </p>
             )}
           </div>
@@ -437,16 +454,14 @@ export default function UrlSwapTaskModal({
                 required
               >
                 <SelectContent>
-                    {URL_SWAP_INTERVAL_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value.toString()}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
+                  {URL_SWAP_INTERVAL_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                检测Offer链接变化的频率
-              </p>
+              <p className="text-xs text-muted-foreground">检测Offer链接变化的频率</p>
             </div>
 
             <div className="space-y-2">
@@ -481,7 +496,8 @@ export default function UrlSwapTaskModal({
                 required
               />
               <p className="text-xs text-muted-foreground">
-                系统会按顺序轮询访问（到末尾后回到第一条），自动提取 Final URL 和 Final URL Suffix 用于更新Campaign追踪参数。
+                系统会按顺序轮询访问（到末尾后回到第一条），自动提取 Final URL 和 Final URL Suffix
+                用于更新Campaign追踪参数。
               </p>
             </div>
           )}
@@ -492,7 +508,9 @@ export default function UrlSwapTaskModal({
               <Globe className="h-4 w-4" />
               Google Ads 配置
               {offer?.googleCustomerId || offer?.googleCampaignId ? (
-                <Badge variant="secondary" className="ml-2">已关联</Badge>
+                <Badge variant="secondary" className="ml-2">
+                  已关联
+                </Badge>
               ) : (
                 <span className="text-xs text-muted-foreground font-normal">（必填）</span>
               )}
@@ -500,8 +518,7 @@ export default function UrlSwapTaskModal({
             <p className="text-xs text-muted-foreground">
               {offer?.googleCustomerId || offer?.googleCampaignId
                 ? '从关联的Campaign自动获取，如需修改请前往Campaign管理页面'
-                : '用于更新Campaign层级 Final URL suffix（缺失将导致任务执行失败）'
-              }
+                : '用于更新Campaign层级 Final URL suffix（缺失将导致任务执行失败）'}
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -511,7 +528,7 @@ export default function UrlSwapTaskModal({
                   value={googleCustomerId}
                   onChange={(e) => setGoogleCustomerId(e.target.value)}
                   placeholder="例如: 123-456-7890"
-                  disabled={!!(offer?.googleCustomerId)}
+                  disabled={!!offer?.googleCustomerId}
                   className={offer?.googleCustomerId ? 'bg-gray-50' : ''}
                 />
               </div>
@@ -522,7 +539,7 @@ export default function UrlSwapTaskModal({
                   value={googleCampaignId}
                   onChange={(e) => setGoogleCampaignId(e.target.value)}
                   placeholder="例如: 123456789"
-                  disabled={!!(offer?.googleCampaignId)}
+                  disabled={!!offer?.googleCampaignId}
                   className={offer?.googleCampaignId ? 'bg-gray-50' : ''}
                 />
               </div>
@@ -558,5 +575,5 @@ export default function UrlSwapTaskModal({
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

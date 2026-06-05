@@ -27,15 +27,12 @@ export async function GET(request: NextRequest) {
       const score = scoreCreativePerformance(parseInt(creativeId), userId)
 
       if (!score) {
-        return NextResponse.json(
-          { error: '创意不存在或数据不足' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: '创意不存在或数据不足' }, { status: 404 })
       }
 
       return NextResponse.json({
         success: true,
-        data: score
+        data: score,
       })
     }
 
@@ -50,14 +47,11 @@ export async function GET(request: NextRequest) {
         good: scores.filter((s: any) => s.rating === 'good').length,
         average: scores.filter((s: any) => s.rating === 'average').length,
         poor: scores.filter((s: any) => s.rating === 'poor').length,
-        scores
-      }
+        scores,
+      },
     })
   } catch (error: any) {
     console.error('创意评分失败:', error)
-    return NextResponse.json(
-      { error: error.message || '创意评分失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '创意评分失败' }, { status: 500 })
   }
 }

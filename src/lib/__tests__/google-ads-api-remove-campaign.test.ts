@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/python-ads-client', () => ({
-  removeCampaignPython: vi.fn()
+  removeCampaignPython: vi.fn(),
 }))
 
 import * as googleAdsApi from '@/lib/google-ads-api'
@@ -19,14 +19,14 @@ describe('removeGoogleAdsCampaign', () => {
       campaignId: '456',
       refreshToken: '',
       authType: 'service_account',
-      serviceAccountId: 'svc-1'
+      serviceAccountId: 'svc-1',
     })
 
     expect(removeCampaignPython).toHaveBeenCalledWith({
       userId: 1,
       serviceAccountId: 'svc-1',
       customerId: '123',
-      campaignResourceName: 'customers/123/campaigns/456'
+      campaignResourceName: 'customers/123/campaigns/456',
     })
   })
 
@@ -42,9 +42,9 @@ describe('removeGoogleAdsCampaign', () => {
       loginCustomerId: '111',
       customer: {
         campaigns: {
-          remove: removeMock
-        }
-      } as any
+          remove: removeMock,
+        },
+      } as any,
     })
 
     expect(removeMock).toHaveBeenCalledWith(['customers/999/campaigns/888'])

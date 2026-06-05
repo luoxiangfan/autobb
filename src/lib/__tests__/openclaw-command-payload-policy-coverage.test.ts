@@ -12,35 +12,45 @@ function toRouteKey(method: string, path: string): string {
 describe('openclaw command payload policy coverage', () => {
   it('covers every canonical write route', () => {
     const canonicalRouteKeys = new Set(
-      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) => toRouteKey(route.method, route.pattern))
+      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) =>
+        toRouteKey(route.method, route.pattern)
+      )
     )
 
     const payloadPolicyKeys = new Set(
       OPENCLAW_COMMAND_PAYLOAD_POLICIES.map((policy) => toRouteKey(policy.method, policy.path))
     )
 
-    const missingPolicies = Array.from(canonicalRouteKeys).filter((routeKey) => !payloadPolicyKeys.has(routeKey))
+    const missingPolicies = Array.from(canonicalRouteKeys).filter(
+      (routeKey) => !payloadPolicyKeys.has(routeKey)
+    )
 
     expect(missingPolicies).toEqual([])
   })
 
   it('does not define stale policies outside canonical write routes', () => {
     const canonicalRouteKeys = new Set(
-      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) => toRouteKey(route.method, route.pattern))
+      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) =>
+        toRouteKey(route.method, route.pattern)
+      )
     )
 
     const payloadPolicyKeys = new Set(
       OPENCLAW_COMMAND_PAYLOAD_POLICIES.map((policy) => toRouteKey(policy.method, policy.path))
     )
 
-    const stalePolicies = Array.from(payloadPolicyKeys).filter((policyKey) => !canonicalRouteKeys.has(policyKey))
+    const stalePolicies = Array.from(payloadPolicyKeys).filter(
+      (policyKey) => !canonicalRouteKeys.has(policyKey)
+    )
 
     expect(stalePolicies).toEqual([])
   })
 
   it('keeps query-policy routes within canonical write routes', () => {
     const canonicalRouteKeys = new Set(
-      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) => toRouteKey(route.method, route.pattern))
+      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) =>
+        toRouteKey(route.method, route.pattern)
+      )
     )
 
     const queryPolicyKeys = new Set(

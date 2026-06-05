@@ -2,52 +2,50 @@
 // 返回该 Offer 关联的补点击任务信息（如果有）
 
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
-import { parseClickFarmTask } from '@/lib/click-farm';
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id';
+import { NextRequest, NextResponse } from 'next/server'
+import { getDatabase } from '@/lib/db'
+import { parseClickFarmTask } from '@/lib/click-farm'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId) {
-      return NextResponse.json(
-        { error: 'unauthorized', message: '未登录' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'unauthorized', message: '未登录' }, { status: 401 })
     }
 
-    const offerId = parsePositiveIntegerOfferId(params.id);
+    const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
       return NextResponse.json(
         { error: 'invalid_params', message: '无效的 Offer ID' },
         { status: 400 }
-      );
+      )
     }
 
-    const db = await getDatabase();
+    const db = await getDatabase()
 
     // 验证 Offer 是否存在且属于该用户
-    const offer = await db.queryOne<any>(`
+    const offer = await db.queryOne<any>(
+      `
       SELECT id FROM offers WHERE id = ? AND user_id = ?
-    `, [offerId, userId]);
+    `,
+      [offerId, userId]
+    )
 
     if (!offer) {
-      return NextResponse.json(
-        { error: 'not_found', message: 'Offer 不存在' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'not_found', message: 'Offer 不存在' }, { status: 404 })
     }
 
     // 查询该 Offer 关联的补点击任务（不包括已删除的任务）
-    const task = await db.queryOne<any>(`
+    const task = await db.queryOne<any>(
+      `
       SELECT
         id,
         user_id,
@@ -76,19 +74,21 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       WHERE offer_id = ? AND user_id = ? AND IS_DELETED_FALSE
       ORDER BY created_at DESC
       LIMIT 1
-    `, [offerId, userId]);
+    `,
+      [offerId, userId]
+    )
 
     if (!task) {
       // 没有找到任务，返回 null 表示没有任务
       return NextResponse.json({
         success: true,
         data: null,
-        message: '该 Offer 没有关联的补点击任务'
-      });
+        message: '该 Offer 没有关联的补点击任务',
+      })
     }
 
     // 解析任务数据
-    const parsedTask = parseClickFarmTask(task);
+    const parsedTask = parseClickFarmTask(task)
 
     return NextResponse.json({
       success: true,
@@ -106,14 +106,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         failed_clicks: parsedTask.failed_clicks,
         created_at: parsedTask.created_at,
         started_at: parsedTask.started_at,
-      }
-    });
-
+      },
+    })
   } catch (error) {
-    console.error('查询补点击任务失败:', error);
+    console.error('查询补点击任务失败:', error)
     return NextResponse.json(
       { error: 'server_error', message: '查询补点击任务失败' },
       { status: 500 }
-    );
+    )
   }
 }

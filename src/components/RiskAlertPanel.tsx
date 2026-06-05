@@ -25,7 +25,7 @@ import {
   Link as LinkIcon,
   CheckCheck,
   XCircle,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -112,7 +112,7 @@ export default function RiskAlertPanel() {
     setLoading(true)
     try {
       const response = await fetch('/api/risk-alerts?status=active', {
-        credentials: 'include'
+        credentials: 'include',
       })
       if (!response.ok) throw new Error('Failed to load alerts')
 
@@ -131,7 +131,7 @@ export default function RiskAlertPanel() {
     setChecking(true)
     try {
       const response = await fetch('/api/risk-alerts', {
-        method: 'POST'
+        method: 'POST',
       })
 
       if (!response.ok) throw new Error('Failed to check links')
@@ -149,7 +149,7 @@ export default function RiskAlertPanel() {
         accessible: 0,
         broken: 0,
         redirected: 0,
-        newAlerts: 0
+        newAlerts: 0,
       })
       setShowResultDialog(true)
     } finally {
@@ -167,7 +167,7 @@ export default function RiskAlertPanel() {
       const response = await fetch(`/api/risk-alerts/${alertId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, note })
+        body: JSON.stringify({ status, note }),
       })
 
       if (!response.ok) throw new Error('Failed to update alert')
@@ -175,10 +175,7 @@ export default function RiskAlertPanel() {
       await loadAlerts()
       setExpandedAlert(null)
       setResolutionNote('')
-      showSuccess(
-        status === 'resolved' ? '风险已解决' : '风险已确认',
-        '提示状态已更新'
-      )
+      showSuccess(status === 'resolved' ? '风险已解决' : '风险已确认', '提示状态已更新')
     } catch (error) {
       console.error('Update alert error:', error)
       showError('更新失败', '无法更新提示状态，请重试')
@@ -195,20 +192,20 @@ export default function RiskAlertPanel() {
       color: 'bg-red-100 text-red-800 border-red-300',
       icon: AlertTriangle,
       label: '严重',
-      bgColor: 'bg-red-50'
+      bgColor: 'bg-red-50',
     },
     warning: {
       color: 'bg-yellow-100 text-yellow-800 border-yellow-300',
       icon: AlertCircle,
       label: '警告',
-      bgColor: 'bg-yellow-50'
+      bgColor: 'bg-yellow-50',
     },
     info: {
       color: 'bg-blue-100 text-blue-800 border-blue-300',
       icon: Info,
       label: '信息',
-      bgColor: 'bg-blue-50'
-    }
+      bgColor: 'bg-blue-50',
+    },
   }
 
   // 提示类型标签
@@ -219,14 +216,14 @@ export default function RiskAlertPanel() {
     account_suspended: '账号暂停',
     campaign_paused: 'Campaign暂停',
     budget_exhausted: '预算耗尽',
-    low_quality_score: '质量分过低'
+    low_quality_score: '质量分过低',
   }
 
   // 按严重程度分组
   const groupedAlerts = {
-    critical: alerts.filter(a => a.severity === 'critical'),
-    warning: alerts.filter(a => a.severity === 'warning'),
-    info: alerts.filter(a => a.severity === 'info')
+    critical: alerts.filter((a) => a.severity === 'critical'),
+    warning: alerts.filter((a) => a.severity === 'warning'),
+    info: alerts.filter((a) => a.severity === 'info'),
   }
 
   if (loading) {
@@ -337,18 +334,31 @@ export default function RiskAlertPanel() {
         const Icon = config.icon
 
         return (
-          <Card key={severity} className={`border-2 ${config.bgColor} hover:shadow-md transition-all`}>
+          <Card
+            key={severity}
+            className={`border-2 ${config.bgColor} hover:shadow-md transition-all`}
+          >
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    severity === 'critical' ? 'bg-red-100' :
-                    severity === 'warning' ? 'bg-yellow-100' : 'bg-blue-100'
-                  }`}>
-                    <Icon className={`h-5 w-5 ${
-                      severity === 'critical' ? 'text-red-600' :
-                      severity === 'warning' ? 'text-yellow-600' : 'text-blue-600'
-                    }`} />
+                  <div
+                    className={`p-2 rounded-lg ${
+                      severity === 'critical'
+                        ? 'bg-red-100'
+                        : severity === 'warning'
+                          ? 'bg-yellow-100'
+                          : 'bg-blue-100'
+                    }`}
+                  >
+                    <Icon
+                      className={`h-5 w-5 ${
+                        severity === 'critical'
+                          ? 'text-red-600'
+                          : severity === 'warning'
+                            ? 'text-yellow-600'
+                            : 'text-blue-600'
+                      }`}
+                    />
                   </div>
                   <div>
                     <CardTitle className="text-lg">{config.label}</CardTitle>
@@ -365,8 +375,8 @@ export default function RiskAlertPanel() {
               </div>
             </CardHeader>
             <CardContent>
-                <div className="space-y-3">
-                  {severityAlerts.map((alert) => {
+              <div className="space-y-3">
+                {severityAlerts.map((alert) => {
                   const details = parseRiskAlertDetails(alert.details)
                   const actionUrl = details?.actionUrl
                   const isExpanded = expandedAlert === alert.id
@@ -408,7 +418,9 @@ export default function RiskAlertPanel() {
                                       <div className="flex items-start gap-2">
                                         <ExternalLink className="h-4 w-4 mt-0.5 shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-xs text-muted-foreground mb-1">链接地址</p>
+                                          <p className="text-xs text-muted-foreground mb-1">
+                                            链接地址
+                                          </p>
                                           <a
                                             href={details.url}
                                             target="_blank"
@@ -438,7 +450,9 @@ export default function RiskAlertPanel() {
                                       <div className="flex items-start gap-2">
                                         <RefreshCw className="h-4 w-4 mt-0.5 shrink-0" />
                                         <div className="flex-1 min-w-0">
-                                          <p className="text-xs text-muted-foreground mb-1">重定向至</p>
+                                          <p className="text-xs text-muted-foreground mb-1">
+                                            重定向至
+                                          </p>
                                           <a
                                             href={details.finalUrl}
                                             target="_blank"
@@ -479,7 +493,9 @@ export default function RiskAlertPanel() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => updateAlertStatus(alert.id, 'acknowledged', resolutionNote)}
+                                    onClick={() =>
+                                      updateAlertStatus(alert.id, 'acknowledged', resolutionNote)
+                                    }
                                     className="flex-1"
                                   >
                                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -487,7 +503,9 @@ export default function RiskAlertPanel() {
                                   </Button>
                                   <Button
                                     size="sm"
-                                    onClick={() => updateAlertStatus(alert.id, 'resolved', resolutionNote)}
+                                    onClick={() =>
+                                      updateAlertStatus(alert.id, 'resolved', resolutionNote)
+                                    }
                                     className="flex-1 bg-green-600 hover:bg-green-700"
                                   >
                                     <X className="mr-2 h-4 w-4" />
@@ -591,7 +609,9 @@ export default function RiskAlertPanel() {
                     <ArrowRight className="h-5 w-5 text-yellow-600" />
                     <span className="text-sm font-medium text-yellow-700">重定向</span>
                   </div>
-                  <span className="text-2xl font-bold text-yellow-600">{checkResult.redirected}</span>
+                  <span className="text-2xl font-bold text-yellow-600">
+                    {checkResult.redirected}
+                  </span>
                 </div>
               )}
 
@@ -609,10 +629,7 @@ export default function RiskAlertPanel() {
           )}
 
           <AlertDialogFooter>
-            <Button
-              onClick={() => setShowResultDialog(false)}
-              className="w-full"
-            >
+            <Button onClick={() => setShowResultDialog(false)} className="w-full">
               确定
             </Button>
           </AlertDialogFooter>

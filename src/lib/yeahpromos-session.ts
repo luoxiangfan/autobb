@@ -225,7 +225,9 @@ function verifyCaptureToken(token: string): CaptureTokenPayload | null {
   }
 
   try {
-    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf8')) as CaptureTokenPayload
+    const payload = JSON.parse(
+      Buffer.from(payloadBase64, 'base64url').toString('utf8')
+    ) as CaptureTokenPayload
     if (!Number.isFinite(payload.userId) || payload.userId <= 0) return null
     if (!payload.nonce || typeof payload.nonce !== 'string') return null
     if (!Number.isFinite(payload.exp) || payload.exp <= 0) return null
@@ -272,7 +274,9 @@ export async function consumeYeahPromosCaptureChallenge(userId: number): Promise
   ])
 }
 
-export async function validateYeahPromosCaptureToken(token: string): Promise<{ valid: boolean; userId?: number; error?: string }> {
+export async function validateYeahPromosCaptureToken(
+  token: string
+): Promise<{ valid: boolean; userId?: number; error?: string }> {
   const payload = verifyCaptureToken(token)
   if (!payload) {
     return { valid: false, error: 'capture_token 无效' }
@@ -309,7 +313,8 @@ export async function saveYeahPromosSessionCookie(params: {
 }): Promise<YeahPromosSessionState> {
   const normalized = normalizeYeahPromosCookie(params.rawCookie)
   const nowMs = Date.now()
-  const expiresAtMs = nowMs + Math.max(60 * 60 * 1000, Math.trunc(params.ttlMs || YEAHPROMOS_SESSION_DEFAULT_TTL_MS))
+  const expiresAtMs =
+    nowMs + Math.max(60 * 60 * 1000, Math.trunc(params.ttlMs || YEAHPROMOS_SESSION_DEFAULT_TTL_MS))
 
   await upsertUserSystemSetting({
     userId: params.userId,
@@ -436,9 +441,7 @@ export async function isYeahPromosManualSyncOnly(userId: number): Promise<boolea
 }
 
 function escapeForSingleQuotedString(value: string): string {
-  return value
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
+  return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
 }
 
 export function buildYeahPromosCaptureBookmarklet(params: {

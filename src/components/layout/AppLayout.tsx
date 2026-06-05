@@ -35,18 +35,18 @@ import { GoogleAdsCampaignSyncSseBridge } from '@/components/GoogleAdsCampaignSy
 
 // 动态导入模态框组件，实现代码分割
 const UserProfileModal = dynamic(
-  () => import('./AppLayoutModals').then(mod => mod.UserProfileModal),
+  () => import('./AppLayoutModals').then((mod) => mod.UserProfileModal),
   { ssr: false }
 )
 
 const ChangePasswordModal = dynamic(
-  () => import('./AppLayoutModals').then(mod => mod.ChangePasswordModal),
+  () => import('./AppLayoutModals').then((mod) => mod.ChangePasswordModal),
   { ssr: false }
 )
 
 // 移动端底部导航（动态导入以减小主包体积）
 const MobileBottomNav = dynamic(
-  () => import('./MobileBottomNav').then(mod => mod.MobileBottomNav),
+  () => import('./MobileBottomNav').then((mod) => mod.MobileBottomNav),
   { ssr: false }
 )
 
@@ -227,7 +227,7 @@ const navigationItems: NavItem[] = [
 ]
 
 function filterNavigationItemsByUser(items: NavItem[], user: UserInfo): NavItem[] {
-  return items.filter(item => {
+  return items.filter((item) => {
     if (item.href === '/openclaw' || item.href === '/openclaw/affiliate-commission') {
       return user.role === 'admin' || Boolean(user.openclawEnabled)
     }
@@ -309,7 +309,7 @@ export default function AppLayout({
   const [user, setUser] = useState<UserInfo | null>(cachedUser)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [advancedNavOpen, setAdvancedNavOpen] = useState(() =>
-    Array.from(collapsibleNavigationHrefs).some(href => pathname?.startsWith(href))
+    Array.from(collapsibleNavigationHrefs).some((href) => pathname?.startsWith(href))
   )
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
@@ -361,7 +361,7 @@ export default function AppLayout({
   useEffect(() => {
     // 如果已有缓存且未过期，直接使用
     const now = Date.now()
-    if (cachedUser && (now - cacheTimestamp) < CACHE_DURATION) {
+    if (cachedUser && now - cacheTimestamp < CACHE_DURATION) {
       setUser(cachedUser)
       setLoading(false)
       return
@@ -414,7 +414,9 @@ export default function AppLayout({
   }
 
   useEffect(() => {
-    const hasActiveCollapsibleRoute = Array.from(collapsibleNavigationHrefs).some(href => pathname?.startsWith(href))
+    const hasActiveCollapsibleRoute = Array.from(collapsibleNavigationHrefs).some((href) =>
+      pathname?.startsWith(href)
+    )
     if (hasActiveCollapsibleRoute) {
       setAdvancedNavOpen(true)
     }
@@ -431,8 +433,12 @@ export default function AppLayout({
   if (!user) return null
 
   const filteredNavigationItems = filterNavigationItemsByUser(navigationItems, user)
-  const mainNavigationItems = filteredNavigationItems.filter(item => !collapsibleNavigationHrefs.has(item.href))
-  const advancedNavigationItems = filteredNavigationItems.filter(item => collapsibleNavigationHrefs.has(item.href))
+  const mainNavigationItems = filteredNavigationItems.filter(
+    (item) => !collapsibleNavigationHrefs.has(item.href)
+  )
+  const advancedNavigationItems = filteredNavigationItems.filter((item) =>
+    collapsibleNavigationHrefs.has(item.href)
+  )
 
   return (
     <div className="min-h-screen bg-slate-50/50 dark:bg-slate-900 lg:pb-0 pb-16">
@@ -513,7 +519,10 @@ export default function AppLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="px-3 space-y-1 flex-1 overflow-y-auto custom-scrollbar" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+        <nav
+          className="px-3 space-y-1 flex-1 overflow-y-auto custom-scrollbar"
+          style={{ maxHeight: 'calc(100vh - 200px)' }}
+        >
           {sidebarOpen && (
             <div className="px-3 py-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
@@ -533,15 +542,18 @@ export default function AppLayout({
                 onIntentPrefetch={prefetchNavLinkByIntent}
                 className={`
                   group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
-                  ${active
-                    ? 'bg-blue-50/80 text-blue-600 font-medium shadow-xs shadow-blue-100/50'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  ${
+                    active
+                      ? 'bg-blue-50/80 text-blue-600 font-medium shadow-xs shadow-blue-100/50'
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                   }
                   ${!sidebarOpen && 'justify-center'}
                 `}
                 title={!sidebarOpen ? item.label : undefined}
               >
-                <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                <Icon
+                  className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}
+                />
                 {sidebarOpen && <span className="text-sm">{item.label}</span>}
                 {sidebarOpen && active && (
                   <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
@@ -554,7 +566,7 @@ export default function AppLayout({
             <div className="pt-1">
               <button
                 type="button"
-                onClick={() => setAdvancedNavOpen(prev => !prev)}
+                onClick={() => setAdvancedNavOpen((prev) => !prev)}
                 className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-all duration-200"
                 aria-expanded={advancedNavOpen}
               >
@@ -583,17 +595,18 @@ export default function AppLayout({
                         onIntentPrefetch={prefetchNavLinkByIntent}
                         className={`
                           group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
-                          ${active
-                            ? 'bg-blue-50/80 text-blue-600 font-medium shadow-xs shadow-blue-100/50'
-                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                          ${
+                            active
+                              ? 'bg-blue-50/80 text-blue-600 font-medium shadow-xs shadow-blue-100/50'
+                              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                           }
                         `}
                       >
-                        <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                        <Icon
+                          className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}
+                        />
                         <span className="text-sm">{item.label}</span>
-                        {active && (
-                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
-                        )}
+                        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />}
                       </SidebarLink>
                     )
                   })}
@@ -613,9 +626,7 @@ export default function AppLayout({
                   </span>
                 </div>
               )}
-              {!sidebarOpen && (
-                <div className="my-3 border-t border-slate-100" />
-              )}
+              {!sidebarOpen && <div className="my-3 border-t border-slate-100" />}
               {adminNavigationItems.map((item) => {
                 const Icon = item.icon
                 const active = isActive(item.href)
@@ -628,15 +639,18 @@ export default function AppLayout({
                     onIntentPrefetch={prefetchNavLinkByIntent}
                     className={`
                       group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
-                      ${active
-                        ? 'bg-purple-50/80 text-purple-600 font-medium shadow-xs shadow-purple-100/50'
-                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                      ${
+                        active
+                          ? 'bg-purple-50/80 text-purple-600 font-medium shadow-xs shadow-purple-100/50'
+                          : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                       }
                       ${!sidebarOpen && 'justify-center'}
                     `}
                     title={!sidebarOpen ? item.label : undefined}
                   >
-                    <Icon className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+                    <Icon
+                      className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-purple-600' : 'text-slate-400 group-hover:text-slate-600'}`}
+                    />
                     {sidebarOpen && <span className="text-sm">{item.label}</span>}
                   </SidebarLink>
                 )
@@ -689,10 +703,7 @@ export default function AppLayout({
         />
       )}
 
-      <ChangePasswordModal
-        open={passwordModalOpen}
-        onOpenChange={setPasswordModalOpen}
-      />
+      <ChangePasswordModal open={passwordModalOpen} onOpenChange={setPasswordModalOpen} />
 
       {user ? <GoogleAdsCampaignSyncSseBridge /> : null}
     </div>

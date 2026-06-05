@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -12,10 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * @param defaultValue Default value if conversion fails (default: 0)
  * @returns Proper number type, or defaultValue if conversion fails
  */
-export function toNumber(
-  value: any,
-  defaultValue: number = 0
-): number {
+export function toNumber(value: any, defaultValue: number = 0): number {
   // Handle null and undefined
   if (value === null || value === undefined) {
     return defaultValue
@@ -71,23 +68,23 @@ export function formatCurrency(
 
   // Currency symbol mapping
   const currencySymbols: Record<string, string> = {
-    'USD': '$',
-    'CNY': '¥',
-    'EUR': '€',
-    'GBP': '£',
-    'JPY': '¥',
-    'CAD': 'C$',
-    'AUD': 'A$',
-    'CHF': 'CHF',
-    'INR': '₹',
-    'KRW': '₩',
-    'BRL': 'R$',
-    'MXN': 'MX$',
-    'SGD': 'S$',
-    'HKD': 'HK$',
-    'TWD': 'NT$',
-    'THB': '฿',
-    'VND': '₫',
+    USD: '$',
+    CNY: '¥',
+    EUR: '€',
+    GBP: '£',
+    JPY: '¥',
+    CAD: 'C$',
+    AUD: 'A$',
+    CHF: 'CHF',
+    INR: '₹',
+    KRW: '₩',
+    BRL: 'R$',
+    MXN: 'MX$',
+    SGD: 'S$',
+    HKD: 'HK$',
+    TWD: 'NT$',
+    THB: '฿',
+    VND: '₫',
   }
 
   // Special case: Mixed currencies

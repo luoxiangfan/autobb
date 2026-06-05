@@ -1,6 +1,10 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findLaunchScoreById, deleteLaunchScore, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
+import {
+  findLaunchScoreById,
+  deleteLaunchScore,
+  parseLaunchScoreAnalysis,
+} from '@/lib/launch-scores'
 import { parsePositiveIntegerId } from '@/lib/parse-offer-id'
 
 /**
@@ -10,7 +14,7 @@ import { parsePositiveIntegerId } from '@/lib/parse-offer-id'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const scoreId = parsePositiveIntegerId(params.id)
     if (!scoreId) {
@@ -59,7 +63,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
  * 删除Launch Score
  */
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const scoreId = parsePositiveIntegerId(params.id)
     if (!scoreId) {

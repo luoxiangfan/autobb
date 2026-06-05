@@ -51,7 +51,11 @@ describe('settings single-key route affiliate sync isolation', () => {
     const payload = await res.json()
 
     expect(res.status).toBe(200)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith('affiliate_sync', 'yeahpromos_site_id', 7)
+    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith(
+      'affiliate_sync',
+      'yeahpromos_site_id',
+      7
+    )
     expect(settingsFns.getSetting).not.toHaveBeenCalled()
     expect(payload.setting.value).toBe('11282')
   })
@@ -102,6 +106,11 @@ describe('settings single-key route affiliate sync isolation', () => {
 
     expect(res.status).toBe(200)
     expect(payload.success).toBe(true)
-    expect(settingsFns.updateSetting).toHaveBeenCalledWith('affiliate_sync', 'yeahpromos_site_id', '11930', 7)
+    expect(settingsFns.updateSetting).toHaveBeenCalledWith(
+      'affiliate_sync',
+      'yeahpromos_site_id',
+      '11930',
+      7
+    )
   })
 })

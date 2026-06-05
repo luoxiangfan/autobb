@@ -22,8 +22,8 @@ vi.mock('@/lib/google-ads-api', () => ({
 }))
 
 vi.mock('@/lib/google-ads-login-customer', () => ({
-  runWithLoginCustomerFallbackForAccount: vi.fn(async ({ callback }: { callback: (id: string) => unknown }) =>
-    callback('9988776655')
+  runWithLoginCustomerFallbackForAccount: vi.fn(
+    async ({ callback }: { callback: (id: string) => unknown }) => callback('9988776655')
   ),
 }))
 

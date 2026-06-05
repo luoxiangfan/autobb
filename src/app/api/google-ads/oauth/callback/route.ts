@@ -3,9 +3,7 @@ import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ad
 import { getUserOnlySetting } from '@/lib/settings'
 import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
-import {
-  assertNoConflictingGoogleAdsAuth,
-} from '@/lib/google-ads-auth-context'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -44,34 +42,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (!code) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=missing_code')
-      )
+      return NextResponse.redirect(createRedirectUrl('/settings?error=missing_code'))
     }
 
     if (!state) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=missing_state')
-      )
+      return NextResponse.redirect(createRedirectUrl('/settings?error=missing_state'))
     }
 
     // 验证state
     let stateData: { user_id: number; timestamp: number }
     try {
-      stateData = JSON.parse(
-        Buffer.from(state, 'base64url').toString()
-      )
+      stateData = JSON.parse(Buffer.from(state, 'base64url').toString())
     } catch {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=invalid_state')
-      )
+      return NextResponse.redirect(createRedirectUrl('/settings?error=invalid_state'))
     }
 
     // 检查state时间戳（10分钟内有效）
     if (Date.now() - stateData.timestamp > 10 * 60 * 1000) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=state_expired')
-      )
+      return NextResponse.redirect(createRedirectUrl('/settings?error=state_expired'))
     }
 
     const userId = stateData.user_id
@@ -84,7 +72,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 校验: login_customer_id 必须由用户自己配置（不使用 getSetting，避免回退到全局配置）
-    const loginCustomerId = (await getUserOnlySetting('google_ads', 'login_customer_id', userId))?.value || ''
+    const loginCustomerId =
+      (await getUserOnlySetting('google_ads', 'login_customer_id', userId))?.value || ''
     if (!loginCustomerId) {
       return NextResponse.redirect(
         createRedirectUrl('/settings?error=missing_login_customer_id&category=google_ads')
@@ -93,8 +82,10 @@ export async function GET(request: NextRequest) {
 
     // 🔧 修复(2025-12-12): 独立账号模式 - 必须使用用户自己的OAuth凭证
     const clientId = (await getUserOnlySetting('google_ads', 'client_id', userId))?.value || ''
-    const clientSecret = (await getUserOnlySetting('google_ads', 'client_secret', userId))?.value || ''
-    const developerToken = (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
+    const clientSecret =
+      (await getUserOnlySetting('google_ads', 'client_secret', userId))?.value || ''
+    const developerToken =
+      (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
 
     if (!clientId || !clientSecret || !developerToken) {
       return NextResponse.redirect(
@@ -103,7 +94,10 @@ export async function GET(request: NextRequest) {
     }
 
     const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
-    if (developerToken.trim() === clientSecret.trim() || looksLikeOAuthClientSecret(developerToken)) {
+    if (
+      developerToken.trim() === clientSecret.trim() ||
+      looksLikeOAuthClientSecret(developerToken)
+    ) {
       return NextResponse.redirect(
         createRedirectUrl('/settings?error=developer_token_invalid&category=google_ads')
       )
@@ -129,12 +123,7 @@ export async function GET(request: NextRequest) {
     console.log(`   Authorization Code: ${code.substring(0, 10)}...`)
 
     // 交换authorization code获取tokens
-    const tokens = await exchangeCodeForTokens(
-      code,
-      clientId,
-      clientSecret,
-      redirectUri
-    )
+    const tokens = await exchangeCodeForTokens(code, clientId, clientSecret, redirectUri)
 
     console.log(`✅ OAuth成功获取tokens`)
     console.log(`   Access Token: ${tokens.access_token.substring(0, 10)}...`)
@@ -163,7 +152,6 @@ export async function GET(request: NextRequest) {
     successUrl.searchParams.set('oauth_success', 'true')
 
     return NextResponse.redirect(successUrl)
-
   } catch (error: any) {
     console.error('OAuth回调处理失败:', error)
 

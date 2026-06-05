@@ -20,9 +20,10 @@ export async function GET(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.autoads.dev'
 
     // 获取IP和User-Agent用于账户共享检测
-    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-                      request.headers.get('x-real-ip') ||
-                      'unknown'
+    const ipAddress =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown'
     const userAgent = request.headers.get('user-agent') || 'unknown'
 
     // 检查是否有错误
@@ -47,15 +48,11 @@ export async function GET(request: NextRequest) {
     const result = await loginWithGoogle(googleUser)
 
     // KISS账户共享检测：创建会话并检查可疑活动
-    const { session } = await createUserSession(
-      result.user.id!,
-      ipAddress,
-      userAgent
-    )
+    const { session } = await createUserSession(result.user.id!, ipAddress, userAgent)
 
     // 获取未解决告警
     const userAlerts = await getUserAlerts(result.user.id!, false)
-    const hasCriticalAlerts = userAlerts.some(a => a.severity === 'critical')
+    const hasCriticalAlerts = userAlerts.some((a) => a.severity === 'critical')
 
     // 构建重定向URL，携带必要的安全状态信息
     const dashboardUrl = new URL('/dashboard', baseUrl)
@@ -72,10 +69,7 @@ export async function GET(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.autoads.dev'
     return NextResponse.redirect(
-      new URL(
-        `/login?error=${encodeURIComponent(error.message || 'Google登录失败')}`,
-        baseUrl
-      )
+      new URL(`/login?error=${encodeURIComponent(error.message || 'Google登录失败')}`, baseUrl)
     )
   }
 }

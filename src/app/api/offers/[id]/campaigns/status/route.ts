@@ -22,7 +22,7 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
     const offerId = parsePositiveIntegerOfferId(id)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       const db = await getDatabase()
       const numericUserId = userId
       const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
-      const latestCampaign = await db.queryOne(
+      const latestCampaign = (await db.queryOne(
         `SELECT
           id,
           offer_id,
@@ -54,13 +54,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         ORDER BY updated_at DESC, id DESC
         LIMIT 1`,
         [offerId, numericUserId]
-      ) as any
+      )) as any
 
       if (!latestCampaign) {
-        return NextResponse.json(
-          { error: 'Campaign not found' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
       }
 
       return NextResponse.json({
@@ -71,8 +68,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           offer_id: latestCampaign.offer_id,
           creation_status: latestCampaign.creation_status,
           creation_error: latestCampaign.creation_error,
-          google_campaign_id: latestCampaign.google_campaign_id
-        }
+          google_campaign_id: latestCampaign.google_campaign_id,
+        },
       })
     }
 
@@ -83,7 +80,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     // 从数据库查询campaign状态
     const db = await getDatabase()
-    const campaign = await db.queryOne(
+    const campaign = (await db.queryOne(
       `SELECT
         id,
         offer_id,
@@ -93,13 +90,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       FROM campaigns
       WHERE id = ? AND offer_id = ? AND user_id = ?`,
       [parsedCampaignId, offerId, userId]
-    ) as any
+    )) as any
 
     if (!campaign) {
-      return NextResponse.json(
-        { error: 'Campaign not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -109,8 +103,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         offer_id: campaign.offer_id,
         creation_status: campaign.creation_status,
         creation_error: campaign.creation_error,
-        google_campaign_id: campaign.google_campaign_id
-      }
+        google_campaign_id: campaign.google_campaign_id,
+      },
     })
   } catch (error: any) {
     console.error('获取Campaign状态失败:', error)

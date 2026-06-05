@@ -41,8 +41,8 @@ export interface CampaignMetrics {
   roi: number
   daysRunning: number
   // 🆕 P1-1优化：广告疲劳检测所需字段
-  ctrTrend?: number  // CTR变化趋势（正值=增长，负值=下降）
-  previousCtr?: number  // 上一周期的CTR
+  ctrTrend?: number // CTR变化趋势（正值=增长，负值=下降）
+  previousCtr?: number // 上一周期的CTR
 }
 
 export interface OptimizationRecommendation {
@@ -77,43 +77,43 @@ const DEFAULT_CONFIG: RulesConfig = {
   ctrLow: {
     enabled: true,
     threshold: 0.01, // 1%
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   ctrHigh: {
     enabled: true,
     threshold: 0.05, // 5%
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   conversionRateLow: {
     enabled: true,
     threshold: 0.01, // 1%
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   cpcHigh: {
     enabled: true,
     threshold: 3.0, // $3
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   costHigh: {
     enabled: true,
     threshold: 100, // $100
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   roiNegative: {
     enabled: true,
     threshold: 0,
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   roiHigh: {
     enabled: true,
     threshold: 1.0, // 100% ROI
-    sensitivity: 'normal'
+    sensitivity: 'normal',
   },
   impressionsLow: {
     enabled: true,
     threshold: 100,
-    sensitivity: 'normal'
-  }
+    sensitivity: 'normal',
+  },
 }
 
 /**
@@ -122,7 +122,7 @@ const DEFAULT_CONFIG: RulesConfig = {
 const SENSITIVITY_MULTIPLIER = {
   strict: 1.2,
   normal: 1.0,
-  relaxed: 0.8
+  relaxed: 0.8,
 }
 
 /**
@@ -132,7 +132,7 @@ const INDUSTRY_BENCHMARKS = {
   avgCtr: 0.02, // 2%
   avgCpc: 1.5, // $1.5
   avgConversionRate: 0.03, // 3%
-  avgRoi: 0.5 // 50%
+  avgRoi: 0.5, // 50%
 }
 
 /**
@@ -220,7 +220,8 @@ export class OptimizationRulesEngine {
   private checkCtrLow(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.ctrLow.enabled) return null
 
-    const threshold = this.config.ctrLow.threshold * SENSITIVITY_MULTIPLIER[this.config.ctrLow.sensitivity]
+    const threshold =
+      this.config.ctrLow.threshold * SENSITIVITY_MULTIPLIER[this.config.ctrLow.sensitivity]
 
     if (metrics.clicks >= 50 && metrics.ctr < threshold) {
       return {
@@ -229,14 +230,15 @@ export class OptimizationRulesEngine {
         priority: 'high',
         type: metrics.ctr < threshold * 0.5 ? 'pause_campaign' : 'optimize_creative',
         reason: `CTR过低（${(metrics.ctr * 100).toFixed(2)}%），远低于行业均值（${(INDUSTRY_BENCHMARKS.avgCtr * 100).toFixed(1)}%）`,
-        action: metrics.ctr < threshold * 0.5
-          ? '建议暂停Campaign，重新优化创意和关键词'
-          : '建议优化广告创意，测试不同的标题和描述',
+        action:
+          metrics.ctr < threshold * 0.5
+            ? '建议暂停Campaign，重新优化创意和关键词'
+            : '建议优化广告创意，测试不同的标题和描述',
         expectedImpact: '预计可提升CTR至2%以上，降低CPC',
         metrics: {
           current: { ctr: metrics.ctr, clicks: metrics.clicks },
-          target: { ctr: INDUSTRY_BENCHMARKS.avgCtr }
-        }
+          target: { ctr: INDUSTRY_BENCHMARKS.avgCtr },
+        },
       }
     }
 
@@ -249,7 +251,9 @@ export class OptimizationRulesEngine {
   private checkConversionRateLow(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.conversionRateLow.enabled) return null
 
-    const threshold = this.config.conversionRateLow.threshold * SENSITIVITY_MULTIPLIER[this.config.conversionRateLow.sensitivity]
+    const threshold =
+      this.config.conversionRateLow.threshold *
+      SENSITIVITY_MULTIPLIER[this.config.conversionRateLow.sensitivity]
 
     if (metrics.clicks >= 20 && metrics.conversionRate < threshold) {
       return {
@@ -262,8 +266,8 @@ export class OptimizationRulesEngine {
         expectedImpact: '预计可提升转化率至3%以上，降低CPA',
         metrics: {
           current: { conversionRate: metrics.conversionRate, conversions: metrics.conversions },
-          target: { conversionRate: INDUSTRY_BENCHMARKS.avgConversionRate }
-        }
+          target: { conversionRate: INDUSTRY_BENCHMARKS.avgConversionRate },
+        },
       }
     }
 
@@ -276,7 +280,8 @@ export class OptimizationRulesEngine {
   private checkCpcHigh(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.cpcHigh.enabled) return null
 
-    const threshold = this.config.cpcHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.cpcHigh.sensitivity]
+    const threshold =
+      this.config.cpcHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.cpcHigh.sensitivity]
 
     if (metrics.clicks >= 10 && metrics.cpc > threshold) {
       return {
@@ -286,11 +291,11 @@ export class OptimizationRulesEngine {
         type: 'lower_cpc',
         reason: `CPC过高（$${metrics.cpc.toFixed(2)}），高于行业均值（$${INDUSTRY_BENCHMARKS.avgCpc.toFixed(2)}）`,
         action: '建议降低最高CPC出价，或调整关键词匹配类型为PHRASE/EXACT',
-        expectedImpact: `预计可降低CPC至$${INDUSTRY_BENCHMARKS.avgCpc.toFixed(2)}，节省${((metrics.cpc - INDUSTRY_BENCHMARKS.avgCpc) / metrics.cpc * 100).toFixed(0)}%成本`,
+        expectedImpact: `预计可降低CPC至$${INDUSTRY_BENCHMARKS.avgCpc.toFixed(2)}，节省${(((metrics.cpc - INDUSTRY_BENCHMARKS.avgCpc) / metrics.cpc) * 100).toFixed(0)}%成本`,
         metrics: {
           current: { cpc: metrics.cpc, cost: metrics.cost },
-          target: { cpc: INDUSTRY_BENCHMARKS.avgCpc }
-        }
+          target: { cpc: INDUSTRY_BENCHMARKS.avgCpc },
+        },
       }
     }
 
@@ -303,7 +308,8 @@ export class OptimizationRulesEngine {
   private checkCostHighNoConversion(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.costHigh.enabled) return null
 
-    const threshold = this.config.costHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.costHigh.sensitivity]
+    const threshold =
+      this.config.costHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.costHigh.sensitivity]
 
     if (metrics.cost > threshold && metrics.conversions === 0) {
       return {
@@ -315,8 +321,8 @@ export class OptimizationRulesEngine {
         action: '建议立即暂停，重新评估关键词定位、受众匹配和着陆页质量',
         expectedImpact: '避免继续浪费预算，重新优化后再启动',
         metrics: {
-          current: { cost: metrics.cost, conversions: metrics.conversions }
-        }
+          current: { cost: metrics.cost, conversions: metrics.conversions },
+        },
       }
     }
 
@@ -339,8 +345,8 @@ export class OptimizationRulesEngine {
         action: '建议降低预算50%，同时优化转化率和降低CPC',
         expectedImpact: '减少亏损，调整后预计可达到正ROI',
         metrics: {
-          current: { roi: metrics.roi, cost: metrics.cost, conversions: metrics.conversions }
-        }
+          current: { roi: metrics.roi, cost: metrics.cost, conversions: metrics.conversions },
+        },
       }
     }
 
@@ -353,7 +359,8 @@ export class OptimizationRulesEngine {
   private checkRoiHigh(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.roiHigh.enabled) return null
 
-    const threshold = this.config.roiHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.roiHigh.sensitivity]
+    const threshold =
+      this.config.roiHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.roiHigh.sensitivity]
 
     if (metrics.conversions >= 5 && metrics.roi > threshold) {
       return {
@@ -366,8 +373,8 @@ export class OptimizationRulesEngine {
         expectedImpact: `预计可增加${(metrics.conversions * 0.5).toFixed(0)}个转化，保持高ROI`,
         metrics: {
           current: { roi: metrics.roi, cost: metrics.cost, conversions: metrics.conversions },
-          target: { cost: metrics.cost * 1.5 }
-        }
+          target: { cost: metrics.cost * 1.5 },
+        },
       }
     }
 
@@ -380,7 +387,8 @@ export class OptimizationRulesEngine {
   private checkCtrHigh(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.ctrHigh.enabled) return null
 
-    const threshold = this.config.ctrHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.ctrHigh.sensitivity]
+    const threshold =
+      this.config.ctrHigh.threshold * SENSITIVITY_MULTIPLIER[this.config.ctrHigh.sensitivity]
 
     if (metrics.clicks >= 50 && metrics.ctr > threshold && metrics.conversions > 0) {
       return {
@@ -392,8 +400,8 @@ export class OptimizationRulesEngine {
         action: '建议增加预算，同时优化转化率以提升整体ROI',
         expectedImpact: '预计可增加展示和点击量，扩大品牌曝光',
         metrics: {
-          current: { ctr: metrics.ctr, clicks: metrics.clicks }
-        }
+          current: { ctr: metrics.ctr, clicks: metrics.clicks },
+        },
       }
     }
 
@@ -406,7 +414,9 @@ export class OptimizationRulesEngine {
   private checkImpressionsLow(metrics: CampaignMetrics): OptimizationRecommendation | null {
     if (!this.config.impressionsLow.enabled) return null
 
-    const threshold = this.config.impressionsLow.threshold * SENSITIVITY_MULTIPLIER[this.config.impressionsLow.sensitivity]
+    const threshold =
+      this.config.impressionsLow.threshold *
+      SENSITIVITY_MULTIPLIER[this.config.impressionsLow.sensitivity]
 
     if (metrics.daysRunning >= 3 && metrics.impressions < threshold) {
       return {
@@ -418,8 +428,8 @@ export class OptimizationRulesEngine {
         action: '建议扩大关键词列表、增加匹配类型为BROAD、或提高出价',
         expectedImpact: '预计可提升展示量至1000+/天',
         metrics: {
-          current: { impressions: metrics.impressions, daysRunning: metrics.daysRunning }
-        }
+          current: { impressions: metrics.impressions, daysRunning: metrics.daysRunning },
+        },
       }
     }
 
@@ -440,8 +450,8 @@ export class OptimizationRulesEngine {
         action: '建议继续观察3-7天，收集更多数据后再优化',
         expectedImpact: '获取充足数据后可做出更准确的优化决策',
         metrics: {
-          current: { daysRunning: metrics.daysRunning, impressions: metrics.impressions }
-        }
+          current: { daysRunning: metrics.daysRunning, impressions: metrics.impressions },
+        },
       }
     }
 
@@ -478,9 +488,9 @@ export class OptimizationRulesEngine {
             daysRunning: metrics.daysRunning,
             ctrTrend: metrics.ctrTrend,
             ctr: metrics.ctr,
-            previousCtr: metrics.previousCtr || 0
-          }
-        }
+            previousCtr: metrics.previousCtr || 0,
+          },
+        },
       }
     }
 
@@ -490,11 +500,13 @@ export class OptimizationRulesEngine {
   /**
    * 按优先级排序
    */
-  private sortByPriority(recommendations: OptimizationRecommendation[]): OptimizationRecommendation[] {
+  private sortByPriority(
+    recommendations: OptimizationRecommendation[]
+  ): OptimizationRecommendation[] {
     const priorityOrder: Record<Priority, number> = {
       high: 0,
       medium: 1,
-      low: 2
+      low: 2,
     }
 
     return recommendations.sort((a, b) => {

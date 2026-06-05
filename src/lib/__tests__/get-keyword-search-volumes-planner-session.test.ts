@@ -23,7 +23,9 @@ const mockSession: KeywordPlannerPreparedSession = {
 describe('getKeywordSearchVolumesForPlannerContext plannerSession', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    volumeFns.getKeywordSearchVolumes.mockResolvedValue([{ keyword: 'test', avgMonthlySearches: 10 }])
+    volumeFns.getKeywordSearchVolumes.mockResolvedValue([
+      { keyword: 'test', avgMonthlySearches: 10 },
+    ])
   })
 
   it('reuses plannerSession.volumeAuth without a separate prepare path', async () => {

@@ -23,6 +23,7 @@ npm run db:init      # initialize SQLite (first run)
 npm run db:migrate   # apply incremental migrations
 npm run dev          # development server
 npm run build        # production build
+npm run format       # Prettier format
 npm run lint         # ESLint
 npm test             # Vitest
 npm run type-check   # TypeScript
@@ -31,21 +32,21 @@ npm run validate-schema
 
 ## Agent workflow (mandatory after code edits)
 
-After changing application code, run **`npm run lint`** and **`npm run type-check`** in the repo root; both must pass before reporting work complete.
+After changing application code, run **`npm run format`**, **`npm run lint`**, and **`npm run type-check`** in the repo root; all must pass before reporting work complete.
 
 If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`, raw SQL, `db-helpers`), review SQL correctness (table aliases, `?` placeholders vs `params`, column types) and run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`** for dual SQLite/PostgreSQL behavior. See [AGENTS.md](./AGENTS.md) —「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的检查（必须）」.
 
 ## Key Directories
 
-| Path | Purpose |
-|------|---------|
-| `src/app/` | Next.js App Router pages and API routes |
-| `src/lib/` | Core business logic (creatives, offers, Google Ads, OpenClaw, queue) |
-| `src/components/` | React UI components |
-| `migrations/` | SQLite schema and incremental migrations |
-| `pg-migrations/` | PostgreSQL migrations |
-| `scripts/` | DB, validation, and maintenance scripts |
-| `docs/` | Operations and feature documentation |
+| Path              | Purpose                                                              |
+| ----------------- | -------------------------------------------------------------------- |
+| `src/app/`        | Next.js App Router pages and API routes                              |
+| `src/lib/`        | Core business logic (creatives, offers, Google Ads, OpenClaw, queue) |
+| `src/components/` | React UI components                                                  |
+| `migrations/`     | SQLite schema and incremental migrations                             |
+| `pg-migrations/`  | PostgreSQL migrations                                                |
+| `scripts/`        | DB, validation, and maintenance scripts                              |
+| `docs/`           | Operations and feature documentation                                 |
 
 ## Environment Variables
 
@@ -59,6 +60,7 @@ Copy `.env.example` to `.env.local` for local development. See `README.md` for t
 - [migrations/DATABASE_INITIALIZATION_GUIDE.md](./migrations/DATABASE_INITIALIZATION_GUIDE.md) — database setup
 
 <!-- gitnexus:start -->
+
 # GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **autobb** (35513 symbols, 65244 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
@@ -82,22 +84,22 @@ This project is indexed by GitNexus as **autobb** (35513 symbols, 65244 relation
 
 ## Resources
 
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/autobb/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/autobb/clusters` | All functional areas |
-| `gitnexus://repo/autobb/processes` | All execution flows |
-| `gitnexus://repo/autobb/process/{name}` | Step-by-step execution trace |
+| Resource                                | Use for                                  |
+| --------------------------------------- | ---------------------------------------- |
+| `gitnexus://repo/autobb/context`        | Codebase overview, check index freshness |
+| `gitnexus://repo/autobb/clusters`       | All functional areas                     |
+| `gitnexus://repo/autobb/processes`      | All execution flows                      |
+| `gitnexus://repo/autobb/process/{name}` | Step-by-step execution trace             |
 
 ## CLI
 
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Task                                         | Read this skill file                                        |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md`       |
+| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md`       |
+| Rename / extract / split / refactor          | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md`     |
+| Tools, resources, schema reference           | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md`           |
+| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`             |
 
 <!-- gitnexus:end -->

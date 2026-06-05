@@ -86,9 +86,9 @@ describe('parseLaunchScoreHashCampaignConfigFromSearchParamsClient', () => {
 
 describe('buildLaunchScorePagePath', () => {
   it('builds path with offerId and creativeId', () => {
-    expect(
-      buildLaunchScorePagePath({ offerId: 7, creativeId: 42 })
-    ).toBe('/launch-score?offerId=7&creativeId=42')
+    expect(buildLaunchScorePagePath({ offerId: 7, creativeId: 42 })).toBe(
+      '/launch-score?offerId=7&creativeId=42'
+    )
   })
 
   it('appends campaign config query fields', () => {

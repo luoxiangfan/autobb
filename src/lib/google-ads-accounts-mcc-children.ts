@@ -112,7 +112,12 @@ export async function processMccChildAccounts(
       }
 
       const rawChildStatus = child.customer_client?.status
-      debugLog(`[DEBUG] Child Account ${childId} raw status:`, rawChildStatus, 'type:', typeof rawChildStatus)
+      debugLog(
+        `[DEBUG] Child Account ${childId} raw status:`,
+        rawChildStatus,
+        'type:',
+        typeof rawChildStatus
+      )
       const parsedChildStatus = parseStatus(rawChildStatus)
       debugLog(`[DEBUG] Child Account ${childId} parsed status:`, parsedChildStatus)
 
@@ -190,7 +195,8 @@ export async function processMccChildAccounts(
             const budgetResourceName = budget?.resource_name || budget?.resourceName
             const billingSetupResourceName = budget?.billing_setup || budget?.billingSetup
             const budgetOwnerCustomerId = extractCustomerIdFromResourceName(budgetResourceName)
-            const billingOwnerCustomerId = extractCustomerIdFromResourceName(billingSetupResourceName)
+            const billingOwnerCustomerId =
+              extractCustomerIdFromResourceName(billingSetupResourceName)
 
             if (billingOwnerCustomerId && billingOwnerCustomerId !== String(childId)) {
               console.log(
@@ -203,7 +209,9 @@ export async function processMccChildAccounts(
             } else {
               const amountServed = Number(budget?.amount_served_micros || 0)
               const spendingLimit = Number(
-                budget?.approved_spending_limit_micros || budget?.proposed_spending_limit_micros || 0
+                budget?.approved_spending_limit_micros ||
+                  budget?.proposed_spending_limit_micros ||
+                  0
               )
               childBalance = spendingLimit > 0 ? spendingLimit - amountServed : null
               console.log(
@@ -218,7 +226,9 @@ export async function processMccChildAccounts(
             errorMsg.includes('PERMISSION_DENIED') ||
             errorMsg.includes('not yet enabled')
           if (!isExpectedError) {
-            console.log(`      ⚠️ ${childId} 无法获取预算信息: ${budgetError?.message || budgetError}`)
+            console.log(
+              `      ⚠️ ${childId} 无法获取预算信息: ${budgetError?.message || budgetError}`
+            )
           }
         }
       }
@@ -234,8 +244,10 @@ export async function processMccChildAccounts(
         account_balance: childBalance,
         parent_mcc: managerId,
         identity_verification_program_status: identityVerification.programStatus,
-        identity_verification_start_deadline_time: identityVerification.verificationStartDeadlineTime,
-        identity_verification_completion_deadline_time: identityVerification.verificationCompletionDeadlineTime,
+        identity_verification_start_deadline_time:
+          identityVerification.verificationStartDeadlineTime,
+        identity_verification_completion_deadline_time:
+          identityVerification.verificationCompletionDeadlineTime,
         identity_verification_overdue: identityVerification.overdue,
         identity_verification_checked_at: identityVerificationCheckedAt,
       }

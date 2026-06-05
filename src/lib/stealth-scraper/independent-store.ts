@@ -41,20 +41,31 @@ function isLikelyBlockedTitle(title: unknown): boolean {
   if (typeof title !== 'string') return false
   const trimmed = title.trim()
   if (!trimmed) return false
-  return /access\s+denied|forbidden|attention\s+required|just\s+a\s+moment|verify\s+you\s+are\s+human|captcha|enable\s+cookies/i.test(trimmed)
+  return /access\s+denied|forbidden|attention\s+required|just\s+a\s+moment|verify\s+you\s+are\s+human|captcha|enable\s+cookies/i.test(
+    trimmed
+  )
 }
 
 function shouldRetryWithNewProxy(error: any): boolean {
   if (!error) return false
   const message = String(error.message || error)
   if (isProxyConnectionError(error)) return true
-  if (message.includes('HTTP 401') || message.includes('HTTP 403') || message.includes('HTTP 407') || message.includes('HTTP 429')) return true
+  if (
+    message.includes('HTTP 401') ||
+    message.includes('HTTP 403') ||
+    message.includes('HTTP 407') ||
+    message.includes('HTTP 429')
+  )
+    return true
   if (message.includes('Access Denied') || message.includes('Forbidden')) return true
   return false
 }
 
 function cleanText(value: string): string {
-  return value.replace(/\s+/g, ' ').replace(/[\u00A0\u200B]/g, ' ').trim()
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/[\u00A0\u200B]/g, ' ')
+    .trim()
 }
 
 function normalizeForCompare(value: string): string {
@@ -64,7 +75,7 @@ function normalizeForCompare(value: string): string {
 function splitStoreTitleSegments(value: string): string[] {
   return value
     .split(/[|\u2013\u2014\-:·•]+/)
-    .map(segment => cleanText(segment))
+    .map((segment) => cleanText(segment))
     .filter(Boolean)
 }
 
@@ -82,7 +93,7 @@ function containsGenericStoreToken(candidate: string): boolean {
   const lower = candidate.toLowerCase()
   const tokens = lower.split(/\s+/).filter(Boolean)
   const genericTokens = new Set(['official', 'store', 'shop', 'online', 'website', 'site'])
-  return tokens.some(token => genericTokens.has(token))
+  return tokens.some((token) => genericTokens.has(token))
 }
 
 function extractLeadingBrandToken(text: string): string | null {
@@ -101,7 +112,17 @@ function extractLeadingBrandToken(text: string): string | null {
 
   // Reject obvious boilerplate tokens that show up on store/home titles.
   const lower = firstToken.toLowerCase().replace(/\.$/, '')
-  const rejected = new Set(['the', 'a', 'an', 'home', 'shop', 'store', 'official', 'website', 'online'])
+  const rejected = new Set([
+    'the',
+    'a',
+    'an',
+    'home',
+    'shop',
+    'store',
+    'official',
+    'website',
+    'online',
+  ])
   if (rejected.has(lower)) return null
 
   return firstToken
@@ -109,11 +130,8 @@ function extractLeadingBrandToken(text: string): string | null {
 
 function normalizeBrandToken(token: string): string {
   // Normalize apostrophes and remove possessive `'s` so "Boscov’s" -> "Boscovs"
-  const normalizedApostrophe = token.replace(/’/g, '\'')
-  return normalizedApostrophe
-    .replace(/'s\b/gi, 's')
-    .replace(/[™®©]/g, '')
-    .trim()
+  const normalizedApostrophe = token.replace(/’/g, "'")
+  return normalizedApostrophe.replace(/'s\b/gi, 's').replace(/[™®©]/g, '').trim()
 }
 
 type CommentApiSummary = {
@@ -151,7 +169,7 @@ function buildCommentApiReviewHighlights(reviews: CommentApiReviewItem[]): strin
   for (const review of reviews) {
     const title = cleanText(review.title || '')
     const content = cleanText(review.content || '')
-    const line = title && content ? `${title}: ${content}` : (title || content)
+    const line = title && content ? `${title}: ${content}` : title || content
     if (!line || line.length < 12) continue
     if (!highlights.includes(line)) highlights.push(line)
     if (highlights.length >= 5) break
@@ -176,9 +194,10 @@ function mergeCapturedCommentApiData(
       if (!body && !title) return null
       return {
         rating: Number.isFinite(rating) && rating > 0 ? rating : 0,
-        date: typeof item.time === 'number' && Number.isFinite(item.time)
-          ? new Date(item.time).toISOString().slice(0, 10)
-          : '',
+        date:
+          typeof item.time === 'number' && Number.isFinite(item.time)
+            ? new Date(item.time).toISOString().slice(0, 10)
+            : '',
         author: author || 'Anonymous',
         title,
         body,
@@ -186,7 +205,10 @@ function mergeCapturedCommentApiData(
         images: Array.isArray(item.imageList) ? item.imageList.filter(Boolean) : undefined,
       }
     })
-    .filter((item): item is NonNullable<typeof item> => !!item && (item.body.length > 0 || item.title.length > 0))
+    .filter(
+      (item): item is NonNullable<typeof item> =>
+        !!item && (item.body.length > 0 || item.title.length > 0)
+    )
 
   const reviewTexts = structuredReviews
     .map((review) => cleanText(review.body || review.title || ''))
@@ -196,7 +218,7 @@ function mergeCapturedCommentApiData(
     .map((review) => {
       const body = cleanText(review.body)
       const title = cleanText(review.title)
-      return title && body ? `${title}: ${body}` : (title || body)
+      return title && body ? `${title}: ${body}` : title || body
     })
     .filter(Boolean)
     .slice(0, 10)
@@ -226,14 +248,23 @@ function mergeCapturedCommentApiData(
 
   return {
     ...productData,
-    rating: productData.rating || (typeof summary?.score === 'number' && summary.score > 0 ? String(summary.score) : null),
-    reviewCount: productData.reviewCount || (typeof summary?.total === 'number' && summary.total >= 0 ? String(summary.total) : null),
+    rating:
+      productData.rating ||
+      (typeof summary?.score === 'number' && summary.score > 0 ? String(summary.score) : null),
+    reviewCount:
+      productData.reviewCount ||
+      (typeof summary?.total === 'number' && summary.total >= 0 ? String(summary.total) : null),
     reviews: productData.reviews.length > 0 ? productData.reviews : reviewTexts.slice(0, 15),
-    topReviews: (productData.topReviews && productData.topReviews.length > 0) ? productData.topReviews : topReviews,
-    reviewHighlights: (productData.reviewHighlights && productData.reviewHighlights.length > 0)
-      ? productData.reviewHighlights
-      : reviewHighlights,
-    structuredReviews: structuredReviews.length > 0 ? structuredReviews : productData.structuredReviews,
+    topReviews:
+      productData.topReviews && productData.topReviews.length > 0
+        ? productData.topReviews
+        : topReviews,
+    reviewHighlights:
+      productData.reviewHighlights && productData.reviewHighlights.length > 0
+        ? productData.reviewHighlights
+        : reviewHighlights,
+    structuredReviews:
+      structuredReviews.length > 0 ? structuredReviews : productData.structuredReviews,
     qaPairs: qaPairs.length > 0 ? qaPairs : productData.qaPairs,
     socialProof: socialProof.length > 0 ? socialProof : productData.socialProof,
   }
@@ -260,14 +291,16 @@ export async function scrapeIndependentStore(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(`🔄 独立站抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`)
+        console.log(
+          `🔄 独立站抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`
+        )
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 🔥 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${maskProxyUrl(effectiveProxyUrl)}`)
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
       const browserResult = await createStealthBrowser(effectiveProxyUrl, targetCountry)
@@ -306,7 +339,9 @@ export async function scrapeIndependentStore(
           signals: [] as string[],
         }))
 
-        console.log(`⏱️ 独立站页面等待: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`)
+        console.log(
+          `⏱️ 独立站页面等待: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`
+        )
         recordWaitOptimization(15000, waitResult.waited)
 
         // Scroll down to trigger lazy loading of products
@@ -351,16 +386,17 @@ export async function scrapeIndependentStore(
         }
         await releaseBrowser(browserResult)
       }
-
     } catch (error: any) {
       lastError = error
-      console.error(`❌ 独立站抓取尝试 ${proxyAttempt + 1}/${maxProxyRetries + 1} 失败: ${error.message?.substring(0, 100)}`)
+      console.error(
+        `❌ 独立站抓取尝试 ${proxyAttempt + 1}/${maxProxyRetries + 1} 失败: ${error.message?.substring(0, 100)}`
+      )
 
       // 如果是代理连接错误，尝试换新代理
       if (shouldRetryWithNewProxy(error)) {
         if (proxyAttempt < maxProxyRetries) {
           console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          await new Promise((resolve) => setTimeout(resolve, 2000))
           continue
         } else {
           console.error(`❌ 已用尽所有代理重试次数 (${maxProxyRetries + 1}次)`)
@@ -401,7 +437,7 @@ export async function scrapeIndependentStoreDeep(
   }
 
   // 2. 筛选有URL的产品进行深度抓取
-  const productsWithUrl = storeData.products.filter(p => p.productUrl)
+  const productsWithUrl = storeData.products.filter((p) => p.productUrl)
   const hotProducts = productsWithUrl.slice(0, topN)
 
   console.log(`📊 筛选出 ${hotProducts.length} 个热销商品准备深度抓取`)
@@ -416,7 +452,7 @@ export async function scrapeIndependentStoreDeep(
     topProducts: [],
     totalScraped: hotProducts.length,
     successCount: 0,
-    failedCount: 0
+    failedCount: 0,
   }
 
   const effectiveProxyUrl = customProxyUrl || PROXY_URL
@@ -444,7 +480,7 @@ export async function scrapeIndependentStoreDeep(
             productData: productData,
             reviews: productData.reviews || [],
             competitorUrls: [] as string[],
-            scrapeStatus: 'success' as const
+            scrapeStatus: 'success' as const,
           }
         } catch (error: any) {
           console.error(`  ❌ 商品详情抓取失败 (${productUrl}): ${error.message}`)
@@ -454,7 +490,7 @@ export async function scrapeIndependentStoreDeep(
             reviews: [],
             competitorUrls: [],
             scrapeStatus: 'failed' as const,
-            error: error.message
+            error: error.message,
           }
         }
       })
@@ -466,7 +502,9 @@ export async function scrapeIndependentStoreDeep(
         deepResults.topProducts.push(result.value)
         if (result.value.scrapeStatus === 'success') {
           deepResults.successCount++
-          console.log(`  ✅ 成功: ${result.value.productUrl.substring(0, 60)}..., 评价数: ${result.value.reviews.length}`)
+          console.log(
+            `  ✅ 成功: ${result.value.productUrl.substring(0, 60)}..., 评价数: ${result.value.reviews.length}`
+          )
         } else {
           deepResults.failedCount++
         }
@@ -490,17 +528,20 @@ export async function scrapeIndependentStoreDeep(
     categoryCounts.set(normalized, (categoryCounts.get(normalized) || 0) + 1)
   }
 
-  const productCategories = categoryCounts.size > 0 ? {
-    primaryCategories: Array.from(categoryCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([name, count]) => ({ name, count })),
-    totalCategories: categoryCounts.size,
-  } : undefined
+  const productCategories =
+    categoryCounts.size > 0
+      ? {
+          primaryCategories: Array.from(categoryCounts.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 12)
+            .map(([name, count]) => ({ name, count })),
+          totalCategories: categoryCounts.size,
+        }
+      : undefined
 
   // 4. 更新产品列表，添加从深度抓取获取的rating和reviewCount
   const enhancedProducts = storeData.products.map((product, _index) => {
-    const deepProduct = deepResults.topProducts.find(dp => dp.productUrl === product.productUrl)
+    const deepProduct = deepResults.topProducts.find((dp) => dp.productUrl === product.productUrl)
     if (deepProduct?.productData) {
       return {
         ...product,
@@ -515,21 +556,33 @@ export async function scrapeIndependentStoreDeep(
   const productsWithScores = calculateIndependentHotScores(enhancedProducts)
 
   // 6. 计算hotInsights
-  const productsWithRatings = productsWithScores.filter(p => {
+  const productsWithRatings = productsWithScores.filter((p) => {
     const rating = p.rating ? parseFloat(p.rating) : 0
     const reviewCount = p.reviewCount ? parseInt(p.reviewCount.replace(/,/g, '')) : 0
     return rating > 0 && reviewCount > 0
   })
 
-  const hotInsights = productsWithRatings.length > 0 ? {
-    avgRating: productsWithRatings.reduce((sum, p) => sum + parseFloat(p.rating || '0'), 0) / productsWithRatings.length,
-    avgReviews: Math.round(productsWithRatings.reduce((sum, p) => sum + parseInt((p.reviewCount || '0').replace(/,/g, '')), 0) / productsWithRatings.length),
-    topProductsCount: productsWithScores.length
-  } : undefined
+  const hotInsights =
+    productsWithRatings.length > 0
+      ? {
+          avgRating:
+            productsWithRatings.reduce((sum, p) => sum + parseFloat(p.rating || '0'), 0) /
+            productsWithRatings.length,
+          avgReviews: Math.round(
+            productsWithRatings.reduce(
+              (sum, p) => sum + parseInt((p.reviewCount || '0').replace(/,/g, '')),
+              0
+            ) / productsWithRatings.length
+          ),
+          topProductsCount: productsWithScores.length,
+        }
+      : undefined
 
   console.log(`📊 热销商品筛选: ${storeData.products.length} → ${productsWithScores.length}`)
   if (hotInsights) {
-    console.log(`💡 热销洞察: 平均评分 ${hotInsights.avgRating.toFixed(1)}⭐, 平均评论 ${hotInsights.avgReviews} 条`)
+    console.log(
+      `💡 热销洞察: 平均评分 ${hotInsights.avgRating.toFixed(1)}⭐, 平均评论 ${hotInsights.avgReviews} 条`
+    )
   }
 
   return {
@@ -537,7 +590,7 @@ export async function scrapeIndependentStoreDeep(
     products: productsWithScores,
     hotInsights,
     ...(productCategories ? { productCategories } : {}),
-    deepScrapeResults: deepResults
+    deepScrapeResults: deepResults,
   }
 }
 
@@ -563,7 +616,7 @@ export async function scrapeIndependentProduct(
         await pool.clearIdleInstances()
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
       const browserResult = await createStealthBrowser(effectiveProxyUrl, targetCountry)
@@ -629,22 +682,34 @@ export async function scrapeIndependentProduct(
         // 🔥 等待评论组件加载（独立站评论通常由第三方插件动态加载）
         const reviewSelectors = [
           // Judge.me
-          '.jdgm-rev__body', '.jdgm-review', '[class*="jdgm"]',
+          '.jdgm-rev__body',
+          '.jdgm-review',
+          '[class*="jdgm"]',
           // Stamped.io
-          '.stamped-review', '[class*="stamped"]',
+          '.stamped-review',
+          '[class*="stamped"]',
           // Loox
-          '.loox-review', '[class*="loox"]',
+          '.loox-review',
+          '[class*="loox"]',
           // Yotpo
-          '.yotpo-review', '[class*="yotpo"]',
+          '.yotpo-review',
+          '[class*="yotpo"]',
           // Okendo
-          '.okendo-review', '[class*="okendo"]',
+          '.okendo-review',
+          '[class*="okendo"]',
           // Rivyo
-          '.rivyo-review', '[class*="rivyo"]',
+          '.rivyo-review',
+          '[class*="rivyo"]',
           // Ali Reviews
-          '.ali-review', '[class*="ali-review"]',
+          '.ali-review',
+          '[class*="ali-review"]',
           // Generic review selectors
-          '[class*="review-content"]', '[class*="review-text"]', '[class*="review-body"]',
-          '[itemprop="reviewBody"]', '.review-item', '.customer-review',
+          '[class*="review-content"]',
+          '[class*="review-text"]',
+          '[class*="review-body"]',
+          '[itemprop="reviewBody"]',
+          '.review-item',
+          '.customer-review',
         ]
 
         // 尝试等待任一评论选择器出现
@@ -665,9 +730,14 @@ export async function scrapeIndependentProduct(
         if (!reviewsLoaded) {
           // 尝试点击"显示评论"按钮触发加载
           const showReviewButtons = [
-            '[class*="show-review"]', '[class*="load-review"]', '[class*="view-review"]',
-            'button:has-text("Reviews")', 'a:has-text("Reviews")',
-            '[data-action="show-reviews"]', '#reviews-tab', '[href="#reviews"]',
+            '[class*="show-review"]',
+            '[class*="load-review"]',
+            '[class*="view-review"]',
+            'button:has-text("Reviews")',
+            'a:has-text("Reviews")',
+            '[data-action="show-reviews"]',
+            '#reviews-tab',
+            '[href="#reviews"]',
           ]
           for (const btnSelector of showReviewButtons) {
             try {
@@ -707,13 +777,14 @@ export async function scrapeIndependentProduct(
         }
         await releaseBrowser(browserResult)
       }
-
     } catch (error: any) {
       lastError = error
-      console.error(`❌ 独立站产品抓取尝试 ${proxyAttempt + 1} 失败: ${error.message?.substring(0, 100)}`)
+      console.error(
+        `❌ 独立站产品抓取尝试 ${proxyAttempt + 1} 失败: ${error.message?.substring(0, 100)}`
+      )
 
       if (shouldRetryWithNewProxy(error) && proxyAttempt < maxProxyRetries) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
         continue
       }
       throw error
@@ -726,7 +797,10 @@ export async function scrapeIndependentProduct(
 /**
  * Parse independent product page HTML
  */
-async function parseIndependentProductHtml(html: string, url: string): Promise<IndependentProductData> {
+async function parseIndependentProductHtml(
+  html: string,
+  url: string
+): Promise<IndependentProductData> {
   const { load } = await import('cheerio')
   const $ = load(html)
 
@@ -742,7 +816,7 @@ async function parseIndependentProductHtml(html: string, url: string): Promise<I
     null
 
   const productName = isPresellStyleUrl(url)
-    ? (extractLandingProductName($, url) || baseProductName)
+    ? extractLandingProductName($, url) || baseProductName
     : baseProductName
 
   const productDescription =
@@ -750,14 +824,17 @@ async function parseIndependentProductHtml(html: string, url: string): Promise<I
     $('meta[property="og:description"]').attr('content') ||
     $('meta[name="description"]').attr('content') ||
     $('[class*="product-description"], [class*="ProductDescription"]').first().text().trim() ||
-     null
+    null
 
   // Extract price
   const productPrice = extractPrice($) || extractLandingPrice($, url)
 
   // Extract original price (for discount calculation)
-  const originalPrice = $('[class*="compare-price"], [class*="was-price"], [class*="original-price"], del')
-                        .first().text().trim() || null
+  const originalPrice =
+    $('[class*="compare-price"], [class*="was-price"], [class*="original-price"], del')
+      .first()
+      .text()
+      .trim() || null
 
   // Calculate discount
   const discount = calculateDiscount(productPrice, originalPrice)
@@ -788,16 +865,18 @@ async function parseIndependentProductHtml(html: string, url: string): Promise<I
   const { rating, reviewCount } = extractRatingAndReviews($, platform)
 
   // Extract availability
-  const availability = $('[class*="availability"], [class*="stock"]').first().text().trim() ||
-                       ($('[class*="add-to-cart"], button[type="submit"]').length > 0 ? 'In Stock' : null)
+  const availability =
+    $('[class*="availability"], [class*="stock"]').first().text().trim() ||
+    ($('[class*="add-to-cart"], button[type="submit"]').length > 0 ? 'In Stock' : null)
 
   // Extract reviews
   const reviews = extractProductReviews($)
 
   // Extract category
-  const category = $('[class*="breadcrumb"] a').last().text().trim() ||
-                   $('meta[property="product:category"]').attr('content') ||
-                   null
+  const category =
+    $('[class*="breadcrumb"] a').last().text().trim() ||
+    $('meta[property="product:category"]').attr('content') ||
+    null
 
   // 🔥 2025-12-24增强：提取实用的独立站特定数据（非Amazon风格，而是真实可用的）
   // 1. 库存状态（不同平台有不同表示）
@@ -868,7 +947,10 @@ function extractPrice($: ReturnType<typeof import('cheerio').load>): string | nu
 /**
  * Calculate discount percentage
  */
-function calculateDiscount(currentPrice: string | null, originalPrice: string | null): string | null {
+function calculateDiscount(
+  currentPrice: string | null,
+  originalPrice: string | null
+): string | null {
   if (!currentPrice || !originalPrice) return null
 
   const current = parseFloat(currentPrice.replace(/[^0-9.]/g, ''))
@@ -891,20 +973,22 @@ function extractFeatures($: ReturnType<typeof import('cheerio').load>): string[]
   const isInNavigationContext = (el: any): boolean => {
     try {
       const $el = $(el)
-      return $el.closest(
-        [
-          'nav',
-          'header',
-          'footer',
-          '.my-account-details',
-          '.sign-in-dropdown',
-          '[class*="account"]',
-          '[id*="account"]',
-          '[class*="utilitynav"]',
-          '[class*="breadcrumb"]',
-          '[class*="navbar"]',
-        ].join(', ')
-      ).length > 0
+      return (
+        $el.closest(
+          [
+            'nav',
+            'header',
+            'footer',
+            '.my-account-details',
+            '.sign-in-dropdown',
+            '[class*="account"]',
+            '[id*="account"]',
+            '[class*="utilitynav"]',
+            '[class*="breadcrumb"]',
+            '[class*="navbar"]',
+          ].join(', ')
+        ).length > 0
+      )
     } catch {
       return false
     }
@@ -977,57 +1061,121 @@ function extractImages($: ReturnType<typeof import('cheerio').load>, baseUrl: st
 /**
  * Extract rating and review count (platform-specific)
  */
-function extractRatingAndReviews($: ReturnType<typeof import('cheerio').load>, platform: string | null): { rating: string | null, reviewCount: string | null } {
+function extractRatingAndReviews(
+  $: ReturnType<typeof import('cheerio').load>,
+  platform: string | null
+): { rating: string | null; reviewCount: string | null } {
   let rating: string | null = null
   let reviewCount: string | null = null
 
   // Shopify-specific (using common review apps like Judge.me, Stamped, Loox)
   if (platform === 'shopify' || platform === 'myshopline') {
     // Judge.me
-    rating = $('[class*="jdgm-prev-badge"]').attr('data-average-rating') ||
-             $('[class*="jdgm"] [class*="rating"]').first().text().match(/[\d.]+/)?.[0] || null
+    rating =
+      $('[class*="jdgm-prev-badge"]').attr('data-average-rating') ||
+      $('[class*="jdgm"] [class*="rating"]')
+        .first()
+        .text()
+        .match(/[\d.]+/)?.[0] ||
+      null
 
-    reviewCount = $('[class*="jdgm-prev-badge"]').attr('data-number-of-reviews') ||
-                  $('[class*="jdgm"] [class*="count"]').first().text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+    reviewCount =
+      $('[class*="jdgm-prev-badge"]').attr('data-number-of-reviews') ||
+      $('[class*="jdgm"] [class*="count"]')
+        .first()
+        .text()
+        .match(/[\d,]+/)?.[0]
+        ?.replace(/,/g, '') ||
+      null
 
     // Stamped
     if (!rating) {
-      rating = $('[class*="stamped-badge"]').attr('data-rating') ||
-               $('[class*="stamped"] [class*="rating"]').first().text().match(/[\d.]+/)?.[0] || null
+      rating =
+        $('[class*="stamped-badge"]').attr('data-rating') ||
+        $('[class*="stamped"] [class*="rating"]')
+          .first()
+          .text()
+          .match(/[\d.]+/)?.[0] ||
+        null
     }
     if (!reviewCount) {
-      reviewCount = $('[class*="stamped-badge"]').attr('data-count') ||
-                    $('[class*="stamped"] [class*="count"]').first().text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+      reviewCount =
+        $('[class*="stamped-badge"]').attr('data-count') ||
+        $('[class*="stamped"] [class*="count"]')
+          .first()
+          .text()
+          .match(/[\d,]+/)?.[0]
+          ?.replace(/,/g, '') ||
+        null
     }
 
     // Loox
     if (!rating) {
-      rating = $('[class*="loox"] [class*="rating"]').first().text().match(/[\d.]+/)?.[0] || null
+      rating =
+        $('[class*="loox"] [class*="rating"]')
+          .first()
+          .text()
+          .match(/[\d.]+/)?.[0] || null
     }
     if (!reviewCount) {
-      reviewCount = $('[class*="loox"] [class*="count"]').first().text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+      reviewCount =
+        $('[class*="loox"] [class*="count"]')
+          .first()
+          .text()
+          .match(/[\d,]+/)?.[0]
+          ?.replace(/,/g, '') || null
     }
   }
 
   // WooCommerce
   if (platform === 'woocommerce') {
-    rating = $('.woocommerce-product-rating .rating').first().text().match(/[\d.]+/)?.[0] ||
-             $('[class*="star-rating"]').attr('title')?.match(/[\d.]+/)?.[0] || null
+    rating =
+      $('.woocommerce-product-rating .rating')
+        .first()
+        .text()
+        .match(/[\d.]+/)?.[0] ||
+      $('[class*="star-rating"]')
+        .attr('title')
+        ?.match(/[\d.]+/)?.[0] ||
+      null
 
-    reviewCount = $('.woocommerce-review-link').first().text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+    reviewCount =
+      $('.woocommerce-review-link')
+        .first()
+        .text()
+        .match(/[\d,]+/)?.[0]
+        ?.replace(/,/g, '') || null
   }
 
   // Generic selectors
   if (!rating) {
-    rating = $('[class*="rating-value"], [class*="average-rating"]').first().text().match(/[\d.]+/)?.[0] ||
-             $('[itemprop="ratingValue"]').attr('content') ||
-             $('[class*="star"] [class*="rating"]').first().text().match(/[\d.]+/)?.[0] || null
+    rating =
+      $('[class*="rating-value"], [class*="average-rating"]')
+        .first()
+        .text()
+        .match(/[\d.]+/)?.[0] ||
+      $('[itemprop="ratingValue"]').attr('content') ||
+      $('[class*="star"] [class*="rating"]')
+        .first()
+        .text()
+        .match(/[\d.]+/)?.[0] ||
+      null
   }
 
   if (!reviewCount) {
-    reviewCount = $('[class*="review-count"], [class*="reviews-count"]').first().text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') ||
-                  $('[itemprop="reviewCount"]').attr('content') ||
-                  $('a[href*="review"]').first().text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+    reviewCount =
+      $('[class*="review-count"], [class*="reviews-count"]')
+        .first()
+        .text()
+        .match(/[\d,]+/)?.[0]
+        ?.replace(/,/g, '') ||
+      $('[itemprop="reviewCount"]').attr('content') ||
+      $('a[href*="review"]')
+        .first()
+        .text()
+        .match(/[\d,]+/)?.[0]
+        ?.replace(/,/g, '') ||
+      null
   }
 
   return { rating, reviewCount }
@@ -1090,10 +1238,12 @@ function extractProductReviews($: ReturnType<typeof import('cheerio').load>): st
       if (text && text.length > 20 && text.length < 3000 && !reviews.includes(text)) {
         // 过滤掉明显不是评论的内容
         const lowerText = text.toLowerCase()
-        if (!lowerText.includes('write a review') &&
-            !lowerText.includes('be the first') &&
-            !lowerText.includes('no reviews yet') &&
-            !lowerText.includes('loading')) {
+        if (
+          !lowerText.includes('write a review') &&
+          !lowerText.includes('be the first') &&
+          !lowerText.includes('no reviews yet') &&
+          !lowerText.includes('loading')
+        ) {
           reviews.push(text)
         }
       }
@@ -1104,7 +1254,9 @@ function extractProductReviews($: ReturnType<typeof import('cheerio').load>): st
   return reviews.slice(0, 15)
 }
 
-function extractTechnicalDetails($: ReturnType<typeof import('cheerio').load>): Record<string, string> {
+function extractTechnicalDetails(
+  $: ReturnType<typeof import('cheerio').load>
+): Record<string, string> {
   const technicalDetails: Record<string, string> = {}
 
   $('table tr').each((_i, row) => {
@@ -1135,16 +1287,21 @@ function extractTechnicalDetails($: ReturnType<typeof import('cheerio').load>): 
 /**
  * 🔥 新增：计算独立站产品热销分数
  */
-function calculateIndependentHotScores(products: IndependentStoreData['products']): IndependentStoreData['products'] {
-  const productsWithScores = products.map(p => {
+function calculateIndependentHotScores(
+  products: IndependentStoreData['products']
+): IndependentStoreData['products'] {
+  const productsWithScores = products.map((p) => {
     const rating = p.rating ? parseFloat(p.rating) : 0
     const reviewCount = p.reviewCount ? parseInt(p.reviewCount.replace(/,/g, '')) : 0
 
     // 热销分数计算：评分 * log(评论数+1)
     // 对于独立站，如果没有评论数据，给一个基础分数
-    const hotScore = rating > 0 && reviewCount > 0
-      ? rating * Math.log10(reviewCount + 1)
-      : (rating > 0 ? rating * 0.5 : 0)
+    const hotScore =
+      rating > 0 && reviewCount > 0
+        ? rating * Math.log10(reviewCount + 1)
+        : rating > 0
+          ? rating * 0.5
+          : 0
 
     return { ...p, hotScore, ratingNum: rating, reviewCountNum: reviewCount }
   })
@@ -1166,14 +1323,17 @@ function calculateIndependentHotScores(products: IndependentStoreData['products'
     hotScore: p.hotScore,
     rank: index + 1,
     isHot: index < 5,
-    hotLabel: index < 5 ? '🔥 热销商品' : '✅ 畅销商品'
+    hotLabel: index < 5 ? '🔥 热销商品' : '✅ 畅销商品',
   }))
 }
 
 /**
  * Parse independent store HTML to extract store data
  */
-async function parseIndependentStoreHtml(html: string, finalUrl: string): Promise<IndependentStoreData> {
+async function parseIndependentStoreHtml(
+  html: string,
+  finalUrl: string
+): Promise<IndependentStoreData> {
   const { load } = await import('cheerio')
   const $ = load(html)
 
@@ -1205,7 +1365,7 @@ async function parseIndependentStoreHtml(html: string, finalUrl: string): Promis
 
       const segments = splitStoreTitleSegments(candidate)
       const preferredSegment = domainNorm
-        ? segments.find(part => normalizeForCompare(part).includes(domainNorm))
+        ? segments.find((part) => normalizeForCompare(part).includes(domainNorm))
         : null
       const picked = cleanText(preferredSegment || segments[0] || candidate)
       if (!isReasonableStoreName(picked)) continue
@@ -1239,15 +1399,17 @@ async function parseIndependentStoreHtml(html: string, finalUrl: string): Promis
   })()
 
   // Extract store description
-  const storeDescription = $('meta[property="og:description"]').attr('content') ||
-                           $('meta[name="description"]').attr('content') ||
-                           null
+  const storeDescription =
+    $('meta[property="og:description"]').attr('content') ||
+    $('meta[name="description"]').attr('content') ||
+    null
 
   // Extract logo
-  const logoUrl = $('meta[property="og:image"]').attr('content') ||
-                  $('link[rel="icon"]').attr('href') ||
-                  $('img[class*="logo"], img[alt*="logo" i], header img').first().attr('src') ||
-                  null
+  const logoUrl =
+    $('meta[property="og:image"]').attr('content') ||
+    $('link[rel="icon"]').attr('href') ||
+    $('img[class*="logo"], img[alt*="logo" i], header img').first().attr('src') ||
+    null
 
   // Extract products with enhanced data
   const products = extractProducts($, finalUrl, platform)
@@ -1310,8 +1472,8 @@ function extractBrandFromIndependentProduct(
   }
 
   // 渠道2: Meta标签（og:brand, twitter:brand）
-  const metaBrand = $('meta[property="og:brand"]').attr('content') ||
-                   $('meta[name="brand"]').attr('content')
+  const metaBrand =
+    $('meta[property="og:brand"]').attr('content') || $('meta[name="brand"]').attr('content')
   if (metaBrand && metaBrand.length > 1 && metaBrand.length < 50) {
     return metaBrand
   }
@@ -1327,23 +1489,30 @@ function extractBrandFromIndependentProduct(
 
   // 渠道4: 限定范围的品牌字段提取（仅主要内容区域，不从导航/页脚）
   // 🔥 关键优化：只在主要内容区域搜索，排除header/footer/nav
-  const mainContent = $('main, [class*="content"], [class*="product-details"], [class*="product-main"]').first()
+  const mainContent = $(
+    'main, [class*="content"], [class*="product-details"], [class*="product-main"]'
+  ).first()
   const searchInMain = mainContent.length > 0 ? mainContent : $('body')
 
   // 精确选择器：匹配 brand: 或 vendor: 标签
-  const brandLabel = searchInMain.find('[class*="brand"], [class*="vendor"]').filter((i, el) => {
-    const text = $(el).text().trim().toLowerCase()
-    const isLabel = /^(brand|vendor|maker|manufacturer)/.test(text)
-    const length = text.length
-    // 过滤：排除导航菜单、footer、长文本
-    return isLabel && length > 2 && length < 50 && !text.includes('select') && !text.includes('menu')
-  }).first().text().trim()
+  const brandLabel = searchInMain
+    .find('[class*="brand"], [class*="vendor"]')
+    .filter((i, el) => {
+      const text = $(el).text().trim().toLowerCase()
+      const isLabel = /^(brand|vendor|maker|manufacturer)/.test(text)
+      const length = text.length
+      // 过滤：排除导航菜单、footer、长文本
+      return (
+        isLabel && length > 2 && length < 50 && !text.includes('select') && !text.includes('menu')
+      )
+    })
+    .first()
+    .text()
+    .trim()
 
   if (brandLabel && brandLabel.length > 1 && brandLabel.length < 50) {
     // 清理"Brand: " 或 "Vendor: "前缀
-    const cleaned = brandLabel
-      .replace(/^(Brand|Vendor|Maker|Manufacturer):\s*/i, '')
-      .trim()
+    const cleaned = brandLabel.replace(/^(Brand|Vendor|Maker|Manufacturer):\s*/i, '').trim()
     if (cleaned.length > 1 && cleaned.length < 50) {
       return cleaned
     }
@@ -1355,9 +1524,12 @@ function extractBrandFromIndependentProduct(
     if (parts.length > 0) {
       const potentialBrand = parts[0].trim()
       // 验证是否看起来像品牌名（2-25字符，不是纯数字/特殊符号）
-      if (potentialBrand.length >= 2 && potentialBrand.length <= 25 &&
-          /^[A-Za-z0-9&\-\.'\s]+$/.test(potentialBrand) &&
-          !/^\d+/.test(potentialBrand)) {
+      if (
+        potentialBrand.length >= 2 &&
+        potentialBrand.length <= 25 &&
+        /^[A-Za-z0-9&\-\.'\s]+$/.test(potentialBrand) &&
+        !/^\d+/.test(potentialBrand)
+      ) {
         return potentialBrand
       }
     }
@@ -1439,35 +1611,45 @@ function extractProducts(
       const $el = $(el)
 
       // Extract product name
-      const name = $el.find('h2, h3, h4, [class*="title"], [class*="name"]').first().text().trim() ||
-                   $el.find('a').first().text().trim() ||
-                   $el.find('img').first().attr('alt') ||
-                   ''
+      const name =
+        $el.find('h2, h3, h4, [class*="title"], [class*="name"]').first().text().trim() ||
+        $el.find('a').first().text().trim() ||
+        $el.find('img').first().attr('alt') ||
+        ''
 
       // Extract price
-      const priceText = $el.find('[class*="price"]:not([class*="compare"]):not([class*="was"]), .money, [data-price]').first().text().trim()
+      const priceText = $el
+        .find('[class*="price"]:not([class*="compare"]):not([class*="was"]), .money, [data-price]')
+        .first()
+        .text()
+        .trim()
       const price = priceText || null
 
       // Extract product link
-      const productUrl = $el.find('a').first().attr('href') ||
-                        $el.attr('href') ||
-                        null
+      const productUrl = $el.find('a').first().attr('href') || $el.attr('href') || null
 
       // 🔥 新增：提取图片URL
-      const imageUrl = $el.find('img').first().attr('src') ||
-                       $el.find('img').first().attr('data-src') ||
-                       null
+      const imageUrl =
+        $el.find('img').first().attr('src') || $el.find('img').first().attr('data-src') || null
 
       // 🔥 新增：尝试提取评分和评论数（平台特定）
       const { rating, reviewCount } = extractProductCardRating($el, platform)
 
       // Add product if we have a valid name
-      if (name && name.length > 3 && name.length < 200 && !products.some(p => p.name === name)) {
+      if (name && name.length > 3 && name.length < 200 && !products.some((p) => p.name === name)) {
         products.push({
           name,
           price,
-          productUrl: productUrl ? (productUrl.startsWith('http') ? productUrl : new URL(productUrl, finalUrl).href) : null,
-          imageUrl: imageUrl ? (imageUrl.startsWith('http') ? imageUrl : new URL(imageUrl, finalUrl).href) : null,
+          productUrl: productUrl
+            ? productUrl.startsWith('http')
+              ? productUrl
+              : new URL(productUrl, finalUrl).href
+            : null,
+          imageUrl: imageUrl
+            ? imageUrl.startsWith('http')
+              ? imageUrl
+              : new URL(imageUrl, finalUrl).href
+            : null,
           rating,
           reviewCount,
         })
@@ -1490,33 +1672,61 @@ function extractProducts(
 function extractProductCardRating(
   $el: ReturnType<ReturnType<typeof import('cheerio').load>>,
   platform: string | null
-): { rating: string | null, reviewCount: string | null } {
+): { rating: string | null; reviewCount: string | null } {
   let rating: string | null = null
   let reviewCount: string | null = null
 
   // Shopify review apps (Judge.me, Stamped, Loox)
   if (platform === 'shopify') {
-    rating = $el.find('[class*="jdgm"]').attr('data-average-rating') ||
-             $el.find('[class*="stamped"]').attr('data-rating') ||
-             $el.find('[class*="loox"] [class*="rating"]').text().match(/[\d.]+/)?.[0] || null
+    rating =
+      $el.find('[class*="jdgm"]').attr('data-average-rating') ||
+      $el.find('[class*="stamped"]').attr('data-rating') ||
+      $el
+        .find('[class*="loox"] [class*="rating"]')
+        .text()
+        .match(/[\d.]+/)?.[0] ||
+      null
 
-    reviewCount = $el.find('[class*="jdgm"]').attr('data-number-of-reviews') ||
-                  $el.find('[class*="stamped"]').attr('data-count') ||
-                  $el.find('[class*="review-count"]').text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+    reviewCount =
+      $el.find('[class*="jdgm"]').attr('data-number-of-reviews') ||
+      $el.find('[class*="stamped"]').attr('data-count') ||
+      $el
+        .find('[class*="review-count"]')
+        .text()
+        .match(/[\d,]+/)?.[0]
+        ?.replace(/,/g, '') ||
+      null
   }
 
   // WooCommerce
   if (platform === 'woocommerce') {
-    rating = $el.find('[class*="star-rating"]').attr('title')?.match(/[\d.]+/)?.[0] || null
-    reviewCount = $el.find('[class*="review-count"]').text().match(/[\d,]+/)?.[0]?.replace(/,/g, '') || null
+    rating =
+      $el
+        .find('[class*="star-rating"]')
+        .attr('title')
+        ?.match(/[\d.]+/)?.[0] || null
+    reviewCount =
+      $el
+        .find('[class*="review-count"]')
+        .text()
+        .match(/[\d,]+/)?.[0]
+        ?.replace(/,/g, '') || null
   }
 
   // Generic fallback
   if (!rating) {
-    rating = $el.find('[class*="rating"]').text().match(/[\d.]+/)?.[0] || null
+    rating =
+      $el
+        .find('[class*="rating"]')
+        .text()
+        .match(/[\d.]+/)?.[0] || null
   }
   if (!reviewCount) {
-    reviewCount = $el.find('[class*="review"]').text().match(/\((\d+)\)/)?.[1] || null
+    reviewCount =
+      $el
+        .find('[class*="review"]')
+        .text()
+        .match(/\((\d+)\)/)?.[1] || null
   }
 
   return { rating, reviewCount }
@@ -1537,22 +1747,30 @@ function extractProductsFromImages(
     const src = $(el).attr('src') || $(el).attr('data-src') || ''
 
     // Filter for likely product images
-    if (alt && alt.length > 5 && alt.length < 150 &&
-        !alt.toLowerCase().includes('logo') &&
-        !alt.toLowerCase().includes('banner') &&
-        !alt.toLowerCase().includes('icon') &&
-        src &&
-        !products.some(p => p.name === alt)) {
-
+    if (
+      alt &&
+      alt.length > 5 &&
+      alt.length < 150 &&
+      !alt.toLowerCase().includes('logo') &&
+      !alt.toLowerCase().includes('banner') &&
+      !alt.toLowerCase().includes('icon') &&
+      src &&
+      !products.some((p) => p.name === alt)
+    ) {
       // Try to find price near image
       const $parent = $(el).closest('div, li, article').first()
       const nearbyPrice = $parent.find('[class*="price"], .money').first().text().trim() || null
-      const nearbyLink = $parent.find('a[href*="/product"], a[href*="/collections"]').first().attr('href') || null
+      const nearbyLink =
+        $parent.find('a[href*="/product"], a[href*="/collections"]').first().attr('href') || null
 
       products.push({
         name: alt,
         price: nearbyPrice,
-        productUrl: nearbyLink ? (nearbyLink.startsWith('http') ? nearbyLink : new URL(nearbyLink, finalUrl).href) : null,
+        productUrl: nearbyLink
+          ? nearbyLink.startsWith('http')
+            ? nearbyLink
+            : new URL(nearbyLink, finalUrl).href
+          : null,
         imageUrl: src.startsWith('http') ? src : new URL(src, finalUrl).href,
       })
     }
@@ -1626,10 +1844,14 @@ function extractShippingInfo($: ReturnType<typeof import('cheerio').load>): stri
   }
 
   // 尝试从图标或标签提取信息
-  const freeShipping = $('[class*="free"], [class*="shipping"]').filter((i, el) => {
-    const text = $(el).text().toLowerCase()
-    return text.includes('free') && text.includes('ship')
-  }).first().text().trim()
+  const freeShipping = $('[class*="free"], [class*="shipping"]')
+    .filter((i, el) => {
+      const text = $(el).text().toLowerCase()
+      return text.includes('free') && text.includes('ship')
+    })
+    .first()
+    .text()
+    .trim()
 
   if (freeShipping && freeShipping.length < 100) {
     return freeShipping
@@ -1642,7 +1864,10 @@ function extractShippingInfo($: ReturnType<typeof import('cheerio').load>): stri
  * 🔥 2025-12-24新增：提取产品徽章/标签
  * 如：Best Seller, Limited Offer, Flash Sale, Featured等
  */
-function extractProductBadge($: ReturnType<typeof import('cheerio').load>, _platform: string | null): string | null {
+function extractProductBadge(
+  $: ReturnType<typeof import('cheerio').load>,
+  _platform: string | null
+): string | null {
   const badgeSelectors = [
     // Badge/Label容器
     '[class*="badge"]',
@@ -1668,10 +1893,14 @@ function extractProductBadge($: ReturnType<typeof import('cheerio').load>, _plat
 
     // 首先尝试找高优先级的徽章
     for (const badge of priorityBadges) {
-      const found = elements.filter((i, el) => {
-        const text = $(el).text().toLowerCase()
-        return text.includes(badge) && text.length < 50
-      }).first().text().trim()
+      const found = elements
+        .filter((i, el) => {
+          const text = $(el).text().toLowerCase()
+          return text.includes(badge) && text.length < 50
+        })
+        .first()
+        .text()
+        .trim()
 
       if (found && found.length > 0 && found.length < 50) {
         return found
@@ -1680,7 +1909,12 @@ function extractProductBadge($: ReturnType<typeof import('cheerio').load>, _plat
 
     // 如果没找到高优先级徽章，返回找到的第一个
     const badge = elements.first().text().trim()
-    if (badge && badge.length > 0 && badge.length < 50 && !/^(select|choose|click|loading)$/i.test(badge)) {
+    if (
+      badge &&
+      badge.length > 0 &&
+      badge.length < 50 &&
+      !/^(select|choose|click|loading)$/i.test(badge)
+    ) {
       return badge
     }
   }

@@ -76,9 +76,11 @@ describe('openclaw proxy write bridge', () => {
     resolveOpenclawUserFromBindingMock.mockResolvedValue(1001)
     isOpenclawEnabledForUserMock.mockResolvedValue(true)
     recordOpenclawActionMock.mockResolvedValue(undefined)
-    resolveOpenclawParentRequestIdMock.mockImplementation(async (params: { explicitParentRequestId?: string }) => {
-      return params.explicitParentRequestId
-    })
+    resolveOpenclawParentRequestIdMock.mockImplementation(
+      async (params: { explicitParentRequestId?: string }) => {
+        return params.explicitParentRequestId
+      }
+    )
   })
 
   it('bridges write requests to command executor and keeps sender context', async () => {

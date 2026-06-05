@@ -23,7 +23,9 @@ describe('syncScrapedProductsFromExtractData', () => {
       debug: { isAmazonStore: true },
     })
     expect(exec).toHaveBeenCalled()
-    const insertCall = exec.mock.calls.find((c) => String(c[0]).includes('INSERT INTO scraped_products'))
+    const insertCall = exec.mock.calls.find((c) =>
+      String(c[0]).includes('INSERT INTO scraped_products')
+    )
     expect(insertCall?.[1]).toContain('amazon_store')
   })
 
@@ -34,7 +36,9 @@ describe('syncScrapedProductsFromExtractData', () => {
       finalUrl: 'https://amazon.com/dp/X',
       debug: { isAmazonProductPage: true },
     })
-    const insertCall = exec.mock.calls.find((c) => String(c[0]).includes('INSERT INTO scraped_products'))
+    const insertCall = exec.mock.calls.find((c) =>
+      String(c[0]).includes('INSERT INTO scraped_products')
+    )
     expect(insertCall?.[1]).toContain('amazon_product')
     expect(insertCall?.[1]).toContain('Widget')
   })

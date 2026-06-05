@@ -45,7 +45,9 @@ describe('GET /api/campaigns/affiliate-platforms', () => {
       query,
     } as any)
 
-    const response = await GET(new NextRequest('http://localhost/api/campaigns/affiliate-platforms'))
+    const response = await GET(
+      new NextRequest('http://localhost/api/campaigns/affiliate-platforms')
+    )
     const body = await response.json()
 
     expect(response.status).toBe(200)

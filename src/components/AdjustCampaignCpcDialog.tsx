@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { showError, showSuccess } from '@/lib/toast-utils'
 
@@ -12,10 +19,7 @@ interface AdjustCampaignCpcDialogProps {
   onOpenChange: (open: boolean) => void
   googleCampaignId: string
   campaignName: string
-  onSaved?: (payload: {
-    googleCampaignId: string
-    newCpc: number
-  }) => void | Promise<void>
+  onSaved?: (payload: { googleCampaignId: string; newCpc: number }) => void | Promise<void>
 }
 
 export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogProps) {
@@ -38,7 +42,9 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
     if (!googleCampaignId) return
     try {
       setLoading(true)
-      const response = await fetch(`/api/campaigns/${googleCampaignId}/cpc`, { credentials: 'include' })
+      const response = await fetch(`/api/campaigns/${googleCampaignId}/cpc`, {
+        credentials: 'include',
+      })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(data?.error || data?.message || '获取当前CPC失败')
 
@@ -114,7 +120,9 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
       <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>调整CPC - {campaignName}</DialogTitle>
-          <DialogDescription>支持输入绝对值CPC，或一键按比例填充（-20%/-10%/+10%/+20%）。</DialogDescription>
+          <DialogDescription>
+            支持输入绝对值CPC，或一键按比例填充（-20%/-10%/+10%/+20%）。
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
@@ -124,7 +132,10 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
 
           <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
-              当前CPC: <span className="font-medium text-foreground">{loading ? '加载中…' : currentCpcDisplay}</span>
+              当前CPC:{' '}
+              <span className="font-medium text-foreground">
+                {loading ? '加载中…' : currentCpcDisplay}
+              </span>
             </span>
             <span className="text-xs text-muted-foreground">历史:</span>
             {loading ? (
@@ -159,16 +170,40 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => applyPercent(-0.2)} disabled={loading || saving || !(currentCpc && currentCpc > 0)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPercent(-0.2)}
+                disabled={loading || saving || !(currentCpc && currentCpc > 0)}
+              >
                 -20%
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => applyPercent(-0.1)} disabled={loading || saving || !(currentCpc && currentCpc > 0)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPercent(-0.1)}
+                disabled={loading || saving || !(currentCpc && currentCpc > 0)}
+              >
                 -10%
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => applyPercent(0.1)} disabled={loading || saving || !(currentCpc && currentCpc > 0)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPercent(0.1)}
+                disabled={loading || saving || !(currentCpc && currentCpc > 0)}
+              >
                 +10%
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => applyPercent(0.2)} disabled={loading || saving || !(currentCpc && currentCpc > 0)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => applyPercent(0.2)}
+                disabled={loading || saving || !(currentCpc && currentCpc > 0)}
+              >
                 +20%
               </Button>
             </div>
@@ -176,7 +211,12 @@ export default function AdjustCampaignCpcDialog(props: AdjustCampaignCpcDialogPr
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0 border-t pt-3 flex-wrap">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             取消
           </Button>
           <Button type="button" onClick={save} disabled={saving || loading}>

@@ -43,10 +43,10 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
   const isIPRocketBusinessError =
     rawMessage.includes('IPRocket') &&
     (rawMessage.includes('Business abnormality') ||
-     rawMessage.includes('business error') ||
-     rawMessage.includes('contact customer service') ||
-     rawMessage.includes('account abnormal') ||
-     rawMessage.includes('risk control'))
+      rawMessage.includes('business error') ||
+      rawMessage.includes('contact customer service') ||
+      rawMessage.includes('account abnormal') ||
+      rawMessage.includes('risk control'))
 
   if (isIPRocketBusinessError) {
     return {
@@ -65,11 +65,7 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
         `✓ 或暂时禁用部分任务，降低请求频率\n\n` +
         `原始错误: ${rawMessage}`,
       originalMessage: rawMessage,
-      suggestions: [
-        '检查 IPRocket 账户状态',
-        '考虑更换代理服务商',
-        '降低请求频率'
-      ]
+      suggestions: ['检查 IPRocket 账户状态', '考虑更换代理服务商', '降低请求频率'],
     }
   }
 
@@ -96,7 +92,7 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
         `✓ 充值或升级套餐\n\n` +
         `原始错误: ${rawMessage}`,
       originalMessage: rawMessage,
-      suggestions: ['检查代理配额', '充值账户']
+      suggestions: ['检查代理配额', '充值账户'],
     }
   }
 
@@ -122,7 +118,7 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
         `✓ 确认 API Key 有效\n\n` +
         `原始错误: ${rawMessage}`,
       originalMessage: rawMessage,
-      suggestions: ['检查代理认证信息', '更新 API Key']
+      suggestions: ['检查代理认证信息', '更新 API Key'],
     }
   }
 
@@ -152,7 +148,7 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
         `✓ 稍后重试\n\n` +
         `原始错误: ${rawMessage}`,
       originalMessage: rawMessage,
-      suggestions: ['检查网络连接', '稍后重试']
+      suggestions: ['检查网络连接', '稍后重试'],
     }
   }
 
@@ -177,7 +173,7 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
         `✓ 查看详细错误信息\n\n` +
         `原始错误: ${rawMessage}`,
       originalMessage: rawMessage,
-      suggestions: ['检查代理配置', '确认代理服务可用']
+      suggestions: ['检查代理配置', '确认代理服务可用'],
     }
   }
 
@@ -187,7 +183,7 @@ export function analyzeProxyError(error: any): ProxyErrorAnalysis {
     isIPRocketBusinessError: false,
     enhancedMessage: rawMessage,
     originalMessage: rawMessage,
-    suggestions: []
+    suggestions: [],
   }
 }
 
@@ -200,10 +196,10 @@ export function isIPRocketBusinessError(error: any): boolean {
   return (
     rawMessage.includes('IPRocket') &&
     (rawMessage.includes('Business abnormality') ||
-     rawMessage.includes('business error') ||
-     rawMessage.includes('contact customer service') ||
-     rawMessage.includes('account abnormal') ||
-     rawMessage.includes('risk control'))
+      rawMessage.includes('business error') ||
+      rawMessage.includes('contact customer service') ||
+      rawMessage.includes('account abnormal') ||
+      rawMessage.includes('risk control'))
   )
 }
 

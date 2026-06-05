@@ -9,10 +9,7 @@ import {
   type GoogleAdsAuthAssignmentMode,
   type GoogleAdsAuthType,
 } from '@/lib/google-ads-auth-assignment'
-import {
-  deleteGoogleAdsCredentials,
-  saveGoogleAdsCredentials,
-} from '@/lib/google-ads-oauth'
+import { deleteGoogleAdsCredentials, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import {
   deleteAllGoogleAdsServiceAccountsForUser,
   parseServiceAccountJson,
@@ -85,7 +82,7 @@ async function buildAuthStatus(userId: number) {
 }
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const admin = await requireAdmin(request)
   if (!admin) {
     return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
@@ -109,7 +106,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const message = String(error?.message || '')
     if (message.includes('google_ads_auth_assignments') || message.includes('no such table')) {
       return NextResponse.json(
-        { error: '数据库缺少 google_ads_auth_assignments 表，请执行 migration 250（npm run db:migrate）' },
+        {
+          error:
+            '数据库缺少 google_ads_auth_assignments 表，请执行 migration 250（npm run db:migrate）',
+        },
         { status: 503 }
       )
     }
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 }
 
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const admin = await requireAdmin(request)
   if (!admin) {
     return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
@@ -143,7 +143,10 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
   const authType = body.authType as GoogleAdsAuthType
 
   if (!assignmentMode || !['own', 'shared_admin'].includes(assignmentMode)) {
-    return NextResponse.json({ error: 'assignmentMode 必须是 own 或 shared_admin' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'assignmentMode 必须是 own 或 shared_admin' },
+      { status: 400 }
+    )
   }
 
   if (!authType || !['oauth', 'service_account'].includes(authType)) {
@@ -190,8 +193,16 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     // own mode - must provide new credentials
     if (authType === 'oauth') {
       const oauth = body.oauth
-      if (!oauth?.client_id || !oauth?.client_secret || !oauth?.developer_token || !oauth?.login_customer_id) {
-        return NextResponse.json({ error: '单独配置 OAuth 时必须填写完整凭证信息' }, { status: 400 })
+      if (
+        !oauth?.client_id ||
+        !oauth?.client_secret ||
+        !oauth?.developer_token ||
+        !oauth?.login_customer_id
+      ) {
+        return NextResponse.json(
+          { error: '单独配置 OAuth 时必须填写完整凭证信息' },
+          { status: 400 }
+        )
       }
 
       await assertOwnCredentialsDifferFromAdmin({
@@ -285,7 +296,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 }
 
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const admin = await requireAdmin(request)
   if (!admin) {
     return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })

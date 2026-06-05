@@ -141,18 +141,17 @@ describe('model-intent-family-filter', () => {
     })
 
     expect(context.productCoreTerms).toEqual(expect.arrayContaining(['mattress']))
-    expect(context.attributeTerms).toEqual(expect.arrayContaining([
-      'king',
-      '10 inch',
-      'memory foam',
-      'medium firm',
-    ]))
-    expect(context.softFamilyTerms).toEqual(expect.arrayContaining([
-      'king mattress',
-      '10 inch mattress',
-      'memory foam mattress',
-      'medium firm mattress',
-    ]))
+    expect(context.attributeTerms).toEqual(
+      expect.arrayContaining(['king', '10 inch', 'memory foam', 'medium firm'])
+    )
+    expect(context.softFamilyTerms).toEqual(
+      expect.arrayContaining([
+        'king mattress',
+        '10 inch mattress',
+        'memory foam mattress',
+        'medium firm mattress',
+      ])
+    )
   })
 
   it('matches soft family keywords and keeps branded single-core term while rejecting weak variants', () => {
@@ -166,7 +165,9 @@ describe('model-intent-family-filter', () => {
     })
 
     expect(isKeywordInProductModelFamily('novilla king mattress', context)).toBe(true)
-    expect(isKeywordInProductModelFamily('novilla 10 inch memory foam mattress', context)).toBe(true)
+    expect(isKeywordInProductModelFamily('novilla 10 inch memory foam mattress', context)).toBe(
+      true
+    )
     expect(isKeywordInProductModelFamily('novilla medium firm mattress', context)).toBe(true)
     expect(isKeywordInProductModelFamily('novilla mattress', context)).toBe(true)
     expect(isKeywordInProductModelFamily('mattress', context)).toBe(false)
@@ -180,21 +181,21 @@ describe('model-intent-family-filter', () => {
       context,
       brandName: 'Novilla',
     })
-    expect(context.attributeTerms).not.toEqual(expect.arrayContaining([
-      'foam',
-      'medium',
-      'firm',
-    ]))
-    expect(fallback).toEqual(expect.arrayContaining([
-      'novilla king mattress',
-      'novilla 10 inch mattress',
-      'novilla memory foam mattress',
-    ]))
-    expect(fallback).not.toEqual(expect.arrayContaining([
-      'novilla foam mattress',
-      'novilla medium mattress',
-      'novilla firm mattress',
-    ]))
+    expect(context.attributeTerms).not.toEqual(expect.arrayContaining(['foam', 'medium', 'firm']))
+    expect(fallback).toEqual(
+      expect.arrayContaining([
+        'novilla king mattress',
+        'novilla 10 inch mattress',
+        'novilla memory foam mattress',
+      ])
+    )
+    expect(fallback).not.toEqual(
+      expect.arrayContaining([
+        'novilla foam mattress',
+        'novilla medium mattress',
+        'novilla firm mattress',
+      ])
+    )
   })
 
   it('activates family filtering for soft-family-only products', () => {
@@ -221,9 +222,7 @@ describe('model-intent-family-filter', () => {
       'novilla memory foam mattress',
       'novilla mattress',
     ])
-    expect(result.removed.map((item) => item.item.keyword)).toEqual([
-      'novilla queen mattress',
-    ])
+    expect(result.removed.map((item) => item.item.keyword)).toEqual(['novilla queen mattress'])
   })
 
   it('supplements model_intent keywords to minimum floor with family fallback', () => {
@@ -234,7 +233,12 @@ describe('model-intent-family-filter', () => {
     })
 
     const base = [
-      { keyword: 'anker solix f3800 price', searchVolume: 880, source: 'KEYWORD_POOL', matchType: 'EXACT' as const },
+      {
+        keyword: 'anker solix f3800 price',
+        searchVolume: 880,
+        source: 'KEYWORD_POOL',
+        matchType: 'EXACT' as const,
+      },
     ]
 
     const supplemented = supplementModelIntentKeywordsWithFallback({
@@ -252,7 +256,11 @@ describe('model-intent-family-filter', () => {
 
     expect(supplemented.items.length).toBeGreaterThanOrEqual(MODEL_INTENT_MIN_KEYWORD_FLOOR)
     expect(supplemented.items.some((item) => item.keyword === 'anker solix f3800 price')).toBe(true)
-    expect(supplemented.items.every((item) => item.keyword.includes('f3800') || item.keyword.includes('solix'))).toBe(true)
+    expect(
+      supplemented.items.every(
+        (item) => item.keyword.includes('f3800') || item.keyword.includes('solix')
+      )
+    ).toBe(true)
     expect(supplemented.addedKeywords.length).toBeGreaterThan(0)
   })
 
@@ -262,7 +270,8 @@ describe('model-intent-family-filter', () => {
       product_name: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
       offer_name: 'Novilla_US_11',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
+        rawProductTitle:
+          'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
         technicalDetails: {
           'Model Name': 'N-M01035',
           'Model Number': 'NAMM10KWV12',
@@ -271,31 +280,33 @@ describe('model-intent-family-filter', () => {
     })
 
     expect(context.modelCodes).toEqual([])
-    expect(context.softFamilyTerms).toEqual(expect.arrayContaining([
-      'king mattress',
-      '10 inch mattress',
-      'memory foam mattress',
-    ]))
+    expect(context.softFamilyTerms).toEqual(
+      expect.arrayContaining(['king mattress', '10 inch mattress', 'memory foam mattress'])
+    )
 
     const fallback = buildProductModelFamilyFallbackKeywords({
       context,
       brandName: 'Novilla',
     })
 
-    expect(fallback).toEqual(expect.arrayContaining([
-      'novilla king mattress',
-      'novilla 10 inch mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(fallback).toEqual(
+      expect.arrayContaining([
+        'novilla king mattress',
+        'novilla 10 inch mattress',
+        'novilla memory foam mattress',
+      ])
+    )
     expect(fallback.some((keyword) => /m01035|namm10kwv12/i.test(keyword))).toBe(false)
   })
 
   it('prefers user-facing line and size fallback combinations when model code is absent', () => {
     const context = buildProductModelFamilyContext({
       brand: 'Anker',
-      product_name: 'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
+      product_name:
+        'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
+        rawProductTitle:
+          'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
       }),
     })
 
@@ -307,12 +318,14 @@ describe('model-intent-family-filter', () => {
       brandName: 'Anker',
     })
 
-    expect(fallback).toEqual(expect.arrayContaining([
-      'anker solix everfrost',
-      'anker solix everfrost cooler',
-      'anker everfrost cooler',
-      'anker 58l cooler',
-    ]))
+    expect(fallback).toEqual(
+      expect.arrayContaining([
+        'anker solix everfrost',
+        'anker solix everfrost cooler',
+        'anker everfrost cooler',
+        'anker 58l cooler',
+      ])
+    )
     expect(fallback.some((keyword) => keyword.includes('everfrost 2'))).toBe(true)
     expect(fallback).not.toContain('anker 288wh')
     expect(fallback).not.toContain('anker cooler 288wh')
@@ -325,25 +338,25 @@ describe('model-intent-family-filter', () => {
     })
 
     expect(context.lineTerms).toEqual(['powder'])
-    expect(context.softFamilyTerms).toEqual(expect.arrayContaining([
-      'unflavored collagen powder',
-    ]))
+    expect(context.softFamilyTerms).toEqual(expect.arrayContaining(['unflavored collagen powder']))
     expect(isKeywordInProductModelFamily('vital proteins powder', context)).toBe(false)
     expect(isKeywordInProductModelFamily('vital proteins collagen', context)).toBe(false)
-    expect(buildProductModelFamilyFallbackKeywords({
-      context,
-      brandName: 'Vital Proteins',
-    })).toEqual(expect.arrayContaining([
-      'vital proteins unflavored collagen powder',
-    ]))
+    expect(
+      buildProductModelFamilyFallbackKeywords({
+        context,
+        brandName: 'Vital Proteins',
+      })
+    ).toEqual(expect.arrayContaining(['vital proteins unflavored collagen powder']))
   })
 
   it('strips leading pack and claim noise from title-derived soft-family phrases', () => {
     const context = buildProductModelFamilyContext({
       brand: 'Livfresh',
-      product_name: 'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
+      product_name:
+        'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
+        rawProductTitle:
+          'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
       }),
     })
 
@@ -352,25 +365,25 @@ describe('model-intent-family-filter', () => {
       brandName: 'Livfresh',
     })
 
-    expect(context.softFamilyTerms).toEqual(expect.arrayContaining([
-      'toothpaste gel',
-    ]))
-    expect(context.softFamilyTerms).not.toEqual(expect.arrayContaining([
-      '3 pack better toothpaste gel',
-      '3 pack better',
-    ]))
+    expect(context.softFamilyTerms).toEqual(expect.arrayContaining(['toothpaste gel']))
+    expect(context.softFamilyTerms).not.toEqual(
+      expect.arrayContaining(['3 pack better toothpaste gel', '3 pack better'])
+    )
     expect(fallback).toContain('livfresh toothpaste gel')
-    expect(fallback).not.toEqual(expect.arrayContaining([
-      'livfresh 3 pack better toothpaste gel',
-      'livfresh remove 250',
-      'livfresh 250',
-    ]))
+    expect(fallback).not.toEqual(
+      expect.arrayContaining([
+        'livfresh 3 pack better toothpaste gel',
+        'livfresh remove 250',
+        'livfresh 250',
+      ])
+    )
   })
 
   it('keeps user-facing title phrases even when they are category-like soft-family signals', () => {
     const context = buildProductModelFamilyContext({
       brand: 'ALLWEI',
-      product_name: 'ALLWEI Portable Power Station with Solar Panel Included, LiFePO4 Battery Backup',
+      product_name:
+        'ALLWEI Portable Power Station with Solar Panel Included, LiFePO4 Battery Backup',
     })
 
     const fallback = buildProductModelFamilyFallbackKeywords({
@@ -378,9 +391,7 @@ describe('model-intent-family-filter', () => {
       brandName: 'ALLWEI',
     })
 
-    expect(context.softFamilyTerms).toEqual(expect.arrayContaining([
-      'portable power station',
-    ]))
+    expect(context.softFamilyTerms).toEqual(expect.arrayContaining(['portable power station']))
     expect(fallback).toContain('allwei portable power station')
   })
 })

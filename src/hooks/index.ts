@@ -10,9 +10,4 @@ export { usePagination } from './usePagination'
 export type { UsePaginationOptions, UsePaginationReturn } from './usePagination'
 
 // 响应式媒体查询
-export {
-  useMediaQuery,
-  useIsMobile,
-  useIsTablet,
-  useIsDesktop,
-} from './useMediaQuery'
+export { useMediaQuery, useIsMobile, useIsTablet, useIsDesktop } from './useMediaQuery'

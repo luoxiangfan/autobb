@@ -16,8 +16,11 @@ export function resolveKeywordCandidatesAfterContextFilter(params: {
     }
   }
 
-  const keywordPoolCandidates = originalCandidates.filter((item) =>
-    String(item.source || '').trim().toUpperCase() === 'KEYWORD_POOL'
+  const keywordPoolCandidates = originalCandidates.filter(
+    (item) =>
+      String(item.source || '')
+        .trim()
+        .toUpperCase() === 'KEYWORD_POOL'
   )
   if (keywordPoolCandidates.length > 0) {
     return {

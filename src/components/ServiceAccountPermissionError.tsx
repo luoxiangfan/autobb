@@ -19,7 +19,7 @@ export function ServiceAccountPermissionError({
   mccCustomerId,
   steps,
   docsUrl,
-  onDismiss
+  onDismiss,
 }: ServiceAccountPermissionErrorProps) {
   const [copiedEmail, setCopiedEmail] = useState(false)
   const [copiedMccId, setCopiedMccId] = useState(false)
@@ -137,11 +137,7 @@ export function ServiceAccountPermissionError({
                 打开 Google Ads UI
               </Button>
               {docsUrl && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(docsUrl, '_blank')}
-                >
+                <Button variant="outline" size="sm" onClick={() => window.open(docsUrl, '_blank')}>
                   查看文档
                 </Button>
               )}

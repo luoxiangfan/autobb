@@ -42,7 +42,8 @@ vi.mock('../google-ads-api', () => ({
   getGoogleAdsClient: () => ({
     Customer: () => ({
       keywordPlanIdeas: {
-        generateKeywordHistoricalMetrics: (...args: any[]) => mockGenerateKeywordHistoricalMetrics(...args),
+        generateKeywordHistoricalMetrics: (...args: any[]) =>
+          mockGenerateKeywordHistoricalMetrics(...args),
       },
       callMetadata: {},
     }),
@@ -100,7 +101,9 @@ describe('KeywordPlanner developer token access handling', () => {
 
     expect(out).toHaveLength(2)
     expect(out.every((v: any) => v.avgMonthlySearches === 0)).toBe(true)
-    expect(out.every((v: any) => v.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS')).toBe(true)
+    expect(
+      out.every((v: any) => v.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS')
+    ).toBe(true)
 
     expect(mockGenerateKeywordHistoricalMetrics).toHaveBeenCalledTimes(1)
     expect(mockBatchCacheVolumes).not.toHaveBeenCalled()
@@ -147,7 +150,9 @@ describe('KeywordPlanner developer token access handling', () => {
     const [sql] = mockDb.exec.mock.calls[0]
     const normalizedSql = String(sql).replace(/\s+/g, ' ')
     expect(normalizedSql).toContain('WHEN excluded.search_volume > 0 THEN excluded.search_volume')
-    expect(normalizedSql).toContain('WHEN COALESCE(global_keywords.search_volume, 0) > 0 THEN global_keywords.search_volume')
+    expect(normalizedSql).toContain(
+      'WHEN COALESCE(global_keywords.search_volume, 0) > 0 THEN global_keywords.search_volume'
+    )
   })
 
   it('allows keyword planner metrics query when developer token access level is standard', async () => {

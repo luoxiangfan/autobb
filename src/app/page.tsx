@@ -1,5 +1,3 @@
 export default function MarketingHome() {
-  return (
-    <div></div>
-  );
+  return <div></div>
 }

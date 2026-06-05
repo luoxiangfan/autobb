@@ -15,12 +15,7 @@ export default defineConfig({
     fileParallelism: false,
     coverage: {
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        '.next/',
-        'src/**/*.d.ts',
-        'src/**/__tests__/test-utils.ts',
-      ],
+      exclude: ['node_modules/', '.next/', 'src/**/*.d.ts', 'src/**/__tests__/test-utils.ts'],
     },
     testTimeout: 30000,
     hookTimeout: 10000,

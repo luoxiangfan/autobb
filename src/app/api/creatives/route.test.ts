@@ -58,7 +58,9 @@ describe('GET /api/creatives', () => {
         headlines: ['BrandX X200 Vacuum'],
         descriptions: ['Model-focused copy'],
         keywords: ['brandx x200 vacuum'],
-        keywordsWithVolume: [{ keyword: 'brandx x200 vacuum', searchVolume: 3200, matchType: 'EXACT' }],
+        keywordsWithVolume: [
+          { keyword: 'brandx x200 vacuum', searchVolume: 3200, matchType: 'EXACT' },
+        ],
         negativeKeywords: [],
         callouts: [],
         sitelinks: [],

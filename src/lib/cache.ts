@@ -58,7 +58,7 @@ export class MemoryCache<T = any> {
       value,
       expiresAt,
       createdAt: Date.now(),
-      hits: 0
+      hits: 0,
     })
   }
 
@@ -133,7 +133,7 @@ export class MemoryCache<T = any> {
       hits: this.hits,
       misses: this.misses,
       hitRate: Math.round(hitRate * 100) / 100,
-      totalSize: this.cache.size
+      totalSize: this.cache.size,
     }
   }
 
@@ -214,9 +214,7 @@ export function generateCreativeCacheKey(
 
   if (options?.referencePerformance) {
     // 简化性能数据作为缓存键的一部分
-    const perfKey = JSON.stringify(options.referencePerformance)
-      .replace(/\s/g, '')
-      .substring(0, 50)
+    const perfKey = JSON.stringify(options.referencePerformance).replace(/\s/g, '').substring(0, 50)
     parts.push(`perf_${perfKey}`)
   }
 
@@ -234,9 +232,7 @@ export function generateGadsApiCacheKey(
   const parts = [`customer_${customerId}`, `op_${operation}`]
 
   if (params) {
-    const paramKey = JSON.stringify(params)
-      .replace(/\s/g, '')
-      .substring(0, 100)
+    const paramKey = JSON.stringify(params).replace(/\s/g, '').substring(0, 100)
     parts.push(`params_${paramKey}`)
   }
 
@@ -246,10 +242,7 @@ export function generateGadsApiCacheKey(
 /**
  * URL解析缓存键生成器
  */
-export function generateUrlCacheKey(
-  url: string,
-  targetCountry?: string
-): string {
+export function generateUrlCacheKey(url: string, targetCountry?: string): string {
   const urlHash = url.length > 100 ? url.substring(0, 100) : url
   const country = targetCountry || 'default'
 
@@ -280,7 +273,7 @@ export function getAllCacheStats() {
   return {
     creative: creativeCache.getStats(),
     gadsApi: gadsApiCache.getStats(),
-    url: urlCache.getStats()
+    url: urlCache.getStats(),
   }
 }
 

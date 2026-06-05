@@ -22,7 +22,8 @@ describe('UnifiedQueueManager.purgePendingTasksByUserAndTypes', () => {
 
     const after = await queue.getPendingTasks()
     expect(after).toHaveLength(2)
-    expect(after.some((t) => t.userId === 1 && (t.type === 'click-farm' || t.type === 'url-swap'))).toBe(false)
+    expect(
+      after.some((t) => t.userId === 1 && (t.type === 'click-farm' || t.type === 'url-swap'))
+    ).toBe(false)
   })
 })
-

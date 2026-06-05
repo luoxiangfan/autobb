@@ -7,7 +7,9 @@ export type CreativeBucketSelection = {
 }
 
 export function normalizeCreativeBucketSelection(value: unknown): CreativeBucketSelection {
-  const rawBucket = String(value || '').trim().toUpperCase()
+  const rawBucket = String(value || '')
+    .trim()
+    .toUpperCase()
   let normalizedBucket: CreativeBucketSlot | null = null
   if (rawBucket === 'A') {
     normalizedBucket = 'A'

@@ -18,13 +18,13 @@ export async function GET(request: NextRequest) {
     const targetUserId = searchParams.get('userId')
 
     // 如果是管理员查询其他用户
-    const queryUserId = targetUserId && authResult.user.role === 'admin' 
-      ? parseInt(targetUserId, 10) 
-      : userId
+    const queryUserId =
+      targetUserId && authResult.user.role === 'admin' ? parseInt(targetUserId, 10) : userId
 
     const db = await getDatabase()
 
-    const assignments = await db.query(`
+    const assignments = (await db.query(
+      `
       SELECT 
         uma.id,
         uma.user_id as assigned_to_user_id,
@@ -43,7 +43,9 @@ export async function GET(request: NextRequest) {
       ) gaa ON uma.mcc_customer_id = gaa.customer_id
       WHERE uma.user_id = ?
       ORDER BY uma.assigned_at DESC
-    `, [queryUserId]) as Array<{
+    `,
+      [queryUserId]
+    )) as Array<{
       id: number
       mcc_customer_id: string
       assigned_at: string
@@ -60,10 +62,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取用户 MCC 分配失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取失败' }, { status: 500 })
   }
 }
 
@@ -89,48 +88,46 @@ export async function POST(request: NextRequest) {
 
     // 验证参数
     if (!userId || !mccCustomerIds || !Array.isArray(mccCustomerIds)) {
-      return NextResponse.json(
-        { error: '缺少 userId 或 mccCustomerIds 参数' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '缺少 userId 或 mccCustomerIds 参数' }, { status: 400 })
     }
 
     if (mccCustomerIds.length === 0) {
-      return NextResponse.json(
-        { error: 'mccCustomerIds 不能为空' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'mccCustomerIds 不能为空' }, { status: 400 })
     }
 
     const db = await getDatabase()
 
     // 验证目标用户是否存在
-    const targetUser = await db.queryOne(`
+    const targetUser = await db.queryOne(
+      `
       SELECT id FROM users WHERE id = ?
-    `, [userId])
+    `,
+      [userId]
+    )
 
     if (!targetUser) {
-      return NextResponse.json(
-        { error: '目标用户不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '目标用户不存在' }, { status: 404 })
     }
 
     // 验证 MCC 账号是否存在（必须是 is_manager_account = TRUE）
-    const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
-    const mccAccounts = await db.query(`
+    const isManagerCondition =
+      db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
+    const mccAccounts = (await db.query(
+      `
       SELECT customer_id, MAX(account_name) AS account_name
       FROM google_ads_accounts
       WHERE customer_id IN (${mccCustomerIds.map(() => '?').join(',')})
       AND ${isManagerCondition}
       GROUP BY customer_id
-    `, mccCustomerIds) as Array<{ customer_id: string; account_name: string }>
+    `,
+      mccCustomerIds
+    )) as Array<{ customer_id: string; account_name: string }>
 
     if (mccAccounts.length !== mccCustomerIds.length) {
-      const validIds = mccAccounts.map(a => a.customer_id)
-      const invalidIds = mccCustomerIds.filter(id => !validIds.includes(id))
+      const validIds = mccAccounts.map((a) => a.customer_id)
+      const invalidIds = mccCustomerIds.filter((id) => !validIds.includes(id))
       return NextResponse.json(
-        { 
+        {
           error: '以下 MCC 账号不存在或不是经理账号',
           invalidIds,
           validAccounts: mccAccounts,
@@ -141,22 +138,25 @@ export async function POST(request: NextRequest) {
 
     // 🔧 检查 MCC 账号是否已被其他用户绑定（一个 MCC 只能绑定一个用户）
     const placeholders = mccCustomerIds.map(() => '?').join(',')
-    const existingAssignments = await db.query(`
+    const existingAssignments = (await db.query(
+      `
       SELECT mcc_customer_id, user_id, u.username as assigned_to_username
       FROM user_mcc_assignments uma
       LEFT JOIN users u ON uma.user_id = u.id
       WHERE mcc_customer_id IN (${placeholders})
       AND user_id != ?
-    `, [...mccCustomerIds, userId]) as Array<{ mcc_customer_id: string; user_id: number; assigned_to_username: string | null }>
+    `,
+      [...mccCustomerIds, userId]
+    )) as Array<{ mcc_customer_id: string; user_id: number; assigned_to_username: string | null }>
 
     if (existingAssignments.length > 0) {
-      const conflicts = existingAssignments.map(a => ({
+      const conflicts = existingAssignments.map((a) => ({
         mccCustomerId: a.mcc_customer_id,
         assignedToUserId: a.user_id,
         assignedToUsername: a.assigned_to_username || `用户${a.user_id}`,
       }))
       return NextResponse.json(
-        { 
+        {
           error: '以下 MCC 账号已被其他用户绑定，一个 MCC 账号只能与一个用户绑定',
           conflicts,
         },
@@ -171,22 +171,28 @@ export async function POST(request: NextRequest) {
         // PostgreSQL: 使用 ON CONFLICT
         let count = 0
         for (const mccId of mccCustomerIds) {
-          const result = await db.exec(`
+          const result = await db.exec(
+            `
             INSERT INTO user_mcc_assignments (user_id, mcc_customer_id, assigned_at, assigned_by)
             VALUES (?, ?, ?, ?)
             ON CONFLICT (user_id, mcc_customer_id) DO NOTHING
-          `, [userId, mccId, now, adminUserId])
+          `,
+            [userId, mccId, now, adminUserId]
+          )
           count += result.changes || 0
         }
         return count
       } else {
         // SQLite: 使用 INSERT OR IGNORE
-        const values = mccCustomerIds.map(_id => `(?, ?, ?, ?)`).join(',')
-        const params = mccCustomerIds.flatMap(id => [userId, id, now, adminUserId])
-        const result = await db.exec(`
+        const values = mccCustomerIds.map((_id) => `(?, ?, ?, ?)`).join(',')
+        const params = mccCustomerIds.flatMap((id) => [userId, id, now, adminUserId])
+        const result = await db.exec(
+          `
           INSERT OR IGNORE INTO user_mcc_assignments (user_id, mcc_customer_id, assigned_at, assigned_by)
           VALUES ${values}
-        `, params)
+        `,
+          params
+        )
         return result.changes || 0
       }
     })()
@@ -199,10 +205,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('分配 MCC 账号失败:', error)
-    return NextResponse.json(
-      { error: error.message || '分配失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '分配失败' }, { status: 500 })
   }
 }
 
@@ -227,20 +230,20 @@ export async function DELETE(request: NextRequest) {
 
     // 验证参数
     if (!userId || !mccCustomerIds || !Array.isArray(mccCustomerIds)) {
-      return NextResponse.json(
-        { error: '缺少 userId 或 mccCustomerIds 参数' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '缺少 userId 或 mccCustomerIds 参数' }, { status: 400 })
     }
 
     const db = await getDatabase()
 
     // 批量删除
     const placeholders = mccCustomerIds.map(() => '?').join(',')
-    const result = await db.exec(`
+    const result = await db.exec(
+      `
       DELETE FROM user_mcc_assignments
       WHERE user_id = ? AND mcc_customer_id IN (${placeholders})
-    `, [userId, ...mccCustomerIds])
+    `,
+      [userId, ...mccCustomerIds]
+    )
 
     return NextResponse.json({
       success: true,
@@ -250,9 +253,6 @@ export async function DELETE(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('移除 MCC 分配失败:', error)
-    return NextResponse.json(
-      { error: error.message || '移除失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '移除失败' }, { status: 500 })
   }
 }

@@ -68,8 +68,10 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
   return {
     ...actual,
-    loadOAuthGoogleAdsCallBundleForContext: oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
-    prepareGoogleAdsApiCallForLinkedAccount: oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
+    loadOAuthGoogleAdsCallBundleForContext:
+      oauthAccountsAuthFns.loadOAuthGoogleAdsCallBundleForContext,
+    prepareGoogleAdsApiCallForLinkedAccount:
+      oauthAccountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
   }
 })
 
@@ -166,8 +168,9 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
       })
     )
     const hasConfigSync = dbFns.exec.mock.calls.some(
-      (call: any[]) => String(call?.[0] || '').includes('UPDATE campaigns')
-        && String(call?.[0] || '').includes('campaign_config')
+      (call: any[]) =>
+        String(call?.[0] || '').includes('UPDATE campaigns') &&
+        String(call?.[0] || '').includes('campaign_config')
     )
     expect(hasConfigSync).toBe(true)
   })
@@ -201,9 +204,7 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
   it('falls back to single-keyword retries for non-duplicate batch failures', async () => {
     adsFns.createGoogleAdsKeywordsBatch
       .mockRejectedValueOnce(new Error('Google Ads batch mutate failed'))
-      .mockResolvedValueOnce([
-        { keywordId: '3001', resourceName: 'r1', keywordText: 'Dreo' },
-      ])
+      .mockResolvedValueOnce([{ keywordId: '3001', resourceName: 'r1', keywordText: 'Dreo' }])
       .mockRejectedValueOnce(new Error('Keyword policy violation'))
 
     const req = new NextRequest('http://localhost/api/campaigns/12/keywords/add', {
@@ -246,8 +247,8 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
     const res = await POST(req, { params: Promise.resolve({ id: '12' }) })
     expect(res.status).toBe(200)
 
-    const insertCall = dbFns.exec.mock.calls.find(
-      (call: any[]) => String(call?.[0] || '').includes('INSERT INTO keywords')
+    const insertCall = dbFns.exec.mock.calls.find((call: any[]) =>
+      String(call?.[0] || '').includes('INSERT INTO keywords')
     )
     expect(insertCall).toBeTruthy()
 
@@ -260,7 +261,9 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
     adsFns.createGoogleAdsKeywordsBatch.mockResolvedValue([
       { keywordId: '4001', resourceName: 'p', keywordText: 'Dreo heater' },
     ])
-    keywordPoolFns.promoteKeywordsToOfferKeywordPool.mockRejectedValueOnce(new Error('pool update failed'))
+    keywordPoolFns.promoteKeywordsToOfferKeywordPool.mockRejectedValueOnce(
+      new Error('pool update failed')
+    )
 
     const req = new NextRequest('http://localhost/api/campaigns/12/keywords/add', {
       method: 'POST',

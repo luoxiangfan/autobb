@@ -153,8 +153,7 @@ export const pageMetadata = {
   // 创建Offer
   offersNew: generateMetadata({
     title: '创建Offer',
-    description:
-      '创建新的推广Offer，填写品牌信息、目标国家、落地页URL，获取AI投放评分和优化建议。',
+    description: '创建新的推广Offer，填写品牌信息、目标国家、落地页URL，获取AI投放评分和优化建议。',
     path: '/offers/new',
     keywords: ['创建Offer', '投放评分', 'Launch Score'],
     noIndex: true,
@@ -172,8 +171,7 @@ export const pageMetadata = {
   // 广告系列
   campaigns: generateMetadata({
     title: '广告系列',
-    description:
-      '查看所有Google Ads广告系列，监控投放效果，调整预算和出价策略，优化广告表现。',
+    description: '查看所有Google Ads广告系列，监控投放效果，调整预算和出价策略，优化广告表现。',
     path: '/campaigns',
     keywords: ['广告系列管理', 'Google Ads', '投放优化', 'CPC调整'],
     noIndex: true,
@@ -182,8 +180,7 @@ export const pageMetadata = {
   // 广告创意
   creatives: generateMetadata({
     title: '广告创意',
-    description:
-      'AI自动生成高质量广告创意。查看、编辑、评分广告文案，确保广告内容吸引目标受众。',
+    description: 'AI自动生成高质量广告创意。查看、编辑、评分广告文案，确保广告内容吸引目标受众。',
     path: '/creatives',
     keywords: ['AI广告文案', '广告创意', '创意评分', '文案优化'],
     noIndex: true,
@@ -212,8 +209,7 @@ export const pageMetadata = {
   // Google Ads账号管理
   googleAdsSettings: generateMetadata({
     title: 'Google Ads账号管理',
-    description:
-      '管理Google Ads账号、查看关联的Offer、监控账户状态。支持MCC管理账户和子账户。',
+    description: '管理Google Ads账号、查看关联的Offer、监控账户状态。支持MCC管理账户和子账户。',
     path: '/google-ads',
     keywords: ['Google Ads账号', 'MCC账户', '账号管理', '关联Offer'],
     noIndex: true,

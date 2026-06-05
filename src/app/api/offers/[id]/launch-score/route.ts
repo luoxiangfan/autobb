@@ -1,11 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
-import {
-  findAdCreativeById,
-  findAdCreativesByOfferId,
-  type AdCreative,
-} from '@/lib/ad-creative'
+import { findAdCreativeById, findAdCreativesByOfferId, type AdCreative } from '@/lib/ad-creative'
 import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score-performance'
 import { parseLaunchScoreAnalysis } from '@/lib/launch-scores'
 import {
@@ -26,7 +22,7 @@ import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse
  * Body 可选 campaignConfig、includePerformance、daysBack、avgOrderValue
  */
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -102,8 +98,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const includePerformance = body.includePerformance === true
     const postDaysBack = parseInt(String(body.daysBack ?? '30'), 10)
-    const postAvgOrderValue =
-      body.avgOrderValue != null ? Number(body.avgOrderValue) : undefined
+    const postAvgOrderValue = body.avgOrderValue != null ? Number(body.avgOrderValue) : undefined
 
     let performance = undefined
     if (includePerformance) {
@@ -145,7 +140,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -159,8 +154,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       ? parseFloat(searchParams.get('avgOrderValue')!)
       : undefined
     const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
-    const hashCampaignConfig =
-      parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
+    const hashCampaignConfig = parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -183,10 +177,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     if (queryCreativeId != null) {
       targetCreative = await findAdCreativeById(queryCreativeId, userId)
       if (!targetCreative || targetCreative.offer_id !== offer.id) {
-        return NextResponse.json(
-          { error: '创意不存在或无权访问' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: '创意不存在或无权访问' }, { status: 404 })
       }
     } else {
       const creatives = await findAdCreativesByOfferId(offer.id, userId)

@@ -38,7 +38,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     const body = await request.json().catch(() => ({}))
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || '参数错误' }, { status: 400 })
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || '参数错误' },
+        { status: 400 }
+      )
     }
 
     const result = await createOfferFromAffiliateProduct({
@@ -72,9 +75,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     })
   } catch (error: any) {
     console.error('[POST /api/products/:id/create-offer] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '创建Offer失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '创建Offer失败' }, { status: 500 })
   }
 }

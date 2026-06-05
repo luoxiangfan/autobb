@@ -12,7 +12,9 @@ describe('resolveBrandCoreKeywordSourceMeta', () => {
       sourceSubtype: 'SEARCH_TERM',
       rawSource: 'SEARCH_TERM',
     })
-    expect(meta.derivedTags).toEqual(expect.arrayContaining(['BRAND_CORE', 'KEYWORD_PERF', 'GLOBAL_CORE']))
+    expect(meta.derivedTags).toEqual(
+      expect.arrayContaining(['BRAND_CORE', 'KEYWORD_PERF', 'GLOBAL_CORE'])
+    )
   })
 
   it('falls back to global_core when source_mask has no search_term', () => {

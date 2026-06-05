@@ -42,7 +42,10 @@ export function getStaleUpdatedAtThresholdIso(staleMinutes?: number): string | n
   return new Date(Date.now() - minutes * 60 * 1000).toISOString()
 }
 
-function stalePendingExcludeSql(tableAlias: string | undefined, staleThresholdIso: string | null): string {
+function stalePendingExcludeSql(
+  tableAlias: string | undefined,
+  staleThresholdIso: string | null
+): string {
   if (!staleThresholdIso) {
     return ''
   }
@@ -73,7 +76,9 @@ export function offerOccupyingCampaignFilterSql(
     AND ${creationStatus} != 'failed'
     AND UPPER(COALESCE(${status}, '')) != 'REMOVED'
     ${stalePendingExcludeSql(tableAlias, staleThresholdIso)}
-  `.trim().replace(/\s+/g, ' ')
+  `
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
 /**
@@ -83,7 +88,9 @@ export function offerOccupyingCampaignWhereClause(dbType: string): string {
   // No table alias: used in `FROM campaigns` without `AS c` (Postgres rejects `c.*` here).
   return `
     offer_id = ? AND user_id = ? AND ${offerOccupyingCampaignFilterSql(dbType, undefined)}
-  `.trim().replace(/\s+/g, ' ')
+  `
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
 /**
@@ -105,8 +112,7 @@ export function offerOccupyingCampaignIdSubquerySql(
   )`
 }
 
-const STALE_PENDING_ABANDON_REASON =
-  '发布任务超时未完成，已自动释放 Offer 占用（可重新发布）'
+const STALE_PENDING_ABANDON_REASON = '发布任务超时未完成，已自动释放 Offer 占用（可重新发布）'
 
 /**
  * 软删除超时 pending 记录，释放 offer_id 唯一索引占用。
@@ -264,7 +270,7 @@ export async function getActiveCampaignConflictForOffer(
   const db = await getDatabase()
   const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
 
-  const row = await db.queryOne(
+  const row = (await db.queryOne(
     `
     SELECT id, campaign_name, creation_status, status
     FROM campaigns
@@ -273,15 +279,12 @@ export async function getActiveCampaignConflictForOffer(
     LIMIT 1
   `,
     [offerId, userId]
-  ) as ActiveCampaignConflict | undefined
+  )) as ActiveCampaignConflict | undefined
 
   return row ?? null
 }
 
-export async function hasActiveCampaignForOffer(
-  offerId: number,
-  userId: number
-): Promise<boolean> {
+export async function hasActiveCampaignForOffer(offerId: number, userId: number): Promise<boolean> {
   return !!(await getActiveCampaignConflictForOffer(offerId, userId))
 }
 
@@ -307,13 +310,14 @@ export async function assertNoActiveCampaignForOffer(
 export function isCampaignOfferUniqueViolation(error: unknown): boolean {
   const message = String((error as any)?.message || error || '')
   return (
-    message.includes('idx_campaigns_offer_id_active_unique')
-    || message.includes('UNIQUE constraint failed: campaigns.offer_id')
-    || message.includes('duplicate key value violates unique constraint')
+    message.includes('idx_campaigns_offer_id_active_unique') ||
+    message.includes('UNIQUE constraint failed: campaigns.offer_id') ||
+    message.includes('duplicate key value violates unique constraint')
   )
 }
 
-const DEFAULT_ENQUEUE_ROLLBACK_REASON = '发布任务入队失败，已回滚本地 Campaign 记录以释放 Offer 占用'
+const DEFAULT_ENQUEUE_ROLLBACK_REASON =
+  '发布任务入队失败，已回滚本地 Campaign 记录以释放 Offer 占用'
 
 /**
  * 入队失败时软删除 pending campaign，释放 Offer 一对一占用，便于用户重新发布。

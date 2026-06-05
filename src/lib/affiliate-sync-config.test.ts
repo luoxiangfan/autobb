@@ -8,11 +8,13 @@ import {
 
 describe('affiliate sync config helpers', () => {
   it('overrides fixed affiliate settings with system defaults', () => {
-    expect(applyFixedAffiliateSyncValues({
-      partnerboost_base_url: 'https://custom.example.com',
-      openclaw_affiliate_sync_interval_hours: '12',
-      openclaw_affiliate_sync_mode: 'realtime',
-    })).toEqual({
+    expect(
+      applyFixedAffiliateSyncValues({
+        partnerboost_base_url: 'https://custom.example.com',
+        openclaw_affiliate_sync_interval_hours: '12',
+        openclaw_affiliate_sync_mode: 'realtime',
+      })
+    ).toEqual({
       partnerboost_base_url: DEFAULT_PARTNERBOOST_BASE_URL,
       openclaw_affiliate_sync_interval_hours: DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
       openclaw_affiliate_sync_mode: 'realtime',

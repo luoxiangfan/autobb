@@ -27,63 +27,258 @@ const SCRIPT_FAMILY_PATTERNS: Array<{ family: ScriptFamily; pattern: RegExp }> =
 
 const CYRILLIC_LANGUAGE_CODES = new Set(['ru', 'uk', 'bg', 'sr', 'mk', 'be', 'kk', 'ky', 'uz'])
 const LATIN_SCRIPT_LANGUAGE_CODES = new Set([
-  'en', 'de', 'es', 'fr', 'it', 'pt', 'tr', 'pl', 'nl', 'sv', 'no', 'da', 'fi', 'cs', 'hu', 'ro'
+  'en',
+  'de',
+  'es',
+  'fr',
+  'it',
+  'pt',
+  'tr',
+  'pl',
+  'nl',
+  'sv',
+  'no',
+  'da',
+  'fi',
+  'cs',
+  'hu',
+  'ro',
 ])
 const DEFAULT_ALLOWED_SCRIPT_FAMILIES = new Set<ScriptFamily>(['latin'])
 const LANGUAGE_HINT_TOKENS: Record<string, Set<string>> = {
   en: new Set([
-    'buy', 'price', 'deal', 'sale', 'shop', 'official', 'store', 'reviews',
-    'review', 'best', 'compare', 'comparison', 'online'
+    'buy',
+    'price',
+    'deal',
+    'sale',
+    'shop',
+    'official',
+    'store',
+    'reviews',
+    'review',
+    'best',
+    'compare',
+    'comparison',
+    'online',
   ]),
   de: new Set([
-    'kaufen', 'kauf', 'preis', 'angebote', 'angebot', 'guenstig', 'günstig',
-    'offiziell', 'bewertung', 'bewertungen', 'vergleich', 'deutschland', 'shop',
-    'modellnummer', 'alkalisch', 'alkalische', 'alkalisches', 'alkalischen',
-    'umkehrosmose', 'zertifiziert', 'zertifizierung', 'stufig', 'stufige',
-    'stufigen', 'stufen', 'tanklos', 'abfluss', 'durchfluss', 'schneller',
-    'untertisch', 'wasserfilter', 'wasserfiltersystem', 'garantie'
+    'kaufen',
+    'kauf',
+    'preis',
+    'angebote',
+    'angebot',
+    'guenstig',
+    'günstig',
+    'offiziell',
+    'bewertung',
+    'bewertungen',
+    'vergleich',
+    'deutschland',
+    'shop',
+    'modellnummer',
+    'alkalisch',
+    'alkalische',
+    'alkalisches',
+    'alkalischen',
+    'umkehrosmose',
+    'zertifiziert',
+    'zertifizierung',
+    'stufig',
+    'stufige',
+    'stufigen',
+    'stufen',
+    'tanklos',
+    'abfluss',
+    'durchfluss',
+    'schneller',
+    'untertisch',
+    'wasserfilter',
+    'wasserfiltersystem',
+    'garantie',
   ]),
   es: new Set([
-    'comprar', 'precio', 'oferta', 'ofertas', 'tienda', 'oficial', 'reseñas',
-    'resenas', 'comparar'
+    'comprar',
+    'precio',
+    'oferta',
+    'ofertas',
+    'tienda',
+    'oficial',
+    'reseñas',
+    'resenas',
+    'comparar',
   ]),
   fr: new Set([
-    'acheter', 'prix', 'offre', 'offres', 'boutique', 'officiel', 'avis',
-    'comparaison'
+    'acheter',
+    'prix',
+    'offre',
+    'offres',
+    'boutique',
+    'officiel',
+    'avis',
+    'comparaison',
   ]),
   it: new Set([
-    'comprare', 'prezzo', 'offerta', 'offerte', 'negozio', 'ufficiale',
-    'recensioni', 'confronto', 'acquista', 'garanzia', 'supporto', 'ordina'
+    'comprare',
+    'prezzo',
+    'offerta',
+    'offerte',
+    'negozio',
+    'ufficiale',
+    'recensioni',
+    'confronto',
+    'acquista',
+    'garanzia',
+    'supporto',
+    'ordina',
   ]),
   pt: new Set([
-    'comprar', 'preco', 'oferta', 'ofertas', 'loja', 'oficial', 'avaliacoes',
-    'avaliações', 'comparacao', 'comparação'
+    'comprar',
+    'preco',
+    'oferta',
+    'ofertas',
+    'loja',
+    'oficial',
+    'avaliacoes',
+    'avaliações',
+    'comparacao',
+    'comparação',
   ]),
   tr: new Set([
-    'satın', 'satin', 'fiyat', 'indirim', 'magaza', 'mağaza', 'resmi',
-    'yorum', 'karsilastir', 'karşılaştır'
+    'satın',
+    'satin',
+    'fiyat',
+    'indirim',
+    'magaza',
+    'mağaza',
+    'resmi',
+    'yorum',
+    'karsilastir',
+    'karşılaştır',
   ]),
   pl: new Set([
-    'kupic', 'kupić', 'cena', 'oferta', 'oferty', 'sklep', 'oficjalny',
-    'opinie', 'porownanie', 'porównanie'
+    'kupic',
+    'kupić',
+    'cena',
+    'oferta',
+    'oferty',
+    'sklep',
+    'oficjalny',
+    'opinie',
+    'porownanie',
+    'porównanie',
   ]),
   ru_latn: new Set([
-    'kupit', 'tsena', 'cena', 'otzyv', 'otzyvy', 'dostavka', 'ventilyator',
-    'napolnyy', 'nastolnyy'
+    'kupit',
+    'tsena',
+    'cena',
+    'otzyv',
+    'otzyvy',
+    'dostavka',
+    'ventilyator',
+    'napolnyy',
+    'nastolnyy',
   ]),
 }
 
 const LANGUAGE_SUPPORT_TOKENS = new Set([
-  'a', 'an', 'and', 'the', 'or', 'to', 'for', 'from', 'of', 'on', 'in', 'at', 'by', 'with', 'without',
-  'per', 'con', 'da', 'di', 'del', 'della', 'dei', 'degli', 'delle', 'il', 'lo', 'la', 'gli', 'le',
-  'de', 'des', 'du', 'et', 'pour', 'sur', 'par', 'mit', 'und', 'fur', 'für', 'zum', 'zur', 'von',
-  'y', 'e', 'para', 'por', 'en', 'el', 'los', 'las', 'una', 'uno', 'un'
+  'a',
+  'an',
+  'and',
+  'the',
+  'or',
+  'to',
+  'for',
+  'from',
+  'of',
+  'on',
+  'in',
+  'at',
+  'by',
+  'with',
+  'without',
+  'per',
+  'con',
+  'da',
+  'di',
+  'del',
+  'della',
+  'dei',
+  'degli',
+  'delle',
+  'il',
+  'lo',
+  'la',
+  'gli',
+  'le',
+  'de',
+  'des',
+  'du',
+  'et',
+  'pour',
+  'sur',
+  'par',
+  'mit',
+  'und',
+  'fur',
+  'für',
+  'zum',
+  'zur',
+  'von',
+  'y',
+  'e',
+  'para',
+  'por',
+  'en',
+  'el',
+  'los',
+  'las',
+  'una',
+  'uno',
+  'un',
 ])
 
 const LANGUAGE_NEUTRAL_UNIT_TOKENS = new Set([
-  'v', 'w', 'kw', 'wh', 'kwh', 'mah', 'ah', 'gb', 'tb', 'mb', 'hz', 'khz', 'mhz', 'ghz',
-  'mm', 'cm', 'm', 'km', 'in', 'inch', 'inches', 'ft', 'oz', 'lb', 'lbs', 'kg', 'g', 'mg',
-  'ml', 'l', 'qt', 'pack', 'packs', 'ct', 'pcs', 'pc', 'piece', 'pieces', 'set', 'sets', 'xl'
+  'v',
+  'w',
+  'kw',
+  'wh',
+  'kwh',
+  'mah',
+  'ah',
+  'gb',
+  'tb',
+  'mb',
+  'hz',
+  'khz',
+  'mhz',
+  'ghz',
+  'mm',
+  'cm',
+  'm',
+  'km',
+  'in',
+  'inch',
+  'inches',
+  'ft',
+  'oz',
+  'lb',
+  'lbs',
+  'kg',
+  'g',
+  'mg',
+  'ml',
+  'l',
+  'qt',
+  'pack',
+  'packs',
+  'ct',
+  'pcs',
+  'pc',
+  'piece',
+  'pieces',
+  'set',
+  'sets',
+  'xl',
 ])
 
 export interface KeywordLanguageCompatibility {
@@ -99,10 +294,12 @@ export interface KeywordLanguageCompatibility {
 }
 
 function normalizeTargetLanguageCode(targetLanguage?: string): string {
-  return normalizeLanguageCode(targetLanguage || 'en')
-    .trim()
-    .toLowerCase()
-    .split('-')[0] || ''
+  return (
+    normalizeLanguageCode(targetLanguage || 'en')
+      .trim()
+      .toLowerCase()
+      .split('-')[0] || ''
+  )
 }
 
 function resolveAllowedScriptFamilies(targetLanguage?: string): Set<ScriptFamily> {
@@ -143,12 +340,13 @@ function getAllowedLanguageHintsForTarget(targetLanguage: string): Set<string> {
   return new Set<string>([code])
 }
 
-
 function normalizeLanguageHintCode(code: string): string {
-  return String(code || '')
-    .trim()
-    .toLowerCase()
-    .split('_')[0] || ''
+  return (
+    String(code || '')
+      .trim()
+      .toLowerCase()
+      .split('_')[0] || ''
+  )
 }
 
 function tokenizeKeywordLanguageUnits(keyword: string): string[] {
@@ -206,7 +404,11 @@ function detectLatinLanguageHintsForToken(token: string): Set<string> {
   if (/[ãõ]/u.test(normalized)) hints.add('pt')
   if (/[ığş]/u.test(normalized)) hints.add('tr')
   if (/[ąćęłńóśźż]/u.test(normalized)) hints.add('pl')
-  if (/(?:lich|liche|lichen|licher|liches|isch|ische|ischen|ischer|isches|keit|heit|ungen|ung|fluss|frei|los)$/u.test(normalized)) {
+  if (
+    /(?:lich|liche|lichen|licher|liches|isch|ische|ischen|ischer|isches|keit|heit|ungen|ung|fluss|frei|los)$/u.test(
+      normalized
+    )
+  ) {
     hints.add('de')
   }
 
@@ -214,9 +416,7 @@ function detectLatinLanguageHintsForToken(token: string): Set<string> {
 }
 
 function normalizeLexicalAnchorToken(value: string): string {
-  return normalizeGoogleAdsKeyword(value)
-    ?.replace(/\s+/g, ' ')
-    .trim() || ''
+  return normalizeGoogleAdsKeyword(value)?.replace(/\s+/g, ' ').trim() || ''
 }
 
 function isLexicalAnchorToken(value: string): boolean {
@@ -245,9 +445,10 @@ export function buildKeywordIntegrityAnchors(params: {
     }
   }
 
-  const productTokens = normalizeGoogleAdsKeyword(params.productName || '')
-    ?.split(/\s+/)
-    .filter(Boolean) || []
+  const productTokens =
+    normalizeGoogleAdsKeyword(params.productName || '')
+      ?.split(/\s+/)
+      .filter(Boolean) || []
 
   for (const token of productTokens) {
     const normalized = normalizeLexicalAnchorToken(token)
@@ -279,9 +480,7 @@ export function getSplitAnchorDistortionReason(params: {
   if (keywordTokens.length < 2) return null
 
   const anchors = new Set(
-    (params.anchorTerms || [])
-      .map(normalizeLexicalAnchorToken)
-      .filter(isLexicalAnchorToken)
+    (params.anchorTerms || []).map(normalizeLexicalAnchorToken).filter(isLexicalAnchorToken)
   )
   if (anchors.size === 0) return null
 
@@ -332,14 +531,20 @@ export function analyzeKeywordLanguageCompatibility(params: {
   const allowedFamilies = resolveAllowedScriptFamilies(targetLanguage)
   const scriptFamilies = detectKeywordScriptFamilies(keyword)
   if (scriptFamilies.size > 0) {
-    if (allowedFamilies.size === 1 && allowedFamilies.has('latin') && hasAnyNonLatinFamily(scriptFamilies)) {
+    if (
+      allowedFamilies.size === 1 &&
+      allowedFamilies.has('latin') &&
+      hasAnyNonLatinFamily(scriptFamilies)
+    ) {
       return {
         ...emptyResult,
         hardReject: true,
       }
     }
 
-    const disallowedFamilies = Array.from(scriptFamilies).filter((family) => !allowedFamilies.has(family))
+    const disallowedFamilies = Array.from(scriptFamilies).filter(
+      (family) => !allowedFamilies.has(family)
+    )
     if (disallowedFamilies.length > 0) {
       return {
         ...emptyResult,
@@ -348,9 +553,12 @@ export function analyzeKeywordLanguageCompatibility(params: {
     }
 
     if (
-      (targetLang === 'ar' || targetLang === 'he' || targetLang === 'th' || CYRILLIC_LANGUAGE_CODES.has(targetLang))
-      && hasOnlyLatinLetters(scriptFamilies)
-      && !containsPureBrand(keyword, pureBrandKeywords)
+      (targetLang === 'ar' ||
+        targetLang === 'he' ||
+        targetLang === 'th' ||
+        CYRILLIC_LANGUAGE_CODES.has(targetLang)) &&
+      hasOnlyLatinLetters(scriptFamilies) &&
+      !containsPureBrand(keyword, pureBrandKeywords)
     ) {
       return {
         ...emptyResult,
@@ -379,7 +587,9 @@ export function analyzeKeywordLanguageCompatibility(params: {
     }
 
     if (tokenHints.size === 0) continue
-    const authorized = Array.from(tokenHints).some((hint) => allowedHints.has(normalizeLanguageHintCode(hint)))
+    const authorized = Array.from(tokenHints).some((hint) =>
+      allowedHints.has(normalizeLanguageHintCode(hint))
+    )
     if (!authorized) unauthorizedTokens.push(token)
   }
 
@@ -392,11 +602,9 @@ export function analyzeKeywordLanguageCompatibility(params: {
 
   const unauthorizedContentRatio = unauthorizedTokens.length / Math.max(1, contentTokens.length)
   const unauthorizedHeadToken = contentTokens.find((token) => unauthorizedTokens.includes(token))
-  const hardReject = unauthorizedTokens.length > 0
-    && (
-      unauthorizedContentRatio > 0.2
-      || unauthorizedHeadToken === contentTokens[0]
-    )
+  const hardReject =
+    unauthorizedTokens.length > 0 &&
+    (unauthorizedContentRatio > 0.2 || unauthorizedHeadToken === contentTokens[0])
 
   return {
     hardReject,

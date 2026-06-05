@@ -48,15 +48,13 @@ export const HTTP_REDIRECT_DOMAINS = [
 
   // YeahPromos (需要验证 - to be verified)
   'yeahpromos.com',
-];
+]
 
 /**
  * Meta Refresh重定向域名
  * These domains use HTTP meta refresh headers (can be parsed from HTTP response)
  */
-export const META_REFRESH_DOMAINS = [
-  'yeahpromos.com',
-];
+export const META_REFRESH_DOMAINS = ['yeahpromos.com']
 
 /**
  * JavaScript重定向域名黑名单
@@ -78,18 +76,18 @@ export const JS_REDIRECT_DOMAINS = [
   'instagram.com',
   'fb.me',
   'youtube.com',
-];
+]
 
 /**
  * Extract domain from URL
  */
 export function extractDomain(url: string): string {
   try {
-    const urlObj = new URL(url);
-    return urlObj.hostname.replace(/^www\./, '');
+    const urlObj = new URL(url)
+    return urlObj.hostname.replace(/^www\./, '')
   } catch (_error) {
-    console.error('Invalid URL for domain extraction:', url);
-    return '';
+    console.error('Invalid URL for domain extraction:', url)
+    return ''
   }
 }
 
@@ -97,30 +95,30 @@ export function extractDomain(url: string): string {
  * Check if domain requires JavaScript rendering
  */
 export function requiresJavaScript(url: string): boolean {
-  const domain = extractDomain(url);
-  return JS_REDIRECT_DOMAINS.some(jsDomain =>
-    domain === jsDomain || domain.endsWith(`.${jsDomain}`)
-  );
+  const domain = extractDomain(url)
+  return JS_REDIRECT_DOMAINS.some(
+    (jsDomain) => domain === jsDomain || domain.endsWith(`.${jsDomain}`)
+  )
 }
 
 /**
  * Check if domain is known to use HTTP redirects
  */
 export function usesHttpRedirect(url: string): boolean {
-  const domain = extractDomain(url);
-  return HTTP_REDIRECT_DOMAINS.some(httpDomain =>
-    domain === httpDomain || domain.endsWith(`.${httpDomain}`)
-  );
+  const domain = extractDomain(url)
+  return HTTP_REDIRECT_DOMAINS.some(
+    (httpDomain) => domain === httpDomain || domain.endsWith(`.${httpDomain}`)
+  )
 }
 
 /**
  * Check if domain uses meta refresh redirects
  */
 export function usesMetaRefresh(url: string): boolean {
-  const domain = extractDomain(url);
-  return META_REFRESH_DOMAINS.some(metaDomain =>
-    domain === metaDomain || domain.endsWith(`.${metaDomain}`)
-  );
+  const domain = extractDomain(url)
+  return META_REFRESH_DOMAINS.some(
+    (metaDomain) => domain === metaDomain || domain.endsWith(`.${metaDomain}`)
+  )
 }
 
 /**
@@ -130,14 +128,14 @@ export function usesMetaRefresh(url: string): boolean {
 export function getOptimalResolver(url: string): 'http' | 'playwright' | 'http-with-fallback' {
   // JavaScript domains → Direct to Playwright
   if (requiresJavaScript(url)) {
-    return 'playwright';
+    return 'playwright'
   }
 
   // Known HTTP redirect domains (including meta refresh) → Direct to HTTP
   if (usesHttpRedirect(url) || usesMetaRefresh(url)) {
-    return 'http';
+    return 'http'
   }
 
   // Unknown domain → Try HTTP first, fallback to Playwright if needed
-  return 'http-with-fallback';
+  return 'http-with-fallback'
 }

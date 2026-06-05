@@ -17,7 +17,9 @@ export type BackgroundWorkerHeartbeatPayload = {
   env: string
 }
 
-export async function setBackgroundWorkerHeartbeat(payload: BackgroundWorkerHeartbeatPayload): Promise<boolean> {
+export async function setBackgroundWorkerHeartbeat(
+  payload: BackgroundWorkerHeartbeatPayload
+): Promise<boolean> {
   const client = getRedisClient()
   if (!client) return false
 

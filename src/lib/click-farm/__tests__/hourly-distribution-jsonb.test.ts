@@ -7,7 +7,9 @@ vi.mock('../../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-function buildHourlyBreakdown(actualAtHour0: number): Array<{ target: number; actual: number; success: number; failed: number }> {
+function buildHourlyBreakdown(
+  actualAtHour0: number
+): Array<{ target: number; actual: number; success: number; failed: number }> {
   return Array.from({ length: 24 }, (_, hour) => ({
     target: 0,
     actual: hour === 0 ? actualAtHour0 : 0,

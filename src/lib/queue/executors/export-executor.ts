@@ -23,7 +23,7 @@ export interface ExportTaskData {
   exportType: 'offers' | 'campaigns' | 'settings'
   format: 'json' | 'csv'
   userId: number
-  includeSensitive?: boolean  // 仅用于settings导出
+  includeSensitive?: boolean // 仅用于settings导出
   filters?: Record<string, any>
 }
 
@@ -37,7 +37,7 @@ export interface ExportTaskResult {
   recordCount: number
   fileSize?: number
   errorMessage?: string
-  duration: number  // 导出耗时（毫秒）
+  duration: number // 导出耗时（毫秒）
 }
 
 /**
@@ -55,7 +55,7 @@ function exportToCSV(data: any[], headers: string[]): string {
 
   const csvLines = [
     headers.join(','),
-    ...data.map(item => headers.map(h => escapeCSV(item[h])).join(','))
+    ...data.map((item) => headers.map((h) => escapeCSV(item[h])).join(',')),
   ]
 
   return csvLines.join('\n')
@@ -64,10 +64,14 @@ function exportToCSV(data: any[], headers: string[]): string {
 /**
  * 导出Offers数据
  */
-async function exportOffers(userId: number, _format: 'json' | 'csv'): Promise<{ data: any, count: number }> {
+async function exportOffers(
+  userId: number,
+  _format: 'json' | 'csv'
+): Promise<{ data: any; count: number }> {
   const db = await getDatabase()
 
-  const offers = await db.query(`
+  const offers = (await db.query(
+    `
     SELECT
       id,
       product_name,
@@ -90,7 +94,9 @@ async function exportOffers(userId: number, _format: 'json' | 'csv'): Promise<{ 
     FROM offers
     WHERE user_id = ?
     ORDER BY created_at DESC
-  `, [userId]) as any[]
+  `,
+    [userId]
+  )) as any[]
 
   return { data: offers, count: offers.length }
 }
@@ -98,10 +104,14 @@ async function exportOffers(userId: number, _format: 'json' | 'csv'): Promise<{ 
 /**
  * 导出Campaigns数据
  */
-async function exportCampaigns(userId: number, _format: 'json' | 'csv'): Promise<{ data: any, count: number }> {
+async function exportCampaigns(
+  userId: number,
+  _format: 'json' | 'csv'
+): Promise<{ data: any; count: number }> {
   const db = await getDatabase()
 
-  const campaigns = await db.query(`
+  const campaigns = (await db.query(
+    `
     SELECT
       c.id,
       c.google_campaign_id,
@@ -124,7 +134,9 @@ async function exportCampaigns(userId: number, _format: 'json' | 'csv'): Promise
     LEFT JOIN google_ads_accounts ga ON c.google_ads_account_id = ga.id
     WHERE c.user_id = ?
     ORDER BY c.created_at DESC
-  `, [userId]) as any[]
+  `,
+    [userId]
+  )) as any[]
 
   return { data: campaigns, count: campaigns.length }
 }
@@ -132,10 +144,15 @@ async function exportCampaigns(userId: number, _format: 'json' | 'csv'): Promise
 /**
  * 导出Settings数据
  */
-async function exportSettings(userId: number, format: 'json' | 'csv', includeSensitive: boolean): Promise<{ data: any, count: number }> {
+async function exportSettings(
+  userId: number,
+  format: 'json' | 'csv',
+  includeSensitive: boolean
+): Promise<{ data: any; count: number }> {
   const db = await getDatabase()
 
-  const settings = await db.query(`
+  const settings = (await db.query(
+    `
     SELECT
       category,
       config_key,
@@ -148,7 +165,9 @@ async function exportSettings(userId: number, format: 'json' | 'csv', includeSen
     FROM system_settings
     WHERE user_id IS NULL OR user_id = ?
     ORDER BY category, config_key
-  `, [userId]) as any[]
+  `,
+    [userId]
+  )) as any[]
 
   // 去重：对于同一个 (category, config_key) 组合，优先使用用户配置
   const settingsMap = new Map<string, any>()
@@ -221,12 +240,14 @@ export function createExportExecutor(): TaskExecutor<ExportTaskData, ExportTaskR
   return async (task: Task<ExportTaskData>) => {
     const { exportType, format, userId, includeSensitive = false } = task.data
 
-    console.log(`📊 [ExportExecutor] 开始导出任务: 类型=${exportType}, 格式=${format}, 用户=${userId}`)
+    console.log(
+      `📊 [ExportExecutor] 开始导出任务: 类型=${exportType}, 格式=${format}, 用户=${userId}`
+    )
 
     const startTime = Date.now()
 
     try {
-      let result: { data: any, count: number }
+      let result: { data: any; count: number }
       let headers: string[] = []
 
       // 根据导出类型执行不同的查询
@@ -234,22 +255,46 @@ export function createExportExecutor(): TaskExecutor<ExportTaskData, ExportTaskR
         case 'offers':
           result = await exportOffers(userId, format)
           headers = [
-            'id', 'product_name', 'product_url', 'affiliate_link',
-            'brand', 'target_country', 'target_language', 'offer_type',
-            'payout', 'cpc_estimate', 'product_price', 'commission_payout',
-            'description', 'keywords', 'is_active', 'scrape_status',
-            'created_at', 'updated_at'
+            'id',
+            'product_name',
+            'product_url',
+            'affiliate_link',
+            'brand',
+            'target_country',
+            'target_language',
+            'offer_type',
+            'payout',
+            'cpc_estimate',
+            'product_price',
+            'commission_payout',
+            'description',
+            'keywords',
+            'is_active',
+            'scrape_status',
+            'created_at',
+            'updated_at',
           ]
           break
 
         case 'campaigns':
           result = await exportCampaigns(userId, format)
           headers = [
-            'id', 'google_campaign_id', 'campaign_name', 'campaign_type',
-            'status', 'daily_budget', 'start_date', 'end_date',
-            'target_locations', 'target_languages', 'bidding_strategy',
-            'offer_name', 'offer_url', 'google_ads_account_id',
-            'created_at', 'updated_at'
+            'id',
+            'google_campaign_id',
+            'campaign_name',
+            'campaign_type',
+            'status',
+            'daily_budget',
+            'start_date',
+            'end_date',
+            'target_locations',
+            'target_languages',
+            'bidding_strategy',
+            'offer_name',
+            'offer_url',
+            'google_ads_account_id',
+            'created_at',
+            'updated_at',
           ]
           break
 
@@ -276,7 +321,9 @@ export function createExportExecutor(): TaskExecutor<ExportTaskData, ExportTaskR
       const fileSize = Buffer.byteLength(exportContent, 'utf8')
       const duration = Date.now() - startTime
 
-      console.log(`✅ [ExportExecutor] 导出任务完成: ${filename}, 记录数=${result.count}, 文件大小=${(fileSize / 1024 / 1024).toFixed(2)}MB, 耗时=${duration}ms`)
+      console.log(
+        `✅ [ExportExecutor] 导出任务完成: ${filename}, 记录数=${result.count}, 文件大小=${(fileSize / 1024 / 1024).toFixed(2)}MB, 耗时=${duration}ms`
+      )
 
       return {
         success: true,
@@ -284,7 +331,7 @@ export function createExportExecutor(): TaskExecutor<ExportTaskData, ExportTaskR
         format,
         recordCount: result.count,
         fileSize,
-        duration
+        duration,
       }
     } catch (error: any) {
       const duration = Date.now() - startTime
@@ -296,7 +343,7 @@ export function createExportExecutor(): TaskExecutor<ExportTaskData, ExportTaskR
         format,
         recordCount: 0,
         errorMessage: error.message,
-        duration
+        duration,
       }
     }
   }

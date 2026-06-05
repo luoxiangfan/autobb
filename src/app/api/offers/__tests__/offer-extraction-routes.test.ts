@@ -41,8 +41,10 @@ vi.mock('@/lib/offer-extraction-task', async (importOriginal) => {
   return {
     ...actual,
     createOfferExtractionTaskForNewOffer: extractionFns.createOfferExtractionTaskForNewOffer,
-    enqueueExistingOfferExtractionAndMarkQueued: extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
-    assertOfferAvailableForExtractionEnqueue: extractionFns.assertOfferAvailableForExtractionEnqueue,
+    enqueueExistingOfferExtractionAndMarkQueued:
+      extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
+    assertOfferAvailableForExtractionEnqueue:
+      extractionFns.assertOfferAvailableForExtractionEnqueue,
   }
 })
 

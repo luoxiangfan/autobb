@@ -6,16 +6,23 @@ describe('RedisQueueAdapter performance-critical methods', () => {
   it('getStats uses HSCAN to avoid per-task HGET', async () => {
     const adapter = new RedisQueueAdapter('redis://example.invalid')
 
-    const hscan = vi.fn().mockResolvedValue([
-      '0',
-      [
-        '1', JSON.stringify({ id: '1', type: 'ad-creative', status: 'pending', userId: 1 }),
-        '2', JSON.stringify({ id: '2', type: 'ad-creative', status: 'running', userId: 1 }),
-        '3', JSON.stringify({ id: '3', type: 'ad-creative', status: 'completed', userId: 2 }),
-        '4', 'not-json',
-        '5', JSON.stringify({ id: '4', type: 'ad-creative', status: 'failed', userId: 0 }),
-      ],
-    ])
+    const hscan = vi
+      .fn()
+      .mockResolvedValue([
+        '0',
+        [
+          '1',
+          JSON.stringify({ id: '1', type: 'ad-creative', status: 'pending', userId: 1 }),
+          '2',
+          JSON.stringify({ id: '2', type: 'ad-creative', status: 'running', userId: 1 }),
+          '3',
+          JSON.stringify({ id: '3', type: 'ad-creative', status: 'completed', userId: 2 }),
+          '4',
+          'not-json',
+          '5',
+          JSON.stringify({ id: '4', type: 'ad-creative', status: 'failed', userId: 0 }),
+        ],
+      ])
 
     ;(adapter as any).client = {
       hscan,
@@ -42,10 +49,12 @@ describe('RedisQueueAdapter performance-critical methods', () => {
     const adapter = new RedisQueueAdapter('redis://example.invalid')
 
     const smembers = vi.fn().mockResolvedValue(['1', '2'])
-    const hmget = vi.fn().mockResolvedValue([
-      JSON.stringify({ id: '1', type: 'ad-creative', status: 'running', userId: 1 }),
-      JSON.stringify({ id: '2', type: 'ad-creative', status: 'running', userId: 2 }),
-    ])
+    const hmget = vi
+      .fn()
+      .mockResolvedValue([
+        JSON.stringify({ id: '1', type: 'ad-creative', status: 'running', userId: 1 }),
+        JSON.stringify({ id: '2', type: 'ad-creative', status: 'running', userId: 2 }),
+      ])
 
     ;(adapter as any).client = {
       smembers,

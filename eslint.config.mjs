@@ -1,6 +1,7 @@
-import { defineConfig, globalIgnores } from 'eslint/config';
-import nextCoreWebVitals from 'eslint-config-next/core-web-vitals';
-import unusedImports from 'eslint-plugin-unused-imports';
+import { defineConfig, globalIgnores } from 'eslint/config'
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
+import prettier from 'eslint-config-prettier/flat'
+import unusedImports from 'eslint-plugin-unused-imports'
 
 const eslintConfig = defineConfig([
   ...nextCoreWebVitals,
@@ -45,6 +46,7 @@ const eslintConfig = defineConfig([
     'openclaw-prebuilt/**',
     'node_modules/**',
   ]),
-]);
+  prettier,
+])
 
-export default eslintConfig;
+export default eslintConfig

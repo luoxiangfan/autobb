@@ -10,7 +10,10 @@ import {
   hasPublishCampaignConfigOwnershipViolation,
 } from '@/lib/campaign-publish/aligned-campaign-config'
 import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
-import { inferNegativeKeywordMatchType, normalizeMatchType } from '@/lib/campaign-publish/negative-keyword-match-type'
+import {
+  inferNegativeKeywordMatchType,
+  normalizeMatchType,
+} from '@/lib/campaign-publish/negative-keyword-match-type'
 import { normalizeCampaignPublishCampaignConfig } from '@/lib/autoads-request-normalizers'
 import { parseCommissionPayoutValue } from '@/lib/offer-monetization'
 import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
@@ -25,7 +28,10 @@ type OpenclawExecutorDb = Awaited<ReturnType<typeof getDatabase>>
 
 const MAX_BODY_LENGTH = 20000
 const OPENCLAW_COMMAND_UPSTREAM_TIMEOUT_MS = (() => {
-  const parsed = Number.parseInt(String(process.env.OPENCLAW_COMMAND_UPSTREAM_TIMEOUT_MS || '').trim(), 10)
+  const parsed = Number.parseInt(
+    String(process.env.OPENCLAW_COMMAND_UPSTREAM_TIMEOUT_MS || '').trim(),
+    10
+  )
   if (!Number.isFinite(parsed) || parsed <= 0) return 120000
   return parsed
 })()
@@ -40,7 +46,9 @@ class OpenclawCommandValidationError extends Error {
   response: Record<string, any>
 
   constructor(status: number, response: Record<string, any>) {
-    super(typeof response?.error === 'string' ? response.error : 'OpenClaw command validation failed')
+    super(
+      typeof response?.error === 'string' ? response.error : 'OpenClaw command validation failed'
+    )
     this.name = 'OpenclawCommandValidationError'
     this.status = status
     this.response = response
@@ -136,7 +144,7 @@ function normalizeOfferTargetCountryPayload(params: {
 
   const normalizedTargetCountry = pickFirstTwoLetterCountryCode(
     payload.target_country,
-    payload.targetCountry,
+    payload.targetCountry
   )
 
   if (isOfferExtractPath(params.path)) {
@@ -195,8 +203,7 @@ function normalizeUrlForComparison(value: unknown): string | null {
     const protocol = parsed.protocol.toLowerCase()
     const hostname = parsed.hostname.toLowerCase()
     const pathname = (parsed.pathname || '/').replace(/\/+$/, '') || '/'
-    const sortedQuery = Array
-      .from(parsed.searchParams.entries())
+    const sortedQuery = Array.from(parsed.searchParams.entries())
       .map(([key, item]) => [String(key).trim().toLowerCase(), String(item).trim()] as const)
       .filter(([key, item]) => key.length > 0 && item.length > 0)
       .sort((a, b) => {
@@ -232,8 +239,9 @@ function extractCaseInsensitiveQueryParam(rawValue: unknown, keyName: string): s
   for (const candidate of candidates) {
     try {
       const parsed = new URL(candidate)
-      const key = Array.from(parsed.searchParams.keys())
-        .find((item) => item.toLowerCase() === normalizedKeyName)
+      const key = Array.from(parsed.searchParams.keys()).find(
+        (item) => item.toLowerCase() === normalizedKeyName
+      )
       if (key) {
         const matched = toTrimmedString(parsed.searchParams.get(key))
         if (matched) return matched
@@ -276,7 +284,9 @@ function trimTrailingPunctuationFromUrl(value: string): string {
   return value.replace(/[),.;，。；]+$/g, '')
 }
 
-function extractOfferExtractMessageCommissionCandidates(messageText: string): OfferExtractMessageCommissionCandidate[] {
+function extractOfferExtractMessageCommissionCandidates(
+  messageText: string
+): OfferExtractMessageCommissionCandidate[] {
   if (!messageText) return []
 
   const lines = messageText
@@ -317,20 +327,21 @@ function pickOfferExtractMessageCommissionCandidate(params: {
   if (!targetAffiliateLink || params.candidates.length === 0) return null
 
   const targetNormalizedLink = normalizeUrlForComparison(targetAffiliateLink)
-  const exactMatches = params.candidates.filter((candidate) => (
-    candidate.normalizedAffiliateLink
-    && targetNormalizedLink
-    && candidate.normalizedAffiliateLink === targetNormalizedLink
-  ))
+  const exactMatches = params.candidates.filter(
+    (candidate) =>
+      candidate.normalizedAffiliateLink &&
+      targetNormalizedLink &&
+      candidate.normalizedAffiliateLink === targetNormalizedLink
+  )
   if (exactMatches.length > 0) {
     return exactMatches[0]
   }
 
   const targetYeahPromosPid = extractYeahPromosPidFromLink(targetAffiliateLink)
   if (targetYeahPromosPid) {
-    const pidMatches = params.candidates.filter((candidate) => (
-      extractYeahPromosPidFromLink(candidate.affiliateLink) === targetYeahPromosPid
-    ))
+    const pidMatches = params.candidates.filter(
+      (candidate) => extractYeahPromosPidFromLink(candidate.affiliateLink) === targetYeahPromosPid
+    )
     if (pidMatches.length > 0) {
       return pidMatches[0]
     }
@@ -338,9 +349,10 @@ function pickOfferExtractMessageCommissionCandidate(params: {
 
   const targetPartnerboostLinkId = extractPartnerboostLinkIdFromLink(targetAffiliateLink)
   if (targetPartnerboostLinkId) {
-    const partnerboostMatches = params.candidates.filter((candidate) => (
-      extractPartnerboostLinkIdFromLink(candidate.affiliateLink) === targetPartnerboostLinkId
-    ))
+    const partnerboostMatches = params.candidates.filter(
+      (candidate) =>
+        extractPartnerboostLinkIdFromLink(candidate.affiliateLink) === targetPartnerboostLinkId
+    )
     if (partnerboostMatches.length > 0) {
       return partnerboostMatches[0]
     }
@@ -348,12 +360,15 @@ function pickOfferExtractMessageCommissionCandidate(params: {
 
   const targetYeahPromosTrack = extractYeahPromosTrackFromLink(targetAffiliateLink)
   if (targetYeahPromosTrack) {
-    const trackMatches = params.candidates.filter((candidate) => (
-      extractYeahPromosTrackFromLink(candidate.affiliateLink) === targetYeahPromosTrack
-    ))
+    const trackMatches = params.candidates.filter(
+      (candidate) =>
+        extractYeahPromosTrackFromLink(candidate.affiliateLink) === targetYeahPromosTrack
+    )
     if (trackMatches.length === 0) return null
 
-    const dedupedRates = Array.from(new Set(trackMatches.map((candidate) => candidate.commissionRate)))
+    const dedupedRates = Array.from(
+      new Set(trackMatches.map((candidate) => candidate.commissionRate))
+    )
     if (dedupedRates.length === 1) {
       return trackMatches[0]
     }
@@ -487,7 +502,12 @@ function ensureStringArray(value: unknown): string[] {
       if (typeof item === 'string') return item.trim()
       if (item && typeof item === 'object') {
         const obj = item as Record<string, unknown>
-        const candidate = typeof obj.text === 'string' ? obj.text : (typeof obj.keyword === 'string' ? obj.keyword : '')
+        const candidate =
+          typeof obj.text === 'string'
+            ? obj.text
+            : typeof obj.keyword === 'string'
+              ? obj.keyword
+              : ''
         return candidate.trim()
       }
       return ''
@@ -512,7 +532,8 @@ function buildWebDefaultKeywords(params: {
 }): Array<Record<string, any>> {
   const candidateKeywordsWithVolume = parseJsonArray(params.keywordsWithVolume)
   const candidateKeywords = parseJsonArray(params.keywords)
-  const source = candidateKeywordsWithVolume.length > 0 ? candidateKeywordsWithVolume : candidateKeywords
+  const source =
+    candidateKeywordsWithVolume.length > 0 ? candidateKeywordsWithVolume : candidateKeywords
   if (source.length === 0) return []
 
   const validMatchTypes = new Set(['EXACT', 'PHRASE', 'BROAD', 'BROAD_MATCH_MODIFIER'])
@@ -530,7 +551,8 @@ function buildWebDefaultKeywords(params: {
       text = entry.trim()
     } else if (entry && typeof entry === 'object') {
       const obj = entry as Record<string, unknown>
-      const textCandidate = typeof obj.keyword === 'string' ? obj.keyword : (typeof obj.text === 'string' ? obj.text : '')
+      const textCandidate =
+        typeof obj.keyword === 'string' ? obj.keyword : typeof obj.text === 'string' ? obj.text : ''
       text = textCandidate.trim()
       matchType = typeof obj.matchType === 'string' ? obj.matchType.trim().toUpperCase() : ''
       searchVolume = obj.searchVolume
@@ -543,7 +565,11 @@ function buildWebDefaultKeywords(params: {
     if (dedupe.has(dedupeKey)) return
     dedupe.add(dedupeKey)
 
-    const normalizedMatchType = validMatchTypes.has(matchType) ? matchType : (index === 0 ? 'EXACT' : 'PHRASE')
+    const normalizedMatchType = validMatchTypes.has(matchType)
+      ? matchType
+      : index === 0
+        ? 'EXACT'
+        : 'PHRASE'
     const normalizedEntry: Record<string, any> = {
       text,
       matchType: normalizedMatchType,
@@ -591,9 +617,8 @@ function buildNormalizedNegativeKeywordMatchTypeMap(params: {
 
   const normalizedMap: Record<string, string> = {}
   params.keywords.forEach((keyword) => {
-    const candidate = sourceMap[keyword]
-      ?? sourceMap[keyword.toLowerCase()]
-      ?? sourceMap[keyword.toUpperCase()]
+    const candidate =
+      sourceMap[keyword] ?? sourceMap[keyword.toLowerCase()] ?? sourceMap[keyword.toUpperCase()]
     const normalized = normalizeMatchType(typeof candidate === 'string' ? candidate : null)
     normalizedMap[keyword] = normalized || inferNegativeKeywordMatchType(keyword)
   })
@@ -643,13 +668,16 @@ async function resolvePublishAccountCurrency(params: {
   userId: number
   rawAccountId: unknown
 }): Promise<string | null> {
-  const raw = String(params.rawAccountId ?? '').trim().replace(/\s+/g, '')
+  const raw = String(params.rawAccountId ?? '')
+    .trim()
+    .replace(/\s+/g, '')
   if (!raw) return null
 
   const accountId = toSafePositiveInt32(raw)
-  const notDeletedCondition = params.db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const notDeletedCondition =
+    params.db.type === 'postgres'
+      ? '(is_deleted = false OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
   if (accountId) {
     const byId = await params.db.queryOne<{ currency: string | null }>(
@@ -714,8 +742,11 @@ async function hydrateCampaignPublishRequestBody(params: {
   }
 
   const offerId = toPositiveInteger(normalizedBody.offerId ?? normalizedBody.offer_id)
-  const adCreativeId = toPositiveInteger(normalizedBody.adCreativeId ?? normalizedBody.ad_creative_id)
-  const rawGoogleAdsAccountId = normalizedBody.googleAdsAccountId ?? normalizedBody.google_ads_account_id
+  const adCreativeId = toPositiveInteger(
+    normalizedBody.adCreativeId ?? normalizedBody.ad_creative_id
+  )
+  const rawGoogleAdsAccountId =
+    normalizedBody.googleAdsAccountId ?? normalizedBody.google_ads_account_id
 
   const [offerContext, accountCurrency] = await Promise.all([
     resolvePublishOfferContext({
@@ -730,22 +761,23 @@ async function hydrateCampaignPublishRequestBody(params: {
     }),
   ])
 
-  const creative = (offerId && adCreativeId)
-    ? await params.db.queryOne<{
-        id: number
-        keywords: unknown
-        keywords_with_volume: unknown
-        negative_keywords: unknown
-        final_url: string | null
-        final_url_suffix: string | null
-      }>(
-        `SELECT id, keywords, keywords_with_volume, negative_keywords, final_url, final_url_suffix
+  const creative =
+    offerId && adCreativeId
+      ? await params.db.queryOne<{
+          id: number
+          keywords: unknown
+          keywords_with_volume: unknown
+          negative_keywords: unknown
+          final_url: string | null
+          final_url_suffix: string | null
+        }>(
+          `SELECT id, keywords, keywords_with_volume, negative_keywords, final_url, final_url_suffix
          FROM ad_creatives
          WHERE id = ? AND offer_id = ? AND user_id = ?
          LIMIT 1`,
-        [adCreativeId, offerId, params.userId]
-      )
-    : null
+          [adCreativeId, offerId, params.userId]
+        )
+      : null
 
   const ownershipCheck = evaluatePublishCampaignConfigOwnership({
     campaignConfig,
@@ -762,12 +794,18 @@ async function hydrateCampaignPublishRequestBody(params: {
   if (hasPublishCampaignConfigOwnershipViolation(ownershipCheck.violation)) {
     const violationHints: string[] = []
     if (ownershipCheck.violation.finalUrls) {
-      violationHints.push(`finalUrls input=${ownershipCheck.violation.inputFinalUrl || '-'} expected=${ownershipCheck.violation.expectedFinalUrl || '-'}`)
+      violationHints.push(
+        `finalUrls input=${ownershipCheck.violation.inputFinalUrl || '-'} expected=${ownershipCheck.violation.expectedFinalUrl || '-'}`
+      )
     }
     if (ownershipCheck.violation.finalUrlSuffix) {
-      violationHints.push(`finalUrlSuffix input=${ownershipCheck.violation.inputFinalUrlSuffix || '-'} expected=${ownershipCheck.violation.expectedFinalUrlSuffix || '-'}`)
+      violationHints.push(
+        `finalUrlSuffix input=${ownershipCheck.violation.inputFinalUrlSuffix || '-'} expected=${ownershipCheck.violation.expectedFinalUrlSuffix || '-'}`
+      )
     }
-    throw new Error(`[OpenClawCommand] campaign.publish URL字段归属校验失败: ${violationHints.join('; ')}`)
+    throw new Error(
+      `[OpenClawCommand] campaign.publish URL字段归属校验失败: ${violationHints.join('; ')}`
+    )
   }
 
   let hydratedCampaignConfig: Record<string, any> = {
@@ -816,7 +854,10 @@ async function hydrateCampaignPublishRequestBody(params: {
   })
   hydratedCampaignConfig = alignedCampaignConfig.campaignConfig
 
-  if (process.env.NODE_ENV !== 'test' && (alignedCampaignConfig.overridden.finalUrls || alignedCampaignConfig.overridden.finalUrlSuffix)) {
+  if (
+    process.env.NODE_ENV !== 'test' &&
+    (alignedCampaignConfig.overridden.finalUrls || alignedCampaignConfig.overridden.finalUrlSuffix)
+  ) {
     console.log(
       `[OpenClawCommand] campaign.publish URL字段按Web来源对齐: inputFinalUrl=${alignedCampaignConfig.overridden.inputFinalUrl || '-'} -> appliedFinalUrl=${alignedCampaignConfig.overridden.appliedFinalUrl || '-'}`
     )
@@ -856,7 +897,10 @@ async function hydrateCampaignPublishRequestBody(params: {
     configuredKeywords: hydratedCampaignConfig.keywords,
     configuredNegativeKeywords,
     fallbackKeywords: defaultKeywords.length > 0 ? defaultKeywords : effectiveCreative.keywords,
-    fallbackNegativeKeywords: defaultNegativeKeywords.length > 0 ? defaultNegativeKeywords : effectiveCreative.negativeKeywords,
+    fallbackNegativeKeywords:
+      defaultNegativeKeywords.length > 0
+        ? defaultNegativeKeywords
+        : effectiveCreative.negativeKeywords,
   })
 
   if (resolvedKeywordConfig.usedKeywordFallback) {
@@ -873,9 +917,9 @@ async function hydrateCampaignPublishRequestBody(params: {
     hydratedCampaignConfig.negativeKeywordMatchType = buildNormalizedNegativeKeywordMatchTypeMap({
       keywords: normalizedNegativeKeywords,
       currentMap:
-        hydratedCampaignConfig.negativeKeywordMatchType
-        ?? hydratedCampaignConfig.negativeKeywordsMatchType
-        ?? buildDefaultNegativeKeywordMatchTypeMap(normalizedNegativeKeywords),
+        hydratedCampaignConfig.negativeKeywordMatchType ??
+        hydratedCampaignConfig.negativeKeywordsMatchType ??
+        buildDefaultNegativeKeywordMatchTypeMap(normalizedNegativeKeywords),
     })
   }
 
@@ -902,10 +946,10 @@ async function hydrateCampaignPublishRequestBody(params: {
 
 function hasOfferExtractCommissionInput(payload: Record<string, unknown>): boolean {
   return Boolean(
-    toTrimmedString(payload.commission_payout ?? payload.commissionPayout)
-    || toTrimmedString(payload.commission_type ?? payload.commissionType)
-    || toTrimmedString(payload.commission_value ?? payload.commissionValue)
-    || toTrimmedString(payload.commission_currency ?? payload.commissionCurrency)
+    toTrimmedString(payload.commission_payout ?? payload.commissionPayout) ||
+    toTrimmedString(payload.commission_type ?? payload.commissionType) ||
+    toTrimmedString(payload.commission_value ?? payload.commissionValue) ||
+    toTrimmedString(payload.commission_currency ?? payload.commissionCurrency)
   )
 }
 
@@ -1011,7 +1055,9 @@ async function hydrateOfferExtractCommissionByMessageContext(params: {
   }
 
   if (incomingCommissionRate === null && !incomingIsAmountMode) {
-    const structuredType = toTrimmedString(payload.commission_type ?? payload.commissionType)?.toLowerCase()
+    const structuredType = toTrimmedString(
+      payload.commission_type ?? payload.commissionType
+    )?.toLowerCase()
     const structuredValue = toTrimmedString(payload.commission_value ?? payload.commissionValue)
     if (structuredType === 'percent' && structuredValue) {
       const parsedValue = Number(structuredValue)
@@ -1039,7 +1085,10 @@ async function hydrateOfferExtractCommissionByMessageContext(params: {
     return { body: params.body, hydrated: false }
   }
 
-  if (incomingCommissionRate !== null && Math.abs(incomingCommissionRate - matched.commissionRate) <= 0.05) {
+  if (
+    incomingCommissionRate !== null &&
+    Math.abs(incomingCommissionRate - matched.commissionRate) <= 0.05
+  ) {
     const harmonized = applyOfferExtractPercentCommissionShape({
       payload,
       commissionRate: matched.commissionRate,
@@ -1064,7 +1113,9 @@ async function hydrateOfferExtractCommissionByMessageContext(params: {
   if (process.env.NODE_ENV !== 'test') {
     const incomingLabel = incomingIsAmountMode
       ? `${commissionText}(amount)`
-      : incomingCommissionRate === null ? '-' : `${formatCompactNumber(incomingCommissionRate)}%`
+      : incomingCommissionRate === null
+        ? '-'
+        : `${formatCompactNumber(incomingCommissionRate)}%`
     console.warn(
       `[OpenClawCommand] 从飞书原始消息回填佣金比例: offer.extract ${affiliateLink} ${incomingLabel} -> ${formatCompactNumber(matched.commissionRate)}% (parentRequestId=${params.parentRequestId})`
     )
@@ -1101,9 +1152,15 @@ async function hydrateOfferUpdateCommissionByMessageContext(params: {
     return { body: params.body, hydrated: false }
   }
 
-  let offerMeta: { affiliate_link: string | null; target_country: string | null } | null | undefined = null
+  let offerMeta:
+    | { affiliate_link: string | null; target_country: string | null }
+    | null
+    | undefined = null
   try {
-    offerMeta = await params.db.queryOne<{ affiliate_link: string | null; target_country: string | null }>(
+    offerMeta = await params.db.queryOne<{
+      affiliate_link: string | null
+      target_country: string | null
+    }>(
       `
         SELECT affiliate_link, target_country
         FROM offers
@@ -1138,9 +1195,9 @@ async function hydrateOfferUpdateCommissionByMessageContext(params: {
   }
 
   const targetCountry =
-    toTrimmedString(payload.target_country ?? payload.targetCountry)
-    || toTrimmedString(offerMeta?.target_country)
-    || 'US'
+    toTrimmedString(payload.target_country ?? payload.targetCountry) ||
+    toTrimmedString(offerMeta?.target_country) ||
+    'US'
   const commissionText = toTrimmedString(payload.commission_payout ?? payload.commissionPayout)
   const hasAmbiguousBareCommissionText = isAmbiguousBareNumericCommissionText(commissionText)
 
@@ -1161,7 +1218,9 @@ async function hydrateOfferUpdateCommissionByMessageContext(params: {
   }
 
   if (incomingCommissionRate === null && !incomingIsAmountMode) {
-    const structuredType = toTrimmedString(payload.commission_type ?? payload.commissionType)?.toLowerCase()
+    const structuredType = toTrimmedString(
+      payload.commission_type ?? payload.commissionType
+    )?.toLowerCase()
     const structuredValue = toTrimmedString(payload.commission_value ?? payload.commissionValue)
     if (structuredType === 'percent' && structuredValue) {
       const parsedValue = Number(structuredValue)
@@ -1185,10 +1244,17 @@ async function hydrateOfferUpdateCommissionByMessageContext(params: {
     return { body: params.body, hydrated: false }
   }
 
-  if (process.env.NODE_ENV !== 'test' && (incomingCommissionRate === null || incomingIsAmountMode || Math.abs(incomingCommissionRate - matched.commissionRate) > 0.05)) {
+  if (
+    process.env.NODE_ENV !== 'test' &&
+    (incomingCommissionRate === null ||
+      incomingIsAmountMode ||
+      Math.abs(incomingCommissionRate - matched.commissionRate) > 0.05)
+  ) {
     const incomingLabel = incomingIsAmountMode
       ? `${commissionText}(amount)`
-      : incomingCommissionRate === null ? '-' : `${formatCompactNumber(incomingCommissionRate)}%`
+      : incomingCommissionRate === null
+        ? '-'
+        : `${formatCompactNumber(incomingCommissionRate)}%`
     console.warn(
       `[OpenClawCommand] 从飞书原始消息纠正佣金比例: offer.update offerId=${offerId} ${incomingLabel} -> ${formatCompactNumber(matched.commissionRate)}% (parentRequestId=${params.parentRequestId})`
     )
@@ -1214,9 +1280,10 @@ async function hasEnabledCampaignForOffer(params: {
   userId: number
   offerId: number
 }): Promise<boolean> {
-  const notDeletedCondition = params.db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const notDeletedCondition =
+    params.db.type === 'postgres'
+      ? '(is_deleted = false OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
   const row = await params.db.queryOne(
     `SELECT id
@@ -1323,8 +1390,12 @@ function extractUpdateBudgetCampaignId(path: string): string | null {
   return match?.[1] || null
 }
 
-function extractLocalCampaignRoutePath(path: string): { campaignId: string; suffix: '' | '/toggle-status' | '/offline' | '/sync' } | null {
-  const match = String(path || '').match(/^\/api\/campaigns\/(\d+)(?:\/(toggle-status|offline|sync))?$/)
+function extractLocalCampaignRoutePath(
+  path: string
+): { campaignId: string; suffix: '' | '/toggle-status' | '/offline' | '/sync' } | null {
+  const match = String(path || '').match(
+    /^\/api\/campaigns\/(\d+)(?:\/(toggle-status|offline|sync))?$/
+  )
   if (!match) return null
   const suffixRaw = match[2]
   if (!suffixRaw) return { campaignId: match[1], suffix: '' }
@@ -1449,9 +1520,10 @@ async function assertUpdateCpcRouteIdSemantic(params: {
 
   if (!localCampaign) return
 
-  const isRemoved = String(localCampaign.status || '').toUpperCase() === 'REMOVED'
-    || localCampaign.is_deleted === true
-    || localCampaign.is_deleted === 1
+  const isRemoved =
+    String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
+    localCampaign.is_deleted === true ||
+    localCampaign.is_deleted === 1
   if (isRemoved) {
     throw new OpenclawCommandValidationError(400, {
       error: '该广告系列已下线/删除，无法调整CPC',
@@ -1459,8 +1531,8 @@ async function assertUpdateCpcRouteIdSemantic(params: {
   }
 
   const expectedGoogleCampaignId =
-    normalizeGoogleCampaignId(localCampaign.google_campaign_id)
-    || normalizeGoogleCampaignId(localCampaign.campaign_id)
+    normalizeGoogleCampaignId(localCampaign.google_campaign_id) ||
+    normalizeGoogleCampaignId(localCampaign.campaign_id)
 
   if (!expectedGoogleCampaignId) {
     throw new OpenclawCommandValidationError(400, {
@@ -1527,9 +1599,10 @@ async function assertUpdateBudgetRouteIdSemantic(params: {
 
   if (!localCampaign) return
 
-  const isRemoved = String(localCampaign.status || '').toUpperCase() === 'REMOVED'
-    || localCampaign.is_deleted === true
-    || localCampaign.is_deleted === 1
+  const isRemoved =
+    String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
+    localCampaign.is_deleted === true ||
+    localCampaign.is_deleted === 1
   if (isRemoved) {
     throw new OpenclawCommandValidationError(400, {
       error: '该广告系列已下线/删除，无法调整预算',
@@ -1537,8 +1610,8 @@ async function assertUpdateBudgetRouteIdSemantic(params: {
   }
 
   const expectedGoogleCampaignId =
-    normalizeGoogleCampaignId(localCampaign.google_campaign_id)
-    || normalizeGoogleCampaignId(localCampaign.campaign_id)
+    normalizeGoogleCampaignId(localCampaign.google_campaign_id) ||
+    normalizeGoogleCampaignId(localCampaign.campaign_id)
 
   if (!expectedGoogleCampaignId) {
     throw new OpenclawCommandValidationError(400, {
@@ -1643,7 +1716,10 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
   const requestQuery = parseJsonObject(run.request_query_json)
   let requestBody = parseJsonAny(run.request_body_json)
   let requestBodyForAudit = requestBody === undefined ? null : JSON.stringify(requestBody)
-  let confirmStatus = (((run.confirm_required as any) === 1 || (run.confirm_required as any) === true) ? 'required' : 'not_required')
+  let confirmStatus =
+    (run.confirm_required as any) === 1 || (run.confirm_required as any) === true
+      ? 'required'
+      : 'not_required'
 
   const startedAt = Date.now()
   let responseStatus: number | null = null
@@ -1709,14 +1785,11 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
     requestBodyForAudit = requestBody === undefined ? null : JSON.stringify(requestBody)
 
     if (
-      (
-        targetCountryNormalized.normalized
-        ||
-        offerExtractByMessageHydrated.hydrated
-        || offerUpdateByMessageHydrated.hydrated
-        || publishHydrated.hydrated
-      )
-      && requestBodyForAudit !== run.request_body_json
+      (targetCountryNormalized.normalized ||
+        offerExtractByMessageHydrated.hydrated ||
+        offerUpdateByMessageHydrated.hydrated ||
+        publishHydrated.hydrated) &&
+      requestBodyForAudit !== run.request_body_json
     ) {
       await db.exec(
         `UPDATE openclaw_command_runs
@@ -1759,7 +1832,9 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
     await updateRunHeartbeat()
     heartbeatTimer = setInterval(() => {
       void updateRunHeartbeat().catch((heartbeatError: any) => {
-        console.warn(`⚠️ OpenClaw命令心跳更新失败: runId=${data.runId}: ${heartbeatError?.message || heartbeatError}`)
+        console.warn(
+          `⚠️ OpenClaw命令心跳更新失败: runId=${data.runId}: ${heartbeatError?.message || heartbeatError}`
+        )
       })
     }, OPENCLAW_COMMAND_HEARTBEAT_MS)
 

@@ -16,9 +16,19 @@ import { getPlaywrightPool } from '@/lib/playwright-pool'
 import { clearProxyCache } from '@/lib/proxy/fetch-proxy-ip'
 import { smartWaitForLoad } from '@/lib/smart-wait-strategy'
 import { isProxyConnectionError } from '@/lib/stealth-scraper/proxy-utils'
-import { createStealthBrowser, configureStealthPage, getDynamicTimeout, randomDelay, releaseBrowser } from '@/lib/stealth-scraper/browser-stealth'
+import {
+  createStealthBrowser,
+  configureStealthPage,
+  getDynamicTimeout,
+  randomDelay,
+  releaseBrowser,
+} from '@/lib/stealth-scraper/browser-stealth'
 import { scrapeUrl } from '@/lib/scraper'
-import { extractBrandServices, generateCalloutSuggestions, generateSitelinkSuggestions } from '@/lib/brand-services-extractor'
+import {
+  extractBrandServices,
+  generateCalloutSuggestions,
+  generateSitelinkSuggestions,
+} from '@/lib/brand-services-extractor'
 
 export interface SerpSitelink {
   text: string
@@ -137,7 +147,7 @@ export async function fetchBrandSearchSupplement(options: {
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         clearProxyCache(options.proxyApiUrl)
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
       browserResult = await createStealthBrowser(options.proxyApiUrl, options.targetCountry)
@@ -166,7 +176,11 @@ export async function fetchBrandSearchSupplement(options: {
       }
 
       // 简单反爬检测：出现验证码/异常流量提示时换代理重试（best-effort）
-      const maybeBlocked = await page.locator('text=/unusual traffic|not a robot|验证|captcha/i').first().count().catch(() => 0)
+      const maybeBlocked = await page
+        .locator('text=/unusual traffic|not a robot|验证|captcha/i')
+        .first()
+        .count()
+        .catch(() => 0)
       if (maybeBlocked) {
         const title = await page.title().catch(() => '(unknown title)')
         const msg = `Google SERP疑似触发反爬（unusual traffic / captcha），title="${title}"`
@@ -208,7 +222,12 @@ export async function fetchBrandSearchSupplement(options: {
             // - /aclk?adurl=https://...
             if (isGoogleHost(u.hostname)) {
               const path = u.pathname || ''
-              if (path === '/url' || path === '/aclk' || path === '/imgres' || path.includes('/pagead/aclk')) {
+              if (
+                path === '/url' ||
+                path === '/aclk' ||
+                path === '/imgres' ||
+                path.includes('/pagead/aclk')
+              ) {
                 const candidate =
                   u.searchParams.get('q') ||
                   u.searchParams.get('url') ||
@@ -226,7 +245,9 @@ export async function fetchBrandSearchSupplement(options: {
         }
 
         const organic: Array<{ url: string; title?: string; snippet?: string }> = []
-        const organicAnchors = Array.from(document.querySelectorAll('#search a[href]')) as HTMLAnchorElement[]
+        const organicAnchors = Array.from(
+          document.querySelectorAll('#search a[href]')
+        ) as HTMLAnchorElement[]
         for (const a of organicAnchors) {
           const h3 = a.querySelector('h3')
           if (!h3) continue
@@ -258,9 +279,14 @@ export async function fetchBrandSearchSupplement(options: {
         }
 
         const adContainersSet = new Set<HTMLElement>()
-        for (const el of Array.from(document.querySelectorAll('#tads .uEierd')) as HTMLElement[]) adContainersSet.add(el)
-        for (const el of Array.from(document.querySelectorAll('#tads [data-text-ad]')) as HTMLElement[]) adContainersSet.add(el)
-        for (const el of Array.from(document.querySelectorAll('[data-text-ad]')) as HTMLElement[]) adContainersSet.add(el)
+        for (const el of Array.from(document.querySelectorAll('#tads .uEierd')) as HTMLElement[])
+          adContainersSet.add(el)
+        for (const el of Array.from(
+          document.querySelectorAll('#tads [data-text-ad]')
+        ) as HTMLElement[])
+          adContainersSet.add(el)
+        for (const el of Array.from(document.querySelectorAll('[data-text-ad]')) as HTMLElement[])
+          adContainersSet.add(el)
         const adContainers = Array.from(adContainersSet)
 
         const ads = adContainers.slice(0, 8).map((container) => {
@@ -268,28 +294,37 @@ export async function fetchBrandSearchSupplement(options: {
           const rawText = container.innerText || ''
           const lines = rawText.split('\n').map(normalize).filter(Boolean)
 
-          const headlineEls = Array.from(container.querySelectorAll('a h3, a div[role="heading"], a span[role="heading"]'))
-          const headlines = headlineEls.map(el => normalize(el.textContent || '')).filter(Boolean).filter(h => h.length >= 3 && h.length <= 120)
+          const headlineEls = Array.from(
+            container.querySelectorAll('a h3, a div[role="heading"], a span[role="heading"]')
+          )
+          const headlines = headlineEls
+            .map((el) => normalize(el.textContent || ''))
+            .filter(Boolean)
+            .filter((h) => h.length >= 3 && h.length <= 120)
 
           const linkEls = Array.from(container.querySelectorAll('a[href]')) as HTMLAnchorElement[]
-          const landingUrl = linkEls
-            .map(a => unwrapGoogleRedirect(a.getAttribute('href') || a.href))
-            .find(u => !!u && /^https?:\/\//i.test(u) && !u.includes('google.com/')) || undefined
+          const landingUrl =
+            linkEls
+              .map((a) => unwrapGoogleRedirect(a.getAttribute('href') || a.href))
+              .find((u) => !!u && /^https?:\/\//i.test(u) && !u.includes('google.com/')) ||
+            undefined
 
-          const displayUrl = lines.find(l => /\b(www\.)?[\w-]+\.[a-z]{2,}\b/i.test(l) && l.length <= 80)
+          const displayUrl = lines.find(
+            (l) => /\b(www\.)?[\w-]+\.[a-z]{2,}\b/i.test(l) && l.length <= 80
+          )
 
           // descriptions：去掉headlines/展示URL后，保留较长行
-          const headlineSet = new Set(headlines.map(h => h.toLowerCase()))
+          const headlineSet = new Set(headlines.map((h) => h.toLowerCase()))
           const descriptions = lines
-            .filter(l => l.length >= 30 && l.length <= 180)
-            .filter(l => !headlineSet.has(l.toLowerCase()))
-            .filter(l => displayUrl ? l !== displayUrl : true)
+            .filter((l) => l.length >= 30 && l.length <= 180)
+            .filter((l) => !headlineSet.has(l.toLowerCase()))
+            .filter((l) => (displayUrl ? l !== displayUrl : true))
 
           // callouts：短句（<=25），排除“Sponsored/Ad”
           const callouts = lines
-            .filter(l => l.length >= 4 && l.length <= 25)
-            .filter(l => !/^(ad|ads|sponsored|赞助内容)$/i.test(l))
-            .filter(l => !headlineSet.has(l.toLowerCase()))
+            .filter((l) => l.length >= 4 && l.length <= 25)
+            .filter((l) => !/^(ad|ads|sponsored|赞助内容)$/i.test(l))
+            .filter((l) => !headlineSet.has(l.toLowerCase()))
 
           // sitelinks：短文本链接（<=25），尽量从a元素文本提取
           const sitelinks: Array<{ text: string; description?: string }> = []
@@ -329,8 +364,7 @@ export async function fetchBrandSearchSupplement(options: {
         if (proxyAttempt < maxProxyRetries) continue
       }
 
-      const normalizeBrandKey = (input: string) =>
-        input.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const normalizeBrandKey = (input: string) => input.toLowerCase().replace(/[^a-z0-9]/g, '')
 
       const isDisallowedHost = (hostname: string): boolean => {
         const h = (hostname || '').toLowerCase()
@@ -353,7 +387,10 @@ export async function fetchBrandSearchSupplement(options: {
         return false
       }
 
-      const scoreOfficialCandidate = (candidate: { url: string; title?: string; snippet?: string }, brand: string): number => {
+      const scoreOfficialCandidate = (
+        candidate: { url: string; title?: string; snippet?: string },
+        brand: string
+      ): number => {
         try {
           const u = new URL(candidate.url)
           const host = u.hostname.toLowerCase().replace(/^www\./i, '')
@@ -374,25 +411,26 @@ export async function fetchBrandSearchSupplement(options: {
         }
       }
 
-      const organicCandidates = Array.isArray((raw as any).organic) ? ((raw as any).organic as Array<{ url: string; title?: string; snippet?: string }>) : []
+      const organicCandidates = Array.isArray((raw as any).organic)
+        ? ((raw as any).organic as Array<{ url: string; title?: string; snippet?: string }>)
+        : []
       const adLandingCandidates = Array.isArray(raw.ads)
         ? raw.ads
             .map((a: any) => ({ url: a?.landingUrl, title: a?.displayUrl }))
             .filter((c: any) => typeof c?.url === 'string' && /^https?:\/\//i.test(c.url))
         : []
 
-      const allCandidates = [
-        ...organicCandidates,
-        ...adLandingCandidates,
-      ].filter(c => typeof c?.url === 'string')
+      const allCandidates = [...organicCandidates, ...adLandingCandidates].filter(
+        (c) => typeof c?.url === 'string'
+      )
 
       // Prefer brand-relevant, non-marketplace domains; fall back to the previous behavior.
       const bestCandidate = allCandidates
-        .map(c => ({ c, score: scoreOfficialCandidate(c as any, brandName) }))
+        .map((c) => ({ c, score: scoreOfficialCandidate(c as any, brandName) }))
         .sort((a, b) => b.score - a.score)[0]?.c as any | undefined
 
       const selectedOrganic = bestCandidate
-        ? organicCandidates.find(o => o.url === bestCandidate.url) || null
+        ? organicCandidates.find((o) => o.url === bestCandidate.url) || null
         : null
 
       // 🔥 额外抓取官网页面信息（best-effort）：补充meta title/description + 真实callout/sitelink建议
@@ -404,8 +442,12 @@ export async function fetchBrandSearchSupplement(options: {
       const officialUrlCandidate =
         bestCandidate?.url ||
         raw.officialSite?.url ||
-        (Array.isArray(raw.ads) ? raw.ads.find((a: any) => typeof a?.landingUrl === 'string' && a.landingUrl.trim())?.landingUrl : undefined)
-      const officialUrl = typeof officialUrlCandidate === 'string' ? officialUrlCandidate.trim() : undefined
+        (Array.isArray(raw.ads)
+          ? raw.ads.find((a: any) => typeof a?.landingUrl === 'string' && a.landingUrl.trim())
+              ?.landingUrl
+          : undefined)
+      const officialUrl =
+        typeof officialUrlCandidate === 'string' ? officialUrlCandidate.trim() : undefined
       if (!officialUrl) {
         errors.push('未能从Google SERP解析出官网链接')
       }
@@ -415,9 +457,13 @@ export async function fetchBrandSearchSupplement(options: {
           officialMetaTitle = pageData.title?.trim() || undefined
           officialMetaDescription = pageData.description?.trim() || undefined
 
-          const services = await extractBrandServices(officialUrl, options.targetCountry, options.proxyApiUrl)
+          const services = await extractBrandServices(
+            officialUrl,
+            options.targetCountry,
+            options.proxyApiUrl
+          )
           officialCallouts = generateCalloutSuggestions(services)
-          officialSitelinks = generateSitelinkSuggestions(services, query).map(s => ({
+          officialSitelinks = generateSitelinkSuggestions(services, query).map((s) => ({
             text: s.title,
             description: s.description,
           }))
@@ -438,13 +484,13 @@ export async function fetchBrandSearchSupplement(options: {
       const extractedHeadlines = uniqStrings([
         ...(officialMetaTitle ? [officialMetaTitle] : []),
         ...(raw.officialSite?.title ? [raw.officialSite.title] : []),
-        ...ads.flatMap(a => a.headlines),
+        ...ads.flatMap((a) => a.headlines),
       ]).slice(0, 30)
 
       const extractedDescriptions = uniqStrings([
         ...(officialMetaDescription ? [officialMetaDescription] : []),
         ...(raw.officialSite?.snippet ? [raw.officialSite.snippet] : []),
-        ...ads.flatMap(a => a.descriptions),
+        ...ads.flatMap((a) => a.descriptions),
       ]).slice(0, 20)
 
       if (extractedHeadlines.length === 0 && extractedDescriptions.length === 0) {
@@ -453,24 +499,26 @@ export async function fetchBrandSearchSupplement(options: {
 
       const extractedCallouts = uniqStrings([
         ...officialCallouts,
-        ...ads.flatMap(a => a.callouts),
+        ...ads.flatMap((a) => a.callouts),
       ]).slice(0, 20)
 
       const extractedSitelinks = uniqSitelinks([
         ...officialSitelinks,
-        ...ads.flatMap(a => a.sitelinks),
+        ...ads.flatMap((a) => a.sitelinks),
       ]).slice(0, 12)
 
       return {
         query,
         targetCountry: options.targetCountry,
         searchedAt: new Date().toISOString(),
-        officialSite: officialUrl ? {
-          ...(selectedOrganic || raw.officialSite || {}),
-          url: officialUrl,
-          metaTitle: officialMetaTitle,
-          metaDescription: officialMetaDescription,
-        } : undefined,
+        officialSite: officialUrl
+          ? {
+              ...(selectedOrganic || raw.officialSite || {}),
+              url: officialUrl,
+              metaTitle: officialMetaTitle,
+              metaDescription: officialMetaDescription,
+            }
+          : undefined,
         ads,
         extracted: {
           headlines: extractedHeadlines,

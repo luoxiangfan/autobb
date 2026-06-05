@@ -2,7 +2,10 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads-accounts'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import {
   getKeywordIdeas,
   filterHighQualityKeywords,
@@ -12,10 +15,7 @@ import {
   formatSearchVolume,
   getKeywordMetrics,
 } from '@/lib/google-ads-keyword-planner'
-import {
-  getBrandSearchSuggestions,
-  filterMismatchedGeoKeywords,
-} from '@/lib/google-suggestions'
+import { getBrandSearchSuggestions, filterMismatchedGeoKeywords } from '@/lib/google-suggestions'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keyword-planner-site-filter'
 import { ensureOfferBrandOfficialSite } from '@/lib/offer-official-site'
@@ -27,7 +27,7 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
  * 获取关键词建议
  */
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -42,20 +42,13 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const numericUserId = userId
 
     const body = await request.json()
-    const {
-      seedKeywords = [],
-      useUrl = true,
-      filterOptions = {},
-    } = body
+    const { seedKeywords = [], useUrl = true, filterOptions = {} } = body
 
     // 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, numericUserId)
 
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
     }
 
     // 获取用户可用的Google Ads账号（ENABLED状态，非Manager账号）
@@ -95,8 +88,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         ? {
             refreshToken: preparedRefreshToken,
             credentials: prepared.oauthCredentials,
-            oauthLoginCustomerId:
-              prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+            oauthLoginCustomerId: prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
             ...preparedAuthContextField(prepared),
           }
         : undefined
@@ -109,27 +101,25 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       const brandWords = offer.brand.split(/\s+/)
       const firstWord = brandWords[0]
 
-      finalSeedKeywords = [
-        offer.brand,
-        `${offer.brand} official`,
-        `${offer.brand} store`,
-      ]
+      finalSeedKeywords = [offer.brand, `${offer.brand} official`, `${offer.brand} store`]
 
       // 如果品牌名有多个词，添加第一个词的变体
       if (brandWords.length > 1) {
-        finalSeedKeywords.push(
-          firstWord,
-          `${firstWord} professional`,
-          `${firstWord} products`
-        )
+        finalSeedKeywords.push(firstWord, `${firstWord} professional`, `${firstWord} products`)
       }
     }
 
-    console.log(`获取关键词建议: seeds=${finalSeedKeywords.join(', ')}, url=${useUrl ? offer.url : 'none'}`)
+    console.log(
+      `获取关键词建议: seeds=${finalSeedKeywords.join(', ')}, url=${useUrl ? offer.url : 'none'}`
+    )
 
     // 🔧 修复(2025-12-25): 支持OAuth和服务账号两种认证方式
     const { getGoogleAdsConfig } = await import('@/lib/keyword-planner')
-    const config = await getGoogleAdsConfig(numericUserId, apiAuth.authType, apiAuth.serviceAccountId)
+    const config = await getGoogleAdsConfig(
+      numericUserId,
+      apiAuth.authType,
+      apiAuth.serviceAccountId
+    )
 
     if (!config) {
       return NextResponse.json({ error: 'Google Ads凭证未配置' }, { status: 400 })
@@ -221,16 +211,16 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         }))
 
         // 合并并去重
-        const existingKeywords = new Set(
-          keywordPlannerIdeas.map((kw) => kw.text.toLowerCase())
-        )
+        const existingKeywords = new Set(keywordPlannerIdeas.map((kw) => kw.text.toLowerCase()))
         const newSuggestions = suggestIdeas.filter(
           (kw) => !existingKeywords.has(kw.text.toLowerCase())
         )
 
         keywordIdeas = [...keywordPlannerIdeas, ...newSuggestions]
 
-        console.log(`✓ 合并后共${keywordIdeas.length}个关键词（新增${newSuggestions.length}个下拉词）`)
+        console.log(
+          `✓ 合并后共${keywordIdeas.length}个关键词（新增${newSuggestions.length}个下拉词）`
+        )
       } catch (err) {
         console.warn('查询Google下拉词搜索量失败，忽略下拉词:', err)
       }
@@ -288,9 +278,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       if (geoAllowedKeywordSet.has(kw.text)) return true
       geoFilteredOutCount++
       const key = kw.text.toLowerCase()
-      const intentInfo = intentByKeyword.get(key) || classifyKeywordIntent(kw.text, {
-        language: offer.target_language || normalizedLanguageCode,
-      })
+      const intentInfo =
+        intentByKeyword.get(key) ||
+        classifyKeywordIntent(kw.text, {
+          language: offer.target_language || normalizedLanguageCode,
+        })
       if (!excludedKeywordMap.has(key)) {
         excludedKeywordMap.set(key, {
           text: kw.text,
@@ -336,14 +328,17 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const rankedKeywordsByIntent = rankedKeywords
       .map((keyword, index) => {
-        const intentInfo = intentByKeyword.get(keyword.text.toLowerCase()) || classifyKeywordIntent(keyword.text, {
-          language: offer.target_language || normalizedLanguageCode,
-        })
+        const intentInfo =
+          intentByKeyword.get(keyword.text.toLowerCase()) ||
+          classifyKeywordIntent(keyword.text, {
+            language: offer.target_language || normalizedLanguageCode,
+          })
         intentByKeyword.set(keyword.text.toLowerCase(), intentInfo)
         return { keyword, index, intentInfo }
       })
       .sort((a, b) => {
-        const priorityDiff = (intentPriority[b.intentInfo.intent] || 0) - (intentPriority[a.intentInfo.intent] || 0)
+        const priorityDiff =
+          (intentPriority[b.intentInfo.intent] || 0) - (intentPriority[a.intentInfo.intent] || 0)
         if (priorityDiff !== 0) return priorityDiff
         return a.index - b.index
       })
@@ -355,24 +350,26 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     // 格式化返回数据
     const currency = offer.target_country === 'CN' ? 'CNY' : 'USD'
 
-    const formattedKeywords = rankedKeywordsByIntent.slice(0, 50).map(kw => {
-      const intentInfo = intentByKeyword.get(kw.text.toLowerCase()) || classifyKeywordIntent(kw.text, {
-        language: offer.target_language || normalizedLanguageCode,
-      })
+    const formattedKeywords = rankedKeywordsByIntent.slice(0, 50).map((kw) => {
+      const intentInfo =
+        intentByKeyword.get(kw.text.toLowerCase()) ||
+        classifyKeywordIntent(kw.text, {
+          language: offer.target_language || normalizedLanguageCode,
+        })
       return {
-      text: kw.text,
-      avgMonthlySearches: kw.avgMonthlySearches,
-      avgMonthlySearchesFormatted: formatSearchVolume(kw.avgMonthlySearches),
-      competition: kw.competition,
-      competitionIndex: kw.competitionIndex,
-      lowTopOfPageBid: formatCpcMicros(kw.lowTopOfPageBidMicros, currency),
-      highTopOfPageBid: formatCpcMicros(kw.highTopOfPageBidMicros, currency),
-      avgTopOfPageBid: formatCpcMicros(
-        (kw.lowTopOfPageBidMicros + kw.highTopOfPageBidMicros) / 2,
-        currency
-      ),
-      lowTopOfPageBidMicros: kw.lowTopOfPageBidMicros,
-      highTopOfPageBidMicros: kw.highTopOfPageBidMicros,
+        text: kw.text,
+        avgMonthlySearches: kw.avgMonthlySearches,
+        avgMonthlySearchesFormatted: formatSearchVolume(kw.avgMonthlySearches),
+        competition: kw.competition,
+        competitionIndex: kw.competitionIndex,
+        lowTopOfPageBid: formatCpcMicros(kw.lowTopOfPageBidMicros, currency),
+        highTopOfPageBid: formatCpcMicros(kw.highTopOfPageBidMicros, currency),
+        avgTopOfPageBid: formatCpcMicros(
+          (kw.lowTopOfPageBidMicros + kw.highTopOfPageBidMicros) / 2,
+          currency
+        ),
+        lowTopOfPageBidMicros: kw.lowTopOfPageBidMicros,
+        highTopOfPageBidMicros: kw.highTopOfPageBidMicros,
         intent: intentInfo.intent,
         hardNegative: intentInfo.hardNegative,
         intentReasons: intentInfo.reasons,
@@ -388,7 +385,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const groupStats = Object.entries(groupedKeywords).map(([theme, keywords]) => ({
       theme,
       count: keywords.length,
-      topKeywords: keywords.slice(0, 3).map(kw => kw.text),
+      topKeywords: keywords.slice(0, 3).map((kw) => kw.text),
     }))
 
     return NextResponse.json({

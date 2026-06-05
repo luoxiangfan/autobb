@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       forceRecalculate = false,
       allowWhenPaused = false,
       batchSize = 100,
-      includeSeasonalityAnalysis = true
+      includeSeasonalityAnalysis = true,
     } = body
 
     if (allowWhenPaused === true) {
@@ -49,14 +49,14 @@ export async function POST(request: NextRequest) {
       batchSize,
       includeSeasonalityAnalysis,
       trigger: 'manual',
-      priority: 'normal'
+      priority: 'normal',
     })
 
     return NextResponse.json({
       success: true,
       message: '推荐指数计算任务已提交到队列',
       taskId,
-      note: '任务将在后台异步执行,请在队列管理页面(/admin/queue)查看进度'
+      note: '任务将在后台异步执行,请在队列管理页面(/admin/queue)查看进度',
     })
   } catch (error: any) {
     if (isProductScoreCalculationPausedError(error)) {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: '提交推荐指数计算任务失败',
-        details: error.message
+        details: error.message,
       },
       { status: 500 }
     )

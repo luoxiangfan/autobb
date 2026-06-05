@@ -96,7 +96,11 @@ describe('extractOffer brand fallback', () => {
       finalUrlSuffix: 'affiliate=abc',
       brand: null,
       redirectCount: 3,
-      redirectChain: ['https://click-ecom.com/', 'https://prf.hn/', 'https://www.hitmanpro.com/en-us'],
+      redirectChain: [
+        'https://click-ecom.com/',
+        'https://prf.hn/',
+        'https://www.hitmanpro.com/en-us',
+      ],
       pageTitle: null,
       statusCode: 200,
       resolveMethod: 'http',
@@ -117,7 +121,9 @@ describe('extractOffer brand fallback', () => {
     expect(result.data?.brand).toBe('Hitmanpro')
 
     expect(vi.mocked(extractProductInfo)).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(extractProductInfo).mock.calls[0]?.[2]).toBe('https://proxy-provider.example/api?cc=US')
+    expect(vi.mocked(extractProductInfo).mock.calls[0]?.[2]).toBe(
+      'https://proxy-provider.example/api?cc=US'
+    )
   })
 
   it('retries Amazon product scraping with canonical URL when tracked URL data is insufficient', async () => {
@@ -161,23 +167,28 @@ describe('extractOffer brand fallback', () => {
     })
 
     vi.mocked(scrapeAmazonProduct)
-      .mockResolvedValueOnce(createAmazonProductMock({
-        productName: null,
-        productDescription: null,
-        brandName: null,
-        features: [],
-        aboutThisItem: [],
-        imageUrls: [],
-      }))
-      .mockResolvedValueOnce(createAmazonProductMock({
-        productName: 'Katchy Indoor Insect Trap',
-        brandName: 'Katchy',
-        features: ['UV light attracts flying insects'],
-        aboutThisItem: ['No zapping, no chemicals'],
-      }))
+      .mockResolvedValueOnce(
+        createAmazonProductMock({
+          productName: null,
+          productDescription: null,
+          brandName: null,
+          features: [],
+          aboutThisItem: [],
+          imageUrls: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        createAmazonProductMock({
+          productName: 'Katchy Indoor Insect Trap',
+          brandName: 'Katchy',
+          features: ['UV light attracts flying insects'],
+          aboutThisItem: ['No zapping, no chemicals'],
+        })
+      )
 
     const result = await extractOffer({
-      affiliateLink: 'https://yeahpromos.com/index/index/openurlproduct?track=43e8d385119b639d&pid=429324',
+      affiliateLink:
+        'https://yeahpromos.com/index/index/openurlproduct?track=43e8d385119b639d&pid=429324',
       targetCountry: 'US',
       userId: 1,
       skipWarmup: true,
@@ -189,10 +200,12 @@ describe('extractOffer brand fallback', () => {
     expect(result.data?.productName).toBe('Katchy Indoor Insect Trap')
 
     expect(vi.mocked(scrapeAmazonProduct)).toHaveBeenCalledTimes(2)
-    expect(vi.mocked(scrapeAmazonProduct).mock.calls[0]?.[0])
-      .toBe('https://www.amazon.com/dp/B09RF5MPGK')
-    expect(vi.mocked(scrapeAmazonProduct).mock.calls[1]?.[0])
-      .toBe('https://www.amazon.com/dp/B09RF5MPGK?maas=abc&aa_campaignid=123')
+    expect(vi.mocked(scrapeAmazonProduct).mock.calls[0]?.[0]).toBe(
+      'https://www.amazon.com/dp/B09RF5MPGK'
+    )
+    expect(vi.mocked(scrapeAmazonProduct).mock.calls[1]?.[0]).toBe(
+      'https://www.amazon.com/dp/B09RF5MPGK?maas=abc&aa_campaignid=123'
+    )
   })
 
   it('skips Playwright when independent light scrape already has offer baseline fields', async () => {
@@ -204,7 +217,8 @@ describe('extractOffer brand fallback', () => {
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
     vi.mocked(resolveAffiliateLink).mockResolvedValue({
-      finalUrl: 'https://handwovenlamp.com/products/rattan-pendant-light-wabi-sabi-style-retro-dining-room-chandelier',
+      finalUrl:
+        'https://handwovenlamp.com/products/rattan-pendant-light-wabi-sabi-style-retro-dining-room-chandelier',
       finalUrlSuffix: 'source_type=sales_plugin_af',
       brand: null,
       redirectCount: 1,
@@ -245,21 +259,31 @@ describe('extractOffer brand fallback', () => {
       rating: '5',
       reviewCount: '42',
       availability: 'In Stock',
-      reviews: ['Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!'],
-      reviewHighlights: ['RECOMMEND!: Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!'],
-      topReviews: ['RECOMMEND!: Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!'],
-      structuredReviews: [{
-        rating: 5,
-        date: '2025-08-07',
-        author: 'Patricia Adrian-Hanson',
-        title: 'RECOMMEND!',
-        body: 'Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!',
-        verifiedBuyer: false,
-      }],
-      qaPairs: [{
-        question: 'Is the 80CM able to be mounted with a slanted ceiling?',
-        answer: 'Yes, it can be installed on slanted ceilings. Hope it helps you!',
-      }],
+      reviews: [
+        'Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!',
+      ],
+      reviewHighlights: [
+        'RECOMMEND!: Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!',
+      ],
+      topReviews: [
+        'RECOMMEND!: Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!',
+      ],
+      structuredReviews: [
+        {
+          rating: 5,
+          date: '2025-08-07',
+          author: 'Patricia Adrian-Hanson',
+          title: 'RECOMMEND!',
+          body: 'Amazing shades!!!! Seller was super helpful and items arrived looking just like the photo!',
+          verifiedBuyer: false,
+        },
+      ],
+      qaPairs: [
+        {
+          question: 'Is the 80CM able to be mounted with a slanted ceiling?',
+          answer: 'Yes, it can be installed on slanted ceilings. Hope it helps you!',
+        },
+      ],
       socialProof: [
         { metric: 'rating', value: '5' },
         { metric: 'reviews', value: '42' },
@@ -292,7 +316,8 @@ describe('extractOffer brand fallback', () => {
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
     vi.mocked(resolveAffiliateLink).mockResolvedValue({
-      finalUrl: 'https://handwovenlamp.com/products/smart-bedside-table-multifunctional-cabinet-with-light-wireless-charging-speaker-fingerprint-unlocking',
+      finalUrl:
+        'https://handwovenlamp.com/products/smart-bedside-table-multifunctional-cabinet-with-light-wireless-charging-speaker-fingerprint-unlocking',
       finalUrlSuffix: 'source_type=sales_plugin_af',
       brand: null,
       redirectCount: 1,
@@ -321,7 +346,8 @@ describe('extractOffer brand fallback', () => {
       productName: 'Smart Bedside Table',
       rawProductTitle: 'Smart Bedside Table',
       rawAboutThisItem: ['Wireless charging', 'Bluetooth speaker'],
-      productDescription: 'This bedside table integrates ambient lighting, wireless charging, bluetooth speakers and fingerprint unlocking functions.',
+      productDescription:
+        'This bedside table integrates ambient lighting, wireless charging, bluetooth speakers and fingerprint unlocking functions.',
       productPrice: '$299.00',
       originalPrice: null,
       discount: null,
@@ -336,14 +362,16 @@ describe('extractOffer brand fallback', () => {
       reviews: ['Excellent quality and function.'],
       reviewHighlights: ['Excellent quality and function.'],
       topReviews: ['Excellent quality and function.'],
-      structuredReviews: [{
-        rating: 5,
-        date: '2026-01-08',
-        author: 'Olivia',
-        title: 'Worth it',
-        body: 'Excellent quality and function.',
-        verifiedBuyer: true,
-      }],
+      structuredReviews: [
+        {
+          rating: 5,
+          date: '2026-01-08',
+          author: 'Olivia',
+          title: 'Worth it',
+          body: 'Excellent quality and function.',
+          verifiedBuyer: true,
+        },
+      ],
       qaPairs: [],
       socialProof: [
         { metric: 'rating', value: '5' },

@@ -43,7 +43,7 @@ import {
   resolveKeywordPoolForCreativeGeneration,
   type BucketType,
   type OfferKeywordPool,
-  type PoolKeywordData
+  type PoolKeywordData,
 } from '@/lib/offer-keyword-pool'
 import { deriveSkipKeywordPoolExpandLoad } from '@/lib/parse-offer-id'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
@@ -67,7 +67,9 @@ function isValidUrl(url: string | null | undefined): boolean {
 }
 
 function normalizeRequestedBucket(value: unknown): BucketType | null {
-  const upper = String(value || '').trim().toUpperCase()
+  const upper = String(value || '')
+    .trim()
+    .toUpperCase()
   if (!upper) return null
   if (upper === 'A') return 'A'
   if (upper === 'B' || upper === 'C') return 'B'
@@ -82,7 +84,9 @@ function parsePositiveIntEnv(value: string | undefined, fallback: number): numbe
 }
 
 function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return fallback
   if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
   if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
@@ -132,14 +136,14 @@ function shouldAutoReleaseGeneratingPlaceholder(row: {
   const headlines = parsePlaceholderTextArray(row.headlines)
   const descriptions = parsePlaceholderTextArray(row.descriptions)
   const isPlaceholder =
-    headlines.some(text => text.includes('生成中')) ||
-    descriptions.some(text => text.includes('正在生成'))
+    headlines.some((text) => text.includes('生成中')) ||
+    descriptions.some((text) => text.includes('正在生成'))
   if (!isPlaceholder) return false
 
   const referenceMs = parseTimestampMs(row.updated_at) ?? parseTimestampMs(row.created_at)
   if (!referenceMs) return false
 
-  return (Date.now() - referenceMs) >= staleGeneratingPlaceholderMs
+  return Date.now() - referenceMs >= staleGeneratingPlaceholderMs
 }
 
 /**
@@ -150,8 +154,8 @@ export interface AdCreativeTaskData {
   maxRetries?: number
   targetRating?: 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR'
   generationMode?: AdCreativeGenerationMode
-  coverage?: boolean   // ✅ 新命名：coverage 模式，运行时仍统一映射到 D / product_intent
-  synthetic?: boolean  // 🔧 向后兼容：旧版 coverage 标记（运行时映射到 D / product_intent）
+  coverage?: boolean // ✅ 新命名：coverage 模式，运行时仍统一映射到 D / product_intent
+  synthetic?: boolean // 🔧 向后兼容：旧版 coverage 标记（运行时映射到 D / product_intent）
   bucket?: 'A' | 'B' | 'C' | 'D' | 'S'
   forceGenerateOnQualityGate?: boolean
   qualityGateBypassReason?: string
@@ -160,9 +164,7 @@ export interface AdCreativeTaskData {
 /**
  * 广告创意生成任务执行器
  */
-export async function executeAdCreativeGeneration(
-  task: Task<AdCreativeTaskData>
-): Promise<any> {
+export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>): Promise<any> {
   const {
     offerId,
     maxRetries = AD_CREATIVE_MAX_AUTO_RETRIES,
@@ -190,10 +192,7 @@ export async function executeAdCreativeGeneration(
   const enforcedTargetRating: AdCreativeTaskData['targetRating'] = 'GOOD'
   const requestedBucket = normalizeRequestedBucket(bucket)
   const isCoverageTask = Boolean(coverage || synthetic)
-  const creativeTaskHeartbeatMs = parsePositiveIntEnv(
-    process.env.CREATIVE_TASK_HEARTBEAT_MS,
-    15000
-  )
+  const creativeTaskHeartbeatMs = parsePositiveIntEnv(process.env.CREATIVE_TASK_HEARTBEAT_MS, 15000)
   const hardQualityGateEnabled = parseBooleanEnv(
     process.env.AD_CREATIVE_HARD_QUALITY_GATE_ENABLED,
     true
@@ -203,7 +202,10 @@ export async function executeAdCreativeGeneration(
     true
   )
   const qualityGateBypassRequested = Boolean(forceGenerateOnQualityGate)
-  const normalizedQualityGateBypassReason = String(qualityGateBypassReason || '').trim().slice(0, 240) || null
+  const normalizedQualityGateBypassReason =
+    String(qualityGateBypassReason || '')
+      .trim()
+      .slice(0, 240) || null
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
@@ -214,14 +216,17 @@ export async function executeAdCreativeGeneration(
 
   try {
     // 更新任务状态为运行中
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE creative_tasks
       SET status = 'running',
           started_at = ${nowFunc},
           message = '开始生成广告创意',
           max_retries = ?
       WHERE id = ?
-    `, [effectiveMaxRetries, task.id])
+    `,
+      [effectiveMaxRetries, task.id]
+    )
 
     console.log(`🚀 开始执行创意生成任务: ${task.id}`)
 
@@ -235,11 +240,13 @@ export async function executeAdCreativeGeneration(
       throw new Error('Offer信息抓取失败，请重新抓取')
     }
 
-    let searchTermFeedbackHints: {
-      hardNegativeTerms?: string[]
-      softSuppressTerms?: string[]
-      highPerformingTerms?: string[]
-    } | undefined
+    let searchTermFeedbackHints:
+      | {
+          hardNegativeTerms?: string[]
+          softSuppressTerms?: string[]
+          highPerformingTerms?: string[]
+        }
+      | undefined
     try {
       const hints = await getSearchTermFeedbackHints({
         offerId,
@@ -254,7 +261,9 @@ export async function executeAdCreativeGeneration(
         `🔁 队列搜索词反馈已加载: high=${hints.highPerformingTerms.length}, hard=${hints.hardNegativeTerms.length}, soft=${hints.softSuppressTerms.length}, rows=${hints.sourceRows}`
       )
     } catch (hintError: any) {
-      console.warn(`⚠️ 队列搜索词反馈读取失败，继续默认生成: ${hintError?.message || 'unknown error'}`)
+      console.warn(
+        `⚠️ 队列搜索词反馈读取失败，继续默认生成: ${hintError?.message || 'unknown error'}`
+      )
     }
 
     // 🆕 v4.10: 获取或创建关键词池（复用已有数据，避免重复AI调用）
@@ -268,14 +277,24 @@ export async function executeAdCreativeGeneration(
 
     try {
       // 更新进度：准备关键词池
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE creative_tasks
         SET stage = 'preparing', progress = 5, message = '正在准备关键词池...', updated_at = ${nowFunc}
         WHERE id = ?
-      `, [task.id])
+      `,
+        [task.id]
+      )
 
       type KeywordPoolProgressInfo = {
-        phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'
+        phase?:
+          | 'seed-volume'
+          | 'expand-round'
+          | 'volume-batch'
+          | 'service-step'
+          | 'filter'
+          | 'cluster'
+          | 'save'
         message: string
         current?: number
         total?: number
@@ -311,10 +330,7 @@ export async function executeAdCreativeGeneration(
           const now = Date.now()
           if (now - lastUpdateAt < minIntervalMs && info.message === lastMessage) return
 
-          const nextProgress = Math.min(
-            9,
-            Math.max(lastProgress, computeProgress(info))
-          )
+          const nextProgress = Math.min(9, Math.max(lastProgress, computeProgress(info)))
           lastProgress = nextProgress
           lastMessage = info.message
           lastUpdateAt = now
@@ -324,22 +340,23 @@ export async function executeAdCreativeGeneration(
             : `关键词池：${info.message}`
 
           try {
-            await db.exec(`
+            await db.exec(
+              `
               UPDATE creative_tasks
               SET stage = 'preparing', progress = ?, message = ?, updated_at = ${nowFunc}
               WHERE id = ?
-            `, [nextProgress, message, task.id])
+            `,
+              [nextProgress, message, task.id]
+            )
           } catch (error: any) {
             console.warn(`⚠️ 关键词池进度更新失败: ${error?.message || String(error)}`)
           }
         }
       })()
 
-      const resolvedPool = await resolveKeywordPoolForCreativeGeneration(
-        offerId,
-        task.userId,
-        { progress: reportKeywordPoolProgress }
-      )
+      const resolvedPool = await resolveKeywordPoolForCreativeGeneration(offerId, task.userId, {
+        progress: reportKeywordPoolProgress,
+      })
       keywordPool = resolvedPool.pool
       plannerSessionForGeneration = resolvedPool.plannerSession
       preparedExpandForGeneration = resolvedPool.preparedExpand
@@ -363,13 +380,16 @@ export async function executeAdCreativeGeneration(
           descriptions: string | null
           created_at: string | Date | null
           updated_at: string | Date | null
-        }>(`
+        }>(
+          `
           SELECT id, keyword_bucket, headlines, descriptions, created_at, updated_at
           FROM ad_creatives
           WHERE offer_id = ?
             AND deleted_at IS NULL
             AND creation_status = 'generating'
-        `, [offerId])
+        `,
+          [offerId]
+        )
 
         const activeReservedBuckets = new Set<BucketType>()
         for (const placeholder of generatingPlaceholders) {
@@ -377,7 +397,8 @@ export async function executeAdCreativeGeneration(
           if (!bucketSlot) continue
 
           if (shouldAutoReleaseGeneratingPlaceholder(placeholder)) {
-            await db.exec(`
+            await db.exec(
+              `
               UPDATE ad_creatives
               SET
                 is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
@@ -386,7 +407,12 @@ export async function executeAdCreativeGeneration(
                 creation_error = ?,
                 updated_at = ${nowFunc}
               WHERE id = ? AND deleted_at IS NULL
-            `, [`系统自动回收超时占位创意（>${staleGeneratingPlaceholderMinutes}分钟）`, placeholder.id])
+            `,
+              [
+                `系统自动回收超时占位创意（>${staleGeneratingPlaceholderMinutes}分钟）`,
+                placeholder.id,
+              ]
+            )
             console.warn(`🧹 自动回收超时占位记录 id=${placeholder.id} bucket=${bucketSlot}`)
             continue
           }
@@ -403,7 +429,9 @@ export async function executeAdCreativeGeneration(
         )
 
         if (availableBuckets.length === 0) {
-          throw new Error('该Offer已生成全部3种创意类型（A/B/D），无需继续生成。请删除某个类型后再生成。')
+          throw new Error(
+            '该Offer已生成全部3种创意类型（A/B/D），无需继续生成。请删除某个类型后再生成。'
+          )
         }
 
         // 确定要生成的桶
@@ -433,12 +461,15 @@ export async function executeAdCreativeGeneration(
         selectedBucket = preferred
         bucketInfo = getBucketInfo(keywordPool, selectedBucket)
         const selectedCreativeType = getCreativeTypeForBucketSlot(selectedBucket as 'A' | 'B' | 'D')
-        console.log(`📦 使用关键词池桶 ${selectedBucket} (${bucketInfo.intent}): ${bucketInfo.keywords.length} 个关键词`)
+        console.log(
+          `📦 使用关键词池桶 ${selectedBucket} (${bucketInfo.intent}): ${bucketInfo.keywords.length} 个关键词`
+        )
 
         // 🔥 关键修复：立即插入占位记录，标记桶已被占用
         // 使用最小化数据（后续 AI 生成完成后更新）
         const placeholderUrl = offer.final_url || offer.url || 'https://placeholder.com'
-        const placeholderResult = await db.exec(`
+        const placeholderResult = await db.exec(
+          `
           INSERT INTO ad_creatives (
             offer_id, user_id,
             headlines, descriptions, keywords,
@@ -448,32 +479,39 @@ export async function executeAdCreativeGeneration(
             keyword_bucket, keyword_pool_id, bucket_intent,
             creation_status, theme
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
-          offerId,
-          task.userId,
-          JSON.stringify(['生成中...']),
-          JSON.stringify(['正在生成广告创意，请稍候...']),
-          JSON.stringify([]),
-          offer.brand || null,
-          offer.url || offer.final_url || null,
-          placeholderUrl,
-          selectedCreativeType,
-          selectedBucket,
-          keywordPool.id,
-          bucketInfo.intent,
-          'generating', // 标记为生成中
-          `[生成中] ${bucketInfo.intent}`
-        ])
+        `,
+          [
+            offerId,
+            task.userId,
+            JSON.stringify(['生成中...']),
+            JSON.stringify(['正在生成广告创意，请稍候...']),
+            JSON.stringify([]),
+            offer.brand || null,
+            offer.url || offer.final_url || null,
+            placeholderUrl,
+            selectedCreativeType,
+            selectedBucket,
+            keywordPool.id,
+            bucketInfo.intent,
+            'generating', // 标记为生成中
+            `[生成中] ${bucketInfo.intent}`,
+          ]
+        )
 
         placeholderCreativeId = Number(placeholderResult.lastInsertRowid) || null
-        console.log(`📝 已插入占位记录 id=${placeholderCreativeId}，桶 ${selectedBucket} 已被标记为占用`)
+        console.log(
+          `📝 已插入占位记录 id=${placeholderCreativeId}，桶 ${selectedBucket} 已被标记为占用`
+        )
       })
 
       // 事务提交后，advisory lock 自动释放，但占位记录已生效
       console.log(`🔓 事务已提交，advisory lock 已自动释放，桶 ${selectedBucket} 占位记录生效`)
     } catch (poolError: any) {
       // 桶选择/并发冲突错误直接透传，不包装成"关键词池失败"
-      const isBucketError = poolError.message?.includes('桶') || poolError.message?.includes('并发冲突') || poolError.message?.includes('创意类型')
+      const isBucketError =
+        poolError.message?.includes('桶') ||
+        poolError.message?.includes('并发冲突') ||
+        poolError.message?.includes('创意类型')
       if (isBucketError) throw poolError
       // 🔥 统一架构(2025-12-16): 关键词池是必需的，失败直接抛错
       console.error(`❌ 关键词池创建失败: ${poolError.message}`)
@@ -492,7 +530,8 @@ export async function executeAdCreativeGeneration(
       throw new Error('关键词桶上下文未初始化')
     }
 
-    const currentBucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string } = bucketInfo
+    const currentBucketInfo: { keywords: PoolKeywordData[]; intent: string; intentEn: string } =
+      bucketInfo
     const preparedBucketContext = await prepareBucketKeywordContext({
       offer,
       userId: task.userId,
@@ -535,16 +574,26 @@ export async function executeAdCreativeGeneration(
           const generationStartedAt = Date.now()
           const updateGenerationHeartbeat = async () => {
             const elapsedSeconds = Math.floor((Date.now() - generationStartedAt) / 1000)
-            await db.exec(`
+            await db.exec(
+              `
               UPDATE creative_tasks
               SET stage = 'generating', progress = ?, message = ?, current_attempt = ?, updated_at = ${nowFunc}
               WHERE id = ?
-            `, [attemptBaseProgress, `${generationMessageBase} (${elapsedSeconds}s)`, attempt, task.id])
+            `,
+              [
+                attemptBaseProgress,
+                `${generationMessageBase} (${elapsedSeconds}s)`,
+                attempt,
+                task.id,
+              ]
+            )
           }
           await updateGenerationHeartbeat()
           const timer = setInterval(() => {
             void updateGenerationHeartbeat().catch((heartbeatError: any) => {
-              console.warn(`⚠️ 创意生成心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
+              console.warn(
+                `⚠️ 创意生成心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`
+              )
             })
           }, creativeTaskHeartbeatMs)
           generationHeartbeatTimers.set(attempt, timer)
@@ -562,16 +611,21 @@ export async function executeAdCreativeGeneration(
           const evaluationStartedAt = Date.now()
           const updateEvaluationHeartbeat = async () => {
             const elapsedSeconds = Math.floor((Date.now() - evaluationStartedAt) / 1000)
-            await db.exec(`
+            await db.exec(
+              `
               UPDATE creative_tasks
               SET stage = 'evaluating', progress = ?, message = ?, updated_at = ${nowFunc}
               WHERE id = ?
-            `, [attemptBaseProgress + 10, `${evaluationMessageBase} (${elapsedSeconds}s)`, task.id])
+            `,
+              [attemptBaseProgress + 10, `${evaluationMessageBase} (${elapsedSeconds}s)`, task.id]
+            )
           }
           await updateEvaluationHeartbeat()
           const timer = setInterval(() => {
             void updateEvaluationHeartbeat().catch((heartbeatError: any) => {
-              console.warn(`⚠️ 创意评估心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`)
+              console.warn(
+                `⚠️ 创意评估心跳更新失败: ${task.id}: ${heartbeatError?.message || heartbeatError}`
+              )
             })
           }, creativeTaskHeartbeatMs)
           evaluationHeartbeatTimers.set(attempt, timer)
@@ -583,15 +637,20 @@ export async function executeAdCreativeGeneration(
             evaluationHeartbeatTimers.delete(attempt)
           }
           const attemptBaseProgress = 10 + (attempt - 1) * 25
-          const hasPersistenceFailure = evaluation.reasons.some((reason) => reason.startsWith('persistence:'))
+          const hasPersistenceFailure = evaluation.reasons.some((reason) =>
+            reason.startsWith('persistence:')
+          )
           const evaluationSummaryMessage = hasPersistenceFailure
             ? `第${attempt}次生成: ${evaluation.adStrength.finalRating} (${evaluation.adStrength.finalScore}分)，门禁预检未过`
             : `第${attempt}次生成: ${evaluation.adStrength.finalRating} (${evaluation.adStrength.finalScore}分)`
-          await db.exec(`
+          await db.exec(
+            `
             UPDATE creative_tasks
             SET progress = ?, message = ?, updated_at = ${nowFunc}
             WHERE id = ?
-          `, [attemptBaseProgress + 18, evaluationSummaryMessage, task.id])
+          `,
+            [attemptBaseProgress + 18, evaluationSummaryMessage, task.id]
+          )
         },
       },
     })
@@ -605,7 +664,8 @@ export async function executeAdCreativeGeneration(
     const qualityGatePassed = Boolean(selectedEvaluation.passed)
     const qualityWarning = !qualityGatePassed
 
-    const qualityGateBypassed = qualityWarning && hardQualityGateEnabled && qualityGateBypassRequested
+    const qualityGateBypassed =
+      qualityWarning && hardQualityGateEnabled && qualityGateBypassRequested
     if (qualityWarning && hardQualityGateEnabled && !qualityGateBypassRequested) {
       const gateReasons = Array.isArray(selectedEvaluation.reasons)
         ? selectedEvaluation.reasons
@@ -661,7 +721,9 @@ export async function executeAdCreativeGeneration(
         `[CreativeQualityGate] bypassed task=${task.id} bucket=${selectedBucket || 'unknown'} score=${bestEvaluation.finalScore} rating=${bestEvaluation.finalRating} reason=${normalizedQualityGateBypassReason || 'user_confirmed'}`
       )
     } else if (qualityWarning) {
-      console.warn(`⚠️ 创意未达 GOOD 阈值，已保存最佳结果: ${bestEvaluation.finalRating} (${bestEvaluation.finalScore})`)
+      console.warn(
+        `⚠️ 创意未达 GOOD 阈值，已保存最佳结果: ${bestEvaluation.finalRating} (${bestEvaluation.finalScore})`
+      )
     }
 
     assertPostGenerationPersistenceGate({
@@ -678,25 +740,29 @@ export async function executeAdCreativeGeneration(
     })
 
     // 更新进度：保存中
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE creative_tasks
       SET stage = 'saving', progress = 85, message = '正在保存创意到数据库...', updated_at = ${nowFunc}
       WHERE id = ?
-    `, [task.id])
+    `,
+      [task.id]
+    )
 
     // 保存到数据库（包含完整的7维度Ad Strength数据）
     let savedCreative: any
     if (placeholderCreativeId) {
       // 🔥 修复：更新占位记录为真实创意数据
       console.log(`📝 更新占位记录 id=${placeholderCreativeId} 为真实创意数据`)
-      
+
       const finalUrl = (() => {
         if (isValidUrl(offer.final_url)) return offer.final_url!
         if (isValidUrl(offer.url)) return offer.url!
         throw new Error('Offer缺少有效的URL（final_url和url均为无效值）')
       })()
 
-      await db.exec(`
+      await db.exec(
+        `
         UPDATE ad_creatives SET
           headlines = ?,
           descriptions = ?,
@@ -721,38 +787,42 @@ export async function executeAdCreativeGeneration(
           creation_status = 'draft',
           updated_at = ${nowFunc}
         WHERE id = ?
-      `, [
-        JSON.stringify(bestCreative.headlines),
-        JSON.stringify(bestCreative.descriptions),
-        JSON.stringify(bestCreative.keywords),
-        bestCreative.keywordsWithVolume && bestCreative.keywordsWithVolume.length > 0
-          ? JSON.stringify(bestCreative.keywordsWithVolume)
-          : null,
-        bestCreative.negativeKeywords && bestCreative.negativeKeywords.length > 0
-          ? JSON.stringify(bestCreative.negativeKeywords)
-          : null,
-        bestCreative.callouts ? JSON.stringify(bestCreative.callouts) : null,
-        bestCreative.sitelinks ? JSON.stringify(bestCreative.sitelinks) : null,
-        bestCreative.theme,
-        bestCreative.explanation,
-        offer.brand || null,
-        offer.url || offer.final_url || null,
-        finalUrl,
-        offer.final_url_suffix || null,
-        bestEvaluation.finalScore,
-        JSON.stringify(createCreativeScoreBreakdown(bestEvaluation, { allowPartialMetrics: true })),
-        attempts,
-        bestCreative.ai_model,
-        JSON.stringify(createCreativeAdStrengthPayload(bestEvaluation, bestCreativeAudit)),
-        selectedBucket
-          ? getCreativeTypeForBucketSlot(selectedBucket as 'A' | 'B' | 'D')
-          : null,
-        generationMode,
-        placeholderCreativeId
-      ])
-      
+      `,
+        [
+          JSON.stringify(bestCreative.headlines),
+          JSON.stringify(bestCreative.descriptions),
+          JSON.stringify(bestCreative.keywords),
+          bestCreative.keywordsWithVolume && bestCreative.keywordsWithVolume.length > 0
+            ? JSON.stringify(bestCreative.keywordsWithVolume)
+            : null,
+          bestCreative.negativeKeywords && bestCreative.negativeKeywords.length > 0
+            ? JSON.stringify(bestCreative.negativeKeywords)
+            : null,
+          bestCreative.callouts ? JSON.stringify(bestCreative.callouts) : null,
+          bestCreative.sitelinks ? JSON.stringify(bestCreative.sitelinks) : null,
+          bestCreative.theme,
+          bestCreative.explanation,
+          offer.brand || null,
+          offer.url || offer.final_url || null,
+          finalUrl,
+          offer.final_url_suffix || null,
+          bestEvaluation.finalScore,
+          JSON.stringify(
+            createCreativeScoreBreakdown(bestEvaluation, { allowPartialMetrics: true })
+          ),
+          attempts,
+          bestCreative.ai_model,
+          JSON.stringify(createCreativeAdStrengthPayload(bestEvaluation, bestCreativeAudit)),
+          selectedBucket ? getCreativeTypeForBucketSlot(selectedBucket as 'A' | 'B' | 'D') : null,
+          generationMode,
+          placeholderCreativeId,
+        ]
+      )
+
       // 读取更新后的记录
-      savedCreative = await db.queryOne('SELECT * FROM ad_creatives WHERE id = ?', [placeholderCreativeId])
+      savedCreative = await db.queryOne('SELECT * FROM ad_creatives WHERE id = ?', [
+        placeholderCreativeId,
+      ])
       if (!savedCreative) {
         throw new Error(`更新占位记录失败: id=${placeholderCreativeId}`)
       }
@@ -778,7 +848,9 @@ export async function executeAdCreativeGeneration(
         })(),
         final_url_suffix: offer.final_url_suffix || undefined,
         score: bestEvaluation.finalScore,
-        score_breakdown: createCreativeScoreBreakdown(bestEvaluation, { allowPartialMetrics: true }),
+        score_breakdown: createCreativeScoreBreakdown(bestEvaluation, {
+          allowPartialMetrics: true,
+        }),
         generation_round: attempts,
         ai_model: bestCreative.ai_model,
         adStrength: createCreativeAdStrengthPayload(bestEvaluation, bestCreativeAudit),
@@ -808,7 +880,7 @@ export async function executeAdCreativeGeneration(
         targetRating: enforcedTargetRating,
         achieved: selectedEvaluation.passed,
         qualityGatePassed: selectedEvaluation.passed,
-        history: retryHistory
+        history: retryHistory,
       }),
       generationMode,
       qualityGate: {
@@ -819,14 +891,15 @@ export async function executeAdCreativeGeneration(
         finalScore: bestEvaluation.finalScore,
         requiredMinimumScore: AD_CREATIVE_REQUIRED_MIN_SCORE,
         bypassReason: qualityGateBypassed
-          ? (normalizedQualityGateBypassReason || 'user_confirmed_from_quality_gate_modal')
+          ? normalizedQualityGateBypassReason || 'user_confirmed_from_quality_gate_modal'
           : null,
       },
-      offer: createCreativeOfferSummaryPayload(offer)
+      offer: createCreativeOfferSummaryPayload(offer),
     }
 
     // 更新任务为完成状态（带质量警告标记）
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE creative_tasks
       SET
         status = 'completed',
@@ -839,17 +912,19 @@ export async function executeAdCreativeGeneration(
         completed_at = ${nowFunc},
         updated_at = ${nowFunc}
       WHERE id = ?
-    `, [
-      qualityGateBypassed
-        ? `⚠️ 已按确认强制生成（质量门禁未通过，${bestEvaluation.finalScore}分）`
-        : qualityWarning
-          ? `⚠️ 生成完成（质量${bestEvaluation.finalScore}分，建议优化）`
-        : '✅ 生成完成',
-      savedCreative.id,
-      toDbJson(finalResult),
-      toDbJson(retryHistory),
-      task.id
-    ])
+    `,
+      [
+        qualityGateBypassed
+          ? `⚠️ 已按确认强制生成（质量门禁未通过，${bestEvaluation.finalScore}分）`
+          : qualityWarning
+            ? `⚠️ 生成完成（质量${bestEvaluation.finalScore}分，建议优化）`
+            : '✅ 生成完成',
+        savedCreative.id,
+        toDbJson(finalResult),
+        toDbJson(retryHistory),
+        task.id,
+      ]
+    )
 
     if (qualityWarning) {
       console.log(`⚠️ 创意生成任务完成（质量警告）: ${task.id} - ${bestEvaluation.finalScore}分`)
@@ -877,7 +952,8 @@ export async function executeAdCreativeGeneration(
     const errorMessage = structuredError.userMessage || structuredError.message || '任务失败'
 
     // 更新任务为失败状态
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE creative_tasks
       SET
         status = 'failed',
@@ -886,20 +962,22 @@ export async function executeAdCreativeGeneration(
         completed_at = ${nowFuncErr},
         updated_at = ${nowFuncErr}
       WHERE id = ?
-    `, [
-      errorMessage,
-      toDbJson({
-        ...structuredError,
-        message: structuredError.message || error.message,
-        userMessage: structuredError.userMessage || errorMessage,
-        details: {
-          ...(structuredError.details || {}),
-          originalMessage: error?.message || structuredError.message,
-          stack: error?.stack || null,
-        },
-      }),
-      task.id
-    ])
+    `,
+      [
+        errorMessage,
+        toDbJson({
+          ...structuredError,
+          message: structuredError.message || error.message,
+          userMessage: structuredError.userMessage || errorMessage,
+          details: {
+            ...(structuredError.details || {}),
+            originalMessage: error?.message || structuredError.message,
+            stack: error?.stack || null,
+          },
+        }),
+        task.id,
+      ]
+    )
 
     throw error
   }

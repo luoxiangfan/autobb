@@ -33,16 +33,8 @@ export interface RecordTokenUsageParams {
  * @returns Promise<void>
  */
 export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<void> {
-  const {
-    userId,
-    model,
-    operationType,
-    inputTokens,
-    outputTokens,
-    totalTokens,
-    cost,
-    apiType
-  } = params
+  const { userId, model, operationType, inputTokens, outputTokens, totalTokens, cost, apiType } =
+    params
 
   try {
     const db = await getDatabase()
@@ -63,7 +55,9 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
       [userId, model, operationType, inputTokens, outputTokens, totalTokens, cost, apiType, today]
     )
 
-    console.log(`✓ Token使用已记录: user=${userId}, model=${model}, tokens=${totalTokens}, cost=¥${cost.toFixed(4)}`)
+    console.log(
+      `✓ Token使用已记录: user=${userId}, model=${model}, tokens=${totalTokens}, cost=¥${cost.toFixed(4)}`
+    )
   } catch (error) {
     console.error('记录token使用失败:', error)
     // 不抛出错误，避免影响主业务流程

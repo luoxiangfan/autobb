@@ -7,30 +7,110 @@
 const DKI_PATTERN = /\{keyword:([^}]*)\}/gi
 
 export const GOOGLE_ADS_PROHIBITED_SYMBOLS = [
-  '★', '☆', '⭐', '🌟', '✨', // stars
-  '©', '®', '™',             // copyright/trademark
-  '•', '●', '◆', '▪',        // bullets
-  '→', '←', '↑', '↓',        // arrows
-  '✓', '✔', '✗', '✘',        // checkmarks
-  '❤', '♥', '♡',             // hearts
-  '⚡', '🔥', '💎',           // decorative emoji
-  '👍', '👎',                 // gestures
-  '"',                       // straight double quote (observed SYMBOLS policy hits)
-  '”', '”', '”', '„', '‟', '«', '»', // double curly quotes (observed SYMBOLS policy hits)
-  '\u2018', '\u2019',        // single curly quotes (observed SYMBOLS policy hits)
-  '₀', '₁', '₂', '₃', '₄', '₅', '₆', '₇', '₈', '₉', // subscript digits
-  '；',                      // fullwidth semicolon
-  '(', ')',                  // parentheses (observed SYMBOLS policy hits)
-  '|',                       // pipe (can trigger SYMBOLS policy in some contexts)
+  '★',
+  '☆',
+  '⭐',
+  '🌟',
+  '✨', // stars
+  '©',
+  '®',
+  '™', // copyright/trademark
+  '•',
+  '●',
+  '◆',
+  '▪', // bullets
+  '→',
+  '←',
+  '↑',
+  '↓', // arrows
+  '✓',
+  '✔',
+  '✗',
+  '✘', // checkmarks
+  '❤',
+  '♥',
+  '♡', // hearts
+  '⚡',
+  '🔥',
+  '💎', // decorative emoji
+  '👍',
+  '👎', // gestures
+  '"', // straight double quote (observed SYMBOLS policy hits)
+  '”',
+  '”',
+  '”',
+  '„',
+  '‟',
+  '«',
+  '»', // double curly quotes (observed SYMBOLS policy hits)
+  '\u2018',
+  '\u2019', // single curly quotes (observed SYMBOLS policy hits)
+  '₀',
+  '₁',
+  '₂',
+  '₃',
+  '₄',
+  '₅',
+  '₆',
+  '₇',
+  '₈',
+  '₉', // subscript digits
+  '；', // fullwidth semicolon
+  '(',
+  ')', // parentheses (observed SYMBOLS policy hits)
+  '|', // pipe (can trigger SYMBOLS policy in some contexts)
 ]
 
 const EMOJI_REGEX = /[\p{Extended_Pictographic}]/gu
 const EMOJI_JOINERS_REGEX = /[\u200D\uFE0E\uFE0F]/g
 const PRESERVED_UPPERCASE_TOKENS = new Set([
-  'AI', 'AMD', 'API', 'ASUS', 'BBC', 'BMW', 'CEO', 'CFO', 'CIA', 'CNN', 'CPU', 'CPA', 'CTO',
-  'DELL', 'DVD', 'EU', 'ESPN', 'FBI', 'GPS', 'GPU', 'HBO', 'HDD', 'HD', 'HP', 'IBM', 'LCD',
-  'LED', 'LG', 'MTV', 'NASA', 'NBA', 'NFL', 'NHL', 'PPC', 'RAM', 'RGB', 'ROI', 'ROM', 'SEO',
-  'SSD', 'TV', 'UAE', 'UHD', 'UK', 'USA', 'USB', 'US'
+  'AI',
+  'AMD',
+  'API',
+  'ASUS',
+  'BBC',
+  'BMW',
+  'CEO',
+  'CFO',
+  'CIA',
+  'CNN',
+  'CPU',
+  'CPA',
+  'CTO',
+  'DELL',
+  'DVD',
+  'EU',
+  'ESPN',
+  'FBI',
+  'GPS',
+  'GPU',
+  'HBO',
+  'HDD',
+  'HD',
+  'HP',
+  'IBM',
+  'LCD',
+  'LED',
+  'LG',
+  'MTV',
+  'NASA',
+  'NBA',
+  'NFL',
+  'NHL',
+  'PPC',
+  'RAM',
+  'RGB',
+  'ROI',
+  'ROM',
+  'SEO',
+  'SSD',
+  'TV',
+  'UAE',
+  'UHD',
+  'UK',
+  'USA',
+  'USB',
+  'US',
 ])
 
 function hasExcessiveCapitalization(text: string): boolean {
@@ -45,9 +125,7 @@ function hasExcessiveCapitalization(text: string): boolean {
 }
 
 function toTitleCaseWord(word: string): string {
-  return word
-    .toLowerCase()
-    .replace(/(^|[-'])[a-z]/g, token => token.toUpperCase())
+  return word.toLowerCase().replace(/(^|[-'])[a-z]/g, (token) => token.toUpperCase())
 }
 
 function sanitizeExcessiveCapitalization(text: string): string {
@@ -68,7 +146,7 @@ export function findGoogleAdsProhibitedSymbols(text: string): string[] {
     if (input.includes(symbol)) found.add(symbol)
   }
   const emojiMatches = input.match(EMOJI_REGEX) || []
-  emojiMatches.forEach(e => found.add(e))
+  emojiMatches.forEach((e) => found.add(e))
   return Array.from(found)
 }
 
@@ -96,7 +174,8 @@ export function getGoogleAdsTextEffectiveLength(text: string): number {
 
   // Google Ads 的“字符长度”在部分双字节语言中会按更严格的规则计算；
   // 这里将常见的东亚宽字符（含标点/全角形式）按 2 计数，避免 API 侧报 Too long。
-  const cjkPattern = /[\u3000-\u303F\u3040-\u30FF\u31F0-\u31FF\u3300-\u33FF\u4E00-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]/
+  const cjkPattern =
+    /[\u3000-\u303F\u3040-\u30FF\u31F0-\u31FF\u3300-\u33FF\u4E00-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]/
   const weightedLength = (value: string): number => {
     let total = 0
     for (const ch of Array.from(value)) {
@@ -127,7 +206,8 @@ function truncateByEffectiveLength(text: string, maxLen: number): string {
   const input = String(text ?? '')
   if (maxLen <= 0) return ''
 
-  const cjkPattern = /[\u3000-\u303F\u3040-\u30FF\u31F0-\u31FF\u3300-\u33FF\u4E00-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]/
+  const cjkPattern =
+    /[\u3000-\u303F\u3040-\u30FF\u31F0-\u31FF\u3300-\u33FF\u4E00-\u9FFF\uAC00-\uD7AF\uFF00-\uFFEF]/
   const charWeight = (ch: string) => (cjkPattern.test(ch) ? 2 : 1)
 
   const takePlain = (value: string, budget: number): { text: string; used: number } => {
@@ -186,11 +266,7 @@ export function sanitizeGoogleAdsAdText(text: string, maxLen: number): string {
   if (getGoogleAdsTextEffectiveLength(replaced) <= maxLen) return replaced
 
   // 如果替换导致超长，回退为移除该符号，优先保证长度合规
-  const removed = original
-    .replace(/±/g, '')
-    .replace(/[~～]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  const removed = original.replace(/±/g, '').replace(/[~～]/g, ' ').replace(/\s+/g, ' ').trim()
   if (getGoogleAdsTextEffectiveLength(removed) <= maxLen) return removed
 
   // 🔧 兜底：自动截断，避免发布失败（包含CJK字符权重 & DKI token 保护）
@@ -219,8 +295,5 @@ export function sanitizeGoogleAdsFinalUrlSuffix(value: string): string {
   const original = String(value ?? '')
   if (!original) return ''
   const symbolSanitized = sanitizeGoogleAdsSymbols(original).text
-  return symbolSanitized
-    .replace(/[~～]/g, '')
-    .replace(/\s+/g, '')
-    .trim()
+  return symbolSanitized.replace(/[~～]/g, '').replace(/\s+/g, '').trim()
 }

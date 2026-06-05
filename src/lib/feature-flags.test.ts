@@ -13,7 +13,9 @@ describe('performance release flags', () => {
 
   it('uses configured defaults for performance release flags', () => {
     const snapshot = getPerformanceReleaseSnapshot()
-    const flagNames = Object.keys(PERFORMANCE_RELEASE_FLAGS) as Array<keyof typeof PERFORMANCE_RELEASE_FLAGS>
+    const flagNames = Object.keys(PERFORMANCE_RELEASE_FLAGS) as Array<
+      keyof typeof PERFORMANCE_RELEASE_FLAGS
+    >
 
     flagNames.forEach((flag) => {
       expect(snapshot[flag].enabled).toBe(PERFORMANCE_RELEASE_FLAGS[flag].enabled)
@@ -40,6 +42,8 @@ describe('performance release flags', () => {
 
     const result = validatePerformanceReleaseDependencies()
     expect(result.valid).toBe(false)
-    expect(result.issues).toContain('offersServerPaging requires offersIncrementalPoll to be enabled')
+    expect(result.issues).toContain(
+      'offersServerPaging requires offersIncrementalPoll to be enabled'
+    )
   })
 })

@@ -150,7 +150,9 @@ describe('GET /api/dashboard/summary', () => {
     const res = await GET(req)
 
     expect(res.status).toBe(200)
-    expect(String(dbFns.queryOne.mock.calls[0]?.[0] || '')).not.toContain("WHERE c.user_id = ?\n      AND c.status != 'REMOVED'")
+    expect(String(dbFns.queryOne.mock.calls[0]?.[0] || '')).not.toContain(
+      "WHERE c.user_id = ?\n      AND c.status != 'REMOVED'"
+    )
     expect(String(dbFns.query.mock.calls[0]?.[0] || '')).not.toContain("AND c.status != 'REMOVED'")
   })
 

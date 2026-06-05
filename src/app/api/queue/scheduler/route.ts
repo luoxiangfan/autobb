@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       dataSyncHealth,
       affiliateSyncHealth,
       zombieCleanupHealth,
-      openclawStrategyHealth
+      openclawStrategyHealth,
     ] = await Promise.all([
       checkClickFarmSchedulerHealth(db),
       checkUrlSwapSchedulerHealth(db),
@@ -58,15 +58,12 @@ export async function GET(request: NextRequest) {
         affiliateSyncScheduler: affiliateSyncHealth,
         zombieCleanupScheduler: zombieCleanupHealth,
         openclawStrategyScheduler: openclawStrategyHealth,
-        note: '调度器运行在独立的 scheduler 进程中，此处显示的是通过任务执行情况推断的健康状态'
-      }
+        note: '调度器运行在独立的 scheduler 进程中，此处显示的是通过任务执行情况推断的健康状态',
+      },
     })
   } catch (error: any) {
     console.error('[Scheduler API] 获取调度器状态失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取调度器状态失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取调度器状态失败' }, { status: 500 })
   }
 }
 
@@ -89,7 +86,7 @@ async function checkClickFarmSchedulerHealth(db: Awaited<ReturnType<typeof getDa
     WHERE status IN ('running', 'pending')
       AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'}
   `
-  const enabledTasksResult = await db.queryOne(enabledTasksQuery) as { count: number } | undefined
+  const enabledTasksResult = (await db.queryOne(enabledTasksQuery)) as { count: number } | undefined
   const enabledTasksCount = Number(enabledTasksResult?.count || 0)
 
   let status: 'healthy' | 'warning' | 'error' = 'healthy'
@@ -112,8 +109,8 @@ async function checkClickFarmSchedulerHealth(db: Awaited<ReturnType<typeof getDa
       runningTasks: clickFarmRunning,
       lastQueuedAt: null, // 队列管理器不提供时间戳信息
       checkInterval: '每小时',
-      schedulerProcess: 'scheduler 进程'
-    }
+      schedulerProcess: 'scheduler 进程',
+    },
   }
 }
 
@@ -129,8 +126,9 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
   const urlSwapRunning = stats.byTypeRunning?.['url-swap'] || 0
 
   // 1. 检查逾期任务数量
-  const overdueQuery = db.type === 'postgres'
-    ? `
+  const overdueQuery =
+    db.type === 'postgres'
+      ? `
       SELECT COUNT(*) as count
       FROM url_swap_tasks
       WHERE status = 'enabled'
@@ -138,7 +136,7 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
         AND started_at <= CURRENT_TIMESTAMP
         AND is_deleted = FALSE
     `
-    : `
+      : `
       SELECT COUNT(*) as count
       FROM url_swap_tasks
       WHERE status = 'enabled'
@@ -147,7 +145,7 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
         AND is_deleted = 0
     `
 
-  const overdueResult = await db.queryOne(overdueQuery) as { count: number } | undefined
+  const overdueResult = (await db.queryOne(overdueQuery)) as { count: number } | undefined
   const overdueCount = Number(overdueResult?.count || 0)
 
   // 2. 检查是否有启用的任务
@@ -157,7 +155,7 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
     WHERE status = 'enabled'
       AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'}
   `
-  const enabledTasksResult = await db.queryOne(enabledTasksQuery) as { count: number } | undefined
+  const enabledTasksResult = (await db.queryOne(enabledTasksQuery)) as { count: number } | undefined
   const enabledTasksCount = Number(enabledTasksResult?.count || 0)
 
   // 判断健康状态
@@ -190,8 +188,8 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
       runningTasks: urlSwapRunning,
       lastQueuedAt: null,
       checkInterval: '每分钟',
-      schedulerProcess: 'scheduler 进程'
-    }
+      schedulerProcess: 'scheduler 进程',
+    },
   }
 }
 
@@ -216,7 +214,7 @@ async function checkDataSyncSchedulerHealth(db: Awaited<ReturnType<typeof getDat
       'true'
     ) = 'true'
   `
-  const enabledUsersResult = await db.queryOne(enabledUsersQuery) as { count: number } | undefined
+  const enabledUsersResult = (await db.queryOne(enabledUsersQuery)) as { count: number } | undefined
   const enabledUsersCount = Number(enabledUsersResult?.count || 0)
 
   let status: 'healthy' | 'warning' | 'error' = 'healthy'
@@ -239,8 +237,8 @@ async function checkDataSyncSchedulerHealth(db: Awaited<ReturnType<typeof getDat
       runningTasks: dataSyncRunning,
       lastQueuedAt: null,
       checkInterval: '每小时',
-      schedulerProcess: 'scheduler 进程'
-    }
+      schedulerProcess: 'scheduler 进程',
+    },
   }
 }
 
@@ -261,7 +259,7 @@ async function checkAffiliateSyncSchedulerHealth(db: Awaited<ReturnType<typeof g
     FROM users
     WHERE ${db.type === 'postgres' ? 'product_management_enabled = TRUE' : 'product_management_enabled = 1'}
   `
-  const enabledUsersResult = await db.queryOne(enabledUsersQuery) as { count: number } | undefined
+  const enabledUsersResult = (await db.queryOne(enabledUsersQuery)) as { count: number } | undefined
   const enabledUsersCount = Number(enabledUsersResult?.count || 0)
 
   let status: 'healthy' | 'warning' | 'error' = 'healthy'
@@ -284,8 +282,8 @@ async function checkAffiliateSyncSchedulerHealth(db: Awaited<ReturnType<typeof g
       runningTasks: affiliateSyncRunning,
       lastQueuedAt: null,
       checkInterval: '每10分钟',
-      schedulerProcess: 'scheduler 进程'
-    }
+      schedulerProcess: 'scheduler 进程',
+    },
   }
 }
 
@@ -294,15 +292,16 @@ async function checkAffiliateSyncSchedulerHealth(db: Awaited<ReturnType<typeof g
  */
 async function checkZombieCleanupSchedulerHealth(db: Awaited<ReturnType<typeof getDatabase>>) {
   // 检查最近 2 小时内是否有僵尸任务被修复
-  const recentFixedQuery = db.type === 'postgres'
-    ? `
+  const recentFixedQuery =
+    db.type === 'postgres'
+      ? `
       SELECT COUNT(*) as count
       FROM affiliate_product_sync_runs
       WHERE status = 'failed'
         AND error_message LIKE '%僵尸任务%'
         AND updated_at >= NOW() - INTERVAL '2 hours'
     `
-    : `
+      : `
       SELECT COUNT(*) as count
       FROM affiliate_product_sync_runs
       WHERE status = 'failed'
@@ -310,25 +309,26 @@ async function checkZombieCleanupSchedulerHealth(db: Awaited<ReturnType<typeof g
         AND updated_at >= datetime('now', '-2 hours')
     `
 
-  const recentFixedResult = await db.queryOne(recentFixedQuery) as { count: number } | undefined
+  const recentFixedResult = (await db.queryOne(recentFixedQuery)) as { count: number } | undefined
   const recentFixedCount = Number(recentFixedResult?.count || 0)
 
   // 检查当前是否有潜在的僵尸任务（运行超过2小时）
-  const zombieQuery = db.type === 'postgres'
-    ? `
+  const zombieQuery =
+    db.type === 'postgres'
+      ? `
       SELECT COUNT(*) as count
       FROM affiliate_product_sync_runs
       WHERE status = 'running'
         AND started_at < NOW() - INTERVAL '2 hours'
     `
-    : `
+      : `
       SELECT COUNT(*) as count
       FROM affiliate_product_sync_runs
       WHERE status = 'running'
         AND started_at < datetime('now', '-2 hours')
     `
 
-  const zombieResult = await db.queryOne(zombieQuery) as { count: number } | undefined
+  const zombieResult = (await db.queryOne(zombieQuery)) as { count: number } | undefined
   const zombieCount = Number(zombieResult?.count || 0)
 
   let status: 'healthy' | 'warning' | 'error' = 'healthy'
@@ -352,8 +352,8 @@ async function checkZombieCleanupSchedulerHealth(db: Awaited<ReturnType<typeof g
       potentialZombieTasks: zombieCount,
       recentFixedTasks: recentFixedCount,
       checkInterval: '每小时',
-      schedulerProcess: 'scheduler 进程'
-    }
+      schedulerProcess: 'scheduler 进程',
+    },
   }
 }
 
@@ -378,7 +378,7 @@ async function checkOpenclawStrategySchedulerHealth(db: Awaited<ReturnType<typeo
       AND ss.key = 'openclaw_strategy_enabled'
       AND ss.value IN ('true', '1', 'yes', 'on')
   `
-  const enabledUsersResult = await db.queryOne(enabledUsersQuery) as { count: number } | undefined
+  const enabledUsersResult = (await db.queryOne(enabledUsersQuery)) as { count: number } | undefined
   const enabledUsersCount = Number(enabledUsersResult?.count || 0)
 
   let status: 'healthy' | 'warning' | 'error' = 'healthy'
@@ -401,8 +401,8 @@ async function checkOpenclawStrategySchedulerHealth(db: Awaited<ReturnType<typeo
       runningTasks: openclawStrategyRunning,
       lastQueuedAt: null,
       checkInterval: '按用户配置',
-      schedulerProcess: 'scheduler 进程'
-    }
+      schedulerProcess: 'scheduler 进程',
+    },
   }
 }
 
@@ -431,14 +431,11 @@ export async function POST(request: NextRequest) {
         processed: result.processed,
         executed: result.executed,
         skipped: result.skipped,
-        errors: result.errors
-      }
+        errors: result.errors,
+      },
     })
   } catch (error: any) {
     console.error('[Scheduler API] 手动触发调度器失败:', error)
-    return NextResponse.json(
-      { error: error.message || '手动触发调度器失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '手动触发调度器失败' }, { status: 500 })
   }
 }

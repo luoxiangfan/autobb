@@ -3,18 +3,26 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolParam, getInsertedId } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
-import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign-config-keywords'
+import {
+  patchCampaignConfigKeywords,
+  type CampaignConfigKeyword,
+} from '@/lib/campaign-config-keywords'
 import { promoteKeywordsToOfferKeywordPool } from '@/lib/offer-keyword-pool'
 
-type KeywordInput = string | {
-  text?: string
-  keyword?: string
-  keywordText?: string
-  matchType?: string
-}
+type KeywordInput =
+  | string
+  | {
+      text?: string
+      keyword?: string
+      keywordText?: string
+      matchType?: string
+    }
 
 type AddKeywordsRequestBody = {
   keywords?: KeywordInput[]
@@ -62,11 +70,19 @@ async function promoteAddedKeywordsToOfferPool(params: {
 }
 
 function normalizeKeywordText(value: unknown): string {
-  return String(value || '').replace(/\s+/g, ' ').trim();
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-function normalizeMatchType(value: unknown, keywordText: string, brand: string | null): 'BROAD' | 'PHRASE' | 'EXACT' {
-  const raw = String(value || '').trim().toUpperCase()
+function normalizeMatchType(
+  value: unknown,
+  keywordText: string,
+  brand: string | null
+): 'BROAD' | 'PHRASE' | 'EXACT' {
+  const raw = String(value || '')
+    .trim()
+    .toUpperCase()
   if (raw === 'BROAD' || raw === 'PHRASE' || raw === 'EXACT') {
     return raw
   }
@@ -76,15 +92,19 @@ function normalizeMatchType(value: unknown, keywordText: string, brand: string |
   })
 }
 
-function parseKeywords(inputs: KeywordInput[] | undefined, brand: string | null): NormalizedKeyword[] {
+function parseKeywords(
+  inputs: KeywordInput[] | undefined,
+  brand: string | null
+): NormalizedKeyword[] {
   if (!Array.isArray(inputs)) return []
 
   const seen = new Set<string>()
   const normalized: NormalizedKeyword[] = []
   for (const item of inputs) {
-    const text = typeof item === 'string'
-      ? normalizeKeywordText(item)
-      : normalizeKeywordText(item?.text || item?.keyword || item?.keywordText)
+    const text =
+      typeof item === 'string'
+        ? normalizeKeywordText(item)
+        : normalizeKeywordText(item?.text || item?.keyword || item?.keywordText)
     if (!text) continue
     if (text.length < 2 || text.length > 80) continue
 
@@ -106,10 +126,12 @@ function parseKeywords(inputs: KeywordInput[] | undefined, brand: string | null)
 
 function isDuplicateKeywordError(error: any): boolean {
   const message = String(error?.message || error || '').toLowerCase()
-  return message.includes('already exists')
-    || message.includes('resource_already_exists')
-    || message.includes('duplicate')
-    || message.includes('重复')
+  return (
+    message.includes('already exists') ||
+    message.includes('resource_already_exists') ||
+    message.includes('duplicate') ||
+    message.includes('重复')
+  )
 }
 
 async function ensurePrimaryAdGroup(params: {
@@ -294,7 +316,7 @@ async function createKeywordsWithDuplicateTolerance(params: {
 }
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -307,7 +329,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
 
-    const body = await request.json().catch(() => ({})) as AddKeywordsRequestBody
+    const body = (await request.json().catch(() => ({}))) as AddKeywordsRequestBody
     const db = await getDatabase()
 
     const campaign = await db.queryOne<{
@@ -366,7 +388,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     const accountIsActive = campaign.account_is_active === true || campaign.account_is_active === 1
-    const accountIsDeleted = campaign.account_is_deleted === true || campaign.account_is_deleted === 1
+    const accountIsDeleted =
+      campaign.account_is_deleted === true || campaign.account_is_deleted === 1
     if (!accountIsActive || accountIsDeleted) {
       return NextResponse.json({ error: '关联Ads账号不可用（可能已停用或解绑）' }, { status: 400 })
     }
@@ -415,9 +438,12 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         .filter(Boolean)
     )
 
-    const toCreate = parsedKeywords.filter((item) => !existingKeywordSet.has(item.text.toLowerCase()))
-    const skippedExistingKeywordRows = parsedKeywords
-      .filter((item) => existingKeywordSet.has(item.text.toLowerCase()))
+    const toCreate = parsedKeywords.filter(
+      (item) => !existingKeywordSet.has(item.text.toLowerCase())
+    )
+    const skippedExistingKeywordRows = parsedKeywords.filter((item) =>
+      existingKeywordSet.has(item.text.toLowerCase())
+    )
     const skippedExistingKeywords = skippedExistingKeywordRows.map((item) => item.text)
 
     if (toCreate.length === 0) {
@@ -499,7 +525,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     const now = new Date().toISOString()
-    const insertedKeywords: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }> = []
+    const insertedKeywords: Array<{
+      keywordId: string
+      keywordText: string
+      matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+    }> = []
     for (const created of createResult.created) {
       const normalized = created.keywordText.toLowerCase()
       const matchType = matchTypeLookup.get(normalized) || 'PHRASE'
@@ -555,7 +585,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const duplicateKeywords = Array.from(
       new Set([...createResult.duplicateKeywords, ...skippedExistingKeywords])
     )
-    const duplicateKeywordSet = new Set(createResult.duplicateKeywords.map((item) => item.toLowerCase()))
+    const duplicateKeywordSet = new Set(
+      createResult.duplicateKeywords.map((item) => item.toLowerCase())
+    )
     const duplicateKeywordRows = toCreate
       .filter((item) => duplicateKeywordSet.has(item.text.toLowerCase()))
       .map((item) => ({ text: item.text, matchType: item.matchType }))
@@ -571,7 +603,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       userId,
       keywords: [
         ...insertedKeywords.map((item) => ({ text: item.keywordText, matchType: item.matchType })),
-        ...skippedExistingKeywordRows.map((item) => ({ text: item.text, matchType: item.matchType })),
+        ...skippedExistingKeywordRows.map((item) => ({
+          text: item.text,
+          matchType: item.matchType,
+        })),
         ...duplicateKeywordRows,
       ],
     })
@@ -598,9 +633,6 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       failures: createResult.failures,
     })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || '新增关键词失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '新增关键词失败' }, { status: 500 })
   }
 }

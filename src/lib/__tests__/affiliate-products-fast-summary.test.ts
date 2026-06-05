@@ -119,9 +119,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
   })
 
   it('filters by targetCountry using postgres jsonb containment with UK/GB alias', async () => {
-    dbFns.query.mockResolvedValueOnce([
-      { platform: 'partnerboost', total_count: 42 },
-    ])
+    dbFns.query.mockResolvedValueOnce([{ platform: 'partnerboost', total_count: 42 }])
 
     const { listAffiliateProducts } = await import('@/lib/affiliate-products')
     await listAffiliateProducts(1, {
@@ -135,18 +133,20 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
 
     expect(dbFns.query).toHaveBeenCalledTimes(1)
     const [sql, params] = dbFns.query.mock.calls[0]
-    expect(String(sql)).toContain("@> ?::jsonb")
+    expect(String(sql)).toContain('@> ?::jsonb')
     expect(String(sql)).toContain(' OR ')
     expect(String(sql)).not.toContain('jsonb_array_elements_text')
-    expect(params).toEqual(expect.arrayContaining([
-      '["UK"]',
-      '["GB"]',
-    ]))
+    expect(params).toEqual(expect.arrayContaining(['["UK"]', '["GB"]']))
   })
 
   it('filters by landingPageType using boolean landing-type condition in postgres', async () => {
     dbFns.query.mockResolvedValueOnce([
-      { platform: 'yeahpromos', total_count: 12, lightweight_product_count: 12, lightweight_store_count: 0 },
+      {
+        platform: 'yeahpromos',
+        total_count: 12,
+        lightweight_product_count: 12,
+        lightweight_store_count: 0,
+      },
     ])
 
     const { listAffiliateProducts } = await import('@/lib/affiliate-products')
@@ -163,15 +163,25 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
     expect(dbFns.query).toHaveBeenCalledTimes(1)
     const [sql, params] = dbFns.query.mock.calls[0]
     const sqlText = String(sql)
-    expect(sqlText).toContain("TRIM(p.asin)")
+    expect(sqlText).toContain('TRIM(p.asin)')
     expect(sqlText).not.toContain("THEN 'amazon_product'")
     expect(params).toEqual(expect.arrayContaining([1]))
   })
 
   it('uses lightweight ASIN-based classification to avoid expensive URL pattern scans', async () => {
     dbFns.query.mockResolvedValueOnce([
-      { platform: 'yeahpromos', total_count: 63074, lightweight_product_count: 61000, lightweight_store_count: 0 },
-      { platform: 'partnerboost', total_count: 182650, lightweight_product_count: 140000, lightweight_store_count: 5000 },
+      {
+        platform: 'yeahpromos',
+        total_count: 63074,
+        lightweight_product_count: 61000,
+        lightweight_store_count: 0,
+      },
+      {
+        platform: 'partnerboost',
+        total_count: 182650,
+        lightweight_product_count: 140000,
+        lightweight_store_count: 5000,
+      },
     ])
 
     const { listAffiliateProducts } = await import('@/lib/affiliate-products')
@@ -206,12 +216,32 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
   it('applies lightweight ASIN-based classification on visible rows when status is filtered', async () => {
     dbFns.query
       .mockResolvedValueOnce([
-        { platform: 'yeahpromos', total_count: 100, lightweight_product_count: 90, lightweight_store_count: 0 },
-        { platform: 'partnerboost', total_count: 200, lightweight_product_count: 120, lightweight_store_count: 30 },
+        {
+          platform: 'yeahpromos',
+          total_count: 100,
+          lightweight_product_count: 90,
+          lightweight_store_count: 0,
+        },
+        {
+          platform: 'partnerboost',
+          total_count: 200,
+          lightweight_product_count: 120,
+          lightweight_store_count: 30,
+        },
       ])
       .mockResolvedValueOnce([
-        { platform: 'yeahpromos', visible_count: 40, lightweight_product_count: 35, lightweight_store_count: 0 },
-        { platform: 'partnerboost', visible_count: 80, lightweight_product_count: 45, lightweight_store_count: 10 },
+        {
+          platform: 'yeahpromos',
+          visible_count: 40,
+          lightweight_product_count: 35,
+          lightweight_store_count: 0,
+        },
+        {
+          platform: 'partnerboost',
+          visible_count: 80,
+          lightweight_product_count: 45,
+          lightweight_store_count: 10,
+        },
       ])
 
     const { listAffiliateProducts } = await import('@/lib/affiliate-products')
@@ -240,7 +270,9 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
   })
 
   it('degrades gracefully when fast summary query hits postgres statement timeout', async () => {
-    const timeoutError = Object.assign(new Error('canceling statement due to statement timeout'), { code: '57014' })
+    const timeoutError = Object.assign(new Error('canceling statement due to statement timeout'), {
+      code: '57014',
+    })
     dbFns.query.mockRejectedValueOnce(timeoutError)
 
     const { listAffiliateProducts } = await import('@/lib/affiliate-products')

@@ -35,17 +35,17 @@ interface BatchTask {
 }
 
 export async function GET(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const db = getDatabase()
   const { batchId } = params
 
   // 验证用户身份
   const authResult = await verifyAuth(req)
   if (!authResult.authenticated || !authResult.user) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
   const userIdNum = authResult.user.userId
 
@@ -80,10 +80,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
         // 轮询数据库获取批量进度
         const pollInterval = setInterval(async () => {
           try {
-            const rows = await db.query<BatchTask>(
-              'SELECT * FROM batch_tasks WHERE id = ?',
-              [batchId]
-            )
+            const rows = await db.query<BatchTask>('SELECT * FROM batch_tasks WHERE id = ?', [
+              batchId,
+            ])
 
             if (!rows || rows.length === 0) {
               sendSSE({ type: 'error', error: 'Batch task not found' })
@@ -103,9 +102,12 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
             lastUpdatedAt = batch.updated_at
 
             // 计算进度
-            const progress = batch.total_count > 0
-              ? Math.round(((batch.completed_count + batch.failed_count) / batch.total_count) * 100)
-              : 0
+            const progress =
+              batch.total_count > 0
+                ? Math.round(
+                    ((batch.completed_count + batch.failed_count) / batch.total_count) * 100
+                  )
+                : 0
 
             // 推送进度更新
             if (batch.status === 'running' || batch.status === 'pending') {
@@ -114,18 +116,22 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
                 completed: batch.completed_count,
                 failed: batch.failed_count,
                 total: batch.total_count,
-                progress
+                progress,
               })
             }
 
             // 批量任务完成
-            if (batch.status === 'completed' || batch.status === 'partial' || batch.status === 'failed') {
+            if (
+              batch.status === 'completed' ||
+              batch.status === 'partial' ||
+              batch.status === 'failed'
+            ) {
               sendSSE({
                 type: 'complete',
                 status: batch.status,
                 completed: batch.completed_count,
                 failed: batch.failed_count,
-                total: batch.total_count
+                total: batch.total_count,
               })
               clearInterval(pollInterval)
               controller.close()
@@ -160,22 +166,21 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
             isClosed = true
           }
         }, 300000)
-      }
+      },
     })
 
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     })
-
   } catch (error: any) {
     console.error('Batch SSE initialization error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

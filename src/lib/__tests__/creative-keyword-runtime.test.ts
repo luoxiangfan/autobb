@@ -81,14 +81,16 @@ describe('creative-keyword-runtime', () => {
     const directAudit = { totalKeywords: 1 }
     const aliasAudit = { totalKeywords: 2 }
 
-    expect(resolveCreativeKeywordAudit({
-      audit: directAudit as any,
-      keywordSourceAudit: aliasAudit as any,
-      adStrength: {
-        audit: aliasAudit as any,
+    expect(
+      resolveCreativeKeywordAudit({
+        audit: directAudit as any,
         keywordSourceAudit: aliasAudit as any,
-      },
-    })).toBe(directAudit)
+        adStrength: {
+          audit: aliasAudit as any,
+          keywordSourceAudit: aliasAudit as any,
+        },
+      })
+    ).toBe(directAudit)
   })
 
   it('builds creative keyword set input from offer + creative runtime state', () => {
@@ -117,24 +119,26 @@ describe('creative-keyword-runtime', () => {
       fallbackMode: false,
     })
 
-    expect(input).toEqual(expect.objectContaining({
-      offer: expect.objectContaining({
-        brand: 'BrandX',
-        target_language: 'de-CH',
-      }),
-      userId: 7,
-      brandName: 'BrandX',
-      targetLanguage: 'de-CH',
-      creativeType: 'model_intent',
-      bucket: 'B',
-      scopeLabel: 'unit-runtime-input',
-      keywords: ['brandx x200 vacuum'],
-      promptKeywords: ['brandx x200 vacuum', 'buy brandx x200 vacuum'],
-      seedCandidates: [{ keyword: 'brandx x200' }],
-      enableSupplementation: true,
-      continueOnSupplementError: true,
-      fallbackMode: false,
-    }))
+    expect(input).toEqual(
+      expect.objectContaining({
+        offer: expect.objectContaining({
+          brand: 'BrandX',
+          target_language: 'de-CH',
+        }),
+        userId: 7,
+        brandName: 'BrandX',
+        targetLanguage: 'de-CH',
+        creativeType: 'model_intent',
+        bucket: 'B',
+        scopeLabel: 'unit-runtime-input',
+        keywords: ['brandx x200 vacuum'],
+        promptKeywords: ['brandx x200 vacuum', 'buy brandx x200 vacuum'],
+        seedCandidates: [{ keyword: 'brandx x200' }],
+        enableSupplementation: true,
+        continueOnSupplementError: true,
+        fallbackMode: false,
+      })
+    )
     expect(input.keywordsWithVolume).toEqual([
       expect.objectContaining({
         keyword: 'brandx x200 vacuum',
@@ -204,19 +208,23 @@ describe('creative-keyword-runtime', () => {
 
   it('builds persisted ad strength payload with shared audit aliases', () => {
     const audit = { totalKeywords: 2 } as any
-    const payload = createCreativeAdStrengthPayload({
-      finalRating: 'GOOD',
-      finalScore: 84,
-      localEvaluation: {
-        dimensions: {
-          relevance: { score: 12 },
+    const payload = createCreativeAdStrengthPayload(
+      {
+        finalRating: 'GOOD',
+        finalScore: 84,
+        localEvaluation: {
+          dimensions: {
+            relevance: { score: 12 },
+          },
         },
-      },
-      combinedSuggestions: ['Add offer'],
-      rsaQualityGate: { passed: true },
-    } as any, audit, {
-      includeRsaQualityGate: true,
-    })
+        combinedSuggestions: ['Add offer'],
+        rsaQualityGate: { passed: true },
+      } as any,
+      audit,
+      {
+        includeRsaQualityGate: true,
+      }
+    )
 
     expect(payload).toEqual({
       rating: 'GOOD',
@@ -259,19 +267,22 @@ describe('creative-keyword-runtime', () => {
   })
 
   it('fills optional score breakdown dimensions with zero when partial metrics are allowed', () => {
-    const breakdown = createCreativeScoreBreakdown({
-      localEvaluation: {
-        dimensions: {
-          relevance: { score: 11 },
-          quality: { score: 12 },
-          completeness: { score: 13 },
-          diversity: { score: 14 },
-          compliance: { score: 15 },
+    const breakdown = createCreativeScoreBreakdown(
+      {
+        localEvaluation: {
+          dimensions: {
+            relevance: { score: 11 },
+            quality: { score: 12 },
+            completeness: { score: 13 },
+            diversity: { score: 14 },
+            compliance: { score: 15 },
+          },
         },
-      },
-    } as any, {
-      allowPartialMetrics: true,
-    })
+      } as any,
+      {
+        allowPartialMetrics: true,
+      }
+    )
 
     expect(breakdown).toEqual({
       relevance: 11,
@@ -337,13 +348,15 @@ describe('creative-keyword-runtime', () => {
   })
 
   it('builds optimization payload with optional quality gate flag', () => {
-    expect(createCreativeOptimizationPayload({
-      attempts: 2,
-      targetRating: 'GOOD',
-      achieved: true,
-      qualityGatePassed: true,
-      history: [{ attempt: 1 }],
-    })).toEqual({
+    expect(
+      createCreativeOptimizationPayload({
+        attempts: 2,
+        targetRating: 'GOOD',
+        achieved: true,
+        qualityGatePassed: true,
+        history: [{ attempt: 1 }],
+      })
+    ).toEqual({
       attempts: 2,
       targetRating: 'GOOD',
       achieved: true,
@@ -351,12 +364,14 @@ describe('creative-keyword-runtime', () => {
       history: [{ attempt: 1 }],
     })
 
-    expect(createCreativeOptimizationPayload({
-      attempts: 1,
-      targetRating: 'GOOD',
-      achieved: false,
-      history: [],
-    })).toEqual({
+    expect(
+      createCreativeOptimizationPayload({
+        attempts: 1,
+        targetRating: 'GOOD',
+        achieved: false,
+        history: [],
+      })
+    ).toEqual({
       attempts: 1,
       targetRating: 'GOOD',
       achieved: false,
@@ -365,12 +380,14 @@ describe('creative-keyword-runtime', () => {
   })
 
   it('builds compact offer summary payload', () => {
-    expect(createCreativeOfferSummaryPayload({
-      id: 96,
-      brand: 'BrandX',
-      url: 'https://example.com',
-      affiliate_link: 'https://aff.example.com',
-    })).toEqual({
+    expect(
+      createCreativeOfferSummaryPayload({
+        id: 96,
+        brand: 'BrandX',
+        url: 'https://example.com',
+        affiliate_link: 'https://aff.example.com',
+      })
+    ).toEqual({
       id: 96,
       brand: 'BrandX',
       url: 'https://example.com',
@@ -379,12 +396,14 @@ describe('creative-keyword-runtime', () => {
   })
 
   it('builds bucket summary payload', () => {
-    expect(createCreativeBucketSummaryPayload({
-      creativeType: 'model_intent',
-      bucket: 'B',
-      bucketIntent: 'Model Intent',
-      generatedBuckets: ['B'],
-    })).toEqual({
+    expect(
+      createCreativeBucketSummaryPayload({
+        creativeType: 'model_intent',
+        bucket: 'B',
+        bucketIntent: 'Model Intent',
+        generatedBuckets: ['B'],
+      })
+    ).toEqual({
       creativeType: 'model_intent',
       bucket: 'B',
       bucketIntent: 'Model Intent',
@@ -394,33 +413,35 @@ describe('creative-keyword-runtime', () => {
 
   it('builds creative response payload with optional fields', () => {
     const audit = { totalKeywords: 1 } as any
-    expect(createCreativeResponsePayload({
-      id: 901,
-      creative: {
-        headlines: ['BrandX X200'],
-        descriptions: ['Clean faster'],
-        keywords: ['brandx x200 vacuum'],
-        keywordsWithVolume: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200 }],
-        negativeKeywords: ['manual'],
-        callouts: ['Free Shipping'],
-        sitelinks: [],
-        theme: 'Model Intent',
-        explanation: 'Focus on the verified model.',
-        headlinesWithMetadata: [{ text: 'BrandX X200', length: 11 }],
-        descriptionsWithMetadata: [{ text: 'Clean faster', length: 12 }],
-        qualityMetrics: { score: 84 },
-        keywordSupplementation: {
-          triggered: false,
-          beforeCount: 1,
-          afterCount: 1,
-          addedKeywords: [],
-          supplementCapApplied: false,
-        },
-      } as any,
-      audit,
-      includeNegativeKeywords: true,
-      includeKeywordSupplementation: true,
-    })).toEqual({
+    expect(
+      createCreativeResponsePayload({
+        id: 901,
+        creative: {
+          headlines: ['BrandX X200'],
+          descriptions: ['Clean faster'],
+          keywords: ['brandx x200 vacuum'],
+          keywordsWithVolume: [{ keyword: 'brandx x200 vacuum', searchVolume: 1200 }],
+          negativeKeywords: ['manual'],
+          callouts: ['Free Shipping'],
+          sitelinks: [],
+          theme: 'Model Intent',
+          explanation: 'Focus on the verified model.',
+          headlinesWithMetadata: [{ text: 'BrandX X200', length: 11 }],
+          descriptionsWithMetadata: [{ text: 'Clean faster', length: 12 }],
+          qualityMetrics: { score: 84 },
+          keywordSupplementation: {
+            triggered: false,
+            beforeCount: 1,
+            afterCount: 1,
+            addedKeywords: [],
+            supplementCapApplied: false,
+          },
+        } as any,
+        audit,
+        includeNegativeKeywords: true,
+        includeKeywordSupplementation: true,
+      })
+    ).toEqual({
       id: 901,
       headlines: ['BrandX X200'],
       descriptions: ['Clean faster'],
@@ -498,69 +519,50 @@ describe('creative-keyword-runtime', () => {
       brandKeywords: ['brandx'],
     })
 
-    expect(merged).toEqual([
-      'brandx x100 vacuum',
-      'cordless vacuum deal',
-      'x200 vacuum deals',
-    ])
+    expect(merged).toEqual(['brandx x100 vacuum', 'cordless vacuum deal', 'x200 vacuum deals'])
   })
 
   it('deduplicates permutation-equivalent non-brand keywords when merging used keywords', () => {
     const merged = mergeUsedKeywordsExcludingBrand({
       usedKeywords: ['vacuum x200 deal'],
-      candidateKeywords: [
-        'x200 vacuum deal',
-        'deal x200 vacuum',
-        'x300 vacuum deal',
-      ],
+      candidateKeywords: ['x200 vacuum deal', 'deal x200 vacuum', 'x300 vacuum deal'],
       brandKeywords: ['brandx'],
     })
 
-    expect(merged).toEqual([
-      'vacuum x200 deal',
-      'x300 vacuum deal',
-    ])
+    expect(merged).toEqual(['vacuum x200 deal', 'x300 vacuum deal'])
   })
 
   it('skips low-signal single-token candidate keywords while keeping model-anchor single tokens', () => {
     const merged = mergeUsedKeywordsExcludingBrand({
       usedKeywords: ['existing keyword'],
-      candidateKeywords: [
-        'deal',
-        'buy',
-        'x10',
-        'x10',
-      ],
+      candidateKeywords: ['deal', 'buy', 'x10', 'x10'],
       brandKeywords: ['brandx'],
     })
 
-    expect(merged).toEqual([
-      'existing keyword',
-      'x10',
-    ])
+    expect(merged).toEqual(['existing keyword', 'x10'])
   })
 
   it('prefers executable keywords when building retry exclusions', () => {
-    expect(resolveCreativeKeywordsForRetryExclusion({
-      executableKeywords: ['novilla queen mattress'],
-      keywords: ['novilla official store'],
-      keywordsWithVolume: [
-        { keyword: 'novilla memory foam mattress', searchVolume: 320 },
-      ],
-    } as any)).toEqual(['novilla queen mattress'])
+    expect(
+      resolveCreativeKeywordsForRetryExclusion({
+        executableKeywords: ['novilla queen mattress'],
+        keywords: ['novilla official store'],
+        keywordsWithVolume: [{ keyword: 'novilla memory foam mattress', searchVolume: 320 }],
+      } as any)
+    ).toEqual(['novilla queen mattress'])
 
-    expect(resolveCreativeKeywordsForRetryExclusion({
-      keywords: ['novilla king mattress'],
-      keywordsWithVolume: [
-        { keyword: 'novilla memory foam mattress', searchVolume: 320 },
-      ],
-    } as any)).toEqual(['novilla king mattress'])
+    expect(
+      resolveCreativeKeywordsForRetryExclusion({
+        keywords: ['novilla king mattress'],
+        keywordsWithVolume: [{ keyword: 'novilla memory foam mattress', searchVolume: 320 }],
+      } as any)
+    ).toEqual(['novilla king mattress'])
 
-    expect(resolveCreativeKeywordsForRetryExclusion({
-      keywordsWithVolume: [
-        { keyword: 'novilla twin mattress', searchVolume: 260 },
-      ],
-    } as any)).toEqual(['novilla twin mattress'])
+    expect(
+      resolveCreativeKeywordsForRetryExclusion({
+        keywordsWithVolume: [{ keyword: 'novilla twin mattress', searchVolume: 260 }],
+      } as any)
+    ).toEqual(['novilla twin mattress'])
   })
 
   it('builds normalized brand keyword matcher list', () => {
@@ -608,11 +610,13 @@ describe('creative-keyword-runtime', () => {
     })
 
     expect(result.passed).toBe(false)
-    expect(result.violations.map((item) => item.code)).toEqual(expect.arrayContaining([
-      'keyword_count_below_floor',
-      'non_target_language_ratio_exceeded',
-      'duplicate_ratio_exceeded',
-      'truncation_anomaly_detected',
-    ]))
+    expect(result.violations.map((item) => item.code)).toEqual(
+      expect.arrayContaining([
+        'keyword_count_below_floor',
+        'non_target_language_ratio_exceeded',
+        'duplicate_ratio_exceeded',
+        'truncation_anomaly_detected',
+      ])
+    )
   })
 })

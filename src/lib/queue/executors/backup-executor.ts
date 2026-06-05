@@ -19,8 +19,8 @@ import { backupDatabase } from '@/lib/backup'
  */
 export interface BackupTaskData {
   backupType: 'manual' | 'auto'
-  createdBy?: number  // 用户ID（手动备份时）
-  dbPath?: string     // 可选，自定义数据库路径
+  createdBy?: number // 用户ID（手动备份时）
+  dbPath?: string // 可选，自定义数据库路径
 }
 
 /**
@@ -32,7 +32,7 @@ export interface BackupTaskResult {
   backupPath?: string
   fileSizeBytes?: number
   errorMessage?: string
-  duration: number  // 备份耗时（毫秒）
+  duration: number // 备份耗时（毫秒）
 }
 
 /**
@@ -42,7 +42,9 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
   return async (task: Task<BackupTaskData>) => {
     const { backupType, createdBy } = task.data
 
-    console.log(`💾 [BackupExecutor] 开始备份任务: 类型=${backupType}, 用户=${createdBy || 'system'}`)
+    console.log(
+      `💾 [BackupExecutor] 开始备份任务: 类型=${backupType}, 用户=${createdBy || 'system'}`
+    )
 
     const startTime = Date.now()
 
@@ -53,9 +55,13 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
       const duration = Date.now() - startTime
 
       if (result.success) {
-        console.log(`✅ [BackupExecutor] 备份任务完成: ${result.backupFilename}, 文件大小=${(result.fileSizeBytes! / 1024 / 1024).toFixed(2)}MB, 耗时=${duration}ms`)
+        console.log(
+          `✅ [BackupExecutor] 备份任务完成: ${result.backupFilename}, 文件大小=${(result.fileSizeBytes! / 1024 / 1024).toFixed(2)}MB, 耗时=${duration}ms`
+        )
       } else {
-        console.error(`❌ [BackupExecutor] 备份任务失败: ${result.errorMessage}, 耗时=${duration}ms`)
+        console.error(
+          `❌ [BackupExecutor] 备份任务失败: ${result.errorMessage}, 耗时=${duration}ms`
+        )
       }
 
       return {
@@ -64,7 +70,7 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
         backupPath: result.backupPath,
         fileSizeBytes: result.fileSizeBytes,
         errorMessage: result.errorMessage,
-        duration
+        duration,
       }
     } catch (error: any) {
       const duration = Date.now() - startTime

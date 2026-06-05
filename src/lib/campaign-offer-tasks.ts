@@ -30,10 +30,7 @@ function resolvePauseBatchConcurrency(): number {
   const raw = Number(rawValue)
   if (!Number.isFinite(raw)) return envDefault
   const normalized = Math.floor(raw)
-  return Math.min(
-    MAX_PAUSE_BATCH_CONCURRENCY,
-    Math.max(MIN_PAUSE_BATCH_CONCURRENCY, normalized)
-  )
+  return Math.min(MAX_PAUSE_BATCH_CONCURRENCY, Math.max(MIN_PAUSE_BATCH_CONCURRENCY, normalized))
 }
 
 function chunkIds(ids: string[], size: number): string[][] {
@@ -118,7 +115,8 @@ export async function pauseOfferTasks(
   await db.transaction(async () => {
     // 1) 暂停补点击任务
     if (db.type === 'postgres') {
-      const updatedRows = await db.query<{ id: string }>(`
+      const updatedRows = await db.query<{ id: string }>(
+        `
         UPDATE click_farm_tasks
         SET status = 'stopped',
             pause_reason = ?,
@@ -128,23 +126,29 @@ export async function pauseOfferTasks(
         WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
           AND status IN ('pending', 'running', 'paused')
         RETURNING id
-      `, [pauseReason, pauseMessage, userId, offerId])
+      `,
+        [pauseReason, pauseMessage, userId, offerId]
+      )
       updatedClickFarmTaskIds.push(...updatedRows.map((row) => String(row.id)))
       clickFarmUpdatedCount = updatedRows.length
     } else {
       // SQLite 保持先查后批量更新，避免超大 IN 列表带来的参数限制风险。
       const clickFarmTaskIds = (
-        await db.query<{ id: string }>(`
+        await db.query<{ id: string }>(
+          `
           SELECT id FROM click_farm_tasks
           WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
             AND status IN ('pending', 'running', 'paused')
-        `, [offerId, userId])
+        `,
+          [offerId, userId]
+        )
       ).map((task) => String(task.id))
 
       for (const batchIds of chunkIds(clickFarmTaskIds, MAX_IDS_PER_UPDATE_BATCH)) {
         const clickFarmIdPlaceholders = batchIds.map(() => '?').join(', ')
         let updateChanges = 0
-        const updateResult = await db.exec(`
+        const updateResult = await db.exec(
+          `
           UPDATE click_farm_tasks
           SET status = 'stopped',
               pause_reason = ?,
@@ -154,18 +158,23 @@ export async function pauseOfferTasks(
           WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
             AND status IN ('pending', 'running', 'paused')
             AND id IN (${clickFarmIdPlaceholders})
-        `, [pauseReason, pauseMessage, userId, offerId, ...batchIds])
+        `,
+          [pauseReason, pauseMessage, userId, offerId, ...batchIds]
+        )
         updateChanges = Number(updateResult.changes || 0)
         if (updateChanges === batchIds.length) {
           updatedClickFarmTaskIds.push(...batchIds)
         } else if (updateChanges > 0) {
           // 并发下部分命中时，二次查询确认已更新到 stopped 的任务，避免误删队列。
-          const confirmedUpdatedRows = await db.query<{ id: string }>(`
+          const confirmedUpdatedRows = await db.query<{ id: string }>(
+            `
             SELECT id FROM click_farm_tasks
             WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
               AND status = 'stopped'
               AND id IN (${clickFarmIdPlaceholders})
-          `, [userId, offerId, ...batchIds])
+          `,
+            [userId, offerId, ...batchIds]
+          )
           updatedClickFarmTaskIds.push(...confirmedUpdatedRows.map((row) => String(row.id)))
         }
         clickFarmUpdatedCount += updateChanges
@@ -180,47 +189,59 @@ export async function pauseOfferTasks(
 
     // 2) 禁用换链接任务（仅处理可暂停态，避免触碰 completed 历史任务）
     if (db.type === 'postgres') {
-      const updatedRows = await db.query<{ id: string }>(`
+      const updatedRows = await db.query<{ id: string }>(
+        `
         UPDATE url_swap_tasks
         SET status = 'disabled',
             updated_at = ${pausedCondition}
         WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
           AND status IN ('enabled', 'error')
         RETURNING id
-      `, [userId, offerId])
+      `,
+        [userId, offerId]
+      )
       updatedUrlSwapTaskIds.push(...updatedRows.map((row) => String(row.id)))
       urlSwapUpdatedCount = updatedRows.length
     } else {
       const urlSwapTaskIds = (
-        await db.query<{ id: string }>(`
+        await db.query<{ id: string }>(
+          `
           SELECT id FROM url_swap_tasks
           WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
             AND status IN ('enabled', 'error')
-        `, [offerId, userId])
+        `,
+          [offerId, userId]
+        )
       ).map((task) => String(task.id))
 
       for (const batchIds of chunkIds(urlSwapTaskIds, MAX_IDS_PER_UPDATE_BATCH)) {
         const urlSwapIdPlaceholders = batchIds.map(() => '?').join(', ')
         let updateChanges = 0
-        const updateResult = await db.exec(`
+        const updateResult = await db.exec(
+          `
           UPDATE url_swap_tasks
           SET status = 'disabled',
               updated_at = ${pausedCondition}
           WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
             AND status IN ('enabled', 'error')
             AND id IN (${urlSwapIdPlaceholders})
-        `, [userId, offerId, ...batchIds])
+        `,
+          [userId, offerId, ...batchIds]
+        )
         updateChanges = Number(updateResult.changes || 0)
         if (updateChanges === batchIds.length) {
           updatedUrlSwapTaskIds.push(...batchIds)
         } else if (updateChanges > 0) {
           // 并发下部分命中时，二次查询确认已禁用的任务，降低残留 pending 队列概率。
-          const confirmedUpdatedRows = await db.query<{ id: string }>(`
+          const confirmedUpdatedRows = await db.query<{ id: string }>(
+            `
             SELECT id FROM url_swap_tasks
             WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
               AND status = 'disabled'
               AND id IN (${urlSwapIdPlaceholders})
-          `, [userId, offerId, ...batchIds])
+          `,
+            [userId, offerId, ...batchIds]
+          )
           updatedUrlSwapTaskIds.push(...confirmedUpdatedRows.map((row) => String(row.id)))
         }
         urlSwapUpdatedCount += updateChanges
@@ -239,18 +260,28 @@ export async function pauseOfferTasks(
     try {
       await removePendingClickFarmQueueTasksByTaskIds(updatedClickFarmTaskIds, userId)
     } catch (error: any) {
-      console.warn(`[pauseOfferTasks] 清理补点击队列失败 (offerId=${offerId}):`, error?.message || error)
+      console.warn(
+        `[pauseOfferTasks] 清理补点击队列失败 (offerId=${offerId}):`,
+        error?.message || error
+      )
     }
-    console.log(`[pauseOfferTasks] 已暂停补点击任务 (offerId=${offerId}, taskCount=${result.clickFarmTaskCount})`)
+    console.log(
+      `[pauseOfferTasks] 已暂停补点击任务 (offerId=${offerId}, taskCount=${result.clickFarmTaskCount})`
+    )
   }
 
   if (updatedUrlSwapTaskIds.length > 0) {
     try {
       await removePendingUrlSwapQueueTasksByTaskIds(updatedUrlSwapTaskIds, userId)
     } catch (error: any) {
-      console.warn(`[pauseOfferTasks] 清理换链接队列失败 (offerId=${offerId}):`, error?.message || error)
+      console.warn(
+        `[pauseOfferTasks] 清理换链接队列失败 (offerId=${offerId}):`,
+        error?.message || error
+      )
     }
-    console.log(`[pauseOfferTasks] 已禁用换链接任务 (offerId=${offerId}, taskCount=${result.urlSwapTaskCount})`)
+    console.log(
+      `[pauseOfferTasks] 已禁用换链接任务 (offerId=${offerId}, taskCount=${result.urlSwapTaskCount})`
+    )
   }
 
   return result
@@ -269,12 +300,15 @@ export async function resumeOfferTasksOnCampaignEnable(
 ): Promise<ResumeOfferTasksResult> {
   const db = await getDatabase()
   const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
-  const offerRow = await db.queryOne<{ target_country: string | null }>(`
+  const offerRow = await db.queryOne<{ target_country: string | null }>(
+    `
     SELECT target_country
     FROM offers
     WHERE id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
     LIMIT 1
-  `, [offerId, userId])
+  `,
+    [offerId, userId]
+  )
 
   const batchResult = await batchStartTasksForOffers({
     userId,
@@ -306,7 +340,8 @@ export async function pauseOfferTasksBatch(
   pauseReason: string = 'campaign_paused_batch',
   pauseMessage: string = '关联广告系列已暂停，自动暂停任务'
 ): Promise<Array<{ offerId: number; result: PauseOfferTasksResult; error?: string }>> {
-  const results: Array<{ offerId: number; result: PauseOfferTasksResult; error?: string }> = new Array(offerIds.length)
+  const results: Array<{ offerId: number; result: PauseOfferTasksResult; error?: string }> =
+    new Array(offerIds.length)
   let nextIndex = 0
   const configuredConcurrency = resolvePauseBatchConcurrency()
   const workerCount = Math.max(1, Math.min(configuredConcurrency, offerIds.length))

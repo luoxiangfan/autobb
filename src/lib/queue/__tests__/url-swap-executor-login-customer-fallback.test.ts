@@ -125,25 +125,31 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       finalUrlSuffix: 'new=2',
     } as any)
 
-    vi.mocked(getUrlSwapTaskTargets).mockResolvedValueOnce([{
-      id: 'target-1',
-      task_id: 'task-1',
-      offer_id: 100,
-      google_ads_account_id: 9,
-      google_customer_id: '2222222222',
-      google_campaign_id: '3333333333',
-      status: 'active',
-      consecutive_failures: 0,
-      last_success_at: null,
-      last_error: null,
-      created_at: '',
-      updated_at: '',
-    }])
+    vi.mocked(getUrlSwapTaskTargets).mockResolvedValueOnce([
+      {
+        id: 'target-1',
+        task_id: 'task-1',
+        offer_id: 100,
+        google_ads_account_id: 9,
+        google_customer_id: '2222222222',
+        google_campaign_id: '3333333333',
+        status: 'active',
+        consecutive_failures: 0,
+        last_success_at: null,
+        last_error: null,
+        created_at: '',
+        updated_at: '',
+      },
+    ])
 
     queryOne.mockResolvedValueOnce({ service_account_id: null, parent_mcc_id: null })
 
     vi.mocked(updateCampaignFinalUrlSuffix)
-      .mockRejectedValueOnce(new Error("User doesn't have permission to access customer. Note: If you're accessing a client customer, the manager's customer id must be set in the 'login-customer-id' header."))
+      .mockRejectedValueOnce(
+        new Error(
+          "User doesn't have permission to access customer. Note: If you're accessing a client customer, the manager's customer id must be set in the 'login-customer-id' header."
+        )
+      )
       .mockResolvedValueOnce(undefined as any)
 
     const result = await executeUrlSwapTask({

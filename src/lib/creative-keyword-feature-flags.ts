@@ -1,5 +1,7 @@
 function envEnabled(name: string, defaultEnabled = true): boolean {
-  const value = String(process.env[name] ?? '').trim().toLowerCase()
+  const value = String(process.env[name] ?? '')
+    .trim()
+    .toLowerCase()
   if (!value) return defaultEnabled
   if (['0', 'false', 'off', 'no'].includes(value)) return false
   if (['1', 'true', 'on', 'yes'].includes(value)) return true

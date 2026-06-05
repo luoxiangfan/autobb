@@ -73,7 +73,10 @@ describe('background-task-suspension', () => {
       removedTaskIds: ['b'],
     })
 
-    const result = await suspendUserBackgroundTasks(42, { reason: 'manual_disable', purgeQueue: true })
+    const result = await suspendUserBackgroundTasks(42, {
+      reason: 'manual_disable',
+      purgeQueue: true,
+    })
 
     expect(exec).toHaveBeenCalledTimes(3)
     expect(exec.mock.calls[0][0]).toContain('UPDATE click_farm_tasks')
@@ -83,8 +86,14 @@ describe('background-task-suspension', () => {
     expect(exec.mock.calls[2][0]).toContain('UPDATE url_swap_task_targets')
     expect(exec.mock.calls[2][1]).toEqual([expect.any(String), 42])
 
-    expect(coreQueue.purgePendingTasksByUserAndTypes).toHaveBeenCalledWith(42, USER_SUSPENDED_TASK_TYPES)
-    expect(bgQueue.purgePendingTasksByUserAndTypes).toHaveBeenCalledWith(42, USER_SUSPENDED_TASK_TYPES)
+    expect(coreQueue.purgePendingTasksByUserAndTypes).toHaveBeenCalledWith(
+      42,
+      USER_SUSPENDED_TASK_TYPES
+    )
+    expect(bgQueue.purgePendingTasksByUserAndTypes).toHaveBeenCalledWith(
+      42,
+      USER_SUSPENDED_TASK_TYPES
+    )
 
     expect(result).toEqual({
       clickFarmStopped: 2,
@@ -109,8 +118,14 @@ describe('background-task-suspension', () => {
       .mockResolvedValueOnce({ changes: 20 }) // bulk disable url-swap
       .mockResolvedValueOnce({ changes: 30 }) // bulk pause url-swap targets
 
-    coreQueue.purgePendingTasksByUserAndTypes.mockResolvedValue({ removedCount: 1, removedTaskIds: [] })
-    bgQueue.purgePendingTasksByUserAndTypes.mockResolvedValue({ removedCount: 2, removedTaskIds: [] })
+    coreQueue.purgePendingTasksByUserAndTypes.mockResolvedValue({
+      removedCount: 1,
+      removedTaskIds: [],
+    })
+    bgQueue.purgePendingTasksByUserAndTypes.mockResolvedValue({
+      removedCount: 2,
+      removedTaskIds: [],
+    })
 
     const result = await suspendBackgroundTasksForInactiveOrExpiredUsers({ purgeQueue: true })
 

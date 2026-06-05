@@ -61,9 +61,6 @@ export async function POST(request: NextRequest, props: { params: Promise<RouteP
     })
   } catch (error: any) {
     console.error('[POST /api/products/:id/offline] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '下线商品失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '下线商品失败' }, { status: 500 })
   }
 }

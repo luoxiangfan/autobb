@@ -35,7 +35,9 @@ describe('creative-keyword-source-priority', () => {
   })
 
   it('derives raw source/subtype/tags for legacy scoring and bucket sources', () => {
-    expect(normalizeKeywordSourceSubtype({ source: 'SCORING_SUGGESTION' })).toBe('SCORING_SUGGESTION')
+    expect(normalizeKeywordSourceSubtype({ source: 'SCORING_SUGGESTION' })).toBe(
+      'SCORING_SUGGESTION'
+    )
     expect(inferKeywordRawSource({ source: 'SCORING_SUGGESTION' })).toBe('GAP_ANALYSIS')
     expect(inferKeywordDerivedTags({ source: 'KEYWORD_POOL' })).toEqual(
       expect.arrayContaining(['KEYWORD_POOL', 'CANONICAL_BUCKET_VIEW'])

@@ -60,7 +60,8 @@ describe('click-farm proxy resolution', () => {
       data: {
         taskId: 'cf-task',
         url: 'https://example.com',
-        proxyUrl: 'https://api.iprocket.io/api?username=x&password=y&cc=ROW&ips=1&proxyType=http&responseType=txt',
+        proxyUrl:
+          'https://api.iprocket.io/api?username=x&password=y&cc=ROW&ips=1&proxyType=http&responseType=txt',
         offerId: 1,
         timezone: 'America/New_York',
         refererConfig: { type: 'none' },
@@ -70,10 +71,7 @@ describe('click-farm proxy resolution', () => {
     const result = await mod.executeClickFarmTask(task)
 
     expect(result.success).toBe(true)
-    expect(getProxyIp).toHaveBeenCalledWith(
-      task.data.proxyUrl,
-      false
-    )
+    expect(getProxyIp).toHaveBeenCalledWith(task.data.proxyUrl, false)
     expect(agentCtor).toHaveBeenCalledWith('http://u:p@1.2.3.4:3128')
     expect(axiosGet).toHaveBeenCalled()
   })

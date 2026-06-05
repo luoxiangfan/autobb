@@ -23,7 +23,7 @@ import type {
   UrlSwapTaskStats,
   UrlSwapGlobalStats,
   UrlSwapTaskListItem,
-  UrlSwapTaskTarget
+  UrlSwapTaskTarget,
 } from './url-swap-types'
 
 type UrlSwapTargetInput = {
@@ -67,7 +67,7 @@ async function resolveInitialUrlForTaskCreation(
       resolveAffiliateLink(offer.affiliate_link, {
         targetCountry: offer.target_country,
         userId,
-        skipCache: true
+        skipCache: true,
       }),
       INITIAL_URL_RESOLVE_TIMEOUT_MS,
       'initial URL resolve'
@@ -93,9 +93,8 @@ export async function createUrlSwapTask(
   const now = new Date().toISOString()
 
   const swapMode: UrlSwapMode = normalizeUrlSwapMode(input.swap_mode)
-  const manualAffiliateLinks = swapMode === 'manual'
-    ? normalizeManualAffiliateLinks(input.manual_affiliate_links)
-    : []
+  const manualAffiliateLinks =
+    swapMode === 'manual' ? normalizeManualAffiliateLinks(input.manual_affiliate_links) : []
 
   if (swapMode === 'manual' && manualAffiliateLinks.length === 0) {
     throw new Error('方式二需要至少配置 1 个推广链接')
@@ -139,9 +138,10 @@ export async function createUrlSwapTask(
   let targets = await getOfferCampaignTargets(input.offer_id, userId)
 
   if (normalizedCampaignId) {
-    targets = targets.filter((t) =>
-      t.google_campaign_id === normalizedCampaignId &&
-      (!normalizedCustomerId || t.google_customer_id === normalizedCustomerId)
+    targets = targets.filter(
+      (t) =>
+        t.google_campaign_id === normalizedCampaignId &&
+        (!normalizedCustomerId || t.google_customer_id === normalizedCustomerId)
     )
   } else if (normalizedCustomerId) {
     targets = targets.filter((t) => t.google_customer_id === normalizedCustomerId)
@@ -150,16 +150,20 @@ export async function createUrlSwapTask(
   if (targets.length === 0 && normalizedCustomerId && normalizedCampaignId) {
     const accountId = await findGoogleAdsAccountIdByCustomerId(normalizedCustomerId, userId)
     if (accountId) {
-      targets = [{
-        google_ads_account_id: accountId,
-        google_customer_id: normalizedCustomerId,
-        google_campaign_id: normalizedCampaignId
-      }]
+      targets = [
+        {
+          google_ads_account_id: accountId,
+          google_customer_id: normalizedCustomerId,
+          google_campaign_id: normalizedCampaignId,
+        },
+      ]
     }
   }
 
   if (targets.length === 0) {
-    throw new Error('缺少 Customer ID 或 Campaign ID，无法创建换链任务（请先完成Campaign发布并关联到Offer）')
+    throw new Error(
+      '缺少 Customer ID 或 Campaign ID，无法创建换链任务（请先完成Campaign发布并关联到Offer）'
+    )
   }
 
   const primaryTarget = targets[0]
@@ -176,7 +180,8 @@ export async function createUrlSwapTask(
   let manualSuffixCursor = 0
 
   // 8. 创建任务
-  await db.exec(`
+  await db.exec(
+    `
     INSERT INTO url_swap_tasks (
       id, user_id, offer_id,
       swap_interval_minutes, enabled, duration_days,
@@ -188,28 +193,34 @@ export async function createUrlSwapTask(
       status, started_at, next_swap_at,
       created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    taskId,
-    userId,
-    input.offer_id,
-    intervalMinutes,
-    true,  // enabled
-    durationDays,
-    swapMode,
-    toDbJsonObjectField(manualAffiliateLinks, db.type, []),
-    manualSuffixCursor,
-    googleCustomerId,
-    googleCampaignId,
-    resolved.finalUrl,
-    resolved.finalUrlSuffix,
-    0, 0, 0, 0, 0,
-    toDbJsonObjectField([], db.type, []),  // 空历史
-    'enabled',
-    now,
-    nextSwapAt.toISOString(),
-    now,
-    now
-  ])
+  `,
+    [
+      taskId,
+      userId,
+      input.offer_id,
+      intervalMinutes,
+      true, // enabled
+      durationDays,
+      swapMode,
+      toDbJsonObjectField(manualAffiliateLinks, db.type, []),
+      manualSuffixCursor,
+      googleCustomerId,
+      googleCampaignId,
+      resolved.finalUrl,
+      resolved.finalUrlSuffix,
+      0,
+      0,
+      0,
+      0,
+      0,
+      toDbJsonObjectField([], db.type, []), // 空历史
+      'enabled',
+      now,
+      nextSwapAt.toISOString(),
+      now,
+      now,
+    ]
+  )
 
   await ensureUrlSwapTaskTargets(taskId, input.offer_id, userId, targets)
 
@@ -226,25 +237,30 @@ export async function createUrlSwapTask(
 /**
  * 获取任务（带权限验证）
  */
-export async function getUrlSwapTaskById(
-  id: string,
-  userId: number
-): Promise<UrlSwapTask | null> {
+export async function getUrlSwapTaskById(id: string, userId: number): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  const task = userId === 0
-    ? await db.queryOne<any>(`
+  const task =
+    userId === 0
+      ? await db.queryOne<any>(
+          `
         SELECT * FROM url_swap_tasks
         WHERE id = ? AND ${isDeletedCondition}
-      `, [id])
-    : await db.queryOne<any>(`
+      `,
+          [id]
+        )
+      : await db.queryOne<any>(
+          `
         SELECT * FROM url_swap_tasks
         WHERE id = ? AND user_id = ? AND ${isDeletedCondition}
-      `, [id, userId])
+      `,
+          [id, userId]
+        )
 
   if (!task) return null
 
@@ -260,15 +276,19 @@ export async function getUrlSwapTaskByOfferId(
 ): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  const task = await db.queryOne<any>(`
+  const task = await db.queryOne<any>(
+    `
     SELECT * FROM url_swap_tasks
     WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
     ORDER BY created_at DESC
-  `, [offerId, userId])
+  `,
+    [offerId, userId]
+  )
 
   if (!task) return null
 
@@ -293,7 +313,9 @@ export async function getUrlSwapTaskTargets(
   }
 
   const statusList = options?.status
-    ? (Array.isArray(options.status) ? options.status : [options.status])
+    ? Array.isArray(options.status)
+      ? options.status
+      : [options.status]
     : null
 
   params.push(taskId)
@@ -304,14 +326,17 @@ export async function getUrlSwapTaskTargets(
     params.push(...statusList)
   }
 
-  const rows = await db.query<any>(`
+  const rows = await db.query<any>(
+    `
     SELECT ust.*
     FROM url_swap_task_targets ust
     ${userJoin}
     WHERE ust.task_id = ?
     ${statusClause}
     ORDER BY ust.created_at DESC
-  `, params)
+  `,
+    params
+  )
 
   return rows.map((row: any) => ({
     id: row.id,
@@ -349,21 +374,43 @@ export async function ensureUrlSwapTaskTargets(
       continue
     }
     if (db.type === 'postgres') {
-      const result = await db.exec(`
+      const result = await db.exec(
+        `
         INSERT INTO url_swap_task_targets (
           task_id, offer_id, google_ads_account_id, google_customer_id, google_campaign_id,
           status, consecutive_failures, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'active', 0, ?, ?)
         ON CONFLICT (task_id, google_ads_account_id, google_campaign_id) DO NOTHING
-      `, [taskId, offerId, target.google_ads_account_id, target.google_customer_id, target.google_campaign_id, now, now])
+      `,
+        [
+          taskId,
+          offerId,
+          target.google_ads_account_id,
+          target.google_customer_id,
+          target.google_campaign_id,
+          now,
+          now,
+        ]
+      )
       if ((result as any)?.changes) inserted += Number((result as any).changes) || 0
     } else {
-      const result = await db.exec(`
+      const result = await db.exec(
+        `
         INSERT OR IGNORE INTO url_swap_task_targets (
           task_id, offer_id, google_ads_account_id, google_customer_id, google_campaign_id,
           status, consecutive_failures, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'active', 0, ?, ?)
-      `, [taskId, offerId, target.google_ads_account_id, target.google_customer_id, target.google_campaign_id, now, now])
+      `,
+        [
+          taskId,
+          offerId,
+          target.google_ads_account_id,
+          target.google_customer_id,
+          target.google_campaign_id,
+          now,
+          now,
+        ]
+      )
       if ((result as any)?.changes) inserted += Number((result as any).changes) || 0
     }
   }
@@ -386,19 +433,30 @@ export async function addUrlSwapTargetForOfferCampaign(params: {
     return false
   }
 
-  await ensureUrlSwapTaskTargets(task.id, params.offerId, params.userId, [{
-    google_ads_account_id: params.googleAdsAccountId,
-    google_customer_id: params.googleCustomerId,
-    google_campaign_id: params.googleCampaignId
-  }])
+  await ensureUrlSwapTaskTargets(task.id, params.offerId, params.userId, [
+    {
+      google_ads_account_id: params.googleAdsAccountId,
+      google_customer_id: params.googleCustomerId,
+      google_campaign_id: params.googleCampaignId,
+    },
+  ])
 
   if (!task.google_customer_id || !task.google_campaign_id) {
     const db = await getDatabase()
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET google_customer_id = ?, google_campaign_id = ?, updated_at = ?
       WHERE id = ? AND user_id = ?
-    `, [params.googleCustomerId, params.googleCampaignId, new Date().toISOString(), task.id, params.userId])
+    `,
+      [
+        params.googleCustomerId,
+        params.googleCampaignId,
+        new Date().toISOString(),
+        task.id,
+        params.userId,
+      ]
+    )
   }
 
   return true
@@ -423,13 +481,18 @@ export async function refreshUrlSwapTaskTargets(params: {
   }
 
   if (targets.length === 0 && task.google_customer_id && task.google_campaign_id) {
-    const accountId = await findGoogleAdsAccountIdByCustomerId(task.google_customer_id, params.userId)
+    const accountId = await findGoogleAdsAccountIdByCustomerId(
+      task.google_customer_id,
+      params.userId
+    )
     if (accountId) {
-      targets = [{
-        google_ads_account_id: accountId,
-        google_customer_id: task.google_customer_id,
-        google_campaign_id: task.google_campaign_id
-      }]
+      targets = [
+        {
+          google_ads_account_id: accountId,
+          google_customer_id: task.google_customer_id,
+          google_campaign_id: task.google_campaign_id,
+        },
+      ]
     }
   }
 
@@ -439,7 +502,7 @@ export async function refreshUrlSwapTaskTargets(params: {
   return {
     inserted,
     totalTargets,
-    candidateTargets: targets.length
+    candidateTargets: targets.length,
   }
 }
 
@@ -449,7 +512,8 @@ export async function refreshUrlSwapTaskTargets(params: {
 export async function markUrlSwapTargetSuccess(targetId: string): Promise<void> {
   const db = await getDatabase()
   const now = new Date().toISOString()
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET
       consecutive_failures = 0,
@@ -458,7 +522,9 @@ export async function markUrlSwapTargetSuccess(targetId: string): Promise<void> 
       status = 'active',
       updated_at = ?
     WHERE id = ?
-  `, [now, now, targetId])
+  `,
+    [now, now, targetId]
+  )
 }
 
 /**
@@ -466,19 +532,26 @@ export async function markUrlSwapTargetSuccess(targetId: string): Promise<void> 
  */
 const URL_SWAP_TARGET_ERROR_THRESHOLD = 3
 
-export async function markUrlSwapTargetFailure(targetId: string, errorMessage: string): Promise<void> {
+export async function markUrlSwapTargetFailure(
+  targetId: string,
+  errorMessage: string
+): Promise<void> {
   const db = await getDatabase()
   const now = new Date().toISOString()
-  const row = await db.queryOne<{ consecutive_failures: number }>(`
+  const row = await db.queryOne<{ consecutive_failures: number }>(
+    `
     SELECT consecutive_failures
     FROM url_swap_task_targets
     WHERE id = ?
-  `, [targetId])
+  `,
+    [targetId]
+  )
   const currentFailures = row?.consecutive_failures || 0
   const newFailures = currentFailures + 1
   const shouldPause = newFailures >= URL_SWAP_TARGET_ERROR_THRESHOLD
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET
       consecutive_failures = ?,
@@ -486,7 +559,9 @@ export async function markUrlSwapTargetFailure(targetId: string, errorMessage: s
       status = ?,
       updated_at = ?
     WHERE id = ?
-  `, [newFailures, errorMessage, shouldPause ? 'paused' : 'active', now, targetId])
+  `,
+    [newFailures, errorMessage, shouldPause ? 'paused' : 'active', now, targetId]
+  )
 }
 
 /**
@@ -495,13 +570,16 @@ export async function markUrlSwapTargetFailure(targetId: string, errorMessage: s
 export async function pauseUrlSwapTargetsByTaskId(taskId: string): Promise<number> {
   const db = await getDatabase()
   const now = new Date().toISOString()
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'paused',
         updated_at = ?
     WHERE task_id = ?
       AND status NOT IN ('removed', 'invalid')
-  `, [now, taskId])
+  `,
+    [now, taskId]
+  )
   return (result as any)?.changes ?? 0
 }
 
@@ -511,13 +589,16 @@ export async function pauseUrlSwapTargetsByTaskId(taskId: string): Promise<numbe
 export async function pauseUrlSwapTargetsByOfferId(offerId: number): Promise<number> {
   const db = await getDatabase()
   const now = new Date().toISOString()
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'paused',
         updated_at = ?
     WHERE offer_id = ?
       AND status NOT IN ('removed', 'invalid')
-  `, [now, offerId])
+  `,
+    [now, offerId]
+  )
   return (result as any)?.changes ?? 0
 }
 
@@ -529,11 +610,13 @@ export async function pauseUrlSwapTargetsByUserIds(userIds: number[]): Promise<n
   const db = await getDatabase()
   const now = new Date().toISOString()
   const placeholders = userIds.map(() => '?').join(', ')
-  const isDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'paused',
         updated_at = ?
@@ -543,7 +626,9 @@ export async function pauseUrlSwapTargetsByUserIds(userIds: number[]): Promise<n
         WHERE user_id IN (${placeholders})
           AND ${isDeletedCondition}
       )
-  `, [now, ...userIds])
+  `,
+    [now, ...userIds]
+  )
   return (result as any)?.changes ?? 0
 }
 
@@ -559,7 +644,8 @@ export async function markUrlSwapTargetsRemovedByCampaignId(
     offer_id: number
     google_ads_account_id: number
     google_campaign_id: string | null
-  }>(`
+  }>(
+    `
     SELECT
       offer_id,
       google_ads_account_id,
@@ -567,21 +653,26 @@ export async function markUrlSwapTargetsRemovedByCampaignId(
     FROM campaigns
     WHERE id = ? AND user_id = ?
     LIMIT 1
-  `, [campaignId, userId])
+  `,
+    [campaignId, userId]
+  )
 
   if (!row?.offer_id || !row?.google_ads_account_id || !row?.google_campaign_id) {
     return 0
   }
 
   const now = new Date().toISOString()
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'removed',
         updated_at = ?
     WHERE offer_id = ?
       AND google_ads_account_id = ?
       AND google_campaign_id = ?
-  `, [now, row.offer_id, row.google_ads_account_id, row.google_campaign_id])
+  `,
+    [now, row.offer_id, row.google_ads_account_id, row.google_campaign_id]
+  )
   return (result as any)?.changes ?? 0
 }
 
@@ -594,13 +685,16 @@ export async function markUrlSwapTargetsRemovedByOfferAccount(
 ): Promise<number> {
   const db = await getDatabase()
   const now = new Date().toISOString()
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'removed',
         updated_at = ?
     WHERE offer_id = ?
       AND google_ads_account_id = ?
-  `, [now, offerId, googleAdsAccountId])
+  `,
+    [now, offerId, googleAdsAccountId]
+  )
   return (result as any)?.changes ?? 0
 }
 
@@ -610,12 +704,15 @@ export async function markUrlSwapTargetsRemovedByOfferAccount(
 export async function markUrlSwapTargetsRemovedByOfferId(offerId: number): Promise<number> {
   const db = await getDatabase()
   const now = new Date().toISOString()
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'removed',
         updated_at = ?
     WHERE offer_id = ?
-  `, [now, offerId])
+  `,
+    [now, offerId]
+  )
   return (result as any)?.changes ?? 0
 }
 
@@ -644,7 +741,8 @@ export async function getUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition = db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'
+  const isDeletedCondition =
+    db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'
   let whereClause = 'ust.user_id = ?'
   const params: any[] = [userId]
 
@@ -658,30 +756,36 @@ export async function getUrlSwapTasks(
   }
 
   // 获取总数
-  const countResult = await db.queryOne<{ count: number }>(`
+  const countResult = await db.queryOne<{ count: number }>(
+    `
     SELECT COUNT(*) as count FROM url_swap_tasks ust
     WHERE ${whereClause}
-  `, params)
+  `,
+    params
+  )
 
   const total = countResult?.count || 0
 
   // 获取任务列表
-  const tasks = await db.query<any>(`
+  const tasks = await db.query<any>(
+    `
     SELECT ust.*, o.offer_name
     FROM url_swap_tasks ust
     LEFT JOIN offers o ON ust.offer_id = o.id
     WHERE ${whereClause}
     ORDER BY ust.created_at DESC
     LIMIT ? OFFSET ?
-  `, [...params, limit, offset])
+  `,
+    [...params, limit, offset]
+  )
 
   return {
-    tasks: tasks.map(row => {
+    tasks: tasks.map((row) => {
       const task = parseUrlSwapTask(row) as UrlSwapTaskListItem
       if (row?.offer_name) task.offer_name = row.offer_name
       return task
     }),
-    total
+    total,
   }
 }
 
@@ -701,20 +805,20 @@ export async function updateUrlSwapTask(
     throw new Error('任务不存在')
   }
 
-  const normalizedGoogleCustomerId = updates.google_customer_id === ''
-    ? null
-    : updates.google_customer_id
-  const normalizedGoogleCampaignId = updates.google_campaign_id === ''
-    ? null
-    : updates.google_campaign_id
+  const normalizedGoogleCustomerId =
+    updates.google_customer_id === '' ? null : updates.google_customer_id
+  const normalizedGoogleCampaignId =
+    updates.google_campaign_id === '' ? null : updates.google_campaign_id
 
-  const swapModeAfter: UrlSwapMode = updates.swap_mode !== undefined
-    ? normalizeUrlSwapMode(updates.swap_mode)
-    : existingTask.swap_mode
+  const swapModeAfter: UrlSwapMode =
+    updates.swap_mode !== undefined
+      ? normalizeUrlSwapMode(updates.swap_mode)
+      : existingTask.swap_mode
 
-  const manualAffiliateLinksAfter = updates.manual_affiliate_links !== undefined
-    ? normalizeManualAffiliateLinks(updates.manual_affiliate_links)
-    : existingTask.manual_affiliate_links
+  const manualAffiliateLinksAfter =
+    updates.manual_affiliate_links !== undefined
+      ? normalizeManualAffiliateLinks(updates.manual_affiliate_links)
+      : existingTask.manual_affiliate_links
 
   if (swapModeAfter === 'manual' && manualAffiliateLinksAfter.length === 0) {
     throw new Error('方式二需要至少配置 1 个推广链接')
@@ -798,11 +902,14 @@ export async function updateUrlSwapTask(
   values.push(now)
   values.push(id, userId)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET ${fields.join(', ')}
     WHERE id = ? AND user_id = ?
-  `, values)
+  `,
+    values
+  )
 
   console.log(`[url-swap] 更新任务配置: ${id}`)
 
@@ -816,18 +923,24 @@ export async function disableUrlSwapTask(id: string, userId: number): Promise<vo
   const db = await getDatabase()
   const now = new Date().toISOString()
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET status = 'disabled', updated_at = ?
     WHERE id = ? AND user_id = ?
-  `, [now, id, userId])
+  `,
+    [now, id, userId]
+  )
 
   // 同步暂停所有目标（除已移除/无效）
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'paused', updated_at = ?
     WHERE task_id = ? AND status NOT IN ('removed', 'invalid')
-  `, [now, id])
+  `,
+    [now, id]
+  )
 
   try {
     await removePendingUrlSwapQueueTasksByTaskIds([id], userId)
@@ -853,18 +966,24 @@ export async function enableUrlSwapTask(id: string, userId: number): Promise<voi
   // 计算下次执行时间
   const nextSwapAt = calculateNextSwapAt(task.swap_interval_minutes)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET status = 'enabled', next_swap_at = ?, updated_at = ?
     WHERE id = ? AND user_id = ?
-  `, [nextSwapAt.toISOString(), now, id, userId])
+  `,
+    [nextSwapAt.toISOString(), now, id, userId]
+  )
 
   // 同步恢复所有目标（除已移除/无效）
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_task_targets
     SET status = 'active', consecutive_failures = 0, last_error = NULL, updated_at = ?
     WHERE task_id = ? AND status NOT IN ('removed', 'invalid')
-  `, [now, id])
+  `,
+    [now, id]
+  )
 
   console.log(`[url-swap] 启用任务: ${id}`)
 }
@@ -901,11 +1020,14 @@ export async function setTaskError(
     failed_swaps: number
     total_swaps: number
     swap_interval_minutes: number
-  }>(`
+  }>(
+    `
     SELECT consecutive_failures, failed_swaps, total_swaps, swap_interval_minutes
     FROM url_swap_tasks
     WHERE id = ?
-  `, [id])
+  `,
+    [id]
+  )
 
   if (!task) {
     console.error(`[url-swap] 任务不存在: ${id}`)
@@ -915,9 +1037,12 @@ export async function setTaskError(
   // 2. 计算新的连续失败次数
   const newConsecutiveFailures = task.consecutive_failures + 1
 
-  const errorTypeLabel = errorType === 'link_resolution'
-    ? '推广链接解析失败'
-    : (errorType === 'google_ads_api' ? 'Google Ads API调用失败' : '任务执行失败')
+  const errorTypeLabel =
+    errorType === 'link_resolution'
+      ? '推广链接解析失败'
+      : errorType === 'google_ads_api'
+        ? 'Google Ads API调用失败'
+        : '任务执行失败'
 
   // 3. 确定新状态和错误信息（单次失败不进入 error，继续 enabled 等下次时间点）
   const shouldMarkError = newConsecutiveFailures >= URL_SWAP_ERROR_THRESHOLD
@@ -927,12 +1052,12 @@ export async function setTaskError(
     ? `🔴 ${errorTypeLabel}连续失败 ${newConsecutiveFailures} 次，任务已标记为错误状态。\n\n` +
       `错误详情: ${errorMessage}\n\n` +
       `建议操作：\n` +
-      `${errorType === 'link_resolution'
-        ? `1. 检查推广链接是否有效\n2. 检查代理可用性/Playwright资源是否足够`
-        : (errorType === 'google_ads_api'
-          ? `1. 检查Google Ads账号权限/配额\n2. 确认OAuth/服务账号配置有效`
-          : `1. 查看日志定位具体失败原因`
-        )
+      `${
+        errorType === 'link_resolution'
+          ? `1. 检查推广链接是否有效\n2. 检查代理可用性/Playwright资源是否足够`
+          : errorType === 'google_ads_api'
+            ? `1. 检查Google Ads账号权限/配额\n2. 确认OAuth/服务账号配置有效`
+            : `1. 查看日志定位具体失败原因`
       }\n` +
       `2. 修复问题后在任务详情页重新启用任务`
     : `⚠️ ${errorTypeLabel}（连续失败 ${newConsecutiveFailures}/${URL_SWAP_ERROR_THRESHOLD}）。\n\n` +
@@ -942,14 +1067,17 @@ export async function setTaskError(
   if (shouldMarkError) {
     console.warn(`[url-swap] ⚠️ 任务进入错误状态（连续失败${newConsecutiveFailures}次）: ${id}`)
   } else {
-    console.warn(`[url-swap] ⚠️ 任务失败但保持启用（连续失败${newConsecutiveFailures}/${URL_SWAP_ERROR_THRESHOLD}）: ${id}`)
+    console.warn(
+      `[url-swap] ⚠️ 任务失败但保持启用（连续失败${newConsecutiveFailures}/${URL_SWAP_ERROR_THRESHOLD}）: ${id}`
+    )
   }
 
   // 4. 计算下次执行时间（即使失败也要推进时间，避免任务卡住）
   const nextSwapAt = calculateNextSwapAt(task.swap_interval_minutes)
 
   // 5. 更新数据库
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET
       status = ?,
@@ -959,9 +1087,13 @@ export async function setTaskError(
       next_swap_at = ?,
       updated_at = ?
     WHERE id = ?
-  `, [newStatus, enhancedMessage, now, newConsecutiveFailures, nextSwapAt.toISOString(), now, id])
+  `,
+    [newStatus, enhancedMessage, now, newConsecutiveFailures, nextSwapAt.toISOString(), now, id]
+  )
 
-  console.log(`[url-swap] 任务错误已记录: ${id} (连续失败: ${newConsecutiveFailures}, 状态: ${newStatus})`)
+  console.log(
+    `[url-swap] 任务错误已记录: ${id} (连续失败: ${newConsecutiveFailures}, 状态: ${newStatus})`
+  )
 }
 
 /**
@@ -976,17 +1108,23 @@ export async function updateTaskStatus(
   const now = new Date().toISOString()
 
   if (nextSwapAt) {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET status = ?, next_swap_at = ?, updated_at = ?
       WHERE id = ?
-    `, [status, nextSwapAt, now, id])
+    `,
+      [status, nextSwapAt, now, id]
+    )
   } else {
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET status = ?, updated_at = ?
       WHERE id = ?
-    `, [status, now, id])
+    `,
+      [status, now, id]
+    )
   }
 }
 
@@ -996,13 +1134,15 @@ export async function updateTaskStatus(
 export async function getPendingTasks(): Promise<UrlSwapTask[]> {
   const db = await getDatabase()
 
-  const isDeletedCondition = db.type === 'postgres'
-    ? '(ust.is_deleted = FALSE OR ust.is_deleted IS NULL)'
-    : '(ust.is_deleted = 0 OR ust.is_deleted IS NULL)'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? '(ust.is_deleted = FALSE OR ust.is_deleted IS NULL)'
+      : '(ust.is_deleted = 0 OR ust.is_deleted IS NULL)'
   const nowCondition = db.type === 'postgres' ? 'CURRENT_TIMESTAMP' : "datetime('now')"
 
   // 🔒 用户禁用/过期后不再调度其任务（避免继续入队）
-  const rows = await db.query<any>(`
+  const rows = await db.query<any>(
+    `
     SELECT
       ust.*,
       u.package_expires_at as user_package_expires_at
@@ -1014,7 +1154,9 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
       AND ${isDeletedCondition}
       AND u.is_active = ?
     ORDER BY ust.next_swap_at ASC
-  `, [boolParam(true, db.type)])
+  `,
+    [boolParam(true, db.type)]
+  )
 
   const now = Date.now()
   const tasks = rows.filter((row: any) => {
@@ -1031,12 +1173,9 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
 /**
  * 记录换链历史
  */
-export async function recordSwapHistory(
-  taskId: string,
-  entry: SwapHistoryEntry
-): Promise<void> {
+export async function recordSwapHistory(taskId: string, entry: SwapHistoryEntry): Promise<void> {
   const db = await getDatabase()
-  const task = await getUrlSwapTaskById(taskId, 0)  // 使用userId=0避免权限检查
+  const task = await getUrlSwapTaskById(taskId, 0) // 使用userId=0避免权限检查
 
   if (!task) return
 
@@ -1048,11 +1187,14 @@ export async function recordSwapHistory(
     existingHistory.splice(0, existingHistory.length - 100)
   }
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET swap_history = ?, updated_at = ?
     WHERE id = ?
-  `, [toDbJsonObjectField(existingHistory, db.type, []), new Date().toISOString(), taskId])
+  `,
+    [toDbJsonObjectField(existingHistory, db.type, []), new Date().toISOString(), taskId]
+  )
 }
 
 /**
@@ -1080,7 +1222,8 @@ export async function updateTaskAfterSwap(
     extraValues.push(options.manualSuffixCursor)
   }
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET current_final_url = COALESCE(?, current_final_url),
         current_final_url_suffix = ?,
@@ -1094,7 +1237,9 @@ export async function updateTaskAfterSwap(
         next_swap_at = ?,
         updated_at = ?
     WHERE id = ?
-  `, [newFinalUrl, newFinalUrlSuffix, ...extraValues, nextSwapAt.toISOString(), now, taskId])
+  `,
+    [newFinalUrl, newFinalUrlSuffix, ...extraValues, nextSwapAt.toISOString(), now, taskId]
+  )
 
   console.log(`[url-swap] 换链成功更新: ${taskId}`)
 }
@@ -1113,7 +1258,8 @@ export async function updateTaskAfterManualAdvance(
   const now = new Date().toISOString()
   const nextSwapAt = calculateNextSwapAt(task.swap_interval_minutes)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE url_swap_tasks
     SET total_swaps = total_swaps + 1,
         success_swaps = success_swaps + 1,
@@ -1124,34 +1270,39 @@ export async function updateTaskAfterManualAdvance(
         next_swap_at = ?,
         updated_at = ?
     WHERE id = ?
-  `, [nextCursor, nextSwapAt.toISOString(), now, taskId])
+  `,
+    [nextCursor, nextSwapAt.toISOString(), now, taskId]
+  )
 }
 
 /**
  * 获取任务统计
  */
-export async function getUrlSwapTaskStats(taskId: string, userId: number): Promise<UrlSwapTaskStats> {
+export async function getUrlSwapTaskStats(
+  taskId: string,
+  userId: number
+): Promise<UrlSwapTaskStats> {
   const task = await getUrlSwapTaskById(taskId, userId)
   if (!task) {
     throw new Error('任务不存在')
   }
 
-  const successRate = task.total_swaps > 0
-    ? Math.round((task.success_swaps / task.total_swaps) * 100)
-    : 0
+  const successRate =
+    task.total_swaps > 0 ? Math.round((task.success_swaps / task.total_swaps) * 100) : 0
 
   return {
     swap_count: task.total_swaps,
     success_count: task.success_swaps,
     failed_count: task.failed_swaps,
     success_rate: successRate,
-    last_swap_at: task.swap_history.length > 0
-      ? task.swap_history[task.swap_history.length - 1].swapped_at
-      : null,
+    last_swap_at:
+      task.swap_history.length > 0
+        ? task.swap_history[task.swap_history.length - 1].swapped_at
+        : null,
     next_swap_at: task.next_swap_at,
     current_final_url: task.current_final_url || '',
     current_final_url_suffix: task.current_final_url_suffix || '',
-    status: task.status
+    status: task.status,
   }
 }
 
@@ -1163,7 +1314,8 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
 
   const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
 
-  const stats = await db.queryOne<any>(`
+  const stats = await db.queryOne<any>(
+    `
     SELECT
       COUNT(*) as total_tasks,
       SUM(CASE WHEN status = 'enabled' THEN 1 ELSE 0 END) as active_tasks,
@@ -1176,11 +1328,12 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
       COALESCE(SUM(url_changed_count), 0) as url_changed_count
     FROM url_swap_tasks
     WHERE user_id = ? AND ${isDeletedCondition}
-  `, [userId])
+  `,
+    [userId]
+  )
 
-  const successRate = stats.total_swaps > 0
-    ? Math.round((stats.success_swaps / stats.total_swaps) * 100)
-    : 0
+  const successRate =
+    stats.total_swaps > 0 ? Math.round((stats.success_swaps / stats.total_swaps) * 100) : 0
 
   return {
     total_tasks: stats.total_tasks || 0,
@@ -1192,7 +1345,7 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
     success_swaps: stats.success_swaps || 0,
     failed_swaps: stats.failed_swaps || 0,
     url_changed_count: stats.url_changed_count || 0,
-    success_rate: successRate
+    success_rate: successRate,
   }
 }
 
@@ -1219,9 +1372,8 @@ export async function getUrlSwapGlobalStats(): Promise<UrlSwapGlobalStats> {
     WHERE ${isDeletedCondition}
   `)
 
-  const successRate = stats.total_swaps > 0
-    ? Math.round((stats.success_swaps / stats.total_swaps) * 100)
-    : 0
+  const successRate =
+    stats.total_swaps > 0 ? Math.round((stats.success_swaps / stats.total_swaps) * 100) : 0
 
   return {
     total_tasks: stats.total_tasks || 0,
@@ -1233,7 +1385,7 @@ export async function getUrlSwapGlobalStats(): Promise<UrlSwapGlobalStats> {
     success_swaps: stats.success_swaps || 0,
     failed_swaps: stats.failed_swaps || 0,
     url_changed_count: stats.url_changed_count || 0,
-    success_rate: successRate
+    success_rate: successRate,
   }
 }
 
@@ -1252,7 +1404,8 @@ export async function getAllUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition = db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'
+  const isDeletedCondition =
+    db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'
   let whereClause = isDeletedCondition
   const params: any[] = []
 
@@ -1262,15 +1415,19 @@ export async function getAllUrlSwapTasks(
   }
 
   // 获取总数
-  const countResult = await db.queryOne<{ count: number }>(`
+  const countResult = await db.queryOne<{ count: number }>(
+    `
     SELECT COUNT(*) as count FROM url_swap_tasks ust
     WHERE ${whereClause}
-  `, params)
+  `,
+    params
+  )
 
   const total = countResult?.count || 0
 
   // 获取任务列表（关联用户表）
-  const tasks = await db.query<any>(`
+  const tasks = await db.query<any>(
+    `
     SELECT ust.*, u.username, o.offer_name
     FROM url_swap_tasks ust
     LEFT JOIN users u ON ust.user_id = u.id
@@ -1278,15 +1435,17 @@ export async function getAllUrlSwapTasks(
     WHERE ${whereClause}
     ORDER BY ust.created_at DESC
     LIMIT ? OFFSET ?
-  `, [...params, limit, offset])
+  `,
+    [...params, limit, offset]
+  )
 
   return {
-    tasks: tasks.map(t => ({
+    tasks: tasks.map((t) => ({
       ...parseUrlSwapTask(t),
       username: t.username,
-      offer_name: t.offer_name
+      offer_name: t.offer_name,
     })),
-    total
+    total,
   }
 }
 
@@ -1298,7 +1457,10 @@ function calculateUrlSwapProgress(row: any): number {
   if (status === 'completed') return 100
 
   const durationDaysRaw = row?.duration_days
-  const durationDays = typeof durationDaysRaw === 'number' ? durationDaysRaw : parseInt(String(durationDaysRaw ?? ''), 10)
+  const durationDays =
+    typeof durationDaysRaw === 'number'
+      ? durationDaysRaw
+      : parseInt(String(durationDaysRaw ?? ''), 10)
   if (!Number.isFinite(durationDays) || durationDays <= 0) return 0
   if (durationDays === -1) return 0
 
@@ -1318,9 +1480,10 @@ function parseUrlSwapTask(row: any): UrlSwapTask {
   const swapMode = normalizeUrlSwapMode(row.swap_mode)
   const manualAffiliateLinks = parseStringArrayJson(row.manual_affiliate_links)
   const manualCursorRaw = row.manual_suffix_cursor
-  const manualSuffixCursor = typeof manualCursorRaw === 'number'
-    ? manualCursorRaw
-    : parseInt(String(manualCursorRaw ?? '0'), 10)
+  const manualSuffixCursor =
+    typeof manualCursorRaw === 'number'
+      ? manualCursorRaw
+      : parseInt(String(manualCursorRaw ?? '0'), 10)
 
   return {
     id: row.id,
@@ -1331,7 +1494,8 @@ function parseUrlSwapTask(row: any): UrlSwapTask {
     duration_days: row.duration_days,
     swap_mode: swapMode,
     manual_affiliate_links: manualAffiliateLinks,
-    manual_suffix_cursor: Number.isFinite(manualSuffixCursor) && manualSuffixCursor >= 0 ? manualSuffixCursor : 0,
+    manual_suffix_cursor:
+      Number.isFinite(manualSuffixCursor) && manualSuffixCursor >= 0 ? manualSuffixCursor : 0,
     google_customer_id: row.google_customer_id,
     google_campaign_id: row.google_campaign_id,
     current_final_url: row.current_final_url,
@@ -1352,7 +1516,7 @@ function parseUrlSwapTask(row: any): UrlSwapTask {
     is_deleted: Boolean(row.is_deleted),
     deleted_at: row.deleted_at,
     created_at: row.created_at,
-    updated_at: row.updated_at
+    updated_at: row.updated_at,
   }
 }
 
@@ -1396,15 +1560,19 @@ function parseStringArrayJson(input: unknown): string[] {
  */
 export async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  return db.queryOne(`
+  return db.queryOne(
+    `
     SELECT id, user_id, affiliate_link, target_country, final_url, final_url_suffix
     FROM offers
     WHERE id = ? AND ${isDeletedCondition}
-  `, [offerId])
+  `,
+    [offerId]
+  )
 }
 
 /**
@@ -1437,7 +1605,8 @@ async function getOfferCampaignTargets(
     params.push(userId)
   }
 
-  const rows = await db.query<any>(`
+  const rows = await db.query<any>(
+    `
     SELECT
       c.google_ads_account_id as google_ads_account_id,
       gaa.customer_id as google_customer_id,
@@ -1454,7 +1623,9 @@ async function getOfferCampaignTargets(
         OR (c.campaign_id IS NOT NULL AND c.campaign_id != '')
       )
     ORDER BY c.created_at DESC
-  `, params)
+  `,
+    params
+  )
 
   const deduped = new Map<string, UrlSwapTargetInput>()
   for (const row of rows) {
@@ -1477,12 +1648,15 @@ async function findGoogleAdsAccountIdByCustomerId(
 ): Promise<number | null> {
   const db = await getDatabase()
   const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
-  const row = await db.queryOne<{ id: number }>(`
+  const row = await db.queryOne<{ id: number }>(
+    `
     SELECT id
     FROM google_ads_accounts
     WHERE user_id = ? AND customer_id = ? AND ${isDeletedCondition}
     ORDER BY created_at DESC
     LIMIT 1
-  `, [userId, customerId])
+  `,
+    [userId, customerId]
+  )
   return row?.id ?? null
 }

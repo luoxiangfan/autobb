@@ -20,10 +20,7 @@ export async function POST(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     console.log('[Cron] Starting weekly optimization tasks generation...')
@@ -46,12 +43,15 @@ export async function POST(request: NextRequest) {
         AND ${userEligibleCondition}
     `)
 
-    const creativeResults: Record<number, {
-      totalCreatives: number
-      highPerformers: number
-      featuresUpdated: boolean
-      avgScore: number
-    }> = {}
+    const creativeResults: Record<
+      number,
+      {
+        totalCreatives: number
+        highPerformers: number
+        featuresUpdated: boolean
+        avgScore: number
+      }
+    > = {}
 
     let totalCreativesScored = 0
     let totalHighPerformers = 0
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       totalUsers: users.length,
       totalCreativesScored,
       totalHighPerformers,
-      usersWithFeaturesUpdated
+      usersWithFeaturesUpdated,
     })
 
     // 清理过期任务
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         campaign: {
           totalUsers: campaignResult.totalUsers,
           totalTasks: campaignResult.totalTasks,
-          userTasks: campaignResult.userTasks
+          userTasks: campaignResult.userTasks,
         },
         // 创意优化（新增）
         creative: {
@@ -102,20 +102,19 @@ export async function POST(request: NextRequest) {
           totalCreativesScored,
           totalHighPerformers,
           usersWithFeaturesUpdated,
-          userResults: creativeResults
+          userResults: creativeResults,
         },
         // 清理统计
-        cleanedTasks: cleanedCount
-      }
+        cleanedTasks: cleanedCount,
+      },
     })
-
   } catch (error) {
     console.error('[Cron] Weekly optimization error:', error)
     return NextResponse.json(
       {
         success: false,
         error: 'Internal server error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     )
@@ -130,6 +129,6 @@ export async function GET() {
     service: 'weekly-optimization-cron',
     status: 'healthy',
     schedule: 'Every Monday 00:00 UTC',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   })
 }

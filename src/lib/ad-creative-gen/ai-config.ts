@@ -21,7 +21,9 @@ export async function getAIConfig(userId?: number): Promise<AIConfig> {
   const resolved = await resolveActiveAIConfig(userId)
 
   if (resolved.type === 'gemini-api' && resolved.geminiAPI) {
-    console.log(`🤖 使用${resolved.geminiAPI.provider === 'relay' ? '第三方中转' : 'Gemini API'}: 模型=${resolved.geminiAPI.model}`)
+    console.log(
+      `🤖 使用${resolved.geminiAPI.provider === 'relay' ? '第三方中转' : 'Gemini API'}: 模型=${resolved.geminiAPI.model}`
+    )
     return {
       type: 'gemini-api',
       geminiAPI: {

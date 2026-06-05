@@ -172,9 +172,7 @@ describe('ad-strength-evaluator KISS optimizations', () => {
         userId: 1,
         offerId: 42,
         skipKeywordPoolExpandLoad: true,
-        keywordsWithVolume: [
-          { keyword: 'novilla memory foam mattress', searchVolume: 370 },
-        ],
+        keywordsWithVolume: [{ keyword: 'novilla memory foam mattress', searchVolume: 370 }],
       }
     )
 
@@ -237,7 +235,9 @@ describe('ad-strength-evaluator KISS optimizations', () => {
       }
     )
 
-    expect(result.dimensions.brandSearchVolume.details.fallbackMode).toBe('exact_brand_keyword_backfill')
+    expect(result.dimensions.brandSearchVolume.details.fallbackMode).toBe(
+      'exact_brand_keyword_backfill'
+    )
     expect(result.dimensions.brandSearchVolume.details.brandNameSearchVolume).toBe(2400)
     expect(result.dimensions.brandSearchVolume.details.totalBrandSearchVolume).toBe(2770)
     expect(result.dimensions.brandSearchVolume.details.dataSource).toBe('database')
@@ -265,9 +265,7 @@ describe('ad-strength-evaluator KISS optimizations', () => {
         { text: 'Save $100 20% Off The Only Official Choice', length: 41 },
         { text: 'Exclusive Premium Offer', length: 23 },
       ],
-      [
-        { text: 'Replace your old setup now for value for money.', length: 49 },
-      ],
+      [{ text: 'Replace your old setup now for value for money.', length: 49 }],
       ['premium offer'],
       {
         brandName: 'TestBrand',
@@ -286,9 +284,7 @@ describe('ad-strength-evaluator KISS optimizations', () => {
         { text: 'Waterdrop NSF/ANSI 58&372', length: 24 },
         { text: 'Supporto ufficiale Waterdrop', length: 27 },
       ],
-      [
-        { text: 'Sistema 1200 GPD con filtrazione certificata.', length: 45 },
-      ],
+      [{ text: 'Sistema 1200 GPD con filtrazione certificata.', length: 45 }],
       ['waterdrop filter'],
       {
         brandName: 'Waterdrop',
@@ -298,18 +294,16 @@ describe('ad-strength-evaluator KISS optimizations', () => {
       }
     )
 
-    expect(result.dimensions.competitivePositioning.details.uniqueMarketPosition).toBeGreaterThanOrEqual(2.5)
+    expect(
+      result.dimensions.competitivePositioning.details.uniqueMarketPosition
+    ).toBeGreaterThanOrEqual(2.5)
     expect(result.dimensions.competitivePositioning.score).toBeGreaterThan(0)
   })
 
   it('avoids substring false positives in competitive uniqueness detection', async () => {
     const result = await evaluateAdStrength(
-      [
-        { text: 'Dependable daily comfort', length: 24 },
-      ],
-      [
-        { text: 'Reliable airflow for everyday use.', length: 33 },
-      ],
+      [{ text: 'Dependable daily comfort', length: 24 }],
+      [{ text: 'Reliable airflow for everyday use.', length: 33 }],
       ['daily comfort'],
       {
         targetCountry: 'US',
@@ -349,9 +343,7 @@ describe('ad-strength-evaluator KISS optimizations', () => {
         { text: 'Für Küche und Zuhause entwickelt', length: 31 },
         { text: 'Löst Wasserprobleme im Alltag', length: 28 },
       ],
-      [
-        { text: 'Jetzt kaufen und Wasserqualität verbessern.', length: 42 },
-      ],
+      [{ text: 'Jetzt kaufen und Wasserqualität verbessern.', length: 42 }],
       ['wasserfilter küche', 'wasserqualität verbessern'],
       {
         brandName: 'Waterdrop',
@@ -427,12 +419,8 @@ describe('ad-strength-evaluator KISS optimizations', () => {
     })
 
     await evaluateAdStrength(
-      [
-        { text: 'Save $120 20% Off The Only Official Choice', length: 42 },
-      ],
-      [
-        { text: 'Replace old setup now for value for money.', length: 42 },
-      ],
+      [{ text: 'Save $120 20% Off The Only Official Choice', length: 42 }],
+      [{ text: 'Replace old setup now for value for money.', length: 42 }],
       ['official choice'],
       {
         brandName: 'TestBrand',

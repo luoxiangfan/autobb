@@ -5,7 +5,7 @@ import {
   resolveGoogleAdsPolicyGuardMode,
   sanitizeGoogleAdsPolicyText,
   sanitizeKeywordListForGoogleAdsPolicy,
-  sanitizeKeywordObjectsForGoogleAdsPolicy
+  sanitizeKeywordObjectsForGoogleAdsPolicy,
 } from '../google-ads-policy-guard'
 
 describe('google-ads-policy-guard', () => {
@@ -13,7 +13,7 @@ describe('google-ads-policy-guard', () => {
     const terms = extractGoogleAdsPolicySensitiveTerms([
       'RingConn sleep apnea monitoring',
       'Clinical diagnosis and treatment assistant',
-      'Political affiliation insights for christian users'
+      'Political affiliation insights for christian users',
     ])
 
     expect(terms).toContain('sleep apnea')
@@ -25,7 +25,9 @@ describe('google-ads-policy-guard', () => {
   })
 
   it('sanitizes policy-sensitive text with replacements', () => {
-    const result = sanitizeGoogleAdsPolicyText('Clinical sleep apnea diagnosis for patients', { maxLength: 200 })
+    const result = sanitizeGoogleAdsPolicyText('Clinical sleep apnea diagnosis for patients', {
+      maxLength: 200,
+    })
 
     expect(result.changed).toBe(true)
     expect(result.text.toLowerCase()).toContain('consumer')
@@ -36,7 +38,9 @@ describe('google-ads-policy-guard', () => {
   })
 
   it('sanitizes sensitive inference sentence patterns', () => {
-    const result = sanitizeGoogleAdsPolicyText('Do you suffer from sleep apnea? This plan is for patients like you.')
+    const result = sanitizeGoogleAdsPolicyText(
+      'Do you suffer from sleep apnea? This plan is for patients like you.'
+    )
 
     expect(result.text.toLowerCase()).not.toContain('do you suffer')
     expect(result.text.toLowerCase()).not.toContain('patients like you')
@@ -48,7 +52,7 @@ describe('google-ads-policy-guard', () => {
     const result = sanitizeKeywordListForGoogleAdsPolicy([
       'ringconn sleep apnea monitoring',
       'clinical sleep diagnosis ring',
-      'novilla pain relief spinal support'
+      'novilla pain relief spinal support',
     ])
 
     expect(result.changedCount).toBeGreaterThan(0)
@@ -62,7 +66,7 @@ describe('google-ads-policy-guard', () => {
     const result = sanitizeKeywordListForGoogleAdsPolicy([
       'ringconn sleep apnea monitoring',
       'christian sleep tracker',
-      'teen sleep tracker'
+      'teen sleep tracker',
     ])
 
     expect(result.items).toHaveLength(1)
@@ -72,14 +76,12 @@ describe('google-ads-policy-guard', () => {
   })
 
   it('uses mode-specific hard block strategy', () => {
-    const balanced = sanitizeKeywordListForGoogleAdsPolicy(
-      ['sleep tracker for divorce recovery'],
-      { mode: 'balanced' }
-    )
-    const strict = sanitizeKeywordListForGoogleAdsPolicy(
-      ['sleep tracker for divorce recovery'],
-      { mode: 'strict' }
-    )
+    const balanced = sanitizeKeywordListForGoogleAdsPolicy(['sleep tracker for divorce recovery'], {
+      mode: 'balanced',
+    })
+    const strict = sanitizeKeywordListForGoogleAdsPolicy(['sleep tracker for divorce recovery'], {
+      mode: 'strict',
+    })
 
     expect(balanced.items).toHaveLength(1)
     expect(strict.items).toHaveLength(0)
@@ -95,7 +97,7 @@ describe('google-ads-policy-guard', () => {
   it('sanitizes keyword object lists while preserving metadata', () => {
     const result = sanitizeKeywordObjectsForGoogleAdsPolicy([
       { keyword: 'sleep apnea ring', searchVolume: 1200, source: 'TEST' },
-      { keyword: 'clinical diagnosis ring', searchVolume: 800, source: 'TEST' }
+      { keyword: 'clinical diagnosis ring', searchVolume: 800, source: 'TEST' },
     ])
 
     expect(result.changedCount).toBe(2)

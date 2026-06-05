@@ -35,15 +35,21 @@ export function getOfferDeepScrapeConcurrency(mode?: OfferExtractionMode | strin
   return profileFor(mode).deepScrapeConcurrency
 }
 
-export function getOfferProductLightScrapeTimeoutMs(mode?: OfferExtractionMode | string | null): number {
+export function getOfferProductLightScrapeTimeoutMs(
+  mode?: OfferExtractionMode | string | null
+): number {
   return profileFor(mode).lightScrapeTimeoutMs
 }
 
-export function getOfferAmazonProductMaxProxyRetries(mode?: OfferExtractionMode | string | null): number {
+export function getOfferAmazonProductMaxProxyRetries(
+  mode?: OfferExtractionMode | string | null
+): number {
   return profileFor(mode).amazonMaxProxyRetries
 }
 
-export function shouldSkipAmazonCompetitorExtractionOnExtract(mode?: OfferExtractionMode | string | null): boolean {
+export function shouldSkipAmazonCompetitorExtractionOnExtract(
+  mode?: OfferExtractionMode | string | null
+): boolean {
   return profileFor(mode).skipAmazonCompetitorExtraction
 }
 
@@ -55,11 +61,15 @@ export function isWarmupBlockingForMode(mode?: OfferExtractionMode | string | nu
   return profileFor(mode).warmupBlocking
 }
 
-export function shouldSkipPlaywrightWhenMinimalBaseline(mode?: OfferExtractionMode | string | null): boolean {
+export function shouldSkipPlaywrightWhenMinimalBaseline(
+  mode?: OfferExtractionMode | string | null
+): boolean {
   return profileFor(mode).skipPlaywrightWhenMinimalBaseline
 }
 
-export function useLegacyIndependentPlaywrightFallback(mode?: OfferExtractionMode | string | null): boolean {
+export function useLegacyIndependentPlaywrightFallback(
+  mode?: OfferExtractionMode | string | null
+): boolean {
   return profileFor(mode).useLegacyIndependentPlaywrightFallback
 }
 
@@ -84,23 +94,26 @@ export function hasSufficientExtractedReviewsForAnalysis(
   const data = extractResult as Record<string, unknown>
   const profile = profileFor(mode)
 
-  if (countNonEmptyStrings(data.topReviews) >= profile.minTopReviewsToSkipReviewDeepScrape) return true
-  if (countNonEmptyStrings(data.reviewHighlights) >= profile.minReviewHighlightsToSkipReviewDeepScrape) {
+  if (countNonEmptyStrings(data.topReviews) >= profile.minTopReviewsToSkipReviewDeepScrape)
+    return true
+  if (
+    countNonEmptyStrings(data.reviewHighlights) >= profile.minReviewHighlightsToSkipReviewDeepScrape
+  ) {
     return true
   }
 
   const structuredReviews = data.reviews
   if (
-    Array.isArray(structuredReviews)
-    && structuredReviews.length >= profile.minStructuredReviewsToSkipReviewDeepScrape
+    Array.isArray(structuredReviews) &&
+    structuredReviews.length >= profile.minStructuredReviewsToSkipReviewDeepScrape
   ) {
     return true
   }
 
   const deepResults = data.deepScrapeResults as { aggregatedReviews?: unknown } | undefined
   if (
-    countNonEmptyStrings(deepResults?.aggregatedReviews)
-    >= profile.minStructuredReviewsToSkipReviewDeepScrape
+    countNonEmptyStrings(deepResults?.aggregatedReviews) >=
+    profile.minStructuredReviewsToSkipReviewDeepScrape
   ) {
     return true
   }
@@ -143,22 +156,36 @@ export function shouldRunCompetitorDetailScrapingInAi(
   return profileFor(mode).aiCompetitorDetailScrape
 }
 
-export function getOfferProductReviewDeepScrapeLimit(mode?: OfferExtractionMode | string | null): number {
+export function getOfferProductReviewDeepScrapeLimit(
+  mode?: OfferExtractionMode | string | null
+): number {
   return profileFor(mode).reviewDeepScrapeLimit
 }
 
-export function getOfferAiCompetitorDetailLimit(mode?: OfferExtractionMode | string | null): number {
+export function getOfferAiCompetitorDetailLimit(
+  mode?: OfferExtractionMode | string | null
+): number {
   return profileFor(mode).aiCompetitorDetailLimit
 }
 
 export function hasMinimalIndependentProductBaseline(
-  data: { productName?: string | null; brandName?: string | null; productPrice?: string | null; imageUrls?: string[] | null } | null | undefined
+  data:
+    | {
+        productName?: string | null
+        brandName?: string | null
+        productPrice?: string | null
+        imageUrls?: string[] | null
+      }
+    | null
+    | undefined
 ): boolean {
   if (!data) return false
   const hasProductName = typeof data.productName === 'string' && data.productName.trim().length > 0
   const hasBrand = typeof data.brandName === 'string' && data.brandName.trim().length > 0
   const hasPrice = typeof data.productPrice === 'string' && data.productPrice.trim().length > 0
-  const hasImages = Array.isArray(data.imageUrls) && data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0)
+  const hasImages =
+    Array.isArray(data.imageUrls) &&
+    data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0)
   return hasProductName && hasBrand && (hasPrice || hasImages)
 }
 
@@ -169,18 +196,23 @@ function hasNonEmptyStringField(data: Record<string, unknown>, key: string): boo
 
 function hasNonEmptyStringArrayField(data: Record<string, unknown>, key: string): boolean {
   const value = data[key]
-  return Array.isArray(value) && value.some((item) => typeof item === 'string' && item.trim().length > 0)
+  return (
+    Array.isArray(value) && value.some((item) => typeof item === 'string' && item.trim().length > 0)
+  )
 }
 
 export function shouldFallbackToRenderedIndependentProductForOffer(
-  data: {
-    productName?: string | null
-    brandName?: string | null
-    productPrice?: string | null
-    imageUrls?: string[] | null
-    productFeatures?: string[] | null
-    productDescription?: string | null
-  } | null | undefined,
+  data:
+    | {
+        productName?: string | null
+        brandName?: string | null
+        productPrice?: string | null
+        imageUrls?: string[] | null
+        productFeatures?: string[] | null
+        productDescription?: string | null
+      }
+    | null
+    | undefined,
   targetUrl?: string
 ): boolean {
   if (!data) return true
@@ -191,8 +223,9 @@ export function shouldFallbackToRenderedIndependentProductForOffer(
   const hasBrand = hasNonEmptyStringField(record, 'brandName')
   const hasImages = hasNonEmptyStringArrayField(record, 'imageUrls')
   const hasFeatureContent = hasNonEmptyStringArrayField(record, 'productFeatures')
-  const hasDescription = hasNonEmptyStringField(record, 'productDescription')
-    && (record.productDescription as string).trim().length >= 80
+  const hasDescription =
+    hasNonEmptyStringField(record, 'productDescription') &&
+    (record.productDescription as string).trim().length >= 80
 
   if (!hasProductName) return true
   if (!hasBrand) return true

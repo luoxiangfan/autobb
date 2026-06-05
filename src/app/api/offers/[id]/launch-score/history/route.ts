@@ -10,33 +10,27 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
-      return NextResponse.json(
-        { error: 'Offer ID无效' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
     // 获取所有历史评分
     const scores = await findLaunchScoresByOfferId(offerId, userId)
 
     // 转换为前端需要的格式 (v4.0 - 4维度)
-    const history = scores.map(score => {
+    const history = scores.map((score) => {
       const analysis = parseLaunchScoreAnalysis(score)
 
       return {
@@ -56,7 +50,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           keywordStrategy: analysis.keywordStrategy,
           basicConfig: analysis.basicConfig,
           overallRecommendations: analysis.overallRecommendations,
-        }
+        },
       }
     })
 
@@ -66,14 +60,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         offerId,
         total: history.length,
         history,
-      }
+      },
     })
-
   } catch (error: any) {
     console.error('获取历史评分失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取历史评分失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取历史评分失败' }, { status: 500 })
   }
 }

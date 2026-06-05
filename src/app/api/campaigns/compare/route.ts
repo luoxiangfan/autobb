@@ -103,10 +103,7 @@ export async function GET(request: NextRequest) {
     // 验证用户身份
     const auth = await verifyAuth(request)
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // 获取查询参数
@@ -114,39 +111,35 @@ export async function GET(request: NextRequest) {
     const offerIdStr = searchParams.get('offer_id')
     const daysStr = searchParams.get('days') || '7'
     const requestedCurrencyRaw = searchParams.get('currency')
-    const requestedCurrency = requestedCurrencyRaw ? requestedCurrencyRaw.trim().toUpperCase() : null
+    const requestedCurrency = requestedCurrencyRaw
+      ? requestedCurrencyRaw.trim().toUpperCase()
+      : null
 
     if (!offerIdStr) {
-      return NextResponse.json(
-        { error: 'offer_id is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'offer_id is required' }, { status: 400 })
     }
 
     const offerId = parseInt(offerIdStr)
     const days = parseInt(daysStr)
 
     if (isNaN(offerId) || isNaN(days) || days <= 0) {
-      return NextResponse.json(
-        { error: 'Invalid parameters' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid parameters' }, { status: 400 })
     }
 
     const db = await getDatabase()
 
     // 获取Offer信息
-    const offer = await db.queryOne<any>(`
+    const offer = await db.queryOne<any>(
+      `
       SELECT id, offer_name, target_country, product_price, commission_payout
       FROM offers
       WHERE id = ? AND user_id = ?
-    `, [offerId, auth.user!.userId])
+    `,
+      [offerId, auth.user!.userId]
+    )
 
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer not found' }, { status: 404 })
     }
 
     // 计算日期范围
@@ -158,28 +151,39 @@ export async function GET(request: NextRequest) {
     const endDateStr = endDate.toISOString().split('T')[0]
 
     // 获取该Offer的可用币种（按账号币种）
-    const currencyRows = await db.query<any>(`
+    const currencyRows = await db.query<any>(
+      `
       SELECT DISTINCT COALESCE(gaa.currency, 'USD') as currency
       FROM campaigns c
       LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
       WHERE c.offer_id = ? AND c.user_id = ?
       ORDER BY currency ASC
-    `, [offerId, auth.user!.userId])
+    `,
+      [offerId, auth.user!.userId]
+    )
 
-    const currencies = Array.from(new Set(
-      (currencyRows || [])
-        .map((r: any) => String(r.currency || '').trim().toUpperCase())
-        .filter(Boolean)
-    ))
+    const currencies = Array.from(
+      new Set(
+        (currencyRows || [])
+          .map((r: any) =>
+            String(r.currency || '')
+              .trim()
+              .toUpperCase()
+          )
+          .filter(Boolean)
+      )
+    )
 
     const defaultCurrency = currencies.length > 0 ? currencies[0] : 'USD'
-    const reportingCurrency = requestedCurrency && currencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : defaultCurrency
+    const reportingCurrency =
+      requestedCurrency && currencies.includes(requestedCurrency)
+        ? requestedCurrency
+        : defaultCurrency
     const hasMixedCurrency = currencies.length > 1
 
     // 获取该Offer的所有Campaigns
-    const campaigns = await db.query<any>(`
+    const campaigns = await db.query<any>(
+      `
       SELECT
         c.id,
         c.campaign_name,
@@ -189,7 +193,9 @@ export async function GET(request: NextRequest) {
       LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
       WHERE c.offer_id = ? AND c.user_id = ?
         AND COALESCE(gaa.currency, 'USD') = ?
-    `, [offerId, auth.user!.userId, reportingCurrency])
+    `,
+      [offerId, auth.user!.userId, reportingCurrency]
+    )
 
     if (campaigns.length === 0) {
       return NextResponse.json({
@@ -202,11 +208,11 @@ export async function GET(request: NextRequest) {
         industryBenchmarks: {
           avgCtr: 0.02, // 2% 行业均值
           avgCpc: 1.5,
-          avgConversionRate: 0.03
+          avgConversionRate: 0.03,
         },
         currency: reportingCurrency,
         currencies,
-        hasMixedCurrency
+        hasMixedCurrency,
       })
     }
 
@@ -233,10 +239,13 @@ export async function GET(request: NextRequest) {
         })
 
         if (parsed && parsed.amount > 0) {
-          const sourceCurrency = String(parsed.currency || 'USD').trim().toUpperCase()
-          conversionValue = sourceCurrency === reportingCurrency
-            ? parsed.amount
-            : convertCurrency(parsed.amount, sourceCurrency, reportingCurrency)
+          const sourceCurrency = String(parsed.currency || 'USD')
+            .trim()
+            .toUpperCase()
+          conversionValue =
+            sourceCurrency === reportingCurrency
+              ? parsed.amount
+              : convertCurrency(parsed.amount, sourceCurrency, reportingCurrency)
         }
       } catch (error) {
         console.warn(`计算转化价值失败，使用默认值: ${error}`)
@@ -244,10 +253,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 批量查询1: 所有campaigns的聚合指标（单次查询）
-    const campaignIds = campaigns.map(c => c.id)
+    const campaignIds = campaigns.map((c) => c.id)
     const placeholders = campaignIds.map(() => '?').join(',')
 
-    const aggregates = await db.query<any>(`
+    const aggregates = await db.query<any>(
+      `
       SELECT
         campaign_id,
         COALESCE(SUM(impressions), 0) as impressions,
@@ -261,7 +271,9 @@ export async function GET(request: NextRequest) {
         AND date >= ?
         AND date <= ?
       GROUP BY campaign_id
-    `, [...campaignIds, auth.user!.userId, reportingCurrency, startDateStr, endDateStr])
+    `,
+      [...campaignIds, auth.user!.userId, reportingCurrency, startDateStr, endDateStr]
+    )
 
     // 建立Map: campaign_id → aggregate data
     const aggregateMap = new Map<number, any>()
@@ -270,7 +282,8 @@ export async function GET(request: NextRequest) {
     }
 
     // 批量查询2: 所有campaigns的每日趋势（单次查询）
-    const dailyData = await db.query<any>(`
+    const dailyData = await db.query<any>(
+      `
       SELECT
         campaign_id,
         date,
@@ -285,7 +298,9 @@ export async function GET(request: NextRequest) {
         AND date <= ?
       GROUP BY campaign_id, date
       ORDER BY campaign_id, date ASC
-    `, [...campaignIds, auth.user!.userId, reportingCurrency, startDateStr, endDateStr])
+    `,
+      [...campaignIds, auth.user!.userId, reportingCurrency, startDateStr, endDateStr]
+    )
 
     // 建立Map: campaign_id → daily trends array
     const dailyMap = new Map<number, any[]>()
@@ -298,7 +313,7 @@ export async function GET(request: NextRequest) {
         impressions: row.impressions,
         clicks: row.clicks,
         ctr: row.impressions > 0 ? row.clicks / row.impressions : 0,
-        cost: row.cost
+        cost: row.cost,
       })
     }
 
@@ -310,7 +325,7 @@ export async function GET(request: NextRequest) {
         impressions: 0,
         clicks: 0,
         cost: 0,
-        conversions: 0
+        conversions: 0,
       }
 
       const impressions = aggregate.impressions || 0
@@ -339,7 +354,7 @@ export async function GET(request: NextRequest) {
         cpa,
         conversionRate,
         roi,
-        dailyTrends
+        dailyTrends,
       })
     }
 
@@ -358,14 +373,14 @@ export async function GET(request: NextRequest) {
         winner = {
           campaignId: topRoi.campaignId,
           metric: 'roi',
-          value: topRoi.roi
+          value: topRoi.roi,
         }
       } else if (topCtr.clicks >= 10) {
         // 否则选CTR最高的（至少有10个点击）
         winner = {
           campaignId: topCtr.campaignId,
           metric: 'ctr',
-          value: topCtr.ctr
+          value: topCtr.ctr,
         }
       }
     }
@@ -374,7 +389,7 @@ export async function GET(request: NextRequest) {
     const engine = createOptimizationEngine()
 
     // 将Campaign数据转换为规则引擎所需格式
-    const campaignMetricsForRules: CampaignMetrics[] = campaignPerformances.map(campaign => ({
+    const campaignMetricsForRules: CampaignMetrics[] = campaignPerformances.map((campaign) => ({
       campaignId: campaign.campaignId,
       campaignName: campaign.campaignName,
       status: campaign.status,
@@ -387,20 +402,22 @@ export async function GET(request: NextRequest) {
       cpa: campaign.cpa,
       conversionRate: campaign.conversionRate,
       roi: campaign.roi,
-      daysRunning: days // 使用查询的天数作为运行天数
+      daysRunning: days, // 使用查询的天数作为运行天数
     }))
 
     // 生成优化建议
     const engineRecommendations = engine.generateBatchRecommendations(campaignMetricsForRules)
 
     // 转换为API响应格式
-    const recommendations: CampaignComparison['recommendations'] = engineRecommendations.map(rec => ({
-      campaignId: rec.campaignId,
-      priority: rec.priority,
-      type: mapOptimizationType(rec.type),
-      reason: rec.reason,
-      action: rec.action
-    }))
+    const recommendations: CampaignComparison['recommendations'] = engineRecommendations.map(
+      (rec) => ({
+        campaignId: rec.campaignId,
+        priority: rec.priority,
+        type: mapOptimizationType(rec.type),
+        reason: rec.reason,
+        action: rec.action,
+      })
+    )
 
     // 行业基准
     const industryAvgCtr = 0.02 // 2%
@@ -424,20 +441,16 @@ export async function GET(request: NextRequest) {
       industryBenchmarks: {
         avgCtr: industryAvgCtr,
         avgCpc: industryAvgCpc,
-        avgConversionRate: industryAvgConversionRate
+        avgConversionRate: industryAvgConversionRate,
       },
       currency: reportingCurrency,
       currencies,
-      hasMixedCurrency
+      hasMixedCurrency,
     }
 
     return NextResponse.json(result)
-
   } catch (error) {
     console.error('Campaign comparison error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

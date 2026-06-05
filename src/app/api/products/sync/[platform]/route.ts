@@ -12,7 +12,10 @@ import {
 import { getDatabase } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
-import { getYeahPromosSessionState, checkYeahPromosSessionValidForSync } from '@/lib/yeahpromos-session'
+import {
+  getYeahPromosSessionState,
+  checkYeahPromosSessionValidForSync,
+} from '@/lib/yeahpromos-session'
 
 type RouteParams = {
   platform: string
@@ -22,19 +25,28 @@ type SyncStrategy = 'light' | 'full'
 
 function parseBooleanFlag(value: unknown, defaultValue: boolean = false): boolean {
   if (typeof value === 'boolean') return value
-  const text = String(value ?? '').trim().toLowerCase()
+  const text = String(value ?? '')
+    .trim()
+    .toLowerCase()
   if (!text) return defaultValue
   return text === '1' || text === 'true' || text === 'yes' || text === 'on'
 }
 
-function resolveSyncMode(params: {
-  platform: 'partnerboost' | 'yeahpromos'
-  strategy?: string
-}): { mode: SyncMode; strategy: SyncStrategy } {
-  const strategyRaw = String(params.strategy || '').trim().toLowerCase()
-  const strategy: SyncStrategy = strategyRaw === 'full' ? 'full' : strategyRaw === 'light' ? 'light' : (
-    params.platform === 'partnerboost' ? 'light' : 'full'
-  )
+function resolveSyncMode(params: { platform: 'partnerboost' | 'yeahpromos'; strategy?: string }): {
+  mode: SyncMode
+  strategy: SyncStrategy
+} {
+  const strategyRaw = String(params.strategy || '')
+    .trim()
+    .toLowerCase()
+  const strategy: SyncStrategy =
+    strategyRaw === 'full'
+      ? 'full'
+      : strategyRaw === 'light'
+        ? 'light'
+        : params.platform === 'partnerboost'
+          ? 'light'
+          : 'full'
 
   return {
     mode: strategy === 'full' ? 'platform' : 'delta',
@@ -77,9 +89,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
 
     // 防止同平台重复手动提交：优先阻止“近期仍活跃”的 queued/running run。
     const db = await getDatabase()
-    const activeRunFreshnessSql = db.type === 'postgres'
-      ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
-      : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
+    const activeRunFreshnessSql =
+      db.type === 'postgres'
+        ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
+        : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
     const activeRun = await db.queryOne<{
       id: number
       status: string
@@ -143,7 +156,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
       const minRemainingMs = mode === 'platform' ? 2 * 60 * 60 * 1000 : 60 * 60 * 1000 // platform: 2小时, delta: 1小时
       const sessionCheck = await checkYeahPromosSessionValidForSync(userId, minRemainingMs)
       if (!sessionCheck.valid) {
-        const remainingMinutes = sessionCheck.remainingMs ? Math.floor(sessionCheck.remainingMs / 60000) : 0
+        const remainingMinutes = sessionCheck.remainingMs
+          ? Math.floor(sessionCheck.remainingMs / 60000)
+          : 0
         const requiredMinutes = Math.floor(minRemainingMs / 60000)
         return NextResponse.json(
           {
@@ -245,9 +260,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     }
 
     console.error('[POST /api/products/sync/:platform] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '提交同步任务失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '提交同步任务失败' }, { status: 500 })
   }
 }

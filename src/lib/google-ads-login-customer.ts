@@ -66,21 +66,10 @@ export function resolveLoginCustomerCandidates(
   const targetCustomerId = normalizeId(params.targetCustomerId)
 
   if (params.authType === 'service_account') {
-    return dedupeIds([
-      primary,
-      serviceAccountMccId,
-      parentMccId,
-      targetCustomerId,
-      undefined,
-    ])
+    return dedupeIds([primary, serviceAccountMccId, parentMccId, targetCustomerId, undefined])
   }
 
-  return dedupeIds([
-    primary,
-    oauthLoginCustomerId,
-    targetCustomerId,
-    undefined,
-  ])
+  return dedupeIds([primary, oauthLoginCustomerId, targetCustomerId, undefined])
 }
 
 function collectErrorMessages(error: any): string {
@@ -165,29 +154,32 @@ export function isGoogleAdsAccountAccessError(error: unknown): boolean {
   const err = error as any
   const codeTokens = collectErrorCodeTokens(err)
 
-  const hasAccessCode = Array.from(codeTokens).some(code => (
-    code === '7' || // gRPC PERMISSION_DENIED
-    code.includes('PERMISSION_DENIED') ||
-    code.includes('ACCESS_DENIED') ||
-    code.includes('AUTHORIZATION_ERROR') ||
-    code.includes('AUTHENTICATION_ERROR') ||
-    code.includes('LOGIN_CUSTOMER_ID') ||
-    code.includes('USER_PERMISSION_DENIED') ||
-    code.includes('CUSTOMER_NOT_ENABLED') ||
-    code.includes('CUSTOMER_NOT_FOUND')
-  ))
+  const hasAccessCode = Array.from(codeTokens).some(
+    (code) =>
+      code === '7' || // gRPC PERMISSION_DENIED
+      code.includes('PERMISSION_DENIED') ||
+      code.includes('ACCESS_DENIED') ||
+      code.includes('AUTHORIZATION_ERROR') ||
+      code.includes('AUTHENTICATION_ERROR') ||
+      code.includes('LOGIN_CUSTOMER_ID') ||
+      code.includes('USER_PERMISSION_DENIED') ||
+      code.includes('CUSTOMER_NOT_ENABLED') ||
+      code.includes('CUSTOMER_NOT_FOUND')
+  )
 
   if (hasAccessCode) return true
 
   const combined = collectErrorMessages(err)
-  return combined.includes("user doesn't have permission to access customer")
-    || (combined.includes('login-customer-id') && combined.includes('access customer'))
-    || (combined.includes('permission denied') && combined.includes('customer'))
-    || combined.includes('permission_denied')
-    || combined.includes('customer_not_enabled')
-    || combined.includes('customer not enabled')
-    || combined.includes('not yet enabled')
-    || combined.includes('deactivated')
+  return (
+    combined.includes("user doesn't have permission to access customer") ||
+    (combined.includes('login-customer-id') && combined.includes('access customer')) ||
+    (combined.includes('permission denied') && combined.includes('customer')) ||
+    combined.includes('permission_denied') ||
+    combined.includes('customer_not_enabled') ||
+    combined.includes('customer not enabled') ||
+    combined.includes('not yet enabled') ||
+    combined.includes('deactivated')
+  )
 }
 
 /**

@@ -27,11 +27,13 @@ describe('gemini-axios daily quota breaker', () => {
     vi.resetModules()
     createMock.mockReset().mockReturnValue({ post: postMock })
     postMock.mockReset()
-    getUserOnlySettingMock.mockReset().mockImplementation(async (_category: string, key: string) => {
-      if (key === 'gemini_provider') return { value: 'official' }
-      if (key === 'gemini_api_key') return { value: 'test-key' }
-      return null
-    })
+    getUserOnlySettingMock
+      .mockReset()
+      .mockImplementation(async (_category: string, key: string) => {
+        if (key === 'gemini_provider') return { value: 'official' }
+        if (key === 'gemini_api_key') return { value: 'test-key' }
+        return null
+      })
     redisGetMock.mockReset()
     redisSetMock.mockReset()
     redisDelMock.mockReset()
@@ -45,13 +47,15 @@ describe('gemini-axios daily quota breaker', () => {
         data: {
           error: {
             code: 429,
-            message: 'Quota exceeded for metric: generativelanguage.googleapis.com/generate_requests_per_model_per_day, limit: 10000. Please retry in 3600s.',
+            message:
+              'Quota exceeded for metric: generativelanguage.googleapis.com/generate_requests_per_model_per_day, limit: 10000. Please retry in 3600s.',
             details: [
               {
                 '@type': 'type.googleapis.com/google.rpc.QuotaFailure',
                 violations: [
                   {
-                    quotaMetric: 'generativelanguage.googleapis.com/generate_requests_per_model_per_day',
+                    quotaMetric:
+                      'generativelanguage.googleapis.com/generate_requests_per_model_per_day',
                     quotaId: 'GenerateRequestsPerDayPerProjectPerModel',
                   },
                 ],

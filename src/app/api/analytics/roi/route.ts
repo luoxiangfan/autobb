@@ -6,7 +6,9 @@ import { toNumber } from '@/lib/utils'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 function normalizeCurrency(value: unknown): string {
-  const normalized = String(value ?? '').trim().toUpperCase()
+  const normalized = String(value ?? '')
+    .trim()
+    .toUpperCase()
   return normalized || 'USD'
 }
 
@@ -30,14 +32,16 @@ export async function GET(request: NextRequest) {
     const campaignIdRaw = searchParams.get('campaign_id')
     const offerIdRaw = searchParams.get('offer_id')
     const requestedCurrencyRaw = searchParams.get('currency')
-    const requestedCurrency = requestedCurrencyRaw ? requestedCurrencyRaw.trim().toUpperCase() : null
+    const requestedCurrency = requestedCurrencyRaw
+      ? requestedCurrencyRaw.trim().toUpperCase()
+      : null
 
     const campaignId = campaignIdRaw ? parseInt(campaignIdRaw, 10) : null
     if (campaignIdRaw && (campaignId === null || isNaN(campaignId))) {
       return NextResponse.json({ error: 'Invalid campaign_id' }, { status: 400 })
     }
 
-    const offerId = offerIdRaw ? parsePositiveIntegerOfferId(offerIdRaw) ?? null : null
+    const offerId = offerIdRaw ? (parsePositiveIntegerOfferId(offerIdRaw) ?? null) : null
     if (offerIdRaw && offerId === null) {
       return NextResponse.json({ error: 'Invalid offer_id' }, { status: 400 })
     }
@@ -95,73 +99,96 @@ export async function GET(request: NextRequest) {
       commissionParams.push(offerId)
     }
 
-    const performanceCurrencyRows = await db.query<any>(`
+    const performanceCurrencyRows = await db.query<any>(
+      `
       SELECT DISTINCT COALESCE(cp.currency, 'USD') as currency
       FROM campaign_performance cp
       INNER JOIN campaigns c ON cp.campaign_id = c.id
       WHERE ${performanceWhereConditions.join(' AND ')}
       ORDER BY currency ASC
-    `, performanceParams)
+    `,
+      performanceParams
+    )
 
-    const attributedCurrencyRows = await db.query<any>(`
+    const attributedCurrencyRows = await db.query<any>(
+      `
       SELECT DISTINCT COALESCE(currency, 'USD') as currency
       FROM affiliate_commission_attributions
       WHERE ${commissionWhereConditions.join(' AND ')}
       ORDER BY currency ASC
-    `, commissionParams)
+    `,
+      commissionParams
+    )
 
     let unattributedCurrencyRows: any[] = []
     try {
-      unattributedCurrencyRows = await db.query<any>(`
+      unattributedCurrencyRows = await db.query<any>(
+        `
         SELECT DISTINCT COALESCE(currency, 'USD') as currency
         FROM openclaw_affiliate_attribution_failures
         WHERE ${commissionWhereConditions.join(' AND ')}
           AND ${unattributedFailureFilter.sql}
         ORDER BY currency ASC
-      `, [...commissionParams, ...unattributedFailureFilter.values])
+      `,
+        [...commissionParams, ...unattributedFailureFilter.values]
+      )
     } catch (error: any) {
       const message = String(error?.message || '')
       if (
-        !/openclaw_affiliate_attribution_failures/i.test(message)
-        || !/(no such table|does not exist)/i.test(message)
+        !/openclaw_affiliate_attribution_failures/i.test(message) ||
+        !/(no such table|does not exist)/i.test(message)
       ) {
         throw error
       }
     }
 
-    let currencies = Array.from(new Set(
-      [
-        ...(performanceCurrencyRows || []),
-        ...(attributedCurrencyRows || []),
-        ...(unattributedCurrencyRows || []),
-      ]
-        .map((row: any) => normalizeCurrency(row.currency))
-        .filter(Boolean)
-    ))
+    let currencies = Array.from(
+      new Set(
+        [
+          ...(performanceCurrencyRows || []),
+          ...(attributedCurrencyRows || []),
+          ...(unattributedCurrencyRows || []),
+        ]
+          .map((row: any) => normalizeCurrency(row.currency))
+          .filter(Boolean)
+      )
+    )
 
     if (currencies.length === 0) {
-      const accountCurrencyRows = await db.query<any>(`
+      const accountCurrencyRows = await db.query<any>(
+        `
         SELECT DISTINCT COALESCE(currency, 'USD') as currency
         FROM google_ads_accounts
         WHERE user_id = ?
         ORDER BY currency ASC
-      `, [userId])
-      currencies = Array.from(new Set(
-        (accountCurrencyRows || [])
-          .map((row: any) => normalizeCurrency(row.currency))
-          .filter(Boolean)
-      ))
+      `,
+        [userId]
+      )
+      currencies = Array.from(
+        new Set(
+          (accountCurrencyRows || [])
+            .map((row: any) => normalizeCurrency(row.currency))
+            .filter(Boolean)
+        )
+      )
     }
 
     const defaultCurrency = currencies.length > 0 ? currencies[0] : 'USD'
-    const reportingCurrency = requestedCurrency && currencies.includes(requestedCurrency)
-      ? requestedCurrency
-      : defaultCurrency
+    const reportingCurrency =
+      requestedCurrency && currencies.includes(requestedCurrency)
+        ? requestedCurrency
+        : defaultCurrency
     const hasMixedCurrency = currencies.length > 1
 
-    const performanceCurrencyWhereConditions = [...performanceWhereConditions, "COALESCE(cp.currency, 'USD') = ?"]
+    const performanceCurrencyWhereConditions = [
+      ...performanceWhereConditions,
+      "COALESCE(cp.currency, 'USD') = ?",
+    ]
     const performanceCurrencyParams: any[] = [...performanceParams, reportingCurrency]
-    const commissionCurrencyWhereConditions = [...commissionWhereConditions, "COALESCE(currency, 'USD') = ?"]
+    const commissionCurrencyWhereConditions = [
+      ...commissionWhereConditions,
+      "COALESCE(currency, 'USD') = ?",
+    ]
     const commissionCurrencyParams: any[] = [...commissionParams, reportingCurrency]
 
     const [
@@ -174,20 +201,27 @@ export async function GET(request: NextRequest) {
       offerCostRows,
       offerAttributedRevenueRows,
     ] = await Promise.all([
-      db.queryOne<any>(`
+      db.queryOne<any>(
+        `
         SELECT COALESCE(SUM(cp.cost), 0) as total_cost
         FROM campaign_performance cp
         INNER JOIN campaigns c ON cp.campaign_id = c.id
         WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
-      `, performanceCurrencyParams),
-      db.queryOne<any>(`
+      `,
+        performanceCurrencyParams
+      ),
+      db.queryOne<any>(
+        `
         SELECT
           COALESCE(SUM(commission_amount), 0) as total_revenue,
           COUNT(*) as total_records
         FROM affiliate_commission_attributions
         WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
-      `, commissionCurrencyParams),
-      db.query<any>(`
+      `,
+        commissionCurrencyParams
+      ),
+      db.query<any>(
+        `
         SELECT
           DATE(cp.date) as date,
           COALESCE(SUM(cp.cost), 0) as cost
@@ -196,8 +230,11 @@ export async function GET(request: NextRequest) {
         WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
         GROUP BY DATE(cp.date)
         ORDER BY date ASC
-      `, performanceCurrencyParams),
-      db.query<any>(`
+      `,
+        performanceCurrencyParams
+      ),
+      db.query<any>(
+        `
         SELECT
           report_date as date,
           COALESCE(SUM(commission_amount), 0) as revenue,
@@ -206,8 +243,11 @@ export async function GET(request: NextRequest) {
         WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
         GROUP BY report_date
         ORDER BY report_date ASC
-      `, commissionCurrencyParams),
-      db.query<any>(`
+      `,
+        commissionCurrencyParams
+      ),
+      db.query<any>(
+        `
         SELECT
           c.id as campaign_id,
           c.campaign_name,
@@ -220,8 +260,11 @@ export async function GET(request: NextRequest) {
         LEFT JOIN offers o ON c.offer_id = o.id
         WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
         GROUP BY c.id, c.campaign_name, o.brand
-      `, performanceCurrencyParams),
-      db.query<any>(`
+      `,
+        performanceCurrencyParams
+      ),
+      db.query<any>(
+        `
         SELECT
           campaign_id,
           COALESCE(SUM(commission_amount), 0) as revenue,
@@ -230,8 +273,11 @@ export async function GET(request: NextRequest) {
         WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
           AND campaign_id IS NOT NULL
         GROUP BY campaign_id
-      `, commissionCurrencyParams),
-      db.query<any>(`
+      `,
+        commissionCurrencyParams
+      ),
+      db.query<any>(
+        `
         SELECT
           o.id as offer_id,
           o.brand,
@@ -244,8 +290,11 @@ export async function GET(request: NextRequest) {
         WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
           AND o.id IS NOT NULL
         GROUP BY o.id, o.brand, o.offer_name
-      `, performanceCurrencyParams),
-      db.query<any>(`
+      `,
+        performanceCurrencyParams
+      ),
+      db.query<any>(
+        `
         SELECT
           offer_id,
           COALESCE(SUM(commission_amount), 0) as revenue,
@@ -254,7 +303,9 @@ export async function GET(request: NextRequest) {
         WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
           AND offer_id IS NOT NULL
         GROUP BY offer_id
-      `, commissionCurrencyParams),
+      `,
+        commissionCurrencyParams
+      ),
     ])
 
     let overallUnattributedRevenueRow: any = { total_revenue: 0, total_records: 0 }
@@ -269,15 +320,19 @@ export async function GET(request: NextRequest) {
         campaignUnattributedRevenueRows,
         offerUnattributedRevenueRows,
       ] = await Promise.all([
-        db.queryOne<any>(`
+        db.queryOne<any>(
+          `
           SELECT
             COALESCE(SUM(commission_amount), 0) as total_revenue,
             COUNT(*) as total_records
           FROM openclaw_affiliate_attribution_failures
           WHERE ${commissionCurrencyWhereConditions.join(' AND ')}
             AND ${unattributedFailureFilter.sql}
-        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
-        db.query<any>(`
+        `,
+          [...commissionCurrencyParams, ...unattributedFailureFilter.values]
+        ),
+        db.query<any>(
+          `
           SELECT
             report_date as date,
             COALESCE(SUM(commission_amount), 0) as revenue,
@@ -287,8 +342,11 @@ export async function GET(request: NextRequest) {
             AND ${unattributedFailureFilter.sql}
           GROUP BY report_date
           ORDER BY report_date ASC
-        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
-        db.query<any>(`
+        `,
+          [...commissionCurrencyParams, ...unattributedFailureFilter.values]
+        ),
+        db.query<any>(
+          `
           SELECT
             campaign_id,
             COALESCE(SUM(commission_amount), 0) as revenue,
@@ -298,8 +356,11 @@ export async function GET(request: NextRequest) {
             AND ${unattributedFailureFilter.sql}
             AND campaign_id IS NOT NULL
           GROUP BY campaign_id
-        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
-        db.query<any>(`
+        `,
+          [...commissionCurrencyParams, ...unattributedFailureFilter.values]
+        ),
+        db.query<any>(
+          `
           SELECT
             offer_id,
             COALESCE(SUM(commission_amount), 0) as revenue,
@@ -309,21 +370,27 @@ export async function GET(request: NextRequest) {
             AND ${unattributedFailureFilter.sql}
             AND offer_id IS NOT NULL
           GROUP BY offer_id
-        `, [...commissionCurrencyParams, ...unattributedFailureFilter.values]),
+        `,
+          [...commissionCurrencyParams, ...unattributedFailureFilter.values]
+        ),
       ])
     } catch (error: any) {
       const message = String(error?.message || '')
       if (
-        !/openclaw_affiliate_attribution_failures/i.test(message)
-        || !/(no such table|does not exist)/i.test(message)
+        !/openclaw_affiliate_attribution_failures/i.test(message) ||
+        !/(no such table|does not exist)/i.test(message)
       ) {
         throw error
       }
     }
 
     const totalCost = toNumber(overallCostRow?.total_cost)
-    const totalRevenue = toNumber(overallAttributedRevenueRow?.total_revenue) + toNumber(overallUnattributedRevenueRow?.total_revenue)
-    const totalConversions = toNumber(overallAttributedRevenueRow?.total_records) + toNumber(overallUnattributedRevenueRow?.total_records)
+    const totalRevenue =
+      toNumber(overallAttributedRevenueRow?.total_revenue) +
+      toNumber(overallUnattributedRevenueRow?.total_revenue)
+    const totalConversions =
+      toNumber(overallAttributedRevenueRow?.total_records) +
+      toNumber(overallUnattributedRevenueRow?.total_records)
     const overallRoas = totalCost > 0 ? totalRevenue / totalCost : 0
     const avgCommission = totalConversions > 0 ? totalRevenue / totalConversions : 0
 
@@ -384,7 +451,10 @@ export async function GET(request: NextRequest) {
         const cost = toNumber(row.cost)
         const impressions = toNumber(row.impressions)
         const clicks = toNumber(row.clicks)
-        const revenueMetrics = campaignRevenueMap.get(campaignIdValue) || { revenue: 0, conversions: 0 }
+        const revenueMetrics = campaignRevenueMap.get(campaignIdValue) || {
+          revenue: 0,
+          conversions: 0,
+        }
         if (revenueMetrics.revenue <= 0) return null
 
         const roas = cost > 0 ? revenueMetrics.revenue / cost : 0
@@ -421,9 +491,8 @@ export async function GET(request: NextRequest) {
         if (revenueMetrics.revenue <= 0) return null
 
         const roas = cost > 0 ? revenueMetrics.revenue / cost : 0
-        const commissionAmount = revenueMetrics.conversions > 0
-          ? revenueMetrics.revenue / revenueMetrics.conversions
-          : 0
+        const commissionAmount =
+          revenueMetrics.conversions > 0 ? revenueMetrics.revenue / revenueMetrics.conversions : 0
 
         return {
           offerId: offerIdValue,
@@ -443,18 +512,15 @@ export async function GET(request: NextRequest) {
       .slice(0, 10)
 
     const efficiency = {
-      costPerConversion: totalConversions > 0
-        ? parseFloat((totalCost / totalConversions).toFixed(2))
-        : 0,
-      revenuePerConversion: totalConversions > 0
-        ? parseFloat((totalRevenue / totalConversions).toFixed(2))
-        : 0,
-      profitMargin: totalRevenue > 0
-        ? parseFloat((((totalRevenue - totalCost) / totalRevenue) * 100).toFixed(2))
-        : 0,
-      breakEvenPoint: avgCommission > 0
-        ? parseFloat((totalCost / avgCommission).toFixed(0))
-        : 0,
+      costPerConversion:
+        totalConversions > 0 ? parseFloat((totalCost / totalConversions).toFixed(2)) : 0,
+      revenuePerConversion:
+        totalConversions > 0 ? parseFloat((totalRevenue / totalConversions).toFixed(2)) : 0,
+      profitMargin:
+        totalRevenue > 0
+          ? parseFloat((((totalRevenue - totalCost) / totalRevenue) * 100).toFixed(2))
+          : 0,
+      breakEvenPoint: avgCommission > 0 ? parseFloat((totalCost / avgCommission).toFixed(0)) : 0,
     }
 
     return NextResponse.json({

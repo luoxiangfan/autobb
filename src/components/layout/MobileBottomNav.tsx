@@ -46,7 +46,7 @@ export function MobileBottomNav({ user }: { user?: MobileBottomNavUser }) {
     return pathname?.startsWith(href) || false
   }
 
-  const filteredMainNavItems = mainNavItems.filter(item => {
+  const filteredMainNavItems = mainNavItems.filter((item) => {
     if (item.href === '/openclaw') {
       return Boolean(user?.openclawEnabled)
     }
@@ -78,19 +78,14 @@ export function MobileBottomNav({ user }: { user?: MobileBottomNavUser }) {
               onClick={() => router.push(item.href)}
               className={`
                 flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-all duration-200
-                ${active
-                  ? 'text-blue-600'
-                  : 'text-slate-500 hover:text-slate-700'
-                }
+                ${active ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'}
               `}
             >
               <Icon className={`w-5 h-5 ${active ? 'scale-110' : ''}`} />
               <span className={`text-[10px] font-medium ${active ? 'text-blue-600' : ''}`}>
                 {item.label}
               </span>
-              {active && (
-                <span className="absolute bottom-0 w-1 h-1 rounded-full bg-blue-600" />
-              )}
+              {active && <span className="absolute bottom-0 w-1 h-1 rounded-full bg-blue-600" />}
             </button>
           )
         })}

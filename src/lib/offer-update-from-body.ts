@@ -65,11 +65,25 @@ export const updateOfferBodySchema = z.object({
 })
 
 const OFFER_UPDATE_KEYS = new Set([
-  'url', 'brand', 'category', 'target_country', 'affiliate_link',
-  'brand_description', 'unique_selling_points', 'product_highlights', 'target_audience',
-  'page_type', 'store_product_links', 'product_price', 'commission_payout',
-  'commission_type', 'commission_value', 'commission_currency', 'is_active',
-  'extraction_mode', 'extractionMode',
+  'url',
+  'brand',
+  'category',
+  'target_country',
+  'affiliate_link',
+  'brand_description',
+  'unique_selling_points',
+  'product_highlights',
+  'target_audience',
+  'page_type',
+  'store_product_links',
+  'product_price',
+  'commission_payout',
+  'commission_type',
+  'commission_value',
+  'commission_currency',
+  'is_active',
+  'extraction_mode',
+  'extractionMode',
 ])
 
 /** 从 rebuild 请求体中剥离 Offer 更新字段 */
@@ -100,11 +114,7 @@ export function resolveStoreProductLinksForUpdate(
   }
   if (pageType === 'store' && linksInput !== undefined) {
     const normalized = Array.from(
-      new Set(
-        linksInput
-          .map((link) => link.trim())
-          .filter(Boolean)
-      )
+      new Set(linksInput.map((link) => link.trim()).filter(Boolean))
     ).slice(0, 3)
     return normalized.length > 0 ? JSON.stringify(normalized) : null
   }
@@ -185,8 +195,8 @@ export async function applyOfferUpdateFromBody(
 
   let pageType = data.page_type
   if (
-    pageType === undefined
-    && (data.store_product_links !== undefined || data.affiliate_link !== undefined)
+    pageType === undefined &&
+    (data.store_product_links !== undefined || data.affiliate_link !== undefined)
   ) {
     let affiliateForInfer = data.affiliate_link
     if (!affiliateForInfer) {
@@ -207,10 +217,11 @@ export async function applyOfferUpdateFromBody(
     data.store_product_links
   )
 
-  const hasCommissionInput = data.commission_payout !== undefined
-    || data.commission_type !== undefined
-    || data.commission_value !== undefined
-    || data.commission_currency !== undefined
+  const hasCommissionInput =
+    data.commission_payout !== undefined ||
+    data.commission_type !== undefined ||
+    data.commission_value !== undefined ||
+    data.commission_currency !== undefined
 
   let normalizedCommission: ReturnType<typeof normalizeOfferCommissionInput> | null = null
   if (hasCommissionInput) {
@@ -252,10 +263,18 @@ export async function applyOfferUpdateFromBody(
     product_highlights: data.product_highlights,
     target_audience: data.target_audience,
     product_price: data.product_price,
-    commission_payout: hasCommissionInput ? (normalizedCommission?.commissionPayout || undefined) : undefined,
-    commission_type: hasCommissionInput ? (normalizedCommission?.commissionType || undefined) : undefined,
-    commission_value: hasCommissionInput ? (normalizedCommission?.commissionValue || undefined) : undefined,
-    commission_currency: hasCommissionInput ? (normalizedCommission?.commissionCurrency || undefined) : undefined,
+    commission_payout: hasCommissionInput
+      ? normalizedCommission?.commissionPayout || undefined
+      : undefined,
+    commission_type: hasCommissionInput
+      ? normalizedCommission?.commissionType || undefined
+      : undefined,
+    commission_value: hasCommissionInput
+      ? normalizedCommission?.commissionValue || undefined
+      : undefined,
+    commission_currency: hasCommissionInput
+      ? normalizedCommission?.commissionCurrency || undefined
+      : undefined,
     page_type: pageType,
     is_active: data.is_active,
     extraction_mode: data.extraction_mode ?? data.extractionMode,

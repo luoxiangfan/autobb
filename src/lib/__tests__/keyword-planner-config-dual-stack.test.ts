@@ -28,7 +28,12 @@ describe('getGoogleAdsConfig dual-stack guard', () => {
       canModify: true,
       dualStack: true,
       auth: { authType: 'oauth' },
-      oauthCredentials: { refresh_token: 'rt', client_id: 'c', client_secret: 's', developer_token: 'd' },
+      oauthCredentials: {
+        refresh_token: 'rt',
+        client_id: 'c',
+        client_secret: 's',
+        developer_token: 'd',
+      },
       serviceAccountConfig: { id: 'sa-1' },
     })
 
@@ -57,29 +62,24 @@ describe('getGoogleAdsConfig dual-stack guard', () => {
   })
 
   it('skips context load when existingContext is passed without dualStack', async () => {
-    const config = await getGoogleAdsConfig(
-      5,
-      'oauth',
-      undefined,
-      {
-        userId: 5,
-        ownerUserId: 5,
-        assignment: null,
-        isShared: false,
-        canModify: true,
-        dualStack: false,
-        auth: { authType: 'oauth' },
-        oauthCredentials: {
-          refresh_token: 'rt',
-          client_id: 'cid',
-          client_secret: 'secret',
-          developer_token: 'dev-token-abcdefghijklmnopqrstuvwxyz',
-          login_customer_id: '1234567890',
-        },
-        serviceAccountConfig: null,
-        apiAccessLevel: 'explorer',
-      }
-    )
+    const config = await getGoogleAdsConfig(5, 'oauth', undefined, {
+      userId: 5,
+      ownerUserId: 5,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: false,
+      auth: { authType: 'oauth' },
+      oauthCredentials: {
+        refresh_token: 'rt',
+        client_id: 'cid',
+        client_secret: 'secret',
+        developer_token: 'dev-token-abcdefghijklmnopqrstuvwxyz',
+        login_customer_id: '1234567890',
+      },
+      serviceAccountConfig: null,
+      apiAccessLevel: 'explorer',
+    })
 
     expect(config).not.toBeNull()
     expect(config?.authType).toBe('oauth')

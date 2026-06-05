@@ -395,7 +395,8 @@ describe('POST /api/campaigns/publish AutoAds enforced', () => {
       errors: [
         {
           error_code: { authorization_error: 2 },
-          message: "User doesn't have permission to access customer. Note: If you're accessing a client customer, the manager's customer id must be set in the 'login-customer-id' header.",
+          message:
+            "User doesn't have permission to access customer. Note: If you're accessing a client customer, the manager's customer id must be set in the 'login-customer-id' header.",
         },
       ],
       request_id: 'RA5IXgBLzdxpntDiNJDlUw',

@@ -4,8 +4,18 @@ import {
   isClickFarmTaskUsingBatchDefaults,
   isUrlSwapTaskUsingBatchDefaults,
 } from '@/lib/batch-task-defaults'
-import { createClickFarmTask, getClickFarmTaskByOfferId, restartClickFarmTask, updateClickFarmTask } from '@/lib/click-farm'
-import { createUrlSwapTask, enableUrlSwapTask, getUrlSwapTaskByOfferId, updateUrlSwapTask } from '@/lib/url-swap'
+import {
+  createClickFarmTask,
+  getClickFarmTaskByOfferId,
+  restartClickFarmTask,
+  updateClickFarmTask,
+} from '@/lib/click-farm'
+import {
+  createUrlSwapTask,
+  enableUrlSwapTask,
+  getUrlSwapTaskByOfferId,
+  updateUrlSwapTask,
+} from '@/lib/url-swap'
 
 export interface BatchStartOfferTarget {
   offerId: number
@@ -89,10 +99,7 @@ async function processOffer(
       const existingTask = await getClickFarmTaskByOfferId(offer.offerId, input.userId)
 
       if (existingTask) {
-        if (
-          existingTask.status === 'running'
-          && isClickFarmTaskUsingBatchDefaults(existingTask)
-        ) {
+        if (existingTask.status === 'running' && isClickFarmTaskUsingBatchDefaults(existingTask)) {
           // 已在运行且配置为批量默认参数，无需重复写入
         } else if (existingTask.status === 'completed') {
           await createClickFarmTask(input.userId, {
@@ -118,7 +125,11 @@ async function processOffer(
             timezone: clickFarmConfig.timezone,
             referer_config: clickFarmConfig.refererConfig,
           })
-          if (existingTask.status === 'paused' || existingTask.status === 'stopped' || existingTask.status === 'pending') {
+          if (
+            existingTask.status === 'paused' ||
+            existingTask.status === 'stopped' ||
+            existingTask.status === 'pending'
+          ) {
             await restartClickFarmTask(existingTask.id, input.userId)
           }
           result.clickFarmTasksUpdated++
@@ -152,10 +163,7 @@ async function processOffer(
       const existingTask = await getUrlSwapTaskByOfferId(offer.offerId, input.userId)
 
       if (existingTask) {
-        if (
-          existingTask.status === 'enabled'
-          && isUrlSwapTaskUsingBatchDefaults(existingTask)
-        ) {
+        if (existingTask.status === 'enabled' && isUrlSwapTaskUsingBatchDefaults(existingTask)) {
           // 已启用且配置为批量默认参数，无需重复写入
         } else if (existingTask.status === 'completed') {
           await createUrlSwapTask(input.userId, {
@@ -207,19 +215,24 @@ async function runWithConcurrency<T>(
   if (items.length === 0) return
 
   let nextIndex = 0
-  const workers = Array.from({ length: Math.max(1, Math.min(concurrency, items.length)) }, async () => {
-    while (true) {
-      const index = nextIndex
-      nextIndex += 1
-      if (index >= items.length) return
-      await worker(items[index])
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(concurrency, items.length)) },
+    async () => {
+      while (true) {
+        const index = nextIndex
+        nextIndex += 1
+        if (index >= items.length) return
+        await worker(items[index])
+      }
     }
-  })
+  )
 
   await Promise.all(workers)
 }
 
-export async function batchStartTasksForOffers(input: BatchStartTasksInput): Promise<BatchStartTasksResult> {
+export async function batchStartTasksForOffers(
+  input: BatchStartTasksInput
+): Promise<BatchStartTasksResult> {
   const result: MutableResult = {
     requestedCount: input.offers.length,
     processedOfferCount: 0,
@@ -239,7 +252,8 @@ export async function batchStartTasksForOffers(input: BatchStartTasksInput): Pro
 
   await runWithConcurrency(
     input.offers,
-    input.concurrency ?? resolveBatchStartTasksConcurrency(process.env.BATCH_START_TASKS_CONCURRENCY),
+    input.concurrency ??
+      resolveBatchStartTasksConcurrency(process.env.BATCH_START_TASKS_CONCURRENCY),
     async (offer) => {
       try {
         await processOffer(input, offer, result)
@@ -257,12 +271,12 @@ export async function batchStartTasksForOffers(input: BatchStartTasksInput): Pro
   )
 
   result.failedOfferCount = result._failedOfferIds.size
-  const hasAnySuccess = (
-    result.clickFarmTasksCreated
-    + result.clickFarmTasksUpdated
-    + result.urlSwapTasksCreated
-    + result.urlSwapTasksUpdated
-  ) > 0
+  const hasAnySuccess =
+    result.clickFarmTasksCreated +
+      result.clickFarmTasksUpdated +
+      result.urlSwapTasksCreated +
+      result.urlSwapTasksUpdated >
+    0
   const hasAnyFailure = result.errors.length > 0
   const partialSuccess = hasAnySuccess && hasAnyFailure
   const success = hasAnySuccess && !hasAnyFailure

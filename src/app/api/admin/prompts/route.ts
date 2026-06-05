@@ -14,7 +14,8 @@ export async function GET(_request: NextRequest) {
     const isActiveValue = db.type === 'postgres' ? true : 1
 
     // 获取所有激活的Prompt版本
-    const activePrompts = await db.query<any>(`
+    const activePrompts = await db.query<any>(
+      `
       SELECT
         pv.*,
         u.username as created_by_name,
@@ -27,7 +28,9 @@ export async function GET(_request: NextRequest) {
       LEFT JOIN users u ON pv.created_by = u.id
       WHERE pv.is_active = ?
       ORDER BY pv.category, pv.name
-    `, [isActiveValue])
+    `,
+      [isActiveValue]
+    )
 
     // 按分类分组
     const promptsByCategory: Record<string, any[]> = {}
@@ -40,9 +43,10 @@ export async function GET(_request: NextRequest) {
       }
 
       // Convert Buffer to string if needed
-      const promptContent = typeof prompt.prompt_content === 'string'
-        ? prompt.prompt_content
-        : prompt.prompt_content?.toString('utf-8') || ''
+      const promptContent =
+        typeof prompt.prompt_content === 'string'
+          ? prompt.prompt_content
+          : prompt.prompt_content?.toString('utf-8') || ''
 
       promptsByCategory[prompt.category].push({
         id: prompt.id,
@@ -58,19 +62,20 @@ export async function GET(_request: NextRequest) {
         createdBy: prompt.created_by_name,
         createdAt: prompt.created_at,
         versionCount: prompt.version_count || 0,
-        totalCalls: 0,  // Feature offline: prompt_usage_stats table removed
-        totalCost: 0,   // Feature offline: prompt_usage_stats table removed
+        totalCalls: 0, // Feature offline: prompt_usage_stats table removed
+        totalCost: 0, // Feature offline: prompt_usage_stats table removed
       })
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        prompts: activePrompts.map(p => {
+        prompts: activePrompts.map((p) => {
           // Convert Buffer to string if needed
-          const promptContent = typeof p.prompt_content === 'string'
-            ? p.prompt_content
-            : p.prompt_content?.toString('utf-8') || ''
+          const promptContent =
+            typeof p.prompt_content === 'string'
+              ? p.prompt_content
+              : p.prompt_content?.toString('utf-8') || ''
 
           return {
             id: p.id,
@@ -86,21 +91,18 @@ export async function GET(_request: NextRequest) {
             createdBy: p.created_by_name,
             createdAt: p.created_at,
             versionCount: p.version_count || 0,
-            totalCalls: 0,  // Feature offline: prompt_usage_stats table removed
-            totalCost: 0,   // Feature offline: prompt_usage_stats table removed
+            totalCalls: 0, // Feature offline: prompt_usage_stats table removed
+            totalCost: 0, // Feature offline: prompt_usage_stats table removed
           }
         }),
         promptsByCategory,
         categories: Array.from(categories),
         totalPrompts: activePrompts.length,
-      }
+      },
     })
   } catch (error: any) {
     console.error('获取Prompt列表失败:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }
 
@@ -122,15 +124,20 @@ export async function POST(request: NextRequest) {
       promptContent,
       language = 'English',
       changeNotes,
-      userId
+      userId,
     } = body
 
     // 验证必需字段
-    if (!promptId || !version || !category || !name || !filePath || !functionName || !promptContent) {
-      return NextResponse.json(
-        { success: false, error: '缺少必需字段' },
-        { status: 400 }
-      )
+    if (
+      !promptId ||
+      !version ||
+      !category ||
+      !name ||
+      !filePath ||
+      !functionName ||
+      !promptContent
+    ) {
+      return NextResponse.json({ success: false, error: '缺少必需字段' }, { status: 400 })
     }
 
     const db = getDatabase()
@@ -142,10 +149,7 @@ export async function POST(request: NextRequest) {
     )
 
     if (existing) {
-      return NextResponse.json(
-        { success: false, error: '该版本已存在' },
-        { status: 409 }
-      )
+      return NextResponse.json({ success: false, error: '该版本已存在' }, { status: 409 })
     }
 
     // 如果是第一个版本，或者请求激活此版本，则取消其他版本的激活状态
@@ -155,10 +159,10 @@ export async function POST(request: NextRequest) {
     const isActiveFalse = db.type === 'postgres' ? false : 0
 
     if (isActive) {
-      await db.exec(
-        'UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?',
-        [isActiveFalse, promptId]
-      )
+      await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
+        isActiveFalse,
+        promptId,
+      ])
     }
 
     // 插入新版本
@@ -179,7 +183,7 @@ export async function POST(request: NextRequest) {
         language,
         userId,
         isActive ? 1 : 0,
-        changeNotes
+        changeNotes,
       ]
     )
 
@@ -191,14 +195,11 @@ export async function POST(request: NextRequest) {
         id: versionId,
         promptId,
         version,
-        message: '新版本创建成功'
-      }
+        message: '新版本创建成功',
+      },
     })
   } catch (error: any) {
     console.error('创建Prompt版本失败:', error)
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

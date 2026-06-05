@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  deriveOfferLinkTypeFromScrapedData,
-  resolveOfferLinkType,
-} from '../offer-link-type'
+import { deriveOfferLinkTypeFromScrapedData, resolveOfferLinkType } from '../offer-link-type'
 
 describe('offer-link-type resolution', () => {
   it('keeps explicit product page_type even when scraped data looks like store', () => {
@@ -61,14 +58,17 @@ describe('offer-link-type resolution', () => {
   })
 
   it('can opt in to legacy product->store override behavior', () => {
-    const resolved = resolveOfferLinkType({
-      page_type: 'product',
-      scraped_data: {
-        pageType: 'store',
+    const resolved = resolveOfferLinkType(
+      {
+        page_type: 'product',
+        scraped_data: {
+          pageType: 'store',
+        },
       },
-    }, {
-      allowProductOverrideByDerivedStore: true,
-    })
+      {
+        allowProductOverrideByDerivedStore: true,
+      }
+    )
 
     expect(resolved).toBe('store')
   })
@@ -82,4 +82,3 @@ describe('offer-link-type resolution', () => {
     expect(derived).toBeNull()
   })
 })
-

@@ -46,9 +46,17 @@ describe('ad-creative-generator final hard contract', () => {
       brandName: 'Waterdrop',
       precomputedKeywordSet: {
         keywordsWithVolume: [
-          { keyword: 'waterdrop alkaline water filter', searchVolume: 1000, contractRole: 'required' },
+          {
+            keyword: 'waterdrop alkaline water filter',
+            searchVolume: 1000,
+            contractRole: 'required',
+          },
           { keyword: 'waterdrop reverse osmosis', searchVolume: 900, contractRole: 'required' },
-          { keyword: 'waterdrop drinking water system', searchVolume: 800, contractRole: 'required' },
+          {
+            keyword: 'waterdrop drinking water system',
+            searchVolume: 800,
+            contractRole: 'required',
+          },
         ],
       },
     })
@@ -68,19 +76,25 @@ describe('ad-creative-generator final hard contract', () => {
 
     for (let index = 0; index < usagePlan.headlineKeywordTargets.length; index += 1) {
       const slot = 4 + index
-      expect(creative.headlines[slot].toLowerCase()).toContain(usagePlan.headlineKeywordTargets[index].split(' ')[0])
+      expect(creative.headlines[slot].toLowerCase()).toContain(
+        usagePlan.headlineKeywordTargets[index].split(' ')[0]
+      )
       expect(creative.headlines[slot].toLowerCase()).toContain('waterdrop')
     }
 
     for (let index = 0; index < usagePlan.descriptionKeywordTargets.length; index += 1) {
       const slot = index
-      expect(creative.descriptions[slot].toLowerCase()).toContain(usagePlan.descriptionKeywordTargets[index].split(' ')[0])
+      expect(creative.descriptions[slot].toLowerCase()).toContain(
+        usagePlan.descriptionKeywordTargets[index].split(' ')[0]
+      )
     }
 
     const merged = [...creative.headlines, ...creative.descriptions].join(' ').toLowerCase()
     expect(merged).not.toMatch(/alkalisch|zertifiz/)
     expect(creative.headlines.some((headline) => /\s([1-9]|1[0-5])$/.test(headline))).toBe(false)
-    expect(result.retainedFixes.headlineFixes + result.retainedFixes.descriptionFixes).toBeGreaterThan(0)
+    expect(
+      result.retainedFixes.headlineFixes + result.retainedFixes.descriptionFixes
+    ).toBeGreaterThan(0)
   })
 
   it('never falls back to numeric suffix during headline dedupe', () => {
@@ -118,12 +132,7 @@ describe('ad-creative-generator final hard contract', () => {
         'placeholder eight',
         'placeholder nine',
       ],
-      descriptions: [
-        'Scopri di p',
-        'Shop No',
-        'Descrizione tre',
-        'Descrizione quattro',
-      ],
+      descriptions: ['Scopri di p', 'Shop No', 'Descrizione tre', 'Descrizione quattro'],
       keywords: [
         'waterdrop nsf ansi 58 372 zertifiziert',
         'waterdrop x12 alkalisches mineral',
@@ -170,8 +179,16 @@ describe('ad-creative-generator final hard contract', () => {
 
     expect(joinedTopSlots).not.toMatch(/alkalisch|zertifiz/)
     expect(joinedDescriptions).not.toMatch(/alkalisch|zertifiz/)
-    expect(creative.headlines.slice(4, 7).every((headline) => headline.toLowerCase().includes('waterdrop'))).toBe(true)
-    expect(creative.descriptions.slice(0, 2).every((description) => description.toLowerCase().includes('waterdrop'))).toBe(true)
+    expect(
+      creative.headlines
+        .slice(4, 7)
+        .every((headline) => headline.toLowerCase().includes('waterdrop'))
+    ).toBe(true)
+    expect(
+      creative.descriptions
+        .slice(0, 2)
+        .every((description) => description.toLowerCase().includes('waterdrop'))
+    ).toBe(true)
   })
 
   it('cleans dangling headline tails and preserves meaningful two-digit numeric specs', () => {
@@ -211,10 +228,7 @@ describe('ad-creative-generator final hard contract', () => {
         'novilla memory foam mattress',
         'novilla full size mattress',
       ],
-      descriptionKeywordTargets: [
-        'novilla mattress full',
-        'novilla memory foam mattress',
-      ],
+      descriptionKeywordTargets: ['novilla mattress full', 'novilla memory foam mattress'],
       headlineCoverageMode: 'top_5',
       descriptionCoverageMode: 'prefer_uncovered_then_best_available',
     }
@@ -231,7 +245,9 @@ describe('ad-creative-generator final hard contract', () => {
     expect(creative.headlines[1]).toBe('Novilla Mattress Full Size')
     expect(creative.headlines[2]).toBe('Novilla Pressure Relieving')
     expect(creative.headlines[3]).toBe('Novilla Medium Plush Feel')
-    expect(creative.headlines.slice(4, 7).join(' ').toLowerCase()).toContain('novilla king size mattress 12')
+    expect(creative.headlines.slice(4, 7).join(' ').toLowerCase()).toContain(
+      'novilla king size mattress 12'
+    )
   })
 
   it('guarantees unique Google Ads headline assets after final contract enforcement', () => {

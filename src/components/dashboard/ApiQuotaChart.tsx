@@ -59,7 +59,7 @@ export function ApiQuotaChart({ days = 7 }: Props) {
     try {
       setLoading(true)
       const response = await fetch(`/api/dashboard/api-quota?days=${days}`, {
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -137,9 +137,19 @@ export function ApiQuotaChart({ days = 7 }: Props) {
       return { label: '已超限', variant: 'destructive' as const, icon: AlertTriangle }
     }
     if (quotaCheck.isNearLimit) {
-      return { label: '接近限制', variant: 'secondary' as const, icon: AlertTriangle, className: 'bg-orange-500 hover:bg-orange-600' }
+      return {
+        label: '接近限制',
+        variant: 'secondary' as const,
+        icon: AlertTriangle,
+        className: 'bg-orange-500 hover:bg-orange-600',
+      }
     }
-    return { label: '正常', variant: 'default' as const, icon: CheckCircle2, className: 'bg-green-600 hover:bg-green-700' }
+    return {
+      label: '正常',
+      variant: 'default' as const,
+      icon: CheckCircle2,
+      className: 'bg-green-600 hover:bg-green-700',
+    }
   }
 
   const statusBadge = getStatusBadge()
@@ -153,10 +163,7 @@ export function ApiQuotaChart({ days = 7 }: Props) {
             <Activity className="w-5 h-5 text-blue-600" />
             API配额使用
           </CardTitle>
-          <Badge
-            variant={statusBadge.variant}
-            className={statusBadge.className}
-          >
+          <Badge variant={statusBadge.variant} className={statusBadge.className}>
             <StatusIcon className="w-3 h-3 mr-1" />
             {statusBadge.label}
           </Badge>
@@ -189,7 +196,13 @@ export function ApiQuotaChart({ days = 7 }: Props) {
                 cy={centerY}
                 r={radius}
                 fill="none"
-                stroke={quotaCheck.isOverLimit ? '#dc2626' : quotaCheck.isNearLimit ? '#f59e0b' : '#10b981'}
+                stroke={
+                  quotaCheck.isOverLimit
+                    ? '#dc2626'
+                    : quotaCheck.isNearLimit
+                      ? '#f59e0b'
+                      : '#10b981'
+                }
                 strokeWidth={strokeWidth}
                 strokeDasharray={circumference}
                 strokeDashoffset={usageOffset}
@@ -226,20 +239,29 @@ export function ApiQuotaChart({ days = 7 }: Props) {
             <div className="text-lg font-semibold text-gray-900">
               {today.totalRequests > 0
                 ? safeToFixed(
-                    ((today.successfulOperations ?? 0) / ((today.successfulOperations ?? 0) + (today.failedOperations ?? 0)) * 100),
+                    ((today.successfulOperations ?? 0) /
+                      ((today.successfulOperations ?? 0) + (today.failedOperations ?? 0))) *
+                      100,
                     1
                   )
-                : '0'}%
+                : '0'}
+              %
             </div>
           </div>
         </div>
 
         {/* 建议 */}
         {recommendations && recommendations.length > 0 && (
-          <Alert className={quotaCheck.isOverLimit ? 'bg-red-50 border-red-200' : quotaCheck.isNearLimit ? 'bg-orange-50 border-orange-200' : 'bg-green-50 border-green-200'}>
-            <AlertDescription className="text-xs">
-              {recommendations[0]}
-            </AlertDescription>
+          <Alert
+            className={
+              quotaCheck.isOverLimit
+                ? 'bg-red-50 border-red-200'
+                : quotaCheck.isNearLimit
+                  ? 'bg-orange-50 border-orange-200'
+                  : 'bg-green-50 border-green-200'
+            }
+          >
+            <AlertDescription className="text-xs">{recommendations[0]}</AlertDescription>
           </Alert>
         )}
 
@@ -268,7 +290,9 @@ export function ApiQuotaChart({ days = 7 }: Props) {
                 .map(([type, count]) => (
                   <div key={type} className="flex items-center justify-between text-xs">
                     <span className="text-gray-600 capitalize">{type.replace('_', ' ')}</span>
-                    <span className="font-medium text-gray-900">{(count as number).toLocaleString('en-US')}</span>
+                    <span className="font-medium text-gray-900">
+                      {(count as number).toLocaleString('en-US')}
+                    </span>
                   </div>
                 ))}
             </div>
@@ -286,7 +310,9 @@ export function ApiQuotaChart({ days = 7 }: Props) {
               {data.trend.slice(0, 3).map((item) => (
                 <div key={item.date} className="flex items-center justify-between text-xs">
                   <span className="text-gray-600">{item.date}</span>
-                  <span className="font-medium text-gray-900">{(item.totalRequests ?? 0).toLocaleString('en-US')}</span>
+                  <span className="font-medium text-gray-900">
+                    {(item.totalRequests ?? 0).toLocaleString('en-US')}
+                  </span>
                 </div>
               ))}
             </div>

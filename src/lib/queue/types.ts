@@ -9,26 +9,26 @@
  * 任务类型枚举
  */
 export type TaskType =
-  | 'ai-analysis'     // AI分析（Enhanced优化）
-  | 'sync'            // Google Ads数据同步
-  | 'backup'          // 数据库备份
-  | 'email'           // 邮件发送
-  | 'export'          // 报表导出
-  | 'link-check'      // 链接可用性检查
-  | 'cleanup'         // 数据清理
-  | 'offer-extraction'      // Offer信息提取（完整流程：URL解析 + 品牌识别 + AI分析）
-  | 'batch-offer-creation'  // 批量Offer创建（父任务：协调多个offer-extraction子任务）
-  | 'ad-creative'           // 广告创意生成（多轮优化 + Ad Strength评估）
-  | 'campaign-publish'      // 🆕 广告系列发布到Google Ads（异步处理，避免504超时）
-  | 'click-farm-trigger'    // 🆕 补点击触发请求（控制面任务：仅触发调度，不直接执行点击）
-  | 'click-farm-batch'      // 🆕 补点击批次分发（将整小时点击拆分为小批量滚动入队）
-  | 'click-farm'            // 🆕 补点击任务（单次点击执行，带代理和超时控制）
-  | 'url-swap'              // 🆕 换链接任务（自动监测和更新Google Ads广告链接）
-  | 'openclaw-strategy'      // 🆕 OpenClaw 自进化策略任务
-  | 'affiliate-product-sync'  // 🆕 联盟商品同步任务（YP/PB）
-  | 'openclaw-command'        // 🆕 OpenClaw 指令执行任务（可含确认流）
+  | 'ai-analysis' // AI分析（Enhanced优化）
+  | 'sync' // Google Ads数据同步
+  | 'backup' // 数据库备份
+  | 'email' // 邮件发送
+  | 'export' // 报表导出
+  | 'link-check' // 链接可用性检查
+  | 'cleanup' // 数据清理
+  | 'offer-extraction' // Offer信息提取（完整流程：URL解析 + 品牌识别 + AI分析）
+  | 'batch-offer-creation' // 批量Offer创建（父任务：协调多个offer-extraction子任务）
+  | 'ad-creative' // 广告创意生成（多轮优化 + Ad Strength评估）
+  | 'campaign-publish' // 🆕 广告系列发布到Google Ads（异步处理，避免504超时）
+  | 'click-farm-trigger' // 🆕 补点击触发请求（控制面任务：仅触发调度，不直接执行点击）
+  | 'click-farm-batch' // 🆕 补点击批次分发（将整小时点击拆分为小批量滚动入队）
+  | 'click-farm' // 🆕 补点击任务（单次点击执行，带代理和超时控制）
+  | 'url-swap' // 🆕 换链接任务（自动监测和更新Google Ads广告链接）
+  | 'openclaw-strategy' // 🆕 OpenClaw 自进化策略任务
+  | 'affiliate-product-sync' // 🆕 联盟商品同步任务（YP/PB）
+  | 'openclaw-command' // 🆕 OpenClaw 指令执行任务（可含确认流）
   | 'openclaw-affiliate-sync' // 🆕 OpenClaw 联盟成交/佣金快照同步任务
-  | 'openclaw-report-send'    // 🆕 OpenClaw 每日报表投递任务
+  | 'openclaw-report-send' // 🆕 OpenClaw 每日报表投递任务
   | 'product-score-calculation' // 🆕 商品推荐指数计算任务
   | 'google-ads-campaign-sync' // 🆕 Google Ads广告系列同步任务
   | 'campaign-batch-create' // 🆕 批量从备份创建广告系列任务
@@ -99,8 +99,8 @@ export interface Task<T = any> {
   parentRequestId?: string
   priority: TaskPriority
   status: TaskStatus
-  requireProxy?: boolean  // 是否需要代理IP
-  proxyConfig?: ProxyConfig  // 指定代理配置
+  requireProxy?: boolean // 是否需要代理IP
+  proxyConfig?: ProxyConfig // 指定代理配置
   createdAt: number
   /**
    * 任务最早可执行时间（用于并发受限时的退避/让路，避免同一个“不可执行任务”反复被 dequeue 造成饥饿）。
@@ -137,17 +137,20 @@ export interface QueueStats {
   byType: Record<TaskType, number>
   // 🔥 运行中任务按类型统计（用于并发利用率展示）
   byTypeRunning: Record<TaskType, number>
-  byUser: Record<number, {
-    pending: number
-    running: number
-    completed: number
-    failed: number
-    // 🔥 按“核心/非核心”细分完成/失败（用于管理台快速判断SLA风险）
-    coreCompleted?: number
-    backgroundCompleted?: number
-    coreFailed?: number
-    backgroundFailed?: number
-  }>
+  byUser: Record<
+    number,
+    {
+      pending: number
+      running: number
+      completed: number
+      failed: number
+      // 🔥 按“核心/非核心”细分完成/失败（用于管理台快速判断SLA风险）
+      coreCompleted?: number
+      backgroundCompleted?: number
+      coreFailed?: number
+      backgroundFailed?: number
+    }
+  >
 }
 
 /**
@@ -182,9 +185,9 @@ export interface RunningConcurrencySnapshot {
  */
 export interface QueueConfig {
   // 并发控制
-  globalConcurrency: number      // 全局最大并发
-  perUserConcurrency: number     // 单用户最大并发
-  perTypeConcurrency: Record<TaskType, number>  // 单类型最大并发
+  globalConcurrency: number // 全局最大并发
+  perUserConcurrency: number // 单用户最大并发
+  perTypeConcurrency: Record<TaskType, number> // 单类型最大并发
 
   /**
    * 是否在 enqueue 时自动启动队列处理循环（并自动注册执行器）。
@@ -195,21 +198,21 @@ export interface QueueConfig {
   autoStartOnEnqueue?: boolean
 
   // 队列限制
-  maxQueueSize: number           // 最大队列长度
-  taskTimeout: number            // 任务超时时间(ms)
-  enablePriority?: boolean       // system_settings 中的优先级开关（admin UI）
+  maxQueueSize: number // 最大队列长度
+  taskTimeout: number // 任务超时时间(ms)
+  enablePriority?: boolean // system_settings 中的优先级开关（admin UI）
 
   // 重试策略
-  defaultMaxRetries: number      // 默认最大重试次数
-  retryDelay: number             // 重试延迟(ms)
+  defaultMaxRetries: number // 默认最大重试次数
+  retryDelay: number // 重试延迟(ms)
 
   // Redis配置（可选）
-  redisUrl?: string              // Redis连接URL
-  redisKeyPrefix?: string        // Redis键前缀
+  redisUrl?: string // Redis连接URL
+  redisKeyPrefix?: string // Redis键前缀
 
   // 代理配置
-  proxyPool?: ProxyConfig[]      // 代理IP池
-  proxyRotation?: boolean        // 是否自动轮换代理
+  proxyPool?: ProxyConfig[] // 代理IP池
+  proxyRotation?: boolean // 是否自动轮换代理
 
   // 队列实例标识（用于日志与诊断）
   instanceName?: string
@@ -247,10 +250,7 @@ export interface QueueStorageAdapter {
   clearFailed(): Promise<number>
 
   // 🔥 按类型和状态删除任务（用于服务重启时清理特定任务）
-  deleteTasksByTypeAndStatus?(
-    type: TaskType,
-    status: 'pending' | 'running'
-  ): Promise<number>
+  deleteTasksByTypeAndStatus?(type: TaskType, status: 'pending' | 'running'): Promise<number>
 
   // 🔥 启动时清理操作（可选，Redis适配器实现）
   clearAllUnfinished?(): Promise<{

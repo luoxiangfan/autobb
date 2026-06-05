@@ -69,9 +69,9 @@ const nextConfig = {
         'fingerprint-generator',
         'fingerprint-injector',
         'header-generator'
-      );
+      )
     }
-    return config;
+    return config
   },
 
   poweredByHeader: false,
@@ -96,7 +96,7 @@ const nextConfig = {
           },
         ],
       },
-    ];
+    ]
   },
 
   async redirects() {
@@ -106,8 +106,8 @@ const nextConfig = {
         destination: '/login',
         statusCode: 301,
       },
-    ];
+    ]
   },
-};
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig

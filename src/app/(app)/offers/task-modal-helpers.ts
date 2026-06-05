@@ -81,10 +81,9 @@ export async function resolveClickFarmTaskMode(offerId: number): Promise<TaskRes
   }
 
   return {
-    infoMessage: (
+    infoMessage:
       `当前任务状态为 ${formatClickFarmStatus(task.status)}，已进入创建新任务。` +
-      '如需继续当前任务，请前往补点击管理页面'
-    ),
+      '如需继续当前任务，请前往补点击管理页面',
   }
 }
 

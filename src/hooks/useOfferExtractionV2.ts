@@ -18,10 +18,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { getDefaultOfferExtractionMode } from '@/lib/offer-extraction-mode'
-import type {
-  ProgressStage,
-  ProgressStatus,
-} from '@/types/progress'
+import type { ProgressStage, ProgressStatus } from '@/types/progress'
 
 interface ExtractionResult {
   finalUrl: string
@@ -121,204 +118,210 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
   }, [cleanup])
 
   // 开始提取 - 使用统一的POST /api/offers/extract/stream端点
-  const startExtraction = useCallback(async (
-    affiliateLink: string,
-    targetCountry: string,
-    productPrice?: string,
-    commissionType?: 'percent' | 'amount',
-    commissionValue?: string,
-    commissionCurrency?: string,
-    brandName?: string,
-    pageType?: 'store' | 'product',
-    storeProductLinks?: string[],
-    extractionMode?: 'fast' | 'balanced' | 'original'
-  ) => {
-    reset()
-    setIsExtracting(true)
-    setCurrentMessage('创建任务中...')
+  const startExtraction = useCallback(
+    async (
+      affiliateLink: string,
+      targetCountry: string,
+      productPrice?: string,
+      commissionType?: 'percent' | 'amount',
+      commissionValue?: string,
+      commissionCurrency?: string,
+      brandName?: string,
+      pageType?: 'store' | 'product',
+      storeProductLinks?: string[],
+      extractionMode?: 'fast' | 'balanced' | 'original'
+    ) => {
+      reset()
+      setIsExtracting(true)
+      setCurrentMessage('创建任务中...')
 
-    try {
-      console.log('📡 Starting unified SSE extraction for:', affiliateLink)
-      setConnectionType('sse')
+      try {
+        console.log('📡 Starting unified SSE extraction for:', affiliateLink)
+        setConnectionType('sse')
 
-      abortControllerRef.current = new AbortController()
+        abortControllerRef.current = new AbortController()
 
-      // 调用统一端点：POST /api/offers/extract/stream
-      // 该端点会创建任务并直接返回SSE流
-      const response = await fetch('/api/offers/extract/stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          affiliate_link: affiliateLink,
-          target_country: targetCountry,
-          product_price: productPrice,
-          commission_type: commissionType,
-          commission_value: commissionValue,
-          commission_currency: commissionCurrency,
-          brand_name: brandName || undefined,
-          page_type: pageType || undefined,
-          store_product_links: storeProductLinks && storeProductLinks.length > 0 ? storeProductLinks : undefined,
-          extraction_mode: extractionMode || getDefaultOfferExtractionMode(),
-        }),
-        signal: abortControllerRef.current.signal
-      })
+        // 调用统一端点：POST /api/offers/extract/stream
+        // 该端点会创建任务并直接返回SSE流
+        const response = await fetch('/api/offers/extract/stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            affiliate_link: affiliateLink,
+            target_country: targetCountry,
+            product_price: productPrice,
+            commission_type: commissionType,
+            commission_value: commissionValue,
+            commission_currency: commissionCurrency,
+            brand_name: brandName || undefined,
+            page_type: pageType || undefined,
+            store_product_links:
+              storeProductLinks && storeProductLinks.length > 0 ? storeProductLinks : undefined,
+            extraction_mode: extractionMode || getDefaultOfferExtractionMode(),
+          }),
+          signal: abortControllerRef.current.signal,
+        })
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      if (!response.body) {
-        throw new Error('Response body is null')
-      }
-
-      const reader = response.body.getReader()
-      sseReaderRef.current = reader
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-
-        if (done) {
-          console.log('✅ SSE stream completed')
-          break
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
         }
 
-        buffer += decoder.decode(value, { stream: true })
+        if (!response.body) {
+          throw new Error('Response body is null')
+        }
 
-        // 处理完整消息（由\n\n分隔）
-        const messages = buffer.split('\n\n')
-        buffer = messages.pop() || ''
+        const reader = response.body.getReader()
+        sseReaderRef.current = reader
+        const decoder = new TextDecoder()
+        let buffer = ''
 
-        for (const message of messages) {
-          if (!message.trim() || !message.startsWith('data: ')) continue
+        while (true) {
+          const { done, value } = await reader.read()
 
-          try {
-            const jsonStr = message.substring(6)
-            const data = JSON.parse(jsonStr)
+          if (done) {
+            console.log('✅ SSE stream completed')
+            break
+          }
 
-            console.log('📨 SSE Message:', data)
+          buffer += decoder.decode(value, { stream: true })
 
-            if (data.type === 'progress') {
-              // 后端发送格式: {type: 'progress', data: {stage, status, message, ...}}
-              const progressData = data.data || data
-              const newStage = progressData.stage as ProgressStage
-              const newStatus = progressData.status || 'in_progress'
+          // 处理完整消息（由\n\n分隔）
+          const messages = buffer.split('\n\n')
+          buffer = messages.pop() || ''
 
-              // 🔥 阶段耗时计算逻辑（前端计算）
-              // 如果是新阶段开始，重置计时器
-              if (newStage !== lastStageRef.current && newStatus === 'in_progress') {
-                // 保存上一个阶段的完成耗时
-                if (lastStageRef.current) {
-                  let previousElapsed = Date.now() - stageStartTimeRef.current
-                  // 🔥 修复：如果阶段切换太快（<1秒），显示为1秒
-                  if (previousElapsed < 1000) previousElapsed = 1000
-                  setStageDurations(prev => new Map(prev).set(lastStageRef.current, previousElapsed))
+          for (const message of messages) {
+            if (!message.trim() || !message.startsWith('data: ')) continue
+
+            try {
+              const jsonStr = message.substring(6)
+              const data = JSON.parse(jsonStr)
+
+              console.log('📨 SSE Message:', data)
+
+              if (data.type === 'progress') {
+                // 后端发送格式: {type: 'progress', data: {stage, status, message, ...}}
+                const progressData = data.data || data
+                const newStage = progressData.stage as ProgressStage
+                const newStatus = progressData.status || 'in_progress'
+
+                // 🔥 阶段耗时计算逻辑（前端计算）
+                // 如果是新阶段开始，重置计时器
+                if (newStage !== lastStageRef.current && newStatus === 'in_progress') {
+                  // 保存上一个阶段的完成耗时
+                  if (lastStageRef.current) {
+                    let previousElapsed = Date.now() - stageStartTimeRef.current
+                    // 🔥 修复：如果阶段切换太快（<1秒），显示为1秒
+                    if (previousElapsed < 1000) previousElapsed = 1000
+                    setStageDurations((prev) =>
+                      new Map(prev).set(lastStageRef.current, previousElapsed)
+                    )
+                  }
+
+                  stageStartTimeRef.current = Date.now()
+                  setCurrentDuration(0)
+                  lastStageRef.current = newStage
                 }
 
-                stageStartTimeRef.current = Date.now()
-                setCurrentDuration(0)
-                lastStageRef.current = newStage
-              }
+                // 🔥 修复：如果是新阶段直接完成（没有先经过in_progress），也需要保存上一个阶段的耗时
+                if (newStage !== lastStageRef.current && newStatus === 'completed') {
+                  // 保存上一个阶段的完成耗时（如果还没保存）
+                  if (lastStageRef.current) {
+                    setStageDurations((prev) => {
+                      const newMap = new Map(prev)
+                      // 只有当上一个阶段还没有耗时记录时才保存
+                      if (!newMap.has(lastStageRef.current)) {
+                        let previousElapsed = Date.now() - stageStartTimeRef.current
+                        // 🔥 修复：如果阶段切换太快（<1秒），显示为1秒
+                        if (previousElapsed < 1000) previousElapsed = 1000
+                        newMap.set(lastStageRef.current, previousElapsed)
+                      }
+                      return newMap
+                    })
+                  }
 
-              // 🔥 修复：如果是新阶段直接完成（没有先经过in_progress），也需要保存上一个阶段的耗时
-              if (newStage !== lastStageRef.current && newStatus === 'completed') {
-                // 保存上一个阶段的完成耗时（如果还没保存）
-                if (lastStageRef.current) {
-                  setStageDurations(prev => {
-                    const newMap = new Map(prev)
-                    // 只有当上一个阶段还没有耗时记录时才保存
-                    if (!newMap.has(lastStageRef.current)) {
-                      let previousElapsed = Date.now() - stageStartTimeRef.current
-                      // 🔥 修复：如果阶段切换太快（<1秒），显示为1秒
-                      if (previousElapsed < 1000) previousElapsed = 1000
-                      newMap.set(lastStageRef.current, previousElapsed)
-                    }
-                    return newMap
-                  })
+                  // 重置计时器为当前阶段
+                  stageStartTimeRef.current = Date.now()
+                  lastStageRef.current = newStage
                 }
 
-                // 重置计时器为当前阶段
-                stageStartTimeRef.current = Date.now()
-                lastStageRef.current = newStage
-              }
-
-              // 如果正在进行中，计算已用时间
-              if (newStatus === 'in_progress') {
-                const elapsed = Date.now() - stageStartTimeRef.current
-                setCurrentDuration(elapsed)
-              }
-
-              // 如果阶段完成，保存完成耗时到stageDurations
-              if (newStatus === 'completed') {
-                let elapsed = Date.now() - stageStartTimeRef.current
-                // 🔥 修复：如果阶段切换太快导致计算不准确（<1秒），显示为1秒
-                if (elapsed < 1000) {
-                  elapsed = 1000
+                // 如果正在进行中，计算已用时间
+                if (newStatus === 'in_progress') {
+                  const elapsed = Date.now() - stageStartTimeRef.current
+                  setCurrentDuration(elapsed)
                 }
-                setCurrentDuration(elapsed)
-                // 🔥 保存当前阶段的完成耗时
-                setStageDurations(prev => new Map(prev).set(newStage, elapsed))
-              }
 
-              setCurrentStage(newStage)
-              setCurrentStatus(newStatus)
-              setCurrentMessage(progressData.message || '')
-              // 根据stage计算进度百分比
-              const progressMap: Record<string, number> = {
-                proxy_warmup: 5,
-                fetching_proxy: 10,
-                resolving_link: 20,
-                accessing_page: 35,
-                extracting_brand: 50,
-                scraping_products: 65,
-                processing_data: 80,
-                ai_analysis: 90,
-                completed: 100,
-                error: 0,
-              }
-              setProgress(progressMap[progressData.stage] || 0)
-            } else if (data.type === 'complete') {
-              // 后端发送格式: {type: 'complete', data: {...result}}
-              const resultData = data.data || data.result
-              console.log('🎉 Complete message received:', { data, resultData })
-              console.log('🔍 Result has finalUrl:', resultData?.finalUrl)
+                // 如果阶段完成，保存完成耗时到stageDurations
+                if (newStatus === 'completed') {
+                  let elapsed = Date.now() - stageStartTimeRef.current
+                  // 🔥 修复：如果阶段切换太快导致计算不准确（<1秒），显示为1秒
+                  if (elapsed < 1000) {
+                    elapsed = 1000
+                  }
+                  setCurrentDuration(elapsed)
+                  // 🔥 保存当前阶段的完成耗时
+                  setStageDurations((prev) => new Map(prev).set(newStage, elapsed))
+                }
 
-              setCurrentStage('completed')
-              setCurrentStatus('completed')
-              setCurrentMessage('提取完成！')
-              setProgress(100)
-              setResult(resultData)
-              setIsExtracting(false)
-              cleanup()
-            } else if (data.type === 'error') {
-              // 后端发送格式: {type: 'error', data: {message, stage, details}}
-              const errorData = data.data || data.error || {}
-              setCurrentStage('error')
-              setCurrentStatus('error')
-              setError(errorData.message || '任务失败')
-              setCurrentMessage(errorData.message || '任务失败')
-              setIsExtracting(false)
-              cleanup()
+                setCurrentStage(newStage)
+                setCurrentStatus(newStatus)
+                setCurrentMessage(progressData.message || '')
+                // 根据stage计算进度百分比
+                const progressMap: Record<string, number> = {
+                  proxy_warmup: 5,
+                  fetching_proxy: 10,
+                  resolving_link: 20,
+                  accessing_page: 35,
+                  extracting_brand: 50,
+                  scraping_products: 65,
+                  processing_data: 80,
+                  ai_analysis: 90,
+                  completed: 100,
+                  error: 0,
+                }
+                setProgress(progressMap[progressData.stage] || 0)
+              } else if (data.type === 'complete') {
+                // 后端发送格式: {type: 'complete', data: {...result}}
+                const resultData = data.data || data.result
+                console.log('🎉 Complete message received:', { data, resultData })
+                console.log('🔍 Result has finalUrl:', resultData?.finalUrl)
+
+                setCurrentStage('completed')
+                setCurrentStatus('completed')
+                setCurrentMessage('提取完成！')
+                setProgress(100)
+                setResult(resultData)
+                setIsExtracting(false)
+                cleanup()
+              } else if (data.type === 'error') {
+                // 后端发送格式: {type: 'error', data: {message, stage, details}}
+                const errorData = data.data || data.error || {}
+                setCurrentStage('error')
+                setCurrentStatus('error')
+                setError(errorData.message || '任务失败')
+                setCurrentMessage(errorData.message || '任务失败')
+                setIsExtracting(false)
+                cleanup()
+              }
+            } catch (parseError) {
+              console.error('Failed to parse SSE message:', parseError, message)
             }
-          } catch (parseError) {
-            console.error('Failed to parse SSE message:', parseError, message)
           }
         }
+      } catch (err: any) {
+        // SSE失败
+        if (err.name !== 'AbortError') {
+          console.error('SSE extraction failed:', err)
+          setError(err.message || '创建任务失败')
+          setCurrentMessage('创建任务失败，请重试')
+          setIsExtracting(false)
+          cleanup()
+        }
       }
-    } catch (err: any) {
-      // SSE失败
-      if (err.name !== 'AbortError') {
-        console.error('SSE extraction failed:', err)
-        setError(err.message || '创建任务失败')
-        setCurrentMessage('创建任务失败，请重试')
-        setIsExtracting(false)
-        cleanup()
-      }
-    }
-  }, [reset, cleanup])
+    },
+    [reset, cleanup]
+  )
 
   // 重连已有任务（简化版 - 统一API不支持按taskId重连）
   const reconnect = useCallback(async (_tid: string) => {

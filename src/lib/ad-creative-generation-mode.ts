@@ -98,7 +98,9 @@ const MODE_ALIASES: Record<string, AdCreativeGenerationMode> = {
 export function getDefaultAdCreativeGenerationMode(): AdCreativeGenerationMode {
   const raw = String(
     process.env.AD_CREATIVE_GENERATION_MODE_DEFAULT || AD_CREATIVE_GENERATION_MODE_DEFAULT
-  ).trim().toLowerCase()
+  )
+    .trim()
+    .toLowerCase()
   return MODE_ALIASES[raw] || AD_CREATIVE_GENERATION_MODE_DEFAULT
 }
 
@@ -156,9 +158,10 @@ export function getGenerationModeFromRequestBody(body: unknown): GenerationModeF
 export function getAdCreativeGenerationModeProfile(
   mode?: AdCreativeGenerationMode | string | null
 ): AdCreativeGenerationModeProfile {
-  const normalized = typeof mode === 'string'
-    ? normalizeAdCreativeGenerationMode(mode)
-    : (mode || getDefaultAdCreativeGenerationMode())
+  const normalized =
+    typeof mode === 'string'
+      ? normalizeAdCreativeGenerationMode(mode)
+      : mode || getDefaultAdCreativeGenerationMode()
   return MODE_PROFILES[normalized]
 }
 
@@ -167,9 +170,8 @@ function resolveModeAndProfileFromRequest(body: unknown): {
   profile: AdCreativeGenerationModeProfile
 } {
   const parsed = getGenerationModeFromRequestBody(body)
-  const mode = parsed && 'mode' in parsed && parsed.mode
-    ? parsed.mode
-    : getDefaultAdCreativeGenerationMode()
+  const mode =
+    parsed && 'mode' in parsed && parsed.mode ? parsed.mode : getDefaultAdCreativeGenerationMode()
   return {
     mode,
     profile: getAdCreativeGenerationModeProfile(mode),
@@ -201,9 +203,7 @@ export function resolveCreativeGenerationRuntime(body: unknown): {
     Math.min(
       AD_CREATIVE_MAX_AUTO_RETRIES,
       profile.maxRetries,
-      Number.isFinite(requestedMaxRetries)
-        ? Math.floor(requestedMaxRetries)
-        : profile.maxRetries
+      Number.isFinite(requestedMaxRetries) ? Math.floor(requestedMaxRetries) : profile.maxRetries
     )
   )
 

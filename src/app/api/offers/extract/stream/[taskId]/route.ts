@@ -36,17 +36,17 @@ interface OfferTask {
 }
 
 export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const db = getDatabase()
   const { taskId } = params
 
   // 验证用户身份
   const authResult = await verifyAuth(req)
   if (!authResult.authenticated || !authResult.user) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized', message: '请先登录' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
   const userIdNum = authResult.user.userId
 
@@ -81,10 +81,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
         // 轮询数据库获取进度
         const pollInterval = setInterval(async () => {
           try {
-            const rows = await db.query<OfferTask>(
-              'SELECT * FROM offer_tasks WHERE id = ?',
-              [taskId]
-            )
+            const rows = await db.query<OfferTask>('SELECT * FROM offer_tasks WHERE id = ?', [
+              taskId,
+            ])
 
             if (!rows || rows.length === 0) {
               sendSSE({
@@ -92,8 +91,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
                 data: {
                   message: 'Task not found',
                   stage: 'error',
-                  details: {}
-                }
+                  details: {},
+                },
               })
               clearInterval(pollInterval)
               controller.close()
@@ -124,8 +123,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
                   status,
                   message: task.message || '处理中...',
                   timestamp: Date.now(),
-                  details: {}
-                }
+                  details: {},
+                },
               })
             }
 
@@ -134,7 +133,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
               const result = parseJsonField<Record<string, any>>(task.result, {})
               sendSSE({
                 type: 'complete',
-                data: result
+                data: result,
               })
               clearInterval(pollInterval)
               controller.close()
@@ -144,16 +143,17 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
             // 任务失败
             if (task.status === 'failed') {
               const parsedError = parseJsonField<any>(task.error, null)
-              const error = parsedError && typeof parsedError === 'object'
-                ? parsedError
-                : { message: task.message || '任务失败' }
+              const error =
+                parsedError && typeof parsedError === 'object'
+                  ? parsedError
+                  : { message: task.message || '任务失败' }
               sendSSE({
                 type: 'error',
                 data: {
                   message: error.message || '任务失败',
                   stage: 'error',
-                  details: error
-                }
+                  details: error,
+                },
               })
               clearInterval(pollInterval)
               controller.close()
@@ -166,8 +166,8 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
               data: {
                 message: error.message,
                 stage: 'error',
-                details: { stack: error.stack }
-              }
+                details: { stack: error.stack },
+              },
             })
             clearInterval(pollInterval)
             controller.close()
@@ -195,29 +195,28 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
               data: {
                 message: 'SSE timeout',
                 stage: 'error',
-                details: {}
-              }
+                details: {},
+              },
             })
             controller.close()
             isClosed = true
           }
         }, 120000)
-      }
+      },
     })
 
     return new Response(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
     })
-
   } catch (error: any) {
     console.error('SSE initialization error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

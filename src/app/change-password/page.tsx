@@ -117,7 +117,14 @@ export default function ChangePasswordPage() {
         />
         <div className="relative z-20 flex flex-col justify-between p-12 w-full h-full text-white">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Logo" width={0} height={0} sizes="100vw" className="h-8 w-auto brightness-0 invert" />
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={0}
+              height={0}
+              sizes="100vw"
+              className="h-8 w-auto brightness-0 invert"
+            />
           </div>
           <div className="space-y-6 max-w-lg">
             <h1 className="text-4xl font-bold leading-tight">
@@ -128,9 +135,7 @@ export default function ChangePasswordPage() {
               "为了确保您的广告账户和数据安全，我们强制要求首次登录时修改默认密码。请设置一个强密码。"
             </p>
           </div>
-          <div className="text-sm text-gray-500">
-            &copy; 2025 AutoAds Inc.
-          </div>
+          <div className="text-sm text-gray-500">&copy; 2025 AutoAds Inc.</div>
         </div>
       </div>
 
@@ -139,14 +144,18 @@ export default function ChangePasswordPage() {
         <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left">
             <h2 className="text-3xl font-bold text-gray-900">修改初始密码</h2>
-            <p className="mt-2 text-gray-600">
-              为了您的账号安全，请设置新密码
-            </p>
+            <p className="mt-2 text-gray-600">为了您的账号安全，请设置新密码</p>
           </div>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2">
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" fillRule="evenodd"></path></svg>
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                <path
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                  fillRule="evenodd"
+                ></path>
+              </svg>
               {error}
             </div>
           )}
@@ -154,7 +163,10 @@ export default function ChangePasswordPage() {
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-5">
               <div>
-                <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="current-password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   当前密码
                 </label>
                 <input
@@ -171,7 +183,10 @@ export default function ChangePasswordPage() {
               </div>
 
               <div>
-                <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="new-password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   新密码
                 </label>
                 <input
@@ -196,7 +211,19 @@ export default function ChangePasswordPage() {
                       </div>
                     ) : (
                       <div className="text-xs text-green-600 flex items-center gap-1">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                        <svg
+                          className="w-3 h-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M5 13l4 4L19 7"
+                          ></path>
+                        </svg>
                         密码强度符合要求
                       </div>
                     )}
@@ -205,7 +232,10 @@ export default function ChangePasswordPage() {
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
+                <label
+                  htmlFor="confirm-password"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
                   确认新密码
                 </label>
                 <input
@@ -229,7 +259,9 @@ export default function ChangePasswordPage() {
                 <li className="flex items-center gap-1">• 至少1个大写字母</li>
                 <li className="flex items-center gap-1">• 至少1个小写字母</li>
                 <li className="flex items-center gap-1">• 至少1个数字</li>
-                <li className="col-span-2 flex items-center gap-1">• 至少1个特殊字符（!@#$%^&*）</li>
+                <li className="col-span-2 flex items-center gap-1">
+                  • 至少1个特殊字符（!@#$%^&*）
+                </li>
               </ul>
             </div>
 

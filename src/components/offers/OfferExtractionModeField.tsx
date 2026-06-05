@@ -54,10 +54,8 @@ export function OfferExtractionModeField({
             </option>
           ))}
         </select>
-        <p className={descriptionClassName}>
-          {OFFER_EXTRACTION_MODE_DESCRIPTIONS[value]}
-        </p>
-        </div>
+        <p className={descriptionClassName}>{OFFER_EXTRACTION_MODE_DESCRIPTIONS[value]}</p>
+      </div>
     )
   }
 

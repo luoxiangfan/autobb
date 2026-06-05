@@ -16,7 +16,10 @@
 
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
-import { compressCompetitors, type CompetitorInfo as CompressorCompetitorInfo } from './competitor-compressor'
+import {
+  compressCompetitors,
+  type CompetitorInfo as CompressorCompetitorInfo,
+} from './competitor-compressor'
 import { withCache } from './ai-cache'
 import { loadPrompt } from './prompt-loader'
 import { parsePrice } from './pricing-utils'
@@ -30,8 +33,8 @@ export interface CompetitorProduct {
   asin: string | null
   name: string
   brand: string | null
-  price: number | null              // 数值价格（便于计算）
-  priceText: string | null          // 原始价格文本
+  price: number | null // 数值价格（便于计算）
+  priceText: string | null // 原始价格文本
   rating: number | null
   reviewCount: number | null
   imageUrl: string | null
@@ -39,7 +42,12 @@ export interface CompetitorProduct {
   productUrl?: string | null
 
   // 竞品来源
-  source: 'amazon_compare' | 'amazon_also_viewed' | 'amazon_similar' | 'same_category' | 'related_products'
+  source:
+    | 'amazon_compare'
+    | 'amazon_also_viewed'
+    | 'amazon_similar'
+    | 'same_category'
+    | 'related_products'
 
   // 相似度评分（0-100）
   similarityScore?: number
@@ -56,10 +64,10 @@ export interface PricePosition {
   avgCompetitorPrice: number
   minCompetitorPrice: number
   maxCompetitorPrice: number
-  pricePercentile: number         // 在竞品中的价格百分位（0-100）
+  pricePercentile: number // 在竞品中的价格百分位（0-100）
   priceAdvantage: 'lowest' | 'below_average' | 'average' | 'above_average' | 'premium'
-  savingsVsAvg: string | null     // "Save $20 vs average competitor"
-  savingsVsMin: string | null     // "Only $5 more than cheapest"
+  savingsVsAvg: string | null // "Save $20 vs average competitor"
+  savingsVsMin: string | null // "Only $5 more than cheapest"
 }
 
 /**
@@ -78,29 +86,29 @@ export interface RatingPosition {
  * 功能对比项
  */
 export interface FeatureComparison {
-  feature: string              // "4K Resolution", "Night Vision"
+  feature: string // "4K Resolution", "Night Vision"
   weHave: boolean
-  competitorsHave: number      // 有此功能的竞品数量
-  ourAdvantage: boolean        // 我们有而大多数竞品没有
+  competitorsHave: number // 有此功能的竞品数量
+  ourAdvantage: boolean // 我们有而大多数竞品没有
 }
 
 /**
  * 独特卖点（USP）
  */
 export interface UniqueSellingPoint {
-  usp: string                  // "Only camera with solar panel option"
-  differentiator: string       // 差异化说明
-  competitorCount: number      // 有此功能的竞品数量（越少越独特）
-  significance: 'high' | 'medium' | 'low'  // 差异化重要性
+  usp: string // "Only camera with solar panel option"
+  differentiator: string // 差异化说明
+  competitorCount: number // 有此功能的竞品数量（越少越独特）
+  significance: 'high' | 'medium' | 'low' // 差异化重要性
 }
 
 /**
  * 竞品优势（需要应对的）
  */
 export interface CompetitorAdvantage {
-  advantage: string            // "Longer warranty", "More storage options"
-  competitor: string           // 竞品名称
-  howToCounter: string         // AI建议的应对策略
+  advantage: string // "Longer warranty", "More storage options"
+  competitor: string // 竞品名称
+  howToCounter: string // AI建议的应对策略
 }
 
 /**
@@ -108,11 +116,11 @@ export interface CompetitorAdvantage {
  * 从竞品的负面评论、用户抱怨中提取
  */
 export interface CompetitorWeakness {
-  weakness: string             // "Short battery life", "Difficult setup"
-  competitor: string           // 竞品名称或 "Multiple competitors"
-  frequency: 'high' | 'medium' | 'low'  // 该弱点的普遍程度
-  ourAdvantage: string         // 我们如何避免这个问题或做得更好
-  adCopy: string               // 可直接用于广告的文案（如 "Unlike others, 8-hour battery life"）
+  weakness: string // "Short battery life", "Difficult setup"
+  competitor: string // 竞品名称或 "Multiple competitors"
+  frequency: 'high' | 'medium' | 'low' // 该弱点的普遍程度
+  ourAdvantage: string // 我们如何避免这个问题或做得更好
+  adCopy: string // 可直接用于广告的文案（如 "Unlike others, 8-hour battery life"）
 }
 
 /**
@@ -160,25 +168,59 @@ function extractCoreProductType(productNameLower: string): string[] {
   // 常见产品类型关键词（按优先级排序）
   const productTypes = [
     // 家电类
-    'robot vacuum', 'vacuum cleaner', 'air purifier', 'humidifier', 'dehumidifier',
-    'robot aspirapolvere', 'aspirapolvere', 'purificatore', 'umidificatore',
+    'robot vacuum',
+    'vacuum cleaner',
+    'air purifier',
+    'humidifier',
+    'dehumidifier',
+    'robot aspirapolvere',
+    'aspirapolvere',
+    'purificatore',
+    'umidificatore',
 
     // 电子产品
-    'wireless earbuds', 'earbuds', 'headphones', 'speaker', 'soundbar',
-    'auricolari', 'cuffie', 'altoparlante',
+    'wireless earbuds',
+    'earbuds',
+    'headphones',
+    'speaker',
+    'soundbar',
+    'auricolari',
+    'cuffie',
+    'altoparlante',
 
     // 智能设备
-    'video conferencing camera', 'conference camera', 'conference webcam', 'webcam', 'ptz camera',
-    'security camera', 'smart camera', 'doorbell', 'smart lock', 'smart display',
-    'videocamera', 'telecamera', 'citofono', 'serratura intelligente',
+    'video conferencing camera',
+    'conference camera',
+    'conference webcam',
+    'webcam',
+    'ptz camera',
+    'security camera',
+    'smart camera',
+    'doorbell',
+    'smart lock',
+    'smart display',
+    'videocamera',
+    'telecamera',
+    'citofono',
+    'serratura intelligente',
 
     // 健康美容
-    'electric toothbrush', 'hair dryer', 'trimmer', 'shaver',
-    'spazzolino elettrico', 'asciugacapelli', 'rasoio',
+    'electric toothbrush',
+    'hair dryer',
+    'trimmer',
+    'shaver',
+    'spazzolino elettrico',
+    'asciugacapelli',
+    'rasoio',
 
     // 厨房电器
-    'coffee maker', 'blender', 'air fryer', 'microwave',
-    'macchina caffè', 'frullatore', 'friggitrice',
+    'coffee maker',
+    'blender',
+    'air fryer',
+    'microwave',
+    'macchina caffè',
+    'frullatore',
+    'friggitrice',
   ]
 
   // 提取匹配的产品类型关键词
@@ -192,9 +234,8 @@ function extractCoreProductType(productNameLower: string): string[] {
   if (keywords.length === 0) {
     // 提取最后2-3个有意义的词作为产品类型
     const words = productNameLower.split(/\s+/)
-    const meaningfulWords = words.filter(w =>
-      w.length > 3 &&
-      !['with', 'and', 'the', 'for', 'con', 'per', 'alla'].includes(w)
+    const meaningfulWords = words.filter(
+      (w) => w.length > 3 && !['with', 'and', 'the', 'for', 'con', 'per', 'alla'].includes(w)
     )
 
     if (meaningfulWords.length >= 2) {
@@ -222,10 +263,10 @@ export async function inferCompetitorKeywords(
     price: number | null
     targetCountry: string
     // 🆕 增强字段：提供更多上下文帮助AI推断更准确的搜索词
-    features?: string[]           // 产品特性列表
-    aboutThisItem?: string[]      // 关于此商品
-    sellingPoints?: string[]      // 卖点
-    productDescription?: string   // 产品描述
+    features?: string[] // 产品特性列表
+    aboutThisItem?: string[] // 关于此商品
+    sellingPoints?: string[] // 卖点
+    productDescription?: string // 产品描述
   },
   userId: number
 ): Promise<string[]> {
@@ -235,11 +276,14 @@ export async function inferCompetitorKeywords(
   const promptTemplate = await loadPrompt('competitor_keyword_inference')
 
   // 🆕 构建产品特性文本（用于AI更好地理解产品类型）
-  const featuresText = [
-    ...(productInfo.features || []),
-    ...(productInfo.aboutThisItem || []),
-    ...(productInfo.sellingPoints || [])
-  ].slice(0, 10).join('\n- ') || 'Not provided'
+  const featuresText =
+    [
+      ...(productInfo.features || []),
+      ...(productInfo.aboutThisItem || []),
+      ...(productInfo.sellingPoints || []),
+    ]
+      .slice(0, 10)
+      .join('\n- ') || 'Not provided'
 
   // 🎨 插值替换模板变量
   const prompt = promptTemplate
@@ -248,16 +292,22 @@ export async function inferCompetitorKeywords(
     .replace('{{productInfo.category}}', productInfo.category)
     .replace('{{productInfo.features}}', featuresText)
     .replace('{{productInfo.description}}', productInfo.productDescription || 'Not provided')
-    .replace('{{productInfo.price}}', productInfo.price ? `Around $${productInfo.price}` : 'Not specified')
+    .replace(
+      '{{productInfo.price}}',
+      productInfo.price ? `Around $${productInfo.price}` : 'Not specified'
+    )
     .replace('{{productInfo.targetCountry}}', productInfo.targetCountry)
 
   try {
-    const aiResponse = await generateContent({
-      operationType: 'competitor_summary',
-      prompt,
-      temperature: 0.3,  // 低温度保证稳定输出
-      maxOutputTokens: 8192,  // ✅ 修复：增加到8192，确保复杂产品的JSON输出完整
-    }, userId)
+    const aiResponse = await generateContent(
+      {
+        operationType: 'competitor_summary',
+        prompt,
+        temperature: 0.3, // 低温度保证稳定输出
+        maxOutputTokens: 8192, // ✅ 修复：增加到8192，确保复杂产品的JSON输出完整
+      },
+      userId
+    )
 
     // 记录token使用
     if (aiResponse.usage) {
@@ -274,12 +324,15 @@ export async function inferCompetitorKeywords(
         outputTokens: aiResponse.usage.outputTokens,
         totalTokens: aiResponse.usage.totalTokens,
         cost,
-        apiType: aiResponse.apiType
+        apiType: aiResponse.apiType,
       })
     }
 
     // 提取JSON
-    let jsonText = aiResponse.text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+    let jsonText = aiResponse.text
+      .replace(/```json\s*/g, '')
+      .replace(/```\s*/g, '')
+      .trim()
     const jsonMatch = jsonText.match(/\{[\s\S]*\}/)
 
     if (!jsonMatch) {
@@ -301,7 +354,11 @@ export async function inferCompetitorKeywords(
       }
 
       // 2. 如果有品类（不是Unknown），使用品类词
-      if (productInfo.category && productInfo.category !== 'Unknown' && productInfo.category !== 'Dati non disponibili') {
+      if (
+        productInfo.category &&
+        productInfo.category !== 'Unknown' &&
+        productInfo.category !== 'Dati non disponibili'
+      ) {
         fallbackTerms.push(productInfo.category)
       }
 
@@ -311,7 +368,7 @@ export async function inferCompetitorKeywords(
       }
 
       console.warn(`   降级搜索词: ${fallbackTerms.join(', ')}`)
-      return fallbackTerms.slice(0, 3)  // 最多返回3个
+      return fallbackTerms.slice(0, 3) // 最多返回3个
     }
 
     const result = JSON.parse(jsonMatch[0])
@@ -337,7 +394,7 @@ export async function inferCompetitorKeywords(
         // 其他类型转换为字符串
         return String(term)
       })
-      .filter((term: string) => term && term.trim().length > 0)  // 过滤空字符串
+      .filter((term: string) => term && term.trim().length > 0) // 过滤空字符串
 
     console.log(`🔍 AI返回了${searchTerms.length}个搜索词，类型检查通过`)
 
@@ -350,11 +407,13 @@ export async function inferCompetitorKeywords(
       const validatedTerms = searchTerms.filter((term: string) => {
         const termLower = term.toLowerCase()
         // 检查是否至少包含一个核心类型关键词
-        return coreTypeKeywords.some(keyword => termLower.includes(keyword))
+        return coreTypeKeywords.some((keyword) => termLower.includes(keyword))
       })
 
       if (validatedTerms.length < searchTerms.length) {
-        console.warn(`⚠️ 品类验证：过滤掉${searchTerms.length - validatedTerms.length}个跨品类搜索词`)
+        console.warn(
+          `⚠️ 品类验证：过滤掉${searchTerms.length - validatedTerms.length}个跨品类搜索词`
+        )
         console.warn(`   原始搜索词: ${searchTerms.join(', ')}`)
         console.warn(`   核心类型: ${coreTypeKeywords.join(', ')}`)
         console.warn(`   验证后: ${validatedTerms.join(', ')}`)
@@ -365,7 +424,6 @@ export async function inferCompetitorKeywords(
 
     console.log(`✅ AI推断了${searchTerms.length}个搜索词: ${searchTerms.join(', ')}`)
     return searchTerms
-
   } catch (error: any) {
     console.error('❌ AI推断失败:', error.message)
     // 降级方案
@@ -384,7 +442,7 @@ function generateSearchVariants(term: string): string[] {
     return []
   }
 
-  const variants: string[] = [term]  // 原始搜索词
+  const variants: string[] = [term] // 原始搜索词
 
   // 提取品牌名（通常是第一个单词）
   const words = term.trim().split(/\s+/)
@@ -398,13 +456,22 @@ function generateSearchVariants(term: string): string[] {
 
     // 品牌+通用类型关键词（camera, vacuum等）
     const genericTypes = [
-      'camera', 'telecamera', 'videocamera',  // 摄像机
-      'vacuum', 'aspirapolvere',               // 吸尘器
-      'earbuds', 'auricolari', 'cuffie',      // 耳机
-      'speaker', 'altoparlante',               // 音箱
-      'router', 'modem',                       // 路由器
-      'watch', 'orologio',                     // 手表
-      'phone', 'telefono',                     // 手机
+      'camera',
+      'telecamera',
+      'videocamera', // 摄像机
+      'vacuum',
+      'aspirapolvere', // 吸尘器
+      'earbuds',
+      'auricolari',
+      'cuffie', // 耳机
+      'speaker',
+      'altoparlante', // 音箱
+      'router',
+      'modem', // 路由器
+      'watch',
+      'orologio', // 手表
+      'phone',
+      'telefono', // 手机
     ]
 
     const termLower = term.toLowerCase()
@@ -446,7 +513,7 @@ async function executeAmazonSearch(
       if (attempt > 0) {
         console.log(`     ↳ 重试 ${attempt}/${maxRetries}...`)
         // 等待后重试
-        await new Promise(resolve => setTimeout(resolve, 2000 * attempt))
+        await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
       }
 
       // 🔥 修复：使用动态超时，国际站点需要更长时间
@@ -454,7 +521,8 @@ async function executeAmazonSearch(
       await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
 
       // 等待搜索结果加载（增加超时时间）
-      await page.waitForSelector('[data-component-type="s-search-result"]', { timeout: 10000 })
+      await page
+        .waitForSelector('[data-component-type="s-search-result"]', { timeout: 10000 })
         .catch(() => null)
 
       // 提取搜索结果
@@ -539,7 +607,7 @@ async function executeAmazonSearch(
               rating,
               reviewCount,
               imageUrl,
-              source: 'amazon_search'
+              source: 'amazon_search',
             })
           }
         }
@@ -549,10 +617,11 @@ async function executeAmazonSearch(
 
       // 成功提取结果，返回
       return results
-
     } catch (error: any) {
       lastError = error
-      console.warn(`     ✗ 搜索失败 (尝试 ${attempt + 1}/${maxRetries + 1}): ${error.message?.substring(0, 100)}`)
+      console.warn(
+        `     ✗ 搜索失败 (尝试 ${attempt + 1}/${maxRetries + 1}): ${error.message?.substring(0, 100)}`
+      )
 
       // 如果不是最后一次重试，继续
       if (attempt < maxRetries) {
@@ -591,7 +660,8 @@ export async function searchCompetitorsOnAmazon(
   const domain = getAmazonDomain(targetCountry)
   const searchStats = { total: 0, success: 0, fallback: 0 }
 
-  for (const term of searchTerms.slice(0, 5)) { // 最多搜索5次
+  for (const term of searchTerms.slice(0, 5)) {
+    // 最多搜索5次
     searchStats.total++
     console.log(`   搜索: "${term}"`)
 
@@ -614,7 +684,7 @@ export async function searchCompetitorsOnAmazon(
           foundResults = true
           searchStats.success++
           if (!isOriginal) searchStats.fallback++
-          break  // 找到结果就停止尝试变体
+          break // 找到结果就停止尝试变体
         }
       }
 
@@ -627,7 +697,6 @@ export async function searchCompetitorsOnAmazon(
         console.log(`   已收集足够竞品，停止搜索`)
         break
       }
-
     } catch (error: any) {
       console.warn(`   ⚠️ 搜索"${term}"失败: ${error.message}`)
       continue
@@ -637,7 +706,9 @@ export async function searchCompetitorsOnAmazon(
   // 去重
   const uniqueCompetitors = deduplicateCompetitors(competitors)
   console.log(`✅ 搜索验证完成，共找到${uniqueCompetitors.length}个真实竞品`)
-  console.log(`   📊 搜索统计: ${searchStats.success}/${searchStats.total}成功，${searchStats.fallback}次使用降级搜索`)
+  console.log(
+    `   📊 搜索统计: ${searchStats.success}/${searchStats.total}成功，${searchStats.fallback}次使用降级搜索`
+  )
 
   return uniqueCompetitors
 }
@@ -647,18 +718,18 @@ export async function searchCompetitorsOnAmazon(
  */
 function getAmazonDomain(countryCode: string): string {
   const domainMap: Record<string, string> = {
-    'US': 'amazon.com',
-    'UK': 'amazon.co.uk',
-    'DE': 'amazon.de',
-    'FR': 'amazon.fr',
-    'IT': 'amazon.it',
-    'ES': 'amazon.es',
-    'JP': 'amazon.co.jp',
-    'CA': 'amazon.ca',
-    'AU': 'amazon.com.au',
-    'IN': 'amazon.in',
-    'MX': 'amazon.com.mx',
-    'BR': 'amazon.com.br',
+    US: 'amazon.com',
+    UK: 'amazon.co.uk',
+    DE: 'amazon.de',
+    FR: 'amazon.fr',
+    IT: 'amazon.it',
+    ES: 'amazon.es',
+    JP: 'amazon.co.jp',
+    CA: 'amazon.ca',
+    AU: 'amazon.com.au',
+    IN: 'amazon.in',
+    MX: 'amazon.com.mx',
+    BR: 'amazon.com.br',
   }
   return domainMap[countryCode] || 'amazon.com'
 }
@@ -687,19 +758,31 @@ export async function scrapeAmazonCompetitors(
 
   try {
     // 🔥 2025-12-13 KISS优化：快速检测竞品区域是否存在
-    const debugContainers = await page.evaluate(() => {
-      return {
-        compareTable: !!document.querySelector('[data-component-type="comparison-table"], .comparison-table, #HLCXComparisonTable'),
-        relatedItems: !!document.querySelector('[data-component-type="related-items"], [data-csa-c-slot-id*="related"]'),
-        alsoViewed: !!document.querySelector('[data-component-type="customers-also-viewed"], [data-a-carousel-options*="also_viewed"]'),
-        similarItems: !!document.querySelector('#sp_detail, #sp_detail2, [data-component-type="similar-items"]'),
-        simsCarousel: !!document.querySelector('[data-csa-c-slot-id*="sims"], [class*="sims-carousel"]')
-      }
-    }).catch(() => ({}))
+    const debugContainers = await page
+      .evaluate(() => {
+        return {
+          compareTable: !!document.querySelector(
+            '[data-component-type="comparison-table"], .comparison-table, #HLCXComparisonTable'
+          ),
+          relatedItems: !!document.querySelector(
+            '[data-component-type="related-items"], [data-csa-c-slot-id*="related"]'
+          ),
+          alsoViewed: !!document.querySelector(
+            '[data-component-type="customers-also-viewed"], [data-a-carousel-options*="also_viewed"]'
+          ),
+          similarItems: !!document.querySelector(
+            '#sp_detail, #sp_detail2, [data-component-type="similar-items"]'
+          ),
+          simsCarousel: !!document.querySelector(
+            '[data-csa-c-slot-id*="sims"], [class*="sims-carousel"]'
+          ),
+        }
+      })
+      .catch(() => ({}))
     console.log(`📊 竞品区域检测: ${JSON.stringify(debugContainers)}`)
 
     // 如果所有区域都不存在，快速返回
-    const hasAnyContainer = Object.values(debugContainers).some(v => v)
+    const hasAnyContainer = Object.values(debugContainers).some((v) => v)
     if (!hasAnyContainer) {
       console.log('⚠️ 未检测到任何竞品区域，快速跳过')
       return []
@@ -714,7 +797,10 @@ export async function scrapeAmazonCompetitors(
 
     // 策略2: 如果数量不足，从"Related to items you've viewed"抓取
     if (competitors.length < limit) {
-      const relatedCompetitors = await scrapeRelatedToItemsYouViewed(page, limit - competitors.length)
+      const relatedCompetitors = await scrapeRelatedToItemsYouViewed(
+        page,
+        limit - competitors.length
+      )
       if (relatedCompetitors.length > 0) {
         console.log(`✅ 从Related to items you've viewed抓取到${relatedCompetitors.length}个竞品`)
         competitors.push(...relatedCompetitors)
@@ -744,7 +830,6 @@ export async function scrapeAmazonCompetitors(
     console.log(`✅ 竞品抓取完成，共${uniqueCompetitors.length}个（去重后）`)
 
     return uniqueCompetitors
-
   } catch (error: any) {
     console.error('❌ 竞品抓取失败:', error.message)
     return []
@@ -756,7 +841,11 @@ export async function scrapeAmazonCompetitors(
  */
 async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorProduct[]> {
   try {
-    await page.waitForSelector('[data-component-type="comparison-table"], .comparison-table, #HLCXComparisonTable', { timeout: 3000 })
+    await page
+      .waitForSelector(
+        '[data-component-type="comparison-table"], .comparison-table, #HLCXComparisonTable',
+        { timeout: 3000 }
+      )
       .catch(() => null)
 
     const competitors = await page.evaluate((maxItems: number) => {
@@ -776,7 +865,7 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
         '[data-component-type="comparison-table"] .comparison-item',
         '.comparison-table .comparison-item',
         '#HLCXComparisonTable .comparison-item',
-        '[cel_widget_id*="comparison"] .comparison-item'
+        '[cel_widget_id*="comparison"] .comparison-item',
       ]
 
       for (const selector of selectors) {
@@ -785,8 +874,9 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
           elements.forEach((el, idx) => {
             if (idx >= maxItems) return
 
-            const asin = el.querySelector('[data-asin]')?.getAttribute('data-asin') ||
-                        el.getAttribute('data-asin')
+            const asin =
+              el.querySelector('[data-asin]')?.getAttribute('data-asin') ||
+              el.getAttribute('data-asin')
 
             const nameEl = el.querySelector('.product-title, .a-link-normal[title], h3')
             const name = nameEl?.textContent?.trim() || nameEl?.getAttribute('title') || 'Unknown'
@@ -795,7 +885,8 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
             const priceText = priceEl?.textContent?.trim() || null
 
             const ratingEl = el.querySelector('.a-icon-star, [class*="star-rating"]')
-            const ratingText = ratingEl?.textContent?.trim() || ratingEl?.getAttribute('aria-label') || null
+            const ratingText =
+              ratingEl?.textContent?.trim() || ratingEl?.getAttribute('aria-label') || null
             const rating = ratingText ? parseFloat(ratingText.match(/[\d.]+/)?.[0] || '0') : null
 
             const reviewEl = el.querySelector('.a-size-small[href*="customerReviews"]')
@@ -814,7 +905,7 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
               rating,
               reviewCount,
               imageUrl,
-              source: 'amazon_compare'
+              source: 'amazon_compare',
             })
           })
           break
@@ -825,7 +916,6 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
     }, limit)
 
     return competitors.filter((c: any) => c.name && c.name !== 'Unknown')
-
   } catch (_error) {
     return []
   }
@@ -836,7 +926,10 @@ async function scrapeCompareTable(page: any, limit: number): Promise<CompetitorP
  *
  * 这是Amazon产品页上常见的竞品推荐区域，通常包含相关竞品
  */
-async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<CompetitorProduct[]> {
+async function scrapeRelatedToItemsYouViewed(
+  page: any,
+  limit: number
+): Promise<CompetitorProduct[]> {
   try {
     const competitors = await page.evaluate((maxItems: number) => {
       const items: any[] = []
@@ -851,7 +944,7 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
         '[aria-label*="Related to items you"] .a-carousel-card',
         '[aria-label*="Related"] .a-carousel-card',
         // 备选：通用carousel，如果上面的都找不到
-        '.a-carousel-container .a-carousel-card'
+        '.a-carousel-container .a-carousel-card',
       ]
 
       for (const selector of selectors) {
@@ -866,13 +959,17 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
             const asin = linkEl?.href?.match(/\/dp\/([A-Z0-9]{10})/)?.[1] || null
 
             // 策略1：从产品链接的aria-label或title属性获取名称
-            let name = linkEl?.getAttribute('aria-label')?.trim() ||
-                      linkEl?.getAttribute('title')?.trim() ||
-                      linkEl?.querySelector('img')?.getAttribute('alt')?.trim() || ''
+            let name =
+              linkEl?.getAttribute('aria-label')?.trim() ||
+              linkEl?.getAttribute('title')?.trim() ||
+              linkEl?.querySelector('img')?.getAttribute('alt')?.trim() ||
+              ''
 
             // 策略2：如果没有，尝试从文本元素获取（排除<style>标签）
             if (!name || name === 'Unknown') {
-              const textElements = el.querySelectorAll('.a-truncate-full, .p13n-sc-truncated, .a-link-normal')
+              const textElements = el.querySelectorAll(
+                '.a-truncate-full, .p13n-sc-truncated, .a-link-normal'
+              )
               for (const textEl of Array.from(textElements)) {
                 const text = textEl.textContent?.trim() || ''
                 // 排除包含CSS代码的文本
@@ -886,11 +983,11 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
             // 策略3：清理名称中的CSS/JS代码
             if (name && (name.includes('{') || name.includes('position:'))) {
               // 尝试提取实际产品名（通常在CSS代码之后）
-              const cleanMatch = name.match(/([A-Z][A-Za-z\s\d,.()+-]+?)(?:,\s*\.\.\.|$)/);
+              const cleanMatch = name.match(/([A-Z][A-Za-z\s\d,.()+-]+?)(?:,\s*\.\.\.|$)/)
               if (cleanMatch) {
-                name = cleanMatch[1].trim();
+                name = cleanMatch[1].trim()
               } else {
-                name = 'Unknown';
+                name = 'Unknown'
               }
             }
 
@@ -901,7 +998,12 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
             let priceText = priceEl?.textContent?.trim() || null
 
             // 清理价格文本中的CSS代码
-            if (priceText && (priceText.includes('{') || priceText.includes('font-weight') || priceText.includes('color:'))) {
+            if (
+              priceText &&
+              (priceText.includes('{') ||
+                priceText.includes('font-weight') ||
+                priceText.includes('color:'))
+            ) {
               // 尝试从混乱文本中提取实际价格（如 S$409.46）
               const priceMatch = priceText.match(/([S$£€¥₹]\$?[\d,]+\.?\d*)/g)
               if (priceMatch && priceMatch.length > 0) {
@@ -912,7 +1014,9 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
               }
             }
 
-            const ratingEl = el.querySelector('.a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt')
+            const ratingEl = el.querySelector(
+              '.a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt'
+            )
             const ratingText = ratingEl?.textContent?.trim() || null
             const rating = ratingText ? parseFloat(ratingText.match(/[\d.]+/)?.[0] || '0') : null
 
@@ -933,7 +1037,7 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
                 rating,
                 reviewCount,
                 imageUrl,
-                source: 'amazon_also_viewed'  // 使用相同source标识
+                source: 'amazon_also_viewed', // 使用相同source标识
               })
             }
           })
@@ -945,7 +1049,6 @@ async function scrapeRelatedToItemsYouViewed(page: any, limit: number): Promise<
     }, limit)
 
     return competitors
-
   } catch (_error) {
     return []
   }
@@ -964,7 +1067,7 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
         '[data-a-carousel-options*="also_viewed"] .a-carousel-card',
         '#similarities_feature_div .a-carousel-card',
         '[cel_widget_id*="also_viewed"] .a-carousel-card',
-        '#dp-pod-similars .a-carousel-card'
+        '#dp-pod-similars .a-carousel-card',
       ]
 
       for (const selector of selectors) {
@@ -984,7 +1087,12 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
             let priceText = priceEl?.textContent?.trim() || null
 
             // 清理价格文本中的CSS代码
-            if (priceText && (priceText.includes('{') || priceText.includes('font-weight') || priceText.includes('color:'))) {
+            if (
+              priceText &&
+              (priceText.includes('{') ||
+                priceText.includes('font-weight') ||
+                priceText.includes('color:'))
+            ) {
               const priceMatch = priceText.match(/([S$£€¥₹]\$?[\d,]+\.?\d*)/g)
               if (priceMatch && priceMatch.length > 0) {
                 priceText = priceMatch[priceMatch.length - 1]
@@ -993,7 +1101,9 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
               }
             }
 
-            const ratingEl = el.querySelector('.a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt')
+            const ratingEl = el.querySelector(
+              '.a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt'
+            )
             const ratingText = ratingEl?.textContent?.trim() || null
             const rating = ratingText ? parseFloat(ratingText.match(/[\d.]+/)?.[0] || '0') : null
 
@@ -1014,7 +1124,7 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
                 rating,
                 reviewCount,
                 imageUrl,
-                source: 'amazon_also_viewed'
+                source: 'amazon_also_viewed',
               })
             }
           })
@@ -1026,7 +1136,6 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
     }, limit)
 
     return competitors
-
   } catch (_error) {
     return []
   }
@@ -1066,7 +1175,9 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
         const feedbackEl = el.querySelector('[data-adfeedbackdetails]')
         if (feedbackEl) {
           try {
-            const feedbackData = JSON.parse(feedbackEl.getAttribute('data-adfeedbackdetails') || '{}')
+            const feedbackData = JSON.parse(
+              feedbackEl.getAttribute('data-adfeedbackdetails') || '{}'
+            )
             if (feedbackData.asin) return feedbackData.asin
           } catch {}
         }
@@ -1107,13 +1218,17 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
         const feedbackEl = el.querySelector('[data-adfeedbackdetails]')
         if (feedbackEl) {
           try {
-            const feedbackData = JSON.parse(feedbackEl.getAttribute('data-adfeedbackdetails') || '{}')
+            const feedbackData = JSON.parse(
+              feedbackEl.getAttribute('data-adfeedbackdetails') || '{}'
+            )
             if (feedbackData.title) return feedbackData.title
           } catch {}
         }
 
         // 传统选择器
-        const nameEl = el.querySelector('.a-truncate-full, .p13n-sc-truncated, .a-link-normal[title], [class*="truncate"]')
+        const nameEl = el.querySelector(
+          '.a-truncate-full, .p13n-sc-truncated, .a-link-normal[title], [class*="truncate"]'
+        )
         if (nameEl) {
           const text = nameEl.textContent?.trim()
           if (text && text !== 'Unknown') return text
@@ -1133,11 +1248,11 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
 
       // "Similar items" / "Products related to this item" 区域选择器
       const selectors = [
-        '#sp_detail .a-carousel-card',                              // 🔥 赞助商品优先
-        '[data-a-carousel-options*="sims"] .a-carousel-card',       // 赞助商品变体
-        '[cel_widget_id*="sims"] .a-carousel-card',                 // 赞助商品变体
-        '[data-a-carousel-options*="similar"] .a-carousel-card',    // 传统similar
-        '[cel_widget_id*="similar"] .a-carousel-card'               // 传统similar
+        '#sp_detail .a-carousel-card', // 🔥 赞助商品优先
+        '[data-a-carousel-options*="sims"] .a-carousel-card', // 赞助商品变体
+        '[cel_widget_id*="sims"] .a-carousel-card', // 赞助商品变体
+        '[data-a-carousel-options*="similar"] .a-carousel-card', // 传统similar
+        '[cel_widget_id*="similar"] .a-carousel-card', // 传统similar
       ]
 
       for (const selector of selectors) {
@@ -1156,7 +1271,12 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
             let priceText = priceEl?.textContent?.trim() || null
 
             // 清理价格文本中的CSS代码
-            if (priceText && (priceText.includes('{') || priceText.includes('font-weight') || priceText.includes('color:'))) {
+            if (
+              priceText &&
+              (priceText.includes('{') ||
+                priceText.includes('font-weight') ||
+                priceText.includes('color:'))
+            ) {
               // 尝试从混乱文本中提取实际价格（如 S$409.46）
               const priceMatch = priceText.match(/([S$£€¥₹]\$?[\d,]+\.?\d*)/g)
               if (priceMatch && priceMatch.length > 0) {
@@ -1167,7 +1287,9 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
               }
             }
 
-            const ratingEl = el.querySelector('.a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt')
+            const ratingEl = el.querySelector(
+              '.a-icon-star-small .a-icon-alt, .a-icon-star .a-icon-alt'
+            )
             const ratingText = ratingEl?.textContent?.trim() || null
             const rating = ratingText ? parseFloat(ratingText.match(/[\d.]+/)?.[0] || '0') : null
 
@@ -1185,7 +1307,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
                 rating,
                 reviewCount: null,
                 imageUrl,
-                source: 'amazon_similar'
+                source: 'amazon_similar',
               })
             }
           })
@@ -1197,7 +1319,6 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
     }, limit)
 
     return competitors
-
   } catch (error) {
     console.error('❌ scrapeSimilarItems失败:', error)
     return []
@@ -1237,23 +1358,22 @@ function deduplicateCompetitors(competitors: CompetitorProduct[]): CompetitorPro
 export async function analyzeCompetitorsWithAI(
   ourProduct: {
     name: string
-    brand?: string | null           // 🆕 品牌名
+    brand?: string | null // 🆕 品牌名
     price: number | null
     rating: number | null
     reviewCount: number | null
     features: string[]
-    sellingPoints?: string          // 🆕 卖点描述
+    sellingPoints?: string // 🆕 卖点描述
   },
   competitors: CompetitorProduct[],
   _targetCountry: string = 'US',
   userId?: number,
   options?: {
-    enableCompression?: boolean  // 启用竞品数据压缩（默认false，零破坏性）
-    enableCache?: boolean        // 启用缓存（默认false，零破坏性）
-    cacheKey?: string            // 自定义缓存键（默认使用产品名+竞品数量）
+    enableCompression?: boolean // 启用竞品数据压缩（默认false，零破坏性）
+    enableCache?: boolean // 启用缓存（默认false，零破坏性）
+    cacheKey?: string // 自定义缓存键（默认使用产品名+竞品数量）
   }
 ): Promise<CompetitorAnalysisResult> {
-
   if (competitors.length === 0) {
     console.log('⚠️ 无竞品数据，返回空分析结果')
     return getEmptyCompetitorAnalysis()
@@ -1272,7 +1392,7 @@ export async function analyzeCompetitorsWithAI(
   if (options?.enableCompression) {
     // 🆕 Token优化:使用压缩格式(40-50%减少)
     console.log('🗜️ 启用竞品数据压缩优化...')
-    const compressorInput: CompressorCompetitorInfo[] = competitors.slice(0, 10).map(c => ({
+    const compressorInput: CompressorCompetitorInfo[] = competitors.slice(0, 10).map((c) => ({
       name: c.name,
       brand: c.brand || undefined,
       price: c.priceText || undefined,
@@ -1286,18 +1406,23 @@ export async function analyzeCompetitorsWithAI(
     const compressed = compressCompetitors(compressorInput, 20)
     competitorSummaries = compressed.compressed
     compressionStats = compressed.stats
-    console.log(`   压缩率: ${compressionStats.compressionRatio}(${compressionStats.originalChars} → ${compressionStats.compressedChars}字符)`)
+    console.log(
+      `   压缩率: ${compressionStats.compressionRatio}(${compressionStats.originalChars} → ${compressionStats.compressedChars}字符)`
+    )
   } else {
     // 原始格式(保持向后兼容)
-    competitorSummaries = competitors.slice(0, 10).map((c, idx) => {
-      return `Competitor ${idx + 1}:
+    competitorSummaries = competitors
+      .slice(0, 10)
+      .map((c, idx) => {
+        return `Competitor ${idx + 1}:
 - Name: ${c.name}
 - Brand: ${c.brand || 'Unknown'}
 - Price: ${c.priceText || 'N/A'}
 - Rating: ${c.rating || 'N/A'} stars
 - Reviews: ${c.reviewCount || 'N/A'}
 - Source: ${c.source}`
-    }).join('\n\n')
+      })
+      .join('\n\n')
   }
 
   // 📦 从数据库加载prompt模板(版本管理)
@@ -1333,12 +1458,15 @@ export async function analyzeCompetitorsWithAI(
     const cacheKey = options?.cacheKey || `${ourProduct.name}:${competitors.length}competitors`
     const performAnalysis = async () => {
       // 智能模型选择：竞品分析使用Pro模型（复杂分析任务）
-      const aiResponse = await generateContent({
-        operationType: 'competitor_analysis',
-        prompt,
-        temperature: 0.6,  // 平衡创造性和准确性
-        maxOutputTokens: 8192,  // 恢复原始值，确保JSON不被截断
-      }, userId!)
+      const aiResponse = await generateContent(
+        {
+          operationType: 'competitor_analysis',
+          prompt,
+          temperature: 0.6, // 平衡创造性和准确性
+          maxOutputTokens: 8192, // 恢复原始值，确保JSON不被截断
+        },
+        userId!
+      )
 
       // 记录token使用
       if (aiResponse.usage) {
@@ -1355,7 +1483,7 @@ export async function analyzeCompetitorsWithAI(
           outputTokens: aiResponse.usage.outputTokens,
           totalTokens: aiResponse.usage.totalTokens,
           cost,
-          apiType: aiResponse.apiType
+          apiType: aiResponse.apiType,
         })
       }
 
@@ -1401,7 +1529,6 @@ export async function analyzeCompetitorsWithAI(
     console.log(`   - 综合竞争力: ${result.overallCompetitiveness}/100`)
 
     return result
-
   } catch (error: any) {
     console.error('❌ AI竞品分析失败:', error.message)
     return getEmptyCompetitorAnalysis()
@@ -1419,7 +1546,7 @@ function calculatePricePosition(
   if (!ourPrice) return null
 
   const competitorPrices = competitors
-    .map(c => c.price)
+    .map((c) => c.price)
     .filter((p): p is number => p !== null && p > 0)
 
   if (competitorPrices.length === 0) return null
@@ -1429,7 +1556,7 @@ function calculatePricePosition(
   const maxPrice = Math.max(...competitorPrices)
 
   // 计算价格百分位
-  const lowerCount = competitorPrices.filter(p => p < ourPrice).length
+  const lowerCount = competitorPrices.filter((p) => p < ourPrice).length
   const pricePercentile = Math.round((lowerCount / competitorPrices.length) * 100)
 
   // 判断价格优势
@@ -1447,13 +1574,11 @@ function calculatePricePosition(
   }
 
   // 计算节省金额
-  const savingsVsAvg = ourPrice < avgPrice
-    ? `Save $${(avgPrice - ourPrice).toFixed(2)} vs average competitor`
-    : null
+  const savingsVsAvg =
+    ourPrice < avgPrice ? `Save $${(avgPrice - ourPrice).toFixed(2)} vs average competitor` : null
 
-  const savingsVsMin = ourPrice > minPrice
-    ? `Only $${(ourPrice - minPrice).toFixed(2)} more than cheapest`
-    : null
+  const savingsVsMin =
+    ourPrice > minPrice ? `Only $${(ourPrice - minPrice).toFixed(2)} more than cheapest` : null
 
   return {
     ourPrice,
@@ -1478,7 +1603,7 @@ function calculateRatingPosition(
   if (!ourRating) return null
 
   const competitorRatings = competitors
-    .map(c => c.rating)
+    .map((c) => c.rating)
     .filter((r): r is number => r !== null && r > 0)
 
   if (competitorRatings.length === 0) return null
@@ -1488,7 +1613,7 @@ function calculateRatingPosition(
   const maxRating = Math.max(...competitorRatings)
 
   // 计算评分百分位
-  const lowerCount = competitorRatings.filter(r => r < ourRating).length
+  const lowerCount = competitorRatings.filter((r) => r < ourRating).length
   const ratingPercentile = Math.round((lowerCount / competitorRatings.length) * 100)
 
   // 判断评分优势
@@ -1539,10 +1664,10 @@ function getEmptyCompetitorAnalysis(): CompetitorAnalysisResult {
  * @returns 结构化的洞察摘要
  */
 export function extractCompetitiveInsights(analysis: CompetitorAnalysisResult): {
-  headlineSuggestions: string[]     // 适合用作广告标题的优势
-  descriptionHighlights: string[]   // 适合用作广告描述的差异化点
-  calloutSuggestions: string[]      // 适合用作Callouts的对比优势
-  sitelinkSuggestions: string[]     // 适合用作Sitelinks的对比主题
+  headlineSuggestions: string[] // 适合用作广告标题的优势
+  descriptionHighlights: string[] // 适合用作广告描述的差异化点
+  calloutSuggestions: string[] // 适合用作Callouts的对比优势
+  sitelinkSuggestions: string[] // 适合用作Sitelinks的对比主题
 } {
   const insights = {
     headlineSuggestions: [] as string[],
@@ -1577,9 +1702,9 @@ export function extractCompetitiveInsights(analysis: CompetitorAnalysisResult): 
 
   // 从独特卖点提取描述亮点和Callouts
   analysis.uniqueSellingPoints
-    .filter(usp => usp.significance === 'high' || usp.significance === 'medium')
+    .filter((usp) => usp.significance === 'high' || usp.significance === 'medium')
     .slice(0, 3)
-    .forEach(usp => {
+    .forEach((usp) => {
       insights.descriptionHighlights.push(usp.usp)
       insights.calloutSuggestions.push(usp.usp.substring(0, 25)) // Callouts限制25字符
     })

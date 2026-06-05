@@ -18,8 +18,14 @@ function validateBrandConsistency(
   const inputBrandLower = inputBrand.toLowerCase().trim()
 
   const knownOtherBrands = [
-    'lilysilk', 'u-share', 'ushare', 'u share',
-    'pajama', 'silk pajama', 'picture frame', 'photo frame'
+    'lilysilk',
+    'u-share',
+    'ushare',
+    'u share',
+    'pajama',
+    'silk pajama',
+    'picture frame',
+    'photo frame',
   ]
 
   if (brandDescription) {
@@ -30,12 +36,14 @@ function validateBrandConsistency(
         return {
           isConsistent: false,
           detectedBrand: otherBrand,
-          reason: `品牌描述中提到了 "${otherBrand}"，但录入品牌是 "${inputBrand}"`
+          reason: `品牌描述中提到了 "${otherBrand}"，但录入品牌是 "${inputBrand}"`,
         }
       }
     }
 
-    const brandStartMatch = descLower.match(/^([a-z][a-z0-9\-_\s]{1,20})\s+(is|specializes|focuses|offers|provides)/i)
+    const brandStartMatch = descLower.match(
+      /^([a-z][a-z0-9\-_\s]{1,20})\s+(is|specializes|focuses|offers|provides)/i
+    )
     if (brandStartMatch) {
       const detectedBrand = brandStartMatch[1].trim()
       const b1 = inputBrandLower.replace(/[\s\-_]/g, '')
@@ -44,7 +52,7 @@ function validateBrandConsistency(
         return {
           isConsistent: false,
           detectedBrand,
-          reason: `品牌描述以 "${detectedBrand}" 开头，但录入品牌是 "${inputBrand}"`
+          reason: `品牌描述以 "${detectedBrand}" 开头，但录入品牌是 "${inputBrand}"`,
         }
       }
     }
@@ -52,9 +60,19 @@ function validateBrandConsistency(
 
   const electronicsBrands = ['anker', 'reolink', 'eufy', 'soundcore', 'nebula']
   const nonElectronicsCategories = [
-    'pajama', 'sleepwear', 'clothing', 'apparel', 'fashion',
-    'picture frame', 'photo frame', 'home decor', 'furniture',
-    'jewelry', 'cosmetics', 'beauty', 'skincare'
+    'pajama',
+    'sleepwear',
+    'clothing',
+    'apparel',
+    'fashion',
+    'picture frame',
+    'photo frame',
+    'home decor',
+    'furniture',
+    'jewelry',
+    'cosmetics',
+    'beauty',
+    'skincare',
   ]
 
   if (category && electronicsBrands.includes(inputBrandLower)) {
@@ -63,7 +81,7 @@ function validateBrandConsistency(
       if (categoryLower.includes(nonElecCat)) {
         return {
           isConsistent: false,
-          reason: `电子产品品牌 "${inputBrand}" 的类别不应该是 "${category}"`
+          reason: `电子产品品牌 "${inputBrand}" 的类别不应该是 "${category}"`,
         }
       }
     }

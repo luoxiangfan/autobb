@@ -158,7 +158,10 @@ export function isPerformanceReleaseEnabled(flag: PerformanceReleaseFlagName): b
 /**
  * 输出开关快照，便于发布排障与审计。
  */
-export function getPerformanceReleaseSnapshot(): Record<PerformanceReleaseFlagName, PerformanceReleaseSnapshot> {
+export function getPerformanceReleaseSnapshot(): Record<
+  PerformanceReleaseFlagName,
+  PerformanceReleaseSnapshot
+> {
   const snapshot: Partial<Record<PerformanceReleaseFlagName, PerformanceReleaseSnapshot>> = {}
 
   for (const flag of Object.keys(PERFORMANCE_RELEASE_FLAGS) as PerformanceReleaseFlagName[]) {
@@ -180,7 +183,10 @@ export function getPerformanceReleaseSnapshot(): Record<PerformanceReleaseFlagNa
  * 检查开关依赖关系是否满足。
  */
 export function validatePerformanceReleaseDependencies(
-  snapshot: Record<PerformanceReleaseFlagName, PerformanceReleaseSnapshot> = getPerformanceReleaseSnapshot()
+  snapshot: Record<
+    PerformanceReleaseFlagName,
+    PerformanceReleaseSnapshot
+  > = getPerformanceReleaseSnapshot()
 ): { valid: boolean; issues: string[] } {
   const issues: string[] = []
 

@@ -7,10 +7,14 @@ export function hasRequiredRsaAssetCounts(creative: {
   descriptions?: unknown
 }): boolean {
   const headlines = Array.isArray(creative?.headlines)
-    ? creative.headlines.filter((item: unknown) => typeof item === 'string' && item.trim().length > 0)
+    ? creative.headlines.filter(
+        (item: unknown) => typeof item === 'string' && item.trim().length > 0
+      )
     : []
   const descriptions = Array.isArray(creative?.descriptions)
-    ? creative.descriptions.filter((item: unknown) => typeof item === 'string' && item.trim().length > 0)
+    ? creative.descriptions.filter(
+        (item: unknown) => typeof item === 'string' && item.trim().length > 0
+      )
     : []
 
   return (

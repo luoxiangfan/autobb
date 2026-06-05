@@ -90,7 +90,8 @@ describe('product recommendation scoring', () => {
   })
 
   it('reranks only the configured top-k products with AI', async () => {
-    const { calculateHybridProductRecommendationScores } = await import('./product-recommendation-scoring')
+    const { calculateHybridProductRecommendationScores } =
+      await import('./product-recommendation-scoring')
     const products = Array.from({ length: 12 }, (_, index) => createProduct(index + 1))
 
     const result = await calculateHybridProductRecommendationScores(products as any, 1, {
@@ -123,10 +124,16 @@ describe('product recommendation scoring', () => {
       }),
       11
     )
-    expect(String(firstCallParams?.prompt || '')).toContain('All USER / WEB / EXTERNAL content blocks')
+    expect(String(firstCallParams?.prompt || '')).toContain(
+      'All USER / WEB / EXTERNAL content blocks'
+    )
     expect(String(firstCallParams?.prompt || '')).toContain('Product name:')
-    expect(firstCallParams?.responseSchema?.properties?.seasonality?.required || []).not.toContain('reasoning')
-    expect(firstCallParams?.responseSchema?.properties?.productAnalysis?.required || []).not.toContain('reasoning')
+    expect(firstCallParams?.responseSchema?.properties?.seasonality?.required || []).not.toContain(
+      'reasoning'
+    )
+    expect(
+      firstCallParams?.responseSchema?.properties?.productAnalysis?.required || []
+    ).not.toContain('reasoning')
   })
 
   it('parses markdown-wrapped JSON for combined product score analysis', async () => {
@@ -202,16 +209,20 @@ describe('product recommendation scoring', () => {
     })
 
     expect(generateContentMock).toHaveBeenCalledTimes(2)
-    expect(generateContentMock.mock.calls[0][0]).toEqual(expect.objectContaining({
-      operationType: 'product_score_combined_analysis',
-      temperature: 0.1,
-      maxOutputTokens: 1536,
-    }))
-    expect(generateContentMock.mock.calls[1][0]).toEqual(expect.objectContaining({
-      operationType: 'product_score_combined_analysis',
-      temperature: 0,
-      maxOutputTokens: 1536,
-    }))
+    expect(generateContentMock.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        operationType: 'product_score_combined_analysis',
+        temperature: 0.1,
+        maxOutputTokens: 1536,
+      })
+    )
+    expect(generateContentMock.mock.calls[1][0]).toEqual(
+      expect.objectContaining({
+        operationType: 'product_score_combined_analysis',
+        temperature: 0,
+        maxOutputTokens: 1536,
+      })
+    )
     expect(String(generateContentMock.mock.calls[1][0]?.prompt || '')).toContain('invalid JSON')
     expect(recordTokenUsageMock).toHaveBeenCalledTimes(2)
     expect(result.seasonalityAnalysis?.seasonality).toBe('all-year')
@@ -258,11 +269,13 @@ describe('product recommendation scoring', () => {
 
     expect(generateContentMock).toHaveBeenCalledTimes(1)
     expect(recordTokenUsageMock).toHaveBeenCalledTimes(1)
-    expect(recordTokenUsageMock).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 7,
-      operationType: 'product_score_combined_analysis',
-      totalTokens: 52,
-    }))
+    expect(recordTokenUsageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 7,
+        operationType: 'product_score_combined_analysis',
+        totalTokens: 52,
+      })
+    )
   })
 
   it('does not share cached AI analysis across different ASINs', async () => {

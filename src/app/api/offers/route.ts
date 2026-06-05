@@ -50,29 +50,39 @@ async function get(request: NextRequest) {
     const offsetParam = searchParams.get('offset')
     const parsedLimit = limitParam ? parseInt(limitParam, 10) : undefined
     const parsedOffset = offsetParam ? parseInt(offsetParam, 10) : undefined
-    const limit = Number.isFinite(parsedLimit) && (parsedLimit as number) > 0
-      ? parsedLimit
-      : undefined
-    const offset = Number.isFinite(parsedOffset) && (parsedOffset as number) >= 0
-      ? parsedOffset
-      : undefined
-    const isActive = searchParams.get('isActive') === 'true' ? true : searchParams.get('isActive') === 'false' ? false : undefined
+    const limit =
+      Number.isFinite(parsedLimit) && (parsedLimit as number) > 0 ? parsedLimit : undefined
+    const offset =
+      Number.isFinite(parsedOffset) && (parsedOffset as number) >= 0 ? parsedOffset : undefined
+    const isActive =
+      searchParams.get('isActive') === 'true'
+        ? true
+        : searchParams.get('isActive') === 'false'
+          ? false
+          : undefined
     const targetCountry = searchParams.get('targetCountry') || undefined
     const searchQuery = searchParams.get('search') || undefined
     const scrapeStatus = searchParams.get('scrapeStatus') || undefined
-    const needsCompletion = searchParams.get('needsCompletion') === 'true' ? true : searchParams.get('needsCompletion') === 'false' ? false : undefined
-    const hasAffiliateLink = searchParams.get('hasAffiliateLink') === 'true'
-      ? true
-      : searchParams.get('hasAffiliateLink') === 'false'
-        ? false
-        : undefined
+    const needsCompletion =
+      searchParams.get('needsCompletion') === 'true'
+        ? true
+        : searchParams.get('needsCompletion') === 'false'
+          ? false
+          : undefined
+    const hasAffiliateLink =
+      searchParams.get('hasAffiliateLink') === 'true'
+        ? true
+        : searchParams.get('hasAffiliateLink') === 'false'
+          ? false
+          : undefined
     const requestedSortBy = searchParams.get('sortBy') || undefined
-    const sortByUnsupported = Boolean(requestedSortBy && !OFFERS_SERVER_SUPPORTED_SORTS.has(requestedSortBy))
+    const sortByUnsupported = Boolean(
+      requestedSortBy && !OFFERS_SERVER_SUPPORTED_SORTS.has(requestedSortBy)
+    )
     const sortBy = sortByUnsupported ? undefined : requestedSortBy
     const sortOrderParam = searchParams.get('sortOrder')
-    const sortOrder = sortOrderParam === 'asc' || sortOrderParam === 'desc'
-      ? sortOrderParam
-      : undefined
+    const sortOrder =
+      sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : undefined
     const compatibility = sortByUnsupported
       ? {
           code: 'PARTIAL_UNSUPPORTED_SORT' as const,
@@ -98,7 +108,7 @@ async function get(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        offers: offers.map(offer => ({
+        offers: offers.map((offer) => ({
           id: offer.id,
           brand: offer.brand,
           scrapeStatus: offer.scrape_status,
@@ -115,9 +125,10 @@ async function get(request: NextRequest) {
     if (summary) {
       const db = await getDatabase()
       const userIdNum = userId
-      const notDeletedCondition = db.type === 'postgres'
-        ? '(is_deleted = false OR is_deleted IS NULL)'
-        : '(is_deleted = 0 OR is_deleted IS NULL)'
+      const notDeletedCondition =
+        db.type === 'postgres'
+          ? '(is_deleted = false OR is_deleted IS NULL)'
+          : '(is_deleted = 0 OR is_deleted IS NULL)'
       const isActiveCondition = boolCondition('is_active', true, db.type)
 
       const row = await db.queryOne<{
@@ -177,7 +188,7 @@ async function get(request: NextRequest) {
 
       return {
         success: true,
-        offers: offers.map(offer => ({
+        offers: offers.map((offer) => ({
           id: offer.id,
           url: offer.url,
           brand: offer.brand,

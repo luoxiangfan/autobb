@@ -17,7 +17,8 @@
 // 1. NEXT_PHASE === 'phase-production-build' → 构建阶段
 // 2. 但如果同时存在 SKIP_ENV_VALIDATION=false → 强制验证（运行时场景）
 // 3. 测试环境也跳过验证
-const IS_BUILD_TIME = process.env.NEXT_PHASE === 'phase-production-build' && process.env.SKIP_ENV_VALIDATION !== 'false'
+const IS_BUILD_TIME =
+  process.env.NEXT_PHASE === 'phase-production-build' && process.env.SKIP_ENV_VALIDATION !== 'false'
 const IS_TEST_ENV = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
 const SKIP_VALIDATION = IS_BUILD_TIME || IS_TEST_ENV
 
@@ -36,14 +37,14 @@ function getRequiredEnvVar(name: string, minLength?: number): string {
   if (!value) {
     throw new Error(
       `❌ SECURITY ERROR: Missing required environment variable: ${name}\n` +
-      `Please set ${name} in your .env file before starting the application.`
+        `Please set ${name} in your .env file before starting the application.`
     )
   }
 
   if (minLength && value.length < minLength) {
     throw new Error(
       `❌ SECURITY ERROR: ${name} is too short (minimum ${minLength} characters required)\n` +
-      `Current length: ${value.length}, Required: ${minLength}`
+        `Current length: ${value.length}, Required: ${minLength}`
     )
   }
 
@@ -102,8 +103,8 @@ if (!SKIP_VALIDATION) {
   if (!/^[0-9a-fA-F]{64}$/.test(ENCRYPTION_KEY)) {
     throw new Error(
       '❌ SECURITY ERROR: ENCRYPTION_KEY must be exactly 64 hexadecimal characters (32 bytes)\n' +
-      'Generate a new key with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n' +
-      `Current value format is invalid: ${ENCRYPTION_KEY.substring(0, 10)}...`
+        "Generate a new key with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"\n" +
+        `Current value format is invalid: ${ENCRYPTION_KEY.substring(0, 10)}...`
     )
   }
 
@@ -119,14 +120,14 @@ if (!SKIP_VALIDATION) {
     if (weakSecrets.includes(JWT_SECRET)) {
       throw new Error(
         '❌ PRODUCTION SECURITY ERROR: JWT_SECRET is using a default/weak value\n' +
-        'Please generate a strong random secret for production deployment.'
+          'Please generate a strong random secret for production deployment.'
       )
     }
 
     if (weakSecrets.includes(ENCRYPTION_KEY)) {
       throw new Error(
         '❌ PRODUCTION SECURITY ERROR: ENCRYPTION_KEY is using a default/weak value\n' +
-        'Please generate a strong random key for production deployment.'
+          'Please generate a strong random key for production deployment.'
       )
     }
 
@@ -134,7 +135,7 @@ if (!SKIP_VALIDATION) {
     if (BCRYPT_SALT_ROUNDS < 12) {
       console.warn(
         '⚠️  WARNING: BCRYPT_SALT_ROUNDS is below recommended value for production (12+)\n' +
-        `Current: ${BCRYPT_SALT_ROUNDS}, Recommended: 12-14`
+          `Current: ${BCRYPT_SALT_ROUNDS}, Recommended: 12-14`
       )
     }
   }
@@ -144,7 +145,9 @@ if (!SKIP_VALIDATION) {
     console.log('\n✅ Security configuration loaded successfully:')
     console.log(`   - JWT_SECRET: ${JWT_SECRET.substring(0, 10)}... (${JWT_SECRET.length} chars)`)
     console.log(`   - JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}`)
-    console.log(`   - ENCRYPTION_KEY: ${ENCRYPTION_KEY.substring(0, 10)}... (${ENCRYPTION_KEY.length} chars)`)
+    console.log(
+      `   - ENCRYPTION_KEY: ${ENCRYPTION_KEY.substring(0, 10)}... (${ENCRYPTION_KEY.length} chars)`
+    )
     console.log(`   - BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS}`)
     console.log(`   - NODE_ENV: ${NODE_ENV}`)
     console.log(`   - DATABASE_TYPE: ${DATABASE_TYPE}\n`)

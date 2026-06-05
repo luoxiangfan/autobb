@@ -24,20 +24,65 @@ const renamedSettings = [
     oldKey: 'primary_model',
     newCategory: 'ai',
     newKey: 'gemini_model',
-    newDescription: 'Gemini模型版本'
+    newDescription: 'Gemini模型版本',
   },
 ]
 
 // 需要添加的缺失配置
 const missingSettings = [
-  { category: 'proxy', key: 'url', dataType: 'string', isSensitive: 0, isRequired: 0, description: '代理服务API地址，必须包含cc、ips、proxyType=http、responseType=txt参数' },
-  { category: 'ai', key: 'gemini_model', dataType: 'string', isSensitive: 0, isRequired: 1, description: 'Gemini模型版本', defaultValue: 'gemini-2.5-pro' },
+  {
+    category: 'proxy',
+    key: 'url',
+    dataType: 'string',
+    isSensitive: 0,
+    isRequired: 0,
+    description: '代理服务API地址，必须包含cc、ips、proxyType=http、responseType=txt参数',
+  },
+  {
+    category: 'ai',
+    key: 'gemini_model',
+    dataType: 'string',
+    isSensitive: 0,
+    isRequired: 1,
+    description: 'Gemini模型版本',
+    defaultValue: 'gemini-2.5-pro',
+  },
 
   // Vertex AI配置项
-  { category: 'ai', key: 'use_vertex_ai', dataType: 'boolean', isSensitive: 0, isRequired: 0, description: '是否使用Vertex AI（优先于直接API）', defaultValue: 'false' },
-  { category: 'ai', key: 'gcp_project_id', dataType: 'string', isSensitive: 1, isRequired: 0, description: 'GCP项目ID（Vertex AI）' },
-  { category: 'ai', key: 'gcp_location', dataType: 'string', isSensitive: 0, isRequired: 0, description: 'GCP区域（Vertex AI）', defaultValue: 'us-central1' },
-  { category: 'ai', key: 'gcp_service_account_json', dataType: 'text', isSensitive: 1, isRequired: 0, description: 'GCP Service Account JSON（Vertex AI）' },
+  {
+    category: 'ai',
+    key: 'use_vertex_ai',
+    dataType: 'boolean',
+    isSensitive: 0,
+    isRequired: 0,
+    description: '是否使用Vertex AI（优先于直接API）',
+    defaultValue: 'false',
+  },
+  {
+    category: 'ai',
+    key: 'gcp_project_id',
+    dataType: 'string',
+    isSensitive: 1,
+    isRequired: 0,
+    description: 'GCP项目ID（Vertex AI）',
+  },
+  {
+    category: 'ai',
+    key: 'gcp_location',
+    dataType: 'string',
+    isSensitive: 0,
+    isRequired: 0,
+    description: 'GCP区域（Vertex AI）',
+    defaultValue: 'us-central1',
+  },
+  {
+    category: 'ai',
+    key: 'gcp_service_account_json',
+    dataType: 'text',
+    isSensitive: 1,
+    isRequired: 0,
+    description: 'GCP Service Account JSON（Vertex AI）',
+  },
 ]
 
 interface SettingRow {
@@ -114,7 +159,9 @@ try {
         rename.oldKey
       )
       if (result.changes > 0) {
-        console.log(`✅ 已重命名: ${rename.oldCategory}.${rename.oldKey} → ${rename.newCategory}.${rename.newKey}`)
+        console.log(
+          `✅ 已重命名: ${rename.oldCategory}.${rename.oldKey} → ${rename.newCategory}.${rename.newKey}`
+        )
         changesMade = true
       }
     }
@@ -122,12 +169,16 @@ try {
 
   // 4. 显示最终状态
   console.log('\n📊 清理后的配置项:')
-  const allSettings = db.prepare(`
+  const allSettings = db
+    .prepare(
+      `
     SELECT category, config_key, description
     FROM system_settings
     WHERE user_id IS NULL
     ORDER BY category, config_key
-  `).all()
+  `
+    )
+    .all()
 
   const groupedByCategory: Record<string, any[]> = {}
   for (const setting of allSettings as any[]) {
@@ -153,7 +204,6 @@ try {
   }
 
   console.log('\n💡 建议: 在设置页确认 system_settings 配置，或运行 npm run validate-schema')
-
 } catch (error) {
   console.error('❌ 清理失败:', error)
   process.exit(1)

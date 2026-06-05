@@ -45,16 +45,16 @@ export interface UrlSwapHealthStatus {
     totalSwaps: number
     successSwaps: number
     failedSwaps: number
-    successRate: number           // 成功率 (%)
-    averageSwapInterval: number   // 平均换链间隔 (分钟)
+    successRate: number // 成功率 (%)
+    averageSwapInterval: number // 平均换链间隔 (分钟)
   }
 
   // 异常任务
   issues: {
-    highFailureRate: UrlSwapTask[]        // 高失败率任务（> 50%）
-    stuckTasks: UrlSwapTask[]             // 卡住的任务（很久没有执行）
-    errorTasks: UrlSwapTask[]             // 错误状态的任务
-    domainChanges: UrlSwapTask[]          // 检测到域名变化的任务
+    highFailureRate: UrlSwapTask[] // 高失败率任务（> 50%）
+    stuckTasks: UrlSwapTask[] // 卡住的任务（很久没有执行）
+    errorTasks: UrlSwapTask[] // 错误状态的任务
+    domainChanges: UrlSwapTask[] // 检测到域名变化的任务
   }
 
   // 告警信息
@@ -85,11 +85,11 @@ function isTaskStuck(task: UrlSwapTask): boolean {
 
   const now = new Date()
   const nextSwapTime = new Date(task.next_swap_at)
-  const expectedInterval = task.swap_interval_minutes * 60 * 1000  // 转换为毫秒
+  const expectedInterval = task.swap_interval_minutes * 60 * 1000 // 转换为毫秒
 
   // 如果 next_swap_at 已经过期超过 2 倍间隔时间，认为任务卡住了
   const overdueMs = now.getTime() - nextSwapTime.getTime()
-  return overdueMs > (expectedInterval * 2)
+  return overdueMs > expectedInterval * 2
 }
 
 /**
@@ -142,20 +142,20 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
   `)
 
   // 解析任务（包括 swap_history 字段）
-  const parsedTasks: UrlSwapTask[] = tasks.map(row => ({
+  const parsedTasks: UrlSwapTask[] = tasks.map((row) => ({
     ...row,
     enabled: Boolean(row.enabled),
     is_deleted: Boolean(row.is_deleted),
-    swap_history: parseJsonField(row.swap_history, [])
+    swap_history: parseJsonField(row.swap_history, []),
   }))
 
   // 2. 统计基本信息
   const stats = {
     total: parsedTasks.length,
-    enabled: parsedTasks.filter(t => t.status === 'enabled').length,
-    disabled: parsedTasks.filter(t => t.status === 'disabled').length,
-    error: parsedTasks.filter(t => t.status === 'error').length,
-    completed: parsedTasks.filter(t => t.status === 'completed').length,
+    enabled: parsedTasks.filter((t) => t.status === 'enabled').length,
+    disabled: parsedTasks.filter((t) => t.status === 'disabled').length,
+    error: parsedTasks.filter((t) => t.status === 'error').length,
+    completed: parsedTasks.filter((t) => t.status === 'completed').length,
   }
 
   // 3. 计算性能指标
@@ -165,25 +165,29 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
   const successRate = totalSwaps > 0 ? (successSwaps / totalSwaps) * 100 : 100
 
   // 计算平均换链间隔
-  const activeTasksWithInterval = parsedTasks.filter(t => t.status === 'enabled' && t.swap_interval_minutes > 0)
-  const averageSwapInterval = activeTasksWithInterval.length > 0
-    ? activeTasksWithInterval.reduce((sum, t) => sum + t.swap_interval_minutes, 0) / activeTasksWithInterval.length
-    : 60
+  const activeTasksWithInterval = parsedTasks.filter(
+    (t) => t.status === 'enabled' && t.swap_interval_minutes > 0
+  )
+  const averageSwapInterval =
+    activeTasksWithInterval.length > 0
+      ? activeTasksWithInterval.reduce((sum, t) => sum + t.swap_interval_minutes, 0) /
+        activeTasksWithInterval.length
+      : 60
 
   const performance = {
     totalSwaps,
     successSwaps,
     failedSwaps,
     successRate: Math.round(successRate * 100) / 100,
-    averageSwapInterval: Math.round(averageSwapInterval)
+    averageSwapInterval: Math.round(averageSwapInterval),
   }
 
   // 4. 检测异常任务
   const issues = {
-    highFailureRate: parsedTasks.filter(t => calculateFailureRate(t) > 50 && t.total_swaps >= 3),
-    stuckTasks: parsedTasks.filter(t => isTaskStuck(t)),
-    errorTasks: parsedTasks.filter(t => t.status === 'error'),
-    domainChanges: parsedTasks.filter(t => hasDomainChange(t)),
+    highFailureRate: parsedTasks.filter((t) => calculateFailureRate(t) > 50 && t.total_swaps >= 3),
+    stuckTasks: parsedTasks.filter((t) => isTaskStuck(t)),
+    errorTasks: parsedTasks.filter((t) => t.status === 'error'),
+    domainChanges: parsedTasks.filter((t) => hasDomainChange(t)),
   }
 
   // 5. 生成告警
@@ -196,15 +200,12 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
       level: 'error',
       message: `任务 ${task.id.substring(0, 8)}... 失败率过高 (${failureRate.toFixed(1)}%)`,
       taskId: task.id,
-      timestamp: now
+      timestamp: now,
     })
 
     // 触发通知（可选：避免频繁通知，可以加上冷却期）
     try {
-      await notifySwapError(
-        task.id,
-        `任务失败率过高 (${failureRate.toFixed(1)}%)，请检查配置`
-      )
+      await notifySwapError(task.id, `任务失败率过高 (${failureRate.toFixed(1)}%)，请检查配置`)
     } catch (notifyError) {
       console.error(`Failed to send notification:`, notifyError)
     }
@@ -216,7 +217,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
       level: 'warning',
       message: `任务 ${task.id.substring(0, 8)}... 可能卡住，超过预期时间未执行`,
       taskId: task.id,
-      timestamp: now
+      timestamp: now,
     })
   }
 
@@ -226,7 +227,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
       level: 'error',
       message: `任务 ${task.id.substring(0, 8)}... 处于错误状态: ${task.error_message || '未知错误'}`,
       taskId: task.id,
-      timestamp: now
+      timestamp: now,
     })
   }
 
@@ -236,7 +237,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
       level: 'warning',
       message: `任务 ${task.id.substring(0, 8)}... 检测到域名变化，可能存在盗链风险`,
       taskId: task.id,
-      timestamp: now
+      timestamp: now,
     })
   }
 
@@ -248,7 +249,11 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
     overall = 'critical'
   }
   // 警告条件：成功率低于90%，或存在卡住的任务
-  else if (performance.successRate < 90 || issues.stuckTasks.length > 0 || issues.domainChanges.length > 0) {
+  else if (
+    performance.successRate < 90 ||
+    issues.stuckTasks.length > 0 ||
+    issues.domainChanges.length > 0
+  ) {
     overall = 'warning'
   }
 
@@ -259,7 +264,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
     stats,
     performance,
     issues,
-    alerts
+    alerts,
   }
 }
 
@@ -279,22 +284,28 @@ export async function autoFixStuckTask(taskId: string): Promise<boolean> {
   const now = new Date().toISOString()
 
   try {
-    const task = await db.queryOne<any>(`
+    const task = await db.queryOne<any>(
+      `
       SELECT * FROM url_swap_tasks WHERE id = ?
-    `, [taskId])
+    `,
+      [taskId]
+    )
 
     if (!task) return false
     if (task.status !== 'enabled') return false
 
     // 重置为立即执行
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET next_swap_at = ?,
           error_message = NULL,
           error_at = NULL,
           updated_at = ?
       WHERE id = ?
-    `, [now, now, taskId])
+    `,
+      [now, now, taskId]
+    )
 
     console.log(`✅ 已自动修复卡住的任务: ${taskId}`)
     return true
@@ -320,23 +331,27 @@ export async function autoDisableHighFailureTask(taskId: string): Promise<boolea
   const now = new Date().toISOString()
 
   try {
-    const task = await db.queryOne<any>(`
+    const task = await db.queryOne<any>(
+      `
       SELECT * FROM url_swap_tasks WHERE id = ?
-    `, [taskId])
+    `,
+      [taskId]
+    )
 
     if (!task) return false
 
-    const failureRate = task.total_swaps > 0
-      ? (task.failed_swaps / task.total_swaps) * 100
-      : 0
+    const failureRate = task.total_swaps > 0 ? (task.failed_swaps / task.total_swaps) * 100 : 0
 
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE url_swap_tasks
       SET status = 'disabled',
           error_message = ?,
           updated_at = ?
       WHERE id = ?
-    `, [`任务失败率过高 (${failureRate.toFixed(1)}%)，已自动禁用`, now, taskId])
+    `,
+      [`任务失败率过高 (${failureRate.toFixed(1)}%)，已自动禁用`, now, taskId]
+    )
 
     await pauseUrlSwapTargetsByTaskId(taskId)
 
@@ -410,7 +425,7 @@ export async function performHealthCheckAndAutoFix(): Promise<{
     health,
     fixed: {
       stuckTasks: stuckFixed,
-      disabledTasks: disabledCount
-    }
+      disabledTasks: disabledCount,
+    },
   }
 }

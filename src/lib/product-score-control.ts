@@ -4,7 +4,9 @@ const PRODUCT_SCORE_PAUSE_SETTING_KEY = 'product_score_calculation_paused'
 const PRODUCT_SCORE_PAUSE_SETTING_DESCRIPTION = '暂停商品推荐指数计算（用于控制AI token消耗）'
 
 function toBooleanLike(value: unknown): boolean {
-  const normalized = String(value ?? '').trim().toLowerCase()
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
   return ['1', 'true', 'yes', 'on'].includes(normalized)
 }
 

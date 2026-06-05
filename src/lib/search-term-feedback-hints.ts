@@ -86,7 +86,7 @@ const DEFAULT_FALLBACK_CPC_BY_CURRENCY: Record<string, number> = {
   SAR: 3.6,
   TRY: 32,
   RUB: 90,
-  ZAR: 16
+  ZAR: 16,
 }
 
 const BRAND_PRODUCT_FAMILY_ALIAS_MAP: Record<string, string[]> = {
@@ -114,7 +114,9 @@ function percentile(values: number[], p: number): number {
 }
 
 function resolveFallbackCpcByCurrency(currency: string): number {
-  const normalized = String(currency || 'USD').trim().toUpperCase()
+  const normalized = String(currency || 'USD')
+    .trim()
+    .toUpperCase()
   return DEFAULT_FALLBACK_CPC_BY_CURRENCY[normalized] || DEFAULT_FALLBACK_CPC_BY_CURRENCY.USD
 }
 
@@ -148,44 +150,27 @@ function buildAdaptiveThresholds(
 
   const softMinCpc = round2(
     Math.max(
-      medianCpc > 0
-        ? Math.max(p75Cpc, medianCpc * 1.15)
-        : fallbackCpc * 1.2,
+      medianCpc > 0 ? Math.max(p75Cpc, medianCpc * 1.15) : fallbackCpc * 1.2,
       fallbackCpc * 0.8
     )
   )
 
   const hardMinCpc = round2(
     Math.max(
-      medianCpc > 0
-        ? Math.max(p90Cpc, medianCpc * 1.45)
-        : fallbackCpc * 1.7,
+      medianCpc > 0 ? Math.max(p90Cpc, medianCpc * 1.45) : fallbackCpc * 1.7,
       softMinCpc * 1.15
     )
   )
 
-  const softMinCost = round2(
-    Math.max(
-      SOFT_MIN_CLICKS * softMinCpc,
-      fallbackCpc * SOFT_MIN_CLICKS
-    )
-  )
+  const softMinCost = round2(Math.max(SOFT_MIN_CLICKS * softMinCpc, fallbackCpc * SOFT_MIN_CLICKS))
 
   const hardMinCost = round2(
-    Math.max(
-      HARD_MIN_CLICKS * hardMinCpc,
-      fallbackCpc * HARD_MIN_CLICKS,
-      softMinCost * 1.4
-    )
+    Math.max(HARD_MIN_CLICKS * hardMinCpc, fallbackCpc * HARD_MIN_CLICKS, softMinCost * 1.4)
   )
 
-  const softMaxCtr = medianCtr > 0
-    ? clamp(medianCtr * 0.65, 0.006, 0.03)
-    : SOFT_MAX_CTR
+  const softMaxCtr = medianCtr > 0 ? clamp(medianCtr * 0.65, 0.006, 0.03) : SOFT_MAX_CTR
 
-  const hardMaxCtr = medianCtr > 0
-    ? clamp(medianCtr * 0.45, 0.004, softMaxCtr * 0.9)
-    : HARD_MAX_CTR
+  const hardMaxCtr = medianCtr > 0 ? clamp(medianCtr * 0.45, 0.004, softMaxCtr * 0.9) : HARD_MAX_CTR
 
   return {
     hardMinClicks: HARD_MIN_CLICKS,
@@ -198,7 +183,7 @@ function buildAdaptiveThresholds(
     softMaxCtr,
     medianCpc: round2(medianCpc),
     medianCtr: round2(medianCtr),
-    dominantCurrency
+    dominantCurrency,
   }
 }
 
@@ -242,7 +227,11 @@ function isBrandRelatedSearchTerm(term: string, pureBrandKeywords: string[]): bo
   return false
 }
 
-function filterBrandRelatedTerms(terms: string[], pureBrandKeywords: string[], maxTerms?: number): string[] {
+function filterBrandRelatedTerms(
+  terms: string[],
+  pureBrandKeywords: string[],
+  maxTerms?: number
+): string[] {
   const seen = new Set<string>()
   const filtered: string[] = []
   const hardCap = typeof maxTerms === 'number' ? Math.max(1, maxTerms) : Number.POSITIVE_INFINITY
@@ -263,7 +252,11 @@ function filterBrandRelatedTerms(terms: string[], pureBrandKeywords: string[], m
   return filtered
 }
 
-function mergeTermsWithCap(base: string[], additions: string[], maxTerms: number): {
+function mergeTermsWithCap(
+  base: string[],
+  additions: string[],
+  maxTerms: number
+): {
   merged: string[]
   addedCount: number
 } {
@@ -306,7 +299,9 @@ export function classifySearchTermFeedbackTerms(
   }
 ): SearchTermFeedbackClassifyResult {
   const maxTerms = Math.max(5, Math.min(100, params?.maxTerms ?? DEFAULT_MAX_TERMS))
-  const dominantCurrency = String(params?.dominantCurrency || 'USD').trim().toUpperCase()
+  const dominantCurrency = String(params?.dominantCurrency || 'USD')
+    .trim()
+    .toUpperCase()
   const thresholds = buildAdaptiveThresholds(rows, dominantCurrency)
 
   const hardNegativeTerms: string[] = []
@@ -326,9 +321,7 @@ export function classifySearchTermFeedbackTerms(
     const conversionRate = clicks > 0 ? conversions / clicks : 0
 
     // 🆕 High performing: strong CTR and conversion signals
-    const highByCtr =
-      clicks >= HIGH_PERFORMING_MIN_CLICKS &&
-      ctr >= HIGH_PERFORMING_MIN_CTR
+    const highByCtr = clicks >= HIGH_PERFORMING_MIN_CLICKS && ctr >= HIGH_PERFORMING_MIN_CTR
     const highByConversion =
       conversions >= HIGH_PERFORMING_MIN_CONVERSIONS &&
       conversionRate >= HIGH_PERFORMING_MIN_CONVERSION_RATE
@@ -366,10 +359,11 @@ export function classifySearchTermFeedbackTerms(
     }
   }
 
-  const dedupe = (list: string[]) => Array.from(new Set(list.map(sanitizeSearchTerm))).filter(isUsableSearchTerm)
+  const dedupe = (list: string[]) =>
+    Array.from(new Set(list.map(sanitizeSearchTerm))).filter(isUsableSearchTerm)
   const hard = dedupe(hardNegativeTerms).slice(0, maxTerms)
   const soft = dedupe(softSuppressTerms)
-    .filter(term => !hard.includes(term))
+    .filter((term) => !hard.includes(term))
     .slice(0, maxTerms)
   const high = dedupe(highPerformingTerms).slice(0, maxTerms)
 
@@ -377,7 +371,7 @@ export function classifySearchTermFeedbackTerms(
     hardNegativeTerms: hard,
     softSuppressTerms: soft,
     highPerformingTerms: high,
-    sourceRows: rows.length
+    sourceRows: rows.length,
   }
 }
 
@@ -397,7 +391,10 @@ async function getUserBrandLevelHighPerformingTerms(params: {
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
-  const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? 'COALESCE(c.is_deleted, FALSE) = FALSE'
+      : 'COALESCE(c.is_deleted, 0) = 0'
 
   const rows = await db.query<SearchTermFeedbackAggregateRow>(
     `SELECT
@@ -418,7 +415,13 @@ async function getUserBrandLevelHighPerformingTerms(params: {
      GROUP BY str.search_term
      HAVING SUM(str.clicks) >= ${HIGH_PERFORMING_MIN_CLICKS}
      ORDER BY SUM(str.clicks) DESC`,
-    [params.userId, params.brandName, params.excludeOfferId, params.targetCountry || null, params.targetLanguage || null]
+    [
+      params.userId,
+      params.brandName,
+      params.excludeOfferId,
+      params.targetCountry || null,
+      params.targetLanguage || null,
+    ]
   )
 
   const terms: string[] = []
@@ -434,7 +437,9 @@ async function getUserBrandLevelHighPerformingTerms(params: {
     const conversionRate = clicks > 0 ? conversions / clicks : 0
 
     const highByCtr = clicks >= HIGH_PERFORMING_MIN_CLICKS && ctr >= HIGH_PERFORMING_MIN_CTR
-    const highByConversion = conversions >= HIGH_PERFORMING_MIN_CONVERSIONS && conversionRate >= HIGH_PERFORMING_MIN_CONVERSION_RATE
+    const highByConversion =
+      conversions >= HIGH_PERFORMING_MIN_CONVERSIONS &&
+      conversionRate >= HIGH_PERFORMING_MIN_CONVERSION_RATE
 
     if (highByCtr || highByConversion) {
       terms.push(term)
@@ -455,23 +460,29 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
   targetLanguage?: string
   maxTerms?: number
   minUsers?: number
-}): Promise<Array<{
-  term: string
-  userCount: number
-  avgCtr: number
-  totalClicks: number
-}>> {
+}): Promise<
+  Array<{
+    term: string
+    userCount: number
+    avgCtr: number
+    totalClicks: number
+  }>
+> {
   const db = await getDatabase()
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
   const minUsers = Math.max(1, params.minUsers ?? 1)
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
-  const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? 'COALESCE(c.is_deleted, FALSE) = FALSE'
+      : 'COALESCE(c.is_deleted, 0) = 0'
 
   // 聚合查询：计算平均 CTR 和用户数
-  const avgCtrExpr = db.type === 'postgres'
-    ? 'AVG(str.clicks::float / NULLIF(str.impressions, 0))'
-    : 'AVG(CAST(str.clicks AS REAL) / NULLIF(str.impressions, 0))'
+  const avgCtrExpr =
+    db.type === 'postgres'
+      ? 'AVG(str.clicks::float / NULLIF(str.impressions, 0))'
+      : 'AVG(CAST(str.clicks AS REAL) / NULLIF(str.impressions, 0))'
 
   const rows = await db.query<{
     search_term: string
@@ -499,18 +510,24 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
        AND ${avgCtrExpr} >= ${HIGH_PERFORMING_MIN_CTR}
      ORDER BY user_count DESC, avg_ctr DESC
      LIMIT ?`,
-    [params.brandName, params.targetCountry || null, params.targetLanguage || null, minUsers, maxTerms]
+    [
+      params.brandName,
+      params.targetCountry || null,
+      params.targetLanguage || null,
+      minUsers,
+      maxTerms,
+    ]
   )
 
   return rows
-    .map(row => ({
+    .map((row) => ({
       term: sanitizeSearchTerm(row.search_term),
       userCount: Number(row.user_count || 0),
       avgCtr: Number(row.avg_ctr || 0),
-      totalClicks: Number(row.total_clicks || 0)
+      totalClicks: Number(row.total_clicks || 0),
     }))
-    .filter(item => isUsableSearchTerm(item.term))
-    .filter(item => isBrandRelatedSearchTerm(item.term, pureBrandKeywords))
+    .filter((item) => isUsableSearchTerm(item.term))
+    .filter((item) => isBrandRelatedSearchTerm(item.term, pureBrandKeywords))
 }
 
 /**
@@ -532,13 +549,20 @@ export async function getSearchTermFeedbackHints(params: {
   const lookbackDays = 0
   const maxTerms = Math.max(5, Math.min(100, params.maxTerms ?? DEFAULT_MAX_TERMS))
 
-  const isDeletedCondition = db.type === 'postgres' ? 'COALESCE(c.is_deleted, FALSE) = FALSE' : 'COALESCE(c.is_deleted, 0) = 0'
+  const isDeletedCondition =
+    db.type === 'postgres'
+      ? 'COALESCE(c.is_deleted, FALSE) = FALSE'
+      : 'COALESCE(c.is_deleted, 0) = 0'
 
   // 获取 Offer 信息（用于品牌级别回退）
-  const offer = await db.queryOne<{ brand: string; target_country: string; target_language: string | null }>(
-    'SELECT brand, target_country, target_language FROM offers WHERE id = ? AND user_id = ?',
-    [params.offerId, params.userId]
-  )
+  const offer = await db.queryOne<{
+    brand: string
+    target_country: string
+    target_language: string | null
+  }>('SELECT brand, target_country, target_language FROM offers WHERE id = ? AND user_id = ?', [
+    params.offerId,
+    params.userId,
+  ])
 
   if (!offer) {
     throw new Error(`Offer ${params.offerId} not found for user ${params.userId}`)
@@ -557,7 +581,9 @@ export async function getSearchTermFeedbackHints(params: {
      ORDER BY COUNT(*) DESC`,
     [params.userId, params.offerId]
   )
-  const dominantCurrency = String(currencyRows[0]?.currency || 'USD').trim().toUpperCase()
+  const dominantCurrency = String(currencyRows[0]?.currency || 'USD')
+    .trim()
+    .toUpperCase()
 
   // 🎯 阶段1: Offer 级别数据（最精准）
   const rows = await db.query<SearchTermFeedbackAggregateRow>(
@@ -579,7 +605,7 @@ export async function getSearchTermFeedbackHints(params: {
   )
   const classified = classifySearchTermFeedbackTerms(rows, {
     dominantCurrency,
-    maxTerms
+    maxTerms,
   })
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand || '')
@@ -601,7 +627,7 @@ export async function getSearchTermFeedbackHints(params: {
         excludeOfferId: params.offerId,
         targetCountry: offer.target_country,
         targetLanguage: offer.target_language || undefined,
-        maxTerms: maxTerms
+        maxTerms: maxTerms,
       }),
       pureBrandKeywords
     )
@@ -620,9 +646,9 @@ export async function getSearchTermFeedbackHints(params: {
           targetCountry: offer.target_country,
           targetLanguage: offer.target_language || undefined,
           maxTerms: maxTerms,
-          minUsers: 1 // 品牌全局优先：不按用户数做硬门槛
+          minUsers: 1, // 品牌全局优先：不按用户数做硬门槛
         })
-      ).map(item => item.term),
+      ).map((item) => item.term),
       pureBrandKeywords,
       maxTerms
     )
@@ -660,6 +686,6 @@ export async function getSearchTermFeedbackHints(params: {
     softSuppressTerms: classified.softSuppressTerms,
     highPerformingTerms,
     lookbackDays,
-    sourceRows: classified.sourceRows
+    sourceRows: classified.sourceRows,
   }
 }

@@ -108,313 +108,313 @@ export const ErrorMessages: Record<ErrorCode, { zh: string; en: string; httpStat
   [ErrorCode.AUTH_UNAUTHORIZED]: {
     zh: '未授权，请先登录',
     en: 'Unauthorized, please login first',
-    httpStatus: 401
+    httpStatus: 401,
   },
   [ErrorCode.AUTH_TOKEN_EXPIRED]: {
     zh: '登录已过期，请重新登录',
     en: 'Token expired, please login again',
-    httpStatus: 401
+    httpStatus: 401,
   },
   [ErrorCode.AUTH_TOKEN_INVALID]: {
     zh: '登录令牌无效',
     en: 'Invalid token',
-    httpStatus: 401
+    httpStatus: 401,
   },
   [ErrorCode.AUTH_SESSION_EXPIRED]: {
     zh: '会话已过期',
     en: 'Session expired',
-    httpStatus: 401
+    httpStatus: 401,
   },
   [ErrorCode.AUTH_CREDENTIALS_INVALID]: {
     zh: '用户名或密码错误',
     en: 'Invalid credentials',
-    httpStatus: 401
+    httpStatus: 401,
   },
 
   // 权限错误
   [ErrorCode.PERM_ACCESS_DENIED]: {
     zh: '访问被拒绝',
     en: 'Access denied',
-    httpStatus: 403
+    httpStatus: 403,
   },
   [ErrorCode.PERM_RESOURCE_NOT_OWNED]: {
     zh: '无权访问该资源',
     en: 'Resource not owned',
-    httpStatus: 403
+    httpStatus: 403,
   },
   [ErrorCode.PERM_INSUFFICIENT_PRIVILEGES]: {
     zh: '权限不足',
     en: 'Insufficient privileges',
-    httpStatus: 403
+    httpStatus: 403,
   },
   [ErrorCode.PERM_ACCOUNT_SUSPENDED]: {
     zh: '账号已被暂停',
     en: 'Account suspended',
-    httpStatus: 403
+    httpStatus: 403,
   },
 
   // Offer错误
   [ErrorCode.OFFER_NOT_FOUND]: {
     zh: 'Offer不存在',
     en: 'Offer not found',
-    httpStatus: 404
+    httpStatus: 404,
   },
   [ErrorCode.OFFER_INVALID_ID]: {
     zh: '无效的Offer ID',
     en: 'Invalid Offer ID',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.OFFER_SCRAPE_FAILED]: {
     zh: '数据抓取失败',
     en: 'Data scraping failed',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.OFFER_SCRAPE_INCOMPLETE]: {
     zh: '数据抓取未完成，请稍后再试',
     en: 'Data scraping incomplete, please try later',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.OFFER_URL_INVALID]: {
     zh: '无效的URL',
     en: 'Invalid URL',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.OFFER_DUPLICATE]: {
     zh: 'Offer已存在',
     en: 'Offer already exists',
-    httpStatus: 409
+    httpStatus: 409,
   },
 
   // Google Ads错误
   [ErrorCode.GADS_API_ERROR]: {
     zh: 'Google Ads API错误',
     en: 'Google Ads API error',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.GADS_RATE_LIMITED]: {
     zh: 'API请求频率超限，请稍后再试',
     en: 'Rate limit exceeded, please try later',
-    httpStatus: 429
+    httpStatus: 429,
   },
   [ErrorCode.GADS_ACCOUNT_NOT_FOUND]: {
     zh: 'Google Ads账号不存在',
     en: 'Google Ads account not found',
-    httpStatus: 404
+    httpStatus: 404,
   },
   [ErrorCode.GADS_ACCOUNT_SUSPENDED]: {
     zh: 'Google Ads账号已被暂停',
     en: 'Google Ads account suspended',
-    httpStatus: 403
+    httpStatus: 403,
   },
   [ErrorCode.GADS_CREDENTIALS_EXPIRED]: {
     zh: 'Google Ads授权已过期，请重新连接',
     en: 'Google Ads credentials expired, please reconnect',
-    httpStatus: 401
+    httpStatus: 401,
   },
   [ErrorCode.GADS_CREDENTIALS_INVALID]: {
     zh: 'Google Ads凭证无效',
     en: 'Invalid Google Ads credentials',
-    httpStatus: 401
+    httpStatus: 401,
   },
   [ErrorCode.GADS_QUOTA_EXCEEDED]: {
     zh: 'Google Ads API配额已用尽',
     en: 'Google Ads API quota exceeded',
-    httpStatus: 429
+    httpStatus: 429,
   },
   [ErrorCode.GADS_CAMPAIGN_NOT_FOUND]: {
     zh: '广告系列不存在',
     en: 'Campaign not found',
-    httpStatus: 404
+    httpStatus: 404,
   },
   [ErrorCode.GADS_CAMPAIGN_CREATE_FAILED]: {
     zh: '创建广告系列失败',
     en: 'Failed to create campaign',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.GADS_BUDGET_EXCEEDED]: {
     zh: '预算超出限制',
     en: 'Budget exceeded',
-    httpStatus: 400
+    httpStatus: 400,
   },
 
   // 广告创意错误
   [ErrorCode.CREA_NOT_FOUND]: {
     zh: '广告创意不存在',
     en: 'Ad creative not found',
-    httpStatus: 404
+    httpStatus: 404,
   },
   [ErrorCode.CREA_GENERATION_FAILED]: {
     zh: '广告创意生成失败',
     en: 'Ad creative generation failed',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.CREA_AI_UNAVAILABLE]: {
     zh: 'AI服务暂时不可用',
     en: 'AI service unavailable',
-    httpStatus: 503
+    httpStatus: 503,
   },
   [ErrorCode.CREA_INVALID_THEME]: {
     zh: '无效的广告主题',
     en: 'Invalid ad theme',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.CREA_SCORE_TOO_LOW]: {
     zh: '广告创意评分过低，请重新生成',
     en: 'Creative score too low, please regenerate',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.CREA_MAX_ATTEMPTS_REACHED]: {
     zh: '已达到最大生成次数（5次）',
     en: 'Maximum generation attempts reached (5)',
-    httpStatus: 400
+    httpStatus: 400,
   },
 
   // 广告系列错误
   [ErrorCode.CAMP_NOT_FOUND]: {
     zh: '广告系列不存在',
     en: 'Campaign not found',
-    httpStatus: 404
+    httpStatus: 404,
   },
   [ErrorCode.CAMP_CREATE_FAILED]: {
     zh: '创建广告系列失败',
     en: 'Failed to create campaign',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.CAMP_UPDATE_FAILED]: {
     zh: '更新广告系列失败',
     en: 'Failed to update campaign',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.CAMP_PAUSE_FAILED]: {
     zh: '暂停广告系列失败',
     en: 'Failed to pause campaign',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.CAMP_DELETE_FAILED]: {
     zh: '删除广告系列失败',
     en: 'Failed to delete campaign',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.CAMP_INVALID_STATUS]: {
     zh: '无效的广告系列状态',
     en: 'Invalid campaign status',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.CAMP_BUDGET_INVALID]: {
     zh: '预算金额无效',
     en: 'Invalid budget amount',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.TEST_NOT_FOUND]: {
     zh: 'A/B测试不存在',
     en: 'AB test not found',
-    httpStatus: 404
+    httpStatus: 404,
   },
   [ErrorCode.TEST_CREATE_FAILED]: {
     zh: '创建A/B测试失败',
     en: 'Failed to create AB test',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.TEST_INVALID_STATUS]: {
     zh: '无效的测试状态',
     en: 'Invalid test status',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.CAMP_ADS_ACCOUNT_ALREADY_LINKED]: {
     zh: 'Google Ads账号已被其他Offer占用',
     en: 'Google Ads account is already linked to another offer',
-    httpStatus: 409
+    httpStatus: 409,
   },
 
   // 数据同步错误
   [ErrorCode.SYNC_FAILED]: {
     zh: '数据同步失败',
     en: 'Data synchronization failed',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.SYNC_TIMEOUT]: {
     zh: '数据同步超时',
     en: 'Synchronization timeout',
-    httpStatus: 504
+    httpStatus: 504,
   },
   [ErrorCode.SYNC_PARTIAL_FAILURE]: {
     zh: '部分数据同步失败',
     en: 'Partial synchronization failure',
-    httpStatus: 207
+    httpStatus: 207,
   },
   [ErrorCode.SYNC_NO_ACCOUNTS]: {
     zh: '没有可同步的账号',
     en: 'No accounts to synchronize',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.SYNC_ALREADY_RUNNING]: {
     zh: '同步任务正在进行中',
     en: 'Synchronization already running',
-    httpStatus: 409
+    httpStatus: 409,
   },
 
   // 系统错误
   [ErrorCode.SYS_INTERNAL_ERROR]: {
     zh: '系统内部错误',
     en: 'Internal server error',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.SYS_DATABASE_ERROR]: {
     zh: '数据库错误',
     en: 'Database error',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.SYS_NETWORK_ERROR]: {
     zh: '网络错误',
     en: 'Network error',
-    httpStatus: 500
+    httpStatus: 500,
   },
   [ErrorCode.SYS_SERVICE_UNAVAILABLE]: {
     zh: '服务暂时不可用',
     en: 'Service unavailable',
-    httpStatus: 503
+    httpStatus: 503,
   },
   [ErrorCode.SYS_TIMEOUT]: {
     zh: '请求超时',
     en: 'Request timeout',
-    httpStatus: 504
+    httpStatus: 504,
   },
   [ErrorCode.SYS_CONFIG_MISSING]: {
     zh: '系统配置缺失',
     en: 'Missing system configuration',
-    httpStatus: 500
+    httpStatus: 500,
   },
 
   // 数据验证错误
   [ErrorCode.VAL_REQUIRED_FIELD]: {
     zh: '必填字段缺失',
     en: 'Required field missing',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.VAL_INVALID_FORMAT]: {
     zh: '数据格式无效',
     en: 'Invalid data format',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.VAL_OUT_OF_RANGE]: {
     zh: '数值超出范围',
     en: 'Value out of range',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.VAL_TOO_SHORT]: {
     zh: '内容过短',
     en: 'Content too short',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.VAL_TOO_LONG]: {
     zh: '内容过长',
     en: 'Content too long',
-    httpStatus: 400
+    httpStatus: 400,
   },
   [ErrorCode.VAL_INVALID_TYPE]: {
     zh: '数据类型无效',
     en: 'Invalid data type',
-    httpStatus: 400
+    httpStatus: 400,
   },
 }
 
@@ -427,11 +427,7 @@ export class AppError extends Error {
   public readonly details?: any
   public readonly timestamp: Date
 
-  constructor(
-    code: ErrorCode,
-    details?: any,
-    message?: string
-  ) {
+  constructor(code: ErrorCode, details?: any, message?: string) {
     const errorInfo = ErrorMessages[code]
     super(message || errorInfo.zh)
 
@@ -468,8 +464,8 @@ export class AppError extends Error {
         code: this.code,
         message: lang === 'zh' ? this.getChineseMessage() : this.getEnglishMessage(),
         details: this.details,
-        timestamp: this.timestamp.toISOString()
-      }
+        timestamp: this.timestamp.toISOString(),
+      },
     }
   }
 
@@ -482,7 +478,7 @@ export class AppError extends Error {
       ErrorCode.GADS_API_ERROR,
       ErrorCode.SYS_NETWORK_ERROR,
       ErrorCode.SYS_TIMEOUT,
-      ErrorCode.SYNC_TIMEOUT
+      ErrorCode.SYNC_TIMEOUT,
     ]
 
     return retryableCodes.includes(this.code)
@@ -528,15 +524,18 @@ export const createError = {
   gadsRateLimited: (details?: any) => new AppError(ErrorCode.GADS_RATE_LIMITED, details),
   gadsAccountNotFound: (details?: any) => new AppError(ErrorCode.GADS_ACCOUNT_NOT_FOUND, details),
   gadsAccountNotActive: (details?: any) => new AppError(ErrorCode.GADS_ACCOUNT_NOT_FOUND, details),
-  gadsCredentialsExpired: (details?: any) => new AppError(ErrorCode.GADS_CREDENTIALS_EXPIRED, details),
+  gadsCredentialsExpired: (details?: any) =>
+    new AppError(ErrorCode.GADS_CREDENTIALS_EXPIRED, details),
 
   // 广告创意错误
   creativeNotFound: (details?: any) => new AppError(ErrorCode.CREA_NOT_FOUND, details),
   creationFailed: (details?: any) => new AppError(ErrorCode.CREA_GENERATION_FAILED, details),
   aiUnavailable: (details?: any) => new AppError(ErrorCode.CREA_AI_UNAVAILABLE, details),
   aiConfigNotSet: (details?: any) => new AppError(ErrorCode.CREA_AI_UNAVAILABLE, details),
-  creativeQuotaExceeded: (details?: any) => new AppError(ErrorCode.CREA_MAX_ATTEMPTS_REACHED, details),
-  creativeGenerationFailed: (details?: any) => new AppError(ErrorCode.CREA_GENERATION_FAILED, details),
+  creativeQuotaExceeded: (details?: any) =>
+    new AppError(ErrorCode.CREA_MAX_ATTEMPTS_REACHED, details),
+  creativeGenerationFailed: (details?: any) =>
+    new AppError(ErrorCode.CREA_GENERATION_FAILED, details),
 
   // 广告系列错误
   campaignNotFound: (details?: any) => new AppError(ErrorCode.CAMP_NOT_FOUND, details),
@@ -545,7 +544,8 @@ export const createError = {
   campaignPauseFailed: (details?: any) => new AppError(ErrorCode.CAMP_PAUSE_FAILED, details),
   campaignDeleteFailed: (details?: any) => new AppError(ErrorCode.CAMP_DELETE_FAILED, details),
   invalidCampaignStatus: (details?: any) => new AppError(ErrorCode.CAMP_INVALID_STATUS, details),
-  adsAccountAlreadyLinked: (details?: any) => new AppError(ErrorCode.CAMP_ADS_ACCOUNT_ALREADY_LINKED, details),
+  adsAccountAlreadyLinked: (details?: any) =>
+    new AppError(ErrorCode.CAMP_ADS_ACCOUNT_ALREADY_LINKED, details),
   testNotFound: (details?: any) => new AppError(ErrorCode.TEST_NOT_FOUND, details),
   testCreateFailed: (details?: any) => new AppError(ErrorCode.TEST_CREATE_FAILED, details),
   invalidTestStatus: (details?: any) => new AppError(ErrorCode.TEST_INVALID_STATUS, details),
@@ -565,8 +565,7 @@ export const createError = {
     new AppError(ErrorCode.VAL_REQUIRED_FIELD, { field: fieldName }),
   invalidFormat: (fieldName: string, expected?: string) =>
     new AppError(ErrorCode.VAL_INVALID_FORMAT, { field: fieldName, expected }),
-  invalidParameter: (details?: any) =>
-    new AppError(ErrorCode.VAL_INVALID_FORMAT, details),
+  invalidParameter: (details?: any) => new AppError(ErrorCode.VAL_INVALID_FORMAT, details),
   outOfRange: (fieldName: string, min?: number, max?: number) =>
     new AppError(ErrorCode.VAL_OUT_OF_RANGE, { field: fieldName, min, max }),
 }

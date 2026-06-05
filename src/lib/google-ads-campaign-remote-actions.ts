@@ -3,10 +3,7 @@ import {
   preparedAuthContextField,
 } from './google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
-import {
-  removeGoogleAdsCampaign,
-  updateGoogleAdsCampaignStatus,
-} from './google-ads-api'
+import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from './google-ads-api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from './google-ads-account-delete-config'
 import { runWithConcurrency, withTimeout } from './run-with-concurrency'
 
@@ -70,9 +67,7 @@ export interface ExecuteGoogleAdsCampaignRemoteActionsParams {
   }
   remoteConfig?: ReturnType<typeof getGoogleAdsAccountDeleteRemoteConfig>
   /** 单项远端操作完成时回调（用于同步本地状态，如 Offer 删除） */
-  onCampaignOutcome?: (
-    event: GoogleAdsCampaignRemoteActionOutcomeEvent
-  ) => void | Promise<void>
+  onCampaignOutcome?: (event: GoogleAdsCampaignRemoteActionOutcomeEvent) => void | Promise<void>
 }
 
 function resolveAccountEligibility(
@@ -182,8 +177,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
     const refreshToken = prepared.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
     const oauthCredentials = prepared.oauthCredentials
-    const oauthLoginCustomerId =
-      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     summary.executed = true
 
@@ -252,7 +246,9 @@ export async function executeGoogleAdsCampaignRemoteActions(
         }
       }
 
-      const runWithLoginFallback = (action: (loginCustomerId: string | undefined) => Promise<void>) =>
+      const runWithLoginFallback = (
+        action: (loginCustomerId: string | undefined) => Promise<void>
+      ) =>
         runWithLoginCustomerFallbackForAccount({
           adsAccount: {
             customer_id: adsAccount.customer_id!,

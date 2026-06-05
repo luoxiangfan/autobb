@@ -1,11 +1,11 @@
 /**
  * Google Ads 广告系列同步服务
- * 
+ *
  * 功能：
  * 1. 定时从 Google Ads 账户同步广告系列到数据库
  * 2. 为每个同步的广告系列创建关联的 Offer
  * 3. 标记这些 Offer 需要完善相关信息
- * 
+ *
  * @module google-ads-campaign-sync
  */
 
@@ -115,7 +115,7 @@ export interface SyncResult {
   syncedCount: number
   createdOffersCount: number
   updatedOffersCount: number
-  skippedOffersCount: number  // 已有关联 Offer，跳过创建/更新
+  skippedOffersCount: number // 已有关联 Offer，跳过创建/更新
   errors: Array<{
     campaignId: string
     campaignName: string
@@ -139,13 +139,10 @@ export function resolveGoogleAdsCampaignSyncLogOutcome(result: SyncResult): {
   status: 'success' | 'partial' | 'failed'
   errorMessage: string | null
 } {
-  const warningText =
-    result.warnings.length > 0 ? result.warnings.join('; ') : null
+  const warningText = result.warnings.length > 0 ? result.warnings.join('; ') : null
 
   if (result.errors.length > 0) {
-    const errorParts = result.errors
-      .slice(0, 3)
-      .map((e) => `${e.campaignName}: ${e.error}`)
+    const errorParts = result.errors.slice(0, 3).map((e) => `${e.campaignName}: ${e.error}`)
     if (warningText) {
       errorParts.push(warningText)
     }
@@ -182,153 +179,153 @@ interface CampaignSyncAuditInsert {
 }
 
 export const LanguageCodeMap = {
-    'en': 1000,      // English
-    'zh': 1017,      // Chinese (Simplified)
-    'zh-cn': 1017,   // Chinese (Simplified)
-    'zh-tw': 1018,   // Chinese (Traditional)
-    'ja': 1005,      // Japanese
-    'de': 1001,      // German
-    'fr': 1002,      // French
-    'es': 1003,      // Spanish
-    'it': 1004,      // Italian
-    'ko': 1012,      // Korean
-    'ru': 1031,      // Russian
-    'pt': 1014,      // Portuguese
-    'ar': 1019,      // Arabic
-    'hi': 1023,      // Hindi
-    'nl': 1020,      // Dutch
-    'th': 1033,      // Thai
-    'vi': 1044,      // Vietnamese
-    'tr': 1037,      // Turkish
-    'sv': 1032,      // Swedish
-    'da': 1009,      // Danish
-    'fi': 1011,      // Finnish
-    'no': 1013,      // Norwegian
-    'pl': 1021,      // Polish
-    'cs': 1008,      // Czech
-    'hu': 1024,      // Hungarian
-    'el': 1022,      // Greek
-    'he': 1025,      // Hebrew
-    'id': 1027,      // Indonesian
-    'ms': 1019,      // Malay
-    'tl': 1034,      // Tagalog
+  en: 1000, // English
+  zh: 1017, // Chinese (Simplified)
+  'zh-cn': 1017, // Chinese (Simplified)
+  'zh-tw': 1018, // Chinese (Traditional)
+  ja: 1005, // Japanese
+  de: 1001, // German
+  fr: 1002, // French
+  es: 1003, // Spanish
+  it: 1004, // Italian
+  ko: 1012, // Korean
+  ru: 1031, // Russian
+  pt: 1014, // Portuguese
+  ar: 1019, // Arabic
+  hi: 1023, // Hindi
+  nl: 1020, // Dutch
+  th: 1033, // Thai
+  vi: 1044, // Vietnamese
+  tr: 1037, // Turkish
+  sv: 1032, // Swedish
+  da: 1009, // Danish
+  fi: 1011, // Finnish
+  no: 1013, // Norwegian
+  pl: 1021, // Polish
+  cs: 1008, // Czech
+  hu: 1024, // Hungarian
+  el: 1022, // Greek
+  he: 1025, // Hebrew
+  id: 1027, // Indonesian
+  ms: 1019, // Malay
+  tl: 1034, // Tagalog
 }
 
 export const languageMap: { [key: string]: string } = {
-  'english': 'en',
+  english: 'en',
   'chinese (simplified)': 'zh-cn',
   'chinese (traditional)': 'zh-tw',
-  'chinese': 'zh',
-  'spanish': 'es',
-  'french': 'fr',
-  'german': 'de',
-  'japanese': 'ja',
-  'korean': 'ko',
-  'portuguese': 'pt',
-  'italian': 'it',
-  'russian': 'ru',
-  'arabic': 'ar',
-  'hindi': 'hi',
-  'dutch': 'nl',
-  'thai': 'th',
-  'vietnamese': 'vi',
-  'turkish': 'tr',
-  'swedish': 'sv',
-  'danish': 'da',
-  'finnish': 'fi',
-  'norwegian': 'no',
-  'polish': 'pl',
-  'czech': 'cs',
-  'hungarian': 'hu',
-  'greek': 'el',
-  'hebrew': 'he',
-  'indonesian': 'id',
-  'malay': 'ms',
+  chinese: 'zh',
+  spanish: 'es',
+  french: 'fr',
+  german: 'de',
+  japanese: 'ja',
+  korean: 'ko',
+  portuguese: 'pt',
+  italian: 'it',
+  russian: 'ru',
+  arabic: 'ar',
+  hindi: 'hi',
+  dutch: 'nl',
+  thai: 'th',
+  vietnamese: 'vi',
+  turkish: 'tr',
+  swedish: 'sv',
+  danish: 'da',
+  finnish: 'fi',
+  norwegian: 'no',
+  polish: 'pl',
+  czech: 'cs',
+  hungarian: 'hu',
+  greek: 'el',
+  hebrew: 'he',
+  indonesian: 'id',
+  malay: 'ms',
 }
 
 export const geoTargetMAP: { [key: string]: number } = {
   // 北美
-  'US': 2840,   // United States
-  'CA': 2124,   // Canada
-  'MX': 2484,   // Mexico
+  US: 2840, // United States
+  CA: 2124, // Canada
+  MX: 2484, // Mexico
 
   // 欧洲
-  'GB': 2826,   // United Kingdom
-  'UK': 2826,   // United Kingdom (alias)
-  'DE': 2276,   // Germany
-  'FR': 2250,   // France
-  'IT': 2380,   // Italy
-  'ES': 2724,   // Spain
-  'PT': 2620,   // Portugal
-  'NL': 2528,   // Netherlands
-  'BE': 2056,   // Belgium
-  'AT': 2040,   // Austria
-  'CH': 2756,   // Switzerland
-  'SE': 2752,   // Sweden
-  'NO': 2578,   // Norway
-  'DK': 2208,   // Denmark
-  'FI': 2246,   // Finland
-  'PL': 2616,   // Poland
-  'CZ': 2203,   // Czech Republic
-  'HU': 2348,   // Hungary
-  'GR': 2300,   // Greece
-  'IE': 2372,   // Ireland
-  'RO': 2642,   // Romania
-  'BG': 2100,   // Bulgaria
-  'HR': 2191,   // Croatia
-  'RS': 2688,   // Serbia
-  'SI': 2705,   // Slovenia
-  'SK': 2703,   // Slovakia
-  'UA': 2804,   // Ukraine
-  'EE': 2233,   // Estonia
-  'LV': 2428,   // Latvia
-  'LT': 2440,   // Lithuania
-  'RU': 2643,   // Russia
+  GB: 2826, // United Kingdom
+  UK: 2826, // United Kingdom (alias)
+  DE: 2276, // Germany
+  FR: 2250, // France
+  IT: 2380, // Italy
+  ES: 2724, // Spain
+  PT: 2620, // Portugal
+  NL: 2528, // Netherlands
+  BE: 2056, // Belgium
+  AT: 2040, // Austria
+  CH: 2756, // Switzerland
+  SE: 2752, // Sweden
+  NO: 2578, // Norway
+  DK: 2208, // Denmark
+  FI: 2246, // Finland
+  PL: 2616, // Poland
+  CZ: 2203, // Czech Republic
+  HU: 2348, // Hungary
+  GR: 2300, // Greece
+  IE: 2372, // Ireland
+  RO: 2642, // Romania
+  BG: 2100, // Bulgaria
+  HR: 2191, // Croatia
+  RS: 2688, // Serbia
+  SI: 2705, // Slovenia
+  SK: 2703, // Slovakia
+  UA: 2804, // Ukraine
+  EE: 2233, // Estonia
+  LV: 2428, // Latvia
+  LT: 2440, // Lithuania
+  RU: 2643, // Russia
 
   // 亚洲
-  'CN': 2156,   // China
-  'JP': 2392,   // Japan
-  'KR': 2410,   // South Korea
-  'IN': 2356,   // India
-  'ID': 2360,   // Indonesia
-  'TH': 2764,   // Thailand
-  'VN': 2704,   // Vietnam
-  'PH': 2608,   // Philippines
-  'MY': 2458,   // Malaysia
-  'SG': 2702,   // Singapore
-  'HK': 2344,   // Hong Kong
-  'TW': 2158,   // Taiwan
-  'BD': 2050,   // Bangladesh
-  'PK': 2586,   // Pakistan
+  CN: 2156, // China
+  JP: 2392, // Japan
+  KR: 2410, // South Korea
+  IN: 2356, // India
+  ID: 2360, // Indonesia
+  TH: 2764, // Thailand
+  VN: 2704, // Vietnam
+  PH: 2608, // Philippines
+  MY: 2458, // Malaysia
+  SG: 2702, // Singapore
+  HK: 2344, // Hong Kong
+  TW: 2158, // Taiwan
+  BD: 2050, // Bangladesh
+  PK: 2586, // Pakistan
 
   // 中东
-  'TR': 2792,   // Turkey
-  'SA': 2682,   // Saudi Arabia
-  'AE': 2784,   // United Arab Emirates
-  'IL': 2376,   // Israel
-  'EG': 2818,   // Egypt
-  'IR': 2364,   // Iran
-  'IQ': 2368,   // Iraq
-  'QA': 2634,   // Qatar
-  'KW': 2414,   // Kuwait
+  TR: 2792, // Turkey
+  SA: 2682, // Saudi Arabia
+  AE: 2784, // United Arab Emirates
+  IL: 2376, // Israel
+  EG: 2818, // Egypt
+  IR: 2364, // Iran
+  IQ: 2368, // Iraq
+  QA: 2634, // Qatar
+  KW: 2414, // Kuwait
 
   // 大洋洲
-  'AU': 2036,   // Australia
-  'NZ': 2554,   // New Zealand
+  AU: 2036, // Australia
+  NZ: 2554, // New Zealand
 
   // 南美
-  'BR': 2076,   // Brazil
-  'AR': 2032,   // Argentina
-  'CO': 2170,   // Colombia
-  'CL': 2152,   // Chile
-  'PE': 2604,   // Peru
-  'VE': 2862,   // Venezuela
+  BR: 2076, // Brazil
+  AR: 2032, // Argentina
+  CO: 2170, // Colombia
+  CL: 2152, // Chile
+  PE: 2604, // Peru
+  VE: 2862, // Venezuela
 
   // 非洲
-  'ZA': 2710,   // South Africa
-  'NG': 2566,   // Nigeria
-  'KE': 2404,   // Kenya
-  'MA': 2504,   // Morocco
+  ZA: 2710, // South Africa
+  NG: 2566, // Nigeria
+  KE: 2404, // Kenya
+  MA: 2504, // Morocco
 }
 
 /**
@@ -339,12 +336,14 @@ function getLanguageName(languageCode: string): string {
 }
 
 function getCountryName(countryCode: string): string {
-  return Object.keys(geoTargetMAP).find(key => geoTargetMAP[key] == Number(countryCode)) || countryCode
+  return (
+    Object.keys(geoTargetMAP).find((key) => geoTargetMAP[key] == Number(countryCode)) || countryCode
+  )
 }
 
 /**
  * 从 Google Ads 同步广告系列
- * 
+ *
  * @param userId - 用户 ID
  * @param options - 同步选项
  * @returns 同步结果
@@ -352,8 +351,8 @@ function getCountryName(countryCode: string): string {
 export async function syncCampaignsFromGoogleAds(
   userId: number,
   options?: {
-    customerId?: string  // 指定同步特定账户
-    dryRun?: boolean     // 仅预览，不实际写入数据库
+    customerId?: string // 指定同步特定账户
+    dryRun?: boolean // 仅预览，不实际写入数据库
   }
 ): Promise<SyncResult> {
   const db = await getDatabase()
@@ -372,23 +371,27 @@ export async function syncCampaignsFromGoogleAds(
 
     // 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
     const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
-    const isManagerCondition = db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
+    const isManagerCondition =
+      db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
     const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
-    
+
     // 🔧 获取用户分配的 MCC 账号列表
     let mccCustomerIds: string[] = []
-    const mccAssignments = await db.query(`
+    const mccAssignments = (await db.query(
+      `
       SELECT mcc_customer_id FROM user_mcc_assignments
       WHERE user_id = ?
-    `, [userId]) as Array<{ mcc_customer_id: string }>
-    
+    `,
+      [userId]
+    )) as Array<{ mcc_customer_id: string }>
+
     if (mccAssignments.length > 0) {
-      mccCustomerIds = mccAssignments.map(a => a.mcc_customer_id)
-      console.log(`[GoogleAds Sync] User ${userId} has ${mccCustomerIds.length} assigned MCCs: ${mccCustomerIds.join(', ')}`)
-    } else {
+      mccCustomerIds = mccAssignments.map((a) => a.mcc_customer_id)
       console.log(
-        `[GoogleAds Sync] User ${userId} has no MCC assignments; skipping campaign sync`
+        `[GoogleAds Sync] User ${userId} has ${mccCustomerIds.length} assigned MCCs: ${mccCustomerIds.join(', ')}`
       )
+    } else {
+      console.log(`[GoogleAds Sync] User ${userId} has no MCC assignments; skipping campaign sync`)
       result.warnings.push('未分配 MCC，无法同步 Google Ads 广告系列')
       return result
     }
@@ -398,12 +401,12 @@ export async function syncCampaignsFromGoogleAds(
     const customerIdsFilter = `AND parent_mcc_id IN (${mccPlaceholders})`
     const accountQueryParams: unknown[] = [userId, ...mccCustomerIds]
 
-    const accounts = await db.query(
+    const accounts = (await db.query(
       `SELECT id, customer_id, account_name, parent_mcc_id, auth_type, service_account_id FROM google_ads_accounts
        WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
        ORDER BY id`,
       accountQueryParams
-    ) as Array<{
+    )) as Array<{
       id: number
       customer_id: string
       account_name: string | null
@@ -427,7 +430,9 @@ export async function syncCampaignsFromGoogleAds(
         continue
       }
 
-      console.log(`[GoogleAds Sync] Syncing account: ${account.customer_id} (${account.account_name || 'N/A'})`)
+      console.log(
+        `[GoogleAds Sync] Syncing account: ${account.customer_id} (${account.account_name || 'N/A'})`
+      )
 
       try {
         const accountPrepared = await prepareGoogleAdsApiCallForLinkedAccountCached(
@@ -444,13 +449,16 @@ export async function syncCampaignsFromGoogleAds(
 
         const authContext = accountPrepared.authContext
         const accountApiAuth = accountPrepared.apiAuth
-        const { syncAuthType, syncServiceAccountId, syncRefreshToken: resolvedRefreshToken } =
-          resolveSyncAuthForAccount(
-            accountApiAuth,
-            authContext.oauthCredentials,
-            account,
-            authContext
-          )
+        const {
+          syncAuthType,
+          syncServiceAccountId,
+          syncRefreshToken: resolvedRefreshToken,
+        } = resolveSyncAuthForAccount(
+          accountApiAuth,
+          authContext.oauthCredentials,
+          account,
+          authContext
+        )
         const syncRefreshToken =
           syncAuthType === 'oauth' ? accountPrepared.refreshToken : resolvedRefreshToken
         const oauthApiCredentials = accountPrepared.oauthCredentials
@@ -458,16 +466,12 @@ export async function syncCampaignsFromGoogleAds(
           accountPrepared.oauthLoginCustomerId ?? accountApiAuth.oauthLoginCustomerId
 
         if (syncAuthType === 'service_account' && !syncServiceAccountId) {
-          result.warnings.push(
-            `账户 ${account.customer_id}: 缺少服务账号配置，已跳过同步`
-          )
+          result.warnings.push(`账户 ${account.customer_id}: 缺少服务账号配置，已跳过同步`)
           continue
         }
 
         if (syncAuthType === 'oauth' && !syncRefreshToken) {
-          result.warnings.push(
-            `账户 ${account.customer_id}: OAuth 缺少 refresh_token，已跳过同步`
-          )
+          result.warnings.push(`账户 ${account.customer_id}: OAuth 缺少 refresh_token，已跳过同步`)
           continue
         }
 
@@ -486,12 +490,16 @@ export async function syncCampaignsFromGoogleAds(
           enableAudit: !options?.dryRun,
         })
 
-        console.log(`[GoogleAds Sync] Found ${campaigns.length} campaigns for account ${account.customer_id}`)
+        console.log(
+          `[GoogleAds Sync] Found ${campaigns.length} campaigns for account ${account.customer_id}`
+        )
 
         // 5. 保存广告系列到数据库并创建关联 Offer
         for (const { campaign, campaign_config, adGroupId, adId } of campaigns) {
           if (options?.dryRun) {
-            console.log(`[Dry Run] Would sync campaign: ${campaign.campaign_name} (${campaign.campaign_id})`)
+            console.log(
+              `[Dry Run] Would sync campaign: ${campaign.campaign_name} (${campaign.campaign_id})`
+            )
             result.syncedCount++
             continue
           }
@@ -531,10 +539,7 @@ export async function syncCampaignsFromGoogleAds(
               `[GoogleAds Sync] Synced campaign: ${campaign.campaign_name} (${campaign.campaign_id}), offer: ${offerSyncLabel} (offer_id=${offerResult.offerId})`
             )
 
-            const hasAutoadsBackup = await hasAutoadsLikeBackupForOffer(
-              offerResult.offerId,
-              userId
-            )
+            const hasAutoadsBackup = await hasAutoadsLikeBackupForOffer(offerResult.offerId, userId)
 
             // 已在 AutoAds 发布并生成备份时，不再创建/更新 Google Ads 备份
             if (!hasAutoadsBackup) {
@@ -580,8 +585,13 @@ export async function syncCampaignsFromGoogleAds(
               try {
                 if (campaign_config && Object.keys(campaign_config).length > 0) {
                   // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
-                  const updated = await updateCampaignConfig(campaignId, campaign_config, adGroupId || null, adId || null)
-                  
+                  const updated = await updateCampaignConfig(
+                    campaignId,
+                    campaign_config,
+                    adGroupId || null,
+                    adId || null
+                  )
+
                   if (updated) {
                     const googleBackup = await findLatestGoogleAdsBackupForOffer(
                       offerResult.offerId,
@@ -597,10 +607,7 @@ export async function syncCampaignsFromGoogleAds(
                         WHERE id = ? AND user_id = ?
                       `,
                         [
-                          toDbCampaignBackupJsonField(
-                            campaign_config,
-                            dbCheck.type
-                          ),
+                          toDbCampaignBackupJsonField(campaign_config, dbCheck.type),
                           new Date(),
                           googleBackup.id,
                           userId,
@@ -682,7 +689,7 @@ async function fetchAllDataFromGoogleAds(params: {
   customerId: string
   googleAdsAccountId: number
   authType: string
-  serviceAccountId?: string,
+  serviceAccountId?: string
   refreshToken: string | null
   parentMccId?: string | null
   oauthCredentials?: OAuthApiCredentialsFields
@@ -773,7 +780,7 @@ async function fetchAllDataFromGoogleAds(params: {
         AND campaign_criterion.type IN ('LANGUAGE', 'LOCATION')
         AND campaign_criterion.status != 'REMOVED'
     `
-    
+
     const query5 = `
       SELECT
         campaign.id,
@@ -798,35 +805,60 @@ async function fetchAllDataFromGoogleAds(params: {
 
     if (authType === 'service_account') {
       // 查询 1
-      const r1 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query1 })
+      const r1 = await executeGAQLQueryPython({
+        userId,
+        serviceAccountId,
+        customerId,
+        query: query1,
+      })
       results1 = r1?.results || []
-      
+
       // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
       // 查询 2
-      const r2 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query2 })
+      const r2 = await executeGAQLQueryPython({
+        userId,
+        serviceAccountId,
+        customerId,
+        query: query2,
+      })
       results2 = r2?.results || []
-      
+
       // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
       // 查询 3
-      const r3 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query3 })
+      const r3 = await executeGAQLQueryPython({
+        userId,
+        serviceAccountId,
+        customerId,
+        query: query3,
+      })
       results3 = r3?.results || []
-      
+
       // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
       // 查询 4
-      const r4 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query4 })
+      const r4 = await executeGAQLQueryPython({
+        userId,
+        serviceAccountId,
+        customerId,
+        query: query4,
+      })
       results4 = r4?.results || []
 
-        // 🔧 等待 1 秒
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 🔧 等待 1 秒
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 查询 5
-      const r5 = await executeGAQLQueryPython({ userId, serviceAccountId, customerId, query: query5 })
+      const r5 = await executeGAQLQueryPython({
+        userId,
+        serviceAccountId,
+        customerId,
+        query: query5,
+      })
       results5 = r5?.results || []
     } else {
       if (!oauthCredentials || !refreshToken) {
@@ -846,15 +878,45 @@ async function fetchAllDataFromGoogleAds(params: {
         authContext,
         actionName: `fetchCampaignsFromGoogleAds(${customerId})`,
         query: async (customer) => {
-          const r1 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query1))
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          const r2 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query2))
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          const r3 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query3))
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          const r4 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query4))
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          const r5 = await trackOAuthApiCall(userId, customerId, ApiOperationType.SEARCH, '/api/google-ads/query', () => customer.query(query5))
+          const r1 = await trackOAuthApiCall(
+            userId,
+            customerId,
+            ApiOperationType.SEARCH,
+            '/api/google-ads/query',
+            () => customer.query(query1)
+          )
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const r2 = await trackOAuthApiCall(
+            userId,
+            customerId,
+            ApiOperationType.SEARCH,
+            '/api/google-ads/query',
+            () => customer.query(query2)
+          )
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const r3 = await trackOAuthApiCall(
+            userId,
+            customerId,
+            ApiOperationType.SEARCH,
+            '/api/google-ads/query',
+            () => customer.query(query3)
+          )
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const r4 = await trackOAuthApiCall(
+            userId,
+            customerId,
+            ApiOperationType.SEARCH,
+            '/api/google-ads/query',
+            () => customer.query(query4)
+          )
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          const r5 = await trackOAuthApiCall(
+            userId,
+            customerId,
+            ApiOperationType.SEARCH,
+            '/api/google-ads/query',
+            () => customer.query(query5)
+          )
           return {
             results1: r1 || [],
             results2: r2 || [],
@@ -879,10 +941,10 @@ async function fetchAllDataFromGoogleAds(params: {
     const query3ByCampaign = new Map<string, any[]>()
     const query4ByCampaign = new Map<string, any[]>()
     const query5ByCampaign = new Map<string, any[]>()
-    const adGroupsMap = new Map<string, any[]>()  // key: ad_group_id
-    const adsMap = new Map<string, any[]>()       // key: ad_group_id
-    const keywordsMap = new Map<string, any[]>()  // key: ad_group_id
-    const calloutsMap = new Map<string, any[]>()  // key: campaign_id
+    const adGroupsMap = new Map<string, any[]>() // key: ad_group_id
+    const adsMap = new Map<string, any[]>() // key: ad_group_id
+    const keywordsMap = new Map<string, any[]>() // key: ad_group_id
+    const calloutsMap = new Map<string, any[]>() // key: campaign_id
     const sitelinksMap = new Map<string, any[]>() // key: campaign_id
     const locationsMap = new Map<string, any[]>() // key: campaign_id
 
@@ -894,14 +956,15 @@ async function fetchAllDataFromGoogleAds(params: {
         rows.push(row)
         query5ByCampaign.set(campaignId, rows)
       }
-      
+
       // 添加广告系列
       if (!campaignMap.has(campaignId)) {
         campaignMap.set(campaignId, {
           campaign_id: campaignId,
           campaign_name: row.campaign?.name || `Campaign_${campaignId}`,
           budget_amount: Number(row.campaign_budget?.amount_micros || 0) / 1000000,
-          cpc_bid_ceiling_micros: Number(row.campaign?.target_spend?.cpc_bid_ceiling_micros || 0) / 1000000,
+          cpc_bid_ceiling_micros:
+            Number(row.campaign?.target_spend?.cpc_bid_ceiling_micros || 0) / 1000000,
           budget_type: (row.campaign_budget?.type || 'DAILY') as 'DAILY' | 'TOTAL',
           status: (row.campaign?.status || 'PAUSED') as 'ENABLED' | 'PAUSED' | 'REMOVED',
           customer_id: customerId,
@@ -923,14 +986,16 @@ async function fetchAllDataFromGoogleAds(params: {
       const adGroupId = String(row.ad_group?.id || '')
       if (adGroupId) {
         if (!adGroupsMap.has(adGroupId)) {
-          adGroupsMap.set(adGroupId, [{
-            ad_group_id: adGroupId,
-            ad_group_name: row.ad_group?.name,
-            final_url_suffix: row.ad_group?.final_url_suffix,
-            campaign_id: campaignId,
-          }])
+          adGroupsMap.set(adGroupId, [
+            {
+              ad_group_id: adGroupId,
+              ad_group_name: row.ad_group?.name,
+              final_url_suffix: row.ad_group?.final_url_suffix,
+              campaign_id: campaignId,
+            },
+          ])
         }
-        
+
         // 添加广告
         const adId = String(row.ad_group_ad?.ad?.id || '')
         if (adId) {
@@ -960,7 +1025,7 @@ async function fetchAllDataFromGoogleAds(params: {
 
       const adGroupId = String(row.ad_group?.id || '')
       const keywordId = String(row.ad_group_criterion?.criterion_id || '')
-      
+
       if (keywordId && row.ad_group_criterion?.keyword?.text) {
         const keywords = keywordsMap.get(adGroupId) || []
         keywords.push({
@@ -983,7 +1048,7 @@ async function fetchAllDataFromGoogleAds(params: {
       }
 
       const assetType = String(row.asset?.type || '')
-      
+
       if (assetType === 'CALLOUT' && row.asset?.callout_asset?.callout_text) {
         const callouts = calloutsMap.get(campaignId) || []
         callouts.push({ text: row.asset.callout_asset.callout_text })
@@ -993,16 +1058,23 @@ async function fetchAllDataFromGoogleAds(params: {
         sitelinks.push({
           text: row.asset?.sitelink_asset?.link_text || '',
           url: (row.asset?.sitelink_asset?.final_urls ?? [])?.[0] || '',
-          description: row.asset?.sitelink_asset?.description1 || row.asset?.sitelink_asset?.description2 || '',
+          description:
+            row.asset?.sitelink_asset?.description1 ||
+            row.asset?.sitelink_asset?.description2 ||
+            '',
         })
         sitelinksMap.set(campaignId, sitelinks)
       }
     }
 
-      // 处理查询 4 结果（定位）
+    // 处理查询 4 结果（定位）
     for (const row of results4) {
-      console.log(`[GoogleAds Sync] Processing targeting criterion for campaign ${row.campaign?.id}: type=${row.campaign_criterion?.type}, display_name=${row.campaign_criterion?.display_name}`)
-      console.log(`[GoogleAds Sync] Criterion details: language=${row.campaign_criterion?.language?.language_constant}, location=${row.campaign_criterion?.location?.geo_target_constant}, negative=${row.campaign_criterion?.negative}`)
+      console.log(
+        `[GoogleAds Sync] Processing targeting criterion for campaign ${row.campaign?.id}: type=${row.campaign_criterion?.type}, display_name=${row.campaign_criterion?.display_name}`
+      )
+      console.log(
+        `[GoogleAds Sync] Criterion details: language=${row.campaign_criterion?.language?.language_constant}, location=${row.campaign_criterion?.location?.geo_target_constant}, negative=${row.campaign_criterion?.negative}`
+      )
       const campaignId = String(row.campaign?.id || '')
       if (campaignId) {
         const queryRows = query4ByCampaign.get(campaignId) || []
@@ -1025,15 +1097,15 @@ async function fetchAllDataFromGoogleAds(params: {
     // 🔧 聚合成完整的广告系列数据并返回
     const campaigns: any[] = []
     const auditRows: CampaignSyncAuditInsert[] = []
-    
+
     for (const [campaignId, campaign] of campaignMap.entries()) {
-      const adGroupId = Array.from(adGroupsMap.keys()).find(key => 
-        adGroupsMap.get(key)?.[0]?.campaign_id === campaignId
+      const adGroupId = Array.from(adGroupsMap.keys()).find(
+        (key) => adGroupsMap.get(key)?.[0]?.campaign_id === campaignId
       )
 
       const adGroup = adGroupId ? adGroupsMap.get(adGroupId)?.[0] : null
-      const ads = adGroupId ? (adsMap.get(adGroupId) || []) : []
-      const keywords = adGroupId ? (keywordsMap.get(adGroupId) || []) : []
+      const ads = adGroupId ? adsMap.get(adGroupId) || [] : []
+      const keywords = adGroupId ? keywordsMap.get(adGroupId) || [] : []
       const callouts = calloutsMap.get(campaignId) || []
       const sitelinks = sitelinksMap.get(campaignId) || []
       const locations = locationsMap.get(campaignId) || []
@@ -1049,10 +1121,12 @@ async function fetchAllDataFromGoogleAds(params: {
       }
 
       // 过滤正关键词
-      const positiveKeywords = keywords.filter(kw => !kw.negative).map(kw => ({
-        text: kw.keyword_text,
-        matchType: kw.keyword_match_type,
-      }))
+      const positiveKeywords = keywords
+        .filter((kw) => !kw.negative)
+        .map((kw) => ({
+          text: kw.keyword_text,
+          matchType: kw.keyword_match_type,
+        }))
 
       // 构建广告系列对象
       const campaignPayload = {
@@ -1063,11 +1137,23 @@ async function fetchAllDataFromGoogleAds(params: {
           campaignName: campaign.campaign_name,
           budgetAmount: campaign.budget_amount,
           budgetType: campaign.budget_type,
-          targetCountry: getCountryName(locations.find((loc: any) => loc.type === 'LOCATION')?.geo_target_constant?.split('/')?.pop()) || 'US',
-          targetLanguage: getLanguageName(locations.find((loc: any) => loc.type === 'LANGUAGE')?.display_name) || 'English',
+          targetCountry:
+            getCountryName(
+              locations
+                .find((loc: any) => loc.type === 'LOCATION')
+                ?.geo_target_constant?.split('/')
+                ?.pop()
+            ) || 'US',
+          targetLanguage:
+            getLanguageName(locations.find((loc: any) => loc.type === 'LANGUAGE')?.display_name) ||
+            'English',
           biddingStrategy: (campaign as any).bidding_strategy || 'MAXIMIZE_CLICKS',
           marketingObjective: 'WEB_TRAFFIC',
-          finalUrlSuffix: ads[0]?.final_url_suffix || adGroup?.final_url_suffix || campaign?.final_url_suffix || '',
+          finalUrlSuffix:
+            ads[0]?.final_url_suffix ||
+            adGroup?.final_url_suffix ||
+            campaign?.final_url_suffix ||
+            '',
           adGroupName: adGroup?.ad_group_name || '',
           maxCpcBid: campaign.cpc_bid_ceiling_micros,
           keywords: positiveKeywords,
@@ -1083,11 +1169,11 @@ async function fetchAllDataFromGoogleAds(params: {
             url: s.url,
             description: s.description,
           })),
-        }
+        },
       }
 
       campaigns.push({
-        ...campaignPayload
+        ...campaignPayload,
       })
 
       const query1Rows = query1ByCampaign.get(campaignId) || []
@@ -1095,8 +1181,12 @@ async function fetchAllDataFromGoogleAds(params: {
       const query3Rows = query3ByCampaign.get(campaignId) || []
       const query4Rows = query4ByCampaign.get(campaignId) || []
       const query5Rows = query5ByCampaign.get(campaignId) || []
-      const adGroupIds = new Set(query1Rows.map((row: any) => String(row.ad_group?.id || '')).filter(Boolean))
-      const adIds = new Set(query1Rows.map((row: any) => String(row.ad_group_ad?.ad?.id || '')).filter(Boolean))
+      const adGroupIds = new Set(
+        query1Rows.map((row: any) => String(row.ad_group?.id || '')).filter(Boolean)
+      )
+      const adIds = new Set(
+        query1Rows.map((row: any) => String(row.ad_group_ad?.ad?.id || '')).filter(Boolean)
+      )
 
       auditRows.push({
         userId,
@@ -1153,7 +1243,7 @@ async function fetchCampaignsFromGoogleAds(params: {
   customerId: string
   googleAdsAccountId: number
   authType: string
-  serviceAccountId?: string,
+  serviceAccountId?: string
   refreshToken: string | null
   parentMccId?: string | null
   oauthCredentials?: OAuthApiCredentialsFields
@@ -1228,7 +1318,10 @@ async function saveCampaignSyncAuditRows(rows: CampaignSyncAuditInsert[]): Promi
           ]
         )
       } catch (error) {
-        console.error(`[GoogleAds Sync] Failed to persist audit row for campaign ${row.campaignId} (ignored):`, error)
+        console.error(
+          `[GoogleAds Sync] Failed to persist audit row for campaign ${row.campaignId} (ignored):`,
+          error
+        )
       }
     }
   } catch (error) {
@@ -1243,9 +1336,9 @@ async function saveCampaignToDatabase(params: {
   userId: number
   googleAdsAccountId: number
   campaign: GoogleAdsCampaign
-  offerId?: number  // 🆕 可选的 offer_id
-  adGroupId?: number | null  // 🆕 可选的 ad_group_id
-  adId?: number | null  // 🆕 可选的 ad_id
+  offerId?: number // 🆕 可选的 offer_id
+  adGroupId?: number | null // 🆕 可选的 ad_group_id
+  adId?: number | null // 🆕 可选的 ad_id
 }): Promise<string> {
   const { userId, googleAdsAccountId, campaign, offerId, adGroupId, adId } = params
   const db = await getDatabase()
@@ -1272,15 +1365,15 @@ async function saveCampaignToDatabase(params: {
         google_ad_id = ?
       WHERE campaign_id = ?`,
       [
-        campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
+        campaign.cpc_bid_ceiling_micros || null, // 🆕 可选的 max_cpc 字段
         campaign.campaign_name,
         campaign.budget_amount,
         campaign.budget_type,
         campaign.status,
         googleAdsAccountId,
         new Date(),
-        `${adGroupId}` || null,  // 🆕 可选的 ad_group_id 字段
-        `${adGroupId}~${adId}` || null,  // 🆕 可选的 ad_id 字段
+        `${adGroupId}` || null, // 🆕 可选的 ad_group_id 字段
+        `${adGroupId}~${adId}` || null, // 🆕 可选的 ad_id 字段
         existing.campaign_id,
       ]
     )
@@ -1290,10 +1383,10 @@ async function saveCampaignToDatabase(params: {
 
   if (offerId) {
     const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
-    const existingForOffer = await db.queryOne(
+    const existingForOffer = (await db.queryOne(
       `SELECT id, campaign_id FROM campaigns WHERE ${occupyingWhere} ORDER BY updated_at DESC, id DESC LIMIT 1`,
       [offerId, userId]
-    ) as { id: number; campaign_id: string | null } | undefined
+    )) as { id: number; campaign_id: string | null } | undefined
 
     if (existingForOffer) {
       console.log(
@@ -1338,7 +1431,7 @@ async function saveCampaignToDatabase(params: {
   const googleAdGroupId = adGroupId != null ? String(adGroupId) : null
   const googleAdId = adGroupId != null && adId != null ? `${adGroupId}~${adId}` : null
   await db.exec(
-      `INSERT INTO campaigns (
+    `INSERT INTO campaigns (
         user_id,
         google_ads_account_id,
         campaign_id,
@@ -1357,23 +1450,23 @@ async function saveCampaignToDatabase(params: {
         created_at,
         updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        googleAdsAccountId,
-        campaign.campaign_id,
-        campaignName,
-        campaign.budget_amount,
-        campaign.budget_type,
-        campaign.status,
-        offerId || null,  // 🆕 如果提供了 offerId，则关联
-        campaign.cpc_bid_ceiling_micros || null,  // 🆕 可选的 max_cpc 字段
-        campaign.campaign_id,  // google_campaign_id
-        googleAdGroupId,
-        googleAdId,
-        new Date(),
-        new Date(),
-      ]
-    )
+    [
+      userId,
+      googleAdsAccountId,
+      campaign.campaign_id,
+      campaignName,
+      campaign.budget_amount,
+      campaign.budget_type,
+      campaign.status,
+      offerId || null, // 🆕 如果提供了 offerId，则关联
+      campaign.cpc_bid_ceiling_micros || null, // 🆕 可选的 max_cpc 字段
+      campaign.campaign_id, // google_campaign_id
+      googleAdGroupId,
+      googleAdId,
+      new Date(),
+      new Date(),
+    ]
+  )
   console.log(`[GoogleAds Sync] Created Campaign ${campaign.campaign_id} for User ${userId}`)
   return campaign.campaign_id
 }
@@ -1389,9 +1482,8 @@ async function createOfferFirst(params: {
   const { userId, campaign, campaignConfig } = params
   const db = await getDatabase()
   const finalUrl = firstNonEmptyFinalUrlFromCampaignConfig(campaignConfig)
-  const finalUrlSuffix = typeof campaignConfig?.finalUrlSuffix === 'string'
-    ? campaignConfig.finalUrlSuffix.trim()
-    : ''
+  const finalUrlSuffix =
+    typeof campaignConfig?.finalUrlSuffix === 'string' ? campaignConfig.finalUrlSuffix.trim() : ''
   const url = finalUrl
   const isNullOrEmpty = (value: unknown): boolean =>
     value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
@@ -1402,17 +1494,19 @@ async function createOfferFirst(params: {
   const brandExtractSucceeded = derivedBrand !== campaignNameTrimmed
 
   // 1. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
-  const existingOffer = await db.queryOne(
+  const existingOffer = (await db.queryOne(
     'SELECT id, sync_source, url, final_url, final_url_suffix, brand FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
-  ) as {
-    id: number
-    sync_source?: string | null
-    url?: string | null
-    final_url?: string | null
-    final_url_suffix?: string | null
-    brand?: string | null
-  } | undefined
+  )) as
+    | {
+        id: number
+        sync_source?: string | null
+        url?: string | null
+        final_url?: string | null
+        final_url_suffix?: string | null
+        brand?: string | null
+      }
+    | undefined
 
   if (existingOffer) {
     let offerUrlFieldsUpdated = false
@@ -1446,10 +1540,12 @@ async function createOfferFirst(params: {
         updateParams.push(extractAsinFromOfferUrls(nextUrl, nextFinalUrl))
       }
 
-      const existingBrand = typeof existingOffer.brand === 'string' ? existingOffer.brand.trim() : ''
+      const existingBrand =
+        typeof existingOffer.brand === 'string' ? existingOffer.brand.trim() : ''
       const brandStillRawCampaignStyle =
         existingBrand === campaignNameTrimmed ||
-        (existingBrand !== '' && extractBrandFromGoogleAdsCampaignName(existingBrand) !== existingBrand)
+        (existingBrand !== '' &&
+          extractBrandFromGoogleAdsCampaignName(existingBrand) !== existingBrand)
 
       if (
         brandExtractSucceeded &&
@@ -1461,25 +1557,28 @@ async function createOfferFirst(params: {
       }
 
       if (updates.length > 0) {
-        await db.exec(
-          `UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`,
-          [...updateParams, new Date(), existingOffer.id]
-        )
+        await db.exec(`UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`, [
+          ...updateParams,
+          new Date(),
+          existingOffer.id,
+        ])
         offerUrlFieldsUpdated = true
         console.log(`[GoogleAds Sync] Updated offer ${existingOffer.id} (${updates.join(', ')})`)
       }
     }
 
-    console.log(`[GoogleAds Sync] Found existing offer ${existingOffer.id} for campaign ${campaign.campaign_id}`)
+    console.log(
+      `[GoogleAds Sync] Found existing offer ${existingOffer.id} for campaign ${campaign.campaign_id}`
+    )
     return { offerId: existingOffer.id, created: false, offerUrlFieldsUpdated }
   }
 
   // 2. 创建新 Offer
   console.log(`[GoogleAds Sync] Creating new offer for campaign ${campaign.campaign_id}`)
-  
+
   // 生成唯一的 offer_name
   const offerName = campaign.campaign_name
-  
+
   const result = await db.exec(
     `INSERT INTO offers (
       user_id,
@@ -1504,12 +1603,12 @@ async function createOfferFirst(params: {
       finalUrlSuffix,
       extractAsinFromOfferUrls(url, finalUrl),
       derivedBrand,
-      'US',  // 默认国家，需要用户完善
-      'English',  // 默认语言
+      'US', // 默认国家，需要用户完善
+      'English', // 默认语言
       offerName,
       campaign.campaign_id,
       'google_ads_sync',
-      db.type === 'postgres' ? 'TRUE' : '1',  // 新创建的 Offer 标记为需要完善
+      db.type === 'postgres' ? 'TRUE' : '1', // 新创建的 Offer 标记为需要完善
       'pending',
       db.type === 'postgres' ? 'TRUE' : '1',
     ]
@@ -1517,7 +1616,7 @@ async function createOfferFirst(params: {
 
   const offerId = getInsertedId(result, db.type)
   console.log(`[GoogleAds Sync] Created offer ${offerId} for campaign ${campaign.campaign_id}`)
-  
+
   return { offerId, created: true, offerUrlFieldsUpdated: false }
 }
 
@@ -1529,11 +1628,11 @@ export async function syncAllUsersCampaigns(): Promise<{
   totalUsers: number
   totalSynced: number
   totalCreated: number
-  totalSkipped: number  // 已有关联 Offer，跳过创建/更新
+  totalSkipped: number // 已有关联 Offer，跳过创建/更新
   totalErrors: number
 }> {
   const db = await getDatabase()
-  
+
   // 获取所有活跃用户
   const users = await db.query(
     `SELECT id FROM users WHERE role != 'admin' AND is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
@@ -1582,16 +1681,21 @@ export async function updateCampaignConfig(
 ): Promise<boolean> {
   const db = await getDatabase()
 
-  const campaign = await db.queryOne(`
+  const campaign = (await db.queryOne(
+    `
     SELECT id, synced_from_google_ads, campaign_config
     FROM campaigns
     WHERE campaign_id = ?
-  `, [campaignId]) as {
-    id: number
-    synced_from_google_ads: number | boolean
-    campaign_config: string | null
-    ad_creative_id: number | null
-  } | undefined
+  `,
+    [campaignId]
+  )) as
+    | {
+        id: number
+        synced_from_google_ads: number | boolean
+        campaign_config: string | null
+        ad_creative_id: number | null
+      }
+    | undefined
 
   if (!campaign) {
     console.log(`[Campaign Config] Campaign ${campaignId} not found, skipping config update`)
@@ -1601,24 +1705,29 @@ export async function updateCampaignConfig(
   const haveConfig = campaign.ad_creative_id && campaign.ad_creative_id != null
 
   if (haveConfig) {
-    console.log(`[Campaign Config] Campaign ${campaignId} is already configured, skipping config update`)
+    console.log(
+      `[Campaign Config] Campaign ${campaignId} is already configured, skipping config update`
+    )
     return false
   }
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE campaigns
     SET campaign_config = ?,
         updated_at = ?,
         google_ad_group_id = ?,
         google_ad_id = ?
     WHERE campaign_id = ?
-  `, [
-    toDbCampaignConfigTextField(campaignConfig),
-    new Date(),
-    `${adGroupId}` || null,
-    `${adGroupId}~${adId}` || null,
-    campaignId,
-  ])
+  `,
+    [
+      toDbCampaignConfigTextField(campaignConfig),
+      new Date(),
+      `${adGroupId}` || null,
+      `${adGroupId}~${adId}` || null,
+      campaignId,
+    ]
+  )
 
   console.log(`[Campaign Config] Updated for campaign ${campaignId}`)
   return true

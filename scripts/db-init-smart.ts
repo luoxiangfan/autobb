@@ -50,11 +50,11 @@ async function checkSQLiteInitialized(dbPath: string): Promise<boolean> {
   }
 
   try {
-    const tableList = CRITICAL_TABLES.map(t => `'${t}'`).join(',')
+    const tableList = CRITICAL_TABLES.map((t) => `'${t}'`).join(',')
     const query = `SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name IN (${tableList});`
 
     const result = execSync(`sqlite3 "${dbPath}" "${query}"`, {
-      encoding: 'utf-8'
+      encoding: 'utf-8',
     }).trim()
 
     const count = parseInt(result)
@@ -77,7 +77,7 @@ async function checkPostgresInitialized(): Promise<boolean> {
     let initializedCount = 0
     for (const table of CRITICAL_TABLES) {
       const result = await db.query<{ exists: boolean }>(
-        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
+        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
         [table]
       )
       if (result[0].exists) {
@@ -131,7 +131,7 @@ async function ensureAdminAccount(): Promise<void> {
 
   try {
     const existingAdmin = await db.queryOne<{ id: number; username: string; email: string }>(
-      "SELECT id, username, email FROM users WHERE username = ?",
+      'SELECT id, username, email FROM users WHERE username = ?',
       [DEFAULT_ADMIN.username]
     )
 
@@ -185,10 +185,10 @@ async function ensureAdminAccount(): Promise<void> {
       console.log('🔄 管理员账号已存在，重置密码...')
 
       if (isPostgres) {
-        await db.exec(
-          "UPDATE users SET password_hash = ?, updated_at = NOW() WHERE username = ?",
-          [passwordHash, DEFAULT_ADMIN.username]
-        )
+        await db.exec('UPDATE users SET password_hash = ?, updated_at = NOW() WHERE username = ?', [
+          passwordHash,
+          DEFAULT_ADMIN.username,
+        ])
       } else {
         await db.exec(
           "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE username = ?",
@@ -239,7 +239,11 @@ async function main() {
   } else {
     // SQLite 初始化
     const dbPath = path.join(process.cwd(), 'data', 'autoads.db')
-    const schemaPath = path.join(process.cwd(), 'migrations', '000_init_schema_consolidated.sqlite.sql')
+    const schemaPath = path.join(
+      process.cwd(),
+      'migrations',
+      '000_init_schema_consolidated.sqlite.sql'
+    )
 
     const initialized = await checkSQLiteInitialized(dbPath)
 

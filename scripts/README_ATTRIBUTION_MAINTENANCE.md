@@ -13,20 +13,24 @@
 ### 1. 监控和告警
 
 #### `monitor-attribution-health.ts`
+
 **用途**：每日健康检查，监控归因系统的关键指标
 
 **检查项**：
+
 - 未归因佣金总额
 - 产品-Offer 链接覆盖率
 - 归因成功率
 - 超期的 pending 失败记录
 
 **运行频率**：每日
+
 ```bash
 npm run attribution:health
 ```
 
 **告警阈值**：
+
 - 未归因佣金 > $10: 警告
 - 未归因佣金 > $50: 严重
 - 产品链接覆盖率 < 90%: 警告
@@ -37,41 +41,50 @@ npm run attribution:health
 ### 2. 自动化维护
 
 #### `auto-link-products-to-offers.ts`
+
 **用途**：自动为产品建立 Offer 链接
 
 **匹配规则**：
+
 1. 品牌完全匹配
 2. ASIN 出现在 Offer URL 中
 
 **运行频率**：每日或产品同步后
+
 ```bash
 npm run attribution:link
 ```
 
 #### `discover-new-products.ts`
+
 **用途**：从未归因佣金中发现新产品
 
 **功能**：
+
 - 识别不在 `affiliate_products` 表中的 ASIN
 - 创建产品占位记录
 - 提示后续操作
 
 **运行频率**：每日或检测到未归因佣金时
+
 ```bash
 npm run attribution:discover
 ```
 
 #### `reattribute-pending-commissions.ts`
+
 **用途**：重新归因 pending 状态的佣金
 
 **注意**：当前版本存在数据丢失风险，使用前请备份
 
 **运行频率**：手动触发
+
 ```bash
 npm run attribution:reattribute
 ```
 
 #### `reattribute-affiliate-commission-by-brand.ts`
+
 **用途**：按品牌与日期范围重跑佣金归因（应急/事故修复）
 
 **运行频率**：手动触发；默认 dry-run，写库需 `--apply true`
@@ -84,6 +97,7 @@ npm run attribution:reattribute-by-brand -- --userId 1 --brand "ExampleBrand" --
 ### 3. 应急工具
 
 #### `repair-redis-pending-index.ts`
+
 **用途**：修复 Redis 队列 pending 索引不一致（任务卡在 pending 但 worker 取不到）
 
 ```bash
@@ -116,6 +130,7 @@ npm run attribution:link
 ### 每周手动检查
 
 1. 查看未归因佣金详情
+
 ```sql
 SELECT
   report_date,
@@ -128,6 +143,7 @@ ORDER BY commission_amount DESC;
 ```
 
 2. 检查产品链接覆盖率
+
 ```sql
 SELECT
   COUNT(*) as total_products,
@@ -138,6 +154,7 @@ LEFT JOIN affiliate_product_offer_links apol ON apol.product_id = ap.id;
 ```
 
 3. 审查 pending 状态的失败记录
+
 ```sql
 SELECT
   report_date,
@@ -217,6 +234,7 @@ OPENCLAW_AFFILIATE_ATTRIBUTION_PENDING_DAYS=7
 **当前已知问题**：`reattribute-pending-commissions.ts` 存在数据丢失风险
 
 **临时解决方案**：
+
 1. 使用前备份数据库
 2. 只处理确定可以归因的记录
 3. 等待归因逻辑优化后再使用

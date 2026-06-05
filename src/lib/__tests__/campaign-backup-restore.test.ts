@@ -20,8 +20,7 @@ vi.mock('@/lib/campaign-offer-constraint', async (importOriginal) => {
     ...actual,
     abandonStalePendingCampaignsForOffers: (...args: unknown[]) =>
       mockAbandonStaleForOffers(...args),
-    getActiveCampaignConflictsForOffers: (...args: unknown[]) =>
-      mockGetConflictsForOffers(...args),
+    getActiveCampaignConflictsForOffers: (...args: unknown[]) => mockGetConflictsForOffers(...args),
   }
 })
 
@@ -125,13 +124,7 @@ describe('validateCampaignBackupsForBatchCreate', () => {
 
     const result = await validateCampaignBackupsForBatchCreate([10, 11], 7, 1)
     expect(result).toEqual({ ok: true })
-    expect(mockAbandonStaleForOffers).toHaveBeenCalledWith(
-      expect.arrayContaining([99, 100]),
-      7
-    )
-    expect(mockGetConflictsForOffers).toHaveBeenCalledWith(
-      expect.arrayContaining([99, 100]),
-      7
-    )
+    expect(mockAbandonStaleForOffers).toHaveBeenCalledWith(expect.arrayContaining([99, 100]), 7)
+    expect(mockGetConflictsForOffers).toHaveBeenCalledWith(expect.arrayContaining([99, 100]), 7)
   })
 })

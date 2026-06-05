@@ -42,7 +42,7 @@ export function parseCampaignName(campaignName: string): CampaignNamingInfo {
 
   if (!parsed) {
     return {
-      isValidNaming: false
+      isValidNaming: false,
     }
   }
 
@@ -51,7 +51,7 @@ export function parseCampaignName(campaignName: string): CampaignNamingInfo {
     creativeId: parsed.creativeId,
     brandName: parsed.brand,
     campaignType: parsed.campaignType,
-    isValidNaming: true
+    isValidNaming: true,
   }
 }
 
@@ -102,7 +102,7 @@ export function categorizeCampaigns(
   return {
     ownCampaigns,
     manualCampaigns,
-    otherCampaigns
+    otherCampaigns,
   }
 }
 

@@ -10,11 +10,11 @@ import { recordTokenUsage, estimateTokenCost } from '@/lib/ai-token-tracker'
 export async function POST(request: NextRequest) {
   try {
     // 验证管理员权限
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId || authResult.user.role !== 'admin') {
       return NextResponse.json({ error: '无权访问' }, { status: 403 })
     }
@@ -103,12 +103,15 @@ export async function POST(request: NextRequest) {
 保持专业、数据驱动、可执行。`
 
     // 调用AI生成分析报告（使用用户级AI配置）
-    const analysis = await generateContent({
-      operationType: 'admin_performance_analysis',
-      prompt: analysisPrompt,
-      temperature: 0.7,
-      maxOutputTokens: 8192,  // 🔴 Pro模型统一使用8192
-    }, userId)
+    const analysis = await generateContent(
+      {
+        operationType: 'admin_performance_analysis',
+        prompt: analysisPrompt,
+        temperature: 0.7,
+        maxOutputTokens: 8192, // 🔴 Pro模型统一使用8192
+      },
+      userId
+    )
 
     // 记录token使用
     if (analysis.usage) {
@@ -125,7 +128,7 @@ export async function POST(request: NextRequest) {
         outputTokens: analysis.usage.outputTokens,
         totalTokens: analysis.usage.totalTokens,
         cost,
-        apiType: analysis.apiType
+        apiType: analysis.apiType,
       })
     }
 
@@ -136,8 +139,10 @@ export async function POST(request: NextRequest) {
       // 识别最佳表现的创意
       const sortedByPerformance = [...performanceData].sort((a, b) => {
         // 综合评分：CTR权重40%，转化率权重40%，质量得分权重20%
-        const scoreA = (a.ctr || 0) * 0.4 + (a.conversionRate || 0) * 0.4 + ((a.qualityScore || 0) / 10) * 0.2
-        const scoreB = (b.ctr || 0) * 0.4 + (b.conversionRate || 0) * 0.4 + ((b.qualityScore || 0) / 10) * 0.2
+        const scoreA =
+          (a.ctr || 0) * 0.4 + (a.conversionRate || 0) * 0.4 + ((a.qualityScore || 0) / 10) * 0.2
+        const scoreB =
+          (b.ctr || 0) * 0.4 + (b.conversionRate || 0) * 0.4 + ((b.qualityScore || 0) / 10) * 0.2
         return scoreB - scoreA
       })
 
@@ -147,20 +152,28 @@ export async function POST(request: NextRequest) {
       const optimizationPrompt = `基于以下投放数据，生成具体的Prompt优化建议：
 
 ## 高表现创意特征
-${topPerformers.map((ad: any, i: number) => `
+${topPerformers
+  .map(
+    (ad: any, i: number) => `
 ${i + 1}. ${ad.headline1}
    - CTR: ${(ad.ctr * 100).toFixed(2)}%
    - 转化率: ${(ad.conversionRate * 100).toFixed(2)}%
    - 导向: ${ad.orientation}
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 ## 低表现创意特征
-${lowPerformers.map((ad: any, i: number) => `
+${lowPerformers
+  .map(
+    (ad: any, i: number) => `
 ${i + 1}. ${ad.headline1}
    - CTR: ${(ad.ctr * 100).toFixed(2)}%
    - 转化率: ${(ad.conversionRate * 100).toFixed(2)}%
    - 导向: ${ad.orientation}
-`).join('\n')}
+`
+  )
+  .join('\n')}
 
 请提供具体的Prompt调整建议，包括：
 1. 应该增强的要素（从高表现创意中提取）
@@ -169,12 +182,15 @@ ${i + 1}. ${ad.headline1}
 
 只返回具体建议，不要解释。`
 
-      promptOptimization = await generateContent({
-        operationType: 'admin_prompt_optimization',
-        prompt: optimizationPrompt,
-        temperature: 0.5,
-        maxOutputTokens: 4096,
-      }, userId)
+      promptOptimization = await generateContent(
+        {
+          operationType: 'admin_prompt_optimization',
+          prompt: optimizationPrompt,
+          temperature: 0.5,
+          maxOutputTokens: 4096,
+        },
+        userId
+      )
 
       // 记录token使用
       if (promptOptimization.usage) {
@@ -191,7 +207,7 @@ ${i + 1}. ${ad.headline1}
           outputTokens: promptOptimization.usage.outputTokens,
           totalTokens: promptOptimization.usage.totalTokens,
           cost,
-          apiType: promptOptimization.apiType
+          apiType: promptOptimization.apiType,
         })
       }
     }
@@ -202,17 +218,20 @@ ${i + 1}. ${ad.headline1}
       promptOptimization,
       insights: {
         totalCreatives: performanceData?.length || 0,
-        avgCtr: performanceData?.reduce((sum: number, ad: any) => sum + (ad.ctr || 0), 0) / (performanceData?.length || 1),
-        avgConversionRate: performanceData?.reduce((sum: number, ad: any) => sum + (ad.conversionRate || 0), 0) / (performanceData?.length || 1),
-        avgQualityScore: performanceData?.reduce((sum: number, ad: any) => sum + (ad.qualityScore || 0), 0) / (performanceData?.length || 1),
+        avgCtr:
+          performanceData?.reduce((sum: number, ad: any) => sum + (ad.ctr || 0), 0) /
+          (performanceData?.length || 1),
+        avgConversionRate:
+          performanceData?.reduce((sum: number, ad: any) => sum + (ad.conversionRate || 0), 0) /
+          (performanceData?.length || 1),
+        avgQualityScore:
+          performanceData?.reduce((sum: number, ad: any) => sum + (ad.qualityScore || 0), 0) /
+          (performanceData?.length || 1),
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   } catch (error: any) {
     console.error('投放数据分析失败:', error)
-    return NextResponse.json(
-      { error: error.message || '投放数据分析失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '投放数据分析失败' }, { status: 500 })
   }
 }

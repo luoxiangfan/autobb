@@ -9,11 +9,13 @@ const accountFns = vi.hoisted(() => ({
 
 const campaignListFns = vi.hoisted(() => ({
   listDeletableRemoteCampaignsForAccount: vi.fn(async () => [{ google_campaign_id: '9001' }]),
-  limitDeletableRemoteCampaigns: vi.fn((campaigns: { google_campaign_id: string }[], max: number) => ({
-    selected: campaigns.slice(0, max),
-    truncated: Math.max(0, campaigns.length - max),
-    maxCampaigns: max,
-  })),
+  limitDeletableRemoteCampaigns: vi.fn(
+    (campaigns: { google_campaign_id: string }[], max: number) => ({
+      selected: campaigns.slice(0, max),
+      truncated: Math.max(0, campaigns.length - max),
+      maxCampaigns: max,
+    })
+  ),
 }))
 
 const remoteFns = vi.hoisted(() => ({

@@ -13,7 +13,12 @@ import {
   processMccChildAccounts,
   type MccChildAccountsSyncContext,
 } from './google-ads-accounts-mcc-children'
-import { debugLog, extractSearchResults, formatErrorMessage, parseStatus } from './google-ads-accounts-sync-utils'
+import {
+  debugLog,
+  extractSearchResults,
+  formatErrorMessage,
+  parseStatus,
+} from './google-ads-accounts-sync-utils'
 import { assertGoogleAdsAuthReadyForApi } from './google-ads-auth-context'
 
 export async function syncAccountsFromAPI(
@@ -63,9 +68,9 @@ export async function syncAccountsFromAPI(
       console.error(`   ❌ 服务账号认证失败:`, error.message)
       throw new Error(
         `服务账号认证失败: ${error.message}。` +
-        `请确保：1) 服务账号邮箱已被添加到 Google Ads MCC 的"访问权限和安全"中；` +
-        `2) GCP 项目中已启用 Google Ads API。` +
-        `服务账号邮箱: ${serviceAccountConfig.serviceAccountEmail}`
+          `请确保：1) 服务账号邮箱已被添加到 Google Ads MCC 的"访问权限和安全"中；` +
+          `2) GCP 项目中已启用 Google Ads API。` +
+          `服务账号邮箱: ${serviceAccountConfig.serviceAccountEmail}`
       )
     }
   } else {
@@ -83,7 +88,9 @@ export async function syncAccountsFromAPI(
   console.log(`   🔍 Resource Names: ${resourceNames.join(', ')}`)
   console.log(`   ✅ 直接可访问账户 (${customerIds.length}个): ${customerIds.join(', ')}`)
 
-  const mccCustomerId = isServiceAccount ? serviceAccountConfig.mccCustomerId : credentials.login_customer_id
+  const mccCustomerId = isServiceAccount
+    ? serviceAccountConfig.mccCustomerId
+    : credentials.login_customer_id
   console.log(`   🔑 Login Customer ID (MCC): ${mccCustomerId || '未设置'}`)
 
   const accountMap = new Map<string, any>()
@@ -92,7 +99,8 @@ export async function syncAccountsFromAPI(
   const pendingManagerIds: string[] = []
   const authScope = {
     authType,
-    serviceAccountId: authType === 'service_account' ? (serviceAccountConfig?.id?.toString?.() || null) : null,
+    serviceAccountId:
+      authType === 'service_account' ? serviceAccountConfig?.id?.toString?.() || null : null,
   }
 
   const recordAccount = (accountData: any, dbId: number, last_sync_at: string) => {
@@ -143,7 +151,7 @@ export async function syncAccountsFromAPI(
       // 原因：根据Google Ads API文档，当直接访问账户(非通过管理账户)时，
       //       login_customer_id应该省略或设置为账户自己的ID
       const loginCustomerIds = isServiceAccount
-        ? [serviceAccountConfig.mccCustomerId, customerId, null]  // MCC → 子账户 → null
+        ? [serviceAccountConfig.mccCustomerId, customerId, null] // MCC → 子账户 → null
         : [credentials.login_customer_id, customerId, null]
 
       let customer: any
@@ -151,7 +159,11 @@ export async function syncAccountsFromAPI(
 
       // 🔧 修复(2025-12-25): 尝试多个login_customer_id直到成功
       // 重点：每次尝试都需要重新创建客户端，因为@htdangkhoa/google-ads在实例化时固化了login_customer_id
-      const loginAttempts: Array<{ loginCustomerId: string | null, error: string | null, success: boolean }> = []
+      const loginAttempts: Array<{
+        loginCustomerId: string | null
+        error: string | null
+        success: boolean
+      }> = []
 
       for (const lcId of loginCustomerIds) {
         const lcIdDisplay = lcId || 'null(省略)'
@@ -208,7 +220,7 @@ export async function syncAccountsFromAPI(
           loginAttempts.push({
             loginCustomerId: lcId,
             error: errorMessage,
-            success: false
+            success: false,
           })
           console.warn(`   ⚠️ 使用 login_customer_id: ${lcIdDisplay} 失败: ${errorMessage}`)
 
@@ -217,22 +229,25 @@ export async function syncAccountsFromAPI(
             console.warn(`   🔍 检测到权限错误，记录详细信息用于前端提示`)
           }
 
-          continue  // 尝试下一个login_customer_id
+          continue // 尝试下一个login_customer_id
         }
       }
 
       // 如果所有login_customer_id都失败，构建详细的错误信息
       if (!customer) {
-        const hasPermissionDenied = loginAttempts.some(attempt =>
-          attempt.error && attempt.error.includes('PERMISSION_DENIED')
+        const hasPermissionDenied = loginAttempts.some(
+          (attempt) => attempt.error && attempt.error.includes('PERMISSION_DENIED')
         )
 
         // 🆕 构建用户友好的错误信息
         let friendlyErrorMessage = '无法访问该账户。'
 
         if (hasPermissionDenied && isServiceAccount) {
-          const mccId = isServiceAccount ? serviceAccountConfig.mccCustomerId : credentials.login_customer_id
-          friendlyErrorMessage = `服务账号权限不足。\n\n` +
+          const mccId = isServiceAccount
+            ? serviceAccountConfig.mccCustomerId
+            : credentials.login_customer_id
+          friendlyErrorMessage =
+            `服务账号权限不足。\n\n` +
             `问题诊断：\n` +
             `1. 尝试使用MCC账户(${mccId})访问失败 - PERMISSION_DENIED\n` +
             `2. 尝试直接访问子账户(${customerId})也失败\n\n` +
@@ -251,8 +266,12 @@ export async function syncAccountsFromAPI(
         const enhancedError = new Error(friendlyErrorMessage)
         ;(enhancedError as any).loginAttempts = loginAttempts
         ;(enhancedError as any).isPermissionError = hasPermissionDenied
-        ;(enhancedError as any).serviceAccountEmail = isServiceAccount ? serviceAccountConfig.serviceAccountEmail : null
-        ;(enhancedError as any).mccCustomerId = isServiceAccount ? serviceAccountConfig.mccCustomerId : credentials.login_customer_id
+        ;(enhancedError as any).serviceAccountEmail = isServiceAccount
+          ? serviceAccountConfig.serviceAccountEmail
+          : null
+        ;(enhancedError as any).mccCustomerId = isServiceAccount
+          ? serviceAccountConfig.mccCustomerId
+          : credentials.login_customer_id
 
         throw enhancedError
       }
@@ -277,7 +296,7 @@ export async function syncAccountsFromAPI(
               userId,
               serviceAccountId: serviceAccountConfig.id.toString(),
               customerId: customerId,
-              query: basicAccountInfoQuery
+              query: basicAccountInfoQuery,
             })
           } else {
             apiRequestCount += 1
@@ -302,7 +321,7 @@ export async function syncAccountsFromAPI(
                 userId,
                 serviceAccountId: serviceAccountConfig.id.toString(),
                 customerId: customerId,
-                query: statusQuery
+                query: statusQuery,
               })
             } else {
               apiRequestCount += 1
@@ -313,7 +332,9 @@ export async function syncAccountsFromAPI(
               rawStatus = statusInfo[0].customer?.status
             }
           } catch (_statusError: any) {
-            console.warn(`   ⚠️ 账户 ${customerId} status 字段查询失败（权限不足或账户状态异常），使用默认值 UNKNOWN`)
+            console.warn(
+              `   ⚠️ 账户 ${customerId} status 字段查询失败（权限不足或账户状态异常），使用默认值 UNKNOWN`
+            )
           }
         }
 
@@ -352,34 +373,50 @@ export async function syncAccountsFromAPI(
           // 🔧 修复(2025-12-26): 服务账号模式使用 executeGAQLQueryPython，而不是错误的 customer.search()
           const { executeGAQLQueryPython } = await import('@/lib/python-ads-client')
           const budgetResult = isServiceAccount
-            ? await executeGAQLQueryPython({ userId, serviceAccountId: serviceAccountConfig.id.toString(), customerId, query: budgetQuery })
+            ? await executeGAQLQueryPython({
+                userId,
+                serviceAccountId: serviceAccountConfig.id.toString(),
+                customerId,
+                query: budgetQuery,
+              })
             : await (async () => {
-              apiRequestCount += 1
-              return await customer.query(budgetQuery)
-            })()
+                apiRequestCount += 1
+                return await customer.query(budgetQuery)
+              })()
           const budgetInfo = extractSearchResults(budgetResult)
           if (budgetInfo && budgetInfo.length > 0) {
             const budget = budgetInfo[0].account_budget
             const budgetResourceName = budget?.resource_name || budget?.resourceName
             const billingSetupResourceName = budget?.billing_setup || budget?.billingSetup
             const budgetOwnerCustomerId = extractCustomerIdFromResourceName(budgetResourceName)
-            const billingOwnerCustomerId = extractCustomerIdFromResourceName(billingSetupResourceName)
+            const billingOwnerCustomerId =
+              extractCustomerIdFromResourceName(billingSetupResourceName)
 
             // ✅ 更严格的“合并/代付账单”识别：
             // - budget.resource_name 可能仍显示为子账户 customer（导致误判为“每个子账户都有相同余额”）
             // - billing_setup 归属通常能反映真实付款主体（paying manager / consolidated billing）
             if (billingOwnerCustomerId && billingOwnerCustomerId !== String(customerId)) {
-              console.log(`   ⚠️ ${customerId} billing_setup 归属不匹配，已跳过余额计算 (billingOwner=${billingOwnerCustomerId})`)
+              console.log(
+                `   ⚠️ ${customerId} billing_setup 归属不匹配，已跳过余额计算 (billingOwner=${billingOwnerCustomerId})`
+              )
             } else if (budgetOwnerCustomerId && budgetOwnerCustomerId !== String(customerId)) {
               // 在“Paying manager / consolidated billing”场景下，子账户可能会返回付款管理账号的预算。
               // 这种预算不应被展示为“每个子账户的余额”，否则会出现多个账号显示同一个余额的误导。
-              console.log(`   ⚠️ ${customerId} 预算归属不匹配，已跳过余额计算 (budgetOwner=${budgetOwnerCustomerId})`)
+              console.log(
+                `   ⚠️ ${customerId} 预算归属不匹配，已跳过余额计算 (budgetOwner=${budgetOwnerCustomerId})`
+              )
             } else {
               const amountServed = Number(budget?.amount_served_micros || 0)
-              const spendingLimit = Number(budget?.approved_spending_limit_micros || budget?.proposed_spending_limit_micros || 0)
+              const spendingLimit = Number(
+                budget?.approved_spending_limit_micros ||
+                  budget?.proposed_spending_limit_micros ||
+                  0
+              )
               // 余额 = 预算 - 已使用
               accountBalance = spendingLimit > 0 ? spendingLimit - amountServed : null
-              console.log(`   💰 ${customerId} 余额: ${accountBalance ? parseFloat((accountBalance / 1000000).toFixed(2)) : 'N/A'}`)
+              console.log(
+                `   💰 ${customerId} 余额: ${accountBalance ? parseFloat((accountBalance / 1000000).toFixed(2)) : 'N/A'}`
+              )
             }
           }
         } catch (_budgetError) {
@@ -389,21 +426,28 @@ export async function syncAccountsFromAPI(
         // 🔧 修复(2025-12-18): 计算parent_mcc字段
         // 默认使用登录的MCC账户ID；在MCC层级遍历中会更新为真实父级
         const isManagerAccount = account.customer?.manager || false
-        const parentMcc = isManagerAccount ? null : (isServiceAccount ? serviceAccountConfig.mccCustomerId : credentials.login_customer_id)
+        const parentMcc = isManagerAccount
+          ? null
+          : isServiceAccount
+            ? serviceAccountConfig.mccCustomerId
+            : credentials.login_customer_id
 
         // 🆕 身份验证（广告主验证）状态：用于识别“因未完成验证导致暂停但 customer.status 仍为 ENABLED”的情况
-        const identityVerification = (!isManagerAccount && parsedStatus === 'ENABLED')
-          ? await fetchIdentityVerificationSnapshot({
-            userId,
-            customerId,
-            customer: isServiceAccount ? undefined : customer,
-            authType: isServiceAccount ? 'service_account' : 'oauth',
-            serviceAccountConfig,
-          })
-          : { ...EMPTY_IDENTITY_VERIFICATION }
+        const identityVerification =
+          !isManagerAccount && parsedStatus === 'ENABLED'
+            ? await fetchIdentityVerificationSnapshot({
+                userId,
+                customerId,
+                customer: isServiceAccount ? undefined : customer,
+                authType: isServiceAccount ? 'service_account' : 'oauth',
+                serviceAccountConfig,
+              })
+            : { ...EMPTY_IDENTITY_VERIFICATION }
 
-        const effectiveStatus = (parsedStatus === 'ENABLED' && identityVerification.overdue) ? 'SUSPENDED' : parsedStatus
-        const identityVerificationCheckedAt = (!isManagerAccount && parsedStatus === 'ENABLED') ? new Date().toISOString() : null
+        const effectiveStatus =
+          parsedStatus === 'ENABLED' && identityVerification.overdue ? 'SUSPENDED' : parsedStatus
+        const identityVerificationCheckedAt =
+          !isManagerAccount && parsedStatus === 'ENABLED' ? new Date().toISOString() : null
 
         const accountData = {
           customer_id: customerId,
@@ -414,10 +458,12 @@ export async function syncAccountsFromAPI(
           test_account: account.customer?.test_account || false,
           status: effectiveStatus,
           account_balance: accountBalance,
-          parent_mcc: parentMcc,  // 🆕 设置parent_mcc：子账户的parent_mcc是MCC账户ID，MCC账户的parent_mcc为null
+          parent_mcc: parentMcc, // 🆕 设置parent_mcc：子账户的parent_mcc是MCC账户ID，MCC账户的parent_mcc为null
           identity_verification_program_status: identityVerification.programStatus,
-          identity_verification_start_deadline_time: identityVerification.verificationStartDeadlineTime,
-          identity_verification_completion_deadline_time: identityVerification.verificationCompletionDeadlineTime,
+          identity_verification_start_deadline_time:
+            identityVerification.verificationStartDeadlineTime,
+          identity_verification_completion_deadline_time:
+            identityVerification.verificationCompletionDeadlineTime,
           identity_verification_overdue: identityVerification.overdue,
           identity_verification_checked_at: identityVerificationCheckedAt,
         }
@@ -425,7 +471,9 @@ export async function syncAccountsFromAPI(
         const { id: dbId, last_sync_at } = await upsertAccount(userId, accountData, authScope)
         recordAccount(accountData, dbId, last_sync_at)
 
-        console.log(`   ✓ ${customerId}: ${accountData.descriptive_name} (MCC: ${accountData.manager})`)
+        console.log(
+          `   ✓ ${customerId}: ${accountData.descriptive_name} (MCC: ${accountData.manager})`
+        )
 
         // 如果是MCC账户，查询其管理的子账户
         if (accountData.manager) {
@@ -470,7 +518,7 @@ export async function syncAccountsFromAPI(
         requestCount: Math.max(1, apiRequestCount),
         responseTimeMs: Date.now() - apiStartTime,
         isSuccess: apiSuccess,
-        errorMessage: apiErrorMessage
+        errorMessage: apiErrorMessage,
       })
     }
   }

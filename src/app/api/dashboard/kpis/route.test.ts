@@ -67,11 +67,7 @@ describe('GET /api/dashboard/kpis', () => {
 
     expect(res.status).toBe(200)
     expect(data).toEqual({ success: true, data: { source: 'cache' } })
-    expect(cacheFns.getOrSet).toHaveBeenCalledWith(
-      'kpis:test',
-      expect.any(Function),
-      20 * 1000
-    )
+    expect(cacheFns.getOrSet).toHaveBeenCalledWith('kpis:test', expect.any(Function), 20 * 1000)
     expect(cacheFns.set).not.toHaveBeenCalled()
   })
 
@@ -82,11 +78,7 @@ describe('GET /api/dashboard/kpis', () => {
     const res = await GET(req)
 
     expect(res.status).toBe(200)
-    expect(cacheFns.getOrSet).toHaveBeenCalledWith(
-      'kpis:test',
-      expect.any(Function),
-      5 * 60 * 1000
-    )
+    expect(cacheFns.getOrSet).toHaveBeenCalledWith('kpis:test', expect.any(Function), 5 * 60 * 1000)
   })
 
   it('applies short KPI TTL when FF_KPI_SHORT_TTL is enabled', async () => {
@@ -97,11 +89,7 @@ describe('GET /api/dashboard/kpis', () => {
     const res = await GET(req)
 
     expect(res.status).toBe(200)
-    expect(cacheFns.getOrSet).toHaveBeenCalledWith(
-      'kpis:test',
-      expect.any(Function),
-      15 * 1000
-    )
+    expect(cacheFns.getOrSet).toHaveBeenCalledWith('kpis:test', expect.any(Function), 15 * 1000)
   })
 
   it('excludes unattributed failures for admin commission totals', async () => {
@@ -116,7 +104,7 @@ describe('GET /api/dashboard/kpis', () => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
         return [{ currency: 'USD' }]
       }
-      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return [{ currency: 'USD', impressions: 800, clicks: 80, cost: 40 }]
       }
 
@@ -127,7 +115,10 @@ describe('GET /api/dashboard/kpis', () => {
     let attributedCallCount = 0
 
     const queryOne = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('SUM(impressions) as impressions')
+      ) {
         periodCallCount += 1
         if (periodCallCount === 1) {
           return { impressions: 1000, clicks: 100, cost: 50 }
@@ -172,7 +163,7 @@ describe('GET /api/dashboard/kpis', () => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
         return [{ currency: 'USD' }]
       }
-      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return [{ currency: 'USD', impressions: 800, clicks: 80, cost: 40 }]
       }
 
@@ -184,7 +175,10 @@ describe('GET /api/dashboard/kpis', () => {
     let unattributedCallCount = 0
 
     const queryOne = vi.fn(async (sql: string, _params: any[] = []) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('SUM(impressions) as impressions')
+      ) {
         periodCallCount += 1
         if (periodCallCount === 1) {
           return { impressions: 1000, clicks: 100, cost: 50 }
@@ -249,7 +243,7 @@ describe('GET /api/dashboard/kpis', () => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
         return [{ currency: 'USD' }]
       }
-      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return [{ currency: 'USD', impressions: 800, clicks: 80, cost: 40 }]
       }
 
@@ -261,7 +255,10 @@ describe('GET /api/dashboard/kpis', () => {
     let unattributedCallCount = 0
 
     const queryOne = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('SUM(impressions) as impressions')
+      ) {
         periodCallCount += 1
         if (periodCallCount === 1) {
           return { impressions: 1000, clicks: 100, cost: 50 }
@@ -311,7 +308,7 @@ describe('GET /api/dashboard/kpis', () => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {
         return [{ currency: 'USD' }]
       }
-      if (sql.includes('GROUP BY COALESCE(currency, \'USD\')')) {
+      if (sql.includes("GROUP BY COALESCE(currency, 'USD')")) {
         return [
           { currency: 'USD', impressions: 50, clicks: 5, cost: 20 },
           { currency: 'CNY', impressions: 50, clicks: 5, cost: 72 },
@@ -326,7 +323,10 @@ describe('GET /api/dashboard/kpis', () => {
     let unattributedCallCount = 0
 
     const queryOne = vi.fn(async (sql: string) => {
-      if (sql.includes('FROM campaign_performance') && sql.includes('SUM(impressions) as impressions')) {
+      if (
+        sql.includes('FROM campaign_performance') &&
+        sql.includes('SUM(impressions) as impressions')
+      ) {
         if (!currentPeriodCalled) {
           currentPeriodCalled = true
           return { impressions: 1000, clicks: 100, cost: 50 }
@@ -336,16 +336,12 @@ describe('GET /api/dashboard/kpis', () => {
 
       if (sql.includes('FROM affiliate_commission_attributions')) {
         attributedCallCount += 1
-        return attributedCallCount === 1
-          ? { total_commission: 10 }
-          : { total_commission: 5 }
+        return attributedCallCount === 1 ? { total_commission: 10 } : { total_commission: 5 }
       }
 
       if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
         unattributedCallCount += 1
-        return unattributedCallCount === 1
-          ? { total_commission: 0 }
-          : { total_commission: 0 }
+        return unattributedCallCount === 1 ? { total_commission: 0 } : { total_commission: 0 }
       }
 
       throw new Error(`unexpected queryOne sql: ${sql}`)

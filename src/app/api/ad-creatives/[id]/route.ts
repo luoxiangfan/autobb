@@ -37,7 +37,7 @@ function normalizeObjectField(value: unknown): Record<string, any> | undefined {
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 
@@ -118,7 +118,7 @@ const updateCreativeSchema = z.object({
  * 更新广告创意
  */
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 
@@ -155,10 +155,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     )
 
     if (!creative) {
-      return NextResponse.json(
-        { error: '广告创意不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告创意不存在或无权访问' }, { status: 404 })
     }
 
     // 检查是否已同步到Google Ads
@@ -189,7 +186,9 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
     if (data.keywords_with_volume !== undefined) {
       updates.push('keywords_with_volume = ?')
-      sqlParams.push(normalizedKeywordsWithVolume ? JSON.stringify(normalizedKeywordsWithVolume) : null)
+      sqlParams.push(
+        normalizedKeywordsWithVolume ? JSON.stringify(normalizedKeywordsWithVolume) : null
+      )
     }
     if (data.negative_keywords !== undefined) {
       updates.push('negative_keywords = ?')
@@ -229,10 +228,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     if (updates.length === 0) {
-      return NextResponse.json(
-        { error: '没有需要更新的字段' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '没有需要更新的字段' }, { status: 400 })
     }
 
     updates.push('updated_at = ?')
@@ -240,10 +236,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     sqlParams.push(parseInt(id, 10))
 
     // 执行更新
-    await db.exec(
-      `UPDATE ad_creatives SET ${updates.join(', ')} WHERE id = ?`,
-      sqlParams
-    )
+    await db.exec(`UPDATE ad_creatives SET ${updates.join(', ')} WHERE id = ?`, sqlParams)
 
     // 查询更新后的记录
     const updatedCreative = await db.queryOne(
@@ -283,7 +276,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
  * 删除广告创意
  */
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 
@@ -302,18 +295,14 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     )
 
     if (!creative) {
-      return NextResponse.json(
-        { error: '广告创意不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告创意不存在或无权访问' }, { status: 404 })
     }
 
     // 检查是否已同步到Google Ads
     if ((creative as any).creation_status === 'synced') {
       return NextResponse.json(
         {
-          error:
-            '广告创意已同步到Google Ads，无法删除。请在Google Ads后台暂停或删除该广告。',
+          error: '广告创意已同步到Google Ads，无法删除。请在Google Ads后台暂停或删除该广告。',
         },
         { status: 409 }
       )

@@ -1,7 +1,12 @@
 import { getDatabase } from '@/lib/db'
 import { getAllProxyUrls } from '@/lib/settings'
 import { getProxyPool, clearProxyPool } from '@/lib/url-resolver-enhanced'
-import { getLanguageNameForCountry, getSupportedCountries, getCountryChineseName, normalizeCountryCode } from '@/lib/language-country-codes'
+import {
+  getLanguageNameForCountry,
+  getSupportedCountries,
+  getCountryChineseName,
+  normalizeCountryCode,
+} from '@/lib/language-country-codes'
 import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 import { calculateMaxCPC } from '@/lib/currency'
 
@@ -14,7 +19,12 @@ import { calculateMaxCPC } from '@/lib/currency'
  * 页面类型检测结果
  */
 export interface PageTypeResult {
-  pageType: 'amazon_store' | 'amazon_product' | 'independent_store' | 'independent_product' | 'unknown'
+  pageType:
+    | 'amazon_store'
+    | 'amazon_product'
+    | 'independent_store'
+    | 'independent_product'
+    | 'unknown'
   isAmazonStore: boolean
   isAmazonProductPage: boolean
   isIndependentStore: boolean
@@ -163,7 +173,9 @@ export function invalidateProxyPoolCache(userId?: number): void {
     console.log(`   - 用户 ${userId} 的缓存已清除`)
   } else {
     // 缓存属于其他用户，不清除
-    console.log(`   - 跳过清除：当前缓存属于用户 ${proxyPoolInitializedForUser}，请求清除用户 ${userId}`)
+    console.log(
+      `   - 跳过清除：当前缓存属于用户 ${proxyPoolInitializedForUser}，请求清除用户 ${userId}`
+    )
   }
 }
 
@@ -205,17 +217,25 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
   }
 
   const isSameUser = proxyPoolInitialized && proxyPoolInitializedForUser === userId
-  if (isSameUser && proxyPoolInitializedConfigSignature !== null && proxyPoolInitializedConfigSignature !== configSignature) {
+  if (
+    isSameUser &&
+    proxyPoolInitializedConfigSignature !== null &&
+    proxyPoolInitializedConfigSignature !== configSignature
+  ) {
     console.log('🔄 [initializeProxyPool] 检测到代理配置变更，重新加载代理池')
   } else {
-    console.log(`🔍 [initializeProxyPool] 开始初始化代理池 (userId=${userId}, country=${targetCountry})`)
+    console.log(
+      `🔍 [initializeProxyPool] 开始初始化代理池 (userId=${userId}, country=${targetCountry})`
+    )
   }
 
   // 🔥 修复:所有代理都不设置为 default（emergency）优先级
   // 代理池会自动将第一个代理作为兜底代理（如果需要）
   const proxiesWithDefault = proxyUrls.map((p: any) => ({
     url: p.url,
-    country: String(p.country || '').trim().toUpperCase(),
+    country: String(p.country || '')
+      .trim()
+      .toUpperCase(),
     is_default: false, // 不自动设置兜底代理，让代理池自行管理
   }))
 
@@ -248,7 +268,7 @@ export function normalizeBrandName(brand: string): string {
   const trimmed = brand.trim()
   if (!trimmed) return trimmed
 
-  const normalizedApostrophe = trimmed.replace(/’/g, '\'')
+  const normalizedApostrophe = trimmed.replace(/’/g, "'")
   const normalizedKey = normalizedApostrophe.toLowerCase()
   const specialCases = new Map<string, string>([
     // BJ's Wholesale Club → prefer a stable, punctuation-free short brand token
@@ -261,10 +281,38 @@ export function normalizeBrandName(brand: string): string {
 
   // 常见全大写缩写列表（保持大写）
   const ABBREVIATIONS = new Set([
-    'IBM', 'HP', 'LG', 'BMW', 'ASUS', 'DELL', 'AMD', 'AT&T',
-    'BBC', 'CNN', 'ESPN', 'HBO', 'MTV', 'NBA', 'NFL', 'NHL',
-    'USA', 'UK', 'EU', 'NASA', 'FBI', 'CIA', 'DVD', 'LCD',
-    'LED', 'USB', 'GPS', 'API', 'SEO', 'CEO', 'CTO', 'CFO'
+    'IBM',
+    'HP',
+    'LG',
+    'BMW',
+    'ASUS',
+    'DELL',
+    'AMD',
+    'AT&T',
+    'BBC',
+    'CNN',
+    'ESPN',
+    'HBO',
+    'MTV',
+    'NBA',
+    'NFL',
+    'NHL',
+    'USA',
+    'UK',
+    'EU',
+    'NASA',
+    'FBI',
+    'CIA',
+    'DVD',
+    'LCD',
+    'LED',
+    'USB',
+    'GPS',
+    'API',
+    'SEO',
+    'CEO',
+    'CTO',
+    'CFO',
   ])
 
   // 如果是常见缩写，保持大写
@@ -275,10 +323,10 @@ export function normalizeBrandName(brand: string): string {
   // 对每个单词进行首字母大写处理
   return trimmed
     .split(/\s+/)
-    .map(word => {
+    .map((word) => {
       if (!word) return word
 
-      const wordKey = word.replace(/’/g, '\'').toLowerCase()
+      const wordKey = word.replace(/’/g, "'").toLowerCase()
       const specialWord = specialCases.get(wordKey)
       if (specialWord) return specialWord
 
@@ -357,7 +405,9 @@ export async function generateOfferName(
 
   // 兜底：使用时间戳确保唯一
   const timestamp = Date.now().toString(36)
-  console.warn(`⚠️ [generateOfferName] 无法找到唯一序号，使用时间戳: ${brandName}_${normalizedCountryCode}_${timestamp}`)
+  console.warn(
+    `⚠️ [generateOfferName] 无法找到唯一序号，使用时间戳: ${brandName}_${normalizedCountryCode}_${timestamp}`
+  )
   return `${brandName}_${normalizedCountryCode}_${timestamp}`
 }
 
@@ -459,7 +509,7 @@ export function calculateSuggestedMaxCPC(
  */
 export function getCountryList(): Array<{ code: string; name: string; language: string }> {
   return getSupportedCountries()
-    .map(country => ({
+    .map((country) => ({
       code: country.code,
       name: getCountryChineseName(country.code),
       language: getLanguageNameForCountry(country.code),
@@ -471,7 +521,11 @@ export function getCountryList(): Array<{ code: string; name: string; language: 
  * 验证Offer名称是否唯一
  * 🔥 修复（2025-12-09）：显式转换count为数字（PostgreSQL bigint可能返回字符串）
  */
-export async function isOfferNameUnique(offerName: string, userId: number, excludeOfferId?: number): Promise<boolean> {
+export async function isOfferNameUnique(
+  offerName: string,
+  userId: number,
+  excludeOfferId?: number
+): Promise<boolean> {
   const db = await getDatabase()
 
   const query = excludeOfferId
@@ -514,11 +568,11 @@ export function formatOfferDisplayName(offer: {
  * @returns 检测到的国家代码，默认返回'US'
  */
 export function detectCountryFromUrl(url: string): string {
-  if (!url) return 'US';
+  if (!url) return 'US'
 
   try {
-    const urlObj = new URL(url);
-    const hostname = urlObj.hostname.toLowerCase();
+    const urlObj = new URL(url)
+    const hostname = urlObj.hostname.toLowerCase()
 
     // Amazon域名映射
     const amazonDomainMap: Record<string, string> = {
@@ -540,52 +594,52 @@ export function detectCountryFromUrl(url: string): string {
       'amazon.ae': 'AE',
       'amazon.sa': 'SA',
       'amazon.sg': 'SG',
-    };
+    }
 
     // 检查Amazon域名
     for (const [domain, country] of Object.entries(amazonDomainMap)) {
       if (hostname === domain || hostname === `www.${domain}`) {
-        return country;
+        return country
       }
     }
 
     // 通用顶级域名映射
     const tldMap: Record<string, string> = {
-      'uk': 'GB',
-      'de': 'DE',
-      'fr': 'FR',
-      'it': 'IT',
-      'es': 'ES',
-      'ca': 'CA',
-      'jp': 'JP',
-      'au': 'AU',
-      'in': 'IN',
-      'br': 'BR',
-      'mx': 'MX',
-      'nl': 'NL',
-      'se': 'SE',
-      'pl': 'PL',
-    };
+      uk: 'GB',
+      de: 'DE',
+      fr: 'FR',
+      it: 'IT',
+      es: 'ES',
+      ca: 'CA',
+      jp: 'JP',
+      au: 'AU',
+      in: 'IN',
+      br: 'BR',
+      mx: 'MX',
+      nl: 'NL',
+      se: 'SE',
+      pl: 'PL',
+    }
 
     // 从顶级域名推断
-    const parts = hostname.split('.');
+    const parts = hostname.split('.')
     if (parts.length >= 2) {
-      const tld = parts[parts.length - 1];
+      const tld = parts[parts.length - 1]
       // 处理 .co.uk 这类复合顶级域名
       if (parts.length >= 3 && parts[parts.length - 2] === 'co') {
-        const countryTld = parts[parts.length - 1];
+        const countryTld = parts[parts.length - 1]
         if (tldMap[countryTld]) {
-          return tldMap[countryTld];
+          return tldMap[countryTld]
         }
       }
       if (tldMap[tld]) {
-        return tldMap[tld];
+        return tldMap[tld]
       }
     }
 
     // 默认返回US
-    return 'US';
+    return 'US'
   } catch {
-    return 'US';
+    return 'US'
   }
 }

@@ -12,22 +12,16 @@ import { getDatabase } from '@/lib/db'
  * PATCH - 更新任务状态
  */
 export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const auth = await verifyAuth(request)
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const taskId = parseInt(params.id)
     if (isNaN(taskId)) {
-      return NextResponse.json(
-        { error: 'Invalid task ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
     }
 
     const body = await request.json()
@@ -35,33 +29,23 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
 
     // 验证status
     if (!['in_progress', 'completed', 'dismissed'].includes(status)) {
-      return NextResponse.json(
-        { error: 'Invalid status' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
     // 更新任务
     const updated = await updateTaskStatus(taskId, auth.user!.userId, status, note)
 
     if (!updated) {
-      return NextResponse.json(
-        { error: 'Task not found or no permission' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Task not found or no permission' }, { status: 404 })
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Task updated successfully'
+      message: 'Task updated successfully',
     })
-
   } catch (error) {
     console.error('Update task error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -69,47 +53,37 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
  * DELETE - 删除任务
  */
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const auth = await verifyAuth(request)
     if (!auth) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const taskId = parseInt(params.id)
     if (isNaN(taskId)) {
-      return NextResponse.json(
-        { error: 'Invalid task ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
     }
 
     const db = await getDatabase()
-    const result = await db.exec(`
+    const result = await db.exec(
+      `
       DELETE FROM optimization_tasks
       WHERE id = ? AND user_id = ?
-    `, [taskId, auth.user!.userId])
+    `,
+      [taskId, auth.user!.userId]
+    )
 
     if (result.changes === 0) {
-      return NextResponse.json(
-        { error: 'Task not found or no permission' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Task not found or no permission' }, { status: 404 })
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Task deleted successfully'
+      message: 'Task deleted successfully',
     })
-
   } catch (error) {
     console.error('Delete task error:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

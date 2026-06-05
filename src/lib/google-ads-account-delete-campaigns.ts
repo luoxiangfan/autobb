@@ -14,7 +14,8 @@ export async function listDeletableRemoteCampaignsForAccount(
   const db = await getDatabase()
   const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
 
-  return (await db.query(`
+  return (await db.query(
+    `
     SELECT google_campaign_id
     FROM campaigns
     WHERE google_ads_account_id = ?
@@ -23,7 +24,9 @@ export async function listDeletableRemoteCampaignsForAccount(
       AND status != 'REMOVED'
       AND google_campaign_id IS NOT NULL
       AND google_campaign_id != ''
-  `, [accountId, userId])) as DeletableRemoteCampaignRow[]
+  `,
+    [accountId, userId]
+  )) as DeletableRemoteCampaignRow[]
 }
 
 export async function countDeletableRemoteCampaignsForAccount(

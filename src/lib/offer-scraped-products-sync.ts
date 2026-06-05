@@ -18,15 +18,19 @@ export async function saveScrapedProducts(
   const db = await getDatabase()
   const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE scraped_products
     SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
         deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
     WHERE offer_id = ? AND user_id = ?
-  `, [offerId, userId])
+  `,
+    [offerId, userId]
+  )
 
   for (const product of products) {
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO scraped_products (
         user_id, offer_id, name, asin, price, rating, review_count, image_url,
         promotion, badge, is_prime,
@@ -42,31 +46,35 @@ export async function saveScrapedProducts(
         ?, ?, ?,
         ${nowFunc}, ${nowFunc}
       )
-    `, [
-      userId,
-      offerId,
-      product.name,
-      product.asin || null,
-      product.price || null,
-      product.rating || null,
-      product.reviewCount || null,
-      product.imageUrl || null,
-      product.promotion || null,
-      product.badge || null,
-      product.isPrime ? 1 : 0,
-      product.hotScore || null,
-      product.rank || null,
-      product.isHot ? 1 : 0,
-      product.hotLabel || null,
-      product.productUrl || null,
-      source,
-      product.salesVolume || null,
-      product.discount || null,
-      product.deliveryInfo || null,
-    ])
+    `,
+      [
+        userId,
+        offerId,
+        product.name,
+        product.asin || null,
+        product.price || null,
+        product.rating || null,
+        product.reviewCount || null,
+        product.imageUrl || null,
+        product.promotion || null,
+        product.badge || null,
+        product.isPrime ? 1 : 0,
+        product.hotScore || null,
+        product.rank || null,
+        product.isHot ? 1 : 0,
+        product.hotLabel || null,
+        product.productUrl || null,
+        source,
+        product.salesVolume || null,
+        product.discount || null,
+        product.deliveryInfo || null,
+      ]
+    )
   }
 
-  console.log(`📊 scraped_products 已同步 ${products.length} 条 (offer_id=${offerId}, source=${source})`)
+  console.log(
+    `📊 scraped_products 已同步 ${products.length} 条 (offer_id=${offerId}, source=${source})`
+  )
 }
 
 function buildSingleProductRow(extractData: Record<string, unknown>): any[] | null {
@@ -78,22 +86,24 @@ function buildSingleProductRow(extractData: Record<string, unknown>): any[] | nu
   const hotScore = rating > 0 && reviewCount > 0 ? rating * Math.log10(reviewCount + 1) : 0
   const imageUrls = Array.isArray(extractData.imageUrls) ? extractData.imageUrls : []
 
-  return [{
-    name: productName,
-    asin: typeof extractData.asin === 'string' ? extractData.asin : null,
-    price: typeof extractData.productPrice === 'string' ? extractData.productPrice : null,
-    rating: extractData.rating ?? null,
-    reviewCount: extractData.reviewCount ?? null,
-    imageUrl: typeof imageUrls[0] === 'string' ? imageUrls[0] : null,
-    promotion: extractData.discount ?? null,
-    badge: null,
-    isPrime: extractData.primeEligible === true,
-    hotScore,
-    rank: 1,
-    isHot: true,
-    hotLabel: '🔥 主推商品',
-    productUrl: typeof extractData.finalUrl === 'string' ? extractData.finalUrl : null,
-  }]
+  return [
+    {
+      name: productName,
+      asin: typeof extractData.asin === 'string' ? extractData.asin : null,
+      price: typeof extractData.productPrice === 'string' ? extractData.productPrice : null,
+      rating: extractData.rating ?? null,
+      reviewCount: extractData.reviewCount ?? null,
+      imageUrl: typeof imageUrls[0] === 'string' ? imageUrls[0] : null,
+      promotion: extractData.discount ?? null,
+      badge: null,
+      isPrime: extractData.primeEligible === true,
+      hotScore,
+      rank: 1,
+      isHot: true,
+      hotLabel: '🔥 主推商品',
+      productUrl: typeof extractData.finalUrl === 'string' ? extractData.finalUrl : null,
+    },
+  ]
 }
 
 /**
@@ -107,9 +117,8 @@ export async function syncScrapedProductsFromExtractData(
   if (!extractData || typeof extractData !== 'object') return
 
   const data = extractData as Record<string, unknown>
-  const debug = (data.debug && typeof data.debug === 'object')
-    ? data.debug as Record<string, unknown>
-    : {}
+  const debug =
+    data.debug && typeof data.debug === 'object' ? (data.debug as Record<string, unknown>) : {}
 
   const isAmazonProductPage = debug.isAmazonProductPage === true
   const isIndependentStore = debug.isIndependentStore === true
@@ -117,9 +126,7 @@ export async function syncScrapedProductsFromExtractData(
   try {
     const storeProducts = Array.isArray(data.products) ? data.products : []
     if (storeProducts.length > 0) {
-      const source: ScrapedProductSource = isIndependentStore
-        ? 'independent_store'
-        : 'amazon_store'
+      const source: ScrapedProductSource = isIndependentStore ? 'independent_store' : 'amazon_store'
       await saveScrapedProducts(offerId, userId, storeProducts, source)
       return
     }
@@ -128,10 +135,15 @@ export async function syncScrapedProductsFromExtractData(
     if (single) {
       const source: ScrapedProductSource = isAmazonProductPage
         ? 'amazon_product'
-        : (isIndependentStore ? 'independent_store' : 'amazon_store')
+        : isIndependentStore
+          ? 'independent_store'
+          : 'amazon_store'
       await saveScrapedProducts(offerId, userId, single, source)
     }
   } catch (error: any) {
-    console.warn(`⚠️ scraped_products 同步失败（非致命） offer_id=${offerId}:`, error?.message || error)
+    console.warn(
+      `⚠️ scraped_products 同步失败（非致命） offer_id=${offerId}:`,
+      error?.message || error
+    )
   }
 }

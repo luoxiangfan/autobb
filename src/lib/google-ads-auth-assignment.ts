@@ -53,7 +53,9 @@ function mapAssignmentRow(row: AssignmentRow): GoogleAdsAuthAssignment {
   }
 }
 
-export async function getGoogleAdsAuthAssignment(userId: number): Promise<GoogleAdsAuthAssignment | null> {
+export async function getGoogleAdsAuthAssignment(
+  userId: number
+): Promise<GoogleAdsAuthAssignment | null> {
   const db = await getDatabase()
   const row = await db.queryOne<AssignmentRow>(
     `SELECT user_id, assignment_mode, shared_admin_user_id, auth_type, configured_by, created_at, updated_at
@@ -189,9 +191,8 @@ export { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-context'
  * 是否已配置可用认证（委托 auth-context，与 FromContext / 双栈 / 共享语义一致）。
  */
 export async function hasConfiguredGoogleAdsAuth(userId: number): Promise<boolean> {
-  const { getGoogleAdsAuthContextMetadata, hasConfiguredGoogleAdsAuthFromContext } = await import(
-    './google-ads-auth-context'
-  )
+  const { getGoogleAdsAuthContextMetadata, hasConfiguredGoogleAdsAuthFromContext } =
+    await import('./google-ads-auth-context')
   const ctx = await getGoogleAdsAuthContextMetadata(userId)
   return hasConfiguredGoogleAdsAuthFromContext(ctx)
 }
@@ -231,8 +232,10 @@ export async function assertOwnCredentialsDifferFromAdmin(params: {
     }
 
     const sameClientId = oauth.client_id.trim() === String(adminOAuth.client_id || '').trim()
-    const sameClientSecret = oauth.client_secret.trim() === String(adminOAuth.client_secret || '').trim()
-    const sameDeveloperToken = oauth.developer_token.trim() === String(adminOAuth.developer_token || '').trim()
+    const sameClientSecret =
+      oauth.client_secret.trim() === String(adminOAuth.client_secret || '').trim()
+    const sameDeveloperToken =
+      oauth.developer_token.trim() === String(adminOAuth.developer_token || '').trim()
     const sameLoginCustomerId =
       oauth.login_customer_id.replace(/[\s-]/g, '') ===
       String(adminOAuth.login_customer_id || '').replace(/[\s-]/g, '')
@@ -240,7 +243,13 @@ export async function assertOwnCredentialsDifferFromAdmin(params: {
       oauth.refresh_token != null &&
       oauth.refresh_token.trim() === String(adminOAuth.refresh_token || '').trim()
 
-  if (sameClientId && sameClientSecret && sameDeveloperToken && sameLoginCustomerId && sameRefreshToken) {
+    if (
+      sameClientId &&
+      sameClientSecret &&
+      sameDeveloperToken &&
+      sameLoginCustomerId &&
+      sameRefreshToken
+    ) {
       throw new Error('单独配置的 OAuth 凭证不能与管理员的完全相同')
     }
 
@@ -291,9 +300,9 @@ export async function adminHasConfiguredAuth(
       ctx.auth.authType === 'oauth' &&
       Boolean(
         ctx.oauthCredentials?.refresh_token &&
-          ctx.oauthCredentials.client_id &&
-          ctx.oauthCredentials.client_secret &&
-          ctx.oauthCredentials.developer_token
+        ctx.oauthCredentials.client_id &&
+        ctx.oauthCredentials.client_secret &&
+        ctx.oauthCredentials.developer_token
       )
     )
   }

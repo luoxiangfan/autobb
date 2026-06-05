@@ -90,7 +90,8 @@ export async function queryHighPerformingCreatives(
 
   // 查询高CTR的创意及其性能数据
   // 从ad_creative_performance表获取性能数据，JOIN ad_creatives获取最新创意内容
-  const rows = await db.query(`
+  const rows = (await db.query(
+    `
     SELECT
       ac.id as creativeId,
       ac.headlines,
@@ -119,40 +120,42 @@ export async function queryHighPerformingCreatives(
       CASE WHEN SUM(acp.impressions) > 0 THEN CAST(SUM(acp.clicks) AS REAL) / SUM(acp.impressions) ELSE 0 END DESC,
       CASE WHEN SUM(acp.clicks) > 0 THEN CAST(SUM(acp.conversions) AS REAL) / SUM(acp.clicks) ELSE 0 END DESC
     LIMIT ?
-  `, [userId, minClicks, minCtr, limit]) as any[]
+  `,
+    [userId, minClicks, minCtr, limit]
+  )) as any[]
 
   // 解析 JSON 字段
-  return rows.map(row => {
-      // 解析 headlines JSON
-      let headlines: string[] = []
-      try {
-        headlines = JSON.parse(row.headlines || '[]')
-      } catch {
-        headlines = []
-      }
+  return rows.map((row) => {
+    // 解析 headlines JSON
+    let headlines: string[] = []
+    try {
+      headlines = JSON.parse(row.headlines || '[]')
+    } catch {
+      headlines = []
+    }
 
-      // 解析 descriptions JSON
-      let descriptions: string[] = []
-      try {
-        descriptions = JSON.parse(row.descriptions || '[]')
-      } catch {
-        descriptions = []
-      }
+    // 解析 descriptions JSON
+    let descriptions: string[] = []
+    try {
+      descriptions = JSON.parse(row.descriptions || '[]')
+    } catch {
+      descriptions = []
+    }
 
-      return {
-        creativeId: row.creativeId,
-        headline1: headlines[0] || '',
-        headline2: headlines[1] || null,
-        headline3: headlines[2] || null,
-        description1: descriptions[0] || '',
-        description2: descriptions[1] || null,
-        ctr: row.ctr,
-        clicks: row.clicks,
-        impressions: row.impressions,
-        conversions: row.conversions,
-        conversionRate: row.conversionRate
-      } as HistoricalCreative
-    })
+    return {
+      creativeId: row.creativeId,
+      headline1: headlines[0] || '',
+      headline2: headlines[1] || null,
+      headline3: headlines[2] || null,
+      description1: descriptions[0] || '',
+      description2: descriptions[1] || null,
+      ctr: row.ctr,
+      clicks: row.clicks,
+      impressions: row.impressions,
+      conversions: row.conversions,
+      conversionRate: row.conversionRate,
+    } as HistoricalCreative
+  })
 }
 
 /**
@@ -163,11 +166,35 @@ function extractCommonWords(texts: string[], minFrequency: number = 3): string[]
 
   // 停用词（中英文）
   const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
-    '的', '了', '和', '是', '在', '我', '你', '他', '她', '它', '我们', '你们', '他们'
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    '的',
+    '了',
+    '和',
+    '是',
+    '在',
+    '我',
+    '你',
+    '他',
+    '她',
+    '它',
+    '我们',
+    '你们',
+    '他们',
   ])
 
-  texts.forEach(text => {
+  texts.forEach((text) => {
     if (!text) return
 
     // 提取单词（支持中英文分词）
@@ -175,9 +202,9 @@ function extractCommonWords(texts: string[], minFrequency: number = 3): string[]
       .toLowerCase()
       .replace(/[^\w\s\u4e00-\u9fa5]/g, ' ')
       .split(/\s+/)
-      .filter(word => word.length > 1 && !stopWords.has(word))
+      .filter((word) => word.length > 1 && !stopWords.has(word))
 
-    words.forEach(word => {
+    words.forEach((word) => {
       wordCounts.set(word, (wordCounts.get(word) || 0) + 1)
     })
   })
@@ -196,14 +223,14 @@ function extractCommonWords(texts: string[], minFrequency: number = 3): string[]
 function extractCommonPhrases(texts: string[], minFrequency: number = 2): string[] {
   const phraseCounts = new Map<string, number>()
 
-  texts.forEach(text => {
+  texts.forEach((text) => {
     if (!text) return
 
     const words = text
       .toLowerCase()
       .replace(/[^\w\s\u4e00-\u9fa5]/g, ' ')
       .split(/\s+/)
-      .filter(w => w.length > 1)
+      .filter((w) => w.length > 1)
 
     // 提取2-gram和3-gram
     for (let i = 0; i < words.length - 1; i++) {
@@ -243,21 +270,63 @@ function analyzeTextFeatures(texts: string[]): {
   let mentionsUrgency = 0
 
   const actionWords = [
-    'get', 'buy', 'order', 'shop', 'discover', 'learn', 'save', 'start', 'try', 'join',
-    '获取', '购买', '订购', '了解', '发现', '节省', '开始', '加入', '体验'
+    'get',
+    'buy',
+    'order',
+    'shop',
+    'discover',
+    'learn',
+    'save',
+    'start',
+    'try',
+    'join',
+    '获取',
+    '购买',
+    '订购',
+    '了解',
+    '发现',
+    '节省',
+    '开始',
+    '加入',
+    '体验',
   ]
 
   const benefitWords = [
-    'free', 'save', 'discount', 'best', 'quality', 'guarantee', 'bonus',
-    '免费', '优惠', '折扣', '最好', '品质', '保证', '赠送', '省钱'
+    'free',
+    'save',
+    'discount',
+    'best',
+    'quality',
+    'guarantee',
+    'bonus',
+    '免费',
+    '优惠',
+    '折扣',
+    '最好',
+    '品质',
+    '保证',
+    '赠送',
+    '省钱',
   ]
 
   const urgencyWords = [
-    'now', 'today', 'limited', 'hurry', 'last chance', 'expires', 'soon',
-    '现在', '今天', '限时', '赶快', '最后机会', '即将', '马上'
+    'now',
+    'today',
+    'limited',
+    'hurry',
+    'last chance',
+    'expires',
+    'soon',
+    '现在',
+    '今天',
+    '限时',
+    '赶快',
+    '最后机会',
+    '即将',
+    '马上',
   ]
 
-  const validTexts = texts.filter(t => t && t.length > 0)
+  const validTexts = texts.filter((t) => t && t.length > 0)
   if (validTexts.length === 0) {
     return {
       avgLength: 0,
@@ -265,17 +334,17 @@ function analyzeTextFeatures(texts: string[]): {
       usesQuestions: 0,
       usesAction: 0,
       mentionsBenefit: 0,
-      mentionsUrgency: 0
+      mentionsUrgency: 0,
     }
   }
 
-  validTexts.forEach(text => {
+  validTexts.forEach((text) => {
     totalLength += text.length
     if (/\d/.test(text)) usesNumbers++
     if (/[?？]/.test(text)) usesQuestions++
-    if (actionWords.some(w => text.toLowerCase().includes(w))) usesAction++
-    if (benefitWords.some(w => text.toLowerCase().includes(w))) mentionsBenefit++
-    if (urgencyWords.some(w => text.toLowerCase().includes(w))) mentionsUrgency++
+    if (actionWords.some((w) => text.toLowerCase().includes(w))) usesAction++
+    if (benefitWords.some((w) => text.toLowerCase().includes(w))) mentionsBenefit++
+    if (urgencyWords.some((w) => text.toLowerCase().includes(w))) mentionsUrgency++
   })
 
   return {
@@ -284,7 +353,7 @@ function analyzeTextFeatures(texts: string[]): {
     usesQuestions: usesQuestions / validTexts.length,
     usesAction: usesAction / validTexts.length,
     mentionsBenefit: mentionsBenefit / validTexts.length,
-    mentionsUrgency: mentionsUrgency / validTexts.length
+    mentionsUrgency: mentionsUrgency / validTexts.length,
   }
 }
 
@@ -296,19 +365,31 @@ function extractCtaPatterns(descriptions: string[]): {
   avgPosition: string
 } {
   const ctaKeywords = [
-    '立即', '马上', '现在', '点击', '购买', '订购', '了解', '咨询',
-    'buy now', 'shop now', 'learn more', 'get started', 'order now', 'click here'
+    '立即',
+    '马上',
+    '现在',
+    '点击',
+    '购买',
+    '订购',
+    '了解',
+    '咨询',
+    'buy now',
+    'shop now',
+    'learn more',
+    'get started',
+    'order now',
+    'click here',
   ]
 
   const ctas: string[] = []
   let positionSum = 0
   let positionCount = 0
 
-  descriptions.forEach(desc => {
+  descriptions.forEach((desc) => {
     if (!desc) return
 
     const lower = desc.toLowerCase()
-    ctaKeywords.forEach(keyword => {
+    ctaKeywords.forEach((keyword) => {
       if (lower.includes(keyword)) {
         ctas.push(keyword)
 
@@ -322,7 +403,7 @@ function extractCtaPatterns(descriptions: string[]): {
 
   // 统计最常见的CTA
   const ctaCounts = new Map<string, number>()
-  ctas.forEach(cta => {
+  ctas.forEach((cta) => {
     ctaCounts.set(cta, (ctaCounts.get(cta) || 0) + 1)
   })
 
@@ -351,35 +432,39 @@ export function analyzeSuccessFeatures(creatives: HistoricalCreative[]): Success
         commonPhrases: [],
         usesNumbers: 0,
         usesQuestions: 0,
-        usesAction: 0
+        usesAction: 0,
       },
       descriptionPatterns: {
         avgLength: 60,
         commonWords: [],
         commonPhrases: [],
         mentionsBenefit: 0,
-        mentionsUrgency: 0
+        mentionsUrgency: 0,
       },
       ctaPatterns: {
         commonCtas: [],
-        avgPosition: 'middle'
+        avgPosition: 'middle',
       },
       stylePatterns: {
         toneOfVoice: ['professional'],
-        emotionalAppeal: ['trust']
+        emotionalAppeal: ['trust'],
       },
       benchmarks: {
         minCtr: 0.03,
         avgCtr: 0.03,
         minConversionRate: 0.01,
-        avgConversionRate: 0.01
-      }
+        avgConversionRate: 0.01,
+      },
     }
   }
 
   // 收集所有标题和描述
-  const headlines = creatives.flatMap(c => [c.headline1, c.headline2, c.headline3].filter(Boolean) as string[])
-  const descriptions = creatives.flatMap(c => [c.description1, c.description2].filter(Boolean) as string[])
+  const headlines = creatives.flatMap(
+    (c) => [c.headline1, c.headline2, c.headline3].filter(Boolean) as string[]
+  )
+  const descriptions = creatives.flatMap(
+    (c) => [c.description1, c.description2].filter(Boolean) as string[]
+  )
 
   // 分析标题特征
   const headlineFeatures = analyzeTextFeatures(headlines)
@@ -395,11 +480,12 @@ export function analyzeSuccessFeatures(creatives: HistoricalCreative[]): Success
   const ctaPatterns = extractCtaPatterns(descriptions)
 
   // 计算基准
-  const ctrs = creatives.map(c => c.ctr)
-  const conversionRates = creatives.map(c => c.conversionRate)
+  const ctrs = creatives.map((c) => c.ctr)
+  const conversionRates = creatives.map((c) => c.conversionRate)
 
   const avgCtr = ctrs.reduce((sum, ctr) => sum + ctr, 0) / ctrs.length
-  const avgConversionRate = conversionRates.reduce((sum, rate) => sum + rate, 0) / conversionRates.length
+  const avgConversionRate =
+    conversionRates.reduce((sum, rate) => sum + rate, 0) / conversionRates.length
 
   // 推断风格（简单的启发式规则）
   const toneOfVoice: string[] = []
@@ -420,36 +506,33 @@ export function analyzeSuccessFeatures(creatives: HistoricalCreative[]): Success
       commonPhrases: headlinePhrases,
       usesNumbers: headlineFeatures.usesNumbers,
       usesQuestions: headlineFeatures.usesQuestions,
-      usesAction: headlineFeatures.usesAction
+      usesAction: headlineFeatures.usesAction,
     },
     descriptionPatterns: {
       avgLength: descriptionFeatures.avgLength,
       commonWords: descriptionWords,
       commonPhrases: descriptionPhrases,
       mentionsBenefit: descriptionFeatures.mentionsBenefit,
-      mentionsUrgency: descriptionFeatures.mentionsUrgency
+      mentionsUrgency: descriptionFeatures.mentionsUrgency,
     },
     ctaPatterns,
     stylePatterns: {
       toneOfVoice,
-      emotionalAppeal
+      emotionalAppeal,
     },
     benchmarks: {
       minCtr: Math.min(...ctrs),
       avgCtr,
       minConversionRate: Math.min(...conversionRates),
-      avgConversionRate
-    }
+      avgConversionRate,
+    },
   }
 }
 
 /**
  * 生成增强的AI Prompt
  */
-export function generateEnhancedPrompt(
-  basePrompt: string,
-  features: SuccessFeatures
-): string {
+export function generateEnhancedPrompt(basePrompt: string, features: SuccessFeatures): string {
   const enhancements: string[] = []
 
   // 标题建议
@@ -488,9 +571,7 @@ export function generateEnhancedPrompt(
 
   // CTA建议
   if (features.ctaPatterns.commonCtas.length > 0) {
-    enhancements.push(
-      `推荐CTA：${features.ctaPatterns.commonCtas.join(', ')}`
-    )
+    enhancements.push(`推荐CTA：${features.ctaPatterns.commonCtas.join(', ')}`)
   }
 
   enhancements.push(
@@ -574,7 +655,8 @@ export async function scoreCreativePerformance(
 
   // 查询创意的性能数据
   // 从ad_creative_performance获取聚合性能数据
-  const data = await db.queryOne(`
+  const data = (await db.queryOne(
+    `
     SELECT
       ac.id as creativeId,
       ac.headlines,
@@ -597,7 +679,9 @@ export async function scoreCreativePerformance(
     LEFT JOIN ad_creative_performance acp ON ac.id = acp.ad_creative_id
     WHERE ac.id = ? AND ac.user_id = ?
     GROUP BY ac.id
-  `, [creativeId, userId]) as any
+  `,
+    [creativeId, userId]
+  )) as any
 
   if (!data || data.impressions === 0) {
     return null // 没有数据或曝光不足
@@ -615,22 +699,28 @@ export async function scoreCreativePerformance(
   let ctrScore = 0
   const ctrPercent = ctr * 100
 
-  if (ctr >= 0.05) {        // ≥5% - 优秀
+  if (ctr >= 0.05) {
+    // ≥5% - 优秀
     ctrScore = 30
     reasons.push(`优秀CTR (${ctrPercent.toFixed(2)}%)`)
-  } else if (ctr >= 0.03) { // ≥3% - 良好（接近行业高水平）
+  } else if (ctr >= 0.03) {
+    // ≥3% - 良好（接近行业高水平）
     ctrScore = 24 + ((ctr - 0.03) / 0.02) * 6 // 24-30分
     reasons.push(`良好CTR (${ctrPercent.toFixed(2)}%)`)
-  } else if (ctr >= 0.02) { // ≥2% - 行业平均水平
+  } else if (ctr >= 0.02) {
+    // ≥2% - 行业平均水平
     ctrScore = 18 + ((ctr - 0.02) / 0.01) * 6 // 18-24分
     reasons.push(`中等CTR (${ctrPercent.toFixed(2)}%)`)
-  } else if (ctr >= 0.01) { // ≥1% - 及格线
+  } else if (ctr >= 0.01) {
+    // ≥1% - 及格线
     ctrScore = 12 + ((ctr - 0.01) / 0.01) * 6 // 12-18分
     reasons.push(`一般CTR (${ctrPercent.toFixed(2)}%)`)
-  } else if (ctr >= 0.005) { // ≥0.5% - 偏低但可接受
+  } else if (ctr >= 0.005) {
+    // ≥0.5% - 偏低但可接受
     ctrScore = 6 + ((ctr - 0.005) / 0.005) * 6 // 6-12分
     reasons.push(`偏低CTR (${ctrPercent.toFixed(2)}%)`)
-  } else {                   // <0.5% - 需要优化
+  } else {
+    // <0.5% - 需要优化
     ctrScore = Math.max(2, ctr * 1200) // 2-6分
     reasons.push(`低CTR (${ctrPercent.toFixed(2)}%)`)
   }
@@ -640,24 +730,30 @@ export async function scoreCreativePerformance(
   let cpcScore = 0
   const cpcRatio = cpc / (budget * 0.01) // CPC相对于预算1%的比例
 
-  if (cpcRatio <= 0.5) {        // CPC ≤ 预算*0.5% - 极低成本
+  if (cpcRatio <= 0.5) {
+    // CPC ≤ 预算*0.5% - 极低成本
     cpcScore = 25
-    reasons.push(`极低CPC (${cpc.toFixed(2)}，预算${(cpcRatio).toFixed(2)}%）`)
-  } else if (cpcRatio <= 1.0) { // CPC ≤ 预算*1% - 低成本
-    cpcScore = 20 + (1.0 - cpcRatio) / 0.5 * 5 // 20-25分
-    reasons.push(`低CPC (${cpc.toFixed(2)}，预算${(cpcRatio).toFixed(2)}%）`)
-  } else if (cpcRatio <= 2.0) { // CPC ≤ 预算*2% - 可接受
-    cpcScore = 15 + (2.0 - cpcRatio) / 1.0 * 5 // 15-20分
-    reasons.push(`中等CPC (${cpc.toFixed(2)}，预算${(cpcRatio).toFixed(2)}%）`)
-  } else if (cpcRatio <= 3.0) { // CPC ≤ 预算*3% - 偏高
-    cpcScore = 10 + (3.0 - cpcRatio) / 1.0 * 5 // 10-15分
-    reasons.push(`偏高CPC (${cpc.toFixed(2)}，预算${(cpcRatio).toFixed(2)}%）`)
-  } else if (cpcRatio <= 5.0) { // CPC ≤ 预算*5% - 高成本
-    cpcScore = 5 + (5.0 - cpcRatio) / 2.0 * 5 // 5-10分
-    reasons.push(`高CPC (${cpc.toFixed(2)}，预算${(cpcRatio).toFixed(2)}%）`)
-  } else {                       // CPC > 预算*5% - 成本过高
+    reasons.push(`极低CPC (${cpc.toFixed(2)}，预算${cpcRatio.toFixed(2)}%）`)
+  } else if (cpcRatio <= 1.0) {
+    // CPC ≤ 预算*1% - 低成本
+    cpcScore = 20 + ((1.0 - cpcRatio) / 0.5) * 5 // 20-25分
+    reasons.push(`低CPC (${cpc.toFixed(2)}，预算${cpcRatio.toFixed(2)}%）`)
+  } else if (cpcRatio <= 2.0) {
+    // CPC ≤ 预算*2% - 可接受
+    cpcScore = 15 + ((2.0 - cpcRatio) / 1.0) * 5 // 15-20分
+    reasons.push(`中等CPC (${cpc.toFixed(2)}，预算${cpcRatio.toFixed(2)}%）`)
+  } else if (cpcRatio <= 3.0) {
+    // CPC ≤ 预算*3% - 偏高
+    cpcScore = 10 + ((3.0 - cpcRatio) / 1.0) * 5 // 10-15分
+    reasons.push(`偏高CPC (${cpc.toFixed(2)}，预算${cpcRatio.toFixed(2)}%）`)
+  } else if (cpcRatio <= 5.0) {
+    // CPC ≤ 预算*5% - 高成本
+    cpcScore = 5 + ((5.0 - cpcRatio) / 2.0) * 5 // 5-10分
+    reasons.push(`高CPC (${cpc.toFixed(2)}，预算${cpcRatio.toFixed(2)}%）`)
+  } else {
+    // CPC > 预算*5% - 成本过高
     cpcScore = Math.max(2, 25 - cpcRatio * 2) // 2-5分
-    reasons.push(`过高CPC (${cpc.toFixed(2)}，预算${(cpcRatio).toFixed(2)}%）`)
+    reasons.push(`过高CPC (${cpc.toFixed(2)}，预算${cpcRatio.toFixed(2)}%）`)
   }
   totalScore += cpcScore
 
@@ -713,25 +809,25 @@ export async function scoreCreativePerformance(
   let budgetScore = 0
   const budgetUsage = cost / budget
 
-  if (budgetUsage >= 0.80 && budgetUsage <= 1.0) {
+  if (budgetUsage >= 0.8 && budgetUsage <= 1.0) {
     // 80-100%利用率 - 最佳
     budgetScore = 10
     reasons.push(`高预算利用率 (${(budgetUsage * 100).toFixed(0)}%)`)
-  } else if (budgetUsage >= 0.60) {
+  } else if (budgetUsage >= 0.6) {
     // 60-80%利用率 - 良好
-    budgetScore = 7 + ((budgetUsage - 0.60) / 0.20) * 3 // 7-10分
+    budgetScore = 7 + ((budgetUsage - 0.6) / 0.2) * 3 // 7-10分
     reasons.push(`良好预算利用 (${(budgetUsage * 100).toFixed(0)}%)`)
-  } else if (budgetUsage >= 0.40) {
+  } else if (budgetUsage >= 0.4) {
     // 40-60%利用率 - 中等
-    budgetScore = 5 + ((budgetUsage - 0.40) / 0.20) * 2 // 5-7分
+    budgetScore = 5 + ((budgetUsage - 0.4) / 0.2) * 2 // 5-7分
     reasons.push(`中等预算利用 (${(budgetUsage * 100).toFixed(0)}%)`)
-  } else if (budgetUsage >= 0.20) {
+  } else if (budgetUsage >= 0.2) {
     // 20-40%利用率 - 偏低
-    budgetScore = 3 + ((budgetUsage - 0.20) / 0.20) * 2 // 3-5分
+    budgetScore = 3 + ((budgetUsage - 0.2) / 0.2) * 2 // 3-5分
     reasons.push(`预算利用偏低 (${(budgetUsage * 100).toFixed(0)}%)`)
   } else if (budgetUsage > 0) {
     // <20%利用率 - 需要关注
-    budgetScore = Math.max(1, (budgetUsage / 0.20) * 3) // 1-3分
+    budgetScore = Math.max(1, (budgetUsage / 0.2) * 3) // 1-3分
     reasons.push(`预算利用很低 (${(budgetUsage * 100).toFixed(0)}%)`)
   } else {
     budgetScore = 0
@@ -774,9 +870,9 @@ export async function scoreCreativePerformance(
       impressions,
       clicks,
       conversions,
-      budget
+      budget,
     },
-    reasons
+    reasons,
   }
 }
 
@@ -787,14 +883,17 @@ export async function scoreAllCreatives(userId: number): Promise<CreativePerform
   const db = await getDatabase()
 
   // 获取所有有性能数据的创意（从ad_creative_performance聚合）
-  const creativeIds = await db.query(`
+  const creativeIds = (await db.query(
+    `
     SELECT DISTINCT ac.id
     FROM ad_creatives ac
     INNER JOIN ad_creative_performance acp ON ac.id = acp.ad_creative_id
     WHERE ac.user_id = ?
     GROUP BY ac.id
     HAVING SUM(acp.impressions) > 100
-  `, [userId]) as { id: number }[]
+  `,
+    [userId]
+  )) as { id: number }[]
 
   const scores: CreativePerformanceScore[] = []
 
@@ -823,14 +922,18 @@ export async function saveSuccessFeatures(
   const featuresJson = JSON.stringify(features)
 
   // 检查是否已存在该用户的学习模式
-  const existing = await db.queryOne(`
+  const existing = (await db.queryOne(
+    `
     SELECT id FROM creative_learning_patterns
     WHERE user_id = ?
-  `, [userId]) as { id: number } | undefined
+  `,
+    [userId]
+  )) as { id: number } | undefined
 
   if (existing) {
     // 更新现有记录
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE creative_learning_patterns
       SET success_features = ?,
           total_creatives_analyzed = ?,
@@ -839,17 +942,20 @@ export async function saveSuccessFeatures(
           min_ctr_threshold = ?,
           updated_at = datetime('now')
       WHERE user_id = ?
-    `, [
-      featuresJson,
-      totalCreatives,
-      features.benchmarks.avgCtr,
-      features.benchmarks.avgConversionRate,
-      features.benchmarks.minCtr,
-      userId
-    ])
+    `,
+      [
+        featuresJson,
+        totalCreatives,
+        features.benchmarks.avgCtr,
+        features.benchmarks.avgConversionRate,
+        features.benchmarks.minCtr,
+        userId,
+      ]
+    )
   } else {
     // 插入新记录
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO creative_learning_patterns (
         user_id,
         success_features,
@@ -858,14 +964,16 @@ export async function saveSuccessFeatures(
         avg_conversion_rate,
         min_ctr_threshold
       ) VALUES (?, ?, ?, ?, ?, ?)
-    `, [
-      userId,
-      featuresJson,
-      totalCreatives,
-      features.benchmarks.avgCtr,
-      features.benchmarks.avgConversionRate,
-      features.benchmarks.minCtr
-    ])
+    `,
+      [
+        userId,
+        featuresJson,
+        totalCreatives,
+        features.benchmarks.avgCtr,
+        features.benchmarks.avgConversionRate,
+        features.benchmarks.minCtr,
+      ]
+    )
   }
 }
 
@@ -875,13 +983,16 @@ export async function saveSuccessFeatures(
 export async function loadSuccessFeatures(userId: number): Promise<SuccessFeatures | null> {
   const db = await getDatabase()
 
-  const result = await db.queryOne(`
+  const result = (await db.queryOne(
+    `
     SELECT success_features
     FROM creative_learning_patterns
     WHERE user_id = ?
     ORDER BY updated_at DESC
     LIMIT 1
-  `, [userId]) as { success_features: string } | undefined
+  `,
+    [userId]
+  )) as { success_features: string } | undefined
 
   if (!result) {
     return null
@@ -904,7 +1015,8 @@ export async function saveCreativeScore(
 ): Promise<void> {
   const db = await getDatabase()
 
-  await db.exec(`
+  await db.exec(
+    `
     INSERT INTO creative_performance_scores (
       user_id,
       creative_id,
@@ -914,15 +1026,17 @@ export async function saveCreativeScore(
       metrics_snapshot,
       reasons
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, [
-    userId,
-    score.creativeId,
-    score.score,
-    score.rating,
-    score.isGood ? 1 : 0,
-    JSON.stringify(score.metrics),
-    JSON.stringify(score.reasons)
-  ])
+  `,
+    [
+      userId,
+      score.creativeId,
+      score.score,
+      score.rating,
+      score.isGood ? 1 : 0,
+      JSON.stringify(score.metrics),
+      JSON.stringify(score.reasons),
+    ]
+  )
 }
 
 /**
@@ -950,7 +1064,7 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
       totalCreatives: 0,
       highPerformers: 0,
       featuresUpdated: false,
-      avgScore: 0
+      avgScore: 0,
     }
   }
 
@@ -960,7 +1074,7 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
   }
 
   // Step 2: 筛选高表现创意（excellent 或 good）
-  const highPerformers = scores.filter(s => s.isGood)
+  const highPerformers = scores.filter((s) => s.isGood)
 
   const avgScore = scores.reduce((sum, s) => sum + s.score, 0) / scores.length
 
@@ -974,14 +1088,17 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
     const historicalCreatives: HistoricalCreative[] = []
 
     for (const s of highPerformers) {
-      const creative = await db.queryOne(`
+      const creative = (await db.queryOne(
+        `
         SELECT
           ac.id as creativeId,
           ac.headlines,
           ac.descriptions
         FROM ad_creatives ac
         WHERE ac.id = ?
-      `, [s.creativeId]) as any
+      `,
+        [s.creativeId]
+      )) as any
 
       // 解析 JSON 字段
       let headlines: string[] = []
@@ -1004,7 +1121,7 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
         clicks: s.metrics.clicks,
         impressions: s.metrics.clicks / (s.metrics.ctr || 0.01),
         conversions: s.metrics.conversions,
-        conversionRate: s.metrics.conversions / (s.metrics.clicks || 1)
+        conversionRate: s.metrics.conversions / (s.metrics.clicks || 1),
       })
     }
 
@@ -1020,7 +1137,7 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
     totalCreatives: scores.length,
     highPerformers: highPerformers.length,
     featuresUpdated,
-    avgScore
+    avgScore,
   }
 }
 
@@ -1028,10 +1145,7 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
  * 获取用户的个性化AI Prompt（增强版）
  * 优先从数据库加载持久化的成功特征
  */
-export async function getUserOptimizedPrompt(
-  userId: number,
-  basePrompt: string
-): Promise<string> {
+export async function getUserOptimizedPrompt(userId: number, basePrompt: string): Promise<string> {
   // 优先从数据库加载持久化的特征
   let features = await loadSuccessFeatures(userId)
 

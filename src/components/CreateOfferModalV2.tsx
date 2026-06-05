@@ -32,7 +32,10 @@ import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Trash2 } from 'lucide
 import ProgressTracker from '@/components/ProgressTracker'
 import { useOfferExtractionV2 } from '@/hooks/useOfferExtractionV2'
 import { getCountryOptionsForUI } from '@/lib/language-country-codes'
-import { getDefaultOfferExtractionMode, type OfferExtractionMode } from '@/lib/offer-extraction-mode'
+import {
+  getDefaultOfferExtractionMode,
+  type OfferExtractionMode,
+} from '@/lib/offer-extraction-mode'
 import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
 
 interface CreateOfferModalV2Props {
@@ -102,7 +105,9 @@ export default function CreateOfferModalV2({
   const [commissionType, setCommissionType] = useState<'percent' | 'amount'>('percent')
   const [commissionValue, setCommissionValue] = useState('')
   const [commissionCurrency, setCommissionCurrency] = useState('')
-  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(() => getDefaultOfferExtractionMode())
+  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(() =>
+    getDefaultOfferExtractionMode()
+  )
 
   // 步骤2：自动提取的数据
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null)
@@ -185,14 +190,17 @@ export default function CreateOfferModalV2({
       ) {
         setError(
           '代理连接失败，推广链接解析中断。可能原因：\n' +
-          '1. 代理服务器不可用或响应超时\n' +
-          '2. 代理配置错误（IP、端口、账号密码）\n' +
-          '3. 目标国家代理IP池耗尽\n\n' +
-          '请检查设置页面的代理配置，确保代理服务可用后重试。'
+            '1. 代理服务器不可用或响应超时\n' +
+            '2. 代理配置错误（IP、端口、账号密码）\n' +
+            '3. 目标国家代理IP池耗尽\n\n' +
+            '请检查设置页面的代理配置，确保代理服务可用后重试。'
         )
       }
       // 检查是否为代理配置缺失
-      else if (extractionError.includes('PROXY_NOT_CONFIGURED') || extractionError.includes('代理配置缺失')) {
+      else if (
+        extractionError.includes('PROXY_NOT_CONFIGURED') ||
+        extractionError.includes('代理配置缺失')
+      ) {
         setError('代理配置缺失。请先在设置页面配置代理IP才能创建Offer。')
       }
       // 其他错误
@@ -226,9 +234,7 @@ export default function CreateOfferModalV2({
   }
 
   const normalizeStoreProductLinks = () => {
-    const normalized = storeProductLinks
-      .map((link) => link.trim())
-      .filter((link) => Boolean(link))
+    const normalized = storeProductLinks.map((link) => link.trim()).filter((link) => Boolean(link))
     return Array.from(new Set(normalized)).slice(0, 3)
   }
 
@@ -244,7 +250,6 @@ export default function CreateOfferModalV2({
       normalizedLinks = normalizeStoreProductLinks()
       for (const link of normalizedLinks) {
         try {
-           
           new URL(link)
         } catch {
           setError(`单品推广链接无效：${link}`)
@@ -261,7 +266,7 @@ export default function CreateOfferModalV2({
       productPrice,
       commissionValue ? commissionType : undefined,
       commissionValue || undefined,
-      commissionType === 'amount' && commissionValue ? (commissionCurrency || undefined) : undefined,
+      commissionType === 'amount' && commissionValue ? commissionCurrency || undefined : undefined,
       brandName,
       linkType,
       normalizedLinks,
@@ -390,10 +395,12 @@ export default function CreateOfferModalV2({
                   链接类型 <span className="text-red-500">*</span>
                 </Label>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {([
-                    { value: 'product', label: '单品' },
-                    { value: 'store', label: '店铺' },
-                  ] as const).map((option) => (
+                  {(
+                    [
+                      { value: 'product', label: '单品' },
+                      { value: 'store', label: '店铺' },
+                    ] as const
+                  ).map((option) => (
                     <label
                       key={option.value}
                       className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors ${
@@ -422,7 +429,8 @@ export default function CreateOfferModalV2({
 
               <div>
                 <Label htmlFor="affiliateLink">
-                  {linkType === 'store' ? '店铺推广链接' : '推广链接'} <span className="text-red-500">*</span>
+                  {linkType === 'store' ? '店铺推广链接' : '推广链接'}{' '}
+                  <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="affiliateLink"
@@ -477,9 +485,7 @@ export default function CreateOfferModalV2({
                       添加单品链接
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    仅用于补充单品数据，最多3个
-                  </p>
+                  <p className="text-xs text-slate-500">仅用于补充单品数据，最多3个</p>
                 </div>
               )}
 
@@ -509,7 +515,9 @@ export default function CreateOfferModalV2({
 
               {/* 可选字段 */}
               <div className="pt-4 border-t border-slate-200 space-y-4">
-                <p className="text-sm font-medium text-slate-700">可选信息（用于CPC计算/独立站补充）</p>
+                <p className="text-sm font-medium text-slate-700">
+                  可选信息（用于CPC计算/独立站补充）
+                </p>
 
                 <div>
                   <Label htmlFor="brandNameOptional">品牌名（可选）</Label>
@@ -574,7 +582,11 @@ export default function CreateOfferModalV2({
                         type="text"
                         value={commissionCurrency}
                         onChange={(e) => setCommissionCurrency(e.target.value.toUpperCase())}
-                        placeholder={commissionType === 'amount' ? '币种，如 USD（可选）' : 'percent模式无需币种'}
+                        placeholder={
+                          commissionType === 'amount'
+                            ? '币种，如 USD（可选）'
+                            : 'percent模式无需币种'
+                        }
                         disabled={commissionType !== 'amount'}
                       />
                     </div>
@@ -616,7 +628,11 @@ export default function CreateOfferModalV2({
             {connectionType && (
               <div className="mb-2 text-xs text-gray-500 flex items-center gap-1">
                 {connectionType === 'sse' ? '🔴 SSE实时推送' : '🔵 轮询模式'}
-                {taskId && <span className="ml-2 font-mono text-[10px]">任务ID: {taskId.substring(0, 8)}...</span>}
+                {taskId && (
+                  <span className="ml-2 font-mono text-[10px]">
+                    任务ID: {taskId.substring(0, 8)}...
+                  </span>
+                )}
               </div>
             )}
             <ProgressTracker
@@ -645,7 +661,7 @@ export default function CreateOfferModalV2({
               </div>
             </div>
 
-            {(extractedData.warnings && extractedData.warnings.length > 0) && (
+            {extractedData.warnings && extractedData.warnings.length > 0 && (
               <div className="bg-amber-50 border border-amber-300 text-amber-800 px-4 py-3 rounded text-sm flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                 <div className="space-y-1">
@@ -659,15 +675,19 @@ export default function CreateOfferModalV2({
               </div>
             )}
 
-            {extractedData.supplementalSummary && extractedData.supplementalSummary.requested > 0 && (
-              <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm flex items-start gap-2">
-                <Badge variant="outline" className="mt-0.5">店铺补充单品</Badge>
-                <div className="text-xs">
-                  已处理 {extractedData.supplementalSummary.requested} 个单品链接，成功 {extractedData.supplementalSummary.succeeded} 个，
-                  失败 {extractedData.supplementalSummary.failed} 个。
+            {extractedData.supplementalSummary &&
+              extractedData.supplementalSummary.requested > 0 && (
+                <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded text-sm flex items-start gap-2">
+                  <Badge variant="outline" className="mt-0.5">
+                    店铺补充单品
+                  </Badge>
+                  <div className="text-xs">
+                    已处理 {extractedData.supplementalSummary.requested} 个单品链接，成功{' '}
+                    {extractedData.supplementalSummary.succeeded} 个， 失败{' '}
+                    {extractedData.supplementalSummary.failed} 个。
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* 自动提取的数据展示 */}
             <div className="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50">

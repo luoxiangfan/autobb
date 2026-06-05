@@ -61,7 +61,7 @@ describe('GET /api/analytics/spend-realtime', () => {
         }
       }
 
-      if (sql.includes("FROM campaigns") && sql.includes("ENABLED")) {
+      if (sql.includes('FROM campaigns') && sql.includes('ENABLED')) {
         return { count: 1 }
       }
 
@@ -123,7 +123,7 @@ describe('GET /api/analytics/spend-realtime', () => {
         }
       }
 
-      if (sql.includes("FROM campaigns") && sql.includes("ENABLED")) {
+      if (sql.includes('FROM campaigns') && sql.includes('ENABLED')) {
         return { count: 1 }
       }
 
@@ -140,7 +140,9 @@ describe('GET /api/analytics/spend-realtime', () => {
       return null
     })
 
-    const req = new NextRequest('http://localhost/api/analytics/spend-realtime?accountId=9&syncIfStale=true&staleMinutes=30')
+    const req = new NextRequest(
+      'http://localhost/api/analytics/spend-realtime?accountId=9&syncIfStale=true&staleMinutes=30'
+    )
     const res = await GET(req)
     const data = await res.json()
 
@@ -148,9 +150,12 @@ describe('GET /api/analytics/spend-realtime', () => {
     expect(data.data.latestSync.isStale).toBe(true)
     expect(data.data.syncTriggered).toBe(true)
     expect(data.data.syncTaskId).toBe('sync-task-1')
-    expect(queueFns.triggerDataSync).toHaveBeenCalledWith(42, expect.objectContaining({
-      googleAdsAccountId: 9,
-      syncType: 'manual',
-    }))
+    expect(queueFns.triggerDataSync).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({
+        googleAdsAccountId: 9,
+        syncType: 'manual',
+      })
+    )
   })
 })

@@ -65,10 +65,7 @@ function getUserConcurrencySettings(): {
       DEFAULT_USER_CONCURRENCY_CAP
     )
   )
-  const requested = parsePositiveIntEnv(
-    process.env.QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY,
-    3
-  )
+  const requested = parsePositiveIntEnv(process.env.QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY, 3)
   return { requested, cap, effective: Math.min(requested, cap) }
 }
 
@@ -208,16 +205,23 @@ export async function runCampaignPausedTaskCheck(
   const maxUserConcurrency = concurrency.effective
 
   let nextBatchIndex = 0
-  const workers = Array.from({ length: Math.min(maxUserConcurrency, userBatches.length) }, async () => {
-    while (true) {
-      const index = nextBatchIndex
-      nextBatchIndex += 1
-      if (index >= userBatches.length) return
+  const workers = Array.from(
+    { length: Math.min(maxUserConcurrency, userBatches.length) },
+    async () => {
+      while (true) {
+        const index = nextBatchIndex
+        nextBatchIndex += 1
+        if (index >= userBatches.length) return
 
-      const userResult = await processUserOfferBatch(userBatches[index], pauseReason, pauseMessage)
-      details[index] = userResult
+        const userResult = await processUserOfferBatch(
+          userBatches[index],
+          pauseReason,
+          pauseMessage
+        )
+        details[index] = userResult
+      }
     }
-  })
+  )
   await Promise.all(workers)
 
   let totalOffersAttempted = 0

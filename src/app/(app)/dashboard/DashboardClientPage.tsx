@@ -119,14 +119,19 @@ const formatDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
-export default function DashboardClientPage({ dashboardDeferEnabled = false }: DashboardClientPageProps) {
+export default function DashboardClientPage({
+  dashboardDeferEnabled = false,
+}: DashboardClientPageProps) {
   const router = useRouter()
   const [timeRange, setTimeRange] = useState<DashboardTimeRange>('7')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const [appliedCustomRange, setAppliedCustomRange] = useState<{ startDate: string; endDate: string } | null>(null)
+  const [appliedCustomRange, setAppliedCustomRange] = useState<{
+    startDate: string
+    endDate: string
+  } | null>(null)
   const [kpiData, setKpiData] = useState<KPIData | null>(null)
   // 🔧 新增：用户筛选状态
-  const [selectedUserId, setSelectedUserId] = useState<string>('all')  // 'all' 或用户 ID
+  const [selectedUserId, setSelectedUserId] = useState<string>('all') // 'all' 或用户 ID
   const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
   const [isAdmin, setIsAdmin] = useState(false)
   const [, setRisks] = useState<RiskAlert[]>([])
@@ -162,18 +167,18 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
         credentials: 'include',
         cache: 'no-store',
       })
-      
+
       if (res.status === 403) {
         // 非管理员，不获取用户列表
         setIsAdmin(false)
         return
       }
-      
+
       if (res.ok) {
         const data = await res.json()
         setUsers(data.users || [])
         setIsAdmin(true)
-        
+
         // 管理员默认选择所有用户
         setSelectedUserId('all')
       }
@@ -189,112 +194,109 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
     router.push(`/login?redirect=${redirectUrl}`)
   }, [router])
 
-  const fetchData = useCallback(async (showRefresh = false) => {
-    const seq = fetchSeqRef.current + 1
-    fetchSeqRef.current = seq
+  const fetchData = useCallback(
+    async (showRefresh = false) => {
+      const seq = fetchSeqRef.current + 1
+      fetchSeqRef.current = seq
 
-    fetchAbortRef.current?.abort()
-    const abortController = new AbortController()
-    fetchAbortRef.current = abortController
+      fetchAbortRef.current?.abort()
+      const abortController = new AbortController()
+      fetchAbortRef.current = abortController
 
-    if (showRefresh) setRefreshing(true)
-    else setLoading(true)
+      if (showRefresh) setRefreshing(true)
+      else setLoading(true)
 
-    try {
-      const kpiParams = new URLSearchParams()
-      if (timeRange === 'custom' && appliedCustomRange) {
-        kpiParams.set('start_date', appliedCustomRange.startDate)
-        kpiParams.set('end_date', appliedCustomRange.endDate)
-      } else {
-        kpiParams.set('days', timeRange)
-      }
-      if (showRefresh) {
-        kpiParams.set('refresh', 'true')
-      }
-      // 🔧 添加用户筛选参数
-      if (isAdmin) {
-        if (selectedUserId === 'all') {
-          kpiParams.set('allUsers', 'true')
-        } else if (selectedUserId) {
-          kpiParams.set('userId', selectedUserId)
-        }
-      }
-
-      const [kpiRes, riskRes, offerRes] = await Promise.all([
-        fetch(`/api/dashboard/kpis?${kpiParams.toString()}`, {
-          credentials: 'include',
-          cache: 'no-store',
-          signal: abortController.signal,
-        }),
-        fetch('/api/risk-alerts?limit=3&includeStatistics=false', {
-          credentials: 'include',
-          cache: 'no-store',
-          signal: abortController.signal,
-        }),
-        fetch('/api/offers?summary=true', {
-          credentials: 'include',
-          cache: 'no-store',
-          signal: abortController.signal,
-        }),
-      ])
-
-      if (fetchSeqRef.current !== seq) return
-
-      // 处理401未授权
-      if (kpiRes.status === 401 || riskRes.status === 401 || offerRes.status === 401) {
-        handleUnauthorized()
-        return
-      }
-
-      if (kpiRes.ok) {
-        const kpi = await kpiRes.json()
-        setKpiData(kpi.data)
-      }
-
-      if (riskRes.ok) {
-        const risk = await riskRes.json()
-        // 确保alerts是数组类型
-        const alertsArray = Array.isArray(risk.alerts) ? risk.alerts : []
-        setRisks(alertsArray.slice(0, 3))
-      }
-
-      if (offerRes.ok) {
-        const offer = await offerRes.json()
-        // ✅ summary模式：后端直接返回聚合统计，避免拉取完整Offer列表
-        if (offer?.summary) {
-          setOfferSummary({
-            total: offer.summary.total || 0,
-            active: offer.summary.active || 0,
-            pendingScrape: offer.summary.pendingScrape || 0
-          })
+      try {
+        const kpiParams = new URLSearchParams()
+        if (timeRange === 'custom' && appliedCustomRange) {
+          kpiParams.set('start_date', appliedCustomRange.startDate)
+          kpiParams.set('end_date', appliedCustomRange.endDate)
         } else {
-          // 兼容旧结构（返回完整offers数组）
-          const offersArray = Array.isArray(offer.offers) ? offer.offers : []
-          setOfferSummary({
-            total: offersArray.length,
-            active: offersArray.filter((o: any) => o.isActive).length,
-            pendingScrape: offersArray.filter((o: any) => o.scrapeStatus === 'pending').length
-          })
+          kpiParams.set('days', timeRange)
+        }
+        if (showRefresh) {
+          kpiParams.set('refresh', 'true')
+        }
+        // 🔧 添加用户筛选参数
+        if (isAdmin) {
+          if (selectedUserId === 'all') {
+            kpiParams.set('allUsers', 'true')
+          } else if (selectedUserId) {
+            kpiParams.set('userId', selectedUserId)
+          }
+        }
+
+        const [kpiRes, riskRes, offerRes] = await Promise.all([
+          fetch(`/api/dashboard/kpis?${kpiParams.toString()}`, {
+            credentials: 'include',
+            cache: 'no-store',
+            signal: abortController.signal,
+          }),
+          fetch('/api/risk-alerts?limit=3&includeStatistics=false', {
+            credentials: 'include',
+            cache: 'no-store',
+            signal: abortController.signal,
+          }),
+          fetch('/api/offers?summary=true', {
+            credentials: 'include',
+            cache: 'no-store',
+            signal: abortController.signal,
+          }),
+        ])
+
+        if (fetchSeqRef.current !== seq) return
+
+        // 处理401未授权
+        if (kpiRes.status === 401 || riskRes.status === 401 || offerRes.status === 401) {
+          handleUnauthorized()
+          return
+        }
+
+        if (kpiRes.ok) {
+          const kpi = await kpiRes.json()
+          setKpiData(kpi.data)
+        }
+
+        if (riskRes.ok) {
+          const risk = await riskRes.json()
+          // 确保alerts是数组类型
+          const alertsArray = Array.isArray(risk.alerts) ? risk.alerts : []
+          setRisks(alertsArray.slice(0, 3))
+        }
+
+        if (offerRes.ok) {
+          const offer = await offerRes.json()
+          // ✅ summary模式：后端直接返回聚合统计，避免拉取完整Offer列表
+          if (offer?.summary) {
+            setOfferSummary({
+              total: offer.summary.total || 0,
+              active: offer.summary.active || 0,
+              pendingScrape: offer.summary.pendingScrape || 0,
+            })
+          } else {
+            // 兼容旧结构（返回完整offers数组）
+            const offersArray = Array.isArray(offer.offers) ? offer.offers : []
+            setOfferSummary({
+              total: offersArray.length,
+              active: offersArray.filter((o: any) => o.isActive).length,
+              pendingScrape: offersArray.filter((o: any) => o.scrapeStatus === 'pending').length,
+            })
+          }
+        }
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          return
+        }
+        console.error('Dashboard数据加载失败:', err)
+      } finally {
+        if (fetchSeqRef.current === seq) {
+          setLoading(false)
+          setRefreshing(false)
         }
       }
-    } catch (err: any) {
-      if (err?.name === 'AbortError') {
-        return
-      }
-      console.error('Dashboard数据加载失败:', err)
-    } finally {
-      if (fetchSeqRef.current === seq) {
-        setLoading(false)
-        setRefreshing(false)
-      }
-    }
-  }, [
-    timeRange,
-    appliedCustomRange,
-    isAdmin,
-    selectedUserId,
-    handleUnauthorized,
-  ])
+    },
+    [timeRange, appliedCustomRange, isAdmin, selectedUserId, handleUnauthorized]
+  )
 
   // 🔧 获取用户列表（仅管理员）
   useEffect(() => {
@@ -423,7 +425,9 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
         <div className="max-w-6xl mx-auto space-y-6">
           <Skeleton className="h-10 w-48" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-32" />)}
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
           </div>
           <Skeleton className="h-48" />
         </div>
@@ -443,14 +447,8 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
             </p>
           </div>
           <div className="flex items-center gap-3">
-
             {/* 刷新按钮 */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchData(true)}
-              disabled={refreshing}
-            >
+            <Button variant="ghost" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
             {/* 🔧 用户筛选器（仅管理员） */}
@@ -500,7 +498,6 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
           </div>
         </div>
 
-
         {/* 核心KPI - 5个关键指标 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
           {/* 展示量 */}
@@ -524,8 +521,11 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-500" />
                   )}
-                  <span className={`text-sm font-medium ${kpiData.changes.impressions >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {kpiData.changes.impressions >= 0 ? '+' : ''}{safeToFixed(kpiData.changes.impressions, 1)}%
+                  <span
+                    className={`text-sm font-medium ${kpiData.changes.impressions >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {kpiData.changes.impressions >= 0 ? '+' : ''}
+                    {safeToFixed(kpiData.changes.impressions, 1)}%
                   </span>
                   <span className="text-xs text-gray-400 ml-1">vs 上周期</span>
                 </div>
@@ -554,8 +554,11 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-500" />
                   )}
-                  <span className={`text-sm font-medium ${kpiData.changes.clicks >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {kpiData.changes.clicks >= 0 ? '+' : ''}{safeToFixed(kpiData.changes.clicks, 1)}%
+                  <span
+                    className={`text-sm font-medium ${kpiData.changes.clicks >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {kpiData.changes.clicks >= 0 ? '+' : ''}
+                    {safeToFixed(kpiData.changes.clicks, 1)}%
                   </span>
                   <span className="text-xs text-gray-400 ml-1">vs 上周期</span>
                 </div>
@@ -568,17 +571,16 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500 mb-1">
-                    总花费(USD)
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {kpiData ? formatCostDisplay(kpiData) : '-'}
-                  </p>
-                  {kpiData && kpiData.current.currency === 'MIXED' && kpiData.current.costs && kpiData.current.costs.length > 0 && (
-                    <p className="text-xs mt-1 text-gray-500">
-                      分币种: {formatMultiCurrency(kpiData.current.costs)}
-                    </p>
-                  )}
+                  <p className="text-sm text-gray-500 mb-1">总花费(USD)</p>
+                  <p className="text-2xl font-bold">{kpiData ? formatCostDisplay(kpiData) : '-'}</p>
+                  {kpiData &&
+                    kpiData.current.currency === 'MIXED' &&
+                    kpiData.current.costs &&
+                    kpiData.current.costs.length > 0 && (
+                      <p className="text-xs mt-1 text-gray-500">
+                        分币种: {formatMultiCurrency(kpiData.current.costs)}
+                      </p>
+                    )}
                 </div>
                 <div className="p-3 bg-purple-50 rounded-xl">
                   <DollarSign className="w-6 h-6 text-purple-600" />
@@ -591,8 +593,11 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                   ) : (
                     <TrendingDown className="w-4 h-4 text-green-500" />
                   )}
-                  <span className={`text-sm font-medium ${kpiData.changes.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                    {kpiData.changes.cost >= 0 ? '+' : ''}{safeToFixed(kpiData.changes.cost, 1)}%
+                  <span
+                    className={`text-sm font-medium ${kpiData.changes.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}
+                  >
+                    {kpiData.changes.cost >= 0 ? '+' : ''}
+                    {safeToFixed(kpiData.changes.cost, 1)}%
                   </span>
                   <span className="text-xs text-gray-400 ml-1">vs 上周期</span>
                 </div>
@@ -610,9 +615,7 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
             <CardContent className="pt-5 pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-500 mb-1">
-                    总佣金(USD)
-                  </p>
+                  <p className="text-sm text-gray-500 mb-1">总佣金(USD)</p>
                   <p className="text-2xl font-bold">
                     {kpiData ? formatCommissionDisplay(kpiData) : '-'}
                   </p>
@@ -628,8 +631,11 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                   ) : (
                     <TrendingDown className="w-4 h-4 text-red-500" />
                   )}
-                  <span className={`text-sm font-medium ${kpiData.changes.commission >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {kpiData.changes.commission >= 0 ? '+' : ''}{safeToFixed(kpiData.changes.commission, 1)}%
+                  <span
+                    className={`text-sm font-medium ${kpiData.changes.commission >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {kpiData.changes.commission >= 0 ? '+' : ''}
+                    {safeToFixed(kpiData.changes.commission, 1)}%
                   </span>
                   <span className="text-xs text-gray-400 ml-1">vs 上周期</span>
                 </div>
@@ -648,9 +654,7 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-sm text-gray-500 mb-1">ROAS</p>
-                  <p className="text-2xl font-bold">
-                    {formatRoasDisplay(kpiData)}
-                  </p>
+                  <p className="text-2xl font-bold">{formatRoasDisplay(kpiData)}</p>
                 </div>
                 <div className="p-3 bg-indigo-50 rounded-xl">
                   <TrendingUp className="w-6 h-6 text-indigo-600" />
@@ -663,7 +667,9 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                   ) : kpiData.changes.roasInfinite ? (
                     <>
                       <TrendingUp className="w-4 h-4 text-green-500" />
-                      <span className="text-sm font-medium text-green-600">{formatRoasChangeText(kpiData)}</span>
+                      <span className="text-sm font-medium text-green-600">
+                        {formatRoasChangeText(kpiData)}
+                      </span>
                       <span className="text-xs text-gray-400 ml-1">vs 上周期</span>
                     </>
                   ) : typeof kpiData.changes.roas === 'number' ? (
@@ -673,7 +679,9 @@ export default function DashboardClientPage({ dashboardDeferEnabled = false }: D
                       ) : (
                         <TrendingDown className="w-4 h-4 text-red-500" />
                       )}
-                      <span className={`text-sm font-medium ${kpiData.changes.roas >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span
+                        className={`text-sm font-medium ${kpiData.changes.roas >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                      >
                         {formatRoasChangeText(kpiData)}
                       </span>
                       <span className="text-xs text-gray-400 ml-1">vs 上周期</span>

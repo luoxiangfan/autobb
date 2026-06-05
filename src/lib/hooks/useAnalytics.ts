@@ -1,12 +1,13 @@
 import useSWR from 'swr'
 
 // Fetcher function for SWR
-const fetcher = (url: string) => fetch(url, { credentials: 'include' }).then((res) => {
-  if (!res.ok) {
-    throw new Error('Failed to fetch data')
-  }
-  return res.json()
-})
+const fetcher = (url: string) =>
+  fetch(url, { credentials: 'include' }).then((res) => {
+    if (!res.ok) {
+      throw new Error('Failed to fetch data')
+    }
+    return res.json()
+  })
 
 // SWR configuration
 const swrConfig = {
@@ -19,7 +20,12 @@ const swrConfig = {
 /**
  * Hook for ROI analytics data
  */
-export function useROIAnalytics(startDate: string, endDate: string, currency?: string | null, options = {}) {
+export function useROIAnalytics(
+  startDate: string,
+  endDate: string,
+  currency?: string | null,
+  options = {}
+) {
   const params = new URLSearchParams({
     start_date: startDate,
     end_date: endDate,
@@ -36,9 +42,14 @@ export function useROIAnalytics(startDate: string, endDate: string, currency?: s
 
   return {
     data: data?.data,
-    currencyInfo: data?.currency && Array.isArray(data?.currencies)
-      ? { currency: data.currency, currencies: data.currencies, hasMixedCurrency: Boolean(data.hasMixedCurrency) }
-      : null,
+    currencyInfo:
+      data?.currency && Array.isArray(data?.currencies)
+        ? {
+            currency: data.currency,
+            currencies: data.currencies,
+            hasMixedCurrency: Boolean(data.hasMixedCurrency),
+          }
+        : null,
     error,
     isLoading,
     refresh: mutate,
@@ -48,7 +59,12 @@ export function useROIAnalytics(startDate: string, endDate: string, currency?: s
 /**
  * Hook for budget analytics data
  */
-export function useBudgetAnalytics(startDate: string, endDate: string, currency?: string | null, options = {}) {
+export function useBudgetAnalytics(
+  startDate: string,
+  endDate: string,
+  currency?: string | null,
+  options = {}
+) {
   const params = new URLSearchParams({
     start_date: startDate,
     end_date: endDate,
@@ -65,9 +81,14 @@ export function useBudgetAnalytics(startDate: string, endDate: string, currency?
 
   return {
     data: data?.data,
-    currencyInfo: data?.currency && Array.isArray(data?.currencies)
-      ? { currency: data.currency, currencies: data.currencies, hasMixedCurrency: Boolean(data.hasMixedCurrency) }
-      : null,
+    currencyInfo:
+      data?.currency && Array.isArray(data?.currencies)
+        ? {
+            currency: data.currency,
+            currencies: data.currencies,
+            hasMixedCurrency: Boolean(data.hasMixedCurrency),
+          }
+        : null,
     error,
     isLoading,
     refresh: mutate,

@@ -95,10 +95,12 @@ describe('POST /api/offers/batch-start-tasks integration', () => {
       if (taskId === 'cf-101') throw new Error('click-farm unavailable')
       return {}
     })
-    urlSwapFns.createUrlSwapTask.mockImplementation(async (userId: number, payload: { offer_id: number }) => {
-      if (payload.offer_id === 101) throw new Error('missing campaign mapping')
-      return {}
-    })
+    urlSwapFns.createUrlSwapTask.mockImplementation(
+      async (userId: number, payload: { offer_id: number }) => {
+        if (payload.offer_id === 101) throw new Error('missing campaign mapping')
+        return {}
+      }
+    )
 
     const req = new NextRequest('http://localhost/api/offers/batch-start-tasks', {
       method: 'POST',

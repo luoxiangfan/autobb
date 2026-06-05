@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'keywords parameter required' }, { status: 400 })
     }
 
-    const keywords = keywordsParam.split(',').map(k => k.trim()).filter(Boolean)
+    const keywords = keywordsParam
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
     if (keywords.length === 0) {
       return NextResponse.json({ error: 'No valid keywords provided' }, { status: 400 })
     }
@@ -63,7 +66,7 @@ export async function GET(request: NextRequest) {
       success: true,
       country,
       language,
-      keywords: volumeResult.volumes.map(v => ({
+      keywords: volumeResult.volumes.map((v) => ({
         keyword: v.keyword,
         searchVolume: v.avgMonthlySearches,
         competition: v.competition,

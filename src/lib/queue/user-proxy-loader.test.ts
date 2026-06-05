@@ -58,4 +58,3 @@ describe('user-proxy-loader', () => {
     expect(proxy?.country).toBe('GB')
   })
 })
-

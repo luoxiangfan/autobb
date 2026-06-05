@@ -21,8 +21,9 @@ function resolveCreativeIdentity(creative: any): {
     theme: creative.theme,
     bucketIntent: creative.bucket_intent ?? creative.bucketIntent,
   })
-  const keywordBucket = mapCreativeTypeToBucketSlot(creativeType)
-    || normalizeCreativeBucketSlot(creative.keyword_bucket ?? creative.keywordBucket)
+  const keywordBucket =
+    mapCreativeTypeToBucketSlot(creativeType) ||
+    normalizeCreativeBucketSlot(creative.keyword_bucket ?? creative.keywordBucket)
 
   return { creativeType, keywordBucket }
 }
@@ -90,7 +91,9 @@ export async function GET(request: NextRequest) {
     const offerIdParam = searchParams.get('offerId')
     const limitParam = searchParams.get('limit')
     const publishableOnly = ['1', 'true', 'yes'].includes(
-      String(searchParams.get('publishableOnly') || '').trim().toLowerCase()
+      String(searchParams.get('publishableOnly') || '')
+        .trim()
+        .toLowerCase()
     )
 
     let creatives
@@ -99,10 +102,7 @@ export async function GET(request: NextRequest) {
       // 按Offer ID过滤
       const offerId = parseInt(offerIdParam, 10)
       if (isNaN(offerId)) {
-        return NextResponse.json(
-          { error: 'offerId必须是数字' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'offerId必须是数字' }, { status: 400 })
       }
 
       creatives = await findAdCreativesByOfferId(offerId, userId)
@@ -121,9 +121,7 @@ export async function GET(request: NextRequest) {
     // 🔧 2025-12-24: 添加 generatedBuckets 聚合逻辑，支持创意类型进度
     const generatedBuckets = Array.from(
       new Set(
-        transformedCreatives
-          .map(c => c.keywordBucket)
-          .filter((b): b is 'A' | 'B' | 'D' => !!b)
+        transformedCreatives.map((c) => c.keywordBucket).filter((b): b is 'A' | 'B' | 'D' => !!b)
       )
     )
 

@@ -4,7 +4,15 @@
  */
 export function getAffiliateDomainKeywords(platformName: string): string[] {
   const platformDomainMap: Record<string, string[]> = {
-    Amazon: ['amzn.to', 'amazon.com', 'amazon.co.uk', 'amazon.ca', 'amazon.de', 'amazon.fr', 'amazon.co.jp'],
+    Amazon: [
+      'amzn.to',
+      'amazon.com',
+      'amazon.co.uk',
+      'amazon.ca',
+      'amazon.de',
+      'amazon.fr',
+      'amazon.co.jp',
+    ],
     LinkShare: ['click.linksynergy.com', 'linksynergy.com'],
     ShareASale: ['shareasale.com'],
     CJ: ['cj.dotomi.com', 'commissionjunction.com'],

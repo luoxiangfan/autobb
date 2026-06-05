@@ -60,4 +60,3 @@ describe('UnifiedQueueManager running index consistency', () => {
     }
   })
 })
-

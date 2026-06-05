@@ -52,7 +52,7 @@ describe('GET /api/dashboard/ai-token-cost', () => {
             output_tokens: 100,
             total_tokens: 1100,
             call_count: 1,
-          }
+          },
         ]
       }
 
@@ -96,9 +96,7 @@ describe('GET /api/dashboard/ai-token-cost', () => {
     expect(payload.data.today.totalCost).toBe(0.04)
     expect(payload.data.today.totalTokens).toBe(3100)
     expect(payload.data.today.totalCalls).toBe(2)
-    expect(payload.data.trend).toEqual([
-      { date: '2026-03-26', totalTokens: 3100, totalCost: 0.04 },
-    ])
+    expect(payload.data.trend).toEqual([{ date: '2026-03-26', totalTokens: 3100, totalCost: 0.04 }])
     expect(query).toHaveBeenCalledTimes(2)
   })
 })

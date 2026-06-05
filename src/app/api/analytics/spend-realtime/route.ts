@@ -52,7 +52,9 @@ function formatDateInTimezone(date: Date, timezone: string): string {
 }
 
 function normalizeCurrency(value: unknown): string {
-  const normalized = String(value ?? '').trim().toUpperCase()
+  const normalized = String(value ?? '')
+    .trim()
+    .toUpperCase()
   return normalized || 'USD'
 }
 
@@ -156,9 +158,12 @@ export async function GET(request: NextRequest) {
     const latestSyncCompletedAt = toIso(latestSync?.completed_at)
     const latestSyncStartedAt = toIso(latestSync?.started_at)
     const ageMinutes = getAgeMinutes(latestSyncCompletedAt || latestSyncStartedAt)
-    const syncStatus = String(latestSync?.status || '').trim().toLowerCase() || null
+    const syncStatus =
+      String(latestSync?.status || '')
+        .trim()
+        .toLowerCase() || null
     const isRunning = syncStatus === 'running'
-    const isStale = isRunning ? false : (ageMinutes === null || ageMinutes > staleMinutes)
+    const isStale = isRunning ? false : ageMinutes === null || ageMinutes > staleMinutes
 
     let syncTriggered = false
     let syncTaskId: string | null = null
@@ -209,9 +214,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取实时花费失败:', error)
-    return NextResponse.json(
-      { error: error?.message || '获取实时花费失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '获取实时花费失败' }, { status: 500 })
   }
 }

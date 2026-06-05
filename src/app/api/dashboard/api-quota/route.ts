@@ -63,19 +63,19 @@ export async function GET(request: NextRequest) {
             totalOperations: 0,
             successfulOperations: 0,
             failedOperations: 0,
-            avgResponseTimeMs: 0
+            avgResponseTimeMs: 0,
           },
           trend: [],
           quotaCheck: {
             isOverLimit: false,
             isNearLimit: false,
             usage: 0,
-            limit: 0
+            limit: 0,
           },
           recommendations: ['ℹ️ 您尚未配置 Google Ads API 凭证，请先在设置页面完成配置'],
           hasCredentials: false,
           latestRateLimitEvent: null,
-        }
+        },
       })
     }
 
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
         recommendations: generateRecommendations(todayStats, quotaCheck, topFailureMessage),
         hasCredentials: true,
         latestRateLimitEvent,
-      }
+      },
     })
   } catch (error: any) {
     console.error('获取API配额统计失败:', error)
@@ -118,7 +118,11 @@ export async function GET(request: NextRequest) {
 /**
  * 根据使用情况生成建议
  */
-function generateRecommendations(stats: any, check: any, topFailureMessage?: string | null): string[] {
+function generateRecommendations(
+  stats: any,
+  check: any,
+  topFailureMessage?: string | null
+): string[] {
   const recommendations: string[] = []
 
   if (check.isOverLimit) {
@@ -132,9 +136,17 @@ function generateRecommendations(stats: any, check: any, topFailureMessage?: str
   if (stats.totalOperations >= 5 && stats.failedOperations > stats.totalOperations * 0.2) {
     const msg = (topFailureMessage || '').toLowerCase()
     if (msg.includes('developer token') && msg.includes('not valid')) {
-      recommendations.push('💡 Developer Token 无效：检查是否包含多余空格/换行，并确认 Token 属于当前 GCP 项目')
-    } else if (msg.includes('developer_token_not_approved') || msg.includes('only approved for use with test accounts') || (msg.includes('developer token') && msg.includes('not approved'))) {
-      recommendations.push('💡 Developer Token 仍为测试权限（Test access）/未通过生产审核：只能访问测试账号，请先升级 Token 权限')
+      recommendations.push(
+        '💡 Developer Token 无效：检查是否包含多余空格/换行，并确认 Token 属于当前 GCP 项目'
+      )
+    } else if (
+      msg.includes('developer_token_not_approved') ||
+      msg.includes('only approved for use with test accounts') ||
+      (msg.includes('developer token') && msg.includes('not approved'))
+    ) {
+      recommendations.push(
+        '💡 Developer Token 仍为测试权限（Test access）/未通过生产审核：只能访问测试账号，请先升级 Token 权限'
+      )
     } else {
       recommendations.push('💡 失败操作较多，建议检查API调用参数和权限')
     }
@@ -156,7 +168,7 @@ async function getTopFailureMessageForToday(userId: number): Promise<string | nu
     const today = formatLocalYmd(new Date())
     const isFailureCondition = db.type === 'postgres' ? 'is_success = false' : 'is_success = 0'
 
-    const row = await db.queryOne(
+    const row = (await db.queryOne(
       `
         SELECT error_message, COUNT(*) as cnt
         FROM google_ads_api_usage
@@ -170,7 +182,7 @@ async function getTopFailureMessageForToday(userId: number): Promise<string | nu
         LIMIT 1
       `,
       [userId, today]
-    ) as { error_message?: string | null } | undefined
+    )) as { error_message?: string | null } | undefined
 
     return row?.error_message ? String(row.error_message) : null
   } catch {
@@ -193,12 +205,12 @@ async function getLatestRateLimitEventForToday(userId: number): Promise<RateLimi
     const today = formatLocalYmd(new Date())
     const isFailureCondition = db.type === 'postgres' ? 'is_success = false' : 'is_success = 0'
 
-    const likeClauses = RATE_LIMIT_MESSAGE_PATTERNS
-      .map(() => 'LOWER(error_message) LIKE ?')
-      .join(' OR ')
+    const likeClauses = RATE_LIMIT_MESSAGE_PATTERNS.map(() => 'LOWER(error_message) LIKE ?').join(
+      ' OR '
+    )
     const likeValues = RATE_LIMIT_MESSAGE_PATTERNS.map((pattern) => `%${pattern}%`)
 
-    const row = await db.queryOne(
+    const row = (await db.queryOne(
       `
         SELECT created_at, error_message, endpoint
         FROM google_ads_api_usage
@@ -212,11 +224,13 @@ async function getLatestRateLimitEventForToday(userId: number): Promise<RateLimi
         LIMIT 1
       `,
       [userId, today, ...likeValues]
-    ) as {
-      created_at?: string | null
-      error_message?: string | null
-      endpoint?: string | null
-    } | undefined
+    )) as
+      | {
+          created_at?: string | null
+          error_message?: string | null
+          endpoint?: string | null
+        }
+      | undefined
 
     const message = String(row?.error_message || '').trim()
     const occurredAt = String(row?.created_at || '').trim()

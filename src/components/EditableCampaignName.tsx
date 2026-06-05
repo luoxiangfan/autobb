@@ -53,64 +53,67 @@ export function EditableCampaignName({
     }
   }, [])
 
-  const saveCampaignName = useCallback(async (value: string) => {
-    const trimmed = value.trim()
-    if (!trimmed) {
-      showError('保存失败', '系列名称不能为空')
-      setDisplayValue(savedValue)
-      setIsEditing(false)
-      return
-    }
-
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-    }
-
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
-    setIsSaving(true)
-
-    try {
-      const response = await fetch(`/api/campaigns/${campaignId}/campaign-name`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ campaignName: trimmed }),
-        signal: abortController.signal,
-      })
-
-      if (response.status === 401) {
-        showError('保存失败', '未授权，请重新登录')
-        setTimeout(() => {
-          window.location.reload()
-        }, 1000)
+  const saveCampaignName = useCallback(
+    async (value: string) => {
+      const trimmed = value.trim()
+      if (!trimmed) {
+        showError('保存失败', '系列名称不能为空')
+        setDisplayValue(savedValue)
+        setIsEditing(false)
         return
       }
 
-      if (!response.ok) {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+
+      const abortController = new AbortController()
+      abortControllerRef.current = abortController
+      setIsSaving(true)
+
+      try {
+        const response = await fetch(`/api/campaigns/${campaignId}/campaign-name`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ campaignName: trimmed }),
+          signal: abortController.signal,
+        })
+
+        if (response.status === 401) {
+          showError('保存失败', '未授权，请重新登录')
+          setTimeout(() => {
+            window.location.reload()
+          }, 1000)
+          return
+        }
+
+        if (!response.ok) {
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || '网络错误')
+        }
+
         const data = await response.json().catch(() => null)
-        throw new Error(data?.error || '网络错误')
+        const nextName = String(data?.campaign?.campaignName || trimmed)
+        setSavedValue(nextName)
+        setDisplayValue(nextName)
+        onSaved?.(nextName)
+        showSuccess('保存成功', data?.syncedToGoogleAds ? '已同步到 Google Ads' : '系列名称已更新')
+        setIsEditing(false)
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          return
+        }
+        const message = error instanceof Error ? error.message : '网络错误'
+        showError('保存失败', message)
+        setDisplayValue(savedValue)
+      } finally {
+        setIsSaving(false)
+        abortControllerRef.current = null
       }
-
-      const data = await response.json().catch(() => null)
-      const nextName = String(data?.campaign?.campaignName || trimmed)
-      setSavedValue(nextName)
-      setDisplayValue(nextName)
-      onSaved?.(nextName)
-      showSuccess('保存成功', data?.syncedToGoogleAds ? '已同步到 Google Ads' : '系列名称已更新')
-      setIsEditing(false)
-    } catch (error: unknown) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        return
-      }
-      const message = error instanceof Error ? error.message : '网络错误'
-      showError('保存失败', message)
-      setDisplayValue(savedValue)
-    } finally {
-      setIsSaving(false)
-      abortControllerRef.current = null
-    }
-  }, [campaignId, savedValue, onSaved])
+    },
+    [campaignId, savedValue, onSaved]
+  )
 
   const handleBlur = useCallback(() => {
     if (debounceTimerRef.current) {
@@ -126,16 +129,19 @@ export function EditableCampaignName({
     }, 300)
   }, [displayValue, savedValue, saveCampaignName])
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleBlur()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      setDisplayValue(savedValue)
-      setIsEditing(false)
-    }
-  }, [handleBlur, savedValue])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleBlur()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        setDisplayValue(savedValue)
+        setIsEditing(false)
+      }
+    },
+    [handleBlur, savedValue]
+  )
 
   const handleStartEdit = useCallback(() => {
     if (disabled) return

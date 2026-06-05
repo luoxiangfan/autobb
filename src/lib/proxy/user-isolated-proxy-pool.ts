@@ -27,20 +27,20 @@ interface UserProxyPoolEntry {
   healthyProxies: ProxyIP[]
   lastRefresh: Date
   refreshing: boolean
-  proxyUrl: string  // 该用户配置的代理URL
+  proxyUrl: string // 该用户配置的代理URL
 }
 
 interface UserPoolData {
   userId: number
   pools: Map<string, UserProxyPoolEntry>
-  proxyConfigs: ProxyConfig[]  // 该用户的代理配置
+  proxyConfigs: ProxyConfig[] // 该用户的代理配置
 }
 
 interface ProxyPoolConfig {
-  refreshIntervalMs: number  // 刷新间隔
-  minHealthyProxies: number  // 最少保持健康代理数
-  maxPoolSize: number        // 每个country最多缓存代理数
-  maxConcurrentRefreshes: number  // 最大并发刷新数
+  refreshIntervalMs: number // 刷新间隔
+  minHealthyProxies: number // 最少保持健康代理数
+  maxPoolSize: number // 每个country最多缓存代理数
+  maxConcurrentRefreshes: number // 最大并发刷新数
 }
 
 const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
@@ -75,7 +75,12 @@ function getCountryCandidates(country: string): Set<string> {
 
 function getPrimaryCountryCode(country: string): string {
   const normalized = normalizeCountryCode(String(country || '').trim())
-  return normalized || String(country || '').trim().toUpperCase()
+  return (
+    normalized ||
+    String(country || '')
+      .trim()
+      .toUpperCase()
+  )
 }
 
 function expandProxyConfigs(proxyConfigs: ProxyConfig[]): ProxyConfig[] {
@@ -88,9 +93,8 @@ function expandProxyConfigs(proxyConfigs: ProxyConfig[]): ProxyConfig[] {
     if (!rawCountry || !url) continue
 
     const countryCandidates = getCountryCandidates(rawCountry)
-    const finalCandidates = countryCandidates.size > 0
-      ? Array.from(countryCandidates)
-      : [rawCountry.toUpperCase()]
+    const finalCandidates =
+      countryCandidates.size > 0 ? Array.from(countryCandidates) : [rawCountry.toUpperCase()]
 
     for (const country of finalCandidates) {
       const key = `${country}\u0000${url}`
@@ -115,13 +119,13 @@ class ResourceMonitor {
 
     // 根据资源使用率动态调整并发数
     if (cpuUsage > 80 || memoryUsage > 85) {
-      return 2  // 资源紧张，降低并发
+      return 2 // 资源紧张，降低并发
     } else if (cpuUsage > 60 || memoryUsage > 70) {
-      return 3  // 中等负载
+      return 3 // 中等负载
     } else if (cpuUsage > 40 || memoryUsage > 50) {
-      return 5  // 较低负载
+      return 5 // 较低负载
     } else {
-      return 8  // 资源充足，最大并发
+      return 8 // 资源充足，最大并发
     }
   }
 
@@ -139,7 +143,7 @@ class ResourceMonitor {
 
     const idle = totalIdle / cpus.length
     const total = totalTick / cpus.length
-    const usage = 100 - ~~(100 * idle / total)
+    const usage = 100 - ~~((100 * idle) / total)
 
     return usage
   }
@@ -156,7 +160,7 @@ class ResourceMonitor {
     return {
       cpuUsage: this.getCPUUsage(),
       memoryUsage: this.getMemoryUsage(),
-      recommendedConcurrency: this.getConcurrencyLimit()
+      recommendedConcurrency: this.getConcurrencyLimit(),
     }
   }
 }
@@ -171,7 +175,7 @@ class UserIsolatedProxyPoolManager {
 
   constructor(config?: Partial<ProxyPoolConfig>) {
     this.config = {
-      refreshIntervalMs: 5 * 60 * 1000,  // 5分钟
+      refreshIntervalMs: 5 * 60 * 1000, // 5分钟
       minHealthyProxies: 3,
       maxPoolSize: 10,
       maxConcurrentRefreshes: 5,
@@ -230,13 +234,16 @@ class UserIsolatedProxyPoolManager {
     // 如果该国家没有池，尝试创建
     if (!countryPool) {
       await this.initializeCountryPool(userId, targetCountry)
-      return this.getHealthyProxy(userId, targetCountry)  // 重试
+      return this.getHealthyProxy(userId, targetCountry) // 重试
     }
 
     // 缓存命中：返回健康代理
     if (countryPool.healthyProxies.length > 0) {
-      const proxy = countryPool.healthyProxies[Math.floor(Math.random() * countryPool.healthyProxies.length)]
-      console.log(`✅ 用户${userId}代理池缓存命中 ${targetCountry} (${countryPool.healthyProxies.length}个可用)`)
+      const proxy =
+        countryPool.healthyProxies[Math.floor(Math.random() * countryPool.healthyProxies.length)]
+      console.log(
+        `✅ 用户${userId}代理池缓存命中 ${targetCountry} (${countryPool.healthyProxies.length}个可用)`
+      )
       return proxy
     }
 
@@ -277,12 +284,16 @@ class UserIsolatedProxyPoolManager {
     // 如果缓存足够，直接返回
     if (countryPool.healthyProxies.length >= count) {
       const proxies = countryPool.healthyProxies.slice(0, count)
-      console.log(`✅ 用户${userId}代理池缓存命中 ${targetCountry} (需要${count}个, 可用${countryPool.healthyProxies.length}个)`)
+      console.log(
+        `✅ 用户${userId}代理池缓存命中 ${targetCountry} (需要${count}个, 可用${countryPool.healthyProxies.length}个)`
+      )
       return proxies
     }
 
     // 缓存不足，刷新
-    console.warn(`⚠️  用户${userId}代理池代理不足 ${targetCountry} (需要${count}个, 仅有${countryPool.healthyProxies.length}个)`)
+    console.warn(
+      `⚠️  用户${userId}代理池代理不足 ${targetCountry} (需要${count}个, 仅有${countryPool.healthyProxies.length}个)`
+    )
     await this.refreshCountryPool(userId, targetCountry)
 
     // 返回刷新后的代理
@@ -386,7 +397,7 @@ class UserIsolatedProxyPoolManager {
     const targetCountryCandidates = getCountryCandidates(targetCountry)
     const proxyConfig = userPool.proxyConfigs.find((c) => {
       const proxyCountryCandidates = getCountryCandidates(c.country)
-      return Array.from(proxyCountryCandidates).some(code => targetCountryCandidates.has(code))
+      return Array.from(proxyCountryCandidates).some((code) => targetCountryCandidates.has(code))
     })
     if (!proxyConfig) {
       console.warn(`⚠️  用户${userId}没有配置${targetCountry}的代理URL`)
@@ -430,7 +441,11 @@ class UserIsolatedProxyPoolManager {
       console.log(`🔄 刷新用户${userId}的${country}代理池...`)
 
       // 批量获取健康代理
-      const proxies = await this.fetchHealthyProxyIPs(countryPool.proxyUrl, country, this.config.maxPoolSize)
+      const proxies = await this.fetchHealthyProxyIPs(
+        countryPool.proxyUrl,
+        country,
+        this.config.maxPoolSize
+      )
 
       // 更新池
       countryPool.healthyProxies = proxies
@@ -447,7 +462,11 @@ class UserIsolatedProxyPoolManager {
   /**
    * 批量获取健康代理IP
    */
-  private async fetchHealthyProxyIPs(proxyUrl: string, country: string, count: number): Promise<ProxyIP[]> {
+  private async fetchHealthyProxyIPs(
+    proxyUrl: string,
+    country: string,
+    count: number
+  ): Promise<ProxyIP[]> {
     const proxies: ProxyIP[] = []
 
     for (let i = 0; i < count; i++) {
@@ -460,7 +479,7 @@ class UserIsolatedProxyPoolManager {
             username: proxyCredentials.username,
             password: proxyCredentials.password,
             country,
-            health: { healthy: true, lastCheck: new Date() }
+            health: { healthy: true, lastCheck: new Date() },
           })
         }
       } catch (error) {
@@ -481,9 +500,11 @@ class UserIsolatedProxyPoolManager {
 
     // 根据资源使用率动态调整并发数
     const concurrencyLimit = this.resourceMonitor.getConcurrencyLimit()
-    console.log(`📊 资源状态: CPU=${this.resourceMonitor.getResourceStats().cpuUsage.toFixed(1)}%, ` +
-                `Memory=${this.resourceMonitor.getResourceStats().memoryUsage.toFixed(1)}%, ` +
-                `并发数=${concurrencyLimit}`)
+    console.log(
+      `📊 资源状态: CPU=${this.resourceMonitor.getResourceStats().cpuUsage.toFixed(1)}%, ` +
+        `Memory=${this.resourceMonitor.getResourceStats().memoryUsage.toFixed(1)}%, ` +
+        `并发数=${concurrencyLimit}`
+    )
 
     let activeRefreshes = 0
 
@@ -492,7 +513,7 @@ class UserIsolatedProxyPoolManager {
         const refreshPromise = (async () => {
           // 等待直到有可用的并发槽
           while (activeRefreshes >= concurrencyLimit) {
-            await new Promise(resolve => setTimeout(resolve, 100))
+            await new Promise((resolve) => setTimeout(resolve, 100))
           }
 
           activeRefreshes++
@@ -516,7 +537,11 @@ class UserIsolatedProxyPoolManager {
   /**
    * 等待代理池刷新完成
    */
-  private async waitForRefresh(userId: number, country: string, maxWaitMs: number = 30000): Promise<void> {
+  private async waitForRefresh(
+    userId: number,
+    country: string,
+    maxWaitMs: number = 30000
+  ): Promise<void> {
     const userPool = this.userPools.get(userId)
     if (!userPool) return
 
@@ -551,7 +576,9 @@ export function getUserIsolatedProxyPoolManager(): UserIsolatedProxyPoolManager 
 /**
  * 初始化并启动用户隔离代理池管理器
  */
-export async function initUserIsolatedProxyPool(config?: Partial<ProxyPoolConfig>): Promise<UserIsolatedProxyPoolManager> {
+export async function initUserIsolatedProxyPool(
+  config?: Partial<ProxyPoolConfig>
+): Promise<UserIsolatedProxyPoolManager> {
   if (global.__userIsolatedProxyPoolInstance) {
     console.warn('⚠️  用户隔离代理池已初始化，返回现有实例')
     return global.__userIsolatedProxyPoolInstance

@@ -9,7 +9,7 @@ export async function GET() {
   try {
     // 检查数据库连接
     const db = await getDatabase()
-    const result = await db.queryOne('SELECT 1 as health', []) as { health: number }
+    const result = (await db.queryOne('SELECT 1 as health', [])) as { health: number }
 
     if (result.health !== 1) {
       throw new Error('数据库健康检查失败')

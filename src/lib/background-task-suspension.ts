@@ -17,10 +17,7 @@ function isExpired(packageExpiresAt: string | null | undefined, now: Date): bool
   return expiry.getTime() < now.getTime()
 }
 
-async function purgeUserPendingQueueTasks(
-  userId: number,
-  types: TaskType[]
-): Promise<number> {
+async function purgeUserPendingQueueTasks(userId: number, types: TaskType[]): Promise<number> {
   const queueManagers = [getQueueManager(), getBackgroundQueueManager()]
   let removedCount = 0
 

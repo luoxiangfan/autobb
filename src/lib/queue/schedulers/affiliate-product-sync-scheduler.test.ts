@@ -19,7 +19,8 @@ vi.mock('../../affiliate-products', () => ({
   checkAffiliatePlatformConfig: mocks.checkAffiliatePlatformConfig,
   createAffiliateProductSyncRun: mocks.createAffiliateProductSyncRun,
   getLatestFailedAffiliateProductSyncRun: mocks.getLatestFailedAffiliateProductSyncRun,
-  runAffiliateProductsRawJsonRetirementMaintenance: mocks.runAffiliateProductsRawJsonRetirementMaintenance,
+  runAffiliateProductsRawJsonRetirementMaintenance:
+    mocks.runAffiliateProductsRawJsonRetirementMaintenance,
   updateAffiliateProductSyncRun: mocks.updateAffiliateProductSyncRun,
 }))
 
@@ -69,23 +70,25 @@ describe('AffiliateProductSyncScheduler YP support', () => {
       lastFullAt: null,
     })
 
-    mocks.checkAffiliatePlatformConfig.mockImplementation(async (_userId: number, platform: string) => {
-      if (platform === 'partnerboost') {
+    mocks.checkAffiliatePlatformConfig.mockImplementation(
+      async (_userId: number, platform: string) => {
+        if (platform === 'partnerboost') {
+          return {
+            configured: false,
+            missingKeys: ['partnerboost_token'],
+            values: {},
+          }
+        }
         return {
-          configured: false,
-          missingKeys: ['partnerboost_token'],
-          values: {},
+          configured: true,
+          missingKeys: [],
+          values: {
+            yeahpromos_token: 'token',
+            yeahpromos_site_id: 'site',
+          },
         }
       }
-      return {
-        configured: true,
-        missingKeys: [],
-        values: {
-          yeahpromos_token: 'token',
-          yeahpromos_site_id: 'site',
-        },
-      }
-    })
+    )
 
     const queued = await scheduler.scheduleForUser(1, new Date('2026-02-24T00:00:00.000Z'))
 
@@ -163,23 +166,25 @@ describe('AffiliateProductSyncScheduler YP support', () => {
       lastFullAt: null,
     })
 
-    mocks.checkAffiliatePlatformConfig.mockImplementation(async (_userId: number, platform: string) => {
-      if (platform === 'partnerboost') {
+    mocks.checkAffiliatePlatformConfig.mockImplementation(
+      async (_userId: number, platform: string) => {
+        if (platform === 'partnerboost') {
+          return {
+            configured: false,
+            missingKeys: ['partnerboost_token'],
+            values: {},
+          }
+        }
         return {
-          configured: false,
-          missingKeys: ['partnerboost_token'],
-          values: {},
+          configured: true,
+          missingKeys: [],
+          values: {
+            yeahpromos_token: 'token',
+            yeahpromos_site_id: 'site',
+          },
         }
       }
-      return {
-        configured: true,
-        missingKeys: [],
-        values: {
-          yeahpromos_token: 'token',
-          yeahpromos_site_id: 'site',
-        },
-      }
-    })
+    )
 
     const queued = await scheduler.scheduleForUser(9, new Date('2026-02-24T00:00:00.000Z'))
 
@@ -235,20 +240,22 @@ describe('AffiliateProductSyncScheduler YP support', () => {
       lastFullAt: null,
     })
 
-    mocks.checkAffiliatePlatformConfig.mockImplementation(async (_userId: number, platform: string) => {
-      if (platform === 'partnerboost') {
+    mocks.checkAffiliatePlatformConfig.mockImplementation(
+      async (_userId: number, platform: string) => {
+        if (platform === 'partnerboost') {
+          return {
+            configured: true,
+            missingKeys: [],
+            values: { partnerboost_token: 'token' },
+          }
+        }
         return {
-          configured: true,
-          missingKeys: [],
-          values: { partnerboost_token: 'token' },
+          configured: false,
+          missingKeys: ['yeahpromos_token', 'yeahpromos_site_id'],
+          values: {},
         }
       }
-      return {
-        configured: false,
-        missingKeys: ['yeahpromos_token', 'yeahpromos_site_id'],
-        values: {},
-      }
-    })
+    )
 
     const queued = await scheduler.scheduleForUser(3, new Date('2026-02-24T00:00:00.000Z'))
 
@@ -268,20 +275,22 @@ describe('AffiliateProductSyncScheduler YP support', () => {
     })
     vi.spyOn(scheduler, 'enqueueSyncTask').mockResolvedValue(undefined)
 
-    mocks.checkAffiliatePlatformConfig.mockImplementation(async (_userId: number, platform: string) => {
-      if (platform === 'partnerboost') {
+    mocks.checkAffiliatePlatformConfig.mockImplementation(
+      async (_userId: number, platform: string) => {
+        if (platform === 'partnerboost') {
+          return {
+            configured: true,
+            missingKeys: [],
+            values: { partnerboost_token: 'token' },
+          }
+        }
         return {
-          configured: true,
-          missingKeys: [],
-          values: { partnerboost_token: 'token' },
+          configured: false,
+          missingKeys: ['yeahpromos_token', 'yeahpromos_site_id'],
+          values: {},
         }
       }
-      return {
-        configured: false,
-        missingKeys: ['yeahpromos_token', 'yeahpromos_site_id'],
-        values: {},
-      }
-    })
+    )
 
     const queued = await scheduler.scheduleForUser(13, new Date('2026-02-24T00:00:00.000Z'))
 
@@ -327,16 +336,13 @@ describe('AffiliateProductSyncScheduler YP support', () => {
         mode: 'delta',
       })
     )
-    expect(dbQueryMock).toHaveBeenCalledWith(
-      expect.stringContaining("key IN (?, ?, ?, ?)"),
-      [
-        5,
-        'affiliate_pb_delta_interval_minutes',
-        'affiliate_pb_full_interval_hours',
-        'affiliate_pb_last_delta_sync_at',
-        'affiliate_pb_last_full_sync_at',
-      ]
-    )
+    expect(dbQueryMock).toHaveBeenCalledWith(expect.stringContaining('key IN (?, ?, ?, ?)'), [
+      5,
+      'affiliate_pb_delta_interval_minutes',
+      'affiliate_pb_full_interval_hours',
+      'affiliate_pb_last_delta_sync_at',
+      'affiliate_pb_last_full_sync_at',
+    ])
   })
 
   it('loads YP schedule config directly when PB is not configured', async () => {
@@ -357,23 +363,25 @@ describe('AffiliateProductSyncScheduler YP support', () => {
       lastFullAt: new Date('2026-02-24T00:00:00.000Z'),
     })
 
-    mocks.checkAffiliatePlatformConfig.mockImplementation(async (_userId: number, platform: string) => {
-      if (platform === 'partnerboost') {
+    mocks.checkAffiliatePlatformConfig.mockImplementation(
+      async (_userId: number, platform: string) => {
+        if (platform === 'partnerboost') {
+          return {
+            configured: false,
+            missingKeys: ['partnerboost_token'],
+            values: {},
+          }
+        }
         return {
-          configured: false,
-          missingKeys: ['partnerboost_token'],
-          values: {},
+          configured: true,
+          missingKeys: [],
+          values: {
+            yeahpromos_token: 'token',
+            yeahpromos_site_id: 'site',
+          },
         }
       }
-      return {
-        configured: true,
-        missingKeys: [],
-        values: {
-          yeahpromos_token: 'token',
-          yeahpromos_site_id: 'site',
-        },
-      }
-    })
+    )
 
     const queued = await scheduler.scheduleForUser(6, new Date('2026-02-24T01:30:00.000Z'))
 

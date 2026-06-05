@@ -3,13 +3,17 @@ import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 const MODEL_ANCHOR_SUFFIX_PATTERN = String.raw`(?:[a-z]\d+[a-z0-9-]*|\d{1,4}[a-z0-9-]*|[a-z]|ii|iii|iv|v|vi|vii|viii|ix|x)`
 const MODEL_ANCHOR_PATTERNS = [
   /\b[a-z]{1,5}[- ]?\d{2,4}[a-z0-9-]*\b/i,
-  new RegExp(String.raw`\b(?:gen|generation|series|model|version|mk)\s*${MODEL_ANCHOR_SUFFIX_PATTERN}\b`, 'i'),
+  new RegExp(
+    String.raw`\b(?:gen|generation|series|model|version|mk)\s*${MODEL_ANCHOR_SUFFIX_PATTERN}\b`,
+    'i'
+  ),
   new RegExp(String.raw`\b(?:type|ver)\s*${MODEL_ANCHOR_SUFFIX_PATTERN}\b`, 'i'),
 ]
 
 const LEGACY_MODEL_CODE_TOKEN_PATTERN = /^[a-z]{1,6}\d{2,5}[a-z0-9]*$/i
 const GENERAL_MODEL_IDENTIFIER_TOKEN_PATTERN = /^[a-z0-9]{6,20}$/i
-const MEASUREMENT_LIKE_TOKEN_PATTERN = /^\d{1,4}(?:mm|cm|m|km|inch|in|ft|yd|oz|lb|lbs|kg|g|mah|wh|w|kw|v|hz|mp|gb|tb|ml|l|day|days|night|nights|year|years|month|months)$/i
+const MEASUREMENT_LIKE_TOKEN_PATTERN =
+  /^\d{1,4}(?:mm|cm|m|km|inch|in|ft|yd|oz|lb|lbs|kg|g|mah|wh|w|kw|v|hz|mp|gb|tb|ml|l|day|days|night|nights|year|years|month|months)$/i
 const ASIN_LIKE_TOKEN_PATTERN = /^b0[a-z0-9]{8}$/i
 const DIMENSION_AXIS_TOKENS = new Set(['d', 'w', 'h'])
 const DIMENSION_UNIT_TOKENS = new Set([
@@ -43,12 +47,7 @@ const DIMENSION_UNIT_TOKENS = new Set([
   'depth',
   'length',
 ])
-const NOISY_IDENTIFIER_TOKENS = new Set([
-  'wifi6',
-  'wifi7',
-  'bluetooth5',
-  'bluetooth52',
-])
+const NOISY_IDENTIFIER_TOKENS = new Set(['wifi6', 'wifi7', 'bluetooth5', 'bluetooth52'])
 
 const SCRAPED_MODEL_IDENTIFIER_FIELDS = [
   'asin',
@@ -67,15 +66,10 @@ const SCRAPED_MODEL_IDENTIFIER_FIELDS = [
   'manufacturer_part_number',
 ] as const
 
-const SCRAPED_URL_FIELDS = [
-  'finalUrl',
-  'productUrl',
-  'url',
-  'link',
-  'href',
-] as const
+const SCRAPED_URL_FIELDS = ['finalUrl', 'productUrl', 'url', 'link', 'href'] as const
 
-const IDENTIFIER_DETAIL_KEY_PATTERN = /(item\s*model|model|sku|asin|mpn|part\s*number|manufacturer\s*part|item\s*#|style\s*#)/i
+const IDENTIFIER_DETAIL_KEY_PATTERN =
+  /(item\s*model|model|sku|asin|mpn|part\s*number|manufacturer\s*part|item\s*#|style\s*#)/i
 
 const STORE_PRODUCT_LINK_NAME_FIELDS = [
   'name',
@@ -88,13 +82,7 @@ const STORE_PRODUCT_LINK_NAME_FIELDS = [
   'sku',
 ] as const
 
-const STORE_PRODUCT_LINK_URL_FIELDS = [
-  'url',
-  'link',
-  'href',
-  'productUrl',
-  'productLink',
-] as const
+const STORE_PRODUCT_LINK_URL_FIELDS = ['url', 'link', 'href', 'productUrl', 'productLink'] as const
 
 function parseScrapedData(scrapedData: unknown): Record<string, unknown> | null {
   if (!scrapedData) return null
@@ -133,7 +121,10 @@ export function containsAsinLikeToken(text: unknown): boolean {
   if (typeof text !== 'string' && typeof text !== 'number') return false
   const normalized = normalizeGoogleAdsKeyword(String(text))
   if (!normalized) return false
-  return normalized.split(/\s+/).filter(Boolean).some((token) => isAsinLikeToken(token))
+  return normalized
+    .split(/\s+/)
+    .filter(Boolean)
+    .some((token) => isAsinLikeToken(token))
 }
 
 function countMatches(value: string, pattern: RegExp): number {
@@ -327,8 +318,15 @@ function appendIdentifierTextsFromRecord(values: string[], record: Record<string
   }
 
   const technicalDetails = record.technicalDetails
-  if (technicalDetails && typeof technicalDetails === 'object' && !Array.isArray(technicalDetails)) {
-    for (const [key, value] of Object.entries(technicalDetails as Record<string, unknown>).slice(0, 30)) {
+  if (
+    technicalDetails &&
+    typeof technicalDetails === 'object' &&
+    !Array.isArray(technicalDetails)
+  ) {
+    for (const [key, value] of Object.entries(technicalDetails as Record<string, unknown>).slice(
+      0,
+      30
+    )) {
       if (!IDENTIFIER_DETAIL_KEY_PATTERN.test(key)) continue
       if (typeof value === 'string' || typeof value === 'number') {
         pushText(values, `${key} ${value}`)

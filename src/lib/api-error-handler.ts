@@ -49,11 +49,15 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
       }
 
       // 检查是否是负载均衡器的错误响应
-      if (text.includes('no healthy upstream') || text.includes('502 Bad Gateway') || text.includes('503 Service')) {
+      if (
+        text.includes('no healthy upstream') ||
+        text.includes('502 Bad Gateway') ||
+        text.includes('503 Service')
+      ) {
         return {
           success: false,
           error: 'SERVICE_UNAVAILABLE',
-          userMessage: '服务正在重启中，请稍后重试'
+          userMessage: '服务正在重启中，请稍后重试',
         }
       }
 
@@ -63,14 +67,14 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
         return {
           success: false,
           error: errorData.error || 'API_ERROR',
-          userMessage: errorData.message || errorData.error || `请求失败 (${response.status})`
+          userMessage: errorData.message || errorData.error || `请求失败 (${response.status})`,
         }
       } catch {
         // 无法解析为JSON，返回原始文本
         return {
           success: false,
           error: 'UNKNOWN_ERROR',
-          userMessage: `服务异常 (${response.status})`
+          userMessage: `服务异常 (${response.status})`,
         }
       }
     }
@@ -83,7 +87,7 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
       return {
         success: false,
         error: 'EMPTY_RESPONSE',
-        userMessage: '服务返回空响应'
+        userMessage: '服务返回空响应',
       }
     }
 
@@ -91,7 +95,7 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
       const data = JSON.parse(text)
       return {
         success: true,
-        data
+        data,
       }
     } catch (_parseError) {
       // JSON解析失败，可能是HTML错误页面
@@ -102,7 +106,7 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
       return {
         success: false,
         error: 'INVALID_JSON',
-        userMessage: '服务返回数据格式错误'
+        userMessage: '服务返回数据格式错误',
       }
     }
   } catch (error) {
@@ -111,14 +115,14 @@ export async function safeJsonParse<T = any>(response: Response): Promise<ApiRes
       return {
         success: false,
         error: 'NETWORK_ERROR',
-        userMessage: '网络连接失败，请检查网络'
+        userMessage: '网络连接失败，请检查网络',
       }
     }
 
     return {
       success: false,
       error: 'UNKNOWN_ERROR',
-      userMessage: '请求发生未知错误'
+      userMessage: '请求发生未知错误',
     }
   }
 }
@@ -139,7 +143,7 @@ export async function fetchWithRetry<T = any>(
   const {
     maxRetries = 2,
     retryDelay = 1000,
-    retryOnErrors = ['SERVICE_UNAVAILABLE', 'NETWORK_ERROR', 'HTML_RESPONSE']
+    retryOnErrors = ['SERVICE_UNAVAILABLE', 'NETWORK_ERROR', 'HTML_RESPONSE'],
   } = retryConfig || {}
 
   let lastError: ApiErrorResult | null = null
@@ -157,7 +161,7 @@ export async function fetchWithRetry<T = any>(
       // 检查是否需要重试
       if (attempt < maxRetries && retryOnErrors.includes(result.error)) {
         lastError = result
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)))
+        await new Promise((resolve) => setTimeout(resolve, retryDelay * (attempt + 1)))
         continue
       }
 
@@ -167,11 +171,11 @@ export async function fetchWithRetry<T = any>(
       lastError = {
         success: false,
         error: 'FETCH_ERROR',
-        userMessage: '请求失败，请稍后重试'
+        userMessage: '请求失败，请稍后重试',
       }
 
       if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)))
+        await new Promise((resolve) => setTimeout(resolve, retryDelay * (attempt + 1)))
         continue
       }
     }
@@ -190,7 +194,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   INVALID_JSON: '服务返回数据格式错误',
   EMPTY_RESPONSE: '服务返回空响应',
   UNKNOWN_ERROR: '请求发生未知错误',
-  FETCH_ERROR: '请求失败，请稍后重试'
+  FETCH_ERROR: '请求失败，请稍后重试',
 }
 
 /**

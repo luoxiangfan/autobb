@@ -79,9 +79,8 @@ async function ensureQueueInitialized(): Promise<{ success: boolean; message: st
         ...(dbConfig || {}),
         redisUrl: process.env.REDIS_URL,
         redisKeyPrefix:
-          process.env.REDIS_KEY_PREFIX ||
-          `autoads:${process.env.NODE_ENV || 'development'}:queue:`,
-        proxyPool: [] // 代理在任务执行时按需加载
+          process.env.REDIS_KEY_PREFIX || `autoads:${process.env.NODE_ENV || 'development'}:queue:`,
+        proxyPool: [], // 代理在任务执行时按需加载
       })
 
       // 确保队列已启动（自动处理初始化）
@@ -121,7 +120,7 @@ export async function POST() {
     return NextResponse.json({
       success: result.success,
       message: result.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   } catch (error: any) {
     console.error('❌ 队列初始化API错误:', error.message)
@@ -130,7 +129,7 @@ export async function POST() {
       {
         success: false,
         message: `队列初始化失败: ${error.message}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     )
@@ -147,21 +146,21 @@ export async function GET() {
       return NextResponse.json({
         initialized: true,
         stats,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       })
     }
 
     return NextResponse.json({
       initialized: false,
       message: '队列系统尚未初始化',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     })
   } catch (error: any) {
     return NextResponse.json(
       {
         initialized: false,
         error: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     )

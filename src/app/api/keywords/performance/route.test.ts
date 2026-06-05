@@ -31,9 +31,7 @@ describe('GET /api/keywords/performance', () => {
 
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('GROUP BY COALESCE(cp.currency')) {
-        return [
-          { currency: 'USD', total_cost: 120.5 },
-        ]
+        return [{ currency: 'USD', total_cost: 120.5 }]
       }
 
       if (sql.includes('FROM keywords k')) {

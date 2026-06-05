@@ -128,7 +128,9 @@ function toNumber(value: unknown): number {
 }
 
 function normalizeSearchTerm(input: string): string {
-  return String(input ?? '').trim().replace(/\s+/g, ' ')
+  return String(input ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
 function normalizeTermKey(input: string): string {
@@ -232,8 +234,7 @@ function createSearchTermGoogleAdsAuthResolver(db: Awaited<ReturnType<typeof get
         serviceAccountMccId: undefined as string | undefined,
         refreshToken: prepared.refreshToken,
         parentMccId,
-        oauthLoginCustomerId:
-          prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
+        oauthLoginCustomerId: prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId,
         credentials: prepared.oauthCredentials,
         ...preparedAuthContextField(prepared),
       }
@@ -329,7 +330,10 @@ async function createSearchTermKeywordsWithFallback(params: {
 function toUserStatsArray(
   actions: Array<{ userId: number }>
 ): Map<number, { userId: number; selected: number; applied: number; failed: number }> {
-  const userStats = new Map<number, { userId: number; selected: number; applied: number; failed: number }>()
+  const userStats = new Map<
+    number,
+    { userId: number; selected: number; applied: number; failed: number }
+  >()
   for (const action of actions) {
     if (!userStats.has(action.userId)) {
       userStats.set(action.userId, { userId: action.userId, selected: 0, applied: 0, failed: 0 })
@@ -422,9 +426,7 @@ async function loadExistingKeywordSet(params: {
   if (params.adGroupIds.length === 0) return existingSet
 
   const placeholders = params.adGroupIds.map(() => '?').join(', ')
-  const whereNegative = params.onlyNegative === undefined
-    ? ''
-    : 'AND is_negative = ?'
+  const whereNegative = params.onlyNegative === undefined ? '' : 'AND is_negative = ?'
   const queryParams: unknown[] = []
   if (params.onlyNegative !== undefined) {
     queryParams.push(boolParam(params.onlyNegative, db.type))
@@ -453,12 +455,7 @@ export function isDuplicateKeywordErrorMessage(message: string): boolean {
   const normalized = String(message || '').toLowerCase()
   if (!normalized) return false
 
-  const duplicateSignals = [
-    'already exists',
-    'duplicate',
-    'already added',
-    'already in ad group',
-  ]
+  const duplicateSignals = ['already exists', 'duplicate', 'already added', 'already in ad group']
 
   return duplicateSignals.some((signal) => normalized.includes(signal))
 }
@@ -486,9 +483,7 @@ export async function runSearchTermAutoNegatives(
 
   const adGroupIds = Array.from(
     new Set(
-      rows
-        .map((row) => Number(row.ad_group_id))
-        .filter((id) => Number.isFinite(id) && id > 0)
+      rows.map((row) => Number(row.ad_group_id)).filter((id) => Number.isFinite(id) && id > 0)
     )
   )
 
@@ -580,62 +575,33 @@ export async function runSearchTermAutoNegatives(
       try {
         const apiAuth = await authResolver.resolve(action)
 
-      const createResults = await createSearchTermKeywordsWithFallback({
-        action,
-        apiAuth,
-        actionName: '自动添加搜索词否定关键词',
-        keywords: [{
-          keywordText: action.searchTerm,
-          matchType: 'EXACT',
-          negativeKeywordMatchType: 'EXACT',
-          status: 'ENABLED',
-          isNegative: true,
-        }],
-      })
+        const createResults = await createSearchTermKeywordsWithFallback({
+          action,
+          apiAuth,
+          actionName: '自动添加搜索词否定关键词',
+          keywords: [
+            {
+              keywordText: action.searchTerm,
+              matchType: 'EXACT',
+              negativeKeywordMatchType: 'EXACT',
+              status: 'ENABLED',
+              isNegative: true,
+            },
+          ],
+        })
 
-      const keywordId = createResults[0]?.keywordId || null
-      await db.exec(
-        `
+        const keywordId = createResults[0]?.keywordId || null
+        await db.exec(
+          `
           INSERT INTO keywords (
             user_id, ad_group_id, keyword_id, keyword_text, match_type, status,
             is_negative, ai_generated, generation_source, creation_status, creation_error, last_sync_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
-        [
-          action.userId,
-          action.adGroupId,
-          keywordId,
-          action.searchTerm,
-          'EXACT',
-          'ENABLED',
-          boolParam(true, db.type),
-          boolParam(true, db.type),
-          AUTO_NEGATIVE_SOURCE,
-          'synced',
-          null,
-          new Date().toISOString(),
-        ]
-      )
-
-      existingNegativeSet.add(key)
-      applied++
-      userSummary.applied++
-    } catch (error) {
-      if (isDuplicateKeywordError(error)) {
-        skippedDuplicateRemote++
-        existingNegativeSet.add(key)
-
-        await db.exec(
-          `
-            INSERT INTO keywords (
-              user_id, ad_group_id, keyword_id, keyword_text, match_type, status,
-              is_negative, ai_generated, generation_source, creation_status, creation_error, last_sync_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `,
           [
             action.userId,
             action.adGroupId,
-            null,
+            keywordId,
             action.searchTerm,
             'EXACT',
             'ENABLED',
@@ -643,21 +609,54 @@ export async function runSearchTermAutoNegatives(
             boolParam(true, db.type),
             AUTO_NEGATIVE_SOURCE,
             'synced',
-            'already_exists_in_google_ads',
+            null,
             new Date().toISOString(),
           ]
-        ).catch(() => undefined)
+        )
 
-        continue
+        existingNegativeSet.add(key)
+        applied++
+        userSummary.applied++
+      } catch (error) {
+        if (isDuplicateKeywordError(error)) {
+          skippedDuplicateRemote++
+          existingNegativeSet.add(key)
+
+          await db
+            .exec(
+              `
+            INSERT INTO keywords (
+              user_id, ad_group_id, keyword_id, keyword_text, match_type, status,
+              is_negative, ai_generated, generation_source, creation_status, creation_error, last_sync_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+              [
+                action.userId,
+                action.adGroupId,
+                null,
+                action.searchTerm,
+                'EXACT',
+                'ENABLED',
+                boolParam(true, db.type),
+                boolParam(true, db.type),
+                AUTO_NEGATIVE_SOURCE,
+                'synced',
+                'already_exists_in_google_ads',
+                new Date().toISOString(),
+              ]
+            )
+            .catch(() => undefined)
+
+          continue
+        }
+
+        failed++
+        userSummary.failed++
+        console.warn(
+          `[AutoNegative] failed user=${action.userId} campaign=${action.campaignId} adGroup=${action.adGroupId} term="${action.searchTerm}":`,
+          error
+        )
       }
-
-      failed++
-      userSummary.failed++
-      console.warn(
-        `[AutoNegative] failed user=${action.userId} campaign=${action.campaignId} adGroup=${action.adGroupId} term="${action.searchTerm}":`,
-        error
-      )
-    }
     }
   } finally {
     authResolver.dispose()
@@ -704,9 +703,7 @@ export async function runSearchTermAutoPositiveKeywords(
 
   const adGroupIds = Array.from(
     new Set(
-      sortedRows
-        .map((row) => Number(row.ad_group_id))
-        .filter((id) => Number.isFinite(id) && id > 0)
+      sortedRows.map((row) => Number(row.ad_group_id)).filter((id) => Number.isFinite(id) && id > 0)
     )
   )
 
@@ -814,61 +811,32 @@ export async function runSearchTermAutoPositiveKeywords(
       try {
         const apiAuth = await authResolver.resolve(action)
 
-      const createResults = await createSearchTermKeywordsWithFallback({
-        action,
-        apiAuth,
-        actionName: '自动添加搜索词正向关键词',
-        keywords: [{
-          keywordText: action.searchTerm,
-          matchType: action.matchType,
-          status: 'ENABLED',
-          isNegative: false,
-        }],
-      })
+        const createResults = await createSearchTermKeywordsWithFallback({
+          action,
+          apiAuth,
+          actionName: '自动添加搜索词正向关键词',
+          keywords: [
+            {
+              keywordText: action.searchTerm,
+              matchType: action.matchType,
+              status: 'ENABLED',
+              isNegative: false,
+            },
+          ],
+        })
 
-      const keywordId = createResults[0]?.keywordId || null
-      await db.exec(
-        `
+        const keywordId = createResults[0]?.keywordId || null
+        await db.exec(
+          `
           INSERT INTO keywords (
             user_id, ad_group_id, keyword_id, keyword_text, match_type, status,
             is_negative, ai_generated, generation_source, creation_status, creation_error, last_sync_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
-        [
-          action.userId,
-          action.adGroupId,
-          keywordId,
-          action.searchTerm,
-          action.matchType,
-          'ENABLED',
-          boolParam(false, db.type),
-          boolParam(true, db.type),
-          AUTO_POSITIVE_SOURCE,
-          'synced',
-          null,
-          new Date().toISOString(),
-        ]
-      )
-
-      existingKeywordSet.add(key)
-      applied++
-      userSummary.applied++
-    } catch (error) {
-      if (isDuplicateKeywordError(error)) {
-        skippedDuplicateRemote++
-        existingKeywordSet.add(key)
-
-        await db.exec(
-          `
-            INSERT INTO keywords (
-              user_id, ad_group_id, keyword_id, keyword_text, match_type, status,
-              is_negative, ai_generated, generation_source, creation_status, creation_error, last_sync_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `,
           [
             action.userId,
             action.adGroupId,
-            null,
+            keywordId,
             action.searchTerm,
             action.matchType,
             'ENABLED',
@@ -876,21 +844,54 @@ export async function runSearchTermAutoPositiveKeywords(
             boolParam(true, db.type),
             AUTO_POSITIVE_SOURCE,
             'synced',
-            'already_exists_in_google_ads',
+            null,
             new Date().toISOString(),
           ]
-        ).catch(() => undefined)
+        )
 
-        continue
+        existingKeywordSet.add(key)
+        applied++
+        userSummary.applied++
+      } catch (error) {
+        if (isDuplicateKeywordError(error)) {
+          skippedDuplicateRemote++
+          existingKeywordSet.add(key)
+
+          await db
+            .exec(
+              `
+            INSERT INTO keywords (
+              user_id, ad_group_id, keyword_id, keyword_text, match_type, status,
+              is_negative, ai_generated, generation_source, creation_status, creation_error, last_sync_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+              [
+                action.userId,
+                action.adGroupId,
+                null,
+                action.searchTerm,
+                action.matchType,
+                'ENABLED',
+                boolParam(false, db.type),
+                boolParam(true, db.type),
+                AUTO_POSITIVE_SOURCE,
+                'synced',
+                'already_exists_in_google_ads',
+                new Date().toISOString(),
+              ]
+            )
+            .catch(() => undefined)
+
+          continue
+        }
+
+        failed++
+        userSummary.failed++
+        console.warn(
+          `[AutoPositive] failed user=${action.userId} campaign=${action.campaignId} adGroup=${action.adGroupId} term="${action.searchTerm}":`,
+          error
+        )
       }
-
-      failed++
-      userSummary.failed++
-      console.warn(
-        `[AutoPositive] failed user=${action.userId} campaign=${action.campaignId} adGroup=${action.adGroupId} term="${action.searchTerm}":`,
-        error
-      )
-    }
     }
   } finally {
     authResolver.dispose()

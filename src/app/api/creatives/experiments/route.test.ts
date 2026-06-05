@@ -69,7 +69,9 @@ describe('GET /api/creatives/experiments', () => {
   })
 
   it('returns experiment list with summary', async () => {
-    const req = new NextRequest('http://localhost/api/creatives/experiments?limit=20&status=completed')
+    const req = new NextRequest(
+      'http://localhost/api/creatives/experiments?limit=20&status=completed'
+    )
     const res = await GET(req)
     const payload = await res.json()
 

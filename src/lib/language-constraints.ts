@@ -38,164 +38,164 @@ export const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
     keywordMinSearchVolume: 500,
-    description: 'English - baseline constraints'
+    description: 'English - baseline constraints',
   },
 
   de: {
     language: 'German',
     languageCode: 'de',
-    headlineLength: 35,  // +5 (复合词较长)
-    descriptionLength: 100,  // +10
+    headlineLength: 35, // +5 (复合词较长)
+    descriptionLength: 100, // +10
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3,  // -1 (复合词通常较长)
-    keywordMinSearchVolume: 400,  // -100
-    description: 'German - longer compound words, adjusted for complexity'
+    keywordMaxWords: 3, // -1 (复合词通常较长)
+    keywordMinSearchVolume: 400, // -100
+    description: 'German - longer compound words, adjusted for complexity',
   },
 
   it: {
     language: 'Italian',
     languageCode: 'it',
-    headlineLength: 32,  // +2 (表达较冗长)
-    descriptionLength: 95,  // +5
+    headlineLength: 32, // +2 (表达较冗长)
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 4,  // 保持不变
-    keywordMinSearchVolume: 300,  // -200 (小语言市场)
-    description: 'Italian - more verbose expressions, smaller market'
+    keywordMaxWords: 4, // 保持不变
+    keywordMinSearchVolume: 300, // -200 (小语言市场)
+    description: 'Italian - more verbose expressions, smaller market',
   },
 
   es: {
     language: 'Spanish',
     languageCode: 'es',
-    headlineLength: 32,  // +2
-    descriptionLength: 95,  // +5
+    headlineLength: 32, // +2
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
-    keywordMinSearchVolume: 350,  // -150
-    description: 'Spanish - similar to Italian, moderate market'
+    keywordMinSearchVolume: 350, // -150
+    description: 'Spanish - similar to Italian, moderate market',
   },
 
   fr: {
     language: 'French',
     languageCode: 'fr',
-    headlineLength: 32,  // +2
-    descriptionLength: 95,  // +5
+    headlineLength: 32, // +2
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
-    keywordMinSearchVolume: 400,  // -100
-    description: 'French - verbose expressions, moderate market'
+    keywordMinSearchVolume: 400, // -100
+    description: 'French - verbose expressions, moderate market',
   },
 
   pt: {
     language: 'Portuguese',
     languageCode: 'pt',
-    headlineLength: 32,  // +2
-    descriptionLength: 95,  // +5
+    headlineLength: 32, // +2
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
-    keywordMinSearchVolume: 300,  // -200
-    description: 'Portuguese - verbose, smaller market'
+    keywordMinSearchVolume: 300, // -200
+    description: 'Portuguese - verbose, smaller market',
   },
 
   ja: {
     language: 'Japanese',
     languageCode: 'ja',
-    headlineLength: 30,  // 保持不变 (字符更紧凑)
-    descriptionLength: 90,  // 保持不变
+    headlineLength: 30, // 保持不变 (字符更紧凑)
+    descriptionLength: 90, // 保持不变
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 2,  // -2 (字符更紧凑，通常用2个词)
-    keywordMinSearchVolume: 250,  // -250
-    description: 'Japanese - compact characters, fewer words needed'
+    keywordMaxWords: 2, // -2 (字符更紧凑，通常用2个词)
+    keywordMinSearchVolume: 250, // -250
+    description: 'Japanese - compact characters, fewer words needed',
   },
 
   ko: {
     language: 'Korean',
     languageCode: 'ko',
-    headlineLength: 30,  // 保持不变
-    descriptionLength: 90,  // 保持不变
+    headlineLength: 30, // 保持不变
+    descriptionLength: 90, // 保持不变
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 2,  // -2
-    keywordMinSearchVolume: 250,  // -250
-    description: 'Korean - compact characters, fewer words needed'
+    keywordMaxWords: 2, // -2
+    keywordMinSearchVolume: 250, // -250
+    description: 'Korean - compact characters, fewer words needed',
   },
 
   zh: {
     language: 'Chinese',
     languageCode: 'zh',
-    headlineLength: 30,  // 保持不变
-    descriptionLength: 90,  // 保持不变
+    headlineLength: 30, // 保持不变
+    descriptionLength: 90, // 保持不变
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3,  // -1 (字符紧凑，但可能需要3个词)
-    keywordMinSearchVolume: 300,  // -200
-    description: 'Chinese - compact characters, moderate market'
+    keywordMaxWords: 3, // -1 (字符紧凑，但可能需要3个词)
+    keywordMinSearchVolume: 300, // -200
+    description: 'Chinese - compact characters, moderate market',
   },
 
   ru: {
     language: 'Russian',
     languageCode: 'ru',
-    headlineLength: 33,  // +3 (西里尔字母较长)
-    descriptionLength: 95,  // +5
+    headlineLength: 33, // +3 (西里尔字母较长)
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3,  // -1
-    keywordMinSearchVolume: 300,  // -200
-    description: 'Russian - Cyrillic characters, smaller market'
+    keywordMaxWords: 3, // -1
+    keywordMinSearchVolume: 300, // -200
+    description: 'Russian - Cyrillic characters, smaller market',
   },
 
   ar: {
     language: 'Arabic',
     languageCode: 'ar',
-    headlineLength: 32,  // +2 (阿拉伯字母较长)
-    descriptionLength: 95,  // +5
+    headlineLength: 32, // +2 (阿拉伯字母较长)
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3,  // -1
-    keywordMinSearchVolume: 250,  // -250
-    description: 'Arabic - right-to-left, smaller market'
+    keywordMaxWords: 3, // -1
+    keywordMinSearchVolume: 250, // -250
+    description: 'Arabic - right-to-left, smaller market',
   },
 
   sv: {
     language: 'Swedish',
     languageCode: 'sv',
-    headlineLength: 32,  // +2
-    descriptionLength: 95,  // +5
+    headlineLength: 32, // +2
+    descriptionLength: 95, // +5
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3,  // -1
-    keywordMinSearchVolume: 300,  // -200
-    description: 'Swedish - compound words, smaller market'
+    keywordMaxWords: 3, // -1
+    keywordMinSearchVolume: 300, // -200
+    description: 'Swedish - compound words, smaller market',
   },
 
   'de-ch': {
     language: 'Swiss German',
     languageCode: 'de-ch',
-    headlineLength: 35,  // +5
-    descriptionLength: 100,  // +10
+    headlineLength: 35, // +5
+    descriptionLength: 100, // +10
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3,  // -1
-    keywordMinSearchVolume: 350,  // -150
-    description: 'Swiss German - similar to German, smaller market'
-  }
+    keywordMaxWords: 3, // -1
+    keywordMinSearchVolume: 350, // -150
+    description: 'Swiss German - similar to German, smaller market',
+  },
 }
 
 /**
@@ -226,7 +226,7 @@ export function normalizeLanguageCode(language: string): string {
     russian: 'ru',
     arabic: 'ar',
     swedish: 'sv',
-    'swiss german': 'de-ch'
+    'swiss german': 'de-ch',
   }
 
   if (nameMap[lower]) {
@@ -262,7 +262,7 @@ export function isSupportedLanguage(language: string): boolean {
     russian: 'ru',
     arabic: 'ar',
     swedish: 'sv',
-    'swiss german': 'de-ch'
+    'swiss german': 'de-ch',
   }
 
   if (nameMap[lower]) {
@@ -305,7 +305,7 @@ export function validateDescriptionLength(description: string, language: string)
  */
 export function validateKeywordWordCount(keyword: string, language: string): boolean {
   const constraints = getLanguageConstraints(language)
-  const wordCount = keyword.split(/\s+/).filter(w => w.length > 0).length
+  const wordCount = keyword.split(/\s+/).filter((w) => w.length > 0).length
   return wordCount >= 1 && wordCount <= constraints.keywordMaxWords
 }
 
@@ -357,25 +357,33 @@ export function compareLanguageConstraints(lang1: string, lang2: string): string
   lines.push('Headline Length:')
   lines.push(`  ${constraints1.language}: ${constraints1.headlineLength}`)
   lines.push(`  ${constraints2.language}: ${constraints2.headlineLength}`)
-  lines.push(`  Difference: ${constraints2.headlineLength - constraints1.headlineLength > 0 ? '+' : ''}${constraints2.headlineLength - constraints1.headlineLength}`)
+  lines.push(
+    `  Difference: ${constraints2.headlineLength - constraints1.headlineLength > 0 ? '+' : ''}${constraints2.headlineLength - constraints1.headlineLength}`
+  )
   lines.push('')
 
   lines.push('Description Length:')
   lines.push(`  ${constraints1.language}: ${constraints1.descriptionLength}`)
   lines.push(`  ${constraints2.language}: ${constraints2.descriptionLength}`)
-  lines.push(`  Difference: ${constraints2.descriptionLength - constraints1.descriptionLength > 0 ? '+' : ''}${constraints2.descriptionLength - constraints1.descriptionLength}`)
+  lines.push(
+    `  Difference: ${constraints2.descriptionLength - constraints1.descriptionLength > 0 ? '+' : ''}${constraints2.descriptionLength - constraints1.descriptionLength}`
+  )
   lines.push('')
 
   lines.push('Keyword Max Words:')
   lines.push(`  ${constraints1.language}: ${constraints1.keywordMaxWords}`)
   lines.push(`  ${constraints2.language}: ${constraints2.keywordMaxWords}`)
-  lines.push(`  Difference: ${constraints2.keywordMaxWords - constraints1.keywordMaxWords > 0 ? '+' : ''}${constraints2.keywordMaxWords - constraints1.keywordMaxWords}`)
+  lines.push(
+    `  Difference: ${constraints2.keywordMaxWords - constraints1.keywordMaxWords > 0 ? '+' : ''}${constraints2.keywordMaxWords - constraints1.keywordMaxWords}`
+  )
   lines.push('')
 
   lines.push('Keyword Min Search Volume:')
   lines.push(`  ${constraints1.language}: ${constraints1.keywordMinSearchVolume}`)
   lines.push(`  ${constraints2.language}: ${constraints2.keywordMinSearchVolume}`)
-  lines.push(`  Difference: ${constraints2.keywordMinSearchVolume - constraints1.keywordMinSearchVolume > 0 ? '+' : ''}${constraints2.keywordMinSearchVolume - constraints1.keywordMinSearchVolume}`)
+  lines.push(
+    `  Difference: ${constraints2.keywordMinSearchVolume - constraints1.keywordMinSearchVolume > 0 ? '+' : ''}${constraints2.keywordMinSearchVolume - constraints1.keywordMinSearchVolume}`
+  )
 
   return lines.join('\n')
 }

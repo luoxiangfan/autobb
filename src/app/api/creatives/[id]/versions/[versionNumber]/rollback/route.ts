@@ -11,7 +11,7 @@ export async function POST(
   request: NextRequest,
   props: { params: Promise<{ id: string; versionNumber: string }> }
 ) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -22,10 +22,7 @@ export async function POST(
     const versionNumber = parseInt(params.versionNumber, 10)
 
     if (isNaN(creativeId) || isNaN(versionNumber)) {
-      return NextResponse.json(
-        { error: '无效的Creative ID或版本号' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '无效的Creative ID或版本号' }, { status: 400 })
     }
 
     const db = await getDatabase()
@@ -54,7 +51,8 @@ export async function POST(
       path_2: string | null
       quality_score: number | null
       quality_details: string | null
-    }>(`
+    }>(
+      `
       SELECT
         headlines,
         descriptions,
@@ -65,7 +63,9 @@ export async function POST(
         quality_details
       FROM creative_versions
       WHERE creative_id = ? AND version_number = ?
-    `, [creativeId, versionNumber])
+    `,
+      [creativeId, versionNumber]
+    )
 
     if (!targetVersion) {
       return NextResponse.json({ error: '目标版本不存在' }, { status: 404 })
@@ -84,7 +84,8 @@ export async function POST(
     const newVersionNumber = (maxVersionRow?.max_version || 0) + 1
 
     // 创建新版本（回滚版本）
-    const result = await db.exec(`
+    const result = await db.exec(
+      `
       INSERT INTO creative_versions (
         creative_id,
         version_number,
@@ -99,25 +100,28 @@ export async function POST(
         creation_method,
         change_summary
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      creativeId,
-      newVersionNumber,
-      JSON.stringify(headlines),
-      JSON.stringify(descriptions),
-      targetVersion.final_url,
-      targetVersion.path_1,
-      targetVersion.path_2,
-      targetVersion.quality_score,
-      targetVersion.quality_details,
-      userId.toString(),
-      'rollback',
-      `回滚到版本 ${versionNumber}`
-    ])
+    `,
+      [
+        creativeId,
+        newVersionNumber,
+        JSON.stringify(headlines),
+        JSON.stringify(descriptions),
+        targetVersion.final_url,
+        targetVersion.path_1,
+        targetVersion.path_2,
+        targetVersion.quality_score,
+        targetVersion.quality_details,
+        userId.toString(),
+        'rollback',
+        `回滚到版本 ${versionNumber}`,
+      ]
+    )
 
     const versionId = getInsertedId(result, db.type)
 
     // 同时更新ad_creatives表的当前内容
-    await db.exec(`
+    await db.exec(
+      `
       UPDATE ad_creatives
       SET
         headlines = ?,
@@ -126,21 +130,22 @@ export async function POST(
         final_url_suffix = ?,
         updated_at = datetime('now')
       WHERE id = ?
-    `, [
-      JSON.stringify(headlines),
-      JSON.stringify(descriptions),
-      targetVersion.final_url,
-      targetVersion.path_1 && targetVersion.path_2
-        ? `${targetVersion.path_1}/${targetVersion.path_2}`
-        : (targetVersion.path_1 || null),
-      creativeId
-    ])
+    `,
+      [
+        JSON.stringify(headlines),
+        JSON.stringify(descriptions),
+        targetVersion.final_url,
+        targetVersion.path_1 && targetVersion.path_2
+          ? `${targetVersion.path_1}/${targetVersion.path_2}`
+          : targetVersion.path_1 || null,
+        creativeId,
+      ]
+    )
 
     // 获取新创建的版本
-    const newVersion = await db.queryOne<any>(
-      'SELECT * FROM creative_versions WHERE id = ?',
-      [versionId]
-    )
+    const newVersion = await db.queryOne<any>('SELECT * FROM creative_versions WHERE id = ?', [
+      versionId,
+    ])
 
     return NextResponse.json({
       success: true,

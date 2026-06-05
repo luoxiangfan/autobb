@@ -18,14 +18,18 @@ import {
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 import { DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerUrlSeedForOffer } from './keyword-planner-site-filter'
-import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
+import {
+  getLanguageName,
+  normalizeCountryCode,
+  normalizeLanguageCode,
+} from './language-country-codes'
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { classifyKeywordIntent } from './keyword-intent'
 import {
   detectCountryInKeyword,
   filterLowIntentKeywords,
   filterMismatchedGeoKeywords,
-  getBrandSearchSuggestions
+  getBrandSearchSuggestions,
 } from './google-suggestions'
 import {
   getPureBrandKeywords,
@@ -37,7 +41,7 @@ import {
   isBrandConcatenation,
   getTemplateGarbageReason,
   detectPlatformsInKeyword,
-  extractPlatformFromUrl
+  extractPlatformFromUrl,
 } from './keyword-quality-filter'
 import { containsAsinLikeToken } from './model-anchor-evidence'
 import {
@@ -118,7 +122,9 @@ function mergeUniqueTags(...inputs: unknown[]): string[] | undefined {
   for (const input of inputs) {
     const values = Array.isArray(input) ? input : [input]
     for (const value of values) {
-      const normalized = String(value || '').trim().toUpperCase()
+      const normalized = String(value || '')
+        .trim()
+        .toUpperCase()
       if (!normalized) continue
       tags.add(normalized)
     }
@@ -195,9 +201,9 @@ function inferPlannerNonBrandUseCase(params: {
   if (intent.hardNegative) return undefined
 
   if (
-    params.pageType === 'product'
-    && params.modelFamilyContext
-    && isKeywordInProductModelFamily(normalizedKeyword, params.modelFamilyContext)
+    params.pageType === 'product' &&
+    params.modelFamilyContext &&
+    isKeywordInProductModelFamily(normalizedKeyword, params.modelFamilyContext)
   ) {
     return 'model_family'
   }
@@ -222,11 +228,12 @@ function buildPlannerNonBrandMetadata(useCase: PlannerNonBrandUseCase): {
   rawSource: 'KEYWORD_PLANNER'
   derivedTags: string[]
 } {
-  const sourceSubtype = useCase === 'model_family'
-    ? 'KEYWORD_PLANNER_MODEL_FAMILY'
-    : useCase === 'demand'
-      ? 'KEYWORD_PLANNER_DEMAND'
-      : 'KEYWORD_PLANNER_POOL'
+  const sourceSubtype =
+    useCase === 'model_family'
+      ? 'KEYWORD_PLANNER_MODEL_FAMILY'
+      : useCase === 'demand'
+        ? 'KEYWORD_PLANNER_DEMAND'
+        : 'KEYWORD_PLANNER_POOL'
 
   return {
     sourceType: 'KEYWORD_PLANNER',
@@ -249,11 +256,12 @@ function buildPlannerBrandRewriteMetadata(useCase: PlannerNonBrandUseCase): {
   rawSource: 'KEYWORD_PLANNER'
   derivedTags: string[]
 } {
-  const sourceSubtype = useCase === 'model_family'
-    ? 'KEYWORD_PLANNER_MODEL_FAMILY_REWRITE'
-    : useCase === 'demand'
-      ? 'KEYWORD_PLANNER_DEMAND_REWRITE'
-      : 'KEYWORD_PLANNER_POOL_REWRITE'
+  const sourceSubtype =
+    useCase === 'model_family'
+      ? 'KEYWORD_PLANNER_MODEL_FAMILY_REWRITE'
+      : useCase === 'demand'
+        ? 'KEYWORD_PLANNER_DEMAND_REWRITE'
+        : 'KEYWORD_PLANNER_POOL_REWRITE'
 
   return {
     sourceType: 'BRANDED_INDUSTRY_TERM',
@@ -272,8 +280,27 @@ function buildPlannerBrandRewriteMetadata(useCase: PlannerNonBrandUseCase): {
 }
 
 const LATIN_SCRIPT_LANGUAGE_CODES = new Set([
-  'en', 'de', 'fr', 'es', 'it', 'pt', 'nl', 'sv', 'no', 'da', 'fi',
-  'pl', 'cs', 'tr', 'vi', 'id', 'ms', 'ro', 'hu', 'sk', 'tl'
+  'en',
+  'de',
+  'fr',
+  'es',
+  'it',
+  'pt',
+  'nl',
+  'sv',
+  'no',
+  'da',
+  'fi',
+  'pl',
+  'cs',
+  'tr',
+  'vi',
+  'id',
+  'ms',
+  'ro',
+  'hu',
+  'sk',
+  'tl',
 ])
 
 const DISALLOWED_NON_LATIN_SCRIPT_FOR_LATIN_LANG_RE =
@@ -281,41 +308,113 @@ const DISALLOWED_NON_LATIN_SCRIPT_FOR_LATIN_LANG_RE =
 
 const LANGUAGE_HINT_TOKENS: Record<string, Set<string>> = {
   en: new Set([
-    'buy', 'price', 'deal', 'sale', 'shop', 'official', 'store', 'reviews',
-    'review', 'best', 'compare', 'comparison', 'online'
+    'buy',
+    'price',
+    'deal',
+    'sale',
+    'shop',
+    'official',
+    'store',
+    'reviews',
+    'review',
+    'best',
+    'compare',
+    'comparison',
+    'online',
   ]),
   de: new Set([
-    'kaufen', 'kauf', 'preis', 'angebote', 'angebot', 'guenstig', 'günstig',
-    'offiziell', 'bewertung', 'bewertungen', 'vergleich', 'deutschland', 'shop'
+    'kaufen',
+    'kauf',
+    'preis',
+    'angebote',
+    'angebot',
+    'guenstig',
+    'günstig',
+    'offiziell',
+    'bewertung',
+    'bewertungen',
+    'vergleich',
+    'deutschland',
+    'shop',
   ]),
   es: new Set([
-    'comprar', 'precio', 'oferta', 'ofertas', 'tienda', 'oficial', 'reseñas',
-    'resenas', 'comparar'
+    'comprar',
+    'precio',
+    'oferta',
+    'ofertas',
+    'tienda',
+    'oficial',
+    'reseñas',
+    'resenas',
+    'comparar',
   ]),
   fr: new Set([
-    'acheter', 'prix', 'offre', 'offres', 'boutique', 'officiel', 'avis',
-    'comparaison'
+    'acheter',
+    'prix',
+    'offre',
+    'offres',
+    'boutique',
+    'officiel',
+    'avis',
+    'comparaison',
   ]),
   it: new Set([
-    'comprare', 'prezzo', 'offerta', 'offerte', 'negozio', 'ufficiale',
-    'recensioni', 'confronto'
+    'comprare',
+    'prezzo',
+    'offerta',
+    'offerte',
+    'negozio',
+    'ufficiale',
+    'recensioni',
+    'confronto',
   ]),
   pt: new Set([
-    'comprar', 'preco', 'oferta', 'ofertas', 'loja', 'oficial', 'avaliacoes',
-    'avaliações', 'comparacao', 'comparação'
+    'comprar',
+    'preco',
+    'oferta',
+    'ofertas',
+    'loja',
+    'oficial',
+    'avaliacoes',
+    'avaliações',
+    'comparacao',
+    'comparação',
   ]),
   tr: new Set([
-    'satın', 'satin', 'fiyat', 'indirim', 'magaza', 'mağaza', 'resmi',
-    'yorum', 'karsilastir', 'karşılaştır'
+    'satın',
+    'satin',
+    'fiyat',
+    'indirim',
+    'magaza',
+    'mağaza',
+    'resmi',
+    'yorum',
+    'karsilastir',
+    'karşılaştır',
   ]),
   pl: new Set([
-    'kupic', 'kupić', 'cena', 'oferta', 'oferty', 'sklep', 'oficjalny',
-    'opinie', 'porownanie', 'porównanie'
+    'kupic',
+    'kupić',
+    'cena',
+    'oferta',
+    'oferty',
+    'sklep',
+    'oficjalny',
+    'opinie',
+    'porownanie',
+    'porównanie',
   ]),
   // 俄语拉丁转写（用于补充脚本检测覆盖不到的场景）
   ru_latn: new Set([
-    'kupit', 'tsena', 'cena', 'otzyv', 'otzyvy', 'dostavka', 'ventilyator',
-    'napolnyy', 'nastolnyy'
+    'kupit',
+    'tsena',
+    'cena',
+    'otzyv',
+    'otzyvy',
+    'dostavka',
+    'ventilyator',
+    'napolnyy',
+    'nastolnyy',
   ]),
 }
 
@@ -328,13 +427,15 @@ function getAllowedLanguageHintsForTarget(targetLanguage: string): Set<string> {
 
 function detectLatinLanguageHints(keyword: string): Set<string> {
   const hints = new Set<string>()
-  const normalized = String(keyword || '').toLowerCase().normalize('NFKC')
+  const normalized = String(keyword || '')
+    .toLowerCase()
+    .normalize('NFKC')
   if (!normalized) return hints
 
   // 先按 token 做词形提示
   const tokens = normalized
     .split(/[^\p{L}\p{N}]+/u)
-    .map(t => t.trim())
+    .map((t) => t.trim())
     .filter(Boolean)
 
   for (const token of tokens) {
@@ -403,7 +504,7 @@ async function getGlobalKeywordCandidates(params: {
   const languageCandidates = Array.from(
     new Set(
       [languageCode, languageName, targetLanguage]
-        .map(value => String(value || '').trim())
+        .map((value) => String(value || '').trim())
         .filter(Boolean)
     )
   )
@@ -412,7 +513,7 @@ async function getGlobalKeywordCandidates(params: {
     new Set(
       [normalizedCountry, targetCountry, targetCountry?.toUpperCase?.()]
         .filter((value): value is string => Boolean(value && value.trim()))
-        .map(value => value.trim().toUpperCase())
+        .map((value) => value.trim().toUpperCase())
     )
   )
   if (countryCandidates.length === 0) return []
@@ -429,14 +530,14 @@ async function getGlobalKeywordCandidates(params: {
   const clauses = patterns.map(() => 'LOWER(keyword) LIKE ?').join(' OR ')
 
   try {
-    const rows = await db.query(
+    const rows = (await db.query(
       `SELECT keyword, search_volume, competition_level, avg_cpc_micros
        FROM global_keywords
        WHERE country IN (${countryPlaceholders}) AND language IN (${languagePlaceholders}) AND (${clauses})
        ORDER BY search_volume DESC
        LIMIT ?`,
       [...countryCandidates, ...languageCandidates, ...patterns, limit]
-    ) as Array<{
+    )) as Array<{
       keyword: string
       search_volume: number | string | null
       competition_level?: string | null
@@ -480,7 +581,7 @@ async function getGlobalKeywordCandidates(params: {
           highTopPageBid: avgCpcMicros / 1_000_000,
           source: 'GLOBAL_KEYWORDS',
           matchType,
-          isPureBrand
+          isPureBrand,
         })
       }
     }
@@ -515,7 +616,8 @@ function mergeGlobalCandidates(params: {
   for (const kw of candidates) {
     const canonical = normalizeGoogleAdsKeyword(kw.keyword)
     if (!canonical) continue
-    const isConcatenatedBrand = (kw.searchVolume || 0) > 0 && isBrandConcatenation(canonical, brandName)
+    const isConcatenatedBrand =
+      (kw.searchVolume || 0) > 0 && isBrandConcatenation(canonical, brandName)
     if (!containsPureBrand(canonical, pureBrandKeywords) && !isConcatenatedBrand) continue
 
     const existing = allKeywords.get(canonical)
@@ -526,7 +628,7 @@ function mergeGlobalCandidates(params: {
       keyword: canonical,
       matchType: kw.matchType || matchType,
       isPureBrand: kw.isPureBrand ?? isPureBrand,
-      source: kw.source || 'GLOBAL_KEYWORDS'
+      source: kw.source || 'GLOBAL_KEYWORDS',
     }
 
     if (!existing) {
@@ -539,7 +641,7 @@ function mergeGlobalCandidates(params: {
       allKeywords.set(canonical, {
         ...existing,
         ...candidate,
-        source: existing.source || candidate.source
+        source: existing.source || candidate.source,
       })
       updated++
     }
@@ -554,7 +656,7 @@ function resolveCountryCodeSet(country?: string): Set<string> {
   return new Set(
     [country, country.toUpperCase?.(), normalized]
       .filter((value): value is string => Boolean(value && value.trim()))
-      .map(value => value.trim().toUpperCase())
+      .map((value) => value.trim().toUpperCase())
   )
 }
 
@@ -568,9 +670,9 @@ function isGeoMismatch(keyword: string, targetCountry?: string): boolean {
 
   const normalizedDetectedCodes = new Set(
     detectedCountries
-      .map(code => normalizeCountryCode(code))
+      .map((code) => normalizeCountryCode(code))
       .filter(Boolean)
-      .map(code => code.toUpperCase())
+      .map((code) => code.toUpperCase())
   )
 
   for (const code of targetCodes) {
@@ -635,7 +737,19 @@ export async function expandAllKeywords(
   clientId?: string,
   clientSecret?: string,
   developerToken?: string,
-  progress?: (info: { phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'; message: string; current?: number; total?: number }) => Promise<void> | void,
+  progress?: (info: {
+    phase?:
+      | 'seed-volume'
+      | 'expand-round'
+      | 'volume-batch'
+      | 'service-step'
+      | 'filter'
+      | 'cluster'
+      | 'save'
+    message: string
+    current?: number
+    total?: number
+  }) => Promise<void> | void,
   plannerMinSearchVolume?: number,
   allowNonBrandFromPlanner?: boolean | PlannerNonBrandPolicy,
   plannerDecision?: PlannerDecision,
@@ -653,7 +767,9 @@ export async function expandAllKeywords(
       category,
       targetCountry,
       targetLanguage,
-      pageUrl: offer ? getKeywordPlannerUrlSeedForOffer(offer, { allowMarketplaceProductUrl: true }) : undefined,
+      pageUrl: offer
+        ? getKeywordPlannerUrlSeedForOffer(offer, { allowMarketplaceProductUrl: true })
+        : undefined,
       offer,
       userId,
       customerId,
@@ -667,7 +783,7 @@ export async function expandAllKeywords(
       plannerDecision,
       progress,
       linkedServiceAccountId,
-      plannerSession
+      plannerSession,
     })
   } else {
     if (!offer || !userId) {
@@ -681,7 +797,7 @@ export async function expandAllKeywords(
       targetLanguage,
       offer,
       userId,
-      progress
+      progress,
     })
   }
 }
@@ -708,7 +824,19 @@ interface OAuthExpandParams {
   minSearchVolume?: number
   allowNonBrandFromPlanner?: boolean | PlannerNonBrandPolicy
   plannerDecision?: PlannerDecision
-  progress?: (info: { phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'; message: string; current?: number; total?: number }) => Promise<void> | void
+  progress?: (info: {
+    phase?:
+      | 'seed-volume'
+      | 'expand-round'
+      | 'volume-batch'
+      | 'service-step'
+      | 'filter'
+      | 'cluster'
+      | 'save'
+    message: string
+    current?: number
+    total?: number
+  }) => Promise<void> | void
   linkedServiceAccountId?: string | null
   plannerSession?: KeywordPlannerPreparedSession
 }
@@ -758,13 +886,11 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
   const fullBrand = normalizeGoogleAdsKeyword(brandName)
   const fullBrandKeywords = fullBrand ? [fullBrand] : []
   const minFullBrandCount = DEFAULTS.minKeywordsTarget
-  const pageType = allowNonBrandFromPlanner && typeof allowNonBrandFromPlanner === 'object'
-    ? (allowNonBrandFromPlanner.pageType || 'product')
-    : 'product'
-  let plannerNonBrandPolicy = normalizePlannerNonBrandPolicy(
-    allowNonBrandFromPlanner,
-    pageType
-  )
+  const pageType =
+    allowNonBrandFromPlanner && typeof allowNonBrandFromPlanner === 'object'
+      ? allowNonBrandFromPlanner.pageType || 'product'
+      : 'product'
+  let plannerNonBrandPolicy = normalizePlannerNonBrandPolicy(allowNonBrandFromPlanner, pageType)
   let allowNonBrand = plannerNonBrandPolicyEnabled(plannerNonBrandPolicy)
   let volumeUnavailableFromPlanner = false
   const allKeywords = new Map<string, PoolKeywordData>()
@@ -772,9 +898,8 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
   const topN = 20
   let keywordPlannerReturned = false
   let usedNoSiteFilterSupplement = false
-  const modelFamilyContext = pageType === 'product' && offer
-    ? buildProductModelFamilyContext(offer as any)
-    : undefined
+  const modelFamilyContext =
+    pageType === 'product' && offer ? buildProductModelFamilyContext(offer as any) : undefined
   const offerContextTokens = buildOfferContextTokenSet({
     brandName,
     category,
@@ -787,7 +912,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
   const fallbackKeywords: PoolKeywordData[] = (() => {
     if (initialKeywords.length > 0) return initialKeywords
     if (pureBrandKeywords.length > 0) {
-      return pureBrandKeywords.map(keyword => ({
+      return pureBrandKeywords.map((keyword) => ({
         keyword,
         searchVolume: 0,
         source: 'PROVIDED',
@@ -808,7 +933,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         targetLanguage,
         offer,
         userId,
-        progress
+        progress,
       })
     }
     return fallbackKeywords
@@ -835,15 +960,17 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
 
   // 🔧 兜底：缺少 OAuth 必要信息时，不生成“空关键词池”
   if (!customerId || !userId) {
-    console.warn(`   ⚠️ 缺少 customerId 或 userId，跳过Keyword Planner查询，回退到初始关键词(${fallbackKeywords.length}个)`)
+    console.warn(
+      `   ⚠️ 缺少 customerId 或 userId，跳过Keyword Planner查询，回退到初始关键词(${fallbackKeywords.length}个)`
+    )
     return expandFallback()
   }
 
   // 初始化种子词：强制包含纯品牌词，避免种子漂移到通用品类词
   const initialBrandSeeds = initialKeywords
-    .map(kw => normalizeGoogleAdsKeyword(kw.keyword))
+    .map((kw) => normalizeGoogleAdsKeyword(kw.keyword))
     .filter(Boolean)
-    .filter(kw => containsPureBrand(kw, pureBrandKeywords))
+    .filter((kw) => containsPureBrand(kw, pureBrandKeywords))
   const seedKeywordsSet = new Set<string>([...plannerBrandKeywords, ...initialBrandSeeds])
   let seedKeywords = Array.from(seedKeywordsSet)
 
@@ -865,10 +992,12 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         phase: 'expand-round',
         current: round,
         total: maxRounds,
-        message: `关键词池扩展 Round ${round}/${maxRounds}`
+        message: `关键词池扩展 Round ${round}/${maxRounds}`,
       })
       console.log(`\n   📊 Round ${round}/${maxRounds}: Keyword Planner 查询`)
-      console.log(`      种子词: ${seedKeywords.slice(0, 5).join(', ')}${seedKeywords.length > 5 ? '...' : ''}`)
+      console.log(
+        `      种子词: ${seedKeywords.slice(0, 5).join(', ')}${seedKeywords.length > 5 ? '...' : ''}`
+      )
 
       const primaryResults = await expandKeywordsWithSeeds({
         expansionSeeds: seedKeywords,
@@ -894,25 +1023,35 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
                 phase: 'volume-batch',
                 current: info.current,
                 total: info.total,
-                message: `关键词池搜索量 Round ${round}/${maxRounds} · ${info.message}`
+                message: `关键词池搜索量 Round ${round}/${maxRounds} · ${info.message}`,
               })
-          : undefined
+          : undefined,
       })
 
       let results = primaryResults
-      if (primaryResults.some((kw: any) =>
-        kw?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-      )) {
+      if (
+        primaryResults.some(
+          (kw: any) => kw?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+        )
+      ) {
         volumeUnavailableFromPlanner = true
         if (plannerDecision) plannerDecision.volumeUnavailableFromPlanner = true
       }
 
-      const brandCountFromSiteFilter = fullBrandKeywords.length > 0
-        ? primaryResults.filter(kw => containsPureBrand(kw.keyword, fullBrandKeywords)).length
-        : 0
+      const brandCountFromSiteFilter =
+        fullBrandKeywords.length > 0
+          ? primaryResults.filter((kw) => containsPureBrand(kw.keyword, fullBrandKeywords)).length
+          : 0
 
-      if (!usedNoSiteFilterSupplement && pageUrl && fullBrandKeywords.length > 0 && brandCountFromSiteFilter < minFullBrandCount) {
-        console.log(`      ⚠️ 站点过滤命中品牌词较少(${brandCountFromSiteFilter}/${minFullBrandCount})，补充无站点过滤查询`)
+      if (
+        !usedNoSiteFilterSupplement &&
+        pageUrl &&
+        fullBrandKeywords.length > 0 &&
+        brandCountFromSiteFilter < minFullBrandCount
+      ) {
+        console.log(
+          `      ⚠️ 站点过滤命中品牌词较少(${brandCountFromSiteFilter}/${minFullBrandCount})，补充无站点过滤查询`
+        )
         const supplementalResults = await expandKeywordsWithSeeds({
           expansionSeeds: seedKeywords,
           country: targetCountry,
@@ -936,12 +1075,12 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
                   phase: 'volume-batch',
                   current: info.current,
                   total: info.total,
-                  message: `关键词池搜索量 Round ${round}/${maxRounds} · ${info.message}`
+                  message: `关键词池搜索量 Round ${round}/${maxRounds} · ${info.message}`,
                 })
-            : undefined
+            : undefined,
         })
 
-        const merged = new Map<string, typeof supplementalResults[number]>()
+        const merged = new Map<string, (typeof supplementalResults)[number]>()
         for (const kw of primaryResults) {
           merged.set(kw.keyword.toLowerCase(), kw)
         }
@@ -953,9 +1092,11 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
           }
         }
         results = Array.from(merged.values())
-        if (supplementalResults.some((kw: any) =>
-          kw?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-        )) {
+        if (
+          supplementalResults.some(
+            (kw: any) => kw?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
+          )
+        ) {
           volumeUnavailableFromPlanner = true
           if (plannerDecision) plannerDecision.volumeUnavailableFromPlanner = true
         }
@@ -969,10 +1110,14 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
       }
 
       if (!allowNonBrand && fullBrandKeywords.length > 0) {
-        const fullBrandCount = results.filter(kw => containsPureBrand(kw.keyword, fullBrandKeywords)).length
+        const fullBrandCount = results.filter((kw) =>
+          containsPureBrand(kw.keyword, fullBrandKeywords)
+        ).length
         if (fullBrandCount < minFullBrandCount) {
           enablePlannerNonBrand('FULL_BRAND_LOW_COVERAGE')
-          console.log(`      ⚠️ 完整品牌词命中较少(${fullBrandCount}/${minFullBrandCount})，允许保留 Keyword Planner 非品牌词`)
+          console.log(
+            `      ⚠️ 完整品牌词命中较少(${fullBrandCount}/${minFullBrandCount})，允许保留 Keyword Planner 非品牌词`
+          )
         }
       }
 
@@ -981,7 +1126,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
       let updatedCount = 0
       let brandRelatedAdded = 0
       let genericSkipped = 0
-      let brandedFromGeneric = 0  // 🆕 统计品牌化的行业词
+      let brandedFromGeneric = 0 // 🆕 统计品牌化的行业词
 
       for (const kw of results) {
         const keywordText = normalizeGoogleAdsKeyword(kw.keyword)
@@ -998,12 +1143,12 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         const isBrandRelated = containsPureBrand(keywordText, pureBrandKeywords)
         const plannerUseCase = !isBrandRelated
           ? inferPlannerNonBrandUseCase({
-            keyword: keywordText,
-            pageType,
-            targetLanguage,
-            offerContextTokens,
-            modelFamilyContext,
-          })
+              keyword: keywordText,
+              pageType,
+              targetLanguage,
+              offerContextTokens,
+              modelFamilyContext,
+            })
           : undefined
         const allowRawPlannerNonBrand = plannerNonBrandPolicyAllows(
           plannerNonBrandPolicy,
@@ -1022,7 +1167,9 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
               wasBranded = true
               metadata = buildPlannerBrandRewriteMetadata(plannerUseCase)
               brandedFromGeneric++
-              console.log(`      🔄 品牌化: “${keywordText}” (${kw.searchVolume}) → “${finalKeyword}”`)
+              console.log(
+                `      🔄 品牌化: “${keywordText}” (${kw.searchVolume}) → “${finalKeyword}”`
+              )
             } else {
               // 品牌化失败（超过5词），跳过
               genericSkipped++
@@ -1057,7 +1204,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
             derivedTags: metadata?.derivedTags,
             matchType,
             isPureBrand,
-            volumeUnavailableReason: (kw as any).volumeUnavailableReason
+            volumeUnavailableReason: (kw as any).volumeUnavailableReason,
           })
           newCount++
           if (!wasBranded) brandRelatedAdded++
@@ -1075,14 +1222,17 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
             derivedTags: mergeUniqueTags(existing.derivedTags, metadata?.derivedTags),
             matchType,
             isPureBrand,
-            volumeUnavailableReason: (kw as any).volumeUnavailableReason || existing.volumeUnavailableReason,
-            source: existing.source === 'BRAND_SEED' ? 'KEYWORD_PLANNER' : existing.source
+            volumeUnavailableReason:
+              (kw as any).volumeUnavailableReason || existing.volumeUnavailableReason,
+            source: existing.source === 'BRAND_SEED' ? 'KEYWORD_PLANNER' : existing.source,
           })
           updatedCount++
         }
       }
 
-      console.log(`      新增 ${newCount} 个关键词 (品牌相关: ${brandRelatedAdded}, 品牌化行业词: ${brandedFromGeneric}, 跳过: ${genericSkipped}, 更新: ${updatedCount})`)
+      console.log(
+        `      新增 ${newCount} 个关键词 (品牌相关: ${brandRelatedAdded}, 品牌化行业词: ${brandedFromGeneric}, 跳过: ${genericSkipped}, 更新: ${updatedCount})`
+      )
 
       if (newCount === 0) {
         console.log(`      本轮未新增关键词，结束迭代`)
@@ -1091,7 +1241,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
 
       // 准备下一轮种子词：始终包含纯品牌词，并优先使用高搜索量的品牌相关词
       const brandCandidates = Array.from(allKeywords.values())
-        .filter(kw => containsPureBrand(kw.keyword, pureBrandKeywords))
+        .filter((kw) => containsPureBrand(kw.keyword, pureBrandKeywords))
         .sort((a, b) => b.searchVolume - a.searchVolume)
 
       const nextSeedSet = new Set<string>()
@@ -1112,8 +1262,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
 
       const currentSeedSet = new Set(seedKeywords)
       const seedsUnchanged =
-        currentSeedSet.size === nextSeedSet.size &&
-        nextSeeds.every(s => currentSeedSet.has(s))
+        currentSeedSet.size === nextSeedSet.size && nextSeeds.every((s) => currentSeedSet.has(s))
 
       seedKeywords = nextSeeds
 
@@ -1127,8 +1276,9 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
 
     // 🔧 修复(2026-01-22): 查询品牌词的真实搜索量
     // 品牌词以 BRAND_SEED 来源初始化时 searchVolume=0，需要查询真实搜索量
-    const brandSeedKeywords = Array.from(allKeywords.values())
-      .filter(kw => kw.source === 'BRAND_SEED' && kw.searchVolume === 0)
+    const brandSeedKeywords = Array.from(allKeywords.values()).filter(
+      (kw) => kw.source === 'BRAND_SEED' && kw.searchVolume === 0
+    )
 
     if (brandSeedKeywords.length > 0 && userId) {
       console.log(`\n   📊 查询 ${brandSeedKeywords.length} 个品牌词的真实搜索量...`)
@@ -1136,7 +1286,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
           offerId: offer?.id,
-          keywords: brandSeedKeywords.map(kw => kw.keyword),
+          keywords: brandSeedKeywords.map((kw) => kw.keyword),
           country: targetCountry,
           language: targetLanguage,
           plannerSession,
@@ -1146,7 +1296,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
                   phase: 'seed-volume',
                   current: info.current,
                   total: info.total,
-                  message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`
+                  message: `品牌词搜索量 ${info.current ?? 0}/${info.total ?? 0}`,
                 })
             : undefined,
         })
@@ -1161,9 +1311,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
           const canonical = normalizeGoogleAdsKeyword(vol.keyword)
           if (canonical && allKeywords.has(canonical)) {
             const existing = allKeywords.get(canonical)!
-            if (
-              vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-            ) {
+            if (vol?.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS') {
               volumeUnavailableFromPlanner = true
               if (plannerDecision) plannerDecision.volumeUnavailableFromPlanner = true
               allKeywords.set(canonical, {
@@ -1179,7 +1327,8 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
                 competitionIndex: vol.competitionIndex || existing.competitionIndex,
                 lowTopPageBid: vol.lowTopPageBid || existing.lowTopPageBid,
                 highTopPageBid: vol.highTopPageBid || existing.highTopPageBid,
-                volumeUnavailableReason: vol.volumeUnavailableReason || existing.volumeUnavailableReason,
+                volumeUnavailableReason:
+                  vol.volumeUnavailableReason || existing.volumeUnavailableReason,
               })
               updatedCount++
             }
@@ -1213,7 +1362,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
       brandName,
       targetCountry,
       targetLanguage,
-      category: offer?.category || category
+      category: offer?.category || category,
     })
 
     if (globalCandidates.length > 0) {
@@ -1221,13 +1370,15 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         allKeywords,
         candidates: globalCandidates,
         pureBrandKeywords,
-        brandName
+        brandName,
       })
       console.log(`      📦 全局关键词库补充: 新增 ${merged.added}, 更新 ${merged.updated}`)
     }
 
     if (allKeywords.size === 0) {
-      console.warn(`   ⚠️ Keyword Planner 未返回可用关键词，回退到初始关键词(${fallbackKeywords.length}个)`)
+      console.warn(
+        `   ⚠️ Keyword Planner 未返回可用关键词，回退到初始关键词(${fallbackKeywords.length}个)`
+      )
       return fallbackKeywords
     }
 
@@ -1244,7 +1395,6 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     console.log(`   过滤后: ${filtered.length} 个关键词`)
 
     return filtered.length > 0 ? filtered : fallbackKeywords
-
   } catch (error: any) {
     console.error(`   ⚠️ OAuth模式关键词扩展失败: ${error.message}`)
     return expandFallback()
@@ -1263,7 +1413,7 @@ function qualityFilterOAuth(
 ): PoolKeywordData[] {
   const pureBrandKeywords = getPureBrandKeywords(brandName)
   const dynamicThreshold = calculateDynamicThreshold(keywords)
-  const hasAnyVolume = keywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = keywords.some((kw) => kw.searchVolume > 0)
   const volumeUnavailable = hasSearchVolumeUnavailableFlag(keywords)
 
   console.log(`      动态搜索量阈值: ${dynamicThreshold}`)
@@ -1278,10 +1428,11 @@ function qualityFilterOAuth(
   let languageRemoved = 0
   let volumeRemoved = 0
 
-  const filtered = keywords.filter(kw => {
+  const filtered = keywords.filter((kw) => {
     const kwLower = kw.keyword.toLowerCase()
     const isPureBrand = isPureBrandKeyword(kw.keyword, pureBrandKeywords)
-    const isConcatenatedBrandWithVolume = (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
+    const isConcatenatedBrandWithVolume =
+      (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
 
     // 1. 明显模板垃圾词过滤（重复词/交易词矩阵）
     if (getTemplateGarbageReason(kw.keyword)) {
@@ -1338,7 +1489,9 @@ function qualityFilterOAuth(
   if (hasAnyVolume && volumeUnavailable) {
     console.log(`      ⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤`)
   }
-  console.log(`      移除: 模板垃圾(${templateRemoved}) 品牌变体(${brandVariantRemoved}) 语义(${semanticRemoved}) 品牌无关(${irrelevantRemoved}) 低意图(${lowIntentRemoved}) 地理(${geoRemoved}) 语言脚本(${languageRemoved}) 搜索量(${volumeRemoved})`)
+  console.log(
+    `      移除: 模板垃圾(${templateRemoved}) 品牌变体(${brandVariantRemoved}) 语义(${semanticRemoved}) 品牌无关(${irrelevantRemoved}) 低意图(${lowIntentRemoved}) 地理(${geoRemoved}) 语言脚本(${languageRemoved}) 搜索量(${volumeRemoved})`
+  )
 
   return filtered
 }
@@ -1355,7 +1508,19 @@ interface ServiceAccountExpandParams {
   targetLanguage: string
   offer: Offer
   userId: number
-  progress?: (info: { phase?: 'seed-volume' | 'expand-round' | 'volume-batch' | 'service-step' | 'filter' | 'cluster' | 'save'; message: string; current?: number; total?: number }) => Promise<void> | void
+  progress?: (info: {
+    phase?:
+      | 'seed-volume'
+      | 'expand-round'
+      | 'volume-batch'
+      | 'service-step'
+      | 'filter'
+      | 'cluster'
+      | 'save'
+    message: string
+    current?: number
+    total?: number
+  }) => Promise<void> | void
 }
 
 /**
@@ -1367,7 +1532,9 @@ interface ServiceAccountExpandParams {
  * 3. Google Trends扩展
  * 4. 质量过滤（无搜索量过滤）
  */
-async function expandForServiceAccount(params: ServiceAccountExpandParams): Promise<PoolKeywordData[]> {
+async function expandForServiceAccount(
+  params: ServiceAccountExpandParams
+): Promise<PoolKeywordData[]> {
   const {
     initialKeywords,
     brandName,
@@ -1376,7 +1543,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
     targetLanguage,
     offer,
     userId,
-    progress
+    progress,
   } = params
 
   const pureBrandKeywords = getPureBrandKeywords(brandName)
@@ -1411,7 +1578,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
           keyword: canonical,
           source: kw.source || 'PROVIDED',
           matchType: kw.matchType || 'PHRASE',
-          isPureBrand: kw.isPureBrand || isPureBrandKeyword(canonical, pureBrandKeywords)
+          isPureBrand: kw.isPureBrand || isPureBrandKeyword(canonical, pureBrandKeywords),
         })
       }
     }
@@ -1421,7 +1588,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
       phase: 'service-step',
       current: 1,
       total: 3,
-      message: '关键词池扩展：Google下拉词 (1/3)'
+      message: '关键词池扩展：Google下拉词 (1/3)',
     })
     console.log(`\n   📊 阶段1: Google下拉词`)
 
@@ -1432,13 +1599,13 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
         language: getLanguageCode(targetLanguage),
         useProxy: true,
         productName: offer.product_name || offer.brand,
-        category: offer.category || category
+        category: offer.category || category,
       })
 
       // 过滤低意图和地理不匹配
       const filteredSuggest = filterLowIntentKeywords(
         filterMismatchedGeoKeywords(
-          googleSuggestKeywords.map(kw => kw.keyword),
+          googleSuggestKeywords.map((kw) => kw.keyword),
           targetCountry
         )
       )
@@ -1461,7 +1628,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
             highTopPageBid: 0,
             source: 'GOOGLE_SUGGEST',
             matchType,
-            isPureBrand: isPureBrandKeyword(canonical, pureBrandKeywords)
+            isPureBrand: isPureBrandKeyword(canonical, pureBrandKeywords),
           })
         }
       }
@@ -1474,7 +1641,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
       phase: 'service-step',
       current: 2,
       total: 3,
-      message: '关键词池扩展：增强提取 (2/3)'
+      message: '关键词池扩展：增强提取 (2/3)',
     })
     console.log(`\n   📊 阶段2: 增强提取`)
 
@@ -1482,19 +1649,22 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
       // 延迟导入避免循环依赖
       const { extractKeywordsEnhanced } = await import('./enhanced-keyword-extractor')
 
-      const enhancedKeywords = await extractKeywordsEnhanced({
-        productName: offer.product_name || offer.brand,
-        brandName: brandName,
-        category: offer.category || category,
-        description: offer.brand_description || '',
-        features: extractFeaturesFromOffer(offer),
-        useCases: extractUseCasesFromOffer(offer),
-        targetAudience: extractAudienceFromOffer(offer).join(', '),
-        competitors: extractCompetitorsFromOffer(offer),
-        targetCountry: targetCountry,
-        targetLanguage: targetLanguage,
-        offerId: offer.id,
-      }, userId)
+      const enhancedKeywords = await extractKeywordsEnhanced(
+        {
+          productName: offer.product_name || offer.brand,
+          brandName: brandName,
+          category: offer.category || category,
+          description: offer.brand_description || '',
+          features: extractFeaturesFromOffer(offer),
+          useCases: extractUseCasesFromOffer(offer),
+          targetAudience: extractAudienceFromOffer(offer).join(', '),
+          competitors: extractCompetitorsFromOffer(offer),
+          targetCountry: targetCountry,
+          targetLanguage: targetLanguage,
+          offerId: offer.id,
+        },
+        userId
+      )
 
       console.log(`      增强提取: ${enhancedKeywords.length} 个`)
 
@@ -1514,7 +1684,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
             highTopPageBid: 0,
             source: 'ENHANCED_EXTRACT',
             matchType,
-            isPureBrand: isPureBrandKeyword(canonical, pureBrandKeywords)
+            isPureBrand: isPureBrandKeyword(canonical, pureBrandKeywords),
           })
         }
       }
@@ -1531,7 +1701,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
       brandName,
       targetCountry,
       targetLanguage,
-      category: offer?.category || category
+      category: offer?.category || category,
     })
 
     if (globalCandidates.length > 0) {
@@ -1539,7 +1709,7 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
         allKeywords,
         candidates: globalCandidates,
         pureBrandKeywords,
-        brandName
+        brandName,
       })
       console.log(`      📦 全局关键词库补充: 新增 ${merged.added}, 更新 ${merged.updated}`)
     }
@@ -1559,7 +1729,6 @@ async function expandForServiceAccount(params: ServiceAccountExpandParams): Prom
     console.log(`   过滤后: ${filtered.length} 个关键词`)
 
     return filtered
-
   } catch (error: any) {
     console.error(`   ⚠️ 服务账号模式关键词扩展失败: ${error.message}`)
     return initialKeywords
@@ -1586,10 +1755,11 @@ function qualityFilterServiceAccount(
   let geoRemoved = 0
   let languageRemoved = 0
 
-  const filtered = keywords.filter(kw => {
+  const filtered = keywords.filter((kw) => {
     const kwLower = kw.keyword.toLowerCase()
     const isPureBrand = isPureBrandKeyword(kw.keyword, pureBrandKeywords)
-    const isConcatenatedBrandWithVolume = (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
+    const isConcatenatedBrandWithVolume =
+      (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
 
     // 1. 明显模板垃圾词过滤（重复词/交易词矩阵）
     if (getTemplateGarbageReason(kw.keyword)) {
@@ -1639,7 +1809,9 @@ function qualityFilterServiceAccount(
 
   console.log(`      保留: ${filtered.length}`)
   console.log(`      纯品牌词: ${brandKeptCount}`)
-  console.log(`      移除: 模板垃圾(${templateRemoved}) 品牌变体(${brandVariantRemoved}) 语义(${semanticRemoved}) 品牌无关(${irrelevantRemoved}) 地理(${geoRemoved}) 语言脚本(${languageRemoved})`)
+  console.log(
+    `      移除: 模板垃圾(${templateRemoved}) 品牌变体(${brandVariantRemoved}) 语义(${semanticRemoved}) 品牌无关(${irrelevantRemoved}) 地理(${geoRemoved}) 语言脚本(${languageRemoved})`
+  )
 
   return filtered
 }
@@ -1730,11 +1902,7 @@ function extractAudienceFromOffer(offer: Offer): string[] {
 
   // 默认受众
   if (audiences.length === 0) {
-    audiences.push(
-      'homeowners',
-      'tech-savvy users',
-      'security-conscious consumers'
-    )
+    audiences.push('homeowners', 'tech-savvy users', 'security-conscious consumers')
   }
 
   return audiences.slice(0, 3)
@@ -1763,15 +1931,13 @@ function extractCompetitorsFromOffer(offer: Offer): string[] {
  * 计算动态搜索量阈值
  */
 function calculateDynamicThreshold(keywords: PoolKeywordData[]): number {
-  const keywordsWithVolume = keywords.filter(kw => kw.searchVolume > 0)
+  const keywordsWithVolume = keywords.filter((kw) => kw.searchVolume > 0)
 
   if (keywordsWithVolume.length === 0) {
     return 100 // 默认阈值
   }
 
-  const volumes = keywordsWithVolume
-    .map(kw => kw.searchVolume)
-    .sort((a, b) => a - b)
+  const volumes = keywordsWithVolume.map((kw) => kw.searchVolume).sort((a, b) => a - b)
 
   const medianVolume = volumes[Math.floor(volumes.length / 2)]
 
@@ -1828,7 +1994,8 @@ export function filterKeywords(
       // 🔒 全量强制：只保留包含“纯品牌词”的关键词（不拼接造词）
       // 🆕 例外：店铺页允许 Keyword Planner 返回的非品牌词进入后续流程
       if (!containsPureBrand(kw.keyword, pureBrandKeywords)) {
-        const isConcatenatedBrandWithVolume = (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
+        const isConcatenatedBrandWithVolume =
+          (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
         const allowPlannerNonBrand = shouldAllowPlannerNonBrandKeyword(kw, plannerNonBrandPolicy)
         if (!isConcatenatedBrandWithVolume && !allowPlannerNonBrand) {
           nonBrandRemovedCount++
@@ -1865,11 +2032,9 @@ export function filterKeywords(
   ].filter(Boolean)
   const strategyLabel = !applyBrandGate
     ? '仅地理预过滤（品牌门禁后置到统一质量过滤）'
-    : (
-      plannerNonBrandPolicyEnabled(plannerNonBrandPolicy)
-        ? `品牌包含 + Keyword Planner 例外(${plannerUseCases.join('/') || 'legacy'})`
-        : '100%品牌包含'
-    )
+    : plannerNonBrandPolicyEnabled(plannerNonBrandPolicy)
+      ? `品牌包含 + Keyword Planner 例外(${plannerUseCases.join('/') || 'legacy'})`
+      : '100%品牌包含'
   console.log(`      策略: ${strategyLabel}`)
 
   return kept
@@ -1888,27 +2053,24 @@ export function selectKeywordsForCreative(
   _bucketIntent: string
 ): PoolKeywordData[] {
   // 品牌词：选择 searchVolume 最高的 2-3 个
-  const topBrand = brandKeywords
-    .sort((a, b) => b.searchVolume - a.searchVolume)
-    .slice(0, 3)
+  const topBrand = brandKeywords.sort((a, b) => b.searchVolume - a.searchVolume).slice(0, 3)
 
   // 桶匹配词：优先 searchVolume > 1000，其次 CPC 高
   // 🔧 修复(2026-03-05): 若搜索量不可用（Explorer/权限受限），跳过搜索量过滤
-  const hasAnyVolume = bucketKeywords.some(kw => kw.searchVolume > 0)
+  const hasAnyVolume = bucketKeywords.some((kw) => kw.searchVolume > 0)
   const volumeUnavailable = hasSearchVolumeUnavailableFlag(bucketKeywords)
-  const highVolume = hasAnyVolume && !volumeUnavailable
-    ? bucketKeywords
-        .filter(kw => kw.searchVolume > 1000)
-        .sort((a, b) => b.searchVolume - a.searchVolume)
-        .slice(0, 8)
-    : bucketKeywords
-        .sort((a, b) => (b.highTopPageBid || 0) - (a.highTopPageBid || 0))
-        .slice(0, 8)
+  const highVolume =
+    hasAnyVolume && !volumeUnavailable
+      ? bucketKeywords
+          .filter((kw) => kw.searchVolume > 1000)
+          .sort((a, b) => b.searchVolume - a.searchVolume)
+          .slice(0, 8)
+      : bucketKeywords.sort((a, b) => (b.highTopPageBid || 0) - (a.highTopPageBid || 0)).slice(0, 8)
 
   // 如果高搜索量关键词不足，补充 CPC 高的关键词
   if (highVolume.length < 6) {
     const highCPC = bucketKeywords
-      .filter(kw => !highVolume.includes(kw))
+      .filter((kw) => !highVolume.includes(kw))
       .sort((a, b) => (b.highTopPageBid || 0) - (a.highTopPageBid || 0))
       .slice(0, 6 - highVolume.length)
     highVolume.push(...highCPC)
@@ -1938,10 +2100,10 @@ export function deduplicateKeywords(
   brandVariants?: Record<string, string>
 ): string[] {
   // Step 1: 基础去重逻辑（保留现有逻辑）
-  const basicDedup = Array.from(new Set(keywords.map(k => k.toLowerCase().trim())))
+  const basicDedup = Array.from(new Set(keywords.map((k) => k.toLowerCase().trim())))
 
   // Step 2: 品牌变体归一化（解决品牌变体重复问题）
-  const normalized = basicDedup.map(k => normalizeBrandVariants(k, brandVariants || {}))
+  const normalized = basicDedup.map((k) => normalizeBrandVariants(k, brandVariants || {}))
 
   // Step 3: 语义去重（解决语义相似问题）
   const semanticDedup = performSemanticDeduplication(normalized)
@@ -2015,7 +2177,7 @@ function performSemanticDeduplication(keywords: string[]): string[] {
   }
 
   // 每组选择最优关键词
-  return equivalenceGroups.map(group => selectBestKeyword(group))
+  return equivalenceGroups.map((group) => selectBestKeyword(group))
 }
 
 /**
@@ -2030,19 +2192,24 @@ function performSemanticDeduplication(keywords: string[]): string[] {
  * 5. 规范化空格
  */
 function normalizeKeyword(keyword: string): string {
-  return keyword
-    .toLowerCase()
-    // 连字符/下划线变空格
-    .replace(/[-_]/g, ' ')
-    // 移除常见购买意图词
-    .replace(/\b(buy|purchase|order|shop|get|cheap|affordable|discount|best|top|new|latest|for)\b/g, '')
-    // 移除数字（规格）
-    .replace(/\b\d+\.?\d*\w*\b/g, '')
-    // 移除品牌名（只保留品类特征）- 用于品类匹配
-    // 注意：这里不直接移除品牌名，而是保留完整形式用于最终选择
-    // 移除多余空格
-    .replace(/\s+/g, ' ')
-    .trim()
+  return (
+    keyword
+      .toLowerCase()
+      // 连字符/下划线变空格
+      .replace(/[-_]/g, ' ')
+      // 移除常见购买意图词
+      .replace(
+        /\b(buy|purchase|order|shop|get|cheap|affordable|discount|best|top|new|latest|for)\b/g,
+        ''
+      )
+      // 移除数字（规格）
+      .replace(/\b\d+\.?\d*\w*\b/g, '')
+      // 移除品牌名（只保留品类特征）- 用于品类匹配
+      // 注意：这里不直接移除品牌名，而是保留完整形式用于最终选择
+      // 移除多余空格
+      .replace(/\s+/g, ' ')
+      .trim()
+  )
 }
 
 /**
@@ -2056,7 +2223,7 @@ function selectBestKeyword(keywords: string[], knownBrands?: string[]): string {
   // 如果没有提供品牌列表，使用启发式规则
   if (!knownBrands || knownBrands.length === 0) {
     // 优先级1：包含数字规格（可能是完整产品名）
-    const hasNumber = keywords.find(k => /\d+w?/.test(k))
+    const hasNumber = keywords.find((k) => /\d+w?/.test(k))
     if (hasNumber) return hasNumber
 
     // 优先级2：最短的关键词（通常更精确）
@@ -2064,15 +2231,13 @@ function selectBestKeyword(keywords: string[], knownBrands?: string[]): string {
   }
 
   // 优先级1：包含品牌名+数字规格
-  const complete = keywords.find(k =>
-    knownBrands.some(brand => k.includes(brand)) && /\d+w?/.test(k)
+  const complete = keywords.find(
+    (k) => knownBrands.some((brand) => k.includes(brand)) && /\d+w?/.test(k)
   )
   if (complete) return complete
 
   // 优先级2：包含品牌名
-  const hasBrand = keywords.find(k =>
-    knownBrands.some(brand => k.includes(brand))
-  )
+  const hasBrand = keywords.find((k) => knownBrands.some((brand) => k.includes(brand)))
   if (hasBrand) return hasBrand
 
   // 默认返回第一个

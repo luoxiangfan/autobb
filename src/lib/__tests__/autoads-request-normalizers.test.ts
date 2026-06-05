@@ -9,21 +9,22 @@ import { resolveExtractPageInput } from '@/lib/offer-extraction-task'
 
 describe('autoads request normalizers', () => {
   it('normalizes campaign.publish payload aliases and defaults', () => {
-    const normalized = normalizeCampaignPublishRequestBody({
-      offer_id: 11,
-      ad_creative_id: 22,
-      google_ads_account_id: 33,
-      campaign_config: {
-        target_country: 'US',
-        target_language: 'en',
-        budget_amount: 10,
-        budget_type: 'DAILY',
-        max_cpc_bid: 0.2,
-        keywords: [{ keyword: ' sonic toothbrush ', matchType: 'phrase' }],
-        negative_keywords: [' free ', 'FREE'],
-      },
-      force_launch: 'true',
-    }) || {}
+    const normalized =
+      normalizeCampaignPublishRequestBody({
+        offer_id: 11,
+        ad_creative_id: 22,
+        google_ads_account_id: 33,
+        campaign_config: {
+          target_country: 'US',
+          target_language: 'en',
+          budget_amount: 10,
+          budget_type: 'DAILY',
+          max_cpc_bid: 0.2,
+          keywords: [{ keyword: ' sonic toothbrush ', matchType: 'phrase' }],
+          negative_keywords: [' free ', 'FREE'],
+        },
+        force_launch: 'true',
+      }) || {}
 
     expect(normalized).toMatchObject({
       offerId: 11,
@@ -53,21 +54,22 @@ describe('autoads request normalizers', () => {
   })
 
   it('lifts misplaced campaign.publish top-level flags from campaignConfig', () => {
-    const normalized = normalizeCampaignPublishRequestBody({
-      offerId: 88,
-      googleAdsAccountId: 66,
-      campaignConfig: {
-        targetCountry: 'US',
-        targetLanguage: 'en',
-        budgetAmount: 12,
-        budgetType: 'DAILY',
-        maxCpcBid: 0.3,
-        enableSmartOptimization: 'true',
-        variantCount: '4',
-        pauseOldCampaigns: 1,
-        enableCampaignImmediately: '1',
-      },
-    }) || {}
+    const normalized =
+      normalizeCampaignPublishRequestBody({
+        offerId: 88,
+        googleAdsAccountId: 66,
+        campaignConfig: {
+          targetCountry: 'US',
+          targetLanguage: 'en',
+          budgetAmount: 12,
+          budgetType: 'DAILY',
+          maxCpcBid: 0.3,
+          enableSmartOptimization: 'true',
+          variantCount: '4',
+          pauseOldCampaigns: 1,
+          enableCampaignImmediately: '1',
+        },
+      }) || {}
 
     expect(normalized).toMatchObject({
       offerId: 88,
@@ -95,10 +97,11 @@ describe('autoads request normalizers', () => {
   })
 
   it('normalizes campaign.publish campaignConfig fields directly', () => {
-    const normalized = normalizeCampaignPublishCampaignConfig({
-      final_urls: [' https://example.com '],
-      negative_keywords_match_type: { free: 'PHRASE' },
-    }) || {}
+    const normalized =
+      normalizeCampaignPublishCampaignConfig({
+        final_urls: [' https://example.com '],
+        negative_keywords_match_type: { free: 'PHRASE' },
+      }) || {}
 
     expect(normalized).toMatchObject({
       finalUrls: ['https://example.com'],
@@ -109,11 +112,12 @@ describe('autoads request normalizers', () => {
   })
 
   it('normalizes click-farm payload aliases and applies defaults', () => {
-    const normalized = normalizeClickFarmTaskRequestBody({
-      offerId: 31,
-      startTime: ' 07:00 ',
-      refererConfig: null,
-    }) || {}
+    const normalized =
+      normalizeClickFarmTaskRequestBody({
+        offerId: 31,
+        startTime: ' 07:00 ',
+        refererConfig: null,
+      }) || {}
 
     expect(normalized).toMatchObject({
       offer_id: 31,
@@ -129,12 +133,13 @@ describe('autoads request normalizers', () => {
   })
 
   it('normalizes offer extract payload aliases and applies defaults', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      url: 'https://aff.example.com/track',
-      brand: 'Example',
-      skip_cache: '1',
-      extraction_mode: '快速',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        url: 'https://aff.example.com/track',
+        brand: 'Example',
+        skip_cache: '1',
+        extraction_mode: '快速',
+      }) || {}
 
     expect(normalized).toMatchObject({
       affiliate_link: 'https://aff.example.com/track',
@@ -152,32 +157,35 @@ describe('autoads request normalizers', () => {
   })
 
   it('does not default page_type to product when store_product_links are present', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com/track',
-      target_country: 'US',
-      store_product_links: ['https://amazon.com/dp/B001'],
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com/track',
+        target_country: 'US',
+        store_product_links: ['https://amazon.com/dp/B001'],
+      }) || {}
 
     expect(normalized.page_type).toBeUndefined()
     expect(normalized.store_product_links).toEqual(['https://amazon.com/dp/B001'])
   })
 
   it('does not default page_type when storeProductLinks alias is present', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliateLink: 'https://aff.example.com/track',
-      targetCountry: 'US',
-      storeProductLinks: ['https://amazon.com/dp/B002'],
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliateLink: 'https://aff.example.com/track',
+        targetCountry: 'US',
+        storeProductLinks: ['https://amazon.com/dp/B002'],
+      }) || {}
 
     expect(normalized.page_type).toBeUndefined()
     expect(normalized.store_product_links).toEqual(['https://amazon.com/dp/B002'])
   })
 
   it('does not default page_type to product for Amazon stores URL without links', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://www.amazon.com/stores/page/ABC',
-      target_country: 'US',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://www.amazon.com/stores/page/ABC',
+        target_country: 'US',
+      }) || {}
 
     expect(normalized.page_type).toBeUndefined()
 
@@ -193,32 +201,35 @@ describe('autoads request normalizers', () => {
   })
 
   it('omits invalid extraction_mode from normalized body', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com/track',
-      target_country: 'US',
-      extraction_mode: 'bogus',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com/track',
+        target_country: 'US',
+        extraction_mode: 'bogus',
+      }) || {}
 
     expect(normalized.extraction_mode).toBeUndefined()
   })
 
   it('keeps bare commission_payout after normalize when only payout is provided', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com/track',
-      target_country: 'US',
-      commission_payout: '30',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com/track',
+        target_country: 'US',
+        commission_payout: '30',
+      }) || {}
 
     expect(normalized.commission_payout).toBe('30')
     expect(normalized.commission_type).toBeUndefined()
   })
 
   it('normalize + resolveExtractPageInput infers store when page_type omitted with links', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com/track',
-      target_country: 'US',
-      store_product_links: ['https://amazon.com/dp/B001'],
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com/track',
+        target_country: 'US',
+        store_product_links: ['https://amazon.com/dp/B001'],
+      }) || {}
 
     const pageInput = resolveExtractPageInput({
       pageType: normalized.page_type,
@@ -233,36 +244,39 @@ describe('autoads request normalizers', () => {
   })
 
   it('drops non-two-letter offer extract countries back to default US', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com/track',
-      target_country: 'USA',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com/track',
+        target_country: 'USA',
+      }) || {}
 
     expect(normalized.target_country).toBe('US')
   })
 
   it('preserves valid two-letter UK offer extract country', () => {
-    const normalized = normalizeOfferExtractRequestBody({
-      affiliate_link: 'https://aff.example.com/track',
-      targetCountry: 'uk',
-    }) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody({
+        affiliate_link: 'https://aff.example.com/track',
+        targetCountry: 'uk',
+      }) || {}
 
     expect(normalized.target_country).toBe('UK')
   })
 
   it('normalizes ambiguous bare numeric commission to amount mode in offer normalization', () => {
-    const normalized = normalizeOfferExtractRequestBody(
-      {
-        affiliate_link: 'https://aff.example.com/track',
-        target_country: 'US',
-        product_price: '349.99',
-        commission_payout: '105.00',
-      },
-      {
-        normalizeMonetization: true,
-        numericCommissionMode: 'amount',
-      }
-    ) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody(
+        {
+          affiliate_link: 'https://aff.example.com/track',
+          target_country: 'US',
+          product_price: '349.99',
+          commission_payout: '105.00',
+        },
+        {
+          normalizeMonetization: true,
+          numericCommissionMode: 'amount',
+        }
+      ) || {}
 
     expect(normalized.product_price).toBe('$349.99')
     expect(normalized.commission_payout).toBe('$105')
@@ -272,53 +286,56 @@ describe('autoads request normalizers', () => {
   })
 
   it('does not auto-convert bare numeric commission to percent in offer normalization', () => {
-    const normalized = normalizeOfferExtractRequestBody(
-      {
-        affiliate_link: 'https://aff.example.com/track',
-        target_country: 'US',
-        product_price: '349.99',
-        commission_payout: '30',
-      },
-      {
-        normalizeMonetization: true,
-        numericCommissionMode: 'percent',
-      }
-    ) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody(
+        {
+          affiliate_link: 'https://aff.example.com/track',
+          target_country: 'US',
+          product_price: '349.99',
+          commission_payout: '30',
+        },
+        {
+          normalizeMonetization: true,
+          numericCommissionMode: 'percent',
+        }
+      ) || {}
 
     expect(normalized.product_price).toBe('$349.99')
     expect(normalized.commission_payout).toBe('30')
   })
 
   it('preserves explicit currency and percent commission when provided', () => {
-    const normalized = normalizeOfferExtractRequestBody(
-      {
-        affiliate_link: 'https://aff.example.com/track',
-        target_country: 'US',
-        product_price: '$349.99',
-        commission_payout: '30%',
-      },
-      {
-        normalizeMonetization: true,
-      }
-    ) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody(
+        {
+          affiliate_link: 'https://aff.example.com/track',
+          target_country: 'US',
+          product_price: '$349.99',
+          commission_payout: '30%',
+        },
+        {
+          normalizeMonetization: true,
+        }
+      ) || {}
 
     expect(normalized.product_price).toBe('$349.99')
     expect(normalized.commission_payout).toBe('30%')
   })
 
   it('normalizes structured commission fields and supports camelCase aliases', () => {
-    const normalized = normalizeOfferExtractRequestBody(
-      {
-        affiliateLink: 'https://aff.example.com/track',
-        targetCountry: 'US',
-        commissionType: 'amount',
-        commissionValue: '22.5',
-        commissionCurrency: 'usd',
-      },
-      {
-        normalizeMonetization: true,
-      }
-    ) || {}
+    const normalized =
+      normalizeOfferExtractRequestBody(
+        {
+          affiliateLink: 'https://aff.example.com/track',
+          targetCountry: 'US',
+          commissionType: 'amount',
+          commissionValue: '22.5',
+          commissionCurrency: 'usd',
+        },
+        {
+          normalizeMonetization: true,
+        }
+      ) || {}
 
     expect(normalized.commission_type).toBe('amount')
     expect(normalized.commission_value).toBe('22.5')

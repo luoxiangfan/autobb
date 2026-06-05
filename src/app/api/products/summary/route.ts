@@ -93,7 +93,9 @@ export async function GET(request: NextRequest) {
     const search = (searchParams.get('search') || '').trim()
     const mid = (searchParams.get('mid') || '').trim()
     const platform = normalizeAffiliatePlatform(searchParams.get('platform')) || 'all'
-    const landingPageType = normalizeAffiliateLandingPageTypeFilter(searchParams.get('landingPageType'))
+    const landingPageType = normalizeAffiliateLandingPageTypeFilter(
+      searchParams.get('landingPageType')
+    )
     const targetCountry = parseCountryFilter(searchParams, 'targetCountry')
     const status = normalizeAffiliateProductStatusFilter(searchParams.get('status'))
 
@@ -157,7 +159,10 @@ export async function GET(request: NextRequest) {
     })
 
     if (!shouldBypassReadCache) {
-      const cached = await getCachedProductSummaryRoute<ProductSummaryResponsePayload>(userId, summaryRouteCacheHash)
+      const cached = await getCachedProductSummaryRoute<ProductSummaryResponsePayload>(
+        userId,
+        summaryRouteCacheHash
+      )
       if (cached) {
         return NextResponse.json(cached)
       }
@@ -190,37 +195,35 @@ export async function GET(request: NextRequest) {
       // summary 场景优先稳定与可用性，避免 URL 模式分类聚合导致慢查询。
       lightweightSummary: true,
     }
-    const effectiveRecommendationScoreMin = recommendationScoreMin === null
-      ? 1
-      : Math.max(1, recommendationScoreMin)
-    const effectiveRecommendationScoreMax = recommendationScoreMax === null
-      ? null
-      : recommendationScoreMax
+    const effectiveRecommendationScoreMin =
+      recommendationScoreMin === null ? 1 : Math.max(1, recommendationScoreMin)
+    const effectiveRecommendationScoreMax =
+      recommendationScoreMax === null ? null : recommendationScoreMax
     const db = await getDatabase()
-    const scoreStillValidSql = db.type === 'postgres'
-      ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
-      : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+    const scoreStillValidSql =
+      db.type === 'postgres'
+        ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+        : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
 
-    const hasScopedFilters = (
-      search.length > 0
-      || mid.length > 0
-      || platform !== 'all'
-      || landingPageType !== 'all'
-      || targetCountry !== 'all'
-      || status !== 'all'
-      || reviewCountMin !== null
-      || reviewCountMax !== null
-      || priceAmountMin !== null
-      || priceAmountMax !== null
-      || commissionRateMin !== null
-      || commissionRateMax !== null
-      || commissionAmountMin !== null
-      || commissionAmountMax !== null
-      || recommendationScoreMin !== null
-      || recommendationScoreMax !== null
-      || createdAtFrom !== null
-      || createdAtTo !== null
-    )
+    const hasScopedFilters =
+      search.length > 0 ||
+      mid.length > 0 ||
+      platform !== 'all' ||
+      landingPageType !== 'all' ||
+      targetCountry !== 'all' ||
+      status !== 'all' ||
+      reviewCountMin !== null ||
+      reviewCountMax !== null ||
+      priceAmountMin !== null ||
+      priceAmountMax !== null ||
+      commissionRateMin !== null ||
+      commissionRateMax !== null ||
+      commissionAmountMin !== null ||
+      commissionAmountMax !== null ||
+      recommendationScoreMin !== null ||
+      recommendationScoreMax !== null ||
+      createdAtFrom !== null ||
+      createdAtTo !== null
 
     const recommendationEffectiveCountPromise: Promise<number> = (() => {
       if (effectiveRecommendationScoreMax !== null && effectiveRecommendationScoreMax < 1) {
@@ -228,8 +231,9 @@ export async function GET(request: NextRequest) {
       }
 
       if (db.type === 'postgres' && !hasScopedFilters) {
-        return db.queryOne<{ effective_count: number }>(
-          `
+        return db
+          .queryOne<{ effective_count: number }>(
+            `
             WITH __cfg AS (
               SELECT
                 set_config('enable_seqscan', 'off', true) AS enable_seqscan_cfg,
@@ -245,8 +249,9 @@ export async function GET(request: NextRequest) {
               AND p.score_calculated_at IS NOT NULL
               AND ${scoreStillValidSql}
           `,
-          [userId, effectiveRecommendationScoreMin]
-        ).then((row) => Number(row?.effective_count || 0))
+            [userId, effectiveRecommendationScoreMin]
+          )
+          .then((row) => Number(row?.effective_count || 0))
       }
 
       return listAffiliateProducts(userId, {
@@ -257,20 +262,21 @@ export async function GET(request: NextRequest) {
       }).then((recommendationScoreResult) => Number(recommendationScoreResult.total || 0))
     })()
 
-    const [result, recommendationEffectiveCount, recommendationScoreTimestampRow] = await Promise.all([
-      listAffiliateProducts(userId, baseListOptions),
-      recommendationEffectiveCountPromise,
-      db.queryOne<{ last_score_calculated_at: string | null }>(
-        `
+    const [result, recommendationEffectiveCount, recommendationScoreTimestampRow] =
+      await Promise.all([
+        listAffiliateProducts(userId, baseListOptions),
+        recommendationEffectiveCountPromise,
+        db.queryOne<{ last_score_calculated_at: string | null }>(
+          `
           SELECT MAX(p.score_calculated_at) AS last_score_calculated_at
           FROM affiliate_products p
           WHERE p.user_id = ?
             AND p.recommendation_score IS NOT NULL
             AND p.score_calculated_at IS NOT NULL
         `,
-        [userId]
-      ),
-    ])
+          [userId]
+        ),
+      ])
 
     const responsePayload: ProductSummaryResponsePayload = {
       success: true,
@@ -309,9 +315,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responsePayload)
   } catch (error: any) {
     console.error('[GET /api/products/summary] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '获取商品统计失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '获取商品统计失败' }, { status: 500 })
   }
 }

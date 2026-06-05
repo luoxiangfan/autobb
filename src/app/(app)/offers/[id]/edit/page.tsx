@@ -22,7 +22,9 @@ export default function EditOfferPage() {
   const [saving, setSaving] = useState(false)
   const [reExtracting, setReExtracting] = useState(false)
   const [error, setError] = useState('')
-  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(getDefaultOfferExtractionMode)
+  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(
+    getDefaultOfferExtractionMode
+  )
 
   // 表单状态
   const [url, setUrl] = useState('')
@@ -66,7 +68,9 @@ export default function EditOfferPage() {
 
         // 填充表单 - 🔧 修复(2025-12-11): 使用camelCase匹配API返回的字段名
         setUrl(offer.url || '')
-        setLinkType((offer.pageType === 'store' || offer.pageType === 'product') ? offer.pageType : 'product')
+        setLinkType(
+          offer.pageType === 'store' || offer.pageType === 'product' ? offer.pageType : 'product'
+        )
         setFinalUrl(offer.finalUrl || '')
         setFinalUrlSuffix(offer.finalUrlSuffix || '')
         setBrand(offer.brand || '')
@@ -74,7 +78,9 @@ export default function EditOfferPage() {
         setTargetCountry(offer.targetCountry || 'US')
         setAffiliateLink(offer.affiliateLink || '')
         const normalizedStoreLinks = Array.isArray(offer.storeProductLinks)
-          ? offer.storeProductLinks.map((link: string) => link.trim()).filter((link: string) => Boolean(link))
+          ? offer.storeProductLinks
+              .map((link: string) => link.trim())
+              .filter((link: string) => Boolean(link))
           : []
         setStoreProductLinks(normalizedStoreLinks.length > 0 ? normalizedStoreLinks : [''])
         setBrandDescription(offer.brandDescription || '')
@@ -110,7 +116,7 @@ export default function EditOfferPage() {
         }
         if (typeof offer.offerName === 'string' && offer.offerName.trim()) {
           const parts = offer.offerName.split('_')
-          const sequence = parts.length >= 3 ? (parts[parts.length - 1] || '01') : '01'
+          const sequence = parts.length >= 3 ? parts[parts.length - 1] || '01' : '01'
           setOfferNameSequence(sequence)
         }
         // Google Ads 同步相关字段
@@ -159,9 +165,8 @@ export default function EditOfferPage() {
         targetCountry,
         commissionType,
         commissionValue: normalizedValue,
-        commissionCurrency: commissionType === 'amount'
-          ? (normalizedCurrency || undefined)
-          : undefined,
+        commissionCurrency:
+          commissionType === 'amount' ? normalizedCurrency || undefined : undefined,
       })
       return {
         normalized,
@@ -202,7 +207,6 @@ export default function EditOfferPage() {
       uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
       for (const link of uniqueLinks) {
         try {
-           
           new URL(link)
         } catch {
           throw new Error(`单品推广链接无效: ${link}`)
@@ -214,13 +218,12 @@ export default function EditOfferPage() {
     const normalizedCommissionCurrency = commissionCurrency.trim().toUpperCase()
     const normalizedCommission = normalizedCommissionValue
       ? normalizeOfferCommissionInput({
-        targetCountry,
-        commissionType,
-        commissionValue: normalizedCommissionValue,
-        commissionCurrency: commissionType === 'amount'
-          ? (normalizedCommissionCurrency || undefined)
-          : undefined,
-      })
+          targetCountry,
+          commissionType,
+          commissionValue: normalizedCommissionValue,
+          commissionCurrency:
+            commissionType === 'amount' ? normalizedCommissionCurrency || undefined : undefined,
+        })
       : null
 
     return {
@@ -362,16 +365,19 @@ export default function EditOfferPage() {
               <div className="flex">
                 <div className="shrink-0">
                   <svg className="h-5 w-5 text-orange-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-orange-800">
-                    需要完善信息
-                  </h3>
+                  <h3 className="text-sm font-medium text-orange-800">需要完善信息</h3>
                   <div className="mt-2 text-sm text-orange-700">
                     <p>
-                      此 Offer 是从 Google Ads 广告系列 <strong className="font-mono">{googleAdsCampaignId}</strong> 自动同步创建的。
+                      此 Offer 是从 Google Ads 广告系列{' '}
+                      <strong className="font-mono">{googleAdsCampaignId}</strong> 自动同步创建的。
                       请完善以下必要信息以便投放广告：
                     </p>
                     <ul className="mt-2 list-disc list-inside space-y-1">
@@ -406,10 +412,12 @@ export default function EditOfferPage() {
                       链接类型 *
                     </label>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {([
-                        { value: 'product', label: '单品' },
-                        { value: 'store', label: '店铺' },
-                      ] as const).map((option) => (
+                      {(
+                        [
+                          { value: 'product', label: '单品' },
+                          { value: 'store', label: '店铺' },
+                        ] as const
+                      ).map((option) => (
                         <label
                           key={option.value}
                           className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors ${
@@ -431,7 +439,9 @@ export default function EditOfferPage() {
                         </label>
                       ))}
                     </div>
-                    <p className="mt-1 text-sm text-gray-500">店铺类型可选填写单品推广链接（最多3个）</p>
+                    <p className="mt-1 text-sm text-gray-500">
+                      店铺类型可选填写单品推广链接（最多3个）
+                    </p>
                   </div>
 
                   <div>
@@ -452,11 +462,15 @@ export default function EditOfferPage() {
                     </p>
                     <div className="mt-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
                       <div className="text-xs text-gray-500">Final URL（解析结果）</div>
-                      <div className={`mt-1 text-sm break-all ${finalUrl ? 'text-gray-900' : 'text-gray-400'}`}>
+                      <div
+                        className={`mt-1 text-sm break-all ${finalUrl ? 'text-gray-900' : 'text-gray-400'}`}
+                      >
                         {finalUrl || '未提取'}
                       </div>
                       <div className="mt-2 text-xs text-gray-500">Final URL Suffix</div>
-                      <div className={`mt-1 text-sm break-all font-mono ${finalUrlSuffix ? 'text-gray-900' : 'text-gray-400'}`}>
+                      <div
+                        className={`mt-1 text-sm break-all font-mono ${finalUrlSuffix ? 'text-gray-900' : 'text-gray-400'}`}
+                      >
                         {finalUrlSuffix || '未提取'}
                       </div>
                     </div>
@@ -493,7 +507,10 @@ export default function EditOfferPage() {
                     </div>
 
                     <div>
-                      <label htmlFor="targetCountry" className="block text-sm font-medium text-gray-700">
+                      <label
+                        htmlFor="targetCountry"
+                        className="block text-sm font-medium text-gray-700"
+                      >
                         目标国家 *
                       </label>
                       <select
@@ -513,7 +530,10 @@ export default function EditOfferPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="affiliateLink" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="affiliateLink"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       {linkType === 'store' ? '店铺推广链接' : '联盟推广链接'}
                     </label>
                     <input
@@ -538,7 +558,10 @@ export default function EditOfferPage() {
                       </label>
                       <div className="space-y-2">
                         {storeProductLinks.map((link, idx) => (
-                          <div key={`store-product-link-${idx}`} className="flex items-center gap-2">
+                          <div
+                            key={`store-product-link-${idx}`}
+                            className="flex items-center gap-2"
+                          >
                             <input
                               type="url"
                               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -582,7 +605,10 @@ export default function EditOfferPage() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
-                    <label htmlFor="productPrice" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="productPrice"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       产品价格 (Product Price)
                     </label>
                     <input
@@ -593,13 +619,14 @@ export default function EditOfferPage() {
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      产品的售价，包含货币符号
-                    </p>
+                    <p className="mt-1 text-xs text-gray-500">产品的售价，包含货币符号</p>
                   </div>
 
                   <div className="space-y-2">
-                    <label htmlFor="commissionType" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="commissionType"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       佣金设置
                     </label>
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
@@ -624,7 +651,11 @@ export default function EditOfferPage() {
                         type="text"
                         id="commissionCurrency"
                         className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-xs focus:outline-hidden focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-100 disabled:text-gray-400"
-                        placeholder={commissionType === 'amount' ? '币种，如 USD（可选）' : 'percent模式无需币种'}
+                        placeholder={
+                          commissionType === 'amount'
+                            ? '币种，如 USD（可选）'
+                            : 'percent模式无需币种'
+                        }
                         value={commissionCurrency}
                         onChange={(e) => setCommissionCurrency(e.target.value.toUpperCase())}
                         disabled={commissionType !== 'amount'}
@@ -639,22 +670,27 @@ export default function EditOfferPage() {
                     {commissionNormalization.error && (
                       <p className="mt-1 text-xs text-red-600">{commissionNormalization.error}</p>
                     )}
-                    {!commissionNormalization.error && commissionNormalization.normalized?.commissionPayout && (
-                      <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-                        <div className="font-medium">发送给 OpenClaw / Offer API 的佣金字段</div>
-                        <div className="mt-1 font-mono break-all">
-                          commission_payout={commissionNormalization.normalized.commissionPayout}
-                          , commission_type={commissionNormalization.normalized.commissionType}
-                          , commission_value={commissionNormalization.normalized.commissionValue}
-                          {commissionNormalization.normalized.commissionCurrency
-                            ? `, commission_currency=${commissionNormalization.normalized.commissionCurrency}`
-                            : ''}
+                    {!commissionNormalization.error &&
+                      commissionNormalization.normalized?.commissionPayout && (
+                        <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                          <div className="font-medium">发送给 OpenClaw / Offer API 的佣金字段</div>
+                          <div className="mt-1 font-mono break-all">
+                            commission_payout={commissionNormalization.normalized.commissionPayout},
+                            commission_type={commissionNormalization.normalized.commissionType},
+                            commission_value={commissionNormalization.normalized.commissionValue}
+                            {commissionNormalization.normalized.commissionCurrency
+                              ? `, commission_currency=${commissionNormalization.normalized.commissionCurrency}`
+                              : ''}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                     <p className="mt-2 text-xs text-gray-500">
-                      OpenClaw 侧规则：<code className="mx-1 rounded bg-gray-100 px-1.5 py-0.5">commission_payout</code>
-                      带 <code className="mx-1 rounded bg-gray-100 px-1.5 py-0.5">%</code> 视为比例，不带则视为金额。
+                      OpenClaw 侧规则：
+                      <code className="mx-1 rounded bg-gray-100 px-1.5 py-0.5">
+                        commission_payout
+                      </code>
+                      带 <code className="mx-1 rounded bg-gray-100 px-1.5 py-0.5">%</code>{' '}
+                      视为比例，不带则视为金额。
                     </p>
                   </div>
                 </div>
@@ -663,12 +699,12 @@ export default function EditOfferPage() {
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <p className="text-sm text-blue-800">
                       <strong>💡 建议CPC</strong>: 在"一键上广告"流程中，系统将根据
-                      <code className="mx-1 px-1.5 py-0.5 bg-blue-100 rounded">{suggestedCpcHint.formula}</code>
+                      <code className="mx-1 px-1.5 py-0.5 bg-blue-100 rounded">
+                        {suggestedCpcHint.formula}
+                      </code>
                       公式计算建议的CPC出价
                     </p>
-                    <p className="mt-1 text-xs text-blue-600">
-                      {suggestedCpcHint.detail}
-                    </p>
+                    <p className="mt-1 text-xs text-blue-600">{suggestedCpcHint.detail}</p>
                   </div>
                 )}
               </div>
@@ -717,7 +753,11 @@ export default function EditOfferPage() {
                   {brand && brand.length > 25 && (
                     <div className="flex items-start space-x-2 text-sm text-red-600">
                       <svg className="w-5 h-5 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       <span>品牌名称过长（当前{brand.length}字符，最多25字符），请缩短</span>
                     </div>
@@ -726,7 +766,11 @@ export default function EditOfferPage() {
                   {brand && targetCountry && brand.length <= 25 && (
                     <div className="flex items-start space-x-2 text-sm text-green-600">
                       <svg className="w-5 h-5 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
                       </svg>
                       <span>将自动生成Offer标识：{offerNamePreview}</span>
                     </div>
@@ -738,14 +782,15 @@ export default function EditOfferPage() {
               <div className="border-t pt-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   产品描述
-                  <span className="ml-2 text-sm font-normal text-gray-500">
-                    （可选）
-                  </span>
+                  <span className="ml-2 text-sm font-normal text-gray-500">（可选）</span>
                 </h3>
 
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="brandDescription" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="brandDescription"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       品牌描述
                     </label>
                     <textarea
@@ -759,7 +804,10 @@ export default function EditOfferPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="uniqueSellingPoints" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="uniqueSellingPoints"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       独特卖点
                     </label>
                     <textarea
@@ -773,7 +821,10 @@ export default function EditOfferPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="productHighlights" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="productHighlights"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       产品亮点
                     </label>
                     <textarea
@@ -787,7 +838,10 @@ export default function EditOfferPage() {
                   </div>
 
                   <div>
-                    <label htmlFor="targetAudience" className="block text-sm font-medium text-gray-700">
+                    <label
+                      htmlFor="targetAudience"
+                      className="block text-sm font-medium text-gray-700"
+                    >
                       目标受众
                     </label>
                     <textarea

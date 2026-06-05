@@ -204,26 +204,26 @@ describe('GET /api/products', () => {
   })
 
   it('keeps landingPageType filter accurate (no fast approximate filter shortcut)', async () => {
-    const req = new NextRequest(
-      'http://localhost/api/products?landingPageType=amazon_product',
-      { headers: { 'x-user-id': '7' } }
-    )
+    const req = new NextRequest('http://localhost/api/products?landingPageType=amazon_product', {
+      headers: { 'x-user-id': '7' },
+    })
     const res = await GET(req)
 
     expect(res.status).toBe(200)
     const call = productsFns.listAffiliateProducts.mock.calls.at(-1)
-    expect(call?.[1]).toEqual(expect.objectContaining({
-      landingPageType: 'amazon_product',
-      skipHeavySummary: false,
-    }))
+    expect(call?.[1]).toEqual(
+      expect.objectContaining({
+        landingPageType: 'amazon_product',
+        skipHeavySummary: false,
+      })
+    )
     expect((call?.[1] as any)?.preferFastLandingTypeFilter).not.toBe(true)
   })
 
   it('supports larger pageSize options and clamps to 1000', async () => {
-    const oversizedReq = new NextRequest(
-      'http://localhost/api/products?pageSize=5000',
-      { headers: { 'x-user-id': '7' } }
-    )
+    const oversizedReq = new NextRequest('http://localhost/api/products?pageSize=5000', {
+      headers: { 'x-user-id': '7' },
+    })
     const oversizedRes = await GET(oversizedReq)
     expect(oversizedRes.status).toBe(200)
     expect(productsFns.listAffiliateProducts).toHaveBeenCalledWith(
@@ -235,10 +235,9 @@ describe('GET /api/products', () => {
 
     productsFns.listAffiliateProducts.mockClear()
 
-    const requestedReq = new NextRequest(
-      'http://localhost/api/products?pageSize=500',
-      { headers: { 'x-user-id': '7' } }
-    )
+    const requestedReq = new NextRequest('http://localhost/api/products?pageSize=500', {
+      headers: { 'x-user-id': '7' },
+    })
     const requestedRes = await GET(requestedReq)
     expect(requestedRes.status).toBe(200)
     expect(productsFns.listAffiliateProducts).toHaveBeenCalledWith(

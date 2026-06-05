@@ -11,216 +11,216 @@
  */
 export const LANGUAGE_CODE_MAP: Record<string, string> = {
   // 英语
-  'english': 'en',
-  'en': 'en',
-  '英语': 'en',
+  english: 'en',
+  en: 'en',
+  英语: 'en',
 
   // 中文
-  'chinese': 'zh',
-  'zh': 'zh',
-  '中文': 'zh',
-  'mandarin': 'zh',
+  chinese: 'zh',
+  zh: 'zh',
+  中文: 'zh',
+  mandarin: 'zh',
 
   // 西班牙语
-  'spanish': 'es',
-  'es': 'es',
-  '西班牙语': 'es',
+  spanish: 'es',
+  es: 'es',
+  西班牙语: 'es',
 
   // 意大利语
-  'italian': 'it',
-  'it': 'it',
-  '意大利语': 'it',
+  italian: 'it',
+  it: 'it',
+  意大利语: 'it',
 
   // 法语
-  'french': 'fr',
-  'fr': 'fr',
+  french: 'fr',
+  fr: 'fr',
   'fr-ca': 'fr',
   'canadian french': 'fr',
   'french (canada)': 'fr',
-  '法语': 'fr',
+  法语: 'fr',
 
   // 德语
-  'german': 'de',
-  'de': 'de',
-  '德语': 'de',
+  german: 'de',
+  de: 'de',
+  德语: 'de',
 
   // 葡萄牙语
-  'portuguese': 'pt',
-  'pt': 'pt',
-  '葡萄牙语': 'pt',
+  portuguese: 'pt',
+  pt: 'pt',
+  葡萄牙语: 'pt',
 
   // 日语
-  'japanese': 'ja',
-  'ja': 'ja',
-  '日语': 'ja',
+  japanese: 'ja',
+  ja: 'ja',
+  日语: 'ja',
 
   // 韩语
-  'korean': 'ko',
-  'ko': 'ko',
-  '韩语': 'ko',
+  korean: 'ko',
+  ko: 'ko',
+  韩语: 'ko',
 
   // 俄语
-  'russian': 'ru',
-  'ru': 'ru',
-  '俄语': 'ru',
+  russian: 'ru',
+  ru: 'ru',
+  俄语: 'ru',
 
   // 阿拉伯语
-  'arabic': 'ar',
-  'ar': 'ar',
-  '阿拉伯语': 'ar',
+  arabic: 'ar',
+  ar: 'ar',
+  阿拉伯语: 'ar',
 
   // 瑞典语
-  'swedish': 'sv',
-  'sv': 'sv',
-  '瑞典语': 'sv',
+  swedish: 'sv',
+  sv: 'sv',
+  瑞典语: 'sv',
 
   // 荷兰语
-  'dutch': 'nl',
-  'nl': 'nl',
-  '荷兰语': 'nl',
+  dutch: 'nl',
+  nl: 'nl',
+  荷兰语: 'nl',
 
   // 波兰语
-  'polish': 'pl',
-  'pl': 'pl',
-  '波兰语': 'pl',
+  polish: 'pl',
+  pl: 'pl',
+  波兰语: 'pl',
 
   // 土耳其语
-  'turkish': 'tr',
-  'tr': 'tr',
-  '土耳其语': 'tr',
+  turkish: 'tr',
+  tr: 'tr',
+  土耳其语: 'tr',
 
   // 泰语
-  'thai': 'th',
-  'th': 'th',
-  '泰语': 'th',
+  thai: 'th',
+  th: 'th',
+  泰语: 'th',
 
   // 越南语
-  'vietnamese': 'vi',
-  'vi': 'vi',
-  '越南语': 'vi',
+  vietnamese: 'vi',
+  vi: 'vi',
+  越南语: 'vi',
 
   // 印尼语
-  'indonesian': 'id',
-  'id': 'id',
-  '印尼语': 'id',
+  indonesian: 'id',
+  id: 'id',
+  印尼语: 'id',
 
   // 马来语
-  'malay': 'ms',
-  'ms': 'ms',
-  '马来语': 'ms',
+  malay: 'ms',
+  ms: 'ms',
+  马来语: 'ms',
 
   // 印地语
-  'hindi': 'hi',
-  'hi': 'hi',
-  '印地语': 'hi',
+  hindi: 'hi',
+  hi: 'hi',
+  印地语: 'hi',
 
   // 希腊语
-  'greek': 'el',
-  'el': 'el',
-  '希腊语': 'el',
+  greek: 'el',
+  el: 'el',
+  希腊语: 'el',
 
   // 捷克语
-  'czech': 'cs',
-  'cs': 'cs',
-  '捷克语': 'cs',
+  czech: 'cs',
+  cs: 'cs',
+  捷克语: 'cs',
 
   // 丹麦语
-  'danish': 'da',
-  'da': 'da',
-  '丹麦语': 'da',
+  danish: 'da',
+  da: 'da',
+  丹麦语: 'da',
 
   // 芬兰语
-  'finnish': 'fi',
-  'fi': 'fi',
-  '芬兰语': 'fi',
+  finnish: 'fi',
+  fi: 'fi',
+  芬兰语: 'fi',
 
   // 挪威语
-  'norwegian': 'no',
-  'no': 'no',
-  '挪威语': 'no',
+  norwegian: 'no',
+  no: 'no',
+  挪威语: 'no',
 
   // 匈牙利语
-  'hungarian': 'hu',
-  'hu': 'hu',
-  '匈牙利语': 'hu',
+  hungarian: 'hu',
+  hu: 'hu',
+  匈牙利语: 'hu',
 
   // 罗马尼亚语
-  'romanian': 'ro',
-  'ro': 'ro',
-  '罗马尼亚语': 'ro',
+  romanian: 'ro',
+  ro: 'ro',
+  罗马尼亚语: 'ro',
 
   // 乌克兰语
-  'ukrainian': 'uk',
-  'uk': 'uk',
-  '乌克兰语': 'uk',
+  ukrainian: 'uk',
+  uk: 'uk',
+  乌克兰语: 'uk',
 
   // 希伯来语
-  'hebrew': 'he',
-  'he': 'he',
-  '希伯来语': 'he',
+  hebrew: 'he',
+  he: 'he',
+  希伯来语: 'he',
 
   // 波斯语
-  'persian': 'fa',
-  'farsi': 'fa',
-  'fa': 'fa',
-  '波斯语': 'fa',
+  persian: 'fa',
+  farsi: 'fa',
+  fa: 'fa',
+  波斯语: 'fa',
 
   // 孟加拉语
-  'bengali': 'bn',
-  'bn': 'bn',
-  '孟加拉语': 'bn',
+  bengali: 'bn',
+  bn: 'bn',
+  孟加拉语: 'bn',
 
   // 塔加洛语（菲律宾）
-  'tagalog': 'tl',
-  'filipino': 'tl',
-  'tl': 'tl',
-  '菲律宾语': 'tl',
+  tagalog: 'tl',
+  filipino: 'tl',
+  tl: 'tl',
+  菲律宾语: 'tl',
 
   // 斯洛伐克语
-  'slovak': 'sk',
-  'sk': 'sk',
-  '斯洛伐克语': 'sk',
+  slovak: 'sk',
+  sk: 'sk',
+  斯洛伐克语: 'sk',
 
   // 保加利亚语
-  'bulgarian': 'bg',
-  'bg': 'bg',
-  '保加利亚语': 'bg',
+  bulgarian: 'bg',
+  bg: 'bg',
+  保加利亚语: 'bg',
 
   // 克罗地亚语
-  'croatian': 'hr',
-  'hr': 'hr',
-  '克罗地亚语': 'hr',
+  croatian: 'hr',
+  hr: 'hr',
+  克罗地亚语: 'hr',
 
   // 塞尔维亚语
-  'serbian': 'sr',
-  'sr': 'sr',
-  '塞尔维亚语': 'sr',
+  serbian: 'sr',
+  sr: 'sr',
+  塞尔维亚语: 'sr',
 
   // 斯洛文尼亚语
-  'slovenian': 'sl',
-  'sl': 'sl',
-  '斯洛文尼亚语': 'sl',
+  slovenian: 'sl',
+  sl: 'sl',
+  斯洛文尼亚语: 'sl',
 
   // 爱沙尼亚语
-  'estonian': 'et',
-  'et': 'et',
-  '爱沙尼亚语': 'et',
+  estonian: 'et',
+  et: 'et',
+  爱沙尼亚语: 'et',
 
   // 拉脱维亚语
-  'latvian': 'lv',
-  'lv': 'lv',
-  '拉脱维亚语': 'lv',
+  latvian: 'lv',
+  lv: 'lv',
+  拉脱维亚语: 'lv',
 
   // 立陶宛语
-  'lithuanian': 'lt',
-  'lt': 'lt',
-  '立陶宛语': 'lt',
+  lithuanian: 'lt',
+  lt: 'lt',
+  立陶宛语: 'lt',
 
   // 瑞士德语
   'swiss german': 'de-ch',
   'de-ch': 'de-ch',
   'de-CH': 'de-ch',
-  '瑞士德语': 'de-ch',
+  瑞士德语: 'de-ch',
 }
 
 /**
@@ -230,289 +230,289 @@ export const LANGUAGE_CODE_MAP: Record<string, string> = {
 export const COUNTRY_CODE_MAP: Record<string, string> = {
   // 北美
   'united states': 'US',
-  'usa': 'US',
-  'us': 'US',
-  '美国': 'US',
+  usa: 'US',
+  us: 'US',
+  美国: 'US',
 
-  'canada': 'CA',
-  'ca': 'CA',
-  '加拿大': 'CA',
+  canada: 'CA',
+  ca: 'CA',
+  加拿大: 'CA',
 
-  'mexico': 'MX',
-  'mx': 'MX',
-  '墨西哥': 'MX',
+  mexico: 'MX',
+  mx: 'MX',
+  墨西哥: 'MX',
 
   // 欧洲
   'united kingdom': 'GB',
-  'uk': 'GB',
-  'gb': 'GB',
-  '英国': 'GB',
+  uk: 'GB',
+  gb: 'GB',
+  英国: 'GB',
 
-  'germany': 'DE',
-  'de': 'DE',
-  '德国': 'DE',
+  germany: 'DE',
+  de: 'DE',
+  德国: 'DE',
 
-  'france': 'FR',
-  'fr': 'FR',
-  '法国': 'FR',
+  france: 'FR',
+  fr: 'FR',
+  法国: 'FR',
 
-  'italy': 'IT',
-  'it': 'IT',
-  '意大利': 'IT',
+  italy: 'IT',
+  it: 'IT',
+  意大利: 'IT',
 
-  'spain': 'ES',
-  'es': 'ES',
-  '西班牙': 'ES',
+  spain: 'ES',
+  es: 'ES',
+  西班牙: 'ES',
 
-  'portugal': 'PT',
-  'pt': 'PT',
-  '葡萄牙': 'PT',
+  portugal: 'PT',
+  pt: 'PT',
+  葡萄牙: 'PT',
 
-  'netherlands': 'NL',
-  'holland': 'NL',
-  'nl': 'NL',
-  '荷兰': 'NL',
+  netherlands: 'NL',
+  holland: 'NL',
+  nl: 'NL',
+  荷兰: 'NL',
 
-  'belgium': 'BE',
-  'be': 'BE',
-  '比利时': 'BE',
+  belgium: 'BE',
+  be: 'BE',
+  比利时: 'BE',
 
-  'austria': 'AT',
-  'at': 'AT',
-  '奥地利': 'AT',
+  austria: 'AT',
+  at: 'AT',
+  奥地利: 'AT',
 
-  'switzerland': 'CH',
-  'ch': 'CH',
-  '瑞士': 'CH',
+  switzerland: 'CH',
+  ch: 'CH',
+  瑞士: 'CH',
 
-  'sweden': 'SE',
-  'se': 'SE',
-  '瑞典': 'SE',
+  sweden: 'SE',
+  se: 'SE',
+  瑞典: 'SE',
 
-  'norway': 'NO',
-  'no': 'NO',
-  '挪威': 'NO',
+  norway: 'NO',
+  no: 'NO',
+  挪威: 'NO',
 
-  'denmark': 'DK',
-  'dk': 'DK',
-  '丹麦': 'DK',
+  denmark: 'DK',
+  dk: 'DK',
+  丹麦: 'DK',
 
-  'finland': 'FI',
-  'fi': 'FI',
-  '芬兰': 'FI',
+  finland: 'FI',
+  fi: 'FI',
+  芬兰: 'FI',
 
-  'poland': 'PL',
-  'pl': 'PL',
-  '波兰': 'PL',
+  poland: 'PL',
+  pl: 'PL',
+  波兰: 'PL',
 
   'czech republic': 'CZ',
-  'czechia': 'CZ',
-  'cz': 'CZ',
-  '捷克': 'CZ',
+  czechia: 'CZ',
+  cz: 'CZ',
+  捷克: 'CZ',
 
-  'hungary': 'HU',
-  'hu': 'HU',
-  '匈牙利': 'HU',
+  hungary: 'HU',
+  hu: 'HU',
+  匈牙利: 'HU',
 
-  'greece': 'GR',
-  'gr': 'GR',
-  '希腊': 'GR',
+  greece: 'GR',
+  gr: 'GR',
+  希腊: 'GR',
 
-  'ireland': 'IE',
-  'ie': 'IE',
-  '爱尔兰': 'IE',
+  ireland: 'IE',
+  ie: 'IE',
+  爱尔兰: 'IE',
 
-  'romania': 'RO',
-  'ro': 'RO',
-  '罗马尼亚': 'RO',
+  romania: 'RO',
+  ro: 'RO',
+  罗马尼亚: 'RO',
 
-  'bulgaria': 'BG',
-  'bg': 'BG',
-  '保加利亚': 'BG',
+  bulgaria: 'BG',
+  bg: 'BG',
+  保加利亚: 'BG',
 
-  'croatia': 'HR',
-  'hr': 'HR',
-  '克罗地亚': 'HR',
+  croatia: 'HR',
+  hr: 'HR',
+  克罗地亚: 'HR',
 
-  'serbia': 'RS',
-  'rs': 'RS',
-  '塞尔维亚': 'RS',
+  serbia: 'RS',
+  rs: 'RS',
+  塞尔维亚: 'RS',
 
-  'slovenia': 'SI',
-  'si': 'SI',
-  '斯洛文尼亚': 'SI',
+  slovenia: 'SI',
+  si: 'SI',
+  斯洛文尼亚: 'SI',
 
-  'slovakia': 'SK',
-  'sk': 'SK',
-  '斯洛伐克': 'SK',
+  slovakia: 'SK',
+  sk: 'SK',
+  斯洛伐克: 'SK',
 
-  'ukraine': 'UA',
-  'ua': 'UA',
-  '乌克兰': 'UA',
+  ukraine: 'UA',
+  ua: 'UA',
+  乌克兰: 'UA',
 
-  'estonia': 'EE',
-  'ee': 'EE',
-  '爱沙尼亚': 'EE',
+  estonia: 'EE',
+  ee: 'EE',
+  爱沙尼亚: 'EE',
 
-  'latvia': 'LV',
-  'lv': 'LV',
-  '拉脱维亚': 'LV',
+  latvia: 'LV',
+  lv: 'LV',
+  拉脱维亚: 'LV',
 
-  'lithuania': 'LT',
-  'lt': 'LT',
-  '立陶宛': 'LT',
+  lithuania: 'LT',
+  lt: 'LT',
+  立陶宛: 'LT',
 
-  'russia': 'RU',
-  'ru': 'RU',
-  '俄罗斯': 'RU',
+  russia: 'RU',
+  ru: 'RU',
+  俄罗斯: 'RU',
 
   // 亚洲
-  'china': 'CN',
-  'cn': 'CN',
-  '中国': 'CN',
+  china: 'CN',
+  cn: 'CN',
+  中国: 'CN',
 
-  'japan': 'JP',
-  'jp': 'JP',
-  '日本': 'JP',
+  japan: 'JP',
+  jp: 'JP',
+  日本: 'JP',
 
   'south korea': 'KR',
-  'korea': 'KR',
-  'kr': 'KR',
-  '韩国': 'KR',
+  korea: 'KR',
+  kr: 'KR',
+  韩国: 'KR',
 
-  'india': 'IN',
-  'in': 'IN',
-  '印度': 'IN',
+  india: 'IN',
+  in: 'IN',
+  印度: 'IN',
 
-  'indonesia': 'ID',
-  'id': 'ID',
-  '印度尼西亚': 'ID',
-  '印尼': 'ID',
+  indonesia: 'ID',
+  id: 'ID',
+  印度尼西亚: 'ID',
+  印尼: 'ID',
 
-  'thailand': 'TH',
-  'th': 'TH',
-  '泰国': 'TH',
+  thailand: 'TH',
+  th: 'TH',
+  泰国: 'TH',
 
-  'vietnam': 'VN',
-  'vn': 'VN',
-  '越南': 'VN',
+  vietnam: 'VN',
+  vn: 'VN',
+  越南: 'VN',
 
-  'philippines': 'PH',
-  'ph': 'PH',
-  '菲律宾': 'PH',
+  philippines: 'PH',
+  ph: 'PH',
+  菲律宾: 'PH',
 
-  'malaysia': 'MY',
-  'my': 'MY',
-  '马来西亚': 'MY',
+  malaysia: 'MY',
+  my: 'MY',
+  马来西亚: 'MY',
 
-  'singapore': 'SG',
-  'sg': 'SG',
-  '新加坡': 'SG',
+  singapore: 'SG',
+  sg: 'SG',
+  新加坡: 'SG',
 
   'hong kong': 'HK',
-  'hk': 'HK',
-  '香港': 'HK',
+  hk: 'HK',
+  香港: 'HK',
 
-  'taiwan': 'TW',
-  'tw': 'TW',
-  '台湾': 'TW',
+  taiwan: 'TW',
+  tw: 'TW',
+  台湾: 'TW',
 
-  'bangladesh': 'BD',
-  'bd': 'BD',
-  '孟加拉国': 'BD',
+  bangladesh: 'BD',
+  bd: 'BD',
+  孟加拉国: 'BD',
 
-  'pakistan': 'PK',
-  'pk': 'PK',
-  '巴基斯坦': 'PK',
+  pakistan: 'PK',
+  pk: 'PK',
+  巴基斯坦: 'PK',
 
   // 中东
-  'turkey': 'TR',
-  'tr': 'TR',
-  '土耳其': 'TR',
+  turkey: 'TR',
+  tr: 'TR',
+  土耳其: 'TR',
 
   'saudi arabia': 'SA',
-  'sa': 'SA',
-  '沙特阿拉伯': 'SA',
+  sa: 'SA',
+  沙特阿拉伯: 'SA',
 
   'united arab emirates': 'AE',
-  'uae': 'AE',
-  'ae': 'AE',
-  '阿联酋': 'AE',
+  uae: 'AE',
+  ae: 'AE',
+  阿联酋: 'AE',
 
-  'israel': 'IL',
-  'il': 'IL',
-  '以色列': 'IL',
+  israel: 'IL',
+  il: 'IL',
+  以色列: 'IL',
 
-  'egypt': 'EG',
-  'eg': 'EG',
-  '埃及': 'EG',
+  egypt: 'EG',
+  eg: 'EG',
+  埃及: 'EG',
 
-  'iran': 'IR',
-  'ir': 'IR',
-  '伊朗': 'IR',
+  iran: 'IR',
+  ir: 'IR',
+  伊朗: 'IR',
 
-  'iraq': 'IQ',
-  'iq': 'IQ',
-  '伊拉克': 'IQ',
+  iraq: 'IQ',
+  iq: 'IQ',
+  伊拉克: 'IQ',
 
-  'qatar': 'QA',
-  'qa': 'QA',
-  '卡塔尔': 'QA',
+  qatar: 'QA',
+  qa: 'QA',
+  卡塔尔: 'QA',
 
-  'kuwait': 'KW',
-  'kw': 'KW',
-  '科威特': 'KW',
+  kuwait: 'KW',
+  kw: 'KW',
+  科威特: 'KW',
 
   // 大洋洲
-  'australia': 'AU',
-  'au': 'AU',
-  '澳大利亚': 'AU',
+  australia: 'AU',
+  au: 'AU',
+  澳大利亚: 'AU',
 
   'new zealand': 'NZ',
-  'nz': 'NZ',
-  '新西兰': 'NZ',
+  nz: 'NZ',
+  新西兰: 'NZ',
 
   // 南美
-  'brazil': 'BR',
-  'br': 'BR',
-  '巴西': 'BR',
+  brazil: 'BR',
+  br: 'BR',
+  巴西: 'BR',
 
-  'argentina': 'AR',
-  'ar': 'AR',
-  '阿根廷': 'AR',
+  argentina: 'AR',
+  ar: 'AR',
+  阿根廷: 'AR',
 
-  'colombia': 'CO',
-  'co': 'CO',
-  '哥伦比亚': 'CO',
+  colombia: 'CO',
+  co: 'CO',
+  哥伦比亚: 'CO',
 
-  'chile': 'CL',
-  'cl': 'CL',
-  '智利': 'CL',
+  chile: 'CL',
+  cl: 'CL',
+  智利: 'CL',
 
-  'peru': 'PE',
-  'pe': 'PE',
-  '秘鲁': 'PE',
+  peru: 'PE',
+  pe: 'PE',
+  秘鲁: 'PE',
 
-  'venezuela': 'VE',
-  've': 'VE',
-  '委内瑞拉': 'VE',
+  venezuela: 'VE',
+  ve: 'VE',
+  委内瑞拉: 'VE',
 
   // 非洲
   'south africa': 'ZA',
-  'za': 'ZA',
-  '南非': 'ZA',
+  za: 'ZA',
+  南非: 'ZA',
 
-  'nigeria': 'NG',
-  'ng': 'NG',
-  '尼日利亚': 'NG',
+  nigeria: 'NG',
+  ng: 'NG',
+  尼日利亚: 'NG',
 
-  'kenya': 'KE',
-  'ke': 'KE',
-  '肯尼亚': 'KE',
+  kenya: 'KE',
+  ke: 'KE',
+  肯尼亚: 'KE',
 
-  'morocco': 'MA',
-  'ma': 'MA',
-  '摩洛哥': 'MA',
+  morocco: 'MA',
+  ma: 'MA',
+  摩洛哥: 'MA',
 }
 
 /**
@@ -520,46 +520,46 @@ export const COUNTRY_CODE_MAP: Record<string, string> = {
  * 用于验证语言和国家的组合是否合理
  */
 export const LANGUAGE_COUNTRY_PAIRS: Record<string, string[]> = {
-  'en': ['US', 'GB', 'CA', 'AU', 'NZ', 'IE', 'SG', 'PH', 'IN', 'ZA', 'NG', 'KE'],
-  'zh': ['CN', 'TW', 'HK', 'SG', 'MY'],
-  'es': ['ES', 'MX', 'AR', 'CO', 'CL', 'PE', 'VE'],
-  'it': ['IT', 'CH'],
-  'fr': ['FR', 'BE', 'CH', 'CA', 'MA'],
-  'de': ['DE', 'AT', 'CH'],
-  'pt': ['BR', 'PT'],
-  'ja': ['JP'],
-  'ko': ['KR'],
-  'ru': ['RU', 'UA'],
-  'ar': ['SA', 'AE', 'EG', 'IQ', 'QA', 'KW', 'MA'],
-  'sv': ['SE'],
-  'nl': ['NL', 'BE'],
-  'pl': ['PL'],
-  'tr': ['TR'],
-  'th': ['TH'],
-  'vi': ['VN'],
-  'id': ['ID'],
-  'ms': ['MY', 'SG'],
-  'hi': ['IN'],
-  'el': ['GR'],
-  'cs': ['CZ'],
-  'da': ['DK'],
-  'fi': ['FI'],
-  'no': ['NO'],
-  'hu': ['HU'],
-  'ro': ['RO'],
-  'uk': ['UA'],
-  'he': ['IL'],
-  'fa': ['IR'],
-  'bn': ['BD'],
-  'tl': ['PH'],
-  'sk': ['SK'],
-  'bg': ['BG'],
-  'hr': ['HR'],
-  'sr': ['RS'],
-  'sl': ['SI'],
-  'et': ['EE'],
-  'lv': ['LV'],
-  'lt': ['LT'],
+  en: ['US', 'GB', 'CA', 'AU', 'NZ', 'IE', 'SG', 'PH', 'IN', 'ZA', 'NG', 'KE'],
+  zh: ['CN', 'TW', 'HK', 'SG', 'MY'],
+  es: ['ES', 'MX', 'AR', 'CO', 'CL', 'PE', 'VE'],
+  it: ['IT', 'CH'],
+  fr: ['FR', 'BE', 'CH', 'CA', 'MA'],
+  de: ['DE', 'AT', 'CH'],
+  pt: ['BR', 'PT'],
+  ja: ['JP'],
+  ko: ['KR'],
+  ru: ['RU', 'UA'],
+  ar: ['SA', 'AE', 'EG', 'IQ', 'QA', 'KW', 'MA'],
+  sv: ['SE'],
+  nl: ['NL', 'BE'],
+  pl: ['PL'],
+  tr: ['TR'],
+  th: ['TH'],
+  vi: ['VN'],
+  id: ['ID'],
+  ms: ['MY', 'SG'],
+  hi: ['IN'],
+  el: ['GR'],
+  cs: ['CZ'],
+  da: ['DK'],
+  fi: ['FI'],
+  no: ['NO'],
+  hu: ['HU'],
+  ro: ['RO'],
+  uk: ['UA'],
+  he: ['IL'],
+  fa: ['IR'],
+  bn: ['BD'],
+  tl: ['PH'],
+  sk: ['SK'],
+  bg: ['BG'],
+  hr: ['HR'],
+  sr: ['RS'],
+  sl: ['SI'],
+  et: ['EE'],
+  lv: ['LV'],
+  lt: ['LT'],
   'de-ch': ['CH'],
 }
 
@@ -785,46 +785,46 @@ export function isValidLanguageCountryPair(language: string, country: string): b
  */
 export function getLanguageName(code: string): string {
   const languageNames: Record<string, string> = {
-    'en': 'English',
-    'zh': 'Chinese',
-    'es': 'Spanish',
-    'it': 'Italian',
-    'fr': 'French',
-    'de': 'German',
-    'pt': 'Portuguese',
-    'ja': 'Japanese',
-    'ko': 'Korean',
-    'ru': 'Russian',
-    'ar': 'Arabic',
-    'sv': 'Swedish',
-    'nl': 'Dutch',
-    'pl': 'Polish',
-    'tr': 'Turkish',
-    'th': 'Thai',
-    'vi': 'Vietnamese',
-    'id': 'Indonesian',
-    'ms': 'Malay',
-    'hi': 'Hindi',
-    'el': 'Greek',
-    'cs': 'Czech',
-    'da': 'Danish',
-    'fi': 'Finnish',
-    'no': 'Norwegian',
-    'hu': 'Hungarian',
-    'ro': 'Romanian',
-    'uk': 'Ukrainian',
-    'he': 'Hebrew',
-    'fa': 'Persian',
-    'bn': 'Bengali',
-    'tl': 'Tagalog',
-    'sk': 'Slovak',
-    'bg': 'Bulgarian',
-    'hr': 'Croatian',
-    'sr': 'Serbian',
-    'sl': 'Slovenian',
-    'et': 'Estonian',
-    'lv': 'Latvian',
-    'lt': 'Lithuanian',
+    en: 'English',
+    zh: 'Chinese',
+    es: 'Spanish',
+    it: 'Italian',
+    fr: 'French',
+    de: 'German',
+    pt: 'Portuguese',
+    ja: 'Japanese',
+    ko: 'Korean',
+    ru: 'Russian',
+    ar: 'Arabic',
+    sv: 'Swedish',
+    nl: 'Dutch',
+    pl: 'Polish',
+    tr: 'Turkish',
+    th: 'Thai',
+    vi: 'Vietnamese',
+    id: 'Indonesian',
+    ms: 'Malay',
+    hi: 'Hindi',
+    el: 'Greek',
+    cs: 'Czech',
+    da: 'Danish',
+    fi: 'Finnish',
+    no: 'Norwegian',
+    hu: 'Hungarian',
+    ro: 'Romanian',
+    uk: 'Ukrainian',
+    he: 'Hebrew',
+    fa: 'Persian',
+    bn: 'Bengali',
+    tl: 'Tagalog',
+    sk: 'Slovak',
+    bg: 'Bulgarian',
+    hr: 'Croatian',
+    sr: 'Serbian',
+    sl: 'Slovenian',
+    et: 'Estonian',
+    lv: 'Latvian',
+    lt: 'Lithuanian',
     'de-ch': 'Swiss German',
   }
   return languageNames[code] || 'Unknown'
@@ -838,80 +838,80 @@ export function getLanguageName(code: string): string {
 export function getCountryName(code: string): string {
   const countryNames: Record<string, string> = {
     // 北美
-    'US': 'United States',
-    'CA': 'Canada',
-    'MX': 'Mexico',
+    US: 'United States',
+    CA: 'Canada',
+    MX: 'Mexico',
     // 欧洲
-    'GB': 'United Kingdom',
-    'DE': 'Germany',
-    'FR': 'France',
-    'IT': 'Italy',
-    'ES': 'Spain',
-    'PT': 'Portugal',
-    'NL': 'Netherlands',
-    'BE': 'Belgium',
-    'AT': 'Austria',
-    'CH': 'Switzerland',
-    'SE': 'Sweden',
-    'NO': 'Norway',
-    'DK': 'Denmark',
-    'FI': 'Finland',
-    'PL': 'Poland',
-    'CZ': 'Czech Republic',
-    'HU': 'Hungary',
-    'GR': 'Greece',
-    'IE': 'Ireland',
-    'RO': 'Romania',
-    'BG': 'Bulgaria',
-    'HR': 'Croatia',
-    'RS': 'Serbia',
-    'SI': 'Slovenia',
-    'SK': 'Slovakia',
-    'UA': 'Ukraine',
-    'EE': 'Estonia',
-    'LV': 'Latvia',
-    'LT': 'Lithuania',
-    'RU': 'Russia',
+    GB: 'United Kingdom',
+    DE: 'Germany',
+    FR: 'France',
+    IT: 'Italy',
+    ES: 'Spain',
+    PT: 'Portugal',
+    NL: 'Netherlands',
+    BE: 'Belgium',
+    AT: 'Austria',
+    CH: 'Switzerland',
+    SE: 'Sweden',
+    NO: 'Norway',
+    DK: 'Denmark',
+    FI: 'Finland',
+    PL: 'Poland',
+    CZ: 'Czech Republic',
+    HU: 'Hungary',
+    GR: 'Greece',
+    IE: 'Ireland',
+    RO: 'Romania',
+    BG: 'Bulgaria',
+    HR: 'Croatia',
+    RS: 'Serbia',
+    SI: 'Slovenia',
+    SK: 'Slovakia',
+    UA: 'Ukraine',
+    EE: 'Estonia',
+    LV: 'Latvia',
+    LT: 'Lithuania',
+    RU: 'Russia',
     // 亚洲
-    'CN': 'China',
-    'JP': 'Japan',
-    'KR': 'South Korea',
-    'IN': 'India',
-    'ID': 'Indonesia',
-    'TH': 'Thailand',
-    'VN': 'Vietnam',
-    'PH': 'Philippines',
-    'MY': 'Malaysia',
-    'SG': 'Singapore',
-    'HK': 'Hong Kong',
-    'TW': 'Taiwan',
-    'BD': 'Bangladesh',
-    'PK': 'Pakistan',
+    CN: 'China',
+    JP: 'Japan',
+    KR: 'South Korea',
+    IN: 'India',
+    ID: 'Indonesia',
+    TH: 'Thailand',
+    VN: 'Vietnam',
+    PH: 'Philippines',
+    MY: 'Malaysia',
+    SG: 'Singapore',
+    HK: 'Hong Kong',
+    TW: 'Taiwan',
+    BD: 'Bangladesh',
+    PK: 'Pakistan',
     // 中东
-    'TR': 'Turkey',
-    'SA': 'Saudi Arabia',
-    'AE': 'United Arab Emirates',
-    'IL': 'Israel',
-    'EG': 'Egypt',
-    'IR': 'Iran',
-    'IQ': 'Iraq',
-    'QA': 'Qatar',
-    'KW': 'Kuwait',
+    TR: 'Turkey',
+    SA: 'Saudi Arabia',
+    AE: 'United Arab Emirates',
+    IL: 'Israel',
+    EG: 'Egypt',
+    IR: 'Iran',
+    IQ: 'Iraq',
+    QA: 'Qatar',
+    KW: 'Kuwait',
     // 大洋洲
-    'AU': 'Australia',
-    'NZ': 'New Zealand',
+    AU: 'Australia',
+    NZ: 'New Zealand',
     // 南美
-    'BR': 'Brazil',
-    'AR': 'Argentina',
-    'CO': 'Colombia',
-    'CL': 'Chile',
-    'PE': 'Peru',
-    'VE': 'Venezuela',
+    BR: 'Brazil',
+    AR: 'Argentina',
+    CO: 'Colombia',
+    CL: 'Chile',
+    PE: 'Peru',
+    VE: 'Venezuela',
     // 非洲
-    'ZA': 'South Africa',
-    'NG': 'Nigeria',
-    'KE': 'Kenya',
-    'MA': 'Morocco',
+    ZA: 'South Africa',
+    NG: 'Nigeria',
+    KE: 'Kenya',
+    MA: 'Morocco',
   }
   return countryNames[code.toUpperCase()] || code
 }
@@ -927,49 +927,49 @@ export function getGoogleAdsLanguageCode(language: string): number {
   const googleAdsLanguageCodes: Record<string, number> = {
     // NOTE: These are Google Ads `language_constant` IDs (languageConstants/<id>),
     // not locale IDs. Keep in sync with Google Ads reference data.
-    'en': 1000,  // English
-    'de': 1001,  // German
-    'fr': 1002,  // French
-    'es': 1003,  // Spanish
-    'it': 1004,  // Italian
-    'ja': 1005,  // Japanese
-    'zh': 1008,  // Chinese
-    'da': 1009,  // Danish
-    'nl': 1010,  // Dutch
-    'fi': 1011,  // Finnish
-    'ko': 1012,  // Korean
-    'no': 1013,  // Norwegian
-    'pt': 1014,  // Portuguese
-    'sv': 1015,  // Swedish
-    'ar': 1019,  // Arabic
-    'bg': 1020,  // Bulgarian
-    'cs': 1021,  // Czech
-    'el': 1022,  // Greek
-    'hi': 1023,  // Hindi
-    'hu': 1024,  // Hungarian
-    'id': 1025,  // Indonesian
-    'he': 1027,  // Hebrew (Google Ads uses code 'iw')
-    'lv': 1028,  // Latvian
-    'lt': 1029,  // Lithuanian
-    'pl': 1030,  // Polish
-    'ru': 1031,  // Russian
-    'ro': 1032,  // Romanian
-    'sk': 1033,  // Slovak
-    'sl': 1034,  // Slovenian
-    'sr': 1035,  // Serbian
-    'uk': 1036,  // Ukrainian
-    'tr': 1037,  // Turkish
-    'hr': 1039,  // Croatian
-    'vi': 1040,  // Vietnamese
-    'tl': 1042,  // Filipino (Tagalog)
-    'et': 1043,  // Estonian
-    'th': 1044,  // Thai
-    'bn': 1056,  // Bengali
-    'fa': 1064,  // Persian
-    'ms': 1102,  // Malay
-    'de-ch': 1001,  // Swiss German (use German)
+    en: 1000, // English
+    de: 1001, // German
+    fr: 1002, // French
+    es: 1003, // Spanish
+    it: 1004, // Italian
+    ja: 1005, // Japanese
+    zh: 1008, // Chinese
+    da: 1009, // Danish
+    nl: 1010, // Dutch
+    fi: 1011, // Finnish
+    ko: 1012, // Korean
+    no: 1013, // Norwegian
+    pt: 1014, // Portuguese
+    sv: 1015, // Swedish
+    ar: 1019, // Arabic
+    bg: 1020, // Bulgarian
+    cs: 1021, // Czech
+    el: 1022, // Greek
+    hi: 1023, // Hindi
+    hu: 1024, // Hungarian
+    id: 1025, // Indonesian
+    he: 1027, // Hebrew (Google Ads uses code 'iw')
+    lv: 1028, // Latvian
+    lt: 1029, // Lithuanian
+    pl: 1030, // Polish
+    ru: 1031, // Russian
+    ro: 1032, // Romanian
+    sk: 1033, // Slovak
+    sl: 1034, // Slovenian
+    sr: 1035, // Serbian
+    uk: 1036, // Ukrainian
+    tr: 1037, // Turkish
+    hr: 1039, // Croatian
+    vi: 1040, // Vietnamese
+    tl: 1042, // Filipino (Tagalog)
+    et: 1043, // Estonian
+    th: 1044, // Thai
+    bn: 1056, // Bengali
+    fa: 1064, // Persian
+    ms: 1102, // Malay
+    'de-ch': 1001, // Swiss German (use German)
   }
-  return googleAdsLanguageCodes[code] || 1000  // 默认英文
+  return googleAdsLanguageCodes[code] || 1000 // 默认英文
 }
 
 /**
@@ -986,7 +986,10 @@ export function getGoogleAdsCountryCode(country: string): string {
  * @param country 国家名称或代码
  * @returns 规范化后的 { language, country } 对象
  */
-export function normalizeLanguageCountry(language: string, country: string): { language: string; country: string } {
+export function normalizeLanguageCountry(
+  language: string,
+  country: string
+): { language: string; country: string } {
   const normalizedLanguage = normalizeLanguageCode(language)
   const normalizedCountry = normalizeCountryCode(country)
 
@@ -1142,87 +1145,87 @@ export function getSupportedCountries(): Array<{ code: string; name: string }> {
  */
 const GOOGLE_ADS_GEO_TARGETS: Record<string, string> = {
   // 北美
-  US: '2840',   // United States
-  CA: '2124',   // Canada
-  MX: '2484',   // Mexico
+  US: '2840', // United States
+  CA: '2124', // Canada
+  MX: '2484', // Mexico
 
   // 欧洲
-  GB: '2826',   // United Kingdom
-  UK: '2826',   // United Kingdom (别名)
-  DE: '2276',   // Germany
-  FR: '2250',   // France
-  IT: '2380',   // Italy
-  ES: '2724',   // Spain
-  PT: '2620',   // Portugal
-  NL: '2528',   // Netherlands
-  BE: '2056',   // Belgium
-  AT: '2040',   // Austria
-  CH: '2756',   // Switzerland
-  SE: '2752',   // Sweden
-  NO: '2578',   // Norway
-  DK: '2208',   // Denmark
-  FI: '2246',   // Finland
-  PL: '2616',   // Poland
-  CZ: '2203',   // Czech Republic
-  HU: '2348',   // Hungary
-  GR: '2300',   // Greece
-  IE: '2372',   // Ireland
-  RO: '2642',   // Romania
-  BG: '2100',   // Bulgaria
-  HR: '2191',   // Croatia
-  RS: '2688',   // Serbia
-  SI: '2705',   // Slovenia
-  SK: '2703',   // Slovakia
-  UA: '2804',   // Ukraine
-  EE: '2233',   // Estonia
-  LV: '2428',   // Latvia
-  LT: '2440',   // Lithuania
-  RU: '2643',   // Russia
+  GB: '2826', // United Kingdom
+  UK: '2826', // United Kingdom (别名)
+  DE: '2276', // Germany
+  FR: '2250', // France
+  IT: '2380', // Italy
+  ES: '2724', // Spain
+  PT: '2620', // Portugal
+  NL: '2528', // Netherlands
+  BE: '2056', // Belgium
+  AT: '2040', // Austria
+  CH: '2756', // Switzerland
+  SE: '2752', // Sweden
+  NO: '2578', // Norway
+  DK: '2208', // Denmark
+  FI: '2246', // Finland
+  PL: '2616', // Poland
+  CZ: '2203', // Czech Republic
+  HU: '2348', // Hungary
+  GR: '2300', // Greece
+  IE: '2372', // Ireland
+  RO: '2642', // Romania
+  BG: '2100', // Bulgaria
+  HR: '2191', // Croatia
+  RS: '2688', // Serbia
+  SI: '2705', // Slovenia
+  SK: '2703', // Slovakia
+  UA: '2804', // Ukraine
+  EE: '2233', // Estonia
+  LV: '2428', // Latvia
+  LT: '2440', // Lithuania
+  RU: '2643', // Russia
 
   // 亚洲
-  CN: '2156',   // China
-  JP: '2392',   // Japan
-  KR: '2410',   // South Korea
-  IN: '2356',   // India
-  ID: '2360',   // Indonesia
-  TH: '2764',   // Thailand
-  VN: '2704',   // Vietnam
-  PH: '2608',   // Philippines
-  MY: '2458',   // Malaysia
-  SG: '2702',   // Singapore
-  HK: '2344',   // Hong Kong
-  TW: '2158',   // Taiwan
-  BD: '2050',   // Bangladesh
-  PK: '2586',   // Pakistan
+  CN: '2156', // China
+  JP: '2392', // Japan
+  KR: '2410', // South Korea
+  IN: '2356', // India
+  ID: '2360', // Indonesia
+  TH: '2764', // Thailand
+  VN: '2704', // Vietnam
+  PH: '2608', // Philippines
+  MY: '2458', // Malaysia
+  SG: '2702', // Singapore
+  HK: '2344', // Hong Kong
+  TW: '2158', // Taiwan
+  BD: '2050', // Bangladesh
+  PK: '2586', // Pakistan
 
   // 中东
-  TR: '2792',   // Turkey
-  SA: '2682',   // Saudi Arabia
-  AE: '2784',   // United Arab Emirates
-  IL: '2376',   // Israel
-  EG: '2818',   // Egypt
-  IR: '2364',   // Iran
-  IQ: '2368',   // Iraq
-  QA: '2634',   // Qatar
-  KW: '2414',   // Kuwait
+  TR: '2792', // Turkey
+  SA: '2682', // Saudi Arabia
+  AE: '2784', // United Arab Emirates
+  IL: '2376', // Israel
+  EG: '2818', // Egypt
+  IR: '2364', // Iran
+  IQ: '2368', // Iraq
+  QA: '2634', // Qatar
+  KW: '2414', // Kuwait
 
   // 大洋洲
-  AU: '2036',   // Australia
-  NZ: '2554',   // New Zealand
+  AU: '2036', // Australia
+  NZ: '2554', // New Zealand
 
   // 南美
-  BR: '2076',   // Brazil
-  AR: '2032',   // Argentina
-  CO: '2170',   // Colombia
-  CL: '2152',   // Chile
-  PE: '2604',   // Peru
-  VE: '2862',   // Venezuela
+  BR: '2076', // Brazil
+  AR: '2032', // Argentina
+  CO: '2170', // Colombia
+  CL: '2152', // Chile
+  PE: '2604', // Peru
+  VE: '2862', // Venezuela
 
   // 非洲
-  ZA: '2710',   // South Africa
-  NG: '2566',   // Nigeria
-  KE: '2404',   // Kenya
-  MA: '2504',   // Morocco
+  ZA: '2710', // South Africa
+  NG: '2566', // Nigeria
+  KE: '2404', // Kenya
+  MA: '2504', // Morocco
 }
 
 /**
@@ -1233,7 +1236,7 @@ const GOOGLE_ADS_GEO_TARGETS: Record<string, string> = {
  */
 export function getGoogleAdsGeoTargetId(countryCode: string): string {
   const upperCode = countryCode.toUpperCase()
-  return GOOGLE_ADS_GEO_TARGETS[upperCode] || '2840'  // 默认美国
+  return GOOGLE_ADS_GEO_TARGETS[upperCode] || '2840' // 默认美国
 }
 
 /**
@@ -1352,8 +1355,12 @@ export function getCountryChineseName(countryCode: string): string {
  * 用于前端下拉选择框
  * @returns 包含code、英文名、中文名的国家数组
  */
-export function getSupportedCountriesWithChineseName(): Array<{ code: string; name: string; chineseName: string }> {
-  return getSupportedCountries().map(country => ({
+export function getSupportedCountriesWithChineseName(): Array<{
+  code: string
+  name: string
+  chineseName: string
+}> {
+  return getSupportedCountries().map((country) => ({
     ...country,
     chineseName: COUNTRY_CHINESE_NAMES[country.code] || country.name,
   }))
@@ -1365,7 +1372,7 @@ export function getSupportedCountriesWithChineseName(): Array<{ code: string; na
  * 用于替代各组件中的硬编码国家列表
  */
 export function getCountryOptionsForUI(): Array<{ code: string; name: string }> {
-  return getSupportedCountries().map(country => ({
+  return getSupportedCountries().map((country) => ({
     code: country.code,
     name: `${COUNTRY_CHINESE_NAMES[country.code] || country.name} (${country.code})`,
   }))

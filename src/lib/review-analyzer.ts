@@ -25,67 +25,67 @@ import { loadPrompt } from './prompt-loader'
  * 单条评论原始数据
  */
 export interface RawReview {
-  rating: string | null           // "5.0 out of 5 stars"
-  title: string | null             // 评论标题
-  body: string | null              // 评论正文
-  helpful: string | null           // "125 people found this helpful"
-  verified: boolean                // 是否为认证购买
-  date?: string | null             // 评论日期
-  author?: string | null           // 评论者
+  rating: string | null // "5.0 out of 5 stars"
+  title: string | null // 评论标题
+  body: string | null // 评论正文
+  helpful: string | null // "125 people found this helpful"
+  verified: boolean // 是否为认证购买
+  date?: string | null // 评论日期
+  author?: string | null // 评论者
 }
 
 /**
  * 情感分布
  */
 export interface SentimentDistribution {
-  positive: number    // 正面评论占比 (4-5星) 0-100
-  neutral: number     // 中性评论占比 (3星) 0-100
-  negative: number    // 负面评论占比 (1-2星) 0-100
+  positive: number // 正面评论占比 (4-5星) 0-100
+  neutral: number // 中性评论占比 (3星) 0-100
+  negative: number // 负面评论占比 (1-2星) 0-100
 }
 
 /**
  * 高频关键词
  */
 export interface KeywordInsight {
-  keyword: string          // "easy setup", "clear image"
-  frequency: number        // 出现次数
+  keyword: string // "easy setup", "clear image"
+  frequency: number // 出现次数
   sentiment: 'positive' | 'negative'
-  context?: string         // 上下文说明
+  context?: string // 上下文说明
 }
 
 /**
  * 真实使用场景
  */
 export interface UseCase {
-  scenario: string         // "monitoring backyard", "baby monitor"
-  mentions: number         // 被提及次数
-  examples?: string[]      // 具体评论片段
+  scenario: string // "monitoring backyard", "baby monitor"
+  mentions: number // 被提及次数
+  examples?: string[] // 具体评论片段
 }
 
 /**
  * 购买动机
  */
 export interface PurchaseReason {
-  reason: string           // "replace old camera", "home security upgrade"
-  frequency: number        // 频次
+  reason: string // "replace old camera", "home security upgrade"
+  frequency: number // 频次
 }
 
 /**
  * 用户画像
  */
 export interface UserProfile {
-  profile: string          // "tech-savvy homeowner", "small business owner"
-  indicators: string[]     // 判断依据
+  profile: string // "tech-savvy homeowner", "small business owner"
+  indicators: string[] // 判断依据
 }
 
 /**
  * 痛点分析
  */
 export interface PainPoint {
-  issue: string            // "difficult installation", "subscription required"
+  issue: string // "difficult installation", "subscription required"
   severity: 'critical' | 'moderate' | 'minor'
-  affectedUsers: number    // 受影响用户数
-  workarounds?: string[]   // 用户提到的解决方法
+  affectedUsers: number // 受影响用户数
+  workarounds?: string[] // 用户提到的解决方法
 }
 
 /**
@@ -93,18 +93,18 @@ export interface PainPoint {
  * 这些数字是广告创意的黄金素材！
  */
 export interface QuantitativeHighlight {
-  metric: string           // "Battery Life", "Suction Power", "Coverage Area"
-  value: string            // "8 hours", "2000Pa", "2000 sq ft"
-  source: string           // "multiple reviews", "verified purchase"
-  adCopy: string           // 适合用于广告的文案格式 "8-Hour Battery Life"
+  metric: string // "Battery Life", "Suction Power", "Coverage Area"
+  value: string // "8 hours", "2000Pa", "2000 sq ft"
+  source: string // "multiple reviews", "verified purchase"
+  adCopy: string // 适合用于广告的文案格式 "8-Hour Battery Life"
 }
 
 /**
  * 🔥 v3.2新增：用户提及的竞品
  */
 export interface CompetitorMention {
-  brand: string            // "Roomba", "Dyson", "iRobot"
-  comparison: string       // "cheaper than", "better than", "similar to"
+  brand: string // "Roomba", "Dyson", "iRobot"
+  comparison: string // "cheaper than", "better than", "similar to"
   sentiment: 'positive' | 'neutral' | 'negative'
 }
 
@@ -142,8 +142,8 @@ export interface ReviewAnalysisResult {
   competitorMentions?: CompetitorMention[]
 
   // 原始数据统计
-  analyzedReviewCount: number      // 实际分析的评论数
-  verifiedReviewCount: number      // 认证购买评论数
+  analyzedReviewCount: number // 实际分析的评论数
+  verifiedReviewCount: number // 认证购买评论数
 }
 
 // ==================== 评论抓取逻辑 ====================
@@ -155,10 +155,7 @@ export interface ReviewAnalysisResult {
  * @param limit 抓取评论数量上限（默认50）
  * @returns 评论数组
  */
-export async function scrapeAmazonReviews(
-  page: any,
-  limit: number = 50
-): Promise<RawReview[]> {
+export async function scrapeAmazonReviews(page: any, limit: number = 50): Promise<RawReview[]> {
   console.log(`📝 开始抓取评论，目标数量: ${limit}`)
 
   try {
@@ -192,8 +189,9 @@ export async function scrapeAmazonReviews(
 
       // 第二步：尝试直接滚动到评论区
       await page.evaluate(() => {
-        const reviewSection = document.querySelector('#customer-reviews_feature_div') ||
-                              document.querySelector('#reviews-medley-footer')
+        const reviewSection =
+          document.querySelector('#customer-reviews_feature_div') ||
+          document.querySelector('#reviews-medley-footer')
         if (reviewSection) {
           reviewSection.scrollIntoView({ behavior: 'instant', block: 'start' })
         } else {
@@ -208,18 +206,20 @@ export async function scrapeAmazonReviews(
     }
 
     // 滚动后再检查评论容器是否存在
-    const hasReviewContainer = await page.evaluate(() => {
-      const containers = [
-        '#customer-reviews_feature_div',
-        '#reviews-medley-footer',
-        '#cm-cr-dp-review-list',
-        '[data-hook="review"]'
-      ]
-      for (const selector of containers) {
-        if (document.querySelector(selector)) return selector
-      }
-      return null
-    }).catch(() => null)
+    const hasReviewContainer = await page
+      .evaluate(() => {
+        const containers = [
+          '#customer-reviews_feature_div',
+          '#reviews-medley-footer',
+          '#cm-cr-dp-review-list',
+          '[data-hook="review"]',
+        ]
+        for (const selector of containers) {
+          if (document.querySelector(selector)) return selector
+        }
+        return null
+      })
+      .catch(() => null)
 
     if (!hasReviewContainer) {
       console.log('⚠️ 深度滚动后评论容器仍不存在，快速跳过评论抓取')
@@ -230,11 +230,11 @@ export async function scrapeAmazonReviews(
     // 🔧 优化(2025-12-11): 优先等待实际评论元素，而非容器
     // 评论容器可能存在但内部评论元素是懒加载的
     const reviewElementSelectors = [
-      '[data-hook="review"]',                        // 标准评论元素（最可靠）
-      '#cm-cr-dp-review-list [data-hook="review"]',  // 详情页评论列表
-      '.review.aok-relative',                        // Amazon UK/EU 布局
-      'li.review[data-hook="review"]',               // 列表形式的评论
-      '[id^="customer_review-"]',                    // 以customer_review-开头的ID
+      '[data-hook="review"]', // 标准评论元素（最可靠）
+      '#cm-cr-dp-review-list [data-hook="review"]', // 详情页评论列表
+      '.review.aok-relative', // Amazon UK/EU 布局
+      'li.review[data-hook="review"]', // 列表形式的评论
+      '[id^="customer_review-"]', // 以customer_review-开头的ID
     ]
 
     let reviewSelectorFound = false
@@ -246,7 +246,7 @@ export async function scrapeAmazonReviews(
       for (const selector of reviewElementSelectors) {
         try {
           // 增加等待时间：第1次3秒，第2次5秒，第3次8秒
-          const timeout = attempt === 1 ? 3000 : (attempt === 2 ? 5000 : 8000)
+          const timeout = attempt === 1 ? 3000 : attempt === 2 ? 5000 : 8000
           await page.waitForSelector(selector, { timeout })
           console.log(`✅ 找到评论选择器: ${selector}`)
           reviewSelectorFound = true
@@ -274,9 +274,10 @@ export async function scrapeAmazonReviews(
       const debugInfo = await page.evaluate(() => {
         return {
           hasReviewContainer: !!document.querySelector('#customer-reviews_feature_div'),
-          containerInnerLength: document.querySelector('#customer-reviews_feature_div')?.innerHTML?.length || 0,
+          containerInnerLength:
+            document.querySelector('#customer-reviews_feature_div')?.innerHTML?.length || 0,
           reviewElementCount: document.querySelectorAll('[data-hook="review"]').length,
-          pageUrl: window.location.href
+          pageUrl: window.location.href,
         }
       })
       console.log('📊 调试信息:', JSON.stringify(debugInfo))
@@ -316,7 +317,7 @@ export async function scrapeAmazonReviews(
         '[data-component-type="s-customer-reviews-list-desktop"] [data-hook="review"]',
 
         // 优先级8: 通用testid
-        '[data-testid="review"]'
+        '[data-testid="review"]',
       ]
 
       let reviewElements: NodeListOf<Element> | null = null
@@ -326,7 +327,9 @@ export async function scrapeAmazonReviews(
           const elements = document.querySelectorAll(selector)
           if (elements.length > 0) {
             reviewElements = elements
-            console.log(`✅ [Browser Context] 找到${elements.length}个评论元素，使用选择器: ${selector}`)
+            console.log(
+              `✅ [Browser Context] 找到${elements.length}个评论元素，使用选择器: ${selector}`
+            )
             break
           }
         } catch (error) {
@@ -340,12 +343,14 @@ export async function scrapeAmazonReviews(
         const debugContainers = [
           '#customer-reviews_feature_div',
           '#reviews-medley-footer',
-          '#cm-cr-dp-review-list'
+          '#cm-cr-dp-review-list',
         ]
-        debugContainers.forEach(container => {
+        debugContainers.forEach((container) => {
           const el = document.querySelector(container)
           if (el) {
-            console.log(`📦 [Browser Context] 找到容器: ${container}, innerHTML长度: ${el.innerHTML.length}`)
+            console.log(
+              `📦 [Browser Context] 找到容器: ${container}, innerHTML长度: ${el.innerHTML.length}`
+            )
           }
         })
         return []
@@ -359,25 +364,26 @@ export async function scrapeAmazonReviews(
         // 🔧 优化(2025-12-11): 增强评分提取，支持更多格式
         const ratingEl = el.querySelector(
           '[data-hook="review-star-rating"], ' +
-          '[data-hook="cmps-review-star-rating"], ' +
-          '.a-icon-star, ' +
-          '.review-rating, ' +
-          '[class*="a-star"]'
+            '[data-hook="cmps-review-star-rating"], ' +
+            '.a-icon-star, ' +
+            '.review-rating, ' +
+            '[class*="a-star"]'
         )
-        const rating = ratingEl?.textContent?.trim() ||
-                       ratingEl?.getAttribute('aria-label') ||
-                       ratingEl?.getAttribute('title') ||
-                       null
+        const rating =
+          ratingEl?.textContent?.trim() ||
+          ratingEl?.getAttribute('aria-label') ||
+          ratingEl?.getAttribute('title') ||
+          null
 
         // 🔧 优化(2025-12-11): 增强标题提取
         const titleEl = el.querySelector(
           '[data-hook="review-title"], ' +
-          '[data-hook="review-title-content"], ' +
-          '.review-title, ' +
-          '.review-title-content, ' +
-          '[class*="review-title"], ' +
-          'a[data-hook="review-title"], ' +
-          '[data-testid="review-title"]'
+            '[data-hook="review-title-content"], ' +
+            '.review-title, ' +
+            '.review-title-content, ' +
+            '[class*="review-title"], ' +
+            'a[data-hook="review-title"], ' +
+            '[data-testid="review-title"]'
         )
         let title = titleEl?.textContent?.trim() || null
         // 清理标题中的评分文字（如"5.0 out of 5 stars Great product"）
@@ -388,10 +394,10 @@ export async function scrapeAmazonReviews(
         // 🔧 优化(2025-12-11): 增强正文提取
         const bodyEl = el.querySelector(
           '[data-hook="review-body"], ' +
-          '[data-hook="review-collapsed-text"], ' +
-          '.review-text, ' +
-          '.review-text-content, ' +
-          '[class*="review-text"]'
+            '[data-hook="review-collapsed-text"], ' +
+            '.review-text, ' +
+            '.review-text-content, ' +
+            '[class*="review-text"]'
         )
         let body = bodyEl?.textContent?.trim() || null
         // 清理正文中的"Read more"按钮文字
@@ -402,37 +408,36 @@ export async function scrapeAmazonReviews(
         // 有用投票
         const helpfulEl = el.querySelector(
           '[data-hook="helpful-vote-statement"], ' +
-          '[data-hook="review-votes"], ' +
-          '.review-votes, ' +
-          '[class*="helpful"]'
+            '[data-hook="review-votes"], ' +
+            '.review-votes, ' +
+            '[class*="helpful"]'
         )
         const helpful = helpfulEl?.textContent?.trim() || null
 
         // 🔧 优化(2025-12-11): 增强认证购买检测
         const verifiedEl = el.querySelector(
           '[data-hook="avp-badge"], ' +
-          '[data-hook="avp-badge-linkless"], ' +
-          '.avp-badge, ' +
-          '[class*="verified-purchase"]'
+            '[data-hook="avp-badge-linkless"], ' +
+            '.avp-badge, ' +
+            '[class*="verified-purchase"]'
         )
-        const verified = verifiedEl !== null ||
-                        (el.textContent?.includes('Verified Purchase') ?? false) ||
-                        (el.textContent?.includes('Verified purchase') ?? false)
+        const verified =
+          verifiedEl !== null ||
+          (el.textContent?.includes('Verified Purchase') ?? false) ||
+          (el.textContent?.includes('Verified purchase') ?? false)
 
         // 日期
         const dateEl = el.querySelector(
-          '[data-hook="review-date"], ' +
-          '.review-date, ' +
-          '[class*="review-date"]'
+          '[data-hook="review-date"], ' + '.review-date, ' + '[class*="review-date"]'
         )
         const date = dateEl?.textContent?.trim() || null
 
         // 作者
         const authorEl = el.querySelector(
           '[data-hook="genome-widget"], ' +
-          '.a-profile-name, ' +
-          '.review-author, ' +
-          '[class*="author"]'
+            '.a-profile-name, ' +
+            '.review-author, ' +
+            '[class*="author"]'
         )
         const author = authorEl?.textContent?.trim() || null
 
@@ -445,9 +450,11 @@ export async function scrapeAmazonReviews(
             helpful,
             verified,
             date,
-            author
+            author,
           })
-          console.log(`✓ [Browser Context] 评论${index + 1}: ${title?.substring(0, 30) || body?.substring(0, 30) || 'N/A'}...`)
+          console.log(
+            `✓ [Browser Context] 评论${index + 1}: ${title?.substring(0, 30) || body?.substring(0, 30) || 'N/A'}...`
+          )
         }
       })
 
@@ -457,7 +464,6 @@ export async function scrapeAmazonReviews(
 
     console.log(`✅ 成功抓取${reviews.length}条评论`)
     return reviews
-
   } catch (error: any) {
     console.error('❌ 评论抓取失败:', error.message)
     return []
@@ -482,12 +488,11 @@ export async function analyzeReviewsWithAI(
   targetCountry: string = 'US',
   userId?: number,
   options?: {
-    enableCompression?: boolean  // 启用评论压缩（默认false，零破坏性）
-    enableCache?: boolean        // 启用缓存（默认false，零破坏性）
-    cacheKey?: string            // 自定义缓存键（必须包含URL以避免不同offer共享缓存）
+    enableCompression?: boolean // 启用评论压缩（默认false，零破坏性）
+    enableCache?: boolean // 启用缓存（默认false，零破坏性）
+    cacheKey?: string // 自定义缓存键（必须包含URL以避免不同offer共享缓存）
   }
 ): Promise<ReviewAnalysisResult> {
-
   if (reviews.length === 0) {
     console.log('⚠️ 无评论数据，返回空分析结果')
     return getEmptyAnalysisResult()
@@ -505,13 +510,12 @@ export async function analyzeReviewsWithAI(
   const langName = getLanguageNameForCountry(targetCountry)
 
   // 计算基础统计
-  const verifiedCount = reviews.filter(r => r.verified).length
+  const verifiedCount = reviews.filter((r) => r.verified).length
   const ratingsArray = reviews
-    .map(r => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0'))
-    .filter(rating => rating > 0)
-  const avgRating = ratingsArray.length > 0
-    ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length
-    : 0
+    .map((r) => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0'))
+    .filter((rating) => rating > 0)
+  const avgRating =
+    ratingsArray.length > 0 ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length : 0
 
   // 准备评论文本（支持压缩优化）
   let reviewTexts: string
@@ -523,20 +527,25 @@ export async function analyzeReviewsWithAI(
     const compressed = compressReviews(reviews as CompressorRawReview[], 40)
     reviewTexts = compressed.compressed
     compressionStats = compressed.stats
-    console.log(`   压缩率: ${compressionStats.compressionRatio}（${compressionStats.originalChars} → ${compressionStats.compressedChars}字符）`)
+    console.log(
+      `   压缩率: ${compressionStats.compressionRatio}（${compressionStats.originalChars} → ${compressionStats.compressedChars}字符）`
+    )
   } else {
     // 原始格式（保持向后兼容）
-    reviewTexts = reviews.slice(0, 50).map((r, idx) => {
-      const ratingNum = parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0')
-      const parts = [
-        `Review ${idx + 1}:`,
-        `Rating: ${ratingNum} stars`,
-        r.verified ? '[Verified Purchase]' : '',
-        `Title: ${r.title || 'N/A'}`,
-        `Body: ${(r.body || '').substring(0, 500)}`, // 限制每条评论最多500字符
-      ]
-      return parts.filter(p => p).join('\n')
-    }).join('\n\n---\n\n')
+    reviewTexts = reviews
+      .slice(0, 50)
+      .map((r, idx) => {
+        const ratingNum = parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0')
+        const parts = [
+          `Review ${idx + 1}:`,
+          `Rating: ${ratingNum} stars`,
+          r.verified ? '[Verified Purchase]' : '',
+          `Title: ${r.title || 'N/A'}`,
+          `Body: ${(r.body || '').substring(0, 500)}`, // 限制每条评论最多500字符
+        ]
+        return parts.filter((p) => p).join('\n')
+      })
+      .join('\n\n---\n\n')
   }
 
   // 📦 从数据库加载prompt模板(版本管理)
@@ -555,7 +564,9 @@ export async function analyzeReviewsWithAI(
 
   // 🔥 2025-12-13修复：强制追加语言指令，确保AI输出目标语言
   // 即使评论是其他语言（如Amazon.com上的意大利语评论），输出也必须是targetCountry语言
-  const languageEnforcedPrompt = prompt + `\n\n⚠️ CRITICAL LANGUAGE REQUIREMENT: Even if some reviews are written in other languages (e.g., Italian, Spanish, French), you MUST translate and output ALL content in ${langName} ONLY. Do NOT preserve the original language of reviews in your output.`
+  const languageEnforcedPrompt =
+    prompt +
+    `\n\n⚠️ CRITICAL LANGUAGE REQUIREMENT: Even if some reviews are written in other languages (e.g., Italian, Spanish, French), you MUST translate and output ALL content in ${langName} ONLY. Do NOT preserve the original language of reviews in your output.`
 
   try {
     // 使用Gemini AI进行分析
@@ -571,12 +582,15 @@ export async function analyzeReviewsWithAI(
       console.warn('⚠️ 未提供cacheKey，使用productName作为fallback。建议传入URL以避免缓存冲突。')
     }
     const performAnalysis = async () => {
-      const aiResponse = await generateContent({
-        operationType: 'review_analysis',
-        prompt: languageEnforcedPrompt,  // 🔥 使用强制语言指令的prompt
-        temperature: 0.5,  // 降低温度确保更准确的提取
-        maxOutputTokens: 8192,  // 增加到8192以避免评论分析被截断
-      }, userId!)
+      const aiResponse = await generateContent(
+        {
+          operationType: 'review_analysis',
+          prompt: languageEnforcedPrompt, // 🔥 使用强制语言指令的prompt
+          temperature: 0.5, // 降低温度确保更准确的提取
+          maxOutputTokens: 8192, // 增加到8192以避免评论分析被截断
+        },
+        userId!
+      )
 
       // 记录token使用
       if (aiResponse.usage) {
@@ -593,7 +607,7 @@ export async function analyzeReviewsWithAI(
           outputTokens: aiResponse.usage.outputTokens,
           totalTokens: aiResponse.usage.totalTokens,
           cost,
-          apiType: aiResponse.apiType
+          apiType: aiResponse.apiType,
         })
       }
 
@@ -620,7 +634,11 @@ export async function analyzeReviewsWithAI(
     const result: ReviewAnalysisResult = {
       totalReviews: reviews.length,
       averageRating: parseFloat(avgRating.toFixed(1)),
-      sentimentDistribution: analysisData.sentimentDistribution || { positive: 0, neutral: 0, negative: 0 },
+      sentimentDistribution: analysisData.sentimentDistribution || {
+        positive: 0,
+        neutral: 0,
+        negative: 0,
+      },
       topPositiveKeywords: analysisData.topPositiveKeywords || [],
       topNegativeKeywords: analysisData.topNegativeKeywords || [],
       realUseCases: analysisData.realUseCases || [],
@@ -641,14 +659,15 @@ export async function analyzeReviewsWithAI(
     console.log(`   - 痛点: ${result.commonPainPoints.length}个`)
     // 🔥 v3.2新增日志
     if (result.quantitativeHighlights && result.quantitativeHighlights.length > 0) {
-      console.log(`   - 量化数据: ${result.quantitativeHighlights.length}个 (${result.quantitativeHighlights.map(q => q.adCopy).join(', ')})`)
+      console.log(
+        `   - 量化数据: ${result.quantitativeHighlights.length}个 (${result.quantitativeHighlights.map((q) => q.adCopy).join(', ')})`
+      )
     }
     if (result.competitorMentions && result.competitorMentions.length > 0) {
-      console.log(`   - 竞品提及: ${result.competitorMentions.map(c => c.brand).join(', ')}`)
+      console.log(`   - 竞品提及: ${result.competitorMentions.map((c) => c.brand).join(', ')}`)
     }
 
     return result
-
   } catch (error: any) {
     console.error('❌ AI评论分析失败:', error.message)
     return getEmptyAnalysisResult()
@@ -685,28 +704,27 @@ function getEmptyAnalysisResult(): ReviewAnalysisResult {
  */
 function generateSimplifiedAnalysis(reviews: RawReview[]): ReviewAnalysisResult {
   // 计算基础统计
-  const verifiedCount = reviews.filter(r => r.verified).length
+  const verifiedCount = reviews.filter((r) => r.verified).length
   const ratingsArray = reviews
-    .map(r => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0'))
-    .filter(rating => rating > 0)
-  const avgRating = ratingsArray.length > 0
-    ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length
-    : 0
+    .map((r) => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0'))
+    .filter((rating) => rating > 0)
+  const avgRating =
+    ratingsArray.length > 0 ? ratingsArray.reduce((sum, r) => sum + r, 0) / ratingsArray.length : 0
 
   // 计算情感分布
-  const positiveCount = ratingsArray.filter(r => r >= 4).length
-  const neutralCount = ratingsArray.filter(r => r === 3).length
-  const negativeCount = ratingsArray.filter(r => r <= 2).length
+  const positiveCount = ratingsArray.filter((r) => r >= 4).length
+  const neutralCount = ratingsArray.filter((r) => r === 3).length
+  const negativeCount = ratingsArray.filter((r) => r <= 2).length
   const total = ratingsArray.length || 1
 
   // 从评论标题提取关键词（简化版）
   const positiveTitles = reviews
-    .filter(r => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0') >= 4 && r.title)
-    .map(r => r.title!)
+    .filter((r) => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0') >= 4 && r.title)
+    .map((r) => r.title!)
 
   const negativeTitles = reviews
-    .filter(r => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0') <= 2 && r.title)
-    .map(r => r.title!)
+    .filter((r) => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0') <= 2 && r.title)
+    .map((r) => r.title!)
 
   console.log(`✅ 简化分析完成: ${reviews.length}条评论, 平均评分${avgRating.toFixed(1)}星`)
 
@@ -718,17 +736,17 @@ function generateSimplifiedAnalysis(reviews: RawReview[]): ReviewAnalysisResult 
       neutral: Math.round((neutralCount / total) * 100),
       negative: Math.round((negativeCount / total) * 100),
     },
-    topPositiveKeywords: positiveTitles.slice(0, 3).map(title => ({
+    topPositiveKeywords: positiveTitles.slice(0, 3).map((title) => ({
       keyword: title.substring(0, 50),
       frequency: 1,
       sentiment: 'positive' as const,
     })),
-    topNegativeKeywords: negativeTitles.slice(0, 3).map(title => ({
+    topNegativeKeywords: negativeTitles.slice(0, 3).map((title) => ({
       keyword: title.substring(0, 50),
       frequency: 1,
       sentiment: 'negative' as const,
     })),
-    realUseCases: [],  // 需要AI分析才能提取
+    realUseCases: [], // 需要AI分析才能提取
     purchaseReasons: [], // 需要AI分析才能提取
     userProfiles: [], // 需要AI分析才能提取
     commonPainPoints: [], // 需要AI分析才能提取
@@ -746,10 +764,10 @@ function generateSimplifiedAnalysis(reviews: RawReview[]): ReviewAnalysisResult 
  * @returns 结构化的洞察摘要
  */
 export function extractAdCreativeInsights(analysis: ReviewAnalysisResult): {
-  headlineSuggestions: string[]     // 适合用作广告标题的关键词
-  descriptionHighlights: string[]   // 适合用作广告描述的卖点
-  painPointAddressing: string[]     // 需要在广告中解决的痛点
-  targetAudienceHints: string[]     // 目标受众描述
+  headlineSuggestions: string[] // 适合用作广告标题的关键词
+  descriptionHighlights: string[] // 适合用作广告描述的卖点
+  painPointAddressing: string[] // 需要在广告中解决的痛点
+  targetAudienceHints: string[] // 目标受众描述
 } {
   const insights = {
     headlineSuggestions: [] as string[],
@@ -760,31 +778,27 @@ export function extractAdCreativeInsights(analysis: ReviewAnalysisResult): {
 
   // 从正面关键词提取标题建议（高频 + 情感积极）
   insights.headlineSuggestions = analysis.topPositiveKeywords
-    .filter(kw => kw.frequency >= 5)  // 至少被提及5次
+    .filter((kw) => kw.frequency >= 5) // 至少被提及5次
     .slice(0, 5)
-    .map(kw => kw.keyword)
+    .map((kw) => kw.keyword)
 
   // 从使用场景和正面关键词提取描述亮点
   insights.descriptionHighlights = [
     ...analysis.realUseCases
-      .filter(uc => uc.mentions >= 3)
+      .filter((uc) => uc.mentions >= 3)
       .slice(0, 3)
-      .map(uc => uc.scenario),
-    ...analysis.topPositiveKeywords
-      .slice(0, 3)
-      .map(kw => kw.keyword)
+      .map((uc) => uc.scenario),
+    ...analysis.topPositiveKeywords.slice(0, 3).map((kw) => kw.keyword),
   ]
 
   // 从痛点提取需要解决的问题（用于差异化广告）
   insights.painPointAddressing = analysis.commonPainPoints
-    .filter(pp => pp.severity === 'critical' || pp.severity === 'moderate')
+    .filter((pp) => pp.severity === 'critical' || pp.severity === 'moderate')
     .slice(0, 3)
-    .map(pp => pp.issue)
+    .map((pp) => pp.issue)
 
   // 从用户画像提取目标受众提示
-  insights.targetAudienceHints = analysis.userProfiles
-    .slice(0, 3)
-    .map(up => up.profile)
+  insights.targetAudienceHints = analysis.userProfiles.slice(0, 3).map((up) => up.profile)
 
   return insights
 }

@@ -13,7 +13,7 @@ import {
   FolderOpen,
   PackageOpen,
   Users,
-  LucideIcon
+  LucideIcon,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,7 +22,14 @@ interface EmptyStateProps {
   /**
    * 空状态类型 - 预定义常见场景
    */
-  variant?: 'no-data' | 'no-results' | 'no-offers' | 'no-campaigns' | 'no-users' | 'error' | 'custom'
+  variant?:
+    | 'no-data'
+    | 'no-results'
+    | 'no-offers'
+    | 'no-campaigns'
+    | 'no-users'
+    | 'error'
+    | 'custom'
   /**
    * 标题文本
    */
@@ -99,13 +106,13 @@ const variantConfig = {
     description: '系统中还没有用户数据',
     iconColor: 'text-purple-500',
   },
-  'error': {
+  error: {
     icon: AlertCircle,
     title: '加载失败',
     description: '数据加载时出现问题，请重试',
     iconColor: 'text-red-500',
   },
-  'custom': {
+  custom: {
     icon: Inbox,
     title: '暂无内容',
     description: '',
@@ -143,15 +150,11 @@ export function EmptyState({
       </div>
 
       {/* Title */}
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-        {displayTitle}
-      </h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">{displayTitle}</h3>
 
       {/* Description */}
       {displayDescription && (
-        <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">
-          {displayDescription}
-        </p>
+        <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">{displayDescription}</p>
       )}
 
       {/* Actions */}
@@ -192,7 +195,7 @@ export const NoDataState = ({
   title,
   description,
   actionLabel,
-  onAction
+  onAction,
 }: Partial<EmptyStateProps>) => (
   <EmptyState
     variant="no-data"
@@ -204,38 +207,21 @@ export const NoDataState = ({
 )
 
 export const NoResultsState = ({
-  description = '尝试调整搜索条件或筛选器'
-}: Partial<EmptyStateProps>) => (
-  <EmptyState
-    variant="no-results"
-    description={description}
-  />
+  description = '尝试调整搜索条件或筛选器',
+}: Partial<EmptyStateProps>) => <EmptyState variant="no-results" description={description} />
+
+export const NoOffersState = ({ onAction }: Partial<EmptyStateProps>) => (
+  <EmptyState variant="no-offers" actionLabel="创建Offer" onAction={onAction} />
 )
 
-export const NoOffersState = ({
-  onAction
-}: Partial<EmptyStateProps>) => (
-  <EmptyState
-    variant="no-offers"
-    actionLabel="创建Offer"
-    onAction={onAction}
-  />
-)
-
-export const NoCampaignsState = ({
-  onAction
-}: Partial<EmptyStateProps>) => (
-  <EmptyState
-    variant="no-campaigns"
-    actionLabel="创建Campaign"
-    onAction={onAction}
-  />
+export const NoCampaignsState = ({ onAction }: Partial<EmptyStateProps>) => (
+  <EmptyState variant="no-campaigns" actionLabel="创建Campaign" onAction={onAction} />
 )
 
 export const ErrorState = ({
   description,
   actionLabel = '重新加载',
-  onAction
+  onAction,
 }: Partial<EmptyStateProps>) => (
   <EmptyState
     variant="error"

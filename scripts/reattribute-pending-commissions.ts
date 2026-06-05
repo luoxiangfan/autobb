@@ -77,7 +77,7 @@ async function main() {
     console.log(`   Pending: $${totalCommission.toFixed(2)} (${groupFailures.length} entries)`)
 
     // Delete existing failure records for these entries
-    const failureIds = groupFailures.map(f => f.id)
+    const failureIds = groupFailures.map((f) => f.id)
     await db.exec(
       `DELETE FROM openclaw_affiliate_attribution_failures WHERE id IN (${failureIds.map(() => '?').join(',')})`,
       failureIds
@@ -87,7 +87,7 @@ async function main() {
     const result = await persistAffiliateCommissionAttributions({
       userId: userIdNum,
       reportDate,
-      entries: groupFailures.map(f => ({
+      entries: groupFailures.map((f) => ({
         platform: f.platform as 'partnerboost' | 'yeahpromos',
         reportDate: f.report_date,
         commission: Number(f.commission_amount),

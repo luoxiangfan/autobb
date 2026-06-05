@@ -25,9 +25,7 @@ describe('parseLaunchScoreHashCampaignConfig', () => {
 
   it('parses JSON string', () => {
     expect(
-      parseLaunchScoreHashCampaignConfig(
-        JSON.stringify({ budgetAmount: 12, maxCpcBid: 0.2 })
-      )
+      parseLaunchScoreHashCampaignConfig(JSON.stringify({ budgetAmount: 12, maxCpcBid: 0.2 }))
     ).toEqual({
       budgetAmount: 12,
       maxCpcBid: 0.2,

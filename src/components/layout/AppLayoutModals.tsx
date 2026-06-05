@@ -52,15 +52,19 @@ interface UserProfileModalProps {
   onLogout: () => void
 }
 
-export function UserProfileModal({ open, onOpenChange, user, onOpenPasswordModal, onLogout }: UserProfileModalProps) {
+export function UserProfileModal({
+  open,
+  onOpenChange,
+  user,
+  onOpenPasswordModal,
+  onLogout,
+}: UserProfileModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>个人中心</DialogTitle>
-          <DialogDescription>
-            查看和管理您的账号信息
-          </DialogDescription>
+          <DialogDescription>查看和管理您的账号信息</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           {/* User Avatar */}
@@ -196,9 +200,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>修改密码</DialogTitle>
-          <DialogDescription>
-            请输入当前密码和新密码
-          </DialogDescription>
+          <DialogDescription>请输入当前密码和新密码</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
@@ -208,7 +210,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                 id="currentPassword"
                 type={showCurrent ? 'text' : 'password'}
                 value={form.currentPassword}
-                onChange={(e) => setForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
                 placeholder="输入当前密码"
               />
               <button
@@ -228,7 +230,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                 id="newPassword"
                 type={showNew ? 'text' : 'password'}
                 value={form.newPassword}
-                onChange={(e) => setForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, newPassword: e.target.value }))}
                 placeholder="输入新密码（至少8位）"
               />
               <button
@@ -248,7 +250,7 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
                 id="confirmPassword"
                 type={showConfirm ? 'text' : 'password'}
                 value={form.confirmPassword}
-                onChange={(e) => setForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
                 placeholder="再次输入新密码"
               />
               <button
@@ -262,18 +264,10 @@ export function ChangePasswordModal({ open, onOpenChange }: ChangePasswordModalP
           </div>
 
           <div className="flex gap-3 pt-4">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               取消
             </Button>
-            <Button
-              className="flex-1"
-              onClick={handleSubmit}
-              disabled={loading}
-            >
+            <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
               {loading ? '修改中...' : '确认修改'}
             </Button>
           </div>

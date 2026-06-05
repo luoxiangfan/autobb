@@ -155,7 +155,9 @@ function toObject(value: unknown): Record<string, unknown> | null {
 
 function extractEventId(rawPayload: unknown, row: RawEventRow): string | null {
   const raw = toObject(rawPayload)
-  const payloadId = normalizeText(getObjectFieldByAliases(raw, ['_autoads_event_id', 'id', 'event_id', 'eventId']))
+  const payloadId = normalizeText(
+    getObjectFieldByAliases(raw, ['_autoads_event_id', 'id', 'event_id', 'eventId'])
+  )
   if (payloadId) {
     return payloadId.includes('|') ? payloadId : `${row.platform}|${payloadId}`
   }
@@ -171,11 +173,20 @@ function extractEventId(rawPayload: unknown, row: RawEventRow): string | null {
   return fallback
 }
 
-
 function parseRawCommission(rawPayload: unknown): number | null {
   const raw = toObject(rawPayload)
   const candidates = [
-    getObjectFieldByAliases(raw, ['sale_comm', 'saleComm', 'commission', 'commission_amount', 'commissionAmount', 'estCommission', 'est_commission', 'earning', 'earnings']),
+    getObjectFieldByAliases(raw, [
+      'sale_comm',
+      'saleComm',
+      'commission',
+      'commission_amount',
+      'commissionAmount',
+      'estCommission',
+      'est_commission',
+      'earning',
+      'earnings',
+    ]),
   ]
   for (const candidate of candidates) {
     const value = Number(candidate)
@@ -198,8 +209,7 @@ function extractBrand(rawPayload: unknown, row: RawEventRow): string | null {
       'merchantName',
       'seller_name',
       'sellerName',
-    ])
-      ?? row.offer_brand
+    ]) ?? row.offer_brand
   )
 }
 
@@ -207,7 +217,6 @@ function ensurePlatform(value: string): AffiliatePlatform {
   if (value === 'partnerboost' || value === 'yeahpromos') return value
   throw new Error(`未知平台: ${value}`)
 }
-
 
 function expandEventIds(eventIds: string[]): string[] {
   const expanded = new Set<string>()
@@ -230,11 +239,14 @@ function getStoredEventIdSql(dbType: DatabaseAdapter['type'], rawColumn = 'raw_p
   return `COALESCE(NULLIF(TRIM(json_extract(${rawColumn}, '$._autoads_event_id')), ''), NULLIF(TRIM(json_extract(${rawColumn}, '$.id')), ''))`
 }
 
-async function loadRawRows(db: DatabaseAdapter, params: {
-  userId: number
-  startDate: string
-  endDate: string
-}): Promise<RawEventRow[]> {
+async function loadRawRows(
+  db: DatabaseAdapter,
+  params: {
+    userId: number
+    startDate: string
+    endDate: string
+  }
+): Promise<RawEventRow[]> {
   const attributedRows = await db.query<RawEventRow>(
     `
       SELECT
@@ -284,7 +296,10 @@ async function loadRawRows(db: DatabaseAdapter, params: {
     )
   } catch (error: any) {
     const message = String(error?.message || '')
-    if (!/openclaw_affiliate_attribution_failures/i.test(message) || !/(no such table|does not exist)/i.test(message)) {
+    if (
+      !/openclaw_affiliate_attribution_failures/i.test(message) ||
+      !/(no such table|does not exist)/i.test(message)
+    ) {
       throw error
     }
   }
@@ -342,10 +357,13 @@ function groupEvents(rows: RawEventRow[], normalizedTargetBrand: string): Reattr
   }))
 }
 
-async function deleteEvents(db: DatabaseAdapter, params: {
-  userId: number
-  eventIds: string[]
-}): Promise<void> {
+async function deleteEvents(
+  db: DatabaseAdapter,
+  params: {
+    userId: number
+    eventIds: string[]
+  }
+): Promise<void> {
   if (params.eventIds.length === 0) return
   const eventIdExpr = getStoredEventIdSql(db.type)
   const queryEventIds = expandEventIds(params.eventIds)
@@ -374,7 +392,10 @@ async function deleteEvents(db: DatabaseAdapter, params: {
       )
     } catch (error: any) {
       const message = String(error?.message || '')
-      if (!/openclaw_affiliate_attribution_failures/i.test(message) || !/(no such table|does not exist)/i.test(message)) {
+      if (
+        !/openclaw_affiliate_attribution_failures/i.test(message) ||
+        !/(no such table|does not exist)/i.test(message)
+      ) {
         throw error
       }
     }
@@ -418,7 +439,9 @@ async function main() {
     return
   }
 
-  for (const [reportDate, list] of Array.from(eventsByDate.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [reportDate, list] of Array.from(eventsByDate.entries()).sort(([a], [b]) =>
+    a.localeCompare(b)
+  )) {
     const total = roundTo(list.reduce((sum, item) => sum + item.commission, 0))
     console.log(`  - ${reportDate}: ${list.length} events / ${total.toFixed(4)} commission`)
   }
@@ -433,7 +456,9 @@ async function main() {
     eventIds: events.map((event) => event.eventId),
   })
 
-  for (const [reportDate, list] of Array.from(eventsByDate.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [reportDate, list] of Array.from(eventsByDate.entries()).sort(([a], [b]) =>
+    a.localeCompare(b)
+  )) {
     const result = await persistAffiliateCommissionAttributions({
       userId: args.userId,
       reportDate,

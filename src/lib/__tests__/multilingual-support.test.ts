@@ -33,7 +33,7 @@ describe('多语言支持 - 国际化配置验证', () => {
     ]
 
     it('应该为所有 13 种语言提供代码映射', () => {
-      supportedLanguages.forEach(lang => {
+      supportedLanguages.forEach((lang) => {
         const code = normalizeLanguageCode(lang)
         expect(code).toBeTruthy()
         expect(code.length).toBeLessThanOrEqual(5)
@@ -65,8 +65,22 @@ describe('多语言支持 - 国际化配置验证', () => {
     })
 
     it('应该支持语言代码直接输入', () => {
-      const codes = ['en', 'zh', 'es', 'de', 'fr', 'it', 'pt', 'ja', 'ko', 'ru', 'ar', 'sv', 'de-ch']
-      codes.forEach(code => {
+      const codes = [
+        'en',
+        'zh',
+        'es',
+        'de',
+        'fr',
+        'it',
+        'pt',
+        'ja',
+        'ko',
+        'ru',
+        'ar',
+        'sv',
+        'de-ch',
+      ]
+      codes.forEach((code) => {
         const result = normalizeLanguageCode(code)
         expect(result.toLowerCase()).toBe(code.toLowerCase())
       })
@@ -75,9 +89,23 @@ describe('多语言支持 - 国际化配置验证', () => {
 
   describe('Google Ads 语言代码映射', () => {
     it('应该为所有语言提供有效的 Google Ads 代码', () => {
-      const languages = ['en', 'zh', 'es', 'de', 'fr', 'it', 'pt', 'ja', 'ko', 'ru', 'ar', 'sv', 'de-ch']
+      const languages = [
+        'en',
+        'zh',
+        'es',
+        'de',
+        'fr',
+        'it',
+        'pt',
+        'ja',
+        'ko',
+        'ru',
+        'ar',
+        'sv',
+        'de-ch',
+      ]
 
-      languages.forEach(lang => {
+      languages.forEach((lang) => {
         const gadsCode = getGoogleAdsLanguageCode(lang)
         expect(gadsCode).toBeTruthy()
         expect(typeof gadsCode).toBe('number')
@@ -103,14 +131,30 @@ describe('多语言支持 - 国际化配置验证', () => {
 
   describe('语言-国家对应关系', () => {
     it('应该为每种语言提供至少一个国家', () => {
-      const languages = ['en', 'zh', 'es', 'de', 'fr', 'it', 'pt', 'ja', 'ko', 'ru', 'ar', 'sv', 'de-ch']
+      const languages = [
+        'en',
+        'zh',
+        'es',
+        'de',
+        'fr',
+        'it',
+        'pt',
+        'ja',
+        'ko',
+        'ru',
+        'ar',
+        'sv',
+        'de-ch',
+      ]
 
-      languages.forEach(lang => {
+      languages.forEach((lang) => {
         const countries = LANGUAGE_COUNTRY_PAIRS[lang]
         expect(countries).toBeDefined()
         expect(Array.isArray(countries)).toBe(true)
         expect(countries.length).toBeGreaterThan(0)
-        console.log(`✅ ${lang} → ${countries.length} 个国家: ${countries.slice(0, 3).join(', ')}...`)
+        console.log(
+          `✅ ${lang} → ${countries.length} 个国家: ${countries.slice(0, 3).join(', ')}...`
+        )
       })
     })
 
@@ -154,9 +198,23 @@ describe('多语言支持 - 国际化配置验证', () => {
 
   describe('国家代码映射', () => {
     it('应该为所有主要国家提供代码映射', () => {
-      const countries = ['US', 'CN', 'ES', 'DE', 'FR', 'IT', 'PT', 'JP', 'KR', 'RU', 'SA', 'SE', 'CH']
+      const countries = [
+        'US',
+        'CN',
+        'ES',
+        'DE',
+        'FR',
+        'IT',
+        'PT',
+        'JP',
+        'KR',
+        'RU',
+        'SA',
+        'SE',
+        'CH',
+      ]
 
-      countries.forEach(country => {
+      countries.forEach((country) => {
         const code = normalizeCountryCode(country)
         expect(code).toBeTruthy()
         expect(code.length).toBeLessThanOrEqual(5)
@@ -250,14 +308,20 @@ describe('多语言支持 - 字符限制和格式验证', () => {
       const testDescriptions = [
         { text: 'Premium quality robot vacuum with smart navigation', lang: 'en', valid: true },
         { text: '智能导航，自动清扫，超长续航，官方正品保证', lang: 'zh', valid: true },
-        { text: 'Aspirador robótico inteligente con navegación avanzada y batería de larga duración para limpiar toda tu casa', lang: 'es', valid: false }, // 超过 90 字符
+        {
+          text: 'Aspirador robótico inteligente con navegación avanzada y batería de larga duración para limpiar toda tu casa',
+          lang: 'es',
+          valid: false,
+        }, // 超过 90 字符
       ]
 
       testDescriptions.forEach(({ text, lang, valid }) => {
         const charCount = text.length
         const isValid = charCount <= 90
         expect(isValid).toBe(valid)
-        console.log(`${isValid ? '✅' : '❌'} [${lang}] "${text.substring(0, 40)}..." (${charCount} 字符)`)
+        console.log(
+          `${isValid ? '✅' : '❌'} [${lang}] "${text.substring(0, 40)}..." (${charCount} 字符)`
+        )
       })
     })
   })
@@ -275,7 +339,7 @@ describe('多语言支持 - 字符限制和格式验证', () => {
         const wordCount = keyword.split(/\s+/).length
         // 修复: CJK语言（中日韩）通常无空格，放宽为 >= 1
         const isCJK = ['zh', 'ja', 'ko'].includes(lang)
-        const isValid = isCJK ? wordCount >= 1 : (wordCount >= 2 && wordCount <= 4)
+        const isValid = isCJK ? wordCount >= 1 : wordCount >= 2 && wordCount <= 4
         expect(isValid).toBe(valid)
         console.log(`${isValid ? '✅' : '❌'} [${lang}] "${keyword}" (${wordCount} 单词)`)
       })
@@ -290,7 +354,8 @@ describe('多语言支持 - 字符限制和格式验证', () => {
       ]
 
       testKeywords.forEach(({ keyword, valid }) => {
-        const hasSpecialChars = /[^a-zA-Z0-9\s\u4e00-\u9fff\u3040-\u309f\uac00-\ud7af\u0600-\u06ff]/.test(keyword)
+        const hasSpecialChars =
+          /[^a-zA-Z0-9\s\u4e00-\u9fff\u3040-\u309f\uac00-\ud7af\u0600-\u06ff]/.test(keyword)
         const isValid = !hasSpecialChars
         expect(isValid).toBe(valid)
       })
@@ -362,11 +427,15 @@ describe('多语言支持 - 字符限制和格式验证', () => {
         const hasKorean = /[\uac00-\ud7af]/.test(text)
         const hasArabic = /[\u0600-\u06ff]/.test(text)
 
-        const languageCount = [hasEnglish, hasChinese, hasJapanese, hasKorean, hasArabic].filter(Boolean).length
+        const languageCount = [hasEnglish, hasChinese, hasJapanese, hasKorean, hasArabic].filter(
+          Boolean
+        ).length
         const actuallyMixed = languageCount > 1
 
         expect(actuallyMixed).toBe(isMixed)
-        console.log(`${actuallyMixed === isMixed ? '✅' : '❌'} [${lang}] "${text}" (混合: ${actuallyMixed})`)
+        console.log(
+          `${actuallyMixed === isMixed ? '✅' : '❌'} [${lang}] "${text}" (混合: ${actuallyMixed})`
+        )
       })
     })
   })
@@ -409,7 +478,7 @@ describe('多语言支持 - AI 分析服务验证', () => {
         'Chinese',
       ]
 
-      testCases.forEach(input => {
+      testCases.forEach((input) => {
         const result = normalizeLanguageCode(input)
         expect(result).toBeTruthy()
         expect(result.length).toBeGreaterThan(0)
@@ -419,9 +488,23 @@ describe('多语言支持 - AI 分析服务验证', () => {
 
   describe('Google Ads API 兼容性', () => {
     it('所有语言代码应该在 Google Ads 支持的范围内', () => {
-      const languages = ['en', 'zh', 'es', 'de', 'fr', 'it', 'pt', 'ja', 'ko', 'ru', 'ar', 'sv', 'de-ch']
+      const languages = [
+        'en',
+        'zh',
+        'es',
+        'de',
+        'fr',
+        'it',
+        'pt',
+        'ja',
+        'ko',
+        'ru',
+        'ar',
+        'sv',
+        'de-ch',
+      ]
 
-      languages.forEach(lang => {
+      languages.forEach((lang) => {
         const gadsCode = getGoogleAdsLanguageCode(lang)
         // Google Ads 语言代码通常在 1000-1100 范围内
         expect(gadsCode).toBeGreaterThan(0)

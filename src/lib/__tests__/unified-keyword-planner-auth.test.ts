@@ -16,8 +16,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
       accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
-    keywordPlannerVolumeAuthFromPrepared:
-      accountsAuthFns.keywordPlannerVolumeAuthFromPrepared,
+    keywordPlannerVolumeAuthFromPrepared: accountsAuthFns.keywordPlannerVolumeAuthFromPrepared,
   }
 })
 
@@ -57,10 +56,7 @@ describe('prepareKeywordPlannerSessionAuth', () => {
     })
     expect(built.preparedOAuth?.authContext).toBe(defaultOAuthAuthContext)
     expect(result.session.volumeAuth.authType).toBe('oauth')
-    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(
-      7,
-      null
-    )
+    expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(7, null)
   })
 
   it('returns ok:false when prepare fails (no fallback path)', async () => {

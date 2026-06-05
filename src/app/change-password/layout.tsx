@@ -10,11 +10,7 @@ export const metadata = createMetadata({
   noIndex: true, // 不需要被搜索引擎索引
 })
 
-export default function ChangePasswordLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function ChangePasswordLayout({ children }: { children: React.ReactNode }) {
   // 不使用AppLayout，避免显示侧边栏
   return <>{children}</>
 }

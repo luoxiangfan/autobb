@@ -36,7 +36,8 @@ describe('ProxyPoolManager.checkProxyHealth', () => {
     const { ProxyPoolManager } = await import('./url-resolver-enhanced')
     const pool = new ProxyPoolManager()
 
-    const providerUrl = 'https://api.iprocket.io/api?username=x&password=y&cc=US&ips=1&proxyType=http&responseType=txt'
+    const providerUrl =
+      'https://api.iprocket.io/api?username=x&password=y&cc=US&ips=1&proxyType=http&responseType=txt'
     const ok = await pool.checkProxyHealth(providerUrl, 1000)
 
     expect(ok).toBe(true)
@@ -58,4 +59,3 @@ describe('ProxyPoolManager.checkProxyHealth', () => {
     expect(axiosHead).toHaveBeenCalled()
   })
 })
-

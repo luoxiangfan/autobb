@@ -132,36 +132,35 @@ describe('createCampaignBackup', () => {
     expect(
       isCampaignBackupOfferUniqueViolation({
         code: '23505',
-        message: 'duplicate key value violates unique constraint "idx_campaign_backups_user_offer_unique"',
+        message:
+          'duplicate key value violates unique constraint "idx_campaign_backups_user_offer_unique"',
       })
     ).toBe(true)
     expect(isCampaignBackupOfferUniqueViolation(new Error('other'))).toBe(false)
   })
 
   it('updates existing row when backup already exists for offer', async () => {
-    mockQueryOne
-      .mockResolvedValueOnce({ id: 42 })
-      .mockResolvedValueOnce({
-        id: 42,
-        user_id: 7,
-        offer_id: 9,
-        campaign_data: '{}',
-        campaign_config: null,
-        backup_type: 'auto',
-        backup_source: 'autoads',
-        backup_version: 1,
-        custom_name: null,
-        campaign_name: 'Existing',
-        budget_amount: 30,
-        budget_type: 'DAILY',
-        target_cpa: null,
-        max_cpc: 2,
-        status: 'PAUSED',
-        google_ads_account_id: 3,
-        created_at: '2026-01-01',
-        updated_at: '2026-01-02',
-        ad_creative_id: null,
-      })
+    mockQueryOne.mockResolvedValueOnce({ id: 42 }).mockResolvedValueOnce({
+      id: 42,
+      user_id: 7,
+      offer_id: 9,
+      campaign_data: '{}',
+      campaign_config: null,
+      backup_type: 'auto',
+      backup_source: 'autoads',
+      backup_version: 1,
+      custom_name: null,
+      campaign_name: 'Existing',
+      budget_amount: 30,
+      budget_type: 'DAILY',
+      target_cpa: null,
+      max_cpc: 2,
+      status: 'PAUSED',
+      google_ads_account_id: 3,
+      created_at: '2026-01-01',
+      updated_at: '2026-01-02',
+      ad_creative_id: null,
+    })
 
     mockExec.mockResolvedValue({ changes: 1 })
 
@@ -297,9 +296,7 @@ describe('syncCampaignBackupAfterPublish', () => {
     const updateSql = String(mockExec.mock.calls[0]?.[0] || '')
     expect(updateSql).toContain('backup_source = ?')
     expect(updateSql).toContain('backup_version = ?')
-    expect(mockExec.mock.calls[0]?.[1]).toEqual(
-      expect.arrayContaining(['autoads', 1, 100, 7])
-    )
+    expect(mockExec.mock.calls[0]?.[1]).toEqual(expect.arrayContaining(['autoads', 1, 100, 7]))
   })
 
   it('prefers publishedSnapshot over stale campaigns.campaign_config', async () => {
@@ -505,9 +502,7 @@ describe('pruneCampaignBackupsForOffer', () => {
 
   it('keeps only the top-ranked backup for user+offer', async () => {
     mockQueryOne.mockResolvedValueOnce({ id: 100 })
-    mockExec
-      .mockResolvedValueOnce({ changes: 2 })
-      .mockResolvedValueOnce({ changes: 0 })
+    mockExec.mockResolvedValueOnce({ changes: 2 }).mockResolvedValueOnce({ changes: 0 })
 
     const deleted = await pruneCampaignBackupsForOffer(9, 7)
     expect(deleted).toBe(2)
@@ -575,7 +570,12 @@ describe('listCampaignBackups', () => {
     expect(countSql).toContain('cb.created_at >=')
     expect(countSql).toContain('cb.backup_source = ?')
     expect(mockQueryOne.mock.calls[0]?.[1]).toEqual(
-      expect.arrayContaining([7, '2026-01-01 00:00:00.000', '2026-01-31 23:59:59.999', 'google_ads'])
+      expect.arrayContaining([
+        7,
+        '2026-01-01 00:00:00.000',
+        '2026-01-31 23:59:59.999',
+        'google_ads',
+      ])
     )
   })
 })

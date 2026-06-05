@@ -76,7 +76,12 @@ describe('GET /api/google-ads/service-account', () => {
       canModify: true,
     })
     listServiceAccountsFn.mockResolvedValue([
-      { id: 'sa-admin', name: 'Admin SA', mcc_customer_id: '111', service_account_email: 'sa@test.com' },
+      {
+        id: 'sa-admin',
+        name: 'Admin SA',
+        mcc_customer_id: '111',
+        service_account_email: 'sa@test.com',
+      },
     ])
 
     const response = await GET(new NextRequest('http://localhost/api/google-ads/service-account'))
@@ -96,7 +101,12 @@ describe('GET /api/google-ads/service-account', () => {
       canModify: true,
     })
     listServiceAccountsFn.mockResolvedValue([
-      { id: 'sa-dual', name: 'Dual SA', mcc_customer_id: '111', service_account_email: 'sa@test.com' },
+      {
+        id: 'sa-dual',
+        name: 'Dual SA',
+        mcc_customer_id: '111',
+        service_account_email: 'sa@test.com',
+      },
     ])
 
     const response = await GET(new NextRequest('http://localhost/api/google-ads/service-account'))

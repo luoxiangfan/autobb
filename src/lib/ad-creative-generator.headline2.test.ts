@@ -12,10 +12,7 @@ describe('selectPrimaryKeywordForHeadline2', () => {
         { keyword: 'redtiger dash cam', searchVolume: 18100 },
       ],
       brand,
-      [
-        'On-Dash Cameras',
-        'REDTIGER 4 Channel 360° View Dash Cam, Dual STARVIS 2, 2.5K Dashcam',
-      ]
+      ['On-Dash Cameras', 'REDTIGER 4 Channel 360° View Dash Cam, Dual STARVIS 2, 2.5K Dashcam']
     )
 
     expect(result.toLowerCase()).toContain('dash')
@@ -43,4 +40,3 @@ describe('selectPrimaryKeywordForHeadline2', () => {
     expect(result.toLowerCase()).toBe('f17')
   })
 })
-

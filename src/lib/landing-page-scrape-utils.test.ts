@@ -14,8 +14,12 @@ vi.mock('bcrypt', () => ({
 describe('landing-page-scrape-utils (presell/int funnels)', () => {
   it('treats /int* and /checkout as presell-style urls', async () => {
     const { isPresellStyleUrl } = await import('./landing-page-scrape-utils')
-    expect(isPresellStyleUrl('https://offer.happybirdy.co/wuzutech/smartbirdfeeder/en/us/int1')).toBe(true)
-    expect(isPresellStyleUrl('https://offer.wuzutech.com/wuzutech/herzp1smartring/en/us/v2/checkout')).toBe(true)
+    expect(
+      isPresellStyleUrl('https://offer.happybirdy.co/wuzutech/smartbirdfeeder/en/us/int1')
+    ).toBe(true)
+    expect(
+      isPresellStyleUrl('https://offer.wuzutech.com/wuzutech/herzp1smartring/en/us/v2/checkout')
+    ).toBe(true)
   })
 
   it('extracts product name from "Brand - Product" title on funnel pages', async () => {
@@ -27,7 +31,10 @@ describe('landing-page-scrape-utils (presell/int funnels)', () => {
       </html>
     `
     const $ = load(html)
-    const name = extractLandingProductName($, 'https://offer.happybirdy.co/wuzutech/smartbirdfeeder/en/us/int1')
+    const name = extractLandingProductName(
+      $,
+      'https://offer.happybirdy.co/wuzutech/smartbirdfeeder/en/us/int1'
+    )
     expect(name).toBe('Smart Bird Feeder')
   })
 

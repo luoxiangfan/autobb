@@ -2,65 +2,65 @@
 // 返回该 Offer 关联的换链接任务信息（如果有）
 
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id';
+import { NextRequest, NextResponse } from 'next/server'
+import { getDatabase } from '@/lib/db'
+import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId) {
-      return NextResponse.json(
-        { error: 'unauthorized', message: '未登录' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'unauthorized', message: '未登录' }, { status: 401 })
     }
 
-    const offerId = parsePositiveIntegerOfferId(params.id);
+    const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
       return NextResponse.json(
         { error: 'invalid_params', message: '无效的 Offer ID' },
         { status: 400 }
-      );
+      )
     }
 
-    const db = await getDatabase();
+    const db = await getDatabase()
 
     // 验证 Offer 是否存在且属于该用户
-    const offer = await db.queryOne<any>(`
+    const offer = await db.queryOne<any>(
+      `
       SELECT id FROM offers WHERE id = ? AND user_id = ?
-    `, [offerId, userId]);
+    `,
+      [offerId, userId]
+    )
 
     if (!offer) {
-      return NextResponse.json(
-        { error: 'not_found', message: 'Offer 不存在' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'not_found', message: 'Offer 不存在' }, { status: 404 })
     }
 
     // 查询该 Offer 关联的换链接任务（不包括已删除的任务）
     // PostgreSQL 使用 is_deleted = FALSE
-    const task = await db.queryOne<any>(`
+    const task = await db.queryOne<any>(
+      `
       SELECT * FROM url_swap_tasks
       WHERE offer_id = ? AND user_id = ? AND is_deleted = FALSE
       ORDER BY created_at DESC
       LIMIT 1
-    `, [offerId, userId]);
+    `,
+      [offerId, userId]
+    )
 
     if (!task) {
       // 没有找到任务，返回 null 表示没有任务
       return NextResponse.json({
         success: true,
         data: null,
-        message: '该 Offer 没有关联的换链接任务'
-      });
+        message: '该 Offer 没有关联的换链接任务',
+      })
     }
 
     // 返回任务信息
@@ -77,14 +77,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         error_message: task.error_message,
         created_at: task.created_at,
         updated_at: task.updated_at,
-      }
-    });
-
+      },
+    })
   } catch (error) {
-    console.error('查询换链接任务失败:', error);
+    console.error('查询换链接任务失败:', error)
     return NextResponse.json(
       { error: 'server_error', message: '查询换链接任务失败' },
       { status: 500 }
-    );
+    )
   }
 }

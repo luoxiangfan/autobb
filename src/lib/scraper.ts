@@ -23,7 +23,10 @@ const PROXY_URL = process.env.PROXY_URL || ''
 /**
  * 获取代理配置（使用新的代理模块）
  */
-async function getProxyAgent(customProxyUrl?: string, userId?: number): Promise<HttpsProxyAgent<string> | undefined> {
+async function getProxyAgent(
+  customProxyUrl?: string,
+  userId?: number
+): Promise<HttpsProxyAgent<string> | undefined> {
   const proxyUrl = customProxyUrl || PROXY_URL
 
   // 检查是否启用代理
@@ -70,7 +73,12 @@ async function getProxyAgent(customProxyUrl?: string, userId?: number): Promise<
  * @param language - 目标语言代码（支持27种语言，如 en, zh, ja, ko, de, fr, es, it, pt, sv, no, da 等）
  * @param userId - 用户ID（用于代理IP缓存隔离）
  */
-export async function scrapeUrl(url: string, customProxyUrl?: string, language?: string, userId?: number): Promise<{
+export async function scrapeUrl(
+  url: string,
+  customProxyUrl?: string,
+  language?: string,
+  userId?: number
+): Promise<{
   html: string
   title: string
   description: string
@@ -83,8 +91,9 @@ export async function scrapeUrl(url: string, customProxyUrl?: string, language?:
     const response = await axios.get(url, {
       timeout: 30000,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': acceptLanguage,
       },
       ...(proxyAgent && { httpsAgent: proxyAgent, httpAgent: proxyAgent as any }),
@@ -97,17 +106,16 @@ export async function scrapeUrl(url: string, customProxyUrl?: string, language?:
     const title = $('title').text() || $('h1').first().text() || ''
 
     // 提取meta描述
-    const description = $('meta[name="description"]').attr('content') ||
-                       $('meta[property="og:description"]').attr('content') || ''
+    const description =
+      $('meta[name="description"]').attr('content') ||
+      $('meta[property="og:description"]').attr('content') ||
+      ''
 
     // 移除script和style标签
     $('script, style, noscript').remove()
 
     // 提取纯文本内容（用于AI分析）
-    const text = $('body').text()
-      .replace(/\s+/g, ' ')
-      .trim()
-      .substring(0, 10000) // 限制文本长度
+    const text = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 10000) // 限制文本长度
 
     return {
       html,
@@ -124,7 +132,11 @@ export async function scrapeUrl(url: string, customProxyUrl?: string, language?:
 /**
  * 验证URL是否可访问
  */
-export async function validateUrl(url: string, customProxyUrl?: string, userId?: number): Promise<{
+export async function validateUrl(
+  url: string,
+  customProxyUrl?: string,
+  userId?: number
+): Promise<{
   isAccessible: boolean
   statusCode?: number
   error?: string
@@ -175,20 +187,21 @@ export interface ScrapedProductData {
   specifications?: Record<string, string>
   packages?: Array<{ name: string; price: string | null; includes: string[] }>
   socialProof?: Array<{ metric: string; value: string }>
-  coreFeatures?: string[]      // 核心卖点
+  coreFeatures?: string[] // 核心卖点
   secondaryFeatures?: string[] // 次要特性
   rating?: string | null
   reviewCount?: string | null
   reviewHighlights?: string[]
   topReviews?: string[]
-  reviews?: Array<{            // 用户评论（Judge.me等评论系统）
-    rating: number            // 评分 1-5
-    date: string              // 日期
-    author: string            // 评论者
-    title: string             // 标题
-    body: string              // 正文
-    verifiedBuyer: boolean    // 是否验证购买
-    images?: string[]         // 评论图片
+  reviews?: Array<{
+    // 用户评论（Judge.me等评论系统）
+    rating: number // 评分 1-5
+    date: string // 日期
+    author: string // 评论者
+    title: string // 标题
+    body: string // 正文
+    verifiedBuyer: boolean // 是否验证购买
+    images?: string[] // 评论图片
   }>
 }
 
@@ -197,28 +210,28 @@ export interface ScrapedProductData {
  */
 export function isAmazonDomain(url: string): boolean {
   const amazonDomains = [
-    'amazon.com',     // 美国
-    'amazon.co.uk',   // 英国
-    'amazon.de',      // 德国
-    'amazon.fr',      // 法国
-    'amazon.it',      // 意大利
-    'amazon.es',      // 西班牙
-    'amazon.co.jp',   // 日本
-    'amazon.ca',      // 加拿大
-    'amazon.com.au',  // 澳大利亚
-    'amazon.in',      // 印度
-    'amazon.com.mx',  // 墨西哥
-    'amazon.nl',      // 荷兰
-    'amazon.pl',      // 波兰
-    'amazon.se',      // 瑞典
-    'amazon.sg',      // 新加坡
-    'amazon.com.br',  // 巴西
-    'amazon.ae',      // 阿联酋
-    'amazon.sa',      // 沙特
-    'amazon.com.tr',  // 土耳其
-    'amazon.eg',      // 埃及
+    'amazon.com', // 美国
+    'amazon.co.uk', // 英国
+    'amazon.de', // 德国
+    'amazon.fr', // 法国
+    'amazon.it', // 意大利
+    'amazon.es', // 西班牙
+    'amazon.co.jp', // 日本
+    'amazon.ca', // 加拿大
+    'amazon.com.au', // 澳大利亚
+    'amazon.in', // 印度
+    'amazon.com.mx', // 墨西哥
+    'amazon.nl', // 荷兰
+    'amazon.pl', // 波兰
+    'amazon.se', // 瑞典
+    'amazon.sg', // 新加坡
+    'amazon.com.br', // 巴西
+    'amazon.ae', // 阿联酋
+    'amazon.sa', // 沙特
+    'amazon.com.tr', // 土耳其
+    'amazon.eg', // 埃及
   ]
-  return amazonDomains.some(domain => url.includes(domain))
+  return amazonDomains.some((domain) => url.includes(domain))
 }
 
 function isPlausibleBrandCandidate(value: string | null): value is string {
@@ -271,7 +284,10 @@ function computeFunnelSuccessUrl(currentUrl: string, successUrl: string): string
 }
 
 function extractMinCurrencyPriceFromText(text: string): string | null {
-  const cleaned = text.replace(/\s+/g, ' ').replace(/[\u00A0\u200B]/g, ' ').trim()
+  const cleaned = text
+    .replace(/\s+/g, ' ')
+    .replace(/[\u00A0\u200B]/g, ' ')
+    .trim()
   if (!cleaned) return null
 
   const re = /([$€£])\s*(\d{1,4}(?:,\d{3})*(?:\.\d{2}))/g
@@ -333,8 +349,9 @@ async function enrichPresellFunnelData(options: {
       const response = await axios.get(nextUrl, {
         timeout: timeoutMs,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': acceptLanguage,
         },
         ...(proxyAgent && { httpsAgent: proxyAgent, httpAgent: proxyAgent as any }),
@@ -361,7 +378,8 @@ async function enrichPresellFunnelData(options: {
 
     if (!data.imageUrls?.length || data.imageUrls.length < 2) {
       const nextImages = extractLandingImages($next, nextUrl, 5)
-      if (nextImages.length > 0) data = { ...data, imageUrls: mergeTopImageUrls(data.imageUrls || [], nextImages, 5) }
+      if (nextImages.length > 0)
+        data = { ...data, imageUrls: mergeTopImageUrls(data.imageUrls || [], nextImages, 5) }
     }
 
     if (data.productPrice && data.imageUrls?.length >= 2) break
@@ -390,7 +408,7 @@ export async function scrapeProductData(
     const proxyAgent = await getProxyAgent(customProxyUrl, userId)
 
     // 🌍 根据目标国家动态生成Accept-Language
-    let acceptLanguage = 'en-US,en;q=0.5'  // 默认英语
+    let acceptLanguage = 'en-US,en;q=0.5' // 默认英语
     if (targetCountry) {
       const langCode = getLanguageCodeForCountry(targetCountry)
       acceptLanguage = getAcceptLanguageHeader(langCode)
@@ -399,9 +417,10 @@ export async function scrapeProductData(
     const response = await axios.get(url, {
       timeout: timeoutMs,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': acceptLanguage,  // 🌍 动态语言支持
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': acceptLanguage, // 🌍 动态语言支持
       },
       ...(proxyAgent && { httpsAgent: proxyAgent, httpAgent: proxyAgent as any }),
     })
@@ -422,7 +441,8 @@ export async function scrapeProductData(
       const baseData = extractGenericData($, url)
 
       // 🔥 presell/int/checkout漏斗页：价格/图片往往只出现在下一跳（int2/checkout）
-      const shouldEnrich = isPresellStyleUrl(url) &&
+      const shouldEnrich =
+        isPresellStyleUrl(url) &&
         (!baseData.productPrice || (baseData.imageUrls?.length || 0) === 0) &&
         !!extractLastFunnelSuccessUrlFromHtml(html) &&
         looksLike29NextFunnelHtml(html)
@@ -483,10 +503,11 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
   const images: string[] = []
 
   // 1. 尝试获取主图（高分辨率）
-  const mainImage = $('#landingImage').attr('src') ||
-                    $('#imgTagWrapperId img').attr('src') ||
-                    $('meta[property="og:image"]').attr('content') ||
-                    null
+  const mainImage =
+    $('#landingImage').attr('src') ||
+    $('#imgTagWrapperId img').attr('src') ||
+    $('meta[property="og:image"]').attr('content') ||
+    null
 
   if (mainImage && !mainImage.includes('data:image')) {
     // 移除尺寸限制以获取原始高分辨率图片
@@ -508,9 +529,8 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
 
   // 3. 如果仍然没有图片，尝试其他选择器
   if (images.length === 0) {
-    const fallbackImage = $('.imgTagWrapper img').attr('src') ||
-                          $('[data-old-hires]').attr('data-old-hires') ||
-                          null
+    const fallbackImage =
+      $('.imgTagWrapper img').attr('src') || $('[data-old-hires]').attr('data-old-hires') || null
     if (fallbackImage && !fallbackImage.includes('data:image')) {
       images.push(fallbackImage.replace(/\._.*_\./, '.'))
     }
@@ -520,14 +540,15 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
   let productPrice: string | null = null
 
   // 尝试多种价格选择器（按优先级排序）
-  productPrice = $('.a-price .a-offscreen').first().text().trim() || // 最常见的价格位置
-                 $('#priceblock_ourprice').text().trim() ||           // 传统价格位置
-                 $('#priceblock_dealprice').text().trim() ||          // Deal价格
-                 $('.a-price-whole').first().text().trim() ||         // 整数部分
-                 $('#price_inside_buybox').text().trim() ||           // Buy box价格
-                 $('[data-a-color="price"]').text().trim() ||         // 数据属性价格
-                 $('.priceToPay .a-offscreen').text().trim() ||       // 支付价格
-                 null
+  productPrice =
+    $('.a-price .a-offscreen').first().text().trim() || // 最常见的价格位置
+    $('#priceblock_ourprice').text().trim() || // 传统价格位置
+    $('#priceblock_dealprice').text().trim() || // Deal价格
+    $('.a-price-whole').first().text().trim() || // 整数部分
+    $('#price_inside_buybox').text().trim() || // Buy box价格
+    $('[data-a-color="price"]').text().trim() || // 数据属性价格
+    $('.priceToPay .a-offscreen').text().trim() || // 支付价格
+    null
 
   // 🔥 增强品牌提取逻辑 - 支持Amazon Store页面和所有主要市场语言
   let bylineInfo = $('#bylineInfo').text().trim()
@@ -597,22 +618,24 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
   bylineInfo = bylineInfo.replace(/\s+स्टोर\s+पर\s+जाएं$/i, '')
 
   // General cleanup for "Brand:" labels in multiple languages
-  bylineInfo = bylineInfo.replace(/^Brand:\s*/i, '')
-    .replace(/^品牌:\s*/i, '')      // Chinese
-    .replace(/^Marca:\s*/i, '')      // Spanish/Italian/Portuguese
-    .replace(/^Marque:\s*/i, '')     // French
-    .replace(/^Marke:\s*/i, '')      // German
-    .replace(/^Merk:\s*/i, '')       // Dutch
-    .replace(/^Marka:\s*/i, '')      // Polish/Turkish
-    .replace(/^Märke:\s*/i, '')      // Swedish
-    .replace(/^ブランド:\s*/i, '')   // Japanese
-    .replace(/^브랜드:\s*/i, '')      // Korean
+  bylineInfo = bylineInfo
+    .replace(/^Brand:\s*/i, '')
+    .replace(/^品牌:\s*/i, '') // Chinese
+    .replace(/^Marca:\s*/i, '') // Spanish/Italian/Portuguese
+    .replace(/^Marque:\s*/i, '') // French
+    .replace(/^Marke:\s*/i, '') // German
+    .replace(/^Merk:\s*/i, '') // Dutch
+    .replace(/^Marka:\s*/i, '') // Polish/Turkish
+    .replace(/^Märke:\s*/i, '') // Swedish
+    .replace(/^ブランド:\s*/i, '') // Japanese
+    .replace(/^브랜드:\s*/i, '') // Korean
     .replace(/^العلامة التجارية:\s*/i, '') // Arabic
 
-  let brandName = bylineInfo ||
-                  dataBrand ||
-                  poBrand.replace(/^Brand/, '') || // 备用选择器
-                  null
+  let brandName =
+    bylineInfo ||
+    dataBrand ||
+    poBrand.replace(/^Brand/, '') || // 备用选择器
+    null
 
   // Guard: avoid persisting locale boilerplate as a brand (e.g. "Besuchen").
   if (isLikelyInvalidBrandName(brandName)) {
@@ -643,7 +666,8 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     productName: productTitle || null,
     rawProductTitle: productTitle || null,
     rawAboutThisItem: features.slice(0, 10),
-    productDescription: $('#feature-bullets').text().trim() || $('#productDescription').text().trim() || null,
+    productDescription:
+      $('#feature-bullets').text().trim() || $('#productDescription').text().trim() || null,
     productPrice,
     productCategory: $('#wayfinding-breadcrumbs_feature_div').text().trim() || null,
     productFeatures: features,
@@ -664,7 +688,9 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
   const secondaryFeatures: string[] = []
 
   // 核心特性：通常在产品主区域、key features、highlights等
-  $('h3:contains("Key Features") + ul li, h3:contains("Features") + ul li, [class*="key-feature"] li, [class*="highlight"] li, [class*="feature"] li:has(strong)').each((i: number, el: any) => {
+  $(
+    'h3:contains("Key Features") + ul li, h3:contains("Features") + ul li, [class*="key-feature"] li, [class*="highlight"] li, [class*="feature"] li:has(strong)'
+  ).each((i: number, el: any) => {
     const text = $(el).text().trim()
     if (text && text.length > 10 && text.length < 300) {
       coreFeatures.push(text)
@@ -683,23 +709,34 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
   const faqs: Array<{ question: string; answer: string }> = []
 
   // 常见FAQ结构：accordion、collapsible、details/summary
-  $('[class*="faq"] [class*="item"], [class*="accordion"] [class*="item"], details').each((i: number, el: any) => {
-    let question = ''
-    let answer = ''
+  $('[class*="faq"] [class*="item"], [class*="accordion"] [class*="item"], details').each(
+    (i: number, el: any) => {
+      let question = ''
+      let answer = ''
 
-    // 尝试多种选择器组合
-    question = $(el).find('h4, h3, summary, [class*="question"], [class*="title"]').first().text().trim()
-    answer = $(el).find('[class*="answer"], [class*="content"], p').map((j: number, p: any) => $(p).text().trim()).get().join('\n').trim()
+      // 尝试多种选择器组合
+      question = $(el)
+        .find('h4, h3, summary, [class*="question"], [class*="title"]')
+        .first()
+        .text()
+        .trim()
+      answer = $(el)
+        .find('[class*="answer"], [class*="content"], p')
+        .map((j: number, p: any) => $(p).text().trim())
+        .get()
+        .join('\n')
+        .trim()
 
-    // 如果是 details/summary 结构
-    if (!answer && $(el).is('details')) {
-      answer = $(el).find('> :not(summary)').text().trim()
+      // 如果是 details/summary 结构
+      if (!answer && $(el).is('details')) {
+        answer = $(el).find('> :not(summary)').text().trim()
+      }
+
+      if (question && answer && question.length > 5 && answer.length > 10) {
+        faqs.push({ question, answer })
+      }
     }
-
-    if (question && answer && question.length > 5 && answer.length > 10) {
-      faqs.push({ question, answer })
-    }
-  })
+  )
 
   console.log(`🔍 [Shopify FAQ] 提取到 ${faqs.length} 个FAQ`)
 
@@ -707,28 +744,34 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
   const specifications: Record<string, string> = {}
 
   // 查找规格表格
-  $('table[class*="spec"], table[class*="technical"], [class*="spec"] table').each((i: number, table: any) => {
-    $(table).find('tr').each((j: number, row: any) => {
-      const cells = $(row).find('td, th')
-      if (cells.length >= 2) {
-        const key = $(cells[0]).text().trim()
-        const value = $(cells[1]).text().trim()
-        if (key && value && key.length < 100 && value.length < 200) {
-          specifications[key] = value
-        }
-      }
-    })
-  })
+  $('table[class*="spec"], table[class*="technical"], [class*="spec"] table').each(
+    (i: number, table: any) => {
+      $(table)
+        .find('tr')
+        .each((j: number, row: any) => {
+          const cells = $(row).find('td, th')
+          if (cells.length >= 2) {
+            const key = $(cells[0]).text().trim()
+            const value = $(cells[1]).text().trim()
+            if (key && value && key.length < 100 && value.length < 200) {
+              specifications[key] = value
+            }
+          }
+        })
+    }
+  )
 
   // 查找规格列表（dl/dt/dd结构）
   $('dl[class*="spec"], [class*="spec"] dl').each((i: number, dl: any) => {
-    $(dl).find('dt').each((j: number, dt: any) => {
-      const key = $(dt).text().trim()
-      const value = $(dt).next('dd').text().trim()
-      if (key && value && key.length < 100 && value.length < 200) {
-        specifications[key] = value
-      }
-    })
+    $(dl)
+      .find('dt')
+      .each((j: number, dt: any) => {
+        const key = $(dt).text().trim()
+        const value = $(dt).next('dd').text().trim()
+        if (key && value && key.length < 100 && value.length < 200) {
+          specifications[key] = value
+        }
+      })
   })
 
   console.log(`🔍 [Shopify Spec] 提取到 ${Object.keys(specifications).length} 个技术参数`)
@@ -736,23 +779,27 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
   // ==================== 4. 包装选项提取 ====================
   const packages: Array<{ name: string; price: string | null; includes: string[] }> = []
 
-  $('[class*="package"] [class*="option"], [class*="variant"] [class*="option"], [class*="tier"]').each((i: number, el: any) => {
+  $(
+    '[class*="package"] [class*="option"], [class*="variant"] [class*="option"], [class*="tier"]'
+  ).each((i: number, el: any) => {
     const name = $(el).find('h3, h4, [class*="name"], [class*="title"]').first().text().trim()
     const priceText = $(el).find('[class*="price"]').first().text().trim()
     const includes: string[] = []
 
-    $(el).find('li, [class*="include"]').each((j: number, item: any) => {
-      const text = $(item).text().trim()
-      if (text && text.length > 3 && text.length < 200) {
-        includes.push(text)
-      }
-    })
+    $(el)
+      .find('li, [class*="include"]')
+      .each((j: number, item: any) => {
+        const text = $(item).text().trim()
+        if (text && text.length > 3 && text.length < 200) {
+          includes.push(text)
+        }
+      })
 
     if (name && (priceText || includes.length > 0)) {
       packages.push({
         name,
         price: priceText || null,
-        includes
+        includes,
       })
     }
   })
@@ -763,7 +810,9 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
   const socialProof: Array<{ metric: string; value: string }> = []
 
   // 查找统计数字（如：18,000+ Installations, 60% Decrease）
-  $('[class*="stat"], [class*="metric"], [class*="proof"], h3:contains("+"), h3:contains("%")').each((i: number, el: any) => {
+  $(
+    '[class*="stat"], [class*="metric"], [class*="proof"], h3:contains("+"), h3:contains("%")'
+  ).each((i: number, el: any) => {
     const text = $(el).text().trim()
     // 匹配数字模式（如：18,000+、60%、100+）
     const numberMatch = text.match(/(\d{1,3}(?:,\d{3})*|\d+)([+%])?/)
@@ -810,14 +859,17 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
       const titleParts = pageTitle.split(/[\|\-]/)
       if (titleParts.length > 0) {
         const firstPart = titleParts[0].trim()
-        brandName = firstPart.replace(/\s+(Store|Shop|Official|Site|Online|Outdoor Life)$/i, '').trim()
+        brandName = firstPart
+          .replace(/\s+(Store|Shop|Official|Site|Online|Outdoor Life)$/i, '')
+          .trim()
         console.log(`✅ [Shopify] 提取的品牌: ${brandName}`)
       }
     }
   }
 
   if (!isPlausibleBrandCandidate(brandName)) {
-    brandName = (isPlausibleBrandCandidate(ogSiteName) ? ogSiteName : null) || deriveBrandFromUrl(url)
+    brandName =
+      (isPlausibleBrandCandidate(ogSiteName) ? ogSiteName : null) || deriveBrandFromUrl(url)
   }
 
   // ==================== 8. 评论数据提取（Judge.me系统）====================
@@ -874,7 +926,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
         title,
         body,
         verifiedBuyer,
-        images: images.length > 0 ? images : undefined
+        images: images.length > 0 ? images : undefined,
       })
     }
   })
@@ -887,17 +939,24 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
   // 尝试1：从 "About [Product Name]" 标题后的列表中提取
   const aboutHeadings = $('h1, h2, h3').filter((i: number, el: any) => {
     const text = $(el).text().trim()
-    return text.startsWith('About ') || text.includes('About Heated') || text.includes('About Oversized')
+    return (
+      text.startsWith('About ') || text.includes('About Heated') || text.includes('About Oversized')
+    )
   })
 
   if (aboutHeadings.length > 0) {
     const descriptionItems: string[] = []
-    aboutHeadings.first().nextAll('ul, ol').first().find('li').each((i: number, el: any) => {
-      const text = $(el).text().trim()
-      if (text && text.length > 20) {
-        descriptionItems.push(text)
-      }
-    })
+    aboutHeadings
+      .first()
+      .nextAll('ul, ol')
+      .first()
+      .find('li')
+      .each((i: number, el: any) => {
+        const text = $(el).text().trim()
+        if (text && text.length > 20) {
+          descriptionItems.push(text)
+        }
+      })
 
     if (descriptionItems.length > 0) {
       productDescription = descriptionItems.join('\n\n')
@@ -907,8 +966,14 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   // 尝试2：从传统选择器提取（排除订阅邮件文字）
   if (!productDescription) {
-    const descText = $('.product-description').text().trim() || $('[class*="product"][class*="description"]').text().trim()
-    if (descText && !descText.includes('Get the latest updates') && !descText.includes('SUBSCRIBE')) {
+    const descText =
+      $('.product-description').text().trim() ||
+      $('[class*="product"][class*="description"]').text().trim()
+    if (
+      descText &&
+      !descText.includes('Get the latest updates') &&
+      !descText.includes('SUBSCRIBE')
+    ) {
       productDescription = descText
     }
   }
@@ -924,7 +989,10 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     rawProductTitle: $('.product-title').text().trim() || $('h1').first().text().trim() || null,
     rawAboutThisItem: [...coreFeatures, ...secondaryFeatures].slice(0, 20),
     productDescription,
-    productPrice: $('.product-price').first().text().trim() || $('[class*="price"]').first().text().trim() || null,
+    productPrice:
+      $('.product-price').first().text().trim() ||
+      $('[class*="price"]').first().text().trim() ||
+      null,
     productCategory: $('.breadcrumbs').text().trim() || null,
     productFeatures: [...coreFeatures, ...secondaryFeatures].slice(0, 20), // 保持向后兼容
     brandName: brandName ? normalizeBrandName(brandName) : null,
@@ -992,7 +1060,10 @@ function extractGenericData($: any, url: string): ScrapedProductData {
         const firstPart = titleParts[0].trim()
         console.log(`📝 第一部分: ${firstPart}`)
         // 移除常见的后缀词和末尾数字
-        brandName = firstPart.replace(/\s+(Store|Shop|Official|Site|Online)$/i, '').replace(/\d+$/, '').trim()
+        brandName = firstPart
+          .replace(/\s+(Store|Shop|Official|Site|Online)$/i, '')
+          .replace(/\d+$/, '')
+          .trim()
         console.log(`✅ 提取的品牌: ${brandName}`)
       }
     }
@@ -1008,12 +1079,10 @@ function extractGenericData($: any, url: string): ScrapedProductData {
   }
 
   const baseProductName =
-    $('h1').text().trim() ||
-    $('[class*="product"][class*="title"]').text().trim() ||
-    null
+    $('h1').text().trim() || $('[class*="product"][class*="title"]').text().trim() || null
 
   const productName = isPresellStyleUrl(url)
-    ? (extractLandingProductName($, url) || baseProductName)
+    ? extractLandingProductName($, url) || baseProductName
     : baseProductName
 
   // 🔥 2026-01-14：补齐“pre/presell advertorial”类型落地页的品牌识别
@@ -1031,10 +1100,7 @@ function extractGenericData($: any, url: string): ScrapedProductData {
     null
 
   const landingDescription = extractLandingDescription({ $, productName })
-  const productDescription =
-    landingDescription ||
-    productDescriptionRaw ||
-    null
+  const productDescription = landingDescription || productDescriptionRaw || null
 
   const productPrice =
     $('[class*="price"]').text().trim() ||
@@ -1048,7 +1114,8 @@ function extractGenericData($: any, url: string): ScrapedProductData {
     rawAboutThisItem: features.slice(0, 10),
     productDescription,
     productPrice,
-    productCategory: $('.breadcrumb').text().trim() || $('[class*="breadcrumb"]').text().trim() || null,
+    productCategory:
+      $('.breadcrumb').text().trim() || $('[class*="breadcrumb"]').text().trim() || null,
     productFeatures: features.slice(0, 10),
     brandName: brandName ? normalizeBrandName(brandName) : null,
     imageUrls: images.slice(0, 5),
@@ -1076,7 +1143,13 @@ export async function extractProductInfo(
 ): Promise<ScrapedProductData> {
   try {
     // 🌍 传入targetCountry到scrapeProductData
-    const productData = await scrapeProductData(url, customProxyUrl, targetCountry, timeoutMs, userId)
+    const productData = await scrapeProductData(
+      url,
+      customProxyUrl,
+      targetCountry,
+      timeoutMs,
+      userId
+    )
 
     // 🔥 直接返回完整的ScrapedProductData，不丢失任何字段
     return productData

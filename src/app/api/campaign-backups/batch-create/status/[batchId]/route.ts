@@ -17,7 +17,7 @@ function parseBatchMetadata(raw: unknown): unknown | null {
  * 查询批量创建任务状态（轮询 fallback）
  */
 export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -29,7 +29,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
 
     const db = await getDatabase()
 
-    const task = await db.queryOne(`
+    const task = (await db.queryOne(
+      `
       SELECT 
         id,
         status,
@@ -42,14 +43,18 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
         metadata
       FROM batch_tasks
       WHERE id = ? AND user_id = ?
-    `, [batchId, userId]) as any
+    `,
+      [batchId, userId]
+    )) as any
 
     if (!task) {
       return NextResponse.json({ error: '任务不存在' }, { status: 404 })
     }
 
     const progress = task.total_count
-      ? Math.round(((task.completed_count || 0) + (task.failed_count || 0)) / task.total_count * 100)
+      ? Math.round(
+          (((task.completed_count || 0) + (task.failed_count || 0)) / task.total_count) * 100
+        )
       : 0
 
     return NextResponse.json({
@@ -66,9 +71,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
     })
   } catch (error: any) {
     console.error('查询任务状态失败:', error)
-    return NextResponse.json(
-      { error: error.message || '查询失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '查询失败' }, { status: 500 })
   }
 }

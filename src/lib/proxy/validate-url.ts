@@ -3,7 +3,7 @@
  */
 export interface ProxyUrlValidation {
   isValid: boolean
-  countryCode: string | null  // ISO2 / ROW (e.g. US, UK, CA, IE, NZ, ROW)
+  countryCode: string | null // ISO2 / ROW (e.g. US, UK, CA, IE, NZ, ROW)
   errors: string[]
 }
 
@@ -152,7 +152,9 @@ export function maskProxyUrl(proxyUrl: string): string {
     if (url.hostname.includes('oxylabs.io')) {
       const ccMatch = url.username.match(/cc-([a-z]{2})/i)
       const cc = ccMatch ? ccMatch[1].toUpperCase() : null
-      return cc ? `${url.protocol}//${url.hostname}:${url.port} (cc-${cc})` : `${url.protocol}//${url.hostname}:${url.port}`
+      return cc
+        ? `${url.protocol}//${url.hostname}:${url.port} (cc-${cc})`
+        : `${url.protocol}//${url.hostname}:${url.port}`
     }
 
     // IPRocket格式：从查询参数提取cc

@@ -17,7 +17,13 @@ function createKeywordRow() {
     offer_id: 77,
     user_id: 1,
     brand_keywords: JSON.stringify([
-      { keyword: 'brandx', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+      {
+        keyword: 'brandx',
+        searchVolume: 1000,
+        source: 'BRAND',
+        matchType: 'EXACT',
+        isPureBrand: true,
+      },
     ]),
     bucket_a_keywords: JSON.stringify([
       { keyword: 'brandx vacuum', searchVolume: 500, source: 'A', matchType: 'PHRASE' },
@@ -85,14 +91,18 @@ function createSoftFamilyOfferContextRow() {
     brand: 'Novilla',
     page_type: 'product',
     category: 'Mattresses',
-    product_name: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
+    product_name:
+      'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
     offer_name: 'Novilla_US_09',
     target_country: 'US',
     target_language: 'en',
     scraped_data: JSON.stringify({
-      rawProductTitle: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
-      productCategory: 'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
-      category: 'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
+      rawProductTitle:
+        'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
+      productCategory:
+        'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
+      category:
+        'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
     }),
     final_url: 'https://example.com/novilla-king-mattress',
     url: 'https://example.com/novilla-king-mattress',
@@ -271,7 +281,13 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'novilla', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'novilla',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([
           { keyword: 'novilla mattress', searchVolume: 500, source: 'A', matchType: 'PHRASE' },
@@ -279,7 +295,12 @@ describe('getKeywords canonical retrieval', () => {
         bucket_b_keywords: JSON.stringify([]),
         bucket_c_keywords: JSON.stringify([]),
         bucket_d_keywords: JSON.stringify([
-          { keyword: 'novilla mattress in a box', searchVolume: 300, source: 'D', matchType: 'PHRASE' },
+          {
+            keyword: 'novilla mattress in a box',
+            searchVolume: 300,
+            source: 'D',
+            matchType: 'PHRASE',
+          },
         ]),
       }
     })
@@ -293,7 +314,9 @@ describe('getKeywords canonical retrieval', () => {
     const keywords = result.keywords.map((item) => item.keyword)
 
     expect(keywords.length).toBeGreaterThan(0)
-    expect(keywords.some((keyword) => keyword.includes('novilla') && keyword.includes('mattress'))).toBe(true)
+    expect(
+      keywords.some((keyword) => keyword.includes('novilla') && keyword.includes('mattress'))
+    ).toBe(true)
     expect(keywords.some((keyword) => /m01035|namm10kwv12/i.test(keyword))).toBe(false)
   })
 
@@ -305,7 +328,13 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'novilla', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'novilla',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([
           { keyword: 'novilla mattress', searchVolume: 500, source: 'A', matchType: 'PHRASE' },
@@ -320,7 +349,9 @@ describe('getKeywords canonical retrieval', () => {
     const keywords = result.keywords.map((item) => item.keyword)
 
     expect(keywords.length).toBeGreaterThan(0)
-    expect(keywords.some((keyword) => keyword.includes('novilla') && keyword.includes('mattress'))).toBe(true)
+    expect(
+      keywords.some((keyword) => keyword.includes('novilla') && keyword.includes('mattress'))
+    ).toBe(true)
   })
 
   it('builds structured model fallback when a hard model code exists but canonical model bucket is empty', async () => {
@@ -331,10 +362,21 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'dreo', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'dreo',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([
-          { keyword: 'dreo portable air conditioner', searchVolume: 5400, source: 'GOOGLE_SUGGEST', matchType: 'PHRASE' },
+          {
+            keyword: 'dreo portable air conditioner',
+            searchVolume: 5400,
+            source: 'GOOGLE_SUGGEST',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_b_keywords: JSON.stringify([]),
         bucket_c_keywords: JSON.stringify([]),
@@ -346,9 +388,7 @@ describe('getKeywords canonical retrieval', () => {
     const keywords = result.keywords.map((item) => item.keyword)
 
     expect(keywords.length).toBeGreaterThan(0)
-    expect(keywords).toEqual(expect.arrayContaining([
-      'dreo ac516s',
-    ]))
+    expect(keywords).toEqual(expect.arrayContaining(['dreo ac516s']))
     expect(result.keywords.some((item) => item.source === 'MODEL_ENTITY_FALLBACK')).toBe(true)
   })
 
@@ -374,18 +414,22 @@ describe('getKeywords canonical retrieval', () => {
       return acc
     }, {})
 
-    expect(normalized['brandx x200 vacuum']).toEqual(expect.objectContaining({
-      source: 'KEYWORD_POOL',
-      sourceType: 'KEYWORD_POOL',
-      sourceSubtype: 'KEYWORD_POOL',
-      matchType: 'PHRASE',
-    }))
-    expect(normalized['brandx x300 vacuum']).toEqual(expect.objectContaining({
-      source: 'HOT_PRODUCT_AGGREGATE',
-      sourceType: 'HOT_PRODUCT_AGGREGATE',
-      sourceSubtype: 'HOT_PRODUCT_AGGREGATE',
-      matchType: 'EXACT',
-    }))
+    expect(normalized['brandx x200 vacuum']).toEqual(
+      expect.objectContaining({
+        source: 'KEYWORD_POOL',
+        sourceType: 'KEYWORD_POOL',
+        sourceSubtype: 'KEYWORD_POOL',
+        matchType: 'PHRASE',
+      })
+    )
+    expect(normalized['brandx x300 vacuum']).toEqual(
+      expect.objectContaining({
+        source: 'HOT_PRODUCT_AGGREGATE',
+        sourceType: 'HOT_PRODUCT_AGGREGATE',
+        sourceSubtype: 'HOT_PRODUCT_AGGREGATE',
+        matchType: 'EXACT',
+      })
+    )
   })
 
   it('deduplicates commercial template variants by canonical concept in brand intent buckets', async () => {
@@ -396,14 +440,45 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'brandx', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'brandx',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([
-          { keyword: 'brandx vacuum', searchVolume: 500, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'brandx vacuum buy', searchVolume: 0, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'buy brandx vacuum', searchVolume: 0, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'brandx vacuum shop', searchVolume: 0, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'brandx vacuum price', searchVolume: 0, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
+          {
+            keyword: 'brandx vacuum',
+            searchVolume: 500,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx vacuum buy',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'buy brandx vacuum',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx vacuum shop',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx vacuum price',
+            searchVolume: 0,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_b_keywords: JSON.stringify([]),
         bucket_c_keywords: JSON.stringify([]),
@@ -429,31 +504,127 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'novilla', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'novilla',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([
-          { keyword: 'novilla king size mattress 12 inch', searchVolume: 50, source: 'GOOGLE_SUGGEST', matchType: 'PHRASE' },
+          {
+            keyword: 'novilla king size mattress 12 inch',
+            searchVolume: 50,
+            source: 'GOOGLE_SUGGEST',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_b_keywords: JSON.stringify([
-          { keyword: 'novilla memory foam mattress', searchVolume: 320, source: 'OFFER_EXTRACTED_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla memory foam mattress topper', searchVolume: 140, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'mattresses', searchVolume: 1900, source: 'KEYWORD_PLANNER', matchType: 'PHRASE' },
-          { keyword: 'novilla 10 inch memory foam mattress', searchVolume: 180, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla 14 inch king mattress', searchVolume: 160, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'king novilla mattress', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla king size memory foam mattress', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress 12', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
+          {
+            keyword: 'novilla memory foam mattress',
+            searchVolume: 320,
+            source: 'OFFER_EXTRACTED_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla memory foam mattress topper',
+            searchVolume: 140,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'mattresses',
+            searchVolume: 1900,
+            source: 'KEYWORD_PLANNER',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla 10 inch memory foam mattress',
+            searchVolume: 180,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla 14 inch king mattress',
+            searchVolume: 160,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'king novilla mattress',
+            searchVolume: 0,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size memory foam mattress',
+            searchVolume: 0,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size mattress 12',
+            searchVolume: 0,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_c_keywords: JSON.stringify([
-          { keyword: 'novilla king size mattress', searchVolume: 260, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-          { keyword: 'novilla king mattress', searchVolume: 210, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-          { keyword: 'novilla mattress king size', searchVolume: 0, source: 'GLOBAL_CORE', matchType: 'PHRASE' },
-          { keyword: 'novilla queen mattress', searchVolume: 240, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-          { keyword: 'novilla twin mattress', searchVolume: 220, source: 'TITLE_EXTRACT', matchType: 'PHRASE' },
-          { keyword: 'buy novilla king size mattress', searchVolume: 120, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress shop', searchVolume: 110, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress pro', searchVolume: 90, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress plus', searchVolume: 80, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
+          {
+            keyword: 'novilla king size mattress',
+            searchVolume: 260,
+            source: 'TITLE_EXTRACT',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king mattress',
+            searchVolume: 210,
+            source: 'TITLE_EXTRACT',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla mattress king size',
+            searchVolume: 0,
+            source: 'GLOBAL_CORE',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla queen mattress',
+            searchVolume: 240,
+            source: 'TITLE_EXTRACT',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla twin mattress',
+            searchVolume: 220,
+            source: 'TITLE_EXTRACT',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'buy novilla king size mattress',
+            searchVolume: 120,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size mattress shop',
+            searchVolume: 110,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size mattress pro',
+            searchVolume: 90,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size mattress plus',
+            searchVolume: 80,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_d_keywords: JSON.stringify([]),
       }
@@ -466,12 +637,14 @@ describe('getKeywords canonical retrieval', () => {
     })
     const keywords = result.keywords.map((item) => item.keyword)
 
-    expect(keywords).toEqual(expect.arrayContaining([
-      'novilla king size mattress 12 inch',
-      'novilla memory foam mattress',
-      'novilla king size mattress',
-      'novilla king mattress',
-    ]))
+    expect(keywords).toEqual(
+      expect.arrayContaining([
+        'novilla king size mattress 12 inch',
+        'novilla memory foam mattress',
+        'novilla king size mattress',
+        'novilla king mattress',
+      ])
+    )
     expect(keywords).not.toContain('mattresses')
     expect(keywords).not.toContain('novilla memory foam mattress topper')
     expect(keywords).not.toContain('king novilla mattress')
@@ -486,12 +659,14 @@ describe('getKeywords canonical retrieval', () => {
     expect(keywords).not.toContain('novilla king size mattress pro')
     expect(keywords).not.toContain('novilla king size mattress plus')
     expect(keywords).toContain('novilla king size memory foam mattress')
-    expect(keywords.slice(0, 4)).toEqual(expect.arrayContaining([
-      'novilla king size mattress',
-      'novilla memory foam mattress',
-      'novilla king mattress',
-      'novilla king size mattress 12 inch',
-    ]))
+    expect(keywords.slice(0, 4)).toEqual(
+      expect.arrayContaining([
+        'novilla king size mattress',
+        'novilla memory foam mattress',
+        'novilla king mattress',
+        'novilla king size mattress 12 inch',
+      ])
+    )
   })
 
   it('injects model-family guard terms when model_intent tightening leaves only hard-blocked sibling variants', async () => {
@@ -502,13 +677,34 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'novilla', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'novilla',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([]),
         bucket_b_keywords: JSON.stringify([
-          { keyword: 'novilla king size mattress pro', searchVolume: 220, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress plus', searchVolume: 210, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'novilla king size mattress ultra', searchVolume: 200, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
+          {
+            keyword: 'novilla king size mattress pro',
+            searchVolume: 220,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size mattress plus',
+            searchVolume: 210,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'novilla king size mattress ultra',
+            searchVolume: 200,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_c_keywords: JSON.stringify([]),
         bucket_d_keywords: JSON.stringify([]),
@@ -523,10 +719,9 @@ describe('getKeywords canonical retrieval', () => {
     const keywords = result.keywords.map((item) => item.keyword)
 
     expect(keywords.length).toBeGreaterThan(0)
-    expect(keywords).toEqual(expect.arrayContaining([
-      'novilla king mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(keywords).toEqual(
+      expect.arrayContaining(['novilla king mattress', 'novilla memory foam mattress'])
+    )
     expect(keywords).not.toContain('novilla king size mattress pro')
     expect(keywords).not.toContain('novilla king size mattress plus')
     expect(keywords).not.toContain('novilla king size mattress ultra')
@@ -540,17 +735,48 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'anker', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'anker',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_a_keywords: JSON.stringify([]),
         bucket_b_keywords: JSON.stringify([
-          { keyword: 'anker x300 portable cooler', searchVolume: 320, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'anker x400 removable battery cooler', searchVolume: 260, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
+          {
+            keyword: 'anker x300 portable cooler',
+            searchVolume: 320,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'anker x400 removable battery cooler',
+            searchVolume: 260,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_c_keywords: JSON.stringify([
-          { keyword: 'anker solix everfrost 2', searchVolume: 880, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'anker everfrost cooler', searchVolume: 110, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
-          { keyword: 'anker solix everfrost 2 58l electric cooler', searchVolume: 40, source: 'GLOBAL_KEYWORDS', matchType: 'PHRASE' },
+          {
+            keyword: 'anker solix everfrost 2',
+            searchVolume: 880,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'anker everfrost cooler',
+            searchVolume: 110,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'anker solix everfrost 2 58l electric cooler',
+            searchVolume: 40,
+            source: 'GLOBAL_KEYWORDS',
+            matchType: 'PHRASE',
+          },
         ]),
         bucket_d_keywords: JSON.stringify([]),
       }
@@ -564,10 +790,9 @@ describe('getKeywords canonical retrieval', () => {
     const keywords = result.keywords.map((item) => item.keyword)
     const rescued = result.keywords.find((item) => item.keyword === 'anker solix everfrost 2')
 
-    expect(keywords).toEqual(expect.arrayContaining([
-      'anker solix everfrost 2',
-      'anker everfrost cooler',
-    ]))
+    expect(keywords).toEqual(
+      expect.arrayContaining(['anker solix everfrost 2', 'anker everfrost cooler'])
+    )
     expect(keywords).not.toContain('anker x300 portable cooler')
     expect(result.keywords.some((item) => item.source === 'MODEL_FAMILY_GUARD')).toBe(false)
     expect(rescued).toMatchObject({
@@ -647,12 +872,34 @@ describe('getKeywords canonical retrieval', () => {
       return {
         ...createKeywordRow(),
         brand_keywords: JSON.stringify([
-          { keyword: 'brandx', searchVolume: 1000, source: 'BRAND', matchType: 'EXACT', isPureBrand: true },
+          {
+            keyword: 'brandx',
+            searchVolume: 1000,
+            source: 'BRAND',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          },
         ]),
         bucket_d_keywords: JSON.stringify([
-          { keyword: 'brandx robot vacuum pet hair', searchVolume: 30, source: 'KEYWORD_POOL', sourceType: 'CANONICAL_BUCKET_VIEW', matchType: 'PHRASE' },
-          { keyword: 'brandx robot vacuum pet hair', searchVolume: 600, source: 'PRODUCT_RELAX_BRANDED', matchType: 'PHRASE' },
-          { keyword: 'brandx cordless robot vacuum', searchVolume: 580, source: 'PRODUCT_RELAX_BRANDED', matchType: 'PHRASE' },
+          {
+            keyword: 'brandx robot vacuum pet hair',
+            searchVolume: 30,
+            source: 'KEYWORD_POOL',
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx robot vacuum pet hair',
+            searchVolume: 600,
+            source: 'PRODUCT_RELAX_BRANDED',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx cordless robot vacuum',
+            searchVolume: 580,
+            source: 'PRODUCT_RELAX_BRANDED',
+            matchType: 'PHRASE',
+          },
         ]),
       }
     })
@@ -663,7 +910,9 @@ describe('getKeywords canonical retrieval', () => {
       maxKeywords: 20,
     })
 
-    const trustedCanonicalKeyword = result.keywords.find((item) => item.keyword === 'brandx robot vacuum pet hair')
+    const trustedCanonicalKeyword = result.keywords.find(
+      (item) => item.keyword === 'brandx robot vacuum pet hair'
+    )
 
     expect(trustedCanonicalKeyword).toMatchObject({
       source: 'KEYWORD_POOL',
@@ -684,15 +933,45 @@ describe('getKeywords canonical retrieval', () => {
           { keyword: 'brandx robot vacuum', searchVolume: 900, source: 'A', matchType: 'PHRASE' },
         ]),
         bucket_b_keywords: JSON.stringify([
-          { keyword: 'brandx x200 robot vacuum', searchVolume: 800, source: 'B', matchType: 'EXACT' },
-          { keyword: 'brandx x300 robot vacuum', searchVolume: 780, source: 'B', matchType: 'EXACT' },
+          {
+            keyword: 'brandx x200 robot vacuum',
+            searchVolume: 800,
+            source: 'B',
+            matchType: 'EXACT',
+          },
+          {
+            keyword: 'brandx x300 robot vacuum',
+            searchVolume: 780,
+            source: 'B',
+            matchType: 'EXACT',
+          },
         ]),
         bucket_c_keywords: JSON.stringify([]),
         bucket_d_keywords: JSON.stringify([
-          { keyword: 'brandx self empty robot vacuum', searchVolume: 700, source: 'D', matchType: 'PHRASE' },
-          { keyword: 'brandx laptop docking station', searchVolume: 650, source: 'D', matchType: 'PHRASE' },
-          { keyword: 'brandx x300 robot vacuum', searchVolume: 640, source: 'D', matchType: 'PHRASE' },
-          { keyword: 'robot vacuum for pet hair', searchVolume: 630, source: 'D', matchType: 'PHRASE' },
+          {
+            keyword: 'brandx self empty robot vacuum',
+            searchVolume: 700,
+            source: 'D',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx laptop docking station',
+            searchVolume: 650,
+            source: 'D',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'brandx x300 robot vacuum',
+            searchVolume: 640,
+            source: 'D',
+            matchType: 'PHRASE',
+          },
+          {
+            keyword: 'robot vacuum for pet hair',
+            searchVolume: 630,
+            source: 'D',
+            matchType: 'PHRASE',
+          },
         ]),
       }
     })

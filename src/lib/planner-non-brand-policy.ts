@@ -15,7 +15,9 @@ export interface PlannerDecision {
 }
 
 function normalizeUseCaseTag(value: unknown): PlannerNonBrandUseCase | undefined {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   if (!normalized) return undefined
   if (normalized.includes('MODEL_FAMILY')) return 'model_family'
   if (normalized.includes('DEMAND')) return 'demand'
@@ -84,9 +86,9 @@ export function normalizePlannerNonBrandPolicy(
 
 export function plannerNonBrandPolicyEnabled(policy?: PlannerNonBrandPolicy): boolean {
   return Boolean(
-    policy?.allowNonBrandForPool
-    || policy?.allowNonBrandForDemand
-    || policy?.allowNonBrandForModelFamily
+    policy?.allowNonBrandForPool ||
+    policy?.allowNonBrandForDemand ||
+    policy?.allowNonBrandForModelFamily
   )
 }
 
@@ -114,12 +116,7 @@ export function resolvePlannerNonBrandUseCaseFromMetadata(input: {
     if (useCase) return useCase
   }
 
-  const fields = [
-    input.sourceSubtype,
-    input.sourceType,
-    input.rawSource,
-    input.source,
-  ]
+  const fields = [input.sourceSubtype, input.sourceType, input.rawSource, input.source]
   for (const field of fields) {
     const useCase = normalizeUseCaseTag(field)
     if (useCase) return useCase
@@ -134,23 +131,26 @@ export function isKeywordPlannerSource(input: {
   sourceSubtype?: string
   rawSource?: string
 }): boolean {
-  const fields = [
-    input.rawSource,
-    input.sourceSubtype,
-    input.sourceType,
-    input.source,
-  ]
+  const fields = [input.rawSource, input.sourceSubtype, input.sourceType, input.source]
 
-  return fields.some((field) => String(field || '').trim().toUpperCase().startsWith('KEYWORD_PLANNER'))
+  return fields.some((field) =>
+    String(field || '')
+      .trim()
+      .toUpperCase()
+      .startsWith('KEYWORD_PLANNER')
+  )
 }
 
-export function shouldAllowPlannerNonBrandKeyword(input: {
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-  rawSource?: string
-  derivedTags?: unknown
-}, policy?: PlannerNonBrandPolicy): boolean {
+export function shouldAllowPlannerNonBrandKeyword(
+  input: {
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+    rawSource?: string
+    derivedTags?: unknown
+  },
+  policy?: PlannerNonBrandPolicy
+): boolean {
   if (!isKeywordPlannerSource(input)) return false
   const normalizedPolicy = normalizePlannerNonBrandPolicy(policy)
   return plannerNonBrandPolicyAllows(

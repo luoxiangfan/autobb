@@ -6,11 +6,17 @@ function normalizeForCompare(value: string): string {
 }
 
 function cleanText(value: string): string {
-  return value.replace(/\s+/g, ' ').replace(/[\u00A0\u200B]/g, ' ').trim()
+  return value
+    .replace(/\s+/g, ' ')
+    .replace(/[\u00A0\u200B]/g, ' ')
+    .trim()
 }
 
 function stripWrappingPunctuation(value: string): string {
-  return value.replace(/^[\s"'“”‘’\(\)\[\]\{\}\-–—:;,.!?]+/, '').replace(/[\s"'“”‘’\(\)\[\]\{\}\-–—:;,.!?]+$/, '').trim()
+  return value
+    .replace(/^[\s"'“”‘’\(\)\[\]\{\}\-–—:;,.!?]+/, '')
+    .replace(/[\s"'“”‘’\(\)\[\]\{\}\-–—:;,.!?]+$/, '')
+    .trim()
 }
 
 function escapeRegExp(value: string): string {
@@ -115,9 +121,10 @@ export function getRegistrableDomainLabelFromUrl(url: string): string | null {
     const sld = stripped[stripped.length - 2]
     const sldIsCommonSecondLevel = new Set(['co', 'com', 'net', 'org', 'gov', 'edu'])
 
-    let label = (tld.length === 2 && sldIsCommonSecondLevel.has(sld) && stripped.length >= 3)
-      ? stripped[stripped.length - 3]
-      : sld
+    let label =
+      tld.length === 2 && sldIsCommonSecondLevel.has(sld) && stripped.length >= 3
+        ? stripped[stripped.length - 3]
+        : sld
 
     if (COMMON_SUBDOMAINS.has(label) && stripped.length >= 3) {
       label = stripped[stripped.length - 3]
@@ -135,7 +142,10 @@ export function getRegistrableDomainLabelFromUrl(url: string): string | null {
 
 export function getFirstMeaningfulPathSegment(url: string): string | null {
   try {
-    const segments = new URL(url).pathname.split('/').map(s => s.trim()).filter(Boolean)
+    const segments = new URL(url).pathname
+      .split('/')
+      .map((s) => s.trim())
+      .filter(Boolean)
     for (const segment of segments) {
       if (isIgnoredPathSegment(segment)) continue
       if (/^\d+$/.test(segment)) continue
@@ -149,8 +159,11 @@ export function getFirstMeaningfulPathSegment(url: string): string | null {
 
 function getLikelyProductSlugSegment(url: string, domainLabel: string | null): string | null {
   try {
-    const segments = new URL(url).pathname.split('/').map(s => s.trim()).filter(Boolean)
-    const meaningful = segments.filter(segment => {
+    const segments = new URL(url).pathname
+      .split('/')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    const meaningful = segments.filter((segment) => {
       if (isIgnoredPathSegment(segment)) return false
       if (/^\d+$/.test(segment)) return false
       return true
@@ -158,7 +171,7 @@ function getLikelyProductSlugSegment(url: string, domainLabel: string | null): s
     if (meaningful.length === 0) return null
 
     const domainNorm = domainLabel ? normalizeForCompare(domainLabel) : ''
-    const scored = meaningful.map(segment => {
+    const scored = meaningful.map((segment) => {
       let score = segment.length
       const norm = normalizeForCompare(segment)
       if (domainNorm && norm === domainNorm) score -= 40
@@ -181,7 +194,9 @@ function slugToTitle(slug: string): string {
 
   const words = cleaned.split(/[-_\s]+/).filter(Boolean)
   return words
-    .map(w => w.length <= 2 ? w.toUpperCase() : (w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))
+    .map((w) =>
+      w.length <= 2 ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    )
     .join(' ')
     .trim()
 }
@@ -203,7 +218,11 @@ function isReasonableNameCandidate(candidate: string): boolean {
   return true
 }
 
-function looksLikePublisherOrCategoryTitle(candidate: string, domainLabel: string | null, slug: string | null): boolean {
+function looksLikePublisherOrCategoryTitle(
+  candidate: string,
+  domainLabel: string | null,
+  slug: string | null
+): boolean {
   const cleaned = cleanText(candidate)
   const lower = cleaned.toLowerCase()
   const genericHits = [
@@ -215,13 +234,17 @@ function looksLikePublisherOrCategoryTitle(candidate: string, domainLabel: strin
     'official',
     'store',
     'shop',
-  ].filter(w => lower.includes(w)).length
+  ].filter((w) => lower.includes(w)).length
 
   if (genericHits >= 2) {
     const normalized = normalizeForCompare(cleaned)
     const domainNorm = domainLabel ? normalizeForCompare(domainLabel) : ''
     const slugNorm = slug ? normalizeForCompare(slug) : ''
-    if ((domainNorm && normalized.includes(domainNorm)) || (slugNorm && normalized.includes(slugNorm))) return false
+    if (
+      (domainNorm && normalized.includes(domainNorm)) ||
+      (slugNorm && normalized.includes(slugNorm))
+    )
+      return false
     return true
   }
 
@@ -239,10 +262,16 @@ function extractJsonLdProductName($: any): string | null {
         const candidates = Array.isArray(parsed) ? parsed : [parsed]
         for (const item of candidates) {
           if (!item) continue
-          if (item['@type'] === 'Product' && typeof item.name === 'string' && item.name.trim()) return item.name.trim()
+          if (item['@type'] === 'Product' && typeof item.name === 'string' && item.name.trim())
+            return item.name.trim()
           if (Array.isArray(item['@graph'])) {
             for (const node of item['@graph']) {
-              if (node?.['@type'] === 'Product' && typeof node.name === 'string' && node.name.trim()) return node.name.trim()
+              if (
+                node?.['@type'] === 'Product' &&
+                typeof node.name === 'string' &&
+                node.name.trim()
+              )
+                return node.name.trim()
             }
           }
         }
@@ -262,7 +291,8 @@ function extractCapitalizedPhrases(text: string): string[] {
   const results: string[] = []
 
   // Word = TitleCase token or ALLCAPS token; phrase length <= 5 words.
-  const re = /\b((?:[A-Z][A-Za-z0-9&'’.\-]{1,}|[A-Z]{2,})(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]{1,}|[A-Z]{2,})){0,4})\b/g
+  const re =
+    /\b((?:[A-Z][A-Za-z0-9&'’.\-]{1,}|[A-Z]{2,})(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]{1,}|[A-Z]{2,})){0,4})\b/g
   let match: RegExpExecArray | null
   while ((match = re.exec(cleaned))) {
     if (match[1]) results.push(match[1])
@@ -276,7 +306,18 @@ function shouldRejectProductPhrase(phrase: string): boolean {
 
   const lower = cleaned.toLowerCase()
   const firstWord = cleaned.split(/\s+/)[0]?.toLowerCase() || ''
-  const rejectFirstWords = new Set(['discover', 'how', 'why', 'when', 'where', 'what', 'the', 'a', 'an', 'top'])
+  const rejectFirstWords = new Set([
+    'discover',
+    'how',
+    'why',
+    'when',
+    'where',
+    'what',
+    'the',
+    'a',
+    'an',
+    'top',
+  ])
   if (rejectFirstWords.has(firstWord)) return true
 
   if (/\b(u\.s\.|us)\b/i.test(cleaned) && /\bdoctors?\b/i.test(cleaned)) return true
@@ -329,7 +370,9 @@ export function extractLandingProductName($: any, url: string): string | null {
     if (!text || text.length > 160) return
     for (const phrase of extractCapitalizedPhrases(text)) addCandidate(phrase, 90)
 
-    const offMatch = text.match(/\bOFF\s+([A-Z][A-Za-z0-9&'’.\-]+(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]+|[A-Z]{2,})){0,3})\b/)
+    const offMatch = text.match(
+      /\bOFF\s+([A-Z][A-Za-z0-9&'’.\-]+(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]+|[A-Z]{2,})){0,3})\b/
+    )
     if (offMatch?.[1]) addCandidate(offMatch[1], 95)
   })
 
@@ -347,9 +390,13 @@ export function extractLandingProductName($: any, url: string): string | null {
   if (titleText) {
     const parts = titleText
       .split(/[|–—-]/)
-      .map(p => stripWrappingPunctuation(cleanText(p)))
+      .map((p) => stripWrappingPunctuation(cleanText(p)))
       .filter(Boolean)
-    if (parts.length >= 2 && domainLabel && normalizeForCompare(parts[0]) === normalizeForCompare(domainLabel)) {
+    if (
+      parts.length >= 2 &&
+      domainLabel &&
+      normalizeForCompare(parts[0]) === normalizeForCompare(domainLabel)
+    ) {
       addCandidate(parts[1], 58)
     }
     addCandidate(titleText, 40)
@@ -367,7 +414,10 @@ export function extractLandingProductName($: any, url: string): string | null {
   return best?.value || null
 }
 
-function deriveBrandFromProductAndDomain(productName: string | null, domainLabel: string | null): string | null {
+function deriveBrandFromProductAndDomain(
+  productName: string | null,
+  domainLabel: string | null
+): string | null {
   const domainNorm = domainLabel ? normalizeForCompare(domainLabel) : ''
   if (productName) {
     const tokens = cleanText(productName).split(/\s+/).filter(Boolean)
@@ -435,7 +485,10 @@ export function refineBrandNameForLandingPage(options: {
   }
 
   // If current brand is identical to product title, attempt to shorten using product+domain relation.
-  if (normalizedProduct && normalizeForCompare(normalizedCurrent) === normalizeForCompare(normalizedProduct)) {
+  if (
+    normalizedProduct &&
+    normalizeForCompare(normalizedCurrent) === normalizeForCompare(normalizedProduct)
+  ) {
     const best = chooseBestFallback()
     if (best && normalizeForCompare(best) !== normalizeForCompare(normalizedCurrent)) return best
   }
@@ -489,9 +542,12 @@ export function extractLandingDescription(options: {
 
     if (hits >= 2) return true
 
-    const pipeSegments = cleaned.split('|').map(s => s.trim()).filter(Boolean)
+    const pipeSegments = cleaned
+      .split('|')
+      .map((s) => s.trim())
+      .filter(Boolean)
     if (pipeSegments.length >= 4) {
-      const shortSegments = pipeSegments.filter(s => s.length > 0 && s.length <= 32).length
+      const shortSegments = pipeSegments.filter((s) => s.length > 0 && s.length <= 32).length
       if (shortSegments / pipeSegments.length >= 0.75) return true
     }
 
@@ -509,7 +565,11 @@ export function extractLandingDescription(options: {
     if (!cleaned) return null
     if (cleaned.length < minLength) return null
     if (cleaned.length > 1400) return null
-    if (/(access\s+denied|forbidden|attention\s+required|just\s+a\s+moment|verify\s+you\s+are\s+human|enable\s+cookies|captcha|service\s+unavailable|not\s+found)/i.test(cleaned)) {
+    if (
+      /(access\s+denied|forbidden|attention\s+required|just\s+a\s+moment|verify\s+you\s+are\s+human|enable\s+cookies|captcha|service\s+unavailable|not\s+found)/i.test(
+        cleaned
+      )
+    ) {
       return null
     }
     if (looksLikeNavigationOrAccountText(cleaned)) return null
@@ -532,7 +592,8 @@ export function extractLandingDescription(options: {
               if (!node || typeof node !== 'object') return null
               const type = node['@type']
               if (type === 'Product' || type === 'Organization' || type === 'WebSite') {
-                if (typeof node.description === 'string' && node.description.trim()) return node.description.trim()
+                if (typeof node.description === 'string' && node.description.trim())
+                  return node.description.trim()
               }
               return null
             }
@@ -604,12 +665,7 @@ export function extractLandingDescription(options: {
   scope.find('p, div').each((_: any, el: any) => {
     if ($(el).closest('nav, header, footer, aside, form').length > 0) return
 
-    const rawText = $(el)
-      .clone()
-      .find('script, style, svg, noscript')
-      .remove()
-      .end()
-      .text()
+    const rawText = $(el).clone().find('script, style, svg, noscript').remove().end().text()
 
     const cleanedText = cleanText(rawText || '')
     if (!cleanedText) return
@@ -636,7 +692,11 @@ export function extractLandingImages($: any, baseUrl: string, maxImages: number 
   const candidates: Array<{ url: string; score: number }> = []
   const seen = new Set<string>()
 
-  const addImage = (rawUrl: string | null | undefined, baseScore: number, meta?: { width?: number; height?: number; alt?: string }) => {
+  const addImage = (
+    rawUrl: string | null | undefined,
+    baseScore: number,
+    meta?: { width?: number; height?: number; alt?: string }
+  ) => {
     if (!rawUrl) return
     if (rawUrl.startsWith('data:')) return
     if (/facebook\.com\/tr/i.test(rawUrl)) return
@@ -684,7 +744,7 @@ export function extractLandingImages($: any, baseUrl: string, maxImages: number 
   })
 
   candidates.sort((a, b) => b.score - a.score)
-  return candidates.slice(0, maxImages).map(c => c.url)
+  return candidates.slice(0, maxImages).map((c) => c.url)
 }
 
 export function isPresellStyleUrl(url: string): boolean {

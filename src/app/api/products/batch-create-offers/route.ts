@@ -33,7 +33,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => null)
     const parsed = bodySchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || '参数错误' }, { status: 400 })
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || '参数错误' },
+        { status: 400 }
+      )
     }
 
     const result = await batchCreateOffersFromAffiliateProducts({
@@ -43,7 +46,10 @@ export async function POST(request: NextRequest) {
 
     const successfulOfferIds = result.results
       .map((item) => item.offerId)
-      .filter((offerId): offerId is number => typeof offerId === 'number' && Number.isInteger(offerId) && offerId > 0)
+      .filter(
+        (offerId): offerId is number =>
+          typeof offerId === 'number' && Number.isInteger(offerId) && offerId > 0
+      )
     const successfulProductIds = result.results
       .filter((item) => item.success)
       .map((item) => item.productId)
@@ -72,9 +78,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[POST /api/products/batch-create-offers] failed:', error)
-    return NextResponse.json(
-      { error: error?.message || '批量创建Offer失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '批量创建Offer失败' }, { status: 500 })
   }
 }

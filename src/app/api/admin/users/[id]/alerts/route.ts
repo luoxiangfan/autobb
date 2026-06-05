@@ -20,10 +20,7 @@ const getHandler: AuthenticatedHandler = async (request, user, context) => {
     return NextResponse.json({ alerts })
   } catch (error: any) {
     console.error('获取安全告警失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取安全告警失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取安全告警失败' }, { status: 500 })
   }
 }
 

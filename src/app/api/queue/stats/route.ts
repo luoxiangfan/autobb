@@ -8,11 +8,17 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getBackgroundQueueManager, getQueueManager, isBackgroundQueueSplitEnabled } from '@/lib/queue'
+import {
+  getBackgroundQueueManager,
+  getQueueManager,
+  isBackgroundQueueSplitEnabled,
+} from '@/lib/queue'
 import { isBackgroundTaskType } from '@/lib/queue/task-category'
 
 type QueueStats = Awaited<ReturnType<ReturnType<typeof getQueueManager>['getStats']>>
-type PendingEligibilityStats = NonNullable<Awaited<ReturnType<ReturnType<typeof getQueueManager>['getPendingEligibilityStats']>>>
+type PendingEligibilityStats = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof getQueueManager>['getPendingEligibilityStats']>>
+>
 
 function mergeQueueStats(a: QueueStats, b: QueueStats): QueueStats {
   const byType: Record<string, number> = { ...(a.byType || {}) }
@@ -108,18 +114,18 @@ export async function GET(request: NextRequest) {
 
     const [coreStats, corePendingEligibility] = await Promise.all([
       coreQueueManager.getStats(),
-      coreQueueManager.getPendingEligibilityStats()
+      coreQueueManager.getPendingEligibilityStats(),
     ])
 
     const [backgroundStats, backgroundPendingEligibility] = backgroundQueueManager
       ? await (async () => {
-        await backgroundQueueManager.ensureInitialized()
-        const [s, p] = await Promise.all([
-          backgroundQueueManager.getStats(),
-          backgroundQueueManager.getPendingEligibilityStats()
-        ])
-        return [s, p] as const
-      })()
+          await backgroundQueueManager.ensureInitialized()
+          const [s, p] = await Promise.all([
+            backgroundQueueManager.getStats(),
+            backgroundQueueManager.getPendingEligibilityStats(),
+          ])
+          return [s, p] as const
+        })()
       : [null, null]
 
     const stats = backgroundStats ? mergeQueueStats(coreStats, backgroundStats) : coreStats
@@ -133,7 +139,7 @@ export async function GET(request: NextRequest) {
         pending: 0,
         running: 0,
         completed: 0,
-        failed: 0
+        failed: 0,
       }
 
       return NextResponse.json({
@@ -146,20 +152,23 @@ export async function GET(request: NextRequest) {
           failed: userStats.failed,
           userId,
           proxyAvailable: proxyStats.filter((p) => p.available).length,
-          proxyTotal: proxyStats.length
-        }
+          proxyTotal: proxyStats.length,
+        },
       })
     }
 
-    const runningTasksPromise = stats.running > 0 ? (async () => {
-      const [coreRunning, backgroundRunning] = await Promise.all([
-        coreStats.running > 0 ? coreQueueManager.getRunningTasks() : Promise.resolve([]),
-        backgroundQueueManager && backgroundStats && backgroundStats.running > 0
-          ? backgroundQueueManager.getRunningTasks()
-          : Promise.resolve([]),
-      ])
-      return [...coreRunning, ...backgroundRunning]
-    })() : Promise.resolve([])
+    const runningTasksPromise =
+      stats.running > 0
+        ? (async () => {
+            const [coreRunning, backgroundRunning] = await Promise.all([
+              coreStats.running > 0 ? coreQueueManager.getRunningTasks() : Promise.resolve([]),
+              backgroundQueueManager && backgroundStats && backgroundStats.running > 0
+                ? backgroundQueueManager.getRunningTasks()
+                : Promise.resolve([]),
+            ])
+            return [...coreRunning, ...backgroundRunning]
+          })()
+        : Promise.resolve([])
 
     const runningByUser: Record<
       number,
@@ -176,7 +185,9 @@ export async function GET(request: NextRequest) {
       const { getDatabase } = await import('@/lib/db')
       const db = await getDatabase()
 
-      const userIds = Object.keys(stats.byUser).map((id) => parseInt(id, 10)).filter((id) => Number.isFinite(id))
+      const userIds = Object.keys(stats.byUser)
+        .map((id) => parseInt(id, 10))
+        .filter((id) => Number.isFinite(id))
       const userMap: Record<number, { username: string; email: string; packageType: string }> = {}
 
       if (userIds.length > 0) {
@@ -184,7 +195,12 @@ export async function GET(request: NextRequest) {
         for (let i = 0; i < userIds.length; i += CHUNK_SIZE) {
           const chunk = userIds.slice(i, i + CHUNK_SIZE)
           const placeholders = chunk.map(() => '?').join(',')
-          const users = await db.query<{ id: number; username: string; email: string; package_type: string }>(
+          const users = await db.query<{
+            id: number
+            username: string
+            email: string
+            package_type: string
+          }>(
             `SELECT id, username, email, package_type FROM users WHERE id IN (${placeholders})`,
             chunk
           )
@@ -211,7 +227,8 @@ export async function GET(request: NextRequest) {
       if (!runningByUser[task.userId]) {
         runningByUser[task.userId] = { coreRunning: 0, backgroundRunning: 0, byType: {} }
       }
-      runningByUser[task.userId].byType[task.type] = (runningByUser[task.userId].byType[task.type] || 0) + 1
+      runningByUser[task.userId].byType[task.type] =
+        (runningByUser[task.userId].byType[task.type] || 0) + 1
 
       if (isBackgroundTaskType(task.type)) {
         runningByUser[task.userId].backgroundRunning++
@@ -235,7 +252,7 @@ export async function GET(request: NextRequest) {
           queuedDelayed: pendingEligibility?.delayedPending,
           nextQueuedAt: pendingEligibility?.nextEligibleAt,
           completed: stats.completed,
-          failed: stats.failed
+          failed: stats.failed,
         },
         perUser: Object.entries(stats.byUser).map(([uid, userStats]) => {
           const numericUid = parseInt(uid)
@@ -268,27 +285,24 @@ export async function GET(request: NextRequest) {
           total: proxyStats.length,
           available: proxyStats.filter((p) => p.available).length,
           failed: proxyStats.filter((p) => !p.available).length,
-          details: proxyStats
+          details: proxyStats,
         },
         // 🔥 修复：返回当前配置，前端需要此数据显示"当前生效配置"
         config: {
           globalConcurrency: currentConfig.globalConcurrency,
           perUserConcurrency: currentConfig.perUserConcurrency,
-          perTypeConcurrency: currentConfig.perTypeConcurrency,  // 🔥 新增：任务类型并发限制
+          perTypeConcurrency: currentConfig.perTypeConcurrency, // 🔥 新增：任务类型并发限制
           maxQueueSize: currentConfig.maxQueueSize,
           taskTimeout: currentConfig.taskTimeout,
-          enablePriority: true,  // 统一队列始终启用优先级
+          enablePriority: true, // 统一队列始终启用优先级
           defaultMaxRetries: currentConfig.defaultMaxRetries,
           retryDelay: currentConfig.retryDelay,
-          storageType: process.env.REDIS_URL ? 'redis' : 'memory'
-        }
-      }
+          storageType: process.env.REDIS_URL ? 'redis' : 'memory',
+        },
+      },
     })
   } catch (error: any) {
     console.error('[UnifiedQueueStats] 获取队列统计失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取队列统计失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取队列统计失败' }, { status: 500 })
   }
 }

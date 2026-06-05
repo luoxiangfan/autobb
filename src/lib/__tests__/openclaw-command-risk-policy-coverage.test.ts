@@ -9,7 +9,9 @@ function toRouteKey(method: string, path: string): string {
 describe('openclaw command risk policy coverage', () => {
   it('covers every canonical write route', () => {
     const canonicalRouteKeys = new Set(
-      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) => toRouteKey(route.method, route.pattern))
+      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) =>
+        toRouteKey(route.method, route.pattern)
+      )
     )
 
     const riskPolicyKeys = new Set(
@@ -25,7 +27,9 @@ describe('openclaw command risk policy coverage', () => {
 
   it('does not define stale risk policies outside canonical write routes', () => {
     const canonicalRouteKeys = new Set(
-      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) => toRouteKey(route.method, route.pattern))
+      OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS.map((route) =>
+        toRouteKey(route.method, route.pattern)
+      )
     )
 
     const riskPolicyKeys = new Set(

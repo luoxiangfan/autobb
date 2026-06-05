@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  containsPureBrand,
-  getPureBrandKeywords,
-  isPureBrandKeyword,
-} from '../brand-keyword-utils'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
 import { buildCreativeKeywordSet } from '../creative-keyword-set-builder'
 import { selectCreativeKeywords } from '../creative-keyword-selection'
 
@@ -34,18 +30,32 @@ function kw(
   }
 }
 
-function expectModelIntentContract(result: ReturnType<typeof selectCreativeKeywords>, brandName: string): void {
+function expectModelIntentContract(
+  result: ReturnType<typeof selectCreativeKeywords>,
+  brandName: string
+): void {
   const pureBrandKeywords = getPureBrandKeywords(brandName)
   expect(result.keywordsWithVolume.length).toBeGreaterThanOrEqual(3)
-  expect(result.keywords.every((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
-  expect(result.keywords.filter((keyword) => containsPureBrand(keyword, pureBrandKeywords)).length).toBeGreaterThanOrEqual(1)
+  expect(result.keywords.every((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(
+    true
+  )
+  expect(
+    result.keywords.filter((keyword) => containsPureBrand(keyword, pureBrandKeywords)).length
+  ).toBeGreaterThanOrEqual(1)
 }
 
-function expectProductIntentContract(result: ReturnType<typeof selectCreativeKeywords>, brandName: string): void {
+function expectProductIntentContract(
+  result: ReturnType<typeof selectCreativeKeywords>,
+  brandName: string
+): void {
   const pureBrandKeywords = getPureBrandKeywords(brandName)
   expect(result.keywords.length).toBeGreaterThanOrEqual(3)
-  expect(result.keywords.some((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
-  expect(result.keywords.filter((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords)).length).toBeGreaterThanOrEqual(2)
+  expect(result.keywords.some((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(
+    true
+  )
+  expect(
+    result.keywords.filter((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords)).length
+  ).toBeGreaterThanOrEqual(2)
 }
 
 describe('creative keyword real-offer regression fixtures', () => {
@@ -55,10 +65,18 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 235,
         brandName: 'Eufy',
         keywordsWithVolume: [
-          kw('eufy', 24000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('eufy omni c20', 6200, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('eufy', 24000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('eufy omni c20', 6200, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('omni c20', 4300, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
-          kw('eufy c20 robot vacuum', 3600, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('eufy c20 robot vacuum', 3600, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
           kw('c20 robot vacuum', 2500, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
         ],
       },
@@ -66,10 +84,18 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 3121,
         brandName: 'Eufy',
         keywordsWithVolume: [
-          kw('eufy', 24000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('eufy x10 pro omni', 5200, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('eufy', 24000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('eufy x10 pro omni', 5200, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('x10 pro omni', 4100, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
-          kw('eufy x10 omni robot vacuum', 3600, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('eufy x10 omni robot vacuum', 3600, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
           kw('x10 robot vacuum', 2400, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
         ],
       },
@@ -77,10 +103,18 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 3188,
         brandName: 'Anker',
         keywordsWithVolume: [
-          kw('anker', 18000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('anker solix f3800', 6400, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('anker', 18000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('anker solix f3800', 6400, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('solix f3800', 5300, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
-          kw('anker f3800 power station', 4200, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('anker f3800 power station', 4200, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
           kw('f3800 power station', 3100, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
         ],
       },
@@ -88,8 +122,14 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 3351,
         brandName: 'RingConn',
         keywordsWithVolume: [
-          kw('ringconn', 11000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('ringconn gen 2 smart ring', 4800, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('ringconn', 11000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('ringconn gen 2 smart ring', 4800, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('gen 2 smart ring', 3100, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('ringconn gen 2', 2900, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
           kw('smart ring gen 2', 2100, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
@@ -99,8 +139,14 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 3499,
         brandName: 'Insta360',
         keywordsWithVolume: [
-          kw('insta360', 19000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('insta360 x4', 6200, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('insta360', 19000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('insta360 x4', 6200, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('x4 action camera', 4500, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('insta360 x4 camera', 3900, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
           kw('x4 camera', 2500, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
@@ -121,7 +167,9 @@ describe('creative keyword real-offer regression fixtures', () => {
 
         expectModelIntentContract(result, fixture.brandName)
         expect(
-          result.keywordsWithVolume.some((item) => item.familyMatchType === 'hard_model' || item.familyMatchType === 'mixed')
+          result.keywordsWithVolume.some(
+            (item) => item.familyMatchType === 'hard_model' || item.familyMatchType === 'mixed'
+          )
         ).toBe(true)
       })
     }
@@ -133,8 +181,14 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 4909,
         brandName: 'Novilla',
         keywordsWithVolume: [
-          kw('novilla', 16000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('novilla king mattress', 4200, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('novilla', 16000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('novilla king mattress', 4200, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('10 inch mattress', 3200, 'KEYWORD_PLANNER', {
             sourceType: 'KEYWORD_PLANNER',
             sourceSubtype: 'KEYWORD_PLANNER_MODEL_FAMILY',
@@ -154,8 +208,14 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 3274,
         brandName: 'Sonos',
         keywordsWithVolume: [
-          kw('sonos', 52000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('sonos arc', 28100, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('sonos', 52000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('sonos arc', 28100, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('arc soundbar', 19100, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('sonos arc soundbar', 15600, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
           kw('arc surround sound', 8200, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
@@ -165,8 +225,14 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 5214,
         brandName: 'Brooklinen',
         keywordsWithVolume: [
-          kw('brooklinen', 14000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('brooklinen queen sheet set', 3100, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('brooklinen', 14000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('brooklinen queen sheet set', 3100, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('queen sheet set', 2700, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('linen sheet set', 2400, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('cooling sheet set', 2100, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
@@ -176,30 +242,54 @@ describe('creative keyword real-offer regression fixtures', () => {
         offerId: 5330,
         brandName: 'Caraway',
         keywordsWithVolume: [
-          kw('caraway', 9800, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('caraway ceramic cookware set', 3600, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('caraway', 9800, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('caraway ceramic cookware set', 3600, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('ceramic cookware set', 2800, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('12 piece cookware set', 2300, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
-          kw('non toxic cookware set', 2200, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('non toxic cookware set', 2200, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
         ],
       },
       {
         offerId: 5487,
         brandName: 'Vital Proteins',
         keywordsWithVolume: [
-          kw('vital proteins', 12000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('vital proteins collagen powder', 5100, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw('vital proteins', 12000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('vital proteins collagen powder', 5100, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('20 oz collagen powder', 2600, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
-          kw('unflavored collagen powder', 2400, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
-          kw('collagen powder 2 pack', 2200, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('unflavored collagen powder', 2400, 'KEYWORD_PLANNER', {
+            sourceType: 'KEYWORD_PLANNER',
+          }),
+          kw('collagen powder 2 pack', 2200, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
         ],
       },
       {
         offerId: 5572,
         brandName: "Levi's",
         keywordsWithVolume: [
-          kw("levi's", 26000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw("levi's straight fit jeans", 4700, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
+          kw("levi's", 26000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw("levi's straight fit jeans", 4700, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
           kw('straight fit jeans', 3100, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('32x32 jeans', 2800, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
           kw('slim fit jeans', 2300, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
@@ -220,7 +310,9 @@ describe('creative keyword real-offer regression fixtures', () => {
 
         expectModelIntentContract(result, fixture.brandName)
         expect(
-          result.keywordsWithVolume.some((item) => item.familyMatchType === 'soft_family' || item.familyMatchType === 'mixed')
+          result.keywordsWithVolume.some(
+            (item) => item.familyMatchType === 'soft_family' || item.familyMatchType === 'mixed'
+          )
         ).toBe(true)
       })
     }
@@ -240,8 +332,13 @@ describe('creative keyword real-offer regression fixtures', () => {
           target_language: 'en',
           page_type: 'product',
           scraped_data: JSON.stringify({
-            rawProductTitle: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress, Medium Firm',
-            rawAboutThisItem: ['King size support', '10 inch memory foam design', 'Medium firm feel'],
+            rawProductTitle:
+              'Novilla King Size Mattress, 10 Inch Memory Foam Mattress, Medium Firm',
+            rawAboutThisItem: [
+              'King size support',
+              '10 inch memory foam design',
+              'Medium firm feel',
+            ],
           }),
         },
         keywords: ['novilla'],
@@ -310,15 +407,23 @@ describe('creative keyword real-offer regression fixtures', () => {
         offer: {
           brand: 'Livfresh',
           category: 'Toothpaste',
-          product_name: 'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
+          product_name:
+            'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
           target_country: 'US',
           target_language: 'en',
           page_type: 'product',
           scraped_data: JSON.stringify({
-            rawProductTitle: 'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
+            rawProductTitle:
+              'Livfresh 3 Pack Better Toothpaste Gel Clinically Proven to Remove 250% More Plaque and Improve Gum Health',
           }),
         },
-        keywords: ['livfresh', 'better 250', 'remove 250', 'livfresh toothpaste gel', 'toothpaste gel'],
+        keywords: [
+          'livfresh',
+          'better 250',
+          'remove 250',
+          'livfresh toothpaste gel',
+          'toothpaste gel',
+        ],
       },
     ]
 
@@ -338,17 +443,33 @@ describe('creative keyword real-offer regression fixtures', () => {
         expect(result.executableKeywords.length).toBeGreaterThan(0)
         if (fixture.creativeType === 'model_intent') {
           const pureBrandKeywords = getPureBrandKeywords(fixture.brandName)
-          expect(result.executableKeywords.every((keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
+          expect(
+            result.executableKeywords.every(
+              (keyword) => !isPureBrandKeyword(keyword, pureBrandKeywords)
+            )
+          ).toBe(true)
           if (fixture.offerId === 4946) {
             expect(result.executableKeywords).toContain('livfresh toothpaste gel')
-            expect(result.executableKeywords.some((keyword) => /\b(?:250|better|remove)\b/i.test(keyword))).toBe(false)
+            expect(
+              result.executableKeywords.some((keyword) =>
+                /\b(?:250|better|remove)\b/i.test(keyword)
+              )
+            ).toBe(false)
           }
         } else if (fixture.creativeType === 'product_intent') {
           const pureBrandKeywords = getPureBrandKeywords(fixture.brandName)
-          expect(result.executableKeywords.some((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
+          expect(
+            result.executableKeywords.some((keyword) =>
+              isPureBrandKeyword(keyword, pureBrandKeywords)
+            )
+          ).toBe(true)
         } else if (fixture.creativeType === 'brand_intent') {
           const pureBrandKeywords = getPureBrandKeywords(fixture.brandName)
-          expect(result.executableKeywords.some((keyword) => isPureBrandKeyword(keyword, pureBrandKeywords))).toBe(true)
+          expect(
+            result.executableKeywords.some((keyword) =>
+              isPureBrandKeyword(keyword, pureBrandKeywords)
+            )
+          ).toBe(true)
         }
       })
     }
@@ -358,9 +479,17 @@ describe('creative keyword real-offer regression fixtures', () => {
     it('keeps controlled PURE_BRAND_PREFIX_REWRITE terms in D when they are high-quality', () => {
       const result = selectCreativeKeywords({
         keywordsWithVolume: [
-          kw('novilla', 16000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('novilla king mattress', 4200, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
-          kw('novilla memory foam mattress', 3800, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('novilla', 16000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('novilla king mattress', 4200, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
+          kw('novilla memory foam mattress', 3800, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
           kw('novilla mattress for side sleepers', 2200, 'PRODUCT_RELAX_BRANDED', {
             sourceType: 'PRODUCT_RELAX_BRANDED',
             sourceSubtype: 'PURE_BRAND_PREFIX_REWRITE',
@@ -382,9 +511,17 @@ describe('creative keyword real-offer regression fixtures', () => {
     it('rejects dimension-only model fragments while keeping the real model entity for offer 4910 style inputs', () => {
       const result = selectCreativeKeywords({
         keywordsWithVolume: [
-          kw('dreo', 24000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('dreo ac516s portable air conditioner', 5400, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
-          kw('ac516s portable air conditioner', 4200, 'KEYWORD_PLANNER', { sourceType: 'KEYWORD_PLANNER' }),
+          kw('dreo', 24000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('dreo ac516s portable air conditioner', 5400, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
+          kw('ac516s portable air conditioner', 4200, 'KEYWORD_PLANNER', {
+            sourceType: 'KEYWORD_PLANNER',
+          }),
           kw('dreo 14.37 d', 200, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
           kw('dreo 17.32 w', 180, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
           kw('dreo 28.13 h', 160, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
@@ -396,10 +533,12 @@ describe('creative keyword real-offer regression fixtures', () => {
         minBrandKeywords: 0,
       })
 
-      expect(result.keywords).toEqual(expect.arrayContaining([
-        'dreo ac516s portable air conditioner',
-        'ac516s portable air conditioner',
-      ]))
+      expect(result.keywords).toEqual(
+        expect.arrayContaining([
+          'dreo ac516s portable air conditioner',
+          'ac516s portable air conditioner',
+        ])
+      )
       expect(result.keywords).not.toContain('dreo 14.37 d')
       expect(result.keywords).not.toContain('dreo 17.32 w')
       expect(result.keywords).not.toContain('dreo 28.13 h')
@@ -408,10 +547,20 @@ describe('creative keyword real-offer regression fixtures', () => {
     it('keeps only IT-language content words for IT-market creative selection', () => {
       const result = selectCreativeKeywords({
         keywordsWithVolume: [
-          kw('waterdrop', 12000, 'BRAND_SEED', { sourceType: 'BRAND_SEED', matchType: 'EXACT', isPureBrand: true }),
-          kw('waterdrop filtro ufficiale x16', 1100, 'SEARCH_TERM_HIGH_PERFORMING', { sourceType: 'SEARCH_TERM_HIGH_PERFORMING' }),
-          kw('waterdrop official filter x16', 900, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
-          kw('waterdrop alkalisches mineral x16', 300, 'KEYWORD_POOL', { sourceType: 'CANONICAL_BUCKET_VIEW' }),
+          kw('waterdrop', 12000, 'BRAND_SEED', {
+            sourceType: 'BRAND_SEED',
+            matchType: 'EXACT',
+            isPureBrand: true,
+          }),
+          kw('waterdrop filtro ufficiale x16', 1100, 'SEARCH_TERM_HIGH_PERFORMING', {
+            sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
+          }),
+          kw('waterdrop official filter x16', 900, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
+          kw('waterdrop alkalisches mineral x16', 300, 'KEYWORD_POOL', {
+            sourceType: 'CANONICAL_BUCKET_VIEW',
+          }),
         ],
         brandName: 'Waterdrop',
         targetLanguage: 'it',

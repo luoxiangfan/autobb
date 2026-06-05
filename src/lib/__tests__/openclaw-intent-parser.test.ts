@@ -20,9 +20,9 @@ describe('openclaw intent parser', () => {
   })
 
   it('blocks internal management endpoints', () => {
-    expect(() =>
-      parseOpenclawCommandIntent({ method: 'POST', path: '/api/admin/users' })
-    ).toThrow('Path blocked: /api/admin')
+    expect(() => parseOpenclawCommandIntent({ method: 'POST', path: '/api/admin/users' })).toThrow(
+      'Path blocked: /api/admin'
+    )
   })
 
   it('rejects absolute urls', () => {
@@ -32,7 +32,10 @@ describe('openclaw intent parser', () => {
   })
 
   it('normalizes trailing slash and query for downstream risk parsing', () => {
-    const result = parseOpenclawCommandIntent({ method: 'GET', path: '/api/campaigns/performance/?daysBack=7' })
+    const result = parseOpenclawCommandIntent({
+      method: 'GET',
+      path: '/api/campaigns/performance/?daysBack=7',
+    })
 
     expect(result.path).toBe('/api/campaigns/performance')
     expect(result.method).toBe('GET')

@@ -51,7 +51,7 @@ export async function findHistoricalOrphanCampaignsForOffer(params: {
   const { offerId, userId, excludeCampaignId } = params
   const db = await getDatabase()
 
-  const rows = await db.query(
+  const rows = (await db.query(
     `
     SELECT id, campaign_id, google_campaign_id, google_ads_account_id
     FROM campaigns
@@ -61,7 +61,7 @@ export async function findHistoricalOrphanCampaignsForOffer(params: {
       ${excludeCampaignId ? 'AND id != ?' : ''}
     `,
     excludeCampaignId ? [offerId, userId, excludeCampaignId] : [offerId, userId]
-  ) as Array<{
+  )) as Array<{
     id: number
     campaign_id: string | null
     google_campaign_id: string | null
@@ -98,7 +98,7 @@ export async function buildPublishRollbackContextForAdsAccount(
   googleAdsAccountId: number
 ): Promise<CampaignPublishRollbackContext | null> {
   const db = await getDatabase()
-  const adsAccount = await db.queryOne(
+  const adsAccount = (await db.queryOne(
     `
     SELECT id, customer_id, parent_mcc_id, service_account_id
     FROM google_ads_accounts
@@ -106,12 +106,14 @@ export async function buildPublishRollbackContextForAdsAccount(
     LIMIT 1
   `,
     [googleAdsAccountId, userId]
-  ) as {
-    id: number
-    customer_id: string
-    parent_mcc_id?: string | null
-    service_account_id?: string | null
-  } | undefined
+  )) as
+    | {
+        id: number
+        customer_id: string
+        parent_mcc_id?: string | null
+        service_account_id?: string | null
+      }
+    | undefined
 
   if (!adsAccount?.customer_id) {
     return null

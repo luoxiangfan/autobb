@@ -30,13 +30,17 @@ describe('amazon-url-utils', () => {
   })
 
   it('extracts store slug from /stores/ and vanity URLs', () => {
-    expect(extractAmazonStoreSlugFromUrl('https://www.amazon.com/stores/acme-brand/page/ABC')).toBe('acme-brand')
+    expect(extractAmazonStoreSlugFromUrl('https://www.amazon.com/stores/acme-brand/page/ABC')).toBe(
+      'acme-brand'
+    )
     expect(extractAmazonStoreSlugFromUrl('https://www.amazon.com/acme-brand')).toBe('acme-brand')
     expect(extractAmazonStoreSlugFromUrl('https://www.amazon.com/dp/B012345678')).toBeNull()
   })
 
   it('classifies page type from URL when page_type is absent', () => {
-    expect(detectAmazonPageTypeFromUrl('https://www.amazon.com/stores/acme-brand/page/ABC')).toBe('store')
+    expect(detectAmazonPageTypeFromUrl('https://www.amazon.com/stores/acme-brand/page/ABC')).toBe(
+      'store'
+    )
     expect(detectAmazonPageTypeFromUrl('https://www.amazon.com/acme-brand')).toBe('store')
     expect(detectAmazonPageTypeFromUrl('https://www.amazon.com/dp/B012345678')).toBe('product')
     expect(detectAmazonPageTypeFromUrl('https://example.com/store')).toBe('unknown')

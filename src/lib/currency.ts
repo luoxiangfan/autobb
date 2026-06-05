@@ -15,26 +15,26 @@ export const USD_BASE_CURRENCY = 'USD'
  * 来源：open.er-api.com (ExchangeRate-API)
  */
 export const EXCHANGE_RATES: Record<string, number> = {
-  USD: 1,        // 美元（基准）
-  CNY: 6.90304,      // 人民币
-  EUR: 0.854186,     // 欧元
-  GBP: 0.746164,     // 英镑
-  JPY: 157.245455,   // 日元
-  KRW: 1459.333782,  // 韩元
-  AUD: 1.411431,     // 澳元
-  CAD: 1.366999,     // 加元
-  HKD: 7.822186,     // 港币
-  TWD: 31.581761,    // 新台币
-  SGD: 1.27295,      // 新加坡元
-  INR: 91.632632,    // 印度卢比
-  BRL: 5.179572,     // 巴西雷亚尔
-  MXN: 17.322493,    // 墨西哥比索
-  THB: 31.437897,    // 泰铢
-  VND: 26100.93299,  // 越南盾
+  USD: 1, // 美元（基准）
+  CNY: 6.90304, // 人民币
+  EUR: 0.854186, // 欧元
+  GBP: 0.746164, // 英镑
+  JPY: 157.245455, // 日元
+  KRW: 1459.333782, // 韩元
+  AUD: 1.411431, // 澳元
+  CAD: 1.366999, // 加元
+  HKD: 7.822186, // 港币
+  TWD: 31.581761, // 新台币
+  SGD: 1.27295, // 新加坡元
+  INR: 91.632632, // 印度卢比
+  BRL: 5.179572, // 巴西雷亚尔
+  MXN: 17.322493, // 墨西哥比索
+  THB: 31.437897, // 泰铢
+  VND: 26100.93299, // 越南盾
   IDR: 16871.400742, // 印尼盾
-  PHP: 58.226732,    // 菲律宾比索
-  MYR: 3.925096,     // 马来西亚林吉特
-  RUB: 77.421005,    // 俄罗斯卢布
+  PHP: 58.226732, // 菲律宾比索
+  MYR: 3.925096, // 马来西亚林吉特
+  RUB: 77.421005, // 俄罗斯卢布
 }
 
 /**
@@ -90,7 +90,9 @@ export const CURRENCY_NAMES: Record<string, string> = {
 }
 
 export function normalizeCurrencyCode(value: unknown): string {
-  return String(value || '').trim().toUpperCase()
+  return String(value || '')
+    .trim()
+    .toUpperCase()
 }
 
 /**
@@ -100,14 +102,14 @@ export function normalizeCurrencyCode(value: unknown): string {
  * @param toCurrency 目标货币代码（例如：CNY）
  * @returns 转换后的金额
  */
-export function convertCurrency(
-  amount: number,
-  fromCurrency: string,
-  toCurrency: string
-): number {
+export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string): number {
   const rates = getEffectiveUsdRates(EXCHANGE_RATES)
-  const from = String(fromCurrency || '').trim().toUpperCase()
-  const to = String(toCurrency || '').trim().toUpperCase()
+  const from = String(fromCurrency || '')
+    .trim()
+    .toUpperCase()
+  const to = String(toCurrency || '')
+    .trim()
+    .toUpperCase()
   const fromRate = rates[from]
   const toRate = rates[to]
 
@@ -129,11 +131,7 @@ export function convertCurrency(
  * @param decimals 小数位数（默认2位）
  * @returns 格式化后的货币字符串（例如：¥6.68）
  */
-export function formatCurrency(
-  amount: number,
-  currency: string,
-  decimals: number = 2
-): string {
+export function formatCurrency(amount: number, currency: string, decimals: number = 2): string {
   const symbol = CURRENCY_SYMBOLS[currency] || currency
   const formattedAmount = amount.toFixed(decimals)
 

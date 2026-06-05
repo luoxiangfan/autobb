@@ -41,7 +41,8 @@ export async function syncCreativePerformance(
     const db = await getDatabase()
 
     // 获取广告创意和关联的campaign/ad_group信息
-    const creative = await db.queryOne<any>(`
+    const creative = await db.queryOne<any>(
+      `
       SELECT
         ac.id,
         ac.offer_id,
@@ -52,7 +53,9 @@ export async function syncCreativePerformance(
       LEFT JOIN campaigns c ON ac.offer_id = c.offer_id AND c.status = 'ACTIVE'
       LEFT JOIN offers o ON ac.offer_id = o.id
       WHERE ac.id = ?
-    `, [adCreativeId])
+    `,
+      [adCreativeId]
+    )
 
     if (!creative || !creative.google_campaign_id) {
       console.warn(`Creative ${adCreativeId} has no active campaign`)
@@ -81,35 +84,40 @@ export async function syncCreativePerformance(
 
     const numericUserId = parseInt(userId, 10)
     const results = useServiceAccount
-      ? await executeGAQLQueryPython({ userId: numericUserId, serviceAccountId, customerId: customerID, query })
+      ? await executeGAQLQueryPython({
+          userId: numericUserId,
+          serviceAccountId,
+          customerId: customerID,
+          query,
+        })
       : await (async () => {
-        const startTime = Date.now()
-        try {
-          const data = await customer.query(query)
-          await trackApiUsage({
-            userId: numericUserId,
-            operationType: ApiOperationType.REPORT,
-            endpoint: '/api/google-ads/query',
-            customerId: customerID,
-            requestCount: 1,
-            responseTimeMs: Date.now() - startTime,
-            isSuccess: true,
-          })
-          return data
-        } catch (error: any) {
-          await trackApiUsage({
-            userId: numericUserId,
-            operationType: ApiOperationType.REPORT,
-            endpoint: '/api/google-ads/query',
-            customerId: customerID,
-            requestCount: 1,
-            responseTimeMs: Date.now() - startTime,
-            isSuccess: false,
-            errorMessage: error?.message || String(error),
-          }).catch(() => {})
-          throw error
-        }
-      })()
+          const startTime = Date.now()
+          try {
+            const data = await customer.query(query)
+            await trackApiUsage({
+              userId: numericUserId,
+              operationType: ApiOperationType.REPORT,
+              endpoint: '/api/google-ads/query',
+              customerId: customerID,
+              requestCount: 1,
+              responseTimeMs: Date.now() - startTime,
+              isSuccess: true,
+            })
+            return data
+          } catch (error: any) {
+            await trackApiUsage({
+              userId: numericUserId,
+              operationType: ApiOperationType.REPORT,
+              endpoint: '/api/google-ads/query',
+              customerId: customerID,
+              requestCount: 1,
+              responseTimeMs: Date.now() - startTime,
+              isSuccess: false,
+              errorMessage: error?.message || String(error),
+            }).catch(() => {})
+            throw error
+          }
+        })()
 
     if (results.length === 0) {
       console.warn(`No performance data found for campaign ${creative.google_campaign_id}`)
@@ -138,7 +146,7 @@ export async function syncCreativePerformance(
       ctr,
       cpc,
       conversions: totalConversions,
-      conversionRate
+      conversionRate,
     }
 
     // 保存到数据库并计算加分
@@ -179,7 +187,8 @@ export async function syncAllCreativesPerformance(
 
   try {
     // 获取所有有活跃campaign的ad creatives
-    const creatives = await db.query<any>(`
+    const creatives = await db.query<any>(
+      `
       SELECT DISTINCT
         ac.id,
         ac.offer_id,
@@ -190,7 +199,9 @@ export async function syncAllCreativesPerformance(
       WHERE c.status = 'ACTIVE'
         AND o.user_id = ?
         AND c.google_campaign_id IS NOT NULL
-    `, [userId])
+    `,
+      [userId]
+    )
 
     for (const creative of creatives) {
       const success = await syncCreativePerformance(
@@ -213,7 +224,7 @@ export async function syncAllCreativesPerformance(
       success: true,
       syncedCount,
       errors,
-      syncDate
+      syncDate,
     }
   } catch (error) {
     errors.push(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -221,7 +232,7 @@ export async function syncAllCreativesPerformance(
       success: false,
       syncedCount,
       errors,
-      syncDate
+      syncDate,
     }
   }
 }
@@ -245,12 +256,15 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       customer_id: string
       parent_mcc_id: string | null
       service_account_id: string | null
-    }>(`
+    }>(
+      `
       SELECT id, customer_id, parent_mcc_id, service_account_id
       FROM google_ads_accounts
       WHERE user_id = ? AND ${isActiveCondition}
       LIMIT 1
-    `, [userIdNum])
+    `,
+      [userIdNum]
+    )
 
     if (!account) {
       throw new Error('No active Google Ads account found')
@@ -272,8 +286,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
     }
 
     const oauthCredentials = prepared.oauthCredentials
-    const oauthLoginCustomerId =
-      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     return await runWithLoginCustomerFallbackForAccount({
       adsAccount: {
@@ -316,7 +329,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       success: false,
       syncedCount: 0,
       errors: [error instanceof Error ? error.message : 'Unknown error'],
-      syncDate: new Date().toISOString().split('T')[0]
+      syncDate: new Date().toISOString().split('T')[0],
     }
   }
 }

@@ -17,24 +17,25 @@ function extractCoreProductWords(productName: string, brandName: string): string
   if (!productName || !brandName) return []
 
   // 移除品牌名
-  const nameWithoutBrand = productName
-    .replace(new RegExp(brandName, 'gi'), '')
-    .trim()
+  const nameWithoutBrand = productName.replace(new RegExp(brandName, 'gi'), '').trim()
 
   // 分词并过滤
-  const words = nameWithoutBrand
-    .split(/[\s\-–—]+/)
-    .filter(w => {
-      // 过滤条件：
-      // 1. 太短（<3字符）
-      if (w.length < 3) return false
-      // 2. 纯数字或规格参数（如 4K, 1080P, 32GB, 2.4GHz）
-      if (/^[\d.]+[pPkKgGmMtThHzZ"']*$/.test(w)) return false
-      if (/^\d+x\d+$/i.test(w)) return false
-      // 3. 常见无意义词
-      if (/^(with|for|and|the|a|an|in|on|of|to|by|from|new|pro|plus|max|mini|lite|version|edition|series|gen|generation)$/i.test(w)) return false
-      return true
-    })
+  const words = nameWithoutBrand.split(/[\s\-–—]+/).filter((w) => {
+    // 过滤条件：
+    // 1. 太短（<3字符）
+    if (w.length < 3) return false
+    // 2. 纯数字或规格参数（如 4K, 1080P, 32GB, 2.4GHz）
+    if (/^[\d.]+[pPkKgGmMtThHzZ"']*$/.test(w)) return false
+    if (/^\d+x\d+$/i.test(w)) return false
+    // 3. 常见无意义词
+    if (
+      /^(with|for|and|the|a|an|in|on|of|to|by|from|new|pro|plus|max|mini|lite|version|edition|series|gen|generation)$/i.test(
+        w
+      )
+    )
+      return false
+    return true
+  })
 
   // 返回前3个有意义的词
   return words.slice(0, 3)
@@ -223,9 +224,7 @@ export async function getGoogleSearchSuggestions(params: {
             },
           }
 
-          console.log(
-            `  ✓ 使用代理: ${proxyConfig.host}:${proxyConfig.port} (${country})`
-          )
+          console.log(`  ✓ 使用代理: ${proxyConfig.host}:${proxyConfig.port} (${country})`)
         }
       } catch (proxyError) {
         console.warn('  ⚠️ 代理配置失败，使用直连:', proxyError)
@@ -235,9 +234,7 @@ export async function getGoogleSearchSuggestions(params: {
     const response = await fetch(apiUrl, fetchOptions)
 
     if (!response.ok) {
-      throw new Error(
-        `Google Suggest API返回错误: ${response.status} ${response.statusText}`
-      )
+      throw new Error(`Google Suggest API返回错误: ${response.status} ${response.statusText}`)
     }
 
     const data = await response.json()
@@ -276,8 +273,8 @@ export async function getBrandSearchSuggestions(params: {
   country: string
   language: string
   useProxy?: boolean
-  productName?: string  // 🔧 新增：产品名称
-  category?: string     // 🔧 新增：产品品类
+  productName?: string // 🔧 新增：产品名称
+  category?: string // 🔧 新增：产品品类
 }): Promise<GoogleSuggestion[]> {
   const { brand, country, language, useProxy, productName, category } = params
 
@@ -343,9 +340,7 @@ export async function getBrandSearchSuggestions(params: {
  */
 export function filterLowIntentKeywords(keywords: string[]): string[] {
   return keywords.filter((keyword) => {
-    const isLowIntent = LOW_INTENT_PATTERNS.some((pattern) =>
-      pattern.test(keyword)
-    )
+    const isLowIntent = LOW_INTENT_PATTERNS.some((pattern) => pattern.test(keyword))
 
     if (isLowIntent) {
       console.log(`  ⊗ 过滤低意图关键词: "${keyword}"`)
@@ -393,10 +388,7 @@ export function detectCountryInKeyword(keyword: string): string[] {
  * filterMismatchedGeoKeywords(["reolink", "reolink australia", "reolink uk"], "AU")
  * // returns ["reolink", "reolink australia"] - 过滤掉 "reolink uk"
  */
-export function filterMismatchedGeoKeywords(
-  keywords: string[],
-  targetCountry: string
-): string[] {
+export function filterMismatchedGeoKeywords(keywords: string[], targetCountry: string): string[] {
   return keywords.filter((keyword) => {
     const detectedCountries = detectCountryInKeyword(keyword)
 
@@ -422,16 +414,10 @@ export function filterMismatchedGeoKeywords(
 /**
  * 过滤关键词建议对象数组
  */
-export function filterLowIntentSuggestions(
-  suggestions: GoogleSuggestion[]
-): GoogleSuggestion[] {
-  const filteredKeywords = filterLowIntentKeywords(
-    suggestions.map((s) => s.keyword)
-  )
+export function filterLowIntentSuggestions(suggestions: GoogleSuggestion[]): GoogleSuggestion[] {
+  const filteredKeywords = filterLowIntentKeywords(suggestions.map((s) => s.keyword))
 
-  return suggestions.filter((s) =>
-    filteredKeywords.includes(s.keyword)
-  )
+  return suggestions.filter((s) => filteredKeywords.includes(s.keyword))
 }
 
 /**
@@ -455,22 +441,13 @@ export async function getHighIntentKeywords(params: {
 
   // 3. 过滤低意图关键词
   const highIntentKeywords = filterLowIntentKeywords(keywords)
-  console.log(
-    `  → 步骤2: 过滤低意图后剩余${highIntentKeywords.length}个关键词`
-  )
+  console.log(`  → 步骤2: 过滤低意图后剩余${highIntentKeywords.length}个关键词`)
 
   // 4. 过滤地理不匹配的关键词 (用户问题1)
-  const geoFilteredKeywords = filterMismatchedGeoKeywords(
-    highIntentKeywords,
-    country
-  )
-  console.log(
-    `  → 步骤3: 过滤地理不匹配后剩余${geoFilteredKeywords.length}个关键词`
-  )
+  const geoFilteredKeywords = filterMismatchedGeoKeywords(highIntentKeywords, country)
+  console.log(`  → 步骤3: 过滤地理不匹配后剩余${geoFilteredKeywords.length}个关键词`)
 
-  console.log(
-    `  ✓ 最终剩余${geoFilteredKeywords.length}个高质量关键词 (原始${keywords.length}个)`
-  )
+  console.log(`  ✓ 最终剩余${geoFilteredKeywords.length}个高质量关键词 (原始${keywords.length}个)`)
 
   return geoFilteredKeywords
 }

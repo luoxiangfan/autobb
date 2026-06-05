@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignName } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 
@@ -13,7 +16,7 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const raw = String(value).trim()
   if (!raw) return null
-  return /^\d+$/.test(raw) ? raw : null;
+  return /^\d+$/.test(raw) ? raw : null
 }
 
 function normalizeCampaignName(value: unknown): string | null {
@@ -30,7 +33,7 @@ function normalizeCampaignName(value: unknown): string | null {
  * 更新广告系列名称（本地 + 已发布时同步 Google Ads）
  */
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -43,7 +46,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       return NextResponse.json({ error: '无效的 campaignId' }, { status: 400 })
     }
 
-    const body = await request.json().catch(() => null) as { campaignName?: string } | null
+    const body = (await request.json().catch(() => null)) as { campaignName?: string } | null
     const campaignName = normalizeCampaignName(body?.campaignName)
 
     if (!campaignName) {
@@ -63,7 +66,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     const db = await getDatabase()
-    const campaignRow = await db.queryOne(
+    const campaignRow = (await db.queryOne(
       `
         SELECT
           id,
@@ -77,7 +80,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         LIMIT 1
       `,
       [campaignId, userId]
-    ) as
+    )) as
       | {
           id: number
           campaign_id: string | null
@@ -94,10 +97,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
     const isDeleted = campaignRow.is_deleted === true || campaignRow.is_deleted === 1
     if (isDeleted || String(campaignRow.status || '').toUpperCase() === 'REMOVED') {
-      return NextResponse.json(
-        { error: '该广告系列已删除/移除，无法修改名称' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '该广告系列已删除/移除，无法修改名称' }, { status: 400 })
     }
 
     const googleCampaignId =
@@ -107,7 +107,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     let syncedToGoogleAds = false
 
     if (googleCampaignId && campaignRow.google_ads_account_id) {
-      const adsAccountRow = await db.queryOne(
+      const adsAccountRow = (await db.queryOne(
         `
           SELECT
             id,
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
           LIMIT 1
         `,
         [campaignRow.google_ads_account_id, userId]
-      ) as
+      )) as
         | {
             id: number
             customer_id: string

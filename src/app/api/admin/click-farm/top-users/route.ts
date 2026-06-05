@@ -1,29 +1,27 @@
 // GET /api/admin/click-farm/top-users - Top 10用户排行
 
 import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/db';
-import { estimateTraffic } from '@/lib/click-farm/distribution';
+import { NextRequest, NextResponse } from 'next/server'
+import { getDatabase } from '@/lib/db'
+import { estimateTraffic } from '@/lib/click-farm/distribution'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId || authResult.user.role !== 'admin') {
-      return NextResponse.json(
-        { error: 'forbidden', message: '需要管理员权限' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'forbidden', message: '需要管理员权限' }, { status: 403 })
     }
 
-    const db = await getDatabase();
+    const db = await getDatabase()
 
-    const topUsers = await db.query<any>(`
+    const topUsers = await db.query<any>(
+      `
       SELECT
         u.id as user_id,
         u.username,
@@ -36,28 +34,27 @@ export async function GET(request: NextRequest) {
       HAVING COALESCE(SUM(t.total_clicks), 0) > 0
       ORDER BY total_clicks DESC
       LIMIT 10
-    `, []);
+    `,
+      []
+    )
 
     const result = topUsers.map((user: any) => ({
       userId: user.user_id,
       username: user.username,
       totalClicks: user.total_clicks,
-      successRate: user.total_clicks > 0
-        ? parseFloat(((user.success_clicks / user.total_clicks) * 100).toFixed(1))
-        : 0,
-      traffic: estimateTraffic(user.total_clicks)  // 🔧 统一使用估算函数
-    }));
+      successRate:
+        user.total_clicks > 0
+          ? parseFloat(((user.success_clicks / user.total_clicks) * 100).toFixed(1))
+          : 0,
+      traffic: estimateTraffic(user.total_clicks), // 🔧 统一使用估算函数
+    }))
 
     return NextResponse.json({
       success: true,
-      data: result
-    });
-
+      data: result,
+    })
   } catch (error) {
-    console.error('获取Top用户失败:', error);
-    return NextResponse.json(
-      { error: 'server_error', message: '获取Top用户失败' },
-      { status: 500 }
-    );
+    console.error('获取Top用户失败:', error)
+    return NextResponse.json({ error: 'server_error', message: '获取Top用户失败' }, { status: 500 })
   }
 }

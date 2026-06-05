@@ -16,9 +16,8 @@ const dbFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth', () => ({
   withAuth: (handler: any) => {
-    return async (request: NextRequest, context?: { params?: Record<string, string> }) => (
+    return async (request: NextRequest, context?: { params?: Record<string, string> }) =>
       handler(request, authUser, context)
-    )
   },
 }))
 

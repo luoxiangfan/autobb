@@ -7,11 +7,13 @@ describe('RedisQueueAdapter.removePendingTasksByUserAndTypes', () => {
     const adapter = new RedisQueueAdapter('redis://example.invalid')
 
     const zrange = vi.fn().mockResolvedValue(['t1', 't2', 't3'])
-    const hmget = vi.fn().mockResolvedValue([
-      JSON.stringify({ id: 't1', type: 'click-farm', status: 'pending', userId: 42 }),
-      JSON.stringify({ id: 't2', type: 'url-swap', status: 'pending', userId: 42 }),
-      JSON.stringify({ id: 't3', type: 'sync', status: 'pending', userId: 42 }),
-    ])
+    const hmget = vi
+      .fn()
+      .mockResolvedValue([
+        JSON.stringify({ id: 't1', type: 'click-farm', status: 'pending', userId: 42 }),
+        JSON.stringify({ id: 't2', type: 'url-swap', status: 'pending', userId: 42 }),
+        JSON.stringify({ id: 't3', type: 'sync', status: 'pending', userId: 42 }),
+      ])
 
     const pipeline = {
       hdel: vi.fn().mockReturnThis(),
@@ -46,4 +48,3 @@ describe('RedisQueueAdapter.removePendingTasksByUserAndTypes', () => {
     expect(result.removedTaskIds.sort()).toEqual(['t1', 't2'])
   })
 })
-

@@ -23,7 +23,8 @@ interface UnknownAsin {
 async function findUnknownAsins(userId: number): Promise<UnknownAsin[]> {
   const db = await getDatabase()
 
-  const results = await db.query<UnknownAsin>(`
+  const results = await db.query<UnknownAsin>(
+    `
     SELECT
       f.source_asin as asin,
       f.platform,
@@ -41,7 +42,9 @@ async function findUnknownAsins(userId: number): Promise<UnknownAsin[]> {
       AND ap.id IS NULL
     GROUP BY f.source_asin, f.platform, f.source_mid
     ORDER BY SUM(f.commission_amount) DESC
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return results
 }
@@ -63,13 +66,16 @@ async function createProductRecord(
   const db = await getDatabase()
 
   // Check if product already exists
-  const existing = await db.queryOne<{ id: number }>(`
+  const existing = await db.queryOne<{ id: number }>(
+    `
     SELECT id
     FROM affiliate_products
     WHERE user_id = ?
       AND asin = ?
       AND platform = ?
-  `, [userId, asin, platform])
+  `,
+    [userId, asin, platform]
+  )
 
   if (existing) {
     console.log(`   ℹ️  Product ${asin} already exists`)
@@ -77,19 +83,22 @@ async function createProductRecord(
   }
 
   // Create placeholder record if API info not available
-  await db.exec(`
+  await db.exec(
+    `
     INSERT INTO affiliate_products
       (user_id, platform, asin, mid, brand, product_name, last_synced_at, created_at)
     VALUES
       (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `, [
-    userId,
-    platform,
-    asin,
-    mid,
-    productInfo?.brand || 'Unknown',
-    productInfo?.name || `Product ${asin}`,
-  ])
+  `,
+    [
+      userId,
+      platform,
+      asin,
+      mid,
+      productInfo?.brand || 'Unknown',
+      productInfo?.name || `Product ${asin}`,
+    ]
+  )
 
   console.log(`   ✅ Created product record for ${asin}`)
 }
@@ -98,7 +107,9 @@ async function main() {
   const db = await getDatabase()
 
   // Get all users
-  const users = await db.query<{ id: number }>('SELECT DISTINCT user_id as id FROM openclaw_affiliate_attribution_failures')
+  const users = await db.query<{ id: number }>(
+    'SELECT DISTINCT user_id as id FROM openclaw_affiliate_attribution_failures'
+  )
 
   console.log(`🔍 Discovering new products from unattributed commissions...\n`)
 
@@ -119,7 +130,9 @@ async function main() {
 
     for (const item of unknownAsins) {
       console.log(`   📦 ${item.asin} (${item.platform}):`)
-      console.log(`      Commission: $${item.totalCommission.toFixed(2)} (${item.occurrences} occurrences)`)
+      console.log(
+        `      Commission: $${item.totalCommission.toFixed(2)} (${item.occurrences} occurrences)`
+      )
 
       totalDiscovered++
 
@@ -140,11 +153,11 @@ async function main() {
 
   await db.close()
 
-  console.log('=' .repeat(60))
+  console.log('='.repeat(60))
   console.log(`📊 Summary:`)
   console.log(`   Unknown ASINs discovered: ${totalDiscovered}`)
   console.log(`   Product records created: ${totalCreated}`)
-  console.log('=' .repeat(60))
+  console.log('='.repeat(60))
 
   if (totalDiscovered > 0) {
     console.log(`\n💡 Next steps:`)

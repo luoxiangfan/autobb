@@ -36,10 +36,11 @@ export async function scheduleProductScoreCalculation(
   }
 ): Promise<string> {
   const paused = await isProductScoreCalculationPaused(userId)
-  const canBypassPause = paused
-    && options?.allowWhenPaused === true
-    && Array.isArray(options?.productIds)
-    && options.productIds.length > 0
+  const canBypassPause =
+    paused &&
+    options?.allowWhenPaused === true &&
+    Array.isArray(options?.productIds) &&
+    options.productIds.length > 0
 
   if (paused && !canBypassPause) {
     throw new ProductScoreCalculationPausedError('推荐指数计算已暂停，暂不接收新任务')
@@ -53,7 +54,7 @@ export async function scheduleProductScoreCalculation(
     allowWhenPaused: canBypassPause,
     batchSize: options?.batchSize ?? 100,
     includeSeasonalityAnalysis: options?.includeSeasonalityAnalysis ?? true,
-    trigger: options?.trigger ?? 'manual'
+    trigger: options?.trigger ?? 'manual',
   }
 
   const existingTask = await findExistingProductScoreTask(queue, userId)
@@ -74,16 +75,13 @@ export async function scheduleProductScoreCalculation(
     return existingTask.id
   }
 
-  const taskId = await queue.enqueue(
-    'product-score-calculation',
-    taskData,
-    userId,
-    {
-      priority: options?.priority ?? 'normal'
-    }
-  )
+  const taskId = await queue.enqueue('product-score-calculation', taskData, userId, {
+    priority: options?.priority ?? 'normal',
+  })
 
-  console.log(`[ProductScoreScheduler] 已调度任务 ${taskId} (用户: ${userId}, 触发: ${taskData.trigger})`)
+  console.log(
+    `[ProductScoreScheduler] 已调度任务 ${taskId} (用户: ${userId}, 触发: ${taskData.trigger})`
+  )
 
   return taskId
 }
@@ -149,7 +147,7 @@ export async function scheduleDailyProductScoreCalculation(): Promise<void> {
         forceRecalculate: false, // 只计算未计算过的商品
         batchSize: 100,
         includeSeasonalityAnalysis: true,
-        trigger: 'schedule'
+        trigger: 'schedule',
       }
     )
 
@@ -178,6 +176,6 @@ export async function scheduleProductScoreAfterSync(
     batchSize: 100,
     includeSeasonalityAnalysis: true,
     trigger: 'sync-complete',
-    priority: 'normal'
+    priority: 'normal',
   })
 }

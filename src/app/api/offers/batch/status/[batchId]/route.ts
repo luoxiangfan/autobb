@@ -48,7 +48,7 @@ interface BatchTask {
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const db = getDatabase()
   const { batchId } = params
 
@@ -56,10 +56,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
     // 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
@@ -79,9 +76,10 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
     const batch = rows[0]
 
     // 计算进度百分比
-    const progress = batch.total_count > 0
-      ? Math.round(((batch.completed_count + batch.failed_count) / batch.total_count) * 100)
-      : 0
+    const progress =
+      batch.total_count > 0
+        ? Math.round(((batch.completed_count + batch.failed_count) / batch.total_count) * 100)
+        : 0
 
     // 构造响应
     return NextResponse.json({
@@ -99,14 +97,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
       startedAt: batch.started_at,
       completedAt: batch.completed_at,
     })
-
   } catch (error: any) {
     console.error('查询批量任务状态失败:', error)
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '查询失败'
+        message: error.message || '查询失败',
       },
       { status: 500 }
     )

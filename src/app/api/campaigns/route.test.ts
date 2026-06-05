@@ -88,14 +88,16 @@ describe('POST /api/campaigns', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(campaignFns.createCampaign).toHaveBeenCalledWith(expect.objectContaining({
-      userId: 7,
-      offerId: 11,
-      googleAdsAccountId: 22,
-      campaignName: 'Demo Campaign',
-      budgetAmount: 19.99,
-      budgetType: 'DAILY',
-    }))
+    expect(campaignFns.createCampaign).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 7,
+        offerId: 11,
+        googleAdsAccountId: 22,
+        campaignName: 'Demo Campaign',
+        budgetAmount: 19.99,
+        budgetType: 'DAILY',
+      })
+    )
     expect(cacheFns.invalidateOfferCache).toHaveBeenCalledWith(7, 11)
   })
 

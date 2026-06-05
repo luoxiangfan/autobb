@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  resolveOfferLatestLaunchScoreForCompare,
-  type LaunchScore,
-} from '../launch-scores'
+import { resolveOfferLatestLaunchScoreForCompare, type LaunchScore } from '../launch-scores'
 
 function scoreRow(overrides: Partial<LaunchScore>): LaunchScore {
   return {

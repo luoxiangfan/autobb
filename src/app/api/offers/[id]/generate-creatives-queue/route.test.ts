@@ -43,7 +43,8 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  validateGoogleAdsConfigForCreativeGeneration: authFns.validateGoogleAdsConfigForCreativeGeneration,
+  validateGoogleAdsConfigForCreativeGeneration:
+    authFns.validateGoogleAdsConfigForCreativeGeneration,
 }))
 
 vi.mock('@/lib/offer-keyword-pool', () => ({
@@ -83,7 +84,9 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     })
 
     creativeTypeFns.normalizeCanonicalCreativeType.mockImplementation((value: unknown) => {
-      const normalized = String(value || '').trim().toLowerCase()
+      const normalized = String(value || '')
+        .trim()
+        .toLowerCase()
       if (!normalized) return null
       if (normalized === 'brand_focus' || normalized === 'brand_intent') return 'brand_intent'
       if (normalized === 'model_focus' || normalized === 'model_intent') return 'model_intent'
@@ -101,7 +104,9 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     creativeTypeFns.deriveCanonicalCreativeType.mockImplementation((params: any) => {
       const normalizedType = creativeTypeFns.normalizeCanonicalCreativeType(params?.creativeType)
       if (normalizedType) return normalizedType
-      const bucket = String(params?.keywordBucket || '').trim().toUpperCase()
+      const bucket = String(params?.keywordBucket || '')
+        .trim()
+        .toUpperCase()
       if (bucket === 'A') return 'brand_intent'
       if (bucket === 'B' || bucket === 'C') return 'model_intent'
       if (bucket === 'D' || bucket === 'S') return 'product_intent'

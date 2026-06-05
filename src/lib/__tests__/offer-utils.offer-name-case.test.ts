@@ -13,7 +13,8 @@ describe('offer-utils: offer name casing consistency', () => {
 
   it('counts existing offers case-insensitively when generating offer_name', async () => {
     const mockDb = {
-      queryOne: vi.fn()
+      queryOne: vi
+        .fn()
         .mockResolvedValueOnce({ count: '2' }) // existing same brand/country (case-insensitive)
         .mockResolvedValueOnce({ count: '0' }), // proposed offer_name uniqueness check
     }
@@ -35,7 +36,8 @@ describe('offer-utils: offer name casing consistency', () => {
 
   it('treats different-case offer_name as conflict and increments sequence', async () => {
     const mockDb = {
-      queryOne: vi.fn()
+      queryOne: vi
+        .fn()
         .mockResolvedValueOnce({ count: '0' }) // existing brand/country count
         .mockResolvedValueOnce({ count: '1' }) // _01 exists in different case
         .mockResolvedValueOnce({ count: '0' }), // _02 available
@@ -65,9 +67,7 @@ describe('offer-utils: offer name casing consistency', () => {
 
   it('normalizes UK country code to GB when generating offer_name', async () => {
     const mockDb = {
-      queryOne: vi.fn()
-        .mockResolvedValueOnce({ count: '0' })
-        .mockResolvedValueOnce({ count: '0' }),
+      queryOne: vi.fn().mockResolvedValueOnce({ count: '0' }).mockResolvedValueOnce({ count: '0' }),
     }
     getDatabaseMock.mockResolvedValue(mockDb)
 

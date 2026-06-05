@@ -80,7 +80,12 @@ function getCountryCandidates(country: string): Set<string> {
 
 function getPrimaryCountryCode(country: string): string {
   const normalized = normalizeCountryCode(String(country || '').trim())
-  return normalized || String(country || '').trim().toUpperCase()
+  return (
+    normalized ||
+    String(country || '')
+      .trim()
+      .toUpperCase()
+  )
 }
 
 // ==================== 代理池管理 ====================
@@ -99,14 +104,21 @@ export class ProxyPoolManager {
   /**
    * 从settings中加载代理配置
    */
-  async loadProxies(settingsProxies: Array<{ url: string; country: string; is_default: boolean }>): Promise<void> {
+  async loadProxies(
+    settingsProxies: Array<{ url: string; country: string; is_default: boolean }>
+  ): Promise<void> {
     console.log(`🔍 [loadProxies] 开始加载代理，输入代理数量: ${settingsProxies.length}`)
-    console.log(`🔍 [loadProxies] 输入代理详情:`, settingsProxies.map(p => ({ country: p.country, url: maskProxyUrl(p.url) })))
+    console.log(
+      `🔍 [loadProxies] 输入代理详情:`,
+      settingsProxies.map((p) => ({ country: p.country, url: maskProxyUrl(p.url) }))
+    )
 
     this.proxies.clear()
 
     for (const proxy of settingsProxies) {
-      const normalizedCountry = String(proxy.country || '').trim().toUpperCase()
+      const normalizedCountry = String(proxy.country || '')
+        .trim()
+        .toUpperCase()
       const config: ProxyConfig = {
         url: proxy.url,
         country: normalizedCountry,
@@ -142,7 +154,7 @@ export class ProxyPoolManager {
 
     // 1. 优先使用目标国家的健康代理
     const countryProxies = allProxies
-      .filter(p => targetCountryCandidates.has(p.country) && p.isHealthy)
+      .filter((p) => targetCountryCandidates.has(p.country) && p.isHealthy)
       .sort((a, b) => a.failureCount - b.failureCount || a.avgResponseTime - b.avgResponseTime)
 
     if (countryProxies.length > 0) {
@@ -151,21 +163,25 @@ export class ProxyPoolManager {
 
     // 2. 尝试使用目标国家的不健康代理（失败次数较少的）
     const unhealthyCountryProxies = allProxies
-      .filter(p => targetCountryCandidates.has(p.country) && !p.isHealthy)
+      .filter((p) => targetCountryCandidates.has(p.country) && !p.isHealthy)
       .sort((a, b) => a.failureCount - b.failureCount)
 
     if (unhealthyCountryProxies.length > 0 && unhealthyCountryProxies[0].failureCount < 10) {
-      console.log(`⚠️ [Proxy] ${normalizedTargetCountry}代理不健康，尝试使用 (failures:${unhealthyCountryProxies[0].failureCount})`)
+      console.log(
+        `⚠️ [Proxy] ${normalizedTargetCountry}代理不健康，尝试使用 (failures:${unhealthyCountryProxies[0].failureCount})`
+      )
       return unhealthyCountryProxies[0]
     }
 
     // 3. 使用其他国家的健康代理
     const healthyProxies = allProxies
-      .filter(p => p.isHealthy)
+      .filter((p) => p.isHealthy)
       .sort((a, b) => a.failureCount - b.failureCount || a.avgResponseTime - b.avgResponseTime)
 
     if (healthyProxies.length > 0) {
-      console.log(`⚠️ [Proxy] ${normalizedTargetCountry}不可用，降级使用${healthyProxies[0].country}`)
+      console.log(
+        `⚠️ [Proxy] ${normalizedTargetCountry}不可用，降级使用${healthyProxies[0].country}`
+      )
       return healthyProxies[0]
     }
 
@@ -186,14 +202,18 @@ export class ProxyPoolManager {
   hasProxyForCountry(targetCountry: string): boolean {
     const targetCountryCandidates = getCountryCandidates(targetCountry)
     const allProxies = Array.from(this.proxies.values())
-    return allProxies.some(p => targetCountryCandidates.has(p.country))
+    return allProxies.some((p) => targetCountryCandidates.has(p.country))
   }
 
   /**
    * 获取将被使用的代理信息（不改变代理状态）
    * @returns 代理信息，包括是否匹配目标国家
    */
-  getProxyInfo(targetCountry: string): { proxy: ProxyConfig | null; isTargetCountryMatch: boolean; usedCountry: string | null } {
+  getProxyInfo(targetCountry: string): {
+    proxy: ProxyConfig | null
+    isTargetCountryMatch: boolean
+    usedCountry: string | null
+  } {
     const targetCountryCandidates = getCountryCandidates(targetCountry)
     const proxy = this.getBestProxyForCountry(targetCountry)
     if (!proxy) {
@@ -254,7 +274,7 @@ export class ProxyPoolManager {
       'net::ERR_HTTP2_PROTOCOL_ERROR',
       'waiting until',
     ]
-    return temporaryErrorPatterns.some(pattern => error.includes(pattern))
+    return temporaryErrorPatterns.some((pattern) => error.includes(pattern))
   }
 
   /**
@@ -280,9 +300,13 @@ export class ProxyPoolManager {
       // 仅在临时失败次数过多时才标记为不健康
       if (proxy.temporaryFailureCount >= this.TEMPORARY_FAILURE_THRESHOLD) {
         proxy.isHealthy = false
-        console.warn(`⚠️ 代理标记为不健康（临时失败过多）: ${maskProxyUrl(proxyUrl)} (${proxy.temporaryFailureCount}次临时失败)`)
+        console.warn(
+          `⚠️ 代理标记为不健康（临时失败过多）: ${maskProxyUrl(proxyUrl)} (${proxy.temporaryFailureCount}次临时失败)`
+        )
       } else {
-        console.warn(`⚠️ 代理临时失败: ${maskProxyUrl(proxyUrl)} (${proxy.temporaryFailureCount}/${this.TEMPORARY_FAILURE_THRESHOLD})`)
+        console.warn(
+          `⚠️ 代理临时失败: ${maskProxyUrl(proxyUrl)} (${proxy.temporaryFailureCount}/${this.TEMPORARY_FAILURE_THRESHOLD})`
+        )
       }
     } else {
       // 🔥 永久失败：严格处理
@@ -292,9 +316,13 @@ export class ProxyPoolManager {
       // 永久失败次数达到阈值立即标记为不健康
       if (proxy.permanentFailureCount >= this.MAX_FAILURES_THRESHOLD) {
         proxy.isHealthy = false
-        console.warn(`⚠️ 代理标记为不健康（永久失败）: ${maskProxyUrl(proxyUrl)} (${proxy.permanentFailureCount}次永久失败)`)
+        console.warn(
+          `⚠️ 代理标记为不健康（永久失败）: ${maskProxyUrl(proxyUrl)} (${proxy.permanentFailureCount}次永久失败)`
+        )
       } else {
-        console.warn(`⚠️ 代理永久失败: ${maskProxyUrl(proxyUrl)} (${proxy.permanentFailureCount}/${this.MAX_FAILURES_THRESHOLD})`)
+        console.warn(
+          `⚠️ 代理永久失败: ${maskProxyUrl(proxyUrl)} (${proxy.permanentFailureCount}/${this.MAX_FAILURES_THRESHOLD})`
+        )
       }
     }
 
@@ -346,13 +374,19 @@ export class ProxyPoolManager {
       }
 
       // 🔥 策略3: 逐步衰减失败计数（即使代理仍不健康）
-      if (proxy.lastTemporaryFailureTime && now - proxy.lastTemporaryFailureTime > this.TEMPORARY_FAILURE_RESET_TIME) {
+      if (
+        proxy.lastTemporaryFailureTime &&
+        now - proxy.lastTemporaryFailureTime > this.TEMPORARY_FAILURE_RESET_TIME
+      ) {
         if (proxy.temporaryFailureCount > 0) {
           proxy.temporaryFailureCount = Math.max(0, proxy.temporaryFailureCount - 1)
         }
       }
 
-      if (proxy.lastPermanentFailureTime && now - proxy.lastPermanentFailureTime > this.FAILURE_RESET_TIME) {
+      if (
+        proxy.lastPermanentFailureTime &&
+        now - proxy.lastPermanentFailureTime > this.FAILURE_RESET_TIME
+      ) {
         if (proxy.permanentFailureCount > 0) {
           proxy.permanentFailureCount = Math.max(0, proxy.permanentFailureCount - 1)
         }
@@ -363,8 +397,14 @@ export class ProxyPoolManager {
   /**
    * 获取所有代理的健康状态
    */
-  getProxyHealth(): Array<{ url: string; country: string; isHealthy: boolean; failureCount: number; successCount: number }> {
-    return Array.from(this.proxies.values()).map(p => ({
+  getProxyHealth(): Array<{
+    url: string
+    country: string
+    isHealthy: boolean
+    failureCount: number
+    successCount: number
+  }> {
+    return Array.from(this.proxies.values()).map((p) => ({
       url: p.url,
       country: p.country,
       isHealthy: p.isHealthy,
@@ -427,7 +467,9 @@ export class ProxyPoolManager {
     }
 
     if (!force && now - this.lastHealthCheckTime < this.HEALTH_CHECK_INTERVAL) {
-      const remainingTime = Math.floor((this.HEALTH_CHECK_INTERVAL - (now - this.lastHealthCheckTime)) / 1000 / 60)
+      const remainingTime = Math.floor(
+        (this.HEALTH_CHECK_INTERVAL - (now - this.lastHealthCheckTime)) / 1000 / 60
+      )
       console.log(`⏳ 距离下次健康检测还有 ${remainingTime} 分钟`)
       return
     }
@@ -463,7 +505,7 @@ export class ProxyPoolManager {
     this.isHealthCheckRunning = false
 
     // 统计结果
-    const healthyCount = Array.from(this.proxies.values()).filter(p => p.isHealthy).length
+    const healthyCount = Array.from(this.proxies.values()).filter((p) => p.isHealthy).length
     const unhealthyCount = this.proxies.size - healthyCount
 
     console.log(`✅ 健康检测完成: ${healthyCount}个健康, ${unhealthyCount}个不健康`)
@@ -477,7 +519,7 @@ export class ProxyPoolManager {
     const now = Date.now()
     if (now - this.lastHealthCheckTime > this.HEALTH_CHECK_INTERVAL && !this.isHealthCheckRunning) {
       // 后台异步执行健康检测（不阻塞当前请求）
-      this.performHealthCheck().catch(err => {
+      this.performHealthCheck().catch((err) => {
         console.error('后台健康检测失败:', err)
       })
     }
@@ -600,7 +642,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxDelay: 16000, // 16秒
   retryableErrors: [
     'timeout',
-    'Timeout',  // 🔥 P0修复：Playwright超时错误应该可以重试
+    'Timeout', // 🔥 P0修复：Playwright超时错误应该可以重试
     'ETIMEDOUT',
     'ECONNRESET',
     'ECONNREFUSED',
@@ -611,14 +653,14 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
     'wrong version number',
     'ssl3_get_record',
     'ERR_NAME_NOT_RESOLVED',
-    'ERR_EMPTY_RESPONSE',     // 服务器无响应（可能是代理IP被封）
-    'ERR_CONNECTION_CLOSED',  // 连接被关闭
+    'ERR_EMPTY_RESPONSE', // 服务器无响应（可能是代理IP被封）
+    'ERR_CONNECTION_CLOSED', // 连接被关闭
     'ERR_HTTP2_PROTOCOL_ERROR', // HTTP2协议错误（代理/中间链路常见）
     'ERR_PROXY_CONNECTION_FAILED', // 代理连接失败
     'net::ERR_EMPTY_RESPONSE', // Playwright格式的空响应错误
     'net::ERR_HTTP2_PROTOCOL_ERROR', // Playwright格式的HTTP2协议错误
-    'TimeoutError',  // 🔥 P0修复：Playwright TimeoutError应该可以重试
-    'waiting until',  // 🔥 P0修复：Playwright waiting until错误应该可以重试
+    'TimeoutError', // 🔥 P0修复：Playwright TimeoutError应该可以重试
+    'waiting until', // 🔥 P0修复：Playwright waiting until错误应该可以重试
   ],
 }
 
@@ -646,14 +688,14 @@ function calculateBackoffDelay(attempt: number, config: RetryConfig): number {
  */
 function isRetryableError(error: any, config: RetryConfig): boolean {
   const errorMessage = error.message || String(error)
-  return config.retryableErrors.some(err => errorMessage.includes(err))
+  return config.retryableErrors.some((err) => errorMessage.includes(err))
 }
 
 /**
  * 延迟函数
  */
 function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 // ==================== HTTP请求方式（Level 1） ====================
@@ -664,7 +706,13 @@ async function resolveWithHttp(
   userId: number,
   forceRefreshProxy = false
 ): Promise<ResolvedUrlData> {
-  const result = await resolveAffiliateLinkWithHttp(affiliateLink, proxyUrl, 10, userId, forceRefreshProxy)
+  const result = await resolveAffiliateLinkWithHttp(
+    affiliateLink,
+    proxyUrl,
+    10,
+    userId,
+    forceRefreshProxy
+  )
 
   return {
     finalUrl: result.finalUrl,
@@ -695,7 +743,10 @@ function isBlockedHttpResolution(result: ResolvedUrlData): boolean {
     const path = urlObj.pathname.toLowerCase()
 
     // 已解析到tracking/中间页时，仍需降级Playwright继续追踪
-    const isTrackingUrl = /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(fullResolvedUrl)
+    const isTrackingUrl =
+      /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
+        fullResolvedUrl
+      )
     if (isTrackingUrl) return true
 
     // 明显错误页路径仍视为阻断
@@ -759,7 +810,7 @@ function shouldRetryHttpInsteadOfFallbackToPlaywright(error: unknown): boolean {
     'ERR_EMPTY_RESPONSE',
     'ERR_CONNECTION_CLOSED',
   ]
-  return transientPatterns.some(p => msg.includes(p))
+  return transientPatterns.some((p) => msg.includes(p))
 }
 
 function shouldFailFastWithoutPlaywrightFallback(error: unknown): boolean {
@@ -826,12 +877,15 @@ export async function resolveAffiliateLink(
   const { targetCountry, userId, skipCache = true, retryConfig: customRetryConfig } = options // 默认禁用缓存
 
   // 🔥 P0优化：检测短链接服务，使用更激进的重试策略
-  const isShortLink = /bit\.ly|tinyurl|ow\.ly|rebrand\.ly|pboost\.me|short\.link|is\.gd|buff\.ly|t\.co|goo\.gl|clk\.|fbuy\.me|amzn\.to|flip\.it|linktr\.ee|soo\.gd|click-ecom\.com/i.test(affiliateLink)
+  const isShortLink =
+    /bit\.ly|tinyurl|ow\.ly|rebrand\.ly|pboost\.me|short\.link|is\.gd|buff\.ly|t\.co|goo\.gl|clk\.|fbuy\.me|amzn\.to|flip\.it|linktr\.ee|soo\.gd|click-ecom\.com/i.test(
+      affiliateLink
+    )
 
   const retryConfig = {
     ...DEFAULT_RETRY_CONFIG,
-    ...(isShortLink ? { maxRetries: 5 } : {}),  // 🔥 短链接服务增加重试次数到5次
-    ...customRetryConfig
+    ...(isShortLink ? { maxRetries: 5 } : {}), // 🔥 短链接服务增加重试次数到5次
+    ...customRetryConfig,
   }
 
   if (isShortLink) {
@@ -884,7 +938,13 @@ export async function resolveAffiliateLink(
       if (resolverMethod === 'playwright') {
         // 已知JavaScript重定向域名，直接使用Playwright
         console.log(`   直接使用Playwright（已知需要JavaScript）`)
-        result = await resolveWithPlaywright(affiliateLink, proxy.url, targetCountry, userId, attempt > 0)
+        result = await resolveWithPlaywright(
+          affiliateLink,
+          proxy.url,
+          targetCountry,
+          userId,
+          attempt > 0
+        )
       } else if (resolverMethod === 'http') {
         // 已知HTTP重定向域名（包括Meta Refresh），先使用HTTP
         try {
@@ -911,7 +971,10 @@ export async function resolveAffiliateLink(
           } else {
             // KISS降级策略：检查是否停在了tracking URL
             const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            const isTrackingUrl = /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(fullResolvedUrl)
+            const isTrackingUrl =
+              /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
+                fullResolvedUrl
+              )
 
             if (isTrackingUrl) {
               console.log(`   ⚠️ 检测到tracking URL，可能需要继续追踪`)
@@ -929,7 +992,10 @@ export async function resolveAffiliateLink(
               // 合并重定向链
               result = {
                 ...playwrightResult,
-                redirectChain: [...result.redirectChain, ...playwrightResult.redirectChain.slice(1)],
+                redirectChain: [
+                  ...result.redirectChain,
+                  ...playwrightResult.redirectChain.slice(1),
+                ],
                 redirectCount: result.redirectCount + playwrightResult.redirectCount,
               }
             }
@@ -946,7 +1012,13 @@ export async function resolveAffiliateLink(
             throw httpError
           }
           console.log(`   降级到Playwright...`)
-          result = await resolveWithPlaywright(affiliateLink, proxy.url, targetCountry, userId, attempt > 0)
+          result = await resolveWithPlaywright(
+            affiliateLink,
+            proxy.url,
+            targetCountry,
+            userId,
+            attempt > 0
+          )
         }
       } else {
         // 未知域名，先尝试HTTP，失败则降级到Playwright
@@ -974,7 +1046,10 @@ export async function resolveAffiliateLink(
           } else {
             // 🔥 重要：即使HTTP有重定向，也可能停在 tracking 中间页（例如 partnermatic track），需要继续用Playwright追踪
             const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            const isTrackingUrl = /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(fullResolvedUrl)
+            const isTrackingUrl =
+              /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
+                fullResolvedUrl
+              )
             if (isTrackingUrl) {
               console.log(`   ⚠️ 检测到tracking URL（未知域名路径），降级到Playwright继续解析...`)
               const fullTrackingUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
@@ -987,7 +1062,10 @@ export async function resolveAffiliateLink(
               )
               result = {
                 ...playwrightResult,
-                redirectChain: [...result.redirectChain, ...playwrightResult.redirectChain.slice(1)],
+                redirectChain: [
+                  ...result.redirectChain,
+                  ...playwrightResult.redirectChain.slice(1),
+                ],
                 redirectCount: result.redirectCount + playwrightResult.redirectCount,
               }
             }
@@ -996,7 +1074,13 @@ export async function resolveAffiliateLink(
             if (result.redirectCount === 0 && affiliateLink !== result.finalUrl) {
               // URL改变了但redirectCount为0，可能是JavaScript重定向
               console.log(`   检测到可能的JavaScript重定向，降级到Playwright`)
-              result = await resolveWithPlaywright(affiliateLink, proxy.url, targetCountry, userId, attempt > 0)
+              result = await resolveWithPlaywright(
+                affiliateLink,
+                proxy.url,
+                targetCountry,
+                userId,
+                attempt > 0
+              )
             } else if (result.redirectCount === 0) {
               // URL没变且无重定向，可能是短链接服务
               console.log(`   ⚠️ 无重定向检测到，尝试Playwright验证`)
@@ -1008,7 +1092,10 @@ export async function resolveAffiliateLink(
                 attempt > 0
               )
               // 如果Playwright获得了不同的结果，使用Playwright结果
-              if (playwrightResult.finalUrl !== result.finalUrl || playwrightResult.redirectCount > 0) {
+              if (
+                playwrightResult.finalUrl !== result.finalUrl ||
+                playwrightResult.redirectCount > 0
+              ) {
                 console.log(`   ✅ Playwright发现了额外的重定向`)
                 result = playwrightResult
               }
@@ -1025,7 +1112,13 @@ export async function resolveAffiliateLink(
             throw httpError
           }
           console.log(`   降级到Playwright...`)
-          result = await resolveWithPlaywright(affiliateLink, proxy.url, targetCountry, userId, attempt > 0)
+          result = await resolveWithPlaywright(
+            affiliateLink,
+            proxy.url,
+            targetCountry,
+            userId,
+            attempt > 0
+          )
         }
       }
 

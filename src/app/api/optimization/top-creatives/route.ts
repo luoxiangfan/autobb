@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
 
     // 获取表现最好的创意（基于performance数据和score）
     // 使用ad_creative_performance表聚合最近30天数据
-    const topCreatives = await db.query(`
+    const topCreatives = (await db.query(
+      `
       SELECT
         ac.id as creativeId,
         ac.headlines,
@@ -50,7 +51,9 @@ export async function GET(request: NextRequest) {
         END DESC,
         COALESCE(SUM(acp.impressions), 0) DESC
       LIMIT ?
-    `, [userId, limit]) as any[]
+    `,
+      [userId, limit]
+    )) as any[]
 
     // 转换为前端需要的格式
     const creatives = topCreatives.map((creative) => {
@@ -78,19 +81,16 @@ export async function GET(request: NextRequest) {
         score: Math.round(score),
         rating,
         ctr: creative.ctr || 0,
-        impressions: creative.impressions || 0
+        impressions: creative.impressions || 0,
       }
     })
 
     return NextResponse.json({
       success: true,
-      creatives
+      creatives,
     })
   } catch (error: any) {
     console.error('获取创意排行失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取创意排行失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取创意排行失败' }, { status: 500 })
   }
 }

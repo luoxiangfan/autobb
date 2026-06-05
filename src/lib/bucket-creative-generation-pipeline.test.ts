@@ -97,7 +97,9 @@ describe('bucket-creative-generation-pipeline', () => {
 
   it('resolveOfferLinkType prefers page_type over link_type', () => {
     expect(resolveOfferLinkType({ page_type: 'store' } as any)).toBe('store')
-    expect(resolveOfferLinkType({ page_type: 'product', link_type: 'store' } as any)).toBe('product')
+    expect(resolveOfferLinkType({ page_type: 'product', link_type: 'store' } as any)).toBe(
+      'product'
+    )
     expect(resolveOfferLinkType({ link_type: 'store' } as any)).toBe('store')
   })
 
@@ -107,12 +109,14 @@ describe('bucket-creative-generation-pipeline', () => {
       violations: [{ code: 'EMPTY_KEYWORDS' }],
     })
 
-    expect(() => assertPostGenerationPersistenceGate({
-      enabled: true,
-      creative: { keywords: [], headlines: ['h'], descriptions: ['d'] } as any,
-      bucket: 'B',
-      offer: { brand: 'B', target_language: 'en' } as any,
-      attempts: 2,
-    })).toThrow(/CREATIVE_PERSISTENCE_GATE_FAILED|落库门禁/)
+    expect(() =>
+      assertPostGenerationPersistenceGate({
+        enabled: true,
+        creative: { keywords: [], headlines: ['h'], descriptions: ['d'] } as any,
+        bucket: 'B',
+        offer: { brand: 'B', target_language: 'en' } as any,
+        attempts: 2,
+      })
+    ).toThrow(/CREATIVE_PERSISTENCE_GATE_FAILED|落库门禁/)
   })
 })

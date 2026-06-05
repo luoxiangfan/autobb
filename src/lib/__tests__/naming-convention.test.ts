@@ -11,7 +11,7 @@ import {
   validateCampaignName,
   generateSmartOptimizationCampaignName,
   generateNamingScheme,
-  NAMING_CONFIG
+  NAMING_CONFIG,
 } from '../naming-convention'
 
 describe('Google Ads Naming Convention', () => {
@@ -22,7 +22,7 @@ describe('Google Ads Naming Convention', () => {
         offerName: 'Ecomobi_US_01',
         creativeId: 121,
         date,
-        randomSuffix: 'ABC'
+        randomSuffix: 'ABC',
       })
 
       expect(name).toBe('Ecomobi_US_01_CMP_121_20251127131415_234_ABC')
@@ -34,7 +34,7 @@ describe('Google Ads Naming Convention', () => {
         offerName: 'Brand-Name & Co._US_01',
         creativeId: 9,
         date,
-        randomSuffix: 'XYZ'
+        randomSuffix: 'XYZ',
       })
 
       expect(name).toBe('BrandNameCo_US_01_CMP_9_20251127000000_005_XYZ')
@@ -48,7 +48,7 @@ describe('Google Ads Naming Convention', () => {
         offerName: 'VeryLongOfferNameThatExceedsNormalLength_XX_99',
         creativeId: 999999,
         date: new Date(2025, 10, 27, 0, 0, 0, 999),
-        randomSuffix: 'AAA'
+        randomSuffix: 'AAA',
       })
 
       expect(name.length).toBeLessThanOrEqual(NAMING_CONFIG.MAX_LENGTH.CAMPAIGN)
@@ -60,7 +60,7 @@ describe('Google Ads Naming Convention', () => {
       const name = generateAdGroupName({
         offerName: 'Eufy_IT_01',
         creativeId: 121,
-        randomSuffix: 'ABC'
+        randomSuffix: 'ABC',
       })
 
       expect(name).toBe('Eufy_IT_01_AG_121_ABC')
@@ -70,7 +70,7 @@ describe('Google Ads Naming Convention', () => {
       const name = generateAdGroupName({
         offerName: '',
         creativeId: 0,
-        randomSuffix: 'XYZ'
+        randomSuffix: 'XYZ',
       })
 
       expect(name).toBe('Offer_AG_0_XYZ')
@@ -80,7 +80,7 @@ describe('Google Ads Naming Convention', () => {
       const name = generateAdGroupName({
         offerName: 'Eufy_IT_01',
         creativeId: Number.NaN,
-        randomSuffix: 'AAA'
+        randomSuffix: 'AAA',
       })
 
       expect(name).toBe('Eufy_IT_01_AG_0_AAA')
@@ -91,7 +91,7 @@ describe('Google Ads Naming Convention', () => {
     it('should generate standard ad name', () => {
       const name = generateAdName({
         theme: 'Cleaning',
-        creativeId: 121
+        creativeId: 121,
       })
 
       expect(name).toBe('RSA_Cleaning_C121')
@@ -101,7 +101,7 @@ describe('Google Ads Naming Convention', () => {
       const name = generateAdName({
         theme: 'Security',
         creativeId: 122,
-        variantIndex: 2
+        variantIndex: 2,
       })
 
       expect(name).toBe('RSA_Security_C122_V2')
@@ -110,7 +110,7 @@ describe('Google Ads Naming Convention', () => {
     it('should truncate long themes', () => {
       const name = generateAdName({
         theme: 'VeryLongThemeNameThatNeedsToBeShortened',
-        creativeId: 123
+        creativeId: 123,
       })
 
       expect(name).toContain('RSA_')
@@ -127,7 +127,7 @@ describe('Google Ads Naming Convention', () => {
         creativeId: 456,
         brand: 'Reolink',
         country: 'us',
-        date
+        date,
       })
 
       expect(name).toBe('Reolink_US_173_456_20260213090807045')
@@ -140,7 +140,7 @@ describe('Google Ads Naming Convention', () => {
         creativeId: 2,
         brand: 'Brand Name_X',
         country: 'GB',
-        date
+        date,
       })
 
       expect(name).toBe('Brand Name_X_GB_1_2_20260213000000001')
@@ -156,7 +156,7 @@ describe('Google Ads Naming Convention', () => {
         creativeId: 121,
         dateTime: '20251127131415',
         milliseconds: '234',
-        randomSuffix: 'ABC'
+        randomSuffix: 'ABC',
       })
     })
 
@@ -181,7 +181,7 @@ describe('Google Ads Naming Convention', () => {
         brand: 'Reolink',
         country: 'US',
         campaignType: 'Search',
-        timestamp: '20260213090807045'
+        timestamp: '20260213090807045',
       })
     })
 
@@ -194,7 +194,7 @@ describe('Google Ads Naming Convention', () => {
         brand: 'reolink',
         country: 'US',
         campaignType: 'Search',
-        timestamp: '20251219211500'
+        timestamp: '20251219211500',
       })
     })
   })
@@ -206,7 +206,7 @@ describe('Google Ads Naming Convention', () => {
       expect(parsed).toEqual({
         offerName: 'Ecomobi_US_01',
         creativeId: 121,
-        randomSuffix: 'ABC'
+        randomSuffix: 'ABC',
       })
     })
 
@@ -256,7 +256,7 @@ describe('Google Ads Naming Convention', () => {
           offerName: 'Eufy_IT_01',
           creativeId: 122,
           date,
-          randomSuffix: 'ABC'
+          randomSuffix: 'ABC',
         },
         2,
         3
@@ -270,7 +270,7 @@ describe('Google Ads Naming Convention', () => {
       const name = generateSmartOptimizationCampaignName(
         {
           offerName: 'VeryLongOfferNameThatExceedsNormalLength_XX_99',
-          creativeId: 999999
+          creativeId: 999999,
         },
         5,
         5
@@ -287,19 +287,19 @@ describe('Google Ads Naming Convention', () => {
           id: 215,
           brand: 'Eufy',
           offerName: 'Eufy_IT_01',
-          category: 'Electronics'
+          category: 'Electronics',
         },
         config: {
           targetCountry: 'IT',
           budgetAmount: 50,
           budgetType: 'DAILY',
           biddingStrategy: 'TARGET_CPA',
-          maxCpcBid: 2.5
+          maxCpcBid: 2.5,
         },
         creative: {
           id: 121,
-          theme: 'Cleaning'
-        }
+          theme: 'Cleaning',
+        },
       })
 
       expect(scheme.campaignName).toMatch(/^Eufy_IT_215_121_\d{17}$/)
@@ -314,24 +314,24 @@ describe('Google Ads Naming Convention', () => {
           id: 216,
           brand: 'Eufy',
           offerName: 'Eufy_IT_01',
-          category: 'Security'
+          category: 'Security',
         },
         config: {
           targetCountry: 'IT',
           budgetAmount: 100,
           budgetType: 'TOTAL',
           biddingStrategy: 'MAXIMIZE_CONVERSIONS',
-          maxCpcBid: 1.8
+          maxCpcBid: 1.8,
         },
         creative: {
           id: 122,
-          theme: 'Safety'
+          theme: 'Safety',
         },
         smartOptimization: {
           enabled: true,
           variantIndex: 1,
-          totalVariants: 3
-        }
+          totalVariants: 3,
+        },
       })
 
       expect(scheme.campaignName).toMatch(/^Eufy_IT_216_122_\d{17}$/)
@@ -344,14 +344,14 @@ describe('Google Ads Naming Convention', () => {
       const scheme = generateNamingScheme({
         offer: {
           id: 215,
-          brand: 'Eufy'
+          brand: 'Eufy',
         },
         config: {
           targetCountry: 'IT',
           budgetAmount: 50,
           budgetType: 'DAILY',
-          biddingStrategy: 'MANUAL_CPC'
-        }
+          biddingStrategy: 'MANUAL_CPC',
+        },
       })
 
       expect(scheme.campaignName).toBeDefined()
@@ -367,7 +367,7 @@ describe('Google Ads Naming Convention', () => {
         offerName: 'Test_US_01',
         creativeId: 12.9,
         date,
-        randomSuffix: 'AAA'
+        randomSuffix: 'AAA',
       })
 
       expect(name).toBe('Test_US_01_CMP_12_20251127000000_010_AAA')
@@ -379,7 +379,7 @@ describe('Google Ads Naming Convention', () => {
         offerName: 'Test_US_01',
         creativeId: Number.NaN,
         date,
-        randomSuffix: 'AAA'
+        randomSuffix: 'AAA',
       })
 
       expect(name).toBe('Test_US_01_CMP_0_20251127000000_010_AAA')

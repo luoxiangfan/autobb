@@ -9,7 +9,9 @@ const BUCKET_MIN_OUTPUT_KEYWORDS: Record<'A' | 'B' | 'D', number> = {
 }
 
 function normalizeBucketForOutputFloor(bucket: unknown): 'A' | 'B' | 'D' | null {
-  const normalized = String(bucket || '').trim().toUpperCase()
+  const normalized = String(bucket || '')
+    .trim()
+    .toUpperCase()
   if (normalized === 'A') return 'A'
   if (normalized === 'B' || normalized === 'C') return 'B'
   if (normalized === 'D' || normalized === 'S') return 'D'

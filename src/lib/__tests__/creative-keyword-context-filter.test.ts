@@ -46,12 +46,14 @@ describe('creative-keyword-context-filter', () => {
     const offer = {
       brand: 'Novilla',
       category: 'Mattresses',
-      product_name: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
+      product_name:
+        'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
       page_type: 'product',
       target_country: 'US',
       target_language: 'en',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
+        rawProductTitle:
+          'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
       }),
     }
 
@@ -68,30 +70,33 @@ describe('creative-keyword-context-filter', () => {
     const keywords = result.keywords.map((item) => item.keyword)
 
     expect(keywords.length).toBeGreaterThan(0)
-    expect(keywords).toEqual(expect.arrayContaining([
-      'novilla king mattress',
-      'novilla memory foam mattress',
-    ]))
+    expect(keywords).toEqual(
+      expect.arrayContaining(['novilla king mattress', 'novilla memory foam mattress'])
+    )
     expect(keywords).not.toContain('novilla king size mattress pro')
     expect(keywords).not.toContain('novilla king size mattress plus')
     expect(keywords).not.toContain('novilla king size mattress ultra')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'novilla king size mattress pro',
-      'novilla king size mattress plus',
-      'novilla king size mattress ultra',
-    ]))
+    expect(result.blockedKeywordKeys).toEqual(
+      expect.arrayContaining([
+        'novilla king size mattress pro',
+        'novilla king size mattress plus',
+        'novilla king size mattress ultra',
+      ])
+    )
   })
 
   it('supplements model_intent underfill with model-family guard fallback when only one tightened keyword remains', () => {
     const offer = {
       brand: 'Novilla',
       category: 'Mattresses',
-      product_name: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
+      product_name:
+        'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
       page_type: 'product',
       target_country: 'US',
       target_language: 'en',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
+        rawProductTitle:
+          'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam, Medium Firm',
       }),
     }
 
@@ -111,9 +116,9 @@ describe('creative-keyword-context-filter', () => {
     expect(keywords.length).toBeGreaterThanOrEqual(3)
     expect(keywords).toContain('novilla memory foam mattress')
     expect(
-      keywords.some((keyword) =>
-        keyword === 'novilla king mattress'
-        || keyword === 'novilla medium firm mattress'
+      keywords.some(
+        (keyword) =>
+          keyword === 'novilla king mattress' || keyword === 'novilla medium firm mattress'
       )
     ).toBe(true)
     expect(keywords).not.toContain('novilla king size mattress pro')
@@ -210,12 +215,8 @@ describe('creative-keyword-context-filter', () => {
       target_country: 'US',
       target_language: 'en',
       scraped_data: JSON.stringify({
-        products: [
-          { name: 'Our Place Titanium Pro Cookware Set' },
-        ],
-        supplementalProducts: [
-          { productName: 'Our Place Wonder Oven Pro Air Fryer Oven' },
-        ],
+        products: [{ name: 'Our Place Titanium Pro Cookware Set' }],
+        supplementalProducts: [{ productName: 'Our Place Wonder Oven Pro Air Fryer Oven' }],
         deepScrapeResults: {
           summary: '8-in-1 air fryer and countertop oven',
         },
@@ -268,172 +269,179 @@ describe('creative-keyword-context-filter', () => {
     expect(keywords).not.toContain('premium bundle brandx')
   })
 
-  it.each([
-    'brand_intent',
-    'product_intent',
-  ] as const)('filters marketplace/support leakage for %s on product pages', (creativeType) => {
-    const offer = {
-      brand: 'Novilla',
-      category: 'Mattresses',
-      product_name: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
-      page_type: 'product',
-      target_country: 'US',
-      target_language: 'en',
-      scraped_data: JSON.stringify({
-        productCategory: 'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
-        rawProductTitle: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
-      }),
-    }
+  it.each(['brand_intent', 'product_intent'] as const)(
+    'filters marketplace/support leakage for %s on product pages',
+    (creativeType) => {
+      const offer = {
+        brand: 'Novilla',
+        category: 'Mattresses',
+        product_name: 'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
+        page_type: 'product',
+        target_country: 'US',
+        target_language: 'en',
+        scraped_data: JSON.stringify({
+          productCategory:
+            'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
+          rawProductTitle:
+            'Novilla King Size Mattress, 10 Inch Memory Foam Mattress King, Medium Firm',
+        }),
+      }
 
-    const result = filterCreativeKeywordsByOfferContextDetailed({
-      offer,
-      creativeType,
-      scopeLabel: `unit-product-noise-${creativeType}`,
-      keywordsWithVolume: [
-        kw('novilla home security', 0),
-        kw('novilla home kitchen see top', 0),
-        kw('novilla mattresses any good', 0),
-        kw('novilla king size mattress how long to expand', 0),
-        kw('novilla king size mattress pro', 0),
-        kw('novilla mattress plus', 0),
-        kw('novilla queen mattress', 3200),
-        kw('novilla memory foam mattress', 2800),
-        kw('novilla', 14000),
-      ],
-    })
-    const keywords = result.keywords.map((item) => item.keyword)
-
-    expect(keywords).toContain('novilla')
-    expect(keywords).toContain('novilla memory foam mattress')
-    expect(keywords).not.toContain('novilla home security')
-    expect(keywords).not.toContain('novilla home kitchen see top')
-    expect(keywords).not.toContain('novilla mattresses any good')
-    expect(keywords).not.toContain('novilla king size mattress how long to expand')
-    expect(keywords).not.toContain('novilla king size mattress pro')
-    expect(keywords).not.toContain('novilla mattress plus')
-    expect(keywords).not.toContain('novilla queen mattress')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'novilla home security',
-      'novilla home kitchen see top',
-      'novilla mattresses any good',
-      'novilla king size mattress how long to expand',
-      'novilla king size mattress pro',
-      'novilla mattress plus',
-      'novilla queen mattress',
-    ]))
-  })
-
-  it.each([
-    'brand_intent',
-    'product_intent',
-  ] as const)('blocks broad family-adjacent accessory drift for %s on product pages', (creativeType) => {
-    const offer = {
-      brand: 'Anker',
-      category: 'Portable Electric Coolers',
-      product_name: 'Anker SOLIX EverFrost 2 Electric Cooler 58L with 288Wh Battery',
-      page_type: 'product',
-      target_country: 'US',
-      target_language: 'en',
-      scraped_data: JSON.stringify({
-        productCategory: 'Sports & Outdoors > Coolers > Electric Coolers',
-        rawProductTitle: 'Anker SOLIX EverFrost 2 Electric Cooler 58L with 288Wh Battery',
-        rawAboutThisItem: ['Electric cooler', '58L capacity', '288Wh battery', 'Road trip ready'],
-      }),
-    }
-
-    const result = filterCreativeKeywordsByOfferContextDetailed({
-      offer,
-      creativeType,
-      scopeLabel: `unit-family-adjacent-drift-${creativeType}`,
-      keywordsWithVolume: [
-        kw('anker', 12000),
-        kw('anker solix cooler', 880),
-        kw('anker solix everfrost 2', 880),
-        kw('anker solix battery', 6600),
-        kw('anker solix solar', 4400),
-        kw('anker solix 300x', 3900),
-      ],
-    })
-    const keywords = result.keywords.map((item) => item.keyword)
-
-    expect(keywords).toContain('anker')
-    expect(keywords).toContain('anker solix cooler')
-    expect(keywords).toContain('anker solix everfrost 2')
-    expect(keywords).not.toContain('anker solix battery')
-    expect(keywords).not.toContain('anker solix solar')
-    expect(keywords).not.toContain('anker solix 300x')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'anker solix battery',
-      'anker solix solar',
-      'anker solix 300x',
-    ]))
-  })
-
-  it.each([
-    'brand_intent',
-    'product_intent',
-  ] as const)('blocks conflicting sibling size/spec variants while preserving scenario demand for %s', (creativeType) => {
-    const offer = {
-      brand: 'Novilla',
-      category: 'Mattresses',
-      product_name: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam for Pressure Relief & Cool Fresh Sleep, Removable Washable Cover, Mattresses in a Box, Medium Firm',
-      page_type: 'product',
-      target_country: 'US',
-      target_language: 'en',
-      scraped_data: JSON.stringify({
-        productCategory: 'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
-        rawProductTitle: 'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam for Pressure Relief & Cool Fresh Sleep, Removable Washable Cover, Mattresses in a Box, Medium Firm',
-        rawAboutThisItem: [
-          '12 inch king size memory foam mattress',
-          'Medium firm comfort foam support',
-          'Pressure relief for side sleepers',
+      const result = filterCreativeKeywordsByOfferContextDetailed({
+        offer,
+        creativeType,
+        scopeLabel: `unit-product-noise-${creativeType}`,
+        keywordsWithVolume: [
+          kw('novilla home security', 0),
+          kw('novilla home kitchen see top', 0),
+          kw('novilla mattresses any good', 0),
+          kw('novilla king size mattress how long to expand', 0),
+          kw('novilla king size mattress pro', 0),
+          kw('novilla mattress plus', 0),
+          kw('novilla queen mattress', 3200),
+          kw('novilla memory foam mattress', 2800),
+          kw('novilla', 14000),
         ],
-      }),
-    }
+      })
+      const keywords = result.keywords.map((item) => item.keyword)
 
-    const result = filterCreativeKeywordsByOfferContextDetailed({
-      offer,
-      creativeType,
-      scopeLabel: `unit-conflicting-soft-variant-drift-${creativeType}`,
-      keywordsWithVolume: [
-        kw('novilla', 2400),
-        kw('Novilla Mattress', 0),
-        kw('novilla memory foam mattress', 320),
-        kw('novilla king size mattress 12 inch', 50),
-        kw('king novilla mattress', 0),
-        kw('best novilla mattress for side sleepers', 0),
-        kw('novilla 10 inch mattress', 30),
-        kw('novilla mattress twin', 0),
-        kw('novilla full mattress', 0),
-        kw('queen novilla mattress', 0),
-        kw('novilla king size mattress 14 inch', 0),
-      ],
-    })
-    const keywords = result.keywords.map((item) => item.keyword)
-
-    expect(keywords).toContain('novilla')
-    expect(keywords).toContain('novilla memory foam mattress')
-    expect(keywords).toContain('novilla king size mattress 12 inch')
-    expect(keywords).toContain('king novilla mattress')
-    expect(keywords).toContain('best novilla mattress for side sleepers')
-    if (creativeType === 'brand_intent') {
-      expect(keywords).toContain('Novilla Mattress')
-    } else {
-      expect(keywords).not.toContain('Novilla Mattress')
+      expect(keywords).toContain('novilla')
+      expect(keywords).toContain('novilla memory foam mattress')
+      expect(keywords).not.toContain('novilla home security')
+      expect(keywords).not.toContain('novilla home kitchen see top')
+      expect(keywords).not.toContain('novilla mattresses any good')
+      expect(keywords).not.toContain('novilla king size mattress how long to expand')
+      expect(keywords).not.toContain('novilla king size mattress pro')
+      expect(keywords).not.toContain('novilla mattress plus')
+      expect(keywords).not.toContain('novilla queen mattress')
+      expect(result.blockedKeywordKeys).toEqual(
+        expect.arrayContaining([
+          'novilla home security',
+          'novilla home kitchen see top',
+          'novilla mattresses any good',
+          'novilla king size mattress how long to expand',
+          'novilla king size mattress pro',
+          'novilla mattress plus',
+          'novilla queen mattress',
+        ])
+      )
     }
-    expect(keywords).not.toContain('novilla 10 inch mattress')
-    expect(keywords).not.toContain('novilla mattress twin')
-    expect(keywords).not.toContain('novilla full mattress')
-    expect(keywords).not.toContain('queen novilla mattress')
-    expect(keywords).not.toContain('novilla king size mattress 14 inch')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'novilla 10 inch mattress',
-      'novilla mattress twin',
-      'novilla full mattress',
-      'queen novilla mattress',
-      'novilla king size mattress 14 inch',
-    ]))
-  })
+  )
+
+  it.each(['brand_intent', 'product_intent'] as const)(
+    'blocks broad family-adjacent accessory drift for %s on product pages',
+    (creativeType) => {
+      const offer = {
+        brand: 'Anker',
+        category: 'Portable Electric Coolers',
+        product_name: 'Anker SOLIX EverFrost 2 Electric Cooler 58L with 288Wh Battery',
+        page_type: 'product',
+        target_country: 'US',
+        target_language: 'en',
+        scraped_data: JSON.stringify({
+          productCategory: 'Sports & Outdoors > Coolers > Electric Coolers',
+          rawProductTitle: 'Anker SOLIX EverFrost 2 Electric Cooler 58L with 288Wh Battery',
+          rawAboutThisItem: ['Electric cooler', '58L capacity', '288Wh battery', 'Road trip ready'],
+        }),
+      }
+
+      const result = filterCreativeKeywordsByOfferContextDetailed({
+        offer,
+        creativeType,
+        scopeLabel: `unit-family-adjacent-drift-${creativeType}`,
+        keywordsWithVolume: [
+          kw('anker', 12000),
+          kw('anker solix cooler', 880),
+          kw('anker solix everfrost 2', 880),
+          kw('anker solix battery', 6600),
+          kw('anker solix solar', 4400),
+          kw('anker solix 300x', 3900),
+        ],
+      })
+      const keywords = result.keywords.map((item) => item.keyword)
+
+      expect(keywords).toContain('anker')
+      expect(keywords).toContain('anker solix cooler')
+      expect(keywords).toContain('anker solix everfrost 2')
+      expect(keywords).not.toContain('anker solix battery')
+      expect(keywords).not.toContain('anker solix solar')
+      expect(keywords).not.toContain('anker solix 300x')
+      expect(result.blockedKeywordKeys).toEqual(
+        expect.arrayContaining(['anker solix battery', 'anker solix solar', 'anker solix 300x'])
+      )
+    }
+  )
+
+  it.each(['brand_intent', 'product_intent'] as const)(
+    'blocks conflicting sibling size/spec variants while preserving scenario demand for %s',
+    (creativeType) => {
+      const offer = {
+        brand: 'Novilla',
+        category: 'Mattresses',
+        product_name:
+          'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam for Pressure Relief & Cool Fresh Sleep, Removable Washable Cover, Mattresses in a Box, Medium Firm',
+        page_type: 'product',
+        target_country: 'US',
+        target_language: 'en',
+        scraped_data: JSON.stringify({
+          productCategory:
+            'Home & Kitchen > Furniture > Bedroom Furniture > Mattresses & Box Springs > Mattresses',
+          rawProductTitle:
+            'Novilla King Mattress, 12 Inch King Size Memory Foam Mattress with Comfort Foam for Pressure Relief & Cool Fresh Sleep, Removable Washable Cover, Mattresses in a Box, Medium Firm',
+          rawAboutThisItem: [
+            '12 inch king size memory foam mattress',
+            'Medium firm comfort foam support',
+            'Pressure relief for side sleepers',
+          ],
+        }),
+      }
+
+      const result = filterCreativeKeywordsByOfferContextDetailed({
+        offer,
+        creativeType,
+        scopeLabel: `unit-conflicting-soft-variant-drift-${creativeType}`,
+        keywordsWithVolume: [
+          kw('novilla', 2400),
+          kw('Novilla Mattress', 0),
+          kw('novilla memory foam mattress', 320),
+          kw('novilla king size mattress 12 inch', 50),
+          kw('king novilla mattress', 0),
+          kw('best novilla mattress for side sleepers', 0),
+          kw('novilla 10 inch mattress', 30),
+          kw('novilla mattress twin', 0),
+          kw('novilla full mattress', 0),
+          kw('queen novilla mattress', 0),
+          kw('novilla king size mattress 14 inch', 0),
+        ],
+      })
+      const keywords = result.keywords.map((item) => item.keyword)
+
+      expect(keywords).toContain('novilla')
+      expect(keywords).toContain('novilla memory foam mattress')
+      expect(keywords).toContain('novilla king size mattress 12 inch')
+      expect(keywords).toContain('king novilla mattress')
+      expect(keywords).toContain('best novilla mattress for side sleepers')
+      if (creativeType === 'brand_intent') {
+        expect(keywords).toContain('Novilla Mattress')
+      } else {
+        expect(keywords).not.toContain('Novilla Mattress')
+      }
+      expect(keywords).not.toContain('novilla 10 inch mattress')
+      expect(keywords).not.toContain('novilla mattress twin')
+      expect(keywords).not.toContain('novilla full mattress')
+      expect(keywords).not.toContain('queen novilla mattress')
+      expect(keywords).not.toContain('novilla king size mattress 14 inch')
+      expect(result.blockedKeywordKeys).toEqual(
+        expect.arrayContaining([
+          'novilla 10 inch mattress',
+          'novilla mattress twin',
+          'novilla full mattress',
+          'queen novilla mattress',
+          'novilla king size mattress 14 inch',
+        ])
+      )
+    }
+  )
 
   it('blocks unsupported generic modifiers and weak noise anchors on product pages', () => {
     const offer = {
@@ -468,183 +476,191 @@ describe('creative-keyword-context-filter', () => {
     expect(keywords).not.toContain('eureka portable vacuum cleaner')
     expect(keywords).not.toContain('eureka pro vacuum')
     expect(keywords).not.toContain('Eureka Stick')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'eureka portable vacuum cleaner',
-      'eureka pro vacuum',
-      'eureka stick',
-    ]))
+    expect(result.blockedKeywordKeys).toEqual(
+      expect.arrayContaining([
+        'eureka portable vacuum cleaner',
+        'eureka pro vacuum',
+        'eureka stick',
+      ])
+    )
   })
 
-  it.each([
-    'brand_intent',
-    'product_intent',
-  ] as const)('drops sibling subcategory drift that only matches broad room tokens for %s', (creativeType) => {
-    const offer = {
-      brand: 'Mellanni',
-      category: 'Sheet & Pillowcase Sets',
-      product_name: 'Mellanni King Sheets Set - 4 PC Iconic Collection Bedding',
-      page_type: 'product',
-      target_country: 'US',
-      target_language: 'en',
-      scraped_data: JSON.stringify({
-        productCategory: 'Home & Kitchen > Bedding > Sheet & Pillowcase Sets',
-        rawProductTitle: 'Mellanni King Sheets Set - 4 PC Iconic Collection Bedding',
-      }),
-    }
+  it.each(['brand_intent', 'product_intent'] as const)(
+    'drops sibling subcategory drift that only matches broad room tokens for %s',
+    (creativeType) => {
+      const offer = {
+        brand: 'Mellanni',
+        category: 'Sheet & Pillowcase Sets',
+        product_name: 'Mellanni King Sheets Set - 4 PC Iconic Collection Bedding',
+        page_type: 'product',
+        target_country: 'US',
+        target_language: 'en',
+        scraped_data: JSON.stringify({
+          productCategory: 'Home & Kitchen > Bedding > Sheet & Pillowcase Sets',
+          rawProductTitle: 'Mellanni King Sheets Set - 4 PC Iconic Collection Bedding',
+        }),
+      }
 
-    const result = filterCreativeKeywordsByOfferContextDetailed({
-      offer,
-      creativeType,
-      scopeLabel: `unit-sibling-drift-${creativeType}`,
-      keywordsWithVolume: [
-        kw('mellanni king size sheet set', 3200),
-        kw('mellanni king comforter bed sets', 1200),
-        kw('mellanni', 14000),
-      ],
-    })
-    const keywords = result.keywords.map((item) => item.keyword)
-
-    expect(keywords).toContain('mellanni')
-    expect(keywords).toContain('mellanni king size sheet set')
-    expect(keywords).not.toContain('mellanni king comforter bed sets')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'mellanni king comforter bed sets',
-    ]))
-  })
-
-  it.each([
-    'brand_intent',
-    'product_intent',
-  ] as const)('uses store scraped context to drop off-category brand noise for %s', (creativeType) => {
-    const offer = {
-      brand: 'Sunaofe',
-      category: 'Office Furniture',
-      product_name: null,
-      page_type: 'store',
-      target_country: 'US',
-      target_language: 'en',
-      scraped_data: JSON.stringify({
-        productDescription: 'Discover modern ergonomic office chairs and electric standing desks designed for ultimate home office comfort.',
-        products: [
-          { name: 'CTS200 Dual Modular Monitor Arm with Stand' },
-          { name: 'MORPH Classic Lumbar Auto-track Tech Ergonomic Chair' },
-          { name: 'Boss Pro Leather Office Chair' },
+      const result = filterCreativeKeywordsByOfferContextDetailed({
+        offer,
+        creativeType,
+        scopeLabel: `unit-sibling-drift-${creativeType}`,
+        keywordsWithVolume: [
+          kw('mellanni king size sheet set', 3200),
+          kw('mellanni king comforter bed sets', 1200),
+          kw('mellanni', 14000),
         ],
-      }),
+      })
+      const keywords = result.keywords.map((item) => item.keyword)
+
+      expect(keywords).toContain('mellanni')
+      expect(keywords).toContain('mellanni king size sheet set')
+      expect(keywords).not.toContain('mellanni king comforter bed sets')
+      expect(result.blockedKeywordKeys).toEqual(
+        expect.arrayContaining(['mellanni king comforter bed sets'])
+      )
     }
+  )
 
-    const result = filterCreativeKeywordsByOfferContextDetailed({
-      offer,
-      creativeType,
-      scopeLabel: `unit-store-context-${creativeType}`,
-      keywordsWithVolume: [
-        kw('sunaofe office furniture', 1800),
-        kw('sunaofe boss pro leather office chair', 1400),
-        kw('sunaofe office security', 300),
-        kw('sunaofe home security', 260),
-        kw('sunaofe website', 220),
-        kw('sunaofe legit', 180),
-        kw('Sunaofe There was', 90),
-        kw('sunaofe', 12000),
-      ],
-    })
-    const keywords = result.keywords.map((item) => item.keyword)
+  it.each(['brand_intent', 'product_intent'] as const)(
+    'uses store scraped context to drop off-category brand noise for %s',
+    (creativeType) => {
+      const offer = {
+        brand: 'Sunaofe',
+        category: 'Office Furniture',
+        product_name: null,
+        page_type: 'store',
+        target_country: 'US',
+        target_language: 'en',
+        scraped_data: JSON.stringify({
+          productDescription:
+            'Discover modern ergonomic office chairs and electric standing desks designed for ultimate home office comfort.',
+          products: [
+            { name: 'CTS200 Dual Modular Monitor Arm with Stand' },
+            { name: 'MORPH Classic Lumbar Auto-track Tech Ergonomic Chair' },
+            { name: 'Boss Pro Leather Office Chair' },
+          ],
+        }),
+      }
 
-    expect(keywords).toContain('sunaofe')
-    expect(keywords).toContain('sunaofe office furniture')
-    expect(keywords).toContain('sunaofe boss pro leather office chair')
-    expect(keywords).not.toContain('sunaofe office security')
-    expect(keywords).not.toContain('sunaofe home security')
-    expect(keywords).not.toContain('sunaofe website')
-    expect(keywords).not.toContain('sunaofe legit')
-    expect(keywords).not.toContain('Sunaofe There was')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'sunaofe office security',
-      'sunaofe home security',
-      'sunaofe website',
-      'sunaofe legit',
-      'sunaofe there was',
-    ]))
-  })
-
-  it.each([
-    'brand_intent',
-    'product_intent',
-  ] as const)('suppresses underspecified store fragments when richer sibling demand exists for %s', (creativeType) => {
-    const offer = {
-      brand: 'Sunaofe',
-      category: 'Office Furniture',
-      product_name: null,
-      page_type: 'store',
-      target_country: 'US',
-      target_language: 'en',
-      scraped_data: JSON.stringify({
-        productDescription: 'Discover ergonomic office chairs, standing desks and monitor arms for your workspace.',
-        products: [
-          { name: 'Boss Pro Leather Office Chair' },
-          { name: 'CTS200 Dual Modular Monitor Arm' },
-          { name: 'MORPH Classic Ergonomic Chair' },
-          { name: 'Lunar Standing Desk' },
-          { name: 'Ergonomic Office Furniture Collection' },
+      const result = filterCreativeKeywordsByOfferContextDetailed({
+        offer,
+        creativeType,
+        scopeLabel: `unit-store-context-${creativeType}`,
+        keywordsWithVolume: [
+          kw('sunaofe office furniture', 1800),
+          kw('sunaofe boss pro leather office chair', 1400),
+          kw('sunaofe office security', 300),
+          kw('sunaofe home security', 260),
+          kw('sunaofe website', 220),
+          kw('sunaofe legit', 180),
+          kw('Sunaofe There was', 90),
+          kw('sunaofe', 12000),
         ],
-      }),
+      })
+      const keywords = result.keywords.map((item) => item.keyword)
+
+      expect(keywords).toContain('sunaofe')
+      expect(keywords).toContain('sunaofe office furniture')
+      expect(keywords).toContain('sunaofe boss pro leather office chair')
+      expect(keywords).not.toContain('sunaofe office security')
+      expect(keywords).not.toContain('sunaofe home security')
+      expect(keywords).not.toContain('sunaofe website')
+      expect(keywords).not.toContain('sunaofe legit')
+      expect(keywords).not.toContain('Sunaofe There was')
+      expect(result.blockedKeywordKeys).toEqual(
+        expect.arrayContaining([
+          'sunaofe office security',
+          'sunaofe home security',
+          'sunaofe website',
+          'sunaofe legit',
+          'sunaofe there was',
+        ])
+      )
     }
+  )
 
-    const result = filterCreativeKeywordsByOfferContextDetailed({
-      offer,
-      creativeType,
-      scopeLabel: `unit-store-fragment-tightening-${creativeType}`,
-      keywordsWithVolume: [
-        kw('sunaofe office chair', 2200),
-        kw('sunaofe standing desk', 1700),
-        kw('sunaofe office furniture', 1400),
-        kw('sunaofe ergonomic furniture', 1200),
-        kw('sunaofe cts200 dual modular monitor arm', 900),
-        kw('sunaofe morph chair', 800),
-        kw('sunaofe lunar desk', 760),
-        kw('sunaofe chair', 1300),
-        kw('sunaofe desk', 1250),
-        kw('sunaofe furniture', 1100),
-        kw('sunaofe office', 700),
-        kw('sunaofe morph', 650),
-        kw('sunaofe lunar', 620),
-        kw('sunaofe brand chair', 610),
-        kw('sunaofe morph classic', 580),
-        kw('sunaofe resistance color', 560),
-        kw('sunaofe', 12000),
-      ],
-    })
-    const keywords = result.keywords.map((item) => item.keyword)
+  it.each(['brand_intent', 'product_intent'] as const)(
+    'suppresses underspecified store fragments when richer sibling demand exists for %s',
+    (creativeType) => {
+      const offer = {
+        brand: 'Sunaofe',
+        category: 'Office Furniture',
+        product_name: null,
+        page_type: 'store',
+        target_country: 'US',
+        target_language: 'en',
+        scraped_data: JSON.stringify({
+          productDescription:
+            'Discover ergonomic office chairs, standing desks and monitor arms for your workspace.',
+          products: [
+            { name: 'Boss Pro Leather Office Chair' },
+            { name: 'CTS200 Dual Modular Monitor Arm' },
+            { name: 'MORPH Classic Ergonomic Chair' },
+            { name: 'Lunar Standing Desk' },
+            { name: 'Ergonomic Office Furniture Collection' },
+          ],
+        }),
+      }
 
-    expect(keywords).toContain('sunaofe')
-    expect(keywords).toContain('sunaofe office chair')
-    expect(keywords).toContain('sunaofe standing desk')
-    expect(keywords).toContain('sunaofe office furniture')
-    expect(keywords).toContain('sunaofe cts200 dual modular monitor arm')
-    expect(keywords).toContain('sunaofe morph chair')
-    expect(keywords).toContain('sunaofe lunar desk')
+      const result = filterCreativeKeywordsByOfferContextDetailed({
+        offer,
+        creativeType,
+        scopeLabel: `unit-store-fragment-tightening-${creativeType}`,
+        keywordsWithVolume: [
+          kw('sunaofe office chair', 2200),
+          kw('sunaofe standing desk', 1700),
+          kw('sunaofe office furniture', 1400),
+          kw('sunaofe ergonomic furniture', 1200),
+          kw('sunaofe cts200 dual modular monitor arm', 900),
+          kw('sunaofe morph chair', 800),
+          kw('sunaofe lunar desk', 760),
+          kw('sunaofe chair', 1300),
+          kw('sunaofe desk', 1250),
+          kw('sunaofe furniture', 1100),
+          kw('sunaofe office', 700),
+          kw('sunaofe morph', 650),
+          kw('sunaofe lunar', 620),
+          kw('sunaofe brand chair', 610),
+          kw('sunaofe morph classic', 580),
+          kw('sunaofe resistance color', 560),
+          kw('sunaofe', 12000),
+        ],
+      })
+      const keywords = result.keywords.map((item) => item.keyword)
 
-    expect(keywords).not.toContain('sunaofe chair')
-    expect(keywords).not.toContain('sunaofe desk')
-    expect(keywords).not.toContain('sunaofe furniture')
-    expect(keywords).not.toContain('sunaofe office')
-    expect(keywords).not.toContain('sunaofe morph')
-    expect(keywords).not.toContain('sunaofe lunar')
-    expect(keywords).not.toContain('sunaofe brand chair')
-    expect(keywords).not.toContain('sunaofe morph classic')
-    expect(keywords).not.toContain('sunaofe resistance color')
-    expect(result.blockedKeywordKeys).toEqual(expect.arrayContaining([
-      'sunaofe chair',
-      'sunaofe desk',
-      'sunaofe furniture',
-      'sunaofe office',
-      'sunaofe morph',
-      'sunaofe lunar',
-      'sunaofe brand chair',
-      'sunaofe morph classic',
-      'sunaofe resistance color',
-    ]))
-  })
+      expect(keywords).toContain('sunaofe')
+      expect(keywords).toContain('sunaofe office chair')
+      expect(keywords).toContain('sunaofe standing desk')
+      expect(keywords).toContain('sunaofe office furniture')
+      expect(keywords).toContain('sunaofe cts200 dual modular monitor arm')
+      expect(keywords).toContain('sunaofe morph chair')
+      expect(keywords).toContain('sunaofe lunar desk')
+
+      expect(keywords).not.toContain('sunaofe chair')
+      expect(keywords).not.toContain('sunaofe desk')
+      expect(keywords).not.toContain('sunaofe furniture')
+      expect(keywords).not.toContain('sunaofe office')
+      expect(keywords).not.toContain('sunaofe morph')
+      expect(keywords).not.toContain('sunaofe lunar')
+      expect(keywords).not.toContain('sunaofe brand chair')
+      expect(keywords).not.toContain('sunaofe morph classic')
+      expect(keywords).not.toContain('sunaofe resistance color')
+      expect(result.blockedKeywordKeys).toEqual(
+        expect.arrayContaining([
+          'sunaofe chair',
+          'sunaofe desk',
+          'sunaofe furniture',
+          'sunaofe office',
+          'sunaofe morph',
+          'sunaofe lunar',
+          'sunaofe brand chair',
+          'sunaofe morph classic',
+          'sunaofe resistance color',
+        ])
+      )
+    }
+  )
 
   it('filters support-tail model_intent keywords while preserving family-demand phrases', () => {
     const offer = {
@@ -682,12 +698,14 @@ describe('creative-keyword-context-filter', () => {
     const offer = {
       brand: 'Bazic Products',
       category: 'Standard Pencil Erasers',
-      product_name: 'BAZIC Products Pink Eraser, Latex Free Bevel Block Erasers, Large Size for Classroom, Office, and Art Use, Smooth Pencil Correction for Writing, Sketching, & Daily Tasks, 12/Pack, 48-Pack',
+      product_name:
+        'BAZIC Products Pink Eraser, Latex Free Bevel Block Erasers, Large Size for Classroom, Office, and Art Use, Smooth Pencil Correction for Writing, Sketching, & Daily Tasks, 12/Pack, 48-Pack',
       page_type: 'product',
       target_country: 'US',
       target_language: 'en',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'BAZIC Products Pink Eraser, Latex Free Bevel Block Erasers, Large Size for Classroom, Office, and Art Use, Smooth Pencil Correction for Writing, Sketching, & Daily Tasks, 12/Pack, 48-Pack',
+        rawProductTitle:
+          'BAZIC Products Pink Eraser, Latex Free Bevel Block Erasers, Large Size for Classroom, Office, and Art Use, Smooth Pencil Correction for Writing, Sketching, & Daily Tasks, 12/Pack, 48-Pack',
         productCategory: 'Office Products > School Supplies > Erasers > Pencil Erasers',
       }),
     }
@@ -725,12 +743,14 @@ describe('creative-keyword-context-filter', () => {
     const offer = {
       brand: 'Eureka',
       category: 'Stick Vacuums & Electric Brooms',
-      product_name: 'Eureka RapidClean Pro NEC280TL Cordless Stick Vacuum Cleaner – Lightweight 5.3 lbs, 40-Min Runtime, LED Headlights, 3 Power Modes, Ideal for Pet Hair, Hard Floors & Carpets',
+      product_name:
+        'Eureka RapidClean Pro NEC280TL Cordless Stick Vacuum Cleaner – Lightweight 5.3 lbs, 40-Min Runtime, LED Headlights, 3 Power Modes, Ideal for Pet Hair, Hard Floors & Carpets',
       page_type: 'product',
       target_country: 'US',
       target_language: 'en',
       scraped_data: JSON.stringify({
-        rawProductTitle: 'Eureka RapidClean Pro NEC280TL Cordless Stick Vacuum Cleaner – Lightweight 5.3 lbs, 40-Min Runtime, LED Headlights, 3 Power Modes, Ideal for Pet Hair, Hard Floors & Carpets',
+        rawProductTitle:
+          'Eureka RapidClean Pro NEC280TL Cordless Stick Vacuum Cleaner – Lightweight 5.3 lbs, 40-Min Runtime, LED Headlights, 3 Power Modes, Ideal for Pet Hair, Hard Floors & Carpets',
         productCategory: 'Home & Kitchen > Vacuums > Stick Vacuums & Electric Brooms',
       }),
     }
@@ -897,21 +917,19 @@ describe('creative-keyword-context-filter', () => {
     expect(keywords).not.toContain('Anker 58L')
     expect(keywords).not.toContain('288wh')
   })
-
-  ;([
-    'brand_intent',
-    'product_intent',
-  ] as const).forEach((creativeType) => {
+  ;(['brand_intent', 'product_intent'] as const).forEach((creativeType) => {
     it(`drops parent-category leakage and broad single-line fragments on product pages for ${creativeType}`, () => {
       const offer = {
         brand: 'Anker',
         category: 'Electrical Appliances',
-        product_name: 'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
+        product_name:
+          'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
         page_type: 'product',
         target_country: 'US',
         target_language: 'en',
         scraped_data: JSON.stringify({
-          rawProductTitle: 'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
+          rawProductTitle:
+            'Anker SOLIX EverFrost 2 58L Cooler with 1 Removable Battery (Ships Separately), 58L Electric Cooler with Two 288Wh LiFePO4 Batteries, Powered by AC/DC or Solar, for Camping, Travel, Fishing',
         }),
       }
 

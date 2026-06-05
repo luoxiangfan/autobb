@@ -37,4 +37,3 @@ describe('resolveAffiliateLinkWithHttp (Amazon 5xx)', () => {
     expect(result.redirectCount).toBe(1)
   })
 })
-

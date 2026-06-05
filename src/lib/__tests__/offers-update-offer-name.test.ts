@@ -15,7 +15,14 @@ vi.mock('../offer-utils', () => ({
   generateOfferName: mockGenerateOfferName,
   isOfferNameUnique: mockIsOfferNameUnique,
   getTargetLanguage: mockGetTargetLanguage,
-  normalizeOfferTargetCountry: (v: string) => (String(v || '').trim().toUpperCase() === 'UK' ? 'GB' : String(v || '').trim().toUpperCase() || 'US'),
+  normalizeOfferTargetCountry: (v: string) =>
+    String(v || '')
+      .trim()
+      .toUpperCase() === 'UK'
+      ? 'GB'
+      : String(v || '')
+          .trim()
+          .toUpperCase() || 'US',
   normalizeBrandName: (v: string) => v,
   validateBrandName: (_v: string) => ({ valid: true as const }),
 }))
@@ -468,6 +475,8 @@ describe('updateOffer: sync offer_name with brand/country', () => {
     const [sql, params] = mockDb.exec.mock.calls[0]
     expect(sql).toContain('final_url = ?')
     expect(sql).toContain('asin = ?')
-    expect(params).toEqual(expect.arrayContaining(['https://www.amazon.com/dp/B0NEWASIN9', 'B0NEWASIN9']))
+    expect(params).toEqual(
+      expect.arrayContaining(['https://www.amazon.com/dp/B0NEWASIN9', 'B0NEWASIN9'])
+    )
   })
 })

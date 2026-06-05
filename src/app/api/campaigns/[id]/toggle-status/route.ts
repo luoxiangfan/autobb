@@ -4,7 +4,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
@@ -19,16 +22,13 @@ type ToggleStatusWarning = {
   message: string
 }
 
-function formatOfferTaskResumeErrors(
-  errors: Array<{ type?: string; error?: string }>
-): string {
+function formatOfferTaskResumeErrors(errors: Array<{ type?: string; error?: string }>): string {
   return errors
     .map((item) => {
       const type = String(item?.type || '').trim()
       const error = String(item?.error || '').trim()
       if (!error) return ''
-      const label =
-        type === 'clickFarm' ? '补点击' : type === 'urlSwap' ? '换链接' : '关联任务'
+      const label = type === 'clickFarm' ? '补点击' : type === 'urlSwap' ? '换链接' : '关联任务'
       return `${label}: ${error}`
     })
     .filter(Boolean)
@@ -39,7 +39,7 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   if (value === null || value === undefined) return null
   const raw = String(value).trim()
   if (!raw) return null
-  return /^\d+$/.test(raw) ? raw : null;
+  return /^\d+$/.test(raw) ? raw : null
 }
 
 /**
@@ -50,7 +50,7 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
  * - body: { status: 'PAUSED' | 'ENABLED' }
  */
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -64,18 +64,17 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     const body = (await request.json().catch(() => null)) as ToggleStatusBody | null
-    const nextStatus = String(body?.status || '').trim().toUpperCase()
+    const nextStatus = String(body?.status || '')
+      .trim()
+      .toUpperCase()
 
     if (nextStatus !== 'PAUSED' && nextStatus !== 'ENABLED') {
-      return NextResponse.json(
-        { error: '无效的状态，只支持 PAUSED / ENABLED' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '无效的状态，只支持 PAUSED / ENABLED' }, { status: 400 })
     }
 
     const db = await getDatabase()
 
-    const campaignRow = await db.queryOne(
+    const campaignRow = (await db.queryOne(
       `
         SELECT
           id,
@@ -90,7 +89,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         LIMIT 1
       `,
       [campaignId, userId]
-    ) as
+    )) as
       | {
           id: number
           offer_id: number | null
@@ -103,18 +102,12 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       | undefined
 
     if (!campaignRow) {
-      return NextResponse.json(
-        { error: '广告系列不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
     const isDeleted = campaignRow.is_deleted === true || campaignRow.is_deleted === 1
     if (isDeleted || String(campaignRow.status || '').toUpperCase() === 'REMOVED') {
-      return NextResponse.json(
-        { error: '该广告系列已删除/移除，无法暂停或启用' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '该广告系列已删除/移除，无法暂停或启用' }, { status: 400 })
     }
 
     const googleCampaignId =
@@ -129,13 +122,10 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     if (!campaignRow.google_ads_account_id) {
-      return NextResponse.json(
-        { error: '未找到关联的Ads账号，无法暂停或启用' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '未找到关联的Ads账号，无法暂停或启用' }, { status: 400 })
     }
 
-    const adsAccountRow = await db.queryOne(
+    const adsAccountRow = (await db.queryOne(
       `
         SELECT
           id,
@@ -150,7 +140,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         LIMIT 1
       `,
       [campaignRow.google_ads_account_id, userId]
-    ) as
+    )) as
       | {
           id: number
           customer_id: string
@@ -212,8 +202,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     const refreshToken = apiAuth.refreshToken
     const serviceAccountId = apiAuth.serviceAccountId
     const oauthCredentials = prepared.oauthCredentials
-    const oauthLoginCustomerId =
-      prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
+    const oauthLoginCustomerId = prepared.oauthLoginCustomerId ?? apiAuth.oauthLoginCustomerId
 
     await runWithLoginCustomerFallbackForAccount({
       adsAccount: {
@@ -305,10 +294,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     if (nextStatus === 'ENABLED') {
       try {
         if (campaignRow.offer_id) {
-          const resumeResult = await resumeOfferTasksOnCampaignEnable(
-            campaignRow.offer_id,
-            userId
-          )
+          const resumeResult = await resumeOfferTasksOnCampaignEnable(campaignRow.offer_id, userId)
           const resumeErrors = formatOfferTaskResumeErrors(resumeResult.errors)
           offerTaskResume = {
             attempted: true,
@@ -355,9 +341,6 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     })
   } catch (error: any) {
     console.error('更新广告系列状态失败:', error)
-    return NextResponse.json(
-      { error: error?.message || '更新广告系列状态失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '更新广告系列状态失败' }, { status: 500 })
   }
 }

@@ -5,7 +5,7 @@ import { queueStrategyRecommendationExecution } from '@/lib/openclaw/strategy-re
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const auth = await resolveStrategyCenterRequestUser(request)
   if (!auth) {
     return NextResponse.json({ error: '策略中心功能未开启或未授权' }, { status: 403 })
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     return NextResponse.json({ error: '缺少建议ID' }, { status: 400 })
   }
 
-  const body = await request.json().catch(() => ({})) as { confirm?: boolean }
+  const body = (await request.json().catch(() => ({}))) as { confirm?: boolean }
   if (body.confirm !== true) {
     return NextResponse.json({ error: '执行前需要二次确认（confirm=true）' }, { status: 400 })
   }
@@ -40,13 +40,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const message = error?.message || '执行建议失败'
     const status = message.includes('不存在')
       ? 404
-      : (
-        message.includes('重新分析')
-        || message.includes('已暂不执行')
-        || message.includes('已执行')
-        || message.includes('仅支持执行')
-        || message.includes('T-1建议仅支持执行')
-      )
+      : message.includes('重新分析') ||
+          message.includes('已暂不执行') ||
+          message.includes('已执行') ||
+          message.includes('仅支持执行') ||
+          message.includes('T-1建议仅支持执行')
         ? 409
         : 400
     return NextResponse.json({ error: message }, { status })

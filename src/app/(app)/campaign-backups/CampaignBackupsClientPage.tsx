@@ -71,19 +71,23 @@ export default function CampaignBackupsClientPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [backupSource, setBackupSource] = useState<string>('all')
-  
+
   // 批量创建对话框
   const [isBatchCreateOpen, setIsBatchCreateOpen] = useState(false)
-  const [googleAdsAccounts, setGoogleAdsAccounts] = useState<Array<{
-    id: number
-    customerId: string
-    accountName: string | null
-  }>>([])
+  const [googleAdsAccounts, setGoogleAdsAccounts] = useState<
+    Array<{
+      id: number
+      customerId: string
+      accountName: string | null
+    }>
+  >([])
   const [selectedGoogleAdsAccountId, setSelectedGoogleAdsAccountId] = useState<number | null>(null)
-  
+
   // 🔧 重新生成广告创意选项 - 每条记录独立选择
-  const [regenerateCreativeMap, setRegenerateCreativeMap] = useState<Map<number, boolean>>(new Map())
-  
+  const [regenerateCreativeMap, setRegenerateCreativeMap] = useState<Map<number, boolean>>(
+    new Map()
+  )
+
   // 🔥 异步批量创建状态
   const [showProgressDialog, setShowProgressDialog] = useState(false)
   const [batchId, setBatchId] = useState<string | null>(null)
@@ -97,7 +101,7 @@ export default function CampaignBackupsClientPage() {
   const [batchWarningDetails, setBatchWarningDetails] = useState<
     Array<{ backupId: number; message: string }>
   >([])
-  
+
   // 分页状态
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
@@ -185,9 +189,7 @@ export default function CampaignBackupsClientPage() {
     fetchGoogleAdsAccounts()
   }, [fetchBackups, fetchGoogleAdsAccounts])
 
-  const selectedOfferIds = new Set(
-    [...selectedBackupMeta.values()].map((meta) => meta.offerId)
-  )
+  const selectedOfferIds = new Set([...selectedBackupMeta.values()].map((meta) => meta.offerId))
 
   const backupCanCreateCampaign = (backup: CampaignBackup) =>
     backupHasCampaignConfig(backup.campaign_config) && !backup.has_active_campaign
@@ -201,9 +203,7 @@ export default function CampaignBackupsClientPage() {
     if (checked) {
       const nextMeta = new Map(selectedBackupMeta)
       const ids: number[] = []
-      const seenOffers = new Set(
-        [...selectedBackupMeta.values()].map((meta) => meta.offerId)
-      )
+      const seenOffers = new Set([...selectedBackupMeta.values()].map((meta) => meta.offerId))
       for (const backup of selectableBackups) {
         if (seenOffers.has(backup.offer_id)) {
           continue
@@ -333,9 +333,7 @@ export default function CampaignBackupsClientPage() {
     const warnings = (metadata as { warnings?: Array<{ backupId: number; message: string }> })
       .warnings
     if (!Array.isArray(warnings)) return []
-    return warnings.filter(
-      (w) => typeof w.backupId === 'number' && typeof w.message === 'string'
-    )
+    return warnings.filter((w) => typeof w.backupId === 'number' && typeof w.message === 'string')
   }
 
   const applyBatchStatusFromApi = (data: {
@@ -408,7 +406,7 @@ export default function CampaignBackupsClientPage() {
       }
 
       const result = await response.json()
-      
+
       // 设置任务状态
       setBatchId(result.batchId)
       batchFinalizeKeyRef.current = null
@@ -418,10 +416,10 @@ export default function CampaignBackupsClientPage() {
       setBatchProgress(0)
       setBatchStatus('pending')
       setShowProgressDialog(true)
-      
+
       // 关闭选择对话框
       setIsBatchCreateOpen(false)
-      
+
       toast.success('批量创建任务已启动', {
         description: '任务正在后台执行，请查看进度对话框',
         duration: 5000,
@@ -429,7 +427,6 @@ export default function CampaignBackupsClientPage() {
 
       // 订阅 SSE 进度
       subscribeToProgress(result.batchId)
-      
     } catch (error: any) {
       console.error('批量创建失败:', error)
       toast.error('批量创建失败', { description: error.message })
@@ -585,11 +582,12 @@ export default function CampaignBackupsClientPage() {
     setBatchErrorDetails(errors)
     setBatchWarningDetails(warnings)
 
-    const message = status === 'completed'
-      ? `已成功创建 ${completed} 个广告系列，发布任务已入队`
-      : status === 'partial'
-      ? `部分完成：入队成功 ${completed} 个，失败 ${failed} 个`
-      : `批量创建失败`
+    const message =
+      status === 'completed'
+        ? `已成功创建 ${completed} 个广告系列，发布任务已入队`
+        : status === 'partial'
+          ? `部分完成：入队成功 ${completed} 个，失败 ${failed} 个`
+          : `批量创建失败`
 
     if (status === 'failed') {
       toast.error(message, { duration: 10000 })
@@ -604,19 +602,15 @@ export default function CampaignBackupsClientPage() {
         .slice(0, 3)
         .map((w) => `备份 #${w.backupId}：${w.message}`)
         .join('\n')
-      toast.warning(
-        warnings.length === 1 ? '部分项有警告' : `${warnings.length} 项有警告`,
-        {
-          description:
-            preview + (warnings.length > 3 ? `\n…另有 ${warnings.length - 3} 项` : ''),
-          duration: 12000,
-        }
-      )
+      toast.warning(warnings.length === 1 ? '部分项有警告' : `${warnings.length} 项有警告`, {
+        description: preview + (warnings.length > 3 ? `\n…另有 ${warnings.length - 3} 项` : ''),
+        duration: 12000,
+      })
     }
 
     // 刷新列表
     fetchBackups()
-    
+
     // 清空选择
     setSelectedBackupIds([])
     setSelectedBackupMeta(new Map())
@@ -628,8 +622,7 @@ export default function CampaignBackupsClientPage() {
   }
 
   const pageSelectedCount = backups.filter((b) => selectedBackupIds.includes(b.id)).length
-  const allSelected =
-    selectableBackups.length > 0 && pageSelectedCount === selectableBackups.length
+  const allSelected = selectableBackups.length > 0 && pageSelectedCount === selectableBackups.length
   const someSelected = pageSelectedCount > 0 && !allSelected
 
   return (
@@ -674,7 +667,7 @@ export default function CampaignBackupsClientPage() {
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className='flex items-center gap-x-2 whitespace-nowrap'>
+              <div className="flex items-center gap-x-2 whitespace-nowrap">
                 <Label>开始日期</Label>
                 <Input
                   type="date"
@@ -682,16 +675,12 @@ export default function CampaignBackupsClientPage() {
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
-              <div className='flex items-center gap-x-2 whitespace-nowrap'>
+              <div className="flex items-center gap-x-2 whitespace-nowrap">
                 <Label>结束日期</Label>
-                <Input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
               <div className="flex items-center gap-x-2">
-                <Label className='whitespace-nowrap'>备份来源</Label>
+                <Label className="whitespace-nowrap">备份来源</Label>
                 <Select value={backupSource} onValueChange={setBackupSource}>
                   <SelectTrigger className="w-[160px]">
                     <SelectValue />
@@ -776,111 +765,112 @@ export default function CampaignBackupsClientPage() {
                     const canSelect = backupCanCreateCampaign(backup)
                     const offerBlocked = isOfferBlocked(backup.offer_id, backup.id)
                     return (
-                    <TableRow
-                      key={backup.id}
-                      className={canSelect && !offerBlocked ? undefined : 'opacity-60'}
-                    >
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedBackupIds.includes(backup.id)}
-                          disabled={!canSelect || offerBlocked}
-                          onCheckedChange={(checked) =>
-                            handleSelectBackup(checked as boolean, backup)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{backup.campaign_name}</div>
-                        {backup.custom_name && (
-                          <div className="text-xs text-gray-500">{backup.custom_name}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="text-sm">{backup.offer_name || backup.brand || '-'}</div>
-                          <div className="text-xs text-gray-500">ID: {backup.offer_id}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {backup.backup_source === 'google_ads' ? 'Google Ads' : 'AutoAds'}
-                        </Badge>
-                        {backup.backup_version > 1 && (
-                          <span className="text-xs text-gray-500 ml-1">v{backup.backup_version}</span>
-                        )}
-                        {!backupHasCampaignConfig(backup.campaign_config) && (
-                          <Badge variant="outline" className="ml-1 text-xs">
-                            无配置
-                          </Badge>
-                        )}
-                        {backup.has_active_campaign && (
-                          <Badge variant="outline" className="ml-1 text-xs">
-                            已有广告系列
-                          </Badge>
-                        )}
-                        {offerBlocked && (
-                          <Badge variant="outline" className="ml-1 text-xs">
-                            Offer 已选
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          ${backup.budget_amount}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {backup.budget_type}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <Calendar className="w-3 h-3 inline mr-1" />
-                          {formatDate(backup.created_at)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <Calendar className="w-3 h-3 inline mr-1" />
-                          {formatDate(backup.updated_at)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!canSelect}
-                            title={
-                              canSelect
-                                ? '从该备份创建'
-                                : backup.has_active_campaign
-                                  ? '该 Offer 已有广告系列，无法从备份创建'
-                                  : '缺少 campaign_config，无法恢复'
+                      <TableRow
+                        key={backup.id}
+                        className={canSelect && !offerBlocked ? undefined : 'opacity-60'}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedBackupIds.includes(backup.id)}
+                            disabled={!canSelect || offerBlocked}
+                            onCheckedChange={(checked) =>
+                              handleSelectBackup(checked as boolean, backup)
                             }
-                            onClick={() => {
-                              setSelectedBackupIds([backup.id])
-                              setSelectedBackupMeta(
-                                new Map([
-                                  [
-                                    backup.id,
-                                    {
-                                      offerId: backup.offer_id,
-                                      hasConfig: true,
-                                      campaignName: backup.campaign_name,
-                                      adCreativeId: backup.ad_creative_id,
-                                    },
-                                  ],
-                                ])
-                              )
-                              handleOpenBatchCreateDialog()
-                            }}
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )})
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{backup.campaign_name}</div>
+                          {backup.custom_name && (
+                            <div className="text-xs text-gray-500">{backup.custom_name}</div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="text-sm">
+                              {backup.offer_name || backup.brand || '-'}
+                            </div>
+                            <div className="text-xs text-gray-500">ID: {backup.offer_id}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {backup.backup_source === 'google_ads' ? 'Google Ads' : 'AutoAds'}
+                          </Badge>
+                          {backup.backup_version > 1 && (
+                            <span className="text-xs text-gray-500 ml-1">
+                              v{backup.backup_version}
+                            </span>
+                          )}
+                          {!backupHasCampaignConfig(backup.campaign_config) && (
+                            <Badge variant="outline" className="ml-1 text-xs">
+                              无配置
+                            </Badge>
+                          )}
+                          {backup.has_active_campaign && (
+                            <Badge variant="outline" className="ml-1 text-xs">
+                              已有广告系列
+                            </Badge>
+                          )}
+                          {offerBlocked && (
+                            <Badge variant="outline" className="ml-1 text-xs">
+                              Offer 已选
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">${backup.budget_amount}</div>
+                          <div className="text-xs text-gray-500">{backup.budget_type}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {formatDate(backup.created_at)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            {formatDate(backup.updated_at)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!canSelect}
+                              title={
+                                canSelect
+                                  ? '从该备份创建'
+                                  : backup.has_active_campaign
+                                    ? '该 Offer 已有广告系列，无法从备份创建'
+                                    : '缺少 campaign_config，无法恢复'
+                              }
+                              onClick={() => {
+                                setSelectedBackupIds([backup.id])
+                                setSelectedBackupMeta(
+                                  new Map([
+                                    [
+                                      backup.id,
+                                      {
+                                        offerId: backup.offer_id,
+                                        hasConfig: true,
+                                        campaignName: backup.campaign_name,
+                                        adCreativeId: backup.ad_creative_id,
+                                      },
+                                    ],
+                                  ])
+                                )
+                                handleOpenBatchCreateDialog()
+                              }}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 )}
               </TableBody>
             </Table>
@@ -931,18 +921,21 @@ export default function CampaignBackupsClientPage() {
               {selectedBackupIds.length === 0 ? (
                 <p className="text-xs text-gray-500">请选择要创建的备份</p>
               ) : (
-                selectedBackupIds.map(id => {
-                  const backup = backups.find(b => b.id === id)
+                selectedBackupIds.map((id) => {
+                  const backup = backups.find((b) => b.id === id)
                   const meta = selectedBackupMeta.get(id)
                   const canRegenerate =
                     (backup?.ad_creative_id ?? meta?.adCreativeId) &&
                     (backup?.offer_id ?? meta?.offerId)
                   const shouldRegenerate = regenerateCreativeMap.get(id) || false
-                  
+
                   return (
-                    <div key={id} className={`flex items-center justify-between p-2 rounded-md border ${
-                      canRegenerate ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'
-                    }`}>
+                    <div
+                      key={id}
+                      className={`flex items-center justify-between p-2 rounded-md border ${
+                        canRegenerate ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100'
+                      }`}
+                    >
                       <div className="flex-1">
                         <div className="text-sm font-medium">
                           {backup?.campaign_name || meta?.campaignName || `备份 #${id}`}
@@ -967,7 +960,10 @@ export default function CampaignBackupsClientPage() {
                             }}
                             disabled={isBatchProcessing}
                           />
-                          <Label htmlFor={`dialog-regenerate-${id}`} className="text-xs cursor-pointer">
+                          <Label
+                            htmlFor={`dialog-regenerate-${id}`}
+                            className="text-xs cursor-pointer"
+                          >
                             {shouldRegenerate ? '🤖 重新生成' : '📦 使用备份'}
                           </Label>
                         </div>
@@ -1008,16 +1004,14 @@ export default function CampaignBackupsClientPage() {
                 onChange={(e) => setSelectedGoogleAdsAccountId(Number(e.target.value))}
               >
                 <option value="">请选择账号</option>
-                {googleAdsAccounts.map(account => (
+                {googleAdsAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.accountName || account.customerId}
                   </option>
                 ))}
               </select>
               {googleAdsAccounts.length === 0 && (
-                <p className="text-xs text-gray-500">
-                  暂无可用的 Google Ads 账号，请先创建账号
-                </p>
+                <p className="text-xs text-gray-500">暂无可用的 Google Ads 账号，请先创建账号</p>
               )}
             </div>
 
@@ -1031,16 +1025,18 @@ export default function CampaignBackupsClientPage() {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsBatchCreateOpen(false)}
               disabled={isBatchProcessing}
             >
               取消
             </Button>
-            <Button 
-              onClick={handleBatchCreate} 
-              disabled={isBatchProcessing || selectedBackupIds.length === 0 || !selectedGoogleAdsAccountId}
+            <Button
+              onClick={handleBatchCreate}
+              disabled={
+                isBatchProcessing || selectedBackupIds.length === 0 || !selectedGoogleAdsAccountId
+              }
               className="bg-blue-600 hover:bg-blue-700"
             >
               {isBatchProcessing ? (

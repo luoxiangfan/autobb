@@ -19,7 +19,8 @@ export const POST = withAuth(
       await enableAccount(userId)
 
       // 记录审计日志
-      const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      const ipAddress =
+        request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
       const userAgent = request.headers.get('user-agent') || 'unknown'
 
       await logAuditEvent({
@@ -40,10 +41,7 @@ export const POST = withAuth(
       })
     } catch (error: any) {
       console.error('解锁账户失败:', error)
-      return NextResponse.json(
-        { error: error.message || '解锁失败' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message || '解锁失败' }, { status: 500 })
     }
   },
   { requireAdmin: true }

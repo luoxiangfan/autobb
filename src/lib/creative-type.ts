@@ -1,15 +1,9 @@
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { hasModelAnchorInText } from './model-anchor-evidence'
 
-export type CanonicalCreativeType =
-  | 'brand_intent'
-  | 'model_intent'
-  | 'product_intent'
+export type CanonicalCreativeType = 'brand_intent' | 'model_intent' | 'product_intent'
 
-export type LegacyCreativeType =
-  | 'brand_focus'
-  | 'model_focus'
-  | 'brand_product'
+export type LegacyCreativeType = 'brand_focus' | 'model_focus' | 'brand_product'
 
 export type CreativeTypeValue = CanonicalCreativeType | LegacyCreativeType
 
@@ -18,9 +12,7 @@ export type CreativeBucketSlot = 'A' | 'B' | 'D'
 
 function normalizeTextArray(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value
-      .map((item) => String(item ?? '').trim())
-      .filter(Boolean)
+    return value.map((item) => String(item ?? '').trim()).filter(Boolean)
   }
 
   if (typeof value === 'string') {
@@ -30,9 +22,7 @@ function normalizeTextArray(value: unknown): string[] {
     try {
       const parsed = JSON.parse(trimmed)
       if (Array.isArray(parsed)) {
-        return parsed
-          .map((item) => String(item ?? '').trim())
-          .filter(Boolean)
+        return parsed.map((item) => String(item ?? '').trim()).filter(Boolean)
       }
     } catch {
       return [trimmed]
@@ -45,7 +35,9 @@ function normalizeTextArray(value: unknown): string[] {
 }
 
 export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot | null {
-  const upper = String(value || '').trim().toUpperCase()
+  const upper = String(value || '')
+    .trim()
+    .toUpperCase()
   if (upper === 'A') return 'A'
   if (upper === 'B' || upper === 'C') return 'B'
   if (upper === 'D' || upper === 'S') return 'D'
@@ -53,7 +45,9 @@ export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot 
 }
 
 export function normalizeCanonicalCreativeType(value: unknown): CanonicalCreativeType | null {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return null
 
   if (normalized === 'brand_intent' || normalized === 'brand_focus') {

@@ -1,6 +1,6 @@
-'use client';
+'use client'
 
-import { useMemo } from 'react';
+import { useMemo } from 'react'
 import {
   AreaChart,
   Area,
@@ -10,21 +10,21 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp } from 'lucide-react';
+} from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TrendingUp } from 'lucide-react'
 
 interface HourlyDistribution {
-  date: string;
-  hourlyActual: number[];
-  hourlyConfigured: number[];
-  matchRate?: number;
+  date: string
+  hourlyActual: number[]
+  hourlyConfigured: number[]
+  matchRate?: number
 }
 
 interface ClickFarmDistributionChartProps {
-  data: HourlyDistribution | null;
-  title?: string;
-  showLegend?: boolean;
+  data: HourlyDistribution | null
+  title?: string
+  showLegend?: boolean
 }
 
 export default function ClickFarmDistributionChart({
@@ -33,14 +33,14 @@ export default function ClickFarmDistributionChart({
   showLegend = true,
 }: ClickFarmDistributionChartProps) {
   const chartData = useMemo(() => {
-    if (!data) return [];
+    if (!data) return []
 
     return Array.from({ length: 24 }, (_, hour) => ({
       hour: `${hour.toString().padStart(2, '0')}:00`,
       配置分布: data.hourlyConfigured[hour] || 0,
       实际执行: data.hourlyActual[hour] || 0,
-    }));
-  }, [data]);
+    }))
+  }, [data])
 
   if (!data) {
     return (
@@ -57,11 +57,11 @@ export default function ClickFarmDistributionChart({
           </div>
         </CardContent>
       </Card>
-    );
+    )
   }
 
-  const totalActual = data.hourlyActual.reduce((sum, n) => sum + n, 0);
-  const totalConfigured = data.hourlyConfigured.reduce((sum, n) => sum + n, 0);
+  const totalActual = data.hourlyActual.reduce((sum, n) => sum + n, 0)
+  const totalConfigured = data.hourlyConfigured.reduce((sum, n) => sum + n, 0)
 
   return (
     <Card>
@@ -85,10 +85,7 @@ export default function ClickFarmDistributionChart({
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <AreaChart
-            data={chartData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
+          <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="colorConfigured" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -110,7 +107,12 @@ export default function ClickFarmDistributionChart({
               tick={{ fontSize: 12 }}
               tickLine={false}
               axisLine={{ stroke: '#e5e7eb' }}
-              label={{ value: '点击次数', angle: -90, position: 'insideLeft', style: { fontSize: 12 } }}
+              label={{
+                value: '点击次数',
+                angle: -90,
+                position: 'insideLeft',
+                style: { fontSize: 12 },
+              }}
             />
             <Tooltip
               contentStyle={{
@@ -120,12 +122,7 @@ export default function ClickFarmDistributionChart({
                 fontSize: '12px',
               }}
             />
-            {showLegend && (
-              <Legend
-                wrapperStyle={{ fontSize: '12px' }}
-                iconType="line"
-              />
-            )}
+            {showLegend && <Legend wrapperStyle={{ fontSize: '12px' }} iconType="line" />}
             <Area
               type="monotone"
               dataKey="配置分布"
@@ -152,5 +149,5 @@ export default function ClickFarmDistributionChart({
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

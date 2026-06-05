@@ -32,7 +32,10 @@ function toPositiveIntegerList(values?: number[]): number[] {
   return Array.from(new Set(normalized))
 }
 
-function shouldReplaceAffiliateLink(candidate: RepairCandidateRow, normalizedShortLink: string): boolean {
+function shouldReplaceAffiliateLink(
+  candidate: RepairCandidateRow,
+  normalizedShortLink: string
+): boolean {
   const normalizedCurrent = normalizeUrl(candidate.affiliate_link)
   if (!normalizedCurrent) return true
   if (normalizedCurrent === normalizedShortLink) return false
@@ -64,9 +67,10 @@ export async function repairOfferAffiliateLinksFromProducts(params: {
   const productIds = toPositiveIntegerList(params.productIds)
 
   const db = await getDatabase()
-  const isNotDeletedCondition = db.type === 'postgres'
-    ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-    : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const isNotDeletedCondition =
+    db.type === 'postgres'
+      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
+      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
 
   const whereClauses = [
     'l.user_id = ?',
@@ -109,7 +113,10 @@ export async function repairOfferAffiliateLinksFromProducts(params: {
     return { scanned: 0, updated: 0, updatedOfferIds: [] }
   }
 
-  const candidateByOffer = new Map<number, { candidate: RepairCandidateRow; shortLinks: Set<string> }>()
+  const candidateByOffer = new Map<
+    number,
+    { candidate: RepairCandidateRow; shortLinks: Set<string> }
+  >()
   for (const row of rows) {
     const normalizedShort = normalizeUrl(row.short_promo_link)
     if (!normalizedShort) continue

@@ -39,11 +39,29 @@ interface DateRangePickerProps {
 
 const presetRanges = [
   { label: '今天', getValue: () => ({ from: startOfDay(new Date()), to: endOfDay(new Date()) }) },
-  { label: '昨天', getValue: () => { const yesterday = subDays(new Date(), 1); return { from: startOfDay(yesterday), to: endOfDay(yesterday) } } },
-  { label: '最近7天', getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }) },
-  { label: '最近30天', getValue: () => ({ from: startOfDay(subDays(new Date(), 29)), to: endOfDay(new Date()) }) },
+  {
+    label: '昨天',
+    getValue: () => {
+      const yesterday = subDays(new Date(), 1)
+      return { from: startOfDay(yesterday), to: endOfDay(yesterday) }
+    },
+  },
+  {
+    label: '最近7天',
+    getValue: () => ({ from: startOfDay(subDays(new Date(), 6)), to: endOfDay(new Date()) }),
+  },
+  {
+    label: '最近30天',
+    getValue: () => ({ from: startOfDay(subDays(new Date(), 29)), to: endOfDay(new Date()) }),
+  },
   { label: '本月', getValue: () => ({ from: startOfMonth(new Date()), to: endOfDay(new Date()) }) },
-  { label: '上月', getValue: () => { const lastMonth = subDays(startOfMonth(new Date()), 1); return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) } } },
+  {
+    label: '上月',
+    getValue: () => {
+      const lastMonth = subDays(startOfMonth(new Date()), 1)
+      return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) }
+    },
+  },
 ]
 
 const normalizeRange = (range: DateRange | undefined): DateRange | undefined => {
@@ -68,13 +86,15 @@ export function DateRangePicker({
   compact = false,
 }: DateRangePickerProps) {
   const [date, setDate] = React.useState<DateRange | undefined>(() => normalizeRange(value))
-  const [draftDate, setDraftDate] = React.useState<DateRange | undefined>(() => normalizeRange(value))
+  const [draftDate, setDraftDate] = React.useState<DateRange | undefined>(() =>
+    normalizeRange(value)
+  )
   const [isOpen, setIsOpen] = React.useState(false)
   const [showTwoMonths, setShowTwoMonths] = React.useState(false)
   const [isMobile, setIsMobile] = React.useState(false)
   const contentRef = React.useRef<HTMLDivElement | null>(null)
 
-  const monthCount = compact ? 1 : (showTwoMonths ? 2 : 1)
+  const monthCount = compact ? 1 : showTwoMonths ? 2 : 1
   const popoverWidthClass = React.useMemo(() => {
     if (compact) {
       return isMobile ? 'w-[min(96vw,360px)]' : 'w-[176px]'
@@ -84,8 +104,14 @@ export function DateRangePicker({
     }
     return 'w-[min(92vw,760px)]'
   }, [compact, isMobile, showPresets, showTwoMonths])
-  const normalizedMinDate = React.useMemo(() => (minDate ? startOfDay(minDate) : undefined), [minDate])
-  const normalizedMaxDate = React.useMemo(() => (maxDate ? endOfDay(maxDate) : undefined), [maxDate])
+  const normalizedMinDate = React.useMemo(
+    () => (minDate ? startOfDay(minDate) : undefined),
+    [minDate]
+  )
+  const normalizedMaxDate = React.useMemo(
+    () => (maxDate ? endOfDay(maxDate) : undefined),
+    [maxDate]
+  )
   const minMonth = React.useMemo(
     () => (normalizedMinDate ? startOfMonth(normalizedMinDate) : undefined),
     [normalizedMinDate]
@@ -95,28 +121,31 @@ export function DateRangePicker({
     [normalizedMaxDate]
   )
 
-  const clampMonth = React.useCallback((candidate: Date) => {
-    let nextMonth = startOfMonth(candidate)
+  const clampMonth = React.useCallback(
+    (candidate: Date) => {
+      let nextMonth = startOfMonth(candidate)
 
-    if (minMonth && isBefore(nextMonth, minMonth)) {
-      nextMonth = minMonth
-    }
-    if (maxMonth && isAfter(nextMonth, maxMonth)) {
-      nextMonth = maxMonth
-    }
-    if (maxMonth && monthCount > 1) {
-      const latestAllowedStartMonth = addMonths(maxMonth, -(monthCount - 1))
-      if (isAfter(nextMonth, latestAllowedStartMonth)) {
-        nextMonth = latestAllowedStartMonth
+      if (minMonth && isBefore(nextMonth, minMonth)) {
+        nextMonth = minMonth
       }
-    }
+      if (maxMonth && isAfter(nextMonth, maxMonth)) {
+        nextMonth = maxMonth
+      }
+      if (maxMonth && monthCount > 1) {
+        const latestAllowedStartMonth = addMonths(maxMonth, -(monthCount - 1))
+        if (isAfter(nextMonth, latestAllowedStartMonth)) {
+          nextMonth = latestAllowedStartMonth
+        }
+      }
 
-    return nextMonth
-  }, [maxMonth, minMonth, monthCount])
+      return nextMonth
+    },
+    [maxMonth, minMonth, monthCount]
+  )
 
-  const [visibleMonth, setVisibleMonth] = React.useState<Date>(() => (
+  const [visibleMonth, setVisibleMonth] = React.useState<Date>(() =>
     startOfMonth(value?.from ?? normalizedMaxDate ?? new Date())
-  ))
+  )
 
   React.useEffect(() => {
     const nextRange = normalizeRange(value)
@@ -203,7 +232,7 @@ export function DateRangePicker({
     }
   }
 
-  const handlePresetClick = (preset: typeof presetRanges[0]) => {
+  const handlePresetClick = (preset: (typeof presetRanges)[0]) => {
     const nextRange = normalizeRange(preset.getValue())
     setDate(nextRange)
     setDraftDate(nextRange)
@@ -234,9 +263,10 @@ export function DateRangePicker({
     onChange?.(undefined)
   }
 
-  const displayText = date?.from && date?.to
-    ? `${format(date.from, 'yyyy-MM-dd')} ~ ${format(date.to, 'yyyy-MM-dd')}`
-    : placeholder
+  const displayText =
+    date?.from && date?.to
+      ? `${format(date.from, 'yyyy-MM-dd')} ~ ${format(date.to, 'yyyy-MM-dd')}`
+      : placeholder
   const canApply = Boolean(draftDate?.from && draftDate?.to)
   const selectedRangeText = canApply
     ? `${format(draftDate!.from!, 'yyyy-MM-dd')} ~ ${format(draftDate!.to!, 'yyyy-MM-dd')}`
@@ -259,10 +289,7 @@ export function DateRangePicker({
         <CalendarIcon className="mr-1 h-3.5 w-3.5" />
         <span className="truncate">{displayText}</span>
         {showClearButton && date?.from && (
-          <X
-            className="ml-auto h-3.5 w-3.5 opacity-50 hover:opacity-100"
-            onClick={handleClear}
-          />
+          <X className="ml-auto h-3.5 w-3.5 opacity-50 hover:opacity-100" onClick={handleClear} />
         )}
       </PopoverTrigger>
       <PopoverContent
@@ -273,33 +300,39 @@ export function DateRangePicker({
         onOpenAutoFocus={(event) => {
           event.preventDefault()
           window.requestAnimationFrame(() => {
-            const firstPresetButton = contentRef.current?.querySelector<HTMLButtonElement>('button[data-date-range-preset="true"]')
+            const firstPresetButton = contentRef.current?.querySelector<HTMLButtonElement>(
+              'button[data-date-range-preset="true"]'
+            )
             if (showPresets && firstPresetButton) {
               firstPresetButton.focus()
               return
             }
-            const firstDayButton = contentRef.current?.querySelector<HTMLButtonElement>('.rdp-day_button:not([disabled])')
+            const firstDayButton = contentRef.current?.querySelector<HTMLButtonElement>(
+              '.rdp-day_button:not([disabled])'
+            )
             firstDayButton?.focus()
           })
         }}
       >
-        <div className={cn(
-          compact ? (isMobile ? 'max-h-[340px]' : 'max-h-[206px]') : 'max-h-[75vh]',
-          'flex flex-col overflow-auto',
-          !compact && showPresets && 'lg:flex-row'
-        )}>
+        <div
+          className={cn(
+            compact ? (isMobile ? 'max-h-[340px]' : 'max-h-[206px]') : 'max-h-[75vh]',
+            'flex flex-col overflow-auto',
+            !compact && showPresets && 'lg:flex-row'
+          )}
+        >
           {showPresets && (
             <div className="flex flex-wrap gap-1 border-b p-3 lg:w-[132px] lg:flex-col lg:border-b-0 lg:border-r">
               <div className="mb-1 text-xs font-medium text-muted-foreground">快捷选择</div>
               {presetRanges.map((preset, index) => {
                 const presetRange = normalizeRange(preset.getValue())
                 const isPresetSelected = Boolean(
-                  draftDate?.from
-                  && draftDate?.to
-                  && presetRange?.from
-                  && presetRange?.to
-                  && format(draftDate.from, 'yyyy-MM-dd') === format(presetRange.from, 'yyyy-MM-dd')
-                  && format(draftDate.to, 'yyyy-MM-dd') === format(presetRange.to, 'yyyy-MM-dd')
+                  draftDate?.from &&
+                  draftDate?.to &&
+                  presetRange?.from &&
+                  presetRange?.to &&
+                  format(draftDate.from, 'yyyy-MM-dd') === format(presetRange.from, 'yyyy-MM-dd') &&
+                  format(draftDate.to, 'yyyy-MM-dd') === format(presetRange.to, 'yyyy-MM-dd')
                 )
 
                 return (
@@ -318,9 +351,11 @@ export function DateRangePicker({
               })}
             </div>
           )}
-          <div className={cn(
-            compact ? 'w-full p-1' : cn('p-3', showPresets ? 'flex-1 min-w-0' : 'w-fit shrink-0')
-          )}>
+          <div
+            className={cn(
+              compact ? 'w-full p-1' : cn('p-3', showPresets ? 'flex-1 min-w-0' : 'w-fit shrink-0')
+            )}
+          >
             <DayPicker
               mode="range"
               month={visibleMonth}
@@ -360,43 +395,71 @@ export function DateRangePicker({
                 months: compact
                   ? 'flex flex-col'
                   : cn('flex flex-col gap-4 xl:flex-row xl:gap-3', !showPresets && 'w-fit'),
-                month: compact ? (isMobile ? 'relative space-y-0.5' : 'relative space-y-0') : 'space-y-2 shrink-0',
+                month: compact
+                  ? isMobile
+                    ? 'relative space-y-0.5'
+                    : 'relative space-y-0'
+                  : 'space-y-2 shrink-0',
                 month_caption: compact
-                  ? (isMobile
+                  ? isMobile
                     ? 'pointer-events-none relative mb-1 flex h-[26px] items-center justify-end pl-[58px] pr-1'
-                    : 'pointer-events-none relative mb-0.5 flex h-[18px] items-center justify-end pl-11 pr-0.5')
+                    : 'pointer-events-none relative mb-0.5 flex h-[18px] items-center justify-end pl-11 pr-0.5'
                   : 'relative flex items-center justify-center pt-1',
                 caption_label: compact
-                  ? (isMobile ? 'text-sm font-semibold leading-[26px] text-right tracking-tight text-foreground' : 'text-[10px] font-semibold leading-[18px] text-right tracking-tight text-foreground')
+                  ? isMobile
+                    ? 'text-sm font-semibold leading-[26px] text-right tracking-tight text-foreground'
+                    : 'text-[10px] font-semibold leading-[18px] text-right tracking-tight text-foreground'
                   : 'text-sm font-medium',
                 chevron: compact ? (isMobile ? 'h-4 w-4' : 'h-3 w-3') : 'h-4 w-4',
                 nav: compact ? 'hidden' : 'space-x-1 flex items-center',
                 button_previous: cn(
                   compact
-                    ? (isMobile
+                    ? isMobile
                       ? 'absolute left-0 top-0 z-10 inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm bg-transparent p-0 text-muted-foreground opacity-85 hover:bg-accent hover:text-foreground disabled:opacity-35'
-                      : 'absolute left-0 top-0 z-10 inline-flex h-[18px] w-[18px] items-center justify-center rounded-sm bg-transparent p-0 text-muted-foreground opacity-85 hover:bg-accent hover:text-foreground disabled:opacity-35')
+                      : 'absolute left-0 top-0 z-10 inline-flex h-[18px] w-[18px] items-center justify-center rounded-sm bg-transparent p-0 text-muted-foreground opacity-85 hover:bg-accent hover:text-foreground disabled:opacity-35'
                     : 'h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100'
                 ),
                 button_next: cn(
                   compact
-                    ? (isMobile
+                    ? isMobile
                       ? 'absolute left-[28px] top-0 z-10 inline-flex h-[26px] w-[26px] items-center justify-center rounded-sm bg-transparent p-0 text-muted-foreground opacity-85 hover:bg-accent hover:text-foreground disabled:opacity-35'
-                      : 'absolute left-[19px] top-0 z-10 inline-flex h-[18px] w-[18px] items-center justify-center rounded-sm bg-transparent p-0 text-muted-foreground opacity-85 hover:bg-accent hover:text-foreground disabled:opacity-35')
+                      : 'absolute left-[19px] top-0 z-10 inline-flex h-[18px] w-[18px] items-center justify-center rounded-sm bg-transparent p-0 text-muted-foreground opacity-85 hover:bg-accent hover:text-foreground disabled:opacity-35'
                     : 'h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100'
                 ),
                 month_grid: 'w-full border-collapse',
                 weekdays: compact ? '' : 'flex',
-                weekday: cn('text-muted-foreground rounded-sm text-center font-medium', compact ? (isMobile ? 'px-0 py-0 text-xs leading-5' : 'px-0 py-0 text-[10px] leading-4') : 'w-8 text-[0.75rem]'),
+                weekday: cn(
+                  'text-muted-foreground rounded-sm text-center font-medium',
+                  compact
+                    ? isMobile
+                      ? 'px-0 py-0 text-xs leading-5'
+                      : 'px-0 py-0 text-[10px] leading-4'
+                    : 'w-8 text-[0.75rem]'
+                ),
                 weeks: compact ? '' : '',
                 week: cn(compact ? '' : 'mt-1.5 flex w-full'),
                 cell: cn(
-                  compact ? (isMobile ? 'relative p-0 text-center align-middle text-xs' : 'relative p-0 text-center align-middle text-[10px]') : 'h-8 w-8 p-0 text-center text-xs relative',
+                  compact
+                    ? isMobile
+                      ? 'relative p-0 text-center align-middle text-xs'
+                      : 'relative p-0 text-center align-middle text-[10px]'
+                    : 'h-8 w-8 p-0 text-center text-xs relative',
                   'focus-within:relative focus-within:z-20'
                 ),
-                day: cn(compact ? (isMobile ? 'h-[28px] w-[28px] p-0 text-xs' : 'h-[20px] w-[20px] p-0 text-[10px]') : 'h-8 w-8 p-0', 'font-normal rounded-md'),
+                day: cn(
+                  compact
+                    ? isMobile
+                      ? 'h-[28px] w-[28px] p-0 text-xs'
+                      : 'h-[20px] w-[20px] p-0 text-[10px]'
+                    : 'h-8 w-8 p-0',
+                  'font-normal rounded-md'
+                ),
                 day_button: cn(
-                  compact ? (isMobile ? 'h-[26px] w-[26px] rounded-[6px] p-0 text-xs' : 'h-[18px] w-[18px] rounded-[4px] p-0 text-[10px]') : 'h-8 w-8 p-0',
+                  compact
+                    ? isMobile
+                      ? 'h-[26px] w-[26px] rounded-[6px] p-0 text-xs'
+                      : 'h-[18px] w-[18px] rounded-[4px] p-0 text-[10px]'
+                    : 'h-8 w-8 p-0',
                   'font-normal transition-colors hover:bg-accent hover:text-accent-foreground',
                   'aria-selected:bg-primary aria-selected:text-primary-foreground aria-selected:font-semibold',
                   'aria-selected:hover:bg-primary aria-selected:hover:text-primary-foreground'
@@ -407,7 +470,9 @@ export function DateRangePicker({
                 range_start: 'drp-range-start',
                 range_end: 'drp-range-end',
                 range_middle: 'drp-range-middle',
-                today: compact ? 'text-primary font-medium' : 'bg-accent text-accent-foreground font-semibold',
+                today: compact
+                  ? 'text-primary font-medium'
+                  : 'bg-accent text-accent-foreground font-semibold',
                 outside: compact
                   ? 'pointer-events-none select-none drp-outside-hidden'
                   : 'drp-outside-day text-muted-foreground opacity-50',
@@ -417,31 +482,58 @@ export function DateRangePicker({
             />
           </div>
         </div>
-        <div className={cn('border-t', compact ? (isMobile ? 'px-2 py-1.5' : 'px-1 py-0.5') : 'flex items-center justify-between px-3 py-2')}>
+        <div
+          className={cn(
+            'border-t',
+            compact
+              ? isMobile
+                ? 'px-2 py-1.5'
+                : 'px-1 py-0.5'
+              : 'flex items-center justify-between px-3 py-2'
+          )}
+        >
           {!compact && (
             <span className="truncate pr-3 text-xs text-muted-foreground">{selectedRangeText}</span>
           )}
-          <div className={cn('flex items-center', compact ? 'w-full justify-between gap-1' : 'gap-2')}>
+          <div
+            className={cn('flex items-center', compact ? 'w-full justify-between gap-1' : 'gap-2')}
+          >
             {compact && (
-              <span className={cn('truncate text-muted-foreground', isMobile ? 'text-[11px]' : 'text-[9px]')}>灰色日期不可选</span>
+              <span
+                className={cn(
+                  'truncate text-muted-foreground',
+                  isMobile ? 'text-[11px]' : 'text-[9px]'
+                )}
+              >
+                灰色日期不可选
+              </span>
             )}
             <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(compact && (isMobile ? 'h-7 px-2.5 text-xs' : 'h-5 px-1.5 text-[10px]'))}
-              onClick={handleResetDraft}
-            >
-              重置
-            </Button>
-            {!compact && (
-              <Button variant="ghost" size="sm" onClick={handleCancel}>
-                取消
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  compact && (isMobile ? 'h-7 px-2.5 text-xs' : 'h-5 px-1.5 text-[10px]')
+                )}
+                onClick={handleResetDraft}
+              >
+                重置
               </Button>
-            )}
-            <Button size="sm" className={cn(compact && (isMobile ? 'h-7 px-2.5 text-xs' : 'h-5 px-1.5 text-[10px]'))} onClick={handleApply} disabled={!canApply}>
-              应用
-            </Button>
+              {!compact && (
+                <Button variant="ghost" size="sm" onClick={handleCancel}>
+                  取消
+                </Button>
+              )}
+              <Button
+                size="sm"
+                className={cn(
+                  compact && (isMobile ? 'h-7 px-2.5 text-xs' : 'h-5 px-1.5 text-[10px]')
+                )}
+                onClick={handleApply}
+                disabled={!canApply}
+              >
+                应用
+              </Button>
             </div>
           </div>
         </div>

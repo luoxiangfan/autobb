@@ -3,11 +3,11 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/offers/[id]/unlink/route'
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: vi.fn(async () => ({ authenticated: true, user: { userId: 1 } }))
+  verifyAuth: vi.fn(async () => ({ authenticated: true, user: { userId: 1 } })),
 }))
 
 vi.mock('@/lib/offers', () => ({
-  unlinkOfferFromAccount: vi.fn(async () => ({ unlinkedCount: 1 }))
+  unlinkOfferFromAccount: vi.fn(async () => ({ unlinkedCount: 1 })),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -18,9 +18,9 @@ vi.mock('@/lib/db', () => ({
       customer_id: null,
       parent_mcc_id: null,
       is_active: 1,
-      is_deleted: 0
-    }))
-  }))
+      is_deleted: 0,
+    })),
+  })),
 }))
 
 vi.mock('@/lib/google-ads-campaign-remote-actions', () => ({
@@ -42,7 +42,7 @@ describe('POST /api/offers/:id/unlink', () => {
     const req = new NextRequest('http://localhost/api/offers/77/unlink', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accountId: 9, removeGoogleAdsCampaigns: true })
+      body: JSON.stringify({ accountId: 9, removeGoogleAdsCampaigns: true }),
     })
 
     const res = await POST(req, { params: Promise.resolve({ id: '77' }) })
@@ -57,7 +57,7 @@ describe('POST /api/offers/:id/unlink', () => {
     const req = new NextRequest('http://localhost/api/offers/77/unlink', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ accountId: 9 })
+      body: JSON.stringify({ accountId: 9 }),
     })
 
     const res = await POST(req, { params: Promise.resolve({ id: '77' }) })

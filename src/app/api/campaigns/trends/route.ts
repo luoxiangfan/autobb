@@ -16,7 +16,9 @@ import {
 } from '@/lib/campaign-trends-scope'
 
 function normalizeCurrency(value: unknown): string {
-  const normalized = String(value ?? '').trim().toUpperCase()
+  const normalized = String(value ?? '')
+    .trim()
+    .toUpperCase()
   return normalized || 'USD'
 }
 
@@ -37,9 +39,9 @@ function parseYmdParam(value: string | null): string | null {
   const [year, month, day] = normalized.split('-').map((part) => Number(part))
   const date = new Date(Date.UTC(year, month - 1, day))
   if (
-    date.getUTCFullYear() !== year
-    || date.getUTCMonth() !== month - 1
-    || date.getUTCDate() !== day
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
   ) {
     return null
   }
@@ -80,7 +82,10 @@ function chunkIds(ids: number[]): number[][] {
   return chunks
 }
 
-function buildIdDisjunctionSql(columnExpr: string, chunks: number[][]): { sql: string; values: number[] } {
+function buildIdDisjunctionSql(
+  columnExpr: string,
+  chunks: number[][]
+): { sql: string; values: number[] } {
   if (chunks.length === 0) return { sql: '1=0', values: [] }
   const parts = chunks.map((ch) => `${columnExpr} IN (${ch.map(() => '?').join(',')})`)
   return { sql: `(${parts.join(' OR ')})`, values: chunks.flat() }
@@ -146,17 +151,15 @@ export async function GET(request: NextRequest) {
         )
       }
       if (startDateQuery > endDateQuery) {
-        return NextResponse.json(
-          { error: 'start_date 不能晚于 end_date' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'start_date 不能晚于 end_date' }, { status: 400 })
       }
     }
     const requestedCurrencyRaw = searchParams.get('currency')
     const requestedCurrency = requestedCurrencyRaw ? normalizeCurrency(requestedCurrencyRaw) : null
 
     const affiliateFilterParam = searchParams.get('affiliate')
-    const { affiliateFilter, affiliateDomainKeywords } = parseAffiliateTrendsParam(affiliateFilterParam)
+    const { affiliateFilter, affiliateDomainKeywords } =
+      parseAffiliateTrendsParam(affiliateFilterParam)
     const hasAffiliateOfferLinkFilter = Boolean(
       affiliateFilterParam && affiliateFilter && affiliateDomainKeywords.length > 0
     )
@@ -169,27 +172,33 @@ export async function GET(request: NextRequest) {
 
     const searchQuery = (searchParams.get('search') || '').trim().toLowerCase()
     const statusFilterRaw = (searchParams.get('status') || '').trim().toUpperCase()
-    const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw) ? statusFilterRaw : ''
-    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '').trim().toUpperCase()
+    const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw)
+      ? statusFilterRaw
+      : ''
+    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '')
+      .trim()
+      .toUpperCase()
     const statusCategoryFilter = (searchParams.get('statusCategory') || '').trim().toLowerCase()
     const showDeletedParam = parseOptionalBooleanParam(searchParams.get('showDeleted'))
     const idsParam = (searchParams.get('ids') || '').trim()
     const idsFilter = idsParam
       ? idsParam
-        .split(',')
-        .map((id) => Number.parseInt(id.trim(), 10))
-        .filter((id) => Number.isFinite(id) && id > 0)
+          .split(',')
+          .map((id) => Number.parseInt(id.trim(), 10))
+          .filter((id) => Number.isFinite(id) && id > 0)
       : []
     const createdAtStartParam = searchParams.get('createdAtStart')
     const createdAtEndParam = searchParams.get('createdAtEnd')
     const userIdsParam = (searchParams.get('userIds') || '').trim()
     const requestedUserIds = userIdsParam
-      ? Array.from(new Set(
-          userIdsParam
-            .split(',')
-            .map((id) => Number.parseInt(id.trim(), 10))
-            .filter((id) => Number.isFinite(id) && id > 0)
-        ))
+      ? Array.from(
+          new Set(
+            userIdsParam
+              .split(',')
+              .map((id) => Number.parseInt(id.trim(), 10))
+              .filter((id) => Number.isFinite(id) && id > 0)
+          )
+        )
       : []
     const userIdFilterParam = searchParams.get('userId')
     const userIdFilter = userIdFilterParam ? Number.parseInt(userIdFilterParam, 10) : null
@@ -311,7 +320,12 @@ export async function GET(request: NextRequest) {
         ${hasAffiliateOfferLinkFilter ? affiliateOfferLikeClause : ''}
     `
 
-    const perfAggBinds = [startDateStr, endDateStr, ...campaignIdDisjunction.values, ...affiliateOfferLikeParams]
+    const perfAggBinds = [
+      startDateStr,
+      endDateStr,
+      ...campaignIdDisjunction.values,
+      ...affiliateOfferLikeParams,
+    ]
 
     const currencyRows = await db.query<any>(
       `
@@ -344,8 +358,9 @@ export async function GET(request: NextRequest) {
       perfAggBinds
     )
 
-    const queryAttributedCommissionTrends = async () => db.query<any>(
-      `
+    const queryAttributedCommissionTrends = async () =>
+      db.query<any>(
+        `
       SELECT
         a.report_date as date,
         COALESCE(a.currency, 'USD') as currency,
@@ -360,8 +375,13 @@ export async function GET(request: NextRequest) {
       GROUP BY a.report_date, COALESCE(a.currency, 'USD')
       ORDER BY report_date ASC, currency ASC
       `,
-      [startDateStr, endDateStr, ...attributionCampaignDisjunction.values, ...affiliateOfferLikeParams]
-    )
+        [
+          startDateStr,
+          endDateStr,
+          ...attributionCampaignDisjunction.values,
+          ...affiliateOfferLikeParams,
+        ]
+      )
 
     const queryUnattributedCommissionTrends = async (): Promise<any[]> => {
       const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
@@ -409,8 +429,8 @@ export async function GET(request: NextRequest) {
       } catch (error: any) {
         const message = String(error?.message || '')
         if (
-          /openclaw_affiliate_attribution_failures/i.test(message)
-          && /(no such table|does not exist)/i.test(message)
+          /openclaw_affiliate_attribution_failures/i.test(message) &&
+          /(no such table|does not exist)/i.test(message)
         ) {
           return []
         }
@@ -423,15 +443,16 @@ export async function GET(request: NextRequest) {
       queryUnattributedCommissionTrends(),
     ])
 
-    const commissionCurrencies = Array.from(new Set([
-      ...attributedCommissionTrends.map((row) => normalizeCurrency(row.currency)),
-      ...unattributedCommissionTrends.map((row) => normalizeCurrency(row.currency)),
-    ]))
-    const availableCurrencies = Array.from(new Set([
-      ...costCurrencies,
-      ...commissionCurrencies,
-    ]))
-    const isFilteredByCurrency = Boolean(requestedCurrency && availableCurrencies.includes(requestedCurrency))
+    const commissionCurrencies = Array.from(
+      new Set([
+        ...attributedCommissionTrends.map((row) => normalizeCurrency(row.currency)),
+        ...unattributedCommissionTrends.map((row) => normalizeCurrency(row.currency)),
+      ])
+    )
+    const availableCurrencies = Array.from(new Set([...costCurrencies, ...commissionCurrencies]))
+    const isFilteredByCurrency = Boolean(
+      requestedCurrency && availableCurrencies.includes(requestedCurrency)
+    )
     const reportingCostCurrencies = isFilteredByCurrency
       ? [String(requestedCurrency)]
       : costCurrencies
@@ -440,16 +461,20 @@ export async function GET(request: NextRequest) {
       : availableCurrencies
     const reportingCurrency = isFilteredByCurrency
       ? String(requestedCurrency)
-      : (reportingCostCurrencies[0] || reportingCommissionCurrencies[0] || BASE_CURRENCY)
+      : reportingCostCurrencies[0] || reportingCommissionCurrencies[0] || BASE_CURRENCY
     const hasMixedCurrency = availableCurrencies.length > 1
 
-    const adMap = new Map<string, Map<string, { impressions: number; clicks: number; cost: number }>>()
+    const adMap = new Map<
+      string,
+      Map<string, { impressions: number; clicks: number; cost: number }>
+    >()
     for (const row of adTrends) {
       const date = normalizeDateKey(row.date)
       const currency = normalizeCurrency(row.currency)
       if (!reportingCostCurrencies.includes(currency)) continue
 
-      const byCurrency = adMap.get(date) ?? new Map<string, { impressions: number; clicks: number; cost: number }>()
+      const byCurrency =
+        adMap.get(date) ?? new Map<string, { impressions: number; clicks: number; cost: number }>()
       byCurrency.set(currency, {
         impressions: Number(row.impressions) || 0,
         clicks: Number(row.clicks) || 0,
@@ -474,10 +499,9 @@ export async function GET(request: NextRequest) {
     appendCommissionRows(attributedCommissionTrends)
     appendCommissionRows(unattributedCommissionTrends)
 
-    const dates = Array.from(new Set<string>([
-      ...Array.from(adMap.keys()),
-      ...Array.from(commissionMap.keys()),
-    ])).sort((a, b) => a.localeCompare(b))
+    const dates = Array.from(
+      new Set<string>([...Array.from(adMap.keys()), ...Array.from(commissionMap.keys())])
+    ).sort((a, b) => a.localeCompare(b))
 
     const convertToBase = (amount: number, currency: string): number => {
       const normalized = normalizeCurrency(currency)
@@ -497,7 +521,8 @@ export async function GET(request: NextRequest) {
     let totalImpressions = 0
 
     const formattedTrends = dates.map((date) => {
-      const adByCurrency = adMap.get(date) ?? new Map<string, { impressions: number; clicks: number; cost: number }>()
+      const adByCurrency =
+        adMap.get(date) ?? new Map<string, { impressions: number; clicks: number; cost: number }>()
       const commissionByCurrency = commissionMap.get(date) ?? new Map<string, number>()
 
       const row: Record<string, string | number> = { date }
@@ -527,7 +552,10 @@ export async function GET(request: NextRequest) {
 
         row[`commission_${currency}`] = roundTo2(currencyCommission)
         commissionBase += convertToBase(currencyCommission, currency)
-        commissionTotalsByCurrency.set(currency, (commissionTotalsByCurrency.get(currency) || 0) + currencyCommission)
+        commissionTotalsByCurrency.set(
+          currency,
+          (commissionTotalsByCurrency.get(currency) || 0) + currencyCommission
+        )
       })
 
       totalImpressions += impressions
@@ -601,9 +629,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responsePayload)
   } catch (error: any) {
     console.error('Get campaigns trends error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取趋势数据失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取趋势数据失败' }, { status: 500 })
   }
 }

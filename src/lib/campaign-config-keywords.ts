@@ -6,14 +6,18 @@ export type CampaignConfigKeyword = {
 }
 
 function normalizeKeywordText(value: unknown): string {
-  return String(value || '').replace(/\s+/g, ' ').trim()
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function normalizeMatchType(
   value: unknown,
   fallback: CampaignConfigKeywordMatchType = 'PHRASE'
 ): CampaignConfigKeywordMatchType {
-  const text = String(value || '').trim().toUpperCase()
+  const text = String(value || '')
+    .trim()
+    .toUpperCase()
   if (text === 'BROAD_MATCH_MODIFIER' || text === 'BMM') return 'BROAD'
   if (text === 'BROAD' || text === 'PHRASE' || text === 'EXACT') {
     return text
@@ -25,7 +29,9 @@ function normalizeBoolean(value: unknown): boolean {
   if (value === true || value === false) return value
   if (value === 1 || value === '1') return true
   if (value === 0 || value === '0') return false
-  const text = String(value || '').trim().toLowerCase()
+  const text = String(value || '')
+    .trim()
+    .toLowerCase()
   return text === 'true' || text === 'yes' || text === 'on'
 }
 
@@ -65,9 +71,9 @@ function parseKeywordEntry(value: unknown): CampaignConfigKeyword | null {
       'PHRASE'
     )
     isNegative =
-      normalizeBoolean(row.isNegative)
-      || normalizeBoolean(row.is_negative)
-      || normalizeBoolean(row.negative)
+      normalizeBoolean(row.isNegative) ||
+      normalizeBoolean(row.is_negative) ||
+      normalizeBoolean(row.negative)
   }
 
   if (!text || text.length < 2 || text.length > 80 || isNegative) return null
@@ -99,9 +105,12 @@ export function extractCampaignConfigNegativeKeywords(campaignConfig: unknown): 
   const seen = new Set<string>()
 
   for (const item of source) {
-    const text = typeof item === 'string'
-      ? normalizeKeywordText(item)
-      : normalizeKeywordText((item as Record<string, unknown>)?.text || (item as Record<string, unknown>)?.keyword)
+    const text =
+      typeof item === 'string'
+        ? normalizeKeywordText(item)
+        : normalizeKeywordText(
+            (item as Record<string, unknown>)?.text || (item as Record<string, unknown>)?.keyword
+          )
     if (!text || text.length < 2 || text.length > 80) continue
     const key = text.toLowerCase()
     if (seen.has(key)) continue
@@ -173,8 +182,9 @@ export function patchCampaignConfigKeywords(params: {
   const nextNegativeKeywords = Array.from(negativeKeywordMap.values())
 
   const changed =
-    buildKeywordSignature(existingKeywords) !== buildKeywordSignature(nextKeywords)
-    || buildNegativeKeywordSignature(existingNegativeKeywords) !== buildNegativeKeywordSignature(nextNegativeKeywords)
+    buildKeywordSignature(existingKeywords) !== buildKeywordSignature(nextKeywords) ||
+    buildNegativeKeywordSignature(existingNegativeKeywords) !==
+      buildNegativeKeywordSignature(nextNegativeKeywords)
 
   config.keywords = nextKeywords.map((item) => ({
     text: item.text,

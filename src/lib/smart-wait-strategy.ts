@@ -13,9 +13,9 @@ import { Page } from 'playwright'
  */
 interface PageComplexity {
   complexity: 'simple' | 'medium' | 'complex'
-  estimatedLoadTime: number      // 预估加载时间（毫秒）
-  recommendedWaitTime: number    // 推荐额外等待时间（毫秒）
-  recommendedTimeout: number     // 推荐总超时时间（毫秒）
+  estimatedLoadTime: number // 预估加载时间（毫秒）
+  recommendedWaitTime: number // 推荐额外等待时间（毫秒）
+  recommendedTimeout: number // 推荐总超时时间（毫秒）
 }
 
 /**
@@ -43,22 +43,35 @@ export function assessPageComplexity(url: string): PageComplexity {
   // 🔥 P0修复：短链接服务需要更长超时（反爬虫验证 + 多次重定向）
   // 常见短链接服务：bit.ly, tinyurl, ow.ly, rebrand.ly, pboost.me, etc.
   const shortLinkDomains = [
-    'bit.ly', 'tinyurl.com', 'ow.ly', 'rebrand.ly', 'pboost.me',
-    'short.link', 'is.gd', 'buff.ly', 't.co', 'goo.gl', 'clk.',
-    'fbuy.me', 'amzn.to', 'flip.it', 'linktr.ee', 'soo.gd'
+    'bit.ly',
+    'tinyurl.com',
+    'ow.ly',
+    'rebrand.ly',
+    'pboost.me',
+    'short.link',
+    'is.gd',
+    'buff.ly',
+    't.co',
+    'goo.gl',
+    'clk.',
+    'fbuy.me',
+    'amzn.to',
+    'flip.it',
+    'linktr.ee',
+    'soo.gd',
   ]
-  if (shortLinkDomains.some(domain => urlLower.includes(domain))) {
+  if (shortLinkDomains.some((domain) => urlLower.includes(domain))) {
     return {
       complexity: 'complex',
       estimatedLoadTime: 15000,
       recommendedWaitTime: 10000,
-      recommendedTimeout: 180000,  // 🔥 3分钟超时，应对短链接服务的反爬虫验证
+      recommendedTimeout: 180000, // 🔥 3分钟超时，应对短链接服务的反爬虫验证
     }
   }
 
   // 复杂页面：电商、社交媒体、SPA应用
   if (
-    urlLower.includes('amazon.') ||  // 🔥 修复：支持所有Amazon域名（.com/.it/.de/.fr等）
+    urlLower.includes('amazon.') || // 🔥 修复：支持所有Amazon域名（.com/.it/.de/.fr等）
     urlLower.includes('ebay.com') ||
     urlLower.includes('facebook.com') ||
     urlLower.includes('twitter.com') ||
@@ -70,7 +83,7 @@ export function assessPageComplexity(url: string): PageComplexity {
       complexity: 'complex',
       estimatedLoadTime: 8000,
       recommendedWaitTime: 5000,
-      recommendedTimeout: 120000,  // 🔥 增加到120秒，应对慢速代理和多次重定向
+      recommendedTimeout: 120000, // 🔥 增加到120秒，应对慢速代理和多次重定向
     }
   }
 
@@ -79,7 +92,7 @@ export function assessPageComplexity(url: string): PageComplexity {
     complexity: 'medium',
     estimatedLoadTime: 4000,
     recommendedWaitTime: 2000,
-    recommendedTimeout: 90000,  // 🔥 增加到90秒，应对代理延迟和页面加载慢
+    recommendedTimeout: 90000, // 🔥 增加到90秒，应对代理延迟和页面加载慢
   }
 }
 
@@ -95,13 +108,13 @@ export async function smartWaitForLoad(
   page: Page,
   url: string,
   options?: {
-    maxWaitTime?: number        // 最大等待时间
-    checkInterval?: number      // 检查间隔
+    maxWaitTime?: number // 最大等待时间
+    checkInterval?: number // 检查间隔
   }
 ): Promise<{
-  waited: number                // 实际等待时间
-  loadComplete: boolean         // 是否加载完成
-  signals: string[]             // 检测到的完成信号
+  waited: number // 实际等待时间
+  loadComplete: boolean // 是否加载完成
+  signals: string[] // 检测到的完成信号
 }> {
   const complexity = assessPageComplexity(url)
   const maxWaitTime = options?.maxWaitTime || complexity.recommendedWaitTime
@@ -121,33 +134,36 @@ export async function smartWaitForLoad(
 
   // 信号1: 网络空闲检测（短超时，不阻塞）
   checkPromises.push(
-    page.waitForLoadState('networkidle', { timeout: Math.min(complexity.estimatedLoadTime, 3000) })
+    page
+      .waitForLoadState('networkidle', { timeout: Math.min(complexity.estimatedLoadTime, 3000) })
       .then(() => 'network-idle' as string)
       .catch(() => null)
   )
 
   // 信号2: 文档就绪状态 (快速检测)
   checkPromises.push(
-    page.evaluate(() => {
-      return new Promise<string>((resolve) => {
-        if (document.readyState === 'complete') {
-          resolve('document-ready')
-        } else {
-          document.addEventListener('readystatechange', () => {
-            if (document.readyState === 'complete') resolve('document-ready')
-          })
-          // 超时保护
-          setTimeout(() => resolve('document-ready'), 2000)
-        }
+    page
+      .evaluate(() => {
+        return new Promise<string>((resolve) => {
+          if (document.readyState === 'complete') {
+            resolve('document-ready')
+          } else {
+            document.addEventListener('readystatechange', () => {
+              if (document.readyState === 'complete') resolve('document-ready')
+            })
+            // 超时保护
+            setTimeout(() => resolve('document-ready'), 2000)
+          }
+        })
       })
-    }).catch(() => null)
+      .catch(() => null)
   )
 
   // 信号3: 主要内容已渲染（轮询检测，但更积极）
   checkPromises.push(
     (async () => {
-      const endTime = startTime + Math.min(maxWaitTime, 3000)  // 🔥 最多轮询3秒
-      const shortInterval = 200  // 🔥 缩短检查间隔到200ms
+      const endTime = startTime + Math.min(maxWaitTime, 3000) // 🔥 最多轮询3秒
+      const shortInterval = 200 // 🔥 缩短检查间隔到200ms
 
       while (Date.now() < endTime) {
         try {
@@ -276,10 +292,7 @@ let totalWaitTime = 0
 let totalOptimizedWaitTime = 0
 let callCount = 0
 
-export function recordWaitOptimization(
-  originalWaitTime: number,
-  optimizedWaitTime: number
-): void {
+export function recordWaitOptimization(originalWaitTime: number, optimizedWaitTime: number): void {
   totalWaitTime += originalWaitTime
   totalOptimizedWaitTime += optimizedWaitTime
   callCount++
@@ -305,7 +318,7 @@ export function getWaitOptimizationStats(): {
   const avgOriginal = totalWaitTime / callCount
   const avgOptimized = totalOptimizedWaitTime / callCount
   const timeSaved = totalWaitTime - totalOptimizedWaitTime
-  const improvement = ((timeSaved / totalWaitTime) * 100)
+  const improvement = (timeSaved / totalWaitTime) * 100
 
   return {
     totalCalls: callCount,

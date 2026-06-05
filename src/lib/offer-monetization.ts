@@ -119,12 +119,16 @@ const SYMBOL_TO_CODE_ENTRIES: Array<[string, string]> = [
 ]
 
 function normalizeCountryCode(country?: string | null): string {
-  const normalized = String(country || '').trim().toUpperCase()
+  const normalized = String(country || '')
+    .trim()
+    .toUpperCase()
   return normalized || 'US'
 }
 
 function normalizeCurrencyCode(code?: string | null): string {
-  const normalized = String(code || '').trim().toUpperCase()
+  const normalized = String(code || '')
+    .trim()
+    .toUpperCase()
   return normalized || 'USD'
 }
 
@@ -158,7 +162,10 @@ function parseNumberish(value: string): number | null {
   } else if (lastComma !== -1) {
     const decimals = withoutCurrency.length - lastComma - 1
     if (decimals >= 1 && decimals <= 2) {
-      normalized = withoutCurrency.slice(0, lastComma).replace(/,/g, '') + '.' + withoutCurrency.slice(lastComma + 1)
+      normalized =
+        withoutCurrency.slice(0, lastComma).replace(/,/g, '') +
+        '.' +
+        withoutCurrency.slice(lastComma + 1)
     } else {
       normalized = withoutCurrency.replace(/,/g, '')
     }
@@ -187,7 +194,9 @@ function resolveSymbolCurrencyCode(symbol: string, targetCountry?: string | null
     return 'JPY'
   }
 
-  const found = SYMBOL_TO_CODE_ENTRIES.find(([candidate]) => candidate.toLowerCase() === symbol.toLowerCase())
+  const found = SYMBOL_TO_CODE_ENTRIES.find(
+    ([candidate]) => candidate.toLowerCase() === symbol.toLowerCase()
+  )
   return found ? found[1] : 'USD'
 }
 
@@ -219,7 +228,9 @@ function hasExplicitCurrencyMarker(value: string): boolean {
 }
 
 function normalizeSpacing(value: string): string {
-  return String(value || '').trim().replace(/\s+/g, ' ')
+  return String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
 }
 
 export function getCurrencyCodeByCountry(country?: string | null): string {
@@ -257,7 +268,9 @@ export function parseMoneyValue(
   if (amount === null) return null
 
   const explicitCurrencyCode = detectCurrencyCodeFromText(raw, options?.targetCountry)
-  const fallbackCurrency = normalizeCurrencyCode(options?.defaultCurrency || getCurrencyCodeByCountry(options?.targetCountry))
+  const fallbackCurrency = normalizeCurrencyCode(
+    options?.defaultCurrency || getCurrencyCodeByCountry(options?.targetCountry)
+  )
 
   return {
     amount,
@@ -344,10 +357,10 @@ export function resolveLegacyBareNumericMode(
     return params.numericCommissionMode
   }
 
-  const hasStructuredType = params.commissionType != null
-    && String(params.commissionType).trim() !== ''
-  const hasStructuredValue = params.commissionValue != null
-    && String(params.commissionValue).trim() !== ''
+  const hasStructuredType =
+    params.commissionType != null && String(params.commissionType).trim() !== ''
+  const hasStructuredValue =
+    params.commissionValue != null && String(params.commissionValue).trim() !== ''
   if (hasStructuredType || hasStructuredValue) {
     return undefined
   }
@@ -394,9 +407,18 @@ function parseStructuredCommission(
   input: NormalizeOfferCommissionInputParams
 ): NormalizedOfferCommission | null {
   const commissionType = normalizeStructuredCommissionType(input.commissionType)
-  const hasCommissionTypeField = input.commissionType !== undefined && input.commissionType !== null && String(input.commissionType).trim() !== ''
-  const hasCommissionValueField = input.commissionValue !== undefined && input.commissionValue !== null && String(input.commissionValue).trim() !== ''
-  const hasCommissionCurrencyField = input.commissionCurrency !== undefined && input.commissionCurrency !== null && String(input.commissionCurrency).trim() !== ''
+  const hasCommissionTypeField =
+    input.commissionType !== undefined &&
+    input.commissionType !== null &&
+    String(input.commissionType).trim() !== ''
+  const hasCommissionValueField =
+    input.commissionValue !== undefined &&
+    input.commissionValue !== null &&
+    String(input.commissionValue).trim() !== ''
+  const hasCommissionCurrencyField =
+    input.commissionCurrency !== undefined &&
+    input.commissionCurrency !== null &&
+    String(input.commissionCurrency).trim() !== ''
 
   if (!hasCommissionTypeField && !hasCommissionValueField && !hasCommissionCurrencyField) {
     return null
@@ -462,7 +484,11 @@ function parseStructuredCommission(
     throw new Error('commission_value 金额格式非法')
   }
 
-  if (currencyFromInput && parsedMoney.explicitCurrency && parsedMoney.currency !== currencyFromInput) {
+  if (
+    currencyFromInput &&
+    parsedMoney.explicitCurrency &&
+    parsedMoney.currency !== currencyFromInput
+  ) {
     throw new Error('commission_value 与 commission_currency 货币不一致')
   }
 
@@ -578,19 +604,19 @@ function areCommissionSemanticallyEqual(
     return Math.abs(structuredValue - legacyValue) <= 0.05
   }
 
-  return structured.commissionCurrency === legacy.commissionCurrency
-    && Math.abs(structuredValue - legacyValue) <= 0.01
+  return (
+    structured.commissionCurrency === legacy.commissionCurrency &&
+    Math.abs(structuredValue - legacyValue) <= 0.01
+  )
 }
 
 export function normalizeOfferCommissionInput(
   params: NormalizeOfferCommissionInputParams
 ): NormalizedOfferCommission {
   const structured = parseStructuredCommission(params)
-  const legacy = parseLegacyCommission(
-    params.commissionPayout,
-    params.targetCountry,
-    { bareNumericMode: params.legacyBareNumericMode }
-  )
+  const legacy = parseLegacyCommission(params.commissionPayout, params.targetCountry, {
+    bareNumericMode: params.legacyBareNumericMode,
+  })
 
   if (!structured && !legacy) {
     return {
@@ -605,26 +631,29 @@ export function normalizeOfferCommissionInput(
     throw new Error('commission_type/commission_value 与 commission_payout 语义冲突')
   }
 
-  return structured || legacy || {
-    commissionType: null,
-    commissionValue: null,
-    commissionCurrency: null,
-    commissionPayout: null,
-  }
+  return (
+    structured ||
+    legacy || {
+      commissionType: null,
+      commissionValue: null,
+      commissionCurrency: null,
+      commissionPayout: null,
+    }
+  )
 }
 
 export type ParsedCommissionPayout =
   | {
-    mode: 'percent'
-    rate: number
-    displayRate: number
-  }
+      mode: 'percent'
+      rate: number
+      displayRate: number
+    }
   | {
-    mode: 'amount'
-    amount: number
-    currency: string
-    explicitCurrency: boolean
-  }
+      mode: 'amount'
+      amount: number
+      currency: string
+      explicitCurrency: boolean
+    }
 
 export function parseCommissionPayoutValue(
   value: string | null | undefined,
@@ -682,13 +711,11 @@ export function parseCommissionPayoutValue(
   }
 }
 
-export function getCommissionPerConversion(
-  params: {
-    productPrice: string | null | undefined
-    commissionPayout: string | null | undefined
-    targetCountry?: string | null
-  }
-): { amount: number; currency: string; mode: 'percent' | 'amount'; rate?: number } | null {
+export function getCommissionPerConversion(params: {
+  productPrice: string | null | undefined
+  commissionPayout: string | null | undefined
+  targetCountry?: string | null
+}): { amount: number; currency: string; mode: 'percent' | 'amount'; rate?: number } | null {
   const product = parseMoneyValue(params.productPrice, {
     targetCountry: params.targetCountry,
   })

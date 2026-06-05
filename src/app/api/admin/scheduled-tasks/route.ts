@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
 
     if (type === 'all' || type === 'backup') {
       // 🔧 修复(2025-12-11): 使用 AS 别名返回 camelCase 字段
-      backups = await db.query(`
+      backups = (await db.query(
+        `
         SELECT
           id,
           backup_filename AS backupFilename,
@@ -47,12 +48,15 @@ export async function GET(request: NextRequest) {
         FROM backup_logs
         ORDER BY created_at DESC
         LIMIT ?
-      `, [limit]) as any[]
+      `,
+        [limit]
+      )) as any[]
     }
 
     if (type === 'all' || type === 'sync') {
       // 🔧 修复(2025-12-11): 使用 AS 别名返回 camelCase 字段
-      syncLogs = await db.query(`
+      syncLogs = (await db.query(
+        `
         SELECT
           sl.id,
           sl.user_id AS userId,
@@ -72,11 +76,13 @@ export async function GET(request: NextRequest) {
         LEFT JOIN google_ads_accounts ga ON sl.google_ads_account_id = ga.id
         ORDER BY sl.started_at DESC
         LIMIT ?
-      `, [limit]) as any[]
+      `,
+        [limit]
+      )) as any[]
     }
 
     // 统计信息
-    const backupStats = await db.queryOne(`
+    const backupStats = (await db.queryOne(`
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success,
@@ -84,9 +90,9 @@ export async function GET(request: NextRequest) {
         SUM(CASE WHEN status = 'success' THEN file_size_bytes ELSE 0 END) as total_size_bytes,
         MAX(created_at) as last_run
       FROM backup_logs
-    `) as any
+    `)) as any
 
-    const syncStats = await db.queryOne(`
+    const syncStats = (await db.queryOne(`
       SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success,
@@ -95,7 +101,7 @@ export async function GET(request: NextRequest) {
         AVG(duration_ms) as avg_duration,
         MAX(started_at) as last_run
       FROM sync_logs
-    `) as any
+    `)) as any
 
     // 定时任务配置信息
     const scheduledTasks = [
@@ -162,12 +168,8 @@ export async function GET(request: NextRequest) {
         scheduledTasks,
       },
     })
-
   } catch (error) {
     console.error('获取定时任务历史失败:', error)
-    return NextResponse.json(
-      { error: '获取定时任务历史失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: '获取定时任务历史失败' }, { status: 500 })
   }
 }

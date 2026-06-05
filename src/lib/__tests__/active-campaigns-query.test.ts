@@ -18,7 +18,6 @@ const apiFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
 }))
 
-
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     type: 'sqlite',
@@ -72,11 +71,14 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
   it('retries with next login_customer_id when first candidate is denied', async () => {
     apiFns.listGoogleAdsCampaigns
       .mockRejectedValueOnce({
-        message: "User doesn't have permission to access customer. login-customer-id header invalid",
-        errors: [{
-          error_code: { authorization_error: 2 },
-          message: "User doesn't have permission to access customer",
-        }],
+        message:
+          "User doesn't have permission to access customer. login-customer-id header invalid",
+        errors: [
+          {
+            error_code: { authorization_error: 2 },
+            message: "User doesn't have permission to access customer",
+          },
+        ],
       })
       .mockResolvedValueOnce([
         {
@@ -188,11 +190,7 @@ describe('pauseCampaigns authContext forwarding', () => {
   it('passes prepared authContext to updateGoogleAdsCampaignStatus', async () => {
     const { pauseCampaigns } = await import('@/lib/active-campaigns-query')
 
-    await pauseCampaigns(
-      [{ id: '123', name: 'Test-Campaign', status: 'ENABLED' }],
-      775,
-      42
-    )
+    await pauseCampaigns([{ id: '123', name: 'Test-Campaign', status: 'ENABLED' }], 775, 42)
 
     expect(apiFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith(
       expect.objectContaining({

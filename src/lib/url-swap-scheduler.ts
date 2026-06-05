@@ -8,7 +8,13 @@
  */
 
 import { calculateNextSwapAt } from './url-swap-time'
-import { getPendingTasks, updateTaskStatus, setTaskError, getOfferById, getUrlSwapTaskById } from './url-swap'
+import {
+  getPendingTasks,
+  updateTaskStatus,
+  setTaskError,
+  getOfferById,
+  getUrlSwapTaskById,
+} from './url-swap'
 import { shouldCompleteTask } from './click-farm/scheduler'
 import { getProxyPool } from './url-resolver-enhanced'
 import { initializeProxyPool } from './offer-utils'
@@ -20,10 +26,10 @@ import type { UrlSwapTaskData, TriggerResult } from './url-swap-types'
  * 由外部Cron每5分钟调用
  */
 export async function triggerAllUrlSwapTasks(): Promise<{
-  processed: number;
-  executed: number;
-  skipped: number;
-  errors: number;
+  processed: number
+  executed: number
+  skipped: number
+  errors: number
 }> {
   console.log('[url-swap-scheduler] 开始触发换链接任务')
 
@@ -82,7 +88,7 @@ export async function triggerAllUrlSwapTasks(): Promise<{
 
       await queueManager.enqueue('url-swap', taskData, task.user_id, {
         priority: 'normal',
-        maxRetries: 0 // 单次失败不立刻重试，等待下个时间点再执行
+        maxRetries: 0, // 单次失败不立刻重试，等待下个时间点再执行
       })
 
       // 4. 更新下次执行时间
@@ -91,7 +97,6 @@ export async function triggerAllUrlSwapTasks(): Promise<{
 
       results.executed++
       console.log(`[url-swap-scheduler] 任务已入队: ${task.id}`)
-
     } catch (error: any) {
       console.error(`[url-swap-scheduler] 任务处理失败: ${task.id}`, error)
       results.errors++
@@ -100,7 +105,9 @@ export async function triggerAllUrlSwapTasks(): Promise<{
     results.processed++
   }
 
-  console.log(`[url-swap-scheduler] 完成: processed=${results.processed}, executed=${results.executed}, skipped=${results.skipped}, errors=${results.errors}`)
+  console.log(
+    `[url-swap-scheduler] 完成: processed=${results.processed}, executed=${results.executed}, skipped=${results.skipped}, errors=${results.errors}`
+  )
 
   return results
 }
@@ -110,7 +117,7 @@ export async function triggerAllUrlSwapTasks(): Promise<{
  * 用户创建任务后立即触发调度，而不是等待Cron
  */
 export async function triggerUrlSwapScheduling(taskId: string): Promise<TriggerResult> {
-  const task = await getUrlSwapTaskById(taskId, 0)  // 使用0避免权限检查
+  const task = await getUrlSwapTaskById(taskId, 0) // 使用0避免权限检查
   if (!task) {
     return { taskId, status: 'error', message: '任务不存在' }
   }
@@ -164,7 +171,7 @@ export async function triggerUrlSwapScheduling(taskId: string): Promise<TriggerR
 
   await queueManager.enqueue('url-swap', taskData, task.user_id, {
     priority: 'normal',
-    maxRetries: 0 // 单次失败不立刻重试，等待下个时间点再执行
+    maxRetries: 0, // 单次失败不立刻重试，等待下个时间点再执行
   })
 
   // 更新下次执行时间

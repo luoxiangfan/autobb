@@ -101,7 +101,9 @@ async function setCachedCampaignRead(
   }
 }
 
-export function buildCampaignPerformanceCacheHash(payload: CampaignPerformanceCachePayload): string {
+export function buildCampaignPerformanceCacheHash(
+  payload: CampaignPerformanceCachePayload
+): string {
   return buildHash(payload)
 }
 
@@ -109,11 +111,18 @@ export function buildCampaignTrendsCacheHash(payload: CampaignTrendsCachePayload
   return buildHash(payload)
 }
 
-export async function getCachedCampaignPerformance<T>(userId: number, hash: string): Promise<T | null> {
+export async function getCachedCampaignPerformance<T>(
+  userId: number,
+  hash: string
+): Promise<T | null> {
   return await getCachedCampaignRead<T>(userId, 'performance', hash)
 }
 
-export async function setCachedCampaignPerformance(userId: number, hash: string, value: unknown): Promise<void> {
+export async function setCachedCampaignPerformance(
+  userId: number,
+  hash: string,
+  value: unknown
+): Promise<void> {
   await setCachedCampaignRead(userId, 'performance', hash, value, PERFORMANCE_TTL_SECONDS)
 }
 
@@ -121,7 +130,11 @@ export async function getCachedCampaignTrends<T>(userId: number, hash: string): 
   return await getCachedCampaignRead<T>(userId, 'trends', hash)
 }
 
-export async function setCachedCampaignTrends(userId: number, hash: string, value: unknown): Promise<void> {
+export async function setCachedCampaignTrends(
+  userId: number,
+  hash: string,
+  value: unknown
+): Promise<void> {
   await setCachedCampaignRead(userId, 'trends', hash, value, TRENDS_TTL_SECONDS)
 }
 

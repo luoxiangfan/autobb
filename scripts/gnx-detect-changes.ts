@@ -115,7 +115,11 @@ function getRepoRoot(): string {
   return runGit(['rev-parse', '--show-toplevel'], process.cwd()).trim()
 }
 
-function parseNameStatusOutput(output: string, options: Pick<Options, 'scope' | 'baseRef'>, repoRoot: string): ChangedFile[] {
+function parseNameStatusOutput(
+  output: string,
+  options: Pick<Options, 'scope' | 'baseRef'>,
+  repoRoot: string
+): ChangedFile[] {
   const files: ChangedFile[] = []
   if (!output.trim()) return files
 
@@ -177,7 +181,10 @@ function getChangedFiles(options: Options, repoRoot: string): ChangedFile[] {
 
   if (options.scope === 'compare') {
     return parseNameStatusOutput(
-      runGit(['diff', '--name-status', '--diff-filter=ACMR', `${options.baseRef}...HEAD`], repoRoot),
+      runGit(
+        ['diff', '--name-status', '--diff-filter=ACMR', `${options.baseRef}...HEAD`],
+        repoRoot
+      ),
       options,
       repoRoot
     )
@@ -191,12 +198,15 @@ function getChangedFiles(options: Options, repoRoot: string): ChangedFile[] {
   const trackedPaths = new Set(tracked.map((item) => item.path))
   const untrackedOut = runGit(['ls-files', '--others', '--exclude-standard'], repoRoot)
   const untracked = untrackedOut
-    ? untrackedOut.split('\n').filter(Boolean).map((filePath) => ({
-        path: filePath,
-        status: '?' as ChangeStatus,
-        touchedLines: allFileLines(path.join(repoRoot, filePath)),
-        lineCount: getLineCount(path.join(repoRoot, filePath)),
-      }))
+    ? untrackedOut
+        .split('\n')
+        .filter(Boolean)
+        .map((filePath) => ({
+          path: filePath,
+          status: '?' as ChangeStatus,
+          touchedLines: allFileLines(path.join(repoRoot, filePath)),
+          lineCount: getLineCount(path.join(repoRoot, filePath)),
+        }))
     : []
 
   return tracked.concat(untracked.filter((item) => !trackedPaths.has(item.path)))
@@ -218,7 +228,14 @@ function resolveTouchedLines(params: {
     params.scope === 'staged'
       ? ['diff', '--cached', '--unified=0', '--no-ext-diff', '--', diffTarget]
       : params.scope === 'compare'
-        ? ['diff', '--unified=0', '--no-ext-diff', `${params.baseRef || 'main'}...HEAD`, '--', diffTarget]
+        ? [
+            'diff',
+            '--unified=0',
+            '--no-ext-diff',
+            `${params.baseRef || 'main'}...HEAD`,
+            '--',
+            diffTarget,
+          ]
         : ['diff', '--unified=0', '--no-ext-diff', 'HEAD', '--', diffTarget]
 
   const diffText = runGit(args, params.repoRoot)
@@ -260,7 +277,8 @@ function scriptKindForFile(filePath: string): ts.ScriptKind {
   if (filePath.endsWith('.tsx')) return ts.ScriptKind.TSX
   if (filePath.endsWith('.ts')) return ts.ScriptKind.TS
   if (filePath.endsWith('.jsx')) return ts.ScriptKind.JSX
-  if (filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs')) return ts.ScriptKind.JS
+  if (filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs'))
+    return ts.ScriptKind.JS
   return ts.ScriptKind.Unknown
 }
 
@@ -278,7 +296,13 @@ function collectSymbols(filePath: string, fullPath: string): SymbolDefinition[] 
   const scriptKind = scriptKindForFile(filePath)
   if (scriptKind === ts.ScriptKind.Unknown || !fs.existsSync(fullPath)) return []
   const sourceText = fs.readFileSync(fullPath, 'utf8')
-  const sourceFile = ts.createSourceFile(filePath, sourceText, ts.ScriptTarget.Latest, true, scriptKind)
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind
+  )
   const symbols: SymbolDefinition[] = []
 
   function pushSymbol(name: string | undefined, kind: string, node: ts.Node): void {
@@ -301,7 +325,11 @@ function collectSymbols(filePath: string, fullPath: string): SymbolDefinition[] 
       pushSymbol(className, 'class', node)
       ts.forEachChild(node, (child) => visit(child, className))
       return
-    } else if (ts.isMethodDeclaration(node) || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)) {
+    } else if (
+      ts.isMethodDeclaration(node) ||
+      ts.isGetAccessorDeclaration(node) ||
+      ts.isSetAccessorDeclaration(node)
+    ) {
       const methodName = getNodeName(node)
       pushSymbol(owner && methodName ? `${owner}.${methodName}` : methodName, 'method', node)
     } else if (ts.isInterfaceDeclaration(node)) {
@@ -312,7 +340,10 @@ function collectSymbols(filePath: string, fullPath: string): SymbolDefinition[] 
       for (const declaration of node.declarationList.declarations) {
         if (!ts.isIdentifier(declaration.name)) continue
         if (!declaration.initializer) continue
-        if (ts.isArrowFunction(declaration.initializer) || ts.isFunctionExpression(declaration.initializer)) {
+        if (
+          ts.isArrowFunction(declaration.initializer) ||
+          ts.isFunctionExpression(declaration.initializer)
+        ) {
           pushSymbol(declaration.name.text, 'variable_function', declaration)
         }
       }
@@ -363,9 +394,10 @@ function renderHumanReadable(report: Report): string {
   lines.push('Files:')
 
   for (const file of report.changedFiles) {
-    const touchedSummary = file.touchedLines.length > 0
-      ? `${file.touchedLines[0]}${file.touchedLines.length > 1 ? `..${file.touchedLines[file.touchedLines.length - 1]}` : ''}`
-      : 'n/a'
+    const touchedSummary =
+      file.touchedLines.length > 0
+        ? `${file.touchedLines[0]}${file.touchedLines.length > 1 ? `..${file.touchedLines[file.touchedLines.length - 1]}` : ''}`
+        : 'n/a'
     lines.push(`- [${file.status}] ${file.path} (lines: ${touchedSummary})`)
   }
 
@@ -373,7 +405,9 @@ function renderHumanReadable(report: Report): string {
     lines.push('')
     lines.push('Symbols:')
     for (const symbol of report.changedSymbols) {
-      lines.push(`- ${symbol.filePath}: ${symbol.kind} ${symbol.name} (${symbol.startLine}-${symbol.endLine})`)
+      lines.push(
+        `- ${symbol.filePath}: ${symbol.kind} ${symbol.name} (${symbol.startLine}-${symbol.endLine})`
+      )
     }
   }
 

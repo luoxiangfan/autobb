@@ -72,9 +72,7 @@ function resolveGateThresholds(evaluation: ComprehensiveAdStrengthResult) {
   return RSA_QUALITY_GATE_THRESHOLDS
 }
 
-export function inferRetryFailureType(
-  evaluation: ComprehensiveAdStrengthResult
-): RetryFailureType {
+export function inferRetryFailureType(evaluation: ComprehensiveAdStrengthResult): RetryFailureType {
   const scores = getGateScores(evaluation)
   const thresholds = resolveGateThresholds(evaluation)
 
@@ -107,11 +105,10 @@ export function evaluateRsaQualityGate(
   const scores = getGateScores(evaluation)
   const thresholds = resolveGateThresholds(evaluation)
   const minimumScorePassed = evaluation.finalScore >= minimumScore
-  const gatePassed = (
+  const gatePassed =
     scores.intentAlignmentScore >= thresholds.intentAlignmentScore &&
     scores.evidenceAlignmentScore >= thresholds.evidenceAlignmentScore &&
     scores.queryLandingAlignmentScore >= thresholds.queryLandingAlignmentScore
-  )
 
   const reasons: string[] = []
   if (!minimumScorePassed) {

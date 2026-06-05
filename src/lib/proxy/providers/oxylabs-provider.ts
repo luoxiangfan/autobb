@@ -109,7 +109,9 @@ export class OxylabsProvider implements ProxyProvider {
 
       return credentials
     } catch (error) {
-      throw new Error(`解析Oxylabs URL失败: ${error instanceof Error ? error.message : String(error)}`)
+      throw new Error(
+        `解析Oxylabs URL失败: ${error instanceof Error ? error.message : String(error)}`
+      )
     }
   }
 }

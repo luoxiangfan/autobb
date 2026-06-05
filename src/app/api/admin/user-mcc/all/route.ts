@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
 
     // 获取所有 MCC 分配及其对应用户
-    const assignments = await db.query(`
+    const assignments = (await db.query(`
       SELECT 
         uma.mcc_customer_id,
         uma.user_id,
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       FROM user_mcc_assignments uma
       LEFT JOIN users u ON uma.user_id = u.id
       ORDER BY uma.assigned_at DESC
-    `) as Array<{
+    `)) as Array<{
       mcc_customer_id: string
       user_id: number
       username: string | null
@@ -46,9 +46,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('获取所有 MCC 分配失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取失败' }, { status: 500 })
   }
 }

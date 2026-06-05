@@ -52,7 +52,8 @@ function normalizeBrand(brand: string | null): string | null {
 async function findUnlinkedProducts(userId: number): Promise<Product[]> {
   const db = await getDatabase()
 
-  const products = await db.query<Product>(`
+  const products = await db.query<Product>(
+    `
     SELECT
       ap.id,
       ap.asin,
@@ -65,18 +66,22 @@ async function findUnlinkedProducts(userId: number): Promise<Product[]> {
       AND ap.brand IS NOT NULL
       AND apol.id IS NULL
     ORDER BY ap.last_synced_at DESC
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return products
 }
 
 async function findMatchingOffers(userId: number): Promise<Offer[]> {
   const db = await getDatabase()
-  const offerNotDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const offerNotDeletedCondition =
+    db.type === 'postgres'
+      ? '(is_deleted = false OR is_deleted IS NULL)'
+      : '(is_deleted = 0 OR is_deleted IS NULL)'
 
-  const offers = await db.query<Offer>(`
+  const offers = await db.query<Offer>(
+    `
     SELECT
       id,
       brand,
@@ -88,7 +93,9 @@ async function findMatchingOffers(userId: number): Promise<Offer[]> {
     WHERE user_id = ?
       AND ${offerNotDeletedCondition}
       AND brand IS NOT NULL
-  `, [userId])
+  `,
+    [userId]
+  )
 
   return offers
 }
@@ -141,31 +148,39 @@ async function createProductOfferLink(
   const db = await getDatabase()
 
   // Check if link already exists
-  const existing = await db.queryOne<{ id: number }>(`
+  const existing = await db.queryOne<{ id: number }>(
+    `
     SELECT id
     FROM affiliate_product_offer_links
     WHERE user_id = ?
       AND product_id = ?
       AND offer_id = ?
-  `, [userId, productId, offerId])
+  `,
+    [userId, productId, offerId]
+  )
 
   if (existing) {
     return // Link already exists
   }
 
-  await db.exec(`
+  await db.exec(
+    `
     INSERT INTO affiliate_product_offer_links
       (user_id, product_id, offer_id, created_via, created_at)
     VALUES
       (?, ?, ?, ?, datetime('now'))
-  `, [userId, productId, offerId, createdVia])
+  `,
+    [userId, productId, offerId, createdVia]
+  )
 }
 
 async function main() {
   const db = await getDatabase()
 
   // Get all users
-  const users = await db.query<{ id: number }>('SELECT DISTINCT user_id as id FROM affiliate_products')
+  const users = await db.query<{ id: number }>(
+    'SELECT DISTINCT user_id as id FROM affiliate_products'
+  )
 
   console.log(`🔗 Auto-linking products to offers for ${users.length} user(s)...\n`)
 
@@ -204,10 +219,7 @@ async function main() {
           `auto_${match.matchReason}`
         )
 
-        linksByReason.set(
-          match.matchReason,
-          (linksByReason.get(match.matchReason) || 0) + 1
-        )
+        linksByReason.set(match.matchReason, (linksByReason.get(match.matchReason) || 0) + 1)
 
         totalLinked++
       }
@@ -224,12 +236,14 @@ async function main() {
 
   await db.close()
 
-  console.log('=' .repeat(60))
+  console.log('='.repeat(60))
   console.log(`📊 Summary:`)
   console.log(`   Total unlinked products: ${totalProducts}`)
   console.log(`   Total links created: ${totalLinked}`)
-  console.log(`   Coverage improvement: ${totalProducts > 0 ? ((totalLinked / totalProducts) * 100).toFixed(1) : 0}%`)
-  console.log('=' .repeat(60))
+  console.log(
+    `   Coverage improvement: ${totalProducts > 0 ? ((totalLinked / totalProducts) * 100).toFixed(1) : 0}%`
+  )
+  console.log('='.repeat(60))
 }
 
 main().catch((error) => {

@@ -15,7 +15,8 @@ describe('normalizeSqliteSql', () => {
 
   it('expands equality placeholders', () => {
     expect(normalizeSqliteSql('WHERE is_deleted = IS_DELETED_FALSE')).toBe('WHERE is_deleted = 0')
-    expect(normalizeSqliteSql('WHERE o.is_deleted = IS_DELETED_TRUE')).toBe('WHERE o.is_deleted = 1')
+    expect(normalizeSqliteSql('WHERE o.is_deleted = IS_DELETED_TRUE')).toBe(
+      'WHERE o.is_deleted = 1'
+    )
   })
 })
-

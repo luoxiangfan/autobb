@@ -118,7 +118,7 @@ export class SimpleProxyManager implements ProxyManager {
     return {
       total: this.proxyPool.length,
       available: this.getAvailableProxies().length,
-      failed: this.failedProxies.size
+      failed: this.failedProxies.size,
     }
   }
 
@@ -138,7 +138,7 @@ export class SimpleProxyManager implements ProxyManager {
         proxy: key,
         success: stats.success,
         failed: stats.failed,
-        available: !this.failedProxies.has(key)
+        available: !this.failedProxies.has(key),
       }
     })
   }

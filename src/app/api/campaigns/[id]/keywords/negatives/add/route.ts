@@ -3,16 +3,21 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
 import { createGoogleAdsKeywordsBatch, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount, preparedAuthContextField } from '@/lib/google-ads-accounts-auth'
+import {
+  prepareGoogleAdsApiCallForLinkedAccount,
+  preparedAuthContextField,
+} from '@/lib/google-ads-accounts-auth'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
 import { patchCampaignConfigKeywords } from '@/lib/campaign-config-keywords'
 
-type KeywordInput = string | {
-  text?: string
-  keyword?: string
-  keywordText?: string
-  matchType?: string
-}
+type KeywordInput =
+  | string
+  | {
+      text?: string
+      keyword?: string
+      keywordText?: string
+      matchType?: string
+    }
 
 type AddNegativeKeywordsRequestBody = {
   keywords?: KeywordInput[]
@@ -29,11 +34,15 @@ type KeywordCreateFailure = {
 }
 
 function normalizeKeywordText(value: unknown): string {
-  return String(value || '').replace(/\s+/g, ' ').trim();
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function normalizeMatchType(value: unknown): 'BROAD' | 'PHRASE' | 'EXACT' {
-  const raw = String(value || '').trim().toUpperCase()
+  const raw = String(value || '')
+    .trim()
+    .toUpperCase()
   if (raw === 'BROAD' || raw === 'PHRASE' || raw === 'EXACT') {
     return raw
   }
@@ -46,9 +55,10 @@ function parseKeywords(inputs: KeywordInput[] | undefined): NormalizedNegativeKe
   const seen = new Set<string>()
   const normalized: NormalizedNegativeKeyword[] = []
   for (const item of inputs) {
-    const text = typeof item === 'string'
-      ? normalizeKeywordText(item)
-      : normalizeKeywordText(item?.text || item?.keyword || item?.keywordText)
+    const text =
+      typeof item === 'string'
+        ? normalizeKeywordText(item)
+        : normalizeKeywordText(item?.text || item?.keyword || item?.keywordText)
     if (!text) continue
     if (text.length < 2 || text.length > 80) continue
     const matchType = normalizeMatchType(typeof item === 'string' ? undefined : item?.matchType)
@@ -65,10 +75,12 @@ function parseKeywords(inputs: KeywordInput[] | undefined): NormalizedNegativeKe
 
 function isDuplicateKeywordError(error: any): boolean {
   const message = String(error?.message || error || '').toLowerCase()
-  return message.includes('already exists')
-    || message.includes('resource_already_exists')
-    || message.includes('duplicate')
-    || message.includes('重复')
+  return (
+    message.includes('already exists') ||
+    message.includes('resource_already_exists') ||
+    message.includes('duplicate') ||
+    message.includes('重复')
+  )
 }
 
 async function ensurePrimaryAdGroup(params: {
@@ -173,11 +185,19 @@ async function createNegativeKeywords(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
 }): Promise<{
-  created: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }>
+  created: Array<{
+    keywordId: string
+    keywordText: string
+    matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+  }>
   duplicateKeywords: string[]
   failures: KeywordCreateFailure[]
 }> {
-  const created: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }> = []
+  const created: Array<{
+    keywordId: string
+    keywordText: string
+    matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+  }> = []
   const duplicateKeywords: string[] = []
   const failures: KeywordCreateFailure[] = []
 
@@ -227,7 +247,7 @@ async function createNegativeKeywords(params: {
 }
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -240,7 +260,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
 
-    const body = await request.json().catch(() => ({})) as AddNegativeKeywordsRequestBody
+    const body = (await request.json().catch(() => ({}))) as AddNegativeKeywordsRequestBody
     const db = await getDatabase()
     const negativeCondition = boolCondition('k.is_negative', true, db.type)
 
@@ -295,7 +315,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     const accountIsActive = campaign.account_is_active === true || campaign.account_is_active === 1
-    const accountIsDeleted = campaign.account_is_deleted === true || campaign.account_is_deleted === 1
+    const accountIsDeleted =
+      campaign.account_is_deleted === true || campaign.account_is_deleted === 1
     if (!accountIsActive || accountIsDeleted) {
       return NextResponse.json({ error: '关联Ads账号不可用（可能已停用或解绑）' }, { status: 400 })
     }
@@ -341,13 +362,19 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const existingKeywordSet = new Set(
       (existingKeywordRows || [])
-        .map((row) => `${normalizeKeywordText(row.keyword_text).toLowerCase()}|${normalizeMatchType(row.match_type)}`)
+        .map(
+          (row) =>
+            `${normalizeKeywordText(row.keyword_text).toLowerCase()}|${normalizeMatchType(row.match_type)}`
+        )
         .filter(Boolean)
     )
 
-    const toCreate = parsedKeywords.filter((item) => !existingKeywordSet.has(`${item.text.toLowerCase()}|${item.matchType}`))
-    const skippedExistingKeywordRows = parsedKeywords
-      .filter((item) => existingKeywordSet.has(`${item.text.toLowerCase()}|${item.matchType}`))
+    const toCreate = parsedKeywords.filter(
+      (item) => !existingKeywordSet.has(`${item.text.toLowerCase()}|${item.matchType}`)
+    )
+    const skippedExistingKeywordRows = parsedKeywords.filter((item) =>
+      existingKeywordSet.has(`${item.text.toLowerCase()}|${item.matchType}`)
+    )
     const skippedExistingKeywords = skippedExistingKeywordRows.map((item) => item.text)
 
     if (toCreate.length === 0) {
@@ -407,7 +434,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     })
 
     const now = new Date().toISOString()
-    const insertedKeywords: Array<{ keywordId: string; keywordText: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT' }> = []
+    const insertedKeywords: Array<{
+      keywordId: string
+      keywordText: string
+      matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+    }> = []
     for (const created of createResult.created) {
       try {
         await db.exec(
@@ -456,7 +487,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const duplicateKeywords = Array.from(
       new Set([...createResult.duplicateKeywords, ...skippedExistingKeywords])
     )
-    const duplicateKeywordSet = new Set(createResult.duplicateKeywords.map((item) => item.toLowerCase()))
+    const duplicateKeywordSet = new Set(
+      createResult.duplicateKeywords.map((item) => item.toLowerCase())
+    )
     const duplicateKeywordRows = toCreate
       .filter((item) => duplicateKeywordSet.has(item.text.toLowerCase()))
       .map((item) => item.text)
@@ -489,9 +522,6 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       failures: createResult.failures,
     })
   } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || '新增否词失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error?.message || '新增否词失败' }, { status: 500 })
   }
 }

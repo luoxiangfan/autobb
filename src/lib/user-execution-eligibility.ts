@@ -41,9 +41,10 @@ export function buildUserExecutionEligibleSql(params: {
   const activeExpr = boolCondition(`${userRef}is_active`, true, params.dbType)
   const nowExpr = params.nowExpr || (params.dbType === 'postgres' ? 'NOW()' : "datetime('now')")
   const packageExpiresAtExpr = `${userRef}package_expires_at`
-  const packageExpr = params.dbType === 'postgres'
-    ? `(${packageExpiresAtExpr} IS NULL OR NULLIF(BTRIM(${packageExpiresAtExpr}), '')::timestamptz >= ${nowExpr})`
-    : `(${packageExpiresAtExpr} IS NULL OR datetime(${packageExpiresAtExpr}) >= ${nowExpr})`
+  const packageExpr =
+    params.dbType === 'postgres'
+      ? `(${packageExpiresAtExpr} IS NULL OR NULLIF(BTRIM(${packageExpiresAtExpr}), '')::timestamptz >= ${nowExpr})`
+      : `(${packageExpiresAtExpr} IS NULL OR datetime(${packageExpiresAtExpr}) >= ${nowExpr})`
 
   return `${activeExpr} AND ${packageExpr}`
 }
@@ -157,7 +158,9 @@ export function createUserExecutionSuspendedError(params: {
   source?: string
 }): Error {
   const source = params.source ? ` (${params.source})` : ''
-  const error = new Error(`User execution suspended${source}: userId=${params.userId}, reason=${params.reason}`)
+  const error = new Error(
+    `User execution suspended${source}: userId=${params.userId}, reason=${params.reason}`
+  )
   ;(error as any).code = USER_EXECUTION_SUSPENDED_ERROR_CODE
   ;(error as any).reason = params.reason
   ;(error as any).userId = params.userId
@@ -179,7 +182,11 @@ export async function assertUserExecutionAllowed(
 }
 
 export function isUserExecutionSuspendedError(error: unknown): boolean {
-  return Boolean(error && typeof error === 'object' && (error as any).code === USER_EXECUTION_SUSPENDED_ERROR_CODE)
+  return Boolean(
+    error &&
+    typeof error === 'object' &&
+    (error as any).code === USER_EXECUTION_SUSPENDED_ERROR_CODE
+  )
 }
 
 export function clearUserExecutionEligibilityCache(userId?: number): void {

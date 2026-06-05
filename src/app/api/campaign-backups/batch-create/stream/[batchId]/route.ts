@@ -15,13 +15,13 @@ function parseBatchMetadata(raw: unknown): unknown | null {
 /**
  * GET /api/campaign-backups/batch-create/stream/[batchId]
  * 订阅批量创建任务进度（SSE 流）
- * 
+ *
  * 响应格式：
  * data: {"type":"progress","status":"running","completed":5,"failed":1,"total":20,"progress":30}
  * data: {"type":"complete","status":"completed","completed":20,"failed":0,"total":20}
  */
 export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -34,10 +34,13 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
     const db = await getDatabase()
 
     // 验证任务存在且属于当前用户
-    const task = await db.queryOne(`
+    const task = (await db.queryOne(
+      `
       SELECT * FROM batch_tasks
       WHERE id = ? AND user_id = ?
-    `, [batchId, userId]) as any
+    `,
+      [batchId, userId]
+    )) as any
 
     if (!task) {
       return NextResponse.json({ error: '任务不存在' }, { status: 404 })
@@ -53,7 +56,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
 
         // 发送初始状态
         const progress = task.total_count
-          ? Math.round(((task.completed_count || 0) + (task.failed_count || 0)) / task.total_count * 100)
+          ? Math.round(
+              (((task.completed_count || 0) + (task.failed_count || 0)) / task.total_count) * 100
+            )
           : 0
 
         sendEvent({
@@ -82,11 +87,14 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
         // 轮询数据库更新
         const pollInterval = setInterval(async () => {
           try {
-            const updated = await db.queryOne(`
+            const updated = (await db.queryOne(
+              `
               SELECT status, completed_count, failed_count, total_count, metadata
               FROM batch_tasks
               WHERE id = ?
-            `, [batchId]) as any
+            `,
+              [batchId]
+            )) as any
 
             if (!updated) {
               clearInterval(pollInterval)
@@ -96,7 +104,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
             }
 
             const currentProgress = updated.total_count
-              ? Math.round(((updated.completed_count || 0) + (updated.failed_count || 0)) / updated.total_count * 100)
+              ? Math.round(
+                  (((updated.completed_count || 0) + (updated.failed_count || 0)) /
+                    updated.total_count) *
+                    100
+                )
               : 0
 
             sendEvent({
@@ -130,9 +142,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
         // 超时保护（10 分钟）
         setTimeout(() => {
           clearInterval(pollInterval)
-          sendEvent({ 
-            type: 'error', 
-            error: { message: '任务超时，请刷新页面查看最新状态' } 
+          sendEvent({
+            type: 'error',
+            error: { message: '任务超时，请刷新页面查看最新状态' },
           })
           controller.close()
         }, 600000)
@@ -143,15 +155,12 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
         'X-Accel-Buffering': 'no', // 禁用 Nginx 缓冲
       },
     })
   } catch (error: any) {
     console.error('SSE 流错误:', error)
-    return NextResponse.json(
-      { error: error.message || 'SSE 流失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || 'SSE 流失败' }, { status: 500 })
   }
 }

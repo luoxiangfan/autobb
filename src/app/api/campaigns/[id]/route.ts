@@ -10,7 +10,7 @@ import { invalidateDashboardCache } from '@/lib/api-cache'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
  * 更新广告系列
  */
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 
@@ -118,7 +118,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
  * 删除广告系列（草稿软删除，已移除永久删除）
  */
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const { id } = params
 

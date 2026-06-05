@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { verifyGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads-access-level-detector'
-import { getGoogleAdsAuthContext, resolveConfiguredGoogleAdsAuthType } from '@/lib/google-ads-auth-context'
+import {
+  getGoogleAdsAuthContext,
+  resolveConfiguredGoogleAdsAuthType,
+} from '@/lib/google-ads-auth-context'
 
 /**
  * POST /api/google-ads/credentials/verify
@@ -13,10 +16,7 @@ export async function POST(request: NextRequest) {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     console.log(`🔍 验证Google Ads凭证`)
@@ -50,30 +50,32 @@ export async function POST(request: NextRequest) {
         message: 'Google Ads凭证有效',
         data: {
           valid: true,
-          customerId: result.customer_id
-        }
+          customerId: result.customer_id,
+        },
       })
     } else {
       console.log(`❌ Google Ads凭证无效`)
       console.log(`   错误: ${result.error}`)
 
-      return NextResponse.json({
-        success: false,
-        message: 'Google Ads凭证无效',
-        data: {
-          valid: false,
-          error: result.error
-        }
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Google Ads凭证无效',
+          data: {
+            valid: false,
+            error: result.error,
+          },
+        },
+        { status: 400 }
+      )
     }
-
   } catch (error: any) {
     console.error('验证Google Ads凭证失败:', error)
 
     return NextResponse.json(
       {
         error: '验证Google Ads凭证失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )

@@ -148,18 +148,18 @@ function OfferTrendsSectionSkeleton() {
  */
 function getAmazonDomain(countryCode: string): string {
   const domainMap: Record<string, string> = {
-    'US': 'amazon.com',
-    'UK': 'amazon.co.uk',
-    'DE': 'amazon.de',
-    'FR': 'amazon.fr',
-    'IT': 'amazon.it',
-    'ES': 'amazon.es',
-    'JP': 'amazon.co.jp',
-    'CA': 'amazon.ca',
-    'AU': 'amazon.com.au',
-    'IN': 'amazon.in',
-    'MX': 'amazon.com.mx',
-    'BR': 'amazon.com.br',
+    US: 'amazon.com',
+    UK: 'amazon.co.uk',
+    DE: 'amazon.de',
+    FR: 'amazon.fr',
+    IT: 'amazon.it',
+    ES: 'amazon.es',
+    JP: 'amazon.co.jp',
+    CA: 'amazon.ca',
+    AU: 'amazon.com.au',
+    IN: 'amazon.in',
+    MX: 'amazon.com.mx',
+    BR: 'amazon.com.br',
   }
   return domainMap[countryCode] || 'amazon.com'
 }
@@ -194,7 +194,9 @@ export default function OfferDetailPage() {
   const [isRebuildDialogOpen, setIsRebuildDialogOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [rebuildError, setRebuildError] = useState<string | null>(null)
-  const [rebuildExtractionMode, setRebuildExtractionMode] = useState<OfferExtractionMode>(getDefaultOfferExtractionMode)
+  const [rebuildExtractionMode, setRebuildExtractionMode] = useState<OfferExtractionMode>(
+    getDefaultOfferExtractionMode
+  )
   const [removeGoogleAdsCampaignsOnDelete, setRemoveGoogleAdsCampaignsOnDelete] = useState(false)
 
   // Performance data states
@@ -202,7 +204,11 @@ export default function OfferDetailPage() {
   const [performanceSummary, setPerformanceSummary] = useState<PerformanceSummary | null>(null)
   const [campaigns, setCampaigns] = useState<CampaignPerformance[]>([])
   const [roi, setRoi] = useState<ROIData | null>(null)
-  const [currencyInfo, setCurrencyInfo] = useState<{ currency: string; currencies: string[]; hasMixedCurrency: boolean } | null>(null)
+  const [currencyInfo, setCurrencyInfo] = useState<{
+    currency: string
+    currencies: string[]
+    hasMixedCurrency: boolean
+  } | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<string>('30')
   const [avgOrderValue, setAvgOrderValue] = useState<string>('')
@@ -326,7 +332,15 @@ export default function OfferDetailPage() {
     if (trendsSectionMounted) {
       fetchTrends()
     }
-  }, [offerId, timeRange, avgOrderValue, reportCurrency, trendsSectionMounted, fetchPerformance, fetchTrends])
+  }, [
+    offerId,
+    timeRange,
+    avgOrderValue,
+    reportCurrency,
+    trendsSectionMounted,
+    fetchPerformance,
+    fetchTrends,
+  ])
 
   const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
   const availableCurrencies = currencyInfo?.currencies ?? []
@@ -359,10 +373,13 @@ export default function OfferDetailPage() {
       mode: parsedPayout.mode,
       payoutLabel: parsedPayout.mode === 'percent' ? '佣金比例' : '佣金设置（绝对值）',
       payoutValue: offer.commissionPayout,
-      absoluteValue: perConversion ? formatCurrency(perConversion.amount, perConversion.currency) : null,
-      absoluteHint: parsedPayout.mode === 'percent' && !perConversion
-        ? '缺少产品价格，暂无法换算绝对佣金'
+      absoluteValue: perConversion
+        ? formatCurrency(perConversion.amount, perConversion.currency)
         : null,
+      absoluteHint:
+        parsedPayout.mode === 'percent' && !perConversion
+          ? '缺少产品价格，暂无法换算绝对佣金'
+          : null,
     }
   }, [offer])
 
@@ -533,13 +550,8 @@ export default function OfferDetailPage() {
   const resolvedFinalUrl = offer.finalUrl || offer.url
   const finalUrlSuffixValue = offer.finalUrlSuffix
   const finalUrlSuffixStatus =
-    finalUrlSuffixValue === ''
-      ? 'empty'
-      : finalUrlSuffixValue
-        ? 'present'
-        : 'missing'
-  const shouldShowOriginalUrl =
-    Boolean(offer.finalUrl && offer.url && offer.finalUrl !== offer.url)
+    finalUrlSuffixValue === '' ? 'empty' : finalUrlSuffixValue ? 'present' : 'missing'
+  const shouldShowOriginalUrl = Boolean(offer.finalUrl && offer.url && offer.finalUrl !== offer.url)
   const storeProductLinks = Array.isArray(offer.storeProductLinks)
     ? offer.storeProductLinks.map((link) => link.trim()).filter((link) => Boolean(link))
     : []
@@ -582,7 +594,9 @@ export default function OfferDetailPage() {
                 onClick={() => setIsRebuildDialogOpen(true)}
                 disabled={rebuilding || !offer.affiliateLink}
                 className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
-                title={!offer.affiliateLink ? '缺少推广链接，无法重建' : '重新抓取并更新所有Offer信息'}
+                title={
+                  !offer.affiliateLink ? '缺少推广链接，无法重建' : '重新抓取并更新所有Offer信息'
+                }
               >
                 重建
               </button>
@@ -604,14 +618,20 @@ export default function OfferDetailPage() {
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {/* 抓取状态提示 */}
-          <div className={`mb-6 px-4 py-3 rounded border ${
-            offer.scrapeStatus === 'completed' ? 'bg-green-50 border-green-400 text-green-700' :
-            offer.scrapeStatus === 'failed' ? 'bg-red-50 border-red-400 text-red-700' :
-            'bg-blue-50 border-blue-400 text-blue-700'
-          }`}>
+          <div
+            className={`mb-6 px-4 py-3 rounded border ${
+              offer.scrapeStatus === 'completed'
+                ? 'bg-green-50 border-green-400 text-green-700'
+                : offer.scrapeStatus === 'failed'
+                  ? 'bg-red-50 border-red-400 text-red-700'
+                  : 'bg-blue-50 border-blue-400 text-blue-700'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getScrapeStatusColor(offer.scrapeStatus)}`}>
+                <span
+                  className={`px-2 py-1 text-xs font-semibold rounded-full ${getScrapeStatusColor(offer.scrapeStatus)}`}
+                >
                   {getScrapeStatusLabel(offer.scrapeStatus)}
                 </span>
                 <Badge variant="outline" className="ml-2 text-xs font-normal">
@@ -620,8 +640,10 @@ export default function OfferDetailPage() {
                 <span className="ml-3">
                   {offer.scrapeStatus === 'pending' && '产品信息后台异步抓取中...'}
                   {offer.scrapeStatus === 'in_progress' && '正在抓取产品信息...'}
-                  {offer.scrapeStatus === 'completed' && `产品信息抓取完成 (${offer.scrapedAt ? new Date(offer.scrapedAt).toLocaleString('zh-CN') : ''})`}
-                  {offer.scrapeStatus === 'failed' && `抓取失败: ${offer.scrapeError || '未知错误'}`}
+                  {offer.scrapeStatus === 'completed' &&
+                    `产品信息抓取完成 (${offer.scrapedAt ? new Date(offer.scrapedAt).toLocaleString('zh-CN') : ''})`}
+                  {offer.scrapeStatus === 'failed' &&
+                    `抓取失败: ${offer.scrapeError || '未知错误'}`}
                 </span>
               </div>
               {offer.scrapeStatus === 'failed' && (
@@ -629,7 +651,11 @@ export default function OfferDetailPage() {
                   onClick={() => setIsRebuildDialogOpen(true)}
                   disabled={rebuilding || !offer.affiliateLink}
                   className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-                  title={!offer.affiliateLink ? '缺少推广链接，无法重新提取' : '按所选提取模式重新抓取并分析'}
+                  title={
+                    !offer.affiliateLink
+                      ? '缺少推广链接，无法重新提取'
+                      : '按所选提取模式重新抓取并分析'
+                  }
                 >
                   重新提取
                 </button>
@@ -680,7 +706,9 @@ export default function OfferDetailPage() {
                         </SelectTrigger>
                         <SelectContent>
                           {availableCurrencies.map((c) => (
-                            <SelectItem key={c} value={c}>{c}</SelectItem>
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -695,9 +723,7 @@ export default function OfferDetailPage() {
                     className="w-[90px] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     style={{ textAlign: 'right', width: '90px' }}
                   />
-                  <span className="text-sm text-gray-600">
-                    {selectedCurrency}
-                  </span>
+                  <span className="text-sm text-gray-600">{selectedCurrency}</span>
                 </div>
               </div>
 
@@ -743,8 +769,7 @@ export default function OfferDetailPage() {
                           </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          平均CPC:{' '}
-                          {formatMoney(Number(performanceSummary.avgCpcUsd) || 0)}
+                          平均CPC: {formatMoney(Number(performanceSummary.avgCpcUsd) || 0)}
                         </p>
                       </CardContent>
                     </Card>
@@ -755,7 +780,11 @@ export default function OfferDetailPage() {
                           <div>
                             <p className="text-sm font-medium text-gray-600">佣金</p>
                             <p className="text-2xl font-bold text-gray-900 mt-1">
-                              {formatMoney(Number(performanceSummary.commission ?? performanceSummary.conversions) || 0)}
+                              {formatMoney(
+                                Number(
+                                  performanceSummary.commission ?? performanceSummary.conversions
+                                ) || 0
+                              )}
                             </p>
                           </div>
                           <div className="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center">
@@ -763,7 +792,13 @@ export default function OfferDetailPage() {
                           </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          每次点击佣金: {formatMoney(Number(performanceSummary.commissionPerClick ?? performanceSummary.conversionRate) || 0)}
+                          每次点击佣金:{' '}
+                          {formatMoney(
+                            Number(
+                              performanceSummary.commissionPerClick ??
+                                performanceSummary.conversionRate
+                            ) || 0
+                          )}
                         </p>
                       </CardContent>
                     </Card>
@@ -792,7 +827,9 @@ export default function OfferDetailPage() {
                   {roi && (
                     <Card className="mb-6">
                       <CardContent className="pt-6">
-                        <h3 className="text-md font-semibold text-gray-900 mb-4">投资回报率 (ROI)</h3>
+                        <h3 className="text-md font-semibold text-gray-900 mb-4">
+                          投资回报率 (ROI)
+                        </h3>
                         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                           <div>
                             <p className="text-sm text-gray-600">总花费</p>
@@ -808,19 +845,25 @@ export default function OfferDetailPage() {
                           </div>
                           <div>
                             <p className="text-sm text-gray-600">利润</p>
-                            <p className={`text-lg font-bold ${roi.profitUsd >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <p
+                              className={`text-lg font-bold ${roi.profitUsd >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                            >
                               {formatMoney(Number(roi.profitUsd) || 0)}
                             </p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-600">ROI</p>
-                            <p className={`text-lg font-bold ${roi.roiPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <p
+                              className={`text-lg font-bold ${roi.roiPercentage >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                            >
                               {(Number(roi.roiPercentage) || 0).toFixed(0)}%
                             </p>
                           </div>
                           <div>
                             <p className="text-sm text-gray-600">佣金</p>
-                            <p className="text-lg font-bold text-gray-900">{formatMoney(Number(roi.commission ?? roi.conversions) || 0)}</p>
+                            <p className="text-lg font-bold text-gray-900">
+                              {formatMoney(Number(roi.commission ?? roi.conversions) || 0)}
+                            </p>
                           </div>
                         </div>
                       </CardContent>
@@ -845,7 +888,9 @@ export default function OfferDetailPage() {
                   {campaigns.length > 0 && (
                     <Card className="mb-6">
                       <CardContent className="pt-6">
-                        <h3 className="text-md font-semibold text-gray-900 mb-4">广告系列表现对比</h3>
+                        <h3 className="text-md font-semibold text-gray-900 mb-4">
+                          广告系列表现对比
+                        </h3>
                         <div className="overflow-x-auto">
                           <Table className="[&_thead_th]:bg-white">
                             <TableHeader>
@@ -873,20 +918,40 @@ export default function OfferDetailPage() {
                                       )}
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-right">{(campaign.impressions ?? 0).toLocaleString()}</TableCell>
-                                  <TableCell className="text-right">{(campaign.clicks ?? 0).toLocaleString()}</TableCell>
-                                  <TableCell className="text-right">{(Number(campaign.ctr) || 0).toFixed(2)}%</TableCell>
                                   <TableCell className="text-right">
-                                    {formatMoney(Number(campaign.cpcUsd) || 0, campaign.adsAccountCurrency || selectedCurrency)}
+                                    {(campaign.impressions ?? 0).toLocaleString()}
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {formatMoney(Number(campaign.commission ?? campaign.conversions) || 0, campaign.adsAccountCurrency || selectedCurrency)}
+                                    {(campaign.clicks ?? 0).toLocaleString()}
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {formatMoney(Number(campaign.commissionPerClick ?? campaign.conversionRate) || 0, campaign.adsAccountCurrency || selectedCurrency)}
+                                    {(Number(campaign.ctr) || 0).toFixed(2)}%
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {formatMoney(Number(campaign.costUsd) || 0, campaign.adsAccountCurrency || selectedCurrency)}
+                                    {formatMoney(
+                                      Number(campaign.cpcUsd) || 0,
+                                      campaign.adsAccountCurrency || selectedCurrency
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {formatMoney(
+                                      Number(campaign.commission ?? campaign.conversions) || 0,
+                                      campaign.adsAccountCurrency || selectedCurrency
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {formatMoney(
+                                      Number(
+                                        campaign.commissionPerClick ?? campaign.conversionRate
+                                      ) || 0,
+                                      campaign.adsAccountCurrency || selectedCurrency
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {formatMoney(
+                                      Number(campaign.costUsd) || 0,
+                                      campaign.adsAccountCurrency || selectedCurrency
+                                    )}
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -917,11 +982,13 @@ export default function OfferDetailPage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">链接类型</dt>
                 <dd className="mt-1">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                    offer.pageType === 'store'
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded ${
+                      offer.pageType === 'store'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
                     {offer.pageType === 'store' ? '🏪 店铺' : '📦 单品'}
                   </span>
                 </dd>
@@ -947,7 +1014,9 @@ export default function OfferDetailPage() {
               )}
               {commissionDisplay && (
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">{commissionDisplay.payoutLabel}</dt>
+                  <dt className="text-sm font-medium text-gray-500">
+                    {commissionDisplay.payoutLabel}
+                  </dt>
                   <dd className="mt-1 text-sm text-gray-900">{commissionDisplay.payoutValue}</dd>
                 </div>
               )}
@@ -956,7 +1025,9 @@ export default function OfferDetailPage() {
                   <dt className="text-sm font-medium text-gray-500">佣金绝对值（单次转化）</dt>
                   <dd className="mt-1 text-sm text-gray-900">
                     {commissionDisplay.absoluteValue || (
-                      <span className="text-gray-400">{commissionDisplay.absoluteHint || '暂无法计算'}</span>
+                      <span className="text-gray-400">
+                        {commissionDisplay.absoluteHint || '暂无法计算'}
+                      </span>
                     )}
                   </dd>
                 </div>
@@ -964,9 +1035,11 @@ export default function OfferDetailPage() {
               <div>
                 <dt className="text-sm font-medium text-gray-500">状态</dt>
                 <dd className="mt-1">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                    offer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-semibold rounded ${
+                      offer.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
                     {offer.isActive ? '启用' : '禁用'}
                   </span>
                 </dd>
@@ -983,7 +1056,9 @@ export default function OfferDetailPage() {
                     {resolvedFinalUrl}
                   </a>
                   {!offer.finalUrl && (
-                    <div className="text-xs text-amber-600 mt-1">Final URL未提取，当前显示原始URL</div>
+                    <div className="text-xs text-amber-600 mt-1">
+                      Final URL未提取，当前显示原始URL
+                    </div>
                   )}
                 </dd>
               </div>
@@ -1005,7 +1080,12 @@ export default function OfferDetailPage() {
                 <div className="sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">原始URL</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    <a href={offer.url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 break-all">
+                    <a
+                      href={offer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-500 break-all"
+                    >
                       {offer.url}
                     </a>
                   </dd>
@@ -1015,7 +1095,12 @@ export default function OfferDetailPage() {
                 <div className="sm:col-span-2">
                   <dt className="text-sm font-medium text-gray-500">联盟推广链接</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    <a href={offer.affiliateLink} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-500 break-all">
+                    <a
+                      href={offer.affiliateLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-indigo-600 hover:text-indigo-500 break-all"
+                    >
                       {offer.affiliateLink}
                     </a>
                   </dd>
@@ -1077,456 +1162,702 @@ export default function OfferDetailPage() {
           </div>
 
           {/* 评论分析卡片 */}
-          {offer.reviewAnalysis && (() => {
-            try {
-              const reviewData = JSON.parse(offer.reviewAnalysis)
-              return (
-                <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    <span className="mr-2">📊</span>评论分析
-                    {reviewData.totalReviews && (
-                      <span className="ml-2 text-sm font-normal text-gray-500">
-                        （基于 {reviewData.totalReviews} 条评论，平均评分 {reviewData.averageRating}⭐）
-                      </span>
-                    )}
-                  </h2>
-                  <dl className="space-y-4">
-                    {/* 情感分布 */}
-                    {reviewData.sentimentDistribution && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">情感分布</dt>
-                        <dd className="flex gap-4 text-sm">
-                          <span className="text-green-600">👍 好评 {typeof reviewData.sentimentDistribution.positive === 'number' ? reviewData.sentimentDistribution.positive : reviewData.sentimentDistribution.positive?.percentage || 0}%</span>
-                          <span className="text-gray-600">😐 中立 {typeof reviewData.sentimentDistribution.neutral === 'number' ? reviewData.sentimentDistribution.neutral : reviewData.sentimentDistribution.neutral?.percentage || 0}%</span>
-                          <span className="text-red-600">👎 差评 {typeof reviewData.sentimentDistribution.negative === 'number' ? reviewData.sentimentDistribution.negative : reviewData.sentimentDistribution.negative?.percentage || 0}%</span>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 正面关键词 */}
-                    {reviewData.topPositiveKeywords && reviewData.topPositiveKeywords.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">用户好评点</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="list-disc list-inside space-y-2">
-                            {reviewData.topPositiveKeywords.map((item: any, idx: number) => (
-                              <li key={idx} className="text-green-700">
-                                <strong>{item.keyword}</strong>
-                                {item.frequency && (
-                                  <span className="text-gray-600 text-xs ml-1">
-                                    （提及频率: {typeof item.frequency === 'number' ? `${item.frequency}次` : item.frequency}）
-                                  </span>
-                                )}
-                                {item.context && <p className="ml-5 text-gray-600 text-xs mt-1">{item.context}</p>}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 负面关键词 */}
-                    {reviewData.topNegativeKeywords && reviewData.topNegativeKeywords.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">用户痛点</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="list-disc list-inside space-y-2">
-                            {reviewData.topNegativeKeywords.map((item: any, idx: number) => (
-                              <li key={idx} className="text-red-700">
-                                <strong>{item.keyword}</strong>
-                                {item.frequency && (
-                                  <span className="text-gray-600 text-xs ml-1">
-                                    （提及频率: {typeof item.frequency === 'number' ? `${item.frequency}次` : item.frequency}）
-                                  </span>
-                                )}
-                                {item.context && <p className="ml-5 text-gray-600 text-xs mt-1">{item.context}</p>}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 购买原因 */}
-                    {reviewData.purchaseReasons && reviewData.purchaseReasons.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">购买原因</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="list-disc list-inside space-y-2">
-                            {reviewData.purchaseReasons.map((item: any, idx: number) => (
-                              <li key={idx}>
-                                <strong>{typeof item === 'string' ? item : item.reason}</strong>
-                                {typeof item === 'object' && item.frequency && (
-                                  <span className="text-gray-500 text-xs ml-1">
-                                    （{typeof item.frequency === 'number' ? `${item.frequency}人` : item.frequency}）
-                                  </span>
-                                )}
-                                {typeof item === 'object' && (item.description || item.evidence) && (
-                                  <p className="ml-5 text-gray-600 text-xs mt-1">{item.description || item.evidence}</p>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 真实使用场景 */}
-                    {reviewData.realUseCases && reviewData.realUseCases.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">使用场景</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="list-disc list-inside space-y-2">
-                            {reviewData.realUseCases.map((item: any, idx: number) => (
-                              <li key={idx}>
-                                <strong>{typeof item === 'string' ? item : (item.scenario || item.useCase)}</strong>
-                                {typeof item === 'object' && item.mentions && (
-                                  <span className="text-gray-600 text-xs ml-1">
-                                    （提及频率: {typeof item.mentions === 'number' ? `${item.mentions}次` : item.mentions}）
-                                  </span>
-                                )}
-                                {typeof item === 'object' && (item.description || item.evidence) && (
-                                  <p className="ml-5 text-gray-600 text-xs mt-1">{item.description || item.evidence}</p>
-                                )}
-                                {typeof item === 'object' && item.examples && item.examples.length > 0 && (
-                                  <ul className="ml-5 mt-1 text-gray-600 text-xs list-none">
-                                    {item.examples.map((ex: string, exIdx: number) => (
-                                      <li key={exIdx}>• {ex}</li>
-                                    ))}
-                                  </ul>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 用户画像 */}
-                    {reviewData.userProfiles && reviewData.userProfiles.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">用户画像</dt>
-                        <dd className="text-sm text-gray-900">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {reviewData.userProfiles.map((profile: any, idx: number) => {
-                              // 🔥 2025-12-16修复：适配字符串格式（AI返回）和对象格式（TypeScript定义）
-                              const isString = typeof profile === 'string'
-                              // 解析字符串格式："The Multi-Pet Owner: Their primary challenge..."
-                              const [title, ...descParts] = isString ? profile.split(': ') : []
-                              const description = descParts.join(': ')
-
-                              return (
-                                <div key={idx} className="bg-gray-50 p-3 rounded">
-                                  <div className="flex justify-between items-start">
-                                    <div className="font-medium text-blue-700">
-                                      {isString ? title : (profile.type || profile.profile)}
-                                    </div>
-                                    {!isString && profile.percentage && (
-                                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-                                        {profile.percentage}%
+          {offer.reviewAnalysis &&
+            (() => {
+              try {
+                const reviewData = JSON.parse(offer.reviewAnalysis)
+                return (
+                  <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                      <span className="mr-2">📊</span>评论分析
+                      {reviewData.totalReviews && (
+                        <span className="ml-2 text-sm font-normal text-gray-500">
+                          （基于 {reviewData.totalReviews} 条评论，平均评分{' '}
+                          {reviewData.averageRating}⭐）
+                        </span>
+                      )}
+                    </h2>
+                    <dl className="space-y-4">
+                      {/* 情感分布 */}
+                      {reviewData.sentimentDistribution && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">情感分布</dt>
+                          <dd className="flex gap-4 text-sm">
+                            <span className="text-green-600">
+                              👍 好评{' '}
+                              {typeof reviewData.sentimentDistribution.positive === 'number'
+                                ? reviewData.sentimentDistribution.positive
+                                : reviewData.sentimentDistribution.positive?.percentage || 0}
+                              %
+                            </span>
+                            <span className="text-gray-600">
+                              😐 中立{' '}
+                              {typeof reviewData.sentimentDistribution.neutral === 'number'
+                                ? reviewData.sentimentDistribution.neutral
+                                : reviewData.sentimentDistribution.neutral?.percentage || 0}
+                              %
+                            </span>
+                            <span className="text-red-600">
+                              👎 差评{' '}
+                              {typeof reviewData.sentimentDistribution.negative === 'number'
+                                ? reviewData.sentimentDistribution.negative
+                                : reviewData.sentimentDistribution.negative?.percentage || 0}
+                              %
+                            </span>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 正面关键词 */}
+                      {reviewData.topPositiveKeywords &&
+                        reviewData.topPositiveKeywords.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">用户好评点</dt>
+                            <dd className="text-sm text-gray-900">
+                              <ul className="list-disc list-inside space-y-2">
+                                {reviewData.topPositiveKeywords.map((item: any, idx: number) => (
+                                  <li key={idx} className="text-green-700">
+                                    <strong>{item.keyword}</strong>
+                                    {item.frequency && (
+                                      <span className="text-gray-600 text-xs ml-1">
+                                        （提及频率:{' '}
+                                        {typeof item.frequency === 'number'
+                                          ? `${item.frequency}次`
+                                          : item.frequency}
+                                        ）
                                       </span>
                                     )}
-                                  </div>
-                                  {(isString ? description : (profile.primaryNeed || profile.description)) && (
-                                    <p className="mt-1 text-xs text-gray-600">
-                                      {isString ? description : (profile.primaryNeed || profile.description)}
-                                    </p>
-                                  )}
-                                  {!isString && profile.indicators && profile.indicators.length > 0 && (
-                                    <ul className="mt-1 text-xs text-gray-600">
-                                      {profile.indicators.map((ind: string, indIdx: number) => (
-                                        <li key={indIdx}>• {ind}</li>
-                                      ))}
-                                    </ul>
-                                  )}
-                                </div>
-                              )
-                            })}
+                                    {item.context && (
+                                      <p className="ml-5 text-gray-600 text-xs mt-1">
+                                        {item.context}
+                                      </p>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </dd>
                           </div>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 常见问题 */}
-                    {reviewData.commonPainPoints && reviewData.commonPainPoints.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">常见问题</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="space-y-2">
-                            {reviewData.commonPainPoints.map((item: any, idx: number) => (
-                              <li key={idx} className="bg-red-50 p-2 rounded">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-red-700 font-medium">{typeof item === 'string' ? item : (item.issue || item.painPoint)}</span>
-                                  {item.severity && (
-                                    <Badge variant={item.severity === 'high' ? 'destructive' : item.severity === 'moderate' ? 'secondary' : 'outline'}>
-                                      {item.severity === 'high' ? '严重' : item.severity === 'moderate' ? '中等' : '轻微'}
-                                    </Badge>
+                        )}
+                      {/* 负面关键词 */}
+                      {reviewData.topNegativeKeywords &&
+                        reviewData.topNegativeKeywords.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">用户痛点</dt>
+                            <dd className="text-sm text-gray-900">
+                              <ul className="list-disc list-inside space-y-2">
+                                {reviewData.topNegativeKeywords.map((item: any, idx: number) => (
+                                  <li key={idx} className="text-red-700">
+                                    <strong>{item.keyword}</strong>
+                                    {item.frequency && (
+                                      <span className="text-gray-600 text-xs ml-1">
+                                        （提及频率:{' '}
+                                        {typeof item.frequency === 'number'
+                                          ? `${item.frequency}次`
+                                          : item.frequency}
+                                        ）
+                                      </span>
+                                    )}
+                                    {item.context && (
+                                      <p className="ml-5 text-gray-600 text-xs mt-1">
+                                        {item.context}
+                                      </p>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </dd>
+                          </div>
+                        )}
+                      {/* 购买原因 */}
+                      {reviewData.purchaseReasons && reviewData.purchaseReasons.length > 0 && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">购买原因</dt>
+                          <dd className="text-sm text-gray-900">
+                            <ul className="list-disc list-inside space-y-2">
+                              {reviewData.purchaseReasons.map((item: any, idx: number) => (
+                                <li key={idx}>
+                                  <strong>{typeof item === 'string' ? item : item.reason}</strong>
+                                  {typeof item === 'object' && item.frequency && (
+                                    <span className="text-gray-500 text-xs ml-1">
+                                      （
+                                      {typeof item.frequency === 'number'
+                                        ? `${item.frequency}人`
+                                        : item.frequency}
+                                      ）
+                                    </span>
                                   )}
-                                </div>
-                                {typeof item === 'object' && (item.description || item.evidence) && (
-                                  <p className="mt-1 text-xs text-gray-600">{item.description || item.evidence}</p>
-                                )}
-                                {item.workarounds && item.workarounds.length > 0 && (
-                                  <div className="mt-1 text-xs text-gray-600">
-                                    解决方案：{item.workarounds.join('；')}
+                                  {typeof item === 'object' &&
+                                    (item.description || item.evidence) && (
+                                      <p className="ml-5 text-gray-600 text-xs mt-1">
+                                        {item.description || item.evidence}
+                                      </p>
+                                    )}
+                                </li>
+                              ))}
+                            </ul>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 真实使用场景 */}
+                      {reviewData.realUseCases && reviewData.realUseCases.length > 0 && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">使用场景</dt>
+                          <dd className="text-sm text-gray-900">
+                            <ul className="list-disc list-inside space-y-2">
+                              {reviewData.realUseCases.map((item: any, idx: number) => (
+                                <li key={idx}>
+                                  <strong>
+                                    {typeof item === 'string'
+                                      ? item
+                                      : item.scenario || item.useCase}
+                                  </strong>
+                                  {typeof item === 'object' && item.mentions && (
+                                    <span className="text-gray-600 text-xs ml-1">
+                                      （提及频率:{' '}
+                                      {typeof item.mentions === 'number'
+                                        ? `${item.mentions}次`
+                                        : item.mentions}
+                                      ）
+                                    </span>
+                                  )}
+                                  {typeof item === 'object' &&
+                                    (item.description || item.evidence) && (
+                                      <p className="ml-5 text-gray-600 text-xs mt-1">
+                                        {item.description || item.evidence}
+                                      </p>
+                                    )}
+                                  {typeof item === 'object' &&
+                                    item.examples &&
+                                    item.examples.length > 0 && (
+                                      <ul className="ml-5 mt-1 text-gray-600 text-xs list-none">
+                                        {item.examples.map((ex: string, exIdx: number) => (
+                                          <li key={exIdx}>• {ex}</li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                </li>
+                              ))}
+                            </ul>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 用户画像 */}
+                      {reviewData.userProfiles && reviewData.userProfiles.length > 0 && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">用户画像</dt>
+                          <dd className="text-sm text-gray-900">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {reviewData.userProfiles.map((profile: any, idx: number) => {
+                                // 🔥 2025-12-16修复：适配字符串格式（AI返回）和对象格式（TypeScript定义）
+                                const isString = typeof profile === 'string'
+                                // 解析字符串格式："The Multi-Pet Owner: Their primary challenge..."
+                                const [title, ...descParts] = isString ? profile.split(': ') : []
+                                const description = descParts.join(': ')
+
+                                return (
+                                  <div key={idx} className="bg-gray-50 p-3 rounded">
+                                    <div className="flex justify-between items-start">
+                                      <div className="font-medium text-blue-700">
+                                        {isString ? title : profile.type || profile.profile}
+                                      </div>
+                                      {!isString && profile.percentage && (
+                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                          {profile.percentage}%
+                                        </span>
+                                      )}
+                                    </div>
+                                    {(isString
+                                      ? description
+                                      : profile.primaryNeed || profile.description) && (
+                                      <p className="mt-1 text-xs text-gray-600">
+                                        {isString
+                                          ? description
+                                          : profile.primaryNeed || profile.description}
+                                      </p>
+                                    )}
+                                    {!isString &&
+                                      profile.indicators &&
+                                      profile.indicators.length > 0 && (
+                                        <ul className="mt-1 text-xs text-gray-600">
+                                          {profile.indicators.map((ind: string, indIdx: number) => (
+                                            <li key={indIdx}>• {ind}</li>
+                                          ))}
+                                        </ul>
+                                      )}
                                   </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 量化亮点 */}
-                    {reviewData.quantitativeHighlights && reviewData.quantitativeHighlights.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">量化亮点</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="space-y-2">
-                            {reviewData.quantitativeHighlights.map((item: any, idx: number) => (
-                              <li key={idx} className="bg-blue-50 p-2 rounded">
-                                {/* 🔥 2025-12-16修复：适配多种数据格式 */}
-                                {/* AI返回格式: {label, quote, value} */}
-                                {/* TypeScript定义: {metric, value, source, adCopy} */}
-                                {/* 旧格式: {highlight, description/evidence} */}
-                                <div className="font-medium text-blue-800">
-                                  {item.label || item.metric || item.highlight || item.adCopy}
-                                  {item.value && <span className="ml-2 text-blue-600">({item.value})</span>}
-                                </div>
-                                {(item.quote || item.description || item.evidence || item.source) && (
-                                  <p className="mt-1 text-xs text-gray-600 italic">
-                                    {item.quote ? `"${item.quote}"` : (item.description || item.evidence || item.source)}
-                                  </p>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 竞品对比提及 */}
-                    {reviewData.competitorMentions && reviewData.competitorMentions.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">竞品对比提及</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="space-y-2">
-                            {reviewData.competitorMentions.map((item: any, idx: number) => (
-                              <li key={idx} className="bg-gray-50 p-2 rounded">
-                                <div className="flex items-center gap-2">
-                                  {/* 🔥 2025-12-16修复：适配多种数据格式 */}
-                                  {/* AI返回格式: {brand, context} */}
-                                  {/* TypeScript定义: {brand, context, sentiment} */}
-                                  {/* 旧格式: {competitor, sentiment, context} */}
-                                  <span className="font-medium">{item.brand || item.competitor}</span>
-                                  {item.sentiment && (
-                                    <Badge variant={item.sentiment === 'positive' ? 'default' : item.sentiment === 'neutral' ? 'secondary' : 'outline'}>
-                                      {item.sentiment}
-                                    </Badge>
+                                )
+                              })}
+                            </div>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 常见问题 */}
+                      {reviewData.commonPainPoints && reviewData.commonPainPoints.length > 0 && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">常见问题</dt>
+                          <dd className="text-sm text-gray-900">
+                            <ul className="space-y-2">
+                              {reviewData.commonPainPoints.map((item: any, idx: number) => (
+                                <li key={idx} className="bg-red-50 p-2 rounded">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-red-700 font-medium">
+                                      {typeof item === 'string'
+                                        ? item
+                                        : item.issue || item.painPoint}
+                                    </span>
+                                    {item.severity && (
+                                      <Badge
+                                        variant={
+                                          item.severity === 'high'
+                                            ? 'destructive'
+                                            : item.severity === 'moderate'
+                                              ? 'secondary'
+                                              : 'outline'
+                                        }
+                                      >
+                                        {item.severity === 'high'
+                                          ? '严重'
+                                          : item.severity === 'moderate'
+                                            ? '中等'
+                                            : '轻微'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {typeof item === 'object' &&
+                                    (item.description || item.evidence) && (
+                                      <p className="mt-1 text-xs text-gray-600">
+                                        {item.description || item.evidence}
+                                      </p>
+                                    )}
+                                  {item.workarounds && item.workarounds.length > 0 && (
+                                    <div className="mt-1 text-xs text-gray-600">
+                                      解决方案：{item.workarounds.join('；')}
+                                    </div>
                                   )}
-                                </div>
-                                {item.context && <p className="mt-1 text-xs text-gray-600">{item.context}</p>}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                </div>
-              )
-            } catch {
-              return null
-            }
-          })()}
+                                </li>
+                              ))}
+                            </ul>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 量化亮点 */}
+                      {reviewData.quantitativeHighlights &&
+                        reviewData.quantitativeHighlights.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">量化亮点</dt>
+                            <dd className="text-sm text-gray-900">
+                              <ul className="space-y-2">
+                                {reviewData.quantitativeHighlights.map((item: any, idx: number) => (
+                                  <li key={idx} className="bg-blue-50 p-2 rounded">
+                                    {/* 🔥 2025-12-16修复：适配多种数据格式 */}
+                                    {/* AI返回格式: {label, quote, value} */}
+                                    {/* TypeScript定义: {metric, value, source, adCopy} */}
+                                    {/* 旧格式: {highlight, description/evidence} */}
+                                    <div className="font-medium text-blue-800">
+                                      {item.label || item.metric || item.highlight || item.adCopy}
+                                      {item.value && (
+                                        <span className="ml-2 text-blue-600">({item.value})</span>
+                                      )}
+                                    </div>
+                                    {(item.quote ||
+                                      item.description ||
+                                      item.evidence ||
+                                      item.source) && (
+                                      <p className="mt-1 text-xs text-gray-600 italic">
+                                        {item.quote
+                                          ? `"${item.quote}"`
+                                          : item.description || item.evidence || item.source}
+                                      </p>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </dd>
+                          </div>
+                        )}
+                      {/* 竞品对比提及 */}
+                      {reviewData.competitorMentions &&
+                        reviewData.competitorMentions.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">竞品对比提及</dt>
+                            <dd className="text-sm text-gray-900">
+                              <ul className="space-y-2">
+                                {reviewData.competitorMentions.map((item: any, idx: number) => (
+                                  <li key={idx} className="bg-gray-50 p-2 rounded">
+                                    <div className="flex items-center gap-2">
+                                      {/* 🔥 2025-12-16修复：适配多种数据格式 */}
+                                      {/* AI返回格式: {brand, context} */}
+                                      {/* TypeScript定义: {brand, context, sentiment} */}
+                                      {/* 旧格式: {competitor, sentiment, context} */}
+                                      <span className="font-medium">
+                                        {item.brand || item.competitor}
+                                      </span>
+                                      {item.sentiment && (
+                                        <Badge
+                                          variant={
+                                            item.sentiment === 'positive'
+                                              ? 'default'
+                                              : item.sentiment === 'neutral'
+                                                ? 'secondary'
+                                                : 'outline'
+                                          }
+                                        >
+                                          {item.sentiment}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {item.context && (
+                                      <p className="mt-1 text-xs text-gray-600">{item.context}</p>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            </dd>
+                          </div>
+                        )}
+                    </dl>
+                  </div>
+                )
+              } catch {
+                return null
+              }
+            })()}
 
           {/* 竞品分析卡片 */}
-          {offer.competitorAnalysis && (() => {
-            try {
-              const competitorData = JSON.parse(offer.competitorAnalysis)
-              return (
-                <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    <span className="mr-2">🏆</span>竞品分析
-                    {competitorData.totalCompetitors && (
-                      <span className="ml-2 text-sm font-normal text-gray-500">
-                        （分析了 {competitorData.totalCompetitors} 个竞品）
-                      </span>
-                    )}
-                    {competitorData.overallCompetitiveness !== undefined && (() => {
-                      // 🔥 2025-12-16修复：适配对象格式 {score, summary} 和数字格式
-                      const competitivenessScore = typeof competitorData.overallCompetitiveness === 'object'
-                        ? competitorData.overallCompetitiveness.score
-                        : competitorData.overallCompetitiveness
-                      return (
-                        <Badge
-                          variant={competitivenessScore >= 70 ? 'default' : competitivenessScore >= 50 ? 'secondary' : 'destructive'}
-                          className="ml-2"
-                        >
-                          竞争力 {competitivenessScore}/100
-                        </Badge>
-                      )
-                    })()}
-                  </h2>
-                  <dl className="space-y-4">
-                    {/* 价格竞争力 */}
-                    {competitorData.pricePosition && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">价格竞争力</dt>
-                        <dd className="text-sm text-gray-900">
-                          <div className="bg-gray-50 p-3 rounded space-y-2">
-                            <div className="flex items-center gap-4">
-                              <span>我方价格: <strong>${competitorData.pricePosition.ourPrice}</strong></span>
-                              <span>竞品均价: ${(Number(competitorData.pricePosition.avgCompetitorPrice) || 0).toFixed(2)}</span>
-                              <Badge variant={
-                                competitorData.pricePosition.priceAdvantage === 'lowest' ? 'default' :
-                                competitorData.pricePosition.priceAdvantage === 'below_average' ? 'secondary' :
-                                competitorData.pricePosition.priceAdvantage === 'average' ? 'outline' : 'destructive'
-                              }>
-                                {competitorData.pricePosition.priceAdvantage === 'lowest' ? '最低价' :
-                                 competitorData.pricePosition.priceAdvantage === 'below_average' ? '低于均价' :
-                                 competitorData.pricePosition.priceAdvantage === 'average' ? '均价水平' :
-                                 competitorData.pricePosition.priceAdvantage === 'above_average' ? '高于均价' : '高端定价'}
+          {offer.competitorAnalysis &&
+            (() => {
+              try {
+                const competitorData = JSON.parse(offer.competitorAnalysis)
+                return (
+                  <div className="bg-white shadow-sm rounded-lg p-6 mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                      <span className="mr-2">🏆</span>竞品分析
+                      {competitorData.totalCompetitors && (
+                        <span className="ml-2 text-sm font-normal text-gray-500">
+                          （分析了 {competitorData.totalCompetitors} 个竞品）
+                        </span>
+                      )}
+                      {competitorData.overallCompetitiveness !== undefined &&
+                        (() => {
+                          // 🔥 2025-12-16修复：适配对象格式 {score, summary} 和数字格式
+                          const competitivenessScore =
+                            typeof competitorData.overallCompetitiveness === 'object'
+                              ? competitorData.overallCompetitiveness.score
+                              : competitorData.overallCompetitiveness
+                          return (
+                            <Badge
+                              variant={
+                                competitivenessScore >= 70
+                                  ? 'default'
+                                  : competitivenessScore >= 50
+                                    ? 'secondary'
+                                    : 'destructive'
+                              }
+                              className="ml-2"
+                            >
+                              竞争力 {competitivenessScore}/100
+                            </Badge>
+                          )
+                        })()}
+                    </h2>
+                    <dl className="space-y-4">
+                      {/* 价格竞争力 */}
+                      {competitorData.pricePosition && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">价格竞争力</dt>
+                          <dd className="text-sm text-gray-900">
+                            <div className="bg-gray-50 p-3 rounded space-y-2">
+                              <div className="flex items-center gap-4">
+                                <span>
+                                  我方价格:{' '}
+                                  <strong>${competitorData.pricePosition.ourPrice}</strong>
+                                </span>
+                                <span>
+                                  竞品均价: $
+                                  {(
+                                    Number(competitorData.pricePosition.avgCompetitorPrice) || 0
+                                  ).toFixed(2)}
+                                </span>
+                                <Badge
+                                  variant={
+                                    competitorData.pricePosition.priceAdvantage === 'lowest'
+                                      ? 'default'
+                                      : competitorData.pricePosition.priceAdvantage ===
+                                          'below_average'
+                                        ? 'secondary'
+                                        : competitorData.pricePosition.priceAdvantage === 'average'
+                                          ? 'outline'
+                                          : 'destructive'
+                                  }
+                                >
+                                  {competitorData.pricePosition.priceAdvantage === 'lowest'
+                                    ? '最低价'
+                                    : competitorData.pricePosition.priceAdvantage ===
+                                        'below_average'
+                                      ? '低于均价'
+                                      : competitorData.pricePosition.priceAdvantage === 'average'
+                                        ? '均价水平'
+                                        : competitorData.pricePosition.priceAdvantage ===
+                                            'above_average'
+                                          ? '高于均价'
+                                          : '高端定价'}
+                                </Badge>
+                              </div>
+                              {competitorData.pricePosition.savingsVsAvg && (
+                                <div className="text-green-600 text-xs">
+                                  {competitorData.pricePosition.savingsVsAvg}
+                                </div>
+                              )}
+                            </div>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 评分竞争力 */}
+                      {competitorData.ratingPosition && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">评分竞争力</dt>
+                          <dd className="text-sm text-gray-900">
+                            <div className="bg-gray-50 p-3 rounded flex items-center gap-4">
+                              <span>
+                                我方评分:{' '}
+                                <strong>{competitorData.ratingPosition.ourRating}⭐</strong>
+                              </span>
+                              <span>
+                                竞品均分:{' '}
+                                {(
+                                  Number(competitorData.ratingPosition.avgCompetitorRating) || 0
+                                ).toFixed(1)}
+                                ⭐
+                              </span>
+                              <Badge
+                                variant={
+                                  competitorData.ratingPosition.ratingAdvantage === 'top_rated'
+                                    ? 'default'
+                                    : competitorData.ratingPosition.ratingAdvantage ===
+                                        'above_average'
+                                      ? 'secondary'
+                                      : 'outline'
+                                }
+                              >
+                                {competitorData.ratingPosition.ratingAdvantage === 'top_rated'
+                                  ? '评分最高'
+                                  : competitorData.ratingPosition.ratingAdvantage ===
+                                      'above_average'
+                                    ? '高于均分'
+                                    : competitorData.ratingPosition.ratingAdvantage === 'average'
+                                      ? '均分水平'
+                                      : '低于均分'}
                               </Badge>
                             </div>
-                            {competitorData.pricePosition.savingsVsAvg && (
-                              <div className="text-green-600 text-xs">{competitorData.pricePosition.savingsVsAvg}</div>
-                            )}
-                          </div>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 评分竞争力 */}
-                    {competitorData.ratingPosition && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">评分竞争力</dt>
-                        <dd className="text-sm text-gray-900">
-                          <div className="bg-gray-50 p-3 rounded flex items-center gap-4">
-                            <span>我方评分: <strong>{competitorData.ratingPosition.ourRating}⭐</strong></span>
-                            <span>竞品均分: {(Number(competitorData.ratingPosition.avgCompetitorRating) || 0).toFixed(1)}⭐</span>
-                            <Badge variant={
-                              competitorData.ratingPosition.ratingAdvantage === 'top_rated' ? 'default' :
-                              competitorData.ratingPosition.ratingAdvantage === 'above_average' ? 'secondary' : 'outline'
-                            }>
-                              {competitorData.ratingPosition.ratingAdvantage === 'top_rated' ? '评分最高' :
-                               competitorData.ratingPosition.ratingAdvantage === 'above_average' ? '高于均分' :
-                               competitorData.ratingPosition.ratingAdvantage === 'average' ? '均分水平' : '低于均分'}
-                            </Badge>
-                          </div>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 独特卖点 */}
-                    {competitorData.uniqueSellingPoints && competitorData.uniqueSellingPoints.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">独特卖点 (USP)</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="space-y-2">
-                            {competitorData.uniqueSellingPoints.map((usp: any, idx: number) => (
-                              <li key={idx} className="bg-green-50 p-2 rounded flex items-start gap-2">
-                                <Badge variant={usp.significance === 'high' ? 'default' : usp.significance === 'medium' ? 'secondary' : 'outline'} className="shrink-0">
-                                  {usp.significance === 'high' ? '高度差异化' : usp.significance === 'medium' ? '中度差异化' : '轻度差异化'}
-                                </Badge>
-                                <div>
-                                  <div className="font-medium text-green-800">{usp.usp}</div>
-                                  {usp.differentiator && <div className="text-xs text-gray-600 mt-1">{usp.differentiator}</div>}
-                                </div>
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 竞品优势（需应对） */}
-                    {competitorData.competitorAdvantages && competitorData.competitorAdvantages.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">竞品优势（需应对）</dt>
-                        <dd className="text-sm text-gray-900">
-                          <ul className="space-y-2">
-                            {competitorData.competitorAdvantages.map((adv: any, idx: number) => (
-                              <li key={idx} className="bg-yellow-50 p-2 rounded">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-yellow-800 font-medium">{adv.advantage}</span>
-                                  {adv.competitor && <span className="text-xs text-gray-500">— {adv.competitor}</span>}
-                                </div>
-                                {adv.howToCounter && (
-                                  <div className="mt-1 text-xs text-blue-600">💡 应对策略：{adv.howToCounter}</div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 功能对比 */}
-                    {competitorData.featureComparison && competitorData.featureComparison.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">功能对比</dt>
-                        <dd className="text-sm text-gray-900">
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {competitorData.featureComparison.map((feat: any, idx: number) => (
-                              <div key={idx} className={`p-2 rounded ${feat.ourAdvantage ? 'bg-green-50 border border-green-200' : feat.weHave ? 'bg-gray-50' : 'bg-red-50'}`}>
-                                <div className="flex items-center gap-1">
-                                  <span>{feat.weHave ? '✅' : '❌'}</span>
-                                  <span className={feat.ourAdvantage ? 'text-green-700 font-medium' : ''}>{feat.feature}</span>
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {feat.competitorsHave}/{competitorData.totalCompetitors || '?'} 竞品有此功能
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </dd>
-                      </div>
-                    )}
-                    {/* 竞品列表 */}
-                    {competitorData.competitors && competitorData.competitors.length > 0 && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500 mb-2">竞品列表</dt>
-                        <dd className="text-sm text-gray-900">
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                              <thead className="bg-gray-50">
-                                <tr>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">品牌/名称</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">价格</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">评分</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">评论数</th>
-                                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">来源</th>
-                                </tr>
-                              </thead>
-                              <tbody className="bg-white divide-y divide-gray-200">
-                                {competitorData.competitors.slice(0, 8).map((comp: any, idx: number) => {
-                                  // 🔧 2025-12-11修复：使用getCompetitorUrl获取正确的竞品链接
-                                  const competitorUrl = getCompetitorUrl(comp, offer.targetCountry)
-                                  return (
-                                  <tr key={idx}>
-                                    <td className="px-3 py-2 text-sm text-gray-900 max-w-[200px]">
-                                      {competitorUrl && comp.asin !== 'market-benchmark' ? (
-                                        <a href={competitorUrl} target="_blank" rel="noopener noreferrer" className="font-medium truncate text-blue-600 hover:text-blue-800 hover:underline block" title={comp.name}>
-                                          {comp.name}
-                                        </a>
-                                      ) : (
-                                        <div className="font-medium truncate" title={comp.name}>{comp.name}</div>
+                          </dd>
+                        </div>
+                      )}
+                      {/* 独特卖点 */}
+                      {competitorData.uniqueSellingPoints &&
+                        competitorData.uniqueSellingPoints.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">
+                              独特卖点 (USP)
+                            </dt>
+                            <dd className="text-sm text-gray-900">
+                              <ul className="space-y-2">
+                                {competitorData.uniqueSellingPoints.map((usp: any, idx: number) => (
+                                  <li
+                                    key={idx}
+                                    className="bg-green-50 p-2 rounded flex items-start gap-2"
+                                  >
+                                    <Badge
+                                      variant={
+                                        usp.significance === 'high'
+                                          ? 'default'
+                                          : usp.significance === 'medium'
+                                            ? 'secondary'
+                                            : 'outline'
+                                      }
+                                      className="shrink-0"
+                                    >
+                                      {usp.significance === 'high'
+                                        ? '高度差异化'
+                                        : usp.significance === 'medium'
+                                          ? '中度差异化'
+                                          : '轻度差异化'}
+                                    </Badge>
+                                    <div>
+                                      <div className="font-medium text-green-800">{usp.usp}</div>
+                                      {usp.differentiator && (
+                                        <div className="text-xs text-gray-600 mt-1">
+                                          {usp.differentiator}
+                                        </div>
                                       )}
-                                      {comp.brand && <div className="text-xs text-gray-500">{comp.brand}</div>}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-900">{comp.priceText || (comp.price ? `$${comp.price}` : '-')}</td>
-                                    <td className="px-3 py-2 text-sm text-gray-900">{comp.rating ? `${comp.rating}⭐` : '-'}</td>
-                                    <td className="px-3 py-2 text-sm text-gray-900">{comp.reviewCount?.toLocaleString() || '-'}</td>
-                                    <td className="px-3 py-2 text-xs text-gray-500">
-                                      {comp.source === 'amazon_compare' ? '对比表' :
-                                       comp.source === 'amazon_also_viewed' ? '看了又看' :
-                                       comp.source === 'amazon_similar' ? '相似商品' : comp.source || '-'}
-                                    </td>
-                                  </tr>
-                                )})}
-                              </tbody>
-                            </table>
+                                    </div>
+                                  </li>
+                                ))}
+                              </ul>
+                            </dd>
                           </div>
-                        </dd>
-                      </div>
-                    )}
-                  </dl>
-                </div>
-              )
-            } catch {
-              return null
-            }
-          })()}
+                        )}
+                      {/* 竞品优势（需应对） */}
+                      {competitorData.competitorAdvantages &&
+                        competitorData.competitorAdvantages.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">
+                              竞品优势（需应对）
+                            </dt>
+                            <dd className="text-sm text-gray-900">
+                              <ul className="space-y-2">
+                                {competitorData.competitorAdvantages.map(
+                                  (adv: any, idx: number) => (
+                                    <li key={idx} className="bg-yellow-50 p-2 rounded">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-yellow-800 font-medium">
+                                          {adv.advantage}
+                                        </span>
+                                        {adv.competitor && (
+                                          <span className="text-xs text-gray-500">
+                                            — {adv.competitor}
+                                          </span>
+                                        )}
+                                      </div>
+                                      {adv.howToCounter && (
+                                        <div className="mt-1 text-xs text-blue-600">
+                                          💡 应对策略：{adv.howToCounter}
+                                        </div>
+                                      )}
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </dd>
+                          </div>
+                        )}
+                      {/* 功能对比 */}
+                      {competitorData.featureComparison &&
+                        competitorData.featureComparison.length > 0 && (
+                          <div>
+                            <dt className="text-sm font-medium text-gray-500 mb-2">功能对比</dt>
+                            <dd className="text-sm text-gray-900">
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {competitorData.featureComparison.map((feat: any, idx: number) => (
+                                  <div
+                                    key={idx}
+                                    className={`p-2 rounded ${feat.ourAdvantage ? 'bg-green-50 border border-green-200' : feat.weHave ? 'bg-gray-50' : 'bg-red-50'}`}
+                                  >
+                                    <div className="flex items-center gap-1">
+                                      <span>{feat.weHave ? '✅' : '❌'}</span>
+                                      <span
+                                        className={
+                                          feat.ourAdvantage ? 'text-green-700 font-medium' : ''
+                                        }
+                                      >
+                                        {feat.feature}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {feat.competitorsHave}/
+                                      {competitorData.totalCompetitors || '?'} 竞品有此功能
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </dd>
+                          </div>
+                        )}
+                      {/* 竞品列表 */}
+                      {competitorData.competitors && competitorData.competitors.length > 0 && (
+                        <div>
+                          <dt className="text-sm font-medium text-gray-500 mb-2">竞品列表</dt>
+                          <dd className="text-sm text-gray-900">
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                  <tr>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                      品牌/名称
+                                    </th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                      价格
+                                    </th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                      评分
+                                    </th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                      评论数
+                                    </th>
+                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                      来源
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {competitorData.competitors
+                                    .slice(0, 8)
+                                    .map((comp: any, idx: number) => {
+                                      // 🔧 2025-12-11修复：使用getCompetitorUrl获取正确的竞品链接
+                                      const competitorUrl = getCompetitorUrl(
+                                        comp,
+                                        offer.targetCountry
+                                      )
+                                      return (
+                                        <tr key={idx}>
+                                          <td className="px-3 py-2 text-sm text-gray-900 max-w-[200px]">
+                                            {competitorUrl && comp.asin !== 'market-benchmark' ? (
+                                              <a
+                                                href={competitorUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="font-medium truncate text-blue-600 hover:text-blue-800 hover:underline block"
+                                                title={comp.name}
+                                              >
+                                                {comp.name}
+                                              </a>
+                                            ) : (
+                                              <div
+                                                className="font-medium truncate"
+                                                title={comp.name}
+                                              >
+                                                {comp.name}
+                                              </div>
+                                            )}
+                                            {comp.brand && (
+                                              <div className="text-xs text-gray-500">
+                                                {comp.brand}
+                                              </div>
+                                            )}
+                                          </td>
+                                          <td className="px-3 py-2 text-sm text-gray-900">
+                                            {comp.priceText ||
+                                              (comp.price ? `$${comp.price}` : '-')}
+                                          </td>
+                                          <td className="px-3 py-2 text-sm text-gray-900">
+                                            {comp.rating ? `${comp.rating}⭐` : '-'}
+                                          </td>
+                                          <td className="px-3 py-2 text-sm text-gray-900">
+                                            {comp.reviewCount?.toLocaleString() || '-'}
+                                          </td>
+                                          <td className="px-3 py-2 text-xs text-gray-500">
+                                            {comp.source === 'amazon_compare'
+                                              ? '对比表'
+                                              : comp.source === 'amazon_also_viewed'
+                                                ? '看了又看'
+                                                : comp.source === 'amazon_similar'
+                                                  ? '相似商品'
+                                                  : comp.source || '-'}
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </dd>
+                        </div>
+                      )}
+                    </dl>
+                  </div>
+                )
+              } catch {
+                return null
+              }
+            })()}
 
           {/* 系统信息卡片 */}
           <div className="bg-white shadow-sm rounded-lg p-6">
@@ -1546,18 +1877,20 @@ export default function OfferDetailPage() {
               </div>
             </dl>
           </div>
-
         </div>
       </main>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        setIsDeleteDialogOpen(open)
-        if (!open) {
-          setDeleteError(null)
-          setRemoveGoogleAdsCampaignsOnDelete(false)
-        }
-      }}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open)
+          if (!open) {
+            setDeleteError(null)
+            setRemoveGoogleAdsCampaignsOnDelete(false)
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除Offer</AlertDialogTitle>
@@ -1579,18 +1912,25 @@ export default function OfferDetailPage() {
                     <p className="text-sm text-amber-800 font-medium mb-2">⚠️ 警告</p>
                     <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
                       <li>此操作不可撤销</li>
-                      <li>系统会自动暂停该Offer在各关联Ads账号下的已启用广告系列（仅暂停该账号下关联的广告系列），避免继续花费</li>
+                      <li>
+                        系统会自动暂停该Offer在各关联Ads账号下的已启用广告系列（仅暂停该账号下关联的广告系列），避免继续花费
+                      </li>
                       <li>所有相关数据将被永久删除</li>
                     </ul>
                     <div className="mt-3 flex items-start gap-3 rounded-md border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
                       <Checkbox
                         id="delete-remove-ads-detail"
                         checked={removeGoogleAdsCampaignsOnDelete}
-                        onCheckedChange={(checked) => setRemoveGoogleAdsCampaignsOnDelete(checked as boolean)}
+                        onCheckedChange={(checked) =>
+                          setRemoveGoogleAdsCampaignsOnDelete(checked as boolean)
+                        }
                         className="mt-0.5"
                       />
                       <div className="flex-1">
-                        <Label htmlFor="delete-remove-ads-detail" className="text-sm font-medium cursor-pointer text-orange-900">
+                        <Label
+                          htmlFor="delete-remove-ads-detail"
+                          className="text-sm font-medium cursor-pointer text-orange-900"
+                        >
                           同时在 Ads 账号中删除对应广告系列（不可恢复）
                         </Label>
                         <p className="text-xs text-orange-700 mt-1">
@@ -1607,11 +1947,7 @@ export default function OfferDetailPage() {
             <AlertDialogCancel disabled={deleting} onClick={() => setDeleteError(null)}>
               取消
             </AlertDialogCancel>
-            <Button
-              onClick={handleDelete}
-              disabled={deleting}
-              variant="destructive"
-            >
+            <Button onClick={handleDelete} disabled={deleting} variant="destructive">
               {deleting ? '删除中...' : deleteError ? '重试删除' : '确认删除'}
             </Button>
           </AlertDialogFooter>
@@ -1619,10 +1955,13 @@ export default function OfferDetailPage() {
       </AlertDialog>
 
       {/* Rebuild Confirmation Dialog */}
-      <AlertDialog open={isRebuildDialogOpen} onOpenChange={(open) => {
-        setIsRebuildDialogOpen(open)
-        if (!open) setRebuildError(null)
-      }}>
+      <AlertDialog
+        open={isRebuildDialogOpen}
+        onOpenChange={(open) => {
+          setIsRebuildDialogOpen(open)
+          if (!open) setRebuildError(null)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>确认重建Offer</AlertDialogTitle>
@@ -1640,10 +1979,10 @@ export default function OfferDetailPage() {
                 )}
 
                 <OfferExtractionModeField
-                    id="rebuildExtractionMode"
-                    value={rebuildExtractionMode}
-                    onChange={setRebuildExtractionMode}
-                  />
+                  id="rebuildExtractionMode"
+                  value={rebuildExtractionMode}
+                  onChange={setRebuildExtractionMode}
+                />
 
                 {!rebuildError && (
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
@@ -1653,7 +1992,9 @@ export default function OfferDetailPage() {
                       <li>重新运行AI分析生成所有内容</li>
                       <li>更新品牌信息、产品描述、评价分析、竞品分析等所有字段</li>
                       <li>处理时间约2-5分钟，后台异步执行</li>
-                      <li><strong>注意：将覆盖现有所有数据</strong></li>
+                      <li>
+                        <strong>注意：将覆盖现有所有数据</strong>
+                      </li>
                     </ul>
                   </div>
                 )}
@@ -1664,11 +2005,7 @@ export default function OfferDetailPage() {
             <AlertDialogCancel disabled={rebuilding} onClick={() => setRebuildError(null)}>
               取消
             </AlertDialogCancel>
-            <Button
-              onClick={handleRebuild}
-              disabled={rebuilding}
-              variant="default"
-            >
+            <Button onClick={handleRebuild} disabled={rebuilding} variant="default">
               {rebuilding ? '启动中...' : rebuildError ? '重试' : '确认重建'}
             </Button>
           </AlertDialogFooter>

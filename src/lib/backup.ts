@@ -41,9 +41,8 @@ function tryEnsureWritableDir(dirPath: string): { ok: true } | { ok: false; erro
 
 function ensureBackupDirWritable(): EnsureBackupDirResult {
   const preferred = resolveBackupDir()
-  const candidates = preferred === DEFAULT_BACKUP_DIR
-    ? [preferred]
-    : [preferred, DEFAULT_BACKUP_DIR]
+  const candidates =
+    preferred === DEFAULT_BACKUP_DIR ? [preferred] : [preferred, DEFAULT_BACKUP_DIR]
 
   let lastError = ''
   for (const candidate of candidates) {
@@ -66,12 +65,15 @@ function ensureBackupDirWritable(): EnsureBackupDirResult {
   }
 }
 
-export async function backupDatabase(backupType: 'manual' | 'auto', createdBy?: number): Promise<{
-  success: boolean;
-  errorMessage?: string;
-  backupFilename?: string;
-  backupPath?: string;
-  fileSizeBytes?: number;
+export async function backupDatabase(
+  backupType: 'manual' | 'auto',
+  createdBy?: number
+): Promise<{
+  success: boolean
+  errorMessage?: string
+  backupFilename?: string
+  backupPath?: string
+  fileSizeBytes?: number
 }> {
   const db = await getDatabase()
 
@@ -83,14 +85,17 @@ export async function backupDatabase(backupType: 'manual' | 'auto', createdBy?: 
       const skipMessage = 'PostgreSQL环境下已跳过文件备份（PostgreSQL由云服务商自动备份）'
       console.log(`⚠️ ${skipMessage}`)
 
-      await db.exec(`
+      await db.exec(
+        `
         INSERT INTO backup_logs (backup_type, status, error_message, created_by)
         VALUES (?, ?, ?, ?)
-      `, [backupType, 'skipped', skipMessage, createdBy || null])
+      `,
+        [backupType, 'skipped', skipMessage, createdBy || null]
+      )
 
       return {
         success: true,
-        errorMessage: skipMessage
+        errorMessage: skipMessage,
       }
     }
 
@@ -113,26 +118,32 @@ export async function backupDatabase(backupType: 'manual' | 'auto', createdBy?: 
 
     const stats = fs.statSync(backupPath)
 
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO backup_logs (backup_type, status, backup_filename, backup_path, file_size_bytes, created_by)
       VALUES (?, ?, ?, ?, ?, ?)
-    `, [backupType, 'success', backupFilename, backupPath, stats.size, createdBy || null])
+    `,
+      [backupType, 'success', backupFilename, backupPath, stats.size, createdBy || null]
+    )
 
     return {
       success: true,
       backupFilename,
       backupPath,
-      fileSizeBytes: stats.size
+      fileSizeBytes: stats.size,
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     console.error('❌ Backup failed:', errorMessage)
 
     try {
-      await db.exec(`
+      await db.exec(
+        `
         INSERT INTO backup_logs (backup_type, status, error_message, created_by)
         VALUES (?, ?, ?, ?)
-      `, [backupType, 'failed', errorMessage, createdBy || null])
+      `,
+        [backupType, 'failed', errorMessage, createdBy || null]
+      )
     } catch (logError) {
       console.error('Failed to log backup failure:', logError)
     }
@@ -147,7 +158,7 @@ function cleanOldBackups(backupDir: string) {
     const now = Date.now()
     const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000
 
-    files.forEach(file => {
+    files.forEach((file) => {
       const filePath = path.join(backupDir, file)
       const stats = fs.statSync(filePath)
       if (now - stats.mtimeMs > SEVEN_DAYS) {

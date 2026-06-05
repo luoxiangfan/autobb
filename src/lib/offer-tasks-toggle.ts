@@ -5,7 +5,9 @@
 export type OfferTasksToggleAction = 'pause' | 'start'
 
 export function normalizeOfferTaskStatus(status: string | null | undefined): string {
-  return String(status || '').trim().toLowerCase()
+  return String(status || '')
+    .trim()
+    .toLowerCase()
 }
 
 /** 补点击：待执行/运行中 → 需要暂停（已 stopped/paused 跳过） */
@@ -58,14 +60,22 @@ export function campaignHasBoundOffer(offerId: number | null | undefined): boole
 }
 
 export function isCampaignEnabled(status: string | null | undefined): boolean {
-  return String(status || '').trim().toUpperCase() === 'ENABLED'
+  return (
+    String(status || '')
+      .trim()
+      .toUpperCase() === 'ENABLED'
+  )
 }
 
 /** 是否展示「补点击任务 / 换链接任务」单独入口（暂停中的广告系列不展示） */
 export function shouldShowIndividualOfferTaskMenuItems(
   campaignStatus: string | null | undefined
 ): boolean {
-  return String(campaignStatus || '').trim().toUpperCase() !== 'PAUSED'
+  return (
+    String(campaignStatus || '')
+      .trim()
+      .toUpperCase() !== 'PAUSED'
+  )
 }
 
 /** 是否展示「暂停/开启关联 Offer 任务」菜单项 */

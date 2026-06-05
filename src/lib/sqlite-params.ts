@@ -20,4 +20,3 @@ export function normalizeSqliteParams(params: any[]): any[] {
     )
   })
 }
-

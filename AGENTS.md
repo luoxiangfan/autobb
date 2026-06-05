@@ -18,20 +18,21 @@
 凡修改了会影响构建/运行的文件（如 `src/`、`scripts/`、`migrations/`、`pg-migrations/`、根目录 TS/JS 配置等），**在向用户汇报「修改完成」之前**，必须在仓库根目录依次执行并通过：
 
 ```bash
+npm run format
 npm run lint
 npm run type-check
 ```
 
 **执行要求：**
 
-1. 两条命令均须 **exit code 0**；任一有报错须先修复再重跑，直至全部通过。
-2. 可在终端并行执行以节省时间，但汇报前须确认两者均已成功。
+1. 三条命令均须 **exit code 0**；须先执行 `npm run format`，再执行 `lint` 与 `type-check`（勿与 format 并行）。
+2. 汇报前须确认三者均已成功。
 3. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
-4. 向用户说明本次改动时，须简要写明 lint / type-check 已通过（或说明跳过原因）。
+4. 向用户说明本次改动时，须简要写明 format / lint / type-check 已通过（或说明跳过原因）。
 
 ## 数据库 / SQL 修改后的检查（必须）
 
-本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 lint / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
+本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format / lint / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
 
 ### 适用场景（满足任一则必须执行）
 
@@ -52,15 +53,15 @@ npm run type-check
 
 **审阅清单（逐项核对）：**
 
-| 类别 | 要求 |
-|------|------|
-| **表与列** | 表名、列名与当前 schema 一致；`JOIN`/`WHERE`/`ORDER BY`/`GROUP BY` 引用的列存在且归属正确 |
-| **表别名** | 多表查询为每张表定义唯一别名；`SELECT`/`ON`/`WHERE` 中只用别名或全限定名，避免歧义列名 |
-| **占位符** | 经 `DatabaseAdapter` 的 SQL 统一用 `?`，`params` 数组顺序与个数与占位符一致（PG 由 `db.ts` 转为 `$1,$2,...`）；勿在双栈共用路径手写 `$1`（除非明确仅 PG 分支） |
-| **数据类型** | 布尔：SQLite 用 `0/1` 或 helper，PG 用 `TRUE/FALSE`；时间用 `db-helpers` 的 `nowFunc` 等，勿混用 `datetime('now')` 与 `NOW()`；JSON/JSONB、数值、UUID 等与列类型匹配 |
-| **INSERT/UPDATE** | PG 需 `RETURNING id` 时与 `getInsertedId` 约定一致；`UPDATE`/`DELETE` 条件完整，避免误伤全表 |
-| **聚合与子查询** | `GROUP BY` 含非聚合列；子查询别名、相关子查询关联字段正确 |
-| **迁移脚本** | `migrations/*.sql` 用 SQLite 语法；`pg-migrations/*.sql` 用 PG 语法；两侧 DDL/DML 语义等价，勿复制粘贴后未改方言 |
+| 类别              | 要求                                                                                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **表与列**        | 表名、列名与当前 schema 一致；`JOIN`/`WHERE`/`ORDER BY`/`GROUP BY` 引用的列存在且归属正确                                                                            |
+| **表别名**        | 多表查询为每张表定义唯一别名；`SELECT`/`ON`/`WHERE` 中只用别名或全限定名，避免歧义列名                                                                               |
+| **占位符**        | 经 `DatabaseAdapter` 的 SQL 统一用 `?`，`params` 数组顺序与个数与占位符一致（PG 由 `db.ts` 转为 `$1,$2,...`）；勿在双栈共用路径手写 `$1`（除非明确仅 PG 分支）       |
+| **数据类型**      | 布尔：SQLite 用 `0/1` 或 helper，PG 用 `TRUE/FALSE`；时间用 `db-helpers` 的 `nowFunc` 等，勿混用 `datetime('now')` 与 `NOW()`；JSON/JSONB、数值、UUID 等与列类型匹配 |
+| **INSERT/UPDATE** | PG 需 `RETURNING id` 时与 `getInsertedId` 约定一致；`UPDATE`/`DELETE` 条件完整，避免误伤全表                                                                         |
+| **聚合与子查询**  | `GROUP BY` 含非聚合列；子查询别名、相关子查询关联字段正确                                                                                                            |
+| **迁移脚本**      | `migrations/*.sql` 用 SQLite 语法；`pg-migrations/*.sql` 用 PG 语法；两侧 DDL/DML 语义等价，勿复制粘贴后未改方言                                                     |
 
 **验证方式：** `db:migrate` / `validate-schema` / 相关 `npm test` 报错（如 `no such column`、`syntax error`、`bind message supplies N parameters`）须视为语法或绑定问题并修复后重跑。
 
@@ -138,7 +139,7 @@ gitnexus impact evaluateAdStrength --depth 2
 1. 进入代码修改前，先汇报 `impact` 结果（直接调用方、风险级别、影响模块）。
 2. 若风险为 HIGH/CRITICAL，先给出降风险方案，再实施修改。
 3. 改动完成后，说明是否需要重新 `analyze` 以保持索引新鲜。
-4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
+4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run format`、`npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
 
 ### 当前仓库限制
 
@@ -148,6 +149,7 @@ gitnexus impact evaluateAdStrength --depth 2
 3. 若升级/重装了全局 `gitnexus` 后问题复现，需重新应用本机的 GitNexus ignore/embedder 补丁后再重建索引。
 
 <!-- gitnexus:start -->
+
 # GitNexus — Code Intelligence
 
 This project is indexed by GitNexus as **autobb** (35513 symbols, 65244 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
@@ -171,30 +173,30 @@ This project is indexed by GitNexus as **autobb** (35513 symbols, 65244 relation
 
 ## Resources
 
-| Resource | Use for |
-|----------|---------|
-| `gitnexus://repo/autobb/context` | Codebase overview, check index freshness |
-| `gitnexus://repo/autobb/clusters` | All functional areas |
-| `gitnexus://repo/autobb/processes` | All execution flows |
-| `gitnexus://repo/autobb/process/{name}` | Step-by-step execution trace |
+| Resource                                | Use for                                  |
+| --------------------------------------- | ---------------------------------------- |
+| `gitnexus://repo/autobb/context`        | Codebase overview, check index freshness |
+| `gitnexus://repo/autobb/clusters`       | All functional areas                     |
+| `gitnexus://repo/autobb/processes`      | All execution flows                      |
+| `gitnexus://repo/autobb/process/{name}` | Step-by-step execution trace             |
 
 ## CLI
 
-| Task | Read this skill file |
-|------|---------------------|
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
-| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
-| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
-| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Task                                         | Read this skill file                                        |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md`       |
+| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md`       |
+| Rename / extract / split / refactor          | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md`     |
+| Tools, resources, schema reference           | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md`           |
+| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`             |
 
 <!-- gitnexus:end -->
 
 Use 'bd' for task tracking
 
-
 <!-- BEGIN BEADS INTEGRATION v:1 profile:full hash:d4f96305 -->
+
 ## Issue Tracking with bd (beads)
 
 **IMPORTANT**: This project uses **bd (beads)** for ALL issue tracking. Do NOT use markdown TODOs, task lists, or other tracking methods.
@@ -293,7 +295,7 @@ For more details, see README.md and docs/QUICKSTART.md.
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) — at minimum `npm run lint` and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
+2. **Run quality gates** (if code changed) — at minimum `npm run format`, `npm run lint`, and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
@@ -307,6 +309,7 @@ For more details, see README.md and docs/QUICKSTART.md.
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push

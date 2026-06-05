@@ -1,6 +1,9 @@
 import { parseJsonField } from '@/lib/json-field'
 import { resolveStoredGenerationMode } from '@/lib/ad-creative-generation-mode'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creative-task-error'
+import {
+  normalizeCreativeTaskError,
+  toCreativeTaskErrorResponseFields,
+} from '@/lib/creative-task-error'
 
 export interface CreativeTaskStreamRow {
   id: string

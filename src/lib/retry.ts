@@ -68,10 +68,7 @@ export interface RetryOptions {
  * )
  * ```
  */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const {
     maxRetries = 3,
     initialDelay = 1000,
@@ -79,7 +76,7 @@ export async function withRetry<T>(
     maxDelay = 30000,
     shouldRetry = defaultShouldRetry,
     onRetry,
-    operationName = 'Operation'
+    operationName = 'Operation',
   } = options
 
   let lastError: any
@@ -179,7 +176,7 @@ function defaultShouldRetry(error: any, _attempt: number): boolean {
  * 延迟函数
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -206,24 +203,21 @@ export async function withBatchRetry<T, R>(
     const item = items[i]
 
     try {
-      const result = await withRetry(
-        () => fn(item, i),
-        {
-          ...options,
-          operationName: `${options.operationName || 'Batch Operation'} [${i + 1}/${items.length}]`
-        }
-      )
+      const result = await withRetry(() => fn(item, i), {
+        ...options,
+        operationName: `${options.operationName || 'Batch Operation'} [${i + 1}/${items.length}]`,
+      })
 
       results.push({
         success: true,
         result,
-        item
+        item,
       })
     } catch (error) {
       results.push({
         success: false,
         error,
-        item
+        item,
       })
     }
   }
@@ -261,15 +255,12 @@ export async function withRetryAndTimeout<T>(
   retryOptions: RetryOptions = {},
   timeoutMs: number = 30000
 ): Promise<T> {
-  return withRetry(
-    async () => {
-      return Promise.race([
-        fn(),
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error(`Operation timeout after ${timeoutMs}ms`)), timeoutMs)
-        )
-      ])
-    },
-    retryOptions
-  )
+  return withRetry(async () => {
+    return Promise.race([
+      fn(),
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`Operation timeout after ${timeoutMs}ms`)), timeoutMs)
+      ),
+    ])
+  }, retryOptions)
 }

@@ -190,29 +190,30 @@ export interface CreativeKeywordSourceQuotaAudit {
   }
 }
 
-export type SourceGovernanceBucket =
-  | 'primary'
-  | 'conditional'
-  | 'rescue'
-  | 'synthetic'
-  | 'unknown'
+export type SourceGovernanceBucket = 'primary' | 'conditional' | 'rescue' | 'synthetic' | 'unknown'
 
-const D_INTENT_PATTERN = /\b(buy|price|deal|sale|discount|coupon|offer|cost|cheap|best|review|reviews?)\b/i
+const D_INTENT_PATTERN =
+  /\b(buy|price|deal|sale|discount|coupon|offer|cost|cheap|best|review|reviews?)\b/i
 const A_TRUST_PATTERN = /\b(official|authentic|original|genuine|warranty|trusted|brand)\b/i
-const B_SCENARIO_PATTERN = /\b(for|outdoor|indoor|home|office|garden|yard|driveway|wall|path|walkway|pool|tree)\b/i
+const B_SCENARIO_PATTERN =
+  /\b(for|outdoor|indoor|home|office|garden|yard|driveway|wall|path|walkway|pool|tree)\b/i
 const PLATFORM_PATTERN = /\b(amazon|walmart|ebay|etsy|aliexpress|temu)\b/i
 const COMMUNITY_PATTERN = /\b(reddit|quora|forum|forums)\b/i
 const INFO_QUERY_PATTERN = /\b(what is|meaning|tutorial|guide|manual|how to|instructions?)\b/i
-const QUESTION_PREFIX_PATTERN = /^(?:what|why|how|when|where|who|which|is|are|do|does|can|should|could)\b/i
+const QUESTION_PREFIX_PATTERN =
+  /^(?:what|why|how|when|where|who|which|is|are|do|does|can|should|could)\b/i
 const REVIEW_COMPARE_PATTERN = /\b(review|reviews|comparison|compare|vs)\b/i
 const PRICE_TRACKER_PATTERN = /\b(price\s*tracker|track(?:ing)?\s*price)\b/i
-const NOISE_STACK_PATTERN = /\b(electronics?\s+photo\s+wearable\s+technology|photo\s+wearable\s+technology)\b/i
+const NOISE_STACK_PATTERN =
+  /\b(electronics?\s+photo\s+wearable\s+technology|photo\s+wearable\s+technology)\b/i
 const REPEATED_ACTION_PATTERN = /\b(buy|shop|purchase|order)\b.*\b\1\b/i
 const LOCALE_NOISE_PATTERN = /\b(ulasan|kabupaten|bekasi|shopee|kasur|gambar|colchon|rng)\b/i
 const BRAND_SLOGAN_PATTERN = /\b(a\s+cozy\s+home\s+made\s+simple|home\s+made\s+simple)\b/i
 const URL_FRAGMENT_PATTERN = /\b(?:https?|www|com|dp)\b/i
-const COMPONENT_NOISE_PATTERN = /\b(?:included\s+components?|package\s+contents?|box\s+contents?|what\s+s?\s+in\s+the\s+box)\b/i
-const MODEL_INTENT_GENERIC_SPILLOVER_PATTERN = /\b(option|options|choice|choices|premium|quality|value|online|daily|everyday|results?|system|technology|performance|style|styles)\b/i
+const COMPONENT_NOISE_PATTERN =
+  /\b(?:included\s+components?|package\s+contents?|box\s+contents?|what\s+s?\s+in\s+the\s+box)\b/i
+const MODEL_INTENT_GENERIC_SPILLOVER_PATTERN =
+  /\b(option|options|choice|choices|premium|quality|value|online|daily|everyday|results?|system|technology|performance|style|styles)\b/i
 const AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES = new Set([
   'AI_GENERATED',
   'AI_LLM_RAW',
@@ -248,11 +249,14 @@ const AI_TEMPLATE_PHRASE_PATTERNS = [
   /\b(?:for|to)\s+every(?:one|day)\b/i,
   /\b(?:lifestyle|home)\s+(?:essential|essentials|must\s*have)\b/i,
 ]
-const AI_TEMPLATE_SAFE_SPEC_PATTERN = /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb|btu|doe|ashrae)\b/i
+const AI_TEMPLATE_SAFE_SPEC_PATTERN =
+  /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb|btu|doe|ashrae)\b/i
 const PROMO_PATTERN = /\b(discount|coupon|cheap|sale|deal|offer|promo|price|cost)\b/i
 const STORE_NAV_PATTERN = /\b(official\s+store|store\s+locator|near\s+me|shop\s+near\s+me)\b/i
-const FEATURE_SCENARIO_PATTERN = /\b(cordless|wireless|portable|smart|pet|outdoor|indoor|home|office|travel|waterproof|quiet|fast|compact|lightweight)\b/i
-const TRANSACTIONAL_MODIFIER_PATTERN = /\b(buy|purchase|order|shop|shopping|shops|price|pricing|cost|deal|deals|discount|sale|offer|coupon|promo|store)\b/i
+const FEATURE_SCENARIO_PATTERN =
+  /\b(cordless|wireless|portable|smart|pet|outdoor|indoor|home|office|travel|waterproof|quiet|fast|compact|lightweight)\b/i
+const TRANSACTIONAL_MODIFIER_PATTERN =
+  /\b(buy|purchase|order|shop|shopping|shops|price|pricing|cost|deal|deals|discount|sale|offer|coupon|promo|store)\b/i
 const TRANSACTIONAL_MODIFIER_TOKENS = new Set([
   'buy',
   'purchase',
@@ -273,9 +277,35 @@ const TRANSACTIONAL_MODIFIER_TOKENS = new Set([
   'store',
 ])
 const NON_ANCHOR_TOKENS = new Set([
-  'official', 'store', 'shop', 'near', 'me', 'brand', 'buy', 'sale', 'deal', 'discount',
-  'coupon', 'offer', 'promo', 'price', 'cost', 'cheap', 'best', 'review', 'reviews',
-  'comparison', 'compare', 'vs', 'online', 'for', 'with', 'and', 'the', 'a', 'an',
+  'official',
+  'store',
+  'shop',
+  'near',
+  'me',
+  'brand',
+  'buy',
+  'sale',
+  'deal',
+  'discount',
+  'coupon',
+  'offer',
+  'promo',
+  'price',
+  'cost',
+  'cheap',
+  'best',
+  'review',
+  'reviews',
+  'comparison',
+  'compare',
+  'vs',
+  'online',
+  'for',
+  'with',
+  'and',
+  'the',
+  'a',
+  'an',
 ])
 const DEMAND_FALLBACK_NOISE_TOKENS = new Set([
   'better',
@@ -347,7 +377,9 @@ function normalizeSourceRank(source: string | undefined, sourceType: string | un
   return getKeywordSourceRankFromInput({ source, sourceType })
 }
 
-export function resolveCreativeKeywordMaxWords(creativeType: CanonicalCreativeType | null | undefined): number {
+export function resolveCreativeKeywordMaxWords(
+  creativeType: CanonicalCreativeType | null | undefined
+): number {
   if (!creativeType) return CREATIVE_KEYWORD_MAX_WORDS
   return CREATIVE_KEYWORD_MAX_WORDS_BY_TYPE[creativeType] || CREATIVE_KEYWORD_MAX_WORDS
 }
@@ -384,21 +416,25 @@ function normalizeCompactedBrandKeyword(keyword: string, brandName: string | und
   if (!compactBrandPattern.test(normalizedKeyword)) return rawKeyword
   compactBrandPattern.lastIndex = 0
 
-  return normalizedKeyword
-    .replace(compactBrandPattern, normalizedBrand)
-    .replace(/\s+/g, ' ')
-    .trim()
+  return normalizedKeyword.replace(compactBrandPattern, normalizedBrand).replace(/\s+/g, ' ').trim()
 }
 
 function isSearchVolumeUnavailableReason(reason: unknown): boolean {
-  const normalized = String(reason || '').trim().toUpperCase()
+  const normalized = String(reason || '')
+    .trim()
+    .toUpperCase()
   return normalized.startsWith('DEV_TOKEN_')
 }
 
-function hasActiveSearchVolumeUnavailableFlag(item: {
-  searchVolume?: unknown
-  volumeUnavailableReason?: unknown
-} | null | undefined): boolean {
+function hasActiveSearchVolumeUnavailableFlag(
+  item:
+    | {
+        searchVolume?: unknown
+        volumeUnavailableReason?: unknown
+      }
+    | null
+    | undefined
+): boolean {
   if (!isSearchVolumeUnavailableReason(item?.volumeUnavailableReason)) return false
   return Number(item?.searchVolume || 0) <= 0
 }
@@ -422,11 +458,9 @@ function normalizeAuditString(value: unknown): string | undefined {
 function normalizeEvidence(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined
 
-  const normalized = Array.from(new Set(
-    value
-      .map((item) => String(item ?? '').trim())
-      .filter(Boolean)
-  )).slice(0, 4)
+  const normalized = Array.from(
+    new Set(value.map((item) => String(item ?? '').trim()).filter(Boolean))
+  ).slice(0, 4)
 
   return normalized.length > 0 ? normalized : undefined
 }
@@ -455,12 +489,10 @@ function buildKeywordLanguageSignals(
 ): KeywordLanguageSignals | undefined {
   if (!targetLanguage) return undefined
 
-  const allowedLanguageHints = analysis.allowedLanguageHints.length > 0
-    ? analysis.allowedLanguageHints
-    : undefined
-  const detectedLanguageHints = analysis.detectedLanguageHints.length > 0
-    ? analysis.detectedLanguageHints
-    : undefined
+  const allowedLanguageHints =
+    analysis.allowedLanguageHints.length > 0 ? analysis.allowedLanguageHints : undefined
+  const detectedLanguageHints =
+    analysis.detectedLanguageHints.length > 0 ? analysis.detectedLanguageHints : undefined
 
   return {
     targetLanguage: analysis.targetLanguage || normalizeAuditString(targetLanguage),
@@ -478,7 +510,9 @@ function isDerivedSourceTier(tier: KeywordSourceTier): boolean {
   return tier.startsWith('DERIVED_')
 }
 
-function normalizeDecisionTraceEvidence(entries: Array<string | undefined | false>): string[] | undefined {
+function normalizeDecisionTraceEvidence(
+  entries: Array<string | undefined | false>
+): string[] | undefined {
   return normalizeEvidence(entries.filter((entry): entry is string => Boolean(entry)))
 }
 
@@ -561,11 +595,18 @@ function buildKeywordDecisionTrace(params: {
 }
 
 function inferSourceField(source: string | undefined): string | undefined {
-  const normalized = String(source || '').trim().toUpperCase()
+  const normalized = String(source || '')
+    .trim()
+    .toUpperCase()
   if (!normalized) return undefined
 
-  if (normalized === 'SEARCH_TERM' || normalized === 'SEARCH_TERM_HIGH_PERFORMING') return 'search_terms'
-  if (normalized.startsWith('KEYWORD_PLANNER') || normalized === 'PLANNER' || normalized === 'GLOBAL_KEYWORD') {
+  if (normalized === 'SEARCH_TERM' || normalized === 'SEARCH_TERM_HIGH_PERFORMING')
+    return 'search_terms'
+  if (
+    normalized.startsWith('KEYWORD_PLANNER') ||
+    normalized === 'PLANNER' ||
+    normalized === 'GLOBAL_KEYWORD'
+  ) {
     return 'keyword_planner'
   }
   if (normalized === 'HOT_PRODUCT_AGGREGATE') return 'hot_products'
@@ -578,11 +619,11 @@ function inferSourceField(source: string | undefined): string | undefined {
   }
   if (normalized === 'BRAND_SEED') return 'brand'
   if (
-    normalized === 'AI_GENERATED'
-    || normalized === 'AI_ENHANCED'
-    || normalized === 'KEYWORD_EXPANSION'
-    || normalized === 'SCORING_SUGGESTION'
-    || normalized === 'BRANDED_INDUSTRY_TERM'
+    normalized === 'AI_GENERATED' ||
+    normalized === 'AI_ENHANCED' ||
+    normalized === 'KEYWORD_EXPANSION' ||
+    normalized === 'SCORING_SUGGESTION' ||
+    normalized === 'BRANDED_INDUSTRY_TERM'
   ) {
     return 'ai'
   }
@@ -647,9 +688,13 @@ function getMeaningfulDemandAnchorTokens(keyword: string, brandName: string | un
     .filter((token) => !DEMAND_FALLBACK_NOISE_TOKENS.has(token))
 }
 
-function getModelIntentSoftFamilyCoreTokens(keyword: string, brandName: string | undefined): string[] {
-  return getMeaningfulDemandAnchorTokens(keyword, brandName)
-    .filter((token) => !MODEL_INTENT_SOFT_FAMILY_NOISE_TOKENS.has(token))
+function getModelIntentSoftFamilyCoreTokens(
+  keyword: string,
+  brandName: string | undefined
+): string[] {
+  return getMeaningfulDemandAnchorTokens(keyword, brandName).filter(
+    (token) => !MODEL_INTENT_SOFT_FAMILY_NOISE_TOKENS.has(token)
+  )
 }
 
 function getNonBrandKeywordTokens(keyword: string, brandName: string | undefined): string[] {
@@ -680,8 +725,7 @@ function hasLowValueTransactionalBoundary(keyword: string, brandName: string | u
   const firstToken = tokens[0]
   const lastToken = tokens[tokens.length - 1]
   return (
-    TRANSACTIONAL_MODIFIER_TOKENS.has(firstToken)
-    || TRANSACTIONAL_MODIFIER_TOKENS.has(lastToken)
+    TRANSACTIONAL_MODIFIER_TOKENS.has(firstToken) || TRANSACTIONAL_MODIFIER_TOKENS.has(lastToken)
   )
 }
 
@@ -701,8 +745,9 @@ function isLowSignalEvaluativeBrandQuery(params: {
   const normalized = normalizeGoogleAdsKeyword(params.keyword)
   if (!normalized) return false
 
-  const demandTokens = getDemandAnchorTokens(normalized, params.brandName)
-    .filter((token) => !TRANSACTIONAL_MODIFIER_TOKENS.has(token))
+  const demandTokens = getDemandAnchorTokens(normalized, params.brandName).filter(
+    (token) => !TRANSACTIONAL_MODIFIER_TOKENS.has(token)
+  )
   const hasExplicitQualifier = /\bfor\b/i.test(normalized)
 
   if (/\bgood\b/i.test(normalized) && !hasExplicitQualifier) return true
@@ -849,36 +894,40 @@ function trimLowValueTransactionalTailCandidates(params: {
     maxKeywords: params.maxKeywords,
     bucket: params.bucket,
   })
-  const minimumDemandFloor = params.creativeType === 'product_intent'
-    ? Math.min(
-      params.minProductDemandCount,
-      countProductIntentDemandCandidates(params.candidates, params.brandName)
-    )
-    : 0
+  const minimumDemandFloor =
+    params.creativeType === 'product_intent'
+      ? Math.min(
+          params.minProductDemandCount,
+          countProductIntentDemandCandidates(params.candidates, params.brandName)
+        )
+      : 0
   const canPreserveContract = (candidates: RankedCandidate[]): boolean => {
     if (candidates.length < minimumOutputFloor) return false
     if (
-      (params.creativeType === 'brand_intent' || params.creativeType === 'product_intent')
-      && params.requiredPureBrandCount > 0
-      && candidates.filter((candidate) => candidate.isPureBrand).length < params.requiredPureBrandCount
+      (params.creativeType === 'brand_intent' || params.creativeType === 'product_intent') &&
+      params.requiredPureBrandCount > 0 &&
+      candidates.filter((candidate) => candidate.isPureBrand).length < params.requiredPureBrandCount
     ) {
       return false
     }
     if (
-      params.creativeType === 'product_intent'
-      && minimumDemandFloor > 0
-      && countProductIntentDemandCandidates(candidates, params.brandName) < minimumDemandFloor
+      params.creativeType === 'product_intent' &&
+      minimumDemandFloor > 0 &&
+      countProductIntentDemandCandidates(candidates, params.brandName) < minimumDemandFloor
     ) {
       return false
     }
     return true
   }
 
-  const fullyPruned = params.candidates.filter((candidate) => !isLowValueTransactionalTailCandidate({
-    candidate,
-    creativeType: params.creativeType,
-    brandName: params.brandName,
-  }))
+  const fullyPruned = params.candidates.filter(
+    (candidate) =>
+      !isLowValueTransactionalTailCandidate({
+        candidate,
+        creativeType: params.creativeType,
+        brandName: params.brandName,
+      })
+  )
   if (fullyPruned.length < params.candidates.length && canPreserveContract(fullyPruned)) {
     return fullyPruned
   }
@@ -886,11 +935,13 @@ function trimLowValueTransactionalTailCandidates(params: {
   const trimmed = [...params.candidates]
   for (let index = trimmed.length - 1; index >= 0; index -= 1) {
     if (trimmed.length <= minimumOutputFloor) break
-    if (!isLowValueTransactionalTailCandidate({
-      candidate: trimmed[index],
-      creativeType: params.creativeType,
-      brandName: params.brandName,
-    })) {
+    if (
+      !isLowValueTransactionalTailCandidate({
+        candidate: trimmed[index],
+        creativeType: params.creativeType,
+        brandName: params.brandName,
+      })
+    ) {
       continue
     }
     const next = [...trimmed]
@@ -922,16 +973,17 @@ function hasModelIntentRescuePrefixNoise(keyword: string, brandName: string | un
   const prefixTokens = tokens.slice(0, firstMeaningfulIndex)
   const packTokenSet = new Set(['pack', 'count', 'pc', 'piece', 'pieces', 'set'])
   const storeTokenSet = new Set(['official', 'store', 'shop', 'shops', 'brand'])
-  const hasClaimLikePrefix = prefixTokens.some((token) =>
-    DEMAND_FALLBACK_NOISE_TOKENS.has(token)
-    && !packTokenSet.has(token)
-    && !storeTokenSet.has(token)
+  const hasClaimLikePrefix = prefixTokens.some(
+    (token) =>
+      DEMAND_FALLBACK_NOISE_TOKENS.has(token) &&
+      !packTokenSet.has(token) &&
+      !storeTokenSet.has(token)
   )
   if (hasClaimLikePrefix) return true
 
   const hasPackHeavyPrefix =
-    prefixTokens.length >= 3
-    && prefixTokens.some((token) => packTokenSet.has(token) || /^\d+$/.test(token))
+    prefixTokens.length >= 3 &&
+    prefixTokens.some((token) => packTokenSet.has(token) || /^\d+$/.test(token))
 
   return hasPackHeavyPrefix
 }
@@ -954,14 +1006,15 @@ function isModelIntentRescueKeyword(keyword: string, brandName: string | undefin
 
   const normalizedBrand = normalizeGoogleAdsKeyword(brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
-  const isBranded = pureBrandKeywords.length > 0
-    ? containsPureBrand(normalized, pureBrandKeywords)
-    : false
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
+  const isBranded =
+    pureBrandKeywords.length > 0 ? containsPureBrand(normalized, pureBrandKeywords) : false
 
-  return isBranded && meaningfulDemandTokens.length >= 1 && normalized.split(/\s+/).filter(Boolean).length >= 3
+  return (
+    isBranded &&
+    meaningfulDemandTokens.length >= 1 &&
+    normalized.split(/\s+/).filter(Boolean).length >= 3
+  )
 }
 
 function isAiGeneratedCandidate(candidate: {
@@ -990,8 +1043,13 @@ function isAiTemplateSensitiveCandidateSource(candidate: {
     if (normalizedSubtype.startsWith('AI_')) return true
     if (AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES.has(normalizedSubtype)) return true
   }
-  const normalizedSource = String(candidate.source || '').trim().toUpperCase()
-  return normalizedSource.startsWith('AI_') || AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES.has(normalizedSource)
+  const normalizedSource = String(candidate.source || '')
+    .trim()
+    .toUpperCase()
+  return (
+    normalizedSource.startsWith('AI_') ||
+    AI_TEMPLATE_SENSITIVE_SOURCE_SUBTYPES.has(normalizedSource)
+  )
 }
 
 function hasAiTemplateLexicalNoise(params: {
@@ -1009,32 +1067,50 @@ function hasAiTemplateLexicalNoise(params: {
   const spilloverHits = new Set(
     nonBrandTokens.filter((token) => AI_TEMPLATE_SPILLOVER_TOKENS.has(token))
   )
-  const nonTemplateDemandTokens = meaningfulDemandTokens.filter((token) =>
-    !AI_TEMPLATE_SPILLOVER_TOKENS.has(token)
-    && !AI_TEMPLATE_NOISE_ONLY_TOKENS.has(token)
+  const nonTemplateDemandTokens = meaningfulDemandTokens.filter(
+    (token) => !AI_TEMPLATE_SPILLOVER_TOKENS.has(token) && !AI_TEMPLATE_NOISE_ONLY_TOKENS.has(token)
   )
   const hasTemplatePhrase = AI_TEMPLATE_PHRASE_PATTERNS.some((pattern) => pattern.test(normalized))
   const hasSafeSpecSignal = AI_TEMPLATE_SAFE_SPEC_PATTERN.test(normalized)
   const hasStrongDemandTail = meaningfulDemandTokens.length >= 2
 
   if (hasSafeSpecSignal && hasStrongDemandTail) return false
-  if (hasTemplatePhrase && (meaningfulDemandTokens.length <= 1 || nonTemplateDemandTokens.length === 0)) {
+  if (
+    hasTemplatePhrase &&
+    (meaningfulDemandTokens.length <= 1 || nonTemplateDemandTokens.length === 0)
+  ) {
     return true
   }
   if (spilloverHits.size >= 2 && !hasStrongDemandTail) return true
-  if (params.creativeType === 'product_intent' && spilloverHits.size >= 1 && meaningfulDemandTokens.length === 0) {
+  if (
+    params.creativeType === 'product_intent' &&
+    spilloverHits.size >= 1 &&
+    meaningfulDemandTokens.length === 0
+  ) {
     return true
   }
 
   return false
 }
 
-function hasDerivedTag(candidate: {
-  derivedTags?: string[]
-}, expectedTag: string): boolean {
-  const normalizedTag = String(expectedTag || '').trim().toUpperCase()
+function hasDerivedTag(
+  candidate: {
+    derivedTags?: string[]
+  },
+  expectedTag: string
+): boolean {
+  const normalizedTag = String(expectedTag || '')
+    .trim()
+    .toUpperCase()
   if (!normalizedTag) return false
-  return Boolean(candidate.derivedTags?.some((tag) => String(tag || '').trim().toUpperCase() === normalizedTag))
+  return Boolean(
+    candidate.derivedTags?.some(
+      (tag) =>
+        String(tag || '')
+          .trim()
+          .toUpperCase() === normalizedTag
+    )
+  )
 }
 
 function getNormalizedCandidateSourceSubtype(candidate: {
@@ -1049,15 +1125,17 @@ function getNormalizedCandidateSourceSubtype(candidate: {
 }
 
 function isDerivedRescueSourceSubtype(sourceSubtype: string | undefined): boolean {
-  const normalized = String(sourceSubtype || '').trim().toUpperCase()
+  const normalized = String(sourceSubtype || '')
+    .trim()
+    .toUpperCase()
   return (
-    normalized === 'BUILDER_NON_EMPTY_RESCUE'
-    || normalized === 'DERIVED_RESCUE'
-    || normalized === 'MODEL_FAMILY_GUARD'
-    || normalized === 'PRODUCT_RELAX_BRANDED'
-    || normalized === 'BRAND_SEED'
-    || normalized === 'CONTRACT_RESCUE'
-    || normalized === 'FINAL_INVARIANT'
+    normalized === 'BUILDER_NON_EMPTY_RESCUE' ||
+    normalized === 'DERIVED_RESCUE' ||
+    normalized === 'MODEL_FAMILY_GUARD' ||
+    normalized === 'PRODUCT_RELAX_BRANDED' ||
+    normalized === 'BRAND_SEED' ||
+    normalized === 'CONTRACT_RESCUE' ||
+    normalized === 'FINAL_INVARIANT'
   )
 }
 
@@ -1075,30 +1153,35 @@ function isModelFamilyGuardCandidate(candidate: {
   sourceSubtype?: string
   derivedTags?: string[]
 }): boolean {
-  const normalizedSource = String(candidate.source || '').trim().toUpperCase()
+  const normalizedSource = String(candidate.source || '')
+    .trim()
+    .toUpperCase()
   const normalizedSubtype = getNormalizedCandidateSourceSubtype(candidate)
 
   return (
-    normalizedSource === 'MODEL_FAMILY_GUARD'
-    || normalizedSubtype === 'MODEL_FAMILY_GUARD'
-    || hasDerivedTag(candidate, 'MODEL_FAMILY_GUARD')
+    normalizedSource === 'MODEL_FAMILY_GUARD' ||
+    normalizedSubtype === 'MODEL_FAMILY_GUARD' ||
+    hasDerivedTag(candidate, 'MODEL_FAMILY_GUARD')
   )
 }
 
-function isTrustedModelIntentSoftFamilyCandidate(candidate: {
-  keyword: string
-  normalized?: string
-  isBrand?: boolean
-  isPureBrand: boolean
-  isPreferredBucket?: boolean
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-  derivedTags?: string[]
-  sourceRank?: number
-  searchVolume?: number
-  volumeUnavailableReason?: unknown
-}, brandName: string | undefined): boolean {
+function isTrustedModelIntentSoftFamilyCandidate(
+  candidate: {
+    keyword: string
+    normalized?: string
+    isBrand?: boolean
+    isPureBrand: boolean
+    isPreferredBucket?: boolean
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+    derivedTags?: string[]
+    sourceRank?: number
+    searchVolume?: number
+    volumeUnavailableReason?: unknown
+  },
+  brandName: string | undefined
+): boolean {
   const text = candidate.normalized || normalizeGoogleAdsKeyword(candidate.keyword) || ''
   if (!text) return false
   if (candidate.isPureBrand) return false
@@ -1112,37 +1195,35 @@ function isTrustedModelIntentSoftFamilyCandidate(candidate: {
   if (meaningfulDemandAnchorTokens.length === 0) return false
   if (softFamilyCoreTokens.length === 0) return false
 
-  const sourceRank = typeof candidate.sourceRank === 'number'
-    ? candidate.sourceRank
-    : normalizeSourceRank(candidate.source, candidate.sourceSubtype || candidate.sourceType)
+  const sourceRank =
+    typeof candidate.sourceRank === 'number'
+      ? candidate.sourceRank
+      : normalizeSourceRank(candidate.source, candidate.sourceSubtype || candidate.sourceType)
   const isBrand = Boolean(candidate.isBrand)
   const nonNumericDemandAnchorCount = softFamilyCoreTokens.length
   const wordCount = text.split(/\s+/).filter(Boolean).length
-  const hasFriendlySpecToken = /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb)?\b/i.test(text)
+  const hasFriendlySpecToken =
+    /\b\d+\s*(?:inch|in|oz|ml|l|pack|count|ct|pcs|piece|w|wh|mah|gb|tb)?\b/i.test(text)
   const hasGenericSpilloverSignal = MODEL_INTENT_GENERIC_SPILLOVER_PATTERN.test(text)
   const hasReliableSearchVolume = hasReliableSearchVolumeSignal({
     searchVolume: candidate.searchVolume,
     volumeUnavailableReason: candidate.volumeUnavailableReason,
   })
   const hasTrustedSource =
-    sourceRank >= 8
-    || (
-      sourceRank >= 7
-      && nonNumericDemandAnchorCount >= 2
-      && !hasGenericSpilloverSignal
-    )
+    sourceRank >= 8 ||
+    (sourceRank >= 7 && nonNumericDemandAnchorCount >= 2 && !hasGenericSpilloverSignal)
 
   const isModelFamilyGuard = isModelFamilyGuardCandidate(candidate)
   const allowHighVolumeBrandedSingleCoreDemand = Boolean(
-    isBrand
-    && !isModelFamilyGuard
-    && candidate.isPreferredBucket
-    && !isAiGeneratedCandidate(candidate)
-    && !hasGenericSpilloverSignal
-    && meaningfulDemandAnchorTokens.length === 1
-    && softFamilyCoreTokens.length === 1
-    && hasReliableSearchVolume
-    && Number(candidate.searchVolume || 0) >= MODEL_INTENT_BRANDED_SINGLE_CORE_SEARCH_VOLUME_FLOOR
+    isBrand &&
+    !isModelFamilyGuard &&
+    candidate.isPreferredBucket &&
+    !isAiGeneratedCandidate(candidate) &&
+    !hasGenericSpilloverSignal &&
+    meaningfulDemandAnchorTokens.length === 1 &&
+    softFamilyCoreTokens.length === 1 &&
+    hasReliableSearchVolume &&
+    Number(candidate.searchVolume || 0) >= MODEL_INTENT_BRANDED_SINGLE_CORE_SEARCH_VOLUME_FLOOR
   )
   if (isModelFamilyGuard) {
     // Guard fallback is allowed only when it carries enough real product-demand detail.
@@ -1156,9 +1237,9 @@ function isTrustedModelIntentSoftFamilyCandidate(candidate: {
   // Single-tail branded demand like "novilla mattress" is usually too generic for B.
   // Keep only when it comes from a trusted source or is a high-volume preferred demand term.
   if (
-    meaningfulDemandAnchorTokens.length === 1
-    && !hasTrustedSource
-    && !allowHighVolumeBrandedSingleCoreDemand
+    meaningfulDemandAnchorTokens.length === 1 &&
+    !hasTrustedSource &&
+    !allowHighVolumeBrandedSingleCoreDemand
   ) {
     return false
   }
@@ -1169,63 +1250,72 @@ function isTrustedModelIntentSoftFamilyCandidate(candidate: {
   return Boolean(isBrand || candidate.isPreferredBucket || hasTrustedSource)
 }
 
-function resolveModelIntentSoftFamilyIntentBoost(candidate: {
-  keyword: string
-  normalized?: string
-  isBrand: boolean
-  isPureBrand: boolean
-  isPreferredBucket?: boolean
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-  derivedTags?: string[]
-  sourceRank?: number
-  searchVolume?: number
-  volumeUnavailableReason?: unknown
-}, brandName: string | undefined): number {
+function resolveModelIntentSoftFamilyIntentBoost(
+  candidate: {
+    keyword: string
+    normalized?: string
+    isBrand: boolean
+    isPureBrand: boolean
+    isPreferredBucket?: boolean
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+    derivedTags?: string[]
+    sourceRank?: number
+    searchVolume?: number
+    volumeUnavailableReason?: unknown
+  },
+  brandName: string | undefined
+): number {
   if (!isTrustedModelIntentSoftFamilyCandidate(candidate, brandName)) return 0
   if (isModelFamilyGuardCandidate(candidate)) return 5
   if (candidate.isBrand) return 4
   return 3
 }
 
-function isCompactTrustedModelIntentSoftFamilyCandidate(candidate: {
-  keyword: string
-  normalized?: string
-  isBrand?: boolean
-  isPureBrand: boolean
-  isPreferredBucket?: boolean
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-  derivedTags?: string[]
-  sourceRank?: number
-  searchVolume?: number
-  wordCount?: number
-}, brandName: string | undefined): boolean {
+function isCompactTrustedModelIntentSoftFamilyCandidate(
+  candidate: {
+    keyword: string
+    normalized?: string
+    isBrand?: boolean
+    isPureBrand: boolean
+    isPreferredBucket?: boolean
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+    derivedTags?: string[]
+    sourceRank?: number
+    searchVolume?: number
+    wordCount?: number
+  },
+  brandName: string | undefined
+): boolean {
   const normalized = candidate.normalized || normalizeGoogleAdsKeyword(candidate.keyword) || ''
   if (!normalized) return false
   if (!isTrustedModelIntentSoftFamilyCandidate(candidate, brandName)) return false
   if (MODEL_INTENT_GENERIC_SPILLOVER_PATTERN.test(normalized)) return false
   if (hasRepeatedDemandAnchorToken(normalized, brandName)) return false
 
-  const demandTokenCount = getDemandAnchorTokens(normalized, brandName)
-    .filter((token) => !/^\d+$/.test(token))
-    .length
+  const demandTokenCount = getDemandAnchorTokens(normalized, brandName).filter(
+    (token) => !/^\d+$/.test(token)
+  ).length
   const wordCount = candidate.wordCount || normalized.split(/\s+/).filter(Boolean).length
 
   return demandTokenCount > 0 && demandTokenCount <= 4 && wordCount <= 6
 }
 
-function isModelIntentRescueBackstopCandidate(candidate: {
-  keyword: string
-  normalized?: string
-  isBrand?: boolean
-  isPureBrand: boolean
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-}, brandName: string | undefined): boolean {
+function isModelIntentRescueBackstopCandidate(
+  candidate: {
+    keyword: string
+    normalized?: string
+    isBrand?: boolean
+    isPureBrand: boolean
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+  },
+  brandName: string | undefined
+): boolean {
   const normalized = candidate.normalized || normalizeGoogleAdsKeyword(candidate.keyword) || ''
   if (!normalized) return false
   if (candidate.isPureBrand) return false
@@ -1253,33 +1343,36 @@ function buildPermutationKey(keyword: string): string {
   return [...tokens].sort().join(' ')
 }
 
-function isLowQualityCandidate(candidate: {
-  keyword: string
-  normalized: string
-  isBrand: boolean
-  isPureBrand: boolean
-  isPreferredBucket?: boolean
-  source?: string
-  sourceType?: string
-  sourceSubtype?: string
-  derivedTags?: string[]
-  sourceRank?: number
-  searchVolume?: number
-  volumeUnavailableReason?: unknown
-}, creativeType: CanonicalCreativeType | null, brandName: string | undefined, options?: {
-  targetLanguage?: string
-  allowModelIntentPreferredFallback?: boolean
-  allowModelIntentSoftFamilyFallback?: boolean
-  disableVolumeReliance?: boolean
-}): boolean {
+function isLowQualityCandidate(
+  candidate: {
+    keyword: string
+    normalized: string
+    isBrand: boolean
+    isPureBrand: boolean
+    isPreferredBucket?: boolean
+    source?: string
+    sourceType?: string
+    sourceSubtype?: string
+    derivedTags?: string[]
+    sourceRank?: number
+    searchVolume?: number
+    volumeUnavailableReason?: unknown
+  },
+  creativeType: CanonicalCreativeType | null,
+  brandName: string | undefined,
+  options?: {
+    targetLanguage?: string
+    allowModelIntentPreferredFallback?: boolean
+    allowModelIntentSoftFamilyFallback?: boolean
+    disableVolumeReliance?: boolean
+  }
+): boolean {
   const text = candidate.normalized
   if (!text) return true
   if (containsAsinLikeToken(text)) return true
   const normalizedBrand = normalizeGoogleAdsKeyword(brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
   const languageAnalysis = analyzeKeywordLanguageCompatibility({
     keyword: candidate.keyword,
     targetLanguage: options?.targetLanguage,
@@ -1288,9 +1381,8 @@ function isLowQualityCandidate(candidate: {
   if (languageAnalysis.hardReject) return true
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [text] })
   const demandAnchorTokens = getDemandAnchorTokens(text, brandName)
-  const modelIntentSoftFamilyCoreTokens = creativeType === 'model_intent'
-    ? getModelIntentSoftFamilyCoreTokens(text, brandName)
-    : []
+  const modelIntentSoftFamilyCoreTokens =
+    creativeType === 'model_intent' ? getModelIntentSoftFamilyCoreTokens(text, brandName) : []
   const hasDemand = demandAnchorTokens.length > 0
   const hasModelIntentSoftFamilyCore = modelIntentSoftFamilyCoreTokens.length > 0
   const hasSpecificModelIntentSoftFamilyCore = modelIntentSoftFamilyCoreTokens.length >= 2
@@ -1302,16 +1394,15 @@ function isLowQualityCandidate(candidate: {
   })
   const isAiGenerated = isAiGeneratedCandidate(candidate)
   const trustedSoftFamilyCandidate = isTrustedModelIntentSoftFamilyCandidate(candidate, brandName)
-  const rescueBackstopCandidate = creativeType === 'model_intent'
-    ? isModelIntentRescueBackstopCandidate(candidate, brandName)
-    : false
+  const rescueBackstopCandidate =
+    creativeType === 'model_intent'
+      ? isModelIntentRescueBackstopCandidate(candidate, brandName)
+      : false
   const allowSoftFamilyCandidate =
-    trustedSoftFamilyCandidate
-    && (
-      candidate.isBrand
-      || isModelFamilyGuardCandidate(candidate)
-      || Boolean(options?.allowModelIntentSoftFamilyFallback)
-    )
+    trustedSoftFamilyCandidate &&
+    (candidate.isBrand ||
+      isModelFamilyGuardCandidate(candidate) ||
+      Boolean(options?.allowModelIntentSoftFamilyFallback))
   if (PLATFORM_PATTERN.test(text)) return true
   if (COMMUNITY_PATTERN.test(text)) return true
   if (INFO_QUERY_PATTERN.test(text)) return true
@@ -1325,10 +1416,10 @@ function isLowQualityCandidate(candidate: {
   if (URL_FRAGMENT_PATTERN.test(text)) return true
   if (COMPONENT_NOISE_PATTERN.test(text)) return true
   if (
-    !candidate.isPureBrand
-    && !hasModelAnchor
-    && isAiTemplateSensitiveCandidateSource(candidate)
-    && hasAiTemplateLexicalNoise({
+    !candidate.isPureBrand &&
+    !hasModelAnchor &&
+    isAiTemplateSensitiveCandidateSource(candidate) &&
+    hasAiTemplateLexicalNoise({
       keyword: text,
       brandName,
       creativeType,
@@ -1336,53 +1427,67 @@ function isLowQualityCandidate(candidate: {
   ) {
     return true
   }
-  if (isLowSignalEvaluativeBrandQuery({
-    keyword: text,
-    creativeType,
-    isBrand: candidate.isBrand,
-    isPureBrand: candidate.isPureBrand,
-    hasModelAnchor,
-    brandName,
-  })) {
+  if (
+    isLowSignalEvaluativeBrandQuery({
+      keyword: text,
+      creativeType,
+      isBrand: candidate.isBrand,
+      isPureBrand: candidate.isPureBrand,
+      hasModelAnchor,
+      brandName,
+    })
+  ) {
     return true
   }
   if (!candidate.isPureBrand && hasRepeatedDemandAnchorToken(text, brandName)) return true
   if (
-    !candidate.isPureBrand
-    && candidate.isBrand
-    && !hasModelAnchor
-    && isBrandTrailingDemandPhrase(text, brandName)
+    !candidate.isPureBrand &&
+    candidate.isBrand &&
+    !hasModelAnchor &&
+    isBrandTrailingDemandPhrase(text, brandName)
   ) {
     return true
   }
   if (STORE_NAV_PATTERN.test(text) && !hasDemand) return true
   if (PROMO_PATTERN.test(text) && !hasDemand && !hasModelAnchor) return true
-  if (creativeType === 'brand_intent' && candidate.isBrand && !candidate.isPureBrand && !hasDemand && !hasModelAnchor) return true
-  if (creativeType === 'model_intent' && hasModelAnchor && hasTransactionalModifier && isAiGenerated) return true
-  if (creativeType === 'model_intent' && isModelIntentDimensionOrParamOnlyText(text, brandName)) return true
   if (
-    creativeType === 'product_intent'
-    && candidate.isBrand
-    && !candidate.isPureBrand
-    && !hasModelAnchor
-    && !trustedSoftFamilyCandidate
-    && (options?.disableVolumeReliance ? false : !hasReliableSearchVolume)
-    && demandAnchorTokens.filter((token) => !/^\d+$/.test(token)).length <= 1
+    creativeType === 'brand_intent' &&
+    candidate.isBrand &&
+    !candidate.isPureBrand &&
+    !hasDemand &&
+    !hasModelAnchor
+  )
+    return true
+  if (
+    creativeType === 'model_intent' &&
+    hasModelAnchor &&
+    hasTransactionalModifier &&
+    isAiGenerated
+  )
+    return true
+  if (creativeType === 'model_intent' && isModelIntentDimensionOrParamOnlyText(text, brandName))
+    return true
+  if (
+    creativeType === 'product_intent' &&
+    candidate.isBrand &&
+    !candidate.isPureBrand &&
+    !hasModelAnchor &&
+    !trustedSoftFamilyCandidate &&
+    (options?.disableVolumeReliance ? false : !hasReliableSearchVolume) &&
+    demandAnchorTokens.filter((token) => !/^\d+$/.test(token)).length <= 1
   ) {
     return true
   }
   if (
-    creativeType === 'model_intent'
-    && !hasModelAnchor
-    && !(
-      (
-        options?.allowModelIntentPreferredFallback
-        && candidate.isPreferredBucket
-        && hasSpecificModelIntentSoftFamilyCore
-        && !candidate.isPureBrand
-      )
-      || rescueBackstopCandidate
-      || (allowSoftFamilyCandidate && hasModelIntentSoftFamilyCore)
+    creativeType === 'model_intent' &&
+    !hasModelAnchor &&
+    !(
+      (options?.allowModelIntentPreferredFallback &&
+        candidate.isPreferredBucket &&
+        hasSpecificModelIntentSoftFamilyCore &&
+        !candidate.isPureBrand) ||
+      rescueBackstopCandidate ||
+      (allowSoftFamilyCandidate && hasModelIntentSoftFamilyCore)
     )
   ) {
     return true
@@ -1419,15 +1524,15 @@ function inferAnchorKinds(candidate: {
   return kinds.length > 0 ? kinds : undefined
 }
 
-function inferEvidenceStrength(candidate: RankedCandidate, creativeType: CanonicalCreativeType | null, _brandName: string | undefined): 'high' | 'medium' | 'low' {
+function inferEvidenceStrength(
+  candidate: RankedCandidate,
+  creativeType: CanonicalCreativeType | null,
+  _brandName: string | undefined
+): 'high' | 'medium' | 'low' {
   let score = 0
   const profile = candidate.evidenceProfile
   const hasSoftFamilySignal =
-    creativeType === 'model_intent'
-    && (
-      profile.isModelFamilyGuard
-      || profile.trustedSoftFamily
-    )
+    creativeType === 'model_intent' && (profile.isModelFamilyGuard || profile.trustedSoftFamily)
   if (profile.hasModelAnchor) score += 2
   if (profile.hasReliableSearchVolume) score += 0.5
   if (profile.sourceTrustScore >= 8) score += 2
@@ -1467,16 +1572,13 @@ function resolveModelIntentFinalMatchType(candidate: RankedCandidate): CreativeK
   const profile = candidate.evidenceProfile
   if (profile.hasModelAnchor) return 'EXACT'
 
-  const allowSoftFamilyPhrase = (
-    profile.compactTrustedSoftFamily
-    || (
-      profile.trustedSoftFamily
-      && profile.sourceTrustScore >= 5.5
-      && profile.selectedIntentScore >= 1.2
-      && profile.intentMargin >= 0
-      && !profile.isTransactional
-    )
-  )
+  const allowSoftFamilyPhrase =
+    profile.compactTrustedSoftFamily ||
+    (profile.trustedSoftFamily &&
+      profile.sourceTrustScore >= 5.5 &&
+      profile.selectedIntentScore >= 1.2 &&
+      profile.intentMargin >= 0 &&
+      !profile.isTransactional)
   if (allowSoftFamilyPhrase) return 'PHRASE'
   if (profile.hasDemand && candidate.isBrand && isDerivedRescueCandidate(candidate)) return 'PHRASE'
 
@@ -1485,11 +1587,10 @@ function resolveModelIntentFinalMatchType(candidate: RankedCandidate): CreativeK
 
 function resolveKeywordFallbackReason(candidate: RankedCandidate): string | undefined {
   const sourceKey = String(
-    candidate.sourceSubtype
-    || candidate.sourceType
-    || candidate.source
-    || ''
-  ).trim().toUpperCase()
+    candidate.sourceSubtype || candidate.sourceType || candidate.source || ''
+  )
+    .trim()
+    .toUpperCase()
 
   if (!sourceKey) return undefined
   if (sourceKey === 'MODEL_FAMILY_GUARD') return 'model_family_guard'
@@ -1544,11 +1645,12 @@ function buildKeywordContractRoleMap(params: {
 
   if (params.creativeType === 'model_intent') {
     markRequired(
-      selected.filter((candidate) =>
-        hasModelAnchorEvidence({ keywords: [candidate.keyword] })
-        || isModelFamilyGuardCandidate(candidate)
-        || isTrustedModelIntentSoftFamilyCandidate(candidate, params.brandName)
-        || isModelIntentRescueBackstopCandidate(candidate, params.brandName)
+      selected.filter(
+        (candidate) =>
+          hasModelAnchorEvidence({ keywords: [candidate.keyword] }) ||
+          isModelFamilyGuardCandidate(candidate) ||
+          isTrustedModelIntentSoftFamilyCandidate(candidate, params.brandName) ||
+          isModelIntentRescueBackstopCandidate(candidate, params.brandName)
       ),
       Math.min(3, selected.length)
     )
@@ -1572,7 +1674,10 @@ function buildKeywordContractRoleMap(params: {
   return roles
 }
 
-function buildAuditEvidence(candidate: RankedCandidate, brandName: string | undefined): string[] | undefined {
+function buildAuditEvidence(
+  candidate: RankedCandidate,
+  brandName: string | undefined
+): string[] | undefined {
   const fromInput = normalizeEvidence(candidate.evidence)
   if (fromInput) return fromInput
 
@@ -1611,7 +1716,10 @@ function inferKeywordConfidence(
   confidence += candidate.isBrand ? 0.05 : 0
   confidence += candidate.evidenceProfile.hasReliableSearchVolume ? 0.015 : 0
 
-  if (creativeType === 'model_intent' && hasModelAnchorEvidence({ keywords: [candidate.keyword] })) {
+  if (
+    creativeType === 'model_intent' &&
+    hasModelAnchorEvidence({ keywords: [candidate.keyword] })
+  ) {
     confidence += 0.1
   }
 
@@ -1676,8 +1784,9 @@ function computeIntentRank(params: {
     derivedTags,
     searchVolume,
   } = params
-  const creativeType = params.creativeType
-    || deriveCanonicalCreativeType({ creativeType: null, keywordBucket: bucket, keywords: [keyword] })
+  const creativeType =
+    params.creativeType ||
+    deriveCanonicalCreativeType({ creativeType: null, keywordBucket: bucket, keywords: [keyword] })
   const text = String(keyword || '')
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [text] })
   const hasDemand = hasDemandAnchor(text, brandName)
@@ -1698,18 +1807,21 @@ function computeIntentRank(params: {
     if (isBrand) score += 1
     if (!hasModelAnchor) score -= 8
     if (!hasModelAnchor) {
-      score += resolveModelIntentSoftFamilyIntentBoost({
-        keyword,
-        normalized: normalizeGoogleAdsKeyword(keyword) || undefined,
-        isBrand,
-        isPureBrand,
-        isPreferredBucket,
-        source,
-        sourceType,
-        sourceSubtype,
-        derivedTags,
-        searchVolume,
-      }, brandName)
+      score += resolveModelIntentSoftFamilyIntentBoost(
+        {
+          keyword,
+          normalized: normalizeGoogleAdsKeyword(keyword) || undefined,
+          isBrand,
+          isPureBrand,
+          isPreferredBucket,
+          source,
+          sourceType,
+          sourceSubtype,
+          derivedTags,
+          searchVolume,
+        },
+        brandName
+      )
     }
     return score
   }
@@ -1847,12 +1959,11 @@ function buildCandidateEvidenceProfile(params: {
   selectedIntentScoreOverride?: number
   disableVolumeReliance?: boolean
 }): CandidateEvidenceProfile {
-  const normalized = params.candidate.normalized || normalizeGoogleAdsKeyword(params.candidate.keyword) || ''
+  const normalized =
+    params.candidate.normalized || normalizeGoogleAdsKeyword(params.candidate.keyword) || ''
   const normalizedBrand = normalizeGoogleAdsKeyword(params.brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
   const demandAnchorTokens = getDemandAnchorTokens(normalized, params.brandName)
   const nonNumericDemandTokens = demandAnchorTokens.filter((token) => !/^\d+$/.test(token))
   const hasModelAnchor = hasModelAnchorEvidence({ keywords: [normalized] })
@@ -1861,20 +1972,25 @@ function buildCandidateEvidenceProfile(params: {
   const isTransactional = TRANSACTIONAL_MODIFIER_PATTERN.test(normalized)
   const isAiGenerated = isAiGeneratedCandidate(params.candidate)
   const isModelFamilyGuard = isModelFamilyGuardCandidate(params.candidate)
-  const trustedSoftFamily = isTrustedModelIntentSoftFamilyCandidate(params.candidate, params.brandName)
-  const compactTrustedSoftFamily = isCompactTrustedModelIntentSoftFamilyCandidate({
-    ...params.candidate,
-    wordCount: params.candidate.wordCount,
-  }, params.brandName)
+  const trustedSoftFamily = isTrustedModelIntentSoftFamilyCandidate(
+    params.candidate,
+    params.brandName
+  )
+  const compactTrustedSoftFamily = isCompactTrustedModelIntentSoftFamilyCandidate(
+    {
+      ...params.candidate,
+      wordCount: params.candidate.wordCount,
+    },
+    params.brandName
+  )
   const languageAnalysis = analyzeKeywordLanguageCompatibility({
     keyword: params.candidate.keyword,
     targetLanguage: params.targetLanguage,
     pureBrandKeywords,
   })
-  const selectedIntentScore = params.selectedIntentScoreOverride ?? resolveSelectedIntentScore(
-    params.intentScores,
-    params.creativeType
-  )
+  const selectedIntentScore =
+    params.selectedIntentScoreOverride ??
+    resolveSelectedIntentScore(params.intentScores, params.creativeType)
   const secondaryIntentScore = resolveSecondaryIntentScore(params.intentScores, params.creativeType)
   const intentMargin = selectedIntentScore - secondaryIntentScore
   const hasReliableSearchVolume = hasReliableSearchVolumeSignal({
@@ -1905,7 +2021,8 @@ function buildCandidateEvidenceProfile(params: {
     else if (trustedSoftFamily) preferredBucketSoftPrior += 0.45
     if (intentMargin >= 2) preferredBucketSoftPrior += 0.45
     else if (intentMargin >= 1) preferredBucketSoftPrior += 0.25
-    if (isTransactional && !hasModelAnchor && !hasSpecificDemandTail) preferredBucketSoftPrior -= 0.35
+    if (isTransactional && !hasModelAnchor && !hasSpecificDemandTail)
+      preferredBucketSoftPrior -= 0.35
     preferredBucketSoftPrior = clampNumber(preferredBucketSoftPrior, 0, 3.5)
   }
 
@@ -1968,20 +2085,23 @@ function buildRankedCandidate(params: {
   })
   let selectedIntentScore = resolveSelectedIntentScore(intentScores, params.creativeType)
   if (params.creativeType === 'model_intent' && params.allowModelIntentSoftFamilyFallback) {
-    selectedIntentScore += resolveModelIntentSoftFamilyIntentBoost({
-      keyword: params.keyword,
-      normalized: params.normalized,
-      isBrand: params.isBrand,
-      isPureBrand: params.isPureBrand,
-      isPreferredBucket: params.isPreferredBucket,
-      source: params.candidate.source,
-      sourceType: params.candidate.sourceType,
-      sourceSubtype: params.candidate.sourceSubtype,
-      derivedTags: params.candidate.derivedTags,
-      sourceRank,
-      searchVolume,
-      volumeUnavailableReason: params.candidate.volumeUnavailableReason,
-    }, params.brandName)
+    selectedIntentScore += resolveModelIntentSoftFamilyIntentBoost(
+      {
+        keyword: params.keyword,
+        normalized: params.normalized,
+        isBrand: params.isBrand,
+        isPureBrand: params.isPureBrand,
+        isPreferredBucket: params.isPreferredBucket,
+        source: params.candidate.source,
+        sourceType: params.candidate.sourceType,
+        sourceSubtype: params.candidate.sourceSubtype,
+        derivedTags: params.candidate.derivedTags,
+        sourceRank,
+        searchVolume,
+        volumeUnavailableReason: params.candidate.volumeUnavailableReason,
+      },
+      params.brandName
+    )
   }
 
   const evidenceProfile = buildCandidateEvidenceProfile({
@@ -2006,12 +2126,14 @@ function buildRankedCandidate(params: {
     disableVolumeReliance: params.disableVolumeReliance,
   })
 
-  const intentRank = Number((
-    evidenceProfile.selectedIntentScore
-    + evidenceProfile.preferredBucketSoftPrior * 0.35
-    + evidenceProfile.sourceTrustScore * 0.2
-    + Math.max(0, evidenceProfile.intentMargin) * 0.25
-  ).toFixed(4))
+  const intentRank = Number(
+    (
+      evidenceProfile.selectedIntentScore +
+      evidenceProfile.preferredBucketSoftPrior * 0.35 +
+      evidenceProfile.sourceTrustScore * 0.2 +
+      Math.max(0, evidenceProfile.intentMargin) * 0.25
+    ).toFixed(4)
+  )
 
   return {
     ...params.candidate,
@@ -2050,10 +2172,10 @@ function compareRankedCandidates(a: RankedCandidate, b: RankedCandidate): number
   const bHasModelAnchor = bProfile.hasModelAnchor
 
   if (
-    !aHasModelAnchor
-    && !bHasModelAnchor
-    && aModelFamilyGuard !== bModelFamilyGuard
-    && Math.abs(a.intentRank - b.intentRank) <= 1
+    !aHasModelAnchor &&
+    !bHasModelAnchor &&
+    aModelFamilyGuard !== bModelFamilyGuard &&
+    Math.abs(a.intentRank - b.intentRank) <= 1
   ) {
     return Number(bModelFamilyGuard) - Number(aModelFamilyGuard)
   }
@@ -2064,11 +2186,13 @@ function compareRankedCandidates(a: RankedCandidate, b: RankedCandidate): number
   if (Math.abs(aProfile.preferredBucketSoftPrior - bProfile.preferredBucketSoftPrior) >= 0.35) {
     return bProfile.preferredBucketSoftPrior - aProfile.preferredBucketSoftPrior
   }
-  if (aProfile.intentMargin !== bProfile.intentMargin) return bProfile.intentMargin - aProfile.intentMargin
+  if (aProfile.intentMargin !== bProfile.intentMargin)
+    return bProfile.intentMargin - aProfile.intentMargin
   if (aProfile.sourceTrustScore !== bProfile.sourceTrustScore) {
     return bProfile.sourceTrustScore - aProfile.sourceTrustScore
   }
-  if (aModelFamilyGuard !== bModelFamilyGuard) return Number(bModelFamilyGuard) - Number(aModelFamilyGuard)
+  if (aModelFamilyGuard !== bModelFamilyGuard)
+    return Number(bModelFamilyGuard) - Number(aModelFamilyGuard)
   if (a.isPureBrand !== b.isPureBrand) return Number(b.isPureBrand) - Number(a.isPureBrand)
   if (a.isBrand !== b.isBrand) return Number(b.isBrand) - Number(a.isBrand)
   if (a.sourceRank !== b.sourceRank) return b.sourceRank - a.sourceRank
@@ -2119,11 +2243,10 @@ function resolveSourceQuotaConfig(params: {
       const sourceClass = classifyCandidateSource(candidate)
       if (sourceClass.lowTrust) lowTrustCount += 1
 
-      const strongFit = (
-        profile.selectedIntentScore >= 2
-        || profile.intentMargin >= 1.5
-        || (profile.hasModelAnchor && profile.selectedIntentScore >= 1)
-      )
+      const strongFit =
+        profile.selectedIntentScore >= 2 ||
+        profile.intentMargin >= 1.5 ||
+        (profile.hasModelAnchor && profile.selectedIntentScore >= 1)
       const trusted = !sourceClass.lowTrust && profile.sourceTrustScore >= 6
       if (strongFit && trusted) trustedStrongFitCount += 1
     }
@@ -2166,9 +2289,21 @@ function resolveSourceQuotaConfig(params: {
     }
   }
 
-  combinedRatio = clampNumber(combinedRatio, params.fallbackMode ? 0.12 : 0.05, params.fallbackMode ? 0.5 : 0.35)
-  aiRatio = clampNumber(aiRatio, params.fallbackMode ? 0.08 : 0.03, params.fallbackMode ? 0.4 : 0.25)
-  aiLlmRawRatio = clampNumber(aiLlmRawRatio, params.fallbackMode ? 0.05 : 0.02, params.fallbackMode ? 0.3 : 0.18)
+  combinedRatio = clampNumber(
+    combinedRatio,
+    params.fallbackMode ? 0.12 : 0.05,
+    params.fallbackMode ? 0.5 : 0.35
+  )
+  aiRatio = clampNumber(
+    aiRatio,
+    params.fallbackMode ? 0.08 : 0.03,
+    params.fallbackMode ? 0.4 : 0.25
+  )
+  aiLlmRawRatio = clampNumber(
+    aiLlmRawRatio,
+    params.fallbackMode ? 0.05 : 0.02,
+    params.fallbackMode ? 0.3 : 0.18
+  )
 
   const combinedLowTrustCap = Math.max(0, Math.floor(safeMax * combinedRatio))
   const aiCap = Math.min(combinedLowTrustCap, Math.max(0, Math.floor(safeMax * aiRatio)))
@@ -2196,44 +2331,51 @@ function resolvePreferredBucketRequiredCount(params: {
   else if (params.creativeType === 'model_intent') baseRatio = 0.2
   else if (params.creativeType === 'product_intent') baseRatio = 0.26
 
-  const strongDensity = params.strongPreferredAvailableCount / Math.max(1, params.totalAvailableCount)
+  const strongDensity =
+    params.strongPreferredAvailableCount / Math.max(1, params.totalAvailableCount)
   const strongSupply = params.strongPreferredAvailableCount / Math.max(1, params.maxKeywords)
-  const adaptiveRatio = clampNumber(baseRatio + strongDensity * 0.12 + strongSupply * 0.08, 0.08, 0.45)
+  const adaptiveRatio = clampNumber(
+    baseRatio + strongDensity * 0.12 + strongSupply * 0.08,
+    0.08,
+    0.45
+  )
 
   let floor = 1
   if (params.maxKeywords >= 12 && params.creativeType !== 'model_intent') floor = 2
   if (params.maxKeywords >= 20 && strongDensity >= 0.35) floor = 3
 
   const target = Math.ceil(params.maxKeywords * adaptiveRatio)
-  return Math.min(
-    params.maxKeywords,
-    params.strongPreferredAvailableCount,
-    Math.max(floor, target)
-  )
+  return Math.min(params.maxKeywords, params.strongPreferredAvailableCount, Math.max(floor, target))
 }
 
 function isAiSubtype(sourceSubtype: string | undefined): boolean {
-  const normalized = String(sourceSubtype || '').trim().toUpperCase()
+  const normalized = String(sourceSubtype || '')
+    .trim()
+    .toUpperCase()
   if (!normalized) return false
   if (normalized.startsWith('AI_')) return true
   return normalized === 'KEYWORD_EXPANSION'
 }
 
 function isAiLlmRawSubtype(sourceSubtype: string | undefined): boolean {
-  const normalized = String(sourceSubtype || '').trim().toUpperCase()
+  const normalized = String(sourceSubtype || '')
+    .trim()
+    .toUpperCase()
   return (
-    normalized === 'AI_LLM_RAW'
-    || normalized === 'AI_GENERATED'
-    || normalized === 'AI_FALLBACK_PLACEHOLDER'
+    normalized === 'AI_LLM_RAW' ||
+    normalized === 'AI_GENERATED' ||
+    normalized === 'AI_FALLBACK_PLACEHOLDER'
   )
 }
 
 function isScoringSubtype(sourceSubtype: string | undefined): boolean {
-  const normalized = String(sourceSubtype || '').trim().toUpperCase()
+  const normalized = String(sourceSubtype || '')
+    .trim()
+    .toUpperCase()
   return (
-    normalized === 'SCORING_SUGGESTION'
-    || normalized === 'GAP_INDUSTRY_BRANDED'
-    || normalized === 'BRANDED_INDUSTRY_TERM'
+    normalized === 'SCORING_SUGGESTION' ||
+    normalized === 'GAP_INDUSTRY_BRANDED' ||
+    normalized === 'BRANDED_INDUSTRY_TERM'
   )
 }
 
@@ -2271,7 +2413,9 @@ function classifySourceGovernance(candidate: RankedCandidate): {
     source: candidate.source,
     sourceType: candidate.sourceSubtype || candidate.sourceType,
   })
-  const tier = getKeywordSourcePriority(sourceSubtype || candidate.sourceType || candidate.source).tier
+  const tier = getKeywordSourcePriority(
+    sourceSubtype || candidate.sourceType || candidate.source
+  ).tier
 
   if (tier === 'T0' || tier === 'T1' || tier === 'T2' || tier === 'DERIVED_TRUSTED') {
     return {
@@ -2330,9 +2474,9 @@ function shouldAllowDeferredRefillCandidate(params: {
     if (profile.hasModelAnchor && profile.sourceTrustScore >= 6.5) return true
     if (profile.compactTrustedSoftFamily && profile.sourceTrustScore >= 6) return true
     if (
-      profile.hasSpecificDemandTail
-      && profile.sourceTrustScore >= (params.fallbackMode ? 6.4 : 7)
-      && !profile.isAiGenerated
+      profile.hasSpecificDemandTail &&
+      profile.sourceTrustScore >= (params.fallbackMode ? 6.4 : 7) &&
+      !profile.isAiGenerated
     ) {
       return true
     }
@@ -2347,13 +2491,16 @@ function shouldAllowDeferredRefillCandidate(params: {
 
   if (params.creativeType === 'product_intent') {
     if (params.classification.aiLlmRaw && !params.fallbackMode) return false
-    if (profile.hasSpecificDemandTail && profile.sourceTrustScore >= (params.fallbackMode ? 5.2 : 6)) {
+    if (
+      profile.hasSpecificDemandTail &&
+      profile.sourceTrustScore >= (params.fallbackMode ? 5.2 : 6)
+    ) {
       return true
     }
     if (
-      profile.selectedIntentScore >= 2.5
-      && profile.sourceTrustScore >= (params.fallbackMode ? 5.5 : 6.2)
-      && !profile.isAiGenerated
+      profile.selectedIntentScore >= 2.5 &&
+      profile.sourceTrustScore >= (params.fallbackMode ? 5.5 : 6.2) &&
+      !profile.isAiGenerated
     ) {
       return true
     }
@@ -2376,9 +2523,7 @@ function applySourceQuotaOnSelectedCandidates(input: {
   audit: CreativeKeywordSourceQuotaAudit
 } {
   const targetCount = Math.min(input.maxKeywords, input.selectedList.length)
-  const quotaSizingMaxKeywords = targetCount > 0
-    ? targetCount
-    : input.maxKeywords
+  const quotaSizingMaxKeywords = targetCount > 0 ? targetCount : input.maxKeywords
   const quota = resolveSourceQuotaConfig({
     maxKeywords: quotaSizingMaxKeywords,
     fallbackMode: input.fallbackMode,
@@ -2431,11 +2576,14 @@ function applySourceQuotaOnSelectedCandidates(input: {
   let blockedAiCount = 0
   let blockedAiLlmRawCount = 0
 
-  const pushAccepted = (candidate: RankedCandidate, classification: {
-    lowTrust: boolean
-    ai: boolean
-    aiLlmRaw: boolean
-  }): boolean => {
+  const pushAccepted = (
+    candidate: RankedCandidate,
+    classification: {
+      lowTrust: boolean
+      ai: boolean
+      aiLlmRaw: boolean
+    }
+  ): boolean => {
     if (acceptedNormalized.has(candidate.normalized)) return false
     accepted.push(candidate)
     acceptedNormalized.add(candidate.normalized)
@@ -2480,15 +2628,12 @@ function applySourceQuotaOnSelectedCandidates(input: {
     const classification = classifyCandidateSource(candidate)
 
     const shouldReserveBrand = candidate.isBrand && acceptedBrandCount < input.requiredBrandCount
-    const shouldReservePureBrand = (
-      candidate.isPureBrand
-      && acceptedPureBrandCount < input.requiredPureBrandCount
-    )
-    const shouldReservePreferredBucket = (
-      candidate.isPreferredBucket
-      && isStrongPreferredBucketCandidate(candidate)
-      && acceptedStrongPreferredBucketCount < input.requiredPreferredBucketCount
-    )
+    const shouldReservePureBrand =
+      candidate.isPureBrand && acceptedPureBrandCount < input.requiredPureBrandCount
+    const shouldReservePreferredBucket =
+      candidate.isPreferredBucket &&
+      isStrongPreferredBucketCandidate(candidate) &&
+      acceptedStrongPreferredBucketCount < input.requiredPreferredBucketCount
     if (shouldReserveBrand || shouldReservePureBrand || shouldReservePreferredBucket) {
       pushAccepted(candidate, classification)
       continue
@@ -2520,12 +2665,14 @@ function applySourceQuotaOnSelectedCandidates(input: {
     for (const candidate of deferred) {
       if (accepted.length >= targetCount) break
       const classification = classifyCandidateSource(candidate)
-      if (!shouldAllowDeferredRefillCandidate({
-        candidate,
-        classification,
-        creativeType: input.creativeType,
-        fallbackMode: input.fallbackMode,
-      })) {
+      if (
+        !shouldAllowDeferredRefillCandidate({
+          candidate,
+          classification,
+          creativeType: input.creativeType,
+          fallbackMode: input.fallbackMode,
+        })
+      ) {
         continue
       }
       deferredRefillCount += 1
@@ -2610,9 +2757,10 @@ function enforceModelIntentAiCapOnFinalOutput(params: {
   if (outputCandidates.length === 0) return outputCandidates
 
   const aiCap = Math.max(0, Math.floor(Number(params.quota.aiCap || 0)))
-  let aiCount = outputCandidates.reduce((count, candidate) => (
-    classifyCandidateSource(candidate).ai ? count + 1 : count
-  ), 0)
+  let aiCount = outputCandidates.reduce(
+    (count, candidate) => (classifyCandidateSource(candidate).ai ? count + 1 : count),
+    0
+  )
   if (aiCount <= aiCap) return outputCandidates
 
   const selectedNormalized = new Set(outputCandidates.map((candidate) => candidate.normalized))
@@ -2628,12 +2776,10 @@ function enforceModelIntentAiCapOnFinalOutput(params: {
       if (!candidate.isPreferredBucket) return false
       const profile = candidate.evidenceProfile
       return (
-        profile.sourceTrustScore >= 5.5
-        && (
-          profile.hasSpecificDemandTail
-          || profile.compactTrustedSoftFamily
-          || profile.trustedSoftFamily
-        )
+        profile.sourceTrustScore >= 5.5 &&
+        (profile.hasSpecificDemandTail ||
+          profile.compactTrustedSoftFamily ||
+          profile.trustedSoftFamily)
       )
     })
 
@@ -2718,23 +2864,22 @@ function repairProductIntentFrontload(params: {
   brandName: string | undefined
 }): RankedCandidate[] {
   const working = [...params.selected]
-  const available = params.candidatePool.filter((candidate) =>
-    !working.some((item) => item.normalized === candidate.normalized)
+  const available = params.candidatePool.filter(
+    (candidate) => !working.some((item) => item.normalized === candidate.normalized)
   )
 
-  const takeReplacement = (predicate: (candidate: RankedCandidate) => boolean): RankedCandidate | null => {
+  const takeReplacement = (
+    predicate: (candidate: RankedCandidate) => boolean
+  ): RankedCandidate | null => {
     const index = available.findIndex(predicate)
     if (index < 0) return null
     const [candidate] = available.splice(index, 1)
     return candidate || null
   }
 
-  if (
-    working[0]
-    && isAdjacentGenericProductCandidate(working[0], params.brandName)
-  ) {
-    const top1Replacement = takeReplacement((candidate) =>
-      !isAdjacentGenericProductCandidate(candidate, params.brandName)
+  if (working[0] && isAdjacentGenericProductCandidate(working[0], params.brandName)) {
+    const top1Replacement = takeReplacement(
+      (candidate) => !isAdjacentGenericProductCandidate(candidate, params.brandName)
     )
     if (top1Replacement) working.splice(0, 1, top1Replacement)
   }
@@ -2742,8 +2887,7 @@ function repairProductIntentFrontload(params: {
   const maxTop3 = Math.min(3, working.length)
   let top3DirectCount = working
     .slice(0, maxTop3)
-    .filter((candidate) => isDirectProductAnchorCandidate(candidate, params.brandName))
-    .length
+    .filter((candidate) => isDirectProductAnchorCandidate(candidate, params.brandName)).length
   const requiredTop3Direct = Math.min(2, maxTop3)
 
   while (top3DirectCount < requiredTop3Direct) {
@@ -2766,11 +2910,10 @@ function repairProductIntentFrontload(params: {
 
   let adjacentTop3Count = working
     .slice(0, maxTop3)
-    .filter((candidate) => isAdjacentGenericProductCandidate(candidate, params.brandName))
-    .length
+    .filter((candidate) => isAdjacentGenericProductCandidate(candidate, params.brandName)).length
   while (adjacentTop3Count > 1) {
-    const replacement = takeReplacement((candidate) =>
-      !isAdjacentGenericProductCandidate(candidate, params.brandName)
+    const replacement = takeReplacement(
+      (candidate) => !isAdjacentGenericProductCandidate(candidate, params.brandName)
     )
     if (!replacement) break
 
@@ -2796,8 +2939,8 @@ function repairGovernanceFrontSlots(params: {
   brandName: string | undefined
 }): RankedCandidate[] {
   const working = [...params.selected]
-  const available = params.candidatePool.filter((candidate) =>
-    !working.some((item) => item.normalized === candidate.normalized)
+  const available = params.candidatePool.filter(
+    (candidate) => !working.some((item) => item.normalized === candidate.normalized)
   )
 
   const topSlotPredicates = [
@@ -2808,7 +2951,9 @@ function repairGovernanceFrontSlots(params: {
   for (let slot = 0; slot < Math.min(2, working.length); slot += 1) {
     if (topSlotPredicates[slot]?.(working[slot])) continue
 
-    const replacementIndex = available.findIndex((candidate) => topSlotPredicates[slot]?.(candidate))
+    const replacementIndex = available.findIndex((candidate) =>
+      topSlotPredicates[slot]?.(candidate)
+    )
     if (replacementIndex < 0) continue
 
     const [replacement] = available.splice(replacementIndex, 1)
@@ -2838,8 +2983,8 @@ function isRescueCapExemptCandidate(
 
   if (creativeType === 'product_intent') {
     return (
-      isDirectProductAnchorCandidate(candidate, brandName)
-      || isProductIntentDemandCandidate(candidate, brandName)
+      isDirectProductAnchorCandidate(candidate, brandName) ||
+      isProductIntentDemandCandidate(candidate, brandName)
     )
   }
 
@@ -2859,8 +3004,8 @@ function isModelIntentFinalEligibleCandidate(params: {
   if (isModelIntentQualifiedCandidate(params.candidate, params.brandName)) return true
 
   if (
-    (params.preserveOutput || params.allowPreferredBucketFallback)
-    && isModelIntentPreferredFallbackCandidate(params.candidate, params.brandName)
+    (params.preserveOutput || params.allowPreferredBucketFallback) &&
+    isModelIntentPreferredFallbackCandidate(params.candidate, params.brandName)
   ) {
     return true
   }
@@ -2881,24 +3026,23 @@ function enforceFinalOutputInvariants(params: {
 }): RankedCandidate[] {
   const preservedOutput = dedupeRankedCandidatePool(params.outputCandidates)
   const preservedOutputSet = new Set(preservedOutput.map((candidate) => candidate.normalized))
-  const combinedPool = dedupeRankedCandidatePool([
-    ...preservedOutput,
-    ...params.rankedCandidates,
-  ])
-  const strictModelIntentQualifiedCount = params.creativeType === 'model_intent'
-    ? combinedPool.filter((candidate) => isModelIntentQualifiedCandidate(candidate, params.brandName)).length
-    : 0
-  const allowPreferredBucketFallback = (
+  const combinedPool = dedupeRankedCandidatePool([...preservedOutput, ...params.rankedCandidates])
+  const strictModelIntentQualifiedCount =
     params.creativeType === 'model_intent'
-    && strictModelIntentQualifiedCount < Math.min(params.maxKeywords, combinedPool.length)
-  )
+      ? combinedPool.filter((candidate) =>
+          isModelIntentQualifiedCandidate(candidate, params.brandName)
+        ).length
+      : 0
+  const allowPreferredBucketFallback =
+    params.creativeType === 'model_intent' &&
+    strictModelIntentQualifiedCount < Math.min(params.maxKeywords, combinedPool.length)
 
   const isValidFinalCandidate = (candidate: RankedCandidate, preserveOutput: boolean): boolean => {
     if (containsAsinLikeToken(candidate.keyword)) return false
     if (candidate.evidenceProfile.unauthorizedContentRatio > 0) return false
     if (
-      params.creativeType === 'model_intent'
-      && !isModelIntentFinalEligibleCandidate({
+      params.creativeType === 'model_intent' &&
+      !isModelIntentFinalEligibleCandidate({
         candidate,
         brandName: params.brandName,
         preserveOutput,
@@ -2911,7 +3055,9 @@ function enforceFinalOutputInvariants(params: {
   }
 
   const sortedPool = combinedPool
-    .filter((candidate) => isValidFinalCandidate(candidate, preservedOutputSet.has(candidate.normalized)))
+    .filter((candidate) =>
+      isValidFinalCandidate(candidate, preservedOutputSet.has(candidate.normalized))
+    )
     .sort((left, right) =>
       compareFinalOutputCandidates(left, right, {
         creativeType: params.creativeType,
@@ -2937,19 +3083,19 @@ function enforceFinalOutputInvariants(params: {
   if (effectivePool.length === 0) return []
 
   const desiredCount = Math.min(params.maxKeywords, effectivePool.length)
-  const rescueCap = desiredCount < 4
-    ? Math.min(1, desiredCount)
-    : Math.max(1, Math.floor(desiredCount * 0.3))
+  const rescueCap =
+    desiredCount < 4 ? Math.min(1, desiredCount) : Math.max(1, Math.floor(desiredCount * 0.3))
   const syntheticCap = params.fallbackMode ? Math.min(1, desiredCount) : 0
 
   const selected: RankedCandidate[] = [...effectivePreservedOutput]
   const selectedKeys = new Set(selected.map((candidate) => candidate.normalized))
-  let selectedRescueCount = selected.filter((candidate) =>
-    classifySourceGovernance(candidate).bucket === 'rescue'
-    && !isRescueCapExemptCandidate(candidate, params.creativeType, params.brandName)
+  let selectedRescueCount = selected.filter(
+    (candidate) =>
+      classifySourceGovernance(candidate).bucket === 'rescue' &&
+      !isRescueCapExemptCandidate(candidate, params.creativeType, params.brandName)
   ).length
-  let selectedSyntheticCount = selected.filter((candidate) =>
-    classifySourceGovernance(candidate).bucket === 'synthetic'
+  let selectedSyntheticCount = selected.filter(
+    (candidate) => classifySourceGovernance(candidate).bucket === 'synthetic'
   ).length
 
   const canSelect = (candidate: RankedCandidate, relaxedTopSlot: boolean): boolean => {
@@ -2959,9 +3105,9 @@ function enforceFinalOutputInvariants(params: {
       if (selected.length === 1 && !governance.top2Eligible) return false
     }
     if (
-      governance.bucket === 'rescue'
-      && !isRescueCapExemptCandidate(candidate, params.creativeType, params.brandName)
-      && selectedRescueCount >= rescueCap
+      governance.bucket === 'rescue' &&
+      !isRescueCapExemptCandidate(candidate, params.creativeType, params.brandName) &&
+      selectedRescueCount >= rescueCap
     ) {
       return false
     }
@@ -2974,15 +3120,17 @@ function enforceFinalOutputInvariants(params: {
     selectedKeys.add(candidate.normalized)
     const governance = classifySourceGovernance(candidate)
     if (
-      governance.bucket === 'rescue'
-      && !isRescueCapExemptCandidate(candidate, params.creativeType, params.brandName)
+      governance.bucket === 'rescue' &&
+      !isRescueCapExemptCandidate(candidate, params.creativeType, params.brandName)
     ) {
       selectedRescueCount += 1
     }
     if (governance.bucket === 'synthetic') selectedSyntheticCount += 1
   }
 
-  const supplementalPool = effectivePool.filter((candidate) => !selectedKeys.has(candidate.normalized))
+  const supplementalPool = effectivePool.filter(
+    (candidate) => !selectedKeys.has(candidate.normalized)
+  )
   if (selected.length < desiredCount) {
     for (const relaxedTopSlot of [false, true]) {
       for (const candidate of supplementalPool) {
@@ -3018,9 +3166,9 @@ function enforceFinalOutputInvariants(params: {
     const currentCount = next.filter(matcher).length
     if (currentCount >= targetCount) return next
 
-    const replacements = pool.filter((candidate) =>
-      matcher(candidate)
-      && !next.some((item) => item.normalized === candidate.normalized)
+    const replacements = pool.filter(
+      (candidate) =>
+        matcher(candidate) && !next.some((item) => item.normalized === candidate.normalized)
     )
     let missing = targetCount - currentCount
     for (const replacement of replacements) {
@@ -3044,7 +3192,10 @@ function enforceFinalOutputInvariants(params: {
     trimmedSelected = enforceCoverageFloor(
       trimmedSelected,
       effectivePool,
-      Math.min(params.requiredPureBrandCount, trimmedSelected.length || params.requiredPureBrandCount),
+      Math.min(
+        params.requiredPureBrandCount,
+        trimmedSelected.length || params.requiredPureBrandCount
+      ),
       (candidate) => candidate.isPureBrand,
       (candidate) => !candidate.isPureBrand
     )
@@ -3053,7 +3204,10 @@ function enforceFinalOutputInvariants(params: {
     trimmedSelected = enforceCoverageFloor(
       trimmedSelected,
       effectivePool,
-      Math.min(params.requiredBrandCount, Math.max(trimmedSelected.length, params.requiredBrandCount)),
+      Math.min(
+        params.requiredBrandCount,
+        Math.max(trimmedSelected.length, params.requiredBrandCount)
+      ),
       (candidate) => candidate.isBrand,
       (candidate) => !candidate.isBrand
     )
@@ -3081,18 +3235,20 @@ function rebalanceModelIntentCandidates(input: {
 
   const allRankedCandidates = Array.isArray(input.rankedCandidates) ? input.rankedCandidates : []
   const compactSoftFamilyUniverse = allRankedCandidates
-    .filter((candidate) =>
-      !hasModelAnchorEvidence({ keywords: [candidate.keyword] })
-      && isCompactTrustedModelIntentSoftFamilyCandidate(candidate, input.brandName)
+    .filter(
+      (candidate) =>
+        !hasModelAnchorEvidence({ keywords: [candidate.keyword] }) &&
+        isCompactTrustedModelIntentSoftFamilyCandidate(candidate, input.brandName)
     )
     .sort(compareRankedCandidates)
   const desiredSoftFamilyCount = Math.min(
     compactSoftFamilyUniverse.length,
     Math.max(2, Math.min(6, Math.floor(input.maxKeywords * 0.2)))
   )
-  const selectedCompactSoftFamilyCount = selectedList.filter((candidate) =>
-    !hasModelAnchorEvidence({ keywords: [candidate.keyword] })
-    && isCompactTrustedModelIntentSoftFamilyCandidate(candidate, input.brandName)
+  const selectedCompactSoftFamilyCount = selectedList.filter(
+    (candidate) =>
+      !hasModelAnchorEvidence({ keywords: [candidate.keyword] }) &&
+      isCompactTrustedModelIntentSoftFamilyCandidate(candidate, input.brandName)
   ).length
 
   let workingSelectedList = selectedList
@@ -3149,15 +3305,14 @@ function rebalanceModelIntentCandidates(input: {
   const maxNonModelCount = Math.max(6, Math.floor(input.maxKeywords * 0.2))
   if (nonModelCandidates.length <= maxNonModelCount) return workingSelectedList
   if (compactSoftFamilyCandidates.length === 0) {
-    return [
-      ...modelCandidates,
-      ...nonModelCandidates.slice(0, maxNonModelCount),
-    ]
+    return [...modelCandidates, ...nonModelCandidates.slice(0, maxNonModelCount)]
       .sort(compareRankedCandidates)
       .slice(0, input.maxKeywords)
   }
 
-  const compactSoftFamilySet = new Set(compactSoftFamilyCandidates.map((candidate) => candidate.normalized))
+  const compactSoftFamilySet = new Set(
+    compactSoftFamilyCandidates.map((candidate) => candidate.normalized)
+  )
   const genericNonModelCandidates = nonModelCandidates
     .filter((candidate) => !compactSoftFamilySet.has(candidate.normalized))
     .sort(compareRankedCandidates)
@@ -3173,9 +3328,10 @@ function rebalanceModelIntentCandidates(input: {
   const prioritizedSoftFamily = compactSoftFamilyCandidates.slice(0, softFamilyReserve)
   const remainingSoftFamily = compactSoftFamilyCandidates.slice(prioritizedSoftFamily.length)
   const remainingBudget = Math.max(0, maxNonModelCount - prioritizedSoftFamily.length)
-  const genericBudget = compactSoftFamilyCandidates.length > softFamilyReserve
-    ? Math.min(remainingBudget, genericBudgetCap)
-    : remainingBudget
+  const genericBudget =
+    compactSoftFamilyCandidates.length > softFamilyReserve
+      ? Math.min(remainingBudget, genericBudgetCap)
+      : remainingBudget
   const selectedGeneric = genericNonModelCandidates.slice(0, genericBudget)
   const leftoverBudget = Math.max(
     0,
@@ -3250,14 +3406,55 @@ function resolveCreativeKeywordContractDefaults(params: {
 }
 
 const MODEL_INTENT_PARAM_TOKENS = new Set([
-  'battery', 'batteries', 'bundle', 'bundles', 'color', 'colors', 'edition', 'gen', 'generation',
-  'height', 'inch', 'inches', 'length', 'pack', 'packs', 'piece', 'pieces', 'set', 'sets',
-  'size', 'sizes', 'version', 'weight', 'width', 'wh', 'mah', 'oz', 'lb', 'lbs', 'ml', 'l',
-  'cm', 'mm', 'm', 'ft', 'qt', 'pcs', 'pc', 'full', 'queen', 'king', 'twin', 'california'
+  'battery',
+  'batteries',
+  'bundle',
+  'bundles',
+  'color',
+  'colors',
+  'edition',
+  'gen',
+  'generation',
+  'height',
+  'inch',
+  'inches',
+  'length',
+  'pack',
+  'packs',
+  'piece',
+  'pieces',
+  'set',
+  'sets',
+  'size',
+  'sizes',
+  'version',
+  'weight',
+  'width',
+  'wh',
+  'mah',
+  'oz',
+  'lb',
+  'lbs',
+  'ml',
+  'l',
+  'cm',
+  'mm',
+  'm',
+  'ft',
+  'qt',
+  'pcs',
+  'pc',
+  'full',
+  'queen',
+  'king',
+  'twin',
+  'california',
 ])
 
 function isDimensionOrParamLikeToken(token: string): boolean {
-  const normalized = String(token || '').trim().toLowerCase()
+  const normalized = String(token || '')
+    .trim()
+    .toLowerCase()
   if (!normalized) return true
   if (/^\d+$/.test(normalized)) return true
   if (/^\d+(?:[a-z]{1,4})$/i.test(normalized)) return true
@@ -3312,12 +3509,12 @@ function isDirectProductAnchorCandidate(
   if (profile.hasSpecificDemandTail) return true
 
   return (
-    !candidate.isBrand
-    && profile.hasDemand
-    && profile.sourceTrustScore >= 6.4
-    && profile.selectedIntentScore >= 1.5
-    && !profile.languageSoftDemote
-    && hasDemandAnchor(candidate.keyword, brandName)
+    !candidate.isBrand &&
+    profile.hasDemand &&
+    profile.sourceTrustScore >= 6.4 &&
+    profile.selectedIntentScore >= 1.5 &&
+    !profile.languageSoftDemote &&
+    hasDemandAnchor(candidate.keyword, brandName)
   )
 }
 
@@ -3331,10 +3528,7 @@ function isAdjacentGenericProductCandidate(
   if (!profile.hasDemand) return false
   if (isDirectProductAnchorCandidate(candidate, brandName)) return false
 
-  return (
-    !candidate.isBrand
-    || (profile.selectedIntentScore < 2 && profile.sourceTrustScore < 6.8)
-  )
+  return !candidate.isBrand || (profile.selectedIntentScore < 2 && profile.sourceTrustScore < 6.8)
 }
 
 function isProductIntentDemandCandidate(
@@ -3349,10 +3543,10 @@ function isProductIntentDemandCandidate(
   if (candidate.isBrand) return true
 
   return (
-    profile.sourceTrustScore >= 5.8
-    && profile.selectedIntentScore >= 1.25
-    && !profile.languageSoftDemote
-    && hasDemandAnchor(candidate.keyword, brandName)
+    profile.sourceTrustScore >= 5.8 &&
+    profile.selectedIntentScore >= 1.25 &&
+    !profile.languageSoftDemote &&
+    hasDemandAnchor(candidate.keyword, brandName)
   )
 }
 
@@ -3360,7 +3554,8 @@ function countProductIntentDemandCandidates(
   candidates: RankedCandidate[],
   brandName: string | undefined
 ): number {
-  return candidates.filter((candidate) => isProductIntentDemandCandidate(candidate, brandName)).length
+  return candidates.filter((candidate) => isProductIntentDemandCandidate(candidate, brandName))
+    .length
 }
 
 function findProductIntentReplacementIndex(input: {
@@ -3391,9 +3586,7 @@ function findProductIntentReplacementIndex(input: {
 
     if (score < 0) continue
 
-    const existingReplacement = replacementIndex >= 0
-      ? input.candidates[replacementIndex]
-      : null
+    const existingReplacement = replacementIndex >= 0 ? input.candidates[replacementIndex] : null
     const candidateIsWorse =
       !existingReplacement || compareRankedCandidates(candidate, existingReplacement) > 0
 
@@ -3417,26 +3610,20 @@ function isModelIntentQualifiedCandidate(
   if (isModelIntentDimensionOrParamOnlyCandidate(candidate, brandName)) return false
   if (profile.hasModelAnchor) return true
   if (
-    profile.isModelFamilyGuard
-    && profile.hasDemand
-    && (
-      profile.demandAnchorCount >= 2
-      || (
-        candidate.isBrand
-        && profile.demandAnchorCount >= 1
-        && profile.sourceTrustScore >= 6.2
-      )
-    )
+    profile.isModelFamilyGuard &&
+    profile.hasDemand &&
+    (profile.demandAnchorCount >= 2 ||
+      (candidate.isBrand && profile.demandAnchorCount >= 1 && profile.sourceTrustScore >= 6.2))
   ) {
     return true
   }
   if (profile.compactTrustedSoftFamily) return true
   if (
-    profile.trustedSoftFamily
-    && profile.hasDemand
-    && candidate.isBrand
-    && profile.sourceTrustScore >= 5.6
-    && profile.selectedIntentScore >= 1
+    profile.trustedSoftFamily &&
+    profile.hasDemand &&
+    candidate.isBrand &&
+    profile.sourceTrustScore >= 5.6 &&
+    profile.selectedIntentScore >= 1
   ) {
     return true
   }
@@ -3468,7 +3655,8 @@ function countModelIntentQualifiedCandidates(
   candidates: RankedCandidate[],
   brandName: string | undefined
 ): number {
-  return candidates.filter((candidate) => isModelIntentQualifiedCandidate(candidate, brandName)).length
+  return candidates.filter((candidate) => isModelIntentQualifiedCandidate(candidate, brandName))
+    .length
 }
 
 function findModelIntentReplacementIndex(input: {
@@ -3489,9 +3677,7 @@ function findModelIntentReplacementIndex(input: {
     else if (!candidate.evidenceProfile.hasSpecificDemandTail) score += 2
     else score += 1
 
-    const existingReplacement = replacementIndex >= 0
-      ? input.candidates[replacementIndex]
-      : null
+    const existingReplacement = replacementIndex >= 0 ? input.candidates[replacementIndex] : null
     const candidateIsWorse =
       !existingReplacement || compareRankedCandidates(candidate, existingReplacement) > 0
 
@@ -3520,9 +3706,10 @@ function enforceCreativeKeywordContract(input: {
   if (input.creativeType === 'product_intent' && input.minProductDemandCount > 0) {
     const seen = new Set(working.map((candidate) => candidate.normalized))
     const rescueCandidates = input.rankedCandidates
-      .filter((candidate) =>
-        !seen.has(candidate.normalized)
-        && isProductIntentDemandCandidate(candidate, input.brandName)
+      .filter(
+        (candidate) =>
+          !seen.has(candidate.normalized) &&
+          isProductIntentDemandCandidate(candidate, input.brandName)
       )
       .sort(compareRankedCandidates)
 
@@ -3554,9 +3741,10 @@ function enforceCreativeKeywordContract(input: {
   if (input.creativeType === 'model_intent' && input.minModelIntentQualifiedCount > 0) {
     const seen = new Set(working.map((candidate) => candidate.normalized))
     const rescueCandidates = input.rankedCandidates
-      .filter((candidate) =>
-        !seen.has(candidate.normalized)
-        && isModelIntentQualifiedCandidate(candidate, input.brandName)
+      .filter(
+        (candidate) =>
+          !seen.has(candidate.normalized) &&
+          isModelIntentQualifiedCandidate(candidate, input.brandName)
       )
       .sort(compareRankedCandidates)
 
@@ -3584,12 +3772,14 @@ function enforceCreativeKeywordContract(input: {
     }
   }
 
-  return working
-    .sort(compareRankedCandidates)
-    .slice(0, input.maxKeywords)
+  return working.sort(compareRankedCandidates).slice(0, input.maxKeywords)
 }
 
-function composeBrandedKeyword(keyword: string, normalizedBrand: string, maxWords: number): string | null {
+function composeBrandedKeyword(
+  keyword: string,
+  normalizedBrand: string,
+  maxWords: number
+): string | null {
   const brandTokens = normalizedBrand.split(/\s+/).filter(Boolean)
   if (brandTokens.length === 0) return null
 
@@ -3599,7 +3789,7 @@ function composeBrandedKeyword(keyword: string, normalizedBrand: string, maxWord
   if (keywordTokens.length === 0) return null
 
   const remainder: string[] = []
-  for (let i = 0; i < keywordTokens.length;) {
+  for (let i = 0; i < keywordTokens.length; ) {
     let matchesBrand = true
     for (let j = 0; j < brandTokens.length; j += 1) {
       if (keywordTokens[i + j] !== brandTokens[j]) {
@@ -3638,9 +3828,9 @@ function shouldGenerateCompactBrandedVariant(
 
   if (creativeType === 'model_intent') {
     if (
-      !profile.hasModelAnchor
-      && !profile.compactTrustedSoftFamily
-      && !profile.hasSpecificDemandTail
+      !profile.hasModelAnchor &&
+      !profile.compactTrustedSoftFamily &&
+      !profile.hasSpecificDemandTail
     ) {
       return false
     }
@@ -3664,8 +3854,8 @@ function ensureBrandCoverage(
   const pureBrandKeywords = getPureBrandKeywords(normalizedBrand)
   if (pureBrandKeywords.length === 0) return candidates
 
-  const existing = new Set(candidates.map(candidate => candidate.normalized))
-  const existingBrandCount = candidates.filter(candidate => candidate.isBrand).length
+  const existing = new Set(candidates.map((candidate) => candidate.normalized))
+  const existingBrandCount = candidates.filter((candidate) => candidate.isBrand).length
   if (existingBrandCount >= targetBrandCount) return candidates
 
   const nonBrandCandidates = candidates
@@ -3675,7 +3865,8 @@ function ensureBrandCoverage(
     .sort(compareRankedCandidates)
 
   const augmented: RankedCandidate[] = [...candidates]
-  let nextIndex = candidates.reduce((max, candidate) => Math.max(max, candidate.originalIndex), -1) + 1
+  let nextIndex =
+    candidates.reduce((max, candidate) => Math.max(max, candidate.originalIndex), -1) + 1
   let brandCount = existingBrandCount
 
   for (const candidate of nonBrandCandidates) {
@@ -3744,7 +3935,8 @@ function ensurePureBrandCoverage(
   targetPureBrandCount: number
 ): RankedCandidate[] {
   if (targetPureBrandCount <= 0) return candidates
-  if (input.creativeType !== 'brand_intent' && input.creativeType !== 'product_intent') return candidates
+  if (input.creativeType !== 'brand_intent' && input.creativeType !== 'product_intent')
+    return candidates
 
   const normalizedBrand = normalizeGoogleAdsKeyword(input.brandName || '')
   if (!normalizedBrand || normalizedBrand === 'unknown') return candidates
@@ -3757,7 +3949,8 @@ function ensurePureBrandCoverage(
   if (existingPureBrandCount >= targetPureBrandCount) return candidates
 
   const augmented: RankedCandidate[] = [...candidates]
-  let nextIndex = candidates.reduce((max, candidate) => Math.max(max, candidate.originalIndex), -1) + 1
+  let nextIndex =
+    candidates.reduce((max, candidate) => Math.max(max, candidate.originalIndex), -1) + 1
   let pureBrandCount = existingPureBrandCount
 
   for (const keyword of pureBrandKeywords) {
@@ -3815,17 +4008,13 @@ function toRankedCandidates(
 ): RankedCandidate[] {
   const normalizedBrand = normalizeGoogleAdsKeyword(input.brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
 
   const merged: CreativeKeywordLike[] = []
   const disableVolumeReliance = Boolean(
-    options?.disableVolumeReliance
-    || input.fallbackMode
-    || input.keywordsWithVolume?.some((item) =>
-      hasActiveSearchVolumeUnavailableFlag(item as any)
-    )
+    options?.disableVolumeReliance ||
+    input.fallbackMode ||
+    input.keywordsWithVolume?.some((item) => hasActiveSearchVolumeUnavailableFlag(item as any))
   )
   const preferredBucketSet = new Set(
     (Array.isArray(input.preferredBucketKeywords) ? input.preferredBucketKeywords : [])
@@ -3894,12 +4083,10 @@ function toRankedCandidates(
     const wordCount = normalized.split(/\s+/).filter(Boolean).length || 1
     if (wordCount > maxWords) continue
 
-    const isBrand = pureBrandKeywords.length > 0
-      ? containsPureBrand(keyword, pureBrandKeywords)
-      : false
-    const isPureBrand = pureBrandKeywords.length > 0
-      ? isPureBrandKeyword(keyword, pureBrandKeywords)
-      : false
+    const isBrand =
+      pureBrandKeywords.length > 0 ? containsPureBrand(keyword, pureBrandKeywords) : false
+    const isPureBrand =
+      pureBrandKeywords.length > 0 ? isPureBrandKeyword(keyword, pureBrandKeywords) : false
     const ranked = buildRankedCandidate({
       candidate,
       keyword,
@@ -3918,11 +4105,13 @@ function toRankedCandidates(
       ),
       disableVolumeReliance,
     })
-    if (isLowQualityCandidate(ranked, input.creativeType || null, input.brandName, {
-      ...options,
-      targetLanguage: input.targetLanguage,
-      disableVolumeReliance,
-    })) {
+    if (
+      isLowQualityCandidate(ranked, input.creativeType || null, input.brandName, {
+        ...options,
+        targetLanguage: input.targetLanguage,
+        disableVolumeReliance,
+      })
+    ) {
       continue
     }
 
@@ -3968,15 +4157,11 @@ function buildBucketSpecificRescueCandidates(params: {
 
   return ensureBrandCoverage(
     ensurePureBrandCoverage(
-      toRankedCandidates(
-        { ...params.input, creativeType: params.creativeType },
-        params.maxWords,
-        {
-          allowModelIntentPreferredFallback: true,
-          allowModelIntentSoftFamilyFallback: true,
-          disableVolumeReliance: Boolean(params.input.fallbackMode),
-        }
-      ),
+      toRankedCandidates({ ...params.input, creativeType: params.creativeType }, params.maxWords, {
+        allowModelIntentPreferredFallback: true,
+        allowModelIntentSoftFamilyFallback: true,
+        disableVolumeReliance: Boolean(params.input.fallbackMode),
+      }),
       { ...params.input, creativeType: params.creativeType },
       params.maxWords,
       0
@@ -4010,7 +4195,11 @@ function buildModelIntentPrecisionRescueCandidates(params: {
   const seenNormalized = new Set<string>()
   const seenPermutation = new Set<string>()
   for (const normalized of params.excludeNormalized || []) {
-    seenNormalized.add(String(normalized || '').trim().toLowerCase())
+    seenNormalized.add(
+      String(normalized || '')
+        .trim()
+        .toLowerCase()
+    )
   }
   for (const permutationKey of params.excludePermutationKeys || []) {
     const normalizedPermutationKey = String(permutationKey || '').trim()
@@ -4058,7 +4247,11 @@ function buildProductIntentPrecisionRescueCandidates(params: {
   const seenNormalized = new Set<string>()
   const seenPermutation = new Set<string>()
   for (const normalized of params.excludeNormalized || []) {
-    seenNormalized.add(String(normalized || '').trim().toLowerCase())
+    seenNormalized.add(
+      String(normalized || '')
+        .trim()
+        .toLowerCase()
+    )
   }
   for (const permutationKey of params.excludePermutationKeys || []) {
     const normalizedPermutationKey = String(permutationKey || '').trim()
@@ -4108,15 +4301,6 @@ function backfillCreativeOutputCandidates(params: {
   const precisionRescueCandidates =
     params.creativeType === 'model_intent'
       ? buildModelIntentPrecisionRescueCandidates({
-        rankedCandidates: params.rankedCandidates,
-        brandName: params.brandName,
-        maxKeywords: params.maxKeywords,
-        maxCandidates: outputFloor - outputCandidates.length,
-        excludeNormalized: existingNormalized,
-        excludePermutationKeys: existingPermutationKeys,
-      })
-      : params.creativeType === 'product_intent'
-        ? buildProductIntentPrecisionRescueCandidates({
           rankedCandidates: params.rankedCandidates,
           brandName: params.brandName,
           maxKeywords: params.maxKeywords,
@@ -4124,6 +4308,15 @@ function backfillCreativeOutputCandidates(params: {
           excludeNormalized: existingNormalized,
           excludePermutationKeys: existingPermutationKeys,
         })
+      : params.creativeType === 'product_intent'
+        ? buildProductIntentPrecisionRescueCandidates({
+            rankedCandidates: params.rankedCandidates,
+            brandName: params.brandName,
+            maxKeywords: params.maxKeywords,
+            maxCandidates: outputFloor - outputCandidates.length,
+            excludeNormalized: existingNormalized,
+            excludePermutationKeys: existingPermutationKeys,
+          })
         : []
   if (precisionRescueCandidates.length === 0) return outputCandidates
 
@@ -4151,15 +4344,11 @@ function buildFallbackRankedCandidate(params: {
 
   const normalizedBrand = normalizeGoogleAdsKeyword(params.brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
-  const isBrand = pureBrandKeywords.length > 0
-    ? containsPureBrand(keyword, pureBrandKeywords)
-    : false
-  const isPureBrand = pureBrandKeywords.length > 0
-    ? isPureBrandKeyword(keyword, pureBrandKeywords)
-    : false
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
+  const isBrand =
+    pureBrandKeywords.length > 0 ? containsPureBrand(keyword, pureBrandKeywords) : false
+  const isPureBrand =
+    pureBrandKeywords.length > 0 ? isPureBrandKeyword(keyword, pureBrandKeywords) : false
 
   return buildRankedCandidate({
     candidate: {
@@ -4196,7 +4385,9 @@ function buildInputSignalRescueCandidates(params: {
   maxWords: number
 }): RankedCandidate[] {
   const rawKeywords = [
-    ...(Array.isArray(params.input.keywordsWithVolume) ? params.input.keywordsWithVolume.map((item) => item.keyword) : []),
+    ...(Array.isArray(params.input.keywordsWithVolume)
+      ? params.input.keywordsWithVolume.map((item) => item.keyword)
+      : []),
     ...(Array.isArray(params.input.keywords) ? params.input.keywords : []),
   ]
 
@@ -4204,10 +4395,18 @@ function buildInputSignalRescueCandidates(params: {
   for (const rawKeyword of rawKeywords) {
     const normalized = normalizeGoogleAdsKeyword(rawKeyword || '')
     if (!normalized || containsAsinLikeToken(normalized)) continue
-    if (params.creativeType === 'model_intent' && !isModelIntentRescueKeyword(normalized, params.input.brandName)) {
+    if (
+      params.creativeType === 'model_intent' &&
+      !isModelIntentRescueKeyword(normalized, params.input.brandName)
+    ) {
       continue
     }
-    const compact = normalized.split(/\s+/).filter(Boolean).slice(0, params.maxWords).join(' ').trim()
+    const compact = normalized
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, params.maxWords)
+      .join(' ')
+      .trim()
     if (!compact) continue
     const compactNormalized = normalizeGoogleAdsKeyword(compact)
     if (!compactNormalized || candidateTexts.has(compactNormalized)) continue
@@ -4219,9 +4418,9 @@ function buildInputSignalRescueCandidates(params: {
     const score = (text: string): number => {
       let value = 0
       if (hasModelAnchorEvidence({ keywords: [text] })) value += 4
-      value += getDemandAnchorTokens(text, params.input.brandName)
-        .filter((token) => !/^\d+$/.test(token))
-        .length * 2
+      value +=
+        getDemandAnchorTokens(text, params.input.brandName).filter((token) => !/^\d+$/.test(token))
+          .length * 2
       if (!INFO_QUERY_PATTERN.test(text) && !QUESTION_PREFIX_PATTERN.test(text)) value += 2
       if (!REVIEW_COMPARE_PATTERN.test(text)) value += 1
       if (!PLATFORM_PATTERN.test(text)) value += 1
@@ -4245,11 +4444,9 @@ function buildInputSignalRescueCandidates(params: {
       sourceType: 'DERIVED_RESCUE',
     })
     if (
-      rescue
-      && (
-        params.creativeType !== 'model_intent'
-        || isModelIntentQualifiedCandidate(rescue, params.input.brandName)
-      )
+      rescue &&
+      (params.creativeType !== 'model_intent' ||
+        isModelIntentQualifiedCandidate(rescue, params.input.brandName))
     ) {
       return [rescue]
     }
@@ -4292,9 +4489,7 @@ function buildGuaranteedNonEmptyRescueCandidates(params: {
 
   const normalizedBrand = normalizeGoogleAdsKeyword(params.input.brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
   for (const keyword of pureBrandKeywords) {
     const pureBrandCandidate = buildFallbackRankedCandidate({
       keyword,
@@ -4324,9 +4519,12 @@ function buildGuaranteedNonEmptyRescueCandidates(params: {
   return bestRanked
 }
 
-export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): SelectCreativeKeywordsOutput {
-  const creativeType = input.creativeType
-    || deriveCanonicalCreativeType({
+export function selectCreativeKeywords(
+  input: SelectCreativeKeywordsInput
+): SelectCreativeKeywordsOutput {
+  const creativeType =
+    input.creativeType ||
+    deriveCanonicalCreativeType({
       creativeType: input.creativeType,
       keywordBucket: input.bucket,
       keywords: input.keywordsWithVolume?.map((item) => item.keyword) || input.keywords,
@@ -4348,21 +4546,21 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
   const minBrandKeywords = Number.isFinite(minBrandKeywordsInput)
     ? Math.max(0, Math.floor(minBrandKeywordsInput))
     : contractDefaults.minBrandKeywords
-  const requestedBrandOnly = creativeType === 'brand_intent'
-    ? true
-    : creativeType === 'model_intent'
-      ? false
-      : Boolean(input.brandOnly)
+  const requestedBrandOnly =
+    creativeType === 'brand_intent'
+      ? true
+      : creativeType === 'model_intent'
+        ? false
+        : Boolean(input.brandOnly)
 
   const maxWordsInput = Number(input.maxWords)
   const maxWords = Number.isFinite(maxWordsInput)
     ? Math.max(1, Math.floor(maxWordsInput))
     : resolveCreativeKeywordMaxWords(creativeType)
-  const fallbackMode = Boolean(input.fallbackMode)
-    || Boolean(
-      input.keywordsWithVolume?.some((item) =>
-        hasActiveSearchVolumeUnavailableFlag(item as any)
-      )
+  const fallbackMode =
+    Boolean(input.fallbackMode) ||
+    Boolean(
+      input.keywordsWithVolume?.some((item) => hasActiveSearchVolumeUnavailableFlag(item as any))
     )
 
   const requiredPureBrandCount = contractDefaults.requiredPureBrandCount
@@ -4374,11 +4572,9 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
 
   let rankedCandidates = ensureBrandCoverage(
     ensurePureBrandCoverage(
-      toRankedCandidates(
-        { ...input, creativeType },
-        maxWords,
-        { disableVolumeReliance: fallbackMode }
-      ),
+      toRankedCandidates({ ...input, creativeType }, maxWords, {
+        disableVolumeReliance: fallbackMode,
+      }),
       { ...input, creativeType },
       maxWords,
       creativeType === 'brand_intent' || creativeType === 'product_intent' ? 1 : 0
@@ -4388,8 +4584,8 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
     requiredBrandCount
   )
   if (
-    creativeType === 'model_intent'
-    && rankedCandidates.length < Math.min(maxKeywords, MODEL_INTENT_UNDERFILL_CANDIDATE_FLOOR)
+    creativeType === 'model_intent' &&
+    rankedCandidates.length < Math.min(maxKeywords, MODEL_INTENT_UNDERFILL_CANDIDATE_FLOOR)
   ) {
     const relaxedCandidates = buildBucketSpecificRescueCandidates({
       input: { ...input, fallbackMode },
@@ -4479,11 +4675,14 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
     .filter((candidate) => candidate.isPureBrand)
     .sort(compareRankedCandidates)
   const brandCandidates = rankedCandidates
-    .filter(candidate => candidate.isBrand)
+    .filter((candidate) => candidate.isBrand)
     .sort(compareRankedCandidates)
   const enforceBrandOnly = requestedBrandOnly && brandCandidates.length > 0
 
-  if ((creativeType === 'brand_intent' || creativeType === 'product_intent') && pureBrandCandidates.length > 0) {
+  if (
+    (creativeType === 'brand_intent' || creativeType === 'product_intent') &&
+    pureBrandCandidates.length > 0
+  ) {
     pushSelected(pureBrandCandidates[0])
   }
 
@@ -4498,7 +4697,10 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
       pushSelected(candidate)
     }
 
-    const reservedBrandCount = Math.min(maxKeywords, Math.max(requiredBrandCount, effectiveBrandReserve))
+    const reservedBrandCount = Math.min(
+      maxKeywords,
+      Math.max(requiredBrandCount, effectiveBrandReserve)
+    )
     for (const candidate of brandCandidates) {
       if (selected.size >= reservedBrandCount) break
       pushSelected(candidate)
@@ -4530,14 +4732,15 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
     requiredPreferredBucketCount,
     fallbackMode,
   })
-  const quotaBalancedSelectedList = creativeType === 'model_intent'
-    ? rebalanceModelIntentCandidates({
-      selectedList: sourceQuotaApplied.selectedList,
-      maxKeywords,
-      brandName: input.brandName,
-      rankedCandidates,
-    })
-    : sourceQuotaApplied.selectedList
+  const quotaBalancedSelectedList =
+    creativeType === 'model_intent'
+      ? rebalanceModelIntentCandidates({
+          selectedList: sourceQuotaApplied.selectedList,
+          maxKeywords,
+          brandName: input.brandName,
+          rankedCandidates,
+        })
+      : sourceQuotaApplied.selectedList
   const selectedList = enforceCreativeKeywordContract({
     creativeType,
     selectedList: quotaBalancedSelectedList,
@@ -4548,8 +4751,13 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
     minProductDemandCount: contractDefaults.minProductDemandCount,
     minModelIntentQualifiedCount: contractDefaults.minModelIntentQualifiedCount,
   })
-  let outputCandidates = selectedList.filter((candidate) => !containsAsinLikeToken(candidate.keyword))
-  if ((creativeType === 'model_intent' || creativeType === 'product_intent') && outputCandidates.length > 0) {
+  let outputCandidates = selectedList.filter(
+    (candidate) => !containsAsinLikeToken(candidate.keyword)
+  )
+  if (
+    (creativeType === 'model_intent' || creativeType === 'product_intent') &&
+    outputCandidates.length > 0
+  ) {
     outputCandidates = backfillCreativeOutputCandidates({
       creativeType,
       bucket: input.bucket,
@@ -4639,37 +4847,36 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
   })
   const normalizedBrand = normalizeGoogleAdsKeyword(input.brandName || '')
   const pureBrandKeywords =
-    normalizedBrand && normalizedBrand !== 'unknown'
-      ? getPureBrandKeywords(normalizedBrand)
-      : []
+    normalizedBrand && normalizedBrand !== 'unknown' ? getPureBrandKeywords(normalizedBrand) : []
   const keywordsWithVolume: CreativeKeywordLike[] = outputCandidates.map((candidate) => {
-    const finalMatchType: CreativeKeywordMatchType = creativeType === 'model_intent'
-      ? resolveModelIntentFinalMatchType(candidate)
-      : candidate.matchType || candidate.suggestedMatchType || 'PHRASE'
+    const finalMatchType: CreativeKeywordMatchType =
+      creativeType === 'model_intent'
+        ? resolveModelIntentFinalMatchType(candidate)
+        : candidate.matchType || candidate.suggestedMatchType || 'PHRASE'
     const normalizedPrioritySubtype = normalizeKeywordSourceSubtype({
       source: candidate.source,
       sourceType: candidate.sourceType,
     })
     const explicitSourceSubtype =
-      normalizeAuditString(candidate.sourceSubtype)
-      || normalizeAuditString(candidate.sourceType)?.toUpperCase()
-    const sourceSubtype = (
-      explicitSourceSubtype === 'KEYWORD_POOL'
-      || explicitSourceSubtype === 'CANONICAL_BUCKET_VIEW'
-    )
-      ? normalizedPrioritySubtype || explicitSourceSubtype
-      : explicitSourceSubtype || normalizedPrioritySubtype
-    const sourceTier = getKeywordSourcePriority(sourceSubtype || candidate.sourceType || candidate.source).tier
+      normalizeAuditString(candidate.sourceSubtype) ||
+      normalizeAuditString(candidate.sourceType)?.toUpperCase()
+    const sourceSubtype =
+      explicitSourceSubtype === 'KEYWORD_POOL' || explicitSourceSubtype === 'CANONICAL_BUCKET_VIEW'
+        ? normalizedPrioritySubtype || explicitSourceSubtype
+        : explicitSourceSubtype || normalizedPrioritySubtype
+    const sourceTier = getKeywordSourcePriority(
+      sourceSubtype || candidate.sourceType || candidate.source
+    ).tier
     const sourceGovernance = classifySourceGovernance(candidate)
     const rawSource =
-      normalizeAuditString(candidate.rawSource)
-      || inferKeywordRawSource({
+      normalizeAuditString(candidate.rawSource) ||
+      inferKeywordRawSource({
         source: candidate.source,
         sourceType: sourceSubtype || candidate.sourceType,
       })
     const derivedTags =
-      normalizeAuditTags(candidate.derivedTags)
-      || inferKeywordDerivedTags({
+      normalizeAuditTags(candidate.derivedTags) ||
+      inferKeywordDerivedTags({
         source: candidate.source,
         sourceType: sourceSubtype || candidate.sourceType,
       })
@@ -4688,11 +4895,11 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
     )
     const isDerived = isDerivedSourceTier(sourceTier)
     const isFallback = Boolean(
-      contractRole === 'fallback'
-      || fallbackReason
-      || rescueStage
-      || sourceGovernance.bucket === 'rescue'
-      || sourceGovernance.bucket === 'synthetic'
+      contractRole === 'fallback' ||
+      fallbackReason ||
+      rescueStage ||
+      sourceGovernance.bucket === 'rescue' ||
+      sourceGovernance.bucket === 'synthetic'
     )
     const decisionTrace = buildKeywordDecisionTrace({
       sourceTier,
@@ -4715,7 +4922,8 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
       competitionIndex: candidate.competitionIndex,
       source: candidate.source,
       matchType: finalMatchType,
-      sourceType: normalizeAuditString(candidate.sourceType) || normalizeAuditString(candidate.source),
+      sourceType:
+        normalizeAuditString(candidate.sourceType) || normalizeAuditString(candidate.source),
       sourceSubtype,
       sourceTier,
       sourceGovernanceBucket: sourceGovernance.bucket,
@@ -4725,12 +4933,15 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
       derivedTags,
       isDerived,
       isFallback,
-      sourceField: normalizeAuditString(candidate.sourceField) || inferSourceField(candidate.source),
-      anchorType: normalizeAuditString(candidate.anchorType) || inferAnchorType({
-        keyword: candidate.keyword,
-        isBrand: candidate.isBrand,
-        brandName: input.brandName,
-      }),
+      sourceField:
+        normalizeAuditString(candidate.sourceField) || inferSourceField(candidate.source),
+      anchorType:
+        normalizeAuditString(candidate.anchorType) ||
+        inferAnchorType({
+          keyword: candidate.keyword,
+          isBrand: candidate.isBrand,
+          brandName: input.brandName,
+        }),
       anchorKinds: inferAnchorKinds({
         keyword: candidate.keyword,
         isBrand: candidate.isBrand,
@@ -4760,7 +4971,7 @@ export function selectCreativeKeywords(input: SelectCreativeKeywordsInput): Sele
   })
 
   return {
-    keywords: keywordsWithVolume.map(item => item.keyword),
+    keywords: keywordsWithVolume.map((item) => item.keyword),
     keywordsWithVolume,
     truncated: rankedCandidates.length > keywordsWithVolume.length,
     sourceQuotaAudit: reconciledSourceQuotaAudit,

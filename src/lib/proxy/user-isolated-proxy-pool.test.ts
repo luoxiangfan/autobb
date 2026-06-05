@@ -47,4 +47,3 @@ describe('UserIsolatedProxyPoolManager country alias matching', () => {
     expect(fetchProxyIp).toHaveBeenCalledWith('gate.kookeey.info:1000:user:pass')
   })
 })
-

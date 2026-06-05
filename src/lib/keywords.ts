@@ -74,10 +74,13 @@ export async function createKeyword(input: CreateKeywordInput): Promise<Keyword>
 export async function findKeywordById(id: number, userId: number): Promise<Keyword | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = await db.queryOne(
+    `
     SELECT * FROM keywords
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   if (!row) {
     return null
@@ -89,13 +92,19 @@ export async function findKeywordById(id: number, userId: number): Promise<Keywo
 /**
  * 根据Google Ads keyword_id查找
  */
-export async function findKeywordByGoogleId(keywordId: string, userId: number): Promise<Keyword | null> {
+export async function findKeywordByGoogleId(
+  keywordId: string,
+  userId: number
+): Promise<Keyword | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = await db.queryOne(
+    `
     SELECT * FROM keywords
     WHERE keyword_id = ? AND user_id = ?
-  `, [keywordId, userId])
+  `,
+    [keywordId, userId]
+  )
 
   if (!row) {
     return null
@@ -107,14 +116,20 @@ export async function findKeywordByGoogleId(keywordId: string, userId: number): 
 /**
  * 查找Ad Group的所有Keywords
  */
-export async function findKeywordsByAdGroupId(adGroupId: number, userId: number): Promise<Keyword[]> {
+export async function findKeywordsByAdGroupId(
+  adGroupId: number,
+  userId: number
+): Promise<Keyword[]> {
   const db = await getDatabase()
 
-  const rows = await db.query(`
+  const rows = await db.query(
+    `
     SELECT * FROM keywords
     WHERE ad_group_id = ? AND user_id = ?
     ORDER BY created_at DESC
-  `, [adGroupId, userId])
+  `,
+    [adGroupId, userId]
+  )
 
   return rows.map(mapRowToKeyword)
 }
@@ -141,14 +156,20 @@ export async function findKeywordsByUserId(userId: number, limit?: number): Prom
 /**
  * 查找AI生成的Keywords
  */
-export async function findAIGeneratedKeywords(adGroupId: number, userId: number): Promise<Keyword[]> {
+export async function findAIGeneratedKeywords(
+  adGroupId: number,
+  userId: number
+): Promise<Keyword[]> {
   const db = await getDatabase()
 
-  const rows = await db.query(`
+  const rows = await db.query(
+    `
     SELECT * FROM keywords
     WHERE ad_group_id = ? AND user_id = ? AND ai_generated = 1
     ORDER BY created_at DESC
-  `, [adGroupId, userId])
+  `,
+    [adGroupId, userId]
+  )
 
   return rows.map(mapRowToKeyword)
 }
@@ -239,11 +260,14 @@ export async function updateKeyword(
   fields.push('updated_at = datetime("now")')
   values.push(id, userId)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE keywords
     SET ${fields.join(', ')}
     WHERE id = ? AND user_id = ?
-  `, values)
+  `,
+    values
+  )
 
   return await findKeywordById(id, userId)
 }
@@ -254,10 +278,13 @@ export async function updateKeyword(
 export async function deleteKeyword(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     DELETE FROM keywords
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   return result.changes > 0
 }
@@ -299,13 +326,19 @@ export async function updateKeywordsStatus(
 /**
  * 删除Ad Group的所有Keywords
  */
-export async function deleteKeywordsByAdGroupId(adGroupId: number, userId: number): Promise<number> {
+export async function deleteKeywordsByAdGroupId(
+  adGroupId: number,
+  userId: number
+): Promise<number> {
   const db = await getDatabase()
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     DELETE FROM keywords
     WHERE ad_group_id = ? AND user_id = ?
-  `, [adGroupId, userId])
+  `,
+    [adGroupId, userId]
+  )
 
   return result.changes
 }

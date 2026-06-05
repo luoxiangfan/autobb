@@ -64,9 +64,7 @@ describe('UrlSwapHistory', () => {
       })
     )
 
-    render(
-      <UrlSwapHistory open={true} onOpenChange={() => {}} taskId="task-1" />
-    )
+    render(<UrlSwapHistory open={true} onOpenChange={() => {}} taskId="task-1" />)
 
     expect(await screen.findByText(expected)).toBeTruthy()
     expect(screen.queryByText('Invalid Date')).toBeNull()

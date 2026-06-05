@@ -56,10 +56,7 @@ describe('resolveStoreProductLinksForUpdate', () => {
 
   it('serializes store links when page_type is store', () => {
     expect(
-      resolveStoreProductLinksForUpdate('store', [
-        'https://example.com/a',
-        'https://example.com/a',
-      ])
+      resolveStoreProductLinksForUpdate('store', ['https://example.com/a', 'https://example.com/a'])
     ).toBe(JSON.stringify(['https://example.com/a']))
   })
 })

@@ -50,13 +50,7 @@ function normalizeTextCandidate(input: unknown): string | null {
 
   // 过滤明显无意义的“页面占位”文本（生产环境常见：Amazon Store 标题/描述被解析为 Home Page）
   const normalized = raw.toLowerCase().replace(/\s+/g, ' ').trim()
-  const generic = new Set([
-    'home page',
-    'homepage',
-    'home',
-    'index',
-    'index page',
-  ])
+  const generic = new Set(['home page', 'homepage', 'home', 'index', 'index page'])
   if (generic.has(normalized)) return null
 
   // "Home Page | xxx" / "xxx | Home Page" 这类也视为无效
@@ -72,7 +66,7 @@ function normalizeForCompare(input: string): string {
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .replace(/\s+/g, ' ')
     .replace(/[^\p{L}\p{N}\s]/gu, '')
-    .trim();
+    .trim()
 }
 
 function areNearDuplicate(a: string | null, b: string | null): boolean {
@@ -129,7 +123,12 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
   targetAudience: string | null
 } {
   if (!scrapedData || typeof scrapedData !== 'object') {
-    return { brandDescription: null, uniqueSellingPoints: null, productHighlights: null, targetAudience: null }
+    return {
+      brandDescription: null,
+      uniqueSellingPoints: null,
+      productHighlights: null,
+      targetAudience: null,
+    }
   }
 
   const storeDescription = pickNonEmptyString(
@@ -149,7 +148,9 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
     })
     .filter((v: any): v is string => typeof v === 'string' && v.trim().length > 0)
 
-  const featuresRaw = deepTopProducts.flatMap((t: any) => Array.isArray(t?.productData?.features) ? t.productData.features : [])
+  const featuresRaw = deepTopProducts.flatMap((t: any) =>
+    Array.isArray(t?.productData?.features) ? t.productData.features : []
+  )
   const features = filterNavigationLabels(featuresRaw)
   const rawFeatureLines = pickTopLines(features, 20)
   const uniqueSellingPointsLines = pickTopLines(rawFeatureLines.map(featureHeading), 4)
@@ -177,7 +178,9 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
     if (topCatalogLines.length > 0) {
       productHighlightsLines.push(...topCatalogLines.slice(0, 3))
       if (uniqueSellingPointsLines.length === 0) {
-        uniqueSellingPointsLines.push(`Popular categories: ${topCatalogLines.slice(0, 4).join(', ')}.`)
+        uniqueSellingPointsLines.push(
+          `Popular categories: ${topCatalogLines.slice(0, 4).join(', ')}.`
+        )
       }
     }
   }
@@ -188,7 +191,8 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
   } else if (productDescriptions.length > 0) {
     brandParts.push(dropLeadingFeatureHeading(productDescriptions[0]))
   }
-  const brandDescription = brandParts.length > 0 ? brandParts.join('\n\n').slice(0, 1200).trim() : null
+  const brandDescription =
+    brandParts.length > 0 ? brandParts.join('\n\n').slice(0, 1200).trim() : null
 
   let targetAudience: string | null = null
   const audienceHintText = [
@@ -196,10 +200,16 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
     ...productDescriptions.slice(0, 2),
     ...uniqueSellingPointsLines,
     ...productHighlightsLines,
-  ].filter((v): v is string => typeof v === 'string' && v.trim().length > 0).join(' ').toLowerCase()
+  ]
+    .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+    .join(' ')
+    .toLowerCase()
 
   if (audienceHintText) {
-    const hasHome = /\bhome\b/.test(audienceHintText) || audienceHintText.includes('at home') || audienceHintText.includes('kitchen')
+    const hasHome =
+      /\bhome\b/.test(audienceHintText) ||
+      audienceHintText.includes('at home') ||
+      audienceHintText.includes('kitchen')
     const hasOffice = /\boffice\b/.test(audienceHintText)
     if (hasHome && hasOffice) targetAudience = 'Home and office users.'
     else if (hasHome) targetAudience = 'Home users.'
@@ -208,7 +218,8 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
 
   return {
     brandDescription: normalizeTextCandidate(brandDescription),
-    uniqueSellingPoints: uniqueSellingPointsLines.length > 0 ? uniqueSellingPointsLines.join('\n') : null,
+    uniqueSellingPoints:
+      uniqueSellingPointsLines.length > 0 ? uniqueSellingPointsLines.join('\n') : null,
     productHighlights: productHighlightsLines.length > 0 ? productHighlightsLines.join('\n') : null,
     targetAudience,
   }
@@ -221,7 +232,7 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -248,7 +259,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const categoryFromScrape = deriveCategoryFromScrapedData(offer.scraped_data)
     const categoryFromStored = offer.category ? compactCategoryLabel(offer.category) : null
     const categoryForDisplay = categoryFromScrape || categoryFromStored || offer.category
-    const categorySource = categoryFromScrape ? 'scraped_data' : (categoryFromStored ? 'category' : null)
+    const categorySource = categoryFromScrape
+      ? 'scraped_data'
+      : categoryFromStored
+        ? 'category'
+        : null
 
     // 🔥 修复：部分生产Offer没有写入 brand_description/product_highlights 等字段
     // 但 scraped_data 中已有 storeDescription / deepScrapeResults，可用于详情页展示兜底
@@ -258,7 +273,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       normalizeTextCandidate(scrapedData?.storeDescription),
       normalizeTextCandidate(scrapedData?.metaDescription)
     )
-    const scrapedStoreDescription = pickNonEmptyString(normalizeTextCandidate(scrapedData?.storeDescription))
+    const scrapedStoreDescription = pickNonEmptyString(
+      normalizeTextCandidate(scrapedData?.storeDescription)
+    )
     const storeDerived = buildStoreDescriptionFromScrapedData(scrapedData)
 
     // 🔥 修复：历史数据可能错误写入 page_type=product（实际上是店铺）
@@ -266,7 +283,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const pageTypeFromScrapedData = (() => {
       if (!scrapedData || typeof scrapedData !== 'object') return null
       const productsLen = Array.isArray(scrapedData.products) ? scrapedData.products.length : 0
-      const hasStoreName = typeof scrapedData.storeName === 'string' && scrapedData.storeName.trim().length > 0
+      const hasStoreName =
+        typeof scrapedData.storeName === 'string' && scrapedData.storeName.trim().length > 0
       const hasDeep = !!scrapedData.deepScrapeResults
       const explicit = typeof scrapedData.pageType === 'string' ? scrapedData.pageType : null
       if (explicit === 'store' || explicit === 'product') return explicit
@@ -282,8 +300,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const storedProductHighlights = normalizeTextCandidate(offer.product_highlights)
     const storedBrandDescription = normalizeTextCandidate(offer.brand_description)
     const preferDerivedDescriptions =
-      isStorePage &&
-      areNearDuplicate(storedUniqueSellingPoints, storedProductHighlights)
+      isStorePage && areNearDuplicate(storedUniqueSellingPoints, storedProductHighlights)
 
     const uniqueSellingPoints = pickNonEmptyString(
       preferDerivedDescriptions ? storeDerived.uniqueSellingPoints : storedUniqueSellingPoints,
@@ -365,7 +382,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
  * 更新Offer
  */
 export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -416,7 +433,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
  * - autoUnlink: boolean (可选) - 是否自动解除关联，默认false
  */
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const offerId = parsePositiveIntegerOfferId(params.id)
     if (!offerId) {
@@ -435,12 +452,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     const removeGoogleAdsCampaigns = searchParams.get('removeGoogleAdsCampaigns') === 'true'
 
     // 执行删除操作
-    const result = await deleteOffer(
-      offerId,
-      userId,
-      autoUnlink,
-      removeGoogleAdsCampaigns
-    )
+    const result = await deleteOffer(offerId, userId, autoUnlink, removeGoogleAdsCampaigns)
 
     // 使缓存失效
     invalidateOfferCache(userId, offerId)
@@ -454,7 +466,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
           hasLinkedAccounts: true,
           linkedAccounts: result.linkedAccounts,
           accountCount: result.accountCount,
-          campaignCount: result.campaignCount
+          campaignCount: result.campaignCount,
         },
         { status: 409 } // 409 Conflict: 资源冲突，需要用户确认
       )

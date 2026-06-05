@@ -94,43 +94,57 @@ describe('normalizeYeahPromosResultCode', () => {
 describe('resolveYeahPromosSyncSessionMinRemainingMs', () => {
   it('requires longer remaining session for initial full-sync window', () => {
     expect(__testOnly.resolveYeahPromosSyncSessionMinRemainingMs({})).toBe(30 * 60 * 1000)
-    expect(__testOnly.resolveYeahPromosSyncSessionMinRemainingMs({ startPage: 1 })).toBe(30 * 60 * 1000)
+    expect(__testOnly.resolveYeahPromosSyncSessionMinRemainingMs({ startPage: 1 })).toBe(
+      30 * 60 * 1000
+    )
   })
 
   it('allows shorter remaining session for resumed windows', () => {
-    expect(__testOnly.resolveYeahPromosSyncSessionMinRemainingMs({ startPage: 2 })).toBe(5 * 60 * 1000)
-    expect(__testOnly.resolveYeahPromosSyncSessionMinRemainingMs({ startScope: 'amazon.com' })).toBe(5 * 60 * 1000)
+    expect(__testOnly.resolveYeahPromosSyncSessionMinRemainingMs({ startPage: 2 })).toBe(
+      5 * 60 * 1000
+    )
+    expect(
+      __testOnly.resolveYeahPromosSyncSessionMinRemainingMs({ startScope: 'amazon.com' })
+    ).toBe(5 * 60 * 1000)
   })
 })
 
 describe('resolveYeahPromosConsecutiveFailureStrategy', () => {
   it('fails sync when skipFailedPages is disabled', () => {
-    expect(__testOnly.resolveYeahPromosConsecutiveFailureStrategy({
-      skipFailedPages: false,
-      fetchedItemsInWindow: 12,
-    })).toBe('fail-sync')
+    expect(
+      __testOnly.resolveYeahPromosConsecutiveFailureStrategy({
+        skipFailedPages: false,
+        fetchedItemsInWindow: 12,
+      })
+    ).toBe('fail-sync')
   })
 
   it('fails sync when no item has been fetched in current window', () => {
-    expect(__testOnly.resolveYeahPromosConsecutiveFailureStrategy({
-      skipFailedPages: true,
-      fetchedItemsInWindow: 0,
-    })).toBe('fail-sync')
+    expect(
+      __testOnly.resolveYeahPromosConsecutiveFailureStrategy({
+        skipFailedPages: true,
+        fetchedItemsInWindow: 0,
+      })
+    ).toBe('fail-sync')
   })
 
   it('allows page skip when run already has historical fetched items', () => {
-    expect(__testOnly.resolveYeahPromosConsecutiveFailureStrategy({
-      skipFailedPages: true,
-      fetchedItemsInWindow: 0,
-      fetchedItemsBeforeWindow: 120,
-    })).toBe('skip-page')
+    expect(
+      __testOnly.resolveYeahPromosConsecutiveFailureStrategy({
+        skipFailedPages: true,
+        fetchedItemsInWindow: 0,
+        fetchedItemsBeforeWindow: 120,
+      })
+    ).toBe('skip-page')
   })
 
   it('allows page skip only when window already has fetched items', () => {
-    expect(__testOnly.resolveYeahPromosConsecutiveFailureStrategy({
-      skipFailedPages: true,
-      fetchedItemsInWindow: 1,
-    })).toBe('skip-page')
+    expect(
+      __testOnly.resolveYeahPromosConsecutiveFailureStrategy({
+        skipFailedPages: true,
+        fetchedItemsInWindow: 1,
+      })
+    ).toBe('skip-page')
   })
 })
 
@@ -143,7 +157,9 @@ describe('isYeahPromosRateLimited', () => {
   it('detects message-based rate-limit signals', () => {
     expect(__testOnly.isYeahPromosRateLimited(null, 'Too many request')).toBe(true)
     expect(__testOnly.isYeahPromosRateLimited(null, 'rate limit exceeded')).toBe(true)
-    expect(__testOnly.isYeahPromosRateLimited(null, 'Request too fast, please request later!')).toBe(true)
+    expect(
+      __testOnly.isYeahPromosRateLimited(null, 'Request too fast, please request later!')
+    ).toBe(true)
     expect(__testOnly.isYeahPromosRateLimited(null, '请求过于频繁，请稍后再试')).toBe(true)
   })
 
@@ -155,7 +171,9 @@ describe('isYeahPromosRateLimited', () => {
 
 describe('isYeahPromosTransientError', () => {
   it('detects HTTP 5xx gateway errors', () => {
-    const error = new Error('YeahPromos 商品拉取失败 (502): <html><title>502 Bad Gateway</title></html>')
+    const error = new Error(
+      'YeahPromos 商品拉取失败 (502): <html><title>502 Bad Gateway</title></html>'
+    )
     expect(__testOnly.isYeahPromosTransientError(error)).toBe(true)
   })
 
@@ -281,7 +299,9 @@ describe('parseYeahPromosProductHtmlPage', () => {
     const parsed = __testOnly.parseYeahPromosProductHtmlPage(html)
     expect(parsed.items).toHaveLength(1)
     expect(parsed.items[0]?.mid).toBe('pid_889900')
-    expect(parsed.items[0]?.promoLink).toContain('https://yeahpromos.com/index/index/openurlproduct?')
+    expect(parsed.items[0]?.promoLink).toContain(
+      'https://yeahpromos.com/index/index/openurlproduct?'
+    )
     expect(parsed.items[0]?.promoLink).toContain('track=data_attr')
     expect(parsed.items[0]?.promoLink).toContain('pid=889900')
   })
@@ -355,7 +375,8 @@ describe('parseYeahPromosProductHtmlPage', () => {
 
 describe('yeahpromos template and proxy helpers', () => {
   it('only mutates page parameter when building paged url', () => {
-    const templateUrl = 'https://yeahpromos.com/index/offer/products?is_delete=0&site_id=11767&join_status=2&market_place=amazon.fr&sort=5&min_price=0&max_price=501&page=2'
+    const templateUrl =
+      'https://yeahpromos.com/index/offer/products?is_delete=0&site_id=11767&join_status=2&market_place=amazon.fr&sort=5&min_price=0&max_price=501&page=2'
     const page10 = __testOnly.buildYeahPromosProductsPageUrl(templateUrl, 10)
     const parsed = new URL(page10)
 
@@ -404,25 +425,33 @@ describe('yeahpromos template and proxy helpers', () => {
         { country: 'US', url: 'https://proxy.example/us' },
       ])
     )
-    expect(__testOnly.resolveYeahPromosProxyProviderUrl(proxyMap, 'GB')).toBe('https://proxy.example/uk')
+    expect(__testOnly.resolveYeahPromosProxyProviderUrl(proxyMap, 'GB')).toBe(
+      'https://proxy.example/uk'
+    )
     expect(__testOnly.resolveYeahPromosProxyProviderUrl(proxyMap, 'FR')).toBeNull()
   })
 
   it('detects html intercept signals for fallback decisions', () => {
-    expect(__testOnly.detectYeahPromosHttpIntercept({
-      status: 403,
-      html: '<html>forbidden</html>',
-    }).blocked).toBe(true)
+    expect(
+      __testOnly.detectYeahPromosHttpIntercept({
+        status: 403,
+        html: '<html>forbidden</html>',
+      }).blocked
+    ).toBe(true)
 
-    expect(__testOnly.detectYeahPromosHttpIntercept({
-      status: 200,
-      html: '<html><body>Request too fast, please request later!</body></html>',
-    }).blocked).toBe(true)
+    expect(
+      __testOnly.detectYeahPromosHttpIntercept({
+        status: 200,
+        html: '<html><body>Request too fast, please request later!</body></html>',
+      }).blocked
+    ).toBe(true)
 
-    expect(__testOnly.detectYeahPromosHttpIntercept({
-      status: 200,
-      html: '<div class=\"adv-content\"></div><div id=\"pageList\"></div>',
-    }).blocked).toBe(false)
+    expect(
+      __testOnly.detectYeahPromosHttpIntercept({
+        status: 200,
+        html: '<div class=\"adv-content\"></div><div id=\"pageList\"></div>',
+      }).blocked
+    ).toBe(false)
   })
 
   it('builds delta scope plan by prioritizing active scopes before fallback scopes', () => {
@@ -491,10 +520,7 @@ describe('yeahpromos template and proxy helpers', () => {
       maxPages: 2,
     })
 
-    expect(plan.templates.map((item) => item.scope)).toEqual([
-      'amazon.com',
-      'amazon.co.uk',
-    ])
+    expect(plan.templates.map((item) => item.scope)).toEqual(['amazon.com', 'amazon.co.uk'])
     expect(plan.scopePageBudgets).toEqual({
       'amazon.com': 1,
       'amazon.co.uk': 1,
@@ -505,7 +531,9 @@ describe('yeahpromos template and proxy helpers', () => {
 describe('yeahpromos store merchant normalization', () => {
   it('builds advert_content url from advert_id and site_id', () => {
     const url = __testOnly.buildYeahPromosAdvertContentUrl('258132', '11767')
-    expect(url).toBe('https://yeahpromos.com/index/advert/advert_content?advert_id=258132&site_id=11767')
+    expect(url).toBe(
+      'https://yeahpromos.com/index/advert/advert_content?advert_id=258132&site_id=11767'
+    )
   })
 
   it('keeps only stores with promotable links and maps store fields', () => {
@@ -544,8 +572,12 @@ describe('yeahpromos store merchant normalization', () => {
 
     expect(mapped).not.toBeNull()
     expect(mapped?.mid).toBe('store_4001')
-    expect(mapped?.promoLink).toBe('https://yeahpromos.com/index/index/openurl?track=track_fallback_4001&url=')
-    expect(mapped?.productUrl).toBe('https://yeahpromos.com/index/advert/advert_content?advert_id=4001&site_id=11767')
+    expect(mapped?.promoLink).toBe(
+      'https://yeahpromos.com/index/index/openurl?track=track_fallback_4001&url='
+    )
+    expect(mapped?.productUrl).toBe(
+      'https://yeahpromos.com/index/advert/advert_content?advert_id=4001&site_id=11767'
+    )
   })
 
   it('returns null when store cannot provide promo link', () => {

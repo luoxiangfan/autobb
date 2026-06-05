@@ -7,32 +7,23 @@ import { selectAdCreative, findAdCreativeById } from '@/lib/ad-creative'
  * 选择指定的广告创意
  */
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权访问' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
     const creativeId = parseInt(params.id)
     if (isNaN(creativeId)) {
-      return NextResponse.json(
-        { error: '无效的创意ID' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: '无效的创意ID' }, { status: 400 })
     }
 
     // 验证创意存在且属于当前用户
     const creative = await findAdCreativeById(creativeId, authResult.user.userId)
     if (!creative) {
-      return NextResponse.json(
-        { error: '广告创意不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: '广告创意不存在或无权访问' }, { status: 404 })
     }
 
     // 标记为已选中
@@ -47,17 +38,16 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       message: '广告创意已选择',
       data: {
         id: creativeId,
-        offerId: creative.offer_id
-      }
+        offerId: creative.offer_id,
+      },
     })
-
   } catch (error: any) {
     console.error('选择广告创意失败:', error)
 
     return NextResponse.json(
       {
         error: '选择广告创意失败',
-        message: error.message || '未知错误'
+        message: error.message || '未知错误',
       },
       { status: 500 }
     )

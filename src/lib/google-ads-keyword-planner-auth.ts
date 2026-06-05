@@ -27,8 +27,7 @@ export function buildKeywordPlannerSessionFromPrepared(
     preparedOAuth = {
       refreshToken: prepared.refreshToken,
       credentials: prepared.oauthCredentials,
-      oauthLoginCustomerId:
-        prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
+      oauthLoginCustomerId: prepared.oauthLoginCustomerId ?? prepared.apiAuth.oauthLoginCustomerId,
       ...preparedAuthContextField(prepared),
     }
   }
@@ -91,8 +90,7 @@ export async function resolveLinkedServiceAccountIdForOffer(
     if (linkedFromCampaign) return linkedFromCampaign
   }
 
-  const isActiveCondition =
-    db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
   const isManagerCondition =
     db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
 
@@ -161,7 +159,11 @@ export async function getKeywordSearchVolumesForPlannerContext(
     country: string
     language: string
     plannerSession?: KeywordPlannerPreparedSession
-    onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void
+    onProgress?: (info: {
+      message: string
+      current?: number
+      total?: number
+    }) => Promise<void> | void
   }
 ): Promise<
   | { ok: true; volumes: Awaited<ReturnType<typeof getKeywordSearchVolumes>> }

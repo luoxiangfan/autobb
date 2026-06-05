@@ -49,8 +49,13 @@ export class UrlSwapScheduler {
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false
   private lastCheckAt: Date | null = null
-  private lastCheckResult: { processed: number; executed: number; skipped: number; errors: number } | null = null
-  private readonly CHECK_INTERVAL_MS = 1 * 60 * 1000  // 每1分钟检查一次，确保任务及时执行
+  private lastCheckResult: {
+    processed: number
+    executed: number
+    skipped: number
+    errors: number
+  } | null = null
+  private readonly CHECK_INTERVAL_MS = 1 * 60 * 1000 // 每1分钟检查一次，确保任务及时执行
   private readonly RUN_ON_START = parseBooleanEnv(process.env.QUEUE_URL_SWAP_RUN_ON_START, true)
   private readonly STARTUP_DELAY_MS = parseNonNegativeIntEnv(
     process.env.QUEUE_URL_SWAP_STARTUP_DELAY_MS,
@@ -131,8 +136,9 @@ export class UrlSwapScheduler {
 
       // 查询所有待执行的换链接任务
       // 条件：status='enabled', next_swap_at <= now, started_at <= now, is_deleted=false/0
-      const query = db.type === 'postgres'
-        ? `
+      const query =
+        db.type === 'postgres'
+          ? `
           SELECT
             id,
             user_id,
@@ -148,7 +154,7 @@ export class UrlSwapScheduler {
             AND is_deleted = FALSE
           ORDER BY next_swap_at ASC
         `
-        : `
+          : `
           SELECT
             id,
             user_id,
@@ -207,7 +213,7 @@ export class UrlSwapScheduler {
       isRunning: this.isRunning,
       checkIntervalMs: this.CHECK_INTERVAL_MS,
       lastCheckAt: this.lastCheckAt ? this.lastCheckAt.toISOString() : null,
-      lastCheckResult: this.lastCheckResult
+      lastCheckResult: this.lastCheckResult,
     }
   }
 }

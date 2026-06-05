@@ -1,9 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  validateGoogleAdsConfig,
-  validateGeminiConfig,
-} from '@/lib/settings'
+import { validateGoogleAdsConfig, validateGeminiConfig } from '@/lib/settings'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { normalizeGeminiModel } from '@/lib/gemini-models'
@@ -22,7 +19,8 @@ const validateSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     const authResult = await verifyAuth(request)
-    const userIdNum = authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum =
+      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
 
     const body = await request.json()
 
@@ -54,10 +52,7 @@ export async function POST(request: NextRequest) {
 
       case 'ai': {
         if (!userIdNum) {
-          return NextResponse.json(
-            { error: '验证AI配置需要登录' },
-            { status: 401 }
-          )
+          return NextResponse.json({ error: '验证AI配置需要登录' }, { status: 401 })
         }
 
         const { getUserOnlySetting } = await import('@/lib/settings')
@@ -81,7 +76,11 @@ export async function POST(request: NextRequest) {
             geminiRelayApiKey = config.gemini_relay_api_key
             console.log('🔍 使用前端传来的中转 API Key（已隐藏）')
           } else {
-            const relayApiKeySetting = await getUserOnlySetting('ai', 'gemini_relay_api_key', userIdNum)
+            const relayApiKeySetting = await getUserOnlySetting(
+              'ai',
+              'gemini_relay_api_key',
+              userIdNum
+            )
             if (!relayApiKeySetting?.value) {
               return NextResponse.json(
                 { error: '请先保存第三方中转 API Key 配置' },
@@ -89,7 +88,9 @@ export async function POST(request: NextRequest) {
               )
             }
             geminiRelayApiKey = relayApiKeySetting.value
-            console.log(`🔍 使用数据库中的中转 API Key（已隐藏，前缀：${geminiRelayApiKey.substring(0, 8)}）`)
+            console.log(
+              `🔍 使用数据库中的中转 API Key（已隐藏，前缀：${geminiRelayApiKey.substring(0, 8)}）`
+            )
           }
         } else {
           if (config.gemini_api_key && config.gemini_api_key !== '············') {
@@ -112,10 +113,7 @@ export async function POST(request: NextRequest) {
         } else {
           const geminiModelSetting = await getUserOnlySetting('ai', 'gemini_model', userIdNum)
           if (!geminiModelSetting?.value) {
-            return NextResponse.json(
-              { error: '请先在AI配置中选择要使用的模型' },
-              { status: 400 }
-            )
+            return NextResponse.json({ error: '请先在AI配置中选择要使用的模型' }, { status: 400 })
           }
           selectedModel = normalizeGeminiModel(geminiModelSetting.value)
         }
@@ -123,7 +121,12 @@ export async function POST(request: NextRequest) {
         console.log(`🔍 验证AI配置: 使用模型配置 ${selectedModel}`)
 
         const apiKeyToValidate = geminiProvider === 'relay' ? geminiRelayApiKey! : geminiApiKey!
-        result = await validateGeminiConfig(apiKeyToValidate, selectedModel, userIdNum, geminiProvider)
+        result = await validateGeminiConfig(
+          apiKeyToValidate,
+          selectedModel,
+          userIdNum,
+          geminiProvider
+        )
         break
       }
 
@@ -164,7 +167,7 @@ export async function POST(request: NextRequest) {
                 url: item.url,
                 urlType: typeof item.url,
                 urlLength: item.url.length,
-                trimmedUrl: item.url.trim()
+                trimmedUrl: item.url.trim(),
               })
 
               // 🔥 使用新的Provider系统验证URL
@@ -174,13 +177,17 @@ export async function POST(request: NextRequest) {
                 const validation = provider.validate(trimmedUrl)
 
                 if (!validation.isValid) {
-                  errors.push(`第${i + 1}个URL (${item.country}) 格式错误: ${validation.errors.join(', ')}`)
+                  errors.push(
+                    `第${i + 1}个URL (${item.country}) 格式错误: ${validation.errors.join(', ')}`
+                  )
                 } else {
                   console.log(`✅ 第${i + 1}个URL验证通过: ${provider.name} Provider`)
                 }
               } catch (error) {
                 console.error(`❌ 第${i + 1}个URL验证失败:`, error)
-                errors.push(`第${i + 1}个URL (${item.country}) 验证失败:${error instanceof Error ? error.message : String(error)}`)
+                errors.push(
+                  `第${i + 1}个URL (${item.country}) 验证失败:${error instanceof Error ? error.message : String(error)}`
+                )
               }
             }
 
@@ -211,10 +218,7 @@ export async function POST(request: NextRequest) {
 
       case 'affiliate_sync': {
         if (!userIdNum) {
-          return NextResponse.json(
-            { error: '验证联盟同步配置需要登录' },
-            { status: 401 }
-          )
+          return NextResponse.json({ error: '验证联盟同步配置需要登录' }, { status: 401 })
         }
 
         const savedSettings = await getAffiliateSyncSettingsMap(userIdNum)

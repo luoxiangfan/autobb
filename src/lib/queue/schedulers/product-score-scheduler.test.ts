@@ -17,10 +17,7 @@ vi.mock('../queue-routing', () => ({
 vi.mock('@/lib/product-score-coordination', () => ({
   findExistingProductScoreTask: vi.fn(async (queue: any, userId: number) => {
     await queue.initialize()
-    const [running, pending] = await Promise.all([
-      queue.getRunningTasks(),
-      queue.getPendingTasks(),
-    ])
+    const [running, pending] = await Promise.all([queue.getRunningTasks(), queue.getPendingTasks()])
     return [...running, ...pending].find((task: any) => task.userId === userId) || null
   }),
   markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
@@ -55,11 +52,14 @@ describe('scheduleProductScoreCalculation', () => {
 
     expect(taskId).toBe('running-1')
     expect(queueMock.enqueue).not.toHaveBeenCalled()
-    expect(markProductScoreRequeueNeededMock).toHaveBeenCalledWith(42, expect.objectContaining({
-      trigger: 'sync-complete',
-      forceRecalculate: true,
-      productIds: [101],
-    }))
+    expect(markProductScoreRequeueNeededMock).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({
+        trigger: 'sync-complete',
+        forceRecalculate: true,
+        productIds: [101],
+      })
+    )
   })
 
   it('does not enqueue a duplicate when a pending task already exists', async () => {

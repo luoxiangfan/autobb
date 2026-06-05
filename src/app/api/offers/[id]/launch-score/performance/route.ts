@@ -3,13 +3,8 @@ import { verifyAuth } from '@/lib/auth'
 import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score-performance'
 import { resolveLaunchScoreForPerformanceApi } from '@/lib/launch-score-cache'
 import { findOfferById } from '@/lib/offers'
-import {
-  parseLaunchScoreHashCampaignConfigFromSearchParams,
-} from '@/lib/launch-score-campaign-config'
-import {
-  parsePositiveIntegerId,
-  parsePositiveIntegerOfferId,
-} from '@/lib/parse-offer-id'
+import { parseLaunchScoreHashCampaignConfigFromSearchParams } from '@/lib/launch-score-campaign-config'
+import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 /**
  * GET /api/offers/:id/launch-score/performance
@@ -20,14 +15,11 @@ import {
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: '未授权' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
 
     const userId = authResult.user.userId
@@ -38,10 +30,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
 
     const offer = await findOfferById(offerId, userId)
     if (!offer) {
-      return NextResponse.json(
-        { error: 'Offer不存在或无权访问' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
     }
 
     const { searchParams } = new URL(request.url)
@@ -51,18 +40,14 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       : undefined
     const launchScoreId = parsePositiveIntegerId(searchParams.get('launchScoreId'))
     const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
-    const hashCampaignConfig =
-      parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
+    const hashCampaignConfig = parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
 
     if (launchScoreId != null) {
       const lookup = await resolveLaunchScoreForPerformanceApi(offer, userId, {
         launchScoreId,
       })
       if (!lookup.launchScore) {
-        return NextResponse.json(
-          { error: 'Launch Score 不存在或无权访问' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: 'Launch Score 不存在或无权访问' }, { status: 404 })
       }
       const performance = await buildLaunchScorePerformanceApiPayload(
         lookup.launchScore,
@@ -74,9 +59,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         success: true,
         hasLaunchScore: true,
         launchScoreId: lookup.launchScore.id,
-        ...(lookup.resolvedCreativeId != null
-          ? { creativeId: lookup.resolvedCreativeId }
-          : {}),
+        ...(lookup.resolvedCreativeId != null ? { creativeId: lookup.resolvedCreativeId } : {}),
         launchScore: {
           id: lookup.launchScore.id,
           totalScore: lookup.launchScore.totalScore,
@@ -113,9 +96,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           hasLaunchScore: false,
           hasPerformanceData: false,
           ...(lookup.stale ? { stale: true } : {}),
-          ...(lookup.resolvedCreativeId != null
-            ? { creativeId: lookup.resolvedCreativeId }
-            : {}),
+          ...(lookup.resolvedCreativeId != null ? { creativeId: lookup.resolvedCreativeId } : {}),
         },
         { status: 200 }
       )
@@ -132,9 +113,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       success: true,
       hasLaunchScore: true,
       launchScoreId: lookup.launchScore.id,
-      ...(lookup.resolvedCreativeId != null
-        ? { creativeId: lookup.resolvedCreativeId }
-        : {}),
+      ...(lookup.resolvedCreativeId != null ? { creativeId: lookup.resolvedCreativeId } : {}),
       launchScore: {
         id: lookup.launchScore.id,
         totalScore: lookup.launchScore.totalScore,
@@ -156,9 +135,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     })
   } catch (error: any) {
     console.error('Get Launch Score performance comparison error:', error)
-    return NextResponse.json(
-      { error: error.message || '获取性能对比数据失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取性能对比数据失败' }, { status: 500 })
   }
 }

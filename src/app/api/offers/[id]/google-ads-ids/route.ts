@@ -10,14 +10,11 @@ import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
     const offerId = parsePositiveIntegerOfferId(params.id)
@@ -27,7 +24,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const db = await getDatabase()
 
     // 验证Offer是否存在且属于该用户
-    const offer = await db.queryOne(`SELECT id FROM offers WHERE id = ? AND user_id = ?`, [offerId, userIdNum])
+    const offer = await db.queryOne(`SELECT id FROM offers WHERE id = ? AND user_id = ?`, [
+      offerId,
+      userIdNum,
+    ])
     if (!offer) {
       return NextResponse.json({ error: 'Offer 不存在' }, { status: 404 })
     }
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     // campaigns 表兼容 SQLite(INTEGER 0/1) / PostgreSQL(BOOLEAN)
     const isDeletedCheck = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'
 
-    const row = await db.queryOne(
+    const row = (await db.queryOne(
       `
         SELECT
           gaa.customer_id as customer_id,
@@ -54,10 +54,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         LIMIT 1
       `,
       [offerId, userIdNum]
-    ) as any
+    )) as any
 
     const googleCustomerId = row?.customer_id || null
-    const googleCampaignId = (row?.google_campaign_id || row?.campaign_id) || null
+    const googleCampaignId = row?.google_campaign_id || row?.campaign_id || null
 
     return NextResponse.json({
       success: true,
@@ -74,4 +74,3 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     )
   }
 }
-

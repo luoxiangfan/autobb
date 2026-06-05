@@ -111,7 +111,8 @@ export async function getPerformanceDataForOffer(
   const cutoffDateStr = cutoffDate.toISOString().split('T')[0]
   const today = new Date().toISOString().split('T')[0]
 
-  const result = await db.queryOne(`
+  const result = (await db.queryOne(
+    `
     SELECT
       SUM(cp.impressions) as total_impressions,
       SUM(cp.clicks) as total_clicks,
@@ -133,7 +134,9 @@ export async function getPerformanceDataForOffer(
       AND c.user_id = ?
       AND cp.date >= ?
       AND cp.date <= ?
-  `, [offerId, userId, cutoffDateStr, today]) as any
+  `,
+    [offerId, userId, cutoffDateStr, today]
+  )) as any
 
   if (!result || result.total_impressions === null || result.total_impressions === 0) {
     return null // 没有性能数据
@@ -141,9 +144,7 @@ export async function getPerformanceDataForOffer(
 
   const totalCost = Number(result.total_cost) || 0
   const costCurrency = String(result.cost_currency || 'CNY')
-  const avgCpc = result.total_clicks > 0
-    ? totalCost / result.total_clicks
-    : 0
+  const avgCpc = result.total_clicks > 0 ? totalCost / result.total_clicks : 0
 
   // SQL 返回百分比 (0–100)，下游阈值/展示统一用小数比率 (0–1)
   const avgCtrPercent = Number(result.avg_ctr) || 0
@@ -164,8 +165,8 @@ export async function getPerformanceDataForOffer(
     dateRange: {
       start: cutoffDateStr,
       end: today,
-      days: daysBack
-    }
+      days: daysBack,
+    },
   }
 }
 
@@ -186,21 +187,21 @@ export function comparePredictionVsActual(
       predicted: '未预测',
       actual: '暂无数据',
       accuracy: null,
-      variance: '等待数据同步'
+      variance: '等待数据同步',
     })
     comparisons.push({
       metric: '转化率',
       predicted: '未预测',
       actual: '暂无数据',
       accuracy: null,
-      variance: '等待数据同步'
+      variance: '等待数据同步',
     })
     comparisons.push({
       metric: 'CPC (每次点击成本)',
       predicted: '未预测',
       actual: '暂无数据',
       accuracy: null,
-      variance: '等待数据同步'
+      variance: '等待数据同步',
     })
     return comparisons
   }
@@ -237,9 +238,10 @@ export function comparePredictionVsActual(
   // 4. ROI对比 (如果提供了平均订单价值)
   if (avgOrderValue && avgOrderValue > 0) {
     const revenue = performanceData.totalConversions * avgOrderValue
-    const actualRoi = performanceData.totalCost > 0
-      ? ((revenue - performanceData.totalCost) / performanceData.totalCost) * 100
-      : 0
+    const actualRoi =
+      performanceData.totalCost > 0
+        ? ((revenue - performanceData.totalCost) / performanceData.totalCost) * 100
+        : 0
 
     comparisons.push({
       metric: 'ROI (投资回报率)',
@@ -277,10 +279,7 @@ export function comparePredictionVsActual(
   comparisons.push({
     metric: '总花费',
     predicted: '—',
-    actual: formatPerformanceMoney(
-      Number(performanceData.totalCost) || 0,
-      costCurrency
-    ),
+    actual: formatPerformanceMoney(Number(performanceData.totalCost) || 0, costCurrency),
     accuracy: null,
     variance: '广告账户原始币种',
   })
@@ -300,23 +299,32 @@ export function generatePerformanceAdjustedRecommendations(
 
   // 1. CTR分析
   if (performanceData.avgCtr < 0.01) {
-    recommendations.push(`📉 点击率过低 (${(performanceData.avgCtr * 100).toFixed(2)}%)，建议优化广告文案和标题吸引力`)
+    recommendations.push(
+      `📉 点击率过低 (${(performanceData.avgCtr * 100).toFixed(2)}%)，建议优化广告文案和标题吸引力`
+    )
   } else if (performanceData.avgCtr > 0.05) {
-    recommendations.push(`🎯 点击率表现优秀 (${(performanceData.avgCtr * 100).toFixed(2)}%)，继续保持创意质量`)
+    recommendations.push(
+      `🎯 点击率表现优秀 (${(performanceData.avgCtr * 100).toFixed(2)}%)，继续保持创意质量`
+    )
   }
 
   // 2. 转化率分析
   if (performanceData.conversionRate < 0.02) {
-    recommendations.push(`🔧 转化率较低 (${(performanceData.conversionRate * 100).toFixed(2)}%)，建议检查着陆页体验和目标受众定位`)
+    recommendations.push(
+      `🔧 转化率较低 (${(performanceData.conversionRate * 100).toFixed(2)}%)，建议检查着陆页体验和目标受众定位`
+    )
   } else if (performanceData.conversionRate > 0.05) {
-    recommendations.push(`🌟 转化率表现出色 (${(performanceData.conversionRate * 100).toFixed(2)}%)，可以考虑扩大预算规模`)
+    recommendations.push(
+      `🌟 转化率表现出色 (${(performanceData.conversionRate * 100).toFixed(2)}%)，可以考虑扩大预算规模`
+    )
   }
 
   // 3. 预算使用分析
   if (performanceData.totalCost > 100) {
-    const costPerConversion = performanceData.totalConversions > 0
-      ? performanceData.totalCost / performanceData.totalConversions
-      : 0
+    const costPerConversion =
+      performanceData.totalConversions > 0
+        ? performanceData.totalCost / performanceData.totalConversions
+        : 0
 
     if (costPerConversion > 0) {
       recommendations.push(
@@ -326,11 +334,15 @@ export function generatePerformanceAdjustedRecommendations(
   }
 
   if (performanceData.avgCtr < 0.02 && launchScore.adQualityScore < 20) {
-    recommendations.push(`📝 低点击率可能与广告质量得分较低有关 (${launchScore.adQualityScore}/30)，建议重新优化广告文案`)
+    recommendations.push(
+      `📝 低点击率可能与广告质量得分较低有关 (${launchScore.adQualityScore}/30)，建议重新优化广告文案`
+    )
   }
 
   if (performanceData.avgCpc > 3 && launchScore.keywordStrategyScore < 15) {
-    recommendations.push(`🔑 高CPC可能与关键词策略得分较低有关 (${launchScore.keywordStrategyScore}/20)，建议优化关键词相关性`)
+    recommendations.push(
+      `🔑 高CPC可能与关键词策略得分较低有关 (${launchScore.keywordStrategyScore}/20)，建议优化关键词相关性`
+    )
   }
 
   // 如果没有生成任何建议，添加默认建议
@@ -351,11 +363,7 @@ export async function getPerformanceEnhancedAnalysis(
   avgOrderValue?: number
 ): Promise<PerformanceEnhancedAnalysis> {
   // 获取实际性能数据
-  const performanceData = await getPerformanceDataForOffer(
-    launchScore.offerId,
-    userId,
-    daysBack
-  )
+  const performanceData = await getPerformanceDataForOffer(launchScore.offerId, userId, daysBack)
 
   if (!performanceData) {
     return {

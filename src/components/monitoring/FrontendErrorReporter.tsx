@@ -34,7 +34,11 @@ function sendError(payload: Record<string, unknown>) {
   }).catch(() => {})
 }
 
-export default function FrontendErrorReporter({ enabled, buildId, flagSnapshot }: FrontendErrorReporterProps) {
+export default function FrontendErrorReporter({
+  enabled,
+  buildId,
+  flagSnapshot,
+}: FrontendErrorReporterProps) {
   const pathname = usePathname() || '/'
   const recentErrorRef = useRef<Map<string, number>>(new Map())
 

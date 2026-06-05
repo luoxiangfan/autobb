@@ -41,20 +41,24 @@ function buildEvaluation(params: {
 
 describe('rsa-quality-gate adaptive thresholds', () => {
   it('passes brand-intent bucket A when queryLandingAlignmentScore is 58', () => {
-    const decision = evaluateRsaQualityGate(buildEvaluation({
-      expectedBucket: 'A',
-      queryLandingAlignmentScore: 58,
-    }))
+    const decision = evaluateRsaQualityGate(
+      buildEvaluation({
+        expectedBucket: 'A',
+        queryLandingAlignmentScore: 58,
+      })
+    )
 
     expect(decision.passed).toBe(true)
     expect(decision.reasons).toEqual([])
   })
 
   it('keeps non-A buckets on stricter queryLandingAlignmentScore threshold', () => {
-    const decision = evaluateRsaQualityGate(buildEvaluation({
-      expectedBucket: 'B',
-      queryLandingAlignmentScore: 64,
-    }))
+    const decision = evaluateRsaQualityGate(
+      buildEvaluation({
+        expectedBucket: 'B',
+        queryLandingAlignmentScore: 64,
+      })
+    )
 
     expect(decision.passed).toBe(false)
     expect(decision.reasons.join(' | ')).toContain('queryLandingAlignmentScore 64 < 65')

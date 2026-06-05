@@ -26,7 +26,7 @@ function getClientIP(request: NextRequest): string {
 
 // PATCH: Update user details
 export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const auth = await verifyAuth(request)
   if (!auth.authenticated || auth.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -48,20 +48,22 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     const db = getDatabase()
 
     // 获取更新前的用户数据（用于审计日志）
-    const beforeUser = await db.queryOne(
+    const beforeUser = (await db.queryOne(
       'SELECT id, username, email, package_type, package_expires_at, is_active, openclaw_enabled, product_management_enabled, strategy_center_enabled FROM users WHERE id = ?',
       [userId]
-    ) as {
-      id: number
-      username: string
-      email: string
-      package_type: string
-      package_expires_at: string
-      is_active: number
-      openclaw_enabled: number | boolean
-      product_management_enabled?: number | boolean
-      strategy_center_enabled?: number | boolean
-    } | undefined
+    )) as
+      | {
+          id: number
+          username: string
+          email: string
+          package_type: string
+          package_expires_at: string
+          is_active: number
+          openclaw_enabled: number | boolean
+          product_management_enabled?: number | boolean
+          strategy_center_enabled?: number | boolean
+        }
+      | undefined
 
     if (!beforeUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -87,41 +89,58 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     if (isActive !== undefined) {
       // 🔧 修复(2025-12-30): PostgreSQL返回boolean类型，SQLite返回number类型
       // 使用类型断言避免TypeScript错误，但保持原有的运行时判断逻辑
-      const currentIsActive = (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
+      const currentIsActive =
+        (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
       const isActiveBoolean = Boolean(isActive)
       if (isActiveBoolean !== currentIsActive) {
         // PostgreSQL接受boolean值，SQLite需要0/1
-        const valueToSet = db.type === 'postgres' ? isActiveBoolean : (isActiveBoolean ? 1 : 0)
+        const valueToSet = db.type === 'postgres' ? isActiveBoolean : isActiveBoolean ? 1 : 0
         fieldUpdates.push({ sql: 'is_active = ?', value: valueToSet })
         changedFields.push('is_active')
       }
     }
 
     if (openclawEnabled !== undefined) {
-      const currentOpenclawEnabled = (beforeUser.openclaw_enabled as any) === true || (beforeUser.openclaw_enabled as any) === 1
+      const currentOpenclawEnabled =
+        (beforeUser.openclaw_enabled as any) === true || (beforeUser.openclaw_enabled as any) === 1
       const openclawEnabledBoolean = Boolean(openclawEnabled)
       if (openclawEnabledBoolean !== currentOpenclawEnabled) {
-        const valueToSet = db.type === 'postgres' ? openclawEnabledBoolean : (openclawEnabledBoolean ? 1 : 0)
+        const valueToSet =
+          db.type === 'postgres' ? openclawEnabledBoolean : openclawEnabledBoolean ? 1 : 0
         fieldUpdates.push({ sql: 'openclaw_enabled = ?', value: valueToSet })
         changedFields.push('openclaw_enabled')
       }
     }
 
     if (productManagementEnabled !== undefined) {
-      const currentProductManagementEnabled = (beforeUser.product_management_enabled as any) === true || (beforeUser.product_management_enabled as any) === 1
+      const currentProductManagementEnabled =
+        (beforeUser.product_management_enabled as any) === true ||
+        (beforeUser.product_management_enabled as any) === 1
       const productManagementEnabledBoolean = Boolean(productManagementEnabled)
       if (productManagementEnabledBoolean !== currentProductManagementEnabled) {
-        const valueToSet = db.type === 'postgres' ? productManagementEnabledBoolean : (productManagementEnabledBoolean ? 1 : 0)
+        const valueToSet =
+          db.type === 'postgres'
+            ? productManagementEnabledBoolean
+            : productManagementEnabledBoolean
+              ? 1
+              : 0
         fieldUpdates.push({ sql: 'product_management_enabled = ?', value: valueToSet })
         changedFields.push('product_management_enabled')
       }
     }
 
     if (strategyCenterEnabled !== undefined) {
-      const currentStrategyCenterEnabled = (beforeUser.strategy_center_enabled as any) === true || (beforeUser.strategy_center_enabled as any) === 1
+      const currentStrategyCenterEnabled =
+        (beforeUser.strategy_center_enabled as any) === true ||
+        (beforeUser.strategy_center_enabled as any) === 1
       const strategyCenterEnabledBoolean = Boolean(strategyCenterEnabled)
       if (strategyCenterEnabledBoolean !== currentStrategyCenterEnabled) {
-        const valueToSet = db.type === 'postgres' ? strategyCenterEnabledBoolean : (strategyCenterEnabledBoolean ? 1 : 0)
+        const valueToSet =
+          db.type === 'postgres'
+            ? strategyCenterEnabledBoolean
+            : strategyCenterEnabledBoolean
+              ? 1
+              : 0
         fieldUpdates.push({ sql: 'strategy_center_enabled = ?', value: valueToSet })
         changedFields.push('strategy_center_enabled')
       }
@@ -132,10 +151,10 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     }
 
     // 构建SQL和参数数组
-    const updates = fieldUpdates.map(f => f.sql)
-    updates.push('updated_at = CURRENT_TIMESTAMP')  // 所有数据库都支持CURRENT_TIMESTAMP
+    const updates = fieldUpdates.map((f) => f.sql)
+    updates.push('updated_at = CURRENT_TIMESTAMP') // 所有数据库都支持CURRENT_TIMESTAMP
 
-    const values = [...fieldUpdates.map(f => f.value), userId]  // WHERE id = ?
+    const values = [...fieldUpdates.map((f) => f.value), userId] // WHERE id = ?
 
     // 构建最终 SQL（用于调试）
     const finalSql = `
@@ -148,7 +167,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     console.log('🔍 [Admin] 更新用户 SQL:', {
       sql: finalSql.trim(),
       params: values,
-      updates: updates
+      updates: updates,
     })
 
     const result = await db.exec(finalSql, values)
@@ -161,10 +180,15 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       return NextResponse.json({ error: 'Failed to update user' }, { status: 500 })
     }
 
-    const updatedUser = await db.queryOne('SELECT id, username, email, package_type, package_expires_at, is_active, openclaw_enabled, product_management_enabled, strategy_center_enabled FROM users WHERE id = ?', [userId]) as any
+    const updatedUser = (await db.queryOne(
+      'SELECT id, username, email, package_type, package_expires_at, is_active, openclaw_enabled, product_management_enabled, strategy_center_enabled FROM users WHERE id = ?',
+      [userId]
+    )) as any
 
     // 获取操作者的username（从数据库查询）
-    const operator = await db.queryOne('SELECT username FROM users WHERE id = ?', [auth.user!.userId]) as { username: string } | undefined
+    const operator = (await db.queryOne('SELECT username FROM users WHERE id = ?', [
+      auth.user!.userId,
+    ])) as { username: string } | undefined
 
     // 记录审计日志
     const auditContext: UserManagementContext = {
@@ -181,8 +205,10 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       clearUserExecutionEligibilityCache(userId)
 
       // 🔧 修复(2025-12-30): PostgreSQL返回boolean类型，SQLite返回number类型
-      const wasActive = (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
-      const isNowActive = (updatedUser.is_active as any) === true || (updatedUser.is_active as any) === 1
+      const wasActive =
+        (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
+      const isNowActive =
+        (updatedUser.is_active as any) === true || (updatedUser.is_active as any) === 1
       if (!wasActive && isNowActive) {
         await logUserEnabled(auditContext)
       } else if (wasActive && !isNowActive) {
@@ -200,13 +226,12 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     }
 
     // 如果有其他字段变更，记录更新日志
-    const nonStatusFields = changedFields.filter(f => f !== 'is_active')
+    const nonStatusFields = changedFields.filter((f) => f !== 'is_active')
     if (nonStatusFields.length > 0) {
       await logUserUpdated(auditContext, beforeUser, updatedUser, nonStatusFields)
     }
 
     return NextResponse.json({ success: true, user: updatedUser })
-
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -214,7 +239,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
 
 // DELETE: Hard delete user permanently
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const auth = await verifyAuth(request)
   if (!auth.authenticated || auth.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -230,10 +255,19 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     }
 
     // Check if user exists and get full user data for audit
-    const user = await db.queryOne(
+    const user = (await db.queryOne(
       'SELECT id, username, email, role, package_type, is_active FROM users WHERE id = ?',
       [userId]
-    ) as { id: number; username: string; email: string; role: string; package_type: string; is_active: number } | undefined
+    )) as
+      | {
+          id: number
+          username: string
+          email: string
+          role: string
+          package_type: string
+          is_active: number
+        }
+      | undefined
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -254,7 +288,9 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     }
 
     // 获取操作者的username（从数据库查询）
-    const operator = await db.queryOne('SELECT username FROM users WHERE id = ?', [auth.user!.userId]) as { username: string } | undefined
+    const operator = (await db.queryOne('SELECT username FROM users WHERE id = ?', [
+      auth.user!.userId,
+    ])) as { username: string } | undefined
 
     // 记录审计日志
     const auditContext: UserManagementContext = {
@@ -268,7 +304,6 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     await logUserDeleted(auditContext, user)
 
     return NextResponse.json({ success: true, message: 'User deleted permanently' })
-
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

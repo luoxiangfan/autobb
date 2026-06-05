@@ -1,9 +1,9 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Table,
   TableBody,
@@ -11,85 +11,78 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import {
-  RefreshCw,
-  Zap,
-  FileText,
-  TrendingUp,
-  AlertCircle,
-  Users,
-} from 'lucide-react';
+} from '@/components/ui/table'
+import { RefreshCw, Zap, FileText, TrendingUp, AlertCircle, Users } from 'lucide-react'
 
 interface GlobalStats {
-  total_tasks: number;
-  active_tasks: number;
-  total_clicks: number;
-  success_clicks: number;
-  success_rate: number;
-  today_clicks: number;
-  today_success_clicks: number;  // 🆕 今日成功点击数
-  today_success_rate: number;    // 🆕 今日成功率
-  today_traffic: number;
-  total_traffic: number;
+  total_tasks: number
+  active_tasks: number
+  total_clicks: number
+  success_clicks: number
+  success_rate: number
+  today_clicks: number
+  today_success_clicks: number // 🆕 今日成功点击数
+  today_success_rate: number // 🆕 今日成功率
+  today_traffic: number
+  total_traffic: number
   taskStatusDistribution: {
-    pending: number;
-    running: number;
-    paused: number;
-    stopped: number;
-    completed: number;
-    total: number;
-  };
+    pending: number
+    running: number
+    paused: number
+    stopped: number
+    completed: number
+    total: number
+  }
 }
 
 interface TopUser {
-  userId: number;
-  username: string;
-  totalClicks: number;
-  successRate: number;
-  traffic: number;
+  userId: number
+  username: string
+  totalClicks: number
+  successRate: number
+  traffic: number
 }
 
 export default function AdminClickFarmPage() {
   // Data states
-  const [stats, setStats] = useState<GlobalStats | null>(null);
-  const [topUsers, setTopUsers] = useState<TopUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<GlobalStats | null>(null)
+  const [topUsers, setTopUsers] = useState<TopUser[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData()
+  }, [])
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      setLoading(true)
       const [statsRes, topUsersRes] = await Promise.all([
         fetch('/api/admin/click-farm/stats'),
         fetch('/api/admin/click-farm/top-users'),
-      ]);
+      ])
 
       if (statsRes.ok) {
-        const data = await statsRes.json();
-        setStats(data.data);
+        const data = await statsRes.json()
+        setStats(data.data)
       }
 
       if (topUsersRes.ok) {
-        const data = await topUsersRes.json();
-        setTopUsers(data.data || []);
+        const data = await topUsersRes.json()
+        setTopUsers(data.data || [])
       }
     } catch (error) {
-      console.error('加载数据失败:', error);
+      console.error('加载数据失败:', error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const formatBytes = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+  }
 
   if (loading) {
     return (
@@ -99,7 +92,7 @@ export default function AdminClickFarmPage() {
           <p className="mt-4 text-gray-600">加载中...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -115,11 +108,7 @@ export default function AdminClickFarmPage() {
               </Badge>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={loadData}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" onClick={loadData} className="flex items-center gap-2">
                 <RefreshCw className="w-4 h-4" />
                 刷新
               </Button>
@@ -244,11 +233,15 @@ export default function AdminClickFarmPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
                 <div className="text-center">
-                  <div className="text-lg font-bold text-blue-600">{stats.taskStatusDistribution.pending}</div>
+                  <div className="text-lg font-bold text-blue-600">
+                    {stats.taskStatusDistribution.pending}
+                  </div>
                   <div className="text-xs text-gray-500">等待开始</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-green-600">{stats.taskStatusDistribution.running}</div>
+                  <div className="text-lg font-bold text-green-600">
+                    {stats.taskStatusDistribution.running}
+                  </div>
                   <div className="text-xs text-gray-500">运行中</div>
                 </div>
                 <div className="text-center">
@@ -258,7 +251,9 @@ export default function AdminClickFarmPage() {
                   <div className="text-xs text-gray-500">已暂停</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-purple-600">{stats.taskStatusDistribution.completed}</div>
+                  <div className="text-lg font-bold text-purple-600">
+                    {stats.taskStatusDistribution.completed}
+                  </div>
                   <div className="text-xs text-gray-500">已完成</div>
                 </div>
                 <div className="text-center">
@@ -301,7 +296,9 @@ export default function AdminClickFarmPage() {
                         {user.totalClicks.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className={user.successRate >= 95 ? 'text-green-600 font-medium' : ''}>
+                        <span
+                          className={user.successRate >= 95 ? 'text-green-600 font-medium' : ''}
+                        >
                           {user.successRate.toFixed(1)}%
                         </span>
                       </TableCell>
@@ -315,5 +312,5 @@ export default function AdminClickFarmPage() {
         )}
       </main>
     </div>
-  );
+  )
 }

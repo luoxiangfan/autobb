@@ -16,7 +16,7 @@ interface CachedProductDetail {
 
 // 统一的产品详情缓存
 const productDetailCache = new Map<string, CachedProductDetail>()
-const CACHE_TTL = 24 * 60 * 60 * 1000  // 24小时
+const CACHE_TTL = 24 * 60 * 60 * 1000 // 24小时
 
 // 缓存统计
 let cacheHits = 0
@@ -51,7 +51,7 @@ export function getCachedProductDetail(
     return cached.data
   }
   if (cached) {
-    productDetailCache.delete(asin)  // 清理过期缓存
+    productDetailCache.delete(asin) // 清理过期缓存
   }
   cacheMisses++
   return null
@@ -63,7 +63,7 @@ export function getCachedProductDetail(
 export function setCachedProductDetail(asin: string, data: AmazonProductData): void {
   productDetailCache.set(asin, {
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   })
 }
 
@@ -82,7 +82,7 @@ export function getProductCacheStats(): {
     size: productDetailCache.size,
     hitRate: `${hitRate}% (${cacheHits}/${total})`,
     hits: cacheHits,
-    misses: cacheMisses
+    misses: cacheMisses,
   }
 }
 

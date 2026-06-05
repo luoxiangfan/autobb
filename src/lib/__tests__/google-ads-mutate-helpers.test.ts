@@ -29,4 +29,3 @@ describe('normalizeGoogleAdsApiUpdateOperations', () => {
     ).toThrow('Resource name is missing.')
   })
 })
-

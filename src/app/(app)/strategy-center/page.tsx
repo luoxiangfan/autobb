@@ -2,13 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -47,12 +41,7 @@ type StrategyRecommendationType =
   | 'add_negative_keywords'
   | 'optimize_match_type'
 
-type StrategyRecommendationStatus =
-  | 'pending'
-  | 'executed'
-  | 'failed'
-  | 'dismissed'
-  | 'stale'
+type StrategyRecommendationStatus = 'pending' | 'executed' | 'failed' | 'dismissed' | 'stale'
 
 const STRATEGY_SETTING_KEYS = [
   'openclaw_strategy_enabled',
@@ -162,7 +151,11 @@ type StrategyRecommendation = {
       selectedFromHistorical?: number
       excludedReasonCounts?: Record<string, number>
     }
-    negativeKeywordPlan?: Array<{ text: string; matchType: 'BROAD' | 'PHRASE' | 'EXACT'; reason?: string }>
+    negativeKeywordPlan?: Array<{
+      text: string
+      matchType: 'BROAD' | 'PHRASE' | 'EXACT'
+      reason?: string
+    }>
     matchTypePlan?: Array<{
       text: string
       currentMatchType: 'BROAD' | 'PHRASE' | 'EXACT'
@@ -236,7 +229,12 @@ type StrategyConfirmRequest = {
 
 type StrategyRecommendationExecuteDatePolicy = {
   allowed: boolean
-  reason: 'same_day' | 't_minus_1_allowed' | 't_minus_1_type_blocked' | 'out_of_window' | 'unknown_date'
+  reason:
+    | 'same_day'
+    | 't_minus_1_allowed'
+    | 't_minus_1_type_blocked'
+    | 'out_of_window'
+    | 'unknown_date'
   reportDate: string
   serverDate: string
   tMinus1Date: string
@@ -276,7 +274,8 @@ const STRATEGY_T_MINUS_1_EXECUTABLE_TYPES = new Set<StrategyRecommendationType>(
   'optimize_match_type',
 ])
 
-const STRATEGY_T_MINUS_1_EXECUTABLE_TYPE_LABELS = 'CPC调整、预算调整、补充Search Terms关键词、新增否词、匹配类型优化'
+const STRATEGY_T_MINUS_1_EXECUTABLE_TYPE_LABELS =
+  'CPC调整、预算调整、补充Search Terms关键词、新增否词、匹配类型优化'
 
 function normalizeSettingMap(settings?: SettingItem[]): Record<StrategySettingKey, string> {
   const values: Record<StrategySettingKey, string> = { ...STRATEGY_SETTING_DEFAULTS }
@@ -320,12 +319,16 @@ function shiftOpenclawLocalIsoDate(dateText: string, offsetDays: number): string
 
 function resolveStrategyCronPreset(cron: string): string {
   const normalized = cron.trim().replace(/\s+/g, ' ')
-  const matched = STRATEGY_CRON_OPTIONS.find((option) => option.id !== 'custom' && option.cron === normalized)
+  const matched = STRATEGY_CRON_OPTIONS.find(
+    (option) => option.id !== 'custom' && option.cron === normalized
+  )
   return matched?.id || 'custom'
 }
 
 function normalizeCurrencyCode(value?: string | null): string {
-  const normalized = String(value || '').trim().toUpperCase()
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
   return /^[A-Z]{3}$/.test(normalized) ? normalized : 'USD'
 }
 
@@ -360,14 +363,18 @@ function formatTimestamp(value?: number | string | null): string {
 }
 
 function resolveImpactConfidenceText(value?: string | null): string {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (normalized === 'high') return '高'
   if (normalized === 'medium') return '中'
   return '低'
 }
 
 function resolveImpactEstimationSourceText(value?: string | null): string {
-  const normalized = String(value || '').trim().toLowerCase()
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
   if (normalized === 'observed_roas') return '估算口径：实测ROAS'
   if (normalized === 'fallback_lag_protected') return '估算口径：滞后保护回退'
   if (normalized === 'fallback_default') return '估算口径：默认回退'
@@ -422,7 +429,9 @@ function resolveRecommendationExecuteDatePolicy(params: {
   serverDate: string
   fallbackReportDate?: string
 }): StrategyRecommendationExecuteDatePolicy {
-  const reportDate = String(params.recommendation.reportDate || params.fallbackReportDate || '').trim()
+  const reportDate = String(
+    params.recommendation.reportDate || params.fallbackReportDate || ''
+  ).trim()
   const serverDate = String(params.serverDate || '').trim()
   const tMinus1Date = shiftOpenclawLocalIsoDate(serverDate, -1)
 
@@ -492,7 +501,9 @@ function resolveRecommendationStatusRank(status: StrategyRecommendationStatus): 
 }
 
 function resolvePostReviewStatusText(status?: string | null): string {
-  const normalized = String(status || '').trim().toLowerCase()
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase()
   if (normalized === 'effective') return '复盘：有效'
   if (normalized === 'mixed') return '复盘：部分有效'
   if (normalized === 'ineffective') return '复盘：无效'
@@ -507,8 +518,12 @@ export default function StrategyCenterPage() {
   const [settingsPanelOpen, setSettingsPanelOpen] = useState(true)
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [settingsSaving, setSettingsSaving] = useState(false)
-  const [settingsValues, setSettingsValues] = useState<Record<StrategySettingKey, string>>({ ...STRATEGY_SETTING_DEFAULTS })
-  const [settingsInitialValues, setSettingsInitialValues] = useState<Record<StrategySettingKey, string>>({ ...STRATEGY_SETTING_DEFAULTS })
+  const [settingsValues, setSettingsValues] = useState<Record<StrategySettingKey, string>>({
+    ...STRATEGY_SETTING_DEFAULTS,
+  })
+  const [settingsInitialValues, setSettingsInitialValues] = useState<
+    Record<StrategySettingKey, string>
+  >({ ...STRATEGY_SETTING_DEFAULTS })
   const [strategyCronPreset, setStrategyCronPreset] = useState('daily_morning')
 
   const [reportDate, setReportDate] = useState<string>(parseLocalDate())
@@ -519,8 +534,11 @@ export default function StrategyCenterPage() {
   const [recommendations, setRecommendations] = useState<StrategyRecommendation[]>([])
 
   const [strategyAnalyzeSendFeishu, setStrategyAnalyzeSendFeishu] = useState(true)
-  const [recommendationsDisplayMode, setRecommendationsDisplayMode] = useState<'final' | 'all'>('final')
-  const [recommendationStatusFilter, setRecommendationStatusFilter] = useState<StrategyRecommendationStatusFilter>('actionable')
+  const [recommendationsDisplayMode, setRecommendationsDisplayMode] = useState<'final' | 'all'>(
+    'final'
+  )
+  const [recommendationStatusFilter, setRecommendationStatusFilter] =
+    useState<StrategyRecommendationStatusFilter>('actionable')
   const [batchScope, setBatchScope] = useState<StrategyBatchScope>('filtered')
   const [selectedRecommendationIds, setSelectedRecommendationIds] = useState<string[]>([])
   const [batchExecuting, setBatchExecuting] = useState(false)
@@ -531,15 +549,17 @@ export default function StrategyCenterPage() {
   const [executingId, setExecutingId] = useState<string | null>(null)
   const [dismissingId, setDismissingId] = useState<string | null>(null)
   const [detailItem, setDetailItem] = useState<StrategyRecommendation | null>(null)
-  const [strategyConfirmDialog, setStrategyConfirmDialog] = useState<StrategyConfirmRequest | null>(null)
+  const [strategyConfirmDialog, setStrategyConfirmDialog] = useState<StrategyConfirmRequest | null>(
+    null
+  )
   const strategyConfirmResolverRef = useRef<((accepted: boolean) => void) | null>(null)
   const [strategyConfirmAcknowledge, setStrategyConfirmAcknowledge] = useState(false)
 
   const [testingFeishu, setTestingFeishu] = useState(false)
   const canRunFeishuConnectionTest = Boolean(
-    settingsValues.feishu_app_id.trim()
-      && settingsValues.feishu_app_secret.trim()
-      && settingsValues.feishu_target.trim()
+    settingsValues.feishu_app_id.trim() &&
+    settingsValues.feishu_app_secret.trim() &&
+    settingsValues.feishu_target.trim()
   )
 
   const settingsDirty = useMemo(
@@ -548,20 +568,21 @@ export default function StrategyCenterPage() {
   )
 
   const strategyDisplayDate = String(reportDate || parseLocalDate()).trim() || parseLocalDate()
-  const strategyServerDateDisplay = String(serverDate || parseLocalDate()).trim() || parseLocalDate()
+  const strategyServerDateDisplay =
+    String(serverDate || parseLocalDate()).trim() || parseLocalDate()
   const strategyHistoricalReadOnly = Boolean(
-    strategyDisplayDate
-      && strategyServerDateDisplay
-      && strategyDisplayDate < strategyServerDateDisplay
+    strategyDisplayDate &&
+    strategyServerDateDisplay &&
+    strategyDisplayDate < strategyServerDateDisplay
   )
 
   const strategyRecommendationActionBusy =
-    manualAnalyzing
-    || recommendationsLoading
-    || executingId !== null
-    || dismissingId !== null
-    || batchExecuting
-    || batchDismissing
+    manualAnalyzing ||
+    recommendationsLoading ||
+    executingId !== null ||
+    dismissingId !== null ||
+    batchExecuting ||
+    batchDismissing
 
   const resolveStrategyConfirmToneClasses = useCallback((tone?: StrategyConfirmTone) => {
     if (tone === 'danger') {
@@ -622,7 +643,7 @@ export default function StrategyCenterPage() {
         return
       }
 
-      const data = await response.json().catch(() => ({})) as StrategySettingsResponse
+      const data = (await response.json().catch(() => ({}))) as StrategySettingsResponse
       if (!response.ok || !data.success) {
         throw new Error(data.error || '加载策略中心配置失败')
       }
@@ -637,63 +658,69 @@ export default function StrategyCenterPage() {
     }
   }, [router])
 
-  const loadRecommendations = useCallback(async (options?: {
-    date?: string
-    refresh?: boolean
-    silent?: boolean
-    syncDate?: boolean
-    isActive?: () => boolean
-  }) => {
-    if (!options?.silent) {
-      setRecommendationsLoading(true)
-    }
-
-    try {
-      const targetDate = String(options?.date || reportDate || parseLocalDate()).trim() || parseLocalDate()
-      const params = new URLSearchParams()
-      params.set('date', targetDate)
-      params.set('limit', '200')
-      if (options?.refresh) {
-        params.set('refresh', '1')
-      }
-
-      const response = await fetch(`/api/strategy-center/recommendations?${params.toString()}`, {
-        credentials: 'include',
-        cache: 'no-store',
-      })
-      if (response.status === 401) {
-        router.push('/login')
-        return
-      }
-
-      const data = await response.json().catch(() => ({})) as StrategyRecommendationsResponse
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || '加载策略建议失败')
-      }
-
-      if (options?.isActive && !options.isActive()) return
-
-      const nextRecommendations = Array.isArray(data.recommendations) ? data.recommendations : []
-      setRecommendations(nextRecommendations)
-      const nextServerDate = String(data.serverDate || '').trim() || parseLocalDate()
-      const nextReportDate = String(data.reportDate || targetDate).trim() || targetDate
-      setServerDate(nextServerDate)
-      setReportDate((options?.syncDate ?? true) ? nextReportDate : (prev) => prev || nextReportDate)
-      setRecommendationsLoaded(true)
-    } catch (error: any) {
-      if (options?.isActive && !options.isActive()) return
+  const loadRecommendations = useCallback(
+    async (options?: {
+      date?: string
+      refresh?: boolean
+      silent?: boolean
+      syncDate?: boolean
+      isActive?: () => boolean
+    }) => {
       if (!options?.silent) {
-        showError('加载失败', error?.message || '加载策略建议失败')
+        setRecommendationsLoading(true)
       }
-      setRecommendations([])
-      setRecommendationsLoaded(true)
-    } finally {
-      if (options?.isActive && !options.isActive()) return
-      if (!options?.silent) {
-        setRecommendationsLoading(false)
+
+      try {
+        const targetDate =
+          String(options?.date || reportDate || parseLocalDate()).trim() || parseLocalDate()
+        const params = new URLSearchParams()
+        params.set('date', targetDate)
+        params.set('limit', '200')
+        if (options?.refresh) {
+          params.set('refresh', '1')
+        }
+
+        const response = await fetch(`/api/strategy-center/recommendations?${params.toString()}`, {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+        if (response.status === 401) {
+          router.push('/login')
+          return
+        }
+
+        const data = (await response.json().catch(() => ({}))) as StrategyRecommendationsResponse
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || '加载策略建议失败')
+        }
+
+        if (options?.isActive && !options.isActive()) return
+
+        const nextRecommendations = Array.isArray(data.recommendations) ? data.recommendations : []
+        setRecommendations(nextRecommendations)
+        const nextServerDate = String(data.serverDate || '').trim() || parseLocalDate()
+        const nextReportDate = String(data.reportDate || targetDate).trim() || targetDate
+        setServerDate(nextServerDate)
+        setReportDate(
+          (options?.syncDate ?? true) ? nextReportDate : (prev) => prev || nextReportDate
+        )
+        setRecommendationsLoaded(true)
+      } catch (error: any) {
+        if (options?.isActive && !options.isActive()) return
+        if (!options?.silent) {
+          showError('加载失败', error?.message || '加载策略建议失败')
+        }
+        setRecommendations([])
+        setRecommendationsLoaded(true)
+      } finally {
+        if (options?.isActive && !options.isActive()) return
+        if (!options?.silent) {
+          setRecommendationsLoading(false)
+        }
       }
-    }
-  }, [reportDate, router])
+    },
+    [reportDate, router]
+  )
 
   useEffect(() => {
     void loadSettings()
@@ -716,27 +743,30 @@ export default function StrategyCenterPage() {
     }
   }, [])
 
-  const isStrategyRecommendationExecutableInCurrentWindow = useCallback((item: StrategyRecommendation) => {
-    if (!isStrategyRecommendationExecutable(item)) return false
-    const datePolicy = resolveRecommendationExecuteDatePolicy({
-      recommendation: item,
-      serverDate: strategyServerDateDisplay,
-      fallbackReportDate: strategyDisplayDate,
-    })
-    return datePolicy.allowed
-  }, [strategyDisplayDate, strategyServerDateDisplay])
+  const isStrategyRecommendationExecutableInCurrentWindow = useCallback(
+    (item: StrategyRecommendation) => {
+      if (!isStrategyRecommendationExecutable(item)) return false
+      const datePolicy = resolveRecommendationExecuteDatePolicy({
+        recommendation: item,
+        serverDate: strategyServerDateDisplay,
+        fallbackReportDate: strategyDisplayDate,
+      })
+      return datePolicy.allowed
+    },
+    [strategyDisplayDate, strategyServerDateDisplay]
+  )
 
   const recommendationsView = useMemo(() => {
     const source = Array.isArray(recommendations) ? recommendations : []
-    return [...source].sort((a, b) => (Number(b.priorityScore) || 0) - (Number(a.priorityScore) || 0))
+    return [...source].sort(
+      (a, b) => (Number(b.priorityScore) || 0) - (Number(a.priorityScore) || 0)
+    )
   }, [recommendations])
 
   const recommendationsFiltered = useMemo(() => {
     if (recommendationStatusFilter === 'actionable') {
       return recommendationsView.filter(
-        (item) => item.status === 'pending'
-          || item.status === 'failed'
-          || item.status === 'stale'
+        (item) => item.status === 'pending' || item.status === 'failed' || item.status === 'stale'
       )
     }
     if (recommendationStatusFilter === 'all') {
@@ -771,8 +801,8 @@ export default function StrategyCenterPage() {
       }
 
       const typeDiff =
-        resolveRecommendationTypeRank(item.recommendationType)
-        - resolveRecommendationTypeRank(existing.recommendationType)
+        resolveRecommendationTypeRank(item.recommendationType) -
+        resolveRecommendationTypeRank(existing.recommendationType)
       if (typeDiff > 0) {
         bestByCampaign.set(item.campaignId, item)
         continue
@@ -782,15 +812,16 @@ export default function StrategyCenterPage() {
       }
 
       const statusDiff =
-        resolveRecommendationStatusRank(item.status)
-        - resolveRecommendationStatusRank(existing.status)
+        resolveRecommendationStatusRank(item.status) -
+        resolveRecommendationStatusRank(existing.status)
       if (statusDiff > 0) {
         bestByCampaign.set(item.campaignId, item)
       }
     }
 
-    return Array.from(bestByCampaign.values())
-      .sort((a, b) => (Number(b.priorityScore) || 0) - (Number(a.priorityScore) || 0))
+    return Array.from(bestByCampaign.values()).sort(
+      (a, b) => (Number(b.priorityScore) || 0) - (Number(a.priorityScore) || 0)
+    )
   }, [recommendationsDisplayMode, recommendationsFiltered])
 
   const recommendationSummary = useMemo(() => {
@@ -802,11 +833,7 @@ export default function StrategyCenterPage() {
     }
 
     for (const item of recommendationsView) {
-      if (
-        item.status === 'pending'
-        || item.status === 'failed'
-        || item.status === 'stale'
-      ) {
+      if (item.status === 'pending' || item.status === 'failed' || item.status === 'stale') {
         summary.actionable += 1
       }
 
@@ -837,24 +864,29 @@ export default function StrategyCenterPage() {
     [batchActionPool]
   )
 
-  const selectedSelectableCount = selectableRecommendations.filter((item) => selectedRecommendationSet.has(item.id)).length
+  const selectedSelectableCount = selectableRecommendations.filter((item) =>
+    selectedRecommendationSet.has(item.id)
+  ).length
   const selectedVisibleCount = recommendationsDisplay.filter(
     (item) => selectedRecommendationSet.has(item.id) && item.status !== 'executed'
   ).length
   const selectedHiddenCount = Math.max(0, selectedSelectableCount - selectedVisibleCount)
   const selectedExecutableCount = batchActionPool.filter(
-    (item) => selectedRecommendationSet.has(item.id)
-      && isStrategyRecommendationExecutableInCurrentWindow(item)
+    (item) =>
+      selectedRecommendationSet.has(item.id) &&
+      isStrategyRecommendationExecutableInCurrentWindow(item)
   ).length
   const selectedDismissibleCount = batchActionPool.filter(
-    (item) => selectedRecommendationSet.has(item.id)
-      && (item.status === 'pending' || item.status === 'failed' || item.status === 'stale')
+    (item) =>
+      selectedRecommendationSet.has(item.id) &&
+      (item.status === 'pending' || item.status === 'failed' || item.status === 'stale')
   ).length
 
-  const recommendationsAllSelected = selectableRecommendations.length > 0
-    && selectedSelectableCount === selectableRecommendations.length
-  const recommendationsPartiallySelected = selectedSelectableCount > 0
-    && selectedSelectableCount < selectableRecommendations.length
+  const recommendationsAllSelected =
+    selectableRecommendations.length > 0 &&
+    selectedSelectableCount === selectableRecommendations.length
+  const recommendationsPartiallySelected =
+    selectedSelectableCount > 0 && selectedSelectableCount < selectableRecommendations.length
 
   useEffect(() => {
     const selectableIdSet = new Set(selectableRecommendations.map((item) => item.id))
@@ -867,11 +899,16 @@ export default function StrategyCenterPage() {
   )
 
   const unknownQueueTaskCount = useMemo(
-    () => recommendations.filter((item) => {
-      const queueTaskId = String(item.executionResult?.queueTaskId || '').trim()
-      if (!queueTaskId) return false
-      return String(item.executionResult?.queueTaskStatus || '').trim().toLowerCase() === 'unknown'
-    }).length,
+    () =>
+      recommendations.filter((item) => {
+        const queueTaskId = String(item.executionResult?.queueTaskId || '').trim()
+        if (!queueTaskId) return false
+        return (
+          String(item.executionResult?.queueTaskStatus || '')
+            .trim()
+            .toLowerCase() === 'unknown'
+        )
+      }).length,
     [recommendations]
   )
 
@@ -917,7 +954,7 @@ export default function StrategyCenterPage() {
         return
       }
 
-      const data = await response.json().catch(() => ({})) as StrategySettingsResponse
+      const data = (await response.json().catch(() => ({}))) as StrategySettingsResponse
       if (!response.ok || !data.success) {
         throw new Error(data.error || '保存策略中心配置失败')
       }
@@ -942,24 +979,34 @@ export default function StrategyCenterPage() {
     setSettingsPanelOpen((prev) => !prev)
   }
 
-  const requestRecommendationAction = useCallback(async (
-    recommendationId: string,
-    action: 'execute' | 'dismiss',
-    body?: Record<string, unknown>
-  ) => {
-    const response = await fetch(`/api/strategy-center/recommendations/${recommendationId}/${action}`, {
-      method: 'POST',
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
-      credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined,
-    })
-    const payload = await response.json().catch(() => null) as { success?: boolean; error?: string; deduplicated?: boolean } | null
-    if (!response.ok || !payload?.success) {
-      const fallbackMessage = action === 'execute' ? '执行建议失败' : '设置暂不执行失败'
-      throw new Error(payload?.error || fallbackMessage)
-    }
-    return payload
-  }, [])
+  const requestRecommendationAction = useCallback(
+    async (
+      recommendationId: string,
+      action: 'execute' | 'dismiss',
+      body?: Record<string, unknown>
+    ) => {
+      const response = await fetch(
+        `/api/strategy-center/recommendations/${recommendationId}/${action}`,
+        {
+          method: 'POST',
+          headers: body ? { 'Content-Type': 'application/json' } : undefined,
+          credentials: 'include',
+          body: body ? JSON.stringify(body) : undefined,
+        }
+      )
+      const payload = (await response.json().catch(() => null)) as {
+        success?: boolean
+        error?: string
+        deduplicated?: boolean
+      } | null
+      if (!response.ok || !payload?.success) {
+        const fallbackMessage = action === 'execute' ? '执行建议失败' : '设置暂不执行失败'
+        throw new Error(payload?.error || fallbackMessage)
+      }
+      return payload
+    },
+    []
+  )
 
   const handleManualAnalyze = async () => {
     if (manualAnalyzing || strategyRecommendationActionBusy) return
@@ -967,11 +1014,18 @@ export default function StrategyCenterPage() {
     const targetDate = String(reportDate || parseLocalDate()).trim() || parseLocalDate()
     const currentServerDate = String(serverDate || parseLocalDate()).trim() || parseLocalDate()
     if (targetDate < currentServerDate) {
-      showError('操作受限', `历史日期 ${targetDate} 仅支持查看，请切换到 ${currentServerDate} 后重新分析`)
+      showError(
+        '操作受限',
+        `历史日期 ${targetDate} 仅支持查看，请切换到 ${currentServerDate} 后重新分析`
+      )
       return
     }
 
-    if (recommendations.some((item) => item.status === 'pending' || item.status === 'failed' || item.status === 'stale')) {
+    if (
+      recommendations.some(
+        (item) => item.status === 'pending' || item.status === 'failed' || item.status === 'stale'
+      )
+    ) {
       const confirmed = await requestStrategyConfirm({
         title: '确认重新分析',
         description: strategyAnalyzeSendFeishu
@@ -1013,7 +1067,9 @@ export default function StrategyCenterPage() {
           return
         }
 
-        const data = await response.json().catch(() => null) as StrategyRecommendationsResponse | null
+        const data = (await response
+          .json()
+          .catch(() => null)) as StrategyRecommendationsResponse | null
         if (!response.ok || !data?.success) {
           throw new Error(data?.error || '手动触发分析失败')
         }
@@ -1025,7 +1081,10 @@ export default function StrategyCenterPage() {
         setSelectedRecommendationIds([])
 
         if (data.reportSent === false) {
-          showWarning('分析完成', data.reportSendError || '优化建议已更新，但 Feishu 报告发送任务入队失败')
+          showWarning(
+            '分析完成',
+            data.reportSendError || '优化建议已更新，但 Feishu 报告发送任务入队失败'
+          )
         } else {
           showSuccess('分析完成', '优化建议已更新，Feishu 报告已入队发送')
         }
@@ -1087,10 +1146,7 @@ export default function StrategyCenterPage() {
     const confirmed = await requestStrategyConfirm({
       title: `确认执行「${typeLabel}」`,
       description: '执行后将直接写入 AutoAds / Google Ads，请确认当前建议已完成业务复核。',
-      details: [
-        `目标：${campaignName}`,
-        `建议ID：${item.id}`,
-      ],
+      details: [`目标：${campaignName}`, `建议ID：${item.id}`],
       acknowledgeLabel: '我已确认：执行后将直接落地到投放系统',
       confirmLabel: '确认执行',
       tone: 'danger',
@@ -1125,10 +1181,7 @@ export default function StrategyCenterPage() {
     const confirmed = await requestStrategyConfirm({
       title: '确认暂不执行该建议',
       description: '暂不执行后该建议将不进入执行队列，可在后续重新分析后再次处理。',
-      details: [
-        `目标：${campaignName}`,
-        `建议ID：${item.id}`,
-      ],
+      details: [`目标：${campaignName}`, `建议ID：${item.id}`],
       confirmLabel: '确认暂不执行',
       tone: 'info',
     })
@@ -1171,21 +1224,23 @@ export default function StrategyCenterPage() {
     if (action === 'execute') {
       return isStrategyRecommendationExecutableInCurrentWindow(item)
     }
-    return item.status === 'pending'
-      || item.status === 'failed'
-      || item.status === 'stale'
+    return item.status === 'pending' || item.status === 'failed' || item.status === 'stale'
   }
 
   const runRecommendationBatchAction = async (
     action: StrategyBatchAction,
     options?: { targetIds?: string[] }
   ) => {
-    const scopeLabel = Array.isArray(options?.targetIds) && options.targetIds.length > 0
-      ? '失败项'
-      : (batchScope === 'filtered' ? '当前筛选全部' : '当前展示')
-    const targetIds = Array.isArray(options?.targetIds) && options.targetIds.length > 0
-      ? options.targetIds
-      : selectedRecommendationIds
+    const scopeLabel =
+      Array.isArray(options?.targetIds) && options.targetIds.length > 0
+        ? '失败项'
+        : batchScope === 'filtered'
+          ? '当前筛选全部'
+          : '当前展示'
+    const targetIds =
+      Array.isArray(options?.targetIds) && options.targetIds.length > 0
+        ? options.targetIds
+        : selectedRecommendationIds
     const selectedIdSet = new Set(targetIds)
     const selectedRows = batchActionPool.filter(
       (item) => selectedIdSet.has(item.id) && isRecommendationBatchEligible(action, item)
@@ -1204,10 +1259,7 @@ export default function StrategyCenterPage() {
       const confirmed = await requestStrategyConfirm({
         title: `确认批量执行 ${selectedRows.length} 条建议`,
         description: '批量执行将直接写入 AutoAds / Google Ads，请确认筛选范围和条目数量。',
-        details: [
-          `范围：${scopeLabel}`,
-          `条目数：${selectedRows.length}`,
-        ],
+        details: [`范围：${scopeLabel}`, `条目数：${selectedRows.length}`],
         acknowledgeLabel: '我已确认：批量执行会直接落地到投放系统',
         confirmLabel: '确认批量执行',
         tone: 'danger',
@@ -1219,10 +1271,7 @@ export default function StrategyCenterPage() {
       const confirmed = await requestStrategyConfirm({
         title: `确认批量设为暂不执行 ${selectedRows.length} 条建议`,
         description: '设为暂不执行后这些建议将不会执行，可在后续重新分析后再次处理。',
-        details: [
-          `范围：${scopeLabel}`,
-          `条目数：${selectedRows.length}`,
-        ],
+        details: [`范围：${scopeLabel}`, `条目数：${selectedRows.length}`],
         confirmLabel: '确认批量暂不执行',
         tone: 'warning',
       })
@@ -1270,11 +1319,14 @@ export default function StrategyCenterPage() {
       setBatchFailures(failed)
 
       if (failed.length === 0) {
-        if (action === 'execute') showSuccess('批量执行完成', `已入队 ${successCount} 条`) 
+        if (action === 'execute') showSuccess('批量执行完成', `已入队 ${successCount} 条`)
         if (action === 'dismiss') showSuccess('批量暂不执行完成', `已处理 ${successCount} 条`)
       } else {
         const label = action === 'execute' ? '执行' : '暂不执行'
-        showWarning('批量处理完成', `批量${label}：成功 ${successCount}，失败 ${failed.length}（失败项已保留，可一键重试）`)
+        showWarning(
+          '批量处理完成',
+          `批量${label}：成功 ${successCount}，失败 ${failed.length}（失败项已保留，可一键重试）`
+        )
       }
     } finally {
       if (action === 'execute') setBatchExecuting(false)
@@ -1309,7 +1361,7 @@ export default function StrategyCenterPage() {
         credentials: 'include',
         body: JSON.stringify({}),
       })
-      const data = await response.json().catch(() => ({})) as FeishuTestResponse
+      const data = (await response.json().catch(() => ({}))) as FeishuTestResponse
       if (!response.ok || data.ok !== true) {
         throw new Error(data.error || '飞书连通性测试失败')
       }
@@ -1342,7 +1394,11 @@ export default function StrategyCenterPage() {
                 onClick={() => loadRecommendations({ date: reportDate, syncDate: true })}
                 disabled={recommendationsLoading || manualAnalyzing}
               >
-                {recommendationsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                {recommendationsLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
                 加载建议
               </Button>
               <Badge variant="outline">服务器日期 {serverDate}</Badge>
@@ -1365,12 +1421,23 @@ export default function StrategyCenterPage() {
                   variant="outline"
                   onClick={handleTestFeishu}
                   disabled={settingsLoading || testingFeishu || !canRunFeishuConnectionTest}
-                  title={canRunFeishuConnectionTest ? undefined : '请先填写飞书 App ID / App Secret / 推送目标'}
+                  title={
+                    canRunFeishuConnectionTest
+                      ? undefined
+                      : '请先填写飞书 App ID / App Secret / 推送目标'
+                  }
                 >
-                  {testingFeishu ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FlaskConical className="mr-2 h-4 w-4" />}
+                  {testingFeishu ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <FlaskConical className="mr-2 h-4 w-4" />
+                  )}
                   测试飞书连接
                 </Button>
-                <Button onClick={handleSaveSettings} disabled={settingsLoading || settingsSaving || !settingsDirty}>
+                <Button
+                  onClick={handleSaveSettings}
+                  disabled={settingsLoading || settingsSaving || !settingsDirty}
+                >
                   {settingsSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                   保存配置
                 </Button>
@@ -1397,7 +1464,9 @@ export default function StrategyCenterPage() {
                           <div className="text-sm font-medium">{SETTING_LABELS[key]}</div>
                           <Select
                             value={value || 'false'}
-                            onValueChange={(nextValue) => setSettingsValues((prev) => ({ ...prev, [key]: nextValue }))}
+                            onValueChange={(nextValue) =>
+                              setSettingsValues((prev) => ({ ...prev, [key]: nextValue }))
+                            }
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -1415,13 +1484,18 @@ export default function StrategyCenterPage() {
                       return (
                         <div key={key} className="space-y-1.5 rounded-md border p-3">
                           <div className="text-sm font-medium">{SETTING_LABELS[key]}</div>
-                          <Select value={strategyCronPreset} onValueChange={handleStrategyCronPresetChange}>
+                          <Select
+                            value={strategyCronPreset}
+                            onValueChange={handleStrategyCronPresetChange}
+                          >
                             <SelectTrigger>
                               <SelectValue placeholder="选择分析频率" />
                             </SelectTrigger>
                             <SelectContent>
                               {STRATEGY_CRON_OPTIONS.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>{option.label}</SelectItem>
+                                <SelectItem key={option.id} value={option.id}>
+                                  {option.label}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -1440,7 +1514,9 @@ export default function StrategyCenterPage() {
                         <Input
                           type={key === 'feishu_app_secret' ? 'password' : 'text'}
                           value={value}
-                          onChange={(event) => setSettingsValues((prev) => ({ ...prev, [key]: event.target.value }))}
+                          onChange={(event) =>
+                            setSettingsValues((prev) => ({ ...prev, [key]: event.target.value }))
+                          }
                           autoComplete="off"
                         />
                       </div>
@@ -1457,7 +1533,9 @@ export default function StrategyCenterPage() {
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-1">
                 <CardTitle className="text-xl">优化建议（按优先级分排序）</CardTitle>
-                <CardDescription>每日自动生成，确认后可直接执行，执行结果直接落地 AutoAds / Google Ads</CardDescription>
+                <CardDescription>
+                  每日自动生成，确认后可直接执行，执行结果直接落地 AutoAds / Google Ads
+                </CardDescription>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                   <span className="rounded-full border border-slate-200 bg-white px-2 py-1">
                     建议日期：{strategyDisplayDate}
@@ -1473,13 +1551,17 @@ export default function StrategyCenterPage() {
                   <Switch
                     checked={strategyAnalyzeSendFeishu}
                     onCheckedChange={(checked) => setStrategyAnalyzeSendFeishu(Boolean(checked))}
-                    disabled={manualAnalyzing || recommendationsLoading || strategyRecommendationActionBusy}
+                    disabled={
+                      manualAnalyzing || recommendationsLoading || strategyRecommendationActionBusy
+                    }
                   />
                 </div>
                 <Button
                   size="sm"
                   onClick={handleManualAnalyze}
-                  disabled={manualAnalyzing || recommendationsLoading || strategyRecommendationActionBusy}
+                  disabled={
+                    manualAnalyzing || recommendationsLoading || strategyRecommendationActionBusy
+                  }
                 >
                   {manualAnalyzing ? '分析中...' : '重新分析'}
                 </Button>
@@ -1488,35 +1570,51 @@ export default function StrategyCenterPage() {
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                 <div className="text-xs text-slate-500">总建议</div>
-                <div className="mt-1 text-2xl font-semibold text-slate-900">{recommendationSummary.total}</div>
+                <div className="mt-1 text-2xl font-semibold text-slate-900">
+                  {recommendationSummary.total}
+                </div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                 <div className="text-xs text-slate-500">待处理（待执行/执行失败/待重算）</div>
-                <div className="mt-1 text-2xl font-semibold text-slate-900">{recommendationSummary.actionable}</div>
+                <div className="mt-1 text-2xl font-semibold text-slate-900">
+                  {recommendationSummary.actionable}
+                </div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                 <div className="text-xs text-slate-500">排队执行中</div>
-                <div className="mt-1 text-2xl font-semibold text-amber-700">{recommendationSummary.queued}</div>
+                <div className="mt-1 text-2xl font-semibold text-amber-700">
+                  {recommendationSummary.queued}
+                </div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
                 <div className="text-xs text-slate-500">当前可执行</div>
-                <div className="mt-1 text-2xl font-semibold text-emerald-700">{recommendationSummary.executable}</div>
+                <div className="mt-1 text-2xl font-semibold text-emerald-700">
+                  {recommendationSummary.executable}
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4 p-4 md:p-6">
             <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-600">
               <div className="grid gap-2 md:grid-cols-2">
-                <div>操作流程：重新分析 → 选择建议 → 执行（需二次确认），支持批量执行与批量暂不执行。</div>
-                <div>下线建议默认执行：删除 Google Ads Campaign + 暂停补点击任务 + 暂停换链接任务。</div>
+                <div>
+                  操作流程：重新分析 → 选择建议 → 执行（需二次确认），支持批量执行与批量暂不执行。
+                </div>
+                <div>
+                  下线建议默认执行：删除 Google Ads Campaign + 暂停补点击任务 + 暂停换链接任务。
+                </div>
                 <div>重新分析会重算建议；开启“分析后发送 Feishu”时，会同时入队发送最新报告。</div>
                 <div>佣金口径：仅按 Offer/Campaign 级联盟佣金统计，不做关键词级佣金归因。</div>
                 <div>优先级口径：优先级分用于排序；净影响为估算值，含低/中/高置信度。</div>
               </div>
-              <div className="mt-2 text-slate-500">刷新建议会重新计算规则，旧建议可能被标记为“待重算”。</div>
+              <div className="mt-2 text-slate-500">
+                刷新建议会重新计算规则，旧建议可能被标记为“待重算”。
+              </div>
               {strategyHistoricalReadOnly && (
                 <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
-                  历史日期默认仅支持查看与复盘；执行仅开放 T-1（{shiftOpenclawLocalIsoDate(strategyServerDateDisplay, -1)}）且限：{STRATEGY_T_MINUS_1_EXECUTABLE_TYPE_LABELS}。
+                  历史日期默认仅支持查看与复盘；执行仅开放 T-1（
+                  {shiftOpenclawLocalIsoDate(strategyServerDateDisplay, -1)}）且限：
+                  {STRATEGY_T_MINUS_1_EXECUTABLE_TYPE_LABELS}。
                 </div>
               )}
               {hasQueuedRecommendations && (
@@ -1555,7 +1653,9 @@ export default function StrategyCenterPage() {
                   <div className="flex flex-wrap gap-2">
                     <Select
                       value={recommendationStatusFilter}
-                      onValueChange={(value) => setRecommendationStatusFilter(value as StrategyRecommendationStatusFilter)}
+                      onValueChange={(value) =>
+                        setRecommendationStatusFilter(value as StrategyRecommendationStatusFilter)
+                      }
                     >
                       <SelectTrigger className="h-8 w-[176px]">
                         <SelectValue placeholder="状态筛选" />
@@ -1586,7 +1686,10 @@ export default function StrategyCenterPage() {
                   </div>
                 </div>
                 <div className="mt-2 text-xs text-slate-500">
-                  当前 {recommendationsDisplayMode === 'final' ? '每个 Campaign 仅显示优先级最高建议' : '显示全部建议'}
+                  当前{' '}
+                  {recommendationsDisplayMode === 'final'
+                    ? '每个 Campaign 仅显示优先级最高建议'
+                    : '显示全部建议'}
                   {' · '}
                   展示 {recommendationsDisplay.length} / {recommendationsView.length} 条
                 </div>
@@ -1651,19 +1754,39 @@ export default function StrategyCenterPage() {
                               ? 'indeterminate'
                               : false
                         }
-                        onCheckedChange={(checked) => handleSelectAllRecommendations(Boolean(checked))}
+                        onCheckedChange={(checked) =>
+                          handleSelectAllRecommendations(Boolean(checked))
+                        }
                         aria-label="全选策略建议"
-                        disabled={strategyRecommendationActionBusy || selectableRecommendations.length === 0}
+                        disabled={
+                          strategyRecommendationActionBusy || selectableRecommendations.length === 0
+                        }
                       />
                     </TableHead>
-                    <TableHead className="w-[52px] text-xs font-semibold text-slate-600">#</TableHead>
-                    <TableHead className="min-w-[200px] text-xs font-semibold text-slate-600">类型 / ID</TableHead>
-                    <TableHead className="min-w-[240px] text-xs font-semibold text-slate-600">建议</TableHead>
-                    <TableHead className="min-w-[260px] text-xs font-semibold text-slate-600">Campaign</TableHead>
-                    <TableHead className="min-w-[240px] text-xs font-semibold text-slate-600">成本/盈亏平衡</TableHead>
-                    <TableHead className="min-w-[220px] text-xs font-semibold text-slate-600">优先级分</TableHead>
-                    <TableHead className="min-w-[96px] text-xs font-semibold text-slate-600">状态</TableHead>
-                    <TableHead className="min-w-[340px] text-left text-xs font-semibold text-slate-600">操作</TableHead>
+                    <TableHead className="w-[52px] text-xs font-semibold text-slate-600">
+                      #
+                    </TableHead>
+                    <TableHead className="min-w-[200px] text-xs font-semibold text-slate-600">
+                      类型 / ID
+                    </TableHead>
+                    <TableHead className="min-w-[240px] text-xs font-semibold text-slate-600">
+                      建议
+                    </TableHead>
+                    <TableHead className="min-w-[260px] text-xs font-semibold text-slate-600">
+                      Campaign
+                    </TableHead>
+                    <TableHead className="min-w-[240px] text-xs font-semibold text-slate-600">
+                      成本/盈亏平衡
+                    </TableHead>
+                    <TableHead className="min-w-[220px] text-xs font-semibold text-slate-600">
+                      优先级分
+                    </TableHead>
+                    <TableHead className="min-w-[96px] text-xs font-semibold text-slate-600">
+                      状态
+                    </TableHead>
+                    <TableHead className="min-w-[340px] text-left text-xs font-semibold text-slate-600">
+                      操作
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1676,59 +1799,94 @@ export default function StrategyCenterPage() {
                     const isDismissing = dismissingId === item.id
                     const isSelectable = item.status !== 'executed'
                     const isChecked = selectedRecommendationSet.has(item.id)
-                    const analysisNote = item.data?.analysisNote || item.reason || item.summary || '-'
+                    const analysisNote =
+                      item.data?.analysisNote || item.reason || item.summary || '-'
                     const postReviewText = resolvePostReviewStatusText(
-                      item.data?.postReviewStatus || item.executionResult?.postReview?.status || null
+                      item.data?.postReviewStatus ||
+                        item.executionResult?.postReview?.status ||
+                        null
                     )
                     const recommendationCurrency = normalizeCurrencyCode(
                       item.data?.currency || item.data?.searchTermFeedback?.dominantCurrency || null
                     )
                     const costText = `花费 ${formatMoney(item.data?.cost, recommendationCurrency, 2)} / 点击 ${formatNumber(item.data?.clicks, 0)} / CTR ${formatNumber(item.data?.ctrPct, 2)}%`
-                    const roasText = item.data?.roas !== null && item.data?.roas !== undefined
-                      ? `ROAS ${formatNumber(item.data?.roas, 2)}`
-                      : 'ROAS --'
-                    const breakEvenText = item.data?.breakEvenConversionRatePct !== null && item.data?.breakEvenConversionRatePct !== undefined
-                      ? `盈亏平衡转化率 ${formatNumber(item.data?.breakEvenConversionRatePct, 2)}%`
-                      : '盈亏平衡转化率 --'
+                    const roasText =
+                      item.data?.roas !== null && item.data?.roas !== undefined
+                        ? `ROAS ${formatNumber(item.data?.roas, 2)}`
+                        : 'ROAS --'
+                    const breakEvenText =
+                      item.data?.breakEvenConversionRatePct !== null &&
+                      item.data?.breakEvenConversionRatePct !== undefined
+                        ? `盈亏平衡转化率 ${formatNumber(item.data?.breakEvenConversionRatePct, 2)}%`
+                        : '盈亏平衡转化率 --'
                     const impactWindowDays = Number(item.data?.impactWindowDays || 0)
                     const estimatedCostSaving = Number(item.data?.estimatedCostSaving || 0)
                     const estimatedRevenueUplift = Number(item.data?.estimatedRevenueUplift || 0)
-                    const estimatedNetImpact = Number(item.data?.estimatedNetImpact || (estimatedCostSaving + estimatedRevenueUplift))
+                    const estimatedNetImpact = Number(
+                      item.data?.estimatedNetImpact || estimatedCostSaving + estimatedRevenueUplift
+                    )
                     const hasImpact = Number.isFinite(estimatedNetImpact) && impactWindowDays > 0
-                    const impactConfidenceText = resolveImpactConfidenceText(item.data?.impactConfidence)
-                    const impactEstimationSourceText = resolveImpactEstimationSourceText(item.data?.impactEstimationSource)
-                    const cpcAdjustText = item.recommendationType === 'adjust_cpc'
-                      ? `CPC ${formatMoney(item.data?.currentCpc, recommendationCurrency, 2)} → ${formatMoney(item.data?.recommendedCpc, recommendationCurrency, 2)}`
-                      : ''
-                    const budgetAdjustText = item.recommendationType === 'adjust_budget'
-                      ? `预算 ${formatMoney(item.data?.currentBudget, recommendationCurrency, 2)} → ${formatMoney(item.data?.recommendedBudget, recommendationCurrency, 2)} (${item.data?.budgetType || 'DAILY'})`
-                      : ''
-                    const keywordPlan = Array.isArray(item.data?.keywordPlan) ? item.data.keywordPlan : []
-                    const negativeKeywordPlan = Array.isArray(item.data?.negativeKeywordPlan) ? item.data.negativeKeywordPlan : []
-                    const matchTypePlan = Array.isArray(item.data?.matchTypePlan) ? item.data.matchTypePlan : []
-                    const hardFeedbackTerms = Array.isArray(item.data?.searchTermFeedback?.hardNegativeTerms)
+                    const impactConfidenceText = resolveImpactConfidenceText(
+                      item.data?.impactConfidence
+                    )
+                    const impactEstimationSourceText = resolveImpactEstimationSourceText(
+                      item.data?.impactEstimationSource
+                    )
+                    const cpcAdjustText =
+                      item.recommendationType === 'adjust_cpc'
+                        ? `CPC ${formatMoney(item.data?.currentCpc, recommendationCurrency, 2)} → ${formatMoney(item.data?.recommendedCpc, recommendationCurrency, 2)}`
+                        : ''
+                    const budgetAdjustText =
+                      item.recommendationType === 'adjust_budget'
+                        ? `预算 ${formatMoney(item.data?.currentBudget, recommendationCurrency, 2)} → ${formatMoney(item.data?.recommendedBudget, recommendationCurrency, 2)} (${item.data?.budgetType || 'DAILY'})`
+                        : ''
+                    const keywordPlan = Array.isArray(item.data?.keywordPlan)
+                      ? item.data.keywordPlan
+                      : []
+                    const negativeKeywordPlan = Array.isArray(item.data?.negativeKeywordPlan)
+                      ? item.data.negativeKeywordPlan
+                      : []
+                    const matchTypePlan = Array.isArray(item.data?.matchTypePlan)
+                      ? item.data.matchTypePlan
+                      : []
+                    const hardFeedbackTerms = Array.isArray(
+                      item.data?.searchTermFeedback?.hardNegativeTerms
+                    )
                       ? item.data?.searchTermFeedback?.hardNegativeTerms || []
                       : []
-                    const softFeedbackTerms = Array.isArray(item.data?.searchTermFeedback?.softSuppressTerms)
+                    const softFeedbackTerms = Array.isArray(
+                      item.data?.searchTermFeedback?.softSuppressTerms
+                    )
                       ? item.data?.searchTermFeedback?.softSuppressTerms || []
                       : []
-                    const keywordPlanText = item.recommendationType === 'expand_keywords'
-                      ? `新增词 ${keywordPlan.length} 个（自动匹配类型）`
-                      : ''
-                    const negativeKeywordPlanText = item.recommendationType === 'add_negative_keywords'
-                      ? `否词 ${negativeKeywordPlan.length} 个（建议默认EXACT）`
-                      : ''
-                    const matchTypePlanText = item.recommendationType === 'optimize_match_type'
-                      ? `匹配类型优化 ${matchTypePlan.length} 个（新增并暂停旧匹配类型）`
-                      : ''
-                    const hasRecommendationDetail = keywordPlan.length > 0 || negativeKeywordPlan.length > 0 || matchTypePlan.length > 0
+                    const keywordPlanText =
+                      item.recommendationType === 'expand_keywords'
+                        ? `新增词 ${keywordPlan.length} 个（自动匹配类型）`
+                        : ''
+                    const negativeKeywordPlanText =
+                      item.recommendationType === 'add_negative_keywords'
+                        ? `否词 ${negativeKeywordPlan.length} 个（建议默认EXACT）`
+                        : ''
+                    const matchTypePlanText =
+                      item.recommendationType === 'optimize_match_type'
+                        ? `匹配类型优化 ${matchTypePlan.length} 个（新增并暂停旧匹配类型）`
+                        : ''
+                    const hasRecommendationDetail =
+                      keywordPlan.length > 0 ||
+                      negativeKeywordPlan.length > 0 ||
+                      matchTypePlan.length > 0
                     const creativeQualityText = item.data?.creativeQuality
                       ? `创意 H${item.data.creativeQuality.headlineCount}/D${item.data.creativeQuality.descriptionCount}/K${item.data.creativeQuality.keywordCount} · ${item.data.creativeQuality.level.toUpperCase()}`
                       : ''
                     const queueRetryCount = Number(item.executionResult?.queueRetryCount)
-                    const hasQueueRetryCount = Number.isFinite(queueRetryCount) && queueRetryCount >= 0
-                    const recommendationTypeLabel = resolveRecommendationTypeLabel(item.recommendationType)
-                    const recommendationTypeTone = resolveRecommendationTypeTone(item.recommendationType)
+                    const hasQueueRetryCount =
+                      Number.isFinite(queueRetryCount) && queueRetryCount >= 0
+                    const recommendationTypeLabel = resolveRecommendationTypeLabel(
+                      item.recommendationType
+                    )
+                    const recommendationTypeTone = resolveRecommendationTypeTone(
+                      item.recommendationType
+                    )
 
                     return (
                       <TableRow key={item.id} className="align-top hover:bg-slate-50/70">
@@ -1736,7 +1894,9 @@ export default function StrategyCenterPage() {
                           {isSelectable ? (
                             <Checkbox
                               checked={isChecked}
-                              onCheckedChange={(checked) => toggleRecommendationSelected(item.id, Boolean(checked))}
+                              onCheckedChange={(checked) =>
+                                toggleRecommendationSelected(item.id, Boolean(checked))
+                              }
                               aria-label={`选择建议 ${item.id}`}
                               disabled={strategyRecommendationActionBusy}
                             />
@@ -1744,55 +1904,84 @@ export default function StrategyCenterPage() {
                             <span className="text-xs text-slate-400">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="pt-3 text-sm font-medium text-slate-500">{index + 1}</TableCell>
+                        <TableCell className="pt-3 text-sm font-medium text-slate-500">
+                          {index + 1}
+                        </TableCell>
                         <TableCell className="space-y-2 pt-3">
-                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${recommendationTypeTone}`}>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${recommendationTypeTone}`}
+                          >
                             {recommendationTypeLabel}
                           </span>
                           <div className="text-xs text-slate-400">ID: {item.id}</div>
                         </TableCell>
                         <TableCell className="space-y-2 pt-3">
-                          <div className="text-sm font-medium leading-5 text-slate-900">{item.title}</div>
+                          <div className="text-sm font-medium leading-5 text-slate-900">
+                            {item.title}
+                          </div>
                           <div className="text-xs leading-5 text-slate-600">{analysisNote}</div>
                           {item.data?.commissionLagProtected && (
-                            <div className="text-xs text-amber-600">佣金滞后保护：投放≤3天无佣金按正常处理</div>
+                            <div className="text-xs text-amber-600">
+                              佣金滞后保护：投放≤3天无佣金按正常处理
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="space-y-1 pt-3">
-                          <div className="text-sm font-medium text-slate-900">{item.data?.campaignName || `Campaign #${item.campaignId}`}</div>
-                          <div className="text-xs text-slate-500">运行 {item.data?.runDays ?? '--'} 天</div>
+                          <div className="text-sm font-medium text-slate-900">
+                            {item.data?.campaignName || `Campaign #${item.campaignId}`}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            运行 {item.data?.runDays ?? '--'} 天
+                          </div>
                           {creativeQualityText && (
                             <div className="text-xs text-slate-500">{creativeQualityText}</div>
                           )}
                           {item.recommendationType === 'expand_keywords' && (
-                            <div className="text-xs text-slate-500">现有关键词 {item.data?.keywordCoverageCount ?? 0} 个</div>
+                            <div className="text-xs text-slate-500">
+                              现有关键词 {item.data?.keywordCoverageCount ?? 0} 个
+                            </div>
                           )}
                           {item.recommendationType === 'add_negative_keywords' && (
                             <div className="text-xs text-slate-500">
                               建议否词 {negativeKeywordPlan.length} 个
-                              {hardFeedbackTerms.length > 0 ? ` · hard反馈 ${hardFeedbackTerms.length} 个` : ''}
+                              {hardFeedbackTerms.length > 0
+                                ? ` · hard反馈 ${hardFeedbackTerms.length} 个`
+                                : ''}
                             </div>
                           )}
                           {item.recommendationType === 'optimize_match_type' && (
                             <div className="text-xs text-slate-500">
                               建议优化 {matchTypePlan.length} 个
-                              {softFeedbackTerms.length > 0 ? ` · soft反馈 ${softFeedbackTerms.length} 个` : ''}
+                              {softFeedbackTerms.length > 0
+                                ? ` · soft反馈 ${softFeedbackTerms.length} 个`
+                                : ''}
                             </div>
                           )}
                           {isQueued && (
-                            <div className="text-xs text-amber-600">执行队列中（Task: {item.executionResult?.queueTaskId || '-'})</div>
+                            <div className="text-xs text-amber-600">
+                              执行队列中（Task: {item.executionResult?.queueTaskId || '-'})
+                            </div>
                           )}
                           {isQueued && (
                             <div className="text-xs text-slate-500">
                               队列状态 {String(item.executionResult?.queueTaskStatus || 'pending')}
-                              {item.executionResult?.queuedAt ? ` · 入队 ${formatTimestamp(item.executionResult.queuedAt)}` : ''}
-                              {item.executionResult?.queueTaskCreatedAt ? ` · 创建 ${formatTimestamp(item.executionResult.queueTaskCreatedAt)}` : ''}
-                              {item.executionResult?.queueTaskStartedAt ? ` · 开始 ${formatTimestamp(item.executionResult.queueTaskStartedAt)}` : ''}
+                              {item.executionResult?.queuedAt
+                                ? ` · 入队 ${formatTimestamp(item.executionResult.queuedAt)}`
+                                : ''}
+                              {item.executionResult?.queueTaskCreatedAt
+                                ? ` · 创建 ${formatTimestamp(item.executionResult.queueTaskCreatedAt)}`
+                                : ''}
+                              {item.executionResult?.queueTaskStartedAt
+                                ? ` · 开始 ${formatTimestamp(item.executionResult.queueTaskStartedAt)}`
+                                : ''}
                               {hasQueueRetryCount ? ` · 重试 ${queueRetryCount}` : ''}
                             </div>
                           )}
                           {item.executionResult?.queueTaskError && (
-                            <div className="text-xs text-red-600" title={String(item.executionResult.queueTaskError)}>
+                            <div
+                              className="text-xs text-red-600"
+                              title={String(item.executionResult.queueTaskError)}
+                            >
                               队列错误：{String(item.executionResult.queueTaskError)}
                             </div>
                           )}
@@ -1819,39 +2008,53 @@ export default function StrategyCenterPage() {
                           {matchTypePlanText && <div>{matchTypePlanText}</div>}
                         </TableCell>
                         <TableCell className="space-y-1 pt-3">
-                          <div className="text-lg font-semibold text-slate-900">{formatNumber(item.priorityScore, 1)}</div>
+                          <div className="text-lg font-semibold text-slate-900">
+                            {formatNumber(item.priorityScore, 1)}
+                          </div>
                           {hasImpact ? (
                             <div className="text-xs text-slate-500">
-                              净影响(估) {formatMoney(estimatedNetImpact, recommendationCurrency, 2)} / {impactWindowDays}天 · 置信度 {impactConfidenceText}
+                              净影响(估){' '}
+                              {formatMoney(estimatedNetImpact, recommendationCurrency, 2)} /{' '}
+                              {impactWindowDays}天 · 置信度 {impactConfidenceText}
                             </div>
                           ) : (
                             <div className="text-xs text-slate-500">净影响 --</div>
                           )}
                           <div className="text-xs text-slate-500">
-                            节省 {formatMoney(estimatedCostSaving, recommendationCurrency, 2)} / 增益 {formatMoney(estimatedRevenueUplift, recommendationCurrency, 2)}
+                            节省 {formatMoney(estimatedCostSaving, recommendationCurrency, 2)} /
+                            增益 {formatMoney(estimatedRevenueUplift, recommendationCurrency, 2)}
                           </div>
                           {item.data?.impactConfidenceReason && (
-                            <div className="text-xs text-slate-500">{item.data.impactConfidenceReason}</div>
+                            <div className="text-xs text-slate-500">
+                              {item.data.impactConfidenceReason}
+                            </div>
                           )}
                           {impactEstimationSourceText && (
-                            <div className="text-xs text-slate-500">{impactEstimationSourceText}</div>
+                            <div className="text-xs text-slate-500">
+                              {impactEstimationSourceText}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="w-[96px] max-w-[96px] space-y-1 pt-3">
                           <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
                           {item.status === 'stale' && (
-                            <div className="text-xs text-amber-600">建议内容已变化，请重新分析后再执行</div>
+                            <div className="text-xs text-amber-600">
+                              建议内容已变化，请重新分析后再执行
+                            </div>
                           )}
-                          {isQueued && (
-                            <div className="text-xs text-amber-600">排队执行中</div>
-                          )}
+                          {isQueued && <div className="text-xs text-amber-600">排队执行中</div>}
                           {item.status === 'failed' && !isQueued && item.executionResult?.error && (
-                            <div className="text-xs text-red-600" title={String(item.executionResult.error)}>
+                            <div
+                              className="text-xs text-red-600"
+                              title={String(item.executionResult.error)}
+                            >
                               失败原因：{String(item.executionResult.error)}
                             </div>
                           )}
                           {item.executedAt && (
-                            <div className="text-xs text-slate-500">{formatTimestamp(item.executedAt)}</div>
+                            <div className="text-xs text-slate-500">
+                              {formatTimestamp(item.executedAt)}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="min-w-[340px] pt-3 text-right">
@@ -1869,10 +2072,10 @@ export default function StrategyCenterPage() {
                               size="sm"
                               className="h-8 px-3"
                               disabled={
-                                strategyRecommendationActionBusy
-                                || isExecuting
-                                || isDismissing
-                                || !isStrategyRecommendationExecutableInCurrentWindow(item)
+                                strategyRecommendationActionBusy ||
+                                isExecuting ||
+                                isDismissing ||
+                                !isStrategyRecommendationExecutableInCurrentWindow(item)
                               }
                               onClick={() => handleExecuteRecommendation(item)}
                             >
@@ -1883,11 +2086,11 @@ export default function StrategyCenterPage() {
                               variant="outline"
                               className="h-8 px-3"
                               disabled={
-                                strategyRecommendationActionBusy
-                                || isExecuting
-                                || isDismissing
-                                || item.status === 'executed'
-                                || item.status === 'dismissed'
+                                strategyRecommendationActionBusy ||
+                                isExecuting ||
+                                isDismissing ||
+                                item.status === 'executed' ||
+                                item.status === 'dismissed'
                               }
                               onClick={() => handleDismissRecommendation(item)}
                             >
@@ -1926,142 +2129,193 @@ export default function StrategyCenterPage() {
                 </DialogHeader>
                 {detailItem && (
                   <div className="max-h-[65vh] space-y-4 overflow-y-auto text-sm">
-                    {Array.isArray(detailItem.data?.keywordPlan) && detailItem.data.keywordPlan.length > 0 && (
-                      <div className="space-y-2 rounded-md border p-3">
-                        <div className="text-sm font-medium">
-                          补充Search Terms关键词（{detailItem.data.keywordPlan.length}）
-                        </div>
-                        {detailItem.data.keywordPlanDiagnostics && (
-                          <div className="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
-                            <div>
-                              候选来源：近14天 {formatNumber(detailItem.data.keywordPlanDiagnostics.candidateCountRecent, 0)} 条，
-                              历史 {formatNumber(detailItem.data.keywordPlanDiagnostics.candidateCountHistorical, 0)} 条；
-                              入选：近14天 {formatNumber(detailItem.data.keywordPlanDiagnostics.selectedFromRecent, 0)} 条，
-                              历史 {formatNumber(detailItem.data.keywordPlanDiagnostics.selectedFromHistorical, 0)} 条
-                            </div>
-                            {detailItem.data.keywordPlanDiagnostics.excludedReasonCounts
-                              && Object.keys(detailItem.data.keywordPlanDiagnostics.excludedReasonCounts).length > 0 && (
-                                <div>
-                                  过滤原因：
-                                  {Object.entries(detailItem.data.keywordPlanDiagnostics.excludedReasonCounts)
-                                    .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
-                                    .slice(0, 6)
-                                    .map(([reason, count]) => `${reason}:${formatNumber(count, 0)}`)
-                                    .join('，')}
-                                </div>
-                              )}
+                    {Array.isArray(detailItem.data?.keywordPlan) &&
+                      detailItem.data.keywordPlan.length > 0 && (
+                        <div className="space-y-2 rounded-md border p-3">
+                          <div className="text-sm font-medium">
+                            补充Search Terms关键词（{detailItem.data.keywordPlan.length}）
                           </div>
-                        )}
-                        <div className="space-y-1 text-xs text-slate-600">
-                          {detailItem.data.keywordPlan.slice(0, 30).map((kw, idx) => (
-                            <div key={`kw:${kw.text}:${idx}`} className="space-y-1">
+                          {detailItem.data.keywordPlanDiagnostics && (
+                            <div className="rounded border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
                               <div>
+                                候选来源：近14天{' '}
+                                {formatNumber(
+                                  detailItem.data.keywordPlanDiagnostics.candidateCountRecent,
+                                  0
+                                )}{' '}
+                                条， 历史{' '}
+                                {formatNumber(
+                                  detailItem.data.keywordPlanDiagnostics.candidateCountHistorical,
+                                  0
+                                )}{' '}
+                                条； 入选：近14天{' '}
+                                {formatNumber(
+                                  detailItem.data.keywordPlanDiagnostics.selectedFromRecent,
+                                  0
+                                )}{' '}
+                                条， 历史{' '}
+                                {formatNumber(
+                                  detailItem.data.keywordPlanDiagnostics.selectedFromHistorical,
+                                  0
+                                )}{' '}
+                                条
+                              </div>
+                              {detailItem.data.keywordPlanDiagnostics.excludedReasonCounts &&
+                                Object.keys(
+                                  detailItem.data.keywordPlanDiagnostics.excludedReasonCounts
+                                ).length > 0 && (
+                                  <div>
+                                    过滤原因：
+                                    {Object.entries(
+                                      detailItem.data.keywordPlanDiagnostics.excludedReasonCounts
+                                    )
+                                      .sort((a, b) => Number(b[1] || 0) - Number(a[1] || 0))
+                                      .slice(0, 6)
+                                      .map(
+                                        ([reason, count]) => `${reason}:${formatNumber(count, 0)}`
+                                      )
+                                      .join('，')}
+                                  </div>
+                                )}
+                            </div>
+                          )}
+                          <div className="space-y-1 text-xs text-slate-600">
+                            {detailItem.data.keywordPlan.slice(0, 30).map((kw, idx) => (
+                              <div key={`kw:${kw.text}:${idx}`} className="space-y-1">
+                                <div>
+                                  {idx + 1}. {kw.text} [{kw.matchType}]
+                                  {kw.sourceLayer === 'recent_search_terms' ? ' · 近14天' : ''}
+                                  {kw.sourceLayer === 'historical_search_terms'
+                                    ? ' · 历史高表现'
+                                    : ''}
+                                  {Number.isFinite(Number(kw.selectionScore))
+                                    ? ` · 评分 ${formatNumber(kw.selectionScore, 1)}`
+                                    : ''}
+                                  {Number.isFinite(Number(kw.evidenceMetrics?.clicks))
+                                    ? ` · 点击 ${formatNumber(kw.evidenceMetrics?.clicks, 0)}`
+                                    : ''}
+                                  {Number.isFinite(Number(kw.evidenceMetrics?.conversions))
+                                    ? ` · 转化 ${formatNumber(kw.evidenceMetrics?.conversions, 2)}`
+                                    : ''}
+                                  {Number.isFinite(Number(kw.evidenceMetrics?.cost))
+                                    ? ` · 花费 ${formatMoney(kw.evidenceMetrics?.cost, detailItem.data?.currency || detailItem.data?.searchTermFeedback?.dominantCurrency, 2)}`
+                                    : ''}
+                                </div>
+                                {kw.whySelected && (
+                                  <div className="text-[11px] text-slate-500">
+                                    说明：{kw.whySelected}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {detailItem.data.keywordPlan.length > 30 && (
+                              <div>其余 {detailItem.data.keywordPlan.length - 30} 条已省略</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    {Array.isArray(detailItem.data?.negativeKeywordPlan) &&
+                      detailItem.data.negativeKeywordPlan.length > 0 && (
+                        <div className="space-y-2 rounded-md border p-3">
+                          <div className="text-sm font-medium">
+                            否词建议（{detailItem.data.negativeKeywordPlan.length}）
+                          </div>
+                          <div className="space-y-1 text-xs text-slate-600">
+                            {detailItem.data.negativeKeywordPlan.slice(0, 30).map((kw, idx) => (
+                              <div key={`neg:${kw.text}:${idx}`}>
                                 {idx + 1}. {kw.text} [{kw.matchType}]
-                                {kw.sourceLayer === 'recent_search_terms' ? ' · 近14天' : ''}
-                                {kw.sourceLayer === 'historical_search_terms' ? ' · 历史高表现' : ''}
-                                {Number.isFinite(Number(kw.selectionScore)) ? ` · 评分 ${formatNumber(kw.selectionScore, 1)}` : ''}
-                                {Number.isFinite(Number(kw.evidenceMetrics?.clicks))
-                                  ? ` · 点击 ${formatNumber(kw.evidenceMetrics?.clicks, 0)}`
+                                {kw.reason ? ` · ${kw.reason}` : ''}
+                              </div>
+                            ))}
+                            {detailItem.data.negativeKeywordPlan.length > 30 && (
+                              <div>
+                                其余 {detailItem.data.negativeKeywordPlan.length - 30} 条已省略
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    {Array.isArray(detailItem.data?.matchTypePlan) &&
+                      detailItem.data.matchTypePlan.length > 0 && (
+                        <div className="space-y-2 rounded-md border p-3">
+                          <div className="text-sm font-medium">
+                            匹配类型优化（{detailItem.data.matchTypePlan.length}）
+                          </div>
+                          <div className="space-y-1 text-xs text-slate-600">
+                            {detailItem.data.matchTypePlan.slice(0, 30).map((kw, idx) => (
+                              <div key={`mt:${kw.text}:${idx}`}>
+                                {idx + 1}. {kw.text} [{kw.currentMatchType} →{' '}
+                                {kw.recommendedMatchType}]
+                                {Number.isFinite(Number(kw.clicks))
+                                  ? ` · 点击 ${formatNumber(kw.clicks, 0)}`
                                   : ''}
-                                {Number.isFinite(Number(kw.evidenceMetrics?.conversions))
-                                  ? ` · 转化 ${formatNumber(kw.evidenceMetrics?.conversions, 2)}`
+                                {Number.isFinite(Number(kw.conversions))
+                                  ? ` · 转化 ${formatNumber(kw.conversions, 2)}`
                                   : ''}
-                                {Number.isFinite(Number(kw.evidenceMetrics?.cost))
-                                  ? ` · 花费 ${formatMoney(kw.evidenceMetrics?.cost, detailItem.data?.currency || detailItem.data?.searchTermFeedback?.dominantCurrency, 2)}`
+                                {Number.isFinite(Number(kw.cost))
+                                  ? ` · 花费 ${formatMoney(kw.cost, detailItem.data?.currency || detailItem.data?.searchTermFeedback?.dominantCurrency, 2)}`
                                   : ''}
                               </div>
-                              {kw.whySelected && (
-                                <div className="text-[11px] text-slate-500">
-                                  说明：{kw.whySelected}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                          {detailItem.data.keywordPlan.length > 30 && (
-                            <div>其余 {detailItem.data.keywordPlan.length - 30} 条已省略</div>
-                          )}
+                            ))}
+                            {detailItem.data.matchTypePlan.length > 30 && (
+                              <div>其余 {detailItem.data.matchTypePlan.length - 30} 条已省略</div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                    {Array.isArray(detailItem.data?.negativeKeywordPlan) && detailItem.data.negativeKeywordPlan.length > 0 && (
+                      )}
+                    {((Array.isArray(detailItem.data?.searchTermFeedback?.hardNegativeTerms) &&
+                      detailItem.data.searchTermFeedback.hardNegativeTerms.length > 0) ||
+                      (Array.isArray(detailItem.data?.searchTermFeedback?.softSuppressTerms) &&
+                        detailItem.data.searchTermFeedback.softSuppressTerms.length > 0)) && (
                       <div className="space-y-2 rounded-md border p-3">
                         <div className="text-sm font-medium">
-                          否词建议（{detailItem.data.negativeKeywordPlan.length}）
+                          搜索词反馈（近{detailItem.data?.searchTermFeedback?.lookbackDays || 14}
+                          天）
                         </div>
-                        <div className="space-y-1 text-xs text-slate-600">
-                          {detailItem.data.negativeKeywordPlan.slice(0, 30).map((kw, idx) => (
-                            <div key={`neg:${kw.text}:${idx}`}>
-                              {idx + 1}. {kw.text} [{kw.matchType}]
-                              {kw.reason ? ` · ${kw.reason}` : ''}
-                            </div>
-                          ))}
-                          {detailItem.data.negativeKeywordPlan.length > 30 && (
-                            <div>其余 {detailItem.data.negativeKeywordPlan.length - 30} 条已省略</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {Array.isArray(detailItem.data?.matchTypePlan) && detailItem.data.matchTypePlan.length > 0 && (
-                      <div className="space-y-2 rounded-md border p-3">
-                        <div className="text-sm font-medium">
-                          匹配类型优化（{detailItem.data.matchTypePlan.length}）
-                        </div>
-                        <div className="space-y-1 text-xs text-slate-600">
-                          {detailItem.data.matchTypePlan.slice(0, 30).map((kw, idx) => (
-                            <div key={`mt:${kw.text}:${idx}`}>
-                              {idx + 1}. {kw.text} [{kw.currentMatchType} → {kw.recommendedMatchType}]
-                              {Number.isFinite(Number(kw.clicks)) ? ` · 点击 ${formatNumber(kw.clicks, 0)}` : ''}
-                              {Number.isFinite(Number(kw.conversions)) ? ` · 转化 ${formatNumber(kw.conversions, 2)}` : ''}
-                              {Number.isFinite(Number(kw.cost))
-                                ? ` · 花费 ${formatMoney(kw.cost, detailItem.data?.currency || detailItem.data?.searchTermFeedback?.dominantCurrency, 2)}`
-                                : ''}
-                            </div>
-                          ))}
-                          {detailItem.data.matchTypePlan.length > 30 && (
-                            <div>其余 {detailItem.data.matchTypePlan.length - 30} 条已省略</div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {(
-                      (Array.isArray(detailItem.data?.searchTermFeedback?.hardNegativeTerms)
-                        && detailItem.data.searchTermFeedback.hardNegativeTerms.length > 0)
-                      || (Array.isArray(detailItem.data?.searchTermFeedback?.softSuppressTerms)
-                        && detailItem.data.searchTermFeedback.softSuppressTerms.length > 0)
-                    ) && (
-                      <div className="space-y-2 rounded-md border p-3">
-                        <div className="text-sm font-medium">
-                          搜索词反馈（近{detailItem.data?.searchTermFeedback?.lookbackDays || 14}天）
-                        </div>
-                        {Array.isArray(detailItem.data?.searchTermFeedback?.hardNegativeTerms)
-                          && detailItem.data.searchTermFeedback.hardNegativeTerms.length > 0 && (
+                        {Array.isArray(detailItem.data?.searchTermFeedback?.hardNegativeTerms) &&
+                          detailItem.data.searchTermFeedback.hardNegativeTerms.length > 0 && (
                             <div className="space-y-1 text-xs text-slate-600">
                               <div className="font-medium text-amber-700">
-                                hard 词（建议优先否词）{detailItem.data.searchTermFeedback.hardNegativeTerms.length}
+                                hard 词（建议优先否词）
+                                {detailItem.data.searchTermFeedback.hardNegativeTerms.length}
                               </div>
-                              {detailItem.data.searchTermFeedback.hardNegativeTerms.slice(0, 30).map((term, idx) => (
-                                <div key={`hard:${term}:${idx}`}>{idx + 1}. {term}</div>
-                              ))}
+                              {detailItem.data.searchTermFeedback.hardNegativeTerms
+                                .slice(0, 30)
+                                .map((term, idx) => (
+                                  <div key={`hard:${term}:${idx}`}>
+                                    {idx + 1}. {term}
+                                  </div>
+                                ))}
                             </div>
                           )}
-                        {Array.isArray(detailItem.data?.searchTermFeedback?.softSuppressTerms)
-                          && detailItem.data.searchTermFeedback.softSuppressTerms.length > 0 && (
+                        {Array.isArray(detailItem.data?.searchTermFeedback?.softSuppressTerms) &&
+                          detailItem.data.searchTermFeedback.softSuppressTerms.length > 0 && (
                             <div className="space-y-1 text-xs text-slate-600">
                               <div className="font-medium text-sky-700">
-                                soft 词（建议弱化/收紧匹配）{detailItem.data.searchTermFeedback.softSuppressTerms.length}
+                                soft 词（建议弱化/收紧匹配）
+                                {detailItem.data.searchTermFeedback.softSuppressTerms.length}
                               </div>
-                              {detailItem.data.searchTermFeedback.softSuppressTerms.slice(0, 30).map((term, idx) => (
-                                <div key={`soft:${term}:${idx}`}>{idx + 1}. {term}</div>
-                              ))}
+                              {detailItem.data.searchTermFeedback.softSuppressTerms
+                                .slice(0, 30)
+                                .map((term, idx) => (
+                                  <div key={`soft:${term}:${idx}`}>
+                                    {idx + 1}. {term}
+                                  </div>
+                                ))}
                             </div>
                           )}
                       </div>
                     )}
-                    {(!Array.isArray(detailItem.data?.keywordPlan) || detailItem.data.keywordPlan.length === 0)
-                      && (!Array.isArray(detailItem.data?.negativeKeywordPlan) || detailItem.data.negativeKeywordPlan.length === 0)
-                      && (!Array.isArray(detailItem.data?.matchTypePlan) || detailItem.data.matchTypePlan.length === 0)
-                      && (!Array.isArray(detailItem.data?.searchTermFeedback?.hardNegativeTerms) || detailItem.data.searchTermFeedback.hardNegativeTerms.length === 0)
-                      && (!Array.isArray(detailItem.data?.searchTermFeedback?.softSuppressTerms) || detailItem.data.searchTermFeedback.softSuppressTerms.length === 0) && (
+                    {(!Array.isArray(detailItem.data?.keywordPlan) ||
+                      detailItem.data.keywordPlan.length === 0) &&
+                      (!Array.isArray(detailItem.data?.negativeKeywordPlan) ||
+                        detailItem.data.negativeKeywordPlan.length === 0) &&
+                      (!Array.isArray(detailItem.data?.matchTypePlan) ||
+                        detailItem.data.matchTypePlan.length === 0) &&
+                      (!Array.isArray(detailItem.data?.searchTermFeedback?.hardNegativeTerms) ||
+                        detailItem.data.searchTermFeedback.hardNegativeTerms.length === 0) &&
+                      (!Array.isArray(detailItem.data?.searchTermFeedback?.softSuppressTerms) ||
+                        detailItem.data.searchTermFeedback.softSuppressTerms.length === 0) && (
                         <div className="text-xs text-slate-500">该建议暂无可展示的执行明细。</div>
                       )}
                   </div>
@@ -2085,21 +2339,30 @@ export default function StrategyCenterPage() {
                 </DialogHeader>
                 {strategyConfirmDialog && (
                   <div className="space-y-4">
-                    {Array.isArray(strategyConfirmDialog.details) && strategyConfirmDialog.details.length > 0 && (
-                      <div className={`space-y-1.5 rounded-md border px-3 py-2.5 text-sm leading-6 ${strategyConfirmToneClasses.panel}`}>
-                        {strategyConfirmDialog.details.map((item, idx) => (
-                          <div key={`confirm-detail-${idx}`}>{item}</div>
-                        ))}
-                      </div>
-                    )}
+                    {Array.isArray(strategyConfirmDialog.details) &&
+                      strategyConfirmDialog.details.length > 0 && (
+                        <div
+                          className={`space-y-1.5 rounded-md border px-3 py-2.5 text-sm leading-6 ${strategyConfirmToneClasses.panel}`}
+                        >
+                          {strategyConfirmDialog.details.map((item, idx) => (
+                            <div key={`confirm-detail-${idx}`}>{item}</div>
+                          ))}
+                        </div>
+                      )}
                     {strategyConfirmDialog.acknowledgeLabel && (
-                      <label className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 ${strategyConfirmToneClasses.panel}`}>
+                      <label
+                        className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 ${strategyConfirmToneClasses.panel}`}
+                      >
                         <Checkbox
                           className="mt-1 h-4 w-4 shrink-0"
                           checked={strategyConfirmAcknowledge}
-                          onCheckedChange={(checked) => setStrategyConfirmAcknowledge(Boolean(checked))}
+                          onCheckedChange={(checked) =>
+                            setStrategyConfirmAcknowledge(Boolean(checked))
+                          }
                         />
-                        <span className={`text-sm font-medium leading-6 ${strategyConfirmToneClasses.detail}`}>
+                        <span
+                          className={`text-sm font-medium leading-6 ${strategyConfirmToneClasses.detail}`}
+                        >
                           {strategyConfirmDialog.acknowledgeLabel}
                         </span>
                       </label>
@@ -2116,7 +2379,10 @@ export default function StrategyCenterPage() {
                         className="h-9 px-4"
                         variant={strategyConfirmToneClasses.confirm}
                         onClick={() => closeStrategyConfirmDialog(true)}
-                        disabled={Boolean(strategyConfirmDialog.acknowledgeLabel) && !strategyConfirmAcknowledge}
+                        disabled={
+                          Boolean(strategyConfirmDialog.acknowledgeLabel) &&
+                          !strategyConfirmAcknowledge
+                        }
                       >
                         {strategyConfirmDialog.confirmLabel || '确认'}
                       </Button>

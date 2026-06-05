@@ -1,8 +1,8 @@
-'use client';
+'use client'
 
-import { Calendar } from 'lucide-react';
-import ClickFarmDistributionChart from '@/components/ClickFarmDistributionChart';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar } from 'lucide-react'
+import ClickFarmDistributionChart from '@/components/ClickFarmDistributionChart'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -10,36 +10,36 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui/table'
 
 interface DailyHistoryEntry {
-  date: string;
-  target: number;
-  actual: number;
-  success: number;
-  failed: number;
+  date: string
+  target: number
+  actual: number
+  success: number
+  failed: number
 }
 
 interface TaskAnalyticsTask {
-  daily_history: DailyHistoryEntry[];
+  daily_history: DailyHistoryEntry[]
 }
 
 interface TaskAnalyticsStatistics {
-  avg_daily_clicks: number;
-  best_day: { actual: number; date: string } | null;
-  worst_day: { actual: number; date: string } | null;
+  avg_daily_clicks: number
+  best_day: { actual: number; date: string } | null
+  worst_day: { actual: number; date: string } | null
 }
 
 interface DistributionData {
-  date: string;
-  hourlyActual: number[];
-  hourlyConfigured: number[];
+  date: string
+  hourlyActual: number[]
+  hourlyConfigured: number[]
 }
 
 interface TaskDetailAnalyticsSectionProps {
-  task: TaskAnalyticsTask;
-  statistics: TaskAnalyticsStatistics;
-  distributionData: DistributionData;
+  task: TaskAnalyticsTask
+  statistics: TaskAnalyticsStatistics
+  distributionData: DistributionData
 }
 
 export default function TaskDetailAnalyticsSection({
@@ -49,10 +49,7 @@ export default function TaskDetailAnalyticsSection({
 }: TaskDetailAnalyticsSectionProps) {
   return (
     <div className="space-y-6">
-      <ClickFarmDistributionChart
-        data={distributionData}
-        title="时间分布（配置 vs 最近执行）"
-      />
+      <ClickFarmDistributionChart data={distributionData} title="时间分布（配置 vs 最近执行）" />
 
       <Card>
         <CardHeader>
@@ -82,8 +79,8 @@ export default function TaskDetailAnalyticsSection({
                   .slice()
                   .reverse()
                   .map((day) => {
-                    const completionRate = day.target > 0 ? (day.actual / day.target) * 100 : 0;
-                    const daySuccessRate = day.actual > 0 ? (day.success / day.actual) * 100 : 0;
+                    const completionRate = day.target > 0 ? (day.actual / day.target) * 100 : 0
+                    const daySuccessRate = day.actual > 0 ? (day.success / day.actual) * 100 : 0
 
                     return (
                       <TableRow key={day.date}>
@@ -93,17 +90,21 @@ export default function TaskDetailAnalyticsSection({
                         <TableCell className="text-right text-green-600">{day.success}</TableCell>
                         <TableCell className="text-right text-red-600">{day.failed}</TableCell>
                         <TableCell className="text-right">
-                          <span className={completionRate >= 90 ? 'font-medium text-green-600' : ''}>
+                          <span
+                            className={completionRate >= 90 ? 'font-medium text-green-600' : ''}
+                          >
                             {completionRate.toFixed(1)}%
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className={daySuccessRate >= 95 ? 'font-medium text-green-600' : ''}>
+                          <span
+                            className={daySuccessRate >= 95 ? 'font-medium text-green-600' : ''}
+                          >
                             {daySuccessRate.toFixed(1)}%
                           </span>
                         </TableCell>
                       </TableRow>
-                    );
+                    )
                   })}
               </TableBody>
             </Table>
@@ -136,5 +137,5 @@ export default function TaskDetailAnalyticsSection({
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

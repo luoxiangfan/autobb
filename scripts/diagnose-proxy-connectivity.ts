@@ -84,7 +84,10 @@ function parseArgs(argv: string[]): CliOptions {
         i++
         break
       case '--kookeey':
-        opts.kookeeyUrl = next && !next.startsWith('--') ? next : process.env.KOOKEEY_PROXY_URL || process.env.PROXY_URL
+        opts.kookeeyUrl =
+          next && !next.startsWith('--')
+            ? next
+            : process.env.KOOKEEY_PROXY_URL || process.env.PROXY_URL
         if (next && !next.startsWith('--')) i++
         break
       case '--skip-health-check':
@@ -262,10 +265,7 @@ async function resolveProxy(opts: CliOptions): Promise<ResolvedProxy> {
   }
 
   const proxyUrl =
-    opts.kookeeyUrl ||
-    opts.proxyUrl ||
-    process.env.KOOKEEY_PROXY_URL ||
-    process.env.PROXY_URL
+    opts.kookeeyUrl || opts.proxyUrl || process.env.KOOKEEY_PROXY_URL || process.env.PROXY_URL
 
   if (!proxyUrl) {
     throw new Error(

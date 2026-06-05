@@ -67,10 +67,7 @@ describe('google-ads-campaign-sync-pipeline-status', () => {
     expect(result.reason).toBe('sync_log')
     const sql = String(dbMocks.queryOne.mock.calls[0][0])
     expect(sql).toContain('sync_type = ?')
-    expect(dbMocks.queryOne.mock.calls[0][1]).toEqual([
-      2,
-      GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE,
-    ])
+    expect(dbMocks.queryOne.mock.calls[0][1]).toEqual([2, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE])
   })
 
   it('markStaleGoogleAdsCampaignSyncLogs updates stale running rows', async () => {

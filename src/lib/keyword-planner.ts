@@ -13,12 +13,14 @@ import { getCachedKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from
 import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken } from './google-ads-oauth'
-import {
-  getGoogleAdsAuthContext,
-  type GoogleAdsAuthContext,
-} from './google-ads-auth-context'
+import { getGoogleAdsAuthContext, type GoogleAdsAuthContext } from './google-ads-auth-context'
 import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
-import { getGoogleAdsLanguageIdString, getGoogleAdsGeoTargetId, normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
+import {
+  getGoogleAdsLanguageIdString,
+  getGoogleAdsGeoTargetId,
+  normalizeCountryCode,
+  normalizeLanguageCode,
+} from './language-country-codes'
 import { getGoogleAdsClient } from './google-ads-api'
 import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
 import type { OAuthApiCredentialsFields } from './google-ads-accounts-auth'
@@ -60,8 +62,8 @@ interface KeywordPlannerConfig {
   clientId: string
   clientSecret: string
   developerToken: string
-  refreshToken?: string  // OAuth模式需要
-  loginCustomerId?: string  // OAuth模式需要
+  refreshToken?: string // OAuth模式需要
+  loginCustomerId?: string // OAuth模式需要
   customerId: string
   // 服务账号认证
   authType?: AuthType
@@ -116,14 +118,16 @@ function isInvalidGrantMessage(message: string): boolean {
   return msg.includes('invalid_grant') || msg.includes('token has been expired or revoked')
 }
 
-
 // Helper: Read user configs from system_settings
 async function readUserConfigs(db: any, userId: number): Promise<Record<string, string>> {
-  const configs = await db.query(`
+  const configs = (await db.query(
+    `
     SELECT key, value, encrypted_value
     FROM system_settings
     WHERE category = 'google_ads' AND user_id = ?
-  `, [userId]) as Array<{ key: string; value: string | null; encrypted_value: string | null }>
+  `,
+    [userId]
+  )) as Array<{ key: string; value: string | null; encrypted_value: string | null }>
 
   const configMap: Record<string, string> = {}
   for (const c of configs) {
@@ -189,10 +193,10 @@ export async function getGoogleAdsConfig(
           return null
         }
         const loginCustomerId =
-          healedOAuth.loginCustomerId ||
-          authContext.oauthCredentials?.login_customer_id ||
-          ''
-        console.log(`[KeywordPlanner] Using OAuth authentication for user ${userId} (healed credentials)`)
+          healedOAuth.loginCustomerId || authContext.oauthCredentials?.login_customer_id || ''
+        console.log(
+          `[KeywordPlanner] Using OAuth authentication for user ${userId} (healed credentials)`
+        )
         return {
           clientId: healedOAuth.credentials.client_id,
           clientSecret: healedOAuth.credentials.client_secret,
@@ -206,7 +210,9 @@ export async function getGoogleAdsConfig(
 
       const credentials = authContext.oauthCredentials
       if (!credentials?.refresh_token) {
-        console.error(`[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`)
+        console.error(
+          `[KeywordPlanner] User ${userId} has no refresh token. Please authorize Google Ads API in Settings.`
+        )
         return null
       }
 
@@ -246,7 +252,10 @@ export async function getGoogleAdsConfig(
 
       return {
         clientId: oauthCredentials?.client_id || userConfigs.client_id || 'placeholder-client-id',
-        clientSecret: oauthCredentials?.client_secret || userConfigs.client_secret || 'placeholder-client-secret',
+        clientSecret:
+          oauthCredentials?.client_secret ||
+          userConfigs.client_secret ||
+          'placeholder-client-secret',
         developerToken: serviceAccount.developerToken,
         customerId: serviceAccount.mccCustomerId,
         authType: 'service_account' as const,
@@ -285,7 +294,11 @@ export async function getKeywordSearchVolumes(
   userId?: number,
   authType?: AuthType,
   serviceAccountId?: string,
-  onProgress?: (info: { message: string; current?: number; total?: number }) => Promise<void> | void,
+  onProgress?: (info: {
+    message: string
+    current?: number
+    total?: number
+  }) => Promise<void> | void,
   plannerAuth?: KeywordPlannerAuthOptions
 ): Promise<KeywordVolume[]> {
   if (!keywords.length) return []
@@ -322,7 +335,7 @@ export async function getKeywordSearchVolumes(
 
       console.warn(
         `[KeywordPlanner] Falling back due to invalid planner params: ${Array.from(fallbackFields).join(', ')}. ` +
-        `requested=${requestedCountry}/${requestedLanguage}, effective=${effectiveCountry}/${effectiveLanguage}`
+          `requested=${requestedCountry}/${requestedLanguage}, effective=${effectiveCountry}/${effectiveLanguage}`
       )
     }
 
@@ -331,10 +344,10 @@ export async function getKeywordSearchVolumes(
 
     // 1. Check Redis cache first
     const cachedVolumes = await getBatchCachedVolumes(keywords, effectiveCountry, effectiveLanguage)
-    const uncachedKeywords = keywords.filter(kw => !cachedVolumes.has(kw.toLowerCase()))
+    const uncachedKeywords = keywords.filter((kw) => !cachedVolumes.has(kw.toLowerCase()))
     // 🔧 重要：Redis 中 volume=0 可能来自历史错误/不可用降级，不能直接当作“命中最终值”
     // 仍然允许走 DB cache 覆盖（避免“全是0搜索量”的严重退化）。
-    const zeroCachedKeywords = keywords.filter(kw => {
+    const zeroCachedKeywords = keywords.filter((kw) => {
       const cached = cachedVolumes.get(kw.toLowerCase())
       return cached !== undefined && (cached.volume || 0) === 0
     })
@@ -345,7 +358,7 @@ export async function getKeywordSearchVolumes(
     // If all cached, return from cache
     if (uncachedKeywords.length === 0 && zeroCachedKeywords.length === 0) {
       console.log(`[KeywordPlanner] 全部命中Redis缓存，无需API调用`)
-      return keywords.map(kw => {
+      return keywords.map((kw) => {
         const cached = cachedVolumes.get(kw.toLowerCase())
         return {
           keyword: kw,
@@ -402,20 +415,24 @@ export async function getKeywordSearchVolumes(
       } else {
         const placeholders = normalizedKeywords.map(() => '?').join(',')
 
-        const rows = await db.query(`
+        const rows = (await db.query(
+          `
           SELECT keyword, search_volume, competition_level, avg_cpc_micros
           FROM global_keywords
           WHERE keyword IN (${placeholders})
             AND country = ?
             AND language IN (${langPlaceholders})
             AND created_at > ${recentCutoffExpr}
-        `, [
-          ...normalizedKeywords,
-          effectiveCountry,
-          ...languageCandidates
-        ]) as Array<{ keyword: string; search_volume: number; competition_level?: string; avg_cpc_micros?: number }>
+        `,
+          [...normalizedKeywords, effectiveCountry, ...languageCandidates]
+        )) as Array<{
+          keyword: string
+          search_volume: number
+          competition_level?: string
+          avg_cpc_micros?: number
+        }>
 
-        rows.forEach(row => {
+        rows.forEach((row) => {
           // 修复(2025-12-19): 从数据库读取competition_level和avg_cpc_micros
           const avgCpc = (row.avg_cpc_micros || 0) / 1_000_000
           const normalizedDbKeyword = normalizeGoogleAdsKeyword(row.keyword)
@@ -439,16 +456,23 @@ export async function getKeywordSearchVolumes(
             })
           }
         })
-        console.log(`[KeywordPlanner] 数据库缓存命中: ${dbVolumes.size}/${dbLookupKeywords.length} 个关键词`)
+        console.log(
+          `[KeywordPlanner] 数据库缓存命中: ${dbVolumes.size}/${dbLookupKeywords.length} 个关键词`
+        )
       }
     } catch (error) {
       // Table might not exist yet or query failed
-      console.error(`[KeywordPlanner] 数据库缓存查询失败:`, error instanceof Error ? error.message : String(error))
+      console.error(
+        `[KeywordPlanner] 数据库缓存查询失败:`,
+        error instanceof Error ? error.message : String(error)
+      )
     }
 
     // Keywords still needing API call
-    const needApiKeywords = uncachedKeywords.filter(kw => !dbVolumes.has(kw.toLowerCase()))
-    console.log(`[KeywordPlanner] 需要API查询: ${needApiKeywords.length} 个关键词 (总${keywords.length} - Redis${cachedVolumes.size} - DB${dbVolumes.size})`)
+    const needApiKeywords = uncachedKeywords.filter((kw) => !dbVolumes.has(kw.toLowerCase()))
+    console.log(
+      `[KeywordPlanner] 需要API查询: ${needApiKeywords.length} 个关键词 (总${keywords.length} - Redis${cachedVolumes.size} - DB${dbVolumes.size})`
+    )
 
     // 3. Call Keyword Planner API for remaining
     const apiVolumes = new Map<string, KeywordVolume>()
@@ -466,9 +490,11 @@ export async function getKeywordSearchVolumes(
       )
 
       // 验证配置（根据认证类型验证不同字段）
-      const isConfigValid = config?.developerToken && config?.customerId &&
-        ((config.authType === 'service_account') ||
-         (config.authType === 'oauth' && config?.refreshToken && config?.loginCustomerId))
+      const isConfigValid =
+        config?.developerToken &&
+        config?.customerId &&
+        (config.authType === 'service_account' ||
+          (config.authType === 'oauth' && config?.refreshToken && config?.loginCustomerId))
 
       if (isConfigValid) {
         // Split keywords into batches of 20 (Google Ads API limit)
@@ -478,7 +504,9 @@ export async function getKeywordSearchVolumes(
           keywordBatches.push(needApiKeywords.slice(i, i + BATCH_SIZE))
         }
 
-        console.log(`[KeywordPlanner] Processing ${needApiKeywords.length} keywords in ${keywordBatches.length} batches (auth: ${config.authType ?? 'unknown'})`)
+        console.log(
+          `[KeywordPlanner] Processing ${needApiKeywords.length} keywords in ${keywordBatches.length} batches (auth: ${config.authType ?? 'unknown'})`
+        )
 
         // API追踪设置
         const apiStartTime = Date.now()
@@ -505,9 +533,15 @@ export async function getKeywordSearchVolumes(
           // 注意：explorer 可能是历史误标（例如实际已经升级到 Basic/Standard 但库内未回填），
           // 因此 explorer 不在此处硬拦截，而是继续做一次真实 Historical Metrics 探测。
           if (apiAccessLevel === 'test') {
-            console.warn('[KeywordPlanner] Developer Token 访问级别为 test，无法使用 Keyword Planner API')
-            console.warn('[KeywordPlanner] 需要 Basic Access 或 Standard Access 权限才能获取精确搜索量数据')
-            console.warn('[KeywordPlanner] 申请地址: https://developers.google.com/google-ads/api/docs/access-levels')
+            console.warn(
+              '[KeywordPlanner] Developer Token 访问级别为 test，无法使用 Keyword Planner API'
+            )
+            console.warn(
+              '[KeywordPlanner] 需要 Basic Access 或 Standard Access 权限才能获取精确搜索量数据'
+            )
+            console.warn(
+              '[KeywordPlanner] 申请地址: https://developers.google.com/google-ads/api/docs/access-levels'
+            )
 
             // 为所有关键词返回默认值
             for (const keyword of needApiKeywords) {
@@ -531,9 +565,13 @@ export async function getKeywordSearchVolumes(
             apiSuccess = true // 标记为成功，避免记录为API错误
           } else {
             // 非 test：允许进行真实 Historical Metrics 探测（包含 basic/standard 以及 explorer 历史误标场景）
-            console.log(`[KeywordPlanner] Developer Token 访问级别: ${apiAccessLevel || 'unknown'}, 认证方式: ${config.authType ?? 'unknown'}`)
+            console.log(
+              `[KeywordPlanner] Developer Token 访问级别: ${apiAccessLevel || 'unknown'}, 认证方式: ${config.authType ?? 'unknown'}`
+            )
             if (apiAccessLevel === 'explorer') {
-              console.warn('[KeywordPlanner] api_access_level=explorer，先执行 Historical Metrics 实测；若权限不足再自动降级 no-volume')
+              console.warn(
+                '[KeywordPlanner] api_access_level=explorer，先执行 Historical Metrics 实测；若权限不足再自动降级 no-volume'
+              )
             }
 
             // 刷新 access token 以确保有效
@@ -545,7 +583,7 @@ export async function getKeywordSearchVolumes(
               if (isInvalidGrantMessage(refreshMessage)) {
                 throw new Error(
                   `Google Ads OAuth 授权已过期或被撤销（invalid_grant）。` +
-                  `请重新授权后再试。原始错误: ${refreshMessage}`
+                    `请重新授权后再试。原始错误: ${refreshMessage}`
                 )
               }
               console.warn('[KeywordPlanner] Token refresh warning:', refreshMessage)
@@ -572,7 +610,9 @@ export async function getKeywordSearchVolumes(
             let stopProcessingBatches = false
             for (let batchIndex = 0; batchIndex < keywordBatches.length; batchIndex++) {
               const batch = keywordBatches[batchIndex]
-              console.log(`[KeywordPlanner] Processing batch ${batchIndex + 1}/${keywordBatches.length} (${batch.length} keywords)`)
+              console.log(
+                `[KeywordPlanner] Processing batch ${batchIndex + 1}/${keywordBatches.length} (${batch.length} keywords)`
+              )
 
               let retries = 0
               const maxRetries = 3
@@ -580,196 +620,231 @@ export async function getKeywordSearchVolumes(
 
               while (!success && retries <= maxRetries) {
                 try {
-                    // 🔧 修复(2025-12-24): 使用统一的服务访问方式
-                    const keywordPlanIdeas = getKeywordPlanIdeaService(customer, config.authType)
+                  // 🔧 修复(2025-12-24): 使用统一的服务访问方式
+                  const keywordPlanIdeas = getKeywordPlanIdeaService(customer, config.authType)
 
-                    // 🔧 修复(2025-12-25): 确保customer_id格式正确（去掉横杠）
-                    const cleanCustomerId = config.customerId.replace(/-/g, '')
+                  // 🔧 修复(2025-12-25): 确保customer_id格式正确（去掉横杠）
+                  const cleanCustomerId = config.customerId.replace(/-/g, '')
 
-                    const requestParams = {
-                      customer_id: cleanCustomerId,
-                      keywords: batch,
-                      language: `languageConstants/${languageId}`,
-                      geo_target_constants: [`geoTargetConstants/${geoTargetId}`],
-                      keyword_plan_network: enums.KeywordPlanNetwork.GOOGLE_SEARCH,
-                    }
-
-                    console.log(`[KeywordPlanner] 🔍 请求参数: customer_id=${cleanCustomerId}, keywords=${batch.length}, authType=${config.authType}`)
-
-                    // OAuth 模式：使用 promise-based API
-                    const response = await keywordPlanIdeas.generateKeywordHistoricalMetrics(requestParams as any)
-
-                    totalApiCalls++
-
-                    console.log(`[KeywordPlanner] API响应类型: ${typeof response}, 结构: ${Object.keys(response || {}).join(', ')}`)
-                    const results = (response as any).results || response || []
-                    console.log(`[KeywordPlanner] 解析结果数量: ${Array.isArray(results) ? results.length : 'N/A'}`)
-
-                    // 🔧 修复(2025-12-17): generateKeywordHistoricalMetrics 返回字段可能是
-                    // snake_case (keyword_metrics) 或 camelCase (keywordMetrics)
-                    // 或者带下划线前缀 (_keyword_metrics) - protobuf 格式
-                    if (results.length > 0) {
-                      console.log(`[KeywordPlanner] 首个结果结构: ${Object.keys(results[0] || {}).join(', ')}`)
-                      // 🔍 调试：打印首个结果的完整内容
-                      console.log(`[KeywordPlanner] 首个结果详情: ${JSON.stringify(results[0], null, 2).slice(0, 800)}`)
-                    }
-
-                    for (const result of results) {
-                      // 兼容多种字段命名：snake_case, camelCase, 和 protobuf 下划线前缀
-                      const text = result.text || result._text
-                      const metrics = result.keyword_metrics
-                        || result.keywordMetrics
-                        || result._keyword_metrics
-                        || result._keywordMetrics
-
-                      if (text && metrics) {
-                        // 同样兼容多种命名风格（包括 protobuf 下划线前缀）
-                        const avgSearches = metrics.avg_monthly_searches
-                          ?? metrics.avgMonthlySearches
-                          ?? metrics._avg_monthly_searches
-                          ?? 0
-                        const comp = (metrics.competition ?? metrics._competition)?.toString() || 'UNKNOWN'
-                        const compIndex = metrics.competition_index
-                          ?? metrics.competitionIndex
-                          ?? metrics._competition_index
-                          ?? 0
-                        const lowBid = metrics.low_top_of_page_bid_micros
-                          ?? metrics.lowTopOfPageBidMicros
-                          ?? metrics._low_top_of_page_bid_micros
-                          ?? 0
-                        const highBid = metrics.high_top_of_page_bid_micros
-                          ?? metrics.highTopOfPageBidMicros
-                          ?? metrics._high_top_of_page_bid_micros
-                          ?? 0
-
-                        apiVolumes.set(text.toLowerCase(), {
-                          keyword: text,
-                          avgMonthlySearches: Number(avgSearches) || 0,
-                          competition: comp,
-                          competitionIndex: Number(compIndex) || 0,
-                          lowTopPageBid: Number(lowBid) / 1_000_000 || 0,
-                          highTopPageBid: Number(highBid) / 1_000_000 || 0,
-                          requestedCountry,
-                          effectiveCountry,
-                          usedProxyGeo,
-                          requestedLanguage,
-                          effectiveLanguage,
-                          usedFallbackLanguage,
-                        })
-                      } else if (text) {
-                        // 🔧 修复(2025-12-24): 有关键词但metrics为null时,返回0搜索量而不是丢弃关键词
-                        // 原因: 长尾词或不常见关键词可能没有metrics数据,但仍需要返回给调用方
-                        console.log(`[KeywordPlanner] 关键词"${text}"缺少metrics数据，返回默认值(搜索量=0)`)
-                        console.log(`  - keyword_metrics: ${typeof result.keyword_metrics} = ${JSON.stringify(result.keyword_metrics)}`)
-                        console.log(`  - _keyword_metrics: ${typeof result._keyword_metrics} = ${JSON.stringify(result._keyword_metrics)}`)
-
-                        // ✅ 仍然添加到结果中,避免关键词丢失
-                        apiVolumes.set(text.toLowerCase(), {
-                          keyword: text,
-                          avgMonthlySearches: 0,
-                          competition: 'UNKNOWN',
-                          competitionIndex: 0,
-                          lowTopPageBid: 0,
-                          highTopPageBid: 0,
-                          requestedCountry,
-                          effectiveCountry,
-                          usedProxyGeo,
-                          requestedLanguage,
-                          effectiveLanguage,
-                          usedFallbackLanguage,
-                        })
-                      }
-                    }
-
-                    success = true
-                  } catch (batchError: any) {
-                    if (isDeveloperTokenTestOnlyAccessError(batchError)) {
-                      const msg = getGoogleAdsErrorMessage(batchError)
-                      console.warn('[KeywordPlanner] Developer token 缺少 Basic/Standard access，Historical Metrics 不可用；本次返回默认搜索量=0（不写入缓存）')
-                      console.warn(`[KeywordPlanner] 原因: ${msg}`)
-
-                      for (const keyword of needApiKeywords) {
-                        apiVolumes.set(keyword.toLowerCase(), {
-                          keyword,
-                          avgMonthlySearches: 0,
-                          competition: 'UNKNOWN',
-                          competitionIndex: 0,
-                          lowTopPageBid: 0,
-                          highTopPageBid: 0,
-                          volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
-                          requestedCountry,
-                          effectiveCountry,
-                          usedProxyGeo,
-                          requestedLanguage,
-                          effectiveLanguage,
-                          usedFallbackLanguage,
-                        })
-                      }
-
-                      skipCachingDueToUnavailable = true
-                      apiErrorMessage = msg
-                      stopProcessingBatches = true
-                      success = true
-                      break
-                    }
-
-                    const errorMsg = batchError.errors?.[0]?.message || batchError.message || ''
-                    if (isInvalidGrantMessage(errorMsg)) {
-                      throw new Error(
-                        `Google Ads OAuth 授权已过期或被撤销（invalid_grant）。` +
-                        `请重新授权后再试。原始错误: ${errorMsg}`
-                      )
-                    }
-                    if (errorMsg.includes('Too many requests')) {
-                      retries++
-                      const waitTime = Math.min(5000 * Math.pow(2, retries - 1), 30000) // 5s, 10s, 20s, max 30s
-                      console.log(`[KeywordPlanner] Rate limit hit, retry ${retries}/${maxRetries} after ${waitTime}ms`)
-                      await new Promise(resolve => setTimeout(resolve, waitTime))
-                      continue
-                    }
-
-                    const invalidFields = getInvalidPlannerFieldsFromGoogleAdsError(batchError)
-                    if (attempt === 0 && invalidFields.size > 0) {
-                      fallbackFields = invalidFields
-                      shouldRetry = true
-                      break
-                    }
-
-                    throw batchError
+                  const requestParams = {
+                    customer_id: cleanCustomerId,
+                    keywords: batch,
+                    language: `languageConstants/${languageId}`,
+                    geo_target_constants: [`geoTargetConstants/${geoTargetId}`],
+                    keyword_plan_network: enums.KeywordPlanNetwork.GOOGLE_SEARCH,
                   }
-                }
 
-                if (shouldRetry) break
-                if (stopProcessingBatches) break
+                  console.log(
+                    `[KeywordPlanner] 🔍 请求参数: customer_id=${cleanCustomerId}, keywords=${batch.length}, authType=${config.authType}`
+                  )
 
-                if (success) {
-                  try {
-                    await onProgress?.({
-                      message: `搜索量批次 ${batchIndex + 1}/${keywordBatches.length} 完成`,
-                      current: batchIndex + 1,
-                      total: keywordBatches.length
-                    })
-                  } catch {}
-                }
+                  // OAuth 模式：使用 promise-based API
+                  const response = await keywordPlanIdeas.generateKeywordHistoricalMetrics(
+                    requestParams as any
+                  )
 
-                // Delay between batches
-                if (batchIndex < keywordBatches.length - 1) {
-                  await new Promise(resolve => setTimeout(resolve, 2000))
+                  totalApiCalls++
+
+                  console.log(
+                    `[KeywordPlanner] API响应类型: ${typeof response}, 结构: ${Object.keys(response || {}).join(', ')}`
+                  )
+                  const results = (response as any).results || response || []
+                  console.log(
+                    `[KeywordPlanner] 解析结果数量: ${Array.isArray(results) ? results.length : 'N/A'}`
+                  )
+
+                  // 🔧 修复(2025-12-17): generateKeywordHistoricalMetrics 返回字段可能是
+                  // snake_case (keyword_metrics) 或 camelCase (keywordMetrics)
+                  // 或者带下划线前缀 (_keyword_metrics) - protobuf 格式
+                  if (results.length > 0) {
+                    console.log(
+                      `[KeywordPlanner] 首个结果结构: ${Object.keys(results[0] || {}).join(', ')}`
+                    )
+                    // 🔍 调试：打印首个结果的完整内容
+                    console.log(
+                      `[KeywordPlanner] 首个结果详情: ${JSON.stringify(results[0], null, 2).slice(0, 800)}`
+                    )
+                  }
+
+                  for (const result of results) {
+                    // 兼容多种字段命名：snake_case, camelCase, 和 protobuf 下划线前缀
+                    const text = result.text || result._text
+                    const metrics =
+                      result.keyword_metrics ||
+                      result.keywordMetrics ||
+                      result._keyword_metrics ||
+                      result._keywordMetrics
+
+                    if (text && metrics) {
+                      // 同样兼容多种命名风格（包括 protobuf 下划线前缀）
+                      const avgSearches =
+                        metrics.avg_monthly_searches ??
+                        metrics.avgMonthlySearches ??
+                        metrics._avg_monthly_searches ??
+                        0
+                      const comp =
+                        (metrics.competition ?? metrics._competition)?.toString() || 'UNKNOWN'
+                      const compIndex =
+                        metrics.competition_index ??
+                        metrics.competitionIndex ??
+                        metrics._competition_index ??
+                        0
+                      const lowBid =
+                        metrics.low_top_of_page_bid_micros ??
+                        metrics.lowTopOfPageBidMicros ??
+                        metrics._low_top_of_page_bid_micros ??
+                        0
+                      const highBid =
+                        metrics.high_top_of_page_bid_micros ??
+                        metrics.highTopOfPageBidMicros ??
+                        metrics._high_top_of_page_bid_micros ??
+                        0
+
+                      apiVolumes.set(text.toLowerCase(), {
+                        keyword: text,
+                        avgMonthlySearches: Number(avgSearches) || 0,
+                        competition: comp,
+                        competitionIndex: Number(compIndex) || 0,
+                        lowTopPageBid: Number(lowBid) / 1_000_000 || 0,
+                        highTopPageBid: Number(highBid) / 1_000_000 || 0,
+                        requestedCountry,
+                        effectiveCountry,
+                        usedProxyGeo,
+                        requestedLanguage,
+                        effectiveLanguage,
+                        usedFallbackLanguage,
+                      })
+                    } else if (text) {
+                      // 🔧 修复(2025-12-24): 有关键词但metrics为null时,返回0搜索量而不是丢弃关键词
+                      // 原因: 长尾词或不常见关键词可能没有metrics数据,但仍需要返回给调用方
+                      console.log(
+                        `[KeywordPlanner] 关键词"${text}"缺少metrics数据，返回默认值(搜索量=0)`
+                      )
+                      console.log(
+                        `  - keyword_metrics: ${typeof result.keyword_metrics} = ${JSON.stringify(result.keyword_metrics)}`
+                      )
+                      console.log(
+                        `  - _keyword_metrics: ${typeof result._keyword_metrics} = ${JSON.stringify(result._keyword_metrics)}`
+                      )
+
+                      // ✅ 仍然添加到结果中,避免关键词丢失
+                      apiVolumes.set(text.toLowerCase(), {
+                        keyword: text,
+                        avgMonthlySearches: 0,
+                        competition: 'UNKNOWN',
+                        competitionIndex: 0,
+                        lowTopPageBid: 0,
+                        highTopPageBid: 0,
+                        requestedCountry,
+                        effectiveCountry,
+                        usedProxyGeo,
+                        requestedLanguage,
+                        effectiveLanguage,
+                        usedFallbackLanguage,
+                      })
+                    }
+                  }
+
+                  success = true
+                } catch (batchError: any) {
+                  if (isDeveloperTokenTestOnlyAccessError(batchError)) {
+                    const msg = getGoogleAdsErrorMessage(batchError)
+                    console.warn(
+                      '[KeywordPlanner] Developer token 缺少 Basic/Standard access，Historical Metrics 不可用；本次返回默认搜索量=0（不写入缓存）'
+                    )
+                    console.warn(`[KeywordPlanner] 原因: ${msg}`)
+
+                    for (const keyword of needApiKeywords) {
+                      apiVolumes.set(keyword.toLowerCase(), {
+                        keyword,
+                        avgMonthlySearches: 0,
+                        competition: 'UNKNOWN',
+                        competitionIndex: 0,
+                        lowTopPageBid: 0,
+                        highTopPageBid: 0,
+                        volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
+                        requestedCountry,
+                        effectiveCountry,
+                        usedProxyGeo,
+                        requestedLanguage,
+                        effectiveLanguage,
+                        usedFallbackLanguage,
+                      })
+                    }
+
+                    skipCachingDueToUnavailable = true
+                    apiErrorMessage = msg
+                    stopProcessingBatches = true
+                    success = true
+                    break
+                  }
+
+                  const errorMsg = batchError.errors?.[0]?.message || batchError.message || ''
+                  if (isInvalidGrantMessage(errorMsg)) {
+                    throw new Error(
+                      `Google Ads OAuth 授权已过期或被撤销（invalid_grant）。` +
+                        `请重新授权后再试。原始错误: ${errorMsg}`
+                    )
+                  }
+                  if (errorMsg.includes('Too many requests')) {
+                    retries++
+                    const waitTime = Math.min(5000 * Math.pow(2, retries - 1), 30000) // 5s, 10s, 20s, max 30s
+                    console.log(
+                      `[KeywordPlanner] Rate limit hit, retry ${retries}/${maxRetries} after ${waitTime}ms`
+                    )
+                    await new Promise((resolve) => setTimeout(resolve, waitTime))
+                    continue
+                  }
+
+                  const invalidFields = getInvalidPlannerFieldsFromGoogleAdsError(batchError)
+                  if (attempt === 0 && invalidFields.size > 0) {
+                    fallbackFields = invalidFields
+                    shouldRetry = true
+                    break
+                  }
+
+                  throw batchError
                 }
               }
 
+              if (shouldRetry) break
+              if (stopProcessingBatches) break
+
+              if (success) {
+                try {
+                  await onProgress?.({
+                    message: `搜索量批次 ${batchIndex + 1}/${keywordBatches.length} 完成`,
+                    current: batchIndex + 1,
+                    total: keywordBatches.length,
+                  })
+                } catch {}
+              }
+
+              // Delay between batches
+              if (batchIndex < keywordBatches.length - 1) {
+                await new Promise((resolve) => setTimeout(resolve, 2000))
+              }
+            }
+
             if (!shouldRetry) {
-              console.log(`[KeywordPlanner] Completed ${totalApiCalls} API calls, retrieved ${apiVolumes.size} keyword volumes`)
+              console.log(
+                `[KeywordPlanner] Completed ${totalApiCalls} API calls, retrieved ${apiVolumes.size} keyword volumes`
+              )
 
               if (!skipCachingDueToUnavailable) {
                 // Save to database and cache
-                const toCache: Array<{ keyword: string; volume: number; competition?: string; competitionIndex?: number }> = []
+                const toCache: Array<{
+                  keyword: string
+                  volume: number
+                  competition?: string
+                  competitionIndex?: number
+                }> = []
                 for (const [kw, vol] of apiVolumes) {
                   toCache.push({
                     keyword: kw,
                     volume: vol.avgMonthlySearches,
                     competition: vol.competition !== 'UNKNOWN' ? vol.competition : undefined,
-                    competitionIndex: vol.competitionIndex
+                    competitionIndex: vol.competitionIndex,
                   })
                   // 修复(2025-12-19): 同时保存competition_level和avg_cpc_micros
                   await saveToGlobalKeywords(
@@ -778,7 +853,8 @@ export async function getKeywordSearchVolumes(
                     effectiveLanguage,
                     vol.avgMonthlySearches,
                     vol.competition !== 'UNKNOWN' ? vol.competition : undefined,
-                    Math.round((vol.lowTopPageBid + vol.highTopPageBid) / 2 * 1_000_000) || undefined
+                    Math.round(((vol.lowTopPageBid + vol.highTopPageBid) / 2) * 1_000_000) ||
+                      undefined
                   )
                 }
 
@@ -795,10 +871,11 @@ export async function getKeywordSearchVolumes(
         } catch (error: any) {
           apiSuccess = false
           // 改进错误捕获：Google Ads API错误可能包含在不同位置
-          apiErrorMessage = error.message
-            || error.errors?.[0]?.message
-            || error.error?.message
-            || (typeof error === 'string' ? error : JSON.stringify(error))
+          apiErrorMessage =
+            error.message ||
+            error.errors?.[0]?.message ||
+            error.error?.message ||
+            (typeof error === 'string' ? error : JSON.stringify(error))
           console.error('[KeywordPlanner] API error:', error)
           if (isInvalidGrantMessage(apiErrorMessage || '')) {
             throw error
@@ -814,7 +891,7 @@ export async function getKeywordSearchVolumes(
               requestCount: totalApiCalls,
               responseTimeMs: Date.now() - apiStartTime,
               isSuccess: apiSuccess,
-              errorMessage: apiErrorMessage
+              errorMessage: apiErrorMessage,
             })
           }
         }
@@ -826,7 +903,7 @@ export async function getKeywordSearchVolumes(
     }
 
     // 4. Combine all results
-    return keywords.map(kw => {
+    return keywords.map((kw) => {
       const kwLower = kw.toLowerCase()
 
       // Check API result first
@@ -907,7 +984,8 @@ async function saveToGlobalKeywords(
     const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
 
     const db = await getDatabase()
-    await db.exec(`
+    await db.exec(
+      `
       INSERT INTO global_keywords (keyword, country, language, search_volume, competition_level, avg_cpc_micros, cached_at, created_at)
       VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
       ON CONFLICT(keyword, country, language)
@@ -939,7 +1017,9 @@ async function saveToGlobalKeywords(
           THEN datetime('now')
           ELSE global_keywords.created_at
         END
-    `, [normalizedKeyword, country, language, volume, competitionLevel || null, avgCpcMicros || null])
+    `,
+      [normalizedKeyword, country, language, volume, competitionLevel || null, avgCpcMicros || null]
+    )
   } catch {
     // Table might not exist yet
   }

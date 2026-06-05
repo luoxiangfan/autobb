@@ -12,11 +12,11 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     // 从中间件注入的请求头中获取用户信息
-    const authResult = await verifyAuth(request);
+    const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 });
+      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId;
+    const userId = authResult.user.userId
     if (!userId || authResult.user.role !== 'admin') {
       return NextResponse.json({ error: '无权访问' }, { status: 403 })
     }
@@ -35,19 +35,16 @@ export async function GET(request: NextRequest) {
     if (!cachedData) {
       return NextResponse.json({
         cached: false,
-        message: '未找到缓存数据'
+        message: '未找到缓存数据',
       })
     }
 
     return NextResponse.json({
       cached: true,
-      data: cachedData
+      data: cachedData,
     })
   } catch (error: any) {
     console.error('获取缓存数据失败:', error)
-    return NextResponse.json(
-      { error: error.message || '获取缓存数据失败' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '获取缓存数据失败' }, { status: 500 })
   }
 }

@@ -2,11 +2,7 @@
 
 import { HelpCircle } from 'lucide-react'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select'
+import { Select, SelectContent, SelectItem } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS,

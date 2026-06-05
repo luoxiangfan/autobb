@@ -22,19 +22,19 @@ export async function GET(request: NextRequest) {
     const runningCheck = "status = 'running'"
 
     // 查询最近 30 分钟内开始的运行中任务
-    const timeThreshold = db.type === 'postgres'
-      ? "(CURRENT_TIMESTAMP - INTERVAL '30 minutes')"
-      : "datetime('now', '-30 minutes')"
+    const timeThreshold =
+      db.type === 'postgres'
+        ? "(CURRENT_TIMESTAMP - INTERVAL '30 minutes')"
+        : "datetime('now', '-30 minutes')"
 
-    const runningSecondsSql = db.type === 'postgres'
-      ? "CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)"
-      : "CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER)";
+    const runningSecondsSql =
+      db.type === 'postgres'
+        ? 'CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)'
+        : "CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER)"
 
-    const startedAtField = db.type === 'postgres' 
-      ? "started_at::timestamptz" 
-      : "started_at";
+    const startedAtField = db.type === 'postgres' ? 'started_at::timestamptz' : 'started_at'
 
-    const runningSync = await db.queryOne(`
+    const runningSync = (await db.queryOne(`
       SELECT 
         id,
         user_id,
@@ -48,10 +48,11 @@ export async function GET(request: NextRequest) {
         AND ${startedAtField} >= ${timeThreshold}
       ORDER BY ${startedAtField} DESC
       LIMIT 1
-    `) as any
+    `)) as any
 
     // 查询最近一次同步完成的时间
-    const lastCompletedSync = await db.queryOne(`
+    const lastCompletedSync = (await db.queryOne(
+      `
       SELECT 
         status,
         completed_at,
@@ -62,34 +63,37 @@ export async function GET(request: NextRequest) {
       WHERE user_id = ? AND status IN ('success', 'partial', 'failed')
       ORDER BY completed_at DESC
       LIMIT 1
-    `, [userId]) as any
+    `,
+      [userId]
+    )) as any
 
     const googleAdsCampaignSyncQueue = await getGoogleAdsCampaignSyncQueueCounts()
 
     return NextResponse.json({
       hasRunningSync: !!runningSync,
-      runningSync: runningSync ? {
-        id: runningSync.id,
-        syncType: runningSync.sync_type,
-        status: runningSync.status,
-        startedAt: runningSync.started_at,
-        isManual: runningSync.is_manual,
-        runningSeconds: runningSync.running_seconds,
-      } : null,
-      lastCompletedSync: lastCompletedSync ? {
-        status: lastCompletedSync.status,
-        completedAt: lastCompletedSync.completed_at,
-        recordCount: lastCompletedSync.record_count,
-        syncType: lastCompletedSync.sync_type,
-        isManual: lastCompletedSync.is_manual,
-      } : null,
+      runningSync: runningSync
+        ? {
+            id: runningSync.id,
+            syncType: runningSync.sync_type,
+            status: runningSync.status,
+            startedAt: runningSync.started_at,
+            isManual: runningSync.is_manual,
+            runningSeconds: runningSync.running_seconds,
+          }
+        : null,
+      lastCompletedSync: lastCompletedSync
+        ? {
+            status: lastCompletedSync.status,
+            completedAt: lastCompletedSync.completed_at,
+            recordCount: lastCompletedSync.record_count,
+            syncType: lastCompletedSync.sync_type,
+            isManual: lastCompletedSync.is_manual,
+          }
+        : null,
       googleAdsCampaignSyncQueue,
     })
   } catch (error: any) {
     console.error('检查同步状态失败:', error)
-    return NextResponse.json(
-      { error: error.message || '服务器错误' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: error.message || '服务器错误' }, { status: 500 })
   }
 }

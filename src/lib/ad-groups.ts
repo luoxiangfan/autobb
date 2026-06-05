@@ -30,18 +30,21 @@ export interface CreateAdGroupInput {
 export async function createAdGroup(input: CreateAdGroupInput): Promise<AdGroup> {
   const db = await getDatabase()
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     INSERT INTO ad_groups (
       user_id, campaign_id, ad_group_name,
       status, cpc_bid_micros
     ) VALUES (?, ?, ?, ?, ?)
-  `, [
-    input.userId,
-    input.campaignId,
-    input.adGroupName,
-    input.status || 'PAUSED',
-    input.cpcBidMicros || null
-  ])
+  `,
+    [
+      input.userId,
+      input.campaignId,
+      input.adGroupName,
+      input.status || 'PAUSED',
+      input.cpcBidMicros || null,
+    ]
+  )
 
   const insertedId = getInsertedId(result, db.type)
   return (await findAdGroupById(insertedId, input.userId))!
@@ -53,10 +56,13 @@ export async function createAdGroup(input: CreateAdGroupInput): Promise<AdGroup>
 export async function findAdGroupById(id: number, userId: number): Promise<AdGroup | null> {
   const db = await getDatabase()
 
-  const row = await db.queryOne(`
+  const row = await db.queryOne(
+    `
     SELECT * FROM ad_groups
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   if (!row) {
     return null
@@ -68,14 +74,20 @@ export async function findAdGroupById(id: number, userId: number): Promise<AdGro
 /**
  * 查找Campaign的所有Ad Groups
  */
-export async function findAdGroupsByCampaignId(campaignId: number, userId: number): Promise<AdGroup[]> {
+export async function findAdGroupsByCampaignId(
+  campaignId: number,
+  userId: number
+): Promise<AdGroup[]> {
   const db = await getDatabase()
 
-  const rows = await db.query(`
+  const rows = await db.query(
+    `
     SELECT * FROM ad_groups
     WHERE campaign_id = ? AND user_id = ?
     ORDER BY created_at DESC
-  `, [campaignId, userId])
+  `,
+    [campaignId, userId]
+  )
 
   return rows.map(mapRowToAdGroup)
 }
@@ -165,11 +177,14 @@ export async function updateAdGroup(
   fields.push(`updated_at = ${nowFunc(db.type)}`)
   values.push(id, userId)
 
-  await db.exec(`
+  await db.exec(
+    `
     UPDATE ad_groups
     SET ${fields.join(', ')}
     WHERE id = ? AND user_id = ?
-  `, values)
+  `,
+    values
+  )
 
   return await findAdGroupById(id, userId)
 }
@@ -180,10 +195,13 @@ export async function updateAdGroup(
 export async function deleteAdGroup(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()
 
-  const result = await db.exec(`
+  const result = await db.exec(
+    `
     DELETE FROM ad_groups
     WHERE id = ? AND user_id = ?
-  `, [id, userId])
+  `,
+    [id, userId]
+  )
 
   return result.changes > 0
 }

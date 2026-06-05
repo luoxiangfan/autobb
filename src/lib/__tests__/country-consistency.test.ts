@@ -5,8 +5,8 @@ import { validateProxyUrl } from '@/lib/proxy/validate-url'
 describe('country consistency', () => {
   it('Google Ads geo targets cover all supported countries', () => {
     const missing = getSupportedCountries()
-      .map(c => c.code)
-      .filter(code => !hasGoogleAdsGeoTargetId(code))
+      .map((c) => c.code)
+      .filter((code) => !hasGoogleAdsGeoTargetId(code))
 
     expect(missing).toEqual([])
   })
@@ -23,4 +23,3 @@ describe('country consistency', () => {
     expect(failures).toEqual([])
   })
 })
-

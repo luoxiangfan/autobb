@@ -2,9 +2,9 @@
  * Proxy warmup utilities for warming up affiliate links with multiple proxy IPs
  */
 
-import axios from 'axios';
-import { HttpsProxyAgent } from 'https-proxy-agent';
-import { maskProxyUrl } from './proxy/validate-url';
+import axios from 'axios'
+import { HttpsProxyAgent } from 'https-proxy-agent'
+import { maskProxyUrl } from './proxy/validate-url'
 
 /**
  * 解析代理IP字符串
@@ -12,11 +12,11 @@ import { maskProxyUrl } from './proxy/validate-url';
  * 示例：15.235.13.80:5959:com49692430-res-row-sid-867994980:Qxi9V59e3kNOW6pnRi3i
  */
 interface ProxyCredentials {
-  host: string;
-  port: string;
-  username: string;
-  password: string;
-  fullAddress: string;
+  host: string
+  port: string
+  username: string
+  password: string
+  fullAddress: string
 }
 
 function redactProxyIpForLog(proxyIP: string): string {
@@ -27,23 +27,25 @@ function redactProxyIpForLog(proxyIP: string): string {
 
 function parseProxyIP(proxyIP: string): ProxyCredentials | null {
   try {
-    const parts = proxyIP.split(':');
+    const parts = proxyIP.split(':')
     if (parts.length !== 4) {
-      console.error(`❌ 代理IP格式错误，应为 host:port:username:password，实际: ${redactProxyIpForLog(proxyIP)}`);
-      return null;
+      console.error(
+        `❌ 代理IP格式错误，应为 host:port:username:password，实际: ${redactProxyIpForLog(proxyIP)}`
+      )
+      return null
     }
 
-    const [host, port, username, password] = parts;
+    const [host, port, username, password] = parts
     return {
       host,
       port,
       username,
       password,
       fullAddress: `${host}:${port}`,
-    };
+    }
   } catch (error) {
-    console.error(`❌ 解析代理IP失败: ${redactProxyIpForLog(proxyIP)}`, error);
-    return null;
+    console.error(`❌ 解析代理IP失败: ${redactProxyIpForLog(proxyIP)}`, error)
+    return null
   }
 }
 
@@ -124,7 +126,8 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 
       try {
         const context = await browser.newContext({
-          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+          userAgent:
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
           viewport: { width: 1920, height: 1080 },
           locale: 'en-US',
           timezoneId: 'America/New_York',
@@ -132,7 +135,8 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
           extraHTTPHeaders: {
             'Accept-Language': 'en-US,en;q=0.9',
             'Accept-Encoding': 'gzip, deflate, br',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            Accept:
+              'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
             'Sec-Fetch-Site': 'none',
@@ -159,11 +163,12 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 
           // 3. 修改plugins（显示为真实Chrome）
           Object.defineProperty(navigator, 'plugins', {
-            get: () => [1, 2, 3, 4, 5].map((_, _i) => ({
-              name: 'Chrome PDF Plugin',
-              filename: 'internal-pdf-viewer',
-              description: 'Portable Document Format',
-            })),
+            get: () =>
+              [1, 2, 3, 4, 5].map((_, _i) => ({
+                name: 'Chrome PDF Plugin',
+                filename: 'internal-pdf-viewer',
+                description: 'Portable Document Format',
+              })),
           })
 
           // 4. 修改languages
@@ -175,18 +180,17 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
           // @ts-ignore - 浏览器端类型与Node.js不同
           const originalQuery = window.navigator.permissions.query
           // @ts-ignore
-          window.navigator.permissions.query = (parameters: any) => (
-            parameters.name === 'notifications' ?
-              Promise.resolve({ state: Notification.permission }) :
-              originalQuery(parameters)
-          )
+          window.navigator.permissions.query = (parameters: any) =>
+            parameters.name === 'notifications'
+              ? Promise.resolve({ state: Notification.permission })
+              : originalQuery(parameters)
 
           // 6. 修改Chrome运行时信息
           // @ts-ignore - chrome对象仅存在于浏览器端
           window.chrome = {
             runtime: {},
-            loadTimes: function() {},
-            csi: function() {},
+            loadTimes: function () {},
+            csi: function () {},
             onConnect: null,
             onMessage: null,
           }
@@ -205,7 +209,7 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
           })
 
           // 9. 覆盖toString方法
-          window.navigator.toString = function() {
+          window.navigator.toString = function () {
             return '[object Navigator]'
           }
 
@@ -244,8 +248,8 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
         // 解析代理IP列表（每行一个）
         proxyIPs = text
           .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
 
         console.log(`✅ 成功获取 ${proxyIPs.length} 个代理IP`)
       } finally {
@@ -275,26 +279,23 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
  * @param proxyIPs - 代理IP数组（格式：host:port:username:password）
  * @param affiliateLink - 推广链接
  */
-export async function triggerProxyVisits(
-  proxyIPs: string[],
-  affiliateLink: string
-): Promise<void> {
-  console.log(`🔥 开始触发 ${proxyIPs.length} 次推广链接访问（通过代理IP）...`);
+export async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Promise<void> {
+  console.log(`🔥 开始触发 ${proxyIPs.length} 次推广链接访问（通过代理IP）...`)
 
   // 为每个代理IP创建一个访问Promise（不等待结果）
   const visitPromises = proxyIPs.map(async (proxyIP, index): Promise<boolean> => {
     try {
       // 解析代理IP
-      const proxy = parseProxyIP(proxyIP);
+      const proxy = parseProxyIP(proxyIP)
       if (!proxy) {
-        console.log(`✗ 访问 #${index + 1} 失败: 代理IP格式错误`);
-        return false;
+        console.log(`✗ 访问 #${index + 1} 失败: 代理IP格式错误`)
+        return false
       }
 
       // 创建 HttpsProxyAgent
       const proxyAgent = new HttpsProxyAgent(
         `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`
-      );
+      )
 
       // 创建配置了代理的 axios 客户端
       const client = axios.create({
@@ -304,36 +305,41 @@ export async function triggerProxyVisits(
         headers: {
           'User-Agent':
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.5',
-          'Connection': 'keep-alive',
+          Connection: 'keep-alive',
         },
         maxRedirects: 0, // 不跟随重定向，只触发初始请求即可
         validateStatus: () => true, // 接受所有HTTP状态码
-      });
+      })
 
       // 使用代理发送请求
-      await client.get(affiliateLink);
+      await client.get(affiliateLink)
 
-      console.log(`✓ 访问 #${index + 1} 已触发（代理: ${proxy.fullAddress}）`);
+      console.log(`✓ 访问 #${index + 1} 已触发（代理: ${proxy.fullAddress}）`)
       return true
     } catch (error) {
       // 忽略错误，只记录日志
       // 即使访问失败，也不影响主流程
-      console.log(`✗ 访问 #${index + 1} 失败:`, error instanceof Error ? error.message : String(error));
+      console.log(
+        `✗ 访问 #${index + 1} 失败:`,
+        error instanceof Error ? error.message : String(error)
+      )
       return false
     }
-  });
+  })
 
   // 不等待所有Promise完成，立即返回（fire-and-forget）
   // 让这些请求在后台执行
   Promise.allSettled(visitPromises).then((results) => {
-    const successCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
-    const failureCount = results.length - successCount;
-    console.log(`✅ 所有访问请求已完成: 成功 ${successCount}/${proxyIPs.length}, 失败 ${failureCount}/${proxyIPs.length}`);
-  });
+    const successCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length
+    const failureCount = results.length - successCount
+    console.log(
+      `✅ 所有访问请求已完成: 成功 ${successCount}/${proxyIPs.length}, 失败 ${failureCount}/${proxyIPs.length}`
+    )
+  })
 
-  console.log(`✅ 已触发 ${proxyIPs.length} 次访问（通过代理IP），不等待访问完成`);
+  console.log(`✅ 已触发 ${proxyIPs.length} 次访问（通过代理IP），不等待访问完成`)
 }
 
 /**
@@ -384,10 +390,10 @@ async function triggerProxyVisitsWithSingleProxy(
           httpAgent: proxyAgent as any,
           headers: {
             'User-Agent': userAgent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate, br',
-            'Connection': 'keep-alive',
+            Connection: 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
             'Sec-Fetch-Dest': 'document',
             'Sec-Fetch-Mode': 'navigate',
@@ -400,7 +406,7 @@ async function triggerProxyVisitsWithSingleProxy(
 
         // 随机延迟100-500ms，模拟真实用户行为
         if (index > 0) {
-          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 400))
+          await new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * 400))
         }
 
         // 发起请求
@@ -409,7 +415,10 @@ async function triggerProxyVisitsWithSingleProxy(
         console.log(`✓ 访问 #${index + 1}/${visitCount} 已触发（代理: ${credentials.fullAddress}）`)
       } catch (error) {
         // 忽略错误，只记录日志
-        console.log(`✗ 访问 #${index + 1}/${visitCount} 失败:`, error instanceof Error ? error.message : String(error))
+        console.log(
+          `✗ 访问 #${index + 1}/${visitCount} 失败:`,
+          error instanceof Error ? error.message : String(error)
+        )
       }
     })
 
@@ -417,7 +426,9 @@ async function triggerProxyVisitsWithSingleProxy(
     Promise.allSettled(visitPromises).then((results) => {
       const successCount = results.filter((r) => r.status === 'fulfilled').length
       const failureCount = results.filter((r) => r.status === 'rejected').length
-      console.log(`✅ 所有访问请求已完成: 成功 ${successCount}/${visitCount}, 失败 ${failureCount}/${visitCount}`)
+      console.log(
+        `✅ 所有访问请求已完成: 成功 ${successCount}/${visitCount}, 失败 ${failureCount}/${visitCount}`
+      )
     })
 
     console.log(`✅ 已触发 ${visitCount} 次访问（通过单个代理），不等待访问完成`)

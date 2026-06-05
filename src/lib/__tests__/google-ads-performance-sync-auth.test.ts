@@ -39,21 +39,17 @@ describe('performance sync auth resolution', () => {
 
   it('falls back to serviceAccountConfig id when auth has no serviceAccountId', () => {
     expect(
-      resolvePerformanceSyncServiceAccountId(
-        { authType: 'service_account' },
-        'sa-from-config',
-        { service_account_id: null }
-      )
+      resolvePerformanceSyncServiceAccountId({ authType: 'service_account' }, 'sa-from-config', {
+        service_account_id: null,
+      })
     ).toBe('sa-from-config')
   })
 
   it('returns undefined for oauth auth', () => {
     expect(
-      resolvePerformanceSyncServiceAccountId(
-        { authType: 'oauth' },
-        undefined,
-        { service_account_id: 'sa-linked' }
-      )
+      resolvePerformanceSyncServiceAccountId({ authType: 'oauth' }, undefined, {
+        service_account_id: 'sa-linked',
+      })
     ).toBeUndefined()
   })
 })

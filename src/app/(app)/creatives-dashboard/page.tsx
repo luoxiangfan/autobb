@@ -21,7 +21,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Award, TrendingUp, Target, Clock, Eye, MousePointer, CheckCircle2, DollarSign } from 'lucide-react'
+import {
+  Award,
+  TrendingUp,
+  Target,
+  Clock,
+  Eye,
+  MousePointer,
+  CheckCircle2,
+  DollarSign,
+} from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
 
 interface Creative {
@@ -91,7 +100,11 @@ export default function CreativesDashboardPage() {
   const [timeRange, setTimeRange] = useState<string>('30')
   const [sortBy, setSortBy] = useState<string>('score')
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [currencyInfo, setCurrencyInfo] = useState<{ currency: string; currencies: string[]; hasMixedCurrency: boolean } | null>(null)
+  const [currencyInfo, setCurrencyInfo] = useState<{
+    currency: string
+    currencies: string[]
+    hasMixedCurrency: boolean
+  } | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
 
   const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
@@ -201,7 +214,9 @@ export default function CreativesDashboardPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {availableCurrencies.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -324,7 +339,7 @@ export default function CreativesDashboardPage() {
                       className="w-full mt-2"
                       onClick={(e) => {
                         e.stopPropagation()
-                        const creative = creatives.find(c => c.id === rec.creativeId)
+                        const creative = creatives.find((c) => c.id === rec.creativeId)
                         if (creative) {
                           router.push(`/offers/${creative.offerId}`)
                         }
@@ -345,10 +360,7 @@ export default function CreativesDashboardPage() {
             <CardContent className="pt-6 text-center py-12">
               <Clock className="w-12 h-12 mx-auto mb-4 opacity-50 text-gray-400" />
               <p className="text-gray-500 mb-4">暂无Creative数据</p>
-              <Button
-                onClick={() => router.push('/offers')}
-                variant="outline"
-              >
+              <Button onClick={() => router.push('/offers')} variant="outline">
                 前往创建Offer
               </Button>
             </CardContent>
@@ -409,7 +421,10 @@ export default function CreativesDashboardPage() {
                             {formatNumber(creative.performance.conversions)}
                           </TableCell>
                           <TableCell className="text-right">
-                            {formatMoney(Number(creative.performance.costUsd) || 0, creative.adsAccountCurrency || selectedCurrency)}
+                            {formatMoney(
+                              Number(creative.performance.costUsd) || 0,
+                              creative.adsAccountCurrency || selectedCurrency
+                            )}
                           </TableCell>
                           <TableCell>
                             {creative.isSelected ? (
@@ -447,7 +462,9 @@ export default function CreativesDashboardPage() {
                               <div className="py-4 space-y-4">
                                 {/* 评分详情 */}
                                 <div>
-                                  <h3 className="text-sm font-semibold text-gray-900 mb-2">评分详情</h3>
+                                  <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                                    评分详情
+                                  </h3>
                                   <div className="grid grid-cols-5 gap-3">
                                     <div className="text-center">
                                       <p className="text-xs text-gray-600">相关性</p>
@@ -489,9 +506,13 @@ export default function CreativesDashboardPage() {
 
                                 {/* Creative内容预览 */}
                                 <div>
-                                  <h3 className="text-sm font-semibold text-gray-900 mb-2">广告预览</h3>
+                                  <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                                    广告预览
+                                  </h3>
                                   <div className="bg-white p-4 rounded-lg border border-gray-200">
-                                    <div className="text-xs text-green-700 mb-1">广告 · {creative.offerUrl}</div>
+                                    <div className="text-xs text-green-700 mb-1">
+                                      广告 · {creative.offerUrl}
+                                    </div>
                                     <div className="text-lg text-blue-600 font-normal leading-snug mb-2">
                                       {creative.headlines.join(' | ')}
                                     </div>
@@ -517,12 +538,17 @@ export default function CreativesDashboardPage() {
 
                                 {/* 性能指标详情 */}
                                 <div>
-                                  <h3 className="text-sm font-semibold text-gray-900 mb-2">性能详情</h3>
+                                  <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                                    性能详情
+                                  </h3>
                                   <div className="grid grid-cols-4 gap-3">
                                     <div className="bg-white p-3 rounded-lg border border-gray-200">
                                       <p className="text-xs text-gray-600">平均CPC</p>
                                       <p className="text-lg font-bold text-gray-900">
-                                        {formatMoney(Number(creative.performance.avgCpcUsd) || 0, creative.adsAccountCurrency || selectedCurrency)}
+                                        {formatMoney(
+                                          Number(creative.performance.avgCpcUsd) || 0,
+                                          creative.adsAccountCurrency || selectedCurrency
+                                        )}
                                       </p>
                                     </div>
                                     <div className="bg-white p-3 rounded-lg border border-gray-200">

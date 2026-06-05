@@ -142,12 +142,15 @@ const MODE_ALIASES: Record<string, OfferExtractionMode> = {
   原始: 'original',
 }
 
-
 export function getDefaultOfferExtractionMode(): OfferExtractionMode {
-  const raw = (process.env.OFFER_EXTRACTION_MODE_DEFAULT || OFFER_EXTRACTION_MODE_DEFAULT).trim().toLowerCase()
-  return MODE_ALIASES[raw]
-    || MODE_ALIASES[process.env.OFFER_EXTRACTION_MODE_DEFAULT || '']
-    || OFFER_EXTRACTION_MODE_DEFAULT
+  const raw = (process.env.OFFER_EXTRACTION_MODE_DEFAULT || OFFER_EXTRACTION_MODE_DEFAULT)
+    .trim()
+    .toLowerCase()
+  return (
+    MODE_ALIASES[raw] ||
+    MODE_ALIASES[process.env.OFFER_EXTRACTION_MODE_DEFAULT || ''] ||
+    OFFER_EXTRACTION_MODE_DEFAULT
+  )
 }
 
 export function normalizeOfferExtractionMode(value: unknown): OfferExtractionMode {
@@ -196,8 +199,9 @@ export function parseExtractionModeFromRequestBody(body: unknown): OfferExtracti
 export function getOfferExtractionModeProfile(
   mode?: OfferExtractionMode | string | null
 ): OfferExtractionModeProfile {
-  const normalized = typeof mode === 'string'
-    ? normalizeOfferExtractionMode(mode)
-    : (mode || getDefaultOfferExtractionMode())
+  const normalized =
+    typeof mode === 'string'
+      ? normalizeOfferExtractionMode(mode)
+      : mode || getDefaultOfferExtractionMode()
   return MODE_PROFILES[normalized]
 }

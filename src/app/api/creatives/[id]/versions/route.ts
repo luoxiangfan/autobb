@@ -10,7 +10,7 @@ import { getInsertedId } from '@/lib/db-helpers'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
  * 创建新版本（保存编辑后的内容）
  */
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
@@ -147,26 +147,17 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     // 验证headlines和descriptions格式
     if (!Array.isArray(headlines) || !Array.isArray(descriptions)) {
-      return NextResponse.json(
-        { error: 'headlines和descriptions必须是数组' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'headlines和descriptions必须是数组' }, { status: 400 })
     }
 
     // 验证headlines数量（3-15个）
     if (headlines.length < 3 || headlines.length > 15) {
-      return NextResponse.json(
-        { error: 'Headlines数量必须在3-15个之间' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Headlines数量必须在3-15个之间' }, { status: 400 })
     }
 
     // 验证descriptions数量（2-4个）
     if (descriptions.length < 2 || descriptions.length > 4) {
-      return NextResponse.json(
-        { error: 'Descriptions数量必须在2-4个之间' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Descriptions数量必须在2-4个之间' }, { status: 400 })
     }
 
     // 验证headlines长度（每个最多30字符）
@@ -244,7 +235,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         qualityDetails ? JSON.stringify(qualityDetails) : null,
         userId.toString(),
         creationMethod,
-        changeSummary || null
+        changeSummary || null,
       ]
     )
 
@@ -278,9 +269,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
           ...newVersion,
           headlines: JSON.parse(newVersion.headlines),
           descriptions: JSON.parse(newVersion.descriptions),
-          qualityDetails: newVersion.qualityDetails
-            ? JSON.parse(newVersion.qualityDetails)
-            : null,
+          qualityDetails: newVersion.qualityDetails ? JSON.parse(newVersion.qualityDetails) : null,
         },
       },
       message: `成功创建版本 ${newVersionNumber}`,

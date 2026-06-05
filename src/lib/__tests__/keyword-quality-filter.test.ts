@@ -29,7 +29,7 @@ describe('keyword-quality-filter', () => {
 
       const result = filterKeywordQuality(input, { brandName: 'auxito', mustContainBrand: true })
       expect(result.removed).toHaveLength(0)
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'auxito',
         'auxito led',
         'auxito led lights',
@@ -55,12 +55,12 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'rove',
         'rove r2 4k',
         'rove r2 4k dash cam',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'rove beetle larvae',
         'rove concept',
         'rove concept miami',
@@ -70,7 +70,11 @@ describe('keyword-quality-filter', () => {
     it('should enforce context relevance even for high-volume ambiguous-brand keywords', () => {
       const input = [
         { keyword: 'moes', searchVolume: 450000, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'moes sprinkler timer', searchVolume: 12000, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'moes sprinkler timer',
+          searchVolume: 12000,
+          source: 'KEYWORD_PLANNER' as const,
+        },
         { keyword: 'moes cafe', searchVolume: 3600, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'moes tacos', searchVolume: 1300, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'moes barbeque', searchVolume: 33100, source: 'KEYWORD_PLANNER' as const },
@@ -85,17 +89,14 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'moes',
-        'moes sprinkler timer',
-      ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['moes', 'moes sprinkler timer'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'moes cafe',
         'moes tacos',
         'moes barbeque',
         'moes sw grill menu',
       ])
-      expect(result.removed.every(r => r.reason.includes('与商品无关'))).toBe(true)
+      expect(result.removed.every((r) => r.reason.includes('与商品无关'))).toBe(true)
     })
 
     it('should keep audio synonym variants for context relevance', () => {
@@ -114,21 +115,29 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'sonos',
         'sonos speaker',
         'sonos soundbar',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['sonos jobs'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['sonos jobs'])
     })
 
     it('should rescue short model terms when supported by multiple kept context keywords', () => {
       const input = [
         { keyword: 'sonos', searchVolume: 246000, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'sonos arc soundbar', searchVolume: 18100, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'sonos arc surround sound', searchVolume: 6600, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'sonos arc surround sound',
+          searchVolume: 6600,
+          source: 'KEYWORD_PLANNER' as const,
+        },
         { keyword: 'sonos beam soundbar', searchVolume: 18100, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'sonos beam surround sound', searchVolume: 4400, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'sonos beam surround sound',
+          searchVolume: 4400,
+          source: 'KEYWORD_PLANNER' as const,
+        },
         { keyword: 'sonos arc', searchVolume: 40500, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'sonos beam', searchVolume: 14800, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'ikea sonos', searchVolume: 18100, source: 'KEYWORD_PLANNER' as const },
@@ -142,7 +151,7 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'sonos',
         'sonos arc soundbar',
         'sonos arc surround sound',
@@ -151,15 +160,27 @@ describe('keyword-quality-filter', () => {
         'sonos arc',
         'sonos beam',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['ikea sonos'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['ikea sonos'])
     })
 
     it('should not restore visual-noise keywords via context support fallback', () => {
       const input = [
-        { keyword: 'running girl sports bra purchase', searchVolume: 0, source: 'KEYWORD_POOL' as const },
-        { keyword: 'running girl sports bras purchase', searchVolume: 0, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'running girl sports bra purchase',
+          searchVolume: 0,
+          source: 'KEYWORD_POOL' as const,
+        },
+        {
+          keyword: 'running girl sports bras purchase',
+          searchVolume: 0,
+          source: 'KEYWORD_POOL' as const,
+        },
         { keyword: 'running girl bra purchase', searchVolume: 0, source: 'KEYWORD_POOL' as const },
-        { keyword: 'running girl sports bra buy', searchVolume: 0, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'running girl sports bra buy',
+          searchVolume: 0,
+          source: 'KEYWORD_POOL' as const,
+        },
         { keyword: 'running girl gif purchase', searchVolume: 0, source: 'KEYWORD_POOL' as const },
       ]
 
@@ -171,13 +192,13 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'running girl sports bra purchase',
         'running girl sports bras purchase',
         'running girl bra purchase',
         'running girl sports bra buy',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['running girl gif purchase'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['running girl gif purchase'])
     })
 
     it('should keep robotic vacuum variants like robovac', () => {
@@ -197,20 +218,28 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'eufy',
         'eufy robovac',
         'eufy robot vacuum',
         'eufy vacuum cleaner',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['eufy security camera'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['eufy security camera'])
     })
 
     it('should not treat broad room tokens as sufficient context when a sibling product noun drifts outside the offer', () => {
       const input = [
         { keyword: 'mellanni', searchVolume: 60500, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'mellanni king size sheet set', searchVolume: 14800, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'mellanni king comforter bed sets', searchVolume: 2400, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'mellanni king size sheet set',
+          searchVolume: 14800,
+          source: 'KEYWORD_PLANNER' as const,
+        },
+        {
+          keyword: 'mellanni king comforter bed sets',
+          searchVolume: 2400,
+          source: 'KEYWORD_PLANNER' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -221,11 +250,11 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'mellanni',
         'mellanni king size sheet set',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'mellanni king comforter bed sets',
       ])
       expect(result.removed[0]?.reason).toContain('与商品无关')
@@ -234,7 +263,11 @@ describe('keyword-quality-filter', () => {
     it('should still keep valid category demand terms when a broad room token appears alongside a specific context match', () => {
       const input = [
         { keyword: 'sunaofe', searchVolume: 60500, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'sunaofe office furniture', searchVolume: 1200, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'sunaofe office furniture',
+          searchVolume: 1200,
+          source: 'KEYWORD_PLANNER' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -245,16 +278,17 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'sunaofe',
-        'sunaofe office furniture',
-      ])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['sunaofe', 'sunaofe office furniture'])
       expect(result.removed).toHaveLength(0)
     })
 
     it('should treat connector-separated brand tokens as valid brand match', () => {
       const input = [
-        { keyword: 'max and lily furniture', searchVolume: 1800, source: 'KEYWORD_PLANNER_BRAND' as const },
+        {
+          keyword: 'max and lily furniture',
+          searchVolume: 1800,
+          source: 'KEYWORD_PLANNER_BRAND' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -265,15 +299,17 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'max and lily furniture',
-      ])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['max and lily furniture'])
       expect(result.removed).toHaveLength(0)
     })
 
     it('should keep furniture-family bridge keywords for non-specific brands', () => {
       const input = [
-        { keyword: 'kidkraft furniture', searchVolume: 1400, source: 'KEYWORD_PLANNER_BRAND' as const },
+        {
+          keyword: 'kidkraft furniture',
+          searchVolume: 1400,
+          source: 'KEYWORD_PLANNER_BRAND' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -284,9 +320,7 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'kidkraft furniture',
-      ])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['kidkraft furniture'])
       expect(result.removed).toHaveLength(0)
     })
 
@@ -308,12 +342,12 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'acme',
         'acme battery station',
         'acme furniture',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'acme chair',
         'acme desk',
         'acme cafe',
@@ -336,10 +370,7 @@ describe('keyword-quality-filter', () => {
         maxWordCount: 6,
       })
 
-      expect(result.filtered.map((item) => item.keyword)).toEqual([
-        'waterdrop',
-        'waterdrop x16',
-      ])
+      expect(result.filtered.map((item) => item.keyword)).toEqual(['waterdrop', 'waterdrop x16'])
       expect(result.removed.map((item) => item.keyword.keyword)).toEqual([
         'wat erdrop',
         'water drop',
@@ -350,7 +381,11 @@ describe('keyword-quality-filter', () => {
     it('filters same-script wrong-language leakage for latin-market campaigns', () => {
       const input = [
         { keyword: 'waterdrop x12', searchVolume: 90, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'waterdrop modellnummer x12', searchVolume: 0, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'waterdrop modellnummer x12',
+          searchVolume: 0,
+          source: 'KEYWORD_PLANNER' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -362,15 +397,25 @@ describe('keyword-quality-filter', () => {
       })
 
       expect(result.filtered.map((item) => item.keyword)).toEqual(['waterdrop x12'])
-      expect(result.removed.map((item) => item.keyword.keyword)).toEqual(['waterdrop modellnummer x12'])
+      expect(result.removed.map((item) => item.keyword.keyword)).toEqual([
+        'waterdrop modellnummer x12',
+      ])
       expect(result.removed[0]?.reason).toContain('语言脚本错配')
     })
 
     it('should drop store-brand noise and weak fragments while keeping valid office furniture demand', () => {
       const input = [
         { keyword: 'sunaofe', searchVolume: 60500, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'sunaofe office furniture', searchVolume: 1200, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'sunaofe office security', searchVolume: 300, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'sunaofe office furniture',
+          searchVolume: 1200,
+          source: 'KEYWORD_PLANNER' as const,
+        },
+        {
+          keyword: 'sunaofe office security',
+          searchVolume: 300,
+          source: 'KEYWORD_PLANNER' as const,
+        },
         { keyword: 'sunaofe home security', searchVolume: 300, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'sunaofe website', searchVolume: 250, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'sunaofe legit', searchVolume: 200, source: 'KEYWORD_PLANNER' as const },
@@ -386,11 +431,8 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'sunaofe',
-        'sunaofe office furniture',
-      ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['sunaofe', 'sunaofe office furniture'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'sunaofe office security',
         'sunaofe home security',
         'sunaofe website',
@@ -410,7 +452,11 @@ describe('keyword-quality-filter', () => {
       const input = [
         { keyword: 'acme', searchVolume: 9000, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'acme charger', searchVolume: 2400, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'acme charging adapter', searchVolume: 1800, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'acme charging adapter',
+          searchVolume: 1800,
+          source: 'KEYWORD_PLANNER' as const,
+        },
         { keyword: 'acme powerbank', searchVolume: 1200, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'acme cafe', searchVolume: 1500, source: 'KEYWORD_PLANNER' as const },
         { keyword: 'acme food', searchVolume: 1300, source: 'KEYWORD_PLANNER' as const },
@@ -424,11 +470,8 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'acme',
-        'acme charger',
-      ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['acme', 'acme charger'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'acme charging adapter',
         'acme powerbank',
         'acme cafe',
@@ -438,9 +481,21 @@ describe('keyword-quality-filter', () => {
 
     it('should skip context gating when context is placeholder text', () => {
       const input = [
-        { keyword: 'anker charger power bank', searchVolume: 90500, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'anker portable charger', searchVolume: 27100, source: 'KEYWORD_PLANNER' as const },
-        { keyword: 'anker nano power bank', searchVolume: 18100, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'anker charger power bank',
+          searchVolume: 90500,
+          source: 'KEYWORD_PLANNER' as const,
+        },
+        {
+          keyword: 'anker portable charger',
+          searchVolume: 27100,
+          source: 'KEYWORD_PLANNER' as const,
+        },
+        {
+          keyword: 'anker nano power bank',
+          searchVolume: 18100,
+          source: 'KEYWORD_PLANNER' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -451,7 +506,7 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'anker charger power bank',
         'anker portable charger',
         'anker nano power bank',
@@ -473,10 +528,7 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'moes tacos',
-        'moes cafe',
-      ])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['moes tacos', 'moes cafe'])
       expect(result.removed).toHaveLength(0)
     })
 
@@ -497,12 +549,12 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'lampick',
         'hair dryer',
         'best blow dryer',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'cheap blender',
         'smoothie blender',
       ])
@@ -511,10 +563,22 @@ describe('keyword-quality-filter', () => {
     it('should remove marketplace rank noise and avoid using generic set tokens as context evidence', () => {
       const input = [
         { keyword: 'mt products', searchVolume: 2400, source: 'KEYWORD_POOL' as const },
-        { keyword: 'mt products food container sets', searchVolume: 1200, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'mt products food container sets',
+          searchVolume: 1200,
+          source: 'KEYWORD_POOL' as const,
+        },
         { keyword: 'mt products bedroom sets', searchVolume: 900, source: 'KEYWORD_POOL' as const },
-        { keyword: 'mt products best sellers rank health', searchVolume: 700, source: 'KEYWORD_POOL' as const },
-        { keyword: 'mt products home kitchen see top', searchVolume: 600, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'mt products best sellers rank health',
+          searchVolume: 700,
+          source: 'KEYWORD_POOL' as const,
+        },
+        {
+          keyword: 'mt products home kitchen see top',
+          searchVolume: 600,
+          source: 'KEYWORD_POOL' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -525,11 +589,11 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'mt products',
         'mt products food container sets',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'mt products bedroom sets',
         'mt products best sellers rank health',
         'mt products home kitchen see top',
@@ -542,7 +606,11 @@ describe('keyword-quality-filter', () => {
     it('should not let size tokens alone satisfy context relevance for adjacent-category phrases', () => {
       const input = [
         { keyword: 'mellanni king sheets', searchVolume: 2400, source: 'KEYWORD_POOL' as const },
-        { keyword: 'mellanni king bedroom furniture sets', searchVolume: 900, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'mellanni king bedroom furniture sets',
+          searchVolume: 900,
+          source: 'KEYWORD_POOL' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -553,10 +621,8 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'mellanni king sheets',
-      ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['mellanni king sheets'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'mellanni king bedroom furniture sets',
       ])
       expect(result.removed[0]?.reason).toContain('与商品无关')
@@ -564,8 +630,16 @@ describe('keyword-quality-filter', () => {
 
     it('should hard-remove obvious template garbage keywords only', () => {
       const input = [
-        { keyword: 'novilla mattress buy buy', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as const },
-        { keyword: 'novilla mattress buy purchase', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as const },
+        {
+          keyword: 'novilla mattress buy buy',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as const,
+        },
+        {
+          keyword: 'novilla mattress buy purchase',
+          searchVolume: 0,
+          source: 'GLOBAL_KEYWORDS' as const,
+        },
         { keyword: 'buy novilla mattress', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as const },
         { keyword: 'novilla mattress price', searchVolume: 0, source: 'GLOBAL_KEYWORDS' as const },
       ]
@@ -577,15 +651,15 @@ describe('keyword-quality-filter', () => {
         mustContainBrand: true,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'buy novilla mattress',
         'novilla mattress price',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'novilla mattress buy buy',
         'novilla mattress buy purchase',
       ])
-      expect(result.removed.every(r => r.reason.includes('模板垃圾词'))).toBe(true)
+      expect(result.removed.every((r) => r.reason.includes('模板垃圾词'))).toBe(true)
     })
 
     it('should remove AI template phrases but keep non-AI keywords with real demand structure', () => {
@@ -610,10 +684,10 @@ describe('keyword-quality-filter', () => {
         mustContainBrand: true,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'novilla memory foam mattress cooling',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'novilla premium choice solution',
       ])
       expect(result.removed[0]?.reason).toContain('AI模版短语')
@@ -621,11 +695,36 @@ describe('keyword-quality-filter', () => {
 
     it('should filter rescue fragment keywords but keep allowed trailing bigrams', () => {
       const input = [
-        { keyword: 'dreo 000 btu doe', searchVolume: 0, source: 'DERIVED_RESCUE' as const, sourceType: 'BUILDER_NON_EMPTY_RESCUE' },
-        { keyword: 'dreo quiet smart ac by', searchVolume: 0, source: 'DERIVED_RESCUE' as const, sourceType: 'BUILDER_NON_EMPTY_RESCUE' },
-        { keyword: 'dreo 10', searchVolume: 0, source: 'DERIVED_RESCUE' as const, sourceType: 'BUILDER_NON_EMPTY_RESCUE' },
-        { keyword: 'dreo 14000 btu ashrae 10', searchVolume: 0, source: 'DERIVED_RESCUE' as const, sourceType: 'BUILDER_NON_EMPTY_RESCUE' },
-        { keyword: 'dreo sign in', searchVolume: 0, source: 'DERIVED_RESCUE' as const, sourceType: 'BUILDER_NON_EMPTY_RESCUE' },
+        {
+          keyword: 'dreo 000 btu doe',
+          searchVolume: 0,
+          source: 'DERIVED_RESCUE' as const,
+          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+        },
+        {
+          keyword: 'dreo quiet smart ac by',
+          searchVolume: 0,
+          source: 'DERIVED_RESCUE' as const,
+          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+        },
+        {
+          keyword: 'dreo 10',
+          searchVolume: 0,
+          source: 'DERIVED_RESCUE' as const,
+          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+        },
+        {
+          keyword: 'dreo 14000 btu ashrae 10',
+          searchVolume: 0,
+          source: 'DERIVED_RESCUE' as const,
+          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+        },
+        {
+          keyword: 'dreo sign in',
+          searchVolume: 0,
+          source: 'DERIVED_RESCUE' as const,
+          sourceType: 'BUILDER_NON_EMPTY_RESCUE',
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -635,10 +734,8 @@ describe('keyword-quality-filter', () => {
         mustContainBrand: true,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'dreo sign in',
-      ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['dreo sign in'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'dreo 000 btu doe',
         'dreo quiet smart ac by',
         'dreo 10',
@@ -652,7 +749,11 @@ describe('keyword-quality-filter', () => {
 
     it('should soft-downgrade context mismatch instead of deleting when contextMismatchMode=soft', () => {
       const input = [
-        { keyword: 'moes sprinkler timer', searchVolume: 12000, source: 'KEYWORD_PLANNER' as const },
+        {
+          keyword: 'moes sprinkler timer',
+          searchVolume: 12000,
+          source: 'KEYWORD_PLANNER' as const,
+        },
         { keyword: 'moes tacos', searchVolume: 1300, source: 'KEYWORD_PLANNER' as const },
       ]
 
@@ -665,20 +766,23 @@ describe('keyword-quality-filter', () => {
         contextMismatchMode: 'soft',
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'moes sprinkler timer',
-        'moes tacos',
-      ])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['moes sprinkler timer', 'moes tacos'])
       expect(result.removed).toHaveLength(0)
 
-      const timerScore = result.filtered.find(k => k.keyword === 'moes sprinkler timer')?.relevanceScore || 0
-      const tacosScore = result.filtered.find(k => k.keyword === 'moes tacos')?.relevanceScore || 0
+      const timerScore =
+        result.filtered.find((k) => k.keyword === 'moes sprinkler timer')?.relevanceScore || 0
+      const tacosScore =
+        result.filtered.find((k) => k.keyword === 'moes tacos')?.relevanceScore || 0
       expect(timerScore).toBeGreaterThan(tacosScore)
     })
 
     it('should not treat weight units like "10 kg" as German legal suffix KG', () => {
       const input = [
-        { keyword: 'midea a3 wärmepumpentrockner 10 kg', searchVolume: 0, source: 'AI_GENERATED' as const },
+        {
+          keyword: 'midea a3 wärmepumpentrockner 10 kg',
+          searchVolume: 0,
+          source: 'AI_GENERATED' as const,
+        },
         { keyword: 'midea gmbh', searchVolume: 0, source: 'KEYWORD_POOL' as const },
       ]
 
@@ -690,16 +794,18 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
-        'midea a3 wärmepumpentrockner 10 kg',
-      ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['midea gmbh'])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['midea a3 wärmepumpentrockner 10 kg'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['midea gmbh'])
       expect(result.removed[0]?.reason).toContain('品牌无关词')
     })
 
     it('should remove obvious script-mismatch keywords for latin-language campaigns', () => {
       const input = [
-        { keyword: 'solarbrand outdoor lights', searchVolume: 1200, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'solarbrand outdoor lights',
+          searchVolume: 1200,
+          source: 'KEYWORD_POOL' as const,
+        },
         { keyword: '太阳能庭院灯', searchVolume: 900, source: 'KEYWORD_POOL' as const },
       ]
 
@@ -712,17 +818,33 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 0,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual(['solarbrand outdoor lights'])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['太阳能庭院灯'])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['solarbrand outdoor lights'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['太阳能庭院灯'])
       expect(result.removed[0]?.reason).toContain('语言脚本错配')
     })
 
     it('should remove explicit foreign-country keywords when targetCountry is set', () => {
       const input = [
-        { keyword: 'ringconn smart ring price', searchVolume: 1200, source: 'KEYWORD_POOL' as const },
-        { keyword: 'ringconn smart ring price in pakistan', searchVolume: 800, source: 'KEYWORD_POOL' as const },
-        { keyword: 'ringconn smart ring price in bangladesh', searchVolume: 700, source: 'KEYWORD_POOL' as const },
-        { keyword: 'ringconn smart ring price in uk', searchVolume: 900, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'ringconn smart ring price',
+          searchVolume: 1200,
+          source: 'KEYWORD_POOL' as const,
+        },
+        {
+          keyword: 'ringconn smart ring price in pakistan',
+          searchVolume: 800,
+          source: 'KEYWORD_POOL' as const,
+        },
+        {
+          keyword: 'ringconn smart ring price in bangladesh',
+          searchVolume: 700,
+          source: 'KEYWORD_POOL' as const,
+        },
+        {
+          keyword: 'ringconn smart ring price in uk',
+          searchVolume: 900,
+          source: 'KEYWORD_POOL' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -733,20 +855,24 @@ describe('keyword-quality-filter', () => {
         mustContainBrand: true,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'ringconn smart ring price',
         'ringconn smart ring price in uk',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual([
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual([
         'ringconn smart ring price in pakistan',
         'ringconn smart ring price in bangladesh',
       ])
-      expect(result.removed.every(r => r.reason.includes('国家不匹配'))).toBe(true)
+      expect(result.removed.every((r) => r.reason.includes('国家不匹配'))).toBe(true)
     })
 
     it('should still apply semantic query filtering when targetCountry has no geo mismatch', () => {
       const input = [
-        { keyword: 'ringconn smart ring review', searchVolume: 1200, source: 'KEYWORD_POOL' as const },
+        {
+          keyword: 'ringconn smart ring review',
+          searchVolume: 1200,
+          source: 'KEYWORD_POOL' as const,
+        },
       ]
 
       const result = filterKeywordQuality(input, {
@@ -758,14 +884,12 @@ describe('keyword-quality-filter', () => {
       })
 
       expect(result.filtered).toHaveLength(0)
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['ringconn smart ring review'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['ringconn smart ring review'])
       expect(result.removed[0]?.reason).toContain('语义查询词')
     })
 
     it('should not remove pure brand fallback due to script checks', () => {
-      const input = [
-        { keyword: 'anker', searchVolume: 24000, source: 'KEYWORD_POOL' as const },
-      ]
+      const input = [{ keyword: 'anker', searchVolume: 24000, source: 'KEYWORD_POOL' as const }]
 
       const result = filterKeywordQuality(input, {
         brandName: 'Anker',
@@ -773,7 +897,7 @@ describe('keyword-quality-filter', () => {
         mustContainBrand: true,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual(['anker'])
+      expect(result.filtered.map((k) => k.keyword)).toEqual(['anker'])
       expect(result.removed).toHaveLength(0)
     })
 
@@ -823,12 +947,12 @@ describe('keyword-quality-filter', () => {
         minContextTokenMatches: 1,
       })
 
-      expect(result.filtered.map(k => k.keyword)).toEqual([
+      expect(result.filtered.map((k) => k.keyword)).toEqual([
         'novilla',
         'king mattress',
         'memory foam mattress',
       ])
-      expect(result.removed.map(r => r.keyword.keyword)).toEqual(['mattress'])
+      expect(result.removed.map((r) => r.keyword.keyword)).toEqual(['mattress'])
       expect(result.removed[0]?.reason).toContain('不含纯品牌词')
     })
   })

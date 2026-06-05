@@ -80,14 +80,14 @@ export const GET = withAuth(
 
       // 获取总数
       let countQuery = query.replace(/SELECT[\s\S]+FROM/, 'SELECT COUNT(*) as total FROM')
-      const totalResult = await db.queryOne(countQuery, params) as { total: number }
+      const totalResult = (await db.queryOne(countQuery, params)) as { total: number }
 
       // 获取记录
       query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
-      const records = await db.query(query, [...params, limit, offset]) as any[]
+      const records = (await db.query(query, [...params, limit, offset])) as any[]
 
       // 解析details字段
-      const formattedRecords = records.map(record => ({
+      const formattedRecords = records.map((record) => ({
         id: record.id,
         userId: record.user_id,
         eventType: record.event_type,
@@ -110,14 +110,11 @@ export const GET = withAuth(
           page,
           limit,
           totalPages: Math.ceil(totalResult.total / limit),
-        }
+        },
       })
     } catch (error: any) {
       console.error('查询审计日志失败:', error)
-      return NextResponse.json(
-        { error: error.message || '查询审计日志失败' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message || '查询审计日志失败' }, { status: 500 })
     }
   },
   { requireAdmin: true }

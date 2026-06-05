@@ -90,11 +90,8 @@ export async function findExistingProductScoreTask(
     queue.getPendingTasks(),
   ])
 
-  const matcher = (task: Task) => (
-    task.type === 'product-score-calculation'
-    && task.userId === userId
-    && task.id !== excludeTaskId
-  )
+  const matcher = (task: Task) =>
+    task.type === 'product-score-calculation' && task.userId === userId && task.id !== excludeTaskId
 
   return runningTasks.find(matcher) || pendingTasks.find(matcher) || null
 }
@@ -115,8 +112,8 @@ export async function markProductScoreRequeueNeeded(
   const key = getProductScoreRequeueKey(userId)
   const existing = parseRequeueRequest(await redis.get(key))
   const shouldForceFullRescore = Boolean(
-    existing?.forceFullRescore
-    || (params.forceRecalculate && (!params.productIds || params.productIds.length === 0))
+    existing?.forceFullRescore ||
+    (params.forceRecalculate && (!params.productIds || params.productIds.length === 0))
   )
 
   const merged: ProductScoreRequeueRequest = {
@@ -129,12 +126,7 @@ export async function markProductScoreRequeueNeeded(
     updatedAt: new Date().toISOString(),
   }
 
-  await redis.set(
-    key,
-    JSON.stringify(merged),
-    'EX',
-    PRODUCT_SCORE_REQUEUE_TTL_SECONDS
-  )
+  await redis.set(key, JSON.stringify(merged), 'EX', PRODUCT_SCORE_REQUEUE_TTL_SECONDS)
 }
 
 export async function consumeProductScoreRequeueRequest(
@@ -170,7 +162,7 @@ export async function acquireProductScoreExecutionMutex(
 
   const key = getProductScoreMutexKey(userId)
   const safeTtlMs = Math.max(60_000, ttlMs)
-  const acquired = await redis.set(key, token, 'PX', safeTtlMs, 'NX') === 'OK'
+  const acquired = (await redis.set(key, token, 'PX', safeTtlMs, 'NX')) === 'OK'
 
   const refresh = async (): Promise<boolean> => {
     const result = await redis.eval(

@@ -71,9 +71,7 @@ export function exportOffers(offers: OfferExportData[]): void {
 
   const keys = Object.keys(offers[0]) as (keyof OfferExportData)[]
   const headerRow = keys.map((key) => headers[key] || String(key)).join(',')
-  const rows = offers.map((row) =>
-    keys.map((key) => escapeCsvCell(row[key])).join(',')
-  )
+  const rows = offers.map((row) => keys.map((key) => escapeCsvCell(row[key])).join(','))
   const csv = [headerRow, ...rows].join('\n')
 
   downloadCsv('offers', csv)

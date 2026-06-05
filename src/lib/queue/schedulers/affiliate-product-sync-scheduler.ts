@@ -90,7 +90,10 @@ export class AffiliateProductSyncScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning = false
-  private readonly RUN_ON_START = parseBooleanEnv(process.env.QUEUE_AFFILIATE_SYNC_RUN_ON_START, true)
+  private readonly RUN_ON_START = parseBooleanEnv(
+    process.env.QUEUE_AFFILIATE_SYNC_RUN_ON_START,
+    true
+  )
   private readonly STARTUP_DELAY_MS = parseNonNegativeIntEnv(
     process.env.QUEUE_AFFILIATE_SYNC_STARTUP_DELAY_MS,
     DEFAULT_STARTUP_DELAY_MS
@@ -111,7 +114,9 @@ export class AffiliateProductSyncScheduler {
           console.error('❌ 联盟商品同步启动检查失败:', error)
         })
       } else {
-        console.log(`⏳ 联盟商品同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
+        console.log(
+          `⏳ 联盟商品同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`
+        )
         this.startupTimeoutHandle = setTimeout(() => {
           this.startupTimeoutHandle = null
           this.checkAndScheduleSync().catch((error) => {
@@ -170,7 +175,9 @@ export class AffiliateProductSyncScheduler {
       try {
         await runAffiliateProductsRawJsonRetirementMaintenance()
       } catch (error: any) {
-        console.warn(`[affiliate-sync-scheduler] raw_json retirement maintenance failed: ${error?.message || error}`)
+        console.warn(
+          `[affiliate-sync-scheduler] raw_json retirement maintenance failed: ${error?.message || error}`
+        )
       }
 
       const users = await this.listEligibleUsers()
@@ -192,12 +199,16 @@ export class AffiliateProductSyncScheduler {
           skippedCount += 1
         } catch (error: any) {
           skippedCount += 1
-          console.warn(`[affiliate-sync-scheduler] user ${userId} schedule failed: ${error?.message || error}`)
+          console.warn(
+            `[affiliate-sync-scheduler] user ${userId} schedule failed: ${error?.message || error}`
+          )
         }
       }
 
       const elapsedMs = Date.now() - checkStartAt
-      console.log(`✅ 联盟商品同步检查完成: 入队 ${queuedCount}，跳过 ${skippedCount}（耗时 ${elapsedMs}ms）`)
+      console.log(
+        `✅ 联盟商品同步检查完成: 入队 ${queuedCount}，跳过 ${skippedCount}（耗时 ${elapsedMs}ms）`
+      )
     } catch (error) {
       const elapsedMs = Date.now() - checkStartAt
       console.error(`❌ 联盟商品同步检查失败（耗时 ${elapsedMs}ms）:`, error)
@@ -217,9 +228,7 @@ export class AffiliateProductSyncScheduler {
       `
     )
 
-    return rows
-      .map((row) => Number(row.id))
-      .filter((id) => Number.isFinite(id) && id > 0)
+    return rows.map((row) => Number(row.id)).filter((id) => Number.isFinite(id) && id > 0)
   }
 
   private async scheduleForUser(userId: number, now: Date): Promise<boolean> {
@@ -240,11 +249,9 @@ export class AffiliateProductSyncScheduler {
           scheduleConfig.fullIntervalHours * 60 * 60 * 1000,
           nowMs
         )
-        const shouldRunDelta = !shouldRunFull && isDue(
-          lastDeltaAt,
-          scheduleConfig.deltaIntervalMinutes * 60 * 1000,
-          nowMs
-        )
+        const shouldRunDelta =
+          !shouldRunFull &&
+          isDue(lastDeltaAt, scheduleConfig.deltaIntervalMinutes * 60 * 1000, nowMs)
 
         if (shouldRunFull || shouldRunDelta) {
           const mode: SyncMode = shouldRunFull ? 'platform' : 'delta'
@@ -294,11 +301,9 @@ export class AffiliateProductSyncScheduler {
       ypScheduleConfig.fullIntervalHours * 60 * 60 * 1000,
       nowMs
     )
-    const shouldRunYpDelta = !shouldRunYpFull && isDue(
-      ypLastDeltaAt,
-      ypScheduleConfig.deltaIntervalMinutes * 60 * 1000,
-      nowMs
-    )
+    const shouldRunYpDelta =
+      !shouldRunYpFull &&
+      isDue(ypLastDeltaAt, ypScheduleConfig.deltaIntervalMinutes * 60 * 1000, nowMs)
     if (!shouldRunYpFull && !shouldRunYpDelta) {
       return false
     }
@@ -315,11 +320,15 @@ export class AffiliateProductSyncScheduler {
     return true
   }
 
-  private async hasActiveSyncRun(userId: number, platform: 'partnerboost' | 'yeahpromos'): Promise<boolean> {
+  private async hasActiveSyncRun(
+    userId: number,
+    platform: 'partnerboost' | 'yeahpromos'
+  ): Promise<boolean> {
     const db = await getDatabase()
-    const activeRunFreshnessSql = db.type === 'postgres'
-      ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
-      : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
+    const activeRunFreshnessSql =
+      db.type === 'postgres'
+        ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
+        : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
     const row = await db.queryOne<{ id: number }>(
       `
         SELECT id
@@ -594,13 +603,14 @@ export class AffiliateProductSyncScheduler {
       return
     }
 
-    const description = key === PB_LAST_FULL_SYNC_KEY
-      ? 'PB全量补齐最近入队时间'
-      : key === PB_LAST_DELTA_SYNC_KEY
-        ? 'PB快速刷新最近入队时间'
-        : key === YP_LAST_FULL_SYNC_KEY
-          ? 'YP全量补齐最近入队时间'
-          : 'YP快速刷新最近入队时间'
+    const description =
+      key === PB_LAST_FULL_SYNC_KEY
+        ? 'PB全量补齐最近入队时间'
+        : key === PB_LAST_DELTA_SYNC_KEY
+          ? 'PB快速刷新最近入队时间'
+          : key === YP_LAST_FULL_SYNC_KEY
+            ? 'YP全量补齐最近入队时间'
+            : 'YP快速刷新最近入队时间'
 
     await db.exec(
       `

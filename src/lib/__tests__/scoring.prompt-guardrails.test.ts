@@ -117,18 +117,13 @@ describe('scoring prompt guardrails', () => {
   it('builds launch_score prompt with guardrails, currency, and vanity store page type', async () => {
     const { calculateLaunchScore } = await import('../scoring')
 
-    const result = await calculateLaunchScore(
-      buildOffer() as any,
-      buildCreative() as any,
-      9,
-      {
-        budgetAmount: 20,
-        maxCpcBid: 0.5,
-        currencyCode: 'eur',
-        targetCountry: 'DE',
-        targetLanguage: 'German',
-      }
-    )
+    const result = await calculateLaunchScore(buildOffer() as any, buildCreative() as any, 9, {
+      budgetAmount: 20,
+      maxCpcBid: 0.5,
+      currencyCode: 'eur',
+      targetCountry: 'DE',
+      targetLanguage: 'German',
+    })
 
     expect(result.totalScore).toBe(85)
     const prompt = String(generateContentMock.mock.calls[0]?.[0]?.prompt || '')
@@ -157,9 +152,7 @@ describe('scoring prompt guardrails', () => {
   it('builds keyword_gap_analysis prompt with sanitized existing keyword evidence', async () => {
     generateContentMock.mockResolvedValueOnce({
       text: JSON.stringify({
-        missing_keywords: [
-          { keyword: 'water filter replacement', priority: 'high' },
-        ],
+        missing_keywords: [{ keyword: 'water filter replacement', priority: 'high' }],
       }),
       usage: { inputTokens: 8, outputTokens: 12, totalTokens: 20 },
       model: 'gemini-test',

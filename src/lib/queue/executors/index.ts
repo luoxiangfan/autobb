@@ -169,7 +169,10 @@ export type { CleanupTaskData } from './cleanup-executor'
 export type { AdCreativeTaskData } from './ad-creative-executor'
 export type { CampaignPublishTaskData } from './campaign-publish-executor'
 export type { ClickFarmTaskData } from './click-farm-executor'
-export type { ClickFarmTriggerTaskData, ClickFarmBatchTaskData } from '@/lib/click-farm/queue-task-types'
+export type {
+  ClickFarmTriggerTaskData,
+  ClickFarmBatchTaskData,
+} from '@/lib/click-farm/queue-task-types'
 export type { UrlSwapTaskData } from './url-swap-executor'
 export type { AffiliateProductSyncTaskData } from './affiliate-product-sync-executor'
 export type { OpenclawCommandTaskData } from './openclaw-command-executor'

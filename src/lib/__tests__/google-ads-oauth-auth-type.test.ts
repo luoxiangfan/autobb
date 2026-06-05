@@ -36,9 +36,7 @@ describe('getUserAuthType', () => {
   })
 
   it('returns oauth when refresh token exists', async () => {
-    dbFns.queryOne
-      .mockResolvedValueOnce({ refresh_token: 'rt-1' })
-      .mockResolvedValueOnce(undefined)
+    dbFns.queryOne.mockResolvedValueOnce({ refresh_token: 'rt-1' }).mockResolvedValueOnce(undefined)
 
     await expect(getUserAuthType(1)).resolves.toEqual({ authType: 'oauth' })
   })

@@ -8,9 +8,7 @@ describe('keywordPlannerIdeasBlockedReason', () => {
       ok: false,
       message: 'Google Ads OAuth 授权已过期',
     }
-    expect(keywordPlannerIdeasBlockedReason(plannerAuth)).toBe(
-      'Google Ads OAuth 授权已过期'
-    )
+    expect(keywordPlannerIdeasBlockedReason(plannerAuth)).toBe('Google Ads OAuth 授权已过期')
   })
 
   it('does not block ideas for service_account even without preparedOAuth', () => {

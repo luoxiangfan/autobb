@@ -37,7 +37,7 @@ interface UploadRecordDetail {
 }
 
 export async function GET(req: NextRequest, props: { params: Promise<{ recordId: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const db = getDatabase()
   const { recordId } = params
 
@@ -45,15 +45,13 @@ export async function GET(req: NextRequest, props: { params: Promise<{ recordId:
     // 验证用户身份
     const authResult = await verifyAuth(req)
     if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', message: '请先登录' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
     }
     const userIdNum = authResult.user.userId
 
     // 查询上传记录详情（联表查询batch_tasks）
-    const records = await db.query<UploadRecordDetail>(`
+    const records = await db.query<UploadRecordDetail>(
+      `
       SELECT
         ur.id,
         ur.batch_id,
@@ -75,13 +73,12 @@ export async function GET(req: NextRequest, props: { params: Promise<{ recordId:
       FROM upload_records ur
       INNER JOIN batch_tasks bt ON ur.batch_id = bt.id
       WHERE ur.id = ? AND ur.user_id = ?
-    `, [recordId, userIdNum])
+    `,
+      [recordId, userIdNum]
+    )
 
     if (!records || records.length === 0) {
-      return NextResponse.json(
-        { error: 'Not found', message: '上传记录不存在' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Not found', message: '上传记录不存在' }, { status: 404 })
     }
 
     const record = records[0]
@@ -92,17 +89,16 @@ export async function GET(req: NextRequest, props: { params: Promise<{ recordId:
       success: true,
       data: {
         ...record,
-        metadata: metadataObj
-      }
+        metadata: metadataObj,
+      },
     })
-
   } catch (error: any) {
     console.error('❌ 获取上传记录详情失败:', error)
 
     return NextResponse.json(
       {
         error: 'Internal server error',
-        message: error.message || '获取上传记录详情失败'
+        message: error.message || '获取上传记录详情失败',
       },
       { status: 500 }
     )

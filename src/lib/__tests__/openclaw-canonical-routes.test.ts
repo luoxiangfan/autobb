@@ -150,7 +150,9 @@ describe('openclaw canonical routes', () => {
   })
 
   it('rejects blocked internal path before matching canonical flow', () => {
-    expect(() => validateOpenclawApiRequest('GET', '/api/admin/users')).toThrow('Path blocked: /api/admin')
+    expect(() => validateOpenclawApiRequest('GET', '/api/admin/users')).toThrow(
+      'Path blocked: /api/admin'
+    )
   })
 
   it('accepts newly-added web write routes', () => {

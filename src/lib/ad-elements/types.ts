@@ -21,7 +21,7 @@ export type EnrichedStoreProduct = {
   productData?: AmazonProductData | null
   reviewAnalysis?: any | null
   competitorAnalysis?: any | null
-  productInfo?: any | null  // AI产品分析结果
+  productInfo?: any | null // AI产品分析结果
 }
 
 /**
@@ -62,7 +62,7 @@ export interface ProductInfo {
   name: string
   description?: string
   features?: string[]
-  aboutThisItem?: string[]  // Amazon "About this item" 产品详细描述
+  aboutThisItem?: string[] // Amazon "About this item" 产品详细描述
   brand?: string
   rating?: string | null
   reviewCount?: string | null
@@ -109,23 +109,23 @@ export interface ProductInfo {
 
   // 🔥 v3.2新增：深度数据增强字段
   storeDeepData?: {
-    aggregatedReviews?: string[]      // 热销商品评论聚合
-    aggregatedFeatures?: string[]     // 热销商品特性聚合
-    hotBadges?: string[]              // 热销商品徽章
-    categoryKeywords?: string[]       // 店铺分类关键词
+    aggregatedReviews?: string[] // 热销商品评论聚合
+    aggregatedFeatures?: string[] // 热销商品特性聚合
+    hotBadges?: string[] // 热销商品徽章
+    categoryKeywords?: string[] // 店铺分类关键词
   }
 
-  userLanguagePatterns?: string[]     // 用户语言模式（从评论提取）
-  competitorFeatures?: string[]       // 竞品特性（用于差异化）
-  topReviewQuotes?: string[]          // 热门评论原文（用于引用）
+  userLanguagePatterns?: string[] // 用户语言模式（从评论提取）
+  competitorFeatures?: string[] // 竞品特性（用于差异化）
+  topReviewQuotes?: string[] // 热门评论原文（用于引用）
 }
 
 /**
  * 品类阈值配置
  */
 export interface CategoryThreshold {
-  highReviewBase: number  // High 流行度评论数基准
-  mediumReviewBase: number  // Medium 流行度评论数基准
-  multiplier: number  // 门槛倍数
+  highReviewBase: number // High 流行度评论数基准
+  mediumReviewBase: number // Medium 流行度评论数基准
+  multiplier: number // 门槛倍数
   description: string
 }

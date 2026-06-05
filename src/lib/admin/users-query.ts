@@ -45,4 +45,3 @@ export function buildAdminUsersOrderBy(params: {
       return `created_at DESC`
   }
 }
-

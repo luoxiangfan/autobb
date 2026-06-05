@@ -5,7 +5,12 @@
 
 import { analyzeProductPage } from './ai'
 import { analyzeReviewsWithAI, type RawReview } from './review-analyzer'
-import { analyzeCompetitorsWithAI, inferCompetitorKeywords, searchCompetitorsOnAmazon, type CompetitorProduct } from './competitor-analyzer'
+import {
+  analyzeCompetitorsWithAI,
+  inferCompetitorKeywords,
+  searchCompetitorsOnAmazon,
+  type CompetitorProduct,
+} from './competitor-analyzer'
 import { extractAdElements } from './ad-elements-extractor'
 import { scrapeAmazonProduct } from './stealth-scraper/amazon-product'
 import { parsePrice } from './pricing-utils'
@@ -16,8 +21,8 @@ import {
   shouldRunPlaywrightCompetitorDeepScrape,
   shouldRunPlaywrightReviewDeepScrape,
   type OfferExtractionMode,
-} from './offer-extraction-performance'  // 🔧 新增：统一价格解析函数
-import { getProxyUrlForCountry } from './settings'  // 🔥 修复（2025-12-09）：动态获取代理URL
+} from './offer-extraction-performance' // 🔧 新增：统一价格解析函数
+import { getProxyUrlForCountry } from './settings' // 🔥 修复（2025-12-09）：动态获取代理URL
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { isInvalidKeyword } from './keyword-invalid-filter'
 import {
@@ -66,9 +71,9 @@ export interface AIAnalysisInput {
         asin: string
         productData?: any
         reviews?: string[]
-        reviewHighlights?: string[]  // 🔥 修复（2025-12-11）：添加评论高亮
+        reviewHighlights?: string[] // 🔥 修复（2025-12-11）：添加评论高亮
         competitorAsins?: string[]
-        features?: string[]  // 🔥 修复（2025-12-11）：添加产品特性
+        features?: string[] // 🔥 修复（2025-12-11）：添加产品特性
         scrapeStatus: 'success' | 'failed' | 'skipped'
         error?: string
       }>
@@ -82,7 +87,7 @@ export interface AIAnalysisInput {
     }
     // Flattened product properties
     productName?: string
-    productPrice?: string  // 🔥 统一字段名：price → productPrice
+    productPrice?: string // 🔥 统一字段名：price → productPrice
     productCategory?: string
     productFeatures?: string[]
     metaTitle?: string
@@ -148,9 +153,9 @@ export interface AIAnalysisInput {
           asin: string
           productData: any
           reviews: string[]
-          reviewHighlights?: string[]  // 🔥 修复（2025-12-11）
+          reviewHighlights?: string[] // 🔥 修复（2025-12-11）
           competitorAsins: string[]
-          features?: string[]  // 🔥 修复（2025-12-11）
+          features?: string[] // 🔥 修复（2025-12-11）
           scrapeStatus: 'success' | 'failed' | 'skipped'
           error?: string
         }>
@@ -291,30 +296,23 @@ export interface AIAnalysisResult {
  */
 function getAmazonDomain(country: string): string {
   const domainMap: Record<string, string> = {
-    'US': 'com',
-    'UK': 'co.uk',
-    'DE': 'de',
-    'FR': 'fr',
-    'IT': 'it',
-    'ES': 'es',
-    'JP': 'co.jp',
-    'CA': 'ca',
-    'AU': 'com.au',
-    'IN': 'in',
-    'MX': 'com.mx',
-    'BR': 'com.br',
+    US: 'com',
+    UK: 'co.uk',
+    DE: 'de',
+    FR: 'fr',
+    IT: 'it',
+    ES: 'es',
+    JP: 'co.jp',
+    CA: 'ca',
+    AU: 'com.au',
+    IN: 'in',
+    MX: 'com.mx',
+    BR: 'com.br',
   }
   return domainMap[country] || 'com'
 }
 
-const PLACEHOLDER_BRANDS = new Set([
-  'unknown',
-  'unknown brand',
-  'n a',
-  'na',
-  'null',
-  'undefined',
-])
+const PLACEHOLDER_BRANDS = new Set(['unknown', 'unknown brand', 'n a', 'na', 'null', 'undefined'])
 
 function toTrimmedText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -339,9 +337,11 @@ function resolveBrandForAdExtraction(candidates: Array<unknown>): string | null 
   return null
 }
 
-function sanitizeExtractedKeywordList(
-  keywords: Array<{ keyword?: string }>
-): { cleaned: string[]; removedInvalid: number; removedDuplicate: number } {
+function sanitizeExtractedKeywordList(keywords: Array<{ keyword?: string }>): {
+  cleaned: string[]
+  removedInvalid: number
+  removedDuplicate: number
+} {
   const seen = new Set<string>()
   const cleaned: string[] = []
   let removedInvalid = 0
@@ -379,7 +379,7 @@ interface CachedCompetitor {
 }
 
 const competitorCache = new Map<string, CachedCompetitor>()
-const CACHE_TTL = 24 * 60 * 60 * 1000  // 24小时
+const CACHE_TTL = 24 * 60 * 60 * 1000 // 24小时
 
 /**
  * 从缓存获取竞品详情
@@ -397,7 +397,7 @@ function getCachedCompetitor(asin: string, targetCountry?: string): CompetitorPr
     return cached.data
   }
   if (cached) {
-    competitorCache.delete(asin)  // 清理过期缓存
+    competitorCache.delete(asin) // 清理过期缓存
   }
   return null
 }
@@ -408,17 +408,17 @@ function getCachedCompetitor(asin: string, targetCountry?: string): CompetitorPr
 function setCachedCompetitor(asin: string, data: CompetitorProduct): void {
   competitorCache.set(asin, {
     data,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   })
 }
 
 /**
  * 获取缓存统计
  */
-function getCacheStats(): { size: number, hitRate: string } {
+function getCacheStats(): { size: number; hitRate: string } {
   return {
     size: competitorCache.size,
-    hitRate: `${competitorCache.size} items cached`
+    hitRate: `${competitorCache.size} items cached`,
   }
 }
 
@@ -471,7 +471,7 @@ async function batchScrapeCompetitorDetails(
   const asinsToScrape: string[] = []
 
   for (const asin of selectedAsins) {
-    const cached = getCachedCompetitor(asin, targetCountry)  // 🔧 传入targetCountry以补充productUrl
+    const cached = getCachedCompetitor(asin, targetCountry) // 🔧 传入targetCountry以补充productUrl
     if (cached) {
       cachedCompetitors.push(cached)
     } else {
@@ -488,9 +488,9 @@ async function batchScrapeCompetitorDetails(
   }
 
   const amazonDomain = getAmazonDomain(targetCountry)
-  const competitorUrls = asinsToScrape.map(asin => ({
+  const competitorUrls = asinsToScrape.map((asin) => ({
     asin,
-    url: `https://www.amazon.${amazonDomain}/dp/${asin}`
+    url: `https://www.amazon.${amazonDomain}/dp/${asin}`,
   }))
 
   // Step 4: 分批抓取详情（限制并发数为5，平衡速度和成功率）
@@ -501,54 +501,54 @@ async function batchScrapeCompetitorDetails(
 
   for (let i = 0; i < competitorUrls.length; i += CONCURRENCY_LIMIT) {
     const batch = competitorUrls.slice(i, i + CONCURRENCY_LIMIT)
-    console.log(`  📦 抓取批次 ${Math.floor(i / CONCURRENCY_LIMIT) + 1}/${Math.ceil(competitorUrls.length / CONCURRENCY_LIMIT)} (${batch.length}个)`)
+    console.log(
+      `  📦 抓取批次 ${Math.floor(i / CONCURRENCY_LIMIT) + 1}/${Math.ceil(competitorUrls.length / CONCURRENCY_LIMIT)} (${batch.length}个)`
+    )
 
     const batchResults = await Promise.allSettled(
       batch.map(async ({ asin, url }) => {
-      try {
-        console.log(`  🔄 正在抓取竞品: ${asin}`)
+        try {
+          console.log(`  🔄 正在抓取竞品: ${asin}`)
 
-        // 🔥 复用现有的 scrapeAmazonProduct 函数
-        // 优势：自动包含代理重试、反爬虫、品牌过滤等逻辑
-        // 🔥 修复（2025-12-09）：传入skipCompetitorExtraction=true，避免"竞品的竞品"二级循环抓取
-        const productData = await scrapeAmazonProduct(
-          url,
-          customProxyUrl,
-          targetCountry,
-          1,  // 竞品抓取只重试1次（避免过长等待）
-          true  // 🛡️ 跳过竞品ASIN提取，避免二级循环
-        )
+          // 🔥 复用现有的 scrapeAmazonProduct 函数
+          // 优势：自动包含代理重试、反爬虫、品牌过滤等逻辑
+          // 🔥 修复（2025-12-09）：传入skipCompetitorExtraction=true，避免"竞品的竞品"二级循环抓取
+          const productData = await scrapeAmazonProduct(
+            url,
+            customProxyUrl,
+            targetCountry,
+            1, // 竞品抓取只重试1次（避免过长等待）
+            true // 🛡️ 跳过竞品ASIN提取，避免二级循环
+          )
 
-        // 转换为 CompetitorProduct 格式
-        const competitor: CompetitorProduct = {
-          asin,
-          name: productData.productName || `Product ${asin}`,
-          brand: productData.brandName || 'Unknown',
-          price: parsePrice(productData.productPrice),  // 🔧 修复：使用统一价格解析函数
-          priceText: productData.productPrice || null,
-          rating: productData.rating
-            ? parseFloat(productData.rating)
-            : null,
-          reviewCount: productData.reviewCount
-            ? parseInt(productData.reviewCount.replace(/[^0-9]/g, ''), 10)
-            : null,
-          imageUrl: productData.imageUrls?.[0] || null,
-          source: 'related_products' as const,
-          features: productData.features || productData.aboutThisItem || [],
-          // 🔥 新增：商品链接（用于前端展示可点击链接）
-          productUrl: url,
+          // 转换为 CompetitorProduct 格式
+          const competitor: CompetitorProduct = {
+            asin,
+            name: productData.productName || `Product ${asin}`,
+            brand: productData.brandName || 'Unknown',
+            price: parsePrice(productData.productPrice), // 🔧 修复：使用统一价格解析函数
+            priceText: productData.productPrice || null,
+            rating: productData.rating ? parseFloat(productData.rating) : null,
+            reviewCount: productData.reviewCount
+              ? parseInt(productData.reviewCount.replace(/[^0-9]/g, ''), 10)
+              : null,
+            imageUrl: productData.imageUrls?.[0] || null,
+            source: 'related_products' as const,
+            features: productData.features || productData.aboutThisItem || [],
+            // 🔥 新增：商品链接（用于前端展示可点击链接）
+            productUrl: url,
+          }
+
+          // 🔥 保存到缓存
+          setCachedCompetitor(asin, competitor)
+
+          console.log(`  ✅ 成功抓取: ${asin} - ${competitor.name} (${competitor.brand})`)
+          return competitor
+        } catch (error: any) {
+          console.warn(`  ❌ 竞品详情抓取失败 (${asin}):`, error.message)
+          return null
         }
-
-        // 🔥 保存到缓存
-        setCachedCompetitor(asin, competitor)
-
-        console.log(`  ✅ 成功抓取: ${asin} - ${competitor.name} (${competitor.brand})`)
-        return competitor
-      } catch (error: any) {
-        console.warn(`  ❌ 竞品详情抓取失败 (${asin}):`, error.message)
-        return null
-      }
-    })
+      })
     )
 
     // 收集本批次结果
@@ -557,10 +557,11 @@ async function batchScrapeCompetitorDetails(
 
   // Step 5: 过滤成功的结果
   const scrapedCompetitors = allResults
-    .filter((r): r is PromiseFulfilledResult<CompetitorProduct | null> =>
-      r.status === 'fulfilled' && r.value !== null
+    .filter(
+      (r): r is PromiseFulfilledResult<CompetitorProduct | null> =>
+        r.status === 'fulfilled' && r.value !== null
     )
-    .map(r => r.value!)
+    .map((r) => r.value!)
 
   // Step 6: 合并缓存和新抓取的结果
   const allCompetitors = [...cachedCompetitors, ...scrapedCompetitors]
@@ -571,13 +572,14 @@ async function batchScrapeCompetitorDetails(
   // Step 7: 过滤同品牌产品（支持跳过过滤）
   // 🔥 新增（2025-12-17）：针对单商品页面，保留同品牌竞品用于差异化分析
   const afterMainBrandFilter = skipBrandFilter
-    ? allCompetitors  // 跳过过滤，保留所有竞品（包括同品牌）
+    ? allCompetitors // 跳过过滤，保留所有竞品（包括同品牌）
     : mainBrandNormalized
-      ? allCompetitors.filter(c => {
+      ? allCompetitors.filter((c) => {
           const competitorBrand = c.brand?.toLowerCase().trim() || ''
-          const isSameBrand = competitorBrand === mainBrandNormalized ||
-                             competitorBrand.includes(mainBrandNormalized) ||
-                             mainBrandNormalized.includes(competitorBrand)
+          const isSameBrand =
+            competitorBrand === mainBrandNormalized ||
+            competitorBrand.includes(mainBrandNormalized) ||
+            mainBrandNormalized.includes(competitorBrand)
           if (isSameBrand) {
             console.log(`🛡️ 过滤同品牌竞品: ${c.asin} - ${c.brand}`)
           }
@@ -586,28 +588,33 @@ async function batchScrapeCompetitorDetails(
       : allCompetitors
 
   // Step 8: 品类相关性过滤（排除配件/跨品类商品）
-  const { kept: relevanceFilteredCompetitors, removed: relevanceRemovedCompetitors } = relevanceContext
-    ? filterRelevantCompetitors(afterMainBrandFilter, relevanceContext)
-    : { kept: afterMainBrandFilter, removed: [] as CompetitorProduct[] }
+  const { kept: relevanceFilteredCompetitors, removed: relevanceRemovedCompetitors } =
+    relevanceContext
+      ? filterRelevantCompetitors(afterMainBrandFilter, relevanceContext)
+      : { kept: afterMainBrandFilter, removed: [] as CompetitorProduct[] }
 
   if (relevanceContext) {
-    console.log(`🎯 相关性过滤: ${afterMainBrandFilter.length}个 → ${relevanceFilteredCompetitors.length}个`)
+    console.log(
+      `🎯 相关性过滤: ${afterMainBrandFilter.length}个 → ${relevanceFilteredCompetitors.length}个`
+    )
     if (relevanceRemovedCompetitors.length > 0) {
       const preview = relevanceRemovedCompetitors
         .slice(0, 3)
         .map((c) => `${c.asin || 'N/A'}:${(c.name || 'Unknown').slice(0, 28)}`)
         .join(', ')
-      console.log(`🧹 已剔除疑似非竞品: ${preview}${relevanceRemovedCompetitors.length > 3 ? ' ...' : ''}`)
+      console.log(
+        `🧹 已剔除疑似非竞品: ${preview}${relevanceRemovedCompetitors.length > 3 ? ' ...' : ''}`
+      )
     }
   }
 
   // Step 9: 保证品牌多样性（每个品牌最多1个产品）
   // 🔥 修复（2025-12-17）：单商品页面也跳过品牌多样性过滤，保留同品牌的所有竞品
   const diverseCompetitors = skipBrandFilter
-    ? relevanceFilteredCompetitors  // 跳过品牌多样性过滤，保留所有同品牌竞品
+    ? relevanceFilteredCompetitors // 跳过品牌多样性过滤，保留所有同品牌竞品
     : (() => {
         const seenBrands = new Set<string>()
-        return relevanceFilteredCompetitors.filter(c => {
+        return relevanceFilteredCompetitors.filter((c) => {
           const brand = c.brand?.toLowerCase().trim() || `unknown_${c.asin}`
           if (seenBrands.has(brand)) {
             console.log(`🔄 跳过重复品牌: ${c.asin} - ${c.brand}`)
@@ -618,11 +625,17 @@ async function batchScrapeCompetitorDetails(
         })
       })()
 
-  console.log(`✅ 批量抓取完成: 缓存${cachedCompetitors.length}个 + 新抓取${scrapedCompetitors.length}/${asinsToScrape.length}个`)
+  console.log(
+    `✅ 批量抓取完成: 缓存${cachedCompetitors.length}个 + 新抓取${scrapedCompetitors.length}/${asinsToScrape.length}个`
+  )
   if (skipBrandFilter) {
-    console.log(`🔄 品牌过滤: 已跳过（单商品页面保留所有同品牌竞品）- ${allCompetitors.length}个可用`)
+    console.log(
+      `🔄 品牌过滤: 已跳过（单商品页面保留所有同品牌竞品）- ${allCompetitors.length}个可用`
+    )
   } else {
-    console.log(`🛡️ 品牌过滤: ${allCompetitors.length}个 → ${afterMainBrandFilter.length}个(排除主品牌) → ${diverseCompetitors.length}个(品牌多样化)`)
+    console.log(
+      `🛡️ 品牌过滤: ${allCompetitors.length}个 → ${afterMainBrandFilter.length}个(排除主品牌) → ${diverseCompetitors.length}个(品牌多样化)`
+    )
   }
 
   return diverseCompetitors.slice(0, limit)
@@ -633,12 +646,7 @@ async function batchScrapeCompetitorDetails(
  * 包括产品分析、评论分析、竞品分析、广告元素提取
  */
 export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnalysisResult> {
-  const {
-    extractResult,
-    targetCountry,
-    targetLanguage,
-    userId,
-  } = input
+  const { extractResult, targetCountry, targetLanguage, userId } = input
 
   const result: AIAnalysisResult = {
     aiAnalysisSuccess: false,
@@ -689,15 +697,15 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
       }
 
       // 添加产品分类信息
-      if (extractResult.productCategories?.primaryCategories && extractResult.productCategories.primaryCategories.length > 0) {
+      if (
+        extractResult.productCategories?.primaryCategories &&
+        extractResult.productCategories.primaryCategories.length > 0
+      ) {
         const categories = extractResult.productCategories.primaryCategories
           .slice(0, 5)
-          .map(c => `${c.name} (${c.count} products)`)
+          .map((c) => `${c.name} (${c.count} products)`)
           .join(', ')
-        textParts.push(
-          `\n=== PRODUCT CATEGORIES ===`,
-          categories
-        )
+        textParts.push(`\n=== PRODUCT CATEGORIES ===`, categories)
       }
 
       // 添加热销产品列表
@@ -708,9 +716,13 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
       console.log(`🔍 [STORE] deepScrapeResults诊断:`)
       console.log(`  - deepScrapeResults存在: ${!!dsr}`)
       if (dsr) {
-        console.log(`  - aggregatedFeatures数量: ${dsr.aggregatedFeatures?.length ?? '(undefined)'}`)
+        console.log(
+          `  - aggregatedFeatures数量: ${dsr.aggregatedFeatures?.length ?? '(undefined)'}`
+        )
         console.log(`  - aggregatedReviews数量: ${dsr.aggregatedReviews?.length ?? '(undefined)'}`)
-        console.log(`  - aggregatedCompetitorAsins数量: ${dsr.aggregatedCompetitorAsins?.length ?? '(undefined)'}`)
+        console.log(
+          `  - aggregatedCompetitorAsins数量: ${dsr.aggregatedCompetitorAsins?.length ?? '(undefined)'}`
+        )
         console.log(`  - topProducts数量: ${dsr.topProducts?.length ?? '(undefined)'}`)
         console.log(`  - successCount: ${dsr.successCount ?? '(undefined)'}`)
         if (dsr.aggregatedFeatures && dsr.aggregatedFeatures.length > 0) {
@@ -719,31 +731,39 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
       }
 
       // 🔥 修复（2025-12-11）：添加深度抓取的聚合特性数据，用于生成"产品亮点"
-      if (extractResult.deepScrapeResults?.aggregatedFeatures &&
-          extractResult.deepScrapeResults.aggregatedFeatures.length > 0) {
+      if (
+        extractResult.deepScrapeResults?.aggregatedFeatures &&
+        extractResult.deepScrapeResults.aggregatedFeatures.length > 0
+      ) {
         const features = extractResult.deepScrapeResults.aggregatedFeatures
-          .slice(0, 15)  // 限制最多15条特性
+          .slice(0, 15) // 限制最多15条特性
           .map((f: string) => `- ${f}`)
           .join('\n')
         textParts.push(
           `\n=== PRODUCT FEATURES (Aggregated from Hot-Selling Products) ===`,
           features
         )
-        console.log(`📊 [STORE] 添加聚合特性到AI分析输入: ${extractResult.deepScrapeResults.aggregatedFeatures.length}条`)
+        console.log(
+          `📊 [STORE] 添加聚合特性到AI分析输入: ${extractResult.deepScrapeResults.aggregatedFeatures.length}条`
+        )
       }
 
       // 🔥 修复（2025-12-11）：添加深度抓取的评论摘要，用于生成"评论分析"
-      if (extractResult.deepScrapeResults?.aggregatedReviews &&
-          extractResult.deepScrapeResults.aggregatedReviews.length > 0) {
+      if (
+        extractResult.deepScrapeResults?.aggregatedReviews &&
+        extractResult.deepScrapeResults.aggregatedReviews.length > 0
+      ) {
         const reviewSummaries = extractResult.deepScrapeResults.aggregatedReviews
-          .slice(0, 10)  // 限制最多10条评论摘要
+          .slice(0, 10) // 限制最多10条评论摘要
           .map((r: string) => `- ${r.substring(0, 200)}${r.length > 200 ? '...' : ''}`)
           .join('\n')
         textParts.push(
           `\n=== REVIEW HIGHLIGHTS (Aggregated from Hot-Selling Products) ===`,
           reviewSummaries
         )
-        console.log(`📊 [STORE] 添加聚合评论到AI分析输入: ${extractResult.deepScrapeResults.aggregatedReviews.length}条`)
+        console.log(
+          `📊 [STORE] 添加聚合评论到AI分析输入: ${extractResult.deepScrapeResults.aggregatedReviews.length}条`
+        )
       }
 
       pageData = {
@@ -770,29 +790,27 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
       ]
 
       // 添加聚合特性（如果有）
-      if (extractResult.deepScrapeResults?.aggregatedFeatures &&
-          extractResult.deepScrapeResults.aggregatedFeatures.length > 0) {
+      if (
+        extractResult.deepScrapeResults?.aggregatedFeatures &&
+        extractResult.deepScrapeResults.aggregatedFeatures.length > 0
+      ) {
         const features = extractResult.deepScrapeResults.aggregatedFeatures
           .slice(0, 15)
           .map((f: string) => `- ${f}`)
           .join('\n')
-        textParts.push(
-          `\n=== PRODUCT FEATURES ===`,
-          features
-        )
+        textParts.push(`\n=== PRODUCT FEATURES ===`, features)
       }
 
       // 添加聚合评论（如果有）
-      if (extractResult.deepScrapeResults?.aggregatedReviews &&
-          extractResult.deepScrapeResults.aggregatedReviews.length > 0) {
+      if (
+        extractResult.deepScrapeResults?.aggregatedReviews &&
+        extractResult.deepScrapeResults.aggregatedReviews.length > 0
+      ) {
         const reviewSummaries = extractResult.deepScrapeResults.aggregatedReviews
           .slice(0, 10)
           .map((r: string) => `- ${r.substring(0, 200)}${r.length > 200 ? '...' : ''}`)
           .join('\n')
-        textParts.push(
-          `\n=== REVIEW HIGHLIGHTS ===`,
-          reviewSummaries
-        )
+        textParts.push(`\n=== REVIEW HIGHLIGHTS ===`, reviewSummaries)
       }
 
       pageData = {
@@ -836,7 +854,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         description: extractResult.productDescription || '',
         text: [
           extractResult.brand ? `Brand: ${extractResult.brand}` : '',
-          extractResult.productDescription ? `\nDescription:\n${extractResult.productDescription}` : '',
+          extractResult.productDescription
+            ? `\nDescription:\n${extractResult.productDescription}`
+            : '',
         ]
           .filter(Boolean)
           .join('\n'),
@@ -890,7 +910,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         console.log(`  - isAmazonProductPage: ${isAmazonProductPage}`)
         console.log(`  - products: ${extractResult.products?.length || 0}个`)
         console.log(`  - pageType: ${extractResult.pageType || 'unknown'}`)
-        console.log(`  - enablePlaywrightDeepScraping: ${input.enablePlaywrightDeepScraping || false}`)
+        console.log(
+          `  - enablePlaywrightDeepScraping: ${input.enablePlaywrightDeepScraping || false}`
+        )
         console.log(`  - debug存在: ${!!debug}`)
         console.log(`  - debug内容:`, JSON.stringify(debug, null, 2))
 
@@ -911,17 +933,26 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
             let deepScrapeProxyUrl: string | undefined
             try {
-              deepScrapeProxyUrl = await getProxyUrlForCountry(targetCountry, userId) || undefined
+              deepScrapeProxyUrl = (await getProxyUrlForCountry(targetCountry, userId)) || undefined
             } catch {
               deepScrapeProxyUrl = undefined
             }
-            console.log(`🔧 [DEEP SCRAPE] 评论抓取代理: ${deepScrapeProxyUrl ? '已配置' : '未配置'}`)
+            console.log(
+              `🔧 [DEEP SCRAPE] 评论抓取代理: ${deepScrapeProxyUrl ? '已配置' : '未配置'}`
+            )
 
-            const { context, instanceId } = await pool.acquire(deepScrapeProxyUrl, undefined, targetCountry)
+            const { context, instanceId } = await pool.acquire(
+              deepScrapeProxyUrl,
+              undefined,
+              targetCountry
+            )
             const page = await context.newPage()
 
             try {
-              await page.goto(extractResult.finalUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+              await page.goto(extractResult.finalUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 30000,
+              })
               const scrapedReviews = await scrapeAmazonReviews(
                 page,
                 getOfferProductReviewDeepScrapeLimit(input.extractionMode)
@@ -939,7 +970,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
                 result.reviewAnalysis = reviewAnalysis
                 result.reviewAnalysisSuccess = true
-                console.log(`✅ [DEEP SCRAPE] 评论深度分析完成 (${scrapedReviews.length}条真实评论)`)
+                console.log(
+                  `✅ [DEEP SCRAPE] 评论深度分析完成 (${scrapedReviews.length}条真实评论)`
+                )
               } else {
                 console.log('⚠️ [DEEP SCRAPE] Playwright未抓取到评论，使用备用数据')
                 // 降级到使用已抓取的topReviews数据
@@ -949,10 +982,17 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
               pool.release(instanceId)
             }
           } catch (playwrightError: any) {
-            console.warn(`⚠️ [DEEP SCRAPE] Playwright评论抓取失败，降级使用已抓取数据:`, playwrightError.message)
+            console.warn(
+              `⚠️ [DEEP SCRAPE] Playwright评论抓取失败，降级使用已抓取数据:`,
+              playwrightError.message
+            )
             // 降级逻辑会在下面的else分支处理
           }
-        } else if (isAmazonProductPage && input.enablePlaywrightDeepScraping && !runPlaywrightReviewDeepScrape) {
+        } else if (
+          isAmazonProductPage &&
+          input.enablePlaywrightDeepScraping &&
+          !runPlaywrightReviewDeepScrape
+        ) {
           console.log('⏩ [DEEP SCRAPE] 提取阶段已有足够评论，跳过Playwright二次评论抓取')
         }
 
@@ -964,7 +1004,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           const reviewHighlights = extractResult.reviewHighlights || []
 
           if (topReviews.length > 0 || reviewHighlights.length > 0) {
-            console.log(`📊 单品页面：使用已抓取的评论数据 (${topReviews.length}条评论, ${reviewHighlights.length}条高亮)...`)
+            console.log(
+              `📊 单品页面：使用已抓取的评论数据 (${topReviews.length}条评论, ${reviewHighlights.length}条高亮)...`
+            )
 
             // 将 topReviews（string[]）转换为 RawReview[] 格式
             // topReviews 格式："4.5 stars - Title: Review text..."
@@ -972,7 +1014,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
               // 解析评论字符串
               const ratingMatch = reviewStr.match(/^([\d.]+)\s*(?:out of 5\s*)?stars?\s*-?\s*/i)
               const rating = ratingMatch ? `${ratingMatch[1]} out of 5 stars` : null
-              const textWithoutRating = ratingMatch ? reviewStr.replace(ratingMatch[0], '') : reviewStr
+              const textWithoutRating = ratingMatch
+                ? reviewStr.replace(ratingMatch[0], '')
+                : reviewStr
 
               // 尝试分离标题和正文
               const titleMatch = textWithoutRating.match(/^([^:]+):\s*(.+)$/)
@@ -1017,11 +1061,11 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
               console.log(`✅ 单品页面评论分析完成 (${reviews.length}条评论)`)
             } else {
               console.log('⚠️ 单品页面未找到有效评论数据')
-              result.reviewAnalysisSuccess = true  // 不视为失败
+              result.reviewAnalysisSuccess = true // 不视为失败
             }
           } else {
             console.log('ℹ️ 单品页面无评论数据可分析')
-            result.reviewAnalysisSuccess = true  // 不视为失败
+            result.reviewAnalysisSuccess = true // 不视为失败
           }
         }
         // 🔥 修复（2025-12-11）：店铺页面评论分析优化
@@ -1040,14 +1084,18 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
           // 策略1: 使用深度抓取的真实评论数据（最优）
           if (aggregatedReviews.length > 0) {
-            console.log(`📊 [STORE] 使用深度抓取的聚合评论数据 (${aggregatedReviews.length}条真实评论)...`)
+            console.log(
+              `📊 [STORE] 使用深度抓取的聚合评论数据 (${aggregatedReviews.length}条真实评论)...`
+            )
 
             // 将聚合评论数据转换为RawReview格式
             aggregatedReviews.forEach((reviewStr: string) => {
               // 解析评论字符串（格式同单品页面）
               const ratingMatch = reviewStr.match(/^([\d.]+)\s*(?:out of 5\s*)?stars?\s*-?\s*/i)
               const rating = ratingMatch ? `${ratingMatch[1]} out of 5 stars` : null
-              const textWithoutRating = ratingMatch ? reviewStr.replace(ratingMatch[0], '') : reviewStr
+              const textWithoutRating = ratingMatch
+                ? reviewStr.replace(ratingMatch[0], '')
+                : reviewStr
 
               // 尝试分离标题和正文
               const titleMatch = textWithoutRating.match(/^([^:]+):\s*(.+)$/)
@@ -1090,7 +1138,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
               productReviews.forEach((reviewStr: string) => {
                 const ratingMatch = reviewStr.match(/^([\d.]+)\s*(?:out of 5\s*)?stars?\s*-?\s*/i)
                 const rating = ratingMatch ? `${ratingMatch[1]} out of 5 stars` : null
-                const textWithoutRating = ratingMatch ? reviewStr.replace(ratingMatch[0], '') : reviewStr
+                const textWithoutRating = ratingMatch
+                  ? reviewStr.replace(ratingMatch[0], '')
+                  : reviewStr
 
                 reviews.push({
                   rating,
@@ -1137,13 +1187,16 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           }
           // 策略4: 降级使用产品列表基础数据（最后方案）
           else {
-            console.log(`📊 [STORE] 降级：从产品列表提取基础评论信息 (${extractResult.products.length}个产品)...`)
+            console.log(
+              `📊 [STORE] 降级：从产品列表提取基础评论信息 (${extractResult.products.length}个产品)...`
+            )
             extractResult.products.forEach((product: any) => {
               if (product.rating && product.reviews > 0) {
                 reviews.push({
-                  rating: typeof product.rating === 'number'
-                    ? `${product.rating} out of 5 stars`
-                    : product.rating,
+                  rating:
+                    typeof product.rating === 'number'
+                      ? `${product.rating} out of 5 stars`
+                      : product.rating,
                   title: product.name || null,
                   body: product.name || null,
                   helpful: null,
@@ -1178,9 +1231,10 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           extractResult.products.forEach((product: any) => {
             if (product.rating && product.reviews > 0) {
               reviews.push({
-                rating: typeof product.rating === 'number'
-                  ? `${product.rating} out of 5 stars`
-                  : product.rating,
+                rating:
+                  typeof product.rating === 'number'
+                    ? `${product.rating} out of 5 stars`
+                    : product.rating,
                 title: product.name || null,
                 body: product.name || null,
                 helpful: null,
@@ -1205,14 +1259,20 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
             console.log(`✅ 评论分析完成 (${reviews.length}条评论)`)
           } else {
             console.log('⚠️ 店铺产品中未找到评论数据')
-            result.reviewAnalysisSuccess = true  // 不视为失败
+            result.reviewAnalysisSuccess = true // 不视为失败
           }
         }
         // 🔥 修复（2026-01-04）：独立站单品页面评论分析
         // 问题：独立站单品页面的extractResult.reviews数组有评论数据，但之前的代码没有使用
         // 修复：检查extractResult.reviews数组，如果有数据则执行评论分析
-        else if (extractResult.reviews && extractResult.reviews.length > 0 && !result.reviewAnalysisSuccess) {
-          console.log(`📊 独立站单品页面：使用已抓取的评论数据 (${extractResult.reviews.length}条评论)...`)
+        else if (
+          extractResult.reviews &&
+          extractResult.reviews.length > 0 &&
+          !result.reviewAnalysisSuccess
+        ) {
+          console.log(
+            `📊 独立站单品页面：使用已抓取的评论数据 (${extractResult.reviews.length}条评论)...`
+          )
 
           // 将独立站评论数据转换为RawReview格式
           extractResult.reviews.forEach((review: any) => {
@@ -1245,7 +1305,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           }
         } else {
           console.log('ℹ️ 非店铺页面，评论分析将由后续流程处理')
-          result.reviewAnalysisSuccess = true  // 标记为成功，让后续流程继续
+          result.reviewAnalysisSuccess = true // 标记为成功，让后续流程继续
         }
       } catch (error: any) {
         console.error('⚠️ 评论分析失败（不影响流程）:', error.message)
@@ -1270,7 +1330,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         console.log(`  - isAmazonProductPage: ${isAmazonProductPage}`)
         console.log(`  - products: ${extractResult.products?.length || 0}个`)
         console.log(`  - pageType: ${extractResult.pageType || 'unknown'}`)
-        console.log(`  - enablePlaywrightDeepScraping: ${input.enablePlaywrightDeepScraping || false}`)
+        console.log(
+          `  - enablePlaywrightDeepScraping: ${input.enablePlaywrightDeepScraping || false}`
+        )
         console.log(`  - debug存在: ${!!debug}`)
         console.log(`  - debug内容:`, JSON.stringify(debug, null, 2))
 
@@ -1296,7 +1358,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         )
 
         if (isAmazonProductPage && runPlaywrightCompetitorDeepScrape && extractResult.finalUrl) {
-          console.log(`🚀 [DEEP SCRAPE] 未找到已提取的竞品ASIN，启用Playwright深度抓取（5个竞品）...`)
+          console.log(
+            `🚀 [DEEP SCRAPE] 未找到已提取的竞品ASIN，启用Playwright深度抓取（5个竞品）...`
+          )
 
           try {
             const { getPlaywrightPool } = await import('@/lib/playwright-pool')
@@ -1305,27 +1369,40 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
             let deepScrapeProxyUrl: string | undefined
             try {
-              deepScrapeProxyUrl = await getProxyUrlForCountry(targetCountry, userId) || undefined
+              deepScrapeProxyUrl = (await getProxyUrlForCountry(targetCountry, userId)) || undefined
             } catch {
               deepScrapeProxyUrl = undefined
             }
-            console.log(`🔧 [DEEP SCRAPE] 竞品抓取代理: ${deepScrapeProxyUrl ? '已配置' : '未配置'}`)
+            console.log(
+              `🔧 [DEEP SCRAPE] 竞品抓取代理: ${deepScrapeProxyUrl ? '已配置' : '未配置'}`
+            )
 
-            const { context, instanceId } = await pool.acquire(deepScrapeProxyUrl, undefined, targetCountry)
+            const { context, instanceId } = await pool.acquire(
+              deepScrapeProxyUrl,
+              undefined,
+              targetCountry
+            )
             const page = await context.newPage()
 
             try {
-              await page.goto(extractResult.finalUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
+              await page.goto(extractResult.finalUrl, {
+                waitUntil: 'domcontentloaded',
+                timeout: 30000,
+              })
               const scrapedCompetitors = await scrapeAmazonCompetitors(page, 5)
               const { kept: relevantScrapedCompetitors, removed: removedScrapedCompetitors } =
                 filterRelevantCompetitors(scrapedCompetitors, competitorRelevanceContext)
 
               if (removedScrapedCompetitors.length > 0) {
-                console.log(`🧹 [DEEP SCRAPE] 相关性过滤移除${removedScrapedCompetitors.length}个非竞品`)
+                console.log(
+                  `🧹 [DEEP SCRAPE] 相关性过滤移除${removedScrapedCompetitors.length}个非竞品`
+                )
               }
 
               if (relevantScrapedCompetitors.length > 0) {
-                console.log(`✅ Playwright抓取${relevantScrapedCompetitors.length}个竞品，执行AI分析...`)
+                console.log(
+                  `✅ Playwright抓取${relevantScrapedCompetitors.length}个竞品，执行AI分析...`
+                )
 
                 // 从产品数据构建"我们的产品"对象
                 // 🔧 修复：使用统一价格解析函数处理欧洲/美国格式
@@ -1336,7 +1413,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
                   brand: extractResult.brand || null,
                   price: priceNum,
                   rating: extractResult.rating ? parseFloat(extractResult.rating) : null,
-                  reviewCount: extractResult.reviewCount ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10) : null,
+                  reviewCount: extractResult.reviewCount
+                    ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10)
+                    : null,
                   features: extractResult.features || extractResult.aboutThisItem || [],
                 }
 
@@ -1350,7 +1429,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
                 result.competitorAnalysis = competitorAnalysis
                 result.competitorAnalysisSuccess = true
-                console.log(`✅ [DEEP SCRAPE] 竞品深度分析完成 (${relevantScrapedCompetitors.length}个真实竞品)`)
+                console.log(
+                  `✅ [DEEP SCRAPE] 竞品深度分析完成 (${relevantScrapedCompetitors.length}个真实竞品)`
+                )
               } else {
                 // 🔥 修复（2025-12-10）：Playwright深度抓取失败时，尝试搜索补充策略
                 console.log('⚠️ [DEEP SCRAPE] Playwright未抓取到竞品，尝试搜索补充策略...')
@@ -1365,27 +1446,37 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
                     brand: extractResult.brand || null,
                     price: priceNum,
                     rating: extractResult.rating ? parseFloat(extractResult.rating) : null,
-                    reviewCount: extractResult.reviewCount ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10) : null,
+                    reviewCount: extractResult.reviewCount
+                      ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10)
+                      : null,
                     features: extractResult.features || extractResult.aboutThisItem || [],
                   }
 
                   // AI推断搜索关键词
-                  const searchTerms = await inferCompetitorKeywords({
-                    name: extractResult.productName || 'Unknown Product',
-                    brand: extractResult.brand || null,
-                    category: extractResult.category || extractResult.productCategory || 'Unknown',
-                    price: ourProduct.price,
-                    targetCountry,
-                    features: extractResult.features || [],
-                    aboutThisItem: extractResult.aboutThisItem || [],
-                  }, userId)
+                  const searchTerms = await inferCompetitorKeywords(
+                    {
+                      name: extractResult.productName || 'Unknown Product',
+                      brand: extractResult.brand || null,
+                      category:
+                        extractResult.category || extractResult.productCategory || 'Unknown',
+                      price: ourProduct.price,
+                      targetCountry,
+                      features: extractResult.features || [],
+                      aboutThisItem: extractResult.aboutThisItem || [],
+                    },
+                    userId
+                  )
 
                   if (searchTerms.length > 0) {
                     console.log(`🔍 [搜索策略] 搜索关键词: ${searchTerms.slice(0, 3).join(', ')}`)
 
                     const { getPlaywrightPool } = await import('@/lib/playwright-pool')
                     const searchPool = getPlaywrightPool()
-                    const searchInstance = await searchPool.acquire(competitorProxyUrl, undefined, targetCountry)
+                    const searchInstance = await searchPool.acquire(
+                      competitorProxyUrl,
+                      undefined,
+                      targetCountry
+                    )
 
                     try {
                       const searchPage = await searchInstance.context.newPage()
@@ -1400,19 +1491,30 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
                         // 过滤同品牌产品
                         const mainBrandLower = (extractResult.brand || '').toLowerCase()
-                        const filteredCompetitors = searchCompetitors.filter(c => {
+                        const filteredCompetitors = searchCompetitors.filter((c) => {
                           const cBrand = (c.brand || '').toLowerCase()
-                          return !cBrand.includes(mainBrandLower) && !mainBrandLower.includes(cBrand)
+                          return (
+                            !cBrand.includes(mainBrandLower) && !mainBrandLower.includes(cBrand)
+                          )
                         })
-                        const { kept: relevantFilteredCompetitors, removed: removedFilteredCompetitors } =
-                          filterRelevantCompetitors(filteredCompetitors, competitorRelevanceContext)
+                        const {
+                          kept: relevantFilteredCompetitors,
+                          removed: removedFilteredCompetitors,
+                        } = filterRelevantCompetitors(
+                          filteredCompetitors,
+                          competitorRelevanceContext
+                        )
 
                         if (removedFilteredCompetitors.length > 0) {
-                          console.log(`🧹 [搜索策略] 相关性过滤移除${removedFilteredCompetitors.length}个非竞品`)
+                          console.log(
+                            `🧹 [搜索策略] 相关性过滤移除${removedFilteredCompetitors.length}个非竞品`
+                          )
                         }
 
                         if (relevantFilteredCompetitors.length > 0) {
-                          console.log(`✅ [搜索策略] 获取${relevantFilteredCompetitors.length}个有效竞品`)
+                          console.log(
+                            `✅ [搜索策略] 获取${relevantFilteredCompetitors.length}个有效竞品`
+                          )
 
                           const competitorAnalysis = await analyzeCompetitorsWithAI(
                             ourProduct,
@@ -1424,7 +1526,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
                           result.competitorAnalysis = competitorAnalysis
                           result.competitorAnalysisSuccess = true
-                          console.log(`✅ [搜索策略] 竞品分析完成 (${relevantFilteredCompetitors.length}个真实竞品)`)
+                          console.log(
+                            `✅ [搜索策略] 竞品分析完成 (${relevantFilteredCompetitors.length}个真实竞品)`
+                          )
                         } else {
                           console.log('⚠️ [搜索策略] 未获取到有效竞品，降级到市场定位分析')
                         }
@@ -1446,14 +1550,17 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
               pool.release(instanceId)
             }
           } catch (playwrightError: any) {
-            console.warn(`⚠️ [DEEP SCRAPE] Playwright竞品抓取失败，降级使用市场定位分析:`, playwrightError.message)
+            console.warn(
+              `⚠️ [DEEP SCRAPE] Playwright竞品抓取失败，降级使用市场定位分析:`,
+              playwrightError.message
+            )
             // 降级逻辑会在下面的else分支处理
           }
         } else if (
-          isAmazonProductPage
-          && !hasRelatedAsins
-          && input.enablePlaywrightDeepScraping
-          && !runPlaywrightCompetitorDeepScrape
+          isAmazonProductPage &&
+          !hasRelatedAsins &&
+          input.enablePlaywrightDeepScraping &&
+          !runPlaywrightCompetitorDeepScrape
         ) {
           console.log('⏩ [DEEP SCRAPE] 当前提取模式跳过竞品二次 Playwright 抓取')
         } else if (isAmazonProductPage && hasRelatedAsins) {
@@ -1470,168 +1577,202 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           }
 
           if (runCompetitorDetailScrape) {
-          // 🔥 新增（2025-12-09）：使用已提取的竞品ASIN，避免重复抓取
-          console.log(`✅ 复用已提取的${extractResult.relatedAsins!.length}个竞品ASIN（已过滤同品牌产品）`)
-
-          try {
-            // 🔥 修复（2025-12-09）：动态获取代理URL（与商品抓取保持一致）
-            const competitorProxyUrl = await getProxyUrlForCountry(targetCountry, userId)
-            console.log(`🔧 竞品抓取代理: ${competitorProxyUrl ? '已配置' : '未配置'}`)
-
-            // 构建"我们的产品"对象
-            // 🔧 修复：使用统一价格解析函数处理欧洲/美国格式
-            const priceNum = parsePrice(extractResult.productPrice)
-
-            const ourProduct = {
-              name: extractResult.productName || extractResult.brand || 'Unknown Product',
-              brand: extractResult.brand || null,
-              price: priceNum,
-              rating: extractResult.rating ? parseFloat(extractResult.rating) : null,
-              reviewCount: extractResult.reviewCount ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10) : null,
-              features: extractResult.features || extractResult.aboutThisItem || [],
-            }
-
-            // 🔥 KISS优化（2025-12-10）：双重策略获取竞品
-            // 策略1：优先使用relatedAsins（推荐区域，速度快）
-            // 策略2：如果竞品不足，使用搜索结果补充（更准确）
-            const MIN_COMPETITORS = 3  // 最少需要3个有效竞品
-            const TARGET_COMPETITORS = getOfferAiCompetitorDetailLimit(input.extractionMode)
-
-            // 🔥 修复（2025-12-17）：单商品页面保留同品牌竞品用于差异化分析
-            let competitors = await batchScrapeCompetitorDetails(
-              extractResult.relatedAsins!,
-              targetCountry,
-              extractResult.brand || null,
-              competitorProxyUrl,
-              TARGET_COMPETITORS,
-              isAmazonProductPage,  // 单商品页面跳过品牌过滤
-              competitorRelevanceContext
+            // 🔥 新增（2025-12-09）：使用已提取的竞品ASIN，避免重复抓取
+            console.log(
+              `✅ 复用已提取的${extractResult.relatedAsins!.length}个竞品ASIN（已过滤同品牌产品）`
             )
 
-            console.log(`📊 [策略1] relatedAsins获取: ${competitors.length}个有效竞品`)
+            try {
+              // 🔥 修复（2025-12-09）：动态获取代理URL（与商品抓取保持一致）
+              const competitorProxyUrl = await getProxyUrlForCountry(targetCountry, userId)
+              console.log(`🔧 竞品抓取代理: ${competitorProxyUrl ? '已配置' : '未配置'}`)
 
-            // 🔥 策略2：如果竞品不足，使用Amazon搜索补充
-            if (competitors.length < MIN_COMPETITORS) {
-              console.log(`⚠️ relatedAsins竞品不足(${competitors.length}<${MIN_COMPETITORS})，启用搜索补充...`)
+              // 构建"我们的产品"对象
+              // 🔧 修复：使用统一价格解析函数处理欧洲/美国格式
+              const priceNum = parsePrice(extractResult.productPrice)
 
-              try {
-                // Step 1: AI推断搜索关键词
-                const searchTerms = await inferCompetitorKeywords({
-                  name: extractResult.productName || 'Unknown Product',
-                  brand: extractResult.brand || null,
-                  category: extractResult.category || extractResult.productCategory || 'Unknown',
-                  price: ourProduct.price,
-                  targetCountry,
-                  features: extractResult.features || [],
-                  aboutThisItem: extractResult.aboutThisItem || [],
-                }, userId)
+              const ourProduct = {
+                name: extractResult.productName || extractResult.brand || 'Unknown Product',
+                brand: extractResult.brand || null,
+                price: priceNum,
+                rating: extractResult.rating ? parseFloat(extractResult.rating) : null,
+                reviewCount: extractResult.reviewCount
+                  ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10)
+                  : null,
+                features: extractResult.features || extractResult.aboutThisItem || [],
+              }
 
-                if (searchTerms.length > 0) {
-                  console.log(`🔍 [策略2] 搜索关键词: ${searchTerms.slice(0, 3).join(', ')}`)
+              // 🔥 KISS优化（2025-12-10）：双重策略获取竞品
+              // 策略1：优先使用relatedAsins（推荐区域，速度快）
+              // 策略2：如果竞品不足，使用搜索结果补充（更准确）
+              const MIN_COMPETITORS = 3 // 最少需要3个有效竞品
+              const TARGET_COMPETITORS = getOfferAiCompetitorDetailLimit(input.extractionMode)
 
-                  // Step 2: 使用Playwright执行搜索
-                  const { getPlaywrightPool } = await import('@/lib/playwright-pool')
-                  const pool = getPlaywrightPool()
-                  // 🔥 修复：acquire() 返回 { browser, context, instanceId }
-                  const instance = await pool.acquire(competitorProxyUrl, undefined, targetCountry)
+              // 🔥 修复（2025-12-17）：单商品页面保留同品牌竞品用于差异化分析
+              let competitors = await batchScrapeCompetitorDetails(
+                extractResult.relatedAsins!,
+                targetCountry,
+                extractResult.brand || null,
+                competitorProxyUrl,
+                TARGET_COMPETITORS,
+                isAmazonProductPage, // 单商品页面跳过品牌过滤
+                competitorRelevanceContext
+              )
 
-                  try {
-                    // 从 context 创建新页面
-                    const page = await instance.context.newPage()
+              console.log(`📊 [策略1] relatedAsins获取: ${competitors.length}个有效竞品`)
+
+              // 🔥 策略2：如果竞品不足，使用Amazon搜索补充
+              if (competitors.length < MIN_COMPETITORS) {
+                console.log(
+                  `⚠️ relatedAsins竞品不足(${competitors.length}<${MIN_COMPETITORS})，启用搜索补充...`
+                )
+
+                try {
+                  // Step 1: AI推断搜索关键词
+                  const searchTerms = await inferCompetitorKeywords(
+                    {
+                      name: extractResult.productName || 'Unknown Product',
+                      brand: extractResult.brand || null,
+                      category:
+                        extractResult.category || extractResult.productCategory || 'Unknown',
+                      price: ourProduct.price,
+                      targetCountry,
+                      features: extractResult.features || [],
+                      aboutThisItem: extractResult.aboutThisItem || [],
+                    },
+                    userId
+                  )
+
+                  if (searchTerms.length > 0) {
+                    console.log(`🔍 [策略2] 搜索关键词: ${searchTerms.slice(0, 3).join(', ')}`)
+
+                    // Step 2: 使用Playwright执行搜索
+                    const { getPlaywrightPool } = await import('@/lib/playwright-pool')
+                    const pool = getPlaywrightPool()
+                    // 🔥 修复：acquire() 返回 { browser, context, instanceId }
+                    const instance = await pool.acquire(
+                      competitorProxyUrl,
+                      undefined,
+                      targetCountry
+                    )
 
                     try {
-                      // Step 3: 执行Amazon搜索
-                      const searchCompetitors = await searchCompetitorsOnAmazon(
-                        searchTerms.slice(0, 3),  // 最多搜索3个词
-                        page,
-                        targetCountry,
-                        2  // 每个词取2个结果
-                      )
+                      // 从 context 创建新页面
+                      const page = await instance.context.newPage()
 
-                      // Step 4: 过滤同品牌产品
-                      const mainBrandLower = (extractResult.brand || '').toLowerCase()
-                      const filteredSearchCompetitors = searchCompetitors.filter(c => {
-                        const cBrand = (c.brand || '').toLowerCase()
-                        return !cBrand.includes(mainBrandLower) && !mainBrandLower.includes(cBrand)
-                      })
-                      const { kept: relevantSearchCompetitors, removed: removedSearchCompetitors } =
-                        filterRelevantCompetitors(filteredSearchCompetitors, competitorRelevanceContext)
+                      try {
+                        // Step 3: 执行Amazon搜索
+                        const searchCompetitors = await searchCompetitorsOnAmazon(
+                          searchTerms.slice(0, 3), // 最多搜索3个词
+                          page,
+                          targetCountry,
+                          2 // 每个词取2个结果
+                        )
 
-                      if (removedSearchCompetitors.length > 0) {
-                        console.log(`🧹 [策略2] 相关性过滤移除${removedSearchCompetitors.length}个非竞品`)
-                      }
+                        // Step 4: 过滤同品牌产品
+                        const mainBrandLower = (extractResult.brand || '').toLowerCase()
+                        const filteredSearchCompetitors = searchCompetitors.filter((c) => {
+                          const cBrand = (c.brand || '').toLowerCase()
+                          return (
+                            !cBrand.includes(mainBrandLower) && !mainBrandLower.includes(cBrand)
+                          )
+                        })
+                        const {
+                          kept: relevantSearchCompetitors,
+                          removed: removedSearchCompetitors,
+                        } = filterRelevantCompetitors(
+                          filteredSearchCompetitors,
+                          competitorRelevanceContext
+                        )
 
-                      console.log(`✅ [策略2] 搜索获取: ${relevantSearchCompetitors.length}个有效竞品`)
-
-                      // Step 5: 合并两个来源，去重
-                      const existingAsins = new Set(competitors.map(c => c.asin))
-                      for (const sc of relevantSearchCompetitors) {
-                        if (!existingAsins.has(sc.asin) && competitors.length < TARGET_COMPETITORS) {
-                          competitors.push(sc)
-                          existingAsins.add(sc.asin)
+                        if (removedSearchCompetitors.length > 0) {
+                          console.log(
+                            `🧹 [策略2] 相关性过滤移除${removedSearchCompetitors.length}个非竞品`
+                          )
                         }
+
+                        console.log(
+                          `✅ [策略2] 搜索获取: ${relevantSearchCompetitors.length}个有效竞品`
+                        )
+
+                        // Step 5: 合并两个来源，去重
+                        const existingAsins = new Set(competitors.map((c) => c.asin))
+                        for (const sc of relevantSearchCompetitors) {
+                          if (
+                            !existingAsins.has(sc.asin) &&
+                            competitors.length < TARGET_COMPETITORS
+                          ) {
+                            competitors.push(sc)
+                            existingAsins.add(sc.asin)
+                          }
+                        }
+
+                        console.log(`📊 [合并] 最终竞品数量: ${competitors.length}个`)
+                      } finally {
+                        await page.close()
                       }
-
-                      console.log(`📊 [合并] 最终竞品数量: ${competitors.length}个`)
                     } finally {
-                      await page.close()
+                      pool.release(instance.instanceId)
                     }
-                  } finally {
-                    pool.release(instance.instanceId)
                   }
+                } catch (searchError: any) {
+                  console.warn(`⚠️ 搜索补充失败: ${searchError.message}`)
+                  // 继续使用已有的competitors
                 }
-              } catch (searchError: any) {
-                console.warn(`⚠️ 搜索补充失败: ${searchError.message}`)
-                // 继续使用已有的competitors
               }
+
+              if (competitors.length > 0) {
+                // 使用完整的竞品数据进行分析
+                const competitorAnalysis = await analyzeCompetitorsWithAI(
+                  ourProduct,
+                  competitors,
+                  targetCountry,
+                  userId,
+                  { enableCompression: true, enableCache: true }
+                )
+
+                result.competitorAnalysis = competitorAnalysis
+                result.competitorAnalysisSuccess = true
+                console.log(
+                  `✅ [DETAILED COMPETITORS] 竞品详细分析完成 (${competitors.length}个完整竞品数据)`
+                )
+              } else {
+                // 降级：使用简化的ASIN列表（无详情）
+                console.warn(`⚠️ 竞品详情抓取全部失败，使用简化ASIN分析`)
+
+                const simplifiedCompetitors: CompetitorProduct[] = extractResult
+                  .relatedAsins!.slice(0, 5)
+                  .map((asin) => ({
+                    asin,
+                    name: `Competitor Product ${asin}`,
+                    brand: 'Unknown',
+                    price: null,
+                    priceText: null,
+                    rating: null,
+                    reviewCount: null,
+                    imageUrl: null,
+                    source: 'same_category' as const,
+                    features: [],
+                  }))
+
+                const competitorAnalysis = await analyzeCompetitorsWithAI(
+                  ourProduct,
+                  simplifiedCompetitors,
+                  targetCountry,
+                  userId,
+                  { enableCompression: true, enableCache: true }
+                )
+
+                result.competitorAnalysis = competitorAnalysis
+                result.competitorAnalysisSuccess = true
+                console.log(
+                  `✅ [SIMPLIFIED ASINS] 竞品简化分析完成 (${simplifiedCompetitors.length}个ASIN)`
+                )
+              }
+            } catch (error: any) {
+              console.warn(`⚠️ [REUSE ASINS] 竞品分析失败:`, error.message)
+              // 降级到市场定位分析
             }
-
-            if (competitors.length > 0) {
-              // 使用完整的竞品数据进行分析
-              const competitorAnalysis = await analyzeCompetitorsWithAI(
-                ourProduct,
-                competitors,
-                targetCountry,
-                userId,
-                { enableCompression: true, enableCache: true }
-              )
-
-              result.competitorAnalysis = competitorAnalysis
-              result.competitorAnalysisSuccess = true
-              console.log(`✅ [DETAILED COMPETITORS] 竞品详细分析完成 (${competitors.length}个完整竞品数据)`)
-            } else {
-              // 降级：使用简化的ASIN列表（无详情）
-              console.warn(`⚠️ 竞品详情抓取全部失败，使用简化ASIN分析`)
-
-              const simplifiedCompetitors: CompetitorProduct[] = extractResult.relatedAsins!.slice(0, 5).map(asin => ({
-                asin,
-                name: `Competitor Product ${asin}`,
-                brand: 'Unknown',
-                price: null,
-                priceText: null,
-                rating: null,
-                reviewCount: null,
-                imageUrl: null,
-                source: 'same_category' as const,
-                features: [],
-              }))
-
-              const competitorAnalysis = await analyzeCompetitorsWithAI(
-                ourProduct,
-                simplifiedCompetitors,
-                targetCountry,
-                userId,
-                { enableCompression: true, enableCache: true }
-              )
-
-              result.competitorAnalysis = competitorAnalysis
-              result.competitorAnalysisSuccess = true
-              console.log(`✅ [SIMPLIFIED ASINS] 竞品简化分析完成 (${simplifiedCompetitors.length}个ASIN)`)
-            }
-          } catch (error: any) {
-            console.warn(`⚠️ [REUSE ASINS] 竞品分析失败:`, error.message)
-            // 降级到市场定位分析
-          }
           }
         }
 
@@ -1639,7 +1780,8 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         // 只有在 Playwright 深度抓取未执行或失败时才使用
         if (isAmazonProductPage && !result.competitorAnalysisSuccess) {
           // 检查是否有足够的产品数据进行分析
-          const hasProductData = extractResult.productPrice || extractResult.rating || extractResult.category
+          const hasProductData =
+            extractResult.productPrice || extractResult.rating || extractResult.category
 
           if (hasProductData) {
             console.log(`📊 单品页面：使用产品数据进行竞品市场定位分析...`)
@@ -1653,7 +1795,9 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
               brand: extractResult.brand || null,
               price: priceNum,
               rating: extractResult.rating ? parseFloat(extractResult.rating) : null,
-              reviewCount: extractResult.reviewCount ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10) : null,
+              reviewCount: extractResult.reviewCount
+                ? parseInt(extractResult.reviewCount.replace(/[^0-9]/g, ''), 10)
+                : null,
               features: extractResult.features || extractResult.aboutThisItem || [],
             }
 
@@ -1691,11 +1835,11 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
             } else {
               // 🔥 修复（2025-12-12）：没有真实竞品时，明确标注而不是创建虚假数据
               console.log('ℹ️ 单品页面无真实竞品数据，跳过竞品分析（不会生成虚假数据）')
-              result.competitorAnalysisSuccess = true  // 不视为失败，但不生成竞品分析
+              result.competitorAnalysisSuccess = true // 不视为失败，但不生成竞品分析
             }
           } else {
             console.log('ℹ️ 单品页面无足够产品数据进行竞品分析')
-            result.competitorAnalysisSuccess = true  // 不视为失败
+            result.competitorAnalysisSuccess = true // 不视为失败
           }
         }
         // 🔥 修复（2025-12-13）：店铺场景跳过竞品分析
@@ -1703,15 +1847,17 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         // 决策：店铺场景的核心价值是产品亮点分析，不是竞品对比
         else if (isAmazonStore) {
           console.log(`ℹ️ [STORE] 店铺场景跳过竞品分析（核心价值是产品亮点，不是竞品对比）`)
-          result.competitorAnalysisSuccess = true  // 不视为失败
+          result.competitorAnalysisSuccess = true // 不视为失败
 
           if (!extractResult.products || extractResult.products.length === 0) {
             console.log(`⚠️ Amazon Store页面未提取到产品数据，跳过竞品分析`)
-            result.competitorAnalysisSuccess = true  // 标记为成功，不阻塞流程
+            result.competitorAnalysisSuccess = true // 标记为成功，不阻塞流程
           } else {
             // 🔥 没有聚合竞品ASIN时的降级策略：记录日志但不使用自家产品作为竞品
-            console.log(`ℹ️ [STORE] 未找到聚合竞品ASIN，店铺页面跳过竞品分析（避免将自家产品误判为竞品）`)
-            result.competitorAnalysisSuccess = true  // 不视为失败
+            console.log(
+              `ℹ️ [STORE] 未找到聚合竞品ASIN，店铺页面跳过竞品分析（避免将自家产品误判为竞品）`
+            )
+            result.competitorAnalysisSuccess = true // 不视为失败
           }
         }
         // 非Amazon店铺，但有产品数据（独立站等）
@@ -1719,7 +1865,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
           console.log(`📊 从店铺产品中提取竞品数据 (${extractResult.products.length}个产品)...`)
           // 将店铺中的其他产品视为竞品
           extractResult.products.slice(0, 10).forEach((product: any) => {
-            const priceNum = parsePrice(product.price)  // 🔧 修复：使用统一价格解析函数
+            const priceNum = parsePrice(product.price) // 🔧 修复：使用统一价格解析函数
             const ratingNum = product.rating ? parseFloat(product.rating) : null
             competitors.push({
               asin: product.asin || null,
@@ -1760,7 +1906,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
             console.log(`✅ 竞品分析完成 (对比${competitors.length}个竞品)`)
           } else {
             console.log('⚠️ 店铺产品数据不足（需要>=2个产品）')
-            result.competitorAnalysisSuccess = true  // 不视为失败
+            result.competitorAnalysisSuccess = true // 不视为失败
           }
         }
         // 🔥 修复（2026-01-04）：独立站单品页面竞品分析
@@ -1768,10 +1914,10 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         // 标记为成功但跳过分析，避免阻塞流程
         else if (debug.isIndependentStore && !result.competitorAnalysisSuccess) {
           console.log('ℹ️ 独立站单品页面：无竞品数据源，跳过竞品分析')
-          result.competitorAnalysisSuccess = true  // 不视为失败
+          result.competitorAnalysisSuccess = true // 不视为失败
         } else {
           console.log('ℹ️ 非店铺页面，竞品分析将由后续流程处理')
-          result.competitorAnalysisSuccess = true  // 标记为成功，让后续流程继续
+          result.competitorAnalysisSuccess = true // 标记为成功，让后续流程继续
         }
       } catch (error: any) {
         console.error('⚠️ 竞品分析失败（不影响流程）:', error.message)
@@ -1793,40 +1939,57 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         // 🔥 2026-01-04修复：独立站/非Amazon页面也需要提供product数据
         // 否则extractAdElements会抛错，导致extractedKeywords为空，进而阻断关键词池/创意生成。
         const adPageType: 'product' | 'store' | 'unknown' =
-          (extractResult as any).pageType === 'store' || (extractResult as any).pageType === 'product'
+          (extractResult as any).pageType === 'store' ||
+          (extractResult as any).pageType === 'product'
             ? ((extractResult as any).pageType as 'store' | 'product')
-            : (isAmazonStore || isIndependentStore ? 'store' : 'product')
+            : isAmazonStore || isIndependentStore
+              ? 'store'
+              : 'product'
 
         // 产品页：无论Amazon还是独立站，只要有基础商品字段就组装成AmazonProductData兼容结构
-        const productData = adPageType === 'product' ? {
-          productName: extractResult.productName ?? null,
-          productDescription: extractResult.productDescription ?? null,
-          productPrice: extractResult.productPrice ?? null,
-          originalPrice: extractResult.originalPrice ?? null,
-          discount: extractResult.discount ?? null,
-          brandName: extractResult.brand ?? null,
-          features: Array.isArray(extractResult.features) ? extractResult.features : [],
-          aboutThisItem: Array.isArray(extractResult.aboutThisItem) ? extractResult.aboutThisItem : [],
-          imageUrls: Array.isArray(extractResult.imageUrls) ? extractResult.imageUrls : [],
-          rating: extractResult.rating ?? null,
-          reviewCount: extractResult.reviewCount ?? null,
-          salesRank: extractResult.salesRank ?? null,
-          badge: (extractResult as any).badge ?? null,
-          availability: extractResult.availability ?? null,
-          primeEligible: Boolean((extractResult as any).primeEligible),
-          reviewHighlights: Array.isArray(extractResult.reviewHighlights) ? extractResult.reviewHighlights : [],
-          topReviews: Array.isArray(extractResult.topReviews) ? extractResult.topReviews : [],
-          technicalDetails: (extractResult.technicalDetails && typeof extractResult.technicalDetails === 'object')
-            ? extractResult.technicalDetails
-            : {},
-          asin: extractResult.asin ?? null,
-          category: extractResult.category ?? null,
-          relatedAsins: Array.isArray((extractResult as any).relatedAsins) ? (extractResult as any).relatedAsins : [],
-          reviewKeywords: Array.isArray((extractResult as any).reviewKeywords) ? (extractResult as any).reviewKeywords : undefined,
-        } : undefined
+        const productData =
+          adPageType === 'product'
+            ? {
+                productName: extractResult.productName ?? null,
+                productDescription: extractResult.productDescription ?? null,
+                productPrice: extractResult.productPrice ?? null,
+                originalPrice: extractResult.originalPrice ?? null,
+                discount: extractResult.discount ?? null,
+                brandName: extractResult.brand ?? null,
+                features: Array.isArray(extractResult.features) ? extractResult.features : [],
+                aboutThisItem: Array.isArray(extractResult.aboutThisItem)
+                  ? extractResult.aboutThisItem
+                  : [],
+                imageUrls: Array.isArray(extractResult.imageUrls) ? extractResult.imageUrls : [],
+                rating: extractResult.rating ?? null,
+                reviewCount: extractResult.reviewCount ?? null,
+                salesRank: extractResult.salesRank ?? null,
+                badge: (extractResult as any).badge ?? null,
+                availability: extractResult.availability ?? null,
+                primeEligible: Boolean((extractResult as any).primeEligible),
+                reviewHighlights: Array.isArray(extractResult.reviewHighlights)
+                  ? extractResult.reviewHighlights
+                  : [],
+                topReviews: Array.isArray(extractResult.topReviews) ? extractResult.topReviews : [],
+                technicalDetails:
+                  extractResult.technicalDetails &&
+                  typeof extractResult.technicalDetails === 'object'
+                    ? extractResult.technicalDetails
+                    : {},
+                asin: extractResult.asin ?? null,
+                category: extractResult.category ?? null,
+                relatedAsins: Array.isArray((extractResult as any).relatedAsins)
+                  ? (extractResult as any).relatedAsins
+                  : [],
+                reviewKeywords: Array.isArray((extractResult as any).reviewKeywords)
+                  ? (extractResult as any).reviewKeywords
+                  : undefined,
+              }
+            : undefined
 
         // 重构店铺产品数据（如果是Amazon Store或独立站）
-        const storeProducts = adPageType === 'store' ? (extractResult.products || undefined) : undefined
+        const storeProducts =
+          adPageType === 'store' ? extractResult.products || undefined : undefined
 
         const scraped = {
           pageType: adPageType,
@@ -1837,10 +2000,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
         const extractedBrand = toTrimmedText(extractResult.brand)
         const fallbackBrand = toTrimmedText(input.fallbackBrand)
-        const brandForAdExtraction = resolveBrandForAdExtraction([
-          extractedBrand,
-          fallbackBrand,
-        ])
+        const brandForAdExtraction = resolveBrandForAdExtraction([extractedBrand, fallbackBrand])
 
         if (!brandForAdExtraction && extractedBrand) {
           console.warn(`⚠️ 广告元素提取品牌异常，检测到占位品牌: "${extractedBrand}"`)
@@ -1859,7 +2019,10 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
         // 转换keywords为string[]并清洗无效项（unknown/test/null等）
         const sanitizedKeywordResult = sanitizeExtractedKeywordList(adElements.keywords)
-        if (sanitizedKeywordResult.removedInvalid > 0 || sanitizedKeywordResult.removedDuplicate > 0) {
+        if (
+          sanitizedKeywordResult.removedInvalid > 0 ||
+          sanitizedKeywordResult.removedDuplicate > 0
+        ) {
           console.warn(
             `⚠️ 广告关键词清洗: 移除无效${sanitizedKeywordResult.removedInvalid}个，去重${sanitizedKeywordResult.removedDuplicate}个`
           )
@@ -1875,7 +2038,6 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
         result.adExtractionSuccess = false
       }
     }
-
   } catch (error: any) {
     console.error('⚠️ AI产品分析失败（不影响流程）:', error.message)
     result.aiAnalysisSuccess = false

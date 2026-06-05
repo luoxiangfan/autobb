@@ -10,10 +10,7 @@
  */
 
 import 'dotenv/config'
-import {
-  getBackupRankOrderSql,
-  pruneCampaignBackupsForOffer,
-} from '../src/lib/campaign-backups'
+import { getBackupRankOrderSql, pruneCampaignBackupsForOffer } from '../src/lib/campaign-backups'
 import { getDatabase, type DatabaseAdapter } from '../src/lib/db'
 
 function distinctPairCountSql(dbType: 'sqlite' | 'postgres'): string {
@@ -204,10 +201,7 @@ async function normalizePublishSources(db: DatabaseAdapter, dryRun: boolean): Pr
   return result.changes
 }
 
-async function pruneAllDuplicateOffers(
-  db: DatabaseAdapter,
-  dryRun: boolean
-): Promise<number> {
+async function pruneAllDuplicateOffers(db: DatabaseAdapter, dryRun: boolean): Promise<number> {
   const duplicateOffers = (await db.query(`
     SELECT user_id, offer_id, COUNT(*) AS backup_count
     FROM campaign_backups
@@ -215,9 +209,7 @@ async function pruneAllDuplicateOffers(
     HAVING COUNT(*) > 1
   `)) as Array<{ user_id: number; offer_id: number; backup_count: number }>
 
-  console.log(
-    `\n=== 按 Offer 修剪重复备份: ${duplicateOffers.length} 组 ===`
-  )
+  console.log(`\n=== 按 Offer 修剪重复备份: ${duplicateOffers.length} 组 ===`)
 
   if (duplicateOffers.length === 0) {
     return 0
@@ -284,14 +276,14 @@ async function printPostStats(db: DatabaseAdapter): Promise<boolean> {
     SELECT COUNT(*) AS count FROM campaign_backups WHERE backup_source = 'publish'
   `)
   if ((publishLeft?.count ?? 0) > 0) {
-    console.warn(`\n⚠️ 仍有 backup_source='publish' 的行: ${publishLeft?.count}（可能为非保留行，请复查）`)
+    console.warn(
+      `\n⚠️ 仍有 backup_source='publish' 的行: ${publishLeft?.count}（可能为非保留行，请复查）`
+    )
   } else {
     console.log("\n✅ 无 backup_source='publish' 行")
   }
 
-  console.log(
-    '✅ 无多余重复组合（允许 canonical + google_ads v2 最终版共存）'
-  )
+  console.log('✅ 无多余重复组合（允许 canonical + google_ads v2 最终版共存）')
   return true
 }
 

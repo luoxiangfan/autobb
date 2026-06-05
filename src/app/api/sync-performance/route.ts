@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Sync failed',
-          details: result.errors
+          details: result.errors,
         },
         { status: 500 }
       )
@@ -31,14 +31,11 @@ export async function POST(request: NextRequest) {
       success: true,
       syncedCount: result.syncedCount,
       syncDate: result.syncDate,
-      errors: result.errors.length > 0 ? result.errors : undefined
+      errors: result.errors.length > 0 ? result.errors : undefined,
     })
   } catch (error) {
     console.error('Performance sync error:', error)
-    return NextResponse.json(
-      { error: 'Failed to sync performance data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to sync performance data' }, { status: 500 })
   }
 }
 
@@ -56,9 +53,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Performance sync error:', error)
-    return NextResponse.json(
-      { error: 'Failed to sync performance data' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to sync performance data' }, { status: 500 })
   }
 }

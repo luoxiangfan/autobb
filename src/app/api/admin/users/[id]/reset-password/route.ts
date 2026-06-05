@@ -20,7 +20,7 @@ function getClientIP(request: NextRequest): string {
 
 // POST: Reset user password
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params;
+  const params = await props.params
   const auth = await verifyAuth(request)
   if (!auth.authenticated || auth.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -31,7 +31,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     const db = getDatabase()
 
     // Check if user exists
-    const user = await db.queryOne('SELECT id, username, role FROM users WHERE id = ?', [userId]) as { id: number; username: string; role: string } | undefined
+    const user = (await db.queryOne('SELECT id, username, role FROM users WHERE id = ?', [
+      userId,
+    ])) as { id: number; username: string; role: string } | undefined
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
@@ -49,19 +51,24 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     // PostgreSQL的must_change_password可能是BOOLEAN类型，需要根据数据库类型传值
     // 管理员账号不强制修改密码（避免管理员被锁死在改密流程）
     const shouldForceChange = user.role !== 'admin'
-    const mustChangeValue = db.type === 'postgres' ? shouldForceChange : (shouldForceChange ? 1 : 0)
-    const result = await db.exec(`
+    const mustChangeValue = db.type === 'postgres' ? shouldForceChange : shouldForceChange ? 1 : 0
+    const result = await db.exec(
+      `
       UPDATE users
       SET password_hash = ?, must_change_password = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [hashedPassword, mustChangeValue, userId])
+    `,
+      [hashedPassword, mustChangeValue, userId]
+    )
 
     if (result.changes === 0) {
       return NextResponse.json({ error: 'Failed to reset password' }, { status: 500 })
     }
 
     // 获取操作者的username（从数据库查询）
-    const operator = await db.queryOne('SELECT username FROM users WHERE id = ?', [auth.user!.userId]) as { username: string } | undefined
+    const operator = (await db.queryOne('SELECT username FROM users WHERE id = ?', [
+      auth.user!.userId,
+    ])) as { username: string } | undefined
 
     // 记录审计日志
     const auditContext: UserManagementContext = {
@@ -77,9 +84,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     return NextResponse.json({
       success: true,
       username: user.username,
-      newPassword
+      newPassword,
     })
-
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

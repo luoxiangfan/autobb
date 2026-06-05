@@ -63,25 +63,40 @@ describe('saveKeywordPool prompt version resolution', () => {
         updated_at: '2026-03-16T00:00:00.000Z',
       })
 
-    const result = await saveKeywordPool(
-      77,
-      1,
-      ['brandx'],
-      {
-        bucketA: { intent: '品牌商品锚点', intentEn: 'Brand Product Anchor', description: 'brand', keywords: ['brandx vacuum'] },
-        bucketB: { intent: '商品需求场景', intentEn: 'Demand Scenario', description: 'scenario', keywords: ['brandx x200 vacuum'] },
-        bucketC: { intent: '功能规格特性', intentEn: 'Feature / Spec', description: 'feature', keywords: ['robot vacuum'] },
-        bucketD: { intent: '商品需求扩展', intentEn: 'Demand Expansion', description: 'demand', keywords: ['robot vacuum for pet hair'] },
-        statistics: {
-          totalKeywords: 4,
-          bucketACount: 1,
-          bucketBCount: 1,
-          bucketCCount: 1,
-          bucketDCount: 1,
-          balanceScore: 0.91,
-        },
-      }
-    )
+    const result = await saveKeywordPool(77, 1, ['brandx'], {
+      bucketA: {
+        intent: '品牌商品锚点',
+        intentEn: 'Brand Product Anchor',
+        description: 'brand',
+        keywords: ['brandx vacuum'],
+      },
+      bucketB: {
+        intent: '商品需求场景',
+        intentEn: 'Demand Scenario',
+        description: 'scenario',
+        keywords: ['brandx x200 vacuum'],
+      },
+      bucketC: {
+        intent: '功能规格特性',
+        intentEn: 'Feature / Spec',
+        description: 'feature',
+        keywords: ['robot vacuum'],
+      },
+      bucketD: {
+        intent: '商品需求扩展',
+        intentEn: 'Demand Expansion',
+        description: 'demand',
+        keywords: ['robot vacuum for pet hair'],
+      },
+      statistics: {
+        totalKeywords: 4,
+        bucketACount: 1,
+        bucketBCount: 1,
+        bucketCCount: 1,
+        bucketDCount: 1,
+        balanceScore: 0.91,
+      },
+    })
 
     expect(dbFns.exec).toHaveBeenCalledTimes(1)
     expect(dbFns.exec).toHaveBeenCalledWith(

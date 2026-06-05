@@ -79,7 +79,7 @@ const STEPS: Step[] = [
   { id: 1, label: '生成创意', description: 'AI生成广告创意' },
   { id: 2, label: '关联账号', description: '绑定Google Ads' },
   { id: 3, label: '配置广告', description: '设置广告系列参数' },
-  { id: 4, label: '发布上线', description: '确认并发布' }
+  { id: 4, label: '发布上线', description: '确认并发布' },
 ]
 
 /**
@@ -142,7 +142,7 @@ interface GoogleAdsAccount {
   customerId: string
   accountName?: string
   isActive: boolean
-  currencyCode?: string  // 🔧 修复(2025-12-13): 新增货币代码字段
+  currencyCode?: string // 🔧 修复(2025-12-13): 新增货币代码字段
   status?: string
 }
 
@@ -173,7 +173,7 @@ export default function LaunchAdPage() {
     try {
       setLoading(true)
       const response = await fetch(`/api/offers/${offerId}`, {
-        credentials: 'include'
+        credentials: 'include',
       })
 
       if (!response.ok) {
@@ -220,7 +220,7 @@ export default function LaunchAdPage() {
   // 🔥 新增：返回第3步（用于发布失败时的"返回修改"）
   const handleGoBackToStep3 = () => {
     setCurrentStep(3)
-    setCanProceed(true)  // 重新启用下一步，因为用户在第3步可以配置广告
+    setCanProceed(true) // 重新启用下一步，因为用户在第3步可以配置广告
   }
 
   const handleCreativeSelected = (creative: SelectedCreative) => {
@@ -232,16 +232,19 @@ export default function LaunchAdPage() {
     setCanProceed(true)
   }
 
-  const handleCampaignConfigured = useCallback((config: CampaignConfig) => {
-    setCampaignConfig(config)
-    setCanProceed(true)
-    const hashConfig = pickLaunchScoreHashCampaignConfigFromStep3(config)
-    if (hashConfig) {
-      saveLaunchScoreCampaignConfigForOffer(offerId, hashConfig)
-    } else {
-      clearLaunchScoreCampaignConfigForOffer(offerId)
-    }
-  }, [offerId])
+  const handleCampaignConfigured = useCallback(
+    (config: CampaignConfig) => {
+      setCampaignConfig(config)
+      setCanProceed(true)
+      const hashConfig = pickLaunchScoreHashCampaignConfigFromStep3(config)
+      if (hashConfig) {
+        saveLaunchScoreCampaignConfigForOffer(offerId, hashConfig)
+      } else {
+        clearLaunchScoreCampaignConfigForOffer(offerId)
+      }
+    },
+    [offerId]
+  )
 
   const handleAccountsLinked = (accounts: GoogleAdsAccount[]) => {
     setSelectedAccounts(accounts)
@@ -342,7 +345,7 @@ export default function LaunchAdPage() {
               selectedAccount={primarySelectedAccount!}
               selectedAccounts={selectedAccounts}
               onPublishComplete={handlePublishComplete}
-              onGoBackToStep3={handleGoBackToStep3}  // 🔥 新增：传递返回第3步的回调
+              onGoBackToStep3={handleGoBackToStep3} // 🔥 新增：传递返回第3步的回调
             />
           )}
         </div>
@@ -353,11 +356,7 @@ export default function LaunchAdPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-center items-center">
           <div className="flex items-center gap-4">
             {currentStep > 1 ? (
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                className="min-w-[100px]"
-              >
+              <Button variant="outline" onClick={handleBack} className="min-w-[100px]">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 上一步
               </Button>

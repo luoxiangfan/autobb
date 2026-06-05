@@ -188,7 +188,11 @@ export function normalizeCampaignTransitionPatch(patch: CampaignStatePatch): Cam
     normalized.creationError = null
   }
 
-  if (normalized.status && normalized.status !== 'REMOVED' && normalized.removedReason === undefined) {
+  if (
+    normalized.status &&
+    normalized.status !== 'REMOVED' &&
+    normalized.removedReason === undefined
+  ) {
     normalized.removedReason = null
   }
 
@@ -222,11 +226,12 @@ const sqlPublishedAtNowExpr = (dbType: 'sqlite' | 'postgres') =>
     ? "COALESCE(NULLIF(published_at::text, '')::timestamptz, NOW())"
     : "COALESCE(NULLIF(published_at, ''), datetime('now'))"
 
-type PatchSqlField =
-  | { sql: string; type: 'param'; value: any }
-  | { sql: string; type: 'raw' }
+type PatchSqlField = { sql: string; type: 'param'; value: any } | { sql: string; type: 'raw' }
 
-const toPatchSqlFields = (patch: CampaignStatePatch, dbType: 'sqlite' | 'postgres'): PatchSqlField[] => {
+const toPatchSqlFields = (
+  patch: CampaignStatePatch,
+  dbType: 'sqlite' | 'postgres'
+): PatchSqlField[] => {
   const nowExpr = sqlNowExpr(dbType)
   const fields: PatchSqlField[] = []
 
