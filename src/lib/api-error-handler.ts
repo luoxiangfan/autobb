@@ -27,7 +27,7 @@ function htmlResponseError(status: number): ApiErrorResult {
     error: 'HTML_RESPONSE',
     userMessage:
       status === 404
-        ? '服务正在启动，请稍后重试'
+        ? '接口未找到 (404)，请重启开发服务或改用 npm run dev:webpack'
         : '服务返回了错误页面，请稍后重试',
   }
 }

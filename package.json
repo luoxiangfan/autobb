@@ -9,6 +9,7 @@
     "bootstrap": "node scripts/bootstrap.js",
     "predev": "node scripts/check-runtime.js",
     "dev": "next dev",
+    "dev:webpack": "next dev --webpack",
     "dev:clean": "rm -rf .next && npm run dev",
     "gnx:analyze": "bash scripts/gnx-analyze.sh",
     "gnx:analyze:embeddings": "bash scripts/gnx-analyze.sh --embeddings",

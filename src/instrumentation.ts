@@ -54,34 +54,5 @@ export async function register() {
     } catch (error) {
       console.error('❌ Batch task status recovery failed during server startup:', error)
     }
-
-    // Dev：预热关键 API 路由，避免 Turbopack 懒编译导致首次请求返回 HTML 404
-    if (process.env.NODE_ENV === 'development') {
-      const port = process.env.PORT || '3000'
-      const base = `http://127.0.0.1:${port}`
-      const warmup = async () => {
-        const paths = ['/api/health', '/api/auth/me']
-        for (const path of paths) {
-          try {
-            await fetch(`${base}${path}`, { signal: AbortSignal.timeout(8000) })
-          } catch {
-            // 服务尚未就绪时忽略
-          }
-        }
-        try {
-          await fetch(`${base}/api/auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: '{}',
-            signal: AbortSignal.timeout(8000),
-          })
-        } catch {
-          // 触发路由编译即可，400/401 均正常
-        }
-      }
-      for (const delayMs of [1500, 4000]) {
-        setTimeout(() => void warmup(), delayMs)
-      }
-    }
   }
 }
