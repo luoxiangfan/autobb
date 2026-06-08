@@ -79,6 +79,7 @@ import {
   clearMemoryAuthContextCacheForTests,
   getGoogleAdsAuthContext,
   getGoogleAdsAuthContextMetadata,
+  GOOGLE_ADS_DUAL_STACK_WARNING,
   hasConfiguredGoogleAdsAuthFromContext,
   invalidateGoogleAdsAuthContextCache,
   invalidateGoogleAdsAuthContextCacheForOwner,
@@ -90,6 +91,7 @@ import {
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
+  resolveGoogleAdsSyncCredentialGate,
   tryGetConfiguredGoogleAdsApiAuthForUser,
 } from '@/lib/google-ads-auth-context'
 
@@ -661,6 +663,57 @@ describe('googleAdsAuthReadyFailurePayload', () => {
       error: message,
       code: 'CREDENTIALS_NOT_CONFIGURED',
       message,
+    })
+  })
+})
+
+describe('resolveGoogleAdsSyncCredentialGate', () => {
+  beforeEach(() => {
+    clearGoogleAdsAuthContextTestCache()
+    vi.clearAllMocks()
+  })
+
+  it('returns ok when metadata context is configured', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 7,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentialsMetadata.mockResolvedValue({
+      client_id: 'cid',
+      hasRefreshToken: true,
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-secret' })
+    dbFns.queryOne.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfigMetadata.mockResolvedValue(null)
+
+    await expect(resolveGoogleAdsSyncCredentialGate(7)).resolves.toEqual({ ok: true })
+  })
+
+  it('returns dual-stack message when metadata context has dual stack', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 2,
+      isShared: false,
+      assignment: null,
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
+    oauthFns.getGoogleAdsCredentialsMetadata.mockResolvedValue({
+      client_id: 'cid',
+      hasRefreshToken: true,
+    })
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt-secret' })
+    dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
+    serviceAccountFns.getServiceAccountConfigMetadata.mockResolvedValue({
+      id: 'sa-1',
+      mccCustomerId: '111',
+    })
+
+    await expect(resolveGoogleAdsSyncCredentialGate(2)).resolves.toEqual({
+      ok: false,
+      reason: GOOGLE_ADS_DUAL_STACK_WARNING,
     })
   })
 })

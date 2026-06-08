@@ -19,7 +19,7 @@ import {
   userHasActiveGoogleAdsCampaignSyncWork,
 } from '../../google-ads-campaign-sync-pipeline-status'
 import { getQueueManagerForTaskType } from '../queue-routing'
-import { hasConfiguredGoogleAdsAuth } from '../../google-ads-auth-assignment'
+import { resolveGoogleAdsSyncCredentialGate } from '../../google-ads-auth-context'
 import { userHasGoogleAdsMccAssignments } from '../../google-ads-campaign-sync'
 import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 
@@ -242,9 +242,10 @@ export class GoogleAdsCampaignSyncScheduler {
           let skipReason = ''
 
           try {
-            hasValidCredentials = await hasConfiguredGoogleAdsAuth(userId)
-            if (!hasValidCredentials) {
-              skipReason = '未配置 Google Ads 认证（OAuth 或服务账号，含共享管理员配置）'
+            const gate = await resolveGoogleAdsSyncCredentialGate(userId)
+            hasValidCredentials = gate.ok
+            if (!gate.ok) {
+              skipReason = gate.reason
             }
           } catch (error) {
             skipReason = `凭证验证失败：${error instanceof Error ? error.message : String(error)}`

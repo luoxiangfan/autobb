@@ -167,6 +167,29 @@ describe('resolveAccountsRouteAuthBundle', () => {
     expect(result.body.code).toBe('CREDENTIALS_NOT_CONFIGURED')
   })
 
+  it('returns 401 with OAUTH_REFRESH_MISSING when metadata indicates refresh but tokens are empty', async () => {
+    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
+      ...defaultOAuthApiAuth,
+      refreshToken: '',
+    })
+
+    const result = await resolveAccountsRouteAuthBundle({
+      userId: 1,
+      authContext: {
+        ...oauthAuthContextFull,
+        oauthHasRefreshToken: true,
+        oauthCredentials: { ...oauthCredentialsFull, refresh_token: '' },
+      },
+      authType: 'oauth',
+      serviceAccountId: null,
+    })
+
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.status).toBe(401)
+    expect(result.body.code).toBe('OAUTH_REFRESH_MISSING')
+  })
+
   it('returns 400 when service account id is missing', async () => {
     const result = await resolveAccountsRouteAuthBundle({
       userId: 1,

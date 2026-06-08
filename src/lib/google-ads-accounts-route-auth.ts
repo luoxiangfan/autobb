@@ -1,5 +1,6 @@
 import {
   getGoogleAdsAuthContext,
+  googleAdsApiAuthValidationErrorMessage,
   googleAdsAuthReadyFailureHttpStatus,
   googleAdsAuthReadyFailurePayload,
   resolveGoogleAdsApiAuthFromContext,
@@ -266,23 +267,28 @@ export async function resolveAccountsRouteAuthBundle(params: {
   const apiAuth = await resolveGoogleAdsApiAuthFromContext(authContext, null)
   const oauthCredentials = authContext.oauthCredentials
   if (!oauthCredentials) {
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext) ?? {
+      reason: 'not_configured',
+      message: googleAdsApiAuthValidationErrorMessage('not_configured'),
+    }
     return {
       ok: false,
-      status: 404,
-      body: {
-        error: '未配置 Google Ads 凭证',
-        message: '请在设置页面完成 Google Ads API 配置并完成 OAuth 授权',
-        code: 'CREDENTIALS_NOT_CONFIGURED',
-      },
+      status: googleAdsAuthReadyFailureHttpStatus(authFailure.reason),
+      body: googleAdsAuthReadyFailurePayload(authFailure),
     }
   }
 
   const refreshToken = resolveOAuthRefreshToken(apiAuth, oauthCredentials)
   if (!refreshToken) {
+    const message = googleAdsApiAuthValidationErrorMessage('oauth_refresh_missing')
     return {
       ok: false,
       status: 401,
-      body: { error: '未找到Refresh Token，请先完成OAuth授权' },
+      body: {
+        error: message,
+        message,
+        code: 'OAUTH_REFRESH_MISSING',
+      },
     }
   }
 

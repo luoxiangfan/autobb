@@ -23,10 +23,7 @@ import {
   triggerLinkCheck,
   triggerCleanup,
 } from './lib/queue-triggers'
-import {
-  getGoogleAdsAuthContextMetadata,
-  resolveGoogleAdsAuthReadyFailure,
-} from './lib/google-ads-auth-context'
+import { resolveGoogleAdsSyncCredentialGate } from './lib/google-ads-auth-context'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
 
@@ -143,13 +140,9 @@ async function getUsersWithActiveSyncTasks(): Promise<Set<number>> {
 
 async function hasValidSyncCredentials(userId: number): Promise<{ ok: boolean; reason?: string }> {
   try {
-    const ctx = await getGoogleAdsAuthContextMetadata(userId)
-    const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
-    if (authFailure) {
-      return {
-        ok: false,
-        reason: authFailure.message,
-      }
+    const gate = await resolveGoogleAdsSyncCredentialGate(userId)
+    if (!gate.ok) {
+      return { ok: false, reason: gate.reason }
     }
     return { ok: true }
   } catch (error: any) {

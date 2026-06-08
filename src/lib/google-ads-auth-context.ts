@@ -5,10 +5,11 @@
  *
  * 约定：
  * - 需要调用 Google Ads API 时，优先 `getGoogleAdsAuthContext(userId)`，勿散落 `getUserAuthType` + `getGoogleAdsCredentials`。
+ * - 认证未就绪（双栈 / 未配置）：优先 `resolveGoogleAdsAuthReadyFailure` → `googleAdsAuthReadyFailurePayload` / `googleAdsAuthReadyFailureHttpStatus`。
  * - `linkedAccountServiceAccountId` 仅在用户当前为服务账号认证时生效；OAuth 用户传入账号 SA 不会切换为服务账号调用。
  * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`（按 userId 查请用 `google-ads-auth-assignment.hasConfiguredGoogleAdsAuth`），勿仅用 `auth.serviceAccountId` 判断。
- * - 已持有 context 做 heal/sync 前须 `googleAdsAuthContextDualStackError`；禁止在 `dualStack` 时绕过 `resolve` 直接调 API。
- * - 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（`getCustomerWithCredentials` / 统一客户端 / `syncAccountsFromAPI` 已用）。
+ * - 已持有 context 且将直接调 API：须已通过 `resolveGoogleAdsAuthReadyFailure` 或 `prepareGoogleAdsApiCallForLinkedAccount`；禁止在 `dualStack` 时绕过 resolve。
+ * - 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（仅拦双栈；未配置由 prepare / resolveGoogleAdsAuthReadyFailure 负责）。
  * - 进程内与 Redis 仅缓存 strip metadata（`secretsStripped: true`）；`getGoogleAdsAuthContext` 返回前 hydrate。
  * - 仅读 metadata（如 apiAccessLevel / hasConfigured）优先 `getGoogleAdsAuthContextMetadata`，勿对 strip context 调 `resolve*FromContext`。
  */
@@ -395,17 +396,9 @@ export async function getGoogleAdsAuthContextMetadata(
  * 进程内与 Redis 均只缓存 strip 后的 metadata；命中后 hydrate 密钥。
  */
 export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthContext> {
-  const fromMemory = await readAuthContextFromMemoryCache(userId)
-  if (fromMemory) {
-    return fromMemory
-  }
-
-  const fromRedis = await readGoogleAdsAuthContextFromRedis(userId, {
-    minGeneration: getAuthContextGeneration(userId),
-  })
-  if (fromRedis) {
-    rememberAuthContextInMemory(userId, fromRedis)
-    return hydrateAuthContextSecrets(fromRedis)
+  const fromCache = await readAuthContextFromMemoryCache(userId)
+  if (fromCache) {
+    return fromCache
   }
 
   const inflight = authContextInflight.get(userId)
@@ -686,6 +679,18 @@ export function googleAdsAuthReadyFailureHttpStatus(
   return reason === 'dual_stack' ? 409 : 404
 }
 
+/** 后台同步 / 定时任务：metadata 路径检查凭证是否可用于同步（不 hydrate 密钥）。 */
+export async function resolveGoogleAdsSyncCredentialGate(
+  userId: number
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const ctx = await getGoogleAdsAuthContextMetadata(userId)
+  const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+  if (authFailure) {
+    return { ok: false, reason: authFailure.message }
+  }
+  return { ok: true }
+}
+
 export function googleAdsApiAuthValidationErrorMessage(
   reason: GoogleAdsApiAuthValidationError
 ): string {
@@ -719,7 +724,9 @@ export async function resolveGoogleAdsApiAuthForAccount(
     return { ok: false, reason: authFailure.reason }
   }
 
-  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)
+  const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId, {
+    skipReadyGate: true,
+  })
   if (apiAuth.authType === 'oauth' && !apiAuth.refreshToken) {
     return { ok: false, reason: 'oauth_refresh_missing' }
   }
@@ -798,12 +805,15 @@ export async function assertNoConflictingGoogleAdsAuth(
 
 export async function resolveGoogleAdsApiAuthFromContext(
   ctx: GoogleAdsAuthContext,
-  linkedAccountServiceAccountId?: string | null
+  linkedAccountServiceAccountId?: string | null,
+  options?: { skipReadyGate?: boolean }
 ): Promise<GoogleAdsApiAuthFields> {
   assertAuthContextSecretsHydrated(ctx)
-  const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
-  if (authFailure) {
-    throw new Error(authFailure.message)
+  if (!options?.skipReadyGate) {
+    const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+    if (authFailure) {
+      throw new Error(authFailure.message)
+    }
   }
 
   const serviceAccountId = resolveEffectiveServiceAccountId(linkedAccountServiceAccountId, ctx)

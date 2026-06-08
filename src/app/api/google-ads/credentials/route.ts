@@ -8,9 +8,10 @@ import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
   googleAdsAuthContextDualStackError,
-  googleAdsAuthNotReadyMessage,
-  hasConfiguredGoogleAdsAuthFromContext,
+  googleAdsAuthReadyFailureHttpStatus,
+  googleAdsAuthReadyFailurePayload,
   resolveConfiguredGoogleAdsAuthType,
+  resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -281,11 +282,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: googleAdsAuthNotReadyMessage(authContext) },
-        { status: 404 }
-      )
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+    if (authFailure) {
+      return NextResponse.json(googleAdsAuthReadyFailurePayload(authFailure), {
+        status: googleAdsAuthReadyFailureHttpStatus(authFailure.reason),
+      })
     }
 
     await updateApiAccessLevel(

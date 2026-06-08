@@ -288,10 +288,10 @@ export async function adminHasConfiguredAuth(
   adminUserId: number,
   authType: GoogleAdsAuthType
 ): Promise<boolean> {
-  const { getGoogleAdsAuthContext, hasConfiguredGoogleAdsAuthFromContext } =
+  const { getGoogleAdsAuthContext, resolveGoogleAdsAuthReadyFailure } =
     await import('./google-ads-auth-context')
   const ctx = await getGoogleAdsAuthContext(adminUserId)
-  if (ctx.dualStack || !hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+  if (resolveGoogleAdsAuthReadyFailure(ctx)) {
     return false
   }
 
