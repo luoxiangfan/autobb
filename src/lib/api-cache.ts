@@ -229,14 +229,6 @@ export function generateCacheKey(
 }
 
 /**
- * 用户相关数据缓存失效
- */
-export function invalidateUserCache(userId: number): void {
-  apiCache.deleteByPrefix(`user:${userId}`)
-  apiCache.deleteByPrefix(`:user:${userId}:`)
-}
-
-/**
  * Offer相关缓存失效
  */
 export function invalidateOfferCache(userId: number, offerId?: number): void {
@@ -246,17 +238,6 @@ export function invalidateOfferCache(userId: number, offerId?: number): void {
   apiCache.deleteByPrefix(`offers:user:${userId}`)
   void invalidateCampaignReadCache(userId)
   invalidateDashboardCache(userId)
-}
-
-/**
- * Creative相关缓存失效
- */
-export function invalidateCreativeCache(userId: number, creativeId?: number): void {
-  if (creativeId) {
-    apiCache.deleteByPrefix(`creative:${creativeId}`)
-  }
-  apiCache.deleteByPrefix(`creatives:user:${userId}`)
-  apiCache.deleteByPrefix(`dashboard:user:${userId}`)
 }
 
 /**

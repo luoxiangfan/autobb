@@ -421,25 +421,6 @@ async function callDirectAPI(
 }
 
 /**
- * 检查用户的 Gemini 连接状态
- */
-export async function checkGeminiConnection(userId: number): Promise<boolean> {
-  try {
-    await generateContent(
-      {
-        prompt: 'Hello',
-        maxOutputTokens: 10,
-      },
-      userId
-    )
-    return true
-  } catch (error) {
-    console.error(`用户(ID=${userId})的Gemini连接检查失败:`, error)
-    return false
-  }
-}
-
-/**
  * 获取用户当前 Gemini 模式
  */
 export async function getGeminiMode(userId: number): Promise<'direct-api' | 'none'> {

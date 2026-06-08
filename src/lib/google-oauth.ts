@@ -61,35 +61,3 @@ export async function getGoogleUserInfo(code: string): Promise<{
     throw new Error('Google登录失败')
   }
 }
-
-/**
- * 验证Google ID Token
- */
-export async function verifyGoogleIdToken(idToken: string): Promise<{
-  id: string
-  email: string
-  name?: string
-  picture?: string
-}> {
-  try {
-    const ticket = await oauth2Client.verifyIdToken({
-      idToken,
-      audience: GOOGLE_CLIENT_ID,
-    })
-
-    const payload = ticket.getPayload()
-    if (!payload) {
-      throw new Error('无效的ID Token')
-    }
-
-    return {
-      id: payload.sub,
-      email: payload.email!,
-      name: payload.name,
-      picture: payload.picture,
-    }
-  } catch (error) {
-    console.error('验证Google ID Token失败:', error)
-    throw new Error('Token验证失败')
-  }
-}

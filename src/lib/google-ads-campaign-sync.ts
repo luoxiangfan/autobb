@@ -1621,55 +1621,6 @@ async function createOfferFirst(params: {
 }
 
 /**
- * 批量同步所有用户的 Google Ads 广告系列
- * 用于定时任务
- */
-export async function syncAllUsersCampaigns(): Promise<{
-  totalUsers: number
-  totalSynced: number
-  totalCreated: number
-  totalSkipped: number // 已有关联 Offer，跳过创建/更新
-  totalErrors: number
-}> {
-  const db = await getDatabase()
-
-  // 获取所有活跃用户
-  const users = await db.query(
-    `SELECT id FROM users WHERE role != 'admin' AND is_active = ${db.type === 'postgres' ? 'TRUE' : '1'}`
-  )
-
-  let totalSynced = 0
-  let totalCreated = 0
-  let totalSkipped = 0
-  let totalErrors = 0
-
-  for (const user of users) {
-    try {
-      const hasMcc = await userHasGoogleAdsMccAssignments(user.id)
-      if (!hasMcc) {
-        continue
-      }
-      const result = await syncCampaignsFromGoogleAds(user.id)
-      totalSynced += result.syncedCount
-      totalCreated += result.createdOffersCount
-      totalSkipped += result.skippedOffersCount
-      totalErrors += result.errors.length
-    } catch (error: any) {
-      console.error(`[GoogleAds Sync] Error syncing user ${user.id}:`, error)
-      totalErrors++
-    }
-  }
-
-  return {
-    totalUsers: users.length,
-    totalSynced,
-    totalCreated,
-    totalSkipped,
-    totalErrors,
-  }
-}
-
-/**
  * 更新广告系列的 campaign_config
  * 只更新尚未配置 ad_creative 的广告系列
  */

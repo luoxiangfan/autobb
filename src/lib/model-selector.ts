@@ -189,33 +189,3 @@ export async function selectOptimalModel(
     testingRequired: false,
   }
 }
-
-/**
- * 获取Flash适用的操作列表（用于文档和监控）
- */
-export function getFlashOperations(): string[] {
-  return Array.from(FLASH_OPERATIONS)
-}
-
-/**
- * 获取Pro保留的操作列表（用于文档和监控）
- */
-export function getProOperations(): string[] {
-  return Array.from(PRO_OPERATIONS)
-}
-
-/**
- * 检查操作类型是否可以使用Flash
- */
-export function canUseFlash(operationType: string): boolean {
-  return FLASH_OPERATIONS.has(operationType)
-}
-
-/**
- * 获取模型成本倍数（相对于Flash）
- */
-export function getModelCostMultiplier(model: ModelType): number {
-  void model
-  // 当前仅保留一个模型，按基准成本返回
-  return 1.0
-}

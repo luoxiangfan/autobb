@@ -530,75 +530,6 @@ export function analyzeSuccessFeatures(creatives: HistoricalCreative[]): Success
 }
 
 /**
- * 生成增强的AI Prompt
- */
-export function generateEnhancedPrompt(basePrompt: string, features: SuccessFeatures): string {
-  const enhancements: string[] = []
-
-  // 标题建议
-  if (features.headlinePatterns.commonWords.length > 0) {
-    enhancements.push(
-      `高效标题常用词汇：${features.headlinePatterns.commonWords.slice(0, 10).join(', ')}`
-    )
-  }
-
-  if (features.headlinePatterns.usesNumbers > 0.3) {
-    enhancements.push('建议在标题中使用具体数字（如折扣、数量、时间）')
-  }
-
-  if (features.headlinePatterns.usesQuestions > 0.2) {
-    enhancements.push('可以考虑使用疑问句式吸引注意力')
-  }
-
-  if (features.headlinePatterns.usesAction > 0.4) {
-    enhancements.push('使用动作词汇（如：获取、了解、发现）增强行动感')
-  }
-
-  // 描述建议
-  if (features.descriptionPatterns.commonWords.length > 0) {
-    enhancements.push(
-      `高转化描述关键词：${features.descriptionPatterns.commonWords.slice(0, 10).join(', ')}`
-    )
-  }
-
-  if (features.descriptionPatterns.mentionsBenefit > 0.4) {
-    enhancements.push('突出产品好处和用户价值（如：免费、优惠、保证）')
-  }
-
-  if (features.descriptionPatterns.mentionsUrgency > 0.2) {
-    enhancements.push('适度使用紧迫性词汇（如：限时、今天、马上）')
-  }
-
-  // CTA建议
-  if (features.ctaPatterns.commonCtas.length > 0) {
-    enhancements.push(`推荐CTA：${features.ctaPatterns.commonCtas.join(', ')}`)
-  }
-
-  enhancements.push(
-    `CTA最佳位置：描述的${features.ctaPatterns.avgPosition === 'early' ? '开头' : features.ctaPatterns.avgPosition === 'middle' ? '中间' : '结尾'}`
-  )
-
-  // 风格建议
-  enhancements.push(`语气风格：${features.stylePatterns.toneOfVoice.join(', ')}`)
-  enhancements.push(`情感诉求：${features.stylePatterns.emotionalAppeal.join(', ')}`)
-
-  // 性能基准
-  enhancements.push(
-    `参考基准：CTR ${(features.benchmarks.avgCtr * 100).toFixed(1)}%，转化率 ${(features.benchmarks.avgConversionRate * 100).toFixed(1)}%`
-  )
-
-  const enhancedPrompt = `${basePrompt}
-
-## 基于历史高表现创意的优化建议
-
-${enhancements.map((e, i) => `${i + 1}. ${e}`).join('\n')}
-
-请根据以上建议生成创意，同时保持创意的独特性和吸引力。`
-
-  return enhancedPrompt
-}
-
-/**
  * 创意效果评分结果
  */
 export interface CreativePerformanceScore {
@@ -1139,32 +1070,4 @@ export async function runCreativeOptimizationLoop(userId: number): Promise<{
     featuresUpdated,
     avgScore,
   }
-}
-
-/**
- * 获取用户的个性化AI Prompt（增强版）
- * 优先从数据库加载持久化的成功特征
- */
-export async function getUserOptimizedPrompt(userId: number, basePrompt: string): Promise<string> {
-  // 优先从数据库加载持久化的特征
-  let features = await loadSuccessFeatures(userId)
-
-  if (!features) {
-    // 数据库中没有，尝试实时分析
-    const highPerformers = await queryHighPerformingCreatives(userId, 0.02, 50, 50)
-
-    if (highPerformers.length < 5) {
-      // 数据不足，返回基础Prompt
-      return basePrompt
-    }
-
-    // 分析成功特征
-    features = analyzeSuccessFeatures(highPerformers)
-
-    // 保存到数据库以供后续使用
-    await saveSuccessFeatures(userId, features, highPerformers.length)
-  }
-
-  // 生成增强Prompt
-  return generateEnhancedPrompt(basePrompt, features)
 }

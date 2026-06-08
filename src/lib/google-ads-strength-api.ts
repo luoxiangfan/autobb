@@ -202,7 +202,7 @@ async function executeOAuthQueryWithTracking(params: {
  * @param campaignId Campaign ID
  * @param userId 用户ID（用于解析 auth-context 与 API 客户端）
  */
-export async function getAdStrength(
+async function getAdStrength(
   customerId: string,
   campaignId: string,
   userId: number
@@ -274,7 +274,7 @@ export async function getAdStrength(
  * @param customerId Google Ads客户ID
  * @param userId 用户ID
  */
-export async function getAdStrengthRecommendations(
+async function getAdStrengthRecommendations(
   customerId: string,
   userId: number
 ): Promise<AdStrengthRecommendation[]> {
@@ -342,7 +342,7 @@ export async function getAdStrengthRecommendations(
  * @param campaignId Campaign ID
  * @param userId 用户ID
  */
-export async function getAssetPerformance(
+async function getAssetPerformance(
   customerId: string,
   campaignId: string,
   userId: number
@@ -481,31 +481,4 @@ export async function validateExcellentStandard(
     console.error('❌ 验证EXCELLENT标准失败:', error)
     throw error
   }
-}
-
-/**
- * 5. 批量验证多个Campaign的Ad Strength
- *
- * @param customerId Google Ads客户ID
- * @param campaignIds Campaign ID列表
- * @param userId 用户ID
- */
-export async function batchValidateAdStrength(
-  customerId: string,
-  campaignIds: string[],
-  userId: number
-): Promise<Map<string, GoogleAdStrengthResponse | null>> {
-  const results = new Map<string, GoogleAdStrengthResponse | null>()
-
-  for (const campaignId of campaignIds) {
-    try {
-      const strengthData = await getAdStrength(customerId, campaignId, userId)
-      results.set(campaignId, strengthData)
-    } catch (error) {
-      console.error(`❌ Campaign ${campaignId} Ad Strength获取失败:`, error)
-      results.set(campaignId, null)
-    }
-  }
-
-  return results
 }

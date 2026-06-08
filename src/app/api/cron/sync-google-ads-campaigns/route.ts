@@ -11,8 +11,7 @@
  * 2. 生产环境：配置 Cron 任务（建议每 6 小时一次）
  *    - 需保证 Redis 与后台队列消费进程（QUEUE_BACKGROUND_WORKER）可用
  *
- * 说明：不再在 HTTP 请求内同步调用 `syncAllUsersCampaigns`，避免网关超时；
- * 各用户执行结果见 `sync_logs`（由任务执行器写入）。
+ * 说明：同步由后台队列任务执行，各用户执行结果见 `sync_logs`（由任务执行器写入）。
  */
 
 import { NextRequest, NextResponse } from 'next/server'
