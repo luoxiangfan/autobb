@@ -438,21 +438,13 @@ export function DateRangePicker({
                 ),
                 weeks: compact ? '' : '',
                 week: cn(compact ? '' : 'mt-1.5 flex w-full'),
-                cell: cn(
-                  compact
-                    ? isMobile
-                      ? 'relative p-0 text-center align-middle text-xs'
-                      : 'relative p-0 text-center align-middle text-[10px]'
-                    : 'h-8 w-8 p-0 text-center text-xs relative',
-                  'focus-within:relative focus-within:z-20'
-                ),
                 day: cn(
                   compact
                     ? isMobile
-                      ? 'h-[28px] w-[28px] p-0 text-xs'
-                      : 'h-[20px] w-[20px] p-0 text-[10px]'
-                    : 'h-8 w-8 p-0',
-                  'font-normal rounded-md'
+                      ? 'relative h-[28px] w-[28px] p-0 text-center align-middle text-xs'
+                      : 'relative h-[20px] w-[20px] p-0 text-center align-middle text-[10px]'
+                    : 'relative h-8 w-8 p-0 text-center text-xs',
+                  'font-normal rounded-md focus-within:relative focus-within:z-20'
                 ),
                 day_button: cn(
                   compact
