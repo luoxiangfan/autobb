@@ -9,11 +9,8 @@
  * 任务类型枚举
  */
 export type TaskType =
-  | 'ai-analysis' // AI分析（Enhanced优化）
   | 'sync' // Google Ads数据同步
   | 'backup' // 数据库备份
-  | 'email' // 邮件发送
-  | 'export' // 报表导出
   | 'link-check' // 链接可用性检查
   | 'cleanup' // 数据清理
   | 'offer-extraction' // Offer信息提取（完整流程：URL解析 + 品牌识别 + AI分析）
@@ -34,11 +31,8 @@ export type TaskType =
   | 'campaign-batch-create' // 🆕 批量从备份创建广告系列任务
 
 export const ALL_TASK_TYPES: TaskType[] = [
-  'ai-analysis',
   'sync',
   'backup',
-  'email',
-  'export',
   'link-check',
   'cleanup',
   'offer-extraction',

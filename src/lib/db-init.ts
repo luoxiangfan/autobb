@@ -1660,10 +1660,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
       'offer-scrape',
       'offer-enhance',
       'sync',
-      'ai-analysis',
       'backup',
-      'export',
-      'email',
       'link-check',
       'cleanup',
     ]

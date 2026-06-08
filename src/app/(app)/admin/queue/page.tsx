@@ -79,11 +79,8 @@ interface QueueStats {
 
 // 任务类型并发配置
 interface PerTypeConcurrency {
-  'ai-analysis': number
   sync: number
   backup: number
-  email: number
-  export: number
   'link-check': number
   cleanup: number
   'offer-extraction': number
@@ -102,11 +99,8 @@ interface PerTypeConcurrency {
 
 // 任务类型中文名称映射
 const TASK_TYPE_LABELS: Record<string, string> = {
-  'ai-analysis': 'AI分析',
   sync: '数据同步',
   backup: '数据备份',
-  email: '邮件发送',
-  export: '数据导出',
   'link-check': '链接检查',
   cleanup: '清理任务',
   'offer-extraction': 'Offer提取',
@@ -416,11 +410,8 @@ export default function QueueManagementPage() {
       globalConcurrency: optimalGlobalConcurrency,
       perUserConcurrency: optimalPerUserConcurrency,
       perTypeConcurrency: {
-        'ai-analysis': 2,
         sync: 1,
         backup: 1,
-        email: 3,
-        export: 2,
         'link-check': 2,
         cleanup: 1,
         'offer-extraction': 2,

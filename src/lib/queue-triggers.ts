@@ -6,10 +6,7 @@
 
 import { getQueueManager } from './queue/unified-queue-manager'
 import type { SyncTaskData } from './queue/executors/sync-executor'
-import type { AIAnalysisTaskData } from './queue/executors/ai-analysis-executor'
 import type { BackupTaskData } from './queue/executors/backup-executor'
-import type { ExportTaskData } from './queue/executors/export-executor'
-import type { EmailTaskData } from './queue/executors/email-executor'
 import type { LinkCheckTaskData } from './queue/executors/link-check-executor'
 import type { CleanupTaskData } from './queue/executors/cleanup-executor'
 
@@ -53,24 +50,6 @@ export async function triggerDataSync(
 }
 
 /**
- * 触发AI分析任务（独立任务）
- *
- * @param data 分析任务数据
- * @returns 任务ID
- */
-export async function triggerAIAnalysis(data: AIAnalysisTaskData): Promise<string> {
-  const queue = getQueueManager()
-
-  const taskId = await queue.enqueue('ai-analysis', data, data.userId, {
-    priority: 'normal',
-    maxRetries: 2,
-  })
-
-  console.log(`📥 [AIAnalysisTrigger] AI分析任务已入队: ${taskId}, Offer #${data.offerId}`)
-  return taskId
-}
-
-/**
  * 触发数据库备份任务
  *
  * @param data 备份任务数据
@@ -94,49 +73,6 @@ export async function triggerBackup(
   )
 
   console.log(`📥 [BackupTrigger] 备份任务已入队: ${taskId}, 类型: ${backupData.backupType}`)
-  return taskId
-}
-
-/**
- * 触发数据导出任务
- *
- * @param data 导出任务数据
- * @returns 任务ID
- */
-export async function triggerExport(data: ExportTaskData): Promise<string> {
-  const queue = getQueueManager()
-
-  const taskId = await queue.enqueue('export', data, data.userId, {
-    priority: 'normal', // 导出通常是中优先级
-    maxRetries: 2,
-  })
-
-  console.log(
-    `📥 [ExportTrigger] 导出任务已入队: ${taskId}, 类型: ${data.exportType}, 格式: ${data.format}`
-  )
-  return taskId
-}
-
-/**
- * 触发邮件发送任务
- *
- * @param data 邮件数据
- * @returns 任务ID
- */
-export async function triggerEmail(data: EmailTaskData): Promise<string> {
-  const queue = getQueueManager()
-
-  const taskId = await queue.enqueue(
-    'email',
-    data,
-    0, // 使用0作为系统任务的用户ID
-    {
-      priority: data.type === 'alert' ? 'high' : 'normal',
-      maxRetries: 3,
-    }
-  )
-
-  console.log(`📥 [EmailTrigger] 邮件任务已入队: ${taskId}, 收件人: ${data.to}, 类型: ${data.type}`)
   return taskId
 }
 

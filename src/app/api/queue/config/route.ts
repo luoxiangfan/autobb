@@ -27,11 +27,8 @@ const DEFAULT_QUEUE_CONFIG = {
   globalConcurrency: 999, // 🔥 全局并发提升至999（补点击需求）
   perUserConcurrency: 999, // 🔥 单用户并发提升至999（补点击需求）
   perTypeConcurrency: {
-    'ai-analysis': 2,
     sync: 1,
     backup: 1,
-    email: 3,
-    export: 2,
     'link-check': 2,
     cleanup: 1,
     'offer-extraction': 2,
@@ -58,11 +55,8 @@ const DEFAULT_QUEUE_CONFIG = {
 }
 
 const ALL_TASK_TYPES = [
-  'ai-analysis',
   'sync',
   'backup',
-  'email',
-  'export',
   'link-check',
   'cleanup',
   'offer-extraction',
