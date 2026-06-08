@@ -10,3 +10,6 @@ openclaw-prebuilt/
 package-lock.json
 *.min.js
 *.min.css
+*.md
+*.yml
+*.yaml

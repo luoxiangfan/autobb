@@ -123,6 +123,6 @@
     "vitest": "^4.1.8"
   },
   "lint-staged": {
-    "*.{js,mjs,cjs,ts,tsx,json,css,md,yml,yaml}": "prettier --write"
+    "*.{js,mjs,cjs,ts,tsx,json,css}": "prettier --write"
   }
 }
