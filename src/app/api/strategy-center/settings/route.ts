@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import cron from 'node-cron'
+import { validateCronExpression } from '@/lib/cron-schedule'
 import {
   getSettingsByCategory,
   getUserOnlySettingsByCategory,
@@ -66,7 +66,7 @@ function resolveFeishuPersonalIdFromTarget(value: string | undefined): string | 
 
 function validateMergedStrategySettings(settingMap: Record<string, string>): string | null {
   const cronExpr = String(settingMap.openclaw_strategy_cron || '0 9 * * *').trim() || '0 9 * * *'
-  if (!cron.validate(cronExpr)) {
+  if (!validateCronExpression(cronExpr)) {
     return '策略 Cron 表达式无效，请使用标准 5 段 Cron'
   }
 

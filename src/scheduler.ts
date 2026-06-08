@@ -1,6 +1,6 @@
 ﻿/**
  * 持续运行的定时任务调度服务
- * 使用node-cron实现定时调度，由supervisord管理进程
+ * 使用 cron 实现定时调度，由supervisord管理进程
  *
  * 功能：
  * 1. 每小时执行补点击任务（迁移到统一队列系统）
@@ -12,7 +12,13 @@
  * 7. 每天 UTC 01:00 同步 USD 基准汇率（ExchangeRate-API）
  */
 
-import cron from 'node-cron'
+import {
+  scheduleCronJob,
+  stopAllScheduledCronJobs,
+  stopScheduledCronJob,
+  validateCronExpression,
+  type ScheduledCronJob,
+} from './lib/cron-schedule'
 import { getDatabase } from './lib/db'
 import { getQueueManagerForTaskType } from './lib/queue/queue-routing'
 import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings'
@@ -111,7 +117,7 @@ function normalizeDateKey(value: unknown): string {
   return matched ? matched[0] : raw
 }
 
-const openclawStrategySchedules = new Map<number, { cron: string; task: cron.ScheduledTask }>()
+const openclawStrategySchedules = new Map<number, { cron: string; task: ScheduledCronJob }>()
 let syncDataTaskRunning = false
 let syncGoogleAdsTaskRunning = false
 let isShuttingDown = false
@@ -202,7 +208,7 @@ async function refreshOpenclawStrategySchedules() {
     const enabled = parseBoolean(row.enabled)
     if (!enabled) continue
     const cronExpr = (row.cron || '0 9 * * *').trim() || '0 9 * * *'
-    if (!cron.validate(cronExpr)) {
+    if (!validateCronExpression(cronExpr)) {
       logError(`❌ OpenClaw策略cron无效 (user=${row.user_id})`, cronExpr)
       continue
     }
@@ -211,16 +217,15 @@ async function refreshOpenclawStrategySchedules() {
     const existing = openclawStrategySchedules.get(row.user_id)
     if (!existing || existing.cron !== cronExpr) {
       if (existing) {
-        existing.task.stop()
+        stopScheduledCronJob(existing.task)
       }
-      const task = cron.schedule(
+      const task = scheduleCronJob(
         cronExpr,
         async () => {
           await enqueueOpenclawStrategy(row.user_id, 'auto')
         },
         {
-          scheduled: true,
-          timezone: 'Asia/Shanghai',
+          timeZone: 'Asia/Shanghai',
         }
       )
       openclawStrategySchedules.set(row.user_id, { cron: cronExpr, task })
@@ -230,7 +235,7 @@ async function refreshOpenclawStrategySchedules() {
 
   for (const [userId, schedule] of openclawStrategySchedules.entries()) {
     if (!activeUsers.has(userId)) {
-      schedule.task.stop()
+      stopScheduledCronJob(schedule.task)
       openclawStrategySchedules.delete(userId)
       log(`⏸️  OpenClaw策略调度已移除 (user=${userId})`)
     }
@@ -1150,29 +1155,20 @@ function startScheduler() {
   // 任务0: 每小时整点执行补点击任务调度
   // 注意：调度器的时区只影响触发时机，实际执行时间判断使用每个任务自己的时区
   console.log(`[Scheduler] 补点击任务调度器启动，当前时间: ${new Date().toISOString()}`)
-  cron.schedule(
-    '0 * * * *',
-    async () => {
-      await clickFarmSchedulerTask()
-    },
-    {
-      scheduled: true,
-      // 不指定时区，使用系统默认 UTC
-      // 每个任务的执行时间范围由其自身的 timezone 配置决定
-    }
-  )
+  scheduleCronJob('0 * * * *', async () => {
+    await clickFarmSchedulerTask()
+  })
 
   // 任务0.1: 每分钟执行换链接任务调度
   // 📍 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
   const urlSwapCheckCron = process.env.URL_SWAP_CHECK_CRON || '* * * * *'
-  cron.schedule(
+  scheduleCronJob(
     urlSwapCheckCron,
     async () => {
       await urlSwapSchedulerTask()
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
   log(`✅ 换链接任务调度已启动 (cron: ${urlSwapCheckCron})`)
@@ -1180,14 +1176,13 @@ function startScheduler() {
   // 任务0.2: 每10分钟执行联盟商品同步调度
   // 📍 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
   const affiliateProductSyncCron = process.env.AFFILIATE_PRODUCT_SYNC_CRON || '*/10 * * * *'
-  cron.schedule(
+  scheduleCronJob(
     affiliateProductSyncCron,
     async () => {
       await affiliateProductSyncSchedulerTask()
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
   log(`✅ 联盟商品同步调度已启动 (cron: ${affiliateProductSyncCron})`)
@@ -1196,14 +1191,13 @@ function startScheduler() {
   const productScoreSchedulerEnabled = process.env.PRODUCT_SCORE_SCHEDULER_ENABLED !== 'false'
   const productScoreSchedulerCron = process.env.PRODUCT_SCORE_SCHEDULER_CRON || '20 * * * *'
   if (productScoreSchedulerEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       productScoreSchedulerCron,
       async () => {
         await productScoreSchedulerTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log(`✅ 推荐指数自愈调度已启动 (cron: ${productScoreSchedulerCron})`)
@@ -1215,14 +1209,13 @@ function startScheduler() {
   const exchangeRateSyncEnabled = process.env.EXCHANGE_RATE_SYNC_ENABLED !== 'false'
   const exchangeRateCron = process.env.EXCHANGE_RATE_SYNC_CRON || '0 1 * * *'
   if (exchangeRateSyncEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       exchangeRateCron,
       async () => {
         await exchangeRatesDailyTask()
       },
       {
-        scheduled: true,
-        timezone: 'UTC',
+        timeZone: 'UTC',
       }
     )
     log(`✅ USD 汇率同步已启动 (cron: ${exchangeRateCron}, timezone: UTC)`)
@@ -1232,39 +1225,36 @@ function startScheduler() {
 
   // 任务1: 高频检查 + 按用户间隔触发同步（避免固定整点导致的延迟）
   const dataSyncCheckCron = process.env.DATA_SYNC_CHECK_CRON || '*/5 * * * *'
-  cron.schedule(
+  scheduleCronJob(
     dataSyncCheckCron,
     async () => {
       await runSyncDataTaskSafely('cron')
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai', // 使用中国时区
+      timeZone: 'Asia/Shanghai', // 使用中国时区
     }
   )
   log(`✅ 数据同步检查任务已启动 (cron: ${dataSyncCheckCron})`)
 
   // 任务2: 每2小时执行一次 Google Ads 数据同步
-  cron.schedule(
+  scheduleCronJob(
     '0 */2 * * *',
     async () => {
       await runSyncGoogleAdsTaskSafely('cron')
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
   log('✅ Google Ads 数据同步检查任务已启动 (cron: 0 */2 * * *)')
   // 任务2: 每天凌晨2点备份数据库
-  cron.schedule(
+  scheduleCronJob(
     '0 2 * * *',
     async () => {
       await backupDatabaseTask()
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
 
@@ -1274,14 +1264,13 @@ function startScheduler() {
   const linkCheckCron = process.env.LINK_CHECK_CRON || '0 2 * * *'
 
   if (linkCheckEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       linkCheckCron,
       async () => {
         await linkAndAccountCheckTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log(`✅ 链接和账号检查任务已启动 (cron: ${linkCheckCron})`)
@@ -1294,14 +1283,13 @@ function startScheduler() {
   const campaignPausedTaskEnabled = process.env.CAMPAIGN_PAUSED_TASK_ENABLED !== 'false'
 
   if (campaignPausedTaskEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       campaignPausedTaskCron,
       async () => {
         await campaignPausedTaskSchedulerTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log('✅ 广告系列暂停任务检测已启动 (cron: ' + campaignPausedTaskCron + ')')
@@ -1314,14 +1302,13 @@ function startScheduler() {
   const creativePublishAlertCron = process.env.CREATIVE_PUBLISH_ALERT_CRON || '*/30 * * * *'
 
   if (creativePublishAlertEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       creativePublishAlertCron,
       async () => {
         await creativePublishTimeoutAlertTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log(`✅ 创意发布超时检查任务已启动 (cron: ${creativePublishAlertCron})`)
@@ -1330,14 +1317,13 @@ function startScheduler() {
   }
 
   // 任务4: 每天凌晨3点清理旧数据
-  cron.schedule(
+  scheduleCronJob(
     '0 3 * * *',
     async () => {
       await cleanupOldDataTask()
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
 
@@ -1347,14 +1333,13 @@ function startScheduler() {
   const userTaskSweepCron = process.env.USER_TASK_SWEEP_CRON || '0 4 * * *'
 
   if (userTaskSweepEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       userTaskSweepCron,
       async () => {
         await suspendInactiveOrExpiredUserTasksTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log(`✅ 禁用/过期用户任务暂停已启动 (cron: ${userTaskSweepCron})`)
@@ -1363,14 +1348,13 @@ function startScheduler() {
   }
 
   // 任务6: OpenClaw 每日报表推送
-  cron.schedule(
+  scheduleCronJob(
     '0 9 * * *',
     async () => {
       await openclawDailyReportTask()
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
 
@@ -1379,14 +1363,13 @@ function startScheduler() {
   const openclawWeeklyReportCron = process.env.OPENCLAW_WEEKLY_REPORT_CRON || '10 9 * * 1'
 
   if (openclawWeeklyReportEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       openclawWeeklyReportCron,
       async () => {
         await openclawWeeklyReportTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log(`✅ OpenClaw 每周报表推送任务已启动 (cron: ${openclawWeeklyReportCron})`)
@@ -1399,14 +1382,13 @@ function startScheduler() {
   const openclawAffiliateSyncCron = process.env.OPENCLAW_AFFILIATE_SYNC_CRON || '5 * * * *'
 
   if (openclawAffiliateSyncEnabled) {
-    cron.schedule(
+    scheduleCronJob(
       openclawAffiliateSyncCron,
       async () => {
         await openclawAffiliateRevenueSnapshotTask()
       },
       {
-        scheduled: true,
-        timezone: 'Asia/Shanghai',
+        timeZone: 'Asia/Shanghai',
       }
     )
     log(`✅ OpenClaw 联盟佣金快照刷新任务已启动 (cron: ${openclawAffiliateSyncCron})`)
@@ -1418,19 +1400,18 @@ function startScheduler() {
   refreshOpenclawStrategySchedules().catch((error) => {
     logError('❌ OpenClaw策略调度初始化失败:', error)
   })
-  cron.schedule(
+  scheduleCronJob(
     '*/10 * * * *',
     async () => {
       await refreshOpenclawStrategySchedules()
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
 
   // 任务10: 僵尸同步任务自动清理（每小时）
-  cron.schedule(
+  scheduleCronJob(
     '0 * * * *',
     async () => {
       try {
@@ -1458,8 +1439,7 @@ function startScheduler() {
       }
     },
     {
-      scheduled: true,
-      timezone: 'Asia/Shanghai',
+      timeZone: 'Asia/Shanghai',
     }
   )
 
@@ -1496,13 +1476,7 @@ function startScheduler() {
 }
 
 function stopAllSchedulerTasks() {
-  for (const task of cron.getTasks().values()) {
-    try {
-      task.stop()
-    } catch (error) {
-      logError('⚠️ 停止 cron 任务失败:', error)
-    }
-  }
+  stopAllScheduledCronJobs()
 
   // 停止 Google Ads 同步调度器
   try {
@@ -1516,15 +1490,7 @@ function stopAllSchedulerTasks() {
     logError('⚠️ 停止 Google Ads 同步调度器失败:', error)
   }
 
-  for (const [userId, schedule] of openclawStrategySchedules.entries()) {
-    try {
-      schedule.task.stop()
-    } catch (error) {
-      logError(`⚠️ 停止 OpenClaw 策略调度失败 (user=${userId}):`, error)
-    } finally {
-      openclawStrategySchedules.delete(userId)
-    }
-  }
+  openclawStrategySchedules.clear()
 }
 
 /**
