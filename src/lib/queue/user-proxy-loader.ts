@@ -102,7 +102,7 @@ type ParsedProxyEndpoint = {
  * - sync: Google Ads数据同步使用官方API，不需要代理
  * - backup: 备份任务是内部操作
  */
-export const PROXY_REQUIRED_TASK_TYPES = ['offer-extraction'] as const
+const PROXY_REQUIRED_TASK_TYPES = ['offer-extraction'] as const
 
 function parseProxyEndpoint(proxyUrl: string): ParsedProxyEndpoint | null {
   const trimmed = String(proxyUrl || '').trim()
@@ -208,7 +208,7 @@ export function convertUserProxiesToQueueFormat(proxies: ProxyUrlConfig[]): Queu
  * @param userId - 用户ID
  * @returns 转换后的代理配置列表
  */
-export async function getUserProxiesForQueue(userId: number): Promise<QueueProxyConfig[]> {
+async function getUserProxiesForQueue(userId: number): Promise<QueueProxyConfig[]> {
   // 只读取用户级配置，不回退全局
   const userProxies = await getUserOnlyProxyUrls(userId)
   const queueProxies = convertUserProxiesToQueueFormat(userProxies)
@@ -314,15 +314,4 @@ export async function getProxyForCountry(
 
   // 没有找到匹配的国家，返回第一个作为兜底
   return proxies[0]
-}
-
-/**
- * 检查用户是否配置了代理
- *
- * @param userId - 用户ID
- * @returns 是否配置了代理
- */
-export async function hasUserProxy(userId: number): Promise<boolean> {
-  const proxies = await getUserProxiesForQueue(userId)
-  return proxies.length > 0
 }

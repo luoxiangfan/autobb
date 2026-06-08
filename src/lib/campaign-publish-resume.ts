@@ -41,9 +41,7 @@ export type PublishResumePlan = {
 
 const DEFAULT_RESUME_FAILED_LOOKBACK_DAYS = 14
 
-export function getResumableFailedLookbackIso(
-  days: number = DEFAULT_RESUME_FAILED_LOOKBACK_DAYS
-): string {
+function getResumableFailedLookbackIso(days: number = DEFAULT_RESUME_FAILED_LOOKBACK_DAYS): string {
   const safeDays =
     Number.isFinite(days) && days > 0 ? Math.floor(days) : DEFAULT_RESUME_FAILED_LOOKBACK_DAYS
   return new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000).toISOString()
@@ -465,27 +463,4 @@ export async function reactivateCampaignForPublishResume(params: {
       params.userId,
     ]
   )
-}
-
-export function isDuplicateGoogleAdsResourceError(error: unknown): boolean {
-  const message = String((error as { message?: string })?.message || error || '').toLowerCase()
-  if (
-    message.includes('already exists') ||
-    message.includes('resource_already_exists') ||
-    message.includes('duplicate') ||
-    message.includes('重复')
-  ) {
-    return true
-  }
-
-  const errors = (error as { errors?: Array<{ error_code?: Record<string, unknown> }> })?.errors
-  if (!Array.isArray(errors)) return false
-
-  return errors.some((entry) => {
-    const codes = entry?.error_code || {}
-    return Object.values(codes).some((code) => {
-      const normalized = String(code || '').toUpperCase()
-      return normalized.includes('DUPLICATE') || normalized.includes('ALREADY_EXISTS')
-    })
-  })
 }

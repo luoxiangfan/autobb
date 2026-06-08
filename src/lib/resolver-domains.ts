@@ -7,7 +7,7 @@
  * HTTP重定向域名白名单
  * These domains use standard HTTP 3xx redirects that can be resolved quickly
  */
-export const HTTP_REDIRECT_DOMAINS = [
+const HTTP_REDIRECT_DOMAINS = [
   // Amazon Associates
   'amzn.to',
   'amazon.com',
@@ -54,13 +54,13 @@ export const HTTP_REDIRECT_DOMAINS = [
  * Meta Refresh重定向域名
  * These domains use HTTP meta refresh headers (can be parsed from HTTP response)
  */
-export const META_REFRESH_DOMAINS = ['yeahpromos.com']
+const META_REFRESH_DOMAINS = ['yeahpromos.com']
 
 /**
  * JavaScript重定向域名黑名单
  * These domains require browser JavaScript execution (Playwright required)
  */
-export const JS_REDIRECT_DOMAINS = [
+const JS_REDIRECT_DOMAINS = [
   // LinkBux (JS redirect / anti-bot)
   'linkbux.com',
   // Modern Link Shorteners
@@ -94,7 +94,7 @@ export function extractDomain(url: string): string {
 /**
  * Check if domain requires JavaScript rendering
  */
-export function requiresJavaScript(url: string): boolean {
+function requiresJavaScript(url: string): boolean {
   const domain = extractDomain(url)
   return JS_REDIRECT_DOMAINS.some(
     (jsDomain) => domain === jsDomain || domain.endsWith(`.${jsDomain}`)
@@ -104,7 +104,7 @@ export function requiresJavaScript(url: string): boolean {
 /**
  * Check if domain is known to use HTTP redirects
  */
-export function usesHttpRedirect(url: string): boolean {
+function usesHttpRedirect(url: string): boolean {
   const domain = extractDomain(url)
   return HTTP_REDIRECT_DOMAINS.some(
     (httpDomain) => domain === httpDomain || domain.endsWith(`.${httpDomain}`)
@@ -114,7 +114,7 @@ export function usesHttpRedirect(url: string): boolean {
 /**
  * Check if domain uses meta refresh redirects
  */
-export function usesMetaRefresh(url: string): boolean {
+function usesMetaRefresh(url: string): boolean {
   const domain = extractDomain(url)
   return META_REFRESH_DOMAINS.some(
     (metaDomain) => domain === metaDomain || domain.endsWith(`.${metaDomain}`)

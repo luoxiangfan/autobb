@@ -5,19 +5,19 @@ import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db-helpers'
 import { getRedisClient } from '@/lib/redis-client'
 
 /** 异步账号刷新状态 TTL（与 Redis key 过期、running  freshness 一致） */
-export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS = 10 * 60 * 1000
+const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS = 10 * 60 * 1000
 
 /** 已完成刷新在 Redis 中的短 TTL（running 互斥已结束） */
-export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_COMPLETED_TTL_SEC = 60
+const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_COMPLETED_TTL_SEC = 60
 
 /** 失败状态保留更久，供 UI 展示 refreshError */
-export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_FAILED_TTL_SEC = 600
+const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_FAILED_TTL_SEC = 600
 
 /** 长 sync 期间续期锁的间隔（须小于 TTL） */
-export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_HEARTBEAT_MS = 3 * 60 * 1000
+const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_HEARTBEAT_MS = 3 * 60 * 1000
 
 /** DB 历史行保留时长 */
-export const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_ROW_RETENTION_MS = 24 * 60 * 60 * 1000
+const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_ROW_RETENTION_MS = 24 * 60 * 60 * 1000
 
 export type GoogleAdsAccountAsyncRefreshStatus = 'running' | 'completed' | 'failed'
 

@@ -38,7 +38,7 @@ export async function hasEnabledCampaignForOffer(params: {
   return Boolean((row as any)?.id)
 }
 
-export async function findClickFarmTasksWithoutEnabledCampaign(params: {
+async function findClickFarmTasksWithoutEnabledCampaign(params: {
   userId?: number
   limit?: number
   db?: DatabaseAdapter

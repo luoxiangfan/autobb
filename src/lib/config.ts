@@ -70,13 +70,10 @@ export const ENCRYPTION_IV_LENGTH = parseInt(getOptionalEnvVar('ENCRYPTION_IV_LE
 export const BCRYPT_SALT_ROUNDS = parseInt(getOptionalEnvVar('BCRYPT_SALT_ROUNDS', '12'), 10)
 
 // ==================== 数据库配置 ====================
-export const DATABASE_TYPE = getOptionalEnvVar('DATABASE_TYPE', 'sqlite')
-export const SQLITE_DB_PATH = getOptionalEnvVar('SQLITE_DB_PATH', './data/autoads.db')
-
-// ==================== Node环境 ====================
+const DATABASE_TYPE = getOptionalEnvVar('DATABASE_TYPE', 'sqlite') // ==================== Node环境 ====================
 export const NODE_ENV = getOptionalEnvVar('NODE_ENV', 'development')
-export const IS_PRODUCTION = NODE_ENV === 'production'
-export const IS_DEVELOPMENT = NODE_ENV === 'development'
+const IS_PRODUCTION = NODE_ENV === 'production'
+const IS_DEVELOPMENT = NODE_ENV === 'development'
 
 // ==================== Redis配置 ====================
 export const REDIS_URL = getOptionalEnvVar('REDIS_URL', 'redis://localhost:6379')

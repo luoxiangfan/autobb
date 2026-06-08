@@ -7999,21 +7999,7 @@ export async function getCoverageBucketKeywords(
   }
 
   return result
-}
-
-/**
- * 兼容旧命名：保留 getSyntheticBucketKeywords，实际转发到 coverage helper
- */
-export async function getSyntheticBucketKeywords(
-  pool: OfferKeywordPool,
-  userId: number,
-  country: string = 'US',
-  config: SyntheticKeywordConfig = DEFAULT_COVERAGE_KEYWORD_CONFIG
-): Promise<Array<{ keyword: string; searchVolume: number; isBrand: boolean }>> {
-  return getCoverageBucketKeywords(pool, userId, country, config)
-}
-
-/**
+} /**
  * KISS-3 方案中不再生成独立的旧 S/综合创意槽位；该 helper 仅保留兼容签名。
  */
 export async function canGenerateCoverageCreative(offerId: number): Promise<boolean> {
@@ -8122,53 +8108,7 @@ export async function getUsedBuckets(offerId: number): Promise<BucketType[]> {
   }
 
   return Array.from(usedBuckets)
-}
-
-/**
- * 检查 Offer 创意数量是否已达上限
- *
- * @param offerId - Offer ID
- * @returns 是否已满
- */
-export async function isCreativeLimitReached(offerId: number): Promise<boolean> {
-  const db = await getDatabase()
-  // ✅ KISS优化：最多3个创意类型（A / B(含C) / D(含S)）
-  // 兼容历史数据：即使数据库中存在>3条旧创意，也不应阻塞新流程的类型判断
-  const usedCreatives = await db.query<{
-    creative_type: string | null
-    keyword_bucket: string | null
-    headlines: string | null
-    descriptions: string | null
-    keywords: string | null
-    theme: string | null
-    bucket_intent: string | null
-  }>(
-    `SELECT creative_type, keyword_bucket, headlines, descriptions, keywords, theme, bucket_intent
-     FROM ad_creatives
-     WHERE offer_id = ? AND deleted_at IS NULL`,
-    [offerId]
-  )
-
-  const usedTypes = new Set<CanonicalCreativeType>()
-  for (const creative of usedCreatives) {
-    const creativeType = deriveCanonicalCreativeType({
-      creativeType: creative.creative_type,
-      keywordBucket: creative.keyword_bucket,
-      headlines: creative.headlines,
-      descriptions: creative.descriptions,
-      keywords: creative.keywords,
-      theme: creative.theme,
-      bucketIntent: creative.bucket_intent,
-    })
-    if (creativeType) {
-      usedTypes.add(creativeType)
-    }
-  }
-
-  return usedTypes.size >= 3
-}
-
-/**
+} /**
  * 计算关键词重叠率
  *
  * @param keywords1 - 关键词列表 1

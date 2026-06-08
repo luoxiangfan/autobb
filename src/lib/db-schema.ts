@@ -25,7 +25,7 @@ export interface ColumnDef {
 }
 
 /** 未软删除行的 partial index 谓词（SQLite 用 0/1，PostgreSQL 用 FALSE） */
-export const INDEX_WHERE_NOT_DELETED = {
+const INDEX_WHERE_NOT_DELETED = {
   sqlite: 'is_deleted = 0',
   postgres: 'is_deleted = FALSE',
 } as const

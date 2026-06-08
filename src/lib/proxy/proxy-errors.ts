@@ -51,7 +51,7 @@ export class ProxyHttpError extends ProxyError {
  * 注意：格式错误可能是临时的API响应异常，而非真正的格式问题
  * 例如：API返回错误消息而非代理IP
  */
-export class ProxyFormatError extends ProxyError {
+class ProxyFormatError extends ProxyError {
   actualContent: string
   expectedFormat: string
 
@@ -72,7 +72,7 @@ export class ProxyFormatError extends ProxyError {
  * 配额错误（持续性，不应重试）
  * 例如：代理配额用完、账户欠费
  */
-export class ProxyQuotaError extends ProxyError {
+class ProxyQuotaError extends ProxyError {
   constructor(message: string) {
     super(message, false, 'QUOTA_ERROR')
     this.name = 'ProxyQuotaError'
@@ -83,7 +83,7 @@ export class ProxyQuotaError extends ProxyError {
  * 认证错误（持续性，不应重试）
  * 例如：用户名密码错误、API key无效
  */
-export class ProxyAuthError extends ProxyError {
+class ProxyAuthError extends ProxyError {
   constructor(message: string) {
     super(message, false, 'AUTH_ERROR')
     this.name = 'ProxyAuthError'
@@ -94,7 +94,7 @@ export class ProxyAuthError extends ProxyError {
  * 服务不可用错误（可能恢复，应该重试）
  * 例如：特定国家代理池暂时无可用IP
  */
-export class ProxyUnavailableError extends ProxyError {
+class ProxyUnavailableError extends ProxyError {
   country?: string
 
   constructor(message: string, country?: string) {

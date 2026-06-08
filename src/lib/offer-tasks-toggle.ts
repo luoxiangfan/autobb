@@ -4,7 +4,7 @@
 
 export type OfferTasksToggleAction = 'pause' | 'start'
 
-export function normalizeOfferTaskStatus(status: string | null | undefined): string {
+function normalizeOfferTaskStatus(status: string | null | undefined): string {
   return String(status || '')
     .trim()
     .toLowerCase()

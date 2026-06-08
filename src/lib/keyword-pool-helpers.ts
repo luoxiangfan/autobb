@@ -2042,44 +2042,7 @@ export function filterKeywords(
 
 // ============================================
 // 智能选择
-// ============================================
-
-/**
- * 智能关键词选择（基于 searchVolume + CPC）
- */
-export function selectKeywordsForCreative(
-  brandKeywords: PoolKeywordData[],
-  bucketKeywords: PoolKeywordData[],
-  _bucketIntent: string
-): PoolKeywordData[] {
-  // 品牌词：选择 searchVolume 最高的 2-3 个
-  const topBrand = brandKeywords.sort((a, b) => b.searchVolume - a.searchVolume).slice(0, 3)
-
-  // 桶匹配词：优先 searchVolume > 1000，其次 CPC 高
-  // 🔧 修复(2026-03-05): 若搜索量不可用（Explorer/权限受限），跳过搜索量过滤
-  const hasAnyVolume = bucketKeywords.some((kw) => kw.searchVolume > 0)
-  const volumeUnavailable = hasSearchVolumeUnavailableFlag(bucketKeywords)
-  const highVolume =
-    hasAnyVolume && !volumeUnavailable
-      ? bucketKeywords
-          .filter((kw) => kw.searchVolume > 1000)
-          .sort((a, b) => b.searchVolume - a.searchVolume)
-          .slice(0, 8)
-      : bucketKeywords.sort((a, b) => (b.highTopPageBid || 0) - (a.highTopPageBid || 0)).slice(0, 8)
-
-  // 如果高搜索量关键词不足，补充 CPC 高的关键词
-  if (highVolume.length < 6) {
-    const highCPC = bucketKeywords
-      .filter((kw) => !highVolume.includes(kw))
-      .sort((a, b) => (b.highTopPageBid || 0) - (a.highTopPageBid || 0))
-      .slice(0, 6 - highVolume.length)
-    highVolume.push(...highCPC)
-  }
-
-  return [...topBrand, ...highVolume]
-}
-
-// ============================================
+// ============================================// ============================================
 // 🔥 2025-12-22新增：增强去重算法
 // ============================================
 

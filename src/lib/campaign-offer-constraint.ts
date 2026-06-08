@@ -21,7 +21,7 @@ function activeCampaignNotDeletedSql(dbType: string, tableAlias?: string): strin
   return dbType === 'postgres' ? `${col} = FALSE` : `${col} = 0`
 }
 
-export function getStalePendingMinutes(): number {
+function getStalePendingMinutes(): number {
   const raw = process.env.CAMPAIGN_PENDING_STALE_MINUTES
   if (raw === undefined || raw === '') {
     return DEFAULT_STALE_PENDING_MINUTES
@@ -287,15 +287,6 @@ export async function getActiveCampaignConflictForOffer(
 export async function hasActiveCampaignForOffer(offerId: number, userId: number): Promise<boolean> {
   return !!(await getActiveCampaignConflictForOffer(offerId, userId))
 }
-
-export async function findActiveCampaignIdForOffer(
-  offerId: number,
-  userId: number
-): Promise<number | null> {
-  const conflict = await getActiveCampaignConflictForOffer(offerId, userId)
-  return conflict?.id ?? null
-}
-
 export async function assertNoActiveCampaignForOffer(
   offerId: number,
   userId: number

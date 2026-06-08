@@ -264,7 +264,7 @@ async function prepareKeywordPlannerSessionForServiceParams(
  * - CamelCase 分词
  * - 🆕 核心品牌词提取（首词）
  */
-export function generateBrandVariants(brand: string): string[] {
+function generateBrandVariants(brand: string): string[] {
   if (!brand || brand.length < 2) return []
 
   const variants = new Set<string>()
@@ -1191,7 +1191,7 @@ function extractEvidenceScenarioSeedsFromText(
  * 优化(2025-12-14): 添加品牌名变体生成，覆盖常见搜索变体
  * 优化(2025-12-16): 使用意图感知种子词构建，最大化覆盖三个意图桶
  */
-export function buildSmartSeedPool(offer: OfferData): string[] {
+function buildSmartSeedPool(offer: OfferData): string[] {
   // 🆕 v2.0: 使用意图感知种子词构建
   const intentPool = buildIntentAwareSeedPool(offer)
   return intentPool.allSeeds
@@ -1643,7 +1643,7 @@ function escapeRegex(str: string): string {
  * 🆕 优化(2025-12): 返回识别到的竞品品牌列表，可用于创建否定关键词
  * 🆕 2025-12-24: 跨品牌比较搜索保留（如 "roborock xiaomi" 应该保留）
  */
-export function filterByWhitelist<T extends { keyword: string }>(
+function filterByWhitelist<T extends { keyword: string }>(
   keywords: T[],
   brandName: string
 ): WhitelistFilterResult<T> {
@@ -1913,10 +1913,7 @@ function calculateAdaptiveThresholds(
 /**
  * 智能匹配类型分配
  */
-export function assignMatchTypes(
-  keywords: UnifiedKeywordData[],
-  brandName: string
-): UnifiedKeywordData[] {
+function assignMatchTypes(keywords: UnifiedKeywordData[], brandName: string): UnifiedKeywordData[] {
   const pureBrandKeywords = getPureBrandKeywords(brandName)
 
   return keywords.map((kw) => {

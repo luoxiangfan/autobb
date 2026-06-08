@@ -387,30 +387,5 @@ export function getProxyPoolManager(): ProxyPoolManager {
   return global.__proxyPoolManagerInstance
 }
 
-/**
- * Initialize and start the proxy pool manager
- */
-export async function initProxyPool(config?: Partial<ProxyPoolConfig>): Promise<ProxyPoolManager> {
-  if (global.__proxyPoolManagerInstance) {
-    console.warn('⚠️ Proxy pool already initialized, returning existing instance')
-    return global.__proxyPoolManagerInstance
-  }
-
-  global.__proxyPoolManagerInstance = new ProxyPoolManager(config)
-  await global.__proxyPoolManagerInstance.start()
-
-  return global.__proxyPoolManagerInstance
-}
-
-/**
- * Stop the proxy pool manager
- */
-export function stopProxyPool(): void {
-  if (global.__proxyPoolManagerInstance) {
-    global.__proxyPoolManagerInstance.stop()
-    global.__proxyPoolManagerInstance = undefined
-  }
-}
-
 export { ProxyPoolManager }
 export type { ProxyPoolConfig, ProxyPoolEntry }

@@ -46,7 +46,7 @@ import { offerOccupyingCampaignWhereClause } from './campaign-offer-constraint'
  * - {字母}{数字}-{brand}（整串剩余段，作兜底）
  * 仍无法识别时返回原文。
  */
-export function extractBrandFromGoogleAdsCampaignName(campaignName: string): string {
+function extractBrandFromGoogleAdsCampaignName(campaignName: string): string {
   const raw = (campaignName ?? '').trim()
   if (!raw) return raw
   if (!raw.includes('@')) return raw
@@ -177,41 +177,7 @@ interface CampaignSyncAuditInsert {
   aggregatedLocations: number
   auditPayload: Record<string, any>
 }
-
-export const LanguageCodeMap = {
-  en: 1000, // English
-  zh: 1017, // Chinese (Simplified)
-  'zh-cn': 1017, // Chinese (Simplified)
-  'zh-tw': 1018, // Chinese (Traditional)
-  ja: 1005, // Japanese
-  de: 1001, // German
-  fr: 1002, // French
-  es: 1003, // Spanish
-  it: 1004, // Italian
-  ko: 1012, // Korean
-  ru: 1031, // Russian
-  pt: 1014, // Portuguese
-  ar: 1019, // Arabic
-  hi: 1023, // Hindi
-  nl: 1020, // Dutch
-  th: 1033, // Thai
-  vi: 1044, // Vietnamese
-  tr: 1037, // Turkish
-  sv: 1032, // Swedish
-  da: 1009, // Danish
-  fi: 1011, // Finnish
-  no: 1013, // Norwegian
-  pl: 1021, // Polish
-  cs: 1008, // Czech
-  hu: 1024, // Hungarian
-  el: 1022, // Greek
-  he: 1025, // Hebrew
-  id: 1027, // Indonesian
-  ms: 1019, // Malay
-  tl: 1034, // Tagalog
-}
-
-export const languageMap: { [key: string]: string } = {
+const languageMap: { [key: string]: string } = {
   english: 'en',
   'chinese (simplified)': 'zh-cn',
   'chinese (traditional)': 'zh-tw',
@@ -243,7 +209,7 @@ export const languageMap: { [key: string]: string } = {
   malay: 'ms',
 }
 
-export const geoTargetMAP: { [key: string]: number } = {
+const geoTargetMAP: { [key: string]: number } = {
   // 北美
   US: 2840, // United States
   CA: 2124, // Canada
@@ -1624,7 +1590,7 @@ async function createOfferFirst(params: {
  * 更新广告系列的 campaign_config
  * 只更新尚未配置 ad_creative 的广告系列
  */
-export async function updateCampaignConfig(
+async function updateCampaignConfig(
   campaignId: string,
   campaignConfig: any,
   adGroupId: number | null,

@@ -114,7 +114,7 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
 /**
  * 优雅关闭队列系统
  */
-export async function shutdownQueue() {
+async function shutdownQueue() {
   try {
     console.log('⏹️ 关闭队列系统...')
 

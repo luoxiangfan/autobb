@@ -47,7 +47,7 @@ export interface LinkCheckResult {
  * 检查单个链接的可用性
  * 使用统一的代理axios客户端（支持真实地理位置访问）
  */
-export async function checkLink(
+async function checkLink(
   url: string,
   country: string = 'US',
   timeout: number = 10000,
@@ -130,7 +130,7 @@ export async function checkLink(
 /**
  * 保存链接检查结果
  */
-export async function saveLinkCheckResult(
+async function saveLinkCheckResult(
   userId: number,
   offerId: number,
   url: string,
@@ -497,7 +497,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
  * 检查用户的Google Ads账号状态
  * 需求24: 检测账号暂停、限制投放等状态
  */
-export async function checkAdsAccountStatus(userId: number): Promise<{
+async function checkAdsAccountStatus(userId: number): Promise<{
   totalChecked: number
   activeAccounts: number
   problemAccounts: number
@@ -730,51 +730,7 @@ export async function dailyLinkCheck(): Promise<{
     },
     results,
   }
-}
-
-/**
- * 获取链接检查历史
- */
-export async function getLinkCheckHistory(
-  userId: number,
-  offerId?: number,
-  limit: number = 50
-): Promise<LinkCheckResult[]> {
-  const db = await getDatabase()
-
-  let query = `
-    SELECT * FROM link_check_history
-    WHERE user_id = ?
-  `
-
-  const params: any[] = [userId]
-
-  if (offerId) {
-    query += ` AND offer_id = ?`
-    params.push(offerId)
-  }
-
-  query += ` ORDER BY checked_at DESC LIMIT ?`
-  params.push(limit)
-
-  const history = (await db.query(query, params)) as any[]
-
-  return history.map((h) => ({
-    id: h.id,
-    offerId: h.offer_id,
-    url: h.url,
-    statusCode: h.status_code,
-    responseTime: h.response_time,
-    isAccessible: h.is_accessible === 1,
-    isRedirected: h.is_redirected === 1,
-    finalUrl: h.final_url,
-    checkCountry: h.check_country,
-    errorMessage: h.error_message,
-    checkedAt: h.checked_at,
-  }))
-}
-
-/**
+} /**
  * 获取风险统计
  */
 export async function getRiskStatistics(userId: number): Promise<{

@@ -1,7 +1,7 @@
 import { offerOccupyingCampaignFilterSql } from '@/lib/campaign-offer-constraint'
 
 /** 与 affiliate-platforms 计数、performance/trends 联盟筛选共用的 Offer 未删除条件 */
-export function offerNotDeletedSql(dbType: string, offerAlias = 'o'): string {
+function offerNotDeletedSql(dbType: string, offerAlias = 'o'): string {
   return dbType === 'postgres' ? `${offerAlias}.is_deleted = FALSE` : `${offerAlias}.is_deleted = 0`
 }
 

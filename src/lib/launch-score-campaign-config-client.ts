@@ -20,7 +20,7 @@ function parseOptionalNumber(value: string | null): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined
 }
 
-export function storageKeyForLaunchScoreCampaignConfig(offerId: number): string {
+function storageKeyForLaunchScoreCampaignConfig(offerId: number): string {
   return `${STORAGE_PREFIX}${offerId}`
 }
 
@@ -84,7 +84,7 @@ export function saveLaunchScoreCampaignConfigForOffer(
   }
 }
 
-export function loadLaunchScoreCampaignConfigForOffer(
+function loadLaunchScoreCampaignConfigForOffer(
   offerId: number
 ): LaunchScoreHashCampaignConfigClient | undefined {
   if (typeof window === 'undefined') {
@@ -150,7 +150,7 @@ export function resolveLaunchScoreHashCampaignConfigForClient(
   return loadLaunchScoreCampaignConfigForOffer(offerId)
 }
 
-export function appendLaunchScoreCampaignConfigToSearchParams(
+function appendLaunchScoreCampaignConfigToSearchParams(
   params: URLSearchParams,
   config?: LaunchScoreHashCampaignConfigClient
 ): void {

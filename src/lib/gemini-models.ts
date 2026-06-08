@@ -1,7 +1,7 @@
 export const GEMINI_ACTIVE_MODEL = 'gemini-3-flash-preview' as const
 export const RELAY_GPT_52_MODEL = 'gpt-5.2' as const
 
-export const GEMINI_DEPRECATED_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'] as const
+const GEMINI_DEPRECATED_MODELS = ['gemini-2.5-pro', 'gemini-2.5-flash'] as const
 
 export const OFFICIAL_SUPPORTED_MODELS = [GEMINI_ACTIVE_MODEL] as const
 export const RELAY_SUPPORTED_MODELS = [GEMINI_ACTIVE_MODEL, RELAY_GPT_52_MODEL] as const
@@ -21,12 +21,7 @@ export function getSupportedModelsForProvider(provider?: string | null): readonl
 
   return OFFICIAL_SUPPORTED_MODELS
 }
-
-export function isSupportedGeminiModel(model?: string | null): model is GeminiModel {
-  return !!model && OFFICIAL_MODEL_SET.has(model)
-}
-
-export function isSupportedRelayModel(model?: string | null): model is RelayModel {
+function isSupportedRelayModel(model?: string | null): model is RelayModel {
   return !!model && RELAY_MODEL_SET.has(model)
 }
 
@@ -42,7 +37,7 @@ export function isModelSupportedByProvider(
   return modelSet.has(model)
 }
 
-export function getDefaultModelForProvider(_provider?: string | null): AIModel {
+function getDefaultModelForProvider(_provider?: string | null): AIModel {
   return GEMINI_ACTIVE_MODEL
 }
 

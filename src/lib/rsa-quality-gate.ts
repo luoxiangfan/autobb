@@ -4,7 +4,7 @@ export type RetryFailureType = 'evidence_fail' | 'intent_fail' | 'format_fail'
 
 export const RSA_QUALITY_MINIMUM_SCORE = 70
 
-export const RSA_QUALITY_GATE_THRESHOLDS = {
+const RSA_QUALITY_GATE_THRESHOLDS = {
   intentAlignmentScore: 70,
   evidenceAlignmentScore: 75,
   queryLandingAlignmentScore: 65,

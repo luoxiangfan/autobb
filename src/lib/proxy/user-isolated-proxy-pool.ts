@@ -563,42 +563,5 @@ declare global {
   var __userIsolatedProxyPoolInstance: UserIsolatedProxyPoolManager | undefined
 }
 
-/**
- * 获取或创建用户隔离代理池管理器实例
- */
-export function getUserIsolatedProxyPoolManager(): UserIsolatedProxyPoolManager {
-  if (!global.__userIsolatedProxyPoolInstance) {
-    global.__userIsolatedProxyPoolInstance = new UserIsolatedProxyPoolManager()
-  }
-  return global.__userIsolatedProxyPoolInstance
-}
-
-/**
- * 初始化并启动用户隔离代理池管理器
- */
-export async function initUserIsolatedProxyPool(
-  config?: Partial<ProxyPoolConfig>
-): Promise<UserIsolatedProxyPoolManager> {
-  if (global.__userIsolatedProxyPoolInstance) {
-    console.warn('⚠️  用户隔离代理池已初始化，返回现有实例')
-    return global.__userIsolatedProxyPoolInstance
-  }
-
-  global.__userIsolatedProxyPoolInstance = new UserIsolatedProxyPoolManager(config)
-  await global.__userIsolatedProxyPoolInstance.start()
-
-  return global.__userIsolatedProxyPoolInstance
-}
-
-/**
- * 停止用户隔离代理池管理器
- */
-export function stopUserIsolatedProxyPool(): void {
-  if (global.__userIsolatedProxyPoolInstance) {
-    global.__userIsolatedProxyPoolInstance.stop()
-    global.__userIsolatedProxyPoolInstance = undefined
-  }
-}
-
 export { UserIsolatedProxyPoolManager, ResourceMonitor }
 export type { ProxyPoolConfig, UserProxyPoolEntry, ProxyConfig }

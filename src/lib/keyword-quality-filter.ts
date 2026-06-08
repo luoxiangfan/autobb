@@ -87,7 +87,7 @@ export function isBrandConcatenation(keyword: string, brandName: string): boolea
  * shouldKeepByBrand("reolink argus", ["reolink"]) → true
  * shouldKeepByBrand("security camera", ["reolink"]) → false
  */
-export function shouldKeepByBrand(keyword: string, pureBrandKeywords: string[]): boolean {
+function shouldKeepByBrand(keyword: string, pureBrandKeywords: string[]): boolean {
   if (containsPureBrand(keyword, pureBrandKeywords)) return true
 
   const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
@@ -439,7 +439,7 @@ export function detectPlatformsInKeyword(keyword: string): string[] {
  * isPlatformMismatch('anker charger', 'https://amazon.com/...') → false
  * isPlatformMismatch('anker amazon', 'https://amazon.com/...') → false
  */
-export function isPlatformMismatch(keyword: string, productUrl: string): boolean {
+function isPlatformMismatch(keyword: string, productUrl: string): boolean {
   const urlPlatform = extractPlatformFromUrl(productUrl)
   if (!urlPlatform) {
     // 无法识别URL平台，不过滤
@@ -528,54 +528,7 @@ export function isBrandVariant(keyword: string, brandName: string): boolean {
   // 4. 检查后缀长度：3-10个字母后缀认为是变体词
   const suffixLength = suffix.length
   return suffixLength >= 3 && suffixLength <= 10
-}
-
-/**
- * 从关键词中提取有效的品牌组合
- *
- * 例如：
- * - eurekaddl → eureka
- * - eureka-j15 → eureka, j15
- * - eureka j15 pro → eureka, j15
- *
- * @param keyword - 关键词
- * @param brandName - 品牌名称
- * @returns 有效的品牌相关词组
- */
-export function extractValidBrandTerms(keyword: string, brandName: string): string[] {
-  const normalized = keyword.toLowerCase().trim()
-  const brand = brandName.toLowerCase().trim()
-  const terms: string[] = []
-
-  // 1. 检查是否包含品牌名（避免子串误匹配，如 "rove" 命中 "rover"）
-  const pureBrandKeywords = getPureBrandKeywords(brandName)
-  if (pureBrandKeywords.length > 0 && containsPureBrand(normalized, pureBrandKeywords)) {
-    terms.push(brand)
-  }
-
-  // 2. 提取产品型号（常见的模式）
-  // 例如：j15, j15 pro, j20, ne20s, e20s 等
-  const modelPatterns = [
-    /([a-z]?\d{1,2}[a-z]*(?:\s+(?:pro|ultra|max|plus))?)/gi,
-    /([a-z]{1,2}\d{2}[a-z]*)/gi,
-  ]
-
-  for (const pattern of modelPatterns) {
-    const matches = keyword.match(pattern)
-    if (matches) {
-      for (const match of matches) {
-        const cleaned = match.toLowerCase().trim()
-        if (cleaned.length >= 2 && cleaned !== brand && !terms.includes(cleaned)) {
-          terms.push(cleaned)
-        }
-      }
-    }
-  }
-
-  return [...new Set(terms)]
-}
-
-// ============================================
+} // ============================================
 // 品牌无关词检测（🔥 2025-12-29 新增：多语言支持）
 // ============================================
 
@@ -645,7 +598,7 @@ export function isBrandIrrelevant(keyword: string, brandName?: string): boolean 
  * @param keyword - 要检测的关键词
  * @returns 匹配的模式（如果没有匹配返回null）
  */
-export function getMatchedIrrelevantPattern(keyword: string): string | null {
+function getMatchedIrrelevantPattern(keyword: string): string | null {
   if (!keyword) return null
 
   for (const pattern of BRAND_IRRELEVANT_PATTERNS) {
@@ -687,7 +640,7 @@ export function isSemanticQuery(keyword: string): boolean {
  * @param keyword - 关键词
  * @returns 匹配的过滤模式（如果没有匹配返回null）
  */
-export function getMatchedFilterPattern(keyword: string): string | null {
+function getMatchedFilterPattern(keyword: string): string | null {
   if (!keyword) return null
 
   const normalized = keyword.toLowerCase()

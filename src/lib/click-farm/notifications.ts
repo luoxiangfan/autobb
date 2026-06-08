@@ -29,7 +29,7 @@ export interface ClickFarmNotification {
  * 注意：这个简化版本只是记录日志，UI从任务状态推断通知
  * 完整版本可以创建独立的notifications表
  */
-export async function logClickFarmEvent(
+async function logClickFarmEvent(
   userId: number,
   taskId: string,
   type: ClickFarmNotificationType,

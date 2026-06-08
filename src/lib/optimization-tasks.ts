@@ -354,36 +354,7 @@ export async function updateTaskStatus(
   const result = await db.exec(query, params)
 
   return result.changes > 0
-}
-
-/**
- * 批量更新任务状态（按Campaign）
- */
-export async function updateCampaignTasks(
-  campaignId: number,
-  userId: number,
-  status: 'completed' | 'dismissed',
-  note?: string
-): Promise<number> {
-  const db = await getDatabase()
-
-  const query = `
-    UPDATE optimization_tasks
-    SET status = ?,
-        ${status === 'completed' ? 'completed_at = datetime("now"),' : ''}
-        ${status === 'dismissed' ? 'dismissed_at = datetime("now"),' : ''}
-        completion_note = ?
-    WHERE campaign_id = ?
-      AND user_id = ?
-      AND status = 'pending'
-  `
-
-  const result = await db.exec(query, [status, note || null, campaignId, userId])
-
-  return result.changes
-}
-
-/**
+} /**
  * 获取任务统计
  */
 export async function getTaskStatistics(userId: number): Promise<{

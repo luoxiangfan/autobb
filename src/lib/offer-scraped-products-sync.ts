@@ -7,7 +7,7 @@ import { getDatabase } from './db'
 
 export type ScrapedProductSource = 'amazon_store' | 'independent_store' | 'amazon_product'
 
-export async function saveScrapedProducts(
+async function saveScrapedProducts(
   offerId: number,
   userId: number,
   products: any[],

@@ -63,32 +63,6 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   RUB: '₽',
 }
 
-/**
- * 货币名称映射
- */
-export const CURRENCY_NAMES: Record<string, string> = {
-  USD: '美元',
-  CNY: '人民币',
-  EUR: '欧元',
-  GBP: '英镑',
-  JPY: '日元',
-  KRW: '韩元',
-  AUD: '澳元',
-  CAD: '加元',
-  HKD: '港币',
-  TWD: '新台币',
-  SGD: '新加坡元',
-  INR: '印度卢比',
-  BRL: '巴西雷亚尔',
-  MXN: '墨西哥比索',
-  THB: '泰铢',
-  VND: '越南盾',
-  IDR: '印尼盾',
-  PHP: '菲律宾比索',
-  MYR: '马来西亚林吉特',
-  RUB: '俄罗斯卢布',
-}
-
 export function normalizeCurrencyCode(value: unknown): string {
   return String(value || '')
     .trim()
@@ -141,39 +115,6 @@ export function formatCurrency(amount: number, currency: string, decimals: numbe
   }
 
   return `${symbol}${Number(formattedAmount).toLocaleString()}`
-}
-
-/**
- * 解析价格字符串
- * @param priceString 价格字符串（例如：$699.00 或 699.00）
- * @returns 数字金额
- */
-export function parsePrice(priceString: string): number | null {
-  if (!priceString) return null
-
-  // 移除货币符号和空格，只保留数字和小数点
-  const cleaned = priceString.replace(/[^0-9.]/g, '')
-  const parsed = parseFloat(cleaned)
-
-  return isNaN(parsed) ? null : parsed
-}
-
-/**
- * 解析佣金比例字符串
- * @param commissionString 佣金字符串（例如：6.75% 或 6.75）
- * @returns 小数形式的佣金比例（例如：0.0675）
- */
-export function parseCommission(commissionString: string): number | null {
-  if (!commissionString) return null
-
-  // 移除百分号和空格
-  const cleaned = commissionString.replace(/[^0-9.]/g, '')
-  const parsed = parseFloat(cleaned)
-
-  if (isNaN(parsed)) return null
-
-  // 转换为小数形式（例如：6.75 → 0.0675）
-  return parsed / 100
 }
 
 /**
@@ -267,14 +208,4 @@ export function calculateMaxCPC(
       targetCurrency,
     },
   }
-}
-
-/**
- * 从Google Ads账号获取货币代码
- * 如果无法获取，返回默认货币（USD）
- */
-export function getAdsCurrency(): string {
-  // TODO: 从Google Ads账号配置中读取货币
-  // 目前返回默认值
-  return 'CNY' // 中国广告主大多使用人民币
 }

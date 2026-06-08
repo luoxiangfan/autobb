@@ -60,7 +60,7 @@ export const SOCIAL_MEDIA_REFERRERS = [
 /**
  * 🆕 从社媒列表中随机获取一个referer
  */
-export function getRandomSocialReferer(): string {
+function getRandomSocialReferer(): string {
   const randomIndex = Math.floor(Math.random() * SOCIAL_MEDIA_REFERRERS.length)
   return SOCIAL_MEDIA_REFERRERS[randomIndex].url
 }

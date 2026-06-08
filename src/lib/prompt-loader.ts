@@ -198,29 +198,7 @@ export function clearPromptCache(promptId?: string): void {
     promptCache.clear()
     console.log(`🗑️ Cleared all prompt cache`)
   }
-}
-
-/**
- * 获取缓存统计信息
- */
-export function getPromptCacheStats(): {
-  size: number
-  entries: Array<{ promptId: string; version: string; age: number }>
-} {
-  const now = Date.now()
-  const entries = Array.from(promptCache.entries()).map(([promptId, entry]) => ({
-    promptId,
-    version: entry.version,
-    age: Math.floor((now - entry.timestamp) / 1000), // 秒
-  }))
-
-  return {
-    size: promptCache.size,
-    entries,
-  }
-}
-
-/**
+} /**
  * 模板变量插值工具函数
  *
  * @param template - 包含 {{variable}} 占位符的模板字符串

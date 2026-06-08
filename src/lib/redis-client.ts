@@ -106,20 +106,7 @@ export function getRedisClient(): Redis | null {
     console.error('❌ Redis客户端初始化失败:', error)
     return null
   }
-}
-
-/**
- * 关闭Redis连接
- */
-export async function closeRedisClient(): Promise<void> {
-  if (redisClient) {
-    await redisClient.quit()
-    redisClient = null
-    console.log('✅ Redis连接已关闭')
-  }
-}
-
-/**
+} /**
  * 检查Redis是否可用
  */
 export function isRedisAvailable(): boolean {

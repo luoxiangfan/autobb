@@ -177,55 +177,7 @@ function defaultShouldRetry(error: any, _attempt: number): boolean {
  */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-/**
- * 批量重试包装器
- * 对数组中的每个元素执行带重试的操作
- *
- * @example
- * ```typescript
- * const results = await withBatchRetry(
- *   items,
- *   async (item) => await processItem(item),
- *   { maxRetries: 2 }
- * )
- * ```
- */
-export async function withBatchRetry<T, R>(
-  items: T[],
-  fn: (item: T, index: number) => Promise<R>,
-  options: RetryOptions = {}
-): Promise<Array<{ success: boolean; result?: R; error?: any; item: T }>> {
-  const results: Array<{ success: boolean; result?: R; error?: any; item: T }> = []
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i]
-
-    try {
-      const result = await withRetry(() => fn(item, i), {
-        ...options,
-        operationName: `${options.operationName || 'Batch Operation'} [${i + 1}/${items.length}]`,
-      })
-
-      results.push({
-        success: true,
-        result,
-        item,
-      })
-    } catch (error) {
-      results.push({
-        success: false,
-        error,
-        item,
-      })
-    }
-  }
-
-  return results
-}
-
-/**
+} /**
  * 指数退避计算器
  * 用于自定义重试逻辑
  */
@@ -236,31 +188,4 @@ export function calculateBackoffDelay(
   maxDelay: number = 30000
 ): number {
   return Math.min(initialDelay * Math.pow(multiplier, attempt), maxDelay)
-}
-
-/**
- * 带超时的重试
- *
- * @example
- * ```typescript
- * const result = await withRetryAndTimeout(
- *   async () => await apiCall(),
- *   { maxRetries: 3 },
- *   5000  // 5秒超时
- * )
- * ```
- */
-export async function withRetryAndTimeout<T>(
-  fn: () => Promise<T>,
-  retryOptions: RetryOptions = {},
-  timeoutMs: number = 30000
-): Promise<T> {
-  return withRetry(async () => {
-    return Promise.race([
-      fn(),
-      new Promise<T>((_, reject) =>
-        setTimeout(() => reject(new Error(`Operation timeout after ${timeoutMs}ms`)), timeoutMs)
-      ),
-    ])
-  }, retryOptions)
 }

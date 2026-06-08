@@ -2602,16 +2602,6 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
     blockedKeywordKeys: Array.from(blockedKeywordKeys),
   }
 }
-
-export function filterCreativeKeywordsByOfferContext(params: {
-  offer: OfferKeywordContext
-  keywordsWithVolume: PoolKeywordData[]
-  scopeLabel: string
-  creativeType?: CanonicalCreativeType | null
-}): PoolKeywordData[] {
-  return filterCreativeKeywordsByOfferContextDetailed(params).keywords
-}
-
 export const __testOnly = {
   normalizeContextToken,
   tokenizeContext,

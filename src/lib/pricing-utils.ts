@@ -77,7 +77,7 @@ function normalizeDecimalSeparator(priceStr: string): string {
  * @param productPrice - 价格字符串
  * @returns 解析后的价格对象，如果无法解析则返回null
  */
-export function parseProductPrice(productPrice: string | null | undefined): ParsedPrice | null {
+function parseProductPrice(productPrice: string | null | undefined): ParsedPrice | null {
   if (!productPrice || !productPrice.trim()) {
     return null
   }

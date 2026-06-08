@@ -842,7 +842,7 @@ export async function scoreAllCreatives(userId: number): Promise<CreativePerform
 /**
  * 将成功特征持久化到数据库
  */
-export async function saveSuccessFeatures(
+async function saveSuccessFeatures(
   userId: number,
   features: SuccessFeatures,
   totalCreatives: number
@@ -906,44 +906,10 @@ export async function saveSuccessFeatures(
       ]
     )
   }
-}
-
-/**
- * 从数据库加载成功特征
- */
-export async function loadSuccessFeatures(userId: number): Promise<SuccessFeatures | null> {
-  const db = await getDatabase()
-
-  const result = (await db.queryOne(
-    `
-    SELECT success_features
-    FROM creative_learning_patterns
-    WHERE user_id = ?
-    ORDER BY updated_at DESC
-    LIMIT 1
-  `,
-    [userId]
-  )) as { success_features: string } | undefined
-
-  if (!result) {
-    return null
-  }
-
-  try {
-    return JSON.parse(result.success_features) as SuccessFeatures
-  } catch (error) {
-    console.error('解析成功特征失败:', error)
-    return null
-  }
-}
-
-/**
+} /**
  * 保存创意评分到数据库
  */
-export async function saveCreativeScore(
-  userId: number,
-  score: CreativePerformanceScore
-): Promise<void> {
+async function saveCreativeScore(userId: number, score: CreativePerformanceScore): Promise<void> {
   const db = await getDatabase()
 
   await db.exec(

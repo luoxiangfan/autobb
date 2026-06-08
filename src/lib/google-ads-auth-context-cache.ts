@@ -36,7 +36,7 @@ function readHydratedSecrets(userId: number, generation: number): HydratedSecret
 }
 
 /** slim 缓存条目为 true；API / resolve 路径使用前须 hydrate */
-export function authContextSecretsLookStripped(
+function authContextSecretsLookStripped(
   ctx: Pick<GoogleAdsAuthContext, 'secretsStripped'>
 ): boolean {
   return ctx.secretsStripped === true
@@ -66,7 +66,7 @@ export function oauthCredentialsLookStripped(
   )
 }
 
-export function serviceAccountConfigLooksStripped(
+function serviceAccountConfigLooksStripped(
   config: GoogleAdsAuthContext['serviceAccountConfig']
 ): boolean {
   if (!config?.id) return false

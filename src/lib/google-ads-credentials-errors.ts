@@ -56,7 +56,7 @@ export function buildGoogleAdsApiErrorMessage(
   return fallbackMessage || `请求失败 (HTTP ${response.status})`
 }
 
-export function parseAuthConfigWarningFromResponseBody(body: unknown): string | null {
+function parseAuthConfigWarningFromResponseBody(body: unknown): string | null {
   const record = body && typeof body === 'object' ? (body as Record<string, unknown>) : null
   if (!record) return null
   const topLevel = formatNullableErrorMessage(record.authConfigWarning)
@@ -204,10 +204,7 @@ export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCr
   }
 }
 
-export function credentialsStatusErrorMessage(
-  data: unknown,
-  fallback = '获取凭证状态失败'
-): string {
+function credentialsStatusErrorMessage(data: unknown, fallback = '获取凭证状态失败'): string {
   const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null
   return (
     formatNullableErrorMessage(record?.message) ||

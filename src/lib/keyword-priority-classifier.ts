@@ -520,49 +520,7 @@ export function calculateIntentScore(keyword: string, brandName?: string): numbe
   }
 
   return maxScore
-}
-
-/**
- * 批量计算关键词意图分数并排序
- *
- * 排序规则：意图分数 * log10(搜索量+1)
- * 这样既考虑购买意图，也考虑搜索量
- *
- * @param keywords - 关键词数组（带搜索量）
- * @param brandName - 品牌名称（品牌词优先）
- * @returns 排序后的关键词数组（带意图分数）
- */
-export function sortKeywordsByIntent<T extends { keyword: string; searchVolume?: number }>(
-  keywords: T[],
-  brandName?: string
-): Array<T & { intentScore: number }> {
-  const brandLower = brandName?.toLowerCase()
-
-  const keywordsWithIntent = keywords.map((kw) => ({
-    ...kw,
-    intentScore: calculateIntentScore(kw.keyword, brandName), // 🔧 修复：传入brandName
-  }))
-
-  keywordsWithIntent.sort((a, b) => {
-    // 1. 品牌词优先
-    if (brandLower) {
-      const aIsBrand = a.keyword.toLowerCase().includes(brandLower) ? 1 : 0
-      const bIsBrand = b.keyword.toLowerCase().includes(brandLower) ? 1 : 0
-      if (aIsBrand !== bIsBrand) {
-        return bIsBrand - aIsBrand
-      }
-    }
-
-    // 2. 意图强度 * log10(搜索量+1) 综合评分
-    const aScore = a.intentScore * Math.log10((a.searchVolume || 0) + 1)
-    const bScore = b.intentScore * Math.log10((b.searchVolume || 0) + 1)
-    return bScore - aScore
-  })
-
-  return keywordsWithIntent
-}
-
-/**
+} /**
  * 获取意图强度等级描述
  */
 export function getIntentLevel(score: number): {

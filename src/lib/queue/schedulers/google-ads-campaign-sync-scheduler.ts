@@ -61,7 +61,7 @@ interface UserSyncConfig {
   last_campaign_sync_at: string | null
 }
 
-export class GoogleAdsCampaignSyncScheduler {
+class GoogleAdsCampaignSyncScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false

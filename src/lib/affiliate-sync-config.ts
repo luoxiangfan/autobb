@@ -8,7 +8,7 @@ export const FIXED_AFFILIATE_SYNC_SETTINGS = {
 
 export type FixedAffiliateSyncSettingKey = keyof typeof FIXED_AFFILIATE_SYNC_SETTINGS
 
-export function isFixedAffiliateSyncSettingKey(key: string): key is FixedAffiliateSyncSettingKey {
+function isFixedAffiliateSyncSettingKey(key: string): key is FixedAffiliateSyncSettingKey {
   return key in FIXED_AFFILIATE_SYNC_SETTINGS
 }
 

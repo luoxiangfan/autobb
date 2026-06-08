@@ -90,30 +90,6 @@ export async function findKeywordById(id: number, userId: number): Promise<Keywo
 }
 
 /**
- * 根据Google Ads keyword_id查找
- */
-export async function findKeywordByGoogleId(
-  keywordId: string,
-  userId: number
-): Promise<Keyword | null> {
-  const db = await getDatabase()
-
-  const row = await db.queryOne(
-    `
-    SELECT * FROM keywords
-    WHERE keyword_id = ? AND user_id = ?
-  `,
-    [keywordId, userId]
-  )
-
-  if (!row) {
-    return null
-  }
-
-  return mapRowToKeyword(row)
-}
-
-/**
  * 查找Ad Group的所有Keywords
  */
 export async function findKeywordsByAdGroupId(
@@ -150,27 +126,6 @@ export async function findKeywordsByUserId(userId: number, limit?: number): Prom
   }
 
   const rows = await db.query(sql, [userId])
-  return rows.map(mapRowToKeyword)
-}
-
-/**
- * 查找AI生成的Keywords
- */
-export async function findAIGeneratedKeywords(
-  adGroupId: number,
-  userId: number
-): Promise<Keyword[]> {
-  const db = await getDatabase()
-
-  const rows = await db.query(
-    `
-    SELECT * FROM keywords
-    WHERE ad_group_id = ? AND user_id = ? AND ai_generated = 1
-    ORDER BY created_at DESC
-  `,
-    [adGroupId, userId]
-  )
-
   return rows.map(mapRowToKeyword)
 }
 
@@ -287,60 +242,6 @@ export async function deleteKeyword(id: number, userId: number): Promise<boolean
   )
 
   return result.changes > 0
-}
-
-/**
- * 批量创建Keywords
- */
-export async function createKeywordsBatch(keywords: CreateKeywordInput[]): Promise<Keyword[]> {
-  const results: Keyword[] = []
-
-  for (const kw of keywords) {
-    const keyword = await createKeyword(kw)
-    results.push(keyword)
-  }
-
-  return results
-}
-
-/**
- * 批量更新Keywords状态
- */
-export async function updateKeywordsStatus(
-  keywordIds: number[],
-  userId: number,
-  status: string
-): Promise<number> {
-  let updateCount = 0
-
-  for (const id of keywordIds) {
-    const result = await updateKeyword(id, userId, { status })
-    if (result) {
-      updateCount++
-    }
-  }
-
-  return updateCount
-}
-
-/**
- * 删除Ad Group的所有Keywords
- */
-export async function deleteKeywordsByAdGroupId(
-  adGroupId: number,
-  userId: number
-): Promise<number> {
-  const db = await getDatabase()
-
-  const result = await db.exec(
-    `
-    DELETE FROM keywords
-    WHERE ad_group_id = ? AND user_id = ?
-  `,
-    [adGroupId, userId]
-  )
-
-  return result.changes
 }
 
 /**

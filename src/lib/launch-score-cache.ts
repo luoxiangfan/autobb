@@ -41,7 +41,7 @@ export function pickBestAdCreativeByScore(creatives: AdCreative[]): AdCreative |
 }
 
 /** Step3 关键词优先：构建与发布路径一致的 contentHash 输入 */
-export function buildLaunchScoreCreativeContentData(
+function buildLaunchScoreCreativeContentData(
   creative: AdCreative,
   offer: Offer,
   campaignConfig?: LaunchScoreHashCampaignConfig
@@ -117,7 +117,7 @@ export async function pickBestCreativeForLaunchScoreRead(
   return bestCreative ?? pickBestAdCreativeByScore(creatives)
 }
 
-export async function findCachedLaunchScoreForCreative(
+async function findCachedLaunchScoreForCreative(
   creative: AdCreative,
   offer: Offer,
   userId: number,

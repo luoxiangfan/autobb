@@ -911,14 +911,6 @@ export async function runSearchTermAutoPositiveKeywords(
   }
 }
 
-export function getSearchTermAutoNegativeDefaults() {
-  return { ...NEGATIVE_DEFAULTS }
-}
-
-export function getSearchTermAutoPositiveDefaults() {
-  return { ...POSITIVE_DEFAULTS }
-}
-
 export function getSearchTermAutoNegativeConfigFromEnv() {
   return {
     enabled: process.env.AUTO_SEARCH_TERM_NEGATIVE_ENABLED !== 'false',

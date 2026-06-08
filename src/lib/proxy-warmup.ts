@@ -56,7 +56,7 @@ function parseProxyIP(proxyIP: string): ProxyCredentials | null {
  * @param proxyUrl - 原始代理URL
  * @returns 12个代理IP的数组，或空数组（如果失败）
  */
-export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
+async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
   try {
     // 🔥 检查代理URL格式，使用Provider系统
     const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
@@ -279,7 +279,7 @@ export async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
  * @param proxyIPs - 代理IP数组（格式：host:port:username:password）
  * @param affiliateLink - 推广链接
  */
-export async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Promise<void> {
+async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Promise<void> {
   console.log(`🔥 开始触发 ${proxyIPs.length} 次推广链接访问（通过代理IP）...`)
 
   // 为每个代理IP创建一个访问Promise（不等待结果）

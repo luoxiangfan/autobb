@@ -26,7 +26,7 @@ export interface ParsedUserAgent {
 /**
  * 解析 User-Agent 字符串
  */
-export function parseUserAgent(userAgent: string): ParsedUserAgent {
+function parseUserAgent(userAgent: string): ParsedUserAgent {
   if (!userAgent) {
     return { deviceType: 'Unknown', os: 'Unknown', browser: 'Unknown', browserVersion: null }
   }
@@ -251,7 +251,7 @@ export interface UserManagementDetails {
  * @param status 操作状态
  * @param errorMessage 错误信息（仅当 status='failure' 时）
  */
-export async function logUserManagementAction(
+async function logUserManagementAction(
   action: UserManagementAction,
   context: UserManagementContext,
   details?: UserManagementDetails,
@@ -401,174 +401,4 @@ export async function logPasswordReset(
     extra: { resetMethod },
     changedFields: ['password_hash'],
   })
-}
-
-/**
- * 快捷方法：记录账户解锁
- */
-export async function logUserUnlocked(
-  context: UserManagementContext,
-  previousLockInfo?: { locked_until?: string; failed_attempts?: number }
-): Promise<void> {
-  await logUserManagementAction('user_unlocked', context, {
-    before: previousLockInfo,
-    after: { locked_until: null, failed_login_attempts: 0 },
-    changedFields: ['locked_until', 'failed_login_attempts'],
-  })
-}
-
-/**
- * 快捷方法：记录角色变更
- */
-export async function logRoleChanged(
-  context: UserManagementContext,
-  oldRole: string,
-  newRole: string
-): Promise<void> {
-  await logUserManagementAction('user_role_changed', context, {
-    before: { role: oldRole },
-    after: { role: newRole },
-    changedFields: ['role'],
-  })
-}
-
-// ============================================================================
-// 登录记录增强 - 添加设备信息
-// ============================================================================
-
-/**
- * 记录登录尝试（带设备信息解析）
- */
-export async function logLoginAttemptWithDeviceInfo(
-  usernameOrEmail: string,
-  success: boolean,
-  ipAddress: string,
-  userAgent: string,
-  userId?: number,
-  failureReason?: string
-): Promise<void> {
-  const db = await getDatabase()
-  const parsedUA = parseUserAgent(userAgent)
-
-  try {
-    await db.exec(
-      `
-      INSERT INTO login_attempts (
-        username_or_email, user_id, ip_address, user_agent, success, failure_reason, attempted_at,
-        device_type, os, browser, browser_version
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-      [
-        usernameOrEmail,
-        userId || null,
-        ipAddress,
-        userAgent,
-        success ? 1 : 0,
-        failureReason || null,
-        new Date().toISOString(),
-        parsedUA.deviceType,
-        parsedUA.os,
-        parsedUA.browser,
-        parsedUA.browserVersion,
-      ]
-    )
-  } catch (error) {
-    console.error('[AuditLogger] Failed to log login attempt:', error)
-  }
-}
-
-/**
- * 查询用户管理操作日志
- */
-export interface QueryUserManagementLogsOptions {
-  operatorId?: number
-  targetUserId?: number
-  action?: UserManagementAction | UserManagementAction[]
-  status?: 'success' | 'failure'
-  startDate?: Date
-  endDate?: Date
-  limit?: number
-  offset?: number
-}
-
-export interface UserManagementLogResult {
-  id: number
-  user_id: number | null
-  event_type: string
-  ip_address: string
-  user_agent: string
-  details: string | null
-  created_at: string
-  operator_id: number | null
-  operator_username: string | null
-  target_user_id: number | null
-  target_username: string | null
-  status: string
-  error_message: string | null
-}
-
-/**
- * 查询用户管理操作日志
- */
-export async function queryUserManagementLogs(
-  options: QueryUserManagementLogsOptions = {}
-): Promise<UserManagementLogResult[]> {
-  const db = await getDatabase()
-
-  let query = `
-    SELECT * FROM audit_logs
-    WHERE event_type IN ('user_created', 'user_updated', 'user_disabled', 'user_enabled',
-                         'user_deleted', 'user_password_reset', 'user_unlocked', 'user_role_changed')
-  `
-  const params: any[] = []
-
-  if (options.operatorId) {
-    query += ' AND operator_id = ?'
-    params.push(options.operatorId)
-  }
-
-  if (options.targetUserId) {
-    query += ' AND target_user_id = ?'
-    params.push(options.targetUserId)
-  }
-
-  if (options.action) {
-    if (Array.isArray(options.action)) {
-      query += ` AND event_type IN (${options.action.map(() => '?').join(',')})`
-      params.push(...options.action)
-    } else {
-      query += ' AND event_type = ?'
-      params.push(options.action)
-    }
-  }
-
-  if (options.status) {
-    query += ' AND status = ?'
-    params.push(options.status)
-  }
-
-  if (options.startDate) {
-    query += ' AND created_at >= ?'
-    params.push(options.startDate.toISOString())
-  }
-
-  if (options.endDate) {
-    query += ' AND created_at <= ?'
-    params.push(options.endDate.toISOString())
-  }
-
-  query += ' ORDER BY created_at DESC'
-
-  if (options.limit) {
-    query += ' LIMIT ?'
-    params.push(options.limit)
-  }
-
-  if (options.offset) {
-    query += ' OFFSET ?'
-    params.push(options.offset)
-  }
-
-  return (await db.query(query, params)) as UserManagementLogResult[]
 }

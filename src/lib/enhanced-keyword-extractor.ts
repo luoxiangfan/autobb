@@ -537,11 +537,3 @@ async function generateKeywordVariants(
     variants: [kw.keyword], // 简化处理
   }))
 }
-
-export {
-  extractBrandKeywords,
-  extractCoreKeywords,
-  extractIntentKeywords,
-  extractLongtailKeywords,
-  extractCompetitorKeywords,
-}

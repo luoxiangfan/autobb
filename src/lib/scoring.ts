@@ -30,7 +30,7 @@ export type LaunchScoreAdStrengthPlannerContext = {
   skipKeywordPoolExpandLoad: boolean
 }
 
-export async function prepareLaunchScoreAdStrengthPlannerContext(
+async function prepareLaunchScoreAdStrengthPlannerContext(
   userId: number,
   offerId: number,
   brandName?: string | null
@@ -594,30 +594,7 @@ function validateScoresV4(analysis: ScoreAnalysis): void {
   if (totalScore < 0 || totalScore > 100) {
     throw new Error(`总分超出范围(0-100): ${totalScore}`)
   }
-}
-
-/**
- * 获取评分等级和颜色
- */
-export function getScoreGrade(totalScore: number): {
-  grade: string
-  color: string
-  label: string
-} {
-  if (totalScore >= 85) {
-    return { grade: 'A', color: 'green', label: '优秀' }
-  } else if (totalScore >= 70) {
-    return { grade: 'B', color: 'blue', label: '良好' }
-  } else if (totalScore >= 60) {
-    return { grade: 'C', color: 'yellow', label: '及格' }
-  } else if (totalScore >= 50) {
-    return { grade: 'D', color: 'orange', label: '需改进' }
-  } else {
-    return { grade: 'F', color: 'red', label: '不建议投放' }
-  }
-}
-
-/**
+} /**
  * ========================================
  * Ad Strength评估系统（NEW）
  * 结合本地算法 + Google Ads API验证
@@ -860,7 +837,7 @@ export async function evaluateCreativeAdStrength(
  * @param brandOptions 品牌搜索量配置（可选）
  * @returns Ad Strength评级
  */
-export async function getQuickAdStrength(
+async function getQuickAdStrength(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],
   keywords: string[],

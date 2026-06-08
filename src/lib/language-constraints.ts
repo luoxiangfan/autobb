@@ -27,7 +27,7 @@ export interface LanguageConstraints {
  * - 关键词：1-4个单词
  * - 最小搜索量：500/月
  */
-export const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
+const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
   en: {
     language: 'English',
     languageCode: 'en',

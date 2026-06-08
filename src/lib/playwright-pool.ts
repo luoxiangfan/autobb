@@ -1083,19 +1083,7 @@ export function getPlaywrightPool(): PlaywrightPool {
     globalPool = new PlaywrightPool()
   }
   return globalPool
-}
-
-/**
- * 关闭全局连接池（用于测试或应用关闭）
- */
-export async function closePlaywrightPool(): Promise<void> {
-  if (globalPool) {
-    await globalPool.closeAll()
-    globalPool = null
-  }
-}
-
-/**
+} /**
  * 获取连接池统计信息
  */
 export function getPlaywrightPoolStats() {

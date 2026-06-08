@@ -6,8 +6,6 @@
  * @created 2025-12-30
  */
 
-import type { DatabaseAdapter } from './db'
-
 /**
  * 统一处理 INSERT 返回的 ID
  *
@@ -219,49 +217,7 @@ export function toBool(value: any): boolean {
     return value
   }
   return value === 1 || value === '1' || value === true
-}
-
-/**
- * 高级工具：执行 INSERT 并返回完整的记录对象
- *
- * 简化了常见的 INSERT + SELECT 模式
- *
- * @param db - 数据库适配器
- * @param insertSql - INSERT SQL 语句
- * @param insertParams - INSERT 参数
- * @param selectSql - SELECT SQL 语句 (应该包含 WHERE id = ? 条件)
- * @param selectParams - SELECT 额外参数 (id 会自动添加到第一位)
- * @returns 插入后的完整记录
- *
- * @example
- * ```typescript
- * const db = await getDatabase()
- * const user = await insertAndReturn(
- *   db,
- *   'INSERT INTO users (username, email) VALUES (?, ?)',
- *   ['john', 'john@example.com'],
- *   'SELECT * FROM users WHERE id = ? AND user_id = ?',
- *   [currentUserId]  // id 会自动添加到第一位
- * )
- * ```
- */
-export async function insertAndReturn<T>(
-  db: DatabaseAdapter,
-  insertSql: string,
-  insertParams: any[],
-  selectSql: string,
-  selectParams: any[] = []
-): Promise<T | null> {
-  const result = await db.exec(insertSql, insertParams)
-  const insertedId = getInsertedId(result, db.type)
-
-  // 将 id 添加到 SELECT 参数的第一位
-  const fullParams = [insertedId, ...selectParams]
-  const queryResult = await db.queryOne<T>(selectSql, fullParams)
-  return queryResult ?? null
-}
-
-/**
+} /**
  * 批量工具：根据数据库类型选择合适的 UPSERT 语法
  *
  * PostgreSQL: INSERT ... ON CONFLICT ... DO UPDATE

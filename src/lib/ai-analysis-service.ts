@@ -20,8 +20,8 @@ import {
   shouldRunCompetitorDetailScrapingInAi,
   shouldRunPlaywrightCompetitorDeepScrape,
   shouldRunPlaywrightReviewDeepScrape,
-  type OfferExtractionMode,
-} from './offer-extraction-performance' // 🔧 新增：统一价格解析函数
+} from './offer-extraction-performance'
+import type { OfferExtractionMode } from './offer-extraction-mode'
 import { getProxyUrlForCountry } from './settings' // 🔥 修复（2025-12-09）：动态获取代理URL
 import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
 import { isInvalidKeyword } from './keyword-invalid-filter'

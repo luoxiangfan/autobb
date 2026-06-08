@@ -42,7 +42,7 @@ const extractionModeSchema = z
       })
   )
 
-export const updateOfferBodySchema = z.object({
+const updateOfferBodySchema = z.object({
   url: z.url(zErr.invalidUrl).optional(),
   brand: z.string().min(1, zErr.brandRequired).optional(),
   category: z.string().optional(),

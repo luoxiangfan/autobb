@@ -125,15 +125,3 @@ export function generateCampaignName(params: {
 
   return `${offerId}-${creativeId}-${cleanBrandName}-${campaignType}`
 }
-
-/**
- * 检查广告系列是否属于当前Offer
- *
- * @param campaignName 广告系列名称
- * @param offerId Offer ID
- * @returns 是否属于当前Offer
- */
-export function isCampaignOwnedByOffer(campaignName: string, offerId: number): boolean {
-  const namingInfo = parseCampaignName(campaignName)
-  return namingInfo.isValidNaming && namingInfo.offerId === offerId
-}

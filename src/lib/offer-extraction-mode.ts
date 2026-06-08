@@ -7,7 +7,7 @@ export type OfferExtractionMode = 'fast' | 'balanced' | 'original'
 export const OFFER_EXTRACTION_MODES: OfferExtractionMode[] = ['fast', 'balanced', 'original']
 
 /** 未指定或无效时的默认提取模式 */
-export const OFFER_EXTRACTION_MODE_DEFAULT: OfferExtractionMode = 'original'
+const OFFER_EXTRACTION_MODE_DEFAULT: OfferExtractionMode = 'original'
 
 export const OFFER_EXTRACTION_MODE_LABELS: Record<OfferExtractionMode, string> = {
   fast: '快速',

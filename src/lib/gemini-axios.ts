@@ -866,7 +866,7 @@ async function getGeminiApiKey(userId: number, provider: GeminiProvider): Promis
 /**
  * 根据服务商类型获取端点 URL（纯函数）
  */
-export function getEndpointByProvider(provider: GeminiProvider): string {
+function getEndpointByProvider(provider: GeminiProvider): string {
   return GEMINI_PROVIDERS[provider].endpoint
 }
 
@@ -885,7 +885,7 @@ export function getEndpointByProvider(provider: GeminiProvider): string {
  * - relay 服务商使用 Cloudflare 防护，需要浏览器特征 headers 绕过检测
  * - official 服务商不需要这些 headers（官方API不使用Cloudflare）
  */
-export async function createGeminiAxiosClient(
+async function createGeminiAxiosClient(
   userId: number,
   provider?: GeminiProvider
 ): Promise<AxiosInstance> {

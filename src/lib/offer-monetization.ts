@@ -1,6 +1,6 @@
 import { parsePrice } from '@/lib/pricing-utils'
 
-export const COUNTRY_CURRENCY_MAP: Readonly<Record<string, string>> = {
+const COUNTRY_CURRENCY_MAP: Readonly<Record<string, string>> = {
   US: 'USD',
   CA: 'CAD',
   GB: 'GBP',
@@ -49,7 +49,7 @@ export const COUNTRY_CURRENCY_MAP: Readonly<Record<string, string>> = {
   ZA: 'ZAR',
 }
 
-export const CURRENCY_SYMBOL_MAP: Readonly<Record<string, string>> = {
+const CURRENCY_SYMBOL_MAP: Readonly<Record<string, string>> = {
   USD: '$',
   CAD: 'C$',
   GBP: '£',
@@ -243,7 +243,7 @@ export function getCurrencySymbolByCode(currencyCode?: string | null): string {
   return CURRENCY_SYMBOL_MAP[code] || '$'
 }
 
-export function getCurrencySymbolByCountry(country?: string | null): string {
+function getCurrencySymbolByCountry(country?: string | null): string {
   const code = getCurrencyCodeByCountry(country)
   return getCurrencySymbolByCode(code)
 }

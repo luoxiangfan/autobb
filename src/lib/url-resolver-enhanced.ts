@@ -578,8 +578,6 @@ export function clearProxyPool(userId?: number): void {
 
 // ==================== Redis缓存管理 ====================
 
-const CACHE_TTL = 7 * 24 * 60 * 60 // 7天（秒）
-
 /**
  * 生成缓存键
  * 格式：{cache_prefix}redirect:{targetCountry}:{affiliateLink}
@@ -592,7 +590,7 @@ function getCacheKey(affiliateLink: string, targetCountry: string): string {
 /**
  * 从Redis获取缓存的重定向结果
  */
-export async function getCachedRedirect(
+async function getCachedRedirect(
   affiliateLink: string,
   targetCountry: string
 ): Promise<ResolvedUrlData | null> {
@@ -612,29 +610,7 @@ export async function getCachedRedirect(
     console.error('Redis缓存读取失败:', error)
     return null
   }
-}
-
-/**
- * 将重定向结果存入Redis缓存
- */
-export async function setCachedRedirect(
-  affiliateLink: string,
-  targetCountry: string,
-  data: ResolvedUrlData
-): Promise<void> {
-  try {
-    const redis = getRedisClient()
-    const cacheKey = getCacheKey(affiliateLink, targetCountry)
-    const cacheData = { ...data, cachedAt: Date.now() }
-
-    await redis.setex(cacheKey, CACHE_TTL, JSON.stringify(cacheData))
-    console.log(`✅ 缓存已保存: ${affiliateLink} (TTL: ${CACHE_TTL}s)`)
-  } catch (error) {
-    console.error('Redis缓存写入失败:', error)
-  }
-}
-
-// ==================== 智能重试策略 ====================
+} // ==================== 智能重试策略 ====================
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

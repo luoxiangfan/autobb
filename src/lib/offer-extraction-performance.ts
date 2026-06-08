@@ -8,16 +8,6 @@ import {
   type OfferExtractionMode,
 } from '@/lib/offer-extraction-mode'
 
-export type { OfferExtractionMode } from '@/lib/offer-extraction-mode'
-export {
-  OFFER_EXTRACTION_MODES,
-  OFFER_EXTRACTION_MODE_LABELS,
-  OFFER_EXTRACTION_MODE_DESCRIPTIONS,
-  getDefaultOfferExtractionMode,
-  getOfferExtractionModeProfile,
-  normalizeOfferExtractionMode,
-} from '@/lib/offer-extraction-mode'
-
 function profileFor(mode?: OfferExtractionMode | string | null) {
   return getOfferExtractionModeProfile(mode ?? getDefaultOfferExtractionMode())
 }
@@ -51,26 +41,6 @@ export function shouldSkipAmazonCompetitorExtractionOnExtract(
   mode?: OfferExtractionMode | string | null
 ): boolean {
   return profileFor(mode).skipAmazonCompetitorExtraction
-}
-
-export function preferCanonicalAmazonUrlFirst(mode?: OfferExtractionMode | string | null): boolean {
-  return profileFor(mode).preferCanonicalAmazonUrlFirst
-}
-
-export function isWarmupBlockingForMode(mode?: OfferExtractionMode | string | null): boolean {
-  return profileFor(mode).warmupBlocking
-}
-
-export function shouldSkipPlaywrightWhenMinimalBaseline(
-  mode?: OfferExtractionMode | string | null
-): boolean {
-  return profileFor(mode).skipPlaywrightWhenMinimalBaseline
-}
-
-export function useLegacyIndependentPlaywrightFallback(
-  mode?: OfferExtractionMode | string | null
-): boolean {
-  return profileFor(mode).useLegacyIndependentPlaywrightFallback
 }
 
 export function getAmazonScrapeOptionsForMode(mode?: OfferExtractionMode | string | null): {

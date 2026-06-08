@@ -5,7 +5,7 @@ export interface DkiLocaleOptions {
   targetCountry?: string | null
 }
 
-export const DKI_OFFICIAL_SUFFIX_BY_LANGUAGE: Record<string, string> = {
+const DKI_OFFICIAL_SUFFIX_BY_LANGUAGE: Record<string, string> = {
   en: ' Official',
   zh: ' 官方',
   es: ' Oficial',

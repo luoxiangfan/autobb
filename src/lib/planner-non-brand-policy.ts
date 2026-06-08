@@ -103,7 +103,7 @@ export function plannerNonBrandPolicyAllows(
   return Boolean(policy.allowNonBrandForModelFamily)
 }
 
-export function resolvePlannerNonBrandUseCaseFromMetadata(input: {
+function resolvePlannerNonBrandUseCaseFromMetadata(input: {
   source?: string
   sourceType?: string
   sourceSubtype?: string
@@ -125,7 +125,7 @@ export function resolvePlannerNonBrandUseCaseFromMetadata(input: {
   return undefined
 }
 
-export function isKeywordPlannerSource(input: {
+function isKeywordPlannerSource(input: {
   source?: string
   sourceType?: string
   sourceSubtype?: string

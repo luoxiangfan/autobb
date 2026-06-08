@@ -23,11 +23,7 @@ export function normalizeBrandKey(brand: string): string {
   return trimmed.normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, '')
 }
 
-export function buildBrandCoreCacheKey(
-  brandKey: string,
-  country: string,
-  language: string
-): string {
+function buildBrandCoreCacheKey(brandKey: string, country: string, language: string): string {
   return `${REDIS_PREFIX_CONFIG.cache}brand:core:${brandKey}:${country}:${language}`
 }
 
@@ -63,7 +59,7 @@ async function writeBrandCoreCache(
   }
 }
 
-export async function getBrandCoreKeywordsByKey(
+async function getBrandCoreKeywordsByKey(
   brandKey: string,
   country: string,
   language: string

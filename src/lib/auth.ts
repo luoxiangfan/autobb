@@ -60,25 +60,14 @@ export interface LoginResponse {
 /**
  * 通过邮箱查找用户
  */
-export async function findUserByEmail(email: string): Promise<User | null> {
+async function findUserByEmail(email: string): Promise<User | null> {
   const db = await getDatabase()
   const user = await db.queryOne<User>('SELECT * FROM users WHERE email = ?', [email])
   return user || null
-}
-
-/**
- * 通过用户名查找用户
- */
-export async function findUserByUsername(username: string): Promise<User | null> {
-  const db = await getDatabase()
-  const user = await db.queryOne<User>('SELECT * FROM users WHERE username = ?', [username])
-  return user || null
-}
-
-/**
+} /**
  * 通过用户名或邮箱查找用户
  */
-export async function findUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
+async function findUserByUsernameOrEmail(usernameOrEmail: string): Promise<User | null> {
   const db = await getDatabase()
   const user = await db.queryOne<User>('SELECT * FROM users WHERE username = ? OR email = ?', [
     usernameOrEmail,
@@ -90,7 +79,7 @@ export async function findUserByUsernameOrEmail(usernameOrEmail: string): Promis
 /**
  * 通过Google ID查找用户
  */
-export async function findUserByGoogleId(googleId: string): Promise<User | null> {
+async function findUserByGoogleId(googleId: string): Promise<User | null> {
   const db = await getDatabase()
   const user = await db.queryOne<User>('SELECT * FROM users WHERE google_id = ?', [googleId])
   return user || null
@@ -108,7 +97,7 @@ export async function findUserById(id: number): Promise<User | null> {
 /**
  * 生成唯一的动物用户名 (8-12位)
  */
-export async function generateUniqueUsername(): Promise<string> {
+async function generateUniqueUsername(): Promise<string> {
   const animals = [
     'panda',
     'tiger',
@@ -239,7 +228,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 /**
  * 更新用户最后登录时间
  */
-export async function updateLastLogin(userId: number): Promise<void> {
+async function updateLastLogin(userId: number): Promise<void> {
   const db = await getDatabase()
   const db_type = db.type
   const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
@@ -418,34 +407,7 @@ export async function loginWithGoogle(googleProfile: {
     },
     mustChangePassword,
   }
-}
-
-/**
- * 验证用户套餐权限
- */
-export function checkPackageAccess(user: User, requiredPackage: string): boolean {
-  const packageLevels = {
-    trial: 0,
-    annual: 1,
-    lifetime: 2,
-    enterprise: 3,
-  }
-
-  const userLevel = packageLevels[user.package_type as keyof typeof packageLevels] || 0
-  const requiredLevel = packageLevels[requiredPackage as keyof typeof packageLevels] || 0
-
-  // 检查套餐是否过期
-  if (user.package_expires_at) {
-    const expiryDate = new Date(user.package_expires_at)
-    if (expiryDate < new Date()) {
-      return false
-    }
-  }
-
-  return userLevel >= requiredLevel
-}
-
-/**
+} /**
  * 验证API请求的认证状态
  */
 export interface AuthResult {

@@ -103,31 +103,6 @@ export async function findGoogleAdsAccountById(
 }
 
 /**
- * 根据 customer_id 查找账号
- */
-export async function findGoogleAdsAccountByCustomerId(
-  customerId: string,
-  userId: number
-): Promise<GoogleAdsAccount | null> {
-  const db = await getDatabase()
-
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
-  const row = (await db.queryOne(
-    `
-    SELECT * FROM google_ads_accounts
-    WHERE customer_id = ? AND user_id = ? AND ${isDeletedCheck}
-  `,
-    [customerId, userId]
-  )) as any
-
-  if (!row) {
-    return null
-  }
-
-  return mapRowToGoogleAdsAccount(row)
-}
-
-/**
  * 查找用户的所有 Google Ads 账号
  */
 export async function findGoogleAdsAccountsByUserId(userId: number): Promise<GoogleAdsAccount[]> {
@@ -521,70 +496,6 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
   }
 
   return true
-}
-
-/**
- * 设置默认激活账号（将其他账号设为不激活）
- */
-export async function setActiveGoogleAdsAccount(id: number, userId: number): Promise<boolean> {
-  const db = await getDatabase()
-
-  // 🔧 PostgreSQL 兼容性：布尔字段和时间函数兼容性处理
-  const isActiveTrue = db.type === 'postgres' ? true : 1
-  const isActiveFalse = db.type === 'postgres' ? false : 0
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-
-  // 将所有账号设为不激活
-  await db.exec(
-    `
-    UPDATE google_ads_accounts
-    SET is_active = ?
-    WHERE user_id = ?
-  `,
-    [isActiveFalse, userId]
-  )
-
-  // 将指定账号设为激活
-  const result = await db.exec(
-    `
-    UPDATE google_ads_accounts
-    SET is_active = ?, updated_at = ${nowFunc}
-    WHERE id = ? AND user_id = ?
-  `,
-    [isActiveTrue, id, userId]
-  )
-
-  return result.changes > 0
-}
-
-/**
- * 获取 Google Ads 账号的解密凭证
- * 用于 API 调用时获取认证信息
- */
-export async function getDecryptedCredentials(
-  accountId: number,
-  userId: number
-): Promise<{
-  customerId: string
-  accessToken: string | null
-  refreshToken: string | null
-  serviceAccountId: string | null
-  clientId?: string
-  clientSecret?: string
-} | null> {
-  const account = await findGoogleAdsAccountById(accountId, userId)
-
-  if (!account) {
-    return null
-  }
-
-  // 返回凭证信息（在实际生产环境中，这里应该进行解密操作）
-  return {
-    customerId: account.customerId,
-    accessToken: account.accessToken,
-    refreshToken: account.refreshToken,
-    serviceAccountId: account.serviceAccountId,
-  }
 }
 
 /**

@@ -202,19 +202,3 @@ export function isIPRocketBusinessError(error: any): boolean {
       rawMessage.includes('risk control'))
   )
 }
-
-/**
- * 简化版：仅检测是否为代理相关错误
- * 用于快速判断场景
- */
-export function isProxyRelatedError(error: any): boolean {
-  const rawMessage = error?.message || String(error)
-  return (
-    rawMessage.includes('proxy') ||
-    rawMessage.includes('代理') ||
-    rawMessage.includes('ProxyError') ||
-    rawMessage.includes('IPRocket') ||
-    rawMessage.includes('Oxylabs') ||
-    rawMessage.includes('获取代理IP失败')
-  )
-}

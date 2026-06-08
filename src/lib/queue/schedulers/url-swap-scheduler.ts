@@ -44,7 +44,7 @@ interface UrlSwapTaskInfo {
   status: string
 }
 
-export class UrlSwapScheduler {
+class UrlSwapScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false

@@ -103,7 +103,7 @@ export enum ErrorCode {
 /**
  * 错误消息映射（中英文）
  */
-export const ErrorMessages: Record<ErrorCode, { zh: string; en: string; httpStatus: number }> = {
+const ErrorMessages: Record<ErrorCode, { zh: string; en: string; httpStatus: number }> = {
   // 认证错误
   [ErrorCode.AUTH_UNAUTHORIZED]: {
     zh: '未授权，请先登录',

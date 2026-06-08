@@ -13,7 +13,7 @@
  * 基于 getSupportedCountries() 支持的 60+ 国家
  * 对于有多个时区的国家，选择最具代表性的商业时区
  */
-export const COUNTRY_TIMEZONE_MAP: Record<string, string> = {
+const COUNTRY_TIMEZONE_MAP: Record<string, string> = {
   // 北美（3个国家）
   US: 'America/New_York', // 美国 - 东部时间（纽约，最大商业中心）
   CA: 'America/Toronto', // 加拿大 - 东部时间（多伦多，最大城市）

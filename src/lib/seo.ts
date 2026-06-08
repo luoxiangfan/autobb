@@ -8,7 +8,7 @@ import { Metadata } from 'next'
 /**
  * 基础SEO配置
  */
-export const baseSEO = {
+const baseSEO = {
   siteName: 'AutoAds',
   siteUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   locale: 'zh_CN',
@@ -247,11 +247,4 @@ export const pageMetadata = {
     path: '/admin/backups',
     noIndex: true,
   }),
-}
-
-/**
- * 获取页面metadata的快捷函数
- */
-export function getPageMetadata(pageKey: keyof typeof pageMetadata): Metadata {
-  return pageMetadata[pageKey]
 }

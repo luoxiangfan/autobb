@@ -31,7 +31,3 @@ export function isEphemeralTaskType(type: TaskType | string): boolean {
 export function isBackgroundTaskType(type: TaskType | string): boolean {
   return BACKGROUND_TASK_TYPES.has(type as TaskType)
 }
-
-export function isCoreTaskType(type: TaskType | string): boolean {
-  return !isBackgroundTaskType(type)
-}

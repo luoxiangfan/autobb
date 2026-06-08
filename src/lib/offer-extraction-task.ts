@@ -20,7 +20,7 @@ import {
 } from '@/lib/offer-extract-request'
 
 /** offer_tasks 中视为“占用中”、不可重复入队的状态 */
-export const ACTIVE_OFFER_EXTRACTION_TASK_STATUSES = ['pending', 'running'] as const
+const ACTIVE_OFFER_EXTRACTION_TASK_STATUSES = ['pending', 'running'] as const
 
 export function isOfferScrapeStatusBusy(scrapeStatus: string | null | undefined): boolean {
   return scrapeStatus === 'queued' || scrapeStatus === 'in_progress'
@@ -364,7 +364,7 @@ export type EnqueueExistingOfferExtractionParams = {
 }
 
 /** rebuild / scrape / batch/rebuild 共用：校验前置条件并入队 */
-export async function enqueueExistingOfferExtraction(
+async function enqueueExistingOfferExtraction(
   params: EnqueueExistingOfferExtractionParams
 ): Promise<{
   taskId: string

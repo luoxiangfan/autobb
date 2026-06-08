@@ -1,0 +1,51 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/scheduler.ts",
+    "src/background-worker.ts",
+    "src/openclaw-sync.ts",
+    "src/test-utils/vitest-auth-setup.ts",
+    "src/hooks/index.ts",
+    "src/components/charts/dynamic.tsx",
+    "build-scheduler.js",
+    "scripts/*.{ts,js,mjs}"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,js,mjs}"],
+  "ignore": [
+    "openclaw/**",
+    "openclaw-v1/**",
+    "openclaw-prebuilt/**",
+    "oldcode/**",
+    "extensions/**"
+  ],
+  "ignoreDependencies": [
+    "tw-animate-css",
+    "@tailwindcss/postcss",
+    "postcss",
+    "tailwindcss",
+    "lint-staged",
+    "eslint-config-next",
+    "eslint-config-prettier",
+    "eslint-plugin-unused-imports",
+    "xlsx"
+  ],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "ignoreIssues": {
+    "src/components/ui/**": ["exports", "types", "enumMembers"],
+    "src/lib/__tests__/test-utils.ts": ["exports", "types"],
+    "src/lib/google-ads-accounts-auth.ts": ["exports", "types"],
+    "src/lib/google-ads-api.ts": ["exports", "types"],
+    "src/lib/stealth-scraper/index.ts": ["exports", "types"],
+    "src/lib/queue/executors/index.ts": ["exports", "types"],
+    "src/lib/audit-logger.ts": ["enumMembers"]
+  },
+  "vitest": {
+    "entry": ["src/**/*.{test,spec}.{ts,tsx}"]
+  },
+  "next": true,
+  "eslint": false,
+  "tags": ["-lintignore"]
+}

@@ -7892,7 +7892,7 @@ export async function setAffiliateProductBlacklist(
   return await getAffiliateProductById(userId, productId)
 }
 
-export async function recordAffiliateProductOfferLink(params: {
+async function recordAffiliateProductOfferLink(params: {
   userId: number
   productId: number
   offerId: number

@@ -227,7 +227,7 @@ export const LANGUAGE_CODE_MAP: Record<string, string> = {
  * 国家代码映射表
  * 从完整国家名称映射到标准的 ISO 3166-1 alpha-2 代码
  */
-export const COUNTRY_CODE_MAP: Record<string, string> = {
+const COUNTRY_CODE_MAP: Record<string, string> = {
   // 北美
   'united states': 'US',
   usa: 'US',
@@ -567,7 +567,7 @@ export const LANGUAGE_COUNTRY_PAIRS: Record<string, string[]> = {
  * 国家代码到语言名称的映射
  * 用于根据目标国家确定分析语言
  */
-export const COUNTRY_TO_LANGUAGE_NAME: Record<string, string> = {
+const COUNTRY_TO_LANGUAGE_NAME: Record<string, string> = {
   // 英语国家
   US: 'English',
   GB: 'English',
@@ -973,88 +973,6 @@ export function getGoogleAdsLanguageCode(language: string): number {
 }
 
 /**
- * 获取语言的 Google Ads API 国家代码
- * 用于 Keyword Planner 和其他 Google Ads API 调用
- */
-export function getGoogleAdsCountryCode(country: string): string {
-  return normalizeCountryCode(country)
-}
-
-/**
- * 验证并规范化语言和国家代码
- * @param language 语言名称或代码
- * @param country 国家名称或代码
- * @returns 规范化后的 { language, country } 对象
- */
-export function normalizeLanguageCountry(
-  language: string,
-  country: string
-): { language: string; country: string } {
-  const normalizedLanguage = normalizeLanguageCode(language)
-  const normalizedCountry = normalizeCountryCode(country)
-
-  return {
-    language: normalizedLanguage,
-    country: normalizedCountry,
-  }
-}
-
-/**
- * 获取所有支持的语言列表
- * 扩展到40种语言
- */
-export function getSupportedLanguages(): Array<{ code: string; name: string }> {
-  return [
-    // 主要语言 (高优先级)
-    { code: 'en', name: 'English' },
-    { code: 'zh', name: 'Chinese' },
-    { code: 'es', name: 'Spanish' },
-    { code: 'fr', name: 'French' },
-    { code: 'de', name: 'German' },
-    { code: 'ja', name: 'Japanese' },
-    { code: 'ko', name: 'Korean' },
-    { code: 'pt', name: 'Portuguese' },
-    { code: 'it', name: 'Italian' },
-    { code: 'ru', name: 'Russian' },
-    { code: 'ar', name: 'Arabic' },
-    // 欧洲语言
-    { code: 'nl', name: 'Dutch' },
-    { code: 'pl', name: 'Polish' },
-    { code: 'sv', name: 'Swedish' },
-    { code: 'da', name: 'Danish' },
-    { code: 'fi', name: 'Finnish' },
-    { code: 'no', name: 'Norwegian' },
-    { code: 'el', name: 'Greek' },
-    { code: 'cs', name: 'Czech' },
-    { code: 'hu', name: 'Hungarian' },
-    { code: 'ro', name: 'Romanian' },
-    { code: 'sk', name: 'Slovak' },
-    { code: 'bg', name: 'Bulgarian' },
-    { code: 'hr', name: 'Croatian' },
-    { code: 'sr', name: 'Serbian' },
-    { code: 'sl', name: 'Slovenian' },
-    { code: 'uk', name: 'Ukrainian' },
-    { code: 'et', name: 'Estonian' },
-    { code: 'lv', name: 'Latvian' },
-    { code: 'lt', name: 'Lithuanian' },
-    // 亚洲语言
-    { code: 'tr', name: 'Turkish' },
-    { code: 'th', name: 'Thai' },
-    { code: 'vi', name: 'Vietnamese' },
-    { code: 'id', name: 'Indonesian' },
-    { code: 'ms', name: 'Malay' },
-    { code: 'hi', name: 'Hindi' },
-    { code: 'bn', name: 'Bengali' },
-    { code: 'tl', name: 'Tagalog' },
-    // 中东语言
-    { code: 'he', name: 'Hebrew' },
-    { code: 'fa', name: 'Persian' },
-    // 特殊变体
-    { code: 'de-ch', name: 'Swiss German' },
-  ]
-}
-
-/**
  * 获取所有支持的国家列表
  * 扩展到60+国家
  */
@@ -1338,32 +1256,6 @@ const COUNTRY_CHINESE_NAMES: Record<string, string> = {
   NG: '尼日利亚',
   KE: '肯尼亚',
   MA: '摩洛哥',
-}
-
-/**
- * 获取国家的中文名称
- * @param countryCode ISO 3166-1 alpha-2 国家代码
- * @returns 中文国家名称
- */
-export function getCountryChineseName(countryCode: string): string {
-  const upperCode = countryCode.toUpperCase()
-  return COUNTRY_CHINESE_NAMES[upperCode] || countryCode
-}
-
-/**
- * 获取所有支持的国家列表（带中文名称）
- * 用于前端下拉选择框
- * @returns 包含code、英文名、中文名的国家数组
- */
-export function getSupportedCountriesWithChineseName(): Array<{
-  code: string
-  name: string
-  chineseName: string
-}> {
-  return getSupportedCountries().map((country) => ({
-    ...country,
-    chineseName: COUNTRY_CHINESE_NAMES[country.code] || country.name,
-  }))
 }
 
 /**

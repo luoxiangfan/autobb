@@ -164,49 +164,6 @@ export async function extractBrandServices(
 }
 
 /**
- * 将品牌服务转换为AI可用的白名单
- */
-export function servicesToWhitelist(services: BrandServices): string[] {
-  const whitelist: string[] = []
-
-  // 合并所有服务
-  Object.values(services).forEach((serviceList) => {
-    whitelist.push(...serviceList)
-  })
-
-  // 去重
-  return Array.from(new Set(whitelist))
-}
-
-/**
- * 验证Callout/Sitelink是否在白名单中
- */
-export function validateAgainstWhitelist(
-  items: string[],
-  whitelist: string[]
-): { valid: string[]; invalid: string[] } {
-  const valid: string[] = []
-  const invalid: string[] = []
-
-  items.forEach((item) => {
-    // 简单的包含匹配（不区分大小写）
-    const itemLower = item.toLowerCase()
-    const isValid = whitelist.some(
-      (allowed) =>
-        itemLower.includes(allowed.toLowerCase()) || allowed.toLowerCase().includes(itemLower)
-    )
-
-    if (isValid) {
-      valid.push(item)
-    } else {
-      invalid.push(item)
-    }
-  })
-
-  return { valid, invalid }
-}
-
-/**
  * 生成Callout建议（基于真实服务）
  */
 export function generateCalloutSuggestions(services: BrandServices): string[] {

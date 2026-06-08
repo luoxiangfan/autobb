@@ -1151,7 +1151,7 @@ function filterSupersededGeneratingPlaceholders(creatives: AdCreative[]): AdCrea
 /**
  * 获取Offer的所有广告创意
  */
-export async function listAdCreativesByOffer(
+async function listAdCreativesByOffer(
   offerId: number,
   userId: number,
   options?: {

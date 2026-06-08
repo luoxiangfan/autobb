@@ -17,7 +17,3 @@ export function getLogContext(): LogContext {
 export async function runWithLogContext<T>(context: LogContext, fn: () => Promise<T>): Promise<T> {
   return await storage.run(context, fn)
 }
-
-export function runWithLogContextSync<T>(context: LogContext, fn: () => T): T {
-  return storage.run(context, fn)
-}

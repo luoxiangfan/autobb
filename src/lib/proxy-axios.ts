@@ -170,57 +170,6 @@ export async function createProxyAxiosClient(options?: {
 }
 
 /**
- * 便捷函数：使用代理发送 GET 请求
- *
- * @param url - 目标 URL
- * @param config - axios 请求配置（可选）
- * @param proxyOptions - 代理配置（可选）
- * @returns axios 响应
- *
- * @example
- * const response = await proxyGet('https://example.com/page')
- * console.log(response.data)
- *
- * @example
- * // 使用自定义代理
- * const response = await proxyGet(
- *   'https://example.com',
- *   { headers: { 'Custom-Header': 'value' } },
- *   { customProxyUrl: 'https://...' }
- * )
- */
-export async function proxyGet<T = any>(
-  url: string,
-  config?: AxiosRequestConfig,
-  proxyOptions?: Parameters<typeof createProxyAxiosClient>[0]
-): Promise<import('axios').AxiosResponse<T>> {
-  const client = await createProxyAxiosClient(proxyOptions)
-  return client.get<T>(url, config)
-}
-
-/**
- * 便捷函数：使用代理发送 POST 请求
- *
- * @param url - 目标 URL
- * @param data - POST 数据
- * @param config - axios 请求配置（可选）
- * @param proxyOptions - 代理配置（可选）
- * @returns axios 响应
- *
- * @example
- * const response = await proxyPost('https://api.example.com/submit', { key: 'value' })
- */
-export async function proxyPost<T = any>(
-  url: string,
-  data?: any,
-  config?: AxiosRequestConfig,
-  proxyOptions?: Parameters<typeof createProxyAxiosClient>[0]
-): Promise<import('axios').AxiosResponse<T>> {
-  const client = await createProxyAxiosClient(proxyOptions)
-  return client.post<T>(url, data, config)
-}
-
-/**
  * 便捷函数：使用代理发送 HEAD 请求
  * 用于检查 URL 可用性而不下载完整内容
  *
@@ -241,53 +190,4 @@ export async function proxyHead<T = any>(
 ): Promise<import('axios').AxiosResponse<T>> {
   const client = await createProxyAxiosClient(proxyOptions)
   return client.head<T>(url, config)
-}
-
-/**
- * 清除代理客户端缓存
- *
- * @param proxyUrl - 可选，指定要清除的代理 URL，不指定则清除所有
- */
-export function clearProxyClientCache(proxyUrl?: string): void {
-  if (proxyUrl) {
-    let cleared = 0
-    for (const key of proxyClientCache.keys()) {
-      if (key.startsWith(proxyUrl + '|')) {
-        proxyClientCache.delete(key)
-        cleared++
-      }
-    }
-    console.log(`已清除 ${cleared} 个代理客户端缓存: ${proxyUrl}`)
-  } else {
-    const size = proxyClientCache.size
-    proxyClientCache.clear()
-    console.log(`已清除所有代理客户端缓存 (${size}个)`)
-  }
-}
-
-/**
- * 获取代理客户端缓存统计信息
- */
-export function getProxyClientCacheStats(): {
-  totalCached: number
-  validCached: number
-  expiredCached: number
-} {
-  const now = Date.now()
-  let validCount = 0
-  let expiredCount = 0
-
-  proxyClientCache.forEach((cached) => {
-    if (now < cached.expiresAt) {
-      validCount++
-    } else {
-      expiredCount++
-    }
-  })
-
-  return {
-    totalCached: proxyClientCache.size,
-    validCached: validCount,
-    expiredCached: expiredCount,
-  }
 }

@@ -86,7 +86,7 @@ function toTopSourceRatio(input: {
   return ratios
 }
 
-export function compareTopKeywordConsistency(input: {
+function compareTopKeywordConsistency(input: {
   baselineKeywords: string[]
   candidateKeywords: string[]
   topN?: number
@@ -176,7 +176,7 @@ export function evaluateMultiEntryTopNConsistency(input: {
   }
 }
 
-export function compareTopSourceDistributionDiff(input: {
+function compareTopSourceDistributionDiff(input: {
   baselineKeywords: Array<{ rawSource?: string }>
   candidateKeywords: Array<{ rawSource?: string }>
   topN?: number

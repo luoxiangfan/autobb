@@ -1,4 +1,4 @@
-export function normalizeTwoLetterCountryCode(value: unknown): string | null {
+function normalizeTwoLetterCountryCode(value: unknown): string | null {
   const normalized = String(value || '')
     .trim()
     .toUpperCase()

@@ -6,15 +6,15 @@ import { JWT_SECRET } from '@/lib/config'
 
 const SYSTEM_CATEGORY = 'system'
 
-export const YEAHPROMOS_SESSION_COOKIE_KEY = 'affiliate_yp_session_cookie'
-export const YEAHPROMOS_SESSION_CAPTURED_AT_KEY = 'affiliate_yp_session_captured_at'
-export const YEAHPROMOS_SESSION_EXPIRES_AT_KEY = 'affiliate_yp_session_expires_at'
-export const YEAHPROMOS_CAPTURE_NONCE_KEY = 'affiliate_yp_capture_nonce'
-export const YEAHPROMOS_CAPTURE_NONCE_EXPIRES_AT_KEY = 'affiliate_yp_capture_nonce_expires_at'
-export const YEAHPROMOS_MANUAL_SYNC_ONLY_KEY = 'affiliate_yp_manual_sync_only'
+const YEAHPROMOS_SESSION_COOKIE_KEY = 'affiliate_yp_session_cookie'
+const YEAHPROMOS_SESSION_CAPTURED_AT_KEY = 'affiliate_yp_session_captured_at'
+const YEAHPROMOS_SESSION_EXPIRES_AT_KEY = 'affiliate_yp_session_expires_at'
+const YEAHPROMOS_CAPTURE_NONCE_KEY = 'affiliate_yp_capture_nonce'
+const YEAHPROMOS_CAPTURE_NONCE_EXPIRES_AT_KEY = 'affiliate_yp_capture_nonce_expires_at'
+const YEAHPROMOS_MANUAL_SYNC_ONLY_KEY = 'affiliate_yp_manual_sync_only'
 
-export const YEAHPROMOS_CAPTURE_TOKEN_TTL_MS = 5 * 60 * 1000
-export const YEAHPROMOS_SESSION_DEFAULT_TTL_MS = 24 * 60 * 60 * 1000
+const YEAHPROMOS_CAPTURE_TOKEN_TTL_MS = 5 * 60 * 1000
+const YEAHPROMOS_SESSION_DEFAULT_TTL_MS = 24 * 60 * 60 * 1000
 
 const TRUE_TEXT_SET = new Set(['1', 'true', 'yes', 'on'])
 const COOKIE_NAME_PATTERN = /^[A-Za-z0-9_.$-]+$/
@@ -164,7 +164,7 @@ function parseCookieHeader(rawCookie: string): Record<string, string> {
   }, {})
 }
 
-export function normalizeYeahPromosCookie(rawCookie: string): {
+function normalizeYeahPromosCookie(rawCookie: string): {
   cookieHeader: string
   phpSessionId: string
 } {

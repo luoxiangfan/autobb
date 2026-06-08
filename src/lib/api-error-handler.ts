@@ -183,23 +183,3 @@ export async function fetchWithRetry<T = any>(
 
   return lastError!
 }
-
-/**
- * 用户友好的错误消息映射
- */
-export const ERROR_MESSAGES: Record<string, string> = {
-  SERVICE_UNAVAILABLE: '服务正在重启中，请稍后重试',
-  NETWORK_ERROR: '网络连接失败，请检查网络',
-  HTML_RESPONSE: '服务返回了错误页面，请稍后重试',
-  INVALID_JSON: '服务返回数据格式错误',
-  EMPTY_RESPONSE: '服务返回空响应',
-  UNKNOWN_ERROR: '请求发生未知错误',
-  FETCH_ERROR: '请求失败，请稍后重试',
-}
-
-/**
- * 获取用户友好的错误消息
- */
-export function getUserFriendlyError(error: string): string {
-  return ERROR_MESSAGES[error] || '请求失败，请稍后重试'
-}

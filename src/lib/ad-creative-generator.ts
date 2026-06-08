@@ -11,14 +11,12 @@ import { creativeCache, generateCreativeCacheKey } from './cache'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
-  resolvePlannerExpandForOffer,
   type KeywordPlannerPreparedSession,
   type KeywordPoolExpandLoadResult,
 } from './google-ads-accounts-auth'
 import {
   clusterKeywordsByIntent,
   getBucketInfo,
-  resolveKeywordPoolForCreativeGeneration,
   type OfferKeywordPool,
   type PoolKeywordData,
 } from './offer-keyword-pool' // 🔥 AI语义分类
@@ -193,7 +191,7 @@ function parsePriceAmount(value: string | null): number | null {
   return parsePrice(stripped)
 }
 
-export function resolveCreativeSalesRankSignal(value: unknown): CreativeSalesRankSignal {
+function resolveCreativeSalesRankSignal(value: unknown): CreativeSalesRankSignal {
   const raw = typeof value === 'string' ? value.trim() : ''
   if (!raw) {
     return {
@@ -253,7 +251,7 @@ function sanitizeReviewSnippetForPrompt(value: unknown): string | null {
   return truncated
 }
 
-export function resolveCreativePriceEvidence(offer: any): CreativePriceEvidenceResolution {
+function resolveCreativePriceEvidence(offer: any): CreativePriceEvidenceResolution {
   const pricingData = safeParseJson(offer?.pricing, null)
   const scrapedData = safeParseJson(offer?.scraped_data, null)
 
@@ -472,7 +470,7 @@ export interface AdCreativePromptKeywordPlan {
   policyMatchedTerms: string[]
 }
 
-export function resolveAdCreativePromptKeywordPlan(input: {
+function resolveAdCreativePromptKeywordPlan(input: {
   extractedKeywords?: Array<{ keyword?: string | null } | string>
   aiKeywords?: string[]
   titleAboutKeywordSeeds?: string[]
@@ -1304,7 +1302,7 @@ function syncDescriptionMetadataSlot(
   }
 }
 
-export function enforceTitlePriorityTopHeadlines(
+function enforceTitlePriorityTopHeadlines(
   result: GeneratedAdCreativeData,
   options: {
     brandName: string
@@ -1962,7 +1960,7 @@ function dedupeKeywordUsageCandidates(
   return Array.from(seen.values())
 }
 
-export function buildCreativeKeywordUsagePlan(input: {
+function buildCreativeKeywordUsagePlan(input: {
   brandName?: string | null
   precomputedKeywordSet?: PrecomputedCreativeKeywordSet | null
   headlineSlotCount?: number
@@ -2281,7 +2279,7 @@ function fitKeywordIntoDescription(
   )
 }
 
-export function enforceRetainedKeywordSlotCoverage(
+function enforceRetainedKeywordSlotCoverage(
   result: GeneratedAdCreativeData,
   usagePlan: CreativeKeywordUsagePlan | null | undefined,
   languageCode: string,
@@ -2520,7 +2518,7 @@ function normalizeCreativeBucketType(bucket?: string | null): NormalizedCreative
   return null
 }
 
-export function resolveCreativeBucketPoolKeywords(
+function resolveCreativeBucketPoolKeywords(
   pool: OfferKeywordPool,
   bucket?: string | null,
   fallbackBucket: Exclude<NormalizedCreativeBucket, null> = 'A'
@@ -2914,7 +2912,7 @@ function dedupeStoreProductNames(productNames: string[], limit = 3): string[] {
   return deduped
 }
 
-export function evaluateStoreModelIntentReadiness(params: {
+function evaluateStoreModelIntentReadiness(params: {
   bucket: NormalizedCreativeBucket
   linkType: 'store' | 'product'
   scrapedData?: unknown
@@ -2996,7 +2994,7 @@ export function evaluateStoreModelIntentReadiness(params: {
   }
 }
 
-export function shouldRunGapAnalysisForCreative(params: {
+function shouldRunGapAnalysisForCreative(params: {
   bucket?: string | null
   isCoverageCreative?: boolean
   deferKeywordSupplementation?: boolean
@@ -3877,7 +3875,7 @@ function enforceEmotionBoundaryByBucket(
   return { fixes }
 }
 
-export function softlyReinforceTypeCopy(
+function softlyReinforceTypeCopy(
   result: GeneratedAdCreativeData,
   bucket: NormalizedCreativeBucket,
   languageCode: string,
@@ -3977,7 +3975,7 @@ export function softlyReinforceTypeCopy(
   return { headlineFixes, descriptionFixes }
 }
 
-export function enforceHeadlineComplementarity(
+function enforceHeadlineComplementarity(
   result: GeneratedAdCreativeData,
   languageCode: string,
   brandName: string,
@@ -4130,7 +4128,7 @@ export function enforceHeadlineComplementarity(
   }
 }
 
-export function enforceLanguagePurityGate(
+function enforceLanguagePurityGate(
   result: GeneratedAdCreativeData,
   bucket: NormalizedCreativeBucket,
   languageCode: string,
@@ -4198,7 +4196,7 @@ export function enforceLanguagePurityGate(
   return { headlineFixes, descriptionFixes }
 }
 
-export function enforceHeadlineUniquenessGate(
+function enforceHeadlineUniquenessGate(
   result: GeneratedAdCreativeData,
   languageCode: string,
   brandName: string,
@@ -4381,7 +4379,7 @@ function resolveKeywordTargetForHeadlineSlot(params: {
   return keywords[(index - 1) % Math.max(1, keywords.length)] || ''
 }
 
-export function enforceGoogleAdsHeadlineAssetUniqueness(
+function enforceGoogleAdsHeadlineAssetUniqueness(
   result: GeneratedAdCreativeData,
   languageCode: string,
   brandName: string,
@@ -4738,7 +4736,7 @@ function enforceHardRetainedKeywordContract(
   return { headlineFixes, descriptionFixes }
 }
 
-export function enforceFinalCreativeContract(
+function enforceFinalCreativeContract(
   result: GeneratedAdCreativeData,
   options: {
     bucket: NormalizedCreativeBucket
@@ -5148,94 +5146,7 @@ function validateOfferDataQuality(offer: {
     isValid: issues.length === 0,
     issues,
   }
-}
-
-export function selectPrimaryKeywordForHeadline2(
-  keywords: Array<{ keyword: string; searchVolume?: number }> | null | undefined,
-  brandName: string,
-  fallbackTexts: string[]
-): string {
-  const brandLower = String(brandName || '')
-    .toLowerCase()
-    .trim()
-  const rawCandidates = (keywords || [])
-    .map((k) => ({
-      keyword: normalizeHeadline2KeywordCandidate(String((k as any).keyword || '')),
-      searchVolume: Number((k as any).searchVolume || 0),
-    }))
-    .filter((k) => k.keyword.length > 0)
-    .filter((k) => k.keyword.length <= 60)
-
-  const fallbackTokenSet = new Set(
-    fallbackTexts
-      .map((t) => normalizeBrandFreeText(t, brandName))
-      .flatMap((t) => tokenizeHeadline2Keyword(t))
-      .filter((t) => t.length > 1)
-      .filter((t) => !HEADLINE2_STOPWORDS.has(t))
-  )
-
-  // Headline #2 必须不含品牌：所有候选统一做去品牌处理（非品牌关键词保持不变）
-  const cleanedCandidates = rawCandidates
-    .map((k) => {
-      const cleaned = normalizeHeadline2KeywordCandidate(
-        normalizeBrandFreeText(k.keyword, brandName)
-      )
-      return { keyword: cleaned, searchVolume: k.searchVolume }
-    })
-    .filter((k) => k.keyword.length > 0)
-    .filter((k) => k.keyword.length <= 60)
-    .filter((k) => (brandLower ? !k.keyword.toLowerCase().includes(brandLower) : true))
-
-  const scored = cleanedCandidates
-    .map((c) => {
-      const tokens = tokenizeHeadline2Keyword(c.keyword)
-      const overlap = tokens.reduce((acc, t) => acc + (fallbackTokenSet.has(t) ? 1 : 0), 0)
-      return {
-        ...c,
-        tokens,
-        overlap,
-        intent: calculateIntentScore(c.keyword, brandName),
-      }
-    })
-    .filter((c) => c.tokens.length > 0)
-    // Filter out generic/navigational candidates like "shop" / "official store" / "store near me"
-    .filter((c) => !c.tokens.some((t) => HEADLINE2_BANNED_TOKENS.has(t)))
-    // Avoid defaultText that is only intent words (e.g. "shop", "buy", "price")
-    .filter((c) =>
-      c.tokens.some((t) => !HEADLINE2_INTENT_TOKENS.has(t) && !HEADLINE2_STOPWORDS.has(t))
-    )
-    // Avoid naked model codes unless they are actually relevant to the offer text
-    .filter((c) => {
-      if (c.tokens.length !== 1) return true
-      const t = c.tokens[0]
-      if (!isLikelyModelCodeToken(t)) return true
-      return fallbackTokenSet.has(t)
-    })
-    // Require relevance when we have offer context; prevents selecting "shop" over category terms
-    .filter((c) => (fallbackTokenSet.size === 0 ? true : c.overlap > 0))
-
-  if (scored.length > 0) {
-    const hasAnyVolume = scored.some((c) => c.searchVolume > 0)
-    scored.sort((a, b) => {
-      if (b.intent !== a.intent) return b.intent - a.intent
-      if (b.overlap !== a.overlap) return b.overlap - a.overlap
-      if (hasAnyVolume && b.searchVolume !== a.searchVolume) return b.searchVolume - a.searchVolume
-      return a.keyword.length - b.keyword.length
-    })
-    return scored[0].keyword
-  }
-
-  for (const fallback of fallbackTexts) {
-    const cleaned = normalizeHeadline2KeywordCandidate(
-      normalizeBrandFreeText(String(fallback || ''), brandName)
-    )
-    if (cleaned) return cleaned
-  }
-
-  return ''
-}
-
-// Keyword with search volume data
+} // Keyword with search volume data
 // 🎯 数据来源说明：统一使用Historical Metrics API的精确搜索量
 // 🎯 意图分类（3类）
 export type IntentCategory = 'brand' | 'scenario' | 'function'
@@ -6306,7 +6217,7 @@ function normalizeKeywordSourceTags(value: unknown): string[] | undefined {
   return normalized.length > 0 ? normalized : undefined
 }
 
-export function normalizeKeywordSourceAuditForGeneratorList(
+function normalizeKeywordSourceAuditForGeneratorList(
   keywords: KeywordWithVolume[]
 ): KeywordWithVolume[] {
   const aiSourceSubtypeEnabled = isCreativeKeywordAiSourceSubtypeEnabled()
@@ -6354,7 +6265,7 @@ export function normalizeKeywordSourceAuditForGeneratorList(
   })
 }
 
-export function normalizeSourceTypeFromLegacySource(input: {
+function normalizeSourceTypeFromLegacySource(input: {
   source?: string
   sourceType?: string
 }): string | undefined {
@@ -6376,7 +6287,7 @@ export function normalizeSourceTypeFromLegacySource(input: {
   return source
 }
 
-export function resolveCreativeTypeFromBucketForMerge(
+function resolveCreativeTypeFromBucketForMerge(
   bucket: 'A' | 'B' | 'C' | 'D' | 'S' | null | undefined
 ): 'brand_intent' | 'model_intent' | 'product_intent' | null {
   if (bucket === 'A') return 'brand_intent'
@@ -6385,7 +6296,7 @@ export function resolveCreativeTypeFromBucketForMerge(
   return null
 }
 
-export function shouldAllowZeroVolumeKeywordForMerge(input: {
+function shouldAllowZeroVolumeKeywordForMerge(input: {
   keyword: string
   source?: string
   sourceType?: string
@@ -7133,7 +7044,7 @@ function truncateDkiDefaultText(defaultText: string, maxLength: number): string 
   return candidate || 'Keyword'
 }
 
-export function buildDkiFirstHeadline(
+function buildDkiFirstHeadline(
   brandName: string,
   maxLength = 30,
   localeOptions?: DkiLocaleOptions
@@ -7164,7 +7075,7 @@ export function buildDkiFirstHeadline(
   return `{KeyWord:${truncateDkiDefaultText(normalizedBrand, maxLength)}}`
 }
 
-export function buildDkiKeywordHeadline(defaultText: string, maxLength = 30): string {
+function buildDkiKeywordHeadline(defaultText: string, maxLength = 30): string {
   const normalized = String(defaultText || '')
     .replace(/[{}]/g, '')
     .replace(/\s{2,}/g, ' ')
@@ -7194,7 +7105,7 @@ export interface CreativeTargetLanguageResolution {
   usedCountryFallback: boolean
 }
 
-export function resolveCreativeTargetLanguage(
+function resolveCreativeTargetLanguage(
   targetLanguageInput: string | null | undefined,
   targetCountryInput: string | null | undefined
 ): CreativeTargetLanguageResolution {
@@ -9916,7 +9827,7 @@ function scoreAdCreativeCandidate(raw: any): number {
 // may reject large or deeply nested schemas with INVALID_ARGUMENT. Keep the
 // transport schema shallow and let the prompt + parseAIResponse enforce business
 // counts/length limits and parse optional audit metadata when present.
-export const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
+const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
   type: 'OBJECT',
   properties: {
     headlines: {
@@ -10000,7 +9911,7 @@ export const AD_CREATIVE_RESPONSE_SCHEMA: ResponseSchema = {
   required: ['headlines', 'descriptions', 'keywords'],
 }
 
-export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
+const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
   type: 'OBJECT',
   properties: {
     headlines: {
@@ -10076,7 +9987,7 @@ export const AD_CREATIVE_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
   required: ['headlines', 'descriptions', 'keywords'],
 }
 
-export const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
+const AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA: ResponseSchema = {
   type: 'OBJECT',
   properties: {
     headlines: {
@@ -10188,7 +10099,7 @@ function isModelIntentTransactionalTemplateKeyword(keyword: string): boolean {
   return MODEL_INTENT_TRANSACTIONAL_MODIFIER_PATTERN.test(normalized)
 }
 
-export function filterModelIntentGeneratedKeywords(
+function filterModelIntentGeneratedKeywords(
   creative: GeneratedAdCreativeData,
   bucket: NormalizedCreativeBucket
 ): GeneratedAdCreativeData {
@@ -10227,7 +10138,7 @@ function normalizeBusinessLimitedStringArray(
     .slice(0, limit)
 }
 
-export function validateGeneratedAdCreativeBusinessLimits(
+function validateGeneratedAdCreativeBusinessLimits(
   creative: GeneratedAdCreativeData
 ): GeneratedAdCreativeData {
   const headlines = normalizeBusinessLimitedStringArray(
@@ -10335,7 +10246,7 @@ function shouldRetryAdCreativeWithSimplifiedPrompt(
   return false
 }
 
-export function resolveAdCreativeRetryPlan(
+function resolveAdCreativeRetryPlan(
   error: any,
   alreadySimplified: boolean
 ): AdCreativeRetryPlan | null {
@@ -10358,7 +10269,7 @@ export function resolveAdCreativeRetryPlan(
   }
 }
 
-export function buildSimplifiedAdCreativeRetryPrompt(prompt: string): string {
+function buildSimplifiedAdCreativeRetryPrompt(prompt: string): string {
   const cutMarkers = [
     '## 输出（JSON only）',
     '## 📋 OUTPUT (JSON only, no markdown):',
@@ -10405,7 +10316,7 @@ Strict rules:
 - Stop immediately after the final closing brace`
 }
 
-export function buildEmergencyAdCreativeRetryPrompt(prompt: string): string {
+function buildEmergencyAdCreativeRetryPrompt(prompt: string): string {
   const simplifiedPrompt = buildSimplifiedAdCreativeRetryPrompt(prompt)
   return `${simplifiedPrompt}
 
@@ -10459,7 +10370,7 @@ function selectBestJsonCandidate(text: string): string | null {
 /**
  * 解析AI响应
  */
-export function parseAIResponse(
+function parseAIResponse(
   text: string,
   options?: { policyGuardMode?: GoogleAdsPolicyGuardMode }
 ): GeneratedAdCreativeData {
@@ -12589,175 +12500,6 @@ export async function generateAdCreative(
 }
 
 /**
- * 并行生成多个广告创意（优化延迟）
- *
- * ✅ 安全修复：userId改为必需参数
- *
- * @param offerId Offer ID
- * @param userId 用户ID（必需）
- * @param count 生成数量（1-3个）
- * @param options 生成选项
- * @returns 生成的创意数组
- */
-export async function generateAdCreativesBatch(
-  offerId: number,
-  userId: number, // ✅ 修复：改为必需参数
-  count: number = 3,
-  options?: {
-    theme?: string
-    referencePerformance?: any
-    skipCache?: boolean
-    retryFailureType?: RetryFailureType
-    searchTermFeedbackHints?: SearchTermFeedbackHintsInput
-    deferKeywordSupplementation?: boolean
-    deferKeywordPostProcessingToBuilder?: boolean
-    precomputedKeywordSet?: PrecomputedCreativeKeywordSet | null
-    keywordPool?: OfferKeywordPool
-    plannerSession?: KeywordPlannerPreparedSession
-    preparedExpand?: KeywordPoolExpandLoadResult
-  }
-): Promise<Array<GeneratedAdCreativeData & { ai_model: string }>> {
-  // 限制数量在1-3之间
-  const validCount = Math.max(1, Math.min(3, count))
-
-  console.log(`🎨 并行生成 ${validCount} 个广告创意...`)
-
-  // 为每个创意生成不同的主题变体（如果没有指定主题）
-  // 增强差异性：使用更具体和对比鲜明的主题
-  const themes = options?.theme
-    ? [options.theme]
-    : [
-        'Brand Intent - 强调品牌背书 + 真实商品锚点。Headlines必须同时体现品牌与商品/品类，不得退化成纯品牌导航文案。',
-        'Model Intent - 强调型号/产品族购买意图。Headlines优先体现型号、产品族或规格锚点，Descriptions突出精准适配与购买动作。',
-        'Product Demand Intent - 强调商品需求、功能、场景和产品线覆盖。Headlines突出功能/场景，Descriptions说明需求解法与CTA。',
-      ]
-
-  // 创建并行生成任务
-  const tasks = Array.from({ length: validCount }, (_, index) => {
-    const taskOptions = {
-      ...options,
-      theme: themes[index % themes.length],
-      skipCache: options?.skipCache || false,
-    }
-
-    return generateAdCreative(offerId, userId, taskOptions)
-  })
-
-  // 并行执行所有任务
-  const startTime = Date.now()
-  const results = await Promise.all(tasks)
-  const duration = ((Date.now() - startTime) / 1000).toFixed(2)
-
-  console.log(`✅ ${validCount} 个广告创意生成完成，耗时 ${duration}秒`)
-  console.log(`   平均每个: ${(parseFloat(duration) / validCount).toFixed(2)}秒`)
-
-  return results
-}
-
-/**
- * 🆕 2025-12-16: 生成内部 coverage 广告创意
- *
- * 说明：
- * 1. 这不是第4种创意类型，而是内部 coverage 模式
- * 2. 关键词覆盖品牌关联的商品需求，但运行时统一归一化到 D / product_intent
- * 3. 优化 Ad Strength 评分，同时保持与真实商品需求一致
- *
- * @param offerId Offer ID
- * @param userId 用户ID
- * @param keywordPool 关键词池
- * @param options 可选配置
- * @returns 生成的 coverage 创意
- */
-export async function generateSyntheticCreative(
-  offerId: number,
-  userId: number,
-  keywordPool: any, // OfferKeywordPool
-  options?: {
-    skipCache?: boolean
-    maxNonBrandKeywords?: number
-    minSearchVolume?: number
-    plannerSession?: KeywordPlannerPreparedSession
-    preparedExpand?: KeywordPoolExpandLoadResult
-  }
-): Promise<GeneratedAdCreativeData & { ai_model: string }> {
-  console.log(`\n🔮 开始生成内部 coverage 广告创意 (Offer #${offerId})...`)
-
-  // 1. 获取offer信息
-  const db = await getDatabase()
-  const offer = await db.queryOne(
-    'SELECT target_country, target_language FROM offers WHERE id = ? AND user_id = ?',
-    [offerId, userId]
-  )
-  if (!offer) {
-    throw new Error('Offer不存在或无权访问')
-  }
-
-  // 2. 使用关键词池服务获取商品需求 coverage 关键词
-  const { getCoverageBucketKeywords, DEFAULT_COVERAGE_KEYWORD_CONFIG } =
-    await import('./offer-keyword-pool')
-
-  const config = {
-    ...DEFAULT_COVERAGE_KEYWORD_CONFIG,
-    maxNonBrandKeywords:
-      options?.maxNonBrandKeywords || DEFAULT_COVERAGE_KEYWORD_CONFIG.maxNonBrandKeywords,
-    minSearchVolume: options?.minSearchVolume || DEFAULT_COVERAGE_KEYWORD_CONFIG.minSearchVolume,
-    language: normalizeLanguageCode((offer as any).target_language || 'en'),
-  }
-
-  const targetCountry = (offer as any).target_country || 'US'
-  const coverageKeywords = await getCoverageBucketKeywords(
-    keywordPool,
-    userId,
-    targetCountry,
-    config
-  )
-
-  // 3. 提取关键词列表
-  const bucketKeywords = coverageKeywords.map((k) => k.keyword)
-  const brandKeywordCount = coverageKeywords.filter((k) => k.isBrand).length
-  const nonBrandKeywordCount = coverageKeywords.filter((k) => !k.isBrand).length
-
-  console.log(`📊 Coverage 关键词准备完成:`)
-  console.log(`   - 品牌词: ${brandKeywordCount}个`)
-  console.log(`   - 高搜索量非品牌词: ${nonBrandKeywordCount}个`)
-  console.log(`   - 总计: ${bucketKeywords.length}个`)
-
-  const { plannerSession, preparedExpand } = await resolvePlannerExpandForOffer(userId, offerId, {
-    plannerSession: options?.plannerSession,
-    preparedExpand: options?.preparedExpand,
-  })
-
-  // 4. 调用通用创意生成函数（内部 coverage 模式，统一归一化到 D / product_intent）
-  const result = await generateAdCreative(offerId, userId, {
-    theme: '商品需求覆盖导向 - Coverage Creative for Product Demand',
-    skipCache: options?.skipCache ?? true,
-    keywordPool,
-    bucket: 'D',
-    bucketKeywords,
-    bucketIntent: '商品需求导向',
-    bucketIntentEn: 'Product Demand Coverage',
-    isSyntheticCreative: true,
-    syntheticKeywordsWithVolume: coverageKeywords,
-    plannerSession,
-    preparedExpand,
-  })
-
-  console.log(`✅ 内部 coverage 广告创意生成完成`)
-  console.log(`   - Headlines: ${result.headlines?.length || 0}个`)
-  console.log(`   - Descriptions: ${result.descriptions?.length || 0}个`)
-  console.log(`   - Keywords: ${result.keywords?.length || 0}个`)
-
-  return result
-}
-
-/**
- * ============================================================================
- * 自动多样性检查和重新生成
- * ============================================================================
- * 生成多个创意时，自动检查相似度，不符合要求则重新生成
- */
-
-/**
  * 计算两个文本的相似度 (0-1)
  * 使用加权多算法
  */
@@ -12870,284 +12612,4 @@ function getNgrams(text: string, n: number): string[] {
   }
 
   return ngrams
-}
-
-/**
- * 检查创意集合中的多样性
- * 返回相似度过高的创意对
- */
-function validateCreativeDiversity(
-  creatives: GeneratedAdCreativeData[],
-  maxSimilarity: number = 0.2
-): {
-  valid: boolean
-  issues: string[]
-  similarities: Array<{
-    creative1Index: number
-    creative2Index: number
-    similarity: number
-    type: 'headline' | 'description' | 'keyword'
-  }>
-} {
-  const issues: string[] = []
-  const similarities: any[] = []
-
-  for (let i = 0; i < creatives.length; i++) {
-    for (let j = i + 1; j < creatives.length; j++) {
-      // 检查标题相似度
-      const headlineSimilarity = calculateCreativeHeadlineSimilarity(
-        creatives[i].headlines,
-        creatives[j].headlines
-      )
-
-      if (headlineSimilarity > maxSimilarity) {
-        issues.push(
-          `创意 ${i + 1} 和 ${j + 1} 的标题相似度过高: ${(headlineSimilarity * 100).toFixed(1)}% > ${maxSimilarity * 100}%`
-        )
-        similarities.push({
-          creative1Index: i,
-          creative2Index: j,
-          similarity: headlineSimilarity,
-          type: 'headline',
-        })
-      }
-
-      // 检查描述相似度
-      const descriptionSimilarity = calculateCreativeDescriptionSimilarity(
-        creatives[i].descriptions,
-        creatives[j].descriptions
-      )
-
-      if (descriptionSimilarity > maxSimilarity) {
-        issues.push(
-          `创意 ${i + 1} 和 ${j + 1} 的描述相似度过高: ${(descriptionSimilarity * 100).toFixed(1)}% > ${maxSimilarity * 100}%`
-        )
-        similarities.push({
-          creative1Index: i,
-          creative2Index: j,
-          similarity: descriptionSimilarity,
-          type: 'description',
-        })
-      }
-
-      // 检查关键词相似度
-      const keywordSimilarity = calculateCreativeKeywordSimilarity(
-        creatives[i].keywords,
-        creatives[j].keywords
-      )
-
-      if (keywordSimilarity > maxSimilarity) {
-        issues.push(
-          `创意 ${i + 1} 和 ${j + 1} 的关键词相似度过高: ${(keywordSimilarity * 100).toFixed(1)}% > ${maxSimilarity * 100}%`
-        )
-        similarities.push({
-          creative1Index: i,
-          creative2Index: j,
-          similarity: keywordSimilarity,
-          type: 'keyword',
-        })
-      }
-    }
-  }
-
-  return {
-    valid: issues.length === 0,
-    issues,
-    similarities,
-  }
-}
-
-/**
- * 计算两个创意的标题相似度
- */
-function calculateCreativeHeadlineSimilarity(headlines1: string[], headlines2: string[]): number {
-  let totalSimilarity = 0
-  let comparisons = 0
-
-  for (const h1 of headlines1.slice(0, 3)) {
-    for (const h2 of headlines2.slice(0, 3)) {
-      totalSimilarity += calculateTextSimilarity(h1, h2)
-      comparisons++
-    }
-  }
-
-  return comparisons > 0 ? totalSimilarity / comparisons : 0
-}
-
-/**
- * 计算两个创意的描述相似度
- */
-function calculateCreativeDescriptionSimilarity(
-  descriptions1: string[],
-  descriptions2: string[]
-): number {
-  let totalSimilarity = 0
-  let comparisons = 0
-
-  for (const d1 of descriptions1) {
-    for (const d2 of descriptions2) {
-      totalSimilarity += calculateTextSimilarity(d1, d2)
-      comparisons++
-    }
-  }
-
-  return comparisons > 0 ? totalSimilarity / comparisons : 0
-}
-
-/**
- * 计算两个创意的关键词相似度
- */
-function calculateCreativeKeywordSimilarity(keywords1: string[], keywords2: string[]): number {
-  const set1 = new Set(keywords1.map((k) => k.toLowerCase()))
-  const set2 = new Set(keywords2.map((k) => k.toLowerCase()))
-
-  const intersection = new Set([...set1].filter((k) => set2.has(k)))
-  const union = new Set([...set1, ...set2])
-
-  return union.size > 0 ? intersection.size / union.size : 0
-}
-
-/**
- * 生成多个创意，确保多样性（相似度过高则重试）。
- *
- * 仅测试/工具引用；生产批量生成请用 `generateAdCreativesBatch` + 质量环。
- *
- * ✅ 安全修复：userId改为必需参数
- */
-export async function generateMultipleCreativesWithDiversityCheck(
-  offerId: number,
-  userId: number, // ✅ 修复：改为必需参数
-  count: number = 3,
-  maxSimilarity: number = 0.2,
-  maxRetries: number = 3,
-  options?: {
-    theme?: string
-    referencePerformance?: any
-    skipCache?: boolean
-    excludeKeywords?: string[]
-    retryFailureType?: RetryFailureType
-    searchTermFeedbackHints?: SearchTermFeedbackHintsInput
-    keywordPool?: OfferKeywordPool
-    plannerSession?: KeywordPlannerPreparedSession
-    preparedExpand?: KeywordPoolExpandLoadResult
-  }
-): Promise<{
-  creatives: GeneratedAdCreativeData[]
-  diversityCheck: {
-    valid: boolean
-    issues: string[]
-    similarities: any[]
-  }
-  stats: {
-    totalAttempts: number
-    successfulCreatives: number
-    failedAttempts: number
-    totalTime: number
-  }
-}> {
-  const creatives: GeneratedAdCreativeData[] = []
-  let totalAttempts = 0
-  let failedAttempts = 0
-  const startTime = Date.now()
-
-  let keywordPool = options?.keywordPool
-  let plannerSession = options?.plannerSession
-  let preparedExpand = options?.preparedExpand
-  if (!keywordPool) {
-    const resolved = await resolveKeywordPoolForCreativeGeneration(offerId, userId)
-    keywordPool = resolved.pool
-    plannerSession = plannerSession ?? resolved.plannerSession
-    preparedExpand = preparedExpand ?? resolved.preparedExpand
-  } else {
-    const resolved = await resolvePlannerExpandForOffer(userId, offerId, {
-      plannerSession,
-      preparedExpand,
-    })
-    plannerSession = resolved.plannerSession
-    preparedExpand = resolved.preparedExpand
-  }
-
-  console.log(`\n🎯 开始生成 ${count} 个多样化创意 (最大相似度: ${maxSimilarity * 100}%)`)
-
-  while (creatives.length < count && failedAttempts < maxRetries) {
-    totalAttempts++
-    console.log(`\n📝 生成创意 ${creatives.length + 1}/${count} (尝试 ${totalAttempts})...`)
-
-    try {
-      // 生成新创意
-      const newCreative = await generateAdCreative(offerId, userId, {
-        ...options,
-        keywordPool,
-        plannerSession,
-        preparedExpand,
-        skipCache: true,
-      })
-
-      // 检查与现有创意的多样性
-      if (creatives.length === 0) {
-        // 第一个创意直接添加
-        creatives.push(newCreative)
-        console.log(`✅ 创意 1 已添加`)
-      } else {
-        // 检查与现有创意的相似度
-        const tempCreatives = [...creatives, newCreative]
-        const diversityCheck = validateCreativeDiversity(tempCreatives, maxSimilarity)
-
-        if (diversityCheck.valid) {
-          // 通过多样性检查
-          creatives.push(newCreative)
-          console.log(`✅ 创意 ${creatives.length} 通过多样性检查`)
-        } else {
-          // 未通过多样性检查
-          failedAttempts++
-          console.warn(`⚠️  创意未通过多样性检查，原因:`)
-          diversityCheck.issues.forEach((issue) => {
-            console.warn(`   - ${issue}`)
-          })
-
-          if (failedAttempts < maxRetries) {
-            console.log(`   重新生成... (${failedAttempts}/${maxRetries})`)
-          }
-        }
-      }
-    } catch (error) {
-      failedAttempts++
-      console.error(`❌ 生成创意失败:`, error instanceof Error ? error.message : '未知错误')
-
-      if (failedAttempts >= maxRetries) {
-        console.warn(`⚠️  达到最大重试次数 (${maxRetries})`)
-      }
-    }
-  }
-
-  const totalTime = (Date.now() - startTime) / 1000
-
-  // 最终多样性检查
-  const finalDiversityCheck = validateCreativeDiversity(creatives, maxSimilarity)
-
-  console.log(`\n📊 生成完成:`)
-  console.log(`   ✅ 成功创意: ${creatives.length}/${count}`)
-  console.log(`   ❌ 失败尝试: ${failedAttempts}`)
-  console.log(`   📈 总尝试数: ${totalAttempts}`)
-  console.log(`   ⏱️  总耗时: ${totalTime.toFixed(2)}秒`)
-
-  if (finalDiversityCheck.valid) {
-    console.log(`\n✅ 所有创意通过多样性检查！`)
-  } else {
-    console.log(`\n⚠️  部分创意未通过多样性检查:`)
-    finalDiversityCheck.issues.forEach((issue) => {
-      console.log(`   - ${issue}`)
-    })
-  }
-
-  return {
-    creatives,
-    diversityCheck: finalDiversityCheck,
-    stats: {
-      totalAttempts,
-      successfulCreatives: creatives.length,
-      failedAttempts,
-      totalTime,
-    },
-  }
 }

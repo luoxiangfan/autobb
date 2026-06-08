@@ -397,7 +397,7 @@ async function enrichPresellFunnelData(options: {
  * @param timeoutMs - 超时时间（毫秒）
  * @param userId - 用户ID（用于代理IP缓存隔离）
  */
-export async function scrapeProductData(
+async function scrapeProductData(
   url: string,
   customProxyUrl?: string,
   targetCountry?: string,

@@ -412,7 +412,7 @@ export async function createCampaignBackup(
 /**
  * 根据 ID 获取备份
  */
-export async function getCampaignBackupById(id: number, userId: number): Promise<CampaignBackup> {
+async function getCampaignBackupById(id: number, userId: number): Promise<CampaignBackup> {
   const db = await getDatabase()
 
   const backup = (await db.queryOne(
@@ -562,7 +562,7 @@ export interface UpsertCampaignBackupAfterPublishInput {
 }
 
 /** 每个 (user_id, offer_id) 仅允许一条备份时，取排名最高的一条 id */
-export async function findCampaignBackupIdForOffer(
+async function findCampaignBackupIdForOffer(
   offerId: number,
   userId: number
 ): Promise<number | null> {
@@ -578,13 +578,7 @@ export async function findCampaignBackupIdForOffer(
     [offerId, userId]
   )) as { id: number } | undefined
   return row?.id ?? null
-}
-
-export async function hasCampaignBackupForOffer(offerId: number, userId: number): Promise<boolean> {
-  return (await findCampaignBackupIdForOffer(offerId, userId)) != null
-}
-
-/** 唯一备份行是否为 autoads / publish 来源（用于 Google 同步跳过覆写） */
+} /** 唯一备份行是否为 autoads / publish 来源（用于 Google 同步跳过覆写） */
 export async function hasAutoadsLikeBackupForOffer(
   offerId: number,
   userId: number
@@ -939,7 +933,7 @@ export async function trySyncCampaignBackupAfterPublish(params: {
   }
 }
 
-export async function upsertCampaignBackupAfterPublish(
+async function upsertCampaignBackupAfterPublish(
   input: UpsertCampaignBackupAfterPublishInput
 ): Promise<void> {
   const db = await getDatabase()
@@ -994,26 +988,7 @@ export async function upsertCampaignBackupAfterPublish(
 
   const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
   console.log(`[Publish Backup] Created backup for offer=${input.offerId}, pruned=${pruned}`)
-}
-
-/**
- * 删除备份
- */
-export async function deleteCampaignBackup(id: number, userId: number): Promise<boolean> {
-  const db = await getDatabase()
-
-  const result = await db.exec(
-    `
-    DELETE FROM campaign_backups
-    WHERE id = ? AND user_id = ?
-  `,
-    [id, userId]
-  )
-
-  return result.changes > 0
-}
-
-/**
+} /**
  * 解析备份数据（DB 行或已解析对象）
  */
 export function parseCampaignBackup(row: any): CampaignBackup {

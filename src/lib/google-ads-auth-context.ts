@@ -617,7 +617,7 @@ export function resolveGoogleAdsDisplayAuthType(
   return resolveGoogleAdsAuthTypeFromCredentialHints(ctx, { unconfiguredDefault: null })
 }
 
-export function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
+function getServiceAccountMccFromContext(ctx: GoogleAdsAuthContext): string | undefined {
   const mcc = ctx.serviceAccountConfig?.mccCustomerId
   return mcc ? String(mcc) : undefined
 }

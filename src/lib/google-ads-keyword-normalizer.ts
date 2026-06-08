@@ -46,7 +46,7 @@ export function normalizeGoogleAdsKeyword(keyword: string): string {
  * @param keywords - 关键词数组
  * @returns Map<标准化关键词, 原始关键词[]>，便于查看去重情况
  */
-export function normalizeKeywordArray(keywords: string[]): Map<string, string[]> {
+function normalizeKeywordArray(keywords: string[]): Map<string, string[]> {
   const normalizedMap = new Map<string, string[]>()
 
   keywords.forEach((keyword) => {
@@ -123,7 +123,7 @@ export function areKeywordsDuplicates(keyword1: string, keyword2: string): boole
  * @param keywords - 关键词数组
  * @returns 重复关键词信息数组
  */
-export function getDuplicateKeywordsInfo(keywords: string[]): Array<{
+function getDuplicateKeywordsInfo(keywords: string[]): Array<{
   normalized: string
   variants: string[]
   count: number

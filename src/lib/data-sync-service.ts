@@ -129,7 +129,7 @@ export interface KeywordPerformanceData {
  * DataSyncService - 数据同步服务
  * 负责从Google Ads API拉取性能数据并存储到SQLite
  */
-export class DataSyncService {
+class DataSyncService {
   private static instance: DataSyncService
   private static googleAdsQuotaBackoffUntilMs = 0
   private syncStatus: Map<number, SyncStatus> = new Map()

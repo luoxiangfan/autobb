@@ -400,15 +400,6 @@ class HostMetricsCollector {
 declare global {
   var __hostMetricsCollector: HostMetricsCollector | undefined
 }
-
-export async function getHostMetricsSnapshot(): Promise<HostMetricsSnapshot> {
-  if (!globalThis.__hostMetricsCollector) {
-    globalThis.__hostMetricsCollector = new HostMetricsCollector()
-  }
-  const payload = await globalThis.__hostMetricsCollector.getPayload()
-  return payload.snapshot
-}
-
 export async function getHostMetricsPayload(): Promise<HostMetricsPayload> {
   if (!globalThis.__hostMetricsCollector) {
     globalThis.__hostMetricsCollector = new HostMetricsCollector()

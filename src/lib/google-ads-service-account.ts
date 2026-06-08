@@ -11,7 +11,7 @@ import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 /**
  * 获取指定用户自身的服务账号配置（不解析共享分配）
  */
-export async function getServiceAccountConfigRaw(userId: number, serviceAccountId?: string) {
+async function getServiceAccountConfigRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 
@@ -68,10 +68,7 @@ export async function getServiceAccountConfig(
 }
 
 /** metadata-only：不读取/解密 private_key、developer_token */
-export async function getServiceAccountConfigMetadataRaw(
-  userId: number,
-  serviceAccountId?: string
-) {
+async function getServiceAccountConfigMetadataRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
 

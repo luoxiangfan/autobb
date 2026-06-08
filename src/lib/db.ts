@@ -728,11 +728,3 @@ export function closeDatabase(): void {
     global.__dbAdapter = undefined
   }
 }
-
-/**
- * 执行异步数据库事务（支持 PostgreSQL 和 SQLite）
- */
-export async function asyncTransaction<T>(fn: () => Promise<T>): Promise<T> {
-  const db = await getDatabase()
-  return await db.transaction(fn)
-}

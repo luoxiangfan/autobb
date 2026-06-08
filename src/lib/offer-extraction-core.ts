@@ -41,13 +41,15 @@ import {
   getOfferDeepScrapeConcurrency,
   getOfferDeepScrapeTopN,
   getOfferProductLightScrapeTimeoutMs,
-  getOfferExtractionModeProfile,
   hasMinimalIndependentProductBaseline,
-  normalizeOfferExtractionMode,
   shouldFallbackToRenderedIndependentProductForOffer,
   shouldSkipAmazonCompetitorExtractionOnExtract,
-  type OfferExtractionMode,
 } from '@/lib/offer-extraction-performance'
+import {
+  getOfferExtractionModeProfile,
+  normalizeOfferExtractionMode,
+  type OfferExtractionMode,
+} from '@/lib/offer-extraction-mode'
 import type { ProgressStage } from '@/types/progress'
 
 /**

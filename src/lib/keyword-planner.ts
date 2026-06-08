@@ -9,7 +9,7 @@ import {
   resolveConfiguredGoogleAdsAuthType,
 } from './google-ads-auth-context'
 import { dateMinusDays } from './db-helpers'
-import { getCachedKeywordVolume, getBatchCachedVolumes, batchCacheVolumes } from './redis'
+import { getBatchCachedVolumes, batchCacheVolumes } from './redis'
 import { decrypt } from './crypto'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken } from './google-ads-oauth'
@@ -1016,21 +1016,4 @@ async function saveToGlobalKeywords(
   } catch {
     // Table might not exist yet
   }
-}
-
-/**
- * 获取单个关键词的搜索量（带缓存）
- */
-export async function getKeywordVolume(
-  keyword: string,
-  country: string,
-  language: string
-): Promise<number> {
-  // Check Redis first
-  const cached = await getCachedKeywordVolume(keyword, country, language)
-  if (cached) return cached.volume
-
-  // Then API
-  const results = await getKeywordSearchVolumes([keyword], country, language)
-  return results[0]?.avgMonthlySearches || 0
 }

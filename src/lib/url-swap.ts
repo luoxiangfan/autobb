@@ -357,7 +357,7 @@ export async function getUrlSwapTaskTargets(
 /**
  * 为任务批量添加目标（多Campaign/多账号）
  */
-export async function ensureUrlSwapTaskTargets(
+async function ensureUrlSwapTaskTargets(
   taskId: string,
   offerId: number,
   userId: number,
@@ -1574,23 +1574,6 @@ export async function getOfferById(offerId: number): Promise<any | null> {
     [offerId]
   )
 }
-
-/**
- * 辅助函数：根据Offer ID获取关联的Campaign
- */
-export async function getCampaignByOfferId(
-  offerId: number,
-  userId?: number
-): Promise<{ customer_id: string | null; campaign_id: string | null } | null> {
-  const targets = await getOfferCampaignTargets(offerId, userId || 0)
-  if (!targets || targets.length === 0) return null
-  const primary = targets[0]
-  return {
-    customer_id: primary.google_customer_id || null,
-    campaign_id: primary.google_campaign_id || null,
-  }
-}
-
 async function getOfferCampaignTargets(
   offerId: number,
   userId: number

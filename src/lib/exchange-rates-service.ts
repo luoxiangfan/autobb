@@ -60,7 +60,7 @@ export async function loadUsdRatesFromDatabase(): Promise<void> {
   setUsdRatesMemoryCache(Object.keys(map).length ? map : null)
 }
 
-export async function replaceUsdExchangeRatesInDb(params: {
+async function replaceUsdExchangeRatesInDb(params: {
   conversionRates: Record<string, number>
   baseCode: string
   timeLastUpdateUnix: number | null
@@ -127,7 +127,7 @@ export async function replaceUsdExchangeRatesInDb(params: {
   await loadUsdRatesFromDatabase()
 }
 
-export async function fetchLatestUsdRatesFromApi(): Promise<ExchangeRateApiPayload> {
+async function fetchLatestUsdRatesFromApi(): Promise<ExchangeRateApiPayload> {
   const apiKey = getExchangeRateApiKey()
   if (!apiKey) {
     throw new Error('EXCHANGE_RATE_API_KEY (or EXCHANGERATE_API_KEY) is not set')

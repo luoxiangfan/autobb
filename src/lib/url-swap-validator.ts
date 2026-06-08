@@ -112,28 +112,6 @@ function checkDomainType(affiliateLink: string): string | null {
 
   return null
 }
-
-/**
- * 获取缺少代理的国家列表
- * @param offerIds - Offer ID列表
- * @returns 缺少代理的国家列表
- */
-export async function getMissingProxyCountries(offerIds: number[]): Promise<string[]> {
-  const proxyPool = getProxyPool()
-  const missingCountries: string[] = []
-
-  for (const offerId of offerIds) {
-    const offer = await getOfferById(offerId)
-    if (offer && !proxyPool.hasProxyForCountry(offer.target_country)) {
-      if (!missingCountries.includes(offer.target_country)) {
-        missingCountries.push(offer.target_country)
-      }
-    }
-  }
-
-  return missingCountries
-}
-
 async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
   const isDeletedCondition =

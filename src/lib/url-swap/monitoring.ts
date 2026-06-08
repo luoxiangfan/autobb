@@ -279,7 +279,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
  * @param taskId 任务ID
  * @returns 是否成功修复
  */
-export async function autoFixStuckTask(taskId: string): Promise<boolean> {
+async function autoFixStuckTask(taskId: string): Promise<boolean> {
   const db = await getDatabase()
   const now = new Date().toISOString()
 
@@ -326,7 +326,7 @@ export async function autoFixStuckTask(taskId: string): Promise<boolean> {
  * @param taskId 任务ID
  * @returns 是否成功禁用
  */
-export async function autoDisableHighFailureTask(taskId: string): Promise<boolean> {
+async function autoDisableHighFailureTask(taskId: string): Promise<boolean> {
   const db = await getDatabase()
   const now = new Date().toISOString()
 

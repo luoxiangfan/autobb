@@ -13,7 +13,7 @@ import {
   getOfferExtractionModeProfile,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offer-extraction-performance'
+} from '@/lib/offer-extraction-mode'
 import { getDatabase } from '@/lib/db'
 import { executeAIAnalysis } from '@/lib/ai-analysis-service'
 import { getTargetLanguage, normalizeBrandName } from '@/lib/offer-utils'

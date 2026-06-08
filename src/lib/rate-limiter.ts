@@ -47,42 +47,7 @@ export function checkRateLimit(identifier: string): void {
   entry.count++
 }
 
-/**
- * 获取剩余请求次数（可选功能，用于前端显示）
- */
-export function getRemainingRequests(identifier: string): {
-  remaining: number
-  resetAt: number
-} {
-  const entry = rateLimitStore.get(identifier)
-  const now = Date.now()
-
-  if (!entry || now > entry.resetAt) {
-    return {
-      remaining: MAX_REQUESTS_PER_WINDOW,
-      resetAt: now + RATE_LIMIT_WINDOW_MS,
-    }
-  }
-
-  return {
-    remaining: Math.max(0, MAX_REQUESTS_PER_WINDOW - entry.count),
-    resetAt: entry.resetAt,
-  }
-}
-
-/**
- * 手动重置速率限制（管理员功能或测试用）
- */
-export function resetRateLimit(identifier: string): void {
-  rateLimitStore.delete(identifier)
-}
-
-/**
- * 清理过期条目（防止内存泄漏）
- *
- * 建议定期调用（如每5分钟）或在达到一定数量时触发
- */
-export function cleanupExpiredEntries(): number {
+function cleanupExpiredEntries(): number {
   const now = Date.now()
   let cleanedCount = 0
 
@@ -103,20 +68,8 @@ export function cleanupExpiredEntries(): number {
 /**
  * 获取当前活跃的速率限制条目数量（监控用）
  */
-export function getActiveEntriesCount(): number {
+function getActiveEntriesCount(): number {
   return rateLimitStore.size
-}
-
-/**
- * 组合多个标识符检查速率限制
- *
- * 示例: checkMultipleRateLimits('192.168.1.1', 'admin')
- * 将同时检查 IP 级别和用户级别的速率限制
- */
-export function checkMultipleRateLimits(...identifiers: string[]): void {
-  for (const identifier of identifiers) {
-    checkRateLimit(identifier)
-  }
 }
 
 // 定期清理过期条目（每5分钟）

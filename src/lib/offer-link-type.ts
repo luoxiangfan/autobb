@@ -8,7 +8,7 @@ function normalizeOfferLinkType(value: unknown): OfferLinkType | null {
   return null
 }
 
-export function parseOfferScrapedData(raw: unknown): any {
+function parseOfferScrapedData(raw: unknown): any {
   if (!raw) return null
   if (typeof raw === 'string') {
     try {

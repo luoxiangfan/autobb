@@ -48,27 +48,6 @@ export function showInfo(message: string, description?: string) {
 }
 
 /**
- * 加载中通知（返回 ID 用于后续更新或关闭）
- */
-export function showLoading(message: string) {
-  return toast.loading(message)
-}
-
-/**
- * Promise 通知（自动处理加载、成功、失败状态）
- */
-export function showPromise<T>(
-  promise: Promise<T>,
-  messages: {
-    loading: string
-    success: string | ((data: T) => string)
-    error: string | ((error: Error) => string)
-  }
-) {
-  return toast.promise(promise, messages)
-}
-
-/**
  * 确认对话框（需要用户确认的操作）
  * 注意：Sonner 不支持原生确认对话框，这个需要用 AlertDialog 组件
  * 这里提供一个辅助函数，返回一个 Promise

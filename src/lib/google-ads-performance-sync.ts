@@ -29,7 +29,7 @@ interface SyncResult {
  * 同步单个广告创意的效果数据
  * 🔧 修复(2025-12-26): 使用统一客户端（支持 Python 代理）
  */
-export async function syncCreativePerformance(
+async function syncCreativePerformance(
   adCreativeId: number,
   userId: string,
   customer: any,
@@ -173,7 +173,7 @@ export async function syncCreativePerformance(
  * 同步用户所有广告创意的效果数据
  * 🔧 修复(2025-12-26): 使用统一客户端（支持 Python 代理）
  */
-export async function syncAllCreativesPerformance(
+async function syncAllCreativesPerformance(
   userId: string,
   customer: any,
   customerID: string,

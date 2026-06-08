@@ -229,24 +229,7 @@ describe('executeAdCreativeGeneration', () => {
       const actual = await vi.importActual<
         typeof import('@/lib/bucket-creative-generation-pipeline')
       >('@/lib/bucket-creative-generation-pipeline')
-      const usedKeywordsRef = { current: [] as string[] }
-      const keywordPoolVolumeHints = params.keywordPool
-        ? actual.buildKeywordPoolVolumeHintMap(params.keywordPool)
-        : undefined
-      const { generate, evaluate } = actual.createBucketCreativeGenerationCallbacks({
-        ...params,
-        bucketContext: params.preparedBucketContext,
-        usedKeywordsRef,
-        brandKeywords: ['brandx'],
-        keywordPoolVolumeHints,
-        searchTermFeedbackHints: params.searchTermFeedbackHints,
-      })
-      return qualityLoopFns.runCreativeGenerationQualityLoop({
-        maxRetries: params.maxRetries,
-        delayMs: params.generationProfile.delayMs,
-        generate,
-        evaluate,
-      })
+      return actual.runBucketCreativeGeneration(params)
     })
 
     generatorFns.generateAdCreative.mockResolvedValue({

@@ -93,7 +93,7 @@ export async function findHistoricalOrphanCampaignsForOffer(params: {
 /**
  * 为指定 Ads 账号构建暂停远端 Campaign 所需的回滚上下文（用于换绑后清理旧账号孤儿）。
  */
-export async function buildPublishRollbackContextForAdsAccount(
+async function buildPublishRollbackContextForAdsAccount(
   userId: number,
   googleAdsAccountId: number
 ): Promise<CampaignPublishRollbackContext | null> {

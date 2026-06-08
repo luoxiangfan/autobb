@@ -9,7 +9,6 @@
  * - 需要手动设置为 true 才能让Campaign优化该转化目标
  */
 
-import { Customer } from 'google-ads-api'
 import { withRetry } from './retry'
 import {
   getCustomerWithCredentials,
@@ -135,117 +134,6 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
         })
       }
     }
-
-    // 不抛出错误，因为这是一个可选的优化配置
-    return false
-  }
-}
-
-/**
- * 配置Campaign的转化目标为"网页浏览"(PAGE_VIEW)
- *
- * @param customer - Google Ads Customer 对象
- * @param campaignResourceName - Campaign 的 resource_name (格式: customers/{customer_id}/campaigns/{campaign_id})
- * @returns 配置成功返回 true
- */
-export async function setCampaignPageViewGoal(
-  customer: Customer,
-  campaignResourceName: string
-): Promise<boolean> {
-  try {
-    // 从 campaignResourceName 中提取 customer_id 和 campaign_id
-    const match = campaignResourceName.match(/customers\/(\d+)\/campaigns\/(\d+)/)
-    if (!match) {
-      throw new Error(`Invalid campaignResourceName format: ${campaignResourceName}`)
-    }
-
-    const customerId = match[1]
-    const campaignId = match[2]
-
-    // 🔧 修复(2025-12-30): 使用字符串名称而非枚举数字值
-    // 构建 CampaignConversionGoal 的 resource_name
-    // 格式: customers/{customer_id}/campaignConversionGoals/{campaign_id}~{category}~{origin}
-    const category = 'PAGE_VIEW' // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
-    const origin = 'WEBSITE' // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
-    const goalResourceName = `customers/${customerId}/campaignConversionGoals/${campaignId}~${category}~${origin}`
-
-    console.log(`🎯 配置Campaign转化目标:`)
-    console.log(`   Campaign: ${campaignResourceName}`)
-    console.log(`   Goal: PAGE_VIEW + WEBSITE`)
-    console.log(`   Resource: ${goalResourceName}`)
-
-    // 更新 CampaignConversionGoal，将 biddable 设置为 true
-    const campaignConversionGoal: any = {
-      resource_name: goalResourceName,
-      biddable: true, // 启用该转化目标用于竞价优化
-    }
-
-    await withRetry(() => customer.campaignConversionGoals.update([campaignConversionGoal]), {
-      maxRetries: 3,
-      initialDelay: 1000,
-      operationName: `Set PAGE_VIEW goal for campaign ${campaignId}`,
-    })
-
-    console.log(`✅ Campaign转化目标配置成功`)
-    return true
-  } catch (error: any) {
-    // 如果错误是因为 CampaignConversionGoal 不存在，可能需要先创建
-    if (error.message?.includes('NOT_FOUND') || error.message?.includes('does not exist')) {
-      console.warn(`⚠️ CampaignConversionGoal 不存在，可能需要等待自动创建`)
-      console.warn(`   提示：Google Ads 会在 Campaign 创建后自动创建 CampaignConversionGoal`)
-      console.warn(`   如果账号已有 PAGE_VIEW 转化操作，稍后会自动生效`)
-    } else {
-      console.error(`❌ 配置Campaign转化目标失败:`, error.message)
-      console.error(`   错误详情:`, JSON.stringify(error, null, 2))
-    }
-
-    // 不抛出错误，因为这是一个可选的优化配置
-    // Campaign 即使没有显式设置 PAGE_VIEW 也能正常投放
-    return false
-  }
-}
-
-/**
- * 配置账号级别的"网页浏览"转化目标（影响所有Campaign）
- *
- * @param customer - Google Ads Customer 对象
- * @param customerId - Customer ID
- * @returns 配置成功返回 true
- */
-export async function setCustomerPageViewGoal(
-  customer: Customer,
-  customerId: string
-): Promise<boolean> {
-  try {
-    // 🔧 修复(2025-12-30): 使用字符串名称而非枚举数字值
-    // 构建 CustomerConversionGoal 的 resource_name
-    // 格式: customers/{customer_id}/customerConversionGoals/{category}~{origin}
-    const category = 'PAGE_VIEW' // 不能用 enums.ConversionActionCategory.PAGE_VIEW (值为3)
-    const origin = 'WEBSITE' // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
-    const goalResourceName = `customers/${customerId}/customerConversionGoals/${category}~${origin}`
-
-    console.log(`🎯 配置账号级别转化目标:`)
-    console.log(`   Customer: ${customerId}`)
-    console.log(`   Goal: PAGE_VIEW + WEBSITE`)
-    console.log(`   Resource: ${goalResourceName}`)
-
-    // 更新 CustomerConversionGoal，将 biddable 设置为 true
-    const customerConversionGoal: any = {
-      resource_name: goalResourceName,
-      biddable: true, // 启用该转化目标用于竞价优化
-    }
-
-    await withRetry(() => customer.customerConversionGoals.update([customerConversionGoal]), {
-      maxRetries: 3,
-      initialDelay: 1000,
-      operationName: `Set PAGE_VIEW goal for customer ${customerId}`,
-    })
-
-    console.log(`✅ 账号级别转化目标配置成功`)
-    return true
-  } catch (error: any) {
-    console.error(`❌ 配置账号级别转化目标失败:`, error.message)
-    console.error(`   错误详情:`, JSON.stringify(error, null, 2))
 
     // 不抛出错误，因为这是一个可选的优化配置
     return false

@@ -446,36 +446,7 @@ export async function clearUserSettings(
   })
 
   return { cleared }
-}
-
-/**
- * 更新配置验证状态
- */
-export async function updateValidationStatus(
-  category: string,
-  key: string,
-  status: 'valid' | 'invalid' | 'pending',
-  message?: string,
-  userId?: number
-): Promise<void> {
-  const db = await getDatabase()
-
-  const query = userId
-    ? `UPDATE system_settings
-       SET validation_status = ?, validation_message = ?, last_validated_at = datetime('now'), updated_at = datetime('now')
-       WHERE category = ? AND key = ? AND user_id = ?`
-    : `UPDATE system_settings
-       SET validation_status = ?, validation_message = ?, last_validated_at = datetime('now'), updated_at = datetime('now')
-       WHERE category = ? AND key = ? AND user_id IS NULL`
-
-  const params = userId
-    ? [status, message || null, category, key, userId]
-    : [status, message || null, category, key]
-
-  await db.exec(query, params)
-}
-
-/**
+} /**
  * 验证结果缓存
  * 结构: Map<credentialsHash, { result, timestamp }>
  */
@@ -954,35 +925,7 @@ export async function getProxyUrlForCountry(
 
   // 没有找到匹配的国家，返回第一个作为兜底
   return proxyUrls[0].url
-}
-
-/**
- * 检查是否启用了代理
- * 只要配置了有效的代理URL即代表启用
- *
- * @param userId - 用户ID
- * @returns 是否启用代理
- */
-export async function isProxyEnabled(userId?: number): Promise<boolean> {
-  const setting = await getSetting('proxy', 'urls', userId)
-
-  if (!setting?.value) {
-    return false
-  }
-
-  try {
-    const proxyUrls: ProxyUrlConfig[] = JSON.parse(setting.value)
-    return (
-      Array.isArray(proxyUrls) &&
-      proxyUrls.length > 0 &&
-      proxyUrls.some((item) => item.url.trim() !== '')
-    )
-  } catch {
-    return false
-  }
-}
-
-/**
+} /**
  * 获取所有配置的代理URL列表
  *
  * @param userId - 用户ID

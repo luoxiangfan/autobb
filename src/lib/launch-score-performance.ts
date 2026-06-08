@@ -99,7 +99,7 @@ export function toLaunchScorePerformanceApiPayload(
 /**
  * 获取Offer的实际性能数据（使用 campaign_performance）
  */
-export async function getPerformanceDataForOffer(
+async function getPerformanceDataForOffer(
   offerId: number,
   userId: number,
   daysBack: number = 30
@@ -356,7 +356,7 @@ export function generatePerformanceAdjustedRecommendations(
 /**
  * 获取性能增强的Launch Score分析
  */
-export async function getPerformanceEnhancedAnalysis(
+async function getPerformanceEnhancedAnalysis(
   launchScore: LaunchScore,
   userId: number,
   daysBack: number = 30,

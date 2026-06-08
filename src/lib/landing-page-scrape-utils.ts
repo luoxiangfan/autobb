@@ -140,7 +140,7 @@ export function getRegistrableDomainLabelFromUrl(url: string): string | null {
   }
 }
 
-export function getFirstMeaningfulPathSegment(url: string): string | null {
+function getFirstMeaningfulPathSegment(url: string): string | null {
   try {
     const segments = new URL(url).pathname
       .split('/')

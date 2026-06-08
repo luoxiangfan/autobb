@@ -218,12 +218,3 @@ async function recoverSingleBatchTask(
     `✅ 批量任务状态已同步: batch_id=${batchId}, status=${finalStatus}, completed=${completed}/${total}, success_rate=${successRate}%`
   )
 }
-
-/**
- * 手动运行脚本入口（用于CLI调用）
- */
-export async function runBatchRecovery() {
-  console.log('🚀 开始批量任务状态恢复...')
-  await recoverBatchTaskStatus()
-  console.log('✅ 批量任务状态恢复完成')
-}

@@ -71,7 +71,7 @@ export async function getGoogleAdsCampaignSyncQueueCounts(): Promise<{
 /**
  * 指定用户在 core + background 队列中的 google-ads-campaign-sync 待处理/执行中任务数。
  */
-export async function getGoogleAdsCampaignSyncQueueCountsForUser(
+async function getGoogleAdsCampaignSyncQueueCountsForUser(
   userId: number
 ): Promise<{ pending: number; running: number }> {
   const matchUser = (task: Task) =>

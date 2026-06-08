@@ -175,7 +175,7 @@ export interface GoogleSuggestion {
  * 从Google获取搜索建议（下拉词）
  * 使用Google的自动完成API (非官方，但广泛使用)
  */
-export async function getGoogleSearchSuggestions(params: {
+async function getGoogleSearchSuggestions(params: {
   query: string
   country: string // 如 'US', 'UK', 'DE'
   language: string // 如 'en', 'de'
@@ -409,18 +409,7 @@ export function filterMismatchedGeoKeywords(keywords: string[], targetCountry: s
 
     return true
   })
-}
-
-/**
- * 过滤关键词建议对象数组
- */
-export function filterLowIntentSuggestions(suggestions: GoogleSuggestion[]): GoogleSuggestion[] {
-  const filteredKeywords = filterLowIntentKeywords(suggestions.map((s) => s.keyword))
-
-  return suggestions.filter((s) => filteredKeywords.includes(s.keyword))
-}
-
-/**
+} /**
  * 获取高质量的购买意图关键词
  * 结合Google建议、意图过滤和地理过滤
  */

@@ -71,7 +71,7 @@ export function generateDeviceFingerprint(userAgent: string, ipAddress: string):
 /**
  * Generate a secure session token
  */
-export function generateSessionToken(): string {
+function generateSessionToken(): string {
   return randomBytes(32).toString('hex')
 }
 
@@ -405,21 +405,7 @@ export async function revokeAllSessions(userId: number): Promise<number> {
     [userId]
   )
   return result.changes
-}
-
-/**
- * Update last activity timestamp
- */
-export async function updateSessionActivity(sessionToken: string): Promise<void> {
-  const db = await getDatabase()
-  await db.exec(
-    `UPDATE user_sessions SET last_activity_at = datetime('now')
-     WHERE session_token = ?`,
-    [sessionToken]
-  )
-}
-
-/**
+} /**
  * Mark a device as trusted
  */
 export async function trustDevice(
@@ -508,18 +494,4 @@ export async function getUserAlerts(
     isResolved: a.is_resolved === 1,
     createdAt: a.created_at,
   }))
-}
-
-/**
- * Resolve an alert (admin action)
- */
-export async function resolveAlert(alertId: number, resolvedByUserId: number): Promise<boolean> {
-  const db = await getDatabase()
-  const result = await db.exec(
-    `UPDATE account_sharing_alerts
-     SET is_resolved = 1, resolved_at = datetime('now'), resolved_by = ?
-     WHERE id = ?`,
-    [resolvedByUserId, alertId]
-  )
-  return result.changes > 0
 }

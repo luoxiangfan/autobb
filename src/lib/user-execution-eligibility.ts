@@ -152,7 +152,7 @@ export async function getUserExecutionEligibility(
   }
 }
 
-export function createUserExecutionSuspendedError(params: {
+function createUserExecutionSuspendedError(params: {
   userId: number
   reason: UserExecutionBlockReason
   source?: string

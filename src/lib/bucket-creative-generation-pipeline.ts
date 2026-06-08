@@ -62,7 +62,7 @@ export interface CreativePersistenceGateErrorEnvelope {
 
 export type KeywordPostProcessMode = 'finalize' | 'applyPrecomputed'
 
-export function createCreativePersistenceGateError(params: {
+function createCreativePersistenceGateError(params: {
   attempts: number
   details: ReturnType<typeof evaluateCreativePersistenceHardGate>
   batchIndex?: number
@@ -214,9 +214,7 @@ export function resolveOfferLinkType(offer: Offer): 'product' | 'store' {
   return 'product'
 }
 
-export function buildKeywordPoolVolumeHintMap(
-  keywordPool: OfferKeywordPool | null | undefined
-): Map<
+function buildKeywordPoolVolumeHintMap(keywordPool: OfferKeywordPool | null | undefined): Map<
   string,
   {
     searchVolume: number
@@ -277,7 +275,7 @@ export function buildKeywordPoolVolumeHintMap(
   return hints
 }
 
-export function backfillCreativeKeywordVolumesFromPoolHints(
+function backfillCreativeKeywordVolumesFromPoolHints(
   creative: GeneratedAdCreative,
   hints: Map<string, { searchVolume: number; volumeUnavailableReason?: string }>,
   scopeLabel: string
@@ -314,7 +312,7 @@ export function backfillCreativeKeywordVolumesFromPoolHints(
   }
 }
 
-export async function loadSearchTermFeedbackHintsForGeneration(
+async function loadSearchTermFeedbackHintsForGeneration(
   offerId: number,
   userId: number
 ): Promise<SearchTermFeedbackHintsInput | undefined> {
@@ -335,7 +333,7 @@ export async function loadSearchTermFeedbackHintsForGeneration(
   }
 }
 
-export async function loadBucketSeedCandidates(
+async function loadBucketSeedCandidates(
   offerId: number,
   linkType: 'product' | 'store',
   bucket: CreativeBucketSlot,
@@ -404,7 +402,7 @@ export async function prepareBucketKeywordContext(params: {
   }
 }
 
-export function warnKeywordContextFallback(
+function warnKeywordContextFallback(
   precomputedKeywordSet: Awaited<ReturnType<typeof buildPreGenerationCreativeKeywordSet>>,
   creative: GeneratedAdCreative
 ): void {
@@ -431,7 +429,7 @@ export function assertExecutableKeywordsNonEmpty(
   }
 }
 
-export async function postProcessGeneratedCreativeKeywords(params: {
+async function postProcessGeneratedCreativeKeywords(params: {
   offer: Offer
   userId: number
   creative: GeneratedAdCreative
@@ -556,7 +554,7 @@ export async function evaluateCreativeWithPersistenceGate(params: {
   }
 }
 
-export function createBucketCreativeGenerationCallbacks(
+function createBucketCreativeGenerationCallbacks(
   params: RunBucketCreativeGenerationParams & {
     bucketContext: BucketKeywordContext | null
     searchTermFeedbackHints?: SearchTermFeedbackHintsInput

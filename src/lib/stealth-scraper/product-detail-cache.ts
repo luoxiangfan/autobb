@@ -105,18 +105,7 @@ export function cleanupExpiredCache(): number {
   }
 
   return cleaned
-}
-
-/**
- * 清空所有缓存（测试用）
- */
-export function clearAllCache(): void {
-  productDetailCache.clear()
-  cacheHits = 0
-  cacheMisses = 0
-}
-
-/**
+} /**
  * 批量检查缓存，返回已缓存和未缓存的ASIN列表
  * @param asins - 要检查的ASIN列表
  * @param requireFeatures - 是否要求features不为空（质量检查）

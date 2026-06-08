@@ -27,9 +27,7 @@ function normalizeUrlCandidate(inputUrl: string): string {
   return `https://${trimmed}`
 }
 
-export function getKeywordPlannerSiteFilterUrl(
-  inputUrl: string | undefined | null
-): string | undefined {
+function getKeywordPlannerSiteFilterUrl(inputUrl: string | undefined | null): string | undefined {
   if (!inputUrl) return undefined
 
   try {

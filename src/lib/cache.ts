@@ -27,7 +27,7 @@ export interface CacheStats {
 /**
  * 通用内存缓存类
  */
-export class MemoryCache<T = any> {
+class MemoryCache<T = any> {
   private cache: Map<string, CacheEntry<T>> = new Map()
   private defaultTTL: number
   private maxSize: number
@@ -239,16 +239,6 @@ export function generateGadsApiCacheKey(
   return `gads_${parts.join('_')}`
 }
 
-/**
- * URL解析缓存键生成器
- */
-export function generateUrlCacheKey(url: string, targetCountry?: string): string {
-  const urlHash = url.length > 100 ? url.substring(0, 100) : url
-  const country = targetCountry || 'default'
-
-  return `url_${country}_${urlHash}`
-}
-
 // ========== 全局缓存实例 ==========
 
 /**
@@ -260,29 +250,3 @@ export const creativeCache = new MemoryCache(3600000, 500)
  * Google Ads API缓存（30分钟TTL，最多1000个条目）
  */
 export const gadsApiCache = new MemoryCache(1800000, 1000)
-
-/**
- * URL解析缓存（24小时TTL，最多200个条目）
- */
-export const urlCache = new MemoryCache(86400000, 200)
-
-/**
- * 获取所有缓存的统计信息
- */
-export function getAllCacheStats() {
-  return {
-    creative: creativeCache.getStats(),
-    gadsApi: gadsApiCache.getStats(),
-    url: urlCache.getStats(),
-  }
-}
-
-/**
- * 清空所有缓存
- */
-export function clearAllCaches() {
-  creativeCache.clear()
-  gadsApiCache.clear()
-  urlCache.clear()
-  console.log('[Cache] 已清空所有缓存')
-}

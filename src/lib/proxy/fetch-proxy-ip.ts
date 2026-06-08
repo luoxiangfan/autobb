@@ -135,7 +135,7 @@ export async function tcpPing(host: string, port: number, timeoutMs = 2000): Pro
  * @param fullCheck - 是否进行完整HTTP检查（默认false，仅TCP测试）
  * @returns 健康状态对象
  */
-export async function testProxyHealth(
+async function testProxyHealth(
   credentials: ProxyCredentials,
   timeoutMs = 3000,
   fullCheck = false
@@ -238,21 +238,7 @@ export async function testProxyHealth(
       error: error.message || String(error),
     }
   }
-}
-
-/**
- * 🔥 P0优化：异步健康检查（不阻塞主流程）
- * 在后台执行健康检查，返回Promise供调用者选择是否等待
- */
-export function testProxyHealthAsync(
-  credentials: ProxyCredentials,
-  timeoutMs = 3000
-): Promise<HealthCheckResult> {
-  // 直接返回Promise，调用者可以选择await或忽略
-  return testProxyHealth(credentials, timeoutMs)
-}
-
-/**
+} /**
  * 从代理服务商获取代理IP（支持多种代理格式）
  *
  * 🔥 P1优化：新增多Provider支持
@@ -386,101 +372,7 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5分钟
 function getCacheKey(proxyUrl: string, userId: number, cacheKey?: string): string {
   const baseKey = `${userId}:${proxyUrl}`
   return cacheKey ? `${baseKey}:${cacheKey}` : baseKey
-}
-
-/**
- * 🔥 P1优化：并行获取多个代理IP并选择最快的
- * 同时获取N个代理IP，通过TCP ping测试选择响应最快的
- *
- * @param proxyUrl - 代理服务商API URL
- * @param concurrency - 并行获取数量（默认3）
- * @param timeoutMs - TCP ping超时（默认2000ms）
- * @returns 最快的代理凭证，如果全部失败则抛出错误
- */
-export async function fetchFastestProxy(
-  proxyUrl: string,
-  concurrency = 3,
-  timeoutMs = 2000
-): Promise<ProxyCredentials> {
-  console.log(`\n🚀 并行获取 ${concurrency} 个代理IP，选择最快的...`)
-  const startTime = Date.now()
-
-  // 并行获取多个代理IP（跳过健康检查，后面统一测试）
-  const fetchPromises: Promise<ProxyCredentials | null>[] = []
-  for (let i = 0; i < concurrency; i++) {
-    fetchPromises.push(
-      fetchProxyIp(proxyUrl, 1, true) // 单次尝试，跳过健康检查
-        .then((creds) => {
-          console.log(`✅ [${i + 1}] 获取成功: ${creds.fullAddress}`)
-          return creds
-        })
-        .catch((err) => {
-          console.warn(`⚠️ [${i + 1}] 获取失败: ${err.message}`)
-          return null
-        })
-    )
-  }
-
-  // 等待所有获取完成
-  const results = await Promise.all(fetchPromises)
-  const validCredentials = results.filter((c): c is ProxyCredentials => c !== null)
-
-  if (validCredentials.length === 0) {
-    throw new Error(`获取代理IP失败：${concurrency}个并行请求全部失败`)
-  }
-
-  console.log(`📊 成功获取 ${validCredentials.length}/${concurrency} 个代理IP`)
-
-  // 如果只有1个，直接返回
-  if (validCredentials.length === 1) {
-    const creds = validCredentials[0]
-    // 做一次快速健康检查
-    const health = await testProxyHealth(creds, timeoutMs, false)
-    if (!health.healthy) {
-      throw new Error(`唯一的代理IP健康检查失败: ${health.error}`)
-    }
-    console.log(`✅ 代理IP选中: ${creds.fullAddress} (${health.responseTime}ms)`)
-    return creds
-  }
-
-  // 并行TCP ping测试所有代理
-  console.log(`🏃 并行测试 ${validCredentials.length} 个代理IP的响应速度...`)
-  const pingPromises = validCredentials.map(async (creds) => {
-    const pingTime = await tcpPing(creds.host, creds.port, timeoutMs)
-    return { creds, pingTime }
-  })
-
-  const pingResults = await Promise.all(pingPromises)
-
-  // 过滤健康的代理并按响应时间排序
-  const healthyProxies = pingResults
-    .filter((r) => r.pingTime > 0)
-    .sort((a, b) => a.pingTime - b.pingTime)
-
-  if (healthyProxies.length === 0) {
-    throw new Error(`所有代理IP的TCP连接测试均失败`)
-  }
-
-  // 选择最快的
-  const fastest = healthyProxies[0]
-  const totalTime = Date.now() - startTime
-
-  console.log(`\n🏆 最快代理IP: ${fastest.creds.fullAddress}`)
-  console.log(`   - TCP响应: ${fastest.pingTime}ms`)
-  console.log(`   - 总耗时: ${totalTime}ms`)
-  console.log(`   - 淘汰: ${validCredentials.length - healthyProxies.length} 个慢速/失败`)
-
-  // 输出所有测试结果
-  pingResults.forEach((r, i) => {
-    const status = r.pingTime > 0 ? `${r.pingTime}ms` : '❌失败'
-    const selected = r === fastest ? ' 👈 选中' : ''
-    console.log(`   [${i + 1}] ${r.creds.fullAddress}: ${status}${selected}`)
-  })
-
-  return fastest.creds
-}
-
-/**
+} /**
  * 获取代理IP（默认不使用缓存）
  *
  * 默认每次都获取最新的代理IP，确保代理有效性
@@ -574,32 +466,5 @@ export function clearProxyCache(proxyUrl?: string): void {
     proxyCache.clear()
     proxyInFlight.clear()
     console.log(`已清除所有代理缓存 (${size}个)`)
-  }
-}
-
-/**
- * 获取代理缓存统计信息
- */
-export function getProxyCacheStats(): {
-  totalCached: number
-  validCached: number
-  expiredCached: number
-} {
-  const now = Date.now()
-  let validCount = 0
-  let expiredCount = 0
-
-  proxyCache.forEach((cached) => {
-    if (now < cached.expiresAt) {
-      validCount++
-    } else {
-      expiredCount++
-    }
-  })
-
-  return {
-    totalCached: proxyCache.size,
-    validCached: validCount,
-    expiredCached: expiredCount,
   }
 }

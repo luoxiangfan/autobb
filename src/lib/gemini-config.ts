@@ -69,13 +69,3 @@ export function getGeminiEndpoint(provider: GeminiProvider, model?: string | nul
 export function getGeminiApiKeyUrl(provider: GeminiProvider): string | null {
   return GEMINI_PROVIDERS[provider]?.apiKeyUrl || null
 }
-
-/**
- * 验证服务商类型是否有效
- *
- * @param provider - 要验证的服务商类型
- * @returns 是否有效
- */
-export function isValidProvider(provider: string): provider is GeminiProvider {
-  return provider in GEMINI_PROVIDERS
-}

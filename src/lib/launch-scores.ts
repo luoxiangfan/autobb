@@ -231,7 +231,7 @@ export interface CreativeContentData {
 /**
  * 将 keywordsWithVolume 规范化为可比较、可排序的结构（用于 contentHash）。
  */
-export function normalizeKeywordsWithVolumeForHash(
+function normalizeKeywordsWithVolumeForHash(
   items?: KeywordVolumeHashInput[] | null
 ): KeywordVolumeHashEntry[] {
   if (!items?.length) {
@@ -333,36 +333,7 @@ export async function findCachedLaunchScore(
   }
 
   return mapRowToLaunchScore(row)
-}
-
-/**
- * 通过creative_id查找最新的Launch Score
- */
-export async function findLaunchScoreByCreativeId(
-  creativeId: number,
-  userId: number
-): Promise<LaunchScore | null> {
-  const db = await getDatabase()
-
-  const row = (await db.queryOne(
-    `
-    SELECT * FROM launch_scores
-    WHERE ad_creative_id = ?
-      AND user_id = ?
-    ORDER BY calculated_at DESC
-    LIMIT 1
-  `,
-    [creativeId, userId]
-  )) as any
-
-  if (!row) {
-    return null
-  }
-
-  return mapRowToLaunchScore(row)
-}
-
-/**
+} /**
  * 从ScoreAnalysis中提取所有issues
  */
 export function extractAllIssues(analysis: ScoreAnalysis): string[] {

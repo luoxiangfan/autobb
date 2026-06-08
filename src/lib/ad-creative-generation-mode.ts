@@ -4,21 +4,16 @@
 
 import { AD_CREATIVE_MAX_AUTO_RETRIES } from './ad-creative-quality-constants'
 
-export type AdCreativeGenerationMode = 'fast' | 'balanced' | 'original'
-
-export const AD_CREATIVE_GENERATION_MODES: AdCreativeGenerationMode[] = [
-  'fast',
-  'balanced',
-  'original',
-]
-
-/** 未指定或无效时的默认生成模式（与历史行为一致） */
+export type AdCreativeGenerationMode =
+  | 'fast'
+  | 'balanced'
+  | 'original' /** 未指定或无效时的默认生成模式（与历史行为一致） */
 export const AD_CREATIVE_GENERATION_MODE_DEFAULT: AdCreativeGenerationMode = 'original'
 
 export const CREATIVE_GENERATION_MODE_INVALID_MESSAGE =
   'generationMode 仅支持 fast / balanced / original（兼容：快速 / 均衡 / 标准 / 原模式）'
 
-export const AD_CREATIVE_GENERATION_MODE_LABELS: Record<AdCreativeGenerationMode, string> = {
+const AD_CREATIVE_GENERATION_MODE_LABELS: Record<AdCreativeGenerationMode, string> = {
   fast: '快速',
   balanced: '均衡',
   original: '标准',
@@ -37,7 +32,7 @@ export const AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS: Record<AdCreativeGenerati
   original: '标准质量流程（默认）：最多 2 次自动重试、关键词补全与竞争定位 AI 增强',
 }
 
-export const AD_CREATIVE_GENERATION_MODE_STORAGE_KEY = 'ad_creative_generation_mode'
+const AD_CREATIVE_GENERATION_MODE_STORAGE_KEY = 'ad_creative_generation_mode'
 
 export interface CreativeGenerationRuntime {
   mode: AdCreativeGenerationMode
@@ -95,7 +90,7 @@ const MODE_ALIASES: Record<string, AdCreativeGenerationMode> = {
   当前模式: 'original',
 }
 
-export function getDefaultAdCreativeGenerationMode(): AdCreativeGenerationMode {
+function getDefaultAdCreativeGenerationMode(): AdCreativeGenerationMode {
   const raw = String(
     process.env.AD_CREATIVE_GENERATION_MODE_DEFAULT || AD_CREATIVE_GENERATION_MODE_DEFAULT
   )

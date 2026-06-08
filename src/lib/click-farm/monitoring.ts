@@ -6,7 +6,6 @@
  */
 
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { logger } from '@/lib/logger'
 
 export interface ClickFarmHealth {
   timestamp: string
@@ -262,45 +261,6 @@ async function getPerformanceMetrics(
     avgClickLatency,
     dbQueryTime,
   }
-}
-
-/**
- * 定期监控（建议每5分钟执行一次）
- */
-export async function monitorClickFarmHealth() {
-  try {
-    const health = await getClickFarmHealth()
-
-    // 记录到日志
-    logger.info('[Click Farm Monitor] Health Check', {
-      ...health,
-      alertCount: health.alerts.length,
-    })
-
-    // 如果有告警，发送通知
-    if (health.alerts.length > 0) {
-      const criticalAlerts = health.alerts.filter((a) => a.level === 'error')
-      if (criticalAlerts.length > 0) {
-        await notifyAdmins(health.alerts)
-      }
-    }
-
-    return health
-  } catch (error) {
-    logger.error('[Click Farm Monitor] Health check failed:', error)
-    throw error
-  }
-}
-
-/**
- * 通知管理员
- */
-async function notifyAdmins(alerts: ClickFarmHealth['alerts']) {
-  // 可以集成邮件、Slack、钉钉等通知系统
-  logger.warn('[Click Farm Monitor] Sending alerts to admins', {
-    alertCount: alerts.length,
-    criticalCount: alerts.filter((a) => a.level === 'error').length,
-  })
 }
 
 /**

@@ -632,39 +632,7 @@ export async function resolveAffiliateLinkWithHttp(
     // 这些错误应该降级到Playwright
     throw new Error(`HTTP请求失败（可能需要Playwright）: ${error.message}`)
   }
-}
-
-/**
- * 验证URL是否可以使用HTTP方式解析
- *
- * 某些网站可能使用JavaScript重定向，HTTP方式无法处理
- * 返回true表示可以尝试HTTP，false表示直接使用Playwright
- */
-export function canUseHttpResolver(url: string): boolean {
-  // 已知需要JavaScript的域名黑名单
-  const jsRequiredDomains: string[] = [
-    // 可以根据实际情况添加
-  ]
-
-  try {
-    const urlObj = new URL(url)
-    const hostname = urlObj.hostname.toLowerCase()
-
-    // 检查是否在黑名单中
-    for (const domain of jsRequiredDomains) {
-      if (hostname.includes(domain)) {
-        console.log(`⚠️ ${hostname} 需要JavaScript，跳过HTTP解析`)
-        return false
-      }
-    }
-
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
+} /**
  * 🔥 从tracking域名URL中提取嵌入的目标URL
  *
  * 某些tracking服务（如partnermatic.com）会将目标URL嵌入到查询参数中

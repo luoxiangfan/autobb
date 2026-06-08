@@ -98,7 +98,7 @@ function simpleHash(str: string): string {
 /**
  * AI缓存管理器类
  */
-export class AICacheManager {
+class AICacheManager {
   private stats: Map<string, CacheStats> = new Map()
   private memoryCache: Map<string, { value: unknown; expireAt: number }> = new Map()
 
@@ -369,7 +369,7 @@ export class AICacheManager {
 /**
  * 全局缓存管理器实例
  */
-export const aiCache = new AICacheManager()
+const aiCache = new AICacheManager()
 
 /**
  * 便捷函数：带缓存的AI调用包装器

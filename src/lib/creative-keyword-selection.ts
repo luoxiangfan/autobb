@@ -23,7 +23,7 @@ import {
 export const CREATIVE_KEYWORD_MAX_COUNT = 50
 export const CREATIVE_BRAND_KEYWORD_RESERVE = 10
 export const CREATIVE_KEYWORD_MAX_WORDS = 6
-export const CREATIVE_KEYWORD_MAX_WORDS_BY_TYPE: Record<CanonicalCreativeType, number> = {
+const CREATIVE_KEYWORD_MAX_WORDS_BY_TYPE: Record<CanonicalCreativeType, number> = {
   brand_intent: 6,
   model_intent: 7,
   product_intent: 8,
@@ -377,7 +377,7 @@ function normalizeSourceRank(source: string | undefined, sourceType: string | un
   return getKeywordSourceRankFromInput({ source, sourceType })
 }
 
-export function resolveCreativeKeywordMaxWords(
+function resolveCreativeKeywordMaxWords(
   creativeType: CanonicalCreativeType | null | undefined
 ): number {
   if (!creativeType) return CREATIVE_KEYWORD_MAX_WORDS

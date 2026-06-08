@@ -23,7 +23,7 @@ export const BATCH_CLICK_FARM_TASK_DEFAULTS: {
   durationDays: 9999,
 }
 
-export const BATCH_CLICK_FARM_REFERER_DEFAULT = { type: 'none' as const }
+const BATCH_CLICK_FARM_REFERER_DEFAULT = { type: 'none' as const }
 
 export const BATCH_URL_SWAP_TASK_DEFAULTS: {
   swapMode: 'auto' | 'manual'

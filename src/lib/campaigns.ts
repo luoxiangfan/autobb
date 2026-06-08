@@ -138,33 +138,7 @@ export async function findCampaignById(id: number, userId: number): Promise<Camp
   }
 
   return mapRowToCampaign(row)
-}
-
-/**
- * 根据Google Ads campaign_id查找
- */
-export async function findCampaignByGoogleId(
-  campaignId: string,
-  userId: number
-): Promise<Campaign | null> {
-  const db = await getDatabase()
-
-  const row = (await db.queryOne(
-    `
-    SELECT * FROM campaigns
-    WHERE campaign_id = ? AND user_id = ?
-  `,
-    [campaignId, userId]
-  )) as any
-
-  if (!row) {
-    return null
-  }
-
-  return mapRowToCampaign(row)
-}
-
-/**
+} /**
  * 查找Offer的所有广告系列（排除已删除）
  */
 export async function findCampaignsByOfferId(offerId: number, userId: number): Promise<Campaign[]> {
@@ -207,33 +181,7 @@ export async function findCampaignsByUserId(userId: number, limit?: number): Pro
 
   const rows = (await db.query(sql, [userId])) as any[]
   return rows.map(mapRowToCampaign)
-}
-
-/**
- * 查找Google Ads账号的所有广告系列（排除已删除）
- */
-export async function findCampaignsByAccountId(
-  googleAdsAccountId: number,
-  userId: number
-): Promise<Campaign[]> {
-  const db = await getDatabase()
-
-  // 🔧 修复: PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
-  const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
-
-  const rows = (await db.query(
-    `
-    SELECT * FROM campaigns
-    WHERE google_ads_account_id = ? AND user_id = ? AND ${isDeletedCheck}
-    ORDER BY created_at DESC
-  `,
-    [googleAdsAccountId, userId]
-  )) as any[]
-
-  return rows.map(mapRowToCampaign)
-}
-
-/**
+} /**
  * 更新广告系列
  */
 export async function updateCampaign(
@@ -550,35 +498,7 @@ async function getClickFarmTaskByOfferId(offerId: number, userId: number): Promi
   if (!task) return null
 
   return task
-}
-
-/**
- * 更新广告系列状态
- */
-export async function updateCampaignStatus(
-  id: number,
-  userId: number,
-  status: string
-): Promise<Campaign | null> {
-  const normalizedStatus = String(status || '')
-    .trim()
-    .toUpperCase()
-
-  if (normalizedStatus === 'ENABLED' || normalizedStatus === 'PAUSED') {
-    await applyCampaignTransition({
-      userId,
-      campaignId: id,
-      action: 'TOGGLE_STATUS',
-      payload: { status: normalizedStatus as 'ENABLED' | 'PAUSED' },
-    })
-
-    return findCampaignById(id, userId)
-  }
-
-  return updateCampaign(id, userId, { status })
-}
-
-/**
+} /**
  * 数据库行映射为Campaign对象
  */
 function mapRowToCampaign(row: any): Campaign {

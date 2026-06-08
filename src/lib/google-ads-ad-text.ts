@@ -6,7 +6,7 @@
 
 const DKI_PATTERN = /\{keyword:([^}]*)\}/gi
 
-export const GOOGLE_ADS_PROHIBITED_SYMBOLS = [
+const GOOGLE_ADS_PROHIBITED_SYMBOLS = [
   '★',
   '☆',
   '⭐',

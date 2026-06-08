@@ -90,7 +90,7 @@ export function isGoogleAdsAuthShared(assignment: GoogleAdsAuthAssignment | null
   return assignment?.assignmentMode === 'shared_admin'
 }
 
-export async function canUserModifyGoogleAdsAuth(
+async function canUserModifyGoogleAdsAuth(
   targetUserId: number,
   actorUserId: number,
   actorRole: string
