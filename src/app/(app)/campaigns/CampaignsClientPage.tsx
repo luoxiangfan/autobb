@@ -1737,6 +1737,7 @@ export default function CampaignsClientPage({
           return
         }
 
+        setError('')
         setCampaigns(nextCampaigns)
         if (isServerPagingMode) {
           setFilteredCampaigns(nextCampaigns)
