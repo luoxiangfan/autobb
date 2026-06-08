@@ -926,6 +926,7 @@ export default function CampaignsClientPage({
     [overallRoasSpendShareData]
   )
   const overallRoasPreviewPanelClass = 'rounded-2xl border border-[#dbeafe] bg-white shadow-xs'
+  const overallRoasChartHeight = 260
   const overallRoasPreviewPanelBodyClass = 'p-5 lg:p-6'
   const overallRoasPreviewSectionTitleClass = 'text-sm font-semibold text-slate-800'
   const overallRoasPreviewSectionHintClass = 'mt-1 text-xs text-slate-500'
@@ -5172,8 +5173,8 @@ export default function CampaignsClientPage({
                         </p>
                       </div>
                       {overallRoasRankTrendData.length > 0 ? (
-                        <div className="h-[260px] px-2 pb-4 sm:px-4 lg:h-[280px] lg:px-5">
-                          <ResponsiveContainer width="100%" height="100%">
+                        <div className="h-[260px] w-full min-w-0 px-2 pb-4 sm:px-4 lg:px-5">
+                          <ResponsiveContainer width="100%" height={overallRoasChartHeight}>
                             <ComposedChart
                               data={overallRoasRankTrendData}
                               margin={{ top: 32, right: 24, bottom: 16, left: 8 }}
@@ -5241,8 +5242,8 @@ export default function CampaignsClientPage({
                         </div>
                         {overallRoasSpendShareData.length > 0 ? (
                           <div className="grid gap-4 px-4 pb-4 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center lg:px-5">
-                            <div className="h-[260px]">
-                              <ResponsiveContainer width="100%" height="100%">
+                            <div className="h-[260px] w-full min-w-0">
+                              <ResponsiveContainer width="100%" height={overallRoasChartHeight}>
                                 <PieChart>
                                   <Pie
                                     data={overallRoasSpendShareData}
