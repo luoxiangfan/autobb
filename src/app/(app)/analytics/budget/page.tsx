@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { showError } from '@/lib/toast-utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { useBudgetAnalytics } from '@/lib/hooks/useAnalytics'
 import { formatCurrency } from '@/lib/currency'
+import { resolveSelectedReportCurrency } from '@/lib/report-currency'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 type BudgetAnalyticsTimeRange = '7' | '14' | '30' | 'custom'
@@ -123,7 +124,7 @@ export default function BudgetAnalyticsPage() {
     refresh,
   } = useBudgetAnalytics(startDate, endDate, reportCurrency)
 
-  const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
+  const selectedCurrency = resolveSelectedReportCurrency(reportCurrency, currencyInfo)
   const availableCurrencies = currencyInfo?.currencies ?? []
   const money = (amount: number) => formatCurrency(amount, selectedCurrency)
   const moneyCsv = (amount: number) => `${selectedCurrency} ${Number(amount ?? 0).toFixed(2)}`
@@ -175,13 +176,6 @@ export default function BudgetAnalyticsPage() {
     setEndDate(endDateStr)
     setTimeRange('custom')
   }
-
-  useEffect(() => {
-    if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
-    if (!reportCurrency || !currencyInfo.currencies.includes(reportCurrency)) {
-      setReportCurrency(currencyInfo.currency)
-    }
-  }, [currencyInfo?.currency, currencyInfo?.currencies, reportCurrency])
 
   // Show error toast if fetch fails
   if (error) {

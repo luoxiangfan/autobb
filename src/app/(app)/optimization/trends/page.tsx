@@ -13,6 +13,12 @@ import {
 import { ArrowLeft, RefreshCw, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/lib/currency'
+import {
+  applyCurrencyFromApiResponse,
+  buildReportCurrencyQueryParam,
+  resolveSelectedReportCurrency,
+  type ReportCurrencyInfo,
+} from '@/lib/report-currency'
 
 interface TrendData {
   date: string
@@ -46,14 +52,14 @@ export default function TrendsPage() {
   const [days, setDays] = useState('7')
   const [trends, setTrends] = useState<TrendData[]>([])
   const [summary, setSummary] = useState<TrendSummary | null>(null)
-  const [currencyInfo, setCurrencyInfo] = useState<{
-    currency: string
-    currencies: string[]
-    hasMixedCurrency: boolean
-  } | null>(null)
+  const [currencyInfo, setCurrencyInfo] = useState<ReportCurrencyInfo | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
 
-  const selectedCurrency = reportCurrency || currencyInfo?.currency || summary?.currency || 'USD'
+  const selectedCurrency = resolveSelectedReportCurrency(
+    reportCurrency,
+    currencyInfo,
+    summary?.currency || 'USD'
+  )
   const availableCurrencies = currencyInfo?.currencies ?? summary?.currencies ?? []
   const formatMoney = (value: number, currencyCode: string = selectedCurrency) =>
     formatCurrency(value, currencyCode)
@@ -61,7 +67,7 @@ export default function TrendsPage() {
   const fetchTrendsData = useCallback(async () => {
     try {
       setLoading(true)
-      const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
+      const currencyParam = buildReportCurrencyQueryParam(reportCurrency)
       const response = await fetch(`/api/dashboard/trends?days=${days}${currencyParam}`)
       if (response.ok) {
         const result = await response.json()
@@ -69,11 +75,15 @@ export default function TrendsPage() {
           setTrends(result.data.trends || [])
           setSummary(result.data.summary || null)
           if (result.data?.summary?.currency && Array.isArray(result.data?.summary?.currencies)) {
-            setCurrencyInfo({
-              currency: String(result.data.summary.currency || 'USD'),
-              currencies: result.data.summary.currencies,
-              hasMixedCurrency: Boolean(result.data.summary.hasMixedCurrency),
-            })
+            applyCurrencyFromApiResponse(
+              {
+                currency: String(result.data.summary.currency || 'USD'),
+                currencies: result.data.summary.currencies,
+                hasMixedCurrency: result.data.summary.hasMixedCurrency,
+              },
+              setCurrencyInfo,
+              setReportCurrency
+            )
           }
         }
       } else {
@@ -90,13 +100,6 @@ export default function TrendsPage() {
   useEffect(() => {
     fetchTrendsData()
   }, [fetchTrendsData])
-
-  useEffect(() => {
-    if (!currencyInfo?.currency || !Array.isArray(currencyInfo.currencies)) return
-    if (!reportCurrency || !currencyInfo.currencies.includes(reportCurrency)) {
-      setReportCurrency(currencyInfo.currency)
-    }
-  }, [currencyInfo?.currency, currencyInfo?.currencies, reportCurrency])
 
   const handleRefresh = async () => {
     setRefreshing(true)

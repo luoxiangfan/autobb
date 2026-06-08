@@ -32,6 +32,12 @@ import {
   DollarSign,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
+import {
+  applyCurrencyFromApiResponse,
+  buildReportCurrencyQueryParam,
+  resolveSelectedReportCurrency,
+  type ReportCurrencyInfo,
+} from '@/lib/report-currency'
 
 interface Creative {
   id: number
@@ -100,14 +106,10 @@ export default function CreativesDashboardPage() {
   const [timeRange, setTimeRange] = useState<string>('30')
   const [sortBy, setSortBy] = useState<string>('score')
   const [expandedId, setExpandedId] = useState<number | null>(null)
-  const [currencyInfo, setCurrencyInfo] = useState<{
-    currency: string
-    currencies: string[]
-    hasMixedCurrency: boolean
-  } | null>(null)
+  const [currencyInfo, setCurrencyInfo] = useState<ReportCurrencyInfo | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
 
-  const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
+  const selectedCurrency = resolveSelectedReportCurrency(reportCurrency, currencyInfo)
   const availableCurrencies = currencyInfo?.currencies ?? []
   const formatMoney = (value: number, currencyCode: string = selectedCurrency) =>
     formatCurrency(value, currencyCode)
@@ -115,7 +117,7 @@ export default function CreativesDashboardPage() {
   const fetchCreatives = useCallback(async () => {
     try {
       setLoading(true)
-      const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
+      const currencyParam = buildReportCurrencyQueryParam(reportCurrency)
       const response = await fetch(
         `/api/creatives/performance?daysBack=${timeRange}&sortBy=${sortBy}${currencyParam}`,
         {
@@ -131,16 +133,7 @@ export default function CreativesDashboardPage() {
       setCreatives(data.creatives)
       setSummary(data.summary)
       setRecommendations(data.recommendations)
-      if (data.currency && Array.isArray(data.currencies)) {
-        setCurrencyInfo({
-          currency: data.currency,
-          currencies: data.currencies,
-          hasMixedCurrency: Boolean(data.hasMixedCurrency),
-        })
-        if (!reportCurrency || !data.currencies.includes(reportCurrency)) {
-          setReportCurrency(data.currency)
-        }
-      }
+      applyCurrencyFromApiResponse(data, setCurrencyInfo, setReportCurrency)
     } catch (err: any) {
       console.error('Fetch creatives error:', err)
       showError('加载失败', err.message)

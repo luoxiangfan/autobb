@@ -38,6 +38,12 @@ import { Label } from '@/components/ui/label'
 import { TrendingUp, DollarSign, Target, Activity, RefreshCcw } from 'lucide-react'
 import { buildLaunchScorePagePath } from '@/lib/launch-score-campaign-config-client'
 import { formatCurrency } from '@/lib/currency'
+import {
+  applyCurrencyFromApiResponse,
+  buildReportCurrencyQueryParam,
+  resolveSelectedReportCurrency,
+  type ReportCurrencyInfo,
+} from '@/lib/report-currency'
 import { getCommissionPerConversion, parseCommissionPayoutValue } from '@/lib/offer-monetization'
 import {
   getDefaultOfferExtractionMode,
@@ -204,11 +210,7 @@ export default function OfferDetailPage() {
   const [performanceSummary, setPerformanceSummary] = useState<PerformanceSummary | null>(null)
   const [campaigns, setCampaigns] = useState<CampaignPerformance[]>([])
   const [roi, setRoi] = useState<ROIData | null>(null)
-  const [currencyInfo, setCurrencyInfo] = useState<{
-    currency: string
-    currencies: string[]
-    hasMixedCurrency: boolean
-  } | null>(null)
+  const [currencyInfo, setCurrencyInfo] = useState<ReportCurrencyInfo | null>(null)
   const [reportCurrency, setReportCurrency] = useState<string | null>(null)
   const [timeRange, setTimeRange] = useState<string>('30')
   const [avgOrderValue, setAvgOrderValue] = useState<string>('')
@@ -253,7 +255,7 @@ export default function OfferDetailPage() {
     try {
       setPerformanceLoading(true)
       const avgOrderValueNum = parseFloat(avgOrderValue) || 0
-      const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
+      const currencyParam = buildReportCurrencyQueryParam(reportCurrency)
       const response = await fetch(
         `/api/offers/${offerId}/performance?daysBack=${timeRange}&avgOrderValue=${avgOrderValueNum}${currencyParam}`,
         {
@@ -269,16 +271,7 @@ export default function OfferDetailPage() {
       setPerformanceSummary(data.summary)
       setCampaigns(data.campaigns)
       setRoi(data.roi)
-      if (data.currency && Array.isArray(data.currencies)) {
-        setCurrencyInfo({
-          currency: data.currency,
-          currencies: data.currencies,
-          hasMixedCurrency: Boolean(data.hasMixedCurrency),
-        })
-        if (!reportCurrency || !data.currencies.includes(reportCurrency)) {
-          setReportCurrency(data.currency)
-        }
-      }
+      applyCurrencyFromApiResponse(data, setCurrencyInfo, setReportCurrency)
     } catch (err: any) {
       console.error('Fetch performance error:', err)
       // 不阻塞页面加载，只是性能数据获取失败
@@ -290,7 +283,7 @@ export default function OfferDetailPage() {
   const fetchTrends = useCallback(async () => {
     try {
       setTrendsLoading(true)
-      const currencyParam = reportCurrency ? `&currency=${encodeURIComponent(reportCurrency)}` : ''
+      const currencyParam = buildReportCurrencyQueryParam(reportCurrency)
       const response = await fetch(
         `/api/offers/${offerId}/trends?daysBack=${timeRange}${currencyParam}`,
         {
@@ -305,22 +298,12 @@ export default function OfferDetailPage() {
       const data = await response.json()
       setTrendsData(data.trends)
       setTrendsError(null)
-      if (!currencyInfo && data.currency && Array.isArray(data.currencies)) {
-        setCurrencyInfo({
-          currency: data.currency,
-          currencies: data.currencies,
-          hasMixedCurrency: Boolean(data.hasMixedCurrency),
-        })
-        if (!reportCurrency || !data.currencies.includes(reportCurrency)) {
-          setReportCurrency(data.currency)
-        }
-      }
     } catch (err: any) {
       setTrendsError(err.message || '加载趋势数据失败')
     } finally {
       setTrendsLoading(false)
     }
-  }, [offerId, timeRange, reportCurrency, currencyInfo])
+  }, [offerId, timeRange, reportCurrency])
 
   useEffect(() => {
     fetchOffer()
@@ -329,20 +312,14 @@ export default function OfferDetailPage() {
   useEffect(() => {
     if (!offerId) return
     fetchPerformance()
-    if (trendsSectionMounted) {
-      fetchTrends()
-    }
-  }, [
-    offerId,
-    timeRange,
-    avgOrderValue,
-    reportCurrency,
-    trendsSectionMounted,
-    fetchPerformance,
-    fetchTrends,
-  ])
+  }, [offerId, fetchPerformance])
 
-  const selectedCurrency = reportCurrency || currencyInfo?.currency || 'USD'
+  useEffect(() => {
+    if (!offerId || !trendsSectionMounted) return
+    fetchTrends()
+  }, [offerId, trendsSectionMounted, fetchTrends])
+
+  const selectedCurrency = resolveSelectedReportCurrency(reportCurrency, currencyInfo)
   const availableCurrencies = currencyInfo?.currencies ?? []
   const formatMoney = (value: number, currencyCode: string = selectedCurrency) =>
     formatCurrency(value, currencyCode)
