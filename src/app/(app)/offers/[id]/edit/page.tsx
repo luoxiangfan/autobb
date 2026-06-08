@@ -22,8 +22,8 @@ export default function EditOfferPage() {
   const [saving, setSaving] = useState(false)
   const [reExtracting, setReExtracting] = useState(false)
   const [error, setError] = useState('')
-  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(
-    getDefaultOfferExtractionMode
+  const [extractionMode, setExtractionMode] = useState<OfferExtractionMode>(() =>
+    getDefaultOfferExtractionMode()
   )
 
   // 表单状态

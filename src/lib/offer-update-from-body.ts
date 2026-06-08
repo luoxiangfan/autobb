@@ -60,8 +60,8 @@ const updateOfferBodySchema = z.object({
   commission_value: z.union([z.string(), z.number()]).optional(),
   commission_currency: z.string().optional(),
   is_active: z.boolean().optional(),
-  extraction_mode: extractionModeSchema,
-  extractionMode: extractionModeSchema,
+  extraction_mode: extractionModeSchema.optional(),
+  extractionMode: extractionModeSchema.optional(),
 })
 
 const OFFER_UPDATE_KEYS = new Set([
