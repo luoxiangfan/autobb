@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 
-import { getDatabase } from '../src/lib/db'
-import { getSearchTermFeedbackHints } from '../src/lib/search-term-feedback-hints'
-import { normalizeGoogleAdsKeyword } from '../src/lib/google-ads-keyword-normalizer'
+import { getDatabase } from '../../../src/lib/db'
+import { getSearchTermFeedbackHints } from '../../../src/lib/search-term-feedback-hints'
+import { normalizeGoogleAdsKeyword } from '../../../src/lib/google-ads-keyword-normalizer'
 
 interface Args {
   offerId: number
@@ -23,7 +23,7 @@ function printUsage(): void {
   console.log(
     [
       'Usage:',
-      '  tsx scripts/validate-search-term-activation.ts --offer-id <id> --user-id <id> [options]',
+      '  tsx scripts/archive/one-off/validate-search-term-activation.ts --offer-id <id> --user-id <id> [options]',
       '',
       'Options:',
       '  --creative-id <id>       指定创意ID；不传则自动取该 offer 最新创意',
@@ -32,7 +32,7 @@ function printUsage(): void {
       '  --help, -h               显示帮助',
       '',
       'Example:',
-      '  DATABASE_URL=postgresql://... tsx scripts/validate-search-term-activation.ts --offer-id 3166 --user-id 62',
+      '  DATABASE_URL=postgresql://... tsx scripts/archive/one-off/validate-search-term-activation.ts --offer-id 3166 --user-id 62',
     ].join('\n')
   )
 }

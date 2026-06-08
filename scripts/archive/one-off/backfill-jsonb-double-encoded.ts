@@ -5,10 +5,10 @@
  * 默认 dry-run（仅扫描并输出统计）；仅当传入 --apply 才会实际更新。
  *
  * 用法:
- *   tsx scripts/backfill-jsonb-double-encoded.ts
- *   tsx scripts/backfill-jsonb-double-encoded.ts --apply
- *   tsx scripts/backfill-jsonb-double-encoded.ts --offer-id=3694
- *   tsx scripts/backfill-jsonb-double-encoded.ts --apply --table=offers,creative_tasks
+ *   tsx scripts/archive/one-off/backfill-jsonb-double-encoded.ts
+ *   tsx scripts/archive/one-off/backfill-jsonb-double-encoded.ts --apply
+ *   tsx scripts/archive/one-off/backfill-jsonb-double-encoded.ts --offer-id=3694
+ *   tsx scripts/archive/one-off/backfill-jsonb-double-encoded.ts --apply --table=offers,creative_tasks
  */
 
 import { closeDatabase, getDatabase, type DatabaseAdapter } from '@/lib/db'
@@ -376,7 +376,7 @@ function parseArgs(argv: string[]): BackfillOptions {
       console.log(
         `
 Usage:
-  tsx scripts/backfill-jsonb-double-encoded.ts [--dry-run] [--apply] [--offer-id=N] [--table=t1,t2] [--column=c1,t2.c2] [--limit-per-column=N]
+  tsx scripts/archive/one-off/backfill-jsonb-double-encoded.ts [--dry-run] [--apply] [--offer-id=N] [--table=t1,t2] [--column=c1,t2.c2] [--limit-per-column=N]
 
 Options:
   --dry-run                 Preview only (default)

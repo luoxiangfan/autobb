@@ -10,8 +10,11 @@
  */
 
 import 'dotenv/config'
-import { getBackupRankOrderSql, pruneCampaignBackupsForOffer } from '../src/lib/campaign-backups'
-import { getDatabase, type DatabaseAdapter } from '../src/lib/db'
+import {
+  getBackupRankOrderSql,
+  pruneCampaignBackupsForOffer,
+} from '../../../src/lib/campaign-backups'
+import { getDatabase, type DatabaseAdapter } from '../../../src/lib/db'
 
 function distinctPairCountSql(dbType: 'sqlite' | 'postgres'): string {
   return dbType === 'postgres'

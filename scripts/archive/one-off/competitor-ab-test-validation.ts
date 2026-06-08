@@ -1,12 +1,12 @@
 /**
- * Competitor compression A/B validation helpers for scripts/run-competitor-ab-test.ts
+ * Competitor compression A/B validation helpers for scripts/archive/one-off/run-competitor-ab-test.ts
  */
 
 import {
   compressCompetitors,
   validateCompressionQuality,
   type CompetitorInfo,
-} from '../src/lib/competitor-compressor'
+} from '../../../src/lib/competitor-compressor'
 
 const AB_TEST_SAMPLE_COMPETITORS: CompetitorInfo[] = [
   {

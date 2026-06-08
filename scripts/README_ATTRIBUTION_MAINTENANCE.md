@@ -1,6 +1,6 @@
 # 佣金归因维护脚本
 
-本目录包含用于维护和监控佣金归因系统的脚本。
+本目录包含用于维护和监控佣金归因系统的脚本。一次性回填/去重类脚本已移至 [`archive/one-off/`](archive/one-off/README.md)（见 [`archive/README.md`](archive/README.md)）。
 
 ## 🎉 最新更新（2026-03-07）
 

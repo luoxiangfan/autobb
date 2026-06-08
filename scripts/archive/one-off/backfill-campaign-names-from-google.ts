@@ -7,9 +7,9 @@
  * 使用 `--apply` 才会真正写入数据库。
  *
  * 用法:
- *   tsx scripts/backfill-campaign-names-from-google.ts
- *   tsx scripts/backfill-campaign-names-from-google.ts --apply
- *   tsx scripts/backfill-campaign-names-from-google.ts --apply --user-id=7 --account-id=33 --limit=200
+ *   tsx scripts/archive/one-off/backfill-campaign-names-from-google.ts
+ *   tsx scripts/archive/one-off/backfill-campaign-names-from-google.ts --apply
+ *   tsx scripts/archive/one-off/backfill-campaign-names-from-google.ts --apply --user-id=7 --account-id=33 --limit=200
  */
 
 type BackfillOptions = {
@@ -71,7 +71,7 @@ function parseArgs(argv: string[]): BackfillOptions {
       console.log(
         `
 Usage:
-  tsx scripts/backfill-campaign-names-from-google.ts [--dry-run] [--apply] [--user-id=N] [--account-id=N] [--limit=N]
+  tsx scripts/archive/one-off/backfill-campaign-names-from-google.ts [--dry-run] [--apply] [--user-id=N] [--account-id=N] [--limit=N]
 
 Options:
   --dry-run      Preview only (default)

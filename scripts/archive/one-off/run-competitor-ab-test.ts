@@ -6,7 +6,7 @@
  *
  * 使用方法：
  *   npm run test:competitor-compression
- *   或: npx tsx scripts/run-competitor-ab-test.ts
+ *   或: npx tsx scripts/archive/one-off/run-competitor-ab-test.ts
  */
 
 import {
@@ -337,7 +337,7 @@ async function main() {
 
 **生成时间**: ${new Date().toISOString()}
 **测试环境**: 开发环境
-**测试脚本**: scripts/run-competitor-ab-test.ts
+**测试脚本**: scripts/archive/one-off/run-competitor-ab-test.ts
 
 ---
 
