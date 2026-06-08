@@ -72,6 +72,7 @@ import {
 } from 'lucide-react'
 import type { TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
+import { MeasuredResponsiveContainer } from '@/components/ui/chart'
 import {
   CartesianGrid,
   Cell,
@@ -80,7 +81,6 @@ import {
   Line,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
@@ -5066,6 +5066,7 @@ export default function CampaignsClientPage({
           if (!open) {
             setOverallRoasError(null)
             setOverallRoasLoading(false)
+            setOverallRoasStats(null)
           }
         }}
       >
@@ -5172,57 +5173,53 @@ export default function CampaignsClientPage({
                           预览结构与导出图保持一致，突出头部系列 ROAS 排名
                         </p>
                       </div>
-                      {overallRoasRankTrendData.length > 0 ? (
-                        <div className="h-[260px] w-full min-w-0 px-2 pb-4 sm:px-4 lg:px-5">
-                          <ResponsiveContainer width="100%" height={overallRoasChartHeight}>
-                            <ComposedChart
-                              data={overallRoasRankTrendData}
-                              margin={{ top: 32, right: 24, bottom: 16, left: 8 }}
+                      {isOverallRoasDialogOpen && overallRoasRankTrendData.length > 0 ? (
+                        <MeasuredResponsiveContainer
+                          height={overallRoasChartHeight}
+                          className="px-2 pb-4 sm:px-4 lg:px-5"
+                        >
+                          <ComposedChart
+                            data={overallRoasRankTrendData}
+                            margin={{ top: 32, right: 24, bottom: 16, left: 8 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
+                            <XAxis
+                              dataKey="rank"
+                              stroke="#64748b"
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              stroke="#334155"
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(value: number) => `${Number(value || 0).toFixed(1)}x`}
+                            />
+                            <RechartsTooltip
+                              contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
+                              formatter={(value) => [formatRoasNumber(Number(value ?? 0)), 'ROAS']}
+                              labelFormatter={(_label, payload) =>
+                                payload?.[0]?.payload?.campaignName || '--'
+                              }
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="roas"
+                              stroke="#1d4ed8"
+                              strokeWidth={3}
+                              dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }}
+                              activeDot={{ r: 6 }}
                             >
-                              <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
-                              <XAxis
-                                dataKey="rank"
-                                stroke="#64748b"
-                                tickLine={false}
-                                axisLine={false}
-                              />
-                              <YAxis
-                                stroke="#334155"
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(value: number) =>
-                                  `${Number(value || 0).toFixed(1)}x`
-                                }
-                              />
-                              <RechartsTooltip
-                                contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
-                                formatter={(value) => [
-                                  formatRoasNumber(Number(value ?? 0)),
-                                  'ROAS',
-                                ]}
-                                labelFormatter={(_label, payload) =>
-                                  payload?.[0]?.payload?.campaignName || '--'
-                                }
-                              />
-                              <Line
-                                type="monotone"
+                              <LabelList
                                 dataKey="roas"
-                                stroke="#1d4ed8"
-                                strokeWidth={3}
-                                dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }}
-                                activeDot={{ r: 6 }}
-                              >
-                                <LabelList
-                                  dataKey="roas"
-                                  position="top"
-                                  offset={12}
-                                  formatter={(value) => `${Number(value ?? 0).toFixed(2)}x`}
-                                  className="fill-slate-700 text-[11px]"
-                                />
-                              </Line>
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
+                                position="top"
+                                offset={12}
+                                formatter={(value) => `${Number(value ?? 0).toFixed(2)}x`}
+                                className="fill-slate-700 text-[11px]"
+                              />
+                            </Line>
+                          </ComposedChart>
+                        </MeasuredResponsiveContainer>
                       ) : (
                         <p className="py-20 text-center text-sm text-slate-500">
                           暂无可绘制的 ROAS 趋势数据
@@ -5240,39 +5237,37 @@ export default function CampaignsClientPage({
                             预览与导出图一致，强调主要花费集中度和构成
                           </p>
                         </div>
-                        {overallRoasSpendShareData.length > 0 ? (
+                        {isOverallRoasDialogOpen && overallRoasSpendShareData.length > 0 ? (
                           <div className="grid gap-4 px-4 pb-4 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center lg:px-5">
-                            <div className="h-[260px] w-full min-w-0">
-                              <ResponsiveContainer width="100%" height={overallRoasChartHeight}>
-                                <PieChart>
-                                  <Pie
-                                    data={overallRoasSpendShareData}
-                                    dataKey="value"
-                                    nameKey="name"
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    paddingAngle={2}
-                                  >
-                                    {overallRoasSpendShareData.map((_, index) => (
-                                      <Cell
-                                        key={`share-${index}`}
-                                        fill={chartPalette[index % chartPalette.length]}
-                                      />
-                                    ))}
-                                  </Pie>
-                                  <RechartsTooltip
-                                    formatter={(value) =>
-                                      formatCurrencyDashboard(
-                                        Number(value ?? 0),
-                                        overallRoasStats.currency
-                                      )
-                                    }
-                                  />
-                                </PieChart>
-                              </ResponsiveContainer>
-                            </div>
+                            <MeasuredResponsiveContainer height={overallRoasChartHeight}>
+                              <PieChart>
+                                <Pie
+                                  data={overallRoasSpendShareData}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={60}
+                                  outerRadius={100}
+                                  paddingAngle={2}
+                                >
+                                  {overallRoasSpendShareData.map((_, index) => (
+                                    <Cell
+                                      key={`share-${index}`}
+                                      fill={chartPalette[index % chartPalette.length]}
+                                    />
+                                  ))}
+                                </Pie>
+                                <RechartsTooltip
+                                  formatter={(value) =>
+                                    formatCurrencyDashboard(
+                                      Number(value ?? 0),
+                                      overallRoasStats.currency
+                                    )
+                                  }
+                                />
+                              </PieChart>
+                            </MeasuredResponsiveContainer>
                             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                               {overallRoasSpendShareData.map((entry, index) => (
                                 <div

@@ -37,29 +37,115 @@ function useChart() {
   return context
 }
 
+function parsePixelDimension(value: React.CSSProperties['height']): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value
+  }
+
+  if (typeof value === 'string') {
+    const pxMatch = value.match(/^(\d+(?:\.\d+)?)px$/)
+    if (pxMatch) {
+      return Number(pxMatch[1])
+    }
+  }
+
+  return undefined
+}
+
+function useContainerSize(ref: React.RefObject<HTMLElement | null>) {
+  const [size, setSize] = React.useState<{ width: number; height: number } | null>(null)
+
+  React.useLayoutEffect(() => {
+    const node = ref.current
+    if (!node) return
+
+    const update = () => {
+      const { width, height } = node.getBoundingClientRect()
+      if (width > 0 && height > 0) {
+        setSize({ width: Math.floor(width), height: Math.floor(height) })
+      }
+    }
+
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [ref])
+
+  return size
+}
+
+type ResponsiveChartChildren = React.ComponentProps<
+  typeof RechartsPrimitive.ResponsiveContainer
+>['children']
+
+function MeasuredResponsiveContainer({
+  height,
+  className,
+  children,
+}: {
+  height: number
+  className?: string
+  children: ResponsiveChartChildren
+}) {
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const size = useContainerSize(containerRef)
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn('w-full min-w-0', className)}
+      style={{ height: `${height}px` }}
+    >
+      {size ? (
+        <RechartsPrimitive.ResponsiveContainer width={size.width} height={size.height} minWidth={0}>
+          {children}
+        </RechartsPrimitive.ResponsiveContainer>
+      ) : null}
+    </div>
+  )
+}
+
 const ChartContainer = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<'div'> & {
     config: ChartConfig
-    children: React.ComponentProps<typeof RechartsPrimitive.ResponsiveContainer>['children']
+    children: ResponsiveChartChildren
   }
->(({ id, className, children, config, ...props }, ref) => {
+>(({ id, className, children, config, style, ...props }, ref) => {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, '')}`
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  React.useImperativeHandle(ref, () => containerRef.current as HTMLDivElement)
+
+  const explicitHeight = parsePixelDimension(style?.height)
+  const size = useContainerSize(containerRef)
+  const chartHeight = explicitHeight ?? size?.height ?? 0
+  const chartWidth = size?.width ?? 0
 
   return (
     <ChartContext.Provider value={{ config }}>
       <div
         data-chart={chartId}
-        ref={ref}
+        ref={containerRef}
+        style={style}
         className={cn(
-          "flex aspect-video justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
+          "w-full min-w-0 justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50 [&_.recharts-curve.recharts-tooltip-cursor]:stroke-border [&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-layer]:outline-hidden [&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border [&_.recharts-radial-bar-background-sector]:fill-muted [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-muted [&_.recharts-reference-line_[stroke='#ccc']]:stroke-border [&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
+          explicitHeight ? 'flex' : 'flex aspect-video',
           className
         )}
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>{children}</RechartsPrimitive.ResponsiveContainer>
+        {chartWidth > 0 && chartHeight > 0 ? (
+          <RechartsPrimitive.ResponsiveContainer
+            width={chartWidth}
+            height={chartHeight}
+            minWidth={0}
+          >
+            {children}
+          </RechartsPrimitive.ResponsiveContainer>
+        ) : null}
       </div>
     </ChartContext.Provider>
   )
@@ -327,6 +413,7 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
 
 export {
   ChartContainer,
+  MeasuredResponsiveContainer,
   ChartTooltip,
   ChartTooltipContent,
   ChartLegend,
