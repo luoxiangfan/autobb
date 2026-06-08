@@ -18,21 +18,22 @@
 凡修改了会影响构建/运行的文件（如 `src/`、`scripts/`、`migrations/`、`pg-migrations/`、根目录 TS/JS 配置等），**在向用户汇报「修改完成」之前**，必须在仓库根目录依次执行并通过：
 
 ```bash
-npm run format
+npm run format:changed
 npm run lint
 npm run type-check
 ```
 
 **执行要求：**
 
-1. 三条命令均须 **exit code 0**；须先执行 `npm run format`，再执行 `lint` 与 `type-check`（勿与 format 并行）。
-2. 汇报前须确认三者均已成功。
-3. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
-4. 向用户说明本次改动时，须简要写明 format / lint / type-check 已通过（或说明跳过原因）。
+1. 三条命令均须 **exit code 0**；须先执行 `npm run format:changed`，再执行 `lint` 与 `type-check`（勿与 format 并行）。
+2. `format:changed` 仅格式化相对 `HEAD` 的修改/新增文件（含未跟踪），勿用 `npm run format` 全仓格式化。
+3. 汇报前须确认三者均已成功。
+4. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
+5. 向用户说明本次改动时，须简要写明 format:changed / lint / type-check 已通过（或说明跳过原因）。
 
 ## 数据库 / SQL 修改后的检查（必须）
 
-本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format / lint / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
+本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format:changed / lint / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
 
 ### 适用场景（满足任一则必须执行）
 
@@ -139,7 +140,7 @@ gitnexus impact evaluateAdStrength --depth 2
 1. 进入代码修改前，先汇报 `impact` 结果（直接调用方、风险级别、影响模块）。
 2. 若风险为 HIGH/CRITICAL，先给出降风险方案，再实施修改。
 3. 改动完成后，说明是否需要重新 `analyze` 以保持索引新鲜。
-4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run format`、`npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
+4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run format:changed`、`npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
 
 ### 当前仓库限制
 
@@ -294,7 +295,7 @@ For more details, see README.md and docs/QUICKSTART.md.
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) — at minimum `npm run format`, `npm run lint`, and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
+2. **Run quality gates** (if code changed) — at minimum `npm run format:changed`, `npm run lint`, and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash

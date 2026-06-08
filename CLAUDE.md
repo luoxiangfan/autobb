@@ -67,7 +67,8 @@ npm run db:init      # initialize SQLite (first run)
 npm run db:migrate   # apply incremental migrations
 npm run dev          # development server
 npm run build        # production build
-npm run format       # Prettier format
+npm run format:changed  # Prettier format changed/new files only
+npm run format          # Prettier format entire repo
 npm run lint         # ESLint
 npm test             # Vitest
 npm run type-check   # TypeScript
@@ -76,7 +77,7 @@ npm run validate-schema
 
 ## Agent workflow (mandatory after code edits)
 
-After changing application code, run **`npm run format`**, **`npm run lint`**, and **`npm run type-check`** in the repo root; all must pass before reporting work complete.
+After changing application code, run **`npm run format:changed`**, **`npm run lint`**, and **`npm run type-check`** in the repo root; all must pass before reporting work complete. Use `format:changed` (not full-repo `format`) so only modified or new files are formatted.
 
 If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`, raw SQL, `db-helpers`), review SQL correctness (table aliases, `?` placeholders vs `params`, column types) and run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`** for dual SQLite/PostgreSQL behavior. See [AGENTS.md](./AGENTS.md) —「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的检查（必须）」.
 

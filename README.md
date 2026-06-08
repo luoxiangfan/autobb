@@ -249,7 +249,7 @@ npm run validate-schema  # Schema 验证
 提交前请依次通过：
 
 ```bash
-npm run format           # Prettier 格式化
+npm run format:changed   # Prettier 格式化（仅修改/新增文件）
 npm run lint             # ESLint 检查
 npm run type-check       # TypeScript 检查
 ```
@@ -413,7 +413,7 @@ npm start
 
 1. Fork 本仓库
 2. 创建功能分支 (`git checkout -b feature/your-feature`)
-3. 提交前运行 `npm run format`、`npm run lint`、`npm run type-check`
+3. 提交前运行 `npm run format:changed`、`npm run lint`、`npm run type-check`
 4. 提交更改并创建 Pull Request
 
 ---
