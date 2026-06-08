@@ -186,7 +186,7 @@ const queueConfigSchema = z.looseObject({
     .max(MAX_QUEUE_SIZE_MAX, zErr.maxNumber(MAX_QUEUE_SIZE_MAX))
     .optional(),
   // 兼容历史超限值：先裁剪再验证，避免“修改其它字段时被旧 taskTimeout 阻塞”
-  taskTimeout: taskTimeoutSchema,
+  taskTimeout: taskTimeoutSchema.optional(),
   defaultMaxRetries: z
     .number()
     .min(0, zErr.minNumber(0))
