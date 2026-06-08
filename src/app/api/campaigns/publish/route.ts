@@ -5,7 +5,7 @@ import { getInsertedId } from '@/lib/db-helpers'
 
 import {
   getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsAuthReadyFailure,
 } from '@/lib/google-ads-auth-context'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
 import { calculateLaunchScore } from '@/lib/scoring'
@@ -460,10 +460,11 @@ export async function POST(request: NextRequest) {
     }
 
     const authContext = await getGoogleAdsAuthContext(userId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+    if (authFailure) {
       const error = new AppError(ErrorCode.GADS_CREDENTIALS_INVALID, {
         userId,
-        reason: 'Google Ads 认证未配置或已失效，请先在设置中完成 OAuth 授权或配置服务账号',
+        reason: authFailure.message,
       })
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }

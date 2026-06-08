@@ -8,9 +8,7 @@ import { getDatabase } from './db'
 import { getLoginCustomerId, AuthType } from './google-ads-service-account'
 import {
   getGoogleAdsAuthContext,
-  googleAdsApiAuthValidationErrorMessage,
-  googleAdsAuthContextDualStackError,
-  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsApiAuthType,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
@@ -37,12 +35,9 @@ async function resolveKeywordPlannerApiAuthType(params: {
   preparedOAuth?: KeywordIdeasPreparedOAuth
 }): Promise<AuthType> {
   const ctx = params.preparedOAuth?.authContext ?? (await getGoogleAdsAuthContext(params.userId))
-  const dualStackError = googleAdsAuthContextDualStackError(ctx)
-  if (dualStackError) {
-    throw new Error(dualStackError)
-  }
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-    throw new Error(googleAdsApiAuthValidationErrorMessage('not_configured'))
+  const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+  if (authFailure) {
+    throw new Error(authFailure.message)
   }
   return resolveGoogleAdsApiAuthType({ authType: params.authType }, ctx)
 }

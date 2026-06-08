@@ -385,6 +385,9 @@ const GOOGLE_ADS_SETTING_KEYS = [
  * 同时移除其他用户对该用户（作为共享管理员）的认证分配。
  */
 export async function purgeGoogleAdsAuthConfigForUser(userId: number): Promise<void> {
+  const { invalidateGoogleAdsAuthContextCacheForOwner } = await import('./google-ads-auth-context')
+  await invalidateGoogleAdsAuthContextCacheForOwner(userId)
+
   const db = await getDatabase()
 
   await db.exec(

@@ -9,8 +9,7 @@ import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import {
   getGoogleAdsAuthContext,
   GOOGLE_ADS_DUAL_STACK_WARNING,
-  googleAdsAuthContextDualStackError,
-  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsAuthReadyFailure,
 } from './google-ads-auth-context'
 
 function isGoogleAdsDualStackError(error: unknown): boolean {
@@ -92,9 +91,9 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
 
   try {
     const ctx = await getGoogleAdsAuthContext(userId)
-    const dualStackError = googleAdsAuthContextDualStackError(ctx)
-    if (dualStackError) {
-      throw new Error(dualStackError)
+    const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+    if (authFailure) {
+      throw new Error(authFailure.message)
     }
 
     if (ctx.auth.authType === 'service_account') {
@@ -111,10 +110,6 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
           method: 'default',
           details: '服务账号认证，使用已存储的 api_access_level',
         }
-      }
-
-      if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-        throw new Error('未找到 Google Ads 服务账号配置')
       }
 
       return {

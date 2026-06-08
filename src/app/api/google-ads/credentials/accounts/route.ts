@@ -2,10 +2,11 @@
 import { verifyAuth } from '@/lib/auth'
 import {
   getGoogleAdsAuthContext,
-  GOOGLE_ADS_DUAL_STACK_WARNING,
-  hasConfiguredGoogleAdsAuthFromContext,
+  googleAdsAuthReadyFailureHttpStatus,
+  googleAdsAuthReadyFailurePayload,
   resolveConfiguredGoogleAdsAuthType,
   resolveEffectiveServiceAccountId,
+  resolveGoogleAdsAuthReadyFailure,
 } from '@/lib/google-ads-auth-context'
 import { formatErrorMessage } from '@/lib/google-ads-credentials-errors'
 import {
@@ -152,26 +153,11 @@ async function get(request: NextRequest) {
 
     const userId = authResult.user.userId
     const authContext = await getGoogleAdsAuthContext(userId)
-    if (authContext.dualStack) {
-      return jsonNoStore(
-        {
-          error: GOOGLE_ADS_DUAL_STACK_WARNING,
-          code: 'DUAL_STACK_CONFLICT',
-          message: GOOGLE_ADS_DUAL_STACK_WARNING,
-          authConfigWarning: GOOGLE_ADS_DUAL_STACK_WARNING,
-        },
-        { status: 409 }
-      )
-    }
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return jsonNoStore(
-        {
-          error: 'Google Ads 认证未配置或已失效',
-          code: 'CREDENTIALS_NOT_CONFIGURED',
-          message: '请先在设置中完成 OAuth 授权或配置服务账号',
-        },
-        { status: 404 }
-      )
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+    if (authFailure) {
+      return jsonNoStore(googleAdsAuthReadyFailurePayload(authFailure), {
+        status: googleAdsAuthReadyFailureHttpStatus(authFailure.reason),
+      })
     }
     const ownerUserId = authContext.ownerUserId
 
@@ -255,9 +241,7 @@ async function get(request: NextRequest) {
       const isDualStack = healResult.code === 'DUAL_STACK_CONFLICT'
       return jsonNoStore(
         {
-          error: isDualStack
-            ? GOOGLE_ADS_DUAL_STACK_WARNING
-            : 'Google Ads Developer Token 配置无效',
+          error: isDualStack ? healResult.message : 'Google Ads Developer Token 配置无效',
           code: healResult.code,
           message: healResult.message,
           ...(isDualStack ? { authConfigWarning: healResult.message } : {}),

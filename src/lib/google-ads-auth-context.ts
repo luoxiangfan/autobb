@@ -635,6 +635,57 @@ export type GoogleAdsApiAuthValidationError =
   | 'oauth_refresh_missing'
   | 'service_account_missing'
 
+/**
+ * `hasConfiguredGoogleAdsAuthFromContext` 为 false 时的用户可读原因（双栈优先于未配置）。
+ */
+export function googleAdsAuthNotReadyMessage(ctx: Pick<GoogleAdsAuthContext, 'dualStack'>): string {
+  const dualStackError = googleAdsAuthContextDualStackError(ctx)
+  if (dualStackError) {
+    return dualStackError
+  }
+  return googleAdsApiAuthValidationErrorMessage('not_configured')
+}
+
+export type GoogleAdsAuthReadyFailureReason = 'dual_stack' | 'not_configured'
+
+/** 认证不可用于 API 时返回原因与文案；已配置则 null。 */
+export function resolveGoogleAdsAuthReadyFailure(
+  ctx: GoogleAdsAuthContext
+): { reason: GoogleAdsAuthReadyFailureReason; message: string } | null {
+  if (hasConfiguredGoogleAdsAuthFromContext(ctx)) {
+    return null
+  }
+  return {
+    reason: ctx.dualStack ? 'dual_stack' : 'not_configured',
+    message: googleAdsAuthNotReadyMessage(ctx),
+  }
+}
+
+/** API 路由：认证未就绪时的标准 error body（含双栈 authConfigWarning）。 */
+export function googleAdsAuthReadyFailurePayload(failure: {
+  reason: GoogleAdsAuthReadyFailureReason
+  message: string
+}): {
+  error: string
+  code: string
+  message: string
+  authConfigWarning?: string
+} {
+  const isDualStack = failure.reason === 'dual_stack'
+  return {
+    error: failure.message,
+    code: isDualStack ? 'DUAL_STACK_CONFLICT' : 'CREDENTIALS_NOT_CONFIGURED',
+    message: failure.message,
+    ...(isDualStack ? { authConfigWarning: failure.message } : {}),
+  }
+}
+
+export function googleAdsAuthReadyFailureHttpStatus(
+  reason: GoogleAdsAuthReadyFailureReason
+): number {
+  return reason === 'dual_stack' ? 409 : 404
+}
+
 export function googleAdsApiAuthValidationErrorMessage(
   reason: GoogleAdsApiAuthValidationError
 ): string {
@@ -663,11 +714,9 @@ export async function resolveGoogleAdsApiAuthForAccount(
   | { ok: false; reason: GoogleAdsApiAuthValidationError }
 > {
   const ctx = await getGoogleAdsAuthContext(userId)
-  if (ctx.dualStack) {
-    return { ok: false, reason: 'dual_stack' }
-  }
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-    return { ok: false, reason: 'not_configured' }
+  const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+  if (authFailure) {
+    return { ok: false, reason: authFailure.reason }
   }
 
   const apiAuth = await resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)
@@ -752,12 +801,9 @@ export async function resolveGoogleAdsApiAuthFromContext(
   linkedAccountServiceAccountId?: string | null
 ): Promise<GoogleAdsApiAuthFields> {
   assertAuthContextSecretsHydrated(ctx)
-  const dualStackError = googleAdsAuthContextDualStackError(ctx)
-  if (dualStackError) {
-    throw new Error(dualStackError)
-  }
-  if (!hasConfiguredGoogleAdsAuthFromContext(ctx)) {
-    throw new Error(googleAdsApiAuthValidationErrorMessage('not_configured'))
+  const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+  if (authFailure) {
+    throw new Error(authFailure.message)
   }
 
   const serviceAccountId = resolveEffectiveServiceAccountId(linkedAccountServiceAccountId, ctx)

@@ -3,7 +3,7 @@ import { getServiceAccountConfig } from './google-ads-service-account'
 import { getDatabase } from './db'
 import {
   getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
@@ -333,8 +333,9 @@ export class DataSyncService {
 
     try {
       const authContext = await getGoogleAdsAuthContext(userId)
-      if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-        throw new Error('Google Ads 认证未配置或已失效，请在设置页面完成配置')
+      const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+      if (authFailure) {
+        throw new Error(authFailure.message)
       }
 
       const defaultApiAuth = await resolveGoogleAdsApiAuthFromContext(authContext)

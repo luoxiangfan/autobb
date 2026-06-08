@@ -2,7 +2,7 @@ import { getDatabase } from './db'
 import { nowFunc } from './db-helpers'
 import { getUserOnlySetting } from './settings'
 import {
-  googleAdsAuthContextDualStackError,
+  resolveGoogleAdsAuthReadyFailure,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
 import type {
@@ -62,9 +62,9 @@ export async function healAccountsRouteDeveloperToken(params: {
   /** 必填：共享认证 / 双栈须以调用方 userId 视角解析 */
   authContext: GoogleAdsAuthContext
 }): Promise<DeveloperTokenHealResult> {
-  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
-  if (dualStackError) {
-    return { ok: false, code: 'DUAL_STACK_CONFLICT', message: dualStackError }
+  const authFailure = resolveGoogleAdsAuthReadyFailure(params.authContext)
+  if (authFailure?.reason === 'dual_stack') {
+    return { ok: false, code: 'DUAL_STACK_CONFLICT', message: authFailure.message }
   }
 
   const developerToken = String(params.credentials.developer_token || '')

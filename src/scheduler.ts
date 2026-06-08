@@ -23,7 +23,10 @@ import {
   triggerLinkCheck,
   triggerCleanup,
 } from './lib/queue-triggers'
-import { hasConfiguredGoogleAdsAuth } from './lib/google-ads-auth-assignment'
+import {
+  getGoogleAdsAuthContextMetadata,
+  resolveGoogleAdsAuthReadyFailure,
+} from './lib/google-ads-auth-context'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
 
@@ -140,11 +143,12 @@ async function getUsersWithActiveSyncTasks(): Promise<Set<number>> {
 
 async function hasValidSyncCredentials(userId: number): Promise<{ ok: boolean; reason?: string }> {
   try {
-    const configured = await hasConfiguredGoogleAdsAuth(userId)
-    if (!configured) {
+    const ctx = await getGoogleAdsAuthContextMetadata(userId)
+    const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
+    if (authFailure) {
       return {
         ok: false,
-        reason: '未配置 Google Ads 认证（OAuth 或服务账号，含共享管理员配置）',
+        reason: authFailure.message,
       }
     }
     return { ok: true }

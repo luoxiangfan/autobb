@@ -7,7 +7,8 @@ import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
-  GOOGLE_ADS_DUAL_STACK_WARNING,
+  googleAdsAuthContextDualStackError,
+  googleAdsAuthNotReadyMessage,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveConfiguredGoogleAdsAuthType,
   resolveGoogleAdsCredentialStatusFields,
@@ -113,7 +114,7 @@ export async function GET(request: NextRequest) {
     const ctx = await getGoogleAdsAuthContext(userId)
     const assignment = ctx.assignment
     const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
-    const authConfigWarning = ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
+    const authConfigWarning = googleAdsAuthContextDualStackError(ctx)
     const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
 
     if (!statusFields.hasCredentials) {
@@ -281,7 +282,10 @@ export async function PATCH(request: NextRequest) {
 
     const authContext = await getGoogleAdsAuthContext(userId)
     if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json({ error: '未找到有效的Google Ads凭证配置' }, { status: 404 })
+      return NextResponse.json(
+        { error: googleAdsAuthNotReadyMessage(authContext) },
+        { status: 404 }
+      )
     }
 
     await updateApiAccessLevel(

@@ -570,6 +570,101 @@ describe('googleAdsAuthContextDualStackError', () => {
   })
 })
 
+describe('googleAdsAuthNotReadyMessage', () => {
+  it('returns dual-stack warning when dualStack is true', async () => {
+    const { googleAdsAuthNotReadyMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =
+      await import('@/lib/google-ads-auth-context')
+    expect(googleAdsAuthNotReadyMessage({ dualStack: true })).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
+  })
+
+  it('returns not_configured message when dualStack is false', async () => {
+    const { googleAdsAuthNotReadyMessage, googleAdsApiAuthValidationErrorMessage } =
+      await import('@/lib/google-ads-auth-context')
+    expect(googleAdsAuthNotReadyMessage({ dualStack: false })).toBe(
+      googleAdsApiAuthValidationErrorMessage('not_configured')
+    )
+  })
+})
+
+describe('resolveGoogleAdsAuthReadyFailure', () => {
+  it('returns null when auth is configured', async () => {
+    const { resolveGoogleAdsAuthReadyFailure } = await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsAuthReadyFailure({
+        dualStack: false,
+        auth: { authType: 'oauth' },
+        oauthCredentials: { refresh_token: 'rt' },
+      } as any)
+    ).toBeNull()
+  })
+
+  it('returns dual_stack failure when dualStack is true', async () => {
+    const { resolveGoogleAdsAuthReadyFailure, GOOGLE_ADS_DUAL_STACK_WARNING } =
+      await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsAuthReadyFailure({
+        dualStack: true,
+        auth: { authType: 'oauth' },
+        oauthCredentials: { refresh_token: 'rt' },
+        serviceAccountConfig: { id: 'sa-1' },
+      } as any)
+    ).toEqual({
+      reason: 'dual_stack',
+      message: GOOGLE_ADS_DUAL_STACK_WARNING,
+    })
+  })
+
+  it('returns not_configured failure when credentials missing', async () => {
+    const { resolveGoogleAdsAuthReadyFailure, googleAdsApiAuthValidationErrorMessage } =
+      await import('@/lib/google-ads-auth-context')
+    expect(
+      resolveGoogleAdsAuthReadyFailure({
+        dualStack: false,
+        auth: {},
+        oauthCredentials: null,
+        serviceAccountConfig: null,
+      } as any)
+    ).toEqual({
+      reason: 'not_configured',
+      message: googleAdsApiAuthValidationErrorMessage('not_configured'),
+    })
+  })
+})
+
+describe('googleAdsAuthReadyFailurePayload', () => {
+  it('includes authConfigWarning for dual_stack', async () => {
+    const { googleAdsAuthReadyFailurePayload, GOOGLE_ADS_DUAL_STACK_WARNING } =
+      await import('@/lib/google-ads-auth-context')
+    expect(
+      googleAdsAuthReadyFailurePayload({
+        reason: 'dual_stack',
+        message: GOOGLE_ADS_DUAL_STACK_WARNING,
+      })
+    ).toEqual({
+      error: GOOGLE_ADS_DUAL_STACK_WARNING,
+      code: 'DUAL_STACK_CONFLICT',
+      message: GOOGLE_ADS_DUAL_STACK_WARNING,
+      authConfigWarning: GOOGLE_ADS_DUAL_STACK_WARNING,
+    })
+  })
+
+  it('omits authConfigWarning for not_configured', async () => {
+    const { googleAdsAuthReadyFailurePayload, googleAdsApiAuthValidationErrorMessage } =
+      await import('@/lib/google-ads-auth-context')
+    const message = googleAdsApiAuthValidationErrorMessage('not_configured')
+    expect(
+      googleAdsAuthReadyFailurePayload({
+        reason: 'not_configured',
+        message,
+      })
+    ).toEqual({
+      error: message,
+      code: 'CREDENTIALS_NOT_CONFIGURED',
+      message,
+    })
+  })
+})
+
 describe('googleAdsApiAuthValidationErrorMessage', () => {
   it('returns dual-stack warning for dual_stack reason', async () => {
     const { googleAdsApiAuthValidationErrorMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =

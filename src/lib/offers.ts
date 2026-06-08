@@ -1126,13 +1126,16 @@ export async function deleteOffer(
   }>
 
   if (campaignsToProcess.length > 0) {
-    const { getGoogleAdsAuthContext, hasConfiguredGoogleAdsAuthFromContext } =
+    const { getGoogleAdsAuthContext, resolveGoogleAdsAuthReadyFailure } =
       await import('./google-ads-auth-context')
     const authContext = await getGoogleAdsAuthContext(userId)
     const errors: Array<{ campaignRowId: number; message: string }> = []
 
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      console.warn(`[offers] 用户 ${userId} Google Ads 认证未配置，跳过远端 Campaign 操作`)
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+    if (authFailure) {
+      console.warn(
+        `[offers] 用户 ${userId} Google Ads 认证不可用，跳过远端 Campaign 操作: ${authFailure.message}`
+      )
     } else {
       const campaignsByAccount = campaignsToProcess.reduce(
         (acc, c) => {

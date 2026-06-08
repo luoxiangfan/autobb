@@ -1,6 +1,6 @@
 import {
   googleAdsApiAuthValidationErrorMessage,
-  googleAdsAuthContextDualStackError,
+  resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsApiAuthForAccount,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsApiAuthFields,
@@ -50,9 +50,9 @@ export async function resolveHealedOAuthCredentialsFields(params: {
   | { ok: true; credentials: OAuthApiCredentialsFields; loginCustomerId: string }
   | { ok: false; message: string }
 > {
-  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
-  if (dualStackError) {
-    return { ok: false, message: dualStackError }
+  const authFailure = resolveGoogleAdsAuthReadyFailure(params.authContext)
+  if (authFailure) {
+    return { ok: false, message: authFailure.message }
   }
 
   if (params.authContext.auth.authType === 'service_account') {
@@ -106,9 +106,9 @@ export async function loadOAuthGoogleAdsCallBundleForContext(params: {
   userId: number
   authContext: GoogleAdsAuthContext
 }): Promise<{ ok: true; bundle?: OAuthGoogleAdsCallBundle } | { ok: false; message: string }> {
-  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
-  if (dualStackError) {
-    return { ok: false, message: dualStackError }
+  const authFailure = resolveGoogleAdsAuthReadyFailure(params.authContext)
+  if (authFailure) {
+    return { ok: false, message: authFailure.message }
   }
 
   if (params.authContext.auth.authType !== 'oauth') {
@@ -159,9 +159,9 @@ export async function prepareGoogleAdsAccountApiCall(params: {
   apiAuth?: GoogleAdsApiAuthFields
   prepareCache?: GoogleAdsLinkedAccountPrepareCache
 }): Promise<({ ok: true } & PreparedGoogleAdsAccountApiCall) | { ok: false; message: string }> {
-  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
-  if (dualStackError) {
-    return { ok: false, message: dualStackError }
+  const authFailure = resolveGoogleAdsAuthReadyFailure(params.authContext)
+  if (authFailure) {
+    return { ok: false, message: authFailure.message }
   }
 
   const apiAuth =

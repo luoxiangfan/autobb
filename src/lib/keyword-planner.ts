@@ -5,7 +5,7 @@
 import { enums } from './google-ads-api'
 import { getDatabase } from './db'
 import {
-  hasConfiguredGoogleAdsAuthFromContext,
+  resolveGoogleAdsAuthReadyFailure,
   resolveConfiguredGoogleAdsAuthType,
 } from './google-ads-auth-context'
 import { dateMinusDays } from './db-helpers'
@@ -161,16 +161,9 @@ export async function getGoogleAdsConfig(
     }
 
     const authContext = existingContext ?? (await getGoogleAdsAuthContext(userId))
-    if (authContext.dualStack) {
-      console.error(
-        `[KeywordPlanner] User ${userId} has dual-stack Google Ads credentials; configure only one auth method in Settings.`
-      )
-      return null
-    }
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      console.error(
-        `[KeywordPlanner] User ${userId} has no configured Google Ads authentication. Please complete setup in Settings.`
-      )
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+    if (authFailure) {
+      console.error(`[KeywordPlanner] User ${userId}: ${authFailure.message}`)
       return null
     }
 

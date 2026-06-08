@@ -145,7 +145,7 @@ describe('resolveAccountsRouteAuthBundle', () => {
     expect(result.bundle.loginCustomerId).toBe('9988776655')
   })
 
-  it('returns 401 when OAuth refresh token is missing', async () => {
+  it('returns 404 when OAuth refresh token is missing', async () => {
     authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
       ...defaultOAuthApiAuth,
       refreshToken: '',
@@ -163,7 +163,8 @@ describe('resolveAccountsRouteAuthBundle', () => {
 
     expect(result.ok).toBe(false)
     if (result.ok) return
-    expect(result.status).toBe(401)
+    expect(result.status).toBe(404)
+    expect(result.body.code).toBe('CREDENTIALS_NOT_CONFIGURED')
   })
 
   it('returns 400 when service account id is missing', async () => {

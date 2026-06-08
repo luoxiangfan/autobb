@@ -13,8 +13,10 @@ import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext,
+  googleAdsAuthReadyFailureHttpStatus,
+  googleAdsAuthReadyFailurePayload,
   resolveEffectiveServiceAccountId,
+  resolveGoogleAdsAuthReadyFailure,
 } from '@/lib/google-ads-auth-context'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
@@ -261,11 +263,11 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     }
 
     const authContext = await getGoogleAdsAuthContext(numericUserId)
-    if (!hasConfiguredGoogleAdsAuthFromContext(authContext)) {
-      return NextResponse.json(
-        { error: 'Google Ads 认证未配置或已失效，请重新连接或配置服务账号' },
-        { status: 400 }
-      )
+    const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+    if (authFailure) {
+      return NextResponse.json(googleAdsAuthReadyFailurePayload(authFailure), {
+        status: googleAdsAuthReadyFailureHttpStatus(authFailure.reason),
+      })
     }
 
     const useServiceAccountAuth = authContext.auth.authType === 'service_account'

@@ -46,4 +46,31 @@ describe('getKeywordIdeas auth guard', () => {
       })
     ).rejects.toThrow(/认证未配置或已失效/)
   })
+
+  it('throws dual-stack warning when auth context has dualStack', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 9,
+      ownerUserId: 9,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: true,
+      auth: { authType: 'oauth' },
+      oauthCredentials: { refresh_token: 'rt' },
+      serviceAccountConfig: { id: 'sa-1' },
+    })
+
+    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
+    const { getKeywordIdeas } = await import('@/lib/google-ads-keyword-planner')
+
+    await expect(
+      getKeywordIdeas({
+        customerId: '1234567890',
+        targetCountry: 'US',
+        targetLanguage: 'en',
+        userId: 9,
+        seedKeywords: ['test'],
+      })
+    ).rejects.toThrow(GOOGLE_ADS_DUAL_STACK_WARNING)
+  })
 })

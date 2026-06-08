@@ -1,7 +1,9 @@
 import {
   getGoogleAdsAuthContext,
-  googleAdsAuthContextDualStackError,
+  googleAdsAuthReadyFailureHttpStatus,
+  googleAdsAuthReadyFailurePayload,
   resolveGoogleAdsApiAuthFromContext,
+  resolveGoogleAdsAuthReadyFailure,
   type GoogleAdsApiAuthFields,
   type GoogleAdsAuthContext,
 } from './google-ads-auth-context'
@@ -45,9 +47,9 @@ export async function resolveAndHealSyncUserCredentials(params: {
     }
   | { ok: false; message: string }
 > {
-  const dualStackError = googleAdsAuthContextDualStackError(params.authContext)
-  if (dualStackError) {
-    return { ok: false, message: dualStackError }
+  const authFailure = resolveGoogleAdsAuthReadyFailure(params.authContext)
+  if (authFailure) {
+    return { ok: false, message: authFailure.message }
   }
 
   const resolved = await resolveAccountsRouteAuthBundle({
@@ -143,9 +145,9 @@ export async function resolveOAuthClientCredentialsForUser(
 ): Promise<OAuthApiClientCredentials> {
   const requireLogin = options.requireLoginCustomerId !== false
   const authContext = options.existingAuthContext ?? (await getGoogleAdsAuthContext(userId))
-  const dualStackError = googleAdsAuthContextDualStackError(authContext)
-  if (dualStackError) {
-    throw new Error(dualStackError)
+  const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+  if (authFailure) {
+    throw new Error(authFailure.message)
   }
   if (authContext.auth.authType === 'service_account') {
     throw new Error(`用户(ID=${userId})当前使用服务账号认证，无法读取 OAuth 基础凭证`)
@@ -192,17 +194,12 @@ export async function resolveAccountsRouteAuthBundle(params: {
 }): Promise<AccountsRouteAuthResolveResult> {
   const { userId, authContext, authType } = params
 
-  const dualStackError = googleAdsAuthContextDualStackError(authContext)
-  if (dualStackError) {
+  const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
+  if (authFailure) {
     return {
       ok: false,
-      status: 409,
-      body: {
-        error: dualStackError,
-        code: 'DUAL_STACK_CONFLICT',
-        message: dualStackError,
-        authConfigWarning: dualStackError,
-      },
+      status: googleAdsAuthReadyFailureHttpStatus(authFailure.reason),
+      body: googleAdsAuthReadyFailurePayload(authFailure),
     }
   }
 

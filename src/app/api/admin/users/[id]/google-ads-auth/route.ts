@@ -19,7 +19,8 @@ import { encrypt } from '@/lib/crypto'
 import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
-  GOOGLE_ADS_DUAL_STACK_WARNING,
+  googleAdsAuthContextDualStackError,
+  googleAdsAuthReadyFailurePayload,
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
@@ -77,7 +78,7 @@ async function buildAuthStatus(userId: number) {
     hasConfigured: configured,
     canModify: ctx.canModify,
     dualStack: ctx.dualStack,
-    authConfigWarning: ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null,
+    authConfigWarning: googleAdsAuthContextDualStackError(ctx),
   }
 }
 
@@ -155,12 +156,14 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
 
   try {
     const targetCtx = await getGoogleAdsAuthContext(userId)
-    if (targetCtx.dualStack) {
+    const dualStackError = googleAdsAuthContextDualStackError(targetCtx)
+    if (dualStackError) {
       return NextResponse.json(
         {
-          error: GOOGLE_ADS_DUAL_STACK_WARNING,
-          code: 'DUAL_STACK_CONFLICT',
-          authConfigWarning: GOOGLE_ADS_DUAL_STACK_WARNING,
+          ...googleAdsAuthReadyFailurePayload({
+            reason: 'dual_stack',
+            message: dualStackError,
+          }),
         },
         { status: 409 }
       )
