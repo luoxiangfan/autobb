@@ -223,7 +223,6 @@ DATABASE_URL="postgresql://username:password@host:5432/autoads"
 sqlite3 data/autoads.db          # SQLite CLI
 psql autoads                     # PostgreSQL CLI
 npm run db:backup                # 自动备份
-npm run campaign-backups:dedup   # Campaign 备份去重
 ```
 
 ### 详细文档
