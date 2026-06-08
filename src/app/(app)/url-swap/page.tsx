@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
+import { TableActionGroup, TableActionSlot } from '@/components/ui/table-action-buttons'
 import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap-types'
 import UrlSwapTaskModal from '@/components/UrlSwapTaskModal'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
@@ -674,90 +675,101 @@ export default function UrlSwapPage() {
                         {task.is_deleted ? (
                           <span className="text-xs text-gray-400">已删除</span>
                         ) : (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => router.push(`/url-swap/${task.id}`)}
-                              className="text-blue-600 hover:text-blue-800"
-                              title="查看详情"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setHistoryTaskId(task.id)
-                                setHistoryOpen(true)
-                              }}
-                              className="text-gray-600"
-                              title="查看历史"
-                            >
-                              <Calendar className="w-4 h-4" />
-                            </Button>
-                            {task.status === 'enabled' && (
+                          <TableActionGroup className="flex-nowrap gap-0">
+                            <TableActionSlot>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleSwapNow(task.id)}
-                                disabled={actionLoading === task.id}
-                                className="text-purple-600 hover:text-purple-700"
-                                title="立即执行"
+                                onClick={() => router.push(`/url-swap/${task.id}`)}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="查看详情"
                               >
-                                <Play className="w-4 h-4" />
+                                <Eye className="w-4 h-4" />
                               </Button>
-                            )}
-                            {task.status === 'disabled' && (
+                            </TableActionSlot>
+                            <TableActionSlot>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleEnableTask(task.id)}
-                                disabled={actionLoading === task.id}
-                                className="text-green-600"
-                                title="恢复任务"
+                                onClick={() => {
+                                  setHistoryTaskId(task.id)
+                                  setHistoryOpen(true)
+                                }}
+                                className="text-gray-600"
+                                title="查看历史"
                               >
-                                <Play className="w-4 h-4" />
+                                <Calendar className="w-4 h-4" />
                               </Button>
-                            )}
-                            {task.status === 'enabled' && (
+                            </TableActionSlot>
+                            <TableActionSlot>
+                              {task.status === 'enabled' ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleSwapNow(task.id)}
+                                  disabled={actionLoading === task.id}
+                                  className="text-purple-600 hover:text-purple-700"
+                                  title="立即执行"
+                                >
+                                  <Play className="w-4 h-4" />
+                                </Button>
+                              ) : task.status === 'disabled' ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleEnableTask(task.id)}
+                                  disabled={actionLoading === task.id}
+                                  className="text-green-600"
+                                  title="恢复任务"
+                                >
+                                  <Play className="w-4 h-4" />
+                                </Button>
+                              ) : null}
+                            </TableActionSlot>
+                            <TableActionSlot>
+                              {task.status === 'enabled' ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDisableTask(task.id)}
+                                  disabled={actionLoading === task.id}
+                                  className="text-yellow-600"
+                                  title="暂停任务"
+                                >
+                                  <Pause className="w-4 h-4" />
+                                </Button>
+                              ) : null}
+                            </TableActionSlot>
+                            <TableActionSlot>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDisableTask(task.id)}
-                                disabled={actionLoading === task.id}
-                                className="text-yellow-600"
-                                title="暂停任务"
+                                onClick={() => {
+                                  setEditTaskId(task.id)
+                                  setModalOpen(true)
+                                }}
+                                className="text-gray-600"
+                                title="编辑任务"
                               >
-                                <Pause className="w-4 h-4" />
+                                <RefreshCw className="w-4 h-4" />
                               </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditTaskId(task.id)
-                                setModalOpen(true)
-                              }}
-                              className="text-gray-600"
-                              title="编辑任务"
-                            >
-                              <RefreshCw className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setDeleteTaskId(task.id)
-                                setDeleteDialogOpen(true)
-                              }}
-                              disabled={actionLoading === task.id}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              title="删除任务"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                            </TableActionSlot>
+                            <TableActionSlot>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setDeleteTaskId(task.id)
+                                  setDeleteDialogOpen(true)
+                                }}
+                                disabled={actionLoading === task.id}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="删除任务"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableActionSlot>
+                          </TableActionGroup>
                         )}
                       </TableCell>
                     </TableRow>

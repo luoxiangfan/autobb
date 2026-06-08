@@ -80,6 +80,26 @@ export function TableActionGroup({ children, className }: TableActionGroupProps)
   )
 }
 
+interface TableActionSlotProps {
+  children?: React.ReactNode
+  className?: string
+}
+
+/**
+ * 固定宽度的操作按钮槽位
+ * 条件渲染时保留占位，保证各行操作图标纵向对齐
+ */
+export function TableActionSlot({ children, className }: TableActionSlotProps) {
+  return (
+    <div
+      className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center', className)}
+      aria-hidden={children == null}
+    >
+      {children}
+    </div>
+  )
+}
+
 interface ResponsiveActionCellProps {
   primaryAction?: {
     icon: React.ReactNode
