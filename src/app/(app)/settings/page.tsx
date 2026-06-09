@@ -127,8 +127,10 @@ interface GoogleAdsCredentialStatus {
   serviceAccountName?: string | null
   authType?: 'oauth' | 'service_account'
   clientId?: string | null
+  clientIdConfigured?: boolean
   developerToken?: string | null
   developerTokenConfigured?: boolean
+  clientSecretConfigured?: boolean
   loginCustomerId?: string
   apiAccessLevel?: 'test' | 'explorer' | 'basic' | 'standard'
   lastVerifiedAt?: string
@@ -545,9 +547,14 @@ export default function SettingsPage() {
         googleAdsCredentialStatus?.developerToken
       )
     }
-    return Boolean(
-      googleAdsCredentialStatus?.hasCredentials || googleAdsCredentialStatus?.hasRefreshToken
-    )
+    if (key === 'client_secret') {
+      return Boolean(
+        googleAdsCredentialStatus?.clientSecretConfigured ||
+        googleAdsCredentialStatus?.hasCredentials ||
+        googleAdsCredentialStatus?.hasRefreshToken
+      )
+    }
+    return false
   }
 
   /**

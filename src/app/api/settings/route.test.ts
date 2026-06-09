@@ -18,16 +18,13 @@ const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
 }))
 
-const cacheFns = vi.hoisted(() => ({
-  invalidateGadsApiCacheForUser: vi.fn(),
-}))
-
 const authAssignmentFns = vi.hoisted(() => ({
   assertUserCanModifyGoogleAdsAuth: vi.fn(),
 }))
 
 const authContextFns = vi.hoisted(() => ({
   invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(async () => {}),
+  invalidateGadsApiCacheForCredentialUser: vi.fn(async () => {}),
 }))
 
 const settingsStoreFns = vi.hoisted(() => ({
@@ -54,10 +51,7 @@ vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
 vi.mock('@/lib/google-ads-auth-context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
-}))
-
-vi.mock('@/lib/cache', () => ({
-  invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
+  invalidateGadsApiCacheForCredentialUser: authContextFns.invalidateGadsApiCacheForCredentialUser,
 }))
 
 vi.mock('@/lib/settings', () => ({
@@ -368,7 +362,34 @@ describe('settings route google ads credential store', () => {
       7
     )
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(7)
-    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(7)
+    expect(authContextFns.invalidateGadsApiCacheForCredentialUser).toHaveBeenCalledWith(7)
+  })
+
+  it('skips oauth auth assert when updating non-credential google_ads keys only', async () => {
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '7',
+      },
+      body: JSON.stringify({
+        updates: [{ category: 'google_ads', key: 'campaign_sync_enabled', value: '1' }],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(payload.success).toBe(true)
+    expect(authAssignmentFns.assertUserCanModifyGoogleAdsAuth).not.toHaveBeenCalled()
+    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).not.toHaveBeenCalled()
+    expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).not.toHaveBeenCalled()
+    expect(authContextFns.invalidateGadsApiCacheForCredentialUser).not.toHaveBeenCalled()
+    expect(settingsFns.updateSettings).toHaveBeenCalledWith(
+      [{ category: 'google_ads', key: 'campaign_sync_enabled', value: '1' }],
+      7
+    )
   })
 
   it('returns 400 for google ads validation errors', async () => {
@@ -441,5 +462,26 @@ describe('settings route google ads credential store', () => {
     expect(payload.error).toContain('需要登录')
     expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).not.toHaveBeenCalled()
     expect(settingsFns.updateSettings).not.toHaveBeenCalled()
+  })
+
+  it('uses generic save message when non-oauth google_ads settings fail', async () => {
+    settingsFns.updateSettings.mockRejectedValue(new Error('settings table locked'))
+
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '7',
+      },
+      body: JSON.stringify({
+        updates: [{ category: 'google_ads', key: 'campaign_sync_enabled', value: '1' }],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+
+    expect(res.status).toBe(500)
+    expect(payload.error).toBe('settings table locked')
   })
 })

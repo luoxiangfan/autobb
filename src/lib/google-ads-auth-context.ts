@@ -485,6 +485,25 @@ export async function invalidateGoogleAdsAuthContextForCredentialUser(
   await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
 }
 
+/** 按凭证 userId 解析 owner 后级联失效 GAds API 内存缓存（含共享子用户）。 */
+export async function invalidateGadsApiCacheForCredentialUser(
+  credentialUserId: number
+): Promise<void> {
+  const { invalidateGadsApiCacheForUser } = await import('./cache')
+  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
+  invalidateGadsApiCacheForUser(ownerUserId)
+
+  const db = await getDatabase()
+  const dependents = await db.query<{ user_id: number }>(
+    `SELECT user_id FROM google_ads_auth_assignments
+     WHERE shared_admin_user_id = ? AND assignment_mode = 'shared_admin'`,
+    [ownerUserId]
+  )
+  for (const row of dependents) {
+    invalidateGadsApiCacheForUser(row.user_id)
+  }
+}
+
 export function resolveEffectiveServiceAccountId(
   linkedAccountServiceAccountId: string | null | undefined,
   ctx: Pick<GoogleAdsAuthContext, 'auth' | 'serviceAccountConfig'>

@@ -21,6 +21,7 @@ import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import {
   collectCredentialBackedFieldUpdates,
+  isGoogleAdsCredentialBackedSettingKey,
   isGoogleAdsSettingsValidationError,
   overlayGoogleAdsSettingsFromCredentialStore,
   partitionGoogleAdsSettingUpdates,
@@ -235,10 +236,14 @@ export async function PUT(request: NextRequest) {
     const { updates } = validationResult.data
 
     const hasGoogleAdsUpdate = updates.some((update) => update.category === 'google_ads')
+    const hasGoogleAdsOAuthCredentialUpdate = updates.some(
+      (update) =>
+        update.category === 'google_ads' && isGoogleAdsCredentialBackedSettingKey(update.key)
+    )
     if (hasGoogleAdsUpdate && !userIdNum) {
       return NextResponse.json({ error: '更新 Google Ads 配置需要登录' }, { status: 401 })
     }
-    if (hasGoogleAdsUpdate && userIdNum) {
+    if (hasGoogleAdsOAuthCredentialUpdate && userIdNum) {
       try {
         await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
       } catch (error: any) {
@@ -383,8 +388,9 @@ export async function PUT(request: NextRequest) {
         })
       }
     } catch (saveError: unknown) {
-      const message =
-        saveError instanceof Error ? saveError.message : '保存 Google Ads OAuth 配置失败'
+      const fallbackMessage =
+        credentialBacked.length > 0 ? '保存 Google Ads OAuth 配置失败' : '保存配置失败'
+      const message = saveError instanceof Error ? saveError.message : fallbackMessage
       const status = isGoogleAdsSettingsValidationError(saveError) ? 400 : 500
       return NextResponse.json({ error: message }, { status })
     }
@@ -396,13 +402,13 @@ export async function PUT(request: NextRequest) {
       invalidateProxyPoolCache(userIdNum)
     }
 
-    if (hasGoogleAdsUpdate && userIdNum) {
-      const { invalidateGoogleAdsAuthContextForCredentialUser } =
-        await import('@/lib/google-ads-auth-context')
+    if (hasGoogleAdsOAuthCredentialUpdate && userIdNum) {
+      const {
+        invalidateGoogleAdsAuthContextForCredentialUser,
+        invalidateGadsApiCacheForCredentialUser,
+      } = await import('@/lib/google-ads-auth-context')
       await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
-
-      const { invalidateGadsApiCacheForUser } = await import('@/lib/cache')
-      invalidateGadsApiCacheForUser(userIdNum)
+      await invalidateGadsApiCacheForCredentialUser(userIdNum)
 
       return NextResponse.json({
         success: true,

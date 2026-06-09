@@ -17,6 +17,7 @@ import {
   resolveGoogleAdsCredentialStatusSummary,
   getGoogleAdsAuthContextMetadata,
 } from '@/lib/google-ads-auth-context'
+import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads-settings-store'
 
 /**
  * POST /api/google-ads/credentials
@@ -140,7 +141,12 @@ export async function GET(request: NextRequest) {
 
     const ctx = await getGoogleAdsAuthContext(userId)
     const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
-    const exposeDeveloperToken = ctx.canModify
+    const exposedCredentialFields = resolveGoogleAdsCredentialFieldsForReadOnlyApi({
+      canModify: ctx.canModify,
+      clientId: statusFields.clientId,
+      developerToken: statusFields.developerToken,
+      clientSecret: ctx.oauthCredentials?.client_secret,
+    })
 
     let sharedAdminEmail: string | null = null
     let sharedAdminUsername: string | null = null
@@ -154,13 +160,13 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         hasCredentials: true,
-        clientId: statusFields.clientId,
-        developerToken: exposeDeveloperToken ? statusFields.developerToken : null,
-        ...(exposeDeveloperToken
-          ? {}
-          : statusFields.developerToken
-            ? { developerTokenConfigured: true }
-            : {}),
+        clientId: exposedCredentialFields.clientId,
+        developerToken: exposedCredentialFields.developerToken,
+        ...(exposedCredentialFields.clientIdConfigured ? { clientIdConfigured: true } : {}),
+        ...(exposedCredentialFields.developerTokenConfigured
+          ? { developerTokenConfigured: true }
+          : {}),
+        ...(exposedCredentialFields.clientSecretConfigured ? { clientSecretConfigured: true } : {}),
         loginCustomerId: statusFields.loginCustomerId,
         hasRefreshToken: statusFields.hasRefreshToken,
         hasServiceAccount: statusFields.hasServiceAccount,

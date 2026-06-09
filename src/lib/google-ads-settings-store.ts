@@ -90,6 +90,41 @@ export function maskGoogleAdsCredentialSettingValueForReadOnly(
   return value
 }
 
+/** credentials GET：只读用户可见的 clientId / 配置标记（不暴露明文密钥） */
+export function resolveGoogleAdsCredentialFieldsForReadOnlyApi(params: {
+  canModify: boolean
+  clientId: string | null | undefined
+  developerToken: string | null | undefined
+  clientSecret: string | null | undefined
+}): {
+  clientId: string | null | undefined
+  developerToken: string | null | undefined
+  clientIdConfigured?: boolean
+  developerTokenConfigured?: boolean
+  clientSecretConfigured?: boolean
+} {
+  if (params.canModify) {
+    return {
+      clientId: params.clientId,
+      developerToken: params.developerToken,
+    }
+  }
+
+  const clientIdRaw = String(params.clientId || '').trim()
+  const developerTokenRaw = String(params.developerToken || '').trim()
+  const clientSecretRaw = String(params.clientSecret || '').trim()
+
+  return {
+    clientId: clientIdRaw
+      ? maskGoogleAdsCredentialSettingValueForReadOnly('client_id', clientIdRaw)
+      : null,
+    developerToken: null,
+    ...(clientIdRaw ? { clientIdConfigured: true } : {}),
+    ...(developerTokenRaw ? { developerTokenConfigured: true } : {}),
+    ...(clientSecretRaw ? { clientSecretConfigured: true } : {}),
+  }
+}
+
 function validateLoginCustomerIdForSettings(raw: string, fieldName?: string): string {
   try {
     return formatAndValidateLoginCustomerId(raw, fieldName)
@@ -182,6 +217,10 @@ async function getGoogleAdsCredentialRowByUserId(
   )
 }
 
+/**
+ * 读取指定 user_id 的 OAuth 配置字段（直读凭证表，不解析共享 owner）。
+ * 共享场景请用 resolveGoogleAdsSettingsReadContext / getGoogleAdsCredentialBackedSettingValue。
+ */
 export async function getGoogleAdsOAuthConfigFields(
   userId: number
 ): Promise<Record<GoogleAdsOAuthConfigKey, string>> {

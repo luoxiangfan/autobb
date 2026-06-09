@@ -23,10 +23,7 @@ const settingsStoreFns = vi.hoisted(() => ({
 
 const authContextFns = vi.hoisted(() => ({
   invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(async () => {}),
-}))
-
-const cacheFns = vi.hoisted(() => ({
-  invalidateGadsApiCacheForUser: vi.fn(),
+  invalidateGadsApiCacheForCredentialUser: vi.fn(async () => {}),
 }))
 
 vi.mock('@/lib/google-ads-auth-assignment', () => ({
@@ -47,10 +44,7 @@ vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
 vi.mock('@/lib/google-ads-auth-context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
-}))
-
-vi.mock('@/lib/cache', () => ({
-  invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
+  invalidateGadsApiCacheForCredentialUser: authContextFns.invalidateGadsApiCacheForCredentialUser,
 }))
 
 vi.mock('@/lib/settings', () => ({
@@ -233,6 +227,6 @@ describe('settings single-key route google_ads credential store', () => {
     expect(settingsFns.updateSetting).not.toHaveBeenCalled()
     expect(payload.oauthReauthRequired).toBe(true)
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(3)
-    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(3)
+    expect(authContextFns.invalidateGadsApiCacheForCredentialUser).toHaveBeenCalledWith(3)
   })
 })

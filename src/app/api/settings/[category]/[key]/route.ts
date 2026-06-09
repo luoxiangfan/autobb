@@ -143,12 +143,12 @@ export async function PUT(
           { skipAuthContextInvalidate: true }
         )
 
-        const { invalidateGoogleAdsAuthContextForCredentialUser } =
-          await import('@/lib/google-ads-auth-context')
+        const {
+          invalidateGoogleAdsAuthContextForCredentialUser,
+          invalidateGadsApiCacheForCredentialUser,
+        } = await import('@/lib/google-ads-auth-context')
         await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
-
-        const { invalidateGadsApiCacheForUser } = await import('@/lib/cache')
-        invalidateGadsApiCacheForUser(userIdNum)
+        await invalidateGadsApiCacheForCredentialUser(userIdNum)
 
         return NextResponse.json({
           success: true,

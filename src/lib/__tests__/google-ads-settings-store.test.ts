@@ -22,6 +22,7 @@ vi.mock('@/lib/db', () => ({
 import {
   maskGoogleAdsCredentialSettingValueForReadOnly,
   overlayGoogleAdsSettingsFromCredentialStore,
+  resolveGoogleAdsCredentialFieldsForReadOnlyApi,
   resolveGoogleAdsOAuthSettingsReadUserId,
 } from '@/lib/google-ads-settings-store'
 
@@ -68,6 +69,39 @@ describe('maskGoogleAdsCredentialSettingValueForReadOnly', () => {
     expect(maskGoogleAdsCredentialSettingValueForReadOnly('login_customer_id', '1234567890')).toBe(
       '1234567890'
     )
+  })
+})
+
+describe('resolveGoogleAdsCredentialFieldsForReadOnlyApi', () => {
+  it('returns full values for users who can modify', () => {
+    expect(
+      resolveGoogleAdsCredentialFieldsForReadOnlyApi({
+        canModify: true,
+        clientId: 'abc.apps.googleusercontent.com',
+        developerToken: 'dev-token',
+        clientSecret: 'secret',
+      })
+    ).toEqual({
+      clientId: 'abc.apps.googleusercontent.com',
+      developerToken: 'dev-token',
+    })
+  })
+
+  it('masks client id and exposes configured flags for read-only users', () => {
+    expect(
+      resolveGoogleAdsCredentialFieldsForReadOnlyApi({
+        canModify: false,
+        clientId: '123456789012345678901.apps.googleusercontent.com',
+        developerToken: 'dev-token',
+        clientSecret: 'secret',
+      })
+    ).toEqual({
+      clientId: '12345678....com',
+      developerToken: null,
+      clientIdConfigured: true,
+      developerTokenConfigured: true,
+      clientSecretConfigured: true,
+    })
   })
 })
 
