@@ -11,6 +11,9 @@ export type GoogleAdsOAuthStatePayload = {
 
 export const GOOGLE_ADS_OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000
 
+/** 允许 state 时间戳相对当前时间的未来偏移（时钟偏差） */
+export const GOOGLE_ADS_OAUTH_STATE_FUTURE_SKEW_MS = 60_000
+
 function signPayloadBase64(payloadBase64: string): string {
   return crypto.createHmac('sha256', JWT_SECRET).update(payloadBase64).digest('base64url')
 }
@@ -68,9 +71,13 @@ export function verifyGoogleAdsOAuthState(
     return { ok: false, error: 'invalid_state' }
   }
 
+  const now = Date.now()
   const maxAgeMs = options.maxAgeMs ?? GOOGLE_ADS_OAUTH_STATE_MAX_AGE_MS
-  if (Date.now() - payload.timestamp > maxAgeMs) {
+  if (now - payload.timestamp > maxAgeMs) {
     return { ok: false, error: 'state_expired' }
+  }
+  if (payload.timestamp > now + GOOGLE_ADS_OAUTH_STATE_FUTURE_SKEW_MS) {
+    return { ok: false, error: 'invalid_state' }
   }
 
   if (options.expectedPurpose !== undefined && payload.purpose !== options.expectedPurpose) {

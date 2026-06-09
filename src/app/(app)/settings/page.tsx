@@ -508,6 +508,7 @@ export default function SettingsPage() {
   const [loadingGoogleAdsAccounts, setLoadingGoogleAdsAccounts] = useState(false)
   const [showGoogleAdsAccounts, setShowGoogleAdsAccounts] = useState(false)
   const [startingOAuth, setStartingOAuth] = useState(false)
+  const [verifyingGoogleAdsCredentials, setVerifyingGoogleAdsCredentials] = useState(false)
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>(
     'oauth'
   )
@@ -559,9 +560,14 @@ export default function SettingsPage() {
         state_expired: 'OAuth 授权失败：状态参数已过期',
         missing_google_ads_config:
           'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
+        missing_login_customer_id: 'OAuth 授权失败：请先配置并保存 Login Customer ID (MCC)',
+        developer_token_invalid:
+          'OAuth 授权失败：Developer Token 配置无效，请检查是否误填为 Client Secret',
         shared_auth_readonly: '当前使用管理员共享认证，无法自行完成 OAuth 授权',
         unauthorized: 'OAuth 授权失败：请先登录后再完成授权回调',
         session_mismatch: 'OAuth 授权失败：登录用户与发起授权的用户不一致，请重新发起授权',
+        legacy_oauth_callback_uri:
+          'OAuth 回调地址已变更：请在 Google Cloud Console 中将 Redirect URI 更新为 /api/google-ads/oauth/callback，并使用「启动 OAuth 授权」重新授权',
       }
       toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
       // 清除 URL 参数
@@ -848,9 +854,23 @@ export default function SettingsPage() {
     }
   }, [fetchServiceAccounts])
 
+  const normalizeGoogleAdsFormForCompare = (
+    record: Record<string, string> | undefined
+  ): Record<string, string> => {
+    const normalized: Record<string, string> = {}
+    for (const [key, rawValue] of Object.entries(record || {})) {
+      normalized[key] = String(rawValue || '')
+    }
+    return normalized
+  }
+
+  const hasGoogleAdsUnsavedChanges = (): boolean =>
+    JSON.stringify(normalizeGoogleAdsFormForCompare(formData.google_ads)) !==
+    JSON.stringify(normalizeGoogleAdsFormForCompare(savedFormData.google_ads))
+
   // Google Ads OAuth 授权
   const handleStartGoogleAdsOAuth = async () => {
-    if (hasUnsavedChanges('google_ads')) {
+    if (hasGoogleAdsUnsavedChanges()) {
       toast.error('请先保存 Google Ads 配置后再启动 OAuth 授权')
       return
     }
@@ -876,6 +896,33 @@ export default function SettingsPage() {
     } catch (err: any) {
       toast.error(err.message || 'OAuth启动失败')
       setStartingOAuth(false)
+    }
+  }
+
+  const handleVerifyGoogleAdsCredentials = async () => {
+    if (hasGoogleAdsUnsavedChanges()) {
+      toast.error('请先保存 Google Ads 配置后再验证凭证')
+      return
+    }
+
+    setVerifyingGoogleAdsCredentials(true)
+    try {
+      const response = await fetch('/api/google-ads/credentials/verify', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const data = await response.json()
+      if (response.ok && data.success && data.data?.valid) {
+        toast.success(data.message || 'Google Ads 凭证验证通过')
+        await fetchGoogleAdsCredentialStatus()
+        return
+      }
+      const message = data.data?.error || data.message || data.error || 'Google Ads 凭证验证失败'
+      toast.error(message)
+    } catch (err: any) {
+      toast.error(err.message || '验证失败')
+    } finally {
+      setVerifyingGoogleAdsCredentials(false)
     }
   }
 
@@ -1146,8 +1193,17 @@ export default function SettingsPage() {
         throw new Error(data.error || '保存失败')
       }
 
+      const saveResult = await response.json()
+
       const categoryLabel = CATEGORY_CONFIG[category]?.label || category
       toast.success(`${categoryLabel} 配置保存成功`)
+
+      if (category === 'google_ads' && saveResult.oauthReauthRequired) {
+        toast.message(
+          'OAuth Client ID 或 Client Secret 已变更，请重新启动 OAuth 授权以使 Refresh Token 生效',
+          { duration: 8000 }
+        )
+      }
 
       // 仅刷新当前分类，避免覆盖其他分类未保存修改
       await refreshCategorySettings(category)
@@ -2924,6 +2980,21 @@ export default function SettingsPage() {
                     >
                       <Key className="w-4 h-4 mr-2" />
                       {startingOAuth ? '启动中...' : '启动 OAuth 授权'}
+                    </Button>
+                  )}
+
+                  {category === 'google_ads' && googleAdsCredentialStatus?.hasCredentials && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleVerifyGoogleAdsCredentials}
+                      disabled={
+                        verifyingGoogleAdsCredentials ||
+                        googleAdsAuthReadOnly ||
+                        hasGoogleAdsUnsavedChanges()
+                      }
+                    >
+                      {verifyingGoogleAdsCredentials ? '验证中...' : '验证凭证'}
                     </Button>
                   )}
 

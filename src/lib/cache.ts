@@ -121,6 +121,18 @@ class MemoryCache<T = any> {
     this.misses = 0
   }
 
+  /** 删除 key 以 prefix 开头的条目（用于按用户粒度失效 Google Ads API 缓存） */
+  deleteByPrefix(prefix: string): number {
+    let removed = 0
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(prefix)) {
+        this.cache.delete(key)
+        removed++
+      }
+    }
+    return removed
+  }
+
   /**
    * 获取缓存统计
    */
@@ -227,9 +239,10 @@ export function generateCreativeCacheKey(
 export function generateGadsApiCacheKey(
   operation: string,
   customerId: string,
+  userId: number,
   params?: Record<string, any>
 ): string {
-  const parts = [`customer_${customerId}`, `op_${operation}`]
+  const parts = [`user_${userId}`, `customer_${customerId}`, `op_${operation}`]
 
   if (params) {
     const paramKey = JSON.stringify(params).replace(/\s/g, '').substring(0, 100)
@@ -250,3 +263,11 @@ export const creativeCache = new MemoryCache(3600000, 500)
  * Google Ads API缓存（30分钟TTL，最多1000个条目）
  */
 export const gadsApiCache = new MemoryCache(1800000, 1000)
+
+/** 按用户失效 Google Ads API 内存缓存（settings 保存凭证后调用） */
+export function invalidateGadsApiCacheForUser(userId: number): void {
+  const removed = gadsApiCache.deleteByPrefix(`gads_user_${userId}_`)
+  if (removed > 0) {
+    console.log(`[Cache] 已清除用户 ${userId} 的 ${removed} 条 Google Ads API 缓存`)
+  }
+}

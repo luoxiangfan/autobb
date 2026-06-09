@@ -6,6 +6,7 @@ vi.mock('@/lib/config', () => ({
 
 import {
   createGoogleAdsOAuthState,
+  GOOGLE_ADS_OAUTH_STATE_FUTURE_SKEW_MS,
   GOOGLE_ADS_OAUTH_STATE_MAX_AGE_MS,
   verifyGoogleAdsOAuthState,
 } from '@/lib/google-ads-oauth-state'
@@ -60,6 +61,22 @@ describe('google-ads-oauth-state', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.error).toBe('state_expired')
+    }
+  })
+
+  it('rejects state timestamp too far in the future', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+
+    const state = createGoogleAdsOAuthState({
+      user_id: 1,
+      timestamp: Date.now() + GOOGLE_ADS_OAUTH_STATE_FUTURE_SKEW_MS + 1,
+    })
+
+    const result = verifyGoogleAdsOAuthState(state)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBe('invalid_state')
     }
   })
 

@@ -1111,7 +1111,7 @@ export async function createGoogleAdsCampaign(params: {
   }
 
   // 清除Campaigns列表缓存（创建新Campaign后）
-  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
   gadsApiCache.delete(listCacheKey)
   console.log(`🗑️ 已清除Campaigns列表缓存: ${params.customerId}`)
 
@@ -1232,10 +1232,10 @@ export async function updateGoogleAdsCampaignStatus(params: {
   }
 
   // 清除相关缓存（更新状态后）
-  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, params.userId, {
     campaignId: params.campaignId,
   })
-  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
@@ -1303,10 +1303,10 @@ export async function updateGoogleAdsCampaignName(params: {
     )
   }
 
-  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, params.userId, {
     campaignId: params.campaignId,
   })
-  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
@@ -1407,10 +1407,10 @@ export async function removeGoogleAdsCampaign(params: {
     )
   }
 
-  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, params.userId, {
     campaignId: params.campaignId,
   })
-  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
   console.log(`🗑️ 已清除Campaign缓存: ${params.campaignId}`)
@@ -1484,10 +1484,10 @@ export async function updateGoogleAdsCampaignBudget(params: {
   }
 
   // 清除相关缓存
-  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, params.userId, {
     campaignId: params.campaignId,
   })
-  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
@@ -1510,7 +1510,7 @@ export async function getGoogleAdsCampaign(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
 }): Promise<any> {
-  const cacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+  const cacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, params.userId, {
     campaignId: params.campaignId,
   })
 
@@ -1608,7 +1608,7 @@ export async function listGoogleAdsCampaigns(params: {
   authContext?: GoogleAdsAuthContext
 }): Promise<any[]> {
   // 生成缓存键
-  const cacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const cacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
 
   // 检查缓存（除非显式跳过）
   if (!params.skipCache) {
@@ -3366,10 +3366,10 @@ export async function updateCampaignFinalUrlSuffix(params: {
   }
 
   // 清除相关缓存
-  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, {
+  const getCacheKey = generateGadsApiCacheKey('getCampaign', params.customerId, params.userId, {
     campaignId: params.campaignId,
   })
-  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId)
+  const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)

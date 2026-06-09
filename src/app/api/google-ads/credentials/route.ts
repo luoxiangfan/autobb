@@ -10,10 +10,13 @@ import {
   googleAdsAuthContextDualStackError,
   googleAdsAuthReadyFailureHttpStatus,
   googleAdsAuthReadyFailurePayload,
+  hasConfiguredGoogleAdsAuthFromContext,
   resolveConfiguredGoogleAdsAuthType,
   resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsDisplayAuthType,
+  resolveGoogleAdsCredentialStatusSummary,
+  getGoogleAdsAuthContextMetadata,
 } from '@/lib/google-ads-auth-context'
 
 /**
@@ -112,33 +115,32 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
-    const ctx = await getGoogleAdsAuthContext(userId)
-    const assignment = ctx.assignment
-    const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
-    const authConfigWarning = googleAdsAuthContextDualStackError(ctx)
-    const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
+    const metadataCtx = await getGoogleAdsAuthContextMetadata(userId)
+    const assignment = metadataCtx.assignment
+    const authConfigWarning = googleAdsAuthContextDualStackError(metadataCtx)
+    const displayAuthType = resolveGoogleAdsDisplayAuthType(metadataCtx)
 
-    if (!statusFields.hasCredentials) {
+    if (!hasConfiguredGoogleAdsAuthFromContext(metadataCtx)) {
+      const summary = resolveGoogleAdsCredentialStatusSummary(metadataCtx)
       return NextResponse.json({
         success: true,
         data: {
           hasCredentials: false,
-          hasRefreshToken: statusFields.hasRefreshToken,
-          hasServiceAccount: statusFields.hasServiceAccount,
-          ...(statusFields.serviceAccountId
-            ? { serviceAccountId: statusFields.serviceAccountId }
-            : {}),
-          ...(statusFields.serviceAccountName
-            ? { serviceAccountName: statusFields.serviceAccountName }
-            : {}),
+          hasRefreshToken: summary.hasRefreshToken,
+          hasServiceAccount: summary.hasServiceAccount,
+          ...(summary.serviceAccountId ? { serviceAccountId: summary.serviceAccountId } : {}),
+          ...(summary.serviceAccountName ? { serviceAccountName: summary.serviceAccountName } : {}),
           ...(displayAuthType != null ? { authType: displayAuthType } : {}),
           assignmentMode: assignment?.assignmentMode ?? 'own',
-          canModify: ctx.canModify,
-          isShared: ctx.isShared,
+          canModify: metadataCtx.canModify,
+          isShared: metadataCtx.isShared,
           authConfigWarning,
         },
       })
     }
+
+    const ctx = await getGoogleAdsAuthContext(userId)
+    const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
 
     let sharedAdminEmail: string | null = null
     let sharedAdminUsername: string | null = null

@@ -244,16 +244,33 @@ export type GoogleAdsOAuthSettingsSyncFields = Partial<
   Record<'client_id' | 'client_secret' | 'developer_token' | 'login_customer_id', string>
 >
 
+export type SyncGoogleAdsOAuthFieldsResult = {
+  synced: boolean
+  /** client_id 或 client_secret 相对 DB 发生变更且仍有 refresh_token */
+  oauthClientCredentialsChanged: boolean
+}
+
 /**
  * 设置页保存 OAuth 基础字段后，若用户已有 refresh_token，同步到 google_ads_credentials。
  */
 export async function syncGoogleAdsOAuthFieldsFromSettings(
   userId: number,
   fields: GoogleAdsOAuthSettingsSyncFields
-): Promise<boolean> {
+): Promise<SyncGoogleAdsOAuthFieldsResult> {
   const raw = await getGoogleAdsCredentialsRaw(userId)
   if (!raw?.refresh_token?.trim()) {
-    return false
+    return { synced: false, oauthClientCredentialsChanged: false }
+  }
+
+  let oauthClientCredentialsChanged = false
+  if (fields.client_id?.trim() && fields.client_id.trim() !== String(raw.client_id || '').trim()) {
+    oauthClientCredentialsChanged = true
+  }
+  if (
+    fields.client_secret?.trim() &&
+    fields.client_secret.trim() !== String(raw.client_secret || '').trim()
+  ) {
+    oauthClientCredentialsChanged = true
   }
 
   const db = await getDatabase()
@@ -263,7 +280,7 @@ export async function syncGoogleAdsOAuthFieldsFromSettings(
     [userId]
   )
   if (!activeRow) {
-    return false
+    return { synced: false, oauthClientCredentialsChanged: false }
   }
 
   const setClauses: string[] = []
@@ -294,7 +311,7 @@ export async function syncGoogleAdsOAuthFieldsFromSettings(
   }
 
   if (setClauses.length === 0) {
-    return false
+    return { synced: false, oauthClientCredentialsChanged: false }
   }
 
   const nowSql = sqlNowFunc(db.type)
@@ -307,7 +324,7 @@ export async function syncGoogleAdsOAuthFieldsFromSettings(
     await import('./google-ads-auth-context')
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 
-  return true
+  return { synced: true, oauthClientCredentialsChanged }
 }
 
 /**

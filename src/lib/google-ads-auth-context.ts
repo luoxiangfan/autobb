@@ -906,3 +906,21 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
     updatedAt: isServiceAccountAuth ? serviceAccount?.updatedAt : credentials?.updated_at,
   }
 }
+
+/** 未配置 / 双栈：无需 hydrate 密钥的凭证摘要（供 GET /credentials metadata 路径） */
+export function resolveGoogleAdsCredentialStatusSummary(ctx: GoogleAdsAuthContext): {
+  hasCredentials: boolean
+  hasRefreshToken: boolean
+  hasServiceAccount: boolean
+  serviceAccountId: string | null
+  serviceAccountName: string | null
+} {
+  const hasServiceAccount = serviceAccountConfiguredFromContext(ctx)
+  return {
+    hasCredentials: hasConfiguredGoogleAdsAuthFromContext(ctx),
+    hasRefreshToken: oauthRefreshConfiguredFromContext(ctx),
+    hasServiceAccount,
+    serviceAccountId: ctx.serviceAccountConfig?.id ?? ctx.auth.serviceAccountId ?? null,
+    serviceAccountName: ctx.serviceAccountConfig?.name ?? null,
+  }
+}

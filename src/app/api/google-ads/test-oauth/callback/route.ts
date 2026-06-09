@@ -15,6 +15,12 @@ function createRedirectUrl(path: string): URL {
   return new URL(path, getBaseUrl())
 }
 
+function redirectToLoginPreservingOAuthCallback(request: NextRequest): NextResponse {
+  const loginUrl = createRedirectUrl('/login')
+  loginUrl.searchParams.set('redirect', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+  return NextResponse.redirect(loginUrl)
+}
+
 /**
  * GET /api/google-ads/test-oauth/callback
  * Google Ads “测试权限MCC” OAuth 回调处理（与现有 OAuth 用户授权隔离）
@@ -48,6 +54,10 @@ export async function GET(request: NextRequest) {
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
+      const looseState = verifyGoogleAdsOAuthState(state, { expectedPurpose: 'google_ads_test' })
+      if (looseState.ok) {
+        return redirectToLoginPreservingOAuthCallback(request)
+      }
       return NextResponse.redirect(
         createRedirectUrl('/settings?category=google_ads&test_oauth_error=unauthorized')
       )

@@ -20,6 +20,12 @@ function createRedirectUrl(path: string): URL {
   return new URL(path, getBaseUrl())
 }
 
+function redirectToLoginPreservingOAuthCallback(request: NextRequest): NextResponse {
+  const loginUrl = createRedirectUrl('/login')
+  loginUrl.searchParams.set('redirect', `${request.nextUrl.pathname}${request.nextUrl.search}`)
+  return NextResponse.redirect(loginUrl)
+}
+
 /**
  * GET /api/google-ads/oauth/callback
  * Google Ads OAuth回调处理
@@ -53,6 +59,10 @@ export async function GET(request: NextRequest) {
 
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
+      const looseState = verifyGoogleAdsOAuthState(state, { expectedPurpose: 'google_ads' })
+      if (looseState.ok) {
+        return redirectToLoginPreservingOAuthCallback(request)
+      }
       return NextResponse.redirect(
         createRedirectUrl('/settings?error=unauthorized&category=google_ads')
       )

@@ -356,10 +356,12 @@ export async function PUT(request: NextRequest) {
           oauthSyncFields[update.key] = update.value
         }
       }
+      let oauthReauthRequired = false
       if (Object.keys(oauthSyncFields).length > 0) {
         const { syncGoogleAdsOAuthFieldsFromSettings } = await import('@/lib/google-ads-oauth')
         try {
-          await syncGoogleAdsOAuthFieldsFromSettings(userIdNum, oauthSyncFields)
+          const syncResult = await syncGoogleAdsOAuthFieldsFromSettings(userIdNum, oauthSyncFields)
+          oauthReauthRequired = syncResult.oauthClientCredentialsChanged
         } catch (syncError: any) {
           return NextResponse.json(
             { error: syncError.message || '同步 Google Ads OAuth 凭证失败' },
@@ -372,9 +374,14 @@ export async function PUT(request: NextRequest) {
         await import('@/lib/google-ads-auth-context')
       await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
 
-      console.log('🔄 检测到Google Ads配置更新，清除API缓存')
-      const { gadsApiCache } = await import('@/lib/cache')
-      gadsApiCache.clear()
+      const { invalidateGadsApiCacheForUser } = await import('@/lib/cache')
+      invalidateGadsApiCacheForUser(userIdNum)
+
+      return NextResponse.json({
+        success: true,
+        message: `成功更新 ${updates.length} 个配置项`,
+        ...(oauthReauthRequired ? { oauthReauthRequired: true } : {}),
+      })
     }
 
     return NextResponse.json({
