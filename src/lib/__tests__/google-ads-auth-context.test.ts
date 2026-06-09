@@ -83,6 +83,7 @@ vi.mock('@/lib/redis-client', () => ({
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 import { oauthCredentialsLookStripped } from '@/lib/google-ads-auth-context-cache'
 import {
+  assertGoogleAdsAuthReadyForApi,
   assertNoConflictingGoogleAdsAuth,
   clearMemoryAuthContextCacheForTests,
   getGoogleAdsAuthContext,
@@ -355,6 +356,7 @@ describe('getGoogleAdsAuthContext', () => {
       undefined,
       expect.objectContaining({ ownerUserId: 2 })
     )
+    await expect(assertGoogleAdsAuthReadyForApi(2)).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 
   it('loads oauth credentials for dual-stack cleanup when auth preference is service_account', async () => {
@@ -888,30 +890,6 @@ describe('tryGetConfiguredGoogleAdsApiAuthForUser', () => {
     const result = await tryGetConfiguredGoogleAdsApiAuthForUser(2)
 
     expect(result).toBeNull()
-  })
-})
-
-describe('assertGoogleAdsAuthReadyForApi', () => {
-  beforeEach(() => {
-    clearGoogleAdsAuthContextTestCache()
-    vi.clearAllMocks()
-  })
-
-  it('throws dual-stack warning when context has dualStack', async () => {
-    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
-      ownerUserId: 2,
-      isShared: false,
-      assignment: null,
-    })
-    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
-    oauthFns.getUserAuthType.mockResolvedValue({ authType: 'oauth' })
-    oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
-    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
-    dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
-    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({ id: 'sa-1', name: 'Dual SA' })
-
-    const { assertGoogleAdsAuthReadyForApi } = await import('@/lib/google-ads-auth-context')
-    await expect(assertGoogleAdsAuthReadyForApi(2)).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 })
 

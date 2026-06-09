@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +59,7 @@ import {
   GoogleAdsAuthSettingsActions,
   GoogleAdsAuthSettingsSection,
   GoogleAdsDeleteConfirmDialog,
+  formatGoogleAdsAuthSaveError,
   useGoogleAdsAuthSettings,
   validateGoogleAdsOAuthForm,
 } from './google-ads'
@@ -510,6 +511,13 @@ export default function SettingsPage() {
     applyCategorySettings(category, (data.settings?.[category] as Setting[]) || [])
   }
 
+  const refreshCategorySettingsRef = useRef(refreshCategorySettings)
+  refreshCategorySettingsRef.current = refreshCategorySettings
+
+  const refreshGoogleAdsCategorySettings = useCallback(async () => {
+    await refreshCategorySettingsRef.current('google_ads')
+  }, [])
+
   const clearGoogleAdsFormFields = useCallback((keys: string[]) => {
     setFormData((prev) => {
       const next = { ...prev }
@@ -524,7 +532,7 @@ export default function SettingsPage() {
   const googleAdsAuth = useGoogleAdsAuthSettings({
     oauthFormData: formData.google_ads,
     savedOAuthFormData: savedFormData.google_ads,
-    onRefreshCategory: () => refreshCategorySettings('google_ads'),
+    onRefreshCategory: refreshGoogleAdsCategorySettings,
     onClearOAuthFormFields: clearGoogleAdsFormFields,
     onOAuthSaveComplete: () => setEditingField(null),
   })
@@ -794,7 +802,7 @@ export default function SettingsPage() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || '保存失败')
+        throw new Error(formatGoogleAdsAuthSaveError(response.status, data.error))
       }
 
       const saveResult = await response.json()

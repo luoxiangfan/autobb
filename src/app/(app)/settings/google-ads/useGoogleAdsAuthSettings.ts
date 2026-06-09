@@ -12,6 +12,8 @@ import {
   type AccountsRequestAuth,
 } from '@/lib/google-ads-credentials-errors'
 import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
+import { formatGoogleAdsAuthSaveError } from './api-messages'
+import { resolveGoogleAdsOAuthCallbackErrorMessage } from './oauth-callback-errors'
 import type {
   GoogleAdsAccount,
   GoogleAdsCredentialStatus,
@@ -73,9 +75,7 @@ export function useGoogleAdsAuthSettings({
   } | null>(null)
 
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
-  const googleAdsDualStack = Boolean(
-    googleAdsCredentialStatus?.dualStack ?? googleAdsCredentialStatus?.authConfigWarning
-  )
+  const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.dualStack)
   const googleAdsAuthActionsBlocked = googleAdsAuthReadOnly || googleAdsDualStack
 
   const isGoogleAdsSharedAdminHiddenSecret = (key: string, value: string) => {
@@ -102,36 +102,6 @@ export function useGoogleAdsAuthSettings({
   }
 
   const oauthHasUnsavedChanges = () => hasGoogleAdsUnsavedChanges(oauthFormData, savedOAuthFormData)
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const oauthSuccess = urlParams.get('oauth_success')
-    const errorParam = urlParams.get('error')
-
-    if (oauthSuccess === 'true') {
-      toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
-      window.history.replaceState({}, '', '/settings?category=google_ads')
-    } else if (errorParam) {
-      const errorMessages: Record<string, string> = {
-        missing_code: 'OAuth 授权失败：缺少授权码',
-        missing_state: 'OAuth 授权失败：缺少状态参数',
-        invalid_state: 'OAuth 授权失败：无效的状态参数',
-        state_expired: 'OAuth 授权失败：状态参数已过期',
-        missing_google_ads_config:
-          'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
-        missing_login_customer_id: 'OAuth 授权失败：请先配置并保存 Login Customer ID (MCC)',
-        developer_token_invalid:
-          'OAuth 授权失败：Developer Token 配置无效，请检查是否误填为 Client Secret',
-        shared_auth_readonly: '当前使用管理员共享认证，无法自行完成 OAuth 授权',
-        unauthorized: 'OAuth 授权失败：请先登录后再完成授权回调',
-        session_mismatch: 'OAuth 授权失败：登录用户与发起授权的用户不一致，请重新发起授权',
-        legacy_oauth_callback_uri:
-          'OAuth 回调地址已变更：请在 Google Cloud Console 中将 Redirect URI 更新为 /api/google-ads/oauth/callback，并使用「启动 OAuth 授权」重新授权',
-      }
-      toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
-      window.history.replaceState({}, '', '/settings?category=google_ads')
-    }
-  }, [])
 
   const fetchServiceAccounts = useCallback(async () => {
     setLoadingServiceAccounts(true)
@@ -180,6 +150,22 @@ export function useGoogleAdsAuthSettings({
 
   useEffect(() => {
     void fetchGoogleAdsCredentialStatus()
+  }, [fetchGoogleAdsCredentialStatus])
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const oauthSuccess = urlParams.get('oauth_success')
+    const errorParam = urlParams.get('error')
+
+    if (oauthSuccess === 'true') {
+      toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
+      setGoogleAdsAuthMethod('oauth')
+      void fetchGoogleAdsCredentialStatus()
+      window.history.replaceState({}, '', '/settings?category=google_ads')
+    } else if (errorParam) {
+      toast.error(resolveGoogleAdsOAuthCallbackErrorMessage(errorParam))
+      window.history.replaceState({}, '', '/settings?category=google_ads')
+    }
   }, [fetchGoogleAdsCredentialStatus])
 
   useEffect(() => {
@@ -266,6 +252,7 @@ export function useGoogleAdsAuthSettings({
           scheduleGoogleAdsAccountsPoll(authForRequest)
         } else {
           toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
+          await fetchGoogleAdsCredentialStatus()
         }
       } catch {
         // 轮询失败时静默，用户可手动重试
@@ -327,6 +314,7 @@ export function useGoogleAdsAuthSettings({
       const data = await response.json()
       setPermissionError(null)
       setGoogleAdsAccounts(data.data.accounts || [])
+      await fetchGoogleAdsCredentialStatus()
       if (data.data?.refreshInProgress) {
         toast.message('账号正在后台同步，列表将逐步更新')
         scheduleGoogleAdsAccountsPoll(authForRequest)
@@ -371,7 +359,9 @@ export function useGoogleAdsAuthSettings({
       })
 
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || '保存失败')
+      if (!response.ok) {
+        throw new Error(formatGoogleAdsAuthSaveError(response.status, data.error))
+      }
 
       toast.success('服务账号配置已保存')
       setServiceAccountForm({
@@ -389,7 +379,7 @@ export function useGoogleAdsAuthSettings({
     }
   }
 
-  const deleteServiceAccountNow = async (id: string) => {
+  const deleteServiceAccountNow = async (id: string): Promise<boolean> => {
     setDeletingServiceAccountId(id)
     try {
       const response = await fetch(`/api/google-ads/service-account?id=${id}`, {
@@ -403,14 +393,16 @@ export function useGoogleAdsAuthSettings({
       toast.success('服务账号配置已删除')
       await fetchServiceAccounts()
       await fetchGoogleAdsCredentialStatus()
+      return true
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : '删除失败')
+      return false
     } finally {
       setDeletingServiceAccountId(null)
     }
   }
 
-  const deleteOAuthConfigNow = async () => {
+  const deleteOAuthConfigNow = async (): Promise<boolean> => {
     setDeletingOAuthConfig(true)
     try {
       const response = await fetch('/api/google-ads/credentials', {
@@ -424,8 +416,10 @@ export function useGoogleAdsAuthSettings({
       toast.success('OAuth 配置已删除')
       await onRefreshCategory()
       await fetchGoogleAdsCredentialStatus()
+      return true
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : '删除失败')
+      return false
     } finally {
       setDeletingOAuthConfig(false)
     }
@@ -473,12 +467,15 @@ export function useGoogleAdsAuthSettings({
   const handleDeleteConfirm = async () => {
     const state = deleteConfirmState
     if (!state) return
-    if (state.kind === 'oauth') {
-      await deleteOAuthConfigNow()
-    } else {
-      await deleteServiceAccountNow(state.serviceAccountId)
+
+    const ok =
+      state.kind === 'oauth'
+        ? await deleteOAuthConfigNow()
+        : await deleteServiceAccountNow(state.serviceAccountId)
+
+    if (ok) {
+      setDeleteConfirmState(null)
     }
-    setDeleteConfirmState(null)
   }
 
   const notifyOAuthSaveComplete = async () => {

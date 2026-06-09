@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,7 +14,6 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
-  Star,
 } from 'lucide-react'
 import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import { GOOGLE_ADS_SETTING_METADATA } from './config'
@@ -58,7 +57,34 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
     handleFetchGoogleAdsAccounts,
     requestDeleteOAuthConfig,
     requestDeleteServiceAccount,
+    hasServiceAccountConfigToDelete,
+    savingServiceAccount,
   } = auth
+
+  const [showServiceAccountReplaceForm, setShowServiceAccountReplaceForm] = useState(false)
+  const prevSavingServiceAccountRef = useRef(false)
+
+  useEffect(() => {
+    if (!hasServiceAccountConfigToDelete) {
+      setShowServiceAccountReplaceForm(false)
+    }
+  }, [hasServiceAccountConfigToDelete])
+
+  useEffect(() => {
+    const wasSaving = prevSavingServiceAccountRef.current
+    prevSavingServiceAccountRef.current = savingServiceAccount
+    if (!wasSaving || savingServiceAccount || !hasServiceAccountConfigToDelete) {
+      return
+    }
+    const formEmpty =
+      !serviceAccountForm.name &&
+      !serviceAccountForm.mccCustomerId &&
+      !serviceAccountForm.developerToken &&
+      !serviceAccountForm.serviceAccountJson
+    if (formEmpty) {
+      setShowServiceAccountReplaceForm(false)
+    }
+  }, [savingServiceAccount, hasServiceAccountConfigToDelete, serviceAccountForm])
   return (
     <div className="space-y-6">
       {googleAdsAuthReadOnly && (
@@ -307,31 +333,20 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
                   : 'border-gray-200 hover:border-gray-300'
               } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <div className="font-semibold">服务账号认证</div>
-                <Badge className="bg-blue-600 hover:bg-blue-700 text-white border-0">
-                  当前使用
-                </Badge>
-              </div>
+              <div className="font-semibold mb-1">服务账号认证</div>
               <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
             </button>
             <button
               type="button"
               onClick={() => setGoogleAdsAuthMethod('oauth')}
               disabled={googleAdsDualStack}
-              className={`p-4 border-2 rounded-lg text-left transition-all relative ${
+              className={`p-4 border-2 rounded-lg text-left transition-all ${
                 googleAdsAuthMethod === 'oauth'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <div className="font-semibold">OAuth 用户授权</div>
-                <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 gap-1">
-                  <Star className="w-3 h-3 fill-current" />
-                  推荐
-                </Badge>
-              </div>
+              <div className="font-semibold mb-1">OAuth 用户授权</div>
               <div className="text-sm text-gray-600">适合管理自己的 Google Ads 账号</div>
             </button>
           </div>
@@ -378,118 +393,136 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
         </div>
       )}
 
-      {googleAdsAuthMethod === 'service_account' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
-          <div>
-            <Label className="label-text flex items-center gap-2">
-              配置名称
-              <span className="text-caption text-red-500">*必填</span>
-            </Label>
-            <p className="helper-text flex items-start gap-1 mt-1">
-              <Info className="w-3 h-3 mt-0.5 shrink-0" />
-              用于标识此服务账号配置，方便管理多个配置
+      {googleAdsAuthMethod === 'service_account' &&
+        (hasServiceAccountConfigToDelete && !showServiceAccountReplaceForm ? (
+          <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+            <p className="text-sm text-slate-700">
+              服务账号已配置。如需更换 MCC、Developer Token 或 JSON
+              密钥，请展开下方表单；保存后将替换现有配置。
             </p>
-            <Input
-              value={serviceAccountForm.name}
-              onChange={(e) => setServiceAccountForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="例如: 生产环境MCC"
-              className="mt-2"
-            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowServiceAccountReplaceForm(true)}
+            >
+              替换服务账号配置
+            </Button>
           </div>
-
-          <div>
-            <div className="flex items-center justify-between">
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
+            <div>
               <Label className="label-text flex items-center gap-2">
-                MCC Customer ID
+                配置名称
                 <span className="text-caption text-red-500">*必填</span>
               </Label>
-              <a
-                href="/help/google-ads-setup?tab=service-account#mcc-customer-id"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-              >
-                获取方式
-                <ExternalLink className="w-3 h-3" />
-              </a>
+              <p className="helper-text flex items-start gap-1 mt-1">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                用于标识此服务账号配置，方便管理多个配置
+              </p>
+              <Input
+                value={serviceAccountForm.name}
+                onChange={(e) =>
+                  setServiceAccountForm((prev) => ({ ...prev, name: e.target.value }))
+                }
+                placeholder="例如: 生产环境MCC"
+                className="mt-2"
+              />
             </div>
-            <p className="helper-text flex items-start gap-1 mt-1">
-              <Info className="w-3 h-3 mt-0.5 shrink-0" />
-              MCC管理账户ID，格式：10位数字（不含连字符）
-            </p>
-            <Input
-              value={serviceAccountForm.mccCustomerId}
-              onChange={(e) =>
-                setServiceAccountForm((prev) => ({ ...prev, mccCustomerId: e.target.value }))
-              }
-              placeholder="例如: 1234567890"
-              className="mt-2"
-            />
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between">
-              <Label className="label-text flex items-center gap-2">
-                Developer Token
-                <span className="text-caption text-red-500">*必填</span>
-              </Label>
-              <a
-                href="/help/google-ads-setup?tab=service-account#developer-token"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-              >
-                获取方式
-                <ExternalLink className="w-3 h-3" />
-              </a>
+            <div>
+              <div className="flex items-center justify-between">
+                <Label className="label-text flex items-center gap-2">
+                  MCC Customer ID
+                  <span className="text-caption text-red-500">*必填</span>
+                </Label>
+                <a
+                  href="/help/google-ads-setup?tab=service-account#mcc-customer-id"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  获取方式
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <p className="helper-text flex items-start gap-1 mt-1">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                MCC管理账户ID，格式：10位数字（不含连字符）
+              </p>
+              <Input
+                value={serviceAccountForm.mccCustomerId}
+                onChange={(e) =>
+                  setServiceAccountForm((prev) => ({ ...prev, mccCustomerId: e.target.value }))
+                }
+                placeholder="例如: 1234567890"
+                className="mt-2"
+              />
             </div>
-            <p className="helper-text flex items-start gap-1 mt-1">
-              <Info className="w-3 h-3 mt-0.5 shrink-0" />
-              需要Explorer级别或更高，在MCC账户的API中心获取
-            </p>
-            <Input
-              value={serviceAccountForm.developerToken}
-              onChange={(e) =>
-                setServiceAccountForm((prev) => ({ ...prev, developerToken: e.target.value }))
-              }
-              placeholder="输入 Developer Token"
-              type="password"
-              className="mt-2"
-            />
-          </div>
 
-          <div className="lg:col-span-2">
-            <div className="flex items-center justify-between">
-              <Label className="label-text flex items-center gap-2">
-                服务账号 JSON
-                <span className="text-caption text-red-500">*必填</span>
-              </Label>
-              <a
-                href="/help/google-ads-setup?tab=service-account#service-account-json"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-              >
-                获取方式
-                <ExternalLink className="w-3 h-3" />
-              </a>
+            <div>
+              <div className="flex items-center justify-between">
+                <Label className="label-text flex items-center gap-2">
+                  Developer Token
+                  <span className="text-caption text-red-500">*必填</span>
+                </Label>
+                <a
+                  href="/help/google-ads-setup?tab=service-account#developer-token"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  获取方式
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <p className="helper-text flex items-start gap-1 mt-1">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                需要Explorer级别或更高，在MCC账户的API中心获取
+              </p>
+              <Input
+                value={serviceAccountForm.developerToken}
+                onChange={(e) =>
+                  setServiceAccountForm((prev) => ({ ...prev, developerToken: e.target.value }))
+                }
+                placeholder="输入 Developer Token"
+                type="password"
+                className="mt-2"
+              />
             </div>
-            <p className="helper-text flex items-start gap-1 mt-1">
-              <Info className="w-3 h-3 mt-0.5 shrink-0" />
-              从Google Cloud Console下载的服务账号密钥文件内容
-            </p>
-            <Textarea
-              value={serviceAccountForm.serviceAccountJson}
-              onChange={(e) =>
-                setServiceAccountForm((prev) => ({ ...prev, serviceAccountJson: e.target.value }))
-              }
-              placeholder='粘贴JSON内容，例如: {"type":"service_account","project_id":"...","private_key":"..."}'
-              rows={6}
-              className="mt-2 font-mono text-xs"
-            />
+
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between">
+                <Label className="label-text flex items-center gap-2">
+                  服务账号 JSON
+                  <span className="text-caption text-red-500">*必填</span>
+                </Label>
+                <a
+                  href="/help/google-ads-setup?tab=service-account#service-account-json"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                >
+                  获取方式
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <p className="helper-text flex items-start gap-1 mt-1">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" />
+                从Google Cloud Console下载的服务账号密钥文件内容
+              </p>
+              <Textarea
+                value={serviceAccountForm.serviceAccountJson}
+                onChange={(e) =>
+                  setServiceAccountForm((prev) => ({ ...prev, serviceAccountJson: e.target.value }))
+                }
+                placeholder='粘贴JSON内容，例如: {"type":"service_account","project_id":"...","private_key":"..."}'
+                rows={6}
+                className="mt-2 font-mono text-xs"
+              />
+            </div>
           </div>
-        </div>
-      )}
+        ))}
 
       {googleAdsAuthMethod === 'service_account' && serviceAccounts.length > 0 && (
         <div className="border-t pt-6">
