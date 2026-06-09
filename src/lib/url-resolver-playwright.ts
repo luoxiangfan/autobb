@@ -5,6 +5,7 @@ import {
   assessPageComplexity,
   recordWaitOptimization,
 } from './smart-wait-strategy'
+import { detectAffiliateLinkFailure } from './affiliate-link-failure'
 import { isProxyConnectionError } from './stealth-scraper'
 
 /**
@@ -427,9 +428,28 @@ export async function resolveAffiliateLinkWithPlaywright(
       console.error(`   - page.url(): ${finalFullUrl}`)
       console.error(`   - response.status: ${statusCode}`)
       console.error(`   - redirectChain: ${redirectChain.join(' → ')}`)
+
+      const affiliateFailure = detectAffiliateLinkFailure({
+        url: finalFullUrl,
+        pageTitle,
+        redirectChain,
+      })
+      if (affiliateFailure) {
+        throw new Error(affiliateFailure.message)
+      }
+
       throw new Error(
         `Playwright解析失败: 页面导航后URL无效 (${finalFullUrl})，可能是推广链接失效或被拦截`
       )
+    }
+
+    const affiliateFailure = detectAffiliateLinkFailure({
+      url: finalFullUrl,
+      pageTitle,
+      redirectChain,
+    })
+    if (affiliateFailure) {
+      throw new Error(affiliateFailure.message)
     }
 
     // 分离Final URL和Final URL suffix
@@ -476,7 +496,14 @@ export async function resolveAffiliateLinkWithPlaywright(
       throw new Error(`Playwright解析失败（代理连接问题，建议重试）: ${error.message}`)
     }
     console.error('Playwright解析失败:', error)
-    throw new Error(`Playwright解析失败: ${error.message}`)
+    const rawMessage = String(error?.message || error)
+    if (rawMessage.startsWith('推广链接')) {
+      throw new Error(rawMessage)
+    }
+    if (rawMessage.startsWith('Playwright解析失败:')) {
+      throw new Error(rawMessage)
+    }
+    throw new Error(`Playwright解析失败: ${rawMessage}`)
   } finally {
     // 清理页面资源
     if (page) await page.close().catch(() => {})

@@ -36,6 +36,10 @@ import {
 import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import {
+  detectDomainChangeAffiliateFailure,
+  isAffiliateLinkExpiredMessage,
+} from '@/lib/affiliate-link-failure'
 
 /**
  * URL域名验证
@@ -46,7 +50,17 @@ function validateUrlDomainChange(
 ): {
   valid: boolean
   error?: string
+  errorType?: UrlSwapErrorType
 } {
+  const affiliateFailure = detectDomainChangeAffiliateFailure(oldUrl, newUrl)
+  if (affiliateFailure) {
+    return {
+      valid: false,
+      error: affiliateFailure.message,
+      errorType: 'link_resolution',
+    }
+  }
+
   try {
     const oldDomain = new URL(oldUrl).hostname
     const newDomain = new URL(newUrl).hostname
@@ -54,7 +68,10 @@ function validateUrlDomainChange(
     if (oldDomain !== newDomain) {
       return {
         valid: false,
-        error: `域名变更警告: ${oldDomain} → ${newDomain}，请确认为正常换链`,
+        error:
+          `落地页域名发生变化（${oldDomain} → ${newDomain}），与当前记录的 Final URL 不一致。` +
+          '若推广链接已更换或失效，请在联盟平台确认并更新 Offer 推广链接。',
+        errorType: 'link_resolution',
       }
     }
 
@@ -507,8 +524,8 @@ export async function executeUrlSwapTask(
       if (urlChanged && currentUrlFromDb) {
         const validation = validateUrlDomainChange(currentUrlFromDb, resolved.finalUrl)
         if (!validation.valid) {
-          console.error(`[url-swap-executor] 域名变更警告: ${taskId} - ${validation.error}`)
-          await setTaskError(taskId, validation.error!)
+          console.error(`[url-swap-executor] 落地页校验失败: ${taskId} - ${validation.error}`)
+          await setTaskError(taskId, validation.error!, validation.errorType ?? 'link_resolution')
           return { success: false, changed: false }
         }
       }
@@ -671,8 +688,8 @@ export async function executeUrlSwapTask(
     if (effectiveCurrentFinalUrl) {
       const validation = validateUrlDomainChange(effectiveCurrentFinalUrl, resolved.finalUrl)
       if (!validation.valid) {
-        console.error(`[url-swap-executor] 域名变更警告: ${taskId} - ${validation.error}`)
-        await setTaskError(taskId, validation.error!)
+        console.error(`[url-swap-executor] 落地页校验失败: ${taskId} - ${validation.error}`)
+        await setTaskError(taskId, validation.error!, validation.errorType ?? 'link_resolution')
         return { success: false, changed: false }
       }
     }
@@ -755,9 +772,12 @@ export async function executeUrlSwapTask(
     }
     // 检测推广链接解析失败
     else if (
+      isAffiliateLinkExpiredMessage(rawMessage) ||
       rawMessage.includes('resolve') ||
       rawMessage.includes('affiliate') ||
-      rawMessage.includes('推广链接格式') ||
+      rawMessage.includes('推广链接') ||
+      rawMessage.includes('URL解析失败') ||
+      rawMessage.includes('Playwright解析失败') ||
       rawMessage.includes('无法访问') ||
       rawMessage.includes('Failed to fetch') ||
       rawMessage.includes('timeout') ||
@@ -766,7 +786,9 @@ export async function executeUrlSwapTask(
       rawMessage.includes('network')
     ) {
       errorType = 'link_resolution'
-      enhancedMessage = `推广链接解析失败: ${rawMessage}`
+      enhancedMessage = isAffiliateLinkExpiredMessage(rawMessage)
+        ? rawMessage
+        : `推广链接解析失败: ${rawMessage}`
     }
     // 检测Google Ads API失败
     else if (

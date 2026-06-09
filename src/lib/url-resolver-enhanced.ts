@@ -11,6 +11,10 @@ import { getOptimalResolver, extractDomain } from './resolver-domains'
 import { REDIS_PREFIX_CONFIG } from './config'
 import { maskProxyUrl } from './proxy/validate-url'
 import { normalizeCountryCode } from './language-country-codes'
+import {
+  isAffiliateLinkExpiredMessage,
+  normalizeNestedResolveErrorMessage,
+} from './affiliate-link-failure'
 
 // ==================== 类型定义 ====================
 
@@ -1142,9 +1146,12 @@ export async function resolveAffiliateLink(
   }
 
   // ========== 所有重试都失败 ==========
-  throw new Error(
-    `URL解析失败（${retryConfig.maxRetries + 1}次尝试后）: ${lastError?.message || '未知错误'}`
-  )
+  const normalizedError = normalizeNestedResolveErrorMessage(lastError?.message || '未知错误')
+  if (isAffiliateLinkExpiredMessage(normalizedError)) {
+    throw new Error(normalizedError)
+  }
+
+  throw new Error(`URL解析失败（${retryConfig.maxRetries + 1}次尝试后）: ${normalizedError}`)
 }
 
 // ==================== 代理健康监控 ====================

@@ -40,6 +40,7 @@ describe('setTaskError', () => {
       consecutive_failures: 0,
       failed_swaps: 0,
       total_swaps: 0,
+      swap_interval_minutes: 1440,
     })
 
     await setTaskError('task-1', 'boom', 'link_resolution')
@@ -55,6 +56,7 @@ describe('setTaskError', () => {
       consecutive_failures: 2,
       failed_swaps: 2,
       total_swaps: 2,
+      swap_interval_minutes: 1440,
     })
 
     await setTaskError('task-1', 'boom', 'google_ads_api')

@@ -12,6 +12,7 @@ import { validateUrlSwapTask, validateTaskConfig } from './url-swap-validator'
 import { boolParam } from './db-helpers'
 import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from './url-swap-link-utils'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
+import { isAffiliateLinkExpiredMessage } from './affiliate-link-failure'
 import { parseJsonField, toDbJsonObjectField } from './json-field'
 import type {
   UrlSwapTask,
@@ -1048,18 +1049,25 @@ export async function setTaskError(
   const shouldMarkError = newConsecutiveFailures >= URL_SWAP_ERROR_THRESHOLD
   const newStatus: UrlSwapTaskStatus = shouldMarkError ? 'error' : 'enabled'
 
+  const linkResolutionSuggestions = isAffiliateLinkExpiredMessage(errorMessage)
+    ? `1. 在浏览器中直接访问推广链接，确认是否正常跳转到商品页\n` +
+      `2. 若联盟平台显示 Invalid Link，请重新生成推广链接并更新 Offer\n` +
+      `3. 更新后在任务详情页重新启用任务`
+    : `1. 检查推广链接是否有效\n` +
+      `2. 检查代理可用性/Playwright 资源是否足够\n` +
+      `3. 修复后在任务详情页重新启用任务`
+
   const enhancedMessage = shouldMarkError
     ? `🔴 ${errorTypeLabel}连续失败 ${newConsecutiveFailures} 次，任务已标记为错误状态。\n\n` +
       `错误详情: ${errorMessage}\n\n` +
       `建议操作：\n` +
       `${
         errorType === 'link_resolution'
-          ? `1. 检查推广链接是否有效\n2. 检查代理可用性/Playwright资源是否足够`
+          ? linkResolutionSuggestions
           : errorType === 'google_ads_api'
-            ? `1. 检查Google Ads账号权限/配额\n2. 确认OAuth/服务账号配置有效`
-            : `1. 查看日志定位具体失败原因`
-      }\n` +
-      `2. 修复问题后在任务详情页重新启用任务`
+            ? `1. 检查Google Ads账号权限/配额\n2. 确认OAuth/服务账号配置有效\n3. 修复后在任务详情页重新启用任务`
+            : `1. 查看日志定位具体失败原因\n2. 修复后在任务详情页重新启用任务`
+      }`
     : `⚠️ ${errorTypeLabel}（连续失败 ${newConsecutiveFailures}/${URL_SWAP_ERROR_THRESHOLD}）。\n\n` +
       `错误详情: ${errorMessage}\n\n` +
       `系统将在下一个执行时间点继续尝试。连续失败${URL_SWAP_ERROR_THRESHOLD}次后将标记为错误状态。`
