@@ -392,12 +392,6 @@ export async function purgeGoogleAdsAuthConfigForUser(userId: number): Promise<v
   await db.exec(`DELETE FROM google_ads_credentials WHERE user_id = ?`, [userId])
   await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
 
-  try {
-    await db.exec(`DELETE FROM google_ads_test_credentials WHERE user_id = ?`, [userId])
-  } catch {
-    // 表不存在时忽略（兼容旧库或未跑对应 migration）
-  }
-
   const placeholders = GOOGLE_ADS_SETTING_KEYS.map(() => '?').join(', ')
   await db.exec(
     `

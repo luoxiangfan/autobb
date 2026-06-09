@@ -120,7 +120,6 @@ const READ_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   },
   { method: 'GET', pattern: '/api/google-ads/service-account', feature: 'google-ads-management' },
   { method: 'GET', pattern: '/api/google-ads/idle-accounts', feature: 'google-ads-management' },
-  { method: 'GET', pattern: '/api/google-ads/test-credentials', feature: 'google-ads-management' },
   { method: 'GET', pattern: '/api/google-ads-accounts', feature: 'google-ads-management' },
   { method: 'GET', pattern: '/api/google-ads-accounts/:id', feature: 'google-ads-management' },
 
@@ -227,7 +226,6 @@ const WRITE_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   { method: 'POST', pattern: '/api/google-ads/credentials/verify', feature: 'google-ads-management' },
   { method: 'POST', pattern: '/api/google-ads/service-account', feature: 'google-ads-management' },
   { method: 'DELETE', pattern: '/api/google-ads/service-account', feature: 'google-ads-management' },
-  { method: 'POST', pattern: '/api/google-ads/test-mcc/diagnose', feature: 'google-ads-management' },
   { method: 'POST', pattern: '/api/google-ads-accounts', feature: 'google-ads-management' },
   { method: 'PUT', pattern: '/api/google-ads-accounts/:id', feature: 'google-ads-management' },
   { method: 'DELETE', pattern: '/api/google-ads-accounts/:id', feature: 'google-ads-management' },

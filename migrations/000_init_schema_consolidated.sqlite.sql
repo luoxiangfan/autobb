@@ -874,10 +874,6 @@ INSERT INTO system_settings VALUES(19,NULL,'ai','gemini_provider',NULL,NULL,'str
 INSERT INTO system_settings VALUES(20,NULL,'ai','gemini_endpoint',NULL,NULL,'string',0,0,NULL,NULL,NULL,NULL,'Gemini API 端点（系统自动计算）','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
 INSERT INTO system_settings VALUES(21,NULL,'system','data_sync_enabled',NULL,NULL,'boolean',0,0,NULL,NULL,NULL,NULL,'启用自动数据同步','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
 INSERT INTO system_settings VALUES(22,NULL,'system','data_sync_interval_hours',NULL,NULL,'number',0,0,NULL,NULL,NULL,NULL,'数据同步间隔（小时）','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
-INSERT INTO system_settings VALUES(23,NULL,'google_ads','test_login_customer_id',NULL,NULL,'string',0,0,NULL,NULL,NULL,NULL,'【测试】Login Customer ID (MCC账户ID)','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
-INSERT INTO system_settings VALUES(24,NULL,'google_ads','test_client_id',NULL,NULL,'string',1,0,NULL,NULL,NULL,NULL,'【测试】OAuth Client ID（仅用于测试诊断，不影响现有OAuth）','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
-INSERT INTO system_settings VALUES(25,NULL,'google_ads','test_client_secret',NULL,NULL,'string',1,0,NULL,NULL,NULL,NULL,'【测试】OAuth Client Secret（仅用于测试诊断，不影响现有OAuth）','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
-INSERT INTO system_settings VALUES(26,NULL,'google_ads','test_developer_token',NULL,NULL,'string',1,0,NULL,NULL,NULL,NULL,'【测试】Developer Token（测试权限/Test access，用于验证MCC调用限制）','2026-01-17 14:16:52','2026-01-17 14:16:52',NULL);
 INSERT INTO system_settings VALUES(27,NULL,'openclaw','openclaw_skills_entries_json',NULL,NULL,'json',0,0,NULL,NULL,NULL,NULL,'OpenClaw skills.entries 覆盖配置 JSON（启用/禁用技能或注入技能配置）','2026-06-04 08:32:48','2026-06-04 08:32:48',NULL);
 INSERT INTO system_settings VALUES(28,NULL,'openclaw','openclaw_skills_allow_bundled_json',NULL,NULL,'json',0,0,NULL,NULL,NULL,NULL,'OpenClaw skills.allowBundled 白名单 JSON 数组（控制可用内置技能）','2026-06-04 08:32:48','2026-06-04 08:32:48',NULL);
 INSERT INTO system_settings VALUES(29,NULL,'openclaw','gateway_token',NULL,NULL,'string',1,0,NULL,NULL,NULL,NULL,'OpenClaw Gateway Auth Token（自动生成/可覆盖）','2026-06-04 08:32:49','2026-06-04 08:32:49',NULL);
@@ -1486,22 +1482,6 @@ CREATE TABLE IF NOT EXISTS "url_swap_tasks" (
 
   
   FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE
-);
-CREATE TABLE google_ads_test_credentials (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER NOT NULL UNIQUE,
-  client_id TEXT NOT NULL,
-  client_secret TEXT NOT NULL,
-  refresh_token TEXT NOT NULL,
-  access_token TEXT,
-  developer_token TEXT NOT NULL,
-  login_customer_id TEXT,
-  access_token_expires_at TEXT,
-  is_active INTEGER DEFAULT 1,
-  last_verified_at TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE TABLE url_swap_task_targets (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),

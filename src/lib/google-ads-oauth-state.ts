@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { JWT_SECRET } from './config'
 
-export type GoogleAdsOAuthStatePurpose = 'google_ads' | 'google_ads_test'
+export type GoogleAdsOAuthStatePurpose = 'google_ads'
 
 export type GoogleAdsOAuthStatePayload = {
   user_id: number

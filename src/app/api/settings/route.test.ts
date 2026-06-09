@@ -32,7 +32,6 @@ const authContextFns = vi.hoisted(() => ({
 
 const settingsStoreFns = vi.hoisted(() => ({
   upsertGoogleAdsOAuthConfigFromSettings: vi.fn(),
-  upsertGoogleAdsTestOAuthConfigFromSettings: vi.fn(),
   overlayGoogleAdsSettingsFromCredentialStore: vi.fn(
     async (settings: unknown[]) => settings as unknown[]
   ),
@@ -47,8 +46,6 @@ vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
   return {
     ...actual,
     upsertGoogleAdsOAuthConfigFromSettings: settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings,
-    upsertGoogleAdsTestOAuthConfigFromSettings:
-      settingsStoreFns.upsertGoogleAdsTestOAuthConfigFromSettings,
     overlayGoogleAdsSettingsFromCredentialStore:
       settingsStoreFns.overlayGoogleAdsSettingsFromCredentialStore,
   }
@@ -91,7 +88,6 @@ describe('settings route affiliate sync safeguards', () => {
       synced: true,
       oauthClientCredentialsChanged: false,
     })
-    settingsStoreFns.upsertGoogleAdsTestOAuthConfigFromSettings.mockResolvedValue(undefined)
     settingsStoreFns.overlayGoogleAdsSettingsFromCredentialStore.mockImplementation(
       async (settings) => settings
     )
@@ -333,7 +329,6 @@ describe('settings route google ads credential store', () => {
       synced: true,
       oauthClientCredentialsChanged: true,
     })
-    settingsStoreFns.upsertGoogleAdsTestOAuthConfigFromSettings.mockResolvedValue(undefined)
     settingsStoreFns.overlayGoogleAdsSettingsFromCredentialStore.mockImplementation(
       async (settings) => settings
     )

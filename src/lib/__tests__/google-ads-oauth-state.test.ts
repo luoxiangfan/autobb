@@ -97,7 +97,6 @@ describe('google-ads-oauth-state', () => {
     const state = createGoogleAdsOAuthState({
       user_id: 1,
       timestamp: Date.now(),
-      purpose: 'google_ads_test',
     })
 
     const result = verifyGoogleAdsOAuthState(state, { expectedPurpose: 'google_ads' })

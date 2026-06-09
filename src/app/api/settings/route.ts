@@ -25,7 +25,6 @@ import {
   overlayGoogleAdsSettingsFromCredentialStore,
   partitionGoogleAdsSettingUpdates,
   upsertGoogleAdsOAuthConfigFromSettings,
-  upsertGoogleAdsTestOAuthConfigFromSettings,
 } from '@/lib/google-ads-settings-store'
 
 /**
@@ -364,8 +363,7 @@ export async function PUT(request: NextRequest) {
         const db = await getDatabase()
         await db.transaction(async () => {
           if (credentialBacked.length > 0 && userIdNum) {
-            const { oauthFields, testFields } =
-              collectCredentialBackedFieldUpdates(credentialBacked)
+            const { oauthFields } = collectCredentialBackedFieldUpdates(credentialBacked)
 
             if (Object.keys(oauthFields).length > 0) {
               const syncResult = await upsertGoogleAdsOAuthConfigFromSettings(
@@ -376,9 +374,6 @@ export async function PUT(request: NextRequest) {
                 }
               )
               oauthReauthRequired = syncResult.oauthClientCredentialsChanged
-            }
-            if (Object.keys(testFields).length > 0) {
-              await upsertGoogleAdsTestOAuthConfigFromSettings(userIdNum, testFields)
             }
           }
 

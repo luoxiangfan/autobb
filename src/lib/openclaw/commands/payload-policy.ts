@@ -1064,7 +1064,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     allowEmptyBody: true,
   },
 
-  // Google Ads credentials / service-account / test diagnose
+  // Google Ads credentials / service-account
   {
     method: 'POST',
     path: '/api/google-ads/credentials',
@@ -1107,15 +1107,6 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     path: '/api/google-ads/service-account',
     canonicalKeys: [],
     allowEmptyBody: true,
-  },
-  {
-    method: 'POST',
-    path: '/api/google-ads/test-mcc/diagnose',
-    canonicalKeys: ['maxCustomers', 'probeCustomerId'],
-    aliasMap: {
-      max_customers: 'maxCustomers',
-      probe_customer_id: 'probeCustomerId',
-    },
   },
 
   // Google Ads accounts

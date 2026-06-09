@@ -93,9 +93,6 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
           developer_token: 'plain-dev-token',
         }
       }
-      if (String(sql).includes('google_ads_test_credentials')) {
-        return null
-      }
       return null
     })
   })
@@ -161,7 +158,7 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
     expect(byKey.developer_token).toBe('')
   })
 
-  it('reads test oauth fields from current user not shared admin', async () => {
+  it('reads oauth fields from shared admin not current user', async () => {
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
       ownerUserId: 99,
       isShared: true,
@@ -179,31 +176,10 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
           developer_token: 'plain-dev-token',
         }
       }
-      if (String(sql).includes('google_ads_test_credentials')) {
-        expect(params?.[0]).toBe(5)
-        return {
-          login_customer_id: '9876543210',
-          client_id: '555555555555555555555.apps.googleusercontent.com',
-          client_secret: 'test-secret',
-          developer_token: 'test-dev-token',
-        }
-      }
       return null
     })
 
     const settings = [
-      {
-        category: 'google_ads',
-        key: 'test_client_id',
-        value: '',
-        dataType: 'string',
-        isSensitive: false,
-        isRequired: false,
-        validationStatus: null,
-        validationMessage: null,
-        lastValidatedAt: null,
-        description: '',
-      },
       {
         category: 'google_ads',
         key: 'client_id',
@@ -222,6 +198,5 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
     const byKey = Object.fromEntries(overlaid.map((item) => [item.key, item.value]))
 
     expect(byKey.client_id).toBe('123456789012345678901.apps.googleusercontent.com')
-    expect(byKey.test_client_id).toBe('555555555555555555555.apps.googleusercontent.com')
   })
 })

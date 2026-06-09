@@ -160,7 +160,6 @@ const ROUTE_RISK_POLICIES: RouteRiskPolicy[] = [
   { method: 'POST', path: '/api/google-ads/credentials/verify', riskLevel: 'high' },
   { method: 'POST', path: '/api/google-ads/service-account', riskLevel: 'high' },
   { method: 'DELETE', path: '/api/google-ads/service-account', riskLevel: 'high' },
-  { method: 'POST', path: '/api/google-ads/test-mcc/diagnose', riskLevel: 'high' },
   { method: 'POST', path: '/api/google-ads-accounts', riskLevel: 'high' },
   { method: 'PUT', path: '/api/google-ads-accounts/:id', riskLevel: 'high' },
   { method: 'DELETE', path: '/api/google-ads-accounts/:id', riskLevel: 'high' },

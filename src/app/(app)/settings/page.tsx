@@ -564,8 +564,6 @@ export default function SettingsPage() {
     const urlParams = new URLSearchParams(window.location.search)
     const oauthSuccess = urlParams.get('oauth_success')
     const errorParam = urlParams.get('error')
-    const testOauthSuccess = urlParams.get('test_oauth_success')
-    const testOauthError = urlParams.get('test_oauth_error')
 
     if (oauthSuccess === 'true') {
       toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
@@ -591,23 +589,6 @@ export default function SettingsPage() {
       toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
       // 清除 URL 参数
       window.history.replaceState({}, '', '/settings?category=google_ads')
-    } else if (testOauthSuccess === 'true') {
-      toast.success('✅ 测试 OAuth 授权成功！测试 Refresh Token 已保存')
-      window.history.replaceState({}, '', '/settings?category=google_ads')
-    } else if (testOauthError) {
-      const testErrorMessages: Record<string, string> = {
-        missing_code: '测试 OAuth 授权失败：缺少授权码',
-        missing_state: '测试 OAuth 授权失败：缺少状态参数',
-        invalid_state: '测试 OAuth 授权失败：无效的状态参数',
-        invalid_purpose: '测试 OAuth 授权失败：状态参数用途不匹配',
-        state_expired: '测试 OAuth 授权失败：状态参数已过期',
-        unauthorized: '测试 OAuth 授权失败：请先登录后再完成授权回调',
-        session_mismatch: '测试 OAuth 授权失败：登录用户与发起授权的用户不一致，请重新发起授权',
-        missing_test_config:
-          '测试 OAuth 授权失败：请先保存测试配置（测试Client ID/Secret、测试Developer Token、测试MCC ID）',
-      }
-      toast.error(testErrorMessages[testOauthError] || `测试 OAuth 授权失败：${testOauthError}`)
-      window.history.replaceState({}, '', '/settings?category=google_ads')
     }
   }, [])
 
@@ -624,21 +605,6 @@ export default function SettingsPage() {
       const metadata = SETTING_METADATA[metaKey]
       const backendSetting = backendMap.get(field.key)
       categoryFormValues[field.key] = backendSetting?.value || metadata?.defaultValue || ''
-    }
-
-    if (category === 'google_ads') {
-      const testKeys = [
-        'test_login_customer_id',
-        'test_client_id',
-        'test_client_secret',
-        'test_developer_token',
-      ]
-      for (const key of testKeys) {
-        const metaKey = `${category}.${key}`
-        const metadata = SETTING_METADATA[metaKey]
-        const backendSetting = backendMap.get(key)
-        categoryFormValues[key] = backendSetting?.value || metadata?.defaultValue || ''
-      }
     }
 
     if (category === 'ai') {

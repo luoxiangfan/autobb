@@ -1,5 +1,5 @@
 /**
- * Google Ads OAuth 配置统一存储：生产/测试 OAuth 字段仅存凭证表，不再写入 system_settings 用户实例。
+ * Google Ads OAuth 配置统一存储：OAuth 字段仅存 google_ads_credentials，不再写入 system_settings 用户实例。
  * system_settings 仅保留 user_id IS NULL 的字段元数据（及 campaign_sync 等非 OAuth 键）。
  */
 import { getDatabase } from './db'
@@ -12,7 +12,6 @@ import { formatAndValidateLoginCustomerId, type GoogleAdsCredentials } from './g
 import { developerTokenLooksInvalid } from './google-ads-developer-token-heal'
 import { getUserOnlySetting } from './settings'
 import type { SettingValue } from './settings'
-import type { GoogleAdsTestCredentials } from './google-ads-test-credentials'
 
 export const GOOGLE_ADS_OAUTH_CONFIG_KEYS = [
   'login_customer_id',
@@ -23,32 +22,13 @@ export const GOOGLE_ADS_OAUTH_CONFIG_KEYS = [
 
 export type GoogleAdsOAuthConfigKey = (typeof GOOGLE_ADS_OAUTH_CONFIG_KEYS)[number]
 
-export const GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS = [
-  'test_login_customer_id',
-  'test_client_id',
-  'test_client_secret',
-  'test_developer_token',
-] as const
-
-export type GoogleAdsTestOAuthConfigKey = (typeof GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS)[number]
-
-export const GOOGLE_ADS_CREDENTIAL_BACKED_SETTING_KEYS = [
-  ...GOOGLE_ADS_OAUTH_CONFIG_KEYS,
-  ...GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS,
-] as const
+export const GOOGLE_ADS_CREDENTIAL_BACKED_SETTING_KEYS = [...GOOGLE_ADS_OAUTH_CONFIG_KEYS] as const
 
 const OAUTH_KEY_TO_COLUMN: Record<GoogleAdsOAuthConfigKey, keyof GoogleAdsCredentials> = {
   login_customer_id: 'login_customer_id',
   client_id: 'client_id',
   client_secret: 'client_secret',
   developer_token: 'developer_token',
-}
-
-const TEST_KEY_TO_COLUMN: Record<GoogleAdsTestOAuthConfigKey, keyof GoogleAdsTestCredentials> = {
-  test_login_customer_id: 'login_customer_id',
-  test_client_id: 'client_id',
-  test_client_secret: 'client_secret',
-  test_developer_token: 'developer_token',
 }
 
 export type GoogleAdsOAuthSettingsSyncFields = Partial<Record<GoogleAdsOAuthConfigKey, string>>
@@ -75,11 +55,9 @@ export type GoogleAdsSettingsReadContext = {
   readOnly: boolean
   /** 生产 OAuth 字段读取目标 user_id（共享 OAuth 时为管理员） */
   oauthUserId: number
-  /** 测试 OAuth 字段始终读当前用户 */
-  testUserId: number
 }
 
-/** 一次解析：只读标记 + 生产/测试凭证各自的 user_id */
+/** 一次解析：只读标记 + 生产 OAuth 凭证 user_id */
 export async function resolveGoogleAdsSettingsReadContext(
   userId: number
 ): Promise<GoogleAdsSettingsReadContext> {
@@ -88,7 +66,6 @@ export async function resolveGoogleAdsSettingsReadContext(
   return {
     readOnly: isGoogleAdsAuthShared(assignment),
     oauthUserId,
-    testUserId: userId,
   }
 }
 
@@ -104,9 +81,9 @@ export function maskGoogleAdsCredentialSettingValueForReadOnly(
   isSensitive?: boolean
 ): string {
   if (!value) return ''
-  if (isSensitive || key === 'client_secret' || key === 'test_client_secret') return ''
-  if (key === 'developer_token' || key === 'test_developer_token') return ''
-  if (key === 'client_id' || key === 'test_client_id') {
+  if (isSensitive || key === 'client_secret') return ''
+  if (key === 'developer_token') return ''
+  if (key === 'client_id') {
     if (value.length <= 12) return '***'
     return `${value.slice(0, 8)}...${value.slice(-4)}`
   }
@@ -124,10 +101,7 @@ function validateLoginCustomerIdForSettings(raw: string, fieldName?: string): st
   }
 }
 
-const LEGACY_OAUTH_SETTING_KEYS = [
-  ...GOOGLE_ADS_OAUTH_CONFIG_KEYS,
-  ...GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS,
-]
+const LEGACY_OAUTH_SETTING_KEYS = [...GOOGLE_ADS_OAUTH_CONFIG_KEYS]
 
 function isCredentialBackedGoogleAdsSettingKey(key: string): boolean {
   return (GOOGLE_ADS_CREDENTIAL_BACKED_SETTING_KEYS as readonly string[]).includes(key)
@@ -147,21 +121,17 @@ export function collectCredentialBackedFieldUpdates(
   updates: Array<{ category: string; key: string; value: string }>
 ): {
   oauthFields: GoogleAdsOAuthSettingsSyncFields
-  testFields: Partial<Record<GoogleAdsTestOAuthConfigKey, string>>
 } {
   const oauthFields: GoogleAdsOAuthSettingsSyncFields = {}
-  const testFields: Partial<Record<GoogleAdsTestOAuthConfigKey, string>> = {}
 
   for (const update of updates) {
     if (update.category !== 'google_ads') continue
     if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(update.key)) {
       oauthFields[update.key as GoogleAdsOAuthConfigKey] = update.value
-    } else if ((GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS as readonly string[]).includes(update.key)) {
-      testFields[update.key as GoogleAdsTestOAuthConfigKey] = update.value
     }
   }
 
-  return { oauthFields, testFields }
+  return { oauthFields }
 }
 
 export async function getGoogleAdsCredentialBackedSettingValue(
@@ -173,14 +143,8 @@ export async function getGoogleAdsCredentialBackedSettingValue(
     return ''
   }
   const readCtx = await resolveGoogleAdsSettingsReadContext(userId)
-  let raw = ''
-  if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
-    const fields = await getGoogleAdsOAuthConfigFields(readCtx.oauthUserId)
-    raw = fields[key as GoogleAdsOAuthConfigKey]
-  } else {
-    const testFields = await getGoogleAdsTestOAuthConfigFields(readCtx.testUserId)
-    raw = testFields[key as GoogleAdsTestOAuthConfigKey]
-  }
+  const fields = await getGoogleAdsOAuthConfigFields(readCtx.oauthUserId)
+  const raw = fields[key as GoogleAdsOAuthConfigKey]
   if (!raw) return ''
   if (readCtx.readOnly) {
     return maskGoogleAdsCredentialSettingValueForReadOnly(key, raw, options?.isSensitive)
@@ -203,12 +167,6 @@ export async function upsertSingleGoogleAdsCredentialBackedSetting(
       options
     )
   }
-  if ((GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
-    await upsertGoogleAdsTestOAuthConfigFromSettings(userId, {
-      [key as GoogleAdsTestOAuthConfigKey]: value,
-    })
-    return null
-  }
   return null
 }
 
@@ -219,18 +177,6 @@ async function getGoogleAdsCredentialRowByUserId(
   return (
     (await db.queryOne<GoogleAdsCredentials>(
       `SELECT * FROM google_ads_credentials WHERE user_id = ? LIMIT 1`,
-      [userId]
-    )) ?? null
-  )
-}
-
-async function getGoogleAdsTestCredentialRowByUserId(
-  userId: number
-): Promise<GoogleAdsTestCredentials | null> {
-  const db = await getDatabase()
-  return (
-    (await db.queryOne<GoogleAdsTestCredentials>(
-      `SELECT * FROM google_ads_test_credentials WHERE user_id = ? LIMIT 1`,
       [userId]
     )) ?? null
   )
@@ -256,44 +202,18 @@ export async function getGoogleAdsOAuthConfigValue(
   return fields[key]
 }
 
-export async function getGoogleAdsTestOAuthConfigFields(
-  userId: number
-): Promise<Record<GoogleAdsTestOAuthConfigKey, string>> {
-  const row = await getGoogleAdsTestCredentialRowByUserId(userId)
-  return {
-    test_login_customer_id: String(row?.login_customer_id || '').trim(),
-    test_client_id: String(row?.client_id || '').trim(),
-    test_client_secret: String(row?.client_secret || '').trim(),
-    test_developer_token: String(row?.developer_token || '').trim(),
-  }
-}
-
-export async function getGoogleAdsTestOAuthConfigValue(
-  userId: number,
-  key: GoogleAdsTestOAuthConfigKey
-): Promise<string> {
-  const fields = await getGoogleAdsTestOAuthConfigFields(userId)
-  return fields[key]
-}
-
 export async function overlayGoogleAdsSettingsFromCredentialStore(
   settings: SettingValue[],
   userId: number
 ): Promise<SettingValue[]> {
   const readCtx = await resolveGoogleAdsSettingsReadContext(userId)
   const oauthFields = await getGoogleAdsOAuthConfigFields(readCtx.oauthUserId)
-  const testFields = await getGoogleAdsTestOAuthConfigFields(readCtx.testUserId)
-
-  const valueByKey: Record<string, string> = {
-    ...oauthFields,
-    ...testFields,
-  }
 
   return settings.map((setting) => {
     if (setting.category !== 'google_ads' || !isCredentialBackedGoogleAdsSettingKey(setting.key)) {
       return setting
     }
-    const stored = valueByKey[setting.key]
+    const stored = oauthFields[setting.key as GoogleAdsOAuthConfigKey]
     if (!stored) {
       return setting
     }
@@ -423,81 +343,6 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
   return { synced: true, oauthClientCredentialsChanged }
 }
 
-export async function upsertGoogleAdsTestOAuthConfigFromSettings(
-  userId: number,
-  fields: Partial<Record<GoogleAdsTestOAuthConfigKey, string>>
-): Promise<void> {
-  const existing = await getGoogleAdsTestCredentialRowByUserId(userId)
-
-  const setClauses: string[] = []
-  const params: unknown[] = []
-
-  for (const [settingKey, column] of Object.entries(TEST_KEY_TO_COLUMN) as Array<
-    [GoogleAdsTestOAuthConfigKey, keyof GoogleAdsTestCredentials]
-  >) {
-    const raw = fields[settingKey]
-    if (!raw?.trim()) continue
-    if (settingKey === 'test_developer_token') {
-      const developerToken = raw.trim()
-      const clientSecretForCheck =
-        fields.test_client_secret?.trim() || String(existing?.client_secret || '').trim()
-      if (developerTokenLooksInvalid(developerToken, clientSecretForCheck)) {
-        throw new GoogleAdsSettingsValidationError(
-          'Developer Token 配置看起来不正确（疑似误填为 OAuth Client Secret）。请在设置页面填写 Google Ads API Center 提供的 Developer Token。'
-        )
-      }
-    }
-    const value =
-      settingKey === 'test_login_customer_id'
-        ? validateLoginCustomerIdForSettings(raw.trim(), 'test_login_customer_id')
-        : raw.trim()
-    setClauses.push(`${String(column)} = ?`)
-    params.push(value)
-  }
-
-  if (setClauses.length === 0) {
-    return
-  }
-
-  const db = await getDatabase()
-  const nowSql = sqlNowFunc(db.type)
-  const isActiveValue = db.type === 'postgres' ? true : 1
-
-  if (existing) {
-    await db.exec(
-      `UPDATE google_ads_test_credentials SET ${setClauses.join(', ')}, is_active = ?, updated_at = ${nowSql} WHERE user_id = ?`,
-      [...params, isActiveValue, userId]
-    )
-    return
-  }
-
-  const merged = await getGoogleAdsTestOAuthConfigFields(userId)
-  for (const settingKey of GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS) {
-    if (fields[settingKey]?.trim()) {
-      merged[settingKey] =
-        settingKey === 'test_login_customer_id'
-          ? validateLoginCustomerIdForSettings(fields[settingKey]!.trim(), 'test_login_customer_id')
-          : fields[settingKey]!.trim()
-    }
-  }
-
-  await db.exec(
-    `INSERT INTO google_ads_test_credentials (
-      user_id, client_id, client_secret, refresh_token,
-      developer_token, login_customer_id, is_active, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ${nowSql})`,
-    [
-      userId,
-      merged.test_client_id,
-      merged.test_client_secret,
-      '',
-      merged.test_developer_token,
-      merged.test_login_customer_id || null,
-      isActiveValue,
-    ]
-  )
-}
-
 /**
  * 一次性：将 system_settings 中遗留的 OAuth 用户实例迁移到凭证表并删除重复行。
  */
@@ -523,19 +368,11 @@ export async function migrateLegacyGoogleAdsSettingsStorage(): Promise<void> {
 
   for (const { user_id: userId } of users) {
     const oauthPatch: Partial<Record<GoogleAdsOAuthConfigKey, string>> = {}
-    const testPatch: Partial<Record<GoogleAdsTestOAuthConfigKey, string>> = {}
 
     for (const key of GOOGLE_ADS_OAUTH_CONFIG_KEYS) {
       const legacy = await getUserOnlySetting('google_ads', key, userId)
       if (legacy?.value?.trim()) {
         oauthPatch[key] = legacy.value.trim()
-      }
-    }
-
-    for (const key of GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS) {
-      const legacy = await getUserOnlySetting('google_ads', key, userId)
-      if (legacy?.value?.trim()) {
-        testPatch[key] = legacy.value.trim()
       }
     }
 
@@ -558,21 +395,6 @@ export async function migrateLegacyGoogleAdsSettingsStorage(): Promise<void> {
       await upsertGoogleAdsOAuthConfigFromSettings(userId, mergedOauth, {
         skipAuthContextInvalidate: true,
       })
-    }
-
-    const testFields = await getGoogleAdsTestOAuthConfigFields(userId)
-    const mergedTest: Partial<Record<GoogleAdsTestOAuthConfigKey, string>> = {}
-    for (const key of GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS) {
-      const fromCredential = testFields[key]
-      const fromLegacy = testPatch[key]
-      const chosen = fromCredential || fromLegacy
-      if (chosen) {
-        mergedTest[key] = chosen
-      }
-    }
-
-    if (Object.keys(mergedTest).length > 0) {
-      await upsertGoogleAdsTestOAuthConfigFromSettings(userId, mergedTest)
     }
   }
 
