@@ -201,7 +201,8 @@ describe('settings single-key route google_ads credential store', () => {
     expect(res.status).toBe(200)
     expect(settingsStoreFns.getGoogleAdsCredentialBackedSettingValue).toHaveBeenCalledWith(
       3,
-      'client_id'
+      'client_id',
+      { isSensitive: true }
     )
     expect(payload.setting.value).toBe('123.apps.googleusercontent.com')
   })
@@ -226,7 +227,8 @@ describe('settings single-key route google_ads credential store', () => {
     expect(settingsStoreFns.upsertSingleGoogleAdsCredentialBackedSetting).toHaveBeenCalledWith(
       3,
       'client_id',
-      'new-id.apps.googleusercontent.com'
+      'new-id.apps.googleusercontent.com',
+      { skipAuthContextInvalidate: true }
     )
     expect(settingsFns.updateSetting).not.toHaveBeenCalled()
     expect(payload.oauthReauthRequired).toBe(true)

@@ -6,6 +6,7 @@ import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignme
 import {
   getGoogleAdsCredentialBackedSettingValue,
   isGoogleAdsCredentialBackedSettingKey,
+  isGoogleAdsSettingsValidationError,
   upsertSingleGoogleAdsCredentialBackedSetting,
 } from '@/lib/google-ads-settings-store'
 import { z } from 'zod'
@@ -48,7 +49,9 @@ export async function GET(
 
     let value = setting.value
     if (category === 'google_ads' && userIdNum && isGoogleAdsCredentialBackedSettingKey(key)) {
-      const stored = await getGoogleAdsCredentialBackedSettingValue(userIdNum, key)
+      const stored = await getGoogleAdsCredentialBackedSettingValue(userIdNum, key, {
+        isSensitive: setting.isSensitive,
+      })
       if (stored) {
         value = stored
       }
@@ -133,7 +136,12 @@ export async function PUT(
       }
 
       try {
-        const syncResult = await upsertSingleGoogleAdsCredentialBackedSetting(userIdNum, key, value)
+        const syncResult = await upsertSingleGoogleAdsCredentialBackedSetting(
+          userIdNum,
+          key,
+          value,
+          { skipAuthContextInvalidate: true }
+        )
 
         const { invalidateGoogleAdsAuthContextForCredentialUser } =
           await import('@/lib/google-ads-auth-context')
@@ -149,7 +157,8 @@ export async function PUT(
         })
       } catch (saveError: unknown) {
         const message = saveError instanceof Error ? saveError.message : '保存 Google Ads 配置失败'
-        return NextResponse.json({ error: message }, { status: 400 })
+        const status = isGoogleAdsSettingsValidationError(saveError) ? 400 : 500
+        return NextResponse.json({ error: message }, { status })
       }
     }
 

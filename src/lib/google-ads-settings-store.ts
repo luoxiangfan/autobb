@@ -4,7 +4,11 @@
  */
 import { getDatabase } from './db'
 import { nowFunc as sqlNowFunc } from './db-helpers'
-import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import {
+  getGoogleAdsAuthAssignment,
+  isGoogleAdsAuthShared,
+  resolveGoogleAdsCredentialOwnerId,
+} from './google-ads-auth-assignment'
 import { formatAndValidateLoginCustomerId, type GoogleAdsCredentials } from './google-ads-oauth'
 import { developerTokenLooksInvalid } from './google-ads-developer-token-heal'
 import { getUserOnlySetting } from './settings'
@@ -56,6 +60,50 @@ export type SyncGoogleAdsOAuthFieldsResult = {
   oauthClientCredentialsChanged: boolean
 }
 
+export class GoogleAdsSettingsValidationError extends Error {
+  readonly name = 'GoogleAdsSettingsValidationError'
+
+  constructor(message: string) {
+    super(message)
+  }
+}
+
+export function isGoogleAdsSettingsValidationError(error: unknown): boolean {
+  return error instanceof GoogleAdsSettingsValidationError
+}
+
+/** 共享 OAuth 子用户只读：Settings API 不返回明文密钥 */
+export async function isGoogleAdsSettingsReadOnly(userId: number): Promise<boolean> {
+  const assignment = await getGoogleAdsAuthAssignment(userId)
+  return isGoogleAdsAuthShared(assignment)
+}
+
+export function maskGoogleAdsCredentialSettingValueForReadOnly(
+  key: string,
+  value: string,
+  isSensitive?: boolean
+): string {
+  if (!value) return ''
+  if (isSensitive || key === 'client_secret' || key === 'test_client_secret') return ''
+  if (key === 'developer_token' || key === 'test_developer_token') return ''
+  if (key === 'client_id' || key === 'test_client_id') {
+    if (value.length <= 12) return '***'
+    return `${value.slice(0, 8)}...${value.slice(-4)}`
+  }
+  return value
+}
+
+function validateLoginCustomerIdForSettings(raw: string, fieldName?: string): string {
+  try {
+    return formatAndValidateLoginCustomerId(raw, fieldName)
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new GoogleAdsSettingsValidationError(error.message)
+    }
+    throw error
+  }
+}
+
 const LEGACY_OAUTH_SETTING_KEYS = [
   ...GOOGLE_ADS_OAUTH_CONFIG_KEYS,
   ...GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS,
@@ -101,29 +149,42 @@ export function collectCredentialBackedFieldUpdates(
 
 export async function getGoogleAdsCredentialBackedSettingValue(
   userId: number,
-  key: string
+  key: string,
+  options?: { isSensitive?: boolean }
 ): Promise<string> {
   if (!isCredentialBackedGoogleAdsSettingKey(key)) {
     return ''
   }
   const credentialUserId = await resolveGoogleAdsOAuthSettingsReadUserId(userId)
+  let raw = ''
   if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
     const fields = await getGoogleAdsOAuthConfigFields(credentialUserId)
-    return fields[key as GoogleAdsOAuthConfigKey]
+    raw = fields[key as GoogleAdsOAuthConfigKey]
+  } else {
+    const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
+    raw = testFields[key as GoogleAdsTestOAuthConfigKey]
   }
-  const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
-  return testFields[key as GoogleAdsTestOAuthConfigKey]
+  if (!raw) return ''
+  if (await isGoogleAdsSettingsReadOnly(userId)) {
+    return maskGoogleAdsCredentialSettingValueForReadOnly(key, raw, options?.isSensitive)
+  }
+  return raw
 }
 
 export async function upsertSingleGoogleAdsCredentialBackedSetting(
   userId: number,
   key: string,
-  value: string
+  value: string,
+  options?: { skipAuthContextInvalidate?: boolean }
 ): Promise<SyncGoogleAdsOAuthFieldsResult | null> {
   if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
-    return upsertGoogleAdsOAuthConfigFromSettings(userId, {
-      [key as GoogleAdsOAuthConfigKey]: value,
-    })
+    return upsertGoogleAdsOAuthConfigFromSettings(
+      userId,
+      {
+        [key as GoogleAdsOAuthConfigKey]: value,
+      },
+      options
+    )
   }
   if ((GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
     await upsertGoogleAdsTestOAuthConfigFromSettings(userId, {
@@ -202,6 +263,7 @@ export async function overlayGoogleAdsSettingsFromCredentialStore(
   settings: SettingValue[],
   userId: number
 ): Promise<SettingValue[]> {
+  const readOnly = await isGoogleAdsSettingsReadOnly(userId)
   const credentialUserId = await resolveGoogleAdsOAuthSettingsReadUserId(userId)
   const oauthFields = await getGoogleAdsOAuthConfigFields(credentialUserId)
   const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
@@ -219,7 +281,10 @@ export async function overlayGoogleAdsSettingsFromCredentialStore(
     if (!stored) {
       return setting
     }
-    return { ...setting, value: stored }
+    const value = readOnly
+      ? maskGoogleAdsCredentialSettingValueForReadOnly(setting.key, stored, setting.isSensitive)
+      : stored
+    return { ...setting, value }
   })
 }
 
@@ -282,7 +347,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     const clientSecretForCheck =
       fields.client_secret?.trim() || String(existing?.client_secret || '').trim()
     if (developerTokenLooksInvalid(developerToken, clientSecretForCheck)) {
-      throw new Error(
+      throw new GoogleAdsSettingsValidationError(
         'Developer Token 配置看起来不正确（疑似误填为 OAuth Client Secret）。请在设置页面填写 Google Ads API Center 提供的 Developer Token。'
       )
     }
@@ -291,7 +356,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
   }
   if (fields.login_customer_id?.trim()) {
     setClauses.push('login_customer_id = ?')
-    params.push(formatAndValidateLoginCustomerId(fields.login_customer_id.trim()))
+    params.push(validateLoginCustomerIdForSettings(fields.login_customer_id.trim()))
   }
 
   if (setClauses.length === 0) {
@@ -313,7 +378,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     if (fields.client_secret?.trim()) merged.client_secret = fields.client_secret.trim()
     if (fields.developer_token?.trim()) merged.developer_token = fields.developer_token.trim()
     if (fields.login_customer_id?.trim()) {
-      merged.login_customer_id = formatAndValidateLoginCustomerId(fields.login_customer_id.trim())
+      merged.login_customer_id = validateLoginCustomerIdForSettings(fields.login_customer_id.trim())
     }
 
     await db.exec(
@@ -358,7 +423,7 @@ export async function upsertGoogleAdsTestOAuthConfigFromSettings(
     if (!raw?.trim()) continue
     const value =
       settingKey === 'test_login_customer_id'
-        ? formatAndValidateLoginCustomerId(raw.trim(), 'test_login_customer_id')
+        ? validateLoginCustomerIdForSettings(raw.trim(), 'test_login_customer_id')
         : raw.trim()
     setClauses.push(`${String(column)} = ?`)
     params.push(value)
@@ -385,7 +450,7 @@ export async function upsertGoogleAdsTestOAuthConfigFromSettings(
     if (fields[settingKey]?.trim()) {
       merged[settingKey] =
         settingKey === 'test_login_customer_id'
-          ? formatAndValidateLoginCustomerId(fields[settingKey]!.trim(), 'test_login_customer_id')
+          ? validateLoginCustomerIdForSettings(fields[settingKey]!.trim(), 'test_login_customer_id')
           : fields[settingKey]!.trim()
     }
   }

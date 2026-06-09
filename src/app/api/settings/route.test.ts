@@ -18,6 +18,51 @@ const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
 }))
 
+const cacheFns = vi.hoisted(() => ({
+  invalidateGadsApiCacheForUser: vi.fn(),
+}))
+
+const authAssignmentFns = vi.hoisted(() => ({
+  assertUserCanModifyGoogleAdsAuth: vi.fn(),
+}))
+
+const authContextFns = vi.hoisted(() => ({
+  invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(async () => {}),
+}))
+
+const settingsStoreFns = vi.hoisted(() => ({
+  upsertGoogleAdsOAuthConfigFromSettings: vi.fn(),
+  upsertGoogleAdsTestOAuthConfigFromSettings: vi.fn(),
+  overlayGoogleAdsSettingsFromCredentialStore: vi.fn(
+    async (settings: unknown[]) => settings as unknown[]
+  ),
+}))
+
+vi.mock('@/lib/google-ads-auth-assignment', () => ({
+  assertUserCanModifyGoogleAdsAuth: authAssignmentFns.assertUserCanModifyGoogleAdsAuth,
+}))
+
+vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-settings-store')>()
+  return {
+    ...actual,
+    upsertGoogleAdsOAuthConfigFromSettings: settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings,
+    upsertGoogleAdsTestOAuthConfigFromSettings:
+      settingsStoreFns.upsertGoogleAdsTestOAuthConfigFromSettings,
+    overlayGoogleAdsSettingsFromCredentialStore:
+      settingsStoreFns.overlayGoogleAdsSettingsFromCredentialStore,
+  }
+})
+
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  invalidateGoogleAdsAuthContextForCredentialUser:
+    authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
+}))
+
+vi.mock('@/lib/cache', () => ({
+  invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
+}))
+
 vi.mock('@/lib/settings', () => ({
   clearUserSettings: settingsFns.clearUserSettings,
   getAllSettings: settingsFns.getAllSettings,
@@ -39,7 +84,17 @@ describe('settings route affiliate sync safeguards', () => {
     vi.clearAllMocks()
     dbFns.getDatabase.mockResolvedValue({
       queryOne: vi.fn().mockResolvedValue(null),
+      transaction: vi.fn(async (cb: () => Promise<void>) => cb()),
     })
+    authAssignmentFns.assertUserCanModifyGoogleAdsAuth.mockResolvedValue(undefined)
+    settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockResolvedValue({
+      synced: true,
+      oauthClientCredentialsChanged: false,
+    })
+    settingsStoreFns.upsertGoogleAdsTestOAuthConfigFromSettings.mockResolvedValue(undefined)
+    settingsStoreFns.overlayGoogleAdsSettingsFromCredentialStore.mockImplementation(
+      async (settings) => settings
+    )
     settingsFns.getAllSettings.mockResolvedValue([
       {
         category: 'affiliate_sync',
@@ -263,5 +318,111 @@ describe('settings route affiliate sync safeguards', () => {
     expect(res.status).toBe(401)
     expect(payload.error).toContain('需要登录')
     expect(settingsFns.clearUserSettings).not.toHaveBeenCalled()
+  })
+})
+
+describe('settings route google ads credential store', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    dbFns.getDatabase.mockResolvedValue({
+      queryOne: vi.fn().mockResolvedValue(null),
+      transaction: vi.fn(async (cb: () => Promise<void>) => cb()),
+    })
+    authAssignmentFns.assertUserCanModifyGoogleAdsAuth.mockResolvedValue(undefined)
+    settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockResolvedValue({
+      synced: true,
+      oauthClientCredentialsChanged: true,
+    })
+    settingsStoreFns.upsertGoogleAdsTestOAuthConfigFromSettings.mockResolvedValue(undefined)
+    settingsStoreFns.overlayGoogleAdsSettingsFromCredentialStore.mockImplementation(
+      async (settings) => settings
+    )
+    settingsFns.updateSettings.mockResolvedValue(undefined)
+  })
+
+  it('saves credential-backed and remainder google_ads updates in one transaction', async () => {
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '7',
+      },
+      body: JSON.stringify({
+        updates: [
+          { category: 'google_ads', key: 'client_id', value: 'cid-new.apps.googleusercontent.com' },
+          { category: 'google_ads', key: 'campaign_sync_enabled', value: '1' },
+        ],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+    const db = await dbFns.getDatabase.mock.results[0]?.value
+
+    expect(res.status).toBe(200)
+    expect(payload.success).toBe(true)
+    expect(payload.oauthReauthRequired).toBe(true)
+    expect(db.transaction).toHaveBeenCalledTimes(1)
+    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).toHaveBeenCalledWith(
+      7,
+      { client_id: 'cid-new.apps.googleusercontent.com' },
+      { skipAuthContextInvalidate: true }
+    )
+    expect(settingsFns.updateSettings).toHaveBeenCalledWith(
+      [{ category: 'google_ads', key: 'campaign_sync_enabled', value: '1' }],
+      7
+    )
+    expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(7)
+    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(7)
+  })
+
+  it('returns 400 for google ads validation errors', async () => {
+    const { GoogleAdsSettingsValidationError } = await import('@/lib/google-ads-settings-store')
+    settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockRejectedValue(
+      new GoogleAdsSettingsValidationError('Developer Token 配置看起来不正确')
+    )
+
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '7',
+      },
+      body: JSON.stringify({
+        updates: [{ category: 'google_ads', key: 'developer_token', value: 'bad-token' }],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+
+    expect(res.status).toBe(400)
+    expect(payload.error).toContain('Developer Token')
+    expect(settingsFns.updateSettings).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 for unexpected google ads save errors', async () => {
+    settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockRejectedValue(
+      new Error('database unavailable')
+    )
+
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '7',
+      },
+      body: JSON.stringify({
+        updates: [
+          { category: 'google_ads', key: 'client_id', value: 'cid-new.apps.googleusercontent.com' },
+        ],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+
+    expect(res.status).toBe(500)
+    expect(payload.error).toContain('database unavailable')
   })
 })

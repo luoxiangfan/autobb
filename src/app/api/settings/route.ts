@@ -21,6 +21,7 @@ import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import {
   collectCredentialBackedFieldUpdates,
+  isGoogleAdsSettingsValidationError,
   overlayGoogleAdsSettingsFromCredentialStore,
   partitionGoogleAdsSettingUpdates,
   upsertGoogleAdsOAuthConfigFromSettings,
@@ -356,34 +357,38 @@ export async function PUT(request: NextRequest) {
     let oauthReauthRequired = false
 
     try {
-      const db = await getDatabase()
-      await db.transaction(async () => {
-        if (credentialBacked.length > 0 && userIdNum) {
-          const { oauthFields, testFields } = collectCredentialBackedFieldUpdates(credentialBacked)
+      if (credentialBacked.length > 0 || remainder.length > 0) {
+        const db = await getDatabase()
+        await db.transaction(async () => {
+          if (credentialBacked.length > 0 && userIdNum) {
+            const { oauthFields, testFields } =
+              collectCredentialBackedFieldUpdates(credentialBacked)
 
-          if (Object.keys(oauthFields).length > 0) {
-            const syncResult = await upsertGoogleAdsOAuthConfigFromSettings(
-              userIdNum,
-              oauthFields,
-              {
-                skipAuthContextInvalidate: true,
-              }
-            )
-            oauthReauthRequired = syncResult.oauthClientCredentialsChanged
+            if (Object.keys(oauthFields).length > 0) {
+              const syncResult = await upsertGoogleAdsOAuthConfigFromSettings(
+                userIdNum,
+                oauthFields,
+                {
+                  skipAuthContextInvalidate: true,
+                }
+              )
+              oauthReauthRequired = syncResult.oauthClientCredentialsChanged
+            }
+            if (Object.keys(testFields).length > 0) {
+              await upsertGoogleAdsTestOAuthConfigFromSettings(userIdNum, testFields)
+            }
           }
-          if (Object.keys(testFields).length > 0) {
-            await upsertGoogleAdsTestOAuthConfigFromSettings(userIdNum, testFields)
-          }
-        }
 
-        if (remainder.length > 0) {
-          await updateSettings(remainder, userIdNum)
-        }
-      })
+          if (remainder.length > 0) {
+            await updateSettings(remainder, userIdNum)
+          }
+        })
+      }
     } catch (saveError: unknown) {
       const message =
         saveError instanceof Error ? saveError.message : '保存 Google Ads OAuth 配置失败'
-      return NextResponse.json({ error: message }, { status: 400 })
+      const status = isGoogleAdsSettingsValidationError(saveError) ? 400 : 500
+      return NextResponse.json({ error: message }, { status })
     }
 
     // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存
