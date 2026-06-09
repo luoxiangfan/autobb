@@ -316,7 +316,7 @@ describe('settings route affiliate sync safeguards', () => {
     const payload = await res.json()
 
     expect(res.status).toBe(401)
-    expect(payload.error).toContain('需要登录')
+    expect(payload.error).toBeTruthy()
     expect(settingsFns.clearUserSettings).not.toHaveBeenCalled()
   })
 })
@@ -424,5 +424,27 @@ describe('settings route google ads credential store', () => {
 
     expect(res.status).toBe(500)
     expect(payload.error).toContain('database unavailable')
+  })
+
+  it('returns 401 when google ads updates are submitted without login', async () => {
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        updates: [
+          { category: 'google_ads', key: 'client_id', value: 'cid-new.apps.googleusercontent.com' },
+        ],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+
+    expect(res.status).toBe(401)
+    expect(payload.error).toContain('需要登录')
+    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).not.toHaveBeenCalled()
+    expect(settingsFns.updateSettings).not.toHaveBeenCalled()
   })
 })

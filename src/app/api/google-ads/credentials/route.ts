@@ -140,6 +140,7 @@ export async function GET(request: NextRequest) {
 
     const ctx = await getGoogleAdsAuthContext(userId)
     const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
+    const exposeDeveloperToken = ctx.canModify
 
     let sharedAdminEmail: string | null = null
     let sharedAdminUsername: string | null = null
@@ -154,7 +155,12 @@ export async function GET(request: NextRequest) {
       data: {
         hasCredentials: true,
         clientId: statusFields.clientId,
-        developerToken: statusFields.developerToken,
+        developerToken: exposeDeveloperToken ? statusFields.developerToken : null,
+        ...(exposeDeveloperToken
+          ? {}
+          : statusFields.developerToken
+            ? { developerTokenConfigured: true }
+            : {}),
         loginCustomerId: statusFields.loginCustomerId,
         hasRefreshToken: statusFields.hasRefreshToken,
         hasServiceAccount: statusFields.hasServiceAccount,

@@ -128,6 +128,7 @@ interface GoogleAdsCredentialStatus {
   authType?: 'oauth' | 'service_account'
   clientId?: string | null
   developerToken?: string | null
+  developerTokenConfigured?: boolean
   loginCustomerId?: string
   apiAccessLevel?: 'test' | 'explorer' | 'basic' | 'standard'
   lastVerifiedAt?: string
@@ -530,6 +531,24 @@ export default function SettingsPage() {
   >(null)
   const [permissionError, setPermissionError] = useState<any | null>(null)
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
+
+  const isGoogleAdsSharedAdminHiddenSecret = (category: string, key: string, value: string) => {
+    if (category !== 'google_ads' || !googleAdsAuthReadOnly || value?.trim()) {
+      return false
+    }
+    if (key !== 'client_secret' && key !== 'developer_token') {
+      return false
+    }
+    if (key === 'developer_token') {
+      return Boolean(
+        googleAdsCredentialStatus?.developerTokenConfigured ||
+        googleAdsCredentialStatus?.developerToken
+      )
+    }
+    return Boolean(
+      googleAdsCredentialStatus?.hasCredentials || googleAdsCredentialStatus?.hasRefreshToken
+    )
+  }
 
   /**
    * 处理401未授权错误 - 跳转到登录页
@@ -1703,8 +1722,10 @@ export default function SettingsPage() {
     if (setting.isSensitive) {
       const fieldKey = `${category}.${setting.key}`
       const isEditing = editingField === fieldKey
-      const hasValue = value && value.trim() !== ''
+      const sharedAdminHidden = isGoogleAdsSharedAdminHiddenSecret(category, setting.key, value)
+      const hasValue = Boolean(value?.trim()) || sharedAdminHidden
       const displayValue = isEditing ? value : hasValue ? '············' : ''
+      const sensitiveReadOnly = googleAdsAuthReadOnly || isReadOnlySetting(category, setting.key)
 
       return (
         <div className="space-y-1">
@@ -1714,7 +1735,10 @@ export default function SettingsPage() {
             onChange={(e) => handleInputChange(category, setting.key, e.target.value)}
             placeholder={metadata?.placeholder || ''}
             className={hasValue ? 'border-green-300' : ''}
+            readOnly={sensitiveReadOnly}
+            disabled={sensitiveReadOnly}
             onFocus={() => {
+              if (sensitiveReadOnly) return
               setEditingField(fieldKey)
               if (hasValue && !isEditing) {
                 handleInputChange(category, setting.key, '')
@@ -1727,7 +1751,7 @@ export default function SettingsPage() {
           {hasValue && !isEditing && (
             <p className="text-caption text-green-600 flex items-center gap-1">
               <CheckCircle2 className="w-3 h-3" />
-              已配置（点击输入框可修改）
+              {sharedAdminHidden ? '已由管理员配置（不可见）' : '已配置（点击输入框可修改）'}
             </p>
           )}
         </div>

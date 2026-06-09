@@ -236,6 +236,9 @@ export async function PUT(request: NextRequest) {
     const { updates } = validationResult.data
 
     const hasGoogleAdsUpdate = updates.some((update) => update.category === 'google_ads')
+    if (hasGoogleAdsUpdate && !userIdNum) {
+      return NextResponse.json({ error: '更新 Google Ads 配置需要登录' }, { status: 401 })
+    }
     if (hasGoogleAdsUpdate && userIdNum) {
       try {
         await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)

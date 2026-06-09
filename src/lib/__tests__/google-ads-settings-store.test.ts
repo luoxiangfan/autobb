@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const assignmentFns = vi.hoisted(() => ({
-  getGoogleAdsAuthAssignment: vi.fn(),
   isGoogleAdsAuthShared: vi.fn(),
   resolveGoogleAdsCredentialOwnerId: vi.fn(),
 }))
@@ -12,7 +11,6 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/google-ads-auth-assignment', () => ({
-  getGoogleAdsAuthAssignment: assignmentFns.getGoogleAdsAuthAssignment,
   isGoogleAdsAuthShared: assignmentFns.isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
 }))
@@ -84,9 +82,6 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
       ownerUserId: 5,
       isShared: true,
       assignment: { authType: 'oauth', assignmentMode: 'shared_admin' },
-    })
-    assignmentFns.getGoogleAdsAuthAssignment.mockResolvedValue({
-      assignmentMode: 'shared_admin',
     })
     assignmentFns.isGoogleAdsAuthShared.mockReturnValue(true)
     dbFns.queryOne.mockImplementation(async (sql: string) => {
@@ -164,5 +159,69 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
     expect(byKey.client_id).toBe('12345678....com')
     expect(byKey.client_secret).toBe('')
     expect(byKey.developer_token).toBe('')
+  })
+
+  it('reads test oauth fields from current user not shared admin', async () => {
+    assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
+      ownerUserId: 99,
+      isShared: true,
+      assignment: { authType: 'oauth', assignmentMode: 'shared_admin' },
+    })
+    assignmentFns.isGoogleAdsAuthShared.mockReturnValue(false)
+
+    dbFns.queryOne.mockImplementation(async (sql: string, params?: unknown[]) => {
+      if (String(sql).includes('google_ads_credentials')) {
+        expect(params?.[0]).toBe(99)
+        return {
+          login_customer_id: '1234567890',
+          client_id: '123456789012345678901.apps.googleusercontent.com',
+          client_secret: 'plain-secret',
+          developer_token: 'plain-dev-token',
+        }
+      }
+      if (String(sql).includes('google_ads_test_credentials')) {
+        expect(params?.[0]).toBe(5)
+        return {
+          login_customer_id: '9876543210',
+          client_id: '555555555555555555555.apps.googleusercontent.com',
+          client_secret: 'test-secret',
+          developer_token: 'test-dev-token',
+        }
+      }
+      return null
+    })
+
+    const settings = [
+      {
+        category: 'google_ads',
+        key: 'test_client_id',
+        value: '',
+        dataType: 'string',
+        isSensitive: false,
+        isRequired: false,
+        validationStatus: null,
+        validationMessage: null,
+        lastValidatedAt: null,
+        description: '',
+      },
+      {
+        category: 'google_ads',
+        key: 'client_id',
+        value: '',
+        dataType: 'string',
+        isSensitive: false,
+        isRequired: false,
+        validationStatus: null,
+        validationMessage: null,
+        lastValidatedAt: null,
+        description: '',
+      },
+    ]
+
+    const overlaid = await overlayGoogleAdsSettingsFromCredentialStore(settings, 5)
+    const byKey = Object.fromEntries(overlaid.map((item) => [item.key, item.value]))
+
+    expect(byKey.client_id).toBe('123456789012345678901.apps.googleusercontent.com')
+    expect(byKey.test_client_id).toBe('555555555555555555555.apps.googleusercontent.com')
   })
 })

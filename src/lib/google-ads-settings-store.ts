@@ -5,7 +5,6 @@
 import { getDatabase } from './db'
 import { nowFunc as sqlNowFunc } from './db-helpers'
 import {
-  getGoogleAdsAuthAssignment,
   isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId,
 } from './google-ads-auth-assignment'
@@ -72,10 +71,31 @@ export function isGoogleAdsSettingsValidationError(error: unknown): boolean {
   return error instanceof GoogleAdsSettingsValidationError
 }
 
+export type GoogleAdsSettingsReadContext = {
+  readOnly: boolean
+  /** 生产 OAuth 字段读取目标 user_id（共享 OAuth 时为管理员） */
+  oauthUserId: number
+  /** 测试 OAuth 字段始终读当前用户 */
+  testUserId: number
+}
+
+/** 一次解析：只读标记 + 生产/测试凭证各自的 user_id */
+export async function resolveGoogleAdsSettingsReadContext(
+  userId: number
+): Promise<GoogleAdsSettingsReadContext> {
+  const { ownerUserId, assignment, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
+  const oauthUserId = isShared && assignment?.authType === 'oauth' ? ownerUserId : userId
+  return {
+    readOnly: isGoogleAdsAuthShared(assignment),
+    oauthUserId,
+    testUserId: userId,
+  }
+}
+
 /** 共享 OAuth 子用户只读：Settings API 不返回明文密钥 */
 export async function isGoogleAdsSettingsReadOnly(userId: number): Promise<boolean> {
-  const assignment = await getGoogleAdsAuthAssignment(userId)
-  return isGoogleAdsAuthShared(assignment)
+  const ctx = await resolveGoogleAdsSettingsReadContext(userId)
+  return ctx.readOnly
 }
 
 export function maskGoogleAdsCredentialSettingValueForReadOnly(
@@ -119,11 +139,8 @@ export function isGoogleAdsCredentialBackedSettingKey(key: string): boolean {
 
 /** 共享 OAuth 读管理员凭证行；其余读当前用户 */
 export async function resolveGoogleAdsOAuthSettingsReadUserId(userId: number): Promise<number> {
-  const { ownerUserId, assignment, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
-  if (isShared && assignment?.authType === 'oauth') {
-    return ownerUserId
-  }
-  return userId
+  const ctx = await resolveGoogleAdsSettingsReadContext(userId)
+  return ctx.oauthUserId
 }
 
 export function collectCredentialBackedFieldUpdates(
@@ -155,17 +172,17 @@ export async function getGoogleAdsCredentialBackedSettingValue(
   if (!isCredentialBackedGoogleAdsSettingKey(key)) {
     return ''
   }
-  const credentialUserId = await resolveGoogleAdsOAuthSettingsReadUserId(userId)
+  const readCtx = await resolveGoogleAdsSettingsReadContext(userId)
   let raw = ''
   if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
-    const fields = await getGoogleAdsOAuthConfigFields(credentialUserId)
+    const fields = await getGoogleAdsOAuthConfigFields(readCtx.oauthUserId)
     raw = fields[key as GoogleAdsOAuthConfigKey]
   } else {
-    const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
+    const testFields = await getGoogleAdsTestOAuthConfigFields(readCtx.testUserId)
     raw = testFields[key as GoogleAdsTestOAuthConfigKey]
   }
   if (!raw) return ''
-  if (await isGoogleAdsSettingsReadOnly(userId)) {
+  if (readCtx.readOnly) {
     return maskGoogleAdsCredentialSettingValueForReadOnly(key, raw, options?.isSensitive)
   }
   return raw
@@ -263,10 +280,9 @@ export async function overlayGoogleAdsSettingsFromCredentialStore(
   settings: SettingValue[],
   userId: number
 ): Promise<SettingValue[]> {
-  const readOnly = await isGoogleAdsSettingsReadOnly(userId)
-  const credentialUserId = await resolveGoogleAdsOAuthSettingsReadUserId(userId)
-  const oauthFields = await getGoogleAdsOAuthConfigFields(credentialUserId)
-  const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
+  const readCtx = await resolveGoogleAdsSettingsReadContext(userId)
+  const oauthFields = await getGoogleAdsOAuthConfigFields(readCtx.oauthUserId)
+  const testFields = await getGoogleAdsTestOAuthConfigFields(readCtx.testUserId)
 
   const valueByKey: Record<string, string> = {
     ...oauthFields,
@@ -281,7 +297,7 @@ export async function overlayGoogleAdsSettingsFromCredentialStore(
     if (!stored) {
       return setting
     }
-    const value = readOnly
+    const value = readCtx.readOnly
       ? maskGoogleAdsCredentialSettingValueForReadOnly(setting.key, stored, setting.isSensitive)
       : stored
     return { ...setting, value }
@@ -421,6 +437,16 @@ export async function upsertGoogleAdsTestOAuthConfigFromSettings(
   >) {
     const raw = fields[settingKey]
     if (!raw?.trim()) continue
+    if (settingKey === 'test_developer_token') {
+      const developerToken = raw.trim()
+      const clientSecretForCheck =
+        fields.test_client_secret?.trim() || String(existing?.client_secret || '').trim()
+      if (developerTokenLooksInvalid(developerToken, clientSecretForCheck)) {
+        throw new GoogleAdsSettingsValidationError(
+          'Developer Token 配置看起来不正确（疑似误填为 OAuth Client Secret）。请在设置页面填写 Google Ads API Center 提供的 Developer Token。'
+        )
+      }
+    }
     const value =
       settingKey === 'test_login_customer_id'
         ? validateLoginCustomerIdForSettings(raw.trim(), 'test_login_customer_id')
@@ -529,7 +555,9 @@ export async function migrateLegacyGoogleAdsSettingsStorage(): Promise<void> {
     }
 
     if (Object.keys(mergedOauth).length > 0) {
-      await upsertGoogleAdsOAuthConfigFromSettings(userId, mergedOauth)
+      await upsertGoogleAdsOAuthConfigFromSettings(userId, mergedOauth, {
+        skipAuthContextInvalidate: true,
+      })
     }
 
     const testFields = await getGoogleAdsTestOAuthConfigFields(userId)
