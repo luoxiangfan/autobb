@@ -456,52 +456,64 @@ export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<st
   return ctx.apiAccessLevel ?? null
 }
 
+async function invalidateGadsApiCacheForOwner(ownerUserId: number): Promise<void> {
+  const { invalidateGadsApiCacheForUser } = await import('./cache')
+  const { listGoogleAdsSharedDependentUserIds } = await import('./google-ads-auth-assignment')
+
+  invalidateGadsApiCacheForUser(ownerUserId)
+  const dependents = await listGoogleAdsSharedDependentUserIds(ownerUserId)
+  for (const userId of dependents) {
+    invalidateGadsApiCacheForUser(userId)
+  }
+}
+
+/** 凭证 owner 变更时失效 auth-context 与 GAds API 内存缓存（含共享子用户，单次 dependents 查询）。 */
+async function invalidateGoogleAdsCredentialCachesForOwner(ownerUserId: number): Promise<void> {
+  const { invalidateGadsApiCacheForUser } = await import('./cache')
+  const { listGoogleAdsSharedDependentUserIds } = await import('./google-ads-auth-assignment')
+
+  invalidateGoogleAdsAuthContextCache(ownerUserId)
+  invalidateGadsApiCacheForUser(ownerUserId)
+
+  const dependents = await listGoogleAdsSharedDependentUserIds(ownerUserId)
+  for (const userId of dependents) {
+    invalidateGoogleAdsAuthContextCache(userId)
+    invalidateGadsApiCacheForUser(userId)
+  }
+}
+
 /**
- * 凭证 owner 变更时失效 owner 及所有共享该 owner 的子用户缓存。
+ * 凭证 owner 变更时失效 owner 及所有共享该 owner 的子用户 auth-context 缓存。
  */
 export async function invalidateGoogleAdsAuthContextCacheForOwner(
   ownerUserId: number
 ): Promise<void> {
   invalidateGoogleAdsAuthContextCache(ownerUserId)
 
-  const db = await getDatabase()
-  const dependents = await db.query<{ user_id: number }>(
-    `SELECT user_id FROM google_ads_auth_assignments
-     WHERE shared_admin_user_id = ? AND assignment_mode = 'shared_admin'`,
-    [ownerUserId]
-  )
-  for (const row of dependents) {
-    invalidateGoogleAdsAuthContextCache(row.user_id)
+  const { listGoogleAdsSharedDependentUserIds } = await import('./google-ads-auth-assignment')
+  const dependents = await listGoogleAdsSharedDependentUserIds(ownerUserId)
+  for (const userId of dependents) {
+    invalidateGoogleAdsAuthContextCache(userId)
   }
 }
 
 /**
- * 按凭证 userId 解析 owner 后级联失效 auth-context（OAuth save/delete、服务账号 mutations 等）。
+ * 按凭证 userId 解析 owner 后级联失效 auth-context 与 GAds API 内存缓存
+ * （OAuth save/delete、服务账号 mutations、Settings OAuth 保存等）。
  */
 export async function invalidateGoogleAdsAuthContextForCredentialUser(
   credentialUserId: number
 ): Promise<void> {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
-  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
+  await invalidateGoogleAdsCredentialCachesForOwner(ownerUserId)
 }
 
 /** 按凭证 userId 解析 owner 后级联失效 GAds API 内存缓存（含共享子用户）。 */
 export async function invalidateGadsApiCacheForCredentialUser(
   credentialUserId: number
 ): Promise<void> {
-  const { invalidateGadsApiCacheForUser } = await import('./cache')
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
-  invalidateGadsApiCacheForUser(ownerUserId)
-
-  const db = await getDatabase()
-  const dependents = await db.query<{ user_id: number }>(
-    `SELECT user_id FROM google_ads_auth_assignments
-     WHERE shared_admin_user_id = ? AND assignment_mode = 'shared_admin'`,
-    [ownerUserId]
-  )
-  for (const row of dependents) {
-    invalidateGadsApiCacheForUser(row.user_id)
-  }
+  await invalidateGadsApiCacheForOwner(ownerUserId)
 }
 
 export function resolveEffectiveServiceAccountId(

@@ -19,6 +19,10 @@ const dbFns = vi.hoisted(() => ({
   type: 'sqlite' as const,
 }))
 
+const cacheFns = vi.hoisted(() => ({
+  invalidateGadsApiCacheForUser: vi.fn(),
+}))
+
 const serviceAccountFns = vi.hoisted(() => ({
   getServiceAccountConfig: vi.fn(),
   getServiceAccountConfigMetadata: vi.fn(),
@@ -61,6 +65,10 @@ vi.mock('@/lib/google-ads-oauth', () => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
+}))
+
+vi.mock('@/lib/cache', () => ({
+  invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
 }))
 
 vi.mock('@/lib/google-ads-service-account', () => ({
@@ -1045,7 +1053,7 @@ describe('invalidateGoogleAdsAuthContextForCredentialUser', () => {
     dbFns.query.mockResolvedValue([])
   })
 
-  it('resolves owner then cascades cache bust', async () => {
+  it('resolves owner then cascades auth-context and gads api cache bust', async () => {
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({
       ownerUserId: 5,
       isShared: false,
@@ -1063,5 +1071,6 @@ describe('invalidateGoogleAdsAuthContextForCredentialUser', () => {
 
     await getGoogleAdsAuthContext(5)
     expect(assignmentFns.resolveGoogleAdsCredentialOwnerId).toHaveBeenCalledTimes(3)
+    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(5)
   })
 })

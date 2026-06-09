@@ -90,6 +90,17 @@ export function isGoogleAdsAuthShared(assignment: GoogleAdsAuthAssignment | null
   return assignment?.assignmentMode === 'shared_admin'
 }
 
+/** 列出将指定用户作为共享管理员的子用户 id（用于凭证变更缓存级联失效）。 */
+export async function listGoogleAdsSharedDependentUserIds(ownerUserId: number): Promise<number[]> {
+  const db = await getDatabase()
+  const rows = await db.query<{ user_id: number }>(
+    `SELECT user_id FROM google_ads_auth_assignments
+     WHERE shared_admin_user_id = ? AND assignment_mode = 'shared_admin'`,
+    [ownerUserId]
+  )
+  return rows.map((row) => row.user_id)
+}
+
 async function canUserModifyGoogleAdsAuth(
   targetUserId: number,
   actorUserId: number,

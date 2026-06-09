@@ -24,7 +24,6 @@ const authAssignmentFns = vi.hoisted(() => ({
 
 const authContextFns = vi.hoisted(() => ({
   invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(async () => {}),
-  invalidateGadsApiCacheForCredentialUser: vi.fn(async () => {}),
 }))
 
 const settingsStoreFns = vi.hoisted(() => ({
@@ -51,7 +50,6 @@ vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
 vi.mock('@/lib/google-ads-auth-context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
-  invalidateGadsApiCacheForCredentialUser: authContextFns.invalidateGadsApiCacheForCredentialUser,
 }))
 
 vi.mock('@/lib/settings', () => ({
@@ -362,7 +360,6 @@ describe('settings route google ads credential store', () => {
       7
     )
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(7)
-    expect(authContextFns.invalidateGadsApiCacheForCredentialUser).toHaveBeenCalledWith(7)
   })
 
   it('skips oauth auth assert when updating non-credential google_ads keys only', async () => {
@@ -385,7 +382,6 @@ describe('settings route google ads credential store', () => {
     expect(authAssignmentFns.assertUserCanModifyGoogleAdsAuth).not.toHaveBeenCalled()
     expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).not.toHaveBeenCalled()
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).not.toHaveBeenCalled()
-    expect(authContextFns.invalidateGadsApiCacheForCredentialUser).not.toHaveBeenCalled()
     expect(settingsFns.updateSettings).toHaveBeenCalledWith(
       [{ category: 'google_ads', key: 'campaign_sync_enabled', value: '1' }],
       7

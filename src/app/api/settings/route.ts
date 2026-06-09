@@ -403,12 +403,9 @@ export async function PUT(request: NextRequest) {
     }
 
     if (hasGoogleAdsOAuthCredentialUpdate && userIdNum) {
-      const {
-        invalidateGoogleAdsAuthContextForCredentialUser,
-        invalidateGadsApiCacheForCredentialUser,
-      } = await import('@/lib/google-ads-auth-context')
+      const { invalidateGoogleAdsAuthContextForCredentialUser } =
+        await import('@/lib/google-ads-auth-context')
       await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
-      await invalidateGadsApiCacheForCredentialUser(userIdNum)
 
       return NextResponse.json({
         success: true,
