@@ -829,9 +829,26 @@ export async function assertNoConflictingGoogleAdsAuth(
   }
 
   const credentials = await getGoogleAdsCredentialsRaw(ownerUserId)
-  if (credentials?.refresh_token) {
+  if (ownerHasConfiguredOAuthCredentialRow(credentials)) {
     throw new Error('当前已配置 OAuth 认证，请先在设置页删除 OAuth 后再配置服务账号。')
   }
+}
+
+/** owner 凭证表存在任意 OAuth 配置字段（含未授权 refresh 的半成品） */
+function ownerHasConfiguredOAuthCredentialRow(
+  credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsRaw>>
+): boolean {
+  if (!credentials) {
+    return false
+  }
+  const hasValue = (value: string | null | undefined) => Boolean(String(value ?? '').trim())
+  return (
+    hasValue(credentials.refresh_token) ||
+    hasValue(credentials.client_id) ||
+    hasValue(credentials.client_secret) ||
+    hasValue(credentials.developer_token) ||
+    hasValue(credentials.login_customer_id)
+  )
 }
 
 export async function resolveGoogleAdsApiAuthFromContext(

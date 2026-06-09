@@ -299,12 +299,12 @@ export function partitionGoogleAdsSettingUpdates(
 export async function upsertGoogleAdsOAuthConfigFromSettings(
   userId: number,
   fields: Partial<Record<GoogleAdsOAuthConfigKey, string>>,
-  options?: { skipAuthContextInvalidate?: boolean }
+  options?: { skipAuthContextInvalidate?: boolean; skipAuthConflictCheck?: boolean }
 ): Promise<SyncGoogleAdsOAuthFieldsResult> {
   const hasOAuthFieldUpdate = (GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).some((key) =>
     fields[key as GoogleAdsOAuthConfigKey]?.trim()
   )
-  if (hasOAuthFieldUpdate) {
+  if (hasOAuthFieldUpdate && !options?.skipAuthConflictCheck) {
     try {
       const { assertNoConflictingGoogleAdsAuth } = await import('./google-ads-auth-context')
       await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
@@ -460,6 +460,7 @@ export async function migrateLegacyGoogleAdsSettingsStorage(): Promise<void> {
     if (Object.keys(mergedOauth).length > 0) {
       await upsertGoogleAdsOAuthConfigFromSettings(userId, mergedOauth, {
         skipAuthContextInvalidate: true,
+        skipAuthConflictCheck: true,
       })
     }
   }

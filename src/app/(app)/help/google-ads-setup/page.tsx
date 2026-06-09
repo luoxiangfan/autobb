@@ -31,9 +31,6 @@ export default function GoogleAdsSetupGuidePage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Badge>方式一</Badge>
                   <h3 className="font-semibold">OAuth 用户授权</h3>
-                  <Badge variant="outline" className="text-xs bg-blue-100">
-                    推荐
-                  </Badge>
                 </div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
@@ -55,12 +52,6 @@ export default function GoogleAdsSetupGuidePage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Badge variant="secondary">方式二</Badge>
                   <h3 className="font-semibold">服务账号认证</h3>
-                  <Badge
-                    variant="outline"
-                    className="text-xs bg-amber-100 text-amber-700 border-amber-300"
-                  >
-                    即将下线
-                  </Badge>
                 </div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-start gap-2">
@@ -451,14 +442,6 @@ export default function GoogleAdsSetupGuidePage() {
                     Access
                     权限）。关键词搜索量查询将返回默认值，不影响广告创建和投放等核心功能。如需精确搜索量数据，请使用
                     OAuth 授权模式。
-                  </AlertDescription>
-                </Alert>
-
-                <Alert className="mt-4 bg-orange-50 border-orange-200">
-                  <AlertCircle className="h-4 w-4 text-orange-500" />
-                  <AlertDescription>
-                    <strong>即将下线：</strong>
-                    服务账号认证方式将在未来版本中逐步下线，建议新用户优先使用 OAuth 授权方式。
                   </AlertDescription>
                 </Alert>
               </CardContent>

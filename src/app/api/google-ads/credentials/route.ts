@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           hasCredentials: false,
+          dualStack: metadataCtx.dualStack,
           hasRefreshToken: summary.hasRefreshToken,
           hasServiceAccount: summary.hasServiceAccount,
           ...(summary.serviceAccountId ? { serviceAccountId: summary.serviceAccountId } : {}),
@@ -160,6 +161,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         hasCredentials: true,
+        dualStack: metadataCtx.dualStack,
         clientId: exposedCredentialFields.clientId,
         developerToken: exposedCredentialFields.developerToken,
         ...(exposedCredentialFields.clientIdConfigured ? { clientIdConfigured: true } : {}),

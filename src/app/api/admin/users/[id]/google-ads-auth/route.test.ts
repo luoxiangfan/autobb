@@ -7,7 +7,7 @@ const authFns = vi.hoisted(() => ({
 }))
 
 const contextFns = vi.hoisted(() => ({
-  getGoogleAdsAuthContext: vi.fn(),
+  getGoogleAdsAuthContextMetadata: vi.fn(),
   adminHasConfiguredAuth: vi.fn(),
 }))
 
@@ -24,7 +24,7 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
   return {
     ...actual,
-    getGoogleAdsAuthContext: contextFns.getGoogleAdsAuthContext,
+    getGoogleAdsAuthContextMetadata: contextFns.getGoogleAdsAuthContextMetadata,
   }
 })
 
@@ -53,7 +53,7 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
   })
 
   it('returns 409 when target user auth context is dual-stack', async () => {
-    contextFns.getGoogleAdsAuthContext.mockResolvedValue({
+    contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
       ownerUserId: 2,
       dualStack: true,
@@ -61,7 +61,7 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
       isShared: false,
       canModify: true,
       auth: { authType: 'oauth' as const },
-      oauthCredentials: { refresh_token: 'rt' },
+      oauthCredentials: { refresh_token: 'rt', client_id: 'cid' },
       serviceAccountConfig: { id: 'sa-1' },
     })
 

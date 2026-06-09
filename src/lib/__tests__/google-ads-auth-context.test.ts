@@ -852,6 +852,16 @@ describe('assertNoConflictingGoogleAdsAuth', () => {
     await expect(assertNoConflictingGoogleAdsAuth(2, 'service_account')).rejects.toThrow('OAuth')
   })
 
+  it('rejects service account save when owner has oauth fields without refresh token', async () => {
+    dbFns.queryOne.mockResolvedValueOnce(null)
+    oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValueOnce({
+      refresh_token: '',
+      client_id: '123.apps.googleusercontent.com',
+    })
+
+    await expect(assertNoConflictingGoogleAdsAuth(2, 'service_account')).rejects.toThrow('OAuth')
+  })
+
   it('allows oauth save when no service account exists', async () => {
     dbFns.queryOne.mockResolvedValueOnce(null)
 
@@ -898,7 +908,7 @@ describe('assertGoogleAdsAuthReadyForApi', () => {
     oauthFns.getGoogleAdsCredentials.mockResolvedValue({ refresh_token: 'rt' })
     oauthFns.getGoogleAdsCredentialsRaw.mockResolvedValue({ refresh_token: 'rt' })
     dbFns.queryOne.mockResolvedValue({ id: 'sa-1' })
-    serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
+    serviceAccountFns.getServiceAccountConfig.mockResolvedValue({ id: 'sa-1', name: 'Dual SA' })
 
     const { assertGoogleAdsAuthReadyForApi } = await import('@/lib/google-ads-auth-context')
     await expect(assertGoogleAdsAuthReadyForApi(2)).rejects.toThrow(/OAuth 与服务账号同时存在/)

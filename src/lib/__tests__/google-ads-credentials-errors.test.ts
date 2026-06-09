@@ -76,12 +76,14 @@ describe('google-ads-credentials-errors', () => {
       success: true,
       data: {
         hasCredentials: false,
+        dualStack: true,
         hasRefreshToken: false,
         hasServiceAccount: true,
         serviceAccountId: 'sa-99',
         authConfigWarning: warning,
       },
     })
+    expect(parsed.dualStack).toBe(true)
     expect(parsed.hasCredentials).toBe(false)
     expect(parsed.authConfigWarning).toBe(warning)
     expect(parsed.authType).toBeUndefined()
@@ -121,6 +123,7 @@ describe('google-ads-credentials-errors', () => {
         authType: 'service_account',
         serviceAccountId: undefined,
         hasCredentials: true,
+        dualStack: false,
         authConfigWarning: null,
       },
       'sa-fallback'
@@ -158,6 +161,7 @@ describe('google-ads-credentials-errors', () => {
     const warning = '双栈冲突'
     const result = resolveAccountsRequestAuth({
       hasCredentials: false,
+      dualStack: true,
       authConfigWarning: warning,
     })
     expect(result).toEqual({
@@ -171,6 +175,7 @@ describe('google-ads-credentials-errors', () => {
     expect(
       resolveAccountsRequestAuth({
         hasCredentials: false,
+        dualStack: false,
         authConfigWarning: null,
       })
     ).toEqual({ ok: false, reason: 'not_configured' })
@@ -180,6 +185,7 @@ describe('google-ads-credentials-errors', () => {
     const result = resolveAccountsRequestAuth({
       authType: 'oauth',
       hasCredentials: true,
+      dualStack: false,
       authConfigWarning: null,
     })
     expect(result).toEqual({
@@ -192,6 +198,7 @@ describe('google-ads-credentials-errors', () => {
     const result = resolveAccountsRequestAuth({
       authType: 'service_account',
       hasCredentials: true,
+      dualStack: false,
       authConfigWarning: null,
     })
     expect(result.ok).toBe(false)
@@ -225,6 +232,7 @@ describe('google-ads-credentials-errors', () => {
     expect(() =>
       buildAuthForAccountsRequest({
         hasCredentials: true,
+        dualStack: false,
         authConfigWarning: null,
       })
     ).toThrow(GOOGLE_ADS_NOT_CONFIGURED_MESSAGE)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,10 +38,7 @@ import {
   Key,
   CheckCircle2,
   AlertCircle,
-  ChevronDown,
-  ChevronUp,
   BookOpen,
-  Star,
 } from 'lucide-react'
 import { getCountryOptionsForUI } from '@/lib/language-country-codes'
 import {
@@ -51,22 +48,20 @@ import {
   normalizeModelForProvider,
 } from '@/lib/gemini-models'
 import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
-import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
-import {
-  appendAccountsAuthToSearchParams,
-  GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
-  parseAccountsListFetchFailure,
-  resolveAccountsFetchBlockedUiEffects,
-  resolveAccountsRequestAuth,
-  safeReadJson,
-  type AccountsRequestAuth,
-} from '@/lib/google-ads-credentials-errors'
-import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
 import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
   getFixedAffiliateSyncSettingValue,
 } from '@/lib/affiliate-sync-config'
+import {
+  GOOGLE_ADS_CATEGORY_FIELDS,
+  GOOGLE_ADS_SETTING_METADATA,
+  GoogleAdsAuthSettingsActions,
+  GoogleAdsAuthSettingsSection,
+  GoogleAdsDeleteConfirmDialog,
+  useGoogleAdsAuthSettings,
+  validateGoogleAdsOAuthForm,
+} from './google-ads'
 
 // 代理URL配置项接口
 interface ProxyUrlConfig {
@@ -105,42 +100,6 @@ function validateProxyUrlFormat(url: string): { isValid: boolean; error?: string
     isValid: false,
     error: '不支持的代理URL格式。当前仅支持：IPRocket、Oxylabs、Kookeey、Cliproxy',
   }
-}
-
-// Google Ads账户接口
-interface GoogleAdsAccount {
-  customerId: string
-  descriptiveName: string
-  currencyCode: string
-  timeZone: string
-  manager: boolean
-  testAccount: boolean
-  status?: string
-}
-
-// Google Ads凭证状态接口
-interface GoogleAdsCredentialStatus {
-  hasCredentials: boolean
-  hasRefreshToken?: boolean
-  hasServiceAccount?: boolean
-  serviceAccountId?: string | null
-  serviceAccountName?: string | null
-  authType?: 'oauth' | 'service_account'
-  clientId?: string | null
-  clientIdConfigured?: boolean
-  developerToken?: string | null
-  developerTokenConfigured?: boolean
-  clientSecretConfigured?: boolean
-  loginCustomerId?: string
-  apiAccessLevel?: 'test' | 'explorer' | 'basic' | 'standard'
-  lastVerifiedAt?: string
-  isActive?: boolean
-  assignmentMode?: 'own' | 'shared_admin'
-  canModify?: boolean
-  isShared?: boolean
-  sharedAdminEmail?: string | null
-  sharedAdminUsername?: string | null
-  authConfigWarning?: string | null
 }
 
 // 代理配置支持的国家列表（使用全局映射 + ROW其他地区选项）
@@ -182,31 +141,7 @@ const SETTING_METADATA: Record<
     defaultValue?: string
   }
 > = {
-  // Google Ads - 所有参数必填
-  'google_ads.login_customer_id': {
-    label: 'Login Customer ID (MCC账户ID)',
-    description: '您的MCC管理账户ID，用于访问您管理的广告账户。格式：10位数字（不含连字符）',
-    placeholder: '例如: 1234567890',
-    helpLink: '/help/google-ads-setup?tab=oauth',
-  },
-  'google_ads.client_id': {
-    label: 'OAuth Client ID',
-    description: 'Google Cloud Console 中创建的 OAuth 2.0 客户端 ID',
-    placeholder: '例如: 123456789-xxx.apps.googleusercontent.com',
-    helpLink: '/help/google-ads-setup?tab=oauth#oauth-client-id',
-  },
-  'google_ads.client_secret': {
-    label: 'OAuth Client Secret',
-    description: 'OAuth 2.0 客户端密钥，与 Client ID 配对使用',
-    placeholder: '输入 Client Secret',
-  },
-  'google_ads.developer_token': {
-    label: 'Developer Token',
-    description:
-      'Google Ads API 开发者令牌。必须与 Client ID 在同一个 GCP Project 中申请，否则会报错',
-    placeholder: '输入 Developer Token',
-    helpLink: '/help/google-ads-setup?tab=oauth#oauth-developer-token',
-  },
+  ...GOOGLE_ADS_SETTING_METADATA,
 
   // AI - Gemini 服务商选择
   'ai.gemini_provider': {
@@ -365,13 +300,7 @@ const CATEGORY_FIELDS: Record<
     isRequired: boolean
   }[]
 > = {
-  google_ads: [
-    // 🔧 修复(2025-12-12): 所有 Google Ads 参数都是必填的（独立账号模式）
-    { key: 'login_customer_id', dataType: 'string', isSensitive: false, isRequired: true },
-    { key: 'client_id', dataType: 'string', isSensitive: true, isRequired: true },
-    { key: 'client_secret', dataType: 'string', isSensitive: true, isRequired: true },
-    { key: 'developer_token', dataType: 'string', isSensitive: true, isRequired: true },
-  ],
+  google_ads: GOOGLE_ADS_CATEGORY_FIELDS,
   ai: [
     { key: 'gemini_provider', dataType: 'string', isSensitive: false, isRequired: false },
     { key: 'gemini_model', dataType: 'string', isSensitive: false, isRequired: false },
@@ -504,61 +433,6 @@ export default function SettingsPage() {
   const [proxyUrls, setProxyUrls] = useState<ProxyUrlConfig[]>([])
   const [savedProxyUrls, setSavedProxyUrls] = useState<ProxyUrlConfig[]>([])
 
-  // Google Ads 凭证和账户状态
-  const [googleAdsCredentialStatus, setGoogleAdsCredentialStatus] =
-    useState<GoogleAdsCredentialStatus | null>(null)
-  const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([])
-  const [loadingGoogleAdsAccounts, setLoadingGoogleAdsAccounts] = useState(false)
-  const [showGoogleAdsAccounts, setShowGoogleAdsAccounts] = useState(false)
-  const [startingOAuth, setStartingOAuth] = useState(false)
-  const [verifyingGoogleAdsCredentials, setVerifyingGoogleAdsCredentials] = useState(false)
-  const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>(
-    'oauth'
-  )
-  const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth()
-  const googleAdsAccountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [serviceAccountForm, setServiceAccountForm] = useState({
-    name: '',
-    mccCustomerId: '',
-    developerToken: '',
-    serviceAccountJson: '',
-  })
-  const [savingServiceAccount, setSavingServiceAccount] = useState(false)
-  const [serviceAccounts, setServiceAccounts] = useState<any[]>([])
-  const [, setLoadingServiceAccounts] = useState(false)
-  const [deletingServiceAccountId, setDeletingServiceAccountId] = useState<string | null>(null)
-  const [deletingOAuthConfig, setDeletingOAuthConfig] = useState(false)
-  const [deleteConfirmState, setDeleteConfirmState] = useState<
-    { kind: 'oauth' } | { kind: 'service_account'; serviceAccountId: string } | null
-  >(null)
-  const [permissionError, setPermissionError] = useState<any | null>(null)
-  const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
-  const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.authConfigWarning)
-  const googleAdsAuthActionsBlocked = googleAdsAuthReadOnly || googleAdsDualStack
-
-  const isGoogleAdsSharedAdminHiddenSecret = (category: string, key: string, value: string) => {
-    if (category !== 'google_ads' || !googleAdsAuthReadOnly || value?.trim()) {
-      return false
-    }
-    if (key !== 'client_secret' && key !== 'developer_token') {
-      return false
-    }
-    if (key === 'developer_token') {
-      return Boolean(
-        googleAdsCredentialStatus?.developerTokenConfigured ||
-        googleAdsCredentialStatus?.developerToken
-      )
-    }
-    if (key === 'client_secret') {
-      return Boolean(
-        googleAdsCredentialStatus?.clientSecretConfigured ||
-        googleAdsCredentialStatus?.hasCredentials ||
-        googleAdsCredentialStatus?.hasRefreshToken
-      )
-    }
-    return false
-  }
-
   /**
    * 处理401未授权错误 - 跳转到登录页
    */
@@ -567,39 +441,6 @@ export default function SettingsPage() {
     const redirectUrl = encodeURIComponent(window.location.pathname + window.location.search)
     router.push(`/login?redirect=${redirectUrl}`)
   }, [router])
-
-  // 检查 OAuth 回调结果
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search)
-    const oauthSuccess = urlParams.get('oauth_success')
-    const errorParam = urlParams.get('error')
-
-    if (oauthSuccess === 'true') {
-      toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
-      // 清除 URL 参数
-      window.history.replaceState({}, '', '/settings?category=google_ads')
-    } else if (errorParam) {
-      const errorMessages: Record<string, string> = {
-        missing_code: 'OAuth 授权失败：缺少授权码',
-        missing_state: 'OAuth 授权失败：缺少状态参数',
-        invalid_state: 'OAuth 授权失败：无效的状态参数',
-        state_expired: 'OAuth 授权失败：状态参数已过期',
-        missing_google_ads_config:
-          'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
-        missing_login_customer_id: 'OAuth 授权失败：请先配置并保存 Login Customer ID (MCC)',
-        developer_token_invalid:
-          'OAuth 授权失败：Developer Token 配置无效，请检查是否误填为 Client Secret',
-        shared_auth_readonly: '当前使用管理员共享认证，无法自行完成 OAuth 授权',
-        unauthorized: 'OAuth 授权失败：请先登录后再完成授权回调',
-        session_mismatch: 'OAuth 授权失败：登录用户与发起授权的用户不一致，请重新发起授权',
-        legacy_oauth_callback_uri:
-          'OAuth 回调地址已变更：请在 Google Cloud Console 中将 Redirect URI 更新为 /api/google-ads/oauth/callback，并使用「启动 OAuth 授权」重新授权',
-      }
-      toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
-      // 清除 URL 参数
-      window.history.replaceState({}, '', '/settings?category=google_ads')
-    }
-  }, [])
 
   const buildCategoryFormValues = (
     category: string,
@@ -668,6 +509,25 @@ export default function SettingsPage() {
     const data = await response.json()
     applyCategorySettings(category, (data.settings?.[category] as Setting[]) || [])
   }
+
+  const clearGoogleAdsFormFields = useCallback((keys: string[]) => {
+    setFormData((prev) => {
+      const next = { ...prev }
+      next.google_ads = { ...(next.google_ads || {}) }
+      for (const key of keys) {
+        next.google_ads[key] = ''
+      }
+      return next
+    })
+  }, [])
+
+  const googleAdsAuth = useGoogleAdsAuthSettings({
+    oauthFormData: formData.google_ads,
+    savedOAuthFormData: savedFormData.google_ads,
+    onRefreshCategory: () => refreshCategorySettings('google_ads'),
+    onClearOAuthFormFields: clearGoogleAdsFormFields,
+    onOAuthSaveComplete: () => setEditingField(null),
+  })
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -805,265 +665,15 @@ export default function SettingsPage() {
     )
   }
 
-  const fetchServiceAccounts = useCallback(async () => {
-    setLoadingServiceAccounts(true)
-    try {
-      const response = await fetch('/api/google-ads/service-account', {
-        credentials: 'include',
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setServiceAccounts(data.accounts || [])
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch service accounts:', err)
-    } finally {
-      setLoadingServiceAccounts(false)
-    }
-  }, [])
-
-  // Google Ads 凭证状态获取
-  const fetchGoogleAdsCredentialStatus = useCallback(async () => {
-    try {
-      const response = await fetch('/api/google-ads/credentials', {
-        credentials: 'include',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setGoogleAdsCredentialStatus(data.data)
-        if (data.data?.authType === 'oauth' || data.data?.authType === 'service_account') {
-          setGoogleAdsAuthMethod(data.data.authType)
-        }
-        // 双栈清理 / SA 配置列表；OAuth 为当前认证方式时不误触发
-        if (
-          data.data?.authType === 'service_account' ||
-          (data.data?.hasServiceAccount && data.data?.authType !== 'oauth') ||
-          (data.data?.authConfigWarning && data.data?.hasServiceAccount)
-        ) {
-          void fetchServiceAccounts()
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch Google Ads credential status:', err)
-    }
-  }, [fetchServiceAccounts])
-
-  const normalizeGoogleAdsFormForCompare = (
-    record: Record<string, string> | undefined
-  ): Record<string, string> => {
-    const normalized: Record<string, string> = {}
-    for (const [key, rawValue] of Object.entries(record || {})) {
-      normalized[key] = String(rawValue || '')
-    }
-    return normalized
-  }
-
-  const hasGoogleAdsUnsavedChanges = (): boolean =>
-    JSON.stringify(normalizeGoogleAdsFormForCompare(formData.google_ads)) !==
-    JSON.stringify(normalizeGoogleAdsFormForCompare(savedFormData.google_ads))
-
-  // Google Ads OAuth 授权
-  const handleStartGoogleAdsOAuth = async () => {
-    if (hasGoogleAdsUnsavedChanges()) {
-      toast.error('请先保存 Google Ads 配置后再启动 OAuth 授权')
-      return
-    }
-
-    const clientId = formData.google_ads?.client_id
-
-    if (!clientId?.trim()) {
-      toast.error('请先填写并保存 Client ID')
-      return
-    }
-
-    try {
-      setStartingOAuth(true)
-      const response = await fetch('/api/google-ads/oauth/start', { credentials: 'include' })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || '启动OAuth失败')
-      }
-
-      const data = await response.json()
-      window.location.href = data.data.auth_url
-    } catch (err: any) {
-      toast.error(err.message || 'OAuth启动失败')
-      setStartingOAuth(false)
-    }
-  }
-
-  const handleVerifyGoogleAdsCredentials = async () => {
-    if (hasGoogleAdsUnsavedChanges()) {
-      toast.error('请先保存 Google Ads 配置后再验证凭证')
-      return
-    }
-
-    setVerifyingGoogleAdsCredentials(true)
-    try {
-      const response = await fetch('/api/google-ads/credentials/verify', {
-        method: 'POST',
-        credentials: 'include',
-      })
-      const data = await response.json()
-      if (response.ok && data.success && data.data?.valid) {
-        toast.success(data.message || 'Google Ads 凭证验证通过')
-        await fetchGoogleAdsCredentialStatus()
-        return
-      }
-      const message = data.data?.error || data.message || data.error || 'Google Ads 凭证验证失败'
-      toast.error(message)
-    } catch (err: any) {
-      toast.error(err.message || '验证失败')
-    } finally {
-      setVerifyingGoogleAdsCredentials(false)
-    }
-  }
-
-  // 获取可访问的 Google Ads 账户
-  const scheduleGoogleAdsAccountsPoll = (authForRequest: AccountsRequestAuth) => {
-    if (googleAdsAccountsPollTimerRef.current) {
-      clearTimeout(googleAdsAccountsPollTimerRef.current)
-    }
-    googleAdsAccountsPollTimerRef.current = setTimeout(async () => {
-      try {
-        const params = new URLSearchParams()
-        appendAccountsAuthToSearchParams(params, authForRequest)
-        const response = await fetch(`/api/google-ads/credentials/accounts?${params.toString()}`, {
-          credentials: 'include',
-          cache: 'no-store',
-        })
-        if (!response.ok) return
-
-        const data = await response.json()
-        if (!data.success || !data.data) return
-
-        setGoogleAdsAccounts(data.data.accounts || [])
-        if (data.data.refreshInProgress) {
-          scheduleGoogleAdsAccountsPoll(authForRequest)
-        } else {
-          toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
-        }
-      } catch {
-        // 轮询失败时静默，用户可手动重试
-      }
-    }, 2000)
-  }
-
-  useEffect(() => {
-    return () => {
-      if (googleAdsAccountsPollTimerRef.current) {
-        clearTimeout(googleAdsAccountsPollTimerRef.current)
-      }
-    }
-  }, [])
-
-  const handleFetchGoogleAdsAccounts = async () => {
-    try {
-      setLoadingGoogleAdsAccounts(true)
-      setShowGoogleAdsAccounts(true)
-
-      const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
-      const resolved = resolveAccountsRequestAuth(
-        auth,
-        serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
-      )
-      if (!resolved.ok) {
-        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh: true })
-        if (effects.authConfigWarning) {
-          setGoogleAdsCredentialStatus((prev) =>
-            prev ? { ...prev, authConfigWarning: effects.authConfigWarning } : prev
-          )
-        }
-        throw new Error(
-          effects.errorMessage ?? effects.authConfigWarning ?? GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
-        )
-      }
-      const authForRequest = resolved.authForRequest
-
-      const params = new URLSearchParams({ refresh: 'true', async: 'true' })
-      appendAccountsAuthToSearchParams(params, authForRequest)
-      const url = `/api/google-ads/credentials/accounts?${params.toString()}`
-
-      const response = await fetch(url, {
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        const data = await safeReadJson(response)
-
-        if (
-          data &&
-          typeof data === 'object' &&
-          (data as { code?: string }).code === 'SERVICE_ACCOUNT_PERMISSION_DENIED' &&
-          (data as { details?: unknown }).details
-        ) {
-          setPermissionError((data as { details: unknown }).details)
-          setShowGoogleAdsAccounts(true)
-          return
-        }
-
-        const { message, authConfigWarning } = parseAccountsListFetchFailure(response, data, {
-          fallbackMessage: '获取账户列表失败',
-        })
-        if (authConfigWarning) {
-          setGoogleAdsCredentialStatus((prev) => (prev ? { ...prev, authConfigWarning } : prev))
-        }
-        throw new Error(message)
-      }
-
-      const data = await response.json()
-      setPermissionError(null) // 清除之前的权限错误
-      setGoogleAdsAccounts(data.data.accounts || [])
-      if (data.data?.refreshInProgress) {
-        toast.message('账号正在后台同步，列表将逐步更新')
-        scheduleGoogleAdsAccountsPoll(authForRequest)
-      } else {
-        toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
-      }
-    } catch (err: any) {
-      toast.error(err.message || '获取失败')
-      setShowGoogleAdsAccounts(false)
-    } finally {
-      setLoadingGoogleAdsAccounts(false)
-    }
-  }
-
-  // 初始化时获取 Google Ads 凭证状态
-  useEffect(() => {
-    void fetchGoogleAdsCredentialStatus()
-  }, [fetchGoogleAdsCredentialStatus])
-
   const handleSave = async (category: string) => {
     setSaving(true)
 
     try {
       // 🔧 修复(2025-12-12): Google Ads 所有参数必填验证
       if (category === 'google_ads') {
-        const loginCustomerId = formData.google_ads?.['login_customer_id']
-        const clientId = formData.google_ads?.['client_id']
-        const clientSecret = formData.google_ads?.['client_secret']
-        const developerToken = formData.google_ads?.['developer_token']
-
-        const isValidValue = (v: string | undefined) => v && v.trim() !== '' && v !== '············'
-
-        if (!isValidValue(loginCustomerId)) {
-          toast.error('Login Customer ID (MCC账户ID) 是必填项')
-          setSaving(false)
-          return
-        }
-        if (!isValidValue(clientId)) {
-          toast.error('OAuth Client ID 是必填项')
-          setSaving(false)
-          return
-        }
-        if (!isValidValue(clientSecret)) {
-          toast.error('OAuth Client Secret 是必填项')
-          setSaving(false)
-          return
-        }
-        if (!isValidValue(developerToken)) {
-          toast.error('Developer Token 是必填项')
+        const oauthValidationError = validateGoogleAdsOAuthForm(formData.google_ads)
+        if (oauthValidationError) {
+          toast.error(oauthValidationError)
           setSaving(false)
           return
         }
@@ -1203,7 +813,7 @@ export default function SettingsPage() {
       await refreshCategorySettings(category)
 
       if (category === 'google_ads') {
-        await fetchGoogleAdsCredentialStatus()
+        await googleAdsAuth.notifyOAuthSaveComplete()
       }
 
       // 🔥 重要：刷新后清除编辑状态，让敏感字段重新显示为占位符
@@ -1406,144 +1016,8 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSaveServiceAccount = async () => {
-    if (
-      !serviceAccountForm.name ||
-      !serviceAccountForm.mccCustomerId ||
-      !serviceAccountForm.developerToken ||
-      !serviceAccountForm.serviceAccountJson
-    ) {
-      toast.error('请填写所有必填字段')
-      return
-    }
-
-    setSavingServiceAccount(true)
-    try {
-      const response = await fetch('/api/google-ads/service-account', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(serviceAccountForm),
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || '保存失败')
-
-      toast.success('服务账号配置已保存')
-      setServiceAccountForm({
-        name: '',
-        mccCustomerId: '',
-        developerToken: '',
-        serviceAccountJson: '',
-      })
-      await fetchServiceAccounts()
-      await fetchGoogleAdsCredentialStatus()
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
-      setSavingServiceAccount(false)
-    }
-  }
-
-  const deleteServiceAccountNow = async (id: string) => {
-    setDeletingServiceAccountId(id)
-    try {
-      const response = await fetch(`/api/google-ads/service-account?id=${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || '删除失败')
-
-      toast.success('服务账号配置已删除')
-      await fetchServiceAccounts()
-      await fetchGoogleAdsCredentialStatus()
-    } catch (err: any) {
-      toast.error(err.message)
-    } finally {
-      setDeletingServiceAccountId(null)
-    }
-  }
-
-  const clearGoogleAdsFormFields = (keys: string[]) => {
-    setFormData((prev) => {
-      const next = { ...prev }
-      next.google_ads = { ...(next.google_ads || {}) }
-      for (const key of keys) {
-        next.google_ads[key] = ''
-      }
-      return next
-    })
-  }
-
-  const deleteOAuthConfigNow = async () => {
-    setDeletingOAuthConfig(true)
-    try {
-      const response = await fetch('/api/google-ads/credentials', {
-        method: 'DELETE',
-        credentials: 'include',
-      })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.message || data.error || '删除失败')
-
-      clearGoogleAdsFormFields([
-        'client_id',
-        'client_secret',
-        'developer_token',
-        'login_customer_id',
-      ])
-      toast.success('OAuth 配置已删除')
-      await refreshCategorySettings('google_ads')
-      await fetchGoogleAdsCredentialStatus()
-    } catch (err: any) {
-      toast.error(err.message || '删除失败')
-    } finally {
-      setDeletingOAuthConfig(false)
-    }
-  }
-
-  const requestDeleteOAuthConfig = () => setDeleteConfirmState({ kind: 'oauth' })
-
-  const requestDeleteServiceAccount = (serviceAccountId: string) =>
-    setDeleteConfirmState({ kind: 'service_account', serviceAccountId })
-
-  const hasOAuthConfigToDelete = (() => {
-    const isSet = (key: string): boolean => {
-      const raw = formData.google_ads?.[key]
-      if (!raw) return false
-      if (raw === '············') return true
-      return raw.trim().length > 0
-    }
-
-    return (
-      Boolean(googleAdsCredentialStatus?.hasRefreshToken) ||
-      ['login_customer_id', 'client_id', 'client_secret', 'developer_token'].some(isSet)
-    )
-  })()
-
-  const hasServiceAccountConfigToDelete = Boolean(googleAdsCredentialStatus?.serviceAccountId)
-
-  const requestDeleteCurrentGoogleAdsConfig = () => {
-    if (googleAdsAuthMethod === 'oauth') {
-      if (!hasOAuthConfigToDelete) {
-        toast.error('当前未配置真实 OAuth 信息，无需删除')
-        return
-      }
-      requestDeleteOAuthConfig()
-      return
-    }
-
-    const id = googleAdsCredentialStatus?.serviceAccountId
-    if (!id) {
-      toast.error('未检测到服务账号配置')
-      return
-    }
-    requestDeleteServiceAccount(id)
-  }
-
   const isReadOnlySetting = (category: string, key: string): boolean => {
-    if (category === 'google_ads' && googleAdsAuthReadOnly) return true
+    if (category === 'google_ads' && googleAdsAuth.googleAdsAuthReadOnly) return true
     if (category === 'ai' && key === 'gemini_endpoint') return true
     return category === 'affiliate_sync' && getFixedAffiliateSyncSettingValue(key) !== undefined
   }
@@ -1583,7 +1057,7 @@ export default function SettingsPage() {
 
   const getValidateDisabledReason = (category: string): string | null => {
     if (validating === category) return '正在验证中'
-    if (saving || savingServiceAccount) return '正在保存中'
+    if (saving || googleAdsAuth.savingServiceAccount) return '正在保存中'
     if (hasUnsavedChanges(category)) return '有未保存的修改，请先保存配置'
     return null
   }
@@ -1696,10 +1170,14 @@ export default function SettingsPage() {
     if (setting.isSensitive) {
       const fieldKey = `${category}.${setting.key}`
       const isEditing = editingField === fieldKey
-      const sharedAdminHidden = isGoogleAdsSharedAdminHiddenSecret(category, setting.key, value)
+      const sharedAdminHidden =
+        category === 'google_ads' &&
+        googleAdsAuth.isGoogleAdsSharedAdminHiddenSecret(setting.key, value)
       const hasValue = Boolean(value?.trim()) || sharedAdminHidden
       const displayValue = isEditing ? value : hasValue ? '············' : ''
-      const sensitiveReadOnly = googleAdsAuthReadOnly || isReadOnlySetting(category, setting.key)
+      const sensitiveReadOnly =
+        (category === 'google_ads' && googleAdsAuth.googleAdsAuthReadOnly) ||
+        isReadOnlySetting(category, setting.key)
 
       return (
         <div className="space-y-1">
@@ -1761,68 +1239,13 @@ export default function SettingsPage() {
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
-        {/* 删除操作：弹窗确认 1 次（OAuth / 服务账号） */}
-        <AlertDialog
-          open={deleteConfirmState !== null}
-          onOpenChange={(open) => {
-            if (!open) setDeleteConfirmState(null)
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {deleteConfirmState?.kind === 'oauth'
-                  ? '确认删除 OAuth 配置？'
-                  : '确认删除服务账号配置？'}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {deleteConfirmState?.kind === 'oauth'
-                  ? '将清除 OAuth 基础配置（Client ID / Secret / Developer Token / Login Customer ID）以及 Refresh Token。删除后需要重新填写并重新授权才能继续使用 OAuth 模式。'
-                  : '将删除当前服务账号配置（包含私钥等敏感信息）。删除后需要重新上传服务账号 JSON 才能继续使用服务账号模式。'}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                disabled={
-                  deletingOAuthConfig ||
-                  (deleteConfirmState?.kind === 'service_account' &&
-                    deletingServiceAccountId === deleteConfirmState.serviceAccountId)
-                }
-              >
-                取消
-              </AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                disabled={
-                  deletingOAuthConfig ||
-                  (deleteConfirmState?.kind === 'service_account' &&
-                    deletingServiceAccountId === deleteConfirmState.serviceAccountId)
-                }
-                onClick={async (e) => {
-                  // 保持弹窗打开以展示"删除中..."，完成后手动关闭
-                  e.preventDefault()
-                  const state = deleteConfirmState
-                  if (!state) return
-                  if (state.kind === 'oauth') {
-                    await deleteOAuthConfigNow()
-                  } else {
-                    await deleteServiceAccountNow(state.serviceAccountId)
-                  }
-                  setDeleteConfirmState(null)
-                }}
-              >
-                {deleteConfirmState?.kind === 'oauth'
-                  ? deletingOAuthConfig
-                    ? '删除中...'
-                    : '确认删除'
-                  : deleteConfirmState?.kind === 'service_account' &&
-                      deletingServiceAccountId === deleteConfirmState.serviceAccountId
-                    ? '删除中...'
-                    : '确认删除'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <GoogleAdsDeleteConfirmDialog
+          deleteConfirmState={googleAdsAuth.deleteConfirmState}
+          setDeleteConfirmState={googleAdsAuth.setDeleteConfirmState}
+          deletingOAuthConfig={googleAdsAuth.deletingOAuthConfig}
+          deletingServiceAccountId={googleAdsAuth.deletingServiceAccountId}
+          handleDeleteConfirm={googleAdsAuth.handleDeleteConfirm}
+        />
 
         {/* AI 引擎删除配置：二次确认弹窗 */}
         <AlertDialog
@@ -1966,654 +1389,11 @@ export default function SettingsPage() {
 
                 {/* 特殊处理 Google Ads 配置分类 */}
                 {category === 'google_ads' ? (
-                  <div className="space-y-6">
-                    {googleAdsAuthReadOnly && (
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800 font-medium">
-                          当前使用管理员共享的 Google Ads 认证配置
-                        </p>
-                        <p className="text-sm text-blue-700 mt-1">
-                          {googleAdsCredentialStatus?.sharedAdminUsername ||
-                          googleAdsCredentialStatus?.sharedAdminEmail
-                            ? `共享自：${googleAdsCredentialStatus?.sharedAdminUsername ?? ''}${googleAdsCredentialStatus?.sharedAdminEmail ? ` (${googleAdsCredentialStatus.sharedAdminEmail})` : ''}`
-                            : '您无法自行修改或删除此配置，如需变更请联系管理员。'}
-                        </p>
-                      </div>
-                    )}
-                    {googleAdsCredentialStatus?.authConfigWarning && (
-                      <div className="p-4 bg-amber-50 border border-amber-400 rounded-lg">
-                        <p className="text-sm font-semibold text-amber-900">认证配置提醒</p>
-                        <p className="text-sm text-amber-800 mt-1 whitespace-pre-line">
-                          {googleAdsCredentialStatus.authConfigWarning}
-                        </p>
-                        <p className="text-sm text-amber-900 mt-2">
-                          请使用上方按钮删除其中一种认证方式后再继续使用。
-                        </p>
-                        {!googleAdsAuthReadOnly && (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {hasOAuthConfigToDelete && (
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                disabled={deletingOAuthConfig}
-                                onClick={requestDeleteOAuthConfig}
-                              >
-                                {deletingOAuthConfig ? '删除中...' : '删除 OAuth 配置'}
-                              </Button>
-                            )}
-                            {googleAdsCredentialStatus?.serviceAccountId && (
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                disabled={
-                                  deletingServiceAccountId ===
-                                  googleAdsCredentialStatus.serviceAccountId
-                                }
-                                onClick={() =>
-                                  requestDeleteServiceAccount(
-                                    googleAdsCredentialStatus.serviceAccountId!
-                                  )
-                                }
-                              >
-                                {deletingServiceAccountId ===
-                                googleAdsCredentialStatus.serviceAccountId
-                                  ? '删除中...'
-                                  : '删除服务账号配置'}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {/* Google Ads 凭证状态 */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {googleAdsCredentialStatus?.hasCredentials ? (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            <span className="font-semibold text-green-700">已完成配置和授权</span>
-                          </div>
-                          {googleAdsCredentialStatus.loginCustomerId && (
-                            <p className="text-sm text-green-700">
-                              MCC ID:{' '}
-                              <span className="font-mono">
-                                {googleAdsCredentialStatus.loginCustomerId}
-                              </span>
-                            </p>
-                          )}
-                          {googleAdsCredentialStatus.lastVerifiedAt && (
-                            <>
-                              <p className="text-sm text-green-700">
-                                验证时间:{' '}
-                                {new Date(googleAdsCredentialStatus.lastVerifiedAt).toLocaleString(
-                                  'zh-CN',
-                                  {
-                                    month: 'numeric',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  }
-                                )}
-                              </p>
-                              <p className="text-sm text-green-700">
-                                过期时间:{' '}
-                                {new Date(
-                                  new Date(googleAdsCredentialStatus.lastVerifiedAt).getTime() +
-                                    7 * 24 * 60 * 60 * 1000
-                                ).toLocaleString('zh-CN', {
-                                  month: 'numeric',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <AlertCircle className="w-5 h-5 text-amber-600" />
-                            <span className="font-semibold text-amber-700">待完成配置</span>
-                          </div>
-                          <p className="text-sm text-amber-700">
-                            {googleAdsCredentialStatus?.authConfigWarning
-                              ? '检测到 OAuth 与服务账号同时存在，请使用上方按钮分别删除其中一种后再配置。'
-                              : googleAdsAuthMethod === 'service_account'
-                                ? '请填写服务账号配置并保存后即可使用 Google Ads 功能'
-                                : '请填写所有必填参数并完成 OAuth 授权后才能使用 Google Ads 功能'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* API 访问级别显示（自动检测） */}
-                    {googleAdsCredentialStatus?.hasCredentials && (
-                      <div className="border-t pt-6">
-                        <div className="mb-4">
-                          <Label className="label-text mb-2 block">Google Ads API 访问级别</Label>
-                          <p className="text-sm text-gray-600 mb-3">
-                            系统会自动检测您的 Developer Token
-                            权限级别，并据此显示每日API调用次数上限
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                          {/* Test Access */}
-                          <div
-                            className={`p-4 border-2 rounded-lg ${
-                              googleAdsCredentialStatus.apiAccessLevel === 'test'
-                                ? 'border-red-500 bg-red-50'
-                                : 'border-gray-200 bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-semibold text-gray-900">Test Access</div>
-                              {googleAdsCredentialStatus.apiAccessLevel === 'test' && (
-                                <CheckCircle2 className="w-5 h-5 text-red-600" />
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：
-                              <span className="font-semibold text-gray-900">0 次</span>
-                            </div>
-                            <div className="text-xs text-gray-500">仅限测试账号，需升级权限</div>
-                          </div>
-
-                          {/* Explorer Access */}
-                          <div
-                            className={`p-4 border-2 rounded-lg ${
-                              googleAdsCredentialStatus.apiAccessLevel === 'explorer'
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-semibold text-gray-900">Explorer Access</div>
-                              {googleAdsCredentialStatus.apiAccessLevel === 'explorer' && (
-                                <CheckCircle2 className="w-5 h-5 text-blue-600" />
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：
-                              <span className="font-semibold text-gray-900">2,880 次</span>
-                            </div>
-                            <div className="text-xs text-gray-500">默认权限级别</div>
-                          </div>
-
-                          {/* Basic Access */}
-                          <div
-                            className={`p-4 border-2 rounded-lg ${
-                              googleAdsCredentialStatus.apiAccessLevel === 'basic'
-                                ? 'border-green-500 bg-green-50'
-                                : 'border-gray-200 bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-semibold text-gray-900">Basic Access</div>
-                              {googleAdsCredentialStatus.apiAccessLevel === 'basic' && (
-                                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：
-                              <span className="font-semibold text-gray-900">15,000 次</span>
-                            </div>
-                            <div className="text-xs text-gray-500">生产环境推荐</div>
-                          </div>
-
-                          {/* Standard Access */}
-                          <div
-                            className={`p-4 border-2 rounded-lg ${
-                              googleAdsCredentialStatus.apiAccessLevel === 'standard'
-                                ? 'border-purple-500 bg-purple-50'
-                                : 'border-gray-200 bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="font-semibold text-gray-900">Standard Access</div>
-                              {googleAdsCredentialStatus.apiAccessLevel === 'standard' && (
-                                <CheckCircle2 className="w-5 h-5 text-purple-600" />
-                              )}
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              每日调用上限：
-                              <span className="font-semibold text-gray-900">无限次</span>
-                            </div>
-                            <div className="text-xs text-gray-500">大规模生产环境</div>
-                          </div>
-                        </div>
-
-                        {/* 提示信息 */}
-                        {googleAdsCredentialStatus.apiAccessLevel === 'test' && (
-                          <div className="mt-3 p-3 bg-blue-50 border border-blue-300 rounded-lg">
-                            <div className="flex items-start gap-2">
-                              <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                              <div className="text-xs text-blue-700">
-                                <p className="font-medium mb-1">
-                                  💡 当前为测试权限 - 可以立即开始测试
-                                </p>
-                                <p>
-                                  您的 Developer Token 目前仅限测试账号使用。
-                                  <strong>建议立即开始测试产品功能</strong>，同时访问{' '}
-                                  <a
-                                    href="https://ads.google.com/aw/apicenter"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="underline hover:text-blue-800 font-semibold"
-                                  >
-                                    Google Ads API Center
-                                  </a>{' '}
-                                  申请升级到 Basic 或 Standard 权限（审核 1-3 个工作日）。真实的 API
-                                  调用记录有助于提高审批通过率，权限升级后自动生效，无需重新配置。
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="flex items-start gap-2">
-                            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
-                            <div className="text-xs text-blue-700">
-                              <p className="font-medium mb-1">🔍 自动检测说明</p>
-                              <p>
-                                系统会在验证凭证或API调用时自动检测您的访问级别。如果权限发生变化（如从
-                                Test 升级到 Basic/Standard），系统会自动更新。
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 认证方式 */}
-                    <div className="border-t pt-6">
-                      <Label className="label-text mb-3 block">认证方式</Label>
-                      {googleAdsAuthReadOnly ? (
-                        <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
-                          <Badge variant="secondary" className="mb-2">
-                            {googleAdsAuthMethod === 'service_account'
-                              ? '服务账号（管理员共享）'
-                              : 'OAuth（管理员共享）'}
-                          </Badge>
-                          <p className="text-sm text-slate-600">
-                            认证方式由管理员配置，此处仅展示当前生效方式。
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-4">
-                          <button
-                            type="button"
-                            onClick={() => setGoogleAdsAuthMethod('oauth')}
-                            disabled={googleAdsDualStack}
-                            className={`p-4 border-2 rounded-lg text-left transition-all relative ${
-                              googleAdsAuthMethod === 'oauth'
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="font-semibold">OAuth 用户授权</div>
-                              <Badge className="bg-orange-500 hover:bg-orange-600 text-white border-0 gap-1">
-                                <Star className="w-3 h-3 fill-current" />
-                                强烈推荐
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              适合管理自己的 Google Ads 账号
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setGoogleAdsAuthMethod('service_account')
-                              fetchServiceAccounts()
-                            }}
-                            disabled={googleAdsDualStack}
-                            className={`p-4 border-2 rounded-lg text-left transition-all ${
-                              googleAdsAuthMethod === 'service_account'
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
-                          >
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="font-semibold">服务账号认证</div>
-                              <Badge
-                                variant="outline"
-                                className="bg-amber-100 text-amber-700 border-amber-300"
-                              >
-                                即将下线
-                              </Badge>
-                            </div>
-                            <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* 基础配置字段 - 2列布局 */}
-                    {googleAdsAuthMethod === 'oauth' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
-                        {categorySettings.map((setting: Setting) => {
-                          const metaKey = `${category}.${setting.key}`
-                          const metadata = SETTING_METADATA[metaKey]
-
-                          return (
-                            <div key={setting.key}>
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <Label className="label-text flex items-center gap-2">
-                                    {metadata?.label || setting.key}
-                                    {setting.isRequired && (
-                                      <span className="text-caption text-red-500">*必填</span>
-                                    )}
-                                  </Label>
-                                  {metadata?.helpLink && (
-                                    <a
-                                      href={metadata.helpLink}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                                    >
-                                      获取方式
-                                      <ExternalLink className="w-3 h-3" />
-                                    </a>
-                                  )}
-                                </div>
-                                <p className="helper-text flex items-start gap-1">
-                                  <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                                  {metadata?.description || setting.description || '无描述'}
-                                </p>
-                                {renderInput(category, setting)}
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* 服务账号配置表单 */}
-                    {googleAdsAuthMethod === 'service_account' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
-                        <div>
-                          <Label className="label-text flex items-center gap-2">
-                            配置名称
-                            <span className="text-caption text-red-500">*必填</span>
-                          </Label>
-                          <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                            用于标识此服务账号配置，方便管理多个配置
-                          </p>
-                          <Input
-                            value={serviceAccountForm.name}
-                            onChange={(e) =>
-                              setServiceAccountForm((prev) => ({ ...prev, name: e.target.value }))
-                            }
-                            placeholder="例如: 生产环境MCC"
-                            className="mt-2"
-                          />
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <Label className="label-text flex items-center gap-2">
-                              MCC Customer ID
-                              <span className="text-caption text-red-500">*必填</span>
-                            </Label>
-                            <a
-                              href="/help/google-ads-setup?tab=service-account#mcc-customer-id"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                            >
-                              获取方式
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                          <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                            MCC管理账户ID，格式：10位数字（不含连字符）
-                          </p>
-                          <Input
-                            value={serviceAccountForm.mccCustomerId}
-                            onChange={(e) =>
-                              setServiceAccountForm((prev) => ({
-                                ...prev,
-                                mccCustomerId: e.target.value,
-                              }))
-                            }
-                            placeholder="例如: 1234567890"
-                            className="mt-2"
-                          />
-                        </div>
-
-                        <div>
-                          <div className="flex items-center justify-between">
-                            <Label className="label-text flex items-center gap-2">
-                              Developer Token
-                              <span className="text-caption text-red-500">*必填</span>
-                            </Label>
-                            <a
-                              href="/help/google-ads-setup?tab=service-account#developer-token"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                            >
-                              获取方式
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                          <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                            需要Explorer级别或更高，在MCC账户的API中心获取
-                          </p>
-                          <Input
-                            value={serviceAccountForm.developerToken}
-                            onChange={(e) =>
-                              setServiceAccountForm((prev) => ({
-                                ...prev,
-                                developerToken: e.target.value,
-                              }))
-                            }
-                            placeholder="输入 Developer Token"
-                            type="password"
-                            className="mt-2"
-                          />
-                        </div>
-
-                        <div className="lg:col-span-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="label-text flex items-center gap-2">
-                              服务账号 JSON
-                              <span className="text-caption text-red-500">*必填</span>
-                            </Label>
-                            <a
-                              href="/help/google-ads-setup?tab=service-account#service-account-json"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-caption text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-                            >
-                              获取方式
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                          <p className="helper-text flex items-start gap-1 mt-1">
-                            <Info className="w-3 h-3 mt-0.5 shrink-0" />
-                            从Google Cloud Console下载的服务账号密钥文件内容
-                          </p>
-                          <Textarea
-                            value={serviceAccountForm.serviceAccountJson}
-                            onChange={(e) =>
-                              setServiceAccountForm((prev) => ({
-                                ...prev,
-                                serviceAccountJson: e.target.value,
-                              }))
-                            }
-                            placeholder='粘贴JSON内容，例如: {"type":"service_account","project_id":"...","private_key":"..."}'
-                            rows={6}
-                            className="mt-2 font-mono text-xs"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 已配置的服务账号列表 */}
-                    {googleAdsAuthMethod === 'service_account' && serviceAccounts.length > 0 && (
-                      <div className="border-t pt-6">
-                        <h3 className="font-semibold mb-4">已配置的服务账号</h3>
-                        <div className="space-y-3">
-                          {serviceAccounts.map((account) => (
-                            <div
-                              key={account.id}
-                              className="p-4 border rounded-lg hover:bg-gray-50"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="font-semibold text-gray-900">{account.name}</div>
-                                  <div className="text-sm text-gray-600 mt-1 space-y-1">
-                                    <div>
-                                      MCC ID:{' '}
-                                      <span className="font-mono">{account.mcc_customer_id}</span>
-                                    </div>
-                                    <div>
-                                      服务账号:{' '}
-                                      <span className="font-mono text-xs">
-                                        {account.service_account_email}
-                                      </span>
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      创建时间:{' '}
-                                      {new Date(account.created_at).toLocaleString('zh-CN')}
-                                    </div>
-                                  </div>
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => requestDeleteServiceAccount(account.id)}
-                                  disabled={deletingServiceAccountId === account.id}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 可访问的账户列表 */}
-                    {googleAdsCredentialStatus?.hasCredentials && (
-                      <div className="border-t pt-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-semibold text-lg">Google Ads 账户</h3>
-                          <Button
-                            onClick={() => {
-                              if (!showGoogleAdsAccounts && googleAdsAccounts.length === 0) {
-                                handleFetchGoogleAdsAccounts()
-                              } else {
-                                setShowGoogleAdsAccounts(!showGoogleAdsAccounts)
-                              }
-                            }}
-                            disabled={loadingGoogleAdsAccounts}
-                            variant="outline"
-                            size="sm"
-                          >
-                            {loadingGoogleAdsAccounts ? (
-                              '加载中...'
-                            ) : showGoogleAdsAccounts ? (
-                              <>
-                                <ChevronUp className="w-4 h-4 mr-1" />
-                                收起账户列表
-                              </>
-                            ) : (
-                              <>
-                                <ChevronDown className="w-4 h-4 mr-1" />
-                                查看可访问账户
-                              </>
-                            )}
-                          </Button>
-                        </div>
-
-                        {showGoogleAdsAccounts && (
-                          <div className="space-y-3">
-                            {/* 🆕 显示权限错误信息 */}
-                            {permissionError && permissionError.solution && (
-                              <ServiceAccountPermissionError
-                                serviceAccountEmail={permissionError.serviceAccountEmail}
-                                mccCustomerId={permissionError.mccCustomerId}
-                                steps={permissionError.solution.steps}
-                                docsUrl={permissionError.solution.docsUrl}
-                                onDismiss={() => {
-                                  setPermissionError(null)
-                                  setShowGoogleAdsAccounts(false)
-                                }}
-                              />
-                            )}
-
-                            {loadingGoogleAdsAccounts ? (
-                              <div className="text-center py-8">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                                <p className="mt-2 text-sm text-gray-600">加载账户列表...</p>
-                              </div>
-                            ) : permissionError ? null : googleAdsAccounts.length === 0 ? ( // 有权限错误时不显示"未找到账户"提示
-                              <div className="text-center py-8 bg-gray-50 rounded-lg">
-                                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                                <p className="text-gray-600">未找到可访问的账户</p>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="text-sm text-gray-600 mb-2">
-                                  共 {googleAdsAccounts.length} 个账户
-                                </div>
-                                {googleAdsAccounts.map((account) => (
-                                  <div
-                                    key={account.customerId}
-                                    className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                                  >
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="font-semibold text-gray-900">
-                                        {account.descriptiveName}
-                                      </span>
-                                      <div className="flex gap-2">
-                                        {account.manager && (
-                                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                                            Manager
-                                          </span>
-                                        )}
-                                        {account.testAccount && (
-                                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                            测试账户
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2 text-sm text-gray-600">
-                                      <div>
-                                        <span className="font-medium">ID:</span>{' '}
-                                        <span className="font-mono">{account.customerId}</span>
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">货币:</span>{' '}
-                                        {account.currencyCode}
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">时区:</span>{' '}
-                                        {account.timeZone}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  <GoogleAdsAuthSettingsSection
+                    auth={googleAdsAuth}
+                    categorySettings={categorySettings}
+                    renderOAuthField={(setting) => renderInput(category, setting)}
+                  />
                 ) : category === 'proxy' ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -2939,59 +1719,15 @@ export default function SettingsPage() {
                 )}
 
                 <div className="mt-6 pt-4 border-t border-slate-200 flex gap-3 flex-wrap">
-                  <Button
-                    onClick={() => {
-                      if (category === 'google_ads' && googleAdsAuthMethod === 'service_account') {
-                        handleSaveServiceAccount()
-                      } else {
-                        handleSave(category)
-                      }
-                    }}
-                    disabled={saving || savingServiceAccount || googleAdsAuthActionsBlocked}
-                  >
-                    {saving || savingServiceAccount ? '保存中...' : '保存配置'}
-                  </Button>
-
-                  {category === 'google_ads' && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={requestDeleteCurrentGoogleAdsConfig}
-                      disabled={
-                        googleAdsAuthActionsBlocked ||
-                        deletingOAuthConfig ||
-                        (googleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
-                        (googleAdsAuthMethod === 'service_account' &&
-                          (!!deletingServiceAccountId || !hasServiceAccountConfigToDelete))
-                      }
-                    >
-                      删除当前配置
-                    </Button>
-                  )}
-
-                  {category === 'google_ads' && googleAdsAuthMethod === 'oauth' && (
-                    <Button
-                      onClick={handleStartGoogleAdsOAuth}
-                      disabled={startingOAuth || googleAdsAuthActionsBlocked}
-                      variant="outline"
-                    >
-                      <Key className="w-4 h-4 mr-2" />
-                      {startingOAuth ? '启动中...' : '启动 OAuth 授权'}
-                    </Button>
-                  )}
-
-                  {category === 'google_ads' && googleAdsCredentialStatus?.hasCredentials && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleVerifyGoogleAdsCredentials}
-                      disabled={
-                        verifyingGoogleAdsCredentials ||
-                        googleAdsAuthActionsBlocked ||
-                        hasGoogleAdsUnsavedChanges()
-                      }
-                    >
-                      {verifyingGoogleAdsCredentials ? '验证中...' : '验证凭证'}
+                  {category === 'google_ads' ? (
+                    <GoogleAdsAuthSettingsActions
+                      auth={googleAdsAuth}
+                      saving={saving}
+                      onSaveOAuth={() => void handleSave(category)}
+                    />
+                  ) : (
+                    <Button onClick={() => handleSave(category)} disabled={saving}>
+                      {saving ? '保存中...' : '保存配置'}
                     </Button>
                   )}
 

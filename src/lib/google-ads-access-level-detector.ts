@@ -8,9 +8,11 @@ import { getGoogleAdsClient } from './google-ads-api'
 import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
 import {
   getGoogleAdsAuthContext,
+  getGoogleAdsAuthContextMetadata,
   GOOGLE_ADS_DUAL_STACK_WARNING,
   resolveGoogleAdsAuthReadyFailure,
 } from './google-ads-auth-context'
+import { oauthRefreshConfiguredFromContext } from './google-ads-auth-context-cache'
 
 function isGoogleAdsDualStackError(error: unknown): boolean {
   return error instanceof Error && error.message === GOOGLE_ADS_DUAL_STACK_WARNING
@@ -90,7 +92,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
   const now = new Date().toISOString()
 
   try {
-    const ctx = await getGoogleAdsAuthContext(userId)
+    const ctx = await getGoogleAdsAuthContextMetadata(userId)
     const authFailure = resolveGoogleAdsAuthReadyFailure(ctx)
     if (authFailure) {
       throw new Error(authFailure.message)
@@ -120,9 +122,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       }
     }
 
-    const credentials = ctx.oauthCredentials
-
-    if (!credentials?.refresh_token) {
+    if (!oauthRefreshConfiguredFromContext(ctx)) {
       const storedLevel = ctx.apiAccessLevel
       if (
         storedLevel === 'test' ||
@@ -137,6 +137,13 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
           details: 'OAuth 凭证不可用，使用已存储的 api_access_level',
         }
       }
+      throw new Error('未找到 Google Ads 凭证')
+    }
+
+    const fullCtx = await getGoogleAdsAuthContext(userId)
+    const credentials = fullCtx.oauthCredentials
+
+    if (!credentials?.refresh_token) {
       throw new Error('未找到 Google Ads 凭证')
     }
 

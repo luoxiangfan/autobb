@@ -149,6 +149,7 @@ export type ParsedGoogleAdsCredentialsStatus = {
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   hasCredentials: boolean
+  dualStack: boolean
   authConfigWarning: string | null
 }
 
@@ -189,17 +190,20 @@ export function parseCredentialsStatusResponse(data: unknown): ParsedGoogleAdsCr
   if (!record?.success || !payload) {
     return {
       hasCredentials: false,
+      dualStack: false,
       authConfigWarning: null,
     }
   }
 
   const authConfigWarning = formatNullableErrorMessage(payload.authConfigWarning)
+  const dualStack = Boolean(payload.dualStack) || Boolean(authConfigWarning)
   const { authType } = resolveParsedCredentialsAuthType(payload)
 
   return {
     ...(authType ? { authType } : {}),
     serviceAccountId: payload.serviceAccountId ? String(payload.serviceAccountId) : undefined,
     hasCredentials: Boolean(payload.hasCredentials),
+    dualStack,
     authConfigWarning,
   }
 }

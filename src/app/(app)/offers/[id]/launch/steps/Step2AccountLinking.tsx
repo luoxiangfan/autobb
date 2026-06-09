@@ -468,7 +468,11 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
               <Plus className="w-4 h-4 mr-2" />
               连接新账号
             </Button>
-            <Button onClick={() => fetchAccounts(true)} variant="outline" disabled={refreshing}>
+            <Button
+              onClick={() => fetchAccounts(true)}
+              variant="outline"
+              disabled={refreshing || Boolean(authConfigWarning)}
+            >
               {refreshing ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (

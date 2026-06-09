@@ -18,11 +18,11 @@ import {
 import { encrypt } from '@/lib/crypto'
 import {
   assertNoConflictingGoogleAdsAuth,
-  getGoogleAdsAuthContext,
+  getGoogleAdsAuthContextMetadata,
   googleAdsAuthContextDualStackError,
   googleAdsAuthReadyFailurePayload,
   hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsCredentialStatusFields,
+  resolveGoogleAdsCredentialStatusSummary,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
 
@@ -35,9 +35,9 @@ async function requireAdmin(request: NextRequest) {
 }
 
 async function buildAuthStatus(userId: number) {
-  const ctx = await getGoogleAdsAuthContext(userId)
+  const ctx = await getGoogleAdsAuthContextMetadata(userId)
   const assignment = ctx.assignment
-  const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
+  const summary = resolveGoogleAdsCredentialStatusSummary(ctx)
 
   let sharedAdminUsername: string | null = null
   let sharedAdminEmail: string | null = null
@@ -71,10 +71,10 @@ async function buildAuthStatus(userId: number) {
           updatedAt: null,
         },
     authType: displayAuthType,
-    hasOAuth: statusFields.hasRefreshToken,
-    hasServiceAccount: statusFields.hasServiceAccount,
-    serviceAccountId: statusFields.serviceAccountId,
-    serviceAccountName: statusFields.serviceAccountName,
+    hasOAuth: summary.hasRefreshToken,
+    hasServiceAccount: summary.hasServiceAccount,
+    serviceAccountId: summary.serviceAccountId,
+    serviceAccountName: summary.serviceAccountName,
     hasConfigured: configured,
     canModify: ctx.canModify,
     dualStack: ctx.dualStack,
@@ -155,7 +155,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
   }
 
   try {
-    const targetCtx = await getGoogleAdsAuthContext(userId)
+    const targetCtx = await getGoogleAdsAuthContextMetadata(userId)
     const dualStackError = googleAdsAuthContextDualStackError(targetCtx)
     if (dualStackError) {
       return NextResponse.json(

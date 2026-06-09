@@ -18,6 +18,7 @@ import { fetchGoogleAdsCredentialsStatus } from '@/lib/google-ads-credentials-er
 const oauthParsed = {
   authType: 'oauth' as const,
   hasCredentials: true,
+  dualStack: false,
   authConfigWarning: null,
 }
 

@@ -46,6 +46,23 @@ describe('upsertGoogleAdsOAuthConfigFromSettings', () => {
     expect(authContextFns.assertNoConflictingGoogleAdsAuth).toHaveBeenCalledWith(1, 'oauth')
   })
 
+  it('skips auth conflict check for legacy migration path', async () => {
+    authContextFns.assertNoConflictingGoogleAdsAuth.mockRejectedValue(
+      new Error('当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。')
+    )
+
+    await expect(
+      upsertGoogleAdsOAuthConfigFromSettings(
+        1,
+        { client_id: 'legacy-id.apps.googleusercontent.com' },
+        { skipAuthConflictCheck: true, skipAuthContextInvalidate: true }
+      )
+    ).resolves.toEqual({ synced: true, oauthClientCredentialsChanged: false })
+
+    expect(authContextFns.assertNoConflictingGoogleAdsAuth).not.toHaveBeenCalled()
+    expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).not.toHaveBeenCalled()
+  })
+
   it('creates credential row when saving config before OAuth', async () => {
     dbFns.queryOne.mockResolvedValueOnce(undefined)
 

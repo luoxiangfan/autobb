@@ -627,7 +627,9 @@ export default function GoogleAdsPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefreshAccounts}
-                disabled={accountsLoading || accountsSyncing || !isConfigured}
+                disabled={
+                  accountsLoading || accountsSyncing || !isConfigured || Boolean(authConfigWarning)
+                }
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {accountsSyncing ? '同步中...' : accountsLoading ? '加载中...' : '刷新账户列表'}
