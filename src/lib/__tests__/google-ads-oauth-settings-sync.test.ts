@@ -60,4 +60,21 @@ describe('syncGoogleAdsOAuthFieldsFromSettings', () => {
     )
     expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(1)
   })
+
+  it('rejects invalid developer_token when syncing', async () => {
+    dbFns.queryOne
+      .mockResolvedValueOnce({
+        refresh_token: 'rt-1',
+        client_secret: 'GOCSPX-real-secret',
+        is_active: 1,
+      })
+      .mockResolvedValueOnce({ user_id: 1 })
+
+    await expect(
+      syncGoogleAdsOAuthFieldsFromSettings(1, {
+        developer_token: 'GOCSPX-mistaken-token',
+      })
+    ).rejects.toThrow(/Developer Token/)
+    expect(dbFns.exec).not.toHaveBeenCalled()
+  })
 })

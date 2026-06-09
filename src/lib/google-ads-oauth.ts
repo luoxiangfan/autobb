@@ -4,6 +4,7 @@ import {
   resolveGoogleAdsCredentialOwnerId,
   type GoogleAdsCredentialOwnerResolutionInput,
 } from './google-ads-auth-assignment'
+import { developerTokenLooksInvalid } from './google-ads-developer-token-heal'
 
 /**
  * 获取用户的 Google Ads 授权方式（产品上 OAuth / 服务账号二选一，切换前须删除另一种配置）。
@@ -277,8 +278,15 @@ export async function syncGoogleAdsOAuthFieldsFromSettings(
     params.push(fields.client_secret.trim())
   }
   if (fields.developer_token?.trim()) {
+    const developerToken = fields.developer_token.trim()
+    const clientSecretForCheck = fields.client_secret?.trim() || raw.client_secret || ''
+    if (developerTokenLooksInvalid(developerToken, clientSecretForCheck)) {
+      throw new Error(
+        'Developer Token 配置看起来不正确（疑似误填为 OAuth Client Secret）。请在设置页面填写 Google Ads API Center 提供的 Developer Token。'
+      )
+    }
     setClauses.push('developer_token = ?')
-    params.push(fields.developer_token.trim())
+    params.push(developerToken)
   }
   if (fields.login_customer_id?.trim()) {
     setClauses.push('login_customer_id = ?')

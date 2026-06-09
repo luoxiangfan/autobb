@@ -850,6 +850,11 @@ export default function SettingsPage() {
 
   // Google Ads OAuth 授权
   const handleStartGoogleAdsOAuth = async () => {
+    if (hasUnsavedChanges('google_ads')) {
+      toast.error('请先保存 Google Ads 配置后再启动 OAuth 授权')
+      return
+    }
+
     const clientId = formData.google_ads?.client_id
 
     if (!clientId?.trim()) {
@@ -859,10 +864,7 @@ export default function SettingsPage() {
 
     try {
       setStartingOAuth(true)
-      const response = await fetch(
-        `/api/google-ads/oauth/start?client_id=${encodeURIComponent(clientId)}`,
-        { credentials: 'include' }
-      )
+      const response = await fetch('/api/google-ads/oauth/start', { credentials: 'include' })
 
       if (!response.ok) {
         const data = await response.json()
@@ -1149,6 +1151,10 @@ export default function SettingsPage() {
 
       // 仅刷新当前分类，避免覆盖其他分类未保存修改
       await refreshCategorySettings(category)
+
+      if (category === 'google_ads') {
+        await fetchGoogleAdsCredentialStatus()
+      }
 
       // 🔥 重要：刷新后清除编辑状态，让敏感字段重新显示为占位符
       setEditingField(null)
@@ -1926,7 +1932,7 @@ export default function SettingsPage() {
                           {googleAdsCredentialStatus.authConfigWarning}
                         </p>
                         <p className="text-sm text-amber-900 mt-2">
-                          请删除下方其中一种认证方式后再继续使用。
+                          请使用上方按钮删除其中一种认证方式后再继续使用。
                         </p>
                         {!googleAdsAuthReadOnly && (
                           <div className="mt-3 flex flex-wrap gap-2">
