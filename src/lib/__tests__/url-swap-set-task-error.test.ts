@@ -13,6 +13,11 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
+vi.mock('../url-swap/urgent-alerts', () => ({
+  syncUrlSwapUrgentRiskAlert: vi.fn().mockResolvedValue(undefined),
+  resolveUrlSwapUrgentRiskAlertsForOffer: vi.fn().mockResolvedValue(undefined),
+}))
+
 describe('setTaskError', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -41,6 +46,9 @@ describe('setTaskError', () => {
       failed_swaps: 0,
       total_swaps: 0,
       swap_interval_minutes: 1440,
+      user_id: 1,
+      offer_id: 10,
+      offer_name: 'Test Offer',
     })
 
     await setTaskError('task-1', 'boom', 'link_resolution')
@@ -57,6 +65,9 @@ describe('setTaskError', () => {
       failed_swaps: 2,
       total_swaps: 2,
       swap_interval_minutes: 1440,
+      user_id: 1,
+      offer_id: 10,
+      offer_name: 'Test Offer',
     })
 
     await setTaskError('task-1', 'boom', 'google_ads_api')

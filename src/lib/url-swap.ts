@@ -13,6 +13,10 @@ import { boolParam } from './db-helpers'
 import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from './url-swap-link-utils'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 import { isAffiliateLinkExpiredMessage } from './affiliate-link-failure'
+import {
+  resolveUrlSwapUrgentRiskAlertsForOffer,
+  syncUrlSwapUrgentRiskAlert,
+} from './url-swap/urgent-alerts'
 import { parseJsonField, toDbJsonObjectField } from './json-field'
 import type {
   UrlSwapTask,
@@ -986,6 +990,12 @@ export async function enableUrlSwapTask(id: string, userId: number): Promise<voi
     [now, id]
   )
 
+  try {
+    await resolveUrlSwapUrgentRiskAlertsForOffer(userId, task.offer_id)
+  } catch (error: any) {
+    console.warn(`[url-swap] 清理换链风险告警失败: ${id}`, error?.message || error)
+  }
+
   console.log(`[url-swap] 启用任务: ${id}`)
 }
 
@@ -1021,11 +1031,22 @@ export async function setTaskError(
     failed_swaps: number
     total_swaps: number
     swap_interval_minutes: number
+    user_id: number
+    offer_id: number
+    offer_name: string
   }>(
     `
-    SELECT consecutive_failures, failed_swaps, total_swaps, swap_interval_minutes
-    FROM url_swap_tasks
-    WHERE id = ?
+    SELECT
+      t.consecutive_failures,
+      t.failed_swaps,
+      t.total_swaps,
+      t.swap_interval_minutes,
+      t.user_id,
+      t.offer_id,
+      o.offer_name
+    FROM url_swap_tasks t
+    INNER JOIN offers o ON t.offer_id = o.id
+    WHERE t.id = ?
   `,
     [id]
   )
@@ -1102,6 +1123,21 @@ export async function setTaskError(
   console.log(
     `[url-swap] 任务错误已记录: ${id} (连续失败: ${newConsecutiveFailures}, 状态: ${newStatus})`
   )
+
+  if (shouldMarkError) {
+    try {
+      await syncUrlSwapUrgentRiskAlert({
+        taskId: id,
+        userId: task.user_id,
+        offerId: task.offer_id,
+        offerName: task.offer_name,
+        errorMessage,
+        errorType,
+      })
+    } catch (error: any) {
+      console.warn(`[url-swap] 同步换链紧急告警失败: ${id}`, error?.message || error)
+    }
+  }
 }
 
 /**

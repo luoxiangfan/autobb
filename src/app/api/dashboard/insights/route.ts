@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import {
+  excludeDisabledUrlSwapWithPausedCampaignSql,
+  requireEnabledCampaignForOfferSql,
+} from '@/lib/url-swap/urgent-alerts'
 
 /**
  * 智能洞察
@@ -35,26 +39,6 @@ interface Insight {
  * Query参数：
  * - days: 分析天数（默认7）
  */
-
-/**
- * 排除「换链接已禁用 + 关联广告系列已暂停」的预期态数据。
- * 广告系列暂停时会自动禁用同 Offer 的换链接任务，不应作为异常洞察展示。
- */
-function excludeDisabledUrlSwapWithPausedCampaignSql(dbType: 'postgres' | 'sqlite'): string {
-  const isDeletedFalse = dbType === 'postgres' ? 'FALSE' : '0'
-  return `
-          AND NOT (
-            t.status = 'disabled'
-            AND EXISTS (
-              SELECT 1
-              FROM campaigns c
-              WHERE c.user_id = t.user_id
-                AND c.offer_id = t.offer_id
-                AND c.status = 'PAUSED'
-                AND c.is_deleted = ${isDeletedFalse}
-            )
-          )`
-}
 
 export const dynamic = 'force-dynamic'
 
@@ -473,6 +457,8 @@ export async function GET(request: NextRequest) {
     })
 
     // ==================== URL Swap 换链接任务洞察 ====================
+    const urlSwapPausedCampaignFilter = excludeDisabledUrlSwapWithPausedCampaignSql(db.type)
+    const urlSwapEnabledCampaignFilter = requireEnabledCampaignForOfferSql(db.type)
 
     // 规则7: 检测URL Swap任务错误
     const urlSwapErrorQuery =
@@ -491,6 +477,8 @@ export async function GET(request: NextRequest) {
           AND t.status = 'error'
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
+          ${urlSwapEnabledCampaignFilter}
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -508,6 +496,8 @@ export async function GET(request: NextRequest) {
           AND t.status = 'error'
           AND t.is_deleted = 0
           AND t.error_at >= datetime('now', '-24 hours')
+          ${urlSwapEnabledCampaignFilter}
+          ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -608,7 +598,6 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则9: 检测暂停的换链任务（可能需要关注）
-    const urlSwapPausedCampaignFilter = excludeDisabledUrlSwapWithPausedCampaignSql(db.type)
     const urlSwapPausedQuery =
       db.type === 'postgres'
         ? `
@@ -628,6 +617,7 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = FALSE
           AND t.updated_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND t.failed_swaps > 0
+          ${urlSwapEnabledCampaignFilter}
           ${urlSwapPausedCampaignFilter}
         ORDER BY t.updated_at DESC
         LIMIT 3
@@ -649,6 +639,7 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = 0
           AND t.updated_at >= datetime('now', '-48 hours')
           AND t.failed_swaps > 0
+          ${urlSwapEnabledCampaignFilter}
           ${urlSwapPausedCampaignFilter}
         ORDER BY t.updated_at DESC
         LIMIT 3
@@ -708,6 +699,9 @@ export async function GET(request: NextRequest) {
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND (
             t.error_message LIKE '%推广链接解析失败%'
+            OR t.error_message LIKE '%推广链接已失效%'
+            OR t.error_message LIKE '%推广链接无法访问%'
+            OR t.error_message LIKE '%推广链接解析异常%'
             OR t.error_message LIKE '%resolve%'
             OR t.error_message LIKE '%无法访问%'
             OR t.error_message LIKE '%Failed to fetch%'
@@ -716,6 +710,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%ECONNREFUSED%'
             OR t.error_message LIKE '%network%'
           )
+          ${urlSwapEnabledCampaignFilter}
           ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
@@ -738,6 +733,9 @@ export async function GET(request: NextRequest) {
           AND t.error_at >= datetime('now', '-48 hours')
           AND (
             t.error_message LIKE '%推广链接解析失败%'
+            OR t.error_message LIKE '%推广链接已失效%'
+            OR t.error_message LIKE '%推广链接无法访问%'
+            OR t.error_message LIKE '%推广链接解析异常%'
             OR t.error_message LIKE '%resolve%'
             OR t.error_message LIKE '%无法访问%'
             OR t.error_message LIKE '%Failed to fetch%'
@@ -746,6 +744,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%ECONNREFUSED%'
             OR t.error_message LIKE '%network%'
           )
+          ${urlSwapEnabledCampaignFilter}
           ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
@@ -828,6 +827,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%campaign%'
             OR t.error_message LIKE '%Customer%'
           )
+          ${urlSwapEnabledCampaignFilter}
           ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
@@ -859,6 +859,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%campaign%'
             OR t.error_message LIKE '%Customer%'
           )
+          ${urlSwapEnabledCampaignFilter}
           ${urlSwapPausedCampaignFilter}
         ORDER BY t.error_at DESC
         LIMIT 5

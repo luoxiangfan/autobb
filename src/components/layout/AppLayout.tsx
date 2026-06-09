@@ -32,6 +32,8 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import { GoogleAdsCampaignSyncSseBridge } from '@/components/GoogleAdsCampaignSyncSseBridge'
+import { UrlSwapUrgentBanner } from '@/components/layout/UrlSwapUrgentBanner'
+import type { UrlSwapUrgentAlert } from '@/lib/url-swap/urgent-alerts'
 
 // 动态导入模态框组件，实现代码分割
 const UserProfileModal = dynamic(
@@ -313,6 +315,9 @@ export default function AppLayout({
   )
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [urlSwapUrgentAlerts, setUrlSwapUrgentAlerts] = useState<UrlSwapUrgentAlert[]>([])
+  const [urlSwapUrgentTotal, setUrlSwapUrgentTotal] = useState(0)
+  const [urlSwapBannerDismissed, setUrlSwapBannerDismissed] = useState(false)
   const [loading, setLoading] = useState(!cachedUser)
   const fetchingRef = useRef(false)
   const prefetchedNavHrefsRef = useRef(new Set<string>())
@@ -421,6 +426,45 @@ export default function AppLayout({
       setAdvancedNavOpen(true)
     }
   }, [pathname])
+
+  useEffect(() => {
+    if (!user) {
+      setUrlSwapUrgentAlerts([])
+      setUrlSwapUrgentTotal(0)
+      return
+    }
+
+    let cancelled = false
+
+    const loadUrlSwapUrgentAlerts = async () => {
+      try {
+        const response = await fetch('/api/url-swap/urgent-alerts?limit=3', {
+          credentials: 'include',
+          cache: 'no-store',
+        })
+        if (!response.ok) return
+
+        const payload = await response.json()
+        if (cancelled) return
+
+        setUrlSwapUrgentAlerts(Array.isArray(payload.alerts) ? payload.alerts : [])
+        setUrlSwapUrgentTotal(Number(payload.total) || 0)
+        if (Number(payload.total) > 0) {
+          setUrlSwapBannerDismissed(false)
+        }
+      } catch (error) {
+        console.warn('[AppLayout] failed to load url-swap urgent alerts:', error)
+      }
+    }
+
+    void loadUrlSwapUrgentAlerts()
+    const timer = window.setInterval(loadUrlSwapUrgentAlerts, 5 * 60 * 1000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
+  }, [user, pathname])
 
   if (loading) {
     return (
@@ -606,7 +650,17 @@ export default function AppLayout({
                           className={`w-5 h-5 shrink-0 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`}
                         />
                         <span className="text-sm">{item.label}</span>
-                        {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />}
+                        {item.href === '/url-swap' && urlSwapUrgentTotal > 0 && (
+                          <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                            {urlSwapUrgentTotal > 99 ? '99+' : urlSwapUrgentTotal}
+                          </span>
+                        )}
+                        {active && item.href !== '/url-swap' && (
+                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        )}
+                        {active && item.href === '/url-swap' && urlSwapUrgentTotal <= 0 && (
+                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />
+                        )}
                       </SidebarLink>
                     )
                   })}
@@ -683,6 +737,13 @@ export default function AppLayout({
           ${sidebarOpen ? 'lg:ml-56 lg:pb-0 pb-16' : 'lg:ml-20 lg:pb-0 pb-16'}
         `}
       >
+        {!urlSwapBannerDismissed && urlSwapUrgentTotal > 0 && (
+          <UrlSwapUrgentBanner
+            alerts={urlSwapUrgentAlerts}
+            total={urlSwapUrgentTotal}
+            onDismiss={() => setUrlSwapBannerDismissed(true)}
+          />
+        )}
         {children}
       </main>
 
