@@ -4,8 +4,6 @@ import {
   resolveGoogleAdsCredentialOwnerId,
   type GoogleAdsCredentialOwnerResolutionInput,
 } from './google-ads-auth-assignment'
-import { developerTokenLooksInvalid } from './google-ads-developer-token-heal'
-
 /**
  * 获取用户的 Google Ads 授权方式（产品上 OAuth / 服务账号二选一，切换前须删除另一种配置）。
  *
@@ -250,81 +248,13 @@ export type SyncGoogleAdsOAuthFieldsResult = {
   oauthClientCredentialsChanged: boolean
 }
 
-/**
- * 设置页保存 OAuth 基础字段后，若用户已有 refresh_token，同步到 google_ads_credentials。
- */
+/** @deprecated 使用 upsertGoogleAdsOAuthConfigFromSettings（google-ads-settings-store） */
 export async function syncGoogleAdsOAuthFieldsFromSettings(
   userId: number,
   fields: GoogleAdsOAuthSettingsSyncFields
 ): Promise<SyncGoogleAdsOAuthFieldsResult> {
-  const raw = await getGoogleAdsCredentialsRaw(userId)
-  if (!raw?.refresh_token?.trim()) {
-    return { synced: false, oauthClientCredentialsChanged: false }
-  }
-
-  let oauthClientCredentialsChanged = false
-  if (fields.client_id?.trim() && fields.client_id.trim() !== String(raw.client_id || '').trim()) {
-    oauthClientCredentialsChanged = true
-  }
-  if (
-    fields.client_secret?.trim() &&
-    fields.client_secret.trim() !== String(raw.client_secret || '').trim()
-  ) {
-    oauthClientCredentialsChanged = true
-  }
-
-  const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
-  const activeRow = await db.queryOne<{ user_id: number }>(
-    `SELECT user_id FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
-    [userId]
-  )
-  if (!activeRow) {
-    return { synced: false, oauthClientCredentialsChanged: false }
-  }
-
-  const setClauses: string[] = []
-  const params: unknown[] = []
-
-  if (fields.client_id?.trim()) {
-    setClauses.push('client_id = ?')
-    params.push(fields.client_id.trim())
-  }
-  if (fields.client_secret?.trim()) {
-    setClauses.push('client_secret = ?')
-    params.push(fields.client_secret.trim())
-  }
-  if (fields.developer_token?.trim()) {
-    const developerToken = fields.developer_token.trim()
-    const clientSecretForCheck = fields.client_secret?.trim() || raw.client_secret || ''
-    if (developerTokenLooksInvalid(developerToken, clientSecretForCheck)) {
-      throw new Error(
-        'Developer Token 配置看起来不正确（疑似误填为 OAuth Client Secret）。请在设置页面填写 Google Ads API Center 提供的 Developer Token。'
-      )
-    }
-    setClauses.push('developer_token = ?')
-    params.push(developerToken)
-  }
-  if (fields.login_customer_id?.trim()) {
-    setClauses.push('login_customer_id = ?')
-    params.push(formatAndValidateLoginCustomerId(fields.login_customer_id.trim()))
-  }
-
-  if (setClauses.length === 0) {
-    return { synced: false, oauthClientCredentialsChanged: false }
-  }
-
-  const nowSql = sqlNowFunc(db.type)
-  await db.exec(
-    `UPDATE google_ads_credentials SET ${setClauses.join(', ')}, updated_at = ${nowSql} WHERE user_id = ? AND ${isActiveCondition}`,
-    [...params, userId]
-  )
-
-  const { invalidateGoogleAdsAuthContextForCredentialUser } =
-    await import('./google-ads-auth-context')
-  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
-
-  return { synced: true, oauthClientCredentialsChanged }
+  const { upsertGoogleAdsOAuthConfigFromSettings } = await import('./google-ads-settings-store')
+  return upsertGoogleAdsOAuthConfigFromSettings(userId, fields)
 }
 
 /**

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads-settings-store'
 import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
@@ -87,21 +87,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 校验: login_customer_id 必须由用户自己配置（不使用 getSetting，避免回退到全局配置）
-    const loginCustomerId =
-      (await getUserOnlySetting('google_ads', 'login_customer_id', userId))?.value || ''
+    const oauthConfig = await getGoogleAdsOAuthConfigFields(userId)
+    const loginCustomerId = oauthConfig.login_customer_id
     if (!loginCustomerId) {
       return NextResponse.redirect(
         createRedirectUrl('/settings?error=missing_login_customer_id&category=google_ads')
       )
     }
 
-    // 🔧 修复(2025-12-12): 独立账号模式 - 必须使用用户自己的OAuth凭证
-    const clientId = (await getUserOnlySetting('google_ads', 'client_id', userId))?.value || ''
-    const clientSecret =
-      (await getUserOnlySetting('google_ads', 'client_secret', userId))?.value || ''
-    const developerToken =
-      (await getUserOnlySetting('google_ads', 'developer_token', userId))?.value || ''
+    const clientId = oauthConfig.client_id
+    const clientSecret = oauthConfig.client_secret
+    const developerToken = oauthConfig.developer_token
 
     if (!clientId || !clientSecret || !developerToken) {
       return NextResponse.redirect(

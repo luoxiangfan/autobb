@@ -19,38 +19,39 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
 
-import { syncGoogleAdsOAuthFieldsFromSettings } from '@/lib/google-ads-oauth'
+import { upsertGoogleAdsOAuthConfigFromSettings } from '@/lib/google-ads-settings-store'
 
-describe('syncGoogleAdsOAuthFieldsFromSettings', () => {
+describe('upsertGoogleAdsOAuthConfigFromSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.queryOne.mockResolvedValue(undefined)
   })
 
-  it('returns not synced when no refresh token on file', async () => {
+  it('creates credential row when saving config before OAuth', async () => {
+    dbFns.queryOne.mockResolvedValueOnce(undefined)
+
+    await expect(
+      upsertGoogleAdsOAuthConfigFromSettings(1, { client_id: 'new-id.apps.googleusercontent.com' })
+    ).resolves.toEqual({ synced: true, oauthClientCredentialsChanged: false })
+
+    expect(dbFns.exec).toHaveBeenCalledWith(
+      expect.stringContaining('INSERT INTO google_ads_credentials'),
+      expect.arrayContaining(['new-id.apps.googleusercontent.com'])
+    )
+    expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(1)
+  })
+
+  it('updates oauth fields on existing row', async () => {
     dbFns.queryOne.mockResolvedValueOnce({
-      refresh_token: '',
+      user_id: 1,
+      client_id: '123.apps.googleusercontent.com',
+      client_secret: 'GOCSPX-existing',
+      refresh_token: 'rt-1',
       is_active: 1,
     })
 
     await expect(
-      syncGoogleAdsOAuthFieldsFromSettings(1, { client_id: 'new-id.apps.googleusercontent.com' })
-    ).resolves.toEqual({ synced: false, oauthClientCredentialsChanged: false })
-    expect(dbFns.exec).not.toHaveBeenCalled()
-  })
-
-  it('syncs oauth fields when refresh token exists', async () => {
-    dbFns.queryOne
-      .mockResolvedValueOnce({
-        refresh_token: 'rt-1',
-        client_id: '123.apps.googleusercontent.com',
-        client_secret: 'GOCSPX-existing',
-        is_active: 1,
-      })
-      .mockResolvedValueOnce({ user_id: 1 })
-
-    await expect(
-      syncGoogleAdsOAuthFieldsFromSettings(1, {
+      upsertGoogleAdsOAuthConfigFromSettings(1, {
         client_id: '123.apps.googleusercontent.com',
         developer_token: 'dev-token-123456789012345',
       })
@@ -60,54 +61,50 @@ describe('syncGoogleAdsOAuthFieldsFromSettings', () => {
       expect.stringContaining('UPDATE google_ads_credentials'),
       expect.arrayContaining(['123.apps.googleusercontent.com', 'dev-token-123456789012345', 1])
     )
-    expect(authContextFns.invalidateGoogleAdsAuthContextForCredentialUser).toHaveBeenCalledWith(1)
   })
 
   it('flags oauthClientCredentialsChanged when client_id changes', async () => {
-    dbFns.queryOne
-      .mockResolvedValueOnce({
-        refresh_token: 'rt-1',
-        client_id: 'old-id.apps.googleusercontent.com',
-        client_secret: 'GOCSPX-existing',
-        is_active: 1,
-      })
-      .mockResolvedValueOnce({ user_id: 1 })
+    dbFns.queryOne.mockResolvedValueOnce({
+      user_id: 1,
+      client_id: 'old-id.apps.googleusercontent.com',
+      client_secret: 'GOCSPX-existing',
+      refresh_token: 'rt-1',
+      is_active: 1,
+    })
 
     await expect(
-      syncGoogleAdsOAuthFieldsFromSettings(1, {
+      upsertGoogleAdsOAuthConfigFromSettings(1, {
         client_id: 'new-id.apps.googleusercontent.com',
       })
     ).resolves.toEqual({ synced: true, oauthClientCredentialsChanged: true })
   })
 
   it('flags oauthClientCredentialsChanged when client_secret changes', async () => {
-    dbFns.queryOne
-      .mockResolvedValueOnce({
-        refresh_token: 'rt-1',
-        client_id: '123.apps.googleusercontent.com',
-        client_secret: 'GOCSPX-old',
-        is_active: 1,
-      })
-      .mockResolvedValueOnce({ user_id: 1 })
+    dbFns.queryOne.mockResolvedValueOnce({
+      user_id: 1,
+      client_id: '123.apps.googleusercontent.com',
+      client_secret: 'GOCSPX-old',
+      refresh_token: 'rt-1',
+      is_active: 1,
+    })
 
     await expect(
-      syncGoogleAdsOAuthFieldsFromSettings(1, {
+      upsertGoogleAdsOAuthConfigFromSettings(1, {
         client_secret: 'GOCSPX-new-secret-value',
       })
     ).resolves.toEqual({ synced: true, oauthClientCredentialsChanged: true })
   })
 
-  it('rejects invalid developer_token when syncing', async () => {
-    dbFns.queryOne
-      .mockResolvedValueOnce({
-        refresh_token: 'rt-1',
-        client_secret: 'GOCSPX-real-secret',
-        is_active: 1,
-      })
-      .mockResolvedValueOnce({ user_id: 1 })
+  it('rejects invalid developer_token when saving', async () => {
+    dbFns.queryOne.mockResolvedValueOnce({
+      user_id: 1,
+      client_secret: 'GOCSPX-real-secret',
+      refresh_token: 'rt-1',
+      is_active: 1,
+    })
 
     await expect(
-      syncGoogleAdsOAuthFieldsFromSettings(1, {
+      upsertGoogleAdsOAuthConfigFromSettings(1, {
         developer_token: 'GOCSPX-mistaken-token',
       })
     ).rejects.toThrow(/Developer Token/)

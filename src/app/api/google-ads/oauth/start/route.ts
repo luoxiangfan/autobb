@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads-settings-store'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
@@ -37,36 +37,9 @@ export async function GET(request: NextRequest) {
     console.log(`🔐 [OAuth Start] 用户ID: ${userId}`)
 
     const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
-    const summarizeSetting = (setting: any) => {
-      if (!setting) return null
-      const rawValue = typeof setting.value === 'string' ? setting.value : ''
-      const prefix = rawValue ? rawValue.slice(0, 6) : ''
-      return {
-        category: setting.category,
-        key: setting.key,
-        dataType: setting.dataType,
-        isSensitive: setting.isSensitive,
-        isRequired: setting.isRequired,
-        value: setting.isSensitive
-          ? rawValue
-            ? `***redacted*** (len=${rawValue.length}, prefix=${prefix})`
-            : ''
-          : rawValue,
-      }
-    }
 
-    // 校验: login_customer_id 必须由用户自己配置（不使用 getSetting，避免回退到全局配置）
-    const loginCustomerIdSetting = await getUserOnlySetting(
-      'google_ads',
-      'login_customer_id',
-      userId
-    )
-    console.log(
-      `🔐 [OAuth Start] login_customer_id 查询结果:`,
-      summarizeSetting(loginCustomerIdSetting)
-    )
-
-    const userLoginCustomerId = loginCustomerIdSetting?.value || ''
+    const oauthConfig = await getGoogleAdsOAuthConfigFields(userId)
+    const userLoginCustomerId = oauthConfig.login_customer_id
     if (!userLoginCustomerId) {
       console.log(`🔐 [OAuth Start] 用户 ${userId} 未配置 login_customer_id`)
       return NextResponse.json(
@@ -78,30 +51,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 🔧 修复(2025-12-12): 独立账号模式 - 必须获取用户自己的OAuth配置
-    const userClientIdSetting = await getUserOnlySetting('google_ads', 'client_id', userId)
-    const userClientSecretSetting = await getUserOnlySetting('google_ads', 'client_secret', userId)
-    const userDeveloperTokenSetting = await getUserOnlySetting(
-      'google_ads',
-      'developer_token',
-      userId
-    )
+    const userClientId = oauthConfig.client_id
+    const userClientSecret = oauthConfig.client_secret
+    const userDeveloperToken = oauthConfig.developer_token
 
-    console.log(`🔐 [OAuth Start] client_id 查询结果:`, summarizeSetting(userClientIdSetting))
+    console.log(`🔐 [OAuth Start] client_id: ${userClientId ? 'configured' : 'missing'}`)
+    console.log(`🔐 [OAuth Start] client_secret: ${userClientSecret ? 'configured' : 'missing'}`)
     console.log(
-      `🔐 [OAuth Start] client_secret 查询结果:`,
-      summarizeSetting(userClientSecretSetting)
-    )
-    console.log(
-      `🔐 [OAuth Start] developer_token 查询结果:`,
-      summarizeSetting(userDeveloperTokenSetting)
+      `🔐 [OAuth Start] developer_token: ${userDeveloperToken ? 'configured' : 'missing'}`
     )
 
-    const userClientId = userClientIdSetting?.value || ''
-    const userClientSecret = userClientSecretSetting?.value || ''
-    const userDeveloperToken = userDeveloperTokenSetting?.value || ''
-
-    // 🔧 修复(2025-12-12): 独立账号模式 - 必须有完整的OAuth配置，不再回退到共享配置
     if (!userClientId || !userClientSecret || !userDeveloperToken) {
       return NextResponse.json(
         {

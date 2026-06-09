@@ -19,6 +19,12 @@ import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import {
+  overlayGoogleAdsSettingsFromCredentialStore,
+  partitionGoogleAdsSettingUpdates,
+  upsertGoogleAdsOAuthConfigFromSettings,
+  upsertGoogleAdsTestOAuthConfigFromSettings,
+} from '@/lib/google-ads-settings-store'
 
 /**
  * GET /api/settings
@@ -153,6 +159,18 @@ export async function GET(request: NextRequest) {
         lastValidatedAt: null,
         description: 'Gemini API Key 获取地址（系统自动计算，只读）',
       })
+    }
+
+    // Google Ads OAuth 字段从凭证表读取（非 system_settings 用户实例）
+    if (userIdNum && groupedSettings['google_ads']) {
+      const overlaid = await overlayGoogleAdsSettingsFromCredentialStore(
+        groupedSettings['google_ads'].map((setting) => ({
+          ...setting,
+          category: 'google_ads',
+        })),
+        userIdNum
+      )
+      groupedSettings['google_ads'] = overlaid.map(({ category: _category, ...setting }) => setting)
     }
 
     // 确保所有核心分类都存在（即使没有配置值）
@@ -332,8 +350,61 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // 更新配置
-    await updateSettings(updates, userIdNum)
+    const { credentialBacked, remainder } = partitionGoogleAdsSettingUpdates(updates)
+
+    let oauthReauthRequired = false
+    if (credentialBacked.length > 0 && userIdNum) {
+      const oauthFields: Partial<
+        Record<'client_id' | 'client_secret' | 'developer_token' | 'login_customer_id', string>
+      > = {}
+      const testFields: Partial<
+        Record<
+          | 'test_login_customer_id'
+          | 'test_client_id'
+          | 'test_client_secret'
+          | 'test_developer_token',
+          string
+        >
+      > = {}
+
+      for (const update of credentialBacked) {
+        if (
+          update.key === 'client_id' ||
+          update.key === 'client_secret' ||
+          update.key === 'developer_token' ||
+          update.key === 'login_customer_id'
+        ) {
+          oauthFields[update.key] = update.value
+        } else if (
+          update.key === 'test_login_customer_id' ||
+          update.key === 'test_client_id' ||
+          update.key === 'test_client_secret' ||
+          update.key === 'test_developer_token'
+        ) {
+          testFields[update.key] = update.value
+        }
+      }
+
+      try {
+        if (Object.keys(oauthFields).length > 0) {
+          const syncResult = await upsertGoogleAdsOAuthConfigFromSettings(userIdNum, oauthFields)
+          oauthReauthRequired = syncResult.oauthClientCredentialsChanged
+        }
+        if (Object.keys(testFields).length > 0) {
+          await upsertGoogleAdsTestOAuthConfigFromSettings(userIdNum, testFields)
+        }
+      } catch (syncError: any) {
+        return NextResponse.json(
+          { error: syncError.message || '保存 Google Ads OAuth 配置失败' },
+          { status: 400 }
+        )
+      }
+    }
+
+    // 更新非 OAuth 凭证字段（campaign_sync 等仍走 system_settings）
+    if (remainder.length > 0) {
+      await updateSettings(remainder, userIdNum)
+    }
 
     // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存
     const hasProxyUpdate = updates.some((u) => u.category === 'proxy')
@@ -342,34 +413,7 @@ export async function PUT(request: NextRequest) {
       invalidateProxyPoolCache(userIdNum)
     }
 
-    // 🔥 新增：如果更新了Google Ads配置，同步 OAuth 凭证并清除 auth-context / API 缓存
     if (hasGoogleAdsUpdate && userIdNum) {
-      const oauthSyncFields: import('@/lib/google-ads-oauth').GoogleAdsOAuthSettingsSyncFields = {}
-      for (const update of updates) {
-        if (update.category !== 'google_ads') continue
-        if (
-          update.key === 'client_id' ||
-          update.key === 'client_secret' ||
-          update.key === 'developer_token' ||
-          update.key === 'login_customer_id'
-        ) {
-          oauthSyncFields[update.key] = update.value
-        }
-      }
-      let oauthReauthRequired = false
-      if (Object.keys(oauthSyncFields).length > 0) {
-        const { syncGoogleAdsOAuthFieldsFromSettings } = await import('@/lib/google-ads-oauth')
-        try {
-          const syncResult = await syncGoogleAdsOAuthFieldsFromSettings(userIdNum, oauthSyncFields)
-          oauthReauthRequired = syncResult.oauthClientCredentialsChanged
-        } catch (syncError: any) {
-          return NextResponse.json(
-            { error: syncError.message || '同步 Google Ads OAuth 凭证失败' },
-            { status: 400 }
-          )
-        }
-      }
-
       const { invalidateGoogleAdsAuthContextForCredentialUser } =
         await import('@/lib/google-ads-auth-context')
       await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)

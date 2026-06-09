@@ -35,8 +35,12 @@ const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
 
-const settingsFns = vi.hoisted(() => ({
-  getUserOnlySetting: vi.fn(),
+const settingsStoreFns = vi.hoisted(() => ({
+  getGoogleAdsOAuthConfigValue: vi.fn(),
+}))
+
+vi.mock('../google-ads-settings-store', () => ({
+  getGoogleAdsOAuthConfigValue: settingsStoreFns.getGoogleAdsOAuthConfigValue,
 }))
 
 vi.mock('../google-ads-auth-context', async (importOriginal) => {
@@ -58,10 +62,6 @@ vi.mock('../db', () => ({
     type: 'postgres',
     exec: dbFns.exec,
   })),
-}))
-
-vi.mock('../settings', () => ({
-  getUserOnlySetting: settingsFns.getUserOnlySetting,
 }))
 
 const oauthCredentialsFull = {
@@ -259,7 +259,7 @@ describe('healAccountsRouteDeveloperToken', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.exec.mockResolvedValue(undefined)
-    settingsFns.getUserOnlySetting.mockResolvedValue({ value: validSettingToken })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue(validSettingToken)
     authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
       ...defaultOAuthAuthContext,
       userId: 1,
@@ -287,7 +287,7 @@ describe('healAccountsRouteDeveloperToken', () => {
     if (result.ok) return
     expect(result.code).toBe('DUAL_STACK_CONFLICT')
     expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
-    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).not.toHaveBeenCalled()
   })
 
   it('returns dual-stack error when authContext has dualStack', async () => {
@@ -313,7 +313,7 @@ describe('healAccountsRouteDeveloperToken', () => {
     if (result.ok) return
     expect(result.code).toBe('DUAL_STACK_CONFLICT')
     expect(result.message).toContain('OAuth 与服务账号同时存在')
-    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).not.toHaveBeenCalled()
   })
 
   it('passes when developer token already looks valid', async () => {
@@ -332,7 +332,7 @@ describe('healAccountsRouteDeveloperToken', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).not.toHaveBeenCalled()
   })
 
   it('heals OAuth developer_token from settings and updates credentials table', async () => {
@@ -394,7 +394,7 @@ describe('healAccountsRouteDeveloperToken', () => {
   })
 
   it('returns DEVELOPER_TOKEN_INVALID when settings has no valid token', async () => {
-    settingsFns.getUserOnlySetting.mockResolvedValue({ value: '' })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue('')
 
     const credentials = {
       client_id: oauthCredentialsFull.client_id,
@@ -464,9 +464,9 @@ describe('resolveAndHealSyncUserCredentials', () => {
         developer_token: 'GOCSPX-wrong-secret-used-as-token',
       },
     }
-    settingsFns.getUserOnlySetting.mockResolvedValue({
-      value: 'abcdefghijklmnopqrstuvwxyz1234567890',
-    })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue(
+      'abcdefghijklmnopqrstuvwxyz1234567890'
+    )
 
     const result = await resolveAndHealSyncUserCredentials({
       userId: 2,
@@ -476,7 +476,7 @@ describe('resolveAndHealSyncUserCredentials', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith('google_ads', 'developer_token', 1)
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).toHaveBeenCalledWith(1, 'developer_token')
     expect(dbFns.exec).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE google_ads_credentials'),
       expect.arrayContaining(['abcdefghijklmnopqrstuvwxyz1234567890', 1])
@@ -596,9 +596,9 @@ describe('prepareGoogleAdsAccountApiCall', () => {
 describe('resolveOAuthClientCredentialsForUser OAuth path alignment', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    settingsFns.getUserOnlySetting.mockResolvedValue({
-      value: 'abcdefghijklmnopqrstuvwxyz1234567890ab',
-    })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue(
+      'abcdefghijklmnopqrstuvwxyz1234567890ab'
+    )
   })
 
   it('returns the same client fields as loadOAuthGoogleAdsCallBundleForContext', async () => {
@@ -655,9 +655,9 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
       ctx: { ...oauthAuthContextFull, userId: 1, ownerUserId: 1 },
       apiAuth: defaultOAuthApiAuth,
     })
-    settingsFns.getUserOnlySetting.mockResolvedValue({
-      value: 'abcdefghijklmnopqrstuvwxyz1234567890ab',
-    })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue(
+      'abcdefghijklmnopqrstuvwxyz1234567890ab'
+    )
   })
 
   it('linkedSaPrepareCacheKey isolates userId and linked SA', () => {
@@ -818,14 +818,14 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     const cache = createGoogleAdsLinkedAccountPrepareCache()
     const first = await prepareGoogleAdsApiCallForLinkedAccountCached(2, null, cache)
     expect(first.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledTimes(1)
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).toHaveBeenCalledTimes(1)
     expect(cache.healedOAuthBundleByOwner.has(7)).toBe(true)
 
-    settingsFns.getUserOnlySetting.mockClear()
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockClear()
 
     const second = await prepareGoogleAdsApiCallForLinkedAccountCached(3, null, cache)
     expect(second.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).not.toHaveBeenCalled()
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(2)
   })
 
@@ -873,14 +873,14 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
     const cache = createGoogleAdsLinkedAccountPrepareCache()
     const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, null, cache)
     expect(first.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).toHaveBeenCalled()
     expect(cache.healedOAuthBundleByOwner.has(1)).toBe(true)
 
-    settingsFns.getUserOnlySetting.mockClear()
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockClear()
 
     const second = await prepareGoogleAdsApiCallForLinkedAccountCached(1, null, cache)
     expect(second.ok).toBe(true)
-    expect(settingsFns.getUserOnlySetting).not.toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).not.toHaveBeenCalled()
     expect(authContextFns.resolveGoogleAdsApiAuthForAccount).toHaveBeenCalledTimes(1)
   })
 })

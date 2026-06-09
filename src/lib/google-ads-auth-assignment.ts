@@ -372,13 +372,7 @@ export async function deleteGoogleAdsAuthAssignment(userId: number): Promise<voi
   invalidateGoogleAdsAuthContextCache(userId)
 }
 
-const GOOGLE_ADS_SETTING_KEYS = [
-  'client_id',
-  'client_secret',
-  'developer_token',
-  'login_customer_id',
-  'use_service_account',
-]
+const GOOGLE_ADS_SETTING_KEYS = ['use_service_account']
 
 /**
  * 永久删除用户时清理其 Google Ads 认证相关数据。

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { exchangeCodeForTokens, formatAndValidateLoginCustomerId } from '@/lib/google-ads-oauth'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getGoogleAdsTestOAuthConfigFields } from '@/lib/google-ads-settings-store'
 import { saveGoogleAdsTestCredentials } from '@/lib/google-ads-test-credentials'
 import { verifyGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
 
@@ -75,18 +75,12 @@ export async function GET(request: NextRequest) {
 
     const userId = stateVerified.payload.user_id
 
-    const [mccSetting, clientIdSetting, clientSecretSetting, developerTokenSetting] =
-      await Promise.all([
-        getUserOnlySetting('google_ads', 'test_login_customer_id', userId),
-        getUserOnlySetting('google_ads', 'test_client_id', userId),
-        getUserOnlySetting('google_ads', 'test_client_secret', userId),
-        getUserOnlySetting('google_ads', 'test_developer_token', userId),
-      ])
+    const testConfig = await getGoogleAdsTestOAuthConfigFields(userId)
 
-    const loginCustomerIdRaw = mccSetting?.value || ''
-    const clientId = clientIdSetting?.value || ''
-    const clientSecret = clientSecretSetting?.value || ''
-    const developerToken = developerTokenSetting?.value || ''
+    const loginCustomerIdRaw = testConfig.test_login_customer_id
+    const clientId = testConfig.test_client_id
+    const clientSecret = testConfig.test_client_secret
+    const developerToken = testConfig.test_developer_token
 
     if (!loginCustomerIdRaw || !clientId || !clientSecret || !developerToken) {
       return NextResponse.redirect(

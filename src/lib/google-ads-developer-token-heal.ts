@@ -1,6 +1,6 @@
 import { getDatabase } from './db'
 import { nowFunc } from './db-helpers'
-import { getUserOnlySetting } from './settings'
+import { getGoogleAdsOAuthConfigValue } from './google-ads-settings-store'
 import {
   resolveGoogleAdsAuthReadyFailure,
   type GoogleAdsAuthContext,
@@ -72,8 +72,10 @@ export async function healAccountsRouteDeveloperToken(params: {
     return { ok: true }
   }
 
-  const settingDeveloperToken =
-    (await getUserOnlySetting('google_ads', 'developer_token', params.ownerUserId))?.value || ''
+  const settingDeveloperToken = await getGoogleAdsOAuthConfigValue(
+    params.ownerUserId,
+    'developer_token'
+  )
 
   if (
     !settingDeveloperTokenLooksOk(settingDeveloperToken, params.clientSecret) ||

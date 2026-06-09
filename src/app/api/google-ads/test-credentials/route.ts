@@ -64,25 +64,6 @@ export async function DELETE(request: NextRequest) {
     // 2) 清空/停用测试OAuth凭证（google_ads_test_credentials）
     await deleteGoogleAdsTestCredentials(userId)
 
-    // 3) 删除 Settings 页保存的测试配置（system_settings 的用户实例）
-    // 注意：必须限定 user_id = ?，避免误删全局模板记录(user_id IS NULL)
-    const keysToClear = [
-      'test_login_customer_id',
-      'test_client_id',
-      'test_client_secret',
-      'test_developer_token',
-    ]
-    const placeholders = keysToClear.map(() => '?').join(', ')
-    await db.exec(
-      `
-        DELETE FROM system_settings
-        WHERE user_id = ?
-          AND category = 'google_ads'
-          AND key IN (${placeholders})
-      `,
-      [userId, ...keysToClear]
-    )
-
     return NextResponse.json({ success: true, message: '测试 OAuth 授权与测试配置已清除' })
   } catch (error: any) {
     return NextResponse.json(

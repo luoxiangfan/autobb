@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, findUserById } from '@/lib/auth'
 import { saveGoogleAdsCredentials, deleteGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { getDatabase } from '@/lib/db'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
@@ -210,27 +209,6 @@ export async function DELETE(request: NextRequest) {
 
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
-
-    // 2) 同步清除 Settings 页保存的 OAuth 配置（system_settings 的用户实例）
-    // 注意：必须限定 user_id = ?，避免误删全局模板记录(user_id IS NULL)
-    const db = await getDatabase()
-    const keysToClear = [
-      'client_id',
-      'client_secret',
-      'developer_token',
-      'login_customer_id',
-      'use_service_account',
-    ]
-    const placeholders = keysToClear.map(() => '?').join(', ')
-    await db.exec(
-      `
-        DELETE FROM system_settings
-        WHERE user_id = ?
-          AND category = 'google_ads'
-          AND key IN (${placeholders})
-      `,
-      [userId, ...keysToClear]
-    )
 
     console.log(`🗑️  已删除Google Ads凭证`)
     console.log(`   用户: ${authResult.user.email}`)

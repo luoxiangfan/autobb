@@ -31,8 +31,12 @@ const syncFns = vi.hoisted(() => ({
   syncAccountsFromAPI: vi.fn(),
 }))
 
-const settingsFns = vi.hoisted(() => ({
-  getUserOnlySetting: vi.fn(),
+const settingsStoreFns = vi.hoisted(() => ({
+  getGoogleAdsOAuthConfigValue: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-settings-store', () => ({
+  getGoogleAdsOAuthConfigValue: settingsStoreFns.getGoogleAdsOAuthConfigValue,
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -63,10 +67,6 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/google-ads-accounts-sync', () => ({
   syncAccountsFromAPI: syncFns.syncAccountsFromAPI,
-}))
-
-vi.mock('@/lib/settings', () => ({
-  getUserOnlySetting: settingsFns.getUserOnlySetting,
 }))
 
 vi.mock('@/lib/api-performance', () => ({
@@ -165,7 +165,7 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     mockAsyncRefreshDb()
     serviceAccountFns.getServiceAccountConfig.mockResolvedValue(null)
     syncFns.syncAccountsFromAPI.mockResolvedValue([])
-    settingsFns.getUserOnlySetting.mockResolvedValue(null)
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue('')
   })
 
   it('returns 404 when auth-context is not configured', async () => {
@@ -366,9 +366,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
         developer_token: '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e',
       },
     })
-    settingsFns.getUserOnlySetting.mockResolvedValueOnce({
-      value: 'abcdefghijklmnopqrstuvwxyz1234567890',
-    })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValueOnce(
+      'abcdefghijklmnopqrstuvwxyz1234567890'
+    )
 
     const req = new NextRequest(
       'http://localhost/api/google-ads/credentials/accounts?auth_type=oauth'
@@ -377,7 +377,7 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     const data = await res.json()
 
     expect(res.status).toBe(200)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalledWith('google_ads', 'developer_token', 7)
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).toHaveBeenCalledWith(7, 'developer_token')
     expect(data.data.accounts).toHaveLength(1)
   })
 
@@ -401,9 +401,9 @@ describe('GET /api/google-ads/credentials/accounts', () => {
       serviceAccountMccId: '1122334455',
       oauthLoginCustomerId: undefined,
     })
-    settingsFns.getUserOnlySetting.mockResolvedValueOnce({
-      value: 'abcdefghijklmnopqrstuvwxyz1234567890',
-    })
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValueOnce(
+      'abcdefghijklmnopqrstuvwxyz1234567890'
+    )
 
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM google_ads_accounts')) {
@@ -430,7 +430,7 @@ describe('GET /api/google-ads/credentials/accounts', () => {
     const data = await res.json()
 
     expect(res.status).toBe(200)
-    expect(settingsFns.getUserOnlySetting).toHaveBeenCalled()
+    expect(settingsStoreFns.getGoogleAdsOAuthConfigValue).toHaveBeenCalled()
     expect(dbFns.exec).toHaveBeenCalled()
     expect(saConfig.developerToken).toBe('abcdefghijklmnopqrstuvwxyz1234567890')
     expect(data.data.loginCustomerId).toBe('1122334455')

@@ -15,6 +15,7 @@
  *   DATABASE_PATH - SQLite 数据库路径（默认: data/autoads.db）
  */
 
+import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
 import { splitSqlStatements } from '../src/lib/sql-splitter'
@@ -111,6 +112,16 @@ async function migrateSQLite() {
     console.log(`🔄 执行: ${file}`)
 
     try {
+      if (migrationName.includes('254_merge_google_ads_settings_into_credentials')) {
+        console.log('   ↳ 回填 OAuth 配置到凭证表…')
+        const dotenv = await import('dotenv')
+        dotenv.config({ path: path.join(process.cwd(), '.env.local') })
+        dotenv.config()
+        const { migrateLegacyGoogleAdsSettingsStorage } =
+          await import('../src/lib/google-ads-settings-store')
+        await migrateLegacyGoogleAdsSettingsStorage()
+      }
+
       const rawContent = normalizeMigrationSql(
         fs.readFileSync(resolveMigrationFilePath(migrationsPath, file), 'utf-8'),
         'sqlite'
@@ -191,6 +202,16 @@ async function migratePostgres() {
       console.log(`🔄 执行: ${file}`)
 
       try {
+        if (migrationName.includes('254_merge_google_ads_settings_into_credentials')) {
+          console.log('   ↳ 回填 OAuth 配置到凭证表…')
+          const dotenv = await import('dotenv')
+          dotenv.config({ path: path.join(process.cwd(), '.env.local') })
+          dotenv.config()
+          const { migrateLegacyGoogleAdsSettingsStorage } =
+            await import('../src/lib/google-ads-settings-store')
+          await migrateLegacyGoogleAdsSettingsStorage()
+        }
+
         const sqlContent = normalizeMigrationSql(
           fs.readFileSync(resolveMigrationFilePath(migrationsPath, file), 'utf-8'),
           'postgres'

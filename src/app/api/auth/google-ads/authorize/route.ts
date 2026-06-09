@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getGoogleAdsOAuthConfigValue } from '@/lib/google-ads-settings-store'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 
 /**
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const clientId = (await getUserOnlySetting('google_ads', 'client_id', userId))?.value || ''
+    const clientId = await getGoogleAdsOAuthConfigValue(userId, 'client_id')
     if (!clientId) {
       return NextResponse.redirect(
         `${getBaseUrl()}/settings?error=missing_google_ads_config&category=google_ads`

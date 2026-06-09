@@ -10,7 +10,7 @@ import {
 } from './google-ads-auth-context'
 import { dateMinusDays } from './db-helpers'
 import { getBatchCachedVolumes, batchCacheVolumes } from './redis'
-import { decrypt } from './crypto'
+import { getGoogleAdsOAuthConfigFields } from './google-ads-settings-store'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken } from './google-ads-oauth'
 import { getGoogleAdsAuthContext, type GoogleAdsAuthContext } from './google-ads-auth-context'
@@ -118,27 +118,15 @@ function isInvalidGrantMessage(message: string): boolean {
   return msg.includes('invalid_grant') || msg.includes('token has been expired or revoked')
 }
 
-// Helper: Read user configs from system_settings
-async function readUserConfigs(db: any, userId: number): Promise<Record<string, string>> {
-  const configs = (await db.query(
-    `
-    SELECT key, value, encrypted_value
-    FROM system_settings
-    WHERE category = 'google_ads' AND user_id = ?
-  `,
-    [userId]
-  )) as Array<{ key: string; value: string | null; encrypted_value: string | null }>
-
-  const configMap: Record<string, string> = {}
-  for (const c of configs) {
-    if (c.encrypted_value) {
-      const decrypted = decrypt(c.encrypted_value)
-      if (decrypted) configMap[c.key] = decrypted
-    } else if (c.value) {
-      configMap[c.key] = c.value
-    }
+// Helper: Read user OAuth config fields from google_ads_credentials
+async function readUserOAuthConfigs(userId: number): Promise<Record<string, string>> {
+  const fields = await getGoogleAdsOAuthConfigFields(userId)
+  return {
+    client_id: fields.client_id,
+    client_secret: fields.client_secret,
+    developer_token: fields.developer_token,
+    login_customer_id: fields.login_customer_id,
   }
-  return configMap
 }
 
 // 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整 OAuth 凭证
@@ -238,9 +226,8 @@ export async function getGoogleAdsConfig(
       console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
       console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
 
-      const db = await getDatabase()
       const ownerUserId = authContext.ownerUserId
-      const userConfigs = await readUserConfigs(db, ownerUserId)
+      const userConfigs = await readUserOAuthConfigs(ownerUserId)
       const oauthCredentials = authContext.oauthCredentials
 
       return {
