@@ -91,10 +91,12 @@ export default function GoogleAdsPage() {
           setCurrentServiceAccountId(parsed.serviceAccountId)
         }
         setAuthConfigWarning(parsed.authConfigWarning)
+        setGoogleAdsDualStack(parsed.dualStack)
       },
     })
   const [error, setError] = useState('')
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
+  const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
   const [success, setSuccess] = useState('')
   const [needsReauth, setNeedsReauth] = useState(false) // 是否需要重新授权
   const [currentPage, setCurrentPage] = useState(1)
@@ -122,6 +124,7 @@ export default function GoogleAdsPage() {
         }
         if (enriched.authConfigWarning) {
           setAuthConfigWarning(enriched.authConfigWarning)
+          setGoogleAdsDualStack(true)
         }
       }
       throw error
@@ -171,7 +174,10 @@ export default function GoogleAdsPage() {
     try {
       await runInitialGoogleAdsAccountsLoad({
         refreshCredentialsStatus,
-        onAuthConfigWarning: setAuthConfigWarning,
+        onAuthConfigWarning: (warning) => {
+          setAuthConfigWarning(warning)
+          setGoogleAdsDualStack(true)
+        },
         fetchOAuthAccounts: (opts) => fetchAccounts(false, false, opts),
         fetchServiceAccountAccounts: (serviceAccountId, opts) => {
           setCurrentServiceAccountId(serviceAccountId)
@@ -205,6 +211,7 @@ export default function GoogleAdsPage() {
         const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
         if (effects.authConfigWarning) {
           setAuthConfigWarning(effects.authConfigWarning)
+          setGoogleAdsDualStack(true)
         }
         if (effects.errorMessage) {
           setError(effects.errorMessage)
@@ -237,6 +244,7 @@ export default function GoogleAdsPage() {
 
       if (data.success && data.data) {
         setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
+        setGoogleAdsDualStack(Boolean(data.data.dualStack))
         setAccountsSyncError(formatNullableErrorMessage(data.data.refreshError))
         setAccountsSyncing(Boolean(data.data.refreshInProgress))
 
@@ -265,6 +273,7 @@ export default function GoogleAdsPage() {
           : null
       if (warning) {
         setAuthConfigWarning(warning)
+        setGoogleAdsDualStack(true)
       }
       setAccountsSyncing(false)
       setAccountsSyncError(null)
@@ -627,9 +636,7 @@ export default function GoogleAdsPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefreshAccounts}
-                disabled={
-                  accountsLoading || accountsSyncing || !isConfigured || Boolean(authConfigWarning)
-                }
+                disabled={accountsLoading || accountsSyncing || !isConfigured || googleAdsDualStack}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {accountsSyncing ? '同步中...' : accountsLoading ? '加载中...' : '刷新账户列表'}

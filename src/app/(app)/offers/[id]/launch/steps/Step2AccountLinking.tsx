@@ -157,6 +157,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [, setRefreshError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null)
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
+  const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
   const [needsReauth, setNeedsReauth] = useState(false)
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
@@ -164,6 +165,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     onCredentialsUpdated: (parsed) => {
       setHasCredentials(parsed.hasCredentials)
       setAuthConfigWarning(parsed.authConfigWarning)
+      setGoogleAdsDualStack(parsed.dualStack)
     },
   })
 
@@ -204,6 +206,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
           if (effects.authConfigWarning) {
             setAuthConfigWarning(effects.authConfigWarning)
+            setGoogleAdsDualStack(true)
           }
           if (effects.errorMessage) {
             showError(effects.errorMessage)
@@ -250,6 +253,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
               }
               if (enriched.authConfigWarning) {
                 setAuthConfigWarning(enriched.authConfigWarning)
+                setGoogleAdsDualStack(true)
               }
             }
             throw error
@@ -258,6 +262,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
         const data = await response.json()
         setAuthConfigWarning(formatNullableErrorMessage(data.data?.authConfigWarning))
+        setGoogleAdsDualStack(Boolean(data.data?.dualStack))
         setNeedsReauth(false)
 
         if (data.success && data.data?.accounts) {
@@ -471,7 +476,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
             <Button
               onClick={() => fetchAccounts(true)}
               variant="outline"
-              disabled={refreshing || Boolean(authConfigWarning)}
+              disabled={refreshing || googleAdsDualStack}
             >
               {refreshing ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />

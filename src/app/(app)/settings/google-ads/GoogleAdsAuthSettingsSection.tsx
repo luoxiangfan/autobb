@@ -51,6 +51,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
     permissionError,
     setPermissionError,
     googleAdsAuthReadOnly,
+    googleAdsAuthActionsBlocked,
     googleAdsDualStack,
     hasOAuthConfigToDelete,
     fetchServiceAccounts,
@@ -393,7 +394,16 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
         </div>
       )}
 
+      {googleAdsAuthMethod === 'service_account' && googleAdsAuthReadOnly && (
+        <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
+          <p className="text-sm text-slate-600">
+            服务账号配置由管理员维护，此处仅展示当前生效方式。
+          </p>
+        </div>
+      )}
+
       {googleAdsAuthMethod === 'service_account' &&
+        !googleAdsAuthReadOnly &&
         (hasServiceAccountConfigToDelete && !showServiceAccountReplaceForm ? (
           <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
             <p className="text-sm text-slate-700">
@@ -404,6 +414,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
               type="button"
               variant="outline"
               size="sm"
+              disabled={googleAdsAuthActionsBlocked}
               onClick={() => setShowServiceAccountReplaceForm(true)}
             >
               替换服务账号配置
@@ -550,7 +561,9 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
                     variant="outline"
                     size="sm"
                     onClick={() => requestDeleteServiceAccount(account.id)}
-                    disabled={deletingServiceAccountId === account.id}
+                    disabled={
+                      googleAdsAuthActionsBlocked || deletingServiceAccountId === account.id
+                    }
                     className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="w-4 h-4" />

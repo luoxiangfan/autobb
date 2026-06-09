@@ -156,6 +156,7 @@ export function useGoogleAdsAuthSettings({
     const urlParams = new URLSearchParams(window.location.search)
     const oauthSuccess = urlParams.get('oauth_success')
     const errorParam = urlParams.get('error')
+    if (!oauthSuccess && !errorParam) return
 
     if (oauthSuccess === 'true') {
       toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
@@ -272,11 +273,7 @@ export function useGoogleAdsAuthSettings({
       )
       if (!resolved.ok) {
         const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh: true })
-        if (effects.authConfigWarning) {
-          setGoogleAdsCredentialStatus((prev) =>
-            prev ? { ...prev, authConfigWarning: effects.authConfigWarning } : prev
-          )
-        }
+        await fetchGoogleAdsCredentialStatus()
         throw new Error(
           effects.errorMessage ?? effects.authConfigWarning ?? GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
         )
@@ -302,12 +299,10 @@ export function useGoogleAdsAuthSettings({
           return
         }
 
-        const { message, authConfigWarning } = parseAccountsListFetchFailure(response, data, {
+        const { message } = parseAccountsListFetchFailure(response, data, {
           fallbackMessage: '获取账户列表失败',
         })
-        if (authConfigWarning) {
-          setGoogleAdsCredentialStatus((prev) => (prev ? { ...prev, authConfigWarning } : prev))
-        }
+        await fetchGoogleAdsCredentialStatus()
         throw new Error(message)
       }
 
@@ -336,6 +331,21 @@ export function useGoogleAdsAuthSettings({
           ? '请先删除双栈认证中的其中一种配置后再保存'
           : '当前 Google Ads 认证为只读，无法修改'
       )
+      return
+    }
+
+    const formEmpty =
+      !serviceAccountForm.name &&
+      !serviceAccountForm.mccCustomerId &&
+      !serviceAccountForm.developerToken &&
+      !serviceAccountForm.serviceAccountJson
+
+    if (formEmpty) {
+      if (googleAdsCredentialStatus?.serviceAccountId) {
+        toast.error('请先点击「替换服务账号配置」并填写新配置')
+      } else {
+        toast.error('请填写所有必填字段')
+      }
       return
     }
 
