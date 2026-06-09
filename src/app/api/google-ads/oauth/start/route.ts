@@ -5,6 +5,7 @@ import { getUserOnlySetting } from '@/lib/settings'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
+import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
 
 /**
  * GET /api/google-ads/oauth/start
@@ -135,13 +136,11 @@ export async function GET(request: NextRequest) {
     const clientId = userClientId
     console.log(`🔐 用户 ${userId} 使用自己的OAuth配置`)
 
-    // 生成state用于验证回调
-    const state = Buffer.from(
-      JSON.stringify({
-        user_id: userId,
-        timestamp: Date.now(),
-      })
-    ).toString('base64url')
+    const state = createGoogleAdsOAuthState({
+      user_id: userId,
+      timestamp: Date.now(),
+      purpose: 'google_ads',
+    })
 
     // 构建redirect URI
     const redirectUri = getGoogleAdsOAuthRedirectUri()

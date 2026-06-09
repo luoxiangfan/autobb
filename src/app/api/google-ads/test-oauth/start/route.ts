@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl, formatAndValidateLoginCustomerId } from '@/lib/google-ads-oauth'
+import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
 import { getUserOnlySetting } from '@/lib/settings'
 
 function getBaseUrl(): string {
@@ -51,13 +52,11 @@ export async function GET(request: NextRequest) {
       'test_login_customer_id'
     )
 
-    const state = Buffer.from(
-      JSON.stringify({
-        user_id: userId,
-        timestamp: Date.now(),
-        purpose: 'google_ads_test',
-      })
-    ).toString('base64url')
+    const state = createGoogleAdsOAuthState({
+      user_id: userId,
+      timestamp: Date.now(),
+      purpose: 'google_ads_test',
+    })
 
     const redirectUri = `${getBaseUrl()}/api/google-ads/test-oauth/callback`
     const authUrl = generateOAuthUrl(clientId, redirectUri, state)

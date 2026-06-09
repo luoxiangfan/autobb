@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
 
       // 🆕 自动检测并更新API访问级别
       try {
-        const authContext = await getGoogleAdsAuthContext(authResult.user.userId)
+        const authContext =
+          result.authContext ?? (await getGoogleAdsAuthContext(authResult.user.userId))
         const accessLevel = await autoDetectAndUpdateAccessLevel(
           authResult.user.userId,
           resolveConfiguredGoogleAdsAuthType(authContext)

@@ -342,11 +342,38 @@ export async function PUT(request: NextRequest) {
       invalidateProxyPoolCache(userIdNum)
     }
 
-    // 🔥 新增：如果更新了Google Ads配置，清除相关缓存
+    // 🔥 新增：如果更新了Google Ads配置，同步 OAuth 凭证并清除 auth-context / API 缓存
     if (hasGoogleAdsUpdate && userIdNum) {
+      const oauthSyncFields: import('@/lib/google-ads-oauth').GoogleAdsOAuthSettingsSyncFields = {}
+      for (const update of updates) {
+        if (update.category !== 'google_ads') continue
+        if (
+          update.key === 'client_id' ||
+          update.key === 'client_secret' ||
+          update.key === 'developer_token' ||
+          update.key === 'login_customer_id'
+        ) {
+          oauthSyncFields[update.key] = update.value
+        }
+      }
+      if (Object.keys(oauthSyncFields).length > 0) {
+        const { syncGoogleAdsOAuthFieldsFromSettings } = await import('@/lib/google-ads-oauth')
+        try {
+          await syncGoogleAdsOAuthFieldsFromSettings(userIdNum, oauthSyncFields)
+        } catch (syncError: any) {
+          return NextResponse.json(
+            { error: syncError.message || '同步 Google Ads OAuth 凭证失败' },
+            { status: 400 }
+          )
+        }
+      }
+
+      const { invalidateGoogleAdsAuthContextForCredentialUser } =
+        await import('@/lib/google-ads-auth-context')
+      await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
+
       console.log('🔄 检测到Google Ads配置更新，清除API缓存')
       const { gadsApiCache } = await import('@/lib/cache')
-      // 清除该用户的所有Google Ads API缓存
       gadsApiCache.clear()
     }
 

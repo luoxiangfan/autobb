@@ -239,6 +239,69 @@ export async function saveGoogleAdsCredentials(
   return updated
 }
 
+export type GoogleAdsOAuthSettingsSyncFields = Partial<
+  Record<'client_id' | 'client_secret' | 'developer_token' | 'login_customer_id', string>
+>
+
+/**
+ * 设置页保存 OAuth 基础字段后，若用户已有 refresh_token，同步到 google_ads_credentials。
+ */
+export async function syncGoogleAdsOAuthFieldsFromSettings(
+  userId: number,
+  fields: GoogleAdsOAuthSettingsSyncFields
+): Promise<boolean> {
+  const raw = await getGoogleAdsCredentialsRaw(userId)
+  if (!raw?.refresh_token?.trim()) {
+    return false
+  }
+
+  const db = await getDatabase()
+  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const activeRow = await db.queryOne<{ user_id: number }>(
+    `SELECT user_id FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+    [userId]
+  )
+  if (!activeRow) {
+    return false
+  }
+
+  const setClauses: string[] = []
+  const params: unknown[] = []
+
+  if (fields.client_id?.trim()) {
+    setClauses.push('client_id = ?')
+    params.push(fields.client_id.trim())
+  }
+  if (fields.client_secret?.trim()) {
+    setClauses.push('client_secret = ?')
+    params.push(fields.client_secret.trim())
+  }
+  if (fields.developer_token?.trim()) {
+    setClauses.push('developer_token = ?')
+    params.push(fields.developer_token.trim())
+  }
+  if (fields.login_customer_id?.trim()) {
+    setClauses.push('login_customer_id = ?')
+    params.push(formatAndValidateLoginCustomerId(fields.login_customer_id.trim()))
+  }
+
+  if (setClauses.length === 0) {
+    return false
+  }
+
+  const nowSql = sqlNowFunc(db.type)
+  await db.exec(
+    `UPDATE google_ads_credentials SET ${setClauses.join(', ')}, updated_at = ${nowSql} WHERE user_id = ? AND ${isActiveCondition}`,
+    [...params, userId]
+  )
+
+  const { invalidateGoogleAdsAuthContextForCredentialUser } =
+    await import('./google-ads-auth-context')
+  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+
+  return true
+}
+
 /**
  * 获取指定用户自身的 Google Ads OAuth 凭证（不解析共享分配）
  */
@@ -455,6 +518,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   customer_id?: string
   error?: string
   authType?: 'oauth' | 'service_account'
+  authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
 }> {
   try {
     const { googleAdsApiAuthValidationErrorMessage, resolveGoogleAdsApiAuthForAccount } =
@@ -509,6 +573,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
           valid: true,
           customer_id: firstCustomerId,
           authType: 'service_account',
+          authContext: ctx,
         }
       } catch (error: any) {
         console.error('[Verify] 服务账号验证失败:', error)
@@ -564,6 +629,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
       valid: true,
       customer_id: firstCustomerId,
       authType: 'oauth',
+      authContext: ctx,
     }
   } catch (error: any) {
     console.error('验证Google Ads凭证失败:', error)

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuth } from '@/lib/auth'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
 import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
+import { verifyGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'
@@ -49,20 +51,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(createRedirectUrl('/settings?error=missing_state'))
     }
 
-    // 验证state
-    let stateData: { user_id: number; timestamp: number }
-    try {
-      stateData = JSON.parse(Buffer.from(state, 'base64url').toString())
-    } catch {
-      return NextResponse.redirect(createRedirectUrl('/settings?error=invalid_state'))
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
+      return NextResponse.redirect(
+        createRedirectUrl('/settings?error=unauthorized&category=google_ads')
+      )
     }
 
-    // 检查state时间戳（10分钟内有效）
-    if (Date.now() - stateData.timestamp > 10 * 60 * 1000) {
-      return NextResponse.redirect(createRedirectUrl('/settings?error=state_expired'))
+    const stateVerified = verifyGoogleAdsOAuthState(state, {
+      expectedPurpose: 'google_ads',
+      expectedUserId: authResult.user.userId,
+    })
+    if (!stateVerified.ok) {
+      return NextResponse.redirect(
+        createRedirectUrl(`/settings?error=${stateVerified.error}&category=google_ads`)
+      )
     }
 
-    const userId = stateData.user_id
+    const userId = stateVerified.payload.user_id
 
     const assignment = await getGoogleAdsAuthAssignment(userId)
     if (isGoogleAdsAuthShared(assignment)) {

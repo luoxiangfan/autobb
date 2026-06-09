@@ -560,6 +560,8 @@ export default function SettingsPage() {
         missing_google_ads_config:
           'OAuth 授权失败：请先保存 Client ID、Client Secret 和 Developer Token',
         shared_auth_readonly: '当前使用管理员共享认证，无法自行完成 OAuth 授权',
+        unauthorized: 'OAuth 授权失败：请先登录后再完成授权回调',
+        session_mismatch: 'OAuth 授权失败：登录用户与发起授权的用户不一致，请重新发起授权',
       }
       toast.error(errorMessages[errorParam] || `OAuth 授权失败：${errorParam}`)
       // 清除 URL 参数
@@ -574,6 +576,8 @@ export default function SettingsPage() {
         invalid_state: '测试 OAuth 授权失败：无效的状态参数',
         invalid_purpose: '测试 OAuth 授权失败：状态参数用途不匹配',
         state_expired: '测试 OAuth 授权失败：状态参数已过期',
+        unauthorized: '测试 OAuth 授权失败：请先登录后再完成授权回调',
+        session_mismatch: '测试 OAuth 授权失败：登录用户与发起授权的用户不一致，请重新发起授权',
         missing_test_config:
           '测试 OAuth 授权失败：请先保存测试配置（测试Client ID/Secret、测试Developer Token、测试MCC ID）',
       }
@@ -1376,7 +1380,8 @@ export default function SettingsPage() {
         developerToken: '',
         serviceAccountJson: '',
       })
-      fetchServiceAccounts()
+      await fetchServiceAccounts()
+      await fetchGoogleAdsCredentialStatus()
     } catch (err: any) {
       toast.error(err.message)
     } finally {
@@ -1396,7 +1401,8 @@ export default function SettingsPage() {
       if (!response.ok) throw new Error(data.error || '删除失败')
 
       toast.success('服务账号配置已删除')
-      fetchServiceAccounts()
+      await fetchServiceAccounts()
+      await fetchGoogleAdsCredentialStatus()
     } catch (err: any) {
       toast.error(err.message)
     } finally {
@@ -1920,8 +1926,44 @@ export default function SettingsPage() {
                           {googleAdsCredentialStatus.authConfigWarning}
                         </p>
                         <p className="text-sm text-amber-900 mt-2">
-                          请在下方删除其中一种认证方式后再继续使用。
+                          请删除下方其中一种认证方式后再继续使用。
                         </p>
+                        {!googleAdsAuthReadOnly && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {hasOAuthConfigToDelete && (
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                disabled={deletingOAuthConfig}
+                                onClick={requestDeleteOAuthConfig}
+                              >
+                                {deletingOAuthConfig ? '删除中...' : '删除 OAuth 配置'}
+                              </Button>
+                            )}
+                            {googleAdsCredentialStatus?.serviceAccountId && (
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                disabled={
+                                  deletingServiceAccountId ===
+                                  googleAdsCredentialStatus.serviceAccountId
+                                }
+                                onClick={() =>
+                                  requestDeleteServiceAccount(
+                                    googleAdsCredentialStatus.serviceAccountId!
+                                  )
+                                }
+                              >
+                                {deletingServiceAccountId ===
+                                googleAdsCredentialStatus.serviceAccountId
+                                  ? '删除中...'
+                                  : '删除服务账号配置'}
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                     {/* Google Ads 凭证状态 */}
@@ -1976,7 +2018,11 @@ export default function SettingsPage() {
                             <span className="font-semibold text-amber-700">待完成配置</span>
                           </div>
                           <p className="text-sm text-amber-700">
-                            请填写所有必填参数并完成 OAuth 授权后才能使用 Google Ads 功能
+                            {googleAdsCredentialStatus?.authConfigWarning
+                              ? '检测到 OAuth 与服务账号同时存在，请使用上方按钮分别删除其中一种后再配置。'
+                              : googleAdsAuthMethod === 'service_account'
+                                ? '请填写服务账号配置并保存后即可使用 Google Ads 功能'
+                                : '请填写所有必填参数并完成 OAuth 授权后才能使用 Google Ads 功能'}
                           </p>
                         </div>
                       )}

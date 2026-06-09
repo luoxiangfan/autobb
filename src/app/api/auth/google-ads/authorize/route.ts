@@ -2,6 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
+import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
 import { getUserOnlySetting } from '@/lib/settings'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 
@@ -40,12 +41,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const state = Buffer.from(
-      JSON.stringify({
-        user_id: userId,
-        timestamp: Date.now(),
-      })
-    ).toString('base64url')
+    const state = createGoogleAdsOAuthState({
+      user_id: userId,
+      timestamp: Date.now(),
+      purpose: 'google_ads',
+    })
 
     const redirectUri = getGoogleAdsOAuthRedirectUri()
     const authUrl = generateOAuthUrl(clientId, redirectUri, state)

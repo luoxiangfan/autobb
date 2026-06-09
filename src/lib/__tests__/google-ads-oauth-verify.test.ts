@@ -133,6 +133,7 @@ describe('verifyGoogleAdsCredentials', () => {
       valid: true,
       customer_id: '1234567890',
       authType: 'service_account',
+      authContext: expect.objectContaining({ userId: 2, ownerUserId: 1 }),
     })
     expect(pythonFns.listAccessibleCustomersPython).toHaveBeenCalledWith({
       userId: 2,
@@ -227,6 +228,7 @@ describe('verifyGoogleAdsCredentials', () => {
       valid: true,
       customer_id: '9876543210',
       authType: 'oauth',
+      authContext: expect.objectContaining({ userId: 2, ownerUserId: 1 }),
     })
     expect(apiFns.listAccessibleCustomers).toHaveBeenCalledWith('rt-1')
     expect(dbFns.exec).toHaveBeenCalledWith(

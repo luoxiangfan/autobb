@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { verifyAuth } from '@/lib/auth'
 import { exchangeCodeForTokens, formatAndValidateLoginCustomerId } from '@/lib/google-ads-oauth'
 import { getUserOnlySetting } from '@/lib/settings'
 import { saveGoogleAdsTestCredentials } from '@/lib/google-ads-test-credentials'
+import { verifyGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,29 +46,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    let stateData: { user_id: number; timestamp: number; purpose?: string }
-    try {
-      stateData = JSON.parse(Buffer.from(state, 'base64url').toString())
-    } catch {
+    const authResult = await verifyAuth(request)
+    if (!authResult.authenticated || !authResult.user) {
       return NextResponse.redirect(
-        createRedirectUrl('/settings?category=google_ads&test_oauth_error=invalid_state')
+        createRedirectUrl('/settings?category=google_ads&test_oauth_error=unauthorized')
       )
     }
 
-    if (stateData.purpose !== 'google_ads_test') {
+    const stateVerified = verifyGoogleAdsOAuthState(state, {
+      expectedPurpose: 'google_ads_test',
+      expectedUserId: authResult.user.userId,
+    })
+    if (!stateVerified.ok) {
       return NextResponse.redirect(
-        createRedirectUrl('/settings?category=google_ads&test_oauth_error=invalid_purpose')
+        createRedirectUrl(`/settings?category=google_ads&test_oauth_error=${stateVerified.error}`)
       )
     }
 
-    // 10分钟内有效
-    if (Date.now() - stateData.timestamp > 10 * 60 * 1000) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?category=google_ads&test_oauth_error=state_expired')
-      )
-    }
-
-    const userId = stateData.user_id
+    const userId = stateVerified.payload.user_id
 
     const [mccSetting, clientIdSetting, clientSecretSetting, developerTokenSetting] =
       await Promise.all([
