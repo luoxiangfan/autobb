@@ -238,25 +238,6 @@ export async function saveGoogleAdsCredentials(
   return updated
 }
 
-export type GoogleAdsOAuthSettingsSyncFields = Partial<
-  Record<'client_id' | 'client_secret' | 'developer_token' | 'login_customer_id', string>
->
-
-export type SyncGoogleAdsOAuthFieldsResult = {
-  synced: boolean
-  /** client_id 或 client_secret 相对 DB 发生变更且仍有 refresh_token */
-  oauthClientCredentialsChanged: boolean
-}
-
-/** @deprecated 使用 upsertGoogleAdsOAuthConfigFromSettings（google-ads-settings-store） */
-export async function syncGoogleAdsOAuthFieldsFromSettings(
-  userId: number,
-  fields: GoogleAdsOAuthSettingsSyncFields
-): Promise<SyncGoogleAdsOAuthFieldsResult> {
-  const { upsertGoogleAdsOAuthConfigFromSettings } = await import('./google-ads-settings-store')
-  return upsertGoogleAdsOAuthConfigFromSettings(userId, fields)
-}
-
 /**
  * 获取指定用户自身的 Google Ads OAuth 凭证（不解析共享分配）
  */

@@ -2,6 +2,12 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSetting, getUserOnlySetting, updateSetting } from '@/lib/settings'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import {
+  getGoogleAdsCredentialBackedSettingValue,
+  isGoogleAdsCredentialBackedSettingKey,
+  upsertSingleGoogleAdsCredentialBackedSetting,
+} from '@/lib/google-ads-settings-store'
 import { z } from 'zod'
 
 /**
@@ -40,12 +46,20 @@ export async function GET(
       )
     }
 
+    let value = setting.value
+    if (category === 'google_ads' && userIdNum && isGoogleAdsCredentialBackedSettingKey(key)) {
+      const stored = await getGoogleAdsCredentialBackedSettingValue(userIdNum, key)
+      if (stored) {
+        value = stored
+      }
+    }
+
     return NextResponse.json({
       success: true,
       setting: {
         category: setting.category,
         key: setting.key,
-        value: setting.value,
+        value,
         dataType: setting.dataType,
         isSensitive: setting.isSensitive,
         isRequired: setting.isRequired,
@@ -89,7 +103,6 @@ export async function PUT(
 
     const body = await request.json()
 
-    // 验证输入
     const validationResult = updateSettingSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
@@ -107,10 +120,41 @@ export async function PUT(
       return NextResponse.json({ error: '更新联盟同步配置需要登录' }, { status: 401 })
     }
 
-    // 更新配置
+    if (category === 'google_ads' && isGoogleAdsCredentialBackedSettingKey(key)) {
+      if (!userIdNum) {
+        return NextResponse.json({ error: '更新 Google Ads OAuth 配置需要登录' }, { status: 401 })
+      }
+
+      try {
+        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : '无法修改 Google Ads 认证配置'
+        return NextResponse.json({ error: message }, { status: 403 })
+      }
+
+      try {
+        const syncResult = await upsertSingleGoogleAdsCredentialBackedSetting(userIdNum, key, value)
+
+        const { invalidateGoogleAdsAuthContextForCredentialUser } =
+          await import('@/lib/google-ads-auth-context')
+        await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
+
+        const { invalidateGadsApiCacheForUser } = await import('@/lib/cache')
+        invalidateGadsApiCacheForUser(userIdNum)
+
+        return NextResponse.json({
+          success: true,
+          message: `配置项 ${category}.${key} 更新成功`,
+          ...(syncResult?.oauthClientCredentialsChanged ? { oauthReauthRequired: true } : {}),
+        })
+      } catch (saveError: unknown) {
+        const message = saveError instanceof Error ? saveError.message : '保存 Google Ads 配置失败'
+        return NextResponse.json({ error: message }, { status: 400 })
+      }
+    }
+
     await updateSetting(category, key, value, userIdNum)
 
-    // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存
     if (category === 'proxy') {
       console.log('🔄 检测到代理配置更新，清除代理池缓存')
       invalidateProxyPoolCache(userIdNum)

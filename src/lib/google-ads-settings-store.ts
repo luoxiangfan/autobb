@@ -4,11 +4,8 @@
  */
 import { getDatabase } from './db'
 import { nowFunc as sqlNowFunc } from './db-helpers'
-import {
-  formatAndValidateLoginCustomerId,
-  type GoogleAdsCredentials,
-  type SyncGoogleAdsOAuthFieldsResult,
-} from './google-ads-oauth'
+import { resolveGoogleAdsCredentialOwnerId } from './google-ads-auth-assignment'
+import { formatAndValidateLoginCustomerId, type GoogleAdsCredentials } from './google-ads-oauth'
 import { developerTokenLooksInvalid } from './google-ads-developer-token-heal'
 import { getUserOnlySetting } from './settings'
 import type { SettingValue } from './settings'
@@ -51,6 +48,14 @@ const TEST_KEY_TO_COLUMN: Record<GoogleAdsTestOAuthConfigKey, keyof GoogleAdsTes
   test_developer_token: 'developer_token',
 }
 
+export type GoogleAdsOAuthSettingsSyncFields = Partial<Record<GoogleAdsOAuthConfigKey, string>>
+
+export type SyncGoogleAdsOAuthFieldsResult = {
+  synced: boolean
+  /** client_id 或 client_secret 相对 DB 发生变更且仍有 refresh_token */
+  oauthClientCredentialsChanged: boolean
+}
+
 const LEGACY_OAUTH_SETTING_KEYS = [
   ...GOOGLE_ADS_OAUTH_CONFIG_KEYS,
   ...GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS,
@@ -58,6 +63,75 @@ const LEGACY_OAUTH_SETTING_KEYS = [
 
 function isCredentialBackedGoogleAdsSettingKey(key: string): boolean {
   return (GOOGLE_ADS_CREDENTIAL_BACKED_SETTING_KEYS as readonly string[]).includes(key)
+}
+
+export function isGoogleAdsCredentialBackedSettingKey(key: string): boolean {
+  return isCredentialBackedGoogleAdsSettingKey(key)
+}
+
+/** 共享 OAuth 读管理员凭证行；其余读当前用户 */
+export async function resolveGoogleAdsOAuthSettingsReadUserId(userId: number): Promise<number> {
+  const { ownerUserId, assignment, isShared } = await resolveGoogleAdsCredentialOwnerId(userId)
+  if (isShared && assignment?.authType === 'oauth') {
+    return ownerUserId
+  }
+  return userId
+}
+
+export function collectCredentialBackedFieldUpdates(
+  updates: Array<{ category: string; key: string; value: string }>
+): {
+  oauthFields: GoogleAdsOAuthSettingsSyncFields
+  testFields: Partial<Record<GoogleAdsTestOAuthConfigKey, string>>
+} {
+  const oauthFields: GoogleAdsOAuthSettingsSyncFields = {}
+  const testFields: Partial<Record<GoogleAdsTestOAuthConfigKey, string>> = {}
+
+  for (const update of updates) {
+    if (update.category !== 'google_ads') continue
+    if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(update.key)) {
+      oauthFields[update.key as GoogleAdsOAuthConfigKey] = update.value
+    } else if ((GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS as readonly string[]).includes(update.key)) {
+      testFields[update.key as GoogleAdsTestOAuthConfigKey] = update.value
+    }
+  }
+
+  return { oauthFields, testFields }
+}
+
+export async function getGoogleAdsCredentialBackedSettingValue(
+  userId: number,
+  key: string
+): Promise<string> {
+  if (!isCredentialBackedGoogleAdsSettingKey(key)) {
+    return ''
+  }
+  const credentialUserId = await resolveGoogleAdsOAuthSettingsReadUserId(userId)
+  if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
+    const fields = await getGoogleAdsOAuthConfigFields(credentialUserId)
+    return fields[key as GoogleAdsOAuthConfigKey]
+  }
+  const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
+  return testFields[key as GoogleAdsTestOAuthConfigKey]
+}
+
+export async function upsertSingleGoogleAdsCredentialBackedSetting(
+  userId: number,
+  key: string,
+  value: string
+): Promise<SyncGoogleAdsOAuthFieldsResult | null> {
+  if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
+    return upsertGoogleAdsOAuthConfigFromSettings(userId, {
+      [key as GoogleAdsOAuthConfigKey]: value,
+    })
+  }
+  if ((GOOGLE_ADS_TEST_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
+    await upsertGoogleAdsTestOAuthConfigFromSettings(userId, {
+      [key as GoogleAdsTestOAuthConfigKey]: value,
+    })
+    return null
+  }
+  return null
 }
 
 async function getGoogleAdsCredentialRowByUserId(
@@ -128,8 +202,9 @@ export async function overlayGoogleAdsSettingsFromCredentialStore(
   settings: SettingValue[],
   userId: number
 ): Promise<SettingValue[]> {
-  const oauthFields = await getGoogleAdsOAuthConfigFields(userId)
-  const testFields = await getGoogleAdsTestOAuthConfigFields(userId)
+  const credentialUserId = await resolveGoogleAdsOAuthSettingsReadUserId(userId)
+  const oauthFields = await getGoogleAdsOAuthConfigFields(credentialUserId)
+  const testFields = await getGoogleAdsTestOAuthConfigFields(credentialUserId)
 
   const valueByKey: Record<string, string> = {
     ...oauthFields,
@@ -170,7 +245,8 @@ export function partitionGoogleAdsSettingUpdates(
 
 export async function upsertGoogleAdsOAuthConfigFromSettings(
   userId: number,
-  fields: Partial<Record<GoogleAdsOAuthConfigKey, string>>
+  fields: Partial<Record<GoogleAdsOAuthConfigKey, string>>,
+  options?: { skipAuthContextInvalidate?: boolean }
 ): Promise<SyncGoogleAdsOAuthFieldsResult> {
   const existing = await getGoogleAdsCredentialRowByUserId(userId)
 
@@ -257,9 +333,11 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     )
   }
 
-  const { invalidateGoogleAdsAuthContextForCredentialUser } =
-    await import('./google-ads-auth-context')
-  await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+  if (!options?.skipAuthContextInvalidate) {
+    const { invalidateGoogleAdsAuthContextForCredentialUser } =
+      await import('./google-ads-auth-context')
+    await invalidateGoogleAdsAuthContextForCredentialUser(userId)
+  }
 
   return { synced: true, oauthClientCredentialsChanged }
 }

@@ -20,6 +20,7 @@ import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import {
+  collectCredentialBackedFieldUpdates,
   overlayGoogleAdsSettingsFromCredentialStore,
   partitionGoogleAdsSettingUpdates,
   upsertGoogleAdsOAuthConfigFromSettings,
@@ -353,57 +354,36 @@ export async function PUT(request: NextRequest) {
     const { credentialBacked, remainder } = partitionGoogleAdsSettingUpdates(updates)
 
     let oauthReauthRequired = false
-    if (credentialBacked.length > 0 && userIdNum) {
-      const oauthFields: Partial<
-        Record<'client_id' | 'client_secret' | 'developer_token' | 'login_customer_id', string>
-      > = {}
-      const testFields: Partial<
-        Record<
-          | 'test_login_customer_id'
-          | 'test_client_id'
-          | 'test_client_secret'
-          | 'test_developer_token',
-          string
-        >
-      > = {}
 
-      for (const update of credentialBacked) {
-        if (
-          update.key === 'client_id' ||
-          update.key === 'client_secret' ||
-          update.key === 'developer_token' ||
-          update.key === 'login_customer_id'
-        ) {
-          oauthFields[update.key] = update.value
-        } else if (
-          update.key === 'test_login_customer_id' ||
-          update.key === 'test_client_id' ||
-          update.key === 'test_client_secret' ||
-          update.key === 'test_developer_token'
-        ) {
-          testFields[update.key] = update.value
-        }
-      }
+    try {
+      const db = await getDatabase()
+      await db.transaction(async () => {
+        if (credentialBacked.length > 0 && userIdNum) {
+          const { oauthFields, testFields } = collectCredentialBackedFieldUpdates(credentialBacked)
 
-      try {
-        if (Object.keys(oauthFields).length > 0) {
-          const syncResult = await upsertGoogleAdsOAuthConfigFromSettings(userIdNum, oauthFields)
-          oauthReauthRequired = syncResult.oauthClientCredentialsChanged
+          if (Object.keys(oauthFields).length > 0) {
+            const syncResult = await upsertGoogleAdsOAuthConfigFromSettings(
+              userIdNum,
+              oauthFields,
+              {
+                skipAuthContextInvalidate: true,
+              }
+            )
+            oauthReauthRequired = syncResult.oauthClientCredentialsChanged
+          }
+          if (Object.keys(testFields).length > 0) {
+            await upsertGoogleAdsTestOAuthConfigFromSettings(userIdNum, testFields)
+          }
         }
-        if (Object.keys(testFields).length > 0) {
-          await upsertGoogleAdsTestOAuthConfigFromSettings(userIdNum, testFields)
-        }
-      } catch (syncError: any) {
-        return NextResponse.json(
-          { error: syncError.message || '保存 Google Ads OAuth 配置失败' },
-          { status: 400 }
-        )
-      }
-    }
 
-    // 更新非 OAuth 凭证字段（campaign_sync 等仍走 system_settings）
-    if (remainder.length > 0) {
-      await updateSettings(remainder, userIdNum)
+        if (remainder.length > 0) {
+          await updateSettings(remainder, userIdNum)
+        }
+      })
+    } catch (saveError: unknown) {
+      const message =
+        saveError instanceof Error ? saveError.message : '保存 Google Ads OAuth 配置失败'
+      return NextResponse.json({ error: message }, { status: 400 })
     }
 
     // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存

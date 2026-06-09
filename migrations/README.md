@@ -65,5 +65,6 @@ DATABASE_URL="$DATABASE_URL" npm run db:migrate
 | 编号    | 说明                                                                                                                  | 部署注意                                                                                                                                                          |
 | ------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **247** | `ad_creatives.generation_mode`、`creative_tasks.generation_mode`（`fast` / `balanced` / `original`，默认 `original`） | 已有库须执行 `npm run db:migrate`（SQLite）或应用 `pg-migrations/247_add_ad_creative_generation_mode.pg.sql`；全新库若已用含 247 字段的 consolidated 初始化可跳过 |
+| **254** | Google Ads OAuth 配置从 `system_settings` 合并至 `google_ads_credentials` / `google_ads_test_credentials` | 须 `npm run db:migrate`；回填依赖 `.env.local` 中 `JWT_SECRET`（解密遗留敏感字段） |
 
 创意生成模式 API 与 UI 依赖上述列；未迁移时入队/列表可能报错或缺少模式展示。

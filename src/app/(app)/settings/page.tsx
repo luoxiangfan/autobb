@@ -1501,6 +1501,7 @@ export default function SettingsPage() {
         'use_service_account',
       ])
       toast.success('OAuth 配置已删除')
+      await refreshCategorySettings('google_ads')
       await fetchGoogleAdsCredentialStatus()
     } catch (err: any) {
       toast.error(err.message || '删除失败')
