@@ -299,26 +299,21 @@ export async function adminHasConfiguredAuth(
   adminUserId: number,
   authType: GoogleAdsAuthType
 ): Promise<boolean> {
-  const { getGoogleAdsAuthContext, resolveGoogleAdsAuthReadyFailure } =
-    await import('./google-ads-auth-context')
-  const ctx = await getGoogleAdsAuthContext(adminUserId)
+  const {
+    getGoogleAdsAuthContextMetadata,
+    resolveGoogleAdsAuthReadyFailure,
+    hasConfiguredGoogleAdsAuthFromContext,
+  } = await import('./google-ads-auth-context')
+  const ctx = await getGoogleAdsAuthContextMetadata(adminUserId)
   if (resolveGoogleAdsAuthReadyFailure(ctx)) {
     return false
   }
 
-  if (authType === 'oauth') {
-    return (
-      ctx.auth.authType === 'oauth' &&
-      Boolean(
-        ctx.oauthCredentials?.refresh_token &&
-        ctx.oauthCredentials.client_id &&
-        ctx.oauthCredentials.client_secret &&
-        ctx.oauthCredentials.developer_token
-      )
-    )
+  if (ctx.auth.authType !== authType) {
+    return false
   }
 
-  return ctx.auth.authType === 'service_account' && Boolean(ctx.serviceAccountConfig)
+  return hasConfiguredGoogleAdsAuthFromContext(ctx)
 }
 
 export async function upsertGoogleAdsAuthAssignment(params: {

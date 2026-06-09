@@ -6,6 +6,7 @@ import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignme
 import {
   getGoogleAdsCredentialBackedSettingValue,
   isGoogleAdsCredentialBackedSettingKey,
+  isGoogleAdsSettingsAuthConflictError,
   isGoogleAdsSettingsValidationError,
   upsertSingleGoogleAdsCredentialBackedSetting,
 } from '@/lib/google-ads-settings-store'
@@ -154,7 +155,11 @@ export async function PUT(
         })
       } catch (saveError: unknown) {
         const message = saveError instanceof Error ? saveError.message : '保存 Google Ads 配置失败'
-        const status = isGoogleAdsSettingsValidationError(saveError) ? 400 : 500
+        const status = isGoogleAdsSettingsValidationError(saveError)
+          ? 400
+          : isGoogleAdsSettingsAuthConflictError(saveError)
+            ? 409
+            : 500
         return NextResponse.json({ error: message }, { status })
       }
     }

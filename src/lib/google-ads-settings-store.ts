@@ -47,8 +47,21 @@ export class GoogleAdsSettingsValidationError extends Error {
   }
 }
 
+/** OAuth 与服务账号互斥冲突（与 credentials / oauth 路由 409 语义一致） */
+export class GoogleAdsSettingsAuthConflictError extends Error {
+  readonly name = 'GoogleAdsSettingsAuthConflictError'
+
+  constructor(message: string) {
+    super(message)
+  }
+}
+
 export function isGoogleAdsSettingsValidationError(error: unknown): boolean {
   return error instanceof GoogleAdsSettingsValidationError
+}
+
+export function isGoogleAdsSettingsAuthConflictError(error: unknown): boolean {
+  return error instanceof GoogleAdsSettingsAuthConflictError
 }
 
 export type GoogleAdsSettingsReadContext = {
@@ -288,6 +301,20 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
   fields: Partial<Record<GoogleAdsOAuthConfigKey, string>>,
   options?: { skipAuthContextInvalidate?: boolean }
 ): Promise<SyncGoogleAdsOAuthFieldsResult> {
+  const hasOAuthFieldUpdate = (GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).some((key) =>
+    fields[key as GoogleAdsOAuthConfigKey]?.trim()
+  )
+  if (hasOAuthFieldUpdate) {
+    try {
+      const { assertNoConflictingGoogleAdsAuth } = await import('./google-ads-auth-context')
+      await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : '当前已配置服务账号认证，无法保存 OAuth 配置'
+      throw new GoogleAdsSettingsAuthConflictError(message)
+    }
+  }
+
   const existing = await getGoogleAdsCredentialRowByUserId(userId)
 
   let oauthClientCredentialsChanged = false

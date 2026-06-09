@@ -533,6 +533,8 @@ export default function SettingsPage() {
   >(null)
   const [permissionError, setPermissionError] = useState<any | null>(null)
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
+  const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.authConfigWarning)
+  const googleAdsAuthActionsBlocked = googleAdsAuthReadOnly || googleAdsDualStack
 
   const isGoogleAdsSharedAdminHiddenSecret = (category: string, key: string, value: string) => {
     if (category !== 'google_ads' || !googleAdsAuthReadOnly || value?.trim()) {
@@ -1490,7 +1492,6 @@ export default function SettingsPage() {
         'client_secret',
         'developer_token',
         'login_customer_id',
-        'use_service_account',
       ])
       toast.success('OAuth 配置已删除')
       await refreshCategorySettings('google_ads')
@@ -2246,11 +2247,12 @@ export default function SettingsPage() {
                           <button
                             type="button"
                             onClick={() => setGoogleAdsAuthMethod('oauth')}
+                            disabled={googleAdsDualStack}
                             className={`p-4 border-2 rounded-lg text-left transition-all relative ${
                               googleAdsAuthMethod === 'oauth'
                                 ? 'border-blue-500 bg-blue-50'
                                 : 'border-gray-200 hover:border-gray-300'
-                            }`}
+                            } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <div className="font-semibold">OAuth 用户授权</div>
@@ -2269,11 +2271,12 @@ export default function SettingsPage() {
                               setGoogleAdsAuthMethod('service_account')
                               fetchServiceAccounts()
                             }}
+                            disabled={googleAdsDualStack}
                             className={`p-4 border-2 rounded-lg text-left transition-all ${
                               googleAdsAuthMethod === 'service_account'
                                 ? 'border-blue-500 bg-blue-50'
                                 : 'border-gray-200 hover:border-gray-300'
-                            }`}
+                            } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             <div className="flex items-center gap-2 mb-1">
                               <div className="font-semibold">服务账号认证</div>
@@ -2944,11 +2947,7 @@ export default function SettingsPage() {
                         handleSave(category)
                       }
                     }}
-                    disabled={
-                      saving ||
-                      savingServiceAccount ||
-                      (category === 'google_ads' && googleAdsAuthReadOnly)
-                    }
+                    disabled={saving || savingServiceAccount || googleAdsAuthActionsBlocked}
                   >
                     {saving || savingServiceAccount ? '保存中...' : '保存配置'}
                   </Button>
@@ -2959,7 +2958,7 @@ export default function SettingsPage() {
                       variant="destructive"
                       onClick={requestDeleteCurrentGoogleAdsConfig}
                       disabled={
-                        googleAdsAuthReadOnly ||
+                        googleAdsAuthActionsBlocked ||
                         deletingOAuthConfig ||
                         (googleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
                         (googleAdsAuthMethod === 'service_account' &&
@@ -2973,7 +2972,7 @@ export default function SettingsPage() {
                   {category === 'google_ads' && googleAdsAuthMethod === 'oauth' && (
                     <Button
                       onClick={handleStartGoogleAdsOAuth}
-                      disabled={startingOAuth || googleAdsAuthReadOnly}
+                      disabled={startingOAuth || googleAdsAuthActionsBlocked}
                       variant="outline"
                     >
                       <Key className="w-4 h-4 mr-2" />
@@ -2988,7 +2987,7 @@ export default function SettingsPage() {
                       onClick={handleVerifyGoogleAdsCredentials}
                       disabled={
                         verifyingGoogleAdsCredentials ||
-                        googleAdsAuthReadOnly ||
+                        googleAdsAuthActionsBlocked ||
                         hasGoogleAdsUnsavedChanges()
                       }
                     >

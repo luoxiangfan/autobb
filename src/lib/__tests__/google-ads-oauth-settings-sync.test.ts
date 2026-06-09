@@ -8,6 +8,7 @@ const dbFns = vi.hoisted(() => ({
 
 const authContextFns = vi.hoisted(() => ({
   invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(async () => {}),
+  assertNoConflictingGoogleAdsAuth: vi.fn(async () => {}),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -17,14 +18,32 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@/lib/google-ads-auth-context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
+  assertNoConflictingGoogleAdsAuth: authContextFns.assertNoConflictingGoogleAdsAuth,
 }))
 
-import { upsertGoogleAdsOAuthConfigFromSettings } from '@/lib/google-ads-settings-store'
+import {
+  GoogleAdsSettingsAuthConflictError,
+  upsertGoogleAdsOAuthConfigFromSettings,
+} from '@/lib/google-ads-settings-store'
 
 describe('upsertGoogleAdsOAuthConfigFromSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.queryOne.mockResolvedValue(undefined)
+    authContextFns.assertNoConflictingGoogleAdsAuth.mockResolvedValue(undefined)
+  })
+
+  it('rejects oauth field save when service account is already configured', async () => {
+    authContextFns.assertNoConflictingGoogleAdsAuth.mockRejectedValue(
+      new Error('当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。')
+    )
+
+    await expect(
+      upsertGoogleAdsOAuthConfigFromSettings(1, { client_id: 'new-id.apps.googleusercontent.com' })
+    ).rejects.toBeInstanceOf(GoogleAdsSettingsAuthConflictError)
+
+    expect(dbFns.exec).not.toHaveBeenCalled()
+    expect(authContextFns.assertNoConflictingGoogleAdsAuth).toHaveBeenCalledWith(1, 'oauth')
   })
 
   it('creates credential row when saving config before OAuth', async () => {

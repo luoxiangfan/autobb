@@ -10,7 +10,7 @@ import { verifyAuth, findUserById } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import {
   assertNoConflictingGoogleAdsAuth,
-  getGoogleAdsAuthContext,
+  getGoogleAdsAuthContextMetadata,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
 
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const ctx = await getGoogleAdsAuthContext(user.id)
+  const ctx = await getGoogleAdsAuthContextMetadata(user.id)
   const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
   const allowListForDualStackCleanup = ctx.dualStack && ctx.canModify
   if (displayAuthType !== 'service_account' && !allowListForDualStackCleanup) {

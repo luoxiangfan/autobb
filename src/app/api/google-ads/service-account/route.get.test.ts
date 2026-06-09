@@ -4,7 +4,7 @@ import { GET } from '@/app/api/google-ads/service-account/route'
 
 const listServiceAccountsFn = vi.hoisted(() => vi.fn())
 const authContextFns = vi.hoisted(() => ({
-  getGoogleAdsAuthContext: vi.fn(),
+  getGoogleAdsAuthContextMetadata: vi.fn(),
   resolveGoogleAdsDisplayAuthType: vi.fn(),
 }))
 
@@ -17,7 +17,7 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,
   resolveGoogleAdsDisplayAuthType: authContextFns.resolveGoogleAdsDisplayAuthType,
   assertNoConflictingGoogleAdsAuth: vi.fn(async () => {}),
 }))
@@ -33,12 +33,12 @@ vi.mock('@/lib/google-ads-service-account', async (importOriginal) => {
 describe('GET /api/google-ads/service-account', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({ userId: 2 })
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({ userId: 2 })
   })
 
   it('returns empty list when effective auth is not service_account', async () => {
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('oauth')
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
       dualStack: false,
       canModify: true,
@@ -54,7 +54,7 @@ describe('GET /api/google-ads/service-account', () => {
 
   it('returns empty list for dual-stack shared user without modify access', async () => {
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue(null)
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
       dualStack: true,
       canModify: false,
@@ -70,7 +70,7 @@ describe('GET /api/google-ads/service-account', () => {
 
   it('lists service accounts when effective auth is service_account', async () => {
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('service_account')
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
       dualStack: false,
       canModify: true,
@@ -95,7 +95,7 @@ describe('GET /api/google-ads/service-account', () => {
 
   it('lists service accounts for dual-stack owner cleanup when canModify', async () => {
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue(null)
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
       dualStack: true,
       canModify: true,

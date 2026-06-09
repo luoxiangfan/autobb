@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { DELETE, GET, PUT } from '@/app/api/settings/route'
+import { GoogleAdsSettingsAuthConflictError } from '@/lib/google-ads-settings-store'
 
 const settingsFns = vi.hoisted(() => ({
   clearUserSettings: vi.fn(),
@@ -410,6 +411,34 @@ describe('settings route google ads credential store', () => {
 
     expect(res.status).toBe(400)
     expect(payload.error).toContain('Developer Token')
+    expect(settingsFns.updateSettings).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 when oauth credential save conflicts with service account auth', async () => {
+    settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockRejectedValue(
+      new GoogleAdsSettingsAuthConflictError(
+        '当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。'
+      )
+    )
+
+    const req = new NextRequest('http://localhost/api/settings', {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        'x-user-id': '7',
+      },
+      body: JSON.stringify({
+        updates: [
+          { category: 'google_ads', key: 'client_id', value: 'cid-new.apps.googleusercontent.com' },
+        ],
+      }),
+    })
+
+    const res = await PUT(req)
+    const payload = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(payload.error).toContain('服务账号')
     expect(settingsFns.updateSettings).not.toHaveBeenCalled()
   })
 
