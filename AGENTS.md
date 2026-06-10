@@ -288,6 +288,40 @@ bd automatically syncs via Dolt:
 
 For more details, see README.md and docs/QUICKSTART.md.
 
+## Cursor Cloud specific instructions
+
+### Node.js 24（必须）
+
+VM 默认 `PATH` 中的 `/exec-daemon/node` 为 **Node 22**，与本仓库 `engines.node >= 24` 不符。所有 npm / tsx / next 命令前须先激活 nvm 24 并置于 `PATH` 最前：
+
+```bash
+export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm use 24
+export PATH="$(dirname "$(nvm which 24)"):$PATH"
+node --version   # 应显示 v24.x
+```
+
+### 首次数据库初始化（SQLite）
+
+1. `cp .env.example .env.local`，生成并填写 `JWT_SECRET`、`ENCRYPTION_KEY`（`openssl rand -hex 32`）；本地开发可设 `DEFAULT_ADMIN_PASSWORD` 固定管理员密码。
+2. **已知问题**：`npm run db:init` 通过系统 `sqlite3` CLI 执行 consolidated schema 时会因 `unistr()`（Oracle 函数，标准 SQLite 不支持）失败。若 `data/autoads.db` 不存在或关键表缺失，需先将 `migrations/000_init_schema_consolidated.sqlite.sql` 中的 `unistr('...')` 转为普通 SQLite 字符串字面量再导入（处理 `''` 转义与 `\u000a` 换行），然后执行 `npm run db:migrate` 与 `DEFAULT_ADMIN_PASSWORD=... npm run admin:ensure`。
+3. 已有库时直接 `npm run db:migrate` + `npm run admin:ensure` 即可。
+
+加载 `.env.local` 跑脚本：`set -a && source .env.local && set +a`（部分行含 shell 不友好字符时会有无害 warning，不影响 tsx 通过 dotenv 读取）。
+
+### 服务与端口
+
+| 服务 | 命令 | 端口 |
+|------|------|------|
+| Next.js（开发） | `npm run dev` | http://localhost:3000 |
+| Scheduler（可选） | `npm run build:scheduler && node dist/scheduler.js` | 无 HTTP |
+| Redis（可选） | `redis-server` 或 Docker | 6379 |
+
+最小本地开发只需 **Next.js + SQLite**。未配置 Redis 时队列回退内存，日志中 Redis 重连错误可忽略。默认管理员：`autoads`（密码见 `admin:ensure` 输出或 `DEFAULT_ADMIN_PASSWORD`）。
+
+### 质量检查（仓库根目录）
+
+标准命令见上文「代码修改后的质量门禁」与 `package.json`：`npm run lint`、`npm run type-check`、`npm test`。全量测试约 4–5 分钟；无 Redis 时 `distributed-running-snapshot-gate` 等分布式队列用例可能失败，属预期。
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
