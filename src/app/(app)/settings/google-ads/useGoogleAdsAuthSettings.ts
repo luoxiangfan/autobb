@@ -171,6 +171,22 @@ export function useGoogleAdsAuthSettings({
     }
   }, [fetchServiceAccounts])
 
+  const credentialStatusRefreshInFlightRef = useRef<Promise<void> | null>(null)
+
+  const refreshCredentialStatusCoalesced = useCallback(async () => {
+    if (credentialStatusRefreshInFlightRef.current) {
+      return credentialStatusRefreshInFlightRef.current
+    }
+
+    const promise = fetchGoogleAdsCredentialStatus().finally(() => {
+      if (credentialStatusRefreshInFlightRef.current === promise) {
+        credentialStatusRefreshInFlightRef.current = null
+      }
+    })
+    credentialStatusRefreshInFlightRef.current = promise
+    return promise
+  }, [fetchGoogleAdsCredentialStatus])
+
   useEffect(() => {
     void fetchGoogleAdsCredentialStatus()
   }, [fetchGoogleAdsCredentialStatus])
@@ -205,13 +221,13 @@ export function useGoogleAdsAuthSettings({
       {
         ...createGoogleAdsAccountsCoreApplyHandlers({
           setAuthConfigWarning: (warning) => {
-            if (warning) void fetchGoogleAdsCredentialStatus()
+            if (warning) void refreshCredentialStatusCoalesced()
           },
           setGoogleAdsDualStack: (dualStack) => {
-            if (dualStack) void fetchGoogleAdsCredentialStatus()
+            if (dualStack) void refreshCredentialStatusCoalesced()
           },
           setNeedsReauth: (needsReauth) => {
-            if (needsReauth) void fetchGoogleAdsCredentialStatus()
+            if (needsReauth) void refreshCredentialStatusCoalesced()
           },
           setPermissionError,
           onErrorMessage: (message) => toast.error(message),
@@ -245,7 +261,7 @@ export function useGoogleAdsAuthSettings({
         toast.success(`找到${effects.data!.total}个可访问的 Google Ads 账户`)
       }
       if (shouldRefreshCredentialsAfterAccountsFetchOk(effects)) {
-        void fetchGoogleAdsCredentialStatus()
+        void refreshCredentialStatusCoalesced()
       }
       return 'ok'
     }
@@ -346,7 +362,7 @@ export function useGoogleAdsAuthSettings({
       const status = handleAccountsFetchResult(result, { forceRefresh: true })
 
       if (status === 'failed') {
-        await fetchGoogleAdsCredentialStatus()
+        await refreshCredentialStatusCoalesced()
         setShowGoogleAdsAccounts(false)
       }
     } catch (err: unknown) {
