@@ -45,10 +45,16 @@ import {
 } from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
+  applyGoogleAdsAccountsFetchUiEffects,
+  resolveGoogleAdsAccountsFetchUiEffects,
+  type ServiceAccountPermissionDetails,
+} from '@/lib/google-ads-accounts-fetch'
+import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,
   type GoogleAdsAccountsFetchResult,
 } from '@/hooks/useGoogleAdsAccountsList'
+import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import Link from 'next/link'
 
 interface Props {
@@ -155,6 +161,9 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
   const [needsReauth, setNeedsReauth] = useState(false)
+  const [permissionError, setPermissionError] = useState<ServiceAccountPermissionDetails | null>(
+    null
+  )
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
   const {
@@ -213,77 +222,54 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
   const handleAccountsFetchResult = useCallback(
     (result: GoogleAdsAccountsFetchResult, opts: { forceRefresh: boolean; isPoll: boolean }) => {
-      if (result.ok === false && result.kind === 'blocked') {
-        const { effects } = result
-        if (effects.authConfigWarning) {
-          setAuthConfigWarning(effects.authConfigWarning)
-          setGoogleAdsDualStack(true)
-        }
-        if (effects.errorMessage) {
-          showError(effects.errorMessage)
-        }
-        if (effects.clearForceRefreshState) {
+      const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
+      applyGoogleAdsAccountsFetchUiEffects(effects, {
+        onAuthConfigWarning: setAuthConfigWarning,
+        onDualStack: setGoogleAdsDualStack,
+        onNeedsReauth: setNeedsReauth,
+        onErrorMessage: (message) => showError('加载失败', message),
+        onPermissionDetails: setPermissionError,
+        onPollFailure: (message) => showError('同步失败', message),
+        onClearForceRefresh: () => {
           setRefreshing(false)
-        }
-        return
-      }
+          setRefreshInProgress(false)
+          setRefreshError(null)
+        },
+        onOkData: (data) => {
+          setIsCached(Boolean(data.cached))
+          setCacheStale(Boolean(data.cacheStale))
+          setRefreshFailed(Boolean(data.refreshFailed))
+          setLastSyncAt(data.lastSyncAt ?? null)
+          setRefreshInProgress(data.refreshInProgress)
+          setRefreshError(data.refreshError)
 
-      if (result.ok === false && result.kind === 'error') {
-        const err = result.error
-        if (err.needsReauth) {
-          setNeedsReauth(true)
-        }
-        if (err.authConfigWarning) {
-          setAuthConfigWarning(err.authConfigWarning)
-          setGoogleAdsDualStack(true)
-        }
-        showError('加载失败', err.message || '获取账号列表失败')
-        setRefreshing(false)
-        setRefreshInProgress(false)
-        setRefreshError(null)
-        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
-        return
-      }
-
-      if (!result.ok) {
-        return
-      }
-
-      const { data } = result
-      setAuthConfigWarning(data.authConfigWarning)
-      setGoogleAdsDualStack(data.dualStack)
-      setNeedsReauth(false)
-      setIsCached(Boolean(data.cached))
-      setCacheStale(Boolean(data.cacheStale))
-      setRefreshFailed(Boolean(data.refreshFailed))
-      setLastSyncAt(data.lastSyncAt ?? null)
-      setRefreshInProgress(data.refreshInProgress)
-      setRefreshError(data.refreshError)
-
-      const allAccounts = data.accounts as GoogleAdsAccount[]
-      if (allAccounts.length > 0) {
-        applyAccountsToState(allAccounts)
-      } else {
-        setAccounts([])
-        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
-      }
-
-      if (opts.forceRefresh) {
-        if (data.refreshInProgress) {
-          showSuccess('已开始刷新', '后台同步中，列表将自动更新')
+          const allAccounts = data.accounts as GoogleAdsAccount[]
+          if (allAccounts.length > 0) {
+            applyAccountsToState(allAccounts)
+          } else {
+            setAccounts([])
+            setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+          }
+        },
+        onSchedulePoll: () => {
+          if (opts.forceRefresh) {
+            showSuccess('已开始刷新', '后台同步中，列表将自动更新')
+          }
           scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
             handleAccountsFetchResult(pollResult, { forceRefresh: false, isPoll: true })
           })
-        } else {
-          showSuccess('已刷新', `已同步 ${allAccounts.length} 个账号`)
+        },
+      })
+
+      if (effects.kind === 'error') {
+        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+      }
+
+      if (effects.kind === 'ok' && effects.data) {
+        if (opts.forceRefresh && !effects.shouldSchedulePoll) {
+          showSuccess('已刷新', `已同步 ${effects.data.accounts.length} 个账号`)
           setRefreshing(false)
-        }
-      } else if (opts.isPoll) {
-        if (data.refreshInProgress) {
-          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
-            handleAccountsFetchResult(pollResult, { forceRefresh: false, isPoll: true })
-          })
-        } else {
+        } else if (opts.isPoll && !effects.shouldSchedulePoll) {
           setRefreshing(false)
         }
       }
@@ -514,6 +500,16 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
             </Link>
           </AlertDescription>
         </Alert>
+      )}
+
+      {permissionError?.solution && (
+        <ServiceAccountPermissionError
+          serviceAccountEmail={permissionError.serviceAccountEmail ?? ''}
+          mccCustomerId={permissionError.mccCustomerId ?? ''}
+          steps={permissionError.solution.steps}
+          docsUrl={permissionError.solution.docsUrl}
+          onDismiss={() => setPermissionError(null)}
+        />
       )}
 
       {/* No Credentials Warning */}

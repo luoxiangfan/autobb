@@ -12,10 +12,14 @@ import {
   resolveAccountsRequestAuth,
   safeReadJson,
   throwAccountsListFetchError,
-  type AccountsFetchBlockedUiEffects,
-  type AccountsRequestAuth,
   type ParsedGoogleAdsCredentialsStatus,
 } from '@/lib/google-ads-credentials-errors'
+import {
+  buildGoogleAdsAccountsSearchParams,
+  type GoogleAdsAccountsApiData,
+  type GoogleAdsAccountsFetchParams,
+  type GoogleAdsAccountsFetchResult,
+} from '@/lib/google-ads-accounts-fetch'
 import {
   useGoogleAdsAccountsAuth,
   type UseGoogleAdsAccountsAuthOptions,
@@ -23,41 +27,7 @@ import {
 
 export const GOOGLE_ADS_ACCOUNTS_POLL_INTERVAL_MS = 2000
 
-export type GoogleAdsAccountsApiData = {
-  accounts: unknown[]
-  total: number
-  refreshInProgress: boolean
-  refreshError: string | null
-  authConfigWarning: string | null
-  dualStack: boolean
-  cached?: boolean
-  cacheStale?: boolean
-  refreshFailed?: boolean
-  lastSyncAt?: string | null
-}
-
-export type GoogleAdsAccountsFetchParams = {
-  forceRefresh?: boolean
-  isPoll?: boolean
-  skipCredentialsRefresh?: boolean
-  fallbackServiceAccountId?: string | null
-  /** 额外 query（如 filterByUserMcc、offerId） */
-  query?: Record<string, string | undefined>
-}
-
-export type GoogleAdsAccountsFetchResult =
-  | {
-      ok: true
-      authForRequest: AccountsRequestAuth
-      data: GoogleAdsAccountsApiData
-    }
-  | { ok: false; kind: 'blocked'; effects: AccountsFetchBlockedUiEffects }
-  | { ok: false; kind: 'permission_denied'; details: unknown }
-  | {
-      ok: false
-      kind: 'error'
-      error: Error & { needsReauth?: boolean; authConfigWarning?: string | null }
-    }
+export type { GoogleAdsAccountsApiData, GoogleAdsAccountsFetchParams, GoogleAdsAccountsFetchResult }
 
 export type UseGoogleAdsAccountsListOptions = UseGoogleAdsAccountsAuthOptions & {
   pollIntervalMs?: number
@@ -108,15 +78,24 @@ export function useGoogleAdsAccountsList(options: UseGoogleAdsAccountsListOption
   })
 
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const mountedRef = useRef(true)
+  const pollGenerationRef = useRef(0)
 
   const clearAccountsPoll = useCallback(() => {
+    pollGenerationRef.current += 1
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
     }
   }, [])
 
-  useEffect(() => () => clearAccountsPoll(), [clearAccountsPoll])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+      clearAccountsPoll()
+    }
+  }, [clearAccountsPoll])
 
   const fetchAccounts = useCallback(
     async (params: GoogleAdsAccountsFetchParams): Promise<GoogleAdsAccountsFetchResult> => {
@@ -138,18 +117,7 @@ export function useGoogleAdsAccountsList(options: UseGoogleAdsAccountsListOption
       }
 
       const authForRequest = resolved.authForRequest
-      const searchParams = new URLSearchParams()
-      if (params.forceRefresh) {
-        searchParams.set('refresh', 'true')
-        searchParams.set('async', 'true')
-      }
-      if (params.query) {
-        for (const [key, value] of Object.entries(params.query)) {
-          if (value !== undefined && value !== '') {
-            searchParams.set(key, value)
-          }
-        }
-      }
+      const searchParams = buildGoogleAdsAccountsSearchParams(params)
       appendAccountsAuthToSearchParams(searchParams, authForRequest)
 
       const response = await fetch(
@@ -211,13 +179,23 @@ export function useGoogleAdsAccountsList(options: UseGoogleAdsAccountsListOption
 
   scheduleAccountsPollRef.current = (baseParams, onResult) => {
     clearAccountsPoll()
+    const generation = pollGenerationRef.current
     pollTimerRef.current = setTimeout(async () => {
+      if (!mountedRef.current || generation !== pollGenerationRef.current) {
+        return
+      }
+
       const result = await fetchAccounts({
         ...baseParams,
         isPoll: true,
         forceRefresh: false,
         skipCredentialsRefresh: baseParams.skipCredentialsRefresh ?? true,
       })
+
+      if (!mountedRef.current || generation !== pollGenerationRef.current) {
+        return
+      }
+
       onResult(result)
       if (result.ok && result.data.refreshInProgress) {
         scheduleAccountsPollRef.current(baseParams, onResult)

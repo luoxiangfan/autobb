@@ -8,9 +8,16 @@ import {
   safeReadJson,
 } from '@/lib/google-ads-credentials-errors'
 import {
+  applyGoogleAdsAccountsFetchUiEffects,
+  resolveGoogleAdsAccountsFetchUiEffects,
+  type ServiceAccountPermissionDetails,
+} from '@/lib/google-ads-accounts-fetch'
+import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,
+  type GoogleAdsAccountsFetchResult,
 } from '@/hooks/useGoogleAdsAccountsList'
+import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
 import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'
 
 interface GoogleAdsAccount {
@@ -89,6 +96,9 @@ export default function GoogleAdsPage() {
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
   const [needsReauth, setNeedsReauth] = useState(false) // 是否需要重新授权
+  const [permissionError, setPermissionError] = useState<ServiceAccountPermissionDetails | null>(
+    null
+  )
   const accountFetchersRef = useRef<{
     fetchAccounts: (
       forceRefresh?: boolean,
@@ -120,71 +130,6 @@ export default function GoogleAdsPage() {
     }
   }, [clearAccountsPoll])
 
-  const applyAccountsFetchResult = (
-    result: Awaited<ReturnType<typeof fetchAccountsFromApi>>,
-    opts?: { forceRefresh?: boolean; isPoll?: boolean }
-  ) => {
-    if (result.ok === false && result.kind === 'blocked') {
-      const { effects } = result
-      if (effects.authConfigWarning) {
-        setAuthConfigWarning(effects.authConfigWarning)
-        setGoogleAdsDualStack(true)
-      }
-      if (effects.errorMessage) {
-        setError(effects.errorMessage)
-      }
-      if (effects.clearForceRefreshState) {
-        setAccountsSyncing(false)
-      }
-      return
-    }
-
-    if (result.ok === false && result.kind === 'error') {
-      const err = result.error
-      if (err.needsReauth) {
-        setNeedsReauth(true)
-      }
-      if (err.authConfigWarning) {
-        setAuthConfigWarning(err.authConfigWarning)
-        setGoogleAdsDualStack(true)
-      }
-      setError(formatErrorMessage(err) || '获取账户列表失败')
-      setAccountsSyncing(false)
-      setAccountsSyncError(null)
-      return
-    }
-
-    if (!result.ok) {
-      return
-    }
-
-    const { data } = result
-    setAuthConfigWarning(data.authConfigWarning)
-    setGoogleAdsDualStack(data.dualStack)
-    setAccountsSyncError(data.refreshError)
-    setAccountsSyncing(data.refreshInProgress)
-    setNeedsReauth(false)
-
-    const allAccounts = data.accounts as GoogleAdsAccount[]
-    setAccounts(enrichAccountsWithMccNames(allAccounts))
-    if (data.cached !== undefined) {
-      setIsCached(data.cached)
-    }
-    if (data.lastSyncAt) {
-      setLastSyncAt(data.lastSyncAt)
-    }
-
-    if (opts?.forceRefresh || opts?.isPoll) {
-      if (data.refreshInProgress) {
-        scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
-          applyAccountsFetchResult(pollResult, { isPoll: true })
-        })
-      } else {
-        setAccountsSyncing(false)
-      }
-    }
-  }
-
   const enrichAccountsWithMccNames = (allAccounts: GoogleAdsAccount[]): GoogleAdsAccount[] => {
     const mccMap = new Map<string, string>()
     allAccounts.forEach((acc) => {
@@ -197,6 +142,45 @@ export default function GoogleAdsPage() {
       parentMccName: acc.parentMcc ? mccMap.get(acc.parentMcc) : undefined,
     }))
   }
+
+  const applyAccountsFetchResult = useCallback(
+    (result: GoogleAdsAccountsFetchResult, opts?: { forceRefresh?: boolean; isPoll?: boolean }) => {
+      const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
+      applyGoogleAdsAccountsFetchUiEffects(effects, {
+        onAuthConfigWarning: setAuthConfigWarning,
+        onDualStack: setGoogleAdsDualStack,
+        onNeedsReauth: setNeedsReauth,
+        onErrorMessage: (message) => {
+          setError(message)
+          setAccountsSyncError(null)
+        },
+        onPermissionDetails: setPermissionError,
+        onClearForceRefresh: () => setAccountsSyncing(false),
+        onPollFailure: (message) => {
+          setError(message)
+          setAccountsSyncError(null)
+        },
+        onOkData: (data) => {
+          setAccountsSyncError(data.refreshError)
+          setAccountsSyncing(data.refreshInProgress)
+          const allAccounts = data.accounts as GoogleAdsAccount[]
+          setAccounts(enrichAccountsWithMccNames(allAccounts))
+          if (data.cached !== undefined) {
+            setIsCached(data.cached)
+          }
+          if (data.lastSyncAt) {
+            setLastSyncAt(data.lastSyncAt)
+          }
+        },
+        onSchedulePoll: () => {
+          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
+            applyAccountsFetchResult(pollResult, { isPoll: true })
+          })
+        },
+      })
+    },
+    [scheduleAccountsPoll]
+  )
 
   const fetchAccountsList = async (
     forceRefresh = false,
@@ -675,6 +659,16 @@ export default function GoogleAdsPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {permissionError?.solution && (
+            <ServiceAccountPermissionError
+              serviceAccountEmail={permissionError.serviceAccountEmail ?? ''}
+              mccCustomerId={permissionError.mccCustomerId ?? ''}
+              steps={permissionError.solution.steps}
+              docsUrl={permissionError.solution.docsUrl}
+              onDismiss={() => setPermissionError(null)}
+            />
           )}
 
           {authConfigWarning && (
