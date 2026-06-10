@@ -2,7 +2,7 @@
  * Google Ads OAuth 配置统一存储：OAuth 字段仅存 google_ads_credentials，不再写入 system_settings 用户实例。
  * system_settings 仅保留 user_id IS NULL 的字段元数据（及 campaign_sync 等非 OAuth 键）。
  */
-import { getDatabase } from './db'
+import { getDatabase, type DatabaseAdapter } from './db'
 import { nowFunc as sqlNowFunc } from './db-helpers'
 import {
   isGoogleAdsAuthShared,
@@ -37,6 +37,13 @@ export type SyncGoogleAdsOAuthFieldsResult = {
   synced: boolean
   /** client_id 或 client_secret 相对 DB 发生变更且仍有 refresh_token */
   oauthClientCredentialsChanged: boolean
+}
+
+export type GoogleAdsOAuthConfigUpsertOptions = {
+  skipAuthContextInvalidate?: boolean
+  skipAuthConflictCheck?: boolean
+  /** 与调用方同一 DatabaseAdapter / transaction 上下文（import、settings 批量保存） */
+  db?: DatabaseAdapter
 }
 
 export class GoogleAdsSettingsValidationError extends Error {
@@ -215,7 +222,7 @@ export async function upsertSingleGoogleAdsCredentialBackedSetting(
   userId: number,
   key: string,
   value: string,
-  options?: { skipAuthContextInvalidate?: boolean }
+  options?: GoogleAdsOAuthConfigUpsertOptions
 ): Promise<SyncGoogleAdsOAuthFieldsResult | null> {
   if ((GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).includes(key)) {
     return upsertGoogleAdsOAuthConfigFromSettings(
@@ -230,11 +237,12 @@ export async function upsertSingleGoogleAdsCredentialBackedSetting(
 }
 
 async function getGoogleAdsCredentialRowByUserId(
-  userId: number
+  userId: number,
+  db?: DatabaseAdapter
 ): Promise<GoogleAdsCredentials | null> {
-  const db = await getDatabase()
+  const adapter = db ?? (await getDatabase())
   return (
-    (await db.queryOne<GoogleAdsCredentials>(
+    (await adapter.queryOne<GoogleAdsCredentials>(
       `SELECT * FROM google_ads_credentials WHERE user_id = ? LIMIT 1`,
       [userId]
     )) ?? null
@@ -246,9 +254,10 @@ async function getGoogleAdsCredentialRowByUserId(
  * 共享场景请用 resolveGoogleAdsSettingsReadContext / getGoogleAdsCredentialBackedSettingValue。
  */
 export async function getGoogleAdsOAuthConfigFields(
-  userId: number
+  userId: number,
+  db?: DatabaseAdapter
 ): Promise<Record<GoogleAdsOAuthConfigKey, string>> {
-  const row = await getGoogleAdsCredentialRowByUserId(userId)
+  const row = await getGoogleAdsCredentialRowByUserId(userId, db)
   return {
     login_customer_id: String(row?.login_customer_id || '').trim(),
     client_id: String(row?.client_id || '').trim(),
@@ -366,8 +375,9 @@ export function partitionGoogleAdsSettingUpdates(
 export async function upsertGoogleAdsOAuthConfigFromSettings(
   userId: number,
   fields: Partial<Record<GoogleAdsOAuthConfigKey, string>>,
-  options?: { skipAuthContextInvalidate?: boolean; skipAuthConflictCheck?: boolean }
+  options?: GoogleAdsOAuthConfigUpsertOptions
 ): Promise<SyncGoogleAdsOAuthFieldsResult> {
+  const db = options?.db ?? (await getDatabase())
   const hasOAuthFieldUpdate = (GOOGLE_ADS_OAUTH_CONFIG_KEYS as readonly string[]).some((key) =>
     fields[key as GoogleAdsOAuthConfigKey]?.trim()
   )
@@ -382,7 +392,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     }
   }
 
-  const existing = await getGoogleAdsCredentialRowByUserId(userId)
+  const existing = await getGoogleAdsCredentialRowByUserId(userId, db)
 
   let oauthClientCredentialsChanged = false
   if (fields.client_id?.trim()) {
@@ -432,7 +442,6 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     return { synced: false, oauthClientCredentialsChanged: false }
   }
 
-  const db = await getDatabase()
   const nowSql = sqlNowFunc(db.type)
   const isActiveValue = db.type === 'postgres' ? true : 1
 
@@ -442,7 +451,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
       [...params, isActiveValue, userId]
     )
   } else {
-    const merged = await getGoogleAdsOAuthConfigFields(userId)
+    const merged = await getGoogleAdsOAuthConfigFields(userId, db)
     if (fields.client_id?.trim()) merged.client_id = fields.client_id.trim()
     if (fields.client_secret?.trim()) merged.client_secret = fields.client_secret.trim()
     if (fields.developer_token?.trim()) merged.developer_token = fields.developer_token.trim()

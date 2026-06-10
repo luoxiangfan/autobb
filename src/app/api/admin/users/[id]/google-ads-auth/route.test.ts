@@ -152,7 +152,7 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
     )
   })
 
-  it('returns 409 when target user auth context is dual-stack', async () => {
+  it('returns 409 when target user auth context is dual-stack (own mode)', async () => {
     contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
       ownerUserId: 2,
@@ -168,8 +168,15 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
     const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
       method: 'PUT',
       body: JSON.stringify({
-        assignmentMode: 'shared_admin',
+        assignmentMode: 'own',
         authType: 'oauth',
+        oauth: {
+          client_id: 'cid.apps.googleusercontent.com',
+          client_secret: 'secret',
+          developer_token: 'dev-token-123456789012345678',
+          login_customer_id: '1234567890',
+          refresh_token: 'rt-new',
+        },
       }),
     })
 
@@ -180,6 +187,57 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
     expect(data.code).toBe('DUAL_STACK_CONFLICT')
     expect(data.authConfigWarning).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
     expect(assignmentFns.upsertGoogleAdsAuthAssignment).not.toHaveBeenCalled()
+  })
+
+  it('assigns shared_admin after clearing sub-user dual-stack orphans', async () => {
+    contextFns.getGoogleAdsAuthContextMetadata
+      .mockResolvedValueOnce({
+        userId: 2,
+        ownerUserId: 2,
+        dualStack: true,
+        assignment: null,
+        isShared: false,
+        canModify: true,
+        auth: { authType: 'oauth' as const },
+        oauthCredentials: { refresh_token: 'rt', client_id: 'cid' },
+        serviceAccountConfig: { id: 'sa-1' },
+        oauthHasRefreshToken: true,
+        serviceAccountConfigured: true,
+      })
+      .mockResolvedValue({
+        userId: 2,
+        ownerUserId: 1,
+        dualStack: false,
+        assignment: {
+          assignmentMode: 'shared_admin',
+          authType: 'oauth',
+          sharedAdminUserId: 1,
+        },
+        isShared: true,
+        canModify: false,
+        auth: { authType: 'oauth' as const },
+        oauthCredentials: { refresh_token: 'admin-rt' },
+        serviceAccountConfig: null,
+        oauthHasRefreshToken: true,
+        serviceAccountConfigured: false,
+      })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'PUT',
+      body: JSON.stringify({
+        assignmentMode: 'shared_admin',
+        authType: 'oauth',
+      }),
+    })
+
+    const res = await PUT(req, { params: Promise.resolve({ id: '2' }) })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(oauthFns.deleteGoogleAdsCredentials).toHaveBeenCalledWith(2)
+    expect(serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser).toHaveBeenCalledWith(2)
+    expect(assignmentFns.upsertGoogleAdsAuthAssignment).toHaveBeenCalled()
   })
 })
 

@@ -123,7 +123,6 @@ export async function GET(request: NextRequest) {
     console.log(`📥 处理OAuth回调`)
     console.log(`   用户: ${userId}`)
     console.log(`   Login Customer ID: ${loginCustomerId}`)
-    console.log(`   Authorization Code: ${code.substring(0, 10)}...`)
 
     // 交换authorization code获取tokens
     const tokens = await exchangeCodeForTokens(code, clientId, clientSecret, redirectUri)

@@ -178,30 +178,18 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
   }
 
   try {
-    const targetCtx = await getGoogleAdsAuthContextMetadata(userId)
-    const dualStackError = googleAdsAuthContextDualStackError(targetCtx)
-    if (dualStackError) {
-      return NextResponse.json(
-        {
-          ...googleAdsAuthReadyFailurePayload({
-            reason: 'dual_stack',
-            message: dualStackError,
-          }),
-        },
-        { status: 409 }
-      )
-    }
-
     if (assignmentMode === 'shared_admin') {
       const adminHasAuth = await adminHasConfiguredAuth(admin.userId, authType)
       if (!adminHasAuth) {
         return NextResponse.json(
-          { error: `管理员尚未配置 ${authType === 'oauth' ? 'OAuth' : '服务账号'} 认证，无法共享` },
+          {
+            error: `管理员尚未配置 ${authType === 'oauth' ? 'OAuth' : '服务账号'} 认证，无法共享（请确认管理员已完成授权且无双栈冲突）`,
+          },
           { status: 400 }
         )
       }
 
-      // 共享模式下子用户不应保留自有凭证，避免取消共享后 orphan 行重新生效
+      // 先清子用户 orphan 凭证，再共享（避免本地双栈阻挡 assignment）
       await clearOwnGoogleAdsCredentialsForUser(userId)
 
       await upsertGoogleAdsAuthAssignment({
@@ -217,6 +205,20 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         message: '已设置为共享管理员认证配置',
         data: await buildAuthStatus(userId),
       })
+    }
+
+    const targetCtx = await getGoogleAdsAuthContextMetadata(userId)
+    const dualStackError = googleAdsAuthContextDualStackError(targetCtx)
+    if (dualStackError) {
+      return NextResponse.json(
+        {
+          ...googleAdsAuthReadyFailurePayload({
+            reason: 'dual_stack',
+            message: dualStackError,
+          }),
+        },
+        { status: 409 }
+      )
     }
 
     // own mode - must provide new credentials

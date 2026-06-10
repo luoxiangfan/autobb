@@ -118,7 +118,8 @@ export function useGoogleAdsAuthSettings({
       return Boolean(
         googleAdsCredentialStatus?.clientSecretConfigured ||
         googleAdsCredentialStatus?.hasCredentials ||
-        googleAdsCredentialStatus?.hasRefreshToken
+        googleAdsCredentialStatus?.hasRefreshToken ||
+        googleAdsCredentialStatus?.hasOAuthFields
       )
     }
     return false
@@ -155,7 +156,7 @@ export function useGoogleAdsAuthSettings({
           setGoogleAdsAuthMethod(data.data.authType)
         } else if (data.data?.hasServiceAccount) {
           setGoogleAdsAuthMethod('service_account')
-        } else if (data.data?.hasRefreshToken) {
+        } else if (data.data?.hasRefreshToken || data.data?.hasOAuthFields) {
           setGoogleAdsAuthMethod('oauth')
         }
         if (
@@ -500,6 +501,7 @@ export function useGoogleAdsAuthSettings({
 
     return (
       Boolean(googleAdsCredentialStatus?.hasRefreshToken) ||
+      Boolean(googleAdsCredentialStatus?.hasOAuthFields) ||
       ['login_customer_id', 'client_id', 'client_secret', 'developer_token'].some(isSet)
     )
   })()

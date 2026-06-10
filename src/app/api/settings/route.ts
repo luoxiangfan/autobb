@@ -376,6 +376,7 @@ export async function PUT(request: NextRequest) {
                 userIdNum,
                 oauthFields,
                 {
+                  db,
                   skipAuthContextInvalidate: true,
                 }
               )

@@ -251,6 +251,19 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('获取Google Ads凭证失败:', error)
 
+    const { formatPythonAdsServiceUnavailableError } = await import('@/lib/python-ads-client')
+    const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
+    if (serviceUnavailable) {
+      return NextResponse.json(
+        {
+          error: 'Python Ads 服务不可用',
+          code: 'PYTHON_ADS_SERVICE_UNAVAILABLE',
+          message: serviceUnavailable,
+        },
+        { status: 503 }
+      )
+    }
+
     return NextResponse.json(
       {
         error: '获取Google Ads凭证失败',

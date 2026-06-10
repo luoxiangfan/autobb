@@ -146,4 +146,25 @@ describe('upsertGoogleAdsOAuthConfigFromSettings', () => {
     ).rejects.toThrow(/Developer Token/)
     expect(dbFns.exec).not.toHaveBeenCalled()
   })
+
+  it('uses injected db adapter for credential reads and writes', async () => {
+    const injectedDb = {
+      type: 'sqlite' as const,
+      queryOne: vi.fn().mockResolvedValue(undefined),
+      exec: vi.fn().mockResolvedValue({ changes: 1 }),
+      query: vi.fn(),
+      transaction: vi.fn(),
+      close: vi.fn(),
+    }
+
+    await upsertGoogleAdsOAuthConfigFromSettings(
+      1,
+      { client_id: 'injected-id.apps.googleusercontent.com' },
+      { db: injectedDb, skipAuthContextInvalidate: true }
+    )
+
+    expect(injectedDb.queryOne).toHaveBeenCalled()
+    expect(injectedDb.exec).toHaveBeenCalled()
+    expect(dbFns.exec).not.toHaveBeenCalled()
+  })
 })

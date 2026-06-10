@@ -354,7 +354,7 @@ describe('settings route google ads credential store', () => {
     expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).toHaveBeenCalledWith(
       7,
       { client_id: 'cid-new.apps.googleusercontent.com' },
-      { skipAuthContextInvalidate: true }
+      expect.objectContaining({ db, skipAuthContextInvalidate: true })
     )
     expect(settingsFns.updateSettings).toHaveBeenCalledWith(
       [{ category: 'google_ads', key: 'campaign_sync_enabled', value: '1' }],

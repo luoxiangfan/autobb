@@ -73,6 +73,7 @@ export async function POST(request: NextRequest) {
     let imported = 0
     let skipped = 0
     const errors: string[] = []
+    const warnings: string[] = []
     const googleAdsOAuthFields: Partial<Record<GoogleAdsOAuthConfigKey, string>> = {}
     const genericEntries: ImportSettingEntry[] = []
 
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
         if (blockedKeys.includes(fullKey)) {
           skipped++
-          errors.push(`跳过受保护的配置: ${fullKey}`)
+          warnings.push(`跳过受保护的配置: ${fullKey}`)
           continue
         }
 
@@ -116,11 +117,88 @@ export async function POST(request: NextRequest) {
       googleAdsOAuthFields[key]?.trim()
     ).length
 
-    if (googleAdsFieldCount > 0) {
+    const importGenericEntry = async (entry: ImportSettingEntry) => {
+      const { category, configKey, value, dataType, isSensitive: configSensitive } = entry
+
+      const existing = await db.queryOne<{ id: number; is_sensitive: number | boolean }>(
+        `
+            SELECT id, is_sensitive FROM system_settings
+            WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
+            ORDER BY user_id DESC LIMIT 1
+          `,
+        [category, configKey, userIdNum]
+      )
+
+      const isSensitive =
+        configSensitive || existing?.is_sensitive === 1 || existing?.is_sensitive === true
+
+      if (existing) {
+        if (isSensitive) {
+          await db.exec(
+            `
+                UPDATE system_settings
+                SET encrypted_value = ?, value = NULL, updated_at = ${nowSql}
+                WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
+              `,
+            [encrypt(value), category, configKey, userIdNum]
+          )
+        } else {
+          await db.exec(
+            `
+                UPDATE system_settings
+                SET value = ?, updated_at = ${nowSql}
+                WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
+              `,
+            [value, category, configKey, userIdNum]
+          )
+        }
+      } else if (isSensitive) {
+        await db.exec(
+          `
+              INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 1, ${nowSql}, ${nowSql})
+            `,
+          [userIdNum, category, configKey, encrypt(value), dataType || 'string']
+        )
+      } else {
+        await db.exec(
+          `
+              INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 0, ${nowSql}, ${nowSql})
+            `,
+          [userIdNum, category, configKey, value, dataType || 'string']
+        )
+      }
+    }
+
+    const genericEntryCount = genericEntries.length
+    const hasDbWork = googleAdsFieldCount > 0 || genericEntryCount > 0
+
+    if (hasDbWork) {
       try {
-        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user.role)
-        await upsertGoogleAdsOAuthConfigFromSettings(userIdNum, googleAdsOAuthFields)
-        imported += googleAdsFieldCount
+        if (googleAdsFieldCount > 0) {
+          await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user.role)
+        }
+
+        await db.transaction(async () => {
+          if (googleAdsFieldCount > 0) {
+            await upsertGoogleAdsOAuthConfigFromSettings(userIdNum, googleAdsOAuthFields, {
+              db,
+              skipAuthContextInvalidate: true,
+            })
+          }
+          for (const entry of genericEntries) {
+            await importGenericEntry(entry)
+          }
+        })
+
+        if (googleAdsFieldCount > 0) {
+          const { invalidateGoogleAdsAuthContextForCredentialUser } =
+            await import('@/lib/google-ads-auth-context')
+          await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
+        }
+
+        imported += googleAdsFieldCount + genericEntryCount
       } catch (error: unknown) {
         if (isGoogleAdsSettingsAuthConflictError(error)) {
           return NextResponse.json({ error: error.message }, { status: 409 })
@@ -128,73 +206,13 @@ export async function POST(request: NextRequest) {
         if (isGoogleAdsSettingsValidationError(error)) {
           return NextResponse.json({ error: error.message }, { status: 400 })
         }
-        const message = error instanceof Error ? error.message : '导入 Google Ads OAuth 配置失败'
+        const message = error instanceof Error ? error.message : '导入配置失败'
         errors.push(message)
       }
     }
 
-    for (const entry of genericEntries) {
-      const { category, configKey, fullKey, value, dataType, isSensitive: configSensitive } = entry
-
-      try {
-        const existing = await db.queryOne<{ id: number; is_sensitive: number | boolean }>(
-          `
-            SELECT id, is_sensitive FROM system_settings
-            WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
-            ORDER BY user_id DESC LIMIT 1
-          `,
-          [category, configKey, userIdNum]
-        )
-
-        const isSensitive =
-          configSensitive || existing?.is_sensitive === 1 || existing?.is_sensitive === true
-
-        if (existing) {
-          if (isSensitive) {
-            await db.exec(
-              `
-                UPDATE system_settings
-                SET encrypted_value = ?, value = NULL, updated_at = ${nowSql}
-                WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
-              `,
-              [encrypt(value), category, configKey, userIdNum]
-            )
-          } else {
-            await db.exec(
-              `
-                UPDATE system_settings
-                SET value = ?, updated_at = ${nowSql}
-                WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
-              `,
-              [value, category, configKey, userIdNum]
-            )
-          }
-        } else if (isSensitive) {
-          await db.exec(
-            `
-              INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 1, ${nowSql}, ${nowSql})
-            `,
-            [userIdNum, category, configKey, encrypt(value), dataType || 'string']
-          )
-        } else {
-          await db.exec(
-            `
-              INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 0, ${nowSql}, ${nowSql})
-            `,
-            [userIdNum, category, configKey, value, dataType || 'string']
-          )
-        }
-
-        imported++
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : '未知错误'
-        errors.push(`导入 ${fullKey} 失败: ${message}`)
-      }
-    }
-
     const errorCount = errors.length
+    const warningCount = warnings.length
     const partial = imported > 0 && errorCount > 0
     const success = errorCount === 0
 
@@ -202,16 +220,20 @@ export async function POST(request: NextRequest) {
       success,
       partial,
       message: success
-        ? `成功导入 ${imported} 个配置项`
+        ? warningCount > 0
+          ? `成功导入 ${imported} 个配置项（${warningCount} 条提示）`
+          : `成功导入 ${imported} 个配置项`
         : partial
-          ? `部分导入成功：${imported} 项已写入，${errorCount} 项失败或受保护跳过`
-          : `导入未完成：${errorCount} 项失败或受保护跳过`,
+          ? `部分导入成功：${imported} 项已写入，${errorCount} 项失败`
+          : `导入未完成：${errorCount} 项失败`,
       summary: {
         imported,
         skipped,
         errors: errorCount,
+        warnings: warningCount,
       },
       errors: errorCount > 0 ? errors : undefined,
+      warnings: warningCount > 0 ? warnings : undefined,
     })
   } catch (error: unknown) {
     console.error('导入配置失败:', error)

@@ -11,6 +11,7 @@ export interface GoogleAdsAccount {
 export interface GoogleAdsCredentialStatus {
   hasCredentials: boolean
   hasRefreshToken?: boolean
+  hasOAuthFields?: boolean
   hasServiceAccount?: boolean
   serviceAccountId?: string | null
   serviceAccountName?: string | null

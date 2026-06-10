@@ -16,6 +16,16 @@ const settingsStoreFns = vi.hoisted(() => ({
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
   exec: vi.fn(),
+  transaction: vi.fn(async (fn: () => Promise<void>) => fn()),
+}))
+
+const authContextFns = vi.hoisted(() => ({
+  invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads-auth-context', () => ({
+  invalidateGoogleAdsAuthContextForCredentialUser:
+    authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -58,6 +68,7 @@ describe('POST /api/import/settings google_ads OAuth fields', () => {
     })
     dbFns.queryOne.mockResolvedValue(undefined)
     dbFns.exec.mockResolvedValue(undefined)
+    authContextFns.invalidateGoogleAdsAuthContextForCredentialUser.mockResolvedValue(undefined)
   })
 
   it('routes google_ads OAuth keys to credentials store instead of system_settings', async () => {
@@ -83,12 +94,17 @@ describe('POST /api/import/settings google_ads OAuth fields', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).toHaveBeenCalledWith(7, {
-      client_id: 'cid.apps.googleusercontent.com',
-      client_secret: 'GOCSPX-secret',
-      developer_token: 'dev-token-123456789012345678',
-      login_customer_id: '1234567890',
-    })
+    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).toHaveBeenCalledWith(
+      7,
+      {
+        client_id: 'cid.apps.googleusercontent.com',
+        client_secret: 'GOCSPX-secret',
+        developer_token: 'dev-token-123456789012345678',
+        login_customer_id: '1234567890',
+      },
+      expect.objectContaining({ db: dbFns, skipAuthContextInvalidate: true })
+    )
+    expect(dbFns.transaction).toHaveBeenCalled()
     expect(dbFns.exec).toHaveBeenCalledTimes(1)
     expect(dbFns.exec.mock.calls[0][0]).toContain('INSERT INTO system_settings')
     expect(dbFns.exec.mock.calls[0][1]).toEqual(
@@ -123,7 +139,7 @@ describe('POST /api/import/settings google_ads OAuth fields', () => {
     expect(dbFns.exec).not.toHaveBeenCalled()
   })
 
-  it('returns success false and partial true when some entries fail after partial import', async () => {
+  it('returns success false when generic settings transaction fails', async () => {
     dbFns.queryOne
       .mockResolvedValueOnce({ id: 1, is_sensitive: 0 })
       .mockResolvedValueOnce({ id: 2, is_sensitive: 0 })
@@ -146,8 +162,69 @@ describe('POST /api/import/settings google_ads OAuth fields', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(false)
-    expect(data.partial).toBe(true)
-    expect(data.summary.imported).toBe(1)
+    expect(data.partial).toBe(false)
+    expect(data.summary.imported).toBe(0)
     expect(data.summary.errors).toBe(1)
+    expect(dbFns.transaction).toHaveBeenCalled()
+  })
+
+  it('rolls back oauth and generic when unified transaction fails', async () => {
+    dbFns.queryOne.mockResolvedValueOnce({ id: 1, is_sensitive: 0 })
+    dbFns.exec.mockRejectedValueOnce(new Error('db write failed'))
+
+    const req = new NextRequest('http://localhost/api/import/settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        settings: {
+          google_ads: {
+            client_id: { value: 'cid.apps.googleusercontent.com' },
+          },
+          ai: {
+            gemini_model: { value: 'gemini-test' },
+          },
+        },
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(false)
+    expect(data.partial).toBe(false)
+    expect(data.summary.imported).toBe(0)
+    expect(data.summary.errors).toBe(1)
+    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).toHaveBeenCalledWith(
+      7,
+      { client_id: 'cid.apps.googleusercontent.com' },
+      expect.objectContaining({ db: dbFns, skipAuthContextInvalidate: true })
+    )
+  })
+
+  it('treats blocked refresh_token as warning and keeps success true', async () => {
+    const req = new NextRequest('http://localhost/api/import/settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        settings: {
+          google_ads: {
+            refresh_token: { value: 'rt-should-not-import' },
+            client_id: { value: 'cid.apps.googleusercontent.com' },
+          },
+        },
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.summary.warnings).toBe(1)
+    expect(data.warnings?.[0]).toContain('refresh_token')
+    expect(settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings).toHaveBeenCalledWith(
+      7,
+      { client_id: 'cid.apps.googleusercontent.com' },
+      expect.objectContaining({ db: dbFns, skipAuthContextInvalidate: true })
+    )
   })
 })

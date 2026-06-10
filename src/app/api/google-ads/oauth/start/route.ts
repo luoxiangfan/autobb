@@ -108,7 +108,6 @@ export async function GET(request: NextRequest) {
 
     console.log(`🔐 启动Google Ads OAuth流程`)
     console.log(`   用户: ${authResult.user.email} (ID: ${userId})`)
-    console.log(`   Client ID: ${clientId.substring(0, 20)}...`)
     console.log(`   Login Customer ID: ${userLoginCustomerId}`)
 
     return NextResponse.json({

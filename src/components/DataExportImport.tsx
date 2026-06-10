@@ -28,8 +28,12 @@ interface ImportResult {
   imported: number
   skipped: number
   errors: number
+  warnings: number
   errorMessages?: string[]
+  warningMessages?: string[]
 }
+
+type StatusMessage = { type: 'success' | 'warning' | 'error'; text: string }
 
 export function DataExportImport() {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('json')
@@ -38,7 +42,7 @@ export function DataExportImport() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [message, setMessage] = useState<StatusMessage | null>(null)
   const [importResults, setImportResults] = useState<ImportResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -139,21 +143,20 @@ export function DataExportImport() {
         imported: result.summary?.imported || 0,
         skipped: result.summary?.skipped || 0,
         errors: result.summary?.errors || 0,
+        warnings: result.summary?.warnings || 0,
         errorMessages: result.errors,
+        warningMessages: result.warnings,
       })
 
       if (result.success) {
-        setMessage({ type: 'success', text: result.message })
+        setMessage({
+          type: result.warnings?.length ? 'warning' : 'success',
+          text: result.message,
+        })
       } else if (result.partial) {
-        setMessage({
-          type: 'error',
-          text: result.message,
-        })
+        setMessage({ type: 'warning', text: result.message })
       } else {
-        setMessage({
-          type: 'error',
-          text: result.message,
-        })
+        setMessage({ type: 'error', text: result.message })
       }
 
       // 清空文件选择
@@ -330,7 +333,7 @@ export function DataExportImport() {
           {importResults && (
             <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
               <h4 className="font-medium text-sm">导入结果</h4>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                 <div className="p-2 bg-white rounded">
                   <div className="text-2xl font-bold text-green-600">{importResults.imported}</div>
                   <div className="text-xs text-gray-500">已导入</div>
@@ -340,23 +343,40 @@ export function DataExportImport() {
                   <div className="text-xs text-gray-500">已跳过</div>
                 </div>
                 <div className="p-2 bg-white rounded">
+                  <div className="text-2xl font-bold text-amber-600">{importResults.warnings}</div>
+                  <div className="text-xs text-gray-500">提示</div>
+                </div>
+                <div className="p-2 bg-white rounded">
                   <div className="text-2xl font-bold text-red-600">{importResults.errors}</div>
                   <div className="text-xs text-gray-500">错误</div>
                 </div>
               </div>
 
+              {importResults.warningMessages && importResults.warningMessages.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium mb-2">提示:</p>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {importResults.warningMessages.slice(0, 5).map((line, idx) => (
+                      <p key={idx} className="text-xs text-amber-800 bg-amber-50 p-2 rounded">
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {importResults.errorMessages && importResults.errorMessages.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-sm font-medium mb-2">详情:</p>
+                  <p className="text-sm font-medium mb-2">错误:</p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {importResults.errorMessages.slice(0, 5).map((err, idx) => (
-                      <p key={idx} className="text-xs text-amber-700 bg-amber-50 p-2 rounded">
+                      <p key={idx} className="text-xs text-red-700 bg-red-50 p-2 rounded">
                         {err}
                       </p>
                     ))}
                     {importResults.errorMessages.length > 5 && (
                       <p className="text-xs text-gray-500 text-center py-1">
-                        ...还有 {importResults.errorMessages.length - 5} 条信息
+                        ...还有 {importResults.errorMessages.length - 5} 条错误
                       </p>
                     )}
                   </div>
@@ -369,7 +389,14 @@ export function DataExportImport() {
 
       {/* 消息提示 */}
       {message && (
-        <Alert variant={message.type === 'error' ? 'destructive' : 'default'}>
+        <Alert
+          variant={message.type === 'error' ? 'destructive' : 'default'}
+          className={
+            message.type === 'warning'
+              ? 'border-amber-400 bg-amber-50 text-amber-900 [&>svg]:text-amber-600'
+              : undefined
+          }
+        >
           {message.type === 'success' ? (
             <CheckCircle2 className="h-4 w-4" />
           ) : (
