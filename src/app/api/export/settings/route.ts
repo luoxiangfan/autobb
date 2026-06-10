@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
         googleAdsOAuthRequiresReauth:
           'OAuth refresh_token 不会导出；导入后须在设置页重新完成 OAuth 授权才能调用 Google Ads API。',
         googleAdsServiceAccountNotIncluded:
-          '服务账号配置不在 settings 导出范围内，请单独备份服务账号 JSON。',
+          '服务账号请使用「Google Ads 服务账号备份」单独导出（/api/export/google-ads-service-account）。',
       },
       settings: exportData,
     }

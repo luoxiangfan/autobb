@@ -39,12 +39,99 @@ export function DataExportImport() {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('json')
   const [exportType, setExportType] = useState<ExportType>('offers')
   const [includeSensitive, setIncludeSensitive] = useState(false)
+  const [includeServiceAccountSensitive, setIncludeServiceAccountSensitive] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
+  const [serviceAccountImportFile, setServiceAccountImportFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
+  const [serviceAccountLoading, setServiceAccountLoading] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
+  const [serviceAccountExportLoading, setServiceAccountExportLoading] = useState(false)
   const [message, setMessage] = useState<StatusMessage | null>(null)
   const [importResults, setImportResults] = useState<ImportResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const serviceAccountFileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleExportServiceAccount = async () => {
+    setServiceAccountExportLoading(true)
+    setMessage(null)
+
+    try {
+      const url = `/api/export/google-ads-service-account${
+        includeServiceAccountSensitive ? '?include_sensitive=true' : ''
+      }`
+      const response = await fetch(url, { credentials: 'include' })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || '导出失败')
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = `google_ads_service_account_${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(downloadUrl)
+      document.body.removeChild(a)
+
+      setMessage({
+        type: includeServiceAccountSensitive ? 'success' : 'warning',
+        text: includeServiceAccountSensitive
+          ? '已导出 Google Ads 服务账号备份（含敏感信息，可用于恢复）'
+          : '已导出服务账号元数据（不含 private_key，无法用于恢复）',
+      })
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : '导出失败',
+      })
+    } finally {
+      setServiceAccountExportLoading(false)
+    }
+  }
+
+  const handleImportServiceAccount = async () => {
+    if (!serviceAccountImportFile) {
+      setMessage({ type: 'error', text: '请先选择服务账号备份文件' })
+      return
+    }
+
+    setServiceAccountLoading(true)
+    setMessage(null)
+
+    try {
+      const fileContent = await serviceAccountImportFile.text()
+      const backupData = JSON.parse(fileContent)
+
+      const response = await fetch('/api/import/google-ads-service-account', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(backupData),
+      })
+
+      const result = await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || '导入失败')
+      }
+
+      setMessage({ type: 'success', text: result.message || '服务账号配置已导入' })
+      setServiceAccountImportFile(null)
+      if (serviceAccountFileInputRef.current) {
+        serviceAccountFileInputRef.current.value = ''
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : '导入失败',
+      })
+    } finally {
+      setServiceAccountLoading(false)
+    }
+  }
 
   // 导出数据
   const handleExport = async () => {
@@ -248,8 +335,8 @@ export function DataExportImport() {
                   </label>
                 </div>
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
-                  Google Ads OAuth 的 refresh_token 不会导出，导入后须重新授权；服务账号配置不在
-                  settings 导出范围内。
+                  Google Ads OAuth 的 refresh_token 不会导出，导入后须重新授权。服务账号请使用下方
+                  「Google Ads 服务账号备份」单独导出/导入。
                 </p>
               </div>
             )}
@@ -384,6 +471,84 @@ export function DataExportImport() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Google Ads 服务账号备份 */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Google Ads 服务账号备份
+          </CardTitle>
+          <CardDescription>
+            专用 JSON 格式（type: google_ads_service_account），与 settings 导出分离
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="includeServiceAccountSensitive"
+              checked={includeServiceAccountSensitive}
+              onChange={(e) => setIncludeServiceAccountSensitive(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="includeServiceAccountSensitive" className="text-sm text-gray-600">
+              包含敏感信息（Developer Token 与 serviceAccountJson / private_key，恢复所必需）
+            </label>
+          </div>
+
+          <Button
+            onClick={handleExportServiceAccount}
+            disabled={serviceAccountExportLoading}
+            className="w-full"
+            variant="outline"
+          >
+            {serviceAccountExportLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                导出中...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                导出服务账号备份
+              </>
+            )}
+          </Button>
+
+          <div>
+            <label className="text-sm font-medium mb-2 block">导入服务账号备份</label>
+            <input
+              ref={serviceAccountFileInputRef}
+              type="file"
+              accept=".json"
+              onChange={(e) => {
+                setServiceAccountImportFile(e.target.files?.[0] || null)
+                clearMessage()
+              }}
+              className="w-full border border-gray-300 rounded-md p-2 text-sm file:mr-4 file:py-1 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+            />
+          </div>
+
+          <Button
+            onClick={handleImportServiceAccount}
+            disabled={serviceAccountLoading || !serviceAccountImportFile}
+            className="w-full"
+          >
+            {serviceAccountLoading ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                导入中...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-4 w-4" />
+                导入服务账号备份
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 

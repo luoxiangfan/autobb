@@ -11,6 +11,10 @@ import type { GoogleAdsAuthContext } from './google-ads-auth-context'
 /**
  * 获取指定用户自身的服务账号配置（不解析共享分配）
  */
+export async function getOwnServiceAccountConfigForBackup(userId: number) {
+  return getServiceAccountConfigRaw(userId)
+}
+
 async function getServiceAccountConfigRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
   const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
