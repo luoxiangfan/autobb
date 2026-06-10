@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateAffiliateProductSyncRun: vi.fn(),
   getQueueManagerForTaskType: vi.fn(),
   isYeahPromosManualSyncOnly: vi.fn(),
+  getYeahPromosSessionState: vi.fn(),
 }))
 
 vi.mock('../../db', () => ({
@@ -30,6 +31,7 @@ vi.mock('../queue-routing', () => ({
 
 vi.mock('../../yeahpromos-session', () => ({
   isYeahPromosManualSyncOnly: mocks.isYeahPromosManualSyncOnly,
+  getYeahPromosSessionState: mocks.getYeahPromosSessionState,
 }))
 
 import { AffiliateProductSyncScheduler } from './affiliate-product-sync-scheduler'
@@ -51,6 +53,7 @@ describe('AffiliateProductSyncScheduler YP support', () => {
     mocks.runAffiliateProductsRawJsonRetirementMaintenance.mockResolvedValue(undefined)
     mocks.getLatestFailedAffiliateProductSyncRun.mockResolvedValue(null)
     mocks.isYeahPromosManualSyncOnly.mockResolvedValue(false)
+    mocks.getYeahPromosSessionState.mockResolvedValue({ hasSession: true })
   })
 
   it('schedules YP full sync when PB is not configured and YP is configured', async () => {

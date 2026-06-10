@@ -13,6 +13,25 @@ vi.mock('../ai-token-tracker', () => ({
   estimateTokenCost: estimateTokenCostMock,
 }))
 
+vi.mock('../prompt-loader', () => ({
+  loadPrompt: vi.fn(async (promptId: string) => {
+    if (promptId === 'keyword_gap_analysis') {
+      return ['{{inputGuardrail}}', 'Existing keywords:', '{{existingKeywords}}'].join('\n')
+    }
+    return [
+      '{{inputGuardrail}}',
+      'Brand: {{brand}}',
+      'Budget: {{budget}}',
+      'Max CPC: {{maxCpc}}',
+      'Page type: {{pageType}}',
+      'Keywords:',
+      '{{keywordsWithVolume}}',
+    ].join('\n')
+  }),
+  interpolateTemplate: (template: string, variables: Record<string, string>) =>
+    template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => variables[key] ?? ''),
+}))
+
 function buildLaunchScoreAiPayload() {
   return {
     launchViability: {

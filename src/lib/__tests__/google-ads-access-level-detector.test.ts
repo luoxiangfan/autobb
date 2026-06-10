@@ -7,6 +7,7 @@ const mockGenerateKeywordHistoricalMetrics = vi.fn()
 
 const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
+  getGoogleAdsAuthContextMetadata: vi.fn(),
 }))
 
 vi.mock('../db', () => ({
@@ -30,6 +31,7 @@ vi.mock('../google-ads-auth-context', async (importOriginal) => {
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+    getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,
   }
 })
 
@@ -43,7 +45,7 @@ const oauthCredentialsFixture = {
 }
 
 function mockOAuthAuthContext(overrides?: { dualStack?: boolean; apiAccessLevel?: string | null }) {
-  authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+  const context = {
     userId: 71,
     ownerUserId: 71,
     dualStack: overrides?.dualStack ?? false,
@@ -54,7 +56,11 @@ function mockOAuthAuthContext(overrides?: { dualStack?: boolean; apiAccessLevel?
     isShared: false,
     canModify: true,
     apiAccessLevel: overrides?.apiAccessLevel ?? 'explorer',
-  })
+    oauthHasRefreshToken: true,
+    serviceAccountConfigured: false,
+  }
+  authContextFns.getGoogleAdsAuthContext.mockResolvedValue(context)
+  authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue(context)
 }
 
 describe('google-ads-access-level-detector', () => {

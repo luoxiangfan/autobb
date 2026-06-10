@@ -41,7 +41,7 @@ describe('ProxyPoolManager.checkProxyHealth', () => {
     const ok = await pool.checkProxyHealth(providerUrl, 1000)
 
     expect(ok).toBe(true)
-    expect(getProxyIp).toHaveBeenCalledWith(providerUrl, false)
+    expect(getProxyIp).toHaveBeenCalledWith(providerUrl, true)
     expect(agentCtor).toHaveBeenCalledWith('http://u:p@1.2.3.4:3128')
     expect(axiosHead).toHaveBeenCalled()
   })

@@ -160,14 +160,10 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
   })
 
   it('sets plannerDecision.volumeUnavailableFromPlanner when planner metrics are unavailable', async () => {
-    mockGetKeywordSearchVolumes.mockResolvedValue([
+    mockExpandKeywordsWithSeeds.mockResolvedValue([
       {
         keyword: 'hoover',
-        avgMonthlySearches: 0,
-        competition: 'UNKNOWN',
-        competitionIndex: 0,
-        lowTopPageBid: 0,
-        highTopPageBid: 0,
+        searchVolume: 0,
         volumeUnavailableReason: 'DEV_TOKEN_INSUFFICIENT_ACCESS',
       },
     ])

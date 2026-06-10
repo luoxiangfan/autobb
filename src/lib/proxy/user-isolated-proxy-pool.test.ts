@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const getUserOnlySetting = vi.fn()
-vi.mock('../settings', () => ({
-  getUserOnlySetting,
+const mocks = vi.hoisted(() => ({
+  getUserOnlySetting: vi.fn(),
+  fetchProxyIp: vi.fn(),
 }))
 
-const fetchProxyIp = vi.fn()
+vi.mock('../settings', () => ({
+  getUserOnlySetting: mocks.getUserOnlySetting,
+}))
+
 vi.mock('./fetch-proxy-ip', () => ({
-  fetchProxyIp,
+  fetchProxyIp: mocks.fetchProxyIp,
 }))
 
 import { UserIsolatedProxyPoolManager } from './user-isolated-proxy-pool'
@@ -15,12 +18,12 @@ import { UserIsolatedProxyPoolManager } from './user-isolated-proxy-pool'
 describe('UserIsolatedProxyPoolManager country alias matching', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-    getUserOnlySetting.mockReset()
-    fetchProxyIp.mockReset()
+    mocks.getUserOnlySetting.mockReset()
+    mocks.fetchProxyIp.mockReset()
   })
 
   it('resolves GB request with UK-only proxy setting', async () => {
-    getUserOnlySetting.mockResolvedValue({
+    mocks.getUserOnlySetting.mockResolvedValue({
       value: JSON.stringify([
         {
           country: 'UK',
@@ -29,7 +32,7 @@ describe('UserIsolatedProxyPoolManager country alias matching', () => {
       ]),
     })
 
-    fetchProxyIp.mockResolvedValue({
+    mocks.fetchProxyIp.mockResolvedValue({
       host: '1.1.1.1',
       port: 9000,
       username: 'u',
@@ -44,6 +47,6 @@ describe('UserIsolatedProxyPoolManager country alias matching', () => {
 
     expect(proxy).toBeTruthy()
     expect(proxy?.country).toBe('GB')
-    expect(fetchProxyIp).toHaveBeenCalledWith('gate.kookeey.info:1000:user:pass')
+    expect(mocks.fetchProxyIp).toHaveBeenCalledWith('gate.kookeey.info:1000:user:pass')
   })
 })

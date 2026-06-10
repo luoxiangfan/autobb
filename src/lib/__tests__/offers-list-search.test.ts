@@ -31,14 +31,14 @@ describe('listOffers search query', () => {
     const countParams = (dbFns.queryOne.mock.calls[0]?.[1] || []) as unknown[]
     const listSql = String(dbFns.query.mock.calls[0]?.[0] || '')
 
-    expect(countSql).toContain('CAST(id AS TEXT) ILIKE ?')
-    expect(countSql).toContain('brand ILIKE ?')
-    expect(countSql).toContain('offer_name ILIKE ?')
-    expect(countSql).toContain('url ILIKE ?')
-    expect(countSql).toContain('final_url ILIKE ?')
-    expect(countSql).toContain('category ILIKE ?')
-    expect(listSql).toContain('CAST(id AS TEXT) ILIKE ?')
-    expect(listSql).toContain('offer_name ILIKE ?')
+    expect(countSql).toContain('CAST(o.id AS TEXT) ILIKE ?')
+    expect(countSql).toContain('o.brand ILIKE ?')
+    expect(countSql).toContain('o.offer_name ILIKE ?')
+    expect(countSql).toContain('o.url ILIKE ?')
+    expect(countSql).toContain('o.final_url ILIKE ?')
+    expect(countSql).toContain('o.category ILIKE ?')
+    expect(listSql).toContain('CAST(o.id AS TEXT) ILIKE ?')
+    expect(listSql).toContain('o.offer_name ILIKE ?')
     expect(countParams).toEqual([
       7,
       '%roborock%',
@@ -59,12 +59,12 @@ describe('listOffers search query', () => {
     const countSql = String(dbFns.queryOne.mock.calls[0]?.[0] || '')
     const countParams = (dbFns.queryOne.mock.calls[0]?.[1] || []) as unknown[]
 
-    expect(countSql).toContain('CAST(id AS TEXT) LIKE ?')
-    expect(countSql).toContain('brand LIKE ?')
-    expect(countSql).toContain('offer_name LIKE ?')
-    expect(countSql).toContain('url LIKE ?')
-    expect(countSql).toContain('final_url LIKE ?')
-    expect(countSql).toContain('category LIKE ?')
+    expect(countSql).toContain('CAST(o.id AS TEXT) LIKE ?')
+    expect(countSql).toContain('o.brand LIKE ?')
+    expect(countSql).toContain('o.offer_name LIKE ?')
+    expect(countSql).toContain('o.url LIKE ?')
+    expect(countSql).toContain('o.final_url LIKE ?')
+    expect(countSql).toContain('o.category LIKE ?')
     expect(countParams).toEqual([9, '%robo%', '%robo%', '%robo%', '%robo%', '%robo%', '%robo%'])
   })
 })

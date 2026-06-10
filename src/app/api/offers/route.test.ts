@@ -84,7 +84,7 @@ describe('GET /api/offers', () => {
     const res = await GET(req)
 
     expect(res.status).toBe(401)
-    expect(await res.json()).toEqual({ error: '未授权' })
+    expect(await res.json()).toEqual({ error: '未提供认证token' })
   })
 
   it('returns compact contract for ids query', async () => {

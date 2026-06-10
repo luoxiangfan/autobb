@@ -1449,10 +1449,10 @@ function resolveOfferProductBackfillDecision(params: {
   asinProductIds: number[]
   brandProductIds: number[]
 } {
-  const exactUrlProductIds = dedupePositiveIds(params.exactUrlProductIds)
-  const linkIdProductIds = dedupePositiveIds(params.linkIdProductIds)
-  const asinProductIds = dedupePositiveIds(params.asinProductIds)
-  const brandProductIds = dedupePositiveIds(params.brandProductIds)
+  const exactUrlProductIds = dedupePositiveIds(params.exactUrlProductIds ?? [])
+  const linkIdProductIds = dedupePositiveIds(params.linkIdProductIds ?? [])
+  const asinProductIds = dedupePositiveIds(params.asinProductIds ?? [])
+  const brandProductIds = dedupePositiveIds(params.brandProductIds ?? [])
 
   if (exactUrlProductIds.length === 1) {
     return {

@@ -1,26 +1,33 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const mocks = vi.hoisted(() => ({
+  queryOne: vi.fn(),
+  getProxyIp: vi.fn(async () => ({
+    host: '1.2.3.4',
+    port: 3128,
+    username: 'u',
+    password: 'p',
+    fullAddress: '1.2.3.4:3128',
+  })),
+  assertUserExecutionAllowed: vi.fn(),
+}))
+
 vi.mock('@/lib/click-farm', () => ({
   updateTaskStats: vi.fn(async () => {}),
 }))
 
-const queryOne = vi.fn()
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    queryOne,
+    queryOne: mocks.queryOne,
   })),
 }))
 
-const getProxyIp = vi.fn(async () => ({
-  host: '1.2.3.4',
-  port: 3128,
-  username: 'u',
-  password: 'p',
-  fullAddress: '1.2.3.4:3128',
+vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
+  getProxyIp: mocks.getProxyIp,
 }))
 
-vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
-  getProxyIp,
+vi.mock('@/lib/user-execution-eligibility', () => ({
+  assertUserExecutionAllowed: mocks.assertUserExecutionAllowed,
 }))
 
 const agentCtor = vi.fn()
@@ -39,9 +46,10 @@ vi.mock('axios', () => ({
 
 describe('click-farm proxy resolution', () => {
   beforeEach(() => {
-    queryOne.mockReset()
-    queryOne.mockResolvedValue({ status: 'running' })
-    getProxyIp.mockClear()
+    mocks.queryOne.mockReset()
+    mocks.queryOne.mockResolvedValue({ status: 'running' })
+    mocks.assertUserExecutionAllowed.mockResolvedValue(undefined)
+    mocks.getProxyIp.mockClear()
     agentCtor.mockClear()
     axiosGet.mockClear()
   })
@@ -71,13 +79,13 @@ describe('click-farm proxy resolution', () => {
     const result = await mod.executeClickFarmTask(task)
 
     expect(result.success).toBe(true)
-    expect(getProxyIp).toHaveBeenCalledWith(task.data.proxyUrl, false)
+    expect(mocks.getProxyIp).toHaveBeenCalledWith(task.data.proxyUrl, false, 1)
     expect(agentCtor).toHaveBeenCalledWith('http://u:p@1.2.3.4:3128')
     expect(axiosGet).toHaveBeenCalled()
   })
 
   it('skips execution when click-farm task status is paused', async () => {
-    queryOne.mockResolvedValue({ status: 'paused' })
+    mocks.queryOne.mockResolvedValue({ status: 'paused' })
 
     const mod = await import('../click-farm-executor')
     const task = {

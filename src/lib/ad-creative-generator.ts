@@ -12613,3 +12613,35 @@ function getNgrams(text: string, n: number): string[] {
 
   return ngrams
 }
+
+/** @internal Exported for unit tests */
+export {
+  AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA,
+  AD_CREATIVE_RESPONSE_SCHEMA,
+  AD_CREATIVE_RETRY_RESPONSE_SCHEMA,
+  buildCreativeKeywordUsagePlan,
+  buildDkiFirstHeadline,
+  buildEmergencyAdCreativeRetryPrompt,
+  buildSimplifiedAdCreativeRetryPrompt,
+  enforceFinalCreativeContract,
+  enforceHeadlineComplementarity,
+  enforceHeadlineUniquenessGate,
+  enforceLanguagePurityGate,
+  enforceRetainedKeywordSlotCoverage,
+  enforceTitlePriorityTopHeadlines,
+  evaluateStoreModelIntentReadiness,
+  filterModelIntentGeneratedKeywords,
+  normalizeKeywordSourceAuditForGeneratorList,
+  normalizeSourceTypeFromLegacySource,
+  parseAIResponse,
+  resolveAdCreativePromptKeywordPlan,
+  resolveAdCreativeRetryPlan,
+  resolveCreativeBucketPoolKeywords,
+  resolveCreativePriceEvidence,
+  resolveCreativeSalesRankSignal,
+  resolveCreativeTargetLanguage,
+  shouldAllowZeroVolumeKeywordForMerge,
+  shouldRunGapAnalysisForCreative,
+  softlyReinforceTypeCopy,
+  validateGeneratedAdCreativeBusinessLimits,
+}

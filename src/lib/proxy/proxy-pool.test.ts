@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const mocks = vi.hoisted(() => ({
+  fetchProxyIp: vi.fn(),
+}))
+
 vi.mock('../db', () => ({
   getDatabase: vi.fn(),
 }))
 
-const fetchProxyIp = vi.fn()
 vi.mock('./fetch-proxy-ip', () => ({
-  fetchProxyIp,
+  fetchProxyIp: mocks.fetchProxyIp,
   getProxyIp: vi.fn(),
 }))
 
@@ -19,7 +22,7 @@ describe('ProxyPoolManager country alias matching', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     queryOne.mockReset()
-    fetchProxyIp.mockReset()
+    mocks.fetchProxyIp.mockReset()
 
     vi.mocked(getDatabase).mockResolvedValue({
       queryOne,
@@ -36,7 +39,7 @@ describe('ProxyPoolManager country alias matching', () => {
       ]),
     })
 
-    fetchProxyIp.mockResolvedValue({
+    mocks.fetchProxyIp.mockResolvedValue({
       host: '2.2.2.2',
       port: 8000,
       username: 'u',
@@ -52,6 +55,6 @@ describe('ProxyPoolManager country alias matching', () => {
 
     expect(proxy).toBeTruthy()
     expect(proxy?.country).toBe('GB')
-    expect(fetchProxyIp).toHaveBeenCalledWith('gate.kookeey.info:1000:user:pass')
+    expect(mocks.fetchProxyIp).toHaveBeenCalledWith('gate.kookeey.info:1000:user:pass')
   })
 })

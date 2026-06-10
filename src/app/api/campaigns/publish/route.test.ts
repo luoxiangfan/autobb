@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import {
+  defaultOAuthAuthContext,
+  hasConfiguredGoogleAdsAuthFromContextMock,
+} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/campaigns/publish/route'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
+}))
+
+const authContextFns = vi.hoisted(() => ({
+  getGoogleAdsAuthContext: vi.fn(),
 }))
 
 const dbFns = vi.hoisted(() => ({
@@ -31,6 +39,15 @@ vi.mock('@/lib/active-campaigns-query', () => ({
   queryActiveCampaigns: campaignsFns.queryActiveCampaigns,
 }))
 
+vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+  return {
+    ...actual,
+    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+    hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
+  }
+})
+
 describe('POST /api/campaigns/publish AutoAds enforced', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -39,6 +56,8 @@ describe('POST /api/campaigns/publish AutoAds enforced', () => {
       authenticated: true,
       user: { userId: 7 },
     })
+
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(defaultOAuthAuthContext)
 
     dbFns.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('FROM offers')) {

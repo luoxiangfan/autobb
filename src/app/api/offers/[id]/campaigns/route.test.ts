@@ -42,9 +42,13 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
-  resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
-}))
+vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+  return {
+    ...actual,
+    resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => ({
   getCustomerWithCredentials: googleAdsFns.getCustomerWithCredentials,
@@ -54,12 +58,16 @@ vi.mock('@/lib/google-ads-service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext: authContextFns.hasConfiguredGoogleAdsAuthFromContext,
-  resolveGoogleAdsApiAuthFromContext: authContextFns.resolveGoogleAdsApiAuthFromContext,
-  resolveEffectiveServiceAccountId: authContextFns.resolveEffectiveServiceAccountId,
-}))
+vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+  return {
+    ...actual,
+    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+    hasConfiguredGoogleAdsAuthFromContext: authContextFns.hasConfiguredGoogleAdsAuthFromContext,
+    resolveGoogleAdsApiAuthFromContext: authContextFns.resolveGoogleAdsApiAuthFromContext,
+    resolveEffectiveServiceAccountId: authContextFns.resolveEffectiveServiceAccountId,
+  }
+})
 
 vi.mock('@/lib/python-ads-client', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
@@ -76,8 +84,16 @@ describe('GET /api/offers/:id/campaigns', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
+      userId: 1,
+      ownerUserId: 1,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      dualStack: false,
       auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
-      credentialOwnerId: 1,
+      oauthCredentials: null,
+      serviceAccountConfig: { id: 'sa-1', mccCustomerId: '2233445566' },
+      apiAccessLevel: 'explorer',
     })
     authContextFns.hasConfiguredGoogleAdsAuthFromContext.mockReturnValue(true)
     authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({

@@ -6,6 +6,7 @@ let getKeywordSearchVolumes: typeof import('../keyword-planner').getKeywordSearc
 const mockGetBatchCachedVolumes = vi.fn()
 const mockBatchCacheVolumes = vi.fn()
 const mockGenerateKeywordHistoricalMetrics = vi.fn()
+const mockResolveGoogleAdsApiAccessLevel = vi.fn()
 
 vi.mock('../db', () => ({
   getDatabase: () => mockDb,
@@ -25,6 +26,44 @@ vi.mock('../google-ads-oauth', () => ({
     login_customer_id: '123',
   }),
 }))
+
+const oauthCredentialsFixture = {
+  client_id: 'cid',
+  client_secret: 'secret',
+  developer_token: 'dt',
+  refresh_token: 'rt',
+  login_customer_id: '123',
+  api_access_level: 'explorer',
+}
+
+vi.mock('../google-ads-auth-assignment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../google-ads-auth-assignment')>()
+  return {
+    ...actual,
+    resolveGoogleAdsApiAccessLevel: (...args: any[]) => mockResolveGoogleAdsApiAccessLevel(...args),
+  }
+})
+
+vi.mock('../google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../google-ads-auth-context')>()
+  return {
+    ...actual,
+    getGoogleAdsAuthContext: vi.fn(async () => ({
+      userId: 1,
+      ownerUserId: 1,
+      dualStack: false,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: oauthCredentialsFixture,
+      serviceAccountConfig: null,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      apiAccessLevel: 'explorer',
+      oauthHasRefreshToken: true,
+      serviceAccountConfigured: false,
+    })),
+  }
+})
 
 vi.mock('../google-ads-api-tracker', () => ({
   trackApiUsage: vi.fn(),
@@ -59,6 +98,8 @@ describe('KeywordPlanner developer token access handling', () => {
       exec: vi.fn(),
       close: vi.fn(),
     }
+    mockResolveGoogleAdsApiAccessLevel.mockReset()
+    mockResolveGoogleAdsApiAccessLevel.mockResolvedValue(null)
   })
 
   beforeEach(async () => {
@@ -74,6 +115,7 @@ describe('KeywordPlanner developer token access handling', () => {
   })
 
   it('returns volumeUnavailableReason and skips caching when developer token is test-only', async () => {
+    mockResolveGoogleAdsApiAccessLevel.mockResolvedValue('test')
     mockGetBatchCachedVolumes.mockResolvedValue(new Map())
     mockDb.query.mockImplementation((sql: string) => {
       const s = String(sql)
@@ -88,15 +130,6 @@ describe('KeywordPlanner developer token access handling', () => {
       return []
     })
 
-    mockGenerateKeywordHistoricalMetrics.mockRejectedValue({
-      errors: [
-        {
-          message:
-            'The developer token is only approved for use with test accounts. To access non-test accounts, apply for Basic or Standard access.',
-        },
-      ],
-    })
-
     const out = await getKeywordSearchVolumes(['k1', 'k2'], 'US', 'en', 1)
 
     expect(out).toHaveLength(2)
@@ -105,7 +138,7 @@ describe('KeywordPlanner developer token access handling', () => {
       out.every((v: any) => v.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS')
     ).toBe(true)
 
-    expect(mockGenerateKeywordHistoricalMetrics).toHaveBeenCalledTimes(1)
+    expect(mockGenerateKeywordHistoricalMetrics).not.toHaveBeenCalled()
     expect(mockBatchCacheVolumes).not.toHaveBeenCalled()
     expect(mockDb.exec).not.toHaveBeenCalled()
   })
@@ -124,7 +157,7 @@ describe('KeywordPlanner developer token access handling', () => {
       if (s.includes('FROM global_keywords')) return []
       return []
     })
-    mockDb.queryOne.mockResolvedValue({ api_access_level: 'basic' })
+    mockResolveGoogleAdsApiAccessLevel.mockResolvedValue('basic')
     mockGenerateKeywordHistoricalMetrics.mockResolvedValue({
       results: [
         {
@@ -169,7 +202,7 @@ describe('KeywordPlanner developer token access handling', () => {
       if (s.includes('FROM global_keywords')) return []
       return []
     })
-    mockDb.queryOne.mockResolvedValue({ api_access_level: 'standard' })
+    mockResolveGoogleAdsApiAccessLevel.mockResolvedValue('standard')
     mockGenerateKeywordHistoricalMetrics.mockResolvedValue({
       results: [
         {
@@ -208,7 +241,7 @@ describe('KeywordPlanner developer token access handling', () => {
       if (s.includes('FROM global_keywords')) return []
       return []
     })
-    mockDb.queryOne.mockResolvedValue({ api_access_level: 'explorer' })
+    mockResolveGoogleAdsApiAccessLevel.mockResolvedValue('explorer')
     mockGenerateKeywordHistoricalMetrics.mockResolvedValue({
       results: [
         {

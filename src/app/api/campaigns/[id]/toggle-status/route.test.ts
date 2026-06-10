@@ -347,16 +347,21 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
 
     expect(res.status).toBe(200)
     expect(data.success).toBe(true)
-    expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith({
-      customerId: '1122334455',
-      refreshToken: '',
-      campaignId: '1234567890',
-      status: 'PAUSED',
-      accountId: 10,
-      userId: 7,
-      loginCustomerId: '2233445566',
-      authType: 'service_account',
-      serviceAccountId: 'sa-1',
-    })
+    expect(adsFns.updateGoogleAdsCampaignStatus).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: '1122334455',
+        refreshToken: '',
+        campaignId: '1234567890',
+        status: 'PAUSED',
+        accountId: 10,
+        userId: 7,
+        loginCustomerId: '2233445566',
+        authType: 'service_account',
+        serviceAccountId: 'sa-1',
+        authContext: expect.objectContaining({
+          auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+        }),
+      })
+    )
   })
 })

@@ -1,4 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mockedEligibility = vi.hoisted(() => ({
+  assertUserExecutionAllowed: vi.fn(),
+  isUserExecutionSuspendedError: vi.fn((error: any) => error?.code === 'USER_EXECUTION_SUSPENDED'),
+}))
+
+vi.mock('@/lib/user-execution-eligibility', () => ({
+  assertUserExecutionAllowed: mockedEligibility.assertUserExecutionAllowed,
+  isUserExecutionSuspendedError: mockedEligibility.isUserExecutionSuspendedError,
+  USER_EXECUTION_SUSPENDED_ERROR_CODE: 'USER_EXECUTION_SUSPENDED',
+}))
 
 import { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'
 
@@ -17,6 +28,10 @@ async function waitFor(
 }
 
 describe('UnifiedQueueManager running index consistency', () => {
+  beforeEach(() => {
+    mockedEligibility.assertUserExecutionAllowed.mockResolvedValue(undefined)
+  })
+
   it('does not keep deferred pending tasks in the running index when per-user concurrency blocks', async () => {
     const queue = new UnifiedQueueManager({
       globalConcurrency: 10,

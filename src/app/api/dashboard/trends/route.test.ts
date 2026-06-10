@@ -19,6 +19,13 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
+function formatLocalYmd(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 describe('GET /api/dashboard/trends', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -32,27 +39,33 @@ describe('GET /api/dashboard/trends', () => {
   })
 
   it('uses affiliate commission totals for trend conversions', async () => {
+    const endDate = new Date()
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - 1)
+    const day1 = formatLocalYmd(startDate)
+    const day2 = formatLocalYmd(endDate)
+
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('MAX(date) as latest_date')) {
-        return [{ currency: 'USD', total_cost: 60, latest_date: '2026-04-06' }]
+        return [{ currency: 'USD', total_cost: 60, latest_date: day2 }]
       }
       if (
         sql.includes('SUM(impressions) as impressions') &&
         sql.includes('FROM campaign_performance')
       ) {
         return [
-          { date: '2026-04-05', impressions: 1000, clicks: 100, cost: 50 },
-          { date: '2026-04-06', impressions: 500, clicks: 50, cost: 10 },
+          { date: day1, impressions: 1000, clicks: 100, cost: 50 },
+          { date: day2, impressions: 500, clicks: 50, cost: 10 },
         ]
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
         return [
-          { date: '2026-04-05', commission: 12.5 },
-          { date: '2026-04-06', commission: 3 },
+          { date: day1, commission: 12.5 },
+          { date: day2, commission: 3 },
         ]
       }
       if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
-        return [{ date: '2026-04-06', commission: 2 }]
+        return [{ date: day2, commission: 2 }]
       }
 
       throw new Error(`unexpected sql: ${sql}`)
@@ -73,18 +86,20 @@ describe('GET /api/dashboard/trends', () => {
   })
 
   it('falls back gracefully when unattributed failures table is missing', async () => {
+    const today = formatLocalYmd(new Date())
+
     dbFns.query.mockImplementation(async (sql: string) => {
       if (sql.includes('MAX(date) as latest_date')) {
-        return [{ currency: 'USD', total_cost: 50, latest_date: '2026-04-06' }]
+        return [{ currency: 'USD', total_cost: 50, latest_date: today }]
       }
       if (
         sql.includes('SUM(impressions) as impressions') &&
         sql.includes('FROM campaign_performance')
       ) {
-        return [{ date: '2026-04-06', impressions: 100, clicks: 10, cost: 5 }]
+        return [{ date: today, impressions: 100, clicks: 10, cost: 5 }]
       }
       if (sql.includes('FROM affiliate_commission_attributions')) {
-        return [{ date: '2026-04-06', commission: 4 }]
+        return [{ date: today, commission: 4 }]
       }
       if (sql.includes('FROM openclaw_affiliate_attribution_failures')) {
         throw new Error('relation "openclaw_affiliate_attribution_failures" does not exist')

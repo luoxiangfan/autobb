@@ -272,8 +272,8 @@ export function normalizeCreativeTaskError(
         rawObject?.errorUserMessage,
         candidate?.userMessage,
         rawObject?.userMessage,
-        rawString,
         inferred.userMessage,
+        rawString,
         candidate?.message,
         rawObject?.message,
         fallbackMessage

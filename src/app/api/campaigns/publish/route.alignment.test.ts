@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
+import { defaultOAuthAuthContext } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 
 const mocks = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -27,27 +28,35 @@ vi.mock('@/lib/active-campaigns-query', () => ({
   queryActiveCampaigns: mocks.queryActiveCampaigns,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
-  getGoogleAdsAuthContext: mocks.getGoogleAdsAuthContext,
-  hasConfiguredGoogleAdsAuthFromContext: (ctx: {
-    oauthCredentials?: { refresh_token?: string } | null
-    serviceAccountConfig?: { id?: string } | null
-    auth?: { authType?: string }
-  }) => {
-    if (ctx.auth?.authType === 'service_account') {
-      return Boolean(ctx.serviceAccountConfig?.id)
-    }
-    return Boolean(ctx.oauthCredentials?.refresh_token)
-  },
-}))
+vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+  return {
+    ...actual,
+    getGoogleAdsAuthContext: mocks.getGoogleAdsAuthContext,
+    hasConfiguredGoogleAdsAuthFromContext: (ctx: {
+      oauthCredentials?: { refresh_token?: string } | null
+      serviceAccountConfig?: { id?: string } | null
+      auth?: { authType?: string }
+    }) => {
+      if (ctx.auth?.authType === 'service_account') {
+        return Boolean(ctx.serviceAccountConfig?.id)
+      }
+      return Boolean(ctx.oauthCredentials?.refresh_token)
+    },
+  }
+})
 
-vi.mock('@/lib/launch-scores', () => ({
-  createLaunchScore: vi.fn(),
-  findCachedLaunchScore: mocks.findCachedLaunchScore,
-  computeContentHash: mocks.computeContentHash,
-  computeCampaignConfigHash: mocks.computeCampaignConfigHash,
-  parseLaunchScoreAnalysis: mocks.parseLaunchScoreAnalysis,
-}))
+vi.mock('@/lib/launch-scores', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/launch-scores')>()
+  return {
+    ...actual,
+    createLaunchScore: vi.fn(),
+    findCachedLaunchScore: mocks.findCachedLaunchScore,
+    computeContentHash: mocks.computeContentHash,
+    computeCampaignConfigHash: mocks.computeCampaignConfigHash,
+    parseLaunchScoreAnalysis: mocks.parseLaunchScoreAnalysis,
+  }
+})
 
 vi.mock('@/lib/queue/init-queue', () => ({
   getOrCreateQueueManager: mocks.getOrCreateQueueManager,
@@ -55,6 +64,22 @@ vi.mock('@/lib/queue/init-queue', () => ({
 
 vi.mock('@/lib/api-cache', () => ({
   invalidateOfferCache: mocks.invalidateOfferCache,
+}))
+
+vi.mock('@/lib/scoring', () => ({
+  calculateLaunchScore: vi.fn().mockResolvedValue({
+    totalScore: 90,
+    analysis: {},
+  }),
+}))
+
+vi.mock('@/lib/launch-score-cache', () => ({
+  buildLaunchScoreHashes: vi.fn().mockReturnValue({
+    contentHash: 'content-hash',
+    campaignConfigHash: 'config-hash',
+  }),
+  enrichCreativeForLaunchScore: vi.fn((creative: unknown) => creative),
+  saveLaunchScoreWithContentCache: vi.fn().mockResolvedValue(undefined),
 }))
 
 import { POST } from '@/app/api/campaigns/publish/route'
@@ -145,16 +170,7 @@ describe('POST /api/campaigns/publish URL alignment', () => {
       total: { enabled: 0, own: 0, manual: 0, other: 0 },
     })
 
-    mocks.getGoogleAdsAuthContext.mockResolvedValue({
-      userId: 7,
-      ownerUserId: 7,
-      assignment: null,
-      isShared: false,
-      canModify: true,
-      auth: { authType: 'oauth' },
-      oauthCredentials: { refresh_token: 'refresh-token' },
-      serviceAccountConfig: null,
-    })
+    mocks.getGoogleAdsAuthContext.mockResolvedValue(defaultOAuthAuthContext)
 
     mocks.findCachedLaunchScore.mockResolvedValue({
       id: 1,

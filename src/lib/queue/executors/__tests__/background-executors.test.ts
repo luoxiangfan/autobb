@@ -15,6 +15,7 @@ describe('registerBackgroundExecutors (background worker)', () => {
       'click-farm',
       'click-farm-batch',
       'click-farm-trigger',
+      'google-ads-campaign-sync',
       'openclaw-affiliate-sync',
       'openclaw-command',
       'openclaw-report-send',
