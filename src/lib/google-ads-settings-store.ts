@@ -109,6 +109,9 @@ export function resolveGoogleAdsCredentialFieldsForReadOnlyApi(params: {
   clientId: string | null | undefined
   developerToken: string | null | undefined
   clientSecret: string | null | undefined
+  /** metadata 路径：无明文时仍标记已配置 */
+  clientSecretConfiguredOverride?: boolean
+  developerTokenConfiguredOverride?: boolean
 }): {
   clientId: string | null | undefined
   developerToken: string | null | undefined
@@ -127,14 +130,18 @@ export function resolveGoogleAdsCredentialFieldsForReadOnlyApi(params: {
   const developerTokenRaw = String(params.developerToken || '').trim()
   const clientSecretRaw = String(params.clientSecret || '').trim()
 
+  const clientSecretConfigured = params.clientSecretConfiguredOverride ?? Boolean(clientSecretRaw)
+  const developerTokenConfigured =
+    params.developerTokenConfiguredOverride ?? Boolean(developerTokenRaw)
+
   return {
     clientId: clientIdRaw
       ? maskGoogleAdsCredentialSettingValueForReadOnly('client_id', clientIdRaw)
       : null,
     developerToken: null,
     ...(clientIdRaw ? { clientIdConfigured: true } : {}),
-    ...(developerTokenRaw ? { developerTokenConfigured: true } : {}),
-    ...(clientSecretRaw ? { clientSecretConfigured: true } : {}),
+    ...(developerTokenConfigured ? { developerTokenConfigured: true } : {}),
+    ...(clientSecretConfigured ? { clientSecretConfigured: true } : {}),
   }
 }
 

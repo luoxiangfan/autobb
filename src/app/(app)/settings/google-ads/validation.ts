@@ -1,4 +1,32 @@
+import type { GoogleAdsCredentialStatus } from './types'
+
 const PLACEHOLDER = '············'
+
+/** 已配置且非双栈时锁定为后端 authType；否则跟随用户 Tab 选择 */
+export function resolveEffectiveGoogleAdsAuthMethod(
+  credentialStatus: Pick<
+    GoogleAdsCredentialStatus,
+    'hasCredentials' | 'authType' | 'dualStack'
+  > | null,
+  selectedMethod: 'oauth' | 'service_account'
+): 'oauth' | 'service_account' {
+  if (credentialStatus?.dualStack) {
+    return selectedMethod
+  }
+  if (
+    credentialStatus?.hasCredentials &&
+    (credentialStatus.authType === 'oauth' || credentialStatus.authType === 'service_account')
+  ) {
+    return credentialStatus.authType
+  }
+  return selectedMethod
+}
+
+export function isGoogleAdsAuthMethodLocked(
+  credentialStatus: Pick<GoogleAdsCredentialStatus, 'hasCredentials' | 'dualStack'> | null
+): boolean {
+  return Boolean(credentialStatus?.hasCredentials) && !credentialStatus?.dualStack
+}
 
 export function validateGoogleAdsOAuthForm(
   formData: Record<string, string> | undefined

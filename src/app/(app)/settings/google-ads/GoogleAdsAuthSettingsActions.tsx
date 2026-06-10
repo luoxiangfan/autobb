@@ -12,7 +12,7 @@ type Props = {
 
 export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Props) {
   const {
-    googleAdsAuthMethod,
+    effectiveGoogleAdsAuthMethod,
     googleAdsAuthActionsBlocked,
     googleAdsCredentialStatus,
     hasOAuthConfigToDelete,
@@ -32,7 +32,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
     <>
       <Button
         onClick={() => {
-          if (googleAdsAuthMethod === 'service_account') {
+          if (effectiveGoogleAdsAuthMethod === 'service_account') {
             void handleSaveServiceAccount()
           } else {
             onSaveOAuth()
@@ -50,15 +50,15 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
         disabled={
           googleAdsAuthActionsBlocked ||
           deletingOAuthConfig ||
-          (googleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
-          (googleAdsAuthMethod === 'service_account' &&
+          (effectiveGoogleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
+          (effectiveGoogleAdsAuthMethod === 'service_account' &&
             (!!deletingServiceAccountId || !hasServiceAccountConfigToDelete))
         }
       >
-        删除当前配置
+        {effectiveGoogleAdsAuthMethod === 'oauth' ? '删除 OAuth 配置' : '删除服务账号配置'}
       </Button>
 
-      {googleAdsAuthMethod === 'oauth' && (
+      {effectiveGoogleAdsAuthMethod === 'oauth' && (
         <Button
           onClick={() => void handleStartGoogleAdsOAuth()}
           disabled={startingOAuth || googleAdsAuthActionsBlocked}

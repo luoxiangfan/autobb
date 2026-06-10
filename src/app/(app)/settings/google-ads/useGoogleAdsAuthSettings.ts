@@ -19,7 +19,11 @@ import type {
   GoogleAdsCredentialStatus,
   GoogleAdsDeleteConfirmState,
 } from './types'
-import { hasGoogleAdsUnsavedChanges } from './validation'
+import {
+  hasGoogleAdsUnsavedChanges,
+  isGoogleAdsAuthMethodLocked,
+  resolveEffectiveGoogleAdsAuthMethod,
+} from './validation'
 
 export interface UseGoogleAdsAuthSettingsParams {
   oauthFormData: Record<string, string> | undefined
@@ -77,6 +81,21 @@ export function useGoogleAdsAuthSettings({
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
   const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.dualStack)
   const googleAdsAuthActionsBlocked = googleAdsAuthReadOnly || googleAdsDualStack
+  const googleAdsAuthMethodLocked = isGoogleAdsAuthMethodLocked(googleAdsCredentialStatus)
+  const effectiveGoogleAdsAuthMethod = resolveEffectiveGoogleAdsAuthMethod(
+    googleAdsCredentialStatus,
+    googleAdsAuthMethod
+  )
+
+  const setGoogleAdsAuthMethodIfAllowed = useCallback(
+    (method: 'oauth' | 'service_account') => {
+      if (isGoogleAdsAuthMethodLocked(googleAdsCredentialStatus)) {
+        return
+      }
+      setGoogleAdsAuthMethod(method)
+    },
+    [googleAdsCredentialStatus]
+  )
 
   const isGoogleAdsSharedAdminHiddenSecret = (key: string, value: string) => {
     if (!googleAdsAuthReadOnly || value?.trim()) {
@@ -457,7 +476,7 @@ export function useGoogleAdsAuthSettings({
   const hasServiceAccountConfigToDelete = Boolean(googleAdsCredentialStatus?.serviceAccountId)
 
   const requestDeleteCurrentGoogleAdsConfig = () => {
-    if (googleAdsAuthMethod === 'oauth') {
+    if (effectiveGoogleAdsAuthMethod === 'oauth') {
       if (!hasOAuthConfigToDelete) {
         toast.error('当前未配置真实 OAuth 信息，无需删除')
         return
@@ -502,7 +521,9 @@ export function useGoogleAdsAuthSettings({
     startingOAuth,
     verifyingGoogleAdsCredentials,
     googleAdsAuthMethod,
-    setGoogleAdsAuthMethod,
+    setGoogleAdsAuthMethod: setGoogleAdsAuthMethodIfAllowed,
+    effectiveGoogleAdsAuthMethod,
+    googleAdsAuthMethodLocked,
     serviceAccountForm,
     setServiceAccountForm,
     savingServiceAccount,

@@ -97,7 +97,6 @@ export default function GoogleAdsPage() {
   const [error, setError] = useState('')
   const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
   const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
-  const [success, setSuccess] = useState('')
   const [needsReauth, setNeedsReauth] = useState(false) // 是否需要重新授权
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -349,9 +348,8 @@ export default function GoogleAdsPage() {
 
     const oauthSuccess = searchParams.get('oauth_success')
     if (oauthSuccess === 'true') {
-      setSuccess('OAuth 授权成功！')
-      setTimeout(() => setSuccess(''), 5000)
-      router.replace('/google-ads')
+      router.replace('/settings?category=google_ads&oauth_success=true')
+      return
     }
 
     const oauthError = searchParams.get('error')
@@ -742,12 +740,6 @@ export default function GoogleAdsPage() {
           {accountsSyncError && (
             <div className="mb-4 bg-red-50 border border-red-400 text-red-700 px-4 py-3 rounded whitespace-pre-line">
               同步失败：{accountsSyncError}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 bg-green-50 border border-green-400 text-green-700 px-4 py-3 rounded">
-              {success}
             </div>
           )}
 

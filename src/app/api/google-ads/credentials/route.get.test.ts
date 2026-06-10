@@ -15,6 +15,9 @@ const authContextFns = vi.hoisted(() => ({
   googleAdsAuthContextDualStackError: vi.fn(),
   resolveGoogleAdsCredentialStatusSummary: vi.fn(),
   resolveGoogleAdsCredentialStatusFields: vi.fn(),
+  resolveGoogleAdsCredentialStatusFieldsFromMetadata: vi.fn(),
+  oauthRefreshConfiguredFromContext: vi.fn(),
+  serviceAccountConfiguredFromContext: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -33,6 +36,10 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
     googleAdsAuthContextDualStackError: authContextFns.googleAdsAuthContextDualStackError,
     resolveGoogleAdsCredentialStatusSummary: authContextFns.resolveGoogleAdsCredentialStatusSummary,
     resolveGoogleAdsCredentialStatusFields: authContextFns.resolveGoogleAdsCredentialStatusFields,
+    resolveGoogleAdsCredentialStatusFieldsFromMetadata:
+      authContextFns.resolveGoogleAdsCredentialStatusFieldsFromMetadata,
+    oauthRefreshConfiguredFromContext: authContextFns.oauthRefreshConfiguredFromContext,
+    serviceAccountConfiguredFromContext: authContextFns.serviceAccountConfiguredFromContext,
   }
 })
 
@@ -47,10 +54,28 @@ describe('GET /api/google-ads/credentials', () => {
       assignment: { assignmentMode: 'shared_admin', authType: 'oauth', sharedAdminUserId: 99 },
       canModify: false,
       isShared: true,
+      auth: { authType: 'oauth' },
+      dualStack: false,
     })
     authContextFns.googleAdsAuthContextDualStackError.mockReturnValue(null)
     authContextFns.resolveGoogleAdsDisplayAuthType.mockReturnValue('oauth')
     authContextFns.hasConfiguredGoogleAdsAuthFromContext.mockReturnValue(true)
+    authContextFns.oauthRefreshConfiguredFromContext.mockReturnValue(true)
+    authContextFns.serviceAccountConfiguredFromContext.mockReturnValue(false)
+    authContextFns.resolveGoogleAdsCredentialStatusFieldsFromMetadata.mockReturnValue({
+      clientId: '123456789012345678901.apps.googleusercontent.com',
+      developerToken: 'plain-dev-token',
+      loginCustomerId: '1234567890',
+      hasRefreshToken: true,
+      hasServiceAccount: false,
+      serviceAccountId: null,
+      serviceAccountName: null,
+      apiAccessLevel: 'explorer',
+      lastVerifiedAt: null,
+      isActive: true,
+      createdAt: '2026-01-01',
+      updatedAt: '2026-01-01',
+    })
     authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
       canModify: false,
       isShared: true,
@@ -97,6 +122,7 @@ describe('GET /api/google-ads/credentials', () => {
     expect(payload.data.developerTokenConfigured).toBe(true)
     expect(payload.data.clientSecretConfigured).toBe(true)
     expect(payload.data.canModify).toBe(false)
+    expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
   })
 
   it('returns full credential fields for users who can modify', async () => {

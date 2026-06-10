@@ -13,9 +13,12 @@ import {
   resolveConfiguredGoogleAdsAuthType,
   resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsCredentialStatusFields,
+  resolveGoogleAdsCredentialStatusFieldsFromMetadata,
   resolveGoogleAdsDisplayAuthType,
   resolveGoogleAdsCredentialStatusSummary,
   getGoogleAdsAuthContextMetadata,
+  oauthRefreshConfiguredFromContext,
+  serviceAccountConfiguredFromContext,
 } from '@/lib/google-ads-auth-context'
 import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads-settings-store'
 
@@ -140,13 +143,23 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    const ctx = await getGoogleAdsAuthContext(userId)
-    const statusFields = resolveGoogleAdsCredentialStatusFields(ctx)
+    const ctx = metadataCtx.canModify ? await getGoogleAdsAuthContext(userId) : metadataCtx
+    const statusFields = metadataCtx.canModify
+      ? resolveGoogleAdsCredentialStatusFields(ctx)
+      : resolveGoogleAdsCredentialStatusFieldsFromMetadata(metadataCtx)
     const exposedCredentialFields = resolveGoogleAdsCredentialFieldsForReadOnlyApi({
       canModify: ctx.canModify,
       clientId: statusFields.clientId,
       developerToken: statusFields.developerToken,
-      clientSecret: ctx.oauthCredentials?.client_secret,
+      clientSecret: ctx.canModify ? ctx.oauthCredentials?.client_secret : null,
+      clientSecretConfiguredOverride: ctx.canModify
+        ? undefined
+        : oauthRefreshConfiguredFromContext(metadataCtx),
+      developerTokenConfiguredOverride: ctx.canModify
+        ? undefined
+        : serviceAccountConfiguredFromContext(metadataCtx) ||
+          Boolean(String(statusFields.developerToken || '').trim()) ||
+          oauthRefreshConfiguredFromContext(metadataCtx),
     })
 
     let sharedAdminEmail: string | null = null

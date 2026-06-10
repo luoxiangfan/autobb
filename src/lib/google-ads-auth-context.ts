@@ -53,6 +53,11 @@ import {
   assertAuthContextSecretsHydrated,
 } from './google-ads-auth-context-cache'
 
+export {
+  oauthRefreshConfiguredFromContext,
+  serviceAccountConfiguredFromContext,
+} from './google-ads-auth-context-cache'
+
 export interface GoogleAdsAuthContext {
   userId: number
   ownerUserId: number
@@ -937,6 +942,45 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
   return {
     hasCredentials,
     hasRefreshToken: Boolean(credentials?.refresh_token),
+    hasServiceAccount,
+    serviceAccountId: serviceAccount?.id ?? ctx.auth.serviceAccountId ?? null,
+    serviceAccountName: serviceAccount?.name ?? null,
+    clientId: credentials?.client_id,
+    developerToken,
+    loginCustomerId,
+    apiAccessLevel: ctx.apiAccessLevel || 'explorer',
+    lastVerifiedAt: isServiceAccountAuth
+      ? (serviceAccount?.updatedAt ?? null)
+      : (credentials?.last_verified_at ?? null),
+    isActive: isServiceAccountAuth
+      ? Boolean(serviceAccount)
+      : isDbRowActive(credentials?.is_active),
+    createdAt: isServiceAccountAuth ? serviceAccount?.createdAt : credentials?.created_at,
+    updatedAt: isServiceAccountAuth ? serviceAccount?.updatedAt : credentials?.updated_at,
+  }
+}
+
+/** 只读 / metadata 路径：不 hydrate 密钥的凭证展示字段（供 GET /credentials） */
+export function resolveGoogleAdsCredentialStatusFieldsFromMetadata(
+  ctx: GoogleAdsAuthContext
+): ReturnType<typeof resolveGoogleAdsCredentialStatusFields> {
+  const credentials = ctx.oauthCredentials
+  const serviceAccount = ctx.serviceAccountConfig
+  const hasServiceAccount = serviceAccountConfiguredFromContext(ctx)
+  const hasCredentials = hasConfiguredGoogleAdsAuthFromContext(ctx)
+  const isServiceAccountAuth = ctx.auth.authType === 'service_account'
+
+  let developerToken = credentials?.developer_token ?? null
+  let loginCustomerId = credentials?.login_customer_id ?? null
+
+  if (isServiceAccountAuth && serviceAccount) {
+    developerToken = serviceAccount.developerToken
+    loginCustomerId = serviceAccount.mccCustomerId
+  }
+
+  return {
+    hasCredentials,
+    hasRefreshToken: oauthRefreshConfiguredFromContext(ctx),
     hasServiceAccount,
     serviceAccountId: serviceAccount?.id ?? ctx.auth.serviceAccountId ?? null,
     serviceAccountName: serviceAccount?.name ?? null,

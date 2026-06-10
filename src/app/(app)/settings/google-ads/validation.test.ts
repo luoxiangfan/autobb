@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { formatGoogleAdsAuthSaveError } from './api-messages'
 import { resolveGoogleAdsOAuthCallbackErrorMessage } from './oauth-callback-errors'
-import { validateGoogleAdsOAuthForm } from './validation'
+import {
+  validateGoogleAdsOAuthForm,
+  resolveEffectiveGoogleAdsAuthMethod,
+  isGoogleAdsAuthMethodLocked,
+} from './validation'
 
 describe('formatGoogleAdsAuthSaveError', () => {
   it('returns server message for 409 conflicts', () => {
@@ -15,9 +19,49 @@ describe('formatGoogleAdsAuthSaveError', () => {
   })
 })
 
+describe('resolveEffectiveGoogleAdsAuthMethod', () => {
+  it('locks to configured authType when credentials are ready', () => {
+    expect(
+      resolveEffectiveGoogleAdsAuthMethod(
+        { hasCredentials: true, authType: 'service_account', dualStack: false },
+        'oauth'
+      )
+    ).toBe('service_account')
+  })
+
+  it('follows tab selection when not configured', () => {
+    expect(
+      resolveEffectiveGoogleAdsAuthMethod(
+        { hasCredentials: false, authType: undefined, dualStack: false },
+        'oauth'
+      )
+    ).toBe('oauth')
+  })
+
+  it('follows tab selection during dual stack cleanup', () => {
+    expect(
+      resolveEffectiveGoogleAdsAuthMethod(
+        { hasCredentials: false, authType: 'oauth', dualStack: true },
+        'service_account'
+      )
+    ).toBe('service_account')
+  })
+})
+
+describe('isGoogleAdsAuthMethodLocked', () => {
+  it('locks when configured and not dual stack', () => {
+    expect(isGoogleAdsAuthMethodLocked({ hasCredentials: true, dualStack: false })).toBe(true)
+  })
+
+  it('does not lock during dual stack cleanup', () => {
+    expect(isGoogleAdsAuthMethodLocked({ hasCredentials: false, dualStack: true })).toBe(false)
+  })
+})
+
 describe('resolveGoogleAdsOAuthCallbackErrorMessage', () => {
   it('maps known oauth callback codes', () => {
     expect(resolveGoogleAdsOAuthCallbackErrorMessage('missing_code')).toContain('缺少授权码')
+    expect(resolveGoogleAdsOAuthCallbackErrorMessage('auth_conflict')).toContain('服务账号')
   })
 })
 

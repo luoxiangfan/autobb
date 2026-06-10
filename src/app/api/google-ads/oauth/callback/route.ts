@@ -20,6 +20,15 @@ function createRedirectUrl(path: string): URL {
   return new URL(path, getBaseUrl())
 }
 
+function redirectToGoogleAdsSettings(params: Record<string, string>): NextResponse {
+  const url = createRedirectUrl('/settings')
+  url.searchParams.set('category', 'google_ads')
+  for (const [key, value] of Object.entries(params)) {
+    url.searchParams.set(key, value)
+  }
+  return NextResponse.redirect(url)
+}
+
 function redirectToLoginPreservingOAuthCallback(request: NextRequest): NextResponse {
   const loginUrl = createRedirectUrl('/login')
   loginUrl.searchParams.set('redirect', `${request.nextUrl.pathname}${request.nextUrl.search}`)
@@ -44,17 +53,15 @@ export async function GET(request: NextRequest) {
     // 检查是否有错误
     if (error) {
       console.error('OAuth授权失败:', error)
-      return NextResponse.redirect(
-        createRedirectUrl(`/settings?error=${encodeURIComponent(error)}`)
-      )
+      return redirectToGoogleAdsSettings({ error })
     }
 
     if (!code) {
-      return NextResponse.redirect(createRedirectUrl('/settings?error=missing_code'))
+      return redirectToGoogleAdsSettings({ error: 'missing_code' })
     }
 
     if (!state) {
-      return NextResponse.redirect(createRedirectUrl('/settings?error=missing_state'))
+      return redirectToGoogleAdsSettings({ error: 'missing_state' })
     }
 
     const authResult = await verifyAuth(request)
@@ -63,9 +70,7 @@ export async function GET(request: NextRequest) {
       if (looseState.ok) {
         return redirectToLoginPreservingOAuthCallback(request)
       }
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=unauthorized&category=google_ads')
-      )
+      return redirectToGoogleAdsSettings({ error: 'unauthorized' })
     }
 
     const stateVerified = verifyGoogleAdsOAuthState(state, {
@@ -73,26 +78,20 @@ export async function GET(request: NextRequest) {
       expectedUserId: authResult.user.userId,
     })
     if (!stateVerified.ok) {
-      return NextResponse.redirect(
-        createRedirectUrl(`/settings?error=${stateVerified.error}&category=google_ads`)
-      )
+      return redirectToGoogleAdsSettings({ error: stateVerified.error })
     }
 
     const userId = stateVerified.payload.user_id
 
     const assignment = await getGoogleAdsAuthAssignment(userId)
     if (isGoogleAdsAuthShared(assignment)) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=shared_auth_readonly&category=google_ads')
-      )
+      return redirectToGoogleAdsSettings({ error: 'shared_auth_readonly' })
     }
 
     const oauthConfig = await getGoogleAdsOAuthConfigFields(userId)
     const loginCustomerId = oauthConfig.login_customer_id
     if (!loginCustomerId) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=missing_login_customer_id&category=google_ads')
-      )
+      return redirectToGoogleAdsSettings({ error: 'missing_login_customer_id' })
     }
 
     const clientId = oauthConfig.client_id
@@ -100,9 +99,7 @@ export async function GET(request: NextRequest) {
     const developerToken = oauthConfig.developer_token
 
     if (!clientId || !clientSecret || !developerToken) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=missing_google_ads_config&category=google_ads')
-      )
+      return redirectToGoogleAdsSettings({ error: 'missing_google_ads_config' })
     }
 
     const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
@@ -110,21 +107,15 @@ export async function GET(request: NextRequest) {
       developerToken.trim() === clientSecret.trim() ||
       looksLikeOAuthClientSecret(developerToken)
     ) {
-      return NextResponse.redirect(
-        createRedirectUrl('/settings?error=developer_token_invalid&category=google_ads')
-      )
+      return redirectToGoogleAdsSettings({ error: 'developer_token_invalid' })
     }
 
     console.log(`🔐 OAuth回调: 用户 ${userId} 使用自己的OAuth配置`)
 
     try {
       await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
-    } catch (error: any) {
-      return NextResponse.redirect(
-        createRedirectUrl(
-          `/settings?error=${encodeURIComponent(error.message)}&category=google_ads`
-        )
-      )
+    } catch {
+      return redirectToGoogleAdsSettings({ error: 'auth_conflict' })
     }
 
     const redirectUri = getGoogleAdsOAuthRedirectUri()
@@ -159,16 +150,10 @@ export async function GET(request: NextRequest) {
     console.log(`   Credentials ID: ${savedCredentials.id}`)
     console.log(`   用户ID: ${userId}`)
 
-    // 重定向回 Google Ads 账号管理页面，显示成功提示
-    const successUrl = createRedirectUrl('/google-ads')
-    successUrl.searchParams.set('oauth_success', 'true')
-
-    return NextResponse.redirect(successUrl)
+    return redirectToGoogleAdsSettings({ oauth_success: 'true' })
   } catch (error: any) {
     console.error('OAuth回调处理失败:', error)
 
-    return NextResponse.redirect(
-      createRedirectUrl(`/settings?error=${encodeURIComponent(error.message)}`)
-    )
+    return redirectToGoogleAdsSettings({ error: 'callback_failed' })
   }
 }

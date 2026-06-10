@@ -41,8 +41,9 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
     loadingGoogleAdsAccounts,
     showGoogleAdsAccounts,
     setShowGoogleAdsAccounts,
-    googleAdsAuthMethod,
     setGoogleAdsAuthMethod,
+    effectiveGoogleAdsAuthMethod,
+    googleAdsAuthMethodLocked,
     serviceAccountForm,
     setServiceAccountForm,
     serviceAccounts,
@@ -158,30 +159,23 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
               </p>
             )}
             {googleAdsCredentialStatus.lastVerifiedAt && (
-              <>
-                <p className="text-sm text-green-700">
-                  验证时间:{' '}
-                  {new Date(googleAdsCredentialStatus.lastVerifiedAt).toLocaleString('zh-CN', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-                <p className="text-sm text-green-700">
-                  过期时间:{' '}
-                  {new Date(
-                    new Date(googleAdsCredentialStatus.lastVerifiedAt).getTime() +
-                      7 * 24 * 60 * 60 * 1000
-                  ).toLocaleString('zh-CN', {
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </>
+              <p className="text-sm text-green-700">
+                验证时间:{' '}
+                {new Date(googleAdsCredentialStatus.lastVerifiedAt).toLocaleString('zh-CN', {
+                  month: 'numeric',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
             )}
+            {googleAdsCredentialStatus.hasCredentials &&
+              effectiveGoogleAdsAuthMethod === 'oauth' &&
+              googleAdsCredentialStatus.hasRefreshToken && (
+                <p className="text-sm text-green-700">
+                  Refresh Token 已授权（长期有效，除非在 Google 账号中撤销）
+                </p>
+              )}
           </div>
         ) : (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -192,7 +186,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
             <p className="text-sm text-amber-700">
               {googleAdsCredentialStatus?.authConfigWarning
                 ? '检测到 OAuth 与服务账号同时存在，请使用上方按钮分别删除其中一种后再配置。'
-                : googleAdsAuthMethod === 'service_account'
+                : effectiveGoogleAdsAuthMethod === 'service_account'
                   ? '请填写服务账号配置并保存后即可使用 Google Ads 功能'
                   : '请填写所有必填参数并完成 OAuth 授权后才能使用 Google Ads 功能'}
             </p>
@@ -313,7 +307,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
         {googleAdsAuthReadOnly ? (
           <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
             <Badge variant="secondary" className="mb-2">
-              {googleAdsAuthMethod === 'service_account'
+              {effectiveGoogleAdsAuthMethod === 'service_account'
                 ? '服务账号（管理员共享）'
                 : 'OAuth（管理员共享）'}
             </Badge>
@@ -327,12 +321,12 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
                 setGoogleAdsAuthMethod('service_account')
                 void fetchServiceAccounts()
               }}
-              disabled={googleAdsDualStack}
+              disabled={googleAdsDualStack || googleAdsAuthMethodLocked}
               className={`p-4 border-2 rounded-lg text-left transition-all ${
-                googleAdsAuthMethod === 'service_account'
+                effectiveGoogleAdsAuthMethod === 'service_account'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
-              } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
+              } ${googleAdsDualStack || googleAdsAuthMethodLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <div className="font-semibold mb-1">服务账号认证</div>
               <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
@@ -340,21 +334,26 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
             <button
               type="button"
               onClick={() => setGoogleAdsAuthMethod('oauth')}
-              disabled={googleAdsDualStack}
+              disabled={googleAdsDualStack || googleAdsAuthMethodLocked}
               className={`p-4 border-2 rounded-lg text-left transition-all ${
-                googleAdsAuthMethod === 'oauth'
+                effectiveGoogleAdsAuthMethod === 'oauth'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
-              } ${googleAdsDualStack ? 'opacity-60 cursor-not-allowed' : ''}`}
+              } ${googleAdsDualStack || googleAdsAuthMethodLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <div className="font-semibold mb-1">OAuth 用户授权</div>
               <div className="text-sm text-gray-600">适合管理自己的 Google Ads 账号</div>
             </button>
           </div>
         )}
+        {googleAdsAuthMethodLocked && (
+          <p className="text-xs text-slate-500 mt-2">
+            已完成配置后认证方式不可切换；如需更换请先删除当前配置。
+          </p>
+        )}
       </div>
 
-      {googleAdsAuthMethod === 'oauth' && (
+      {effectiveGoogleAdsAuthMethod === 'oauth' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
           {categorySettings.map((setting) => {
             const metaKey = `google_ads.${setting.key}`
@@ -394,7 +393,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
         </div>
       )}
 
-      {googleAdsAuthMethod === 'service_account' && googleAdsAuthReadOnly && (
+      {effectiveGoogleAdsAuthMethod === 'service_account' && googleAdsAuthReadOnly && (
         <div className="p-4 border border-slate-200 rounded-lg bg-slate-50">
           <p className="text-sm text-slate-600">
             服务账号配置由管理员维护，此处仅展示当前生效方式。
@@ -402,7 +401,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
         </div>
       )}
 
-      {googleAdsAuthMethod === 'service_account' &&
+      {effectiveGoogleAdsAuthMethod === 'service_account' &&
         !googleAdsAuthReadOnly &&
         (hasServiceAccountConfigToDelete && !showServiceAccountReplaceForm ? (
           <div className="p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
@@ -535,7 +534,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
           </div>
         ))}
 
-      {googleAdsAuthMethod === 'service_account' && serviceAccounts.length > 0 && (
+      {effectiveGoogleAdsAuthMethod === 'service_account' && serviceAccounts.length > 0 && (
         <div className="border-t pt-6">
           <h3 className="font-semibold mb-4">已配置的服务账号</h3>
           <div className="space-y-3">
