@@ -2,16 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { GOOGLE_ADS_NOT_CONFIGURED_MESSAGE } from '@/lib/google-ads-credentials-errors'
 import {
-  appendAccountsAuthToSearchParams,
-  GOOGLE_ADS_NOT_CONFIGURED_MESSAGE,
-  parseAccountsListFetchFailure,
-  resolveAccountsFetchBlockedUiEffects,
-  resolveAccountsRequestAuth,
-  safeReadJson,
-  type AccountsRequestAuth,
-} from '@/lib/google-ads-credentials-errors'
-import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
+  useGoogleAdsAccountsList,
+  type GoogleAdsAccountsFetchParams,
+} from '@/hooks/useGoogleAdsAccountsList'
 import { formatGoogleAdsAuthSaveError } from './api-messages'
 import { resolveGoogleAdsOAuthCallbackErrorMessage } from './oauth-callback-errors'
 import type {
@@ -50,8 +45,8 @@ export function useGoogleAdsAuthSettings({
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>(
     'service_account'
   )
-  const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth()
-  const googleAdsAccountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { fetchAccounts, scheduleAccountsPoll, clearAccountsPoll } = useGoogleAdsAccountsList()
+  const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({})
   const [serviceAccountForm, setServiceAccountForm] = useState({
     name: '',
     mccCustomerId: '',
@@ -190,11 +185,9 @@ export function useGoogleAdsAuthSettings({
 
   useEffect(() => {
     return () => {
-      if (googleAdsAccountsPollTimerRef.current) {
-        clearTimeout(googleAdsAccountsPollTimerRef.current)
-      }
+      clearAccountsPoll()
     }
-  }, [])
+  }, [clearAccountsPoll])
 
   const handleStartGoogleAdsOAuth = async () => {
     if (oauthHasUnsavedChanges()) {
@@ -250,90 +243,55 @@ export function useGoogleAdsAuthSettings({
     }
   }
 
-  const scheduleGoogleAdsAccountsPoll = (authForRequest: AccountsRequestAuth) => {
-    if (googleAdsAccountsPollTimerRef.current) {
-      clearTimeout(googleAdsAccountsPollTimerRef.current)
-    }
-    googleAdsAccountsPollTimerRef.current = setTimeout(async () => {
-      try {
-        const params = new URLSearchParams()
-        appendAccountsAuthToSearchParams(params, authForRequest)
-        const response = await fetch(`/api/google-ads/credentials/accounts?${params.toString()}`, {
-          credentials: 'include',
-          cache: 'no-store',
-        })
-        if (!response.ok) return
-
-        const data = await response.json()
-        if (!data.success || !data.data) return
-
-        setGoogleAdsAccounts(data.data.accounts || [])
-        if (data.data.refreshInProgress) {
-          scheduleGoogleAdsAccountsPoll(authForRequest)
-        } else {
-          toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
-          await fetchGoogleAdsCredentialStatus()
-        }
-      } catch {
-        // 轮询失败时静默，用户可手动重试
-      }
-    }, 2000)
-  }
-
   const handleFetchGoogleAdsAccounts = async () => {
     try {
       setLoadingGoogleAdsAccounts(true)
       setShowGoogleAdsAccounts(true)
 
-      const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
-      const resolved = resolveAccountsRequestAuth(
-        auth,
-        serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId
-      )
-      if (!resolved.ok) {
-        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh: true })
+      const baseParams: GoogleAdsAccountsFetchParams = {
+        forceRefresh: true,
+        fallbackServiceAccountId:
+          serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId,
+      }
+      accountsPollBaseParamsRef.current = baseParams
+
+      const result = await fetchAccounts(baseParams)
+
+      if (result.ok === false && result.kind === 'blocked') {
         await fetchGoogleAdsCredentialStatus()
+        const { effects } = result
         throw new Error(
           effects.errorMessage ?? effects.authConfigWarning ?? GOOGLE_ADS_NOT_CONFIGURED_MESSAGE
         )
       }
-      const authForRequest = resolved.authForRequest
 
-      const params = new URLSearchParams({ refresh: 'true', async: 'true' })
-      appendAccountsAuthToSearchParams(params, authForRequest)
-      const response = await fetch(`/api/google-ads/credentials/accounts?${params.toString()}`, {
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        const data = await safeReadJson(response)
-        if (
-          data &&
-          typeof data === 'object' &&
-          (data as { code?: string }).code === 'SERVICE_ACCOUNT_PERMISSION_DENIED' &&
-          (data as { details?: unknown }).details
-        ) {
-          setPermissionError((data as { details: typeof permissionError }).details)
-          setShowGoogleAdsAccounts(true)
-          return
-        }
-
-        const { message } = parseAccountsListFetchFailure(response, data, {
-          fallbackMessage: '获取账户列表失败',
-        })
-        await fetchGoogleAdsCredentialStatus()
-        throw new Error(message)
+      if (result.ok === false && result.kind === 'permission_denied') {
+        setPermissionError(result.details as typeof permissionError)
+        setShowGoogleAdsAccounts(true)
+        return
       }
 
-      const data = await response.json()
+      if (result.ok === false) {
+        await fetchGoogleAdsCredentialStatus()
+        throw result.error
+      }
+
       setPermissionError(null)
-      setGoogleAdsAccounts(data.data.accounts || [])
+      setGoogleAdsAccounts(result.data.accounts as GoogleAdsAccount[])
       await fetchGoogleAdsCredentialStatus()
-      if (data.data?.refreshInProgress) {
+
+      if (result.data.refreshInProgress) {
         toast.message('账号正在后台同步，列表将逐步更新')
-        scheduleGoogleAdsAccountsPoll(authForRequest)
+        scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
+          if (!pollResult.ok) return
+          setGoogleAdsAccounts(pollResult.data.accounts as GoogleAdsAccount[])
+          if (!pollResult.data.refreshInProgress) {
+            toast.success(`找到${pollResult.data.total}个可访问的 Google Ads 账户`)
+            void fetchGoogleAdsCredentialStatus()
+          }
+        })
       } else {
-        toast.success(`找到${data.data.total}个可访问的 Google Ads 账户`)
+        toast.success(`找到${result.data.total}个可访问的 Google Ads 账户`)
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : '获取失败')

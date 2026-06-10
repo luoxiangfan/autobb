@@ -3,17 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  appendAccountsAuthToSearchParams,
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
-  formatNullableErrorMessage,
-  resolveAccountsFetchBlockedUiEffects,
-  resolveAccountsRequestAuth,
   safeReadJson,
-  throwAccountsListFetchError,
-  type AccountsRequestAuth,
 } from '@/lib/google-ads-credentials-errors'
-import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
+import {
+  useGoogleAdsAccountsList,
+  type GoogleAdsAccountsFetchParams,
+} from '@/hooks/useGoogleAdsAccountsList'
 import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'
 
 interface GoogleAdsAccount {
@@ -68,7 +65,30 @@ export default function GoogleAdsPage() {
   const [accountsLoading, setAccountsLoading] = useState(false)
   const [accountsSyncing, setAccountsSyncing] = useState(false)
   const [accountsSyncError, setAccountsSyncError] = useState<string | null>(null)
-  const accountsPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const accountsListBaseQuery = { filterByUserMcc: 'true' } as const
+  const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({
+    query: { ...accountsListBaseQuery },
+  })
+
+  const {
+    fetchAccounts: fetchAccountsFromApi,
+    scheduleAccountsPoll,
+    clearAccountsPoll,
+    refreshCredentialsStatus,
+    syncFromCredentialsResponse,
+  } = useGoogleAdsAccountsList({
+    onCredentialsUpdated: (parsed) => {
+      if (parsed.serviceAccountId) {
+        setCurrentServiceAccountId(parsed.serviceAccountId)
+      }
+      setAuthConfigWarning(parsed.authConfigWarning)
+      setGoogleAdsDualStack(parsed.dualStack)
+    },
+  })
+  const [error, setError] = useState('')
+  const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
+  const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
+  const [needsReauth, setNeedsReauth] = useState(false) // 是否需要重新授权
   const accountFetchersRef = useRef<{
     fetchAccounts: (
       forceRefresh?: boolean,
@@ -83,21 +103,6 @@ export default function GoogleAdsPage() {
     ) => Promise<void>
     fetchServiceAccounts: () => Promise<void>
   } | null>(null)
-
-  const { prepareAuthForAccountsFetch, refreshCredentialsStatus, syncFromCredentialsResponse } =
-    useGoogleAdsAccountsAuth({
-      onCredentialsUpdated: (parsed) => {
-        if (parsed.serviceAccountId) {
-          setCurrentServiceAccountId(parsed.serviceAccountId)
-        }
-        setAuthConfigWarning(parsed.authConfigWarning)
-        setGoogleAdsDualStack(parsed.dualStack)
-      },
-    })
-  const [error, setError] = useState('')
-  const [authConfigWarning, setAuthConfigWarning] = useState<string | null>(null)
-  const [googleAdsDualStack, setGoogleAdsDualStack] = useState(false)
-  const [needsReauth, setNeedsReauth] = useState(false) // 是否需要重新授权
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [expandedOffers, setExpandedOffers] = useState<Set<string>>(new Set())
@@ -109,35 +114,76 @@ export default function GoogleAdsPage() {
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
 
-  const throwOnAccountsFetchError = (response: Response, errorData: unknown | null): never => {
-    try {
-      throwAccountsListFetchError(response, errorData, { fallbackMessage: '获取账户列表失败' })
-    } catch (error) {
-      if (error instanceof Error) {
-        const enriched = error as Error & {
-          needsReauth?: boolean
-          authConfigWarning?: string | null
-        }
-        if (enriched.needsReauth) {
-          setNeedsReauth(true)
-        }
-        if (enriched.authConfigWarning) {
-          setAuthConfigWarning(enriched.authConfigWarning)
-          setGoogleAdsDualStack(true)
-        }
-      }
-      throw error
-    }
-  }
-
   useEffect(() => {
     return () => {
-      if (accountsPollTimerRef.current) {
-        clearTimeout(accountsPollTimerRef.current)
-        accountsPollTimerRef.current = null
+      clearAccountsPoll()
+    }
+  }, [clearAccountsPoll])
+
+  const applyAccountsFetchResult = (
+    result: Awaited<ReturnType<typeof fetchAccountsFromApi>>,
+    opts?: { forceRefresh?: boolean; isPoll?: boolean }
+  ) => {
+    if (result.ok === false && result.kind === 'blocked') {
+      const { effects } = result
+      if (effects.authConfigWarning) {
+        setAuthConfigWarning(effects.authConfigWarning)
+        setGoogleAdsDualStack(true)
+      }
+      if (effects.errorMessage) {
+        setError(effects.errorMessage)
+      }
+      if (effects.clearForceRefreshState) {
+        setAccountsSyncing(false)
+      }
+      return
+    }
+
+    if (result.ok === false && result.kind === 'error') {
+      const err = result.error
+      if (err.needsReauth) {
+        setNeedsReauth(true)
+      }
+      if (err.authConfigWarning) {
+        setAuthConfigWarning(err.authConfigWarning)
+        setGoogleAdsDualStack(true)
+      }
+      setError(formatErrorMessage(err) || '获取账户列表失败')
+      setAccountsSyncing(false)
+      setAccountsSyncError(null)
+      return
+    }
+
+    if (!result.ok) {
+      return
+    }
+
+    const { data } = result
+    setAuthConfigWarning(data.authConfigWarning)
+    setGoogleAdsDualStack(data.dualStack)
+    setAccountsSyncError(data.refreshError)
+    setAccountsSyncing(data.refreshInProgress)
+    setNeedsReauth(false)
+
+    const allAccounts = data.accounts as GoogleAdsAccount[]
+    setAccounts(enrichAccountsWithMccNames(allAccounts))
+    if (data.cached !== undefined) {
+      setIsCached(data.cached)
+    }
+    if (data.lastSyncAt) {
+      setLastSyncAt(data.lastSyncAt)
+    }
+
+    if (opts?.forceRefresh || opts?.isPoll) {
+      if (data.refreshInProgress) {
+        scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
+          applyAccountsFetchResult(pollResult, { isPoll: true })
+        })
+      } else {
+        setAccountsSyncing(false)
       }
     }
-  }, [])
+  }
 
   const enrichAccountsWithMccNames = (allAccounts: GoogleAdsAccount[]): GoogleAdsAccount[] => {
     const mccMap = new Map<string, string>()
@@ -152,42 +198,6 @@ export default function GoogleAdsPage() {
     }))
   }
 
-  const scheduleAccountsPoll = (
-    authForRequest: AccountsRequestAuth,
-    fallbackServiceAccountId?: string | null
-  ) => {
-    if (accountsPollTimerRef.current) clearTimeout(accountsPollTimerRef.current)
-    accountsPollTimerRef.current = setTimeout(() => {
-      if (authForRequest.authType === 'service_account') {
-        const saId = authForRequest.serviceAccountId || fallbackServiceAccountId
-        if (!saId) return
-        fetchAccountsWithServiceAccount(saId, false, true)
-      } else {
-        fetchAccounts(false, true)
-      }
-    }, 2000)
-  }
-
-  // 按凭证状态（auth-context）二选一拉取账号列表；双栈时仅展示警告，不隐式切换认证方式
-  const fetchServiceAccounts = async () => {
-    try {
-      await runInitialGoogleAdsAccountsLoad({
-        refreshCredentialsStatus,
-        onAuthConfigWarning: (warning) => {
-          setAuthConfigWarning(warning)
-          setGoogleAdsDualStack(true)
-        },
-        fetchOAuthAccounts: (opts) => fetchAccounts(false, false, opts),
-        fetchServiceAccountAccounts: (serviceAccountId, opts) => {
-          setCurrentServiceAccountId(serviceAccountId)
-          return fetchAccountsWithServiceAccount(serviceAccountId, false, false, opts)
-        },
-      })
-    } catch (err: any) {
-      console.error('初始加载 Google Ads 账号失败:', err)
-    }
-  }
-
   const fetchAccountsList = async (
     forceRefresh = false,
     isPoll = false,
@@ -200,80 +210,20 @@ export default function GoogleAdsPage() {
         setAccountsSyncError(null)
       }
 
-      const auth = await prepareAuthForAccountsFetch({
+      const baseParams: GoogleAdsAccountsFetchParams = {
         forceRefresh,
         isPoll,
         skipCredentialsRefresh: opts?.skipCredentialsRefresh,
-      })
-      const resolved = resolveAccountsRequestAuth(auth, opts?.fallbackServiceAccountId)
-      if (!resolved.ok) {
-        const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
-        if (effects.authConfigWarning) {
-          setAuthConfigWarning(effects.authConfigWarning)
-          setGoogleAdsDualStack(true)
-        }
-        if (effects.errorMessage) {
-          setError(effects.errorMessage)
-        }
-        if (effects.clearForceRefreshState) {
-          setAccountsSyncing(false)
-        }
-        return
+        fallbackServiceAccountId: opts?.fallbackServiceAccountId,
+        query: { ...accountsListBaseQuery },
       }
-      const authForRequest = resolved.authForRequest
+      accountsPollBaseParamsRef.current = baseParams
 
-      const params = new URLSearchParams({ filterByUserMcc: 'true' })
-      if (forceRefresh) {
-        params.set('refresh', 'true')
-        params.set('async', 'true')
-      }
-      appendAccountsAuthToSearchParams(params, authForRequest)
-      const url = `/api/google-ads/credentials/accounts?${params.toString()}`
-      const response = await fetch(url, {
-        credentials: 'include',
-        cache: 'no-store',
-      })
-
-      if (!response.ok) {
-        const errorData = await safeReadJson(response)
-        throwOnAccountsFetchError(response, errorData)
-      }
-
-      const data = await response.json()
-
-      if (data.success && data.data) {
-        setAuthConfigWarning(formatNullableErrorMessage(data.data.authConfigWarning))
-        setGoogleAdsDualStack(Boolean(data.data.dualStack))
-        setAccountsSyncError(formatNullableErrorMessage(data.data.refreshError))
-        setAccountsSyncing(Boolean(data.data.refreshInProgress))
-
-        const allAccounts = data.data.accounts || []
-        setAccounts(enrichAccountsWithMccNames(allAccounts))
-        setIsCached(data.data.cached || false)
-
-        if (allAccounts.length > 0 && allAccounts[0].lastSyncAt) {
-          setLastSyncAt(allAccounts[0].lastSyncAt)
-        }
-
-        if (forceRefresh || isPoll) {
-          if (data.data.refreshInProgress) {
-            scheduleAccountsPoll(authForRequest, opts?.fallbackServiceAccountId)
-          } else {
-            setAccountsSyncing(false)
-          }
-        }
-      }
-    } catch (err: any) {
+      const result = await fetchAccountsFromApi(baseParams)
+      applyAccountsFetchResult(result, { forceRefresh, isPoll })
+    } catch (err: unknown) {
       console.error('获取账户列表失败:', err)
       setError(formatErrorMessage(err) || '获取账户列表失败')
-      const warning =
-        err instanceof Error
-          ? (err as Error & { authConfigWarning?: string | null }).authConfigWarning
-          : null
-      if (warning) {
-        setAuthConfigWarning(warning)
-        setGoogleAdsDualStack(true)
-      }
       setAccountsSyncing(false)
       setAccountsSyncError(null)
     } finally {
@@ -297,6 +247,26 @@ export default function GoogleAdsPage() {
     isPoll = false,
     listOpts?: { skipCredentialsRefresh?: boolean }
   ) => fetchAccountsList(forceRefresh, isPoll, listOpts)
+
+  // 按凭证状态（auth-context）二选一拉取账号列表；双栈时仅展示警告，不隐式切换认证方式
+  const fetchServiceAccounts = async () => {
+    try {
+      await runInitialGoogleAdsAccountsLoad({
+        refreshCredentialsStatus,
+        onAuthConfigWarning: (warning) => {
+          setAuthConfigWarning(warning)
+          setGoogleAdsDualStack(true)
+        },
+        fetchOAuthAccounts: (opts) => fetchAccounts(false, false, opts),
+        fetchServiceAccountAccounts: (serviceAccountId, opts) => {
+          setCurrentServiceAccountId(serviceAccountId)
+          return fetchAccountsWithServiceAccount(serviceAccountId, false, false, opts)
+        },
+      })
+    } catch (err: unknown) {
+      console.error('初始加载 Google Ads 账号失败:', err)
+    }
+  }
 
   accountFetchersRef.current = {
     fetchAccounts,
@@ -365,22 +335,11 @@ export default function GoogleAdsPage() {
     setAccountsSyncError(null)
 
     try {
-      const auth = await prepareAuthForAccountsFetch({ forceRefresh: true, isPoll: false })
-      let fallbackServiceAccountId = currentServiceAccountId || undefined
-
-      if (auth.authType === 'service_account') {
-        const serviceAccountId = auth.serviceAccountId || fallbackServiceAccountId
-        if (serviceAccountId) {
-          setCurrentServiceAccountId(serviceAccountId)
-          fallbackServiceAccountId = serviceAccountId
-        }
-      }
-
       await fetchAccountsList(true, false, {
-        fallbackServiceAccountId,
+        fallbackServiceAccountId: currentServiceAccountId ?? undefined,
         skipCredentialsRefresh: true,
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('刷新账户列表失败:', err)
       setError(formatErrorMessage(err) || '刷新账户列表失败')
       setAccountsSyncing(false)

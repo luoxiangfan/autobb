@@ -45,14 +45,10 @@ import {
 } from 'lucide-react'
 import { showError, showSuccess } from '@/lib/toast-utils'
 import {
-  appendAccountsAuthToSearchParams,
-  formatNullableErrorMessage,
-  resolveAccountsFetchBlockedUiEffects,
-  resolveAccountsRequestAuth,
-  safeReadJson,
-  throwAccountsListFetchError,
-} from '@/lib/google-ads-credentials-errors'
-import { useGoogleAdsAccountsAuth } from '@/hooks/useGoogleAdsAccountsAuth'
+  useGoogleAdsAccountsList,
+  type GoogleAdsAccountsFetchParams,
+  type GoogleAdsAccountsFetchResult,
+} from '@/hooks/useGoogleAdsAccountsList'
 import Link from 'next/link'
 
 interface Props {
@@ -148,7 +144,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   )
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const refreshPollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({})
   const [hasCredentials, setHasCredentials] = useState(false)
   const [isCached, setIsCached] = useState(false)
   const [cacheStale, setCacheStale] = useState(false)
@@ -161,7 +157,11 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [needsReauth, setNeedsReauth] = useState(false)
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
-  const { prepareAuthForAccountsFetch } = useGoogleAdsAccountsAuth({
+  const {
+    fetchAccounts: fetchAccountsFromApi,
+    scheduleAccountsPoll,
+    clearAccountsPoll,
+  } = useGoogleAdsAccountsList({
     onCredentialsUpdated: (parsed) => {
       setHasCredentials(parsed.hasCredentials)
       setAuthConfigWarning(parsed.authConfigWarning)
@@ -169,20 +169,127 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     },
   })
 
-  useEffect(() => {
-    setSelectedIds(selectedAccounts.map((account) => account.customerId))
-  }, [selectedAccounts])
-
-  const fetchAccountsRef = useRef<(forceRefresh?: boolean, isPoll?: boolean) => Promise<void>>(
-    async () => {}
+  const buildAccountsFetchParams = useCallback(
+    (forceRefresh: boolean, isPoll: boolean): GoogleAdsAccountsFetchParams => ({
+      forceRefresh,
+      isPoll,
+      query: {
+        offerId: offer.id.toString(),
+        filterByUserMcc: 'true',
+        ...(forceRefresh ? {} : { refresh: 'false' }),
+      },
+    }),
+    [offer.id]
   )
 
-  const scheduleRefreshPoll = useCallback(() => {
-    if (refreshPollTimerRef.current) clearTimeout(refreshPollTimerRef.current)
-    refreshPollTimerRef.current = setTimeout(() => {
-      void fetchAccountsRef.current(false, true)
-    }, 2000)
+  const applyAccountsToState = useCallback((allAccounts: GoogleAdsAccount[]) => {
+    const isClosedOrCanceled = (status: string | null | undefined) => {
+      const normalizedStatus = String(status || '').toUpperCase()
+      return (
+        normalizedStatus === 'CANCELED' ||
+        normalizedStatus === 'CANCELLED' ||
+        normalizedStatus === 'CLOSED'
+      )
+    }
+    const filteredManagerCount = allAccounts.filter((account) => account.manager === true).length
+    const filteredClosedCount = allAccounts.filter((account) =>
+      isClosedOrCanceled(account.status)
+    ).length
+
+    const availableAccounts = allAccounts.filter((account) => {
+      if (account.manager === true) return false
+      if (isClosedOrCanceled(account.status)) return false
+      return true
+    })
+
+    setAccountStats({
+      total: allAccounts.length,
+      available: availableAccounts.length,
+      filteredManager: filteredManagerCount,
+      filteredClosed: filteredClosedCount,
+    })
+    setAccounts(availableAccounts)
   }, [])
+
+  const handleAccountsFetchResult = useCallback(
+    (result: GoogleAdsAccountsFetchResult, opts: { forceRefresh: boolean; isPoll: boolean }) => {
+      if (result.ok === false && result.kind === 'blocked') {
+        const { effects } = result
+        if (effects.authConfigWarning) {
+          setAuthConfigWarning(effects.authConfigWarning)
+          setGoogleAdsDualStack(true)
+        }
+        if (effects.errorMessage) {
+          showError(effects.errorMessage)
+        }
+        if (effects.clearForceRefreshState) {
+          setRefreshing(false)
+        }
+        return
+      }
+
+      if (result.ok === false && result.kind === 'error') {
+        const err = result.error
+        if (err.needsReauth) {
+          setNeedsReauth(true)
+        }
+        if (err.authConfigWarning) {
+          setAuthConfigWarning(err.authConfigWarning)
+          setGoogleAdsDualStack(true)
+        }
+        showError('加载失败', err.message || '获取账号列表失败')
+        setRefreshing(false)
+        setRefreshInProgress(false)
+        setRefreshError(null)
+        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+        return
+      }
+
+      if (!result.ok) {
+        return
+      }
+
+      const { data } = result
+      setAuthConfigWarning(data.authConfigWarning)
+      setGoogleAdsDualStack(data.dualStack)
+      setNeedsReauth(false)
+      setIsCached(Boolean(data.cached))
+      setCacheStale(Boolean(data.cacheStale))
+      setRefreshFailed(Boolean(data.refreshFailed))
+      setLastSyncAt(data.lastSyncAt ?? null)
+      setRefreshInProgress(data.refreshInProgress)
+      setRefreshError(data.refreshError)
+
+      const allAccounts = data.accounts as GoogleAdsAccount[]
+      if (allAccounts.length > 0) {
+        applyAccountsToState(allAccounts)
+      } else {
+        setAccounts([])
+        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+      }
+
+      if (opts.forceRefresh) {
+        if (data.refreshInProgress) {
+          showSuccess('已开始刷新', '后台同步中，列表将自动更新')
+          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
+            handleAccountsFetchResult(pollResult, { forceRefresh: false, isPoll: true })
+          })
+        } else {
+          showSuccess('已刷新', `已同步 ${allAccounts.length} 个账号`)
+          setRefreshing(false)
+        }
+      } else if (opts.isPoll) {
+        if (data.refreshInProgress) {
+          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
+            handleAccountsFetchResult(pollResult, { forceRefresh: false, isPoll: true })
+          })
+        } else {
+          setRefreshing(false)
+        }
+      }
+    },
+    [applyAccountsToState, scheduleAccountsPoll]
+  )
 
   const fetchAccounts = useCallback(
     async (forceRefresh: boolean = false, isPoll: boolean = false) => {
@@ -199,142 +306,13 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
           setNeedsReauth(false)
         }
 
-        const auth = await prepareAuthForAccountsFetch({ forceRefresh, isPoll })
-
-        const resolved = resolveAccountsRequestAuth(auth)
-        if (!resolved.ok) {
-          const effects = resolveAccountsFetchBlockedUiEffects(resolved, { forceRefresh })
-          if (effects.authConfigWarning) {
-            setAuthConfigWarning(effects.authConfigWarning)
-            setGoogleAdsDualStack(true)
-          }
-          if (effects.errorMessage) {
-            showError(effects.errorMessage)
-          }
-          if (effects.clearForceRefreshState) {
-            setRefreshing(false)
-          }
-          return
-        }
-        const authForRequest = resolved.authForRequest
-
-        const params = new URLSearchParams({
-          refresh: forceRefresh ? 'true' : 'false',
-          offerId: offer.id.toString(),
-        })
-        if (forceRefresh) {
-          params.append('async', 'true')
-        }
-        appendAccountsAuthToSearchParams(params, authForRequest)
-
-        // 🔓 KISS优化(2025-12-12): 传入offerId用于计算账号优先级
-        // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
-        const response = await fetch(
-          `/api/google-ads/credentials/accounts?${params}&filterByUserMcc=true`,
-          {
-            credentials: 'include',
-          }
-        )
-
-        if (!response.ok) {
-          const errorData = await safeReadJson(response)
-          try {
-            throwAccountsListFetchError(response, errorData, {
-              fallbackMessage: '获取账号列表失败',
-            })
-          } catch (error) {
-            if (error instanceof Error) {
-              const enriched = error as Error & {
-                needsReauth?: boolean
-                authConfigWarning?: string | null
-              }
-              if (enriched.needsReauth) {
-                setNeedsReauth(true)
-              }
-              if (enriched.authConfigWarning) {
-                setAuthConfigWarning(enriched.authConfigWarning)
-                setGoogleAdsDualStack(true)
-              }
-            }
-            throw error
-          }
-        }
-
-        const data = await response.json()
-        setAuthConfigWarning(formatNullableErrorMessage(data.data?.authConfigWarning))
-        setGoogleAdsDualStack(Boolean(data.data?.dualStack))
-        setNeedsReauth(false)
-
-        if (data.success && data.data?.accounts) {
-          setIsCached(Boolean(data.data.cached))
-          setCacheStale(Boolean(data.data.cacheStale))
-          setRefreshFailed(Boolean(data.data.refreshFailed))
-          setLastSyncAt(data.data.lastSyncAt || null)
-          setRefreshInProgress(Boolean(data.data.refreshInProgress))
-          setRefreshError(data.data.refreshError || null)
-
-          const allAccounts = data.data.accounts as GoogleAdsAccount[]
-          const isClosedOrCanceled = (status: string | null | undefined) => {
-            const normalizedStatus = String(status || '').toUpperCase()
-            return (
-              normalizedStatus === 'CANCELED' ||
-              normalizedStatus === 'CANCELLED' ||
-              normalizedStatus === 'CLOSED'
-            )
-          }
-          const filteredManagerCount = allAccounts.filter(
-            (account) => account.manager === true
-          ).length
-          const filteredClosedCount = allAccounts.filter((account) =>
-            isClosedOrCanceled(account.status)
-          ).length
-
-          // 🔓 KISS优化(2025-12-12): 移除独占约束，只筛选基本条件
-          // 筛选可用账号：
-          // 1. 不能是 MCC 账号
-          // 2. 过滤明显不可用（取消/关闭）的账号
-          const availableAccounts = allAccounts.filter((account) => {
-            // 条件1：不能是 MCC 账号
-            if (account.manager === true) return false
-
-            // 条件2：明确不可用的账号不展示（一般不可恢复/不可操作）
-            if (isClosedOrCanceled(account.status)) return false
-
-            return true
-          })
-
-          setAccountStats({
-            total: allAccounts.length,
-            available: availableAccounts.length,
-            filteredManager: filteredManagerCount,
-            filteredClosed: filteredClosedCount,
-          })
-
-          // API已按优先级排序，直接使用
-          setAccounts(availableAccounts)
-
-          if (forceRefresh) {
-            if (data.data.refreshInProgress) {
-              showSuccess('已开始刷新', '后台同步中，列表将自动更新')
-              scheduleRefreshPoll()
-            } else {
-              showSuccess('已刷新', `已同步 ${allAccounts.length} 个账号`)
-              setRefreshing(false)
-            }
-          } else if (isPoll) {
-            if (data.data.refreshInProgress) {
-              scheduleRefreshPoll()
-            } else {
-              setRefreshing(false)
-            }
-          }
-        } else {
-          setAccounts([])
-          setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
-        }
-      } catch (error: any) {
+        const params = buildAccountsFetchParams(forceRefresh, isPoll)
+        accountsPollBaseParamsRef.current = params
+        const result = await fetchAccountsFromApi(params)
+        handleAccountsFetchResult(result, { forceRefresh, isPoll })
+      } catch (error: unknown) {
         console.error('获取账号列表失败:', error)
-        showError('加载失败', error.message || '获取账号列表失败')
+        showError('加载失败', error instanceof Error ? error.message : '获取账号列表失败')
         setRefreshing(false)
         setRefreshInProgress(false)
         setRefreshError(null)
@@ -345,21 +323,20 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
         }
       }
     },
-    [offer.id, prepareAuthForAccountsFetch, scheduleRefreshPoll]
+    [buildAccountsFetchParams, fetchAccountsFromApi, handleAccountsFetchResult]
   )
 
-  fetchAccountsRef.current = fetchAccounts
+  useEffect(() => {
+    setSelectedIds(selectedAccounts.map((account) => account.customerId))
+  }, [selectedAccounts])
 
   useEffect(() => {
     void fetchAccounts()
 
     return () => {
-      if (refreshPollTimerRef.current) {
-        clearTimeout(refreshPollTimerRef.current)
-        refreshPollTimerRef.current = null
-      }
+      clearAccountsPoll()
     }
-  }, [fetchAccounts])
+  }, [fetchAccounts, clearAccountsPoll])
 
   const handleConnectNewAccount = () => {
     // 显示操作指南弹窗，引导用户添加新账号
