@@ -54,7 +54,7 @@ import {
   type GoogleAdsAccountsFetchParams,
   type GoogleAdsAccountsFetchResult,
 } from '@/hooks/useGoogleAdsAccountsList'
-import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
+import { GoogleAdsServiceAccountPermissionAlert } from '@/components/GoogleAdsServiceAccountPermissionAlert'
 import Link from 'next/link'
 
 interface Props {
@@ -166,11 +166,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   )
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
-  const {
-    fetchAccounts: fetchAccountsFromApi,
-    scheduleAccountsPoll,
-    clearAccountsPoll,
-  } = useGoogleAdsAccountsList({
+  const { fetchAccounts: fetchAccountsFromApi, scheduleAccountsPoll } = useGoogleAdsAccountsList({
     onCredentialsUpdated: (parsed) => {
       setHasCredentials(parsed.hasCredentials)
       setAuthConfigWarning(parsed.authConfigWarning)
@@ -318,11 +314,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
   useEffect(() => {
     void fetchAccounts()
-
-    return () => {
-      clearAccountsPoll()
-    }
-  }, [fetchAccounts, clearAccountsPoll])
+  }, [fetchAccounts])
 
   const handleConnectNewAccount = () => {
     // 显示操作指南弹窗，引导用户添加新账号
@@ -502,15 +494,10 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
         </Alert>
       )}
 
-      {permissionError?.solution && (
-        <ServiceAccountPermissionError
-          serviceAccountEmail={permissionError.serviceAccountEmail ?? ''}
-          mccCustomerId={permissionError.mccCustomerId ?? ''}
-          steps={permissionError.solution.steps}
-          docsUrl={permissionError.solution.docsUrl}
-          onDismiss={() => setPermissionError(null)}
-        />
-      )}
+      <GoogleAdsServiceAccountPermissionAlert
+        details={permissionError}
+        onDismiss={() => setPermissionError(null)}
+      />
 
       {/* No Credentials Warning */}
       {!hasCredentials && accounts.length === 0 && (

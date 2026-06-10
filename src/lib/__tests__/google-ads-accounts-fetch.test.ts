@@ -43,6 +43,16 @@ describe('parseServiceAccountPermissionDetails', () => {
   it('returns null for invalid payload', () => {
     expect(parseServiceAccountPermissionDetails(null)).toBeNull()
     expect(parseServiceAccountPermissionDetails('x')).toBeNull()
+    expect(parseServiceAccountPermissionDetails({})).toBeNull()
+  })
+
+  it('fills default steps when email is present without solution', () => {
+    const parsed = parseServiceAccountPermissionDetails({
+      serviceAccountEmail: 'sa@test.iam.gserviceaccount.com',
+      mccCustomerId: '1234567890',
+    })
+    expect(parsed?.solution?.steps.length).toBeGreaterThan(0)
+    expect(parsed?.solution?.steps.some((step) => step.includes('1234567890'))).toBe(true)
   })
 })
 
@@ -86,6 +96,19 @@ describe('resolveGoogleAdsAccountsFetchUiEffects', () => {
     expect(effects.shouldSchedulePoll).toBe(true)
     expect(effects.clearForceRefreshState).toBeUndefined()
   })
+
+  it('clears refresh state for blocked poll failures', () => {
+    const effects = resolveGoogleAdsAccountsFetchUiEffects(
+      {
+        ok: false,
+        kind: 'blocked',
+        effects: { errorMessage: '未配置' },
+      },
+      { isPoll: true }
+    )
+    expect(effects.clearForceRefreshState).toBe(true)
+    expect(effects.pollFailureMessage).toBe('未配置')
+  })
 })
 
 describe('getAccountsPollFailureMessage', () => {
@@ -120,5 +143,43 @@ describe('applyGoogleAdsAccountsFetchUiEffects', () => {
     expect(onPollFailure).toHaveBeenCalled()
     expect(onClearForceRefresh).toHaveBeenCalled()
     expect(onPermissionDetails).toHaveBeenCalled()
+  })
+
+  it('clears stale permission details on blocked failures', () => {
+    const onPermissionDetails = vi.fn()
+
+    applyGoogleAdsAccountsFetchUiEffects(
+      resolveGoogleAdsAccountsFetchUiEffects(
+        {
+          ok: false,
+          kind: 'blocked',
+          effects: { errorMessage: '双栈配置冲突' },
+        },
+        { forceRefresh: true }
+      ),
+      { onPermissionDetails }
+    )
+
+    expect(onPermissionDetails).toHaveBeenCalledWith(null)
+  })
+
+  it('clears stale permission details on error failures', () => {
+    const onPermissionDetails = vi.fn()
+    const onClearForceRefresh = vi.fn()
+
+    applyGoogleAdsAccountsFetchUiEffects(
+      resolveGoogleAdsAccountsFetchUiEffects(
+        {
+          ok: false,
+          kind: 'error',
+          error: new Error('network'),
+        },
+        { forceRefresh: true }
+      ),
+      { onPermissionDetails, onClearForceRefresh }
+    )
+
+    expect(onPermissionDetails).toHaveBeenCalledWith(null)
+    expect(onClearForceRefresh).toHaveBeenCalled()
   })
 })

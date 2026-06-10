@@ -17,7 +17,7 @@ import {
   type GoogleAdsAccountsFetchParams,
   type GoogleAdsAccountsFetchResult,
 } from '@/hooks/useGoogleAdsAccountsList'
-import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
+import { GoogleAdsServiceAccountPermissionAlert } from '@/components/GoogleAdsServiceAccountPermissionAlert'
 import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'
 
 interface GoogleAdsAccount {
@@ -80,7 +80,6 @@ export default function GoogleAdsPage() {
   const {
     fetchAccounts: fetchAccountsFromApi,
     scheduleAccountsPoll,
-    clearAccountsPoll,
     refreshCredentialsStatus,
     syncFromCredentialsResponse,
   } = useGoogleAdsAccountsList({
@@ -123,12 +122,6 @@ export default function GoogleAdsPage() {
   const [currentServiceAccountId, setCurrentServiceAccountId] = useState<string | null>(null)
   const [searchKeyword, setSearchKeyword] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-
-  useEffect(() => {
-    return () => {
-      clearAccountsPoll()
-    }
-  }, [clearAccountsPoll])
 
   const enrichAccountsWithMccNames = (allAccounts: GoogleAdsAccount[]): GoogleAdsAccount[] => {
     const mccMap = new Map<string, string>()
@@ -661,15 +654,11 @@ export default function GoogleAdsPage() {
             </div>
           )}
 
-          {permissionError?.solution && (
-            <ServiceAccountPermissionError
-              serviceAccountEmail={permissionError.serviceAccountEmail ?? ''}
-              mccCustomerId={permissionError.mccCustomerId ?? ''}
-              steps={permissionError.solution.steps}
-              docsUrl={permissionError.solution.docsUrl}
-              onDismiss={() => setPermissionError(null)}
-            />
-          )}
+          <GoogleAdsServiceAccountPermissionAlert
+            details={permissionError}
+            className="mb-4"
+            onDismiss={() => setPermissionError(null)}
+          />
 
           {authConfigWarning && (
             <div className="mb-4 bg-amber-50 border border-amber-400 text-amber-900 px-4 py-3 rounded">

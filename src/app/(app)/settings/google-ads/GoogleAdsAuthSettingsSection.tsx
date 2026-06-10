@@ -15,7 +15,8 @@ import {
   ChevronUp,
   Trash2,
 } from 'lucide-react'
-import { ServiceAccountPermissionError } from '@/components/ServiceAccountPermissionError'
+import { GoogleAdsServiceAccountPermissionAlert } from '@/components/GoogleAdsServiceAccountPermissionAlert'
+import { hasServiceAccountPermissionDetails } from '@/lib/google-ads-accounts-fetch'
 import { GOOGLE_ADS_SETTING_METADATA } from './config'
 import type { GoogleAdsAuthSettings } from './useGoogleAdsAuthSettings'
 
@@ -608,25 +609,22 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
 
           {showGoogleAdsAccounts && (
             <div className="space-y-3">
-              {permissionError && permissionError.solution && (
-                <ServiceAccountPermissionError
-                  serviceAccountEmail={permissionError.serviceAccountEmail ?? ''}
-                  mccCustomerId={permissionError.mccCustomerId ?? ''}
-                  steps={permissionError.solution.steps}
-                  docsUrl={permissionError.solution.docsUrl}
-                  onDismiss={() => {
-                    setPermissionError(null)
-                    setShowGoogleAdsAccounts(false)
-                  }}
-                />
-              )}
+              <GoogleAdsServiceAccountPermissionAlert
+                details={permissionError}
+                onDismiss={() => {
+                  setPermissionError(null)
+                  setShowGoogleAdsAccounts(false)
+                }}
+              />
 
               {loadingGoogleAdsAccounts ? (
                 <div className="text-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
                   <p className="mt-2 text-sm text-gray-600">加载账户列表...</p>
                 </div>
-              ) : permissionError ? null : googleAdsAccounts.length === 0 ? (
+              ) : hasServiceAccountPermissionDetails(
+                  permissionError
+                ) ? null : googleAdsAccounts.length === 0 ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg">
                   <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-2" />
                   <p className="text-gray-600">未找到可访问的账户</p>

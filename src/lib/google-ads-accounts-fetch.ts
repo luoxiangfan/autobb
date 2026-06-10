@@ -46,6 +46,39 @@ export type ServiceAccountPermissionDetails = {
   solution?: { steps: string[]; docsUrl?: string }
 }
 
+export const DEFAULT_SERVICE_ACCOUNT_PERMISSION_STEPS = [
+  '登录 Google Ads UI: https://ads.google.com',
+  '切换到 MCC 账户',
+  '进入「管理」→「访问权限和安全」',
+  '添加服务账号并授予「标准访问」或「管理员」权限',
+  '保存后等待几分钟，然后刷新此页面',
+] as const
+
+export function buildDefaultServiceAccountPermissionSteps(
+  details: Pick<ServiceAccountPermissionDetails, 'serviceAccountEmail' | 'mccCustomerId'>
+): string[] {
+  return DEFAULT_SERVICE_ACCOUNT_PERMISSION_STEPS.map((step) => {
+    if (step.includes('MCC 账户') && details.mccCustomerId) {
+      return `切换到 MCC 账户: ${details.mccCustomerId}`
+    }
+    if (step.includes('添加服务账号') && details.serviceAccountEmail) {
+      return `添加服务账号: ${details.serviceAccountEmail}`
+    }
+    return step
+  })
+}
+
+export function hasServiceAccountPermissionDetails(
+  details: ServiceAccountPermissionDetails | null | undefined
+): details is ServiceAccountPermissionDetails {
+  if (!details) return false
+  return Boolean(
+    details.serviceAccountEmail ||
+    details.mccCustomerId ||
+    (details.solution?.steps?.length ?? 0) > 0
+  )
+}
+
 export type GoogleAdsAccountsFetchUiEffects = {
   kind: 'ok' | 'blocked' | 'permission_denied' | 'error'
   authConfigWarning?: string | null
@@ -101,11 +134,26 @@ export function parseServiceAccountPermissionDetails(
         }
       : undefined
 
+  const serviceAccountEmail =
+    typeof record.serviceAccountEmail === 'string' ? record.serviceAccountEmail : undefined
+  const mccCustomerId = typeof record.mccCustomerId === 'string' ? record.mccCustomerId : undefined
+
+  if (!serviceAccountEmail && !mccCustomerId && !(solution?.steps.length ?? 0)) {
+    return null
+  }
+
+  const normalizedSolution =
+    solution && solution.steps.length > 0
+      ? solution
+      : {
+          steps: buildDefaultServiceAccountPermissionSteps({ serviceAccountEmail, mccCustomerId }),
+          docsUrl: solution?.docsUrl ?? '/docs/service-account-setup',
+        }
+
   return {
-    serviceAccountEmail:
-      typeof record.serviceAccountEmail === 'string' ? record.serviceAccountEmail : undefined,
-    mccCustomerId: typeof record.mccCustomerId === 'string' ? record.mccCustomerId : undefined,
-    ...(solution && solution.steps.length > 0 ? { solution } : {}),
+    serviceAccountEmail,
+    mccCustomerId,
+    solution: normalizedSolution,
   }
 }
 
@@ -137,7 +185,7 @@ export function resolveGoogleAdsAccountsFetchUiEffects(
       authConfigWarning: effects.authConfigWarning ?? null,
       dualStack: effects.authConfigWarning ? true : undefined,
       errorMessage: effects.errorMessage,
-      clearForceRefreshState: effects.clearForceRefreshState,
+      clearForceRefreshState: effects.clearForceRefreshState || opts?.isPoll,
       pollFailureMessage: opts?.isPoll ? getAccountsPollFailureMessage(result) : undefined,
     }
   }
@@ -208,6 +256,8 @@ export function applyGoogleAdsAccountsFetchUiEffects(
     handlers.onPollFailure?.(effects.pollFailureMessage)
     if (effects.kind === 'permission_denied') {
       handlers.onPermissionDetails?.(effects.permissionDetails ?? null)
+    } else {
+      handlers.onPermissionDetails?.(null)
     }
     if (effects.clearForceRefreshState) {
       handlers.onClearForceRefresh?.()
@@ -216,6 +266,7 @@ export function applyGoogleAdsAccountsFetchUiEffects(
   }
 
   if (effects.kind === 'blocked') {
+    handlers.onPermissionDetails?.(null)
     if (effects.authConfigWarning !== undefined) {
       handlers.onAuthConfigWarning?.(effects.authConfigWarning)
       if (effects.authConfigWarning) {
@@ -240,6 +291,7 @@ export function applyGoogleAdsAccountsFetchUiEffects(
   }
 
   if (effects.kind === 'error') {
+    handlers.onPermissionDetails?.(null)
     if (effects.needsReauth) {
       handlers.onNeedsReauth?.(true)
     }
@@ -250,7 +302,9 @@ export function applyGoogleAdsAccountsFetchUiEffects(
     if (effects.errorMessage) {
       handlers.onErrorMessage?.(effects.errorMessage)
     }
-    handlers.onClearForceRefresh?.()
+    if (effects.clearForceRefreshState) {
+      handlers.onClearForceRefresh?.()
+    }
     return 'failure'
   }
 
