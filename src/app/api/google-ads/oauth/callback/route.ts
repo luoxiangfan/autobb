@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { looksLikeOAuthClientSecret } from '@/lib/google-ads-developer-token-heal'
 import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads-settings-store'
 import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
@@ -102,7 +103,6 @@ export async function GET(request: NextRequest) {
       return redirectToGoogleAdsSettings({ error: 'missing_google_ads_config' })
     }
 
-    const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
     if (
       developerToken.trim() === clientSecret.trim() ||
       looksLikeOAuthClientSecret(developerToken)
@@ -129,8 +129,6 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeCodeForTokens(code, clientId, clientSecret, redirectUri)
 
     console.log(`✅ OAuth成功获取tokens`)
-    console.log(`   Access Token: ${tokens.access_token.substring(0, 10)}...`)
-    console.log(`   Refresh Token: ${tokens.refresh_token.substring(0, 10)}...`)
 
     // 计算 access token 过期时间
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()

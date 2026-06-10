@@ -39,9 +39,13 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
   GOOGLE_ADS_DUAL_STACK_WARNING: DUAL_STACK_WARNING,
 }))
 
-vi.mock('@/lib/python-ads-client', () => ({
-  listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,
-}))
+vi.mock('@/lib/python-ads-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/python-ads-client')>()
+  return {
+    ...actual,
+    listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,
+  }
+})
 
 vi.mock('@/lib/google-ads-api', () => ({
   getGoogleAdsClient: apiFns.getGoogleAdsClient,
@@ -206,6 +210,30 @@ describe('verifyGoogleAdsCredentials', () => {
       error: 'SA auth failed',
       authType: 'service_account',
     })
+  })
+
+  it('returns actionable error when Python Ads Service is unavailable', async () => {
+    authContextFns.resolveGoogleAdsApiAuthForAccount.mockResolvedValue({
+      ok: true,
+      ctx: saCtx,
+      apiAuth: {
+        authType: 'service_account',
+        refreshToken: '',
+        serviceAccountId: 'sa-1',
+      },
+    })
+    const connectionError = Object.assign(new Error('connect ECONNREFUSED'), {
+      code: 'ECONNREFUSED',
+      isAxiosError: true,
+    })
+    pythonFns.listAccessibleCustomersPython.mockRejectedValue(connectionError)
+
+    const result = await verifyGoogleAdsCredentials(2)
+
+    expect(result.valid).toBe(false)
+    expect(result.authType).toBe('service_account')
+    expect(result.error).toContain('Python Ads 服务不可用')
+    expect(result.error).toContain('PYTHON_ADS_SERVICE_URL')
   })
 
   it('verifies OAuth via listAccessibleCustomers and updates owner credentials', async () => {

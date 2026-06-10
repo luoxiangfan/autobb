@@ -3,6 +3,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { encrypt } from '@/lib/crypto'
 import { z } from 'zod'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import {
+  GOOGLE_ADS_OAUTH_CONFIG_KEYS,
+  isGoogleAdsCredentialBackedSettingKey,
+  isGoogleAdsSettingsAuthConflictError,
+  isGoogleAdsSettingsValidationError,
+  upsertGoogleAdsOAuthConfigFromSettings,
+  type GoogleAdsOAuthConfigKey,
+} from '@/lib/google-ads-settings-store'
 
 // 配置导入验证Schema
 const importSettingsSchema = z.object({
@@ -21,13 +30,21 @@ const importSettingsSchema = z.object({
   ),
 })
 
+type ImportSettingEntry = {
+  category: string
+  configKey: string
+  fullKey: string
+  value: string
+  dataType?: string
+  isSensitive?: boolean
+}
+
 /**
  * POST /api/import/settings
  * 导入用户配置数据
  */
 export async function POST(request: NextRequest) {
   try {
-    // 从中间件注入的请求头中获取用户ID
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
@@ -35,7 +52,6 @@ export async function POST(request: NextRequest) {
     const userIdNum = authResult.user.userId
     const body = await request.json()
 
-    // 验证输入格式
     const validationResult = importSettingsSchema.safeParse(body)
     if (!validationResult.success) {
       return NextResponse.json(
@@ -50,96 +66,129 @@ export async function POST(request: NextRequest) {
     const { settings } = validationResult.data
     const db = await getDatabase()
 
-    // 不允许导入的敏感配置（安全考虑）
     const blockedKeys = ['google_ads:refresh_token', 'google_ads:access_token']
 
     let imported = 0
     let skipped = 0
     const errors: string[] = []
+    const googleAdsOAuthFields: Partial<Record<GoogleAdsOAuthConfigKey, string>> = {}
+    const genericEntries: ImportSettingEntry[] = []
 
-    // 遍历所有配置并导入
     for (const [category, categorySettings] of Object.entries(settings)) {
       for (const [configKey, config] of Object.entries(categorySettings)) {
         const fullKey = `${category}:${configKey}`
 
-        // 检查是否为被阻止的配置
         if (blockedKeys.includes(fullKey)) {
           skipped++
           errors.push(`跳过受保护的配置: ${fullKey}`)
           continue
         }
 
-        // 跳过脱敏的值（包含 **** 的值）
         if (config.value && config.value.includes('****')) {
           skipped++
           continue
         }
 
-        // 跳过空值
         if (config.value === null || config.value === '') {
           skipped++
           continue
         }
 
-        try {
-          // 检查配置是否已存在
-          const existing = await db.queryOne<any>(
-            `
+        if (category === 'google_ads' && isGoogleAdsCredentialBackedSettingKey(configKey)) {
+          googleAdsOAuthFields[configKey as GoogleAdsOAuthConfigKey] = config.value
+          continue
+        }
+
+        genericEntries.push({
+          category,
+          configKey,
+          fullKey,
+          value: config.value,
+          dataType: config.dataType,
+          isSensitive: config.isSensitive,
+        })
+      }
+    }
+
+    const googleAdsFieldCount = GOOGLE_ADS_OAUTH_CONFIG_KEYS.filter((key) =>
+      googleAdsOAuthFields[key]?.trim()
+    ).length
+
+    if (googleAdsFieldCount > 0) {
+      try {
+        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user.role)
+        await upsertGoogleAdsOAuthConfigFromSettings(userIdNum, googleAdsOAuthFields)
+        imported += googleAdsFieldCount
+      } catch (error: unknown) {
+        if (isGoogleAdsSettingsAuthConflictError(error)) {
+          return NextResponse.json({ error: error.message }, { status: 409 })
+        }
+        if (isGoogleAdsSettingsValidationError(error)) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        const message = error instanceof Error ? error.message : '导入 Google Ads OAuth 配置失败'
+        errors.push(message)
+      }
+    }
+
+    for (const entry of genericEntries) {
+      const { category, configKey, fullKey, value, dataType, isSensitive: configSensitive } = entry
+
+      try {
+        const existing = await db.queryOne<{ id: number; is_sensitive: number | boolean }>(
+          `
             SELECT id, is_sensitive FROM system_settings
             WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
             ORDER BY user_id DESC LIMIT 1
           `,
-            [category, configKey, userIdNum]
-          )
+          [category, configKey, userIdNum]
+        )
 
-          const isSensitive = config.isSensitive || existing?.is_sensitive === 1
+        const isSensitive =
+          configSensitive || existing?.is_sensitive === 1 || existing?.is_sensitive === true
 
-          if (existing) {
-            // 更新现有配置
-            if (isSensitive) {
-              await db.exec(
-                `
+        if (existing) {
+          if (isSensitive) {
+            await db.exec(
+              `
                 UPDATE system_settings
                 SET encrypted_value = ?, value = NULL, updated_at = datetime('now')
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
               `,
-                [encrypt(config.value), category, configKey, userIdNum]
-              )
-            } else {
-              await db.exec(
-                `
+              [encrypt(value), category, configKey, userIdNum]
+            )
+          } else {
+            await db.exec(
+              `
                 UPDATE system_settings
                 SET value = ?, updated_at = datetime('now')
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
               `,
-                [config.value, category, configKey, userIdNum]
-              )
-            }
-          } else {
-            // 插入新配置（用户级别）
-            if (isSensitive) {
-              await db.exec(
-                `
-                INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-              `,
-                [userIdNum, category, configKey, encrypt(config.value), config.dataType || 'string']
-              )
-            } else {
-              await db.exec(
-                `
-                INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
-              `,
-                [userIdNum, category, configKey, config.value, config.dataType || 'string']
-              )
-            }
+              [value, category, configKey, userIdNum]
+            )
           }
-
-          imported++
-        } catch (err: any) {
-          errors.push(`导入 ${fullKey} 失败: ${err.message}`)
+        } else if (isSensitive) {
+          await db.exec(
+            `
+              INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+            `,
+            [userIdNum, category, configKey, encrypt(value), dataType || 'string']
+          )
+        } else {
+          await db.exec(
+            `
+              INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
+            `,
+            [userIdNum, category, configKey, value, dataType || 'string']
+          )
         }
+
+        imported++
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : '未知错误'
+        errors.push(`导入 ${fullKey} 失败: ${message}`)
       }
     }
 
@@ -153,8 +202,9 @@ export async function POST(request: NextRequest) {
       },
       errors: errors.length > 0 ? errors : undefined,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('导入配置失败:', error)
-    return NextResponse.json({ error: error.message || '导入失败' }, { status: 500 })
+    const message = error instanceof Error ? error.message : '导入失败'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

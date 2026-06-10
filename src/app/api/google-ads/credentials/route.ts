@@ -20,15 +20,22 @@ import {
   oauthRefreshConfiguredFromContext,
   serviceAccountConfiguredFromContext,
 } from '@/lib/google-ads-auth-context'
-import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads-settings-store'
+import {
+  isGoogleAdsSettingsAuthConflictError,
+  isGoogleAdsSettingsValidationError,
+  resolveGoogleAdsCredentialFieldsForReadOnlyApi,
+  upsertGoogleAdsOAuthConfigFromSettings,
+} from '@/lib/google-ads-settings-store'
 
 /**
  * POST /api/google-ads/credentials
- * 保存Google Ads凭证
+ * 保存 Google Ads OAuth 凭证。
+ *
+ * @deprecated 优先使用 PUT /api/settings 保存 OAuth 字段；refresh_token 由 OAuth 回调写入。
+ * 无 refresh_token 时仅 upsert 配置字段；含 refresh_token 时写入完整凭证行。
  */
 export async function POST(request: NextRequest) {
   try {
-    // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 })
@@ -42,7 +49,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
 
-    // 解析请求参数
     const body = await request.json()
     const {
       client_id,
@@ -54,8 +60,52 @@ export async function POST(request: NextRequest) {
       access_token_expires_at,
     } = body
 
-    // 验证必需参数
-    if (!client_id || !client_secret || !refresh_token || !developer_token) {
+    const hasRefreshToken = Boolean(String(refresh_token ?? '').trim())
+
+    if (!hasRefreshToken) {
+      if (!client_id || !client_secret || !developer_token) {
+        return NextResponse.json(
+          {
+            error:
+              '缺少必需参数。无 refresh_token 时需 client_id、client_secret、developer_token；完整授权请使用 PUT /api/settings 与 OAuth 回调。',
+          },
+          { status: 400 }
+        )
+      }
+
+      try {
+        await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
+      } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 409 })
+      }
+
+      try {
+        await upsertGoogleAdsOAuthConfigFromSettings(userId, {
+          client_id,
+          client_secret,
+          developer_token,
+          ...(login_customer_id ? { login_customer_id } : {}),
+        })
+      } catch (error: unknown) {
+        if (isGoogleAdsSettingsAuthConflictError(error)) {
+          return NextResponse.json({ error: error.message }, { status: 409 })
+        }
+        if (isGoogleAdsSettingsValidationError(error)) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        throw error
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Google Ads OAuth 配置字段已保存（请完成 OAuth 授权以获取 refresh_token）',
+        data: {
+          hasCredentials: false,
+        },
+      })
+    }
+
+    if (!client_id || !client_secret || !developer_token) {
       return NextResponse.json({ error: '缺少必需参数' }, { status: 400 })
     }
 
@@ -69,7 +119,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
 
-    // 保存凭证
     const credentials = await saveGoogleAdsCredentials(authResult.user.userId, {
       client_id,
       client_secret,

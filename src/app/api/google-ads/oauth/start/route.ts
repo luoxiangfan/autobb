@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads-oauth'
+import { looksLikeOAuthClientSecret } from '@/lib/google-ads-developer-token-heal'
 import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads-settings-store'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
@@ -35,8 +36,6 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`🔐 [OAuth Start] 用户ID: ${userId}`)
-
-    const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
 
     const oauthConfig = await getGoogleAdsOAuthConfigFields(userId)
     const userLoginCustomerId = oauthConfig.login_customer_id

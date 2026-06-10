@@ -56,11 +56,15 @@ export class GoogleAdsSettingsAuthConflictError extends Error {
   }
 }
 
-export function isGoogleAdsSettingsValidationError(error: unknown): boolean {
+export function isGoogleAdsSettingsValidationError(
+  error: unknown
+): error is GoogleAdsSettingsValidationError {
   return error instanceof GoogleAdsSettingsValidationError
 }
 
-export function isGoogleAdsSettingsAuthConflictError(error: unknown): boolean {
+export function isGoogleAdsSettingsAuthConflictError(
+  error: unknown
+): error is GoogleAdsSettingsAuthConflictError {
   return error instanceof GoogleAdsSettingsAuthConflictError
 }
 

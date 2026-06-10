@@ -311,24 +311,44 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   }
 
   const assignment = await getGoogleAdsAuthAssignment(userId)
-  if (!assignment) {
-    return NextResponse.json({ error: '该用户没有认证分配记录' }, { status: 404 })
-  }
 
   try {
-    if (assignment.assignmentMode === 'own') {
-      if (assignment.authType === 'oauth') {
-        await deleteGoogleAdsCredentials(userId)
-      } else {
-        await deleteAllGoogleAdsServiceAccountsForUser(userId)
+    if (assignment) {
+      if (assignment.assignmentMode === 'own') {
+        if (assignment.authType === 'oauth') {
+          await deleteGoogleAdsCredentials(userId)
+        } else {
+          await deleteAllGoogleAdsServiceAccountsForUser(userId)
+        }
       }
+
+      await deleteGoogleAdsAuthAssignment(userId)
+
+      return NextResponse.json({
+        success: true,
+        message: '已清除用户的 Google Ads 认证分配',
+      })
     }
 
-    await deleteGoogleAdsAuthAssignment(userId)
+    const ctx = await getGoogleAdsAuthContextMetadata(userId)
+    const summary = resolveGoogleAdsCredentialStatusSummary(ctx)
+    const hasOAuth = summary.hasRefreshToken
+    const hasServiceAccount = summary.hasServiceAccount
+
+    if (!hasOAuth && !hasServiceAccount) {
+      return NextResponse.json({ error: '该用户没有 Google Ads 认证配置' }, { status: 404 })
+    }
+
+    if (ctx.dualStack || hasOAuth) {
+      await deleteGoogleAdsCredentials(userId)
+    }
+    if (ctx.dualStack || hasServiceAccount) {
+      await deleteAllGoogleAdsServiceAccountsForUser(userId)
+    }
 
     return NextResponse.json({
       success: true,
-      message: '已清除用户的 Google Ads 认证分配',
+      message: '已清除用户的 Google Ads 认证配置',
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message || '删除失败' }, { status: 500 })

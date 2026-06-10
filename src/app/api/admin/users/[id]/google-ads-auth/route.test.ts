@@ -13,6 +13,19 @@ const contextFns = vi.hoisted(() => ({
 
 const assignmentFns = vi.hoisted(() => ({
   upsertGoogleAdsAuthAssignment: vi.fn(),
+  getGoogleAdsAuthAssignment: vi.fn(),
+  deleteGoogleAdsAuthAssignment: vi.fn(),
+}))
+
+const oauthFns = vi.hoisted(() => ({
+  saveGoogleAdsCredentials: vi.fn(),
+  deleteGoogleAdsCredentials: vi.fn(),
+}))
+
+const serviceAccountFns = vi.hoisted(() => ({
+  deleteAllGoogleAdsServiceAccountsForUser: vi.fn(),
+  parseServiceAccountJson: vi.fn(),
+  replaceGoogleAdsServiceAccountForUser: vi.fn(),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -34,10 +47,28 @@ vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
     ...actual,
     adminHasConfiguredAuth: contextFns.adminHasConfiguredAuth,
     upsertGoogleAdsAuthAssignment: assignmentFns.upsertGoogleAdsAuthAssignment,
+    getGoogleAdsAuthAssignment: assignmentFns.getGoogleAdsAuthAssignment,
+    deleteGoogleAdsAuthAssignment: assignmentFns.deleteGoogleAdsAuthAssignment,
   }
 })
 
-import { PUT } from '@/app/api/admin/users/[id]/google-ads-auth/route'
+vi.mock('@/lib/google-ads-oauth', () => ({
+  saveGoogleAdsCredentials: oauthFns.saveGoogleAdsCredentials,
+  deleteGoogleAdsCredentials: oauthFns.deleteGoogleAdsCredentials,
+}))
+
+vi.mock('@/lib/google-ads-service-account', () => ({
+  deleteAllGoogleAdsServiceAccountsForUser:
+    serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser,
+  parseServiceAccountJson: serviceAccountFns.parseServiceAccountJson,
+  replaceGoogleAdsServiceAccountForUser: serviceAccountFns.replaceGoogleAdsServiceAccountForUser,
+}))
+
+vi.mock('@/lib/crypto', () => ({
+  encrypt: vi.fn((value: string) => value),
+}))
+
+import { PUT, DELETE } from '@/app/api/admin/users/[id]/google-ads-auth/route'
 import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads-auth-context'
 
 describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
@@ -80,5 +111,76 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
     expect(data.code).toBe('DUAL_STACK_CONFLICT')
     expect(data.authConfigWarning).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
     expect(assignmentFns.upsertGoogleAdsAuthAssignment).not.toHaveBeenCalled()
+  })
+})
+
+describe('DELETE /api/admin/users/[id]/google-ads-auth', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 1, role: 'admin' },
+    })
+    authFns.findUserById.mockResolvedValue({ id: 2, username: 'user2' })
+    oauthFns.deleteGoogleAdsCredentials.mockResolvedValue(undefined)
+    serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser.mockResolvedValue(undefined)
+    assignmentFns.deleteGoogleAdsAuthAssignment.mockResolvedValue(undefined)
+  })
+
+  it('clears self-configured OAuth when no assignment record exists', async () => {
+    assignmentFns.getGoogleAdsAuthAssignment.mockResolvedValue(null)
+    contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      userId: 2,
+      ownerUserId: 2,
+      dualStack: false,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: { refresh_token: 'rt' },
+      serviceAccountConfig: null,
+      oauthHasRefreshToken: true,
+      serviceAccountConfigured: false,
+    })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'DELETE',
+    })
+
+    const res = await DELETE(req, { params: Promise.resolve({ id: '2' }) })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(oauthFns.deleteGoogleAdsCredentials).toHaveBeenCalledWith(2)
+    expect(serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser).not.toHaveBeenCalled()
+    expect(assignmentFns.deleteGoogleAdsAuthAssignment).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when user has no assignment and no credentials', async () => {
+    assignmentFns.getGoogleAdsAuthAssignment.mockResolvedValue(null)
+    contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      userId: 2,
+      ownerUserId: 2,
+      dualStack: false,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: {},
+      oauthCredentials: null,
+      serviceAccountConfig: null,
+      oauthHasRefreshToken: false,
+      serviceAccountConfigured: false,
+    })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'DELETE',
+    })
+
+    const res = await DELETE(req, { params: Promise.resolve({ id: '2' }) })
+    const data = await res.json()
+
+    expect(res.status).toBe(404)
+    expect(data.error).toContain('没有 Google Ads 认证配置')
   })
 })

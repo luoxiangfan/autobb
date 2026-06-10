@@ -49,6 +49,9 @@ interface AuthStatus {
 
 function isAuthConfigured(status: AuthStatus | null): boolean {
   if (!status) return false
+  if (status.hasConfigured) return true
+  if (status.dualStack) return true
+  if (status.hasOAuth || status.hasServiceAccount) return true
   return Boolean(status.assignment.updatedAt)
 }
 
@@ -145,7 +148,8 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
 
   const handleClear = async () => {
     if (!user) return
-    if (!confirm(`确定清除用户 "${user.username}" 的 Google Ads 认证分配吗？`)) return
+    const clearLabel = status?.assignment.updatedAt ? 'Google Ads 认证分配' : 'Google Ads 认证配置'
+    if (!confirm(`确定清除用户 "${user.username}" 的 ${clearLabel} 吗？`)) return
 
     setSaving(true)
     try {

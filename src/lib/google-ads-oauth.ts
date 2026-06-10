@@ -511,11 +511,22 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
           authType: 'service_account',
           authContext: ctx,
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const { formatPythonAdsServiceUnavailableError } = await import('./python-ads-client')
+        const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
+        if (serviceUnavailable) {
+          console.error('[Verify] Python Ads Service 不可用:', serviceUnavailable)
+          return {
+            valid: false,
+            error: serviceUnavailable,
+            authType: 'service_account',
+          }
+        }
         console.error('[Verify] 服务账号验证失败:', error)
+        const message = error instanceof Error ? error.message : '服务账号验证失败'
         return {
           valid: false,
-          error: error.message || '服务账号验证失败',
+          error: message,
           authType: 'service_account',
         }
       }

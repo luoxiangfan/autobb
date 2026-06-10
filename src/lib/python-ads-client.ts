@@ -9,6 +9,39 @@ import { logger } from './structured-logger'
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_ADS_SERVICE_URL || 'http://localhost:8001'
 
+export function getPythonAdsServiceUrl(): string {
+  return PYTHON_SERVICE_URL
+}
+
+const PYTHON_ADS_SERVICE_UNAVAILABLE_MESSAGE =
+  'Python Ads 服务不可用。服务账号认证需要部署 Python Ads Service 并配置环境变量 PYTHON_ADS_SERVICE_URL。'
+
+/** 连接/超时等导致 Python Ads Service 不可达（非凭证本身无效）。 */
+export function isPythonAdsServiceConnectionError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+  const err = error as { code?: string; isAxiosError?: boolean; response?: unknown }
+  if (
+    err.code === 'ECONNREFUSED' ||
+    err.code === 'ENOTFOUND' ||
+    err.code === 'ETIMEDOUT' ||
+    err.code === 'ECONNABORTED' ||
+    err.code === 'EHOSTUNREACH'
+  ) {
+    return true
+  }
+  return Boolean(err.isAxiosError && !err.response)
+}
+
+/** 服务账号验证/同步路径：区分 Python 服务不可用与凭证错误。 */
+export function formatPythonAdsServiceUnavailableError(error: unknown): string | null {
+  if (!isPythonAdsServiceConnectionError(error)) {
+    return null
+  }
+  return `${PYTHON_ADS_SERVICE_UNAVAILABLE_MESSAGE}（当前: ${PYTHON_SERVICE_URL}）`
+}
+
 function getPythonRequestHeaders(userId: number, requestId?: string): Record<string, string> {
   return {
     'x-user-id': String(userId),
