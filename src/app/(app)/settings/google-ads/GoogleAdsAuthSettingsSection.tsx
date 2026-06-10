@@ -51,7 +51,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
     deletingServiceAccountId,
     deletingOAuthConfig,
     permissionError,
-    setPermissionError,
+    dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
     googleAdsAuthActionsBlocked,
     googleAdsDualStack,
@@ -611,10 +611,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
             <div className="space-y-3">
               <GoogleAdsServiceAccountPermissionAlert
                 details={permissionError}
-                onDismiss={() => {
-                  setPermissionError(null)
-                  setShowGoogleAdsAccounts(false)
-                }}
+                onDismiss={dismissGoogleAdsAccountsPermissionError}
               />
 
               {loadingGoogleAdsAccounts ? (

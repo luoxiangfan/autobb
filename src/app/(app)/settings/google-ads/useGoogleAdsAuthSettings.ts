@@ -9,6 +9,10 @@ import {
   type ServiceAccountPermissionDetails,
 } from '@/lib/google-ads-accounts-fetch'
 import {
+  createGoogleAdsAccountsCoreApplyHandlers,
+  withAccountsListSchedulePoll,
+} from '@/lib/google-ads-accounts-fetch-handlers'
+import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,
   type GoogleAdsAccountsFetchResult,
@@ -187,48 +191,81 @@ export function useGoogleAdsAuthSettings({
     }
   }, [fetchGoogleAdsCredentialStatus])
 
+  const handleAccountsFetchResultRef = useRef<
+    (
+      result: GoogleAdsAccountsFetchResult,
+      opts: { forceRefresh?: boolean; isPoll?: boolean }
+    ) => 'ok' | 'permission_denied' | 'failed'
+  >(() => 'failed')
+
+  handleAccountsFetchResultRef.current = (result, opts) => {
+    const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
+    const handlers = withAccountsListSchedulePoll(
+      {
+        ...createGoogleAdsAccountsCoreApplyHandlers({
+          setAuthConfigWarning: () => {},
+          setGoogleAdsDualStack: () => {},
+          setNeedsReauth: () => {},
+          setPermissionError,
+          onErrorMessage: (message) => toast.error(message),
+          onPollFailure: (message) => toast.error(message),
+          onClearForceRefresh: () => {},
+          onPermissionAccountsHidden: () => setGoogleAdsAccounts([]),
+        }),
+        onOkData: (data) => {
+          setGoogleAdsAccounts(data.accounts as GoogleAdsAccount[])
+        },
+      },
+      scheduleAccountsPoll,
+      accountsPollBaseParamsRef,
+      (pollResult) => {
+        handleAccountsFetchResultRef.current(pollResult, { isPoll: true })
+      }
+    )
+
+    const outcome = applyGoogleAdsAccountsFetchUiEffects(effects, {
+      ...handlers,
+      onSchedulePoll: () => {
+        if (opts.forceRefresh) {
+          toast.message('账号正在后台同步，列表将逐步更新')
+        }
+        handlers.onSchedulePoll?.()
+      },
+    })
+
+    if (outcome === 'ok') {
+      if (!effects.shouldSchedulePoll) {
+        toast.success(`找到${effects.data!.total}个可访问的 Google Ads 账户`)
+      }
+      if (shouldRefreshCredentialsAfterAccountsFetchOk(effects)) {
+        void fetchGoogleAdsCredentialStatus()
+      }
+      return 'ok'
+    }
+
+    if (effects.kind === 'permission_denied') {
+      setShowGoogleAdsAccounts(true)
+      return 'permission_denied'
+    }
+
+    return 'failed'
+  }
+
   const handleAccountsFetchResult = useCallback(
     (
       result: GoogleAdsAccountsFetchResult,
       opts: { forceRefresh?: boolean; isPoll?: boolean }
     ): 'ok' | 'permission_denied' | 'failed' => {
-      const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
-      const outcome = applyGoogleAdsAccountsFetchUiEffects(effects, {
-        onPollFailure: (message) => toast.error(message),
-        onErrorMessage: (message) => toast.error(message),
-        onPermissionDetails: setPermissionError,
-        onOkData: (data) => {
-          setGoogleAdsAccounts(data.accounts as GoogleAdsAccount[])
-        },
-        onSchedulePoll: () => {
-          if (opts.forceRefresh) {
-            toast.message('账号正在后台同步，列表将逐步更新')
-          }
-          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
-            handleAccountsFetchResult(pollResult, { isPoll: true })
-          })
-        },
-      })
-
-      if (outcome === 'ok') {
-        if (!effects.shouldSchedulePoll) {
-          toast.success(`找到${effects.data!.total}个可访问的 Google Ads 账户`)
-        }
-        if (shouldRefreshCredentialsAfterAccountsFetchOk(effects)) {
-          void fetchGoogleAdsCredentialStatus()
-        }
-        return 'ok'
-      }
-
-      if (effects.kind === 'permission_denied') {
-        setShowGoogleAdsAccounts(true)
-        return 'permission_denied'
-      }
-
-      return 'failed'
+      return handleAccountsFetchResultRef.current(result, opts)
     },
-    [fetchGoogleAdsCredentialStatus, scheduleAccountsPoll]
+    []
   )
+
+  const dismissGoogleAdsAccountsPermissionError = useCallback(() => {
+    setPermissionError(null)
+    setGoogleAdsAccounts([])
+    setShowGoogleAdsAccounts(false)
+  }, [])
 
   const handleStartGoogleAdsOAuth = async () => {
     if (oauthHasUnsavedChanges()) {
@@ -301,10 +338,10 @@ export function useGoogleAdsAuthSettings({
 
       if (status === 'failed') {
         await fetchGoogleAdsCredentialStatus()
-        const effects = resolveGoogleAdsAccountsFetchUiEffects(result, { forceRefresh: true })
-        throw new Error(effects.errorMessage ?? effects.authConfigWarning ?? '获取失败')
+        setShowGoogleAdsAccounts(false)
       }
     } catch (err: unknown) {
+      console.error('获取 Google Ads 账户失败:', err)
       toast.error(err instanceof Error ? err.message : '获取失败')
       setShowGoogleAdsAccounts(false)
     } finally {
@@ -503,6 +540,7 @@ export function useGoogleAdsAuthSettings({
     setDeleteConfirmState,
     permissionError,
     setPermissionError,
+    dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
     googleAdsDualStack,
     googleAdsAuthActionsBlocked,

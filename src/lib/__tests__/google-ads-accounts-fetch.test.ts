@@ -206,6 +206,24 @@ describe('applyGoogleAdsAccountsFetchUiEffects', () => {
 
     expect(onErrorMessage).toHaveBeenCalledWith(SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE)
   })
+  it('blocked initial fetch invokes onErrorMessage once', () => {
+    const onErrorMessage = vi.fn()
+
+    applyGoogleAdsAccountsFetchUiEffects(
+      resolveGoogleAdsAccountsFetchUiEffects(
+        {
+          ok: false,
+          kind: 'blocked',
+          effects: { errorMessage: '未配置 Google Ads 认证' },
+        },
+        { forceRefresh: true }
+      ),
+      { onErrorMessage, onPermissionDetails: vi.fn() }
+    )
+
+    expect(onErrorMessage).toHaveBeenCalledTimes(1)
+    expect(onErrorMessage).toHaveBeenCalledWith('未配置 Google Ads 认证')
+  })
 })
 
 describe('shouldRefreshCredentialsAfterAccountsFetchOk', () => {
@@ -280,5 +298,38 @@ describe('google-ads-accounts-fetch-handlers', () => {
     handlers.onSchedulePoll?.()
 
     expect(scheduleAccountsPoll).toHaveBeenCalledWith(baseParamsRef.current, onPollResult)
+  })
+
+  it('poll permission_denied via core handlers clears accounts', () => {
+    const onPermissionAccountsHidden = vi.fn()
+    const onPollFailure = vi.fn()
+    const handlers = createGoogleAdsAccountsCoreApplyHandlers({
+      setAuthConfigWarning: vi.fn(),
+      setGoogleAdsDualStack: vi.fn(),
+      setNeedsReauth: vi.fn(),
+      setPermissionError: vi.fn(),
+      onErrorMessage: vi.fn(),
+      onPollFailure,
+      onClearForceRefresh: vi.fn(),
+      onPermissionAccountsHidden,
+    })
+
+    applyGoogleAdsAccountsFetchUiEffects(
+      resolveGoogleAdsAccountsFetchUiEffects(
+        {
+          ok: false,
+          kind: 'permission_denied',
+          details: {
+            serviceAccountEmail: 'sa@test.iam.gserviceaccount.com',
+            mccCustomerId: '1234567890',
+          },
+        },
+        { isPoll: true }
+      ),
+      handlers
+    )
+
+    expect(onPermissionAccountsHidden).toHaveBeenCalled()
+    expect(onPollFailure).toHaveBeenCalled()
   })
 })
