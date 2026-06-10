@@ -109,10 +109,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '缺少必需参数' }, { status: 400 })
     }
 
-    console.log(`💾 保存Google Ads凭证`)
-    console.log(`   用户: ${authResult.user.email}`)
-    console.log(`   Developer Token: ${developer_token.substring(0, 10)}...`)
-
     try {
       await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
     } catch (error: any) {

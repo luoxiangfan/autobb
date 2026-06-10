@@ -8,6 +8,11 @@ import {
 } from './gemini-models'
 import { estimateTokenCost, recordTokenUsage } from './ai-token-tracker'
 import { getGoogleAdsOAuthRedirectUri } from './google-ads-oauth-redirect'
+import {
+  looksLikeOAuthAccessToken,
+  looksLikeOAuthClientId,
+  looksLikeOAuthClientSecret,
+} from './google-ads-developer-token-heal'
 
 export interface SystemSetting {
   id: number
@@ -499,10 +504,6 @@ export async function validateGoogleAdsConfig(
   developerToken: string
 ): Promise<{ valid: boolean; message: string }> {
   try {
-    const looksLikeOAuthClientId = (value: string) => value.includes('.apps.googleusercontent.com')
-    const looksLikeOAuthClientSecret = (value: string) => /^GOCSPX[-_]?/i.test(value.trim())
-    const looksLikeOAuthAccessToken = (value: string) => /^ya29\./i.test(value.trim())
-
     // 清理过期缓存
     cleanExpiredCache()
 

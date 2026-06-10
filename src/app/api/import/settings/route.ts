@@ -2,6 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { encrypt } from '@/lib/crypto'
+import { nowFunc as sqlNowFunc } from '@/lib/db-helpers'
 import { z } from 'zod'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import {
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
 
     const { settings } = validationResult.data
     const db = await getDatabase()
+    const nowSql = sqlNowFunc(db.type)
 
     const blockedKeys = ['google_ads:refresh_token', 'google_ads:access_token']
 
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest) {
             await db.exec(
               `
                 UPDATE system_settings
-                SET encrypted_value = ?, value = NULL, updated_at = datetime('now')
+                SET encrypted_value = ?, value = NULL, updated_at = ${nowSql}
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
               `,
               [encrypt(value), category, configKey, userIdNum]
@@ -161,7 +163,7 @@ export async function POST(request: NextRequest) {
             await db.exec(
               `
                 UPDATE system_settings
-                SET value = ?, updated_at = datetime('now')
+                SET value = ?, updated_at = ${nowSql}
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
               `,
               [value, category, configKey, userIdNum]
@@ -171,7 +173,7 @@ export async function POST(request: NextRequest) {
           await db.exec(
             `
               INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+              VALUES (?, ?, ?, ?, ?, 1, ${nowSql}, ${nowSql})
             `,
             [userIdNum, category, configKey, encrypt(value), dataType || 'string']
           )
@@ -179,7 +181,7 @@ export async function POST(request: NextRequest) {
           await db.exec(
             `
               INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))
+              VALUES (?, ?, ?, ?, ?, 0, ${nowSql}, ${nowSql})
             `,
             [userIdNum, category, configKey, value, dataType || 'string']
           )

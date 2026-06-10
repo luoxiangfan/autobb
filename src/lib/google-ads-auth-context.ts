@@ -55,6 +55,7 @@ import {
 
 export {
   oauthRefreshConfiguredFromContext,
+  oauthCredentialFieldsPresentFromContext,
   serviceAccountConfiguredFromContext,
 } from './google-ads-auth-context-cache'
 

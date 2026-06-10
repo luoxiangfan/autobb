@@ -8,6 +8,18 @@ const apiFns = vi.hoisted(() => ({
   getGoogleAdsClient: vi.fn(),
 }))
 
+const pythonFns = vi.hoisted(() => ({
+  listAccessibleCustomersPython: vi.fn(),
+}))
+
+vi.mock('../python-ads-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../python-ads-client')>()
+  return {
+    ...actual,
+    listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,
+  }
+})
+
 vi.mock('../google-ads-auth-context', () => ({
   assertGoogleAdsAuthReadyForApi: authContextFns.assertGoogleAdsAuthReadyForApi,
 }))
@@ -42,5 +54,25 @@ describe('syncAccountsFromAPI', () => {
     ).rejects.toThrow('OAuth 与服务账号不能同时配置')
 
     expect(apiFns.getGoogleAdsClient).not.toHaveBeenCalled()
+  })
+
+  it('surfaces Python Ads Service unavailable message for service account sync', async () => {
+    const connectionError = Object.assign(new Error('connect ECONNREFUSED'), {
+      code: 'ECONNREFUSED',
+      isAxiosError: true,
+    })
+    pythonFns.listAccessibleCustomersPython.mockRejectedValue(connectionError)
+
+    await expect(
+      syncAccountsFromAPI(
+        42,
+        { client_id: 'c', client_secret: 's', developer_token: 't' },
+        'service_account',
+        {
+          id: 'sa-1',
+          serviceAccountEmail: 'sa@test.iam.gserviceaccount.com',
+        }
+      )
+    ).rejects.toThrow(/Python Ads 服务不可用/)
   })
 })

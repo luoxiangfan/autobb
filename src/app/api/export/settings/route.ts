@@ -2,6 +2,11 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { decrypt } from '@/lib/crypto'
+import {
+  isGoogleAdsCredentialBackedSettingKey,
+  overlayGoogleAdsOAuthFieldsForSettingsExport,
+  type SettingsExportEntry,
+} from '@/lib/google-ads-settings-store'
 
 /**
  * GET /api/export/settings
@@ -24,7 +29,6 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const userIdNum = userId
 
-    // 获取用户的配置（优先用户配置，其次全局配置）
     const settings = (await db.query(
       `
       SELECT
@@ -41,64 +45,72 @@ export async function GET(request: NextRequest) {
       ORDER BY category, key
     `,
       [userIdNum]
-    )) as any[]
+    )) as Array<{
+      category: string
+      key: string
+      value: string | null
+      encrypted_value: string | null
+      data_type: string
+      is_sensitive: number | boolean
+      is_required: number | boolean
+      description: string | null
+    }>
 
-    // 去重：对于同一个 (category, key) 组合，优先使用用户配置
-    const settingsMap = new Map<string, any>()
+    const settingsMap = new Map<string, (typeof settings)[number]>()
     for (const setting of settings) {
       const key = `${setting.category}:${setting.key}`
-      // 简单处理：后出现的覆盖前面的（用户配置在后面）
       settingsMap.set(key, setting)
     }
 
-    // 转换为导出格式
-    const exportData: Record<string, Record<string, any>> = {}
+    const exportData: Record<string, Record<string, SettingsExportEntry>> = {}
 
     for (const setting of settingsMap.values()) {
+      if (setting.category === 'google_ads' && isGoogleAdsCredentialBackedSettingKey(setting.key)) {
+        continue
+      }
+
       if (!exportData[setting.category]) {
         exportData[setting.category] = {}
       }
 
       let value = setting.value
+      const isSensitive = setting.is_sensitive === 1 || setting.is_sensitive === true
 
-      // 处理敏感信息
-      if (setting.is_sensitive === 1) {
+      if (isSensitive) {
         if (includeSensitive && setting.encrypted_value) {
-          // 解密敏感值（仅在明确请求时）
           try {
             value = decrypt(setting.encrypted_value)
           } catch {
             value = null
           }
-        } else {
-          // 脱敏处理：显示部分字符
-          if (setting.encrypted_value) {
-            try {
-              const decrypted = decrypt(setting.encrypted_value)
-              if (decrypted && decrypted.length > 8) {
-                value =
-                  decrypted.substring(0, 4) + '****' + decrypted.substring(decrypted.length - 4)
-              } else {
-                value = '****'
-              }
-            } catch {
+        } else if (setting.encrypted_value) {
+          try {
+            const decrypted = decrypt(setting.encrypted_value)
+            if (decrypted && decrypted.length > 8) {
+              value = decrypted.substring(0, 4) + '****' + decrypted.substring(decrypted.length - 4)
+            } else {
               value = '****'
             }
-          } else {
-            value = null
+          } catch {
+            value = '****'
           }
+        } else {
+          value = null
         }
       }
 
       exportData[setting.category][setting.key] = {
         value,
         dataType: setting.data_type,
-        isSensitive: setting.is_sensitive === 1,
+        isSensitive,
         description: setting.description,
       }
     }
 
-    // 添加元数据
+    await overlayGoogleAdsOAuthFieldsForSettingsExport(exportData, userIdNum, {
+      includeSensitive,
+    })
+
     const exportPayload = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
@@ -113,8 +125,9 @@ export async function GET(request: NextRequest) {
         'Content-Disposition': `attachment; filename="settings_${new Date().toISOString().split('T')[0]}.json"`,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('导出配置失败:', error)
-    return NextResponse.json({ error: error.message || '导出失败' }, { status: 500 })
+    const message = error instanceof Error ? error.message : '导出失败'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

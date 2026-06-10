@@ -6,6 +6,7 @@ import {
   hydrateGoogleAdsAuthContextSecrets,
   normalizeCachedAuthContextPayload,
   oauthCredentialsLookStripped,
+  oauthCredentialFieldsPresentFromContext,
   oauthRefreshConfiguredFromContext,
   stripGoogleAdsAuthContextForCache,
 } from '../google-ads-auth-context-cache'
@@ -197,5 +198,33 @@ describe('google-ads-auth-context-cache', () => {
   it('assertAuthContextSecretsHydrated rejects strip context', () => {
     const slim = stripGoogleAdsAuthContextForCache(defaultOAuthAuthContext as any)
     expect(() => assertAuthContextSecretsHydrated(slim)).toThrow(/not hydrated/)
+  })
+
+  it('oauthCredentialFieldsPresentFromContext detects refresh and partial OAuth rows', () => {
+    expect(
+      oauthCredentialFieldsPresentFromContext({
+        oauthHasRefreshToken: true,
+        oauthCredentials: null,
+      })
+    ).toBe(true)
+
+    expect(
+      oauthCredentialFieldsPresentFromContext({
+        oauthHasRefreshToken: false,
+        oauthCredentials: {
+          client_id: 'cid.apps.googleusercontent.com',
+          client_secret: '',
+          developer_token: '',
+          login_customer_id: '',
+        } as any,
+      })
+    ).toBe(true)
+
+    expect(
+      oauthCredentialFieldsPresentFromContext({
+        oauthHasRefreshToken: false,
+        oauthCredentials: null,
+      })
+    ).toBe(false)
   })
 })

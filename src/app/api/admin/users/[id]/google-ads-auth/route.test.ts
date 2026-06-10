@@ -183,4 +183,62 @@ describe('DELETE /api/admin/users/[id]/google-ads-auth', () => {
     expect(res.status).toBe(404)
     expect(data.error).toContain('没有 Google Ads 认证配置')
   })
+
+  it('clears partial OAuth and dual-stack when assignment exists (own mode)', async () => {
+    assignmentFns.getGoogleAdsAuthAssignment.mockResolvedValue({
+      assignmentMode: 'own',
+      authType: 'oauth',
+      userId: 2,
+    })
+    contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      userId: 2,
+      ownerUserId: 2,
+      dualStack: true,
+      assignment: { assignmentMode: 'own', authType: 'oauth' },
+      isShared: false,
+      canModify: true,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: { refresh_token: 'rt', client_id: 'cid' },
+      serviceAccountConfig: { id: 'sa-1' },
+      oauthHasRefreshToken: true,
+      serviceAccountConfigured: true,
+    })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'DELETE',
+    })
+
+    const res = await DELETE(req, { params: Promise.resolve({ id: '2' }) })
+
+    expect(res.status).toBe(200)
+    expect(oauthFns.deleteGoogleAdsCredentials).toHaveBeenCalledWith(2)
+    expect(serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser).toHaveBeenCalledWith(2)
+    expect(assignmentFns.deleteGoogleAdsAuthAssignment).toHaveBeenCalledWith(2)
+  })
+
+  it('clears partial OAuth without refresh_token when no assignment', async () => {
+    assignmentFns.getGoogleAdsAuthAssignment.mockResolvedValue(null)
+    contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      userId: 2,
+      ownerUserId: 2,
+      dualStack: false,
+      assignment: null,
+      isShared: false,
+      canModify: true,
+      auth: {},
+      oauthCredentials: { client_id: 'cid.apps.googleusercontent.com' },
+      serviceAccountConfig: null,
+      oauthHasRefreshToken: false,
+      serviceAccountConfigured: false,
+    })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'DELETE',
+    })
+
+    const res = await DELETE(req, { params: Promise.resolve({ id: '2' }) })
+
+    expect(res.status).toBe(200)
+    expect(oauthFns.deleteGoogleAdsCredentials).toHaveBeenCalledWith(2)
+  })
 })

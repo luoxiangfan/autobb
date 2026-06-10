@@ -22,6 +22,7 @@ import {
   googleAdsAuthContextDualStackError,
   googleAdsAuthReadyFailurePayload,
   hasConfiguredGoogleAdsAuthFromContext,
+  oauthCredentialFieldsPresentFromContext,
   resolveGoogleAdsCredentialStatusSummary,
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads-auth-context'
@@ -32,6 +33,27 @@ async function requireAdmin(request: NextRequest) {
     return null
   }
   return auth.user
+}
+
+/** 清除用户自有凭证（双栈时 OAuth + SA 均删；含半成品 OAuth 行） */
+async function clearOwnGoogleAdsCredentialsForUser(userId: number): Promise<'cleared' | 'none'> {
+  const ctx = await getGoogleAdsAuthContextMetadata(userId)
+  const summary = resolveGoogleAdsCredentialStatusSummary(ctx)
+  const hasOAuthFields = oauthCredentialFieldsPresentFromContext(ctx)
+  const hasServiceAccount = summary.hasServiceAccount
+
+  if (!hasOAuthFields && !hasServiceAccount) {
+    return 'none'
+  }
+
+  if (ctx.dualStack || hasOAuthFields) {
+    await deleteGoogleAdsCredentials(userId)
+  }
+  if (ctx.dualStack || hasServiceAccount) {
+    await deleteAllGoogleAdsServiceAccountsForUser(userId)
+  }
+
+  return 'cleared'
 }
 
 async function buildAuthStatus(userId: number) {
@@ -71,7 +93,7 @@ async function buildAuthStatus(userId: number) {
           updatedAt: null,
         },
     authType: displayAuthType,
-    hasOAuth: summary.hasRefreshToken,
+    hasOAuth: oauthCredentialFieldsPresentFromContext(ctx),
     hasServiceAccount: summary.hasServiceAccount,
     serviceAccountId: summary.serviceAccountId,
     serviceAccountName: summary.serviceAccountName,
@@ -315,11 +337,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
   try {
     if (assignment) {
       if (assignment.assignmentMode === 'own') {
-        if (assignment.authType === 'oauth') {
-          await deleteGoogleAdsCredentials(userId)
-        } else {
-          await deleteAllGoogleAdsServiceAccountsForUser(userId)
-        }
+        await clearOwnGoogleAdsCredentialsForUser(userId)
       }
 
       await deleteGoogleAdsAuthAssignment(userId)
@@ -330,20 +348,9 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       })
     }
 
-    const ctx = await getGoogleAdsAuthContextMetadata(userId)
-    const summary = resolveGoogleAdsCredentialStatusSummary(ctx)
-    const hasOAuth = summary.hasRefreshToken
-    const hasServiceAccount = summary.hasServiceAccount
-
-    if (!hasOAuth && !hasServiceAccount) {
+    const cleared = await clearOwnGoogleAdsCredentialsForUser(userId)
+    if (cleared === 'none') {
       return NextResponse.json({ error: '该用户没有 Google Ads 认证配置' }, { status: 404 })
-    }
-
-    if (ctx.dualStack || hasOAuth) {
-      await deleteGoogleAdsCredentials(userId)
-    }
-    if (ctx.dualStack || hasServiceAccount) {
-      await deleteAllGoogleAdsServiceAccountsForUser(userId)
     }
 
     return NextResponse.json({

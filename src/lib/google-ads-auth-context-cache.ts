@@ -96,6 +96,29 @@ export function oauthRefreshConfiguredFromContext(
   return computeOAuthHasRefreshToken(ctx as GoogleAdsAuthContext)
 }
 
+function oauthFieldHasValue(value: string | null | undefined): boolean {
+  return Boolean(String(value ?? '').trim())
+}
+
+/** 凭证表是否存在 OAuth 配置字段（含 refresh 或半成品 client_id 等；metadata 路径可用） */
+export function oauthCredentialFieldsPresentFromContext(
+  ctx: Pick<GoogleAdsAuthContext, 'oauthHasRefreshToken' | 'oauthCredentials'>
+): boolean {
+  if (oauthRefreshConfiguredFromContext(ctx)) {
+    return true
+  }
+  const credentials = ctx.oauthCredentials
+  if (!credentials) {
+    return false
+  }
+  return (
+    oauthFieldHasValue(credentials.client_id) ||
+    oauthFieldHasValue(credentials.client_secret) ||
+    oauthFieldHasValue(credentials.developer_token) ||
+    oauthFieldHasValue(credentials.login_customer_id)
+  )
+}
+
 /** 是否已配置服务账号（strip metadata 或 hydrate 后均可） */
 export function serviceAccountConfiguredFromContext(
   ctx: Pick<GoogleAdsAuthContext, 'serviceAccountConfigured' | 'serviceAccountConfig' | 'auth'>

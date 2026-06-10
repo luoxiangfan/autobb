@@ -287,6 +287,62 @@ export async function overlayGoogleAdsSettingsFromCredentialStore(
   })
 }
 
+export type SettingsExportEntry = {
+  value: string | null
+  dataType: string
+  isSensitive: boolean
+  description?: string | null
+}
+
+function maskSensitiveExportValue(raw: string): string {
+  if (raw.length > 8) {
+    return `${raw.slice(0, 4)}****${raw.slice(-4)}`
+  }
+  return '****'
+}
+
+/** 导出配置：从凭证表 overlay google_ads OAuth 字段（与 import 路径对齐；共享只读用户跳过） */
+export async function overlayGoogleAdsOAuthFieldsForSettingsExport(
+  exportData: Record<string, Record<string, SettingsExportEntry>>,
+  userId: number,
+  options: { includeSensitive: boolean }
+): Promise<void> {
+  const readCtx = await resolveGoogleAdsSettingsReadContext(userId)
+  if (readCtx.readOnly) {
+    return
+  }
+
+  const oauthFields = await getGoogleAdsOAuthConfigFields(userId)
+  const hasAnyField = GOOGLE_ADS_OAUTH_CONFIG_KEYS.some((key) => oauthFields[key]?.trim())
+  if (!hasAnyField) {
+    return
+  }
+
+  if (!exportData.google_ads) {
+    exportData.google_ads = {}
+  }
+
+  for (const key of GOOGLE_ADS_OAUTH_CONFIG_KEYS) {
+    const raw = oauthFields[key]?.trim()
+    if (!raw) {
+      continue
+    }
+
+    const isSensitive = key === 'client_secret' || key === 'developer_token'
+    let value: string | null = raw
+    if (isSensitive && !options.includeSensitive) {
+      value = maskSensitiveExportValue(raw)
+    }
+
+    exportData.google_ads[key] = {
+      value,
+      dataType: 'string',
+      isSensitive,
+      description: null,
+    }
+  }
+}
+
 export function partitionGoogleAdsSettingUpdates(
   updates: Array<{ category: string; key: string }>
 ): {

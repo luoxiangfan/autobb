@@ -64,10 +64,16 @@ export async function syncAccountsFromAPI(
         serviceAccountId: serviceAccountConfig.id.toString(),
       })
       console.log(`   ✅ 服务账号认证成功，获取到 ${resourceNames.length} 个账户`)
-    } catch (error: any) {
-      console.error(`   ❌ 服务账号认证失败:`, error.message)
+    } catch (error: unknown) {
+      const { formatPythonAdsServiceUnavailableError } = await import('@/lib/python-ads-client')
+      const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
+      if (serviceUnavailable) {
+        throw new Error(serviceUnavailable)
+      }
+      console.error(`   ❌ 服务账号认证失败:`, error instanceof Error ? error.message : error)
+      const detail = error instanceof Error ? error.message : String(error)
       throw new Error(
-        `服务账号认证失败: ${error.message}。` +
+        `服务账号认证失败: ${detail}。` +
           `请确保：1) 服务账号邮箱已被添加到 Google Ads MCC 的"访问权限和安全"中；` +
           `2) GCP 项目中已启用 Google Ads API。` +
           `服务账号邮箱: ${serviceAccountConfig.serviceAccountEmail}`
