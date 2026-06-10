@@ -46,7 +46,11 @@ import { toast } from 'sonner'
 import { getDateInTimezone } from '@/lib/timezone-utils'
 import ClickFarmTaskModal from '@/components/ClickFarmTaskModal'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
-import { TableActionGroup, TableActionSlot } from '@/components/ui/table-action-buttons'
+import {
+  TableActionGroup,
+  TableActionIconButton,
+  TableActionSlot,
+} from '@/components/ui/table-action-buttons'
 import type { ClickFarmTaskListItem, ClickFarmStats } from '@/lib/click-farm-types'
 import { safeJsonParse } from '@/lib/api-error-handler'
 
@@ -401,6 +405,50 @@ export default function ClickFarmPage() {
       toast.error(error.message || '删除任务失败')
     } finally {
       setActionLoading(null)
+    }
+  }
+
+  const getClickFarmControlAction = (task: ClickFarmTaskListItem) => {
+    switch (task.status) {
+      case 'pending':
+        return {
+          icon: <Zap className="w-4 h-4" />,
+          title: '立即触发',
+          onClick: () => handleTriggerTask(task.id),
+          disabled: false,
+          className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50',
+        }
+      case 'running':
+        return {
+          icon: <Pause className="w-4 h-4" />,
+          title: '暂停任务',
+          onClick: () => handleStopTask(task.id),
+          disabled: false,
+          className: 'text-yellow-600',
+        }
+      case 'stopped':
+      case 'paused':
+        return {
+          icon: <Play className="w-4 h-4" />,
+          title: '重启任务',
+          onClick: () => handleRestartTask(task.id),
+          disabled: false,
+          className: 'text-green-600',
+        }
+      case 'completed':
+        return {
+          icon: <Play className="w-4 h-4" />,
+          title: '任务已完成',
+          disabled: true,
+          className: 'text-gray-400',
+        }
+      default:
+        return {
+          icon: <Play className="w-4 h-4" />,
+          title: '当前状态不可用',
+          disabled: true,
+          className: 'text-gray-400',
+        }
     }
   }
 
@@ -944,82 +992,54 @@ export default function ClickFarmPage() {
                         ) : (
                           <TableActionGroup className="flex-nowrap gap-0">
                             <TableActionSlot>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <TableActionIconButton
+                                icon={<Eye className="w-4 h-4" />}
+                                title="查看详情"
                                 onClick={() => router.push(`/click-farm/tasks/${task.id}`)}
                                 className="text-blue-600 hover:text-blue-800"
-                                title="查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              {task.status === 'pending' || task.status === 'running' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditTaskId(task.id)
-                                    setModalOpen(true)
-                                  }}
-                                  className="text-gray-600"
-                                  title="编辑任务"
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </Button>
-                              ) : null}
+                              <TableActionIconButton
+                                icon={<Edit2 className="w-4 h-4" />}
+                                title={
+                                  task.status === 'pending' || task.status === 'running'
+                                    ? '编辑任务'
+                                    : '当前状态不可编辑'
+                                }
+                                onClick={() => {
+                                  setEditTaskId(task.id)
+                                  setModalOpen(true)
+                                }}
+                                disabled={task.status !== 'pending' && task.status !== 'running'}
+                                className="text-gray-600"
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              {task.status === 'pending' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleTriggerTask(task.id)}
-                                  disabled={actionLoading === task.id}
-                                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                                  title="立即触发"
-                                >
-                                  <Zap className="w-4 h-4" />
-                                </Button>
-                              ) : task.status === 'running' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleStopTask(task.id)}
-                                  disabled={actionLoading === task.id}
-                                  className="text-yellow-600"
-                                  title="暂停任务"
-                                >
-                                  <Pause className="w-4 h-4" />
-                                </Button>
-                              ) : task.status === 'stopped' || task.status === 'paused' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleRestartTask(task.id)}
-                                  disabled={actionLoading === task.id}
-                                  className="text-green-600"
-                                  title="重启任务"
-                                >
-                                  <Play className="w-4 h-4" />
-                                </Button>
-                              ) : null}
+                              {(() => {
+                                const controlAction = getClickFarmControlAction(task)
+                                return (
+                                  <TableActionIconButton
+                                    icon={controlAction.icon}
+                                    title={controlAction.title}
+                                    onClick={controlAction.onClick}
+                                    disabled={actionLoading === task.id || controlAction.disabled}
+                                    className={controlAction.className}
+                                  />
+                                )
+                              })()}
                             </TableActionSlot>
                             <TableActionSlot>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <TableActionIconButton
+                                icon={<Trash2 className="w-4 h-4" />}
+                                title="删除任务"
                                 onClick={() => {
                                   setDeleteTaskId(task.id)
                                   setDeleteDialogOpen(true)
                                 }}
                                 disabled={actionLoading === task.id}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="删除任务"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              />
                             </TableActionSlot>
                           </TableActionGroup>
                         )}

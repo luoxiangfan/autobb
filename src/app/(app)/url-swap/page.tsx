@@ -41,7 +41,11 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
-import { TableActionGroup, TableActionSlot } from '@/components/ui/table-action-buttons'
+import {
+  TableActionGroup,
+  TableActionIconButton,
+  TableActionSlot,
+} from '@/components/ui/table-action-buttons'
 import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap-types'
 import UrlSwapTaskModal from '@/components/UrlSwapTaskModal'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
@@ -677,97 +681,101 @@ export default function UrlSwapPage() {
                         ) : (
                           <TableActionGroup className="flex-nowrap gap-0">
                             <TableActionSlot>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <TableActionIconButton
+                                icon={<Eye className="w-4 h-4" />}
+                                title="查看详情"
                                 onClick={() => router.push(`/url-swap/${task.id}`)}
                                 className="text-blue-600 hover:text-blue-800"
-                                title="查看详情"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <TableActionIconButton
+                                icon={<Calendar className="w-4 h-4" />}
+                                title="查看历史"
                                 onClick={() => {
                                   setHistoryTaskId(task.id)
                                   setHistoryOpen(true)
                                 }}
                                 className="text-gray-600"
-                                title="查看历史"
-                              >
-                                <Calendar className="w-4 h-4" />
-                              </Button>
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              {task.status === 'enabled' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleSwapNow(task.id)}
-                                  disabled={actionLoading === task.id}
-                                  className="text-purple-600 hover:text-purple-700"
-                                  title="立即执行"
-                                >
-                                  <Play className="w-4 h-4" />
-                                </Button>
-                              ) : task.status === 'disabled' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleEnableTask(task.id)}
-                                  disabled={actionLoading === task.id}
-                                  className="text-green-600"
-                                  title="恢复任务"
-                                >
-                                  <Play className="w-4 h-4" />
-                                </Button>
-                              ) : null}
+                              <TableActionIconButton
+                                icon={<Play className="w-4 h-4" />}
+                                title={
+                                  task.status === 'enabled'
+                                    ? '立即执行'
+                                    : task.status === 'disabled'
+                                      ? '恢复任务'
+                                      : task.status === 'error'
+                                        ? '任务异常，无法执行'
+                                        : task.status === 'completed'
+                                          ? '任务已完成'
+                                          : '当前状态不可用'
+                                }
+                                onClick={
+                                  task.status === 'enabled'
+                                    ? () => handleSwapNow(task.id)
+                                    : task.status === 'disabled'
+                                      ? () => handleEnableTask(task.id)
+                                      : undefined
+                                }
+                                disabled={
+                                  actionLoading === task.id ||
+                                  (task.status !== 'enabled' && task.status !== 'disabled')
+                                }
+                                className={
+                                  task.status === 'disabled'
+                                    ? 'text-green-600'
+                                    : 'text-purple-600 hover:text-purple-700'
+                                }
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              {task.status === 'enabled' ? (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDisableTask(task.id)}
-                                  disabled={actionLoading === task.id}
-                                  className="text-yellow-600"
-                                  title="暂停任务"
-                                >
-                                  <Pause className="w-4 h-4" />
-                                </Button>
-                              ) : null}
+                              <TableActionIconButton
+                                icon={<Pause className="w-4 h-4" />}
+                                title={
+                                  task.status === 'enabled'
+                                    ? '暂停任务'
+                                    : task.status === 'disabled'
+                                      ? '任务已暂停'
+                                      : task.status === 'error'
+                                        ? '任务异常，无法暂停'
+                                        : task.status === 'completed'
+                                          ? '任务已完成'
+                                          : '当前状态不可用'
+                                }
+                                onClick={
+                                  task.status === 'enabled'
+                                    ? () => handleDisableTask(task.id)
+                                    : undefined
+                                }
+                                disabled={actionLoading === task.id || task.status !== 'enabled'}
+                                className="text-yellow-600"
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <TableActionIconButton
+                                icon={<RefreshCw className="w-4 h-4" />}
+                                title="编辑任务"
                                 onClick={() => {
                                   setEditTaskId(task.id)
                                   setModalOpen(true)
                                 }}
                                 className="text-gray-600"
-                                title="编辑任务"
-                              >
-                                <RefreshCw className="w-4 h-4" />
-                              </Button>
+                              />
                             </TableActionSlot>
                             <TableActionSlot>
-                              <Button
-                                size="sm"
-                                variant="ghost"
+                              <TableActionIconButton
+                                icon={<Trash2 className="w-4 h-4" />}
+                                title="删除任务"
                                 onClick={() => {
                                   setDeleteTaskId(task.id)
                                   setDeleteDialogOpen(true)
                                 }}
                                 disabled={actionLoading === task.id}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="删除任务"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                              />
                             </TableActionSlot>
                           </TableActionGroup>
                         )}

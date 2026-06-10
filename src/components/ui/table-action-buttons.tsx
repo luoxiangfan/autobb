@@ -100,6 +100,40 @@ export function TableActionSlot({ children, className }: TableActionSlotProps) {
   )
 }
 
+interface TableActionIconButtonProps {
+  icon: React.ReactNode
+  title: string
+  onClick?: () => void
+  disabled?: boolean
+  className?: string
+}
+
+/**
+ * 表格内固定尺寸的图标操作按钮
+ * 不可用时仍渲染为 disabled，配合 TableActionSlot 保持列对齐
+ */
+export function TableActionIconButton({
+  icon,
+  title,
+  onClick,
+  disabled = false,
+  className,
+}: TableActionIconButtonProps) {
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn('h-9 w-9 p-0', disabled && 'opacity-40', className)}
+      title={title}
+      aria-label={title}
+    >
+      {icon}
+    </Button>
+  )
+}
+
 interface ResponsiveActionCellProps {
   primaryAction?: {
     icon: React.ReactNode
