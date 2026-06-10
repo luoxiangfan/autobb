@@ -122,4 +122,32 @@ describe('POST /api/import/settings google_ads OAuth fields', () => {
     expect(data.error).toContain('服务账号')
     expect(dbFns.exec).not.toHaveBeenCalled()
   })
+
+  it('returns success false and partial true when some entries fail after partial import', async () => {
+    dbFns.queryOne
+      .mockResolvedValueOnce({ id: 1, is_sensitive: 0 })
+      .mockResolvedValueOnce({ id: 2, is_sensitive: 0 })
+    dbFns.exec.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('db write failed'))
+
+    const req = new NextRequest('http://localhost/api/import/settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        settings: {
+          ai: {
+            gemini_model: { value: 'gemini-test' },
+            gemini_api_key: { value: 'bad-key' },
+          },
+        },
+      }),
+    })
+
+    const res = await POST(req)
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(false)
+    expect(data.partial).toBe(true)
+    expect(data.summary.imported).toBe(1)
+    expect(data.summary.errors).toBe(1)
+  })
 })

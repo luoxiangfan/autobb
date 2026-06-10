@@ -40,6 +40,7 @@ interface AuthStatus {
   }
   authType: 'oauth' | 'service_account' | null
   hasOAuth: boolean
+  hasRefreshToken?: boolean
   hasServiceAccount: boolean
   hasConfigured?: boolean
   canModify: boolean
@@ -251,9 +252,10 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                         : ''}
                     </p>
                   )}
-                {(status.hasOAuth || status.hasServiceAccount) && (
+                {(status.hasOAuth || status.hasServiceAccount || status.hasRefreshToken) && (
                   <p className="text-muted-foreground">
-                    OAuth：{status.hasOAuth ? '已配置' : '未配置'} · 服务账号：
+                    OAuth 字段：{status.hasOAuth ? '有' : '无'} · OAuth 授权：
+                    {status.hasRefreshToken ? '已完成' : '未完成'} · 服务账号：
                     {status.hasServiceAccount ? '已配置' : '未配置'}
                     {status.hasConfigured === false &&
                       !status.dualStack &&

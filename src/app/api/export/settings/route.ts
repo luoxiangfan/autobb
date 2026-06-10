@@ -116,6 +116,12 @@ export async function GET(request: NextRequest) {
       exportedAt: new Date().toISOString(),
       userId: userIdNum,
       includeSensitive,
+      notes: {
+        googleAdsOAuthRequiresReauth:
+          'OAuth refresh_token 不会导出；导入后须在设置页重新完成 OAuth 授权才能调用 Google Ads API。',
+        googleAdsServiceAccountNotIncluded:
+          '服务账号配置不在 settings 导出范围内，请单独备份服务账号 JSON。',
+      },
       settings: exportData,
     }
 

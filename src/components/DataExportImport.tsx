@@ -142,12 +142,17 @@ export function DataExportImport() {
         errorMessages: result.errors,
       })
 
-      if (result.summary?.errors === 0) {
+      if (result.success) {
         setMessage({ type: 'success', text: result.message })
+      } else if (result.partial) {
+        setMessage({
+          type: 'error',
+          text: result.message,
+        })
       } else {
         setMessage({
           type: 'error',
-          text: `${result.message}，但有 ${result.summary.errors} 个错误`,
+          text: result.message,
         })
       }
 
@@ -226,17 +231,23 @@ export function DataExportImport() {
             )}
 
             {showSensitiveOption && (
-              <div className="flex items-center gap-2 sm:col-span-2">
-                <input
-                  type="checkbox"
-                  id="includeSensitive"
-                  checked={includeSensitive}
-                  onChange={(e) => setIncludeSensitive(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <label htmlFor="includeSensitive" className="text-sm text-gray-600">
-                  包含敏感信息（API密钥等，不勾选则脱敏显示）
-                </label>
+              <div className="space-y-2 sm:col-span-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="includeSensitive"
+                    checked={includeSensitive}
+                    onChange={(e) => setIncludeSensitive(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <label htmlFor="includeSensitive" className="text-sm text-gray-600">
+                    包含敏感信息（API密钥等，不勾选则脱敏显示）
+                  </label>
+                </div>
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md p-2">
+                  Google Ads OAuth 的 refresh_token 不会导出，导入后须重新授权；服务账号配置不在
+                  settings 导出范围内。
+                </p>
               </div>
             )}
           </div>

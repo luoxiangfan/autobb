@@ -17,6 +17,7 @@ import {
   resolveGoogleAdsDisplayAuthType,
   resolveGoogleAdsCredentialStatusSummary,
   getGoogleAdsAuthContextMetadata,
+  oauthCredentialFieldsPresentFromContext,
   oauthRefreshConfiguredFromContext,
   serviceAccountConfiguredFromContext,
 } from '@/lib/google-ads-auth-context'
@@ -176,6 +177,7 @@ export async function GET(request: NextRequest) {
           hasCredentials: false,
           dualStack: metadataCtx.dualStack,
           hasRefreshToken: summary.hasRefreshToken,
+          hasOAuthFields: oauthCredentialFieldsPresentFromContext(metadataCtx),
           hasServiceAccount: summary.hasServiceAccount,
           ...(summary.serviceAccountId ? { serviceAccountId: summary.serviceAccountId } : {}),
           ...(summary.serviceAccountName ? { serviceAccountName: summary.serviceAccountName } : {}),

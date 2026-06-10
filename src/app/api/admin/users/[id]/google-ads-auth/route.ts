@@ -94,6 +94,7 @@ async function buildAuthStatus(userId: number) {
         },
     authType: displayAuthType,
     hasOAuth: oauthCredentialFieldsPresentFromContext(ctx),
+    hasRefreshToken: summary.hasRefreshToken,
     hasServiceAccount: summary.hasServiceAccount,
     serviceAccountId: summary.serviceAccountId,
     serviceAccountName: summary.serviceAccountName,
@@ -199,6 +200,9 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
           { status: 400 }
         )
       }
+
+      // 共享模式下子用户不应保留自有凭证，避免取消共享后 orphan 行重新生效
+      await clearOwnGoogleAdsCredentialsForUser(userId)
 
       await upsertGoogleAdsAuthAssignment({
         userId,
@@ -336,9 +340,8 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
 
   try {
     if (assignment) {
-      if (assignment.assignmentMode === 'own') {
-        await clearOwnGoogleAdsCredentialsForUser(userId)
-      }
+      // own / shared_admin 均清除子用户 userId 上的自有凭证（共享时 ctx 可能指向管理员凭证）
+      await clearOwnGoogleAdsCredentialsForUser(userId)
 
       await deleteGoogleAdsAuthAssignment(userId)
 

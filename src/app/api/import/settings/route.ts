@@ -194,15 +194,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const errorCount = errors.length
+    const partial = imported > 0 && errorCount > 0
+    const success = errorCount === 0
+
     return NextResponse.json({
-      success: true,
-      message: `成功导入 ${imported} 个配置项`,
+      success,
+      partial,
+      message: success
+        ? `成功导入 ${imported} 个配置项`
+        : partial
+          ? `部分导入成功：${imported} 项已写入，${errorCount} 项失败或受保护跳过`
+          : `导入未完成：${errorCount} 项失败或受保护跳过`,
       summary: {
         imported,
         skipped,
-        errors: errors.length,
+        errors: errorCount,
       },
-      errors: errors.length > 0 ? errors : undefined,
+      errors: errorCount > 0 ? errors : undefined,
     })
   } catch (error: unknown) {
     console.error('导入配置失败:', error)

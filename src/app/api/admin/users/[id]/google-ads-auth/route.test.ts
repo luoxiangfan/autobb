@@ -83,6 +83,75 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
     assignmentFns.upsertGoogleAdsAuthAssignment.mockResolvedValue({})
   })
 
+  it('clears orphan credentials before assigning shared_admin', async () => {
+    contextFns.getGoogleAdsAuthContextMetadata
+      .mockResolvedValueOnce({
+        userId: 2,
+        ownerUserId: 2,
+        dualStack: false,
+        assignment: null,
+        isShared: false,
+        canModify: true,
+        auth: { authType: 'oauth' as const },
+        oauthCredentials: { client_id: 'orphan.apps.googleusercontent.com' },
+        serviceAccountConfig: null,
+        oauthHasRefreshToken: false,
+        serviceAccountConfigured: false,
+      })
+      .mockResolvedValueOnce({
+        userId: 2,
+        ownerUserId: 2,
+        dualStack: false,
+        assignment: null,
+        isShared: false,
+        canModify: true,
+        auth: { authType: 'oauth' as const },
+        oauthCredentials: { client_id: 'orphan.apps.googleusercontent.com' },
+        serviceAccountConfig: null,
+        oauthHasRefreshToken: false,
+        serviceAccountConfigured: false,
+      })
+      .mockResolvedValue({
+        userId: 2,
+        ownerUserId: 1,
+        dualStack: false,
+        assignment: {
+          assignmentMode: 'shared_admin',
+          authType: 'oauth',
+          sharedAdminUserId: 1,
+        },
+        isShared: true,
+        canModify: false,
+        auth: { authType: 'oauth' as const },
+        oauthCredentials: { refresh_token: 'admin-rt' },
+        serviceAccountConfig: null,
+        oauthHasRefreshToken: true,
+        serviceAccountConfigured: false,
+      })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'PUT',
+      body: JSON.stringify({
+        assignmentMode: 'shared_admin',
+        authType: 'oauth',
+      }),
+    })
+
+    const res = await PUT(req, { params: Promise.resolve({ id: '2' }) })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(oauthFns.deleteGoogleAdsCredentials).toHaveBeenCalledWith(2)
+    expect(assignmentFns.upsertGoogleAdsAuthAssignment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 2,
+        assignmentMode: 'shared_admin',
+        sharedAdminUserId: 1,
+      })
+    )
+  })
+
   it('returns 409 when target user auth context is dual-stack', async () => {
     contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
       userId: 2,
@@ -182,6 +251,38 @@ describe('DELETE /api/admin/users/[id]/google-ads-auth', () => {
 
     expect(res.status).toBe(404)
     expect(data.error).toContain('没有 Google Ads 认证配置')
+  })
+
+  it('clears orphan credentials when deleting shared_admin assignment', async () => {
+    assignmentFns.getGoogleAdsAuthAssignment.mockResolvedValue({
+      assignmentMode: 'shared_admin',
+      authType: 'oauth',
+      userId: 2,
+      sharedAdminUserId: 1,
+    })
+    contextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      userId: 2,
+      ownerUserId: 1,
+      dualStack: false,
+      assignment: { assignmentMode: 'shared_admin', authType: 'oauth', sharedAdminUserId: 1 },
+      isShared: true,
+      canModify: false,
+      auth: { authType: 'oauth' as const },
+      oauthCredentials: { refresh_token: 'admin-rt' },
+      serviceAccountConfig: null,
+      oauthHasRefreshToken: true,
+      serviceAccountConfigured: false,
+    })
+
+    const req = new NextRequest('http://localhost/api/admin/users/2/google-ads-auth', {
+      method: 'DELETE',
+    })
+
+    const res = await DELETE(req, { params: Promise.resolve({ id: '2' }) })
+
+    expect(res.status).toBe(200)
+    expect(oauthFns.deleteGoogleAdsCredentials).toHaveBeenCalledWith(2)
+    expect(assignmentFns.deleteGoogleAdsAuthAssignment).toHaveBeenCalledWith(2)
   })
 
   it('clears partial OAuth and dual-stack when assignment exists (own mode)', async () => {

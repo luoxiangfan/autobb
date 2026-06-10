@@ -737,11 +737,6 @@ async function get(request: NextRequest) {
       errorCode = 'CREDENTIALS_ERROR'
     }
 
-    // 🔧 友好化：Developer Token 测试权限/未审批/无效
-    // 常见报错：
-    // - DEVELOPER_TOKEN_NOT_APPROVED: The developer token is only approved for use with test accounts
-    // - The developer token is not approved.
-    // - The developer token is not valid.
     if (
       extractedMessageLower.includes('developer_token_not_approved') ||
       extractedMessageLower.includes('only approved for use with test accounts') ||
@@ -794,6 +789,19 @@ async function get(request: NextRequest) {
           },
         },
         { status: statusCode }
+      )
+    }
+
+    const { formatPythonAdsServiceUnavailableError } = await import('@/lib/python-ads-client')
+    const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
+    if (serviceUnavailable) {
+      return jsonNoStore(
+        {
+          error: 'Python Ads 服务不可用',
+          code: 'PYTHON_ADS_SERVICE_UNAVAILABLE',
+          message: serviceUnavailable,
+        },
+        { status: 503 }
       )
     }
 

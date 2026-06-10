@@ -88,6 +88,8 @@ describe('GET /api/export/settings', () => {
     expect(res.status).toBe(200)
     expect(payload.settings.ai.gemini_model.value).toBe('gemini-test')
     expect(payload.settings.google_ads.client_id.value).toBe('cid.apps.googleusercontent.com')
+    expect(payload.notes.googleAdsOAuthRequiresReauth).toContain('refresh_token')
+    expect(payload.notes.googleAdsServiceAccountNotIncluded).toContain('服务账号')
     expect(settingsStoreFns.overlayGoogleAdsOAuthFieldsForSettingsExport).toHaveBeenCalledWith(
       expect.objectContaining({
         ai: expect.any(Object),
