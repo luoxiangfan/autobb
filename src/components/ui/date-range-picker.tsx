@@ -209,6 +209,12 @@ export function DateRangePicker({
     if (open) {
       setDraftDate(date)
       setVisibleMonth(clampMonth(date?.from ?? normalizedMaxDate ?? new Date()))
+      // Radix modal layers set aria-hidden on page content; blur trigger first so focus
+      // is not trapped inside a hidden subtree (Chrome a11y warning).
+      const active = document.activeElement
+      if (active instanceof HTMLElement) {
+        active.blur()
+      }
     } else {
       setDraftDate(date)
     }
@@ -273,7 +279,7 @@ export function DateRangePicker({
     : '请选择开始与结束日期'
 
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange} modal>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         className={cn(
           buttonVariants({ variant, size }),
@@ -285,6 +291,11 @@ export function DateRangePicker({
         )}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
+        onPointerDown={(event) => {
+          if (event.pointerType === 'mouse') {
+            event.preventDefault()
+          }
+        }}
       >
         <CalendarIcon className="mr-1 h-3.5 w-3.5" />
         <span className="truncate">{displayText}</span>
@@ -299,19 +310,17 @@ export function DateRangePicker({
         className={cn(popoverWidthClass, 'p-0')}
         onOpenAutoFocus={(event) => {
           event.preventDefault()
-          window.requestAnimationFrame(() => {
-            const firstPresetButton = contentRef.current?.querySelector<HTMLButtonElement>(
-              'button[data-date-range-preset="true"]'
-            )
-            if (showPresets && firstPresetButton) {
-              firstPresetButton.focus()
-              return
-            }
-            const firstDayButton = contentRef.current?.querySelector<HTMLButtonElement>(
-              '.rdp-day_button:not([disabled])'
-            )
-            firstDayButton?.focus()
-          })
+          const firstPresetButton = contentRef.current?.querySelector<HTMLButtonElement>(
+            'button[data-date-range-preset="true"]'
+          )
+          if (showPresets && firstPresetButton) {
+            firstPresetButton.focus()
+            return
+          }
+          const firstDayButton = contentRef.current?.querySelector<HTMLButtonElement>(
+            '.rdp-day_button:not([disabled])'
+          )
+          firstDayButton?.focus()
         }}
       >
         <div
