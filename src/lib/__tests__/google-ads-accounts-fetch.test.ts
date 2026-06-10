@@ -5,7 +5,13 @@ import {
   getAccountsPollFailureMessage,
   parseServiceAccountPermissionDetails,
   resolveGoogleAdsAccountsFetchUiEffects,
+  SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE,
+  shouldRefreshCredentialsAfterAccountsFetchOk,
 } from '../google-ads-accounts-fetch'
+import {
+  createGoogleAdsAccountsCoreApplyHandlers,
+  withAccountsListSchedulePoll,
+} from '../google-ads-accounts-fetch-handlers'
 
 describe('buildGoogleAdsAccountsSearchParams', () => {
   it('applies query first then forceRefresh overrides refresh/async', () => {
@@ -181,5 +187,98 @@ describe('applyGoogleAdsAccountsFetchUiEffects', () => {
 
     expect(onPermissionDetails).toHaveBeenCalledWith(null)
     expect(onClearForceRefresh).toHaveBeenCalled()
+  })
+
+  it('shows fallback message when permission_denied details cannot be parsed', () => {
+    const onErrorMessage = vi.fn()
+
+    applyGoogleAdsAccountsFetchUiEffects(
+      resolveGoogleAdsAccountsFetchUiEffects(
+        {
+          ok: false,
+          kind: 'permission_denied',
+          details: {},
+        },
+        { forceRefresh: true }
+      ),
+      { onErrorMessage, onPermissionDetails: vi.fn() }
+    )
+
+    expect(onErrorMessage).toHaveBeenCalledWith(SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE)
+  })
+})
+
+describe('shouldRefreshCredentialsAfterAccountsFetchOk', () => {
+  it('returns false while background sync poll should continue', () => {
+    expect(
+      shouldRefreshCredentialsAfterAccountsFetchOk({
+        kind: 'ok',
+        shouldSchedulePoll: true,
+        data: {
+          accounts: [],
+          total: 0,
+          refreshInProgress: true,
+          refreshError: null,
+          authConfigWarning: null,
+          dualStack: false,
+        },
+      })
+    ).toBe(false)
+  })
+
+  it('returns true when sync completes', () => {
+    expect(
+      shouldRefreshCredentialsAfterAccountsFetchOk({
+        kind: 'ok',
+        shouldSchedulePoll: false,
+        data: {
+          accounts: [],
+          total: 0,
+          refreshInProgress: false,
+          refreshError: null,
+          authConfigWarning: null,
+          dualStack: false,
+        },
+      })
+    ).toBe(true)
+  })
+})
+
+describe('google-ads-accounts-fetch-handlers', () => {
+  it('createGoogleAdsAccountsCoreApplyHandlers clears accounts on permission error', () => {
+    const onPermissionAccountsHidden = vi.fn()
+    const handlers = createGoogleAdsAccountsCoreApplyHandlers({
+      setAuthConfigWarning: vi.fn(),
+      setGoogleAdsDualStack: vi.fn(),
+      setNeedsReauth: vi.fn(),
+      setPermissionError: vi.fn(),
+      onErrorMessage: vi.fn(),
+      onPollFailure: vi.fn(),
+      onClearForceRefresh: vi.fn(),
+      onPermissionAccountsHidden,
+    })
+
+    handlers.onPermissionDetails?.({
+      serviceAccountEmail: 'sa@test.iam.gserviceaccount.com',
+      solution: { steps: ['fix'] },
+    })
+
+    expect(onPermissionAccountsHidden).toHaveBeenCalled()
+  })
+
+  it('withAccountsListSchedulePoll wires poll callback', () => {
+    const scheduleAccountsPoll = vi.fn()
+    const onPollResult = vi.fn()
+    const baseParamsRef = { current: { forceRefresh: true } }
+    const handlers = withAccountsListSchedulePoll(
+      {},
+      scheduleAccountsPoll,
+      baseParamsRef,
+      onPollResult
+    )
+
+    handlers.onSchedulePoll?.()
+
+    expect(scheduleAccountsPoll).toHaveBeenCalledWith(baseParamsRef.current, onPollResult)
   })
 })

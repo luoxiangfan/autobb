@@ -10,8 +10,13 @@ import {
 import {
   applyGoogleAdsAccountsFetchUiEffects,
   resolveGoogleAdsAccountsFetchUiEffects,
+  hasServiceAccountPermissionDetails,
   type ServiceAccountPermissionDetails,
 } from '@/lib/google-ads-accounts-fetch'
+import {
+  createGoogleAdsAccountsCoreApplyHandlers,
+  withAccountsListSchedulePoll,
+} from '@/lib/google-ads-accounts-fetch-handlers'
 import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,
@@ -136,43 +141,60 @@ export default function GoogleAdsPage() {
     }))
   }
 
+  const applyAccountsFetchResultRef = useRef<
+    (
+      result: GoogleAdsAccountsFetchResult,
+      opts?: { forceRefresh?: boolean; isPoll?: boolean }
+    ) => void
+  >(() => {})
+
+  applyAccountsFetchResultRef.current = (result, opts) => {
+    const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
+    applyGoogleAdsAccountsFetchUiEffects(
+      effects,
+      withAccountsListSchedulePoll(
+        {
+          ...createGoogleAdsAccountsCoreApplyHandlers({
+            setAuthConfigWarning,
+            setGoogleAdsDualStack,
+            setNeedsReauth,
+            setPermissionError,
+            onErrorMessage: (message) => {
+              setError(message)
+              setAccountsSyncError(null)
+            },
+            onPollFailure: (message) => {
+              setError(message)
+              setAccountsSyncError(null)
+            },
+            onClearForceRefresh: () => setAccountsSyncing(false),
+            onPermissionAccountsHidden: () => setAccounts([]),
+          }),
+          onOkData: (data) => {
+            setAccountsSyncError(data.refreshError)
+            setAccountsSyncing(data.refreshInProgress)
+            const allAccounts = data.accounts as GoogleAdsAccount[]
+            setAccounts(enrichAccountsWithMccNames(allAccounts))
+            if (data.cached !== undefined) {
+              setIsCached(data.cached)
+            }
+            if (data.lastSyncAt) {
+              setLastSyncAt(data.lastSyncAt)
+            }
+          },
+        },
+        scheduleAccountsPoll,
+        accountsPollBaseParamsRef,
+        (pollResult) => applyAccountsFetchResultRef.current(pollResult, { isPoll: true })
+      )
+    )
+  }
+
   const applyAccountsFetchResult = useCallback(
     (result: GoogleAdsAccountsFetchResult, opts?: { forceRefresh?: boolean; isPoll?: boolean }) => {
-      const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
-      applyGoogleAdsAccountsFetchUiEffects(effects, {
-        onAuthConfigWarning: setAuthConfigWarning,
-        onDualStack: setGoogleAdsDualStack,
-        onNeedsReauth: setNeedsReauth,
-        onErrorMessage: (message) => {
-          setError(message)
-          setAccountsSyncError(null)
-        },
-        onPermissionDetails: setPermissionError,
-        onClearForceRefresh: () => setAccountsSyncing(false),
-        onPollFailure: (message) => {
-          setError(message)
-          setAccountsSyncError(null)
-        },
-        onOkData: (data) => {
-          setAccountsSyncError(data.refreshError)
-          setAccountsSyncing(data.refreshInProgress)
-          const allAccounts = data.accounts as GoogleAdsAccount[]
-          setAccounts(enrichAccountsWithMccNames(allAccounts))
-          if (data.cached !== undefined) {
-            setIsCached(data.cached)
-          }
-          if (data.lastSyncAt) {
-            setLastSyncAt(data.lastSyncAt)
-          }
-        },
-        onSchedulePoll: () => {
-          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
-            applyAccountsFetchResult(pollResult, { isPoll: true })
-          })
-        },
-      })
+      applyAccountsFetchResultRef.current(result, opts)
     },
-    [scheduleAccountsPoll]
+    []
   )
 
   const fetchAccountsList = async (
@@ -719,394 +741,397 @@ export default function GoogleAdsPage() {
             </div>
           )}
 
-          {(hasRefreshToken || hasServiceAccount) && (
-            <>
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">可访问的账户</h2>
-                  {lastSyncAt && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {isCached ? '缓存数据' : '已刷新'} · 同步时间:{' '}
-                      {new Date(lastSyncAt).toLocaleString('zh-CN')}
-                    </p>
+          {(hasRefreshToken || hasServiceAccount) &&
+            !hasServiceAccountPermissionDetails(permissionError) && (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">可访问的账户</h2>
+                    {lastSyncAt && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        {isCached ? '缓存数据' : '已刷新'} · 同步时间:{' '}
+                        {new Date(lastSyncAt).toLocaleString('zh-CN')}
+                      </p>
+                    )}
+                  </div>
+                  {accounts.length > 0 && (
+                    <span className="text-base text-gray-600 font-medium">
+                      显示 {sortedAccounts.length} / {accounts.length} 个账户（可发布{' '}
+                      {publishableAccountsCount} 个）
+                    </span>
                   )}
                 </div>
-                {accounts.length > 0 && (
-                  <span className="text-base text-gray-600 font-medium">
-                    显示 {sortedAccounts.length} / {accounts.length} 个账户（可发布{' '}
-                    {publishableAccountsCount} 个）
-                  </span>
-                )}
-              </div>
 
-              {accounts.length > 0 && (
-                <div className="mb-4 bg-white shadow-sm rounded-lg p-4">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-end">
-                    <div className="w-full md:flex-1">
-                      <label
-                        htmlFor="ads-account-search"
-                        className="block text-sm font-medium text-gray-700 mb-1"
-                      >
-                        搜索账号
-                      </label>
-                      <input
-                        id="ads-account-search"
-                        type="text"
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        placeholder="按账户名称 / Customer ID 搜索"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div className="w-full md:w-56">
-                      <label
-                        htmlFor="ads-account-status-filter"
-                        className="block text-sm font-medium text-gray-700 mb-1"
-                      >
-                        状态筛选
-                      </label>
-                      <select
-                        id="ads-account-status-filter"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="ALL">全部状态</option>
-                        {statusOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                {accounts.length > 0 && (
+                  <div className="mb-4 bg-white shadow-sm rounded-lg p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-end">
+                      <div className="w-full md:flex-1">
+                        <label
+                          htmlFor="ads-account-search"
+                          className="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          搜索账号
+                        </label>
+                        <input
+                          id="ads-account-search"
+                          type="text"
+                          value={searchKeyword}
+                          onChange={(e) => setSearchKeyword(e.target.value)}
+                          placeholder="按账户名称 / Customer ID 搜索"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                        />
+                      </div>
+                      <div className="w-full md:w-56">
+                        <label
+                          htmlFor="ads-account-status-filter"
+                          className="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          状态筛选
+                        </label>
+                        <select
+                          id="ads-account-status-filter"
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="ALL">全部状态</option>
+                          {statusOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {accountsLoading && accounts.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">加载账户列表...</p>
-                </div>
-              ) : accounts.length === 0 ? (
-                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-                  <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                    />
-                  </svg>
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">未找到可访问的账户</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    您的 Google 账号可能没有关联任何 Google Ads 账户
-                  </p>
-                </div>
-              ) : sortedAccounts.length === 0 ? (
-                <div className="bg-white shadow-sm rounded-lg p-8 text-center">
-                  <h3 className="text-base font-medium text-gray-900">没有匹配的账户</h3>
-                  <p className="mt-1 text-sm text-gray-500">请调整搜索关键词或状态筛选条件后重试</p>
-                  <button
-                    onClick={() => {
-                      setSearchKeyword('')
-                      setStatusFilter('ALL')
-                    }}
-                    className="mt-4 px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    清空筛选
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {/* 账户列表 - 表格形式 */}
-                  <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('name')}
-                          >
-                            <div className="flex items-center">
-                              账户名称
-                              <SortIndicator column="name" />
-                            </div>
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('customerId')}
-                          >
-                            <div className="flex items-center">
-                              Customer ID
-                              <SortIndicator column="customerId" />
-                            </div>
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('mcc')}
-                          >
-                            <div className="flex items-center">
-                              所属 MCC
-                              <SortIndicator column="mcc" />
-                            </div>
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('type')}
-                          >
-                            <div className="flex items-center">
-                              类型
-                              <SortIndicator column="type" />
-                            </div>
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('balance')}
-                          >
-                            <div className="flex items-center">
-                              预算余额
-                              <SortIndicator column="balance" />
-                            </div>
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('status')}
-                          >
-                            <div className="flex items-center">
-                              状态
-                              <SortIndicator column="status" />
-                            </div>
-                          </th>
-                          <th
-                            className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
-                            onClick={() => handleSort('offers')}
-                          >
-                            <div className="flex items-center">
-                              关联 Offer
-                              <SortIndicator column="offers" />
-                            </div>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {paginatedAccounts.map((account) => (
-                          <tr key={account.customerId} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
+                {accountsLoading && accounts.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">加载账户列表...</p>
+                  </div>
+                ) : accounts.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                      />
+                    </svg>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">未找到可访问的账户</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      您的 Google 账号可能没有关联任何 Google Ads 账户
+                    </p>
+                  </div>
+                ) : sortedAccounts.length === 0 ? (
+                  <div className="bg-white shadow-sm rounded-lg p-8 text-center">
+                    <h3 className="text-base font-medium text-gray-900">没有匹配的账户</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      请调整搜索关键词或状态筛选条件后重试
+                    </p>
+                    <button
+                      onClick={() => {
+                        setSearchKeyword('')
+                        setStatusFilter('ALL')
+                      }}
+                      className="mt-4 px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                      清空筛选
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* 账户列表 - 表格形式 */}
+                    <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('name')}
+                            >
                               <div className="flex items-center">
-                                <div>
-                                  <div className="text-base font-medium text-gray-900">
-                                    {account.descriptiveName}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {account.currencyCode} · {account.timeZone}
-                                  </div>
-                                </div>
+                                账户名称
+                                <SortIndicator column="name" />
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-sm font-mono text-gray-700">
-                                {account.customerId}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {account.parentMcc ? (
-                                <div>
-                                  <div className="text-sm text-gray-900">
-                                    {account.parentMccName || '未知 MCC'}
-                                  </div>
-                                  <div className="text-sm text-gray-500 font-mono">
-                                    {account.parentMcc}
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-wrap gap-1">
-                                {account.manager && (
-                                  <span className="px-2 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    MCC
-                                  </span>
-                                )}
-                                {account.testAccount && (
-                                  <span className="px-2 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                    测试
-                                  </span>
-                                )}
-                                {!account.manager && !account.testAccount && (
-                                  <span className="text-sm text-gray-600">普通账户</span>
-                                )}
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('customerId')}
+                            >
+                              <div className="flex items-center">
+                                Customer ID
+                                <SortIndicator column="customerId" />
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {account.accountBalance !== null &&
-                              account.accountBalance !== undefined ? (
-                                <div className="text-sm">
-                                  <div className="font-medium text-gray-900">
-                                    {account.currencyCode}{' '}
-                                    {(account.accountBalance / 1000000).toLocaleString('zh-CN', {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </div>
-                                  <div className="text-xs text-gray-500">预算余额</div>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-400">-</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {(() => {
-                                const config = getStatusConfig(account)
-                                return (
-                                  <span
-                                    className={`px-2 py-1 text-sm font-semibold rounded-full ${config.color}`}
-                                  >
-                                    {config.label}
-                                  </span>
-                                )
-                              })()}
-                            </td>
-                            <td className="px-6 py-4">
-                              {account.linkedOffers && account.linkedOffers.length > 0 ? (
-                                <div>
-                                  <button
-                                    onClick={() => toggleOffers(account.customerId)}
-                                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                                  >
-                                    {account.linkedOffers.length} 个 Offer
-                                    <span className="ml-1">
-                                      {expandedOffers.has(account.customerId) ? '▼' : '▶'}
-                                    </span>
-                                  </button>
-                                  {expandedOffers.has(account.customerId) && (
-                                    <div className="mt-2 space-y-1">
-                                      {account.linkedOffers.map((offer) => (
-                                        <div
-                                          key={offer.id}
-                                          className="text-sm bg-gray-50 px-2 py-1.5 rounded"
-                                        >
-                                          <a
-                                            href={`/offers/${offer.id}`}
-                                            className="text-indigo-600 hover:underline font-medium"
-                                          >
-                                            {offer.offerName || offer.brand}
-                                          </a>
-                                          <span className="text-gray-600 ml-1">
-                                            · {offer.targetCountry} · {offer.campaignCount} 系列
-                                          </span>
-                                        </div>
-                                      ))}
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('mcc')}
+                            >
+                              <div className="flex items-center">
+                                所属 MCC
+                                <SortIndicator column="mcc" />
+                              </div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('type')}
+                            >
+                              <div className="flex items-center">
+                                类型
+                                <SortIndicator column="type" />
+                              </div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('balance')}
+                            >
+                              <div className="flex items-center">
+                                预算余额
+                                <SortIndicator column="balance" />
+                              </div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('status')}
+                            >
+                              <div className="flex items-center">
+                                状态
+                                <SortIndicator column="status" />
+                              </div>
+                            </th>
+                            <th
+                              className="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none"
+                              onClick={() => handleSort('offers')}
+                            >
+                              <div className="flex items-center">
+                                关联 Offer
+                                <SortIndicator column="offers" />
+                              </div>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {paginatedAccounts.map((account) => (
+                            <tr key={account.customerId} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div>
+                                    <div className="text-base font-medium text-gray-900">
+                                      {account.descriptiveName}
                                     </div>
+                                    <div className="text-sm text-gray-500">
+                                      {account.currencyCode} · {account.timeZone}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="text-sm font-mono text-gray-700">
+                                  {account.customerId}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {account.parentMcc ? (
+                                  <div>
+                                    <div className="text-sm text-gray-900">
+                                      {account.parentMccName || '未知 MCC'}
+                                    </div>
+                                    <div className="text-sm text-gray-500 font-mono">
+                                      {account.parentMcc}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-wrap gap-1">
+                                  {account.manager && (
+                                    <span className="px-2 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">
+                                      MCC
+                                    </span>
+                                  )}
+                                  {account.testAccount && (
+                                    <span className="px-2 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                      测试
+                                    </span>
+                                  )}
+                                  {!account.manager && !account.testAccount && (
+                                    <span className="text-sm text-gray-600">普通账户</span>
                                   )}
                                 </div>
-                              ) : (
-                                <span className="text-sm text-gray-400">-</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* 分页控件 - Updated with page size selector */}
-                  {totalPages > 1 && (
-                    <div className="mt-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-sm">
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <span>每页显示</span>
-                          <select
-                            value={pageSize}
-                            onChange={(e) => {
-                              const newSize = Number(e.target.value)
-                              setPageSize(newSize)
-                              setCurrentPage(1) // 重置到第一页
-                            }}
-                            className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-                          >
-                            <option value={10}>10</option>
-                            <option value={20}>20</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                          </select>
-                          <span>条</span>
-                        </div>
-                        <div>
-                          显示第 {startIndex + 1} - {Math.min(endIndex, sortedAccounts.length)}{' '}
-                          条，共 {sortedAccounts.length} 条
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => goToPage(1)}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          首页
-                        </button>
-                        <button
-                          onClick={() => goToPage(currentPage - 1)}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          上一页
-                        </button>
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                            let pageNum: number
-                            if (totalPages <= 5) {
-                              pageNum = i + 1
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1
-                            } else if (currentPage >= totalPages - 2) {
-                              pageNum = totalPages - 4 + i
-                            } else {
-                              pageNum = currentPage - 2 + i
-                            }
-                            return (
-                              <button
-                                key={pageNum}
-                                onClick={() => goToPage(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${
-                                  currentPage === pageNum
-                                    ? 'bg-indigo-600 text-white border-indigo-600'
-                                    : 'hover:bg-gray-50'
-                                }`}
-                              >
-                                {pageNum}
-                              </button>
-                            )
-                          })}
-                        </div>
-                        <button
-                          onClick={() => goToPage(currentPage + 1)}
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          下一页
-                        </button>
-                        <button
-                          onClick={() => goToPage(totalPages)}
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          末页
-                        </button>
-                      </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {account.accountBalance !== null &&
+                                account.accountBalance !== undefined ? (
+                                  <div className="text-sm">
+                                    <div className="font-medium text-gray-900">
+                                      {account.currencyCode}{' '}
+                                      {(account.accountBalance / 1000000).toLocaleString('zh-CN', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      })}
+                                    </div>
+                                    <div className="text-xs text-gray-500">预算余额</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-gray-400">-</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {(() => {
+                                  const config = getStatusConfig(account)
+                                  return (
+                                    <span
+                                      className={`px-2 py-1 text-sm font-semibold rounded-full ${config.color}`}
+                                    >
+                                      {config.label}
+                                    </span>
+                                  )
+                                })()}
+                              </td>
+                              <td className="px-6 py-4">
+                                {account.linkedOffers && account.linkedOffers.length > 0 ? (
+                                  <div>
+                                    <button
+                                      onClick={() => toggleOffers(account.customerId)}
+                                      className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                                    >
+                                      {account.linkedOffers.length} 个 Offer
+                                      <span className="ml-1">
+                                        {expandedOffers.has(account.customerId) ? '▼' : '▶'}
+                                      </span>
+                                    </button>
+                                    {expandedOffers.has(account.customerId) && (
+                                      <div className="mt-2 space-y-1">
+                                        {account.linkedOffers.map((offer) => (
+                                          <div
+                                            key={offer.id}
+                                            className="text-sm bg-gray-50 px-2 py-1.5 rounded"
+                                          >
+                                            <a
+                                              href={`/offers/${offer.id}`}
+                                              className="text-indigo-600 hover:underline font-medium"
+                                            >
+                                              {offer.offerName || offer.brand}
+                                            </a>
+                                            <span className="text-gray-600 ml-1">
+                                              · {offer.targetCountry} · {offer.campaignCount} 系列
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-sm text-gray-400">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
+
+                    {/* 分页控件 - Updated with page size selector */}
+                    {totalPages > 1 && (
+                      <div className="mt-4 flex items-center justify-between bg-white px-4 py-3 rounded-lg shadow-sm">
+                        <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <span>每页显示</span>
+                            <select
+                              value={pageSize}
+                              onChange={(e) => {
+                                const newSize = Number(e.target.value)
+                                setPageSize(newSize)
+                                setCurrentPage(1) // 重置到第一页
+                              }}
+                              className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                            >
+                              <option value={10}>10</option>
+                              <option value={20}>20</option>
+                              <option value={50}>50</option>
+                              <option value={100}>100</option>
+                            </select>
+                            <span>条</span>
+                          </div>
+                          <div>
+                            显示第 {startIndex + 1} - {Math.min(endIndex, sortedAccounts.length)}{' '}
+                            条，共 {sortedAccounts.length} 条
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => goToPage(1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            首页
+                          </button>
+                          <button
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            上一页
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                              let pageNum: number
+                              if (totalPages <= 5) {
+                                pageNum = i + 1
+                              } else if (currentPage <= 3) {
+                                pageNum = i + 1
+                              } else if (currentPage >= totalPages - 2) {
+                                pageNum = totalPages - 4 + i
+                              } else {
+                                pageNum = currentPage - 2 + i
+                              }
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => goToPage(pageNum)}
+                                  className={`px-3 py-1 text-sm border rounded ${
+                                    currentPage === pageNum
+                                      ? 'bg-indigo-600 text-white border-indigo-600'
+                                      : 'hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <button
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            下一页
+                          </button>
+                          <button
+                            onClick={() => goToPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            末页
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
           <div className="mt-6 bg-gray-50 border border-gray-300 text-gray-700 px-4 py-3 rounded">
             <p className="font-semibold">使用说明：</p>

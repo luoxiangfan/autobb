@@ -47,8 +47,13 @@ import { showError, showSuccess } from '@/lib/toast-utils'
 import {
   applyGoogleAdsAccountsFetchUiEffects,
   resolveGoogleAdsAccountsFetchUiEffects,
+  hasServiceAccountPermissionDetails,
   type ServiceAccountPermissionDetails,
 } from '@/lib/google-ads-accounts-fetch'
+import {
+  createGoogleAdsAccountsCoreApplyHandlers,
+  withAccountsListSchedulePoll,
+} from '@/lib/google-ads-accounts-fetch-handlers'
 import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,
@@ -216,21 +221,31 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
     setAccounts(availableAccounts)
   }, [])
 
-  const handleAccountsFetchResult = useCallback(
-    (result: GoogleAdsAccountsFetchResult, opts: { forceRefresh: boolean; isPoll: boolean }) => {
-      const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
-      applyGoogleAdsAccountsFetchUiEffects(effects, {
-        onAuthConfigWarning: setAuthConfigWarning,
-        onDualStack: setGoogleAdsDualStack,
-        onNeedsReauth: setNeedsReauth,
-        onErrorMessage: (message) => showError('加载失败', message),
-        onPermissionDetails: setPermissionError,
-        onPollFailure: (message) => showError('同步失败', message),
-        onClearForceRefresh: () => {
-          setRefreshing(false)
-          setRefreshInProgress(false)
-          setRefreshError(null)
-        },
+  const handleAccountsFetchResultRef = useRef<
+    (result: GoogleAdsAccountsFetchResult, opts: { forceRefresh: boolean; isPoll: boolean }) => void
+  >(() => {})
+
+  handleAccountsFetchResultRef.current = (result, opts) => {
+    const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
+    const handlers = withAccountsListSchedulePoll(
+      {
+        ...createGoogleAdsAccountsCoreApplyHandlers({
+          setAuthConfigWarning,
+          setGoogleAdsDualStack,
+          setNeedsReauth,
+          setPermissionError,
+          onErrorMessage: (message) => showError('加载失败', message),
+          onPollFailure: (message) => showError('同步失败', message),
+          onClearForceRefresh: () => {
+            setRefreshing(false)
+            setRefreshInProgress(false)
+            setRefreshError(null)
+          },
+          onPermissionAccountsHidden: () => {
+            setAccounts([])
+            setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+          },
+        }),
         onOkData: (data) => {
           setIsCached(Boolean(data.cached))
           setCacheStale(Boolean(data.cacheStale))
@@ -247,66 +262,77 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
             setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
           }
         },
-        onSchedulePoll: () => {
-          if (opts.forceRefresh) {
-            showSuccess('已开始刷新', '后台同步中，列表将自动更新')
-          }
-          scheduleAccountsPoll(accountsPollBaseParamsRef.current, (pollResult) => {
-            handleAccountsFetchResult(pollResult, { forceRefresh: false, isPoll: true })
-          })
-        },
-      })
-
-      if (effects.kind === 'error') {
-        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+      },
+      scheduleAccountsPoll,
+      accountsPollBaseParamsRef,
+      (pollResult) => {
+        handleAccountsFetchResultRef.current(pollResult, { forceRefresh: false, isPoll: true })
       }
+    )
 
-      if (effects.kind === 'ok' && effects.data) {
-        if (opts.forceRefresh && !effects.shouldSchedulePoll) {
-          showSuccess('已刷新', `已同步 ${effects.data.accounts.length} 个账号`)
-          setRefreshing(false)
-        } else if (opts.isPoll && !effects.shouldSchedulePoll) {
-          setRefreshing(false)
+    applyGoogleAdsAccountsFetchUiEffects(effects, {
+      ...handlers,
+      onSchedulePoll: () => {
+        if (opts.forceRefresh) {
+          showSuccess('已开始刷新', '后台同步中，列表将自动更新')
         }
-      }
-    },
-    [applyAccountsToState, scheduleAccountsPoll]
-  )
+        handlers.onSchedulePoll?.()
+      },
+    })
 
-  const fetchAccounts = useCallback(
-    async (forceRefresh: boolean = false, isPoll: boolean = false) => {
-      try {
-        if (forceRefresh) {
-          setRefreshing(true)
-        } else if (!isPoll) {
-          setLoading(true)
-        }
-        if (!isPoll) {
-          setRefreshFailed(false)
-        }
-        if (forceRefresh) {
-          setNeedsReauth(false)
-        }
+    if (effects.kind === 'error') {
+      setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+    }
 
-        const params = buildAccountsFetchParams(forceRefresh, isPoll)
-        accountsPollBaseParamsRef.current = params
-        const result = await fetchAccountsFromApi(params)
-        handleAccountsFetchResult(result, { forceRefresh, isPoll })
-      } catch (error: unknown) {
-        console.error('获取账号列表失败:', error)
-        showError('加载失败', error instanceof Error ? error.message : '获取账号列表失败')
+    if (effects.kind === 'ok' && effects.data) {
+      if (opts.forceRefresh && !effects.shouldSchedulePoll) {
+        showSuccess('已刷新', `已同步 ${effects.data.accounts.length} 个账号`)
         setRefreshing(false)
-        setRefreshInProgress(false)
-        setRefreshError(null)
-        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
-      } finally {
-        if (!isPoll) {
-          setLoading(false)
-        }
+      } else if (opts.isPoll && !effects.shouldSchedulePoll) {
+        setRefreshing(false)
       }
-    },
-    [buildAccountsFetchParams, fetchAccountsFromApi, handleAccountsFetchResult]
+    }
+  }
+
+  const fetchAccountsRef = useRef<(forceRefresh?: boolean, isPoll?: boolean) => Promise<void>>(
+    async () => {}
   )
+
+  fetchAccountsRef.current = async (forceRefresh = false, isPoll = false) => {
+    try {
+      if (forceRefresh) {
+        setRefreshing(true)
+      } else if (!isPoll) {
+        setLoading(true)
+      }
+      if (!isPoll) {
+        setRefreshFailed(false)
+      }
+      if (forceRefresh) {
+        setNeedsReauth(false)
+      }
+
+      const params = buildAccountsFetchParams(forceRefresh, isPoll)
+      accountsPollBaseParamsRef.current = params
+      const result = await fetchAccountsFromApi(params)
+      handleAccountsFetchResultRef.current(result, { forceRefresh, isPoll })
+    } catch (error: unknown) {
+      console.error('获取账号列表失败:', error)
+      showError('加载失败', error instanceof Error ? error.message : '获取账号列表失败')
+      setRefreshing(false)
+      setRefreshInProgress(false)
+      setRefreshError(null)
+      setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+    } finally {
+      if (!isPoll) {
+        setLoading(false)
+      }
+    }
+  }
+
+  const fetchAccounts = useCallback(async (forceRefresh = false, isPoll = false) => {
+    await fetchAccountsRef.current(forceRefresh, isPoll)
+  }, [])
 
   useEffect(() => {
     setSelectedIds(selectedAccounts.map((account) => account.customerId))
@@ -521,181 +547,183 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
       )}
 
       {/* Accounts List */}
-      {accounts.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">暂无可用的Google Ads账号</p>
-            <p className="text-sm text-gray-400 mt-2">点击"连接新账号"查看添加账号的操作指南</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">可用账号列表</CardTitle>
-            <CardDescription>
-              最多选择 {MAX_SELECTABLE_ACCOUNTS}{' '}
-              个账号用于同步发布（仅支持同一货币，已按推荐优先级排序）
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedCurrencyCode && (
-              <div className="mb-2 text-xs text-amber-700">
-                已锁定币种：{selectedCurrencyCode}（仅可继续选择相同币种账号）
+      {!hasServiceAccountPermissionDetails(permissionError) &&
+        (accounts.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Link2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">暂无可用的Google Ads账号</p>
+              <p className="text-sm text-gray-400 mt-2">点击"连接新账号"查看添加账号的操作指南</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">可用账号列表</CardTitle>
+              <CardDescription>
+                最多选择 {MAX_SELECTABLE_ACCOUNTS}{' '}
+                个账号用于同步发布（仅支持同一货币，已按推荐优先级排序）
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {selectedCurrencyCode && (
+                <div className="mb-2 text-xs text-amber-700">
+                  已锁定币种：{selectedCurrencyCode}（仅可继续选择相同币种账号）
+                </div>
+              )}
+              <div className="mb-3 text-xs text-gray-600">
+                已选择 {selectedIds.length}/{MAX_SELECTABLE_ACCOUNTS}
               </div>
-            )}
-            <div className="mb-3 text-xs text-gray-600">
-              已选择 {selectedIds.length}/{MAX_SELECTABLE_ACCOUNTS}
-            </div>
-            <Table className="table-fixed min-w-[1120px] [&_thead_th]:bg-white">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[50px]">选择</TableHead>
-                  <TableHead className="w-[220px]">账号名称</TableHead>
-                  <TableHead>账号ID</TableHead>
-                  <TableHead className="w-[80px] whitespace-nowrap">状态</TableHead>
-                  <TableHead className="w-[90px] whitespace-nowrap">推荐</TableHead>
-                  <TableHead>账户余额</TableHead>
-                  <TableHead className="w-[200px]">已关联Offer</TableHead>
-                  <TableHead>时区</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {accounts.map((account) => {
-                  const isSelected = selectedIds.includes(account.customerId)
-                  const accountCurrencyCode = normalizeCurrencyCode(account.currencyCode)
-                  const isCurrencyCompatible =
-                    isSelected ||
-                    !selectedCurrencyCode ||
-                    (accountCurrencyCode.length > 0 && accountCurrencyCode === selectedCurrencyCode)
-                  const isSelectable = account.dbAccountId !== null && isCurrencyCompatible
+              <Table className="table-fixed min-w-[1120px] [&_thead_th]:bg-white">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">选择</TableHead>
+                    <TableHead className="w-[220px]">账号名称</TableHead>
+                    <TableHead>账号ID</TableHead>
+                    <TableHead className="w-[80px] whitespace-nowrap">状态</TableHead>
+                    <TableHead className="w-[90px] whitespace-nowrap">推荐</TableHead>
+                    <TableHead>账户余额</TableHead>
+                    <TableHead className="w-[200px]">已关联Offer</TableHead>
+                    <TableHead>时区</TableHead>
+                    <TableHead className="text-right">操作</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {accounts.map((account) => {
+                    const isSelected = selectedIds.includes(account.customerId)
+                    const accountCurrencyCode = normalizeCurrencyCode(account.currencyCode)
+                    const isCurrencyCompatible =
+                      isSelected ||
+                      !selectedCurrencyCode ||
+                      (accountCurrencyCode.length > 0 &&
+                        accountCurrencyCode === selectedCurrencyCode)
+                    const isSelectable = account.dbAccountId !== null && isCurrencyCompatible
 
-                  return (
-                    <TableRow
-                      key={account.customerId}
-                      className={`${isSelectable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} ${isSelected ? 'bg-green-50' : 'hover:bg-gray-50'}`}
-                      onClick={() => {
-                        if (!isSelectable) return
-                        handleSelectAccount(account)
-                      }}
-                    >
-                      <TableCell>
-                        <div
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            isSelected ? 'border-green-600 bg-green-600' : 'border-gray-300'
-                          }`}
-                        >
-                          {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-[220px]">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <span
-                            className="block truncate font-medium"
-                            title={account.descriptiveName}
+                    return (
+                      <TableRow
+                        key={account.customerId}
+                        className={`${isSelectable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} ${isSelected ? 'bg-green-50' : 'hover:bg-gray-50'}`}
+                        onClick={() => {
+                          if (!isSelectable) return
+                          handleSelectAccount(account)
+                        }}
+                      >
+                        <TableCell>
+                          <div
+                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                              isSelected ? 'border-green-600 bg-green-600' : 'border-gray-300'
+                            }`}
                           >
-                            {account.descriptiveName}
-                          </span>
-                          {account.testAccount && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-yellow-100 text-yellow-800 text-xs"
+                            {isSelected && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          </div>
+                        </TableCell>
+                        <TableCell className="w-[220px]">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="block truncate font-medium"
+                              title={account.descriptiveName}
                             >
-                              测试
+                              {account.descriptiveName}
+                            </span>
+                            {account.testAccount && (
+                              <Badge
+                                variant="secondary"
+                                className="bg-yellow-100 text-yellow-800 text-xs"
+                              >
+                                测试
+                              </Badge>
+                            )}
+                          </div>
+                          {account.parentMcc && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              MCC: {account.parentMccName || account.parentMcc}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{account.customerId}</TableCell>
+                        <TableCell className="w-[80px] whitespace-nowrap">
+                          {getAccountStatusBadge(account.status)}
+                        </TableCell>
+                        <TableCell className="w-[90px] whitespace-nowrap">
+                          {/* 🔓 KISS优化(2025-12-12): 优先级标识 */}
+                          {account.priority === 'current' && (
+                            <Badge className="bg-green-100 text-green-800 border-green-300">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              已用
                             </Badge>
                           )}
-                        </div>
-                        {account.parentMcc && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            MCC: {account.parentMccName || account.parentMcc}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{account.customerId}</TableCell>
-                      <TableCell className="w-[80px] whitespace-nowrap">
-                        {getAccountStatusBadge(account.status)}
-                      </TableCell>
-                      <TableCell className="w-[90px] whitespace-nowrap">
-                        {/* 🔓 KISS优化(2025-12-12): 优先级标识 */}
-                        {account.priority === 'current' && (
-                          <Badge className="bg-green-100 text-green-800 border-green-300">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            已用
-                          </Badge>
-                        )}
-                        {account.priority === 'same-brand' && (
-                          <Badge className="bg-blue-100 text-blue-800 border-blue-300">
-                            同品牌
-                          </Badge>
-                        )}
-                        {account.priority === 'none' && <span className="text-gray-400">-</span>}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatBalance(account.accountBalance, account.currencyCode)}
-                      </TableCell>
-                      <TableCell className="w-[200px] text-sm">
-                        {account.linkedOffers && account.linkedOffers.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {account.linkedOffers.map((linkedOffer) => (
-                              <Badge
-                                key={linkedOffer.id}
-                                variant="outline"
-                                className={
-                                  linkedOffer.id === offer.id
-                                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                                    : 'bg-gray-50'
-                                }
-                              >
-                                #{linkedOffer.id}
-                              </Badge>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">{account.timeZone}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            window.open('https://ads.google.com', '_blank')
-                          }}
-                          title="在Google Ads中查看"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                          {account.priority === 'same-brand' && (
+                            <Badge className="bg-blue-100 text-blue-800 border-blue-300">
+                              同品牌
+                            </Badge>
+                          )}
+                          {account.priority === 'none' && <span className="text-gray-400">-</span>}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {formatBalance(account.accountBalance, account.currencyCode)}
+                        </TableCell>
+                        <TableCell className="w-[200px] text-sm">
+                          {account.linkedOffers && account.linkedOffers.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {account.linkedOffers.map((linkedOffer) => (
+                                <Badge
+                                  key={linkedOffer.id}
+                                  variant="outline"
+                                  className={
+                                    linkedOffer.id === offer.id
+                                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                      : 'bg-gray-50'
+                                  }
+                                >
+                                  #{linkedOffer.id}
+                                </Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">{account.timeZone}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              window.open('https://ads.google.com', '_blank')
+                            }}
+                            title="在Google Ads中查看"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
 
-            {/* Selected Account Info */}
-            {selectedIds.length > 0 && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-2 text-green-800">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span className="font-medium">已选择 {selectedIds.length} 个账号</span>
+              {/* Selected Account Info */}
+              {selectedIds.length > 0 && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-800">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="font-medium">已选择 {selectedIds.length} 个账号</span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {accounts
+                      .filter((account) => selectedIds.includes(account.customerId))
+                      .map((account) => (
+                        <Badge key={account.customerId} variant="secondary">
+                          {account.descriptiveName} ({account.customerId})
+                        </Badge>
+                      ))}
+                  </div>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {accounts
-                    .filter((account) => selectedIds.includes(account.customerId))
-                    .map((account) => (
-                      <Badge key={account.customerId} variant="secondary">
-                        {account.descriptiveName} ({account.customerId})
-                      </Badge>
-                    ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              )}
+            </CardContent>
+          </Card>
+        ))}
 
       {/* Info Alert */}
       <Alert>

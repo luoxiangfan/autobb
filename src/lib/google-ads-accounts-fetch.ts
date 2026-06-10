@@ -79,6 +79,9 @@ export function hasServiceAccountPermissionDetails(
   )
 }
 
+export const SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE =
+  '服务账号权限不足，请检查 MCC 访问权限'
+
 export type GoogleAdsAccountsFetchUiEffects = {
   kind: 'ok' | 'blocked' | 'permission_denied' | 'error'
   authConfigWarning?: string | null
@@ -90,6 +93,12 @@ export type GoogleAdsAccountsFetchUiEffects = {
   pollFailureMessage?: string
   data?: GoogleAdsAccountsApiData
   shouldSchedulePoll?: boolean
+}
+
+export function shouldRefreshCredentialsAfterAccountsFetchOk(
+  effects: GoogleAdsAccountsFetchUiEffects
+): boolean {
+  return effects.kind === 'ok' && !effects.shouldSchedulePoll
 }
 
 /** 合并 query 后再由 forceRefresh 强制 refresh/async，避免 caller query 覆盖 forceRefresh */
@@ -247,6 +256,10 @@ export type GoogleAdsAccountsFetchUiHandlers = {
   onSchedulePoll?: () => void
 }
 
+function notifyPermissionDeniedFallback(handlers: GoogleAdsAccountsFetchUiHandlers): void {
+  handlers.onErrorMessage?.(SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE)
+}
+
 /** 将 resolveGoogleAdsAccountsFetchUiEffects 的结果应用到页面 state / toast */
 export function applyGoogleAdsAccountsFetchUiEffects(
   effects: GoogleAdsAccountsFetchUiEffects,
@@ -284,6 +297,9 @@ export function applyGoogleAdsAccountsFetchUiEffects(
 
   if (effects.kind === 'permission_denied') {
     handlers.onPermissionDetails?.(effects.permissionDetails ?? null)
+    if (!hasServiceAccountPermissionDetails(effects.permissionDetails)) {
+      notifyPermissionDeniedFallback(handlers)
+    }
     if (effects.clearForceRefreshState) {
       handlers.onClearForceRefresh?.()
     }

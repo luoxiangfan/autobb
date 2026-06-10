@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import {
   applyGoogleAdsAccountsFetchUiEffects,
   resolveGoogleAdsAccountsFetchUiEffects,
+  shouldRefreshCredentialsAfterAccountsFetchOk,
   type ServiceAccountPermissionDetails,
 } from '@/lib/google-ads-accounts-fetch'
 import {
@@ -194,6 +195,7 @@ export function useGoogleAdsAuthSettings({
       const effects = resolveGoogleAdsAccountsFetchUiEffects(result, opts)
       const outcome = applyGoogleAdsAccountsFetchUiEffects(effects, {
         onPollFailure: (message) => toast.error(message),
+        onErrorMessage: (message) => toast.error(message),
         onPermissionDetails: setPermissionError,
         onOkData: (data) => {
           setGoogleAdsAccounts(data.accounts as GoogleAdsAccount[])
@@ -212,7 +214,9 @@ export function useGoogleAdsAuthSettings({
         if (!effects.shouldSchedulePoll) {
           toast.success(`找到${effects.data!.total}个可访问的 Google Ads 账户`)
         }
-        void fetchGoogleAdsCredentialStatus()
+        if (shouldRefreshCredentialsAfterAccountsFetchOk(effects)) {
+          void fetchGoogleAdsCredentialStatus()
+        }
         return 'ok'
       }
 
