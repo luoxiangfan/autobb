@@ -25,21 +25,10 @@ function isDeletedFalseLiteral(dbType: 'postgres' | 'sqlite'): string {
   return dbType === 'postgres' ? 'FALSE' : '0'
 }
 
-/** 排除「换链接已禁用 + 关联广告系列已暂停」的预期态数据。 */
-export function excludeDisabledUrlSwapWithPausedCampaignSql(dbType: 'postgres' | 'sqlite'): string {
-  const deletedFalse = isDeletedFalseLiteral(dbType)
+/** 排除已禁用的换链接任务（无论关联广告系列是否启用）。 */
+export function excludeDisabledUrlSwapTasksSql(_dbType: 'postgres' | 'sqlite'): string {
   return `
-          AND NOT (
-            t.status = 'disabled'
-            AND EXISTS (
-              SELECT 1
-              FROM campaigns c
-              WHERE c.user_id = t.user_id
-                AND c.offer_id = t.offer_id
-                AND c.status = 'PAUSED'
-                AND c.is_deleted = ${deletedFalse}
-            )
-          )`
+          AND t.status <> 'disabled'`
 }
 
 /** 仅关联 Offer 存在启用中广告系列时才纳入通知。 */
@@ -73,7 +62,7 @@ function buildUrgentAlertsBaseWhere(dbType: 'postgres' | 'sqlite'): string {
       AND ${isDeletedFilter(dbType)}
       AND ${lookbackSql(dbType)}
       ${requireEnabledCampaignForOfferSql(dbType)}
-      ${excludeDisabledUrlSwapWithPausedCampaignSql(dbType)}
+      ${excludeDisabledUrlSwapTasksSql(dbType)}
   `
 }
 
@@ -181,6 +170,17 @@ export async function syncUrlSwapUrgentRiskAlert(params: {
   errorMessage: string
   errorType: UrlSwapErrorType
 }): Promise<void> {
+  const db = await getDatabase()
+  const taskStatus = await db.queryOne<{ status: string }>(
+    `
+    SELECT status
+    FROM url_swap_tasks
+    WHERE id = ? AND user_id = ?
+  `,
+    [params.taskId, params.userId]
+  )
+  if (!taskStatus || taskStatus.status === 'disabled') return
+
   const hasEnabledCampaign = await offerHasEnabledCampaign(params.userId, params.offerId)
   if (!hasEnabledCampaign) return
 

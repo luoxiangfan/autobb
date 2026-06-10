@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import {
-  excludeDisabledUrlSwapWithPausedCampaignSql,
+  excludeDisabledUrlSwapTasksSql,
   requireEnabledCampaignForOfferSql,
 } from '@/lib/url-swap/urgent-alerts'
 
@@ -457,7 +457,7 @@ export async function GET(request: NextRequest) {
     })
 
     // ==================== URL Swap 换链接任务洞察 ====================
-    const urlSwapPausedCampaignFilter = excludeDisabledUrlSwapWithPausedCampaignSql(db.type)
+    const urlSwapDisabledFilter = excludeDisabledUrlSwapTasksSql(db.type)
     const urlSwapEnabledCampaignFilter = requireEnabledCampaignForOfferSql(db.type)
 
     // 规则7: 检测URL Swap任务错误
@@ -478,7 +478,7 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
           ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
+          ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -497,7 +497,7 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = 0
           AND t.error_at >= datetime('now', '-24 hours')
           ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
+          ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -597,88 +597,7 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // 规则9: 检测暂停的换链任务（可能需要关注）
-    const urlSwapPausedQuery =
-      db.type === 'postgres'
-        ? `
-        SELECT
-          t.id as task_id,
-          t.offer_id,
-          t.error_message,
-          t.updated_at,
-          t.failed_swaps,
-          t.total_swaps,
-          o.offer_name,
-          o.url as product_url
-        FROM url_swap_tasks t
-        INNER JOIN offers o ON t.offer_id = o.id
-        WHERE t.user_id = ?
-          AND t.status = 'disabled'
-          AND t.is_deleted = FALSE
-          AND t.updated_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
-          AND t.failed_swaps > 0
-          ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
-        ORDER BY t.updated_at DESC
-        LIMIT 3
-      `
-        : `
-        SELECT
-          t.id as task_id,
-          t.offer_id,
-          t.error_message,
-          t.updated_at,
-          t.failed_swaps,
-          t.total_swaps,
-          o.offer_name,
-          o.url as product_url
-        FROM url_swap_tasks t
-        INNER JOIN offers o ON t.offer_id = o.id
-        WHERE t.user_id = ?
-          AND t.status = 'disabled'
-          AND t.is_deleted = 0
-          AND t.updated_at >= datetime('now', '-48 hours')
-          AND t.failed_swaps > 0
-          ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
-        ORDER BY t.updated_at DESC
-        LIMIT 3
-      `
-
-    const urlSwapPaused = (await db.query(urlSwapPausedQuery, [userId])) as Array<{
-      task_id: string
-      offer_id: number
-      error_message: string | null
-      updated_at: string
-      failed_swaps: number
-      total_swaps: number
-      offer_name: string
-      product_url: string
-    }>
-
-    urlSwapPaused.forEach((task) => {
-      const failureRate =
-        task.total_swaps > 0 ? ((task.failed_swaps / task.total_swaps) * 100).toFixed(1) : '0'
-
-      insights.push({
-        id: `url-swap-paused-${task.task_id}`,
-        type: 'warning',
-        priority: 'high',
-        title: '换链接任务已暂停',
-        message: `Offer "${task.offer_name}" 的自动换链任务已暂停（失败率: ${failureRate}%）`,
-        recommendation: task.error_message
-          ? `暂停原因: ${task.error_message}。建议：检查并修复问题后重新启用任务`
-          : '建议：检查任务配置，确认问题已解决后重新启用任务',
-        relatedOffer: {
-          id: task.offer_id,
-          name: task.offer_name,
-          url: task.product_url,
-        },
-        createdAt: task.updated_at,
-      })
-    })
-
-    // 规则10: 检测推广链接解析失败（高优先级错误）
+    // 规则9: 检测推广链接解析失败（高优先级错误）
     const linkResolutionErrorQuery =
       db.type === 'postgres'
         ? `
@@ -694,7 +613,7 @@ export async function GET(request: NextRequest) {
         FROM url_swap_tasks t
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
-          AND t.status IN ('error', 'disabled')
+          AND t.status = 'error'
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND (
@@ -711,7 +630,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%network%'
           )
           ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
+          ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -728,7 +647,7 @@ export async function GET(request: NextRequest) {
         FROM url_swap_tasks t
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
-          AND t.status IN ('error', 'disabled')
+          AND t.status = 'error'
           AND t.is_deleted = 0
           AND t.error_at >= datetime('now', '-48 hours')
           AND (
@@ -745,7 +664,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%network%'
           )
           ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
+          ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -797,7 +716,7 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // 规则11: 检测Google Ads API调用失败（高优先级错误）
+    // 规则10: 检测Google Ads API调用失败（高优先级错误）
     const googleAdsApiErrorQuery =
       db.type === 'postgres'
         ? `
@@ -813,7 +732,7 @@ export async function GET(request: NextRequest) {
         FROM url_swap_tasks t
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
-          AND t.status IN ('error', 'disabled')
+          AND t.status = 'error'
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND (
@@ -828,7 +747,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%Customer%'
           )
           ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
+          ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `
@@ -845,7 +764,7 @@ export async function GET(request: NextRequest) {
         FROM url_swap_tasks t
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
-          AND t.status IN ('error', 'disabled')
+          AND t.status = 'error'
           AND t.is_deleted = 0
           AND t.error_at >= datetime('now', '-48 hours')
           AND (
@@ -860,7 +779,7 @@ export async function GET(request: NextRequest) {
             OR t.error_message LIKE '%Customer%'
           )
           ${urlSwapEnabledCampaignFilter}
-          ${urlSwapPausedCampaignFilter}
+          ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
         LIMIT 5
       `

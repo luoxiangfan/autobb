@@ -953,6 +953,15 @@ export async function disableUrlSwapTask(id: string, userId: number): Promise<vo
     console.warn(`[url-swap] 禁用任务后清理队列失败: ${id}`, error)
   }
 
+  const task = await getUrlSwapTaskById(id, userId)
+  if (task) {
+    try {
+      await resolveUrlSwapUrgentRiskAlertsForOffer(userId, task.offer_id, '换链接任务已禁用')
+    } catch (error: any) {
+      console.warn(`[url-swap] 清理换链风险告警失败: ${id}`, error?.message || error)
+    }
+  }
+
   console.log(`[url-swap] 禁用任务: ${id}`)
 }
 

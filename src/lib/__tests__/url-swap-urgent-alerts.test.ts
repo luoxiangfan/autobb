@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  excludeDisabledUrlSwapWithPausedCampaignSql,
+  excludeDisabledUrlSwapTasksSql,
   requireEnabledCampaignForOfferSql,
   summarizeUrlSwapErrorMessage,
 } from '../url-swap/urgent-alerts'
@@ -13,11 +13,9 @@ describe('url-swap urgent alerts', () => {
     expect(requireEnabledCampaignForOfferSql('sqlite')).toContain('c.is_deleted = 0')
   })
 
-  it('builds paused-campaign exclusion SQL', () => {
-    expect(excludeDisabledUrlSwapWithPausedCampaignSql('postgres')).toContain(
-      "t.status = 'disabled'"
-    )
-    expect(excludeDisabledUrlSwapWithPausedCampaignSql('sqlite')).toContain("c.status = 'PAUSED'")
+  it('builds disabled-task exclusion SQL for postgres and sqlite', () => {
+    expect(excludeDisabledUrlSwapTasksSql('postgres')).toContain("t.status <> 'disabled'")
+    expect(excludeDisabledUrlSwapTasksSql('sqlite')).toContain("t.status <> 'disabled'")
   })
 
   it('summarizes enhanced task error messages', () => {
