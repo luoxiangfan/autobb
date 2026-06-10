@@ -288,6 +288,8 @@ export function applyGoogleAdsAccountsFetchUiEffects(
     }
     if (effects.errorMessage) {
       handlers.onErrorMessage?.(effects.errorMessage)
+    } else if (effects.authConfigWarning) {
+      handlers.onErrorMessage?.(effects.authConfigWarning)
     }
     if (effects.clearForceRefreshState) {
       handlers.onClearForceRefresh?.()

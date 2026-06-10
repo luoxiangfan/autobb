@@ -64,3 +64,16 @@ export function withAccountsListSchedulePoll(
     },
   }
 }
+
+/** 关闭权限错误提示并清空可能残留的账户列表状态 */
+export function createDismissGoogleAdsPermissionErrorHandler(options: {
+  setPermissionError: (details: ServiceAccountPermissionDetails | null) => void
+  onAccountsHidden?: () => void
+  onDismiss?: () => void
+}): () => void {
+  return () => {
+    options.setPermissionError(null)
+    options.onAccountsHidden?.()
+    options.onDismiss?.()
+  }
+}

@@ -15,6 +15,7 @@ import {
 } from '@/lib/google-ads-accounts-fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
+  createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
 } from '@/lib/google-ads-accounts-fetch-handlers'
 import {
@@ -103,6 +104,12 @@ export default function GoogleAdsPage() {
   const [permissionError, setPermissionError] = useState<ServiceAccountPermissionDetails | null>(
     null
   )
+  const dismissGoogleAdsAccountsPermissionError = useCallback(() => {
+    createDismissGoogleAdsPermissionErrorHandler({
+      setPermissionError,
+      onAccountsHidden: () => setAccounts([]),
+    })()
+  }, [])
   const accountFetchersRef = useRef<{
     fetchAccounts: (
       forceRefresh?: boolean,
@@ -679,7 +686,7 @@ export default function GoogleAdsPage() {
           <GoogleAdsServiceAccountPermissionAlert
             details={permissionError}
             className="mb-4"
-            onDismiss={() => setPermissionError(null)}
+            onDismiss={dismissGoogleAdsAccountsPermissionError}
           />
 
           {authConfigWarning && (

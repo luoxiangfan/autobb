@@ -10,6 +10,7 @@ import {
 } from '@/lib/google-ads-accounts-fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
+  createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
 } from '@/lib/google-ads-accounts-fetch-handlers'
 import {
@@ -203,9 +204,15 @@ export function useGoogleAdsAuthSettings({
     const handlers = withAccountsListSchedulePoll(
       {
         ...createGoogleAdsAccountsCoreApplyHandlers({
-          setAuthConfigWarning: () => {},
-          setGoogleAdsDualStack: () => {},
-          setNeedsReauth: () => {},
+          setAuthConfigWarning: (warning) => {
+            if (warning) void fetchGoogleAdsCredentialStatus()
+          },
+          setGoogleAdsDualStack: (dualStack) => {
+            if (dualStack) void fetchGoogleAdsCredentialStatus()
+          },
+          setNeedsReauth: (needsReauth) => {
+            if (needsReauth) void fetchGoogleAdsCredentialStatus()
+          },
           setPermissionError,
           onErrorMessage: (message) => toast.error(message),
           onPollFailure: (message) => toast.error(message),
@@ -262,9 +269,11 @@ export function useGoogleAdsAuthSettings({
   )
 
   const dismissGoogleAdsAccountsPermissionError = useCallback(() => {
-    setPermissionError(null)
-    setGoogleAdsAccounts([])
-    setShowGoogleAdsAccounts(false)
+    createDismissGoogleAdsPermissionErrorHandler({
+      setPermissionError,
+      onAccountsHidden: () => setGoogleAdsAccounts([]),
+      onDismiss: () => setShowGoogleAdsAccounts(false),
+    })()
   }, [])
 
   const handleStartGoogleAdsOAuth = async () => {
@@ -539,7 +548,6 @@ export function useGoogleAdsAuthSettings({
     deleteConfirmState,
     setDeleteConfirmState,
     permissionError,
-    setPermissionError,
     dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
     googleAdsDualStack,

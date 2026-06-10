@@ -10,6 +10,7 @@ import {
 } from '../google-ads-accounts-fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
+  createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
 } from '../google-ads-accounts-fetch-handlers'
 
@@ -224,6 +225,24 @@ describe('applyGoogleAdsAccountsFetchUiEffects', () => {
     expect(onErrorMessage).toHaveBeenCalledTimes(1)
     expect(onErrorMessage).toHaveBeenCalledWith('未配置 Google Ads 认证')
   })
+
+  it('blocked with only authConfigWarning uses warning as feedback', () => {
+    const onErrorMessage = vi.fn()
+
+    applyGoogleAdsAccountsFetchUiEffects(
+      resolveGoogleAdsAccountsFetchUiEffects(
+        {
+          ok: false,
+          kind: 'blocked',
+          effects: { authConfigWarning: '检测到双栈认证配置' },
+        },
+        { forceRefresh: true }
+      ),
+      { onErrorMessage, onPermissionDetails: vi.fn() }
+    )
+
+    expect(onErrorMessage).toHaveBeenCalledWith('检测到双栈认证配置')
+  })
 })
 
 describe('shouldRefreshCredentialsAfterAccountsFetchOk', () => {
@@ -331,5 +350,21 @@ describe('google-ads-accounts-fetch-handlers', () => {
 
     expect(onPermissionAccountsHidden).toHaveBeenCalled()
     expect(onPollFailure).toHaveBeenCalled()
+  })
+
+  it('createDismissGoogleAdsPermissionErrorHandler clears permission and accounts', () => {
+    const setPermissionError = vi.fn()
+    const onAccountsHidden = vi.fn()
+    const onDismiss = vi.fn()
+
+    createDismissGoogleAdsPermissionErrorHandler({
+      setPermissionError,
+      onAccountsHidden,
+      onDismiss,
+    })()
+
+    expect(setPermissionError).toHaveBeenCalledWith(null)
+    expect(onAccountsHidden).toHaveBeenCalled()
+    expect(onDismiss).toHaveBeenCalled()
   })
 })

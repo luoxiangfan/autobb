@@ -52,6 +52,7 @@ import {
 } from '@/lib/google-ads-accounts-fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
+  createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
 } from '@/lib/google-ads-accounts-fetch-handlers'
 import {
@@ -169,6 +170,15 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
   const [permissionError, setPermissionError] = useState<ServiceAccountPermissionDetails | null>(
     null
   )
+  const dismissGoogleAdsAccountsPermissionError = useCallback(() => {
+    createDismissGoogleAdsPermissionErrorHandler({
+      setPermissionError,
+      onAccountsHidden: () => {
+        setAccounts([])
+        setAccountStats({ total: 0, available: 0, filteredManager: 0, filteredClosed: 0 })
+      },
+    })()
+  }, [])
   const [showGuideDialog, setShowGuideDialog] = useState(false)
 
   const { fetchAccounts: fetchAccountsFromApi, scheduleAccountsPoll } = useGoogleAdsAccountsList({
@@ -522,7 +532,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
 
       <GoogleAdsServiceAccountPermissionAlert
         details={permissionError}
-        onDismiss={() => setPermissionError(null)}
+        onDismiss={dismissGoogleAdsAccountsPermissionError}
       />
 
       {/* No Credentials Warning */}
