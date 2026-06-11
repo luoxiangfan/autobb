@@ -492,11 +492,6 @@ export async function invalidateGoogleAdsAuthContextCacheForOwner(
   await invalidateGadsApiCacheForOwner(ownerUserId, dependents)
 }
 
-/** 凭证 owner 变更时失效 auth-context 与 GAds API 内存缓存（与 CacheForOwner 等价，供 credential user 解析路径）。 */
-async function invalidateGoogleAdsCredentialCachesForOwner(ownerUserId: number): Promise<void> {
-  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
-}
-
 /**
  * 按凭证 userId 解析 owner 后级联失效 auth-context 与 GAds API 内存缓存
  * （OAuth save/delete、服务账号 mutations、Settings OAuth 保存等）。
@@ -505,7 +500,7 @@ export async function invalidateGoogleAdsAuthContextForCredentialUser(
   credentialUserId: number
 ): Promise<void> {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
-  await invalidateGoogleAdsCredentialCachesForOwner(ownerUserId)
+  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
 }
 
 export function resolveEffectiveServiceAccountId(

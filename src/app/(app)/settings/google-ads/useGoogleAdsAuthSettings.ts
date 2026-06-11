@@ -29,7 +29,8 @@ import {
   hasGoogleAdsUnsavedChanges,
   isGoogleAdsAuthMethodLocked,
   resolveEffectiveGoogleAdsAuthMethod,
-  resolveGoogleAdsAuthMethodFromCredentialStatus,
+  resolveAuthMethodAfterCredentialStatusRefresh,
+  shouldFetchGoogleAdsServiceAccounts,
 } from './validation'
 
 export interface UseGoogleAdsAuthSettingsParams {
@@ -49,6 +50,8 @@ export function useGoogleAdsAuthSettings({
 }: UseGoogleAdsAuthSettingsParams) {
   const [googleAdsCredentialStatus, setGoogleAdsCredentialStatus] =
     useState<GoogleAdsCredentialStatus | null>(null)
+  const googleAdsCredentialStatusRef = useRef<GoogleAdsCredentialStatus | null>(null)
+  const googleAdsAuthMethodRef = useRef<'oauth' | 'service_account'>('oauth')
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([])
   const [loadingGoogleAdsAccounts, setLoadingGoogleAdsAccounts] = useState(false)
   const [showGoogleAdsAccounts, setShowGoogleAdsAccounts] = useState(false)
@@ -57,6 +60,10 @@ export function useGoogleAdsAuthSettings({
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>(
     'oauth'
   )
+
+  useEffect(() => {
+    googleAdsAuthMethodRef.current = googleAdsAuthMethod
+  }, [googleAdsAuthMethod])
   const { fetchAccounts, scheduleAccountsPoll } = useGoogleAdsAccountsList()
   const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({})
   const [serviceAccountForm, setServiceAccountForm] = useState({
@@ -152,16 +159,19 @@ export function useGoogleAdsAuthSettings({
       })
       if (response.ok) {
         const data = await response.json()
-        setGoogleAdsCredentialStatus(data.data)
-        const resolvedMethod = resolveGoogleAdsAuthMethodFromCredentialStatus(data.data)
-        if (resolvedMethod) {
-          setGoogleAdsAuthMethod(resolvedMethod)
+        const nextStatus = data.data as GoogleAdsCredentialStatus
+        const previousStatus = googleAdsCredentialStatusRef.current
+        const nextAuthMethod = resolveAuthMethodAfterCredentialStatusRefresh(
+          previousStatus,
+          nextStatus,
+          googleAdsAuthMethodRef.current
+        )
+        if (nextAuthMethod !== googleAdsAuthMethodRef.current) {
+          setGoogleAdsAuthMethod(nextAuthMethod)
         }
-        if (
-          data.data?.authType === 'service_account' ||
-          (data.data?.hasServiceAccount && data.data?.authType !== 'oauth') ||
-          (data.data?.authConfigWarning && data.data?.hasServiceAccount)
-        ) {
+        googleAdsCredentialStatusRef.current = nextStatus
+        setGoogleAdsCredentialStatus(nextStatus)
+        if (shouldFetchGoogleAdsServiceAccounts(nextStatus)) {
           void fetchServiceAccounts()
         }
       }

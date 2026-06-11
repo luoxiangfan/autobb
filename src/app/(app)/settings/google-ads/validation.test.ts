@@ -5,6 +5,9 @@ import {
   validateGoogleAdsOAuthForm,
   resolveEffectiveGoogleAdsAuthMethod,
   resolveGoogleAdsAuthMethodFromCredentialStatus,
+  resolveAuthMethodAfterCredentialStatusRefresh,
+  shouldApplyGoogleAdsAuthMethodFromCredentialStatus,
+  shouldFetchGoogleAdsServiceAccounts,
   isGoogleAdsAuthMethodLocked,
 } from './validation'
 
@@ -105,6 +108,136 @@ describe('resolveGoogleAdsAuthMethodFromCredentialStatus', () => {
         hasRefreshToken: false,
       })
     ).toBe('oauth')
+  })
+})
+
+describe('shouldApplyGoogleAdsAuthMethodFromCredentialStatus', () => {
+  it('applies on first load', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(null, {
+        hasCredentials: false,
+        dualStack: true,
+      })
+    ).toBe(true)
+  })
+
+  it('applies when configured and locked', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        { hasCredentials: false, dualStack: false, authType: undefined },
+        { hasCredentials: true, dualStack: false, authType: 'oauth' }
+      )
+    ).toBe(true)
+  })
+
+  it('does not apply on refresh when dual stack unchanged', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        { hasCredentials: false, dualStack: true, authType: undefined },
+        { hasCredentials: false, dualStack: true, authType: undefined }
+      )
+    ).toBe(false)
+  })
+
+  it('does not apply on refresh when unconfigured unchanged', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        { hasCredentials: false, dualStack: false, authType: undefined },
+        { hasCredentials: false, dualStack: false, authType: undefined }
+      )
+    ).toBe(false)
+  })
+
+  it('applies when dual stack clears after cleanup', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        { hasCredentials: false, dualStack: true, authType: undefined },
+        { hasCredentials: true, dualStack: false, authType: 'service_account' }
+      )
+    ).toBe(true)
+  })
+
+  it('applies when authType changes', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        { hasCredentials: true, dualStack: false, authType: 'oauth' },
+        { hasCredentials: true, dualStack: false, authType: 'service_account' }
+      )
+    ).toBe(true)
+  })
+})
+
+describe('resolveAuthMethodAfterCredentialStatusRefresh', () => {
+  const dualStackStatus = {
+    hasCredentials: false,
+    dualStack: true,
+    hasServiceAccount: true,
+    hasRefreshToken: true,
+    hasOAuthFields: true,
+  }
+
+  it('preserves service_account tab when dual stack unchanged on refresh', () => {
+    expect(
+      resolveAuthMethodAfterCredentialStatusRefresh(
+        dualStackStatus,
+        dualStackStatus,
+        'service_account'
+      )
+    ).toBe('service_account')
+  })
+
+  it('applies oauth on first load for dual stack', () => {
+    expect(
+      resolveAuthMethodAfterCredentialStatusRefresh(null, dualStackStatus, 'service_account')
+    ).toBe('oauth')
+  })
+
+  it('applies service_account when dual stack clears and SA remains configured', () => {
+    expect(
+      resolveAuthMethodAfterCredentialStatusRefresh(
+        dualStackStatus,
+        {
+          hasCredentials: true,
+          dualStack: false,
+          authType: 'service_account',
+          hasServiceAccount: true,
+        },
+        'oauth'
+      )
+    ).toBe('service_account')
+  })
+})
+
+describe('shouldFetchGoogleAdsServiceAccounts', () => {
+  it('fetches for configured service account auth', () => {
+    expect(
+      shouldFetchGoogleAdsServiceAccounts({
+        authType: 'service_account',
+        hasServiceAccount: true,
+      })
+    ).toBe(true)
+  })
+
+  it('fetches for dual stack with service account present', () => {
+    expect(
+      shouldFetchGoogleAdsServiceAccounts({
+        authType: undefined,
+        hasServiceAccount: true,
+      })
+    ).toBe(true)
+  })
+
+  it('skips for oauth-only configuration', () => {
+    expect(
+      shouldFetchGoogleAdsServiceAccounts({
+        authType: 'oauth',
+        hasServiceAccount: false,
+      })
+    ).toBe(false)
+  })
+
+  it('skips when status is missing', () => {
+    expect(shouldFetchGoogleAdsServiceAccounts(null)).toBe(false)
   })
 })
 

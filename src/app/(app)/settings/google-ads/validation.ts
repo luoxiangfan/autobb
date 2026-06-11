@@ -68,6 +68,69 @@ export function resolveGoogleAdsAuthMethodFromCredentialStatus(
   return 'oauth'
 }
 
+type GoogleAdsAuthMethodTabState = Pick<
+  GoogleAdsCredentialStatus,
+  'authType' | 'dualStack' | 'hasCredentials'
+>
+
+/**
+ * 是否用 API 解析结果覆盖当前 Tab。
+ * 双栈 / 未配置时刷新凭证状态不重置用户已选 Tab；状态跃迁（首次加载、锁定、authType/双栈/已配置变化）时同步。
+ */
+export function shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+  previous: GoogleAdsAuthMethodTabState | null | undefined,
+  next: GoogleAdsAuthMethodTabState
+): boolean {
+  if (!previous) {
+    return true
+  }
+
+  if (isGoogleAdsAuthMethodLocked(next)) {
+    return true
+  }
+
+  if (next.authType !== previous.authType) {
+    return true
+  }
+
+  if (Boolean(next.dualStack) !== Boolean(previous.dualStack)) {
+    return true
+  }
+
+  if (Boolean(next.hasCredentials) !== Boolean(previous.hasCredentials)) {
+    return true
+  }
+
+  return false
+}
+
+/** 凭证状态刷新后应展示的 Tab（未跃迁时保留 currentAuthMethod）。 */
+export function resolveAuthMethodAfterCredentialStatusRefresh(
+  previous: GoogleAdsAuthMethodTabState | null | undefined,
+  next: GoogleAdsAuthMethodTabState &
+    Pick<GoogleAdsCredentialStatus, 'hasServiceAccount' | 'hasRefreshToken' | 'hasOAuthFields'>,
+  currentAuthMethod: GoogleAdsAuthMethodTab
+): GoogleAdsAuthMethodTab {
+  const resolvedMethod = resolveGoogleAdsAuthMethodFromCredentialStatus(next)
+  if (resolvedMethod && shouldApplyGoogleAdsAuthMethodFromCredentialStatus(previous, next)) {
+    return resolvedMethod
+  }
+  return currentAuthMethod
+}
+
+/** 是否应拉取服务账号列表（与凭证 GET 语义对齐，供设置页与双栈清理复用）。 */
+export function shouldFetchGoogleAdsServiceAccounts(
+  status: Pick<GoogleAdsCredentialStatus, 'authType' | 'hasServiceAccount'> | null | undefined
+): boolean {
+  if (!status) {
+    return false
+  }
+  if (status.authType === 'service_account') {
+    return true
+  }
+  return Boolean(status.hasServiceAccount && status.authType !== 'oauth')
+}
+
 export function validateGoogleAdsOAuthForm(
   formData: Record<string, string> | undefined
 ): string | null {

@@ -7,6 +7,11 @@ import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignme
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
+import {
+  logGoogleAdsOAuthDebug,
+  logGoogleAdsOAuthError,
+  logGoogleAdsOAuthInfo,
+} from '../oauth-route-logger'
 
 /**
  * GET /api/google-ads/oauth/start
@@ -21,7 +26,6 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 验证用户身份
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 })
@@ -35,12 +39,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
 
-    console.log(`🔐 [OAuth Start] 用户ID: ${userId}`)
+    logGoogleAdsOAuthDebug('start_requested', { userId })
 
     const oauthConfig = await getGoogleAdsOAuthConfigFields(userId)
     const userLoginCustomerId = oauthConfig.login_customer_id
     if (!userLoginCustomerId) {
-      console.log(`🔐 [OAuth Start] 用户 ${userId} 未配置 login_customer_id`)
+      logGoogleAdsOAuthDebug('start_missing_login_customer_id', { userId })
       return NextResponse.json(
         {
           error:
@@ -54,11 +58,12 @@ export async function GET(request: NextRequest) {
     const userClientSecret = oauthConfig.client_secret
     const userDeveloperToken = oauthConfig.developer_token
 
-    console.log(`🔐 [OAuth Start] client_id: ${userClientId ? 'configured' : 'missing'}`)
-    console.log(`🔐 [OAuth Start] client_secret: ${userClientSecret ? 'configured' : 'missing'}`)
-    console.log(
-      `🔐 [OAuth Start] developer_token: ${userDeveloperToken ? 'configured' : 'missing'}`
-    )
+    logGoogleAdsOAuthDebug('start_config_presence', {
+      userId,
+      hasClientId: Boolean(userClientId),
+      hasClientSecret: Boolean(userClientSecret),
+      hasDeveloperToken: Boolean(userDeveloperToken),
+    })
 
     if (!userClientId || !userClientSecret || !userDeveloperToken) {
       return NextResponse.json(
@@ -70,7 +75,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 🧯 防误填：developer_token 被错误填写为 client_secret（常见前缀 GOCSPX-）
     if (
       userDeveloperToken.trim() === userClientSecret.trim() ||
       looksLikeOAuthClientSecret(userDeveloperToken)
@@ -91,24 +95,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
 
-    const clientId = userClientId
-    console.log(`🔐 用户 ${userId} 使用自己的OAuth配置`)
-
     const state = createGoogleAdsOAuthState({
       user_id: userId,
       timestamp: Date.now(),
       purpose: 'google_ads',
     })
 
-    // 构建redirect URI
     const redirectUri = getGoogleAdsOAuthRedirectUri()
+    const authUrl = generateOAuthUrl(userClientId, redirectUri, state)
 
-    // 生成授权URL
-    const authUrl = generateOAuthUrl(clientId, redirectUri, state)
-
-    console.log(`🔐 启动Google Ads OAuth流程`)
-    console.log(`   用户: ${authResult.user.email} (ID: ${userId})`)
-    console.log(`   Login Customer ID: ${userLoginCustomerId}`)
+    logGoogleAdsOAuthInfo('start_redirect_prepared', {
+      userId,
+      hasLoginCustomerId: true,
+    })
+    logGoogleAdsOAuthDebug('start_redirect_details', {
+      userId,
+      loginCustomerId: userLoginCustomerId,
+      redirectUri,
+    })
 
     return NextResponse.json({
       success: true,
@@ -118,7 +122,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('启动OAuth流程失败:', error)
+    logGoogleAdsOAuthError('start_failed', error)
 
     return NextResponse.json(
       {

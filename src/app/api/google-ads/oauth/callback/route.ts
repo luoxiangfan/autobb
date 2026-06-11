@@ -7,16 +7,18 @@ import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
 import { verifyGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
+import {
+  logGoogleAdsOAuthDebug,
+  logGoogleAdsOAuthError,
+  logGoogleAdsOAuthInfo,
+} from '../oauth-route-logger'
 
-// 强制动态渲染
 export const dynamic = 'force-dynamic'
 
-// 获取基础URL，统一使用 NEXT_PUBLIC_APP_URL
 function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
-// 创建重定向URL的辅助函数
 function createRedirectUrl(path: string): URL {
   return new URL(path, getBaseUrl())
 }
@@ -39,10 +41,6 @@ function redirectToLoginPreservingOAuthCallback(request: NextRequest): NextRespo
 /**
  * GET /api/google-ads/oauth/callback
  * Google Ads OAuth回调处理
- *
- * 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须使用自己的OAuth凭证
- * - 不再支持平台共享配置，确保用户数据完全隔离
- * - login_customer_id, client_id, client_secret, developer_token 都必须由用户自己配置
  */
 export async function GET(request: NextRequest) {
   try {
@@ -51,9 +49,8 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state')
     const error = searchParams.get('error')
 
-    // 检查是否有错误
     if (error) {
-      console.error('OAuth授权失败:', error)
+      logGoogleAdsOAuthError('callback_provider_error', error)
       return redirectToGoogleAdsSettings({ error })
     }
 
@@ -110,7 +107,7 @@ export async function GET(request: NextRequest) {
       return redirectToGoogleAdsSettings({ error: 'developer_token_invalid' })
     }
 
-    console.log(`🔐 OAuth回调: 用户 ${userId} 使用自己的OAuth配置`)
+    logGoogleAdsOAuthDebug('callback_processing', { userId })
 
     try {
       await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
@@ -119,20 +116,12 @@ export async function GET(request: NextRequest) {
     }
 
     const redirectUri = getGoogleAdsOAuthRedirectUri()
-
-    console.log(`📥 处理OAuth回调`)
-    console.log(`   用户: ${userId}`)
-    console.log(`   Login Customer ID: ${loginCustomerId}`)
-
-    // 交换authorization code获取tokens
     const tokens = await exchangeCodeForTokens(code, clientId, clientSecret, redirectUri)
 
-    console.log(`✅ OAuth成功获取tokens`)
+    logGoogleAdsOAuthDebug('callback_tokens_exchanged', { userId })
 
-    // 计算 access token 过期时间
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
-    // 保存凭证到当前用户的记录（无论使用哪套OAuth配置，refresh_token都保存到用户自己的记录）
     const savedCredentials = await saveGoogleAdsCredentials(userId, {
       client_id: clientId,
       client_secret: clientSecret,
@@ -143,14 +132,14 @@ export async function GET(request: NextRequest) {
       access_token_expires_at: expiresAt,
     })
 
-    console.log(`💾 已保存Google Ads凭证到数据库`)
-    console.log(`   Credentials ID: ${savedCredentials.id}`)
-    console.log(`   用户ID: ${userId}`)
+    logGoogleAdsOAuthInfo('callback_credentials_saved', {
+      userId,
+      credentialsId: savedCredentials.id,
+    })
 
     return redirectToGoogleAdsSettings({ oauth_success: 'true' })
   } catch (error: any) {
-    console.error('OAuth回调处理失败:', error)
-
+    logGoogleAdsOAuthError('callback_failed', error)
     return redirectToGoogleAdsSettings({ error: 'callback_failed' })
   }
 }
