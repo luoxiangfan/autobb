@@ -322,12 +322,12 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
                 setGoogleAdsAuthMethod('service_account')
                 void fetchServiceAccounts()
               }}
-              disabled={googleAdsDualStack || googleAdsAuthMethodLocked}
+              disabled={googleAdsAuthMethodLocked}
               className={`p-4 border-2 rounded-lg text-left transition-all ${
                 effectiveGoogleAdsAuthMethod === 'service_account'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
-              } ${googleAdsDualStack || googleAdsAuthMethodLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+              } ${googleAdsAuthMethodLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <div className="font-semibold mb-1">服务账号认证</div>
               <div className="text-sm text-gray-600">适合 MCC 账号管理多个子账号</div>
@@ -335,17 +335,22 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
             <button
               type="button"
               onClick={() => setGoogleAdsAuthMethod('oauth')}
-              disabled={googleAdsDualStack || googleAdsAuthMethodLocked}
+              disabled={googleAdsAuthMethodLocked}
               className={`p-4 border-2 rounded-lg text-left transition-all ${
                 effectiveGoogleAdsAuthMethod === 'oauth'
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
-              } ${googleAdsDualStack || googleAdsAuthMethodLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+              } ${googleAdsAuthMethodLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <div className="font-semibold mb-1">OAuth 用户授权</div>
               <div className="text-sm text-gray-600">适合管理自己的 Google Ads 账号</div>
             </button>
           </div>
+        )}
+        {googleAdsDualStack && (
+          <p className="text-xs text-amber-700 mt-2">
+            双栈冲突时可切换 Tab 查看 OAuth / 服务账号配置，请使用上方按钮删除其中一种。
+          </p>
         )}
         {googleAdsAuthMethodLocked && (
           <p className="text-xs text-slate-500 mt-2">

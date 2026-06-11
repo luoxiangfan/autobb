@@ -28,6 +28,46 @@ export function isGoogleAdsAuthMethodLocked(
   return Boolean(credentialStatus?.hasCredentials) && !credentialStatus?.dualStack
 }
 
+type GoogleAdsAuthMethodTab = 'oauth' | 'service_account'
+
+/**
+ * 从凭证状态解析设置页 Tab（未配置 / 双栈 / 半成品）。
+ * 双栈时不偏向服务账号，默认 OAuth 便于对照清理；全新用户默认 OAuth。
+ */
+export function resolveGoogleAdsAuthMethodFromCredentialStatus(
+  status:
+    | Pick<
+        GoogleAdsCredentialStatus,
+        'authType' | 'dualStack' | 'hasServiceAccount' | 'hasRefreshToken' | 'hasOAuthFields'
+      >
+    | null
+    | undefined
+): GoogleAdsAuthMethodTab | null {
+  if (!status) {
+    return null
+  }
+
+  if (status.authType === 'oauth' || status.authType === 'service_account') {
+    return status.authType
+  }
+
+  if (status.dualStack) {
+    return 'oauth'
+  }
+
+  const hasOAuth = Boolean(status.hasRefreshToken || status.hasOAuthFields)
+  const hasServiceAccount = Boolean(status.hasServiceAccount)
+
+  if (hasOAuth && !hasServiceAccount) {
+    return 'oauth'
+  }
+  if (hasServiceAccount && !hasOAuth) {
+    return 'service_account'
+  }
+
+  return 'oauth'
+}
+
 export function validateGoogleAdsOAuthForm(
   formData: Record<string, string> | undefined
 ): string | null {

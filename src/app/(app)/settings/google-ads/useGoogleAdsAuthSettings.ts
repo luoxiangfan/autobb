@@ -29,6 +29,7 @@ import {
   hasGoogleAdsUnsavedChanges,
   isGoogleAdsAuthMethodLocked,
   resolveEffectiveGoogleAdsAuthMethod,
+  resolveGoogleAdsAuthMethodFromCredentialStatus,
 } from './validation'
 
 export interface UseGoogleAdsAuthSettingsParams {
@@ -54,7 +55,7 @@ export function useGoogleAdsAuthSettings({
   const [startingOAuth, setStartingOAuth] = useState(false)
   const [verifyingGoogleAdsCredentials, setVerifyingGoogleAdsCredentials] = useState(false)
   const [googleAdsAuthMethod, setGoogleAdsAuthMethod] = useState<'oauth' | 'service_account'>(
-    'service_account'
+    'oauth'
   )
   const { fetchAccounts, scheduleAccountsPoll } = useGoogleAdsAccountsList()
   const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({})
@@ -152,12 +153,9 @@ export function useGoogleAdsAuthSettings({
       if (response.ok) {
         const data = await response.json()
         setGoogleAdsCredentialStatus(data.data)
-        if (data.data?.authType === 'oauth' || data.data?.authType === 'service_account') {
-          setGoogleAdsAuthMethod(data.data.authType)
-        } else if (data.data?.hasServiceAccount) {
-          setGoogleAdsAuthMethod('service_account')
-        } else if (data.data?.hasRefreshToken || data.data?.hasOAuthFields) {
-          setGoogleAdsAuthMethod('oauth')
+        const resolvedMethod = resolveGoogleAdsAuthMethodFromCredentialStatus(data.data)
+        if (resolvedMethod) {
+          setGoogleAdsAuthMethod(resolvedMethod)
         }
         if (
           data.data?.authType === 'service_account' ||
@@ -321,7 +319,7 @@ export function useGoogleAdsAuthSettings({
   }
 
   const handleVerifyGoogleAdsCredentials = async () => {
-    if (oauthHasUnsavedChanges()) {
+    if (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges()) {
       toast.error('请先保存 Google Ads 配置后再验证凭证')
       return
     }

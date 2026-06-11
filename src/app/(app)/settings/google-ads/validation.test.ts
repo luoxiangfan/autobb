@@ -4,6 +4,7 @@ import { resolveGoogleAdsOAuthCallbackErrorMessage } from './oauth-callback-erro
 import {
   validateGoogleAdsOAuthForm,
   resolveEffectiveGoogleAdsAuthMethod,
+  resolveGoogleAdsAuthMethodFromCredentialStatus,
   isGoogleAdsAuthMethodLocked,
 } from './validation'
 
@@ -45,6 +46,65 @@ describe('resolveEffectiveGoogleAdsAuthMethod', () => {
         'service_account'
       )
     ).toBe('service_account')
+  })
+})
+
+describe('resolveGoogleAdsAuthMethodFromCredentialStatus', () => {
+  it('returns null when status is missing', () => {
+    expect(resolveGoogleAdsAuthMethodFromCredentialStatus(null)).toBeNull()
+  })
+
+  it('uses configured authType when present', () => {
+    expect(
+      resolveGoogleAdsAuthMethodFromCredentialStatus({
+        authType: 'service_account',
+        dualStack: false,
+        hasServiceAccount: true,
+      })
+    ).toBe('service_account')
+  })
+
+  it('defaults dual stack to oauth instead of biasing service account', () => {
+    expect(
+      resolveGoogleAdsAuthMethodFromCredentialStatus({
+        dualStack: true,
+        hasServiceAccount: true,
+        hasRefreshToken: true,
+        hasOAuthFields: true,
+      })
+    ).toBe('oauth')
+  })
+
+  it('prefers oauth for oauth-only partial config', () => {
+    expect(
+      resolveGoogleAdsAuthMethodFromCredentialStatus({
+        dualStack: false,
+        hasOAuthFields: true,
+        hasRefreshToken: false,
+        hasServiceAccount: false,
+      })
+    ).toBe('oauth')
+  })
+
+  it('prefers service account for sa-only partial config', () => {
+    expect(
+      resolveGoogleAdsAuthMethodFromCredentialStatus({
+        dualStack: false,
+        hasServiceAccount: true,
+        hasOAuthFields: false,
+      })
+    ).toBe('service_account')
+  })
+
+  it('defaults unconfigured users to oauth', () => {
+    expect(
+      resolveGoogleAdsAuthMethodFromCredentialStatus({
+        dualStack: false,
+        hasServiceAccount: false,
+        hasOAuthFields: false,
+        hasRefreshToken: false,
+      })
+    ).toBe('oauth')
   })
 })
 

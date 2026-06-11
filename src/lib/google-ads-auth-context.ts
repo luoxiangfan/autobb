@@ -462,12 +462,13 @@ export async function resolveGoogleAdsApiAccessLevel(userId: number): Promise<st
   return ctx.apiAccessLevel ?? null
 }
 
-async function invalidateGadsApiCacheForOwner(ownerUserId: number): Promise<void> {
+async function invalidateGadsApiCacheForOwner(
+  ownerUserId: number,
+  dependents: number[]
+): Promise<void> {
   const { invalidateGadsApiCacheForUser } = await import('./cache')
-  const { listGoogleAdsSharedDependentUserIds } = await import('./google-ads-auth-assignment')
 
   invalidateGadsApiCacheForUser(ownerUserId)
-  const dependents = await listGoogleAdsSharedDependentUserIds(ownerUserId)
   for (const userId of dependents) {
     invalidateGadsApiCacheForUser(userId)
   }
@@ -488,7 +489,7 @@ export async function invalidateGoogleAdsAuthContextCacheForOwner(
     invalidateGoogleAdsAuthContextCache(userId)
   }
 
-  await invalidateGadsApiCacheForOwner(ownerUserId)
+  await invalidateGadsApiCacheForOwner(ownerUserId, dependents)
 }
 
 /** 凭证 owner 变更时失效 auth-context 与 GAds API 内存缓存（与 CacheForOwner 等价，供 credential user 解析路径）。 */
@@ -505,14 +506,6 @@ export async function invalidateGoogleAdsAuthContextForCredentialUser(
 ): Promise<void> {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
   await invalidateGoogleAdsCredentialCachesForOwner(ownerUserId)
-}
-
-/** 按凭证 userId 解析 owner 后级联失效 GAds API 内存缓存（含共享子用户）。 */
-export async function invalidateGadsApiCacheForCredentialUser(
-  credentialUserId: number
-): Promise<void> {
-  const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(credentialUserId)
-  await invalidateGadsApiCacheForOwner(ownerUserId)
 }
 
 export function resolveEffectiveServiceAccountId(
