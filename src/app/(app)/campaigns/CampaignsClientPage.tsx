@@ -419,6 +419,7 @@ function CampaignsTrendsSectionSkeleton() {
 
 const MAX_SELECTED_CAMPAIGNS = 500
 const BATCH_OPERATION_CHUNK_SIZE = 100
+const DEFAULT_STATUS_FILTER = 'ENABLED'
 
 function areUserFilterSelectionsEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false
@@ -448,7 +449,7 @@ export default function CampaignsClientPage({
   // Filter states
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>(DEFAULT_STATUS_FILTER)
   const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
   const [selectedUserFilters, setSelectedUserFilters] = useState<string[]>([]) // [] => all users
@@ -1055,7 +1056,7 @@ export default function CampaignsClientPage({
   const selectedUsersLabel = userFilterApplied ? `用户(${selectedUserFilters.length})` : '所有用户'
   const hasActiveFilters =
     searchQuery.trim().length > 0 ||
-    statusFilter !== 'all' ||
+    statusFilter !== DEFAULT_STATUS_FILTER ||
     statusCategoryFilter !== 'all' ||
     needsOfferCompletionFilter !== 'all' ||
     userFilterApplied ||
@@ -1210,7 +1211,7 @@ export default function CampaignsClientPage({
   const resetFilters = () => {
     setSearchQuery('')
     setDebouncedSearchQuery('')
-    setStatusFilter('all')
+    setStatusFilter(DEFAULT_STATUS_FILTER)
     setStatusCategoryFilter('all')
     setNeedsOfferCompletionFilter('all')
     const allUserIds = users.map((user) => String(user.id))
