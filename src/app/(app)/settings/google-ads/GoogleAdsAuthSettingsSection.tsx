@@ -16,6 +16,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { GoogleAdsServiceAccountPermissionAlert } from '@/components/GoogleAdsServiceAccountPermissionAlert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { hasServiceAccountPermissionDetails } from '@/lib/google-ads-accounts-fetch'
 import { GOOGLE_ADS_SETTING_METADATA } from './config'
 import type { GoogleAdsAuthSettings } from './useGoogleAdsAuthSettings'
@@ -38,6 +39,7 @@ type Props = {
 export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAuthField }: Props) {
   const {
     googleAdsCredentialStatus,
+    loadingGoogleAdsCredentialStatus,
     googleAdsAccounts,
     loadingGoogleAdsAccounts,
     showGoogleAdsAccounts,
@@ -88,6 +90,21 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
       setShowServiceAccountReplaceForm(false)
     }
   }, [savingServiceAccount, hasServiceAccountConfigToDelete, serviceAccountForm])
+
+  if (loadingGoogleAdsCredentialStatus) {
+    return (
+      <div className="space-y-6" aria-busy="true" aria-label="正在加载 Google Ads 认证配置">
+        <Skeleton className="h-20 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-28 w-full" />
+        </div>
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {googleAdsAuthReadOnly && (

@@ -14,6 +14,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
   const {
     effectiveGoogleAdsAuthMethod,
     googleAdsAuthActionsBlocked,
+    loadingGoogleAdsCredentialStatus,
     googleAdsCredentialStatus,
     hasOAuthConfigToDelete,
     hasServiceAccountConfigToDelete,
@@ -38,7 +39,12 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
             onSaveOAuth()
           }
         }}
-        disabled={saving || savingServiceAccount || googleAdsAuthActionsBlocked}
+        disabled={
+          saving ||
+          savingServiceAccount ||
+          googleAdsAuthActionsBlocked ||
+          loadingGoogleAdsCredentialStatus
+        }
       >
         {saving || savingServiceAccount ? '保存中...' : '保存配置'}
       </Button>
@@ -48,6 +54,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
         variant="destructive"
         onClick={requestDeleteCurrentGoogleAdsConfig}
         disabled={
+          loadingGoogleAdsCredentialStatus ||
           googleAdsAuthActionsBlocked ||
           deletingOAuthConfig ||
           (effectiveGoogleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
@@ -61,7 +68,9 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
       {effectiveGoogleAdsAuthMethod === 'oauth' && (
         <Button
           onClick={() => void handleStartGoogleAdsOAuth()}
-          disabled={startingOAuth || googleAdsAuthActionsBlocked}
+          disabled={
+            startingOAuth || googleAdsAuthActionsBlocked || loadingGoogleAdsCredentialStatus
+          }
           variant="outline"
         >
           <Key className="w-4 h-4 mr-2" />
@@ -76,6 +85,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           onClick={() => void handleVerifyGoogleAdsCredentials()}
           disabled={
             verifyingGoogleAdsCredentials ||
+            loadingGoogleAdsCredentialStatus ||
             googleAdsAuthActionsBlocked ||
             (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges())
           }

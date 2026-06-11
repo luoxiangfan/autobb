@@ -6,6 +6,12 @@ import {
   getGoogleAdsAuthContext,
   resolveConfiguredGoogleAdsAuthType,
 } from '@/lib/google-ads-auth-context'
+import {
+  logGoogleAdsVerifyDebug,
+  logGoogleAdsVerifyError,
+  logGoogleAdsVerifyInfo,
+  logGoogleAdsVerifyWarn,
+} from '@/lib/google-ads-auth-route-logger'
 
 /**
  * POST /api/google-ads/credentials/verify
@@ -19,30 +25,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
-    console.log(`🔍 验证Google Ads凭证`)
-    console.log(`   用户: ${authResult.user.email}`)
+    const userId = authResult.user.userId
+    logGoogleAdsVerifyDebug('verify_started', { userId })
 
-    // 验证凭证
-    const result = await verifyGoogleAdsCredentials(authResult.user.userId)
+    const result = await verifyGoogleAdsCredentials(userId)
 
     if (result.valid) {
-      console.log(`✅ Google Ads凭证有效`)
-      if (result.customer_id) {
-        console.log(`   Customer ID: ${result.customer_id}`)
-      }
+      logGoogleAdsVerifyInfo('verify_succeeded', {
+        userId,
+        authType: result.authType,
+        customerId: result.customer_id,
+      })
 
-      // 🆕 自动检测并更新API访问级别
       try {
-        const authContext =
-          result.authContext ?? (await getGoogleAdsAuthContext(authResult.user.userId))
+        const authContext = result.authContext ?? (await getGoogleAdsAuthContext(userId))
         const accessLevel = await autoDetectAndUpdateAccessLevel(
-          authResult.user.userId,
+          userId,
           resolveConfiguredGoogleAdsAuthType(authContext)
         )
-        console.log(`   检测到API访问级别: ${accessLevel}`)
+        logGoogleAdsVerifyDebug('access_level_detected', { userId, accessLevel })
       } catch (detectError) {
-        console.warn('自动检测API访问级别失败:', detectError)
-        // 不影响验证结果
+        logGoogleAdsVerifyWarn('access_level_detect_failed', detectError, { userId })
       }
 
       // 🔧 修复(2025-12-11): snake_case → camelCase
@@ -55,8 +58,11 @@ export async function POST(request: NextRequest) {
         },
       })
     } else {
-      console.log(`❌ Google Ads凭证无效`)
-      console.log(`   错误: ${result.error}`)
+      logGoogleAdsVerifyInfo('verify_failed', {
+        userId,
+        authType: result.authType,
+        error: result.error,
+      })
 
       return NextResponse.json(
         {
@@ -71,7 +77,7 @@ export async function POST(request: NextRequest) {
       )
     }
   } catch (error: any) {
-    console.error('验证Google Ads凭证失败:', error)
+    logGoogleAdsVerifyError('verify_unhandled_error', error)
 
     return NextResponse.json(
       {

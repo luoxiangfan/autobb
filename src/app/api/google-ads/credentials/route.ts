@@ -21,6 +21,10 @@ import {
   serviceAccountConfiguredFromContext,
 } from '@/lib/google-ads-auth-context'
 import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads-settings-store'
+import {
+  logGoogleAdsCredentialsError,
+  logGoogleAdsCredentialsInfo,
+} from '@/lib/google-ads-auth-route-logger'
 
 const GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE =
   'POST /api/google-ads/credentials 已移除。请使用 PUT /api/settings（category=google_ads）保存 OAuth 配置字段，并通过「启动 OAuth 授权」完成 refresh_token 写入。'
@@ -153,7 +157,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('获取Google Ads凭证失败:', error)
+    logGoogleAdsCredentialsError('get_credentials_failed', error)
 
     const { formatPythonAdsServiceUnavailableError } = await import('@/lib/python-ads-client')
     const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
@@ -201,15 +205,14 @@ export async function DELETE(request: NextRequest) {
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
 
-    console.log(`🗑️  已删除Google Ads凭证`)
-    console.log(`   用户: ${authResult.user.email}`)
+    logGoogleAdsCredentialsInfo('credentials_deleted', { userId })
 
     return NextResponse.json({
       success: true,
       message: 'Google Ads凭证已删除',
     })
   } catch (error: any) {
-    console.error('删除Google Ads凭证失败:', error)
+    logGoogleAdsCredentialsError('delete_credentials_failed', error)
 
     return NextResponse.json(
       {
@@ -266,9 +269,8 @@ export async function PATCH(request: NextRequest) {
       resolveConfiguredGoogleAdsAuthType(authContext)
     )
 
-    console.log(`✅ 已更新API访问级别: ${apiAccessLevel}`)
-    console.log(`   用户: ${authResult.user.email}`)
-    console.log(`   认证类型: ${resolveConfiguredGoogleAdsAuthType(authContext)}`)
+    const authType = resolveConfiguredGoogleAdsAuthType(authContext)
+    logGoogleAdsCredentialsInfo('api_access_level_updated', { userId, apiAccessLevel, authType })
 
     return NextResponse.json({
       success: true,
@@ -276,7 +278,7 @@ export async function PATCH(request: NextRequest) {
       data: { apiAccessLevel },
     })
   } catch (error: any) {
-    console.error('更新API访问级别失败:', error)
+    logGoogleAdsCredentialsError('update_api_access_level_failed', error)
 
     return NextResponse.json(
       {

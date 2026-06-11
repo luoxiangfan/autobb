@@ -50,6 +50,7 @@ export function useGoogleAdsAuthSettings({
 }: UseGoogleAdsAuthSettingsParams) {
   const [googleAdsCredentialStatus, setGoogleAdsCredentialStatus] =
     useState<GoogleAdsCredentialStatus | null>(null)
+  const [loadingGoogleAdsCredentialStatus, setLoadingGoogleAdsCredentialStatus] = useState(true)
   const googleAdsCredentialStatusRef = useRef<GoogleAdsCredentialStatus | null>(null)
   const googleAdsAuthMethodRef = useRef<'oauth' | 'service_account'>('oauth')
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([])
@@ -61,9 +62,6 @@ export function useGoogleAdsAuthSettings({
     'oauth'
   )
 
-  useEffect(() => {
-    googleAdsAuthMethodRef.current = googleAdsAuthMethod
-  }, [googleAdsAuthMethod])
   const { fetchAccounts, scheduleAccountsPoll } = useGoogleAdsAccountsList()
   const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({})
   const [serviceAccountForm, setServiceAccountForm] = useState({
@@ -136,21 +134,36 @@ export function useGoogleAdsAuthSettings({
 
   const oauthHasUnsavedChanges = () => hasGoogleAdsUnsavedChanges(oauthFormData, savedOAuthFormData)
 
+  const serviceAccountsFetchInFlightRef = useRef<Promise<void> | null>(null)
+
   const fetchServiceAccounts = useCallback(async () => {
-    setLoadingServiceAccounts(true)
-    try {
-      const response = await fetch('/api/google-ads/service-account', {
-        credentials: 'include',
-      })
-      const data = await response.json()
-      if (response.ok) {
-        setServiceAccounts(data.accounts || [])
-      }
-    } catch (err: unknown) {
-      console.error('Failed to fetch service accounts:', err)
-    } finally {
-      setLoadingServiceAccounts(false)
+    if (serviceAccountsFetchInFlightRef.current) {
+      return serviceAccountsFetchInFlightRef.current
     }
+
+    setLoadingServiceAccounts(true)
+    const promise = (async () => {
+      try {
+        const response = await fetch('/api/google-ads/service-account', {
+          credentials: 'include',
+        })
+        const data = await response.json()
+        if (response.ok) {
+          setServiceAccounts(data.accounts || [])
+        }
+      } catch (err: unknown) {
+        console.error('Failed to fetch service accounts:', err)
+      } finally {
+        setLoadingServiceAccounts(false)
+      }
+    })()
+    serviceAccountsFetchInFlightRef.current = promise
+    void promise.finally(() => {
+      if (serviceAccountsFetchInFlightRef.current === promise) {
+        serviceAccountsFetchInFlightRef.current = null
+      }
+    })
+    return promise
   }, [])
 
   const fetchGoogleAdsCredentialStatus = useCallback(async () => {
@@ -179,6 +192,8 @@ export function useGoogleAdsAuthSettings({
       }
     } catch (err) {
       console.error('Failed to fetch Google Ads credential status:', err)
+    } finally {
+      setLoadingGoogleAdsCredentialStatus(false)
     }
   }, [fetchServiceAccounts])
 
@@ -558,6 +573,7 @@ export function useGoogleAdsAuthSettings({
 
   return {
     googleAdsCredentialStatus,
+    loadingGoogleAdsCredentialStatus,
     googleAdsAccounts,
     loadingGoogleAdsAccounts,
     showGoogleAdsAccounts,

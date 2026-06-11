@@ -456,6 +456,9 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   authType?: 'oauth' | 'service_account'
   authContext?: import('./google-ads-auth-context').GoogleAdsAuthContext
 }> {
+  const { logGoogleAdsVerifyDebug, logGoogleAdsVerifyError } =
+    await import('./google-ads-auth-route-logger')
+
   try {
     const { googleAdsApiAuthValidationErrorMessage, resolveGoogleAdsApiAuthForAccount } =
       await import('./google-ads-auth-context')
@@ -479,7 +482,10 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         return { valid: false, error: '未找到服务账号配置', authType: 'service_account' }
       }
 
-      console.log(`[Verify] 服务账号: ${serviceAccount.name ?? serviceAccount.id}`)
+      logGoogleAdsVerifyDebug('service_account_verify_started', {
+        userId,
+        serviceAccountId: String(serviceAccount.id),
+      })
 
       const { listAccessibleCustomersPython } = await import('./python-ads-client')
 
@@ -515,14 +521,14 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         const { formatPythonAdsServiceUnavailableError } = await import('./python-ads-client')
         const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
         if (serviceUnavailable) {
-          console.error('[Verify] Python Ads Service 不可用:', serviceUnavailable)
+          logGoogleAdsVerifyError('python_ads_service_unavailable', serviceUnavailable, { userId })
           return {
             valid: false,
             error: serviceUnavailable,
             authType: 'service_account',
           }
         }
-        console.error('[Verify] 服务账号验证失败:', error)
+        logGoogleAdsVerifyError('service_account_verify_failed', error, { userId })
         const message = error instanceof Error ? error.message : '服务账号验证失败'
         return {
           valid: false,
@@ -579,7 +585,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
       authContext: ctx,
     }
   } catch (error: any) {
-    console.error('验证Google Ads凭证失败:', error)
+    logGoogleAdsVerifyError('verify_unhandled_error', error, { userId })
     return {
       valid: false,
       error: error.message || '未知错误',

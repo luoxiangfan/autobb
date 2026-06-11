@@ -23,6 +23,11 @@ import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
 import {
+  logGoogleAdsAccountsDebug,
+  logGoogleAdsAccountsError,
+  logGoogleAdsAccountsWarn,
+} from '@/lib/google-ads-auth-route-logger'
+import {
   buildGoogleAdsAccountSyncKey,
   completeGoogleAdsAccountAsyncRefresh,
   getGoogleAdsAccountAsyncRefreshState,
@@ -200,9 +205,13 @@ async function get(request: NextRequest) {
         ? queryServiceAccountId || resolveEffectiveServiceAccountId(null, authContext) || null
         : null
 
-    console.log(
-      `🔍 [GET /api/google-ads/credentials/accounts] forceRefresh=${forceRefresh}, asyncRefresh=${asyncRefresh}, offerId=${offerId}, authType=${authType}`
-    )
+    logGoogleAdsAccountsDebug('accounts_request', {
+      userId,
+      forceRefresh,
+      asyncRefresh,
+      offerId: offerId ?? null,
+      authType,
+    })
 
     const authResolved = await resolveAccountsRouteAuthBundle({
       userId,
@@ -269,7 +278,11 @@ async function get(request: NextRequest) {
       ? Number.POSITIVE_INFINITY
       : Date.now() - latestSyncAtMs
     const cacheStaleBeforeRefresh = cacheAgeMs > GOOGLE_ADS_ACCOUNTS_CACHE_MAX_AGE_MS
-    console.log(`📦 缓存中有 ${cachedAccounts.length} 个账号`)
+    logGoogleAdsAccountsDebug('cache_loaded', {
+      userId,
+      cachedCount: cachedAccounts.length,
+      cacheAgeMs,
+    })
 
     const mapCachedAccounts = (accounts: CachedAccount[] = cachedAccounts) =>
       accounts.map((acc) => {
@@ -346,31 +359,40 @@ async function get(request: NextRequest) {
 
       if (startResult.started) {
         void runAccountsSyncJob(startResult.startedAtMs).catch((err) => {
-          console.error('后台账号同步失败:', err)
+          logGoogleAdsAccountsError('background_sync_failed', err, { userId, syncKey })
         })
       }
     } else if (!forceRefresh && cachedAccounts.length > 0) {
       // 使用缓存数据（即使缓存已过期也先返回，避免请求阻塞/网关超时；由 refresh=true 显式触发同步）
       usedCache = true
-      console.log(`✅ 使用缓存的 ${cachedAccounts.length} 个账号 (ageMs=${cacheAgeMs})`)
+      logGoogleAdsAccountsDebug('cache_hit', {
+        userId,
+        cachedCount: cachedAccounts.length,
+        cacheAgeMs,
+      })
       allAccounts = mapCachedAccounts()
     } else {
       // 从 API 获取并同步（refresh=true 无 async，或无缓存）；与 async 路径共用互斥锁
-      console.log(
-        `🔄 从 Google Ads API 同步账号... (forceRefresh=${forceRefresh}, cacheStale=${cacheStaleBeforeRefresh})`
-      )
+      logGoogleAdsAccountsDebug('sync_started', {
+        userId,
+        forceRefresh,
+        cacheStale: cacheStaleBeforeRefresh,
+      })
       const startResult = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
 
       if (startResult.started) {
         try {
           allAccounts = await runAccountsSyncJob(startResult.startedAtMs)
-          console.log(`✅ 同步完成，获取到 ${allAccounts.length} 个账号`)
+          logGoogleAdsAccountsDebug('sync_completed', { userId, accountCount: allAccounts.length })
           effectiveLastSyncAtIso = new Date().toISOString()
         } catch (err) {
           if (cachedAccounts.length > 0) {
             refreshFailed = true
             usedCache = true
-            console.warn(`⚠️ 同步账号失败，回退使用缓存账号列表:`, err)
+            logGoogleAdsAccountsWarn('sync_failed_using_cache', err, {
+              userId,
+              cachedCount: cachedAccounts.length,
+            })
             allAccounts = mapCachedAccounts()
           } else {
             throw err
@@ -378,7 +400,10 @@ async function get(request: NextRequest) {
         }
       } else if (cachedAccounts.length > 0) {
         usedCache = true
-        console.log(`⏳ 其它请求正在同步，使用缓存的 ${cachedAccounts.length} 个账号`)
+        logGoogleAdsAccountsDebug('sync_in_progress_using_cache', {
+          userId,
+          cachedCount: cachedAccounts.length,
+        })
         allAccounts = mapCachedAccounts()
       } else {
         await waitForGoogleAdsAccountAsyncRefreshToSettle(syncKey, {
@@ -398,7 +423,7 @@ async function get(request: NextRequest) {
           if (isGoogleAdsAccountRefreshInProgress(stateAfterWait)) {
             usedCache = true
             allAccounts = cachedAccounts.length > 0 ? mapCachedAccounts() : []
-            console.log('⏳ 其它请求正在同步，返回 refreshInProgress 供客户端轮询')
+            logGoogleAdsAccountsDebug('sync_in_progress_poll', { userId })
           } else {
             const retryStart = await tryStartGoogleAdsAccountAsyncRefresh(syncKey, syncKeyParams)
             if (retryStart.started) {
@@ -604,15 +629,20 @@ async function get(request: NextRequest) {
         return account.parentMcc && userMccIds.has(account.parentMcc)
       })
 
-      console.log(
-        `🔧 filterByUserMcc=true (普通用户): 从 ${accountsWithOffers.length} 个账号过滤到 ${finalAccounts.length} 个账号`
-      )
+      logGoogleAdsAccountsDebug('filter_by_user_mcc', {
+        userId,
+        role: 'user',
+        beforeCount: accountsWithOffers.length,
+        afterCount: finalAccounts.length,
+      })
     } else if (filterByUserMcc && isAdmin) {
       // 管理员：只过滤掉 MCC 账号，显示所有非 MCC 账号
       finalAccounts = accountsWithOffers.filter((account) => !account.manager)
-      console.log(
-        `🔧 filterByUserMcc=true (管理员): 过滤后剩余 ${finalAccounts.length} 个非 MCC 账号`
-      )
+      logGoogleAdsAccountsDebug('filter_by_user_mcc', {
+        userId,
+        role: 'admin',
+        afterCount: finalAccounts.length,
+      })
     }
 
     const finalSyncState = await getGoogleAdsAccountAsyncRefreshState(syncKey)
@@ -638,7 +668,7 @@ async function get(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('获取Google Ads账户失败:', error)
+    logGoogleAdsAccountsError('get_accounts_failed', error)
 
     // 🔧 修复(2025-12-24): 根据错误类型返回合适的 HTTP 状态码
     let statusCode = 500
