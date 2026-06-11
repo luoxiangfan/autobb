@@ -1,5 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { logGoogleAdsAccountsError } from '@/lib/google-ads-auth-route-logger'
 import { getIdleAdsAccounts } from '@/lib/offers'
 
 /**
@@ -10,12 +11,13 @@ import { getIdleAdsAccounts } from '@/lib/offers'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  let userId: number | undefined
   try {
     const authResult = await verifyAuth(request)
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
     }
-    const userId = authResult.user.userId
+    userId = authResult.user.userId
 
     const idleAccounts = await getIdleAdsAccounts(userId)
 
@@ -33,7 +35,11 @@ export async function GET(request: NextRequest) {
       total: idleAccounts.length,
     })
   } catch (error: any) {
-    console.error('获取闲置Ads账号失败:', error)
+    logGoogleAdsAccountsError(
+      'get_idle_accounts_failed',
+      error,
+      userId != null ? { userId } : undefined
+    )
 
     return NextResponse.json(
       {

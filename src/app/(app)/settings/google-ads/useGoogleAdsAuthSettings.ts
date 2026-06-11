@@ -186,8 +186,18 @@ export function useGoogleAdsAuthSettings({
         return
       }
 
+      if (data.data == null) {
+        const message = '服务器返回的 Google Ads 认证状态格式无效'
+        const isInitialLoad = googleAdsCredentialStatusRef.current == null
+        setCredentialStatusLoadError(message)
+        if (isInitialLoad) {
+          toast.error(message)
+        }
+        return
+      }
+
       setCredentialStatusLoadError(null)
-      const nextStatus = data.data as GoogleAdsCredentialStatus
+      const nextStatus = data.data
       const previousStatus = googleAdsCredentialStatusRef.current
       const nextAuthMethod = resolveAuthMethodAfterCredentialStatusRefresh(
         previousStatus,
@@ -626,7 +636,7 @@ export function useGoogleAdsAuthSettings({
     isGoogleAdsSharedAdminHiddenSecret,
     oauthHasUnsavedChanges,
     fetchServiceAccounts,
-    fetchGoogleAdsCredentialStatus,
+    refreshCredentialStatusCoalesced,
     handleStartGoogleAdsOAuth,
     handleVerifyGoogleAdsCredentials,
     handleFetchGoogleAdsAccounts,
