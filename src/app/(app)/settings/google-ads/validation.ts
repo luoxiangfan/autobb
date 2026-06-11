@@ -70,12 +70,23 @@ export function resolveGoogleAdsAuthMethodFromCredentialStatus(
 
 type GoogleAdsAuthMethodTabState = Pick<
   GoogleAdsCredentialStatus,
-  'authType' | 'dualStack' | 'hasCredentials'
+  | 'authType'
+  | 'dualStack'
+  | 'hasCredentials'
+  | 'hasServiceAccount'
+  | 'hasRefreshToken'
+  | 'hasOAuthFields'
 >
+
+function isUnconfiguredCredentialTabState(
+  status: Pick<GoogleAdsCredentialStatus, 'hasCredentials' | 'dualStack'>
+): boolean {
+  return !status.hasCredentials && !status.dualStack
+}
 
 /**
  * 是否用 API 解析结果覆盖当前 Tab。
- * 双栈 / 未配置时刷新凭证状态不重置用户已选 Tab；状态跃迁（首次加载、锁定、authType/双栈/已配置变化）时同步。
+ * 双栈刷新不重置用户已选 Tab；未配置时 OAuth/SA 半成品出现则同步；锁定与 authType/双栈/已配置跃迁时同步。
  */
 export function shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
   previous: GoogleAdsAuthMethodTabState | null | undefined,
@@ -101,14 +112,25 @@ export function shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
     return true
   }
 
+  if (isUnconfiguredCredentialTabState(previous) && isUnconfiguredCredentialTabState(next)) {
+    if (Boolean(next.hasServiceAccount) !== Boolean(previous.hasServiceAccount)) {
+      return true
+    }
+    if (Boolean(next.hasOAuthFields) !== Boolean(previous.hasOAuthFields)) {
+      return true
+    }
+    if (Boolean(next.hasRefreshToken) !== Boolean(previous.hasRefreshToken)) {
+      return true
+    }
+  }
+
   return false
 }
 
 /** 凭证状态刷新后应展示的 Tab（未跃迁时保留 currentAuthMethod）。 */
 export function resolveAuthMethodAfterCredentialStatusRefresh(
   previous: GoogleAdsAuthMethodTabState | null | undefined,
-  next: GoogleAdsAuthMethodTabState &
-    Pick<GoogleAdsCredentialStatus, 'hasServiceAccount' | 'hasRefreshToken' | 'hasOAuthFields'>,
+  next: GoogleAdsAuthMethodTabState,
   currentAuthMethod: GoogleAdsAuthMethodTab
 ): GoogleAdsAuthMethodTab {
   const resolvedMethod = resolveGoogleAdsAuthMethodFromCredentialStatus(next)

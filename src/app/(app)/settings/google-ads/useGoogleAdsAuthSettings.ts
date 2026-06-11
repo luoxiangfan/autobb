@@ -104,6 +104,7 @@ export function useGoogleAdsAuthSettings({
       if (isGoogleAdsAuthMethodLocked(googleAdsCredentialStatus)) {
         return
       }
+      googleAdsAuthMethodRef.current = method
       setGoogleAdsAuthMethod(method)
     },
     [googleAdsCredentialStatus]
@@ -167,6 +168,7 @@ export function useGoogleAdsAuthSettings({
           googleAdsAuthMethodRef.current
         )
         if (nextAuthMethod !== googleAdsAuthMethodRef.current) {
+          googleAdsAuthMethodRef.current = nextAuthMethod
           setGoogleAdsAuthMethod(nextAuthMethod)
         }
         googleAdsCredentialStatusRef.current = nextStatus
@@ -208,6 +210,7 @@ export function useGoogleAdsAuthSettings({
 
     if (oauthSuccess === 'true') {
       toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
+      googleAdsAuthMethodRef.current = 'oauth'
       setGoogleAdsAuthMethod('oauth')
       void fetchGoogleAdsCredentialStatus()
       window.history.replaceState({}, '', '/settings?category=google_ads')

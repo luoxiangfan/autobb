@@ -165,6 +165,59 @@ describe('shouldApplyGoogleAdsAuthMethodFromCredentialStatus', () => {
       )
     ).toBe(true)
   })
+
+  it('applies when unconfigured user gains service account partial config', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        {
+          hasCredentials: false,
+          dualStack: false,
+          hasServiceAccount: false,
+        },
+        {
+          hasCredentials: false,
+          dualStack: false,
+          hasServiceAccount: true,
+        }
+      )
+    ).toBe(true)
+  })
+
+  it('applies when unconfigured user gains oauth partial config', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        {
+          hasCredentials: false,
+          dualStack: false,
+          hasOAuthFields: false,
+        },
+        {
+          hasCredentials: false,
+          dualStack: false,
+          hasOAuthFields: true,
+        }
+      )
+    ).toBe(true)
+  })
+
+  it('does not apply partial flag churn during unchanged dual stack refresh', () => {
+    expect(
+      shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
+        {
+          hasCredentials: false,
+          dualStack: true,
+          hasServiceAccount: true,
+          hasOAuthFields: true,
+        },
+        {
+          hasCredentials: false,
+          dualStack: true,
+          hasServiceAccount: true,
+          hasOAuthFields: true,
+        }
+      )
+    ).toBe(false)
+  })
 })
 
 describe('resolveAuthMethodAfterCredentialStatusRefresh', () => {
@@ -200,6 +253,24 @@ describe('resolveAuthMethodAfterCredentialStatusRefresh', () => {
           hasCredentials: true,
           dualStack: false,
           authType: 'service_account',
+          hasServiceAccount: true,
+        },
+        'oauth'
+      )
+    ).toBe('service_account')
+  })
+
+  it('switches to service_account when unconfigured user saves SA partial config', () => {
+    expect(
+      resolveAuthMethodAfterCredentialStatusRefresh(
+        {
+          hasCredentials: false,
+          dualStack: false,
+          hasServiceAccount: false,
+        },
+        {
+          hasCredentials: false,
+          dualStack: false,
           hasServiceAccount: true,
         },
         'oauth'
