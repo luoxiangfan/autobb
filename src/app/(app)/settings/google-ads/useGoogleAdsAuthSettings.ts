@@ -51,6 +51,7 @@ export function useGoogleAdsAuthSettings({
   const [googleAdsCredentialStatus, setGoogleAdsCredentialStatus] =
     useState<GoogleAdsCredentialStatus | null>(null)
   const [loadingGoogleAdsCredentialStatus, setLoadingGoogleAdsCredentialStatus] = useState(true)
+  const [credentialStatusLoadError, setCredentialStatusLoadError] = useState<string | null>(null)
   const googleAdsCredentialStatusRef = useRef<GoogleAdsCredentialStatus | null>(null)
   const googleAdsAuthMethodRef = useRef<'oauth' | 'service_account'>('oauth')
   const [googleAdsAccounts, setGoogleAdsAccounts] = useState<GoogleAdsAccount[]>([])
@@ -80,7 +81,6 @@ export function useGoogleAdsAuthSettings({
       created_at: string
     }>
   >([])
-  const [, setLoadingServiceAccounts] = useState(false)
   const [deletingServiceAccountId, setDeletingServiceAccountId] = useState<string | null>(null)
   const [deletingOAuthConfig, setDeletingOAuthConfig] = useState(false)
   const [deleteConfirmState, setDeleteConfirmState] = useState<GoogleAdsDeleteConfirmState>(null)
@@ -141,7 +141,6 @@ export function useGoogleAdsAuthSettings({
       return serviceAccountsFetchInFlightRef.current
     }
 
-    setLoadingServiceAccounts(true)
     const promise = (async () => {
       try {
         const response = await fetch('/api/google-ads/service-account', {
@@ -151,10 +150,8 @@ export function useGoogleAdsAuthSettings({
         if (response.ok) {
           setServiceAccounts(data.accounts || [])
         }
-      } catch (err: unknown) {
-        console.error('Failed to fetch service accounts:', err)
-      } finally {
-        setLoadingServiceAccounts(false)
+      } catch {
+        // 服务账号列表为辅助数据，失败时静默；凭证状态刷新会再次触发
       }
     })()
     serviceAccountsFetchInFlightRef.current = promise
@@ -171,27 +168,42 @@ export function useGoogleAdsAuthSettings({
       const response = await fetch('/api/google-ads/credentials', {
         credentials: 'include',
       })
-      if (response.ok) {
-        const data = await response.json()
-        const nextStatus = data.data as GoogleAdsCredentialStatus
-        const previousStatus = googleAdsCredentialStatusRef.current
-        const nextAuthMethod = resolveAuthMethodAfterCredentialStatusRefresh(
-          previousStatus,
-          nextStatus,
-          googleAdsAuthMethodRef.current
-        )
-        if (nextAuthMethod !== googleAdsAuthMethodRef.current) {
-          googleAdsAuthMethodRef.current = nextAuthMethod
-          setGoogleAdsAuthMethod(nextAuthMethod)
-        }
-        googleAdsCredentialStatusRef.current = nextStatus
-        setGoogleAdsCredentialStatus(nextStatus)
-        if (shouldFetchGoogleAdsServiceAccounts(nextStatus)) {
-          void fetchServiceAccounts()
-        }
+      const data = (await response.json().catch(() => ({}))) as {
+        data?: GoogleAdsCredentialStatus
+        error?: string
+        message?: string
       }
-    } catch (err) {
-      console.error('Failed to fetch Google Ads credential status:', err)
+
+      if (!response.ok) {
+        const message =
+          data.message || data.error || `加载 Google Ads 认证状态失败（${response.status}）`
+        setCredentialStatusLoadError(message)
+        toast.error(message)
+        return
+      }
+
+      setCredentialStatusLoadError(null)
+      const nextStatus = data.data as GoogleAdsCredentialStatus
+      const previousStatus = googleAdsCredentialStatusRef.current
+      const nextAuthMethod = resolveAuthMethodAfterCredentialStatusRefresh(
+        previousStatus,
+        nextStatus,
+        googleAdsAuthMethodRef.current
+      )
+      if (nextAuthMethod !== googleAdsAuthMethodRef.current) {
+        googleAdsAuthMethodRef.current = nextAuthMethod
+        setGoogleAdsAuthMethod(nextAuthMethod)
+      }
+      googleAdsCredentialStatusRef.current = nextStatus
+      setGoogleAdsCredentialStatus(nextStatus)
+      if (shouldFetchGoogleAdsServiceAccounts(nextStatus)) {
+        void fetchServiceAccounts()
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : '加载 Google Ads 认证状态失败，请稍后重试'
+      setCredentialStatusLoadError(message)
+      toast.error(message)
     } finally {
       setLoadingGoogleAdsCredentialStatus(false)
     }
@@ -213,9 +225,15 @@ export function useGoogleAdsAuthSettings({
     return promise
   }, [fetchGoogleAdsCredentialStatus])
 
+  const retryLoadGoogleAdsCredentialStatus = useCallback(async () => {
+    setLoadingGoogleAdsCredentialStatus(true)
+    setCredentialStatusLoadError(null)
+    await refreshCredentialStatusCoalesced()
+  }, [refreshCredentialStatusCoalesced])
+
   useEffect(() => {
-    void fetchGoogleAdsCredentialStatus()
-  }, [fetchGoogleAdsCredentialStatus])
+    void refreshCredentialStatusCoalesced()
+  }, [refreshCredentialStatusCoalesced])
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -227,13 +245,13 @@ export function useGoogleAdsAuthSettings({
       toast.success('✅ OAuth 授权成功！Refresh Token 已保存')
       googleAdsAuthMethodRef.current = 'oauth'
       setGoogleAdsAuthMethod('oauth')
-      void fetchGoogleAdsCredentialStatus()
+      void refreshCredentialStatusCoalesced()
       window.history.replaceState({}, '', '/settings?category=google_ads')
     } else if (errorParam) {
       toast.error(resolveGoogleAdsOAuthCallbackErrorMessage(errorParam))
       window.history.replaceState({}, '', '/settings?category=google_ads')
     }
-  }, [fetchGoogleAdsCredentialStatus])
+  }, [refreshCredentialStatusCoalesced])
 
   const handleAccountsFetchResultRef = useRef<
     (
@@ -574,6 +592,8 @@ export function useGoogleAdsAuthSettings({
   return {
     googleAdsCredentialStatus,
     loadingGoogleAdsCredentialStatus,
+    credentialStatusLoadError,
+    retryLoadGoogleAdsCredentialStatus,
     googleAdsAccounts,
     loadingGoogleAdsAccounts,
     showGoogleAdsAccounts,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { verifyGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
@@ -26,6 +27,13 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authResult.user.userId
+
+    try {
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
+
     logGoogleAdsVerifyDebug('verify_started', { userId })
 
     const result = await verifyGoogleAdsCredentials(userId)

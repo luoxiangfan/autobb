@@ -15,6 +15,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
     effectiveGoogleAdsAuthMethod,
     googleAdsAuthActionsBlocked,
     loadingGoogleAdsCredentialStatus,
+    credentialStatusLoadError,
     googleAdsCredentialStatus,
     hasOAuthConfigToDelete,
     hasServiceAccountConfigToDelete,
@@ -29,6 +30,11 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
     handleStartGoogleAdsOAuth,
     handleVerifyGoogleAdsCredentials,
   } = auth
+
+  const credentialStatusUnavailable =
+    loadingGoogleAdsCredentialStatus ||
+    (credentialStatusLoadError != null && !googleAdsCredentialStatus)
+
   return (
     <>
       <Button
@@ -43,7 +49,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           saving ||
           savingServiceAccount ||
           googleAdsAuthActionsBlocked ||
-          loadingGoogleAdsCredentialStatus
+          credentialStatusUnavailable
         }
       >
         {saving || savingServiceAccount ? '保存中...' : '保存配置'}
@@ -54,7 +60,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
         variant="destructive"
         onClick={requestDeleteCurrentGoogleAdsConfig}
         disabled={
-          loadingGoogleAdsCredentialStatus ||
+          credentialStatusUnavailable ||
           googleAdsAuthActionsBlocked ||
           deletingOAuthConfig ||
           (effectiveGoogleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
@@ -68,9 +74,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
       {effectiveGoogleAdsAuthMethod === 'oauth' && (
         <Button
           onClick={() => void handleStartGoogleAdsOAuth()}
-          disabled={
-            startingOAuth || googleAdsAuthActionsBlocked || loadingGoogleAdsCredentialStatus
-          }
+          disabled={startingOAuth || googleAdsAuthActionsBlocked || credentialStatusUnavailable}
           variant="outline"
         >
           <Key className="w-4 h-4 mr-2" />
@@ -85,7 +89,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           onClick={() => void handleVerifyGoogleAdsCredentials()}
           disabled={
             verifyingGoogleAdsCredentials ||
-            loadingGoogleAdsCredentialStatus ||
+            credentialStatusUnavailable ||
             googleAdsAuthActionsBlocked ||
             (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges())
           }

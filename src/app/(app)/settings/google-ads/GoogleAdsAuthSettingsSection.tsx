@@ -40,6 +40,8 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
   const {
     googleAdsCredentialStatus,
     loadingGoogleAdsCredentialStatus,
+    credentialStatusLoadError,
+    retryLoadGoogleAdsCredentialStatus,
     googleAdsAccounts,
     loadingGoogleAdsAccounts,
     showGoogleAdsAccounts,
@@ -101,6 +103,32 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
         </div>
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (credentialStatusLoadError && !googleAdsCredentialStatus) {
+    return (
+      <div
+        className="p-4 bg-red-50 border border-red-200 rounded-lg space-y-3"
+        role="alert"
+        aria-live="polite"
+      >
+        <div className="flex items-start gap-2">
+          <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-800">无法加载 Google Ads 认证状态</p>
+            <p className="text-sm text-red-700 mt-1">{credentialStatusLoadError}</p>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void retryLoadGoogleAdsCredentialStatus()}
+        >
+          重试
+        </Button>
       </div>
     )
   }

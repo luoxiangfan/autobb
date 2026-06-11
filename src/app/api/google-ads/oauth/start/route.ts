@@ -11,7 +11,7 @@ import {
   logGoogleAdsOAuthDebug,
   logGoogleAdsOAuthError,
   logGoogleAdsOAuthInfo,
-} from '../oauth-route-logger'
+} from '@/lib/google-ads-auth-route-logger'
 
 /**
  * GET /api/google-ads/oauth/start
