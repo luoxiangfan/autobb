@@ -90,7 +90,8 @@ export function useGoogleAdsAuthSettings({
 
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
   const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.dualStack)
-  const googleAdsAuthActionsBlocked = googleAdsAuthReadOnly || googleAdsDualStack
+  /** 禁止保存 / OAuth / 验证等写入；双栈时仍允许删除其中一种认证 */
+  const googleAdsAuthModifyBlocked = googleAdsAuthReadOnly || googleAdsDualStack
   const googleAdsAuthMethodLocked = isGoogleAdsAuthMethodLocked(googleAdsCredentialStatus)
   const effectiveGoogleAdsAuthMethod = resolveEffectiveGoogleAdsAuthMethod(
     googleAdsCredentialStatus,
@@ -177,8 +178,11 @@ export function useGoogleAdsAuthSettings({
       if (!response.ok) {
         const message =
           data.message || data.error || `加载 Google Ads 认证状态失败（${response.status}）`
+        const isInitialLoad = googleAdsCredentialStatusRef.current == null
         setCredentialStatusLoadError(message)
-        toast.error(message)
+        if (isInitialLoad) {
+          toast.error(message)
+        }
         return
       }
 
@@ -202,8 +206,11 @@ export function useGoogleAdsAuthSettings({
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : '加载 Google Ads 认证状态失败，请稍后重试'
+      const isInitialLoad = googleAdsCredentialStatusRef.current == null
       setCredentialStatusLoadError(message)
-      toast.error(message)
+      if (isInitialLoad) {
+        toast.error(message)
+      }
     } finally {
       setLoadingGoogleAdsCredentialStatus(false)
     }
@@ -379,7 +386,7 @@ export function useGoogleAdsAuthSettings({
       const data = await response.json()
       if (response.ok && data.success && data.data?.valid) {
         toast.success(data.message || 'Google Ads 凭证验证通过')
-        await fetchGoogleAdsCredentialStatus()
+        await refreshCredentialStatusCoalesced()
         return
       }
       const message = data.data?.error || data.message || data.error || 'Google Ads 凭证验证失败'
@@ -411,7 +418,6 @@ export function useGoogleAdsAuthSettings({
         setShowGoogleAdsAccounts(false)
       }
     } catch (err: unknown) {
-      console.error('获取 Google Ads 账户失败:', err)
       toast.error(err instanceof Error ? err.message : '获取失败')
       setShowGoogleAdsAccounts(false)
     } finally {
@@ -420,7 +426,7 @@ export function useGoogleAdsAuthSettings({
   }
 
   const handleSaveServiceAccount = async () => {
-    if (googleAdsAuthActionsBlocked) {
+    if (googleAdsAuthModifyBlocked) {
       toast.error(
         googleAdsDualStack
           ? '请先删除双栈认证中的其中一种配置后再保存'
@@ -476,7 +482,7 @@ export function useGoogleAdsAuthSettings({
         serviceAccountJson: '',
       })
       await fetchServiceAccounts()
-      await fetchGoogleAdsCredentialStatus()
+      await refreshCredentialStatusCoalesced()
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : '保存失败')
     } finally {
@@ -497,7 +503,7 @@ export function useGoogleAdsAuthSettings({
 
       toast.success('服务账号配置已删除')
       await fetchServiceAccounts()
-      await fetchGoogleAdsCredentialStatus()
+      await refreshCredentialStatusCoalesced()
       return true
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : '删除失败')
@@ -520,7 +526,7 @@ export function useGoogleAdsAuthSettings({
       onClearOAuthFormFields(['client_id', 'client_secret', 'developer_token', 'login_customer_id'])
       toast.success('OAuth 配置已删除')
       await onRefreshCategory()
-      await fetchGoogleAdsCredentialStatus()
+      await refreshCredentialStatusCoalesced()
       return true
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : '删除失败')
@@ -585,7 +591,7 @@ export function useGoogleAdsAuthSettings({
   }
 
   const notifyOAuthSaveComplete = async () => {
-    await fetchGoogleAdsCredentialStatus()
+    await refreshCredentialStatusCoalesced()
     onOAuthSaveComplete()
   }
 
@@ -616,7 +622,7 @@ export function useGoogleAdsAuthSettings({
     dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
     googleAdsDualStack,
-    googleAdsAuthActionsBlocked,
+    googleAdsAuthModifyBlocked,
     isGoogleAdsSharedAdminHiddenSecret,
     oauthHasUnsavedChanges,
     fetchServiceAccounts,

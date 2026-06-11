@@ -226,7 +226,8 @@ export async function DELETE(request: NextRequest) {
 
 /**
  * PATCH /api/google-ads/credentials
- * 更新Google Ads API访问级别
+ * 更新 Google Ads API 访问级别。
+ * 设置页仅展示自动检测结果；本接口供验证流程、内部脚本或后续管理功能调用。
  */
 export async function PATCH(request: NextRequest) {
   try {

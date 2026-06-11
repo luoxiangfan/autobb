@@ -13,7 +13,8 @@ type Props = {
 export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Props) {
   const {
     effectiveGoogleAdsAuthMethod,
-    googleAdsAuthActionsBlocked,
+    googleAdsAuthModifyBlocked,
+    googleAdsAuthReadOnly,
     loadingGoogleAdsCredentialStatus,
     credentialStatusLoadError,
     googleAdsCredentialStatus,
@@ -48,7 +49,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
         disabled={
           saving ||
           savingServiceAccount ||
-          googleAdsAuthActionsBlocked ||
+          googleAdsAuthModifyBlocked ||
           credentialStatusUnavailable
         }
       >
@@ -61,7 +62,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
         onClick={requestDeleteCurrentGoogleAdsConfig}
         disabled={
           credentialStatusUnavailable ||
-          googleAdsAuthActionsBlocked ||
+          googleAdsAuthReadOnly ||
           deletingOAuthConfig ||
           (effectiveGoogleAdsAuthMethod === 'oauth' && !hasOAuthConfigToDelete) ||
           (effectiveGoogleAdsAuthMethod === 'service_account' &&
@@ -74,7 +75,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
       {effectiveGoogleAdsAuthMethod === 'oauth' && (
         <Button
           onClick={() => void handleStartGoogleAdsOAuth()}
-          disabled={startingOAuth || googleAdsAuthActionsBlocked || credentialStatusUnavailable}
+          disabled={startingOAuth || googleAdsAuthModifyBlocked || credentialStatusUnavailable}
           variant="outline"
         >
           <Key className="w-4 h-4 mr-2" />
@@ -90,7 +91,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           disabled={
             verifyingGoogleAdsCredentials ||
             credentialStatusUnavailable ||
-            googleAdsAuthActionsBlocked ||
+            googleAdsAuthModifyBlocked ||
             (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges())
           }
         >

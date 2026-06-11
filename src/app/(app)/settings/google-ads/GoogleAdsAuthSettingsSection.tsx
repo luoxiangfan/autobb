@@ -57,7 +57,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
     permissionError,
     dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
-    googleAdsAuthActionsBlocked,
+    googleAdsAuthModifyBlocked,
     googleAdsDualStack,
     hasOAuthConfigToDelete,
     fetchServiceAccounts,
@@ -135,6 +135,29 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
 
   return (
     <div className="space-y-6">
+      {credentialStatusLoadError && googleAdsCredentialStatus && (
+        <div
+          className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex flex-wrap items-center justify-between gap-3"
+          role="status"
+        >
+          <div className="flex items-start gap-2 min-w-0">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800">
+              认证状态刷新失败，当前显示的可能不是最新数据：{credentialStatusLoadError}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => void retryLoadGoogleAdsCredentialStatus()}
+          >
+            重试
+          </Button>
+        </div>
+      )}
+
       {googleAdsAuthReadOnly && (
         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800 font-medium">
@@ -464,7 +487,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
               type="button"
               variant="outline"
               size="sm"
-              disabled={googleAdsAuthActionsBlocked}
+              disabled={googleAdsAuthModifyBlocked}
               onClick={() => setShowServiceAccountReplaceForm(true)}
             >
               替换服务账号配置
@@ -611,9 +634,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
                     variant="outline"
                     size="sm"
                     onClick={() => requestDeleteServiceAccount(account.id)}
-                    disabled={
-                      googleAdsAuthActionsBlocked || deletingServiceAccountId === account.id
-                    }
+                    disabled={googleAdsAuthReadOnly || deletingServiceAccountId === account.id}
                     className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="w-4 h-4" />
