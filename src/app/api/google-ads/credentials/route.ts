@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, findUserById } from '@/lib/auth'
-import { saveGoogleAdsCredentials, deleteGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { deleteGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
-  assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContext,
   googleAdsAuthContextDualStackError,
   googleAdsAuthReadyFailureHttpStatus,
@@ -21,132 +20,37 @@ import {
   oauthRefreshConfiguredFromContext,
   serviceAccountConfiguredFromContext,
 } from '@/lib/google-ads-auth-context'
-import {
-  isGoogleAdsSettingsAuthConflictError,
-  isGoogleAdsSettingsValidationError,
-  resolveGoogleAdsCredentialFieldsForReadOnlyApi,
-  upsertGoogleAdsOAuthConfigFromSettings,
-} from '@/lib/google-ads-settings-store'
+import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads-settings-store'
+
+const GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE =
+  'POST /api/google-ads/credentials 已移除。请使用 PUT /api/settings（category=google_ads）保存 OAuth 配置字段，并通过「启动 OAuth 授权」完成 refresh_token 写入。'
 
 /**
  * POST /api/google-ads/credentials
- * 保存 Google Ads OAuth 凭证。
  *
- * @deprecated 优先使用 PUT /api/settings 保存 OAuth 字段；refresh_token 由 OAuth 回调写入。
- * 无 refresh_token 时仅 upsert 配置字段；含 refresh_token 时写入完整凭证行。
+ * @deprecated 已返回 410。请使用 PUT /api/settings 保存 OAuth 字段；refresh_token 由 OAuth 回调写入。
  */
-export async function POST(request: NextRequest) {
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-
-    try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
-    }
-
-    const body = await request.json()
-    const {
-      client_id,
-      client_secret,
-      refresh_token,
-      developer_token,
-      login_customer_id,
-      access_token,
-      access_token_expires_at,
-    } = body
-
-    const hasRefreshToken = Boolean(String(refresh_token ?? '').trim())
-
-    if (!hasRefreshToken) {
-      if (!client_id || !client_secret || !developer_token) {
-        return NextResponse.json(
-          {
-            error:
-              '缺少必需参数。无 refresh_token 时需 client_id、client_secret、developer_token；完整授权请使用 PUT /api/settings 与 OAuth 回调。',
-          },
-          { status: 400 }
-        )
-      }
-
-      try {
-        await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
-      } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 409 })
-      }
-
-      try {
-        await upsertGoogleAdsOAuthConfigFromSettings(userId, {
-          client_id,
-          client_secret,
-          developer_token,
-          ...(login_customer_id ? { login_customer_id } : {}),
-        })
-      } catch (error: unknown) {
-        if (isGoogleAdsSettingsAuthConflictError(error)) {
-          return NextResponse.json({ error: error.message }, { status: 409 })
-        }
-        if (isGoogleAdsSettingsValidationError(error)) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
-        }
-        throw error
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: 'Google Ads OAuth 配置字段已保存（请完成 OAuth 授权以获取 refresh_token）',
-        data: {
-          hasCredentials: false,
-        },
-      })
-    }
-
-    if (!client_id || !client_secret || !developer_token) {
-      return NextResponse.json({ error: '缺少必需参数' }, { status: 400 })
-    }
-
-    try {
-      await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 409 })
-    }
-
-    const credentials = await saveGoogleAdsCredentials(authResult.user.userId, {
-      client_id,
-      client_secret,
-      refresh_token,
-      developer_token,
-      login_customer_id,
-      access_token,
-      access_token_expires_at,
-    })
-
-    console.log(`✅ Google Ads凭证已保存`)
-
-    return NextResponse.json({
-      success: true,
-      message: 'Google Ads凭证已保存',
-      data: {
-        id: credentials.id,
-        hasCredentials: true,
+export async function POST(_request: NextRequest) {
+  return NextResponse.json(
+    {
+      error: GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE,
+      code: 'ENDPOINT_DEPRECATED',
+      message: GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE,
+      replacement: {
+        method: 'PUT',
+        path: '/api/settings',
+        notes:
+          '保存 google_ads 分类下的 OAuth 字段；refresh_token 由 /api/google-ads/oauth/start 与回调写入',
       },
-    })
-  } catch (error: any) {
-    console.error('保存Google Ads凭证失败:', error)
-
-    return NextResponse.json(
-      {
-        error: '保存Google Ads凭证失败',
-        message: error.message || '未知错误',
+    },
+    {
+      status: 410,
+      headers: {
+        Deprecation: 'true',
+        Link: '</api/settings>; rel="successor-version"',
       },
-      { status: 500 }
-    )
-  }
+    }
+  )
 }
 
 /**

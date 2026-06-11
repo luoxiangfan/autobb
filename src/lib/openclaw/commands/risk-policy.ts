@@ -155,7 +155,6 @@ const ROUTE_RISK_POLICIES: RouteRiskPolicy[] = [
   { method: 'PUT', path: '/api/settings/:category/:key', riskLevel: 'high' },
   { method: 'POST', path: '/api/settings/validate', riskLevel: 'high' },
   { method: 'POST', path: '/api/settings/proxy/validate', riskLevel: 'high' },
-  { method: 'POST', path: '/api/google-ads/credentials', riskLevel: 'high' },
   { method: 'DELETE', path: '/api/google-ads/credentials', riskLevel: 'high' },
   { method: 'POST', path: '/api/google-ads/credentials/verify', riskLevel: 'high' },
   { method: 'POST', path: '/api/google-ads/service-account', riskLevel: 'high' },

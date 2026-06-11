@@ -473,23 +473,9 @@ async function invalidateGadsApiCacheForOwner(ownerUserId: number): Promise<void
   }
 }
 
-/** 凭证 owner 变更时失效 auth-context 与 GAds API 内存缓存（含共享子用户，单次 dependents 查询）。 */
-async function invalidateGoogleAdsCredentialCachesForOwner(ownerUserId: number): Promise<void> {
-  const { invalidateGadsApiCacheForUser } = await import('./cache')
-  const { listGoogleAdsSharedDependentUserIds } = await import('./google-ads-auth-assignment')
-
-  invalidateGoogleAdsAuthContextCache(ownerUserId)
-  invalidateGadsApiCacheForUser(ownerUserId)
-
-  const dependents = await listGoogleAdsSharedDependentUserIds(ownerUserId)
-  for (const userId of dependents) {
-    invalidateGoogleAdsAuthContextCache(userId)
-    invalidateGadsApiCacheForUser(userId)
-  }
-}
-
 /**
- * 凭证 owner 变更时失效 owner 及所有共享该 owner 的子用户 auth-context 缓存。
+ * 凭证 owner 变更时失效 owner 及共享子用户的 auth-context 与 GAds API 内存缓存。
+ * refresh / verify 与 save / delete 共用此入口，避免 gadsApiCache 短窗口陈旧。
  */
 export async function invalidateGoogleAdsAuthContextCacheForOwner(
   ownerUserId: number
@@ -501,6 +487,13 @@ export async function invalidateGoogleAdsAuthContextCacheForOwner(
   for (const userId of dependents) {
     invalidateGoogleAdsAuthContextCache(userId)
   }
+
+  await invalidateGadsApiCacheForOwner(ownerUserId)
+}
+
+/** 凭证 owner 变更时失效 auth-context 与 GAds API 内存缓存（与 CacheForOwner 等价，供 credential user 解析路径）。 */
+async function invalidateGoogleAdsCredentialCachesForOwner(ownerUserId: number): Promise<void> {
+  await invalidateGoogleAdsAuthContextCacheForOwner(ownerUserId)
 }
 
 /**

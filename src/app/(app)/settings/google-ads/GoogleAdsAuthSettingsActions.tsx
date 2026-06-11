@@ -75,7 +75,9 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           variant="outline"
           onClick={() => void handleVerifyGoogleAdsCredentials()}
           disabled={
-            verifyingGoogleAdsCredentials || googleAdsAuthActionsBlocked || oauthHasUnsavedChanges()
+            verifyingGoogleAdsCredentials ||
+            googleAdsAuthActionsBlocked ||
+            (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges())
           }
         >
           {verifyingGoogleAdsCredentials ? '验证中...' : '验证凭证'}

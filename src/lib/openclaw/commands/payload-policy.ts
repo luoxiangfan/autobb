@@ -1064,21 +1064,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     allowEmptyBody: true,
   },
 
-  // Google Ads credentials / service-account
-  {
-    method: 'POST',
-    path: '/api/google-ads/credentials',
-    canonicalKeys: [
-      'client_id',
-      'client_secret',
-      'refresh_token',
-      'developer_token',
-      'login_customer_id',
-      'access_token',
-      'access_token_expires_at',
-    ],
-    requiredKeys: ['client_id', 'client_secret', 'refresh_token', 'developer_token'],
-  },
+  // Google Ads credentials / service-account (POST /credentials removed — use PUT /api/settings)
   {
     method: 'DELETE',
     path: '/api/google-ads/credentials',

@@ -25,9 +25,9 @@ describe('openclaw risk policy', () => {
     expect(requiresOpenclawCommandConfirmation(riskLevel)).toBe(true)
   })
 
-  it('marks google ads credential writes as high risk', () => {
+  it('marks google ads credential deletes as high risk', () => {
     const riskLevel = deriveOpenclawCommandRiskLevel({
-      method: 'POST',
+      method: 'DELETE',
       path: '/api/google-ads/credentials',
     })
 

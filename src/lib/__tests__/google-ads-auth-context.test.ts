@@ -1027,6 +1027,9 @@ describe('invalidateGoogleAdsAuthContextCacheForOwner', () => {
     await invalidateGoogleAdsAuthContextCacheForOwner(1)
 
     expect(dbFns.query).toHaveBeenCalledWith(expect.stringContaining('shared_admin_user_id'), [1])
+    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(1)
+    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(2)
+    expect(cacheFns.invalidateGadsApiCacheForUser).toHaveBeenCalledWith(7)
 
     await getGoogleAdsAuthContext(1)
     await getGoogleAdsAuthContext(2)

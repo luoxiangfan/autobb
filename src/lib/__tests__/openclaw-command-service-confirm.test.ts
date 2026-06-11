@@ -163,14 +163,9 @@ describe('openclaw command service confirmation guard', () => {
       body: undefined,
     },
     {
-      method: 'POST',
+      method: 'DELETE',
       path: '/api/google-ads/credentials',
-      body: {
-        client_id: 'client-id',
-        client_secret: 'client-secret',
-        refresh_token: 'refresh-token',
-        developer_token: 'developer-token',
-      },
+      body: undefined,
     },
   ])('auto-confirms and queues high-risk path $method $path', async ({ method, path, body }) => {
     const result = await executeOpenclawCommand({

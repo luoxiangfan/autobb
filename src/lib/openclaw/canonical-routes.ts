@@ -220,8 +220,7 @@ const WRITE_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   { method: 'POST', pattern: '/api/settings/validate', feature: 'settings-management' },
   { method: 'POST', pattern: '/api/settings/proxy/validate', feature: 'settings-management' },
 
-  // Google Ads（操作）
-  { method: 'POST', pattern: '/api/google-ads/credentials', feature: 'google-ads-management' },
+  // Google Ads（操作；OAuth 配置字段请走 PUT /api/settings，POST /credentials 已 410）
   { method: 'DELETE', pattern: '/api/google-ads/credentials', feature: 'google-ads-management' },
   { method: 'POST', pattern: '/api/google-ads/credentials/verify', feature: 'google-ads-management' },
   { method: 'POST', pattern: '/api/google-ads/service-account', feature: 'google-ads-management' },
