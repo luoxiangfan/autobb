@@ -61,7 +61,7 @@ import {
   GoogleAdsDeleteConfirmDialog,
   formatGoogleAdsAuthSaveError,
   useGoogleAdsAuthSettings,
-  validateGoogleAdsOAuthForm,
+  validateGoogleAdsOAuthFormForSave,
 } from './google-ads'
 
 // 代理URL配置项接口
@@ -679,7 +679,10 @@ export default function SettingsPage() {
     try {
       // 🔧 修复(2025-12-12): Google Ads 所有参数必填验证
       if (category === 'google_ads') {
-        const oauthValidationError = validateGoogleAdsOAuthForm(formData.google_ads)
+        const oauthValidationError = validateGoogleAdsOAuthFormForSave(
+          formData.google_ads,
+          googleAdsAuth.googleAdsCredentialStatus
+        )
         if (oauthValidationError) {
           toast.error(oauthValidationError)
           setSaving(false)

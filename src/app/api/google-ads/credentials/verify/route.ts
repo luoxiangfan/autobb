@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
 import { verifyGoogleAdsCredentials } from '@/lib/google-ads-oauth'
 import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads-access-level-detector'
 import {
   getGoogleAdsAuthContext,
+  googleAdsAuthReadyFailureHttpStatus,
+  googleAdsAuthReadyFailurePayload,
   resolveConfiguredGoogleAdsAuthType,
+  resolveGoogleAdsAuthReadyFailure,
+  getGoogleAdsAuthContextMetadata,
 } from '@/lib/google-ads-auth-context'
 import {
   logGoogleAdsVerifyDebug,
@@ -28,13 +31,15 @@ export async function POST(request: NextRequest) {
 
     const userId = authResult.user.userId
 
-    try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
-    } catch (error: any) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
+    const metadataCtx = await getGoogleAdsAuthContextMetadata(userId)
+    const authFailure = resolveGoogleAdsAuthReadyFailure(metadataCtx)
+    if (authFailure) {
+      return NextResponse.json(googleAdsAuthReadyFailurePayload(authFailure), {
+        status: googleAdsAuthReadyFailureHttpStatus(authFailure.reason),
+      })
     }
 
-    logGoogleAdsVerifyDebug('verify_started', { userId })
+    logGoogleAdsVerifyDebug('verify_started', { userId, readOnly: !metadataCtx.canModify })
 
     const result = await verifyGoogleAdsCredentials(userId)
 

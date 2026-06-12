@@ -11,6 +11,7 @@ export {
 } from './oauth-callback-errors'
 export {
   validateGoogleAdsOAuthForm,
+  validateGoogleAdsOAuthFormForSave,
   hasGoogleAdsUnsavedChanges,
   normalizeGoogleAdsFormForCompare,
 } from './validation'

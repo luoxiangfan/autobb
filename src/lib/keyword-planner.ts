@@ -10,7 +10,6 @@ import {
 } from './google-ads-auth-context'
 import { dateMinusDays } from './db-helpers'
 import { getBatchCachedVolumes, batchCacheVolumes } from './redis'
-import { getGoogleAdsOAuthConfigFields } from './google-ads-settings-store'
 import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
 import { refreshAccessToken } from './google-ads-oauth'
 import { getGoogleAdsAuthContext, type GoogleAdsAuthContext } from './google-ads-auth-context'
@@ -118,17 +117,6 @@ function isInvalidGrantMessage(message: string): boolean {
   return msg.includes('invalid_grant') || msg.includes('token has been expired or revoked')
 }
 
-// Helper: Read user OAuth config fields from google_ads_credentials
-async function readUserOAuthConfigs(userId: number): Promise<Record<string, string>> {
-  const fields = await getGoogleAdsOAuthConfigFields(userId)
-  return {
-    client_id: fields.client_id,
-    client_secret: fields.client_secret,
-    developer_token: fields.developer_token,
-    login_customer_id: fields.login_customer_id,
-  }
-}
-
 // 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整 OAuth 凭证
 // Get Google Ads API config - supports both OAuth and Service Account authentication
 export async function getGoogleAdsConfig(
@@ -226,18 +214,12 @@ export async function getGoogleAdsConfig(
       console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
       console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
 
-      const ownerUserId = authContext.ownerUserId
-      const userConfigs = await readUserOAuthConfigs(ownerUserId)
-      const oauthCredentials = authContext.oauthCredentials
-
       return {
-        clientId: oauthCredentials?.client_id || userConfigs.client_id || 'placeholder-client-id',
-        clientSecret:
-          oauthCredentials?.client_secret ||
-          userConfigs.client_secret ||
-          'placeholder-client-secret',
+        clientId: '',
+        clientSecret: '',
         developerToken: serviceAccount.developerToken,
         customerId: serviceAccount.mccCustomerId,
+        loginCustomerId: serviceAccount.mccCustomerId,
         authType: 'service_account' as const,
         serviceAccountId: serviceAccount.id,
       }

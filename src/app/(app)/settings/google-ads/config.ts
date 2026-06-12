@@ -37,7 +37,7 @@ export const GOOGLE_ADS_SETTING_METADATA: Record<
 
 export const GOOGLE_ADS_CATEGORY_FIELDS: GoogleAdsSettingField[] = [
   { key: 'login_customer_id', dataType: 'string', isSensitive: false, isRequired: true },
-  { key: 'client_id', dataType: 'string', isSensitive: true, isRequired: true },
+  { key: 'client_id', dataType: 'string', isSensitive: false, isRequired: true },
   { key: 'client_secret', dataType: 'string', isSensitive: true, isRequired: true },
   { key: 'developer_token', dataType: 'string', isSensitive: true, isRequired: true },
 ]

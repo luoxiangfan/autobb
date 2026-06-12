@@ -6,10 +6,6 @@ const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
 }))
 
-const assignmentFns = vi.hoisted(() => ({
-  assertUserCanModifyGoogleAdsAuth: vi.fn(),
-}))
-
 const oauthFns = vi.hoisted(() => ({
   verifyGoogleAdsCredentials: vi.fn(),
 }))
@@ -20,14 +16,20 @@ const accessLevelFns = vi.hoisted(() => ({
 
 const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
+  getGoogleAdsAuthContextMetadata: vi.fn(),
+  resolveGoogleAdsAuthReadyFailure: vi.fn(),
+  googleAdsAuthReadyFailurePayload: vi.fn((failure: { message: string; reason: string }) => ({
+    error: failure.message,
+    code: failure.reason === 'dual_stack' ? 'DUAL_STACK_CONFLICT' : 'CREDENTIALS_NOT_CONFIGURED',
+    message: failure.message,
+  })),
+  googleAdsAuthReadyFailureHttpStatus: vi.fn((reason: string) =>
+    reason === 'dual_stack' ? 409 : 404
+  ),
 }))
 
 vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
-}))
-
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
-  assertUserCanModifyGoogleAdsAuth: assignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
 vi.mock('@/lib/google-ads-oauth', () => ({
@@ -40,7 +42,11 @@ vi.mock('@/lib/google-ads-access-level-detector', () => ({
 
 vi.mock('@/lib/google-ads-auth-context', () => ({
   getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
+  getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,
   resolveConfiguredGoogleAdsAuthType: vi.fn(() => 'oauth'),
+  resolveGoogleAdsAuthReadyFailure: authContextFns.resolveGoogleAdsAuthReadyFailure,
+  googleAdsAuthReadyFailurePayload: authContextFns.googleAdsAuthReadyFailurePayload,
+  googleAdsAuthReadyFailureHttpStatus: authContextFns.googleAdsAuthReadyFailureHttpStatus,
 }))
 
 describe('POST /api/google-ads/credentials/verify', () => {
@@ -50,7 +56,12 @@ describe('POST /api/google-ads/credentials/verify', () => {
       authenticated: true,
       user: { userId: 3, email: 'user@test.com', role: 'user' },
     })
-    assignmentFns.assertUserCanModifyGoogleAdsAuth.mockResolvedValue(undefined)
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      canModify: true,
+      dualStack: false,
+      auth: { authType: 'oauth' },
+    })
+    authContextFns.resolveGoogleAdsAuthReadyFailure.mockReturnValue(null)
     oauthFns.verifyGoogleAdsCredentials.mockResolvedValue({
       valid: true,
       customer_id: '1234567890',
@@ -72,10 +83,11 @@ describe('POST /api/google-ads/credentials/verify', () => {
     expect(response.status).toBe(401)
   })
 
-  it('returns 403 when user cannot modify shared Google Ads auth', async () => {
-    assignmentFns.assertUserCanModifyGoogleAdsAuth.mockRejectedValue(
-      new Error('当前 Google Ads 认证配置由管理员共享，无法自行修改或删除')
-    )
+  it('returns 409 when auth is dual stack', async () => {
+    authContextFns.resolveGoogleAdsAuthReadyFailure.mockReturnValue({
+      reason: 'dual_stack',
+      message: '检测到 OAuth 与服务账号同时存在',
+    })
 
     const response = await POST(
       new NextRequest('http://localhost/api/google-ads/credentials/verify', {
@@ -84,8 +96,29 @@ describe('POST /api/google-ads/credentials/verify', () => {
     )
     const body = await response.json()
 
-    expect(response.status).toBe(403)
-    expect(body.error).toContain('共享')
+    expect(response.status).toBe(409)
+    expect(body.code).toBe('DUAL_STACK_CONFLICT')
+    expect(oauthFns.verifyGoogleAdsCredentials).not.toHaveBeenCalled()
+  })
+
+  it('allows verify for shared read-only users when credentials are ready', async () => {
+    authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({
+      canModify: false,
+      isShared: true,
+      dualStack: false,
+      auth: { authType: 'oauth' },
+    })
+
+    const response = await POST(
+      new NextRequest('http://localhost/api/google-ads/credentials/verify', {
+        method: 'POST',
+      })
+    )
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(oauthFns.verifyGoogleAdsCredentials).toHaveBeenCalledWith(3)
   })
 
   it('returns success when credentials are valid', async () => {

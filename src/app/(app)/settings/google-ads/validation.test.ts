@@ -3,11 +3,15 @@ import { formatGoogleAdsAuthSaveError } from './api-messages'
 import { resolveGoogleAdsOAuthCallbackErrorMessage } from './oauth-callback-errors'
 import {
   validateGoogleAdsOAuthForm,
+  validateGoogleAdsOAuthFormForSave,
   resolveEffectiveGoogleAdsAuthMethod,
   resolveGoogleAdsAuthMethodFromCredentialStatus,
   resolveAuthMethodAfterCredentialStatusRefresh,
   shouldApplyGoogleAdsAuthMethodFromCredentialStatus,
   shouldFetchGoogleAdsServiceAccounts,
+  resolveGoogleAdsOAuthStartGate,
+  resolveGoogleAdsOAuthVerifyGate,
+  validateGoogleAdsServiceAccountForm,
   isGoogleAdsAuthMethodLocked,
 } from './validation'
 
@@ -339,5 +343,154 @@ describe('validateGoogleAdsOAuthForm', () => {
         developer_token: 'token',
       })
     ).toMatch(/Login Customer ID/)
+  })
+})
+
+describe('validateGoogleAdsOAuthFormForSave', () => {
+  it('accepts empty secret fields when credential status marks them configured', () => {
+    expect(
+      validateGoogleAdsOAuthFormForSave(
+        {
+          login_customer_id: '1234567890',
+          client_id: 'cid.apps.googleusercontent.com',
+          client_secret: '',
+          developer_token: '',
+        },
+        {
+          dualStack: false,
+          hasCredentials: false,
+          clientSecretConfigured: true,
+          developerTokenConfigured: true,
+        }
+      )
+    ).toBeNull()
+  })
+
+  it('accepts login customer id from credential status when form field was cleared', () => {
+    expect(
+      validateGoogleAdsOAuthFormForSave(
+        {
+          login_customer_id: '',
+          client_id: 'cid.apps.googleusercontent.com',
+          client_secret: 'secret',
+          developer_token: 'token',
+        },
+        {
+          dualStack: false,
+          hasCredentials: false,
+          loginCustomerId: '1234567890',
+        }
+      )
+    ).toBeNull()
+  })
+
+  it('rejects dual stack saves', () => {
+    expect(
+      validateGoogleAdsOAuthFormForSave(
+        {
+          login_customer_id: '1234567890',
+          client_id: 'cid.apps.googleusercontent.com',
+          client_secret: 'secret',
+          developer_token: 'token',
+        },
+        { dualStack: true, hasCredentials: false }
+      )
+    ).toMatch(/双栈/)
+  })
+
+  it('falls back to form-only validation when credential status is missing', () => {
+    expect(
+      validateGoogleAdsOAuthFormForSave(
+        {
+          login_customer_id: '1234567890',
+          client_id: 'cid.apps.googleusercontent.com',
+          client_secret: '',
+          developer_token: 'token',
+        },
+        null
+      )
+    ).toMatch(/Client Secret/)
+  })
+})
+
+describe('resolveGoogleAdsOAuthStartGate', () => {
+  it('accepts saved oauth fields from credential status', () => {
+    expect(
+      resolveGoogleAdsOAuthStartGate({
+        dualStack: false,
+        authType: 'oauth',
+        hasCredentials: false,
+        loginCustomerId: '1234567890',
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        developerTokenConfigured: true,
+      })
+    ).toEqual({ ok: true })
+  })
+
+  it('rejects when secrets are not saved yet', () => {
+    const result = resolveGoogleAdsOAuthStartGate({
+      dualStack: false,
+      authType: 'oauth',
+      hasCredentials: false,
+      loginCustomerId: '1234567890',
+      clientId: 'abc.apps.googleusercontent.com',
+      clientSecretConfigured: false,
+      developerTokenConfigured: true,
+    })
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.message).toMatch(/Client Secret/)
+    }
+  })
+
+  it('rejects dual stack', () => {
+    const result = resolveGoogleAdsOAuthStartGate({
+      dualStack: true,
+      hasCredentials: false,
+    })
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('resolveGoogleAdsOAuthVerifyGate', () => {
+  it('blocks when oauth form has unsaved changes', () => {
+    const result = resolveGoogleAdsOAuthVerifyGate(
+      {
+        dualStack: false,
+        authType: 'oauth',
+        hasCredentials: true,
+        loginCustomerId: '1234567890',
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        developerTokenConfigured: true,
+      },
+      true
+    )
+    expect(result.ok).toBe(false)
+  })
+})
+
+describe('validateGoogleAdsServiceAccountForm', () => {
+  it('rejects invalid mcc id', () => {
+    expect(
+      validateGoogleAdsServiceAccountForm({
+        name: 'prod',
+        mccCustomerId: '123',
+        developerToken: 'token',
+        serviceAccountJson: '{"client_email":"a@b.iam.gserviceaccount.com","private_key":"k"}',
+      })
+    ).toMatch(/10位数字/)
+  })
+
+  it('accepts valid service account json', () => {
+    expect(
+      validateGoogleAdsServiceAccountForm({
+        name: 'prod',
+        mccCustomerId: '1234567890',
+        developerToken: 'token',
+        serviceAccountJson: '{"client_email":"a@b.iam.gserviceaccount.com","private_key":"k"}',
+      })
+    ).toBeNull()
   })
 })

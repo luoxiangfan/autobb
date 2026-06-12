@@ -57,7 +57,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
     permissionError,
     dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
-    googleAdsAuthModifyBlocked,
+    googleAdsAuthWriteBlocked,
     googleAdsDualStack,
     hasOAuthConfigToDelete,
     fetchServiceAccounts,
@@ -487,7 +487,7 @@ export function GoogleAdsAuthSettingsSection({ auth, categorySettings, renderOAu
               type="button"
               variant="outline"
               size="sm"
-              disabled={googleAdsAuthModifyBlocked}
+              disabled={googleAdsAuthWriteBlocked}
               onClick={() => setShowServiceAccountReplaceForm(true)}
             >
               替换服务账号配置

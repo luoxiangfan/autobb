@@ -50,7 +50,14 @@ interface AuthStatus {
 
 function isAuthConfigured(status: AuthStatus | null): boolean {
   if (!status) return false
+  if (status.dualStack) return false
   if (status.hasConfigured) return true
+  return false
+}
+
+/** 是否仍存在可清除的凭证（含双栈 / 半成品） */
+function hasGoogleAdsCredentialsToClear(status: AuthStatus | null): boolean {
+  if (!status) return false
   if (status.dualStack) return true
   if (status.hasOAuth || status.hasServiceAccount) return true
   return Boolean(status.assignment.updatedAt)
@@ -91,9 +98,9 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
       if (!res.ok) throw new Error(data?.error || '加载失败')
       const nextStatus = data.data as AuthStatus
       setStatus(nextStatus)
-      if (isAuthConfigured(nextStatus)) {
+      if (isAuthConfigured(nextStatus) || hasGoogleAdsCredentialsToClear(nextStatus)) {
         setAssignmentMode(nextStatus.assignment.assignmentMode)
-        setAuthType(nextStatus.assignment.authType)
+        setAuthType(nextStatus.assignment.authType ?? nextStatus.authType ?? 'oauth')
       } else {
         setAssignmentMode('shared_admin')
         setAuthType('service_account')
@@ -198,6 +205,16 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
                       ，与当前有效认证方式不一致，请勿仅依据分配记录判断。
                     </>
                   )}
+                </p>
+              </div>
+            )}
+
+            {status?.authConfigWarning && (
+              <div className="rounded-lg border border-amber-400 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="font-medium">双栈认证冲突</p>
+                <p className="mt-1 whitespace-pre-line">{status.authConfigWarning}</p>
+                <p className="mt-2 text-amber-800">
+                  请让用户在设置页删除 OAuth 或服务账号其中一种后再保存 assignment。
                 </p>
               </div>
             )}
@@ -374,7 +391,7 @@ export function GoogleAdsAuthManageDialog({ user, open, onOpenChange }: Props) {
         )}
 
         <DialogFooter className="gap-2 sm:gap-0">
-          {status && isAuthConfigured(status) && (
+          {status && hasGoogleAdsCredentialsToClear(status) && (
             <Button type="button" variant="destructive" onClick={handleClear} disabled={saving}>
               清除配置
             </Button>

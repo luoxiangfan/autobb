@@ -153,26 +153,88 @@ export function shouldFetchGoogleAdsServiceAccounts(
   return Boolean(status.hasServiceAccount && status.authType !== 'oauth')
 }
 
+type OAuthCredentialStatusForGate = Pick<
+  GoogleAdsCredentialStatus,
+  | 'authType'
+  | 'dualStack'
+  | 'hasCredentials'
+  | 'hasOAuthFields'
+  | 'clientId'
+  | 'clientIdConfigured'
+  | 'clientSecretConfigured'
+  | 'developerTokenConfigured'
+  | 'loginCustomerId'
+>
+
+function oauthClientIdConfigured(status: OAuthCredentialStatusForGate): boolean {
+  return Boolean(String(status.clientId || '').trim() || status.clientIdConfigured)
+}
+
+function oauthSecretsConfigured(status: OAuthCredentialStatusForGate): boolean {
+  return Boolean(status.clientSecretConfigured && status.developerTokenConfigured)
+}
+
+function isOAuthFormFieldValuePresent(value: string | undefined): boolean {
+  return Boolean(value && value.trim() !== '' && value !== PLACEHOLDER)
+}
+
+function resolveOAuthRequiredFieldPresence(
+  formData: Record<string, string> | undefined,
+  status: OAuthCredentialStatusForGate | null | undefined
+): {
+  loginCustomerId: string
+  hasClientId: boolean
+  hasClientSecret: boolean
+  hasDeveloperToken: boolean
+} {
+  const loginCustomerId = isOAuthFormFieldValuePresent(formData?.login_customer_id)
+    ? formData!.login_customer_id.trim()
+    : String(status?.loginCustomerId || '').trim()
+
+  const hasClientId =
+    isOAuthFormFieldValuePresent(formData?.client_id) ||
+    oauthClientIdConfigured(status ?? { hasCredentials: false })
+
+  const hasClientSecret =
+    isOAuthFormFieldValuePresent(formData?.client_secret) || Boolean(status?.clientSecretConfigured)
+
+  const hasDeveloperToken =
+    isOAuthFormFieldValuePresent(formData?.developer_token) ||
+    Boolean(status?.developerTokenConfigured)
+
+  return { loginCustomerId, hasClientId, hasClientSecret, hasDeveloperToken }
+}
+
 export function validateGoogleAdsOAuthForm(
   formData: Record<string, string> | undefined
 ): string | null {
-  const loginCustomerId = formData?.login_customer_id
-  const clientId = formData?.client_id
-  const clientSecret = formData?.client_secret
-  const developerToken = formData?.developer_token
+  return validateGoogleAdsOAuthFormForSave(formData, null)
+}
 
-  const isValidValue = (v: string | undefined) => v && v.trim() !== '' && v !== PLACEHOLDER
+/**
+ * OAuth 保存：表单值与 credential status 合并校验。
+ * 已保存的敏感字段在表单为空/占位时，用 GET /credentials 的 configured 标记补全。
+ */
+export function validateGoogleAdsOAuthFormForSave(
+  formData: Record<string, string> | undefined,
+  credentialStatus: OAuthCredentialStatusForGate | null | undefined
+): string | null {
+  if (credentialStatus?.dualStack) {
+    return '请先删除双栈认证中的其中一种配置后再保存'
+  }
 
-  if (!isValidValue(loginCustomerId)) {
+  const fields = resolveOAuthRequiredFieldPresence(formData, credentialStatus)
+
+  if (!fields.loginCustomerId) {
     return 'Login Customer ID (MCC账户ID) 是必填项'
   }
-  if (!isValidValue(clientId)) {
+  if (!fields.hasClientId) {
     return 'OAuth Client ID 是必填项'
   }
-  if (!isValidValue(clientSecret)) {
+  if (!fields.hasClientSecret) {
     return 'OAuth Client Secret 是必填项'
   }
-  if (!isValidValue(developerToken)) {
+  if (!fields.hasDeveloperToken) {
     return 'Developer Token 是必填项'
   }
   return null
@@ -196,4 +258,83 @@ export function hasGoogleAdsUnsavedChanges(
     JSON.stringify(normalizeGoogleAdsFormForCompare(formData)) !==
     JSON.stringify(normalizeGoogleAdsFormForCompare(savedFormData))
   )
+}
+
+/** OAuth 启动授权：以 GET /credentials 快照为准，不依赖表单 focus 后的 clientId 占位状态 */
+export function resolveGoogleAdsOAuthStartGate(
+  status: OAuthCredentialStatusForGate | null | undefined
+): { ok: true } | { ok: false; message: string } {
+  if (!status) {
+    return { ok: false, message: '正在加载 Google Ads 认证状态，请稍后重试' }
+  }
+  if (status.dualStack) {
+    return { ok: false, message: '请先删除双栈认证中的其中一种配置后再启动 OAuth 授权' }
+  }
+  if (status.authType === 'service_account' && status.hasCredentials) {
+    return {
+      ok: false,
+      message: '当前已配置服务账号认证，请删除服务账号或切换到 OAuth 后再启动授权',
+    }
+  }
+  if (!String(status.loginCustomerId || '').trim()) {
+    return { ok: false, message: '请先在设置中填写并保存 Login Customer ID (MCC)' }
+  }
+  if (!oauthClientIdConfigured(status)) {
+    return { ok: false, message: '请先在设置中填写并保存 OAuth Client ID' }
+  }
+  if (!oauthSecretsConfigured(status)) {
+    return { ok: false, message: '请先在设置中填写并保存 Client Secret 与 Developer Token' }
+  }
+  return { ok: true }
+}
+
+/** OAuth 验证凭证：credential status 已保存字段齐全，且表单无未保存 OAuth 修改 */
+export function resolveGoogleAdsOAuthVerifyGate(
+  status: OAuthCredentialStatusForGate | null | undefined,
+  hasUnsavedOAuthChanges: boolean
+): { ok: true } | { ok: false; message: string } {
+  if (hasUnsavedOAuthChanges) {
+    return { ok: false, message: '请先保存 Google Ads 配置后再验证凭证' }
+  }
+  const startGate = resolveGoogleAdsOAuthStartGate(status)
+  if (!startGate.ok) {
+    return startGate
+  }
+  return { ok: true }
+}
+
+export function validateGoogleAdsServiceAccountForm(form: {
+  name: string
+  mccCustomerId: string
+  developerToken: string
+  serviceAccountJson: string
+}): string | null {
+  if (!form.name.trim()) {
+    return '配置名称是必填项'
+  }
+
+  const mcc = form.mccCustomerId.replace(/[\s-]/g, '')
+  if (!/^\d{10}$/.test(mcc)) {
+    return 'MCC Customer ID 必须是10位数字（格式：1234567890）'
+  }
+
+  if (!form.developerToken.trim()) {
+    return 'Developer Token 是必填项'
+  }
+
+  const jsonRaw = form.serviceAccountJson.trim()
+  if (!jsonRaw) {
+    return '服务账号 JSON 是必填项'
+  }
+
+  try {
+    const data = JSON.parse(jsonRaw) as { client_email?: string; private_key?: string }
+    if (!data.client_email?.trim() || !data.private_key?.trim()) {
+      return '服务账号 JSON 缺少 client_email 或 private_key 字段'
+    }
+  } catch {
+    return '服务账号 JSON 格式无效，请粘贴完整的 JSON 密钥文件内容'
+  }
+
+  return null
 }

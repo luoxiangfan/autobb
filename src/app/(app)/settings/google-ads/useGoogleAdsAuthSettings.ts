@@ -30,6 +30,9 @@ import {
   isGoogleAdsAuthMethodLocked,
   resolveEffectiveGoogleAdsAuthMethod,
   resolveAuthMethodAfterCredentialStatusRefresh,
+  resolveGoogleAdsOAuthStartGate,
+  resolveGoogleAdsOAuthVerifyGate,
+  validateGoogleAdsServiceAccountForm,
   shouldFetchGoogleAdsServiceAccounts,
 } from './validation'
 
@@ -90,8 +93,10 @@ export function useGoogleAdsAuthSettings({
 
   const googleAdsAuthReadOnly = googleAdsCredentialStatus?.canModify === false
   const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.dualStack)
-  /** 禁止保存 / OAuth / 验证等写入；双栈时仍允许删除其中一种认证 */
-  const googleAdsAuthModifyBlocked = googleAdsAuthReadOnly || googleAdsDualStack
+  /** 禁止保存 / OAuth / 服务账号写入；双栈时仍允许删除其中一种认证 */
+  const googleAdsAuthWriteBlocked = googleAdsAuthReadOnly || googleAdsDualStack
+  /** @deprecated 使用 googleAdsAuthWriteBlocked；verify 在只读共享场景仍可用 */
+  const googleAdsAuthModifyBlocked = googleAdsAuthWriteBlocked
   const googleAdsAuthMethodLocked = isGoogleAdsAuthMethodLocked(googleAdsCredentialStatus)
   const effectiveGoogleAdsAuthMethod = resolveEffectiveGoogleAdsAuthMethod(
     googleAdsCredentialStatus,
@@ -360,9 +365,9 @@ export function useGoogleAdsAuthSettings({
       return
     }
 
-    const clientId = oauthFormData?.client_id
-    if (!clientId?.trim()) {
-      toast.error('请先填写并保存 Client ID')
+    const startGate = resolveGoogleAdsOAuthStartGate(googleAdsCredentialStatus)
+    if (!startGate.ok) {
+      toast.error(startGate.message)
       return
     }
 
@@ -382,8 +387,22 @@ export function useGoogleAdsAuthSettings({
   }
 
   const handleVerifyGoogleAdsCredentials = async () => {
-    if (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges()) {
-      toast.error('请先保存 Google Ads 配置后再验证凭证')
+    if (googleAdsDualStack) {
+      toast.error('请先删除双栈认证中的其中一种配置后再验证')
+      return
+    }
+
+    if (effectiveGoogleAdsAuthMethod === 'oauth') {
+      const verifyGate = resolveGoogleAdsOAuthVerifyGate(
+        googleAdsCredentialStatus,
+        oauthHasUnsavedChanges()
+      )
+      if (!verifyGate.ok) {
+        toast.error(verifyGate.message)
+        return
+      }
+    } else if (!googleAdsCredentialStatus?.hasCredentials) {
+      toast.error('请先保存服务账号配置后再验证')
       return
     }
 
@@ -436,7 +455,7 @@ export function useGoogleAdsAuthSettings({
   }
 
   const handleSaveServiceAccount = async () => {
-    if (googleAdsAuthModifyBlocked) {
+    if (googleAdsAuthWriteBlocked) {
       toast.error(
         googleAdsDualStack
           ? '请先删除双栈认证中的其中一种配置后再保存'
@@ -460,13 +479,9 @@ export function useGoogleAdsAuthSettings({
       return
     }
 
-    if (
-      !serviceAccountForm.name ||
-      !serviceAccountForm.mccCustomerId ||
-      !serviceAccountForm.developerToken ||
-      !serviceAccountForm.serviceAccountJson
-    ) {
-      toast.error('请填写所有必填字段')
+    const validationError = validateGoogleAdsServiceAccountForm(serviceAccountForm)
+    if (validationError) {
+      toast.error(validationError)
       return
     }
 
@@ -632,6 +647,7 @@ export function useGoogleAdsAuthSettings({
     dismissGoogleAdsAccountsPermissionError,
     googleAdsAuthReadOnly,
     googleAdsDualStack,
+    googleAdsAuthWriteBlocked,
     googleAdsAuthModifyBlocked,
     isGoogleAdsSharedAdminHiddenSecret,
     oauthHasUnsavedChanges,

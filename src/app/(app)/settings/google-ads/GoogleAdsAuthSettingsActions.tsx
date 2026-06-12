@@ -13,7 +13,8 @@ type Props = {
 export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Props) {
   const {
     effectiveGoogleAdsAuthMethod,
-    googleAdsAuthModifyBlocked,
+    googleAdsAuthWriteBlocked,
+    googleAdsDualStack,
     googleAdsAuthReadOnly,
     loadingGoogleAdsCredentialStatus,
     credentialStatusLoadError,
@@ -47,10 +48,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           }
         }}
         disabled={
-          saving ||
-          savingServiceAccount ||
-          googleAdsAuthModifyBlocked ||
-          credentialStatusUnavailable
+          saving || savingServiceAccount || googleAdsAuthWriteBlocked || credentialStatusUnavailable
         }
       >
         {saving || savingServiceAccount ? '保存中...' : '保存配置'}
@@ -75,7 +73,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
       {effectiveGoogleAdsAuthMethod === 'oauth' && (
         <Button
           onClick={() => void handleStartGoogleAdsOAuth()}
-          disabled={startingOAuth || googleAdsAuthModifyBlocked || credentialStatusUnavailable}
+          disabled={startingOAuth || googleAdsAuthWriteBlocked || credentialStatusUnavailable}
           variant="outline"
         >
           <Key className="w-4 h-4 mr-2" />
@@ -91,7 +89,7 @@ export function GoogleAdsAuthSettingsActions({ auth, saving, onSaveOAuth }: Prop
           disabled={
             verifyingGoogleAdsCredentials ||
             credentialStatusUnavailable ||
-            googleAdsAuthModifyBlocked ||
+            googleAdsDualStack ||
             (effectiveGoogleAdsAuthMethod === 'oauth' && oauthHasUnsavedChanges())
           }
         >

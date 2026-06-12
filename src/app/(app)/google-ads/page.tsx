@@ -694,10 +694,10 @@ export default function GoogleAdsPage() {
               <p className="text-sm font-semibold mb-1">认证配置提醒</p>
               <p className="text-sm whitespace-pre-line">{authConfigWarning}</p>
               <a
-                href="/settings"
+                href="/settings?category=google_ads"
                 className="inline-block mt-2 text-sm font-medium text-amber-950 underline hover:no-underline"
               >
-                前往设置页处理 →
+                前往设置页清理认证配置 →
               </a>
             </div>
           )}
