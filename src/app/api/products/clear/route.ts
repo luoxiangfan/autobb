@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { clearAllAffiliateProducts } from '@/lib/affiliate-products'
+import { clearAllAffiliateProducts } from '@/lib/affiliate-products/index'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { invalidateProductListCache } from '@/lib/products-cache'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'

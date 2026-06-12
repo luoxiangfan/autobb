@@ -8,7 +8,7 @@ import {
   type PlatformProductStats,
   type ProductSortField,
   type ProductSortOrder,
-} from '@/lib/affiliate-products'
+} from '@/lib/affiliate-products/index'
 import {
   buildProductListCacheHash,
   buildProductSummaryCacheHash,

@@ -10,7 +10,7 @@ import type { Task } from '../types'
 import {
   syncCampaignsFromGoogleAds,
   resolveGoogleAdsCampaignSyncLogOutcome,
-} from '@/lib/google-ads/campaign/sync'
+} from '@/lib/google-ads/campaign/sync/index'
 import { markStaleGoogleAdsCampaignSyncLogs } from '@/lib/google-ads/campaign/sync-pipeline-status'
 import { createRiskAlert } from '../../risk-alerts'
 import { utcNowIso } from '../../db-datetime'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { __testOnly, type AffiliateProduct } from '../affiliate-products'
+import { __testOnly, type AffiliateProduct } from '../affiliate-products/index'
 
 function buildBaseRow(overrides: Partial<AffiliateProduct> = {}): AffiliateProduct {
   return {

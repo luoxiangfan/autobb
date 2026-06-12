@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveCreativePriceEvidence } from '../ad-creative-generator'
+import { resolveCreativePriceEvidence } from '../ad-creative-generator/test-exports'
 
 describe('ad-creative-generator price evidence guard', () => {
   it('prefers authoritative offer.product_price over scraped_data price', () => {

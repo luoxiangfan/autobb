@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { applyKeywordSupplementationOnce, type KeywordWithVolume } from '../ad-creative-generator'
+import {
+  applyKeywordSupplementationOnce,
+  type KeywordWithVolume,
+} from '../ad-creative-generator/index'
 
 const { getKeywordPoolByOfferIdMock } = vi.hoisted(() => ({
   getKeywordPoolByOfferIdMock: vi.fn(),

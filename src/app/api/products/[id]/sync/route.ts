@@ -5,7 +5,7 @@ import {
   checkAffiliatePlatformConfig,
   createAffiliateProductSyncRun,
   getAffiliateProductById,
-} from '@/lib/affiliate-products'
+} from '@/lib/affiliate-products/index'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 

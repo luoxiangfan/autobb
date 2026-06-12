@@ -5,7 +5,7 @@ import {
   extractYeahPromosTransactionsPayload,
   normalizeYeahPromosResultCode,
   parseYeahPromosMerchantCommission,
-} from '@/lib/affiliate-products'
+} from '@/lib/affiliate-products/index'
 
 describe('normalizeYeahPromosResultCode', () => {
   it('parses success code from number and string', () => {

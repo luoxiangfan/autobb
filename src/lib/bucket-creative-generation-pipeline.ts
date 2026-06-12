@@ -28,7 +28,7 @@ import {
   type CanonicalCreativeType,
   type CreativeBucketSlot,
 } from '@/lib/creative-type'
-import { getThemeByBucket } from '@/lib/ad-creative-generator'
+import { getThemeByBucket } from '@/lib/ad-creative-generator/index'
 import { getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
 import type {
   KeywordPlannerPreparedSession,
@@ -40,7 +40,7 @@ import {
   getSearchTermFeedbackHints,
   type SearchTermFeedbackHints,
 } from '@/lib/search-term-feedback-hints'
-import type { SearchTermFeedbackHintsInput } from '@/lib/ad-creative-generator'
+import type { SearchTermFeedbackHintsInput } from '@/lib/ad-creative-generator/index'
 import { parseBooleanEnv } from '@/lib/parse-env'
 import type { RetryFailureType } from '@/lib/rsa-quality-gate'
 

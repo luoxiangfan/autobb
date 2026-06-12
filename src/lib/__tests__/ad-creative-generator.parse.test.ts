@@ -9,7 +9,7 @@ import {
   parseAIResponse,
   resolveAdCreativeRetryPlan,
   validateGeneratedAdCreativeBusinessLimits,
-} from '../ad-creative-generator'
+} from '../ad-creative-generator/test-exports'
 
 describe('ad-creative-generator.parseAIResponse', () => {
   it('keeps Gemini transport schema within the conservative structured-output subset', () => {

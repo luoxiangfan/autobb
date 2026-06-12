@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveCreativeSalesRankSignal } from '../ad-creative-generator'
+import { resolveCreativeSalesRankSignal } from '../ad-creative-generator/test-exports'
 
 describe('ad-creative-generator sales rank guard', () => {
   it('suppresses weak high-rank claims from prompt context', () => {

@@ -25,7 +25,7 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
   })
 
   it('builds a typed incoming CTE to avoid text inference mismatches', async () => {
-    const { upsertAffiliateProducts } = await import('@/lib/affiliate-products')
+    const { upsertAffiliateProducts } = await import('@/lib/affiliate-products/index')
 
     const result = await upsertAffiliateProducts(
       1,
@@ -120,7 +120,7 @@ describe('upsertAffiliateProducts postgres two-phase upsert', () => {
   })
 
   it('splits postgres upsert batch when statement timeout occurs', async () => {
-    const { upsertAffiliateProducts } = await import('@/lib/affiliate-products')
+    const { upsertAffiliateProducts } = await import('@/lib/affiliate-products/index')
 
     let timeoutInjected = false
     dbFns.exec.mockImplementation(async (sql: string) => {

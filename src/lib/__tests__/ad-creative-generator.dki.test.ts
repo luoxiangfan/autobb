@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDkiFirstHeadline } from '../ad-creative-generator'
+import { buildDkiFirstHeadline } from '../ad-creative-generator/test-exports'
 
 describe('ad-creative-generator DKI', () => {
   it('does not truncate default text for valid DKI length (Google Ads counts defaultText only)', () => {

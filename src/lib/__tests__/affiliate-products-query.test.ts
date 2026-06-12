@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { __testOnly, buildAffiliateProductsOrderBy } from '../affiliate-products'
+import { __testOnly, buildAffiliateProductsOrderBy } from '../affiliate-products/index'
 
 describe('affiliate-products order by', () => {
   it('keeps null values last for numeric sort fields in asc', () => {

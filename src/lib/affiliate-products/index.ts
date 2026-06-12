@@ -1,4 +1,4 @@
-// Public API barrel — re-exports preserve @/lib/affiliate-products imports
+// Public API barrel
 
 export type {
   AffiliatePlatform,

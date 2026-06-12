@@ -23,7 +23,7 @@ process.env.AFFILIATE_SYNC_RECOVERY_SYNC_MAX_ATTEMPTS = '2'
 process.env.AFFILIATE_SYNC_RECOVERY_RETRY_BASE_DELAY_MS = '1'
 process.env.AFFILIATE_SYNC_RECOVERY_RETRY_MAX_DELAY_MS = '2'
 
-vi.mock('@/lib/affiliate-products', () => ({
+vi.mock('@/lib/affiliate-products/index', () => ({
   checkAffiliatePlatformConfig: mocks.checkAffiliatePlatformConfig,
   getAffiliateProductSyncRunById: mocks.getAffiliateProductSyncRunById,
   listAffiliateProducts: mocks.listAffiliateProducts,

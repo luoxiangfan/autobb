@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { GeneratedAdCreativeData } from '../ad-creative'
-import { enforceHeadlineComplementarity, softlyReinforceTypeCopy } from '../ad-creative-generator'
+import {
+  enforceHeadlineComplementarity,
+  softlyReinforceTypeCopy,
+} from '../ad-creative-generator/test-exports'
 
 function buildCreativeDraft(): GeneratedAdCreativeData {
   return {

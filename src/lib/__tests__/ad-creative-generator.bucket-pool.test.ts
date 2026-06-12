@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { getThemeByBucket, resolveCreativeBucketPoolKeywords } from '../ad-creative-generator'
+import { getThemeByBucket } from '../ad-creative-generator/index'
+import { resolveCreativeBucketPoolKeywords } from '../ad-creative-generator/test-exports'
 
 function kw(keyword: string, searchVolume: number = 100) {
   return {

@@ -20,7 +20,7 @@ import {
 } from '@/lib/google-ads/campaign/sync-pipeline-status'
 import { getQueueManagerForTaskType } from '../queue-routing'
 import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/context'
-import { userHasGoogleAdsMccAssignments } from '@/lib/google-ads/campaign/sync'
+import { userHasGoogleAdsMccAssignments } from '@/lib/google-ads/campaign/sync/index'
 import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 
 /**

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import type { GeneratedAdCreativeData } from '../ad-creative'
-import { enforceLanguagePurityGate, resolveCreativeTargetLanguage } from '../ad-creative-generator'
+import {
+  enforceLanguagePurityGate,
+  resolveCreativeTargetLanguage,
+} from '../ad-creative-generator/test-exports'
 
 describe('ad-creative-generator language resolution', () => {
   it('falls back to country-language mapping when target language is missing', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate-products'
+import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate-products/index'
 import { getDatabase } from '@/lib/db'
 
 vi.mock('@/lib/db', () => ({

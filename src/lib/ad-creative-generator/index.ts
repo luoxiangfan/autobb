@@ -1,4 +1,4 @@
-// Public API barrel — preserves @/lib/ad-creative-generator imports
+// Public API barrel
 
 export type {
   RetryFailureType,
