@@ -18,6 +18,7 @@
     "build:scheduler": "node build-scheduler.js",
     "start": "next start",
     "lint": "eslint src --max-warnings 0",
+    "lint:changed": "tsx scripts/lint-changed.ts",
     "format": "prettier --write .",
     "format:changed": "tsx scripts/format-changed.ts",
     "format:check": "prettier --check .",

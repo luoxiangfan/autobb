@@ -96,9 +96,9 @@ if [ -f "package.json" ] && grep -q "lint-staged" package.json; then
   }
 fi
 
-if [ -f "package.json" ] && grep -q "lint" package.json; then
-  echo "🔍 Running linter..."
-  npm run lint --silent || {
+if [ -f "package.json" ] && grep -q "lint:changed" package.json; then
+  echo "🔍 Running linter on changed files..."
+  npm run lint:changed --silent || {
     echo "❌ Linter found issues. Please fix them before committing."
     echo "To bypass: git commit --no-verify"
     exit 1

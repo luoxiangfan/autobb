@@ -19,21 +19,22 @@
 
 ```bash
 npm run format:changed
-npm run lint
+npm run lint:changed
 npm run type-check
 ```
 
 **执行要求：**
 
-1. 三条命令均须 **exit code 0**；须先执行 `npm run format:changed`，再执行 `lint` 与 `type-check`（勿与 format 并行）。
+1. 三条命令均须 **exit code 0**；须先执行 `npm run format:changed`，再执行 `lint:changed` 与 `type-check`（勿与 format 并行）。
 2. `format:changed` 仅格式化相对 `HEAD` 的修改/新增文件（含未跟踪），勿用 `npm run format` 全仓格式化。
-3. 汇报前须确认三者均已成功。
-4. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
-5. 向用户说明本次改动时，须简要写明 format:changed / lint / type-check 已通过（或说明跳过原因）。
+3. `lint:changed` 仅对相对 `HEAD` 的修改/新增可 lint 文件（`.js`/`.mjs`/`.cjs`/`.ts`/`.tsx`）运行 ESLint，勿用 `npm run lint` 全量检查 `src/`。
+4. 汇报前须确认三者均已成功。
+5. 仅改文档（如 `*.md`）且未触及上述代码路径时，可跳过；若有疑问则仍应运行。
+6. 向用户说明本次改动时，须简要写明 format:changed / lint:changed / type-check 已通过（或说明跳过原因）。
 
 ## 数据库 / SQL 修改后的检查（必须）
 
-本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format:changed / lint / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
+本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format:changed / lint:changed / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
 
 ### 适用场景（满足任一则必须执行）
 
@@ -140,7 +141,7 @@ gitnexus impact evaluateAdStrength --depth 2
 1. 进入代码修改前，先汇报 `impact` 结果（直接调用方、风险级别、影响模块）。
 2. 若风险为 HIGH/CRITICAL，先给出降风险方案，再实施修改。
 3. 改动完成后，说明是否需要重新 `analyze` 以保持索引新鲜。
-4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run format:changed`、`npm run lint` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
+4. 改动完成后，按上文「代码修改后的质量门禁」运行 `npm run format:changed`、`npm run lint:changed` 与 `npm run type-check`；若涉及 SQL，另按「数据库 / SQL 修改后的检查」执行兼容性与语法验证。
 
 ### 当前仓库限制
 
@@ -320,7 +321,7 @@ node --version   # 应显示 v24.x
 
 ### 质量检查（仓库根目录）
 
-标准命令见上文「代码修改后的质量门禁」与 `package.json`：`npm run lint`、`npm run type-check`、`npm test`。全量测试约 4–5 分钟；无 Redis 时 `distributed-running-snapshot-gate` 等分布式队列用例可能失败，属预期。
+标准命令见上文「代码修改后的质量门禁」与 `package.json`：`npm run lint:changed`、`npm run type-check`、`npm test`。CI 部署前仍跑全量 `npm run lint`。全量测试约 4–5 分钟；无 Redis 时 `distributed-running-snapshot-gate` 等分布式队列用例可能失败，属预期。
 
 ## Landing the Plane (Session Completion)
 
@@ -329,7 +330,7 @@ node --version   # 应显示 v24.x
 **MANDATORY WORKFLOW:**
 
 1. **File issues for remaining work** - Create issues for anything that needs follow-up
-2. **Run quality gates** (if code changed) — at minimum `npm run format:changed`, `npm run lint`, and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
+2. **Run quality gates** (if code changed) — at minimum `npm run format:changed`, `npm run lint:changed`, and `npm run type-check` (see「代码修改后的质量门禁」); if SQL/DB touched, also review SQL syntax/aliases/placeholders/types, then `db:migrate`, `validate-schema`, and targeted tests (see「数据库 / SQL 修改后的检查」); add full test suite/build as appropriate
 3. **Update issue status** - Close finished work, update in-progress items
 4. **PUSH TO REMOTE** - This is MANDATORY:
    ```bash
