@@ -10,6 +10,7 @@ import {
 } from '@/lib/google-ads/auth/context'
 import { getServiceAccountConfig } from '@/lib/google-ads/service-account/service-account'
 import { healAccountsRouteDeveloperToken } from '@/lib/google-ads/accounts/auth/developer-token-heal'
+import { googleAdsCredentialsLogger } from '@/lib/google-ads/common/logger'
 import type {
   AccountsRouteAuthBundle,
   AccountsRouteAuthResolveResult,
@@ -242,7 +243,7 @@ export async function resolveAccountsRouteAuthBundle(params: {
 
     const oauthCredentials = authContext.oauthCredentials
     if (!oauthCredentials?.client_id) {
-      console.log('⚠️ 未配置OAuth凭证，使用占位值创建API客户端（服务账号认证不需要OAuth）')
+      googleAdsCredentialsLogger.info('oauth_placeholder_for_service_account', {})
     }
 
     const credentials: AccountsRouteCredentials = {

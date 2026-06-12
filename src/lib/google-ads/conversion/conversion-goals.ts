@@ -15,6 +15,7 @@ import {
   resolveAuthTypeForGoogleAdsApiCall,
   type OAuthApiCredentialsFields,
 } from '@/lib/google-ads/api/api'
+import { googleAdsConversionLogger } from '@/lib/google-ads/common/logger'
 
 function getErrorText(error: any): string {
   if (!error) return ''
@@ -71,19 +72,21 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
   credentials?: OAuthApiCredentialsFields
   authContext?: import('@/lib/google-ads/auth/context').GoogleAdsAuthContext
 }): Promise<boolean> {
+  const { customerId, campaignId } = params
   try {
-    const { customerId, campaignId } = params
     const authType = await resolveAuthTypeForGoogleAdsApiCall(params)
 
-    console.log(`🎯 配置Campaign转化目标为"网页浏览":`)
-    console.log(`   Customer ID: ${customerId}`)
-    console.log(`   Campaign ID: ${campaignId}`)
-    console.log(`   Auth Type: ${authType}`)
+    googleAdsConversionLogger.info('set_page_view_goal_start', {
+      customerId,
+      campaignId,
+      authType,
+    })
 
     // 🚫 服务账号模式暂不支持（需要Python服务实现）
     if (authType === 'service_account') {
-      console.warn(`⚠️  服务账号模式暂不支持转化目标配置`)
-      console.warn(`   提示：可在 Google Ads UI 中手动配置`)
+      googleAdsConversionLogger.warn('service_account_not_supported', {
+        hint: 'Configure manually in Google Ads UI',
+      })
       return false
     }
 
@@ -98,7 +101,7 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
     const origin = 'WEBSITE' // 不能用 enums.ConversionOrigin.WEBSITE (值为2)
     const goalResourceName = `customers/${customerId}/campaignConversionGoals/${campaignId}~${category}~${origin}`
 
-    console.log(`   Goal Resource: ${goalResourceName}`)
+    googleAdsConversionLogger.debug('goal_resource_resolved', { goalResourceName })
 
     // 更新 CampaignConversionGoal，将 biddable 设置为 true
     const campaignConversionGoal: any = {
@@ -118,19 +121,27 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
       operationName: `Set PAGE_VIEW goal for campaign ${campaignId}`,
     })
 
-    console.log(`✅ Campaign转化目标配置成功 (网页浏览)`)
+    googleAdsConversionLogger.info('set_page_view_goal_success', { customerId, campaignId })
     return true
   } catch (error: any) {
     // 如果错误是因为 CampaignConversionGoal 不存在
     if (isNotFoundLikeError(error)) {
-      console.warn(`⚠️  CampaignConversionGoal 不存在`)
-      console.warn(`   原因：账号可能未启用"网页浏览"转化操作`)
-      console.warn(`   影响：Campaign 仍可正常投放，但不会优化该转化目标`)
+      googleAdsConversionLogger.warn('campaign_conversion_goal_not_found', {
+        customerId,
+        campaignId,
+        impact: 'Campaign can still serve but will not optimize for this goal',
+      })
     } else {
-      console.error(`❌ 配置Campaign转化目标失败:`, getErrorText(error) || '(unknown error)')
+      googleAdsConversionLogger.error(
+        'set_page_view_goal_failed',
+        { customerId, campaignId, message: getErrorText(error) || '(unknown error)' },
+        error
+      )
       if (error.errors && Array.isArray(error.errors)) {
         error.errors.forEach((err: any) => {
-          console.error(`   - ${err.message}`)
+          googleAdsConversionLogger.error('set_page_view_goal_error_detail', {
+            message: err.message,
+          })
         })
       }
     }

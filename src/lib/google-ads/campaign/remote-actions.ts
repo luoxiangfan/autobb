@@ -6,6 +6,7 @@ import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/l
 import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from '@/lib/google-ads/account-delete'
 import { runWithConcurrency, withTimeout } from '../../run-with-concurrency'
+import { googleAdsCampaignLogger } from '@/lib/google-ads/common/logger'
 
 export interface GoogleAdsAccountRemoteRef {
   id: number
@@ -366,7 +367,11 @@ export async function executeGoogleAdsCampaignRemoteActions(
       }
     }
   } catch (err: any) {
-    console.error(`[${logPrefix}] Google Ads remote action failed:`, err?.message || err)
+    googleAdsCampaignLogger.error(
+      'remote_action_failed',
+      { logPrefix, message: err?.message || String(err) },
+      err
+    )
     const handledCount = summary.removed + summary.paused + summary.pausedFallback
     const unhandledCount = Math.max(0, summary.planned - handledCount)
     summary.failed = Math.max(summary.failed, unhandledCount)
@@ -377,7 +382,7 @@ export async function executeGoogleAdsCampaignRemoteActions(
       })
     }
   } finally {
-    console.log(`[${logPrefix}] Google Ads remote summary:`, summary)
+    googleAdsCampaignLogger.info('remote_action_summary', { logPrefix, summary })
   }
 
   return summary

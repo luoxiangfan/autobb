@@ -13,6 +13,7 @@ import { ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
 import { sanitizeKeyword } from './keywords-sanitize'
+import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 
 const RESPONSIVE_AD_VARIANT_HINTS = ['Now', 'Today', 'Deals', 'Official', 'Shop'] as const
 
@@ -91,7 +92,11 @@ export function ensureUniqueResponsiveSearchAdAssets(
       )
     }
 
-    console.warn(`[RSA] ${assetLabel}${index + 1}与已有资产重复，自动改写为: "${replacement}"`)
+    googleAdsApiLogger.warn('rsa_duplicate_asset_rewritten', {
+      assetLabel,
+      index: index + 1,
+      replacement,
+    })
     return replacement
   })
 }
@@ -257,12 +262,12 @@ export function ensureKeywordsInHeadlines(
   maxKeywordsToEnsure: number = 3
 ): string[] {
   if (!headlines || headlines.length === 0) {
-    console.log(`[HeadlineOptimizer] ⚠️ 没有标题可优化`)
+    googleAdsApiLogger.debug('headline_optimizer_no_headlines')
     return headlines
   }
 
   if (!keywords || keywords.length === 0) {
-    console.log(`[HeadlineOptimizer] ⚠️ 没有关键词可用于优化`)
+    googleAdsApiLogger.debug('headline_optimizer_no_keywords')
     return headlines
   }
 
@@ -302,8 +307,10 @@ export function ensureKeywordsInHeadlines(
     topKeywords.push(keyword)
   }
 
-  console.log(`[HeadlineOptimizer] 🔍 检查 Top ${topKeywords.length} 关键词覆盖情况`)
-  console.log(`[HeadlineOptimizer]    关键词: ${topKeywords.join(', ')}`)
+  googleAdsApiLogger.debug('headline_optimizer_coverage_check', {
+    keywordCount: topKeywords.length,
+    keywords: topKeywords.join(', '),
+  })
 
   // 找出未被标题覆盖的关键词
   const uncoveredKeywords: string[] = []
@@ -318,18 +325,20 @@ export function ensureKeywordsInHeadlines(
     })
     if (!isCovered) {
       uncoveredKeywords.push(kw)
-      console.log(`[HeadlineOptimizer]    ❌ 未覆盖: "${kw}"`)
+      googleAdsApiLogger.debug('headline_optimizer_keyword_uncovered', { keyword: kw })
     } else {
-      console.log(`[HeadlineOptimizer]    ✅ 已覆盖: "${kw}"`)
+      googleAdsApiLogger.debug('headline_optimizer_keyword_covered', { keyword: kw })
     }
   })
 
   if (uncoveredKeywords.length === 0) {
-    console.log(`[HeadlineOptimizer] ✅ 所有热门关键词已被标题覆盖，无需优化`)
+    googleAdsApiLogger.debug('headline_optimizer_all_covered')
     return result
   }
 
-  console.log(`[HeadlineOptimizer] 🔧 需要为 ${uncoveredKeywords.length} 个关键词生成新标题`)
+  googleAdsApiLogger.debug('headline_optimizer_uncovered_count', {
+    count: uncoveredKeywords.length,
+  })
 
   // 去重未覆盖关键词（按Google Ads规范化键），避免近似词重复替换
   const uniqueUncoveredKeywords = Array.from(
@@ -342,9 +351,9 @@ export function ensureKeywordsInHeadlines(
       }, new Map<string, string>())
       .values()
   )
-  console.log(
-    `[HeadlineOptimizer] 去重后需要为 ${uniqueUncoveredKeywords.length} 个唯一关键词生成新标题`
-  )
+  googleAdsApiLogger.debug('headline_optimizer_unique_uncovered', {
+    count: uniqueUncoveredKeywords.length,
+  })
 
   // 生成包含关键词的新标题模板
   const generateKeywordHeadline = (keyword: string, brand: string): string => {
@@ -444,20 +453,23 @@ export function ensureKeywordsInHeadlines(
 
       if (!isDuplicate) {
         result[replaceIndex] = newHeadline
-        console.log(
-          `[HeadlineOptimizer]    替换标题[${replaceIndex}]: "${oldHeadline}" → "${newHeadline}"`
-        )
+        googleAdsApiLogger.debug('headline_optimizer_replaced', {
+          replaceIndex,
+          oldHeadline,
+          newHeadline,
+        })
       } else {
-        console.log(
-          `[HeadlineOptimizer]    跳过标题[${replaceIndex}]：新标题"${newHeadline}"与已有标题重复`
-        )
+        googleAdsApiLogger.debug('headline_optimizer_skip_duplicate', {
+          replaceIndex,
+          newHeadline,
+        })
       }
     }
   })
 
-  console.log(
-    `[HeadlineOptimizer] ✅ 标题优化完成，替换了 ${uniqueUncoveredKeywords.length} 个标题`
-  )
+  googleAdsApiLogger.info('headline_optimizer_completed', {
+    replacedCount: uniqueUncoveredKeywords.length,
+  })
 
   return result
 }

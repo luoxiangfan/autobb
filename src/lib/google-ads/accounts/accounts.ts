@@ -4,6 +4,7 @@ import { pauseOfferTasks } from '../../campaign-offer-tasks'
 import { hasActiveCampaignForOffer } from '../../campaign-offer-constraint'
 import { applyCampaignTransitionByIds } from '../../campaign-state-machine'
 import { getInsertedId, nowFunc, toBool } from '../../db-helpers'
+import { googleAdsAccountsLogger } from '../common/logger'
 
 export interface GoogleAdsAccount {
   id: number
@@ -365,9 +366,10 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
         action: 'OFFER_DELETE',
         payload: { removedReason: 'account_delete' },
       })
-      console.log(
-        `[Delete Account] Marked ${transitionResult.updatedCount} campaigns REMOVED for customer_id ${customerId}`
-      )
+      googleAdsAccountsLogger.info('delete_account_campaigns_removed', {
+        customerId,
+        updatedCount: transitionResult.updatedCount,
+      })
     }
 
     const now = new Date().toISOString()
@@ -409,15 +411,19 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
           [JSON.stringify(unlinkedCustomerIds), now, offerId, userId]
         )
       } catch (error) {
-        console.error(
-          `[Delete Account] Failed to record unlinked time for offer_id ${offerId}:`,
+        googleAdsAccountsLogger.error(
+          'delete_account_unlinked_time_failed',
+          { offerId, customerId },
           error
         )
       }
     }
 
     if (offerIds.length > 0) {
-      console.log(`[Delete Account] Recorded unlinked time for ${offerIds.length} offers`)
+      googleAdsAccountsLogger.info('delete_account_unlinked_recorded', {
+        customerId,
+        offerCount: offerIds.length,
+      })
     }
 
     const accountResult = await db.exec(
@@ -438,7 +444,7 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     return false
   }
 
-  console.log(`[Delete Account] Marked customer_id ${customerId} as deleted`)
+  googleAdsAccountsLogger.info('delete_account_marked_deleted', { customerId })
 
   // 事务提交后再处理任务，避免长事务与嵌套事务
   let pausedClickFarmCount = 0
@@ -450,13 +456,16 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
       const removedTargets = await markUrlSwapTargetsRemovedByOfferAccount(offerId, id)
       removedUrlSwapTargetCount += removedTargets
       if (removedTargets > 0) {
-        console.log(
-          `[Delete Account] Marked ${removedTargets} url swap targets removed for offer_id ${offerId}, account_id ${id}`
-        )
+        googleAdsAccountsLogger.info('delete_account_url_swap_targets_removed', {
+          offerId,
+          accountId: id,
+          removedTargets,
+        })
       }
     } catch (error) {
-      console.error(
-        `[Delete Account] Failed to mark url swap targets removed for offer_id ${offerId}, account_id ${id}:`,
+      googleAdsAccountsLogger.error(
+        'delete_account_url_swap_targets_failed',
+        { offerId, accountId: id },
         error
       )
     }
@@ -475,19 +484,24 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
       pausedClickFarmCount += pauseResult.clickFarmTaskCount
       disabledUrlSwapCount += pauseResult.urlSwapTaskCount
       if (pauseResult.clickFarmTaskCount > 0 || pauseResult.urlSwapTaskCount > 0) {
-        console.log(
-          `[Delete Account] Paused offer tasks for offer_id ${offerId}: clickFarm=${pauseResult.clickFarmTaskCount}, urlSwap=${pauseResult.urlSwapTaskCount}`
-        )
+        googleAdsAccountsLogger.info('delete_account_offer_tasks_paused', {
+          offerId,
+          clickFarmTaskCount: pauseResult.clickFarmTaskCount,
+          urlSwapTaskCount: pauseResult.urlSwapTaskCount,
+        })
       }
     } catch (error) {
-      console.error(`[Delete Account] Failed to pause offer tasks for offer_id ${offerId}:`, error)
+      googleAdsAccountsLogger.error('delete_account_pause_tasks_failed', { offerId }, error)
     }
   }
 
   if (removedUrlSwapTargetCount > 0 || pausedClickFarmCount > 0 || disabledUrlSwapCount > 0) {
-    console.log(
-      `[Delete Account] Task cleanup summary: urlSwapTargetsRemoved=${removedUrlSwapTargetCount}, clickFarmPaused=${pausedClickFarmCount}, urlSwapDisabled=${disabledUrlSwapCount}`
-    )
+    googleAdsAccountsLogger.info('delete_account_task_cleanup_summary', {
+      customerId,
+      removedUrlSwapTargetCount,
+      pausedClickFarmCount,
+      disabledUrlSwapCount,
+    })
   }
 
   return true

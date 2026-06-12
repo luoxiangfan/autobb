@@ -13,6 +13,7 @@ import {
   type GoogleAdsCredentials,
 } from '@/lib/google-ads/oauth/oauth'
 import { developerTokenLooksInvalid } from '@/lib/google-ads/accounts/auth/developer-token-heal'
+import { googleAdsSettingsLogger } from '@/lib/google-ads/common/logger'
 import { getUserOnlySetting } from '../../settings'
 import type { SettingValue } from '../../settings'
 
@@ -509,7 +510,7 @@ export async function migrateLegacyGoogleAdsSettingsStorage(): Promise<void> {
     return
   }
 
-  console.log(`[google-ads-settings-store] 迁移 ${users.length} 个用户的 OAuth 配置到凭证表`)
+  googleAdsSettingsLogger.info('oauth_config_migration_started', { userCount: users.length })
 
   for (const { user_id: userId } of users) {
     const oauthPatch: Partial<Record<GoogleAdsOAuthConfigKey, string>> = {}

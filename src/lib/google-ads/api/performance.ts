@@ -3,6 +3,7 @@ import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
+import { googleAdsPerformanceLogger } from '@/lib/google-ads/common/logger'
 
 export async function getCampaignPerformance(params: {
   customerId: string
@@ -81,7 +82,7 @@ export async function getCampaignPerformance(params: {
 
     return performanceData
   } catch (error: any) {
-    console.error('获取Campaign表现数据失败:', error)
+    googleAdsPerformanceLogger.error('get_campaign_performance_failed', {}, error)
     throw new Error(`获取表现数据失败: ${error.message}`)
   }
 }
@@ -175,7 +176,7 @@ export async function getAdGroupPerformance(params: {
 
     return performanceData
   } catch (error: any) {
-    console.error('获取Ad Group表现数据失败:', error)
+    googleAdsPerformanceLogger.error('get_ad_group_performance_failed', {}, error)
     throw new Error(`获取表现数据失败: ${error.message}`)
   }
 }
@@ -269,7 +270,7 @@ export async function getAdPerformance(params: {
 
     return performanceData
   } catch (error: any) {
-    console.error('获取Ad表现数据失败:', error)
+    googleAdsPerformanceLogger.error('get_ad_performance_failed', {}, error)
     throw new Error(`获取表现数据失败: ${error.message}`)
   }
 }
@@ -380,7 +381,7 @@ export async function getBatchCampaignPerformance(params: {
 
     return performanceByCampaign
   } catch (error: any) {
-    console.error('批量获取Campaign表现数据失败:', error)
+    googleAdsPerformanceLogger.error('batch_get_campaign_performance_failed', {}, error)
     throw new Error(`批量获取表现数据失败: ${error.message}`)
   }
 }

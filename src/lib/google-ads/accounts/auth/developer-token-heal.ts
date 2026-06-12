@@ -9,6 +9,7 @@ import type {
   AccountsRouteCredentials,
   DeveloperTokenHealResult,
 } from '@/lib/google-ads/accounts/auth/types'
+import { googleAdsCredentialsLogger } from '@/lib/google-ads/common/logger'
 
 export function looksLikeOAuthClientId(value: string): boolean {
   return value.includes('.apps.googleusercontent.com')
@@ -88,9 +89,9 @@ export async function healAccountsRouteDeveloperToken(params: {
     }
   }
 
-  console.warn(
-    `[Google Ads] 检测到 ${params.authType === 'service_account' ? '服务账号' : 'OAuth'} developer_token 可能误填，已自动使用设置中的 developer_token`
-  )
+  googleAdsCredentialsLogger.warn('developer_token_auto_healed', {
+    authType: params.authType,
+  })
   params.credentials.developer_token = settingDeveloperToken
   if (params.serviceAccountConfig && 'developerToken' in params.serviceAccountConfig) {
     params.serviceAccountConfig.developerToken = settingDeveloperToken

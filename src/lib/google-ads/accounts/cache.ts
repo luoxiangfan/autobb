@@ -3,6 +3,7 @@
  */
 import { getDatabase } from '../../db'
 import { getInsertedId } from '../../db-helpers'
+import { googleAdsAccountsLogger } from '../common/logger'
 
 export interface CachedAccount {
   id: number
@@ -270,7 +271,8 @@ export async function deactivateMissingAccounts(params: {
     [inactiveValue, params.userId, ...scopeParams, ...missing]
   )
 
-  console.log(
-    `🧹 已标记 ${missing.length} 个已解除关联的账号为非激活: ${missing.slice(0, 10).join(', ')}${missing.length > 10 ? '...' : ''}`
-  )
+  googleAdsAccountsLogger.info('accounts_deactivated', {
+    count: missing.length,
+    sample: missing.slice(0, 10),
+  })
 }

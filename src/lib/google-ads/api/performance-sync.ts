@@ -17,6 +17,7 @@ import {
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { executeGAQLQueryPython } from '../../python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
+import { googleAdsPerformanceLogger } from '@/lib/google-ads/common/logger'
 
 interface SyncResult {
   success: boolean
@@ -58,7 +59,7 @@ async function syncCreativePerformance(
     )
 
     if (!creative || !creative.google_campaign_id) {
-      console.warn(`Creative ${adCreativeId} has no active campaign`)
+      googleAdsPerformanceLogger.warn('creative_no_active_campaign', { adCreativeId })
       return false
     }
 
@@ -120,7 +121,9 @@ async function syncCreativePerformance(
         })()
 
     if (results.length === 0) {
-      console.warn(`No performance data found for campaign ${creative.google_campaign_id}`)
+      googleAdsPerformanceLogger.warn('no_performance_data', {
+        googleCampaignId: creative.google_campaign_id,
+      })
       return false
     }
 
@@ -164,7 +167,7 @@ async function syncCreativePerformance(
 
     return true
   } catch (error) {
-    console.error(`Error syncing creative ${adCreativeId}:`, error)
+    googleAdsPerformanceLogger.error('sync_creative_failed', { adCreativeId }, error)
     return false
   }
 }

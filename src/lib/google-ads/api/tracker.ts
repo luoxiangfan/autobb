@@ -15,6 +15,7 @@ import {
   resolveGoogleAdsApiAccessLevel,
   resolveGoogleAdsCredentialOwnerId,
 } from '@/lib/google-ads/auth/assignment'
+import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 
 const QUOTA_LIMITS = {
   test: 0, // Test access: 只能访问测试账号，生产环境配额为0
@@ -165,12 +166,12 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
         )
       } catch (detectError) {
         // 不影响主流程
-        console.debug('尝试从错误检测访问级别失败:', detectError)
+        googleAdsApiLogger.warn('access_level_detect_from_error_failed', {}, detectError)
       }
     }
   } catch (error) {
     // 不阻塞主流程，但记录错误
-    console.error('Failed to track API usage:', error)
+    googleAdsApiLogger.error('track_api_usage_failed', {}, error)
   }
 }
 

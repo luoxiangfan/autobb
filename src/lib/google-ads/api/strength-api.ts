@@ -20,6 +20,7 @@ import { getDatabase } from '../../db'
 import type { AdStrengthRating } from '../../ad-strength-evaluator'
 import { executeGAQLQueryPython } from '../../python-ads-client'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
+import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 
 /**
  * 获取Google Ads客户端（支持服务账号和OAuth两种模式）
@@ -238,13 +239,13 @@ async function getAdStrength(
         })
 
     if (results.length === 0) {
-      console.log('⚠️ 未找到已发布的响应式搜索广告')
+      googleAdsApiLogger.warn('ad_strength_no_rsa_found', { customerId, campaignId })
       return null
     }
 
     const ad = results[0]
     if (!ad.ad_group_ad?.ad?.id) {
-      console.log('⚠️ 广告数据不完整')
+      googleAdsApiLogger.warn('ad_strength_incomplete_ad_data', { customerId, campaignId })
       return null
     }
 
@@ -252,7 +253,7 @@ async function getAdStrength(
     const adData = ad as any
     const adStrength = adData.ad_group_ad?.ad?.responsive_search_ad?.ad_strength || 'PENDING'
 
-    console.log(`📊 Google Ads Ad Strength: ${adStrength} (Ad ID: ${adId})`)
+    googleAdsApiLogger.info('ad_strength_fetched', { customerId, campaignId, adId, adStrength })
 
     return {
       adGroupAdId: adId.toString(),
@@ -263,7 +264,7 @@ async function getAdStrength(
       },
     }
   } catch (error) {
-    console.error('❌ 获取Ad Strength失败:', error)
+    googleAdsApiLogger.error('ad_strength_fetch_failed', { customerId, campaignId }, error)
     throw error
   }
 }
@@ -326,11 +327,14 @@ async function getAdStrengthRecommendations(
       }
     })
 
-    console.log(`💡 找到 ${recommendations.length} 条Ad Strength改进建议`)
+    googleAdsApiLogger.info('ad_strength_recommendations_fetched', {
+      customerId,
+      count: recommendations.length,
+    })
 
     return recommendations
   } catch (error) {
-    console.error('❌ 获取Ad Strength建议失败:', error)
+    googleAdsApiLogger.error('ad_strength_recommendations_failed', { customerId }, error)
     return []
   }
 }
@@ -394,11 +398,15 @@ async function getAssetPerformance(
       ctr: parseFloat(row.metrics.ctr || '0'),
     }))
 
-    console.log(`📈 获取到 ${assetPerformance.length} 个资产的性能数据`)
+    googleAdsApiLogger.info('asset_performance_fetched', {
+      customerId,
+      campaignId,
+      count: assetPerformance.length,
+    })
 
     return assetPerformance
   } catch (error) {
-    console.error('❌ 获取资产性能失败:', error)
+    googleAdsApiLogger.error('asset_performance_failed', { customerId, campaignId }, error)
     return []
   }
 }
@@ -457,15 +465,16 @@ export async function validateExcellentStandard(
 
     const isExcellent = currentStrength === 'EXCELLENT'
 
-    console.log(`
-🎯 Ad Strength验证结果:
-- 当前评级: ${currentStrength}
-- 是否EXCELLENT: ${isExcellent ? '✅ 是' : '❌ 否'}
-- 改进建议数: ${recommendations.length}
-- 最佳Headlines: ${bestHeadlines.length}个
-- 最佳Descriptions: ${bestDescriptions.length}个
-- 低性能资产: ${lowPerformingAssets.length}个
-    `)
+    googleAdsApiLogger.info('excellent_standard_validation', {
+      customerId,
+      campaignId,
+      currentStrength,
+      isExcellent,
+      recommendationCount: recommendations.length,
+      bestHeadlineCount: bestHeadlines.length,
+      bestDescriptionCount: bestDescriptions.length,
+      lowPerformingAssetCount: lowPerformingAssets.length,
+    })
 
     return {
       isExcellent,
@@ -478,7 +487,11 @@ export async function validateExcellentStandard(
       },
     }
   } catch (error) {
-    console.error('❌ 验证EXCELLENT标准失败:', error)
+    googleAdsApiLogger.error(
+      'excellent_standard_validation_failed',
+      { customerId, campaignId },
+      error
+    )
     throw error
   }
 }

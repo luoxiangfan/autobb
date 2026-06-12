@@ -6,6 +6,7 @@ import { ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
 import { escapeGaqlStringLiteral } from './campaign-helpers'
+import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 
 export async function findGoogleAdsAdGroupByName(params: {
   customerId: string
@@ -119,8 +120,10 @@ export async function createGoogleAdsAdGroup(params: {
         authContext,
       })
     } catch (lookupError: any) {
-      console.warn(
-        `⚠️ Ad Group存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`
+      googleAdsApiLogger.warn(
+        'ad_group_existence_check_failed',
+        { message: lookupError?.message || String(lookupError) },
+        lookupError
       )
       return null
     }
@@ -130,7 +133,10 @@ export async function createGoogleAdsAdGroup(params: {
   if (authType === 'service_account') {
     const existing = await reuseExistingAdGroup()
     if (existing) {
-      console.log(`♻️ 复用已存在的Ad Group: ${params.adGroupName} (ID=${existing.adGroupId})`)
+      googleAdsApiLogger.info('ad_group_reused', {
+        adGroupName: params.adGroupName,
+        adGroupId: existing.adGroupId,
+      })
       return existing
     }
 
@@ -152,9 +158,10 @@ export async function createGoogleAdsAdGroup(params: {
       if (isDuplicateAdGroupNameError(error)) {
         const duplicate = await reuseExistingAdGroup()
         if (duplicate) {
-          console.log(
-            `♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`
-          )
+          googleAdsApiLogger.info('ad_group_duplicate_reused', {
+            adGroupName: params.adGroupName,
+            adGroupId: duplicate.adGroupId,
+          })
           return duplicate
         }
       }
@@ -168,7 +175,10 @@ export async function createGoogleAdsAdGroup(params: {
   // OAuth模式：使用原有逻辑
   const existing = await reuseExistingAdGroup()
   if (existing) {
-    console.log(`♻️ 复用已存在的Ad Group: ${params.adGroupName} (ID=${existing.adGroupId})`)
+    googleAdsApiLogger.info('ad_group_reused', {
+      adGroupName: params.adGroupName,
+      adGroupId: existing.adGroupId,
+    })
     return existing
   }
 
@@ -210,9 +220,10 @@ export async function createGoogleAdsAdGroup(params: {
     if (isDuplicateAdGroupNameError(error)) {
       const duplicate = await reuseExistingAdGroup()
       if (duplicate) {
-        console.log(
-          `♻️ Ad Group名称重复，复用已存在的Ad Group: ${params.adGroupName} (ID=${duplicate.adGroupId})`
-        )
+        googleAdsApiLogger.info('ad_group_duplicate_reused', {
+          adGroupName: params.adGroupName,
+          adGroupId: duplicate.adGroupId,
+        })
         return duplicate
       }
     }

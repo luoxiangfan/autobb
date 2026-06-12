@@ -17,6 +17,7 @@ import {
   isDuplicateCampaignNameError,
   normalizeCampaignDateFields,
 } from './campaign-helpers'
+import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 
 export async function findGoogleAdsCampaignByName(params: {
   customerId: string
@@ -122,12 +123,17 @@ export async function createGoogleAdsCampaign(params: {
         authContext,
       })
       if (existing) {
-        console.log(`♻️ 复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`)
+        googleAdsApiLogger.info('campaign_reused', {
+          campaignName: params.campaignName,
+          campaignId: existing.campaignId,
+        })
         return existing
       }
     } catch (lookupError: any) {
-      console.warn(
-        `⚠️ Campaign存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`
+      googleAdsApiLogger.warn(
+        'campaign_existence_check_failed',
+        { message: lookupError?.message || String(lookupError) },
+        lookupError
       )
     }
 
@@ -175,9 +181,10 @@ export async function createGoogleAdsCampaign(params: {
           authContext,
         })
         if (existing) {
-          console.log(
-            `♻️ Campaign名称重复，复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`
-          )
+          googleAdsApiLogger.info('campaign_duplicate_reused', {
+            campaignName: params.campaignName,
+            campaignId: existing.campaignId,
+          })
           return existing
         }
       }
@@ -205,12 +212,17 @@ export async function createGoogleAdsCampaign(params: {
       authContext,
     })
     if (existing) {
-      console.log(`♻️ 复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`)
+      googleAdsApiLogger.info('campaign_reused', {
+        campaignName: params.campaignName,
+        campaignId: existing.campaignId,
+      })
       return existing
     }
   } catch (lookupError: any) {
-    console.warn(
-      `⚠️ Campaign存在性检查失败，将继续尝试创建: ${lookupError?.message || lookupError}`
+    googleAdsApiLogger.warn(
+      'campaign_existence_check_failed',
+      { message: lookupError?.message || String(lookupError) },
+      lookupError
     )
   }
 
@@ -274,9 +286,11 @@ export async function createGoogleAdsCampaign(params: {
   campaign.final_url_suffix = sanitizedFinalUrlSuffix
 
   if (campaign.final_url_suffix) {
-    console.log('✅ Campaign Final URL Suffix配置:', campaign.final_url_suffix)
+    googleAdsApiLogger.debug('campaign_final_url_suffix_set', {
+      finalUrlSuffix: campaign.final_url_suffix,
+    })
   } else {
-    console.log('ℹ️ Campaign Final URL Suffix未设置（空字符串）')
+    googleAdsApiLogger.debug('campaign_final_url_suffix_empty')
   }
 
   // 3. 添加日期设置（Google Ads API v23: start_date/end_date => start_date_time/end_date_time）
@@ -291,7 +305,7 @@ export async function createGoogleAdsCampaign(params: {
   // 🚀 优化(2025-12-18): 简化日志输出，减少噪音
   // DEBUG: 完整的Campaign对象（仅在开发环境打印）
   if (process.env.NODE_ENV === 'development') {
-    console.log('📋 Campaign配置:', {
+    googleAdsApiLogger.debug('campaign_config', {
       name: campaign.name,
       strategy: campaign.bidding_strategy_type,
       budget: campaign.target_spend,
@@ -327,28 +341,31 @@ export async function createGoogleAdsCampaign(params: {
         authContext,
       })
       if (existing) {
-        console.log(
-          `♻️ Campaign名称重复，复用已存在的Campaign: ${params.campaignName} (ID=${existing.campaignId})`
-        )
+        googleAdsApiLogger.info('campaign_duplicate_reused', {
+          campaignName: params.campaignName,
+          campaignId: existing.campaignId,
+        })
         return existing
       }
     }
 
     // 打印详细的错误信息，特别是location字段
-    console.error('🐛 Campaign创建失败 - 详细错误信息:')
-    console.error('📋 错误对象:', JSON.stringify(error, null, 2))
+    googleAdsApiLogger.error(
+      'campaign_create_failed',
+      {
+        errorJson: JSON.stringify(error, null, 2),
+      },
+      error
+    )
 
     if (error.errors && Array.isArray(error.errors)) {
-      console.error('📋 错误详情:')
       error.errors.forEach((err: any, index: number) => {
-        console.error(`  错误 ${index + 1}:`)
-        console.error(`    - message: ${err.message}`)
-        console.error(`    - error_code: ${JSON.stringify(err.error_code)}`)
-
-        // location字段可能包含缺失字段的信息
-        if (err.location) {
-          console.error(`    - location:`, JSON.stringify(err.location, null, 2))
-        }
+        googleAdsApiLogger.error('campaign_create_error_detail', {
+          index: index + 1,
+          message: err.message,
+          errorCode: err.error_code,
+          location: err.location ? JSON.stringify(err.location, null, 2) : undefined,
+        })
       })
     }
 
@@ -363,7 +380,7 @@ export async function createGoogleAdsCampaign(params: {
   const campaignId = result.resource_name?.split('/').pop() || ''
   const campaignResourceName = result.resource_name || ''
 
-  console.log(`✅ Campaign创建成功! ID: ${campaignId}, Resource: ${campaignResourceName}`)
+  googleAdsApiLogger.info('campaign_created', { campaignId, campaignResourceName })
 
   // 4. 添加地理位置和语言定位条件（必需）
   // 参考: https://developers.google.com/google-ads/api/docs/campaigns/search-campaigns/getting-started
@@ -379,7 +396,10 @@ export async function createGoogleAdsCampaign(params: {
           geo_target_constant: `geoTargetConstants/${geoTargetConstantId}`,
         },
       })
-      console.log(`📍 添加地理位置定位: ${params.targetCountry} (${geoTargetConstantId})`)
+      googleAdsApiLogger.debug('campaign_geo_target_added', {
+        targetCountry: params.targetCountry,
+        geoTargetConstantId,
+      })
     }
   }
 
@@ -393,14 +413,17 @@ export async function createGoogleAdsCampaign(params: {
           language_constant: `languageConstants/${languageConstantId}`,
         },
       })
-      console.log(`🌐 添加语言定位: ${params.targetLanguage} (${languageConstantId})`)
+      googleAdsApiLogger.debug('campaign_language_target_added', {
+        targetLanguage: params.targetLanguage,
+        languageConstantId,
+      })
     } else {
-      console.warn(
-        `⚠️ 警告: 未找到语言 "${params.targetLanguage}" 对应的常量ID，语言定位可能被跳过`
-      )
+      googleAdsApiLogger.warn('campaign_language_constant_not_found', {
+        targetLanguage: params.targetLanguage,
+      })
     }
   } else {
-    console.warn(`⚠️ 警告: 未提供targetLanguage参数，将使用默认语言设置`)
+    googleAdsApiLogger.warn('campaign_target_language_missing')
   }
 
   // 批量创建定位条件
@@ -418,9 +441,12 @@ export async function createGoogleAdsCampaign(params: {
             operationName: `Create Campaign Criteria for ${params.campaignName}`,
           })
       )
-      console.log(`✅ 成功添加${criteriaOperations.length}个定位条件`)
+      googleAdsApiLogger.info('campaign_criteria_added', {
+        count: criteriaOperations.length,
+        campaignId,
+      })
     } catch (error: any) {
-      console.error('❌ 添加定位条件失败:', error.message)
+      googleAdsApiLogger.error('campaign_criteria_failed', { campaignId }, error)
       // 如果定位条件创建失败，暂停已创建的Campaign以保持安全（避免删除触发风控）
       try {
         await trackOAuthApiCall(
@@ -436,20 +462,20 @@ export async function createGoogleAdsCampaign(params: {
               },
             ])
         )
-        console.log(`⏸️ 已暂停Campaign ${campaignId}（因定位条件创建失败）`)
+        googleAdsApiLogger.info('campaign_paused_after_criteria_failure', { campaignId })
       } catch (rollbackError) {
-        console.error('⚠️ Campaign暂停失败:', rollbackError)
+        googleAdsApiLogger.error('campaign_pause_rollback_failed', { campaignId }, rollbackError)
       }
       throw new Error(`Campaign定位条件创建失败: ${error.message}`)
     }
   } else {
-    console.warn('⚠️ 未提供地理位置或语言定位，Campaign可能无法正常投放')
+    googleAdsApiLogger.warn('campaign_targeting_missing')
   }
 
   // 清除Campaigns列表缓存（创建新Campaign后）
   const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
   gadsApiCache.delete(listCacheKey)
-  console.log(`🗑️ 已清除Campaigns列表缓存: ${params.customerId}`)
+  googleAdsApiLogger.debug('campaigns_list_cache_cleared', { customerId: params.customerId })
 
   return {
     campaignId,
@@ -478,7 +504,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
   const requestedStatus = params.status
   const effectiveStatus = requestedStatus === 'REMOVED' ? 'PAUSED' : requestedStatus
   if (requestedStatus === 'REMOVED') {
-    console.warn(`⚠️ 已禁用Google Ads删除操作，改为暂停: campaign ${params.campaignId}`)
+    googleAdsApiLogger.warn('campaign_remove_disabled_pausing', { campaignId: params.campaignId })
   }
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
@@ -528,7 +554,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
-  console.log(`🗑️ 已清除Campaign缓存: ${params.campaignId}`)
+  googleAdsApiLogger.debug('campaign_cache_cleared', { campaignId: params.campaignId })
 }
 
 /**
@@ -653,7 +679,7 @@ export async function removeGoogleAdsCampaign(params: {
   const listCacheKey = generateGadsApiCacheKey('listCampaigns', params.customerId, params.userId)
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
-  console.log(`🗑️ 已清除Campaign缓存: ${params.campaignId}`)
+  googleAdsApiLogger.debug('campaign_cache_cleared', { campaignId: params.campaignId })
 }
 
 /**
@@ -731,7 +757,7 @@ export async function updateGoogleAdsCampaignBudget(params: {
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
-  console.log(`🗑️ 已清除Campaign预算缓存: ${params.campaignId}`)
+  googleAdsApiLogger.debug('campaign_budget_cache_cleared', { campaignId: params.campaignId })
 }
 
 /**
@@ -757,7 +783,7 @@ export async function getGoogleAdsCampaign(params: {
   if (!params.skipCache) {
     const cached = gadsApiCache.get(cacheKey)
     if (cached) {
-      console.log(`✅ 使用缓存的Campaign数据: ${params.campaignId}`)
+      googleAdsApiLogger.debug('campaign_cache_hit', { campaignId: params.campaignId })
       return cached
     }
   }
@@ -825,7 +851,7 @@ export async function getGoogleAdsCampaign(params: {
 
   if (result) {
     gadsApiCache.set(cacheKey, result)
-    console.log(`💾 已缓存Campaign数据: ${params.campaignId}`)
+    googleAdsApiLogger.debug('campaign_cache_set', { campaignId: params.campaignId })
   }
 
   return result
@@ -854,7 +880,7 @@ export async function listGoogleAdsCampaigns(params: {
   if (!params.skipCache) {
     const cached = gadsApiCache.get(cacheKey)
     if (cached) {
-      console.log(`✅ 使用缓存的Campaigns列表: ${params.customerId}`)
+      googleAdsApiLogger.debug('campaigns_list_cache_hit', { customerId: params.customerId })
       return cached
     }
   }
@@ -889,7 +915,10 @@ export async function listGoogleAdsCampaigns(params: {
 
     // 缓存结果（30分钟TTL）
     gadsApiCache.set(cacheKey, results)
-    console.log(`💾 已缓存Campaigns列表: ${params.customerId} (${results.length}个)`)
+    googleAdsApiLogger.debug('campaigns_list_cache_set', {
+      customerId: params.customerId,
+      count: results.length,
+    })
 
     return results
   }
@@ -922,7 +951,10 @@ export async function listGoogleAdsCampaigns(params: {
 
   // 缓存结果（30分钟TTL）
   gadsApiCache.set(cacheKey, results)
-  console.log(`💾 已缓存Campaigns列表: ${params.customerId} (${results.length}个)`)
+  googleAdsApiLogger.debug('campaigns_list_cache_set', {
+    customerId: params.customerId,
+    count: results.length,
+  })
 
   return results
 }
@@ -990,5 +1022,7 @@ export async function updateCampaignFinalUrlSuffix(params: {
 
   gadsApiCache.delete(getCacheKey)
   gadsApiCache.delete(listCacheKey)
-  console.log(`🗑️ 已清除Campaign缓存（Final URL Suffix更新）: ${params.campaignId}`)
+  googleAdsApiLogger.debug('campaign_cache_cleared_final_url_suffix', {
+    campaignId: params.campaignId,
+  })
 }

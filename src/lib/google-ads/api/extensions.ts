@@ -6,6 +6,7 @@ import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
+import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 
 export async function createGoogleAdsCalloutExtensions(params: {
   customerId: string
@@ -63,7 +64,7 @@ export async function createGoogleAdsCalloutExtensions(params: {
       },
     }))
 
-    console.log(`📢 创建${normalizedCallouts.length}个Callout Assets...`)
+    googleAdsApiLogger.info('callout_assets_create_start', { count: normalizedCallouts.length })
     const assetResponse = await trackOAuthApiCall(
       params.userId,
       params.customerId,
@@ -76,14 +77,14 @@ export async function createGoogleAdsCalloutExtensions(params: {
       assetResponse.results.forEach((result: any) => {
         const resourceName = result.resource_name || result.resourceName
         if (!resourceName) {
-          console.warn('⚠️ Callout Asset结果缺少resource_name，已跳过:', JSON.stringify(result))
+          googleAdsApiLogger.warn('callout_asset_missing_resource_name', { result })
           return
         }
         assetResourceNames.push(resourceName)
         const assetId = resourceName.split('/').pop() || ''
         if (assetId) assetIds.push(assetId)
       })
-      console.log(`✅ Callout Assets创建成功: ${assetIds.length}个`)
+      googleAdsApiLogger.info('callout_assets_created', { count: assetIds.length })
     }
 
     if (assetResourceNames.length === 0) {
@@ -97,7 +98,7 @@ export async function createGoogleAdsCalloutExtensions(params: {
       field_type: enums.AssetFieldType.CALLOUT,
     }))
 
-    console.log(`🔗 关联Callout Assets到Campaign ${params.campaignId}...`)
+    googleAdsApiLogger.info('callout_assets_link_start', { campaignId: params.campaignId })
     const linkResponse = await trackOAuthApiCall(
       params.userId,
       params.customerId,
@@ -109,9 +110,9 @@ export async function createGoogleAdsCalloutExtensions(params: {
       linkResponse?.partial_failure_error ||
       (linkResponse as { partialFailureError?: unknown } | undefined)?.partialFailureError
     if (partialFailure) {
-      console.warn('⚠️ Callout Assets部分关联失败:', JSON.stringify(partialFailure, null, 2))
+      googleAdsApiLogger.warn('callout_assets_partial_failure', { partialFailure })
     }
-    console.log(`✅ Callout Assets关联成功`)
+    googleAdsApiLogger.info('callout_assets_linked', { campaignId: params.campaignId })
 
     return { assetIds }
   } catch (error: any) {
@@ -126,8 +127,11 @@ export async function createGoogleAdsCalloutExtensions(params: {
     } catch {
       errorDetails = String(error)
     }
-    console.error('❌ 创建Callout扩展失败:', errorMessage)
-    console.error('❌ 错误详情:', errorDetails)
+    googleAdsApiLogger.error(
+      'callout_extensions_create_failed',
+      { errorMessage, errorDetails },
+      error
+    )
     throw new Error(`创建Callout扩展失败: ${errorMessage}`)
   }
 }
@@ -214,9 +218,11 @@ export async function createGoogleAdsSitelinkExtensions(params: {
   try {
     // Step 1: Create Sitelink Assets
     const assetOperations = sanitizedSitelinks.map((sitelink) => {
-      console.log(
-        `🔍 处理Sitelink: text="${sitelink.text}", url="${sitelink.url}", desc1="${sitelink.description1}"`
-      )
+      googleAdsApiLogger.debug('sitelink_processing', {
+        text: sitelink.text,
+        url: sitelink.url,
+        description1: sitelink.description1,
+      })
 
       const sitelinkAsset: any = {
         // sanitizedSitelinks 已经过 sanitizeGoogleAdsAdText(..., 25) 处理
@@ -237,13 +243,15 @@ export async function createGoogleAdsSitelinkExtensions(params: {
         final_urls: [sitelink.url], // final_urls在Asset层级
       }
 
-      console.log(`✅ 生成的Asset:`, JSON.stringify(assetObj, null, 2))
+      googleAdsApiLogger.debug('sitelink_asset_built', { assetObj })
 
       return assetObj
     })
 
-    console.log(`🔗 创建${params.sitelinks.length}个Sitelink Assets...`)
-    console.log(`📋 Sitelink数据:`, JSON.stringify(assetOperations, null, 2))
+    googleAdsApiLogger.info('sitelink_assets_create_start', {
+      count: params.sitelinks.length,
+      assetOperations,
+    })
     const assetResponse = await trackOAuthApiCall(
       params.userId,
       params.customerId,
@@ -257,7 +265,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
         const assetId = result.resource_name?.split('/').pop() || ''
         assetIds.push(assetId)
       })
-      console.log(`✅ Sitelink Assets创建成功: ${assetIds.length}个`)
+      googleAdsApiLogger.info('sitelink_assets_created', { count: assetIds.length })
     }
 
     // Step 2: Link Assets to Campaign
@@ -267,7 +275,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       field_type: enums.AssetFieldType.SITELINK,
     }))
 
-    console.log(`🔗 关联Sitelink Assets到Campaign ${params.campaignId}...`)
+    googleAdsApiLogger.info('sitelink_assets_link_start', { campaignId: params.campaignId })
     await trackOAuthApiCall(
       params.userId,
       params.customerId,
@@ -275,7 +283,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       '/api/google-ads/campaign-assets/create',
       () => customer.campaignAssets.create(campaignAssetOperations)
     )
-    console.log(`✅ Sitelink Assets关联成功`)
+    googleAdsApiLogger.info('sitelink_assets_linked', { campaignId: params.campaignId })
 
     return { assetIds }
   } catch (error: any) {
@@ -290,8 +298,11 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     } catch {
       errorDetails = String(error)
     }
-    console.error('❌ 创建Sitelink扩展失败:', errorMessage)
-    console.error('❌ 错误详情:', errorDetails)
+    googleAdsApiLogger.error(
+      'sitelink_extensions_create_failed',
+      { errorMessage, errorDetails },
+      error
+    )
     throw new Error(`创建Sitelink扩展失败: ${errorMessage}`)
   }
 }

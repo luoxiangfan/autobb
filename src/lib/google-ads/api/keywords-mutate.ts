@@ -11,6 +11,7 @@ import {
   GOOGLE_ADS_KEYWORD_MAX_WORDS,
   sanitizeKeywordForGoogleAds,
 } from './keywords-sanitize'
+import { googleAdsKeywordLogger } from '@/lib/google-ads/common/logger'
 
 export async function updateGoogleAdsKeywordStatus(params: {
   customerId: string
@@ -92,8 +93,11 @@ export async function createGoogleAdsKeywordsBatch(params: {
     if (normalized.truncatedByWordLimit) reasons.push(`words>${GOOGLE_ADS_KEYWORD_MAX_WORDS}`)
     if (normalized.truncatedByCharLimit) reasons.push(`chars>${GOOGLE_ADS_KEYWORD_MAX_LENGTH}`)
 
-    const reasonSuffix = reasons.length > 0 ? ` (${reasons.join(', ')})` : ''
-    console.log(`[Keyword] Normalized: "${originalText}" -> "${normalized.text}"${reasonSuffix}`)
+    googleAdsKeywordLogger.debug('keyword_normalized', {
+      originalText,
+      normalizedText: normalized.text,
+      reasons: reasons.length > 0 ? reasons : undefined,
+    })
   }
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
@@ -106,7 +110,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
         const normalized = sanitizeKeywordForGoogleAds(kw.keywordText)
         logKeywordNormalization(kw.keywordText, normalized)
         if (!normalized.text) {
-          console.warn(`[Keyword] Dropped empty keyword after sanitization: "${kw.keywordText}"`)
+          googleAdsKeywordLogger.warn('keyword_dropped_empty', { keywordText: kw.keywordText })
           return null
         }
         return { kw, originalIndex, normalizedText: normalized.text }
@@ -166,7 +170,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
         const normalized = sanitizeKeywordForGoogleAds(kw.keywordText)
         logKeywordNormalization(kw.keywordText, normalized)
         if (!normalized.text) {
-          console.warn(`[Keyword] Dropped empty keyword after sanitization: "${kw.keywordText}"`)
+          googleAdsKeywordLogger.warn('keyword_dropped_empty', { keywordText: kw.keywordText })
           return null
         }
 
@@ -255,7 +259,7 @@ export async function createGoogleAdsKeywordsBatchAllowingDuplicates(
     if (!isDuplicateKeywordCriterionError(batchError)) {
       throw batchError
     }
-    console.warn('[Keyword] 批量创建命中重复，改为逐条补全缺失关键词')
+    googleAdsKeywordLogger.warn('keyword_batch_duplicate_fallback')
   }
 
   const results: Array<{ keywordId: string; resourceName: string; keywordText: string }> = []

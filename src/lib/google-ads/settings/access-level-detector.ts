@@ -13,6 +13,7 @@ import {
   resolveGoogleAdsAuthReadyFailure,
 } from '@/lib/google-ads/auth/context'
 import { oauthRefreshConfiguredFromContext } from '@/lib/google-ads/auth/context-cache'
+import { googleAdsSettingsLogger } from '@/lib/google-ads/common/logger'
 
 function isGoogleAdsDualStackError(error: unknown): boolean {
   return error instanceof Error && error.message === GOOGLE_ADS_DUAL_STACK_WARNING
@@ -251,7 +252,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       }
 
       // 如果无法从错误中检测，默认返回explorer
-      console.warn('无法从API错误中检测访问级别，使用默认值:', errorMessage)
+      googleAdsSettingsLogger.warn('access_level_detect_from_error_default', { errorMessage })
       return {
         level: 'explorer',
         detectedAt: now,
@@ -264,7 +265,7 @@ export async function detectApiAccessLevel(userId: number): Promise<AccessLevelD
       throw error
     }
 
-    console.error('检测API访问级别失败:', error)
+    googleAdsSettingsLogger.error('access_level_detect_failed', {}, error)
 
     // 尝试从错误中检测
     const errorMessage = extractGoogleAdsErrorMessage(error)
@@ -324,11 +325,13 @@ export async function updateApiAccessLevel(
   }
 
   if (ownerUserId !== userId) {
-    console.log(
-      `✅ 已更新共享凭证所有者 ${ownerUserId} 的API访问级别: ${level} (请求用户 ${userId})`
-    )
+    googleAdsSettingsLogger.info('access_level_updated_shared_owner', {
+      ownerUserId,
+      userId,
+      level,
+    })
   } else {
-    console.log(`✅ 已更新用户 ${userId} 的API访问级别: ${level}`)
+    googleAdsSettingsLogger.info('access_level_updated', { userId, level })
   }
 
   const { invalidateGoogleAdsAuthContextCacheForOwner } =
@@ -347,7 +350,7 @@ export async function autoDetectAndUpdateAccessLevel(
   const result = await detectApiAccessLevel(userId)
   await updateApiAccessLevel(userId, result.level, authType)
 
-  console.log(`🔍 自动检测API访问级别:`, {
+  googleAdsSettingsLogger.info('access_level_auto_detected', {
     userId,
     level: result.level,
     method: result.method,
@@ -370,7 +373,7 @@ export async function detectAndUpdateFromError(
 
   if (level) {
     await updateApiAccessLevel(userId, level, authType)
-    console.log(`🔍 从错误消息检测到API访问级别: ${level}`)
+    googleAdsSettingsLogger.info('access_level_detected_from_error', { userId, level })
     return level
   }
 

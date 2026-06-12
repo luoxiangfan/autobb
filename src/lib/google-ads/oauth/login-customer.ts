@@ -1,3 +1,5 @@
+import { googleAdsOAuthLogger } from '@/lib/google-ads/common/logger'
+
 type AuthType = 'oauth' | 'service_account'
 
 interface ResolveLoginCustomerIdParams {
@@ -227,18 +229,20 @@ export async function runWithLoginCustomerFallbackForAccount<T>(params: {
       const result = await params.callback(loginCustomerId)
       params.onLoginCustomerIdResolved?.(loginCustomerId)
       if (i > 0) {
-        console.log(
-          `✅ ${params.actionName} 使用备用 login_customer_id=${loginCustomerId ?? 'null(omit)'} 成功`
-        )
+        googleAdsOAuthLogger.info('login_customer_fallback_success', {
+          actionName: params.actionName,
+          loginCustomerId: loginCustomerId ?? null,
+        })
       }
       return result
     } catch (error) {
       lastError = error
       const hasNextCandidate = i < loginCustomerIdCandidates.length - 1
       if (hasNextCandidate && isGoogleAdsAccountAccessError(error)) {
-        console.warn(
-          `⚠️ ${params.actionName} login_customer_id=${loginCustomerId ?? 'null(omit)'} 失败，切换候选重试`
-        )
+        googleAdsOAuthLogger.warn('login_customer_candidate_failed', {
+          actionName: params.actionName,
+          loginCustomerId: loginCustomerId ?? null,
+        })
         continue
       }
       throw error
