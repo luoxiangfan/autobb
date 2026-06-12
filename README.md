@@ -70,8 +70,8 @@
 
 - **运行时**: Node.js 24+
 - **API**: Next.js API Routes
-- **数据库**: SQLite（本地）/ PostgreSQL（生产），`DatabaseAdapter` 双栈抽象
-- **数据访问**: 原生 SQL — better-sqlite3 + postgres.js
+- **数据库**: PostgreSQL（`DATABASE_URL`），`DatabaseAdapter` 抽象层
+- **数据访问**: 原生 SQL — postgres.js
 - **队列 / 缓存**: Redis (ioredis)，统一任务调度器（Web / Background Worker 可分离）
 - **定时任务**: node-cron + Scheduler 进程
 - **认证**: Google OAuth 2.0 + JWT (jose / jsonwebtoken)，bcrypt 密码哈希
@@ -117,8 +117,8 @@
 ```bash
 node --version   # 应 >= 24.0.0
 npm --version
+# 必需：PostgreSQL（本地开发与生产均通过 DATABASE_URL）
 # 可选：Redis（队列与补点击功能）
-# 可选：PostgreSQL（生产环境）
 ```
 
 ### 安装和运行
@@ -135,9 +135,10 @@ npm run bootstrap
 
 # 3. 配置环境变量
 cp .env.example .env.local
-# 编辑 .env.local，至少配置 JWT_SECRET、ENCRYPTION_KEY、GEMINI_API_KEY 等
+# 编辑 .env.local：DATABASE_URL、JWT_SECRET、ENCRYPTION_KEY、GEMINI_API_KEY 等
 
-# 4. 初始化数据库
+# 4. 初始化数据库（需已可用的 PostgreSQL）
+npm run db:migrate
 npm run db:init
 
 # 5. 启动开发服务器
@@ -150,60 +151,42 @@ npm run dev
 
 ## 💾 数据库初始化
 
-AutoAds 使用**双数据库架构**：
-
-- **本地开发**: SQLite（轻量级，零配置）
-- **生产环境**: PostgreSQL（高性能，可扩展）
-
-### 本地开发（SQLite）
-
-#### 首次初始化
+AutoAds 使用 **PostgreSQL**（本地开发与生产环境相同）。在 `.env.local` 或 `.env.production` 中配置：
 
 ```bash
-# 推荐
-npm run db:init
+DATABASE_URL=postgresql://用户名:密码@主机:5432/autoads
+```
 
-# 手动初始化
-mkdir -p data
-sqlite3 data/autoads.db < migrations/000_init_schema_consolidated.sqlite.sql
+本仓库**不内置** Docker PostgreSQL；开发者自行安装或使用已有实例（本机、云托管或自建 Docker 均可）。
 
-# 验证增量迁移（新库通常无需迁移）
+**与 OpenClaw 的边界：** AutoAds 业务数据（用户、Offer、广告、OpenClaw 绑定与指令记录等）全部在 PostgreSQL。OpenClaw Agent 的**会话记忆索引**由 OpenClaw 网关自行管理（通常为 `~/.openclaw/memory/` 下的本地 SQLite），与 `DATABASE_URL` 无关；升级 OpenClaw 时不要求改动 AutoAds 数据库配置。
+
+### 首次初始化
+
+```bash
+# 推荐流程
+npm run db:migrate          # 应用 migrations/ 增量迁移
+npm run db:init             # 检查关键表 + 确保管理员账号
+
+# 或手动灌入 consolidated schema 后再迁移
+psql "$DATABASE_URL" -f migrations/000_init_schema_consolidated.pg.sql
 npm run db:migrate
 ```
 
-#### 验证初始化
+### 验证
 
 ```bash
 npm run validate-schema
-
-# 手动检查
-sqlite3 data/autoads.db ".tables"
-sqlite3 data/autoads.db "SELECT COUNT(*) FROM prompt_versions;"
+psql "$DATABASE_URL" -c "\dt"
 ```
 
-#### 重置数据库（⚠️ 删除所有数据）
+### 重置开发库（⚠️ 删除所有数据）
 
 ```bash
-npm run db:reset
-```
-
-### 生产环境（PostgreSQL）
-
-```bash
-# 创建数据库
-createdb autoads
-
-# 初始化 Schema
-psql autoads < pg-migrations/000_init_schema_consolidated.pg.sql
-
-# 应用增量迁移
-DATABASE_URL="postgresql://username:password@host:5432/autoads" npm run db:migrate
-```
-
-在 `.env.production` 中设置：
-
-```bash
-DATABASE_URL="postgresql://username:password@host:5432/autoads"
+psql "$DATABASE_URL" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+psql "$DATABASE_URL" -f migrations/000_init_schema_consolidated.pg.sql
+npm run db:migrate
+npm run db:init
 ```
 
 ### Schema 结构
@@ -220,9 +203,8 @@ DATABASE_URL="postgresql://username:password@host:5432/autoads"
 ### 数据库管理工具
 
 ```bash
-sqlite3 data/autoads.db          # SQLite CLI
-psql autoads                     # PostgreSQL CLI
-npm run db:backup                # 自动备份
+psql "$DATABASE_URL"             # PostgreSQL CLI
+npm run db:backup                # 自动备份（若已配置）
 ```
 
 ### 详细文档
@@ -271,19 +253,19 @@ npm run test:openclaw    # OpenClaw 相关测试
 | `npm run attribution:health`       | 联盟归因健康检查         |
 | `npm run openclaw:prebuilt:verify` | 验证 OpenClaw 预构建产物 |
 
-### 调试 SQLite
+### 调试 PostgreSQL
 
 ```bash
-sqlite3 data/autoads.db
-.schema offers
+psql "$DATABASE_URL"
+\d offers
 SELECT * FROM offers LIMIT 5;
-SELECT prompt_id, version, is_active FROM prompt_versions WHERE is_active = 1;
-.quit
+SELECT prompt_id, version, is_active FROM prompt_versions WHERE is_active = true;
+\q
 ```
 
 ### Agent / 贡献者约定
 
-AI Agent 与贡献者请参阅 [AGENTS.md](./AGENTS.md) 与 [CLAUDE.md](./CLAUDE.md)，其中包含 Google Ads 认证约定、数据库双栈规范与质量门禁要求。
+AI Agent 与贡献者请参阅 [AGENTS.md](./AGENTS.md) 与 [CLAUDE.md](./CLAUDE.md)，其中包含 Google Ads 认证约定、PostgreSQL/SQL 规范与质量门禁要求。
 
 ---
 
@@ -305,14 +287,12 @@ autobb/
 │   │   ├── launch-score.ts
 │   │   └── scraper-stealth.ts
 │   └── types/                 # TypeScript 类型
-├── migrations/                # SQLite 迁移
-│   ├── 000_init_schema_consolidated.sqlite.sql
+├── migrations/                # PostgreSQL schema 与增量迁移
+│   ├── 000_init_schema_consolidated.pg.sql
 │   └── README.md
-├── pg-migrations/             # PostgreSQL 迁移
-│   └── 000_init_schema_consolidated.pg.sql
 ├── scripts/                   # 运维与验证脚本
 ├── openclaw/                  # OpenClaw 网关源码
-├── data/                      # SQLite 数据库（.gitignore）
+├── data/                      # 备份等本地数据（.gitignore）
 ├── Dockerfile                 # 单容器生产镜像
 └── package.json
 ```
@@ -334,9 +314,8 @@ JWT_SECRET=your_random_64_char_hex_secret
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 
-# 数据库（SQLite 本地 / PostgreSQL 生产）
-DATABASE_PATH=./data/autoads.db
-# DATABASE_URL=postgresql://user:pass@host:5432/autoads
+# 数据库（必填）
+DATABASE_URL=postgresql://user:pass@localhost:5432/autoads
 
 # AI
 GEMINI_API_KEY=...
@@ -434,4 +413,4 @@ npm start
 ---
 
 **版本**: 2.0.0
-**最后更新**: 2026-06-05
+**最后更新**: 2026-06-12

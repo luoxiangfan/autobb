@@ -57,8 +57,7 @@ async function resolveUser(userId: number) {
     id: user.id,
     email: user.email,
     role: user.role,
-    package_type: user.package_type,
-  }
+    package_type: user.package_type }
   userCache.set(userId, { user: normalized, expiresAt: now + USER_CACHE_TTL_MS })
   return normalized
 }
@@ -78,8 +77,7 @@ function resolveUserToken(user: { id: number; email: string; role: string; packa
     userId: user.id,
     email: user.email,
     role: user.role,
-    packageType: user.package_type,
-  })
+    packageType: user.package_type })
   tokenCache.set(user.id, { token, expiresAt: now + TOKEN_CACHE_TTL_MS })
   return token
 }
@@ -139,8 +137,7 @@ export async function fetchAutoadsAsUser(params: {
 
   const headers: Record<string, string> = {
     'Cookie': `auth_token=${token}`,
-    ...(params.headers || {}),
-  }
+    ...(params.headers || {}) }
 
   let body: string | undefined
   if (params.body !== undefined && method !== 'GET' && method !== 'HEAD') {
@@ -163,8 +160,7 @@ export async function fetchAutoadsAsUser(params: {
       method,
       headers,
       body,
-      signal: controller?.signal,
-    })
+      signal: controller?.signal })
   } catch (error: any) {
     if (normalizedTimeoutMs > 0 && error?.name === 'AbortError') {
       throw new Error(`AutoAds API timeout after ${normalizedTimeoutMs}ms: ${method} ${params.path}`)
@@ -192,8 +188,7 @@ export async function fetchAutoadsJson<T = any>(params: {
     query: params.query,
     body: params.body,
     timeoutMs: params.timeoutMs,
-    headers: { Accept: 'application/json' },
-  })
+    headers: { Accept: 'application/json' } })
   if (!response.ok) {
     const text = await response.text()
     throw new Error(`AutoAds API error (${response.status}): ${text}`)

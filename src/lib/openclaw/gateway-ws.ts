@@ -252,14 +252,12 @@ async function connectGateway(
       displayName: 'AutoAds',
       version,
       platform,
-      mode: 'backend',
-    },
+      mode: 'backend' },
     role: 'operator',
     scopes,
     auth: { token },
     locale: 'zh-CN',
-    userAgent: `autoads/${version}`,
-  }
+    userAgent: `autoads/${version}` }
   return await client.request('connect', connectPayload, timeoutMs)
 }
 
@@ -301,16 +299,14 @@ export async function requestOpenclawGatewayRestart(opts?: {
         baseHash,
         raw: '{}',
         note: String(opts?.note || '').trim() || 'openclaw-manual-hot-reload',
-        restartDelayMs: 0,
-      },
+        restartDelayMs: 0 },
       timeoutMs,
     )
 
     return {
       requestedAt: new Date().toISOString(),
       restart: patchResult?.restart ?? null,
-      path: typeof patchResult?.path === 'string' ? patchResult.path : null,
-    }
+      path: typeof patchResult?.path === 'string' ? patchResult.path : null }
   } catch (error: any) {
     const message = error?.message || '未知错误'
     throw new Error(`Gateway 重启请求失败 (${wsUrl}): ${message}`)
@@ -360,8 +356,7 @@ async function fetchGatewaySnapshot(): Promise<OpenclawGatewaySnapshot> {
       fetchedAt: new Date().toISOString(),
       health,
       skills,
-      errors,
-    }
+      errors }
   } catch (error: any) {
     const message = error?.message || '未知错误'
     throw new Error(`Gateway 状态查询失败 (${wsUrl}): ${message}`)

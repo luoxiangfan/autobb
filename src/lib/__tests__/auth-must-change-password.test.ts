@@ -57,7 +57,6 @@ function makeUser(overrides: Partial<import('../auth').User> = {}): import('../a
 describe('loginWithPassword mustChangePassword', () => {
   beforeEach(() => {
     mockDb = {
-      type: 'sqlite',
       queryOne: vi.fn(),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
     }

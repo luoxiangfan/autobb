@@ -175,8 +175,7 @@ export async function listOpenclawCommandRuns(
 
   await failStaleQueuedCommandRuns({
     db,
-    userId: input.userId,
-  })
+    userId: input.userId })
   await expireStaleCommandConfirmations({ userId: input.userId })
 
   const page = normalizePage(input.page)
@@ -272,8 +271,7 @@ export async function listOpenclawCommandRuns(
       intent: row.intent,
       request: {
         method: row.request_method,
-        path: row.request_path,
-      },
+        path: row.request_path },
       riskLevel: row.risk_level,
       status: row.status,
       confirmRequired,
@@ -288,8 +286,7 @@ export async function listOpenclawCommandRuns(
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       startedAt: row.started_at,
-      completedAt: row.completed_at,
-    }
+      completedAt: row.completed_at }
   })
 
   return {
@@ -298,12 +295,9 @@ export async function listOpenclawCommandRuns(
       page,
       limit,
       total,
-      totalPages: Math.max(1, Math.ceil(total / limit)),
-    },
+      totalPages: Math.max(1, Math.ceil(total / limit)) },
     filters: {
       status,
       riskLevel,
-      createdAfter,
-    },
-  }
+      createdAfter } }
 }

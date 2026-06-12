@@ -15,7 +15,7 @@ describe('GET /api/google-ads/idle-accounts', () => {
     vi.clearAllMocks()
   })
 
-  it('maps is_active consistently for postgres boolean and sqlite integer', async () => {
+  it('maps is_active consistently for postgres boolean values', async () => {
     mocks.getIdleAdsAccounts.mockResolvedValue([
       {
         id: 810,

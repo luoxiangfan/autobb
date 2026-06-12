@@ -313,7 +313,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         invalidateDashboardCache(numericUserId)
       }
     }
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFunc = 'NOW()'
     const syncLocalConfiguredMaxCpc = async (nextMaxCpc: number) => {
       const normalized = toPositiveNumberOrNull(nextMaxCpc)
       if (normalized === null) return

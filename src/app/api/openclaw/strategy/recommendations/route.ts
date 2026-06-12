@@ -3,8 +3,7 @@ import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import {
   getStrategyRecommendations,
-  persistStrategyRecommendationExecutionRuntime,
-} from '@/lib/openclaw/strategy-recommendations'
+  persistStrategyRecommendationExecutionRuntime } from '@/lib/openclaw/strategy-recommendations'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
@@ -96,17 +95,14 @@ async function hydrateStrategyQueueRuntime(params: {
             ? (executionResult.queueTaskError || '队列任务不存在或已过期，请重新执行建议')
             : executionResult.queueTaskError || null,
           queueUpdatedAt: new Date().toISOString(),
-          queued: exceededMissThreshold ? false : true,
-        }
+          queued: exceededMissThreshold ? false : true }
         hydratedByIndex.set(index, {
           ...item,
-          executionResult: nextExecutionResult,
-        })
+          executionResult: nextExecutionResult })
         if (recommendationId) {
           runtimeUpdates.push({
             recommendationId,
-            executionResult: nextExecutionResult,
-          })
+            executionResult: nextExecutionResult })
         }
         return
       }
@@ -129,17 +125,14 @@ async function hydrateStrategyQueueRuntime(params: {
           || executionResult.queueTaskStartedAt
           || null,
         queueUpdatedAt: new Date().toISOString(),
-        queued: taskStatus === 'pending' || taskStatus === 'running',
-      }
+        queued: taskStatus === 'pending' || taskStatus === 'running' }
       hydratedByIndex.set(index, {
         ...item,
-        executionResult: nextExecutionResult,
-      })
+        executionResult: nextExecutionResult })
       if (recommendationId) {
         runtimeUpdates.push({
           recommendationId,
-          executionResult: nextExecutionResult,
-        })
+          executionResult: nextExecutionResult })
       }
     })
   )
@@ -154,8 +147,7 @@ async function hydrateStrategyQueueRuntime(params: {
         await persistStrategyRecommendationExecutionRuntime({
           userId: params.userId,
           recommendationId,
-          executionResult,
-        })
+          executionResult })
       })
     )
   }
@@ -190,8 +182,7 @@ export async function GET(request: NextRequest) {
         error: `历史日期 ${normalizedReportDate} 仅支持查看，不支持重新分析。请切换到 ${serverDate}`,
         code: 'HISTORICAL_READONLY',
         reportDate: normalizedReportDate,
-        serverDate,
-      },
+        serverDate },
       { status: 400 }
     )
   }
@@ -201,20 +192,17 @@ export async function GET(request: NextRequest) {
       userId: auth.userId,
       reportDate: normalizedReportDate,
       forceRefresh,
-      limit,
-    })
+      limit })
     const recommendations = await hydrateStrategyQueueRuntime({
       userId: auth.userId,
-      recommendations: recommendationsRaw,
-    })
+      recommendations: recommendationsRaw })
 
     return NextResponse.json({
       success: true,
       reportDate: normalizedReportDate,
       serverDate,
       historicalReadOnly: isHistoricalDate,
-      recommendations,
-    })
+      recommendations })
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || '加载策略建议失败' },
@@ -249,8 +237,7 @@ export async function POST(request: NextRequest) {
         error: `历史日期 ${normalizedReportDate} 仅支持查看，不支持手动触发分析。请切换到 ${serverDate}`,
         code: 'HISTORICAL_READONLY',
         reportDate: normalizedReportDate,
-        serverDate,
-      },
+        serverDate },
       { status: 400 }
     )
   }
@@ -260,17 +247,14 @@ export async function POST(request: NextRequest) {
       userId: auth.userId,
       reportDate: normalizedReportDate,
       forceRefresh: true,
-      limit,
-    })
+      limit })
     const recommendations = await hydrateStrategyQueueRuntime({
       userId: auth.userId,
-      recommendations: recommendationsRaw,
-    })
+      recommendations: recommendationsRaw })
 
     const report = await refreshOpenclawDailyReportSnapshot({
       userId: auth.userId,
-      date: normalizedReportDate,
-    })
+      date: normalizedReportDate })
     const settings = await getOpenclawSettingsMap(auth.userId)
     const feishuTarget = String(settings.feishu_target || '').trim() || undefined
     const deliveryTaskId = `openclaw-report-send-manual:${auth.userId}:${report.date}`
@@ -285,15 +269,13 @@ export async function POST(request: NextRequest) {
           userId: auth.userId,
           target: feishuTarget,
           date: report.date,
-          trigger: 'manual',
-        },
+          trigger: 'manual' },
         auth.userId,
         {
           priority: 'high',
           maxRetries: 1,
           taskId: deliveryTaskId,
-          parentRequestId: request.headers.get('x-request-id') || undefined,
-        }
+          parentRequestId: request.headers.get('x-request-id') || undefined }
       )
     } catch (error: any) {
       reportSent = false
@@ -310,8 +292,7 @@ export async function POST(request: NextRequest) {
       reportSent,
       reportSendError,
       reportDeliveryTaskId: deliveryTaskId,
-      reportDeliveryMode: 'queued',
-    })
+      reportDeliveryMode: 'queued' })
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || '手动触发策略分析失败' },

@@ -9,7 +9,6 @@ const dbState = vi.hoisted(() => ({
 
 vi.mock('../db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite' as const,
     queryOne: dbState.queryOne,
     exec: dbState.exec,
   })),

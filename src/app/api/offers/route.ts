@@ -125,11 +125,8 @@ async function get(request: NextRequest) {
     if (summary) {
       const db = await getDatabase()
       const userIdNum = userId
-      const notDeletedCondition =
-        db.type === 'postgres'
-          ? '(is_deleted = false OR is_deleted IS NULL)'
-          : '(is_deleted = 0 OR is_deleted IS NULL)'
-      const isActiveCondition = boolCondition('is_active', true, db.type)
+      const notDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
+      const isActiveCondition = boolCondition('is_active', true)
 
       const row = await db.queryOne<{
         total: number

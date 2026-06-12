@@ -81,8 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: '请先配置联盟平台 Token（PartnerBoost 或 YeahPromos），再触发手动同步',
-          code: 'AFFILIATE_PLATFORM_NOT_CONFIGURED',
-        },
+          code: 'AFFILIATE_PLATFORM_NOT_CONFIGURED' },
         { status: 400 }
       )
     }
@@ -102,15 +101,13 @@ export async function POST(request: NextRequest) {
           userId: auth.userId,
           date,
           syncMode,
-          trigger: 'manual',
-        },
+          trigger: 'manual' },
         auth.userId,
         {
           priority: 'high',
           maxRetries: 1,
           taskId: `openclaw-affiliate-sync-manual:${auth.userId}:${date}:${Date.now()}:${index}`,
-          parentRequestId: request.headers.get('x-request-id') || undefined,
-        }
+          parentRequestId: request.headers.get('x-request-id') || undefined }
       )
       queueTaskIds.push(taskId)
     }
@@ -123,8 +120,7 @@ export async function POST(request: NextRequest) {
       reportDates,
       queuedCount: queueTaskIds.length,
       queueTaskIds,
-      message: `已触发联盟成交/佣金同步（${reportDates[0]} ~ ${reportDates[reportDates.length - 1]}）`,
-    })
+      message: `已触发联盟成交/佣金同步（${reportDates[0]} ~ ${reportDates[reportDates.length - 1]}）` })
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || '手动触发联盟佣金同步失败' },

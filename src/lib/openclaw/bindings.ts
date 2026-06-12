@@ -1,8 +1,8 @@
 import { getDatabase } from '@/lib/db'
+import { isUniqueConstraintViolation } from '@/lib/db-helpers'
 import {
   collectUserFeishuBindingAccounts,
-  parseFeishuAccountUserId,
-} from '@/lib/openclaw/feishu-accounts'
+  parseFeishuAccountUserId } from '@/lib/openclaw/feishu-accounts'
 
 type FeishuAuthMode = 'strict' | 'compat'
 type FeishuAuthSettings = {
@@ -98,23 +98,20 @@ async function resolveFeishuAuthSettingsForAccount(accountId?: string | null): P
   if (!normalizedAccountId) {
     return {
       settings: resolveFeishuAuthSettingsFromOptions({ accountConfig: null }),
-      accounts: null,
-    }
+      accounts: null }
   }
 
   const accounts = await collectFeishuAccountsSafe()
   if (!accounts) {
     return {
       settings: resolveFeishuAuthSettingsFromOptions({ accountConfig: null }),
-      accounts: null,
-    }
+      accounts: null }
   }
 
   const accountConfig = accounts[normalizedAccountId] || null
   return {
     settings: resolveFeishuAuthSettingsFromOptions({ accountConfig }),
-    accounts,
-  }
+    accounts }
 }
 
 function resolveFeishuRequireTenantKey(): boolean {
@@ -127,18 +124,6 @@ function resolveFeishuStrictAutoBind(): boolean {
 
 function normalizeFeishuId(value?: string | null): string {
   return String(value || '').trim().replace(/^(feishu|lark):/i, '').toLowerCase()
-}
-
-function isUniqueViolationError(error: unknown): boolean {
-  const details = error as { code?: string; message?: string } | null
-  if (!details) return false
-
-  if (details.code === '23505') return true
-  if (typeof details.code === 'string' && details.code.startsWith('SQLITE_CONSTRAINT')) return true
-
-  const message = String(details.message || '')
-  return /duplicate key value violates unique constraint/i.test(message)
-    || /UNIQUE constraint failed/i.test(message)
 }
 
 function isFeishuSenderAllowlisted(senderId: string, allowFrom?: string[]): boolean {
@@ -171,7 +156,7 @@ async function ensureStrictFeishuBinding(params: {
   senderId: string
 }): Promise<boolean> {
   const db = await getDatabase()
-  const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowSql = 'NOW()'
 
   const existing = await db.queryOne<{ id: number; user_id: number }>(
     `SELECT id, user_id
@@ -209,7 +194,7 @@ async function ensureStrictFeishuBinding(params: {
     )
     return true
   } catch (error) {
-    if (!isUniqueViolationError(error)) {
+    if (!isUniqueConstraintViolation(error)) {
       throw error
     }
   }
@@ -279,8 +264,7 @@ async function resolveStrictFeishuUser(params: {
 
   const tenantBindingUserId = await findFeishuTenantBinding({
     tenantKey: params.tenantKey,
-    senderId: params.senderId,
-  })
+    senderId: params.senderId })
 
   if (tenantBindingUserId) {
     if (tenantBindingUserId !== params.accountUserId) {
@@ -296,8 +280,7 @@ async function resolveStrictFeishuUser(params: {
   const bound = await ensureStrictFeishuBinding({
     userId: params.accountUserId,
     tenantKey: params.tenantKey,
-    senderId: params.senderId,
-  })
+    senderId: params.senderId })
 
   return bound
     ? { userId: params.accountUserId, reason: 'strict_auto_bind_success' }
@@ -353,8 +336,7 @@ export async function resolveOpenclawUserFromBindingDebug(
       channel: normalizedChannel,
       senderId: normalizedSenderId,
       accountId: accountId || undefined,
-      tenantKeyProvided: Boolean((options?.tenantKey || '').trim()),
-    }
+      tenantKeyProvided: Boolean((options?.tenantKey || '').trim()) }
   }
 
   const tenantKey = (options?.tenantKey || '').trim() || undefined
@@ -384,8 +366,7 @@ export async function resolveOpenclawUserFromBindingDebug(
       tenantKey,
       requireTenantKey: feishuSettings.requireTenantKey,
       strictAutoBind: feishuSettings.strictAutoBind,
-      allowFrom: strictAccountAllowFrom,
-    })
+      allowFrom: strictAccountAllowFrom })
 
     return {
       userId: strictResolution.userId,
@@ -394,8 +375,7 @@ export async function resolveOpenclawUserFromBindingDebug(
       senderId: normalizedSenderId,
       accountId: accountId || undefined,
       tenantKeyProvided: Boolean(tenantKey),
-      authMode: 'strict',
-    }
+      authMode: 'strict' }
   }
 
   if (accountUserId) {
@@ -406,8 +386,7 @@ export async function resolveOpenclawUserFromBindingDebug(
       senderId: normalizedSenderId,
       accountId: accountId || undefined,
       tenantKeyProvided: Boolean(tenantKey),
-      authMode: isFeishu ? 'compat' : undefined,
-    }
+      authMode: isFeishu ? 'compat' : undefined }
   }
 
   if (isFeishu && !tenantKey) {
@@ -419,8 +398,7 @@ export async function resolveOpenclawUserFromBindingDebug(
       senderId: normalizedSenderId,
       accountId: accountId || undefined,
       tenantKeyProvided: false,
-      authMode: 'compat',
-    }
+      authMode: 'compat' }
   }
 
   const db = await getDatabase()
@@ -444,8 +422,7 @@ export async function resolveOpenclawUserFromBindingDebug(
         senderId: normalizedSenderId,
         accountId: accountId || undefined,
         tenantKeyProvided: true,
-        authMode: isFeishu ? 'compat' : undefined,
-      }
+        authMode: isFeishu ? 'compat' : undefined }
     }
 
     if (isFeishu) {
@@ -457,8 +434,7 @@ export async function resolveOpenclawUserFromBindingDebug(
         senderId: normalizedSenderId,
         accountId: accountId || undefined,
         tenantKeyProvided: true,
-        authMode: 'compat',
-      }
+        authMode: 'compat' }
     }
   }
 
@@ -471,8 +447,7 @@ export async function resolveOpenclawUserFromBindingDebug(
       senderId: normalizedSenderId,
       accountId: accountId || undefined,
       tenantKeyProvided: false,
-      authMode: 'compat',
-    }
+      authMode: 'compat' }
   }
 
   const record = await db.queryOne<{ user_id: number }>(
@@ -490,8 +465,7 @@ export async function resolveOpenclawUserFromBindingDebug(
     channel: normalizedChannel,
     senderId: normalizedSenderId,
     accountId: accountId || undefined,
-    tenantKeyProvided: Boolean(tenantKey),
-  }
+    tenantKeyProvided: Boolean(tenantKey) }
 }
 
 export async function resolveOpenclawUserFromBinding(

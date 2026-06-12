@@ -35,12 +35,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '没有有效的表需要清理' }, { status: 400 })
     }
 
-    // 🔧 兼容 SQLite 和 PostgreSQL
-    const deletedCheck = db.type === 'sqlite' ? 'is_deleted = 1' : 'is_deleted = TRUE'
-    const dateCheck =
-      db.type === 'sqlite'
-        ? `deleted_at < datetime('now', '-${retentionDays} days')`
-        : `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
+    // PostgreSQL
+    const deletedCheck = 'is_deleted = TRUE'
+    const dateCheck = `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
 
     const results: Record<string, { count: number; success: boolean; error?: string }> = {}
     let totalDeleted = 0
@@ -127,8 +124,7 @@ export async function GET(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const isPostgres = db.type === 'postgres'
-    const deletedFlag = isPostgres ? 'TRUE' : '1'
+    const deletedFlag = 'TRUE'
     const retentionDays = 90
 
     // 统计所有软删除记录

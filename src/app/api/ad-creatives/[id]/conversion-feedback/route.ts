@@ -75,7 +75,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       ]
     )
 
-    const feedbackId = getInsertedId(result, db.type)
+    const feedbackId = getInsertedId(result)
 
     // 获取现有效果数据并更新转化信息
     const existingPerformance = await db.queryOne<any>(

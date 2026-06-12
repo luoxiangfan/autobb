@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         END as ctr
       FROM ad_creatives ac
       LEFT JOIN ad_creative_performance acp ON ac.id = acp.ad_creative_id
-        AND acp.sync_date >= date('now', '-30 days')
+        AND acp.sync_date >= CURRENT_DATE - INTERVAL '30 days'
       WHERE ac.user_id = ?
         AND ac.is_selected = TRUE
       GROUP BY ac.id

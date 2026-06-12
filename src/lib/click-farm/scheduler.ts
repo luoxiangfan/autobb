@@ -231,7 +231,7 @@ export function shouldCompleteTask(task: ClickFarmTask): boolean {
  *
  * ⚠️ 注意：此函数返回的是 Date 对象，其内部存储的是 UTC 时间戳
  * 在 updateTaskStatus 中会通过 toISOString() 转换为 ISO 8601 格式（UTC）存储到数据库
- * 数据库查询时使用 next_run_at <= datetime('now') 进行比较（datetime('now')返回UTC）
+ * 数据库查询时使用 next_run_at <= NOW() 进行比较（NOW()返回UTC）
  *
  * 🔧 修复(2025-12-31): 所有"下一个整点"的计算必须基于任务时区，而不是服务器本地时间
  *

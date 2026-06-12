@@ -3,32 +3,26 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/openclaw/commands/confirm/route'
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const commandFns = vi.hoisted(() => ({
   confirmOpenclawCommand: vi.fn(),
-  confirmOpenclawCommandByOwner: vi.fn(),
-}))
+  confirmOpenclawCommandByOwner: vi.fn() }))
 
 const correlationFns = vi.hoisted(() => ({
   resolveOpenclawParentRequestId: vi.fn(),
-  resolveOpenclawParentRequestIdFromHeaders: vi.fn(),
-}))
+  resolveOpenclawParentRequestIdFromHeaders: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/commands/command-service', () => ({
   confirmOpenclawCommand: commandFns.confirmOpenclawCommand,
-  confirmOpenclawCommandByOwner: commandFns.confirmOpenclawCommandByOwner,
-}))
+  confirmOpenclawCommandByOwner: commandFns.confirmOpenclawCommandByOwner }))
 
 vi.mock('@/lib/openclaw/request-correlation', () => ({
   resolveOpenclawParentRequestId: correlationFns.resolveOpenclawParentRequestId,
-  resolveOpenclawParentRequestIdFromHeaders: correlationFns.resolveOpenclawParentRequestIdFromHeaders,
-}))
+  resolveOpenclawParentRequestIdFromHeaders: correlationFns.resolveOpenclawParentRequestIdFromHeaders }))
 
 describe('POST /api/openclaw/commands/confirm', () => {
   const previousGatewayBindingToggle = process.env.OPENCLAW_CONFIRM_ALLOW_GATEWAY_BINDING
@@ -39,21 +33,17 @@ describe('POST /api/openclaw/commands/confirm', () => {
 
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 99,
-      authType: 'gateway-binding',
-    })
+      authType: 'gateway-binding' })
     correlationFns.resolveOpenclawParentRequestIdFromHeaders.mockReturnValue({
       parentRequestId: null,
-      source: 'none',
-    })
+      source: 'none' })
     correlationFns.resolveOpenclawParentRequestId.mockResolvedValue(null)
     commandFns.confirmOpenclawCommand.mockResolvedValue({
       status: 'confirmed',
-      runId: 'run-confirm-1',
-    })
+      runId: 'run-confirm-1' })
     commandFns.confirmOpenclawCommandByOwner.mockResolvedValue({
       status: 'confirmed',
-      runId: 'run-confirm-1',
-    })
+      runId: 'run-confirm-1' })
   })
 
   afterEach(() => {
@@ -69,8 +59,7 @@ describe('POST /api/openclaw/commands/confirm', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: 'Bearer gateway-token',
-      },
+        authorization: 'Bearer gateway-token' },
       body: JSON.stringify({
         runId: 'run-confirm-1',
         confirmToken: 'confirm_token_12345',
@@ -78,9 +67,7 @@ describe('POST /api/openclaw/commands/confirm', () => {
         channel: 'feishu',
         sender_open_id: 'ou_confirm_1',
         account_id: 'acct_confirm_1',
-        tenant_key: 'tenant_confirm_1',
-      }),
-    })
+        tenant_key: 'tenant_confirm_1' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -92,8 +79,7 @@ describe('POST /api/openclaw/commands/confirm', () => {
       channel: 'feishu',
       senderId: 'ou_confirm_1',
       accountId: 'acct_confirm_1',
-      tenantKey: 'tenant_confirm_1',
-    })
+      tenantKey: 'tenant_confirm_1' })
     expect(commandFns.confirmOpenclawCommand).not.toHaveBeenCalled()
   })
 
@@ -104,8 +90,7 @@ describe('POST /api/openclaw/commands/confirm', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: 'Bearer gateway-token',
-      },
+        authorization: 'Bearer gateway-token' },
       body: JSON.stringify({
         runId: 'run-confirm-1',
         confirmToken: 'confirm_token_12345',
@@ -113,9 +98,7 @@ describe('POST /api/openclaw/commands/confirm', () => {
         channel: 'feishu',
         sender_open_id: 'ou_confirm_1',
         account_id: 'acct_confirm_1',
-        tenant_key: 'tenant_confirm_1',
-      }),
-    })
+        tenant_key: 'tenant_confirm_1' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -126,32 +109,26 @@ describe('POST /api/openclaw/commands/confirm', () => {
       runId: 'run-confirm-1',
       userId: 99,
       decision: 'confirm',
-      channel: 'feishu',
-    }))
+      channel: 'feishu' }))
   })
 
   it('allows session confirmation without confirm token via owner flow', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValueOnce({
       userId: 99,
-      authType: 'session',
-    })
+      authType: 'session' })
     commandFns.confirmOpenclawCommandByOwner.mockResolvedValueOnce({
       status: 'queued',
       runId: 'run-confirm-2',
       taskId: 'task-2',
-      riskLevel: 'high',
-    })
+      riskLevel: 'high' })
 
     const req = new NextRequest('http://localhost/api/openclaw/commands/confirm', {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
-      },
+        'content-type': 'application/json' },
       body: JSON.stringify({
         runId: 'run-confirm-2',
-        decision: 'confirm',
-      }),
-    })
+        decision: 'confirm' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -161,27 +138,22 @@ describe('POST /api/openclaw/commands/confirm', () => {
     expect(commandFns.confirmOpenclawCommandByOwner).toHaveBeenCalledWith(expect.objectContaining({
       runId: 'run-confirm-2',
       userId: 99,
-      decision: 'confirm',
-    }))
+      decision: 'confirm' }))
     expect(commandFns.confirmOpenclawCommand).not.toHaveBeenCalled()
   })
 
   it('rejects tokenless confirmation when auth type is not session', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValueOnce({
       userId: 99,
-      authType: 'user-token',
-    })
+      authType: 'user-token' })
 
     const req = new NextRequest('http://localhost/api/openclaw/commands/confirm', {
       method: 'POST',
       headers: {
-        'content-type': 'application/json',
-      },
+        'content-type': 'application/json' },
       body: JSON.stringify({
         runId: 'run-confirm-3',
-        decision: 'confirm',
-      }),
-    })
+        decision: 'confirm' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -199,13 +171,10 @@ describe('POST /api/openclaw/commands/confirm', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: 'Bearer gateway-token',
-      },
+        authorization: 'Bearer gateway-token' },
       body: JSON.stringify({
         runId: 'run-confirm-1',
-        confirmToken: 'confirm_token_12345',
-      }),
-    })
+        confirmToken: 'confirm_token_12345' }) })
 
     const res = await POST(req)
     const payload = await res.json()

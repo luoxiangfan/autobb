@@ -23,8 +23,7 @@ const PENDING_REASON_MAP: Record<
   AffiliateAttributionPendingFailureReasonCode
 > = {
   product_mapping_miss: 'pending_product_mapping_miss',
-  offer_mapping_miss: 'pending_offer_mapping_miss',
-}
+  offer_mapping_miss: 'pending_offer_mapping_miss' }
 
 export const ATTRIBUTION_ALWAYS_EXCLUDED_REASON_CODES = [
   'campaign_mapping_miss',
@@ -115,8 +114,7 @@ export function buildAffiliateUnattributedFailureFilter(params?: {
         values: [],
         currentDate,
         pendingCutoffDate,
-        pendingGraceDays,
-      }
+        pendingGraceDays }
     }
 
     const pendingReasonPlaceholders = ATTRIBUTION_PENDING_REASON_CODES.map(() => '?').join(', ')
@@ -131,8 +129,7 @@ export function buildAffiliateUnattributedFailureFilter(params?: {
       ],
       currentDate,
       pendingCutoffDate,
-      pendingGraceDays,
-    }
+      pendingGraceDays }
   }
 
   // Original behavior: exclude campaign_mapping_miss
@@ -146,8 +143,7 @@ export function buildAffiliateUnattributedFailureFilter(params?: {
       ],
       currentDate,
       pendingCutoffDate,
-      pendingGraceDays,
-    }
+      pendingGraceDays }
   }
 
   const pendingReasonPlaceholders = ATTRIBUTION_PENDING_REASON_CODES.map(() => '?').join(', ')
@@ -167,6 +163,5 @@ export function buildAffiliateUnattributedFailureFilter(params?: {
     ],
     currentDate,
     pendingCutoffDate,
-    pendingGraceDays,
-  }
+    pendingGraceDays }
 }

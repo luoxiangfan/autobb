@@ -43,8 +43,7 @@ function lineItemsToFactRows(lineItems: AffiliateCommissionLineItem[]): LineFact
     brand_name: item.brandName,
     commission: item.commission,
     advert_id: item.advertId ?? null,
-    asin: item.asin ?? null,
-  }))
+    asin: item.asin ?? null }))
 }
 
 export function factRowsToLineItems(
@@ -61,8 +60,7 @@ export function factRowsToLineItems(
     brandName: row.brand_name,
     commission: row.commission,
     advertId: row.advert_id,
-    asin: row.asin,
-  }))
+    asin: row.asin }))
 }
 
 export async function replaceAffiliateCommissionLineFacts(params: {
@@ -98,7 +96,7 @@ export async function replaceAffiliateCommissionLineFacts(params: {
           INSERT INTO openclaw_affiliate_commission_line_facts
             (user_id, report_date, platform, brand_key, brand_name, commission, advert_id, asin, rebuilt_at)
           VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc(db.type)})
+            (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc()})
         `,
         [
           row.user_id,
@@ -180,8 +178,7 @@ export async function affiliateCommissionFactsCoverRawRange(params: {
     for (const row of rows) {
       const reportDate = normalizeReportDate(row.report_date)
       rawDatesByKey.set(`${row.user_id}:${reportDate}`, {
-        maxUpdatedAt: row.max_updated_at ? String(row.max_updated_at) : null,
-      })
+        maxUpdatedAt: row.max_updated_at ? String(row.max_updated_at) : null })
     }
   }
 
@@ -256,8 +253,7 @@ export async function loadAffiliateCommissionLineFacts(params: {
     )
     rows.push(...chunkRows.map((row) => ({
       ...row,
-      report_date: normalizeReportDate(row.report_date),
-    })))
+      report_date: normalizeReportDate(row.report_date) })))
   }
 
   return rows
@@ -372,8 +368,7 @@ export async function loadAffiliateCommissionBrandAggregatesFromFacts(params: {
     )
     rows.push(...chunkRows.map((row) => ({
       ...row,
-      total_commission: Number(row.total_commission) || 0,
-    })))
+      total_commission: Number(row.total_commission) || 0 })))
   }
 
   return rows
@@ -415,6 +410,5 @@ export async function loadAffiliateCommissionDateAggregatesFromFacts(params: {
 
   return Array.from(summaryMap.entries()).map(([report_date, total_commission]) => ({
     report_date,
-    total_commission,
-  }))
+    total_commission }))
 }

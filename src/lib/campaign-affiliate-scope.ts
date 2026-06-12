@@ -1,31 +1,25 @@
 import { offerOccupyingCampaignFilterSql } from '@/lib/campaign-offer-constraint'
 
 /** 与 affiliate-platforms 计数、performance/trends 联盟筛选共用的 Offer 未删除条件 */
-function offerNotDeletedSql(dbType: string, offerAlias = 'o'): string {
-  return dbType === 'postgres' ? `${offerAlias}.is_deleted = FALSE` : `${offerAlias}.is_deleted = 0`
+function offerNotDeletedSql(offerAlias = 'o'): string {
+  return `${offerAlias}.is_deleted = FALSE`
 }
 
 /**
  * Campaign 列表与联盟下拉计数对齐：占用槽位 + Offer 未删。
  * 用于 SQL WHERE（要求已 JOIN offers）。
  */
-export function campaignAffiliateAlignedFilterSql(
-  dbType: string,
-  campaignAlias = 'c',
-  offerAlias = 'o'
-): string {
-  return [
-    offerNotDeletedSql(dbType, offerAlias),
-    offerOccupyingCampaignFilterSql(dbType, campaignAlias),
-  ].join(' AND ')
+export function campaignAffiliateAlignedFilterSql(campaignAlias = 'c', offerAlias = 'o'): string {
+  return [offerNotDeletedSql(offerAlias), offerOccupyingCampaignFilterSql(campaignAlias)].join(
+    ' AND '
+  )
 }
 
 export function buildCampaignAffiliateAlignedWhereClause(
-  dbType: string,
   campaignAlias = 'c',
   offerAlias = 'o'
 ): string {
-  return `AND ${campaignAffiliateAlignedFilterSql(dbType, campaignAlias, offerAlias)}`
+  return `AND ${campaignAffiliateAlignedFilterSql(campaignAlias, offerAlias)}`
 }
 
 type CampaignAffiliateScopeRow = {

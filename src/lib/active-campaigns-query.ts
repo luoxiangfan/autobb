@@ -100,7 +100,7 @@ export async function queryActiveCampaigns(
   const db = await getDatabase()
 
   // 1. 获取Google Ads账号信息（包含parent_mcc_id用于MCC子账号权限）
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
   const adsAccount = (await db.queryOne(
     `SELECT id, customer_id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE id = ? AND user_id = ? AND ${isActiveCondition}`,
@@ -207,7 +207,7 @@ export async function pauseCampaigns(
   const db = await getDatabase()
 
   // 获取账号信息（包含parent_mcc_id用于MCC子账号权限）
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
   const adsAccount = (await db.queryOne(
     `SELECT customer_id, parent_mcc_id, service_account_id FROM google_ads_accounts
      WHERE id = ? AND user_id = ? AND ${isActiveCondition}`,

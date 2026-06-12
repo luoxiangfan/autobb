@@ -23,7 +23,7 @@ export interface SystemSetting {
   value: string | null
   encrypted_value: string | null
   data_type: string
-  // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1 (number)
+  // 注意：PostgreSQL 返回 boolean
   is_sensitive: number | boolean
   is_required: number | boolean
   validation_status: string | null
@@ -96,7 +96,7 @@ export async function getAllSettings(userId?: number): Promise<SettingValue[]> {
   }
 
   // 转换为返回格式
-  // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
+  // 注意：PostgreSQL 返回 boolean
   return Array.from(settingsMap.values()).map((setting) => {
     const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
@@ -144,7 +144,7 @@ export async function getSettingsByCategory(
   }
 
   // 转换为返回格式
-  // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
+  // 注意：PostgreSQL 返回 boolean
   return Array.from(settingsMap.values()).map((setting) => {
     const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
@@ -222,7 +222,7 @@ export async function getSetting(
   // 自动迁移：已下线模型统一映射到 Gemini 3 Flash Preview
   const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
 
-  // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
+  // 注意：PostgreSQL 返回 boolean
   const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
 
   let value: string | null = rawValue
@@ -287,7 +287,7 @@ export async function getUserOnlySetting(
   // 自动迁移：已下线模型统一映射到 Gemini 3 Flash Preview
   const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
 
-  // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
+  // 注意：PostgreSQL 返回 boolean
   const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
 
   let value: string | null = rawValue
@@ -330,7 +330,7 @@ export async function updateSetting(
   const normalizedValue = normalizeInputValue(category, key, value)
 
   const db = await getDatabase()
-  const nowSql = sqlNowFunc(db.type)
+  const nowSql = sqlNowFunc()
 
   // 获取配置元数据（从全局模板获取字段定义）
   const metadata = (await db.queryOne(
@@ -347,7 +347,7 @@ export async function updateSetting(
   }
 
   // 确定是否需要加密
-  // 注意：PostgreSQL 返回 boolean 类型，SQLite 返回 0/1，需要兼容处理
+  // 注意：PostgreSQL 返回 boolean
   const isSensitive = metadata.is_sensitive === true || metadata.is_sensitive === 1
 
   // 🔥 阻止保存空的敏感字段（防止加密空字符串导致验证失败）

@@ -59,7 +59,6 @@ vi.mock('../google-ads-service-account', () => ({
 
 vi.mock('../db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'postgres',
     exec: dbFns.exec,
   })),
 }))

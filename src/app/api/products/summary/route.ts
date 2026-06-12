@@ -200,10 +200,7 @@ export async function GET(request: NextRequest) {
     const effectiveRecommendationScoreMax =
       recommendationScoreMax === null ? null : recommendationScoreMax
     const db = await getDatabase()
-    const scoreStillValidSql =
-      db.type === 'postgres'
-        ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
-        : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+    const scoreStillValidSql = `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
 
     const hasScopedFilters =
       search.length > 0 ||
@@ -230,7 +227,7 @@ export async function GET(request: NextRequest) {
         return Promise.resolve(0)
       }
 
-      if (db.type === 'postgres' && !hasScopedFilters) {
+      if (!hasScopedFilters) {
         return db
           .queryOne<{ effective_count: number }>(
             `

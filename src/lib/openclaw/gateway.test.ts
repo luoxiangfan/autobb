@@ -2,22 +2,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { getSettingMock, getOpenclawGatewayTokenMock } = vi.hoisted(() => ({
   getSettingMock: vi.fn(),
-  getOpenclawGatewayTokenMock: vi.fn(),
-}))
+  getOpenclawGatewayTokenMock: vi.fn() }))
 
 vi.mock('@/lib/settings', () => ({
-  getSetting: getSettingMock,
-}))
+  getSetting: getSettingMock }))
 
 vi.mock('@/lib/openclaw/auth', () => ({
-  getOpenclawGatewayToken: getOpenclawGatewayTokenMock,
-}))
+  getOpenclawGatewayToken: getOpenclawGatewayTokenMock }))
 
 import {
   invokeOpenclawTool,
   resolveOpenclawGatewayBaseUrl,
-  resetOpenclawGatewayInvokeCachesForTests,
-} from './gateway'
+  resetOpenclawGatewayInvokeCachesForTests } from './gateway'
 
 describe('openclaw gateway base url', () => {
   beforeEach(() => {
@@ -92,15 +88,13 @@ describe('openclaw gateway base url', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true, action }),
-      text: async () => '',
-    })
+      text: async () => '' })
     vi.stubGlobal('fetch', fetchMock)
 
     const payload = {
       tool: 'message',
       action,
-      args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-    }
+      args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } }
 
     const result = await invokeOpenclawTool(payload)
 
@@ -111,10 +105,8 @@ describe('openclaw gateway base url', () => {
       method: 'POST',
       headers: {
         Authorization: 'Bearer gateway-token',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
+        'Content-Type': 'application/json' },
+      body: JSON.stringify(payload) })
     expect(fetchMock.mock.calls[0]?.[1]).toHaveProperty('signal')
   })
 
@@ -125,8 +117,7 @@ describe('openclaw gateway base url', () => {
     await expect(
       invokeOpenclawTool({
         tool: 'sessions_spawn',
-        action: 'run',
-      })
+        action: 'run' })
     ).rejects.toThrow('OpenClaw tool not allowed by AutoAds policy')
 
     expect(fetchMock).not.toHaveBeenCalled()
@@ -140,8 +131,7 @@ describe('openclaw gateway base url', () => {
     await expect(
       invokeOpenclawTool({
         tool: 'message',
-        action: 'delete',
-      })
+        action: 'delete' })
     ).rejects.toThrow('OpenClaw message action not allowed by AutoAds policy')
 
     expect(fetchMock).not.toHaveBeenCalled()
@@ -153,16 +143,14 @@ describe('openclaw gateway base url', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
-      text: async () => 'gateway failed',
-    })
+      text: async () => 'gateway failed' })
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
       invokeOpenclawTool({
         tool: 'message',
         action: 'send',
-        args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-      })
+        args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } })
     ).rejects.toThrow('OpenClaw gateway error (500): gateway failed')
   })
 
@@ -173,25 +161,21 @@ describe('openclaw gateway base url', () => {
       .mockResolvedValueOnce({
         ok: false,
         status: 502,
-        text: async () => 'bad gateway',
-      })
+        text: async () => 'bad gateway' })
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({ ok: true }),
-        text: async () => '',
-      })
+        text: async () => '' })
     vi.stubGlobal('fetch', fetchMock)
 
     const result = await invokeOpenclawTool(
       {
         tool: 'message',
         action: 'send',
-        args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-      },
+        args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } },
       {
         maxRetries: 1,
-        retryBaseDelayMs: 1,
-      }
+        retryBaseDelayMs: 1 }
     )
 
     expect(result).toEqual({ ok: true })
@@ -203,8 +187,7 @@ describe('openclaw gateway base url', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
-      text: async () => 'bad request',
-    })
+      text: async () => 'bad request' })
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(
@@ -212,12 +195,10 @@ describe('openclaw gateway base url', () => {
         {
           tool: 'message',
           action: 'send',
-          args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-        },
+          args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } },
         {
           maxRetries: 3,
-          retryBaseDelayMs: 1,
-        }
+          retryBaseDelayMs: 1 }
       )
     ).rejects.toThrow('OpenClaw gateway error (400): bad request')
 
@@ -229,19 +210,16 @@ describe('openclaw gateway base url', () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true }),
-      text: async () => '',
-    })
+      text: async () => '' })
     vi.stubGlobal('fetch', fetchMock)
 
     await invokeOpenclawTool(
       {
         tool: 'message',
         action: 'send',
-        args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-      },
+        args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } },
       {
-        idempotencyKey: 'daily-report:1:2026-02-14',
-      }
+        idempotencyKey: 'daily-report:1:2026-02-14' }
     )
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -249,9 +227,7 @@ describe('openclaw gateway base url', () => {
       headers: {
         Authorization: 'Bearer gateway-token',
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': 'daily-report:1:2026-02-14',
-      },
-    })
+        'X-Idempotency-Key': 'daily-report:1:2026-02-14' } })
   })
 
   it('coalesces in-flight duplicate invocation by idempotency key', async () => {
@@ -261,16 +237,14 @@ describe('openclaw gateway base url', () => {
       return {
         ok: true,
         json: async () => ({ ok: true, at: Date.now() }),
-        text: async () => '',
-      }
+        text: async () => '' }
     })
     vi.stubGlobal('fetch', fetchMock)
 
     const payload = {
       tool: 'message' as const,
       action: 'send' as const,
-      args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-    }
+      args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } }
     const options = { idempotencyKey: 'coalesce:1', dedupeWindowMs: 0 }
 
     const [first, second] = await Promise.all([
@@ -289,15 +263,13 @@ describe('openclaw gateway base url', () => {
       .mockResolvedValue({
         ok: true,
         json: async () => ({ ok: true, value: 1 }),
-        text: async () => '',
-      })
+        text: async () => '' })
     vi.stubGlobal('fetch', fetchMock)
 
     const payload = {
       tool: 'message' as const,
       action: 'send' as const,
-      args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-    }
+      args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } }
     const options = { idempotencyKey: 'window:1', dedupeWindowMs: 60_000 }
 
     const first = await invokeOpenclawTool(payload, options)
@@ -319,13 +291,11 @@ describe('openclaw gateway base url', () => {
         {
           tool: 'message',
           action: 'send',
-          args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' },
-        },
+          args: { channel: 'feishu', target: 'ou_xxx', message: 'hello' } },
         {
           timeoutMs: 10,
           maxRetries: 1,
-          retryBaseDelayMs: 1,
-        }
+          retryBaseDelayMs: 1 }
       )
     ).rejects.toThrow('OpenClaw gateway timeout after 10ms')
 

@@ -73,7 +73,7 @@ describe('openclaw runs service', () => {
         },
       ])
 
-    getDatabaseMock.mockResolvedValue({ type: 'sqlite', queryOne, query, exec })
+    getDatabaseMock.mockResolvedValue({ queryOne, query, exec })
 
     const result = await listOpenclawCommandRuns({
       userId: 99,
@@ -105,7 +105,7 @@ describe('openclaw runs service', () => {
     const exec = vi.fn().mockResolvedValue({ changes: 0 })
     const query = vi.fn().mockResolvedValue([])
 
-    getDatabaseMock.mockResolvedValue({ type: 'sqlite', queryOne, query, exec })
+    getDatabaseMock.mockResolvedValue({ queryOne, query, exec })
 
     const result = await listOpenclawCommandRuns({
       userId: 77,

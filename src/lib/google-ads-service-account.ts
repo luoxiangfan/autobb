@@ -17,7 +17,7 @@ export async function getOwnServiceAccountConfigForBackup(userId: number) {
 
 async function getServiceAccountConfigRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
 
   let query = `
     SELECT id, name, mcc_customer_id, developer_token, service_account_email, private_key, project_id,
@@ -74,7 +74,7 @@ export async function getServiceAccountConfig(
 /** metadata-only：不读取/解密 private_key、developer_token */
 async function getServiceAccountConfigMetadataRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
 
   let query = `
     SELECT id, name, mcc_customer_id, service_account_email, project_id,
@@ -147,7 +147,7 @@ export async function getServiceAccountConfigMetadata(
 export async function listServiceAccounts(userId: number) {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const isActiveCondition = boolCondition('is_active', true)
   const accounts = await db.query(
     `
     SELECT id, name, mcc_customer_id, service_account_email, is_active, created_at
@@ -177,7 +177,7 @@ export async function replaceGoogleAdsServiceAccountForUser(
 ): Promise<string> {
   const db = await getDatabase()
   const { nowFunc } = await import('./db-helpers')
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
   const id = crypto.randomUUID()
 
   await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])

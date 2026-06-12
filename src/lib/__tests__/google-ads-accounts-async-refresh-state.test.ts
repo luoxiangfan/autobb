@@ -14,7 +14,6 @@ const redisFns = vi.hoisted(() => ({
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
   exec: vi.fn(),
-  type: 'postgres' as 'postgres' | 'sqlite',
 }))
 
 vi.mock('@/lib/redis-client', () => ({
@@ -23,7 +22,6 @@ vi.mock('@/lib/redis-client', () => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: dbFns.type,
     queryOne: dbFns.queryOne,
     exec: dbFns.exec,
   })),
@@ -50,7 +48,6 @@ describe('google-ads-accounts-async-refresh-state', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests()
-    dbFns.type = 'postgres'
     redisFns.client = {
       get: redisFns.get,
       set: redisFns.set,
@@ -130,17 +127,15 @@ describe('google-ads-accounts-async-refresh-state', () => {
     )
   })
 
-  it('writes SQLite-compatible timestamps for lock acquire', async () => {
+  it('writes ISO timestamps for lock acquire', async () => {
     vi.mocked(getRedisClient).mockReturnValue(null)
-    dbFns.type = 'sqlite'
 
     const acquired = await tryStartGoogleAdsAccountAsyncRefresh('7:oauth:', syncKeyParams)
 
     expect(acquired).toEqual({ started: true, startedAtMs: expect.any(Number) })
     const insertCall = dbFns.exec.mock.calls.find(([sql]) => String(sql).includes('INSERT'))
     const insertParams = insertCall?.[1] as unknown[] | undefined
-    expect(insertParams?.[4]).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
-    expect(String(insertParams?.[4])).not.toContain('T')
+    expect(String(insertParams?.[4])).toContain('T')
   })
 
   it('does not start when another instance holds a fresh Redis lock', async () => {
@@ -192,7 +187,6 @@ describe('google-ads-accounts-async-refresh-state', () => {
   })
 
   it('deletes old rows during cleanup', async () => {
-    dbFns.type = 'sqlite'
     await cleanupStaleGoogleAdsAccountAsyncRefreshRows()
 
     expect(dbFns.exec).toHaveBeenCalledWith(

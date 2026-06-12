@@ -1,7 +1,7 @@
 /**
  * 数据库 Schema 定义 - 单一权威来源
  *
- * 所有表结构在此定义，自动生成 SQLite 和 PostgreSQL 的初始化脚本
+ * 所有表结构在此定义，可用于生成 PostgreSQL 初始化脚本
  * 版本: 2.0.0
  * 最后更新: 2026-01-30
  * 表数量: 41 (added brand_core_keywords, brand_core_keyword_daily)
@@ -24,20 +24,14 @@ export interface ColumnDef {
   generated?: { expression: string; stored: boolean } // PostgreSQL only
 }
 
-/** 未软删除行的 partial index 谓词（SQLite 用 0/1，PostgreSQL 用 FALSE） */
-const INDEX_WHERE_NOT_DELETED = {
-  sqlite: 'is_deleted = 0',
-  postgres: 'is_deleted = FALSE',
-} as const
+const INDEX_WHERE_NOT_DELETED = 'is_deleted = FALSE'
 
 export interface IndexDef {
   name: string
   columns: string[]
   unique?: boolean
-  /** Partial index 谓词（SQLite）；与 wherePostgres 成对使用 */
-  whereSqlite?: string
-  /** Partial index 谓词（PostgreSQL）；与 whereSqlite 成对使用 */
-  wherePostgres?: string
+  /** Partial index 谓词（PostgreSQL） */
+  where?: string
 }
 
 export interface TableDef {
@@ -330,8 +324,7 @@ export const TABLES: TableDef[] = [
         name: 'idx_campaigns_offer_id_active_unique',
         columns: ['offer_id'],
         unique: true,
-        whereSqlite: INDEX_WHERE_NOT_DELETED.sqlite,
-        wherePostgres: INDEX_WHERE_NOT_DELETED.postgres,
+        where: INDEX_WHERE_NOT_DELETED,
       },
       { name: 'idx_campaigns_is_test_variant', columns: ['is_test_variant'] },
       { name: 'idx_campaigns_ab_test_id', columns: ['ab_test_id'] },

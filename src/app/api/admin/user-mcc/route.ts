@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       LEFT JOIN (
         SELECT customer_id, MAX(account_name) as account_name
         FROM google_ads_accounts
-        WHERE is_manager_account = ${db.type === 'postgres' ? 'TRUE' : '1'}
+        WHERE is_manager_account = ${'TRUE'}
         GROUP BY customer_id
       ) gaa ON uma.mcc_customer_id = gaa.customer_id
       WHERE uma.user_id = ?
@@ -110,8 +110,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证 MCC 账号是否存在（必须是 is_manager_account = TRUE）
-    const isManagerCondition =
-      db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
+    const isManagerCondition = 'is_manager_account = TRUE'
     const mccAccounts = (await db.query(
       `
       SELECT customer_id, MAX(account_name) AS account_name
@@ -164,37 +163,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 批量插入或忽略（SQLite）/ ON CONFLICT DO NOTHING（PostgreSQL）
+    // 批量插入或忽略（ON CONFLICT DO NOTHING）
     const now = new Date().toISOString()
     const insertedCount = await (async () => {
-      if (db.type === 'postgres') {
-        // PostgreSQL: 使用 ON CONFLICT
-        let count = 0
-        for (const mccId of mccCustomerIds) {
-          const result = await db.exec(
-            `
+      let count = 0
+      for (const mccId of mccCustomerIds) {
+        const result = await db.exec(
+          `
             INSERT INTO user_mcc_assignments (user_id, mcc_customer_id, assigned_at, assigned_by)
             VALUES (?, ?, ?, ?)
             ON CONFLICT (user_id, mcc_customer_id) DO NOTHING
           `,
-            [userId, mccId, now, adminUserId]
-          )
-          count += result.changes || 0
-        }
-        return count
-      } else {
-        // SQLite: 使用 INSERT OR IGNORE
-        const values = mccCustomerIds.map((_id) => `(?, ?, ?, ?)`).join(',')
-        const params = mccCustomerIds.flatMap((id) => [userId, id, now, adminUserId])
-        const result = await db.exec(
-          `
-          INSERT OR IGNORE INTO user_mcc_assignments (user_id, mcc_customer_id, assigned_at, assigned_by)
-          VALUES ${values}
-        `,
-          params
+          [userId, mccId, now, adminUserId]
         )
-        return result.changes || 0
+        count += result.changes || 0
       }
+      return count
     })()
 
     return NextResponse.json({

@@ -1,4 +1,5 @@
 import { getDatabase } from './db'
+import { isUniqueConstraintViolation } from './db-helpers'
 
 export const CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE =
   '该 Offer 已有关联的广告系列，一个 Offer 只能有一个广告系列'
@@ -16,9 +17,9 @@ function campaignColumn(tableAlias: string | undefined, column: string): string 
   return tableAlias ? `${tableAlias}.${column}` : column
 }
 
-function activeCampaignNotDeletedSql(dbType: string, tableAlias?: string): string {
+function activeCampaignNotDeletedSql(tableAlias?: string): string {
   const col = campaignColumn(tableAlias, 'is_deleted')
-  return dbType === 'postgres' ? `${col} = FALSE` : `${col} = 0`
+  return `${col} = FALSE`
 }
 
 function getStalePendingMinutes(): number {
@@ -63,11 +64,10 @@ function stalePendingExcludeSql(
  * 排除：已软删、发布失败、用户下线（REMOVED）、超时的 pending。
  */
 export function offerOccupyingCampaignFilterSql(
-  dbType: string,
   tableAlias?: string,
   staleThresholdIso: string | null = getStaleUpdatedAtThresholdIso()
 ): string {
-  const isDeletedCheck = activeCampaignNotDeletedSql(dbType, tableAlias)
+  const isDeletedCheck = activeCampaignNotDeletedSql(tableAlias)
   const creationStatus = campaignColumn(tableAlias, 'creation_status')
   const status = campaignColumn(tableAlias, 'status')
 
@@ -84,10 +84,10 @@ export function offerOccupyingCampaignFilterSql(
 /**
  * 参数化 WHERE：offer_id = ? AND user_id = ? AND [占用过滤]
  */
-export function offerOccupyingCampaignWhereClause(dbType: string): string {
+export function offerOccupyingCampaignWhereClause(): string {
   // No table alias: used in `FROM campaigns` without `AS c` (Postgres rejects `c.*` here).
   return `
-    offer_id = ? AND user_id = ? AND ${offerOccupyingCampaignFilterSql(dbType, undefined)}
+    offer_id = ? AND user_id = ? AND ${offerOccupyingCampaignFilterSql(undefined)}
   `
     .trim()
     .replace(/\s+/g, ' ')
@@ -97,7 +97,6 @@ export function offerOccupyingCampaignWhereClause(dbType: string): string {
  * 列表查询用：当前仍占用槽位的 campaign id 子查询（与发布 API 一致）。
  */
 export function offerOccupyingCampaignIdSubquerySql(
-  dbType: string,
   offerIdExpr: string,
   userIdExpr: string
 ): string {
@@ -106,7 +105,7 @@ export function offerOccupyingCampaignIdSubquerySql(
     FROM campaigns c
     WHERE c.offer_id = ${offerIdExpr}
       AND c.user_id = ${userIdExpr}
-      AND ${offerOccupyingCampaignFilterSql(dbType, 'c')}
+      AND ${offerOccupyingCampaignFilterSql('c')}
     ORDER BY c.updated_at DESC, c.id DESC
     LIMIT 1
   )`
@@ -128,9 +127,9 @@ export async function abandonStalePendingCampaignsForOffer(
   }
 
   const db = await getDatabase()
-  const isDeletedCheck = activeCampaignNotDeletedSql(db.type)
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const isDeletedSet = db.type === 'postgres' ? 'TRUE' : '1'
+  const isDeletedCheck = activeCampaignNotDeletedSql()
+  const nowExpr = 'NOW()'
+  const isDeletedSet = 'TRUE'
 
   const result = await db.exec(
     `
@@ -180,9 +179,9 @@ export async function abandonStalePendingCampaignsForOffers(
   }
 
   const db = await getDatabase()
-  const isDeletedCheck = activeCampaignNotDeletedSql(db.type)
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const isDeletedSet = db.type === 'postgres' ? 'TRUE' : '1'
+  const isDeletedCheck = activeCampaignNotDeletedSql()
+  const nowExpr = 'NOW()'
+  const isDeletedSet = 'TRUE'
   const placeholders = uniqueOfferIds.map(() => '?').join(', ')
 
   const result = await db.exec(
@@ -232,7 +231,7 @@ export async function getActiveCampaignConflictsForOffers(
 
   const db = await getDatabase()
   const placeholders = uniqueOfferIds.map(() => '?').join(', ')
-  const occupyingFilter = offerOccupyingCampaignFilterSql(db.type, undefined)
+  const occupyingFilter = offerOccupyingCampaignFilterSql(undefined)
 
   const rows = (await db.query(
     `
@@ -268,7 +267,7 @@ export async function getActiveCampaignConflictForOffer(
   userId: number
 ): Promise<ActiveCampaignConflict | null> {
   const db = await getDatabase()
-  const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
+  const occupyingWhere = offerOccupyingCampaignWhereClause()
 
   const row = (await db.queryOne(
     `
@@ -299,12 +298,10 @@ export async function assertNoActiveCampaignForOffer(
 }
 
 export function isCampaignOfferUniqueViolation(error: unknown): boolean {
-  const message = String((error as any)?.message || error || '')
-  return (
-    message.includes('idx_campaigns_offer_id_active_unique') ||
-    message.includes('UNIQUE constraint failed: campaigns.offer_id') ||
-    message.includes('duplicate key value violates unique constraint')
-  )
+  return isUniqueConstraintViolation(error, {
+    constraint: 'idx_campaigns_offer_id_active_unique',
+    table: 'campaigns',
+  })
 }
 
 const DEFAULT_ENQUEUE_ROLLBACK_REASON =
@@ -322,9 +319,9 @@ export async function rollbackPendingCampaignAfterEnqueueFailure(params: {
 }): Promise<boolean> {
   const { campaignId, offerId, userId, reason = DEFAULT_ENQUEUE_ROLLBACK_REASON } = params
   const db = await getDatabase()
-  const isDeletedCheck = activeCampaignNotDeletedSql(db.type)
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const isDeletedSet = db.type === 'postgres' ? 'TRUE' : '1'
+  const isDeletedCheck = activeCampaignNotDeletedSql()
+  const nowExpr = 'NOW()'
+  const isDeletedSet = 'TRUE'
 
   const result = await db.exec(
     `

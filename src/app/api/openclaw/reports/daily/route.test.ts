@@ -3,38 +3,31 @@ import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/openclaw/reports/daily/route'
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const reportFns = vi.hoisted(() => ({
   getOrCreateDailyReport: vi.fn(),
-  buildOpenclawDailyReport: vi.fn(),
-}))
+  buildOpenclawDailyReport: vi.fn() }))
 
 const settingsFns = vi.hoisted(() => ({
-  getAffiliateSyncSettingsMap: vi.fn(),
-}))
+  getAffiliateSyncSettingsMap: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/reports', () => ({
   getOrCreateDailyReport: reportFns.getOrCreateDailyReport,
-  buildOpenclawDailyReport: reportFns.buildOpenclawDailyReport,
-}))
+  buildOpenclawDailyReport: reportFns.buildOpenclawDailyReport }))
 
 vi.mock('@/lib/openclaw/settings', () => ({
-  getAffiliateSyncSettingsMap: settingsFns.getAffiliateSyncSettingsMap,
-}))
+  getAffiliateSyncSettingsMap: settingsFns.getAffiliateSyncSettingsMap }))
 
 describe('openclaw reports daily route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     reportFns.getOrCreateDailyReport.mockResolvedValue({
       date: '2026-02-09',
-      generatedAt: '2026-02-09T00:00:00.000Z',
-    })
+      generatedAt: '2026-02-09T00:00:00.000Z' })
     reportFns.buildOpenclawDailyReport.mockResolvedValue({
       date: '2026-02-09',
       generatedAt: '2026-02-09T00:00:00.000Z',
@@ -42,9 +35,7 @@ describe('openclaw reports daily route', () => {
         startDate: '2026-02-01',
         endDate: '2026-02-09',
         days: 9,
-        isRange: true,
-      },
-    })
+        isRange: true } })
     settingsFns.getAffiliateSyncSettingsMap.mockResolvedValue({})
   })
 
@@ -63,8 +54,7 @@ describe('openclaw reports daily route', () => {
   it('forces realtime refresh when query flag is provided', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 7,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     const req = new NextRequest('http://localhost/api/openclaw/reports/daily?date=2026-02-09&force_realtime=1')
     const res = await GET(req)
@@ -79,18 +69,14 @@ describe('openclaw reports daily route', () => {
   it('forces realtime refresh for Feishu gateway binding when mode is realtime', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 11,
-      authType: 'gateway-binding',
-    })
+      authType: 'gateway-binding' })
 
     settingsFns.getAffiliateSyncSettingsMap.mockResolvedValue({
-      openclaw_affiliate_sync_mode: 'realtime',
-    })
+      openclaw_affiliate_sync_mode: 'realtime' })
 
     const req = new NextRequest('http://localhost/api/openclaw/reports/daily?date=2026-02-09', {
       headers: {
-        'x-openclaw-channel': 'feishu',
-      },
-    })
+        'x-openclaw-channel': 'feishu' } })
     const res = await GET(req)
     const payload = await res.json()
 
@@ -104,18 +90,14 @@ describe('openclaw reports daily route', () => {
   it('keeps cache path for Feishu gateway binding when mode is incremental', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 19,
-      authType: 'gateway-binding',
-    })
+      authType: 'gateway-binding' })
 
     settingsFns.getAffiliateSyncSettingsMap.mockResolvedValue({
-      openclaw_affiliate_sync_mode: 'incremental',
-    })
+      openclaw_affiliate_sync_mode: 'incremental' })
 
     const req = new NextRequest('http://localhost/api/openclaw/reports/daily?date=2026-02-09', {
       headers: {
-        'x-openclaw-channel': 'feishu',
-      },
-    })
+        'x-openclaw-channel': 'feishu' } })
     const res = await GET(req)
     const payload = await res.json()
 
@@ -128,8 +110,7 @@ describe('openclaw reports daily route', () => {
   it('builds date-range report when start_date and end_date are provided', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 23,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     const req = new NextRequest(
       'http://localhost/api/openclaw/reports/daily?start_date=2026-02-01&end_date=2026-02-09'
@@ -150,8 +131,7 @@ describe('openclaw reports daily route', () => {
   it('builds single-day range report when only start_date is provided', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 24,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     const req = new NextRequest(
       'http://localhost/api/openclaw/reports/daily?start_date=2026-02-07'
@@ -170,8 +150,7 @@ describe('openclaw reports daily route', () => {
   it('supports camelCase range params', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 25,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     const req = new NextRequest(
       'http://localhost/api/openclaw/reports/daily?startDate=2026-02-03&endDate=2026-02-09'
@@ -190,8 +169,7 @@ describe('openclaw reports daily route', () => {
   it('returns 400 when range start date is later than end date', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 23,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     const req = new NextRequest(
       'http://localhost/api/openclaw/reports/daily?start_date=2026-02-10&end_date=2026-02-09'

@@ -3,8 +3,7 @@ import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/openclaw/feishu/chat-health/route'
 
 const authFns = vi.hoisted(() => ({
-  verifyOpenclawSessionAuth: vi.fn(),
-}))
+  verifyOpenclawSessionAuth: vi.fn() }))
 
 const healthFns = vi.hoisted(() => ({
   listFeishuChatHealthLogs: vi.fn(),
@@ -12,12 +11,10 @@ const healthFns = vi.hoisted(() => ({
   FEISHU_CHAT_HEALTH_RETENTION_DAYS: 7,
   FEISHU_CHAT_HEALTH_EXCERPT_LIMIT: 500,
   FEISHU_CHAT_HEALTH_EXECUTION_MISSING_SECONDS: 180,
-  getFeishuChatHealthExecutionMissingSeconds: vi.fn().mockReturnValue(180),
-}))
+  getFeishuChatHealthExecutionMissingSeconds: vi.fn().mockReturnValue(180) }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth,
-}))
+  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/feishu-chat-health', () => ({
   listFeishuChatHealthLogs: healthFns.listFeishuChatHealthLogs,
@@ -25,16 +22,14 @@ vi.mock('@/lib/openclaw/feishu-chat-health', () => ({
   FEISHU_CHAT_HEALTH_RETENTION_DAYS: healthFns.FEISHU_CHAT_HEALTH_RETENTION_DAYS,
   FEISHU_CHAT_HEALTH_EXCERPT_LIMIT: healthFns.FEISHU_CHAT_HEALTH_EXCERPT_LIMIT,
   FEISHU_CHAT_HEALTH_EXECUTION_MISSING_SECONDS: healthFns.FEISHU_CHAT_HEALTH_EXECUTION_MISSING_SECONDS,
-  getFeishuChatHealthExecutionMissingSeconds: healthFns.getFeishuChatHealthExecutionMissingSeconds,
-}))
+  getFeishuChatHealthExecutionMissingSeconds: healthFns.getFeishuChatHealthExecutionMissingSeconds }))
 
 describe('openclaw feishu chat health route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
-      user: { userId: 7, role: 'admin' },
-    })
+      user: { userId: 7, role: 'admin' } })
     healthFns.getFeishuChatHealthExecutionMissingSeconds.mockReturnValue(180)
     healthFns.listFeishuChatHealthLogs.mockResolvedValue({
       rows: [
@@ -65,8 +60,7 @@ describe('openclaw feishu chat health route', () => {
           executionRunCreatedAt: null,
           executionDetail: '非放行消息，无执行链路',
           ageSeconds: 0,
-          createdAt: '2026-02-10T03:00:00.000Z',
-        },
+          createdAt: '2026-02-10T03:00:00.000Z' },
       ],
       stats: {
         total: 1,
@@ -81,18 +75,14 @@ describe('openclaw feishu chat health route', () => {
           missing: 0,
           failed: 0,
           notApplicable: 1,
-          unknown: 0,
-        },
-      },
-    })
+          unknown: 0 } } })
   })
 
   it('returns 401 when not authenticated', async () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValueOnce({
       authenticated: false,
       status: 401,
-      error: '未授权',
-    })
+      error: '未授权' })
 
     const res = await GET(new NextRequest('http://localhost/api/openclaw/feishu/chat-health'))
     const payload = await res.json()
@@ -105,8 +95,7 @@ describe('openclaw feishu chat health route', () => {
   it('returns 403 for non-admin', async () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValueOnce({
       authenticated: true,
-      user: { userId: 7, role: 'member' },
-    })
+      user: { userId: 7, role: 'member' } })
 
     const res = await GET(new NextRequest('http://localhost/api/openclaw/feishu/chat-health'))
     const payload = await res.json()
@@ -134,7 +123,6 @@ describe('openclaw feishu chat health route', () => {
     expect(healthFns.listFeishuChatHealthLogs).toHaveBeenCalledWith({
       userId: 7,
       withinHours: 168,
-      limit: 500,
-    })
+      limit: 500 })
   })
 })

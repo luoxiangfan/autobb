@@ -61,7 +61,6 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
 
 vi.mock('@/lib/db', () => ({
   getDatabase: () => ({
-    type: 'sqlite' as const,
     exec: dbState.exec,
     query: dbState.query,
     queryOne: dbState.queryOne,

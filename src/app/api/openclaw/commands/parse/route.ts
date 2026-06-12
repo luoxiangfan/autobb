@@ -9,8 +9,7 @@ export const dynamic = 'force-dynamic'
 const parseSchema = z.object({
   method: z.string().min(1, zErr.required),
   path: z.string().min(1, zErr.required),
-  intent: z.string().optional(),
-})
+  intent: z.string().optional() })
 
 export async function POST(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)

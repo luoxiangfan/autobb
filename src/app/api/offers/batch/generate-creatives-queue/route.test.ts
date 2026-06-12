@@ -60,7 +60,6 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
 
     dbFns.getDatabase.mockReturnValue({
-      type: 'sqlite',
       query: dbFns.query,
       exec: dbFns.exec,
     })

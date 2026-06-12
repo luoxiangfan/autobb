@@ -6,7 +6,6 @@ const mockExec = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     query: mockQuery,
     queryOne: mockQueryOne,
     exec: mockExec,
@@ -65,20 +64,20 @@ describe('campaign-offer-constraint', () => {
 
   it('uses ISO threshold for stale pending exclusion in filter SQL', () => {
     const threshold = '2020-01-01T00:00:00.000Z'
-    const sql = offerOccupyingCampaignFilterSql('sqlite', 'c', threshold)
+    const sql = offerOccupyingCampaignFilterSql('c', threshold)
     expect(sql).toContain("updated_at < '2020-01-01T00:00:00.000Z'")
     expect(getStaleUpdatedAtThresholdIso(30)).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   })
 
   it('offerOccupyingCampaignWhereClause uses unqualified columns (no phantom alias)', () => {
-    const sql = offerOccupyingCampaignWhereClause('postgres')
+    const sql = offerOccupyingCampaignWhereClause()
     expect(sql).toContain('offer_id = ?')
     expect(sql).toContain('is_deleted = FALSE')
     expect(sql).not.toMatch(/\bc\./)
   })
 
   it('offerOccupyingCampaignFilterSql still qualifies columns when alias is provided', () => {
-    const sql = offerOccupyingCampaignFilterSql('postgres', 'c', null)
+    const sql = offerOccupyingCampaignFilterSql('c', null)
     expect(sql).toContain('c.is_deleted = FALSE')
     expect(sql).toContain("c.creation_status != 'failed'")
   })

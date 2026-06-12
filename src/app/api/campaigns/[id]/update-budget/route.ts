@@ -204,7 +204,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
         }),
     })
 
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFunc = 'NOW()'
     await db.exec(
       `
         UPDATE campaigns

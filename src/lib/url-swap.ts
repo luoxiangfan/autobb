@@ -207,7 +207,7 @@ export async function createUrlSwapTask(
       true, // enabled
       durationDays,
       swapMode,
-      toDbJsonObjectField(manualAffiliateLinks, db.type, []),
+      toDbJsonObjectField(manualAffiliateLinks, []),
       manualSuffixCursor,
       googleCustomerId,
       googleCampaignId,
@@ -218,7 +218,7 @@ export async function createUrlSwapTask(
       0,
       0,
       0,
-      toDbJsonObjectField([], db.type, []), // 空历史
+      toDbJsonObjectField([], []), // 空历史
       'enabled',
       now,
       nextSwapAt.toISOString(),
@@ -245,10 +245,7 @@ export async function createUrlSwapTask(
 export async function getUrlSwapTaskById(id: string, userId: number): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const task =
     userId === 0
@@ -281,10 +278,7 @@ export async function getUrlSwapTaskByOfferId(
 ): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const task = await db.queryOne<any>(
     `
@@ -378,46 +372,25 @@ async function ensureUrlSwapTaskTargets(
     if (!target.google_ads_account_id || !target.google_customer_id || !target.google_campaign_id) {
       continue
     }
-    if (db.type === 'postgres') {
-      const result = await db.exec(
-        `
+    const result = await db.exec(
+      `
         INSERT INTO url_swap_task_targets (
           task_id, offer_id, google_ads_account_id, google_customer_id, google_campaign_id,
           status, consecutive_failures, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, 'active', 0, ?, ?)
         ON CONFLICT (task_id, google_ads_account_id, google_campaign_id) DO NOTHING
       `,
-        [
-          taskId,
-          offerId,
-          target.google_ads_account_id,
-          target.google_customer_id,
-          target.google_campaign_id,
-          now,
-          now,
-        ]
-      )
-      if ((result as any)?.changes) inserted += Number((result as any).changes) || 0
-    } else {
-      const result = await db.exec(
-        `
-        INSERT OR IGNORE INTO url_swap_task_targets (
-          task_id, offer_id, google_ads_account_id, google_customer_id, google_campaign_id,
-          status, consecutive_failures, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, 'active', 0, ?, ?)
-      `,
-        [
-          taskId,
-          offerId,
-          target.google_ads_account_id,
-          target.google_customer_id,
-          target.google_campaign_id,
-          now,
-          now,
-        ]
-      )
-      if ((result as any)?.changes) inserted += Number((result as any).changes) || 0
-    }
+      [
+        taskId,
+        offerId,
+        target.google_ads_account_id,
+        target.google_customer_id,
+        target.google_campaign_id,
+        now,
+        now,
+      ]
+    )
+    if ((result as any)?.changes) inserted += Number((result as any).changes) || 0
   }
 
   return inserted
@@ -615,10 +588,7 @@ export async function pauseUrlSwapTargetsByUserIds(userIds: number[]): Promise<n
   const db = await getDatabase()
   const now = new Date().toISOString()
   const placeholders = userIds.map(() => '?').join(', ')
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const result = await db.exec(
     `
@@ -746,8 +716,7 @@ export async function getUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition =
-    db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'
+  const isDeletedCondition = 'ust.is_deleted = FALSE'
   let whereClause = 'ust.user_id = ?'
   const params: any[] = [userId]
 
@@ -869,7 +838,7 @@ export async function updateUrlSwapTask(
 
   if (updates.manual_affiliate_links !== undefined) {
     fields.push('manual_affiliate_links = ?')
-    values.push(toDbJsonObjectField(manualAffiliateLinksAfter, db.type, []))
+    values.push(toDbJsonObjectField(manualAffiliateLinksAfter, []))
   }
 
   // 手动模式：当切换模式或更新列表时，重置游标（从头开始轮询）
@@ -1187,11 +1156,8 @@ export async function updateTaskStatus(
 export async function getPendingTasks(): Promise<UrlSwapTask[]> {
   const db = await getDatabase()
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(ust.is_deleted = FALSE OR ust.is_deleted IS NULL)'
-      : '(ust.is_deleted = 0 OR ust.is_deleted IS NULL)'
-  const nowCondition = db.type === 'postgres' ? 'CURRENT_TIMESTAMP' : "datetime('now')"
+  const isDeletedCondition = '(ust.is_deleted = FALSE OR ust.is_deleted IS NULL)'
+  const nowCondition = 'CURRENT_TIMESTAMP'
 
   // 🔒 用户禁用/过期后不再调度其任务（避免继续入队）
   const rows = await db.query<any>(
@@ -1208,7 +1174,7 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
       AND u.is_active = ?
     ORDER BY ust.next_swap_at ASC
   `,
-    [boolParam(true, db.type)]
+    [boolParam(true)]
   )
 
   const now = Date.now()
@@ -1246,7 +1212,7 @@ export async function recordSwapHistory(taskId: string, entry: SwapHistoryEntry)
     SET swap_history = ?, updated_at = ?
     WHERE id = ?
   `,
-    [toDbJsonObjectField(existingHistory, db.type, []), new Date().toISOString(), taskId]
+    [toDbJsonObjectField(existingHistory, []), new Date().toISOString(), taskId]
   )
 }
 
@@ -1365,7 +1331,7 @@ export async function getUrlSwapTaskStats(
 export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobalStats> {
   const db = await getDatabase()
 
-  const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCondition = 'is_deleted = FALSE'
 
   const stats = await db.queryOne<any>(
     `
@@ -1408,7 +1374,7 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
 export async function getUrlSwapGlobalStats(): Promise<UrlSwapGlobalStats> {
   const db = await getDatabase()
 
-  const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCondition = 'is_deleted = FALSE'
 
   const stats = await db.queryOne<any>(`
     SELECT
@@ -1457,8 +1423,7 @@ export async function getAllUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition =
-    db.type === 'postgres' ? 'ust.is_deleted = FALSE' : 'ust.is_deleted = 0'
+  const isDeletedCondition = 'ust.is_deleted = FALSE'
   let whereClause = isDeletedCondition
   const params: any[] = []
 
@@ -1613,10 +1578,7 @@ function parseStringArrayJson(input: unknown): string[] {
  */
 export async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   return db.queryOne(
     `
@@ -1632,7 +1594,7 @@ async function getOfferCampaignTargets(
   userId: number
 ): Promise<UrlSwapTargetInput[]> {
   const db = await getDatabase()
-  const isDeletedCondition = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'
+  const isDeletedCondition = 'c.is_deleted = FALSE'
 
   const params: any[] = [offerId]
   let userCondition = ''
@@ -1683,7 +1645,7 @@ async function findGoogleAdsAccountIdByCustomerId(
   userId: number
 ): Promise<number | null> {
   const db = await getDatabase()
-  const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCondition = 'is_deleted = FALSE'
   const row = await db.queryOne<{ id: number }>(
     `
     SELECT id

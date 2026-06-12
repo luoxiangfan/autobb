@@ -12,7 +12,7 @@ export async function listDeletableRemoteCampaignsForAccount(
   userId: number
 ): Promise<DeletableRemoteCampaignRow[]> {
   const db = await getDatabase()
-  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+  const isDeletedFalse = 'FALSE'
 
   return (await db.query(
     `

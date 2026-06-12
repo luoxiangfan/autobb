@@ -71,7 +71,6 @@ describe('GET /api/dashboard/summary', () => {
     })
     dbFns.query.mockResolvedValue([])
     dbFns.getDatabase.mockResolvedValue({
-      type: 'postgres',
       queryOne: dbFns.queryOne,
       query: dbFns.query,
     })

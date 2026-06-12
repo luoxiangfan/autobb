@@ -12,7 +12,6 @@ const authContextFns = vi.hoisted(() => ({
 
 const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
-  type: 'sqlite' as const,
 }))
 
 vi.mock('@/lib/google-ads-auth-assignment', () => ({

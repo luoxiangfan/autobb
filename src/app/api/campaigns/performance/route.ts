@@ -486,7 +486,7 @@ export async function GET(request: NextRequest) {
     const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
     const db = await getDatabase()
     const affiliateAlignedWhereClause = hasAffiliateListScope
-      ? buildCampaignAffiliateAlignedWhereClause(db.type, 'c', 'o')
+      ? buildCampaignAffiliateAlignedWhereClause('c', 'o')
       : ''
     const buildUserScopeClause = (column: string): string =>
       effectiveUserIds !== null
@@ -536,8 +536,8 @@ export async function GET(request: NextRequest) {
           o.needs_completion as offer_needs_completion,
           o.sync_source as offer_sync_source,
           o.google_ads_campaign_id as offer_google_ads_campaign_id,
-          (SELECT status FROM click_farm_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} ORDER BY created_at DESC LIMIT 1) as click_farm_task_status,
-          (SELECT status FROM url_swap_tasks WHERE offer_id = c.offer_id AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'} ORDER BY created_at DESC LIMIT 1) as url_swap_task_status
+          (SELECT status FROM click_farm_tasks WHERE offer_id = c.offer_id AND ${'is_deleted = FALSE'} ORDER BY created_at DESC LIMIT 1) as click_farm_task_status,
+          (SELECT status FROM url_swap_tasks WHERE offer_id = c.offer_id AND ${'is_deleted = FALSE'} ORDER BY created_at DESC LIMIT 1) as url_swap_task_status
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
@@ -1070,10 +1070,8 @@ export async function GET(request: NextRequest) {
       null
     )
 
-    const latestSyncFromLogsPromise =
-      db.type === 'postgres'
-        ? db.queryOne<{ latest_sync_at: string | null }>(
-            `
+    const latestSyncFromLogsPromise = db.queryOne<{ latest_sync_at: string | null }>(
+      `
             SELECT MAX(
               COALESCE(
                 NULLIF(completed_at, '')::timestamptz,
@@ -1084,16 +1082,8 @@ export async function GET(request: NextRequest) {
             FROM sync_logs
             WHERE ${buildUserScopeClause('user_id')}
           `,
-            userScopeValues
-          )
-        : db.queryOne<{ latest_sync_at: string | null }>(
-            `
-            SELECT MAX(COALESCE(NULLIF(completed_at, ''), NULLIF(started_at, ''), NULLIF(created_at, ''))) AS latest_sync_at
-            FROM sync_logs
-            WHERE ${buildUserScopeClause('user_id')}
-          `,
-            userScopeValues
-          )
+      userScopeValues
+    )
 
     const latestSyncFromLogsRow = await latestSyncFromLogsPromise
 

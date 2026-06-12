@@ -350,8 +350,8 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
   const db = getDatabase()
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const toDbJson = (value: any): any => toDbJsonObjectField(value, db.type, null)
+  const nowFunc = 'NOW()'
+  const toDbJson = (value: any): any => toDbJsonObjectField(value, null)
 
   const taskLinkRow = await db.queryOne<{ offer_id: number | null }>(
     'SELECT offer_id FROM offer_tasks WHERE id = ?',

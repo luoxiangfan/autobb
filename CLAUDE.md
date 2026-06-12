@@ -21,8 +21,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Runtime**: Node.js 24+
 - **API**: Next.js API Routes
-- **Database**: SQLite (local) / PostgreSQL (production), `DatabaseAdapter` dual-stack abstraction
-- **Data access**: Raw SQL — better-sqlite3 + postgres.js
+- **Database**: PostgreSQL (`DATABASE_URL`), `DatabaseAdapter` abstraction
+- **Data access**: Raw SQL — postgres.js
 - **Queue / cache**: Redis (ioredis), unified task scheduler (Web / Background Worker split optional)
 - **Scheduling**: node-cron + Scheduler process
 - **Auth**: Google OAuth 2.0 + JWT (jose / jsonwebtoken), bcrypt password hashing
@@ -63,8 +63,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm install          # install dependencies
-npm run db:init      # initialize SQLite (first run)
-npm run db:migrate   # apply incremental migrations
+npm run db:migrate   # apply migrations/ incremental migrations
+npm run db:init      # verify critical tables + ensure admin account
 npm run dev          # development server
 npm run build        # production build
 npm run format:changed  # Prettier format changed/new files only
@@ -80,7 +80,7 @@ npm run validate-schema
 
 After changing application code, run **`npm run format:changed`**, **`npm run lint:changed`**, and **`npm run type-check`** in the repo root; all must pass before reporting work complete. Use `format:changed` (not full-repo `format`) and `lint:changed` (not full-repo `lint`) so only modified or new files are checked.
 
-If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`, raw SQL, `db-helpers`), review SQL correctness (table aliases, `?` placeholders vs `params`, column types) and run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`** for dual SQLite/PostgreSQL behavior. See [AGENTS.md](./AGENTS.md) —「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的检查（必须）」.
+If the change touches SQL or the database layer (`migrations/`, raw SQL, `db-helpers`), review SQL correctness (table aliases, `?` placeholders vs `params`, column types) and run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`**. See [AGENTS.md](./AGENTS.md) —「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的检查（必须）」.
 
 ## Key Directories
 
@@ -89,8 +89,7 @@ If the change touches SQL or the database layer (`migrations/`, `pg-migrations/`
 | `src/app/`        | Next.js App Router pages and API routes                              |
 | `src/lib/`        | Core business logic (creatives, offers, Google Ads, OpenClaw, queue) |
 | `src/components/` | React UI components                                                  |
-| `migrations/`     | SQLite schema and incremental migrations                             |
-| `pg-migrations/`  | PostgreSQL migrations                                                |
+| `migrations/`     | PostgreSQL schema, incremental migrations, and docs                    |
 | `scripts/`        | DB, validation, and maintenance scripts                              |
 | `docs/`           | Operations and feature documentation                                 |
 

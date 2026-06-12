@@ -162,8 +162,8 @@ async function saveLinkCheckResult(
       result.statusCode,
       result.responseTime,
       // 🔧 PostgreSQL兼容性：确保boolean转换为正确的值
-      db.type === 'postgres' ? result.isAccessible : result.isAccessible ? 1 : 0,
-      db.type === 'postgres' ? result.isRedirected : result.isRedirected ? 1 : 0,
+      result.isAccessible,
+      result.isRedirected,
       result.finalUrl,
       country,
       result.errorMessage,
@@ -195,8 +195,8 @@ export async function createRiskAlertWithDedupMeta(
   }
 ): Promise<RiskAlertDedupCreated> {
   const db = await getDatabase()
-  const recentCutoffExpr = dateMinusDays(1, db.type)
-  const createdAtExpr = db.type === 'postgres' ? `created_at::timestamp` : 'created_at'
+  const recentCutoffExpr = dateMinusDays(1)
+  const createdAtExpr = `created_at::timestamp`
 
   const resourceId = options?.resourceId ?? null
   let existingQuery = `
@@ -269,7 +269,7 @@ export async function refreshActiveRiskAlertContent(
     SET title = ?,
         message = ?,
         details = ?,
-        updated_at = ${nowFunc(db.type)}
+        updated_at = ${nowFunc()}
     WHERE id = ? AND user_id = ? AND alert_type = ? AND status = 'active'
   `,
     [title, message, details ? JSON.stringify(details) : null, alertId, userId, alertType]
@@ -375,8 +375,8 @@ export async function updateAlertStatus(
   const stmt = `
     UPDATE risk_alerts
     SET status = ?,
-        ${status === 'acknowledged' ? `acknowledged_at = ${nowFunc(db.type)}` : ''},
-        ${status === 'resolved' ? `resolved_at = ${nowFunc(db.type)}` : ''},
+        ${status === 'acknowledged' ? `acknowledged_at = ${nowFunc()}` : ''},
+        ${status === 'resolved' ? `resolved_at = ${nowFunc()}` : ''},
         resolution_note = ?
     WHERE id = ? AND user_id = ?
   `
@@ -399,7 +399,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
-  const isDeletedFalse = db.type === 'postgres' ? false : 0
+  const isDeletedFalse = false
 
   // 获取用户的所有活跃Offers（包含目标国家）
   const offers = (await db.query(
@@ -506,7 +506,7 @@ async function checkAdsAccountStatus(userId: number): Promise<{
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
 
   // 获取用户的所有活跃Ads账号
   const accounts = (await db.query(
@@ -564,7 +564,7 @@ async function checkAdsAccountStatus(userId: number): Promise<{
     WHERE google_ads_account_id IN (${placeholders})
       AND user_id = ?
       AND status = 'failed'
-      AND started_at >= datetime('now', '-7 days')
+      AND started_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'
     GROUP BY google_ads_account_id
   `,
     [...accountIds, userId]
@@ -681,10 +681,10 @@ export async function dailyLinkCheck(): Promise<{
   results: Record<number, Awaited<ReturnType<typeof checkAllUserLinks>>>
 }> {
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
   // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
-  const isDeletedFalse = db.type === 'postgres' ? false : 0
+  const isDeletedFalse = false
 
   // 获取所有有Offers的用户
   const users = (await db.query(
@@ -742,8 +742,8 @@ export async function getRiskStatistics(userId: number): Promise<{
   byType: Record<string, number>
 }> {
   const db = await getDatabase()
-  const recentCutoffExpr = dateMinusDays(30, db.type)
-  const createdAtExpr = db.type === 'postgres' ? `created_at::timestamp` : 'created_at'
+  const recentCutoffExpr = dateMinusDays(30)
+  const createdAtExpr = `created_at::timestamp`
 
   const rows = (await db.query(
     `

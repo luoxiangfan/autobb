@@ -84,7 +84,7 @@ async function checkClickFarmSchedulerHealth(db: Awaited<ReturnType<typeof getDa
     SELECT COUNT(*) as count
     FROM click_farm_tasks
     WHERE status IN ('running', 'pending')
-      AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'}
+      AND ${'is_deleted = FALSE'}
   `
   const enabledTasksResult = (await db.queryOne(enabledTasksQuery)) as { count: number } | undefined
   const enabledTasksCount = Number(enabledTasksResult?.count || 0)
@@ -126,23 +126,13 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
   const urlSwapRunning = stats.byTypeRunning?.['url-swap'] || 0
 
   // 1. 检查逾期任务数量
-  const overdueQuery =
-    db.type === 'postgres'
-      ? `
+  const overdueQuery = `
       SELECT COUNT(*) as count
       FROM url_swap_tasks
       WHERE status = 'enabled'
         AND next_swap_at <= CURRENT_TIMESTAMP
         AND started_at <= CURRENT_TIMESTAMP
         AND is_deleted = FALSE
-    `
-      : `
-      SELECT COUNT(*) as count
-      FROM url_swap_tasks
-      WHERE status = 'enabled'
-        AND next_swap_at <= datetime('now')
-        AND started_at <= datetime('now')
-        AND is_deleted = 0
     `
 
   const overdueResult = (await db.queryOne(overdueQuery)) as { count: number } | undefined
@@ -153,7 +143,7 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
     SELECT COUNT(*) as count
     FROM url_swap_tasks
     WHERE status = 'enabled'
-      AND ${db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'}
+      AND ${'is_deleted = FALSE'}
   `
   const enabledTasksResult = (await db.queryOne(enabledTasksQuery)) as { count: number } | undefined
   const enabledTasksCount = Number(enabledTasksResult?.count || 0)
@@ -257,7 +247,7 @@ async function checkAffiliateSyncSchedulerHealth(db: Awaited<ReturnType<typeof g
   const enabledUsersQuery = `
     SELECT COUNT(*) as count
     FROM users
-    WHERE ${db.type === 'postgres' ? 'product_management_enabled = TRUE' : 'product_management_enabled = 1'}
+    WHERE product_management_enabled = TRUE
   `
   const enabledUsersResult = (await db.queryOne(enabledUsersQuery)) as { count: number } | undefined
   const enabledUsersCount = Number(enabledUsersResult?.count || 0)
@@ -292,40 +282,23 @@ async function checkAffiliateSyncSchedulerHealth(db: Awaited<ReturnType<typeof g
  */
 async function checkZombieCleanupSchedulerHealth(db: Awaited<ReturnType<typeof getDatabase>>) {
   // 检查最近 2 小时内是否有僵尸任务被修复
-  const recentFixedQuery =
-    db.type === 'postgres'
-      ? `
+  const recentFixedQuery = `
       SELECT COUNT(*) as count
       FROM affiliate_product_sync_runs
       WHERE status = 'failed'
         AND error_message LIKE '%僵尸任务%'
         AND updated_at >= NOW() - INTERVAL '2 hours'
     `
-      : `
-      SELECT COUNT(*) as count
-      FROM affiliate_product_sync_runs
-      WHERE status = 'failed'
-        AND error_message LIKE '%僵尸任务%'
-        AND updated_at >= datetime('now', '-2 hours')
-    `
 
   const recentFixedResult = (await db.queryOne(recentFixedQuery)) as { count: number } | undefined
   const recentFixedCount = Number(recentFixedResult?.count || 0)
 
   // 检查当前是否有潜在的僵尸任务（运行超过2小时）
-  const zombieQuery =
-    db.type === 'postgres'
-      ? `
+  const zombieQuery = `
       SELECT COUNT(*) as count
       FROM affiliate_product_sync_runs
       WHERE status = 'running'
         AND started_at < NOW() - INTERVAL '2 hours'
-    `
-      : `
-      SELECT COUNT(*) as count
-      FROM affiliate_product_sync_runs
-      WHERE status = 'running'
-        AND started_at < datetime('now', '-2 hours')
     `
 
   const zombieResult = (await db.queryOne(zombieQuery)) as { count: number } | undefined
@@ -373,7 +346,7 @@ async function checkOpenclawStrategySchedulerHealth(db: Awaited<ReturnType<typeo
     SELECT COUNT(DISTINCT u.id) as count
     FROM users u
     INNER JOIN system_settings ss ON ss.user_id = u.id
-    WHERE ${db.type === 'postgres' ? 'u.strategy_center_enabled = TRUE' : 'u.strategy_center_enabled = 1'}
+    WHERE u.strategy_center_enabled = TRUE
       AND ss.category = 'openclaw'
       AND ss.key = 'openclaw_strategy_enabled'
       AND ss.value IN ('true', '1', 'yes', 'on')

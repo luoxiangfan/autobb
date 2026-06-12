@@ -1,4 +1,4 @@
-import { getDatabase, type DatabaseType } from '@/lib/db'
+import { getDatabase } from '@/lib/db'
 import { boolCondition, toBool } from '@/lib/db-helpers'
 
 export const USER_EXECUTION_SUSPENDED_ERROR_CODE = 'USER_EXECUTION_SUSPENDED' as const
@@ -33,18 +33,14 @@ function normalizeAlias(alias?: string): string {
 }
 
 export function buildUserExecutionEligibleSql(params: {
-  dbType: DatabaseType
   userAlias?: string
   nowExpr?: string
 }): string {
   const userRef = normalizeAlias(params.userAlias)
-  const activeExpr = boolCondition(`${userRef}is_active`, true, params.dbType)
-  const nowExpr = params.nowExpr || (params.dbType === 'postgres' ? 'NOW()' : "datetime('now')")
+  const activeExpr = boolCondition(`${userRef}is_active`, true)
+  const nowExpr = params.nowExpr || 'NOW()'
   const packageExpiresAtExpr = `${userRef}package_expires_at`
-  const packageExpr =
-    params.dbType === 'postgres'
-      ? `(${packageExpiresAtExpr} IS NULL OR NULLIF(BTRIM(${packageExpiresAtExpr}), '')::timestamptz >= ${nowExpr})`
-      : `(${packageExpiresAtExpr} IS NULL OR datetime(${packageExpiresAtExpr}) >= ${nowExpr})`
+  const packageExpr = `(${packageExpiresAtExpr} IS NULL OR NULLIF(BTRIM(${packageExpiresAtExpr}), '')::timestamptz >= ${nowExpr})`
 
   return `${activeExpr} AND ${packageExpr}`
 }

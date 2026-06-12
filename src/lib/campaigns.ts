@@ -1,4 +1,5 @@
 import { getDatabase } from './db'
+import { nowFunc, notDeletedClause } from './db-helpers'
 import { getInsertedId } from './db-helpers'
 import {
   markUrlSwapTargetsRemovedByCampaignId,
@@ -99,7 +100,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
     throw error
   }
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   const campaign = (await findCampaignById(insertedId, input.userId))!
 
   // 🔧 优化 (2026-04-20): 创建广告系列时自动备份
@@ -146,7 +147,7 @@ export async function findCampaignsByOfferId(offerId: number, userId: number): P
 
   // 🔧 修复: PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
   // 避免 prepared statement 中的 boolean = integer 类型不匹配问题
-  const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCheck = 'is_deleted = FALSE'
 
   const rows = (await db.query(
     `
@@ -167,7 +168,7 @@ export async function findCampaignsByUserId(userId: number, limit?: number): Pro
   const db = await getDatabase()
 
   // 🔧 修复: PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
-  const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCheck = 'is_deleted = FALSE'
 
   let sql = `
     SELECT * FROM campaigns
@@ -282,10 +283,8 @@ export async function updateCampaign(
     return campaign
   }
 
-  // 🔧 修复: PostgreSQL兼容性 - 使用NOW()而非datetime('now')
-  const db_type = db.type
-  const nowFunc = db_type === 'postgres' ? 'NOW()' : 'datetime("now")'
-  fields.push(`updated_at = ${nowFunc}`)
+  const nowSql = nowFunc()
+  fields.push(`updated_at = ${nowSql}`)
   values.push(id, userId)
 
   await db.exec(
@@ -488,7 +487,7 @@ async function getClickFarmTaskByOfferId(offerId: number, userId: number): Promi
   const task = await db.queryOne<any>(
     `
     SELECT * FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND is_deleted = 0
+    WHERE offer_id = ? AND user_id = ? AND ${notDeletedClause('click_farm_tasks')}
     ORDER BY created_at DESC
     LIMIT 1
   `,

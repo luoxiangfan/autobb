@@ -8,42 +8,33 @@ const hoisted = vi.hoisted(() => ({
   invokeOpenclawToolMock: vi.fn(),
   resolveUserFeishuAccountIdMock: vi.fn(),
   writeDailyReportToBitableMock: vi.fn(),
-  writeDailyReportToDocMock: vi.fn(),
-}))
+  writeDailyReportToDocMock: vi.fn() }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: async () => ({
-    type: 'sqlite',
     query: hoisted.queryMock,
     queryOne: hoisted.queryOneMock,
-    exec: hoisted.execMock,
-  }),
-}))
+    exec: hoisted.execMock }) }))
 
 vi.mock('@/lib/openclaw/autoads-client', () => ({
-  fetchAutoadsJson: hoisted.fetchAutoadsJsonMock,
-}))
+  fetchAutoadsJson: hoisted.fetchAutoadsJsonMock }))
 
 vi.mock('@/lib/openclaw/gateway', () => ({
-  invokeOpenclawTool: hoisted.invokeOpenclawToolMock,
-}))
+  invokeOpenclawTool: hoisted.invokeOpenclawToolMock }))
 
 vi.mock('@/lib/openclaw/feishu-accounts', () => ({
-  resolveUserFeishuAccountId: hoisted.resolveUserFeishuAccountIdMock,
-}))
+  resolveUserFeishuAccountId: hoisted.resolveUserFeishuAccountIdMock }))
 
 vi.mock('@/lib/openclaw/feishu-docs', () => ({
   writeDailyReportToBitable: hoisted.writeDailyReportToBitableMock,
-  writeDailyReportToDoc: hoisted.writeDailyReportToDocMock,
-}))
+  writeDailyReportToDoc: hoisted.writeDailyReportToDocMock }))
 
 import { sendDailyReportToFeishu } from './reports'
 
 describe('sendDailyReportToFeishu', () => {
   const cachedReportPayload = {
     date: '2026-02-14',
-    generatedAt: '2026-02-14T01:02:03.000Z',
-  }
+    generatedAt: '2026-02-14T01:02:03.000Z' }
 
   beforeEach(() => {
     hoisted.queryMock.mockReset()
@@ -79,8 +70,7 @@ describe('sendDailyReportToFeishu', () => {
       userId: 7,
       target: 'ou_xxx',
       date: '2026-02-14',
-      deliveryTaskId: 'delivery-1',
-    })
+      deliveryTaskId: 'delivery-1' })
 
     expect(hoisted.execMock).toHaveBeenCalledTimes(1)
     expect(String(hoisted.execMock.mock.calls[0]?.[0] || '')).toContain('SET payload_json')
@@ -104,13 +94,11 @@ describe('sendDailyReportToFeishu', () => {
       userId: 7,
       target: 'ou_xxx',
       date: '2026-02-14',
-      deliveryTaskId: 'delivery-2',
-    })
+      deliveryTaskId: 'delivery-2' })
 
     expect(hoisted.invokeOpenclawToolMock).toHaveBeenCalledTimes(1)
     expect(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[1]).toEqual({
-      idempotencyKey: 'daily-report:7:2026-02-14:ou_xxx:delivery-2',
-    })
+      idempotencyKey: 'daily-report:7:2026-02-14:ou_xxx:delivery-2' })
   })
 
   it('coalesces concurrent delivery calls for same delivery task id', async () => {
@@ -132,8 +120,7 @@ describe('sendDailyReportToFeishu', () => {
       userId: 7,
       target: 'ou_xxx',
       date: '2026-02-14',
-      deliveryTaskId: 'delivery-3',
-    }
+      deliveryTaskId: 'delivery-3' }
     await Promise.all([
       sendDailyReportToFeishu(params),
       sendDailyReportToFeishu(params),
@@ -157,25 +144,19 @@ describe('sendDailyReportToFeishu', () => {
                 totalOffers: 13,
                 totalCampaigns: 15,
                 totalClicks: 185,
-                totalCost: 132.706319,
-              },
-            },
+                totalCost: 132.706319 } },
             kpis: {
               data: {
                 current: {
                   impressions: 1707,
                   clicks: 185,
                   cost: 132.706319,
-                  conversions: 38.52,
-                },
-              },
-            },
+                  conversions: 38.52 } } },
             dailySnapshot: {
               impressions: 1707,
               clicks: 185,
               cost: 41.21,
-              conversions: 38.52,
-            },
+              conversions: 38.52 },
             roi: {
               data: {
                 overall: {
@@ -191,11 +172,7 @@ describe('sendDailyReportToFeishu', () => {
                     { platform: 'yeahpromos', totalCommission: 0, records: 0 },
                   ],
                   affiliateAttribution: {
-                    writtenRows: 0,
-                  },
-                },
-              },
-            },
+                    writtenRows: 0 } } } },
             budget: {
               data: {
                 overall: {
@@ -203,12 +180,7 @@ describe('sendDailyReportToFeishu', () => {
                   totalSpent: 41.21,
                   totalSpentEnabledCampaigns: 41.21,
                   totalSpentAllCampaigns: 41.21,
-                  remaining: 82.12,
-                },
-              },
-            },
-          }),
-        }
+                  remaining: 82.12 } } } }) }
       }
       return undefined
     })
@@ -216,8 +188,7 @@ describe('sendDailyReportToFeishu', () => {
     await sendDailyReportToFeishu({
       userId: 7,
       target: 'ou_xxx',
-      date: '2026-02-22',
-    })
+      date: '2026-02-22' })
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('- 投放消耗：点击 185 次｜花费 41.21 USD')
@@ -236,15 +207,12 @@ describe('sendDailyReportToFeishu', () => {
             summary: {
               kpis: {
                 totalOffers: 5,
-                totalCampaigns: 7,
-              },
-            },
+                totalCampaigns: 7 } },
             dailySnapshot: {
               impressions: 900,
               clicks: 66,
               cost: 15,
-              conversions: 2,
-            },
+              conversions: 2 },
             roi: {
               data: {
                 overall: {
@@ -257,11 +225,7 @@ describe('sendDailyReportToFeishu', () => {
                   revenueAvailable: true,
                   affiliateBreakdown: [],
                   affiliateAttribution: {
-                    writtenRows: 0,
-                  },
-                },
-              },
-            },
+                    writtenRows: 0 } } } },
             budget: {
               currency: 'CNY',
               currencies: ['CNY', 'USD'],
@@ -272,9 +236,7 @@ describe('sendDailyReportToFeishu', () => {
                   totalSpent: 0,
                   totalSpentEnabledCampaigns: 0,
                   totalSpentAllCampaigns: 0,
-                  remaining: 130,
-                },
-              },
+                  remaining: 130 } },
               multiCurrencyOverall: [
                 {
                   currency: 'CNY',
@@ -282,20 +244,15 @@ describe('sendDailyReportToFeishu', () => {
                   totalSpent: 0,
                   totalSpentEnabledCampaigns: 0,
                   totalSpentAllCampaigns: 0,
-                  remaining: 130,
-                },
+                  remaining: 130 },
                 {
                   currency: 'USD',
                   totalBudget: 75,
                   totalSpent: 15,
                   totalSpentEnabledCampaigns: 15,
                   totalSpentAllCampaigns: 15,
-                  remaining: 60,
-                },
-              ],
-            },
-          }),
-        }
+                  remaining: 60 },
+              ] } }) }
       }
       return undefined
     })
@@ -303,8 +260,7 @@ describe('sendDailyReportToFeishu', () => {
     await sendDailyReportToFeishu({
       userId: 7,
       target: 'ou_xxx',
-      date: '2026-02-23',
-    })
+      date: '2026-02-23' })
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('- 投放消耗：点击 66 次｜花费 0 CNY｜15 USD')
@@ -321,15 +277,12 @@ describe('sendDailyReportToFeishu', () => {
             summary: {
               kpis: {
                 totalOffers: 5,
-                totalCampaigns: 7,
-              },
-            },
+                totalCampaigns: 7 } },
             dailySnapshot: {
               impressions: 900,
               clicks: 66,
               cost: 15,
-              conversions: 2,
-            },
+              conversions: 2 },
             roi: {
               currency: 'CNY',
               data: {
@@ -346,11 +299,7 @@ describe('sendDailyReportToFeishu', () => {
                     { platform: 'yeahpromos', totalCommission: 25, records: 2, currency: 'USD' },
                   ],
                   affiliateAttribution: {
-                    writtenRows: 2,
-                  },
-                },
-              },
-            },
+                    writtenRows: 2 } } } },
             budget: {
               currency: 'CNY',
               currencies: ['CNY', 'USD'],
@@ -359,12 +308,7 @@ describe('sendDailyReportToFeishu', () => {
                 overall: {
                   totalBudget: 130,
                   totalSpent: 0,
-                  remaining: 130,
-                },
-              },
-            },
-          }),
-        }
+                  remaining: 130 } } } }) }
       }
       return undefined
     })
@@ -378,10 +322,7 @@ describe('sendDailyReportToFeishu', () => {
               totalSpent: 0,
               totalSpentEnabledCampaigns: 0,
               totalSpentAllCampaigns: 0,
-              remaining: 130,
-            },
-          },
-        }
+              remaining: 130 } } }
       }
       if (query?.currency === 'USD') {
         return {
@@ -392,10 +333,7 @@ describe('sendDailyReportToFeishu', () => {
               totalSpent: 15,
               totalSpentEnabledCampaigns: 15,
               totalSpentAllCampaigns: 19,
-              remaining: 60,
-            },
-          },
-        }
+              remaining: 60 } } }
       }
       return {}
     })
@@ -403,8 +341,7 @@ describe('sendDailyReportToFeishu', () => {
     await sendDailyReportToFeishu({
       userId: 7,
       target: 'ou_xxx',
-      date: '2026-02-24',
-    })
+      date: '2026-02-24' })
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(hoisted.fetchAutoadsJsonMock).toHaveBeenCalledTimes(2)
@@ -433,10 +370,7 @@ describe('sendDailyReportToFeishu', () => {
                   roas: 0,
                   revenueAvailable: true,
                   affiliateBreakdown: [],
-                  affiliateAttribution: { writtenRows: 0 },
-                },
-              },
-            },
+                  affiliateAttribution: { writtenRows: 0 } } } },
             strategyRecommendations: [
               {
                 id: 'r1',
@@ -445,8 +379,7 @@ describe('sendDailyReportToFeishu', () => {
                 status: 'pending',
                 summary: '建议下线该 Campaign，停止低价值占用并回收预算。',
                 campaignId: 11,
-                data: { campaignName: 'Dovoh_3679', impactConfidenceReason: '样本：曝光 1000 / 点击 88 / 花费 21.00 / ROAS 0.00' },
-              },
+                data: { campaignName: 'Dovoh_3679', impactConfidenceReason: '样本：曝光 1000 / 点击 88 / 花费 21.00 / ROAS 0.00' } },
               {
                 id: 'r2',
                 recommendationType: 'adjust_cpc',
@@ -454,8 +387,7 @@ describe('sendDailyReportToFeishu', () => {
                 status: 'pending',
                 summary: '建议CPC = 商品价格 × 佣金比例 ÷ 50 = 0.80。',
                 campaignId: 12,
-                data: { campaignName: 'Renpho_3709' },
-              },
+                data: { campaignName: 'Renpho_3709' } },
               {
                 id: 'r3',
                 recommendationType: 'adjust_budget',
@@ -463,11 +395,8 @@ describe('sendDailyReportToFeishu', () => {
                 status: 'dismissed',
                 summary: '该条应被过滤，不应出现在TOP建议里。',
                 campaignId: 13,
-                data: { campaignName: 'Filtered_Out' },
-              },
-            ],
-          }),
-        }
+                data: { campaignName: 'Filtered_Out' } },
+            ] }) }
       }
       return undefined
     })
@@ -475,8 +404,7 @@ describe('sendDailyReportToFeishu', () => {
     await sendDailyReportToFeishu({
       userId: 7,
       target: 'ou_xxx',
-      date: '2026-02-22',
-    })
+      date: '2026-02-22' })
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('建议状态：总 3｜待执行 2｜已执行 0｜执行失败 0｜待重算 0｜暂不执行 1')
@@ -509,8 +437,7 @@ describe('sendDailyReportToFeishu', () => {
                   ],
                   affiliateAttribution: {
                     attributedCommission: 6,
-                    writtenRows: 2,
-                  },
+                    writtenRows: 2 },
                   affiliateReconciliation: {
                     reportDate: '2026-02-22',
                     totalRevenue: 10,
@@ -524,13 +451,7 @@ describe('sendDailyReportToFeishu', () => {
                     topFailureReasons: [
                       { code: 'product_mapping_miss', label: '商品映射缺失', count: 3, commission: 3 },
                       { code: 'campaign_mapping_miss', label: '无活动Campaign', count: 1, commission: 1 },
-                    ],
-                  },
-                },
-              },
-            },
-          }),
-        }
+                    ] } } } } }) }
       }
       return undefined
     })
@@ -538,8 +459,7 @@ describe('sendDailyReportToFeishu', () => {
     await sendDailyReportToFeishu({
       userId: 7,
       target: 'ou_xxx',
-      date: '2026-02-22',
-    })
+      date: '2026-02-22' })
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('- 佣金对账（严重）：总佣金 10 USD｜已归因 6 USD｜缺口 4 USD（40%）')
@@ -565,10 +485,7 @@ describe('sendDailyReportToFeishu', () => {
                   roas: 1.11,
                   revenueAvailable: true,
                   affiliateBreakdown: [],
-                  affiliateAttribution: { writtenRows: 0 },
-                },
-              },
-            },
+                  affiliateAttribution: { writtenRows: 0 } } } },
             strategyRecommendations: [
               {
                 id: 'rb1',
@@ -576,11 +493,8 @@ describe('sendDailyReportToFeishu', () => {
                 priorityScore: 88.4,
                 summary: '当前预算 10.00，建议提升到 15.00（DAILY）。',
                 campaignId: 66,
-                data: { campaignName: 'Idoo_3702' },
-              },
-            ],
-          }),
-        }
+                data: { campaignName: 'Idoo_3702' } },
+            ] }) }
       }
       return undefined
     })
@@ -588,8 +502,7 @@ describe('sendDailyReportToFeishu', () => {
     await sendDailyReportToFeishu({
       userId: 7,
       target: 'ou_xxx',
-      date: '2026-02-22',
-    })
+      date: '2026-02-22' })
 
     const message = String(hoisted.invokeOpenclawToolMock.mock.calls[0]?.[0]?.args?.message || '')
     expect(message).toContain('[预算调整] Idoo_3702｜优先级分 88.4')

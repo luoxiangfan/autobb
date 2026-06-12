@@ -3,7 +3,7 @@
  *
  * 负责执行Google Ads数据同步任务，包括：
  * - 从Google Ads API拉取性能数据
- * - 存储到SQLite数据库
+ * - 存储到 PostgreSQL
  * - 自动重试机制
  * - 任务状态追踪
  *

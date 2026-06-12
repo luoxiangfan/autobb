@@ -13,30 +13,26 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  SelectValue } from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+  DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  TableRow } from '@/components/ui/table'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 import { showError } from '@/lib/toast-utils'
@@ -44,8 +40,7 @@ import { formatCurrency } from '@/lib/currency'
 import {
   filterAffiliatesWithRawCommissionSupport,
   getAffiliatePlatformDisplayName,
-  type AffiliateCommissionReportPlatformFilter,
-} from '@/lib/openclaw/affiliate-commission-platform'
+  type AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission-platform'
 
 type ViewMode = 'brand' | 'date'
 
@@ -110,8 +105,7 @@ type DateDetailPayload = {
 
 const PLATFORM_BADGE_CLASS: Record<'yeahpromos' | 'partnerboost', string> = {
   yeahpromos: 'border-sky-200 bg-sky-50 text-sky-700',
-  partnerboost: 'border-orange-200 bg-orange-50 text-orange-700',
-}
+  partnerboost: 'border-orange-200 bg-orange-50 text-orange-700' }
 
 function formatYmd(date: Date): string {
   return format(date, 'yyyy-MM-dd')
@@ -209,8 +203,7 @@ export default function AffiliateCommissionReportPage() {
         setUsersLoading(true)
         const usersResponse = await fetch('/api/admin/users?role=user&status=active&limit=200', {
           credentials: 'include',
-          cache: 'no-store',
-        })
+          cache: 'no-store' })
 
         if (usersResponse.status === 403 || usersResponse.status === 401) {
           setIsAdmin(false)
@@ -368,8 +361,7 @@ export default function AffiliateCommissionReportPage() {
     setLoading(true)
     try {
       const response = await fetch(`/api/openclaw/affiliate-commission-report?${queryString}`, {
-        credentials: 'include',
-      })
+        credentials: 'include' })
       const payload = await response.json() as ReportPayload & { error?: string }
       if (!response.ok) {
         throw new Error(payload.error || '加载佣金数据失败')
@@ -420,8 +412,7 @@ export default function AffiliateCommissionReportPage() {
       const response = await fetch(
         `/api/openclaw/affiliate-commission-report?${buildScopedQueryString({
           detail: 'brand',
-          brandKey: item.brandKey,
-        })}`,
+          brandKey: item.brandKey })}`,
         { credentials: 'include' }
       )
       const payload = await response.json() as BrandDetailPayload & { error?: string }
@@ -449,8 +440,7 @@ export default function AffiliateCommissionReportPage() {
       const response = await fetch(
         `/api/openclaw/affiliate-commission-report?${buildScopedQueryString({
           detail: 'date',
-          reportDate: item.reportDate,
-        })}`,
+          reportDate: item.reportDate })}`,
         { credentials: 'include' }
       )
       const payload = await response.json() as DateDetailPayload & { error?: string }

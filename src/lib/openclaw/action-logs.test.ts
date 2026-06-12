@@ -2,12 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   getDatabase: vi.fn(),
-  exec: vi.fn(),
-}))
+  exec: vi.fn() }))
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: mocks.getDatabase,
-}))
+  getDatabase: mocks.getDatabase }))
 
 import { recordOpenclawAction } from './action-logs'
 
@@ -28,12 +26,9 @@ describe('openclaw action logs redaction', () => {
             id: 810,
             accessToken: 'ya29.secret-access-token',
             refreshToken: 'refresh-secret-token',
-            authorization: 'Bearer top-secret-token',
-          },
-        ],
-      }),
-      status: 'success',
-    })
+            authorization: 'Bearer top-secret-token' },
+        ] }),
+      status: 'success' })
 
     const args = mocks.exec.mock.calls[0]?.[1]
     const persistedResponseBody = String(args?.[7] || '')

@@ -170,8 +170,7 @@ function toBudgetCurrencyOverview(value: unknown): BudgetCurrencyOverview | null
     totalSpentEnabledCampaigns,
     totalSpentAllCampaigns,
     remaining: roundTo2(toNumber(row?.remaining, totalBudget - totalSpentEnabledCampaigns)),
-    activeCampaigns: Math.max(0, Math.round(toNumber(row?.activeCampaigns, 0))),
-  }
+    activeCampaigns: Math.max(0, Math.round(toNumber(row?.activeCampaigns, 0))) }
 }
 
 function isBudgetCurrencyOverview(
@@ -247,8 +246,7 @@ function buildRoiCurrencyOverview(params: {
       revenue,
       profit,
       roas,
-      roi,
-    }
+      roi }
   })
 }
 
@@ -454,8 +452,7 @@ function resolveNormalizedDateRange(startDate: string, endDate: string): {
     : normalizedEndDate
   return {
     startDate: normalizedStartDate,
-    endDate: normalizedEndDate,
-  }
+    endDate: normalizedEndDate }
 }
 
 function calculateInclusiveDateSpan(startDate: string, endDate: string): number {
@@ -531,14 +528,12 @@ async function queryAffiliateAttributionFailureSummary(params: {
       code: String(row.reason_code || 'unknown'),
       label: formatAffiliateFailureReasonLabel(String(row.reason_code || 'unknown')),
       count: Math.round(toNumber(row.reason_count, 0)),
-      commission: roundTo2(toNumber(row.commission, 0)),
-    }))
+      commission: roundTo2(toNumber(row.commission, 0)) }))
 
     return {
       totalRows: topReasons.reduce((sum, item) => sum + item.count, 0),
       totalCommission: roundTo2(topReasons.reduce((sum, item) => sum + item.commission, 0)),
-      topReasons: topReasons.slice(0, 5),
-    }
+      topReasons: topReasons.slice(0, 5) }
   } catch (error: any) {
     const message = String(error?.message || '')
     if (
@@ -548,8 +543,7 @@ async function queryAffiliateAttributionFailureSummary(params: {
       return {
         totalRows: 0,
         totalCommission: 0,
-        topReasons: [],
-      }
+        topReasons: [] }
     }
     throw error
   }
@@ -586,8 +580,7 @@ function buildAffiliateReconciliationSnapshot(params: {
     severity,
     failureRows: Math.max(0, Math.round(toNumber(params.failureRows, 0))),
     failureCommission: roundTo2(Math.max(0, toNumber(params.failureCommission, 0))),
-    topFailureReasons: params.topReasons.slice(0, 5),
-  }
+    topFailureReasons: params.topReasons.slice(0, 5) }
 }
 
 function attachAffiliateReconciliation(params: {
@@ -600,13 +593,11 @@ function attachAffiliateReconciliation(params: {
 
   roiData.overall = {
     ...roiOverall,
-    affiliateReconciliation: params.reconciliation,
-  }
+    affiliateReconciliation: params.reconciliation }
 
   return {
     ...roiRoot,
-    data: roiData,
-  }
+    data: roiData }
 }
 
 async function queryCampaignPerformanceByDateRange(params: {
@@ -618,7 +609,7 @@ async function queryCampaignPerformanceByDateRange(params: {
   const rows = await params.db.query<CampaignPerformanceByDateRow>(
     `
       SELECT
-        DATE(date) AS date,
+        (date::date) AS date,
         COALESCE(SUM(impressions), 0) AS impressions,
         COALESCE(SUM(clicks), 0) AS clicks,
         COALESCE(SUM(cost), 0) AS cost,
@@ -627,8 +618,8 @@ async function queryCampaignPerformanceByDateRange(params: {
       WHERE user_id = ?
         AND date >= ?
         AND date <= ?
-      GROUP BY DATE(date)
-      ORDER BY DATE(date) ASC
+      GROUP BY (date::date)
+      ORDER BY (date::date) ASC
     `,
     [params.userId, params.startDate, params.endDate]
   )
@@ -641,8 +632,7 @@ async function queryCampaignPerformanceByDateRange(params: {
       impressions: toNumber(row.impressions, 0),
       clicks: toNumber(row.clicks, 0),
       cost: roundTo2(toNumber(row.cost, 0)),
-      conversions: roundTo2(toNumber(row.conversions, 0)),
-    })
+      conversions: roundTo2(toNumber(row.conversions, 0)) })
   }
   return map
 }
@@ -690,9 +680,7 @@ async function queryRangeKpiSnapshot(params: {
   cost: number
   conversions: number
 }> {
-  const campaignNotDeletedCondition = params.db.type === 'postgres'
-    ? '(c.is_deleted = false OR c.is_deleted IS NULL)'
-    : '(c.is_deleted = 0 OR c.is_deleted IS NULL)'
+  const campaignNotDeletedCondition = '(c.is_deleted = false OR c.is_deleted IS NULL)'
 
   const row = await params.db.queryOne<ReportRangeKpiRow>(
     `
@@ -721,8 +709,7 @@ async function queryRangeKpiSnapshot(params: {
     impressions: Math.max(0, Math.round(toNumber(row?.impressions, 0))),
     clicks: Math.max(0, Math.round(toNumber(row?.clicks, 0))),
     cost: roundTo2(toNumber(row?.cost, 0)),
-    conversions: roundTo2(toNumber(row?.conversions, 0)),
-  }
+    conversions: roundTo2(toNumber(row?.conversions, 0)) }
 }
 
 function normalizeAffiliatePlatform(value: unknown): 'partnerboost' | 'yeahpromos' | null {
@@ -781,8 +768,7 @@ async function buildAffiliateRevenueSummaryByDateRange(params: {
       return {
         platformRows,
         totalCommission: roundTo2(toNumber(summaryRow?.total_commission, 0)),
-        totalRows: Math.max(0, Math.round(toNumber(summaryRow?.total_rows, 0))),
-      }
+        totalRows: Math.max(0, Math.round(toNumber(summaryRow?.total_rows, 0))) }
     } catch (error: any) {
       const message = String(error?.message || '')
       if (
@@ -792,8 +778,7 @@ async function buildAffiliateRevenueSummaryByDateRange(params: {
         return {
           platformRows: [],
           totalCommission: 0,
-          totalRows: 0,
-        }
+          totalRows: 0 }
       }
       throw error
     }
@@ -855,8 +840,7 @@ async function buildAffiliateRevenueSummaryByDateRange(params: {
         platform,
         currency,
         totalCommission: 0,
-        records: 0,
-      }
+        records: 0 }
       current.totalCommission = roundTo2(current.totalCommission + toNumber(row.total_commission, 0))
       current.records = Math.max(0, current.records + Math.round(toNumber(row.records, 0)))
       breakdownMap.set(key, current)
@@ -872,8 +856,7 @@ async function buildAffiliateRevenueSummaryByDateRange(params: {
       platform: row.platform,
       totalCommission: roundTo2(row.totalCommission),
       records: row.records,
-      currency: row.currency,
-    }))
+      currency: row.currency }))
 
   const configuredPlatforms: Array<'partnerboost' | 'yeahpromos'> = []
   const queriedPlatforms: Array<'partnerboost' | 'yeahpromos'> = []
@@ -911,9 +894,7 @@ async function buildAffiliateRevenueSummaryByDateRange(params: {
       unattributedCommission,
       attributedOffers: Math.max(0, Math.round(toNumber(attributionRow?.attributed_offers, 0))),
       attributedCampaigns: Math.max(0, Math.round(toNumber(attributionRow?.attributed_campaigns, 0))),
-      writtenRows: Math.max(0, Math.round(toNumber(attributionRow?.written_rows, 0))),
-    },
-  }
+      writtenRows: Math.max(0, Math.round(toNumber(attributionRow?.written_rows, 0))) } }
 }
 
 async function queryOfferRevenueByDateRange(params: {
@@ -946,9 +927,7 @@ async function queryOfferPerformanceByDateRange(params: {
   startDate: string
   endDate: string
 }): Promise<OfferPerformanceRow[]> {
-  const campaignNotDeletedCondition = params.db.type === 'postgres'
-    ? '(c.is_deleted = false OR c.is_deleted IS NULL)'
-    : '(c.is_deleted = 0 OR c.is_deleted IS NULL)'
+  const campaignNotDeletedCondition = '(c.is_deleted = false OR c.is_deleted IS NULL)'
 
   return params.db.query<OfferPerformanceRow>(
     `
@@ -1002,9 +981,7 @@ async function queryCampaignPerformanceByDateRangeForBreakdown(params: {
   startDate: string
   endDate: string
 }): Promise<CampaignPerformanceRow[]> {
-  const campaignNotDeletedCondition = params.db.type === 'postgres'
-    ? '(c.is_deleted = false OR c.is_deleted IS NULL)'
-    : '(c.is_deleted = 0 OR c.is_deleted IS NULL)'
+  const campaignNotDeletedCondition = '(c.is_deleted = false OR c.is_deleted IS NULL)'
 
   return params.db.query<CampaignPerformanceRow>(
     `
@@ -1056,9 +1033,7 @@ async function queryOfferPerformanceByReportDate(params: {
   userId: number
   reportDate: string
 }): Promise<OfferPerformanceRow[]> {
-  const campaignNotDeletedCondition = params.db.type === 'postgres'
-    ? '(c.is_deleted = false OR c.is_deleted IS NULL)'
-    : '(c.is_deleted = 0 OR c.is_deleted IS NULL)'
+  const campaignNotDeletedCondition = '(c.is_deleted = false OR c.is_deleted IS NULL)'
 
   return params.db.query<OfferPerformanceRow>(
     `
@@ -1108,9 +1083,7 @@ async function queryCampaignPerformanceByReportDate(params: {
   userId: number
   reportDate: string
 }): Promise<CampaignPerformanceRow[]> {
-  const campaignNotDeletedCondition = params.db.type === 'postgres'
-    ? '(c.is_deleted = false OR c.is_deleted IS NULL)'
-    : '(c.is_deleted = 0 OR c.is_deleted IS NULL)'
+  const campaignNotDeletedCondition = '(c.is_deleted = false OR c.is_deleted IS NULL)'
 
   return params.db.query<CampaignPerformanceRow>(
     `
@@ -1164,8 +1137,7 @@ async function queryOfferMetaMap(params: {
     if (!Number.isFinite(offerId)) continue
     map.set(offerId, {
       offerName: String(row.offer_name || '').trim(),
-      brand: String(row.brand || '').trim(),
-    })
+      brand: String(row.brand || '').trim() })
   }
   return map
 }
@@ -1183,8 +1155,7 @@ function buildUnattributedOfferRow(reportDate: string, revenue: number): ReportO
     profit: roundTo2(revenue),
     roi: null,
     roas: null,
-    isUnattributed: true,
-  }
+    isUnattributed: true }
 }
 
 function buildUnattributedCampaignRow(reportDate: string, revenue: number): ReportCampaignBreakdownRow {
@@ -1201,8 +1172,7 @@ function buildUnattributedCampaignRow(reportDate: string, revenue: number): Repo
     profit: roundTo2(revenue),
     roi: null,
     roas: null,
-    isUnattributed: true,
-  }
+    isUnattributed: true }
 }
 
 async function enrichReportCommissionSections(params: {
@@ -1247,62 +1217,52 @@ async function enrichReportCommissionSections(params: {
       db: params.db,
       userId: params.userId,
       startDate: trendStartDate,
-      endDate: trendEndDate,
-    }),
+      endDate: trendEndDate }),
     queryCommissionByDateRange({
       db: params.db,
       userId: params.userId,
       startDate: trendStartDate,
-      endDate: trendEndDate,
-    }),
+      endDate: trendEndDate }),
     isDateRangeMode
       ? queryOfferRevenueByDateRange({
         db: params.db,
         userId: params.userId,
         startDate: trendStartDate,
-        endDate: trendEndDate,
-      })
+        endDate: trendEndDate })
       : queryOfferRevenueByReportDate({
         db: params.db,
         userId: params.userId,
-        reportDate,
-      }),
+        reportDate }),
     isDateRangeMode
       ? queryOfferPerformanceByDateRange({
         db: params.db,
         userId: params.userId,
         startDate: trendStartDate,
-        endDate: trendEndDate,
-      })
+        endDate: trendEndDate })
       : queryOfferPerformanceByReportDate({
         db: params.db,
         userId: params.userId,
-        reportDate,
-      }),
+        reportDate }),
     isDateRangeMode
       ? queryCampaignRevenueByDateRange({
         db: params.db,
         userId: params.userId,
         startDate: trendStartDate,
-        endDate: trendEndDate,
-      })
+        endDate: trendEndDate })
       : queryCampaignRevenueByReportDate({
         db: params.db,
         userId: params.userId,
-        reportDate,
-      }),
+        reportDate }),
     isDateRangeMode
       ? queryCampaignPerformanceByDateRangeForBreakdown({
         db: params.db,
         userId: params.userId,
         startDate: trendStartDate,
-        endDate: trendEndDate,
-      })
+        endDate: trendEndDate })
       : queryCampaignPerformanceByReportDate({
         db: params.db,
         userId: params.userId,
-        reportDate,
-      }),
+        reportDate }),
   ])
 
   const attributedCommissionForRange = roundTo2(
@@ -1322,8 +1282,7 @@ async function enrichReportCommissionSections(params: {
       impressions: 0,
       clicks: 0,
       cost: 0,
-      conversions: 0,
-    }
+      conversions: 0 }
     const commission = roundTo2(commissionByDate.get(date) || 0)
     const impressions = toNumber(perf.impressions, 0)
     const clicks = toNumber(perf.clicks, 0)
@@ -1337,8 +1296,7 @@ async function enrichReportCommissionSections(params: {
       conversions,
       commission,
       ctr: impressions > 0 ? roundTo2((clicks / impressions) * 100) : 0,
-      cpc: clicks > 0 ? roundTo2(cost / clicks) : 0,
-    }
+      cpc: clicks > 0 ? roundTo2(cost / clicks) : 0 }
   })
 
   const trendSummary = {
@@ -1348,8 +1306,7 @@ async function enrichReportCommissionSections(params: {
     totalConversions: roundTo2(trendRows.reduce((sum, row) => sum + row.conversions, 0)),
     totalCommission: roundTo2(trendRows.reduce((sum, row) => sum + row.commission, 0)),
     avgCTR: 0,
-    avgCPC: 0,
-  }
+    avgCPC: 0 }
   trendSummary.avgCTR = trendSummary.totalImpressions > 0
     ? roundTo2((trendSummary.totalClicks / trendSummary.totalImpressions) * 100)
     : 0
@@ -1365,12 +1322,10 @@ async function enrichReportCommissionSections(params: {
   trendsData.trends = trendRows
   trendsData.summary = {
     ...trendsSummaryExisting,
-    ...trendSummary,
-  }
+    ...trendSummary }
   const normalizedTrends = {
     ...trendsRoot,
-    data: trendsData,
-  }
+    data: trendsData }
 
   const offerMetaMap = await queryOfferMetaMap({
     db: params.db,
@@ -1378,8 +1333,7 @@ async function enrichReportCommissionSections(params: {
     offerIds: [
       ...offerRevenueRows.map((row) => Number(row.offer_id)),
       ...campaignPerformanceRows.map((row) => Number(row.offer_id)),
-    ],
-  })
+    ] })
 
   const offerPerformanceMap = new Map<number, {
     cost: number
@@ -1392,8 +1346,7 @@ async function enrichReportCommissionSections(params: {
     offerPerformanceMap.set(offerId, {
       cost: roundTo2(toNumber(row.cost, 0)),
       clicks: Math.round(toNumber(row.clicks, 0)),
-      campaignCount: Math.round(toNumber(row.campaign_count, 0)),
-    })
+      campaignCount: Math.round(toNumber(row.campaign_count, 0)) })
   }
 
   const attributedOfferRows = offerRevenueRows
@@ -1419,8 +1372,7 @@ async function enrichReportCommissionSections(params: {
         profit,
         roi: calculateRoiPercent(revenue, cost),
         roas: calculateRoasValue(revenue, cost),
-        isUnattributed: false,
-      }
+        isUnattributed: false }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => (b.revenue - a.revenue) || (Number(a.offerId) - Number(b.offerId)))
@@ -1445,8 +1397,7 @@ async function enrichReportCommissionSections(params: {
       status: normalizeCampaignStatus(row.status),
       offerId: Number.isFinite(Number(row.offer_id)) ? Number(row.offer_id) : null,
       cost: roundTo2(toNumber(row.cost, 0)),
-      clicks: Math.round(toNumber(row.clicks, 0)),
-    })
+      clicks: Math.round(toNumber(row.clicks, 0)) })
   }
 
   const attributedCampaignRows = campaignRevenueRows
@@ -1478,8 +1429,7 @@ async function enrichReportCommissionSections(params: {
         profit,
         roi: calculateRoiPercent(revenue, cost),
         roas: calculateRoasValue(revenue, cost),
-        isUnattributed: false,
-      }
+        isUnattributed: false }
     })
     .filter((row): row is NonNullable<typeof row> => row !== null)
     .sort((a, b) => (b.revenue - a.revenue) || (Number(a.campaignId) - Number(b.campaignId)))
@@ -1502,16 +1452,13 @@ async function enrichReportCommissionSections(params: {
   roiData.overall = {
     ...roiOverall,
     attributedRevenue: roundTo2(attributedCommissionForRange),
-    unattributedRevenue: roundTo2(unattributedRevenue),
-  }
+    unattributedRevenue: roundTo2(unattributedRevenue) }
 
   return {
     trends: normalizedTrends,
     roi: {
       ...roiRoot,
-      data: roiData,
-    },
-  }
+      data: roiData } }
 }
 
 function mergeRoiWithAffiliateRevenue(params: {
@@ -1547,8 +1494,7 @@ function mergeRoiWithAffiliateRevenue(params: {
   for (const item of params.affiliateRevenue.errors) {
     params.errors?.push({
       source: `affiliate.${item.platform}`,
-      message: item.message,
-    })
+      message: item.message })
   }
 
   roiData.overall = {
@@ -1569,13 +1515,11 @@ function mergeRoiWithAffiliateRevenue(params: {
     affiliateConfiguredPlatforms: params.affiliateRevenue.configuredPlatforms,
     affiliateQueriedPlatforms: params.affiliateRevenue.queriedPlatforms,
     affiliateBreakdown: params.affiliateRevenue.breakdown,
-    affiliateAttribution: params.affiliateRevenue.attribution,
-  }
+    affiliateAttribution: params.affiliateRevenue.attribution }
 
   return {
     ...roiRoot,
-    data: roiData,
-  }
+    data: roiData }
 }
 
 function mergeSummaryAndKpisWithRangeSnapshot(params: {
@@ -1608,9 +1552,7 @@ function mergeSummaryAndKpisWithRangeSnapshot(params: {
       startDate: params.startDate,
       endDate: params.endDate,
       days,
-      isRange: params.startDate < params.endDate,
-    },
-  }
+      isRange: params.startDate < params.endDate } }
 
   const kpisRoot = asObject(params.kpis) ? { ...(params.kpis as Record<string, any>) } : {}
   const kpisData = asObject(kpisRoot.data) ? { ...(kpisRoot.data as Record<string, any>) } : {}
@@ -1620,20 +1562,17 @@ function mergeSummaryAndKpisWithRangeSnapshot(params: {
     impressions: params.snapshot.impressions,
     clicks: params.snapshot.clicks,
     cost: params.snapshot.cost,
-    conversions: params.snapshot.conversions,
-  }
+    conversions: params.snapshot.conversions }
   kpisData.dateRange = {
     startDate: params.startDate,
     endDate: params.endDate,
     days,
-    isRange: params.startDate < params.endDate,
-  }
+    isRange: params.startDate < params.endDate }
   kpisRoot.data = kpisData
 
   return {
     summary: summaryRoot,
-    kpis: kpisRoot,
-  }
+    kpis: kpisRoot }
 }
 
 function buildStrategyRunRangeSummary(params: {
@@ -1657,8 +1596,7 @@ function buildStrategyRunRangeSummary(params: {
     runsSkipped,
     latestRunDate: String(latest?.run_date || '').trim() || null,
     latestMode: String(latest?.mode || '').trim() || null,
-    latestStatus: String(latest?.status || '').trim() || null,
-  }
+    latestStatus: String(latest?.status || '').trim() || null }
 }
 
 function getTopReasons(messages: unknown[], limit = 3): string[] {
@@ -1804,10 +1742,8 @@ function buildStrategyKnowledgeSummary(report: DailyReportPayload): StrategyKnow
     recommendationNote: buildRecommendationNote({
       guardLevel: String(failureGuard.guardLevel || 'none'),
       publishFailureRate: toNumber(failureGuard.publishFailureRate, 0),
-      reason,
-    }),
-    topPublishFailureReasons,
-  }
+      reason }),
+    topPublishFailureReasons }
 }
 
 async function fetchWithGuard<T>(source: string, fn: () => Promise<T>, errors: DailyReportPayload['errors']) {
@@ -1850,9 +1786,7 @@ async function enrichBudgetWithMultiCurrencyOverview(params: {
           query: {
             start_date: params.startDate,
             end_date: params.endDate,
-            currency,
-          },
-        }),
+            currency } }),
         params.errors
       )
     )
@@ -1863,8 +1797,7 @@ async function enrichBudgetWithMultiCurrencyOverview(params: {
       const responseRoot = asObject(response)
       return toBudgetCurrencyOverview({
         ...asObject(responseRoot?.data?.overall),
-        currency: responseRoot?.currency,
-      })
+        currency: responseRoot?.currency })
     })
     .filter(isBudgetCurrencyOverview)
 
@@ -1874,8 +1807,7 @@ async function enrichBudgetWithMultiCurrencyOverview(params: {
 
   return {
     ...budgetRoot,
-    multiCurrencyOverall,
-  }
+    multiCurrencyOverall }
 }
 
 export async function buildOpenclawDailyReport(
@@ -1898,38 +1830,31 @@ export async function buildOpenclawDailyReport(
     fetchWithGuard('dashboard.summary', () => fetchAutoadsJson({
       userId,
       path: '/api/dashboard/summary',
-      query: { days: 30 },
-    }), errors),
+      query: { days: 30 } }), errors),
     fetchWithGuard('dashboard.kpis', () => fetchAutoadsJson({
       userId,
       path: '/api/dashboard/kpis',
-      query: { days: 7 },
-    }), errors),
+      query: { days: 7 } }), errors),
     fetchWithGuard('dashboard.trends', () => fetchAutoadsJson({
       userId,
       path: '/api/dashboard/trends',
-      query: { days: 30 },
-    }), errors),
+      query: { days: 30 } }), errors),
     fetchWithGuard('analytics.roi', () => fetchAutoadsJson({
       userId,
       path: '/api/analytics/roi',
-      query: { start_date: reportStartDate, end_date: reportEndDate },
-    }), errors),
+      query: { start_date: reportStartDate, end_date: reportEndDate } }), errors),
     fetchWithGuard('dashboard.campaigns', () => fetchAutoadsJson({
       userId,
       path: '/api/dashboard/campaigns',
-      query: { days: 30, pageSize: 5, sortBy: 'cost', sortOrder: 'desc' },
-    }), errors),
+      query: { days: 30, pageSize: 5, sortBy: 'cost', sortOrder: 'desc' } }), errors),
     fetchWithGuard('analytics.budget', () => fetchAutoadsJson({
       userId,
       path: '/api/analytics/budget',
-      query: { start_date: reportStartDate, end_date: reportEndDate },
-    }), errors),
+      query: { start_date: reportStartDate, end_date: reportEndDate } }), errors),
     fetchWithGuard('campaigns.performance', () => fetchAutoadsJson({
       userId,
       path: '/api/campaigns/performance',
-      query: { daysBack: Math.max(7, reportRangeDays) },
-    }), errors),
+      query: { daysBack: Math.max(7, reportRangeDays) } }), errors),
     isDateRangeMode
       ? fetchWithGuard(
         'affiliate.commission.range',
@@ -1937,14 +1862,12 @@ export async function buildOpenclawDailyReport(
           db,
           userId,
           startDate: reportStartDate,
-          endDate: reportEndDate,
-        }),
+          endDate: reportEndDate }),
         errors
       )
       : fetchWithGuard('affiliate.commission', () => fetchAffiliateCommissionRevenue({
         userId,
-        reportDate,
-      }), errors),
+        reportDate }), errors),
   ])
 
   let normalizedSummary: any = summary
@@ -1954,8 +1877,7 @@ export async function buildOpenclawDailyReport(
     startDate: reportStartDate,
     endDate: reportEndDate,
     budget,
-    errors,
-  })
+    errors })
 
   if (isDateRangeMode) {
     const rangeKpiSnapshot = await fetchWithGuard(
@@ -1964,8 +1886,7 @@ export async function buildOpenclawDailyReport(
         db,
         userId,
         startDate: reportStartDate,
-        endDate: reportEndDate,
-      }),
+        endDate: reportEndDate }),
       errors
     )
     if (rangeKpiSnapshot) {
@@ -1974,8 +1895,7 @@ export async function buildOpenclawDailyReport(
         kpis: kpis || {},
         startDate: reportStartDate,
         endDate: reportEndDate,
-        snapshot: rangeKpiSnapshot,
-      })
+        snapshot: rangeKpiSnapshot })
       normalizedSummary = merged.summary
       normalizedKpis = merged.kpis
     }
@@ -1996,11 +1916,8 @@ export async function buildOpenclawDailyReport(
         unattributedCommission: 0,
         attributedOffers: 0,
         attributedCampaigns: 0,
-        writtenRows: 0,
-      },
-    },
-    errors,
-  })
+        writtenRows: 0 } },
+    errors })
 
   const roiRootForReconciliation = asObject(normalizedRoi)
   const roiDataForReconciliation = asObject(roiRootForReconciliation?.data)
@@ -2021,8 +1938,7 @@ export async function buildOpenclawDailyReport(
     () => queryAffiliateAttributionFailureSummary({
       db,
       userId,
-      reportDate,
-    }),
+      reportDate }),
     errors
   )
   const reconciliationSnapshot = buildAffiliateReconciliationSnapshot({
@@ -2031,12 +1947,10 @@ export async function buildOpenclawDailyReport(
     attributedRevenue: attributedRevenueForReconciliation,
     failureRows: failureSummary?.totalRows || 0,
     failureCommission: failureSummary?.totalCommission || 0,
-    topReasons: failureSummary?.topReasons || [],
-  })
+    topReasons: failureSummary?.topReasons || [] })
   normalizedRoi = attachAffiliateReconciliation({
     roi: normalizedRoi,
-    reconciliation: reconciliationSnapshot,
-  })
+    reconciliation: reconciliationSnapshot })
 
   if (reconciliationSnapshot.hasGap) {
     const reasonSummary = reconciliationSnapshot.topFailureReasons
@@ -2046,8 +1960,7 @@ export async function buildOpenclawDailyReport(
     errors.push({
       source: 'affiliate.reconciliation',
       message: `date=${reportDate}; gap=${reconciliationSnapshot.gap}; ratio=${reconciliationSnapshot.gapRatio}%`
-        + (reasonSummary ? `; reasons=${reasonSummary}` : ''),
-    })
+        + (reasonSummary ? `; reasons=${reasonSummary}` : '') })
 
     try {
       const resourceId = Number(reportDate.replace(/-/g, ''))
@@ -2067,15 +1980,12 @@ export async function buildOpenclawDailyReport(
             gapRatio: reconciliationSnapshot.gapRatio,
             failureRows: reconciliationSnapshot.failureRows,
             failureCommission: reconciliationSnapshot.failureCommission,
-            topFailureReasons: reconciliationSnapshot.topFailureReasons,
-          },
-        }
+            topFailureReasons: reconciliationSnapshot.topFailureReasons } }
       )
     } catch (error: any) {
       errors.push({
         source: 'affiliate.reconciliation_alert',
-        message: error?.message || String(error),
-      })
+        message: error?.message || String(error) })
     }
   }
 
@@ -2101,15 +2011,14 @@ export async function buildOpenclawDailyReport(
     impressions: toNumber(dailySnapshotRow?.impressions, 0),
     clicks: toNumber(dailySnapshotRow?.clicks, 0),
     cost: roundTo2(toNumber(dailySnapshotRow?.cost, 0)),
-    conversions: roundTo2(toNumber(dailySnapshotRow?.conversions, 0)),
-  }
+    conversions: roundTo2(toNumber(dailySnapshotRow?.conversions, 0)) }
 
   const actions = await db.query<any>(
     `SELECT id, channel, sender_id, action, target_type, target_id, status, error_message, created_at
      FROM openclaw_action_logs
      WHERE user_id = ?
-       AND DATE(created_at) >= ?
-       AND DATE(created_at) <= ?
+       AND (created_at::date) >= ?
+       AND (created_at::date) <= ?
      ORDER BY created_at DESC
      LIMIT 200`,
     [userId, reportStartDate, reportEndDate]
@@ -2119,8 +2028,8 @@ export async function buildOpenclawDailyReport(
     `SELECT id, action_type, target_type, target_id, status, error_message, created_at
      FROM strategy_center_actions
      WHERE user_id = ?
-       AND DATE(created_at) >= ?
-       AND DATE(created_at) <= ?
+       AND (created_at::date) >= ?
+       AND (created_at::date) <= ?
      ORDER BY created_at DESC
      LIMIT 200`,
     [userId, reportStartDate, reportEndDate]
@@ -2143,8 +2052,7 @@ export async function buildOpenclawDailyReport(
     ? buildStrategyRunRangeSummary({
       runs: strategyRunsInRange,
       startDate: reportStartDate,
-      endDate: reportEndDate,
-    })
+      endDate: reportEndDate })
     : undefined
 
   const strategyRecommendations = await fetchWithGuard(
@@ -2153,8 +2061,7 @@ export async function buildOpenclawDailyReport(
       userId,
       reportDate,
       forceRefresh: false,
-      limit: 100,
-    }),
+      limit: 100 }),
     errors
   )
 
@@ -2166,8 +2073,7 @@ export async function buildOpenclawDailyReport(
       reportDate,
       startDate: isDateRangeMode ? reportStartDate : undefined,
       trends,
-      roi: normalizedRoi,
-    }),
+      roi: normalizedRoi }),
     errors
   )
 
@@ -2177,8 +2083,7 @@ export async function buildOpenclawDailyReport(
       startDate: reportStartDate,
       endDate: reportEndDate,
       days: reportRangeDays,
-      isRange: isDateRangeMode,
-    },
+      isRange: isDateRangeMode },
     generatedAt: new Date().toISOString(),
     summary: normalizedSummary,
     kpis: normalizedKpis,
@@ -2193,8 +2098,7 @@ export async function buildOpenclawDailyReport(
     strategyRun,
     strategyRunRange: strategyRunRangeSummary,
     strategyRecommendations: strategyRecommendations || [],
-    errors: errors && errors.length > 0 ? errors : undefined,
-  }
+    errors: errors && errors.length > 0 ? errors : undefined }
 }
 
 function formatRecommendationTypeLabel(type: string): string {
@@ -2263,23 +2167,20 @@ export async function getOrCreateDailyReport(
             reportDate: effectiveReportDate,
             startDate: cachedRangeStart < cachedRangeEnd ? cachedRangeStart : undefined,
             trends: parsed.trends,
-            roi: parsed.roi,
-          })
+            roi: parsed.roi })
           const normalizedBudget = await enrichBudgetWithMultiCurrencyOverview({
             userId,
             startDate: cachedRangeStart,
             endDate: cachedRangeEnd,
             budget: parsed.budget,
-            errors: parsed.errors,
-          })
+            errors: parsed.errors })
 
           const normalizedCachedReport: DailyReportPayload = {
             ...parsed,
             date: effectiveReportDate,
             trends: enriched.trends,
             roi: enriched.roi,
-            budget: normalizedBudget,
-          }
+            budget: normalizedBudget }
           const normalizedPayloadJson = JSON.stringify(normalizedCachedReport)
           if (normalizedPayloadJson !== existing.payload_json) {
             await db.exec(
@@ -2329,16 +2230,13 @@ export async function getOrCreateDailyReport(
             roi: report.roi?.data?.overall,
             budget: report.budget?.data?.overall,
             actions: (report.actions || []).length,
-            strategy: strategySummary,
-          },
-          db.type,
+            strategy: strategySummary },
           {
             summary: report.summary?.kpis,
             roi: report.roi?.data?.overall,
             budget: report.budget?.data?.overall,
             actions: (report.actions || []).length,
-            strategy: strategySummary,
-          }
+            strategy: strategySummary }
         ),
         existingKnowledge?.notes || '待人工复盘：请补充今日有效策略、失败原因、修正规则。',
       ]
@@ -2415,8 +2313,7 @@ function formatReportMessage(report: DailyReportPayload): string {
     : roiCurrency
   const multiCurrencyRoiOverview = buildRoiCurrencyOverview({
     budgetOverview: multiCurrencyBudgetOverview,
-    affiliateBreakdown,
-  })
+    affiliateBreakdown })
   const hasMultiCurrencyRoiOverview = multiCurrencyRoiOverview.length > 1
   const profitCurrency = revenueAvailable && affiliateCurrency === roiCurrency
     ? roiCurrency
@@ -2471,8 +2368,7 @@ function formatReportMessage(report: DailyReportPayload): string {
       executed: 0,
       failed: 0,
       stale: 0,
-      dismissed: 0,
-    }
+      dismissed: 0 }
   )
 
   if (isRangeMode && reportStartDate && reportEndDate) {
@@ -2674,8 +2570,7 @@ export async function sendDailyReportToFeishu(params: SendDailyReportToFeishuPar
     const task = sendDailyReportToFeishuInternal({
       ...params,
       date: reportDate,
-      startDate: isRangeMode ? normalizedStartDate : undefined,
-    })
+      startDate: isRangeMode ? normalizedStartDate : undefined })
     reportDeliveryInflight.set(inflightKey, task)
     try {
       await task
@@ -2688,8 +2583,7 @@ export async function sendDailyReportToFeishu(params: SendDailyReportToFeishuPar
   return sendDailyReportToFeishuInternal({
     ...params,
     date: reportDate,
-    startDate: isRangeMode ? normalizedStartDate : undefined,
-  })
+    startDate: isRangeMode ? normalizedStartDate : undefined })
 }
 
 async function sendDailyReportToFeishuInternal(params: SendDailyReportToFeishuParams): Promise<void> {
@@ -2704,7 +2598,7 @@ async function sendDailyReportToFeishuInternal(params: SendDailyReportToFeishuPa
     ? await buildOpenclawDailyReport(params.userId, reportDate, { startDate: normalizedStartDate })
     : await getOrCreateDailyReport(params.userId, reportDate)
   const db = await getDatabase()
-  const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowSql = 'NOW()'
 
   if (!isRangeMode && params.deliveryTaskId) {
     const latestDelivery = await db.queryOne<{
@@ -2754,9 +2648,7 @@ async function sendDailyReportToFeishuInternal(params: SendDailyReportToFeishuPa
           channel: 'feishu',
           target: params.target,
           message,
-          ...(accountId ? { accountId } : {}),
-        },
-      }, deliveryIdempotencyKey ? { idempotencyKey: deliveryIdempotencyKey } : {})
+          ...(accountId ? { accountId } : {}) } }, deliveryIdempotencyKey ? { idempotencyKey: deliveryIdempotencyKey } : {})
       sentAny = true
     } catch (error: any) {
       const messageText = error?.message || String(error)

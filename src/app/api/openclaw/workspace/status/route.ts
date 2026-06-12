@@ -54,8 +54,7 @@ export async function GET(request: NextRequest) {
   const computedWorkspaceDir = resolveOpenclawWorkspaceDir({
     stateDir,
     actorUserId: auth.user.userId,
-    preferredWorkspace,
-  })
+    preferredWorkspace })
   const runtimeWorkspaceDir = readRuntimeWorkspaceDir(configPath)
   const effectiveWorkspaceDir = runtimeWorkspaceDir || computedWorkspaceDir
   const { inspectOpenclawWorkspace } = await import(
@@ -69,6 +68,5 @@ export async function GET(request: NextRequest) {
     runtimeWorkspaceDir: runtimeWorkspaceDir || null,
     computedWorkspaceDir,
     canReloadGateway: auth.user.role === 'admin',
-    ...status,
-  })
+    ...status })
 }

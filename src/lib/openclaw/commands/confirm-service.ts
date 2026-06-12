@@ -56,7 +56,7 @@ export async function expireStaleCommandConfirmations(params?: {
   userId?: number
 }): Promise<number> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   const confirmWhere = [
     `status = 'pending'`,
@@ -83,7 +83,7 @@ export async function expireStaleCommandConfirmations(params?: {
     `confirm_expires_at <= ${nowSql}`,
     'confirm_required = ?',
   ]
-  const runParams: Array<number | string | boolean> = [boolParam(true, db.type)]
+  const runParams: Array<number | string | boolean> = [boolParam(true)]
   if (typeof params?.userId === 'number' && Number.isFinite(params.userId)) {
     runWhere.push('user_id = ?')
     runParams.push(params.userId)
@@ -106,7 +106,7 @@ export async function createOrRefreshCommandConfirmation(params: {
   ttlSeconds?: number
 }): Promise<{ confirmToken: string; expiresAt: string }> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   await expireStaleCommandConfirmations({ userId: params.userId })
 
@@ -139,13 +139,12 @@ export async function createOrRefreshCommandConfirmation(params: {
          confirm_expires_at = ?,
          updated_at = ${nowSql}
      WHERE id = ? AND user_id = ?`,
-    [boolParam(true, db.type), expiresAt, params.runId, params.userId]
+    [boolParam(true), expiresAt, params.runId, params.userId]
   )
 
   return {
     confirmToken,
-    expiresAt,
-  }
+    expiresAt }
 }
 
 export async function consumeCommandConfirmation(params: {
@@ -161,8 +160,7 @@ export async function consumeCommandConfirmation(params: {
     decision: params.decision,
     callbackEventId: params.callbackEventId,
     confirmToken: params.confirmToken,
-    requireTokenCheck: true,
-  })
+    requireTokenCheck: true })
 }
 
 export async function consumeCommandConfirmationByOwner(params: {
@@ -174,8 +172,7 @@ export async function consumeCommandConfirmationByOwner(params: {
     runId: params.runId,
     userId: params.userId,
     decision: params.decision,
-    requireTokenCheck: false,
-  })
+    requireTokenCheck: false })
 }
 
 async function consumeCommandConfirmationInternal(params: {
@@ -187,7 +184,7 @@ async function consumeCommandConfirmationInternal(params: {
   requireTokenCheck: boolean
 }): Promise<ConsumeConfirmResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   await expireStaleCommandConfirmations({ userId: params.userId })
 
@@ -224,8 +221,7 @@ async function consumeCommandConfirmationInternal(params: {
       ok: false,
       code: 'already_processed',
       confirmStatus: row.status,
-      runStatus: row.run_status,
-    }
+      runStatus: row.run_status }
   }
 
   const expiresAtMs = Date.parse(row.expires_at)
@@ -281,8 +277,7 @@ async function consumeCommandConfirmationInternal(params: {
       runId: params.runId,
       userId: params.userId,
       riskLevel: row.risk_level,
-      confirmStatus: 'canceled',
-    }
+      confirmStatus: 'canceled' }
   }
 
   await db.exec(
@@ -309,8 +304,7 @@ async function consumeCommandConfirmationInternal(params: {
     runId: params.runId,
     userId: params.userId,
     riskLevel: row.risk_level,
-    confirmStatus: 'confirmed',
-  }
+    confirmStatus: 'confirmed' }
 }
 
 export async function recordOpenclawCallbackEvent(params: {
@@ -337,6 +331,5 @@ export async function recordOpenclawCallbackEvent(params: {
   )
 
   return {
-    accepted: Number(result.changes || 0) > 0,
-  }
+    accepted: Number(result.changes || 0) > 0 }
 }

@@ -26,8 +26,7 @@ const HEADER_ALIASES: Record<string, string[]> = {
   title: ['title', 'product_name', 'name', 'product'],
   affiliate_link: ['affiliate_link', 'link', 'tracking_url', 'affiliate', 'trackinglink'],
   product_url: ['product_url', 'url', 'productlink', 'product_link'],
-  priority: ['priority', 'priority_score', 'rank', 'score'],
-}
+  priority: ['priority', 'priority_score', 'rank', 'score'] }
 
 function canonicalizeHeader(raw: string): string {
   const normalized = normalizeCsvHeaderCell(raw).toLowerCase()
@@ -83,8 +82,7 @@ function parseRows(rows: string[][], defaultCountry?: string | null): ParsedAsin
       affiliate_link: map.affiliate_link !== undefined ? row[map.affiliate_link] : null,
       product_url: map.product_url !== undefined ? row[map.product_url] : null,
       priority: map.priority !== undefined ? parsePriority(row[map.priority]) : null,
-      data_json: { row },
-    }
+      data_json: { row } }
     items.push(item)
   }
 
@@ -95,8 +93,7 @@ function parseCsvText(text: string, defaultCountry?: string | null): ParsedAsinI
   const parseResult = Papa.parse<string[]>(text, {
     header: false,
     skipEmptyLines: true,
-    transformHeader: (header: string) => header.trim(),
-  })
+    transformHeader: (header: string) => header.trim() })
   const rows = parseResult.data as string[][]
   if (rows.length === 0) return []
   return parseRows(rows, defaultCountry)
@@ -123,8 +120,7 @@ function parseJsonText(text: string, defaultCountry?: string | null): ParsedAsin
       affiliate_link: row?.affiliate_link ?? row?.link ?? row?.tracking_url ?? null,
       product_url: row?.product_url ?? row?.url ?? null,
       priority: parsePriority(row?.priority ?? row?.priority_score),
-      data_json: row,
-    })
+      data_json: row })
   }
   return items
 }
@@ -161,15 +157,11 @@ export async function importAsinFile(params: {
 }): Promise<{ inputId: number; total: number; inserted: number }> {
   const db = await getDatabase()
   const checksum = computeChecksum(params.buffer)
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
-  const insertSql = db.type === 'postgres'
-    ? `INSERT INTO openclaw_asin_inputs
+  const insertSql = `INSERT INTO openclaw_asin_inputs
        (user_id, source, filename, file_type, file_size, checksum, status, total_items, parsed_items, metadata_json, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ${nowFunc}, ${nowFunc}) RETURNING id`
-    : `INSERT INTO openclaw_asin_inputs
-       (user_id, source, filename, file_type, file_size, checksum, status, total_items, parsed_items, metadata_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ${nowFunc}, ${nowFunc})`
 
   const result = await db.exec(insertSql, [
     params.userId,
@@ -178,10 +170,10 @@ export async function importAsinFile(params: {
     params.fileType || null,
     params.fileSize ?? null,
     checksum,
-    toDbJsonObjectField(params.metadata ?? null, db.type, null),
+    toDbJsonObjectField(params.metadata ?? null, null),
   ])
 
-  const inputId = getInsertedId(result, db.type)
+  const inputId = getInsertedId(result)
 
   let items: ParsedAsinItem[] = []
   const lowerName = (params.filename || '').toLowerCase()
@@ -231,7 +223,7 @@ export async function importAsinFile(params: {
         sanitizeString(item.product_url),
         item.priority ?? 0,
         params.source,
-        toDbJsonObjectField(item.data_json ?? null, db.type, null),
+        toDbJsonObjectField(item.data_json ?? null, null),
       ]
     )
     inserted += 1

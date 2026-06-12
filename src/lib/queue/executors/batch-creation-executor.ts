@@ -59,7 +59,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
   const queue = getQueueManager()
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   console.log(`🚀 开始执行批量创建任务: batch=${batchId}, count=${rows.length}`)
 
@@ -295,7 +295,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
     console.error(`❌ 批量创建任务失败: batch=${batchId}:`, error.message)
 
     // 🔧 PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
-    const nowFuncErr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFuncErr = 'NOW()'
 
     // 更新batch_tasks和upload_records为失败状态
     await db.exec(

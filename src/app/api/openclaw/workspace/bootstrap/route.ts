@@ -32,8 +32,7 @@ async function buildWorkspaceStatus(params: {
     runtimeWorkspaceDir: null,
     computedWorkspaceDir: params.computedWorkspaceDir,
     canReloadGateway: params.canReloadGateway,
-    ...inspected,
-  }
+    ...inspected }
 }
 
 export async function POST(request: NextRequest) {
@@ -57,8 +56,7 @@ export async function POST(request: NextRequest) {
   const computedWorkspaceDir = resolveOpenclawWorkspaceDir({
     stateDir,
     actorUserId: auth.user.userId,
-    preferredWorkspace,
-  })
+    preferredWorkspace })
 
   const { ensureOpenclawWorkspaceBootstrap } = await import(
     /* turbopackIgnore: true */ '@/lib/openclaw/workspace-bootstrap'
@@ -66,28 +64,24 @@ export async function POST(request: NextRequest) {
   const bootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,
     actorUserId: auth.user.userId,
-    preferredWorkspace,
-  })
+    preferredWorkspace })
 
   const statusPayload = await buildWorkspaceStatus({
     workspaceDir: bootstrap.workspaceDir || computedWorkspaceDir,
     computedWorkspaceDir,
-    canReloadGateway: auth.user.role === 'admin',
-  })
+    canReloadGateway: auth.user.role === 'admin' })
 
   try {
     await syncOpenclawConfig({
       reason: 'openclaw-workspace-bootstrap',
-      actorUserId: auth.user.userId,
-    })
+      actorUserId: auth.user.userId })
   } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         error: error?.message || 'OpenClaw 配置同步失败',
         changedFiles: bootstrap.changedFiles,
-        status: statusPayload,
-      },
+        status: statusPayload },
       { status: 500 }
     )
   }
@@ -95,6 +89,5 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     success: true,
     changedFiles: bootstrap.changedFiles,
-    status: statusPayload,
-  })
+    status: statusPayload })
 }

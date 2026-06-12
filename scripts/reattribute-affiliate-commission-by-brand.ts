@@ -232,11 +232,8 @@ function expandEventIds(eventIds: string[]): string[] {
   return Array.from(expanded)
 }
 
-function getStoredEventIdSql(dbType: DatabaseAdapter['type'], rawColumn = 'raw_payload'): string {
-  if (dbType === 'postgres') {
-    return `COALESCE(NULLIF(TRIM(${rawColumn}->>'_autoads_event_id'), ''), NULLIF(TRIM(${rawColumn}->>'id'), ''))`
-  }
-  return `COALESCE(NULLIF(TRIM(json_extract(${rawColumn}, '$._autoads_event_id')), ''), NULLIF(TRIM(json_extract(${rawColumn}, '$.id')), ''))`
+function getStoredEventIdSql(rawColumn = 'raw_payload'): string {
+  return `COALESCE(NULLIF(TRIM(${rawColumn}->>'_autoads_event_id'), ''), NULLIF(TRIM(${rawColumn}->>'id'), ''))`
 }
 
 async function loadRawRows(
@@ -365,7 +362,7 @@ async function deleteEvents(
   }
 ): Promise<void> {
   if (params.eventIds.length === 0) return
-  const eventIdExpr = getStoredEventIdSql(db.type)
+  const eventIdExpr = getStoredEventIdSql()
   const queryEventIds = expandEventIds(params.eventIds)
 
   for (let i = 0; i < queryEventIds.length; i += 100) {

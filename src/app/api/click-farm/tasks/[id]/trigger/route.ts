@@ -105,9 +105,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     // 🔧 修复(2026-01-05): 不要清空 next_run_at，这会导致任务在每次 cron job 执行时被重复选中
     // 而是设置为一个过去的值，让任务立即执行一次，然后在 triggerTaskScheduling 中正确更新 next_run_at
     const db = getDatabase()
-    const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-    const oneHourAgoSql =
-      db.type === 'postgres' ? "NOW() - INTERVAL '1 hour'" : "datetime('now', '-1 hour')"
+    const nowSql = 'NOW()'
+    const oneHourAgoSql = "NOW() - INTERVAL '1 hour'"
     const updated = await db.exec(
       `
       UPDATE click_farm_tasks

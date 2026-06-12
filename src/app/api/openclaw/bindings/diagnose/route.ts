@@ -10,8 +10,7 @@ const diagnoseSchema = z.object({
   channel: z.string().min(1, zErr.required),
   senderId: z.string().min(1, zErr.required),
   accountId: z.string().optional(),
-  tenantKey: z.string().optional(),
-})
+  tenantKey: z.string().optional() })
 
 export async function POST(request: NextRequest) {
   const auth = await verifyOpenclawSessionAuth(request)
@@ -33,14 +32,12 @@ export async function POST(request: NextRequest) {
     parsed.data.senderId,
     {
       accountId: parsed.data.accountId,
-      tenantKey: parsed.data.tenantKey,
-    }
+      tenantKey: parsed.data.tenantKey }
   )
 
   return NextResponse.json({
     success: true,
     resolution,
     expectedUserId: auth.user.userId,
-    matchesCurrentUser: resolution.userId === auth.user.userId,
-  })
+    matchesCurrentUser: resolution.userId === auth.user.userId })
 }

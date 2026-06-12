@@ -336,10 +336,9 @@ export async function syncCampaignsFromGoogleAds(
     console.log(`[GoogleAds Sync] Starting sync for user ${userId}...`)
 
     // 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
-    const isManagerCondition =
-      db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
-    const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+    const isActiveCondition = 'is_active = TRUE'
+    const isManagerCondition = 'is_manager_account = FALSE'
+    const isDeletedCondition = 'is_deleted = FALSE'
 
     // 🔧 获取用户分配的 MCC 账号列表
     let mccCustomerIds: string[] = []
@@ -573,7 +572,7 @@ export async function syncCampaignsFromGoogleAds(
                         WHERE id = ? AND user_id = ?
                       `,
                         [
-                          toDbCampaignBackupJsonField(campaign_config, dbCheck.type),
+                          toDbCampaignBackupJsonField(campaign_config),
                           new Date(),
                           googleBackup.id,
                           userId,
@@ -1278,7 +1277,7 @@ async function saveCampaignSyncAuditRows(rows: CampaignSyncAuditInsert[]): Promi
             row.aggregatedCallouts,
             row.aggregatedSitelinks,
             row.aggregatedLocations,
-            db.type === 'postgres' ? row.auditPayload : JSON.stringify(row.auditPayload),
+            row.auditPayload,
             new Date(),
             new Date(),
           ]
@@ -1348,7 +1347,7 @@ async function saveCampaignToDatabase(params: {
   }
 
   if (offerId) {
-    const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
+    const occupyingWhere = offerOccupyingCampaignWhereClause()
     const existingForOffer = (await db.queryOne(
       `SELECT id, campaign_id FROM campaigns WHERE ${occupyingWhere} ORDER BY updated_at DESC, id DESC LIMIT 1`,
       [offerId, userId]
@@ -1415,7 +1414,7 @@ async function saveCampaignToDatabase(params: {
         google_ad_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ${db.type === 'postgres' ? 'TRUE' : '1'}, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${'TRUE'}, ?, ${'TRUE'}, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       googleAdsAccountId,
@@ -1574,13 +1573,13 @@ async function createOfferFirst(params: {
       offerName,
       campaign.campaign_id,
       'google_ads_sync',
-      db.type === 'postgres' ? 'TRUE' : '1', // 新创建的 Offer 标记为需要完善
+      'TRUE', // 新创建的 Offer 标记为需要完善
       'pending',
-      db.type === 'postgres' ? 'TRUE' : '1',
+      'TRUE',
     ]
   )
 
-  const offerId = getInsertedId(result, db.type)
+  const offerId = getInsertedId(result)
   console.log(`[GoogleAds Sync] Created offer ${offerId} for campaign ${campaign.campaign_id}`)
 
   return { offerId, created: true, offerUrlFieldsUpdated: false }

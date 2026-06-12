@@ -62,7 +62,7 @@ export interface Offer {
   scrape_status: string
   scrape_error: string | null
   scraped_at: string | null
-  // 注意：PostgreSQL 返回 boolean，SQLite 返回 number (0/1)
+  // 注意：PostgreSQL 返回 boolean
   is_active: number | boolean
   industry_code: string | null // 行业代码（数据库字段，之前遗漏）
   google_ads_campaign_id: string | null
@@ -335,17 +335,13 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
   ]
 
   // Debug: Check for undefined values
-  if (db.type === 'postgres') {
-    const undefinedIndices = params
-      .map((p, i) => (p === undefined ? i : -1))
-      .filter((i) => i !== -1)
-    if (undefinedIndices.length > 0) {
-      console.error('❌ Found undefined parameters at indices:', undefinedIndices)
-      console.error('Parameters:', params)
-      throw new Error(
-        `Cannot insert with undefined values at indices: ${undefinedIndices.join(', ')}`
-      )
-    }
+  const undefinedIndices = params.map((p, i) => (p === undefined ? i : -1)).filter((i) => i !== -1)
+  if (undefinedIndices.length > 0) {
+    console.error('❌ Found undefined parameters at indices:', undefinedIndices)
+    console.error('Parameters:', params)
+    throw new Error(
+      `Cannot insert with undefined values at indices: ${undefinedIndices.join(', ')}`
+    )
   }
 
   const result = await db.exec(
@@ -367,25 +363,11 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     params
   )
 
-  // 🔧 修复(2025-12-30): PostgreSQL 使用 RETURNING id，SQLite 使用 lastInsertRowid
-  let insertedId: number
-  if (db.type === 'postgres') {
-    // PostgreSQL: db.exec 已经自动添加 RETURNING id，结果在 result.lastInsertRowid
-    // 格式: { changes: number, lastInsertRowid: number }
-    const pgResult = result as { changes: number; lastInsertRowid?: number }
-    if (pgResult.lastInsertRowid !== undefined) {
-      insertedId = pgResult.lastInsertRowid
-      console.log('🔍 [createOffer] PostgreSQL insertedId:', insertedId)
-    } else {
-      throw new Error('PostgreSQL INSERT 未返回 id')
-    }
-  } else {
-    // SQLite: 使用 lastInsertRowid
-    if (!result.lastInsertRowid) {
-      throw new Error('SQLite INSERT 未返回 lastInsertRowid')
-    }
-    insertedId = result.lastInsertRowid as number
+  const pgResult = result as { changes: number; lastInsertRowid?: number }
+  if (pgResult.lastInsertRowid === undefined) {
+    throw new Error('PostgreSQL INSERT 未返回 id')
   }
+  const insertedId = pgResult.lastInsertRowid
 
   const offer = await findOfferById(insertedId, userId)
   if (!offer) {
@@ -405,11 +387,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
  */
 export async function findOfferById(id: number, userId: number): Promise<Offer | null> {
   const db = await getDatabase()
-  const db_type = db.type
-  const deletedCondition =
-    db_type === 'postgres'
-      ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const deletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
 
   const offer = (await db.queryOne(
     `
@@ -449,12 +427,7 @@ export async function listOffers(
 
   // 默认排除已删除的Offer（需求25）
   if (!options?.includeDeleted) {
-    const db_type = db.type
-    if (db_type === 'postgres') {
-      whereConditions.push("(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))")
-    } else {
-      whereConditions.push('(o.is_deleted = 0 OR o.is_deleted IS NULL)')
-    }
+    whereConditions.push("(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))")
   }
 
   // 如果提供了ids参数，只查询特定ID的Offers（用于批量上传进度显示）
@@ -467,12 +440,7 @@ export async function listOffers(
   // 构建WHERE条件
   if (options?.isActive !== undefined) {
     whereConditions.push('o.is_active = ?')
-    const db_type = db.type
-    if (db_type === 'postgres') {
-      params.push(options.isActive) // PostgreSQL uses boolean
-    } else {
-      params.push(options.isActive ? 1 : 0) // SQLite uses integer
-    }
+    params.push(options.isActive)
   }
 
   if (options?.targetCountry) {
@@ -486,7 +454,7 @@ export async function listOffers(
       // Keep server-side search behavior aligned with client-side filtering:
       // - case-insensitive matching
       // - include id / brand / offer_name / url / final_url / category
-      const likeOperator = db.type === 'postgres' ? 'ILIKE' : 'LIKE'
+      const likeOperator = 'ILIKE'
       const searchPattern = `%${normalizedQuery}%`
       whereConditions.push(
         `(
@@ -564,11 +532,7 @@ export async function listOffers(
     'o.needs_completion',
   ].join(', ')
 
-  const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql(
-    db.type,
-    'o.id',
-    'o.user_id'
-  )
+  const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql('o.id', 'o.user_id')
   const listColumnsWithCampaign = `${listColumns}, ${occupyingCampaignIdSubquery} as campaign_id`
 
   const sortableColumnMap: Record<string, string> = {
@@ -608,18 +572,11 @@ export async function listOffers(
     return { offers: [], total: count }
   }
 
-  // 🔧 PostgreSQL兼容性修复: is_manager_account在PostgreSQL中是BOOLEAN类型
-  // 使用SQL类型转换确保兼容性，而不是在参数中传递类型不匹配的值
   const isManagerCondition =
-    db.type === 'postgres'
-      ? "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-      : 'gaa.is_manager_account = 0' // SQLite: 使用0
-  const isActiveAccountCondition =
-    db.type === 'postgres' ? "gaa.is_active::text IN ('1', 't', 'true')" : 'gaa.is_active = 1'
+    "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
+  const isActiveAccountCondition = "gaa.is_active::text IN ('1', 't', 'true')"
   const isNotDeletedAccountCondition =
-    db.type === 'postgres'
-      ? "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
-      : '(gaa.is_deleted = 0 OR gaa.is_deleted IS NULL)'
+    "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
 
   // 构建offer IDs的占位符
   const offerIds = offers.map((o) => o.id)
@@ -722,7 +679,7 @@ export async function updateOffer(
   input: UpdateOfferInput
 ): Promise<Offer> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   // 验证Offer存在且属于该用户
   const existing = await findOfferById(id, userId)
@@ -860,12 +817,7 @@ export async function updateOffer(
   }
   if (input.is_active !== undefined) {
     updates.push('is_active = ?')
-    const db_type = db.type
-    if (db_type === 'postgres') {
-      params.push(input.is_active) // PostgreSQL uses boolean
-    } else {
-      params.push(input.is_active ? 1 : 0) // SQLite uses integer
-    }
+    params.push(input.is_active)
   }
   if (input.product_price !== undefined) {
     updates.push('product_price = ?')
@@ -942,7 +894,7 @@ export async function updateOffer(
   // v3.2架构：店铺/单品差异化分析字段
   if (input.ai_analysis_v32 !== undefined) {
     updates.push('ai_analysis_v32 = ?')
-    params.push(toDbJsonObjectField(input.ai_analysis_v32, db.type, null))
+    params.push(toDbJsonObjectField(input.ai_analysis_v32, null))
   }
   if (input.page_type !== undefined) {
     updates.push('page_type = ?')
@@ -990,7 +942,7 @@ export async function updateOfferExtractionMetadata(
   extractionMetadata: string
 ): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   const { invalidateOfferCache } = await import('./api-cache')
   invalidateOfferCache(userId, id)
@@ -1046,9 +998,9 @@ export async function deleteOffer(
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数和布尔值
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const isDeletedTrue = db.type === 'postgres' ? true : 1
-  const isActiveFalse = db.type === 'postgres' ? false : 0
+  const nowFunc = 'NOW()'
+  const isDeletedTrue = true
+  const isActiveFalse = false
   let autoPausedCampaignCount = 0
   let autoRemovedCampaignCount = 0
 
@@ -1272,10 +1224,7 @@ export async function deleteOffer(
   // 🔥 需求：终止并软删除关联的补点击任务
   // 1. 停止所有运行中/待执行的补点击任务
   // 2. 软删除任务（保留历史统计数据）
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
-      : 'is_deleted = 0'
+  const isDeletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
   const clickFarmTasks = await db.query<any>(
     `
     SELECT id, status
@@ -1457,7 +1406,7 @@ export async function unlinkOfferFromAccount(
   //   JOIN offers o ON c.offer_id = o.id
   //   WHERE c.google_ads_account_id = ?
   //     AND c.user_id = ?
-  //     AND o.is_deleted = 0
+  //     AND o.is_deleted = FALSE
   //     AND c.status != 'REMOVED'
   // `, [accountId, userId]) as { count: number }
 
@@ -1465,7 +1414,7 @@ export async function unlinkOfferFromAccount(
   // if (activeCount.count === 0) {
   //   await db.exec(`
   //     UPDATE google_ads_accounts
-  //     SET is_idle = 1, updated_at = datetime('now')
+  //     SET is_idle = 1, updated_at = NOW()
   //     WHERE id = ? AND user_id = ?
   //   `, [accountId, userId])
   // }
@@ -1481,17 +1430,10 @@ export async function unlinkOfferFromAccount(
 export async function getIdleAdsAccounts(userId: number): Promise<any[]> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性修复: 布尔字段直接在SQL中比较
-  const isActiveCondition =
-    db.type === 'postgres' ? "gaa.is_active::text IN ('1', 't', 'true')" : 'gaa.is_active = 1'
+  const isActiveCondition = "gaa.is_active::text IN ('1', 't', 'true')"
   const isManagerCondition =
-    db.type === 'postgres'
-      ? "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-      : 'gaa.is_manager_account = 0'
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-      : 'o.is_deleted = 0'
+    "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
+  const isDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
 
   // 通过子查询判断账号是否闲置（没有活跃的Campaign关联）
   return await db.query(
@@ -1801,8 +1743,8 @@ export async function updateOfferScrapeStatus(
       // 继续使用原有的offer_name
     }
 
-    // 🔧 PostgreSQL兼容性修复：使用NOW()替代datetime('now')
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    // 🔧 PostgreSQL兼容性修复：使用NOW()替代NOW()
+    const nowFunc = 'NOW()'
     const effectiveUrl = urlForWrite ?? currentOffer?.url ?? null
     const effectiveFinalUrl = finalUrlForWrite ?? currentOffer?.final_url ?? null
     const asinForWrite = extractAsinFromOfferUrls(effectiveUrl, effectiveFinalUrl)
@@ -1874,18 +1816,18 @@ export async function updateOfferScrapeStatus(
         scrapedData.scraped_data || null,
         scrapedData.product_categories || null,
         scrapedData.page_type || null,
-        toDbJsonObjectField(scrapedData.ai_analysis_v32, db.type, null),
-        toDbJsonObjectField(scrapedData.ai_keywords, db.type, null),
-        toDbJsonObjectField(scrapedData.ai_competitive_edges, db.type, null),
+        toDbJsonObjectField(scrapedData.ai_analysis_v32, null),
+        toDbJsonObjectField(scrapedData.ai_keywords, null),
+        toDbJsonObjectField(scrapedData.ai_competitive_edges, null),
         id,
         userId,
       ]
     )
   } else {
     // 🔧 修复: 为了兼容PostgreSQL，使用条件更新而不是CASE表达式
-    // SQLite中scraped_at是TEXT，PostgreSQL中是TIMESTAMP，CASE会导致类型不匹配
-    // 🔧 PostgreSQL兼容性修复：使用NOW()替代datetime('now')
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    // scraped_at 为 TIMESTAMP，CASE 分支须保持类型一致
+    // 🔧 PostgreSQL兼容性修复：使用NOW()替代NOW()
+    const nowFunc = 'NOW()'
 
     if (status === 'completed') {
       await db.exec(

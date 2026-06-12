@@ -541,7 +541,7 @@ function detectRunawayStructuredOutput(
 
   // 生产故障样本：尾部出现长串重复数字/时间戳片段（如 1738770420-1200000000-...）
   // 这通常是结构化输出跑飞，不应继续扩大 maxOutputTokens。
-  const longNumbers = tail.match(/\d{6,}/g) || []
+  const longNumbers = tail.match(/\d{6 }/g) || []
   if (longNumbers.length >= 10) {
     const countMap = new Map<string, number>()
     let maxRepeat = 0
@@ -553,7 +553,7 @@ function detectRunawayStructuredOutput(
     if (maxRepeat >= 6) return true
   }
 
-  const repetitiveNumericChain = /(?:\d{6,}-){6,}\d{4,}/.test(tail)
+  const repetitiveNumericChain = /(?:\d{6 }-){6 }\d{4 }/.test(tail)
   if (repetitiveNumericChain) return true
 
   return false

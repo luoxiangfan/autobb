@@ -14,7 +14,6 @@ const cacheFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'postgres',
     query: dbFns.query,
     queryOne: dbFns.queryOne,
     exec: dbFns.exec,

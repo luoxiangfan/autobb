@@ -348,7 +348,7 @@ export async function getKeywordSearchVolumes(
 
       const languageCandidates = Array.from(new Set([effectiveLanguage, language].filter(Boolean)))
       const langPlaceholders = languageCandidates.map(() => '?').join(',')
-      const recentCutoffExpr = dateMinusDays(7, db.type)
+      const recentCutoffExpr = dateMinusDays(7)
 
       // 🔧 修复(2026-01-21): 使用规范化的关键词查询，解决标点符号匹配问题
       // 例如: "dr. mercola" 和 "dr mercola" 应该匹配同一条记录
@@ -949,7 +949,7 @@ async function saveToGlobalKeywords(
     await db.exec(
       `
       INSERT INTO global_keywords (keyword, country, language, search_volume, competition_level, avg_cpc_micros, cached_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
       ON CONFLICT(keyword, country, language)
       DO UPDATE SET
         search_volume = CASE
@@ -967,7 +967,7 @@ async function saveToGlobalKeywords(
           WHEN COALESCE(global_keywords.search_volume, 0) > 0 THEN global_keywords.avg_cpc_micros
           ELSE COALESCE(excluded.avg_cpc_micros, global_keywords.avg_cpc_micros)
         END,
-        cached_at = datetime('now'),
+        cached_at = NOW(),
         created_at = CASE
           WHEN COALESCE(global_keywords.search_volume, 0) != (
             CASE
@@ -976,7 +976,7 @@ async function saveToGlobalKeywords(
               ELSE excluded.search_volume
             END
           )
-          THEN datetime('now')
+          THEN NOW()
           ELSE global_keywords.created_at
         END
     `,

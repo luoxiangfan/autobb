@@ -71,7 +71,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         created_at,
         updated_at
       FROM click_farm_tasks
-      WHERE offer_id = ? AND user_id = ? AND IS_DELETED_FALSE
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = FALSE
       ORDER BY created_at DESC
       LIMIT 1
     `,

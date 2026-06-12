@@ -12,7 +12,7 @@ describe('splitSqlStatements', () => {
     expect(splitSqlStatements(sql)).toEqual(["INSERT INTO t(v) VALUES ('a;b');", 'SELECT 1;'])
   })
 
-  it('keeps SQLite triggers as a single statement', () => {
+  it('keeps PL/pgSQL trigger blocks as a single statement', () => {
     const sql = `
       CREATE TRIGGER t AFTER UPDATE ON x
       BEGIN

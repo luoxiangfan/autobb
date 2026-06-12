@@ -1,22 +1,20 @@
 -- ==========================================
 -- AutoAds PostgreSQL Schema - Consolidated (Init + Migrations)
 -- ==========================================
--- Includes: pg-migrations/000_init_schema_v2.pg.sql + pg-migrations/064-253*
+-- Includes: migrations/000_init_schema_v2.pg.sql + migrations/064-253*
 -- Generated: 2026-06-04
--- Database: PostgreSQL 14+
 -- NOTE: Migrations 141-253 merged into init; incremental files removed from repo.
 
 -- Tip (psql): run with `-v ON_ERROR_STOP=1` to stop on first error
 
 -- ====================================================================
--- SOURCE: pg-migrations/000_init_schema_v2.pg.sql
+-- SOURCE: migrations/000_init_schema_v2.pg.sql
 -- ====================================================================
 -- ==========================================
 -- AutoAds PostgreSQL Schema - Consolidated Edition
 -- ==========================================
 -- Version: 2.0.1 (Migrations 001-063, KISS optimized)
 -- Generated: 2025-12-08
--- Database: PostgreSQL 14+
 -- Description: Complete production-ready schema including all features
 --
 -- This schema consolidates all migrations (001-057) into a single
@@ -2896,7 +2894,7 @@ INSERT INTO users (
 ON CONFLICT DO NOTHING;
 
 -- ====================================================================
--- SOURCE: pg-migrations/064_consolidated_schema_changes.pg.sql
+-- SOURCE: migrations/064_consolidated_schema_changes.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 064_consolidated_schema_changes.pg.sql
@@ -3219,7 +3217,7 @@ END $$;
 -- SELECT column_name FROM information_schema.columns WHERE table_name = 'launch_scores' AND column_name LIKE '%_score' OR column_name LIKE '%_data';
 
 -- ====================================================================
--- SOURCE: pg-migrations/065_consolidated_prompt_ad_creative.pg.sql
+-- SOURCE: migrations/065_consolidated_prompt_ad_creative.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 065_consolidated_prompt_ad_creative.pg.sql
@@ -3503,7 +3501,7 @@ Return JSON with descriptions, descriptionTemplates, ctrOptimization, dataUtiliz
 -- SELECT prompt_id, version, is_active FROM prompt_versions WHERE prompt_id IN ('ad_creative_generation', 'ad_elements_headlines', 'ad_elements_descriptions') ORDER BY prompt_id, version DESC;
 
 -- ====================================================================
--- SOURCE: pg-migrations/066_consolidated_prompt_analysis.pg.sql
+-- SOURCE: migrations/066_consolidated_prompt_analysis.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 066_consolidated_prompt_analysis.pg.sql
@@ -4023,7 +4021,7 @@ CRITICAL RULES:
 -- ORDER BY prompt_id, version DESC;
 
 -- ====================================================================
--- SOURCE: pg-migrations/067_fix_prompt_missing_variables.pg.sql
+-- SOURCE: migrations/067_fix_prompt_missing_variables.pg.sql
 -- ====================================================================
 -- ============================================================================
 -- Migration 067: Fix prompt templates missing variables + optimize instructions (PostgreSQL)
@@ -4037,9 +4035,6 @@ CRITICAL RULES:
 --   1. brand_name_extraction v3.1 → v3.2: 添加4个输入变量 + 提取策略指导
 --   2. ad_elements_headlines v3.3 → v3.4: 添加4个深度分析变量 + 使用优先级指导
 --   3. brand_analysis_store v3.2 → v3.4: 添加2个数据变量 + 使用指导
---
--- SQLite vs PostgreSQL差异:
---   - is_active: SQLite用1/0, PostgreSQL用true/false
 --
 -- 日期: 2025-12-14
 -- ============================================================================
@@ -4326,7 +4321,7 @@ Return a COMPLETE JSON object:
 WHERE prompt_id = 'brand_analysis_store' AND is_active = true;
 
 -- ====================================================================
--- SOURCE: pg-migrations/068_sync_prompt_versions.pg.sql
+-- SOURCE: migrations/068_sync_prompt_versions.pg.sql
 -- ====================================================================
 -- ============================================================================
 -- Migration 068: 同步prompt版本 - 修复065/066覆盖问题
@@ -4633,7 +4628,7 @@ WHERE prompt_id = 'keywords_generation';
 -- ORDER BY prompt_id, version DESC;
 
 -- ====================================================================
--- SOURCE: pg-migrations/069_deprecate_keywords_generation_prompt.pg.sql
+-- SOURCE: migrations/069_deprecate_keywords_generation_prompt.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 069_deprecate_keywords_generation_prompt.pg.sql
@@ -4707,7 +4702,7 @@ ON CONFLICT (prompt_id, version) DO UPDATE SET
   change_notes = EXCLUDED.change_notes;
 
 -- ====================================================================
--- SOURCE: pg-migrations/070_keyword_pools_and_prompts.pg.sql
+-- SOURCE: migrations/070_keyword_pools_and_prompts.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 070_keyword_pools_and_prompts.pg.sql
@@ -5150,7 +5145,7 @@ COUNTRY: {{target_country}} | LANGUAGE: {{target_language}}
 -- SELECT prompt_id, version, is_active FROM prompt_versions WHERE prompt_id IN ('ad_creative_generation', 'keyword_intent_clustering') ORDER BY prompt_id, version DESC;
 
 -- ====================================================================
--- SOURCE: pg-migrations/071_rename_product_to_brand_oriented.pg.sql
+-- SOURCE: migrations/071_rename_product_to_brand_oriented.pg.sql
 -- ====================================================================
 -- Migration 071: Rename bucket classifications for clearer semantics
 --
@@ -5393,7 +5388,7 @@ SET bucket_intent = '功能导向'
 WHERE bucket_intent = '需求导向';
 
 -- ====================================================================
--- SOURCE: pg-migrations/072_add_synthetic_bucket.pg.sql
+-- SOURCE: migrations/072_add_synthetic_bucket.pg.sql
 -- ====================================================================
 -- 072: 添加综合创意桶类型 'S' (Synthetic)
 -- 用于第4个综合广告创意，包含所有品牌词+高搜索量非品牌词
@@ -5409,7 +5404,7 @@ ALTER TABLE ad_creatives ADD CONSTRAINT ad_creatives_keyword_bucket_check
 COMMENT ON COLUMN ad_creatives.keyword_bucket IS '关键词桶类型: A=品牌导向, B=场景导向, C=功能导向, S=综合(Synthetic)';
 
 -- ====================================================================
--- SOURCE: pg-migrations/073_update_review_analysis_prompt_v3.3.pg.sql
+-- SOURCE: migrations/073_update_review_analysis_prompt_v3.3.pg.sql
 -- ====================================================================
 -- Migration: 073_update_review_analysis_prompt_v3.3
 -- Description: 增强评论分析prompt的量化亮点提取（v3.2 → v3.3）
@@ -5564,7 +5559,7 @@ IMPORTANT: Extract AT LEAST 8-12 quantitative highlights if the reviews contain 
 WHERE prompt_id = 'review_analysis' AND is_active = true;
 
 -- ====================================================================
--- SOURCE: pg-migrations/074_launch_scores_creative_link.pg.sql
+-- SOURCE: migrations/074_launch_scores_creative_link.pg.sql
 -- ====================================================================
 -- Migration 074: Link launch_scores to ad_creatives and add issues/suggestions storage
 -- Date: 2025-12-17
@@ -5600,7 +5595,7 @@ WHERE ad_creative_id IS NOT NULL AND content_hash IS NOT NULL;
 -- No data migration needed as existing records don't have creative associations
 
 -- ====================================================================
--- SOURCE: pg-migrations/075_fix_global_keywords_schema.pg.sql
+-- SOURCE: migrations/075_fix_global_keywords_schema.pg.sql
 -- ====================================================================
 -- Migration: 075_fix_global_keywords_schema.pg.sql
 -- Purpose: 修复 global_keywords 表结构（旧结构 keyword_text → 新结构 keyword）
@@ -5651,14 +5646,13 @@ CREATE INDEX IF NOT EXISTS idx_global_keywords_cached_at
 ON global_keywords(cached_at);
 
 -- ====================================================================
--- SOURCE: pg-migrations/076_update_all_prompts_v4.14.pg.sql
+-- SOURCE: migrations/076_update_all_prompts_v4.14.pg.sql
 -- ====================================================================
 -- Migration: 076_update_all_prompts_v4.14
 -- Description: 批量更新所有Prompt到 v4.14 版本
 -- Created: 2025-12-17
 -- Version: v4.13 → v4.14
 -- Prompts: 12 个
--- Database: PostgreSQL
 
 
 -- ========================================
@@ -7377,10 +7371,10 @@ ON CONFLICT (prompt_id, version) DO NOTHING;
 
 
 -- ====================================================================
--- SOURCE: pg-migrations/077_enhance_audit_system.pg.sql
+-- SOURCE: migrations/077_enhance_audit_system.pg.sql
 -- ====================================================================
 -- Migration: 077_enhance_audit_system.pg.sql
--- Purpose: 完善审计系统 - 增强login_attempts表和audit_logs表（PostgreSQL版本）
+-- Purpose: 完善审计系统 - 增强login_attempts表和audit_logs表
 -- Date: 2025-12-17
 
 -- ============================================================================
@@ -7536,11 +7530,11 @@ GROUP BY operator_id, operator_username, event_type;
 -- ============================================================================
 
 -- ====================================================================
--- SOURCE: pg-migrations/078_fix_boolean_columns.pg.sql
+-- SOURCE: migrations/078_fix_boolean_columns.pg.sql
 -- ====================================================================
 -- 078_fix_boolean_columns.pg.sql
 -- 修复 PostgreSQL 中应该是 BOOLEAN 但实际是 INTEGER 的列
--- 问题：某些表的 is_deleted, is_active 列可能从 SQLite 迁移时保留了 INTEGER 类型
+-- 问题：某些表的 is_deleted, is_active 列若仍为 INTEGER 类型
 -- 导致错误：operator does not exist: integer = boolean
 
 -- 安全检查：只在列类型是 INTEGER 时才执行转换
@@ -7725,11 +7719,11 @@ AND column_name IN ('is_deleted', 'is_active', 'is_sensitive', 'is_required')
 ORDER BY table_name, column_name;
 
 -- ====================================================================
--- SOURCE: pg-migrations/079_update_gemini_model_config.pg.sql
+-- SOURCE: migrations/079_update_gemini_model_config.pg.sql
 -- ====================================================================
 -- 迁移目标：下线Gemini 3 Pro Preview，上线Gemini 3 Flash
 
--- PostgreSQL版本：更新或删除系统设置中的Gemini Pro Preview相关配置
+-- 更新或删除系统设置中的Gemini Pro Preview相关配置
 -- 如果用户之前选择了Gemini 3 Pro Preview，重置为默认值Gemini 2.5 Pro
 
 UPDATE system_settings
@@ -7754,10 +7748,9 @@ WHERE
   AND key = 'gemini_model';
 
 -- ====================================================================
--- SOURCE: pg-migrations/080_launch_score_v4.15_prompt_activation.pg.sql
+-- SOURCE: migrations/080_launch_score_v4.15_prompt_activation.pg.sql
 -- ====================================================================
 -- Migration: 080_launch_score_v4.15_prompt_activation.pg.sql
--- Database: PostgreSQL
 -- Purpose: Create and activate Launch Score v4.15 prompt with new scoring dimensions
 -- Date: 2025-12-18
 -- Author: Claude Code
@@ -8021,10 +8014,9 @@ COMMIT;
 -- ORDER BY created_at DESC LIMIT 5;
 
 -- ====================================================================
--- SOURCE: pg-migrations/081_launch_score_v4.16_matchtype_scoring.pg.sql
+-- SOURCE: migrations/081_launch_score_v4.16_matchtype_scoring.pg.sql
 -- ====================================================================
 -- Migration: 081_launch_score_v4.16_matchtype_scoring.pg.sql
--- Database: PostgreSQL
 -- Purpose: Update Launch Score to v4.16 with intelligent matchType scoring strategy
 -- Date: 2025-12-18
 -- Author: Claude Code
@@ -8326,12 +8318,11 @@ COMMIT;
 -- 3. Test Launch Score calculation with new matchType scoring
 
 -- ====================================================================
--- SOURCE: pg-migrations/082_add_negative_keyword_matchtype.pg.sql
+-- SOURCE: migrations/082_add_negative_keyword_matchtype.pg.sql
 -- ====================================================================
 -- Migration: 082_add_negative_keyword_matchtype.pg.sql
 -- Purpose: Add support for negative keyword match type configuration (PostgreSQL version)
 -- Date: 2025-12-18
--- Database: PostgreSQL
 -- Description:
 --   Google Ads API requires specifying match type for negative keywords (BROAD/PHRASE/EXACT).
 --   Previously, all negative keywords were hardcoded to BROAD match, causing unintended filtering.
@@ -8405,7 +8396,7 @@ Used by createGoogleAdsKeywordsBatch() to determine correct match type for negat
 COMMIT;
 
 -- ====================================================================
--- SOURCE: pg-migrations/083_update_queue_config_campaign_publish.pg.sql
+-- SOURCE: migrations/083_update_queue_config_campaign_publish.pg.sql
 -- ====================================================================
 -- Migration: Update queue config to include campaign-publish task type
 -- Description: Add campaign-publish to perTypeConcurrency configuration
@@ -8436,7 +8427,7 @@ WHERE category = 'queue' AND key = 'config' AND user_id IS NULL;
 -- Expected result: perTypeConcurrency should include "campaign-publish": 2
 
 -- ====================================================================
--- SOURCE: pg-migrations/084_add_system_settings_unique_constraint.pg.sql
+-- SOURCE: migrations/084_add_system_settings_unique_constraint.pg.sql
 -- ====================================================================
 -- Migration: Add unique constraint to system_settings (PostgreSQL - FIXED VERSION)
 -- Purpose: Prevent duplicate (category, key) entries with non-empty values
@@ -8488,14 +8479,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_system_settings_category_key_unique
 -- ORDER BY category, key;
 
 -- ====================================================================
--- SOURCE: pg-migrations/085_add_missing_proxy_urls_template.pg.sql
+-- SOURCE: migrations/085_add_missing_proxy_urls_template.pg.sql
 -- ====================================================================
 -- Migration: Add missing proxy.urls global template (PostgreSQL)
 -- Purpose: Insert the missing global template record for proxy.urls configuration
 -- Date: 2025-12-20
 
 -- Insert the global template for proxy.urls if it doesn't exist
--- PostgreSQL uses WHERE NOT EXISTS pattern instead of INSERT OR IGNORE
+-- 幂等插入：WHERE NOT EXISTS
 INSERT INTO system_settings (
   user_id,
   category,
@@ -8528,7 +8519,7 @@ WHERE NOT EXISTS (
 -- WHERE category = 'proxy' AND key = 'urls';
 
 -- ====================================================================
--- SOURCE: pg-migrations/086_fix_system_settings_unique_constraint.pg.sql
+-- SOURCE: migrations/086_fix_system_settings_unique_constraint.pg.sql
 -- ====================================================================
 -- Migration: Fix unique constraint for system_settings (PostgreSQL)
 -- Purpose: Ensure global templates are also unique, not just user configurations
@@ -8580,7 +8571,7 @@ CREATE UNIQUE INDEX idx_system_settings_global_template_unique
 -- HAVING COUNT(*) > 1;
 
 -- ====================================================================
--- SOURCE: pg-migrations/087_restore_global_templates.pg.sql
+-- SOURCE: migrations/087_restore_global_templates.pg.sql
 -- ====================================================================
 -- Emergency Fix: Restore all missing global templates (PostgreSQL)
 -- Purpose: Re-insert all global templates that were deleted by 084 migration
@@ -8686,7 +8677,7 @@ FROM system_settings
 WHERE user_id IS NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/088_add_bucket_d_to_keyword_pools.pg.sql
+-- SOURCE: migrations/088_add_bucket_d_to_keyword_pools.pg.sql
 -- ====================================================================
 -- Migration: Add Bucket D (High Purchase Intent) to Offer Keyword Pools (PostgreSQL)
 -- Date: 2025-12-22
@@ -8706,7 +8697,7 @@ SET bucket_d_keywords = '[]'::jsonb, bucket_d_intent = '高购买意图'
 WHERE bucket_d_keywords IS NULL OR bucket_d_intent IS NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/089_add_bucket_d_to_ad_creatives.pg.sql
+-- SOURCE: migrations/089_add_bucket_d_to_ad_creatives.pg.sql
 -- ====================================================================
 -- Migration: Add Bucket D to ad_creatives keyword_bucket constraint (PostgreSQL)
 -- Date: 2025-12-22
@@ -8721,14 +8712,13 @@ ADD CONSTRAINT ad_creatives_keyword_bucket_check
 CHECK (keyword_bucket IN ('A', 'B', 'C', 'D', 'S'));
 
 -- ====================================================================
--- SOURCE: pg-migrations/090_update_keyword_intent_clustering_v4.15.pg.sql
+-- SOURCE: migrations/090_update_keyword_intent_clustering_v4.15.pg.sql
 -- ====================================================================
 -- Migration: 090_update_keyword_intent_clustering_v4.15
 -- Description: 更新keyword_intent_clustering prompt到 v4.15，支持4桶聚类
 -- Created: 2025-12-22
 -- Version: v4.14 → v4.15
 -- Prompts: 1 个 (keyword_intent_clustering)
--- Database: PostgreSQL
 -- Author: Claude Code
 
 -- ========================================
@@ -8736,13 +8726,12 @@ CHECK (keyword_bucket IN ('A', 'B', 'C', 'D', 'S'));
 -- ========================================
 
 -- 1. 将当前活跃版本设为非活跃
--- PostgreSQL使用TRUE/FALSE而不是1/0
 UPDATE prompt_versions
 SET is_active = FALSE
 WHERE prompt_id = 'keyword_intent_clustering' AND is_active = TRUE;
 
 -- 2. 插入新版本
--- PostgreSQL语法与SQLite基本相同，注意字符串转义使用单引号''
+-- 注意字符串转义使用单引号 ''
 INSERT INTO prompt_versions (
   prompt_id,
   version,
@@ -8923,14 +8912,13 @@ v4.15 更新内容:
 -- Next version: v4.16 (待规划)
 
 -- ====================================================================
--- SOURCE: pg-migrations/091_092_093_update_prompts_v4.15.pg.sql
+-- SOURCE: migrations/091_092_093_update_prompts_v4.15.pg.sql
 -- ====================================================================
 -- Migration: 091_092_093_update_prompts_v4.15
 -- Description: 整合三个prompt更新迁移，优化关键词提取质量，添加严格的质量要求和格式规范
 -- Created: 2025-12-22
 -- Version: v4.14 → v4.15
 -- Prompts: 3 个 (brand_analysis_store, review_analysis, product_analysis_single)
--- Database: PostgreSQL
 -- Author: Claude Code
 
 -- ========================================
@@ -8938,7 +8926,6 @@ v4.15 更新内容:
 -- ========================================
 
 -- 1. 将当前活跃版本设为非活跃
--- PostgreSQL使用TRUE/FALSE而不是1/0
 UPDATE prompt_versions
 SET is_active = FALSE
 WHERE prompt_id = 'brand_analysis_store' AND is_active = TRUE;
@@ -9501,10 +9488,10 @@ Return a COMPLETE JSON object with this structure:
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/092_sync_competition_data_to_global_keywords.pg.sql
+-- SOURCE: migrations/092_sync_competition_data_to_global_keywords.pg.sql
 -- ====================================================================
 -- PostgreSQL Migration: 082_sync_competition_data_to_global_keywords.pg.sql
--- Purpose: 同步competition数据到global_keywords表 (PostgreSQL版本)
+-- Purpose: 同步competition数据到global_keywords表
 -- Date: 2025-12-19
 
 -- 背景：
@@ -9546,7 +9533,7 @@ WHERE (competition_level IS NULL OR competition_level = '')
 -- 4. 后续查询会从表中读取competition_level而不是UNKNOWN
 
 -- ====================================================================
--- SOURCE: pg-migrations/094_add_batch_cancellation.pg.sql
+-- SOURCE: migrations/094_add_batch_cancellation.pg.sql
 -- ====================================================================
 -- ===================================================
 -- Migration: 094_add_batch_cancellation.pg.sql
@@ -9588,7 +9575,7 @@ ALTER TABLE upload_records ADD CONSTRAINT upload_records_status_check
 -- 用户现在可以通过 POST /api/offers/batch/[batchId]/cancel 取消批量任务
 
 -- ====================================================================
--- SOURCE: pg-migrations/095_create_google_ads_service_accounts.pg.sql
+-- SOURCE: migrations/095_create_google_ads_service_accounts.pg.sql
 -- ====================================================================
 -- 创建 Google Ads 服务账号表
 CREATE TABLE IF NOT EXISTS google_ads_service_accounts (
@@ -9614,14 +9601,13 @@ ALTER TABLE google_ads_accounts ADD COLUMN IF NOT EXISTS auth_type TEXT DEFAULT 
 ALTER TABLE google_ads_accounts ADD COLUMN IF NOT EXISTS service_account_id TEXT REFERENCES google_ads_service_accounts(id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/096_update_ad_creative_generation_v4.15.pg.sql
+-- SOURCE: migrations/096_update_ad_creative_generation_v4.15.pg.sql
 -- ====================================================================
 -- Migration: 096_update_ad_creative_generation_v4.15
 -- Description: 更新广告创意生成prompt v4.15，强化货币符号本地化、紧迫感生成、价格优势量化
 -- Created: 2025-12-23
 -- Version: v4.14 → v4.15
 -- Prompts: 1个 (ad_creative_generation)
--- Database: PostgreSQL
 -- Author: Claude Code
 -- Safety: 防重复执行 - 使用 ON CONFLICT DO NOTHING
 
@@ -9898,14 +9884,13 @@ ORDER BY version DESC
 LIMIT 3;
 
 -- ====================================================================
--- SOURCE: pg-migrations/097_ad_creative_types_optimization.pg.sql
+-- SOURCE: migrations/097_ad_creative_types_optimization.pg.sql
 -- ====================================================================
 -- ===================================================
 -- Migration: 097_ad_creative_types_optimization.pg.sql
 -- Description: 广告创意类型优化 - 添加generated_buckets字段和更新prompt v4.16
 -- Created: 2025-12-23
 -- Version: v4.15 → v4.16
--- Database: PostgreSQL
 -- Author: Claude Code
 -- Safety: 防重复执行 - 使用 DO $$, IF EXISTS, ON CONFLICT DO NOTHING
 -- ===================================================
@@ -10221,13 +10206,12 @@ LIMIT 3;
 -- 4. 防重复执行 - 多次运行安全
 
 -- ====================================================================
--- SOURCE: pg-migrations/098_add_store_keyword_buckets.pg.sql
+-- SOURCE: migrations/098_add_store_keyword_buckets.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 098_add_store_keyword_buckets.pg.sql
 -- Description: 为店铺链接添加关键词分桶字段，支持5种店铺创意类型
 -- Date: 2025-12-24
--- Database: PostgreSQL
 -- =====================================================
 
 -- ============================================================
@@ -10302,13 +10286,12 @@ LIMIT 5;
 -- 4. idx_offer_keyword_pools_link_type: 链接类型索引
 
 -- ====================================================================
--- SOURCE: pg-migrations/099_keyword_clustering_v4.16.pg.sql
+-- SOURCE: migrations/099_keyword_clustering_v4.16.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 099_keyword_clustering_v4.16.pg.sql
 -- Description: 关键词聚类Prompt v4.16 - 支持店铺链接类型区分
 -- Date: 2025-12-24
--- Database: PostgreSQL
 -- =====================================================
 
 -- ============================================================
@@ -10557,13 +10540,12 @@ ORDER BY version DESC
 LIMIT 3;
 
 -- ====================================================================
--- SOURCE: pg-migrations/100_keyword_clustering_v4.17.pg.sql
+-- SOURCE: migrations/100_keyword_clustering_v4.17.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 100_keyword_clustering_v4.17.pg.sql
 -- Description: 关键词聚类Prompt v4.17 - 修复店铺链接聚类不均衡问题
 -- Date: 2025-12-24
--- Database: PostgreSQL
 -- =====================================================
 
 -- ============================================================
@@ -10809,13 +10791,12 @@ ORDER BY version DESC
 LIMIT 3;
 
 -- ====================================================================
--- SOURCE: pg-migrations/101_ad_creative_generation_v4.17_final.pg.sql
+-- SOURCE: migrations/101_ad_creative_generation_v4.17_final.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 101_ad_creative_generation_v4.17_final
 -- Description: 广告创意生成Prompt v4.17最终版 - 支持店铺链接类型区分 + JSON输出修复
 -- Date: 2025-12-24
--- Database: PostgreSQL
 -- =====================================================
 
 -- ========================================
@@ -10990,33 +10971,8 @@ LIMIT 5;
 
 -- ✅ Migration complete!
 
--- ========================================
--- SQLite vs PostgreSQL 迁移差异说明
--- ========================================
---
--- 1. INSERT 幂等性:
---    SQLite: INSERT OR IGNORE INTO ...
---    PostgreSQL: INSERT INTO ... ON CONFLICT (prompt_id, version) DO NOTHING
---
--- 2. BOOLEAN 值:
---    SQLite: is_active = 1 / is_active = 0
---    PostgreSQL: is_active = TRUE / is_active = FALSE
---
--- 3. 日期时间函数:
---    SQLite: datetime(''now'', '-24 hours')
---    PostgreSQL: CURRENT_TIMESTAMP - INTERVAL '24 hours'
---
--- 4. 字符串拼接:
---    SQLite: CONCAT(a, b) 或 a || b
---    PostgreSQL: a || b 或 CONCAT(a, b)
---
--- 5. 条件表达式:
---    SQLite: CASE WHEN ... THEN ... END
---    PostgreSQL: CASE WHEN ... THEN ... END (相同)
---
-
 -- ====================================================================
--- SOURCE: pg-migrations/102_fix_generated_buckets_inconsistency.pg.sql
+-- SOURCE: migrations/102_fix_generated_buckets_inconsistency.pg.sql
 -- ====================================================================
 -- Migration: 修复 generated_buckets 字段不一致问题 (PostgreSQL)
 -- Date: 2025-12-24
@@ -11062,7 +11018,7 @@ WHERE o.generated_buckets IS NOT NULL
   AND o.generated_buckets != '[]';
 
 -- ====================================================================
--- SOURCE: pg-migrations/103_keyword_clustering_v4.18_enhanced.pg.sql
+-- SOURCE: migrations/103_keyword_clustering_v4.18_enhanced.pg.sql
 -- ====================================================================
 -- 关键词意图聚类 v4.18 - 增强店铺链接分桶精准度
 -- 修复问题：
@@ -11413,7 +11369,7 @@ ELSE
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/104_fix_timestamp_columns.pg.sql
+-- SOURCE: migrations/104_fix_timestamp_columns.pg.sql
 -- ====================================================================
 -- 修复时间戳列类型问题
 -- 问题：PostgreSQL中 TEXT 类型的日期列无法与 TIMESTAMP WITH TIME ZONE 进行比较
@@ -11433,13 +11389,12 @@ ALTER TABLE link_check_history
 ALTER COLUMN checked_at SET DEFAULT NOW();
 
 -- ====================================================================
--- SOURCE: pg-migrations/105_strict_json_format_constraint.pg.sql
+-- SOURCE: migrations/105_strict_json_format_constraint.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 105_strict_json_format_constraint
 -- Description: 修复JSON解析问题 - 强制AI返回对象格式而非数组
 -- Date: 2025-12-24
--- Database: PostgreSQL
 -- =====================================================
 
 -- 错误: Unexpected non-whitespace character after JSON at position 3518
@@ -11617,13 +11572,12 @@ LIMIT 5;
 -- Migration complete!
 
 -- ====================================================================
--- SOURCE: pg-migrations/106_sitelinks_count_6.pg.sql
+-- SOURCE: migrations/106_sitelinks_count_6.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 106_sitelinks_count_6
 -- Description: 更新广告创意生成Prompt - 要求生成6个Sitelinks(从之前的隐式4个改为明确6个)
 -- Date: 2025-12-24
--- Database: PostgreSQL
 -- =====================================================
 
 -- ========================================
@@ -11836,13 +11790,12 @@ LIMIT 5;
 -- ✅ Migration complete!
 
 -- ====================================================================
--- SOURCE: pg-migrations/107_single_product_focus_prompt_v4.18.pg.sql
+-- SOURCE: migrations/107_single_product_focus_prompt_v4.18.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 107_single_product_focus_prompt_v4.18
 -- Description: 单品聚焦Prompt增强 v4.18 - 强制所有广告创意元素100%聚焦单品商品
 -- Date: 2025-12-25
--- Database: PostgreSQL
 -- =====================================================
 
 -- ========================================
@@ -12285,14 +12238,14 @@ WHERE prompt_id = 'keyword_intent_clustering' AND version = 'v4.18';
 -- 两个Prompt现在都已就绪，系统将使用最新的优化版本生成广告创意
 
 -- ====================================================================
--- SOURCE: pg-migrations/108_fix_google_ads_account_id_on_delete.pg.sql
+-- SOURCE: migrations/108_fix_google_ads_account_id_on_delete.pg.sql
 -- ====================================================================
 -- Migration: 108_fix_google_ads_account_id_on_delete
 -- Date: 2025-12-25
 -- Description: 修改google_ads_account_id外键约束，删除Ads账号时保留历史数据，设为NULL
 -- Tables affected: campaigns, weekly_recommendations, optimization_recommendations, sync_logs
 
--- PostgreSQL支持ALTER TABLE FOREIGN KEY，比SQLite简单
+-- PostgreSQL 支持 ALTER TABLE FOREIGN KEY
 
 -- =============================================================================
 -- 1. campaigns 表
@@ -12343,13 +12296,12 @@ ADD CONSTRAINT sync_logs_google_ads_account_id_fkey
 FOREIGN KEY (google_ads_account_id) REFERENCES google_ads_accounts(id) ON DELETE SET NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/108_product_model_emphasis_v4.19.pg.sql
+-- SOURCE: migrations/108_product_model_emphasis_v4.19.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 108_product_model_emphasis_v4.19
 -- Description: 产品型号强化 v4.19 - 提升产品型号在创意中的出现率
 -- Date: 2025-12-25
--- Database: PostgreSQL
 -- =====================================================
 
 -- 问题背景：
@@ -12723,7 +12675,7 @@ ORDER BY id DESC
 LIMIT 3;
 
 -- ====================================================================
--- SOURCE: pg-migrations/109_create_offer_blacklist.pg.sql
+-- SOURCE: migrations/109_create_offer_blacklist.pg.sql
 -- ====================================================================
 -- Migration: 109_create_offer_blacklist
 -- Description: 创建Offer拉黑投放黑名单库（品牌+国家）
@@ -12745,20 +12697,12 @@ CREATE INDEX IF NOT EXISTS idx_offer_blacklist_user ON offer_blacklist(user_id);
 CREATE INDEX IF NOT EXISTS idx_offer_blacklist_brand_country ON offer_blacklist(brand, target_country);
 
 -- ====================================================================
--- SOURCE: pg-migrations/110_bucket_type_differentiation_v4.20.pg.sql
+-- SOURCE: migrations/110_bucket_type_differentiation_v4.20.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 110_bucket_type_differentiation_v4.20
 -- Description: 桶类型差异化角度 v4.20 - 单品+店铺链接差异化创意
 -- Date: 2025-12-26
--- Database: PostgreSQL
--- =====================================================
-
--- PostgreSQL版本说明：
--- 1. 使用 INSERT ... WHERE NOT EXISTS 进行幂等插入
--- 2. 使用 NOW() 替代 datetime('now')
--- 3. 使用 || 进行字符串拼接
--- 4. 布尔值使用 true/false
 
 -- 步骤1：停用其他版本，激活v4.20（使用事务）
 DO $$
@@ -13605,13 +13549,12 @@ ORDER BY id DESC
 LIMIT 5;
 
 -- ====================================================================
--- SOURCE: pg-migrations/111_prompt_v4.21_store_link_sitelink_optional.pg.sql
+-- SOURCE: migrations/111_prompt_v4.21_store_link_sitelink_optional.pg.sql
 -- ====================================================================
 -- =====================================================
 -- Migration: 111_prompt_v4.21_store_link_sitelink_optional
 -- Description: v4.21 - 店铺链接Sitelink型号可选版，修复前后冲突
 -- Date: 2025-12-26
--- Database: PostgreSQL
 -- =====================================================
 
 -- ========================================
@@ -14179,7 +14122,7 @@ LIMIT 5;
 -- 5. 修复v4.20店铺聚焦与单品型号的冲突规则
 
 -- ====================================================================
--- SOURCE: pg-migrations/112_prompt_v4.22_reduce_product_model_emphasis.pg.sql
+-- SOURCE: migrations/112_prompt_v4.22_reduce_product_model_emphasis.pg.sql
 -- ====================================================================
 -- Migration: 112_prompt_v4.22_reduce_product_model_emphasis.pg.sql
 -- Description: 减少单品型号强制比例，提升创意多样性
@@ -14190,7 +14133,7 @@ LIMIT 5;
 --   3. Sitelinks: 强制至少2个 → 建议1-2个 包含产品型号
 --   4. 新增型号平衡策略：6-9个型号标题 + 6-9个品牌/功能/场景标题
 
--- PostgreSQL版本：更新prompt版本
+-- 更新prompt版本
 -- 1) 如果 v4.22 已存在：仅更新其内容（避免 UNIQUE(prompt_id, version) 冲突）
 UPDATE prompt_versions
 SET
@@ -14260,7 +14203,7 @@ WHERE prompt_id = 'ad_creative_generation' AND is_active = true AND version = 'v
   );
 
 -- ====================================================================
--- SOURCE: pg-migrations/113_prompt_v4.25_headline_diversity_and_bucket_adaptation.pg.sql
+-- SOURCE: migrations/113_prompt_v4.25_headline_diversity_and_bucket_adaptation.pg.sql
 -- ====================================================================
 -- Migration: 113_prompt_v4.25_headline_diversity_and_bucket_adaptation.pg.sql
 -- Description: 整合v4.23-v4.25：强制5+5+5结构 + 店铺链接例外 + 桶主题适配
@@ -14270,7 +14213,7 @@ WHERE prompt_id = 'ad_creative_generation' AND is_active = true AND version = 'v
 --   v4.24: 修复店铺链接冲突，5+5+5仅适用单品链接
 --   v4.25: 调整5+5+5结构适配桶主题（桶A全品牌/桶B场景/桶C功能/桶D价格/桶S平衡）
 
--- SQLite & PostgreSQL通用版本
+-- PostgreSQL 版本
 
 -- Step 1: 更新主规则（v4.23 → v4.25，整合店铺链接例外和桶适配）
 -- 1) 如果 v4.25 已存在：仅更新其内容（避免 UNIQUE(prompt_id, version) 冲突）
@@ -14407,7 +14350,7 @@ SET
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.25';
 
 -- ====================================================================
--- SOURCE: pg-migrations/114_prompt_v4.26_clean.pg.sql
+-- SOURCE: migrations/114_prompt_v4.26_clean.pg.sql
 -- ====================================================================
 -- Migration: 114_prompt_v4.26_clean.pg.sql
 -- Description: v4.26 完整重写 - 整合所有功能，解决历史冲突
@@ -14771,7 +14714,7 @@ WHERE prompt_id = 'ad_creative_generation' AND is_active = true AND version = 'v
   );
 
 -- ====================================================================
--- SOURCE: pg-migrations/115_prompt_v4.30_final.pg.sql
+-- SOURCE: migrations/115_prompt_v4.30_final.pg.sql
 -- ====================================================================
 -- Migration: Prompt v4.30 - 明确Keywords数量+精简标记
 -- Date: 2025-12-26
@@ -15034,7 +14977,7 @@ COUNTRY: {{target_country}} | LANGUAGE: {{target_language}}
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/116_prompt_v4.31_ad_strength_optimization.pg.sql
+-- SOURCE: migrations/116_prompt_v4.31_ad_strength_optimization.pg.sql
 -- ====================================================================
 -- Migration: 116_prompt_v4.31_ad_strength_optimization.pg.sql
 -- Description: Ad Strength优化版 - 增加类型多样性、紧迫感、CTA要求
@@ -15345,7 +15288,7 @@ ORDER BY created_at DESC
 LIMIT 3;
 
 -- ====================================================================
--- SOURCE: pg-migrations/117_prompt_v4.32_brand_coverage_optimization.pg.sql
+-- SOURCE: migrations/117_prompt_v4.32_brand_coverage_optimization.pg.sql
 -- ====================================================================
 -- Migration: 117_prompt_v4.32_brand_coverage_optimization.pg.sql
 -- Description: 品牌词覆盖率优化 - 平衡品牌认知与多样性
@@ -15407,26 +15350,24 @@ ORDER BY created_at DESC
 LIMIT 3;
 
 -- ====================================================================
--- SOURCE: pg-migrations/118_click_farm_tasks.pg.sql
+-- SOURCE: migrations/118_click_farm_tasks.pg.sql
 -- ====================================================================
 -- Migration: 118_click_farm_tasks
 -- Description: 创建补点击任务表（Click Farm Tasks），支持未来日期开始任务
--- PostgreSQL版本
 -- Author: Claude
 -- Date: 2024-12-28
 --
 -- ==============================================================================
--- SQLite vs PostgreSQL 语法差异对照：
+-- PostgreSQL schema 约定：
 -- ==============================================================================
--- | 特性          | SQLite                          | PostgreSQL                    |
--- |--------------|---------------------------------|-------------------------------|
--- | ID生成       | TEXT DEFAULT (lower(hex(...)))  | UUID PRIMARY KEY DEFAULT ...  |
--- | 布尔类型     | INTEGER (0/1)                   | BOOLEAN                       |
--- | 时间戳       | TEXT                            | TIMESTAMP                     |
--- | JSON存储     | TEXT                            | JSONB                         |
--- | 默认时间函数 | datetime('now')                 | NOW() / CURRENT_DATE          |
--- | 日期函数     | DATE('now')                     | CURRENT_DATE                  |
--- | 外键约束     | 行内定义                         | CONSTRAINT ... FOREIGN KEY    |
+-- | 特性       | 本仓库用法                                      |
+-- |-----------|------------------------------------------------|
+-- | ID 生成   | UUID PRIMARY KEY DEFAULT gen_random_uuid()     |
+-- | 布尔类型  | BOOLEAN（TRUE/FALSE）                          |
+-- | 时间戳    | TIMESTAMP / TIMESTAMPTZ                        |
+-- | JSON 存储 | JSONB                                          |
+-- | 默认时间  | NOW() / CURRENT_TIMESTAMP / CURRENT_DATE     |
+-- | 外键约束  | CONSTRAINT ... FOREIGN KEY                     |
 -- ==============================================================================
 
 -- 补点击任务表
@@ -15533,7 +15474,7 @@ CREATE INDEX IF NOT EXISTS idx_cft_daily_history
   ON click_farm_tasks USING GIN (daily_history);
 
 -- ====================================================================
--- SOURCE: pg-migrations/119_drop_ad_performance_table.pg.sql
+-- SOURCE: migrations/119_drop_ad_performance_table.pg.sql
 -- ====================================================================
 -- Migration: 119_drop_ad_performance_table.pg.sql
 -- Description: 删除不再使用的 ad_performance 表（Ad级别细粒度数据不需要）
@@ -15608,7 +15549,7 @@ END $$;
 SELECT '迁移 119 完成: ad_performance 表已删除' AS status;
 
 -- ====================================================================
--- SOURCE: pg-migrations/120_user_sessions.pg.sql
+-- SOURCE: migrations/120_user_sessions.pg.sql
 -- ====================================================================
 -- ==========================================
 -- Migration: 120_user_sessions (PostgreSQL)
@@ -15751,7 +15692,7 @@ ALTER TABLE trusted_devices ADD CONSTRAINT fk_trusted_devices_user
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- ====================================================================
--- SOURCE: pg-migrations/121_auto_sync_batch_status.pg.sql
+-- SOURCE: migrations/121_auto_sync_batch_status.pg.sql
 -- ====================================================================
 -- Migration: 121_auto_sync_batch_status
 -- Description: 自动同步 batch_tasks 状态与子任务状态
@@ -15908,7 +15849,7 @@ COMMENT ON FUNCTION sync_batch_task_stats IS '自动同步 batch_tasks 状态与
 COMMENT ON TRIGGER trigger_offer_tasks_sync_batch ON offer_tasks IS '在 offer_tasks 状态变更时自动更新 batch_tasks';
 
 -- ====================================================================
--- SOURCE: pg-migrations/122_combined_migration.pg.sql
+-- SOURCE: migrations/122_combined_migration.pg.sql
 -- ====================================================================
 -- ============================================
 -- PostgreSQL 迁移编号：122
@@ -16041,7 +15982,7 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/123_add_soft_delete_to_core_tables.pg.sql
+-- SOURCE: migrations/123_add_soft_delete_to_core_tables.pg.sql
 -- ====================================================================
 -- ============================================
 -- PostgreSQL 迁移编号：123
@@ -16243,13 +16184,12 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/124_add_click_farm_referer_config.pg.sql
+-- SOURCE: migrations/124_add_click_farm_referer_config.pg.sql
 -- ====================================================================
 -- Migration: 123_add_click_farm_referer_config.pg.sql
 -- Description: 为click_farm_tasks表添加referer_config字段，支持防爬优化
 -- Author: AutoBB
 -- Date: 2025-12-30
--- Database: PostgreSQL
 -- Priority: P1 - 功能必需
 
 -- ==========================================
@@ -16329,7 +16269,7 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/125_gemini_api_keys_and_provider_templates.pg.sql
+-- SOURCE: migrations/125_gemini_api_keys_and_provider_templates.pg.sql
 -- ====================================================================
 -- Migration: 125_gemini_api_keys_and_provider_templates.pg.sql
 -- Description: 添加 gemini_relay_api_key 字段和补充全局模板记录
@@ -16459,7 +16399,7 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/126_add_currency_to_campaign_performance.pg.sql
+-- SOURCE: migrations/126_add_currency_to_campaign_performance.pg.sql
 -- ====================================================================
 /**
  * Migration 126: Add currency support to campaign_performance table (PostgreSQL)
@@ -16512,11 +16452,10 @@ COMMENT ON COLUMN campaign_performance.currency IS 'Currency code from Google Ad
 -- ORDER BY total_cost DESC;
 
 -- ====================================================================
--- SOURCE: pg-migrations/127_fix_click_farm_tasks_foreign_key.pg.sql
+-- SOURCE: migrations/127_fix_click_farm_tasks_foreign_key.pg.sql
 -- ====================================================================
 -- Migration: 125_fix_click_farm_tasks_foreign_key
 -- Description: 修复 click_farm_tasks 表的外键约束问题
--- PostgreSQL版本
 -- Date: 2024-12-30
 --
 -- 问题：click_farm_tasks 表定义了复合外键 (offer_id, user_id) REFERENCES offers(id, user_id)
@@ -16582,11 +16521,10 @@ WHERE pg_constraint.conrelid = 'click_farm_tasks'::regclass
 AND pg_constraint.contype = 'f';
 
 -- ====================================================================
--- SOURCE: pg-migrations/128_create_url_swap_tasks.pg.sql
+-- SOURCE: migrations/128_create_url_swap_tasks.pg.sql
 -- ====================================================================
 -- Migration: 128_create_url_swap_tasks
 -- Description: 创建换链接任务表（URL Swap Task System）
--- PostgreSQL版本
 -- Date: 2025-01-03
 --
 -- 换链接任务系统：自动监测和更新Google Ads广告链接
@@ -16724,11 +16662,10 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/129_add_consecutive_failures.pg.sql
+-- SOURCE: migrations/129_add_consecutive_failures.pg.sql
 -- ====================================================================
 -- Migration: 129_add_consecutive_failures
 -- Description: 为url_swap_tasks表添加连续失败跟踪字段
--- PostgreSQL版本
 -- Date: 2025-01-03
 
 -- 添加连续失败次数字段
@@ -16739,7 +16676,7 @@ ADD COLUMN consecutive_failures INTEGER DEFAULT 0;
 SELECT 'consecutive_failures字段添加成功' AS result;
 
 -- ====================================================================
--- SOURCE: pg-migrations/130_update_prompts_enhanced_data.pg.sql
+-- SOURCE: migrations/130_update_prompts_enhanced_data.pg.sql
 -- ====================================================================
 -- ============================================================
 -- Migration: 130_update_prompts_enhanced_data.pg.sql
@@ -16756,7 +16693,6 @@ SELECT 'consecutive_failures字段添加成功' AS result;
 --
 -- Author: Claude Code
 -- Date: 2026-01-04
--- Database: PostgreSQL
 -- ============================================================
 
 -- ============================================================
@@ -17204,11 +17140,10 @@ Output in {{langName}}.$PROMPT$,
 -- ORDER BY prompt_id;
 
 -- ====================================================================
--- SOURCE: pg-migrations/131_add_enhanced_extraction_fields.pg.sql
+-- SOURCE: migrations/131_add_enhanced_extraction_fields.pg.sql
 -- ====================================================================
 -- Migration: 131_add_enhanced_extraction_fields
 -- Description: 为offers表补齐增强提取相关字段（修复生产库schema漂移：offers.enhanced_keywords等列缺失）
--- PostgreSQL版本
 -- Date: 2026-01-04
 
 -- 说明：
@@ -17237,7 +17172,7 @@ SELECT 'offers增强提取字段添加成功' AS result;
 
 
 -- ====================================================================
--- SOURCE: pg-migrations/132_remove_risk_type_column.pg.sql
+-- SOURCE: migrations/132_remove_risk_type_column.pg.sql
 -- ====================================================================
 -- Migration: Remove risk_type field from risk_alerts table (PostgreSQL)
 -- Date: 2026-01-06
@@ -17263,7 +17198,7 @@ END $$;
 DROP INDEX IF EXISTS idx_risk_alerts_risk_type;
 
 -- ====================================================================
--- SOURCE: pg-migrations/133_add_data_sync_global_templates.pg.sql
+-- SOURCE: migrations/133_add_data_sync_global_templates.pg.sql
 -- ====================================================================
 -- Migration: 133_add_data_sync_global_templates.pg.sql
 -- Date: 2026-01-07
@@ -17287,11 +17222,10 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/134_fix_url_swap_offer_unique_soft_delete.pg.sql
+-- SOURCE: migrations/134_fix_url_swap_offer_unique_soft_delete.pg.sql
 -- ====================================================================
 -- Migration: 134_fix_url_swap_offer_unique_soft_delete
 -- Description: 修复url_swap_tasks的offer_id唯一约束与软删除/完成态冲突
--- PostgreSQL版本
 --
 -- 背景：
 -- - 现有 uq_url_swap_offer UNIQUE(offer_id) 会导致：任务软删除后仍无法为同一Offer重新创建任务
@@ -17314,7 +17248,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_url_swap_offer_active
 
 
 -- ====================================================================
--- SOURCE: pg-migrations/136_add_google_ads_accounts_identity_verification.pg.sql
+-- SOURCE: migrations/136_add_google_ads_accounts_identity_verification.pg.sql
 -- ====================================================================
 -- Migration: 136_add_google_ads_accounts_identity_verification.pg.sql
 -- Date: 2026-01-08
@@ -17337,14 +17271,14 @@ ADD COLUMN identity_verification_checked_at TEXT;
 
 
 -- ====================================================================
--- SOURCE: pg-migrations/137_add_offer_tasks_brand_name.pg.sql
+-- SOURCE: migrations/137_add_offer_tasks_brand_name.pg.sql
 -- ====================================================================
 -- 新增：Offer创建/提取任务可选品牌名输入
 -- 用途：独立站场景下，使用用户填写的品牌名进行Google搜索补充信息
 ALTER TABLE offer_tasks ADD COLUMN IF NOT EXISTS brand_name TEXT;
 
 -- ====================================================================
--- SOURCE: pg-migrations/138_add_campaign_published_at.pg.sql
+-- SOURCE: migrations/138_add_campaign_published_at.pg.sql
 -- ====================================================================
 -- Add published_at to campaigns to track successful publish time (used by Campaigns "投放日期")
 ALTER TABLE campaigns ADD COLUMN IF NOT EXISTS published_at TEXT;
@@ -17359,12 +17293,11 @@ WHERE published_at IS NULL
 
 
 -- ====================================================================
--- SOURCE: pg-migrations/139_ad_creative_generation_v4.34.pg.sql
+-- SOURCE: migrations/139_ad_creative_generation_v4.34.pg.sql
 -- ====================================================================
 -- Migration: 139_ad_creative_generation_v4.34.pg.sql
 -- Description: ad_creative_generation v4.34 - KISS-3类型 + 证据约束 + Headline#2主关键词
 -- Date: 2026-01-14
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -17540,12 +17473,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.34';
 
 -- ====================================================================
--- SOURCE: pg-migrations/140_ad_creative_generation_v4.35.pg.sql
+-- SOURCE: migrations/140_ad_creative_generation_v4.35.pg.sql
 -- ====================================================================
 -- Migration: 140_ad_creative_generation_v4.35.pg.sql
 -- Description: ad_creative_generation v4.35 - Headline #2 使用DKI高购买意图关键词
 -- Date: 2026-01-15
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -17728,12 +17660,11 @@ WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.35';
 -- ====================================================================
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/141_ad_creative_generation_v4.36.pg.sql
+-- SOURCE: migrations/archived_141_253/141_ad_creative_generation_v4.36.pg.sql
 -- ====================================================================
 -- Migration: 141_ad_creative_generation_v4.36.pg.sql
 -- Description: ad_creative_generation v4.36 - 移除强制Headline #2 DKI限制
 -- Date: 2026-01-19
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -17906,7 +17837,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.36';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/142_product_analysis_prompt_v4.17.pg.sql
+-- SOURCE: migrations/archived_141_253/142_product_analysis_prompt_v4.17.pg.sql
 -- ====================================================================
 -- Migration 142: Update product analysis prompt to v4.17
 -- Fix brand description generation logic
@@ -18076,12 +18007,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'product_analysis_single' AND version = 'v4.17';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/143_url_swap_tasks_manual_suffix_mode.pg.sql
+-- SOURCE: migrations/archived_141_253/143_url_swap_tasks_manual_suffix_mode.pg.sql
 -- ====================================================================
 -- Migration: 143_url_swap_tasks_manual_suffix_mode.pg.sql
 -- Description: url_swap_tasks支持手动轮询Final URL suffix（方式二）
 -- Date: 2026-01-21
--- Database: PostgreSQL
 
 -- 方式字段：auto=自动解析推广链接；manual=用户配置suffix列表轮询
 ALTER TABLE url_swap_tasks
@@ -18100,12 +18030,11 @@ COMMENT ON COLUMN url_swap_tasks.manual_final_url_suffixes IS '手动模式下�
 COMMENT ON COLUMN url_swap_tasks.manual_suffix_cursor IS '手动模式轮询游标（下一次要使用的suffix索引）';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/144_url_swap_tasks_manual_affiliate_links.pg.sql
+-- SOURCE: migrations/archived_141_253/144_url_swap_tasks_manual_affiliate_links.pg.sql
 -- ====================================================================
 -- Migration: 144_url_swap_tasks_manual_affiliate_links.pg.sql
 -- Description: url_swap_tasks新增推广链接列表字段（方式二）
 -- Date: 2026-01-22
--- Database: PostgreSQL
 
 -- 手动模式：推广链接列表（JSON数组，完整URL）
 ALTER TABLE url_swap_tasks
@@ -18120,12 +18049,11 @@ WHERE (manual_affiliate_links IS NULL OR manual_affiliate_links = '[]'::jsonb)
   AND manual_final_url_suffixes IS NOT NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/145_fix_prompt_versions_sequence.pg.sql
+-- SOURCE: migrations/archived_141_253/145_fix_prompt_versions_sequence.pg.sql
 -- ====================================================================
 -- Migration: 145_fix_prompt_versions_sequence.pg.sql
 -- Description: Align prompt_versions_id_seq with max(id) to prevent duplicate key errors
 -- Date: 2026-01-28
--- Database: PostgreSQL
 
 DO $$
 BEGIN
@@ -18139,7 +18067,7 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/146_cpc_adjustment_history_campaign_id.pg.sql
+-- SOURCE: migrations/archived_141_253/146_cpc_adjustment_history_campaign_id.pg.sql
 -- ====================================================================
 -- Add campaign_id to cpc_adjustment_history for faster per-campaign lookups
 ALTER TABLE cpc_adjustment_history ADD COLUMN campaign_id INTEGER;
@@ -18149,12 +18077,11 @@ CREATE INDEX IF NOT EXISTS idx_cpc_history_user_campaign_created
 ON cpc_adjustment_history(user_id, campaign_id, created_at DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/147_url_swap_task_targets.pg.sql
+-- SOURCE: migrations/archived_141_253/147_url_swap_task_targets.pg.sql
 -- ====================================================================
 -- Migration: 147_url_swap_task_targets.pg.sql
 -- Description: url_swap_tasks多目标支持（任务目标表）
 -- Date: 2026-01-29
--- Database: PostgreSQL
 
 CREATE TABLE IF NOT EXISTS url_swap_task_targets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -18184,7 +18111,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_url_swap_task_targets_unique
   ON url_swap_task_targets(task_id, google_ads_account_id, google_campaign_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/148_add_offer_store_product_links.pg.sql
+-- SOURCE: migrations/archived_141_253/148_add_offer_store_product_links.pg.sql
 -- ====================================================================
 -- Migration 148: add store product links and page_type to offer tasks (PostgreSQL)
 ALTER TABLE offers ADD COLUMN IF NOT EXISTS store_product_links TEXT;
@@ -18192,12 +18119,11 @@ ALTER TABLE offer_tasks ADD COLUMN IF NOT EXISTS page_type TEXT;
 ALTER TABLE offer_tasks ADD COLUMN IF NOT EXISTS store_product_links TEXT;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/149_ad_creative_generation_v4.37.pg.sql
+-- SOURCE: migrations/archived_141_253/149_ad_creative_generation_v4.37.pg.sql
 -- ====================================================================
 -- Migration: 149_ad_creative_generation_v4.37.pg.sql
 -- Description: ad_creative_generation v4.37 - 补充单品优先
 -- Date: 2026-01-30
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -18368,7 +18294,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = '{version}';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/150_normalize_prompt_categories.pg.sql
+-- SOURCE: migrations/archived_141_253/150_normalize_prompt_categories.pg.sql
 -- ====================================================================
 -- Ensure prompt categories use Chinese labels
 UPDATE prompt_versions
@@ -18387,7 +18313,7 @@ WHERE category = 'keyword_generation'
   AND prompt_id <> 'keyword_intent_clustering';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/151_brand_core_keyword_pool.pg.sql
+-- SOURCE: migrations/archived_141_253/151_brand_core_keyword_pool.pg.sql
 -- ====================================================================
 -- Migration 151: add brand global core keyword pool tables (PostgreSQL)
 
@@ -18432,12 +18358,11 @@ CREATE INDEX IF NOT EXISTS idx_brand_core_daily_date
   ON brand_core_keyword_daily (date);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/152_ad_creative_generation_v4.38.pg.sql
+-- SOURCE: migrations/archived_141_253/152_ad_creative_generation_v4.38.pg.sql
 -- ====================================================================
 -- Migration: 152_ad_creative_generation_v4.38.pg.sql
 -- Description: ad_creative_generation v4.38 - 多单品卖点混合
 -- Date: 2026-01-31
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -18610,12 +18535,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.38';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/153_ad_creative_generation_v4.39.pg.sql
+-- SOURCE: migrations/archived_141_253/153_ad_creative_generation_v4.39.pg.sql
 -- ====================================================================
 -- Migration: 153_ad_creative_generation_v4.39.pg.sql
 -- Description: ad_creative_generation v4.39 - 数量规则调整
 -- Date: 2026-01-31
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -18800,12 +18724,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.39';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/154_ad_creative_generation_v4.40.pg.sql
+-- SOURCE: migrations/archived_141_253/154_ad_creative_generation_v4.40.pg.sql
 -- ====================================================================
 -- Migration: 154_ad_creative_generation_v4.40.pg.sql
 -- Description: ad_creative_generation v4.40 - 关键词数量限制10-20 + JSON Schema约束恢复
 -- Date: 2026-02-01
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -18990,12 +18913,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.40';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/155_ad_creative_generation_v4.41.pg.sql
+-- SOURCE: migrations/archived_141_253/155_ad_creative_generation_v4.41.pg.sql
 -- ====================================================================
 -- Migration: 155_ad_creative_generation_v4.41.pg.sql
 -- Description: ad_creative_generation v4.41 - 修复type字段膨胀 + 证据一致性
 -- Date: 2026-02-04
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -19173,12 +19095,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.41';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/156_ad_creative_generation_v4.42.pg.sql
+-- SOURCE: migrations/archived_141_253/156_ad_creative_generation_v4.42.pg.sql
 -- ====================================================================
 -- Migration: 156_ad_creative_generation_v4.42.pg.sql
 -- Description: ad_creative_generation v4.42 - 证据/紧迫感冲突修复 + 店铺/单品约束
 -- Date: 2026-02-04
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -19362,12 +19283,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.42';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/157_ad_creative_generation_v4.43.pg.sql
+-- SOURCE: migrations/archived_141_253/157_ad_creative_generation_v4.43.pg.sql
 -- ====================================================================
 -- Migration: 157_ad_creative_generation_v4.43.pg.sql
 -- Description: ad_creative_generation v4.43 - CTA对齐 + 关键词嵌入强化
 -- Date: 2026-02-04
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -19557,12 +19477,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.43';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/158_openclaw_integration.pg.sql
+-- SOURCE: migrations/archived_141_253/158_openclaw_integration.pg.sql
 -- ====================================================================
 -- Migration: 158_openclaw_integration.pg.sql
 -- Description: OpenClaw integration tables + default settings
 -- Date: 2026-02-05
--- Database: PostgreSQL
 
 -- ---------------------------------------------------------------------
 -- 1) OpenClaw tokens (per-user, revocable)
@@ -19776,7 +19695,7 @@ VALUES
   (NULL, 'openclaw', 'yeahpromos_site_id', 'string', false, false, NULL, 'YeahPromos Site ID'),
   (NULL, 'openclaw', 'yeahpromos_start_date', 'string', false, false, NULL, 'YeahPromos Start Date (YYYY-MM-DD)'),
   (NULL, 'openclaw', 'yeahpromos_end_date', 'string', false, false, NULL, 'YeahPromos End Date (YYYY-MM-DD)'),
-  (NULL, 'openclaw', 'yeahpromos_is_amazon', 'boolean', false, false, '0', 'YeahPromos is_amazon (1/0)'),
+  (NULL, 'openclaw', 'yeahpromos_is_amazon', 'boolean', false, false, '0', 'YeahPromos is_amazon 布尔标志'),
   (NULL, 'openclaw', 'yeahpromos_page', 'number', false, false, '1', 'YeahPromos page'),
   (NULL, 'openclaw', 'yeahpromos_limit', 'number', false, false, '1000', 'YeahPromos limit'),
 
@@ -19879,7 +19798,7 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/159_add_data_sync_mode_template.pg.sql
+-- SOURCE: migrations/archived_141_253/159_add_data_sync_mode_template.pg.sql
 -- ====================================================================
 -- Migration: 159_add_data_sync_mode_template.pg.sql
 -- Date: 2026-02-06
@@ -19914,7 +19833,7 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/160_add_openclaw_enabled_to_users.pg.sql
+-- SOURCE: migrations/archived_141_253/160_add_openclaw_enabled_to_users.pg.sql
 -- ====================================================================
 -- Migration: 160_add_openclaw_enabled_to_users.pg.sql
 -- Date: 2026-02-06
@@ -19929,7 +19848,7 @@ SET openclaw_enabled = TRUE
 WHERE role = 'admin';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/161_add_openclaw_priority_asins_template.pg.sql
+-- SOURCE: migrations/archived_141_253/161_add_openclaw_priority_asins_template.pg.sql
 -- ====================================================================
 -- Migration: 161_add_openclaw_priority_asins_template.pg.sql
 -- Date: 2026-02-06
@@ -19964,7 +19883,7 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/162_add_openclaw_enforce_autoads_only_template.pg.sql
+-- SOURCE: migrations/archived_141_253/162_add_openclaw_enforce_autoads_only_template.pg.sql
 -- ====================================================================
 -- Migration: 162_add_openclaw_enforce_autoads_only_template.pg.sql
 -- Date: 2026-02-06
@@ -19999,7 +19918,7 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/163_affiliate_products_management.pg.sql
+-- SOURCE: migrations/archived_141_253/163_affiliate_products_management.pg.sql
 -- ====================================================================
 -- Migration: 163_affiliate_products_management.pg.sql
 -- Date: 2026-02-07
@@ -20095,7 +20014,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_product_offer_links_product
   ON affiliate_product_offer_links(product_id, created_at DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/164_openclaw_execution_plane.pg.sql
+-- SOURCE: migrations/archived_141_253/164_openclaw_execution_plane.pg.sql
 -- ====================================================================
 -- Migration: 164_openclaw_execution_plane.pg.sql
 -- Date: 2026-02-07
@@ -20219,7 +20138,7 @@ CREATE INDEX IF NOT EXISTS idx_openclaw_reports_delivery_status
   ON openclaw_daily_reports(user_id, sent_status, report_date);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/165_add_openclaw_skills_templates.pg.sql
+-- SOURCE: migrations/archived_141_253/165_add_openclaw_skills_templates.pg.sql
 -- ====================================================================
 -- Migration: 165_add_openclaw_skills_templates.pg.sql
 -- Date: 2026-02-07
@@ -20281,7 +20200,7 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/166_openclaw_offer_scores.pg.sql
+-- SOURCE: migrations/archived_141_253/166_openclaw_offer_scores.pg.sql
 -- ====================================================================
 -- Migration: 166_openclaw_offer_scores.pg.sql
 -- Date: 2026-02-07
@@ -20320,7 +20239,7 @@ CREATE INDEX idx_ocs_score ON openclaw_offer_scores(user_id, score_total DESC);
 CREATE INDEX idx_ocs_priority ON openclaw_offer_scores(user_id, priority);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/167_openclaw_experiment_results.pg.sql
+-- SOURCE: migrations/archived_141_253/167_openclaw_experiment_results.pg.sql
 -- ====================================================================
 -- Migration: 167_openclaw_experiment_results.pg.sql
 -- Date: 2026-02-07
@@ -20351,7 +20270,7 @@ CREATE INDEX idx_oer_status ON openclaw_experiment_results(user_id, status);
 CREATE INDEX idx_oer_offer ON openclaw_experiment_results(user_id, offer_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/168_openclaw_affiliate_products.pg.sql
+-- SOURCE: migrations/archived_141_253/168_openclaw_affiliate_products.pg.sql
 -- ====================================================================
 -- Migration: 168_openclaw_affiliate_products.pg.sql
 -- Date: 2026-02-07
@@ -20388,7 +20307,7 @@ CREATE INDEX idx_oap_synced ON openclaw_affiliate_products(user_id, synced_at DE
 CREATE UNIQUE INDEX idx_oap_unique ON openclaw_affiliate_products(user_id, platform, COALESCE(asin, external_product_id));
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/169_openclaw_config.pg.sql
+-- SOURCE: migrations/archived_141_253/169_openclaw_config.pg.sql
 -- ====================================================================
 -- Migration: 169_openclaw_config.pg.sql
 -- Date: 2026-02-07
@@ -20410,7 +20329,7 @@ CREATE TABLE IF NOT EXISTS openclaw_config (
 CREATE INDEX idx_oc_user_key ON openclaw_config(user_id, config_key);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/170_affiliate_products_review_count.pg.sql
+-- SOURCE: migrations/archived_141_253/170_affiliate_products_review_count.pg.sql
 -- ====================================================================
 -- Migration: 170_affiliate_products_review_count.pg.sql
 -- Date: 2026-02-08
@@ -20441,12 +20360,11 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_products_user_review_count
   ON affiliate_products(user_id, review_count);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/171_openclaw_feishu_auth_hardening.pg.sql
+-- SOURCE: migrations/archived_141_253/171_openclaw_feishu_auth_hardening.pg.sql
 -- ====================================================================
 -- Migration: 171_openclaw_feishu_auth_hardening.pg.sql
 -- Description: Add strict Feishu auth templates and binding uniqueness indexes
 -- Date: 2026-02-08
--- Database: PostgreSQL
 
 -- ---------------------------------------------------------------------
 -- 1) OpenClaw strict Feishu auth templates
@@ -20549,7 +20467,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_openclaw_bindings_channel_tenant_union_uni
   WHERE union_id IS NOT NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/172_add_openclaw_affiliate_sync_settings.pg.sql
+-- SOURCE: migrations/archived_141_253/172_add_openclaw_affiliate_sync_settings.pg.sql
 -- ====================================================================
 -- Migration: 172_add_openclaw_affiliate_sync_settings.pg.sql
 -- Date: 2026-02-09
@@ -20638,7 +20556,7 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/173_affiliate_commission_attributions.pg.sql
+-- SOURCE: migrations/archived_141_253/173_affiliate_commission_attributions.pg.sql
 -- ====================================================================
 -- Migration: 173_affiliate_commission_attributions.pg.sql
 -- Date: 2026-02-09
@@ -20674,7 +20592,7 @@ CREATE INDEX IF NOT EXISTS idx_aca_source
   ON affiliate_commission_attributions(user_id, platform, source_mid, source_asin, report_date DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/174_openclaw_feishu_chat_health_logs.pg.sql
+-- SOURCE: migrations/archived_141_253/174_openclaw_feishu_chat_health_logs.pg.sql
 -- ====================================================================
 -- Migration: 174_openclaw_feishu_chat_health_logs.pg.sql
 -- Date: 2026-02-10
@@ -20712,7 +20630,7 @@ CREATE INDEX IF NOT EXISTS idx_openclaw_feishu_health_message_id
   ON openclaw_feishu_chat_health_logs(message_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/175_campaign_removed_reason_and_state_backfill.pg.sql
+-- SOURCE: migrations/archived_141_253/175_campaign_removed_reason_and_state_backfill.pg.sql
 -- ====================================================================
 -- Migration: 175_campaign_removed_reason_and_state_backfill.pg.sql
 -- Date: 2026-02-11
@@ -20739,7 +20657,7 @@ WHERE status != 'REMOVED'
   AND removed_reason IS NOT NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/176_campaigns_timestamps_to_timestamptz.pg.sql
+-- SOURCE: migrations/archived_141_253/176_campaigns_timestamps_to_timestamptz.pg.sql
 -- ====================================================================
 -- Migration: 176_campaigns_timestamps_to_timestamptz.pg.sql
 -- Date: 2026-02-12
@@ -20943,7 +20861,7 @@ ALTER TABLE campaigns
   ALTER COLUMN updated_at SET DEFAULT NOW();
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/177_openclaw_command_runs_link_indexes.pg.sql
+-- SOURCE: migrations/archived_141_253/177_openclaw_command_runs_link_indexes.pg.sql
 -- ====================================================================
 -- Migration: 177_openclaw_command_runs_link_indexes.pg.sql
 -- Date: 2026-02-13
@@ -20958,7 +20876,7 @@ CREATE INDEX IF NOT EXISTS idx_openclaw_command_runs_user_channel_sender_created
   ON openclaw_command_runs(user_id, channel, sender_id, created_at DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/178_add_openclaw_gateway_guardrail_templates.pg.sql
+-- SOURCE: migrations/archived_141_253/178_add_openclaw_gateway_guardrail_templates.pg.sql
 -- ====================================================================
 -- Migration: 178_add_openclaw_gateway_guardrail_templates.pg.sql
 -- Date: 2026-02-14
@@ -21020,12 +20938,11 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/179_ad_creative_generation_v4.44.pg.sql
+-- SOURCE: migrations/archived_141_253/179_ad_creative_generation_v4.44.pg.sql
 -- ====================================================================
 -- Migration: 179_ad_creative_generation_v4.44.pg.sql
 -- Description: ad_creative_generation v4.44 - Amazon Title/About 强利用
 -- Date: 2026-02-15
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -21233,7 +21150,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.44';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/180_search_term_reports_intent_ready.pg.sql
+-- SOURCE: migrations/archived_141_253/180_search_term_reports_intent_ready.pg.sql
 -- ====================================================================
 -- Migration: 180_search_term_reports_intent_ready.pg.sql
 -- Date: 2026-02-15
@@ -21251,12 +21168,11 @@ CREATE INDEX IF NOT EXISTS idx_search_terms_google_adgroup
 ON search_term_reports(google_ad_group_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/181_openclaw_user_bindings_tenant_unique_fix.pg.sql
+-- SOURCE: migrations/archived_141_253/181_openclaw_user_bindings_tenant_unique_fix.pg.sql
 -- ====================================================================
 -- Migration: 181_openclaw_user_bindings_tenant_unique_fix.pg.sql
 -- Description: Replace legacy global open_id uniqueness with tenant-aware constraints
 -- Date: 2026-02-15
--- Database: PostgreSQL
 
 -- ---------------------------------------------------------------------
 -- 1) Drop legacy global unique constraint
@@ -21282,7 +21198,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_openclaw_bindings_channel_open_null_tenant
   WHERE tenant_key IS NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/182_affiliate_product_sync_run_checkpoint.pg.sql
+-- SOURCE: migrations/archived_141_253/182_affiliate_product_sync_run_checkpoint.pg.sql
 -- ====================================================================
 -- Migration: 182_affiliate_product_sync_run_checkpoint.pg.sql
 -- Date: 2026-02-18
@@ -21301,7 +21217,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_product_sync_runs_status_updated
   ON affiliate_product_sync_runs(status, updated_at DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/183_affiliate_products_id_bigint.pg.sql
+-- SOURCE: migrations/archived_141_253/183_affiliate_products_id_bigint.pg.sql
 -- ====================================================================
 -- Migration: 183_affiliate_products_id_bigint.pg.sql
 -- Date: 2026-02-20
@@ -21328,12 +21244,11 @@ ALTER TABLE IF EXISTS affiliate_product_offer_links
   ON DELETE CASCADE;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/184_ad_creative_generation_v4.45.pg.sql
+-- SOURCE: migrations/archived_141_253/184_ad_creative_generation_v4.45.pg.sql
 -- ====================================================================
 -- Migration: 184_ad_creative_generation_v4.45.pg.sql
 -- Description: ad_creative_generation v4.45 - 价格证据冲突防护
 -- Date: 2026-02-21
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -21410,12 +21325,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.45';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/185_ad_creative_generation_v4.46.pg.sql
+-- SOURCE: migrations/archived_141_253/185_ad_creative_generation_v4.46.pg.sql
 -- ====================================================================
 -- Migration: 185_ad_creative_generation_v4.46.pg.sql
 -- Description: ad_creative_generation v4.46 - 类型意图引导占位
 -- Date: 2026-02-21
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -21495,7 +21409,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.46';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/186_offer_commission_structured_fields.pg.sql
+-- SOURCE: migrations/archived_141_253/186_offer_commission_structured_fields.pg.sql
 -- ====================================================================
 -- Migration 186: add structured commission fields to offers (PostgreSQL)
 -- Purpose:
@@ -21508,7 +21422,7 @@ ALTER TABLE offers ADD COLUMN IF NOT EXISTS commission_value TEXT;
 ALTER TABLE offers ADD COLUMN IF NOT EXISTS commission_currency TEXT;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/187_openclaw_strategy_recommendations.pg.sql
+-- SOURCE: migrations/archived_141_253/187_openclaw_strategy_recommendations.pg.sql
 -- ====================================================================
 -- Migration 187: OpenClaw strategy recommendations + execution events (PostgreSQL)
 -- Purpose:
@@ -21568,7 +21482,7 @@ CREATE INDEX IF NOT EXISTS idx_openclaw_strategy_recommendation_events_user
   ON openclaw_strategy_recommendation_events(user_id, created_at);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/188_openclaw_affiliate_attribution_failures.pg.sql
+-- SOURCE: migrations/archived_141_253/188_openclaw_affiliate_attribution_failures.pg.sql
 -- ====================================================================
 -- Migration: 188_openclaw_affiliate_attribution_failures.pg.sql
 -- Date: 2026-02-24
@@ -21603,7 +21517,7 @@ CREATE INDEX IF NOT EXISTS idx_oc_aaf_user_offer_date
   ON openclaw_affiliate_attribution_failures(user_id, offer_id, report_date DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/189_openclaw_strategy_recommendations_remove_approval_status.pg.sql
+-- SOURCE: migrations/archived_141_253/189_openclaw_strategy_recommendations_remove_approval_status.pg.sql
 -- ====================================================================
 -- Migration: 189_openclaw_strategy_recommendations_remove_approval_status.pg.sql
 -- Date: 2026-02-24
@@ -21618,7 +21532,7 @@ SET
 WHERE status = 'approved';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/190_openclaw_strategy_recommendations_drop_approval_columns.pg.sql
+-- SOURCE: migrations/archived_141_253/190_openclaw_strategy_recommendations_drop_approval_columns.pg.sql
 -- ====================================================================
 -- Migration: 190_openclaw_strategy_recommendations_drop_approval_columns.pg.sql
 -- Date: 2026-02-24
@@ -21631,12 +21545,11 @@ ALTER TABLE openclaw_strategy_recommendations
   DROP COLUMN IF EXISTS approved_snapshot_hash;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/191_ad_creative_generation_v4.47.pg.sql
+-- SOURCE: migrations/archived_141_253/191_ad_creative_generation_v4.47.pg.sql
 -- ====================================================================
 -- Migration: 191_ad_creative_generation_v4.47.pg.sql
 -- Description: ad_creative_generation v4.47 - 恢复排除关键词占位
 -- Date: 2026-02-25
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -21716,7 +21629,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.47';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/192_feature_gates_and_strategy_center_split.pg.sql
+-- SOURCE: migrations/archived_141_253/192_feature_gates_and_strategy_center_split.pg.sql
 -- ====================================================================
 -- Migration: 192_feature_gates_and_strategy_center_split.pg.sql
 -- Date: 2026-02-25
@@ -21782,7 +21695,7 @@ CREATE INDEX IF NOT EXISTS idx_strategy_center_recommendation_events_user
   ON strategy_center_recommendation_events(user_id, created_at);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/193_affiliate_product_sync_hourly_stats.pg.sql
+-- SOURCE: migrations/archived_141_253/193_affiliate_product_sync_hourly_stats.pg.sql
 -- ====================================================================
 -- Migration: 193_affiliate_product_sync_hourly_stats.pg.sql
 -- Date: 2026-02-27
@@ -21808,12 +21721,11 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_product_sync_hourly_stats_run_hour
   ON affiliate_product_sync_hourly_stats(run_id, hour_bucket DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/194_keyword_supplement_relevance_scoring_v1.0.pg.sql
+-- SOURCE: migrations/archived_141_253/194_keyword_supplement_relevance_scoring_v1.0.pg.sql
 -- ====================================================================
 -- Migration: 194_keyword_supplement_relevance_scoring_v1.0.pg.sql
 -- Description: 新增补词相关性打分独立 Prompt v1.0
 -- Date: 2026-02-27
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本（同 prompt_id 仅允许一个 active）
 UPDATE prompt_versions
@@ -21910,7 +21822,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'keyword_supplement_relevance_scoring' AND version = 'v1.0';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/195_affiliate_product_sync_cursor_scope.pg.sql
+-- SOURCE: migrations/archived_141_253/195_affiliate_product_sync_cursor_scope.pg.sql
 -- ====================================================================
 -- Migration: 195_affiliate_product_sync_cursor_scope.pg.sql
 -- Date: 2026-02-27
@@ -21920,7 +21832,7 @@ ALTER TABLE affiliate_product_sync_runs
   ADD COLUMN IF NOT EXISTS cursor_scope TEXT;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/196_openclaw_yeahpromos_marketplace_templates.pg.sql
+-- SOURCE: migrations/archived_141_253/196_openclaw_yeahpromos_marketplace_templates.pg.sql
 -- ====================================================================
 -- Migration: 196_openclaw_yeahpromos_marketplace_templates.pg.sql
 -- Date: 2026-02-27
@@ -21956,12 +21868,11 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/197_keyword_intent_clustering_v4.19.pg.sql
+-- SOURCE: migrations/archived_141_253/197_keyword_intent_clustering_v4.19.pg.sql
 -- ====================================================================
 -- Migration: 197_keyword_intent_clustering_v4.19.pg.sql
 -- Description: keyword_intent_clustering v4.19 - 输出稳定性优化
 -- Date: 2026-03-02
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -22057,7 +21968,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'keyword_intent_clustering' AND version = 'v4.19';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/198_yeahpromos_skip_failed_pages_config.pg.sql
+-- SOURCE: migrations/archived_141_253/198_yeahpromos_skip_failed_pages_config.pg.sql
 -- ====================================================================
 -- Migration: 198_yeahpromos_skip_failed_pages_config.pg.sql
 -- Date: 2026-03-03
@@ -22083,7 +21994,7 @@ WHERE NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/199_affiliate_products_merchant_id.pg.sql
+-- SOURCE: migrations/archived_141_253/199_affiliate_products_merchant_id.pg.sql
 -- ====================================================================
 -- Migration: 199_affiliate_products_merchant_id.pg.sql
 -- Date: 2026-03-04
@@ -22149,12 +22060,11 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_products_allowed_countries_trgm
   WHERE allowed_countries_json IS NOT NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/200_ad_creative_generation_v4.48.pg.sql
+-- SOURCE: migrations/archived_141_253/200_ad_creative_generation_v4.48.pg.sql
 -- ====================================================================
 -- Migration: 200_ad_creative_generation_v4.48.pg.sql
 -- Description: ad_creative_generation v4.48 - 负向信号禁用与信任表达增强
 -- Date: 2026-03-04
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -22246,7 +22156,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v4.48';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/201_affiliate_products_raw_json_retirement.pg.sql
+-- SOURCE: migrations/archived_141_253/201_affiliate_products_raw_json_retirement.pg.sql
 -- ====================================================================
 -- Migration: 201_affiliate_products_raw_json_retirement.pg.sql
 -- Date: 2026-03-05
@@ -22295,7 +22205,7 @@ VALUES (
 ON CONFLICT (singleton_id) DO NOTHING;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/202_offline_not_soft_delete.pg.sql
+-- SOURCE: migrations/archived_141_253/202_offline_not_soft_delete.pg.sql
 -- ====================================================================
 -- Migration: 20260306_offline_not_soft_delete.pg.sql
 -- Date: 2026-03-06
@@ -22309,7 +22219,7 @@ WHERE status = 'REMOVED'
   AND (removed_reason = 'offline' OR removed_reason IS NULL);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/203_migrate_affiliate_sync_settings.pg.sql
+-- SOURCE: migrations/archived_141_253/203_migrate_affiliate_sync_settings.pg.sql
 -- ====================================================================
 -- Migration: 203_migrate_affiliate_sync_settings.pg.sql
 -- Date: 2026-03-06
@@ -22566,7 +22476,7 @@ WHERE category = 'openclaw'
   );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/204_add_api_access_level.pg.sql
+-- SOURCE: migrations/archived_141_253/204_add_api_access_level.pg.sql
 -- ====================================================================
 -- 添加 API 访问级别字段 (PostgreSQL)
 -- 支持三种权限级别：
@@ -22583,12 +22493,11 @@ ALTER TABLE google_ads_service_accounts
 ADD COLUMN api_access_level TEXT DEFAULT 'explorer' CHECK (api_access_level IN ('test', 'explorer', 'basic'));
 
 -- ====================================================================
--- SOURCE: pg-migrations/205_add_intent_fields.sql
+-- SOURCE: migrations/205_add_intent_fields.sql
 -- ====================================================================
 -- Migration: 205_add_intent_fields.sql
 -- Description: Add intent-driven optimization fields to offers table
 -- Date: 2026-03-11
--- Database: PostgreSQL
 
 ALTER TABLE offers ADD COLUMN IF NOT EXISTS user_scenarios TEXT;
 ALTER TABLE offers ADD COLUMN IF NOT EXISTS pain_points TEXT;
@@ -22596,12 +22505,11 @@ ALTER TABLE offers ADD COLUMN IF NOT EXISTS user_questions TEXT;
 ALTER TABLE offers ADD COLUMN IF NOT EXISTS scenario_analyzed_at TIMESTAMP;
 
 -- ====================================================================
--- SOURCE: pg-migrations/206_create_intent_analysis.sql
+-- SOURCE: migrations/206_create_intent_analysis.sql
 -- ====================================================================
 -- Migration: 206_create_intent_analysis.sql
 -- Description: Create search_term_intent_analysis table for dashboard insights (Phase 3)
 -- Date: 2026-03-11
--- Database: PostgreSQL
 
 CREATE TABLE IF NOT EXISTS search_term_intent_analysis (
   id SERIAL PRIMARY KEY,
@@ -22624,12 +22532,11 @@ CREATE INDEX IF NOT EXISTS idx_search_term_intent_category ON search_term_intent
 CREATE INDEX IF NOT EXISTS idx_search_term_intent_user ON search_term_intent_analysis(user_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/207_ad_creative_generation_v5.0.pg.sql
+-- SOURCE: migrations/archived_141_253/207_ad_creative_generation_v5.0.pg.sql
 -- ====================================================================
 -- Migration: 207_ad_creative_generation_v5.0.pg.sql
 -- Description: ad_creative_generation v5.0 - Intent-Driven Optimization (动态注入)
 -- Date: 2026-03-11
--- Database: PostgreSQL
 
 -- v5.0 采用动态注入策略，不修改 prompt_content 本身
 -- Intent-driven sections 通过代码在运行时注入（见 creative-orchestrator.ts）
@@ -22704,11 +22611,11 @@ SET is_active = true
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.0';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/208_add_product_recommendation_score.pg.sql
+-- SOURCE: migrations/archived_141_253/208_add_product_recommendation_score.pg.sql
 -- ====================================================================
 -- Migration: 208_add_product_recommendation_score.sql
 -- Date: 2026-03-15
--- Description: 添加商品推荐指数系统 - 完整实现（PostgreSQL版本）
+-- Description: 添加商品推荐指数系统 - 完整实现
 -- 包含：推荐指数字段、AI分析字段、索引、prompt注册
 
 -- ============================================
@@ -22905,7 +22812,7 @@ ON CONFLICT (prompt_id, version) DO NOTHING;
 -- score_calculated_at: 评分计算时间戳
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/209_add_ad_creative_creative_type.pg.sql
+-- SOURCE: migrations/archived_141_253/209_add_ad_creative_creative_type.pg.sql
 -- ====================================================================
 -- Migration: 209_add_ad_creative_creative_type.pg.sql
 -- Date: 2026-03-16
@@ -22918,12 +22825,11 @@ CREATE INDEX IF NOT EXISTS idx_ad_creatives_creative_type
   ON ad_creatives(creative_type);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/210_ad_creative_generation_v5.1.pg.sql
+-- SOURCE: migrations/archived_141_253/210_ad_creative_generation_v5.1.pg.sql
 -- ====================================================================
 -- Migration: 210_ad_creative_generation_v5.1.pg.sql
 -- Description: ad_creative_generation v5.1 - Canonical intent structured output
 -- Date: 2026-03-16
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -22990,12 +22896,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.1';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/211_keyword_intent_clustering_v4.20.pg.sql
+-- SOURCE: migrations/archived_141_253/211_keyword_intent_clustering_v4.20.pg.sql
 -- ====================================================================
 -- Migration: 211_keyword_intent_clustering_v4.20.pg.sql
 -- Description: keyword_intent_clustering v4.20 - Canonical creative alignment
 -- Date: 2026-03-17
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -23091,12 +22996,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'keyword_intent_clustering' AND version = 'v4.20';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/212_ad_creative_generation_v5.2.pg.sql
+-- SOURCE: migrations/archived_141_253/212_ad_creative_generation_v5.2.pg.sql
 -- ====================================================================
 -- Migration: 212_ad_creative_generation_v5.2.pg.sql
 -- Description: ad_creative_generation v5.2 - Title-priority Top Headlines (#2-#4)
 -- Date: 2026-03-17
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -23163,7 +23067,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.2';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/212_affiliate_products_user_id_id_desc.pg.sql
+-- SOURCE: migrations/archived_141_253/212_affiliate_products_user_id_id_desc.pg.sql
 -- ====================================================================
 -- Migration: 212_affiliate_products_user_id_id_desc.pg.sql
 -- Date: 2026-03-17
@@ -23173,12 +23077,11 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_products_user_id_id_desc
   ON affiliate_products(user_id, id DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/213_ad_creative_generation_active_recovery_v5.2.pg.sql
+-- SOURCE: migrations/archived_141_253/213_ad_creative_generation_active_recovery_v5.2.pg.sql
 -- ====================================================================
 -- Migration: 213_ad_creative_generation_active_recovery_v5.2.pg.sql
 -- Description: Recover ad_creative_generation active version and bootstrap v5.2 when dependency chain is missing
 -- Date: 2026-03-18
--- Database: PostgreSQL
 
 -- 1) 基于可用基线补齐/更新 v5.2（优先 v5.1，其次 v5.0，再其次最新版本）
 WITH base AS (
@@ -23278,12 +23181,11 @@ AND NOT EXISTS (
 );
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/214_enforce_unique_offer_bucket_creatives.pg.sql
+-- SOURCE: migrations/archived_141_253/214_enforce_unique_offer_bucket_creatives.pg.sql
 -- ====================================================================
 -- Migration: 214_enforce_unique_offer_bucket_creatives.pg.sql
 -- Description: Enforce one active creative per offer+bucket (A/B/D) and clean historical duplicates
 -- Date: 2026-03-18
--- Database: PostgreSQL
 
 -- 1) 统一历史桶值到 A/B/D（兼容旧值 C/S）
 UPDATE ad_creatives
@@ -23343,12 +23245,11 @@ WHERE is_deleted = FALSE
   AND keyword_bucket IN ('A', 'B', 'D');
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/215_normalize_offer_country_uk_to_gb.pg.sql
+-- SOURCE: migrations/archived_141_253/215_normalize_offer_country_uk_to_gb.pg.sql
 -- ====================================================================
 -- Migration: 215_normalize_offer_country_uk_to_gb.pg.sql
 -- Description: Normalize offers.target_country from UK to GB and migrate offer_name token _UK_ -> _GB_
 -- Date: 2026-03-19
--- Database: PostgreSQL
 
 DROP TABLE IF EXISTS tmp_offer_uk_to_gb;
 CREATE TEMP TABLE tmp_offer_uk_to_gb AS
@@ -23433,12 +23334,11 @@ DROP TABLE IF EXISTS tmp_offer_uk_to_gb_seq;
 DROP TABLE IF EXISTS tmp_offer_uk_to_gb;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/216_ad_creative_generation_v5.3.pg.sql
+-- SOURCE: migrations/archived_141_253/216_ad_creative_generation_v5.3.pg.sql
 -- ====================================================================
 -- Migration: 216_ad_creative_generation_v5.3.pg.sql
 -- Description: ad_creative_generation v5.3 - retained keyword contract with protected top headlines
 -- Date: 2026-03-22
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -23575,12 +23475,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.3';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/217_ad_creative_generation_v5.3_header_fix.pg.sql
+-- SOURCE: migrations/archived_141_253/217_ad_creative_generation_v5.3_header_fix.pg.sql
 -- ====================================================================
 -- Migration: 217_ad_creative_generation_v5.3_header_fix.pg.sql
 -- Description: ad_creative_generation v5.3 - fix stale v5.0 header text in prompt_content
 -- Date: 2026-03-24
--- Database: PostgreSQL
 
 -- 1) 修正 v5.3 prompt 内容头部版本标识（仅文本修正，不改变规则本体）
 UPDATE prompt_versions
@@ -23602,12 +23501,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.3';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/218_ad_creative_generation_v5.4.pg.sql
+-- SOURCE: migrations/archived_141_253/218_ad_creative_generation_v5.4.pg.sql
 -- ====================================================================
 -- Migration: 218_ad_creative_generation_v5.4.pg.sql
 -- Description: ad_creative_generation v5.4 - competitive positioning signals hardening
 -- Date: 2026-03-26
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -23711,12 +23609,11 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.4';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/219_ad_creative_generation_v5.5.pg.sql
+-- SOURCE: migrations/archived_141_253/219_ad_creative_generation_v5.5.pg.sql
 -- ====================================================================
 -- Migration: 219_ad_creative_generation_v5.5.pg.sql
 -- Description: ad_creative_generation v5.5 - Headline semantic completeness & attraction hardening
 -- Date: 2026-03-26
--- Database: PostgreSQL
 
 -- 1) 取消当前激活版本
 UPDATE prompt_versions
@@ -23799,7 +23696,7 @@ SET is_active = TRUE
 WHERE prompt_id = 'ad_creative_generation' AND version = 'v5.5';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/220_support_standard_access_level.pg.sql
+-- SOURCE: migrations/archived_141_253/220_support_standard_access_level.pg.sql
 -- ====================================================================
 -- 支持 Standard Access（无限次/天）
 -- 扩展 api_access_level 的 CHECK 约束
@@ -23819,7 +23716,7 @@ ADD CONSTRAINT google_ads_service_accounts_api_access_level_check
 CHECK (api_access_level IN ('test', 'explorer', 'basic', 'standard'));
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/221_campaigns_performance_commission_indexes.pg.sql
+-- SOURCE: migrations/archived_141_253/221_campaigns_performance_commission_indexes.pg.sql
 -- ====================================================================
 -- Migration: 221_campaigns_performance_commission_indexes.pg.sql
 -- Date: 2026-04-02
@@ -23841,7 +23738,7 @@ CREATE INDEX IF NOT EXISTS idx_oc_aaf_user_platform_report_asin
   ON openclaw_affiliate_attribution_failures(user_id, platform, report_date DESC, source_asin);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/222_affiliate_products_summary_timeout_indexes.pg.sql
+-- SOURCE: migrations/archived_141_253/222_affiliate_products_summary_timeout_indexes.pg.sql
 -- ====================================================================
 -- Migration: 222_affiliate_products_summary_timeout_indexes.pg.sql
 -- Date: 2026-04-02
@@ -23857,7 +23754,7 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_products_user_score_recent_effective
     AND score_calculated_at IS NOT NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/223_additional_slow_query_indexes.pg.sql
+-- SOURCE: migrations/archived_141_253/223_additional_slow_query_indexes.pg.sql
 -- ====================================================================
 -- Migration: 223_additional_slow_query_indexes.pg.sql
 -- Date: 2026-04-02
@@ -23890,7 +23787,7 @@ CREATE INDEX IF NOT EXISTS idx_global_keywords_lower_keyword_trgm
   USING gin (LOWER(keyword) gin_trgm_ops);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/224_affiliate_products_list_filter_indexes.pg.sql
+-- SOURCE: migrations/archived_141_253/224_affiliate_products_list_filter_indexes.pg.sql
 -- ====================================================================
 -- Migration: 224_affiliate_products_list_filter_indexes.pg.sql
 -- Date: 2026-04-02
@@ -23909,12 +23806,11 @@ CREATE INDEX IF NOT EXISTS idx_affiliate_products_user_landing_type_id_desc
   ON affiliate_products (user_id, id DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/225_ad_elements_store_prompts_v1.0.pg.sql
+-- SOURCE: migrations/archived_141_253/225_ad_elements_store_prompts_v1.0.pg.sql
 -- ====================================================================
 -- Migration: 225_ad_elements_store_prompts_v1.0.pg.sql
 -- Description: Register store ad-elements prompts with version management (headlines/descriptions)
 -- Date: 2026-04-02
--- Database: PostgreSQL
 
 -- 1) Deactivate current active versions for target prompt IDs
 UPDATE prompt_versions
@@ -24082,7 +23978,7 @@ WHERE (prompt_id = 'ad_elements_headlines_store' AND version = 'v1.0')
    OR (prompt_id = 'ad_elements_descriptions_store' AND version = 'v1.0');
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/226_add_google_ads_campaign_sync_fields.pg.sql
+-- SOURCE: migrations/archived_141_253/226_add_google_ads_campaign_sync_fields.pg.sql
 -- ====================================================================
 -- Migration 231: Add Google Ads campaign sync fields
 -- Created: 2026-04-07
@@ -24115,7 +24011,7 @@ COMMENT ON COLUMN campaigns.synced_from_google_ads IS '是否从 Google Ads 同�
 COMMENT ON COLUMN campaigns.needs_offer_completion IS '是否需要完善 Offer 信息';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/227_fix_service_account_foreign_key.pg.sql
+-- SOURCE: migrations/archived_141_253/227_fix_service_account_foreign_key.pg.sql
 -- ====================================================================
 -- 修复 google_ads_accounts 服务账号外键约束 (PostgreSQL)
 -- 添加 ON DELETE CASCADE，删除服务账号时自动清理关联账户
@@ -24137,7 +24033,7 @@ COMMENT ON CONSTRAINT google_ads_accounts_service_account_id_fkey ON google_ads_
   '服务账号外键，删除服务账号时自动删除关联的 Google Ads 账户';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/228_add_campaign_custom_name.pg.sql
+-- SOURCE: migrations/archived_141_253/228_add_campaign_custom_name.pg.sql
 -- ====================================================================
 -- 添加广告系列自定义名称字段 (PostgreSQL)
 -- 允许用户为广告系列设置自定义显示名称，与 campaign_name 区分
@@ -24148,7 +24044,7 @@ ALTER TABLE campaigns ADD COLUMN custom_name TEXT;
 CREATE INDEX IF NOT EXISTS idx_campaigns_custom_name ON campaigns(custom_name);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/229_add_campaign_status_category.pg.sql
+-- SOURCE: migrations/archived_141_253/229_add_campaign_status_category.pg.sql
 -- ====================================================================
 -- 添加广告系列状态分类字段 (PostgreSQL)
 -- 用于标识广告系列的运营状态：待定/观察/合格
@@ -24159,7 +24055,7 @@ ALTER TABLE campaigns ADD COLUMN status_category TEXT NOT NULL DEFAULT 'pending'
 CREATE INDEX IF NOT EXISTS idx_campaigns_status_category ON campaigns(status_category);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/230_add_sync_logs_is_manual.pg.sql
+-- SOURCE: migrations/archived_141_253/230_add_sync_logs_is_manual.pg.sql
 -- ====================================================================
 -- Migration: Add is_manual column to sync_logs table (PostgreSQL)
 -- Purpose: Distinguish between manual and automatic sync triggers
@@ -24178,7 +24074,7 @@ CREATE INDEX IF NOT EXISTS idx_sync_logs_is_manual ON sync_logs(is_manual);
 CREATE INDEX IF NOT EXISTS idx_sync_logs_is_manual_started_at ON sync_logs(is_manual, started_at DESC);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/231_create_campaign_backups_table.pg.sql
+-- SOURCE: migrations/archived_141_253/231_create_campaign_backups_table.pg.sql
 -- ====================================================================
 -- Migration: Create campaign_backups table (PostgreSQL)
 -- Purpose: Backup campaign data for quick restoration
@@ -24223,7 +24119,7 @@ COMMENT ON COLUMN campaign_backups.campaign_data IS '完整的广告系列数据
 COMMENT ON COLUMN campaign_backups.campaign_config IS '广告系列配置（JSONB 格式），包含出价策略、投放设置等';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/232_add_campaign_schedule_fields.pg.sql
+-- SOURCE: migrations/archived_141_253/232_add_campaign_schedule_fields.pg.sql
 -- ====================================================================
 -- Migration: Add campaign schedule and targeting fields (PostgreSQL)
 -- Purpose: Add start_date_time, end_date_time, target_country, target_language
@@ -24242,7 +24138,7 @@ COMMENT ON COLUMN campaigns.target_country IS '目标国家代码 (如 US, GB, D
 COMMENT ON COLUMN campaigns.target_language IS '目标语言 (如 English, Spanish, German)';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/233_add_offer_unlinked_fields.pg.sql
+-- SOURCE: migrations/archived_141_253/233_add_offer_unlinked_fields.pg.sql
 -- ====================================================================
 -- Migration: Add offer unlinked fields for tracking disassociation from Google Ads accounts (PostgreSQL)
 -- Purpose: Track when offers are unlinked from Google Ads accounts (customerId)
@@ -24261,7 +24157,7 @@ COMMENT ON COLUMN offers.unlinked_from_customer_ids IS '已解除关联的 Googl
 COMMENT ON COLUMN offers.last_unlinked_at IS '最近一次解除关联的时间';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/234_add_campaign_backups_ad_creative_id.pg.sql
+-- SOURCE: migrations/archived_141_253/234_add_campaign_backups_ad_creative_id.pg.sql
 -- ====================================================================
 -- Migration: Add ad_creative_id to campaign_backups table (PostgreSQL)
 -- Purpose: Store the ad creative ID used for campaign creation
@@ -24277,7 +24173,7 @@ CREATE INDEX IF NOT EXISTS idx_campaign_backups_ad_creative_id ON campaign_backu
 COMMENT ON COLUMN campaign_backups.ad_creative_id IS '创建广告系列时使用的广告创意 ID';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/235_create_user_mcc_assignments.pg.sql
+-- SOURCE: migrations/archived_141_253/235_create_user_mcc_assignments.pg.sql
 -- ====================================================================
 -- Migration: Create user_mcc_assignments table (PostgreSQL)
 -- Purpose: Allow admins to assign MCC accounts to users (one MCC per user)
@@ -24305,7 +24201,7 @@ COMMENT ON COLUMN user_mcc_assignments.mcc_customer_id IS 'MCC 账号的 custome
 COMMENT ON COLUMN user_mcc_assignments.assigned_by IS '分配的管理员 ID';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/236_add_mcc_unique_constraint.pg.sql
+-- SOURCE: migrations/archived_141_253/236_add_mcc_unique_constraint.pg.sql
 -- ====================================================================
 -- Migration: Add UNIQUE constraint to mcc_customer_id (PostgreSQL)
 -- Purpose: Ensure one MCC account can only be bound to one user
@@ -24328,7 +24224,7 @@ ADD CONSTRAINT unique_mcc_customer_id UNIQUE (mcc_customer_id);
 CREATE INDEX IF NOT EXISTS idx_user_mcc_assignments_mcc_id ON user_mcc_assignments(mcc_customer_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/237_openclaw_affiliate_attribution_failures_campaign_id.pg.sql
+-- SOURCE: migrations/archived_141_253/237_openclaw_affiliate_attribution_failures_campaign_id.pg.sql
 -- ====================================================================
 -- Migration: 237_openclaw_affiliate_attribution_failures_campaign_id.pg.sql
 -- Date: 2026-05-09
@@ -24342,7 +24238,7 @@ CREATE INDEX IF NOT EXISTS idx_oc_aaf_user_campaign_date
   WHERE campaign_id IS NOT NULL;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/238_backfill_openclaw_affiliate_attribution_failures_campaign_id.pg.sql
+-- SOURCE: migrations/archived_141_253/238_backfill_openclaw_affiliate_attribution_failures_campaign_id.pg.sql
 -- ====================================================================
 -- Migration: 238_backfill_openclaw_affiliate_attribution_failures_campaign_id.pg.sql
 -- Date: 2026-05-09
@@ -24400,7 +24296,7 @@ FROM asin_campaign ac
 WHERE f.id = ac.failure_id;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/239_usd_exchange_rates.pg.sql
+-- SOURCE: migrations/archived_141_253/239_usd_exchange_rates.pg.sql
 -- ====================================================================
 -- Migration: USD base exchange rates (ExchangeRate-API sync)
 -- PostgreSQL
@@ -24427,7 +24323,7 @@ COMMENT ON TABLE usd_exchange_rates IS 'Per-currency rates vs USD (same units as
 COMMENT ON TABLE exchange_rate_snapshot_meta IS 'Singleton row (id=1) for last API snapshot metadata';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/240_openclaw_affiliate_commission_raw_sync_payloads.pg.sql
+-- SOURCE: migrations/archived_141_253/240_openclaw_affiliate_commission_raw_sync_payloads.pg.sql
 -- ====================================================================
 -- Migration: 240_openclaw_affiliate_commission_raw_sync_payloads.pg.sql
 -- Date: 2026-05-12
@@ -24452,7 +24348,7 @@ CREATE INDEX IF NOT EXISTS idx_oacrsp_user_date_source
   ON openclaw_affiliate_commission_raw_sync_payloads(user_id, report_date DESC, source_api);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/241_create_google_ads_campaign_sync_audits.pg.sql
+-- SOURCE: migrations/archived_141_253/241_create_google_ads_campaign_sync_audits.pg.sql
 -- ====================================================================
 -- Migration: create_google_ads_campaign_sync_audits (PostgreSQL)
 -- Purpose: store campaign-level Google Ads sync snapshots for audit
@@ -24493,7 +24389,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uk_google_ads_campaign_sync_audits_user_custom
 ON google_ads_campaign_sync_audits(user_id, customer_id, campaign_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/242_campaign_paused_task_query_indexes.pg.sql
+-- SOURCE: migrations/archived_141_253/242_campaign_paused_task_query_indexes.pg.sql
 -- ====================================================================
 -- Migration: 242_campaign_paused_task_query_indexes.pg.sql
 -- Purpose: speed up paused campaign task check query
@@ -24503,7 +24399,7 @@ CREATE INDEX IF NOT EXISTS idx_campaigns_status_deleted_user_offer
   ON campaigns(status, is_deleted, user_id, offer_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/243_enforce_campaign_offer_one_to_one.pg.sql
+-- SOURCE: migrations/archived_141_253/243_enforce_campaign_offer_one_to_one.pg.sql
 -- ====================================================================
 -- Migration: 243_enforce_campaign_offer_one_to_one
 -- Description: Enforce strict one active campaign per offer (Offer ↔ Campaign 1:1)
@@ -24539,7 +24435,7 @@ ON campaigns(offer_id)
 WHERE is_deleted = FALSE;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/244_soft_delete_legacy_failed_campaigns.pg.sql
+-- SOURCE: migrations/archived_141_253/244_soft_delete_legacy_failed_campaigns.pg.sql
 -- ====================================================================
 -- Migration: 244_soft_delete_legacy_failed_campaigns
 -- Description: Soft-delete legacy failed campaigns still holding offer_id unique slots (pre PUBLISH_FAILED is_deleted fix)
@@ -24554,7 +24450,7 @@ WHERE is_deleted = FALSE
   AND creation_status = 'failed';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/245_add_offer_extraction_mode.pg.sql
+-- SOURCE: migrations/archived_141_253/245_add_offer_extraction_mode.pg.sql
 -- ====================================================================
 -- Migration 245: persist offer extraction mode (fast / balanced / original) (PostgreSQL)
 -- Default: original (完整提取)
@@ -24564,17 +24460,15 @@ ALTER TABLE offers ADD COLUMN IF NOT EXISTS extraction_mode TEXT DEFAULT 'origin
 COMMENT ON COLUMN offers.extraction_mode IS 'Offer 提取模式：fast | balanced | original';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/246_llm_prompt_externalization_v1.pg.sql
+-- SOURCE: migrations/archived_141_253/246_llm_prompt_externalization_v1.pg.sql
 -- ====================================================================
 -- Migration: 246_llm_prompt_externalization_v1.pg.sql
 -- Description: Register externalized LLM prompts with input guardrails
 -- Date: 2026-05-20
--- Database: PostgreSQL
 
 -- Migration: 243_ad_creative_quality_prompts.pg.sql
 -- Description: Full-chain Google Ads ad creative prompt quality optimization (PostgreSQL)
 -- Date: 2026-05-12
--- Database: PostgreSQL
 
 UPDATE prompt_versions
 SET is_active = FALSE
@@ -26233,7 +26127,7 @@ WHERE (prompt_id = 'ad_creative_generation' AND version = 'v5.7')
    OR (prompt_id = 'product_score_combined_analysis_retry' AND version = 'v1.0');
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/247_add_ad_creative_generation_mode.pg.sql
+-- SOURCE: migrations/archived_141_253/247_add_ad_creative_generation_mode.pg.sql
 -- ====================================================================
 -- Migration 247: persist ad creative generation mode (fast / balanced / original) (PostgreSQL)
 ALTER TABLE ad_creatives ADD COLUMN IF NOT EXISTS generation_mode TEXT DEFAULT 'original';
@@ -26245,7 +26139,7 @@ ALTER TABLE creative_tasks ADD COLUMN IF NOT EXISTS generation_mode TEXT DEFAULT
 COMMENT ON COLUMN creative_tasks.generation_mode IS '广告创意异步入队时的生成模式：fast | balanced | original';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/248_sync_logs_created_at_utc.pg.sql
+-- SOURCE: migrations/archived_141_253/248_sync_logs_created_at_utc.pg.sql
 -- ====================================================================
 -- Migration: 248_sync_logs_created_at_utc.pg.sql
 -- Purpose: Backfill sync_logs.created_at to UTC, aligned with started_at (ISO Z)
@@ -26318,7 +26212,7 @@ BEGIN
 END $$;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/249_campaign_backups_user_offer_unique.pg.sql
+-- SOURCE: migrations/archived_141_253/249_campaign_backups_user_offer_unique.pg.sql
 -- ====================================================================
 -- Migration: 249_campaign_backups_user_offer_unique
 -- Description: Dedupe campaign_backups to one row per (user_id, offer_id), then enforce unique (any backup_source)
@@ -26356,7 +26250,7 @@ COMMENT ON INDEX idx_campaign_backups_user_offer_unique IS
   '每个 user+offer 仅允许一条 campaign_backups（与 backup_source 无关）';
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/250_google_ads_auth_assignments.pg.sql
+-- SOURCE: migrations/archived_141_253/250_google_ads_auth_assignments.pg.sql
 -- ====================================================================
 -- Migration 250: Google Ads auth assignment (admin shared vs per-user config)
 CREATE TABLE IF NOT EXISTS google_ads_auth_assignments (
@@ -26373,7 +26267,7 @@ CREATE INDEX IF NOT EXISTS idx_google_ads_auth_assignments_shared_admin
   ON google_ads_auth_assignments(shared_admin_user_id);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/251_openclaw_affiliate_commission_raw_sync_payloads_updated_at.pg.sql
+-- SOURCE: migrations/archived_141_253/251_openclaw_affiliate_commission_raw_sync_payloads_updated_at.pg.sql
 -- ====================================================================
 -- Migration: 251_openclaw_affiliate_commission_raw_sync_payloads_updated_at.pg.sql
 -- Description: 联盟佣金原始同步 payload 表增加更新时间
@@ -26385,7 +26279,7 @@ UPDATE openclaw_affiliate_commission_raw_sync_payloads
   SET updated_at = created_at;
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/252_google_ads_accounts_async_refresh_state.pg.sql
+-- SOURCE: migrations/archived_141_253/252_google_ads_accounts_async_refresh_state.pg.sql
 -- ====================================================================
 -- Migration 252: Shared async Google Ads accounts refresh state (multi-instance)
 CREATE TABLE IF NOT EXISTS google_ads_accounts_async_refresh_state (
@@ -26403,7 +26297,7 @@ CREATE INDEX IF NOT EXISTS idx_google_ads_accounts_async_refresh_user
   ON google_ads_accounts_async_refresh_state(user_id, updated_at);
 
 -- ====================================================================
--- SOURCE: pg-migrations/archived_141_253/253_affiliate_commission_report_perf.pg.sql
+-- SOURCE: migrations/archived_141_253/253_affiliate_commission_report_perf.pg.sql
 -- ====================================================================
 -- Migration: 253_affiliate_commission_report_perf.pg.sql
 -- Date: 2026-06-02

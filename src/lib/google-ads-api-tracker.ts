@@ -116,8 +116,8 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
     const db = getDatabase()
     const today = new Date().toISOString().split('T')[0] // YYYY-MM-DD
 
-    // PostgreSQL需要true/false，SQLite需要1/0
-    const isSuccessValue = db.type === 'postgres' ? record.isSuccess : record.isSuccess ? 1 : 0
+    // PostgreSQL boolean column
+    const isSuccessValue = record.isSuccess
 
     await db.exec(
       `
@@ -196,16 +196,10 @@ export async function getDailyUsageStats(userId: number, date?: string): Promise
   const db = getDatabase()
   const targetDate = date || new Date().toISOString().split('T')[0]
 
-  // 根据数据库类型调整 SQL（PostgreSQL 使用 BOOLEAN，SQLite 使用 INTEGER）
-  const isSuccessCondition =
-    db.type === 'postgres'
-      ? 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
-      : 'CASE WHEN is_success = 1 THEN 1 ELSE 0 END'
+  // 使用 PostgreSQL BOOLEAN 语法
+  const isSuccessCondition = 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
 
-  const isFailureCondition =
-    db.type === 'postgres'
-      ? 'CASE WHEN is_success = false THEN 1 ELSE 0 END'
-      : 'CASE WHEN is_success = 0 THEN 1 ELSE 0 END'
+  const isFailureCondition = 'CASE WHEN is_success = false THEN 1 ELSE 0 END'
 
   // 获取汇总统计
   const summary = (await db.queryOne(
@@ -281,17 +275,11 @@ export async function getUsageTrend(userId: number, days: number = 7): Promise<U
   const db = getDatabase()
 
   // 根据数据库类型调整 SQL
-  const isSuccessCondition =
-    db.type === 'postgres'
-      ? 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
-      : 'CASE WHEN is_success = 1 THEN 1 ELSE 0 END'
+  const isSuccessCondition = 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
 
-  // PostgreSQL 和 SQLite 的日期函数不同
+  // 使用 PostgreSQL 日期函数
   // 由于 date 字段是 TEXT 类型（存储 'YYYY-MM-DD' 格式），需要返回相同格式进行比较
-  const dateCondition =
-    db.type === 'postgres'
-      ? `date >= to_char(CURRENT_DATE - INTERVAL '${days} days', 'YYYY-MM-DD')`
-      : `date >= date('now', '-${days} days')`
+  const dateCondition = `date >= to_char(CURRENT_DATE - INTERVAL '${days} days', 'YYYY-MM-DD')`
 
   const rows = (await db.query(
     `

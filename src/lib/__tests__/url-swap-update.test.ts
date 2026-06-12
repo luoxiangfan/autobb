@@ -51,7 +51,6 @@ describe('updateUrlSwapTask', () => {
     vi.setSystemTime(new Date('2026-01-08T00:00:00.000Z'))
 
     mockDb = {
-      type: 'sqlite',
       queryOne: vi.fn(),
       query: vi.fn().mockResolvedValue([]),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),

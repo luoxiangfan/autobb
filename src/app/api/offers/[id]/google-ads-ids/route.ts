@@ -32,8 +32,8 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Offer 不存在' }, { status: 404 })
     }
 
-    // campaigns 表兼容 SQLite(INTEGER 0/1) / PostgreSQL(BOOLEAN)
-    const isDeletedCheck = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'
+    // campaigns.is_deleted 为 BOOLEAN
+    const isDeletedCheck = 'c.is_deleted = FALSE'
 
     const row = (await db.queryOne(
       `

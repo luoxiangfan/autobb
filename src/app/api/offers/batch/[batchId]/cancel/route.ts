@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ batchId:
   const queue = getQueueManager()
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   try {
     // 1. 验证用户身份

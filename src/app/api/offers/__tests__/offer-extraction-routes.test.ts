@@ -315,7 +315,6 @@ describe('POST /api/offers/batch/create', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.getDatabase.mockReturnValue({
-      type: 'sqlite',
       exec: dbFns.exec,
     })
     dbFns.exec.mockResolvedValue(undefined)

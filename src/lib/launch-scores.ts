@@ -467,7 +467,7 @@ export async function createLaunchScore(
     ]
   )
 
-  const insertedId = getInsertedId(info, db.type)
+  const insertedId = getInsertedId(info)
   return (await findLaunchScoreById(insertedId, userId))!
 }
 

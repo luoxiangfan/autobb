@@ -90,7 +90,6 @@ describe('executeUrlSwapTask (auto)', () => {
     })
 
     vi.mocked(getDatabase).mockReturnValue({
-      type: 'sqlite',
       exec,
       queryOne,
       query: vi.fn(),

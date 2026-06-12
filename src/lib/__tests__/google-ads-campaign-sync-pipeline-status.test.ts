@@ -13,7 +13,6 @@ const queueMocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'postgres',
     queryOne: dbMocks.queryOne,
     exec: dbMocks.exec,
   })),

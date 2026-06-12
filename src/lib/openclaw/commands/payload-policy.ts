@@ -1,13 +1,11 @@
 import {
   normalizeCampaignPublishRequestBody,
   normalizeClickFarmTaskRequestBody,
-  normalizeOfferExtractRequestBody,
-} from '@/lib/autoads-request-normalizers'
+  normalizeOfferExtractRequestBody } from '@/lib/autoads-request-normalizers'
 import {
   getCurrencyCodeByCountry,
   getCurrencySymbolByCode,
-  parseMoneyValue,
-} from '@/lib/offer-monetization'
+  parseMoneyValue } from '@/lib/offer-monetization'
 import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
 
 type PlainObject = Record<string, any>
@@ -157,8 +155,7 @@ function normalizeOfferExtractCommissionInputByInputShape(params: {
   }
 
   const nextBody: PlainObject = {
-    ...sourceBody,
-  }
+    ...sourceBody }
   if (Object.prototype.hasOwnProperty.call(sourceBody, 'target_country')) {
     nextBody.target_country = targetCountry
   }
@@ -182,8 +179,7 @@ function normalizeOfferExtractCommissionInputByInputShape(params: {
   const defaultCurrency = getCurrencyCodeByCountry(targetCountry)
   const parsedAmount = parseMoneyValue(commissionRaw, {
     targetCountry,
-    defaultCurrency,
-  })
+    defaultCurrency })
   if (!parsedAmount || parsedAmount.amount <= 0) {
     throw new Error(
       `Invalid payload: ${method} ${path} commission value format is invalid`
@@ -229,13 +225,11 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       forceLaunch: 'forcePublish',
       force_launch: 'forcePublish',
       skipLaunchScore: 'forcePublish',
-      skip_launch_score: 'forcePublish',
-    },
+      skip_launch_score: 'forcePublish' },
     normalize: ({ sourceBody, normalizedBody }) => {
       const normalized = normalizeCampaignPublishRequestBody(sourceBody)
       return normalized || normalizedBody
-    },
-  },
+    } },
   {
     method: 'POST',
     path: '/api/click-farm/tasks',
@@ -259,13 +253,11 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       durationDays: 'duration_days',
       scheduledStartDate: 'scheduled_start_date',
       hourlyDistribution: 'hourly_distribution',
-      refererConfig: 'referer_config',
-    },
+      refererConfig: 'referer_config' },
     normalize: ({ sourceBody, normalizedBody }) => {
       const normalized = normalizeClickFarmTaskRequestBody(sourceBody)
       return normalized || normalizedBody
-    },
-  },
+    } },
   {
     method: 'POST',
     path: '/api/offers/extract',
@@ -300,25 +292,21 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       pageType: 'page_type',
       storeProductLinks: 'store_product_links',
       skip_cache: 'skipCache',
-      skip_warmup: 'skipWarmup',
-    },
+      skip_warmup: 'skipWarmup' },
     normalize: ({ sourceBody, normalizedBody }) => {
       const normalizedSourceBody = normalizeOfferExtractCommissionInputByInputShape({
         sourceBody,
         method: 'POST',
-        path: '/api/offers/extract',
-      })
+        path: '/api/offers/extract' })
       const normalized = normalizeOfferExtractRequestBody(normalizedSourceBody, {
         numericCommissionMode: 'amount',
-        strictMonetization: true,
-      })
+        strictMonetization: true })
       if (normalized) {
         delete normalized.commission_rate
         delete normalized.commissionRate
       }
       return normalized || normalizedBody
-    },
-  },
+    } },
   {
     method: 'POST',
     path: '/api/offers/extract/stream',
@@ -353,25 +341,21 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       pageType: 'page_type',
       storeProductLinks: 'store_product_links',
       skip_cache: 'skipCache',
-      skip_warmup: 'skipWarmup',
-    },
+      skip_warmup: 'skipWarmup' },
     normalize: ({ sourceBody, normalizedBody }) => {
       const normalizedSourceBody = normalizeOfferExtractCommissionInputByInputShape({
         sourceBody,
         method: 'POST',
-        path: '/api/offers/extract/stream',
-      })
+        path: '/api/offers/extract/stream' })
       const normalized = normalizeOfferExtractRequestBody(normalizedSourceBody, {
         numericCommissionMode: 'amount',
-        strictMonetization: true,
-      })
+        strictMonetization: true })
       if (normalized) {
         delete normalized.commission_rate
         delete normalized.commissionRate
       }
       return normalized || normalizedBody
-    },
-  },
+    } },
   {
     method: 'PUT',
     path: '/api/offers/:id',
@@ -427,39 +411,31 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       commissionType: 'commission_type',
       commissionValue: 'commission_value',
       commissionCurrency: 'commission_currency',
-      isActive: 'is_active',
-    },
-  },
+      isActive: 'is_active' } },
   {
     method: 'POST',
     path: '/api/offers/:id/rebuild',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/offers/:id/generate-creatives-queue',
     canonicalKeys: ['maxRetries', 'targetRating', 'synthetic', 'bucket'],
     aliasMap: {
       max_retries: 'maxRetries',
-      target_rating: 'targetRating',
-    },
-  },
+      target_rating: 'targetRating' } },
   {
     method: 'POST',
     path: '/api/offers/batch/generate-creatives-queue',
     canonicalKeys: ['offerIds'],
     requiredKeys: ['offerIds'],
     aliasMap: {
-      offer_ids: 'offerIds',
-    },
-  },
+      offer_ids: 'offerIds' } },
   {
     method: 'POST',
     path: '/api/ad-creatives/:id/select',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/offers/:id/keyword-ideas',
@@ -467,39 +443,31 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     aliasMap: {
       seed_keywords: 'seedKeywords',
       use_url: 'useUrl',
-      filter_options: 'filterOptions',
-    },
-  },
+      filter_options: 'filterOptions' } },
   {
     method: 'POST',
     path: '/api/offers/:id/keyword-pool',
     canonicalKeys: ['forceRegenerate', 'keywords'],
     aliasMap: {
-      force_regenerate: 'forceRegenerate',
-    },
-    allowEmptyBody: true,
-  },
+      force_regenerate: 'forceRegenerate' },
+    allowEmptyBody: true },
   {
     method: 'DELETE',
     path: '/api/offers/:id/keyword-pool',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'PUT',
     path: '/api/campaigns/:id/toggle-status',
     canonicalKeys: ['status'],
-    requiredKeys: ['status'],
-  },
+    requiredKeys: ['status'] },
   {
     method: 'PUT',
     path: '/api/campaigns/:id/update-cpc',
     canonicalKeys: ['newCpc'],
     requiredKeys: ['newCpc'],
     aliasMap: {
-      new_cpc: 'newCpc',
-    },
-  },
+      new_cpc: 'newCpc' } },
   {
     method: 'PUT',
     path: '/api/campaigns/:id/update-budget',
@@ -507,9 +475,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     requiredKeys: ['budgetAmount'],
     aliasMap: {
       budget_amount: 'budgetAmount',
-      budget_type: 'budgetType',
-    },
-  },
+      budget_type: 'budgetType' } },
   {
     method: 'POST',
     path: '/api/campaigns/:id/offline',
@@ -525,10 +491,8 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       force_local_offline: 'forceLocalOffline',
       remove_google_ads_campaign: 'removeGoogleAdsCampaign',
       pause_click_farm_tasks: 'pauseClickFarmTasks',
-      pause_url_swap_tasks: 'pauseUrlSwapTasks',
-    },
-    allowEmptyBody: true,
-  },
+      pause_url_swap_tasks: 'pauseUrlSwapTasks' },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/offers/:id/unlink',
@@ -536,39 +500,32 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     requiredKeys: ['accountId'],
     aliasMap: {
       account_id: 'accountId',
-      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns',
-    },
-  },
+      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns' } },
   {
     method: 'POST',
     path: '/api/offers/:id/blacklist',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'DELETE',
     path: '/api/offers/:id/blacklist',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'DELETE',
     path: '/api/offers/:id',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/offers/:id/pause-campaigns',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/offers/:id/resolve-url',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/offers/:id/validate-url',
@@ -576,33 +533,26 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     requiredKeys: ['url'],
     aliasMap: {
       final_url: 'url',
-      finalUrl: 'url',
-    },
-  },
+      finalUrl: 'url' } },
   {
     method: 'POST',
     path: '/api/offers/:id/launch-score',
     canonicalKeys: ['creativeId'],
     requiredKeys: ['creativeId'],
     aliasMap: {
-      creative_id: 'creativeId',
-    },
-  },
+      creative_id: 'creativeId' } },
   {
     method: 'POST',
     path: '/api/offers/:id/launch-score/compare',
     canonicalKeys: ['creativeIds'],
     requiredKeys: ['creativeIds'],
     aliasMap: {
-      creative_ids: 'creativeIds',
-    },
-  },
+      creative_ids: 'creativeIds' } },
   {
     method: 'POST',
     path: '/api/offers/batch/:batchId/cancel',
     canonicalKeys: ['reason'],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'PUT',
     path: '/api/ad-creatives/:id',
@@ -642,15 +592,12 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       finalUrl: 'final_url',
       finalUrlSuffix: 'final_url_suffix',
       scoreBreakdown: 'score_breakdown',
-      adStrength: 'ad_strength',
-    },
-  },
+      adStrength: 'ad_strength' } },
   {
     method: 'DELETE',
     path: '/api/ad-creatives/:id',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/ad-creatives/:id/conversion-feedback',
@@ -660,9 +607,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       conversion_value: 'conversionValue',
       period_start: 'periodStart',
       period_end: 'periodEnd',
-      feedback_note: 'feedbackNote',
-    },
-  },
+      feedback_note: 'feedbackNote' } },
   {
     method: 'POST',
     path: '/api/campaigns',
@@ -688,9 +633,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       target_cpa: 'targetCpa',
       max_cpc: 'maxCpc',
       start_date: 'startDate',
-      end_date: 'endDate',
-    },
-  },
+      end_date: 'endDate' } },
   {
     method: 'PUT',
     path: '/api/campaigns/:id',
@@ -721,21 +664,17 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       target_cpa: 'targetCpa',
       max_cpc: 'maxCpc',
       start_date: 'startDate',
-      end_date: 'endDate',
-    },
-  },
+      end_date: 'endDate' } },
   {
     method: 'DELETE',
     path: '/api/campaigns/:id',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/campaigns/:id/sync',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/campaigns/circuit-break',
@@ -744,9 +683,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     aliasMap: {
       account_id: 'accountId',
       google_ads_account_id: 'googleAdsAccountId',
-      dry_run: 'dryRun',
-    },
-  },
+      dry_run: 'dryRun' } },
   {
     method: 'POST',
     path: '/api/url-swap/tasks',
@@ -767,9 +704,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       googleCustomerId: 'google_customer_id',
       googleCampaignId: 'google_campaign_id',
       swapMode: 'swap_mode',
-      manualAffiliateLinks: 'manual_affiliate_links',
-    },
-  },
+      manualAffiliateLinks: 'manual_affiliate_links' } },
   {
     method: 'PUT',
     path: '/api/url-swap/tasks/:id',
@@ -789,111 +724,90 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       googleCustomerId: 'google_customer_id',
       googleCampaignId: 'google_campaign_id',
       swapMode: 'swap_mode',
-      manualAffiliateLinks: 'manual_affiliate_links',
-    },
-  },
+      manualAffiliateLinks: 'manual_affiliate_links' } },
   {
     method: 'DELETE',
     path: '/api/url-swap/tasks/:id',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/url-swap/tasks/:id/swap-now',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/url-swap/tasks/:id/disable',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/url-swap/tasks/:id/enable',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/url-swap/tasks/:id/targets/refresh',
     canonicalKeys: ['googleAdsAccountId'],
     aliasMap: {
-      google_ads_account_id: 'googleAdsAccountId',
-    },
-    allowEmptyBody: true,
-  },
+      google_ads_account_id: 'googleAdsAccountId' },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/products/sync/:platform',
     canonicalKeys: ['strategy'],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/products/:id/sync',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/products/:id/create-offer',
     canonicalKeys: ['targetCountry'],
     aliasMap: {
-      target_country: 'targetCountry',
-    },
-    allowEmptyBody: true,
-  },
+      target_country: 'targetCountry' },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/products/:id/link-offer',
     canonicalKeys: ['offerId'],
     requiredKeys: ['offerId'],
     aliasMap: {
-      offer_id: 'offerId',
-    },
-  },
+      offer_id: 'offerId' } },
   {
     method: 'POST',
     path: '/api/products/:id/offline',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/products/:id/blacklist',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'DELETE',
     path: '/api/products/:id/blacklist',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/products/batch-offline',
     canonicalKeys: ['productIds'],
     requiredKeys: ['productIds'],
     aliasMap: {
-      product_ids: 'productIds',
-    },
-  },
+      product_ids: 'productIds' } },
   {
     method: 'POST',
     path: '/api/products/batch-create-offers',
     canonicalKeys: ['items'],
-    requiredKeys: ['items'],
-  },
+    requiredKeys: ['items'] },
   {
     method: 'POST',
     path: '/api/products/clear',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'PUT',
     path: '/api/click-farm/tasks/:id',
@@ -924,33 +838,27 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       durationDays: 'duration_days',
       scheduledStartDate: 'scheduled_start_date',
       hourlyDistribution: 'hourly_distribution',
-      refererConfig: 'referer_config',
-    },
-  },
+      refererConfig: 'referer_config' } },
   {
     method: 'DELETE',
     path: '/api/click-farm/tasks/:id',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/click-farm/tasks/:id/stop',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/click-farm/tasks/:id/restart',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/click-farm/tasks/:id/trigger',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/click-farm/distribution/generate',
@@ -959,65 +867,53 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     aliasMap: {
       dailyClickCount: 'daily_click_count',
       startTime: 'start_time',
-      endTime: 'end_time',
-    },
-  },
+      endTime: 'end_time' } },
   {
     method: 'POST',
     path: '/api/click-farm/distribution/normalize',
     canonicalKeys: ['distribution', 'targetTotal'],
     requiredKeys: ['distribution', 'targetTotal'],
     aliasMap: {
-      target_total: 'targetTotal',
-    },
-  },
+      target_total: 'targetTotal' } },
   {
     method: 'POST',
     path: '/api/risk-alerts',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'PATCH',
     path: '/api/risk-alerts/:id',
     canonicalKeys: ['status', 'note'],
-    requiredKeys: ['status'],
-  },
+    requiredKeys: ['status'] },
 
   // Settings
   {
     method: 'PUT',
     path: '/api/settings',
     canonicalKeys: ['updates'],
-    requiredKeys: ['updates'],
-  },
+    requiredKeys: ['updates'] },
   {
     method: 'DELETE',
     path: '/api/settings',
     canonicalKeys: ['category', 'target'],
-    requiredKeys: ['category', 'target'],
-  },
+    requiredKeys: ['category', 'target'] },
   {
     method: 'PUT',
     path: '/api/settings/:category/:key',
     canonicalKeys: ['value'],
-    requiredKeys: ['value'],
-  },
+    requiredKeys: ['value'] },
   {
     method: 'POST',
     path: '/api/settings/validate',
     canonicalKeys: ['category', 'config'],
-    requiredKeys: ['category', 'config'],
-  },
+    requiredKeys: ['category', 'config'] },
   {
     method: 'POST',
     path: '/api/settings/proxy/validate',
     canonicalKeys: ['proxy_url'],
     requiredKeys: ['proxy_url'],
     aliasMap: {
-      proxyUrl: 'proxy_url',
-    },
-  },
+      proxyUrl: 'proxy_url' } },
 
   // Sync
   {
@@ -1048,35 +944,29 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       retry_delay_minutes: 'retryDelayMinutes',
       notify_on_success: 'notifyOnSuccess',
       notify_on_failure: 'notifyOnFailure',
-      notification_email: 'notificationEmail',
-    },
-  },
+      notification_email: 'notificationEmail' } },
   {
     method: 'POST',
     path: '/api/sync/scheduler',
     canonicalKeys: ['action'],
-    requiredKeys: ['action'],
-  },
+    requiredKeys: ['action'] },
   {
     method: 'POST',
     path: '/api/sync/trigger',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
 
   // Google Ads credentials / service-account (POST /credentials removed — use PUT /api/settings)
   {
     method: 'DELETE',
     path: '/api/google-ads/credentials',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/google-ads/credentials/verify',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
   {
     method: 'POST',
     path: '/api/google-ads/service-account',
@@ -1085,15 +975,12 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
     aliasMap: {
       mcc_customer_id: 'mccCustomerId',
       developer_token: 'developerToken',
-      service_account_json: 'serviceAccountJson',
-    },
-  },
+      service_account_json: 'serviceAccountJson' } },
   {
     method: 'DELETE',
     path: '/api/google-ads/service-account',
     canonicalKeys: [],
-    allowEmptyBody: true,
-  },
+    allowEmptyBody: true },
 
   // Google Ads accounts
   {
@@ -1116,9 +1003,7 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       is_manager_account: 'isManagerAccount',
       access_token: 'accessToken',
       refresh_token: 'refreshToken',
-      token_expires_at: 'tokenExpiresAt',
-    },
-  },
+      token_expires_at: 'tokenExpiresAt' } },
   {
     method: 'PUT',
     path: '/api/google-ads-accounts/:id',
@@ -1148,17 +1033,14 @@ const PAYLOAD_POLICIES: RoutePayloadPolicy[] = [
       access_token: 'accessToken',
       refresh_token: 'refreshToken',
       token_expires_at: 'tokenExpiresAt',
-      last_sync_at: 'lastSyncAt',
-    },
-  },
+      last_sync_at: 'lastSyncAt' } },
   {
     method: 'DELETE',
     path: '/api/google-ads-accounts/:id',
     canonicalKeys: ['removeGoogleAdsCampaigns'],
     allowEmptyBody: true,
     aliasMap: {
-      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns',
-    },
+      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns' },
     // 参数优先级：query removeGoogleAdsCampaigns > JSON body（见 docs/api/google-ads-accounts-delete.md）
   },
 ]
@@ -1171,8 +1053,7 @@ export const OPENCLAW_COMMAND_PAYLOAD_POLICIES: readonly OpenclawCommandPayloadP
       canonicalKeys: [...policy.canonicalKeys],
       requiredKeys: [...(policy.requiredKeys || [])],
       requireAtLeastOneOf: [...(policy.requireAtLeastOneOf || [])],
-      allowEmptyBody: Boolean(policy.allowEmptyBody),
-    }))
+      allowEmptyBody: Boolean(policy.allowEmptyBody) }))
   )
 
 const QUERY_POLICIES: RouteQueryPolicy[] = [
@@ -1182,10 +1063,8 @@ const QUERY_POLICIES: RouteQueryPolicy[] = [
     canonicalKeys: ['autoUnlink', 'removeGoogleAdsCampaigns'],
     aliasMap: {
       auto_unlink: 'autoUnlink',
-      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns',
-    },
-    allowEmptyQuery: true,
-  },
+      remove_google_ads_campaigns: 'removeGoogleAdsCampaigns' },
+    allowEmptyQuery: true },
 ]
 
 export const OPENCLAW_COMMAND_QUERY_POLICIES: readonly OpenclawCommandQueryPolicyDefinition[] =
@@ -1195,21 +1074,18 @@ export const OPENCLAW_COMMAND_QUERY_POLICIES: readonly OpenclawCommandQueryPolic
       path: normalizePathPattern(policy.path),
       canonicalKeys: [...policy.canonicalKeys],
       requiredKeys: [...(policy.requiredKeys || [])],
-      allowEmptyQuery: policy.allowEmptyQuery !== false,
-    }))
+      allowEmptyQuery: policy.allowEmptyQuery !== false }))
   )
 
 const COMPILED_PAYLOAD_POLICIES: CompiledRoutePayloadPolicy[] = PAYLOAD_POLICIES.map((policy) => ({
   ...policy,
   method: policy.method.toUpperCase(),
-  regex: compilePathPattern(policy.path),
-}))
+  regex: compilePathPattern(policy.path) }))
 
 const COMPILED_QUERY_POLICIES: CompiledRouteQueryPolicy[] = QUERY_POLICIES.map((policy) => ({
   ...policy,
   method: policy.method.toUpperCase(),
-  regex: compilePathPattern(policy.path),
-}))
+  regex: compilePathPattern(policy.path) }))
 
 function findPolicy(method: string, path: string): CompiledRoutePayloadPolicy | undefined {
   const normalizedMethod = method.toUpperCase()
@@ -1316,8 +1192,7 @@ export function normalizeOpenclawCommandPayload(params: {
     method,
     path: params.path,
     body: params.body,
-    policy,
-  })
+    policy })
 
   return { body: normalizedBody }
 }

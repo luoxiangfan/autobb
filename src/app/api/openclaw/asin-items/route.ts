@@ -66,6 +66,5 @@ export async function GET(request: NextRequest) {
     success: true,
     inputs,
     items,
-    stats,
-  })
+    stats })
 }

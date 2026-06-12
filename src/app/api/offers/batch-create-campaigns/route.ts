@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       skipped: 0,
       errors: [] as Array<{ offerId: number; error: string }>,
     }
-    const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+    const isDeletedFalse = 'FALSE'
     // 批量创建广告系列
     for (const offerId of offerIds) {
       try {

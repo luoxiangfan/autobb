@@ -94,14 +94,14 @@ export function deriveBrandFromProductTitle(
   if (!title) return null
 
   // Prefer leading all-caps token (very common on Amazon product titles).
-  const upperCaseMatch = title.match(/^([A-Z][A-Z0-9&-]{2,})(?:\s|$)/)
+  const upperCaseMatch = title.match(/^([A-Z][A-Z0-9&-]{2 })(?:\s|$)/)
   if (upperCaseMatch?.[1]) {
     const token = upperCaseMatch[1].trim()
     if (!GENERIC_TITLE_FIRST_WORDS.has(token.toLowerCase())) return token
   }
 
   // Fallback: leading TitleCase token.
-  const firstWordMatch = title.match(/^([A-Z][a-z][a-z0-9&-]{1,})(?:\s|$)/)
+  const firstWordMatch = title.match(/^([A-Z][a-z][a-z0-9&-]{1 })(?:\s|$)/)
   if (firstWordMatch?.[1]) {
     const token = firstWordMatch[1].trim()
     if (!GENERIC_TITLE_FIRST_WORDS.has(token.toLowerCase())) return token

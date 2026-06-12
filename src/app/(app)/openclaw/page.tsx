@@ -506,8 +506,7 @@ const FEISHU_BASIC_EXAMPLE_VALUES: Record<string, string> = {
   feishu_domain: 'feishu',
   feishu_auth_mode: 'strict',
   feishu_require_tenant_key: 'true',
-  feishu_strict_auto_bind: 'true',
-}
+  feishu_strict_auto_bind: 'true' }
 
 const PARTNERBOOST_USER_KEYS = [
   'partnerboost_base_url',
@@ -555,8 +554,7 @@ const USER_DEFAULT_VALUES: Record<string, string> = {
   feishu_strict_auto_bind: 'true',
   partnerboost_base_url: 'https://app.partnerboost.com',
   openclaw_strategy_enabled: 'false',
-  openclaw_strategy_cron: '0 9 * * *',
-}
+  openclaw_strategy_cron: '0 9 * * *' }
 
 const OPENCLAW_TIMEZONE = 'Asia/Shanghai'
 
@@ -567,8 +565,7 @@ const parseLocalDate = (value?: string | null) => {
     timeZone: OPENCLAW_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(now)
+    day: '2-digit' }).format(now)
   return iso
 }
 
@@ -600,8 +597,7 @@ const resolveNormalizedReportDateRange = (startValue?: string | null, endValue?:
   return {
     startDate,
     endDate,
-    days: Math.max(1, days),
-  }
+    days: Math.max(1, days) }
 }
 
 const isTruthy = (value?: string | null, fallback: boolean = false) => {
@@ -658,8 +654,7 @@ const formatTimestamp = (value?: number | string | null) => {
   if (Number.isNaN(date.getTime())) return '未知'
   return new Intl.DateTimeFormat('zh-CN', {
     dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+    timeStyle: 'short' }).format(date)
 }
 
 const formatTimestampCompactLines = (value?: number | string | null): { date: string; time: string } => {
@@ -680,8 +675,7 @@ const formatTimestampCompactLines = (value?: number | string | null): { date: st
 
   return {
     date: `${month}-${day}`,
-    time: `${hours}:${minutes}:${seconds}`,
-  }
+    time: `${hours}:${minutes}:${seconds}` }
 }
 
 const formatDuration = (ms?: number | null) => {
@@ -725,8 +719,7 @@ const formatMoney = (value: unknown, currency?: string | null, digits = 2): stri
   if (!Number.isFinite(parsed)) return '--'
   const formatted = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(parsed)
+    maximumFractionDigits: digits }).format(parsed)
   return `${formatted} ${normalizeCurrencyCode(currency)}`
 }
 
@@ -739,8 +732,7 @@ const formatMoneyWithUnit = (value: unknown, currency?: string | null, digits = 
   if (normalized === 'MIXED') {
     const formatted = new Intl.NumberFormat('en-US', {
       minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    }).format(parsed)
+      maximumFractionDigits: digits }).format(parsed)
     return `${formatted} MIXED`
   }
   return formatMoney(parsed, normalized || 'USD', digits)
@@ -819,8 +811,7 @@ const shiftOpenclawLocalIsoDate = (dateText: string, offsetDays: number): string
     timeZone: OPENCLAW_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(baseMs + offsetDays * 24 * 60 * 60 * 1000))
+    day: '2-digit' }).format(new Date(baseMs + offsetDays * 24 * 60 * 60 * 1000))
 }
 
 type StrategyRecommendationExecuteDatePolicy = {
@@ -846,8 +837,7 @@ const resolveStrategyRecommendationExecuteDatePolicy = (params: {
       reason: 'unknown_date',
       reportDate,
       serverDate,
-      tMinus1Date,
-    }
+      tMinus1Date }
   }
 
   if (reportDate === serverDate) {
@@ -856,8 +846,7 @@ const resolveStrategyRecommendationExecuteDatePolicy = (params: {
       reason: 'same_day',
       reportDate,
       serverDate,
-      tMinus1Date,
-    }
+      tMinus1Date }
   }
 
   if (reportDate === tMinus1Date) {
@@ -867,16 +856,14 @@ const resolveStrategyRecommendationExecuteDatePolicy = (params: {
         reason: 't_minus_1_allowed',
         reportDate,
         serverDate,
-        tMinus1Date,
-      }
+        tMinus1Date }
     }
     return {
       allowed: false,
       reason: 't_minus_1_type_blocked',
       reportDate,
       serverDate,
-      tMinus1Date,
-    }
+      tMinus1Date }
   }
 
   return {
@@ -884,8 +871,7 @@ const resolveStrategyRecommendationExecuteDatePolicy = (params: {
     reason: 'out_of_window',
     reportDate,
     serverDate,
-    tMinus1Date,
-  }
+    tMinus1Date }
 }
 
 const isStrategyRecommendationExecutable = (item: OpenclawStrategyRecommendation): boolean => {
@@ -1044,8 +1030,7 @@ export default function OpenClawPage() {
     setPageSize: setReportActionPageSize,
     offset: reportActionOffset,
     getTotalPages: getReportActionTotalPages,
-    pageSizeOptions: reportActionPageSizeOptions,
-  } = usePagination({ initialPageSize: 10 })
+    pageSizeOptions: reportActionPageSizeOptions } = usePagination({ initialPageSize: 10 })
   const [loading, setLoading] = useState(true)
   const [savingUser, setSavingUser] = useState(false)
   const [gatewayStatus, setGatewayStatus] = useState<GatewayStatusResponse | null>(null)
@@ -1123,21 +1108,18 @@ export default function OpenClawPage() {
       return {
         panel: 'border-red-200 bg-red-50 text-red-900',
         detail: 'text-red-700',
-        confirm: 'destructive' as const,
-      }
+        confirm: 'destructive' as const }
     }
     if (tone === 'warning') {
       return {
         panel: 'border-amber-200 bg-amber-50 text-amber-900',
         detail: 'text-amber-700',
-        confirm: 'default' as const,
-      }
+        confirm: 'default' as const }
     }
     return {
       panel: 'border-sky-200 bg-sky-50 text-sky-900',
       detail: 'text-sky-700',
-      confirm: 'default' as const,
-    }
+      confirm: 'default' as const }
   }, [])
 
   const strategyConfirmToneClasses = useMemo(
@@ -1198,8 +1180,7 @@ export default function OpenClawPage() {
 
     try {
       const response = await fetch('/api/openclaw/feishu/chat-health?limit=200', {
-        credentials: 'include',
-      })
+        credentials: 'include' })
 
       const payload = await response.json().catch(() => null)
       if (!response.ok || !payload?.success) {
@@ -1230,14 +1211,12 @@ export default function OpenClawPage() {
       const strategyDate = String(options?.date || reportDate || parseLocalDate()).trim() || parseLocalDate()
       const query = new URLSearchParams({
         date: strategyDate,
-        limit: '200',
-      })
+        limit: '200' })
       if (options?.refresh) {
         query.set('refresh', '1')
       }
       const response = await fetch(`/api/openclaw/strategy/recommendations?${query.toString()}`, {
-        credentials: 'include',
-      })
+        credentials: 'include' })
       const payload = await response.json().catch(() => null) as StrategyRecommendationsResponse | null
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.error || '加载策略建议失败')
@@ -1298,8 +1277,7 @@ export default function OpenClawPage() {
       if (isActive && !isActive()) return
       setGatewayStatus({
         success: false,
-        error: error?.message || 'Gateway 状态获取失败',
-      })
+        error: error?.message || 'Gateway 状态获取失败' })
     } finally {
       if (isActive && !isActive()) return
       setGatewayLoading(false)
@@ -1335,8 +1313,7 @@ export default function OpenClawPage() {
       if (isActive && !isActive()) return
       setWorkspaceStatus({
         success: false,
-        error: error?.message || 'SOUL 工作区状态获取失败',
-      })
+        error: error?.message || 'SOUL 工作区状态获取失败' })
     } finally {
       if (isActive && !isActive()) return
       setWorkspaceLoading(false)
@@ -1359,8 +1336,7 @@ export default function OpenClawPage() {
       const strategyDate = resolvedReportRange.endDate
       const strategyQuery = new URLSearchParams({
         date: strategyDate,
-        limit: '200',
-      })
+        limit: '200' })
 
       const [settingsRes, tokensRes, reportRes, strategyRecommendationsRes] = await Promise.all([
         fetch('/api/openclaw/settings', { credentials: 'include' }),
@@ -1486,11 +1462,9 @@ export default function OpenClawPage() {
         page: String(page),
         limit: String(HIGH_RISK_COMMAND_PAGE_LIMIT),
         riskLevel: 'high_or_above',
-        createdAfter: resolveRecentHighRiskCreatedAfter(),
-      })
+        createdAfter: resolveRecentHighRiskCreatedAfter() })
       const response = await fetch(`/api/openclaw/commands/runs?${query.toString()}`, {
-        credentials: 'include',
-      })
+        credentials: 'include' })
       const payload = await response.json().catch(() => null) as OpenclawCommandRunsResponse | null
       if (!response.ok || !payload?.success) {
         throw new Error((payload as any)?.error || '高风险命令记录加载失败')
@@ -1545,14 +1519,12 @@ export default function OpenClawPage() {
     void loadPendingCommandRuns({
       silent: false,
       page: pendingCommandRunsPage,
-      isActive: () => active,
-    })
+      isActive: () => active })
     const timer = window.setInterval(() => {
       void loadPendingCommandRuns({
         silent: true,
         page: pendingCommandRunsPage,
-        isActive: () => active,
-      })
+        isActive: () => active })
     }, 30000)
 
     return () => {
@@ -1567,8 +1539,7 @@ export default function OpenClawPage() {
     try {
       const response = await fetch('/api/openclaw/workspace/bootstrap', {
         method: 'POST',
-        credentials: 'include',
-      })
+        credentials: 'include' })
       const payload = (await response.json().catch(() => null)) as WorkspaceBootstrapResponse | null
       if (!response.ok) {
         throw new Error(payload?.error || 'SOUL 工作区补齐失败')
@@ -1621,8 +1592,7 @@ export default function OpenClawPage() {
     try {
       const response = await fetch('/api/openclaw/gateway/reload', {
         method: 'POST',
-        credentials: 'include',
-      })
+        credentials: 'include' })
       const payload = (await response.json().catch(() => null)) as OpenclawGatewayReloadResponse | null
       if (!response.ok) {
         throw new Error(payload?.error || '配置热加载失败')
@@ -1665,8 +1635,7 @@ export default function OpenClawPage() {
         }
         const strategyNormalizedPatch: Record<string, string> = {
           openclaw_strategy_cron: cronValue,
-          openclaw_strategy_enabled: isTruthy(normalizedUserValues.openclaw_strategy_enabled, false) ? 'true' : 'false',
-        }
+          openclaw_strategy_enabled: isTruthy(normalizedUserValues.openclaw_strategy_enabled, false) ? 'true' : 'false' }
         Object.assign(normalizedUserValues, strategyNormalizedPatch)
         setUserValues((prev) => ({ ...prev, ...strategyNormalizedPatch }))
       }
@@ -1699,8 +1668,7 @@ export default function OpenClawPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ scope, updates }),
-      })
+        body: JSON.stringify({ scope, updates }) })
       const payload = (await response.json().catch(() => null)) as OpenclawSettingsSaveResponse | null
 
       if (!response.ok) {
@@ -1730,8 +1698,7 @@ export default function OpenClawPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name: 'OpenClaw Access' }),
-      })
+        body: JSON.stringify({ name: 'OpenClaw Access' }) })
 
       if (!response.ok) {
         const errorJson = await response.json().catch(() => ({}))
@@ -1751,8 +1718,7 @@ export default function OpenClawPage() {
     try {
       const response = await fetch(`/api/openclaw/tokens/${id}`, {
         method: 'DELETE',
-        credentials: 'include',
-      })
+        credentials: 'include' })
 
       if (!response.ok) {
         const errorJson = await response.json().catch(() => ({}))
@@ -1802,9 +1768,7 @@ export default function OpenClawPage() {
           appId,
           appSecret,
           domain: userValues.feishu_domain || 'feishu',
-          target,
-        }),
-      })
+          target }) })
       const payload = await response.json().catch(() => null)
       if (response.ok && payload?.success) {
         setFeishuTestResult({ ok: true, message: payload?.message || 'Feishu 连接正常' })
@@ -1851,9 +1815,7 @@ export default function OpenClawPage() {
           appSecret,
           domain: userValues.feishu_domain || 'feishu',
           target,
-          expectedSenderOpenId: expectedSenderOpenId || undefined,
-        }),
-      })
+          expectedSenderOpenId: expectedSenderOpenId || undefined }) })
 
       const payload = await response.json().catch(() => null)
       if (!response.ok || !payload?.success || !payload?.verification?.verificationId) {
@@ -1871,8 +1833,7 @@ export default function OpenClawPage() {
       setFeishuVerifyResult({
         verified: false,
         pending: true,
-        message: payload?.message || '验证码已发送，请回复验证码后校验回执',
-      })
+        message: payload?.message || '验证码已发送，请回复验证码后校验回执' })
       toast.success(payload?.message || '双向通信验证已发起')
     } catch (error: any) {
       const message = error?.message || '双向通信验证发起失败'
@@ -1898,9 +1859,7 @@ export default function OpenClawPage() {
         credentials: 'include',
         body: JSON.stringify({
           action: 'check',
-          verificationId: feishuVerifySession.verificationId,
-        }),
-      })
+          verificationId: feishuVerifySession.verificationId }) })
 
       const payload = await response.json().catch(() => null)
       const message = payload?.message || payload?.error || '校验双向通信状态失败'
@@ -1910,8 +1869,7 @@ export default function OpenClawPage() {
       setFeishuVerifyResult({
         verified,
         pending,
-        message,
-      })
+        message })
 
       if (response.ok && verified) {
         toast.success(message)
@@ -1927,8 +1885,7 @@ export default function OpenClawPage() {
           return {
             ...prev,
             expiresAt: Number.isFinite(expiresAt) ? expiresAt : prev.expiresAt,
-            expectedSenderOpenId: expectedSenderOpenId || prev.expectedSenderOpenId,
-          }
+            expectedSenderOpenId: expectedSenderOpenId || prev.expectedSenderOpenId }
         })
         return
       }
@@ -2006,8 +1963,7 @@ export default function OpenClawPage() {
           strategyAnalyzeSendFeishu ? '报告投递：Feishu 已开启' : '报告投递：仅更新页面建议',
         ],
         confirmLabel: '继续分析',
-        tone: 'warning',
-      })
+        tone: 'warning' })
       if (!confirmed) return
     }
     setStrategyManualTriggering(true)
@@ -2019,8 +1975,7 @@ export default function OpenClawPage() {
         await loadStrategyRecommendations({
           refresh: true,
           date: targetDate,
-          syncReportDate: true,
-        })
+          syncReportDate: true })
         setSelectedStrategyRecommendationIds([])
         toast.success('分析完成，优化建议已更新')
       } else {
@@ -2028,8 +1983,7 @@ export default function OpenClawPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ date: targetDate, limit: 200 }),
-        })
+          body: JSON.stringify({ date: targetDate, limit: 200 }) })
         const payload = await response.json().catch(() => null) as StrategyRecommendationsResponse | null
         if (!response.ok || !payload?.success) {
           throw new Error(payload?.error || '手动触发分析失败')
@@ -2086,8 +2040,7 @@ export default function OpenClawPage() {
     const executeDatePolicy = resolveStrategyRecommendationExecuteDatePolicy({
       recommendation,
       serverDate: strategyServerDateDisplay,
-      fallbackReportDate: strategyDisplayDate,
-    })
+      fallbackReportDate: strategyDisplayDate })
     if (!executeDatePolicy.allowed) {
       if (executeDatePolicy.reason === 't_minus_1_type_blocked') {
         toast.error(
@@ -2112,8 +2065,7 @@ export default function OpenClawPage() {
       ],
       acknowledgeLabel: '我已确认：执行后将直接落地到投放系统',
       confirmLabel: '确认执行',
-      tone: 'danger',
-    })
+      tone: 'danger' })
     if (!confirmed) return
 
     setStrategyRecommendationExecutingId(recommendation.id)
@@ -2149,8 +2101,7 @@ export default function OpenClawPage() {
         `建议ID：${recommendation.id}`,
       ],
       confirmLabel: '确认暂不执行',
-      tone: 'info',
-    })
+      tone: 'info' })
     if (!confirmed) return
 
     setStrategyRecommendationDismissingId(recommendation.id)
@@ -2180,8 +2131,7 @@ export default function OpenClawPage() {
       method: 'POST',
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       credentials: 'include',
-      body: body ? JSON.stringify(body) : undefined,
-    })
+      body: body ? JSON.stringify(body) : undefined })
     const payload = await response.json().catch(() => null)
     if (!response.ok || !payload?.success) {
       const fallbackMessage = action === 'execute' ? '执行建议失败' : '设置暂不执行失败'
@@ -2320,8 +2270,7 @@ export default function OpenClawPage() {
     const datePolicy = resolveStrategyRecommendationExecuteDatePolicy({
       recommendation: item,
       serverDate: strategyServerDateDisplay,
-      fallbackReportDate: strategyDisplayDate,
-    })
+      fallbackReportDate: strategyDisplayDate })
     return datePolicy.allowed
   }, [strategyDisplayDate, strategyServerDateDisplay])
   const strategyRecommendationsView = useMemo(() => {
@@ -2404,8 +2353,7 @@ export default function OpenClawPage() {
       stale: 0,
       actionable: 0,
       queued: 0,
-      executable: 0,
-    }
+      executable: 0 }
 
     for (const item of strategyRecommendationsView) {
       if (item.status === 'pending') summary.pending += 1
@@ -2488,8 +2436,7 @@ export default function OpenClawPage() {
         silent: true,
         date: strategyRecommendationsReportDate || reportDate,
         syncReportDate: false,
-        isActive: () => active,
-      })
+        isActive: () => active })
     }, 15000)
     return () => {
       active = false
@@ -2566,8 +2513,7 @@ export default function OpenClawPage() {
         ],
         acknowledgeLabel: '我已确认：批量执行会直接落地到投放系统',
         confirmLabel: '确认批量执行',
-        tone: 'danger',
-      })
+        tone: 'danger' })
       if (!confirmed) return
     } else if (action === 'dismiss') {
       const confirmed = await requestStrategyConfirm({
@@ -2578,8 +2524,7 @@ export default function OpenClawPage() {
           `条目数：${selectedRows.length}`,
         ],
         confirmLabel: '确认批量暂不执行',
-        tone: 'warning',
-      })
+        tone: 'warning' })
       if (!confirmed) return
     }
 
@@ -2603,8 +2548,7 @@ export default function OpenClawPage() {
           failed.push({
             id: item.id,
             action,
-            message: error?.message || `${item.id} ${action} 失败`,
-          })
+            message: error?.message || `${item.id} ${action} 失败` })
         }
       }
 
@@ -2612,8 +2556,7 @@ export default function OpenClawPage() {
         refresh: false,
         silent: true,
         date: strategyRecommendationsReportDate || reportDate,
-        syncReportDate: false,
-      })
+        syncReportDate: false })
       if (action === 'execute' && successCount > 0) {
         setRefreshKey((prev) => prev + 1)
       }
@@ -2708,8 +2651,7 @@ export default function OpenClawPage() {
         missingItems,
         isReady,
         status,
-        installHint,
-      }
+        installHint }
     })
   }, [gatewaySkillsList])
   const gatewayVisibleSkills = gatewayShowAvailableOnly
@@ -2757,22 +2699,19 @@ export default function OpenClawPage() {
       done: Boolean(gatewayStatus?.success && gatewayHealth?.ok),
       note: gatewayStatus?.success
         ? (gatewayHealth?.ok ? '在线' : '离线')
-        : (gatewayStatus?.error || '待检测'),
-    },
+        : (gatewayStatus?.error || '待检测') },
     {
       id: 'ai',
       label: 'AI引擎',
       done: canEditAiSettings ? aiConfigured : true,
       note: canEditAiSettings
         ? (aiConfigured ? (aiModelLabel ? '当前：' + aiModelLabel : '已配置 Providers JSON') : '未配置')
-        : '成员无需配置（管理员统一维护）',
-    },
+        : '成员无需配置（管理员统一维护）' },
     {
       id: 'strategy',
       label: '自动分析',
       done: isTruthy(userValues.openclaw_strategy_enabled, false),
-      note: isTruthy(userValues.openclaw_strategy_enabled, false) ? '已启用' : '未启用',
-    },
+      note: isTruthy(userValues.openclaw_strategy_enabled, false) ? '已启用' : '未启用' },
   ] as const
   const setupCompletedCount = setupCards.filter(item => item.done).length
   const setupProgressPercent = Math.round((setupCompletedCount / setupCards.length) * 100)
@@ -2787,8 +2726,7 @@ export default function OpenClawPage() {
     total: 0,
     allowed: 0,
     blocked: 0,
-    error: 0,
-  }
+    error: 0 }
   const feishuHealthExecutionStats = feishuHealthData?.stats?.execution || {
     linked: 0,
     completed: 0,
@@ -2797,8 +2735,7 @@ export default function OpenClawPage() {
     missing: 0,
     failed: 0,
     notApplicable: 0,
-    unknown: 0,
-  }
+    unknown: 0 }
   const feishuHealthWorkflowStats = feishuHealthData?.stats?.workflow || {
     tracked: 0,
     completed: 0,
@@ -2806,8 +2743,7 @@ export default function OpenClawPage() {
     incomplete: 0,
     failed: 0,
     notRequired: 0,
-    unknown: 0,
-  }
+    unknown: 0 }
   const feishuHealthWindowHours = feishuHealthData?.windowHours || 24 * 7
   const feishuHealthWindowDays = Math.max(1, Math.floor(feishuHealthWindowHours / 24))
   const feishuHealthRetentionDays = feishuHealthData?.retentionDays || 7
@@ -2891,8 +2827,7 @@ export default function OpenClawPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => loadPendingCommandRuns({
-                    page: pendingCommandRunsPage,
-                  })}
+                    page: pendingCommandRunsPage })}
                   disabled={pendingCommandRunsLoading}
                 >
                   {pendingCommandRunsLoading ? '刷新中...' : '刷新'}

@@ -24,7 +24,6 @@ const dbFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'postgres',
     queryOne: dbFns.queryOne,
     query: dbFns.query,
   })),

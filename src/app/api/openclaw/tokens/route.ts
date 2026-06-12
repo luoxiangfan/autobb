@@ -6,8 +6,7 @@ import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
 const createTokenSchema = z.object({
   name: z.string().min(1, zErr.required).max(100, zErr.maxChars(100)).optional(),
-  scopes: z.array(z.string()).optional(),
-})
+  scopes: z.array(z.string()).optional() })
 
 export async function GET(request: NextRequest) {
   const auth = await verifyOpenclawSessionAuth(request)
@@ -37,8 +36,7 @@ export async function POST(request: NextRequest) {
   const { token, record } = await createOpenclawToken({
     userId: auth.user.userId,
     name: parsed.data.name,
-    scopes: parsed.data.scopes,
-  })
+    scopes: parsed.data.scopes })
 
   return NextResponse.json({ success: true, token, record })
 }

@@ -184,12 +184,9 @@ export async function createUser(input: CreateUserInput): Promise<User> {
   const shouldEnableOpenclaw = role === 'admin'
   const shouldEnableProducts = role === 'admin'
   const shouldEnableStrategyCenter = role === 'admin'
-  const openclawEnabledValue =
-    db.type === 'postgres' ? shouldEnableOpenclaw : shouldEnableOpenclaw ? 1 : 0
-  const productManagementEnabledValue =
-    db.type === 'postgres' ? shouldEnableProducts : shouldEnableProducts ? 1 : 0
-  const strategyCenterEnabledValue =
-    db.type === 'postgres' ? shouldEnableStrategyCenter : shouldEnableStrategyCenter ? 1 : 0
+  const openclawEnabledValue = shouldEnableOpenclaw
+  const productManagementEnabledValue = shouldEnableProducts
+  const strategyCenterEnabledValue = shouldEnableStrategyCenter
 
   const result = await db.exec(
     `
@@ -214,8 +211,8 @@ export async function createUser(input: CreateUserInput): Promise<User> {
     ]
   )
 
-  // 从INSERT结果中提取ID（兼容PostgreSQL和SQLite）
-  const insertedId = getInsertedId(result, db.type)
+  // 从INSERT结果中提取ID（PostgreSQL）
+  const insertedId = getInsertedId(result)
 
   const user = await findUserById(insertedId)
   if (!user) {
@@ -230,8 +227,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
  */
 async function updateLastLogin(userId: number): Promise<void> {
   const db = await getDatabase()
-  const db_type = db.type
-  const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   await db.exec(`UPDATE users SET last_login_at = ${nowFunc} WHERE id = ?`, [userId])
 }
 
@@ -339,8 +335,7 @@ export async function loginWithGoogle(googleProfile: {
     if (existingUser) {
       // 绑定Google ID到现有账户
       const db = await getDatabase()
-      const db_type = db.type
-      const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowFunc = 'NOW()'
       await db.exec(
         `
         UPDATE users

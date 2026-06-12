@@ -289,9 +289,7 @@ export async function GET(request: NextRequest) {
 
     // 规则5: 检查长期未更新的Campaign
     // 使用数据库兼容的日期计算方式
-    const staleQuery =
-      db.type === 'postgres'
-        ? `
+    const staleQuery = `
         SELECT
           c.id,
           c.campaign_name,
@@ -301,19 +299,6 @@ export async function GET(request: NextRequest) {
         WHERE c.user_id = ?
           AND c.status IN ('ENABLED', 'ACTIVE')
           AND EXTRACT(DAY FROM (CURRENT_TIMESTAMP - c.updated_at::timestamp)) > 30
-        ORDER BY days_since_update DESC
-        LIMIT 2
-      `
-        : `
-        SELECT
-          c.id,
-          c.campaign_name,
-          c.updated_at,
-          julianday('now') - julianday(c.updated_at) as days_since_update
-        FROM campaigns c
-        WHERE c.user_id = ?
-          AND c.status IN ('ENABLED', 'ACTIVE')
-          AND days_since_update > 30
         ORDER BY days_since_update DESC
         LIMIT 2
       `
@@ -344,9 +329,7 @@ export async function GET(request: NextRequest) {
     // 规则6: 检查每日链接检查结果
     // 获取最近24小时内的链接检查结果，只显示有问题的链接
     // 注意：PostgreSQL中 is_accessible, brand_found, content_valid 是 INTEGER 类型 (0/1)
-    const linkCheckQuery =
-      db.type === 'postgres'
-        ? `
+    const linkCheckQuery = `
         SELECT
           lch.id,
           lch.offer_id,
@@ -363,31 +346,6 @@ export async function GET(request: NextRequest) {
         INNER JOIN offers o ON lch.offer_id = o.id
         WHERE o.user_id = ?
           AND lch.checked_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
-          AND (
-            lch.is_accessible = 0
-            OR lch.brand_found = 0
-            OR lch.content_valid = 0
-          )
-        ORDER BY lch.checked_at DESC
-        LIMIT 5
-      `
-        : `
-        SELECT
-          lch.id,
-          lch.offer_id,
-          o.offer_name,
-          o.url as product_url,
-          lch.is_accessible,
-          lch.http_status_code,
-          lch.brand_found,
-          lch.content_valid,
-          lch.validation_message,
-          lch.error_message,
-          lch.checked_at
-        FROM link_check_history lch
-        INNER JOIN offers o ON lch.offer_id = o.id
-        WHERE o.user_id = ?
-          AND lch.checked_at >= datetime('now', '-24 hours')
           AND (
             lch.is_accessible = 0
             OR lch.brand_found = 0
@@ -457,13 +415,11 @@ export async function GET(request: NextRequest) {
     })
 
     // ==================== URL Swap 换链接任务洞察 ====================
-    const urlSwapDisabledFilter = excludeDisabledUrlSwapTasksSql(db.type)
-    const urlSwapEnabledCampaignFilter = requireEnabledCampaignForOfferSql(db.type)
+    const urlSwapDisabledFilter = excludeDisabledUrlSwapTasksSql()
+    const urlSwapEnabledCampaignFilter = requireEnabledCampaignForOfferSql()
 
     // 规则7: 检测URL Swap任务错误
-    const urlSwapErrorQuery =
-      db.type === 'postgres'
-        ? `
+    const urlSwapErrorQuery = `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -477,25 +433,6 @@ export async function GET(request: NextRequest) {
           AND t.status = 'error'
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
-          ${urlSwapEnabledCampaignFilter}
-          ${urlSwapDisabledFilter}
-        ORDER BY t.error_at DESC
-        LIMIT 5
-      `
-        : `
-        SELECT
-          t.id as task_id,
-          t.offer_id,
-          t.error_message,
-          t.error_at,
-          o.offer_name,
-          o.url as product_url
-        FROM url_swap_tasks t
-        INNER JOIN offers o ON t.offer_id = o.id
-        WHERE t.user_id = ?
-          AND t.status = 'error'
-          AND t.is_deleted = 0
-          AND t.error_at >= datetime('now', '-24 hours')
           ${urlSwapEnabledCampaignFilter}
           ${urlSwapDisabledFilter}
         ORDER BY t.error_at DESC
@@ -529,9 +466,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则8: 检测最近的URL变化（成功的换链）
-    const urlSwapChangesQuery =
-      db.type === 'postgres'
-        ? `
+    const urlSwapChangesQuery = `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -547,25 +482,6 @@ export async function GET(request: NextRequest) {
           AND t.is_deleted = FALSE
           AND t.url_changed_count > 0
           AND t.updated_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
-        ORDER BY t.updated_at DESC
-        LIMIT 3
-      `
-        : `
-        SELECT
-          t.id as task_id,
-          t.offer_id,
-          t.current_final_url,
-          t.url_changed_count,
-          t.updated_at,
-          o.offer_name,
-          o.url as product_url
-        FROM url_swap_tasks t
-        INNER JOIN offers o ON t.offer_id = o.id
-        WHERE t.user_id = ?
-          AND t.status = 'enabled'
-          AND t.is_deleted = 0
-          AND t.url_changed_count > 0
-          AND t.updated_at >= datetime('now', '-24 hours')
         ORDER BY t.updated_at DESC
         LIMIT 3
       `
@@ -598,9 +514,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则9: 检测推广链接解析失败（高优先级错误）
-    const linkResolutionErrorQuery =
-      db.type === 'postgres'
-        ? `
+    const linkResolutionErrorQuery = `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -616,40 +530,6 @@ export async function GET(request: NextRequest) {
           AND t.status = 'error'
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
-          AND (
-            t.error_message LIKE '%推广链接解析失败%'
-            OR t.error_message LIKE '%推广链接已失效%'
-            OR t.error_message LIKE '%推广链接无法访问%'
-            OR t.error_message LIKE '%推广链接解析异常%'
-            OR t.error_message LIKE '%resolve%'
-            OR t.error_message LIKE '%无法访问%'
-            OR t.error_message LIKE '%Failed to fetch%'
-            OR t.error_message LIKE '%timeout%'
-            OR t.error_message LIKE '%ENOTFOUND%'
-            OR t.error_message LIKE '%ECONNREFUSED%'
-            OR t.error_message LIKE '%network%'
-          )
-          ${urlSwapEnabledCampaignFilter}
-          ${urlSwapDisabledFilter}
-        ORDER BY t.error_at DESC
-        LIMIT 5
-      `
-        : `
-        SELECT
-          t.id as task_id,
-          t.offer_id,
-          t.error_message,
-          t.error_at,
-          t.consecutive_failures,
-          o.offer_name,
-          o.affiliate_link,
-          o.url as product_url
-        FROM url_swap_tasks t
-        INNER JOIN offers o ON t.offer_id = o.id
-        WHERE t.user_id = ?
-          AND t.status = 'error'
-          AND t.is_deleted = 0
-          AND t.error_at >= datetime('now', '-48 hours')
           AND (
             t.error_message LIKE '%推广链接解析失败%'
             OR t.error_message LIKE '%推广链接已失效%'
@@ -717,9 +597,7 @@ export async function GET(request: NextRequest) {
     })
 
     // 规则10: 检测Google Ads API调用失败（高优先级错误）
-    const googleAdsApiErrorQuery =
-      db.type === 'postgres'
-        ? `
+    const googleAdsApiErrorQuery = `
         SELECT
           t.id as task_id,
           t.offer_id,
@@ -735,38 +613,6 @@ export async function GET(request: NextRequest) {
           AND t.status = 'error'
           AND t.is_deleted = FALSE
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
-          AND (
-            t.error_message LIKE '%Google Ads API%'
-            OR t.error_message LIKE '%google_ads%'
-            OR t.error_message LIKE '%OAuth%'
-            OR t.error_message LIKE '%refresh_token%'
-            OR t.error_message LIKE '%authentication%'
-            OR t.error_message LIKE '%authorization%'
-            OR t.error_message LIKE '%quota%'
-            OR t.error_message LIKE '%campaign%'
-            OR t.error_message LIKE '%Customer%'
-          )
-          ${urlSwapEnabledCampaignFilter}
-          ${urlSwapDisabledFilter}
-        ORDER BY t.error_at DESC
-        LIMIT 5
-      `
-        : `
-        SELECT
-          t.id as task_id,
-          t.offer_id,
-          t.error_message,
-          t.error_at,
-          t.consecutive_failures,
-          t.google_campaign_id,
-          o.offer_name,
-          o.url as product_url
-        FROM url_swap_tasks t
-        INNER JOIN offers o ON t.offer_id = o.id
-        WHERE t.user_id = ?
-          AND t.status = 'error'
-          AND t.is_deleted = 0
-          AND t.error_at >= datetime('now', '-48 hours')
           AND (
             t.error_message LIKE '%Google Ads API%'
             OR t.error_message LIKE '%google_ads%'

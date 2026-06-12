@@ -24,7 +24,7 @@ export async function createOpenclawToken(params: {
   const token = `oc_${generateRandomKey(24)}`
   const tokenHash = hashOpenclawToken(token)
   const encrypted = encrypt(token)
-  const scopesValue = toDbJsonArrayField(params.scopes ?? [], db.type, [])
+  const scopesValue = toDbJsonArrayField(params.scopes ?? [], [])
 
   const result = await db.exec(
     `INSERT INTO openclaw_tokens (user_id, name, token_hash, token_encrypted, scopes, status)
@@ -32,7 +32,7 @@ export async function createOpenclawToken(params: {
     [params.userId, params.name || null, tokenHash, encrypted, scopesValue]
   )
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   const record = await db.queryOne<OpenclawTokenRecord>(
     'SELECT id, user_id, name, scopes, status, last_used_at, created_at, revoked_at FROM openclaw_tokens WHERE id = ?',
     [insertedId]
@@ -60,7 +60,7 @@ export async function revokeOpenclawToken(userId: number, tokenId: number): Prom
   const db = await getDatabase()
   const result = await db.exec(
     `UPDATE openclaw_tokens
-     SET status = 'revoked', revoked_at = datetime('now')
+     SET status = 'revoked', revoked_at = NOW()
      WHERE id = ? AND user_id = ?`,
     [tokenId, userId]
   )
@@ -82,7 +82,7 @@ export async function verifyOpenclawUserToken(token: string): Promise<OpenclawTo
   }
 
   await db.exec(
-    `UPDATE openclaw_tokens SET last_used_at = datetime('now') WHERE id = ?`,
+    `UPDATE openclaw_tokens SET last_used_at = NOW() WHERE id = ?`,
     [record.id]
   )
 

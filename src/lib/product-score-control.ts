@@ -53,8 +53,8 @@ export async function setProductScoreCalculationPaused(
   }
 
   const db = await getDatabase()
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const falseValue = db.type === 'postgres' ? false : 0
+  const nowExpr = 'NOW()'
+  const falseValue = false
   const value = paused ? 'true' : 'false'
 
   const existing = await db.queryOne<{ id: number }>(

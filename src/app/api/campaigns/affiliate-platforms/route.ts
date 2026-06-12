@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const alignedFilter = campaignAffiliateAlignedFilterSql(db.type, 'c', 'o')
+    const alignedFilter = campaignAffiliateAlignedFilterSql('c', 'o')
     const campaignRows = await db.query(
       `
       SELECT c.id, o.affiliate_link

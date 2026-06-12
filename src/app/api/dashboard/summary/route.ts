@@ -33,10 +33,7 @@ async function getKPIs(userId: number, days: number = 30) {
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
-  const notDeletedCondition =
-    db.type === 'postgres'
-      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const notDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
 
   const startDateStr = resolveStartDateYmd(days)
 
@@ -120,10 +117,7 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
   const startDateStr = resolveStartDateYmd(7)
 
   // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
-  const notDeletedCondition =
-    db.type === 'postgres'
-      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const notDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
 
   // 获取最近7天的风险警报
   const alerts = (await db.query(

@@ -49,7 +49,7 @@ async function findUnknownAsins(userId: number): Promise<UnknownAsin[]> {
   return results
 }
 
-async function fetchProductInfo(asin: string, platform: string, mid: string | null): Promise<any> {
+async function fetchProductInfo(asin: string, platform: string, _mid: string | null): Promise<any> {
   // TODO: Implement actual API calls to affiliate platforms
   // For now, return null to indicate product info not available
   console.log(`   ⚠️  API fetch not implemented for ${platform}`)
@@ -88,7 +88,7 @@ async function createProductRecord(
     INSERT INTO affiliate_products
       (user_id, platform, asin, mid, brand, product_name, last_synced_at, created_at)
     VALUES
-      (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      (?, ?, ?, ?, ?, ?, NOW(), NOW())
   `,
     [
       userId,

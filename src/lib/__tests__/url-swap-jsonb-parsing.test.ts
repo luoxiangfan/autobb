@@ -9,7 +9,6 @@ vi.mock('../db', () => ({
 describe('url-swap json parsing compatibility', () => {
   beforeEach(() => {
     mockDb = {
-      type: 'postgres',
       queryOne: vi.fn(),
     }
   })

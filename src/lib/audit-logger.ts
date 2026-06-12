@@ -183,7 +183,7 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
         entry.eventType,
         entry.ipAddress,
         entry.userAgent,
-        toDbJsonObjectField(entry.details || null, db.type, null),
+        toDbJsonObjectField(entry.details || null, null),
         timestamp.toISOString(),
       ]
     )
@@ -284,7 +284,6 @@ async function logUserManagementAction(
                 parsedUserAgent: parsedUA,
               }
             : { parsedUserAgent: parsedUA },
-          db.type,
           { parsedUserAgent: parsedUA }
         ),
         timestamp,

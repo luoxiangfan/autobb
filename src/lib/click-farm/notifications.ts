@@ -120,10 +120,10 @@ export async function getUserNotifications(userId: number): Promise<ClickFarmNot
       updated_at
     FROM click_farm_tasks
     WHERE user_id = ?
-      AND IS_DELETED_FALSE
+      AND is_deleted = FALSE
       AND (
-        (status = 'paused' AND paused_at > datetime('now', '-24 hours'))
-        OR (status = 'completed' AND completed_at > datetime('now', '-24 hours'))
+        (status = 'paused' AND paused_at > CURRENT_TIMESTAMP - INTERVAL '24 hours')
+        OR (status = 'completed' AND completed_at > CURRENT_TIMESTAMP - INTERVAL '24 hours')
       )
     ORDER BY updated_at DESC
     LIMIT 10

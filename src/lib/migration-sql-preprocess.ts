@@ -1,12 +1,8 @@
 /**
  * Normalize migration SQL before execution in wrapped transactions.
  */
-export function normalizeMigrationSql(content: string, dbType: 'sqlite' | 'postgres'): string {
-  let normalized = stripTopLevelTransactionWrappers(content)
-  if (dbType === 'sqlite') {
-    normalized = normalized.replace(/\bADD COLUMN IF NOT EXISTS\b/gi, 'ADD COLUMN')
-  }
-  return normalized
+export function normalizeMigrationSql(content: string): string {
+  return stripTopLevelTransactionWrappers(content)
 }
 
 /**

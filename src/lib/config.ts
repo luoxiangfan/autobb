@@ -70,7 +70,7 @@ export const ENCRYPTION_IV_LENGTH = parseInt(getOptionalEnvVar('ENCRYPTION_IV_LE
 export const BCRYPT_SALT_ROUNDS = parseInt(getOptionalEnvVar('BCRYPT_SALT_ROUNDS', '12'), 10)
 
 // ==================== 数据库配置 ====================
-const DATABASE_TYPE = getOptionalEnvVar('DATABASE_TYPE', 'sqlite') // ==================== Node环境 ====================
+export const DATABASE_URL_REQUIRED = 'postgresql:// (set DATABASE_URL in .env)'
 export const NODE_ENV = getOptionalEnvVar('NODE_ENV', 'development')
 const IS_PRODUCTION = NODE_ENV === 'production'
 const IS_DEVELOPMENT = NODE_ENV === 'development'
@@ -147,6 +147,6 @@ if (!SKIP_VALIDATION) {
     )
     console.log(`   - BCRYPT_SALT_ROUNDS: ${BCRYPT_SALT_ROUNDS}`)
     console.log(`   - NODE_ENV: ${NODE_ENV}`)
-    console.log(`   - DATABASE_TYPE: ${DATABASE_TYPE}\n`)
+    console.log(`   - Database: PostgreSQL (DATABASE_URL)\n`)
   }
 }

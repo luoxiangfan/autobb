@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
         [userId, DEFAULT_SYNC_INTERVAL_HOURS]
       )
 
-      const configId = getInsertedId(result, db.type)
+      const configId = getInsertedId(result)
 
       config = (await db.queryOne(
         `SELECT
@@ -232,7 +232,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Always update updated_at
-    updates.push('updated_at = datetime("now")')
+    updates.push('updated_at = NOW()')
 
     if (updates.length === 0) {
       return NextResponse.json({ error: '没有需要更新的字段' }, { status: 400 })

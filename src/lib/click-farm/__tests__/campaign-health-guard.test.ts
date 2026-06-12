@@ -25,7 +25,6 @@ describe('click-farm campaign health guard', () => {
 
   it('detects enabled campaign by user + offer', async () => {
     const db = {
-      type: 'postgres',
       queryOne: vi.fn(async () => ({ id: 77 })),
       query: vi.fn(),
       exec: vi.fn(),
@@ -44,7 +43,6 @@ describe('click-farm campaign health guard', () => {
 
   it('returns task ids only in dry-run mode', async () => {
     const db = {
-      type: 'postgres',
       queryOne: vi.fn(),
       query: vi.fn(async () => [
         { id: 'task-1', user_id: 1, offer_id: 3343, status: 'running' },
@@ -74,7 +72,6 @@ describe('click-farm campaign health guard', () => {
 
   it('pauses tasks and cleans pending queue in apply mode', async () => {
     const db = {
-      type: 'postgres',
       queryOne: vi.fn(),
       query: vi.fn(async () => [
         { id: 'task-10', user_id: 1, offer_id: 3343, status: 'running' },

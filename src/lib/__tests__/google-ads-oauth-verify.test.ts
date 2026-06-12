@@ -15,7 +15,6 @@ const apiFns = vi.hoisted(() => ({
 }))
 
 const dbFns = vi.hoisted(() => ({
-  type: 'sqlite' as const,
   exec: vi.fn(),
 }))
 

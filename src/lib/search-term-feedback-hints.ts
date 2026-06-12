@@ -391,10 +391,7 @@ async function getUserBrandLevelHighPerformingTerms(params: {
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? 'COALESCE(c.is_deleted, FALSE) = FALSE'
-      : 'COALESCE(c.is_deleted, 0) = 0'
+  const isDeletedCondition = 'COALESCE(c.is_deleted, FALSE) = FALSE'
 
   const rows = await db.query<SearchTermFeedbackAggregateRow>(
     `SELECT
@@ -473,16 +470,10 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
   const minUsers = Math.max(1, params.minUsers ?? 1)
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? 'COALESCE(c.is_deleted, FALSE) = FALSE'
-      : 'COALESCE(c.is_deleted, 0) = 0'
+  const isDeletedCondition = 'COALESCE(c.is_deleted, FALSE) = FALSE'
 
   // 聚合查询：计算平均 CTR 和用户数
-  const avgCtrExpr =
-    db.type === 'postgres'
-      ? 'AVG(str.clicks::float / NULLIF(str.impressions, 0))'
-      : 'AVG(CAST(str.clicks AS REAL) / NULLIF(str.impressions, 0))'
+  const avgCtrExpr = 'AVG(str.clicks::float / NULLIF(str.impressions, 0))'
 
   const rows = await db.query<{
     search_term: string
@@ -549,10 +540,7 @@ export async function getSearchTermFeedbackHints(params: {
   const lookbackDays = 0
   const maxTerms = Math.max(5, Math.min(100, params.maxTerms ?? DEFAULT_MAX_TERMS))
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? 'COALESCE(c.is_deleted, FALSE) = FALSE'
-      : 'COALESCE(c.is_deleted, 0) = 0'
+  const isDeletedCondition = 'COALESCE(c.is_deleted, FALSE) = FALSE'
 
   // 获取 Offer 信息（用于品牌级别回退）
   const offer = await db.queryOne<{

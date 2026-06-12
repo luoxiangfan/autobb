@@ -16,8 +16,7 @@ const proxySchema = z.object({
   accountId: z.string().optional(),
   tenantKey: z.string().optional(),
   parentRequestId: z.string().optional(),
-  parentRequestIdSource: z.enum(['none', 'message_id', 'inbound_message_id', 'request_id', 'manual']).optional(),
-})
+  parentRequestIdSource: z.enum(['none', 'message_id', 'inbound_message_id', 'request_id', 'manual']).optional() })
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,10 +46,8 @@ export async function POST(request: NextRequest) {
         accountId,
         tenantKey,
         parentRequestId,
-        parentRequestIdSource,
-      },
-      authHeader,
-    })
+        parentRequestIdSource },
+      authHeader })
 
     return response
   } catch (error: any) {
@@ -59,8 +56,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error:
-            'OpenClaw 控制面路由不能通过 /api/openclaw/proxy 调用。请直连目标路由（如 GET /api/openclaw/commands/runs），并携带 channel/senderId（可选 accountId/tenantKey）身份字段。',
-        },
+            'OpenClaw 控制面路由不能通过 /api/openclaw/proxy 调用。请直连目标路由（如 GET /api/openclaw/commands/runs），并携带 channel/senderId（可选 accountId/tenantKey）身份字段。' },
         { status: 400 }
       )
     }

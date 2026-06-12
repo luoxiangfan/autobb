@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import { getDatabase } from '@/lib/db'
+import { boolParam } from '@/lib/db-helpers'
 import { getUserOnlySetting } from '@/lib/settings'
 import { encrypt } from '@/lib/crypto'
 import { JWT_SECRET } from '@/lib/config'
@@ -34,11 +35,6 @@ export type YeahPromosSessionState = {
   phpSessionId: string | null
 }
 
-function toBooleanFlag(value: boolean, dbType: string): boolean | number {
-  if (dbType === 'postgres') return value
-  return value ? 1 : 0
-}
-
 function toIsoTime(value: number): string {
   return new Date(value).toISOString()
 }
@@ -61,7 +57,7 @@ async function upsertUserSystemSetting(params: {
   const db = await getDatabase()
   const dataType = params.dataType || 'string'
   const isSensitive = Boolean(params.isSensitive)
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowExpr = 'NOW()'
 
   const existing = await db.queryOne<{ id: number }>(
     `
@@ -85,7 +81,7 @@ async function upsertUserSystemSetting(params: {
         SET value = ?, encrypted_value = ?, data_type = ?, is_sensitive = ?, updated_at = ${nowExpr}
         WHERE id = ?
       `,
-      [plainValue, encryptedValue, dataType, toBooleanFlag(isSensitive, db.type), existing.id]
+      [plainValue, encryptedValue, dataType, boolParam(isSensitive), existing.id]
     )
     return
   }
@@ -111,8 +107,8 @@ async function upsertUserSystemSetting(params: {
       plainValue,
       encryptedValue,
       dataType,
-      toBooleanFlag(isSensitive, db.type),
-      toBooleanFlag(false, db.type),
+      boolParam(isSensitive),
+      boolParam(false),
       params.description || null,
     ]
   )

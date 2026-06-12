@@ -54,7 +54,6 @@ import {
 
 describe('openclaw command service confirmation guard', () => {
   let db: {
-    type: 'sqlite'
     queryOne: ReturnType<typeof vi.fn>
     exec: ReturnType<typeof vi.fn>
   }
@@ -98,7 +97,6 @@ describe('openclaw command service confirmation guard', () => {
     process.env.OPENCLAW_CONFIRM_MEDIUM_RISK = 'false'
 
     db = {
-      type: 'sqlite',
       queryOne: vi.fn().mockResolvedValue(null),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
     }

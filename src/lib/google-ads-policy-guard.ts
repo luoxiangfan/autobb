@@ -332,7 +332,7 @@ function dedupeTerms(terms: string[]): string[] {
 
 function cleanPolicyText(value: string): string {
   return value
-    .replace(/\s{2,}/g, ' ')
+    .replace(/\s{2 }/g, ' ')
     .replace(/\s+([,.;:!?])/g, '$1')
     .trim()
 }

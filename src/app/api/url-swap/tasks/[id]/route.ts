@@ -199,7 +199,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     // 软删除任务
     const db = await getDatabase()
     const now = new Date().toISOString()
-    const isDeletedValue = db.type === 'postgres' ? true : 1
+    const isDeletedValue = true
     await db.exec(
       `
       UPDATE url_swap_tasks

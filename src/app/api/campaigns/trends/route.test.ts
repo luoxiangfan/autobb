@@ -112,7 +112,7 @@ describe('GET /api/campaigns/trends', () => {
         }
         if (
           sql.includes('FROM campaign_performance') &&
-          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+          sql.includes('GROUP BY (cp.date::date), COALESCE(cp.currency')
         ) {
           return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
         }
@@ -161,7 +161,7 @@ describe('GET /api/campaigns/trends', () => {
 
         if (
           sql.includes('FROM campaign_performance') &&
-          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+          sql.includes('GROUP BY (cp.date::date), COALESCE(cp.currency')
         ) {
           return [
             { date: '2026-02-24', currency: 'USD', impressions: 100, clicks: 20, cost: 10 },
@@ -233,7 +233,7 @@ describe('GET /api/campaigns/trends', () => {
 
         if (
           sql.includes('FROM campaign_performance') &&
-          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+          sql.includes('GROUP BY (cp.date::date), COALESCE(cp.currency')
         ) {
           return [{ date: '2026-02-27', currency: 'USD', impressions: 80, clicks: 8, cost: 40 }]
         }
@@ -280,7 +280,7 @@ describe('GET /api/campaigns/trends', () => {
         }
         if (
           sql.includes('FROM campaign_performance') &&
-          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+          sql.includes('GROUP BY (cp.date::date), COALESCE(cp.currency')
         ) {
           return [{ date: '2026-02-24', currency: 'USD', impressions: 50, clicks: 10, cost: 5 }]
         }
@@ -317,7 +317,7 @@ describe('GET /api/campaigns/trends', () => {
         }
         if (
           sql.includes('FROM campaign_performance') &&
-          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+          sql.includes('GROUP BY (cp.date::date), COALESCE(cp.currency')
         ) {
           return [
             { date: '2026-03-07', currency: 'USD', impressions: 345, clicks: 39, cost: 42.33 },
@@ -371,7 +371,7 @@ describe('GET /api/campaigns/trends', () => {
         }
         if (
           sql.includes('FROM campaign_performance') &&
-          sql.includes('GROUP BY DATE(cp.date), COALESCE(cp.currency')
+          sql.includes('GROUP BY (cp.date::date), COALESCE(cp.currency')
         ) {
           return [
             { date: '2026-02-24', currency: 'USD', impressions: 80, clicks: 16, cost: 6.4 },

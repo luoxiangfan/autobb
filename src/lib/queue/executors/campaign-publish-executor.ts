@@ -398,7 +398,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
   let apiSuccess = false
   let apiErrorMessage: string | undefined
   let totalApiOperations = 0
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowExpr = 'NOW()'
   const campaignPublishHeartbeatMs = parsePositiveIntEnv(
     process.env.CAMPAIGN_PUBLISH_HEARTBEAT_MS,
     15000
@@ -1512,7 +1512,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
         }
       }
 
-      const nowExpr = db.type === 'postgres' ? 'CURRENT_TIMESTAMP' : 'datetime("now")'
+      const nowExpr = 'CURRENT_TIMESTAMP'
       const setConfigSql = nextCampaignConfig !== null ? ', campaign_config = ?' : ''
       const params: Array<string | number> = [
         authoritativeCampaignName,

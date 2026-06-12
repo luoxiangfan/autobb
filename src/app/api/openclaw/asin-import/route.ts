@@ -52,13 +52,11 @@ export async function POST(request: NextRequest) {
       fileSize: file.size,
       buffer,
       defaultCountry,
-      metadata,
-    })
+      metadata })
 
     return NextResponse.json({
       success: true,
-      ...result,
-    })
+      ...result })
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || 'ASIN导入失败' },

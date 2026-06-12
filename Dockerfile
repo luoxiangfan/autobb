@@ -185,13 +185,12 @@ RUN test -f /app/openclaw/dist/entry.js && \
 
 # 复制数据库迁移文件（初始化需要）
 COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
-COPY --from=builder --chown=nextjs:nodejs /app/pg-migrations ./pg-migrations
 
 # 复制启动脚本
 COPY --from=builder --chown=root:root /app/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# 复制生产依赖（调度器需要better-sqlite3等原生模块）
+# 复制生产依赖（调度器与 Playwright 等原生模块）
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 
 # 设置Playwright缓存目录到应用目录

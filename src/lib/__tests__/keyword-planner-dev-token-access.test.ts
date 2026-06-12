@@ -92,7 +92,6 @@ vi.mock('../google-ads-api', () => ({
 describe('KeywordPlanner developer token access handling', () => {
   beforeEach(() => {
     mockDb = {
-      type: 'postgres',
       query: vi.fn(),
       queryOne: vi.fn(),
       exec: vi.fn(),

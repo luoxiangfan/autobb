@@ -163,7 +163,6 @@ class GoogleAdsCampaignSyncScheduler {
       const db = await getDatabase()
       const now = new Date()
       const userEligibleCondition = buildUserExecutionEligibleSql({
-        dbType: db.type,
         userAlias: 'u',
       })
 

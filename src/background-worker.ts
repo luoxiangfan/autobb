@@ -40,21 +40,12 @@ async function detectClickFarmStall(overdueMinutes: number): Promise<number> {
   const db = await getDatabase()
   const minutes = Math.max(1, Math.floor(overdueMinutes))
 
-  const query =
-    db.type === 'postgres'
-      ? `
+  const query = `
       SELECT COUNT(*)::int AS count
       FROM click_farm_tasks
       WHERE status IN ('pending', 'running')
         AND is_deleted = FALSE
         AND next_run_at <= CURRENT_TIMESTAMP - INTERVAL '${minutes} minutes'
-    `
-      : `
-      SELECT COUNT(*) AS count
-      FROM click_farm_tasks
-      WHERE status IN ('pending', 'running')
-        AND is_deleted = 0
-        AND next_run_at <= datetime('now', '-${minutes} minutes')
     `
 
   const row = await db.queryOne<{ count?: number | string }>(query)

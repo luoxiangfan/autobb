@@ -223,12 +223,12 @@ export async function GET(request: NextRequest) {
       db.query<any>(
         `
         SELECT
-          DATE(cp.date) as date,
+          (cp.date::date) as date,
           COALESCE(SUM(cp.cost), 0) as cost
         FROM campaign_performance cp
         INNER JOIN campaigns c ON cp.campaign_id = c.id
         WHERE ${performanceCurrencyWhereConditions.join(' AND ')}
-        GROUP BY DATE(cp.date)
+        GROUP BY (cp.date::date)
         ORDER BY date ASC
       `,
         performanceCurrencyParams

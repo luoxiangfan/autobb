@@ -6,6 +6,9 @@
  */
 
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
+import { dateMinusDays, datetimeMinusHours } from '@/lib/db-helpers'
+
+const AVG_LATENCY_MS_SQL = 'AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)'
 
 export interface ClickFarmHealth {
   timestamp: string
@@ -45,16 +48,9 @@ export async function getClickFarmHealth(): Promise<ClickFarmHealth> {
   const today = now.toISOString().split('T')[0]
   const alerts: ClickFarmHealth['alerts'] = []
 
-  // 1. 队列深度统计
   const queueStats = await getQueueStats(db, alerts)
-
-  // 2. 点击成功率
   const successRate = await getSuccessRate(db, today, alerts)
-
-  // 3. 任务统计
   const taskStats = await getTaskStats(db, today, alerts)
-
-  // 4. 性能指标
   const performanceMetrics = await getPerformanceMetrics(db, alerts)
 
   return {
@@ -67,34 +63,27 @@ export async function getClickFarmHealth(): Promise<ClickFarmHealth> {
   }
 }
 
-/**
- * 获取队列统计信息
- */
 async function getQueueStats(
   db: DatabaseAdapter,
   alerts: ClickFarmHealth['alerts']
 ): Promise<ClickFarmHealth['queueStats']> {
-  // 注意：实现取决于使用的队列系统（Redis/内存）
-  // 这里提供一个基于DB计数的简化版本
-
   const pendingTasks = await db.queryOne<any>(`
     SELECT COUNT(*) as count FROM click_farm_queue WHERE status = 'pending'
   `)
 
   const depth = pendingTasks?.count || 0
+  const lastHour = datetimeMinusHours(1)
 
-  // 计算平均处理时间
   const recentTasks = await db.queryOne<any>(`
     SELECT
-      AVG((strftime('%s', completed_at) - strftime('%s', created_at)) * 1000) as avgTime
+      ${AVG_LATENCY_MS_SQL} as avgTime
     FROM click_farm_queue
     WHERE status = 'completed'
-      AND completed_at >= datetime('now', '-1 hour')
+      AND completed_at >= ${lastHour}
   `)
 
   const avgProcessTime = Math.round(recentTasks?.avgTime || 0)
 
-  // 警告阈值
   let warning = false
   if (depth > 50000) {
     warning = true
@@ -117,15 +106,11 @@ async function getQueueStats(
   return { depth, avgProcessTime, warning }
 }
 
-/**
- * 获取成功率
- */
 async function getSuccessRate(
   db: DatabaseAdapter,
   today: string,
   alerts: ClickFarmHealth['alerts']
 ): Promise<ClickFarmHealth['successRate']> {
-  // 今天的成功率
   const todayStats = await db.queryOne<any>(
     `
     SELECT
@@ -140,19 +125,17 @@ async function getSuccessRate(
   const todayRate =
     todayStats?.total > 0 ? Math.round((todayStats.successful / todayStats.total) * 100) : 0
 
-  // 最近7天的成功率
   const last7days = await db.queryOne<any>(`
     SELECT
       COUNT(*) as total,
       SUM(CASE WHEN success_clicks > 0 THEN 1 ELSE 0 END) as successful
     FROM click_farm_tasks
-    WHERE scheduled_start_date >= date('now', '-7 days')
+    WHERE scheduled_start_date >= ${dateMinusDays(7)}
   `)
 
   const last7daysRate =
     last7days?.total > 0 ? Math.round((last7days.successful / last7days.total) * 100) : 0
 
-  // 警告阈值
   if (todayRate < 90) {
     alerts.push({
       level: 'warning',
@@ -168,15 +151,11 @@ async function getSuccessRate(
   }
 }
 
-/**
- * 获取任务统计
- */
 async function getTaskStats(
   db: DatabaseAdapter,
   today: string,
   alerts: ClickFarmHealth['alerts']
 ): Promise<ClickFarmHealth['taskStats']> {
-  // 活跃任务数
   const activeTasks = await db.queryOne<any>(
     `
     SELECT COUNT(*) as count
@@ -189,7 +168,6 @@ async function getTaskStats(
 
   const activeTaskCount = activeTasks?.count || 0
 
-  // 今日总点击数
   const totalClicks = await db.queryOne<any>(
     `
     SELECT SUM(total_clicks) as total
@@ -201,13 +179,11 @@ async function getTaskStats(
 
   const todayClicks = totalClicks?.total || 0
 
-  // 推算日总点击数
   const now = new Date()
   const hoursElapsed = now.getHours() + now.getMinutes() / 60
   const projectedDaily =
     hoursElapsed > 0 ? Math.round((todayClicks / hoursElapsed) * 24) : todayClicks
 
-  // 警告阈值
   if (projectedDaily > 500000) {
     alerts.push({
       level: 'info',
@@ -223,35 +199,31 @@ async function getTaskStats(
   }
 }
 
-/**
- * 获取性能指标
- */
 async function getPerformanceMetrics(
   db: DatabaseAdapter,
   _alerts: ClickFarmHealth['alerts']
 ): Promise<ClickFarmHealth['performanceMetrics']> {
-  // 数据库查询时间
   const dbStart = Date.now()
   await db.queryOne<any>(`SELECT 1`)
   const dbQueryTime = Date.now() - dbStart
 
-  // Cron执行时间（从日志中获取最近的执行记录）
+  const lastHour = datetimeMinusHours(1)
+
   const cronLogs = await db.queryOne<any>(`
     SELECT
-      AVG((strftime('%s', end_time) - strftime('%s', start_time)) * 1000) as avgTime
+      AVG(EXTRACT(EPOCH FROM (end_time - start_time)) * 1000) as avgTime
     FROM cron_execution_logs
     WHERE name = 'click-farm-scheduler'
-      AND end_time >= datetime('now', '-1 hour')
+      AND end_time >= ${lastHour}
   `)
 
   const cronExecutionTime = Math.round(cronLogs?.avgTime || 0)
 
-  // 平均点击延迟
   const clickLatency = await db.queryOne<any>(`
     SELECT
-      AVG((strftime('%s', completed_at) - strftime('%s', created_at)) * 1000) as avgLatency
+      ${AVG_LATENCY_MS_SQL} as avgLatency
     FROM click_farm_queue
-    WHERE completed_at >= datetime('now', '-1 hour')
+    WHERE completed_at >= ${lastHour}
   `)
 
   const avgClickLatency = Math.round(clickLatency?.avgLatency || 0)
@@ -272,13 +244,13 @@ export async function getClickFarmMetricsHistory(hours: number = 24) {
   const metrics = await db.query<any>(
     `
     SELECT
-      datetime(created_at, '-' || ((strftime('%s', 'now') - strftime('%s', created_at)) / 3600) || ' hours', '+' || ((strftime('%s', 'now') - strftime('%s', created_at)) % 3600 / 60) || ' minutes') as hour,
+      date_trunc('hour', created_at) as hour,
       COUNT(*) as totalClicks,
       SUM(CASE WHEN success THEN 1 ELSE 0 END) as successClicks,
-      AVG((strftime('%s', completed_at) - strftime('%s', created_at)) * 1000) as avgLatency
+      ${AVG_LATENCY_MS_SQL} as avgLatency
     FROM click_farm_queue
-    WHERE created_at >= datetime('now', '-' || ? || ' hours')
-    GROUP BY hour
+    WHERE created_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 hour')
+    GROUP BY date_trunc('hour', created_at)
     ORDER BY hour DESC
   `,
     [hours]

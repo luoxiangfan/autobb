@@ -178,8 +178,7 @@ export async function invokeOpenclawTool(payload: {
 
     const headers: Record<string, string> = {
       'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    }
+      'Content-Type': 'application/json' }
     if (explicitIdempotencyKey) {
       headers['X-Idempotency-Key'] = explicitIdempotencyKey
     }
@@ -194,8 +193,7 @@ export async function invokeOpenclawTool(payload: {
           method: 'POST',
           headers,
           body: JSON.stringify(payload),
-          signal: controller.signal,
-        })
+          signal: controller.signal })
 
         if (!response.ok) {
           const text = await response.text()
@@ -212,8 +210,7 @@ export async function invokeOpenclawTool(payload: {
         if (explicitIdempotencyKey && dedupeWindowMs > 0) {
           recentInvocationResults.set(explicitIdempotencyKey, {
             value,
-            expiresAt: Date.now() + dedupeWindowMs,
-          })
+            expiresAt: Date.now() + dedupeWindowMs })
         }
         return value
       } catch (error) {

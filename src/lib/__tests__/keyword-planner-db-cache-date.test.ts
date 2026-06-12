@@ -19,7 +19,6 @@ vi.mock('../redis', () => ({
 describe('KeywordPlanner DB cache cutoff', () => {
   beforeEach(() => {
     mockDb = {
-      type: 'postgres',
       query: vi.fn(),
       queryOne: vi.fn(),
       exec: vi.fn(),

@@ -155,8 +155,7 @@ export function normalizePartnerboostTransactionRows(payload: any): { rows: any[
 
   return {
     rows,
-    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? Math.floor(totalPages) : null,
-  }
+    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? Math.floor(totalPages) : null }
 }
 
 function normalizeAsin(value: unknown): string | null {
@@ -360,14 +359,11 @@ export function collectPartnerboostReportRows(params: {
         row: paramsForRow.row,
         matchedReportRow: paramsForRow.matchedReportRow,
         fallbackReportRow: paramsForRow.fallbackReportRow,
-        sourceLinkFallback: paramsForRow.sourceLinkFallback,
-      }),
+        sourceLinkFallback: paramsForRow.sourceLinkFallback }),
       rawBrand: resolvePartnerboostRowRawBrand({
         row: paramsForRow.row,
         matchedReportRow: paramsForRow.matchedReportRow,
-        fallbackReportRow: paramsForRow.fallbackReportRow,
-      }),
-    })
+        fallbackReportRow: paramsForRow.fallbackReportRow }) })
   }
 
   if (transactionRows.length > 0) {
@@ -383,8 +379,7 @@ export function collectPartnerboostReportRows(params: {
         commission,
         matchedReportRow,
         fallbackReportRow: matchedReportRow ? null : singleAdGroupFallback?.reportRow || null,
-        sourceLinkFallback: matchedReportRow ? null : singleAdGroupFallback?.sourceLink || null,
-      })
+        sourceLinkFallback: matchedReportRow ? null : singleAdGroupFallback?.sourceLink || null })
     }
     return results
   }
@@ -404,5 +399,4 @@ export const partnerboostCommissionFieldAliases = {
   linkId: PARTNERBOOST_LINK_ID_ALIASES,
   link: PARTNERBOOST_LINK_ALIASES,
   asin: PARTNERBOOST_SOURCE_ASIN_ALIASES,
-  brand: PARTNERBOOST_BRAND_ALIASES,
-}
+  brand: PARTNERBOOST_BRAND_ALIASES }

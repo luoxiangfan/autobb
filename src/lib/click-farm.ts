@@ -175,14 +175,14 @@ async function flushPendingStats(taskId: string): Promise<void> {
             success_clicks = success_clicks + ?,
             failed_clicks = failed_clicks + ?,
             daily_history = ?,
-            updated_at = datetime('now')
+            updated_at = NOW()
         WHERE id = ?
       `,
         [
           snapshot.total,
           snapshot.success,
           snapshot.failed,
-          toDbJsonObjectField(dailyHistory, db.type, []),
+          toDbJsonObjectField(dailyHistory, []),
           taskId,
         ]
       )
@@ -246,7 +246,7 @@ export async function createClickFarmTask(
     console.log('[createClickFarmTask] 生成任务ID:', taskId)
 
     // 🔧 修复(2026-02-20): PostgreSQL JSONB 传原生数组，避免双重编码
-    const hourlyDistributionJson = toDbJsonObjectField(input.hourly_distribution, db.type, [])
+    const hourlyDistributionJson = toDbJsonObjectField(input.hourly_distribution, [])
     const refererConfigJson = input.referer_config ? JSON.stringify(input.referer_config) : null
 
     const result = await db.exec(
@@ -300,7 +300,7 @@ export async function createClickFarmTask(
     await db.exec(
       `
       UPDATE click_farm_tasks
-      SET next_run_at = ?, updated_at = datetime('now')
+      SET next_run_at = ?, updated_at = NOW()
       WHERE id = ?
     `,
       [nextRunAt.toISOString(), task.id]
@@ -330,7 +330,7 @@ export async function getClickFarmTaskById(
   const task = await db.queryOne<any>(
     `
     SELECT * FROM click_farm_tasks
-    WHERE id = ? AND user_id = ? AND IS_DELETED_FALSE
+    WHERE id = ? AND user_id = ? AND is_deleted = FALSE
   `,
     [id, userId]
   )
@@ -353,7 +353,7 @@ export async function getClickFarmTasks(
   const params: any[] = [userId]
 
   if (!filters.include_deleted) {
-    whereConditions.push('cft.IS_DELETED_FALSE')
+    whereConditions.push('cft.is_deleted = FALSE')
   }
 
   if (filters.status) {
@@ -446,7 +446,7 @@ export async function updateClickFarmTask(
 
   if (updates.hourly_distribution !== undefined) {
     fields.push('hourly_distribution = ?')
-    values.push(toDbJsonObjectField(updates.hourly_distribution, db.type, []))
+    values.push(toDbJsonObjectField(updates.hourly_distribution, []))
   }
 
   // 🆕 支持更新timezone
@@ -465,14 +465,14 @@ export async function updateClickFarmTask(
     throw new Error('No fields to update')
   }
 
-  fields.push("updated_at = datetime('now')")
+  fields.push('updated_at = NOW()')
   values.push(id, userId)
 
   await db.exec(
     `
     UPDATE click_farm_tasks
     SET ${fields.join(', ')}
-    WHERE id = ? AND user_id = ? AND IS_DELETED_FALSE
+    WHERE id = ? AND user_id = ? AND is_deleted = FALSE
   `,
     values
   )
@@ -489,7 +489,7 @@ export async function deleteClickFarmTask(id: number | string, userId: number): 
   await db.exec(
     `
     UPDATE click_farm_tasks
-    SET is_deleted = TRUE, deleted_at = datetime('now'), updated_at = datetime('now')
+    SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
     WHERE id = ? AND user_id = ?
   `,
     [id, userId]
@@ -514,7 +514,7 @@ export async function stopClickFarmTask(
   await db.exec(
     `
     UPDATE click_farm_tasks
-    SET status = 'stopped', updated_at = datetime('now')
+    SET status = 'stopped', updated_at = NOW()
     WHERE id = ? AND user_id = ? AND status IN ('pending', 'running', 'paused')
   `,
     [id, userId]
@@ -545,7 +545,7 @@ export async function restartClickFarmTask(
         pause_reason = NULL,
         pause_message = NULL,
         paused_at = NULL,
-        updated_at = datetime('now')
+        updated_at = NOW()
     WHERE id = ? AND user_id = ? AND status IN ('stopped', 'paused', 'pending')
   `,
     [id, userId]
@@ -570,8 +570,8 @@ export async function pauseClickFarmTask(
     SET status = 'paused',
         pause_reason = ?,
         pause_message = ?,
-        paused_at = datetime('now'),
-        updated_at = datetime('now')
+        paused_at = NOW(),
+        updated_at = NOW()
     WHERE id = ?
   `,
     [reason, message, id]
@@ -595,14 +595,14 @@ export async function pauseClickFarmTasksByOfferId(
   }
 ): Promise<number> {
   const db = await getDatabase()
-  const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowSql = 'NOW()'
   const reason = options?.reason ?? 'offer_deactivated'
   const message = options?.message ?? 'Offer 关联的广告系列已删除'
 
   const pendingRows = await db.query<{ id: string | number }>(
     `
     SELECT id FROM click_farm_tasks
-    WHERE offer_id = ? AND status IN ('pending', 'running') AND IS_DELETED_FALSE
+    WHERE offer_id = ? AND status IN ('pending', 'running') AND is_deleted = FALSE
   `,
     [offerId]
   )
@@ -616,7 +616,7 @@ export async function pauseClickFarmTasksByOfferId(
         pause_message = ?,
         updated_at = ${nowSql},
         paused_at = ${nowSql}
-    WHERE offer_id = ? AND status IN ('pending', 'running') AND IS_DELETED_FALSE
+    WHERE offer_id = ? AND status IN ('pending', 'running') AND is_deleted = FALSE
   `,
     [reason, message, offerId]
   )
@@ -647,28 +647,30 @@ export async function getClickFarmStats(
 
   // 构建日期过滤条件
   let dateFilter = ''
+  let statsParams: (number | string)[] = [userId]
   if (daysBack !== 'all') {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysBack)
-    dateFilter = ` AND started_at >= datetime('${cutoffDate.toISOString()}')`
+    dateFilter = ' AND started_at >= ?'
+    statsParams.push(cutoffDate.toISOString())
   }
 
   // 🔧 修复：获取所有任务及其对应的timezone，在应用层按每个任务的timezone过滤今日数据
   // ⚠️ 注意：每个任务可能有不同的timezone（来自offer的target_country）
   // 必须按每个任务的timezone单独判断"today"，然后聚合统计
   // 仅扫描最近更新的任务，避免解析大量历史任务导致内存暴涨
-  const recentCutoff = datetimeMinusHours(48, db.type)
+  const recentCutoff = datetimeMinusHours(48)
   const allTasksQuery = `
     SELECT timezone, daily_history
     FROM click_farm_tasks
-    WHERE user_id = ? AND IS_DELETED_FALSE AND started_at IS NOT NULL ${dateFilter}
+    WHERE user_id = ? AND is_deleted = FALSE AND started_at IS NOT NULL ${dateFilter}
       AND updated_at >= ${recentCutoff}
   `
 
   const allTasks = await db.query<{
     timezone: string
     daily_history: string | any[]
-  }>(allTasksQuery, [userId])
+  }>(allTasksQuery, statsParams)
 
   // 🔧 修复：今日统计应该从 daily_history 中按任务的时区查找今天的记录
   // 而不是判断 started_at 是否在今天
@@ -745,7 +747,8 @@ export async function getClickFarmStats(
   if (daysBack !== 'all') {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysBack)
-    cumulativeFilter = ` AND created_at >= datetime('${cutoffDate.toISOString()}')`
+    cumulativeFilter = ' AND created_at >= ?'
+    cumulativeParams.push(cutoffDate.toISOString())
   }
 
   // 累计统计（不含已删除任务）
@@ -756,7 +759,7 @@ export async function getClickFarmStats(
       COALESCE(SUM(success_clicks), 0) as success_clicks,
       COALESCE(SUM(failed_clicks), 0) as failed_clicks
     FROM click_farm_tasks
-    WHERE user_id = ? AND IS_DELETED_FALSE ${cumulativeFilter}
+    WHERE user_id = ? AND is_deleted = FALSE ${cumulativeFilter}
   `,
     cumulativeParams
   )
@@ -795,7 +798,7 @@ export async function getClickFarmStats(
     `
     SELECT status, COUNT(*) as count
     FROM click_farm_tasks
-    WHERE user_id = ? AND IS_DELETED_FALSE ${dateFilter.replace('started_at', 'created_at')}
+    WHERE user_id = ? AND is_deleted = FALSE ${dateFilter.replace('started_at', 'created_at')}
     GROUP BY status
   `,
     [userId]
@@ -888,7 +891,7 @@ export async function getAdminClickFarmStats(): Promise<{
   // 🔧 修复：从每个任务的 daily_history 中提取今日数据
   // 而不是判断 started_at 是否为今天（started_at 是任务首次开始日期，可能是很久以前）
   // 仅扫描最近更新的任务，避免解析大量历史任务导致内存暴涨
-  const recentCutoff = datetimeMinusHours(48, db.type)
+  const recentCutoff = datetimeMinusHours(48)
   const allTasks = await db.query<{
     timezone: string
     daily_history: string | any[]
@@ -896,7 +899,7 @@ export async function getAdminClickFarmStats(): Promise<{
     `
     SELECT timezone, daily_history
     FROM click_farm_tasks
-    WHERE IS_DELETED_FALSE AND started_at IS NOT NULL
+    WHERE is_deleted = FALSE AND started_at IS NOT NULL
       AND updated_at >= ${recentCutoff}
   `,
     []
@@ -945,7 +948,7 @@ export async function getAdminClickFarmStats(): Promise<{
     `
     SELECT status, COUNT(*) as count
     FROM click_farm_tasks
-    WHERE IS_DELETED_FALSE
+    WHERE is_deleted = FALSE
     GROUP BY status
   `,
     []
@@ -996,7 +999,7 @@ export async function getHourlyDistribution(userId: number): Promise<HourlyDistr
     `
     SELECT hourly_distribution, timezone, daily_history, started_at
     FROM click_farm_tasks
-    WHERE user_id = ? AND IS_DELETED_FALSE AND status IN ('running', 'completed')
+    WHERE user_id = ? AND is_deleted = FALSE AND status IN ('running', 'completed')
   `,
     [userId]
   )
@@ -1066,12 +1069,12 @@ function calculateMatchRate(actual: number[], configured: number[]): number {
 /**
  * 解析数据库任务对象
  * 🔧 修复(2025-12-31): PostgreSQL jsonb 类型会被自动解析为 JS 对象/数组，
- * 不需要再调用 JSON.parse。SQLite 返回字符串，需要解析。
+ * 不需要再调用 JSON.parse。部分驱动可能返回字符串，需要解析。
  * 🔧 额外修复：PostgreSQL time without time zone 类型返回 Date 对象，
  * 需要转换为字符串格式 "HH:mm" 才能使用 split() 方法。
  */
 export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
-  // 安全解析函数：处理字符串（SQLite）或已解析对象（PostgreSQL jsonb）
+  // 安全解析函数：处理 JSON 字符串或已解析的 jsonb 对象
   // 🔧 修复(2025-12-31): 增强类型检查，确保返回正确类型
   // 🔧 修复(2026-01-05): 处理双重JSON编码问题（PostgreSQL jsonb存储了JSON字符串）
   const safeParse = (value: any, defaultValue: any = null): any => {
@@ -1295,10 +1298,10 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
     `
     UPDATE click_farm_tasks
     SET daily_history = ?,
-        updated_at = datetime('now')
+        updated_at = NOW()
     WHERE id = ?
   `,
-    [toDbJsonObjectField(dailyHistory, db.type, []), task.id]
+    [toDbJsonObjectField(dailyHistory, []), task.id]
   )
 }
 
@@ -1375,7 +1378,7 @@ export async function updateTaskStatus(
       UPDATE click_farm_tasks
       SET status = ?,
           next_run_at = ?,
-          updated_at = datetime('now')
+          updated_at = NOW()
       WHERE id = ?
     `,
       [status, nextRunAt.toISOString(), id]
@@ -1385,7 +1388,7 @@ export async function updateTaskStatus(
       `
       UPDATE click_farm_tasks
       SET status = ?,
-          updated_at = datetime('now')
+          updated_at = NOW()
       WHERE id = ?
     `,
       [status, id]
@@ -1410,8 +1413,8 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
     FROM click_farm_tasks cft
     INNER JOIN users u ON u.id = cft.user_id
     WHERE cft.status IN ('pending', 'running')
-      AND cft.IS_DELETED_FALSE
-      AND (cft.next_run_at IS NULL OR cft.next_run_at <= datetime('now'))
+      AND cft.is_deleted = FALSE
+      AND (cft.next_run_at IS NULL OR cft.next_run_at <= NOW())
       AND u.is_active = ?
     ORDER BY
       CASE WHEN cft.next_run_at IS NULL THEN 0 ELSE 1 END,
@@ -1419,7 +1422,7 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
       cft.created_at ASC
     LIMIT ${pendingLimit}
   `,
-    [boolParam(true, db.type)]
+    [boolParam(true)]
   )
 
   const now = Date.now()
@@ -1458,10 +1461,7 @@ export async function getClickFarmTaskByOfferId(
 ): Promise<ClickFarmTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const task = (await db.queryOne(
     `

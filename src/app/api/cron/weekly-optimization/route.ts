@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     console.log('[Cron] Starting creative optimization loop...')
 
     const db = await getDatabase()
-    const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+    const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
     const users = await db.query<{ user_id: number }>(`
       SELECT DISTINCT c.user_id
       FROM campaigns c

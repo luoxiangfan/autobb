@@ -61,8 +61,7 @@ async function getUserFeatureAccessFlags(userId: number): Promise<UserFeatureAcc
       isActive: false,
       openclawEnabled: false,
       productManagementEnabled: false,
-      strategyCenterEnabled: false,
-    }
+      strategyCenterEnabled: false }
   }
 
   const openclawEnabled = (user.openclaw_enabled as any) === true || (user.openclaw_enabled as any) === 1
@@ -73,8 +72,7 @@ async function getUserFeatureAccessFlags(userId: number): Promise<UserFeatureAcc
     isActive: true,
     openclawEnabled,
     productManagementEnabled,
-    strategyCenterEnabled,
-  }
+    strategyCenterEnabled }
 }
 
 export async function isOpenclawEnabledForUser(userId: number): Promise<boolean> {
@@ -103,8 +101,7 @@ export async function verifyOpenclawSessionAuth(
     return {
       authenticated: false,
       status: 401,
-      error: auth.error || '未授权',
-    }
+      error: auth.error || '未授权' }
   }
 
   const openclawEnabled = await isOpenclawEnabledForUser(auth.user.userId)
@@ -112,14 +109,12 @@ export async function verifyOpenclawSessionAuth(
     return {
       authenticated: false,
       status: 403,
-      error: 'OpenClaw 功能未开启',
-    }
+      error: 'OpenClaw 功能未开启' }
   }
 
   return {
     authenticated: true,
-    user: auth.user,
-  }
+    user: auth.user }
 }
 
 export async function verifyStrategyCenterSessionAuth(
@@ -130,8 +125,7 @@ export async function verifyStrategyCenterSessionAuth(
     return {
       authenticated: false,
       status: 401,
-      error: auth.error || '未授权',
-    }
+      error: auth.error || '未授权' }
   }
 
   const strategyCenterEnabled = await isStrategyCenterEnabledForUser(auth.user.userId)
@@ -139,14 +133,12 @@ export async function verifyStrategyCenterSessionAuth(
     return {
       authenticated: false,
       status: 403,
-      error: '策略中心功能未开启',
-    }
+      error: '策略中心功能未开启' }
   }
 
   return {
     authenticated: true,
-    user: auth.user,
-  }
+    user: auth.user }
 }
 
 export async function verifyProductManagementSessionAuth(
@@ -157,8 +149,7 @@ export async function verifyProductManagementSessionAuth(
     return {
       authenticated: false,
       status: 401,
-      error: auth.error || '未授权',
-    }
+      error: auth.error || '未授权' }
   }
 
   const productManagementEnabled = await isProductManagementEnabledForUser(auth.user.userId)
@@ -166,14 +157,12 @@ export async function verifyProductManagementSessionAuth(
     return {
       authenticated: false,
       status: 403,
-      error: '商品管理功能未开启',
-    }
+      error: '商品管理功能未开启' }
   }
 
   return {
     authenticated: true,
-    user: auth.user,
-  }
+    user: auth.user }
 }
 
 function extractBearerToken(authHeader: string | null): string | null {

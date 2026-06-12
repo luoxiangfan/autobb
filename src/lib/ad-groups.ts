@@ -46,7 +46,7 @@ export async function createAdGroup(input: CreateAdGroupInput): Promise<AdGroup>
     ]
   )
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   return (await findAdGroupById(insertedId, input.userId))!
 }
 
@@ -174,7 +174,7 @@ export async function updateAdGroup(
     return adGroup
   }
 
-  fields.push(`updated_at = ${nowFunc(db.type)}`)
+  fields.push(`updated_at = ${nowFunc()}`)
   values.push(id, userId)
 
   await db.exec(

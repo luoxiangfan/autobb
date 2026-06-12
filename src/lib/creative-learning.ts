@@ -871,7 +871,7 @@ async function saveSuccessFeatures(
           avg_ctr = ?,
           avg_conversion_rate = ?,
           min_ctr_threshold = ?,
-          updated_at = datetime('now')
+          updated_at = NOW()
       WHERE user_id = ?
     `,
       [

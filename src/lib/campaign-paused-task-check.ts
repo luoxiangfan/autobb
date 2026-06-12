@@ -132,7 +132,7 @@ export async function runCampaignPausedTaskCheck(
 ): Promise<CampaignPausedTaskCheckResult> {
   const checkStartedAt = Date.now()
   const db = await getDatabase()
-  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+  const isDeletedFalse = 'FALSE'
 
   const pausedOfferPairs = await db.query<PausedCampaignOfferPair>(`
     WITH paused_campaigns AS (
@@ -173,7 +173,6 @@ export async function runCampaignPausedTaskCheck(
     const concurrency = getUserConcurrencySettings()
     logCampaignPausedTaskCheckComplete({
       durationMs: Date.now() - checkStartedAt,
-      dbType: db.type,
       userBatchCount: 0,
       activeUserConcurrency: 0,
       requestedUserConcurrency: concurrency.requested,
@@ -261,7 +260,6 @@ export async function runCampaignPausedTaskCheck(
 
   logCampaignPausedTaskCheckComplete({
     durationMs: Date.now() - checkStartedAt,
-    dbType: db.type,
     userBatchCount: userBatches.length,
     activeUserConcurrency: Math.min(maxUserConcurrency, userBatches.length),
     requestedUserConcurrency: concurrency.requested,

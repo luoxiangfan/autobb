@@ -28,29 +28,25 @@ export function resolveOpenclawParentRequestIdFromHeaders(
   if (inboundMessageId) {
     return {
       parentRequestId: inboundMessageId,
-      source: 'inbound_message_id',
-    }
+      source: 'inbound_message_id' }
   }
 
   const messageId = normalizeHeaderValue(headers.get('x-openclaw-message-id'))
   if (messageId) {
     return {
       parentRequestId: messageId,
-      source: 'message_id',
-    }
+      source: 'message_id' }
   }
 
   const requestId = normalizeHeaderValue(headers.get('x-request-id'))
   if (requestId) {
     return {
       parentRequestId: requestId,
-      source: 'request_id',
-    }
+      source: 'request_id' }
   }
 
   return {
-    source: 'none',
-  }
+    source: 'none' }
 }
 
 export async function resolveOpenclawParentRequestId(params: {

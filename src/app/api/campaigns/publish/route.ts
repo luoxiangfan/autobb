@@ -1301,7 +1301,7 @@ export async function POST(request: NextRequest) {
             now,
           ]
         )
-        campaignId = getInsertedId(campaignInsert, db.type)
+        campaignId = getInsertedId(campaignInsert)
       }
     } catch (insertError) {
       if (isCampaignOfferUniqueViolation(insertError)) {

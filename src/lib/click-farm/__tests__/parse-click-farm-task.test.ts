@@ -42,7 +42,7 @@ describe('parseClickFarmTask', () => {
     expect(task.updated_at).toBe('2026-01-17T03:26:49.053Z')
   })
 
-  it('treats SQLite datetime strings as UTC when normalizing', () => {
+  it('treats legacy datetime strings as UTC when normalizing', () => {
     const row = {
       id: 'task-2',
       user_id: 1,

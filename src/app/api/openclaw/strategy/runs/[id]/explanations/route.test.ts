@@ -3,24 +3,19 @@ import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/openclaw/strategy/runs/[id]/explanations/route'
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
-  query: vi.fn(),
-}))
+  query: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     queryOne: dbFns.queryOne,
-    query: dbFns.query,
-  })),
-}))
+    query: dbFns.query })) }))
 
 describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
   beforeEach(() => {
@@ -28,8 +23,7 @@ describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
 
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 7,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     dbFns.queryOne.mockResolvedValue({
       id: 'run-123',
@@ -41,13 +35,11 @@ describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
         campaignsPublished: 1,
         campaignsPaused: 2,
         publishFailed: 1,
-        budgetAllocation: { method: 'thompson_sampling' },
-      }),
+        budgetAllocation: { method: 'thompson_sampling' } }),
       error_message: null,
       started_at: '2026-02-07T01:00:00.000Z',
       completed_at: '2026-02-07T01:05:00.000Z',
-      created_at: '2026-02-07T01:00:00.000Z',
-    })
+      created_at: '2026-02-07T01:00:00.000Z' })
 
     dbFns.query.mockResolvedValue([
       {
@@ -59,8 +51,7 @@ describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
         request_json: JSON.stringify({ offerId: 100 }),
         response_json: JSON.stringify({ campaignId: 200 }),
         error_message: null,
-        created_at: '2026-02-07T01:02:00.000Z',
-      },
+        created_at: '2026-02-07T01:02:00.000Z' },
       {
         id: 12,
         action_type: 'spend_cap_circuit_break',
@@ -70,8 +61,7 @@ describe('GET /api/openclaw/strategy/runs/:id/explanations', () => {
         request_json: JSON.stringify({ dailySpendCap: 100 }),
         response_json: JSON.stringify({ paused: 2 }),
         error_message: null,
-        created_at: '2026-02-07T01:03:00.000Z',
-      },
+        created_at: '2026-02-07T01:03:00.000Z' },
     ])
   })
 

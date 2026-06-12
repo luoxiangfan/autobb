@@ -442,8 +442,8 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     return { synced: false, oauthClientCredentialsChanged: false }
   }
 
-  const nowSql = sqlNowFunc(db.type)
-  const isActiveValue = db.type === 'postgres' ? true : 1
+  const nowSql = sqlNowFunc()
+  const isActiveValue = true
 
   if (existing) {
     await db.exec(

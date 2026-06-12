@@ -249,7 +249,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
     }
 
     const db = await getDatabase()
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+    const isActiveCondition = 'is_active = true'
 
     const account = await db.queryOne<{
       id: number

@@ -10,7 +10,6 @@ const authContextFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     exec: dbFns.exec,
   })),
 }))

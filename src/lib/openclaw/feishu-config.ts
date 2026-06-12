@@ -30,6 +30,5 @@ export async function getOpenclawFeishuDocConfig(userId: number): Promise<Opencl
     docTitlePrefix: normalizeValue(settingMap.feishu_doc_title_prefix),
     bitableAppToken: normalizeValue(settingMap.feishu_bitable_app_token),
     bitableTableId: normalizeValue(settingMap.feishu_bitable_table_id),
-    bitableTableName: normalizeValue(settingMap.feishu_bitable_table_name),
-  }
+    bitableTableName: normalizeValue(settingMap.feishu_bitable_table_name) }
 }

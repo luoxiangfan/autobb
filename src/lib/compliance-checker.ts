@@ -276,7 +276,7 @@ function rule_ExcessivePunctuation(content: CreativeContent): ComplianceIssue[] 
 
   const checkText = (text: string, field: 'headline' | 'description', index: number) => {
     // 检查重复标点（如：!!!、???、...）
-    const repeatedPunctuation = text.match(/[!?。，,.]{2,}/g)
+    const repeatedPunctuation = text.match(/[!?。，,.]{2 }/g)
     if (repeatedPunctuation) {
       issues.push({
         ruleId: 'R_REPEATED_PUNCTUATION',
@@ -643,7 +643,7 @@ export function getAutoFixSuggestions(issue: ComplianceIssue, originalText: stri
 
     case 'R_REPEATED_PUNCTUATION':
       // 移除重复标点
-      return originalText.replace(/[!?。，,.]{2,}/g, (match) => match[0])
+      return originalText.replace(/[!?。，,.]{2 }/g, (match) => match[0])
 
     case 'R_EXCESSIVE_EXCLAMATION':
       // 保留最多1个感叹号

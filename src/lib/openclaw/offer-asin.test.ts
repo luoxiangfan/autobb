@@ -3,8 +3,7 @@ import { extractAsinFromOfferUrls, normalizeOfferAsin } from '@/lib/openclaw/off
 import {
   compressJsonPayloadText,
   decompressJsonPayloadText,
-  serializeJsonPayloadForStorage,
-} from '@/lib/json-payload-compression'
+  serializeJsonPayloadForStorage } from '@/lib/json-payload-compression'
 
 describe('offer-asin', () => {
   it('extracts ASIN from amazon urls', () => {

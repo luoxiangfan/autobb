@@ -10,8 +10,7 @@ import { resolveOpenclawParentRequestId, type OpenclawParentRequestIdSource } fr
 import {
   assertOpenclawProxyRouteAllowed,
   isOpenclawWriteMethod,
-  validateOpenclawApiRequest,
-} from '@/lib/openclaw/canonical-routes'
+  validateOpenclawApiRequest } from '@/lib/openclaw/canonical-routes'
 
 export type OpenclawProxyRequest = {
   method: string
@@ -86,8 +85,7 @@ async function resolveOpenclawUser(params: {
   if (await verifyOpenclawGatewayToken(token)) {
     const userId = await resolveOpenclawUserFromBinding(params.channel, params.senderId, {
       accountId: params.accountId,
-      tenantKey: params.tenantKey,
-    })
+      tenantKey: params.tenantKey })
     if (!userId) return null
     return { userId, authType: 'gateway-binding' }
   }
@@ -102,8 +100,7 @@ function withQueryPatch(
   patch: ProxyQuery
 ): ProxyQuery | undefined {
   const merged: ProxyQuery = {
-    ...(baseQuery || {}),
-  }
+    ...(baseQuery || {}) }
 
   for (const [key, value] of Object.entries(patch)) {
     if (value === null || value === undefined || String(value).trim() === '') {
@@ -133,8 +130,7 @@ export function normalizeOpenclawProxyTarget(params: {
     return {
       path: '/api/google-ads-accounts',
       query,
-      rewritten: true,
-    }
+      rewritten: true }
   }
 
   const googleAdsAccountDetailMatch = path.match(/^\/api\/google-ads\/accounts\/(\d+)$/)
@@ -142,24 +138,21 @@ export function normalizeOpenclawProxyTarget(params: {
     return {
       path: `/api/google-ads-accounts/${googleAdsAccountDetailMatch[1]}`,
       query,
-      rewritten: true,
-    }
+      rewritten: true }
   }
 
   if (path === '/api/reports/campaigns' || path === '/api/google-ads/reports') {
     return {
       path: '/api/campaigns/performance',
       query,
-      rewritten: true,
-    }
+      rewritten: true }
   }
 
   if (path === '/api/google-ads/campaigns') {
     return {
       path: '/api/campaigns',
       query,
-      rewritten: true,
-    }
+      rewritten: true }
   }
 
   const accountCampaignsMatch = path.match(/^\/api\/google-ads\/accounts\/(\d+)\/campaigns$/)
@@ -167,8 +160,7 @@ export function normalizeOpenclawProxyTarget(params: {
     return {
       path: '/api/campaigns',
       query: withQueryPatch(query, { googleAdsAccountId: accountCampaignsMatch[1] }),
-      rewritten: true,
-    }
+      rewritten: true }
   }
 
   const campaignMetricsMatch = path.match(/^\/api\/campaigns\/(\d+)\/(metrics|performance)$/)
@@ -176,15 +168,13 @@ export function normalizeOpenclawProxyTarget(params: {
     return {
       path: '/api/campaigns/performance',
       query: withQueryPatch(query, { campaignId: campaignMetricsMatch[1] }),
-      rewritten: true,
-    }
+      rewritten: true }
   }
 
   return {
     path,
     query,
-    rewritten: false,
-  }
+    rewritten: false }
 }
 
 function deriveTarget(path: string): { targetType?: string; targetId?: string } {
@@ -195,8 +185,7 @@ function deriveTarget(path: string): { targetType?: string; targetId?: string } 
   }
   return {
     targetType: parts[1],
-    targetId: parts[2],
-  }
+    targetId: parts[2] }
 }
 
 function isPlainObject(value: unknown): value is Record<string, any> {
@@ -351,23 +340,20 @@ function compactPollingStatusResponse(params: {
   if (!routeKind) {
     return {
       compacted: false,
-      bodyText: params.bodyText,
-    }
+      bodyText: params.bodyText }
   }
 
   const parsed = parseJsonObject(params.bodyText)
   if (!parsed) {
     return {
       compacted: false,
-      bodyText: params.bodyText,
-    }
+      bodyText: params.bodyText }
   }
 
   if (typeof parsed.taskId !== 'string' || typeof parsed.status !== 'string') {
     return {
       compacted: false,
-      bodyText: params.bodyText,
-    }
+      bodyText: params.bodyText }
   }
 
   const compacted: Record<string, any> = {}
@@ -416,15 +402,11 @@ function compactPollingStatusResponse(params: {
       query: {
         waitForUpdate: '1',
         lastUpdatedAt: updatedAt,
-        timeoutMs: String(OPENCLAW_POLLING_TIMEOUT_MS),
-      },
-    },
-  }
+        timeoutMs: String(OPENCLAW_POLLING_TIMEOUT_MS) } } }
 
   return {
     compacted: true,
-    bodyText: JSON.stringify(compacted),
-  }
+    bodyText: JSON.stringify(compacted) }
 }
 
 export async function handleOpenclawProxyRequest(params: {
@@ -437,8 +419,7 @@ export async function handleOpenclawProxyRequest(params: {
     channel: request.channel,
     senderId: request.senderId,
     accountId: request.accountId,
-    tenantKey: request.tenantKey,
-  })
+    tenantKey: request.tenantKey })
 
   if (!resolved) {
     throw new Error('OpenClaw authentication failed')
@@ -459,8 +440,7 @@ export async function handleOpenclawProxyRequest(params: {
     userId: resolved.userId,
     channel: request.channel || null,
     senderId: request.senderId || null,
-    accountId: request.accountId || null,
-  })
+    accountId: request.accountId || null })
 
   // Backward compatibility bridge:
   // if caller still sends write operations to /api/openclaw/proxy,
@@ -477,34 +457,28 @@ export async function handleOpenclawProxyRequest(params: {
       senderId: request.senderId || null,
       intent: request.intent || undefined,
       idempotencyKey: request.idempotencyKey || undefined,
-      parentRequestId: resolvedParentRequestId,
-    })
+      parentRequestId: resolvedParentRequestId })
 
     const status = result.status === 'pending_confirm' ? 202 : 200
     return Response.json(
       {
         success: true,
         bridged: true,
-        ...result,
-      },
+        ...result },
       {
         status,
         headers: {
-          'x-openclaw-proxy-bridge': 'commands-execute',
-        },
-      }
+          'x-openclaw-proxy-bridge': 'commands-execute' } }
     )
   }
 
   const normalizedTarget = normalizeOpenclawProxyTarget({
     path: requestedTarget.path,
-    query: request.query,
-  })
+    query: request.query })
 
   const canonicalTarget = assertOpenclawProxyRouteAllowed({
     method: requestedTarget.method,
-    path: normalizedTarget.path,
-  })
+    path: normalizedTarget.path })
 
   const method = canonicalTarget.method
   const finalPath = canonicalTarget.normalizedPath
@@ -528,8 +502,7 @@ export async function handleOpenclawProxyRequest(params: {
       method,
       query: normalizedTarget.query,
       body: request.body,
-      timeoutMs,
-    })
+      timeoutMs })
   } catch (error: any) {
     const latencyMs = Date.now() - startedAt
     const errorMessage = error?.message || 'OpenClaw proxy upstream request failed'
@@ -543,8 +516,7 @@ export async function handleOpenclawProxyRequest(params: {
       requestBody: requestBodyString,
       status: 'error',
       errorMessage,
-      latencyMs,
-    })
+      latencyMs })
     throw error
   }
 
@@ -566,8 +538,7 @@ export async function handleOpenclawProxyRequest(params: {
     if (responseBodyText !== null && isJsonContentType(contentType)) {
       const compacted = compactPollingStatusResponse({
         path: finalPath,
-        bodyText: responseBodyText,
-      })
+        bodyText: responseBodyText })
       if (compacted.compacted) {
         responseBodyText = compacted.bodyText
         responseBodyForClient = compacted.bodyText
@@ -586,20 +557,17 @@ export async function handleOpenclawProxyRequest(params: {
     responseBody: responseBodyText,
     status: upstream.ok ? 'success' : 'error',
     errorMessage: upstream.ok ? null : responseBodyText,
-    latencyMs,
-  })
+    latencyMs })
 
   if (responseBodyForClient !== null) {
     const headers = new Headers(upstream.headers)
     headers.delete('content-length')
     return new Response(responseBodyForClient, {
       status: upstream.status,
-      headers,
-    })
+      headers })
   }
 
   return new Response(upstream.body, {
     status: upstream.status,
-    headers: upstream.headers,
-  })
+    headers: upstream.headers })
 }

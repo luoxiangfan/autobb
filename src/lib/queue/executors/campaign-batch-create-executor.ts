@@ -29,7 +29,7 @@ export async function executeCampaignBatchCreate(
 ): Promise<void> {
   const { batchId, backupIds, googleAdsAccountId, regenerateCreativeMap } = task.data
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   console.log(`🚀 开始执行批量创建广告系列：batch=${batchId}, count=${backupIds.length}`)
 
@@ -218,7 +218,7 @@ export async function executeCampaignBatchCreate(
     )
   } catch (error: any) {
     console.error(`❌ 批量创建失败：batch=${batchId}:`, error.message)
-    const nowFuncErr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFuncErr = 'NOW()'
     await db.exec(
       `
       UPDATE batch_tasks

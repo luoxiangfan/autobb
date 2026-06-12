@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const parentRequestId = req.headers.get('x-request-id') || undefined
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   try {
     // 1. 验证用户身份
@@ -404,7 +404,6 @@ export async function POST(req: NextRequest) {
             skipped_rows: skippedCount,
             valid_rows: rows.length,
           },
-          db.type,
           { skipped_rows: skippedCount, valid_rows: rows.length }
         ),
       ]
@@ -446,7 +445,6 @@ export async function POST(req: NextRequest) {
             skipped_rows: skippedCount,
             valid_rows: rows.length,
           },
-          db.type,
           { skipped_rows: skippedCount, valid_rows: rows.length }
         ),
       ]

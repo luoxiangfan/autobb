@@ -64,7 +64,7 @@ export async function createKeyword(input: CreateKeywordInput): Promise<Keyword>
     ]
   )
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   return (await findKeywordById(insertedId, input.userId))!
 }
 
@@ -212,7 +212,7 @@ export async function updateKeyword(
     return keyword
   }
 
-  fields.push('updated_at = datetime("now")')
+  fields.push('updated_at = NOW()')
   values.push(id, userId)
 
   await db.exec(

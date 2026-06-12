@@ -7,8 +7,7 @@ describe('openclaw command payload policy behavior', () => {
       normalizeOpenclawCommandPayload({
         method: 'POST',
         path: '/api/unknown/write-route',
-        body: { any: true },
-      })
+        body: { any: true } })
     ).toThrow('missing route payload policy')
   })
 
@@ -25,9 +24,7 @@ describe('openclaw command payload policy behavior', () => {
         target_cpa: 3.2,
         max_cpc: 0.9,
         start_date: '2026-02-20',
-        end_date: '2026-03-20',
-      },
-    })
+        end_date: '2026-03-20' } })
 
     expect(body).toEqual({
       offerId: 11,
@@ -38,8 +35,7 @@ describe('openclaw command payload policy behavior', () => {
       targetCpa: 3.2,
       maxCpc: 0.9,
       startDate: '2026-02-20',
-      endDate: '2026-03-20',
-    })
+      endDate: '2026-03-20' })
   })
 
   it('rejects unknown fields for campaign create route', () => {
@@ -52,9 +48,7 @@ describe('openclaw command payload policy behavior', () => {
           googleAdsAccountId: 22,
           campaignName: 'x',
           budgetAmount: 10,
-          attackerField: true,
-        },
-      })
+          attackerField: true } })
     ).toThrow('unsupported fields')
   })
 
@@ -64,9 +58,7 @@ describe('openclaw command payload policy behavior', () => {
         method: 'POST',
         path: '/api/campaigns/circuit-break',
         body: {
-          reason: 'manual',
-        },
-      })
+          reason: 'manual' } })
     ).toThrow('at least one field is required')
   })
 
@@ -77,15 +69,12 @@ describe('openclaw command payload policy behavior', () => {
       body: {
         google_ads_account_id: 66,
         dry_run: true,
-        source: 'openclaw',
-      },
-    })
+        source: 'openclaw' } })
 
     expect(body).toEqual({
       googleAdsAccountId: 66,
       dryRun: true,
-      source: 'openclaw',
-    })
+      source: 'openclaw' })
   })
 
   it('normalizes url-swap create aliases', () => {
@@ -97,17 +86,14 @@ describe('openclaw command payload policy behavior', () => {
         swapIntervalMinutes: 60,
         durationDays: 7,
         swapMode: 'manual',
-        manualAffiliateLinks: ['https://example.com/aff?a=1'],
-      },
-    })
+        manualAffiliateLinks: ['https://example.com/aff?a=1'] } })
 
     expect(body).toEqual({
       offer_id: 9,
       swap_interval_minutes: 60,
       duration_days: 7,
       swap_mode: 'manual',
-      manual_affiliate_links: ['https://example.com/aff?a=1'],
-    })
+      manual_affiliate_links: ['https://example.com/aff?a=1'] })
   })
 
   it('rejects non-empty body for url-swap enable route', () => {
@@ -115,8 +101,7 @@ describe('openclaw command payload policy behavior', () => {
       normalizeOpenclawCommandPayload({
         method: 'POST',
         path: '/api/url-swap/tasks/abc/enable',
-        body: { force: true },
-      })
+        body: { force: true } })
     ).toThrow('unsupported fields')
   })
 
@@ -127,15 +112,12 @@ describe('openclaw command payload policy behavior', () => {
       body: {
         dailyClickCount: 123,
         startTime: '07:00',
-        refererConfig: { type: 'none' },
-      },
-    })
+        refererConfig: { type: 'none' } } })
 
     expect(body).toEqual({
       daily_click_count: 123,
       start_time: '07:00',
-      referer_config: { type: 'none' },
-    })
+      referer_config: { type: 'none' } })
   })
 
   it('normalizes click-farm distribution generate aliases', () => {
@@ -145,15 +127,12 @@ describe('openclaw command payload policy behavior', () => {
       body: {
         dailyClickCount: 216,
         startTime: '06:00',
-        endTime: '24:00',
-      },
-    })
+        endTime: '24:00' } })
 
     expect(body).toEqual({
       daily_click_count: 216,
       start_time: '06:00',
-      end_time: '24:00',
-    })
+      end_time: '24:00' })
   })
 
   it('treats bare numeric commission_payout as amount for offer extract', () => {
@@ -164,9 +143,7 @@ describe('openclaw command payload policy behavior', () => {
         affiliate_link: 'https://example.com/aff',
         target_country: 'US',
         product_price: '399',
-        commission_payout: '74.81',
-      },
-    })
+        commission_payout: '74.81' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -178,8 +155,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'USD',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('preserves explicit currency commission amount for offer extract', () => {
@@ -190,9 +166,7 @@ describe('openclaw command payload policy behavior', () => {
         affiliate_link: 'https://example.com/aff',
         target_country: 'US',
         product_price: '399',
-        commission_payout: '$74.81',
-      },
-    })
+        commission_payout: '$74.81' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -204,8 +178,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'USD',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('preserves explicit currency product price and percent commission for offer extract', () => {
@@ -216,9 +189,7 @@ describe('openclaw command payload policy behavior', () => {
         affiliate_link: 'https://example.com/aff',
         target_country: 'US',
         product_price: '$349.99',
-        commission_payout: '30%',
-      },
-    })
+        commission_payout: '30%' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -229,8 +200,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_value: '30',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('falls back invalid three-letter offer extract country codes to US', () => {
@@ -240,9 +210,7 @@ describe('openclaw command payload policy behavior', () => {
       body: {
         affiliate_link: 'https://example.com/aff',
         target_country: 'USA',
-        product_price: '399',
-      },
-    })
+        product_price: '399' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -250,8 +218,7 @@ describe('openclaw command payload policy behavior', () => {
       product_price: '$399',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('accepts UK as a valid two-letter offer extract country code', () => {
@@ -262,9 +229,7 @@ describe('openclaw command payload policy behavior', () => {
         affiliate_link: 'https://example.com/aff',
         target_country: 'uk',
         product_price: '399',
-        commission_payout: '74.81',
-      },
-    })
+        commission_payout: '74.81' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -276,8 +241,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'GBP',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('ignores commission_rate mismatch and follows percent-form commission_payout for offer extract', () => {
@@ -289,9 +253,7 @@ describe('openclaw command payload policy behavior', () => {
         target_country: 'US',
         product_price: '$129.99',
         commission_payout: '16.57%',
-        commission_rate: '12.75',
-      },
-    })
+        commission_rate: '12.75' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -302,8 +264,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_value: '16.57',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('ignores commission_rate mismatch and follows percent-form commission_payout for offer extract stream', () => {
@@ -315,9 +276,7 @@ describe('openclaw command payload policy behavior', () => {
         target_country: 'US',
         product_price: '$299.99',
         commission_payout: '22.5%',
-        commission_rate: '7.5',
-      },
-    })
+        commission_rate: '7.5' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -328,8 +287,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_value: '22.5',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('treats amount-form commission_payout as amount even when commission_rate is provided', () => {
@@ -341,9 +299,7 @@ describe('openclaw command payload policy behavior', () => {
         target_country: 'US',
         product_price: '$299.99',
         commission_rate: '7.5',
-        commission_payout: '$22.50',
-      },
-    })
+        commission_payout: '$22.50' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -355,8 +311,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'USD',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('drops commission_rate and keeps percent commission_payout', () => {
@@ -368,9 +323,7 @@ describe('openclaw command payload policy behavior', () => {
         target_country: 'US',
         product_price: '$129.99',
         commission_payout: '12.75%',
-        commission_rate: '12.75',
-      },
-    })
+        commission_rate: '12.75' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -381,8 +334,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_value: '12.75',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('treats bare numeric commission_payout as amount even when commission_rate is provided', () => {
@@ -394,9 +346,7 @@ describe('openclaw command payload policy behavior', () => {
         target_country: 'US',
         product_price: '$129.99',
         commission_rate: '12.75',
-        commission_payout: '12.75',
-      },
-    })
+        commission_payout: '12.75' } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -408,8 +358,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'USD',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('treats commission_rate without percent as amount when commission_payout is missing', () => {
@@ -420,9 +369,7 @@ describe('openclaw command payload policy behavior', () => {
         affiliate_link: 'https://example.com/aff',
         target_country: 'US',
         product_price: '$22.99',
-        commission_rate: 22.5,
-      },
-    })
+        commission_rate: 22.5 } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -434,8 +381,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'USD',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('treats bare numeric commission_payout as amount when no explicit rate is provided', () => {
@@ -446,9 +392,7 @@ describe('openclaw command payload policy behavior', () => {
         affiliate_link: 'https://example.com/aff',
         target_country: 'US',
         product_price: '$22.99',
-        commission_payout: 18.75,
-      },
-    })
+        commission_payout: 18.75 } })
 
     expect(body).toEqual({
       affiliate_link: 'https://example.com/aff',
@@ -460,8 +404,7 @@ describe('openclaw command payload policy behavior', () => {
       commission_currency: 'USD',
       page_type: 'product',
       skipCache: false,
-      skipWarmup: false,
-    })
+      skipWarmup: false })
   })
 
   it('requires status when patching risk alert', () => {
@@ -470,9 +413,7 @@ describe('openclaw command payload policy behavior', () => {
         method: 'PATCH',
         path: '/api/risk-alerts/88',
         body: {
-          note: 'reviewed',
-        },
-      })
+          note: 'reviewed' } })
     ).toThrow('missing required fields')
   })
 
@@ -480,16 +421,14 @@ describe('openclaw command payload policy behavior', () => {
     const empty = normalizeOpenclawCommandPayload({
       method: 'POST',
       path: '/api/risk-alerts',
-      body: {},
-    })
+      body: {} })
     expect(empty.body).toBeUndefined()
 
     expect(() =>
       normalizeOpenclawCommandPayload({
         method: 'POST',
         path: '/api/risk-alerts',
-        body: { force: true },
-      })
+        body: { force: true } })
     ).toThrow('unsupported fields')
   })
 
@@ -499,14 +438,11 @@ describe('openclaw command payload policy behavior', () => {
       path: '/api/offers/123',
       query: {
         auto_unlink: true,
-        remove_google_ads_campaigns: 'true',
-      },
-    })
+        remove_google_ads_campaigns: 'true' } })
 
     expect(query).toEqual({
       autoUnlink: true,
-      removeGoogleAdsCampaigns: 'true',
-    })
+      removeGoogleAdsCampaigns: 'true' })
   })
 
   it('rejects unsupported query params on delete-offer route', () => {
@@ -516,9 +452,7 @@ describe('openclaw command payload policy behavior', () => {
         path: '/api/offers/123',
         query: {
           autoUnlink: true,
-          force: true,
-        },
-      })
+          force: true } })
     ).toThrow('unsupported params')
   })
 
@@ -528,9 +462,7 @@ describe('openclaw command payload policy behavior', () => {
         method: 'POST',
         path: '/api/campaigns',
         query: {
-          debug: true,
-        },
-      })
+          debug: true } })
     ).toThrow('unsupported params')
   })
 })

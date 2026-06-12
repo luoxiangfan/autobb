@@ -60,10 +60,9 @@ export async function POST(request: NextRequest) {
     // 生成新密码哈希
     const newPasswordHash = await hashPassword(newPassword)
 
-    // 更新密码并将must_change_password设为false (兼容PostgreSQL和SQLite)
-    const db_type = db.type
-    const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
-    const falseValue = db_type === 'postgres' ? 'false' : '0'
+    // 更新密码并将must_change_password设为false (PostgreSQL)
+    const nowFunc = 'NOW()'
+    const falseValue = 'false'
     await db.exec(
       `
       UPDATE users

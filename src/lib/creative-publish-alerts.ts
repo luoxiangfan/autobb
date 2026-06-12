@@ -91,9 +91,9 @@ export async function checkCreativePublishTimeouts(
   const lookbackHours = clampPositiveInt(options.lookbackHours, 48, 1, 30 * 24)
   const limit = clampPositiveInt(options.limit, 500, 1, 5000)
 
-  const staleBeforeExpr = datetimeMinusMinutes(thresholdMinutes, db.type)
-  const lookbackExpr = datetimeMinusHours(lookbackHours, db.type)
-  const isDeletedFalse = db.type === 'postgres' ? false : 0
+  const staleBeforeExpr = datetimeMinusMinutes(thresholdMinutes)
+  const lookbackExpr = datetimeMinusHours(lookbackHours)
+  const isDeletedFalse = false
 
   const candidates = await db.query<CandidateRow>(
     `

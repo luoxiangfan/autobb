@@ -257,9 +257,9 @@ async function upsertOfferTaskRow(params: {
   skipWarmup: boolean
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const skipCacheVal = db.type === 'postgres' ? params.skipCache : params.skipCache ? 1 : 0
-  const skipWarmupVal = db.type === 'postgres' ? params.skipWarmup : params.skipWarmup ? 1 : 0
+  const nowFunc = 'NOW()'
+  const skipCacheVal = params.skipCache
+  const skipWarmupVal = params.skipWarmup
 
   const existing = await db.queryOne<{ id: string }>('SELECT id FROM offer_tasks WHERE id = ?', [
     params.taskId,
@@ -407,7 +407,7 @@ export async function compensateOfferExtractionEnqueueFailure(params: {
 }): Promise<void> {
   const db = getDatabase()
   const queue = getQueueManager()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   try {
     await queue.removeTask(params.taskId)
@@ -429,9 +429,12 @@ export async function compensateOfferExtractionEnqueueFailure(params: {
       `,
       [
         params.failMessage,
-        toDbJsonObjectField({ message: params.failMessage }, db.type, {
-          message: params.failMessage,
-        }),
+        toDbJsonObjectField(
+          { message: params.failMessage },
+          {
+            message: params.failMessage,
+          }
+        ),
         params.taskId,
       ]
     )
@@ -485,7 +488,7 @@ export async function createOfferExtractionTaskForExistingOffer(
 ): Promise<string> {
   const db = await getDatabase()
   const queue = getQueueManager()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   const affiliateLink = (params.affiliateLink || '').trim()
   if (!affiliateLink) {
@@ -585,7 +588,7 @@ export async function createOfferExtractionTaskForExistingOffer(
       `,
       [
         failMessage,
-        toDbJsonObjectField({ message: failMessage }, db.type, { message: '任务入队失败' }),
+        toDbJsonObjectField({ message: failMessage }, { message: '任务入队失败' }),
         taskId,
       ]
     )
@@ -626,7 +629,7 @@ export async function createOfferExtractionTaskForNewOffer(
 ): Promise<string> {
   const db = await getDatabase()
   const queue = getQueueManager()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   const affiliateLink = (params.affiliateLink || '').trim()
   if (!affiliateLink) {
@@ -653,8 +656,8 @@ export async function createOfferExtractionTaskForNewOffer(
   )
   const taskId = crypto.randomUUID()
 
-  const skipCacheVal = db.type === 'postgres' ? skipCache : skipCache ? 1 : 0
-  const skipWarmupVal = db.type === 'postgres' ? skipWarmup : skipWarmup ? 1 : 0
+  const skipCacheVal = skipCache
+  const skipWarmupVal = skipWarmup
 
   await db.exec(
     `
@@ -732,7 +735,7 @@ export async function createOfferExtractionTaskForNewOffer(
       `,
       [
         failMessage,
-        toDbJsonObjectField({ message: failMessage }, db.type, { message: '任务入队失败' }),
+        toDbJsonObjectField({ message: failMessage }, { message: '任务入队失败' }),
         taskId,
       ]
     )

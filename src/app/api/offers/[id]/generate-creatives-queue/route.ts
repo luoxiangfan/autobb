@@ -384,7 +384,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       `INSERT INTO creative_tasks (
         id, user_id, offer_id, status, stage, progress, message,
         max_retries, target_rating, generation_mode, created_at, updated_at
-      ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, NOW(), NOW())`,
       [taskId, userId, offerId, normalizedMaxRetries, normalizedTargetRating, generationMode]
     )
 

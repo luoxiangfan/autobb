@@ -68,9 +68,7 @@ export async function repairOfferAffiliateLinksFromProducts(params: {
 
   const db = await getDatabase()
   const isNotDeletedCondition =
-    db.type === 'postgres'
-      ? "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+    "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
 
   const whereClauses = [
     'l.user_id = ?',

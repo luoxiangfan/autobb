@@ -31,7 +31,6 @@ vi.mock('@/lib/url-swap', () => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'postgres',
     exec: dbFns.exec,
     query: dbFns.query,
     queryOne: dbFns.queryOne,

@@ -13,7 +13,6 @@ const nextConfig = {
   },
 
   serverExternalPackages: [
-    'better-sqlite3',
     'cheerio',
     'postgres',
     'playwright',
@@ -48,7 +47,6 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push(
-        'better-sqlite3',
         'cheerio',
         'postgres',
         'playwright',

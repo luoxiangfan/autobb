@@ -132,7 +132,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const isDeletedCheck = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'
+    const isDeletedCheck = 'c.is_deleted = FALSE'
 
     // 从数据库获取该Offer关联的已发布campaign列表（google_campaign_id非空）
     // 注意：campaigns 有软删除字段 is_deleted，同时 status='REMOVED' 也可视为解除关联/移除标记

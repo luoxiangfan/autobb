@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       : 45
 
     const db = await getDatabase()
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+    const isActiveCondition = 'is_active = true'
 
     const account = await db.queryOne<{
       id: number

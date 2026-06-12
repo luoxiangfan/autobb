@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
   const db = getDatabase()
   const queue = getQueueManager()
   const parentRequestId = request.headers.get('x-request-id') || undefined
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   let authCache: CreativeGenerationAuthCache | undefined
 
   try {
@@ -255,10 +255,7 @@ export async function POST(request: NextRequest) {
 
     // 1) 批量读取Offer状态（只处理当前用户且未删除）
     const placeholders = offerIds.map(() => '?').join(',')
-    const notDeletedCondition =
-      db.type === 'postgres'
-        ? '(is_deleted = false OR is_deleted IS NULL)'
-        : '(is_deleted = 0 OR is_deleted IS NULL)'
+    const notDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
     const offers = await db.query<{
       id: number
@@ -442,7 +439,6 @@ export async function POST(request: NextRequest) {
               error?.message || '任务入队失败',
               toDbJsonObjectField(
                 { message: error?.message || String(error), stack: error?.stack },
-                db.type,
                 { message: error?.message || String(error) }
               ),
               taskId,

@@ -30,7 +30,6 @@ vi.mock('../brand-name-utils', () => ({
 describe('updateOfferScrapeStatus final_url guard', () => {
   beforeEach(async () => {
     mockDb = {
-      type: 'sqlite',
       queryOne: vi.fn().mockResolvedValue({
         offer_name: 'KicksCrew_US_01',
         target_country: 'US',

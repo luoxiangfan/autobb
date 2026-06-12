@@ -3,32 +3,26 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/openclaw/feishu/test/route'
 
 const authFns = vi.hoisted(() => ({
-  verifyOpenclawSessionAuth: vi.fn(),
-}))
+  verifyOpenclawSessionAuth: vi.fn() }))
 
 const settingsFns = vi.hoisted(() => ({
-  getOpenclawSettingsMap: vi.fn(),
-}))
+  getOpenclawSettingsMap: vi.fn() }))
 
 const feishuApiFns = vi.hoisted(() => ({
   getTenantAccessToken: vi.fn(),
   feishuRequest: vi.fn(),
-  resolveFeishuApiBase: vi.fn(),
-}))
+  resolveFeishuApiBase: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth,
-}))
+  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/settings', () => ({
-  getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap,
-}))
+  getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap }))
 
 vi.mock('@/lib/openclaw/feishu-api', () => ({
   getTenantAccessToken: feishuApiFns.getTenantAccessToken,
   feishuRequest: feishuApiFns.feishuRequest,
-  resolveFeishuApiBase: feishuApiFns.resolveFeishuApiBase,
-}))
+  resolveFeishuApiBase: feishuApiFns.resolveFeishuApiBase }))
 
 describe('openclaw feishu test route', () => {
   beforeEach(() => {
@@ -36,14 +30,12 @@ describe('openclaw feishu test route', () => {
 
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
-      user: { userId: 7, role: 'member' },
-    })
+      user: { userId: 7, role: 'member' } })
     settingsFns.getOpenclawSettingsMap.mockResolvedValue({
       feishu_app_id: 'cli_xxx',
       feishu_app_secret: 'sec_xxx',
       feishu_domain: 'feishu',
-      feishu_target: 'ou_target_123',
-    })
+      feishu_target: 'ou_target_123' })
     feishuApiFns.getTenantAccessToken.mockResolvedValue('tenant_token_xxx')
     feishuApiFns.resolveFeishuApiBase.mockReturnValue('https://open.feishu.cn/open-apis')
     feishuApiFns.feishuRequest.mockResolvedValue({ bot: { app_name: 'OpenClaw Bot' } })
@@ -54,14 +46,12 @@ describe('openclaw feishu test route', () => {
       feishu_app_id: 'cli_xxx',
       feishu_app_secret: '',
       feishu_domain: 'feishu',
-      feishu_target: 'ou_target_123',
-    })
+      feishu_target: 'ou_target_123' })
 
     const req = new NextRequest('http://localhost/api/openclaw/feishu/test', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ target: 'ou_target_123' }),
-    })
+      body: JSON.stringify({ target: 'ou_target_123' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -74,8 +64,7 @@ describe('openclaw feishu test route', () => {
     const req = new NextRequest('http://localhost/api/openclaw/feishu/test', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ target: 'bad-target' }),
-    })
+      body: JSON.stringify({ target: 'bad-target' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -88,8 +77,7 @@ describe('openclaw feishu test route', () => {
     const req = new NextRequest('http://localhost/api/openclaw/feishu/test', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ target: 'ou_target_123' }),
-    })
+      body: JSON.stringify({ target: 'ou_target_123' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -108,8 +96,7 @@ describe('openclaw feishu test route', () => {
     const req = new NextRequest('http://localhost/api/openclaw/feishu/test', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ target: 'oc_chat_123' }),
-    })
+      body: JSON.stringify({ target: 'oc_chat_123' }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -121,8 +108,7 @@ describe('openclaw feishu test route', () => {
     expect(feishuApiFns.feishuRequest).toHaveBeenLastCalledWith(
       expect.objectContaining({
         method: 'GET',
-        url: expect.stringContaining('/im/v1/chats/oc_chat_123'),
-      })
+        url: expect.stringContaining('/im/v1/chats/oc_chat_123') })
     )
   })
 })

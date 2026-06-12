@@ -365,7 +365,6 @@ const MAX_PB_STREAM_WINDOW_PAGES = 200
 const DEFAULT_YP_STREAM_WINDOW_PAGES = 3
 const MAX_YP_STREAM_WINDOW_PAGES = 20
 const DEFAULT_UPSERT_BATCH_SIZE_POSTGRES = 800
-const DEFAULT_UPSERT_BATCH_SIZE_SQLITE = 40
 const DEFAULT_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 5 * 60 * 1000
 const MIN_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 60 * 1000
 const MAX_AFFILIATE_PRODUCTS_UPSERT_STATEMENT_TIMEOUT_MS = 30 * 60 * 1000
@@ -2638,8 +2637,8 @@ async function upsertUserSystemSetting(params: {
   description: string
 }): Promise<void> {
   const db = await getDatabase()
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const falseValue = db.type === 'postgres' ? false : 0
+  const nowExpr = 'NOW()'
+  const falseValue = false
 
   const existing = await db.queryOne<{ id: number }>(
     `
@@ -4736,8 +4735,8 @@ async function loadExistingMidSet(
   )
   if (dedupedMids.length === 0) return existing
 
-  // 避免 PostgreSQL 参数上限（65534）与 SQLite 变量上限导致大批量同步失败。
-  const batchSize = db.type === 'postgres' ? 10000 : 500
+  // 避免 PostgreSQL 参数上限（65534）导致大批量同步失败。
+  const batchSize = 10000
   for (let index = 0; index < dedupedMids.length; index += batchSize) {
     const batch = dedupedMids.slice(index, index + batchSize)
     if (batch.length === 0) continue
@@ -4795,16 +4794,9 @@ async function getPartnerboostDeltaSyncSettings(userId: number): Promise<{
 async function listActivePartnerboostAsins(userId: number, activeDays: number): Promise<string[]> {
   const db = await getDatabase()
   const recentDays = Math.max(1, activeDays)
-  const isBlacklistedCondition =
-    db.type === 'postgres' ? 'p.is_blacklisted = FALSE' : 'p.is_blacklisted = 0'
-  const recentUpdatedCondition =
-    db.type === 'postgres'
-      ? `p.updated_at >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
-      : `p.updated_at >= datetime('now', '-${recentDays} days')`
-  const recentReportDateCondition =
-    db.type === 'postgres'
-      ? `report_date >= CURRENT_DATE - INTERVAL '${Math.max(0, recentDays - 1)} days'`
-      : `report_date >= date('now', '-${Math.max(0, recentDays - 1)} days')`
+  const isBlacklistedCondition = 'p.is_blacklisted = FALSE'
+  const recentUpdatedCondition = `p.updated_at >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
+  const recentReportDateCondition = `report_date >= CURRENT_DATE - INTERVAL '${Math.max(0, recentDays - 1)} days'`
 
   const rows = await db.query<{ asin: string | null }>(
     `
@@ -4935,12 +4927,8 @@ async function listActiveYeahPromosScopes(params: {
 
   const db = await getDatabase()
   const recentDays = Math.max(1, params.activeDays)
-  const isBlacklistedCondition =
-    db.type === 'postgres' ? 'p.is_blacklisted = FALSE' : 'p.is_blacklisted = 0'
-  const recentSeenCondition =
-    db.type === 'postgres'
-      ? `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
-      : `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= datetime('now', '-${recentDays} days')`
+  const isBlacklistedCondition = 'p.is_blacklisted = FALSE'
+  const recentSeenCondition = `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
 
   const rows = await db.query<{
     allowed_countries_json: string | null
@@ -5046,10 +5034,8 @@ async function fetchYeahPromosDeltaProducts(params: {
   })
 }
 
-function getAffiliateProductsUpsertBatchSize(dbType: 'sqlite' | 'postgres'): number {
-  return dbType === 'postgres'
-    ? DEFAULT_UPSERT_BATCH_SIZE_POSTGRES
-    : DEFAULT_UPSERT_BATCH_SIZE_SQLITE
+function getAffiliateProductsUpsertBatchSize(): number {
+  return DEFAULT_UPSERT_BATCH_SIZE_POSTGRES
 }
 
 function resolveAffiliateProductsUpsertStatementTimeoutMs(): number {
@@ -5075,11 +5061,6 @@ async function runAffiliateProductsPostgresUpsertWithTimeout(params: {
   db: DatabaseAdapter
   operation: () => Promise<void>
 }): Promise<void> {
-  if (params.db.type !== 'postgres') {
-    await params.operation()
-    return
-  }
-
   const statementTimeoutMs = resolveAffiliateProductsUpsertStatementTimeoutMs()
   await params.db.transaction(async () => {
     await params.db.exec(`SET LOCAL statement_timeout = '${statementTimeoutMs}ms'`)
@@ -5126,9 +5107,8 @@ function buildAffiliateProductsUpsertValues(params: {
 function buildAffiliateProductsBusinessChangedSql(params: {
   existingAlias: string
   incomingAlias: string
-  dbType: 'sqlite' | 'postgres'
 }): string {
-  const comparator = params.dbType === 'postgres' ? 'IS DISTINCT FROM' : 'IS NOT'
+  const comparator = 'IS DISTINCT FROM'
 
   const fields: Array<[string, string]> = [
     ['merchant_id', 'merchant_id'],
@@ -5155,167 +5135,6 @@ function buildAffiliateProductsBusinessChangedSql(params: {
         `${params.existingAlias}.${existingColumn} ${comparator} ${params.incomingAlias}.${incomingColumn}`
     )
     .join('\n          OR ')
-}
-
-async function upsertAffiliateProductsChunkOnConflict(params: {
-  db: DatabaseAdapter
-  userId: number
-  platform: AffiliatePlatform
-  items: NormalizedAffiliateProduct[]
-  nowIso: string
-}): Promise<void> {
-  if (params.items.length === 0) return
-
-  const perRowPlaceholder = '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  const placeholders = new Array(params.items.length).fill(perRowPlaceholder).join(', ')
-  const values = buildAffiliateProductsUpsertValues(params)
-  const businessChangedSql = buildAffiliateProductsBusinessChangedSql({
-    existingAlias: 'affiliate_products',
-    incomingAlias: 'EXCLUDED',
-    dbType: params.db.type,
-  })
-  const timestampDistinctComparator = params.db.type === 'postgres' ? 'IS DISTINCT FROM' : 'IS NOT'
-
-  await params.db.exec(
-    `
-    INSERT INTO affiliate_products (
-      user_id,
-      platform,
-      mid,
-      merchant_id,
-      asin,
-      brand,
-      product_name,
-      product_url,
-      promo_link,
-      short_promo_link,
-      allowed_countries_json,
-      price_amount,
-      price_currency,
-      commission_rate,
-      commission_amount,
-      commission_rate_mode,
-      review_count,
-      is_deeplink,
-      is_confirmed_invalid,
-      last_synced_at,
-      last_seen_at,
-      updated_at
-    )
-    VALUES ${placeholders}
-    ON CONFLICT (user_id, platform, mid) DO UPDATE SET
-      merchant_id = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.merchant_id
-        ELSE affiliate_products.merchant_id
-      END,
-      asin = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.asin
-        ELSE affiliate_products.asin
-      END,
-      brand = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.brand
-        ELSE affiliate_products.brand
-      END,
-      product_name = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.product_name
-        ELSE affiliate_products.product_name
-      END,
-      product_url = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.product_url
-        ELSE affiliate_products.product_url
-      END,
-      promo_link = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.promo_link
-        ELSE affiliate_products.promo_link
-      END,
-      short_promo_link = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.short_promo_link
-        ELSE affiliate_products.short_promo_link
-      END,
-      allowed_countries_json = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.allowed_countries_json
-        ELSE affiliate_products.allowed_countries_json
-      END,
-      price_amount = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN COALESCE(EXCLUDED.price_amount, affiliate_products.price_amount)
-        ELSE affiliate_products.price_amount
-      END,
-      price_currency = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN COALESCE(EXCLUDED.price_currency, affiliate_products.price_currency)
-        ELSE affiliate_products.price_currency
-      END,
-      commission_rate = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.commission_rate
-        ELSE affiliate_products.commission_rate
-      END,
-      commission_amount = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.commission_amount
-        ELSE affiliate_products.commission_amount
-      END,
-      commission_rate_mode = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.commission_rate_mode
-        ELSE affiliate_products.commission_rate_mode
-      END,
-      review_count = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.review_count
-        ELSE affiliate_products.review_count
-      END,
-      is_deeplink = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.is_deeplink
-        ELSE affiliate_products.is_deeplink
-      END,
-      is_confirmed_invalid = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.is_confirmed_invalid
-        ELSE affiliate_products.is_confirmed_invalid
-      END,
-      last_synced_at = EXCLUDED.last_synced_at,
-      last_seen_at = EXCLUDED.last_seen_at,
-      updated_at = CASE
-        WHEN (
-          ${businessChangedSql}
-        ) THEN EXCLUDED.updated_at
-        ELSE affiliate_products.updated_at
-      END
-    WHERE (
-      ${businessChangedSql}
-    )
-      OR affiliate_products.last_synced_at ${timestampDistinctComparator} EXCLUDED.last_synced_at
-      OR affiliate_products.last_seen_at ${timestampDistinctComparator} EXCLUDED.last_seen_at
-  `,
-    values
-  )
 }
 
 async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
@@ -5388,12 +5207,10 @@ async function upsertAffiliateProductsChunkPostgresTwoPhase(params: {
   const businessChangedSql = buildAffiliateProductsBusinessChangedSql({
     existingAlias: 'p',
     incomingAlias: 'incoming',
-    dbType: 'postgres',
   })
   const conflictBusinessChangedSql = buildAffiliateProductsBusinessChangedSql({
     existingAlias: 'affiliate_products',
     incomingAlias: 'EXCLUDED',
-    dbType: 'postgres',
   })
 
   await runAffiliateProductsPostgresUpsertWithTimeout({
@@ -5636,11 +5453,7 @@ async function upsertAffiliateProductsChunk(params: {
   items: NormalizedAffiliateProduct[]
   nowIso: string
 }): Promise<void> {
-  if (params.db.type === 'postgres') {
-    await upsertAffiliateProductsChunkPostgresTwoPhase(params)
-    return
-  }
-  await upsertAffiliateProductsChunkOnConflict(params)
+  await upsertAffiliateProductsChunkPostgresTwoPhase(params)
 }
 
 type UpsertAffiliateProductsBatchStats = {
@@ -5698,8 +5511,7 @@ async function upsertAffiliateProductsBatchWithAdaptiveRetry(params: {
       processedCount: batch.length,
     }
   } catch (error: any) {
-    const canSplitAndRetry =
-      params.db.type === 'postgres' && isPostgresStatementTimeoutError(error) && batch.length > 1
+    const canSplitAndRetry = isPostgresStatementTimeoutError(error) && batch.length > 1
     if (!canSplitAndRetry) {
       throw error
     }
@@ -5778,7 +5590,7 @@ export async function upsertAffiliateProducts(
   let lastEmittedProcessed = 0
   const nowIso = new Date().toISOString()
   const progressEvery = Math.max(1, Math.floor(Number(options?.progressEvery || 20)))
-  const upsertBatchSize = Math.max(1, getAffiliateProductsUpsertBatchSize(db.type))
+  const upsertBatchSize = Math.max(1, getAffiliateProductsUpsertBatchSize())
 
   await emitProgress({
     totalFetched,
@@ -6023,22 +5835,17 @@ function isMissingTableError(error: unknown): boolean {
   return /(no such table|does not exist)/i.test(message)
 }
 
-const affiliateProductsMerchantIdColumnAvailability: Partial<
-  Record<'sqlite' | 'postgres', boolean>
-> = {}
-const affiliateProductsRawJsonColumnAvailability: Partial<Record<'sqlite' | 'postgres', boolean>> =
-  {}
+let affiliateProductsMerchantIdColumnAvailability: boolean | undefined
+let affiliateProductsRawJsonColumnAvailability: boolean | undefined
 
 async function hasAffiliateProductsMerchantIdColumn(db: DatabaseAdapter): Promise<boolean> {
-  const cached = affiliateProductsMerchantIdColumnAvailability[db.type]
-  if (typeof cached === 'boolean') {
-    return cached
+  if (typeof affiliateProductsMerchantIdColumnAvailability === 'boolean') {
+    return affiliateProductsMerchantIdColumnAvailability
   }
 
   try {
-    if (db.type === 'postgres') {
-      const row = await db.queryOne<{ exists: boolean }>(
-        `
+    const row = await db.queryOne<{ exists: boolean }>(
+      `
           SELECT EXISTS (
             SELECT 1
             FROM information_schema.columns
@@ -6047,17 +5854,9 @@ async function hasAffiliateProductsMerchantIdColumn(db: DatabaseAdapter): Promis
               AND column_name = 'merchant_id'
           ) AS exists
         `
-      )
-      const exists = Boolean(row?.exists)
-      affiliateProductsMerchantIdColumnAvailability.postgres = exists
-      return exists
-    }
-
-    const rows = await db.query<{ name: string }>(`PRAGMA table_info(affiliate_products)`)
-    const exists =
-      Array.isArray(rows) &&
-      rows.some((row) => String((row as any)?.name || '').toLowerCase() === 'merchant_id')
-    affiliateProductsMerchantIdColumnAvailability.sqlite = exists
+    )
+    const exists = Boolean(row?.exists)
+    affiliateProductsMerchantIdColumnAvailability = exists
     return exists
   } catch {
     return false
@@ -6068,15 +5867,13 @@ async function hasAffiliateProductsRawJsonColumn(
   db: DatabaseAdapter,
   options?: { refresh?: boolean }
 ): Promise<boolean> {
-  const cached = affiliateProductsRawJsonColumnAvailability[db.type]
-  if (!options?.refresh && typeof cached === 'boolean') {
-    return cached
+  if (!options?.refresh && typeof affiliateProductsRawJsonColumnAvailability === 'boolean') {
+    return affiliateProductsRawJsonColumnAvailability
   }
 
   try {
-    if (db.type === 'postgres') {
-      const row = await db.queryOne<{ exists: boolean }>(
-        `
+    const row = await db.queryOne<{ exists: boolean }>(
+      `
           SELECT EXISTS (
             SELECT 1
             FROM information_schema.columns
@@ -6085,17 +5882,9 @@ async function hasAffiliateProductsRawJsonColumn(
               AND column_name = 'raw_json'
           ) AS exists
         `
-      )
-      const exists = Boolean(row?.exists)
-      affiliateProductsRawJsonColumnAvailability.postgres = exists
-      return exists
-    }
-
-    const rows = await db.query<{ name: string }>(`PRAGMA table_info(affiliate_products)`)
-    const exists =
-      Array.isArray(rows) &&
-      rows.some((row) => String((row as any)?.name || '').toLowerCase() === 'raw_json')
-    affiliateProductsRawJsonColumnAvailability.sqlite = exists
+    )
+    const exists = Boolean(row?.exists)
+    affiliateProductsRawJsonColumnAvailability = exists
     return exists
   } catch {
     return false
@@ -6200,18 +5989,6 @@ function isWithinAffiliateRawJsonDropWindow(now: Date): boolean {
 async function dropAffiliateProductsRawJsonColumnWithRetry(
   db: DatabaseAdapter
 ): Promise<RawJsonDropAttemptResult> {
-  if (db.type !== 'postgres') {
-    try {
-      await db.exec(`ALTER TABLE affiliate_products DROP COLUMN raw_json`)
-      return 'dropped'
-    } catch (error) {
-      if (isMissingColumnError(error)) {
-        return 'already_missing'
-      }
-      throw error
-    }
-  }
-
   for (let attempt = 1; attempt <= AFFILIATE_RAW_JSON_RETIREMENT_DROP_MAX_ATTEMPTS; attempt += 1) {
     try {
       const result = await db.transaction(async () => {
@@ -6263,9 +6040,8 @@ async function clearAffiliateProductsRawJsonBatch(
 ): Promise<number> {
   if (batchSize <= 0) return 0
 
-  if (db.type === 'postgres') {
-    const result = await db.exec(
-      `
+  const result = await db.exec(
+    `
         WITH target AS (
           SELECT ctid
           FROM affiliate_products
@@ -6277,22 +6053,6 @@ async function clearAffiliateProductsRawJsonBatch(
         FROM target
         WHERE p.ctid = target.ctid
       `,
-      [batchSize]
-    )
-    return Number(result?.changes || 0)
-  }
-
-  const result = await db.exec(
-    `
-      UPDATE affiliate_products
-      SET raw_json = NULL
-      WHERE rowid IN (
-        SELECT rowid
-        FROM affiliate_products
-        WHERE raw_json IS NOT NULL
-        LIMIT ?
-      )
-    `,
     [batchSize]
   )
   return Number(result?.changes || 0)
@@ -6421,7 +6181,7 @@ export async function runAffiliateProductsRawJsonRetirementMaintenance(options?:
       }
     } catch (error) {
       if (isMissingColumnError(error)) {
-        affiliateProductsRawJsonColumnAvailability[db.type] = false
+        affiliateProductsRawJsonColumnAvailability = false
         rawJsonColumnExists = false
         const dropCompletedAt = new Date().toISOString()
         await db.exec(
@@ -6522,16 +6282,12 @@ export async function listAffiliateProducts(
   const sortBy = options.sortBy || 'serial'
   const sortOrder = options.sortOrder === 'asc' ? 'asc' : 'desc'
   const orderBySql = buildAffiliateProductsOrderBy({ sortBy, sortOrder })
-  const offerNotDeletedCondition =
-    db.type === 'postgres'
-      ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
-      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(o.is_deleted = false OR o.is_deleted IS NULL)'
   const statusFilter = normalizeAffiliateProductStatusFilter(options.status)
   const landingPageTypeFilter = normalizeAffiliateLandingPageTypeFilter(options.landingPageType)
   const landingTypeSql = buildAffiliateLandingTypeConditionSql('p')
   const asinPresentConditionSql = `COALESCE(NULLIF(TRIM(p.asin), ''), NULL) IS NOT NULL`
-  const preferFastLandingTypeFilter =
-    db.type === 'postgres' && options.preferFastLandingTypeFilter === true
+  const preferFastLandingTypeFilter = options.preferFastLandingTypeFilter === true
   // lightweight 汇总只用于首屏快速统计；避免在大表上执行 URL LIKE 分类导致超时。
   const lightweightProductConditionSql = asinPresentConditionSql
   const lightweightStoreConditionSql = `(p.platform = 'partnerboost' AND NOT (${asinPresentConditionSql}))`
@@ -6586,10 +6342,7 @@ export async function listAffiliateProducts(
     partnerboost: toPlatformStats(accumulator.partnerboost),
   })
   const confirmedInvalidStatusSql = buildConfirmedInvalidSql()
-  const recommendationScoreFreshSql =
-    db.type === 'postgres'
-      ? `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
-      : `(datetime(p.score_calculated_at) >= datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
+  const recommendationScoreFreshSql = `(p.score_calculated_at >= (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days'))`
   const fullSyncBaselineCteSql = `
     WITH latest_platform_full_sync AS (
       SELECT ranked.platform, ranked.baseline_started_at
@@ -6639,7 +6392,7 @@ export async function listAffiliateProducts(
   const mid = midRaw.toLowerCase()
   const hasMerchantIdColumn = midRaw ? await hasAffiliateProductsMerchantIdColumn(db) : false
   if (midRaw) {
-    const prefersPartnerboostMerchantExact = hasMerchantIdColumn && /^\d{5,}$/.test(midRaw)
+    const prefersPartnerboostMerchantExact = hasMerchantIdColumn && /^\d{5 }$/.test(midRaw)
 
     if (prefersPartnerboostMerchantExact) {
       // 典型场景：输入 PartnerBoost 商家ID（纯数字），走 merchant_id 精确匹配避免扫描。
@@ -6676,23 +6429,13 @@ export async function listAffiliateProducts(
 
   const targetCountryCandidates = resolveProductCountryFilterCandidates(options.targetCountry)
   if (targetCountryCandidates.length > 0) {
-    if (db.type === 'postgres') {
-      const normalizedCountriesJsonbSql = `COALESCE(NULLIF(BTRIM(p.allowed_countries_json), ''), '[]')::jsonb`
-      const postgresCountryContainsSql = targetCountryCandidates
-        .map(() => `${normalizedCountriesJsonbSql} @> ?::jsonb`)
-        .join(' OR ')
-      whereConditions.push(`(${postgresCountryContainsSql})`)
-      for (const countryCode of targetCountryCandidates) {
-        whereParams.push(JSON.stringify([countryCode]))
-      }
-    } else {
-      const countryLikeConditions = targetCountryCandidates
-        .map(() => `LOWER(p.allowed_countries_json) LIKE ?`)
-        .join(' OR ')
-      whereConditions.push(`(${countryLikeConditions})`)
-      for (const countryCode of targetCountryCandidates) {
-        whereParams.push(`%\"${countryCode.toLowerCase()}\"%`)
-      }
+    const normalizedCountriesJsonbSql = `COALESCE(NULLIF(BTRIM(p.allowed_countries_json), ''), '[]')::jsonb`
+    const postgresCountryContainsSql = targetCountryCandidates
+      .map(() => `${normalizedCountriesJsonbSql} @> ?::jsonb`)
+      .join(' OR ')
+    whereConditions.push(`(${postgresCountryContainsSql})`)
+    for (const countryCode of targetCountryCandidates) {
+      whereParams.push(JSON.stringify([countryCode]))
     }
   }
 
@@ -7745,10 +7488,7 @@ async function listActiveLinkedOfferIdsForProduct(
   productId: number
 ): Promise<number[]> {
   const db = await getDatabase()
-  const offerNotDeletedCondition =
-    db.type === 'postgres'
-      ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
-      : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(o.is_deleted = false OR o.is_deleted IS NULL)'
 
   const rows = await db.query<{ offer_id: number }>(
     `
@@ -7877,7 +7617,7 @@ export async function setAffiliateProductBlacklist(
   blacklisted: boolean
 ): Promise<AffiliateProduct | null> {
   const db = await getDatabase()
-  const value = db.type === 'postgres' ? blacklisted : blacklisted ? 1 : 0
+  const value = blacklisted
   const nowIso = new Date().toISOString()
 
   await db.exec(
@@ -7995,10 +7735,7 @@ export async function backfillOfferProductLinkForPublishedCampaign(params: {
     }
   }
 
-  const offerNotDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = false OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const offer = await db.queryOne<{
     id: number
@@ -8104,10 +7841,7 @@ export async function backfillOfferProductLinkForPublishedCampaign(params: {
     }
   }
 
-  const notBlacklistedCondition =
-    db.type === 'postgres'
-      ? '(is_blacklisted = false OR is_blacklisted IS NULL)'
-      : '(is_blacklisted = 0 OR is_blacklisted IS NULL)'
+  const notBlacklistedCondition = '(is_blacklisted = false OR is_blacklisted IS NULL)'
 
   const productRows = await db.query<{
     id: number
@@ -8410,7 +8144,7 @@ export async function createAffiliateProductSyncRun(params: {
     ]
   )
 
-  return getInsertedId(result, db.type)
+  return getInsertedId(result)
 }
 
 export async function updateAffiliateProductSyncRun(params: {
@@ -8739,9 +8473,8 @@ export async function recordAffiliateProductSyncHourlySnapshot(params: {
   const db = await getDatabase()
 
   try {
-    if (db.type === 'postgres') {
-      await db.exec(
-        `
+    await db.exec(
+      `
           INSERT INTO affiliate_product_sync_hourly_stats (
             user_id,
             run_id,
@@ -8758,33 +8491,6 @@ export async function recordAffiliateProductSyncHourlySnapshot(params: {
             sample_count = affiliate_product_sync_hourly_stats.sample_count + 1,
             updated_at = EXCLUDED.updated_at
         `,
-        [params.userId, params.runId, params.platform, hourBucket, totalItems, nowIso, nowIso]
-      )
-      return
-    }
-
-    await db.exec(
-      `
-        INSERT INTO affiliate_product_sync_hourly_stats (
-          user_id,
-          run_id,
-          platform,
-          hour_bucket,
-          max_total_items,
-          sample_count,
-          created_at,
-          updated_at
-        ) VALUES (?, ?, ?, ?, ?, 1, ?, ?)
-        ON CONFLICT(run_id, hour_bucket)
-        DO UPDATE SET
-          max_total_items = CASE
-            WHEN excluded.max_total_items > affiliate_product_sync_hourly_stats.max_total_items
-              THEN excluded.max_total_items
-            ELSE affiliate_product_sync_hourly_stats.max_total_items
-          END,
-          sample_count = affiliate_product_sync_hourly_stats.sample_count + 1,
-          updated_at = excluded.updated_at
-      `,
       [params.userId, params.runId, params.platform, hourBucket, totalItems, nowIso, nowIso]
     )
   } catch (error) {
@@ -8820,9 +8526,7 @@ export async function getYeahPromosSyncMonitor(userId: number): Promise<YeahProm
 
   const db = await getDatabase()
   const activeRunFreshnessSql =
-    db.type === 'postgres'
-      ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
-      : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
+    "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
   const latestRun = await db.queryOne<{
     id: number
     status: string

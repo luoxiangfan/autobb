@@ -199,7 +199,7 @@ export async function findResumablePublishCampaignForOffer(
   userId: number
 ): Promise<ResumablePublishCampaignRow | null> {
   const db = await getDatabase()
-  const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCheck = 'is_deleted = FALSE'
 
   const { getStaleUpdatedAtThresholdIso } = await import('./campaign-offer-constraint')
   const staleThresholdIso = getStaleUpdatedAtThresholdIso()
@@ -363,7 +363,7 @@ export async function persistPublishGoogleAdsIds(params: {
   }
 
   const db = await getDatabase()
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowExpr = 'NOW()'
   const assignments: string[] = []
   const values: Array<string | number> = []
 
@@ -421,8 +421,8 @@ export async function reactivateCampaignForPublishResume(params: {
   maxCpc: number | null
 }): Promise<void> {
   const db = await getDatabase()
-  const isDeletedSet = db.type === 'postgres' ? 'FALSE' : '0'
-  const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const isDeletedSet = 'FALSE'
+  const nowExpr = 'NOW()'
 
   await applyCampaignTransition({
     userId: params.userId,

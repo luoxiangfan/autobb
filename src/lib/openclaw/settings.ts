@@ -91,8 +91,7 @@ export async function getOpenclawSettingsWithAffiliateSyncMap(userId?: number): 
 
   return {
     ...sanitizedOpenclawSettings,
-    ...affiliateSyncSettings,
-  }
+    ...affiliateSyncSettings }
 }
 
 export function readSecretFile(filePath?: string | null): string | undefined {

@@ -22,8 +22,7 @@ function makeCampaign(overrides: Record<string, any> = {}) {
     brand: 'Dreo',
     category: 'air conditioner',
     product_name: 'Portable AC',
-    ...overrides,
-  }
+    ...overrides }
 }
 
 describe('openclaw strategy recommendations rules', () => {
@@ -32,14 +31,12 @@ describe('openclaw strategy recommendations rules', () => {
       campaigns: [makeCampaign({
         max_cpc: 1.2,
         created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[101, { impressions: 1200, clicks: 120, cost: 144 }]]),
       perfTotalByCampaign: new Map([[101, { impressions: 2000, clicks: 180, cost: 216 }]]),
       commissionByCampaign: new Map([[101, 42]]),
       keywordsByCampaign: new Map([[101, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const cpcRec = drafts.find((item) => item.recommendationType === 'adjust_cpc')
     expect(cpcRec).toBeTruthy()
@@ -58,14 +55,12 @@ describe('openclaw strategy recommendations rules', () => {
         id: 114,
         max_cpc: 0.5,
         created_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[114, { impressions: 0, clicks: 0, cost: 0 }]]),
       perfTotalByCampaign: new Map([[114, { impressions: 0, clicks: 0, cost: 0 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[114, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const cpcRec = drafts.find((item) => item.recommendationType === 'adjust_cpc')
     expect(cpcRec).toBeTruthy()
@@ -84,14 +79,12 @@ describe('openclaw strategy recommendations rules', () => {
         commission_payout: '20%', // recommendedCpc = 1.0
         max_cpc: 1.4,
         created_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[115, { impressions: 0, clicks: 0, cost: 0 }]]),
       perfTotalByCampaign: new Map([[115, { impressions: 0, clicks: 0, cost: 0 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[115, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const cpcRec = drafts.find((item) => item.recommendationType === 'adjust_cpc')
     expect(cpcRec).toBeTruthy()
@@ -105,14 +98,12 @@ describe('openclaw strategy recommendations rules', () => {
         id: 102,
         max_cpc: 1.2,
         created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[102, { impressions: 300, clicks: 30, cost: 36 }]]),
       perfTotalByCampaign: new Map([[102, { impressions: 300, clicks: 30, cost: 36 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[102, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const cpcRec = drafts.find((item) => item.recommendationType === 'adjust_cpc')
     expect(cpcRec).toBeTruthy()
@@ -126,17 +117,14 @@ describe('openclaw strategy recommendations rules', () => {
         id: 113,
         max_cpc: null,
         campaign_config: JSON.stringify({
-          maxCpcBid: 0.9,
-        }),
+          maxCpcBid: 0.9 }),
         created_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[113, { impressions: 1200, clicks: 120, cost: 108 }]]),
       perfTotalByCampaign: new Map([[113, { impressions: 1800, clicks: 180, cost: 162 }]]),
       commissionByCampaign: new Map([[113, 42]]),
       keywordsByCampaign: new Map([[113, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const cpcRec = drafts.find((item) => item.recommendationType === 'adjust_cpc')
     expect(cpcRec).toBeTruthy()
@@ -152,8 +140,7 @@ describe('openclaw strategy recommendations rules', () => {
       perfTotalByCampaign: new Map([[103, { impressions: 0, clicks: 0, cost: 35 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[103, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const offlineRec = drafts.find((item) => item.recommendationType === 'offline_campaign')
     expect(offlineRec).toBeTruthy()
@@ -169,8 +156,7 @@ describe('openclaw strategy recommendations rules', () => {
       perfTotalByCampaign: new Map([[104, { impressions: 200, clicks: 8, cost: 16 }]]),
       commissionByCampaign: new Map([[104, 12]]),
       keywordsByCampaign: new Map([[104, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const offlineRec = drafts.find((item) => item.recommendationType === 'offline_campaign')
     expect(offlineRec).toBeTruthy()
@@ -184,8 +170,7 @@ describe('openclaw strategy recommendations rules', () => {
       perfTotalByCampaign: new Map([[111, { impressions: 20, clicks: 0, cost: 1 }]]),
       commissionByCampaign: new Map([[111, 1]]),
       keywordsByCampaign: new Map([[111, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const offlineRec = drafts.find((item) => item.recommendationType === 'offline_campaign')
     expect(offlineRec).toBeFalsy()
@@ -198,8 +183,7 @@ describe('openclaw strategy recommendations rules', () => {
       perfTotalByCampaign: new Map([[107, { impressions: 1200, clicks: 120, cost: 220 }]]),
       commissionByCampaign: new Map([[107, 60]]), // ROAS = 0.27
       keywordsByCampaign: new Map([[107, new Set(['dreo', 'portable ac'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const offlineRec = drafts.find((item) => item.recommendationType === 'offline_campaign')
     expect(offlineRec).toBeTruthy()
@@ -212,14 +196,12 @@ describe('openclaw strategy recommendations rules', () => {
         id: 201,
         campaign_name: 'Renpho_3709_A',
         offer_id: 9901,
-        max_cpc: 0.6,
-      }),
+        max_cpc: 0.6 }),
       makeCampaign({
         id: 202,
         campaign_name: 'Renpho_3709_B',
         offer_id: 9901,
-        max_cpc: 0.6,
-      }),
+        max_cpc: 0.6 }),
     ]
 
     const drafts = __testUtils.buildRecommendationDrafts({
@@ -240,8 +222,7 @@ describe('openclaw strategy recommendations rules', () => {
         [201, new Set(['renpho scale'])],
         [202, new Set(['renpho scale'])],
       ]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const duplicateOfflineRec = drafts.find((item) => item.campaignId === 202 && item.recommendationType === 'offline_campaign')
     expect(duplicateOfflineRec).toBeTruthy()
@@ -257,8 +238,7 @@ describe('openclaw strategy recommendations rules', () => {
       impressions: 120 - index,
       clicks: 12 - Math.floor(index / 3),
       conversions: index < 3 ? 1 : 0,
-      cost: 8 - index * 0.1,
-    }))
+      cost: 8 - index * 0.1 }))
 
     const drafts = __testUtils.buildRecommendationDrafts({
       campaigns: [makeCampaign({
@@ -267,15 +247,13 @@ describe('openclaw strategy recommendations rules', () => {
         product_price: '$150',
         commission_payout: '10%',
         created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[105, { impressions: 120, clicks: 10, cost: 8 }]]),
       perfTotalByCampaign: new Map([[105, { impressions: 120, clicks: 10, cost: 8 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[105, new Set(['dreo'])]]),
       searchTermsByCampaign: new Map([[105, searchTerms]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
     expect(expandRec).toBeTruthy()
@@ -304,23 +282,20 @@ describe('openclaw strategy recommendations rules', () => {
       recentClicks: index % 2 === 0 ? 2 : 0,
       recentConversions: index === 0 ? 1 : 0,
       recentCost: index % 2 === 0 ? 1.5 : 0,
-      lastSeenDate: '2026-04-01',
-    }))
+      lastSeenDate: '2026-04-01' }))
 
     const drafts = __testUtils.buildRecommendationDrafts({
       campaigns: [makeCampaign({
         id: 116,
         created_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[116, { impressions: 100, clicks: 8, cost: 7 }]]),
       perfTotalByCampaign: new Map([[116, { impressions: 100, clicks: 8, cost: 7 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[116, new Set(['dreo'])]]),
       searchTermsByCampaign: new Map([[116, []]]),
       historicalSearchTermsByCampaign: new Map([[116, historicalTerms]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
     expect(expandRec).toBeTruthy()
@@ -347,24 +322,21 @@ describe('openclaw strategy recommendations rules', () => {
         recentClicks: 0,
         recentConversions: 0,
         recentCost: 0,
-        lastSeenDate: '2026-03-20',
-      },
+        lastSeenDate: '2026-03-20' },
     ]
 
     const drafts = __testUtils.buildRecommendationDrafts({
       campaigns: [makeCampaign({
         id: 117,
         created_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[117, { impressions: 150, clicks: 12, cost: 9 }]]),
       perfTotalByCampaign: new Map([[117, { impressions: 150, clicks: 12, cost: 9 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[117, new Set(['dreo'])]]),
       searchTermsByCampaign: new Map([[117, recentTerms]]),
       historicalSearchTermsByCampaign: new Map([[117, historicalTerms]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
     expect(expandRec).toBeTruthy()
@@ -378,8 +350,7 @@ describe('openclaw strategy recommendations rules', () => {
   it('falls back to campaign_config keywords when keyword inventory is empty', () => {
     const fallbackKeywords = Array.from({ length: 12 }, (_, index) => ({
       text: `fallback keyword ${index + 1}`,
-      matchType: 'PHRASE',
-    }))
+      matchType: 'PHRASE' }))
 
     const drafts = __testUtils.buildRecommendationDrafts({
       campaigns: [makeCampaign({
@@ -387,9 +358,7 @@ describe('openclaw strategy recommendations rules', () => {
         created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
         published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
         campaign_config: JSON.stringify({
-          keywords: fallbackKeywords,
-        }),
-      })],
+          keywords: fallbackKeywords }) })],
       perf7dByCampaign: new Map([[112, { impressions: 80, clicks: 6, cost: 4 }]]),
       perfTotalByCampaign: new Map([[112, { impressions: 80, clicks: 6, cost: 4 }]]),
       commissionByCampaign: new Map(),
@@ -401,11 +370,9 @@ describe('openclaw strategy recommendations rules', () => {
           impressions: 80 - index,
           clicks: 6,
           conversions: 0,
-          cost: 4,
-        }))
+          cost: 4 }))
       ]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
     expect(expandRec).toBeTruthy()
@@ -431,16 +398,13 @@ describe('openclaw strategy recommendations rules', () => {
         created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
         published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
         campaign_config: JSON.stringify({
-          negativeKeywords: ['digital', 'review', 'discount', 'comparison'],
-        }),
-      })],
+          negativeKeywords: ['digital', 'review', 'discount', 'comparison'] }) })],
       perf7dByCampaign: new Map([[113, { impressions: 95, clicks: 8, cost: 6 }]]),
       perfTotalByCampaign: new Map([[113, { impressions: 95, clicks: 8, cost: 6 }]]),
       commissionByCampaign: new Map(),
       keywordsByCampaign: new Map([[113, new Set(['renpho'])]]),
       searchTermsByCampaign: new Map([[113, searchTerms]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const expandRec = drafts.find((item) => item.recommendationType === 'expand_keywords')
     expect(expandRec).toBeTruthy()
@@ -456,8 +420,7 @@ describe('openclaw strategy recommendations rules', () => {
       campaigns: [makeCampaign({
         id: 109,
         created_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[109, { impressions: 900, clicks: 90, cost: 62 }]]),
       perfTotalByCampaign: new Map([[109, { impressions: 1400, clicks: 130, cost: 95 }]]),
       commissionByCampaign: new Map([[109, 20]]),
@@ -475,8 +438,7 @@ describe('openclaw strategy recommendations rules', () => {
           { searchTerm: 'dreo jobs', impressions: 30, clicks: 4, conversions: 0, cost: 3.2 },
         ],
       ]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const negativeRec = drafts.find((item) => item.recommendationType === 'add_negative_keywords')
     expect(negativeRec).toBeTruthy()
@@ -489,8 +451,7 @@ describe('openclaw strategy recommendations rules', () => {
       campaigns: [makeCampaign({
         id: 110,
         created_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 6 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[110, { impressions: 980, clicks: 88, cost: 58 }]]),
       perfTotalByCampaign: new Map([[110, { impressions: 1600, clicks: 148, cost: 102 }]]),
       commissionByCampaign: new Map([[110, 22]]),
@@ -507,8 +468,7 @@ describe('openclaw strategy recommendations rules', () => {
           { searchTerm: 'dreo', impressions: 200, clicks: 26, conversions: 0, cost: 14.2 },
         ],
       ]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const matchRec = drafts.find((item) => item.recommendationType === 'optimize_match_type')
     expect(matchRec).toBeTruthy()
@@ -529,16 +489,14 @@ describe('openclaw strategy recommendations rules', () => {
       campaigns: [makeCampaign({
         max_cpc: 1.2,
         created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      })],
+        published_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString() })],
       perf7dByCampaign: new Map([[101, { impressions: 1200, clicks: 120, cost: 144 }]]),
       perfTotalByCampaign: new Map([[101, { impressions: 2000, clicks: 180, cost: 216 }]]),
       commissionByCampaign: new Map([[101, 42]]),
       keywordsByCampaign: new Map([[101, new Set(['dreo'])]]),
       creativeById: new Map(),
       cooldownUntilByKey: cooldownMap,
-      nowMs,
-    })
+      nowMs })
 
     expect(drafts.some((item) => item.recommendationType === 'adjust_cpc')).toBe(false)
   })
@@ -548,14 +506,12 @@ describe('openclaw strategy recommendations rules', () => {
       campaigns: [makeCampaign({
         id: 108,
         max_cpc: 0.35,
-        budget_amount: 10,
-      })],
+        budget_amount: 10 })],
       perf7dByCampaign: new Map([[108, { impressions: 900, clicks: 95, cost: 32 }]]),
       perfTotalByCampaign: new Map([[108, { impressions: 900, clicks: 95, cost: 32 }]]),
       commissionByCampaign: new Map([[108, 40]]), // ROAS = 1.25
       keywordsByCampaign: new Map([[108, new Set(['dreo', 'portable ac deals'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     const budgetRec = drafts.find((item) => item.recommendationType === 'adjust_budget')
     expect(budgetRec).toBeTruthy()
@@ -566,12 +522,10 @@ describe('openclaw strategy recommendations rules', () => {
   it('normalizes strategy budget execution payload to campaigns daily-budget interface', () => {
     expect(__testUtils.buildDailyBudgetUpdatePayload(16.236)).toEqual({
       budgetAmount: 16.24,
-      budgetType: 'DAILY',
-    })
+      budgetType: 'DAILY' })
     expect(__testUtils.buildDailyBudgetUpdatePayload('19.9')).toEqual({
       budgetAmount: 19.9,
-      budgetType: 'DAILY',
-    })
+      budgetType: 'DAILY' })
   })
 
   it('rejects invalid budget values when building strategy budget execution payload', () => {
@@ -586,14 +540,12 @@ describe('openclaw strategy recommendations rules', () => {
         id: 106,
         google_campaign_id: null,
         campaign_id: null,
-        max_cpc: 1.2,
-      })],
+        max_cpc: 1.2 })],
       perf7dByCampaign: new Map([[106, { impressions: 800, clicks: 80, cost: 96 }]]),
       perfTotalByCampaign: new Map([[106, { impressions: 1200, clicks: 120, cost: 144 }]]),
       commissionByCampaign: new Map([[106, 20]]),
       keywordsByCampaign: new Map([[106, new Set(['dreo'])]]),
-      creativeById: new Map(),
-    })
+      creativeById: new Map() })
 
     expect(drafts.some((item) => item.recommendationType === 'adjust_cpc')).toBe(false)
   })
@@ -601,8 +553,7 @@ describe('openclaw strategy recommendations rules', () => {
   it('builds deterministic execute task id by recommendationId + snapshotHash', () => {
     const taskId = __testUtils.buildDeterministicRecommendationExecuteTaskId({
       recommendationId: 'rec-abc_123',
-      snapshotHash: 'aa11bb22cc33',
-    })
+      snapshotHash: 'aa11bb22cc33' })
 
     expect(taskId).toBe('openclaw-strategy-exec-rec-abc_123-aa11bb22cc33')
   })
@@ -612,9 +563,7 @@ describe('openclaw strategy recommendations rules', () => {
       recommendationType: 'expand_keywords',
       response: {
         success: true,
-        failures: [{ keyword: 'bad keyword' }],
-      },
-    })).toThrow('执行存在失败项')
+        failures: [{ keyword: 'bad keyword' }] } })).toThrow('执行存在失败项')
   })
 
   it('accepts keyword execution partial failures when some items were applied', () => {
@@ -623,9 +572,7 @@ describe('openclaw strategy recommendations rules', () => {
       response: {
         success: true,
         addedCount: 2,
-        failures: [{ keyword: 'bad keyword', message: 'Keyword policy violation' }],
-      },
-    })).not.toThrow()
+        failures: [{ keyword: 'bad keyword', message: 'Keyword policy violation' }] } })).not.toThrow()
   })
 
   it('treats offline queued response as incomplete execution', () => {
@@ -634,10 +581,7 @@ describe('openclaw strategy recommendations rules', () => {
       response: {
         success: true,
         googleAds: {
-          queued: true,
-        },
-      },
-    })).toThrow('异步处理中')
+          queued: true } } })).toThrow('异步处理中')
   })
 
   it('treats offline planned/actual mismatch as failure', () => {
@@ -650,10 +594,7 @@ describe('openclaw strategy recommendations rules', () => {
           action: 'REMOVE',
           planned: 1,
           removed: 0,
-          failed: 0,
-        },
-      },
-    })).toThrow('执行不完整')
+          failed: 0 } } })).toThrow('执行不完整')
   })
 
   it('accepts offline remove fallback pause as complete', () => {
@@ -667,10 +608,7 @@ describe('openclaw strategy recommendations rules', () => {
           planned: 1,
           removed: 0,
           pausedFallback: 1,
-          failed: 0,
-        },
-      },
-    })).not.toThrow()
+          failed: 0 } } })).not.toThrow()
   })
 
   it('detects already-offline API errors as idempotent', () => {

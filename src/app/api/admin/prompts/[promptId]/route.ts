@@ -12,7 +12,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ promp
     const db = getDatabase()
 
     // 🔧 PostgreSQL 兼容性：布尔字段兼容性处理
-    const isActiveValue = db.type === 'postgres' ? true : 1
+    const isActiveValue = true
 
     // 获取当前激活版本
     const activeVersion = await db.queryOne<any>(
@@ -99,8 +99,8 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ promp
     const db = getDatabase()
 
     // 🔧 PostgreSQL 兼容性：布尔字段兼容性处理
-    const isActiveFalse = db.type === 'postgres' ? false : 0
-    const isActiveTrue = db.type === 'postgres' ? true : 1
+    const isActiveFalse = false
+    const isActiveTrue = true
 
     // 判断是激活版本还是编辑创建新版本
     const isEditOperation = body.promptContent !== undefined
@@ -200,8 +200,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ promp
         ]
       )
 
-      const versionId =
-        db.type === 'postgres' ? (result as any).rows?.[0]?.id : (result as any).lastInsertRowid
+      const versionId = (result as any).lastInsertRowid
 
       return NextResponse.json({
         success: true,

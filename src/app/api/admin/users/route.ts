@@ -20,7 +20,7 @@ function getClientIP(request: NextRequest): string {
 
 /**
  * 🔧 修复(2025-12-11): 转换数据库字段名为 camelCase
- * 🔧 修复(2025-12-30): 统一isActive为boolean类型（兼容PostgreSQL和SQLite）
+ * 🔧 修复(2025-12-30): 统一isActive为boolean类型（PostgreSQL）
  * 规范: API响应使用 camelCase，数据库字段使用 snake_case
  */
 function transformUserToApiResponse(user: any, now: Date) {
@@ -35,7 +35,7 @@ function transformUserToApiResponse(user: any, now: Date) {
     role: user.role,
     packageType: user.package_type,
     packageExpiresAt: user.package_expires_at,
-    // PostgreSQL返回boolean，SQLite返回0/1，统一转为boolean
+    // PostgreSQL 返回 boolean
     isActive,
     openclawEnabled: user.openclaw_enabled === true || user.openclaw_enabled === 1,
     productManagementEnabled:
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
 
     const db = getDatabase()
-    const likeOperator = db.type === 'postgres' ? 'ILIKE' : 'LIKE'
+    const likeOperator = 'ILIKE'
 
     const sortBy = (searchParams.get('sortBy') || 'createdAt') as string
     const sortOrderRaw = (searchParams.get('sortOrder') || 'desc').toLowerCase()
@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
       query += statusCondition
       countQuery += statusCondition
       // 🔧 修复(2025-12-30): PostgreSQL兼容性 - 发送boolean值
-      params.push(db.type === 'postgres' ? status === 'active' : status === 'active' ? 1 : 0)
+      params.push(status === 'active')
     }
 
     // Package type filter
@@ -136,7 +136,6 @@ export async function GET(request: NextRequest) {
     const orderBy = buildAdminUsersOrderBy({
       sortBy,
       sortOrder,
-      dbType: db.type,
     })
 
     // Pagination + sorting (ORDER BY validated above)

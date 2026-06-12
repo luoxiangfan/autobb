@@ -180,7 +180,7 @@ async function enqueueOpenclawStrategy(userId: number, mode: string) {
 
 async function refreshOpenclawStrategySchedules() {
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
   const rows = await db.query<{
     user_id: number
     enabled: string | null
@@ -347,8 +347,7 @@ async function productScoreSchedulerTask() {
       AND COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'
     )`
     const dueUsers = await db.query<{ user_id: number; due_count: number | string }>(
-      db.type === 'postgres'
-        ? `SELECT
+      `SELECT
              user_id,
              COUNT(*)::int AS due_count
            FROM affiliate_products
@@ -357,20 +356,6 @@ async function productScoreSchedulerTask() {
              OR (
                last_synced_at IS NOT NULL
                AND score_calculated_at < (last_synced_at AT TIME ZONE 'UTC')
-             )
-             OR ${legacyAmazonMisclassifiedCondition}
-           GROUP BY user_id
-           ORDER BY due_count DESC
-           LIMIT ?`
-        : `SELECT
-             user_id,
-             COUNT(*) AS due_count
-           FROM affiliate_products
-           WHERE recommendation_score IS NULL
-             OR score_calculated_at IS NULL
-             OR (
-               last_synced_at IS NOT NULL
-               AND datetime(score_calculated_at) < datetime(last_synced_at)
              )
              OR ${legacyAmazonMisclassifiedCondition}
            GROUP BY user_id
@@ -431,7 +416,7 @@ async function syncDataTask() {
   log('📊 开始执行数据同步任务...')
 
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
   const DEFAULT_DATA_SYNC_INTERVAL_HOURS = 4
 
   try {
@@ -701,7 +686,7 @@ async function openclawDailyReportTask() {
   log(`📨 开始推送 OpenClaw 每日报表 (reportDate=${reportDate}, timezone=${reportTimeZone})...`)
 
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
   try {
     const rows = await db.query<{
@@ -782,7 +767,7 @@ async function openclawWeeklyReportTask() {
   )
 
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
   try {
     const rows = await db.query<{
@@ -857,7 +842,7 @@ async function openclawAffiliateRevenueSnapshotTask() {
   log('🧾 开始刷新 OpenClaw 联盟成交/佣金快照...')
 
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
   const reportTimeZone = 'Asia/Shanghai'
   const pendingGraceDays = Math.max(
     1,
@@ -1000,7 +985,7 @@ async function linkAndAccountCheckTask() {
   log('🔍 开始执行链接可用性和账号状态检查任务...')
 
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
   try {
     // 获取所有启用了链接检查且执行资格有效的用户配置

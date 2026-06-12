@@ -14,8 +14,7 @@ import {
   consumeCommandConfirmationByOwner,
   createOrRefreshCommandConfirmation,
   expireStaleCommandConfirmations,
-  recordOpenclawCallbackEvent,
-} from './confirm-service'
+  recordOpenclawCallbackEvent } from './confirm-service'
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
 
@@ -56,14 +55,12 @@ async function enqueueCommandRun(params: {
     {
       runId: params.runId,
       userId: params.userId,
-      trigger: params.trigger,
-    },
+      trigger: params.trigger },
     params.userId,
     {
       priority,
       maxRetries: 0,
-      parentRequestId: params.parentRequestId || undefined,
-    }
+      parentRequestId: params.parentRequestId || undefined }
   )
 }
 
@@ -168,14 +165,12 @@ async function autoConfirmAndQueueCommandRun(params: {
 }): Promise<QueueResult | DuplicateResult> {
   await createOrRefreshCommandConfirmation({
     runId: params.runId,
-    userId: params.userId,
-  })
+    userId: params.userId })
 
   const consumeResult = await consumeCommandConfirmationByOwner({
     runId: params.runId,
     userId: params.userId,
-    decision: 'confirm',
-  })
+    decision: 'confirm' })
 
   if (!consumeResult.ok) {
     if (consumeResult.code !== 'already_processed') {
@@ -185,8 +180,7 @@ async function autoConfirmAndQueueCommandRun(params: {
     const latestRun = await findRunById({
       db: params.db,
       userId: params.userId,
-      runId: params.runId,
-    })
+      runId: params.runId })
     const runStatus = latestRun?.status || consumeResult.runStatus || 'queued'
     const runRisk = latestRun?.risk_level || params.riskLevel
     const taskId = latestRun?.queue_task_id || null
@@ -202,8 +196,7 @@ async function autoConfirmAndQueueCommandRun(params: {
       runId: params.runId,
       runStatus,
       riskLevel: runRisk,
-      taskId,
-    }
+      taskId }
   }
 
   if (consumeResult.status !== 'confirmed') {
@@ -218,8 +211,7 @@ async function autoConfirmAndQueueCommandRun(params: {
       userId: params.userId,
       riskLevel: confirmedRiskLevel,
       parentRequestId: params.parentRequestId,
-      trigger: 'confirm',
-    })
+      trigger: 'confirm' })
 
     await params.db.exec(
       `UPDATE openclaw_command_runs
@@ -232,8 +224,7 @@ async function autoConfirmAndQueueCommandRun(params: {
       status: 'queued',
       runId: params.runId,
       taskId,
-      riskLevel: confirmedRiskLevel,
-    }
+      riskLevel: confirmedRiskLevel }
   } catch (error: any) {
     const message = error?.message || 'enqueue failed'
     await params.db.exec(
@@ -248,14 +239,13 @@ async function autoConfirmAndQueueCommandRun(params: {
 
 export async function executeOpenclawCommand(input: ExecuteCommandInput): Promise<ExecuteCommandResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   await expireStaleCommandConfirmations({ userId: input.userId })
 
   const validated = assertOpenclawCommandRouteAllowed({
     method: input.method || 'GET',
-    path: String(input.path || '').trim(),
-  })
+    path: String(input.path || '').trim() })
 
   const method = validated.method
   const path = validated.normalizedPath
@@ -263,13 +253,11 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
   const normalizedCommandPayload = normalizeOpenclawCommandPayload({
     method,
     path,
-    body: input.body,
-  })
+    body: input.body })
   const normalizedCommandQuery = normalizeOpenclawCommandQuery({
     method,
     path,
-    query: input.query,
-  })
+    query: input.query })
 
   const riskLevel = deriveOpenclawCommandRiskLevel({ method, path, strictCanonicalWrite: true })
   const requireConfirm = requiresOpenclawCommandConfirmation(riskLevel)
@@ -277,8 +265,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
 
   const staleQueuedCount = await failStaleQueuedCommandRuns({
     db,
-    userId: input.userId,
-  })
+    userId: input.userId })
   if (staleQueuedCount > 0 && process.env.NODE_ENV !== 'test') {
     console.warn(`[OpenClawCommand] 已自动收敛 ${staleQueuedCount} 条超时 queued 命令`)
   }
@@ -293,8 +280,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
           runId: existing.id,
           userId: input.userId,
           riskLevel: existing.risk_level,
-          parentRequestId: input.parentRequestId,
-        })
+          parentRequestId: input.parentRequestId })
       }
 
       return {
@@ -302,8 +288,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
         runId: existing.id,
         runStatus: existing.status,
         riskLevel: existing.risk_level,
-        taskId: existing.queue_task_id,
-      }
+        taskId: existing.queue_task_id }
     }
   }
 
@@ -332,7 +317,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       normalizedCommandPayload.body === undefined ? null : JSON.stringify(normalizedCommandPayload.body),
       riskLevel,
       requireConfirm ? 'pending_confirm' : 'draft',
-      boolParam(requireConfirm, db.type),
+      boolParam(requireConfirm),
       idempotencyKey,
       input.parentRequestId || null,
     ]
@@ -345,8 +330,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       runId,
       userId: input.userId,
       riskLevel,
-      parentRequestId: input.parentRequestId,
-    })
+      parentRequestId: input.parentRequestId })
   }
 
   try {
@@ -355,8 +339,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       userId: input.userId,
       riskLevel,
       parentRequestId: input.parentRequestId,
-      trigger: 'direct',
-    })
+      trigger: 'direct' })
 
     await db.exec(
       `UPDATE openclaw_command_runs
@@ -369,8 +352,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       status: 'queued',
       runId,
       taskId,
-      riskLevel,
-    }
+      riskLevel }
   } catch (error: any) {
     const message = error?.message || 'enqueue failed'
     await db.exec(
@@ -428,12 +410,11 @@ type ConfirmResult =
 
 export async function confirmOpenclawCommand(input: ConfirmInput): Promise<ConfirmResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   const staleQueuedCount = await failStaleQueuedCommandRuns({
     db,
-    userId: input.userId,
-  })
+    userId: input.userId })
   if (staleQueuedCount > 0 && process.env.NODE_ENV !== 'test') {
     console.warn(`[OpenClawCommand] confirm 前已自动收敛 ${staleQueuedCount} 条超时 queued 命令`)
   }
@@ -462,15 +443,13 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
       channel: (input.channel || 'feishu').trim() || 'feishu',
       eventId: input.callbackEventId,
       eventType: input.callbackEventType || null,
-      payloadJson: input.callbackPayload === undefined ? null : JSON.stringify(input.callbackPayload),
-    })
+      payloadJson: input.callbackPayload === undefined ? null : JSON.stringify(input.callbackPayload) })
 
     if (!callbackResult.accepted) {
       return {
         status: 'duplicate_event',
         runId: input.runId,
-        runStatus: run.status,
-      }
+        runStatus: run.status }
     }
   }
 
@@ -479,8 +458,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
     userId: input.userId,
     confirmToken: input.confirmToken,
     decision: input.decision,
-    callbackEventId: input.callbackEventId,
-  })
+    callbackEventId: input.callbackEventId })
 
   if (!consumeResult.ok) {
     if (consumeResult.code === 'expired') {
@@ -491,8 +469,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
         status: 'already_processed',
         runId: input.runId,
         confirmStatus: consumeResult.confirmStatus,
-        runStatus: consumeResult.runStatus,
-      }
+        runStatus: consumeResult.runStatus }
     }
     return { status: consumeResult.code, runId: input.runId }
   }
@@ -500,8 +477,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
   if (consumeResult.status === 'canceled') {
     return {
       status: 'canceled',
-      runId: input.runId,
-    }
+      runId: input.runId }
   }
 
   try {
@@ -510,8 +486,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
       userId: input.userId,
       riskLevel: consumeResult.riskLevel as OpenclawCommandRiskLevel,
       parentRequestId: input.parentRequestId,
-      trigger: 'confirm',
-    })
+      trigger: 'confirm' })
 
     await db.exec(
       `UPDATE openclaw_command_runs
@@ -524,8 +499,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
       status: 'queued',
       runId: input.runId,
       taskId,
-      riskLevel: consumeResult.riskLevel as OpenclawCommandRiskLevel,
-    }
+      riskLevel: consumeResult.riskLevel as OpenclawCommandRiskLevel }
   } catch (error: any) {
     const message = error?.message || 'enqueue failed'
     await db.exec(
@@ -547,12 +521,11 @@ type OwnerConfirmInput = {
 
 export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): Promise<ConfirmResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   const staleQueuedCount = await failStaleQueuedCommandRuns({
     db,
-    userId: input.userId,
-  })
+    userId: input.userId })
   if (staleQueuedCount > 0 && process.env.NODE_ENV !== 'test') {
     console.warn(`[OpenClawCommand] owner confirm 前已自动收敛 ${staleQueuedCount} 条超时 queued 命令`)
   }
@@ -578,8 +551,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
   const consumeResult = await consumeCommandConfirmationByOwner({
     runId: input.runId,
     userId: input.userId,
-    decision: input.decision,
-  })
+    decision: input.decision })
 
   if (!consumeResult.ok) {
     if (consumeResult.code === 'expired') {
@@ -590,8 +562,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
         status: 'already_processed',
         runId: input.runId,
         confirmStatus: consumeResult.confirmStatus,
-        runStatus: consumeResult.runStatus,
-      }
+        runStatus: consumeResult.runStatus }
     }
     return { status: consumeResult.code, runId: input.runId }
   }
@@ -599,8 +570,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
   if (consumeResult.status === 'canceled') {
     return {
       status: 'canceled',
-      runId: input.runId,
-    }
+      runId: input.runId }
   }
 
   try {
@@ -609,8 +579,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
       userId: input.userId,
       riskLevel: consumeResult.riskLevel as OpenclawCommandRiskLevel,
       parentRequestId: input.parentRequestId,
-      trigger: 'confirm',
-    })
+      trigger: 'confirm' })
 
     await db.exec(
       `UPDATE openclaw_command_runs
@@ -623,8 +592,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
       status: 'queued',
       runId: input.runId,
       taskId,
-      riskLevel: consumeResult.riskLevel as OpenclawCommandRiskLevel,
-    }
+      riskLevel: consumeResult.riskLevel as OpenclawCommandRiskLevel }
   } catch (error: any) {
     const message = error?.message || 'enqueue failed'
     await db.exec(

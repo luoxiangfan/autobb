@@ -208,8 +208,8 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       .slice(0, 240) || null
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const toDbJson = (value: any): any => toDbJsonObjectField(value, db.type, null)
+  const nowFunc = 'NOW()'
+  const toDbJson = (value: any): any => toDbJsonObjectField(value, null)
 
   // 🔒 占位记录 ID（声明在 try 外，确保 catch 块可访问）
   let placeholderCreativeId: number | null = null
@@ -401,7 +401,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
               `
               UPDATE ad_creatives
               SET
-                is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
+                is_deleted = ${'TRUE'},
                 deleted_at = ${nowFunc},
                 creation_status = 'failed',
                 creation_error = ?,
@@ -829,7 +829,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       savedCreative.id = placeholderCreativeId
       console.log(`✅ 占位记录已更新为真实创意 id=${placeholderCreativeId}`)
     } else {
-      // 降级：没有占位记录（SQLite 或旧流程），直接插入
+      // 降级：没有占位记录（旧流程），直接插入
       console.log(`📝 直接插入新创意记录（无占位记录）`)
       savedCreative = await createAdCreative(task.userId, offerId, {
         headlines: bestCreative.headlines,
@@ -947,7 +947,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
     }
 
     // 🔧 PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
-    const nowFuncErr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFuncErr = 'NOW()'
     const structuredError = normalizeCreativeTaskError(error, '创意生成任务失败')
     const errorMessage = structuredError.userMessage || structuredError.message || '任务失败'
 

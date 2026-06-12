@@ -38,14 +38,10 @@ export async function POST(request: NextRequest) {
     // 计算阈值日期
     const thresholdDate = new Date()
     thresholdDate.setDate(thresholdDate.getDate() - daysThreshold)
-    const thresholdDateStr =
-      db.type === 'postgres'
-        ? thresholdDate.toISOString()
-        : thresholdDate.toISOString().split('T')[0]
+    const thresholdDateStr = thresholdDate.toISOString()
 
-    // 🔧 PostgreSQL/SQLite兼容性
-    const isDeletedTrue = db.type === 'postgres' ? true : 1
-    const dateComparison = db.type === 'postgres' ? 'deleted_at < $1::timestamp' : 'deleted_at < ?'
+    const isDeletedTrue = true
+    const dateComparison = 'deleted_at < ?::timestamp'
 
     // 1. 统计将要删除的数据
     const campaignsToDelete = (await db.query(
@@ -77,9 +73,7 @@ export async function POST(request: NextRequest) {
     let performanceCount = 0
 
     if (campaignIds.length > 0) {
-      const placeholders = campaignIds
-        .map((_, i) => (db.type === 'postgres' ? `$${i + 1}` : '?'))
-        .join(',')
+      const placeholders = campaignIds.map(() => '?').join(',')
       const perfData = (await db.queryOne(
         `
         SELECT COUNT(*) as count
@@ -146,7 +140,7 @@ export async function POST(request: NextRequest) {
         records_deleted,
         threshold_date,
         created_at
-      ) VALUES (?, ?, ?, ?, ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"})
+      ) VALUES (?, ?, ?, ?, ${'NOW()'})
     `,
         [
           authResult.user.userId,
@@ -206,8 +200,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
     }
 
-    // 🔧 PostgreSQL/SQLite兼容性
-    const isDeletedTrue = db.type === 'postgres' ? true : 1
+    // 🔧 PostgreSQL
+    const isDeletedTrue = true
 
     // 统计软删除数据
     const stats = (await db.queryOne(`
@@ -224,9 +218,9 @@ export async function GET(request: NextRequest) {
     const campaignsByAge = (await db.query(`
       SELECT
         CASE
-          WHEN deleted_at >= ${db.type === 'postgres' ? "NOW() - INTERVAL '7 days'" : "date('now', '-7 days')"} THEN '7_days'
-          WHEN deleted_at >= ${db.type === 'postgres' ? "NOW() - INTERVAL '30 days'" : "date('now', '-30 days')"} THEN '30_days'
-          WHEN deleted_at >= ${db.type === 'postgres' ? "NOW() - INTERVAL '90 days'" : "date('now', '-90 days')"} THEN '90_days'
+          WHEN deleted_at >= NOW() - INTERVAL '7 days' THEN '7_days'
+          WHEN deleted_at >= NOW() - INTERVAL '30 days' THEN '30_days'
+          WHEN deleted_at >= NOW() - INTERVAL '90 days' THEN '90_days'
           ELSE 'over_90_days'
         END as age_group,
         COUNT(*) as count

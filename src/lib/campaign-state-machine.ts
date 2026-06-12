@@ -218,21 +218,14 @@ const normalizeGoogleCampaignIds = (ids: string[]) => {
   return Array.from(uniq)
 }
 
-const sqlNowExpr = (dbType: 'sqlite' | 'postgres') =>
-  dbType === 'postgres' ? 'NOW()' : "datetime('now')"
+const sqlNowExpr = () => 'NOW()'
 
-const sqlPublishedAtNowExpr = (dbType: 'sqlite' | 'postgres') =>
-  dbType === 'postgres'
-    ? "COALESCE(NULLIF(published_at::text, '')::timestamptz, NOW())"
-    : "COALESCE(NULLIF(published_at, ''), datetime('now'))"
+const sqlPublishedAtNowExpr = () => "COALESCE(NULLIF(published_at::text, '')::timestamptz, NOW())"
 
 type PatchSqlField = { sql: string; type: 'param'; value: any } | { sql: string; type: 'raw' }
 
-const toPatchSqlFields = (
-  patch: CampaignStatePatch,
-  dbType: 'sqlite' | 'postgres'
-): PatchSqlField[] => {
-  const nowExpr = sqlNowExpr(dbType)
+const toPatchSqlFields = (patch: CampaignStatePatch): PatchSqlField[] => {
+  const nowExpr = sqlNowExpr()
   const fields: PatchSqlField[] = []
 
   if (patch.status !== undefined) {
@@ -264,7 +257,7 @@ const toPatchSqlFields = (
   if (patch.publishedAt !== undefined) {
     if (patch.publishedAt === nowToken) {
       fields.push({
-        sql: `published_at = ${sqlPublishedAtNowExpr(dbType)}`,
+        sql: `published_at = ${sqlPublishedAtNowExpr()}`,
         type: 'raw',
       })
     } else if (patch.publishedAt === null) {
@@ -342,8 +335,7 @@ export async function applyCampaignTransitionByIds(params: {
 
   const basePatch = buildCampaignTransitionPatch(params.action, params.payload)
   const patch = normalizeCampaignTransitionPatch(basePatch)
-  const sqlFields = toPatchSqlFields(patch, db.type)
-
+  const sqlFields = toPatchSqlFields(patch)
   const setFragments: string[] = []
   const values: any[] = []
 

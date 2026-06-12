@@ -10,7 +10,6 @@ const contextFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     queryOne: dbMocks.queryOne,
   })),
 }))

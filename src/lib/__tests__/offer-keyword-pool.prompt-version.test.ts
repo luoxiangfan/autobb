@@ -16,7 +16,6 @@ describe('saveKeywordPool prompt version resolution', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       queryOne: dbFns.queryOne,
       exec: dbFns.exec,
     })

@@ -222,7 +222,7 @@ async function ensurePrimaryAdGroup(params: {
   )
 
   return {
-    localAdGroupId: getInsertedId(result, db.type),
+    localAdGroupId: getInsertedId(result),
     googleAdGroupId: fallbackGoogleAdGroupId,
   }
 }
@@ -323,7 +323,7 @@ async function pauseExistingKeywords(params: {
     return { pausedCount: 0, pausedKeywords: [], failures: [] }
   }
 
-  const positiveCondition = boolCondition('k.is_negative', false, params.db.type)
+  const positiveCondition = boolCondition('k.is_negative', false)
   const keywordMatchConditions = params.oldKeywords
     .map(() => `(LOWER(TRIM(k.keyword_text)) = ? AND UPPER(COALESCE(k.match_type, 'PHRASE')) = ?)`)
     .join(' OR ')
@@ -446,7 +446,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const body = (await request.json().catch(() => ({}))) as AddKeywordsRequestBody
     const db = await getDatabase()
-    const positiveCondition = boolCondition('k.is_negative', false, db.type)
+    const positiveCondition = boolCondition('k.is_negative', false)
 
     const campaign = await db.queryOne<{
       id: number
@@ -518,7 +518,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         removeKeywords,
       })
       if (!patch.changed) return
-      const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowExpr = 'NOW()'
       await db.exec(
         `
           UPDATE campaigns
@@ -666,8 +666,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
             created.keywordText,
             created.matchType,
             status,
-            boolParam(false, db.type),
-            boolParam(false, db.type),
+            boolParam(false),
+            boolParam(false),
             now,
             now,
             now,

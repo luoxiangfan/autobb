@@ -29,12 +29,7 @@ export async function POST(request: NextRequest) {
     if (result.success) {
       return NextResponse.json({
         success: true,
-        message: '备份成功',
-        data: {
-          backupFilename: result.backupFilename,
-          backupPath: result.backupPath,
-          fileSizeBytes: result.fileSizeBytes,
-        },
+        message: result.errorMessage || '备份任务已记录',
       })
     } else {
       return NextResponse.json({ error: result.errorMessage || '备份失败' }, { status: 500 })

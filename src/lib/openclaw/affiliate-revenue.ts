@@ -1,8 +1,7 @@
 import {
   persistAffiliateCommissionAttributions,
   type AffiliateCommissionRawEntry,
-  type AffiliatePlatform,
-} from '@/lib/openclaw/affiliate-commission-attribution'
+  type AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
 import { nowFunc } from '@/lib/db-helpers'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/json-field'
@@ -211,16 +210,14 @@ function normalizeYmdDate(value: string): string {
       timeZone: process.env.TZ || 'Asia/Shanghai',
       year: 'numeric',
       month: '2-digit',
-      day: '2-digit',
-    }).format(new Date())
+      day: '2-digit' }).format(new Date())
   }
 
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: process.env.TZ || 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(parsed)
+    day: '2-digit' }).format(parsed)
 }
 
 function toPartnerboostDate(ymd: string): string {
@@ -246,8 +243,7 @@ function normalizePartnerboostTransactionRows(payload: any): { rows: any[]; tota
 
   return {
     rows,
-    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? Math.floor(totalPages) : null,
-  }
+    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? Math.floor(totalPages) : null }
 }
 
 function normalizeYeahPromosCode(payload: any): number | null {
@@ -297,8 +293,7 @@ function normalizeYeahPromosPayloadRows(payload: any): { rows: any[]; pageTotal:
   const pageTotal = Number(pageTotalRaw)
   return {
     rows,
-    pageTotal: Number.isFinite(pageTotal) && pageTotal > 0 ? Math.floor(pageTotal) : null,
-  }
+    pageTotal: Number.isFinite(pageTotal) && pageTotal > 0 ? Math.floor(pageTotal) : null }
 }
 
 function normalizeAsin(value: unknown): string | null {
@@ -508,10 +503,10 @@ async function persistAffiliateCommissionRawSnapshots(params: {
   await db.transaction(async () => {
     for (const snapshot of params.snapshots) {
       const requestStored = serializeJsonPayloadForStorage(
-        toDbJsonObjectField(snapshot.requestPayload ?? null, db.type, null)
+        toDbJsonObjectField(snapshot.requestPayload ?? null, null)
       )
       const responseStored = serializeJsonPayloadForStorage(
-        toDbJsonObjectField(snapshot.responsePayload ?? null, db.type, null)
+        toDbJsonObjectField(snapshot.responsePayload ?? null, null)
       )
       const updateResult = await db.exec(
         `
@@ -520,7 +515,7 @@ async function persistAffiliateCommissionRawSnapshots(params: {
               response_payload = ?,
               request_payload_codec = ?,
               response_payload_codec = ?,
-              updated_at = ${nowFunc(db.type)}
+              updated_at = ${nowFunc()}
           WHERE user_id = ?
             AND report_date = ?
             AND platform = ?
@@ -579,8 +574,7 @@ async function persistAffiliateCommissionRawSnapshots(params: {
   try {
     await rebuildAffiliateCommissionLineFactsForUserDate({
       userId: params.userId,
-      reportDate: params.reportDate,
-    })
+      reportDate: params.reportDate })
   } catch (error: any) {
     const message = String(error?.message || '')
     if (!/(no such table|does not exist)/i.test(message)) {
@@ -616,9 +610,7 @@ async function fetchPartnerboostCommission(params: {
         marketplace: '',
         asins: '',
         adGroupIds: '',
-        order_ids: '',
-      }),
-    })
+        order_ids: '' }) })
 
     if (!response.ok) {
       const text = await response.text()
@@ -638,10 +630,8 @@ async function fetchPartnerboostCommission(params: {
         marketplace: '',
         asins: '',
         adGroupIds: '',
-        order_ids: '',
-      },
-      responsePayload: payload,
-    })
+        order_ids: '' },
+      responsePayload: payload })
     const statusCode = Number(payload?.status?.code)
     if (!Number.isFinite(statusCode) || statusCode !== 0) {
       throw new Error(`PartnerBoost report error: ${payload?.status?.msg || statusCode}`)
@@ -709,14 +699,12 @@ async function fetchPartnerboostCommission(params: {
         end_date: params.reportDate,
         status: 'All',
         page: String(txPage),
-        limit: String(PARTNERBOOST_PAGE_SIZE),
-      })
+        limit: String(PARTNERBOOST_PAGE_SIZE) })
 
       const response = await fetch(transactionUrl.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body.toString(),
-      })
+        body: body.toString() })
 
       if (!response.ok) {
         const text = await response.text()
@@ -733,10 +721,8 @@ async function fetchPartnerboostCommission(params: {
           end_date: params.reportDate,
           status: 'All',
           page: txPage,
-          limit: PARTNERBOOST_PAGE_SIZE,
-        },
-        responsePayload: payload,
-      })
+          limit: PARTNERBOOST_PAGE_SIZE },
+        responsePayload: payload })
       const statusCode = Number(payload?.status?.code)
       if (!Number.isFinite(statusCode) || statusCode !== 0) {
         throw new Error(`PartnerBoost transaction error: ${payload?.status?.msg || statusCode}`)
@@ -835,8 +821,7 @@ async function fetchPartnerboostCommission(params: {
       ),
       sourceLink,
       sourceLinkId,
-      raw: row,
-    })
+      raw: row })
   }
 
   if (transactionRows.length > 0) {
@@ -856,8 +841,7 @@ async function fetchPartnerboostCommission(params: {
         matchedReportRow,
         fallbackReportRow: matchedReportRow ? null : singleAdGroupFallback?.reportRow || null,
         sourceLinkFallback: matchedReportRow ? null : singleAdGroupFallback?.sourceLink || null,
-        sourceLinkIdFallback: matchedReportRow ? null : singleAdGroupFallback?.sourceLinkId || null,
-      })
+        sourceLinkIdFallback: matchedReportRow ? null : singleAdGroupFallback?.sourceLinkId || null })
     }
   }
 
@@ -873,8 +857,7 @@ async function fetchPartnerboostCommission(params: {
       appendPartnerboostEntry({
         row,
         commission,
-        matchedReportRow: null,
-      })
+        matchedReportRow: null })
     }
   }
 
@@ -898,8 +881,7 @@ async function fetchPartnerboostCommission(params: {
     totalCommission: roundTo2(totalCommission),
     records,
     entries,
-    rawSnapshots,
-  }
+    rawSnapshots }
 }
 
 async function fetchYeahPromosCommission(params: {
@@ -933,9 +915,7 @@ async function fetchYeahPromosCommission(params: {
       method: 'GET',
       headers: {
         token: params.token,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    })
+        'Content-Type': 'application/x-www-form-urlencoded' } })
 
     if (!response.ok) {
       const text = await response.text()
@@ -953,10 +933,8 @@ async function fetchYeahPromosCommission(params: {
         endDate: params.reportDate,
         page,
         limit: params.limit,
-        is_amazon: params.isAmazonOnly ? 1 : 0,
-      },
-      responsePayload: payload,
-    })
+        is_amazon: params.isAmazonOnly ? 1 : 0 },
+      responsePayload: payload })
     const code = normalizeYeahPromosCode(payload)
     if (code !== null && code !== 100000) {
       throw new Error(`YeahPromos order error: ${code}`)
@@ -1003,8 +981,7 @@ async function fetchYeahPromosCommission(params: {
             row?.product_link,
             row?.productLink
           ),
-          raw: row,
-        })
+          raw: row })
       }
     }
 
@@ -1031,8 +1008,7 @@ async function fetchYeahPromosCommission(params: {
     totalCommission: roundTo2(totalCommission),
     records,
     entries,
-    rawSnapshots,
-  }
+    rawSnapshots }
 }
 
 export async function fetchAffiliateCommissionRevenue(params: {
@@ -1061,22 +1037,19 @@ export async function fetchAffiliateCommissionRevenue(params: {
       const metrics = await fetchPartnerboostCommission({
         token: partnerboostToken,
         baseUrl,
-        reportDate,
-      })
+        reportDate })
       queriedPlatforms.push('partnerboost')
       breakdown.push({
         platform: 'partnerboost',
         totalCommission: metrics.totalCommission,
         records: metrics.records,
-        currency: 'USD',
-      })
+        currency: 'USD' })
       attributionEntries.push(...metrics.entries)
       rawSnapshots.push(...metrics.rawSnapshots)
     } catch (error: any) {
       errors.push({
         platform: 'partnerboost',
-        message: error?.message || 'PartnerBoost commission query failed',
-      })
+        message: error?.message || 'PartnerBoost commission query failed' })
     }
   }
 
@@ -1096,22 +1069,19 @@ export async function fetchAffiliateCommissionRevenue(params: {
         reportDate,
         isAmazonOnly,
         pageStart,
-        limit,
-      })
+        limit })
       queriedPlatforms.push('yeahpromos')
       breakdown.push({
         platform: 'yeahpromos',
         totalCommission: metrics.totalCommission,
         records: metrics.records,
-        currency: 'USD',
-      })
+        currency: 'USD' })
       attributionEntries.push(...metrics.entries)
       rawSnapshots.push(...metrics.rawSnapshots)
     } catch (error: any) {
       errors.push({
         platform: 'yeahpromos',
-        message: error?.message || 'YeahPromos commission query failed',
-      })
+        message: error?.message || 'YeahPromos commission query failed' })
     }
   }
 
@@ -1125,15 +1095,13 @@ export async function fetchAffiliateCommissionRevenue(params: {
     unattributedCommission: totalCommission,
     attributedOffers: 0,
     attributedCampaigns: 0,
-    writtenRows: 0,
-  }
+    writtenRows: 0 }
 
   try {
     await persistAffiliateCommissionRawSnapshots({
       userId: params.userId,
       reportDate,
-      snapshots: rawSnapshots,
-    })
+      snapshots: rawSnapshots })
   } catch (error: any) {
     const message = String(error?.message || '')
     if (
@@ -1144,8 +1112,7 @@ export async function fetchAffiliateCommissionRevenue(params: {
     } else {
       errors.push({
         platform: 'raw_audit',
-        message: `[raw_audit] ${error?.message || 'Raw payload persistence failed'}`,
-      })
+        message: `[raw_audit] ${error?.message || 'Raw payload persistence failed'}` })
     }
   }
 
@@ -1156,21 +1123,18 @@ export async function fetchAffiliateCommissionRevenue(params: {
       entries: attributionEntries,
       replaceExisting: shouldReplaceAttribution,
       lockHistorical: true,
-      replacePlatforms: queriedPlatforms,
-    })
+      replacePlatforms: queriedPlatforms })
 
     attribution = {
       attributedCommission: roundTo2(attributionResult.attributedCommission),
       unattributedCommission: roundTo2(attributionResult.unattributedCommission),
       attributedOffers: attributionResult.attributedOffers,
       attributedCampaigns: attributionResult.attributedCampaigns,
-      writtenRows: attributionResult.writtenRows,
-    }
+      writtenRows: attributionResult.writtenRows }
   } catch (error: any) {
     errors.push({
       platform: 'attribution',
-      message: `[attribution] ${error?.message || 'Attribution persistence failed'}`,
-    })
+      message: `[attribution] ${error?.message || 'Attribution persistence failed'}` })
   }
 
   return {
@@ -1180,6 +1144,5 @@ export async function fetchAffiliateCommissionRevenue(params: {
     totalCommission,
     breakdown,
     errors,
-    attribution,
-  }
+    attribution }
 }

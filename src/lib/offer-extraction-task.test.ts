@@ -74,7 +74,6 @@ describe('offer extraction enqueue guards', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.getDatabase.mockReturnValue({
-      type: 'sqlite',
       query: dbFns.query,
       exec: dbFns.exec,
     })

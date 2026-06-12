@@ -136,9 +136,7 @@ class UrlSwapScheduler {
 
       // 查询所有待执行的换链接任务
       // 条件：status='enabled', next_swap_at <= now, started_at <= now, is_deleted=false/0
-      const query =
-        db.type === 'postgres'
-          ? `
+      const query = `
           SELECT
             id,
             user_id,
@@ -152,22 +150,6 @@ class UrlSwapScheduler {
             AND next_swap_at <= CURRENT_TIMESTAMP
             AND started_at <= CURRENT_TIMESTAMP
             AND is_deleted = FALSE
-          ORDER BY next_swap_at ASC
-        `
-          : `
-          SELECT
-            id,
-            user_id,
-            offer_id,
-            swap_interval_minutes,
-            next_swap_at,
-            started_at,
-            status
-          FROM url_swap_tasks
-          WHERE status = 'enabled'
-            AND next_swap_at <= datetime('now')
-            AND started_at <= datetime('now')
-            AND is_deleted = 0
           ORDER BY next_swap_at ASC
         `
 

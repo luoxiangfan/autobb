@@ -170,8 +170,7 @@ export function scoreOffer(product: AffiliateProduct): OfferScore {
     priority: derivePriority(total),
     suggested_cpc_min: cpcRange.min,
     suggested_cpc_max: cpcRange.max,
-    estimated_roas: estimateRoas(product.commission_rate, product.price, total),
-  }
+    estimated_roas: estimateRoas(product.commission_rate, product.price, total) }
 }
 
 export function batchScoreOffers(products: AffiliateProduct[]): OfferScore[] {
@@ -190,7 +189,7 @@ export async function saveOfferScore(
   score: OfferScore
 ): Promise<number> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   const result = await db.exec(
     `INSERT INTO openclaw_offer_scores
@@ -221,11 +220,11 @@ export async function saveOfferScore(
       score.suggested_cpc_max,
       score.estimated_roas,
       score.priority,
-      toDbJsonObjectField(product, db.type, null),
+      toDbJsonObjectField(product, null),
     ]
   )
 
-  return getInsertedId(result, db.type)
+  return getInsertedId(result)
 }
 
 export async function batchSaveOfferScores(

@@ -11,8 +11,8 @@
  * 🔧 更新 (2026-04-20): 新增 campaign_config 字段备份
  */
 
-import { getDatabase, type DatabaseType } from './db'
-import { getInsertedId } from './db-helpers'
+import { getDatabase } from './db'
+import { getInsertedId, isUniqueConstraintViolation } from './db-helpers'
 import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint'
 import { parseJsonField, toDbJsonObjectField } from './json-field'
 
@@ -48,15 +48,12 @@ export function isAutoadsLikeBackupSource(source: string): boolean {
   return source === 'autoads' || source === 'publish'
 }
 
-/**
- * campaign_backups.campaign_data / campaign_config：
- * SQLite TEXT，PostgreSQL JSONB。
- */
-export function toDbCampaignBackupJsonField(value: unknown, dbType: DatabaseType): unknown {
-  return toDbJsonObjectField(value, dbType, null)
+/** campaign_backups.campaign_data / campaign_config（PostgreSQL JSONB） */
+export function toDbCampaignBackupJsonField(value: unknown): unknown {
+  return toDbJsonObjectField(value, null)
 }
 
-/** campaigns.campaign_config：SQLite / PostgreSQL 均为 TEXT */
+/** campaigns.campaign_config 列为 TEXT */
 export { toDbJsonTextField as toDbCampaignConfigTextField } from './json-field'
 
 function parseCampaignBackupJsonField(value: unknown): unknown | null {
@@ -306,16 +303,10 @@ function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignB
 
 /** 并发 INSERT 撞上 (user_id, offer_id) 唯一索引时的错误识别 */
 export function isCampaignBackupOfferUniqueViolation(error: unknown): boolean {
-  const message = String((error as Error)?.message || error || '')
-  const code = String((error as { code?: string })?.code || '')
-  return (
-    code === '23505' ||
-    code.startsWith('SQLITE_CONSTRAINT') ||
-    message.includes('idx_campaign_backups_user_offer_unique') ||
-    (message.includes('UNIQUE constraint failed') && message.includes('campaign_backups')) ||
-    (message.includes('duplicate key value violates unique constraint') &&
-      message.includes('campaign_backups'))
-  )
+  return isUniqueConstraintViolation(error, {
+    constraint: 'idx_campaign_backups_user_offer_unique',
+    table: 'campaign_backups',
+  })
 }
 
 async function updateCampaignBackupFromInput(
@@ -357,8 +348,8 @@ export async function createCampaignBackup(
 
   const now = new Date().toISOString()
 
-  const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData, db.type)
-  const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig, db.type)
+  const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData)
+  const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig)
 
   try {
     const result = await db.exec(
@@ -395,7 +386,7 @@ export async function createCampaignBackup(
       ]
     )
 
-    const backupId = getInsertedId(result, db.type)
+    const backupId = getInsertedId(result)
     return await getCampaignBackupById(backupId, input.userId)
   } catch (error) {
     if (!isCampaignBackupOfferUniqueViolation(error)) {
@@ -485,7 +476,7 @@ export async function listCampaignBackups(filters: CampaignBackupFilters): Promi
   const total = countResult?.count ?? 0
 
   const occupyingCampaignSubquery = filters.withOfferInfo
-    ? offerOccupyingCampaignIdSubquerySql(db.type, 'cb.offer_id', 'cb.user_id')
+    ? offerOccupyingCampaignIdSubquerySql('cb.offer_id', 'cb.user_id')
     : null
 
   const selectColumns = filters.withOfferInfo
@@ -531,12 +522,9 @@ export async function listCampaignBackups(filters: CampaignBackupFilters): Promi
 }
 
 /** 与 dedup 脚本一致的备份优先级排序（用于 SQL ORDER BY） */
-export function getBackupRankOrderSql(dbType: DatabaseType, tableAlias?: string): string {
+export function getBackupRankOrderSql(tableAlias?: string): string {
   const p = tableAlias ? `${tableAlias}.` : ''
-  const hasConfig =
-    dbType === 'postgres'
-      ? `${p}campaign_config IS NOT NULL AND ${p}campaign_config::text NOT IN ('null', '{}')`
-      : `${p}campaign_config IS NOT NULL AND TRIM(${p}campaign_config) NOT IN ('', '{}', 'null')`
+  const hasConfig = `${p}campaign_config IS NOT NULL AND ${p}campaign_config::text NOT IN ('null', '{}')`
   return `
     ${p}backup_version DESC,
     CASE WHEN ${hasConfig} THEN 0 ELSE 1 END,
@@ -567,7 +555,7 @@ async function findCampaignBackupIdForOffer(
   userId: number
 ): Promise<number | null> {
   const db = await getDatabase()
-  const rankOrder = getBackupRankOrderSql(db.type)
+  const rankOrder = getBackupRankOrderSql()
   const row = (await db.queryOne(
     `
     SELECT id FROM campaign_backups
@@ -670,8 +658,8 @@ async function updateCampaignBackupSnapshot(
   }
 ): Promise<void> {
   const now = new Date().toISOString()
-  const campaignDataDb = toDbCampaignBackupJsonField(params.campaignData, db.type)
-  const campaignConfigDb = toDbCampaignBackupJsonField(params.campaignConfig, db.type)
+  const campaignDataDb = toDbCampaignBackupJsonField(params.campaignData)
+  const campaignConfigDb = toDbCampaignBackupJsonField(params.campaignConfig)
 
   await db.exec(
     `
@@ -1129,8 +1117,8 @@ export async function autoBackupCampaign(params: {
       WHERE id = ? AND user_id = ?
     `,
       [
-        toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign), db.type),
-        toDbCampaignBackupJsonField(campaign.campaign_config, db.type),
+        toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign)),
+        toDbCampaignBackupJsonField(campaign.campaign_config),
         campaign.custom_name,
         campaign.campaign_name,
         campaign.budget_amount,
@@ -1183,8 +1171,8 @@ export async function autoBackupCampaign(params: {
     WHERE id = ? AND user_id = ?
   `,
     [
-      toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign), db.type),
-      toDbCampaignBackupJsonField(campaign.campaign_config, db.type),
+      toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign)),
+      toDbCampaignBackupJsonField(campaign.campaign_config),
       'google_ads',
       new Date().toISOString(),
       existingBackupId,

@@ -14,7 +14,7 @@
  * @see docs/Offer 级广告创意优化方案.md
  */
 
-import { getDatabase, type DatabaseType } from './db'
+import { getDatabase } from './db'
 import { generateContent } from './gemini'
 import { repairJsonText } from './ai-json'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
@@ -3233,8 +3233,8 @@ function applyStoreBucketPostProcessing(buckets: StoreKeywordBuckets): void {
 // 关键词池数据库操作
 // ============================================
 
-function serializeKeywordArrayForDb(data: unknown, dbType: DatabaseType): unknown {
-  return toDbJsonArrayField(data, dbType, [])
+function serializeKeywordArrayForDb(data: unknown): unknown {
+  return toDbJsonArrayField(data, [])
 }
 
 function parseKeywordArrayFromDb(data: unknown): unknown[] {
@@ -3250,7 +3250,7 @@ async function resolveActivePromptVersion(
   fallbackVersion: string
 ): Promise<string> {
   try {
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
+    const isActiveCondition = 'is_active = TRUE'
     const activePrompt = await db.queryOne<{ version: string }>(
       `SELECT version
        FROM prompt_versions
@@ -3304,13 +3304,12 @@ export async function saveKeywordPool(
   )
 
   // 🔥 2025-12-16修复：使用统一的JSON序列化函数
-  const brandKwJson = serializeKeywordArrayForDb(brandKeywords, db.type)
-  const bucketAJson = serializeKeywordArrayForDb(buckets.bucketA.keywords, db.type)
-  const bucketBJson = serializeKeywordArrayForDb(buckets.bucketB.keywords, db.type)
-  const bucketCJson = serializeKeywordArrayForDb(buckets.bucketC.keywords, db.type)
-  const bucketDJson = serializeKeywordArrayForDb(buckets.bucketD.keywords, db.type)
-
-  console.log(`📊 保存关键词池 (dbType=${db.type}):`)
+  const brandKwJson = serializeKeywordArrayForDb(brandKeywords)
+  const bucketAJson = serializeKeywordArrayForDb(buckets.bucketA.keywords)
+  const bucketBJson = serializeKeywordArrayForDb(buckets.bucketB.keywords)
+  const bucketCJson = serializeKeywordArrayForDb(buckets.bucketC.keywords)
+  const bucketDJson = serializeKeywordArrayForDb(buckets.bucketD.keywords)
+  console.log(`📊 保存关键词池:`)
   console.log(`   brand_keywords: ${brandKeywords.length}个 → ${typeof brandKwJson}`)
   console.log(`   bucket_a: ${buckets.bucketA.keywords.length}个`)
   console.log(`   bucket_b: ${buckets.bucketB.keywords.length}个`)
@@ -3334,7 +3333,7 @@ export async function saveKeywordPool(
         clustering_model = ?,
         clustering_prompt_version = ?,
         balance_score = ?,
-        updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}
+        updated_at = ${'NOW()'}
       WHERE offer_id = ?`,
       [
         brandKwJson,
@@ -3423,38 +3422,37 @@ async function saveKeywordPoolWithData(
     KEYWORD_CLUSTERING_PROMPT_VERSION_FALLBACK
   )
 
-  const brandKwJson = serializeKeywordArrayForDb(brandKeywords, db.type)
-  const bucketAJson = serializeKeywordArrayForDb(buckets.bucketA.keywords, db.type)
-  const bucketBJson = serializeKeywordArrayForDb(buckets.bucketB.keywords, db.type)
-  const bucketCJson = serializeKeywordArrayForDb(buckets.bucketC.keywords, db.type)
-  const bucketDJson = serializeKeywordArrayForDb(buckets.bucketD.keywords, db.type)
-  const emptyArrayJson = serializeKeywordArrayForDb([], db.type)
-
+  const brandKwJson = serializeKeywordArrayForDb(brandKeywords)
+  const bucketAJson = serializeKeywordArrayForDb(buckets.bucketA.keywords)
+  const bucketBJson = serializeKeywordArrayForDb(buckets.bucketB.keywords)
+  const bucketCJson = serializeKeywordArrayForDb(buckets.bucketC.keywords)
+  const bucketDJson = serializeKeywordArrayForDb(buckets.bucketD.keywords)
+  const emptyArrayJson = serializeKeywordArrayForDb([])
   // 🆕 v4.16: 店铺分桶JSON（优先保存带搜索量的数据）
   const storeBucketAJson = storeBucketData
-    ? serializeKeywordArrayForDb(storeBucketData.bucketA, db.type)
+    ? serializeKeywordArrayForDb(storeBucketData.bucketA)
     : storeBuckets
-      ? serializeKeywordArrayForDb(storeBuckets.bucketA.keywords, db.type)
+      ? serializeKeywordArrayForDb(storeBuckets.bucketA.keywords)
       : emptyArrayJson
   const storeBucketBJson = storeBucketData
-    ? serializeKeywordArrayForDb(storeBucketData.bucketB, db.type)
+    ? serializeKeywordArrayForDb(storeBucketData.bucketB)
     : storeBuckets
-      ? serializeKeywordArrayForDb(storeBuckets.bucketB.keywords, db.type)
+      ? serializeKeywordArrayForDb(storeBuckets.bucketB.keywords)
       : emptyArrayJson
   const storeBucketCJson = storeBucketData
-    ? serializeKeywordArrayForDb(storeBucketData.bucketC, db.type)
+    ? serializeKeywordArrayForDb(storeBucketData.bucketC)
     : storeBuckets
-      ? serializeKeywordArrayForDb(storeBuckets.bucketC.keywords, db.type)
+      ? serializeKeywordArrayForDb(storeBuckets.bucketC.keywords)
       : emptyArrayJson
   const storeBucketDJson = storeBucketData
-    ? serializeKeywordArrayForDb(storeBucketData.bucketD, db.type)
+    ? serializeKeywordArrayForDb(storeBucketData.bucketD)
     : storeBuckets
-      ? serializeKeywordArrayForDb(storeBuckets.bucketD.keywords, db.type)
+      ? serializeKeywordArrayForDb(storeBuckets.bucketD.keywords)
       : emptyArrayJson
   const storeBucketSJson = storeBucketData
-    ? serializeKeywordArrayForDb(storeBucketData.bucketS, db.type)
+    ? serializeKeywordArrayForDb(storeBucketData.bucketS)
     : storeBuckets
-      ? serializeKeywordArrayForDb(storeBuckets.bucketS.keywords, db.type)
+      ? serializeKeywordArrayForDb(storeBuckets.bucketS.keywords)
       : emptyArrayJson
 
   const totalKeywords =
@@ -3504,7 +3502,7 @@ async function saveKeywordPoolWithData(
       'store_bucket_c_intent = ?',
       'store_bucket_d_intent = ?',
       'store_bucket_s_intent = ?',
-      `updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}`,
+      `updated_at = ${'NOW()'}`,
     ]
 
     const updateValues = [
@@ -6126,21 +6124,21 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
           store_bucket_s_keywords = ?,
           total_keywords = ?,
           balance_score = ?,
-          updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}
+          updated_at = ${'NOW()'}
       WHERE offer_id = ?
         AND user_id = ?
     `,
     [
-      serializeKeywordArrayForDb(nextBrandKeywords, db.type),
-      serializeKeywordArrayForDb(nextBucketAKeywords, db.type),
-      serializeKeywordArrayForDb(nextBucketBKeywords, db.type),
-      serializeKeywordArrayForDb(nextBucketCKeywords, db.type),
-      serializeKeywordArrayForDb(nextBucketDKeywords, db.type),
-      serializeKeywordArrayForDb(nextStoreBucketAKeywords, db.type),
-      serializeKeywordArrayForDb(nextStoreBucketBKeywords, db.type),
-      serializeKeywordArrayForDb(nextStoreBucketCKeywords, db.type),
-      serializeKeywordArrayForDb(nextStoreBucketDKeywords, db.type),
-      serializeKeywordArrayForDb(nextStoreBucketSKeywords, db.type),
+      serializeKeywordArrayForDb(nextBrandKeywords),
+      serializeKeywordArrayForDb(nextBucketAKeywords),
+      serializeKeywordArrayForDb(nextBucketBKeywords),
+      serializeKeywordArrayForDb(nextBucketCKeywords),
+      serializeKeywordArrayForDb(nextBucketDKeywords),
+      serializeKeywordArrayForDb(nextStoreBucketAKeywords),
+      serializeKeywordArrayForDb(nextStoreBucketBKeywords),
+      serializeKeywordArrayForDb(nextStoreBucketCKeywords),
+      serializeKeywordArrayForDb(nextStoreBucketDKeywords),
+      serializeKeywordArrayForDb(nextStoreBucketSKeywords),
       nextTotalKeywords,
       nextBalanceScore,
       params.offerId,

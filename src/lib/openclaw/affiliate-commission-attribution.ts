@@ -3,8 +3,7 @@ import { toDbJsonObjectField } from '@/lib/json-field'
 import {
   resolveAffiliateAttributionFailureReasonCode,
   type AffiliateAttributionBaseFailureReasonCode,
-  type AffiliateAttributionFailureReasonCode,
-} from '@/lib/openclaw/affiliate-attribution-failures'
+  type AffiliateAttributionFailureReasonCode } from '@/lib/openclaw/affiliate-attribution-failures'
 
 export type AffiliatePlatform = 'partnerboost' | 'yeahpromos'
 
@@ -266,8 +265,7 @@ function normalizeBrand(value: unknown): string | null {
     'livionex dental gel': 'livfresh',
     // Wahl variations
     'wahl clipper': 'wahl professional',
-    'wahl': 'wahl professional',
-  }
+    'wahl': 'wahl professional' }
 
   return aliases[normalized] || normalized
 }
@@ -371,20 +369,17 @@ function buildStoredRawPayload(params: {
   const metadata = {
     _autoads_event_id: params.eventId,
     _autoads_attribution_rule: params.attributionRule || null,
-    _autoads_attribution_brand: params.normalizedBrand || null,
-  }
+    _autoads_attribution_brand: params.normalizedBrand || null }
 
   if (params.raw && typeof params.raw === 'object' && !Array.isArray(params.raw)) {
     return {
       ...(params.raw as Record<string, unknown>),
-      ...metadata,
-    }
+      ...metadata }
   }
 
   return {
     ...metadata,
-    value: params.raw ?? null,
-  }
+    value: params.raw ?? null }
 }
 
 function extractYmdFromDateLike(value: unknown): string | null {
@@ -422,12 +417,8 @@ function canonicalizeStoredEventId(platform: unknown, eventId: unknown): string 
   return `${normalizedPlatform}|${normalizedEventId}`
 }
 
-function getStoredEventIdSql(dbType: DatabaseAdapter['type'], rawColumn = 'raw_payload'): string {
-  if (dbType === 'postgres') {
-    return `COALESCE(NULLIF(TRIM(${rawColumn}->>'_autoads_event_id'), ''), NULLIF(TRIM(${rawColumn}->>'id'), ''))`
-  }
-
-  return `COALESCE(NULLIF(TRIM(json_extract(${rawColumn}, '$._autoads_event_id')), ''), NULLIF(TRIM(json_extract(${rawColumn}, '$.id')), ''))`
+function getStoredEventIdSql(rawColumn = 'raw_payload'): string {
+  return `COALESCE(NULLIF(TRIM(${rawColumn}->>'_autoads_event_id'), ''), NULLIF(TRIM(${rawColumn}->>'id'), ''))`
 }
 
 function extractAsinFromUrlLike(value: unknown): string | null {
@@ -536,8 +527,7 @@ function formatLocalYmd(date: Date): string {
     timeZone: process.env.TZ || 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+    day: '2-digit' }).format(date)
 }
 
 function isHistoricalReportDate(reportDate: string): boolean {
@@ -576,8 +566,7 @@ function mergeCampaignTargets(targets: CampaignTarget[]): CampaignTarget[] {
       byCampaign.set(campaignId, {
         campaignId,
         offerId,
-        weight,
-      })
+        weight })
       continue
     }
 
@@ -642,8 +631,7 @@ async function queryExistingAttributionSummary(params: {
     ),
     attributedOffers: Number(row?.attributed_offers) || 0,
     attributedCampaigns: Number(row?.attributed_campaigns) || 0,
-    writtenRows,
-  }
+    writtenRows }
 }
 
 function buildWeightedShares(total: number, weights: number[]): number[] {
@@ -705,7 +693,7 @@ async function queryExistingEventOutcomes(params: {
   const result = new Map<string, ExistingEventOutcome>()
   if (params.eventIds.length === 0) return result
 
-  const eventIdExpr = getStoredEventIdSql(params.db.type)
+  const eventIdExpr = getStoredEventIdSql()
   const queryEventIds = expandEventIds(params.eventIds)
   const excludedPlatforms = normalizeAffiliatePlatforms(params.excludePlatforms)
   const excludePlatformSql = excludedPlatforms.length > 0
@@ -745,8 +733,7 @@ async function queryExistingEventOutcomes(params: {
         attributedCommission: 0,
         unattributedCommission: 0,
         offerIds: new Set<number>(),
-        campaignIds: new Set<number>(),
-      }
+        campaignIds: new Set<number>() }
       existing.attributedCommission = roundTo(existing.attributedCommission + (Number(row.commission_amount) || 0))
 
       const offerId = Number(row.offer_id)
@@ -786,8 +773,7 @@ async function queryExistingEventOutcomes(params: {
           attributedCommission: 0,
           unattributedCommission: 0,
           offerIds: new Set<number>(),
-          campaignIds: new Set<number>(),
-        }
+          campaignIds: new Set<number>() }
         existing.unattributedCommission = roundTo(existing.unattributedCommission + (Number(row.commission_amount) || 0))
         result.set(eventId, existing)
       }
@@ -902,9 +888,7 @@ async function queryOfferContexts(params: {
   userId: number
 }): Promise<Map<number, OfferContext>> {
   const contexts = new Map<number, OfferContext>()
-  const offerNotDeletedCondition = params.db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const offerRows = await params.db.query<{
     id: number
@@ -942,8 +926,7 @@ async function queryOfferContexts(params: {
     contexts.set(offerId, {
       offerId,
       normalizedBrands,
-      asins,
-    })
+      asins })
   }
 
   const productRows = await params.db.query<{
@@ -983,12 +966,8 @@ async function queryCampaignAttributionCandidates(params: {
   reportDate: string
   lookbackDays: number
 }): Promise<CampaignAttributionCandidate[]> {
-  const campaignNotDeletedCondition = params.db.type === 'postgres'
-    ? '(c.is_deleted = false OR c.is_deleted IS NULL)'
-    : '(c.is_deleted = 0 OR c.is_deleted IS NULL)'
-  const offerNotDeletedCondition = params.db.type === 'postgres'
-    ? '(o.is_deleted = false OR o.is_deleted IS NULL)'
-    : '(o.is_deleted = 0 OR o.is_deleted IS NULL)'
+  const campaignNotDeletedCondition = '(c.is_deleted = false OR c.is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(o.is_deleted = false OR o.is_deleted IS NULL)'
 
   const startDate = shiftYmd(params.reportDate, -(Math.max(1, params.lookbackDays) - 1))
   const rows = await params.db.query<{
@@ -1036,8 +1015,7 @@ async function queryCampaignAttributionCandidates(params: {
       normalizedBrand: normalizeBrand(row.brand),
       campaignStatus: normalizeCampaignStatus(row.campaign_status),
       cost: Math.max(0, Number(row.cost) || 0),
-      clicks: Math.max(0, Number(row.clicks) || 0),
-    }))
+      clicks: Math.max(0, Number(row.clicks) || 0) }))
     .filter((row) => Number.isFinite(row.campaignId) && Number.isFinite(row.offerId))
 }
 
@@ -1063,8 +1041,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         ? derivePartnerboostLinkId({
             sourceLinkId: entry.sourceLinkId,
             sourceLink,
-            sourceMid,
-          })
+            sourceMid })
         : null
       const sourceNormId = entry.platform === 'partnerboost'
         ? extractPartnerboostNormIdFromRaw(entry.raw)
@@ -1083,8 +1060,7 @@ export async function persistAffiliateCommissionAttributions(params: {
           sourceOrderId: entry.sourceOrderId,
           sourceMid,
           sourceAsin,
-          raw: entry.raw,
-        }),
+          raw: entry.raw }),
         normalizedBrand: extractBrandFromRaw(entry.raw),
         sourceOrderId: normalizeText(entry.sourceOrderId),
         sourceMid,
@@ -1092,8 +1068,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         sourceLink,
         sourceLinkId,
         sourceNormId,
-        raw: entry.raw,
-      }
+        raw: entry.raw }
     })
     .filter((entry): entry is NormalizedCommissionEntry => Boolean(entry))
 
@@ -1112,8 +1087,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       userId: params.userId,
       reportDate: params.reportDate,
       totalCommission,
-      platforms: incomingPlatforms,
-    })
+      platforms: incomingPlatforms })
 
     if (existingSummary) {
       const shouldKeepExisting =
@@ -1133,8 +1107,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       unattributedCommission: totalCommission,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    }
+      writtenRows: 0 }
   }
 
   if (normalizedEntries.length === 0) {
@@ -1144,8 +1117,7 @@ export async function persistAffiliateCommissionAttributions(params: {
           db,
           userId: params.userId,
           reportDate: params.reportDate,
-          platforms: replacePlatforms,
-        })
+          platforms: replacePlatforms })
       })
     }
 
@@ -1156,8 +1128,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       unattributedCommission: 0,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    }
+      writtenRows: 0 }
   }
 
   let existingOutcomes = new Map<string, ExistingEventOutcome>()
@@ -1167,8 +1138,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       userId: params.userId,
       reportDate: params.reportDate,
       eventIds: normalizedEntries.map((entry) => entry.eventId),
-      excludePlatforms: shouldResetHistoricalSnapshot ? replacePlatforms : undefined,
-    })
+      excludePlatforms: shouldResetHistoricalSnapshot ? replacePlatforms : undefined })
   } catch (error: any) {
     if (!isStatementTimeoutError(error)) {
       throw error
@@ -1212,8 +1182,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       db,
       userId: params.userId,
       reportDate: params.reportDate,
-      lookbackDays: Math.max(7, removedCampaignGraceDays),
-    })
+      lookbackDays: Math.max(7, removedCampaignGraceDays) })
 
     const asinToCampaigns = new Map<string, CampaignAttributionCandidate[]>()
     const brandToCampaigns = new Map<string, CampaignAttributionCandidate[]>()
@@ -1314,8 +1283,7 @@ export async function persistAffiliateCommissionAttributions(params: {
           userId: params.userId,
           asins,
           platform,
-          db,
-        })
+          db })
 
         // Merge into asinToBrands
         for (const [asin, brand] of asinBrandMap.entries()) {
@@ -1339,16 +1307,14 @@ export async function persistAffiliateCommissionAttributions(params: {
         paramsForAppend.candidates.map((candidate) => ({
           campaignId: candidate.campaignId,
           offerId: candidate.offerId,
-          weight: 1,
-        }))
+          weight: 1 }))
       ).map((target) => {
         const source = paramsForAppend.candidates.find((candidate) => candidate.campaignId === target.campaignId)
         return {
           campaignId: target.campaignId,
           offerId: Number(target.offerId),
           cost: Math.max(0, Number(source?.cost) || 0),
-          clicks: Math.max(0, Number(source?.clicks) || 0),
-        }
+          clicks: Math.max(0, Number(source?.clicks) || 0) }
       })
 
       const totalCost = uniqueCandidates.reduce((sum, candidate) => sum + candidate.cost, 0)
@@ -1384,9 +1350,7 @@ export async function persistAffiliateCommissionAttributions(params: {
             raw: paramsForAppend.entry.raw,
             eventId: paramsForAppend.entry.eventId,
             attributionRule: paramsForAppend.attributionRule,
-            normalizedBrand: paramsForAppend.entry.normalizedBrand,
-          }), db.type, null),
-        })
+            normalizedBrand: paramsForAppend.entry.normalizedBrand }), null) })
       })
     }
 
@@ -1412,8 +1376,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         appendAttributionRows({
           entry,
           candidates: preferredDirectCandidates,
-          attributionRule: 'asin_match',
-        })
+          attributionRule: 'asin_match' })
         continue
       }
 
@@ -1437,8 +1400,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         appendAttributionRows({
           entry,
           candidates: preferredBrandCandidates,
-          attributionRule: 'brand_equal_split',
-        })
+          attributionRule: 'brand_equal_split' })
         continue
       }
 
@@ -1460,28 +1422,23 @@ export async function persistAffiliateCommissionAttributions(params: {
           offerContexts,
           campaignCandidates,
           matchedAsinCandidates,
-          sourceAsin,
-        }),
+          sourceAsin }),
         commissionAmount: entry.commission,
         currency: entry.currency,
         reasonCode: resolveAffiliateAttributionFailureReasonCode({
           baseReasonCode,
-          reportDate: params.reportDate,
-        }),
+          reportDate: params.reportDate }),
         reasonDetail: buildFailureReasonDetail({
           reportDate: params.reportDate,
           sourceMid: entry.sourceMid,
           sourceAsin: entry.sourceAsin,
           sourceLinkId: entry.sourceLinkId,
-          sourceNormId: entry.sourceNormId,
-        }),
+          sourceNormId: entry.sourceNormId }),
         rawPayload: buildStoredRawPayload({
           raw: entry.raw,
           eventId: entry.eventId,
           attributionRule: 'unattributed',
-          normalizedBrand: entry.normalizedBrand,
-        }),
-      })
+          normalizedBrand: entry.normalizedBrand }) })
     }
   }
 
@@ -1491,8 +1448,7 @@ export async function persistAffiliateCommissionAttributions(params: {
         db,
         userId: params.userId,
         reportDate: params.reportDate,
-        platforms: replacePlatforms,
-      })
+        platforms: replacePlatforms })
     }
 
     for (const row of rowsToInsert) {
@@ -1542,7 +1498,7 @@ export async function persistAffiliateCommissionAttributions(params: {
             row.currency,
             row.reasonCode,
             row.reasonDetail,
-            toDbJsonObjectField(row.rawPayload ?? null, db.type, null),
+            toDbJsonObjectField(row.rawPayload ?? null, null),
           ]
         )
       }
@@ -1571,8 +1527,7 @@ export async function persistAffiliateCommissionAttributions(params: {
       unattributedCommission: newUnattributedCommission,
       attributedOffers: attributedOfferIds.size,
       attributedCampaigns: attributedCampaignIds.size,
-      writtenRows: rowsToInsert.length,
-    }
+      writtenRows: rowsToInsert.length }
   }
 
   return {
@@ -1582,6 +1537,5 @@ export async function persistAffiliateCommissionAttributions(params: {
     unattributedCommission: roundTo(existingUnattributedCommission + newUnattributedCommission),
     attributedOffers: attributedOfferIds.size,
     attributedCampaigns: attributedCampaignIds.size,
-    writtenRows: rowsToInsert.length,
-  }
+    writtenRows: rowsToInsert.length }
 }

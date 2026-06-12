@@ -6,15 +6,10 @@ describe('admin/users-query', () => {
     const orderBy = buildAdminUsersOrderBy({
       sortBy: 'status',
       sortOrder: 'ASC',
-      dbType: 'postgres',
     })
     expect(orderBy).toContain("NULLIF(locked_until, '')::timestamptz")
     expect(orderBy).toContain('> NOW()')
     expect(orderBy).not.toContain('locked_until > NOW()')
-  })
-
-  it('builds status orderBy for sqlite using datetime(now)', () => {
-    const orderBy = buildAdminUsersOrderBy({ sortBy: 'status', sortOrder: 'ASC', dbType: 'sqlite' })
-    expect(orderBy).toContain("locked_until > datetime('now')")
+    expect(orderBy).not.toContain("datetime('now')")
   })
 })

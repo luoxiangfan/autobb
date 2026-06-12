@@ -100,7 +100,7 @@ export async function createUserSession(
       user_id, session_token, ip_address, user_agent,
       device_fingerprint, is_suspicious, suspicious_reason,
       created_at, last_activity_at, expires_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
     RETURNING id
   `
 
@@ -187,7 +187,6 @@ async function checkSharingPatterns(
   }>
 }> {
   const db = await getDatabase()
-  const db_type = db.type
   const alerts: Array<{
     type: string
     severity: 'info' | 'warning' | 'critical'
@@ -203,10 +202,7 @@ async function checkSharingPatterns(
   }
 
   // Get recent sessions (within IP change window)
-  const timeCondition =
-    db_type === 'postgres'
-      ? `created_at > CURRENT_TIMESTAMP - INTERVAL '${IP_CHANGE_WINDOW_HOURS} hours'`
-      : `created_at > datetime('now', '-${IP_CHANGE_WINDOW_HOURS} hours')`
+  const timeCondition = `created_at > CURRENT_TIMESTAMP - INTERVAL '${IP_CHANGE_WINDOW_HOURS} hours'`
 
   const recentSessions = await db.query<{
     ip_address: string
@@ -280,7 +276,7 @@ async function checkSharingPatterns(
  */
 async function isDeviceTrusted(userId: number, deviceFingerprint: string): Promise<boolean> {
   const db = await getDatabase()
-  // 注意：trusted_devices.is_active 在 PostgreSQL 和 SQLite 中都是 INTEGER 类型
+  // 注意：trusted_devices.is_active 为 INTEGER 类型
   const trusted = await db.queryOne<{ id: number }>(
     `SELECT id FROM trusted_devices
      WHERE user_id = ? AND device_fingerprint = ? AND is_active = 1`,
@@ -305,7 +301,7 @@ async function createAlert(
     `INSERT INTO account_sharing_alerts (
       user_id, alert_type, severity, description,
       ip_addresses, device_fingerprints, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    ) VALUES (?, ?, ?, ?, ?, ?, NOW())
     RETURNING id`,
     [
       userId,
@@ -339,7 +335,7 @@ async function enforceMaxConcurrentSessions(userId: number): Promise<void> {
     const idsToRevoke = toRevoke.map((s: { id: number }) => s.id)
 
     await db.exec(
-      `UPDATE user_sessions SET revoked_at = datetime('now')
+      `UPDATE user_sessions SET revoked_at = NOW()
        WHERE id IN (${idsToRevoke.map(() => '?').join(',')})`,
       idsToRevoke
     )
@@ -351,8 +347,8 @@ async function enforceMaxConcurrentSessions(userId: number): Promise<void> {
  */
 async function cleanupExpiredSessions(userId?: number): Promise<number> {
   const db = await getDatabase()
-  let sql = `UPDATE user_sessions SET revoked_at = datetime('now')
-             WHERE expires_at < datetime('now') AND revoked_at IS NULL`
+  let sql = `UPDATE user_sessions SET revoked_at = NOW()
+             WHERE expires_at < NOW() AND revoked_at IS NULL`
   const params: (number | undefined)[] = []
 
   if (userId) {
@@ -386,7 +382,7 @@ export async function revokeSession(sessionToken: string, userId: number): Promi
   const db = await getDatabase()
   const result = await db.exec(
     `UPDATE user_sessions
-     SET revoked_at = datetime('now')
+     SET revoked_at = NOW()
      WHERE session_token = ? AND user_id = ?`,
     [sessionToken, userId]
   )
@@ -400,7 +396,7 @@ export async function revokeAllSessions(userId: number): Promise<number> {
   const db = await getDatabase()
   const result = await db.exec(
     `UPDATE user_sessions
-     SET revoked_at = datetime('now')
+     SET revoked_at = NOW()
      WHERE user_id = ? AND is_current = 1`,
     [userId]
   )
@@ -417,7 +413,7 @@ export async function trustDevice(
   const result = await db.queryOne<{ id: number }>(
     `INSERT INTO trusted_devices
      (user_id, device_fingerprint, device_name, last_used_at, created_at, is_active)
-     VALUES (?, ?, ?, datetime('now'), datetime('now'), 1)
+     VALUES (?, ?, ?, NOW(), NOW(), 1)
      RETURNING id`,
     [userId, deviceFingerprint, deviceName || null]
   )
@@ -429,7 +425,7 @@ export async function trustDevice(
  */
 export async function untrustDevice(userId: number, deviceFingerprint: string): Promise<boolean> {
   const db = await getDatabase()
-  // 注意：trusted_devices.is_active 在 PostgreSQL 和 SQLite 中都是 INTEGER 类型
+  // 注意：trusted_devices.is_active 为 INTEGER 类型
   const result = await db.exec(
     `UPDATE trusted_devices SET is_active = 0
      WHERE user_id = ? AND device_fingerprint = ?`,
@@ -443,7 +439,7 @@ export async function untrustDevice(userId: number, deviceFingerprint: string): 
  */
 export async function getTrustedDevices(userId: number): Promise<TrustedDevice[]> {
   const db = await getDatabase()
-  // 注意：trusted_devices.is_active 在 PostgreSQL 和 SQLite 中都是 INTEGER 类型
+  // 注意：trusted_devices.is_active 为 INTEGER 类型
   return db.query<TrustedDevice>(
     `SELECT * FROM trusted_devices
      WHERE user_id = ? AND is_active = 1

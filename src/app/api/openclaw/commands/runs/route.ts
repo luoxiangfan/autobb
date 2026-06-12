@@ -20,8 +20,7 @@ const runsQuerySchema = z.object({
   accountId: z.string().optional(),
   account_id: z.string().optional(),
   tenantKey: z.string().optional(),
-  tenant_key: z.string().optional(),
-})
+  tenant_key: z.string().optional() })
 
 function normalizeQueryValue(value: string | null): string | undefined {
   const normalized = String(value || '').trim()
@@ -44,8 +43,7 @@ export async function GET(request: NextRequest) {
       accountId: normalizeQueryValue(request.nextUrl.searchParams.get('accountId')),
       account_id: normalizeQueryValue(request.nextUrl.searchParams.get('account_id')),
       tenantKey: normalizeQueryValue(request.nextUrl.searchParams.get('tenantKey')),
-      tenant_key: normalizeQueryValue(request.nextUrl.searchParams.get('tenant_key')),
-    }
+      tenant_key: normalizeQueryValue(request.nextUrl.searchParams.get('tenant_key')) }
 
     const parsedQuery = runsQuerySchema.safeParse(queryObject)
     if (!parsedQuery.success) {
@@ -62,8 +60,7 @@ export async function GET(request: NextRequest) {
         || parsedQuery.data.senderOpenId
         || parsedQuery.data.sender_open_id,
       accountId: parsedQuery.data.accountId || parsedQuery.data.account_id,
-      tenantKey: parsedQuery.data.tenantKey || parsedQuery.data.tenant_key,
-    })
+      tenantKey: parsedQuery.data.tenantKey || parsedQuery.data.tenant_key })
     if (!auth) {
       return NextResponse.json({ error: 'OpenClaw 功能未开启或未授权' }, { status: 403 })
     }
@@ -74,8 +71,7 @@ export async function GET(request: NextRequest) {
       limit: parsedQuery.data.limit,
       status: parsedQuery.data.status,
       riskLevel: parsedQuery.data.riskLevel,
-      createdAfter: parsedQuery.data.createdAfter,
-    })
+      createdAfter: parsedQuery.data.createdAfter })
 
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {

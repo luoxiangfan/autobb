@@ -5,8 +5,7 @@ export function formatOpenclawLocalDate(date: Date): string {
     timeZone: DEFAULT_TIMEZONE,
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+    day: '2-digit' }).format(date)
 }
 
 function isIsoDateLike(value: string): boolean {

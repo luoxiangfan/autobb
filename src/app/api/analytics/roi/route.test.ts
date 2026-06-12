@@ -76,7 +76,7 @@ describe('GET /api/analytics/roi', () => {
       ) {
         return []
       }
-      if (sql.includes('DATE(cp.date) as date')) {
+      if (sql.includes('(cp.date::date) as date')) {
         return [{ date: '2026-04-01', cost: 100 }]
       }
       if (

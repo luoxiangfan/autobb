@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   queryOneMock: vi.fn(),
   getDatabaseMock: vi.fn(async () => ({
-    type: 'postgres',
     queryOne: mocks.queryOneMock,
   })),
 }))

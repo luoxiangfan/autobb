@@ -11,18 +11,11 @@ describe('parseAiModelsJson', () => {
             models: [
               { id: 'gpt-5.2-codex', name: 'GPT-5.2 Codex' },
               { id: 'gpt-5.2', name: 'GPT-5.2' },
-            ],
-          },
-        },
-      },
+            ] } } },
       agents: {
         defaults: {
           model: {
-            primary: 'aicodecat-gpt/gpt-5.2',
-          },
-        },
-      },
-    })
+            primary: 'aicodecat-gpt/gpt-5.2' } } } })
 
     const parsed = parseAiModelsJson(raw)
 
@@ -42,11 +35,8 @@ describe('parseAiModelsJson', () => {
           baseUrl: 'https://api.openai.com/v1',
           models: [
             { id: 'gpt-5-mini', name: 'GPT-5 Mini' },
-          ],
-        },
-      },
-      selectedModel: 'gpt-5-mini',
-    })
+          ] } },
+      selectedModel: 'gpt-5-mini' })
 
     const parsed = parseAiModelsJson(raw)
 
@@ -65,19 +55,12 @@ describe('setAiModelsSelectedModel', () => {
             models: [
               { id: 'claude-sonnet-4-5-20250929', name: 'Claude Sonnet 4.5' },
               { id: 'claude-opus-4-5-20251101', name: 'Claude Opus 4.5' },
-            ],
-          },
-        },
-      },
+            ] } } },
       agents: {
         defaults: {
           model: {
             primary: 'aicodecat-claude/claude-sonnet-4-5-20250929',
-            fallbacks: ['aicodecat-claude/claude-sonnet-4-5-20250929'],
-          },
-        },
-      },
-    })
+            fallbacks: ['aicodecat-claude/claude-sonnet-4-5-20250929'] } } } })
 
     const updated = setAiModelsSelectedModel(raw, 'aicodecat-claude/claude-opus-4-5-20251101')
 
@@ -93,10 +76,7 @@ describe('setAiModelsSelectedModel', () => {
       providers: {
         openai: {
           baseUrl: 'https://api.openai.com/v1',
-          models: [{ id: 'gpt-5-mini', name: 'GPT-5 Mini' }],
-        },
-      },
-    })
+          models: [{ id: 'gpt-5-mini', name: 'GPT-5 Mini' }] } } })
 
     const updated = setAiModelsSelectedModel(raw, 'openai/gpt-5')
 

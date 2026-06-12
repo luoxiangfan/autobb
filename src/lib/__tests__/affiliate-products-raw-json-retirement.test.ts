@@ -13,7 +13,6 @@ function createMockDb(params?: {
   exec?: ReturnType<typeof vi.fn>
 }) {
   return {
-    type: 'postgres' as const,
     query: vi.fn().mockResolvedValue([]),
     queryOne: params?.queryOne || vi.fn(),
     exec: params?.exec || vi.fn().mockResolvedValue({ changes: 0 }),

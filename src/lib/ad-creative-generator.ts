@@ -89,7 +89,7 @@ import { createCreativeRuleContext, filterPromptExtrasByRelevance } from './ad-c
 
 /**
  * 🔧 安全解析JSON字段
- * 处理 PostgreSQL jsonb 类型（自动解析为JS对象/数组）和 SQLite text 类型（需要JSON.parse）
+ * 处理 PostgreSQL jsonb 类型（自动解析为JS对象/数组）和 JSON 字符串（需要 JSON.parse）
  */
 function safeParseJson(value: any, defaultValue: any = null): any {
   if (value === null || value === undefined) return defaultValue
@@ -943,7 +943,7 @@ function hasBrandAnchorInHeadline(
 function stripRepeatedBrandPrefix(text: string, brandName: string): string {
   const normalizedBrand = normalizeBrandNameForHeadline(brandName)
   if (!normalizedBrand) return normalizeHeadlineCandidateText(text)
-  const repeatedPattern = new RegExp(`^(?:${escapeRegex(normalizedBrand)}\\s+){2,}`, 'i')
+  const repeatedPattern = new RegExp(`^(?:${escapeRegex(normalizedBrand)}\\s+){2 }`, 'i')
   return normalizeHeadlineCandidateText(text).replace(repeatedPattern, `${normalizedBrand} `).trim()
 }
 
@@ -4910,7 +4910,7 @@ function normalizeBrandFreeText(text: string, brandName: string): string {
   const pattern = new RegExp(escapeRegex(brand), 'ig')
   return String(text)
     .replace(pattern, '')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/\s{2 }/g, ' ')
     .trim()
 }
 
@@ -4918,7 +4918,7 @@ function normalizeHeadline2KeywordCandidate(text: string): string {
   return String(text || '')
     .replace(/[{}]/g, '')
     .replace(/[_/]+/g, ' ')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/\s{2 }/g, ' ')
     .trim()
 }
 
@@ -7051,7 +7051,7 @@ function buildDkiFirstHeadline(
 ): string {
   const normalizedBrand = String(brandName || '')
     .replace(/[{}]/g, '')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/\s{2 }/g, ' ')
     .trim()
 
   if (!normalizedBrand) {
@@ -7078,7 +7078,7 @@ function buildDkiFirstHeadline(
 function buildDkiKeywordHeadline(defaultText: string, maxLength = 30): string {
   const normalized = String(defaultText || '')
     .replace(/[{}]/g, '')
-    .replace(/\s{2,}/g, ' ')
+    .replace(/\s{2 }/g, ' ')
     .trim()
 
   if (!normalized) return `{KeyWord:Keyword}`

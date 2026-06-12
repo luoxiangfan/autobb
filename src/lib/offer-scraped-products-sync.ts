@@ -16,13 +16,13 @@ async function saveScrapedProducts(
   if (!Array.isArray(products) || products.length === 0) return
 
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   await db.exec(
     `
     UPDATE scraped_products
-    SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
-        deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
+    SET is_deleted = ${'TRUE'},
+        deleted_at = ${'NOW()'}
     WHERE offer_id = ? AND user_id = ?
   `,
     [offerId, userId]

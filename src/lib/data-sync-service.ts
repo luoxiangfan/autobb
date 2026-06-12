@@ -127,7 +127,7 @@ export interface KeywordPerformanceData {
 
 /**
  * DataSyncService - 数据同步服务
- * 负责从Google Ads API拉取性能数据并存储到SQLite
+ * 负责从Google Ads API拉取性能数据并存储到 PostgreSQL
  */
 class DataSyncService {
   private static instance: DataSyncService
@@ -362,7 +362,7 @@ class DataSyncService {
       }
 
       // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
-      const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+      const isActiveCondition = 'is_active = true'
 
       // 1. 获取用户的所有Google Ads账户
       // 🔧 修复(2025-12-30): 添加currency字段以支持多货币账户
@@ -405,7 +405,7 @@ class DataSyncService {
             [userId, account.id, syncType, startedAt]
           )
 
-          accountSyncLogId = getInsertedId(logResult, db.type)
+          accountSyncLogId = getInsertedId(logResult)
           syncLogId = accountSyncLogId // 保留最后一个syncLogId用于整体同步日志
 
           const quotaBackoffRemaining = this.getGoogleAdsQuotaBackoffSecondsRemaining()
@@ -582,7 +582,7 @@ class DataSyncService {
                 UPDATE google_ads_accounts
                 SET currency = COALESCE(?, currency),
                     timezone = COALESCE(?, timezone),
-                    updated_at = ${db.type === 'postgres' ? 'NOW()' : "datetime('now')"}
+                    updated_at = ${'NOW()'}
                 WHERE id = ?
               `,
                 [shouldUpdateCurrency ? derivedCurrency : null, derivedTimeZone, account.id]
@@ -1430,7 +1430,7 @@ class DataSyncService {
     ])
 
     const db = await getDatabase()
-    const nowSql = nowFunc(db.type)
+    const nowSql = nowFunc()
 
     const campaignIds = campaigns.map((c) => c.id)
     if (campaignIds.length > 0) {

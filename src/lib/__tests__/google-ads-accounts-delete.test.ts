@@ -6,7 +6,6 @@ const dbFns = vi.hoisted(() => ({
   query: vi.fn(),
   exec: vi.fn(),
   transaction: vi.fn(),
-  type: 'sqlite' as const,
 }))
 
 const markRemovedFns = vi.hoisted(() => ({
@@ -35,7 +34,6 @@ const stateMachineFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: dbFns.type,
     queryOne: dbFns.queryOne,
     query: dbFns.query,
     exec: dbFns.exec,

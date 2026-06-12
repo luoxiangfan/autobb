@@ -72,7 +72,7 @@ export async function queryCampaignRowsForTrendsScope(
     ? `AND (${affiliateDomainKeywords.map(() => `o.affiliate_link LIKE ?`).join(' OR ')})`
     : ''
   const affiliateAlignedClause = hasAffiliate
-    ? buildCampaignAffiliateAlignedWhereClause(db.type, 'c', 'o')
+    ? buildCampaignAffiliateAlignedWhereClause('c', 'o')
     : ''
   const affiliateBinds = hasAffiliate ? affiliateDomainKeywords.map((k) => `%${k}%`) : []
 

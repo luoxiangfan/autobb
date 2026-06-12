@@ -9,7 +9,6 @@ const assignmentFns = vi.hoisted(() => ({
 }))
 
 const dbFns = vi.hoisted(() => ({
-  type: 'sqlite' as const,
   exec: vi.fn(),
   queryOne: vi.fn(),
 }))

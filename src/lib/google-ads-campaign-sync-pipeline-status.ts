@@ -22,14 +22,12 @@ function parsePositiveIntEnv(raw: string | undefined, defaultValue: number): num
   return parsed
 }
 
-function startedAtSqlField(dbType: 'postgres' | 'sqlite'): string {
-  return dbType === 'postgres' ? 'started_at::timestamptz' : 'started_at'
+function startedAtSqlField(): string {
+  return 'started_at::timestamptz'
 }
 
-function staleRunningThresholdSql(dbType: 'postgres' | 'sqlite', minutes: number): string {
-  return dbType === 'postgres'
-    ? `(CURRENT_TIMESTAMP - INTERVAL '${minutes} minutes')`
-    : `datetime('now', '-${minutes} minutes')`
+function staleRunningThresholdSql(minutes: number): string {
+  return `(CURRENT_TIMESTAMP - INTERVAL '${minutes} minutes')`
 }
 
 /**
@@ -123,9 +121,8 @@ export async function userHasActiveGoogleAdsCampaignSyncWork(userId: number): Pr
   }
 
   const db = await getDatabase()
-  const startedAtField = startedAtSqlField(db.type)
+  const startedAtField = startedAtSqlField()
   const activeLogThreshold = staleRunningThresholdSql(
-    db.type,
     parsePositiveIntEnv(
       process.env.GOOGLE_ADS_SYNC_LOG_ACTIVE_MINUTES,
       DEFAULT_ACTIVE_RUNNING_LOG_MINUTES
@@ -166,15 +163,12 @@ export async function markStaleGoogleAdsCampaignSyncLogs(options?: {
       process.env.GOOGLE_ADS_SYNC_LOG_STALE_MINUTES,
       DEFAULT_STALE_RUNNING_LOG_MINUTES
     )
-  const startedAtField = startedAtSqlField(db.type)
-  const threshold = staleRunningThresholdSql(db.type, staleMinutes)
+  const startedAtField = startedAtSqlField()
+  const threshold = staleRunningThresholdSql(staleMinutes)
   const completedAt = utcNowIso()
   const errorMessage = '同步未正常结束（超时自动关闭）'
 
-  const durationExpr =
-    db.type === 'postgres'
-      ? `CAST(EXTRACT(EPOCH FROM (NOW() - ${startedAtField})) * 1000 AS INTEGER)`
-      : `CAST((strftime('%s', 'now') - strftime('%s', started_at)) * 1000 AS INTEGER)`
+  const durationExpr = `CAST(EXTRACT(EPOCH FROM (NOW() - ${startedAtField})) * 1000 AS INTEGER)`
 
   const params: unknown[] = [completedAt, errorMessage, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
   let userFilter = ''
@@ -212,8 +206,8 @@ export async function getGoogleAdsCampaignSyncPipelineSnapshot(): Promise<{
   const { pending, running } = await getGoogleAdsCampaignSyncQueueCounts()
   const db = await getDatabase()
 
-  const startedAtField = startedAtSqlField(db.type)
-  const timeThreshold = staleRunningThresholdSql(db.type, 30)
+  const startedAtField = startedAtSqlField()
+  const timeThreshold = staleRunningThresholdSql(30)
 
   const runningSync = (await db.queryOne(
     `

@@ -1,4 +1,3 @@
-import type { DatabaseAdapter } from '@/lib/db'
 import { REDIS_PREFIX_CONFIG } from '@/lib/config'
 import { getDatabase } from '@/lib/db'
 import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db-helpers'
@@ -55,12 +54,8 @@ function redisTtlSecondsForState(state: GoogleAdsAccountAsyncRefreshState): numb
   return redisTtlSeconds()
 }
 
-/** SQLite 与 datetime('now') 可比较；PG 用 ISO */
-function toDbTimestamp(dbType: DatabaseAdapter['type'], ms: number): string {
-  if (dbType === 'postgres') {
-    return new Date(ms).toISOString()
-  }
-  return new Date(ms).toISOString().slice(0, 19).replace('T', ' ')
+function toDbTimestamp(ms: number): string {
+  return new Date(ms).toISOString()
 }
 
 function parseTimestampToMs(value: unknown): number {
@@ -200,8 +195,8 @@ async function writeStateToDb(
   state: GoogleAdsAccountAsyncRefreshState
 ): Promise<void> {
   const db = await getDatabase()
-  const startedAt = toDbTimestamp(db.type, state.startedAtMs)
-  const updatedAt = toDbTimestamp(db.type, state.updatedAtMs)
+  const startedAt = toDbTimestamp(state.startedAtMs)
+  const updatedAt = toDbTimestamp(state.updatedAtMs)
   const errorMessage = state.errorMessage ?? null
 
   await db.exec(
@@ -241,11 +236,10 @@ async function tryAcquireLockInDb(
 ): Promise<boolean> {
   const db = await getDatabase()
   const staleBefore = datetimeMinusMinutes(
-    Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS / 60_000),
-    db.type
+    Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS / 60_000)
   )
   const nowMs = Date.now()
-  const startedAt = toDbTimestamp(db.type, nowMs)
+  const startedAt = toDbTimestamp(nowMs)
   const updatedAt = startedAt
 
   const result = await db.exec(
@@ -314,7 +308,7 @@ export async function cleanupStaleGoogleAdsAccountAsyncRefreshRows(): Promise<vo
 
   const db = await getDatabase()
   const retentionHours = Math.ceil(GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_ROW_RETENTION_MS / 3_600_000)
-  const cutoff = datetimeMinusHours(retentionHours, db.type)
+  const cutoff = datetimeMinusHours(retentionHours)
 
   try {
     await db.exec(

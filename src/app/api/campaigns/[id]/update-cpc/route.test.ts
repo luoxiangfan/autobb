@@ -54,7 +54,6 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'postgres',
     queryOne: dbFns.queryOne,
     exec: dbFns.exec,
   })),

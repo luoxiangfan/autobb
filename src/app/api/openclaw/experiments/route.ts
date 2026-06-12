@@ -6,8 +6,7 @@ import {
   createExperiment,
   recordExperimentMetrics,
   evaluateExperiment,
-  getExperimentHistory,
-} from '@/lib/openclaw/experiments'
+  getExperimentHistory } from '@/lib/openclaw/experiments'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +18,7 @@ const createSchema = z.object({
   campaign_id: z.number().int(zErr.int).optional().nullable(),
   variant_a: z.any().optional().nullable(),
   variant_b: z.any().optional().nullable(),
-  status: z.string().max(20, zErr.maxChars(20)).optional().default('running'),
-})
+  status: z.string().max(20, zErr.maxChars(20)).optional().default('running') })
 
 export async function GET(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)
@@ -51,13 +49,11 @@ const recordMetricsSchema = z.object({
   action: z.literal('record-metrics'),
   experiment_id: z.number().int(zErr.int),
   variant: z.enum(['a', 'b']),
-  metrics: z.record(z.string(), z.any()),
-})
+  metrics: z.record(z.string(), z.any()) })
 
 const evaluateSchema = z.object({
   action: z.literal('evaluate'),
-  experiment_id: z.number().int(zErr.int),
-})
+  experiment_id: z.number().int(zErr.int) })
 
 export async function POST(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)

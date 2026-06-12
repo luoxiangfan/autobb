@@ -4,8 +4,7 @@ import {
   FEISHU_CHAT_HEALTH_RETENTION_DAYS,
   FEISHU_CHAT_HEALTH_WINDOW_HOURS,
   getFeishuChatHealthExecutionMissingSeconds,
-  listFeishuChatHealthLogs,
-} from '@/lib/openclaw/feishu-chat-health'
+  listFeishuChatHealthLogs } from '@/lib/openclaw/feishu-chat-health'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
 function clampLimit(value: unknown): number {
@@ -29,8 +28,7 @@ export async function GET(request: NextRequest) {
     const result = await listFeishuChatHealthLogs({
       userId: auth.user.userId,
       withinHours: FEISHU_CHAT_HEALTH_WINDOW_HOURS,
-      limit,
-    })
+      limit })
 
     return NextResponse.json({
       success: true,
@@ -39,13 +37,11 @@ export async function GET(request: NextRequest) {
       retentionDays: FEISHU_CHAT_HEALTH_RETENTION_DAYS,
       excerptLimit: FEISHU_CHAT_HEALTH_EXCERPT_LIMIT,
       executionMissingSeconds: getFeishuChatHealthExecutionMissingSeconds(),
-      limit,
-    })
+      limit })
   } catch (error: any) {
     return NextResponse.json(
       {
-        error: error?.message || '加载飞书聊天链路健康数据失败',
-      },
+        error: error?.message || '加载飞书聊天链路健康数据失败' },
       { status: 500 }
     )
   }

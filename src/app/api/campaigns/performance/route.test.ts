@@ -157,7 +157,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -316,7 +315,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -379,7 +377,6 @@ describe('GET /api/campaigns/performance', () => {
       })
 
       dbFns.getDatabase.mockResolvedValue({
-        type: 'sqlite',
         query,
         queryOne,
       })
@@ -539,7 +536,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -676,7 +672,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -806,7 +801,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -974,7 +968,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -1139,7 +1132,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -1307,7 +1299,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -1461,7 +1452,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -1555,7 +1545,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -1715,7 +1704,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -1919,7 +1907,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -2080,7 +2067,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })
@@ -2203,7 +2189,6 @@ describe('GET /api/campaigns/performance', () => {
     })
 
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query,
       queryOne,
     })

@@ -354,10 +354,10 @@ async function loadSearchTermAggregates(options: {
   const startDate = formatDateYmd(start)
 
   const db = await getDatabase()
-  const campaignNotDeleted = boolCondition('c.is_deleted', false, db.type)
-  const campaignNotTestVariant = boolCondition('c.is_test_variant', false, db.type)
-  const accountActive = boolCondition('gaa.is_active', true, db.type)
-  const accountNotDeleted = boolCondition('gaa.is_deleted', false, db.type)
+  const campaignNotDeleted = boolCondition('c.is_deleted', false)
+  const campaignNotTestVariant = boolCondition('c.is_test_variant', false)
+  const accountActive = boolCondition('gaa.is_active', true)
+  const accountNotDeleted = boolCondition('gaa.is_deleted', false)
 
   const params: Array<string | number> = [startDate, endDate]
   const userFilterSql = options.userId ? 'AND str.user_id = ?' : ''
@@ -429,7 +429,7 @@ async function loadExistingKeywordSet(params: {
   const whereNegative = params.onlyNegative === undefined ? '' : 'AND is_negative = ?'
   const queryParams: unknown[] = []
   if (params.onlyNegative !== undefined) {
-    queryParams.push(boolParam(params.onlyNegative, db.type))
+    queryParams.push(boolParam(params.onlyNegative))
   }
 
   const existingRows = await db.query<{ ad_group_id: number; keyword_text: string }>(
@@ -605,8 +605,8 @@ export async function runSearchTermAutoNegatives(
             action.searchTerm,
             'EXACT',
             'ENABLED',
-            boolParam(true, db.type),
-            boolParam(true, db.type),
+            boolParam(true),
+            boolParam(true),
             AUTO_NEGATIVE_SOURCE,
             'synced',
             null,
@@ -637,8 +637,8 @@ export async function runSearchTermAutoNegatives(
                 action.searchTerm,
                 'EXACT',
                 'ENABLED',
-                boolParam(true, db.type),
-                boolParam(true, db.type),
+                boolParam(true),
+                boolParam(true),
                 AUTO_NEGATIVE_SOURCE,
                 'synced',
                 'already_exists_in_google_ads',
@@ -840,8 +840,8 @@ export async function runSearchTermAutoPositiveKeywords(
             action.searchTerm,
             action.matchType,
             'ENABLED',
-            boolParam(false, db.type),
-            boolParam(true, db.type),
+            boolParam(false),
+            boolParam(true),
             AUTO_POSITIVE_SOURCE,
             'synced',
             null,
@@ -872,8 +872,8 @@ export async function runSearchTermAutoPositiveKeywords(
                 action.searchTerm,
                 action.matchType,
                 'ENABLED',
-                boolParam(false, db.type),
-                boolParam(true, db.type),
+                boolParam(false),
+                boolParam(true),
                 AUTO_POSITIVE_SOURCE,
                 'synced',
                 'already_exists_in_google_ads',

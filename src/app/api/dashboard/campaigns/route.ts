@@ -82,7 +82,7 @@ const getHandler = withPerformanceMonitoring<any>(
       const endDateStr = formatDate(endDate)
 
       const db = await getDatabase()
-      const likeOperator = db.type === 'postgres' ? 'ILIKE' : 'LIKE'
+      const likeOperator = 'ILIKE'
       const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
         includePendingWithinGrace: true,
         includeAllFailures: true,

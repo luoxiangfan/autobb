@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbFns = vi.hoisted(() => ({
-  type: 'sqlite' as const,
   exec: vi.fn(),
   queryOne: vi.fn(),
 }))
@@ -149,7 +148,6 @@ describe('upsertGoogleAdsOAuthConfigFromSettings', () => {
 
   it('uses injected db adapter for credential reads and writes', async () => {
     const injectedDb = {
-      type: 'sqlite' as const,
       queryOne: vi.fn().mockResolvedValue(undefined),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(),

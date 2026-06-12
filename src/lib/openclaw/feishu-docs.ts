@@ -51,7 +51,7 @@ async function getFeishuDocRow(userId: number): Promise<FeishuDocRow | null> {
 async function upsertFeishuDocRow(userId: number, updates: Partial<FeishuDocRow>) {
   const db = await getDatabase()
   const existing = await getFeishuDocRow(userId)
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   if (existing) {
     const fields: string[] = []
@@ -196,10 +196,8 @@ function buildBitableStrategySummary(report: DailyReportPayload): BitableStrateg
     recommendationNote: buildRecommendationNote({
       guardLevel,
       publishFailureRate,
-      reason,
-    }),
-    reason,
-  }
+      reason }),
+    reason }
 }
 
 function buildDocLines(report: DailyReportPayload): string[] {
@@ -290,8 +288,7 @@ async function ensureBitableFields(params: {
     }>({
       method: 'GET',
       url: `${params.apiBase}/bitable/v1/apps/${params.appToken}/tables/${params.tableId}/fields?${query.toString()}`,
-      token: params.token,
-    })
+      token: params.token })
 
     const items = response?.data?.items || []
     for (const item of items) {
@@ -313,9 +310,7 @@ async function ensureBitableFields(params: {
         token: params.token,
         body: {
           field_name: fieldName,
-          type: 1,
-        },
-      })
+          type: 1 } })
     } catch (error) {
       console.warn(`Feishu Bitable field create skipped: ${fieldName}`, error)
     }
@@ -338,9 +333,7 @@ async function ensureBitableTable(params: {
       url: `${params.apiBase}/bitable/v1/apps/${params.appToken}/tables`,
       token: params.token,
       body: {
-        table: { name: params.tableName },
-      },
-    })
+        table: { name: params.tableName } } })
 
     tableId = createTable?.data?.table_id
     if (!tableId) {
@@ -354,8 +347,7 @@ async function ensureBitableTable(params: {
 
     await upsertFeishuDocRow(params.userId, {
       bitable_app_token: params.appToken,
-      bitable_table_id: tableId,
-    })
+      bitable_table_id: tableId })
   }
 
   await ensureBitableFields({
@@ -363,8 +355,7 @@ async function ensureBitableTable(params: {
     tableId,
     token: params.token,
     apiBase: params.apiBase,
-    fieldNames: REQUIRED_BITABLE_FIELDS,
-  })
+    fieldNames: REQUIRED_BITABLE_FIELDS })
 
   return tableId
 }
@@ -376,8 +367,7 @@ export async function writeDailyReportToBitable(userId: number, report: DailyRep
   const token = await getTenantAccessToken({
     appId: config.appId,
     appSecret: config.appSecret,
-    domain: config.domain,
-  })
+    domain: config.domain })
   const apiBase = resolveFeishuApiBase(config.domain)
 
   const tableId = await ensureBitableTable({
@@ -386,8 +376,7 @@ export async function writeDailyReportToBitable(userId: number, report: DailyRep
     tableId: config.bitableTableId,
     tableName: config.bitableTableName || 'OpenClaw 每日报表',
     token,
-    apiBase,
-  })
+    apiBase })
 
   const roi = report.roi?.data?.overall || {}
   const totalCost = Number(roi.totalCost) || 0
@@ -423,8 +412,7 @@ export async function writeDailyReportToBitable(userId: number, report: DailyRep
     StrategyReason: strategySummary.reason || '',
     Notes: revenueAvailable
       ? '收入来源：联盟佣金'
-      : '收入暂不可用：严格联盟模式',
-  }
+      : '收入暂不可用：严格联盟模式' }
 
   let existingRecordId: string | null = null
   try {
@@ -436,10 +424,7 @@ export async function writeDailyReportToBitable(userId: number, report: DailyRep
         page_size: 1,
         filter: {
           conjunction: 'and',
-          conditions: [{ field_name: 'Date', operator: 'is', value: [report.date] }],
-        },
-      },
-    })
+          conditions: [{ field_name: 'Date', operator: 'is', value: [report.date] }] } } })
     const record = searchRes?.data?.items?.[0]
     existingRecordId = record?.record_id || record?.recordId || null
   } catch (error) {
@@ -451,8 +436,7 @@ export async function writeDailyReportToBitable(userId: number, report: DailyRep
       method: 'POST',
       url: `${apiBase}/bitable/v1/apps/${config.bitableAppToken}/tables/${tableId}/records/batch_update`,
       token,
-      body: { records: [{ record_id: existingRecordId, fields }] },
-    })
+      body: { records: [{ record_id: existingRecordId, fields }] } })
     return
   }
 
@@ -460,8 +444,7 @@ export async function writeDailyReportToBitable(userId: number, report: DailyRep
     method: 'POST',
     url: `${apiBase}/bitable/v1/apps/${config.bitableAppToken}/tables/${tableId}/records/batch_create`,
     token,
-    body: { records: [{ fields }] },
-  })
+    body: { records: [{ fields }] } })
 }
 
 async function createDoc(params: {
@@ -480,8 +463,7 @@ async function createDoc(params: {
       method: 'POST',
       url: `${params.apiBase}/docx/v1/documents`,
       token: params.token,
-      body: payload,
-    }
+      body: payload }
   )
 
   const documentId = result?.data?.document_id
@@ -511,20 +493,15 @@ async function appendDocLines(params: {
         elements: [
           {
             text_run: {
-              content: line,
-            },
-          },
-        ],
-      },
-    }))
+              content: line } },
+        ] } }))
 
     await feishuRequest(
       {
         method: 'POST',
         url: `${params.apiBase}/docx/v1/documents/${params.documentId}/blocks/${params.documentId}/children`,
         token: params.token,
-        body: { children },
-      }
+        body: { children } }
     )
   }
 }
@@ -536,8 +513,7 @@ export async function writeDailyReportToDoc(userId: number, report: DailyReportP
   const token = await getTenantAccessToken({
     appId: config.appId,
     appSecret: config.appSecret,
-    domain: config.domain,
-  })
+    domain: config.domain })
   const apiBase = resolveFeishuApiBase(config.domain)
 
   const docRow = await getFeishuDocRow(userId)
@@ -551,19 +527,16 @@ export async function writeDailyReportToDoc(userId: number, report: DailyReportP
         apiBase,
         token,
         title: docTitle,
-        folderToken: config.docFolderToken,
-      })
+        folderToken: config.docFolderToken })
 
   await appendDocLines({
     apiBase,
     token,
     documentId,
-    lines: buildDocLines(report),
-  })
+    lines: buildDocLines(report) })
 
   await upsertFeishuDocRow(userId, {
     folder_token: config.docFolderToken || null,
     last_doc_token: documentId,
-    last_doc_date: report.date,
-  })
+    last_doc_date: report.date })
 }

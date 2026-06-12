@@ -53,8 +53,7 @@ const READ_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   {
     method: 'GET',
     pattern: '/api/offers/batch/upload-records/:recordId',
-    feature: 'offer-management',
-  },
+    feature: 'offer-management' },
   { method: 'GET', pattern: '/api/offers/extract/status/:taskId', feature: 'offer-management' },
   { method: 'GET', pattern: '/api/offers/extract/stream/:taskId', feature: 'offer-management' },
 
@@ -74,8 +73,7 @@ const READ_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   {
     method: 'GET',
     pattern: '/api/ad-creatives/:id/conversion-feedback',
-    feature: 'creative-management',
-  },
+    feature: 'creative-management' },
   { method: 'GET', pattern: '/api/creative-tasks/:taskId', feature: 'creative-management' },
   { method: 'GET', pattern: '/api/creative-tasks/:taskId/stream', feature: 'creative-management' },
 
@@ -116,8 +114,7 @@ const READ_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   {
     method: 'GET',
     pattern: '/api/google-ads/credentials/accounts',
-    feature: 'google-ads-management',
-  },
+    feature: 'google-ads-management' },
   { method: 'GET', pattern: '/api/google-ads/service-account', feature: 'google-ads-management' },
   { method: 'GET', pattern: '/api/google-ads/idle-accounts', feature: 'google-ads-management' },
   { method: 'GET', pattern: '/api/google-ads-accounts', feature: 'google-ads-management' },
@@ -155,16 +152,14 @@ const WRITE_ROUTE_DEFINITIONS: CanonicalRouteDefinition[] = [
   {
     method: 'POST',
     pattern: '/api/offers/batch/generate-creatives-queue',
-    feature: 'creative-management',
-  },
+    feature: 'creative-management' },
   { method: 'PUT', pattern: '/api/ad-creatives/:id', feature: 'creative-management' },
   { method: 'DELETE', pattern: '/api/ad-creatives/:id', feature: 'creative-management' },
   { method: 'POST', pattern: '/api/ad-creatives/:id/select', feature: 'creative-management' },
   {
     method: 'POST',
     pattern: '/api/ad-creatives/:id/conversion-feedback',
-    feature: 'creative-management',
-  },
+    feature: 'creative-management' },
 
   // 广告系列管理（发布 / 下线 / 调整 CPC）
   { method: 'POST', pattern: '/api/campaigns', feature: 'campaign-management' },
@@ -271,8 +266,7 @@ function compileRouteDefinitions(definitions: CanonicalRouteDefinition[]): Compi
     return {
       ...definition,
       pattern: normalizedPattern,
-      regex: new RegExp(`^/${source}$`),
-    }
+      regex: new RegExp(`^/${source}$`) }
   })
 }
 
@@ -282,8 +276,7 @@ function snapshotRouteDefinitions(
   return definitions.map((definition) => ({
     method: definition.method,
     pattern: normalizePattern(definition.pattern),
-    feature: definition.feature,
-  }))
+    feature: definition.feature }))
 }
 
 export const OPENCLAW_CANONICAL_READ_ROUTE_DEFINITIONS: readonly OpenclawCanonicalRouteDefinition[] =
@@ -353,8 +346,7 @@ export function validateOpenclawApiRequest(method: string, path: string): {
 
   return {
     method: normalizedMethod,
-    path: normalizedPath,
-  }
+    path: normalizedPath }
 }
 
 export function isOpenclawReadMethod(method: OpenclawHttpMethod): boolean {
@@ -402,8 +394,7 @@ export function assertOpenclawProxyRouteAllowed(params: {
     method,
     pattern: route.pattern,
     feature: route.feature,
-    normalizedPath: path,
-  }
+    normalizedPath: path }
 }
 
 export function assertOpenclawCommandRouteAllowed(params: {
@@ -445,6 +436,5 @@ export function assertOpenclawCommandRouteAllowed(params: {
     method,
     pattern: route.pattern,
     feature: route.feature,
-    normalizedPath: path,
-  }
+    normalizedPath: path }
 }

@@ -35,8 +35,8 @@ export async function getCachedAccounts(params: {
   serviceAccountId?: string | null
 }): Promise<CachedAccount[]> {
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isActiveCondition = 'is_active = true'
+  const isDeletedCheck = 'is_deleted = FALSE'
 
   const scopeSqlParts: string[] = []
   const scopeParams: any[] = []
@@ -104,8 +104,8 @@ export async function upsertAccount(
     throw new Error('upsertAccount requires authScope.authType')
   }
   const db = await getDatabase()
-  const activeValue = db.type === 'postgres' ? true : 1
-  const notDeletedValue = db.type === 'postgres' ? false : 0
+  const activeValue = true
+  const notDeletedValue = false
 
   // 检查是否已存在
   const existing = (await db.queryOne(
@@ -139,8 +139,8 @@ export async function upsertAccount(
           identity_verification_completion_deadline_time = ?,
           identity_verification_overdue = ?,
           identity_verification_checked_at = ?,
-          last_sync_at = datetime('now'),
-          updated_at = datetime('now')
+          last_sync_at = NOW(),
+          updated_at = NOW()
       WHERE id = ?
     `,
       [
@@ -181,7 +181,7 @@ export async function upsertAccount(
         identity_verification_overdue,
         identity_verification_checked_at,
         last_sync_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `,
       [
         userId,
@@ -206,7 +206,7 @@ export async function upsertAccount(
         account.identity_verification_checked_at ?? null,
       ]
     )
-    const insertedId = getInsertedId(result, db.type)
+    const insertedId = getInsertedId(result)
     return { id: insertedId, last_sync_at: new Date().toISOString() }
   }
 }
@@ -220,9 +220,9 @@ export async function deactivateMissingAccounts(params: {
   if (!params.seenCustomerIds || params.seenCustomerIds.size === 0) return
 
   const db = await getDatabase()
-  const inactiveValue = db.type === 'postgres' ? false : 0
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const inactiveValue = false
+  const isActiveCondition = 'is_active = true'
+  const isDeletedCheck = 'is_deleted = FALSE'
 
   const scopeSqlParts: string[] = []
   const scopeParams: any[] = []
@@ -261,7 +261,7 @@ export async function deactivateMissingAccounts(params: {
   await db.exec(
     `
     UPDATE google_ads_accounts
-    SET is_active = ?, updated_at = datetime('now')
+    SET is_active = ?, updated_at = NOW()
     WHERE user_id = ?
       AND ${isDeletedCheck}
       AND ${scopeSql}

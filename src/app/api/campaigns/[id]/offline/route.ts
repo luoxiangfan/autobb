@@ -192,7 +192,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     // 先执行本地标记下线，避免外部接口阻塞
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFunc = 'NOW()'
 
     await applyCampaignTransition({
       userId,
@@ -235,7 +235,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
             WHERE offer_id = ?
               AND user_id = ?
               AND status IN ('pending', 'running', 'paused')
-              AND IS_DELETED_FALSE
+              AND is_deleted = FALSE
           `,
           [campaignRow.offer_id, userId]
         )
@@ -251,7 +251,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
               AND user_id = ?
               AND status = 'paused'
               AND pause_reason = 'offline'
-              AND IS_DELETED_FALSE
+              AND is_deleted = FALSE
           `,
           [campaignRow.offer_id, userId]
         )
@@ -270,10 +270,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     // 可选：暂停换链接任务
     let urlSwapPaused = 0
     if (pauseUrlSwapTasks) {
-      const urlSwapNotDeletedCondition =
-        db.type === 'postgres'
-          ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-          : '(is_deleted = 0 OR is_deleted IS NULL)'
+      const urlSwapNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
       urlSwapPaused = (
         await db.exec(
           `

@@ -60,6 +60,5 @@ export function parseOpenclawCommandIntent(
     intent,
     riskLevel,
     requiresConfirmation,
-    summary: buildSummary({ method, path, riskLevel, requiresConfirmation }),
-  }
+    summary: buildSummary({ method, path, riskLevel, requiresConfirmation }) }
 }

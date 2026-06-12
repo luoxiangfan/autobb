@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       },
       {
         name: '数据库备份',
-        description: '自动备份SQLite数据库',
+        description: '自动备份 PostgreSQL 数据库',
         schedule: '每天凌晨2点',
         enabled: true,
       },

@@ -30,7 +30,6 @@ describe('GET /api/admin/users search operator', () => {
       user: { role: 'admin', userId: 1 },
     })
     dbFns.getDatabase.mockReturnValue({
-      type: 'postgres',
       queryOne: dbFns.queryOne,
       query: dbFns.query,
     })

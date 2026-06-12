@@ -2,7 +2,7 @@
  * 数据库自动初始化模块
  *
  * 在应用启动时自动检查并初始化数据库：
- * 1. 检测数据库类型（SQLite 或 PostgreSQL）
+ * 1. 连接 PostgreSQL（DATABASE_URL）
  * 2. 创建数据库表结构（如果不存在）
  * 3. 创建默认管理员账号
  * 4. 导入管理员配置（PostgreSQL 生产环境）
@@ -59,82 +59,23 @@ async function isDatabaseInitialized(): Promise<boolean> {
     'offer_tasks', // Offer提取任务表
   ]
 
-  if (db.type === 'sqlite') {
-    // SQLite: 检查所有关键表是否存在
-    try {
-      for (const table of criticalTables) {
-        const result = await db.query<{ count: number }>(
-          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name=?",
-          [table]
-        )
-        if (result[0].count === 0) {
-          console.log(`⚠️ 数据库初始化检查: 缺少关键表 '${table}'`)
-          return false
-        }
+  try {
+    for (const table of criticalTables) {
+      const result = await db.query<{ exists: boolean }>(
+        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = ?)',
+        [table]
+      )
+      if (!result[0].exists) {
+        console.log(`⚠️ 数据库初始化检查: 缺少关键表 '${table}'`)
+        return false
       }
-      console.log('✅ 数据库初始化检查: 所有关键表都存在')
-      return true
-    } catch (error) {
-      console.error('❌ 数据库初始化检查失败:', error)
-      return false
     }
-  } else {
-    // PostgreSQL: 检查所有关键表是否存在
-    try {
-      for (const table of criticalTables) {
-        const result = await db.query<{ exists: boolean }>(
-          'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
-          [table]
-        )
-        if (!result[0].exists) {
-          console.log(`⚠️ 数据库初始化检查: 缺少关键表 '${table}'`)
-          return false
-        }
-      }
-      console.log('✅ 数据库初始化检查: 所有关键表都存在')
-      return true
-    } catch (error) {
-      console.error('❌ 数据库初始化检查失败:', error)
-      return false
-    }
+    console.log('✅ 数据库初始化检查: 所有关键表都存在')
+    return true
+  } catch (error) {
+    console.error('❌ 数据库初始化检查失败:', error)
+    return false
   }
-}
-
-/**
- * 初始化 SQLite 数据库
- */
-async function initializeSQLite(): Promise<void> {
-  console.log('📦 Initializing SQLite database...')
-
-  const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'data', 'autoads.db')
-  const dataDir = path.dirname(dbPath)
-  const sqlPath = path.join(process.cwd(), 'migrations', '000_init_schema_consolidated.sqlite.sql')
-
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true })
-    console.log(`✅ Created data directory: ${dataDir}`)
-  }
-
-  if (!fs.existsSync(sqlPath)) {
-    console.log('⚠️  SQLite schema file not found.')
-    console.log(`   Expected: ${sqlPath}`)
-    console.log('   Please run: npm run db:init')
-    return
-  }
-
-  // 内存数据库无法依赖外部 db:init，必须在启动时自动灌入 schema。
-  if (dbPath === ':memory:') {
-    console.log('🧠 Detected in-memory SQLite, bootstrapping schema automatically...')
-    const sqlContent = fs.readFileSync(sqlPath, 'utf-8')
-    const db = await getDatabase()
-    await db.exec(sqlContent)
-    console.log('✅ In-memory SQLite schema initialized')
-    return
-  }
-
-  // 文件数据库仍沿用手工初始化流程（避免误覆盖既有运维流程）。
-  console.log('⚠️  SQLite database needs manual initialization.')
-  console.log('   Please run: npm run db:init')
 }
 
 /**
@@ -145,7 +86,7 @@ async function initializePostgreSQL(): Promise<void> {
 
   try {
     // 1. 从生成的SQL文件创建表结构
-    const sqlPath = path.join(process.cwd(), 'pg-migrations', '000_init_schema_consolidated.pg.sql')
+    const sqlPath = path.join(process.cwd(), 'migrations', '000_init_schema_consolidated.pg.sql')
     if (!fs.existsSync(sqlPath)) {
       throw new Error(`PostgreSQL schema file not found: ${sqlPath}`)
     }
@@ -157,7 +98,7 @@ async function initializePostgreSQL(): Promise<void> {
     console.log('\n📋 Creating database tables...')
     // 注意：整合初始化脚本可能包含自身的 BEGIN/COMMIT（历史迁移保留），因此不要再包一层事务
     await sql.unsafe(sqlContent)
-    console.log('✅ Schema created from pg-migrations/000_init_schema_consolidated.pg.sql')
+    console.log('✅ Schema created from migrations/000_init_schema_consolidated.pg.sql')
 
     // 2. 创建默认管理员账号
     await createDefaultAdmin()
@@ -185,74 +126,38 @@ async function createDefaultAdmin(): Promise<void> {
   console.log('\n👤 Creating default admin account...')
 
   const db = await getDatabase()
-  const asyncDb = db.type === 'postgres' ? getDatabase() : null
 
   try {
-    // 检查管理员是否已存在
-    let existingAdmin: any
+    const existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
+      DEFAULT_ADMIN.username,
+      'admin',
+    ])
 
-    if (db.type === 'sqlite') {
-      existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
-        DEFAULT_ADMIN.username,
-        'admin',
-      ])
-    } else {
-      const result = await asyncDb!.query('SELECT id FROM users WHERE username = $1 OR role = $2', [
-        DEFAULT_ADMIN.username,
-        'admin',
-      ])
-      existingAdmin = result[0]
-    }
-
-    // 生成密码哈希
     const passwordHash = await hashPassword(DEFAULT_ADMIN.password)
 
     if (existingAdmin) {
       console.log('⚠️  Admin account already exists, updating password...')
 
-      if (db.type === 'sqlite') {
-        db.exec(
-          'UPDATE users SET password_hash = ?, must_change_password = 0, is_active = 1, openclaw_enabled = 1 WHERE username = ? OR role = ?',
-          [passwordHash, DEFAULT_ADMIN.username, 'admin']
-        )
-      } else {
-        await asyncDb!.query(
-          'UPDATE users SET password_hash = $1, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = $2 OR role = $3',
-          [passwordHash, DEFAULT_ADMIN.username, 'admin']
-        )
-      }
+      await db.exec(
+        'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
+        [passwordHash, DEFAULT_ADMIN.username, 'admin']
+      )
 
       console.log('✅ Admin password updated')
     } else {
-      if (db.type === 'sqlite') {
-        db.exec(
-          `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, 1)`,
-          [
-            DEFAULT_ADMIN.username,
-            DEFAULT_ADMIN.email,
-            passwordHash,
-            DEFAULT_ADMIN.display_name,
-            DEFAULT_ADMIN.role,
-            DEFAULT_ADMIN.package_type,
-            DEFAULT_ADMIN.package_expires_at,
-          ]
-        )
-      } else {
-        await asyncDb!.query(
-          `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, TRUE, TRUE)`,
-          [
-            DEFAULT_ADMIN.username,
-            DEFAULT_ADMIN.email,
-            passwordHash,
-            DEFAULT_ADMIN.display_name,
-            DEFAULT_ADMIN.role,
-            DEFAULT_ADMIN.package_type,
-            DEFAULT_ADMIN.package_expires_at,
-          ]
-        )
-      }
+      await db.exec(
+        `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, TRUE, TRUE)`,
+        [
+          DEFAULT_ADMIN.username,
+          DEFAULT_ADMIN.email,
+          passwordHash,
+          DEFAULT_ADMIN.display_name,
+          DEFAULT_ADMIN.role,
+          DEFAULT_ADMIN.package_type,
+          DEFAULT_ADMIN.package_expires_at,
+        ]
+      )
 
       console.log('✅ Default admin account created')
       console.log('\n🔑 Admin credentials:')
@@ -279,7 +184,7 @@ async function createDefaultAdmin(): Promise<void> {
  *
  * 与 createDefaultAdmin() 的区别：
  * - createDefaultAdmin: 仅在数据库初始化时调用（PostgreSQL自动初始化）
- * - ensureAdminAccount: 每次启动都调用（SQLite开发环境需要）
+ * - ensureAdminAccount: 每次启动都调用
  *
  * 行为：
  * - 如果管理员不存在：创建新账号
@@ -289,94 +194,48 @@ async function ensureAdminAccount(): Promise<void> {
   console.log('\n👤 Checking admin account...')
 
   const db = await getDatabase()
-  const asyncDb = db.type === 'postgres' ? getDatabase() : null
 
   try {
-    // 检查管理员是否已存在
-    let existingAdmin: any
+    const existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
+      DEFAULT_ADMIN.username,
+      'admin',
+    ])
 
-    if (db.type === 'sqlite') {
-      existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
-        DEFAULT_ADMIN.username,
-        'admin',
-      ])
-    } else {
-      const result = await asyncDb!.query('SELECT id FROM users WHERE username = $1 OR role = $2', [
-        DEFAULT_ADMIN.username,
-        'admin',
-      ])
-      existingAdmin = result[0]
-    }
-
-    // 生成密码哈希
     const passwordHash = await hashPassword(DEFAULT_ADMIN.password)
 
     if (existingAdmin) {
-      // 管理员已存在，检查是否需要更新密码
       if (process.env.DEFAULT_ADMIN_PASSWORD) {
         console.log('⚠️  Admin account exists, updating password from environment variable...')
 
-        if (db.type === 'sqlite') {
-          db.exec(
-            'UPDATE users SET password_hash = ?, must_change_password = 0, is_active = 1, openclaw_enabled = 1 WHERE username = ? OR role = ?',
-            [passwordHash, DEFAULT_ADMIN.username, 'admin']
-          )
-        } else {
-          await asyncDb!.query(
-            'UPDATE users SET password_hash = $1, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = $2 OR role = $3',
-            [passwordHash, DEFAULT_ADMIN.username, 'admin']
-          )
-        }
+        await db.exec(
+          'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
+          [passwordHash, DEFAULT_ADMIN.username, 'admin']
+        )
 
         console.log('✅ Admin password updated')
       } else {
-        // 兜底：即使不更新密码，也确保管理员不被强制修改密码
-        if (db.type === 'sqlite') {
-          db.exec(
-            'UPDATE users SET must_change_password = 0, is_active = 1, openclaw_enabled = 1 WHERE username = ? OR role = ?',
-            [DEFAULT_ADMIN.username, 'admin']
-          )
-        } else {
-          await asyncDb!.query(
-            'UPDATE users SET must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = $1 OR role = $2',
-            [DEFAULT_ADMIN.username, 'admin']
-          )
-        }
+        await db.exec(
+          'UPDATE users SET must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
+          [DEFAULT_ADMIN.username, 'admin']
+        )
         console.log('✅ Admin account exists (password unchanged)')
       }
     } else {
-      // 管理员不存在，创建新账号
       console.log('⚠️  Admin account not found, creating...')
 
-      if (db.type === 'sqlite') {
-        db.exec(
-          `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, 1)`,
-          [
-            DEFAULT_ADMIN.username,
-            DEFAULT_ADMIN.email,
-            passwordHash,
-            DEFAULT_ADMIN.display_name,
-            DEFAULT_ADMIN.role,
-            DEFAULT_ADMIN.package_type,
-            DEFAULT_ADMIN.package_expires_at,
-          ]
-        )
-      } else {
-        await asyncDb!.query(
-          `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, TRUE, TRUE)`,
-          [
-            DEFAULT_ADMIN.username,
-            DEFAULT_ADMIN.email,
-            passwordHash,
-            DEFAULT_ADMIN.display_name,
-            DEFAULT_ADMIN.role,
-            DEFAULT_ADMIN.package_type,
-            DEFAULT_ADMIN.package_expires_at,
-          ]
-        )
-      }
+      await db.exec(
+        `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
+         VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, TRUE, TRUE)`,
+        [
+          DEFAULT_ADMIN.username,
+          DEFAULT_ADMIN.email,
+          passwordHash,
+          DEFAULT_ADMIN.display_name,
+          DEFAULT_ADMIN.role,
+          DEFAULT_ADMIN.package_type,
+          DEFAULT_ADMIN.package_expires_at,
+        ]
+      )
 
       console.log('✅ Admin account created')
       console.log('\n🔑 Admin credentials:')
@@ -405,7 +264,6 @@ async function insertDefaultSystemSettings(): Promise<void> {
   console.log('\n⚙️  Inserting default system settings...')
 
   const db = await getDatabase()
-  const asyncDb = db.type === 'postgres' ? getDatabase() : null
 
   const defaultSettings = [
     // Google Ads API配置
@@ -555,50 +413,25 @@ async function insertDefaultSystemSettings(): Promise<void> {
 
   try {
     for (const setting of defaultSettings) {
-      if (db.type === 'sqlite') {
-        // 检查配置是否已存在
-        const existing = db.queryOne(
-          'SELECT id FROM system_settings WHERE category = ? AND key = ? AND user_id IS NULL',
-          [setting.category, setting.key]
-        )
+      const existing = await db.queryOne(
+        'SELECT id FROM system_settings WHERE category = ? AND key = ? AND user_id IS NULL',
+        [setting.category, setting.key]
+      )
 
-        if (!existing) {
-          db.exec(
-            `INSERT INTO system_settings (user_id, category, key, data_type, is_sensitive, is_required, default_value, description)
-             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              setting.category,
-              setting.key,
-              setting.dataType,
-              setting.isSensitive ? 1 : 0,
-              setting.isRequired ? 1 : 0,
-              setting.defaultValue || null,
-              setting.description,
-            ]
-          )
-        }
-      } else {
-        // PostgreSQL
-        const existing = await asyncDb!.query(
-          'SELECT id FROM system_settings WHERE category = $1 AND key = $2 AND user_id IS NULL',
-          [setting.category, setting.key]
+      if (!existing) {
+        await db.exec(
+          `INSERT INTO system_settings (user_id, category, key, data_type, is_sensitive, is_required, default_value, description)
+           VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            setting.category,
+            setting.key,
+            setting.dataType,
+            setting.isSensitive,
+            setting.isRequired,
+            setting.defaultValue || null,
+            setting.description,
+          ]
         )
-
-        if (existing.length === 0) {
-          await asyncDb!.query(
-            `INSERT INTO system_settings (user_id, category, key, data_type, is_sensitive, is_required, default_value, description)
-             VALUES (NULL, $1, $2, $3, $4, $5, $6, $7)`,
-            [
-              setting.category,
-              setting.key,
-              setting.dataType,
-              setting.isSensitive,
-              setting.isRequired,
-              setting.defaultValue || null,
-              setting.description,
-            ]
-          )
-        }
       }
     }
 
@@ -613,12 +446,6 @@ async function insertDefaultSystemSettings(): Promise<void> {
  * 导入管理员配置（从导出文件）
  */
 async function importAdminConfig(): Promise<void> {
-  // 只在 PostgreSQL 生产环境导入
-  const db = await getDatabase()
-  if (db.type !== 'postgres') {
-    return
-  }
-
   if (!fs.existsSync(CONFIG_EXPORT_PATH)) {
     console.log('\n⏭️  No admin config export file found, skipping import')
     return
@@ -628,11 +455,10 @@ async function importAdminConfig(): Promise<void> {
 
   try {
     const exportData = JSON.parse(fs.readFileSync(CONFIG_EXPORT_PATH, 'utf-8'))
-    const asyncDb = getDatabase()
+    const db = await getDatabase()
 
-    // 查找管理员用户ID
-    const adminResult = await asyncDb.query<{ id: number }>(
-      'SELECT id FROM users WHERE username = $1 OR role = $2',
+    const adminResult = await db.query<{ id: number }>(
+      'SELECT id FROM users WHERE username = ? OR role = ?',
       ['autoads', 'admin']
     )
 
@@ -646,26 +472,24 @@ async function importAdminConfig(): Promise<void> {
     // 导入配置
     for (const setting of exportData.settings) {
       // 检查配置是否已存在
-      const existing = await asyncDb.query(
-        'SELECT id FROM system_settings WHERE category = $1 AND key = $2 AND (user_id = $3 OR user_id IS NULL)',
+      const existing = await db.query(
+        'SELECT id FROM system_settings WHERE category = ? AND key = ? AND (user_id = ? OR user_id IS NULL)',
         [setting.category, setting.key, setting.user_id === null ? null : adminUserId]
       )
 
       if (existing.length > 0) {
-        // 更新现有配置
-        await asyncDb.query(
+        await db.exec(
           `UPDATE system_settings
-           SET value = $1, encrypted_value = $2, updated_at = CURRENT_TIMESTAMP
-           WHERE id = $3`,
+           SET value = ?, encrypted_value = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`,
           [setting.value, setting.encrypted_value, existing[0].id]
         )
       } else {
-        // 插入新配置
-        await asyncDb.query(
+        await db.exec(
           `INSERT INTO system_settings (
             user_id, category, key, value, encrypted_value,
             data_type, is_sensitive, is_required, default_value, description
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             setting.user_id === null ? null : adminUserId,
             setting.category,
@@ -696,7 +520,6 @@ async function insertIndustryBenchmarks(): Promise<void> {
   console.log('\n📊 Inserting industry benchmarks...')
 
   const db = await getDatabase()
-  const asyncDb = db.type === 'postgres' ? getDatabase() : null
 
   // 行业基准数据（30个二级分类）
   const benchmarks = [
@@ -912,22 +735,12 @@ async function insertIndustryBenchmarks(): Promise<void> {
 
   try {
     for (const benchmark of benchmarks) {
-      if (db.type === 'sqlite') {
-        // 使用 INSERT OR IGNORE 避免重复
-        db.exec(
-          `INSERT OR IGNORE INTO industry_benchmarks (industry_l1, industry_l2, industry_code, avg_ctr, avg_cpc, avg_conversion_rate)
-           VALUES (?, ?, ?, ?, ?, ?)`,
-          [benchmark.l1, benchmark.l2, benchmark.code, benchmark.ctr, benchmark.cpc, benchmark.cvr]
-        )
-      } else {
-        // PostgreSQL: 使用 ON CONFLICT DO NOTHING
-        await asyncDb!.query(
-          `INSERT INTO industry_benchmarks (industry_l1, industry_l2, industry_code, avg_ctr, avg_cpc, avg_conversion_rate)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT (industry_code) DO NOTHING`,
-          [benchmark.l1, benchmark.l2, benchmark.code, benchmark.ctr, benchmark.cpc, benchmark.cvr]
-        )
-      }
+      await db.exec(
+        `INSERT INTO industry_benchmarks (industry_l1, industry_l2, industry_code, avg_ctr, avg_cpc, avg_conversion_rate)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (industry_code) DO NOTHING`,
+        [benchmark.l1, benchmark.l2, benchmark.code, benchmark.ctr, benchmark.cpc, benchmark.cvr]
+      )
     }
 
     console.log(`✅ Inserted ${benchmarks.length} industry benchmarks`)
@@ -981,17 +794,9 @@ export async function initializeDatabase(): Promise<void> {
 
   console.log('⚠️  Database not initialized, starting initialization...\n')
 
-  const db = await getDatabase()
-
-  if (db.type === 'sqlite') {
-    await runStep('SQLite初始化', async () => {
-      await initializeSQLite()
-    })
-  } else {
-    await runStep('PostgreSQL初始化', async () => {
-      await initializePostgreSQL()
-    })
-  }
+  await runStep('PostgreSQL初始化', async () => {
+    await initializePostgreSQL()
+  })
 
   // 初始化完成后也执行迁移（确保所有增量迁移都被应用）
   await runStep('增量迁移检查', async () => {
@@ -1038,9 +843,6 @@ function calculateFileHash(content: string): string {
  */
 async function alignPostgresSequences(): Promise<void> {
   const db = await getDatabase()
-  if (db.type !== 'postgres') {
-    return
-  }
 
   try {
     await db.query(`
@@ -1070,24 +872,15 @@ async function alignPostgresSequences(): Promise<void> {
  * 4. 按文件名顺序执行未执行的迁移
  * 5. 记录执行结果和文件 hash 到 migration_history 表
  *
- * 迁移文件命名规范：
- * - SQLite: {编号}_{描述}.sql (如 037_add_keywords.sql)
- * - PostgreSQL: {编号}_{描述}.pg.sql (如 037_add_keywords.pg.sql)
- * - 000 开头的是初始化 schema，不参与增量迁移
+ * 迁移文件命名规范：migrations/{编号}_{描述}.pg.sql；000 开头为初始化 schema，不参与增量迁移
  */
 async function runPendingMigrations(): Promise<void> {
-  const db = await getDatabase()
-
   // PostgreSQL: 迁移前对齐序列，避免 prompt_versions 主键冲突
   await alignPostgresSequences()
 
-  // 🎯 根据数据库类型选择迁移目录
-  const migrationsDir =
-    db.type === 'postgres'
-      ? path.join(process.cwd(), 'pg-migrations')
-      : path.join(process.cwd(), 'migrations')
+  const migrationsDir = path.join(process.cwd(), 'migrations')
 
-  console.log(`🔍 Checking migrations in: ${migrationsDir} (DB type: ${db.type})`)
+  console.log(`🔍 Checking migrations in: ${migrationsDir}`)
 
   // 检查迁移目录是否存在
   if (!fs.existsSync(migrationsDir)) {
@@ -1099,10 +892,7 @@ async function runPendingMigrations(): Promise<void> {
   await ensureMigrationHistoryTable()
 
   // 获取所有迁移文件（含 archived_* 子目录）
-  const migrationFiles = listIncrementalMigrationFiles(
-    migrationsDir,
-    db.type === 'postgres' ? 'postgres' : 'sqlite'
-  )
+  const migrationFiles = listIncrementalMigrationFiles(migrationsDir)
 
   if (migrationFiles.length === 0) {
     console.log('📋 No migration files found')
@@ -1194,43 +984,25 @@ async function runPendingMigrations(): Promise<void> {
 async function ensureMigrationHistoryTable(): Promise<void> {
   const db = await getDatabase()
 
-  if (db.type === 'sqlite') {
-    await db.exec(`
-      CREATE TABLE IF NOT EXISTS migration_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        migration_name TEXT NOT NULL UNIQUE,
-        file_hash TEXT,
-        executed_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )
-    `)
-    // 添加 file_hash 列（如果不存在）
-    const columns = await db.query<{ name: string }>(`PRAGMA table_info(migration_history)`)
-    const hasFileHash = columns.some((col) => col.name === 'file_hash')
-    if (!hasFileHash) {
-      await db.exec(`ALTER TABLE migration_history ADD COLUMN file_hash TEXT`)
-    }
-  } else {
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS migration_history (
-        id SERIAL PRIMARY KEY,
-        migration_name TEXT NOT NULL UNIQUE,
-        file_hash TEXT,
-        executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
-    // 添加 file_hash 列（如果不存在）
-    await db.query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_name = 'migration_history' AND column_name = 'file_hash'
-        ) THEN
-          ALTER TABLE migration_history ADD COLUMN file_hash TEXT;
-        END IF;
-      END $$;
-    `)
-  }
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS migration_history (
+      id SERIAL PRIMARY KEY,
+      migration_name TEXT NOT NULL UNIQUE,
+      file_hash TEXT,
+      executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `)
+  await db.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'migration_history' AND column_name = 'file_hash'
+      ) THEN
+        ALTER TABLE migration_history ADD COLUMN file_hash TEXT;
+      END IF;
+    END $$;
+  `)
 }
 
 /**
@@ -1270,159 +1042,37 @@ async function getExecutedMigrations(): Promise<Map<string, string | null>> {
 }
 
 /**
- * SQLite 单条语句执行（区分 query / exec）
- */
-async function executeSingleSqliteStatement(
-  db: Awaited<ReturnType<typeof getDatabase>>,
-  stmt: string
-): Promise<void> {
-  if (/^SELECT\b/i.test(stmt)) {
-    await db.query(stmt)
-    return
-  }
-
-  if (/^PRAGMA\b/i.test(stmt)) {
-    try {
-      await db.query(stmt)
-    } catch (pragmaError) {
-      const pragmaMsg = pragmaError instanceof Error ? pragmaError.message : String(pragmaError)
-      if (pragmaMsg.includes('does not return data')) {
-        await db.exec(stmt)
-      } else {
-        throw pragmaError
-      }
-    }
-    return
-  }
-
-  await db.exec(stmt)
-}
-
-function isSqliteAddColumnIfNotExistsSyntaxError(stmt: string, errorMsg: string): boolean {
-  return (
-    /\bALTER\s+TABLE\b/i.test(stmt) &&
-    /\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b/i.test(stmt) &&
-    /near\s+["']EXISTS["']\s*:\s*syntax error/i.test(errorMsg)
-  )
-}
-
-function rewriteSqliteAddColumnIfNotExists(stmt: string): string {
-  return stmt.replace(/\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b/i, 'ADD COLUMN')
-}
-
-/**
  * 执行单个迁移
  */
 async function executeMigration(name: string, sql: string): Promise<void> {
   const db = await getDatabase()
 
-  // 分割多个 SQL 语句（按分号分割，但忽略字符串中的分号）
-  const statements = splitSqlStatements(
-    normalizeMigrationSql(sql, db.type === 'postgres' ? 'postgres' : 'sqlite')
-  )
+  const statements = splitSqlStatements(normalizeMigrationSql(sql))
 
-  if (db.type === 'sqlite') {
-    // SQLite: 逐条执行
-    // 注意：部分迁移会临时关闭 foreign_keys。若迁移失败且未恢复，会影响后续迁移与运行期行为。
-    // 这里在 finally 中强制恢复，避免“失败后 foreign_keys 仍为 OFF”的隐性状态。
-    try {
-      for (let stmtIndex = 0; stmtIndex < statements.length; stmtIndex++) {
-        const stmt = statements[stmtIndex]
-        const trimmedStmt = stmt.trim()
-        if (trimmedStmt) {
-          let stmtForExecution = trimmedStmt
-          try {
-            try {
-              // SQLite：区分“返回结果的查询”与“无返回的语句”
-              // - SELECT 一定返回结果集（可能为空）
-              // - PRAGMA 既可能返回结果（如 PRAGMA table_info），也可能仅设置参数（如 PRAGMA foreign_keys=ON）
-              await executeSingleSqliteStatement(db, stmtForExecution)
-            } catch (firstError) {
-              const firstErrorMsg =
-                firstError instanceof Error ? firstError.message : String(firstError)
-              if (!isSqliteAddColumnIfNotExistsSyntaxError(stmtForExecution, firstErrorMsg)) {
-                throw firstError
-              }
-
-              // 兼容旧版 SQLite：不支持 ADD COLUMN IF NOT EXISTS，回退为 ADD COLUMN，
-              // 若列已存在会进入幂等错误分支被跳过。
-              stmtForExecution = rewriteSqliteAddColumnIfNotExists(stmtForExecution)
-              console.log(
-                `   🔧 Rewritten for SQLite compatibility: ${stmtForExecution.substring(0, 80)}...`
-              )
-              try {
-                await executeSingleSqliteStatement(db, stmtForExecution)
-              } catch (retryError) {
-                throw retryError
-              }
-            }
-          } catch (error) {
-            // 忽略 "column already exists" 等幂等性错误
-            const errorMsg = error instanceof Error ? error.message : String(error)
-            const isPromptVersionsUniqueConflict =
-              errorMsg.includes(
-                'UNIQUE constraint failed: prompt_versions.prompt_id, prompt_versions.version'
-              ) &&
-              (/\bINSERT\s+INTO\s+prompt_versions\b/i.test(stmtForExecution) ||
-                /\bUPDATE\s+prompt_versions\b/i.test(stmtForExecution))
-
-            const isIdempotentError =
-              errorMsg.includes('duplicate column name') ||
-              errorMsg.includes('already exists') ||
-              isPromptVersionsUniqueConflict
-
-            if (!isIdempotentError) {
-              const context =
-                `${name}: statement ${stmtIndex + 1}/${statements.length} failed\n` +
-                `${stmtForExecution.substring(0, 500)}${stmtForExecution.length > 500 ? '...' : ''}\n` +
-                `Error: ${errorMsg}`
-              throw new Error(context)
-            }
-
-            const reason = isPromptVersionsUniqueConflict
-              ? 'prompt version already exists'
-              : 'already exists'
-            console.log(`   ⏭️  Skipped (${reason}): ${stmtForExecution.substring(0, 60)}...`)
-          }
-        }
+  const rawSql = (db as any).getRawConnection()
+  await rawSql.begin(async (tx: any) => {
+    for (const stmt of statements) {
+      if (!stmt.trim()) {
+        continue
       }
-    } finally {
+
       try {
-        await db.exec('PRAGMA foreign_keys = ON')
-      } catch {
-        // ignore
+        await tx.savepoint(async (sp: any) => {
+          await sp.unsafe(stmt)
+        })
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        if (
+          errorMsg.includes('already exists') ||
+          errorMsg.includes('duplicate key value violates unique constraint')
+        ) {
+          console.log(`   ⏭️  Skipped (already exists): ${stmt.substring(0, 60)}...`)
+        } else {
+          throw error
+        }
       }
     }
-  } else {
-    // PostgreSQL: 使用事务
-    const rawSql = (db as any).getRawConnection()
-    await rawSql.begin(async (tx: any) => {
-      for (const stmt of statements) {
-        if (!stmt.trim()) {
-          continue
-        }
-
-        try {
-          // 使用 SAVEPOINT 避免“已忽略错误导致事务中断”
-          await tx.savepoint(async (sp: any) => {
-            await sp.unsafe(stmt)
-          })
-        } catch (error) {
-          // 忽略 "column already exists" 和 "duplicate key" 等幂等性错误
-          const errorMsg = error instanceof Error ? error.message : String(error)
-          if (
-            errorMsg.includes('already exists') ||
-            errorMsg.includes('duplicate key value violates unique constraint')
-          ) {
-            console.log(`   ⏭️  Skipped (already exists): ${stmt.substring(0, 60)}...`)
-            // 不抛出异常，继续执行下一条语句
-          } else {
-            throw error
-          }
-        }
-      }
-    })
-  }
+  })
 }
 
 /**
@@ -1431,26 +1081,14 @@ async function executeMigration(name: string, sql: string): Promise<void> {
 async function recordMigration(name: string, fileHash: string): Promise<void> {
   const db = await getDatabase()
 
-  if (db.type === 'sqlite') {
-    // 先尝试更新（如果存在），否则插入
-    await db.exec(
-      `INSERT INTO migration_history (migration_name, file_hash, executed_at)
-       VALUES (?, ?, datetime('now'))
-       ON CONFLICT(migration_name) DO UPDATE SET
-         file_hash = excluded.file_hash,
-         executed_at = datetime('now')`,
-      [name, fileHash]
-    )
-  } else {
-    await db.query(
-      `INSERT INTO migration_history (migration_name, file_hash)
-       VALUES ($1, $2)
-       ON CONFLICT (migration_name) DO UPDATE SET
-         file_hash = EXCLUDED.file_hash,
-         executed_at = CURRENT_TIMESTAMP`,
-      [name, fileHash]
-    )
-  }
+  await db.query(
+    `INSERT INTO migration_history (migration_name, file_hash)
+     VALUES (?, ?)
+     ON CONFLICT (migration_name) DO UPDATE SET
+       file_hash = EXCLUDED.file_hash,
+       executed_at = CURRENT_TIMESTAMP`,
+    [name, fileHash]
+  )
 }
 
 // 全局标记：是否需要恢复队列任务（声明在全局作用域）
@@ -1524,39 +1162,19 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
     // 🔥 新增：检查offer_tasks表是否存在，避免在数据库未初始化时报错
     let dbClearedCount = 0
     try {
-      // 检查offer_tasks表是否存在
-      let tableExists = false
-      if (db.type === 'sqlite') {
-        const result = await db.query<{ count: number }>(
-          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='offer_tasks'"
-        )
-        tableExists = result[0].count > 0
-      } else {
-        // PostgreSQL
-        const result = await db.query<{ exists: boolean }>(
-          "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'offer_tasks')"
-        )
-        tableExists = result[0].exists
-      }
+      const tableResult = await db.query<{ exists: boolean }>(
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'offer_tasks')"
+      )
+      const tableExists = tableResult[0].exists
 
       if (!tableExists) {
         console.log('  ℹ️  数据库: offer_tasks表不存在，跳过清理')
       } else {
-        // 表存在，执行清理
-        if (db.type === 'sqlite') {
-          const result = await db.exec(`
-            DELETE FROM offer_tasks
-            WHERE status IN ('pending', 'running')
-          `)
-          dbClearedCount = result.changes
-        } else {
-          // PostgreSQL
-          const result = await db.query(`
-            DELETE FROM offer_tasks
-            WHERE status IN ('pending', 'running')
-          `)
-          dbClearedCount = result.length
-        }
+        const result = await db.exec(`
+          DELETE FROM offer_tasks
+          WHERE status IN ('pending', 'running')
+        `)
+        dbClearedCount = result.changes
         if (dbClearedCount > 0) {
           console.log(`  ✅ 数据库: 已清空 ${dbClearedCount} 个未完成任务`)
         }

@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
       SELECT DISTINCT o.id as offer_id, o.target_country
       FROM campaigns c
       INNER JOIN offers o ON c.offer_id = o.id
-      WHERE c.id IN (${campaignIdPlaceholders}) AND c.user_id = ? AND c.IS_DELETED_FALSE
-        AND o.IS_DELETED_FALSE
+      WHERE c.id IN (${campaignIdPlaceholders}) AND c.user_id = ? AND c.is_deleted = FALSE
+        AND o.is_deleted = FALSE
     `,
       [...normalizedCampaignIds, userId]
     )) as Array<{

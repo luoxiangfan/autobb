@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
-  type: 'sqlite' as const,
 }))
 
 const assignmentFns = vi.hoisted(() => ({

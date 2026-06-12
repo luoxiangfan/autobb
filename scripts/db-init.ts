@@ -114,7 +114,7 @@ async function waitForDatabase(
       await Promise.race([sql`SELECT 1`, timeoutPromise])
       console.log(`✅ 数据库连接成功 (尝试 ${i + 1}/${maxRetries})`)
       return true
-    } catch (error) {
+    } catch (_error) {
       console.log(`⏳ 等待数据库就绪... (${i + 1}/${maxRetries})`)
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
@@ -142,7 +142,7 @@ async function checkDatabaseInitialized(sql: ReturnType<typeof postgres>): Promi
     }
 
     return allTablesExist
-  } catch (error) {
+  } catch (_error) {
     return false
   }
 }
@@ -150,14 +150,14 @@ async function checkDatabaseInitialized(sql: ReturnType<typeof postgres>): Promi
 async function initializeDatabase(sql: ReturnType<typeof postgres>): Promise<void> {
   // 支持本地开发和 Docker 容器两种路径
   const possiblePaths = [
-    resolve('/app/pg-migrations/000_init_schema_consolidated.pg.sql'), // Docker 容器（推荐）
-    resolve(__dirname, '../pg-migrations/000_init_schema_consolidated.pg.sql'), // 本地开发（推荐）
-    resolve(process.cwd(), 'pg-migrations/000_init_schema_consolidated.pg.sql'), // 当前目录（推荐）
+    resolve('/app/migrations/000_init_schema_consolidated.pg.sql'), // Docker 容器（推荐）
+    resolve(__dirname, '../migrations/000_init_schema_consolidated.pg.sql'), // 本地开发（推荐）
+    resolve(process.cwd(), 'migrations/000_init_schema_consolidated.pg.sql'), // 当前目录（推荐）
 
     // 兼容旧版本文件名
-    resolve('/app/pg-migrations/000_init_schema_v2.pg.sql'),
-    resolve(__dirname, '../pg-migrations/000_init_schema_v2.pg.sql'),
-    resolve(process.cwd(), 'pg-migrations/000_init_schema_v2.pg.sql'),
+    resolve('/app/migrations/000_init_schema_v2.pg.sql'),
+    resolve(__dirname, '../migrations/000_init_schema_v2.pg.sql'),
+    resolve(process.cwd(), 'migrations/000_init_schema_v2.pg.sql'),
   ]
 
   let migrationPath = ''
@@ -242,9 +242,9 @@ function isIgnorablePostgresMigrationError(errorMessage: string): boolean {
 async function runPendingMigrations(sql: ReturnType<typeof postgres>): Promise<void> {
   const startedAt = Date.now()
   const possiblePaths = [
-    resolve('/app/pg-migrations'),
-    resolve(__dirname, '../pg-migrations'),
-    resolve(process.cwd(), 'pg-migrations'),
+    resolve('/app/migrations'),
+    resolve(__dirname, '../migrations'),
+    resolve(process.cwd(), 'migrations'),
   ]
 
   const migrationsPath = possiblePaths.find((p) => existsSync(p))
@@ -452,7 +452,7 @@ async function safeCloseConnection(sql: ReturnType<typeof postgres>, name: strin
     )
     await Promise.race([closePromise, timeoutPromise])
     console.log(`✅ ${name}连接已关闭`)
-  } catch (error) {
+  } catch (_error) {
     console.warn(`⚠️  ${name}连接关闭超时，强制继续`)
   }
 }

@@ -3,64 +3,50 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/openclaw/feishu/chat-health/ingest/route'
 
 const gatewayAuthFns = vi.hoisted(() => ({
-  verifyOpenclawGatewayToken: vi.fn(),
-}))
+  verifyOpenclawGatewayToken: vi.fn() }))
 
 const sessionAuthFns = vi.hoisted(() => ({
-  verifyOpenclawSessionAuth: vi.fn(),
-}))
+  verifyOpenclawSessionAuth: vi.fn() }))
 
 const healthFns = vi.hoisted(() => ({
   recordFeishuChatHealthLog: vi.fn(),
-  backfillFeishuChatHealthRunLinks: vi.fn(),
-}))
+  backfillFeishuChatHealthRunLinks: vi.fn() }))
 
 const accountFns = vi.hoisted(() => ({
-  parseFeishuAccountUserId: vi.fn(),
-}))
+  parseFeishuAccountUserId: vi.fn() }))
 
 const bindingFns = vi.hoisted(() => ({
-  resolveOpenclawUserFromBinding: vi.fn(),
-}))
+  resolveOpenclawUserFromBinding: vi.fn() }))
 
 const dbFns = vi.hoisted(() => ({
-  getDatabase: vi.fn(),
-}))
+  getDatabase: vi.fn() }))
 
 vi.mock('@/lib/openclaw/auth', () => ({
-  verifyOpenclawGatewayToken: gatewayAuthFns.verifyOpenclawGatewayToken,
-}))
+  verifyOpenclawGatewayToken: gatewayAuthFns.verifyOpenclawGatewayToken }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  verifyOpenclawSessionAuth: sessionAuthFns.verifyOpenclawSessionAuth,
-}))
+  verifyOpenclawSessionAuth: sessionAuthFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/feishu-chat-health', () => ({
   recordFeishuChatHealthLog: healthFns.recordFeishuChatHealthLog,
-  backfillFeishuChatHealthRunLinks: healthFns.backfillFeishuChatHealthRunLinks,
-}))
+  backfillFeishuChatHealthRunLinks: healthFns.backfillFeishuChatHealthRunLinks }))
 
 vi.mock('@/lib/openclaw/feishu-accounts', () => ({
-  parseFeishuAccountUserId: accountFns.parseFeishuAccountUserId,
-}))
+  parseFeishuAccountUserId: accountFns.parseFeishuAccountUserId }))
 
 vi.mock('@/lib/openclaw/bindings', () => ({
-  resolveOpenclawUserFromBinding: bindingFns.resolveOpenclawUserFromBinding,
-}))
+  resolveOpenclawUserFromBinding: bindingFns.resolveOpenclawUserFromBinding }))
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+  getDatabase: dbFns.getDatabase }))
 
 function createRequest(body: unknown, token?: string) {
   return new NextRequest('http://localhost/api/openclaw/feishu/chat-health/ingest', {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-  })
+      ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    body: JSON.stringify(body) })
 }
 
 describe('openclaw feishu chat health ingest route', () => {
@@ -71,13 +57,11 @@ describe('openclaw feishu chat health ingest route', () => {
     sessionAuthFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: false,
       status: 401,
-      error: '未授权',
-    })
+      error: '未授权' })
     accountFns.parseFeishuAccountUserId.mockReturnValue(7)
     bindingFns.resolveOpenclawUserFromBinding.mockResolvedValue(null)
     dbFns.getDatabase.mockResolvedValue({
-      queryOne: vi.fn().mockResolvedValue(null),
-    })
+      queryOne: vi.fn().mockResolvedValue(null) })
     healthFns.recordFeishuChatHealthLog.mockResolvedValue(undefined)
     healthFns.backfillFeishuChatHealthRunLinks.mockResolvedValue({ updatedRuns: 0 })
   })
@@ -88,8 +72,7 @@ describe('openclaw feishu chat health ingest route', () => {
       decision: 'blocked',
       reasonCode: 'group_require_mention',
       messageText: 'hello',
-      senderCandidates: ['ou_1'],
-    }, 'gateway-token'))
+      senderCandidates: ['ou_1'] }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -103,8 +86,7 @@ describe('openclaw feishu chat health ingest route', () => {
         userId: 7,
         accountId: 'user-7',
         decision: 'blocked',
-        reasonCode: 'group_require_mention',
-      })
+        reasonCode: 'group_require_mention' })
     )
     expect(healthFns.backfillFeishuChatHealthRunLinks).not.toHaveBeenCalled()
   })
@@ -115,8 +97,7 @@ describe('openclaw feishu chat health ingest route', () => {
       decision: 'blocked',
       reasonCode: 'duplicate_message',
       reasonMessage: 'duplicate message skipped by dedup',
-      messageId: 'om_dup_1',
-    }, 'gateway-token'))
+      messageId: 'om_dup_1' }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -132,14 +113,12 @@ describe('openclaw feishu chat health ingest route', () => {
     gatewayAuthFns.verifyOpenclawGatewayToken.mockResolvedValue(false)
     sessionAuthFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
-      user: { userId: 7, role: 'member' },
-    })
+      user: { userId: 7, role: 'member' } })
 
     const res = await POST(createRequest({
       accountId: 'user-7',
       decision: 'blocked',
-      reasonCode: 'group_require_mention',
-    }, 'bad-token'))
+      reasonCode: 'group_require_mention' }, 'bad-token'))
 
     const payload = await res.json()
 
@@ -156,8 +135,7 @@ describe('openclaw feishu chat health ingest route', () => {
       senderCandidates: ['ou_1'],
       decision: 'allowed',
       reasonCode: 'reply_dispatched',
-      messageText: 'hello',
-    }, 'gateway-token'))
+      messageText: 'hello' }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -170,8 +148,7 @@ describe('openclaw feishu chat health ingest route', () => {
       expect.objectContaining({
         userId: 7,
         messageId: 'om_1',
-        senderIds: ['ou_1'],
-      })
+        senderIds: ['ou_1'] })
     )
   })
 
@@ -179,16 +156,14 @@ describe('openclaw feishu chat health ingest route', () => {
     accountFns.parseFeishuAccountUserId.mockReturnValue(null)
     bindingFns.resolveOpenclawUserFromBinding.mockResolvedValue(null)
     dbFns.getDatabase.mockResolvedValue({
-      queryOne: vi.fn().mockResolvedValue(null),
-    })
+      queryOne: vi.fn().mockResolvedValue(null) })
 
     const res = await POST(createRequest({
       accountId: 'cli_xxx',
       senderPrimaryId: 'ou_unknown',
       senderCandidates: ['ou_unknown'],
       decision: 'blocked',
-      reasonCode: 'dm_allowlist_denied',
-    }, 'gateway-token'))
+      reasonCode: 'dm_allowlist_denied' }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -207,8 +182,7 @@ describe('openclaw feishu chat health ingest route', () => {
       senderId: 'ou_alias_1',
       decision: 'allowed',
       reasonCode: 'reply_dispatched',
-      messageId: 'req_123',
-    }, 'gateway-token'))
+      messageId: 'req_123' }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -221,8 +195,7 @@ describe('openclaw feishu chat health ingest route', () => {
       'feishu',
       'ou_alias_1',
       expect.objectContaining({
-        accountId: 'unknown',
-      })
+        accountId: 'unknown' })
     )
     expect(healthFns.recordFeishuChatHealthLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -230,8 +203,7 @@ describe('openclaw feishu chat health ingest route', () => {
         accountId: 'unknown',
         messageId: undefined,
         senderPrimaryId: 'ou_alias_1',
-        senderCandidates: ['ou_alias_1'],
-      })
+        senderCandidates: ['ou_alias_1'] })
     )
     expect(healthFns.backfillFeishuChatHealthRunLinks).not.toHaveBeenCalled()
   })
@@ -248,8 +220,7 @@ describe('openclaw feishu chat health ingest route', () => {
       reason: 'reply_dispatched',
       message_id: 'om_x1',
       tenant_key: 'tenant_1',
-      message_text: 'hello',
-    }, 'gateway-token'))
+      message_text: 'hello' }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -264,8 +235,7 @@ describe('openclaw feishu chat health ingest route', () => {
         senderOpenId: 'ou_snake_1',
         decision: 'allowed',
         reasonCode: 'reply_dispatched',
-        messageId: 'om_x1',
-      })
+        messageId: 'om_x1' })
     )
   })
 
@@ -279,8 +249,7 @@ describe('openclaw feishu chat health ingest route', () => {
       sender_candidates: ['ou_inbound_1'],
       decision: 'allowed',
       reason_code: 'reply_dispatched',
-      inbound_message_id: 'om_inbound_123',
-    }, 'gateway-token'))
+      inbound_message_id: 'om_inbound_123' }, 'gateway-token'))
 
     const payload = await res.json()
 
@@ -294,15 +263,13 @@ describe('openclaw feishu chat health ingest route', () => {
         userId: 21,
         accountId: 'cli_feishu_main',
         messageId: 'om_inbound_123',
-        reasonCode: 'reply_dispatched',
-      })
+        reasonCode: 'reply_dispatched' })
     )
     expect(healthFns.backfillFeishuChatHealthRunLinks).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 21,
         messageId: 'om_inbound_123',
-        senderIds: ['ou_inbound_1'],
-      })
+        senderIds: ['ou_inbound_1'] })
     )
   })
 })

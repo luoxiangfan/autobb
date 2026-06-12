@@ -253,7 +253,7 @@ async function saveQueueConfigToDB(config: typeof DEFAULT_QUEUE_CONFIG): Promise
     await db.exec(
       `
       UPDATE system_settings
-      SET value = ?, updated_at = datetime('now')
+      SET value = ?, updated_at = NOW()
       WHERE category = 'queue' AND key = 'config' AND user_id IS NULL
     `,
       [configJson]

@@ -6,7 +6,6 @@ const mockExec = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     query: mockQuery,
     queryOne: mockQueryOne,
     exec: mockExec,
@@ -63,14 +62,12 @@ describe('campaign-backups helpers', () => {
   })
 
   it('getBackupRankOrderSql prefers config, version, and updated_at', () => {
-    const sqlite = getBackupRankOrderSql('sqlite', 'cb')
-    expect(sqlite).toContain('cb.backup_version DESC')
-    expect(sqlite).toContain('cb.campaign_config IS NOT NULL')
-    expect(sqlite).toContain('cb.updated_at DESC')
-
-    const pg = getBackupRankOrderSql('postgres')
-    expect(pg).toContain('campaign_config::text')
-    expect(pg).not.toContain('TRIM(')
+    const orderSql = getBackupRankOrderSql('cb')
+    expect(orderSql).toContain('cb.backup_version DESC')
+    expect(orderSql).toContain('cb.campaign_config IS NOT NULL')
+    expect(orderSql).toContain('cb.updated_at DESC')
+    expect(orderSql).toContain('campaign_config::text')
+    expect(orderSql).not.toContain('TRIM(')
   })
 
   it('parseCampaignBackup maps snake_case and parses JSON fields', () => {
@@ -123,18 +120,20 @@ describe('createCampaignBackup', () => {
     mockExec.mockReset()
   })
 
-  it('isCampaignBackupOfferUniqueViolation detects sqlite and postgres errors', () => {
-    expect(
-      isCampaignBackupOfferUniqueViolation(
-        new Error('UNIQUE constraint failed: campaign_backups.user_id, campaign_backups.offer_id')
-      )
-    ).toBe(true)
+  it('isCampaignBackupOfferUniqueViolation detects PostgreSQL unique constraint errors', () => {
     expect(
       isCampaignBackupOfferUniqueViolation({
         code: '23505',
         message:
           'duplicate key value violates unique constraint "idx_campaign_backups_user_offer_unique"',
       })
+    ).toBe(true)
+    expect(
+      isCampaignBackupOfferUniqueViolation(
+        new Error(
+          'duplicate key value violates unique constraint "idx_campaign_backups_user_offer_unique"'
+        )
+      )
     ).toBe(true)
     expect(isCampaignBackupOfferUniqueViolation(new Error('other'))).toBe(false)
   })
@@ -208,9 +207,11 @@ describe('createCampaignBackup', () => {
       })
 
     mockExec
-      .mockRejectedValueOnce(
-        new Error('UNIQUE constraint failed: campaign_backups.user_id, campaign_backups.offer_id')
-      )
+      .mockRejectedValueOnce({
+        code: '23505',
+        message:
+          'duplicate key value violates unique constraint "idx_campaign_backups_user_offer_unique"',
+      })
       .mockResolvedValueOnce({ changes: 1 })
 
     const backup = await createCampaignBackup({

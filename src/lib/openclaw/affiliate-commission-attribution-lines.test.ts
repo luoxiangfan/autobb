@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   preferAttributionLineItemsIfHigher,
-  sumAffiliateCommissionLineItems,
-} from '@/lib/openclaw/affiliate-commission-attribution-lines'
+  sumAffiliateCommissionLineItems } from '@/lib/openclaw/affiliate-commission-attribution-lines'
 import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
 
 function makeItem(commission: number): AffiliateCommissionLineItem {
@@ -14,8 +13,7 @@ function makeItem(commission: number): AffiliateCommissionLineItem {
     brandKey: 'yeahpromos:advert:100',
     brandName: 'Brand A',
     commission,
-    advertId: '100',
-  }
+    advertId: '100' }
 }
 
 describe('affiliate-commission-attribution-lines', () => {
@@ -25,8 +23,7 @@ describe('affiliate-commission-attribution-lines', () => {
 
     const selected = preferAttributionLineItemsIfHigher({
       rawDerived,
-      attributionDerived,
-    })
+      attributionDerived })
 
     expect(selected).toBe(attributionDerived)
     expect(sumAffiliateCommissionLineItems(selected)).toBeCloseTo(20.75, 2)
@@ -38,8 +35,7 @@ describe('affiliate-commission-attribution-lines', () => {
 
     const selected = preferAttributionLineItemsIfHigher({
       rawDerived,
-      attributionDerived,
-    })
+      attributionDerived })
 
     expect(selected).toBe(rawDerived)
   })
@@ -49,8 +45,7 @@ describe('affiliate-commission-attribution-lines', () => {
 
     const selected = preferAttributionLineItemsIfHigher({
       rawDerived,
-      attributionDerived: [],
-    })
+      attributionDerived: [] })
 
     expect(selected).toBe(rawDerived)
   })

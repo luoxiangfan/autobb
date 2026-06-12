@@ -166,7 +166,7 @@ async function getTopFailureMessageForToday(userId: number): Promise<string | nu
   try {
     const db = await getDatabase()
     const today = formatLocalYmd(new Date())
-    const isFailureCondition = db.type === 'postgres' ? 'is_success = false' : 'is_success = 0'
+    const isFailureCondition = 'is_success = false'
 
     const row = (await db.queryOne(
       `
@@ -203,7 +203,7 @@ async function getLatestRateLimitEventForToday(userId: number): Promise<RateLimi
   try {
     const db = await getDatabase()
     const today = formatLocalYmd(new Date())
-    const isFailureCondition = db.type === 'postgres' ? 'is_success = false' : 'is_success = 0'
+    const isFailureCondition = 'is_success = false'
 
     const likeClauses = RATE_LIMIT_MESSAGE_PATTERNS.map(() => 'LOWER(error_message) LIKE ?').join(
       ' OR '

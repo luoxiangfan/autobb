@@ -23,7 +23,7 @@ export function getOpenclawQueuedStaleSeconds(): number {
 }
 
 export async function failStaleQueuedCommandRuns(params: {
-  db: Pick<DatabaseAdapter, 'type' | 'exec'>
+  db: Pick<DatabaseAdapter, 'exec'>
   userId?: number
   staleSeconds?: number
 }): Promise<number> {
@@ -33,11 +33,9 @@ export async function failStaleQueuedCommandRuns(params: {
     OPENCLAW_QUEUED_STALE_SECONDS_MIN,
     OPENCLAW_QUEUED_STALE_SECONDS_MAX
   )
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
   const staleMessage = `队列任务超过 ${staleSeconds}s 未开始执行，系统已自动标记失败，请重试`
-  const staleCondition = db.type === 'postgres'
-    ? `created_at <= (${nowSql} - (? * INTERVAL '1 second'))`
-    : `created_at <= datetime('now', '-' || ? || ' seconds')`
+  const staleCondition = `created_at <= (${nowSql} - (? * INTERVAL '1 second'))`
 
   const hasUserScope = Number.isFinite(Number(params.userId))
   const userFilterSql = hasUserScope ? 'AND user_id = ?' : ''

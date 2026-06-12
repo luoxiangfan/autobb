@@ -22,17 +22,12 @@ export async function GET(request: NextRequest) {
     const runningCheck = "status = 'running'"
 
     // 查询最近 30 分钟内开始的运行中任务
-    const timeThreshold =
-      db.type === 'postgres'
-        ? "(CURRENT_TIMESTAMP - INTERVAL '30 minutes')"
-        : "datetime('now', '-30 minutes')"
+    const timeThreshold = "(CURRENT_TIMESTAMP - INTERVAL '30 minutes')"
 
     const runningSecondsSql =
-      db.type === 'postgres'
-        ? 'CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)'
-        : "CAST((strftime('%s', 'now') - strftime('%s', started_at)) AS INTEGER)"
+      'CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)'
 
-    const startedAtField = db.type === 'postgres' ? 'started_at::timestamptz' : 'started_at'
+    const startedAtField = 'started_at::timestamptz'
 
     const runningSync = (await db.queryOne(`
       SELECT 

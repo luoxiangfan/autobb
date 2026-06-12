@@ -1,10 +1,7 @@
-import type { DatabaseType } from '@/lib/db'
-
 function tryParseJsonString(value: string): { ok: true; parsed: unknown } | { ok: false } {
   try {
     let parsed: unknown = JSON.parse(value)
 
-    // 处理双重 JSON 编码：第一次解析后仍是 JSON 字符串
     for (let i = 0; i < 2; i += 1) {
       if (typeof parsed !== 'string') break
       const nested = parsed.trim()
@@ -23,10 +20,7 @@ function tryParseJsonString(value: string): { ok: true; parsed: unknown } | { ok
 }
 
 /**
- * 安全解析 JSON 字段，兼容以下存储形态：
- * 1) SQLite TEXT(JSON字符串)
- * 2) PostgreSQL JSONB(对象/数组)
- * 3) PostgreSQL JSONB 中误存的 JSON 字符串（双重编码）
+ * 安全解析 JSON 字段，兼容 JSONB 对象/数组及双重编码的 JSON 字符串。
  */
 export function parseJsonField<T>(value: unknown, fallback: T): T {
   if (value === null || value === undefined) return fallback
@@ -51,16 +45,10 @@ export function parseJsonField<T>(value: unknown, fallback: T): T {
 }
 
 /**
- * 将任意 JSON 字段值规范化为数据库可写入值：
- * - SQLite: 保持字符串（或对对象/数组执行 JSON.stringify）
- * - PostgreSQL: 尽量写入原生对象/数组，避免 jsonb 双重编码
+ * 将 JSON 字段值规范化为 PostgreSQL JSONB 可写入值（原生对象/数组）。
  */
-export function toDbJsonField(value: unknown, dbType: DatabaseType): unknown {
+export function toDbJsonField(value: unknown): unknown {
   if (value === undefined || value === null) return null
-
-  if (dbType !== 'postgres') {
-    return typeof value === 'string' ? value : JSON.stringify(value)
-  }
 
   if (typeof value === 'string') {
     const trimmed = value.trim()
@@ -75,10 +63,7 @@ export function toDbJsonField(value: unknown, dbType: DatabaseType): unknown {
   return value
 }
 
-/**
- * TEXT 列 JSON 字段（如 campaigns.campaign_config）：
- * SQLite / PostgreSQL 均存 JSON 字符串。
- */
+/** TEXT 列 JSON 字段：存 JSON 字符串。 */
 export function toDbJsonTextField(value: unknown): string | null {
   if (value === undefined || value === null) return null
   if (typeof value === 'string') {
@@ -89,18 +74,10 @@ export function toDbJsonTextField(value: unknown): string | null {
   return JSON.stringify(value)
 }
 
-/**
- * JSONB 结构化字段专用：
- * PostgreSQL 下强制仅允许对象/数组，避免写入 jsonb string。
- */
-export function toDbJsonObjectField(
-  value: unknown,
-  dbType: DatabaseType,
-  fallback: unknown = null
-): unknown {
-  const normalized = toDbJsonField(value, dbType)
+/** JSONB 结构化字段：仅允许对象/数组。 */
+export function toDbJsonObjectField(value: unknown, fallback: unknown = null): unknown {
+  const normalized = toDbJsonField(value)
 
-  if (dbType !== 'postgres') return normalized
   if (normalized === null || normalized === undefined) return null
 
   if (Array.isArray(normalized) || typeof normalized === 'object') {
@@ -110,18 +87,10 @@ export function toDbJsonObjectField(
   return fallback
 }
 
-/**
- * JSONB 数组字段专用：
- * PostgreSQL 下强制仅允许数组，避免写入 jsonb string 或对象。
- */
-export function toDbJsonArrayField(
-  value: unknown,
-  dbType: DatabaseType,
-  fallback: unknown[] = []
-): unknown {
-  const normalized = toDbJsonField(value ?? fallback, dbType)
+/** JSONB 数组字段：仅允许数组。 */
+export function toDbJsonArrayField(value: unknown, fallback: unknown[] = []): unknown {
+  const normalized = toDbJsonField(value ?? fallback)
 
-  if (dbType !== 'postgres') return normalized
   if (Array.isArray(normalized)) return normalized
   return fallback
 }

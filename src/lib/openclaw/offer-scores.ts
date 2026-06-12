@@ -84,7 +84,7 @@ export async function createOfferScore(
   }
 ): Promise<OfferScoreRecord> {
   const db = await getDatabase()
-  const rawData = toDbJsonObjectField(data.raw_data ?? null, db.type, null)
+  const rawData = toDbJsonObjectField(data.raw_data ?? null, null)
 
   const result = await db.exec(
     `INSERT INTO openclaw_offer_scores
@@ -118,7 +118,7 @@ export async function createOfferScore(
     ]
   )
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   const record = await db.queryOne<OfferScoreRecord>(
     'SELECT * FROM openclaw_offer_scores WHERE id = ?',
     [insertedId]

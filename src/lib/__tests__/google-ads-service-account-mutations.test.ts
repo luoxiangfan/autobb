@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbFns = vi.hoisted(() => ({
   exec: vi.fn(async () => {}),
-  type: 'sqlite' as const,
 }))
 
 const authContextFns = vi.hoisted(() => ({

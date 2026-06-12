@@ -7,75 +7,60 @@ function formatShanghaiDate(date: Date): string {
     timeZone: 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+    day: '2-digit' }).format(date)
 }
 
 const TODAY = formatShanghaiDate(new Date())
 const YESTERDAY = formatShanghaiDate(new Date(Date.now() - 24 * 60 * 60 * 1000))
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const recommendationFns = vi.hoisted(() => ({
   getStrategyRecommendations: vi.fn(),
-  persistStrategyRecommendationExecutionRuntime: vi.fn(),
-}))
+  persistStrategyRecommendationExecutionRuntime: vi.fn() }))
 
 const reportFns = vi.hoisted(() => ({
-  refreshOpenclawDailyReportSnapshot: vi.fn(),
-}))
+  refreshOpenclawDailyReportSnapshot: vi.fn() }))
 
 const settingsFns = vi.hoisted(() => ({
-  getOpenclawSettingsMap: vi.fn(),
-}))
+  getOpenclawSettingsMap: vi.fn() }))
 
 const queueFns = vi.hoisted(() => ({
   getQueueManagerForTaskType: vi.fn(),
   queue: {
     initialize: vi.fn(),
     enqueue: vi.fn(),
-    getTask: vi.fn(),
-  },
-}))
+    getTask: vi.fn() } }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/strategy-recommendations', () => ({
   getStrategyRecommendations: recommendationFns.getStrategyRecommendations,
-  persistStrategyRecommendationExecutionRuntime: recommendationFns.persistStrategyRecommendationExecutionRuntime,
-}))
+  persistStrategyRecommendationExecutionRuntime: recommendationFns.persistStrategyRecommendationExecutionRuntime }))
 
 vi.mock('@/lib/openclaw/reports', () => ({
-  refreshOpenclawDailyReportSnapshot: reportFns.refreshOpenclawDailyReportSnapshot,
-}))
+  refreshOpenclawDailyReportSnapshot: reportFns.refreshOpenclawDailyReportSnapshot }))
 
 vi.mock('@/lib/openclaw/settings', () => ({
-  getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap,
-}))
+  getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap }))
 
 vi.mock('@/lib/queue/queue-routing', () => ({
-  getQueueManagerForTaskType: queueFns.getQueueManagerForTaskType,
-}))
+  getQueueManagerForTaskType: queueFns.getQueueManagerForTaskType }))
 
 describe('openclaw strategy recommendations route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 7,
-      authType: 'session',
-    })
+      authType: 'session' })
     recommendationFns.getStrategyRecommendations.mockResolvedValue([])
     recommendationFns.persistStrategyRecommendationExecutionRuntime.mockResolvedValue(undefined)
     reportFns.refreshOpenclawDailyReportSnapshot.mockResolvedValue({
-      date: TODAY,
-    })
+      date: TODAY })
     settingsFns.getOpenclawSettingsMap.mockResolvedValue({
-      feishu_target: 'ou_xxx',
-    })
+      feishu_target: 'ou_xxx' })
     queueFns.queue.initialize.mockResolvedValue(undefined)
     queueFns.queue.enqueue.mockResolvedValue(`openclaw-report-send-manual:7:${TODAY}`)
     queueFns.queue.getTask.mockResolvedValue(null)
@@ -98,8 +83,7 @@ describe('openclaw strategy recommendations route', () => {
       userId: 7,
       reportDate: TODAY,
       forceRefresh: true,
-      limit: 9,
-    })
+      limit: 9 })
   })
 
   it('returns 400 when refreshing historical date', async () => {
@@ -129,9 +113,7 @@ describe('openclaw strategy recommendations route', () => {
         status: 'pending',
         executionResult: {
           queueTaskId: 'task-1',
-          queueTaskStatus: 'pending',
-        },
-      },
+          queueTaskStatus: 'pending' } },
     ])
     queueFns.queue.getTask.mockResolvedValue(null)
 
@@ -146,8 +128,7 @@ describe('openclaw strategy recommendations route', () => {
     expect(recommendationFns.persistStrategyRecommendationExecutionRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 7,
-        recommendationId: 'rec-1',
-      })
+        recommendationId: 'rec-1' })
     )
   })
 
@@ -157,8 +138,7 @@ describe('openclaw strategy recommendations route', () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ date: TODAY }),
-    })
+      body: JSON.stringify({ date: TODAY }) })
     const res = await POST(req)
 
     expect(res.status).toBe(403)
@@ -171,9 +151,7 @@ describe('openclaw strategy recommendations route', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         date: TODAY,
-        limit: 500,
-      }),
-    })
+        limit: 500 }) })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -185,12 +163,10 @@ describe('openclaw strategy recommendations route', () => {
       userId: 7,
       reportDate: TODAY,
       forceRefresh: true,
-      limit: 200,
-    })
+      limit: 200 })
     expect(reportFns.refreshOpenclawDailyReportSnapshot).toHaveBeenCalledWith({
       userId: 7,
-      date: TODAY,
-    })
+      date: TODAY })
     expect(settingsFns.getOpenclawSettingsMap).toHaveBeenCalledWith(7)
     expect(queueFns.queue.enqueue).toHaveBeenCalledWith(
       'openclaw-report-send',
@@ -198,14 +174,12 @@ describe('openclaw strategy recommendations route', () => {
         userId: 7,
         target: 'ou_xxx',
         date: TODAY,
-        trigger: 'manual',
-      },
+        trigger: 'manual' },
       7,
       expect.objectContaining({
         priority: 'high',
         maxRetries: 1,
-        taskId: `openclaw-report-send-manual:7:${TODAY}`,
-      })
+        taskId: `openclaw-report-send-manual:7:${TODAY}` })
     )
   })
 
@@ -216,9 +190,7 @@ describe('openclaw strategy recommendations route', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        date: TODAY,
-      }),
-    })
+        date: TODAY }) })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -233,9 +205,7 @@ describe('openclaw strategy recommendations route', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        date: YESTERDAY,
-      }),
-    })
+        date: YESTERDAY }) })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -249,9 +219,7 @@ describe('openclaw strategy recommendations route', () => {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        date: '2026/02/23',
-      }),
-    })
+        date: '2026/02/23' }) })
     const res = await POST(req)
 
     expect(res.status).toBe(400)

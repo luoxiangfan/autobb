@@ -3,40 +3,32 @@ import { NextRequest } from 'next/server'
 import { GET, PUT } from '@/app/api/openclaw/settings/route'
 
 const authFns = vi.hoisted(() => ({
-  verifyOpenclawSessionAuth: vi.fn(),
-}))
+  verifyOpenclawSessionAuth: vi.fn() }))
 
 const settingsFns = vi.hoisted(() => ({
   getSettingsByCategory: vi.fn(),
   getUserOnlySettingsByCategory: vi.fn(),
-  updateSettings: vi.fn(),
-}))
+  updateSettings: vi.fn() }))
 
 const syncFns = vi.hoisted(() => ({
-  syncOpenclawConfig: vi.fn(),
-}))
+  syncOpenclawConfig: vi.fn() }))
 
 const auditFns = vi.hoisted(() => ({
-  auditOpenclawAiAuthOverrides: vi.fn(),
-}))
+  auditOpenclawAiAuthOverrides: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth,
-}))
+  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/settings', () => ({
   getSettingsByCategory: settingsFns.getSettingsByCategory,
   getUserOnlySettingsByCategory: settingsFns.getUserOnlySettingsByCategory,
-  updateSettings: settingsFns.updateSettings,
-}))
+  updateSettings: settingsFns.updateSettings }))
 
 vi.mock('@/lib/openclaw/config', () => ({
-  syncOpenclawConfig: syncFns.syncOpenclawConfig,
-}))
+  syncOpenclawConfig: syncFns.syncOpenclawConfig }))
 
 vi.mock('@/lib/openclaw/ai-auth-audit', () => ({
-  auditOpenclawAiAuthOverrides: auditFns.auditOpenclawAiAuthOverrides,
-}))
+  auditOpenclawAiAuthOverrides: auditFns.auditOpenclawAiAuthOverrides }))
 
 describe('openclaw settings route AI global permissions', () => {
   beforeEach(() => {
@@ -60,8 +52,7 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 7, role: 'member' },
-    })
+      user: { userId: 7, role: 'member' } })
 
     settingsFns.getUserOnlySettingsByCategory.mockResolvedValueOnce([
       { key: 'feishu_app_id', value: 'cli_xxx', dataType: 'string' },
@@ -90,17 +81,14 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/settings', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         scope: 'user',
-        updates: [{ key: 'ai_models_json', value: '{"providers":{}}' }],
-      }),
-    })
+        updates: [{ key: 'ai_models_json', value: '{"providers":{}}' }] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -114,17 +102,14 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/settings', {
       method: 'PUT',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         scope: 'global',
-        updates: [{ key: 'ai_models_json', value: '{"providers":{}}' }],
-      }),
-    })
+        updates: [{ key: 'ai_models_json', value: '{"providers":{}}' }] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -138,8 +123,7 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 1, role: 'admin' },
-    })
+      user: { userId: 1, role: 'admin' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/settings', {
       method: 'PUT',
@@ -149,9 +133,7 @@ describe('openclaw settings route AI global permissions', () => {
         updates: [
           { key: 'ai_models_json', value: '{"providers":{"openai":{"models":["gpt-5"]}}}' },
           { key: 'openclaw_models_mode', value: 'merge' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -169,19 +151,14 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 1, role: 'admin' },
-    })
+      user: { userId: 1, role: 'admin' } })
 
     syncFns.syncOpenclawConfig.mockResolvedValue({
       configPath: '/tmp/.openclaw/openclaw.json',
       config: {
         models: {
           providers: {
-            openai: { apiKey: 'sk-live' },
-          },
-        },
-      },
-    })
+            openai: { apiKey: 'sk-live' } } } } })
     auditFns.auditOpenclawAiAuthOverrides.mockReturnValue([
       {
         providerId: 'openai',
@@ -189,8 +166,7 @@ describe('openclaw settings route AI global permissions', () => {
         sourceLabel: 'env: OPENAI_API_KEY',
         envVar: 'OPENAI_API_KEY',
         message: 'Provider "openai" 当前优先使用环境变量 OPENAI_API_KEY，Providers JSON 里的 apiKey 不会生效。',
-        suggestion: '请移除或更新环境变量 OPENAI_API_KEY 后再热加载。',
-      },
+        suggestion: '请移除或更新环境变量 OPENAI_API_KEY 后再热加载。' },
     ])
 
     const req = new NextRequest('http://localhost/api/openclaw/settings', {
@@ -200,9 +176,7 @@ describe('openclaw settings route AI global permissions', () => {
         scope: 'global',
         updates: [
           { key: 'ai_models_json', value: '{"providers":{"openai":{"models":["gpt-5"],"apiKey":"sk-live"}}}' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -213,8 +187,7 @@ describe('openclaw settings route AI global permissions', () => {
       expect.arrayContaining([
         expect.objectContaining({
           providerId: 'openai',
-          source: 'env',
-        }),
+          source: 'env' }),
       ])
     )
     expect(auditFns.auditOpenclawAiAuthOverrides).toHaveBeenCalledTimes(1)
@@ -224,8 +197,7 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     settingsFns.getSettingsByCategory.mockResolvedValueOnce([
       { key: 'feishu_app_id', value: '', dataType: 'string' },
@@ -240,9 +212,7 @@ describe('openclaw settings route AI global permissions', () => {
         updates: [
           { key: 'feishu_app_id', value: 'cli_new' },
           { key: 'feishu_auth_mode', value: 'strict' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -256,15 +226,13 @@ describe('openclaw settings route AI global permissions', () => {
     )
     expect(syncFns.syncOpenclawConfig).toHaveBeenCalledWith({
       reason: 'openclaw-user-settings',
-      actorUserId: 9,
-    })
+      actorUserId: 9 })
   })
   it('rejects affiliate sync keys after migration to settings category', async () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/settings', {
       method: 'PUT',
@@ -274,9 +242,7 @@ describe('openclaw settings route AI global permissions', () => {
         updates: [
           { key: 'partnerboost_token', value: 'token_xxx' },
           { key: 'openclaw_affiliate_sync_interval_hours', value: '2' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -291,8 +257,7 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     settingsFns.getSettingsByCategory.mockResolvedValueOnce([
       { key: 'gateway_auth_rate_limit_json', value: '{}', dataType: 'json' },
@@ -307,15 +272,11 @@ describe('openclaw settings route AI global permissions', () => {
         updates: [
           {
             key: 'gateway_auth_rate_limit_json',
-            value: '{"maxAttempts":8,"windowMs":60000,"lockoutMs":300000,"exemptLoopback":true}',
-          },
+            value: '{"maxAttempts":8,"windowMs":60000,"lockoutMs":300000,"exemptLoopback":true}' },
           {
             key: 'gateway_tools_json',
-            value: '{"allow":["message"],"deny":["sessions_spawn"]}',
-          },
-        ],
-      }),
-    })
+            value: '{"allow":["message"],"deny":["sessions_spawn"]}' },
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -328,28 +289,24 @@ describe('openclaw settings route AI global permissions', () => {
         {
           category: 'openclaw',
           key: 'gateway_auth_rate_limit_json',
-          value: '{"maxAttempts":8,"windowMs":60000,"lockoutMs":300000,"exemptLoopback":true}',
-        },
+          value: '{"maxAttempts":8,"windowMs":60000,"lockoutMs":300000,"exemptLoopback":true}' },
         {
           category: 'openclaw',
           key: 'gateway_tools_json',
-          value: '{"allow":["message"],"deny":["sessions_spawn"]}',
-        },
+          value: '{"allow":["message"],"deny":["sessions_spawn"]}' },
       ],
       9
     )
     expect(syncFns.syncOpenclawConfig).toHaveBeenCalledWith({
       reason: 'openclaw-user-settings',
-      actorUserId: 9,
-    })
+      actorUserId: 9 })
   })
 
   it('rejects invalid strategy cron expressions on user save', async () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/settings', {
       method: 'PUT',
@@ -359,9 +316,7 @@ describe('openclaw settings route AI global permissions', () => {
         updates: [
           { key: 'openclaw_strategy_enabled', value: 'false' },
           { key: 'openclaw_strategy_cron', value: 'not-a-cron' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -375,8 +330,7 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     settingsFns.getSettingsByCategory.mockResolvedValueOnce([
       { key: 'openclaw_strategy_enabled', value: 'false', dataType: 'boolean' },
@@ -391,9 +345,7 @@ describe('openclaw settings route AI global permissions', () => {
         updates: [
           { key: 'openclaw_strategy_enabled', value: 'true' },
           { key: 'openclaw_strategy_cron', value: '0 9 * * *' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()
@@ -413,8 +365,7 @@ describe('openclaw settings route AI global permissions', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 9, role: 'member' },
-    })
+      user: { userId: 9, role: 'member' } })
 
     settingsFns.getSettingsByCategory.mockResolvedValueOnce([
       { key: 'openclaw_strategy_enabled', value: 'false', dataType: 'boolean' },
@@ -430,9 +381,7 @@ describe('openclaw settings route AI global permissions', () => {
           { key: 'openclaw_strategy_enabled', value: 'true' },
           { key: 'openclaw_strategy_cron', value: '0 */6 * * *' },
           { key: 'openclaw_strategy_max_offers_per_run', value: '6' },
-        ],
-      }),
-    })
+        ] }) })
 
     const res = await PUT(req)
     const payload = await res.json()

@@ -34,15 +34,13 @@ export async function POST(request: NextRequest) {
 
   const aiAuthOverrideWarnings = auditOpenclawAiAuthOverrides({
     config: syncResult?.config,
-    configPath: syncResult?.configPath,
-  })
+    configPath: syncResult?.configPath })
 
   let restartResult: any = null
   let restartError: string | null = null
   try {
     restartResult = await requestOpenclawGatewayRestart({
-      note: 'OpenClaw 控制台手动执行配置热加载',
-    })
+      note: 'OpenClaw 控制台手动执行配置热加载' })
   } catch (error: any) {
     restartError = error?.message || 'Gateway 重启触发失败'
     console.error('[openclaw] manual config hot reload restart trigger failed:', restartError)
@@ -57,8 +55,7 @@ export async function POST(request: NextRequest) {
     console.error('[openclaw] manual config hot reload status check failed:', message)
     gatewayStatus = {
       success: false,
-      error: message,
-    }
+      error: message }
   }
 
   return NextResponse.json({
@@ -73,6 +70,5 @@ export async function POST(request: NextRequest) {
       : gatewayStatus.success
         ? '配置已同步并触发 Gateway 重启'
         : '配置已同步并触发 Gateway 重启，Gateway 状态暂不可用',
-    aiAuthOverrideWarnings,
-  })
+    aiAuthOverrideWarnings })
 }

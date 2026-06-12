@@ -133,7 +133,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
   const db = await getDatabase()
   const now = new Date().toISOString()
 
-  const isDeletedCondition = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+  const isDeletedCondition = 'is_deleted = FALSE'
 
   // 1. 查询所有未删除的任务
   const tasks = await db.query<any>(`

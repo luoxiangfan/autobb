@@ -83,8 +83,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         completedAt: run.completed_at || null,
         createdAt: run.created_at || null,
         errorMessage: run.error_message || null,
-        statsJson: parseJsonValue(run.stats_json),
-      },
+        statsJson: parseJsonValue(run.stats_json) },
       actions: (actions || []).map((action: any) => ({
         id: Number(action.id),
         actionType: String(action.action_type || ''),
@@ -94,9 +93,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         errorMessage: action.error_message || null,
         requestJson: parseJsonValue(action.request_json),
         responseJson: parseJsonValue(action.response_json),
-        createdAt: action.created_at || null,
-      })),
-    })
+        createdAt: action.created_at || null })) })
 
     return NextResponse.json({
       success: true,
@@ -104,9 +101,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       meta: {
         runId,
         actionCount: actions.length,
-        source: 'strategy_center_runs + strategy_center_actions',
-      },
-    })
+        source: 'strategy_center_runs + strategy_center_actions' } })
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || '策略解释日志查询失败' },

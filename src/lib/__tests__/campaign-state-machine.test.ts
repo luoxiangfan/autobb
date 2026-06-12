@@ -5,17 +5,12 @@ const dbFns = vi.hoisted(() => ({
   query: vi.fn(),
 }))
 
-const dbState = vi.hoisted(() => ({
-  type: 'sqlite' as 'sqlite' | 'postgres',
-}))
-
 const urlSwapFns = vi.hoisted(() => ({
   markUrlSwapTargetsRemovedByCampaignId: vi.fn(async () => {}),
 }))
 
 vi.mock('../db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: dbState.type,
     exec: dbFns.exec,
     query: dbFns.query,
   })),
@@ -35,7 +30,6 @@ const {
 describe('campaign-state-machine', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.type = 'sqlite'
     dbFns.exec.mockResolvedValue({ changes: 1 })
     dbFns.query.mockResolvedValue([])
   })
@@ -106,9 +100,7 @@ describe('campaign-state-machine', () => {
     expect(urlSwapFns.markUrlSwapTargetsRemovedByCampaignId).not.toHaveBeenCalled()
   })
 
-  it('uses text-safe published_at COALESCE for postgres publish success', async () => {
-    dbState.type = 'postgres'
-
+  it('uses text-safe published_at COALESCE on publish success', async () => {
     await applyCampaignTransition({
       userId: 3,
       campaignId: 222,

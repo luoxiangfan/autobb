@@ -9,17 +9,12 @@ describe('collectPartnerboostReportRows', () => {
           list: [
             { sale_comm: 12.5, asin: 'B0TXASIN01', order_id: 'order-1' },
             { sale_comm: 7.25, asin: 'B0TXASIN02', order_id: 'order-2' },
-          ],
-        },
-      }],
+          ] } }],
       reportPayloads: [{
         data: {
           list: [
             { estCommission: 5, asin: 'B0TXASIN01' },
-          ],
-        },
-      }],
-    })
+          ] } }] })
 
     expect(rows).toHaveLength(2)
     expect(rows[0]).toMatchObject({ commission: 12.5, asin: 'B0TXASIN01', rawBrand: null })
@@ -32,10 +27,7 @@ describe('collectPartnerboostReportRows', () => {
       transactionPayloads: [],
       reportPayloads: [{
         data: {
-          list: [{ estCommission: 8.4, asin: 'B0REPORT01' }],
-        },
-      }],
-    })
+          list: [{ estCommission: 8.4, asin: 'B0REPORT01' }] } }] })
 
     expect(rows).toEqual([
       { commission: 8.4, asin: 'B0REPORT01', rawBrand: null },
@@ -48,21 +40,15 @@ describe('collectPartnerboostReportRows', () => {
         data: {
           list: [
             { sale_comm: 12.5, order_id: 'order-1' },
-          ],
-        },
-      }],
+          ] } }],
       reportPayloads: [{
         data: {
           list: [
             {
               order_id: 'order-1',
               asin: 'B0TXASIN01',
-              merchant_name: 'Acme Brand_CA',
-            },
-          ],
-        },
-      }],
-    })
+              merchant_name: 'Acme Brand_CA' },
+          ] } }] })
 
     expect(rows).toEqual([
       { commission: 12.5, asin: 'B0TXASIN01', rawBrand: 'Acme Brand_CA' },

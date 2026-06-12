@@ -4473,7 +4473,7 @@ export default function CampaignsClientPage({
                   </TableHeader>
                   <TableBody>
                     {paginatedCampaigns.map((campaign) => {
-                      // 🔧 检查是否已删除 (兼容PostgreSQL的boolean和SQLite的number)
+                      // 🔧 检查 is_deleted 布尔值
                       const isDeleted = isCampaignDeleted(campaign)
                       const offerDeleted = isOfferDeleted(campaign)
                       const googleCampaignId = getCampaignGoogleId(campaign)

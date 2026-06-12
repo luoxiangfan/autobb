@@ -61,8 +61,7 @@ const collectModelOptions = (providers: Record<string, JsonRecord>): AiModelOpti
         providerId,
         modelId,
         modelName,
-        modelRef: `${providerId}/${modelId}`,
-      })
+        modelRef: `${providerId}/${modelId}` })
     }
   }
   return options
@@ -124,8 +123,7 @@ export function parseAiModelsJson(value: string | null | undefined): ParsedAiMod
       providers: undefined,
       modelOptions: [],
       explicitSelectedModelRef: null,
-      selectedModelRef: null,
-    }
+      selectedModelRef: null }
   }
 
   let parsed: unknown
@@ -138,8 +136,7 @@ export function parseAiModelsJson(value: string | null | undefined): ParsedAiMod
       providers: undefined,
       modelOptions: [],
       explicitSelectedModelRef: null,
-      selectedModelRef: null,
-    }
+      selectedModelRef: null }
   }
 
   if (!isJsonRecord(parsed)) {
@@ -149,8 +146,7 @@ export function parseAiModelsJson(value: string | null | undefined): ParsedAiMod
       providers: undefined,
       modelOptions: [],
       explicitSelectedModelRef: null,
-      selectedModelRef: null,
-    }
+      selectedModelRef: null }
   }
 
   let jsonShape: AiModelsJsonShape = 'unknown'
@@ -181,8 +177,7 @@ export function parseAiModelsJson(value: string | null | undefined): ParsedAiMod
     providers: Object.keys(providers).length > 0 ? providers : undefined,
     modelOptions,
     explicitSelectedModelRef,
-    selectedModelRef,
-  }
+    selectedModelRef }
 }
 
 export function setAiModelsSelectedModel(
@@ -238,8 +233,7 @@ export function setAiModelsSelectedModel(
   if (isJsonRecord(modelNode)) {
     defaultsNode.model = {
       ...modelNode,
-      primary: normalizedRef,
-    }
+      primary: normalizedRef }
   } else {
     defaultsNode.model = { primary: normalizedRef }
   }
@@ -249,6 +243,5 @@ export function setAiModelsSelectedModel(
 
   return {
     json: JSON.stringify(parsed, null, 2),
-    error: null,
-  }
+    error: null }
 }

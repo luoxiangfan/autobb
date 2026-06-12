@@ -21,7 +21,6 @@ function buildHourlyBreakdown(
 describe('getHourlyDistribution JSONB compatibility', () => {
   beforeEach(() => {
     mockDb = {
-      type: 'postgres',
       query: vi.fn(),
     }
   })

@@ -49,7 +49,7 @@ describe('parseUniquePositiveIntegerIds', () => {
 describe('parsePositiveIntegerOfferIdList', () => {
   it('parses comma-separated ids and drops invalid segments', () => {
     expect(parsePositiveIntegerOfferIdList('1, 2,3')).toEqual([1, 2, 3])
-    expect(parsePositiveIntegerOfferIdList('1,,x,4')).toEqual([1, 4])
+    expect(parsePositiveIntegerOfferIdList('1,x,4')).toEqual([1, 4])
   })
 
   it('dedupes ids while preserving first-seen order', () => {

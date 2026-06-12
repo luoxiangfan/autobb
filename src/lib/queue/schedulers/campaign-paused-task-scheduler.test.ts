@@ -10,7 +10,6 @@ const offerTaskFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     query: dbFns.query,
   })),
 }))

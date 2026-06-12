@@ -87,7 +87,6 @@ import { POST } from '@/app/api/campaigns/publish/route'
 function createMockDb() {
   let insertedCampaignConfig: any = null
   const db = {
-    type: 'sqlite' as const,
     queryOne: vi.fn(async (sql: string) => {
       if (sql.includes('FROM offers')) {
         return {

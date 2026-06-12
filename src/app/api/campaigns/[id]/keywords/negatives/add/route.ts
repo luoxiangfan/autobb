@@ -167,7 +167,7 @@ async function ensurePrimaryAdGroup(params: {
   )
 
   return {
-    localAdGroupId: getInsertedId(result, db.type),
+    localAdGroupId: getInsertedId(result),
     googleAdGroupId: fallbackGoogleAdGroupId,
   }
 }
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     const body = (await request.json().catch(() => ({}))) as AddNegativeKeywordsRequestBody
     const db = await getDatabase()
-    const negativeCondition = boolCondition('k.is_negative', true, db.type)
+    const negativeCondition = boolCondition('k.is_negative', true)
 
     const campaign = await db.queryOne<{
       id: number
@@ -328,7 +328,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         addNegativeKeywords: negativeKeywords,
       })
       if (!patch.changed) return
-      const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowExpr = 'NOW()'
       await db.exec(
         `
           UPDATE campaigns
@@ -466,8 +466,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
             created.keywordId || null,
             created.keywordText,
             created.matchType,
-            boolParam(true, db.type),
-            boolParam(false, db.type),
+            boolParam(true),
+            boolParam(false),
             now,
             now,
             now,

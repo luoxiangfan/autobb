@@ -95,7 +95,6 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
     })
 
     vi.mocked(getDatabase).mockReturnValue({
-      type: 'sqlite',
       exec,
       queryOne,
       query: vi.fn(),

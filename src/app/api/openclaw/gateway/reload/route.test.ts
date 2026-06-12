@@ -3,38 +3,30 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/openclaw/gateway/reload/route'
 
 const authFns = vi.hoisted(() => ({
-  verifyOpenclawSessionAuth: vi.fn(),
-}))
+  verifyOpenclawSessionAuth: vi.fn() }))
 
 const configFns = vi.hoisted(() => ({
-  syncOpenclawConfig: vi.fn(),
-}))
+  syncOpenclawConfig: vi.fn() }))
 
 const gatewayFns = vi.hoisted(() => ({
   getOpenclawGatewaySnapshot: vi.fn(),
-  requestOpenclawGatewayRestart: vi.fn(),
-}))
+  requestOpenclawGatewayRestart: vi.fn() }))
 
 const auditFns = vi.hoisted(() => ({
-  auditOpenclawAiAuthOverrides: vi.fn(),
-}))
+  auditOpenclawAiAuthOverrides: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth,
-}))
+  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/config', () => ({
-  syncOpenclawConfig: configFns.syncOpenclawConfig,
-}))
+  syncOpenclawConfig: configFns.syncOpenclawConfig }))
 
 vi.mock('@/lib/openclaw/gateway-ws', () => ({
   getOpenclawGatewaySnapshot: gatewayFns.getOpenclawGatewaySnapshot,
-  requestOpenclawGatewayRestart: gatewayFns.requestOpenclawGatewayRestart,
-}))
+  requestOpenclawGatewayRestart: gatewayFns.requestOpenclawGatewayRestart }))
 
 vi.mock('@/lib/openclaw/ai-auth-audit', () => ({
-  auditOpenclawAiAuthOverrides: auditFns.auditOpenclawAiAuthOverrides,
-}))
+  auditOpenclawAiAuthOverrides: auditFns.auditOpenclawAiAuthOverrides }))
 
 describe('POST /api/openclaw/gateway/reload', () => {
   beforeEach(() => {
@@ -43,20 +35,17 @@ describe('POST /api/openclaw/gateway/reload', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 1, role: 'admin' },
-    })
+      user: { userId: 1, role: 'admin' } })
     configFns.syncOpenclawConfig.mockResolvedValue(undefined)
     gatewayFns.getOpenclawGatewaySnapshot.mockResolvedValue({
       fetchedAt: '2026-02-08T00:00:00.000Z',
       health: { ok: true },
       skills: null,
-      errors: [],
-    })
+      errors: [] })
     gatewayFns.requestOpenclawGatewayRestart.mockResolvedValue({
       requestedAt: '2026-02-08T00:00:00.000Z',
       restart: { ok: true },
-      path: '/tmp/openclaw.json',
-    })
+      path: '/tmp/openclaw.json' })
     auditFns.auditOpenclawAiAuthOverrides.mockReturnValue([])
   })
 
@@ -64,12 +53,10 @@ describe('POST /api/openclaw/gateway/reload', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: false,
       status: 401,
-      error: 'Unauthorized',
-    })
+      error: 'Unauthorized' })
 
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -82,12 +69,10 @@ describe('POST /api/openclaw/gateway/reload', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 3, role: 'member' },
-    })
+      user: { userId: 3, role: 'member' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -98,8 +83,7 @@ describe('POST /api/openclaw/gateway/reload', () => {
 
   it('syncs config and returns refreshed gateway status', async () => {
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -108,13 +92,11 @@ describe('POST /api/openclaw/gateway/reload', () => {
     expect(payload.gatewayStatus).toEqual(
       expect.objectContaining({
         success: true,
-        fetchedAt: '2026-02-08T00:00:00.000Z',
-      })
+        fetchedAt: '2026-02-08T00:00:00.000Z' })
     )
     expect(configFns.syncOpenclawConfig).toHaveBeenCalledWith({ reason: 'openclaw-manual-hot-reload' })
     expect(gatewayFns.requestOpenclawGatewayRestart).toHaveBeenCalledWith({
-      note: 'OpenClaw 控制台手动执行配置热加载',
-    })
+      note: 'OpenClaw 控制台手动执行配置热加载' })
     expect(gatewayFns.getOpenclawGatewaySnapshot).toHaveBeenCalledWith({ force: true })
   })
 
@@ -122,8 +104,7 @@ describe('POST /api/openclaw/gateway/reload', () => {
     gatewayFns.getOpenclawGatewaySnapshot.mockRejectedValue(new Error('Gateway unavailable'))
 
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -138,8 +119,7 @@ describe('POST /api/openclaw/gateway/reload', () => {
     gatewayFns.requestOpenclawGatewayRestart.mockRejectedValue(new Error('restart failed'))
 
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -154,8 +134,7 @@ describe('POST /api/openclaw/gateway/reload', () => {
     configFns.syncOpenclawConfig.mockRejectedValue(new Error('sync failed'))
 
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -172,11 +151,7 @@ describe('POST /api/openclaw/gateway/reload', () => {
       config: {
         models: {
           providers: {
-            openai: { apiKey: 'sk-live' },
-          },
-        },
-      },
-    })
+            openai: { apiKey: 'sk-live' } } } } })
     auditFns.auditOpenclawAiAuthOverrides.mockReturnValue([
       {
         providerId: 'openai',
@@ -184,13 +159,11 @@ describe('POST /api/openclaw/gateway/reload', () => {
         sourceLabel: 'auth-profiles: openai:default',
         profileIds: ['openai:default'],
         message: 'Provider "openai" 当前优先使用 auth-profiles，Providers JSON 里的 apiKey 不会生效。',
-        suggestion: '请清理 /tmp/.openclaw/agents/main/agent/auth-profiles.json 中该 provider 的 profile 后再热加载。',
-      },
+        suggestion: '请清理 /tmp/.openclaw/agents/main/agent/auth-profiles.json 中该 provider 的 profile 后再热加载。' },
     ])
 
     const req = new NextRequest('http://localhost/api/openclaw/gateway/reload', {
-      method: 'POST',
-    })
+      method: 'POST' })
     const res = await POST(req)
     const payload = await res.json()
 
@@ -200,8 +173,7 @@ describe('POST /api/openclaw/gateway/reload', () => {
       expect.arrayContaining([
         expect.objectContaining({
           providerId: 'openai',
-          source: 'auth-profile',
-        }),
+          source: 'auth-profile' }),
       ])
     )
   })

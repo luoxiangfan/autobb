@@ -229,8 +229,7 @@ function resolveEnvVarCandidates(providerId: string): string[] {
     together: 'TOGETHER_API_KEY',
     qianfan: 'QIANFAN_API_KEY',
     ollama: 'OLLAMA_API_KEY',
-    vllm: 'VLLM_API_KEY',
-  }
+    vllm: 'VLLM_API_KEY' }
 
   const mapped = envMap[normalized]
   if (mapped) return [mapped]
@@ -304,8 +303,7 @@ function collectManagedProviderEntries(config: Record<string, any> | undefined):
       providerId,
       providerKey,
       apiKey,
-      managedProfileId: resolveManagedProfileId(providerId),
-    })
+      managedProfileId: resolveManagedProfileId(providerId) })
   }
 
   return entries
@@ -401,8 +399,7 @@ export function syncOpenclawManagedAiAuthProfiles(params: {
       profiles[profileId] = {
         type: 'api_key',
         provider: target.providerKey,
-        key: target.apiKey,
-      }
+        key: target.apiKey }
       mutated = true
     }
   }
@@ -416,8 +413,7 @@ export function syncOpenclawManagedAiAuthProfiles(params: {
       profiles[entry.managedProfileId] = {
         type: 'api_key',
         provider: entry.providerKey,
-        key: entry.apiKey,
-      }
+        key: entry.apiKey }
       mutated = true
     }
   }
@@ -479,8 +475,7 @@ export function syncOpenclawManagedAiAuthProfiles(params: {
     return {
       updated: false,
       authProfilesPath,
-      managedProviders: entries.map((entry) => entry.providerId),
-    }
+      managedProviders: entries.map((entry) => entry.providerId) }
   }
 
   fs.mkdirSync(path.dirname(authProfilesPath), { recursive: true })
@@ -489,8 +484,7 @@ export function syncOpenclawManagedAiAuthProfiles(params: {
   return {
     updated: true,
     authProfilesPath,
-    managedProviders: entries.map((entry) => entry.providerId),
-  }
+    managedProviders: entries.map((entry) => entry.providerId) }
 }
 
 export function auditOpenclawAiAuthOverrides(params: {
@@ -525,8 +519,7 @@ export function auditOpenclawAiAuthOverrides(params: {
         store: authStore,
         profileId: firstProfileId,
         providerId,
-        providerApiKey,
-      })) {
+        providerApiKey })) {
         continue
       }
 
@@ -540,8 +533,7 @@ export function auditOpenclawAiAuthOverrides(params: {
         message: `Provider "${providerId}" 当前优先使用 auth-profiles，Providers JSON 里的 apiKey 不会生效。`,
         suggestion: authProfilesPath
           ? `请清理 ${authProfilesPath} 中该 provider 的 profile 后再热加载。`
-          : '请清理该 provider 的 auth-profiles 后再热加载。',
-      })
+          : '请清理该 provider 的 auth-profiles 后再热加载。' })
       continue
     }
 
@@ -552,8 +544,7 @@ export function auditOpenclawAiAuthOverrides(params: {
         sourceLabel: `env: ${envVar}`,
         envVar,
         message: `Provider "${providerId}" 当前优先使用环境变量 ${envVar}，Providers JSON 里的 apiKey 不会生效。`,
-        suggestion: `请移除或更新环境变量 ${envVar} 后再热加载。`,
-      })
+        suggestion: `请移除或更新环境变量 ${envVar} 后再热加载。` })
     }
   }
 

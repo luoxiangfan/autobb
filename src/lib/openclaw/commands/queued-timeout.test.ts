@@ -17,12 +17,9 @@ describe('openclaw queued timeout guard', () => {
     const exec = vi.fn().mockResolvedValue({ changes: 2 })
     const changed = await failStaleQueuedCommandRuns({
       db: {
-        type: 'sqlite',
-        exec,
-      } as any,
+        exec } as any,
       userId: 7,
-      staleSeconds: 600,
-    })
+      staleSeconds: 600 })
 
     expect(changed).toBe(2)
     expect(exec).toHaveBeenCalledTimes(1)
@@ -39,11 +36,8 @@ describe('openclaw queued timeout guard', () => {
     const exec = vi.fn().mockResolvedValue({ changes: 1 })
     const changed = await failStaleQueuedCommandRuns({
       db: {
-        type: 'postgres',
-        exec,
-      } as any,
-      staleSeconds: 720,
-    })
+        exec } as any,
+      staleSeconds: 720 })
 
     expect(changed).toBe(1)
     expect(exec).toHaveBeenCalledTimes(1)

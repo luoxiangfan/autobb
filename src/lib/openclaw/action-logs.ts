@@ -2,7 +2,7 @@ import { getDatabase } from '@/lib/db'
 
 const MAX_LOG_BODY = 20000
 const REDACT_PATTERNS: Array<[RegExp, string]> = [
-  [/oc_[A-Za-z0-9_-]{16,}/g, 'oc_***'],
+  [/oc_[A-Za-z0-9_-]{16 }/g, 'oc_***'],
   [/("apiKey"\s*:\s*")([^"]+)(")/gi, '$1***$3'],
   [/("appSecret"\s*:\s*")([^"]+)(")/gi, '$1***$3'],
   [/("token"\s*:\s*")([^"]+)(")/gi, '$1***$3'],

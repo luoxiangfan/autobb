@@ -16,7 +16,6 @@ const oauthFns = vi.hoisted(() => ({
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
   query: vi.fn(),
-  type: 'sqlite' as const,
 }))
 
 const cacheFns = vi.hoisted(() => ({

@@ -12,7 +12,7 @@
  *
  * 关键设计：
  * - 队列清理（Redis）：clearAllUnfinished() 清理所有未完成的队列任务
- * - 数据库同步（SQLite/PostgreSQL）：本模块同步更新数据库中的状态记录
+ * - 数据库同步（PostgreSQL）：本模块同步更新数据库中的状态记录
  *
  * 🔥 修复（2025-12-11）：解决服务重启后upload_records一直显示"处理中"的问题
  */
@@ -34,23 +34,15 @@ export async function recoverBatchTaskStatus(): Promise<void> {
     console.log('🔍 开始同步批量任务数据库状态...')
 
     // 1. 查询所有未完成的upload_records（status为pending或processing）
-    // 🔧 2025-12-23: 先检查表是否存在，避免SQLite/PostgreSQL未初始化错误
+    // 🔧 2025-12-23: 先检查表是否存在，避免表未初始化错误
     let pendingRecords: any[] = []
     try {
-      // 检查upload_records表是否存在（支持SQLite和PostgreSQL）
-      let tableExists = false
-      if (db.type === 'sqlite') {
-        const result = await db.query<{ count: number }>(
-          "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='upload_records'"
-        )
-        tableExists = result[0].count > 0
-      } else {
-        const result = await db.query<{ exists: boolean }>(
-          'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
-          ['upload_records']
-        )
-        tableExists = result[0].exists
-      }
+      // 检查 upload_records 表是否存在（PostgreSQL information_schema）
+      const tableCheck = await db.query<{ exists: boolean }>(
+        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)',
+        ['upload_records']
+      )
+      const tableExists = tableCheck[0].exists
 
       if (tableExists) {
         // 表存在，查询数据
@@ -121,7 +113,7 @@ async function recoverSingleBatchTask(
   validCount: number
 ): Promise<void> {
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   // 1. 查询所有子任务的实际状态（数据库是唯一真相来源）
   const childStats = await db.query<{

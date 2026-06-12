@@ -349,8 +349,7 @@ export async function collectUserFeishuAccounts(): Promise<Record<string, Feishu
       requireTenantKey: configuredRequireTenantKey ?? jsonMain.requireTenantKey,
       strictAutoBind: configuredStrictAutoBind ?? jsonMain.strictAutoBind,
       enabled: true,
-      name: jsonMain.name || `user-${userId}`,
-    }
+      name: jsonMain.name || `user-${userId}` }
   }
 
   return accounts
@@ -398,8 +397,7 @@ export async function collectUserFeishuBindingAccounts(): Promise<Record<string,
       allowFrom: mergedAllowFrom.length > 0 ? mergedAllowFrom : undefined,
       authMode: configuredAuthMode,
       requireTenantKey: configuredRequireTenantKey,
-      strictAutoBind: configuredStrictAutoBind,
-    }
+      strictAutoBind: configuredStrictAutoBind }
   }
 
   return accounts

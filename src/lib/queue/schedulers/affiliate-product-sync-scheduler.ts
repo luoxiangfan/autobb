@@ -217,8 +217,8 @@ export class AffiliateProductSyncScheduler {
 
   private async listEligibleUsers(): Promise<number[]> {
     const db = await getDatabase()
-    const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type })
-    const whereClause = `${userEligibleCondition} AND ${db.type === 'postgres' ? 'product_management_enabled = TRUE' : 'product_management_enabled = 1'}`
+    const userEligibleCondition = buildUserExecutionEligibleSql({})
+    const whereClause = `${userEligibleCondition} AND product_management_enabled = TRUE`
 
     const rows = await db.query<{ id: number }>(
       `
@@ -326,9 +326,7 @@ export class AffiliateProductSyncScheduler {
   ): Promise<boolean> {
     const db = await getDatabase()
     const activeRunFreshnessSql =
-      db.type === 'postgres'
-        ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
-        : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
+      "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
     const row = await db.queryOne<{ id: number }>(
       `
         SELECT id
@@ -576,8 +574,8 @@ export class AffiliateProductSyncScheduler {
 
   private async upsertUserSystemSetting(userId: number, key: string, value: string): Promise<void> {
     const db = await getDatabase()
-    const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-    const falseValue = db.type === 'postgres' ? false : 0
+    const nowExpr = 'NOW()'
+    const falseValue = false
 
     const existing = await db.queryOne<{ id: number }>(
       `

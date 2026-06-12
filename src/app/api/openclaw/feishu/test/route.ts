@@ -8,8 +8,7 @@ const feishuTestSchema = z.object({
   appId: z.string().optional(),
   appSecret: z.string().optional(),
   domain: z.string().optional(),
-  target: z.string().optional(),
-})
+  target: z.string().optional() })
 
 type FeishuReceiveIdType = 'open_id' | 'union_id' | 'chat_id'
 
@@ -115,22 +114,19 @@ export async function POST(request: NextRequest) {
     const tenantAccessToken = await getTenantAccessToken({
       appId,
       appSecret,
-      domain,
-    })
+      domain })
 
     const apiBase = resolveFeishuApiBase(domain)
     const botInfo = await feishuRequest<{ bot?: { app_name?: string } }>({
       method: 'GET',
       url: `${apiBase}/bot/v3/info`,
-      token: tenantAccessToken,
-    })
+      token: tenantAccessToken })
 
     if (target.receiveIdType === 'chat_id') {
       await feishuRequest({
         method: 'GET',
         url: `${apiBase}/im/v1/chats/${encodeURIComponent(target.target)}`,
-        token: tenantAccessToken,
-      })
+        token: tenantAccessToken })
     }
 
     const botName = (botInfo.bot?.app_name || '').trim()
@@ -146,16 +142,13 @@ export async function POST(request: NextRequest) {
       details: {
         receiveIdType: target.receiveIdType,
         target: target.target,
-        botName: botName || null,
-      },
-    })
+        botName: botName || null } })
   } catch (error: any) {
     return NextResponse.json(
       {
         success: false,
         ok: false,
-        error: error?.message || 'Feishu 连接测试失败',
-      },
+        error: error?.message || 'Feishu 连接测试失败' },
       { status: 502 }
     )
   }

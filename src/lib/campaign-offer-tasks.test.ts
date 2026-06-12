@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbFns = vi.hoisted(() => ({
-  type: 'sqlite' as 'sqlite' | 'postgres',
   query: vi.fn(),
   exec: vi.fn(),
 }))
@@ -13,7 +12,6 @@ const queueCleanupFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: dbFns.type,
     query: dbFns.query,
     exec: dbFns.exec,
     transaction: async (fn: () => Promise<unknown>) => fn(),
@@ -38,19 +36,7 @@ import {
 describe('pauseOfferTasks', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbFns.type = 'sqlite'
-    dbFns.exec.mockImplementation(async (sql: string, params: any[] = []) => {
-      const normalizedSql = String(sql)
-      if (normalizedSql.includes('UPDATE click_farm_tasks')) {
-        const idCount = Math.max(0, params.length - 4)
-        return { changes: idCount }
-      }
-      if (normalizedSql.includes('UPDATE url_swap_tasks')) {
-        const idCount = Math.max(0, params.length - 2)
-        return { changes: idCount }
-      }
-      return { changes: 0 }
-    })
+    dbFns.exec.mockResolvedValue({ changes: 0 })
     queueCleanupFns.removePendingClickFarmQueueTasksByTaskIds.mockResolvedValue({
       removedCount: 2,
       scannedCount: 10,
@@ -61,20 +47,20 @@ describe('pauseOfferTasks', () => {
     })
   })
 
-  it('pauses all active tasks for the offer', async () => {
+  it('uses UPDATE ... RETURNING ids for precise queue cleanup', async () => {
     dbFns.query
-      .mockResolvedValueOnce([{ id: 'cf-1' }, { id: 'cf-2' }])
-      .mockResolvedValueOnce([{ id: 'us-1' }])
+      .mockResolvedValueOnce([{ id: 'cf-2' }, { id: 'cf-1' }])
+      .mockResolvedValueOnce([{ id: 'us-2' }, { id: 'us-1' }])
 
     const result = await pauseOfferTasks(123, 7)
 
-    expect(dbFns.exec).toHaveBeenCalledTimes(2)
+    expect(dbFns.exec).not.toHaveBeenCalled()
     expect(queueCleanupFns.removePendingClickFarmQueueTasksByTaskIds).toHaveBeenCalledWith(
       ['cf-1', 'cf-2'],
       7
     )
     expect(queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds).toHaveBeenCalledWith(
-      ['us-1'],
+      ['us-1', 'us-2'],
       7
     )
     expect(result).toEqual({
@@ -83,7 +69,7 @@ describe('pauseOfferTasks', () => {
       clickFarmTaskCount: 2,
       urlSwapTaskDisabled: true,
       urlSwapTaskId: 'us-1',
-      urlSwapTaskCount: 1,
+      urlSwapTaskCount: 2,
     })
   })
 
@@ -92,16 +78,12 @@ describe('pauseOfferTasks', () => {
 
     await pauseOfferTasks(123, 7)
 
-    const urlSwapSelectSql = String(dbFns.query.mock.calls[1][0] || '')
-    const urlSwapUpdateSql = String(dbFns.exec.mock.calls[0][0] || '')
-
-    expect(urlSwapSelectSql).toContain("status IN ('enabled', 'error')")
+    const urlSwapUpdateSql = String(dbFns.query.mock.calls[1][0] || '')
     expect(urlSwapUpdateSql).toContain("status IN ('enabled', 'error')")
-    expect(urlSwapSelectSql).not.toContain("status != 'disabled'")
     expect(urlSwapUpdateSql).not.toContain("status != 'disabled'")
   })
 
-  it('returns no-op when no tasks need update', async () => {
+  it('returns no-op when returning has no matched rows', async () => {
     dbFns.query.mockResolvedValueOnce([]).mockResolvedValueOnce([])
 
     const result = await pauseOfferTasks(123, 7)
@@ -115,46 +97,6 @@ describe('pauseOfferTasks', () => {
       urlSwapTaskDisabled: false,
       urlSwapTaskCount: 0,
     })
-  })
-
-  it('splits large task-id updates into batches', async () => {
-    const largeClickFarmIds = Array.from({ length: 1205 }, (_, index) => ({
-      id: `cf-${index + 1}`,
-    }))
-    dbFns.query.mockResolvedValueOnce(largeClickFarmIds).mockResolvedValueOnce([])
-
-    const result = await pauseOfferTasks(123, 7)
-
-    expect(result.clickFarmTaskPaused).toBe(true)
-    expect(result.clickFarmTaskCount).toBe(1205)
-
-    // 1205 ids with batch size 200 => 7 update statements
-    expect(dbFns.exec).toHaveBeenCalledTimes(7)
-
-    for (const [sql, params] of dbFns.exec.mock.calls) {
-      const normalizedSql = String(sql)
-      expect(normalizedSql).toContain('UPDATE click_farm_tasks')
-      // base params: reason + message + userId + offerId = 4
-      expect(Array.isArray(params)).toBe(true)
-      expect((params as any[]).length).toBeLessThanOrEqual(4 + 200)
-    }
-  })
-
-  it('uses confirmed ids for queue cleanup when batch updates are partially matched', async () => {
-    dbFns.query
-      .mockResolvedValueOnce([{ id: 'cf-1' }, { id: 'cf-2' }, { id: 'cf-3' }])
-      .mockResolvedValueOnce([{ id: 'cf-1' }, { id: 'cf-2' }])
-      .mockResolvedValueOnce([])
-    dbFns.exec.mockResolvedValueOnce({ changes: 2 })
-
-    const result = await pauseOfferTasks(123, 7)
-
-    expect(result.clickFarmTaskPaused).toBe(true)
-    expect(result.clickFarmTaskCount).toBe(2)
-    expect(queueCleanupFns.removePendingClickFarmQueueTasksByTaskIds).toHaveBeenCalledWith(
-      ['cf-1', 'cf-2'],
-      7
-    )
   })
 })
 
@@ -378,57 +320,5 @@ describe('pauseOfferTasksBatch', () => {
     } finally {
       spy.mockRestore()
     }
-  })
-})
-
-describe('pauseOfferTasks (postgres returning)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    dbFns.type = 'postgres'
-    dbFns.exec.mockResolvedValue({ changes: 0 })
-  })
-
-  it('uses UPDATE ... RETURNING ids for precise queue cleanup', async () => {
-    dbFns.query
-      // update click_farm_tasks returning
-      .mockResolvedValueOnce([{ id: 'cf-2' }, { id: 'cf-1' }])
-      // update url_swap_tasks returning
-      .mockResolvedValueOnce([{ id: 'us-2' }, { id: 'us-1' }])
-
-    const result = await pauseOfferTasks(123, 7)
-
-    expect(dbFns.exec).not.toHaveBeenCalled()
-    expect(queueCleanupFns.removePendingClickFarmQueueTasksByTaskIds).toHaveBeenCalledWith(
-      ['cf-1', 'cf-2'],
-      7
-    )
-    expect(queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds).toHaveBeenCalledWith(
-      ['us-1', 'us-2'],
-      7
-    )
-    expect(result).toEqual({
-      clickFarmTaskPaused: true,
-      clickFarmTaskId: 'cf-1',
-      clickFarmTaskCount: 2,
-      urlSwapTaskDisabled: true,
-      urlSwapTaskId: 'us-1',
-      urlSwapTaskCount: 2,
-    })
-  })
-
-  it('returns no-op when postgres returning has no matched rows', async () => {
-    dbFns.query.mockResolvedValueOnce([]).mockResolvedValueOnce([])
-
-    const result = await pauseOfferTasks(123, 7)
-
-    expect(dbFns.exec).not.toHaveBeenCalled()
-    expect(queueCleanupFns.removePendingClickFarmQueueTasksByTaskIds).not.toHaveBeenCalled()
-    expect(queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds).not.toHaveBeenCalled()
-    expect(result).toEqual({
-      clickFarmTaskPaused: false,
-      clickFarmTaskCount: 0,
-      urlSwapTaskDisabled: false,
-      urlSwapTaskCount: 0,
-    })
   })
 })

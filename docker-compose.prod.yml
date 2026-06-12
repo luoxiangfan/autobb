@@ -14,13 +14,11 @@ services:
       - '3000:3000'
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=file:./autoads.db
+      - DATABASE_URL=${DATABASE_URL}
       - NEXT_TELEMETRY_DISABLED=1
       - REDIS_URL=${REDIS_URL}
       - QUEUE_SPLIT_BACKGROUND=true
     volumes:
-      # 持久化数据库（如果使用 SQLite）
-      - ./autoads.db:/app/autoads.db
       - ./scripts:/app/scripts:ro
     healthcheck:
       test:

@@ -882,9 +882,9 @@ export async function createAdCreative(
     explanation: data.explanation || '由Ad Strength评估系统生成',
   }
 
-  const isDeletedFalseSql = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
-  const isDeletedFalseValueSql = db.type === 'sqlite' ? '0' : 'FALSE'
-  const nowSql = nowFunc(db.type)
+  const isDeletedFalseSql = 'is_deleted = FALSE'
+  const isDeletedFalseValueSql = 'FALSE'
+  const nowSql = nowFunc()
   const generationModeForStorage = normalizeAdCreativeGenerationMode(
     data.generation_mode ?? undefined
   )
@@ -1025,7 +1025,7 @@ export async function createAdCreative(
       `,
         insertParams
       )
-      creativeId = getInsertedId(result, db.type)
+      creativeId = getInsertedId(result)
     } catch (error) {
       if (!bucketForStorage || !isOfferBucketUniqueConflict(error)) {
         throw error
@@ -1095,7 +1095,7 @@ export async function createAdCreative(
  */
 export async function findAdCreativeById(id: number, userId: number): Promise<AdCreative | null> {
   const db = await getDatabase()
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isDeletedCheck = 'is_deleted = FALSE'
   const row = (await db.queryOne(
     `
     SELECT * FROM ad_creatives
@@ -1161,7 +1161,7 @@ async function listAdCreativesByOffer(
 ): Promise<AdCreative[]> {
   const db = await getDatabase()
 
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isDeletedCheck = 'is_deleted = FALSE'
   let whereConditions = ['offer_id = ?', 'user_id = ?', isDeletedCheck]
   const params: any[] = [offerId, userId]
 
@@ -1200,15 +1200,15 @@ export async function selectAdCreative(id: number, userId: number): Promise<void
     throw new Error('广告创意不存在')
   }
 
-  // PostgreSQL 使用 BOOLEAN，SQLite 使用 INTEGER
-  const isSelectedTrue = db.type === 'postgres' ? 'is_selected = true' : 'is_selected = 1'
-  const isSelectedFalse = db.type === 'postgres' ? 'is_selected = false' : 'is_selected = 0'
+  // 使用 BOOLEAN
+  const isSelectedTrue = 'is_selected = true'
+  const isSelectedFalse = 'is_selected = false'
 
   await db.exec(
     `
     UPDATE ad_creatives
     SET ${isSelectedFalse},
-        updated_at = ${nowFunc(db.type)}
+        updated_at = ${nowFunc()}
     WHERE offer_id = ? AND user_id = ? AND ${isSelectedTrue}
   `,
     [creative.offer_id, userId]
@@ -1219,7 +1219,7 @@ export async function selectAdCreative(id: number, userId: number): Promise<void
     `
     UPDATE ad_creatives
     SET ${isSelectedTrue},
-        updated_at = ${nowFunc(db.type)}
+        updated_at = ${nowFunc()}
     WHERE id = ? AND user_id = ?
   `,
     [id, userId]
@@ -1519,7 +1519,7 @@ export async function updateAdCreative(
     return creative
   }
 
-  fields.push("updated_at = datetime('now')")
+  fields.push('updated_at = NOW()')
   values.push(id, userId)
 
   await db.exec(
@@ -1546,8 +1546,8 @@ export async function deleteAdCreative(id: number, userId: number): Promise<bool
   const result = await db.exec(
     `
     UPDATE ad_creatives
-    SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
-        deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
+    SET is_deleted = ${'TRUE'},
+        deleted_at = ${'NOW()'}
     WHERE id = ? AND user_id = ?
   `,
     [id, userId]
@@ -1575,7 +1575,7 @@ export async function findAdCreativesByUserId(
 ): Promise<AdCreative[]> {
   const db = await getDatabase()
 
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isDeletedCheck = 'is_deleted = FALSE'
   let sql = `
     SELECT * FROM ad_creatives
     WHERE user_id = ? AND ${isDeletedCheck}

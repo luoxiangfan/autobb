@@ -2,7 +2,7 @@
  * Backup 任务执行器
  *
  * 负责执行数据库备份任务，包括：
- * - SQLite数据库文件备份
+ * - PostgreSQL 数据库备份
  * - 自动清理旧备份文件
  * - 备份状态记录到数据库
  * - 失败重试机制
@@ -56,7 +56,7 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
 
       if (result.success) {
         console.log(
-          `✅ [BackupExecutor] 备份任务完成: ${result.backupFilename}, 文件大小=${(result.fileSizeBytes! / 1024 / 1024).toFixed(2)}MB, 耗时=${duration}ms`
+          `✅ [BackupExecutor] 备份任务完成: ${result.errorMessage || 'ok'}, 耗时=${duration}ms`
         )
       } else {
         console.error(
@@ -66,9 +66,6 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
 
       return {
         success: result.success,
-        backupFilename: result.backupFilename,
-        backupPath: result.backupPath,
-        fileSizeBytes: result.fileSizeBytes,
         errorMessage: result.errorMessage,
         duration,
       }

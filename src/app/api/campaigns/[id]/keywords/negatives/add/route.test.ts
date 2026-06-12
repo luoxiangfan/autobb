@@ -36,7 +36,6 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     queryOne: dbFns.queryOne,
     query: dbFns.query,
     exec: dbFns.exec,

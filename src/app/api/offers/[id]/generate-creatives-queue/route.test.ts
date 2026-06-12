@@ -75,7 +75,6 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     })
 
     dbFns.getDatabase.mockReturnValue({
-      type: 'sqlite',
       exec: dbFns.exec,
     })
 

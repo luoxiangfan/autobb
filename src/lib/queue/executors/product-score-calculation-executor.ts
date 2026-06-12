@@ -161,7 +161,7 @@ export async function executeProductScoreCalculation(
 
   const db = await getDatabase()
   const startTime = Date.now()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
   const queue = await getQueueManagerForTaskType('product-score-calculation')
   const lockTtlMs =
     Math.max(queue.getConfig().taskTimeout || 900000, 15 * 60 * 1000) + 5 * 60 * 1000
@@ -219,21 +219,12 @@ export async function executeProductScoreCalculation(
       )`
 
       // 默认仅计算未算分或“上次计算已超过30天”的商品，避免重复计算
-      if (db.type === 'postgres') {
-        whereClause += ` AND (
+      whereClause += ` AND (
           recommendation_score IS NULL
           OR score_calculated_at IS NULL
           OR score_calculated_at < (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days')
           OR ${legacyAmazonMisclassifiedWhere}
         )`
-      } else {
-        whereClause += ` AND (
-          recommendation_score IS NULL
-          OR score_calculated_at IS NULL
-          OR datetime(score_calculated_at) < datetime('now', '-${PRODUCT_SCORE_VALIDITY_DAYS} days')
-          OR ${legacyAmazonMisclassifiedWhere}
-        )`
-      }
     }
 
     // 查询需要计算的商品

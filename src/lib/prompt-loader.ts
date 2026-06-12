@@ -47,7 +47,7 @@ async function queryCurrentPromptVersion(
   db: DatabaseAdapter,
   promptId: string
 ): Promise<string | undefined> {
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
   const active = await db.queryOne<{ version: string }>(
     `SELECT version
      FROM prompt_versions
@@ -81,7 +81,7 @@ async function queryPromptWithFallback(
   db: DatabaseAdapter,
   promptId: string
 ): Promise<{ prompt: PromptVersionRecord; source: 'active' | 'latest' } | undefined> {
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
 
   const activePrompt = await db.queryOne<PromptVersionRecord>(
     `SELECT prompt_content, version, name
@@ -166,7 +166,7 @@ export async function loadPrompt(promptId: string): Promise<string> {
     )
   }
 
-  // 3. 处理Buffer类型（SQLite可能返回Buffer）
+  // 3. 处理 Buffer 类型（驱动可能返回 Buffer）
   const content =
     typeof resolvedPrompt.prompt.prompt_content === 'string'
       ? resolvedPrompt.prompt.prompt_content

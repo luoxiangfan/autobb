@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       `
       SELECT COUNT(*) as count
       FROM click_farm_tasks
-      WHERE IS_DELETED_FALSE
+      WHERE is_deleted = FALSE
     `,
       []
     )
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       FROM click_farm_tasks t
       JOIN users u ON t.user_id = u.id
       LEFT JOIN offers o ON t.offer_id = o.id
-      WHERE t.IS_DELETED_FALSE
+      WHERE t.is_deleted = FALSE
       ORDER BY t.created_at DESC
       LIMIT ? OFFSET ?
     `,

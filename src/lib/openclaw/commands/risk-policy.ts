@@ -172,15 +172,13 @@ export const OPENCLAW_COMMAND_ROUTE_RISK_POLICIES: readonly OpenclawCommandRoute
     ROUTE_RISK_POLICIES.map((policy) => ({
       method: policy.method.toUpperCase(),
       path: normalizePathPattern(policy.path),
-      riskLevel: policy.riskLevel,
-    }))
+      riskLevel: policy.riskLevel }))
   )
 
 const COMPILED_ROUTE_RISK_POLICIES: CompiledRouteRiskPolicy[] = ROUTE_RISK_POLICIES.map((policy) => ({
   ...policy,
   method: policy.method.toUpperCase(),
-  regex: compilePathPattern(policy.path),
-}))
+  regex: compilePathPattern(policy.path) }))
 
 function findRouteRiskPolicy(method: string, path: string): CompiledRouteRiskPolicy | undefined {
   const normalizedMethod = method.toUpperCase()

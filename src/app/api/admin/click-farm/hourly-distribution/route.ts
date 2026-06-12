@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       `
       SELECT hourly_distribution
       FROM click_farm_tasks
-      WHERE IS_DELETED_FALSE AND status IN ('running', 'completed')
+      WHERE is_deleted = FALSE AND status IN ('running', 'completed')
     `,
       []
     )

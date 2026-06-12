@@ -45,7 +45,7 @@ export async function suspendUserBackgroundTasks(
   queuePurged: number
 }> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   const clickFarmStopped = (
     await db.exec(
@@ -55,16 +55,13 @@ export async function suspendUserBackgroundTasks(
             updated_at = ${nowSql}
         WHERE user_id = ?
           AND status IN ('pending', 'running', 'paused')
-          AND IS_DELETED_FALSE
+          AND is_deleted = FALSE
       `,
       [userId]
     )
   ).changes
 
-  const urlSwapNotDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const urlSwapNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const urlSwapDisabled = (
     await db.exec(
@@ -116,7 +113,7 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
       WHERE is_active = ?
          OR package_expires_at IS NOT NULL
     `,
-    [boolParam(false, db.type)]
+    [boolParam(false)]
   )
 
   const affectedUserIds = Array.from(
@@ -132,7 +129,7 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
   }
 
   const placeholders = affectedUserIds.map(() => '?').join(', ')
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   const clickFarmStopped = (
     await db.exec(
@@ -142,16 +139,13 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
             updated_at = ${nowSql}
         WHERE user_id IN (${placeholders})
           AND status IN ('pending', 'running', 'paused')
-          AND IS_DELETED_FALSE
+          AND is_deleted = FALSE
       `,
       [...affectedUserIds]
     )
   ).changes
 
-  const urlSwapNotDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const urlSwapNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const urlSwapDisabled = (
     await db.exec(

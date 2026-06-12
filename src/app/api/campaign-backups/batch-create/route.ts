@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       .digest('hex')
       .slice(0, 16)
 
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFunc = 'NOW()'
 
     // 创建 batch_tasks 记录
     await db.exec(

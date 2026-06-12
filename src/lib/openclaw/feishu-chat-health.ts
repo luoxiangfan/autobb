@@ -434,8 +434,7 @@ function resolveFeishuChatHealthEventTiming(input: {
     linkAnchorAt,
     linkAnchorMs: Number.isFinite(linkAnchorMsRaw) ? linkAnchorMsRaw : fallbackMs,
     dispatchAnchorAt,
-    dispatchAnchorMs: Number.isFinite(dispatchAnchorMsRaw) ? dispatchAnchorMsRaw : fallbackMs,
-  }
+    dispatchAnchorMs: Number.isFinite(dispatchAnchorMsRaw) ? dispatchAnchorMsRaw : fallbackMs }
 }
 
 function extractExpectedOfferCountFromMessageText(messageText: string | null): number {
@@ -459,8 +458,7 @@ function resolveDynamicLinkWindowSeconds(params: {
   if (!params.expectation) {
     return {
       beforeSeconds: baseBefore,
-      afterSeconds: baseAfter,
-    }
+      afterSeconds: baseAfter }
   }
 
   const offerCount = clamp(
@@ -474,8 +472,7 @@ function resolveDynamicLinkWindowSeconds(params: {
 
   return {
     beforeSeconds: clamp(Math.max(baseBefore, dynamicBefore), 30, 3 * 60 * 60),
-    afterSeconds: clamp(Math.max(baseAfter, dynamicAfter), 30, 3600),
-  }
+    afterSeconds: clamp(Math.max(baseAfter, dynamicAfter), 30, 3600) }
 }
 
 function toIsoTimestamp(value: string | Date): string {
@@ -609,8 +606,7 @@ function resolveCreativeWorkflowExpectation(
   return {
     kind: 'creative_triplet_publish',
     requirePublish,
-    expectedOffers,
-  }
+    expectedOffers }
 }
 
 const FEISHU_CHAT_HEALTH_COMMAND_ACTION_HINT_REGEX =
@@ -809,8 +805,7 @@ function parseWorkflowRun(run: OpenclawCommandRunLinkRow): ParsedWorkflowRun | n
     isCreativeGenerate,
     isPublish,
     isFailed: isRunFailed(run.status, run.response_status),
-    isAccepted: isRunAccepted(run.status, run.response_status),
-  }
+    isAccepted: isRunAccepted(run.status, run.response_status) }
 }
 
 function resolvePrimaryOfferId(runs: ParsedWorkflowRun[]): number | null {
@@ -828,8 +823,7 @@ function resolveWorkflowOfferIds(params: {
     const current = statsByOffer.get(run.offerId) || {
       score: 0,
       bucketSet: new Set<NormalizedCreativeBucket>(),
-      latestMs: 0,
-    }
+      latestMs: 0 }
 
     if (run.isCreativeGenerate) {
       current.score += 10
@@ -852,8 +846,7 @@ function resolveWorkflowOfferIds(params: {
     .map(([offerId, stat]) => ({
       offerId,
       score: stat.score + stat.bucketSet.size * 100,
-      latestMs: stat.latestMs,
-    }))
+      latestMs: stat.latestMs }))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score
       return b.latestMs - a.latestMs
@@ -890,8 +883,7 @@ function evaluateCreativeBucketStep(params: {
       key,
       label,
       status: 'pending',
-      detail: `待生成桶 ${params.bucket}`,
-    }
+      detail: `待生成桶 ${params.bucket}` }
   }
 
   const ordered = scopedRuns.slice().sort((a, b) => b.createdMs - a.createdMs)
@@ -910,8 +902,7 @@ function evaluateCreativeBucketStep(params: {
           key,
           label,
           status: 'completed',
-          detail: `桶 ${params.bucket} 创意已完成`,
-        }
+          detail: `桶 ${params.bucket} 创意已完成` }
       }
       if (taskStatus === 'running' || taskStatus === 'pending') {
         hasRunning = true
@@ -946,32 +937,28 @@ function evaluateCreativeBucketStep(params: {
       key,
       label,
       status: 'running',
-      detail: runningDetail || `桶 ${params.bucket} 处理中`,
-    }
+      detail: runningDetail || `桶 ${params.bucket} 处理中` }
   }
   if (hasFailure) {
     return {
       key,
       label,
       status: 'failed',
-      detail: failureDetail || `桶 ${params.bucket} 失败`,
-    }
+      detail: failureDetail || `桶 ${params.bucket} 失败` }
   }
   if (hasUnknown) {
     return {
       key,
       label,
       status: 'unknown',
-      detail: `桶 ${params.bucket} 状态未知`,
-    }
+      detail: `桶 ${params.bucket} 状态未知` }
   }
 
   return {
     key,
     label,
     status: 'pending',
-    detail: `待生成桶 ${params.bucket}`,
-  }
+    detail: `待生成桶 ${params.bucket}` }
 }
 
 function evaluatePublishStep(params: {
@@ -994,8 +981,7 @@ function evaluatePublishStep(params: {
       key,
       label,
       status: 'pending',
-      detail: '待发布',
-    }
+      detail: '待发布' }
   }
 
   const campaignIds = new Set<number>()
@@ -1045,8 +1031,7 @@ function evaluatePublishStep(params: {
         key,
         label,
         status: 'completed',
-        detail: '发布完成并已同步',
-      }
+        detail: '发布完成并已同步' }
     }
 
     const hasPending = campaignRows.some((campaign) => {
@@ -1072,16 +1057,14 @@ function evaluatePublishStep(params: {
             key,
             label,
             status: 'pending',
-            detail: `Campaign 长时间未同步（>${params.runningStaleSeconds}s）`,
-          }
+            detail: `Campaign 长时间未同步（>${params.runningStaleSeconds}s）` }
         }
       }
       return {
         key,
         label,
         status: 'running',
-        detail: '发布已受理，等待 Campaign 同步',
-      }
+        detail: '发布已受理，等待 Campaign 同步' }
     }
 
     const hasFailed = campaignRows.some((campaign) => {
@@ -1093,8 +1076,7 @@ function evaluatePublishStep(params: {
         key,
         label,
         status: 'failed',
-        detail: 'Campaign 发布失败',
-      }
+        detail: 'Campaign 发布失败' }
     }
   }
 
@@ -1104,31 +1086,27 @@ function evaluatePublishStep(params: {
         key,
         label,
         status: 'pending',
-        detail: `发布已受理但超时未落地（>${params.runningStaleSeconds}s）`,
-      }
+        detail: `发布已受理但超时未落地（>${params.runningStaleSeconds}s）` }
     }
     return {
       key,
       label,
       status: 'running',
-      detail: '发布请求已受理，等待业务结果',
-    }
+      detail: '发布请求已受理，等待业务结果' }
   }
   if (failedRuns.length > 0) {
     return {
       key,
       label,
       status: 'failed',
-      detail: '发布命令失败',
-    }
+      detail: '发布命令失败' }
   }
 
   return {
     key,
     label,
     status: 'unknown',
-    detail: '发布状态未知',
-  }
+    detail: '发布状态未知' }
 }
 
 function buildWorkflowAssessmentForMessage(params: {
@@ -1143,8 +1121,7 @@ function buildWorkflowAssessmentForMessage(params: {
   const expectedOffers = clamp(params.context.expectation.expectedOffers || 1, 1, 10)
   const workflowOfferIds = resolveWorkflowOfferIds({
     runs: params.runs,
-    expectedOffers,
-  })
+    expectedOffers })
   const primaryOfferId = workflowOfferIds[0] || params.context.primaryOfferId || resolvePrimaryOfferId(params.runs)
   const steps: FeishuChatHealthWorkflowStep[] = []
 
@@ -1160,24 +1137,21 @@ function buildWorkflowAssessmentForMessage(params: {
         labelPrefix,
         keyPrefix,
         runs: params.runs,
-        creativeTaskById: params.creativeTaskById,
-      }),
+        creativeTaskById: params.creativeTaskById }),
       evaluateCreativeBucketStep({
         bucket: 'B',
         offerId,
         labelPrefix,
         keyPrefix,
         runs: params.runs,
-        creativeTaskById: params.creativeTaskById,
-      }),
+        creativeTaskById: params.creativeTaskById }),
       evaluateCreativeBucketStep({
         bucket: 'D',
         offerId,
         labelPrefix,
         keyPrefix,
         runs: params.runs,
-        creativeTaskById: params.creativeTaskById,
-      })
+        creativeTaskById: params.creativeTaskById })
     )
 
     if (params.context.expectation.requirePublish) {
@@ -1189,8 +1163,7 @@ function buildWorkflowAssessmentForMessage(params: {
           runs: params.runs,
           campaignsByOfferId: params.campaignsByOfferId,
           nowMs: params.nowMs,
-          runningStaleSeconds: params.publishRunningStaleSeconds,
-        })
+          runningStaleSeconds: params.publishRunningStaleSeconds })
       )
     }
   }
@@ -1204,8 +1177,7 @@ function buildWorkflowAssessmentForMessage(params: {
         status: 'pending',
         detail: params.context.expectation.requirePublish
           ? `待识别第${seq}个 Offer 并完成 A/B/D + 发布`
-          : `待识别第${seq}个 Offer 并完成 A/B/D`,
-      })
+          : `待识别第${seq}个 Offer 并完成 A/B/D` })
     }
   }
 
@@ -1215,8 +1187,7 @@ function buildWorkflowAssessmentForMessage(params: {
       progress: 0,
       detail: 'workflow 步骤为空',
       offerId: primaryOfferId,
-      steps,
-    }
+      steps }
   }
 
   const completedSteps = steps.filter((step) => step.status === 'completed')
@@ -1236,8 +1207,7 @@ function buildWorkflowAssessmentForMessage(params: {
       progress,
       detail: `业务链路失败：${failedSteps.map((step) => step.label).join('，')}`,
       offerId: primaryOfferId,
-      steps,
-    }
+      steps }
   }
 
   if (completedSteps.length === steps.length) {
@@ -1246,8 +1216,7 @@ function buildWorkflowAssessmentForMessage(params: {
       progress: 100,
       detail: '业务链路完成',
       offerId: primaryOfferId,
-      steps,
-    }
+      steps }
   }
 
   if (runningSteps.length > 0 || unknownSteps.length > 0) {
@@ -1257,8 +1226,7 @@ function buildWorkflowAssessmentForMessage(params: {
       progress,
       detail: `业务链路执行中：${activeLabels.join('，')}`,
       offerId: primaryOfferId,
-      steps,
-    }
+      steps }
   }
 
   if (pendingSteps.length > 0) {
@@ -1269,16 +1237,14 @@ function buildWorkflowAssessmentForMessage(params: {
         progress,
         detail: `业务链路未完成：${pendingLabels}`,
         offerId: primaryOfferId,
-        steps,
-      }
+        steps }
     }
     return {
       state: 'running',
       progress,
       detail: `业务链路等待：${pendingLabels}`,
       offerId: primaryOfferId,
-      steps,
-    }
+      steps }
   }
 
   return {
@@ -1286,8 +1252,7 @@ function buildWorkflowAssessmentForMessage(params: {
     progress,
     detail: '业务链路状态未知',
     offerId: primaryOfferId,
-    steps,
-  }
+    steps }
 }
 
 async function buildWorkflowAssessmentsByMessageId(params: {
@@ -1312,8 +1277,7 @@ async function buildWorkflowAssessmentsByMessageId(params: {
 
     const timing = resolveFeishuChatHealthEventTiming({
       metadataJson: row.metadata_json,
-      createdAt: row.created_at,
-    })
+      createdAt: row.created_at })
     const createdMs = timing.linkAnchorMs
     const messageText = normalizeMessageText(row.message_text)
 
@@ -1323,8 +1287,7 @@ async function buildWorkflowAssessmentsByMessageId(params: {
       senderCandidates,
       // Continuation-only messages (e.g. "继续") should not split an unfinished
       // workflow into independent chains.
-      isSoftBoundary: isContinuationMessageText(messageText),
-    })
+      isSoftBoundary: isContinuationMessageText(messageText) })
 
     const expectation = resolveCreativeWorkflowExpectation(messageText)
     if (!expectation) continue
@@ -1339,8 +1302,7 @@ async function buildWorkflowAssessmentsByMessageId(params: {
       ageSeconds,
       windowStartMs: createdMs,
       windowEndMs: createdMs,
-      primaryOfferId: null,
-    })
+      primaryOfferId: null })
   }
 
   if (workflowContexts.length === 0) {
@@ -1388,8 +1350,7 @@ async function buildWorkflowAssessmentsByMessageId(params: {
     const hardWindowEnd = context.createdMs + maxWindowMs
     const dynamicWindow = resolveDynamicLinkWindowSeconds({
       messageText: null,
-      expectation: context.expectation,
-    })
+      expectation: context.expectation })
     context.windowStartMs = linkAnchorMs - dynamicWindow.beforeSeconds * 1000
     if (previousBoundaryMs !== null) {
       // Keep recovery within this message segment and avoid stealing runs from
@@ -1411,7 +1372,7 @@ async function buildWorkflowAssessmentsByMessageId(params: {
   const workflowSendersAll = Array.from(workflowSenderSet)
   const canUseSenderFilter = workflowSendersAll.length > 0 && workflowSendersAll.length <= 200
   const workflowSenders = canUseSenderFilter ? workflowSendersAll : []
-  const cutoffExpr = datetimeMinusHours(params.withinHours + 1, params.db.type)
+  const cutoffExpr = datetimeMinusHours(params.withinHours + 1)
 
   const workflowCandidateRuns = await (async () => {
     if (workflowSenders.length > 0) {
@@ -1545,8 +1506,7 @@ async function buildWorkflowAssessmentsByMessageId(params: {
       campaignsByOfferId,
       workflowIncompleteSeconds,
       nowMs: params.nowMs,
-      publishRunningStaleSeconds,
-    })
+      publishRunningStaleSeconds })
     result.set(context.messageId, assessment)
   }
 
@@ -1583,13 +1543,11 @@ export async function backfillFeishuChatHealthRunLinks(params: {
 
   const healthTiming = resolveFeishuChatHealthEventTiming({
     metadataJson: healthRow?.metadata_json || null,
-    createdAt: healthRow?.created_at || new Date().toISOString(),
-  })
+    createdAt: healthRow?.created_at || new Date().toISOString() })
   const expectation = resolveCreativeWorkflowExpectation(normalizeMessageText(healthRow?.message_text || null))
   const dynamicWindow = resolveDynamicLinkWindowSeconds({
     messageText: normalizeMessageText(healthRow?.message_text || null),
-    expectation,
-  })
+    expectation })
 
   const senderPlaceholders = senderIds.map(() => '?').join(', ')
 
@@ -1643,7 +1601,7 @@ export async function backfillFeishuChatHealthRunLinks(params: {
     }
   }
 
-  const cutoffExpr = datetimeMinusHours(6, db.type)
+  const cutoffExpr = datetimeMinusHours(6)
   const candidateRuns = await db.query<OpenclawCommandRunLinkRow>(
     `SELECT id, parent_request_id, channel, sender_id, status, created_at
      FROM openclaw_command_runs
@@ -1684,8 +1642,7 @@ export async function backfillFeishuChatHealthRunLinks(params: {
   )
 
   return {
-    updatedRuns: Number(result?.changes || 0),
-  }
+    updatedRuns: Number(result?.changes || 0) }
 }
 
 async function cleanupFeishuChatHealthLogsIfNeeded() {
@@ -1696,7 +1653,7 @@ async function cleanupFeishuChatHealthLogsIfNeeded() {
   lastCleanupAt = now
 
   const db = await getDatabase()
-  const cutoffExpr = datetimeMinusHours(FEISHU_HEALTH_RETENTION_HOURS, db.type)
+  const cutoffExpr = datetimeMinusHours(FEISHU_HEALTH_RETENTION_HOURS)
   await db.exec(
     `DELETE FROM openclaw_feishu_chat_health_logs
      WHERE created_at < ${cutoffExpr}`
@@ -1774,12 +1731,10 @@ export async function listFeishuChatHealthLogs(params: {
   const db = await getDatabase()
   await failStaleQueuedCommandRuns({
     db,
-    userId: params.userId,
-  })
+    userId: params.userId })
   const withinHours = clamp(params.withinHours || FEISHU_CHAT_HEALTH_WINDOW_HOURS, 1, FEISHU_HEALTH_RETENTION_HOURS)
   const limit = clamp(params.limit || 200, 20, 500)
-  const cutoffExpr = datetimeMinusHours(withinHours, db.type)
-
+  const cutoffExpr = datetimeMinusHours(withinHours)
   const dbRows = await db.query<FeishuChatHealthRow>(
     `SELECT
        id,
@@ -1844,8 +1799,7 @@ export async function listFeishuChatHealthLogs(params: {
         senderId: normalizeShortText(run.sender_id, 255),
         requestPath: normalizeShortText(run.request_path, 255),
         requestBodyJson: run.request_body_json || null,
-        runCount: 1,
-      })
+        runCount: 1 })
       continue
     }
 
@@ -1889,10 +1843,8 @@ export async function listFeishuChatHealthLogs(params: {
         metadata_json: JSON.stringify({
           synthetic: true,
           source: 'command_runs',
-          runCount: candidate.runCount,
-        }),
-        created_at: candidate.createdAt,
-      }
+          runCount: candidate.runCount }),
+        created_at: candidate.createdAt }
     })
 
   const rows = [...dbRows, ...syntheticRows]
@@ -1945,7 +1897,7 @@ export async function listFeishuChatHealthLogs(params: {
   const missingMessageIds = allowedMessageIds.filter((id) => (runsByMessageId.get(id) || []).length === 0)
   const missingMessageIdSet = new Set(missingMessageIds)
   if (missingMessageIdSet.size > 0) {
-    const cutoffExpr = datetimeMinusHours(withinHours + 1, db.type)
+    const cutoffExpr = datetimeMinusHours(withinHours + 1)
     const candidateSenderSet = new Set<string>()
     const pushSenderCandidate = (value: unknown) => {
       const normalized = normalizeShortText(value, 255)
@@ -2026,13 +1978,11 @@ export async function listFeishuChatHealthLogs(params: {
 
       const timing = resolveFeishuChatHealthEventTiming({
         metadataJson: row.metadata_json,
-        createdAt: row.created_at,
-      })
+        createdAt: row.created_at })
       const expectation = resolveCreativeWorkflowExpectation(normalizeMessageText(row.message_text))
       const dynamicWindow = resolveDynamicLinkWindowSeconds({
         messageText: normalizeMessageText(row.message_text),
-        expectation,
-      })
+        expectation })
 
       const startMs = Math.min(
         timing.linkAnchorMs,
@@ -2094,8 +2044,7 @@ export async function listFeishuChatHealthLogs(params: {
     rows,
     runsByMessageId,
     withinHours,
-    nowMs,
-  })
+    nowMs })
 
   const mapped: FeishuChatHealthLogItem[] = rows.map((row) => {
     const messageText = normalizeMessageText(row.message_text)
@@ -2103,8 +2052,7 @@ export async function listFeishuChatHealthLogs(params: {
     const metadata = safeParseJsonObject(row.metadata_json)
     const timing = resolveFeishuChatHealthEventTiming({
       metadataJson: row.metadata_json,
-      createdAt: row.created_at,
-    })
+      createdAt: row.created_at })
     const createdAt = timing.ingestedAt
     const ageSeconds = Math.max(0, Math.floor((nowMs - timing.dispatchAnchorMs) / 1000))
 
@@ -2143,8 +2091,7 @@ export async function listFeishuChatHealthLogs(params: {
         const shouldExpectExecution = shouldExpectExecutionForAllowedMessage({
           messageText,
           workflowState,
-          linkedRunCount: linkedRuns.length,
-        })
+          linkedRunCount: linkedRuns.length })
 
         if (linkedRuns.length === 0) {
           if (!shouldExpectExecution) {
@@ -2206,8 +2153,7 @@ export async function listFeishuChatHealthLogs(params: {
       workflowOfferId,
       workflowSteps,
       ageSeconds,
-      createdAt,
-    }
+      createdAt }
   })
 
   const stats = statsRows.reduce(
@@ -2274,8 +2220,7 @@ export async function listFeishuChatHealthLogs(params: {
       missing: 0,
       failed: 0,
       notApplicable: 0,
-      unknown: 0,
-    }
+      unknown: 0 }
   )
 
   const workflowStats = mapped.reduce(
@@ -2312,8 +2257,7 @@ export async function listFeishuChatHealthLogs(params: {
       incomplete: 0,
       failed: 0,
       notRequired: 0,
-      unknown: 0,
-    }
+      unknown: 0 }
   )
 
   void cleanupFeishuChatHealthLogsIfNeeded().catch(() => {})
@@ -2323,9 +2267,7 @@ export async function listFeishuChatHealthLogs(params: {
     stats: {
       ...stats,
       execution: executionStats,
-      workflow: workflowStats,
-    },
-  }
+      workflow: workflowStats } }
 }
 
 export const FEISHU_CHAT_HEALTH_RETENTION_DAYS = FEISHU_HEALTH_RETENTION_DAYS

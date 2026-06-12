@@ -1,8 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/json-field'
 import {
-  extractBrandFromRaw,
-} from '@/lib/openclaw/affiliate-commission-attribution'
+  extractBrandFromRaw } from '@/lib/openclaw/affiliate-commission-attribution'
 import type { AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission-platform'
 import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
 import { extractPartnerboostBrandFromRow } from '@/lib/openclaw/partnerboost-commission-rows'
@@ -118,8 +117,7 @@ function buildYeahPromosLineItem(params: {
     brandName,
     commission,
     advertId,
-    asin: normalizeAsin(params.row.source_asin),
-  }
+    asin: normalizeAsin(params.row.source_asin) }
 }
 
 function buildPartnerboostLineItem(params: {
@@ -151,8 +149,7 @@ function buildPartnerboostLineItem(params: {
     brandKey: scopeBrandKey(params.userId, baseBrandKey, params.showUserScope),
     brandName,
     commission,
-    asin,
-  }
+    asin }
 }
 
 function buildLineItemFromAttributionRow(params: {
@@ -169,8 +166,7 @@ function buildLineItemFromAttributionRow(params: {
       username: params.username,
       reportDate,
       showUserScope: params.showUserScope,
-      row: params.row,
-    })
+      row: params.row })
   }
 
   return buildPartnerboostLineItem({
@@ -178,8 +174,7 @@ function buildLineItemFromAttributionRow(params: {
     username: params.username,
     reportDate,
     showUserScope: params.showUserScope,
-    row: params.row,
-  })
+    row: params.row })
 }
 
 async function loadAttributionCommissionRows(params: {
@@ -428,19 +423,16 @@ export async function sumAttributionCommissionTotals(params: {
   const [attributionTotal, failureTotal] = await Promise.all([
     sumAttributionCommissionForTable({
       tableName: 'affiliate_commission_attributions',
-      ...params,
-    }),
+      ...params }),
     sumAttributionCommissionForTable({
       tableName: 'openclaw_affiliate_attribution_failures',
-      ...params,
-    }),
+      ...params }),
   ])
 
   return {
     attributionTotal,
     failureTotal,
-    combinedTotal: roundTo4(attributionTotal + failureTotal),
-  }
+    combinedTotal: roundTo4(attributionTotal + failureTotal) }
 }
 
 type ReconcileAffiliateCommissionLineItemsResult = {
@@ -467,8 +459,7 @@ export async function reconcileAffiliateCommissionLineItems(params: {
     userIds: params.userIds,
     startDate: params.startDate,
     endDate: params.endDate,
-    platform: params.platform,
-  }
+    platform: params.platform }
 
   const attributionUpdatedAt = await getAffiliateCommissionAttributionUpdatedAt(reconcileCtx)
 
@@ -478,8 +469,7 @@ export async function reconcileAffiliateCommissionLineItems(params: {
   ) {
     return {
       lineItems: params.rawDerived,
-      attributionUpdatedAt,
-    }
+      attributionUpdatedAt }
   }
 
   const totals = await sumAttributionCommissionTotals(reconcileCtx)
@@ -488,8 +478,7 @@ export async function reconcileAffiliateCommissionLineItems(params: {
   if (totals.combinedTotal <= rawTotal + 0.001) {
     return {
       lineItems: params.rawDerived,
-      attributionUpdatedAt,
-    }
+      attributionUpdatedAt }
   }
 
   const attributionDerived = await loadAffiliateCommissionLineItemsFromAttributions({
@@ -498,16 +487,13 @@ export async function reconcileAffiliateCommissionLineItems(params: {
     startDate: params.startDate,
     endDate: params.endDate,
     platform: params.platform,
-    showUserScope: params.showUserScope,
-  })
+    showUserScope: params.showUserScope })
 
   return {
     lineItems: preferAttributionLineItemsIfHigher({
       rawDerived: params.rawDerived,
-      attributionDerived,
-    }),
-    attributionUpdatedAt,
-  }
+      attributionDerived }),
+    attributionUpdatedAt }
 }
 
 /**
@@ -537,8 +523,7 @@ async function loadAffiliateCommissionLineItemsFromAttributions(params: {
     const item = buildLineItemFromAttributionRow({
       row,
       username,
-      showUserScope: params.showUserScope,
-    })
+      showUserScope: params.showUserScope })
     if (item) items.push(item)
   }
 

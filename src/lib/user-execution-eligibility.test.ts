@@ -23,7 +23,6 @@ describe('user-execution-eligibility', () => {
     clearUserExecutionEligibilityCache()
 
     vi.mocked(getDatabase).mockReturnValue({
-      type: 'sqlite',
       query: vi.fn(),
       queryOne,
       exec: vi.fn(),
@@ -82,7 +81,7 @@ describe('user-execution-eligibility', () => {
   })
 
   it('builds SQL user eligibility condition for postgres', () => {
-    const sql = buildUserExecutionEligibleSql({ dbType: 'postgres', userAlias: 'u' })
+    const sql = buildUserExecutionEligibleSql({ userAlias: 'u' })
     expect(sql).toContain('u.is_active = true')
     expect(sql).toContain('u.package_expires_at')
     expect(sql).toContain("NULLIF(BTRIM(u.package_expires_at), '')::timestamptz")

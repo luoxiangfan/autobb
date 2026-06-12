@@ -82,8 +82,7 @@ export function normalizeOpenclawStrategyConfig(raw: OpenclawStrategyConfig): Op
     dailyBudgetCap,
     dailySpendCap,
     targetRoas,
-    priorityAsins: normalizedPriorityAsins && normalizedPriorityAsins.length > 0 ? normalizedPriorityAsins : undefined,
-  }
+    priorityAsins: normalizedPriorityAsins && normalizedPriorityAsins.length > 0 ? normalizedPriorityAsins : undefined }
 }
 
 export async function getOpenclawStrategyConfig(userId: number): Promise<OpenclawStrategyConfig> {
@@ -107,6 +106,5 @@ export async function getOpenclawStrategyConfig(userId: number): Promise<Opencla
     enableAutoAdjustCpc: parseBoolean(settingMap.openclaw_strategy_enable_auto_adjust_cpc, true),
     allowAffiliateFetch: parseBoolean(settingMap.openclaw_strategy_allow_affiliate_fetch, true),
     enforceAutoadsOnly: parseBoolean(settingMap.openclaw_strategy_enforce_autoads_only, true),
-    dryRun: parseBoolean(settingMap.openclaw_strategy_dry_run, false),
-  })
+    dryRun: parseBoolean(settingMap.openclaw_strategy_dry_run, false) })
 }

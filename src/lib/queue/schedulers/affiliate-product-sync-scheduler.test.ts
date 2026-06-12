@@ -40,7 +40,6 @@ describe('AffiliateProductSyncScheduler YP support', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getDatabase.mockResolvedValue({
-      type: 'postgres',
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn().mockResolvedValue(undefined),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -309,7 +308,6 @@ describe('AffiliateProductSyncScheduler YP support', () => {
       { key: 'affiliate_pb_last_full_sync_at', value: '2026-02-24T00:00:00.000Z' },
     ])
     mocks.getDatabase.mockResolvedValue({
-      type: 'postgres',
       query: dbQueryMock,
       queryOne: vi.fn().mockResolvedValue(undefined),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -474,7 +472,6 @@ describe('AffiliateProductSyncScheduler YP support', () => {
   it('filters scheduler users by product_management_enabled gate', async () => {
     const dbQueryMock = vi.fn().mockResolvedValue([{ id: 9 }, { id: 12 }])
     mocks.getDatabase.mockResolvedValue({
-      type: 'postgres',
       query: dbQueryMock,
       queryOne: vi.fn().mockResolvedValue(undefined),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),

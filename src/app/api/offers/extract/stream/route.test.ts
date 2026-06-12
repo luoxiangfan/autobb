@@ -15,7 +15,6 @@ vi.mock('@/lib/offer-extraction-task', async (importOriginal) => {
 
 vi.mock('@/lib/db', () => ({
   getDatabase: () => ({
-    type: 'sqlite',
     query: vi.fn().mockResolvedValue([]),
   }),
 }))

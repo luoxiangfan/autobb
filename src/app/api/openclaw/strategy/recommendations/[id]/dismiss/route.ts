@@ -19,13 +19,11 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   try {
     const recommendation = await dismissStrategyRecommendation({
       userId: auth.userId,
-      recommendationId,
-    })
+      recommendationId })
 
     return NextResponse.json({
       success: true,
-      recommendation,
-    })
+      recommendation })
   } catch (error: any) {
     const message = error?.message || '设置暂不执行失败'
     const status = message.includes('不存在')

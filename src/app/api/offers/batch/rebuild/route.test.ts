@@ -51,7 +51,7 @@ import { POST } from '@/app/api/offers/batch/rebuild/route'
 describe('POST /api/offers/batch/rebuild', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbFns.getDatabase.mockReturnValue({ type: 'sqlite', query: dbFns.query })
+    dbFns.getDatabase.mockReturnValue({ query: dbFns.query })
     dbFns.query.mockResolvedValueOnce([{ id: 10 }]).mockResolvedValueOnce([])
     offerFns.findOfferById.mockResolvedValue({
       id: 10,

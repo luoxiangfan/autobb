@@ -12,7 +12,6 @@ import { getDatabase } from './db'
 import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 
-const MAX_IDS_PER_UPDATE_BATCH = 200
 const DEFAULT_PAUSE_BATCH_CONCURRENCY = 3
 const DEV_DEFAULT_PAUSE_BATCH_CONCURRENCY = 2
 const MIN_PAUSE_BATCH_CONCURRENCY = 1
@@ -31,15 +30,6 @@ function resolvePauseBatchConcurrency(): number {
   if (!Number.isFinite(raw)) return envDefault
   const normalized = Math.floor(raw)
   return Math.min(MAX_PAUSE_BATCH_CONCURRENCY, Math.max(MIN_PAUSE_BATCH_CONCURRENCY, normalized))
-}
-
-function chunkIds(ids: string[], size: number): string[][] {
-  if (ids.length === 0) return []
-  const chunks: string[][] = []
-  for (let index = 0; index < ids.length; index += size) {
-    chunks.push(ids.slice(index, index + size))
-  }
-  return chunks
 }
 
 function normalizeUpdatedTaskIds(ids: string[]): string[] {
@@ -104,8 +94,8 @@ export async function pauseOfferTasks(
     urlSwapTaskCount: 0,
   }
 
-  const pausedCondition = db.type === 'postgres' ? 'NOW()' : 'datetime("now")'
-  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+  const pausedCondition = 'NOW()'
+  const isDeletedFalse = 'FALSE'
   let updatedClickFarmTaskIds: string[] = []
   let updatedUrlSwapTaskIds: string[] = []
   let clickFarmUpdatedCount = 0
@@ -114,9 +104,8 @@ export async function pauseOfferTasks(
   // 统一事务内完成查询与状态更新，避免并发下读写窗口不一致
   await db.transaction(async () => {
     // 1) 暂停补点击任务
-    if (db.type === 'postgres') {
-      const updatedRows = await db.query<{ id: string }>(
-        `
+    const updatedClickFarmRows = await db.query<{ id: string }>(
+      `
         UPDATE click_farm_tasks
         SET status = 'stopped',
             pause_reason = ?,
@@ -127,59 +116,10 @@ export async function pauseOfferTasks(
           AND status IN ('pending', 'running', 'paused')
         RETURNING id
       `,
-        [pauseReason, pauseMessage, userId, offerId]
-      )
-      updatedClickFarmTaskIds.push(...updatedRows.map((row) => String(row.id)))
-      clickFarmUpdatedCount = updatedRows.length
-    } else {
-      // SQLite 保持先查后批量更新，避免超大 IN 列表带来的参数限制风险。
-      const clickFarmTaskIds = (
-        await db.query<{ id: string }>(
-          `
-          SELECT id FROM click_farm_tasks
-          WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-            AND status IN ('pending', 'running', 'paused')
-        `,
-          [offerId, userId]
-        )
-      ).map((task) => String(task.id))
-
-      for (const batchIds of chunkIds(clickFarmTaskIds, MAX_IDS_PER_UPDATE_BATCH)) {
-        const clickFarmIdPlaceholders = batchIds.map(() => '?').join(', ')
-        let updateChanges = 0
-        const updateResult = await db.exec(
-          `
-          UPDATE click_farm_tasks
-          SET status = 'stopped',
-              pause_reason = ?,
-              pause_message = ?,
-              paused_at = ${pausedCondition},
-              updated_at = ${pausedCondition}
-          WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
-            AND status IN ('pending', 'running', 'paused')
-            AND id IN (${clickFarmIdPlaceholders})
-        `,
-          [pauseReason, pauseMessage, userId, offerId, ...batchIds]
-        )
-        updateChanges = Number(updateResult.changes || 0)
-        if (updateChanges === batchIds.length) {
-          updatedClickFarmTaskIds.push(...batchIds)
-        } else if (updateChanges > 0) {
-          // 并发下部分命中时，二次查询确认已更新到 stopped 的任务，避免误删队列。
-          const confirmedUpdatedRows = await db.query<{ id: string }>(
-            `
-            SELECT id FROM click_farm_tasks
-            WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
-              AND status = 'stopped'
-              AND id IN (${clickFarmIdPlaceholders})
-          `,
-            [userId, offerId, ...batchIds]
-          )
-          updatedClickFarmTaskIds.push(...confirmedUpdatedRows.map((row) => String(row.id)))
-        }
-        clickFarmUpdatedCount += updateChanges
-      }
-    }
+      [pauseReason, pauseMessage, userId, offerId]
+    )
+    updatedClickFarmTaskIds.push(...updatedClickFarmRows.map((row) => String(row.id)))
+    clickFarmUpdatedCount = updatedClickFarmRows.length
     result.clickFarmTaskPaused = clickFarmUpdatedCount > 0
     updatedClickFarmTaskIds = normalizeUpdatedTaskIds(updatedClickFarmTaskIds)
     if (updatedClickFarmTaskIds.length > 0) {
@@ -188,9 +128,8 @@ export async function pauseOfferTasks(
     result.clickFarmTaskCount = clickFarmUpdatedCount
 
     // 2) 禁用换链接任务（仅处理可暂停态，避免触碰 completed 历史任务）
-    if (db.type === 'postgres') {
-      const updatedRows = await db.query<{ id: string }>(
-        `
+    const updatedUrlSwapRows = await db.query<{ id: string }>(
+      `
         UPDATE url_swap_tasks
         SET status = 'disabled',
             updated_at = ${pausedCondition}
@@ -198,55 +137,10 @@ export async function pauseOfferTasks(
           AND status IN ('enabled', 'error')
         RETURNING id
       `,
-        [userId, offerId]
-      )
-      updatedUrlSwapTaskIds.push(...updatedRows.map((row) => String(row.id)))
-      urlSwapUpdatedCount = updatedRows.length
-    } else {
-      const urlSwapTaskIds = (
-        await db.query<{ id: string }>(
-          `
-          SELECT id FROM url_swap_tasks
-          WHERE offer_id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
-            AND status IN ('enabled', 'error')
-        `,
-          [offerId, userId]
-        )
-      ).map((task) => String(task.id))
-
-      for (const batchIds of chunkIds(urlSwapTaskIds, MAX_IDS_PER_UPDATE_BATCH)) {
-        const urlSwapIdPlaceholders = batchIds.map(() => '?').join(', ')
-        let updateChanges = 0
-        const updateResult = await db.exec(
-          `
-          UPDATE url_swap_tasks
-          SET status = 'disabled',
-              updated_at = ${pausedCondition}
-          WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
-            AND status IN ('enabled', 'error')
-            AND id IN (${urlSwapIdPlaceholders})
-        `,
-          [userId, offerId, ...batchIds]
-        )
-        updateChanges = Number(updateResult.changes || 0)
-        if (updateChanges === batchIds.length) {
-          updatedUrlSwapTaskIds.push(...batchIds)
-        } else if (updateChanges > 0) {
-          // 并发下部分命中时，二次查询确认已禁用的任务，降低残留 pending 队列概率。
-          const confirmedUpdatedRows = await db.query<{ id: string }>(
-            `
-            SELECT id FROM url_swap_tasks
-            WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
-              AND status = 'disabled'
-              AND id IN (${urlSwapIdPlaceholders})
-          `,
-            [userId, offerId, ...batchIds]
-          )
-          updatedUrlSwapTaskIds.push(...confirmedUpdatedRows.map((row) => String(row.id)))
-        }
-        urlSwapUpdatedCount += updateChanges
-      }
-    }
+      [userId, offerId]
+    )
+    updatedUrlSwapTaskIds.push(...updatedUrlSwapRows.map((row) => String(row.id)))
+    urlSwapUpdatedCount = updatedUrlSwapRows.length
     result.urlSwapTaskDisabled = urlSwapUpdatedCount > 0
     updatedUrlSwapTaskIds = normalizeUpdatedTaskIds(updatedUrlSwapTaskIds)
     if (updatedUrlSwapTaskIds.length > 0) {
@@ -299,7 +193,7 @@ export async function resumeOfferTasksOnCampaignEnable(
   userId: number
 ): Promise<ResumeOfferTasksResult> {
   const db = await getDatabase()
-  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+  const isDeletedFalse = 'FALSE'
   const offerRow = await db.queryOne<{ target_country: string | null }>(
     `
     SELECT target_country

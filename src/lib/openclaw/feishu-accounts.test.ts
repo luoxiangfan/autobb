@@ -3,25 +3,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const hoisted = vi.hoisted(() => ({
   queryMock: vi.fn(),
   decryptMock: vi.fn((value: string) => value),
-  getUserOnlySettingMock: vi.fn(),
-}))
+  getUserOnlySettingMock: vi.fn() }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: async () => ({
-    query: hoisted.queryMock,
-  }),
-}))
+    query: hoisted.queryMock }) }))
 
 vi.mock('@/lib/crypto', () => ({
-  decrypt: hoisted.decryptMock,
-}))
+  decrypt: hoisted.decryptMock }))
 
 vi.mock('@/lib/settings', async () => {
   const actual = await vi.importActual<typeof import('@/lib/settings')>('@/lib/settings')
   return {
     ...actual,
-    getUserOnlySetting: hoisted.getUserOnlySettingMock,
-  }
+    getUserOnlySetting: hoisted.getUserOnlySettingMock }
 })
 
 import { collectUserFeishuAccounts, collectUserFeishuBindingAccounts } from './feishu-accounts'
@@ -101,12 +96,9 @@ describe('collectUserFeishuAccounts', () => {
             cardEncryptKey: 'encrypt_key_4',
             cardConfirmUrl: 'https://example.com/api/openclaw/commands/confirm',
             cardConfirmAuthToken: 'confirm_auth_4',
-            cardConfirmTimeoutMs: 12000,
-          },
-        }),
+            cardConfirmTimeoutMs: 12000 } }),
         encrypted_value: null,
-        is_sensitive: true,
-      },
+        is_sensitive: true },
     ])
 
     const accounts = await collectUserFeishuAccounts()
@@ -132,8 +124,7 @@ describe('collectUserFeishuAccounts', () => {
         key: 'feishu_app_secret_file',
         value: '/secrets/feishu-app-secret',
         encrypted_value: null,
-        is_sensitive: false,
-      },
+        is_sensitive: false },
     ])
 
     const accounts = await collectUserFeishuAccounts()
@@ -156,8 +147,7 @@ describe('collectUserFeishuAccounts', () => {
         key: 'feishu_app_secret',
         value: null,
         encrypted_value: 'never-read-in-binding-collector',
-        is_sensitive: true,
-      },
+        is_sensitive: true },
     ])
 
     const accounts = await collectUserFeishuBindingAccounts()

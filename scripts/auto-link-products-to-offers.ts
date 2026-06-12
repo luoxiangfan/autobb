@@ -75,10 +75,7 @@ async function findUnlinkedProducts(userId: number): Promise<Product[]> {
 
 async function findMatchingOffers(userId: number): Promise<Offer[]> {
   const db = await getDatabase()
-  const offerNotDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = false OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   const offers = await db.query<Offer>(
     `
@@ -168,7 +165,7 @@ async function createProductOfferLink(
     INSERT INTO affiliate_product_offer_links
       (user_id, product_id, offer_id, created_via, created_at)
     VALUES
-      (?, ?, ?, ?, datetime('now'))
+      (?, ?, ?, ?, NOW())
   `,
     [userId, productId, offerId, createdVia]
   )

@@ -41,9 +41,7 @@ export async function getTenantAccessToken(params: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       app_id: params.appId,
-      app_secret: params.appSecret,
-    }),
-  })
+      app_secret: params.appSecret }) })
 
   if (!response.ok) {
     const text = await response.text()
@@ -71,10 +69,8 @@ export async function feishuRequest<T>(params: {
     method: params.method,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${params.token}`,
-    },
-    body: params.body ? JSON.stringify(params.body) : undefined,
-  })
+      Authorization: `Bearer ${params.token}` },
+    body: params.body ? JSON.stringify(params.body) : undefined })
 
   if (!response.ok) {
     const text = await response.text()

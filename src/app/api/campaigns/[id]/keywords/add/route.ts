@@ -218,7 +218,7 @@ async function ensurePrimaryAdGroup(params: {
   )
 
   return {
-    localAdGroupId: getInsertedId(result, db.type),
+    localAdGroupId: getInsertedId(result),
     googleAdGroupId: fallbackGoogleAdGroupId,
   }
 }
@@ -401,7 +401,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         addKeywords: keywordRows,
       })
       if (!patch.changed) return
-      const nowExpr = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowExpr = 'NOW()'
       await db.exec(
         `
           UPDATE campaigns
@@ -560,8 +560,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
             created.keywordText,
             matchType,
             status,
-            boolParam(false, db.type),
-            boolParam(false, db.type),
+            boolParam(false),
+            boolParam(false),
             now,
             now,
             now,

@@ -7,7 +7,6 @@ vi.mock('@/lib/db', () => ({
     exec,
     query: vi.fn(async () => []),
     queryOne: vi.fn(async () => null),
-    type: 'postgres',
   })),
 }))
 

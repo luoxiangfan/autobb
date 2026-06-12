@@ -78,7 +78,7 @@ export async function upsertAffiliateProducts(
   let synced = 0
 
   for (const p of products) {
-    const rawData = toDbJsonObjectField(p.raw_data ?? null, db.type, null)
+    const rawData = toDbJsonObjectField(p.raw_data ?? null, null)
     const sql = generateUpsertSql(
       'openclaw_affiliate_products',
       ['user_id', 'platform', 'COALESCE(asin, external_product_id)'],
@@ -93,10 +93,7 @@ export async function upsertAffiliateProducts(
         'commission_rate', 'discount_percent', 'rating', 'review_count',
         'availability', 'image_url', 'product_url', 'tracking_url',
         'raw_data', 'synced_at', 'updated_at',
-      ],
-      db.type
-    )
-
+      ])
     await db.exec(sql, [
       userId,
       p.platform,

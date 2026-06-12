@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     const { settings } = validationResult.data
     const db = await getDatabase()
-    const nowSql = sqlNowFunc(db.type)
+    const nowSql = sqlNowFunc()
 
     const blockedKeys = ['google_ads:refresh_token', 'google_ads:access_token']
 

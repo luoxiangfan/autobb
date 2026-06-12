@@ -131,7 +131,7 @@ export async function assertUserCanModifyGoogleAdsAuth(
 
 async function getRawGoogleAdsCredentials(userId: number): Promise<GoogleAdsCredentials | null> {
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const isActiveCondition = boolCondition('is_active', true)
   const credentials = await db.queryOne<GoogleAdsCredentials>(
     `SELECT * FROM google_ads_credentials
      WHERE user_id = ? AND ${isActiveCondition}`,
@@ -148,7 +148,7 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
   api_access_level?: string | null
 } | null> {
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const isActiveCondition = boolCondition('is_active', true)
   const account = await db.queryOne<{
     id: string
     mcc_customer_id: string
@@ -324,7 +324,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
   configuredBy: number
 }): Promise<GoogleAdsAuthAssignment> {
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
   const existing = await getGoogleAdsAuthAssignment(params.userId)
 
   if (existing) {

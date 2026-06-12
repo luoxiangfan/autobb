@@ -90,9 +90,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     // 防止同平台重复手动提交：优先阻止“近期仍活跃”的 queued/running run。
     const db = await getDatabase()
     const activeRunFreshnessSql =
-      db.type === 'postgres'
-        ? "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
-        : "COALESCE(last_heartbeat_at, updated_at, created_at) >= datetime('now', '-45 minutes')"
+      "COALESCE(last_heartbeat_at, updated_at, created_at) >= NOW() - INTERVAL '45 minutes'"
     const activeRun = await db.queryOne<{
       id: number
       status: string

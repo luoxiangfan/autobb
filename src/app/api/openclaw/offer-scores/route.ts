@@ -27,8 +27,7 @@ const createSchema = z.object({
   suggested_cpc_max: z.number().optional().nullable(),
   estimated_roas: z.number().optional().nullable(),
   priority: z.string().optional().default('P2'),
-  raw_data: z.any().optional().nullable(),
-})
+  raw_data: z.any().optional().nullable() })
 
 export async function GET(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)
@@ -47,8 +46,7 @@ export async function GET(request: NextRequest) {
   const data = await listOfferScores(auth.userId, {
     limit,
     priority,
-    orderBy,
-  })
+    orderBy })
   return NextResponse.json({ success: true, data })
 }
 
@@ -67,10 +65,8 @@ const autoScoreSchema = z.object({
     marketplace: z.string().optional().nullable(),
     has_promo_code: z.boolean().optional().nullable(),
     platform: z.string().max(50, zErr.maxChars(50)).optional().nullable(),
-    offer_id: z.number().int(zErr.int).optional().nullable(),
-  })).min(1, zErr.minItems(1)).max(100, zErr.maxItems(100)),
-  top: z.number().int(zErr.int).min(1, zErr.minNumber(1)).max(100, zErr.maxNumber(100)).optional(),
-})
+    offer_id: z.number().int(zErr.int).optional().nullable() })).min(1, zErr.minItems(1)).max(100, zErr.maxItems(100)),
+  top: z.number().int(zErr.int).min(1, zErr.minNumber(1)).max(100, zErr.maxNumber(100)).optional() })
 
 export async function POST(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)
@@ -131,8 +127,7 @@ export async function POST(request: NextRequest) {
             suggested_cpc_max: ranked[i].suggested_cpc_max,
             estimated_roas: ranked[i].estimated_roas,
             priority: ranked[i].priority,
-            raw_data: product,
-          })
+            raw_data: product })
         }
       }
 

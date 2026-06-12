@@ -30,8 +30,7 @@ const DEFAULT_LOG_FILE = '/proc/self/fd/1'
 // AutoAds-specific safety is enforced at the API boundary (canonical routes + command queue),
 // not by crippling OpenClaw tools/skills. (User requirement: "全能力默认开放".)
 const DEFAULT_TOOLS_POLICY = {
-  profile: 'full',
-} as const
+  profile: 'full' } as const
 
 function resolveEnvValue(value: string | undefined, fallback: string): string {
   const trimmed = (value || '').trim()
@@ -334,8 +333,7 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
     authMode: feishuAuthMode,
     requireTenantKey: feishuRequireTenantKey,
     strictAutoBind: feishuStrictAutoBind,
-    enabled: true,
-  }
+    enabled: true }
 
   const requireMentionRaw = settingMap.feishu_require_mention
   let mergedGroups = feishuGroups
@@ -398,8 +396,7 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
   const workspaceBootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,
     actorUserId,
-    preferredWorkspace,
-  })
+    preferredWorkspace })
 
   if (workspaceBootstrap.changedFiles.length > 0) {
     console.log('🧠 OpenClaw workspace bootstrap updated:', workspaceBootstrap.changedFiles)
@@ -408,62 +405,46 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
   const config: Record<string, any> = {
     meta: {
       lastTouchedAt: new Date().toISOString(),
-      lastTouchedVersion: 'autoads',
-    },
+      lastTouchedVersion: 'autoads' },
     env: {
-      shellEnv: { enabled: true },
-    },
+      shellEnv: { enabled: true } },
     logging: {
       level: 'info',
       file: resolveEnvValue(process.env.OPENCLAW_LOG_FILE, DEFAULT_LOG_FILE),
       consoleLevel: resolveEnvValue(process.env.OPENCLAW_CONSOLE_LEVEL, 'info'),
       consoleStyle: resolveEnvValue(process.env.OPENCLAW_CONSOLE_STYLE, 'compact'),
-      redactSensitive: 'tools',
-    },
+      redactSensitive: 'tools' },
     tools: { ...DEFAULT_TOOLS_POLICY },
     session: {
-      dmScope: 'per-account-channel-peer',
-    },
+      dmScope: 'per-account-channel-peer' },
     gateway: {
       mode: 'local',
       bind: gatewayBind,
       port: gatewayPort,
       auth: {
         mode: 'token',
-        token: gatewayToken,
-      },
+        token: gatewayToken },
       controlUi: {
-        enabled: false,
-      },
+        enabled: false },
       reload: {
-        mode: 'hybrid',
-      },
-    },
+        mode: 'hybrid' } },
     plugins: {
       entries: {
-        feishu: { enabled: true },
-      },
-    },
+        feishu: { enabled: true } } },
     channels: {
       feishu: {
         enabled: true,
-        accounts: {},
-      },
-    },
+        accounts: {} } },
     skills: {
       entries: {
         autoads: { enabled: true },
         'autoads-report-qa': { enabled: true },
-        'autoads-prd-writer': { enabled: true },
-      },
-    },
-  }
+        'autoads-prd-writer': { enabled: true } } } }
 
   if (gatewayAuthRateLimit) {
     config.gateway.auth = {
       ...(config.gateway.auth || {}),
-      rateLimit: gatewayAuthRateLimit,
-    }
+      rateLimit: gatewayAuthRateLimit }
   }
 
   if (gatewayToolsConfig) {
@@ -567,16 +548,13 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
       ...(config.skills || {}),
       entries: {
         ...((config.skills && config.skills.entries) || {}),
-        ...skillsEntries,
-      },
-    }
+        ...skillsEntries } }
   }
 
   if (skillsAllowBundled.length > 0) {
     config.skills = {
       ...(config.skills || {}),
-      allowBundled: skillsAllowBundled.map((entry) => String(entry)),
-    }
+      allowBundled: skillsAllowBundled.map((entry) => String(entry)) }
   }
 
   // Ensure the key integration skill is always available.
@@ -584,8 +562,7 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
     const current = (config.skills.entries as Record<string, any>).autoads
     ;(config.skills.entries as Record<string, any>).autoads = {
       ...(current && typeof current === 'object' && !Array.isArray(current) ? current : {}),
-      enabled: true,
-    }
+      enabled: true }
   }
 
   const mergedAgentDefaults = (() => {
@@ -664,8 +641,7 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
   try {
     const managedAuthSync = syncOpenclawManagedAiAuthProfiles({
       config,
-      configPath,
-    })
+      configPath })
     if (managedAuthSync.updated) {
       console.log(
         `🔐 OpenClaw AI 凭据已同步到 auth-profiles -> ${managedAuthSync.authProfilesPath}`

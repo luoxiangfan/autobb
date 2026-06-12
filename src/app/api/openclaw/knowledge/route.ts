@@ -5,8 +5,7 @@ import {
   saveKnowledgeEntry,
   generateKnowledgeSummary,
   determineStrategyMode,
-  getRecentKnowledge,
-} from '@/lib/openclaw/strategy-store'
+  getRecentKnowledge } from '@/lib/openclaw/strategy-store'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'
@@ -14,8 +13,7 @@ export const dynamic = 'force-dynamic'
 const saveEntrySchema = z.object({
   report_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, zErr.dateYmd),
   summary_json: z.string().min(1, zErr.required),
-  notes: z.string().optional().nullable(),
-})
+  notes: z.string().optional().nullable() })
 
 export async function GET(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)
@@ -42,9 +40,7 @@ export async function GET(request: NextRequest) {
     success: true,
     data: {
       summary,
-      entries: recent,
-    },
-  })
+      entries: recent } })
 }
 
 export async function POST(request: NextRequest) {

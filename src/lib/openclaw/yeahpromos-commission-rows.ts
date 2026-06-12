@@ -138,8 +138,7 @@ export function normalizeYeahPromosPayloadRows(payload: any): { rows: any[]; pag
   const pageTotal = Number(pageTotalRaw)
   return {
     rows,
-    pageTotal: Number.isFinite(pageTotal) && pageTotal > 0 ? Math.floor(pageTotal) : null,
-  }
+    pageTotal: Number.isFinite(pageTotal) && pageTotal > 0 ? Math.floor(pageTotal) : null }
 }
 
 function normalizeAsin(value: unknown): string | null {
@@ -262,8 +261,7 @@ export function collectYeahPromosReportRows(payload: unknown): YeahPromosReportC
       commission,
       advertId,
       brandName,
-      asin,
-    })
+      asin })
   }
 
   return results

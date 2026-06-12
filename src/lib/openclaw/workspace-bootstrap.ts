@@ -4,14 +4,12 @@ import {
   formatOpenclawDateInShanghai,
   getOpenclawDailyMemoryFileName,
   normalizeOpenclawUserPath,
-  resolveOpenclawWorkspaceDir,
-} from '@/lib/openclaw/workspace-paths'
+  resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
 
 export {
   getOpenclawDailyMemoryFileName,
   normalizeOpenclawUserPath,
-  resolveOpenclawWorkspaceDir,
-} from '@/lib/openclaw/workspace-paths'
+  resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
 
 type EnsureOpenclawWorkspaceOptions = {
   stateDir: string
@@ -330,14 +328,12 @@ function inspectSingleFile(filePath: string): {
     return {
       exists: true,
       size: stat.size,
-      updatedAt: stat.mtime.toISOString(),
-    }
+      updatedAt: stat.mtime.toISOString() }
   } catch {
     return {
       exists: false,
       size: null,
-      updatedAt: null,
-    }
+      updatedAt: null }
   }
 }
 
@@ -352,8 +348,7 @@ export function inspectOpenclawWorkspace(workspaceDir: string, date: Date = new 
       path: filePath,
       exists: meta.exists,
       size: meta.size,
-      updatedAt: meta.updatedAt,
-    }
+      updatedAt: meta.updatedAt }
   })
 
   const missingFiles = files
@@ -369,8 +364,7 @@ export function inspectOpenclawWorkspace(workspaceDir: string, date: Date = new 
     files,
     missingFiles,
     dailyMemoryPath,
-    dailyMemoryExists,
-  }
+    dailyMemoryExists }
 }
 
 function ensureMemoryScaffold(workspaceDir: string, changedFiles: string[]): void {
@@ -402,6 +396,5 @@ export function ensureOpenclawWorkspaceBootstrap(
 
   return {
     workspaceDir,
-    changedFiles,
-  }
+    changedFiles }
 }

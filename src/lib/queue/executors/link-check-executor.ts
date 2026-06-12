@@ -178,7 +178,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
         const db = await getDatabase()
 
         // 🔧 修复: PostgreSQL BOOLEAN 兼容性
-        const isActiveCondition = db.type === 'postgres' ? 'o.is_active = true' : 'o.is_active = 1'
+        const isActiveCondition = 'o.is_active = true'
 
         // 构建查询条件
         let query = `
@@ -310,7 +310,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
           console.log(`   ❌ ${displayName}: 链接失效 - ${result.error}`)
 
-          const isDeletedFalse = dbConn.type === 'postgres' ? 'FALSE' : '0'
+          const isDeletedFalse = 'FALSE'
           let campaignsToSyncGoogle: Array<{
             campaign_id: string
             google_ads_account_id: number

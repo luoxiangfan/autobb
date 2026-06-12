@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(),
-}))
+  getDatabase: vi.fn() }))
 
 import { getDatabase } from '@/lib/db'
 import { persistAffiliateCommissionAttributions } from '@/lib/openclaw/affiliate-commission-attribution'
@@ -12,8 +11,7 @@ function formatLocalYmd(date: Date): string {
     timeZone: process.env.TZ || 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+    day: '2-digit' }).format(date)
 }
 
 describe('persistAffiliateCommissionAttributions simplified attribution', () => {
@@ -29,13 +27,11 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     exec.mockReset()
 
     vi.mocked(getDatabase).mockReturnValue({
-      type: 'sqlite',
       query,
       queryOne,
       exec,
       transaction: vi.fn(async (fn: () => Promise<unknown>) => await fn()),
-      close: vi.fn(),
-    } as any)
+      close: vi.fn() } as any)
   })
 
   it('returns existing summary for historical date when lock is enabled and fully attributed', async () => {
@@ -43,8 +39,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       written_rows: 2,
       attributed_commission: 7.5,
       attributed_offers: 1,
-      attributed_campaigns: 1,
-    })
+      attributed_campaigns: 1 })
 
     const result = await persistAffiliateCommissionAttributions({
       userId: 7,
@@ -53,12 +48,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
         {
           platform: 'partnerboost',
           reportDate: '2000-01-01',
-          commission: 7.5,
-        },
+          commission: 7.5 },
       ],
       replaceExisting: true,
-      lockHistorical: true,
-    })
+      lockHistorical: true })
 
     expect(result).toEqual({
       reportDate: '2000-01-01',
@@ -67,8 +60,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 1,
       attributedCampaigns: 1,
-      writtenRows: 2,
-    })
+      writtenRows: 2 })
 
     expect(queryOne).toHaveBeenCalledTimes(1)
     expect(exec).not.toHaveBeenCalled()
@@ -79,8 +71,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       written_rows: 1,
       attributed_commission: 7.5,
       attributed_offers: 1,
-      attributed_campaigns: 1,
-    })
+      attributed_campaigns: 1 })
 
     const result = await persistAffiliateCommissionAttributions({
       userId: 7,
@@ -89,12 +80,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
         {
           platform: 'partnerboost',
           reportDate: '2000-01-01',
-          commission: 10,
-        },
+          commission: 10 },
       ],
       replaceExisting: false,
-      lockHistorical: true,
-    })
+      lockHistorical: true })
 
     expect(result).toEqual({
       reportDate: '2000-01-01',
@@ -103,8 +92,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 10,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    })
+      writtenRows: 0 })
   })
 
   it('rebuilds historical platform snapshot when fetched commission is lower', async () => {
@@ -134,13 +122,11 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: '2000-01-01',
           commission: 5,
           sourceAsin: 'B0HISTLOW1',
-          raw: { id: 'evt-hist-lower-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-hist-lower-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
       lockHistorical: true,
-      replacePlatforms: ['partnerboost'],
-    })
+      replacePlatforms: ['partnerboost'] })
 
     expect(result).toEqual({
       reportDate: '2000-01-01',
@@ -149,8 +135,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 1,
       attributedCampaigns: 1,
-      writtenRows: 1,
-    })
+      writtenRows: 1 })
 
     expect(queryOne).not.toHaveBeenCalled()
 
@@ -174,8 +159,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       entries: [],
       replaceExisting: true,
       lockHistorical: true,
-      replacePlatforms: ['yeahpromos'],
-    })
+      replacePlatforms: ['yeahpromos'] })
 
     expect(result).toEqual({
       reportDate: '2000-01-01',
@@ -184,8 +168,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    })
+      writtenRows: 0 })
 
     const deleteCalls = exec.mock.calls.filter(([sql]) =>
       typeof sql === 'string' && sql.includes('DELETE FROM affiliate_commission_attributions')
@@ -209,12 +192,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
         {
           platform: 'partnerboost',
           reportDate: today,
-          commission: 12.34,
-        },
+          commission: 12.34 },
       ],
       replaceExisting: false,
-      lockHistorical: true,
-    })
+      lockHistorical: true })
 
     expect(result).toEqual({
       reportDate: today,
@@ -223,8 +204,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 12.34,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    })
+      writtenRows: 0 })
 
     expect(queryOne).not.toHaveBeenCalled()
   })
@@ -266,12 +246,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 12,
           sourceAsin: 'B0C7GYLKPM',
-          raw: { id: 'evt-asin-cost-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-asin-cost-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result).toEqual({
       reportDate: today,
@@ -280,8 +258,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 2,
       attributedCampaigns: 2,
-      writtenRows: 2,
-    })
+      writtenRows: 2 })
 
     const attributionInsertCalls = exec.mock.calls.filter(([sql]) =>
       typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
@@ -322,12 +299,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 12,
           sourceAsin: 'B0CLICKS01',
-          raw: { id: 'evt-asin-clicks-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-asin-clicks-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result.attributedCommission).toBe(12)
     expect(result.unattributedCommission).toBe(0)
@@ -370,12 +345,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 10,
           sourceAsin: 'B0UNKNOWN99',
-          raw: { id: 'evt-brand-split-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-brand-split-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result).toEqual({
       reportDate: today,
@@ -384,8 +357,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 2,
       attributedCampaigns: 2,
-      writtenRows: 2,
-    })
+      writtenRows: 2 })
 
     const attributionInsertCalls = exec.mock.calls.filter(([sql]) =>
       typeof sql === 'string' && sql.includes('INSERT INTO affiliate_commission_attributions')
@@ -418,12 +390,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 6.66,
           sourceAsin: 'B0FROZEN01',
-          raw: { id: 'evt-frozen-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-frozen-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result).toEqual({
       reportDate: today,
@@ -432,8 +402,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 1,
       attributedCampaigns: 1,
-      writtenRows: 0,
-    })
+      writtenRows: 0 })
 
     expect(exec).not.toHaveBeenCalled()
   })
@@ -468,12 +437,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 8,
           sourceAsin: 'B0TIMEOUT1',
-          raw: { id: 'evt-timeout-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-timeout-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result).toEqual({
       reportDate: today,
@@ -482,8 +449,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 0,
       attributedOffers: 1,
       attributedCampaigns: 1,
-      writtenRows: 1,
-    })
+      writtenRows: 1 })
 
     const eventLookupCall = query.mock.calls.find(([sql]) =>
       typeof sql === 'string'
@@ -515,12 +481,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 8.88,
           sourceAsin: 'B0NOHIT001',
-          raw: { id: 'evt-unattributed-1' },
-        },
+          raw: { id: 'evt-unattributed-1' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result).toEqual({
       reportDate: today,
@@ -529,8 +493,7 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
       unattributedCommission: 8.88,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    })
+      writtenRows: 0 })
 
     const failureInsertCalls = exec.mock.calls.filter(([sql]) =>
       typeof sql === 'string' && sql.includes('INSERT INTO openclaw_affiliate_attribution_failures')
@@ -578,12 +541,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 15.5,
           sourceAsin: 'B0NOLINK01',
-          raw: { id: 'evt-nolink-1' },
-        },
+          raw: { id: 'evt-nolink-1' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     // Should successfully attribute via brand fallback
     expect(result.attributedCommission).toBe(15.5)
@@ -641,13 +602,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           sourceAsin: 'B08KTR8FJJ',
           raw: {
             id: 'evt-max-lily-1',
-            advert_name: "Max & Lily Kid's Furniture",
-          },
-        },
+            advert_name: "Max & Lily Kid's Furniture" } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result.attributedCommission).toBe(191.1375)
     expect(result.unattributedCommission).toBe(0)
@@ -709,19 +667,16 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 25.0,
           sourceAsin: 'B0REOLINK2',
-          raw: { id: 'evt-reolink-uk', brand: 'Reolink UK' },
-        },
+          raw: { id: 'evt-reolink-uk', brand: 'Reolink UK' } },
         {
           platform: 'partnerboost',
           reportDate: today,
           commission: 35.0,
           sourceAsin: 'B0ROBOROCK2',
-          raw: { id: 'evt-roborock-it', brand: 'Roborock Amazon IT' },
-        },
+          raw: { id: 'evt-roborock-it', brand: 'Roborock Amazon IT' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     // Should successfully attribute both commissions via brand normalization
     expect(result.attributedCommission).toBe(60.0)
@@ -776,19 +731,16 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 12.5,
           sourceAsin: 'B0LEFANT02',
-          raw: { id: 'evt-lefant-zyg' },
-        },
+          raw: { id: 'evt-lefant-zyg' } },
         {
           platform: 'partnerboost',
           reportDate: today,
           commission: 7.5,
           sourceAsin: 'B0LEFANT03',
-          raw: { id: 'evt-lefant-vc' },
-        },
+          raw: { id: 'evt-lefant-vc' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result.attributedCommission).toBe(20)
     expect(result.unattributedCommission).toBe(0)
@@ -839,19 +791,16 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 11.23,
           sourceAsin: 'B07PQYJBM3',
-          raw: { id: 'evt-livionex-1', advert_name: 'Livionex Dental Gel' },
-        },
+          raw: { id: 'evt-livionex-1', advert_name: 'Livionex Dental Gel' } },
         {
           platform: 'yeahpromos',
           reportDate: today,
           commission: 5.62,
           sourceAsin: 'B07PMTDY8G',
-          raw: { id: 'evt-livionex-2', advert_name: 'Livionex Dental Gel' },
-        },
+          raw: { id: 'evt-livionex-2', advert_name: 'Livionex Dental Gel' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     // Should successfully attribute both Livionex commissions to Livfresh
     expect(result.attributedCommission).toBe(16.85)
@@ -899,12 +848,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 9.9,
           sourceAsin: 'B0REMOVED1',
-          raw: { id: 'evt-removed-only-1', advert_name: 'Novilla' },
-        },
+          raw: { id: 'evt-removed-only-1', advert_name: 'Novilla' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     expect(result.attributedCommission).toBe(9.9)
     expect(result.unattributedCommission).toBe(0)
@@ -950,12 +897,10 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
             reportDate: today,
             commission: 12.34,
             sourceAsin: 'B0REMOVED2',
-            raw: { id: 'evt-removed-no-activity-1', advert_name: 'Dormify' },
-          },
+            raw: { id: 'evt-removed-no-activity-1', advert_name: 'Dormify' } },
         ],
         replaceExisting: true,
-        lockHistorical: false,
-      })
+        lockHistorical: false })
 
       expect(result.attributedCommission).toBe(0)
       expect(result.unattributedCommission).toBe(12.34)
@@ -1019,19 +964,16 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
           reportDate: today,
           commission: 15.0,
           sourceAsin: 'B0WATERDROP2',
-          raw: { id: 'evt-waterdrop', brand: 'LT-Waterdrop' },
-        },
+          raw: { id: 'evt-waterdrop', brand: 'LT-Waterdrop' } },
         {
           platform: 'partnerboost',
           reportDate: today,
           commission: 20.0,
           sourceAsin: 'B0WAHL2',
-          raw: { id: 'evt-wahl', brand: 'Wahl Clipper' },
-        },
+          raw: { id: 'evt-wahl', brand: 'Wahl Clipper' } },
       ],
       replaceExisting: true,
-      lockHistorical: false,
-    })
+      lockHistorical: false })
 
     // Should successfully attribute both commissions via brand normalization
     expect(result.attributedCommission).toBe(35.0)

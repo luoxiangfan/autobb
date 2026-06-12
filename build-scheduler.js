@@ -18,7 +18,6 @@ async function buildScheduler() {
       outfile: path.join(__dirname, 'dist', 'scheduler.js'),
       external: [
         // 排除需要原生模块的依赖
-        'better-sqlite3',
         'bcrypt',
         // 排除Playwright相关依赖（避免打包问题）
         'playwright',
@@ -49,7 +48,6 @@ async function buildBackgroundWorker() {
       outfile: path.join(__dirname, 'dist', 'background-worker.js'),
       external: [
         // 排除需要原生模块的依赖
-        'better-sqlite3',
         'bcrypt',
         // 排除Playwright相关依赖（避免打包问题）
         'playwright',
@@ -80,7 +78,6 @@ async function buildDbInit() {
       outfile: path.join(__dirname, 'dist', 'db-init.js'),
       external: [
         // 排除需要原生模块的依赖
-        'better-sqlite3',
         'bcrypt',
       ],
       minify: false,
@@ -107,7 +104,6 @@ async function buildOpenclawSync() {
       outfile: path.join(__dirname, 'dist', 'openclaw-sync.js'),
       external: [
         // 排除需要原生模块的依赖
-        'better-sqlite3',
         'bcrypt',
         // 排除Playwright相关依赖（避免打包问题）
         'playwright',

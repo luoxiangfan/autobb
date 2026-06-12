@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 const exec = vi.fn().mockResolvedValue(undefined)
 const getDatabase = vi.fn().mockResolvedValue({
-  type: 'sqlite',
   exec,
 })
 

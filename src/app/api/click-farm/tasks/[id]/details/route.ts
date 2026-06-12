@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
         o.affiliate_link
       FROM click_farm_tasks t
       LEFT JOIN offers o ON t.offer_id = o.id
-      WHERE t.id = ? AND t.user_id = ? AND t.IS_DELETED_FALSE
+      WHERE t.id = ? AND t.user_id = ? AND t.is_deleted = FALSE
     `,
       [id, userId]
     )
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: 'Task not found' }, { status: 404 })
     }
 
-    // 🆕 安全解析JSON字段（兼容 SQLite TEXT / PostgreSQL JSONB / 双重编码字符串）
+    // 🆕 安全解析JSON字段（兼容 JSONB / TEXT / 双重编码字符串）
     const safeParseJSON = (value: any, fallback: any) => {
       if (value === null || value === undefined) return fallback
       if (value === 'null' || value === 'undefined') return fallback

@@ -8,7 +8,6 @@ vi.mock('@/lib/db', () => ({
 
 describe('backfillOfferProductLinkForPublishedCampaign - brand matching', () => {
   const mockDb = {
-    type: 'sqlite' as const,
     queryOne: vi.fn(),
     query: vi.fn(),
     exec: vi.fn(),

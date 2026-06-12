@@ -674,10 +674,7 @@ async function resolvePublishAccountCurrency(params: {
   if (!raw) return null
 
   const accountId = toSafePositiveInt32(raw)
-  const notDeletedCondition =
-    params.db.type === 'postgres'
-      ? '(is_deleted = false OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const notDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   if (accountId) {
     const byId = await params.db.queryOne<{ currency: string | null }>(
@@ -1280,10 +1277,7 @@ async function hasEnabledCampaignForOffer(params: {
   userId: number
   offerId: number
 }): Promise<boolean> {
-  const notDeletedCondition =
-    params.db.type === 'postgres'
-      ? '(is_deleted = false OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const notDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const row = await params.db.queryOne(
     `SELECT id
@@ -1655,7 +1649,7 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
   }
 
   const db = await getDatabase()
-  const nowSql = nowFunc(db.type)
+  const nowSql = nowFunc()
 
   const run = await db.queryOne<{
     id: string

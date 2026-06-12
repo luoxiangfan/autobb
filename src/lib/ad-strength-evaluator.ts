@@ -2968,7 +2968,7 @@ const COPY_INTENT_MODEL_SPEC_WORDS: Record<string, string[]> = {
   it: ['modello', 'serie', 'versione', 'generazione', 'misura', 'specifiche', 'pollici'],
 }
 
-const MODEL_ALNUM_CODE_PATTERN = /\b(?=[a-z0-9-]{3,})(?=.*[a-z])(?=.*\d)[a-z0-9-]+\b/i
+const MODEL_ALNUM_CODE_PATTERN = /\b(?=[a-z0-9-]{3 })(?=.*[a-z])(?=.*\d)[a-z0-9-]+\b/i
 const MODEL_NUMERIC_SPEC_PATTERN =
   /\b\d{1,4}\s*(?:inch|in|cm|mm|gpd|btu|mah|wh|w|kw|v|ah|ft|oz|lb|lbs|kg|g|qt|quart|cup|cups|hz)\b/i
 

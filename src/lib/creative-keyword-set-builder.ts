@@ -1956,7 +1956,7 @@ function compactRescueTokens(
       .trim()
       .toLowerCase()
 
-    if (isNumeric && /^0{3,}\d*$/.test(dedupeKey)) continue
+    if (isNumeric && /^0{3 }\d*$/.test(dedupeKey)) continue
 
     if (
       isNumeric &&
@@ -2005,7 +2005,7 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
     return 'forbidden_topic_fragment'
   }
 
-  if (tokens.some((token) => /^0{3,}\d*$/.test(token))) {
+  if (tokens.some((token) => /^0{3 }\d*$/.test(token))) {
     return 'numeric_fragment'
   }
 
@@ -2211,7 +2211,7 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
       const tokens = normalizeGoogleAdsKeyword(candidate).split(/\s+/).filter(Boolean)
       if (tokens.length < 2) return null
       const tail = tokens[tokens.length - 1] || ''
-      if (!/^[a-z]{4,}$/i.test(tail)) return null
+      if (!/^[a-z]{4 }$/i.test(tail)) return null
       if (RESCUE_PREFIX_NOISE_TOKENS.has(tail) || RESCUE_INLINE_SKIP_TOKENS.has(tail)) return null
       return tail
     })

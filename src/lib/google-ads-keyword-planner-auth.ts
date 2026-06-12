@@ -90,9 +90,8 @@ export async function resolveLinkedServiceAccountIdForOffer(
     if (linkedFromCampaign) return linkedFromCampaign
   }
 
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isManagerCondition =
-    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+  const isActiveCondition = 'is_active = true'
+  const isManagerCondition = 'is_manager_account = false'
 
   const account = await db.queryOne<{ service_account_id: string | null }>(
     `SELECT service_account_id FROM google_ads_accounts
@@ -209,9 +208,8 @@ export async function queryGoogleAdsAccountForOfferExpand(
   offerId: number
 ): Promise<{ id: number; customer_id: string } | undefined> {
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isManagerCondition =
-    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+  const isActiveCondition = 'is_active = true'
+  const isManagerCondition = 'is_manager_account = false'
 
   const fromCampaign = await db.queryOne<{ id: number; customer_id: string }>(
     `SELECT ga.id, ga.customer_id

@@ -226,11 +226,11 @@ export async function GET(request: NextRequest) {
     const budgetTrend = (await db.query(
       `
       SELECT
-        DATE(cp.date) as date,
+        (cp.date::date) as date,
         SUM(cp.cost) as daily_spent
       FROM campaign_performance cp
       WHERE ${whereConditions.join(' AND ')}
-      GROUP BY DATE(cp.date)
+      GROUP BY (cp.date::date)
       ORDER BY date ASC
     `,
       params

@@ -73,7 +73,7 @@ export async function createGoogleAdsAccount(
     ]
   )
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   return (await findGoogleAdsAccountById(insertedId, input.userId))!
 }
 
@@ -86,7 +86,7 @@ export async function findGoogleAdsAccountById(
 ): Promise<GoogleAdsAccount | null> {
   const db = await getDatabase()
 
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isDeletedCheck = 'is_deleted = FALSE'
   const row = (await db.queryOne(
     `
     SELECT * FROM google_ads_accounts
@@ -108,7 +108,7 @@ export async function findGoogleAdsAccountById(
 export async function findGoogleAdsAccountsByUserId(userId: number): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+  const isDeletedCheck = 'is_deleted = FALSE'
   const rows = (await db.query(
     `
     SELECT * FROM google_ads_accounts
@@ -123,7 +123,7 @@ export async function findGoogleAdsAccountsByUserId(userId: number): Promise<Goo
 
 /**
  * 查找用户的激活账号（包括所有状态）
- * 注意：这会返回所有 is_active=1 的账号，包括 DISABLED 状态的
+ * 注意：这会返回所有 is_active=true 的账号，包括 DISABLED 状态的
  * 如果需要可用于 API 调用的账号，请使用 findEnabledGoogleAdsAccounts
  */
 export async function findActiveGoogleAdsAccounts(
@@ -133,10 +133,9 @@ export async function findActiveGoogleAdsAccounts(
   const db = await getDatabase()
 
   // 🔧 PostgreSQL 兼容性修复：is_active 在 PostgreSQL 中是 BOOLEAN 类型
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
-  const isManagerCondition =
-    db.type === 'postgres' ? 'is_manager_account = TRUE' : 'is_manager_account = 1'
+  const isActiveCondition = 'is_active = true'
+  const isDeletedCheck = 'is_deleted = FALSE'
+  const isManagerCondition = 'is_manager_account = TRUE'
   let sqlStr = `
     SELECT * FROM google_ads_accounts
     WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck}
@@ -163,14 +162,11 @@ export async function findEnabledGoogleAdsAccounts(userId: number): Promise<Goog
 
   // 🔧 PostgreSQL 兼容性修复：布尔字段在 PostgreSQL 中是 BOOLEAN 类型
   // 使用 SQL 条件而非参数绑定，避免类型不匹配
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isManagerCondition =
-    db.type === 'postgres' ? 'is_manager_account = false' : 'is_manager_account = 0'
+  const isActiveCondition = 'is_active = true'
+  const isManagerCondition = 'is_manager_account = false'
   const identityVerificationOkCondition =
-    db.type === 'postgres'
-      ? '(identity_verification_overdue IS NULL OR identity_verification_overdue = false)'
-      : '(identity_verification_overdue IS NULL OR identity_verification_overdue = 0)'
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
+    '(identity_verification_overdue IS NULL OR identity_verification_overdue = false)'
+  const isDeletedCheck = 'is_deleted = FALSE'
 
   const rows = (await db.query(
     `
@@ -203,10 +199,9 @@ export async function findGoogleAdsAccountsByUserMcc(
 ): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
-  const isDeletedCheck = db.type === 'sqlite' ? 'is_deleted = 0' : 'is_deleted = FALSE'
-  const isManagerCondition =
-    db.type === 'postgres' ? 'is_manager_account = FALSE' : 'is_manager_account = 0'
+  const isActiveCondition = 'is_active = true'
+  const isDeletedCheck = 'is_deleted = FALSE'
+  const isManagerCondition = 'is_manager_account = FALSE'
 
   // 基础查询：只返回用户 MCC 下的账号
   let sqlStr = `
@@ -301,7 +296,7 @@ export async function updateGoogleAdsAccount(
     return account
   }
 
-  fields.push(`updated_at = ${nowFunc(db.type)}`)
+  fields.push(`updated_at = ${nowFunc()}`)
   values.push(id, userId)
 
   await db.exec(
@@ -338,7 +333,7 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
   }
 
   const customerId = account.customer_id
-  const isDeletedFalse = db.type === 'postgres' ? 'FALSE' : '0'
+  const isDeletedFalse = 'FALSE'
 
   const linkedCampaigns = await db.query<{ id: number; offer_id: number }>(
     `
@@ -428,9 +423,9 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     const accountResult = await db.exec(
       `
       UPDATE google_ads_accounts
-      SET is_deleted = ${db.type === 'sqlite' ? '1' : 'TRUE'},
-          is_active = ${db.type === 'sqlite' ? '0' : 'FALSE'},
-          deleted_at = ${db.type === 'sqlite' ? "datetime('now')" : 'NOW()'}
+      SET is_deleted = ${'TRUE'},
+          is_active = ${'FALSE'},
+          deleted_at = ${'NOW()'}
       WHERE id = ? AND user_id = ?
     `,
       [id, userId]

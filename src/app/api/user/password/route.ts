@@ -67,8 +67,8 @@ export async function PUT(request: NextRequest) {
 
     // 更新密码，同时取消首次修改密码标记
     const db = await getDatabase()
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-    const falseValue = db.type === 'postgres' ? 'false' : '0'
+    const nowFunc = 'NOW()'
+    const falseValue = 'false'
     await db.exec(
       `
       UPDATE users

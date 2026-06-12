@@ -24,10 +24,6 @@ const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
 
-const dbState = vi.hoisted(() => ({
-  type: 'sqlite' as 'sqlite' | 'postgres',
-}))
-
 const adsFns = vi.hoisted(() => ({
   createGoogleAdsKeywordsBatch: vi.fn(),
 }))
@@ -47,7 +43,6 @@ vi.mock('@/lib/auth', () => ({
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: dbState.type,
     queryOne: dbFns.queryOne,
     query: dbFns.query,
     exec: dbFns.exec,
@@ -82,7 +77,6 @@ vi.mock('@/lib/offer-keyword-pool', () => ({
 describe('POST /api/campaigns/:id/keywords/add', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbState.type = 'sqlite'
 
     authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
@@ -230,8 +224,7 @@ describe('POST /api/campaigns/:id/keywords/add', () => {
     expect(adsFns.createGoogleAdsKeywordsBatch).toHaveBeenCalledTimes(3)
   })
 
-  it('writes boolean flags for postgres keyword inserts', async () => {
-    dbState.type = 'postgres'
+  it('writes boolean flags for keyword inserts', async () => {
     adsFns.createGoogleAdsKeywordsBatch.mockResolvedValue([
       { keywordId: '3001', resourceName: 'p', keywordText: 'Dreo official' },
     ])

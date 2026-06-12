@@ -70,7 +70,7 @@ function parseOptionalBooleanParam(value: string | null): boolean | null {
   return null
 }
 
-/** Keep each IN list under SQLite SQLITE_MAX_VARIABLE_NUMBER (~999) with room for other binds. */
+/** Keep each IN list under PostgreSQL parameter limits (~999) with room for other binds. */
 const CAMPAIGN_ID_IN_CHUNK = 350
 
 function chunkIds(ids: number[]): number[][] {
@@ -346,13 +346,13 @@ export async function GET(request: NextRequest) {
     const adTrends = await db.query<any>(
       `
       SELECT
-        DATE(cp.date) as date,
+        (cp.date::date) as date,
         COALESCE(cp.currency, 'USD') as currency,
         SUM(cp.impressions) as impressions,
         SUM(cp.clicks) as clicks,
         SUM(cp.cost) as cost
       ${perfFromJoin}
-      GROUP BY DATE(cp.date), COALESCE(cp.currency, 'USD')
+      GROUP BY (cp.date::date), COALESCE(cp.currency, 'USD')
       ORDER BY date ASC, currency ASC
       `,
       perfAggBinds

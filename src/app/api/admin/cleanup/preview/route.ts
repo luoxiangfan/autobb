@@ -21,12 +21,9 @@ export async function GET(request: NextRequest) {
     const db = await getDatabase()
     const retentionDays = 90 // 保留90天内的软删除记录
 
-    // 🔧 兼容 SQLite 和 PostgreSQL
-    const deletedCheck = db.type === 'sqlite' ? 'is_deleted = 1' : 'is_deleted = TRUE'
-    const dateCheck =
-      db.type === 'sqlite'
-        ? `deleted_at < datetime('now', '-${retentionDays} days')`
-        : `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
+    // PostgreSQL
+    const deletedCheck = 'is_deleted = TRUE'
+    const dateCheck = `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
 
     // 统计各表的可清理记录数
     const scrapedProductsCount = (await db.queryOne(`

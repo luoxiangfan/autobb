@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbFns = vi.hoisted(() => ({
-  type: 'postgres' as 'postgres' | 'sqlite',
   queryOne: vi.fn(),
   query: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: dbFns.type,
     queryOne: dbFns.queryOne,
     query: dbFns.query,
   })),
@@ -22,7 +20,6 @@ describe('listOffers search query', () => {
   })
 
   it('uses case-insensitive postgres search over id/brand/offer_name/url/final_url/category', async () => {
-    dbFns.type = 'postgres'
     const { listOffers } = await import('@/lib/offers')
 
     await listOffers(7, { searchQuery: 'roborock' })
@@ -48,23 +45,5 @@ describe('listOffers search query', () => {
       '%roborock%',
       '%roborock%',
     ])
-  })
-
-  it('uses sqlite LIKE search with the same field set', async () => {
-    dbFns.type = 'sqlite'
-    const { listOffers } = await import('@/lib/offers')
-
-    await listOffers(9, { searchQuery: 'robo' })
-
-    const countSql = String(dbFns.queryOne.mock.calls[0]?.[0] || '')
-    const countParams = (dbFns.queryOne.mock.calls[0]?.[1] || []) as unknown[]
-
-    expect(countSql).toContain('CAST(o.id AS TEXT) LIKE ?')
-    expect(countSql).toContain('o.brand LIKE ?')
-    expect(countSql).toContain('o.offer_name LIKE ?')
-    expect(countSql).toContain('o.url LIKE ?')
-    expect(countSql).toContain('o.final_url LIKE ?')
-    expect(countSql).toContain('o.category LIKE ?')
-    expect(countParams).toEqual([9, '%robo%', '%robo%', '%robo%', '%robo%', '%robo%', '%robo%'])
   })
 })

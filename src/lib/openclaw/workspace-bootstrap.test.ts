@@ -44,8 +44,7 @@ describe('ensureOpenclawWorkspaceBootstrap agents overlay', () => {
 
     ensureOpenclawWorkspaceBootstrap({
       stateDir,
-      actorUserId: 9,
-    })
+      actorUserId: 9 })
 
     const nextContent = fs.readFileSync(path.join(workspaceDir, 'AGENTS.md'), 'utf-8')
     expect(nextContent).toContain('<!-- autoads-openclaw-agents-managed:start -->')

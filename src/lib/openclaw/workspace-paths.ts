@@ -47,8 +47,7 @@ function formatDateInShanghai(date: Date): string {
     timeZone: 'Asia/Shanghai',
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit',
-  }).format(date)
+    day: '2-digit' }).format(date)
 }
 
 export function resolveOpenclawConfigPath(): string {

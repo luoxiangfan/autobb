@@ -352,7 +352,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         scrapeStatus: offer.scrape_status,
         scrapeError: offer.scrape_error,
         scrapedAt: offer.scraped_at,
-        // 🔥 修复：兼容PostgreSQL(BOOLEAN)和SQLite(INTEGER)
+        // 🔥 修复：PostgreSQL BOOLEAN
         isActive: offer.is_active === true || offer.is_active === 1,
         createdAt: offer.created_at,
         updatedAt: offer.updated_at,

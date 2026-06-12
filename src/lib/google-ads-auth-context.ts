@@ -104,7 +104,7 @@ async function resolveDualStackOnOwner(
     hasActiveServiceAccount = options.hasActiveServiceAccount
   } else {
     const db = await getDatabase()
-    const isActiveCondition = boolCondition('is_active', true, db.type)
+    const isActiveCondition = boolCondition('is_active', true)
     const existingSa = await db.queryOne<{ id: string }>(
       `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
       [ownerUserId]
@@ -802,7 +802,7 @@ export async function assertNoConflictingGoogleAdsAuth(
 ): Promise<void> {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const isActiveCondition = boolCondition('is_active', true)
 
   if (targetAuthType === 'oauth') {
     const existingSa = await db.queryOne<{ id: string }>(

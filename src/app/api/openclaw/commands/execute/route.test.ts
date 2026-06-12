@@ -3,30 +3,24 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/openclaw/commands/execute/route'
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const commandFns = vi.hoisted(() => ({
-  executeOpenclawCommand: vi.fn(),
-}))
+  executeOpenclawCommand: vi.fn() }))
 
 const correlationFns = vi.hoisted(() => ({
   resolveOpenclawParentRequestId: vi.fn(),
-  resolveOpenclawParentRequestIdFromHeaders: vi.fn(),
-}))
+  resolveOpenclawParentRequestIdFromHeaders: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/commands/command-service', () => ({
-  executeOpenclawCommand: commandFns.executeOpenclawCommand,
-}))
+  executeOpenclawCommand: commandFns.executeOpenclawCommand }))
 
 vi.mock('@/lib/openclaw/request-correlation', () => ({
   resolveOpenclawParentRequestId: correlationFns.resolveOpenclawParentRequestId,
-  resolveOpenclawParentRequestIdFromHeaders: correlationFns.resolveOpenclawParentRequestIdFromHeaders,
-}))
+  resolveOpenclawParentRequestIdFromHeaders: correlationFns.resolveOpenclawParentRequestIdFromHeaders }))
 
 describe('POST /api/openclaw/commands/execute', () => {
   beforeEach(() => {
@@ -34,17 +28,14 @@ describe('POST /api/openclaw/commands/execute', () => {
 
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 42,
-      authType: 'gateway-binding',
-    })
+      authType: 'gateway-binding' })
     correlationFns.resolveOpenclawParentRequestIdFromHeaders.mockReturnValue({
       parentRequestId: null,
-      source: 'none',
-    })
+      source: 'none' })
     correlationFns.resolveOpenclawParentRequestId.mockResolvedValue(null)
     commandFns.executeOpenclawCommand.mockResolvedValue({
       status: 'queued',
-      runId: 'run-1',
-    })
+      runId: 'run-1' })
   })
 
   it('uses body metadata as auth fallback for gateway binding', async () => {
@@ -52,8 +43,7 @@ describe('POST /api/openclaw/commands/execute', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: 'Bearer gateway-token',
-      },
+        authorization: 'Bearer gateway-token' },
       body: JSON.stringify({
         method: 'POST',
         path: '/api/offers/extract',
@@ -62,10 +52,7 @@ describe('POST /api/openclaw/commands/execute', () => {
         account_id: 'acct_123',
         tenant_key: 'tenant_456',
         body: {
-          affiliate_link: 'https://example.com/offer',
-        },
-      }),
-    })
+          affiliate_link: 'https://example.com/offer' } }) })
 
     const res = await POST(req)
     const payload = await res.json()
@@ -77,15 +64,13 @@ describe('POST /api/openclaw/commands/execute', () => {
       channel: 'feishu',
       senderId: 'ou_abc',
       accountId: 'acct_123',
-      tenantKey: 'tenant_456',
-    })
+      tenantKey: 'tenant_456' })
     expect(commandFns.executeOpenclawCommand).toHaveBeenCalledWith(expect.objectContaining({
       userId: 42,
       channel: 'feishu',
       senderId: 'ou_abc',
       path: '/api/offers/extract',
-      method: 'POST',
-    }))
+      method: 'POST' }))
   })
 
   it('returns json 500 when auth resolution throws before command execution', async () => {
@@ -95,13 +80,10 @@ describe('POST /api/openclaw/commands/execute', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: 'Bearer gateway-token',
-      },
+        authorization: 'Bearer gateway-token' },
       body: JSON.stringify({
         method: 'POST',
-        path: '/api/offers/extract',
-      }),
-    })
+        path: '/api/offers/extract' }) })
 
     const res = await POST(req)
     const payload = await res.json()

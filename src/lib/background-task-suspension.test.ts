@@ -38,7 +38,6 @@ describe('background-task-suspension', () => {
     query.mockReset()
 
     vi.mocked(getDatabase).mockReturnValue({
-      type: 'sqlite',
       exec,
       query,
       queryOne: vi.fn(),

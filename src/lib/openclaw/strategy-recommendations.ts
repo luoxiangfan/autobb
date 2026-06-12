@@ -11,8 +11,7 @@ import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { containsPureBrand, getPureBrandKeywords } from '@/lib/brand-keyword-utils'
 import {
   extractCampaignConfigKeywords,
-  extractCampaignConfigNegativeKeywords,
-} from '@/lib/campaign-config-keywords'
+  extractCampaignConfigNegativeKeywords } from '@/lib/campaign-config-keywords'
 
 export type StrategyRecommendationType =
   | 'adjust_cpc'
@@ -315,8 +314,7 @@ const RECOMMENDATION_COOLDOWN_DAYS: Record<StrategyRecommendationType, number> =
   offline_campaign: 30,
   expand_keywords: 5,
   add_negative_keywords: 3,
-  optimize_match_type: 5,
-}
+  optimize_match_type: 5 }
 const T_MINUS_1_EXECUTION_ALLOWED_TYPES = new Set<StrategyRecommendationType>([
   'adjust_cpc',
   'adjust_budget',
@@ -483,8 +481,7 @@ function applyImpactEstimation(
     estimatedCostSaving,
     estimatedRevenueUplift,
     estimatedNetImpact: roundTo2(estimatedCostSaving + estimatedRevenueUplift),
-    impactWindowDays,
-  }
+    impactWindowDays }
 }
 
 function buildSnapshotHash(payload: Record<string, unknown>): string {
@@ -557,8 +554,7 @@ function buildPerfMap(rows: Array<{ campaign_id: number; impressions: number; cl
     map.set(campaignId, {
       impressions: toNumber(row.impressions, 0),
       clicks: toNumber(row.clicks, 0),
-      cost: roundTo2(toNumber(row.cost, 0)),
-    })
+      cost: roundTo2(toNumber(row.cost, 0)) })
   }
   return map
 }
@@ -569,8 +565,7 @@ function calculateCreativeQuality(creative: CreativeRow | undefined): StrategyRe
       headlineCount: 0,
       descriptionCount: 0,
       keywordCount: 0,
-      level: 'low',
-    }
+      level: 'low' }
   }
 
   const headlines = safeParseArray(creative.headlines)
@@ -594,8 +589,7 @@ function calculateCreativeQuality(creative: CreativeRow | undefined): StrategyRe
     headlineCount,
     descriptionCount,
     keywordCount,
-    level,
-  }
+    level }
 }
 
 function sanitizeKeyword(text: string): string {
@@ -618,8 +612,7 @@ function buildDailyBudgetUpdatePayload(recommendedBudget: unknown): {
   // Align with campaigns page "调整每日预算" dialog payload contract.
   return {
     budgetAmount,
-    budgetType: 'DAILY',
-  }
+    budgetType: 'DAILY' }
 }
 
 function normalizeKeywordMatchType(value: unknown): 'BROAD' | 'PHRASE' | 'EXACT' | null {
@@ -834,8 +827,7 @@ function buildKeywordExpansionPlan(params: {
     candidateCountHistorical: 0,
     selectedFromRecent: 0,
     selectedFromHistorical: 0,
-    excludedReasonCounts: {} as Record<string, number>,
-  }
+    excludedReasonCounts: {} as Record<string, number> }
 
   const incrementExcludedReason = (reason: string) => {
     if (!reason) return
@@ -857,8 +849,7 @@ function buildKeywordExpansionPlan(params: {
       seen.add(key)
       normalized.push({
         ...row,
-        searchTerm: text,
-      })
+        searchTerm: text })
     }
     return normalized.sort((a, b) => {
       const scoreDiff = scoreSearchTermCandidate(b, sourceLayer) - scoreSearchTermCandidate(a, sourceLayer)
@@ -982,8 +973,7 @@ function buildKeywordExpansionPlan(params: {
       matchType: recommendMatchTypeForKeyword({
         keyword: text,
         brandName: brand || undefined,
-        intent,
-      }),
+        intent }),
       sourceLayer,
       selectionScore: score,
       whySelected: whySelectedParts.join('；') || '来源于真实 Search Terms 且通过相关性校验',
@@ -991,13 +981,10 @@ function buildKeywordExpansionPlan(params: {
         impressions,
         clicks,
         conversions,
-        cost,
-      },
+        cost },
       conflictCheck: {
         negativeConflict,
-        duplicateConflict,
-      },
-    })
+        duplicateConflict } })
     seen.add(normalized)
     if (sourceLayer === 'recent_search_terms') diagnostics.selectedFromRecent += 1
     else diagnostics.selectedFromHistorical += 1
@@ -1020,8 +1007,7 @@ function buildKeywordExpansionPlan(params: {
 
   return {
     keywordPlan: selected,
-    diagnostics,
-  }
+    diagnostics }
 }
 
 function buildExpandKeywordsSnapshotHash(params: {
@@ -1039,8 +1025,7 @@ function buildExpandKeywordsSnapshotHash(params: {
     keywordCoverageCount: params.keywordCoverageCount,
     impressions: params.impressions,
     clicks: params.clicks,
-    keywordPlan: params.keywordPlan.map((item) => ({ text: item.text, matchType: item.matchType })),
-  })
+    keywordPlan: params.keywordPlan.map((item) => ({ text: item.text, matchType: item.matchType })) })
 }
 
 function estimateOfflinePriority(params: {
@@ -1185,8 +1170,7 @@ function buildNegativeKeywordPlan(params: {
     selected.push({
       text: term,
       matchType: 'EXACT',
-      reason: Array.from(reasonParts).join(', ') || 'hard_negative_intent',
-    })
+      reason: Array.from(reasonParts).join(', ') || 'hard_negative_intent' })
     if (selected.length >= NEGATIVE_KEYWORD_PLAN_MAX) {
       break
     }
@@ -1219,8 +1203,7 @@ function buildMatchTypeOptimizationPlan(params: {
     const recommendedMatchType = recommendMatchTypeForKeyword({
       keyword: text,
       brandName: params.brand || undefined,
-      intent,
-    })
+      intent })
     if (recommendedMatchType === currentMatchType) continue
     // KISS: 仅建议“收紧匹配类型”，避免放大流量风险
     const isNarrowing =
@@ -1242,8 +1225,7 @@ function buildMatchTypeOptimizationPlan(params: {
       recommendedMatchType,
       clicks: roundTo2(clicks),
       conversions: roundTo2(conversions),
-      cost: roundTo2(cost),
-    })
+      cost: roundTo2(cost) })
   }
 
   const softFeedbackTerms = new Set(
@@ -1293,8 +1275,7 @@ function buildMatchTypeOptimizationPlan(params: {
           text: keywordText,
           normalized: keywordNormalized,
           currentMatchType,
-          tokenCount: keywordTokens.length || 999,
-        }
+          tokenCount: keywordTokens.length || 999 }
 
         if (!bestCandidate) {
           bestCandidate = candidate
@@ -1328,8 +1309,7 @@ function buildMatchTypeOptimizationPlan(params: {
         recommendedMatchType,
         clicks: roundTo2(toNumber(row.clicks, 0)),
         conversions: roundTo2(toNumber(row.conversions, 0)),
-        cost: roundTo2(toNumber(row.cost, 0)),
-      })
+        cost: roundTo2(toNumber(row.cost, 0)) })
     }
   }
 
@@ -1423,8 +1403,7 @@ function buildDuplicateOfflineMetaByCampaign(params: {
       roas,
       ctrPct,
       clicks: perfTotal.clicks,
-      cpc,
-    })
+      cpc })
 
     const bucket = candidatesByOffer.get(offerId) || []
     bucket.push({
@@ -1436,8 +1415,7 @@ function buildDuplicateOfflineMetaByCampaign(params: {
       clicks: perfTotal.clicks,
       cpc,
       roas,
-      score,
-    })
+      score })
     candidatesByOffer.set(offerId, bucket)
   }
 
@@ -1471,8 +1449,7 @@ function buildDuplicateOfflineMetaByCampaign(params: {
         winnerCampaignId: winner.campaignId,
         winnerCampaignName: winner.campaignName,
         winnerScore: winner.score,
-        loserScore: candidate.score,
-      })
+        loserScore: candidate.score })
     }
   }
 
@@ -1535,8 +1512,7 @@ function buildRecommendationDrafts(params: {
     campaigns: params.campaigns,
     perfTotalByCampaign: params.perfTotalByCampaign,
     perf7dByCampaign: params.perf7dByCampaign,
-    commissionByCampaign: params.commissionByCampaign,
-  })
+    commissionByCampaign: params.commissionByCampaign })
 
   for (const campaign of params.campaigns) {
     const campaignId = Number(campaign.id)
@@ -1557,8 +1533,7 @@ function buildRecommendationDrafts(params: {
     const commissionInfo = getCommissionPerConversion({
       productPrice: campaign.product_price,
       commissionPayout: campaign.commission_payout,
-      targetCountry: campaign.target_country || undefined,
-    })
+      targetCountry: campaign.target_country || undefined })
     const commissionPerConversion = commissionInfo?.amount && commissionInfo.amount > 0
       ? roundTo2(commissionInfo.amount)
       : null
@@ -1618,8 +1593,7 @@ function buildRecommendationDrafts(params: {
           impressions: roundTo2(toNumber(existing.impressions, 0) + toNumber(row.impressions, 0)),
           clicks: roundTo2(toNumber(existing.clicks, 0) + toNumber(row.clicks, 0)),
           conversions: roundTo2(toNumber(existing.conversions, 0) + toNumber(row.conversions, 0)),
-          cost: roundTo2(toNumber(existing.cost, 0) + toNumber(row.cost, 0)),
-        })
+          cost: roundTo2(toNumber(existing.cost, 0) + toNumber(row.cost, 0)) })
       }
     }
     const dominantCurrency = String(campaign.currency || 'USD').trim().toUpperCase() || 'USD'
@@ -1628,8 +1602,7 @@ function buildRecommendationDrafts(params: {
         search_term: item.searchTerm,
         impressions: toNumber(item.impressions, 0),
         clicks: toNumber(item.clicks, 0),
-        cost: toNumber(item.cost, 0),
-      })),
+        cost: toNumber(item.cost, 0) })),
       {
         dominantCurrency,
         maxTerms: 24
@@ -1652,8 +1625,7 @@ function buildRecommendationDrafts(params: {
           hardNegativeTerms: searchTermFeedback.hardNegativeTerms.slice(0, 15),
           softSuppressTerms: searchTermFeedback.softSuppressTerms.slice(0, 15),
           lookbackDays: SEARCH_TERM_LOOKBACK_DAYS,
-          dominantCurrency,
-        }
+          dominantCurrency }
       : undefined
     const creativeQuality = calculateCreativeQuality(
       campaign.ad_creative_id ? params.creativeById.get(Number(campaign.ad_creative_id)) : undefined
@@ -1665,22 +1637,19 @@ function buildRecommendationDrafts(params: {
       clicks: perfTotal.clicks,
       cost: perfTotal.cost,
       roas,
-      commissionLagProtected,
-    })
+      commissionLagProtected })
     const impactConfidenceReason = buildImpactConfidenceReason({
       impressions: perfTotal.impressions,
       clicks: perfTotal.clicks,
       cost: perfTotal.cost,
-      roas,
-    })
+      roas })
     const hasLowCtrSignalSample = hasSignalSample({
       impressions: perfTotal.impressions,
       clicks: perfTotal.clicks,
       cost: perfTotal.cost,
       minImpressions: OFFLINE_LOW_CTR_MIN_IMPRESSIONS,
       minClicks: OFFLINE_LOW_CTR_MIN_CLICKS,
-      minCost: OFFLINE_LOW_CTR_MIN_COST,
-    })
+      minCost: OFFLINE_LOW_CTR_MIN_COST })
 
     const baseData: Omit<StrategyRecommendationData, 'ruleCode' | 'analysisNote'> = {
       campaignId,
@@ -1712,8 +1681,7 @@ function buildRecommendationDrafts(params: {
       impactConfidence,
       impactConfidenceReason,
       keywordCoverageCount,
-      creativeQuality,
-    }
+      creativeQuality }
 
     const over7DaysZeroImpression =
       runDays > 7 && perfTotal.impressions <= 0 && perfTotal.clicks <= 0
@@ -1731,8 +1699,7 @@ function buildRecommendationDrafts(params: {
         campaignId,
         recommendationType: 'offline_campaign',
         cooldownUntilByKey: params.cooldownUntilByKey,
-        nowMs: params.nowMs,
-      })) {
+        nowMs: params.nowMs })) {
         continue
       }
 
@@ -1751,8 +1718,7 @@ function buildRecommendationDrafts(params: {
         ctrPct,
         cost: perfTotal.cost,
         cpc,
-        roas,
-      })
+        roas })
       const reason = over7DaysZeroImpression
         ? `已投放 ${runDays} 天，累计仍无曝光/点击。`
         : over7DaysLowRoas
@@ -1786,28 +1752,23 @@ function buildRecommendationDrafts(params: {
           lowRoas: over7DaysLowRoas,
           roas,
           cost7d: perf7d.cost,
-          costTotal: perfTotal.cost,
-        }),
+          costTotal: perfTotal.cost }),
         data: {
           ...applyImpactEstimation(baseData, {
             estimatedCostSaving: projectedWasteCost,
             estimatedRevenueUplift: 0,
-            impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL,
-          }),
+            impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL }),
           snapshotHash,
           offlineOptions: {
             removeGoogleAdsCampaign: true,
             pauseClickFarmTasks: true,
-            pauseUrlSwapTasks: true,
-          },
+            pauseUrlSwapTasks: true },
           ruleCode,
           analysisNote: over7DaysZeroImpression
             ? '超过7天且无曝光/点击，命中下线规则。'
             : over7DaysLowRoas
               ? '超过7天且ROAS<0.5，命中止损下线规则。'
-              : '超过7天且CTR<5%，并满足最低样本量阈值，命中下线规则。',
-        },
-      })
+              : '超过7天且CTR<5%，并满足最低样本量阈值，命中下线规则。' } })
 
       // 下线建议优先级最高，同一 Campaign 不再生成其它可执行建议，避免冲突。
       continue
@@ -1819,8 +1780,7 @@ function buildRecommendationDrafts(params: {
         campaignId,
         recommendationType: 'offline_campaign',
         cooldownUntilByKey: params.cooldownUntilByKey,
-        nowMs: params.nowMs,
-      })) {
+        nowMs: params.nowMs })) {
         continue
       }
 
@@ -1834,8 +1794,7 @@ function buildRecommendationDrafts(params: {
         winnerCampaignId: duplicateOfflineMeta.winnerCampaignId,
         winnerScore: duplicateOfflineMeta.winnerScore,
         loserScore: duplicateOfflineMeta.loserScore,
-        scoreGap,
-      })
+        scoreGap })
 
       recommendations.push({
         key: `${campaignId}:offline_campaign`,
@@ -1848,8 +1807,7 @@ function buildRecommendationDrafts(params: {
         priorityScore: estimateDuplicateOfflinePriority({
           winnerScore: duplicateOfflineMeta.winnerScore,
           loserScore: duplicateOfflineMeta.loserScore,
-          cost7d: perf7d.cost,
-        }),
+          cost7d: perf7d.cost }),
         data: {
           ...applyImpactEstimation(baseData, {
             estimatedCostSaving: roundTo2(
@@ -1861,18 +1819,14 @@ function buildRecommendationDrafts(params: {
               )
             ),
             estimatedRevenueUplift: 0,
-            impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL,
-          }),
+            impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL }),
           snapshotHash,
           offlineOptions: {
             removeGoogleAdsCampaign: true,
             pauseClickFarmTasks: true,
-            pauseUrlSwapTasks: true,
-          },
+            pauseUrlSwapTasks: true },
           ruleCode,
-          analysisNote: `命中重复系列合并规则：同Offer建议仅保留 ${duplicateOfflineMeta.winnerCampaignName}，当前系列建议下线。`,
-        },
-      })
+          analysisNote: `命中重复系列合并规则：同Offer建议仅保留 ${duplicateOfflineMeta.winnerCampaignName}，当前系列建议下线。` } })
 
       // 同 Offer 重复系列建议使用下线动作，避免与其它写操作冲突。
       continue
@@ -1900,8 +1854,7 @@ function buildRecommendationDrafts(params: {
           campaignId,
           recommendationType: 'adjust_cpc',
           cooldownUntilByKey: params.cooldownUntilByKey,
-          nowMs: params.nowMs,
-        })
+          nowMs: params.nowMs })
         if (!inCooldown) {
           const direction: StrategyRecommendationData['cpcAdjustmentDirection'] =
             shouldRaiseCpc
@@ -1931,8 +1884,7 @@ function buildRecommendationDrafts(params: {
             cpcRaiseCap,
             commissionPerConversion,
             breakEvenConversionRatePct,
-            breakEvenConversionRateByRecommendedCpcPct,
-          })
+            breakEvenConversionRateByRecommendedCpcPct })
           const reason = direction === 'raise'
             ? `已连续${runDays}天无曝光无点击，建议将CPC上调至 ${actionCpc.toFixed(2)}（单次+${Math.round(CPC_RAISE_STEP_RATIO * 100)}%，上限 ${cpcRaiseCap.toFixed(2)}）。`
             : direction === 'lower'
@@ -1978,14 +1930,12 @@ function buildRecommendationDrafts(params: {
               clicks7d: perf7d.clicks,
               direction: direction || undefined,
               runDays,
-              noTraffic: shouldRaiseCpcNoTraffic,
-            }),
+              noTraffic: shouldRaiseCpcNoTraffic }),
             data: {
               ...applyImpactEstimation(baseData, {
                 estimatedCostSaving,
                 estimatedRevenueUplift: 0,
-                impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL,
-              }),
+                impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL }),
               snapshotHash,
               recommendedCpc: actionCpc,
               cpcAdjustmentDirection: direction,
@@ -1993,9 +1943,7 @@ function buildRecommendationDrafts(params: {
               ruleCode,
               analysisNote: direction === 'raise'
                 ? `${lagHint} 公式建议CPC ${recommendedCpc.toFixed(2)}，本次目标CPC ${actionCpc.toFixed(2)}。当前盈亏平衡转化率 ${breakEvenConversionRatePct?.toFixed(2) ?? '--'}%，按目标CPC为 ${breakEvenConversionRateByActionCpcPct?.toFixed(2) ?? '--'}%。`
-                : `${lagHint} 当前盈亏平衡转化率 ${breakEvenConversionRatePct?.toFixed(2) ?? '--'}%，按建议CPC可降至 ${breakEvenConversionRateByActionCpcPct?.toFixed(2) ?? '--'}%。`,
-            },
-          })
+                : `${lagHint} 当前盈亏平衡转化率 ${breakEvenConversionRatePct?.toFixed(2) ?? '--'}%，按建议CPC可降至 ${breakEvenConversionRateByActionCpcPct?.toFixed(2) ?? '--'}%。` } })
         }
       }
     }
@@ -2015,8 +1963,7 @@ function buildRecommendationDrafts(params: {
         campaignId,
         recommendationType: 'adjust_budget',
         cooldownUntilByKey: params.cooldownUntilByKey,
-        nowMs: params.nowMs,
-      })
+        nowMs: params.nowMs })
       if (!inCooldown) {
         const incrementalBudget = Math.max(
           3,
@@ -2035,8 +1982,7 @@ function buildRecommendationDrafts(params: {
           budgetType,
           ctrPct,
           cpc,
-          roas,
-        })
+          roas })
         const incrementalSpend = roundTo2(
           budgetType === 'DAILY'
             ? Math.max(0, recommendedBudget - currentBudget) * IMPACT_WINDOW_DAYS_COST_CONTROL
@@ -2044,8 +1990,7 @@ function buildRecommendationDrafts(params: {
         )
         const impactEstimationSource = resolveImpactEstimationSource({
           roas,
-          commissionLagProtected,
-        })
+          commissionLagProtected })
         const effectiveRoas = roas !== null
           ? Math.max(0, roas)
           : (commissionLagProtected ? 1 : 0.6)
@@ -2055,8 +2000,7 @@ function buildRecommendationDrafts(params: {
             ctrPct,
             cpc,
             currentBudget,
-            recommendedBudget,
-          }),
+            recommendedBudget }),
           impactEstimationSource
         )
 
@@ -2073,16 +2017,13 @@ function buildRecommendationDrafts(params: {
             ...applyImpactEstimation(baseData, {
               estimatedCostSaving: 0,
               estimatedRevenueUplift,
-              impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL,
-            }),
+              impactWindowDays: IMPACT_WINDOW_DAYS_COST_CONTROL }),
             snapshotHash,
             recommendedBudget,
             budgetAdjustmentDirection: 'increase',
             ruleCode: 'adjust_budget_high_value_campaign',
             impactEstimationSource,
-            analysisNote: `基于CTR/CPC/ROAS综合评估，建议提升预算承接有效流量。${formatImpactEstimationSource(impactEstimationSource)}。`,
-          },
-        })
+            analysisNote: `基于CTR/CPC/ROAS综合评估，建议提升预算承接有效流量。${formatImpactEstimationSource(impactEstimationSource)}。` } })
       }
     }
 
@@ -2090,14 +2031,12 @@ function buildRecommendationDrafts(params: {
       runDays,
       keywordCoverageCount,
       impressions: perfTotal.impressions,
-      clicks: perfTotal.clicks,
-    })) {
+      clicks: perfTotal.clicks })) {
       const inCooldown = isRecommendationInCooldown({
         campaignId,
         recommendationType: 'expand_keywords',
         cooldownUntilByKey: params.cooldownUntilByKey,
-        nowMs: params.nowMs,
-      })
+        nowMs: params.nowMs })
       if (!inCooldown) {
         const expansionPlan = buildKeywordExpansionPlan({
           brand: campaign.brand,
@@ -2106,8 +2045,7 @@ function buildRecommendationDrafts(params: {
           existing: keywordSet,
           negativeTerms: negativeKeywordSet,
           searchTermsRecent: searchTermRows,
-          searchTermsHistorical: historicalSearchTermRows,
-        })
+          searchTermsHistorical: historicalSearchTermRows })
         const keywordPlan = expansionPlan.keywordPlan
 
         if (keywordPlan.length > 0) {
@@ -2117,8 +2055,7 @@ function buildRecommendationDrafts(params: {
             keywordCoverageCount,
             impressions: perfTotal.impressions,
             clicks: perfTotal.clicks,
-            keywordPlan,
-          })
+            keywordPlan })
           const targetHint = keywordPlan.length < KEYWORD_EXPANSION_TARGET_MIN
             ? `（候选不足，先落地 ${keywordPlan.length} 个）`
             : '（目标 20-30 个）'
@@ -2130,8 +2067,7 @@ function buildRecommendationDrafts(params: {
           const projectedCost = roundTo2(projectedClicks * (cpc > 0 ? cpc : (recommendedCpc || 0.5)))
           const impactEstimationSource = resolveImpactEstimationSource({
             roas,
-            commissionLagProtected,
-          })
+            commissionLagProtected })
           const effectiveRoas = roas !== null
             ? Math.max(0, roas)
             : (commissionLagProtected ? 0.9 : 0.6)
@@ -2140,8 +2076,7 @@ function buildRecommendationDrafts(params: {
             estimateKeywordPriority({
               keywordCount: keywordCoverageCount,
               impressions: perfTotal.impressions,
-              clicks: perfTotal.clicks,
-            }),
+              clicks: perfTotal.clicks }),
             impactEstimationSource
           )
 
@@ -2158,16 +2093,13 @@ function buildRecommendationDrafts(params: {
               ...applyImpactEstimation(baseData, {
                 estimatedCostSaving: 0,
                 estimatedRevenueUplift,
-                impactWindowDays: IMPACT_WINDOW_DAYS_TRAFFIC_GROWTH,
-              }),
+                impactWindowDays: IMPACT_WINDOW_DAYS_TRAFFIC_GROWTH }),
               snapshotHash,
               keywordPlan,
               keywordPlanDiagnostics: expansionPlan.diagnostics,
               ruleCode: 'expand_keywords_low_coverage_low_traffic',
               impactEstimationSource,
-              analysisNote: `已仅基于真实 Search Terms 候选筛选新增关键词（近期优先、历史补充），并为其自动推荐匹配类型（EXACT/PHRASE/BROAD）。${formatImpactEstimationSource(impactEstimationSource)}。`,
-            },
-          })
+              analysisNote: `已仅基于真实 Search Terms 候选筛选新增关键词（近期优先、历史补充），并为其自动推荐匹配类型（EXACT/PHRASE/BROAD）。${formatImpactEstimationSource(impactEstimationSource)}。` } })
         }
       }
     }
@@ -2175,15 +2107,13 @@ function buildRecommendationDrafts(params: {
     const negativeKeywordPlan = buildNegativeKeywordPlan({
       searchTerms: searchTermRows,
       existingNegativeTerms: negativeKeywordSet,
-      hardFeedbackTerms,
-    })
+      hardFeedbackTerms })
     if (negativeKeywordPlan.length > 0) {
       const inCooldown = isRecommendationInCooldown({
         campaignId,
         recommendationType: 'add_negative_keywords',
         cooldownUntilByKey: params.cooldownUntilByKey,
-        nowMs: params.nowMs,
-      })
+        nowMs: params.nowMs })
       if (!inCooldown) {
         const hardNegativeCount = negativeKeywordPlan.length
         const totalNegativeWasteCost = roundTo2(
@@ -2198,9 +2128,7 @@ function buildRecommendationDrafts(params: {
           runDays,
           plan: negativeKeywordPlan.map((item) => ({
             text: item.text,
-            matchType: item.matchType,
-          })),
-        })
+            matchType: item.matchType })) })
         const estimatedCostSaving = roundTo2(totalNegativeWasteCost * 0.7)
         recommendations.push({
           key: `${campaignId}:add_negative_keywords`,
@@ -2213,21 +2141,17 @@ function buildRecommendationDrafts(params: {
           priorityScore: estimateNegativeKeywordPriority({
             hardNegativeCount,
             totalCost: totalNegativeWasteCost,
-            selectedCount: negativeKeywordPlan.length,
-          }),
+            selectedCount: negativeKeywordPlan.length }),
           data: {
             ...applyImpactEstimation(baseData, {
               estimatedCostSaving,
               estimatedRevenueUplift: 0,
-              impactWindowDays: IMPACT_WINDOW_DAYS_TRAFFIC_GROWTH,
-            }),
+              impactWindowDays: IMPACT_WINDOW_DAYS_TRAFFIC_GROWTH }),
             snapshotHash,
             negativeKeywordPlan,
             searchTermFeedback: searchTermFeedbackSummary,
             ruleCode: 'negative_keywords_from_search_terms',
-            analysisNote: '基于搜索词 hard 反馈与硬负向意图词识别否词（投放回收口径仍按Campaign/Offer级佣金）。',
-          },
-        })
+            analysisNote: '基于搜索词 hard 反馈与硬负向意图词识别否词（投放回收口径仍按Campaign/Offer级佣金）。' } })
       }
     }
 
@@ -2236,15 +2160,13 @@ function buildRecommendationDrafts(params: {
       brand: campaign.brand,
       searchTermMetrics: searchTermPerfByText,
       searchTerms: searchTermRows,
-      softFeedbackTerms,
-    })
+      softFeedbackTerms })
     if (matchTypePlan.length > 0) {
       const inCooldown = isRecommendationInCooldown({
         campaignId,
         recommendationType: 'optimize_match_type',
         cooldownUntilByKey: params.cooldownUntilByKey,
-        nowMs: params.nowMs,
-      })
+        nowMs: params.nowMs })
       if (!inCooldown) {
         const broadToNarrowCount = matchTypePlan.filter((item) => item.currentMatchType === 'BROAD').length
         const totalCost = roundTo2(matchTypePlan.reduce((acc, item) => acc + toNumber(item.cost, 0), 0))
@@ -2255,9 +2177,7 @@ function buildRecommendationDrafts(params: {
           plan: matchTypePlan.map((item) => ({
             text: item.text,
             currentMatchType: item.currentMatchType,
-            recommendedMatchType: item.recommendedMatchType,
-          })),
-        })
+            recommendedMatchType: item.recommendedMatchType })) })
         const estimatedCostSaving = roundTo2(totalCost * 0.2)
         const estimatedRevenueUplift = roas !== null && roas >= 0.6
           ? roundTo2(totalCost * Math.min(0.12, Math.max(0.03, roas * 0.05)))
@@ -2274,22 +2194,18 @@ function buildRecommendationDrafts(params: {
           priorityScore: estimateMatchTypePriority({
             selectedCount: matchTypePlan.length,
             totalCost,
-            broadToNarrowCount,
-          }),
+            broadToNarrowCount }),
           data: {
             ...applyImpactEstimation(baseData, {
               estimatedCostSaving,
               estimatedRevenueUplift,
-              impactWindowDays: IMPACT_WINDOW_DAYS_TRAFFIC_GROWTH,
-            }),
+              impactWindowDays: IMPACT_WINDOW_DAYS_TRAFFIC_GROWTH }),
             snapshotHash,
             matchTypePlan,
             searchTermFeedback: searchTermFeedbackSummary,
             matchTypeReplaceMode: 'pause_existing',
             ruleCode: 'optimize_keyword_match_type',
-            analysisNote: '执行方式为新增推荐匹配类型关键词，并默认暂停原匹配类型关键词（可回滚）；soft 反馈词用于优先收紧匹配类型。',
-          },
-        })
+            analysisNote: '执行方式为新增推荐匹配类型关键词，并默认暂停原匹配类型关键词（可回滚）；soft 反馈词用于优先收紧匹配类型。' } })
       }
     }
   }
@@ -2349,8 +2265,7 @@ async function listRecommendations(params: {
     executedAt: row.executed_at ? String(row.executed_at) : null,
     executionResult: safeParseObject(row.execution_result_json),
     createdAt: String(row.created_at || ''),
-    updatedAt: String(row.updated_at || ''),
-  }))
+    updatedAt: String(row.updated_at || '') }))
 }
 
 async function fetchKeywordCoverageByCampaign(params: {
@@ -2446,8 +2361,7 @@ async function repairLegacyExpandKeywordCoverage(params: {
 
   const coverageByCampaign = await fetchKeywordCoverageByCampaign({
     userId: params.userId,
-    campaignIds: targetRecommendations.map((item) => item.campaignId),
-  })
+    campaignIds: targetRecommendations.map((item) => item.campaignId) })
   if (coverageByCampaign.size === 0) {
     return params.recommendations
   }
@@ -2458,12 +2372,10 @@ async function repairLegacyExpandKeywordCoverage(params: {
     if (!Number.isFinite(keywordCoverageCount) || keywordCoverageCount <= 0) continue
     const nextData = {
       ...item.data,
-      keywordCoverageCount: Math.floor(keywordCoverageCount),
-    }
+      keywordCoverageCount: Math.floor(keywordCoverageCount) }
     updates.set(item.id, {
       summary: patchExpandKeywordsSummaryCoverage(item.summary, keywordCoverageCount),
-      data: nextData,
-    })
+      data: nextData })
   }
 
   if (updates.size === 0) {
@@ -2471,7 +2383,7 @@ async function repairLegacyExpandKeywordCoverage(params: {
   }
 
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   await Promise.allSettled(
     Array.from(updates.entries()).map(async ([recommendationId, payload]) => {
@@ -2486,7 +2398,7 @@ async function repairLegacyExpandKeywordCoverage(params: {
             AND report_date = ?
         `,
         [
-          toDbJsonObjectField(payload.data, db.type, payload.data),
+          toDbJsonObjectField(payload.data, payload.data),
           payload.summary,
           recommendationId,
           params.userId,
@@ -2504,8 +2416,7 @@ async function repairLegacyExpandKeywordCoverage(params: {
       ...item,
       summary: patched.summary,
       data: patched.data,
-      updatedAt: nowIso,
-    }
+      updatedAt: nowIso }
   })
 }
 
@@ -2528,7 +2439,7 @@ async function appendRecommendationEvent(params: {
       params.userId,
       params.eventType,
       params.actorUserId || null,
-      toDbJsonObjectField(params.eventJson ?? null, db.type, null),
+      toDbJsonObjectField(params.eventJson ?? null, null),
     ]
   )
 }
@@ -2539,7 +2450,7 @@ export async function persistStrategyRecommendationExecutionRuntime(params: {
   executionResult: Record<string, any>
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   await db.exec(
     `
       UPDATE strategy_center_recommendations
@@ -2549,7 +2460,7 @@ export async function persistStrategyRecommendationExecutionRuntime(params: {
         AND user_id = ?
     `,
     [
-      toDbJsonObjectField(params.executionResult || {}, db.type, params.executionResult || {}),
+      toDbJsonObjectField(params.executionResult || {}, params.executionResult || {}),
       params.recommendationId,
       params.userId,
     ]
@@ -2572,9 +2483,9 @@ export async function refreshStrategyRecommendations(params: {
 
   const task = (async () => {
     const db = await getDatabase()
-    const isDeletedCondition = db.type === 'postgres' ? 'c.is_deleted = FALSE' : 'c.is_deleted = 0'
-    const adsAccountIsActiveCondition = db.type === 'postgres' ? 'gaa.is_active = TRUE' : 'gaa.is_active = 1'
-    const adsAccountIsDeletedCondition = db.type === 'postgres' ? 'gaa.is_deleted = FALSE' : 'gaa.is_deleted = 0'
+    const isDeletedCondition = 'c.is_deleted = FALSE'
+    const adsAccountIsActiveCondition = 'gaa.is_active = TRUE'
+    const adsAccountIsDeletedCondition = 'gaa.is_deleted = FALSE'
 
     const campaigns = await db.query<CampaignRow>(
       `
@@ -2754,8 +2665,7 @@ export async function refreshStrategyRecommendations(params: {
       inventory.push({
         text: keywordText,
         matchType,
-        isNegative,
-      })
+        isNegative })
       keywordInventoryByCampaign.set(campaignId, inventory)
       if (isNegative) {
         continue
@@ -2777,8 +2687,7 @@ export async function refreshStrategyRecommendations(params: {
         impressions: toNumber(row.impressions, 0),
         clicks: toNumber(row.clicks, 0),
         conversions: toNumber(row.conversions, 0),
-        cost: roundTo2(toNumber(row.cost, 0)),
-      })
+        cost: roundTo2(toNumber(row.cost, 0)) })
       searchTermsByCampaign.set(campaignId, bucket)
     }
 
@@ -2798,8 +2707,7 @@ export async function refreshStrategyRecommendations(params: {
         recentClicks: toNumber(row.clicks_recent, 0),
         recentConversions: toNumber(row.conversions_recent, 0),
         recentCost: roundTo2(toNumber(row.cost_recent, 0)),
-        lastSeenDate: row.last_seen_date || null,
-      })
+        lastSeenDate: row.last_seen_date || null })
       historicalSearchTermsByCampaign.set(campaignId, bucket)
     }
 
@@ -2868,8 +2776,7 @@ export async function refreshStrategyRecommendations(params: {
       historicalSearchTermsByCampaign,
       creativeById,
       cooldownUntilByKey,
-      nowMs: Date.now(),
-    })
+      nowMs: Date.now() })
 
     const existingRows = await db.query<{
       id: string
@@ -2893,11 +2800,10 @@ export async function refreshStrategyRecommendations(params: {
     for (const row of existingRows || []) {
       existingByKey.set(`${row.campaign_id}:${row.recommendation_type}`, {
         id: row.id,
-        snapshotHash: row.snapshot_hash ? String(row.snapshot_hash) : null,
-      })
+        snapshotHash: row.snapshot_hash ? String(row.snapshot_hash) : null })
     }
 
-    const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowFunc = 'NOW()'
     const generatedIds: string[] = []
     for (const draft of drafts) {
       const existing = existingByKey.get(draft.key)
@@ -2962,7 +2868,7 @@ export async function refreshStrategyRecommendations(params: {
           draft.priorityScore,
           'pending',
           snapshotHash,
-          toDbJsonObjectField(draft.data, db.type, draft.data),
+          toDbJsonObjectField(draft.data, draft.data),
         ]
       )
 
@@ -2975,9 +2881,7 @@ export async function refreshStrategyRecommendations(params: {
           eventJson: {
             recommendationType: draft.recommendationType,
             priorityScore: draft.priorityScore,
-            snapshotHash,
-          },
-        })
+            snapshotHash } })
       }
     }
 
@@ -3034,8 +2938,7 @@ export async function refreshStrategyRecommendations(params: {
     return listRecommendations({
       userId: params.userId,
       reportDate,
-      limit: params.limit,
-    })
+      limit: params.limit })
   })()
 
   refreshRecommendationsInflight.set(inflightKey, task)
@@ -3060,28 +2963,24 @@ export async function getStrategyRecommendations(params: {
     return refreshStrategyRecommendations({
       userId: params.userId,
       reportDate,
-      limit: params.limit,
-    })
+      limit: params.limit })
   }
 
   const existing = await listRecommendations({
     userId: params.userId,
     reportDate,
-    limit: params.limit,
-  })
+    limit: params.limit })
   if (existing.length > 0) {
     return repairLegacyExpandKeywordCoverage({
       userId: params.userId,
       reportDate,
-      recommendations: existing,
-    })
+      recommendations: existing })
   }
 
   return refreshStrategyRecommendations({
     userId: params.userId,
     reportDate,
-    limit: params.limit,
-  })
+    limit: params.limit })
 }
 
 async function getRecommendationById(params: {
@@ -3136,8 +3035,7 @@ async function getRecommendationById(params: {
     executedAt: row.executed_at ? String(row.executed_at) : null,
     executionResult: safeParseObject(row.execution_result_json),
     createdAt: String(row.created_at || ''),
-    updatedAt: String(row.updated_at || ''),
-  }
+    updatedAt: String(row.updated_at || '') }
 }
 
 export async function dismissStrategyRecommendation(params: {
@@ -3145,12 +3043,11 @@ export async function dismissStrategyRecommendation(params: {
   recommendationId: string
 }): Promise<StrategyRecommendation> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   const existing = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!existing) {
     throw new Error('建议不存在或无权限访问')
   }
@@ -3175,14 +3072,11 @@ export async function dismissStrategyRecommendation(params: {
     eventType: 'dismissed',
     actorUserId: params.userId,
     eventJson: {
-      snapshotHash: existing.snapshotHash || null,
-    },
-  })
+      snapshotHash: existing.snapshotHash || null } })
 
   const latest = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!latest) {
     throw new Error('建议设为暂不执行后读取失败')
   }
@@ -3221,8 +3115,7 @@ export async function assertStrategyRecommendationReadyForExecution(params: {
 
   const recommendation = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!recommendation) {
     throw new Error('建议不存在或无权限访问')
   }
@@ -3265,11 +3158,10 @@ export async function markStrategyRecommendationQueued(params: {
   taskStartedAt?: number | null
 }): Promise<StrategyRecommendation> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   const recommendation = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!recommendation) {
     throw new Error('建议不存在或无权限访问')
   }
@@ -3299,8 +3191,7 @@ export async function markStrategyRecommendationQueued(params: {
     queueTaskStartedAt:
       toIsoTimestampFromEpoch(params.taskStartedAt)
       || existingExecutionResult.queueTaskStartedAt
-      || null,
-  }
+      || null }
 
   await db.exec(
     `
@@ -3312,7 +3203,7 @@ export async function markStrategyRecommendationQueued(params: {
         AND user_id = ?
     `,
     [
-      toDbJsonObjectField(nextExecutionResult, db.type, nextExecutionResult),
+      toDbJsonObjectField(nextExecutionResult, nextExecutionResult),
       params.recommendationId,
       params.userId,
     ]
@@ -3325,14 +3216,11 @@ export async function markStrategyRecommendationQueued(params: {
     actorUserId: params.userId,
     eventJson: {
       taskId: params.taskId,
-      queuedAt,
-    },
-  })
+      queuedAt } })
 
   const latest = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!latest) {
     throw new Error('写入执行队列状态失败')
   }
@@ -3346,11 +3234,10 @@ export async function markStrategyRecommendationReviewQueued(params: {
   scheduledAt: string
 }) {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   const recommendation = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!recommendation) {
     throw new Error('建议不存在或无权限访问')
   }
@@ -3359,12 +3246,10 @@ export async function markStrategyRecommendationReviewQueued(params: {
   const nextExecutionResult = {
     ...existingExecutionResult,
     postReviewTaskId: params.taskId,
-    postReviewScheduledAt: params.scheduledAt,
-  }
+    postReviewScheduledAt: params.scheduledAt }
   const nextData: StrategyRecommendationData = {
     ...(recommendation.data || ({} as StrategyRecommendationData)),
-    postReviewStatus: 'pending_window',
-  }
+    postReviewStatus: 'pending_window' }
 
   await db.exec(
     `
@@ -3376,8 +3261,8 @@ export async function markStrategyRecommendationReviewQueued(params: {
         AND user_id = ?
     `,
     [
-      toDbJsonObjectField(nextData, db.type, nextData),
-      toDbJsonObjectField(nextExecutionResult, db.type, nextExecutionResult),
+      toDbJsonObjectField(nextData, nextData),
+      toDbJsonObjectField(nextExecutionResult, nextExecutionResult),
       params.recommendationId,
       params.userId,
     ]
@@ -3390,9 +3275,7 @@ export async function markStrategyRecommendationReviewQueued(params: {
     actorUserId: params.userId,
     eventJson: {
       taskId: params.taskId,
-      scheduledAt: params.scheduledAt,
-    },
-  })
+      scheduledAt: params.scheduledAt } })
 }
 
 function computeReviewDateRange(params: {
@@ -3411,8 +3294,7 @@ function computeReviewDateRange(params: {
     baselineEndDate,
     afterStartDate,
     afterEndDate,
-    afterEndMs,
-  }
+    afterEndMs }
 }
 
 async function aggregateCampaignWindow(params: {
@@ -3465,8 +3347,7 @@ async function aggregateCampaignWindow(params: {
     ctrPct: impressions > 0 ? roundTo2((clicks / impressions) * 100) : 0,
     cpc: clicks > 0 ? roundTo2(cost / clicks) : 0,
     commission: commissionAmount,
-    roas: cost > 0 ? roundTo2(commissionAmount / cost) : null as number | null,
-  }
+    roas: cost > 0 ? roundTo2(commissionAmount / cost) : null as number | null }
 }
 
 function pctChange(after: number, before: number): number | null {
@@ -3516,16 +3397,14 @@ function evaluatePostReviewStatus(params: {
     cost: params.baseline.cost,
     minImpressions: POST_REVIEW_MIN_IMPRESSIONS,
     minClicks: POST_REVIEW_MIN_CLICKS,
-    minCost: POST_REVIEW_MIN_COST,
-  })
+    minCost: POST_REVIEW_MIN_COST })
   const afterHasSample = hasSignalSample({
     impressions: params.after.impressions,
     clicks: params.after.clicks,
     cost: params.after.cost,
     minImpressions: POST_REVIEW_MIN_IMPRESSIONS,
     minClicks: POST_REVIEW_MIN_CLICKS,
-    minCost: POST_REVIEW_MIN_COST,
-  })
+    minCost: POST_REVIEW_MIN_COST })
   if (!baselineHasSample && !afterHasSample) {
     return 'no_data'
   }
@@ -3568,11 +3447,10 @@ export async function reviewStrategyRecommendationEffect(params: {
   force?: boolean
 }): Promise<StrategyRecommendation> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   const recommendation = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!recommendation) {
     throw new Error('建议不存在或无权限访问')
   }
@@ -3596,8 +3474,7 @@ export async function reviewStrategyRecommendationEffect(params: {
   if (!params.force && nowMs < reviewDueAtMs) {
     const pendingData: StrategyRecommendationData = {
       ...(recommendation.data || ({} as StrategyRecommendationData)),
-      postReviewStatus: 'pending_window',
-    }
+      postReviewStatus: 'pending_window' }
     await db.exec(
       `
         UPDATE strategy_center_recommendations
@@ -3607,15 +3484,14 @@ export async function reviewStrategyRecommendationEffect(params: {
           AND user_id = ?
       `,
       [
-        toDbJsonObjectField(pendingData, db.type, pendingData),
+        toDbJsonObjectField(pendingData, pendingData),
         params.recommendationId,
         params.userId,
       ]
     )
     const latest = await getRecommendationById({
       userId: params.userId,
-      recommendationId: params.recommendationId,
-    })
+      recommendationId: params.recommendationId })
     if (!latest) {
       throw new Error('复盘状态写入失败')
     }
@@ -3625,8 +3501,7 @@ export async function reviewStrategyRecommendationEffect(params: {
   const dateRange = computeReviewDateRange({
     executedAtMs,
     reviewWindowDays,
-    nowMs,
-  })
+    nowMs })
   if (dateRange.afterEndMs < executedAtMs) {
     return recommendation
   }
@@ -3636,15 +3511,13 @@ export async function reviewStrategyRecommendationEffect(params: {
     userId: params.userId,
     campaignId: recommendation.campaignId,
     startDate: dateRange.baselineStartDate,
-    endDate: dateRange.baselineEndDate,
-  })
+    endDate: dateRange.baselineEndDate })
   const after = await aggregateCampaignWindow({
     db,
     userId: params.userId,
     campaignId: recommendation.campaignId,
     startDate: dateRange.afterStartDate,
-    endDate: dateRange.afterEndDate,
-  })
+    endDate: dateRange.afterEndDate })
   const observedDays = Math.max(
     1,
     Math.floor((Date.parse(`${dateRange.afterEndDate}T00:00:00.000Z`) - Date.parse(`${dateRange.afterStartDate}T00:00:00.000Z`)) / MS_PER_DAY) + 1
@@ -3659,16 +3532,13 @@ export async function reviewStrategyRecommendationEffect(params: {
       clicks: baseline.clicks,
       cost: baseline.cost,
       ctrPct: baseline.ctrPct,
-      roas: baseline.roas,
-    },
+      roas: baseline.roas },
     after: {
       impressions: after.impressions,
       clicks: after.clicks,
       cost: after.cost,
       ctrPct: after.ctrPct,
-      roas: after.roas,
-    },
-  })
+      roas: after.roas } })
 
   const postReviewSummary: StrategyRecommendationData['postReviewSummary'] = {
     reviewedAt,
@@ -3680,8 +3550,7 @@ export async function reviewStrategyRecommendationEffect(params: {
       ctrPct: baseline.ctrPct,
       cpc: baseline.cpc,
       roas: baseline.roas,
-      commission: baseline.commission,
-    },
+      commission: baseline.commission },
     after: {
       impressions: after.impressions,
       clicks: after.clicks,
@@ -3690,8 +3559,7 @@ export async function reviewStrategyRecommendationEffect(params: {
       cpc: after.cpc,
       roas: after.roas,
       commission: after.commission,
-      observedDays,
-    },
+      observedDays },
     delta: {
       impressionsPct: pctChange(after.impressions, baseline.impressions),
       clicksPct: pctChange(after.clicks, baseline.clicks),
@@ -3701,15 +3569,12 @@ export async function reviewStrategyRecommendationEffect(params: {
       roasDiff:
         after.roas !== null && baseline.roas !== null
           ? roundTo2(after.roas - baseline.roas)
-          : null,
-    },
-  }
+          : null } }
 
   const nextData: StrategyRecommendationData = {
     ...(recommendation.data || ({} as StrategyRecommendationData)),
     postReviewStatus: status,
-    postReviewSummary,
-  }
+    postReviewSummary }
   const executionResult = parseExecutionResultObject(recommendation.executionResult)
   const nextExecutionResult = {
     ...executionResult,
@@ -3717,9 +3582,7 @@ export async function reviewStrategyRecommendationEffect(params: {
       status,
       reviewedAt,
       reviewWindowDays,
-      observedDays,
-    },
-  }
+      observedDays } }
 
   await db.exec(
     `
@@ -3731,8 +3594,8 @@ export async function reviewStrategyRecommendationEffect(params: {
         AND user_id = ?
     `,
     [
-      toDbJsonObjectField(nextData, db.type, nextData),
-      toDbJsonObjectField(nextExecutionResult, db.type, nextExecutionResult),
+      toDbJsonObjectField(nextData, nextData),
+      toDbJsonObjectField(nextExecutionResult, nextExecutionResult),
       params.recommendationId,
       params.userId,
     ]
@@ -3746,14 +3609,11 @@ export async function reviewStrategyRecommendationEffect(params: {
     eventJson: {
       status,
       reviewWindowDays,
-      observedDays,
-    },
-  })
+      observedDays } })
 
   const latest = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!latest) {
     throw new Error('复盘后读取建议失败')
   }
@@ -3769,8 +3629,7 @@ export async function queueStrategyRecommendationExecution(params: {
   const recommendation = await assertStrategyRecommendationReadyForExecution({
     userId: params.userId,
     recommendationId: params.recommendationId,
-    confirm: params.confirm,
-  })
+    confirm: params.confirm })
   if (recommendation.status === 'executed') {
     throw new Error('建议已执行，无需重复执行')
   }
@@ -3791,21 +3650,18 @@ export async function queueStrategyRecommendationExecution(params: {
         retryCount: task.retryCount,
         taskError: task.error || null,
         taskCreatedAt: task.createdAt,
-        taskStartedAt: task.startedAt || null,
-      })
+        taskStartedAt: task.startedAt || null })
       return {
         queued: true,
         deduplicated: true,
         taskId: existingTaskId,
-        recommendation: latest,
-      }
+        recommendation: latest }
     }
   }
 
   const deterministicTaskId = buildDeterministicRecommendationExecuteTaskId({
     recommendationId: params.recommendationId,
-    snapshotHash: recommendation.snapshotHash,
-  })
+    snapshotHash: recommendation.snapshotHash })
   const deterministicTask = await queue.getTask(deterministicTaskId).catch(() => null)
   if (deterministicTask && (deterministicTask.status === 'pending' || deterministicTask.status === 'running')) {
     const latest = await markStrategyRecommendationQueued({
@@ -3816,14 +3672,12 @@ export async function queueStrategyRecommendationExecution(params: {
       retryCount: deterministicTask.retryCount,
       taskError: deterministicTask.error || null,
       taskCreatedAt: deterministicTask.createdAt,
-      taskStartedAt: deterministicTask.startedAt || null,
-    })
+      taskStartedAt: deterministicTask.startedAt || null })
     return {
       queued: true,
       deduplicated: true,
       taskId: deterministicTaskId,
-      recommendation: latest,
-    }
+      recommendation: latest }
   }
 
   const taskPayload: StrategyRecommendationQueueTaskData = {
@@ -3832,8 +3686,7 @@ export async function queueStrategyRecommendationExecution(params: {
     trigger: 'strategy_recommendation_execute',
     kind: 'execute_recommendation',
     recommendationId: params.recommendationId,
-    confirm: true,
-  }
+    confirm: true }
 
   const taskId = await queue.enqueue(
     'openclaw-strategy',
@@ -3843,8 +3696,7 @@ export async function queueStrategyRecommendationExecution(params: {
       priority: 'high',
       maxRetries: 0,
       taskId: deterministicTaskId,
-      parentRequestId: params.parentRequestId || undefined,
-    }
+      parentRequestId: params.parentRequestId || undefined }
   )
   const task = await queue.getTask(taskId).catch(() => null)
   const latest = await markStrategyRecommendationQueued({
@@ -3855,15 +3707,13 @@ export async function queueStrategyRecommendationExecution(params: {
     retryCount: task?.retryCount,
     taskError: task?.error || null,
     taskCreatedAt: task?.createdAt || null,
-    taskStartedAt: task?.startedAt || null,
-  })
+    taskStartedAt: task?.startedAt || null })
 
   return {
     queued: true,
     deduplicated: false,
     taskId,
-    recommendation: latest,
-  }
+    recommendation: latest }
 }
 
 type ExecuteActionResult = {
@@ -3968,12 +3818,10 @@ async function executeRecommendationAction(params: {
       userId: params.userId,
       path: `/api/campaigns/${googleCampaignId}/update-cpc`,
       method: 'PUT',
-      body: { newCpc },
-    })
+      body: { newCpc } })
     return {
       route: `/api/campaigns/${googleCampaignId}/update-cpc`,
-      response,
-    }
+      response }
   }
 
   if (recommendation.recommendationType === 'adjust_budget') {
@@ -3990,12 +3838,10 @@ async function executeRecommendationAction(params: {
       userId: params.userId,
       path: `/api/campaigns/${googleCampaignId}/update-budget`,
       method: 'PUT',
-      body: payload,
-    })
+      body: payload })
     return {
       route: `/api/campaigns/${googleCampaignId}/update-budget`,
-      response,
-    }
+      response }
   }
 
   if (recommendation.recommendationType === 'offline_campaign') {
@@ -4007,16 +3853,14 @@ async function executeRecommendationAction(params: {
       removeGoogleAdsCampaign: true,
       pauseClickFarmTasks: true,
       pauseUrlSwapTasks: true,
-      waitRemote: true,
-    }
+      waitRemote: true }
     let response: unknown
     try {
       response = await fetchAutoadsJson({
         userId: params.userId,
         path: `/api/campaigns/${campaignId}/offline`,
         method: 'POST',
-        body,
-      })
+        body })
     } catch (error: any) {
       if (!isAlreadyOfflineCampaignError(error)) {
         throw error
@@ -4028,8 +3872,7 @@ async function executeRecommendationAction(params: {
         data: {
           campaignId,
           offlineCount: 1,
-          alreadyOffline: true,
-        },
+          alreadyOffline: true },
         googleAds: {
           queued: false,
           planned: 0,
@@ -4039,14 +3882,11 @@ async function executeRecommendationAction(params: {
           failed: 0,
           errors: [],
           skippedReason: 'campaign_already_offline',
-          action: 'REMOVE',
-        },
-      }
+          action: 'REMOVE' } }
     }
     return {
       route: `/api/campaigns/${campaignId}/offline`,
-      response,
-    }
+      response }
   }
 
   if (recommendation.recommendationType === 'expand_keywords') {
@@ -4067,14 +3907,10 @@ async function executeRecommendationAction(params: {
       body: {
         keywords: keywordPlan.map((item) => ({
           text: String(item.text || '').trim(),
-          matchType: String(item.matchType || 'PHRASE').toUpperCase(),
-        })),
-      },
-    })
+          matchType: String(item.matchType || 'PHRASE').toUpperCase() })) } })
     return {
       route: `/api/campaigns/${campaignId}/keywords/add`,
-      response,
-    }
+      response }
   }
 
   if (recommendation.recommendationType === 'add_negative_keywords') {
@@ -4095,14 +3931,10 @@ async function executeRecommendationAction(params: {
       body: {
         keywords: negativeKeywordPlan.map((item) => ({
           text: String(item.text || '').trim(),
-          matchType: String(item.matchType || 'EXACT').toUpperCase(),
-        })),
-      },
-    })
+          matchType: String(item.matchType || 'EXACT').toUpperCase() })) } })
     return {
       route: `/api/campaigns/${campaignId}/keywords/negatives/add`,
-      response,
-    }
+      response }
   }
 
   if (recommendation.recommendationType === 'optimize_match_type') {
@@ -4123,19 +3955,14 @@ async function executeRecommendationAction(params: {
       body: {
         keywords: matchTypePlan.map((item) => ({
           text: String(item.text || '').trim(),
-          matchType: String(item.recommendedMatchType || 'PHRASE').toUpperCase(),
-        })),
+          matchType: String(item.recommendedMatchType || 'PHRASE').toUpperCase() })),
         oldKeywords: matchTypePlan.map((item) => ({
           text: String(item.text || '').trim(),
-          matchType: String(item.currentMatchType || 'PHRASE').toUpperCase(),
-        })),
-        replaceMode: String(data.matchTypeReplaceMode || 'pause_existing'),
-      },
-    })
+          matchType: String(item.currentMatchType || 'PHRASE').toUpperCase() })),
+        replaceMode: String(data.matchTypeReplaceMode || 'pause_existing') } })
     return {
       route: `/api/campaigns/${campaignId}/keywords/match-type/add`,
-      response,
-    }
+      response }
   }
 
   throw new Error(`不支持的建议类型: ${recommendation.recommendationType}`)
@@ -4150,26 +3977,23 @@ export async function executeStrategyRecommendation(params: {
   const recommendation = await assertStrategyRecommendationReadyForExecution({
     userId: params.userId,
     recommendationId: params.recommendationId,
-    confirm: params.confirm,
-  })
+    confirm: params.confirm })
   if (recommendation.status === 'executed') {
     return recommendation
   }
 
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   const existingExecutionResult = parseExecutionResultObject(recommendation.executionResult)
   const queueTaskId = String(params.queueTaskId || existingExecutionResult.queueTaskId || '').trim() || null
 
   try {
     const actionResult = await executeRecommendationAction({
       userId: params.userId,
-      recommendation,
-    })
+      recommendation })
     assertRecommendationActionResult({
       recommendationType: recommendation.recommendationType,
-      response: actionResult.response,
-    })
+      response: actionResult.response })
     const executedAt = new Date().toISOString()
     const successPayload = {
       ...existingExecutionResult,
@@ -4181,8 +4005,7 @@ export async function executeStrategyRecommendation(params: {
       route: actionResult.route,
       response: actionResult.response,
       queueUpdatedAt: executedAt,
-      executedAt,
-    }
+      executedAt }
 
     await db.exec(
       `
@@ -4196,9 +4019,7 @@ export async function executeStrategyRecommendation(params: {
       `,
       [
         toDbJsonObjectField(
-          successPayload,
-          db.type,
-          successPayload
+          successPayload, successPayload
         ),
         params.recommendationId,
         params.userId,
@@ -4212,9 +4033,7 @@ export async function executeStrategyRecommendation(params: {
       actorUserId: params.userId,
       eventJson: {
         route: actionResult.route,
-        queueTaskId,
-      },
-    })
+        queueTaskId } })
   } catch (error: any) {
     const message = error?.message || '执行失败'
     const failedAt = new Date().toISOString()
@@ -4227,8 +4046,7 @@ export async function executeStrategyRecommendation(params: {
       success: false,
       error: message,
       queueUpdatedAt: failedAt,
-      failedAt,
-    }
+      failedAt }
     await db.exec(
       `
         UPDATE strategy_center_recommendations
@@ -4240,9 +4058,7 @@ export async function executeStrategyRecommendation(params: {
       `,
       [
         toDbJsonObjectField(
-          failedPayload,
-          db.type,
-          failedPayload
+          failedPayload, failedPayload
         ),
         params.recommendationId,
         params.userId,
@@ -4256,16 +4072,13 @@ export async function executeStrategyRecommendation(params: {
       actorUserId: params.userId,
       eventJson: {
         error: message,
-        queueTaskId,
-      },
-    })
+        queueTaskId } })
     throw error
   }
 
   const latest = await getRecommendationById({
     userId: params.userId,
-    recommendationId: params.recommendationId,
-  })
+    recommendationId: params.recommendationId })
   if (!latest) {
     throw new Error('执行后读取建议失败')
   }
@@ -4279,5 +4092,4 @@ export const __testUtils = {
   assertRecommendationActionResult,
   isAlreadyOfflineCampaignError,
   patchExpandKeywordsSummaryCoverage,
-  normalizeRecommendationReportDate,
-}
+  normalizeRecommendationReportDate }

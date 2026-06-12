@@ -128,10 +128,8 @@ const updateSchema = z.object({
   updates: z.array(
     z.object({
       key: z.string(),
-      value: z.string(),
-    })
-  ),
-})
+      value: z.string() })
+  ) })
 
 function validateMergedStrategySettings(settingMap: Record<string, string>): string | null {
   const cronExpr = String(settingMap.openclaw_strategy_cron || '0 9 * * *').trim() || '0 9 * * *'
@@ -157,8 +155,7 @@ export async function GET(request: NextRequest) {
     success: true,
     isAdmin: auth.user.role === 'admin',
     userId: auth.user.userId,
-    user: [...userSettings, ...globalAiSettings],
-  })
+    user: [...userSettings, ...globalAiSettings] })
 }
 
 export async function PUT(request: NextRequest) {
@@ -265,8 +262,7 @@ export async function PUT(request: NextRequest) {
       if (hasGlobalSync) {
         aiAuthOverrideWarnings = auditOpenclawAiAuthOverrides({
           config: syncResult?.config,
-          configPath: syncResult?.configPath,
-        })
+          configPath: syncResult?.configPath })
       }
     } catch (error) {
       console.error('❌ OpenClaw配置同步失败:', error)
@@ -276,6 +272,5 @@ export async function PUT(request: NextRequest) {
   return NextResponse.json({
     success: true,
     skippedKeys,
-    aiAuthOverrideWarnings,
-  })
+    aiAuthOverrideWarnings })
 }

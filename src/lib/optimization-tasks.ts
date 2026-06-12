@@ -48,7 +48,7 @@ export async function generateOptimizationTasksForUser(userId: number): Promise<
   }
 
   const db = await getDatabase()
-  const recentCutoffExpr = dateMinusDays(7, db.type)
+  const recentCutoffExpr = dateMinusDays(7)
   const engine = createOptimizationEngine()
 
   // 获取用户的所有活跃Campaigns（JOIN offers获取转化价值）
@@ -239,7 +239,7 @@ export async function generateWeeklyOptimizationTasks(): Promise<{
   userTasks: Record<number, number>
 }> {
   const db = await getDatabase()
-  const userEligibleCondition = buildUserExecutionEligibleSql({ dbType: db.type, userAlias: 'u' })
+  const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
   // 获取所有有活跃Campaign的用户
   const users = (await db.query(
@@ -340,8 +340,8 @@ export async function updateTaskStatus(
   let query = `
     UPDATE optimization_tasks
     SET status = ?,
-        ${status === 'completed' ? "completed_at = datetime('now')," : ''}
-        ${status === 'dismissed' ? "dismissed_at = datetime('now')," : ''}
+        ${status === 'completed' ? 'completed_at = NOW(),' : ''}
+        ${status === 'dismissed' ? 'dismissed_at = NOW(),' : ''}
         completion_note = ?
     WHERE id = ? AND user_id = ?
   `
@@ -370,7 +370,7 @@ export async function getTaskStatistics(userId: number): Promise<{
   }
 }> {
   const db = await getDatabase()
-  const recentCutoffExpr = dateMinusDays(30, db.type)
+  const recentCutoffExpr = dateMinusDays(30)
 
   const stats = (await db.queryOne(
     `
@@ -409,7 +409,7 @@ export async function getTaskStatistics(userId: number): Promise<{
  */
 export async function cleanupOldTasks(): Promise<number> {
   const db = await getDatabase()
-  const recentCutoffExpr = dateMinusDays(30, db.type)
+  const recentCutoffExpr = dateMinusDays(30)
 
   const result = await db.exec(
     `

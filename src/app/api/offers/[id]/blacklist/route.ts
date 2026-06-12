@@ -104,7 +104,7 @@ export async function DELETE(
       [userId, offer.brand, offer.target_country]
     )
 
-    // 兼容SQLite和PostgreSQL
+    // PostgreSQL BOOLEAN 语法
     const deletedCount =
       (result.changes !== undefined ? result.changes : (result as any).rowCount) || 0
     if (deletedCount === 0) {

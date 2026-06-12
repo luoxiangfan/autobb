@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest) {
     const db = getDatabase()
 
     // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
-    const isActiveValue = db.type === 'postgres' ? true : 1
+    const isActiveValue = true
 
     // 获取所有激活的Prompt版本
     const activePrompts = await db.query<any>(
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     const isActive = body.isActive !== undefined ? body.isActive : true
 
     // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
-    const isActiveFalse = db.type === 'postgres' ? false : 0
+    const isActiveFalse = false
 
     if (isActive) {
       await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
       ]
     )
 
-    const versionId = getInsertedId(result, db.type)
+    const versionId = getInsertedId(result)
 
     return NextResponse.json({
       success: true,

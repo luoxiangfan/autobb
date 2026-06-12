@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
       [...queryParams, limit, offset]
     )
 
-    // 确保 success_rate 是数字类型（处理 SQLite/PostgreSQL 差异）
+    // 确保 success_rate 是数字类型（处理 PostgreSQL 差异）
     // 同时转换为 camelCase
     const normalizedRecords = records.map((record) => ({
       id: record.id,

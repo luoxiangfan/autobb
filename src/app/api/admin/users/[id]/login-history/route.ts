@@ -86,7 +86,7 @@ export const GET = withAuth(
       )) as any[]
 
       // P1修复：确保 success 是布尔值类型，处理不同数据库返回的类型差异
-      // SQLite可能返回整数/字符串，PostgreSQL可能返回布尔值
+      // 驱动可能返回多种标量类型，统一规范化
       const normalizedRecords = [
         ...loginAttempts.map((record) => ({
           type: 'login_attempt',

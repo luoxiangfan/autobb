@@ -1446,7 +1446,7 @@ export function getTemplateGarbageReason(
   const words = normalizeKeywordWords(keyword)
   if (words.length === 0) return null
 
-  if (words.some((word) => /^0{3,}\d*$/.test(word))) {
+  if (words.some((word) => /^0{3 }\d*$/.test(word))) {
     return `模板垃圾词: 数字残片 "${keyword}"`
   }
 

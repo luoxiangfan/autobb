@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     // PostgreSQL的must_change_password可能是BOOLEAN类型，需要根据数据库类型传值
     // 管理员账号不强制修改密码（避免管理员被锁死在改密流程）
     const shouldForceChange = user.role !== 'admin'
-    const mustChangeValue = db.type === 'postgres' ? shouldForceChange : shouldForceChange ? 1 : 0
+    const mustChangeValue = shouldForceChange
     const result = await db.exec(
       `
       UPDATE users

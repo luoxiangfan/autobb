@@ -1013,14 +1013,13 @@ export class UnifiedQueueManager {
       try {
         const { getDatabase } = await import('@/lib/db')
         const db = getDatabase()
-        const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+        const nowSql = 'NOW()'
         const message = error?.message || '任务执行失败'
         const errorPayload = toDbJsonObjectField(
           {
             message,
             source: 'queue-manager',
           },
-          db.type,
           { message, source: 'queue-manager' }
         )
 
@@ -1293,15 +1292,7 @@ export class UnifiedQueueManager {
     try {
       const { getDatabase } = await import('@/lib/db')
       const db = getDatabase()
-      const db_type = db.type
-
-      // PostgreSQL 和 SQLite 使用不同的超时计算方式
-      let timeoutThreshold: string
-      if (db_type === 'postgres') {
-        timeoutThreshold = `NOW() - INTERVAL '${this.STALE_TASK_TIMEOUT / 1000} seconds'`
-      } else {
-        timeoutThreshold = `datetime('now', '-${this.STALE_TASK_TIMEOUT / 1000} seconds')`
-      }
+      const timeoutThreshold = `NOW() - INTERVAL '${this.STALE_TASK_TIMEOUT / 1000} seconds'`
 
       // 获取超时的 running 任务
       const staleTasks = await db.query<{
@@ -1327,13 +1318,12 @@ export class UnifiedQueueManager {
       )
 
       // 将超时任务标记为 failed
-      const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowFunc = 'NOW()'
       const timeoutErrorJson = toDbJsonObjectField(
         {
           timeout: true,
           message: 'Task timeout - no heartbeat received',
         },
-        db_type,
         { timeout: true, message: 'Task timeout - no heartbeat received' }
       )
       const updateResult = await db.exec(
@@ -1497,8 +1487,7 @@ export class UnifiedQueueManager {
       // 1. 获取数据库实例
       const { getDatabase } = await import('@/lib/db')
       const db = getDatabase()
-      const db_type = db.type
-      const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowFunc = 'NOW()'
 
       // 2. 获取所有子任务（包括 pending 和 running 状态）
       const childTasks = await db.query<{
@@ -1527,33 +1516,17 @@ export class UnifiedQueueManager {
       }
 
       // 4. 将 running/pending 任务标记为 failed（因为无法直接停止正在执行的代码）
-      // PostgreSQL 使用 JSONB，SQLite 使用 JSON 字符串
-      if (db_type === 'postgres') {
-        await db.exec(
-          `
-          UPDATE offer_tasks
-          SET status = 'failed',
-              message = '因批次取消而终止',
-              error = jsonb_build_object('cancelled', true, 'message', 'Batch cancelled by user', 'cancelled_at', ${nowFunc}),
-              updated_at = ${nowFunc}
-          WHERE batch_id = ? AND status IN ('pending', 'running')
-        `,
-          [batchId]
-        )
-      } else {
-        // SQLite
-        await db.exec(
-          `
-          UPDATE offer_tasks
-          SET status = 'failed',
-              message = '因批次取消而终止',
-              error = json_object('cancelled', 1, 'message', 'Batch cancelled by user'),
-              updated_at = ${nowFunc}
-          WHERE batch_id = ? AND status IN ('pending', 'running')
-        `,
-          [batchId]
-        )
-      }
+      await db.exec(
+        `
+        UPDATE offer_tasks
+        SET status = 'failed',
+            message = '因批次取消而终止',
+            error = jsonb_build_object('cancelled', true, 'message', 'Batch cancelled by user', 'cancelled_at', ${nowFunc}),
+            updated_at = ${nowFunc}
+        WHERE batch_id = ? AND status IN ('pending', 'running')
+      `,
+        [batchId]
+      )
 
       console.log(`✅ 批量任务 ${batchId} 已取消，共处理 ${cancelledCount} 个 pending 任务`)
 
@@ -1581,8 +1554,7 @@ export class UnifiedQueueManager {
     try {
       const { getDatabase } = await import('@/lib/db')
       const db = getDatabase()
-      const db_type = db.type
-      const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+      const nowFunc = 'NOW()'
 
       let batches: { id: string; status: string }[]
 

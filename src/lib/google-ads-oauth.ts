@@ -23,7 +23,7 @@ export async function getUserAuthType(
 ): Promise<GoogleAdsUserAuthType> {
   const db = await getDatabase()
   const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const isActiveCondition = boolCondition('is_active', true)
 
   if (assignment?.assignmentMode === 'shared_admin') {
     if (assignment.authType === 'service_account') {
@@ -161,10 +161,10 @@ export async function saveGoogleAdsCredentials(
   )
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowSql = sqlNowFunc(db.type)
+  const nowSql = sqlNowFunc()
 
-  // 🔧 PostgreSQL兼容性：is_active 在 PostgreSQL 是 BOOLEAN，在 SQLite 是 INTEGER
-  const isActiveValue = db.type === 'postgres' ? true : 1
+  // is_active 列为 BOOLEAN
+  const isActiveValue = true
 
   // 检查是否已存在
   const existing = await db.queryOne<GoogleAdsCredentials>(
@@ -245,7 +245,7 @@ export async function getGoogleAdsCredentialsRaw(
   userId: number
 ): Promise<GoogleAdsCredentials | null> {
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
 
   const credentials = await db.queryOne<GoogleAdsCredentials>(
     `
@@ -293,7 +293,7 @@ export async function getGoogleAdsCredentialsMetadata(
   }
 
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true, db.type)
+  const isActiveCondition = boolCondition('is_active', true)
   const row = await db.queryOne<{
     client_id: string | null
     login_customer_id: string | null
@@ -343,10 +343,10 @@ export async function deleteGoogleAdsCredentials(userId: number): Promise<void> 
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowSql = sqlNowFunc(db.type)
+  const nowSql = sqlNowFunc()
 
-  // 🔧 PostgreSQL兼容性：is_active 在 PostgreSQL 是 BOOLEAN，在 SQLite 是 INTEGER
-  const isActiveValue = db.type === 'postgres' ? false : 0
+  // is_active 列为 BOOLEAN
+  const isActiveValue = false
 
   await db.exec(
     `
@@ -424,7 +424,7 @@ export async function refreshAccessToken(userId: number): Promise<{
   const db = await getDatabase()
 
   // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowSql = sqlNowFunc(db.type)
+  const nowSql = sqlNowFunc()
 
   await db.exec(
     `
@@ -474,7 +474,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 
     const { ctx, apiAuth } = resolved
     const db = await getDatabase()
-    const nowSql = sqlNowFunc(db.type)
+    const nowSql = sqlNowFunc()
 
     if (apiAuth.authType === 'service_account') {
       const serviceAccount = ctx.serviceAccountConfig

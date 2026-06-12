@@ -178,13 +178,12 @@ export async function GET(request: NextRequest) {
       return String(dateValue)
     }
 
-    // PostgreSQL/SQLite 兼容性条件
-    const isSelectedTrue = db.type === 'postgres' ? 'is_selected = true' : 'is_selected = 1'
-    const isSelectedFalse = db.type === 'postgres' ? 'is_selected = false' : 'is_selected = 0'
-    const isDeletedCheck = db.type === 'postgres' ? 'is_deleted = FALSE' : 'is_deleted = 0'
+    // PostgreSQL条件
+    const isSelectedTrue = 'is_selected = true'
+    const isSelectedFalse = 'is_selected = false'
+    const isDeletedCheck = 'is_deleted = FALSE'
 
-    // DATE() 函数兼容性：PostgreSQL的created_at是TEXT类型，需要转换
-    const dateFunc = db.type === 'postgres' ? '(created_at::date)' : 'DATE(created_at)'
+    const dateFunc = '(created_at::date)'
 
     // 3. 查询每日新增创意数量趋势
     // 🔧 修复(2025-01-01): 使用正确的日期参数占位符，不要在SQL中包含::date转换
@@ -280,10 +279,7 @@ export async function GET(request: NextRequest) {
     const statusDistribution = (await db.query(statusQuery, statusParams)) as any[]
 
     // 5. 查询Ad Strength分布（当前总量）
-    const adStrengthExpr =
-      db.type === 'postgres'
-        ? `COALESCE(NULLIF(trim(both '\"' from NULLIF(ad_strength_data::text, 'null')), ''), 'UNKNOWN')`
-        : `COALESCE(ad_strength_data, 'UNKNOWN')`
+    const adStrengthExpr = `COALESCE(NULLIF(trim(both '\"' from NULLIF(ad_strength_data::text, 'null')), ''), 'UNKNOWN')`
     let adStrengthQuery = `
       SELECT
         ${adStrengthExpr} as ad_strength,

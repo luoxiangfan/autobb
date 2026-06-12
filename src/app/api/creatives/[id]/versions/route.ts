@@ -239,7 +239,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       ]
     )
 
-    const versionId = getInsertedId(result, db.type)
+    const versionId = getInsertedId(result)
 
     // 获取新创建的版本
     const newVersion = await db.queryOne<any>(

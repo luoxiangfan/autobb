@@ -32,7 +32,6 @@ describe('GET /api/dashboard/campaigns search operator', () => {
       user: { userId: 7 },
     })
     dbFns.getDatabase.mockResolvedValue({
-      type: 'postgres',
       query: dbFns.query,
       queryOne: dbFns.queryOne,
     })

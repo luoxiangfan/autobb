@@ -117,7 +117,7 @@ export async function POST(
       ]
     )
 
-    const versionId = getInsertedId(result, db.type)
+    const versionId = getInsertedId(result)
 
     // 同时更新ad_creatives表的当前内容
     await db.exec(
@@ -128,7 +128,7 @@ export async function POST(
         descriptions = ?,
         final_url = ?,
         final_url_suffix = ?,
-        updated_at = datetime('now')
+        updated_at = NOW()
       WHERE id = ?
     `,
       [

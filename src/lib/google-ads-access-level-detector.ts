@@ -300,7 +300,7 @@ export async function updateApiAccessLevel(
   const db = await getDatabase()
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const { nowFunc } = await import('./db-helpers')
-  const updatedAt = nowFunc(db.type)
+  const updatedAt = nowFunc()
 
   if (authType === 'oauth') {
     await db.exec(
@@ -312,7 +312,7 @@ export async function updateApiAccessLevel(
       [level, ownerUserId]
     )
   } else {
-    const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+    const isActiveCondition = 'is_active = true'
     await db.exec(
       `
       UPDATE google_ads_service_accounts

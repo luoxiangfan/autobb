@@ -97,7 +97,7 @@ export async function healAccountsRouteDeveloperToken(params: {
   }
 
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = true' : 'is_active = 1'
+  const isActiveCondition = 'is_active = true'
 
   if (params.authType === 'oauth') {
     await db
@@ -107,7 +107,7 @@ export async function healAccountsRouteDeveloperToken(params: {
       )
       .catch(() => {})
   } else if (params.serviceAccountId) {
-    const nowSql = nowFunc(db.type)
+    const nowSql = nowFunc()
     await db
       .exec(
         `UPDATE google_ads_service_accounts SET developer_token = ?, updated_at = ${nowSql} WHERE user_id = ? AND id = ? AND ${isActiveCondition}`,

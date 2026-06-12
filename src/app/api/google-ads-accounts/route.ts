@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
+import { isUniqueConstraintViolation } from '@/lib/db-helpers'
 import {
   createGoogleAdsAccount,
   findGoogleAdsAccountsByUserId,
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
     console.error('创建 Google Ads 账号失败:', error)
 
     // 检查是否是重复账号错误
-    if (error.message && error.message.includes('UNIQUE constraint failed')) {
+    if (isUniqueConstraintViolation(error, { table: 'google_ads_accounts' })) {
       return NextResponse.json(
         {
           error: '该 Google Ads 账号已经绑定',

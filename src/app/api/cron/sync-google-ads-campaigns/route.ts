@@ -36,9 +36,7 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
     const users = (await db.query(
-      `SELECT id FROM users WHERE role != 'admin' AND is_active = ${
-        db.type === 'postgres' ? 'TRUE' : '1'
-      }`
+      `SELECT id FROM users WHERE role != 'admin' AND is_active = ${'TRUE'}`
     )) as { id: number }[]
 
     const scheduler = getGoogleAdsCampaignSyncScheduler()

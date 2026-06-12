@@ -2,26 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/zod-errors'
 import { getDatabase } from '@/lib/db'
+import { isUniqueConstraintViolation } from '@/lib/db-helpers'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
 const createBindingSchema = z.object({
   channel: z.string().min(1, zErr.required),
   openId: z.string().min(1, zErr.required),
   unionId: z.string().optional(),
-  tenantKey: z.string().optional(),
-})
-
-function isUniqueViolationError(error: unknown): boolean {
-  const details = error as { code?: string; message?: string } | null
-  if (!details) return false
-
-  if (details.code === '23505') return true
-  if (typeof details.code === 'string' && details.code.startsWith('SQLITE_CONSTRAINT')) return true
-
-  const message = String(details.message || '')
-  return /duplicate key value violates unique constraint/i.test(message)
-    || /UNIQUE constraint failed/i.test(message)
-}
+  tenantKey: z.string().optional() })
 
 export async function GET(request: NextRequest) {
   const auth = await verifyOpenclawSessionAuth(request)
@@ -57,7 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   const db = await getDatabase()
-  const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowSql = 'NOW()'
   const channel = parsed.data.channel.trim()
   const openId = parsed.data.openId.trim()
   const unionId = (parsed.data.unionId || '').trim() || null
@@ -96,7 +84,7 @@ export async function POST(request: NextRequest) {
         [auth.user.userId, channel, tenantKey, openId, unionId]
       )
     } catch (error) {
-      if (!isUniqueViolationError(error)) {
+      if (!isUniqueConstraintViolation(error)) {
         throw error
       }
       await db.exec(updateSql, updateParams)

@@ -23,10 +23,10 @@ export async function GET() {
   // 这里主动添加 UTF-8 BOM（\uFEFF），并使用 CRLF 换行，提升跨平台兼容性
   const csv = `\uFEFF${[
     '推广链接,推广国家,链接类型,品牌名,产品价格/平均产品价格,佣金类型,佣金值,佣金币种,佣金比例/平均佣金比例(兼容旧列),单品推广链接1,单品推广链接2,单品推广链接3',
-    'https://pboost.me/UKTs4I6,US,product,kaspersky,$699.00,percent,6.75,,6.75%,,,',
-    'https://pboost.me/xEAgQ8ec,DE,product,,€299.00,percent,8,,8.00%,,,',
-    'https://pboost.me/RKWwEZR9,UK,product,,£499.00,amount,22.5,GBP,£22.5,,,',
-    'https://example-affiliate-store.com,US,store,BrandX,$59.00,percent,12,,12%,https://example.com/item-a,https://example.com/item-b,https://example.com/item-c',
+    'https://pboost.me/UKTs4I6,US,product,kaspersky,$699.00,percent,6.75,6.75%,,',
+    'https://pboost.me/xEAgQ8ec,DE,product,€299.00,percent,8,8.00%,,',
+    'https://pboost.me/RKWwEZR9,UK,product,£499.00,amount,22.5,GBP,£22.5,,',
+    'https://example-affiliate-store.com,US,store,BrandX,$59.00,percent,12,12%,https://example.com/item-a,https://example.com/item-b,https://example.com/item-c',
     '',
   ].join('\r\n')}`
 

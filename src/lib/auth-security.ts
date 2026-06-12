@@ -23,10 +23,9 @@ export async function recordFailedLogin(
   userAgent: string = 'unknown'
 ): Promise<void> {
   const db = await getDatabase()
-  const db_type = db.type
 
   // 增加失败计数
-  const nowFunc = db_type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   await db.exec(
     `
     UPDATE users
@@ -50,7 +49,7 @@ export async function recordFailedLogin(
       SET is_active = ?
       WHERE id = ?
     `,
-      [boolParam(false, db.type), userId]
+      [boolParam(false), userId]
     )
 
     console.warn(
@@ -105,11 +104,9 @@ export async function logLoginAttempt(
   failureReason?: string
 ): Promise<void> {
   const db = await getDatabase()
-  const db_type = db.type
 
   try {
-    // PostgreSQL使用布尔值，SQLite使用整数
-    const successValue = db_type === 'postgres' ? success : success ? 1 : 0
+    const successValue = success
     await db.exec(
       `
       INSERT INTO login_attempts (username_or_email, ip_address, user_agent, success, failure_reason)
@@ -138,7 +135,7 @@ export async function enableAccount(userId: number): Promise<void> {
         last_failed_login = NULL
     WHERE id = ?
   `,
-    [boolParam(true, db.type), userId]
+    [boolParam(true), userId]
   )
 
   console.log(`[Security] Account ${userId} manually enabled by admin`)

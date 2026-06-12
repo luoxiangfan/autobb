@@ -2,7 +2,6 @@ import { createHash } from 'crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbMock = {
-  type: 'sqlite',
   query: vi.fn(),
   exec: vi.fn(),
 }
@@ -26,7 +25,7 @@ vi.mock('@/lib/db', () => ({
 }))
 
 vi.mock('@/lib/db-helpers', () => ({
-  nowFunc: vi.fn(() => "datetime('now')"),
+  nowFunc: vi.fn(() => 'NOW()'),
 }))
 
 vi.mock('@/lib/queue/queue-routing', () => ({

@@ -28,41 +28,41 @@ describe('parseJsonField', () => {
 })
 
 describe('toDbJsonField', () => {
-  it('keeps sqlite behavior with json string', () => {
-    expect(toDbJsonField({ ok: true }, 'sqlite')).toBe('{"ok":true}')
+  it('returns native object values for JSONB writes', () => {
+    expect(toDbJsonField({ ok: true })).toEqual({ ok: true })
   })
 
-  it('parses json string to native object for postgres', () => {
-    expect(toDbJsonField('{"ok":true}', 'postgres')).toEqual({ ok: true })
+  it('parses json string to native object', () => {
+    expect(toDbJsonField('{"ok":true}')).toEqual({ ok: true })
   })
 
-  it('parses double-encoded json string to native object for postgres', () => {
-    expect(toDbJsonField('"{\\"ok\\":true}"', 'postgres')).toEqual({ ok: true })
+  it('parses double-encoded json string to native object', () => {
+    expect(toDbJsonField('"{\\"ok\\":true}"')).toEqual({ ok: true })
   })
 })
 
 describe('toDbJsonObjectField', () => {
-  it('returns object for postgres', () => {
-    expect(toDbJsonObjectField({ a: 1 }, 'postgres')).toEqual({ a: 1 })
+  it('returns object values', () => {
+    expect(toDbJsonObjectField({ a: 1 })).toEqual({ a: 1 })
   })
 
-  it('rejects scalar string for postgres and uses fallback', () => {
-    expect(toDbJsonObjectField('"hello"', 'postgres', { message: 'fallback' })).toEqual({
+  it('rejects scalar string and uses fallback', () => {
+    expect(toDbJsonObjectField('"hello"', { message: 'fallback' })).toEqual({
       message: 'fallback',
     })
   })
 })
 
 describe('toDbJsonArrayField', () => {
-  it('returns array for postgres', () => {
-    expect(toDbJsonArrayField([1, 2], 'postgres')).toEqual([1, 2])
+  it('returns array values', () => {
+    expect(toDbJsonArrayField([1, 2])).toEqual([1, 2])
   })
 
-  it('parses double-encoded array string for postgres', () => {
-    expect(toDbJsonArrayField('"[1,2]"', 'postgres', [])).toEqual([1, 2])
+  it('parses double-encoded array string', () => {
+    expect(toDbJsonArrayField('"[1,2]"', [])).toEqual([1, 2])
   })
 
-  it('rejects object payload for postgres and uses fallback array', () => {
-    expect(toDbJsonArrayField('{"a":1}', 'postgres', [])).toEqual([])
+  it('rejects object payload and uses fallback array', () => {
+    expect(toDbJsonArrayField('{"a":1}', [])).toEqual([])
   })
 })

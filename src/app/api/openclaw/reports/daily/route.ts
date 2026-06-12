@@ -91,6 +91,5 @@ export async function GET(request: NextRequest) {
     success: true,
     report,
     forceRefreshApplied: hasDateRangeQuery ? true : forceRefresh,
-    forceRefreshReason,
-  })
+    forceRefreshReason })
 }

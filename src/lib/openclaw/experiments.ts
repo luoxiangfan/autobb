@@ -60,8 +60,8 @@ export async function createExperiment(
   }
 ): Promise<ExperimentResultRecord> {
   const db = await getDatabase()
-  const variantA = toDbJsonObjectField(data.variant_a ?? null, db.type, null)
-  const variantB = toDbJsonObjectField(data.variant_b ?? null, db.type, null)
+  const variantA = toDbJsonObjectField(data.variant_a ?? null, null)
+  const variantB = toDbJsonObjectField(data.variant_b ?? null, null)
 
   const result = await db.exec(
     `INSERT INTO openclaw_experiment_results
@@ -79,7 +79,7 @@ export async function createExperiment(
     ]
   )
 
-  const insertedId = getInsertedId(result, db.type)
+  const insertedId = getInsertedId(result)
   const record = await db.queryOne<ExperimentResultRecord>(
     'SELECT * FROM openclaw_experiment_results WHERE id = ?',
     [insertedId]
@@ -99,7 +99,7 @@ export async function recordExperimentMetrics(
   metrics: Record<string, any>
 ): Promise<void> {
   const db = await getDatabase()
-  const metricsJson = toDbJsonObjectField(metrics, db.type, {})
+  const metricsJson = toDbJsonObjectField(metrics, {})
   const field = variant === 'a' ? 'metrics_a' : 'metrics_b'
 
   await db.exec(
@@ -113,7 +113,7 @@ export async function evaluateExperiment(
   experimentId: number
 ): Promise<{ winner: string | null; confidence: number; conclusion: string }> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   const experiment = await db.queryOne<ExperimentResultRecord>(
     'SELECT * FROM openclaw_experiment_results WHERE id = ? AND user_id = ?',

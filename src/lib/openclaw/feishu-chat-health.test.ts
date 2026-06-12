@@ -1,41 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbFns = vi.hoisted(() => ({
-  getDatabase: vi.fn(),
-}))
+  getDatabase: vi.fn() }))
 
 const dbHelperFns = vi.hoisted(() => ({
   datetimeMinusHours: vi.fn(),
-  nowFunc: vi.fn(),
-}))
+  nowFunc: vi.fn() }))
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+  getDatabase: dbFns.getDatabase }))
 
 vi.mock('@/lib/db-helpers', () => ({
   datetimeMinusHours: dbHelperFns.datetimeMinusHours,
-  nowFunc: dbHelperFns.nowFunc,
-}))
+  nowFunc: dbHelperFns.nowFunc }))
 
 import {
   backfillFeishuChatHealthRunLinks,
   listFeishuChatHealthLogs,
-  recordFeishuChatHealthLog,
-} from '@/lib/openclaw/feishu-chat-health'
+  recordFeishuChatHealthLog } from '@/lib/openclaw/feishu-chat-health'
 
 describe('feishu chat health lib', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    dbHelperFns.datetimeMinusHours.mockImplementation((hours: number, dbType: string) => {
-      if (dbType === 'postgres') {
-        return `CURRENT_TIMESTAMP - INTERVAL '${hours} hours'`
-      }
-      return `datetime('now', '-${hours} hours')`
+    dbHelperFns.datetimeMinusHours.mockImplementation((hours: number) => {
+      return `CURRENT_TIMESTAMP - INTERVAL '${hours} hours'`
     })
-    dbHelperFns.nowFunc.mockImplementation((dbType: string) => {
-      return dbType === 'postgres' ? 'NOW()' : "datetime('now')"
-    })
+    dbHelperFns.nowFunc.mockImplementation(() => 'NOW()')
   })
 
   it('lists logs with excerpt and grouped stats', async () => {
@@ -43,7 +33,6 @@ describe('feishu chat health lib', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-02-10T03:20:00.000Z'))
     const db = {
-      type: 'sqlite',
       query: vi
         .fn()
         .mockResolvedValueOnce([
@@ -66,8 +55,7 @@ describe('feishu chat health lib', () => {
             message_text: longText,
             message_text_length: 510,
             metadata_json: '{"k":"v"}',
-            created_at: '2026-02-10 03:00:00',
-          },
+            created_at: '2026-02-10 03:00:00' },
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -75,8 +63,7 @@ describe('feishu chat health lib', () => {
           { decision: 'blocked', total: 3 },
           { decision: 'error', total: 1 },
         ]),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -99,8 +86,7 @@ describe('feishu chat health lib', () => {
         missing: 0,
         failed: 0,
         notApplicable: 1,
-        unknown: 0,
-      },
+        unknown: 0 },
       workflow: {
         tracked: 0,
         completed: 0,
@@ -108,9 +94,7 @@ describe('feishu chat health lib', () => {
         incomplete: 0,
         failed: 0,
         notRequired: 1,
-        unknown: 0,
-      },
-    })
+        unknown: 0 } })
 
     expect(db.query).toHaveBeenNthCalledWith(
       1,
@@ -143,7 +127,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T03:20:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi
         .fn()
         .mockResolvedValueOnce([
@@ -166,8 +149,7 @@ describe('feishu chat health lib', () => {
             message_text: '请修复offer 123广告投放',
             message_text_length: 17,
             metadata_json: null,
-            created_at: '2026-02-10 03:00:00',
-          },
+            created_at: '2026-02-10 03:00:00' },
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -175,8 +157,7 @@ describe('feishu chat health lib', () => {
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -221,19 +202,16 @@ describe('feishu chat health lib', () => {
       request_body_json: '{"bucket":"A"}',
       response_status: null,
       response_body: null,
-      created_at: '2026-02-10 03:00:00',
-    }
+      created_at: '2026-02-10 03:00:00' }
 
     const db = {
-      type: 'sqlite',
       query: vi
         .fn()
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([runRow])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([runRow]),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -259,7 +237,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T03:20:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi
         .fn()
         .mockResolvedValueOnce([
@@ -282,8 +259,7 @@ describe('feishu chat health lib', () => {
             message_text: '你现在使用的AI模型是什么？',
             message_text_length: 14,
             metadata_json: null,
-            created_at: '2026-02-10 03:00:00',
-          },
+            created_at: '2026-02-10 03:00:00' },
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -291,8 +267,7 @@ describe('feishu chat health lib', () => {
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -312,7 +287,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T03:20:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi
         .fn()
         .mockResolvedValueOnce([
@@ -335,8 +309,7 @@ describe('feishu chat health lib', () => {
             message_text: '请修复offer 123广告投放',
             message_text_length: 17,
             metadata_json: null,
-            created_at: '2026-02-10 03:00:00',
-          },
+            created_at: '2026-02-10 03:00:00' },
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -350,11 +323,9 @@ describe('feishu chat health lib', () => {
             channel: 'feishu',
             sender_id: 'ou_1',
             status: 'completed',
-            created_at: '2026-02-10 02:59:50',
-          },
+            created_at: '2026-02-10 02:59:50' },
         ]),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -395,8 +366,7 @@ describe('feishu chat health lib', () => {
           '请依次生成3个新的广告创意（前一个成功后再生成下一个），3个创意都完成后再发布广告。',
         message_text_length: 50,
         metadata_json: null,
-        created_at: '2026-02-10 03:00:00',
-      },
+        created_at: '2026-02-10 03:00:00' },
     ]
 
     const parentRuns = [
@@ -410,8 +380,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"B"}',
         response_status: 200,
         response_body: '{"taskId":"task-b","bucket":"B"}',
-        created_at: '2026-02-10 03:05:00',
-      },
+        created_at: '2026-02-10 03:05:00' },
       {
         id: 'run-a',
         parent_request_id: 'om_chain',
@@ -422,12 +391,10 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"A"}',
         response_status: 200,
         response_body: '{"taskId":"task-a","bucket":"A"}',
-        created_at: '2026-02-10 03:04:00',
-      },
+        created_at: '2026-02-10 03:04:00' },
     ]
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 1 }]
@@ -451,8 +418,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:04:45',
-              updated_at: '2026-02-10 03:04:45',
-            },
+              updated_at: '2026-02-10 03:04:45' },
             {
               id: 'task-b',
               offer_id: 123,
@@ -461,14 +427,12 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:05:30',
-              updated_at: '2026-02-10 03:05:30',
-            },
+              updated_at: '2026-02-10 03:05:30' },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -509,8 +473,7 @@ describe('feishu chat health lib', () => {
         message_text: '今天天气如何',
         message_text_length: 6,
         metadata_json: null,
-        created_at: '2026-02-10 03:25:00',
-      },
+        created_at: '2026-02-10 03:25:00' },
       {
         id: 31,
         user_id: 7,
@@ -531,8 +494,7 @@ describe('feishu chat health lib', () => {
           '请依次生成3个新的广告创意（前一个成功后再生成下一个），3个创意都完成后再发布广告。',
         message_text_length: 50,
         metadata_json: null,
-        created_at: '2026-02-10 03:00:00',
-      },
+        created_at: '2026-02-10 03:00:00' },
     ]
 
     const parentRuns = [
@@ -546,8 +508,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"B"}',
         response_status: 200,
         response_body: '{"taskId":"task-b","bucket":"B"}',
-        created_at: '2026-02-10 03:05:00',
-      },
+        created_at: '2026-02-10 03:05:00' },
       {
         id: 'run-a',
         parent_request_id: 'om_chain',
@@ -558,8 +519,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"A"}',
         response_status: 200,
         response_body: '{"taskId":"task-a","bucket":"A"}',
-        created_at: '2026-02-10 03:04:00',
-      },
+        created_at: '2026-02-10 03:04:00' },
       {
         id: 'run-d',
         parent_request_id: 'om_other',
@@ -570,8 +530,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"D"}',
         response_status: 200,
         response_body: '{"taskId":"task-d","bucket":"D"}',
-        created_at: '2026-02-10 03:10:00',
-      },
+        created_at: '2026-02-10 03:10:00' },
       {
         id: 'run-publish',
         parent_request_id: 'om_other',
@@ -582,12 +541,10 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"offerId":123,"adCreativeId":999}',
         response_status: 202,
         response_body: '{"campaigns":[{"id":501,"creationStatus":"pending"}]}',
-        created_at: '2026-02-10 03:12:00',
-      },
+        created_at: '2026-02-10 03:12:00' },
     ]
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 2 }]
@@ -611,8 +568,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:04:45',
-              updated_at: '2026-02-10 03:04:45',
-            },
+              updated_at: '2026-02-10 03:04:45' },
             {
               id: 'task-b',
               offer_id: 123,
@@ -621,8 +577,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:05:30',
-              updated_at: '2026-02-10 03:05:30',
-            },
+              updated_at: '2026-02-10 03:05:30' },
             {
               id: 'task-d',
               offer_id: 123,
@@ -631,8 +586,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:10:40',
-              updated_at: '2026-02-10 03:10:40',
-            },
+              updated_at: '2026-02-10 03:10:40' },
           ]
         }
         if (sql.includes('FROM campaigns')) {
@@ -647,14 +601,12 @@ describe('feishu chat health lib', () => {
               is_deleted: 0,
               created_at: '2026-02-10 03:12:30',
               updated_at: '2026-02-10 03:13:00',
-              published_at: '2026-02-10 03:13:00',
-            },
+              published_at: '2026-02-10 03:13:00' },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -675,7 +627,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-22T03:20:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 1 }]
@@ -701,8 +652,7 @@ describe('feishu chat health lib', () => {
               message_text: '请生成3个创意并发布广告',
               message_text_length: 13,
               metadata_json: null,
-              created_at: '2026-02-22 03:00:00',
-            },
+              created_at: '2026-02-22 03:00:00' },
           ]
         }
         if (sql.includes('parent_request_id IN')) {
@@ -717,8 +667,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"B"}',
               response_status: 200,
               response_body: '{"taskId":"task-b","bucket":"B"}',
-              created_at: '2026-02-22 02:40:00',
-            },
+              created_at: '2026-02-22 02:40:00' },
             {
               id: 'run-d',
               parent_request_id: 'om_chain',
@@ -729,8 +678,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"D"}',
               response_status: 200,
               response_body: '{"taskId":"task-d","bucket":"D"}',
-              created_at: '2026-02-22 02:47:00',
-            },
+              created_at: '2026-02-22 02:47:00' },
             {
               id: 'run-publish',
               parent_request_id: 'om_chain',
@@ -741,8 +689,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"offerId":123,"adCreativeId":999}',
               response_status: 202,
               response_body: '{"campaigns":[{"id":801,"creationStatus":"pending"}]}',
-              created_at: '2026-02-22 02:50:00',
-            },
+              created_at: '2026-02-22 02:50:00' },
           ]
         }
         if (sql.includes('sender_id IN') && sql.includes('ORDER BY created_at ASC')) {
@@ -757,8 +704,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"A"}',
               response_status: 200,
               response_body: '{"taskId":"task-a","bucket":"A"}',
-              created_at: '2026-02-22 02:20:00',
-            },
+              created_at: '2026-02-22 02:20:00' },
             {
               id: 'run-b',
               parent_request_id: 'om_chain',
@@ -769,8 +715,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"B"}',
               response_status: 200,
               response_body: '{"taskId":"task-b","bucket":"B"}',
-              created_at: '2026-02-22 02:40:00',
-            },
+              created_at: '2026-02-22 02:40:00' },
             {
               id: 'run-d',
               parent_request_id: 'om_chain',
@@ -781,8 +726,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"D"}',
               response_status: 200,
               response_body: '{"taskId":"task-d","bucket":"D"}',
-              created_at: '2026-02-22 02:47:00',
-            },
+              created_at: '2026-02-22 02:47:00' },
             {
               id: 'run-publish',
               parent_request_id: 'om_chain',
@@ -793,8 +737,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"offerId":123,"adCreativeId":999}',
               response_status: 202,
               response_body: '{"campaigns":[{"id":801,"creationStatus":"pending"}]}',
-              created_at: '2026-02-22 02:50:00',
-            },
+              created_at: '2026-02-22 02:50:00' },
           ]
         }
         if (sql.includes('FROM creative_tasks')) {
@@ -807,8 +750,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-22 02:25:00',
-              updated_at: '2026-02-22 02:25:00',
-            },
+              updated_at: '2026-02-22 02:25:00' },
             {
               id: 'task-b',
               offer_id: 123,
@@ -817,8 +759,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-22 02:42:00',
-              updated_at: '2026-02-22 02:42:00',
-            },
+              updated_at: '2026-02-22 02:42:00' },
             {
               id: 'task-d',
               offer_id: 123,
@@ -827,8 +768,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-22 02:48:00',
-              updated_at: '2026-02-22 02:48:00',
-            },
+              updated_at: '2026-02-22 02:48:00' },
           ]
         }
         if (sql.includes('FROM campaigns')) {
@@ -843,14 +783,12 @@ describe('feishu chat health lib', () => {
               is_deleted: 0,
               created_at: '2026-02-22 02:50:30',
               updated_at: '2026-02-22 02:51:00',
-              published_at: '2026-02-22 02:51:00',
-            },
+              published_at: '2026-02-22 02:51:00' },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -887,8 +825,7 @@ describe('feishu chat health lib', () => {
         message_text: '继续',
         message_text_length: 2,
         metadata_json: null,
-        created_at: '2026-02-10 03:06:00',
-      },
+        created_at: '2026-02-10 03:06:00' },
       {
         id: 31,
         user_id: 7,
@@ -908,8 +845,7 @@ describe('feishu chat health lib', () => {
         message_text: '请依次生成3个新的广告创意（前一个成功后再生成下一个），3个创意都完成后再发布广告。',
         message_text_length: 50,
         metadata_json: null,
-        created_at: '2026-02-10 03:00:00',
-      },
+        created_at: '2026-02-10 03:00:00' },
     ]
 
     const runs = [
@@ -923,8 +859,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"A"}',
         response_status: 200,
         response_body: '{"taskId":"task-a","bucket":"A"}',
-        created_at: '2026-02-10 03:01:00',
-      },
+        created_at: '2026-02-10 03:01:00' },
       {
         id: 'run-b',
         parent_request_id: 'om_chain',
@@ -935,8 +870,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"B"}',
         response_status: 200,
         response_body: '{"taskId":"task-b","bucket":"B"}',
-        created_at: '2026-02-10 03:02:00',
-      },
+        created_at: '2026-02-10 03:02:00' },
       {
         id: 'run-d',
         parent_request_id: 'om_continue',
@@ -947,8 +881,7 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"bucket":"D"}',
         response_status: 200,
         response_body: '{"taskId":"task-d","bucket":"D"}',
-        created_at: '2026-02-10 03:07:00',
-      },
+        created_at: '2026-02-10 03:07:00' },
       {
         id: 'run-publish',
         parent_request_id: 'om_continue',
@@ -959,12 +892,10 @@ describe('feishu chat health lib', () => {
         request_body_json: '{"offerId":123,"adCreativeId":999}',
         response_status: 202,
         response_body: '{"campaigns":[{"id":501,"creationStatus":"pending"}]}',
-        created_at: '2026-02-10 03:09:00',
-      },
+        created_at: '2026-02-10 03:09:00' },
     ]
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 2 }]
@@ -988,8 +919,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:01:30',
-              updated_at: '2026-02-10 03:01:30',
-            },
+              updated_at: '2026-02-10 03:01:30' },
             {
               id: 'task-b',
               offer_id: 123,
@@ -998,8 +928,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:02:30',
-              updated_at: '2026-02-10 03:02:30',
-            },
+              updated_at: '2026-02-10 03:02:30' },
             {
               id: 'task-d',
               offer_id: 123,
@@ -1008,8 +937,7 @@ describe('feishu chat health lib', () => {
               progress: 100,
               message: 'ok',
               completed_at: '2026-02-10 03:07:30',
-              updated_at: '2026-02-10 03:07:30',
-            },
+              updated_at: '2026-02-10 03:07:30' },
           ]
         }
         if (sql.includes('FROM campaigns')) {
@@ -1024,14 +952,12 @@ describe('feishu chat health lib', () => {
               is_deleted: 0,
               created_at: '2026-02-10 03:09:30',
               updated_at: '2026-02-10 03:10:00',
-              published_at: '2026-02-10 03:10:00',
-            },
+              published_at: '2026-02-10 03:10:00' },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -1053,7 +979,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T03:15:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 1 }]
@@ -1079,8 +1004,7 @@ describe('feishu chat health lib', () => {
               message_text: '生成3个创意后发布广告',
               message_text_length: 12,
               metadata_json: null,
-              created_at: '2026-02-10 03:00:00',
-            },
+              created_at: '2026-02-10 03:00:00' },
           ]
         }
         if (sql.includes('parent_request_id IN') || (sql.includes('sender_id IN') && sql.includes('ORDER BY created_at ASC'))) {
@@ -1095,8 +1019,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"A"}',
               response_status: 200,
               response_body: '{"taskId":"task-a","bucket":"A"}',
-              created_at: '2026-02-10 03:01:00',
-            },
+              created_at: '2026-02-10 03:01:00' },
             {
               id: 'run-b',
               parent_request_id: 'om_chain',
@@ -1107,8 +1030,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"B"}',
               response_status: 200,
               response_body: '{"taskId":"task-b","bucket":"B"}',
-              created_at: '2026-02-10 03:02:00',
-            },
+              created_at: '2026-02-10 03:02:00' },
             {
               id: 'run-d',
               parent_request_id: 'om_chain',
@@ -1119,8 +1041,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"D"}',
               response_status: 200,
               response_body: '{"taskId":"task-d","bucket":"D"}',
-              created_at: '2026-02-10 03:03:00',
-            },
+              created_at: '2026-02-10 03:03:00' },
             {
               id: 'run-publish',
               parent_request_id: 'om_chain',
@@ -1131,8 +1052,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"offerId":123,"adCreativeId":999}',
               response_status: 202,
               response_body: '{"campaigns":[{"id":601,"creationStatus":"pending"}]}',
-              created_at: '2026-02-10 03:04:00',
-            },
+              created_at: '2026-02-10 03:04:00' },
           ]
         }
         if (sql.includes('FROM creative_tasks')) {
@@ -1154,14 +1074,12 @@ describe('feishu chat health lib', () => {
               is_deleted: 0,
               created_at: '2026-02-10 03:04:30',
               updated_at: '2026-02-10 03:05:00',
-              published_at: null,
-            },
+              published_at: null },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
     const result = await listFeishuChatHealthLogs({ userId: 7, withinHours: 1, limit: 100 })
@@ -1177,7 +1095,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T05:40:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 1 }]
@@ -1203,8 +1120,7 @@ describe('feishu chat health lib', () => {
               message_text: '生成3个创意后发布广告',
               message_text_length: 12,
               metadata_json: null,
-              created_at: '2026-02-10 03:00:00',
-            },
+              created_at: '2026-02-10 03:00:00' },
           ]
         }
         if (sql.includes('parent_request_id IN') || (sql.includes('sender_id IN') && sql.includes('ORDER BY created_at ASC'))) {
@@ -1219,8 +1135,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"A"}',
               response_status: 200,
               response_body: '{"taskId":"task-a","bucket":"A"}',
-              created_at: '2026-02-10 03:01:00',
-            },
+              created_at: '2026-02-10 03:01:00' },
             {
               id: 'run-b',
               parent_request_id: 'om_chain',
@@ -1231,8 +1146,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"B"}',
               response_status: 200,
               response_body: '{"taskId":"task-b","bucket":"B"}',
-              created_at: '2026-02-10 03:02:00',
-            },
+              created_at: '2026-02-10 03:02:00' },
             {
               id: 'run-d',
               parent_request_id: 'om_chain',
@@ -1243,8 +1157,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"D"}',
               response_status: 200,
               response_body: '{"taskId":"task-d","bucket":"D"}',
-              created_at: '2026-02-10 03:03:00',
-            },
+              created_at: '2026-02-10 03:03:00' },
             {
               id: 'run-publish',
               parent_request_id: 'om_chain',
@@ -1255,8 +1168,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"offerId":123,"adCreativeId":999}',
               response_status: 202,
               response_body: '{"campaigns":[{"id":701,"creationStatus":"pending"}]}',
-              created_at: '2026-02-10 03:04:00',
-            },
+              created_at: '2026-02-10 03:04:00' },
           ]
         }
         if (sql.includes('FROM creative_tasks')) {
@@ -1278,14 +1190,12 @@ describe('feishu chat health lib', () => {
               is_deleted: 0,
               created_at: '2026-02-10 03:04:30',
               updated_at: '2026-02-10 03:05:00',
-              published_at: null,
-            },
+              published_at: null },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
     const result = await listFeishuChatHealthLogs({ userId: 7, withinHours: 4, limit: 100 })
@@ -1302,7 +1212,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T03:15:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_feishu_chat_health_logs') && sql.includes('GROUP BY decision')) {
           return [{ decision: 'allowed', total: 1 }]
@@ -1328,8 +1237,7 @@ describe('feishu chat health lib', () => {
               message_text: '生成3个创意后发布广告',
               message_text_length: 12,
               metadata_json: null,
-              created_at: '2026-02-10 03:00:00',
-            },
+              created_at: '2026-02-10 03:00:00' },
           ]
         }
         if (sql.includes('parent_request_id IN') || (sql.includes('sender_id IN') && sql.includes('ORDER BY created_at ASC'))) {
@@ -1344,8 +1252,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"A"}',
               response_status: 200,
               response_body: '{"taskId":"task-a","bucket":"A"}',
-              created_at: '2026-02-10 03:01:00',
-            },
+              created_at: '2026-02-10 03:01:00' },
             {
               id: 'run-b',
               parent_request_id: 'om_chain',
@@ -1356,8 +1263,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"B"}',
               response_status: 200,
               response_body: '{"taskId":"task-b","bucket":"B"}',
-              created_at: '2026-02-10 03:02:00',
-            },
+              created_at: '2026-02-10 03:02:00' },
             {
               id: 'run-d',
               parent_request_id: 'om_chain',
@@ -1368,8 +1274,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"bucket":"D"}',
               response_status: 200,
               response_body: '{"taskId":"task-d","bucket":"D"}',
-              created_at: '2026-02-10 03:03:00',
-            },
+              created_at: '2026-02-10 03:03:00' },
             {
               id: 'run-publish',
               parent_request_id: 'om_chain',
@@ -1380,8 +1285,7 @@ describe('feishu chat health lib', () => {
               request_body_json: '{"offerId":123,"adCreativeId":999}',
               response_status: 202,
               response_body: '{"campaigns":[{"id":602,"creationStatus":"pending"}]}',
-              created_at: '2026-02-10 03:04:00',
-            },
+              created_at: '2026-02-10 03:04:00' },
           ]
         }
         if (sql.includes('FROM creative_tasks')) {
@@ -1403,14 +1307,12 @@ describe('feishu chat health lib', () => {
               is_deleted: 0,
               created_at: '2026-02-10 03:04:30',
               updated_at: '2026-02-10 03:05:00',
-              published_at: null,
-            },
+              published_at: null },
           ]
         }
         return []
       }),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
     const result = await listFeishuChatHealthLogs({ userId: 7, withinHours: 1, limit: 100 })
@@ -1426,7 +1328,6 @@ describe('feishu chat health lib', () => {
     vi.setSystemTime(new Date('2026-02-10T03:20:00.000Z'))
 
     const db = {
-      type: 'sqlite',
       query: vi
         .fn()
         .mockResolvedValueOnce([
@@ -1449,8 +1350,7 @@ describe('feishu chat health lib', () => {
             message_text: '请修复offer 123广告投放',
             message_text_length: 17,
             metadata_json: null,
-            created_at: '2026-02-10 03:00:00',
-          },
+            created_at: '2026-02-10 03:00:00' },
         ])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([
@@ -1464,11 +1364,9 @@ describe('feishu chat health lib', () => {
             channel: 'feishu',
             sender_id: 'ou_1',
             status: 'failed',
-            created_at: '2026-02-10 03:00:10',
-          },
+            created_at: '2026-02-10 03:00:10' },
         ]),
-      exec: vi.fn().mockResolvedValue({ changes: 0 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 0 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -1485,15 +1383,12 @@ describe('feishu chat health lib', () => {
 
   it('backfills long-running feishu runs without crossing previous allowed message boundary', async () => {
     const db = {
-      type: 'sqlite',
       queryOne: vi
         .fn()
         .mockResolvedValueOnce({
-          created_at: '2026-02-10 03:11:17',
-        })
+          created_at: '2026-02-10 03:11:17' })
         .mockResolvedValueOnce({
-          created_at: '2026-02-10 02:59:59',
-        }),
+          created_at: '2026-02-10 02:59:59' }),
       query: vi.fn().mockResolvedValueOnce([
         {
           id: 'run-late',
@@ -1501,51 +1396,44 @@ describe('feishu chat health lib', () => {
           channel: 'feishu',
           sender_id: 'ou_1',
           status: 'completed',
-          created_at: '2026-02-10 03:17:00',
-        },
+          created_at: '2026-02-10 03:17:00' },
         {
           id: 'run-2',
           parent_request_id: null,
           channel: 'feishu',
           sender_id: 'ou_1',
           status: 'completed',
-          created_at: '2026-02-10 03:10:00',
-        },
+          created_at: '2026-02-10 03:10:00' },
         {
           id: 'run-bound-other',
           parent_request_id: 'om_other_message',
           channel: 'feishu',
           sender_id: 'ou_1',
           status: 'failed',
-          created_at: '2026-02-10 03:09:00',
-        },
+          created_at: '2026-02-10 03:09:00' },
         {
           id: 'run-1',
           parent_request_id: 'uuid-1',
           channel: 'feishu',
           sender_id: 'ou_1',
           status: 'queued',
-          created_at: '2026-02-10 03:01:00',
-        },
+          created_at: '2026-02-10 03:01:00' },
         {
           id: 'run-prev-boundary',
           parent_request_id: 'uuid-prev',
           channel: 'feishu',
           sender_id: 'ou_1',
           status: 'completed',
-          created_at: '2026-02-10 02:59:59',
-        },
+          created_at: '2026-02-10 02:59:59' },
       ]),
-      exec: vi.fn().mockResolvedValue({ changes: 2 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 2 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
     const result = await backfillFeishuChatHealthRunLinks({
       userId: 7,
       messageId: 'om_target',
-      senderIds: ['ou_1', 'ou_1'],
-    })
+      senderIds: ['ou_1', 'ou_1'] })
 
     expect(result).toEqual({ updatedRuns: 2 })
     expect(db.exec).toHaveBeenCalledTimes(1)
@@ -1560,10 +1448,8 @@ describe('feishu chat health lib', () => {
   it('records logs with deduplicated sender candidates', async () => {
     const longText = 'x'.repeat(21_000)
     const db = {
-      type: 'sqlite',
       query: vi.fn().mockResolvedValue([]),
-      exec: vi.fn().mockResolvedValue({ changes: 1 }),
-    }
+      exec: vi.fn().mockResolvedValue({ changes: 1 }) }
 
     dbFns.getDatabase.mockResolvedValue(db)
 
@@ -1583,8 +1469,7 @@ describe('feishu chat health lib', () => {
       reasonCode: 'group_require_mention',
       reasonMessage: 'group requires @mention',
       messageText: longText,
-      metadata: { source: 'test' },
-    })
+      metadata: { source: 'test' } })
 
     expect(db.exec).toHaveBeenCalledWith(
       expect.stringContaining('INSERT INTO openclaw_feishu_chat_health_logs'),

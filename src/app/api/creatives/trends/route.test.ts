@@ -27,7 +27,7 @@ describe('GET /api/creatives/trends', () => {
     })
 
     mocks.query.mockImplementation(async (sql: string) => {
-      if (sql.includes('GROUP BY DATE(created_at)')) {
+      if (sql.includes('GROUP BY (created_at::date)')) {
         return [
           {
             date: '2026-03-18',
@@ -155,7 +155,6 @@ describe('GET /api/creatives/trends', () => {
     })
 
     mocks.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       query: mocks.query,
       queryOne: mocks.queryOne,
     })

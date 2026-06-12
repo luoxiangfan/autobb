@@ -85,13 +85,12 @@ async function replaceUsdExchangeRatesInDb(params: {
     await db.exec('DELETE FROM usd_exchange_rates')
     for (const [currency, rate] of entries) {
       await db.exec(
-        "INSERT INTO usd_exchange_rates (currency, rate, updated_at) VALUES (?, ?, datetime('now'))",
+        'INSERT INTO usd_exchange_rates (currency, rate, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
         [currency, rate]
       )
     }
-    if (db.type === 'postgres') {
-      await db.exec(
-        `INSERT INTO exchange_rate_snapshot_meta (id, base_code, time_last_update_unix, time_next_update_unix, time_last_update_utc, time_next_update_utc, fetched_at)
+    await db.exec(
+      `INSERT INTO exchange_rate_snapshot_meta (id, base_code, time_last_update_unix, time_next_update_unix, time_last_update_utc, time_next_update_utc, fetched_at)
          VALUES (1, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
          ON CONFLICT (id) DO UPDATE SET
            base_code = EXCLUDED.base_code,
@@ -100,27 +99,14 @@ async function replaceUsdExchangeRatesInDb(params: {
            time_last_update_utc = EXCLUDED.time_last_update_utc,
            time_next_update_utc = EXCLUDED.time_next_update_utc,
            fetched_at = EXCLUDED.fetched_at`,
-        [
-          params.baseCode || 'USD',
-          params.timeLastUpdateUnix,
-          params.timeNextUpdateUnix,
-          params.timeLastUpdateUtc,
-          params.timeNextUpdateUtc,
-        ]
-      )
-    } else {
-      await db.exec(
-        `INSERT OR REPLACE INTO exchange_rate_snapshot_meta (id, base_code, time_last_update_unix, time_next_update_unix, time_last_update_utc, time_next_update_utc, fetched_at)
-         VALUES (1, ?, ?, ?, ?, ?, datetime('now'))`,
-        [
-          params.baseCode || 'USD',
-          params.timeLastUpdateUnix,
-          params.timeNextUpdateUnix,
-          params.timeLastUpdateUtc,
-          params.timeNextUpdateUtc,
-        ]
-      )
-    }
+      [
+        params.baseCode || 'USD',
+        params.timeLastUpdateUnix,
+        params.timeNextUpdateUnix,
+        params.timeLastUpdateUtc,
+        params.timeNextUpdateUtc,
+      ]
+    )
   })
 
   // Persist succeeded: always refresh in-memory cache from DB snapshot.

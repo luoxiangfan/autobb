@@ -117,7 +117,6 @@ describe('affiliate-product-sync executor resume behavior', () => {
     mocks.buildProductListCacheHash.mockReturnValue('cache-hash')
     mocks.dbQuery.mockResolvedValue([])
     mocks.getDatabase.mockResolvedValue({
-      type: 'postgres',
       query: mocks.dbQuery,
     })
     mocks.listAffiliateProducts.mockResolvedValue({

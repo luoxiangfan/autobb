@@ -1,29 +1,18 @@
 import fs from 'fs'
 import path from 'path'
 
-export type MigrationDbType = 'sqlite' | 'postgres'
-
-function matchesMigrationFile(name: string, dbType: MigrationDbType): boolean {
+function matchesMigrationFile(name: string): boolean {
   if (!/^\d{3}_/.test(name) || name.startsWith('000_')) {
     return false
   }
-
-  if (dbType === 'postgres') {
-    if (name.endsWith('.pg.sql')) return true
-    return name.endsWith('.sql') && !name.endsWith('.sqlite.sql')
-  }
-
-  return name.endsWith('.sql') && !name.endsWith('.pg.sql')
+  if (name.endsWith('.pg.sql')) return true
+  return name.endsWith('.sql') && !name.endsWith('.md')
 }
 
 /**
- * Collect incremental migration files from the migrations root and archived_* subdirectories.
- * Returns POSIX-style relative paths sorted by filename (migration number).
+ * Collect incremental PostgreSQL migration files from migrations root and archived_* subdirectories.
  */
-export function listIncrementalMigrationFiles(
-  migrationsPath: string,
-  dbType: MigrationDbType
-): string[] {
+export function listIncrementalMigrationFiles(migrationsPath: string): string[] {
   const files: string[] = []
 
   const scan = (dir: string, relativePrefix = ''): void => {
@@ -37,7 +26,7 @@ export function listIncrementalMigrationFiles(
         continue
       }
 
-      if (matchesMigrationFile(entry.name, dbType)) {
+      if (matchesMigrationFile(entry.name)) {
         files.push(relativePath)
       }
     }

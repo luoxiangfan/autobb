@@ -53,7 +53,7 @@ function jsonNoStore(body: any, init?: { status?: number }) {
 
 function parseDbTimestampToMs(value: string | null | undefined) {
   if (!value) return NaN
-  // SQLite datetime('now') 常见格式：'YYYY-MM-DD HH:mm:ss'（UTC，无时区标记）
+  // UTC 文本时间戳常见格式：'YYYY-MM-DD HH:mm:ss'（UTC，无时区标记）
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(value)) {
     return Date.parse(value.replace(' ', 'T') + 'Z')
   }
@@ -456,14 +456,10 @@ async function get(request: NextRequest) {
     // 🔧 修复(2026-02-08): 关联Offer查询使用更稳健的“未删除”判定
     // 兼容历史数据（is_deleted 为空）并兜底 deleted_at 软删除标记，避免已删除Offer仍显示在关联列表中。
     const offerNotDeletedCondition =
-      db.type === 'postgres'
-        ? '(o.is_deleted = FALSE OR o.is_deleted IS NULL) AND o.deleted_at IS NULL'
-        : '(o.is_deleted = 0 OR o.is_deleted IS NULL) AND o.deleted_at IS NULL'
+      '(o.is_deleted = FALSE OR o.is_deleted IS NULL) AND o.deleted_at IS NULL'
 
     const campaignNotDeletedCondition =
-      db.type === 'postgres'
-        ? '(c.is_deleted = FALSE OR c.is_deleted IS NULL) AND c.deleted_at IS NULL'
-        : '(c.is_deleted = 0 OR c.is_deleted IS NULL) AND c.deleted_at IS NULL'
+      '(c.is_deleted = FALSE OR c.is_deleted IS NULL) AND c.deleted_at IS NULL'
 
     const accountsWithOffers = await Promise.all(
       allAccounts.map(async (account) => {
@@ -505,7 +501,7 @@ async function get(request: NextRequest) {
           o.brand,
           o.target_country,
           CASE
-            WHEN o.is_deleted = IS_DELETED_TRUE OR o.deleted_at IS NOT NULL THEN 0
+            WHEN o.is_deleted = TRUE OR o.deleted_at IS NOT NULL THEN 0
             ELSE 1
           END as is_active,
           COUNT(DISTINCT c.id) as campaign_count

@@ -43,7 +43,6 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
     mockGetKeywordSearchVolumes.mockResolvedValue([])
 
     mockDb = {
-      type: 'postgres',
       queryOne: vi.fn(),
       exec: vi.fn(),
       close: vi.fn(),

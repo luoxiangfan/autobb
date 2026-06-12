@@ -5,16 +5,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   getSettingMock,
-  updateSettingsMock,
-} = vi.hoisted(() => ({
+  updateSettingsMock } = vi.hoisted(() => ({
   getSettingMock: vi.fn(),
-  updateSettingsMock: vi.fn(),
-}))
+  updateSettingsMock: vi.fn() }))
 
 vi.mock('@/lib/settings', () => ({
   getSetting: getSettingMock,
-  updateSettings: updateSettingsMock,
-}))
+  updateSettings: updateSettingsMock }))
 
 import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
 

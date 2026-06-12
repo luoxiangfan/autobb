@@ -4,12 +4,10 @@ import { nowFunc } from '@/lib/db-helpers'
 import {
   compressJsonPayloadText,
   decompressJsonPayloadText,
-  type JsonPayloadCodec,
-} from '@/lib/json-payload-compression'
+  type JsonPayloadCodec } from '@/lib/json-payload-compression'
 import type {
   AffiliateCommissionDateBounds,
-  AffiliateCommissionLineItem,
-} from '@/lib/openclaw/affiliate-commission-types'
+  AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
 
 const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000
 const MEMORY_CACHE_MAX_ENTRIES = 32
@@ -98,8 +96,7 @@ export function writeAffiliateCommissionLineItemsMemoryCache(
   trimMemoryCache()
   memoryCache.set(cacheKey, {
     ...entry,
-    expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
-  })
+    expiresAt: Date.now() + MEMORY_CACHE_TTL_MS })
 }
 
 export function readAffiliateCommissionDateBoundsMemoryCache(
@@ -121,8 +118,7 @@ export function writeAffiliateCommissionDateBoundsMemoryCache(
   trimDateBoundsCache()
   dateBoundsMemoryCache.set(cacheKey, {
     dateBounds,
-    expiresAt: Date.now() + MEMORY_CACHE_TTL_MS,
-  })
+    expiresAt: Date.now() + MEMORY_CACHE_TTL_MS })
 }
 
 export function clearAffiliateCommissionLineItemsMemoryCache(): void {
@@ -182,7 +178,7 @@ export async function writeAffiliateCommissionLineItemsDbCache(params: {
       INSERT INTO openclaw_affiliate_commission_report_cache
         (cache_key, line_items_json, line_items_codec, source_updated_at, built_at)
       VALUES
-        (?, ?, ?, ?, ${nowFunc(db.type)})
+        (?, ?, ?, ?, ${nowFunc()})
       ON CONFLICT(cache_key) DO UPDATE SET
         line_items_json = excluded.line_items_json,
         line_items_codec = excluded.line_items_codec,

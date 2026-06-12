@@ -227,7 +227,7 @@ describe('openclaw bindings isolation', () => {
 
     const queryOne = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null)
     const exec = vi.fn().mockResolvedValue({ changes: 1 })
-    getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
+    getDatabaseMock.mockResolvedValue({ queryOne, exec })
 
     const result = await resolveOpenclawUserFromBinding('feishu', 'ou_new', {
       accountId: 'user-11',
@@ -252,7 +252,7 @@ describe('openclaw bindings isolation', () => {
       .mockResolvedValueOnce(null) // ensureStrictFeishuBinding existing (scoped)
       .mockResolvedValueOnce({ id: 101, user_id: 11 }) // scopedAfterConflict
     const exec = vi.fn().mockRejectedValueOnce(duplicate)
-    getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
+    getDatabaseMock.mockResolvedValue({ queryOne, exec })
 
     const result = await resolveOpenclawUserFromBinding('feishu', 'ou_race', {
       accountId: 'user-11',
@@ -277,7 +277,7 @@ describe('openclaw bindings isolation', () => {
       .mockResolvedValueOnce(null) // scopedAfterConflict
       .mockResolvedValueOnce({ id: 5, user_id: 9 }) // legacyGlobal
     const exec = vi.fn().mockRejectedValueOnce(duplicate)
-    getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
+    getDatabaseMock.mockResolvedValue({ queryOne, exec })
 
     const result = await resolveOpenclawUserFromBinding('feishu', 'ou_conflict_legacy', {
       accountId: 'user-11',
@@ -296,7 +296,7 @@ describe('openclaw bindings isolation', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: 99, user_id: 5 })
     const exec = vi.fn()
-    getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
+    getDatabaseMock.mockResolvedValue({ queryOne, exec })
 
     const result = await resolveOpenclawUserFromBinding('feishu', 'ou_conflict', {
       accountId: 'user-7',
@@ -331,7 +331,7 @@ describe('openclaw bindings isolation', () => {
 
     const queryOne = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null)
     const exec = vi.fn().mockResolvedValue({ changes: 1 })
-    getDatabaseMock.mockResolvedValue({ queryOne, exec, type: 'postgres' })
+    getDatabaseMock.mockResolvedValue({ queryOne, exec })
 
     const resolution = await resolveOpenclawUserFromBindingDebug('feishu', 'ou_new', {
       accountId: 'user-11',

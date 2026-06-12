@@ -5,24 +5,20 @@ const hoisted = vi.hoisted(() => ({
   persistAffiliateCommissionAttributionsMock: vi.fn(),
   getDatabaseMock: vi.fn(),
   dbExecMock: vi.fn(),
-  dbTransactionMock: vi.fn(),
-}))
+  dbTransactionMock: vi.fn() }))
 
 vi.mock('@/lib/openclaw/settings', () => ({
   getOpenclawSettingsWithAffiliateSyncMap: hoisted.getOpenclawSettingsWithAffiliateSyncMapMock,
   parseNumber: (value: unknown, fallback = 0) => {
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : fallback
-  },
-}))
+  } }))
 
 vi.mock('@/lib/openclaw/affiliate-commission-attribution', () => ({
-  persistAffiliateCommissionAttributions: hoisted.persistAffiliateCommissionAttributionsMock,
-}))
+  persistAffiliateCommissionAttributions: hoisted.persistAffiliateCommissionAttributionsMock }))
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: hoisted.getDatabaseMock,
-}))
+  getDatabase: hoisted.getDatabaseMock }))
 
 import { fetchAffiliateCommissionRevenue } from './affiliate-revenue'
 
@@ -31,8 +27,7 @@ function makeOkJsonResponse(payload: any): any {
     ok: true,
     status: 200,
     json: async () => payload,
-    text: async () => JSON.stringify(payload),
-  }
+    text: async () => JSON.stringify(payload) }
 }
 
 function makeErrorResponse(status: number, text: string): any {
@@ -40,8 +35,7 @@ function makeErrorResponse(status: number, text: string): any {
     ok: false,
     status,
     json: async () => ({}),
-    text: async () => text,
-  }
+    text: async () => text }
 }
 
 describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
@@ -51,17 +45,14 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
     hoisted.dbTransactionMock.mockReset()
     hoisted.dbTransactionMock.mockImplementation(async (fn: () => Promise<unknown>) => await fn())
     hoisted.getDatabaseMock.mockResolvedValue({
-      type: 'sqlite',
       exec: hoisted.dbExecMock,
-      transaction: hoisted.dbTransactionMock,
-    })
+      transaction: hoisted.dbTransactionMock })
 
     hoisted.getOpenclawSettingsWithAffiliateSyncMapMock.mockResolvedValue({
       partnerboost_token: 'pb-token',
       partnerboost_base_url: 'https://app.partnerboost.com',
       yeahpromos_token: '',
-      yeahpromos_site_id: '',
-    })
+      yeahpromos_site_id: '' })
 
     hoisted.persistAffiliateCommissionAttributionsMock.mockResolvedValue({
       reportDate: '2026-02-19',
@@ -70,8 +61,7 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
       unattributedCommission: 0,
       attributedOffers: 1,
       attributedCampaigns: 1,
-      writtenRows: 1,
-    })
+      writtenRows: 1 })
   })
 
   afterEach(() => {
@@ -90,11 +80,8 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
                 order_id: 'C28VW-7C7IDG8UPD',
                 adGroupId: 'a6e3PBLq_xxx',
                 link: 'https://www.amazon.com/dp/B0CCY6VG8Z?aa_adgroupid=a6e3PBLq_xxx',
-                estCommission: 0,
-              },
-            ],
-          },
-        })
+                estCommission: 0 },
+            ] } })
       )
       .mockResolvedValueOnce(
         makeOkJsonResponse({
@@ -107,18 +94,14 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
                 sale_comm: '3.99',
                 prod_id: 'B0CCY6VG8Z',
                 partnerboost_id: '8aed2d6efd41e6b9d26b0b0fd20c9591',
-                status: 'Pending',
-              },
-            ],
-          },
-        })
+                status: 'Pending' },
+            ] } })
       )
     vi.stubGlobal('fetch', fetchMock)
 
     const revenue = await fetchAffiliateCommissionRevenue({
       userId: 1,
-      reportDate: '2026-02-20',
-    })
+      reportDate: '2026-02-20' })
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/datafeed/get_amazon_report')
@@ -151,11 +134,8 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
                 order_id: 'REPORT-ONLY-1',
                 adGroupId: 'pb_adg_single',
                 link: 'https://www.amazon.com/dp/B0CCY6VG8Z?aa_adgroupid=pb_adg_single',
-                estCommission: 0,
-              },
-            ],
-          },
-        })
+                estCommission: 0 },
+            ] } })
       )
       .mockResolvedValueOnce(
         makeOkJsonResponse({
@@ -166,18 +146,14 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
               {
                 order_id: 'TX-ORDER-1',
                 sale_comm: '3.99',
-                prod_id: 'B0CCY6VG8Z',
-              },
-            ],
-          },
-        })
+                prod_id: 'B0CCY6VG8Z' },
+            ] } })
       )
     vi.stubGlobal('fetch', fetchMock)
 
     const revenue = await fetchAffiliateCommissionRevenue({
       userId: 1,
-      reportDate: '2026-02-20',
-    })
+      reportDate: '2026-02-20' })
 
     expect(revenue.totalCommission).toBe(3.99)
     expect(fetchMock).toHaveBeenCalledTimes(2)
@@ -201,11 +177,8 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
                 adGroupId: 'pb_adg_single',
                 'Product ID': 'B0CCY6VG8Z',
                 link: 'https://www.amazon.com/dp/B0CCY6VG8Z?aa_adgroupid=pb_adg_single',
-                estCommission: 0,
-              },
-            ],
-          },
-        })
+                estCommission: 0 },
+            ] } })
       )
       .mockResolvedValueOnce(
         makeOkJsonResponse({
@@ -216,18 +189,14 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
               {
                 order_id: 'TX-ORDER-2',
                 sale_comm: '6.99',
-                partnerboost_id: 'pb_mid_real_123',
-              },
-            ],
-          },
-        })
+                partnerboost_id: 'pb_mid_real_123' },
+            ] } })
       )
     vi.stubGlobal('fetch', fetchMock)
 
     const revenue = await fetchAffiliateCommissionRevenue({
       userId: 1,
-      reportDate: '2026-02-22',
-    })
+      reportDate: '2026-02-22' })
 
     expect(revenue.totalCommission).toBe(6.99)
     expect(fetchMock).toHaveBeenCalledTimes(2)
@@ -255,19 +224,15 @@ describe('fetchAffiliateCommissionRevenue partnerboost commission sync', () => {
                 'Product ID': 'B0CCJGKY4M',
                 'Est. Commission': '$8.94',
                 adGroupId: 'pb_adg_002',
-                'Referrer URL': 'https://www.amazon.com/dp/B0CCJGKY4M?aa_adgroupid=pb_adg_002',
-              },
-            ],
-          },
-        })
+                'Referrer URL': 'https://www.amazon.com/dp/B0CCJGKY4M?aa_adgroupid=pb_adg_002' },
+            ] } })
       )
       .mockResolvedValueOnce(makeErrorResponse(500, 'upstream error'))
     vi.stubGlobal('fetch', fetchMock)
 
     const revenue = await fetchAffiliateCommissionRevenue({
       userId: 1,
-      reportDate: '2026-02-20',
-    })
+      reportDate: '2026-02-20' })
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(warnSpy).toHaveBeenCalled()
@@ -291,8 +256,7 @@ describe('fetchAffiliateCommissionRevenue yeahpromos transaction parsing', () =>
       partnerboost_token: '',
       yeahpromos_token: 'yp-token',
       yeahpromos_site_id: '11767',
-      yeahpromos_is_amazon: '1',
-    })
+      yeahpromos_is_amazon: '1' })
 
     hoisted.persistAffiliateCommissionAttributionsMock.mockResolvedValue({
       reportDate: '2026-02-22',
@@ -301,8 +265,7 @@ describe('fetchAffiliateCommissionRevenue yeahpromos transaction parsing', () =>
       unattributedCommission: 41.775,
       attributedOffers: 0,
       attributedCampaigns: 0,
-      writtenRows: 0,
-    })
+      writtenRows: 0 })
   })
 
   afterEach(() => {
@@ -329,8 +292,7 @@ describe('fetchAffiliateCommissionRevenue yeahpromos transaction parsing', () =>
               amount: 39.99,
               oid: '362632_2678_11767_a',
               status: 'PENDING',
-              sku: 'B0FGJ3M5X4',
-            },
+              sku: 'B0FGJ3M5X4' },
             {
               advert_id: 362632,
               id: 'row-2',
@@ -338,8 +300,7 @@ describe('fetchAffiliateCommissionRevenue yeahpromos transaction parsing', () =>
               amount: 189.98,
               oid: '362632_2678_11767_b',
               status: 'PENDING',
-              sku: 'B0FJFL8KP4',
-            },
+              sku: 'B0FJFL8KP4' },
             {
               advert_id: 362632,
               id: 'row-3',
@@ -347,18 +308,14 @@ describe('fetchAffiliateCommissionRevenue yeahpromos transaction parsing', () =>
               amount: 39.99,
               oid: '362632_2678_11767_c',
               status: 'PENDING',
-              sku: 'B0FGJ3M5X4',
-            },
-          ],
-        },
-      })
+              sku: 'B0FGJ3M5X4' },
+          ] } })
     )
     vi.stubGlobal('fetch', fetchMock)
 
     const revenue = await fetchAffiliateCommissionRevenue({
       userId: 1,
-      reportDate: '2026-02-22',
-    })
+      reportDate: '2026-02-22' })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const requestUrl = String(fetchMock.mock.calls[0]?.[0] || '')
@@ -371,8 +328,7 @@ describe('fetchAffiliateCommissionRevenue yeahpromos transaction parsing', () =>
         platform: 'yeahpromos',
         totalCommission: 41.78,
         records: 3,
-        currency: 'USD',
-      },
+        currency: 'USD' },
     ])
 
     expect(hoisted.persistAffiliateCommissionAttributionsMock).toHaveBeenCalledTimes(1)

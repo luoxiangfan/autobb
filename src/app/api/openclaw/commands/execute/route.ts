@@ -5,8 +5,7 @@ import { executeOpenclawCommand } from '@/lib/openclaw/commands/command-service'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {
   resolveOpenclawParentRequestId,
-  resolveOpenclawParentRequestIdFromHeaders,
-} from '@/lib/openclaw/request-correlation'
+  resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/request-correlation'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,8 +26,7 @@ const executeSchema = z.object({
   intent: z.string().optional(),
   idempotencyKey: z.string().optional(),
   parentRequestId: z.string().optional(),
-  parent_request_id: z.string().optional(),
-})
+  parent_request_id: z.string().optional() })
 
 function normalizeHeaderValue(value: string | null | undefined): string | undefined {
   const normalized = String(value || '').trim()
@@ -62,8 +60,7 @@ export async function POST(request: NextRequest) {
       channel: channelFromBody,
       senderId: senderIdFromBody,
       accountId: accountIdFromBody,
-      tenantKey: tenantKeyFromBody,
-    })
+      tenantKey: tenantKeyFromBody })
     if (!auth) {
       return NextResponse.json({ error: 'OpenClaw 功能未开启或未授权' }, { status: 403 })
     }
@@ -106,8 +103,7 @@ export async function POST(request: NextRequest) {
       userId: auth.userId,
       channel,
       senderId,
-      accountId,
-    })
+      accountId })
 
     const result = await executeOpenclawCommand({
       userId: auth.userId,
@@ -120,8 +116,7 @@ export async function POST(request: NextRequest) {
       senderId,
       intent: parsed.data.intent,
       idempotencyKey: parsed.data.idempotencyKey,
-      parentRequestId,
-    })
+      parentRequestId })
 
     const status = result.status === 'pending_confirm' ? 202 : 200
     return NextResponse.json({ success: true, ...result }, { status })

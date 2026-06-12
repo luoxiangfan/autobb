@@ -11,12 +11,10 @@ import {
   loadAffiliateCommissionLineFacts,
   replaceAffiliateCommissionLineFacts,
   sumAffiliateCommissionFromFacts,
-  type AffiliateCommissionFactsBrandAggregate,
-} from '@/lib/openclaw/affiliate-commission-facts'
+  type AffiliateCommissionFactsBrandAggregate } from '@/lib/openclaw/affiliate-commission-facts'
 import type {
   AffiliateCommissionReportPlatformFilter,
-  AffiliateCommissionReportViewMode,
-} from '@/lib/openclaw/affiliate-commission-platform'
+  AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission-platform'
 import {
   buildAffiliateCommissionDateBoundsCacheKey,
   buildAffiliateCommissionLineItemsCacheKey,
@@ -25,8 +23,7 @@ import {
   readAffiliateCommissionLineItemsMemoryCache,
   writeAffiliateCommissionDateBoundsMemoryCache,
   writeAffiliateCommissionLineItemsDbCache,
-  writeAffiliateCommissionLineItemsMemoryCache,
-} from '@/lib/openclaw/affiliate-commission-report-cache'
+  writeAffiliateCommissionLineItemsMemoryCache } from '@/lib/openclaw/affiliate-commission-report-cache'
 import type {
   ActiveNonAdminUser,
   AffiliateCommissionBrandDetailRow,
@@ -35,15 +32,13 @@ import type {
   AffiliateCommissionDateDetailRow,
   AffiliateCommissionDateSummary,
   AffiliateCommissionLineItem,
-  AffiliateCommissionReportResult,
-} from '@/lib/openclaw/affiliate-commission-types'
+  AffiliateCommissionReportResult } from '@/lib/openclaw/affiliate-commission-types'
 import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
 import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
 import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
 import {
   reconcileAffiliateCommissionLineItems,
-  sumAttributionCommissionTotals,
-} from '@/lib/openclaw/affiliate-commission-attribution-lines'
+  sumAttributionCommissionTotals } from '@/lib/openclaw/affiliate-commission-attribution-lines'
 
 // Facts built before aligned PartnerBoost/YeahPromos parsing under-count commission vs campaigns.
 const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-05T00:00:00.000Z'
@@ -216,8 +211,7 @@ function resolveBrandSummaryKey(
     return buildPartnerboostBrandSummaryKey({
       userId: item.userId,
       brandName: item.brandName,
-      showUserScope,
-    })
+      showUserScope })
   }
   return item.brandKey
 }
@@ -258,8 +252,7 @@ function parseYeahPromosLineItems(params: {
       brandName,
       commission: roundTo4(row.commission),
       advertId,
-      asin: normalizeAsin(row.asin),
-    })
+      asin: normalizeAsin(row.asin) })
   }
 
   return items
@@ -278,8 +271,7 @@ function parsePartnerboostLineItems(params: {
 } {
   const rows = collectPartnerboostReportRows({
     transactionPayloads: params.transactionPayloads,
-    reportPayloads: params.reportPayloads,
-  })
+    reportPayloads: params.reportPayloads })
   const items: AffiliateCommissionLineItem[] = []
   const rawBrandByUserAsin = new Map<string, string>()
 
@@ -304,8 +296,7 @@ function parsePartnerboostLineItems(params: {
       brandKey: scopeBrandKey(params.userId, baseBrandKey, params.showUserScope),
       brandName: asin ? `ASIN ${asin}` : 'Unknown Brand',
       commission: roundTo4(row.commission),
-      asin,
-    })
+      asin })
   })
 
   return { items, rawBrandByUserAsin }
@@ -327,8 +318,7 @@ function buildPartnerboostBrandLookupEntries(
     if (!normalizedAsin) continue
     entries.set(`${item.userId}:${normalizedAsin}`, {
       userId: item.userId,
-      asin: normalizedAsin,
-    })
+      asin: normalizedAsin })
   }
 
   return Array.from(entries.values())
@@ -505,9 +495,7 @@ async function loadPartnerboostOfferBrandByAsin(params: {
   const userIds = Array.from(new Set(params.entries.map((entry) => entry.userId)))
   const asins = Array.from(new Set(params.entries.map((entry) => entry.asin)))
   const db = await getDatabase()
-  const offerNotDeletedCondition = db.type === 'postgres'
-    ? '(is_deleted = false OR is_deleted IS NULL)'
-    : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const offerNotDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const offerRows: Array<{
     user_id: number
@@ -568,8 +556,7 @@ async function loadPartnerboostBrandMap(params: {
     const mapKey = `${entry.userId}:${entry.asin}`
     const resolvedBrand = resolvePartnerboostDisplayBrand({
       productBrand: productBrandByUserAsin.get(mapKey) ?? globalBrandByAsin.get(entry.asin),
-      offerBrand: offerBrandByUserAsin.get(mapKey),
-    }) ?? normalizePartnerboostRawBrandFallback(params.rawBrandByUserAsin.get(mapKey))
+      offerBrand: offerBrandByUserAsin.get(mapKey) }) ?? normalizePartnerboostRawBrandFallback(params.rawBrandByUserAsin.get(mapKey))
     if (resolvedBrand) {
       brandByUserAsin.set(mapKey, resolvedBrand)
     }
@@ -593,8 +580,7 @@ function applyPartnerboostBrandNames(
     return {
       ...item,
       brandKey: scopeBrandKey(item.userId, baseBrandKey, showUserScope),
-      brandName,
-    }
+      brandName }
   })
 }
 
@@ -647,8 +633,7 @@ async function loadRawSyncPayloadRowsChunk(params: {
       row.response_payload,
       row.response_payload_codec || 'json'
     ),
-    response_payload_codec: row.response_payload_codec,
-  })))
+    response_payload_codec: row.response_payload_codec })))
 }
 
 function compareRawSyncPayloadRows(left: RawSyncPayloadRow, right: RawSyncPayloadRow): number {
@@ -679,8 +664,7 @@ async function loadRawSyncPayloadRows(params: {
   const chunkResults = await Promise.all(
     chunkArray(params.userIds, USER_ID_CHUNK_SIZE).map((userIds) => loadRawSyncPayloadRowsChunk({
       ...params,
-      userIds,
-    }))
+      userIds }))
   )
 
   return chunkResults.flat().sort(compareRawSyncPayloadRows)
@@ -693,14 +677,12 @@ function buildSupportedSourceClause(platform: AffiliateCommissionReportPlatformF
   if (platform === 'yeahpromos') {
     return {
       clause: `AND platform = 'yeahpromos' AND source_api = 'getorder'`,
-      params: [],
-    }
+      params: [] }
   }
   if (platform === 'partnerboost') {
     return {
       clause: `AND platform = 'partnerboost' AND source_api IN ('amazon_report', 'transaction')`,
-      params: [],
-    }
+      params: [] }
   }
 
   return {
@@ -710,8 +692,7 @@ function buildSupportedSourceClause(platform: AffiliateCommissionReportPlatformF
         OR (platform = 'partnerboost' AND source_api IN ('amazon_report', 'transaction'))
       )
     `,
-    params: [],
-  }
+    params: [] }
 }
 
 export async function getAffiliateCommissionDateBounds(params: {
@@ -744,8 +725,7 @@ export async function getAffiliateCommissionDateBounds(params: {
 
   return {
     minDate: minDate || null,
-    maxDate: maxDate || null,
-  }
+    maxDate: maxDate || null }
 }
 
 export async function getAffiliateCommissionDateBoundsCached(params: {
@@ -755,8 +735,7 @@ export async function getAffiliateCommissionDateBoundsCached(params: {
   const platform = params.platform || 'all'
   const cacheKey = buildAffiliateCommissionDateBoundsCacheKey({
     userIds: params.userIds,
-    platform,
-  })
+    platform })
   const cached = readAffiliateCommissionDateBoundsMemoryCache(cacheKey)
   if (cached) {
     return cached
@@ -792,7 +771,7 @@ export function clampDateRangeToBounds(params: {
 
 export async function listActiveNonAdminUsers(): Promise<ActiveNonAdminUser[]> {
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
+  const isActiveCondition = 'is_active = TRUE'
 
   return db.query<ActiveNonAdminUser>(
     `
@@ -809,7 +788,7 @@ async function filterActiveNonAdminUserIds(userIds: number[]): Promise<Set<numbe
   if (userIds.length === 0) return new Set()
 
   const db = await getDatabase()
-  const isActiveCondition = db.type === 'postgres' ? 'is_active = TRUE' : 'is_active = 1'
+  const isActiveCondition = 'is_active = TRUE'
   const allowedIds = new Set<number>()
 
   for (const userIdChunk of chunkArray(userIds, 200)) {
@@ -896,8 +875,7 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
         username,
         reportDate: row.report_date,
         payload,
-        showUserScope: params.showUserScope,
-      }))
+        showUserScope: params.showUserScope }))
       continue
     }
 
@@ -911,8 +889,7 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
           username,
           reportDate,
           transactionPayloads: [],
-          reportPayloads: [],
-        }
+          reportPayloads: [] }
         partnerboostGroups.set(groupKey, group)
       }
 
@@ -933,8 +910,7 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
       reportDate: group.reportDate,
       transactionPayloads: group.transactionPayloads,
       reportPayloads: group.reportPayloads,
-      showUserScope: params.showUserScope,
-    })
+      showUserScope: params.showUserScope })
     lineItems.push(...parsed.items)
     for (const [mapKey, rawBrand] of parsed.rawBrandByUserAsin) {
       if (!partnerboostRawBrandByUserAsin.has(mapKey)) {
@@ -953,8 +929,7 @@ async function buildAffiliateCommissionLineItemsFromRawRows(params: {
 
   const brandByUserAsin = await loadPartnerboostBrandMap({
     entries: partnerboostEntries,
-    rawBrandByUserAsin: partnerboostRawBrandByUserAsin,
-  })
+    rawBrandByUserAsin: partnerboostRawBrandByUserAsin })
 
   return applyPartnerboostBrandNames(lineItems, brandByUserAsin, params.showUserScope)
 }
@@ -976,15 +951,13 @@ async function writeAffiliateCommissionLineItemsCaches(params: {
   writeAffiliateCommissionLineItemsMemoryCache(params.cacheKey, {
     lineItems: params.lineItems,
     sourceUpdatedAt: params.sourceUpdatedAt,
-    attributionUpdatedAt: params.attributionUpdatedAt,
-  })
+    attributionUpdatedAt: params.attributionUpdatedAt })
 
   try {
     await writeAffiliateCommissionLineItemsDbCache({
       cacheKey: params.cacheKey,
       lineItems: params.lineItems,
-      sourceUpdatedAt: params.sourceUpdatedAt,
-    })
+      sourceUpdatedAt: params.sourceUpdatedAt })
   } catch {
     // ignore cache write failures
   }
@@ -1000,8 +973,7 @@ async function persistAffiliateCommissionLineFactsFromLineItems(params: {
     const mapKey = `${item.userId}:${reportDate}`
     const unscopedItem = {
       ...item,
-      brandKey: item.brandKey.replace(/^user:\d+:/, ''),
-    }
+      brandKey: item.brandKey.replace(/^user:\d+:/, '') }
     const existing = factsByUserDate.get(mapKey)
     if (existing) {
       existing.items.push(unscopedItem)
@@ -1010,8 +982,7 @@ async function persistAffiliateCommissionLineFactsFromLineItems(params: {
     factsByUserDate.set(mapKey, {
       userId: item.userId,
       reportDate,
-      items: [unscopedItem],
-    })
+      items: [unscopedItem] })
   }
 
   for (const group of factsByUserDate.values()) {
@@ -1019,8 +990,7 @@ async function persistAffiliateCommissionLineFactsFromLineItems(params: {
       await replaceAffiliateCommissionLineFacts({
         userId: group.userId,
         reportDates: [group.reportDate],
-        lineItems: group.items,
-      })
+        lineItems: group.items })
     } catch {
       // Facts table may not exist before migration 253.
     }
@@ -1039,8 +1009,7 @@ export async function rebuildAffiliateCommissionLineFactsForUserDate(params: {
     userIds: [params.userId],
     startDate: params.reportDate,
     endDate: params.reportDate,
-    platform,
-  })
+    platform })
 
   const lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
     rows,
@@ -1048,14 +1017,12 @@ export async function rebuildAffiliateCommissionLineFactsForUserDate(params: {
     startDate: params.reportDate,
     endDate: params.reportDate,
     platform,
-    showUserScope: false,
-  })
+    showUserScope: false })
 
   await replaceAffiliateCommissionLineFacts({
     userId: params.userId,
     reportDates: [params.reportDate],
-    lineItems,
-  })
+    lineItems })
 }
 
 export async function loadAffiliateCommissionLineItems(params: {
@@ -1073,8 +1040,7 @@ export async function loadAffiliateCommissionLineItems(params: {
     startDate: params.startDate,
     endDate: params.endDate,
     platform: params.platform,
-    showUserScope,
-  })
+    showUserScope })
 
   const reconcileCtx = {
     userIds: params.userIds,
@@ -1082,8 +1048,7 @@ export async function loadAffiliateCommissionLineItems(params: {
     startDate: params.startDate,
     endDate: params.endDate,
     platform: params.platform,
-    showUserScope,
-  }
+    showUserScope }
 
   const memoryCached = readAffiliateCommissionLineItemsMemoryCache(cacheKey)
   if (memoryCached) {
@@ -1095,8 +1060,7 @@ export async function loadAffiliateCommissionLineItems(params: {
     sourceUpdatedAt = await getAffiliateCommissionRawSourceUpdatedAt({
       userIds: params.userIds,
       startDate: params.startDate,
-      endDate: params.endDate,
-    })
+      endDate: params.endDate })
   } catch {
     sourceUpdatedAt = null
   }
@@ -1104,19 +1068,16 @@ export async function loadAffiliateCommissionLineItems(params: {
   try {
     const dbCached = await readAffiliateCommissionLineItemsDbCache({
       cacheKey,
-      sourceUpdatedAt,
-    })
+      sourceUpdatedAt })
     if (dbCached) {
       const reconciled = await reconcileAffiliateCommissionLineItems({
         rawDerived: dbCached,
-        ...reconcileCtx,
-      })
+        ...reconcileCtx })
       await writeAffiliateCommissionLineItemsCaches({
         cacheKey,
         lineItems: reconciled.lineItems,
         sourceUpdatedAt,
-        attributionUpdatedAt: reconciled.attributionUpdatedAt,
-      })
+        attributionUpdatedAt: reconciled.attributionUpdatedAt })
       return reconciled.lineItems
     }
   } catch {
@@ -1131,16 +1092,14 @@ export async function loadAffiliateCommissionLineItems(params: {
       startDate: params.startDate,
       endDate: params.endDate,
       platform: params.platform,
-      minRebuiltAt: AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT,
-    })
+      minRebuiltAt: AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT })
 
     if (factsAreFresh) {
       const factRows = await loadAffiliateCommissionLineFacts({
         userIds: params.userIds,
         startDate: params.startDate,
         endDate: params.endDate,
-        platform: params.platform,
-      })
+        platform: params.platform })
       lineItems = factRowsToLineItems(factRows, userLabels, showUserScope)
     } else {
       lineItems = await buildAffiliateCommissionLineItemsFromRawRows({
@@ -1148,14 +1107,12 @@ export async function loadAffiliateCommissionLineItems(params: {
           userIds: params.userIds,
           startDate: params.startDate,
           endDate: params.endDate,
-          platform: params.platform,
-        }),
+          platform: params.platform }),
         userLabels,
         startDate: params.startDate,
         endDate: params.endDate,
         platform: params.platform,
-        showUserScope,
-      })
+        showUserScope })
     }
   } catch {
     // Facts table may not exist before migration 253.
@@ -1164,20 +1121,17 @@ export async function loadAffiliateCommissionLineItems(params: {
         userIds: params.userIds,
         startDate: params.startDate,
         endDate: params.endDate,
-        platform: params.platform,
-      }),
+        platform: params.platform }),
       userLabels,
       startDate: params.startDate,
       endDate: params.endDate,
       platform: params.platform,
-      showUserScope,
-    })
+      showUserScope })
   }
 
   const reconciled = await reconcileAffiliateCommissionLineItems({
     rawDerived: lineItems,
-    ...reconcileCtx,
-  })
+    ...reconcileCtx })
 
   schedulePersistAffiliateCommissionLineFactsFromLineItems({ lineItems: reconciled.lineItems })
 
@@ -1185,8 +1139,7 @@ export async function loadAffiliateCommissionLineItems(params: {
     cacheKey,
     lineItems: reconciled.lineItems,
     sourceUpdatedAt,
-    attributionUpdatedAt: reconciled.attributionUpdatedAt,
-  })
+    attributionUpdatedAt: reconciled.attributionUpdatedAt })
 
   return reconciled.lineItems
 }
@@ -1212,15 +1165,13 @@ function buildBrandSummaries(
       totalCommission: item.commission,
       ...(showUserScope
         ? { userId: item.userId, username: item.username }
-        : {}),
-    })
+        : {}) })
   }
 
   return Array.from(summaryMap.values())
     .map((summary) => ({
       ...summary,
-      totalCommission: roundTo2(summary.totalCommission),
-    }))
+      totalCommission: roundTo2(summary.totalCommission) }))
     .sort((left, right) => {
       if (showUserScope) {
         const usernameCompare = String(left.username || '').localeCompare(String(right.username || ''))
@@ -1246,15 +1197,13 @@ function buildDateSummaries(items: AffiliateCommissionLineItem[]): AffiliateComm
 
     summaryMap.set(reportDate, {
       reportDate,
-      totalCommission: item.commission,
-    })
+      totalCommission: item.commission })
   }
 
   return Array.from(summaryMap.values())
     .map((summary) => ({
       ...summary,
-      totalCommission: roundTo2(summary.totalCommission),
-    }))
+      totalCommission: roundTo2(summary.totalCommission) }))
     .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
@@ -1271,8 +1220,7 @@ function brandFactAggregatesToPseudoLineItems(params: {
     platform: row.platform === 'partnerboost' ? 'partnerboost' : 'yeahpromos',
     brandKey: scopeBrandKey(row.user_id, row.brand_key, params.showUserScope),
     brandName: row.brand_name,
-    commission: roundTo4(Number(row.total_commission) || 0),
-  }))
+    commission: roundTo4(Number(row.total_commission) || 0) }))
 }
 
 function buildBrandSummariesFromFactAggregates(params: {
@@ -1293,8 +1241,7 @@ function buildDateSummariesFromFactAggregates(params: {
   return params.aggregates
     .map((row) => ({
       reportDate: normalizeReportDate(row.report_date),
-      totalCommission: roundTo2(Number(row.total_commission) || 0),
-    }))
+      totalCommission: roundTo2(Number(row.total_commission) || 0) }))
     .sort((left, right) => compareReportDatesDesc(left.reportDate, right.reportDate))
 }
 
@@ -1319,8 +1266,7 @@ async function tryBuildAffiliateCommissionReportFromFactsAggregates(params: {
       startDate: params.startDate,
       endDate: params.endDate,
       platform: params.platform,
-      minRebuiltAt: AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT,
-    })
+      minRebuiltAt: AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT })
   } catch {
     return null
   }
@@ -1333,8 +1279,7 @@ async function tryBuildAffiliateCommissionReportFromFactsAggregates(params: {
     userIds: params.userIds,
     startDate: params.startDate,
     endDate: params.endDate,
-    platform: params.platform,
-  }
+    platform: params.platform }
 
   const [factsTotal, attributionTotals, brandAggregates, dateAggregates] = await Promise.all([
     sumAffiliateCommissionFromFacts(aggregateCtx),
@@ -1351,8 +1296,7 @@ async function tryBuildAffiliateCommissionReportFromFactsAggregates(params: {
     aggregates: brandAggregates,
     userLabels: params.userLabels,
     startDate: params.startDate,
-    showUserScope: params.showUserScope,
-  })
+    showUserScope: params.showUserScope })
   const dateSummaries = buildDateSummariesFromFactAggregates({ aggregates: dateAggregates })
 
   return {
@@ -1365,8 +1309,7 @@ async function tryBuildAffiliateCommissionReportFromFactsAggregates(params: {
     showUserScope: params.showUserScope,
     dateBounds: params.dateBounds,
     brandSummaries,
-    dateSummaries,
-  }
+    dateSummaries }
 }
 
 export async function getAffiliateCommissionReport(params: {
@@ -1385,13 +1328,11 @@ export async function getAffiliateCommissionReport(params: {
 
   const dateBounds = await getAffiliateCommissionDateBoundsCached({
     userIds: params.userIds,
-    platform,
-  })
+    platform })
   const clampedRange = clampDateRangeToBounds({
     startDate: params.startDate,
     endDate: params.endDate,
-    bounds: dateBounds,
-  })
+    bounds: dateBounds })
 
   const aggregatedReport = await tryBuildAffiliateCommissionReportFromFactsAggregates({
     userIds: params.userIds,
@@ -1401,8 +1342,7 @@ export async function getAffiliateCommissionReport(params: {
     platform,
     viewMode,
     showUserScope,
-    dateBounds,
-  })
+    dateBounds })
   if (aggregatedReport) {
     return aggregatedReport
   }
@@ -1413,8 +1353,7 @@ export async function getAffiliateCommissionReport(params: {
     startDate: clampedRange.startDate,
     endDate: clampedRange.endDate,
     platform,
-    showUserScope,
-  })
+    showUserScope })
 
   const totalCommission = roundTo2(
     lineItems.reduce((sum, item) => sum + item.commission, 0)
@@ -1430,8 +1369,7 @@ export async function getAffiliateCommissionReport(params: {
     showUserScope,
     dateBounds,
     brandSummaries: buildBrandSummaries(lineItems, showUserScope),
-    dateSummaries: buildDateSummaries(lineItems),
-  }
+    dateSummaries: buildDateSummaries(lineItems) }
 }
 
 export async function getAffiliateCommissionBrandDetail(params: {
@@ -1451,8 +1389,7 @@ export async function getAffiliateCommissionBrandDetail(params: {
     startDate: params.startDate,
     endDate: params.endDate,
     platform,
-    showUserScope,
-  })
+    showUserScope })
 
   const detailMap = new Map<string, number>()
   for (const item of lineItems) {
@@ -1481,8 +1418,7 @@ export async function getAffiliateCommissionDateDetail(params: {
     startDate: params.reportDate,
     endDate: params.reportDate,
     platform,
-    showUserScope,
-  })
+    showUserScope })
 
   const detailMap = new Map<string, AffiliateCommissionDateDetailRow>()
   for (const item of lineItems) {
@@ -1499,15 +1435,13 @@ export async function getAffiliateCommissionDateDetail(params: {
       commission: item.commission,
       ...(showUserScope
         ? { userId: item.userId, username: item.username }
-        : {}),
-    })
+        : {}) })
   }
 
   return Array.from(detailMap.values())
     .map((row) => ({
       ...row,
-      commission: roundTo2(row.commission),
-    }))
+      commission: roundTo2(row.commission) }))
     .sort((left, right) => {
       if (showUserScope) {
         const usernameCompare = String(left.username || '').localeCompare(String(right.username || ''))

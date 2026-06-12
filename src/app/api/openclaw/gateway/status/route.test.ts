@@ -3,28 +3,22 @@ import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/openclaw/gateway/status/route'
 
 const authFns = vi.hoisted(() => ({
-  verifyOpenclawSessionAuth: vi.fn(),
-}))
+  verifyOpenclawSessionAuth: vi.fn() }))
 
 const configFns = vi.hoisted(() => ({
-  syncOpenclawConfig: vi.fn(),
-}))
+  syncOpenclawConfig: vi.fn() }))
 
 const gatewayFns = vi.hoisted(() => ({
-  getOpenclawGatewaySnapshot: vi.fn(),
-}))
+  getOpenclawGatewaySnapshot: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth,
-}))
+  verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/config', () => ({
-  syncOpenclawConfig: configFns.syncOpenclawConfig,
-}))
+  syncOpenclawConfig: configFns.syncOpenclawConfig }))
 
 vi.mock('@/lib/openclaw/gateway-ws', () => ({
-  getOpenclawGatewaySnapshot: gatewayFns.getOpenclawGatewaySnapshot,
-}))
+  getOpenclawGatewaySnapshot: gatewayFns.getOpenclawGatewaySnapshot }))
 
 describe('GET /api/openclaw/gateway/status', () => {
   beforeEach(() => {
@@ -32,8 +26,7 @@ describe('GET /api/openclaw/gateway/status', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: true,
       status: 200,
-      user: { userId: 1, role: 'admin' },
-    })
+      user: { userId: 1, role: 'admin' } })
     configFns.syncOpenclawConfig.mockResolvedValue(undefined)
   })
 
@@ -41,8 +34,7 @@ describe('GET /api/openclaw/gateway/status', () => {
     authFns.verifyOpenclawSessionAuth.mockResolvedValue({
       authenticated: false,
       status: 401,
-      error: 'Unauthorized',
-    })
+      error: 'Unauthorized' })
 
     const res = await GET(new NextRequest('http://localhost/api/openclaw/gateway/status'))
     const payload = await res.json()
@@ -60,12 +52,9 @@ describe('GET /api/openclaw/gateway/status', () => {
         channelOrder: ['feishu', 'whatsapp'],
         channels: {
           feishu: { configured: true, running: true },
-          whatsapp: { configured: true, linked: false },
-        },
-      },
+          whatsapp: { configured: true, linked: false } } },
       skills: null,
-      errors: [],
-    })
+      errors: [] })
 
     const res = await GET(new NextRequest('http://localhost/api/openclaw/gateway/status'))
     const payload = await res.json()
@@ -82,12 +71,9 @@ describe('GET /api/openclaw/gateway/status', () => {
       health: {
         ok: true,
         channels: {
-          feishu: { configured: true, linked: false },
-        },
-      },
+          feishu: { configured: true, linked: false } } },
       skills: null,
-      errors: [],
-    })
+      errors: [] })
 
     const res = await GET(new NextRequest('http://localhost/api/openclaw/gateway/status'))
     const payload = await res.json()
@@ -104,12 +90,9 @@ describe('GET /api/openclaw/gateway/status', () => {
         health: {
           ok: true,
           channels: {
-            feishu: { configured: false },
-          },
-        },
+            feishu: { configured: false } } },
         skills: null,
-        errors: [],
-      })
+        errors: [] })
 
     const res = await GET(new NextRequest('http://localhost/api/openclaw/gateway/status?force=1'))
     const payload = await res.json()
@@ -120,7 +103,6 @@ describe('GET /api/openclaw/gateway/status', () => {
     expect(payload.health.channels.feishu.linked).toBe(false)
     expect(configFns.syncOpenclawConfig).toHaveBeenCalledWith({
       reason: 'gateway-status-repair',
-      actorUserId: 1,
-    })
+      actorUserId: 1 })
   })
 })

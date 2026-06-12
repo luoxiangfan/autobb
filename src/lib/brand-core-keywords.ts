@@ -188,7 +188,7 @@ export async function updateBrandCoreKeywordSearchVolumes(
   const normalizedLanguage = normalizeLanguageCode(language || 'en')
 
   const db = await getDatabase()
-  const updatedAt = nowFunc(db.type)
+  const updatedAt = nowFunc()
 
   await db.transaction(async () => {
     for (const update of updates) {

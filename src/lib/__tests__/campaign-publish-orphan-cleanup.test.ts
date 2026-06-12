@@ -55,7 +55,6 @@ describe('campaign-publish-orphan-cleanup', () => {
 
   it('findHistoricalOrphanCampaignsForOffer returns orphans across all ads accounts', async () => {
     vi.mocked(getDatabase).mockResolvedValue({
-      type: 'sqlite',
       query: vi.fn(async () => [
         {
           id: 1,
@@ -103,7 +102,6 @@ describe('campaign-publish-orphan-cleanup', () => {
     })
 
     vi.mocked(getDatabase).mockResolvedValue({
-      type: 'sqlite',
       queryOne: query,
       query,
     } as any)
@@ -149,7 +147,6 @@ describe('campaign-publish-orphan-cleanup', () => {
 
   it('skips orphans with null google_ads_account_id instead of using current account', async () => {
     vi.mocked(getDatabase).mockResolvedValue({
-      type: 'sqlite',
       query: vi.fn(async () => [
         {
           id: 1,

@@ -6,7 +6,7 @@
  * parser) interpret those values as *local time*, which causes a fixed offset shift
  * when `process.env.TZ` is not UTC.
  *
- * These helpers normalize common SQLite/PostgreSQL textual formats and interpret
+ * These helpers normalize common PostgreSQL textual formats and interpret
  * "no time zone" timestamps as UTC.
  */
 
@@ -44,7 +44,7 @@ export function parseDbDateTimeAsUtc(value: string): Date {
   }
 
   // Normalize fractional seconds to milliseconds (Date only keeps ms).
-  base = base.replace(/\.(\d{1,})$/, (_, digits: string) => {
+  base = base.replace(/\.(\d{1 })$/, (_, digits: string) => {
     const ms = digits.slice(0, 3).padEnd(3, '0')
     return `.${ms}`
   })

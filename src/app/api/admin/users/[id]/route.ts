@@ -87,14 +87,13 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
       changedFields.push('package_expires_at')
     }
     if (isActive !== undefined) {
-      // 🔧 修复(2025-12-30): PostgreSQL返回boolean类型，SQLite返回number类型
+      // 🔧 修复(2025-12-30): PostgreSQL 返回 boolean
       // 使用类型断言避免TypeScript错误，但保持原有的运行时判断逻辑
       const currentIsActive =
         (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
       const isActiveBoolean = Boolean(isActive)
       if (isActiveBoolean !== currentIsActive) {
-        // PostgreSQL接受boolean值，SQLite需要0/1
-        const valueToSet = db.type === 'postgres' ? isActiveBoolean : isActiveBoolean ? 1 : 0
+        const valueToSet = isActiveBoolean
         fieldUpdates.push({ sql: 'is_active = ?', value: valueToSet })
         changedFields.push('is_active')
       }
@@ -105,8 +104,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         (beforeUser.openclaw_enabled as any) === true || (beforeUser.openclaw_enabled as any) === 1
       const openclawEnabledBoolean = Boolean(openclawEnabled)
       if (openclawEnabledBoolean !== currentOpenclawEnabled) {
-        const valueToSet =
-          db.type === 'postgres' ? openclawEnabledBoolean : openclawEnabledBoolean ? 1 : 0
+        const valueToSet = openclawEnabledBoolean
         fieldUpdates.push({ sql: 'openclaw_enabled = ?', value: valueToSet })
         changedFields.push('openclaw_enabled')
       }
@@ -118,12 +116,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         (beforeUser.product_management_enabled as any) === 1
       const productManagementEnabledBoolean = Boolean(productManagementEnabled)
       if (productManagementEnabledBoolean !== currentProductManagementEnabled) {
-        const valueToSet =
-          db.type === 'postgres'
-            ? productManagementEnabledBoolean
-            : productManagementEnabledBoolean
-              ? 1
-              : 0
+        const valueToSet = productManagementEnabledBoolean
         fieldUpdates.push({ sql: 'product_management_enabled = ?', value: valueToSet })
         changedFields.push('product_management_enabled')
       }
@@ -135,12 +128,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         (beforeUser.strategy_center_enabled as any) === 1
       const strategyCenterEnabledBoolean = Boolean(strategyCenterEnabled)
       if (strategyCenterEnabledBoolean !== currentStrategyCenterEnabled) {
-        const valueToSet =
-          db.type === 'postgres'
-            ? strategyCenterEnabledBoolean
-            : strategyCenterEnabledBoolean
-              ? 1
-              : 0
+        const valueToSet = strategyCenterEnabledBoolean
         fieldUpdates.push({ sql: 'strategy_center_enabled = ?', value: valueToSet })
         changedFields.push('strategy_center_enabled')
       }
@@ -204,7 +192,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     if (changedFields.includes('is_active')) {
       clearUserExecutionEligibilityCache(userId)
 
-      // 🔧 修复(2025-12-30): PostgreSQL返回boolean类型，SQLite返回number类型
+      // 🔧 修复(2025-12-30): PostgreSQL 返回 boolean
       const wasActive =
         (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
       const isNowActive =
@@ -274,7 +262,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     }
 
     // Prevent deleting active users
-    // 🔧 修复(2025-12-30): PostgreSQL返回boolean类型，SQLite返回number类型
+    // 🔧 修复(2025-12-30): PostgreSQL 返回 boolean
     if ((user.is_active as any) === true || (user.is_active as any) === 1) {
       return NextResponse.json({ error: '无法删除启用状态的用户，请先禁用该用户' }, { status: 400 })
     }

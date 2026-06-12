@@ -3,20 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   findUserByIdMock,
   generateTokenMock,
-  fetchMock,
-} = vi.hoisted(() => ({
+  fetchMock } = vi.hoisted(() => ({
   findUserByIdMock: vi.fn(),
   generateTokenMock: vi.fn(),
-  fetchMock: vi.fn(),
-}))
+  fetchMock: vi.fn() }))
 
 vi.mock('@/lib/auth', () => ({
-  findUserById: findUserByIdMock,
-}))
+  findUserById: findUserByIdMock }))
 
 vi.mock('@/lib/jwt', () => ({
-  generateToken: generateTokenMock,
-}))
+  generateToken: generateTokenMock }))
 
 import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'
 
@@ -31,8 +27,7 @@ describe('openclaw autoads client base url', () => {
       id: 1001,
       email: 'u@example.com',
       role: 'user',
-      package_type: 'trial',
-    })
+      package_type: 'trial' })
 
     generateTokenMock.mockReset()
     generateTokenMock.mockReturnValue('jwt-test-token')
@@ -75,8 +70,7 @@ describe('openclaw autoads client base url', () => {
     await fetchAutoadsAsUser({
       userId: 1001,
       path: '/api/sync/trigger',
-      method: 'POST',
-    })
+      method: 'POST' })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('http://127.0.0.1:4000/api/sync/trigger')
@@ -89,8 +83,7 @@ describe('openclaw autoads client base url', () => {
     await fetchAutoadsAsUser({
       userId: 1001,
       path: '/api/settings',
-      method: 'GET',
-    })
+      method: 'GET' })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('http://127.0.0.1:3123/api/settings')
@@ -103,8 +96,7 @@ describe('openclaw autoads client base url', () => {
       fetchAutoadsAsUser({
         userId: 1001,
         path: '/api/settings',
-        method: 'GET',
-      })
+        method: 'GET' })
     ).rejects.toThrow('Invalid INTERNAL_APP_URL')
 
     expect(fetchMock).not.toHaveBeenCalled()

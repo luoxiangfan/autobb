@@ -15,7 +15,7 @@
 
 ## 代码修改后的质量门禁（必须）
 
-凡修改了会影响构建/运行的文件（如 `src/`、`scripts/`、`migrations/`、`pg-migrations/`、根目录 TS/JS 配置等），**在向用户汇报「修改完成」之前**，必须在仓库根目录依次执行并通过：
+凡修改了会影响构建/运行的文件（如 `src/`、`scripts/`、`migrations/`、根目录 TS/JS 配置等），**在向用户汇报「修改完成」之前**，必须在仓库根目录依次执行并通过：
 
 ```bash
 npm run format:changed
@@ -34,20 +34,20 @@ npm run type-check
 
 ## 数据库 / SQL 修改后的检查（必须）
 
-本仓库同时支持 **SQLite**（本地）与 **PostgreSQL**（生产）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format:changed / lint:changed / type-check 外，还须同时满足 **双栈兼容性** 与 **SQL 语法/语义正确性**（见下两节），并完成必跑检查。
+本仓库使用 **PostgreSQL**（`DATABASE_URL`）。凡改动涉及数据库操作（SQL），在向用户汇报「修改完成」之前，除上文 format:changed / lint:changed / type-check 外，还须满足 **SQL 语法/语义正确性**（见下节），并完成必跑检查。
 
 ### 适用场景（满足任一则必须执行）
 
-- 新增或修改 `migrations/`、`pg-migrations/` 中的 SQL
+- 新增或修改 `migrations/` 中的 SQL
 - 在 `src/` 中编写/修改原始 SQL、`db.exec` / `db.query` 调用
-- 修改 `src/lib/db.ts`、`src/lib/db-helpers.ts` 或出现 `db.type === 'postgres' | 'sqlite'` 分支
+- 修改 `src/lib/db.ts`、`src/lib/db-helpers.ts`
 - 变更表结构、索引、约束、种子数据等与 schema 相关的内容
 
-### 设计与成对迁移
+### 设计与迁移
 
-1. **Schema 变更须双栈成对**：同一编号的增量迁移须同时存在于 `migrations/{N}_*.sql` 与 `pg-migrations/{N}_*.sql`（或 consolidated 初始化脚本的等价更新）。命名与语义须对齐，见 `migrations/README.md`。
-2. **优先复用** `src/lib/db-helpers.ts`（如 `nowFunc`、`getInsertedId`、日期/布尔兼容表达式），避免散落方言专用 SQL。
-3. **禁止** 仅在一侧数据库可用的语法（如 SQLite 专有函数未在 PG 侧等价实现，或反之）而不加 `db.type` 分支或 helper。
+1. **Schema 变更**：在 `migrations/{N}_*.pg.sql` 添加增量迁移，并同步更新 `migrations/000_init_schema_consolidated.pg.sql`（全新库）。见 `migrations/README.md`。
+2. **优先复用** `src/lib/db-helpers.ts`（如 `nowFunc`、`getInsertedId`、`boolParam`），避免散落方言专用 SQL。
+3. **占位符**：经 `DatabaseAdapter` 的 SQL 统一用 `?`；勿在应用层混用未转换的 `$1` 风格（适配层会自动转换）。
 
 ### SQL 语法与语义正确性（必须）
 
@@ -59,35 +59,32 @@ npm run type-check
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **表与列**        | 表名、列名与当前 schema 一致；`JOIN`/`WHERE`/`ORDER BY`/`GROUP BY` 引用的列存在且归属正确                                                                            |
 | **表别名**        | 多表查询为每张表定义唯一别名；`SELECT`/`ON`/`WHERE` 中只用别名或全限定名，避免歧义列名                                                                               |
-| **占位符**        | 经 `DatabaseAdapter` 的 SQL 统一用 `?`，`params` 数组顺序与个数与占位符一致（PG 由 `db.ts` 转为 `$1,$2,...`）；勿在双栈共用路径手写 `$1`（除非明确仅 PG 分支）       |
-| **数据类型**      | 布尔：SQLite 用 `0/1` 或 helper，PG 用 `TRUE/FALSE`；时间用 `db-helpers` 的 `nowFunc` 等，勿混用 `datetime('now')` 与 `NOW()`；JSON/JSONB、数值、UUID 等与列类型匹配 |
-| **INSERT/UPDATE** | PG 需 `RETURNING id` 时与 `getInsertedId` 约定一致；`UPDATE`/`DELETE` 条件完整，避免误伤全表                                                                         |
+| **占位符**        | 经 `DatabaseAdapter` 的 SQL 统一用 `?`，`params` 顺序与个数一致（`db.ts` 转为 `$1,$2,...`）                                                                          |
+| **数据类型**      | 布尔用 `TRUE/FALSE` 或 `boolParam`；时间用 `nowFunc` / `NOW()`；JSON 列用 JSONB；使用 PostgreSQL 标准语法 |
+| **INSERT/UPDATE** | 需 `RETURNING id` 时与 `getInsertedId` 约定一致；`UPDATE`/`DELETE` 条件完整，避免误伤全表                                                                              |
 | **聚合与子查询**  | `GROUP BY` 含非聚合列；子查询别名、相关子查询关联字段正确                                                                                                            |
-| **迁移脚本**      | `migrations/*.sql` 用 SQLite 语法；`pg-migrations/*.sql` 用 PG 语法；两侧 DDL/DML 语义等价，勿复制粘贴后未改方言                                                     |
+| **迁移脚本**      | `migrations/*.pg.sql` 使用 PostgreSQL 语法                                                                                                                           |
 
 **验证方式：** `db:migrate` / `validate-schema` / 相关 `npm test` 报错（如 `no such column`、`syntax error`、`bind message supplies N parameters`）须视为语法或绑定问题并修复后重跑。
 
 ### 必跑检查（按顺序）
 
 ```bash
-# 1) 本地 SQLite：应用增量迁移（无库可先 npm run db:init）
+# 1) 应用增量迁移（需 DATABASE_URL）
 npm run db:migrate
 
-# 2) Schema 一致性（至少 SQLite；有 PG 连接时一并验证）
+# 2) Schema 一致性
 npm run validate-schema
-# 仅 SQLite：tsx scripts/validate-db-schema.ts --sqlite-only
-# 有 DATABASE_URL 指向 PostgreSQL 时：DATABASE_URL="postgresql://..." npm run validate-schema
 
-# 3) 相关单元测试（须覆盖或补充双栈行为）
+# 3) 相关单元测试
 npm test -- <受影响模块的 test 文件或路径>
 ```
 
 **执行要求：**
 
 1. 上述命令与测试均须通过；迁移/校验失败须修复后重跑。
-2. 修改查询/写入逻辑时，相关测试应体现 **sqlite 与 postgres** 差异（可参考同目录下 `type: 'sqlite' | 'postgres'` 的既有用例）；无则补充最小用例。
-3. 无法连接 PostgreSQL 时，仍须完成 SQLite 的 `db:migrate` + `validate-schema`，并在汇报中说明 PG 侧为「未实测 / 已按 pg-migrations 脚本人工对齐」。
-4. 向用户说明时，须写明：双栈检查项（迁移编号、validate-schema、所跑测试）、SQL 语法审阅结论（或「已通过 migrate/测试验证」）。
+2. 无法连接 PostgreSQL 时，须在汇报中说明「未实测 migrate/validate-schema」，并完成对 SQL 的人工审阅。
+3. 向用户说明时，须写明：迁移编号、validate-schema、所跑测试、SQL 审阅结论（或「已通过 migrate/测试验证」）。
 
 详细操作见 `migrations/DATABASE_INITIALIZATION_GUIDE.md` 中「Schema验证」与 `migrations/README.md`。
 
@@ -301,10 +298,10 @@ export PATH="$(dirname "$(nvm which 24)"):$PATH"
 node --version   # 应显示 v24.x
 ```
 
-### 首次数据库初始化（SQLite）
+### 首次数据库初始化（PostgreSQL）
 
-1. `cp .env.example .env.local`，生成并填写 `JWT_SECRET`、`ENCRYPTION_KEY`（`openssl rand -hex 32`）；本地开发可设 `DEFAULT_ADMIN_PASSWORD` 固定管理员密码。
-2. **已知问题**：`npm run db:init` 通过系统 `sqlite3` CLI 执行 consolidated schema 时会因 `unistr()`（Oracle 函数，标准 SQLite 不支持）失败。若 `data/autoads.db` 不存在或关键表缺失，需先将 `migrations/000_init_schema_consolidated.sqlite.sql` 中的 `unistr('...')` 转为普通 SQLite 字符串字面量再导入（处理 `''` 转义与 `\u000a` 换行），然后执行 `npm run db:migrate` 与 `DEFAULT_ADMIN_PASSWORD=... npm run admin:ensure`。
+1. `cp .env.example .env.local`，填写 `DATABASE_URL`、`JWT_SECRET`、`ENCRYPTION_KEY`（`openssl rand -hex 32`）；可设 `DEFAULT_ADMIN_PASSWORD` 固定管理员密码。
+2. 自行准备 PostgreSQL 实例（本仓库不内置 Docker PG），然后 `npm run db:migrate`、`npm run db:init`（或 `admin:ensure`）。
 3. 已有库时直接 `npm run db:migrate` + `npm run admin:ensure` 即可。
 
 加载 `.env.local` 跑脚本：`set -a && source .env.local && set +a`（部分行含 shell 不友好字符时会有无害 warning，不影响 tsx 通过 dotenv 读取）。
@@ -317,7 +314,7 @@ node --version   # 应显示 v24.x
 | Scheduler（可选） | `npm run build:scheduler && node dist/scheduler.js` | 无 HTTP |
 | Redis（可选） | `redis-server` 或 Docker | 6379 |
 
-最小本地开发只需 **Next.js + SQLite**。未配置 Redis 时队列回退内存，日志中 Redis 重连错误可忽略。默认管理员：`autoads`（密码见 `admin:ensure` 输出或 `DEFAULT_ADMIN_PASSWORD`）。
+最小本地开发需 **Next.js + PostgreSQL**（`DATABASE_URL`）。未配置 Redis 时队列回退内存，日志中 Redis 重连错误可忽略。默认管理员：`autoads`（密码见 `admin:ensure` 输出或 `DEFAULT_ADMIN_PASSWORD`）。
 
 ### 质量检查（仓库根目录）
 

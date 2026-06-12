@@ -3,13 +3,11 @@ import { z } from 'zod'
 import { zErr } from '@/lib/zod-errors'
 import {
   confirmOpenclawCommand,
-  confirmOpenclawCommandByOwner,
-} from '@/lib/openclaw/commands/command-service'
+  confirmOpenclawCommandByOwner } from '@/lib/openclaw/commands/command-service'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {
   resolveOpenclawParentRequestId,
-  resolveOpenclawParentRequestIdFromHeaders,
-} from '@/lib/openclaw/request-correlation'
+  resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/request-correlation'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,8 +27,7 @@ const confirmSchema = z.object({
   tenant_key: z.string().optional(),
   callbackEventId: z.string().optional(),
   callbackEventType: z.string().optional(),
-  callbackPayload: z.unknown().optional(),
-})
+  callbackPayload: z.unknown().optional() })
 
 function normalizeHeaderValue(value: string | null | undefined): string | undefined {
   const normalized = String(value || '').trim()
@@ -69,8 +66,7 @@ export async function POST(request: NextRequest) {
       channel: channelFromBody,
       senderId: senderIdFromBody,
       accountId: accountIdFromBody,
-      tenantKey: tenantKeyFromBody,
-    })
+      tenantKey: tenantKeyFromBody })
     if (!auth) {
       return NextResponse.json({ error: 'OpenClaw 功能未开启或未授权' }, { status: 403 })
     }
@@ -78,8 +74,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: '已禁用 gateway-binding 直连确认，请改用 Web 控制台会话或用户令牌执行确认。',
-          code: 'gateway_binding_confirm_disabled',
-        },
+          code: 'gateway_binding_confirm_disabled' },
         { status: 403 }
       )
     }
@@ -115,8 +110,7 @@ export async function POST(request: NextRequest) {
       userId: auth.userId,
       channel,
       senderId,
-      accountId,
-    })
+      accountId })
 
     const confirmToken = normalizeHeaderValue(parsed.data.confirmToken)
     const result = confirmToken
@@ -129,21 +123,18 @@ export async function POST(request: NextRequest) {
           callbackEventId: parsed.data.callbackEventId,
           callbackEventType: parsed.data.callbackEventType,
           callbackPayload: parsed.data.callbackPayload,
-          parentRequestId,
-        })
+          parentRequestId })
       : await (() => {
           if (auth.authType !== 'session') {
             return Promise.resolve({
               status: 'invalid_token' as const,
-              runId: parsed.data.runId,
-            })
+              runId: parsed.data.runId })
           }
           return confirmOpenclawCommandByOwner({
             runId: parsed.data.runId,
             userId: auth.userId,
             decision,
-            parentRequestId,
-          })
+            parentRequestId })
         })()
 
     if (result.status === 'not_found') {

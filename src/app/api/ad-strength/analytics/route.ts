@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         SUM(cost) as total_cost
       FROM ad_strength_history
       WHERE user_id = ?
-        AND evaluated_at >= datetime('now', '-' || ? || ' days')
+        AND evaluated_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 day')
         ${offerId ? 'AND offer_id = ?' : ''}
       GROUP BY rating
       ORDER BY
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
         AVG(cvr) as avg_cvr
       FROM ad_strength_history
       WHERE user_id = ?
-        AND evaluated_at >= datetime('now', '-' || ? || ' days')
+        AND evaluated_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 day')
         AND impressions > 100
       GROUP BY score_range
       ORDER BY score_range DESC
@@ -169,14 +169,14 @@ export async function GET(request: NextRequest) {
     const weeklyTrend = await db.query(
       `
       SELECT
-        strftime('%Y-%W', evaluated_at) as week,
+        to_char(evaluated_at, 'IYYY-IW') as week,
         COUNT(*) as count,
         AVG(overall_score) as avg_score,
         AVG(cvr) as avg_cvr,
         SUM(conversions) as total_conversions
       FROM ad_strength_history
       WHERE user_id = ?
-        AND evaluated_at >= datetime('now', '-' || ? || ' days')
+        AND evaluated_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 day')
       GROUP BY week
       ORDER BY week
     `,
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
       ]
     )
 
-    const historyId = getInsertedId(result, db.type)
+    const historyId = getInsertedId(result)
 
     return NextResponse.json({
       success: true,

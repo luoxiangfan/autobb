@@ -26,16 +26,14 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       userId: auth.userId,
       recommendationId,
       confirm: true,
-      parentRequestId: request.headers.get('x-request-id') || undefined,
-    })
+      parentRequestId: request.headers.get('x-request-id') || undefined })
 
     return NextResponse.json({
       success: true,
       queued: true,
       deduplicated: result.deduplicated,
       taskId: result.taskId,
-      recommendation: result.recommendation,
-    })
+      recommendation: result.recommendation })
   } catch (error: any) {
     const message = error?.message || '执行建议失败'
     const status = message.includes('不存在')

@@ -1,4 +1,5 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
+import { notDeletedClause } from '@/lib/db-helpers'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 
 type ClickFarmTaskCandidate = {
@@ -8,20 +9,13 @@ type ClickFarmTaskCandidate = {
   status: string
 }
 
-function taskNotDeletedClause(dbType: DatabaseAdapter['type'], alias: string): string {
-  if (dbType === 'postgres') {
-    return `(${alias}.is_deleted = false OR ${alias}.is_deleted IS NULL)`
-  }
-  return `(${alias}.is_deleted = 0 OR ${alias}.is_deleted IS NULL)`
-}
-
 export async function hasEnabledCampaignForOffer(params: {
   userId: number
   offerId: number
   db?: DatabaseAdapter
 }): Promise<boolean> {
   const db = params.db || (await getDatabase())
-  const campaignNotDeleted = taskNotDeletedClause(db.type, 'c')
+  const campaignNotDeleted = notDeletedClause('c')
 
   const row = await db.queryOne(
     `SELECT c.id
@@ -45,8 +39,8 @@ async function findClickFarmTasksWithoutEnabledCampaign(params: {
 }): Promise<ClickFarmTaskCandidate[]> {
   const db = params.db || (await getDatabase())
   const limit = Math.max(1, Math.min(Number(params.limit || 200), 1000))
-  const taskNotDeleted = taskNotDeletedClause(db.type, 't')
-  const campaignNotDeleted = taskNotDeletedClause(db.type, 'c')
+  const taskNotDeleted = notDeletedClause('t')
+  const campaignNotDeleted = notDeletedClause('c')
 
   const whereParts = [`t.status IN ('pending', 'running')`, taskNotDeleted]
   const queryParams: Array<string | number> = []
@@ -92,8 +86,8 @@ export async function pauseClickFarmTasksWithoutEnabledCampaign(params?: {
   const dryRun = params?.dryRun === true
   const message =
     params?.pauseMessage || '未检测到可用Campaign，系统自动暂停，请先发布广告后重启任务'
-  const taskNotDeleted = taskNotDeletedClause(db.type, 'click_farm_tasks')
-  const nowSql = db.type === 'postgres' ? 'CURRENT_TIMESTAMP' : "datetime('now')"
+  const taskNotDeleted = notDeletedClause('click_farm_tasks')
+  const nowSql = 'CURRENT_TIMESTAMP'
 
   const tasks = await findClickFarmTasksWithoutEnabledCampaign({
     userId: params?.userId,

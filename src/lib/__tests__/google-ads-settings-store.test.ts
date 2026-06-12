@@ -109,7 +109,6 @@ describe('overlayGoogleAdsSettingsFromCredentialStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       queryOne: dbFns.queryOne,
     })
     assignmentFns.resolveGoogleAdsCredentialOwnerId.mockResolvedValue({

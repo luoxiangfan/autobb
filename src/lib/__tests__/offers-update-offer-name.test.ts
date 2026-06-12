@@ -30,7 +30,6 @@ vi.mock('../offer-utils', () => ({
 describe('updateOffer: sync offer_name with brand/country', () => {
   beforeEach(() => {
     mockDb = {
-      type: 'sqlite',
       queryOne: vi.fn(),
       query: vi.fn().mockResolvedValue([]),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),

@@ -5,7 +5,6 @@ const mockQueryOne = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     query: mockQuery,
     queryOne: mockQueryOne,
   })),

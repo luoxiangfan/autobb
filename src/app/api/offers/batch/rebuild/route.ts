@@ -65,10 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const notDeletedCondition =
-      db.type === 'postgres'
-        ? "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
-        : 'is_deleted = 0'
+    const notDeletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
 
     const placeholders = offerIds.map(() => '?').join(',')
     const offers = await db.query<OfferRow>(

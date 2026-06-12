@@ -2,18 +2,12 @@
  * 定时清理：补点击任务已暂停、换链接任务已禁用时，移除队列中仍挂起的对应任务。
  * 兜底 pause/disable 路径未调用 queue-cleanup 或清理失败留下的脏数据。
  */
-import { getDatabase, type DatabaseAdapter } from '@/lib/db'
+import { getDatabase } from '@/lib/db'
+import { notDeletedClause } from '@/lib/db-helpers'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 
 const DEFAULT_MAX_IDS = 3000
-
-function taskNotDeletedClause(dbType: DatabaseAdapter['type'], alias: string): string {
-  if (dbType === 'postgres') {
-    return `(${alias}.is_deleted = false OR ${alias}.is_deleted IS NULL)`
-  }
-  return `(${alias}.is_deleted = 0 OR ${alias}.is_deleted IS NULL)`
-}
 
 export async function sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap(options?: {
   maxIdsPerSource?: number
@@ -30,7 +24,7 @@ export async function sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap(optio
     1,
     Math.min(Number(options?.maxIdsPerSource ?? DEFAULT_MAX_IDS) || DEFAULT_MAX_IDS, 10_000)
   )
-  const taskNotDeleted = taskNotDeletedClause(db.type, 't')
+  const taskNotDeleted = notDeletedClause('t')
 
   const pausedRows = await db.query<{ id: string | number }>(
     `SELECT t.id

@@ -3,8 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { isOpenclawEnabledForUser, resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {
   resolveAffiliateCommissionPlatformFilter,
-  type AffiliateCommissionReportViewMode,
-} from '@/lib/openclaw/affiliate-commission-platform'
+  type AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission-platform'
 import {
   buildUserLabelMap,
   getAffiliateCommissionBrandDetail,
@@ -12,8 +11,7 @@ import {
   getAffiliateCommissionDateBoundsCached,
   getAffiliateCommissionReport,
   parseRequestedUserIds,
-  resolveTargetUserIds,
-} from '@/lib/openclaw/affiliate-commission-raw-report'
+  resolveTargetUserIds } from '@/lib/openclaw/affiliate-commission-raw-report'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,8 +57,7 @@ async function resolveReportAccess(request: NextRequest): Promise<{
     }
     return {
       currentUserId: sessionAuth.user.userId,
-      isAdmin,
-    }
+      isAdmin }
   }
 
   const openclawAuth = await resolveOpenclawRequestUser(request)
@@ -68,8 +65,7 @@ async function resolveReportAccess(request: NextRequest): Promise<{
 
   return {
     currentUserId: openclawAuth.userId,
-    isAdmin: false,
-  }
+    isAdmin: false }
 }
 
 export async function GET(request: NextRequest) {
@@ -103,22 +99,19 @@ export async function GET(request: NextRequest) {
     const targetUserIds = await resolveTargetUserIds({
       isAdmin: access.isAdmin,
       currentUserId: access.currentUserId,
-      requestedUserIds,
-    })
+      requestedUserIds })
     const userLabels = await buildUserLabelMap(targetUserIds)
     const showUserScope = access.isAdmin
 
     if (searchParams.get('meta') === 'bounds') {
       const dateBounds = await getAffiliateCommissionDateBoundsCached({
         userIds: targetUserIds,
-        platform,
-      })
+        platform })
 
       return NextResponse.json({
         success: true,
         isAdmin: access.isAdmin,
-        dateBounds,
-      })
+        dateBounds })
     }
 
     if (detailType === 'brand') {
@@ -134,8 +127,7 @@ export async function GET(request: NextRequest) {
         endDate,
         platform,
         brandKey,
-        showUserScope,
-      })
+        showUserScope })
 
       return NextResponse.json({
         success: true,
@@ -145,8 +137,7 @@ export async function GET(request: NextRequest) {
         endDate,
         platform,
         showUserScope,
-        items,
-      })
+        items })
     }
 
     if (detailType === 'date') {
@@ -163,8 +154,7 @@ export async function GET(request: NextRequest) {
         userLabels,
         reportDate,
         platform,
-        showUserScope,
-      })
+        showUserScope })
 
       return NextResponse.json({
         success: true,
@@ -172,8 +162,7 @@ export async function GET(request: NextRequest) {
         reportDate,
         platform,
         showUserScope,
-        items,
-      })
+        items })
     }
 
     const report = await getAffiliateCommissionReport({
@@ -183,14 +172,12 @@ export async function GET(request: NextRequest) {
       endDate,
       platform,
       viewMode,
-      showUserScope,
-    })
+      showUserScope })
 
     return NextResponse.json({
       success: true,
       isAdmin: access.isAdmin,
-      report,
-    })
+      report })
   } catch (error: any) {
     return NextResponse.json(
       { error: error?.message || '查询联盟佣金原始数据失败' },

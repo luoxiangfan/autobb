@@ -308,7 +308,7 @@ export async function triggerTaskScheduling(
     )
     // 同时更新 completed_at 字段
     const db = getDatabase()
-    const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowSql = 'NOW()'
     await db.exec(
       `
       UPDATE click_farm_tasks
@@ -457,7 +457,7 @@ export async function triggerTaskScheduling(
 
   // 第一次执行时设置 started_at
   if (!task.started_at) {
-    const nowSql = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+    const nowSql = 'NOW()'
     await db.exec(
       `
       UPDATE click_farm_tasks

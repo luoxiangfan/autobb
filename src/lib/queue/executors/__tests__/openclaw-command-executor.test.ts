@@ -45,7 +45,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('blocks click-farm task when offer has no available campaign or recent successful publish', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -100,7 +99,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('allows click-farm task when same offer has recent successful publish record', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM openclaw_command_runs')) {
@@ -176,7 +174,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('does not auto-correct offer.extract commission from historical amount-derived pattern', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM offers')) {
@@ -249,7 +246,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('normalizes invalid three-letter offer.extract country codes before forwarding', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -308,7 +304,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('does not harmonize offer.extract commission fields before forwarding', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -373,7 +368,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('drops invalid three-letter offer.update country codes before forwarding', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -426,7 +420,6 @@ describe('openclaw command executor click-farm guard', () => {
       'https://yeahpromos.com/index/index/openurlproduct?track=fc03db0d2f9009e7&pid=1044718'
     const parentRequestId = 'om_x100b56df905d20a4b3dda1c847084b4'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -493,7 +486,6 @@ describe('openclaw command executor click-farm guard', () => {
       'https://yeahpromos.com/index/index/openurlproduct?track=5c127e3c2c6ab88e&pid=408015'
     const parentRequestId = 'om_x100b56d9b760c8a8b2675b2dc187931'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -570,7 +562,6 @@ describe('openclaw command executor click-farm guard', () => {
       'https://yeahpromos.com/index/index/openurlproduct?track=ebb4d552075a7ef5&pid=732114'
     const parentRequestId = 'om_test_source_override_guard'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -663,7 +654,6 @@ describe('openclaw command executor click-farm guard', () => {
       'https://yeahpromos.com/index/index/openurlproduct?track=3ee0ff3ca7d17921&pid=485084'
     const parentRequestId = 'om_x100b55228ca8f0acc3274c1b0e0fac9'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -746,7 +736,6 @@ describe('openclaw command executor click-farm guard', () => {
       'https://yeahpromos.com/index/index/openurlproduct?track=5c127e3c2c6ab88e&pid=408015'
     const parentRequestId = 'om_x100b56d9b760c8a8b2675b2dc187931'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -825,7 +814,6 @@ describe('openclaw command executor click-farm guard', () => {
     const affiliateLink =
       'https://yeahpromos.com/index/index/openurlproduct?track=d75ea6f3305ebf16&pid=727678'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -903,7 +891,6 @@ describe('openclaw command executor click-farm guard', () => {
     const affiliateLink =
       'https://yeahpromos.com/index/index/openurlproduct?track=d7d9484735a4d807&pid=763996'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -981,7 +968,6 @@ describe('openclaw command executor click-farm guard', () => {
     const affiliateLink =
       'https://yeahpromos.com/index/index/openurlproduct?track=test-track&pid=740178'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -1051,7 +1037,6 @@ describe('openclaw command executor click-farm guard', () => {
     const affiliateLink =
       'https://yeahpromos.com/index/index/openurlproduct?track=3117168dd1120720&pid=435374'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -1126,7 +1111,6 @@ describe('openclaw command executor click-farm guard', () => {
   it('does not auto-correct quarter percent via sibling consensus amount-derived pattern', async () => {
     const parentRequestId = 'om_x100b569a1d988ca8c3454b17cf79415'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -1215,7 +1199,6 @@ describe('openclaw command executor click-farm guard', () => {
     const affiliateLink =
       'https://yeahpromos.com/index/index/openurlproduct?track=test-track&pid=1005965'
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn(async (sql: string) => {
         if (sql.includes('FROM affiliate_products')) {
@@ -1283,7 +1266,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('hydrates campaign.publish payload with fallback keywords before forwarding', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -1366,7 +1348,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('applies web defaults for campaign.publish when params are omitted', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -1461,7 +1442,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('rejects campaign.publish when explicit finalUrls violate web ownership', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -1551,7 +1531,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('rejects update-cpc when path id is local campaign id instead of googleCampaignId', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -1618,7 +1597,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('rejects update-budget when path id is local campaign id instead of googleCampaignId', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {
@@ -1686,7 +1664,6 @@ describe('openclaw command executor click-farm guard', () => {
 
   it('rejects toggle-status when path id is googleCampaignId instead of local campaign id', async () => {
     const db = {
-      type: 'postgres',
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
       query: vi.fn().mockResolvedValue([]),
       queryOne: vi.fn(async (sql: string) => {

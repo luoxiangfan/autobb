@@ -33,14 +33,12 @@ const startSchema = z.object({
   appSecret: z.string().optional(),
   domain: z.string().optional(),
   target: z.string().optional(),
-  expectedSenderOpenId: z.string().optional(),
-})
+  expectedSenderOpenId: z.string().optional() })
 
 const checkSchema = z.object({
   action: z.literal('check'),
   verificationId: z.string().min(8, zErr.minChars(8)),
-  debug: z.boolean().optional(),
-})
+  debug: z.boolean().optional() })
 
 const requestSchema = z.union([startSchema, checkSchema])
 
@@ -223,8 +221,7 @@ async function resolveSenderOpenIdFromMessageDetail(params: {
     const detail = await feishuRequest<{ data?: { items?: any[]; sender?: any } }>({
       method: 'GET',
       url: `${params.apiBase}/im/v1/messages/${encodeURIComponent(messageId)}?user_id_type=open_id`,
-      token: params.token,
-    })
+      token: params.token })
 
     const item = Array.isArray(detail?.data?.items) ? detail?.data?.items?.[0] : null
     const sender = item || { sender: detail?.data?.sender }
@@ -259,8 +256,7 @@ async function resolveChatIdForStartMessage(params: {
   const detail = await feishuRequest<{ data?: { chat_id?: string } }>({
     method: 'GET',
     url: `${params.apiBase}/im/v1/messages/${encodeURIComponent(messageId)}`,
-    token: params.token,
-  })
+    token: params.token })
 
   const chatId = String(detail?.data?.chat_id || '').trim()
   if (!chatId) {
@@ -284,8 +280,7 @@ async function startVerification(params: {
   const tenantAccessToken = await getTenantAccessToken({
     appId: params.appId,
     appSecret: params.appSecret,
-    domain: params.domain,
-  })
+    domain: params.domain })
 
   const apiBase = resolveFeishuApiBase(params.domain)
   const code = generateVerificationCode()
@@ -301,16 +296,13 @@ async function startVerification(params: {
         `验证码：${code}`,
         '请在当前会话内回复该验证码（原样回复）。',
         '验证码 5 分钟内有效。',
-      ].join('\n'),
-    }),
-  }
+      ].join('\n') }) }
 
   const sendResult = await feishuRequest<{ data?: { message_id?: string } }>({
     method: 'POST',
     url: `${apiBase}/im/v1/messages?receive_id_type=${params.receiveIdType}`,
     token: tenantAccessToken,
-    body: sendPayload,
-  })
+    body: sendPayload })
 
   const testMessageId = String(sendResult?.data?.message_id || '').trim() || null
   const chatIdFromSend = String((sendResult as any)?.data?.chat_id || '').trim() || null
@@ -320,8 +312,7 @@ async function startVerification(params: {
     receiveIdType: params.receiveIdType,
     target: params.target,
     chatIdFromSend,
-    messageId: testMessageId,
-  })
+    messageId: testMessageId })
 
   const session: FeishuVerifySession = {
     id: randomUUID(),
@@ -336,8 +327,7 @@ async function startVerification(params: {
     code,
     createdAt: now,
     expiresAt,
-    testMessageId,
-  }
+    testMessageId }
 
   sessions.set(session.id, session)
 
@@ -347,8 +337,7 @@ async function startVerification(params: {
     expiresAt: session.expiresAt,
     receiveIdType: session.receiveIdType,
     target: session.target,
-    expectedSenderOpenId: session.expectedSenderOpenId,
-  }
+    expectedSenderOpenId: session.expectedSenderOpenId }
 }
 
 async function checkVerification(params: {
@@ -364,8 +353,7 @@ async function checkVerification(params: {
       found: false,
       verified: false,
       pending: false,
-      message: '验证会话不存在或已失效，请重新发起双向验证',
-    }
+      message: '验证会话不存在或已失效，请重新发起双向验证' }
   }
 
   const now = Date.now()
@@ -376,22 +364,19 @@ async function checkVerification(params: {
       verified: false,
       pending: false,
       expired: true,
-      message: '验证码已过期，请重新发起双向验证',
-    }
+      message: '验证码已过期，请重新发起双向验证' }
   }
 
   const tenantAccessToken = await getTenantAccessToken({
     appId: session.appId,
     appSecret: session.appSecret,
-    domain: session.domain,
-  })
+    domain: session.domain })
   const apiBase = resolveFeishuApiBase(session.domain)
 
   const messagesResult = await feishuRequest<{ data?: { items?: any[] } }>({
     method: 'GET',
     url: `${apiBase}/im/v1/messages?container_id_type=chat&container_id=${encodeURIComponent(session.chatId)}&sort_type=ByCreateTimeDesc&page_size=50&user_id_type=open_id`,
-    token: tenantAccessToken,
-  })
+    token: tenantAccessToken })
 
   const items = Array.isArray(messagesResult?.data?.items) ? messagesResult.data.items : []
   const expectedSender = normalizeFeishuId(session.expectedSenderOpenId)
@@ -404,8 +389,7 @@ async function checkVerification(params: {
     codeMatched: 0,
     senderMatchedDirect: 0,
     senderDetailLookups: 0,
-    senderMatchedViaDetail: 0,
-  }
+    senderMatchedViaDetail: 0 }
 
   const senderDetailCache = new Map<string, string | null>()
   let matched: any = null
@@ -442,8 +426,7 @@ async function checkVerification(params: {
         const resolved = await resolveSenderOpenIdFromMessageDetail({
           apiBase,
           token: tenantAccessToken,
-          messageId,
-        })
+          messageId })
         senderDetailCache.set(messageId, resolved)
       }
       senderOpenId = senderDetailCache.get(messageId) || null
@@ -471,9 +454,7 @@ async function checkVerification(params: {
       matchedMessage: {
         messageId: String(matched?.message_id || '').trim() || null,
         createdAt: parseCreateTimeMs(matched?.create_time),
-        senderOpenId: matchedSenderOpenId || extractSenderOpenId(matched),
-      },
-    }
+        senderOpenId: matchedSenderOpenId || extractSenderOpenId(matched) } }
   }
 
   return {
@@ -483,8 +464,7 @@ async function checkVerification(params: {
     message: '暂未检测到有效验证码回执，请在飞书当前会话中回复验证码后重试',
     expiresAt: session.expiresAt,
     expectedSenderOpenId: session.expectedSenderOpenId,
-    diagnostics: params.debug ? diagnostics : undefined,
-  }
+    diagnostics: params.debug ? diagnostics : undefined }
 }
 
 export async function POST(request: NextRequest) {
@@ -529,16 +509,14 @@ export async function POST(request: NextRequest) {
       receiveIdType: parsedTarget.receiveIdType,
       target: parsedTarget.target,
       expectedSenderOpenIdInput: parsed.data.expectedSenderOpenId,
-      allowFromRaw: settingsMap.feishu_allow_from,
-    })
+      allowFromRaw: settingsMap.feishu_allow_from })
 
     if (!expectedSenderOpenId) {
       return NextResponse.json(
         {
           error: parsedTarget.receiveIdType === 'open_id'
             ? '无法解析验证发送者 open_id'
-            : '当前 target 不是 open_id，请填写“验证发送者 open_id”（或确保 allowFrom 仅包含一个 open_id）',
-        },
+            : '当前 target 不是 open_id，请填写“验证发送者 open_id”（或确保 allowFrom 仅包含一个 open_id）' },
         { status: 400 }
       )
     }
@@ -551,28 +529,24 @@ export async function POST(request: NextRequest) {
         domain,
         target: parsedTarget.target,
         receiveIdType: parsedTarget.receiveIdType,
-        expectedSenderOpenId,
-      })
+        expectedSenderOpenId })
 
       return NextResponse.json({
         success: true,
         step: 'pending',
         message: '验证码已发送，请在飞书当前会话回复验证码后点击“校验回执”',
-        verification: result,
-      })
+        verification: result })
     } catch (error: any) {
       console.error('[openclaw][feishu-verify] start failed:', {
         userId: auth.user.userId,
         domain,
         target: parsedTarget.target,
         receiveIdType: parsedTarget.receiveIdType,
-        error: error?.message || String(error),
-      })
+        error: error?.message || String(error) })
       return NextResponse.json(
         {
           success: false,
-          error: error?.message || '发起双向验证失败',
-        },
+          error: error?.message || '发起双向验证失败' },
         { status: 502 }
       )
     }
@@ -582,8 +556,7 @@ export async function POST(request: NextRequest) {
     const check = await checkVerification({
       userId: auth.user.userId,
       verificationId: parsed.data.verificationId,
-      debug: Boolean(parsed.data.debug),
-    })
+      debug: Boolean(parsed.data.debug) })
 
     if (!check.found) {
       return NextResponse.json({ success: false, ...check }, { status: 404 })
@@ -598,13 +571,11 @@ export async function POST(request: NextRequest) {
     console.error('[openclaw][feishu-verify] check failed:', {
       userId: auth.user.userId,
       verificationId: parsed.data.verificationId,
-      error: error?.message || String(error),
-    })
+      error: error?.message || String(error) })
     return NextResponse.json(
       {
         success: false,
-        error: error?.message || '校验双向验证状态失败',
-      },
+        error: error?.message || '校验双向验证状态失败' },
       { status: 502 }
     )
   }

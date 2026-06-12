@@ -21,19 +21,14 @@ export interface UrlSwapUrgentAlert {
 const URL_SWAP_URGENT_ALERT_TYPE = 'url_swap_error'
 const URL_SWAP_URGENT_LOOKBACK_HOURS = 72
 
-function isDeletedFalseLiteral(dbType: 'postgres' | 'sqlite'): string {
-  return dbType === 'postgres' ? 'FALSE' : '0'
-}
-
 /** 排除已禁用的换链接任务（无论关联广告系列是否启用）。 */
-export function excludeDisabledUrlSwapTasksSql(_dbType: 'postgres' | 'sqlite'): string {
+export function excludeDisabledUrlSwapTasksSql(): string {
   return `
           AND t.status <> 'disabled'`
 }
 
 /** 仅关联 Offer 存在启用中广告系列时才纳入通知。 */
-export function requireEnabledCampaignForOfferSql(dbType: 'postgres' | 'sqlite'): string {
-  const deletedFalse = isDeletedFalseLiteral(dbType)
+export function requireEnabledCampaignForOfferSql(): string {
   return `
           AND EXISTS (
             SELECT 1
@@ -41,28 +36,22 @@ export function requireEnabledCampaignForOfferSql(dbType: 'postgres' | 'sqlite')
             WHERE c.user_id = t.user_id
               AND c.offer_id = t.offer_id
               AND c.status IN ('ENABLED', 'ACTIVE')
-              AND c.is_deleted = ${deletedFalse}
+              AND c.is_deleted = FALSE
           )`
 }
 
-function lookbackSql(dbType: 'postgres' | 'sqlite'): string {
-  return dbType === 'postgres'
-    ? `t.error_at >= CURRENT_TIMESTAMP - INTERVAL '${URL_SWAP_URGENT_LOOKBACK_HOURS} hours'`
-    : `t.error_at >= datetime('now', '-${URL_SWAP_URGENT_LOOKBACK_HOURS} hours')`
+function lookbackSql(): string {
+  return `t.error_at >= CURRENT_TIMESTAMP - INTERVAL '${URL_SWAP_URGENT_LOOKBACK_HOURS} hours'`
 }
 
-function isDeletedFilter(dbType: 'postgres' | 'sqlite'): string {
-  return dbType === 'postgres' ? 't.is_deleted = FALSE' : 't.is_deleted = 0'
-}
-
-function buildUrgentAlertsBaseWhere(dbType: 'postgres' | 'sqlite'): string {
+function buildUrgentAlertsBaseWhere(): string {
   return `
     WHERE t.user_id = ?
       AND t.status = 'error'
-      AND ${isDeletedFilter(dbType)}
-      AND ${lookbackSql(dbType)}
-      ${requireEnabledCampaignForOfferSql(dbType)}
-      ${excludeDisabledUrlSwapTasksSql(dbType)}
+      AND t.is_deleted = FALSE
+      AND ${lookbackSql()}
+      ${requireEnabledCampaignForOfferSql()}
+      ${excludeDisabledUrlSwapTasksSql()}
   `
 }
 
@@ -116,7 +105,7 @@ export async function queryUrlSwapUrgentAlerts(
       o.offer_name
     FROM url_swap_tasks t
     INNER JOIN offers o ON t.offer_id = o.id
-    ${buildUrgentAlertsBaseWhere(db.type)}
+    ${buildUrgentAlertsBaseWhere()}
     ORDER BY t.error_at DESC
     LIMIT ${safeLimit}
   `,
@@ -139,7 +128,7 @@ export async function countUrlSwapUrgentAlerts(userId: number): Promise<number> 
     `
     SELECT COUNT(*) as count
     FROM url_swap_tasks t
-    ${buildUrgentAlertsBaseWhere(db.type)}
+    ${buildUrgentAlertsBaseWhere()}
   `,
     [userId]
   )
@@ -155,7 +144,7 @@ async function offerHasEnabledCampaign(userId: number, offerId: number): Promise
     WHERE c.user_id = ?
       AND c.offer_id = ?
       AND c.status IN ('ENABLED', 'ACTIVE')
-      AND c.is_deleted = ${boolParam(false, db.type)}
+      AND c.is_deleted = ${boolParam(false)}
   `,
     [userId, offerId]
   )
@@ -234,9 +223,9 @@ export async function resolveUrlSwapUrgentRiskAlertsForOffer(
     `
     UPDATE risk_alerts
     SET status = 'resolved',
-        resolved_at = ${nowFunc(db.type)},
+        resolved_at = ${nowFunc()},
         resolution_note = ?,
-        updated_at = ${nowFunc(db.type)}
+        updated_at = ${nowFunc()}
     WHERE user_id = ?
       AND alert_type = ?
       AND resource_type = 'offer'

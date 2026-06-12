@@ -114,10 +114,7 @@ function checkDomainType(affiliateLink: string): string | null {
 }
 async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition =
-    db.type === 'postgres'
-      ? '(is_deleted = FALSE OR is_deleted IS NULL)'
-      : '(is_deleted = 0 OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
 
   return db.queryOne(
     `

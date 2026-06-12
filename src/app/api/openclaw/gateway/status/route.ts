@@ -32,8 +32,7 @@ function normalizeGatewayHealth(rawHealth: unknown): unknown {
     if (channelId === 'feishu' && typeof channel.configured === 'boolean') {
       nextChannels[channelId] = {
         ...channel,
-        linked: channel.configured,
-      }
+        linked: channel.configured }
       changed = true
       continue
     }
@@ -44,8 +43,7 @@ function normalizeGatewayHealth(rawHealth: unknown): unknown {
   if (!changed) return rawHealth
   return {
     ...health,
-    channels: nextChannels,
-  }
+    channels: nextChannels }
 }
 
 function normalizeGatewaySnapshot(snapshot: {
@@ -56,8 +54,7 @@ function normalizeGatewaySnapshot(snapshot: {
 }) {
   return {
     ...snapshot,
-    health: normalizeGatewayHealth(snapshot.health),
-  }
+    health: normalizeGatewayHealth(snapshot.health) }
 }
 
 export async function GET(request: NextRequest) {
@@ -80,16 +77,14 @@ export async function GET(request: NextRequest) {
       try {
         await syncOpenclawConfig({
           reason: 'gateway-status-repair',
-          actorUserId: auth.user.userId,
-        })
+          actorUserId: auth.user.userId })
 
         const repairedSnapshot = await getOpenclawGatewaySnapshot({ force: true })
         return NextResponse.json({
           success: true,
           recovered: true,
           warnings: [firstError],
-          ...normalizeGatewaySnapshot(repairedSnapshot),
-        })
+          ...normalizeGatewaySnapshot(repairedSnapshot) })
       } catch (retryError: any) {
         const retryMessage = retryError?.message || 'Gateway 修复重试失败'
         console.error('[openclaw] gateway status repair retry failed:', retryMessage)
@@ -97,8 +92,7 @@ export async function GET(request: NextRequest) {
           {
             success: false,
             error: retryMessage,
-            retryError: firstError,
-          },
+            retryError: firstError },
           { status: 502 }
         )
       }

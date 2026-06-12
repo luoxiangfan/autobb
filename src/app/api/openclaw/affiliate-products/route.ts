@@ -3,8 +3,7 @@ import { z } from 'zod'
 import { zErr } from '@/lib/zod-errors'
 import {
   listAffiliateProducts,
-  upsertAffiliateProducts,
-} from '@/lib/openclaw/affiliate-products'
+  upsertAffiliateProducts } from '@/lib/openclaw/affiliate-products'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'
@@ -26,12 +25,10 @@ const productSchema = z.object({
   image_url: z.string().max(1000, zErr.maxChars(1000)).optional().nullable(),
   product_url: z.string().max(2000, zErr.maxChars(2000)).optional().nullable(),
   tracking_url: z.string().max(2000, zErr.maxChars(2000)).optional().nullable(),
-  raw_data: z.any().optional().nullable(),
-})
+  raw_data: z.any().optional().nullable() })
 
 const syncSchema = z.object({
-  products: z.array(productSchema).min(1, zErr.minItems(1)).max(500, zErr.maxItems(500)),
-})
+  products: z.array(productSchema).min(1, zErr.minItems(1)).max(500, zErr.maxItems(500)) })
 
 export async function GET(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)

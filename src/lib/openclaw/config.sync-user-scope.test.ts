@@ -6,24 +6,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   getSettingsByCategoryMock,
   getOpenclawGatewayTokenMock,
-  collectUserFeishuAccountsMock,
-} = vi.hoisted(() => ({
+  collectUserFeishuAccountsMock } = vi.hoisted(() => ({
   getSettingsByCategoryMock: vi.fn(),
   getOpenclawGatewayTokenMock: vi.fn(),
-  collectUserFeishuAccountsMock: vi.fn(),
-}))
+  collectUserFeishuAccountsMock: vi.fn() }))
 
 vi.mock('@/lib/settings', () => ({
-  getSettingsByCategory: getSettingsByCategoryMock,
-}))
+  getSettingsByCategory: getSettingsByCategoryMock }))
 
 vi.mock('@/lib/openclaw/auth', () => ({
-  getOpenclawGatewayToken: getOpenclawGatewayTokenMock,
-}))
+  getOpenclawGatewayToken: getOpenclawGatewayTokenMock }))
 
 vi.mock('@/lib/openclaw/feishu-accounts', () => ({
-  collectUserFeishuAccounts: collectUserFeishuAccountsMock,
-}))
+  collectUserFeishuAccounts: collectUserFeishuAccountsMock }))
 
 import { syncOpenclawConfig } from '@/lib/openclaw/config'
 
@@ -83,22 +78,16 @@ describe('syncOpenclawConfig user scope', () => {
         openai: {
           api: 'openai-responses',
           apiKey: 'sk-user',
-          models: [{ id: 'gpt-5' }],
-        },
-      },
-      selectedModel: 'openai/gpt-5',
-    })
+          models: [{ id: 'gpt-5' }] } },
+      selectedModel: 'openai/gpt-5' })
 
     const globalAiModelsJson = JSON.stringify({
       providers: {
         anthropic: {
           api: 'anthropic',
           apiKey: 'sk-global',
-          models: [{ id: 'claude-opus-4-5' }],
-        },
-      },
-      selectedModel: 'anthropic/claude-opus-4-5',
-    })
+          models: [{ id: 'claude-opus-4-5' }] } },
+      selectedModel: 'anthropic/claude-opus-4-5' })
 
     getSettingsByCategoryMock
       .mockResolvedValueOnce([
@@ -124,20 +113,13 @@ describe('syncOpenclawConfig user scope', () => {
       agents: {
         defaults: {
           model: {
-            primary: 'openai/gpt-5.2',
-          },
-        },
-      },
+            primary: 'openai/gpt-5.2' } } },
       models: {
         providers: {
           openai: {
             api: 'openai-responses',
             apiKey: 'sk-existing',
-            models: [{ id: 'gpt-5.2' }],
-          },
-        },
-      },
-    }
+            models: [{ id: 'gpt-5.2' }] } } } }
     fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2), 'utf-8')
 
     getSettingsByCategoryMock.mockResolvedValueOnce([])
@@ -170,16 +152,12 @@ describe('syncOpenclawConfig user scope', () => {
           maxAttempts: 8,
           windowMs: 60000,
           lockoutMs: 300000,
-          exemptLoopback: false,
-        }),
-      },
+          exemptLoopback: false }) },
       {
         key: 'gateway_tools_json',
         value: JSON.stringify({
           allow: ['message'],
-          deny: ['sessions_spawn'],
-        }),
-      },
+          deny: ['sessions_spawn'] }) },
     ])
 
     await syncOpenclawConfig({ reason: 'test-gateway-extended-settings' })
@@ -189,12 +167,10 @@ describe('syncOpenclawConfig user scope', () => {
       maxAttempts: 8,
       windowMs: 60000,
       lockoutMs: 300000,
-      exemptLoopback: false,
-    })
+      exemptLoopback: false })
     expect(written.gateway.tools).toEqual({
       allow: ['message'],
-      deny: ['sessions_spawn'],
-    })
+      deny: ['sessions_spawn'] })
   })
 
   it('prefers global AI settings when startup sync has global rows', async () => {
@@ -202,20 +178,13 @@ describe('syncOpenclawConfig user scope', () => {
       agents: {
         defaults: {
           model: {
-            primary: 'openai/gpt-5.2',
-          },
-        },
-      },
+            primary: 'openai/gpt-5.2' } } },
       models: {
         providers: {
           openai: {
             api: 'openai-responses',
             apiKey: 'sk-existing',
-            models: [{ id: 'gpt-5.2' }],
-          },
-        },
-      },
-    }
+            models: [{ id: 'gpt-5.2' }] } } } }
     fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2), 'utf-8')
 
     const globalAiModelsJson = JSON.stringify({
@@ -223,11 +192,8 @@ describe('syncOpenclawConfig user scope', () => {
         anthropic: {
           api: 'anthropic',
           apiKey: 'sk-global',
-          models: [{ id: 'claude-opus-4-5' }],
-        },
-      },
-      selectedModel: 'anthropic/claude-opus-4-5',
-    })
+          models: [{ id: 'claude-opus-4-5' }] } },
+      selectedModel: 'anthropic/claude-opus-4-5' })
 
     getSettingsByCategoryMock.mockResolvedValueOnce([
       { key: 'ai_models_json', value: globalAiModelsJson },
@@ -247,20 +213,13 @@ describe('syncOpenclawConfig user scope', () => {
       agents: {
         defaults: {
           model: {
-            primary: 'openai/gpt-5.2',
-          },
-        },
-      },
+            primary: 'openai/gpt-5.2' } } },
       models: {
         providers: {
           openai: {
             api: 'openai-responses',
             apiKey: 'sk-existing',
-            models: [{ id: 'gpt-5.2' }],
-          },
-        },
-      },
-    }
+            models: [{ id: 'gpt-5.2' }] } } } }
     fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2), 'utf-8')
 
     const userAiModelsJson = JSON.stringify({
@@ -268,11 +227,8 @@ describe('syncOpenclawConfig user scope', () => {
         openai: {
           api: 'openai-responses',
           apiKey: 'sk-user',
-          models: [{ id: 'gpt-5' }],
-        },
-      },
-      selectedModel: 'openai/gpt-5',
-    })
+          models: [{ id: 'gpt-5' }] } },
+      selectedModel: 'openai/gpt-5' })
 
     getSettingsByCategoryMock
       .mockResolvedValueOnce([
@@ -297,10 +253,7 @@ describe('syncOpenclawConfig user scope', () => {
               appId: 'cli_actor',
               appSecret: 'sec_actor',
               cardVerificationToken: 'v1_legacy_main',
-              cardEncryptKey: 'enc_legacy_main',
-            },
-          }),
-        },
+              cardEncryptKey: 'enc_legacy_main' } }) },
         { key: 'feishu_app_id', value: 'cli_actor' },
         { key: 'feishu_app_secret', value: 'sec_actor' },
       ])
@@ -312,9 +265,7 @@ describe('syncOpenclawConfig user scope', () => {
         appSecret: 'sec_actor',
         dmPolicy: 'allowlist',
         cardVerificationToken: 'v1_legacy_user',
-        cardEncryptKey: 'enc_legacy_user',
-      },
-    })
+        cardEncryptKey: 'enc_legacy_user' } })
 
     await syncOpenclawConfig({ reason: 'test-user-feishu-compat', actorUserId: 42 })
 
@@ -356,12 +307,7 @@ describe('syncOpenclawConfig user scope', () => {
               appId: 'cli_existing',
               appSecret: 'sec_existing',
               allowFrom: ['ou_existing'],
-              cardCallbackPath: '/feishu/card-action',
-            },
-          },
-        },
-      },
-    }
+              cardCallbackPath: '/feishu/card-action' } } } } }
     fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2), 'utf-8')
 
     getSettingsByCategoryMock
@@ -391,12 +337,7 @@ describe('syncOpenclawConfig user scope', () => {
               appId: 'cli_user_existing',
               appSecret: 'sec_user_existing',
               allowFrom: ['ou_user_existing'],
-              cardCallbackPath: '/feishu/user-1/card-action',
-            },
-          },
-        },
-      },
-    }
+              cardCallbackPath: '/feishu/user-1/card-action' } } } } }
     fs.writeFileSync(configPath, JSON.stringify(existingConfig, null, 2), 'utf-8')
 
     getSettingsByCategoryMock
@@ -448,8 +389,7 @@ describe('syncOpenclawConfig user scope', () => {
       .mockResolvedValueOnce([
         {
           key: 'openclaw_agent_defaults_json',
-          value: JSON.stringify({ workspace: preferredWorkspace }),
-        },
+          value: JSON.stringify({ workspace: preferredWorkspace }) },
       ])
       .mockResolvedValueOnce([])
 
@@ -480,8 +420,7 @@ describe('syncOpenclawConfig user scope', () => {
       .mockResolvedValueOnce([
         {
           key: 'openclaw_agent_defaults_json',
-          value: JSON.stringify({ workspace: preferredWorkspace }),
-        },
+          value: JSON.stringify({ workspace: preferredWorkspace }) },
       ])
       .mockResolvedValueOnce([])
 
@@ -507,8 +446,7 @@ describe('syncOpenclawConfig user scope', () => {
       .mockResolvedValueOnce([
         {
           key: 'openclaw_agent_defaults_json',
-          value: JSON.stringify({ workspace: preferredWorkspace }),
-        },
+          value: JSON.stringify({ workspace: preferredWorkspace }) },
       ])
       .mockResolvedValueOnce([])
 

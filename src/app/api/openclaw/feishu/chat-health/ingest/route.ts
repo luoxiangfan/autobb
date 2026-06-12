@@ -4,8 +4,7 @@ import { getDatabase } from '@/lib/db'
 import {
   type FeishuChatHealthDecision,
   backfillFeishuChatHealthRunLinks,
-  recordFeishuChatHealthLog,
-} from '@/lib/openclaw/feishu-chat-health'
+  recordFeishuChatHealthLog } from '@/lib/openclaw/feishu-chat-health'
 import { verifyOpenclawGatewayToken } from '@/lib/openclaw/auth'
 import { parseFeishuAccountUserId } from '@/lib/openclaw/feishu-accounts'
 import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
@@ -381,8 +380,7 @@ function normalizeIngestPayload(raw: RawIngestPayload): IngestPayload | null {
       raw.created_at
     ),
     metadata,
-    tenantKey: firstNonEmpty(raw.tenantKey, raw.tenant_key, metadata?.tenantKey, metadata?.tenant_key),
-  }
+    tenantKey: firstNonEmpty(raw.tenantKey, raw.tenant_key, metadata?.tenantKey, metadata?.tenant_key) }
 }
 
 async function resolveUserIdFromFeishuAppId(accountId: string): Promise<number | null> {
@@ -417,8 +415,7 @@ async function resolveUserIdForPayload(payload: IngestPayload): Promise<number |
   for (const senderId of candidates) {
     const resolved = await resolveOpenclawUserFromBinding('feishu', senderId, {
       accountId: payload.accountId,
-      tenantKey: payload.tenantKey,
-    })
+      tenantKey: payload.tenantKey })
     if (resolved) {
       return resolved
     }
@@ -471,16 +468,14 @@ async function ensureIngestAuthorized(request: NextRequest): Promise<
     return {
       ok: false,
       status: sessionAuth.status,
-      error: sessionAuth.error,
-    }
+      error: sessionAuth.error }
   }
 
   if (sessionAuth.user.role !== 'admin') {
     return {
       ok: false,
       status: 403,
-      error: '无权写入飞书聊天链路健康日志',
-    }
+      error: '无权写入飞书聊天链路健康日志' }
   }
 
   return { ok: true }
@@ -497,8 +492,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json(
       {
-        error: parsed.error.issues[0]?.message || 'Invalid payload',
-      },
+        error: parsed.error.issues[0]?.message || 'Invalid payload' },
       { status: 400 }
     )
   }
@@ -508,8 +502,7 @@ export async function POST(request: NextRequest) {
     if (!payload) {
       return NextResponse.json(
         {
-          error: 'decision 不能为空或格式不支持',
-        },
+          error: 'decision 不能为空或格式不支持' },
         { status: 400 }
       )
     }
@@ -520,8 +513,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         stored: false,
-        skippedReason: FEISHU_CHAT_HEALTH_NOISE_REASON_CODE,
-      })
+        skippedReason: FEISHU_CHAT_HEALTH_NOISE_REASON_CODE })
     }
 
     const userId = await resolveUserIdForPayload(payload)
@@ -530,13 +522,11 @@ export async function POST(request: NextRequest) {
         accountId: payload.accountId,
         messageId: payload.messageId || null,
         tenantKeyProvided: Boolean(payload.tenantKey),
-        senderCandidates: payload.senderCandidates.slice(0, 5),
-      })
+        senderCandidates: payload.senderCandidates.slice(0, 5) })
       return NextResponse.json({
         success: true,
         stored: false,
-        skippedReason: 'user_unresolved',
-      })
+        skippedReason: 'user_unresolved' })
     }
 
     await recordFeishuChatHealthLog({
@@ -557,8 +547,7 @@ export async function POST(request: NextRequest) {
       messageText: payload.messageText,
       messageReceivedAt: payload.messageReceivedAt,
       replyDispatchedAt: payload.replyDispatchedAt,
-      metadata: sanitizeMetadata(payload.metadata),
-    })
+      metadata: sanitizeMetadata(payload.metadata) })
 
     if (payload.decision === 'allowed' && payload.messageId) {
       const senderIds = Array.from(
@@ -575,8 +564,7 @@ export async function POST(request: NextRequest) {
         await backfillFeishuChatHealthRunLinks({
           userId,
           messageId: payload.messageId,
-          senderIds,
-        })
+          senderIds })
       } catch (err: any) {
         console.error('[openclaw] feishu chat health backfill failed:', err?.message || String(err))
       }
@@ -585,13 +573,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       stored: true,
-      userId,
-    })
+      userId })
   } catch (error: any) {
     return NextResponse.json(
       {
-        error: error?.message || '写入飞书聊天链路健康日志失败',
-      },
+        error: error?.message || '写入飞书聊天链路健康日志失败' },
       { status: 500 }
     )
   }

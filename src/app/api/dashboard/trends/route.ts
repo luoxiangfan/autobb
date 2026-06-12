@@ -121,7 +121,7 @@ export async function GET(request: NextRequest) {
     // 查询每日广告表现数据
     const performanceQuery = `
       SELECT
-        DATE(date) as date,
+        (date::date) as date,
         SUM(impressions) as impressions,
         SUM(clicks) as clicks,
         SUM(cost) as cost
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
       WHERE user_id = ?
         AND date >= ?
         AND date <= ?
-      GROUP BY DATE(date)
+      GROUP BY (date::date)
       ORDER BY date ASC
     `
 

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       `
       SELECT id, target_country
       FROM offers
-      WHERE id IN (${offerIdPlaceholders}) AND user_id = ? AND IS_DELETED_FALSE
+      WHERE id IN (${offerIdPlaceholders}) AND user_id = ? AND is_deleted = FALSE
     `,
       [...normalizedOfferIds, userId]
     )) as Array<{

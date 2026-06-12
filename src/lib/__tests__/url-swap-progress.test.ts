@@ -12,7 +12,6 @@ describe('url-swap progress', () => {
     vi.setSystemTime(new Date('2026-01-12T00:00:00.000Z'))
 
     mockDb = {
-      type: 'sqlite',
       queryOne: vi.fn(),
     }
   })

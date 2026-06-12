@@ -3,41 +3,33 @@ import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/openclaw/commands/runs/route'
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const runsFns = vi.hoisted(() => ({
-  listOpenclawCommandRuns: vi.fn(),
-}))
+  listOpenclawCommandRuns: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/commands/runs-service', () => ({
-  listOpenclawCommandRuns: runsFns.listOpenclawCommandRuns,
-}))
+  listOpenclawCommandRuns: runsFns.listOpenclawCommandRuns }))
 
 describe('GET /api/openclaw/commands/runs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 7,
-      authType: 'gateway-binding',
-    })
+      authType: 'gateway-binding' })
     runsFns.listOpenclawCommandRuns.mockResolvedValue({
       items: [],
       pagination: {
         page: 1,
         limit: 20,
         total: 0,
-        totalPages: 1,
-      },
+        totalPages: 1 },
       filters: {
         status: null,
-        riskLevel: null,
-      },
-    })
+        riskLevel: null } })
   })
 
   it('uses query metadata as auth fallback for gateway binding', async () => {
@@ -48,9 +40,7 @@ describe('GET /api/openclaw/commands/runs', () => {
       {
         method: 'GET',
         headers: {
-          authorization: 'Bearer gateway-token',
-        },
-      }
+          authorization: 'Bearer gateway-token' } }
     )
 
     const res = await GET(req)
@@ -63,16 +53,14 @@ describe('GET /api/openclaw/commands/runs', () => {
       channel: 'feishu',
       senderId: 'ou_runs_1',
       accountId: 'acct_runs_1',
-      tenantKey: 'tenant_runs_1',
-    })
+      tenantKey: 'tenant_runs_1' })
     expect(runsFns.listOpenclawCommandRuns).toHaveBeenCalledWith({
       userId: 7,
       page: 2,
       limit: 10,
       status: 'failed',
       riskLevel: 'high',
-      createdAfter: '2026-02-09T00:00:00.000Z',
-    })
+      createdAfter: '2026-02-09T00:00:00.000Z' })
   })
 
   it('returns json 500 when auth resolution throws before listing runs', async () => {
@@ -83,9 +71,7 @@ describe('GET /api/openclaw/commands/runs', () => {
       {
         method: 'GET',
         headers: {
-          authorization: 'Bearer gateway-token',
-        },
-      }
+          authorization: 'Bearer gateway-token' } }
     )
 
     const res = await GET(req)

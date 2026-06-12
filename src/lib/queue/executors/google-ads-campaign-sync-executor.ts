@@ -76,7 +76,7 @@ export async function executeGoogleAdsCampaignSyncTask(
           isManualSync,
         ]
       )
-      // 🔧 获取插入的 ID（支持 PostgreSQL 和 SQLite）
+      // 🔧 获取插入的 id（RETURNING / lastInsertRowid）
       syncLogId = logResult.lastInsertRowid || null
       console.log(`📝 [GoogleAdsSyncExecutor] 创建同步日志记录 ID: ${syncLogId}`)
     } catch (logError) {

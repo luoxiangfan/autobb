@@ -7,8 +7,7 @@ export type AffiliateCommissionReportPlatformFilter = AffiliatePlatform | 'all'
 /** Display names from /api/campaigns/affiliate-platforms mapped to raw sync platform slugs. */
 export const AFFILIATE_DISPLAY_TO_RAW_PLATFORM = {
   YeahPromos: 'yeahpromos',
-  PartnerBoost: 'partnerboost',
-} as const satisfies Record<string, AffiliatePlatform>
+  PartnerBoost: 'partnerboost' } as const satisfies Record<string, AffiliatePlatform>
 
 export function resolveAffiliateCommissionPlatformFilter(
   value: string | null | undefined

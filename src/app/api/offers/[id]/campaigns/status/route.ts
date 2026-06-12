@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       // 向后兼容：某些 OpenClaw 流程会遗漏 campaignId，返回仍占用槽位的 Campaign 状态
       const db = await getDatabase()
       const numericUserId = userId
-      const occupyingWhere = offerOccupyingCampaignWhereClause(db.type)
+      const occupyingWhere = offerOccupyingCampaignWhereClause()
       const latestCampaign = (await db.queryOne(
         `SELECT
           id,

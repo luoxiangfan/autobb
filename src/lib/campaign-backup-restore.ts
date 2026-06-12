@@ -260,7 +260,7 @@ export async function createCampaignRowFromBackup(params: {
       ]
     )
 
-    const campaignId = getInsertedId(result, db.type)
+    const campaignId = getInsertedId(result)
     return { backupId, offerId, campaignId }
   } catch (error: any) {
     return {
@@ -329,7 +329,7 @@ export async function enqueueCampaignPublishFromBackup(params: {
       }
 
       if (regeneratedCreative) {
-        const configSerialized = toDbCampaignBackupJsonField(finalCampaignConfig, db.type)
+        const configSerialized = toDbCampaignBackupJsonField(finalCampaignConfig)
         const configText = toDbCampaignConfigTextField(finalCampaignConfig)
         const nowIso = new Date().toISOString()
 

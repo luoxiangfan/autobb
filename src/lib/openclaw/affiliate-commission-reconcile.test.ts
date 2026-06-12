@@ -2,22 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const hoisted = vi.hoisted(() => ({
   dbQueryMock: vi.fn(),
-  dbQueryOneMock: vi.fn(),
-}))
+  dbQueryOneMock: vi.fn() }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     query: hoisted.dbQueryMock,
-    queryOne: hoisted.dbQueryOneMock,
-  })),
-}))
+    queryOne: hoisted.dbQueryOneMock })) }))
 
 import {
   getAffiliateCommissionAttributionUpdatedAt,
   reconcileAffiliateCommissionLineItems,
-  sumAttributionCommissionTotals,
-} from '@/lib/openclaw/affiliate-commission-attribution-lines'
+  sumAttributionCommissionTotals } from '@/lib/openclaw/affiliate-commission-attribution-lines'
 import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
 
 function makeItem(commission: number): AffiliateCommissionLineItem {
@@ -29,8 +24,7 @@ function makeItem(commission: number): AffiliateCommissionLineItem {
     brandKey: 'yeahpromos:advert:100',
     brandName: 'Brand A',
     commission,
-    advertId: '100',
-  }
+    advertId: '100' }
 }
 
 describe('affiliate-commission-attribution-lines reconcile', () => {
@@ -62,8 +56,7 @@ describe('affiliate-commission-attribution-lines reconcile', () => {
       startDate: '2026-05-01',
       endDate: '2026-05-31',
       platform: 'all',
-      showUserScope: false,
-    })
+      showUserScope: false })
 
     expect(result.lineItems).toBe(rawDerived)
     expect(hoisted.dbQueryMock).not.toHaveBeenCalled()
@@ -84,8 +77,7 @@ describe('affiliate-commission-attribution-lines reconcile', () => {
       platform: 'all',
       showUserScope: false,
       knownAttributionUpdatedAt: '2026-06-02T10:00:00.000Z',
-      skipWhenAttributionUnchanged: true,
-    })
+      skipWhenAttributionUnchanged: true })
 
     expect(result.lineItems).toBe(rawDerived)
     expect(hoisted.dbQueryOneMock).toHaveBeenCalledTimes(2)
@@ -100,8 +92,7 @@ describe('affiliate-commission-attribution-lines reconcile', () => {
       userIds: [1],
       startDate: '2026-05-01',
       endDate: '2026-05-31',
-      platform: 'all',
-    })).resolves.toBe('2026-06-02T11:00:00.000Z')
+      platform: 'all' })).resolves.toBe('2026-06-02T11:00:00.000Z')
   })
 
   it('combines attribution and failure commission totals', async () => {
@@ -113,11 +104,9 @@ describe('affiliate-commission-attribution-lines reconcile', () => {
       userIds: [1],
       startDate: '2026-05-01',
       endDate: '2026-05-31',
-      platform: 'all',
-    })).resolves.toEqual({
+      platform: 'all' })).resolves.toEqual({
       attributionTotal: 12.5,
       failureTotal: 2.5,
-      combinedTotal: 15,
-    })
+      combinedTotal: 15 })
   })
 })

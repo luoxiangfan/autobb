@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 type StubDb = {
-  type: 'postgres'
   query: ReturnType<typeof vi.fn>
 }
 
 const stubDb: StubDb = {
-  type: 'postgres',
   query: vi.fn(),
 }
 

@@ -4,16 +4,14 @@ import path from 'path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   auditOpenclawAiAuthOverrides,
-  syncOpenclawManagedAiAuthProfiles,
-} from '@/lib/openclaw/ai-auth-audit'
+  syncOpenclawManagedAiAuthProfiles } from '@/lib/openclaw/ai-auth-audit'
 
 describe('auditOpenclawAiAuthOverrides', () => {
   const envBackup = {
     OPENCLAW_AGENT_DIR: process.env.OPENCLAW_AGENT_DIR,
     PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
     OPENCLAW_CONFIG_PATH: process.env.OPENCLAW_CONFIG_PATH,
-    OPENCLAW_STATE_DIR: process.env.OPENCLAW_STATE_DIR,
-  }
+    OPENCLAW_STATE_DIR: process.env.OPENCLAW_STATE_DIR }
 
   const tempDirs: string[] = []
 
@@ -53,11 +51,7 @@ describe('auditOpenclawAiAuthOverrides', () => {
         providers: {
           openai: {
             apiKey: 'sk-new',
-            models: ['gpt-5'],
-          },
-        },
-      },
-    }
+            models: ['gpt-5'] } } } }
   }
 
   it('flags auth-profile as higher-priority source than Providers JSON apiKey', () => {
@@ -72,26 +66,21 @@ describe('auditOpenclawAiAuthOverrides', () => {
           'openai:default': {
             type: 'api_key',
             provider: 'openai',
-            key: 'sk-old',
-          },
-        },
-      }),
+            key: 'sk-old' } } }),
       'utf-8'
     )
 
     const warnings = auditOpenclawAiAuthOverrides({
       config: buildConfig(),
       configPath,
-      env: {} as unknown as NodeJS.ProcessEnv,
-    })
+      env: {} as unknown as NodeJS.ProcessEnv })
 
     expect(warnings).toHaveLength(1)
     expect(warnings[0]).toEqual(
       expect.objectContaining({
         providerId: 'openai',
         source: 'auth-profile',
-        authProfilesPath: authPath,
-      })
+        authProfilesPath: authPath })
     )
   })
 
@@ -101,16 +90,14 @@ describe('auditOpenclawAiAuthOverrides', () => {
     const warnings = auditOpenclawAiAuthOverrides({
       config: buildConfig(),
       configPath,
-      env: { OPENAI_API_KEY: 'sk-env' } as unknown as NodeJS.ProcessEnv,
-    })
+      env: { OPENAI_API_KEY: 'sk-env' } as unknown as NodeJS.ProcessEnv })
 
     expect(warnings).toHaveLength(1)
     expect(warnings[0]).toEqual(
       expect.objectContaining({
         providerId: 'openai',
         source: 'env',
-        envVar: 'OPENAI_API_KEY',
-      })
+        envVar: 'OPENAI_API_KEY' })
     )
   })
 
@@ -120,8 +107,7 @@ describe('auditOpenclawAiAuthOverrides', () => {
     const warnings = auditOpenclawAiAuthOverrides({
       config: buildConfig(),
       configPath,
-      env: {} as unknown as NodeJS.ProcessEnv,
-    })
+      env: {} as unknown as NodeJS.ProcessEnv })
 
     expect(warnings).toEqual([])
   })
@@ -138,17 +124,13 @@ describe('auditOpenclawAiAuthOverrides', () => {
           'openai:default': {
             type: 'api_key',
             provider: 'openai',
-            key: 'sk-old',
-          },
-        },
-      }),
+            key: 'sk-old' } } }),
       'utf-8'
     )
 
     const syncResult = syncOpenclawManagedAiAuthProfiles({
       config: buildConfig(),
-      configPath,
-    })
+      configPath })
 
     expect(syncResult.updated).toBe(true)
     expect(syncResult.authProfilesPath).toBe(authPath)
@@ -158,16 +140,14 @@ describe('auditOpenclawAiAuthOverrides', () => {
       expect.objectContaining({
         type: 'api_key',
         provider: 'openai',
-        key: 'sk-new',
-      })
+        key: 'sk-new' })
     )
     expect(savedStore.order.openai?.[0]).toBe('autoads-managed:openai')
 
     const warnings = auditOpenclawAiAuthOverrides({
       config: buildConfig(),
       configPath,
-      env: { OPENAI_API_KEY: 'sk-env-old' } as unknown as NodeJS.ProcessEnv,
-    })
+      env: { OPENAI_API_KEY: 'sk-env-old' } as unknown as NodeJS.ProcessEnv })
     expect(warnings).toEqual([])
   })
 })

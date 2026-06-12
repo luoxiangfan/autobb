@@ -136,7 +136,6 @@ describe('GET /api/offers', () => {
       pendingScrape: '2',
     })
     dbFns.getDatabase.mockResolvedValue({
-      type: 'sqlite',
       queryOne,
     })
 

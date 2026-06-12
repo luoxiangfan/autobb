@@ -10,7 +10,7 @@ export async function createStrategyRun(params: {
   configJson?: unknown
 }): Promise<string> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   const runId = crypto.randomUUID()
 
   const insertSql = `INSERT INTO strategy_center_runs
@@ -22,7 +22,7 @@ export async function createStrategyRun(params: {
     params.userId,
     params.mode,
     params.runDate,
-    toDbJsonObjectField(params.configJson ?? null, db.type, null),
+    toDbJsonObjectField(params.configJson ?? null, null),
   ])
 
   return runId
@@ -38,7 +38,7 @@ export async function updateStrategyRun(params: {
   completedAt?: string | null
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
   const fields: string[] = []
   const values: any[] = []
 
@@ -48,7 +48,7 @@ export async function updateStrategyRun(params: {
   }
   if (params.statsJson !== undefined) {
     fields.push('stats_json = ?')
-    values.push(toDbJsonObjectField(params.statsJson, db.type, null))
+    values.push(toDbJsonObjectField(params.statsJson, null))
   }
   if (params.errorMessage !== undefined) {
     fields.push('error_message = ?')
@@ -78,7 +78,7 @@ export async function touchStrategyRun(params: {
   userId: number
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
+  const nowFunc = 'NOW()'
 
   await db.exec(
     `UPDATE strategy_center_runs
@@ -100,14 +100,10 @@ export async function recordStrategyAction(params: {
   errorMessage?: string | null
 }): Promise<number> {
   const db = await getDatabase()
-  const nowFunc = db.type === 'postgres' ? 'NOW()' : "datetime('now')"
-  const insertSql = db.type === 'postgres'
-    ? `INSERT INTO strategy_center_actions
+  const nowFunc = 'NOW()'
+  const insertSql = `INSERT INTO strategy_center_actions
        (run_id, user_id, action_type, target_type, target_id, status, request_json, response_json, error_message, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}) RETURNING id`
-    : `INSERT INTO strategy_center_actions
-       (run_id, user_id, action_type, target_type, target_id, status, request_json, response_json, error_message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc})`
 
   const result = await db.exec(insertSql, [
     params.runId,
@@ -116,12 +112,12 @@ export async function recordStrategyAction(params: {
     params.targetType || null,
     params.targetId || null,
     params.status || 'pending',
-    toDbJsonObjectField(params.requestJson ?? null, db.type, null),
-    toDbJsonObjectField(params.responseJson ?? null, db.type, null),
+    toDbJsonObjectField(params.requestJson ?? null, null),
+    toDbJsonObjectField(params.responseJson ?? null, null),
     params.errorMessage || null,
   ])
 
-  return getInsertedId(result, db.type)
+  return getInsertedId(result)
 }
 
 export async function updateStrategyAction(params: {
@@ -141,7 +137,7 @@ export async function updateStrategyAction(params: {
   }
   if (params.responseJson !== undefined) {
     fields.push('response_json = ?')
-    values.push(toDbJsonObjectField(params.responseJson, db.type, null))
+    values.push(toDbJsonObjectField(params.responseJson, null))
   }
   if (params.errorMessage !== undefined) {
     fields.push('error_message = ?')
@@ -179,7 +175,7 @@ export async function saveKnowledgeEntry(
      VALUES (?, ?, ?, ?)
      ON CONFLICT(user_id, report_date)
      DO UPDATE SET summary_json = excluded.summary_json, notes = excluded.notes`,
-    [userId, entry.report_date, toDbJsonObjectField(entry.summary_json, db.type, null), entry.notes || null]
+    [userId, entry.report_date, toDbJsonObjectField(entry.summary_json, null), entry.notes || null]
   )
 }
 
@@ -192,7 +188,7 @@ export async function getRecentKnowledge(
   return db.query(
     `SELECT id, report_date, summary_json, notes, created_at
      FROM openclaw_knowledge_base
-     WHERE user_id = ? AND report_date >= date('now', '-${days} days')
+     WHERE user_id = ? AND report_date >= CURRENT_DATE - INTERVAL '${days} days'
      ORDER BY report_date DESC`,
     [userId]
   )
@@ -235,8 +231,7 @@ export async function generateKnowledgeSummary(
       avgPublishSuccessRate: 0,
       recentMode: null,
       discoveries: [],
-      lessons: [],
-    }
+      lessons: [] }
   }
 
   let totalRoas = 0
@@ -282,8 +277,7 @@ export async function generateKnowledgeSummary(
     avgPublishSuccessRate: Math.round((totalPublishRate / count) * 100) / 100,
     recentMode,
     discoveries: allDiscoveries.slice(0, 10),
-    lessons: allLessons.slice(0, 10),
-  }
+    lessons: allLessons.slice(0, 10) }
 }
 
 export async function determineStrategyMode(
@@ -294,8 +288,7 @@ export async function determineStrategyMode(
   if (recent.length < 3) {
     return {
       mode: 'insufficient_data',
-      reasoning: `Only ${recent.length} day(s) of data available, need at least 3 days to determine strategy mode.`,
-    }
+      reasoning: `Only ${recent.length} day(s) of data available, need at least 3 days to determine strategy mode.` }
   }
 
   let totalRoas = 0
@@ -315,8 +308,7 @@ export async function determineStrategyMode(
   if (validCount === 0) {
     return {
       mode: 'insufficient_data',
-      reasoning: 'No valid ROAS data in recent knowledge entries.',
-    }
+      reasoning: 'No valid ROAS data in recent knowledge entries.' }
   }
 
   const avgRoas = totalRoas / validCount
@@ -325,19 +317,16 @@ export async function determineStrategyMode(
   if (avgRoas >= 1.5 && avgPublishRate >= 80) {
     return {
       mode: 'expand',
-      reasoning: `3-day avg ROAS ${avgRoas.toFixed(2)} >= 1.5 and publish success rate ${avgPublishRate.toFixed(0)}% >= 80%. Conditions met for expansion.`,
-    }
+      reasoning: `3-day avg ROAS ${avgRoas.toFixed(2)} >= 1.5 and publish success rate ${avgPublishRate.toFixed(0)}% >= 80%. Conditions met for expansion.` }
   }
 
   if (avgRoas < 1.0 || avgPublishRate < 60) {
     return {
       mode: 'defensive',
-      reasoning: `3-day avg ROAS ${avgRoas.toFixed(2)} ${avgRoas < 1.0 ? '< 1.0' : ''} or publish success rate ${avgPublishRate.toFixed(0)}% ${avgPublishRate < 60 ? '< 60%' : ''}. Switching to defensive mode.`,
-    }
+      reasoning: `3-day avg ROAS ${avgRoas.toFixed(2)} ${avgRoas < 1.0 ? '< 1.0' : ''} or publish success rate ${avgPublishRate.toFixed(0)}% ${avgPublishRate < 60 ? '< 60%' : ''}. Switching to defensive mode.` }
   }
 
   return {
     mode: 'hold',
-    reasoning: `3-day avg ROAS ${avgRoas.toFixed(2)} in 1.0-1.5 range, publish success rate ${avgPublishRate.toFixed(0)}%. Maintaining current parameters.`,
-  }
+    reasoning: `3-day avg ROAS ${avgRoas.toFixed(2)} in 1.0-1.5 range, publish success rate ${avgPublishRate.toFixed(0)}%. Maintaining current parameters.` }
 }

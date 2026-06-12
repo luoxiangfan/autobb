@@ -1,15 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const hoisted = vi.hoisted(() => ({
-  dbQueryMock: vi.fn(),
-}))
+  dbQueryMock: vi.fn() }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
-    query: hoisted.dbQueryMock,
-  })),
-}))
+    query: hoisted.dbQueryMock })) }))
 
 import { affiliateCommissionFactsCoverRawRange } from '@/lib/openclaw/affiliate-commission-facts'
 
@@ -33,8 +29,7 @@ describe('affiliateCommissionFactsCoverRawRange', () => {
       startDate: '2026-05-01',
       endDate: '2026-05-31',
       platform: 'all',
-      minRebuiltAt: '2026-06-02T00:00:00.000Z',
-    })).resolves.toBe(false)
+      minRebuiltAt: '2026-06-02T00:00:00.000Z' })).resolves.toBe(false)
   })
 
   it('returns true when every raw date has fresh rebuilt facts', async () => {
@@ -53,7 +48,6 @@ describe('affiliateCommissionFactsCoverRawRange', () => {
       startDate: '2026-05-01',
       endDate: '2026-05-31',
       platform: 'all',
-      minRebuiltAt: '2026-06-02T00:00:00.000Z',
-    })).resolves.toBe(true)
+      minRebuiltAt: '2026-06-02T00:00:00.000Z' })).resolves.toBe(true)
   })
 })

@@ -3,20 +3,16 @@ import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/openclaw/strategy/recommendations/[id]/execute/route'
 
 const authFns = vi.hoisted(() => ({
-  resolveOpenclawRequestUser: vi.fn(),
-}))
+  resolveOpenclawRequestUser: vi.fn() }))
 
 const recommendationFns = vi.hoisted(() => ({
-  queueStrategyRecommendationExecution: vi.fn(),
-}))
+  queueStrategyRecommendationExecution: vi.fn() }))
 
 vi.mock('@/lib/openclaw/request-auth', () => ({
-  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser,
-}))
+  resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/strategy-recommendations', () => ({
-  queueStrategyRecommendationExecution: recommendationFns.queueStrategyRecommendationExecution,
-}))
+  queueStrategyRecommendationExecution: recommendationFns.queueStrategyRecommendationExecution }))
 
 describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
   beforeEach(() => {
@@ -26,14 +22,12 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
   it('requires confirm=true', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 9,
-      authType: 'session',
-    })
+      authType: 'session' })
 
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/r1/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ confirm: false }),
-    })
+      body: JSON.stringify({ confirm: false }) })
     const res = await POST(req, { params: Promise.resolve({ id: 'r1' }) })
 
     expect(res.status).toBe(400)
@@ -43,23 +37,19 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
   it('queues recommendation execution with confirmation', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 12,
-      authType: 'session',
-    })
+      authType: 'session' })
     recommendationFns.queueStrategyRecommendationExecution.mockResolvedValue({
       queued: true,
       deduplicated: false,
       taskId: 'task-123',
       recommendation: {
         id: 'rec-2',
-        status: 'pending',
-      },
-    })
+        status: 'pending' } })
 
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/rec-2/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ confirm: true }),
-    })
+      body: JSON.stringify({ confirm: true }) })
     const res = await POST(req, { params: Promise.resolve({ id: 'rec-2' }) })
     const data = await res.json()
 
@@ -71,15 +61,13 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
       userId: 12,
       recommendationId: 'rec-2',
       confirm: true,
-      parentRequestId: undefined,
-    })
+      parentRequestId: undefined })
   })
 
   it('returns 409 when recommendation requires re-analysis', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 12,
-      authType: 'session',
-    })
+      authType: 'session' })
     recommendationFns.queueStrategyRecommendationExecution.mockRejectedValue(
       new Error('建议内容已更新，请重新分析后再执行')
     )
@@ -87,8 +75,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/rec-2/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ confirm: true }),
-    })
+      body: JSON.stringify({ confirm: true }) })
     const res = await POST(req, { params: Promise.resolve({ id: 'rec-2' }) })
 
     expect(res.status).toBe(409)
@@ -97,8 +84,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
   it('returns 409 when recommendation is outside execution date window', async () => {
     authFns.resolveOpenclawRequestUser.mockResolvedValue({
       userId: 12,
-      authType: 'session',
-    })
+      authType: 'session' })
     recommendationFns.queueStrategyRecommendationExecution.mockRejectedValue(
       new Error('T-1建议仅支持执行以下类型（2026-02-24）：adjust_cpc, adjust_budget, expand_keywords, add_negative_keywords, optimize_match_type')
     )
@@ -106,8 +92,7 @@ describe('POST /api/openclaw/strategy/recommendations/:id/execute', () => {
     const req = new NextRequest('http://localhost/api/openclaw/strategy/recommendations/rec-2/execute', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ confirm: true }),
-    })
+      body: JSON.stringify({ confirm: true }) })
     const res = await POST(req, { params: Promise.resolve({ id: 'rec-2' }) })
 
     expect(res.status).toBe(409)

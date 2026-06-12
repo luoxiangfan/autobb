@@ -4,7 +4,6 @@ const mockExec = vi.fn()
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
-    type: 'sqlite',
     exec: mockExec,
   })),
 }))
