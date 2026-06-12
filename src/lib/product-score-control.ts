@@ -1,5 +1,15 @@
 import { getDatabase } from '@/lib/db'
 
+/** 历史误分类：有 ASIN 但 product_url 为空时被记为非 Amazon 落地页 */
+export const LEGACY_AMAZON_MISCLASSIFIED_REASON = '非Amazon落地页,信任度相对较低'
+
+/** affiliate_products 自愈/增量评分共用的 SQL 片段 */
+export const LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION = `(
+  NULLIF(TRIM(COALESCE(asin, '')), '') IS NOT NULL
+  AND TRIM(COALESCE(product_url, '')) = ''
+  AND COALESCE(recommendation_reasons, '') LIKE '%${LEGACY_AMAZON_MISCLASSIFIED_REASON}%'
+)`
+
 const PRODUCT_SCORE_PAUSE_SETTING_KEY = 'product_score_calculation_paused'
 const PRODUCT_SCORE_PAUSE_SETTING_DESCRIPTION = '暂停商品推荐指数计算（用于控制AI token消耗）'
 

@@ -34,6 +34,7 @@ async function readBrandCoreCache(
 ): Promise<BrandCoreKeyword[] | null> {
   try {
     const client = getRedisClient()
+    if (!client) return null
     const key = buildBrandCoreCacheKey(brandKey, country, language)
     const cached = await client.get(key)
     if (!cached) return null
@@ -52,6 +53,7 @@ async function writeBrandCoreCache(
 ): Promise<void> {
   try {
     const client = getRedisClient()
+    if (!client) return
     const key = buildBrandCoreCacheKey(brandKey, country, language)
     await client.setex(key, BRAND_CORE_CACHE_TTL_SECONDS, JSON.stringify(keywords))
   } catch (error: any) {

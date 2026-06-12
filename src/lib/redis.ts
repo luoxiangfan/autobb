@@ -1,39 +1,10 @@
-import Redis from 'ioredis'
 import { REDIS_PREFIX_CONFIG } from './config'
+import { getRedisClient, isRedisAvailable } from './redis-client'
+
+export { getRedisClient, isRedisAvailable }
 
 // 7天缓存时间（秒）
 const CACHE_TTL = 7 * 24 * 60 * 60
-
-// 单例Redis连接
-let redisClient: Redis | null = null
-
-/**
- * 获取Redis客户端连接
- */
-export function getRedisClient(): Redis {
-  if (!redisClient) {
-    const redisUrl = process.env.REDIS_URL
-    if (!redisUrl) {
-      throw new Error('REDIS_URL environment variable is not set')
-    }
-
-    redisClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      enableReadyCheck: true,
-      lazyConnect: true,
-    })
-
-    redisClient.on('error', (err) => {
-      console.error('Redis连接错误:', err.message)
-    })
-
-    redisClient.on('connect', () => {
-      console.log('Redis已连接')
-    })
-  }
-
-  return redisClient
-}
 
 /**
  * 生成网页缓存的key
@@ -97,6 +68,8 @@ export async function getCachedPageData(
 ): Promise<CachedPageData | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
+
     const key = generateCacheKey(url, language, pageType)
 
     const cached = await redis.get(key)
@@ -136,6 +109,8 @@ export async function getBatchCachedVolumes(
   >()
   try {
     const client = getRedisClient()
+    if (!client) return result
+
     const keys = keywords.map((kw) => getKeywordCacheKey(kw, country, language))
     if (keys.length === 0) return result
 
@@ -166,6 +141,8 @@ export async function batchCacheVolumes(
 ): Promise<void> {
   try {
     const client = getRedisClient()
+    if (!client) return
+
     const pipeline = client.pipeline()
 
     for (const item of data) {

@@ -48,9 +48,13 @@ vi.mock('@/lib/product-score-coordination', () => ({
   markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
 }))
 
-vi.mock('@/lib/product-score-control', () => ({
-  isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,
-}))
+vi.mock('@/lib/product-score-control', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/product-score-control')>()
+  return {
+    ...actual,
+    isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,
+  }
+})
 
 function createTask(overrides: Record<string, any> = {}) {
   return {

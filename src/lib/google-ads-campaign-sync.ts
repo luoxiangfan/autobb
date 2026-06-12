@@ -35,6 +35,7 @@ import { createRiskAlert } from './risk-alerts'
 import { ApiOperationType } from './google-ads-api-tracker'
 import { firstNonEmptyFinalUrlFromCampaignConfig } from './google-ads-campaign-final-url'
 import { offerOccupyingCampaignWhereClause } from './campaign-offer-constraint'
+import { resolveCountryCodeFromGoogleAdsGeoTargetId } from './language-country-codes'
 
 /**
  * 从 Google Ads campaign_name 提取 offer brand。
@@ -209,102 +210,11 @@ const languageMap: { [key: string]: string } = {
   malay: 'ms',
 }
 
-const geoTargetMAP: { [key: string]: number } = {
-  // 北美
-  US: 2840, // United States
-  CA: 2124, // Canada
-  MX: 2484, // Mexico
-
-  // 欧洲
-  GB: 2826, // United Kingdom
-  UK: 2826, // United Kingdom (alias)
-  DE: 2276, // Germany
-  FR: 2250, // France
-  IT: 2380, // Italy
-  ES: 2724, // Spain
-  PT: 2620, // Portugal
-  NL: 2528, // Netherlands
-  BE: 2056, // Belgium
-  AT: 2040, // Austria
-  CH: 2756, // Switzerland
-  SE: 2752, // Sweden
-  NO: 2578, // Norway
-  DK: 2208, // Denmark
-  FI: 2246, // Finland
-  PL: 2616, // Poland
-  CZ: 2203, // Czech Republic
-  HU: 2348, // Hungary
-  GR: 2300, // Greece
-  IE: 2372, // Ireland
-  RO: 2642, // Romania
-  BG: 2100, // Bulgaria
-  HR: 2191, // Croatia
-  RS: 2688, // Serbia
-  SI: 2705, // Slovenia
-  SK: 2703, // Slovakia
-  UA: 2804, // Ukraine
-  EE: 2233, // Estonia
-  LV: 2428, // Latvia
-  LT: 2440, // Lithuania
-  RU: 2643, // Russia
-
-  // 亚洲
-  CN: 2156, // China
-  JP: 2392, // Japan
-  KR: 2410, // South Korea
-  IN: 2356, // India
-  ID: 2360, // Indonesia
-  TH: 2764, // Thailand
-  VN: 2704, // Vietnam
-  PH: 2608, // Philippines
-  MY: 2458, // Malaysia
-  SG: 2702, // Singapore
-  HK: 2344, // Hong Kong
-  TW: 2158, // Taiwan
-  BD: 2050, // Bangladesh
-  PK: 2586, // Pakistan
-
-  // 中东
-  TR: 2792, // Turkey
-  SA: 2682, // Saudi Arabia
-  AE: 2784, // United Arab Emirates
-  IL: 2376, // Israel
-  EG: 2818, // Egypt
-  IR: 2364, // Iran
-  IQ: 2368, // Iraq
-  QA: 2634, // Qatar
-  KW: 2414, // Kuwait
-
-  // 大洋洲
-  AU: 2036, // Australia
-  NZ: 2554, // New Zealand
-
-  // 南美
-  BR: 2076, // Brazil
-  AR: 2032, // Argentina
-  CO: 2170, // Colombia
-  CL: 2152, // Chile
-  PE: 2604, // Peru
-  VE: 2862, // Venezuela
-
-  // 非洲
-  ZA: 2710, // South Africa
-  NG: 2566, // Nigeria
-  KE: 2404, // Kenya
-  MA: 2504, // Morocco
-}
-
 /**
  * 🔧 将语言代码转换为语言名称
  */
 function getLanguageName(languageCode: string): string {
   return languageMap[languageCode] || languageCode
-}
-
-function getCountryName(countryCode: string): string {
-  return (
-    Object.keys(geoTargetMAP).find((key) => geoTargetMAP[key] == Number(countryCode)) || countryCode
-  )
 }
 
 /**
@@ -1103,11 +1013,11 @@ async function fetchAllDataFromGoogleAds(params: {
           budgetAmount: campaign.budget_amount,
           budgetType: campaign.budget_type,
           targetCountry:
-            getCountryName(
+            resolveCountryCodeFromGoogleAdsGeoTargetId(
               locations
                 .find((loc: any) => loc.type === 'LOCATION')
                 ?.geo_target_constant?.split('/')
-                ?.pop()
+                ?.pop() ?? ''
             ) || 'US',
           targetLanguage:
             getLanguageName(locations.find((loc: any) => loc.type === 'LANGUAGE')?.display_name) ||

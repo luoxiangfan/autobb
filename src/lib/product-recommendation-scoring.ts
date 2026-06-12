@@ -11,6 +11,7 @@
 
 import { generateContent, type ResponseSchema } from './gemini'
 import { detectAffiliateLandingPageType, type AffiliateProduct } from './affiliate-products'
+import { LEGACY_AMAZON_MISCLASSIFIED_REASON } from './product-score-control'
 import { withCache } from './ai-cache'
 import { estimateTokenCost, recordTokenUsage } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
@@ -1424,7 +1425,7 @@ function generateRecommendationReasons(params: {
 
   if (dimensions.marketFit.details.landingPageScore < 60) {
     reasons.push({
-      text: `非Amazon落地页,信任度相对较低`,
+      text: LEGACY_AMAZON_MISCLASSIFIED_REASON,
       priority: 20,
     })
   }

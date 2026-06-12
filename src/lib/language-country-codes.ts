@@ -1158,6 +1158,17 @@ export function getGoogleAdsGeoTargetId(countryCode: string): string {
 }
 
 /**
+ * 由 Google Ads 地理目标 ID 反查 ISO 国家代码（如 2840 → US）。
+ * 多个别名（如 GB/UK）命中时返回映射表中的首个键。
+ */
+export function resolveCountryCodeFromGoogleAdsGeoTargetId(geoTargetId: string | number): string {
+  const id = String(geoTargetId ?? '').trim()
+  if (!id) return ''
+  const match = Object.entries(GOOGLE_ADS_GEO_TARGETS).find(([, value]) => value === id)
+  return match?.[0] ?? id
+}
+
+/**
  * 判断国家是否有明确的 Google Ads 地理目标ID映射
  * 用于一致性校验（避免意外走默认值）
  */

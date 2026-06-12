@@ -25,7 +25,10 @@ import {
   findExistingProductScoreTask,
   markProductScoreRequeueNeeded,
 } from '@/lib/product-score-coordination'
-import { isProductScoreCalculationPaused } from '@/lib/product-score-control'
+import {
+  isProductScoreCalculationPaused,
+  LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION,
+} from '@/lib/product-score-control'
 
 export type ProductScoreCalculationTaskData = {
   userId: number
@@ -212,18 +215,12 @@ export async function executeProductScoreCalculation(
     }
 
     if (!forceRecalculate) {
-      const legacyAmazonMisclassifiedWhere = `(
-        NULLIF(TRIM(COALESCE(asin, '')), '') IS NOT NULL
-        AND TRIM(COALESCE(product_url, '')) = ''
-        AND COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'
-      )`
-
       // 默认仅计算未算分或“上次计算已超过30天”的商品，避免重复计算
       whereClause += ` AND (
           recommendation_score IS NULL
           OR score_calculated_at IS NULL
           OR score_calculated_at < (NOW() - INTERVAL '${PRODUCT_SCORE_VALIDITY_DAYS} days')
-          OR ${legacyAmazonMisclassifiedWhere}
+          OR ${LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION}
         )`
     }
 

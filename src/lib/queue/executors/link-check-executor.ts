@@ -20,8 +20,7 @@ import {
 } from '@/lib/risk-alerts'
 import type { DatabaseAdapter } from '@/lib/db'
 import { getDatabase } from '@/lib/db'
-import { resolveAffiliateLink } from '@/lib/url-resolver'
-import { getProxyForCountry } from '../user-proxy-loader'
+import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
 import {
@@ -126,12 +125,11 @@ async function validateLinkWithResolver(
   unresolvedDueToInfrastructure?: boolean
 }> {
   try {
-    // 获取用户配置的代理
-    const proxyConfig = await getProxyForCountry(targetCountry, userId)
-    const proxyUrl = proxyConfig?.originalUrl
-
-    // 使用URL解析器解析链接（不使用缓存，确保实时检查）
-    const resolved = await resolveAffiliateLink(affiliateLink, proxyUrl, false)
+    const resolved = await resolveAffiliateLink(affiliateLink, {
+      targetCountry,
+      userId,
+      skipCache: true,
+    })
 
     // 如果能提取出final url和final url suffix，说明链接有效
     if (resolved.finalUrl && resolved.finalUrl.length > 0) {

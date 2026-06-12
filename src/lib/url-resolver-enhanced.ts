@@ -600,6 +600,7 @@ async function getCachedRedirect(
 ): Promise<ResolvedUrlData | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
     const cacheKey = getCacheKey(affiliateLink, targetCountry)
     const cached = await redis.get(cacheKey)
 

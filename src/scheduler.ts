@@ -32,6 +32,7 @@ import {
 import { resolveGoogleAdsSyncCredentialGate } from './lib/google-ads-auth-context'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
+import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/product-score-control'
 
 // 日志函数
 function log(message: string) {
@@ -341,11 +342,6 @@ async function productScoreSchedulerTask() {
 
   try {
     const db = await getDatabase()
-    const legacyAmazonMisclassifiedCondition = `(
-      NULLIF(TRIM(COALESCE(asin, '')), '') IS NOT NULL
-      AND TRIM(COALESCE(product_url, '')) = ''
-      AND COALESCE(recommendation_reasons, '') LIKE '%非Amazon落地页,信任度相对较低%'
-    )`
     const dueUsers = await db.query<{ user_id: number; due_count: number | string }>(
       `SELECT
              user_id,
@@ -357,7 +353,7 @@ async function productScoreSchedulerTask() {
                last_synced_at IS NOT NULL
                AND score_calculated_at < (last_synced_at AT TIME ZONE 'UTC')
              )
-             OR ${legacyAmazonMisclassifiedCondition}
+             OR ${LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION}
            GROUP BY user_id
            ORDER BY due_count DESC
            LIMIT ?`,

@@ -2050,6 +2050,11 @@ async function isRedisAvailable(): Promise<boolean> {
   try {
     const { getRedisClient } = await import('./redis')
     const client = getRedisClient()
+    if (!client) {
+      redisAvailable = false
+      lastRedisCheck = now
+      return false
+    }
     await client.ping()
     redisAvailable = true
     lastRedisCheck = now
@@ -2086,6 +2091,7 @@ async function getCachedResult(adCopyText: string): Promise<CachedResult | null>
     try {
       const { getRedisClient } = await import('./redis')
       const client = getRedisClient()
+      if (!client) return null
       const data = await client.get(key)
 
       if (data) {
@@ -2124,6 +2130,7 @@ async function setCachedResult(adCopyText: string, result: CachedResult) {
     try {
       const { getRedisClient } = await import('./redis')
       const client = getRedisClient()
+      if (!client) return
       await client.setex(key, CACHE_TTL_SECONDS, JSON.stringify(resultWithTimestamp))
       console.log('   💾 已缓存到Redis（TTL: 24小时）')
       return

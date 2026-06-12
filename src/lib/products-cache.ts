@@ -241,6 +241,7 @@ function normalizeProductListCachePayload(input: unknown): ProductListCachePaylo
 export async function getCachedProductList<T>(userId: number, hash: string): Promise<T | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
     const raw = await redis.get(getListKey(userId, hash))
     if (!raw) return null
     return JSON.parse(raw) as T
@@ -256,6 +257,7 @@ export async function setCachedProductList(
 ): Promise<void> {
   try {
     const redis = getRedisClient()
+    if (!redis) return
     const listKey = getListKey(userId, hash)
     const indexKey = getListIndexKey(userId)
     const payload = JSON.stringify(value)
@@ -274,6 +276,7 @@ export async function setCachedProductList(
 export async function getCachedProductSummary<T>(userId: number, hash: string): Promise<T | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
     const raw = await redis.get(getSummaryKey(userId, hash))
     if (!raw) return null
     return JSON.parse(raw) as T
@@ -289,6 +292,7 @@ export async function setCachedProductSummary(
 ): Promise<void> {
   try {
     const redis = getRedisClient()
+    if (!redis) return
     const summaryKey = getSummaryKey(userId, hash)
     const summaryIndexKey = getSummaryIndexKey(userId)
     const payload = JSON.stringify(value)
@@ -310,6 +314,7 @@ export async function getCachedProductSummaryRoute<T>(
 ): Promise<T | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
     const raw = await redis.get(getSummaryRouteKey(userId, hash))
     if (!raw) return null
     return JSON.parse(raw) as T
@@ -325,6 +330,7 @@ export async function setCachedProductSummaryRoute(
 ): Promise<void> {
   try {
     const redis = getRedisClient()
+    if (!redis) return
     const summaryRouteKey = getSummaryRouteKey(userId, hash)
     const summaryRouteIndexKey = getSummaryRouteIndexKey(userId)
     const payload = JSON.stringify(value)
@@ -351,6 +357,7 @@ export async function setLatestProductListQuery(
     }
 
     const redis = getRedisClient()
+    if (!redis) return
     await redis.setex(getLatestQueryKey(userId), LAST_QUERY_TTL_SECONDS, JSON.stringify(normalized))
   } catch {
     // ignore cache write failure
@@ -362,6 +369,7 @@ export async function getLatestProductListQuery(
 ): Promise<ProductListCachePayload | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
     const [raw, legacyRaw] = await Promise.all([
       redis.get(getLatestQueryKey(userId)),
       redis.get(getLegacyLatestQueryKey(userId)),
@@ -380,6 +388,7 @@ export async function getLatestProductListQuery(
 export async function invalidateProductListCache(userId: number): Promise<void> {
   try {
     const redis = getRedisClient()
+    if (!redis) return
     const targets = [
       { indexKey: getListIndexKey(userId), pattern: getListPattern(userId) },
       { indexKey: getSummaryIndexKey(userId), pattern: getSummaryPattern(userId) },

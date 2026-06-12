@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { getSupportedCountries, hasGoogleAdsGeoTargetId } from '@/lib/language-country-codes'
+import {
+  getSupportedCountries,
+  hasGoogleAdsGeoTargetId,
+  resolveCountryCodeFromGoogleAdsGeoTargetId,
+} from '@/lib/language-country-codes'
 import { validateProxyUrl } from '@/lib/proxy/validate-url'
 
 describe('country consistency', () => {
@@ -9,6 +13,12 @@ describe('country consistency', () => {
       .filter((code) => !hasGoogleAdsGeoTargetId(code))
 
     expect(missing).toEqual([])
+  })
+
+  it('resolves Google Ads geo target IDs back to country codes', () => {
+    expect(resolveCountryCodeFromGoogleAdsGeoTargetId('2840')).toBe('US')
+    expect(resolveCountryCodeFromGoogleAdsGeoTargetId(2826)).toBe('GB')
+    expect(resolveCountryCodeFromGoogleAdsGeoTargetId('999999')).toBe('999999')
   })
 
   it('proxy cc validation accepts all supported countries', () => {

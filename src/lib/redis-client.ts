@@ -13,6 +13,7 @@ import Redis from 'ioredis'
 
 let redisClient: Redis | null = null
 let reconnectAttempts = 0
+let heartbeatStarted = false
 const MAX_RECONNECT_ATTEMPTS = 10
 
 /**
@@ -90,23 +91,27 @@ export function getRedisClient(): Redis | null {
       }
     })
 
-    // 定期心跳检测，保持连接活跃
-    setInterval(async () => {
-      if (redisClient && redisClient.status === 'ready') {
-        try {
-          await redisClient.ping()
-        } catch (_err) {
-          // 心跳失败静默处理，让重连机制自动处理
+    if (!heartbeatStarted) {
+      heartbeatStarted = true
+      setInterval(async () => {
+        if (redisClient && redisClient.status === 'ready') {
+          try {
+            await redisClient.ping()
+          } catch (_err) {
+            // 心跳失败静默处理，让重连机制自动处理
+          }
         }
-      }
-    }, 30000) // 每30秒心跳一次
+      }, 30000)
+    }
 
     return redisClient
   } catch (error) {
     console.error('❌ Redis客户端初始化失败:', error)
     return null
   }
-} /**
+}
+
+/**
  * 检查Redis是否可用
  */
 export function isRedisAvailable(): boolean {

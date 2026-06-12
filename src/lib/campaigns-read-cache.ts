@@ -69,6 +69,7 @@ async function getCachedCampaignRead<T>(
 ): Promise<T | null> {
   try {
     const redis = getRedisClient()
+    if (!redis) return null
     const raw = await redis.get(getCampaignReadKey(userId, kind, hash))
     if (!raw) return null
     return JSON.parse(raw) as T
@@ -86,6 +87,7 @@ async function setCachedCampaignRead(
 ): Promise<void> {
   try {
     const redis = getRedisClient()
+    if (!redis) return
     const cacheKey = getCampaignReadKey(userId, kind, hash)
     const indexKey = getCampaignReadIndexKey(userId, kind)
     const payload = JSON.stringify(value)
@@ -141,6 +143,7 @@ export async function setCachedCampaignTrends(
 export async function invalidateCampaignReadCache(userId: number): Promise<void> {
   try {
     const redis = getRedisClient()
+    if (!redis) return
     const targets: Array<{ kind: CampaignReadCacheKind }> = [
       { kind: 'performance' },
       { kind: 'trends' },

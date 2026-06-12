@@ -42,7 +42,7 @@ export async function cacheProductRecommendationScore(
   score: CachedRecommendationScore
 ): Promise<void> {
   try {
-    const redis = await getRedisClient()
+    const redis = getRedisClient()
     if (!redis) {
       console.warn('[ProductScoreCache] Redis不可用,跳过缓存')
       return
@@ -72,7 +72,7 @@ export async function batchGetCachedProductRecommendationScores(
   const result = new Map<number, CachedRecommendationScore>()
 
   try {
-    const redis = await getRedisClient()
+    const redis = getRedisClient()
     if (!redis || productIds.length === 0) {
       return result
     }
