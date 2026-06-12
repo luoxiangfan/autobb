@@ -12,6 +12,10 @@
 
 import { getDatabase } from './db'
 import { hashPassword } from './crypto'
+import {
+  applyConsolidatedSchemaStatements,
+  loadConsolidatedSchemaStatements,
+} from './apply-consolidated-schema'
 import { splitSqlStatements } from './sql-splitter'
 import {
   listIncrementalMigrationFiles,
@@ -21,6 +25,7 @@ import {
 import { normalizeMigrationSql } from './migration-sql-preprocess'
 import fs from 'fs'
 import path from 'path'
+import postgres from 'postgres'
 
 // 默认管理员信息
 // 安全说明：密码从环境变量读取，如果未设置则生成32位随机密码
@@ -91,14 +96,26 @@ async function initializePostgreSQL(): Promise<void> {
       throw new Error(`PostgreSQL schema file not found: ${sqlPath}`)
     }
 
-    const sqlContent = fs.readFileSync(sqlPath, 'utf-8')
-    const db = await getDatabase()
-    const sql = (db as any).getRawConnection()
+    const statements = loadConsolidatedSchemaStatements(sqlPath)
 
     console.log('\n📋 Creating database tables...')
-    // 注意：整合初始化脚本可能包含自身的 BEGIN/COMMIT（历史迁移保留），因此不要再包一层事务
-    await sql.unsafe(sqlContent)
-    console.log('✅ Schema created from migrations/000_init_schema_consolidated.pg.sql')
+    const databaseUrl = process.env.DATABASE_URL
+    if (
+      !databaseUrl ||
+      (!databaseUrl.startsWith('postgres://') && !databaseUrl.startsWith('postgresql://'))
+    ) {
+      throw new Error('DATABASE_URL is required for PostgreSQL initialization')
+    }
+
+    const initSql = postgres(databaseUrl, { max: 1 })
+    try {
+      const { ok, skipped } = await applyConsolidatedSchemaStatements(initSql, statements)
+      console.log(
+        `✅ Schema created from migrations/000_init_schema_consolidated.pg.sql (${ok} statements, ${skipped} skipped)`
+      )
+    } finally {
+      await initSql.end({ timeout: 5 })
+    }
 
     // 2. 创建默认管理员账号
     await createDefaultAdmin()

@@ -10,6 +10,12 @@ import { resolve } from 'path'
 import crypto from 'crypto'
 import { hashPassword } from '../src/lib/crypto.js'
 import { splitSqlStatements } from '../src/lib/sql-splitter'
+import {
+  applyConsolidatedSchemaStatements,
+  loadConsolidatedSchemaStatements,
+  isIgnorablePostgresSchemaError,
+  resolveConsolidatedSchemaPath,
+} from '../src/lib/apply-consolidated-schema'
 
 const DATABASE_URL = process.env.DATABASE_URL
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD
@@ -147,44 +153,39 @@ async function checkDatabaseInitialized(sql: ReturnType<typeof postgres>): Promi
   }
 }
 
-async function initializeDatabase(sql: ReturnType<typeof postgres>): Promise<void> {
-  // 支持本地开发和 Docker 容器两种路径
-  const possiblePaths = [
-    resolve('/app/migrations/000_init_schema_consolidated.pg.sql'), // Docker 容器（推荐）
-    resolve(__dirname, '../migrations/000_init_schema_consolidated.pg.sql'), // 本地开发（推荐）
-    resolve(process.cwd(), 'migrations/000_init_schema_consolidated.pg.sql'), // 当前目录（推荐）
-
-    // 兼容旧版本文件名
+async function initializeDatabase(_sql: ReturnType<typeof postgres>): Promise<void> {
+  const migrationPath = resolveConsolidatedSchemaPath([
+    resolve('/app/migrations/000_init_schema_consolidated.pg.sql'),
+    resolve(__dirname, '../migrations/000_init_schema_consolidated.pg.sql'),
+    resolve(process.cwd(), 'migrations/000_init_schema_consolidated.pg.sql'),
     resolve('/app/migrations/000_init_schema_v2.pg.sql'),
     resolve(__dirname, '../migrations/000_init_schema_v2.pg.sql'),
     resolve(process.cwd(), 'migrations/000_init_schema_v2.pg.sql'),
-  ]
-
-  let migrationPath = ''
-  for (const path of possiblePaths) {
-    if (existsSync(path)) {
-      migrationPath = path
-      break
-    }
-  }
-
-  if (!migrationPath) {
-    throw new Error(`找不到迁移文件，尝试过以下路径:\n${possiblePaths.join('\n')}`)
-  }
+  ])
 
   console.log(`📄 使用迁移文件: ${migrationPath}`)
 
-  const migration = readFileSync(migrationPath, 'utf8')
+  const statements = loadConsolidatedSchemaStatements(migrationPath)
 
-  // 🔥 FIX: 添加SQL执行超时保护（5分钟）
   console.log('⏳ 执行数据库初始化SQL（最多5分钟）...')
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('SQL execution timeout after 5m')), 300000)
-  )
+  const initSql = postgres(DATABASE_URL!, {
+    max: 1,
+    connect_timeout: 10,
+    idle_timeout: 20,
+    max_lifetime: 60,
+  })
 
-  await Promise.race([sql.unsafe(migration), timeoutPromise])
-
-  console.log('✅ 数据库初始化完成')
+  try {
+    const { ok, skipped } = await Promise.race([
+      applyConsolidatedSchemaStatements(initSql, statements, { logSkipped: true }),
+      new Promise<{ ok: number; skipped: number }>((_, reject) =>
+        setTimeout(() => reject(new Error('SQL execution timeout after 5m')), 300000)
+      ),
+    ])
+    console.log(`✅ 数据库初始化完成 (${ok} 条语句, ${skipped} 条跳过)`)
+  } finally {
+    await initSql.end({ timeout: 5 })
+  }
 }
 
 function calculateFileHash(content: string): string {
@@ -232,11 +233,8 @@ async function ensureMigrationHistorySchema(sql: ReturnType<typeof postgres>): P
   `)
 }
 
-function isIgnorablePostgresMigrationError(errorMessage: string): boolean {
-  return (
-    errorMessage.includes('already exists') ||
-    errorMessage.includes('duplicate key value violates unique constraint')
-  )
+function isIgnorablePostgresMigrationError(error: unknown): boolean {
+  return isIgnorablePostgresSchemaError(error)
 }
 
 async function runPendingMigrations(sql: ReturnType<typeof postgres>): Promise<void> {
@@ -351,13 +349,13 @@ async function runPendingMigrations(sql: ReturnType<typeof postgres>): Promise<v
             await tx.savepoint(async (sp) => {
               await sp.unsafe(trimmed)
             })
-          } catch (error: any) {
-            const errorMsg = error?.message ? String(error.message) : String(error)
-            if (isIgnorablePostgresMigrationError(errorMsg)) {
+          } catch (error: unknown) {
+            if (isIgnorablePostgresMigrationError(error)) {
               console.log(`   ⏭️  跳过幂等语句: ${trimmed.substring(0, 80)}...`)
               continue
             }
 
+            const errorMsg = error instanceof Error ? error.message : String(error)
             if (errorMsg.includes('canceling statement due to lock timeout')) {
               throw new Error(
                 `语句触发 lock_timeout(${STARTUP_MIGRATION_LOCK_TIMEOUT_MS}ms): ${trimmed.substring(0, 120)}...`
