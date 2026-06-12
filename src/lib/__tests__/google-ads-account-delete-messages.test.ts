@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDeleteAccountRemoteMessage } from '@/lib/google-ads/account-delete'
+import { buildDeleteAccountRemoteMessage } from '@/lib/google-ads/account-delete-messages'
 
 describe('buildDeleteAccountRemoteMessage', () => {
   it('describes partial failures as warning', () => {

@@ -13,8 +13,6 @@
  * - "dr_mercola" → "dr mercola"
  * - "  Dr.-Mercola  " → "dr mercola"
  */
-import { googleAdsKeywordLogger } from '../common/logger'
-
 /**
  * 标准化关键词（用于去重/缓存键归一）
  *
@@ -39,26 +37,6 @@ export function normalizeGoogleAdsKeyword(keyword: string): string {
       .replace(/\s+/g, ' ')
       .trim()
   )
-}
-
-/**
- * 批量标准化关键词数组
- *
- * @param keywords - 关键词数组
- * @returns Map<标准化关键词, 原始关键词[]>，便于查看去重情况
- */
-function normalizeKeywordArray(keywords: string[]): Map<string, string[]> {
-  const normalizedMap = new Map<string, string[]>()
-
-  keywords.forEach((keyword) => {
-    const normalized = normalizeGoogleAdsKeyword(keyword)
-    if (!normalizedMap.has(normalized)) {
-      normalizedMap.set(normalized, [])
-    }
-    normalizedMap.get(normalized)!.push(keyword)
-  })
-
-  return normalizedMap
 }
 
 /**
@@ -96,11 +74,6 @@ export function deduplicateKeywordsWithPriority<T>(
         // 如果当前优先级更高，替换已存在的
         if (currentPriority > existingPriority) {
           result[existingIndex] = item
-          googleAdsKeywordLogger.debug('dedupe_replaced_by_priority', {
-            keyword,
-            currentPriority,
-            existingPriority,
-          })
         }
       }
     }
@@ -121,48 +94,11 @@ export function areKeywordsDuplicates(keyword1: string, keyword2: string): boole
 }
 
 /**
- * 获取关键词的重复信息
- *
- * @param keywords - 关键词数组
- * @returns 重复关键词信息数组
- */
-function getDuplicateKeywordsInfo(keywords: string[]): Array<{
-  normalized: string
-  variants: string[]
-  count: number
-}> {
-  const normalizedMap = normalizeKeywordArray(keywords)
-
-  return Array.from(normalizedMap.entries())
-    .filter(([_, variants]) => variants.length > 1)
-    .map(([normalized, variants]) => ({
-      normalized,
-      variants,
-      count: variants.length,
-    }))
-    .sort((a, b) => b.count - a.count)
-}
-
-/**
  * 为调试目的，打印重复关键词信息
  *
  * @param keywords - 关键词数组
  * @param label - 标签（用于标识输出）
  */
-export function logDuplicateKeywords(keywords: string[], label: string = '关键词'): void {
-  const duplicates = getDuplicateKeywordsInfo(keywords)
-
-  if (duplicates.length > 0) {
-    googleAdsKeywordLogger.warn('duplicate_keywords_found', {
-      label,
-      groupCount: duplicates.length,
-      groups: duplicates.map(({ normalized, variants, count }) => ({
-        normalized,
-        variants,
-        count,
-      })),
-    })
-  } else {
-    googleAdsKeywordLogger.debug('no_duplicate_keywords', { label, keywordCount: keywords.length })
-  }
+export function logDuplicateKeywords(_keywords: string[], _label: string = '关键词'): void {
+  // No-op: shared module must stay free of server-only logging for client bundles.
 }
