@@ -3,8 +3,8 @@
  * 用于服务账号模式的 Google Ads API 调用
  */
 import axios from 'axios'
-import { getServiceAccountConfig } from './google-ads-service-account'
-import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
+import { getServiceAccountConfig } from '@/lib/google-ads/service-account/service-account'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { logger } from './structured-logger'
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_ADS_SERVICE_URL || 'http://localhost:8001'

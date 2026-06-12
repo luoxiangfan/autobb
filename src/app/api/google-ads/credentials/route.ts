@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, findUserById } from '@/lib/auth'
-import { deleteGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
-import { updateApiAccessLevel } from '@/lib/google-ads-access-level-detector'
+import { deleteGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
+import { updateApiAccessLevel } from '@/lib/google-ads/settings/access-level-detector'
 import {
   getGoogleAdsAuthContext,
   googleAdsAuthContextDualStackError,
@@ -19,12 +19,12 @@ import {
   oauthCredentialFieldsPresentFromContext,
   oauthRefreshConfiguredFromContext,
   serviceAccountConfiguredFromContext,
-} from '@/lib/google-ads-auth-context'
-import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/auth/context'
+import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads/settings/settings-store'
 import {
   logGoogleAdsCredentialsError,
   logGoogleAdsCredentialsInfo,
-} from '@/lib/google-ads-auth-route-logger'
+} from '@/lib/google-ads/auth/route-logger'
 
 const GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE =
   'POST /api/google-ads/credentials 已移除。请使用 PUT /api/settings（category=google_ads）保存 OAuth 配置字段，并通过「启动 OAuth 授权」完成 refresh_token 写入。'

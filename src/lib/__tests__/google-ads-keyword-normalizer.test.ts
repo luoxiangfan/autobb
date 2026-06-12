@@ -3,9 +3,9 @@ import {
   areKeywordsDuplicates,
   deduplicateKeywordsWithPriority,
   normalizeGoogleAdsKeyword,
-} from '../google-ads-keyword-normalizer'
+} from '@/lib/google-ads/keyword/normalizer'
 
-describe('google-ads-keyword-normalizer', () => {
+describe('@/lib/google-ads/keyword/normalizer', () => {
   it('normalizes punctuation and whitespace while preserving word boundaries', () => {
     expect(normalizeGoogleAdsKeyword('Dr. Mercola')).toBe('dr mercola')
     expect(normalizeGoogleAdsKeyword('dr-mercola')).toBe('dr mercola')

@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative } from '@/lib/ad-creative'
 import { findAdGroupById } from '@/lib/ad-groups'
 import { findCampaignById } from '@/lib/campaigns'
-import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
-import { createGoogleAdsResponsiveSearchAd } from '@/lib/google-ads-api'
+import { findGoogleAdsAccountById } from '@/lib/google-ads/accounts/accounts'
+import { createGoogleAdsResponsiveSearchAd } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 
 /**
  * POST /api/creatives/:id/sync

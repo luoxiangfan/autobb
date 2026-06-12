@@ -21,15 +21,15 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: assignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getOwnServiceAccountConfigForBackup: serviceAccountFns.getOwnServiceAccountConfigForBackup,
 }))
 
-vi.mock('@/lib/google-ads-service-account-backup', () => ({
+vi.mock('@/lib/google-ads/service-account/backup', () => ({
   buildGoogleAdsServiceAccountBackupPayload: backupFns.buildGoogleAdsServiceAccountBackupPayload,
 }))
 

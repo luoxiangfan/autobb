@@ -1,12 +1,15 @@
 import { getDatabase } from './db'
-import { updateGoogleAdsCampaignStatus, type OAuthApiCredentialsFields } from './google-ads-api'
-import type { GoogleAdsAuthContext } from './google-ads-auth-context'
+import {
+  updateGoogleAdsCampaignStatus,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads/api/api'
+import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import {
   googleAdsAuthContextParam,
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from './google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 
 export type CampaignPublishRollbackContext = {
   customerId: string

@@ -4,7 +4,7 @@ import { getDatabase } from '@/lib/db'
 import { encrypt } from '@/lib/crypto'
 import { nowFunc as sqlNowFunc } from '@/lib/db-helpers'
 import { z } from 'zod'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   GOOGLE_ADS_OAUTH_CONFIG_KEYS,
   isGoogleAdsCredentialBackedSettingKey,
@@ -12,7 +12,7 @@ import {
   isGoogleAdsSettingsValidationError,
   upsertGoogleAdsOAuthConfigFromSettings,
   type GoogleAdsOAuthConfigKey,
-} from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/settings/settings-store'
 
 // 配置导入验证Schema
 const importSettingsSchema = z.object({
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
 
         if (googleAdsFieldCount > 0) {
           const { invalidateGoogleAdsAuthContextForCredentialUser } =
-            await import('@/lib/google-ads-auth-context')
+            await import('@/lib/google-ads/auth/context')
           await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
         }
 

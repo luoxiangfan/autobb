@@ -32,15 +32,15 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/google-ads-oauth', () => ({
+vi.mock('@/lib/google-ads/oauth/oauth', () => ({
   verifyGoogleAdsCredentials: oauthFns.verifyGoogleAdsCredentials,
 }))
 
-vi.mock('@/lib/google-ads-access-level-detector', () => ({
+vi.mock('@/lib/google-ads/settings/access-level-detector', () => ({
   autoDetectAndUpdateAccessLevel: accessLevelFns.autoDetectAndUpdateAccessLevel,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
   getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,
   resolveConfiguredGoogleAdsAuthType: vi.fn(() => 'oauth'),

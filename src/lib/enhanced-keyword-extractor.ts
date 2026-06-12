@@ -17,7 +17,7 @@ import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
-} from './google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import { getHighIntentKeywords } from './google-suggestions'
 
 export interface EnhancedKeyword {

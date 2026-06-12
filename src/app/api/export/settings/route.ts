@@ -6,7 +6,7 @@ import {
   isGoogleAdsCredentialBackedSettingKey,
   overlayGoogleAdsOAuthFieldsForSettingsExport,
   type SettingsExportEntry,
-} from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/settings/settings-store'
 
 /**
  * GET /api/export/settings

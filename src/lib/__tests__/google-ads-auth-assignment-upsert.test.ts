@@ -14,13 +14,13 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextCache: authContextFns.invalidateGoogleAdsAuthContextCache,
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
 
-import { upsertGoogleAdsAuthAssignment } from '@/lib/google-ads-auth-assignment'
+import { upsertGoogleAdsAuthAssignment } from '@/lib/google-ads/auth/assignment'
 
 const sharedAssignmentRow = {
   user_id: 3,

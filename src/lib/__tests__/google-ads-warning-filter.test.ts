@@ -4,7 +4,7 @@ import {
   normalizeProcessWarningArgs,
   shouldSuppressGoogleAdsProcessWarning,
   shouldSuppressGoogleAdsWarningText,
-} from '@/lib/google-ads-warning-filter'
+} from '@/lib/google-ads/common/warning-filter'
 
 describe('google-ads warning filter', () => {
   it('parses emitWarning(message, options) shape used by MetadataLookupWarning', () => {

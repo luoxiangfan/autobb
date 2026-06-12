@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { syncUserPerformanceData } from '@/lib/google-ads-performance-sync'
+import { syncUserPerformanceData } from '@/lib/google-ads/api/performance-sync'
 
 export async function POST(request: NextRequest) {
   try {

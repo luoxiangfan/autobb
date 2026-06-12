@@ -683,7 +683,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       'openclaw-command',
       'openclaw-affiliate-sync',
       'openclaw-report-send',
-      'google-ads-campaign-sync',
+      '@/lib/google-ads/campaign/sync',
     ]
     for (const taskType of taskTypes) {
       pipeline.del(this.getKey(`pending:${taskType}`))

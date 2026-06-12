@@ -6,6 +6,6 @@
 
 export type { KeywordWithVolume, AIConfig } from './types'
 
-export { generateAdCreative, applyKeywordSupplementationOnce } from '../ad-creative-generator'
+export { generateAdCreative, applyKeywordSupplementationOnce } from '../ad-creative-generator/index'
 
-export type { KeywordSupplementationReport } from '../ad-creative-generator'
+export type { KeywordSupplementationReport } from '../ad-creative-generator/index'

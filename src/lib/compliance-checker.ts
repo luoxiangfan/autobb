@@ -1,4 +1,4 @@
-import { findGoogleAdsProhibitedSymbols } from './google-ads-ad-text'
+import { findGoogleAdsProhibitedSymbols } from '@/lib/google-ads/common/ad-text'
 
 /**
  * Google Ads 合规性检查规则引擎

@@ -36,9 +36,9 @@ const remoteFns = vi.hoisted(() => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts', () => accountFns)
-vi.mock('@/lib/google-ads-account-delete-campaigns', () => campaignListFns)
-vi.mock('@/lib/google-ads-campaign-remote-actions', () => remoteFns)
+vi.mock('@/lib/google-ads/accounts/accounts', () => accountFns)
+vi.mock('@/lib/google-ads/account-delete', () => campaignListFns)
+vi.mock('@/lib/google-ads/campaign/remote-actions', () => remoteFns)
 
 describe('DELETE /api/google-ads-accounts/:id', () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 
 export const PRODUCT_WORD_PATTERNS = [
   'pro',

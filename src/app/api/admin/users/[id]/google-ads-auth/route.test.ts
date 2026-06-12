@@ -33,16 +33,16 @@ vi.mock('@/lib/auth', () => ({
   findUserById: authFns.findUserById,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContextMetadata: contextFns.getGoogleAdsAuthContextMetadata,
   }
 })
 
-vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-assignment')>()
+vi.mock('@/lib/google-ads/auth/assignment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/assignment')>()
   return {
     ...actual,
     adminHasConfiguredAuth: contextFns.adminHasConfiguredAuth,
@@ -52,12 +52,12 @@ vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-oauth', () => ({
+vi.mock('@/lib/google-ads/oauth/oauth', () => ({
   saveGoogleAdsCredentials: oauthFns.saveGoogleAdsCredentials,
   deleteGoogleAdsCredentials: oauthFns.deleteGoogleAdsCredentials,
 }))
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   deleteAllGoogleAdsServiceAccountsForUser:
     serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser,
   parseServiceAccountJson: serviceAccountFns.parseServiceAccountJson,
@@ -69,7 +69,7 @@ vi.mock('@/lib/crypto', () => ({
 }))
 
 import { PUT, DELETE } from '@/app/api/admin/users/[id]/google-ads-auth/route'
-import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads-auth-context'
+import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads/auth/context'
 
 describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
   beforeEach(() => {

@@ -5,9 +5,9 @@ import {
   removeGoogleAdsCampaign as removeGoogleAdsCampaignRemote,
   updateGoogleAdsCampaignStatus,
   type OAuthApiCredentialsFields,
-} from '@/lib/google-ads-api'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/api/api'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { invalidateOfferCache } from '@/lib/api-cache'
 import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
@@ -395,7 +395,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
           let oauthLoginCustomerId: string | undefined
           let serviceAccountMccId: string | undefined
           let preparedAuthContext:
-            | import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
+            | import('@/lib/google-ads/auth/context').GoogleAdsAuthContext
             | undefined
 
           if (!googleAdsSummary.skippedReason) {

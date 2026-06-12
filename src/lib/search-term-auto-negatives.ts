@@ -1,15 +1,15 @@
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam } from '@/lib/db-helpers'
-import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads-api'
+import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads/api/api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
   type OAuthApiCredentialsFields,
-} from '@/lib/google-ads-accounts-auth'
-import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { KEYWORD_POLICY } from '@/lib/keyword-policy'
 

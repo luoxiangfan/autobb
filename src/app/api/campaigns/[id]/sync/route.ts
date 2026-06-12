@@ -1,13 +1,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
-import { findGoogleAdsAccountById } from '@/lib/google-ads-accounts'
-import { createGoogleAdsCampaign } from '@/lib/google-ads-api'
+import { findGoogleAdsAccountById } from '@/lib/google-ads/accounts/accounts'
+import { createGoogleAdsCampaign } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { invalidateOfferCache } from '@/lib/api-cache'
 
 /**

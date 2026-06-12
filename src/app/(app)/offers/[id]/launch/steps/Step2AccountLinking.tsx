@@ -49,12 +49,12 @@ import {
   resolveGoogleAdsAccountsFetchUiEffects,
   hasServiceAccountPermissionDetails,
   type ServiceAccountPermissionDetails,
-} from '@/lib/google-ads-accounts-fetch'
+} from '@/lib/google-ads/accounts/fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
   createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
-} from '@/lib/google-ads-accounts-fetch-handlers'
+} from '@/lib/google-ads/accounts/fetch-handlers'
 import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,

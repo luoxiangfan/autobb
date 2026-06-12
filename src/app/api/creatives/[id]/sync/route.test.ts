@@ -41,16 +41,16 @@ vi.mock('@/lib/campaigns', () => ({
   findCampaignById: campaignFns.findCampaignById,
 }))
 
-vi.mock('@/lib/google-ads-accounts', () => ({
+vi.mock('@/lib/google-ads/accounts/accounts', () => ({
   findGoogleAdsAccountById: accountFns.findGoogleAdsAccountById,
 }))
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   createGoogleAdsResponsiveSearchAd: adsFns.createGoogleAdsResponsiveSearchAd,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:

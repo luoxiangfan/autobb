@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
 }))
 
-import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign-publish-orphan-cleanup'
 
 describe('pauseOrphanGoogleAdsCampaignAfterPublishFailure', () => {

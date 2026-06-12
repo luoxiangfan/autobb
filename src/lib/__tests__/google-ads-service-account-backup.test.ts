@@ -5,7 +5,7 @@ import {
   GoogleAdsServiceAccountBackupConflictError,
   GoogleAdsServiceAccountBackupValidationError,
   importGoogleAdsServiceAccountFromBackup,
-} from '@/lib/google-ads-service-account-backup'
+} from '@/lib/google-ads/service-account/backup'
 
 const authContextFns = vi.hoisted(() => ({
   assertNoConflictingGoogleAdsAuth: vi.fn(),
@@ -16,12 +16,13 @@ const serviceAccountFns = vi.hoisted(() => ({
   parseServiceAccountJson: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   assertNoConflictingGoogleAdsAuth: authContextFns.assertNoConflictingGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-service-account', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-service-account')>()
+vi.mock('@/lib/google-ads/service-account/service-account', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/lib/google-ads/service-account/service-account')>()
   return {
     ...actual,
     parseServiceAccountJson: serviceAccountFns.parseServiceAccountJson,
@@ -33,7 +34,7 @@ vi.mock('@/lib/crypto', () => ({
   encrypt: vi.fn((value: string) => `enc:${value}`),
 }))
 
-describe('google-ads-service-account-backup', () => {
+describe('@/lib/google-ads/service-account/backup', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authContextFns.assertNoConflictingGoogleAdsAuth.mockResolvedValue(undefined)

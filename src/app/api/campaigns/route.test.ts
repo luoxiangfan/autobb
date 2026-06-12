@@ -28,7 +28,7 @@ vi.mock('@/lib/offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
-vi.mock('@/lib/google-ads-accounts', () => ({
+vi.mock('@/lib/google-ads/accounts/accounts', () => ({
   findGoogleAdsAccountById: adsAccountFns.findGoogleAdsAccountById,
 }))
 

@@ -6,7 +6,7 @@ import {
   findGoogleAdsAccountsByUserId,
   findActiveGoogleAdsAccounts,
   findGoogleAdsAccountsByUserMcc,
-} from '@/lib/google-ads-accounts'
+} from '@/lib/google-ads/accounts/accounts'
 
 /**
  * GET /api/google-ads-accounts

@@ -6,9 +6,9 @@ import {
   sanitizeGoogleAdsPolicyText,
   sanitizeKeywordListForGoogleAdsPolicy,
   sanitizeKeywordObjectsForGoogleAdsPolicy,
-} from '../google-ads-policy-guard'
+} from '@/lib/google-ads/policy/policy-guard'
 
-describe('google-ads-policy-guard', () => {
+describe('@/lib/google-ads/policy/policy-guard', () => {
   it('extracts sensitive health terms from mixed content', () => {
     const terms = extractGoogleAdsPolicySensitiveTerms([
       'RingConn sleep apnea monitoring',

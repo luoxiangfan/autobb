@@ -41,24 +41,24 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     resolveOAuthApiCredentialsForUser: accountsAuthFns.resolveOAuthApiCredentialsForUser,
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getCustomerWithCredentials: googleAdsFns.getCustomerWithCredentials,
 }))
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
@@ -72,7 +72,7 @@ vi.mock('@/lib/python-ads-client', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
 }))
 
-vi.mock('@/lib/google-ads-api-tracker', () => ({
+vi.mock('@/lib/google-ads/api/tracker', () => ({
   trackApiUsage: trackerFns.trackApiUsage,
   ApiOperationType: {
     REPORT: 'REPORT',

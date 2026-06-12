@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET, PUT } from '@/app/api/settings/[category]/[key]/route'
-import { GoogleAdsSettingsAuthConflictError } from '@/lib/google-ads-settings-store'
+import { GoogleAdsSettingsAuthConflictError } from '@/lib/google-ads/settings/settings-store'
 
 const settingsFns = vi.hoisted(() => ({
   getSetting: vi.fn(),
@@ -26,12 +26,12 @@ const authContextFns = vi.hoisted(() => ({
   invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: authAssignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-settings-store')>()
+vi.mock('@/lib/google-ads/settings/settings-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/settings/settings-store')>()
   return {
     ...actual,
     getGoogleAdsCredentialBackedSettingValue:
@@ -41,7 +41,7 @@ vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))

@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   executeGoogleAdsCampaignRemoteActions,
   queueGoogleAdsCampaignRemoteActions,
-} from '@/lib/google-ads-campaign-remote-actions'
+} from '@/lib/google-ads/campaign/remote-actions'
 
 const accountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
+vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   prepareGoogleAdsApiCallForLinkedAccount: accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount,
 }))
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   removeGoogleAdsCampaign: vi.fn(async () => {}),
   updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
 }))

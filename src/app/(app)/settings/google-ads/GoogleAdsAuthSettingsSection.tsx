@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { GoogleAdsServiceAccountPermissionAlert } from '@/components/GoogleAdsServiceAccountPermissionAlert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { hasServiceAccountPermissionDetails } from '@/lib/google-ads-accounts-fetch'
+import { hasServiceAccountPermissionDetails } from '@/lib/google-ads/accounts/fetch'
 import { GOOGLE_ADS_SETTING_METADATA } from './config'
 import type { GoogleAdsAuthSettings } from './useGoogleAdsAuthSettings'
 

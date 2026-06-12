@@ -1,13 +1,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   googleAdsServiceAccountBackupImportSchema,
   importGoogleAdsServiceAccountFromBackup,
   isGoogleAdsServiceAccountBackupValidationError,
   isGoogleAdsServiceAccountBackupConflictError,
-} from '@/lib/google-ads-service-account-backup'
+} from '@/lib/google-ads/service-account/backup'
 
 export const dynamic = 'force-dynamic'
 

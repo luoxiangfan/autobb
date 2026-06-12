@@ -7,18 +7,18 @@ import {
   resolveConfiguredGoogleAdsAuthType,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsAuthReadyFailure,
-} from '@/lib/google-ads-auth-context'
-import { formatErrorMessage } from '@/lib/google-ads-credentials-errors'
+} from '@/lib/google-ads/auth/context'
+import { formatErrorMessage } from '@/lib/google-ads/common/credentials-errors'
 import {
   healAccountsRouteDeveloperToken,
   resolveAccountsRouteAuthBundle,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import {
   type CachedAccount,
   getCachedAccounts,
   GOOGLE_ADS_ACCOUNTS_CACHE_MAX_AGE_MS,
-} from '@/lib/google-ads-accounts-cache'
-import { syncAccountsFromAPI } from '@/lib/google-ads-accounts-sync'
+} from '@/lib/google-ads/accounts/cache'
+import { syncAccountsFromAPI } from '@/lib/google-ads/accounts/sync'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/utils'
 import { withPerformanceMonitoring } from '@/lib/api-performance'
@@ -26,7 +26,7 @@ import {
   logGoogleAdsAccountsDebug,
   logGoogleAdsAccountsError,
   logGoogleAdsAccountsWarn,
-} from '@/lib/google-ads-auth-route-logger'
+} from '@/lib/google-ads/auth/route-logger'
 import {
   buildGoogleAdsAccountSyncKey,
   completeGoogleAdsAccountAsyncRefresh,
@@ -35,7 +35,7 @@ import {
   startGoogleAdsAccountAsyncRefreshHeartbeat,
   tryStartGoogleAdsAccountAsyncRefresh,
   waitForGoogleAdsAccountAsyncRefreshToSettle,
-} from '@/lib/google-ads-accounts-async-refresh-state'
+} from '@/lib/google-ads/accounts/async-refresh-state'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 // 该接口返回用户私有数据（账号列表/关联Offer），必须禁用任何层面的静态缓存

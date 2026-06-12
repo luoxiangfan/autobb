@@ -38,20 +38,20 @@ vi.mock('google-ads-api', () => {
   }
 })
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     resolveOAuthClientCredentialsForUser: accountsAuthFns.resolveOAuthClientCredentialsForUser,
   }
 })
 
-vi.mock('@/lib/google-ads-accounts', () => ({
+vi.mock('@/lib/google-ads/accounts/accounts', () => ({
   updateGoogleAdsAccount,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     assertGoogleAdsAuthReadyForApi: authContextFns.assertGoogleAdsAuthReadyForApi,
@@ -59,7 +59,7 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getUnifiedGoogleAdsClient: serviceAccountFns.getUnifiedGoogleAdsClient,
 }))
 
@@ -100,10 +100,10 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
     )
   })
 
-  let getCustomerWithCredentials: typeof import('@/lib/google-ads-api').getCustomerWithCredentials
+  let getCustomerWithCredentials: typeof import('@/lib/google-ads/api/api').getCustomerWithCredentials
 
   beforeAll(async () => {
-    ;({ getCustomerWithCredentials } = await import('@/lib/google-ads-api'))
+    ;({ getCustomerWithCredentials } = await import('@/lib/google-ads/api/api'))
   })
 
   it('omits login_customer_id when caller passes explicit undefined', async () => {
@@ -224,10 +224,10 @@ describe('getCustomerWithCredentials login_customer_id fallback', () => {
 })
 
 describe('resolveGoogleAdsApiCallAuth', () => {
-  let resolveGoogleAdsApiCallAuth: typeof import('@/lib/google-ads-api').resolveGoogleAdsApiCallAuth
+  let resolveGoogleAdsApiCallAuth: typeof import('@/lib/google-ads/api/api').resolveGoogleAdsApiCallAuth
 
   beforeAll(async () => {
-    ;({ resolveGoogleAdsApiCallAuth } = await import('@/lib/google-ads-api'))
+    ;({ resolveGoogleAdsApiCallAuth } = await import('@/lib/google-ads/api/api'))
   })
 
   beforeEach(() => {
@@ -256,10 +256,10 @@ describe('resolveGoogleAdsApiCallAuth', () => {
 })
 
 describe('resolveAuthTypeForGoogleAdsApiCall', () => {
-  let resolveAuthTypeForGoogleAdsApiCall: typeof import('@/lib/google-ads-api').resolveAuthTypeForGoogleAdsApiCall
+  let resolveAuthTypeForGoogleAdsApiCall: typeof import('@/lib/google-ads/api/api').resolveAuthTypeForGoogleAdsApiCall
 
   beforeAll(async () => {
-    ;({ resolveAuthTypeForGoogleAdsApiCall } = await import('@/lib/google-ads-api'))
+    ;({ resolveAuthTypeForGoogleAdsApiCall } = await import('@/lib/google-ads/api/api'))
   })
 
   beforeEach(() => {
@@ -303,10 +303,10 @@ describe('resolveAuthTypeForGoogleAdsApiCall', () => {
 })
 
 describe('findGoogleAdsCampaignByName auth reuse', () => {
-  let findGoogleAdsCampaignByName: typeof import('@/lib/google-ads-api').findGoogleAdsCampaignByName
+  let findGoogleAdsCampaignByName: typeof import('@/lib/google-ads/api/api').findGoogleAdsCampaignByName
 
   beforeAll(async () => {
-    ;({ findGoogleAdsCampaignByName } = await import('@/lib/google-ads-api'))
+    ;({ findGoogleAdsCampaignByName } = await import('@/lib/google-ads/api/api'))
   })
 
   afterEach(() => {

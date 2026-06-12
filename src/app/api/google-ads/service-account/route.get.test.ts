@@ -16,14 +16,15 @@ vi.mock('@/lib/auth', () => ({
   findUserById: vi.fn(async () => ({ id: 2, role: 'user' })),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,
   resolveGoogleAdsDisplayAuthType: authContextFns.resolveGoogleAdsDisplayAuthType,
   assertNoConflictingGoogleAdsAuth: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/google-ads-service-account', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-service-account')>()
+vi.mock('@/lib/google-ads/service-account/service-account', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/lib/google-ads/service-account/service-account')>()
   return {
     ...actual,
     listServiceAccounts: listServiceAccountsFn,

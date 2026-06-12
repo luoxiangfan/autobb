@@ -13,12 +13,12 @@ const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextCacheForOwner:
     authContextFns.invalidateGoogleAdsAuthContextCacheForOwner,
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
 }))
 
@@ -26,7 +26,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-import { refreshAccessToken } from '@/lib/google-ads-oauth'
+import { refreshAccessToken } from '@/lib/google-ads/oauth/oauth'
 
 describe('refreshAccessToken', () => {
   beforeEach(() => {

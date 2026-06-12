@@ -14,11 +14,11 @@ const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: authAssignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   assertNoConflictingGoogleAdsAuth: authContextFns.assertNoConflictingGoogleAdsAuth,
   invalidateGoogleAdsAuthContextCache: vi.fn(),
 }))
@@ -35,7 +35,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(() => dbFns),
 }))
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   parseServiceAccountJson: vi.fn(() => ({
     clientEmail: 'sa@test.iam.gserviceaccount.com',
     privateKey: '-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----',

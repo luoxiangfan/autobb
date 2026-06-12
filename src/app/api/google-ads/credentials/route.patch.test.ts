@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { PATCH } from '@/app/api/google-ads/credentials/route'
-import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads-auth-context'
+import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads/auth/context'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -23,19 +23,19 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: assignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
   }
 })
 
-vi.mock('@/lib/google-ads-access-level-detector', () => ({
+vi.mock('@/lib/google-ads/settings/access-level-detector', () => ({
   updateApiAccessLevel: accessLevelFns.updateApiAccessLevel,
 }))
 

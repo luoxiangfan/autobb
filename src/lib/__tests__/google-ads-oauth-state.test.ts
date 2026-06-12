@@ -9,9 +9,9 @@ import {
   GOOGLE_ADS_OAUTH_STATE_FUTURE_SKEW_MS,
   GOOGLE_ADS_OAUTH_STATE_MAX_AGE_MS,
   verifyGoogleAdsOAuthState,
-} from '@/lib/google-ads-oauth-state'
+} from '@/lib/google-ads/oauth/state'
 
-describe('google-ads-oauth-state', () => {
+describe('@/lib/google-ads/oauth/state', () => {
   beforeEach(() => {
     vi.useRealTimers()
   })

@@ -16,13 +16,13 @@ vi.mock('@/lib/user-execution-eligibility', () => ({
   assertUserExecutionAllowed: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContext: vi.fn(),
   hasConfiguredGoogleAdsAuthFromContext: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   const prepareGoogleAdsApiCallForLinkedAccount = vi.fn()
   return {
     ...actual,
@@ -34,7 +34,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   updateCampaignFinalUrlSuffix: vi.fn(),
 }))
 
@@ -51,14 +51,14 @@ vi.mock('@/lib/url-swap', () => ({
 import { getDatabase } from '@/lib/db'
 import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
 import { initializeProxyPool } from '@/lib/offer-utils'
-import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads-api'
+import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads/api/api'
 import { getUrlSwapTaskTargets, recordSwapHistory, setTaskError } from '@/lib/url-swap'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,
-} from '@/lib/google-ads-auth-context'
-import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/auth/context'
+import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads/accounts/auth/index'
 import { defaultPreparedGoogleAdsApiCallForLinkedAccount } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { executeUrlSwapTask } from '@/lib/queue/executors/url-swap-executor'
 

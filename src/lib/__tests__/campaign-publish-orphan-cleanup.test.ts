@@ -4,12 +4,12 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount: vi.fn(async () => ({
@@ -32,8 +32,8 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-login-customer', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-login-customer')>()
+vi.mock('@/lib/google-ads/oauth/login-customer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/oauth/login-customer')>()
   return {
     ...actual,
     resolveLoginCustomerCandidates: vi.fn(() => ['111']),
@@ -42,7 +42,7 @@ vi.mock('@/lib/google-ads-login-customer', async (importOriginal) => {
 })
 
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import {
   findHistoricalOrphanCampaignsForOffer,
   pauseHistoricalOrphanGoogleCampaignsForOffer,

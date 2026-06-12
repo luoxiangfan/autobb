@@ -8,12 +8,12 @@ import {
   normalizeGeminiModel,
 } from './gemini-models'
 import { estimateTokenCost, recordTokenUsage } from './ai-token-tracker'
-import { getGoogleAdsOAuthRedirectUri } from './google-ads-oauth-redirect'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
 import {
   looksLikeOAuthAccessToken,
   looksLikeOAuthClientId,
   looksLikeOAuthClientSecret,
-} from './google-ads-developer-token-heal'
+} from '@/lib/google-ads/accounts/auth/developer-token-heal'
 
 export interface SystemSetting {
   id: number
@@ -587,7 +587,7 @@ export async function validateGoogleAdsConfig(
     // Step 3: 尝试创建GoogleAdsApi实例（验证配置能否被库接受）
     try {
       // 使用统一的 getGoogleAdsClient 验证配置
-      const { getGoogleAdsClient } = await import('./google-ads-api')
+      const { getGoogleAdsClient } = await import('@/lib/google-ads/api/api')
 
       const testClient = getGoogleAdsClient({
         client_id: clientId,

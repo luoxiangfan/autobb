@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { generateOAuthUrl } from '@/lib/google-ads-oauth'
-import { looksLikeOAuthClientSecret } from '@/lib/google-ads-developer-token-heal'
-import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads-settings-store'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
-import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
-import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
-import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
+import { generateOAuthUrl } from '@/lib/google-ads/oauth/oauth'
+import { looksLikeOAuthClientSecret } from '@/lib/google-ads/accounts/auth/developer-token-heal'
+import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads/settings/settings-store'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads/auth/context'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
+import { createGoogleAdsOAuthState } from '@/lib/google-ads/oauth/state'
 import {
   logGoogleAdsOAuthDebug,
   logGoogleAdsOAuthError,
   logGoogleAdsOAuthInfo,
-} from '@/lib/google-ads-auth-route-logger'
+} from '@/lib/google-ads/auth/route-logger'
 
 /**
  * GET /api/google-ads/oauth/start

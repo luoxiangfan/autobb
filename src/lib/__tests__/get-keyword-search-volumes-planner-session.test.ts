@@ -11,7 +11,7 @@ vi.mock('@/lib/keyword-planner', () => ({
 import {
   getKeywordSearchVolumesForPlannerContext,
   type KeywordPlannerPreparedSession,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 
 const mockSession: KeywordPlannerPreparedSession = {
   volumeAuth: {

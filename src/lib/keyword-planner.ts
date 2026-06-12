@@ -2,27 +2,27 @@
  * Google Ads Keyword Planner API Service
  * 获取真实的关键词搜索量数据
  */
-import { enums } from './google-ads-api'
+import { enums } from 'google-ads-api'
 import { getDatabase } from './db'
 import {
   resolveGoogleAdsAuthReadyFailure,
   resolveConfiguredGoogleAdsAuthType,
-} from './google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 import { dateMinusDays } from './db-helpers'
 import { getBatchCachedVolumes, batchCacheVolumes } from './redis'
-import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
-import { refreshAccessToken } from './google-ads-oauth'
-import { getGoogleAdsAuthContext, type GoogleAdsAuthContext } from './google-ads-auth-context'
-import { resolveGoogleAdsApiAccessLevel } from './google-ads-auth-assignment'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
+import { refreshAccessToken } from '@/lib/google-ads/oauth/oauth'
+import { getGoogleAdsAuthContext, type GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
+import { resolveGoogleAdsApiAccessLevel } from '@/lib/google-ads/auth/assignment'
 import {
   getGoogleAdsLanguageIdString,
   getGoogleAdsGeoTargetId,
   normalizeCountryCode,
   normalizeLanguageCode,
 } from './language-country-codes'
-import { getGoogleAdsClient } from './google-ads-api'
-import { getServiceAccountConfig, AuthType } from './google-ads-service-account'
-import type { OAuthApiCredentialsFields } from './google-ads-accounts-auth'
+import { getGoogleAdsClient } from '@/lib/google-ads/api/api'
+import { getServiceAccountConfig, AuthType } from '@/lib/google-ads/service-account/service-account'
+import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
 
 /**
  * 🔧 修复(2025-12-24): 获取 KeywordPlanIdeaService
@@ -344,7 +344,7 @@ export async function getKeywordSearchVolumes(
     const dbVolumes = new Map<string, KeywordVolume>()
 
     try {
-      const { normalizeGoogleAdsKeyword } = await import('./google-ads-keyword-normalizer')
+      const { normalizeGoogleAdsKeyword } = await import('@/lib/google-ads/keyword/normalizer')
 
       const languageCandidates = Array.from(new Set([effectiveLanguage, language].filter(Boolean)))
       const langPlaceholders = languageCandidates.map(() => '?').join(',')
@@ -941,7 +941,7 @@ async function saveToGlobalKeywords(
   avgCpcMicros?: number
 ): Promise<void> {
   try {
-    const { normalizeGoogleAdsKeyword } = await import('./google-ads-keyword-normalizer')
+    const { normalizeGoogleAdsKeyword } = await import('@/lib/google-ads/keyword/normalizer')
     // 🔧 修复(2026-01-21): 存储规范化的关键词，解决标点符号匹配问题
     const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
 

@@ -3,7 +3,7 @@ import {
   defaultOAuthApiAuth,
   defaultOAuthAuthContext,
 } from './helpers/campaign-route-auth-context-mock'
-import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads-auth-context'
+import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads/auth/context'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
@@ -18,8 +18,8 @@ import {
   resolveOAuthApiCredentialsForUser,
   resolveOAuthClientCredentialsForUser,
   resolveOAuthRefreshToken,
-} from '../google-ads-accounts-auth'
-import * as routeAuthModule from '../google-ads-accounts-route-auth'
+} from '@/lib/google-ads/accounts/auth/index'
+import * as routeAuthModule from '@/lib/google-ads/accounts/auth/route-auth'
 
 const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
@@ -39,12 +39,12 @@ const settingsStoreFns = vi.hoisted(() => ({
   getGoogleAdsOAuthConfigValue: vi.fn(),
 }))
 
-vi.mock('../google-ads-settings-store', () => ({
+vi.mock('@/lib/google-ads/settings/settings-store', () => ({
   getGoogleAdsOAuthConfigValue: settingsStoreFns.getGoogleAdsOAuthConfigValue,
 }))
 
-vi.mock('../google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
@@ -53,7 +53,7 @@ vi.mock('../google-ads-auth-context', async (importOriginal) => {
   }
 })
 
-vi.mock('../google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
@@ -724,7 +724,7 @@ describe('GoogleAdsLinkedAccountPrepareCache', () => {
   })
 
   it('prepareGoogleAdsApiCallForLinkedAccountCached evicts slim and retries full prepare when rehydrate fails', async () => {
-    const cacheModule = await import('../google-ads-auth-context-cache')
+    const cacheModule = await import('@/lib/google-ads/auth/context-cache')
     const cache = createGoogleAdsLinkedAccountPrepareCache()
 
     const first = await prepareGoogleAdsApiCallForLinkedAccountCached(1, 'sa-1', cache)

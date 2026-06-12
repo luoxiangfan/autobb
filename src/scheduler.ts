@@ -29,7 +29,7 @@ import {
   triggerLinkCheck,
   triggerCleanup,
 } from './lib/queue-triggers'
-import { resolveGoogleAdsSyncCredentialGate } from './lib/google-ads-auth-context'
+import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/context'
 import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
 import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/product-score-control'

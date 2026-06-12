@@ -10,7 +10,7 @@ const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   isGoogleAdsAuthShared: assignmentFns.isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
 }))
@@ -24,7 +24,7 @@ import {
   overlayGoogleAdsSettingsFromCredentialStore,
   resolveGoogleAdsCredentialFieldsForReadOnlyApi,
   resolveGoogleAdsOAuthSettingsReadUserId,
-} from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/settings/settings-store'
 
 describe('resolveGoogleAdsOAuthSettingsReadUserId', () => {
   beforeEach(() => {

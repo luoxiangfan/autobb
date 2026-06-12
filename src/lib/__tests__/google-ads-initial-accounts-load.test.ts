@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'
+import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads/settings/initial-accounts-load'
 
 describe('runInitialGoogleAdsAccountsLoad', () => {
   it('prefers OAuth accounts when OAuth is configured', async () => {

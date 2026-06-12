@@ -1,6 +1,6 @@
 import { getDatabase } from './db'
 import { containsPureBrand, getPureBrandKeywords } from './brand-keyword-utils'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 
 export interface SearchTermFeedbackHints {
   hardNegativeTerms: string[]

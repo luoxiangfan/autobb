@@ -33,7 +33,7 @@ import { getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
 import type {
   KeywordPlannerPreparedSession,
   KeywordPoolPreparedExpand,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
 import type { Offer } from '@/lib/offers'
 import {

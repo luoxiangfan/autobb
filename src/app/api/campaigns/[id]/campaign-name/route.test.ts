@@ -29,11 +29,11 @@ vi.mock('@/lib/campaigns', () => ({
   updateCampaign: campaignFns.updateCampaign,
 }))
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   updateGoogleAdsCampaignName: googleAdsFns.updateGoogleAdsCampaignName,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,

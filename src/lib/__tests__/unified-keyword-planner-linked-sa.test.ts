@@ -10,7 +10,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-import { resolveKeywordPlannerLinkedServiceAccountId } from '@/lib/google-ads-accounts-auth'
+import { resolveKeywordPlannerLinkedServiceAccountId } from '@/lib/google-ads/accounts/auth/index'
 import {
   keywordPlannerIdeasAuthFromSession,
   type KeywordPlannerSessionAuthResult,

@@ -49,7 +49,7 @@ import { deriveSkipKeywordPoolExpandLoad } from '@/lib/parse-offer-id'
 import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
 import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
-import type { KeywordPlannerPreparedSession } from '@/lib/google-ads-accounts-auth'
+import type { KeywordPlannerPreparedSession } from '@/lib/google-ads/accounts/auth/index'
 
 /**
  * 验证URL是否为有效的URL

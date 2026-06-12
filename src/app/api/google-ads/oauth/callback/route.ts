@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { looksLikeOAuthClientSecret } from '@/lib/google-ads-developer-token-heal'
-import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads-settings-store'
-import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads-auth-assignment'
-import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
-import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads-auth-context'
-import { verifyGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
+import { exchangeCodeForTokens, saveGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
+import { looksLikeOAuthClientSecret } from '@/lib/google-ads/accounts/auth/developer-token-heal'
+import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads/settings/settings-store'
+import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-ads/auth/assignment'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
+import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads/auth/context'
+import { verifyGoogleAdsOAuthState } from '@/lib/google-ads/oauth/state'
 import {
   logGoogleAdsOAuthDebug,
   logGoogleAdsOAuthError,
   logGoogleAdsOAuthInfo,
-} from '@/lib/google-ads-auth-route-logger'
+} from '@/lib/google-ads/auth/route-logger'
 
 export const dynamic = 'force-dynamic'
 

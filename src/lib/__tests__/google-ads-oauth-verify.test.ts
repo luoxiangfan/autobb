@@ -22,7 +22,7 @@ const { DUAL_STACK_WARNING } = vi.hoisted(() => ({
   DUAL_STACK_WARNING: '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。',
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
   invalidateGoogleAdsAuthContextCacheForOwner:
     authContextFns.invalidateGoogleAdsAuthContextCacheForOwner,
@@ -46,7 +46,7 @@ vi.mock('@/lib/python-ads-client', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getGoogleAdsClient: apiFns.getGoogleAdsClient,
 }))
 
@@ -54,7 +54,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-import { verifyGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+import { verifyGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
 
 const oauthCtx = {
   userId: 2,

@@ -13,13 +13,13 @@ import {
   safeReadJson,
   throwAccountsListFetchError,
   type ParsedGoogleAdsCredentialsStatus,
-} from '@/lib/google-ads-credentials-errors'
+} from '@/lib/google-ads/common/credentials-errors'
 import {
   buildGoogleAdsAccountsSearchParams,
   type GoogleAdsAccountsApiData,
   type GoogleAdsAccountsFetchParams,
   type GoogleAdsAccountsFetchResult,
-} from '@/lib/google-ads-accounts-fetch'
+} from '@/lib/google-ads/accounts/fetch'
 import {
   useGoogleAdsAccountsAuth,
   type UseGoogleAdsAccountsAuthOptions,

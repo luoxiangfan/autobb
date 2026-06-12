@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveSyncAuthForAccount } from '../google-ads-accounts-auth'
+import { resolveSyncAuthForAccount } from '@/lib/google-ads/accounts/auth/index'
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 
 const saAuthContext = {

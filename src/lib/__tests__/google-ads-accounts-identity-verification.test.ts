@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   EMPTY_IDENTITY_VERIFICATION,
   extractIdentityVerificationSnapshot,
-} from '../google-ads-accounts-identity-verification'
+} from '@/lib/google-ads/accounts/identity-verification'
 
 describe('extractIdentityVerificationSnapshot', () => {
   it('returns empty snapshot when response has no identity data', () => {

@@ -13,7 +13,7 @@ vi.mock('@/lib/db', () => ({
 import {
   resolveLinkedServiceAccountIdForGoogleAdsAccount,
   resolveLinkedServiceAccountIdForOffer,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 
 describe('resolveLinkedServiceAccountIdForOffer', () => {
   beforeEach(() => {

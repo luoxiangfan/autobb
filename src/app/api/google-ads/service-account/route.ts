@@ -4,15 +4,15 @@ import {
   listServiceAccounts,
   parseServiceAccountJson,
   replaceGoogleAdsServiceAccountForUser,
-} from '@/lib/google-ads-service-account'
+} from '@/lib/google-ads/service-account/service-account'
 import { encrypt } from '@/lib/crypto'
 import { verifyAuth, findUserById } from '@/lib/auth'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   assertNoConflictingGoogleAdsAuth,
   getGoogleAdsAuthContextMetadata,
   resolveGoogleAdsDisplayAuthType,
-} from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 
 async function getAuthenticatedUser(request: NextRequest) {
   const authResult = await verifyAuth(request)

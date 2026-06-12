@@ -18,7 +18,7 @@ import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   collectCredentialBackedFieldUpdates,
   isGoogleAdsCredentialBackedSettingKey,
@@ -27,7 +27,7 @@ import {
   overlayGoogleAdsSettingsFromCredentialStore,
   partitionGoogleAdsSettingUpdates,
   upsertGoogleAdsOAuthConfigFromSettings,
-} from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/settings/settings-store'
 
 /**
  * GET /api/settings
@@ -410,7 +410,7 @@ export async function PUT(request: NextRequest) {
 
     if (hasGoogleAdsOAuthCredentialUpdate && userIdNum) {
       const { invalidateGoogleAdsAuthContextForCredentialUser } =
-        await import('@/lib/google-ads-auth-context')
+        await import('@/lib/google-ads/auth/context')
       await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
 
       return NextResponse.json({

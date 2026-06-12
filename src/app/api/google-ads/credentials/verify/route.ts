@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { verifyGoogleAdsCredentials } from '@/lib/google-ads-oauth'
-import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads-access-level-detector'
+import { verifyGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
+import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads/settings/access-level-detector'
 import {
   getGoogleAdsAuthContext,
   googleAdsAuthReadyFailureHttpStatus,
@@ -9,13 +9,13 @@ import {
   resolveConfiguredGoogleAdsAuthType,
   resolveGoogleAdsAuthReadyFailure,
   getGoogleAdsAuthContextMetadata,
-} from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 import {
   logGoogleAdsVerifyDebug,
   logGoogleAdsVerifyError,
   logGoogleAdsVerifyInfo,
   logGoogleAdsVerifyWarn,
-} from '@/lib/google-ads-auth-route-logger'
+} from '@/lib/google-ads/auth/route-logger'
 
 /**
  * POST /api/google-ads/credentials/verify

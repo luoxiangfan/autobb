@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
-import { createGoogleAdsKeywordsBatch, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import {
+  createGoogleAdsKeywordsBatch,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { patchCampaignConfigKeywords } from '@/lib/campaign-config-keywords'
 
 type KeywordInput =
@@ -183,7 +186,7 @@ async function createNegativeKeywords(params: {
   serviceAccountId?: string
   loginCustomerId?: string
   credentials?: OAuthApiCredentialsFields
-  authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
+  authContext?: import('@/lib/google-ads/auth/context').GoogleAdsAuthContext
 }): Promise<{
   created: Array<{
     keywordId: string

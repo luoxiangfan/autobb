@@ -42,7 +42,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
+vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   validateGoogleAdsConfigForCreativeGeneration:
     authFns.validateGoogleAdsConfigForCreativeGeneration,
 }))

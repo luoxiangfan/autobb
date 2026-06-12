@@ -23,7 +23,7 @@ const authContextFns = vi.hoisted(() => ({
   invalidateGoogleAdsAuthContextForCredentialUser: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
@@ -32,12 +32,12 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: assignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-settings-store')>()
+vi.mock('@/lib/google-ads/settings/settings-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/settings/settings-store')>()
   return {
     ...actual,
     upsertGoogleAdsOAuthConfigFromSettings: settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings,
@@ -113,7 +113,8 @@ describe('POST /api/import/settings google_ads OAuth fields', () => {
   })
 
   it('returns 409 when OAuth import conflicts with service account auth', async () => {
-    const { GoogleAdsSettingsAuthConflictError } = await import('@/lib/google-ads-settings-store')
+    const { GoogleAdsSettingsAuthConflictError } =
+      await import('@/lib/google-ads/settings/settings-store')
     settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockRejectedValueOnce(
       new GoogleAdsSettingsAuthConflictError(
         '当前已配置服务账号认证，请先在设置页删除服务账号后再配置 OAuth。'

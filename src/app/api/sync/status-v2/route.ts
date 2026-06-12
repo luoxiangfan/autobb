@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCampaignSyncQueueCounts } from '@/lib/google-ads-campaign-sync-pipeline-status'
+import { getGoogleAdsCampaignSyncQueueCounts } from '@/lib/google-ads/campaign/sync-pipeline-status'
 
 /**
  * GET /api/sync/status-v2

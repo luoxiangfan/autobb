@@ -16,7 +16,7 @@ vi.mock('../keyword-planner', () => ({
   getKeywordSearchVolumes: getKeywordSearchVolumesMock,
 }))
 
-vi.mock('../google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   tryGetConfiguredGoogleAdsApiAuthForUser: tryGetConfiguredGoogleAdsApiAuthForUserMock,
 }))
 

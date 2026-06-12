@@ -6,7 +6,7 @@ import { getInsertedId } from '@/lib/db-helpers'
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsAuthReadyFailure,
-} from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 import { createError, ErrorCode, AppError } from '@/lib/errors'
 import { calculateLaunchScore } from '@/lib/scoring'
 import type { AdCreative } from '@/lib/ad-creative'
@@ -31,7 +31,7 @@ import {
   hasPublishCampaignConfigOwnershipViolation,
 } from '@/lib/campaign-publish/aligned-campaign-config'
 import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
-import { isGoogleAdsAccountAccessError } from '@/lib/google-ads-login-customer'
+import { isGoogleAdsAccountAccessError } from '@/lib/google-ads/oauth/login-customer'
 import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign-state-machine'
 import { normalizeCampaignPublishRequestBody } from '@/lib/autoads-request-normalizers'
 import { invalidateOfferCache } from '@/lib/api-cache'

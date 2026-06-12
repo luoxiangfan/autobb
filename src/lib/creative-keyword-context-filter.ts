@@ -1,4 +1,4 @@
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { getMinContextTokenMatchesForKeywordQualityFilter } from './keyword-context-filter'
 import { filterKeywordQuality } from './keyword-quality-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'

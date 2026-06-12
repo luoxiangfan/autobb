@@ -1,18 +1,40 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+const authContextFns = vi.hoisted(() => ({
+  assertGoogleAdsAuthReadyForApi: vi.fn(),
+}))
+
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
+  return {
+    ...actual,
+    assertGoogleAdsAuthReadyForApi: authContextFns.assertGoogleAdsAuthReadyForApi,
+  }
+})
+
 vi.mock('@/lib/python-ads-client', () => ({
   removeCampaignPython: vi.fn(),
 }))
 
-import * as googleAdsApi from '@/lib/google-ads-api'
+import * as googleAdsApi from '@/lib/google-ads/api/api'
 import { removeCampaignPython } from '@/lib/python-ads-client'
 
 describe('removeGoogleAdsCampaign', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authContextFns.assertGoogleAdsAuthReadyForApi.mockResolvedValue({
+      dualStack: false,
+      auth: { authType: 'oauth' },
+      oauthCredentials: {},
+    })
   })
 
   it('uses removeCampaignPython for service_account auth', async () => {
+    authContextFns.assertGoogleAdsAuthReadyForApi.mockResolvedValue({
+      dualStack: false,
+      auth: { authType: 'service_account' },
+    })
+
     await googleAdsApi.removeGoogleAdsCampaign({
       userId: 1,
       customerId: '123',

@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolParam, getInsertedId } from '@/lib/db-helpers'
-import { createGoogleAdsKeywordsBatch, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
+import {
+  createGoogleAdsKeywordsBatch,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import {
   patchCampaignConfigKeywords,
@@ -235,7 +238,7 @@ async function createKeywordsWithDuplicateTolerance(params: {
   serviceAccountId?: string
   loginCustomerId?: string
   credentials?: OAuthApiCredentialsFields
-  authContext?: import('@/lib/google-ads-auth-context').GoogleAdsAuthContext
+  authContext?: import('@/lib/google-ads/auth/context').GoogleAdsAuthContext
 }) {
   const created: Array<{ keywordId: string; keywordText: string }> = []
   const duplicateKeywords: string[] = []

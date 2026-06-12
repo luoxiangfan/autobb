@@ -11,9 +11,9 @@ import {
   parseCredentialsStatusResponse,
   resolveAccountsFetchBlockedUiEffects,
   resolveAccountsRequestAuth,
-} from '../google-ads-credentials-errors'
+} from '@/lib/google-ads/common/credentials-errors'
 
-describe('google-ads-credentials-errors', () => {
+describe('@/lib/google-ads/common/credentials-errors', () => {
   it('buildGoogleAdsApiErrorMessage handles AUTH_TYPE_MISMATCH', () => {
     const response = new Response(null, { status: 409 })
     expect(

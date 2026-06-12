@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
+import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
 
 describe('formatGoogleAdsApiError', () => {
   it('formats policy_violation_details with actionable context', () => {

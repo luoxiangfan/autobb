@@ -24,10 +24,10 @@ import {
   tryAcquireGoogleAdsAuthContextInflightLock,
   waitForPeerGoogleAdsAuthContext,
   writeGoogleAdsAuthContextToRedis,
-} from '@/lib/google-ads-auth-context-redis'
+} from '@/lib/google-ads/auth/context-redis'
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
 
-describe('google-ads-auth-context-redis', () => {
+describe('@/lib/google-ads/auth/context-redis', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     redisFns.client = {

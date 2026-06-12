@@ -24,8 +24,8 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
@@ -33,7 +33,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   listGoogleAdsCampaigns: apiFns.listGoogleAdsCampaigns,
   updateGoogleAdsCampaignStatus: apiFns.updateGoogleAdsCampaignStatus,
 }))
@@ -156,7 +156,7 @@ describe('pauseCampaigns authContext forwarding', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
 
-    const loginCustomer = await import('@/lib/google-ads-login-customer')
+    const loginCustomer = await import('@/lib/google-ads/oauth/login-customer')
     vi.spyOn(loginCustomer, 'runWithLoginCustomerFallbackForAccount').mockImplementation(
       async ({ callback }) => callback('7888509345')
     )

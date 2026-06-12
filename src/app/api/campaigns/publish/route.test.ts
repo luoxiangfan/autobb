@@ -38,8 +38,8 @@ vi.mock('@/lib/active-campaigns-query', () => ({
   queryActiveCampaigns: campaignsFns.queryActiveCampaigns,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { showSuccess, showError, showWarning } from '@/lib/toast-utils'
-import { buildDeleteAccountRemoteMessage } from '@/lib/google-ads-account-delete-messages'
+import { buildDeleteAccountRemoteMessage } from '@/lib/google-ads/account-delete'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

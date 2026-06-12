@@ -18,7 +18,7 @@ import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
-} from './google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import { normalizeLanguageCode } from './language-country-codes'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'

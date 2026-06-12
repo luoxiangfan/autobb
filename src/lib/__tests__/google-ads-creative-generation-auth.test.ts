@@ -17,8 +17,8 @@ const plannerAuthFns = vi.hoisted(() => ({
   queryGoogleAdsAccountForOfferExpand: vi.fn(),
 }))
 
-vi.mock('../google-ads-api-prepare', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../google-ads-api-prepare')>()
+vi.mock('@/lib/google-ads/accounts/auth/api-prepare', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/api-prepare')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccountCached:
@@ -30,7 +30,7 @@ vi.mock('../keyword-planner', () => ({
   getGoogleAdsConfig: keywordPlannerFns.getGoogleAdsConfig,
 }))
 
-vi.mock('../google-ads-keyword-planner-auth', () => ({
+vi.mock('@/lib/google-ads/keyword/planner-auth', () => ({
   resolveLinkedServiceAccountIdForOffer: plannerAuthFns.resolveLinkedServiceAccountIdForOffer,
   queryGoogleAdsAccountForOfferExpand: plannerAuthFns.queryGoogleAdsAccountForOfferExpand,
 }))
@@ -38,8 +38,8 @@ vi.mock('../google-ads-keyword-planner-auth', () => ({
 import {
   createCreativeGenerationAuthCache,
   validateGoogleAdsConfigForCreativeGeneration,
-} from '../google-ads-creative-generation-auth'
-import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/accounts/auth/creative-generation-auth'
+import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads/auth/context'
 
 const oauthCredentialsFull = {
   refresh_token: 'oauth-refresh-token',

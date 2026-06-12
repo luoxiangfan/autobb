@@ -4,8 +4,8 @@ const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
@@ -34,7 +34,7 @@ describe('getKeywordIdeas auth guard', () => {
       serviceAccountConfig: null,
     })
 
-    const { getKeywordIdeas } = await import('@/lib/google-ads-keyword-planner')
+    const { getKeywordIdeas } = await import('@/lib/google-ads/keyword/planner')
 
     await expect(
       getKeywordIdeas({
@@ -60,8 +60,8 @@ describe('getKeywordIdeas auth guard', () => {
       serviceAccountConfig: { id: 'sa-1' },
     })
 
-    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
-    const { getKeywordIdeas } = await import('@/lib/google-ads-keyword-planner')
+    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads/auth/context')
+    const { getKeywordIdeas } = await import('@/lib/google-ads/keyword/planner')
 
     await expect(
       getKeywordIdeas({

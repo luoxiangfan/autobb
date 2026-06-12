@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   extractGoogleAdsRetryDelaySeconds,
   isGoogleAdsQuotaRateError,
-} from '@/lib/google-ads-quota-error'
+} from '@/lib/google-ads/common/quota-error'
 
-describe('google-ads-quota-error', () => {
+describe('@/lib/google-ads/common/quota-error', () => {
   it('extracts retry delay from message text', () => {
     const error = {
       errors: [

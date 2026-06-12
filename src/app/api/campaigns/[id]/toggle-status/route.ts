@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { getDatabase } from '@/lib/db'
 import { findCampaignById } from '@/lib/campaigns'
-import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 import { pauseOfferTasks, resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'

@@ -23,17 +23,20 @@ import {
 } from '@/lib/url-swap'
 import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap-types'
 import { getDatabase } from '@/lib/db'
-import { updateCampaignFinalUrlSuffix, type OAuthApiCredentialsFields } from '@/lib/google-ads-api'
-import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+import {
+  updateCampaignFinalUrlSuffix,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads/api/api'
+import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
   type GoogleAdsLinkedAccountPrepareCache,
-} from '@/lib/google-ads-accounts-auth'
-import type { GoogleAdsAuthContext } from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/accounts/auth/index'
+import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { initializeProxyPool } from '@/lib/offer-utils'
 import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
 import {

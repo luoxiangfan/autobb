@@ -4,8 +4,8 @@ const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContext: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
@@ -20,13 +20,16 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getGoogleAdsClient: vi.fn(() => ({
     Customer: vi.fn((opts: unknown) => ({ kind: 'oauth-customer', opts })),
   })),
 }))
 
-import { getLoginCustomerId, getUnifiedGoogleAdsClient } from '@/lib/google-ads-service-account'
+import {
+  getLoginCustomerId,
+  getUnifiedGoogleAdsClient,
+} from '@/lib/google-ads/service-account/service-account'
 
 describe('google-ads-service-account auth-context integration', () => {
   beforeEach(() => {

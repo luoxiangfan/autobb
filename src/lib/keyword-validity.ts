@@ -1,5 +1,5 @@
 import { containsPureBrand, isPureBrandKeyword } from './brand-keyword-utils'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { normalizeLanguageCode } from './language-country-codes'
 
 type ScriptFamily =

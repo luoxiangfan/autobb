@@ -29,8 +29,8 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
@@ -38,15 +38,15 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getCustomerWithCredentials: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,

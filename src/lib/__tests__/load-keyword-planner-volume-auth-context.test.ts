@@ -13,7 +13,7 @@ vi.mock('@/lib/db', () => ({
 import {
   resolveKeywordPlannerLinkedServiceAccountId,
   resolveLinkedServiceAccountIdForKeywordPlannerContext,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 
 describe('resolveKeywordPlannerLinkedServiceAccountId', () => {
   beforeEach(() => {

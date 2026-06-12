@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getGoogleAdsCampaignSyncPipelineSnapshot } from '@/lib/google-ads-campaign-sync-pipeline-status'
+import { getGoogleAdsCampaignSyncPipelineSnapshot } from '@/lib/google-ads/campaign/sync-pipeline-status'
 
 const POLL_MS = 2000
 const STREAM_MAX_MS = 20 * 60 * 1000

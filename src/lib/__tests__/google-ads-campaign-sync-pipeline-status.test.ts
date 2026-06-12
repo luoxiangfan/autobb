@@ -33,9 +33,9 @@ import {
   GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE,
   markStaleGoogleAdsCampaignSyncLogs,
   userHasActiveGoogleAdsCampaignSyncWork,
-} from '@/lib/google-ads-campaign-sync-pipeline-status'
+} from '@/lib/google-ads/campaign/sync-pipeline-status'
 
-describe('google-ads-campaign-sync-pipeline-status', () => {
+describe('@/lib/google-ads/campaign/sync-pipeline-status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queueMocks.getPendingTasksForType.mockResolvedValue([])

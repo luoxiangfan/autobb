@@ -9,7 +9,7 @@ import {
   UserManagementContext,
 } from '@/lib/audit-logger'
 import { clearUserExecutionEligibilityCache } from '@/lib/user-execution-eligibility'
-import { purgeGoogleAdsAuthConfigForUser } from '@/lib/google-ads-auth-assignment'
+import { purgeGoogleAdsAuthConfigForUser } from '@/lib/google-ads/auth/assignment'
 
 // 获取客户端IP地址
 function getClientIP(request: NextRequest): string {

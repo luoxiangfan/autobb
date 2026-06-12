@@ -25,8 +25,8 @@ vi.mock('@/lib/crypto', () => ({
   decrypt: vi.fn((value: string) => `decrypted:${value}`),
 }))
 
-vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-settings-store')>()
+vi.mock('@/lib/google-ads/settings/settings-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/settings/settings-store')>()
   return {
     ...actual,
     overlayGoogleAdsOAuthFieldsForSettingsExport:

@@ -6,7 +6,7 @@ import { findOfferById } from '@/lib/offers'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 import { mapWithConcurrency, resolveBatchEvaluateConcurrency } from '@/lib/run-with-concurrency'
 

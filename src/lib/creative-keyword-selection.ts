@@ -13,7 +13,7 @@ import {
   type KeywordSourceTier,
 } from './creative-keyword-source-priority'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { containsAsinLikeToken } from './model-anchor-evidence'
 import {
   analyzeKeywordLanguageCompatibility,

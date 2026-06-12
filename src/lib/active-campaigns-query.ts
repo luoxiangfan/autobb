@@ -4,14 +4,14 @@
  * 使用真实的Google Ads API查询，结合命名规范建立关联关系
  */
 
-import { enums } from 'google-ads-api'
+import { enums } from '@/lib/google-ads/api/api'
 import { getDatabase } from './db'
-import { listGoogleAdsCampaigns } from './google-ads-api'
+import { listGoogleAdsCampaigns } from '@/lib/google-ads/api/api'
 import {
   googleAdsAuthContextParam,
   prepareGoogleAdsApiCallForLinkedAccount,
-} from './google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { categorizeCampaigns, type GoogleAdsCampaignInfo } from './campaign-association'
 
 /**
@@ -228,7 +228,7 @@ export async function pauseCampaigns(
     oauthLoginCustomerId,
   } = await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
-  const { updateGoogleAdsCampaignStatus } = await import('./google-ads-api')
+  const { updateGoogleAdsCampaignStatus } = await import('@/lib/google-ads/api/api')
 
   const failures: PauseCampaignsResult['failures'] = []
   let pausedCount = 0

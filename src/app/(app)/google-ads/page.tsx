@@ -6,25 +6,25 @@ import {
   buildGoogleAdsApiErrorMessage,
   formatErrorMessage,
   safeReadJson,
-} from '@/lib/google-ads-credentials-errors'
+} from '@/lib/google-ads/common/credentials-errors'
 import {
   applyGoogleAdsAccountsFetchUiEffects,
   resolveGoogleAdsAccountsFetchUiEffects,
   hasServiceAccountPermissionDetails,
   type ServiceAccountPermissionDetails,
-} from '@/lib/google-ads-accounts-fetch'
+} from '@/lib/google-ads/accounts/fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
   createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
-} from '@/lib/google-ads-accounts-fetch-handlers'
+} from '@/lib/google-ads/accounts/fetch-handlers'
 import {
   useGoogleAdsAccountsList,
   type GoogleAdsAccountsFetchParams,
   type GoogleAdsAccountsFetchResult,
 } from '@/hooks/useGoogleAdsAccountsList'
 import { GoogleAdsServiceAccountPermissionAlert } from '@/components/GoogleAdsServiceAccountPermissionAlert'
-import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads-initial-accounts-load'
+import { runInitialGoogleAdsAccountsLoad } from '@/lib/google-ads/settings/initial-accounts-load'
 
 interface GoogleAdsAccount {
   customerId: string

@@ -21,7 +21,7 @@ import {
   clearCreativeGenerationAuthCache,
   validateGoogleAdsConfigForCreativeGeneration,
   type CreativeGenerationAuthCache,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import { toDbJsonObjectField } from '@/lib/json-field'
 import {

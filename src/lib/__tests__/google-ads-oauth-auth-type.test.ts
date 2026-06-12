@@ -12,11 +12,11 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
 }))
 
-import { getUserAuthType } from '@/lib/google-ads-oauth'
+import { getUserAuthType } from '@/lib/google-ads/oauth/oauth'
 
 describe('getUserAuthType', () => {
   beforeEach(() => {

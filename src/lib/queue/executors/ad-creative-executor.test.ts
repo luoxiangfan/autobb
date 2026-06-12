@@ -47,8 +47,8 @@ const keywordRuntimeFns = vi.hoisted(() => ({
   buildPreGenerationCreativeKeywordSet: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     loadKeywordPoolExpandCredentialsForOffer: vi.fn().mockResolvedValue({ ok: false }),

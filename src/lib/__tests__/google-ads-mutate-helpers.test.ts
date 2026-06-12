@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeGoogleAdsApiUpdateOperations } from '../google-ads-mutate-helpers'
+import { normalizeGoogleAdsApiUpdateOperations } from '@/lib/google-ads/common/mutate-helpers'
 
 describe('normalizeGoogleAdsApiUpdateOperations', () => {
   it('converts mutate-style update operations into google-ads-api update objects', () => {

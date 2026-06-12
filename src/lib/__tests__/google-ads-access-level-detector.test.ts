@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GOOGLE_ADS_DUAL_STACK_WARNING } from '../google-ads-auth-context'
+import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads/auth/context'
 
 let mockDb: any
 const mockListAccessibleCustomers = vi.fn()
@@ -14,7 +14,7 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getGoogleAdsClient: () => ({
     listAccessibleCustomers: (...args: any[]) => mockListAccessibleCustomers(...args),
     Customer: () => ({
@@ -26,8 +26,8 @@ vi.mock('../google-ads-api', () => ({
   }),
 }))
 
-vi.mock('../google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
@@ -63,7 +63,7 @@ function mockOAuthAuthContext(overrides?: { dualStack?: boolean; apiAccessLevel?
   authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue(context)
 }
 
-describe('google-ads-access-level-detector', () => {
+describe('@/lib/google-ads/settings/access-level-detector', () => {
   beforeEach(() => {
     mockDb = {
       queryOne: vi.fn(),
@@ -79,14 +79,14 @@ describe('google-ads-access-level-detector', () => {
 
   it('throws dual-stack warning before probing Google Ads API', async () => {
     mockOAuthAuthContext({ dualStack: true })
-    const { detectApiAccessLevel } = await import('../google-ads-access-level-detector')
+    const { detectApiAccessLevel } = await import('@/lib/google-ads/settings/access-level-detector')
 
     await expect(detectApiAccessLevel(71)).rejects.toThrow(GOOGLE_ADS_DUAL_STACK_WARNING)
     expect(mockListAccessibleCustomers).not.toHaveBeenCalled()
   })
 
   it('upgrades explorer to basic when keyword planner probe succeeds', async () => {
-    const { detectApiAccessLevel } = await import('../google-ads-access-level-detector')
+    const { detectApiAccessLevel } = await import('@/lib/google-ads/settings/access-level-detector')
 
     mockListAccessibleCustomers.mockResolvedValue({
       resource_names: ['customers/2872703913'],
@@ -101,7 +101,7 @@ describe('google-ads-access-level-detector', () => {
   })
 
   it('returns test when probe fails with test-only developer token error', async () => {
-    const { detectApiAccessLevel } = await import('../google-ads-access-level-detector')
+    const { detectApiAccessLevel } = await import('@/lib/google-ads/settings/access-level-detector')
 
     mockListAccessibleCustomers.mockResolvedValue({
       resource_names: ['customers/2872703913'],

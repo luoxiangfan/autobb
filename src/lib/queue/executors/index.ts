@@ -109,7 +109,7 @@ export function registerAllExecutors(queue: UnifiedQueueManager): void {
     queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
 
     // 🆕 注册 google-ads-campaign-sync 执行器（Google Ads广告系列同步）
-    queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
+    queue.registerExecutor('@/lib/google-ads/campaign/sync', executeGoogleAdsCampaignSyncTask)
   } else {
     logger.warn('queue_background_executors_skipped', {
       reason: backgroundDecision.reason,
@@ -136,7 +136,7 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('openclaw-affiliate-sync', executeOpenclawAffiliateSync)
   queue.registerExecutor('openclaw-report-send', executeOpenclawReportSend)
   queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
-  queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
+  queue.registerExecutor('@/lib/google-ads/campaign/sync', executeGoogleAdsCampaignSyncTask)
   queue.registerExecutor('campaign-batch-create', executeCampaignBatchCreate)
 }
 

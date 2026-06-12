@@ -17,12 +17,12 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: assignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-service-account-backup', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-service-account-backup')>()
+vi.mock('@/lib/google-ads/service-account/backup', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/service-account/backup')>()
   return {
     ...actual,
     importGoogleAdsServiceAccountFromBackup: backupFns.importGoogleAdsServiceAccountFromBackup,
@@ -33,7 +33,7 @@ import { POST } from '@/app/api/import/google-ads-service-account/route'
 import {
   GoogleAdsServiceAccountBackupConflictError,
   GoogleAdsServiceAccountBackupValidationError,
-} from '@/lib/google-ads-service-account-backup'
+} from '@/lib/google-ads/service-account/backup'
 
 describe('POST /api/import/google-ads-service-account', () => {
   beforeEach(() => {

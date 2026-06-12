@@ -14,7 +14,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
   assertNoConflictingGoogleAdsAuth: authContextFns.assertNoConflictingGoogleAdsAuth,
@@ -23,7 +23,7 @@ vi.mock('@/lib/google-ads-auth-context', () => ({
 import {
   GoogleAdsSettingsAuthConflictError,
   upsertGoogleAdsOAuthConfigFromSettings,
-} from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/settings/settings-store'
 
 describe('upsertGoogleAdsOAuthConfigFromSettings', () => {
   beforeEach(() => {

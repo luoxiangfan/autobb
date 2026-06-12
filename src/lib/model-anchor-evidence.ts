@@ -1,4 +1,4 @@
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 
 const MODEL_ANCHOR_SUFFIX_PATTERN = String.raw`(?:[a-z]\d+[a-z0-9-]*|\d{1,4}[a-z0-9-]*|[a-z]|ii|iii|iv|v|vi|vii|viii|ix|x)`
 const MODEL_ANCHOR_PATTERNS = [

@@ -29,5 +29,5 @@ export function registerBackgroundExecutors(queue: UnifiedQueueManager): void {
   queue.registerExecutor('openclaw-affiliate-sync', executeOpenclawAffiliateSync)
   queue.registerExecutor('openclaw-report-send', executeOpenclawReportSend)
   queue.registerExecutor('product-score-calculation', executeProductScoreCalculation)
-  queue.registerExecutor('google-ads-campaign-sync', executeGoogleAdsCampaignSyncTask)
+  queue.registerExecutor('@/lib/google-ads/campaign/sync', executeGoogleAdsCampaignSyncTask)
 }

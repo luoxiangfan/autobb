@@ -14,12 +14,12 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextCacheForOwner:
     authContextFns.invalidateGoogleAdsAuthContextCacheForOwner,
 }))
 
-import { purgeGoogleAdsAuthConfigForUser } from '@/lib/google-ads-auth-assignment'
+import { purgeGoogleAdsAuthConfigForUser } from '@/lib/google-ads/auth/assignment'
 
 describe('purgeGoogleAdsAuthConfigForUser', () => {
   beforeEach(() => {

@@ -9,7 +9,7 @@ import {
   oauthCredentialFieldsPresentFromContext,
   oauthRefreshConfiguredFromContext,
   stripGoogleAdsAuthContextForCache,
-} from '../google-ads-auth-context-cache'
+} from '@/lib/google-ads/auth/context-cache'
 
 const oauthFns = vi.hoisted(() => ({
   getGoogleAdsCredentials: vi.fn(),
@@ -19,16 +19,16 @@ const saFns = vi.hoisted(() => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
-vi.mock('../google-ads-oauth', () => ({
+vi.mock('@/lib/google-ads/oauth/oauth', () => ({
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
   getGoogleAdsCredentialsRaw: vi.fn(),
 }))
 
-vi.mock('../google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: saFns.getServiceAccountConfig,
 }))
 
-describe('google-ads-auth-context-cache', () => {
+describe('@/lib/google-ads/auth/context-cache', () => {
   it('stripGoogleAdsAuthContextForCache removes OAuth and SA secrets', () => {
     const stripped = stripGoogleAdsAuthContextForCache({
       ...defaultOAuthAuthContext,

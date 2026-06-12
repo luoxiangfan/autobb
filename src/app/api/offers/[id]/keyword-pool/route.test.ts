@@ -44,7 +44,7 @@ vi.mock('@/app/api/offers/[id]/rebuild/route', () => ({
   POST: rebuildFns.postRebuild,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
+vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   loadKeywordPoolExpandCredentialsForOffer: authFns.loadKeywordPoolExpandCredentialsForOffer,
 }))
 

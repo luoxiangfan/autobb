@@ -3,17 +3,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useGoogleAdsAccountsAuth } from '../useGoogleAdsAccountsAuth'
-import { GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY } from '@/lib/google-ads-credentials-errors'
+import { GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY } from '@/lib/google-ads/common/credentials-errors'
 
-vi.mock('@/lib/google-ads-credentials-errors', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-credentials-errors')>()
+vi.mock('@/lib/google-ads/common/credentials-errors', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/common/credentials-errors')>()
   return {
     ...actual,
     fetchGoogleAdsCredentialsStatus: vi.fn(),
   }
 })
 
-import { fetchGoogleAdsCredentialsStatus } from '@/lib/google-ads-credentials-errors'
+import { fetchGoogleAdsCredentialsStatus } from '@/lib/google-ads/common/credentials-errors'
 
 const oauthParsed = {
   authType: 'oauth' as const,

@@ -28,7 +28,7 @@ vi.mock('@/lib/offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', () => ({
+vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   loadKeywordPoolExpandCredentialsForOffer: authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
 }))
 

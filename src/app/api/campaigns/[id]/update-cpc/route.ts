@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import { getDatabase } from '@/lib/db'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { executeGAQLQueryPython, updateCampaignPython } from '@/lib/python-ads-client'
-import { normalizeGoogleAdsApiUpdateOperations } from '@/lib/google-ads-mutate-helpers'
-import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
+import { normalizeGoogleAdsApiUpdateOperations } from '@/lib/google-ads/common/mutate-helpers'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
 
 function extractSearchResults(result: any): any[] {

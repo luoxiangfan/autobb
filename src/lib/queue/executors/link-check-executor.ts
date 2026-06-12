@@ -28,9 +28,9 @@ import {
   clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import { updateGoogleAdsCampaignStatus } from '../../google-ads-api'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
+import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 
 /**
  * Link Check 任务数据接口

@@ -2,12 +2,12 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaigns'
 import { getDatabase } from '@/lib/db'
-import { updateGoogleAdsCampaignName } from '@/lib/google-ads-api'
+import { updateGoogleAdsCampaignName } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { invalidateDashboardCache } from '@/lib/api-cache'
 
 const MAX_CAMPAIGN_NAME_LENGTH = 255

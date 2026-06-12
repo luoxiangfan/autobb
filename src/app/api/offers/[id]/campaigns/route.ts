@@ -1,15 +1,15 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCustomerWithCredentials } from '@/lib/google-ads-api'
+import { getCustomerWithCredentials } from '@/lib/google-ads/api/api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
   prepareGoogleAdsApiCallForLinkedAccountCached,
   preparedAuthContextField,
   type GoogleAdsLinkedAccountPrepareCache,
-} from '@/lib/google-ads-accounts-auth'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
-import { getServiceAccountConfig } from '@/lib/google-ads-service-account'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
+import { getServiceAccountConfig } from '@/lib/google-ads/service-account/service-account'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsAuthContext,
@@ -17,9 +17,9 @@ import {
   googleAdsAuthReadyFailurePayload,
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsAuthReadyFailure,
-} from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
-import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 
 // Google Ads CampaignStatus 枚举值映射

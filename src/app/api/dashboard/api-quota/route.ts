@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getDailyUsageStats, getUsageTrend, checkQuotaLimit } from '@/lib/google-ads-api-tracker'
-import { hasConfiguredGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { getDailyUsageStats, getUsageTrend, checkQuotaLimit } from '@/lib/google-ads/api/tracker'
+import { hasConfiguredGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import { getDatabase } from '@/lib/db'
 
 type RateLimitEvent = {

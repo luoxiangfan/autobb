@@ -18,14 +18,14 @@ vi.mock('@/lib/db-helpers', () => ({
   boolCondition: () => 'is_active = 1',
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: contextFns.getGoogleAdsAuthContext,
     getGoogleAdsAuthContextMetadata: async (userId: number) => {
       const { stripGoogleAdsAuthContextForCache } =
-        await import('@/lib/google-ads-auth-context-cache')
+        await import('@/lib/google-ads/auth/context-cache')
       const ctx = await contextFns.getGoogleAdsAuthContext(userId)
       return stripGoogleAdsAuthContextForCache(ctx)
     },
@@ -36,14 +36,14 @@ import {
   adminHasConfiguredAuth,
   hasConfiguredGoogleAdsAuth,
   resolveGoogleAdsApiAccessLevelFromContext,
-} from '@/lib/google-ads-auth-assignment'
+} from '@/lib/google-ads/auth/assignment'
 import {
   hasConfiguredGoogleAdsAuthFromContext,
   resolveGoogleAdsApiAccessLevel,
   clearMemoryAuthContextCacheForTests,
   seedMemoryAuthContextCacheForTests,
-} from '@/lib/google-ads-auth-context'
-import { stripGoogleAdsAuthContextForCache } from '@/lib/google-ads-auth-context-cache'
+} from '@/lib/google-ads/auth/context'
+import { stripGoogleAdsAuthContextForCache } from '@/lib/google-ads/auth/context-cache'
 
 function sharedSaContext() {
   return {

@@ -23,7 +23,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-campaign-remote-actions', () => ({
+vi.mock('@/lib/google-ads/campaign/remote-actions', () => ({
   queueGoogleAdsCampaignRemoteActions: vi.fn((params: { shouldRemove?: boolean }) => ({
     queued: false,
     planned: 0,

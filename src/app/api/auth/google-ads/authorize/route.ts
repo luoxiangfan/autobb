@@ -1,10 +1,10 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateOAuthUrl } from '@/lib/google-ads-oauth'
-import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads-oauth-redirect'
-import { createGoogleAdsOAuthState } from '@/lib/google-ads-oauth-state'
-import { getGoogleAdsOAuthConfigValue } from '@/lib/google-ads-settings-store'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { generateOAuthUrl } from '@/lib/google-ads/oauth/oauth'
+import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
+import { createGoogleAdsOAuthState } from '@/lib/google-ads/oauth/state'
+import { getGoogleAdsOAuthConfigValue } from '@/lib/google-ads/settings/settings-store'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 
 /**
  * GET /api/auth/google-ads/authorize?customerId=xxx

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
-import { GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT } from '@/lib/google-ads-campaign-sync-events'
+import { GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT } from '@/lib/google-ads/campaign/sync-events'
 import {
   Table,
   TableBody,

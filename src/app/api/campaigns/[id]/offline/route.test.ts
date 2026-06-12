@@ -84,8 +84,8 @@ const accountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
@@ -93,13 +93,13 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   updateGoogleAdsCampaignStatus: vi.fn(),
   getCustomerWithCredentials: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
@@ -108,14 +108,14 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api-tracker', () => ({
+vi.mock('@/lib/google-ads/api/tracker', () => ({
   trackApiUsage: vi.fn(async () => {}),
   ApiOperationType: {
     MUTATE: 'mutate',
   },
 }))
 
-vi.mock('@/lib/google-ads-login-customer', () => ({
+vi.mock('@/lib/google-ads/oauth/login-customer', () => ({
   runWithLoginCustomerFallbackForAccount: vi.fn(
     async ({ callback }: { callback: (id?: string) => unknown }) => callback(undefined)
   ),
@@ -126,7 +126,7 @@ const { removePendingClickFarmQueueTasksByTaskIds } = await import('@/lib/click-
 const { removePendingUrlSwapQueueTasksByTaskIds } = await import('@/lib/url-swap/queue-cleanup')
 const { applyCampaignTransition } = await import('@/lib/campaign-state-machine')
 const { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } =
-  await import('@/lib/google-ads-api')
+  await import('@/lib/google-ads/api/api')
 describe('POST /api/campaigns/:id/offline', () => {
   beforeEach(() => {
     vi.clearAllMocks()

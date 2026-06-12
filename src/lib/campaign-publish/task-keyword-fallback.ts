@@ -1,4 +1,4 @@
-import { sanitizeKeywordObjectsForGoogleAdsPolicy } from '@/lib/google-ads-policy-guard'
+import { sanitizeKeywordObjectsForGoogleAdsPolicy } from '@/lib/google-ads/policy/policy-guard'
 
 export type CampaignKeywordConfigItem =
   | string

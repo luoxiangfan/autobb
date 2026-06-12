@@ -17,10 +17,10 @@ import {
   GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE,
   markStaleGoogleAdsCampaignSyncLogs,
   userHasActiveGoogleAdsCampaignSyncWork,
-} from '../../google-ads-campaign-sync-pipeline-status'
+} from '@/lib/google-ads/campaign/sync-pipeline-status'
 import { getQueueManagerForTaskType } from '../queue-routing'
-import { resolveGoogleAdsSyncCredentialGate } from '../../google-ads-auth-context'
-import { userHasGoogleAdsMccAssignments } from '../../google-ads-campaign-sync'
+import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/context'
+import { userHasGoogleAdsMccAssignments } from '@/lib/google-ads/campaign/sync'
 import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
 
 /**
@@ -309,7 +309,7 @@ class GoogleAdsCampaignSyncScheduler {
   ): Promise<string> {
     // 🆕 修复：使用 getQueueManagerForTaskType 确保任务被路由到正确的队列
     // google-ads-campaign-sync 属于后台任务，应该入队到 background 队列
-    const queue = getQueueManagerForTaskType('google-ads-campaign-sync')
+    const queue = getQueueManagerForTaskType('@/lib/google-ads/campaign/sync')
 
     const taskData: GoogleAdsCampaignSyncTaskData = {
       userId,
@@ -318,7 +318,7 @@ class GoogleAdsCampaignSyncScheduler {
       dryRun: options.dryRun,
     }
 
-    const taskId = await queue.enqueue('google-ads-campaign-sync', taskData, userId, {
+    const taskId = await queue.enqueue('@/lib/google-ads/campaign/sync', taskData, userId, {
       priority: options.syncType === 'manual' ? 'high' : 'normal',
       maxRetries: 3,
     })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractCustomerIdFromResourceName } from '../google-ads-resource-name'
+import { extractCustomerIdFromResourceName } from '@/lib/google-ads/common/resource-name'
 
 describe('extractCustomerIdFromResourceName', () => {
   it('extracts customer id from resource name', () => {

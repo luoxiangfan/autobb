@@ -11,11 +11,11 @@ import { findOfferById } from '@/lib/offers'
 import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { createError } from '@/lib/errors'
-import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads-accounts-auth'
+import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads/accounts/auth/index'
 import {
   clearCreativeGenerationAuthCache,
   createCreativeGenerationAuthCache,
-} from '@/lib/google-ads-creative-generation-auth'
+} from '@/lib/google-ads/accounts/auth/creative-generation-auth'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {

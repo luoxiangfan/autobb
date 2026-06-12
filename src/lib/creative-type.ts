@@ -1,4 +1,4 @@
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { hasModelAnchorInText } from './model-anchor-evidence'
 
 export type CanonicalCreativeType = 'brand_intent' | 'model_intent' | 'product_intent'

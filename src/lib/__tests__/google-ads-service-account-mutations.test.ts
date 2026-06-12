@@ -12,7 +12,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
@@ -21,7 +21,7 @@ import {
   deleteAllGoogleAdsServiceAccountsForUser,
   deleteGoogleAdsServiceAccountForUser,
   replaceGoogleAdsServiceAccountForUser,
-} from '@/lib/google-ads-service-account'
+} from '@/lib/google-ads/service-account/service-account'
 
 describe('google-ads-service-account mutations', () => {
   beforeEach(() => {

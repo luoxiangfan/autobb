@@ -26,7 +26,7 @@ import {
   type KeywordPoolExpandLoadResult,
   type KeywordPoolPreparedExpand,
   type KeywordPlannerPreparedSession,
-} from './google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
 import {
   filterKeywordQuality,
@@ -39,7 +39,7 @@ import {
   extractPlatformFromUrl,
 } from './keyword-quality-filter'
 import { getMinContextTokenMatchesForKeywordQualityFilter } from './keyword-context-filter'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { isInvalidKeyword } from './keyword-invalid-filter'
 import {
   getBrandCoreKeywords,

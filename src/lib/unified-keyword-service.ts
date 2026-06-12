@@ -19,12 +19,12 @@ import {
   prepareGoogleAdsApiCallForLinkedAccount,
   resolveKeywordPlannerLinkedServiceAccountId,
   type KeywordPlannerPreparedSession,
-} from './google-ads-accounts-auth'
-import { getKeywordIdeas, type KeywordIdeasPreparedOAuth } from './google-ads-keyword-planner'
+} from '@/lib/google-ads/accounts/auth/index'
+import { getKeywordIdeas, type KeywordIdeasPreparedOAuth } from '@/lib/google-ads/keyword/planner'
 import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { normalizeLanguageCode } from './language-country-codes'
 import { hasModelAnchorEvidence } from './creative-type'
 import {

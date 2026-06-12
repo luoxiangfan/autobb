@@ -10,8 +10,8 @@ const accountsAuthFns = vi.hoisted(() => ({
   keywordPlannerVolumeAuthFromPrepared: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
@@ -20,7 +20,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads-accounts-auth'
+import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads/accounts/auth/index'
 import { prepareKeywordPlannerSessionAuth } from '@/lib/unified-keyword-service'
 
 describe('prepareKeywordPlannerSessionAuth', () => {

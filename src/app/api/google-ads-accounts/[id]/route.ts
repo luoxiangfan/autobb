@@ -4,18 +4,18 @@ import {
   findGoogleAdsAccountById,
   updateGoogleAdsAccount,
   deleteGoogleAdsAccount,
-} from '@/lib/google-ads-accounts'
+} from '@/lib/google-ads/accounts/accounts'
 import {
   listDeletableRemoteCampaignsForAccount,
   countDeletableRemoteCampaignsForAccount,
   limitDeletableRemoteCampaigns,
-} from '@/lib/google-ads-account-delete-campaigns'
-import { getGoogleAdsAccountDeleteRemoteConfig } from '@/lib/google-ads-account-delete-config'
-import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
-import { parseDeleteGoogleAdsAccountRequest } from '@/lib/google-ads-account-delete-request'
-import { buildDeleteAccountApiWarnings } from '@/lib/google-ads-account-delete-warnings'
+} from '@/lib/google-ads/account-delete'
+import { getGoogleAdsAccountDeleteRemoteConfig } from '@/lib/google-ads/account-delete'
+import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
+import { parseDeleteGoogleAdsAccountRequest } from '@/lib/google-ads/account-delete'
+import { buildDeleteAccountApiWarnings } from '@/lib/google-ads/account-delete'
 import { parseTruthyFlag } from '@/lib/parse-truthy-flag'
-import type { GoogleAdsCampaignRemoteActionSummary } from '@/lib/google-ads-campaign-remote-actions'
+import type { GoogleAdsCampaignRemoteActionSummary } from '@/lib/google-ads/campaign/remote-actions'
 
 function emptyGoogleAdsRemoteSummary(): GoogleAdsCampaignRemoteActionSummary {
   const config = getGoogleAdsAccountDeleteRemoteConfig()

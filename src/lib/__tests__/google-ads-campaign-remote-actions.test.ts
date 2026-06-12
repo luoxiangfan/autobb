@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
+import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
 
 const accountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
@@ -10,8 +10,8 @@ const apiFns = vi.hoisted(() => ({
   updateGoogleAdsCampaignStatus: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
@@ -19,7 +19,7 @@ vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => apiFns)
+vi.mock('@/lib/google-ads/api/api', () => apiFns)
 
 describe('queueGoogleAdsCampaignRemoteActions', () => {
   beforeEach(() => {

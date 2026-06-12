@@ -4,7 +4,7 @@ import {
   defaultOAuthAuthContext,
   defaultPreparedGoogleAdsApiCallForLinkedAccount,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
-import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads-accounts-auth'
+import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads/accounts/auth/index'
 
 describe('buildKeywordPlannerSessionFromPrepared', () => {
   it('builds OAuth session with preparedOAuth for expand + ideas reuse', () => {

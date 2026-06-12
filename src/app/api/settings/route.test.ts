@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { DELETE, GET, PUT } from '@/app/api/settings/route'
-import { GoogleAdsSettingsAuthConflictError } from '@/lib/google-ads-settings-store'
+import { GoogleAdsSettingsAuthConflictError } from '@/lib/google-ads/settings/settings-store'
 
 const settingsFns = vi.hoisted(() => ({
   clearUserSettings: vi.fn(),
@@ -34,12 +34,12 @@ const settingsStoreFns = vi.hoisted(() => ({
   ),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', () => ({
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: authAssignmentFns.assertUserCanModifyGoogleAdsAuth,
 }))
 
-vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-settings-store')>()
+vi.mock('@/lib/google-ads/settings/settings-store', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/settings/settings-store')>()
   return {
     ...actual,
     upsertGoogleAdsOAuthConfigFromSettings: settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings,
@@ -48,7 +48,7 @@ vi.mock('@/lib/google-ads-settings-store', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextForCredentialUser:
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
@@ -390,7 +390,8 @@ describe('settings route google ads credential store', () => {
   })
 
   it('returns 400 for google ads validation errors', async () => {
-    const { GoogleAdsSettingsValidationError } = await import('@/lib/google-ads-settings-store')
+    const { GoogleAdsSettingsValidationError } =
+      await import('@/lib/google-ads/settings/settings-store')
     settingsStoreFns.upsertGoogleAdsOAuthConfigFromSettings.mockRejectedValue(
       new GoogleAdsSettingsValidationError('Developer Token 配置看起来不正确')
     )

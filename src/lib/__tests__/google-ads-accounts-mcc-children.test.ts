@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   processMccChildAccounts,
   type MccChildAccountsSyncContext,
-} from '../google-ads-accounts-mcc-children'
+} from '@/lib/google-ads/accounts/mcc-children'
 
 const upsertFns = vi.hoisted(() => ({
   upsertAccount: vi.fn(),
@@ -12,7 +12,7 @@ const pythonFns = vi.hoisted(() => ({
   executeGAQLQueryPython: vi.fn(),
 }))
 
-vi.mock('../google-ads-accounts-cache', () => ({
+vi.mock('@/lib/google-ads/accounts/cache', () => ({
   upsertAccount: upsertFns.upsertAccount,
 }))
 
@@ -20,7 +20,7 @@ vi.mock('@/lib/python-ads-client', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
 }))
 
-vi.mock('../google-ads-api-tracker', () => ({
+vi.mock('@/lib/google-ads/api/tracker', () => ({
   trackApiUsage: vi.fn().mockResolvedValue(undefined),
   ApiOperationType: { SEARCH: 'SEARCH' },
 }))

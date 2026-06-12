@@ -10,7 +10,7 @@ import {
   type AdStrengthRating,
 } from './ad-strength-evaluator'
 import type { CanonicalCreativeType } from './creative-type'
-import { validateExcellentStandard } from './google-ads-strength-api'
+import { validateExcellentStandard } from '@/lib/google-ads/api/strength-api'
 import { detectAmazonPageTypeFromUrl } from './amazon-url-utils'
 import {
   buildUntrustedInputGuardrail,
@@ -22,7 +22,7 @@ import { USD_BASE_CURRENCY, normalizeCurrencyCode } from './currency'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
-} from './google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 
 /** 同一 Offer 多次 Launch Score 时复用，避免重复 prepare Keyword Planner expand */
 export type LaunchScoreAdStrengthPlannerContext = {
@@ -751,7 +751,7 @@ export async function evaluateCreativeAdStrength(
       volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
     }>
     skipCompetitivePositioningAi?: boolean
-    plannerSession?: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
+    plannerSession?: import('@/lib/google-ads/accounts/auth/index').KeywordPlannerPreparedSession
     skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<ComprehensiveAdStrengthResult> {
@@ -852,7 +852,7 @@ async function getQuickAdStrength(
       searchVolume: number
       volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
     }>
-    plannerSession?: import('./google-ads-accounts-auth').KeywordPlannerPreparedSession
+    plannerSession?: import('@/lib/google-ads/accounts/auth/index').KeywordPlannerPreparedSession
     skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<AdStrengthRating> {

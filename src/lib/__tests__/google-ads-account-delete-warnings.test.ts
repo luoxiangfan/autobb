@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDeleteAccountApiWarnings } from '@/lib/google-ads-account-delete-warnings'
+import { buildDeleteAccountApiWarnings } from '@/lib/google-ads/account-delete'
 
 describe('buildDeleteAccountApiWarnings', () => {
   it('includes credentials warning after local delete', () => {

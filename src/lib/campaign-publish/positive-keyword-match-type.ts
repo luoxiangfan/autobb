@@ -1,4 +1,4 @@
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 
 export type PositiveKeywordMatchType = 'EXACT' | 'PHRASE' | 'BROAD'
 

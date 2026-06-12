@@ -1,0 +1,297 @@
+import { enums } from 'google-ads-api'
+import { sanitizeGoogleAdsAdText } from '@/lib/google-ads/common/ad-text'
+import { oauthGetCustomerParams } from '@/lib/google-ads/oauth/customer-params'
+import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
+import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
+import { ApiOperationType } from '@/lib/google-ads/api/tracker'
+import { trackOAuthApiCall } from './shared'
+import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
+
+export async function createGoogleAdsCalloutExtensions(params: {
+  customerId: string
+  refreshToken: string
+  campaignId: string
+  callouts: string[]
+  accountId?: number
+  userId: number
+  loginCustomerId?: string
+  authType?: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
+}): Promise<{ assetIds: string[] }> {
+  try {
+    const normalizedCallouts = Array.from(
+      new Set(
+        params.callouts
+          .filter((text): text is string => typeof text === 'string')
+          .map((text) => sanitizeGoogleAdsAdText(text, 25))
+          .map((text) => text.trim())
+          .filter((text) => text.length > 0)
+      )
+    )
+
+    if (normalizedCallouts.length === 0) {
+      throw new Error('没有有效的Callout文本，无法创建Callout扩展')
+    }
+
+    const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
+    // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+    if (authType === 'service_account') {
+      const { createCalloutExtensionsPython } = await import('../../python-ads-client')
+      const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
+      const assetResourceNames = await createCalloutExtensionsPython({
+        userId: params.userId,
+        serviceAccountId: params.serviceAccountId,
+        customerId: params.customerId,
+        campaignResourceName: resourceName,
+        calloutTexts: normalizedCallouts,
+      })
+      return { assetIds: assetResourceNames.map((rn) => rn.split('/').pop() || '') }
+    }
+
+    const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
+
+    const assetIds: string[] = []
+    const assetResourceNames: string[] = []
+
+    // Step 1: Create Callout Assets
+    const assetOperations = normalizedCallouts.map((calloutText) => ({
+      callout_asset: {
+        // normalizedCallouts 已经过 sanitizeGoogleAdsAdText(..., 25) 处理
+        callout_text: calloutText,
+      },
+    }))
+
+    console.log(`📢 创建${normalizedCallouts.length}个Callout Assets...`)
+    const assetResponse = await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.MUTATE_BATCH,
+      '/api/google-ads/assets/create',
+      () => customer.assets.create(assetOperations)
+    )
+
+    if (assetResponse && assetResponse.results) {
+      assetResponse.results.forEach((result: any) => {
+        const resourceName = result.resource_name || result.resourceName
+        if (!resourceName) {
+          console.warn('⚠️ Callout Asset结果缺少resource_name，已跳过:', JSON.stringify(result))
+          return
+        }
+        assetResourceNames.push(resourceName)
+        const assetId = resourceName.split('/').pop() || ''
+        if (assetId) assetIds.push(assetId)
+      })
+      console.log(`✅ Callout Assets创建成功: ${assetIds.length}个`)
+    }
+
+    if (assetResourceNames.length === 0) {
+      throw new Error('Callout Assets创建结果为空，无法继续关联到Campaign')
+    }
+
+    // Step 2: Link Assets to Campaign
+    const campaignAssetOperations = assetResourceNames.map((resourceName) => ({
+      campaign: `customers/${params.customerId}/campaigns/${params.campaignId}`,
+      asset: resourceName,
+      field_type: enums.AssetFieldType.CALLOUT,
+    }))
+
+    console.log(`🔗 关联Callout Assets到Campaign ${params.campaignId}...`)
+    const linkResponse = await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.MUTATE_BATCH,
+      '/api/google-ads/campaign-assets/create',
+      () => customer.campaignAssets.create(campaignAssetOperations, { partial_failure: true })
+    )
+    const partialFailure =
+      linkResponse?.partial_failure_error ||
+      (linkResponse as { partialFailureError?: unknown } | undefined)?.partialFailureError
+    if (partialFailure) {
+      console.warn('⚠️ Callout Assets部分关联失败:', JSON.stringify(partialFailure, null, 2))
+    }
+    console.log(`✅ Callout Assets关联成功`)
+
+    return { assetIds }
+  } catch (error: any) {
+    const errorMessage =
+      error?.errors?.[0]?.message ||
+      error?.error?.message ||
+      error?.message ||
+      (typeof error === 'string' ? error : 'Unknown error')
+    let errorDetails = ''
+    try {
+      errorDetails = JSON.stringify(error, null, 2)
+    } catch {
+      errorDetails = String(error)
+    }
+    console.error('❌ 创建Callout扩展失败:', errorMessage)
+    console.error('❌ 错误详情:', errorDetails)
+    throw new Error(`创建Callout扩展失败: ${errorMessage}`)
+  }
+}
+
+/**
+ * 创建Sitelink扩展（现在称为Sitelink Assets）
+ *
+ * @param params.customerId - Google Ads Customer ID
+ * @param params.refreshToken - OAuth refresh token
+ * @param params.campaignId - Campaign ID to attach sitelinks to
+ * @param params.sitelinks - Array of sitelink objects
+ * @param params.accountId - 本地账号ID
+ * @param params.userId - 用户ID
+ * @returns Array of created asset IDs
+ */
+export async function createGoogleAdsSitelinkExtensions(params: {
+  customerId: string
+  refreshToken: string
+  campaignId: string
+  sitelinks: Array<{
+    text: string
+    url: string
+    description1?: string
+    description2?: string
+  }>
+  accountId?: number
+  userId: number
+  loginCustomerId?: string
+  authType?: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  credentials?: OAuthApiCredentialsFields
+  authContext?: GoogleAdsAuthContext
+}): Promise<{ assetIds: string[] }> {
+  const sanitizedSitelinks = params.sitelinks.map((sitelink) => {
+    const sanitizedText = sanitizeGoogleAdsAdText(sitelink.text, 25).trim()
+    const desc1Raw = sitelink.description1
+      ? sanitizeGoogleAdsAdText(sitelink.description1, 35).trim()
+      : ''
+    const desc2Raw = sitelink.description2
+      ? sanitizeGoogleAdsAdText(sitelink.description2, 35).trim()
+      : ''
+
+    let description1: string | undefined = desc1Raw
+    let description2: string | undefined = desc2Raw
+    if (description1) {
+      if (!description2) description2 = description1
+    } else {
+      description1 = undefined
+      description2 = undefined
+    }
+
+    return {
+      ...sitelink,
+      text: sanitizedText,
+      description1,
+      description2,
+    }
+  })
+
+  const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
+  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  if (authType === 'service_account') {
+    const { createSitelinkExtensionsPython } = await import('../../python-ads-client')
+    const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
+    const assetResourceNames = await createSitelinkExtensionsPython({
+      userId: params.userId,
+      serviceAccountId: params.serviceAccountId,
+      customerId: params.customerId,
+      campaignResourceName: resourceName,
+      sitelinks: sanitizedSitelinks.map((sl) => ({
+        linkText: sl.text,
+        finalUrl: sl.url,
+        description1: sl.description1,
+        description2: sl.description2,
+      })),
+    })
+    return { assetIds: assetResourceNames.map((rn) => rn.split('/').pop() || '') }
+  }
+
+  const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
+
+  const assetIds: string[] = []
+
+  try {
+    // Step 1: Create Sitelink Assets
+    const assetOperations = sanitizedSitelinks.map((sitelink) => {
+      console.log(
+        `🔍 处理Sitelink: text="${sitelink.text}", url="${sitelink.url}", desc1="${sitelink.description1}"`
+      )
+
+      const sitelinkAsset: any = {
+        // sanitizedSitelinks 已经过 sanitizeGoogleAdsAdText(..., 25) 处理
+        link_text: sitelink.text,
+      }
+
+      // description1 和 description2 必须要么都存在，要么都不存在
+      if (sitelink.description1 && sitelink.description1.trim()) {
+        const desc1 = sitelink.description1
+        const desc2 = sitelink.description2 || sitelink.description1
+        sitelinkAsset.description1 = desc1
+        sitelinkAsset.description2 = desc2
+      }
+
+      // 关键修复：final_urls必须在Asset层级，不是sitelink_asset内部
+      const assetObj = {
+        sitelink_asset: sitelinkAsset,
+        final_urls: [sitelink.url], // final_urls在Asset层级
+      }
+
+      console.log(`✅ 生成的Asset:`, JSON.stringify(assetObj, null, 2))
+
+      return assetObj
+    })
+
+    console.log(`🔗 创建${params.sitelinks.length}个Sitelink Assets...`)
+    console.log(`📋 Sitelink数据:`, JSON.stringify(assetOperations, null, 2))
+    const assetResponse = await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.MUTATE_BATCH,
+      '/api/google-ads/assets/create',
+      () => customer.assets.create(assetOperations)
+    )
+
+    if (assetResponse && assetResponse.results) {
+      assetResponse.results.forEach((result: any) => {
+        const assetId = result.resource_name?.split('/').pop() || ''
+        assetIds.push(assetId)
+      })
+      console.log(`✅ Sitelink Assets创建成功: ${assetIds.length}个`)
+    }
+
+    // Step 2: Link Assets to Campaign
+    const campaignAssetOperations = assetIds.map((assetId) => ({
+      campaign: `customers/${params.customerId}/campaigns/${params.campaignId}`,
+      asset: `customers/${params.customerId}/assets/${assetId}`,
+      field_type: enums.AssetFieldType.SITELINK,
+    }))
+
+    console.log(`🔗 关联Sitelink Assets到Campaign ${params.campaignId}...`)
+    await trackOAuthApiCall(
+      params.userId,
+      params.customerId,
+      ApiOperationType.MUTATE_BATCH,
+      '/api/google-ads/campaign-assets/create',
+      () => customer.campaignAssets.create(campaignAssetOperations)
+    )
+    console.log(`✅ Sitelink Assets关联成功`)
+
+    return { assetIds }
+  } catch (error: any) {
+    const errorMessage =
+      error?.errors?.[0]?.message ||
+      error?.error?.message ||
+      error?.message ||
+      (typeof error === 'string' ? error : 'Unknown error')
+    let errorDetails = ''
+    try {
+      errorDetails = JSON.stringify(error, null, 2)
+    } catch {
+      errorDetails = String(error)
+    }
+    console.error('❌ 创建Sitelink扩展失败:', errorMessage)
+    console.error('❌ 错误详情:', errorDetails)
+    throw new Error(`创建Sitelink扩展失败: ${errorMessage}`)
+  }
+}

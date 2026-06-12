@@ -16,7 +16,7 @@
  */
 
 import type { PoolKeywordData } from './offer-keyword-pool'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import {
   containsPureBrand,
   getPureBrandKeywords,

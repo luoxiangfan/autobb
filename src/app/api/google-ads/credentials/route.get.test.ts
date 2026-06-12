@@ -25,8 +25,8 @@ vi.mock('@/lib/auth', () => ({
   findUserById: authFns.findUserById,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,

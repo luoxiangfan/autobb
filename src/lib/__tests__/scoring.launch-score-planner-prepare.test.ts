@@ -18,7 +18,7 @@ vi.mock('../ai-token-tracker', () => ({
   estimateTokenCost: vi.fn(() => 0.01),
 }))
 
-vi.mock('../google-ads-accounts-auth', () => ({
+vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   loadKeywordPoolExpandCredentialsForOffer: loadKeywordPoolExpandMock,
 }))
 

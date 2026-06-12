@@ -8,8 +8,8 @@ vi.mock('google-ads-api', () => ({
 
 describe('ensureKeywordsInHeadlines duplicate-asset guard', () => {
   it('avoids duplicate headline assets after sanitization and truncation', async () => {
-    const { ensureKeywordsInHeadlines } = await import('@/lib/google-ads-api')
-    const { sanitizeGoogleAdsAdText } = await import('@/lib/google-ads-ad-text')
+    const { ensureKeywordsInHeadlines } = await import('@/lib/google-ads/api/api')
+    const { sanitizeGoogleAdsAdText } = await import('@/lib/google-ads/common/ad-text')
 
     const headlines = [
       '{KeyWord:Novilla} Official',
@@ -49,8 +49,8 @@ describe('ensureKeywordsInHeadlines duplicate-asset guard', () => {
   })
 
   it('normalizes duplicate headline assets before RSA mutate', async () => {
-    const { ensureUniqueResponsiveSearchAdAssets } = await import('@/lib/google-ads-api')
-    const { sanitizeGoogleAdsAdText } = await import('@/lib/google-ads-ad-text')
+    const { ensureUniqueResponsiveSearchAdAssets } = await import('@/lib/google-ads/api/api')
+    const { sanitizeGoogleAdsAdText } = await import('@/lib/google-ads/common/ad-text')
 
     const headlines = [
       '{KeyWord:Gevi} Official',

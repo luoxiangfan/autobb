@@ -23,7 +23,7 @@ import {
 } from './offer-extraction-performance'
 import type { OfferExtractionMode } from './offer-extraction-mode'
 import { getProxyUrlForCountry } from './settings' // 🔥 修复（2025-12-09）：动态获取代理URL
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { isInvalidKeyword } from './keyword-invalid-filter'
 import {
   createCompetitorRelevanceContext,

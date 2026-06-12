@@ -7,12 +7,12 @@ import {
   resolveGoogleAdsAccountsFetchUiEffects,
   SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE,
   shouldRefreshCredentialsAfterAccountsFetchOk,
-} from '../google-ads-accounts-fetch'
+} from '@/lib/google-ads/accounts/fetch'
 import {
   createGoogleAdsAccountsCoreApplyHandlers,
   createDismissGoogleAdsPermissionErrorHandler,
   withAccountsListSchedulePoll,
-} from '../google-ads-accounts-fetch-handlers'
+} from '@/lib/google-ads/accounts/fetch-handlers'
 
 describe('buildGoogleAdsAccountsSearchParams', () => {
   it('applies query first then forceRefresh overrides refresh/async', () => {
@@ -281,7 +281,7 @@ describe('shouldRefreshCredentialsAfterAccountsFetchOk', () => {
   })
 })
 
-describe('google-ads-accounts-fetch-handlers', () => {
+describe('@/lib/google-ads/accounts/fetch-handlers', () => {
   it('createGoogleAdsAccountsCoreApplyHandlers clears accounts on permission error', () => {
     const onPermissionAccountsHidden = vi.fn()
     const handlers = createGoogleAdsAccountsCoreApplyHandlers({

@@ -16,12 +16,12 @@ vi.mock('../keyword-planner', () => ({
   getKeywordSearchVolumes: getKeywordSearchVolumesMock,
 }))
 
-vi.mock('../google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   tryGetConfiguredGoogleAdsApiAuthForUser: tryGetConfiguredGoogleAdsApiAuthForUserMock,
 }))
 
-vi.mock('../google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     getKeywordSearchVolumesForPlannerContext: getKeywordSearchVolumesForPlannerContextMock,

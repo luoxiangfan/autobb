@@ -30,7 +30,7 @@ import { removePendingClickFarmQueueTasksByTaskIds } from './click-farm/queue-cl
 import { removePendingUrlSwapQueueTasksByTaskIds } from './url-swap/queue-cleanup'
 import type { OfferExtractionMode } from './offer-extraction-mode'
 import { normalizeOfferExtractionMode } from './offer-extraction-mode'
-import { executeGoogleAdsCampaignRemoteActions } from './google-ads-campaign-remote-actions'
+import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
 import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
 
 export interface Offer {
@@ -1079,7 +1079,7 @@ export async function deleteOffer(
 
   if (campaignsToProcess.length > 0) {
     const { getGoogleAdsAuthContext, resolveGoogleAdsAuthReadyFailure } =
-      await import('./google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     const authContext = await getGoogleAdsAuthContext(userId)
     const errors: Array<{ campaignRowId: number; message: string }> = []
 

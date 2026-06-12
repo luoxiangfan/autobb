@@ -9,7 +9,7 @@ import {
   GOOGLE_ADS_CREDENTIALS_POLL_REFRESH_EVERY,
   parseCredentialsStatusResponse,
   type ParsedGoogleAdsCredentialsStatus,
-} from '@/lib/google-ads-credentials-errors'
+} from '@/lib/google-ads/common/credentials-errors'
 
 export type { ParsedGoogleAdsCredentialsStatus }
 

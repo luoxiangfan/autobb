@@ -7,7 +7,7 @@ import {
   buildDefaultServiceAccountPermissionSteps,
   hasServiceAccountPermissionDetails,
   type ServiceAccountPermissionDetails,
-} from '@/lib/google-ads-accounts-fetch'
+} from '@/lib/google-ads/accounts/fetch'
 
 type GoogleAdsServiceAccountPermissionAlertProps = {
   details: ServiceAccountPermissionDetails | null | undefined

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeKeywordForGoogleAds } from '@/lib/google-ads-api'
+import { sanitizeKeywordForGoogleAds } from '@/lib/google-ads/api/api'
 
 describe('sanitizeKeywordForGoogleAds', () => {
   it('truncates keywords to 10 words to satisfy Google Ads limit', () => {

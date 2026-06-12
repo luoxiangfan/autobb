@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads-campaign-remote-actions'
+import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
 

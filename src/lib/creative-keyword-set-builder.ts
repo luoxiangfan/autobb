@@ -21,7 +21,7 @@ import {
   normalizeKeywordSourceSubtype,
 } from './creative-keyword-source-priority'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { KEYWORD_POLICY } from './keyword-policy'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import type { PoolKeywordData } from './offer-keyword-pool'

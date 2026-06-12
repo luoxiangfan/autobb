@@ -4,9 +4,9 @@ import {
   sanitizeGoogleAdsAdText,
   sanitizeGoogleAdsFinalUrlSuffix,
   sanitizeGoogleAdsPath,
-} from '../google-ads-ad-text'
+} from '@/lib/google-ads/common/ad-text'
 
-describe('google-ads-ad-text', () => {
+describe('@/lib/google-ads/common/ad-text', () => {
   it('counts DKI token as defaultText only', () => {
     const text = '{KeyWord:Sportsroyals} Official' // raw=31
     expect(getGoogleAdsTextEffectiveLength(text)).toBe('Sportsroyals'.length + ' Official'.length)

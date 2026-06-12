@@ -16,7 +16,7 @@
 
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads-login-customer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import {
   createGoogleAdsCampaign,
   createGoogleAdsAdGroup,
@@ -30,11 +30,11 @@ import {
   createGoogleAdsCalloutExtensions,
   createGoogleAdsSitelinkExtensions,
   ensureKeywordsInHeadlines,
-} from '@/lib/google-ads-api'
+} from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import {
   buildPublishResumePlan,
   collectCampaignNameCandidates,
@@ -42,11 +42,11 @@ import {
   type PublishResumePlan,
   type ResumablePublishCampaignRow,
 } from '@/lib/campaign-publish-resume'
-import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads-conversion-goals'
-import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
+import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads/conversion/conversion-goals'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { type NamingScheme } from '@/lib/naming-convention'
 import { invalidateOfferCache } from '@/lib/api-cache'
-import { formatGoogleAdsApiError } from '@/lib/google-ads-api-error'
+import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
 import { addUrlSwapTargetForOfferCampaign } from '@/lib/url-swap'
 import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate-products'
@@ -54,7 +54,7 @@ import {
   normalizeNegativeKeywordMatchTypeMap,
   resolveNegativeKeywordMatchType,
 } from '@/lib/campaign-publish/negative-keyword-match-type'
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import {
   normalizePositiveKeywordMatchType,
   resolvePositiveKeywordMatchType,
@@ -63,7 +63,7 @@ import {
 import {
   extractGoogleAdsRetryDelaySeconds,
   isGoogleAdsQuotaRateError,
-} from '@/lib/google-ads-quota-error'
+} from '@/lib/google-ads/common/quota-error'
 import {
   pauseHistoricalOrphanGoogleCampaignsForOffer,
   pauseOrphanGoogleAdsCampaignAfterPublishFailure,

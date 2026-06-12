@@ -3,7 +3,7 @@ import {
   resolveLoginCustomerId,
   resolveLoginCustomerCandidates,
   isGoogleAdsAccountAccessError,
-} from '@/lib/google-ads-login-customer'
+} from '@/lib/google-ads/oauth/login-customer'
 
 describe('resolveLoginCustomerId', () => {
   it('prefers account parent MCC in oauth mode', () => {

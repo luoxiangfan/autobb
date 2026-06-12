@@ -9,19 +9,20 @@ const loginCustomerFns = vi.hoisted(() => ({
   getLoginCustomerId: vi.fn(async () => '9988776655'),
 }))
 
-vi.mock('@/lib/google-ads-service-account', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-service-account')>()
+vi.mock('@/lib/google-ads/service-account/service-account', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@/lib/google-ads/service-account/service-account')>()
   return {
     ...actual,
     getLoginCustomerId: loginCustomerFns.getLoginCustomerId,
   }
 })
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getCustomerWithCredentials: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-login-customer', () => ({
+vi.mock('@/lib/google-ads/oauth/login-customer', () => ({
   runWithLoginCustomerFallbackForAccount: vi.fn(
     async ({ callback }: { callback: (id: string) => unknown }) => callback('9988776655')
   ),
@@ -33,13 +34,13 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-api-tracker', () => ({
+vi.mock('@/lib/google-ads/api/tracker', () => ({
   trackApiUsage: vi.fn(),
   ApiOperationType: { KEYWORD_PLANNER: 'keyword_planner' },
 }))
 
-import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads-accounts-auth'
-import { getKeywordIdeas } from '@/lib/google-ads-keyword-planner'
+import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads/accounts/auth/index'
+import { getKeywordIdeas } from '@/lib/google-ads/keyword/planner'
 
 describe('Keyword Planner authContext reuse', () => {
   beforeEach(() => {
@@ -57,7 +58,7 @@ describe('Keyword Planner authContext reuse', () => {
   })
 
   it('getKeywordIdeas passes prepared authContext to getLoginCustomerId', async () => {
-    const { getCustomerWithCredentials } = await import('@/lib/google-ads-api')
+    const { getCustomerWithCredentials } = await import('@/lib/google-ads/api/api')
     vi.mocked(getCustomerWithCredentials).mockResolvedValue({
       keywordPlanIdeas: {
         generateKeywordIdeas: vi.fn(async () => []),

@@ -4,12 +4,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
-import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads-oauth-gaql'
+} from '@/lib/google-ads/accounts/auth/index'
+import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads/oauth/gaql'
 import { getDatabase } from '@/lib/db'
 import { getRedisClient } from '@/lib/redis-client'
 import { executeGAQLQueryPython } from '@/lib/python-ads-client'
-import { trackApiUsage, ApiOperationType } from '@/lib/google-ads-api-tracker'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 
 function extractSearchResults(result: any): any[] {
   if (Array.isArray(result)) return result

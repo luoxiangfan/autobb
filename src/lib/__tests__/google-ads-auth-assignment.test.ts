@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   isGoogleAdsAuthShared,
   listGoogleAdsSharedDependentUserIds,
-} from '@/lib/google-ads-auth-assignment'
+} from '@/lib/google-ads/auth/assignment'
 
 const dbFns = vi.hoisted(() => ({
   query: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-describe('google-ads-auth-assignment', () => {
+describe('@/lib/google-ads/auth/assignment', () => {
   it('treats shared_admin as shared', () => {
     expect(
       isGoogleAdsAuthShared({

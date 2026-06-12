@@ -1,11 +1,11 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
-import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads-accounts'
+import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads/accounts/accounts'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
-} from '@/lib/google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import {
   getKeywordIdeas,
   filterHighQualityKeywords,
@@ -14,7 +14,7 @@ import {
   formatCpcMicros,
   formatSearchVolume,
   getKeywordMetrics,
-} from '@/lib/google-ads-keyword-planner'
+} from '@/lib/google-ads/keyword/planner'
 import { getBrandSearchSuggestions, filterMismatchedGeoKeywords } from '@/lib/google-suggestions'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
 import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keyword-planner-site-filter'

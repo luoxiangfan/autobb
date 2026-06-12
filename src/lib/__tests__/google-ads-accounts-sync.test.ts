@@ -20,16 +20,16 @@ vi.mock('../python-ads-client', async (importOriginal) => {
   }
 })
 
-vi.mock('../google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   assertGoogleAdsAuthReadyForApi: authContextFns.assertGoogleAdsAuthReadyForApi,
 }))
 
-vi.mock('../google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getGoogleAdsClient: apiFns.getGoogleAdsClient,
   getCustomer: vi.fn(),
 }))
 
-import { syncAccountsFromAPI } from '../google-ads-accounts-sync'
+import { syncAccountsFromAPI } from '@/lib/google-ads/accounts/sync'
 
 describe('syncAccountsFromAPI', () => {
   beforeEach(() => {

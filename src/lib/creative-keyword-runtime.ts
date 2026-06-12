@@ -11,7 +11,7 @@ import {
   type CreativeKeywordSourceAudit,
 } from './creative-keyword-set-builder'
 import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from './creative-type'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import type { ComprehensiveAdStrengthResult } from './scoring'
 
@@ -101,7 +101,7 @@ interface CreateCreativeQualityEvaluationInputOptions {
   productNameFallback?: string | null
   productTitleFallback?: string | null
   skipCompetitivePositioningAi?: boolean
-  plannerSession?: import('@/lib/google-ads-accounts-auth').KeywordPlannerPreparedSession
+  plannerSession?: import('@/lib/google-ads/accounts/auth/index').KeywordPlannerPreparedSession
   skipKeywordPoolExpandLoad?: boolean
 }
 

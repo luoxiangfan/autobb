@@ -1,12 +1,15 @@
-import { getCustomerWithCredentials, type OAuthApiCredentialsFields } from './google-ads-api'
-import { getServiceAccountConfig } from './google-ads-service-account'
+import {
+  getCustomerWithCredentials,
+  type OAuthApiCredentialsFields,
+} from '@/lib/google-ads/api/api'
+import { getServiceAccountConfig } from '@/lib/google-ads/service-account/service-account'
 import { getDatabase } from './db'
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsAuthReadyFailure,
   resolveGoogleAdsApiAuthFromContext,
   type GoogleAdsAuthContext,
-} from './google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
@@ -16,16 +19,16 @@ import {
   type GoogleAdsLinkedAccountPrepareCache,
   type SyncUserCredentials,
   preparedAuthContextField,
-} from './google-ads-accounts-auth'
+} from '@/lib/google-ads/accounts/auth/index'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from './db-helpers'
 import { createRiskAlert } from './risk-alerts'
-import { runWithLoginCustomerFallbackForAccount } from './google-ads-login-customer'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { normalizeCountryCode, normalizeLanguageCode } from './language-country-codes'
 import { normalizeBrandKey, refreshBrandCoreKeywordCache } from './brand-core-keywords'
 import { isInvalidKeyword } from './keyword-invalid-filter'
-import { trackApiUsage, ApiOperationType } from './google-ads-api-tracker'
+import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 
 /**
  * 同步状态

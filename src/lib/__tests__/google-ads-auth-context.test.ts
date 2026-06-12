@@ -27,8 +27,8 @@ const serviceAccountFns = vi.hoisted(() => ({
   getServiceAccountConfigMetadata: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-assignment')>()
+vi.mock('@/lib/google-ads/auth/assignment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/assignment')>()
   return {
     ...actual,
     resolveGoogleAdsCredentialOwnerId: assignmentFns.resolveGoogleAdsCredentialOwnerId,
@@ -37,7 +37,7 @@ vi.mock('@/lib/google-ads-auth-assignment', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-oauth', () => ({
+vi.mock('@/lib/google-ads/oauth/oauth', () => ({
   getUserAuthType: oauthFns.getUserAuthType,
   getGoogleAdsCredentials: oauthFns.getGoogleAdsCredentials,
   getGoogleAdsCredentialsRaw: oauthFns.getGoogleAdsCredentialsRaw,
@@ -70,7 +70,7 @@ vi.mock('@/lib/cache', () => ({
   invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
 }))
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
   getServiceAccountConfigMetadata: serviceAccountFns.getServiceAccountConfigMetadata,
 }))
@@ -80,7 +80,7 @@ vi.mock('@/lib/redis-client', () => ({
 }))
 
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'
-import { oauthCredentialsLookStripped } from '@/lib/google-ads-auth-context-cache'
+import { oauthCredentialsLookStripped } from '@/lib/google-ads/auth/context-cache'
 import {
   assertGoogleAdsAuthReadyForApi,
   assertNoConflictingGoogleAdsAuth,
@@ -101,7 +101,7 @@ import {
   resolveGoogleAdsCredentialStatusFields,
   resolveGoogleAdsSyncCredentialGate,
   tryGetConfiguredGoogleAdsApiAuthForUser,
-} from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 
 function clearGoogleAdsAuthContextTestCache(): void {
   resetGoogleAdsAuthContextGenerationForTests()
@@ -536,7 +536,7 @@ describe('resolveGoogleAdsCredentialStatusFields', () => {
 
 describe('resolveGoogleAdsDisplayAuthType', () => {
   it('returns null when dualStack is true', async () => {
-    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsDisplayAuthType({
         dualStack: true,
@@ -546,7 +546,7 @@ describe('resolveGoogleAdsDisplayAuthType', () => {
   })
 
   it('returns null when auth is not configured', async () => {
-    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsDisplayAuthType({
         dualStack: false,
@@ -558,7 +558,7 @@ describe('resolveGoogleAdsDisplayAuthType', () => {
   })
 
   it('returns authType when configured', async () => {
-    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsDisplayAuthType } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsDisplayAuthType({
         dualStack: false,
@@ -573,7 +573,7 @@ describe('resolveGoogleAdsDisplayAuthType', () => {
 describe('googleAdsAuthContextDualStackError', () => {
   it('returns warning when dualStack is true', async () => {
     const { googleAdsAuthContextDualStackError, GOOGLE_ADS_DUAL_STACK_WARNING } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(googleAdsAuthContextDualStackError({ dualStack: true })).toBe(
       GOOGLE_ADS_DUAL_STACK_WARNING
     )
@@ -584,13 +584,13 @@ describe('googleAdsAuthContextDualStackError', () => {
 describe('googleAdsAuthNotReadyMessage', () => {
   it('returns dual-stack warning when dualStack is true', async () => {
     const { googleAdsAuthNotReadyMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(googleAdsAuthNotReadyMessage({ dualStack: true })).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
   })
 
   it('returns not_configured message when dualStack is false', async () => {
     const { googleAdsAuthNotReadyMessage, googleAdsApiAuthValidationErrorMessage } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(googleAdsAuthNotReadyMessage({ dualStack: false })).toBe(
       googleAdsApiAuthValidationErrorMessage('not_configured')
     )
@@ -599,7 +599,7 @@ describe('googleAdsAuthNotReadyMessage', () => {
 
 describe('resolveGoogleAdsAuthReadyFailure', () => {
   it('returns null when auth is configured', async () => {
-    const { resolveGoogleAdsAuthReadyFailure } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsAuthReadyFailure } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsAuthReadyFailure({
         dualStack: false,
@@ -611,7 +611,7 @@ describe('resolveGoogleAdsAuthReadyFailure', () => {
 
   it('returns dual_stack failure when dualStack is true', async () => {
     const { resolveGoogleAdsAuthReadyFailure, GOOGLE_ADS_DUAL_STACK_WARNING } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsAuthReadyFailure({
         dualStack: true,
@@ -627,7 +627,7 @@ describe('resolveGoogleAdsAuthReadyFailure', () => {
 
   it('returns not_configured failure when credentials missing', async () => {
     const { resolveGoogleAdsAuthReadyFailure, googleAdsApiAuthValidationErrorMessage } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsAuthReadyFailure({
         dualStack: false,
@@ -645,7 +645,7 @@ describe('resolveGoogleAdsAuthReadyFailure', () => {
 describe('googleAdsAuthReadyFailurePayload', () => {
   it('includes authConfigWarning for dual_stack', async () => {
     const { googleAdsAuthReadyFailurePayload, GOOGLE_ADS_DUAL_STACK_WARNING } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(
       googleAdsAuthReadyFailurePayload({
         reason: 'dual_stack',
@@ -661,7 +661,7 @@ describe('googleAdsAuthReadyFailurePayload', () => {
 
   it('omits authConfigWarning for not_configured', async () => {
     const { googleAdsAuthReadyFailurePayload, googleAdsApiAuthValidationErrorMessage } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     const message = googleAdsApiAuthValidationErrorMessage('not_configured')
     expect(
       googleAdsAuthReadyFailurePayload({
@@ -730,7 +730,7 @@ describe('resolveGoogleAdsSyncCredentialGate', () => {
 describe('googleAdsApiAuthValidationErrorMessage', () => {
   it('returns dual-stack warning for dual_stack reason', async () => {
     const { googleAdsApiAuthValidationErrorMessage, GOOGLE_ADS_DUAL_STACK_WARNING } =
-      await import('@/lib/google-ads-auth-context')
+      await import('@/lib/google-ads/auth/context')
     expect(googleAdsApiAuthValidationErrorMessage('dual_stack')).toBe(GOOGLE_ADS_DUAL_STACK_WARNING)
   })
 })
@@ -894,7 +894,7 @@ describe('tryGetConfiguredGoogleAdsApiAuthForUser', () => {
 
 describe('resolveGoogleAdsApiAuthType', () => {
   it('infers service_account when authType omitted and context is SA', async () => {
-    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsApiAuthType({}, {
         ...defaultOAuthAuthContext,
@@ -906,7 +906,7 @@ describe('resolveGoogleAdsApiAuthType', () => {
   })
 
   it('rejects explicit oauth when context is service_account', async () => {
-    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads/auth/context')
     expect(() =>
       resolveGoogleAdsApiAuthType({ authType: 'oauth' }, {
         ...defaultOAuthAuthContext,
@@ -918,7 +918,7 @@ describe('resolveGoogleAdsApiAuthType', () => {
   })
 
   it('infers oauth from credential hints when auth.authType is empty', async () => {
-    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsApiAuthType({}, {
         ...defaultOAuthAuthContext,
@@ -930,7 +930,7 @@ describe('resolveGoogleAdsApiAuthType', () => {
   })
 
   it('infers service_account from credential hints when auth.authType is empty', async () => {
-    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsApiAuthType } = await import('@/lib/google-ads/auth/context')
     expect(
       resolveGoogleAdsApiAuthType({}, {
         ...defaultOAuthAuthContext,
@@ -944,7 +944,7 @@ describe('resolveGoogleAdsApiAuthType', () => {
 
 describe('resolveGoogleAdsApiAuthFromContext', () => {
   it('throws when context is not configured', async () => {
-    const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads/auth/context')
     await expect(
       resolveGoogleAdsApiAuthFromContext({
         ...defaultOAuthAuthContext,
@@ -957,7 +957,7 @@ describe('resolveGoogleAdsApiAuthFromContext', () => {
   })
 
   it('throws when context has dualStack', async () => {
-    const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads-auth-context')
+    const { resolveGoogleAdsApiAuthFromContext } = await import('@/lib/google-ads/auth/context')
     await expect(
       resolveGoogleAdsApiAuthFromContext({
         ...defaultOAuthAuthContext,

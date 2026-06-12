@@ -28,7 +28,7 @@ import type {
   CreativeKeywordAudit,
   CreativeKeywordSourceAudit,
 } from './creative-keyword-set-builder'
-import { normalizeGoogleAdsKeyword } from './google-ads-keyword-normalizer'
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import {
   getSearchTermAutoNegativeConfigFromEnv,
   getSearchTermAutoPositiveConfigFromEnv,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { deleteGoogleAdsAccount } from '@/lib/google-ads-accounts'
+import { deleteGoogleAdsAccount } from '@/lib/google-ads/accounts/accounts'
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),

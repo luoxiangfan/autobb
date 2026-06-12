@@ -19,7 +19,7 @@ vi.mock('../redis', () => ({
   batchCacheVolumes: (...args: any[]) => mockBatchCacheVolumes(...args),
 }))
 
-vi.mock('../google-ads-oauth', () => ({
+vi.mock('@/lib/google-ads/oauth/oauth', () => ({
   refreshAccessToken: vi.fn().mockResolvedValue(undefined),
   getGoogleAdsCredentials: vi.fn().mockResolvedValue({
     refresh_token: 'rt',
@@ -36,16 +36,16 @@ const oauthCredentialsFixture = {
   api_access_level: 'explorer',
 }
 
-vi.mock('../google-ads-auth-assignment', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../google-ads-auth-assignment')>()
+vi.mock('@/lib/google-ads/auth/assignment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/assignment')>()
   return {
     ...actual,
     resolveGoogleAdsApiAccessLevel: (...args: any[]) => mockResolveGoogleAdsApiAccessLevel(...args),
   }
 })
 
-vi.mock('../google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: vi.fn(async () => ({
@@ -65,16 +65,16 @@ vi.mock('../google-ads-auth-context', async (importOriginal) => {
   }
 })
 
-vi.mock('../google-ads-api-tracker', () => ({
+vi.mock('@/lib/google-ads/api/tracker', () => ({
   trackApiUsage: vi.fn(),
   ApiOperationType: { GET_KEYWORD_IDEAS: 'GET_KEYWORD_IDEAS' },
 }))
 
-vi.mock('../google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: vi.fn(),
 }))
 
-vi.mock('../google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   GoogleAdsApi: vi.fn(),
   enums: { KeywordPlanNetwork: { GOOGLE_SEARCH: 2 } },
   getCustomerWithCredentials: vi.fn(),

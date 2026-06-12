@@ -8,13 +8,13 @@ import {
   upsertGoogleAdsAuthAssignment,
   type GoogleAdsAuthAssignmentMode,
   type GoogleAdsAuthType,
-} from '@/lib/google-ads-auth-assignment'
-import { deleteGoogleAdsCredentials, saveGoogleAdsCredentials } from '@/lib/google-ads-oauth'
+} from '@/lib/google-ads/auth/assignment'
+import { deleteGoogleAdsCredentials, saveGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
 import {
   deleteAllGoogleAdsServiceAccountsForUser,
   parseServiceAccountJson,
   replaceGoogleAdsServiceAccountForUser,
-} from '@/lib/google-ads-service-account'
+} from '@/lib/google-ads/service-account/service-account'
 import { encrypt } from '@/lib/crypto'
 import {
   assertNoConflictingGoogleAdsAuth,
@@ -25,7 +25,7 @@ import {
   oauthCredentialFieldsPresentFromContext,
   resolveGoogleAdsCredentialStatusSummary,
   resolveGoogleAdsDisplayAuthType,
-} from '@/lib/google-ads-auth-context'
+} from '@/lib/google-ads/auth/context'
 
 async function requireAdmin(request: NextRequest) {
   const auth = await verifyAuth(request)

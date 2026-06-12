@@ -6,7 +6,7 @@ import {
   resetCampaignRouteAuthMocksOAuth,
 } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 import { GET } from '@/app/api/google-ads/credentials/accounts/route'
-import { resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests } from '@/lib/google-ads-accounts-async-refresh-state'
+import { resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests } from '@/lib/google-ads/accounts/async-refresh-state'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -35,7 +35,7 @@ const settingsStoreFns = vi.hoisted(() => ({
   getGoogleAdsOAuthConfigValue: vi.fn(),
 }))
 
-vi.mock('@/lib/google-ads-settings-store', () => ({
+vi.mock('@/lib/google-ads/settings/settings-store', () => ({
   getGoogleAdsOAuthConfigValue: settingsStoreFns.getGoogleAdsOAuthConfigValue,
 }))
 
@@ -43,8 +43,8 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-auth-context')>()
+vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {
     ...actual,
     getGoogleAdsAuthContext: accountsAuthFns.getGoogleAdsAuthContext,
@@ -52,7 +52,7 @@ vi.mock('@/lib/google-ads-auth-context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/google-ads-service-account', () => ({
+vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
@@ -64,7 +64,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-accounts-sync', () => ({
+vi.mock('@/lib/google-ads/accounts/sync', () => ({
   syncAccountsFromAPI: syncFns.syncAccountsFromAPI,
 }))
 
@@ -253,8 +253,8 @@ describe('GET /api/google-ads/credentials/accounts', () => {
   })
 
   it('returns 409 when heal reports DUAL_STACK_CONFLICT', async () => {
-    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
-    const accountsAuth = await import('@/lib/google-ads-accounts-auth')
+    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads/auth/context')
+    const accountsAuth = await import('@/lib/google-ads/accounts/auth/index')
     const healSpy = vi
       .spyOn(accountsAuth, 'healAccountsRouteDeveloperToken')
       .mockResolvedValueOnce({
@@ -277,7 +277,7 @@ describe('GET /api/google-ads/credentials/accounts', () => {
   })
 
   it('returns 409 when auth context reports dual-stack credentials', async () => {
-    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads-auth-context')
+    const { GOOGLE_ADS_DUAL_STACK_WARNING } = await import('@/lib/google-ads/auth/context')
     accountsAuthFns.getGoogleAdsAuthContext.mockResolvedValueOnce({
       ...defaultOAuthAuthContext,
       oauthCredentials: oauthCredentialsFull,

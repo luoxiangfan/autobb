@@ -36,7 +36,7 @@ import {
   renewGoogleAdsAccountAsyncRefreshLock,
   resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests,
   tryStartGoogleAdsAccountAsyncRefresh,
-} from '@/lib/google-ads-accounts-async-refresh-state'
+} from '@/lib/google-ads/accounts/async-refresh-state'
 
 const syncKeyParams = {
   userId: 7,
@@ -44,7 +44,7 @@ const syncKeyParams = {
   serviceAccountId: null,
 }
 
-describe('google-ads-accounts-async-refresh-state', () => {
+describe('@/lib/google-ads/accounts/async-refresh-state', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests()

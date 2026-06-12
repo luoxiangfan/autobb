@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { firstNonEmptyFinalUrlFromCampaignConfig } from '../google-ads-campaign-final-url'
+import { firstNonEmptyFinalUrlFromCampaignConfig } from '@/lib/google-ads/campaign/final-url'
 
 describe('firstNonEmptyFinalUrlFromCampaignConfig', () => {
   it('returns empty when config is undefined', () => {

@@ -2,14 +2,14 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSetting, getUserOnlySetting, updateSetting } from '@/lib/settings'
 import { invalidateProxyPoolCache } from '@/lib/offer-utils'
-import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads-auth-assignment'
+import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   getGoogleAdsCredentialBackedSettingValue,
   isGoogleAdsCredentialBackedSettingKey,
   isGoogleAdsSettingsAuthConflictError,
   isGoogleAdsSettingsValidationError,
   upsertSingleGoogleAdsCredentialBackedSetting,
-} from '@/lib/google-ads-settings-store'
+} from '@/lib/google-ads/settings/settings-store'
 import { z } from 'zod'
 
 /**
@@ -145,7 +145,7 @@ export async function PUT(
         )
 
         const { invalidateGoogleAdsAuthContextForCredentialUser } =
-          await import('@/lib/google-ads-auth-context')
+          await import('@/lib/google-ads/auth/context')
         await invalidateGoogleAdsAuthContextForCredentialUser(userIdNum)
 
         return NextResponse.json({

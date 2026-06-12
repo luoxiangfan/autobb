@@ -59,18 +59,18 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/google-ads-api', () => ({
+vi.mock('@/lib/google-ads/api/api', () => ({
   getCustomerWithCredentials: googleAdsFns.getCustomerWithCredentials,
 }))
 
-vi.mock('@/lib/google-ads-auth-context', () => ({
+vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContext: campaignRouteAuthFns.getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext: hasConfiguredGoogleAdsAuthFromContextMock,
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
-vi.mock('@/lib/google-ads-accounts-auth', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads-accounts-auth')>()
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {
     ...actual,
     prepareGoogleAdsApiCallForLinkedAccount:
@@ -84,11 +84,11 @@ vi.mock('@/lib/python-ads-client', () => ({
   updateAdGroupPython: pythonFns.updateAdGroupPython,
 }))
 
-vi.mock('@/lib/google-ads-mutate-helpers', () => ({
+vi.mock('@/lib/google-ads/common/mutate-helpers', () => ({
   normalizeGoogleAdsApiUpdateOperations: vi.fn((operations: any[]) => operations),
 }))
 
-vi.mock('@/lib/google-ads-api-tracker', () => ({
+vi.mock('@/lib/google-ads/api/tracker', () => ({
   trackApiUsage: trackerFns.trackApiUsage,
   ApiOperationType: {
     REPORT: 'REPORT',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { NextRequest } from 'next/server'
-import { parseDeleteGoogleAdsAccountRequest } from '@/lib/google-ads-account-delete-request'
+import { parseDeleteGoogleAdsAccountRequest } from '@/lib/google-ads/account-delete'
 
 describe('parseDeleteGoogleAdsAccountRequest', () => {
   it('reads flag from query string', async () => {
