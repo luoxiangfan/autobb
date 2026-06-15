@@ -8,7 +8,6 @@ import type {
   HeadlineAsset,
   DescriptionAsset,
 } from '../../ad-creative'
-import type { Offer } from '../../offers'
 import type { AdCreativeRetryPlan, NormalizedCreativeBucket } from '../types'
 import { type ResponseSchema } from '../../gemini'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
@@ -27,9 +26,16 @@ import {
   applyDescriptionTextGuardrail,
   applyHeadlineTextGuardrail,
   MODEL_INTENT_TRANSACTIONAL_MODIFIER_PATTERN,
-} from '../contract/enforcement'
+} from './text-guardrails'
 
 export type { ResponseSchema } from '../../gemini'
+
+export {
+  HEADLINE2_INTENT_TOKENS,
+  HEADLINE2_BANNED_TOKENS,
+  HEADLINE2_STOPWORDS,
+  HEADLINE_DANGLING_TAIL_TOKENS,
+} from './headline-tokens'
 
 // --- extracted body below ---
 
@@ -38,17 +44,14 @@ export function normalizeBrandFreeText(text: string, brandName: string): string 
   const brand = String(brandName || '').trim()
   if (!brand) return String(text).trim()
   const pattern = new RegExp(escapeRegex(brand), 'ig')
-  return String(text)
-    .replace(pattern, '')
-    .replace(/\s{2 }/g, ' ')
-    .trim()
+  return String(text).replace(pattern, '').replace(/\s{2}/g, ' ').trim()
 }
 
 export function normalizeHeadline2KeywordCandidate(text: string): string {
   return String(text || '')
     .replace(/[{}]/g, '')
     .replace(/[_/]+/g, ' ')
-    .replace(/\s{2 }/g, ' ')
+    .replace(/\s{2}/g, ' ')
     .trim()
 }
 
@@ -63,94 +66,6 @@ export function isLikelyModelCodeToken(token: string): boolean {
   // e.g. "f17", "vp40", "x100", "a7" (very short alnum code)
   return /^[a-z]*\d+[a-z0-9]*$/i.test(t) && t.length <= 6
 }
-
-export const HEADLINE2_INTENT_TOKENS = new Set([
-  'buy',
-  'purchase',
-  'order',
-  'shop',
-  'get',
-  'need',
-  'price',
-  'cost',
-  'deal',
-  'discount',
-  'coupon',
-  'promo',
-  'best',
-  'top',
-  'cheap',
-  'affordable',
-  'sale',
-])
-
-export const HEADLINE2_BANNED_TOKENS = new Set([
-  // Navigational / irrelevant for a product-category keyword defaultText
-  'official',
-  'store',
-  'website',
-  'site',
-  'amazon',
-  'ebay',
-  // Local intent noise (commonly appears in brand query keywords)
-  'near',
-  'nearby',
-  'me',
-])
-
-export const HEADLINE2_STOPWORDS = new Set([
-  'a',
-  'an',
-  'the',
-  'and',
-  'or',
-  'of',
-  'to',
-  'for',
-  'with',
-  'in',
-  'on',
-  'at',
-  'by',
-  'from',
-  'your',
-  'our',
-  'my',
-  'their',
-  'this',
-  'that',
-  'these',
-  'those',
-])
-
-export const HEADLINE_DANGLING_TAIL_TOKENS = new Set([
-  'a',
-  'an',
-  'the',
-  'and',
-  'or',
-  'of',
-  'to',
-  'for',
-  'with',
-  'in',
-  'on',
-  'at',
-  'by',
-  'from',
-  'your',
-  'our',
-  'my',
-  'their',
-])
-
-/**
- * 🔒 前置数据质量校验（2026-01-26）
- * 在生成创意前检查 Offer 数据质量，防止使用错误数据生成创意
- *
- * @param offer - Offer 数据对象
- * @returns 校验结果
- */
 
 export function scoreAdCreativeCandidate(raw: any): number {
   if (!raw || typeof raw !== 'object') return 0

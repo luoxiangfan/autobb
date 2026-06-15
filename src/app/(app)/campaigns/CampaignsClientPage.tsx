@@ -5,14 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
 import { GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT } from '@/lib/google-ads/campaign/sync-events'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -24,16 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,58 +34,28 @@ import {
   XCircle,
   TrendingUp,
   Coins,
-  Wallet,
-  Package,
   Loader2,
-  MoreHorizontal,
   BarChart3,
-  Download,
 } from 'lucide-react'
 import type { TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
-import { MeasuredResponsiveContainer } from '@/components/ui/chart'
-import {
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  LabelList,
-  Line,
-  Pie,
-  PieChart,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 import { getCampaignStatusLabel } from '@/lib/i18n-constants'
 import { formatToggleStatusWarnings } from './toggle-status-warning'
 import {
   campaignHasBoundOffer,
-  getOfferTasksMenuLabel,
   isCampaignEnabled,
   resolveOfferTasksToggleAction,
-  shouldShowIndividualOfferTaskMenuItems,
-  shouldShowOfferTasksMenuItem,
   type OfferTasksToggleAction,
 } from '@/lib/offer-tasks-toggle'
 import { CampaignsActionDialogs } from './CampaignsActionDialogs'
-import { buildOverallRoasStatistics } from './build-overall-roas-statistics'
-import { buildOverallRoasImageDataUrl } from './export-overall-roas-image'
-import { CampaignSortableHeader } from './CampaignSortableHeader'
+import { CampaignOverallRoasDialog } from './CampaignOverallRoasDialog'
+import { CampaignsTable } from './CampaignsTable'
 import {
-  anonymizeCampaignName,
   calculateCampaignRoas,
   convertAmountForDisplay,
   formatCurrencyWithCode,
-  formatPercentNumber,
-  formatRoasNumber,
-  roundTo2,
 } from './campaign-metrics-utils'
-import type {
-  CampaignRoasRankItem,
-  CampaignSortDirection,
-  CampaignSortField,
-  OverallRoasStatistics,
-} from './types'
+import type { CampaignSortDirection, CampaignSortField } from './types'
 import { matchesCampaignSearch } from '@/lib/campaign-search'
 import { formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
@@ -120,18 +73,6 @@ const AdjustCampaignBudgetDialog = dynamic(
 )
 const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), { ssr: false })
 const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
-const EditableCustomName = dynamic(
-  () => import('@/components/EditableCustomName').then((mod) => mod.EditableCustomName),
-  { ssr: false }
-)
-const EditableCampaignName = dynamic(
-  () => import('@/components/EditableCampaignName').then((mod) => mod.EditableCampaignName),
-  { ssr: false }
-)
-const EditableStatusCategory = dynamic(
-  () => import('@/components/EditableStatusCategory').then((mod) => mod.EditableStatusCategory),
-  { ssr: false }
-)
 const BatchTasksDialog = dynamic(() => import('@/components/BatchTasksDialog'), { ssr: false })
 
 interface Campaign {
@@ -457,11 +398,6 @@ export default function CampaignsClientPage({
   const [batchDeleteSubmitting, setBatchDeleteSubmitting] = useState(false)
   const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false)
   const [isOverallRoasDialogOpen, setIsOverallRoasDialogOpen] = useState(false)
-  const [overallRoasLoading, setOverallRoasLoading] = useState(false)
-  const [overallRoasDownloading, setOverallRoasDownloading] = useState(false)
-  const [overallRoasError, setOverallRoasError] = useState<string | null>(null)
-  const [overallRoasStats, setOverallRoasStats] = useState<OverallRoasStatistics | null>(null)
-  const [hideBrandNames, setHideBrandNames] = useState(false)
 
   // 批量任务相关状态
   const [isBatchTasksDialogOpen, setIsBatchTasksDialogOpen] = useState(false)
@@ -725,99 +661,6 @@ export default function CampaignsClientPage({
         ? `${appliedCustomRange.startDate} ~ ${appliedCustomRange.endDate}`
         : '自定义时间范围'
       : `最近${timeRange}天`
-  const chartPalette = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6']
-  const getCampaignDisplayName = useCallback(
-    (campaign: CampaignRoasRankItem): string => {
-      if (!hideBrandNames) return campaign.campaignName
-      return anonymizeCampaignName(campaign.campaignName)
-    },
-    [hideBrandNames]
-  )
-  const overallRoasRankTrendData = useMemo(() => {
-    if (!overallRoasStats) return []
-    return [...overallRoasStats.campaigns]
-      .filter((item) => item.roas !== null)
-      .sort((a, b) => Number(b.roas) - Number(a.roas))
-      .slice(0, 8)
-      .map((item, index) => ({
-        rank: `#${index + 1}`,
-        campaignName: getCampaignDisplayName(item),
-        roas: Number(item.roas || 0),
-        spend: roundTo2(item.spend),
-        commission: roundTo2(item.commission),
-      }))
-  }, [getCampaignDisplayName, overallRoasStats])
-
-  const overallRoasSpendShareData = useMemo(() => {
-    if (!overallRoasStats) return []
-    const sortedBySpend = [...overallRoasStats.campaigns].sort((a, b) => b.spend - a.spend)
-    const top = sortedBySpend.slice(0, 5).map((item) => ({
-      name: getCampaignDisplayName(item),
-      value: roundTo2(item.spend),
-    }))
-    const otherTotal = sortedBySpend.slice(5).reduce((sum, item) => sum + item.spend, 0)
-    if (otherTotal > 0) {
-      top.push({
-        name: hideBrandNames ? '其他品牌' : '其他广告系列',
-        value: roundTo2(otherTotal),
-      })
-    }
-    return top
-  }, [getCampaignDisplayName, hideBrandNames, overallRoasStats])
-  const overallRoasShareHeadline = (() => {
-    if (!overallRoasStats) return ''
-
-    const best = overallRoasStats.bestTop3[0]
-    const worst = overallRoasStats.worstBottom3[0]
-
-    if (best && best.roas !== null) {
-      const bestName = getCampaignDisplayName(best)
-      const bestRoas = formatRoasNumber(best.roas)
-      const totalRoas = formatRoasNumber(overallRoasStats.totalRoas)
-      const ctr = formatPercentNumber(overallRoasStats.averageCtr)
-      if (worst && worst.roas !== null) {
-        return `亮点：${bestName} ROAS 达 ${bestRoas}，显著领先尾部系列，拉动整体 ROAS 至 ${totalRoas}（平均点击率 ${ctr}）。`
-      }
-      return `亮点：${bestName} ROAS 达 ${bestRoas}，整体 ROAS 为 ${totalRoas}（平均点击率 ${ctr}）。`
-    }
-
-    return `本周期覆盖 ${overallRoasStats.campaignCount} 个广告系列，总花费 ${formatCurrencyDashboard(overallRoasStats.totalSpend, overallRoasStats.currency)}，建议补齐转化归因后再进行扩量决策。`
-  })()
-  const overallRoasMetricCards = useMemo(() => {
-    if (!overallRoasStats) return []
-
-    return [
-      {
-        title: `总花费(${overallRoasStats.currency})`,
-        value: formatCurrencyDashboard(overallRoasStats.totalSpend, overallRoasStats.currency),
-      },
-      {
-        title: `总佣金(${overallRoasStats.currency})`,
-        value: formatCurrencyDashboard(overallRoasStats.totalCommission, overallRoasStats.currency),
-      },
-      { title: '总 ROAS', value: formatRoasNumber(overallRoasStats.totalRoas) },
-      {
-        title: `平均实际 CPC(${overallRoasStats.currency})`,
-        value:
-          overallRoasStats.avgActualCpc === null
-            ? '--'
-            : formatCurrencyDashboard(overallRoasStats.avgActualCpc, overallRoasStats.currency),
-      },
-      { title: '总展示', value: overallRoasStats.totalImpressions.toLocaleString('zh-CN') },
-      { title: '总点击', value: overallRoasStats.totalClicks.toLocaleString('zh-CN') },
-      { title: '平均点击率', value: formatPercentNumber(overallRoasStats.averageCtr) },
-      { title: '广告系列数量', value: `${overallRoasStats.campaignCount}` },
-    ]
-  }, [overallRoasStats])
-  const overallRoasSpendShareTotal = useMemo(
-    () => overallRoasSpendShareData.reduce((sum, entry) => sum + Number(entry.value || 0), 0),
-    [overallRoasSpendShareData]
-  )
-  const overallRoasPreviewPanelClass = 'rounded-2xl border border-[#dbeafe] bg-white shadow-xs'
-  const overallRoasChartHeight = 260
-  const overallRoasPreviewPanelBodyClass = 'p-5 lg:p-6'
-  const overallRoasPreviewSectionTitleClass = 'text-sm font-semibold text-slate-800'
-  const overallRoasPreviewSectionHintClass = 'mt-1 text-xs text-slate-500'
   const selectedRemovedCampaignCount = useMemo(
     () =>
       Object.values(selectedCampaignSnapshots).filter(
@@ -2168,59 +2011,6 @@ export default function CampaignsClientPage({
     return selected
   }
 
-  const handleOpenOverallRoasDialog = async () => {
-    if (!hasMultipleCampaignSelection || overallRoasLoading) return
-
-    setIsOverallRoasDialogOpen(true)
-    setOverallRoasLoading(true)
-    setOverallRoasError(null)
-    setOverallRoasStats(null)
-
-    try {
-      const selectedCampaigns = await getSelectedCampaigns()
-      if (selectedCampaigns.length < 2) {
-        setOverallRoasError('至少选择 2 个广告系列后才能计算整体 ROAS。')
-        return
-      }
-
-      setOverallRoasStats(
-        buildOverallRoasStatistics({
-          selectedCampaigns,
-          timeRangeLabel: overallRoasTimeRangeLabel,
-          summaryDisplayCurrency,
-        })
-      )
-    } catch (err: any) {
-      if (err?.message === 'UNAUTHORIZED') return
-      setOverallRoasError(err?.message || '计算整体 ROAS 失败')
-    } finally {
-      setOverallRoasLoading(false)
-    }
-  }
-
-  const handleDownloadOverallRoasImage = () => {
-    if (!overallRoasStats || overallRoasDownloading) return
-
-    setOverallRoasDownloading(true)
-    try {
-      const dataUrl = buildOverallRoasImageDataUrl(overallRoasStats, {
-        hideBrandNames,
-      })
-      const link = document.createElement('a')
-      const filenameTs = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
-      link.href = dataUrl
-      link.download = `campaigns-overall-roas-${filenameTs}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      showSuccess('下载成功', '统计图片已保存')
-    } catch (err: any) {
-      showError('下载失败', err?.message || '生成图片失败')
-    } finally {
-      setOverallRoasDownloading(false)
-    }
-  }
-
   const getRemovedCampaigns = (list: Campaign[]) =>
     list.filter((campaign) => {
       const isRemovedStatus = String(campaign.status || '').toUpperCase() === 'REMOVED'
@@ -3226,17 +3016,9 @@ export default function CampaignsClientPage({
               </Button>
               <Button onClick={() => router.push('/offers')}>创建广告系列</Button>
               {hasMultipleCampaignSelection && (
-                <Button
-                  variant="outline"
-                  onClick={() => void handleOpenOverallRoasDialog()}
-                  disabled={overallRoasLoading}
-                >
-                  {overallRoasLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                  )}
-                  {overallRoasLoading ? '计算中...' : '计算整体ROAS'}
+                <Button variant="outline" onClick={() => setIsOverallRoasDialogOpen(true)}>
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  计算整体ROAS
                 </Button>
               )}
             </div>
@@ -3738,687 +3520,88 @@ export default function CampaignsClientPage({
             )}
           </div>
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table className="min-w-[1260px] [&_th]:h-9 [&_th]:px-1 [&_td]:px-1 [&_td]:py-1.5 [&_thead_th]:bg-white">
-                  <TableHeader>
-                    <TableRow>
-                      {/* 全选checkbox */}
-                      <TableHead className="w-[30px]">
-                        <Checkbox
-                          checked={
-                            paginatedCampaigns.length > 0 &&
-                            paginatedCampaigns.every((campaign) =>
-                              selectedCampaignIds.has(campaign.id)
-                            )
-                          }
-                          onCheckedChange={handleSelectAll}
-                          aria-label="全选"
-                        />
-                      </TableHead>
-                      <CampaignSortableHeader
-                        field="campaignName"
-                        className="w-[300px] whitespace-nowrap"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        系列名称
-                      </CampaignSortableHeader>
-                      <TableHead className="w-[200px] whitespace-nowrap">自定义名称</TableHead>
-                      <CampaignSortableHeader
-                        field="budgetAmount"
-                        className="w-[86px] whitespace-nowrap"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        预算
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="impressions"
-                        className="w-[58px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        展示
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="clicks"
-                        className="w-[58px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        点击
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="ctr"
-                        className="w-[56px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        点击率
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="cpc"
-                        className="w-[94px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        实际CPC
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="configuredMaxCpc"
-                        className="w-[94px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        配置CPC
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="conversions"
-                        className="w-[94px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        佣金
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="cost"
-                        className="w-[94px] whitespace-nowrap px-0.5!"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        花费
-                      </CampaignSortableHeader>
-                      <TableHead className="w-[100px] whitespace-nowrap">运营状态</TableHead>
-                      <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>
-                      <CampaignSortableHeader
-                        field="status"
-                        className="w-[78px] whitespace-nowrap"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        投放状态
-                      </CampaignSortableHeader>
-                      <CampaignSortableHeader
-                        field="servingStartDate"
-                        className="w-[74px] whitespace-nowrap"
-                        sortField={sortField}
-                        sortDirection={sortDirection}
-                        onSort={handleSort}
-                      >
-                        投放日期
-                      </CampaignSortableHeader>
-                      <TableHead className="w-[48px] whitespace-nowrap text-center">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {paginatedCampaigns.map((campaign) => {
-                      // 🔧 检查 is_deleted 布尔值
-                      const isDeleted = isCampaignDeleted(campaign)
-                      const offerDeleted = isOfferDeleted(campaign)
-                      const googleCampaignId = getCampaignGoogleId(campaign)
-                      const isStatusUpdating = statusUpdatingIds.has(campaign.id)
-                      const budgetCurrency = campaign.adsAccountCurrency || defaultCurrency
-                      const performanceCurrency =
-                        campaign.performanceCurrency ||
-                        campaign.adsAccountCurrency ||
-                        defaultCurrency
-
-                      const canAdjustCpc =
-                        Boolean(googleCampaignId) &&
-                        !isDeleted &&
-                        !offerDeleted &&
-                        campaign.adsAccountAvailable !== false
-                      const adjustCpcDisabledReason = !googleCampaignId
-                        ? '该广告系列尚未发布到Google Ads，无法调整CPC'
-                        : campaign.adsAccountAvailable === false
-                          ? 'Ads账号已解绑，无法调整CPC'
-                          : isDeleted
-                            ? '该广告系列已删除，无法调整CPC'
-                            : offerDeleted
-                              ? '关联Offer已删除，无法调整CPC'
-                              : '调整CPC出价'
-                      const canAdjustBudget =
-                        Boolean(googleCampaignId) &&
-                        !isDeleted &&
-                        !offerDeleted &&
-                        campaign.adsAccountAvailable !== false
-                      const adjustBudgetDisabledReason = !googleCampaignId
-                        ? '该广告系列尚未发布到Google Ads，无法调整每日预算'
-                        : campaign.adsAccountAvailable === false
-                          ? 'Ads账号已解绑，无法调整每日预算'
-                          : isDeleted
-                            ? '该广告系列已删除，无法调整每日预算'
-                            : offerDeleted
-                              ? '关联Offer已删除，无法调整每日预算'
-                              : '调整每日预算'
-
-                      const canToggleStatus =
-                        !isStatusUpdating &&
-                        Boolean(googleCampaignId) &&
-                        !isDeleted &&
-                        !offerDeleted &&
-                        campaign.adsAccountAvailable !== false &&
-                        (campaign.status === 'ENABLED' || campaign.status === 'PAUSED')
-                      const toggleLabel =
-                        campaign.status === 'ENABLED' ? '暂停广告系列' : '启用广告系列'
-                      const toggleDisabledReason = isStatusUpdating
-                        ? '操作中...'
-                        : !googleCampaignId
-                          ? '该广告系列尚未发布到Google Ads，无法暂停/启用'
-                          : campaign.adsAccountAvailable === false
-                            ? 'Ads账号已解绑，无法暂停/启用'
-                            : isDeleted
-                              ? '该广告系列已删除，无法暂停/启用'
-                              : offerDeleted
-                                ? '关联Offer已删除，无法暂停/启用'
-                                : campaign.status !== 'ENABLED' && campaign.status !== 'PAUSED'
-                                  ? `当前状态(${campaign.status})不支持暂停/启用`
-                                  : toggleLabel
-
-                      const normalizedCreationStatus = String(
-                        campaign.creationStatus || ''
-                      ).toLowerCase()
-                      const canOfflineWithoutGoogleCampaign =
-                        normalizedCreationStatus === 'pending' ||
-                        normalizedCreationStatus === 'failed'
-                      const canOffline =
-                        !offlineSubmitting &&
-                        !isDeleted &&
-                        !offerDeleted &&
-                        String(campaign.status || '').toUpperCase() !== 'REMOVED' &&
-                        (Boolean(googleCampaignId) || canOfflineWithoutGoogleCampaign) &&
-                        (googleCampaignId ? campaign.adsAccountAvailable !== false : true)
-                      const offlineDisabledReason = isDeleted
-                        ? '该广告系列已删除，无法下线'
-                        : offerDeleted
-                          ? '关联Offer已删除，无法下线'
-                          : String(campaign.status || '').toUpperCase() === 'REMOVED'
-                            ? '该广告系列已下线'
-                            : !googleCampaignId && !canOfflineWithoutGoogleCampaign
-                              ? '该广告系列尚未发布到Google Ads，且不在可下线状态（pending/failed）'
-                              : googleCampaignId && campaign.adsAccountAvailable === false
-                                ? 'Ads账号已解绑，无法下线'
-                                : '下线广告系列（不可恢复）'
-
-                      const canDeleteDraft = campaign.creationStatus === 'draft'
-                      const canDeleteDraftAction = canDeleteDraft && !deleteDraftSubmitting
-                      const isRemovedStatus =
-                        String(campaign.status || '').toUpperCase() === 'REMOVED'
-                      const canDeleteRemovedAction =
-                        (isRemovedStatus || campaign.adsAccountAvailable === false) &&
-                        !deleteRemovedSubmitting
-                      const configuredMaxCpc = Number(campaign.configuredMaxCpc)
-                      const hasConfiguredMaxCpc =
-                        Number.isFinite(configuredMaxCpc) && configuredMaxCpc > 0
-
-                      return (
-                        <TableRow
-                          key={campaign.id}
-                          className={`hover:bg-gray-50/50 ${isDeleted || offerDeleted ? 'bg-gray-50' : ''}`}
-                        >
-                          {/* 选择checkbox */}
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedCampaignIds.has(campaign.id)}
-                              onCheckedChange={(checked) =>
-                                handleSelectCampaign(campaign, checked as boolean)
-                              }
-                              aria-label={`选择 ${campaign.campaignName}`}
-                              title="加入批量下线"
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <EditableCampaignName
-                                campaignId={campaign.id}
-                                initialCampaignName={campaign.campaignName}
-                                disabled={isDeleted || offerDeleted}
-                                onSaved={(newName) => {
-                                  setCampaigns((prev) =>
-                                    prev.map((c) =>
-                                      c.id === campaign.id ? { ...c, campaignName: newName } : c
-                                    )
-                                  )
-                                }}
-                              />
-                              {isDeleted && (
-                                <span
-                                  className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 shrink-0"
-                                  title="已删除"
-                                  aria-label="已删除"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </span>
-                              )}
-                              {offerDeleted && !isDeleted && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs whitespace-nowrap bg-orange-50 text-orange-700 border-orange-200 shrink-0"
-                                >
-                                  Offer已删除
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-[200px] whitespace-nowrap">
-                            <EditableCustomName
-                              campaignId={campaign.id}
-                              initialCustomName={campaign.customName}
-                              disabled={isDeleted || offerDeleted}
-                              onSaved={(newName) => {
-                                // 更新本地状态
-                                setCampaigns((prev) =>
-                                  prev.map((c) =>
-                                    c.id === campaign.id ? { ...c, customName: newName } : c
-                                  )
-                                )
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <div className="min-w-0">
-                              <div
-                                className="font-medium text-gray-900 truncate"
-                                title={formatMoney(
-                                  Number(campaign.budgetAmount) || 0,
-                                  budgetCurrency
-                                )}
-                              >
-                                {formatMoney(Number(campaign.budgetAmount) || 0, budgetCurrency)}
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className="mt-0.5 text-[10px] px-1 py-0 whitespace-nowrap border-gray-200 text-gray-600"
-                              >
-                                {campaign.budgetType}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {campaign.performance?.impressions?.toLocaleString() || '0'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {campaign.performance?.clicks?.toLocaleString() || '0'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {(Number(campaign.performance?.ctr) || 0).toFixed(2)}%
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {formatMoney(
-                                Number(
-                                  campaign.performance?.cpcLocal ?? campaign.performance?.cpcUsd
-                                ) || 0,
-                                performanceCurrency
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {hasConfiguredMaxCpc
-                                ? formatMoney(configuredMaxCpc, budgetCurrency)
-                                : '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {formatMoney(
-                                Number(
-                                  campaign.performance?.commission ??
-                                    campaign.performance?.conversions
-                                ) || 0,
-                                performanceCurrency
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap px-0.5!">
-                            <div className="font-medium text-gray-900">
-                              {formatMoney(
-                                Number(
-                                  campaign.performance?.costLocal ?? campaign.performance?.costUsd
-                                ) || 0,
-                                performanceCurrency
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <EditableStatusCategory
-                              campaignId={campaign.id}
-                              initialStatusCategory={campaign.statusCategory}
-                              disabled={isDeleted || offerDeleted}
-                              onSaved={(newStatus) => {
-                                // 更新本地状态
-                                setCampaigns((prev) =>
-                                  prev.map((c) =>
-                                    c.id === campaign.id ? { ...c, statusCategory: newStatus } : c
-                                  )
-                                )
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {(() => {
-                              const hasClickFarm =
-                                campaign.clickFarmTaskStatus &&
-                                campaign.clickFarmTaskStatus === 'running'
-                              const hasUrlSwap =
-                                campaign.urlSwapTaskStatus &&
-                                campaign.urlSwapTaskStatus === 'enabled'
-
-                              // 红：都未开启，黄：一个开启，绿：两个都开启
-                              const taskColor =
-                                hasClickFarm && hasUrlSwap
-                                  ? 'bg-green-100 text-green-800 border-green-200'
-                                  : hasClickFarm || hasUrlSwap
-                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                    : 'bg-red-100 text-red-800 border-red-200'
-
-                              const taskLabel =
-                                hasClickFarm && hasUrlSwap
-                                  ? '双任务'
-                                  : hasClickFarm
-                                    ? '补点击运行中'
-                                    : hasUrlSwap
-                                      ? '换链接已启用'
-                                      : '无运行中任务'
-
-                              return (
-                                <Badge
-                                  variant="outline"
-                                  className={`w-full justify-center ${taskColor}`}
-                                >
-                                  {taskLabel}
-                                </Badge>
-                              )
-                            })()}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            {getStatusBadge(campaign.status, campaign.adsAccountAvailable)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <span className="text-sm text-gray-900">
-                              {campaign.servingStartDate || '-'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0"
-                                  aria-label="更多操作"
-                                  title="更多操作"
-                                >
-                                  <MoreHorizontal className="w-3.5 h-3.5" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-40">
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={() =>
-                                    window.open(`/offers/${campaign.offerId}`, '_blank')
-                                  }
-                                >
-                                  <Package className="w-4 h-4 text-green-600" />
-                                  <span>查看关联Offer</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={() => {
-                                    if (!googleCampaignId) return
-                                    if (campaign.adsAccountAvailable === false) return
-                                    setAdjustBudgetTarget({
-                                      googleCampaignId,
-                                      campaignName: campaign.campaignName,
-                                      currentBudget: Number(campaign.budgetAmount) || 0,
-                                      currentBudgetType: String(campaign.budgetType || 'DAILY'),
-                                      currency: budgetCurrency,
-                                    })
-                                    setAdjustBudgetOpen(true)
-                                  }}
-                                  disabled={!canAdjustBudget}
-                                  title={adjustBudgetDisabledReason}
-                                >
-                                  <Wallet className="w-4 h-4 text-emerald-600" />
-                                  <span>调整每日预算</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={() => {
-                                    if (!googleCampaignId) return
-                                    if (campaign.adsAccountAvailable === false) return
-                                    setAdjustCpcTarget({
-                                      googleCampaignId,
-                                      campaignName: campaign.campaignName,
-                                    })
-                                    setAdjustCpcOpen(true)
-                                  }}
-                                  disabled={!canAdjustCpc}
-                                  title={adjustCpcDisabledReason}
-                                >
-                                  <Coins className="w-4 h-4 text-indigo-600" />
-                                  <span>调整CPC</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={() => void openToggleStatusConfirm(campaign)}
-                                  disabled={!canToggleStatus}
-                                  title={toggleDisabledReason}
-                                >
-                                  {isStatusUpdating ? (
-                                    <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-                                  ) : campaign.status === 'ENABLED' ? (
-                                    <PauseCircle className="w-4 h-4 text-yellow-600" />
-                                  ) : (
-                                    <PlayCircle className="w-4 h-4 text-green-600" />
-                                  )}
-                                  <span>{isStatusUpdating ? '状态更新中' : toggleLabel}</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onClick={() => openOfflineDialog(campaign)}
-                                  disabled={!canOffline}
-                                  title={offlineDisabledReason}
-                                >
-                                  <XCircle className="w-4 h-4 text-red-600" />
-                                  <span>下线广告系列</span>
-                                </DropdownMenuItem>
-
-                                {(isRemovedStatus ||
-                                  campaign.adsAccountAvailable === false ||
-                                  canDeleteDraft) && <DropdownMenuSeparator />}
-
-                                {(isRemovedStatus || campaign.adsAccountAvailable === false) && (
-                                  <DropdownMenuItem
-                                    className="gap-2"
-                                    onClick={() => openDeleteRemovedDialog(campaign)}
-                                    disabled={!canDeleteRemovedAction}
-                                    title={
-                                      canDeleteRemovedAction
-                                        ? '永久删除广告系列（本地删除，不再调用 Google Ads）'
-                                        : '删除中...'
-                                    }
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-600" />
-                                    <span>删除广告系列</span>
-                                  </DropdownMenuItem>
-                                )}
-
-                                {canDeleteDraft && (
-                                  <DropdownMenuItem
-                                    className="gap-2"
-                                    onClick={() => openDeleteDraftDialog(campaign)}
-                                    disabled={!canDeleteDraftAction}
-                                    title={canDeleteDraftAction ? '删除草稿广告系列' : '删除中...'}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-600" />
-                                    <span>删除草稿</span>
-                                  </DropdownMenuItem>
-                                )}
-                                {shouldShowIndividualOfferTaskMenuItems(campaign.status) &&
-                                  campaignHasBoundOffer(campaign.offerId) && (
-                                    <>
-                                      <DropdownMenuItem
-                                        className="gap-2"
-                                        title="补点击任务"
-                                        disabled={clickFarmLoading}
-                                        onClick={async () => {
-                                          setClickFarmLoading(true)
-                                          try {
-                                            const { resolveClickFarmTaskMode } =
-                                              await import('../offers/task-modal-helpers')
-                                            const { editTaskId, infoMessage } =
-                                              await resolveClickFarmTaskMode(campaign.offerId)
-                                            setSelectedOfferForClickFarm(campaign)
-                                            setEditTaskIdForClickFarm(editTaskId)
-                                            if (infoMessage) {
-                                              showInfo(infoMessage)
-                                            }
-                                            setIsClickFarmModalOpen(true)
-                                          } catch (error) {
-                                            console.error('查询补点击任务出错:', error)
-                                            setSelectedOfferForClickFarm(campaign)
-                                            setEditTaskIdForClickFarm(undefined)
-                                            setIsClickFarmModalOpen(true)
-                                          } finally {
-                                            setClickFarmLoading(false)
-                                          }
-                                        }}
-                                      >
-                                        <span className="text-[10px] font-semibold text-gray-500">
-                                          CLK
-                                        </span>
-                                        <span>补点击任务</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        className="gap-2"
-                                        title="换链接任务"
-                                        disabled={urlSwapLoading || !campaign.adsAccountAvailable}
-                                        onClick={async () => {
-                                          setUrlSwapLoading(true)
-                                          try {
-                                            const { resolveUrlSwapTaskMode } =
-                                              await import('../offers/task-modal-helpers')
-                                            const { editTaskId, infoMessage } =
-                                              await resolveUrlSwapTaskMode(campaign.offerId)
-                                            setSelectedOfferForUrlSwap(campaign)
-                                            setEditTaskIdForUrlSwap(
-                                              editTaskId === undefined
-                                                ? undefined
-                                                : String(editTaskId)
-                                            )
-                                            if (infoMessage) {
-                                              showInfo(infoMessage)
-                                            }
-                                            setIsUrlSwapModalOpen(true)
-                                          } catch (error) {
-                                            console.error('查询换链接任务出错:', error)
-                                            setSelectedOfferForUrlSwap(campaign)
-                                            setEditTaskIdForUrlSwap(undefined)
-                                            setIsUrlSwapModalOpen(true)
-                                          } finally {
-                                            setUrlSwapLoading(false)
-                                          }
-                                        }}
-                                      >
-                                        <span className="text-[10px] font-semibold text-gray-500">
-                                          URL
-                                        </span>
-                                        <span>换链接任务</span>
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                {(() => {
-                                  const offerTasksAction = resolveOfferTasksToggleAction(
-                                    campaign.clickFarmTaskStatus,
-                                    campaign.urlSwapTaskStatus
-                                  )
-                                  if (
-                                    !shouldShowOfferTasksMenuItem({
-                                      offerId: campaign.offerId,
-                                      campaignStatus: campaign.status,
-                                      action: offerTasksAction,
-                                    })
-                                  ) {
-                                    return null
-                                  }
-
-                                  const offerTasksLabel = getOfferTasksMenuLabel(offerTasksAction)
-                                  const isPauseOfferTasksAction = offerTasksAction === 'pause'
-                                  return (
-                                    <>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="gap-2"
-                                        title={
-                                          isPauseOfferTasksAction
-                                            ? '暂停关联 Offer 任务'
-                                            : '开启关联 Offer 任务'
-                                        }
-                                        disabled={pauseOfferTasksSubmitting}
-                                        onClick={() => openPauseOfferTasksDialog(campaign)}
-                                      >
-                                        {isPauseOfferTasksAction ? (
-                                          <PauseCircle className="w-4 h-4 text-orange-600" />
-                                        ) : (
-                                          <PlayCircle className="w-4 h-4 text-green-600" />
-                                        )}
-                                        <span>{offerTasksLabel}</span>
-                                      </DropdownMenuItem>
-                                    </>
-                                  )
-                                })()}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-              {/* Pagination Controls - Bottom */}
-              {filteredCampaigns.length > 0 && (
-                <div className="px-4 py-3 border-t border-gray-200">
-                  <ResponsivePagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalItems={totalItems}
-                    pageSize={pageSize}
-                    onPageChange={setCurrentPage}
-                    onPageSizeChange={(size) => {
-                      setPageSize(size)
-                      setCurrentPage(1)
-                    }}
-                    pageSizeOptions={[10, 20, 50, 100, 500, 1000]}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CampaignsTable
+            paginatedCampaigns={paginatedCampaigns}
+            filteredCampaigns={filteredCampaigns}
+            selectedCampaignIds={selectedCampaignIds}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+            onSelectAll={handleSelectAll}
+            onSelectCampaign={handleSelectCampaign}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size)
+              setCurrentPage(1)
+            }}
+            defaultCurrency={defaultCurrency}
+            formatMoney={formatMoney}
+            isCampaignDeleted={isCampaignDeleted}
+            isOfferDeleted={isOfferDeleted}
+            getCampaignGoogleId={getCampaignGoogleId}
+            getStatusBadge={getStatusBadge}
+            statusUpdatingIds={statusUpdatingIds}
+            offlineSubmitting={offlineSubmitting}
+            deleteDraftSubmitting={deleteDraftSubmitting}
+            deleteRemovedSubmitting={deleteRemovedSubmitting}
+            pauseOfferTasksSubmitting={pauseOfferTasksSubmitting}
+            setCampaigns={setCampaigns}
+            onAdjustBudget={(target) => {
+              setAdjustBudgetTarget(target)
+              setAdjustBudgetOpen(true)
+            }}
+            onAdjustCpc={(target) => {
+              setAdjustCpcTarget(target)
+              setAdjustCpcOpen(true)
+            }}
+            onToggleStatus={openToggleStatusConfirm}
+            onOffline={openOfflineDialog}
+            onDeleteRemoved={openDeleteRemovedDialog}
+            onDeleteDraft={openDeleteDraftDialog}
+            onPauseOfferTasks={openPauseOfferTasksDialog}
+            onOpenClickFarmModal={async (campaign) => {
+              setClickFarmLoading(true)
+              try {
+                const { resolveClickFarmTaskMode } = await import('../offers/task-modal-helpers')
+                const { editTaskId, infoMessage } = await resolveClickFarmTaskMode(campaign.offerId)
+                setSelectedOfferForClickFarm(campaign)
+                setEditTaskIdForClickFarm(editTaskId === undefined ? undefined : String(editTaskId))
+                if (infoMessage) showInfo(infoMessage)
+                setIsClickFarmModalOpen(true)
+              } catch (error) {
+                console.error('查询补点击任务出错:', error)
+                setSelectedOfferForClickFarm(campaign)
+                setEditTaskIdForClickFarm(undefined)
+                setIsClickFarmModalOpen(true)
+              } finally {
+                setClickFarmLoading(false)
+              }
+            }}
+            onOpenUrlSwapModal={async (campaign) => {
+              setUrlSwapLoading(true)
+              try {
+                const { resolveUrlSwapTaskMode } = await import('../offers/task-modal-helpers')
+                const { editTaskId, infoMessage } = await resolveUrlSwapTaskMode(campaign.offerId)
+                setSelectedOfferForUrlSwap(campaign)
+                setEditTaskIdForUrlSwap(editTaskId === undefined ? undefined : String(editTaskId))
+                if (infoMessage) showInfo(infoMessage)
+                setIsUrlSwapModalOpen(true)
+              } catch (error) {
+                console.error('查询换链接任务出错:', error)
+                setSelectedOfferForUrlSwap(campaign)
+                setEditTaskIdForUrlSwap(undefined)
+                setIsUrlSwapModalOpen(true)
+              } finally {
+                setUrlSwapLoading(false)
+              }
+            }}
+            clickFarmLoading={clickFarmLoading}
+            urlSwapLoading={urlSwapLoading}
+          />
         )}
       </main>
 
@@ -4452,404 +3635,14 @@ export default function CampaignsClientPage({
           onSaved={handleCpcAdjusted}
         />
       )}
-      <Dialog
+      <CampaignOverallRoasDialog
         open={isOverallRoasDialogOpen}
-        onOpenChange={(open) => {
-          setIsOverallRoasDialogOpen(open)
-          if (!open) {
-            setOverallRoasError(null)
-            setOverallRoasLoading(false)
-            setOverallRoasStats(null)
-          }
-        }}
-      >
-        <DialogContent size="wide" className="flex h-[96vh] max-h-[96vh] flex-col overflow-hidden">
-          <DialogHeader className="gap-4 border-b border-slate-200 bg-white px-5 py-5 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1.5">
-                <DialogTitle className="text-xl text-slate-900">
-                  广告系列整体 ROAS 社交战报
-                </DialogTitle>
-                <DialogDescription className="space-y-1 text-sm leading-6 text-slate-600">
-                  <span className="block">
-                    分析范围：{overallRoasTimeRangeLabel}，已选广告系列 {selectedCampaignIds.size}{' '}
-                    个
-                  </span>
-                  {overallRoasStats && !overallRoasLoading && !overallRoasError ? (
-                    <span className="block">最近生成：{overallRoasStats.generatedAt}</span>
-                  ) : null}
-                </DialogDescription>
-              </div>
-              <Button
-                type="button"
-                variant={hideBrandNames ? 'default' : 'outline'}
-                onClick={() => setHideBrandNames((prev) => !prev)}
-              >
-                {hideBrandNames ? '显示品牌名' : '隐藏品牌名'}
-              </Button>
-            </div>
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {overallRoasLoading ? (
-              <div className="flex items-center justify-center py-16 text-sm text-gray-600">
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                正在汇总选中广告系列数据...
-              </div>
-            ) : overallRoasError ? (
-              <div className="m-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 sm:m-6 lg:m-8">
-                <p>{overallRoasError}</p>
-                <Button
-                  variant="outline"
-                  className="mt-3 border-red-200 bg-white hover:bg-red-100"
-                  onClick={() => void handleOpenOverallRoasDialog()}
-                >
-                  重新计算
-                </Button>
-              </div>
-            ) : overallRoasStats ? (
-              <div className="bg-slate-50 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
-                <div className="mx-auto max-w-[960px] overflow-hidden rounded-2xl border border-blue-200 bg-[#eef5ff] shadow-[0_12px_32px_rgba(15,23,42,0.10)]">
-                  <div className="bg-linear-to-r from-[#0b1220] via-[#1d4ed8] to-[#0369a1] px-4 py-5 text-white sm:px-5 sm:py-6 lg:px-6 lg:py-7">
-                    <div className="flex min-h-[112px] flex-col justify-between gap-4 lg:min-h-[120px]">
-                      <div className="space-y-2">
-                        <h3 className="text-[24px] font-bold leading-tight tracking-tight sm:text-[28px] lg:text-[32px]">
-                          广告系列整体 ROAS 社交战报
-                        </h3>
-                        <div className="space-y-0.5 text-[12px] leading-5 text-blue-100 sm:text-[13px]">
-                          <p>
-                            {overallRoasTimeRangeLabel} | {overallRoasStats.generatedAt}
-                          </p>
-                          <p>统计币种：{overallRoasStats.currency}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-end justify-end">
-                        {hideBrandNames ? (
-                          <div className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.12em] text-blue-50">
-                            已隐藏品牌名
-                          </div>
-                        ) : (
-                          <div />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4 px-3 py-3 sm:px-4 sm:py-4 lg:px-5 lg:py-5">
-                    <div className={`${overallRoasPreviewPanelClass} p-5`}>
-                      <p className="text-sm font-semibold text-[#1e3a8a]">一句话结论</p>
-                      <p className="mt-2 text-sm font-medium leading-7 text-slate-700 lg:text-base">
-                        {overallRoasShareHeadline}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-                      {overallRoasMetricCards.map((card) => (
-                        <div
-                          key={card.title}
-                          className={`${overallRoasPreviewPanelClass} min-h-[100px] px-4 py-3`}
-                        >
-                          <p className="text-sm text-slate-500">{card.title}</p>
-                          <p className="mt-1.5 text-[24px] font-semibold leading-none tracking-tight text-slate-950">
-                            {card.value}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className={overallRoasPreviewPanelClass}>
-                      <div className={`${overallRoasPreviewPanelBodyClass} pb-4`}>
-                        <p className={overallRoasPreviewSectionTitleClass}>
-                          ROAS 排名趋势（Top 8）
-                        </p>
-                        <p className={overallRoasPreviewSectionHintClass}>
-                          预览结构与导出图保持一致，突出头部系列 ROAS 排名
-                        </p>
-                      </div>
-                      {isOverallRoasDialogOpen && overallRoasRankTrendData.length > 0 ? (
-                        <MeasuredResponsiveContainer
-                          height={overallRoasChartHeight}
-                          className="px-2 pb-4 sm:px-4 lg:px-5"
-                        >
-                          <ComposedChart
-                            data={overallRoasRankTrendData}
-                            margin={{ top: 32, right: 24, bottom: 16, left: 8 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
-                            <XAxis
-                              dataKey="rank"
-                              stroke="#64748b"
-                              tickLine={false}
-                              axisLine={false}
-                            />
-                            <YAxis
-                              stroke="#334155"
-                              tickLine={false}
-                              axisLine={false}
-                              tickFormatter={(value: number) => `${Number(value || 0).toFixed(1)}x`}
-                            />
-                            <RechartsTooltip
-                              contentStyle={{ borderRadius: 12, borderColor: '#dbeafe' }}
-                              formatter={(value) => [formatRoasNumber(Number(value ?? 0)), 'ROAS']}
-                              labelFormatter={(_label, payload) =>
-                                payload?.[0]?.payload?.campaignName || '--'
-                              }
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="roas"
-                              stroke="#1d4ed8"
-                              strokeWidth={3}
-                              dot={{ r: 4, fill: '#ffffff', strokeWidth: 2 }}
-                              activeDot={{ r: 6 }}
-                            >
-                              <LabelList
-                                dataKey="roas"
-                                position="top"
-                                offset={12}
-                                formatter={(value) => `${Number(value ?? 0).toFixed(2)}x`}
-                                className="fill-slate-700 text-[11px]"
-                              />
-                            </Line>
-                          </ComposedChart>
-                        </MeasuredResponsiveContainer>
-                      ) : (
-                        <p className="py-20 text-center text-sm text-slate-500">
-                          暂无可绘制的 ROAS 趋势数据
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_420px]">
-                      <div className={overallRoasPreviewPanelClass}>
-                        <div className={overallRoasPreviewPanelBodyClass}>
-                          <p className={overallRoasPreviewSectionTitleClass}>
-                            花费占比结构（Top 5 + 其他）
-                          </p>
-                          <p className={overallRoasPreviewSectionHintClass}>
-                            预览与导出图一致，强调主要花费集中度和构成
-                          </p>
-                        </div>
-                        {isOverallRoasDialogOpen && overallRoasSpendShareData.length > 0 ? (
-                          <div className="grid gap-4 px-4 pb-4 sm:px-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center lg:px-5">
-                            <MeasuredResponsiveContainer height={overallRoasChartHeight}>
-                              <PieChart>
-                                <Pie
-                                  data={overallRoasSpendShareData}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  cx="50%"
-                                  cy="50%"
-                                  innerRadius={60}
-                                  outerRadius={100}
-                                  paddingAngle={2}
-                                >
-                                  {overallRoasSpendShareData.map((_, index) => (
-                                    <Cell
-                                      key={`share-${index}`}
-                                      fill={chartPalette[index % chartPalette.length]}
-                                    />
-                                  ))}
-                                </Pie>
-                                <RechartsTooltip
-                                  formatter={(value) =>
-                                    formatCurrencyDashboard(
-                                      Number(value ?? 0),
-                                      overallRoasStats.currency
-                                    )
-                                  }
-                                />
-                              </PieChart>
-                            </MeasuredResponsiveContainer>
-                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                              {overallRoasSpendShareData.map((entry, index) => (
-                                <div
-                                  key={`legend-${entry.name}-${index}`}
-                                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 shadow-xs"
-                                >
-                                  <div className="flex items-center gap-2 text-sm text-slate-700">
-                                    <span
-                                      className="h-2.5 w-2.5 rounded-full"
-                                      style={{
-                                        backgroundColor: chartPalette[index % chartPalette.length],
-                                      }}
-                                    />
-                                    <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-                                  </div>
-                                  <div className="mt-1 flex items-center justify-between gap-3 text-xs">
-                                    <span className="text-slate-500">
-                                      {overallRoasSpendShareTotal > 0
-                                        ? `${((Number(entry.value) / overallRoasSpendShareTotal) * 100).toFixed(1)}%`
-                                        : '0%'}
-                                    </span>
-                                    <span className="font-semibold text-slate-900">
-                                      {formatCurrencyDashboard(
-                                        Number(entry.value),
-                                        overallRoasStats.currency
-                                      )}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="py-20 text-center text-sm text-slate-500">
-                            暂无可绘制的花费占比数据
-                          </p>
-                        )}
-                      </div>
-
-                      <div
-                        className={`${overallRoasPreviewPanelClass} min-h-[280px] ${overallRoasPreviewPanelBodyClass}`}
-                      >
-                        <p className={overallRoasPreviewSectionTitleClass}>CPC 极值洞察</p>
-                        <div className="mt-4 space-y-4">
-                          <div>
-                            <p className="text-sm text-slate-500">最高实际 CPC</p>
-                            {overallRoasStats.highestActualCpc ? (
-                              <>
-                                <p className="mt-2 text-base font-semibold text-slate-900">
-                                  {getCampaignDisplayName(overallRoasStats.highestActualCpc)}
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-indigo-600">
-                                  {formatCurrencyDashboard(
-                                    Number(overallRoasStats.highestActualCpc.actualCpc || 0),
-                                    overallRoasStats.currency
-                                  )}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="mt-2 text-sm text-slate-500">
-                                暂无可计算的实际 CPC 数据
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm text-slate-500">最低实际 CPC</p>
-                            {overallRoasStats.lowestActualCpc ? (
-                              <>
-                                <p className="mt-2 text-base font-semibold text-slate-900">
-                                  {getCampaignDisplayName(overallRoasStats.lowestActualCpc)}
-                                </p>
-                                <p className="mt-1 text-sm font-semibold text-emerald-600">
-                                  {formatCurrencyDashboard(
-                                    Number(overallRoasStats.lowestActualCpc.actualCpc || 0),
-                                    overallRoasStats.currency
-                                  )}
-                                </p>
-                              </>
-                            ) : (
-                              <p className="mt-2 text-sm text-slate-500">
-                                暂无可计算的实际 CPC 数据
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                      <div
-                        className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}
-                      >
-                        <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>
-                          Top 3 优秀广告系列
-                        </p>
-                        {overallRoasStats.bestTop3.length > 0 ? (
-                          <div className="space-y-3">
-                            {overallRoasStats.bestTop3.map((item, index) => (
-                              <div
-                                key={`best-${item.id}`}
-                                className="rounded-xl bg-slate-50 px-4 py-3"
-                              >
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {index + 1}. {getCampaignDisplayName(item)}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-600">
-                                  ROAS {formatRoasNumber(item.roas)} | 花费{' '}
-                                  {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} |
-                                  佣金{' '}
-                                  {formatCurrencyDashboard(
-                                    item.commission,
-                                    overallRoasStats.currency
-                                  )}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
-                        )}
-                      </div>
-                      <div
-                        className={`${overallRoasPreviewPanelClass} min-h-[286px] ${overallRoasPreviewPanelBodyClass}`}
-                      >
-                        <p className={`mb-4 ${overallRoasPreviewSectionTitleClass}`}>
-                          Bottom 3 待优化广告系列
-                        </p>
-                        {overallRoasStats.worstBottom3.length > 0 ? (
-                          <div className="space-y-3">
-                            {overallRoasStats.worstBottom3.map((item, index) => (
-                              <div
-                                key={`worst-${item.id}`}
-                                className="rounded-xl bg-slate-50 px-4 py-3"
-                              >
-                                <p className="text-sm font-semibold text-slate-900">
-                                  {index + 1}. {getCampaignDisplayName(item)}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-600">
-                                  ROAS {formatRoasNumber(item.roas)} | 花费{' '}
-                                  {formatCurrencyDashboard(item.spend, overallRoasStats.currency)} |
-                                  佣金{' '}
-                                  {formatCurrencyDashboard(
-                                    item.commission,
-                                    overallRoasStats.currency
-                                  )}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-slate-500">暂无可计算 ROAS 的广告系列</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="px-1 text-xs text-slate-500">
-                      提示：该战报用于分享决策参考，建议结合归因口径与预算目标复核。
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="px-5 py-10 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
-                请点击“重新计算”生成统计数据。
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="gap-2 border-t border-slate-200 bg-white px-5 py-4 sm:px-6 lg:px-8">
-            {overallRoasStats && !overallRoasLoading && !overallRoasError && (
-              <Button
-                variant="outline"
-                onClick={handleDownloadOverallRoasImage}
-                disabled={overallRoasDownloading}
-              >
-                {overallRoasDownloading ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="w-4 h-4 mr-2" />
-                )}
-                {overallRoasDownloading ? '下载中...' : '下载统计图片'}
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setIsOverallRoasDialogOpen(false)}>
-              关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onOpenChange={setIsOverallRoasDialogOpen}
+        selectedCampaignCount={selectedCampaignIds.size}
+        timeRangeLabel={overallRoasTimeRangeLabel}
+        summaryDisplayCurrency={summaryDisplayCurrency}
+        loadSelectedCampaigns={getSelectedCampaigns}
+      />
       <CampaignsActionDialogs
         isToggleStatusDialogOpen={isToggleStatusDialogOpen}
         setIsToggleStatusDialogOpen={setIsToggleStatusDialogOpen}
