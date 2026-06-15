@@ -8,9 +8,6 @@ const { findUserByIdMock, generateTokenMock, fetchMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth', () => ({
   findUserById: findUserByIdMock,
-}))
-
-vi.mock('@/lib/auth', () => ({
   generateToken: generateTokenMock,
 }))
 

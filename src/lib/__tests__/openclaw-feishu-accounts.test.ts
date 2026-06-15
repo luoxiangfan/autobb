@@ -17,9 +17,10 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 vi.mock('@/lib/common', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/common')>('@/lib/common')
+  const settings =
+    await vi.importActual<typeof import('@/lib/common/settings')>('@/lib/common/settings')
   return {
-    ...actual,
+    ...settings,
     getUserOnlySetting: hoisted.getUserOnlySettingMock,
   }
 })

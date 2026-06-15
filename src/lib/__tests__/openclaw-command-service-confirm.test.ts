@@ -24,6 +24,8 @@ const {
 
 vi.mock('../db', () => ({
   getDatabase: getDatabaseMock,
+  nowFunc: () => 'NOW()',
+  boolParam: (value: boolean) => value,
 }))
 
 vi.mock('../queue/queue-routing', () => ({

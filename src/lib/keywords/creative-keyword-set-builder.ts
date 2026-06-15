@@ -1,7 +1,5 @@
-import {
-  applyKeywordSupplementationOnce,
-  type KeywordSupplementationReport,
-} from '../ad-creative-generator/index'
+import { applyKeywordSupplementationOnce } from '../ad-creative-generator/keyword-supplement'
+import type { KeywordSupplementationReport } from '../ad-creative-generator/types'
 import {
   filterCreativeKeywordsByOfferContextDetailed,
   normalizeCreativeKeywordCandidatesForContextFilter,

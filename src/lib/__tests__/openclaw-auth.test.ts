@@ -8,10 +8,14 @@ const { getSettingMock, updateSettingsMock } = vi.hoisted(() => ({
   updateSettingsMock: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
-  getSetting: getSettingMock,
-  updateSettings: updateSettingsMock,
-}))
+vi.mock('@/lib/common', async () => {
+  const config = await vi.importActual<typeof import('@/lib/common/config')>('@/lib/common/config')
+  return {
+    ...config,
+    getSetting: getSettingMock,
+    updateSettings: updateSettingsMock,
+  }
+})
 
 import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
 

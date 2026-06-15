@@ -10,6 +10,8 @@ const { collectUserFeishuAccountsMock } = vi.hoisted(() => ({
 
 vi.mock('../db', () => ({
   getDatabase: getDatabaseMock,
+  isUniqueConstraintViolation: (error: unknown) =>
+    String((error as { code?: string })?.code || '') === '23505',
 }))
 
 vi.mock('../openclaw/feishu-accounts', () => ({

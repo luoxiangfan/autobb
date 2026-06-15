@@ -3,13 +3,22 @@
  */
 
 import { z } from 'zod'
-import { zErr } from '@/lib/common'
-import { compactCategoryLabel } from '@/lib/offers'
-import { findOfferById, updateOffer, type Offer } from '@/lib/offers'
-import { normalizeOfferCommissionInput, resolveLegacyBareNumericMode } from '@/lib/offers'
-import { inferOfferPageType } from '@/lib/offers'
-import { OfferExtractRequestError, resolveValidatedTargetCountry } from '@/lib/offers'
-import { normalizeOfferExtractionMode, resolveExtractionModeInput } from '@/lib/offers'
+import { zErr } from '@/lib/common/zod-errors'
+import { compactCategoryLabel } from '@/lib/offers/offer-category'
+import { findOfferById, updateOffer, type Offer } from '@/lib/offers/offers'
+import {
+  normalizeOfferCommissionInput,
+  resolveLegacyBareNumericMode,
+} from '@/lib/offers/offer-monetization'
+import { inferOfferPageType } from '@/lib/offers/offer-extraction-task'
+import {
+  OfferExtractRequestError,
+  resolveValidatedTargetCountry,
+} from '@/lib/offers/offer-extract-request'
+import {
+  normalizeOfferExtractionMode,
+  resolveExtractionModeInput,
+} from '@/lib/offers/offer-extraction-mode'
 
 const extractionModeSchema = z
   .union([z.string(), z.undefined(), z.null(), z.literal('')])
