@@ -12,7 +12,7 @@ import {
   getAdCreativeGenerationModeProfile,
   normalizeAdCreativeGenerationMode,
 } from './ad-creative-generation-mode'
-import { getThemeByBucket } from '../ad-creative-generator/index'
+import { getThemeByBucket } from './generator/index'
 import {
   assertPostGenerationPersistenceGate,
   formatBucketGenerationRejectedError,

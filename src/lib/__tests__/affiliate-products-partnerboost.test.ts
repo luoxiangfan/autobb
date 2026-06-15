@@ -7,7 +7,7 @@ import {
   normalizePartnerboostStatusCode,
   resolvePartnerboostCountryCode,
   resolvePartnerboostPromoLinks,
-} from '@/lib/affiliate-products/index'
+} from '@/lib/affiliate/products/index'
 
 describe('normalizePartnerboostStatusCode', () => {
   it('supports number and string status code', () => {

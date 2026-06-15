@@ -13,7 +13,7 @@ import { getDatabase } from '@/lib/db'
 import { nowFunc } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { calculateHybridProductRecommendationScores } from '@/lib/ai'
-import type { AffiliateProduct } from '@/lib/affiliate-products/index'
+import type { AffiliateProduct } from '@/lib/affiliate/products/index'
 import {
   batchGetCachedProductRecommendationScores,
   cacheProductRecommendationScore,

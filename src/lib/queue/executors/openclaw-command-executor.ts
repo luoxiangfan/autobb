@@ -3,17 +3,17 @@ import { getDatabase } from '@/lib/db'
 import { nowFunc } from '@/lib/db'
 import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'
 import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
-import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
+import { buildEffectiveCreative } from '@/lib/campaign/publish/effective-creative'
 import {
   buildAlignedPublishCampaignConfig,
   evaluatePublishCampaignConfigOwnership,
   hasPublishCampaignConfigOwnershipViolation,
-} from '@/lib/campaign-publish/aligned-campaign-config'
-import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
+} from '@/lib/campaign/publish/aligned-campaign-config'
+import { resolveTaskCampaignKeywords } from '@/lib/campaign/publish/task-keyword-fallback'
 import {
   inferNegativeKeywordMatchType,
   normalizeMatchType,
-} from '@/lib/campaign-publish/negative-keyword-match-type'
+} from '@/lib/campaign/publish/negative-keyword-match-type'
 import { normalizeCampaignPublishCampaignConfig } from '@/lib/common'
 import { parseCommissionPayoutValue } from '@/lib/offers'
 import { pickFirstTwoLetterCountryCode } from '@/lib/common'

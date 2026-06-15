@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   normalizePositiveKeywordMatchType,
   resolvePositiveKeywordMatchType,
-} from '../campaign-publish/positive-keyword-match-type'
+} from '../campaign/publish/positive-keyword-match-type'
 
 describe('positive-keyword-match-type', () => {
   it('normalizes supported match types', () => {

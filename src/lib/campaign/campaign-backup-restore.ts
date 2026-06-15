@@ -11,8 +11,8 @@ import {
   type CampaignBackup,
 } from './campaign-backups'
 import { generateNamingScheme } from './naming-convention'
-import { buildEffectiveCreative } from '../campaign-publish/effective-creative'
-import { resolveTaskCampaignKeywords } from '../campaign-publish/task-keyword-fallback'
+import { buildEffectiveCreative } from './publish/effective-creative'
+import { resolveTaskCampaignKeywords } from './publish/task-keyword-fallback'
 import { regenerateAdCreative } from '../creatives'
 import {
   abandonStalePendingCampaignsForOffers,

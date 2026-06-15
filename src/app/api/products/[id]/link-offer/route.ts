@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common'
-import { linkOfferToAffiliateProduct } from '@/lib/affiliate-products/index'
+import { linkOfferToAffiliateProduct } from '@/lib/affiliate/products/index'
 import { invalidateProductListCache } from '@/lib/common'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 

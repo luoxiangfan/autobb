@@ -3,7 +3,7 @@ import {
   buildAlignedPublishCampaignConfig,
   evaluatePublishCampaignConfigOwnership,
   hasPublishCampaignConfigOwnershipViolation,
-} from '@/lib/campaign-publish/aligned-campaign-config'
+} from '@/lib/campaign/publish/aligned-campaign-config'
 
 describe('buildAlignedPublishCampaignConfig', () => {
   it('prefers creative finalUrl and finalUrlSuffix over input and offer', () => {

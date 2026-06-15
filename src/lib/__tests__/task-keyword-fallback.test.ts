@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
+import { resolveTaskCampaignKeywords } from '@/lib/campaign/publish/task-keyword-fallback'
 
 describe('resolveTaskCampaignKeywords', () => {
   it('prefers configured keywords and negative keywords when provided', () => {

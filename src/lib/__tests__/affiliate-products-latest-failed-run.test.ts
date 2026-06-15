@@ -27,7 +27,7 @@ describe('getLatestFailedAffiliateProductSyncRun', () => {
     dbFns.queryOne.mockResolvedValueOnce(null)
 
     const { getLatestFailedAffiliateProductSyncRun } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
     const result = await getLatestFailedAffiliateProductSyncRun({
       userId: 1,
       platform: 'yeahpromos',
@@ -64,7 +64,7 @@ describe('getLatestFailedAffiliateProductSyncRun', () => {
       .mockResolvedValueOnce(null)
 
     const { getLatestFailedAffiliateProductSyncRun } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
     const result = await getLatestFailedAffiliateProductSyncRun({
       userId: 1,
       platform: 'yeahpromos',
@@ -106,7 +106,7 @@ describe('getLatestFailedAffiliateProductSyncRun', () => {
       .mockResolvedValueOnce({ id: 112 })
 
     const { getLatestFailedAffiliateProductSyncRun } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
     const result = await getLatestFailedAffiliateProductSyncRun({
       userId: 1,
       platform: 'yeahpromos',

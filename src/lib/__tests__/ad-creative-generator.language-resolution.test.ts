@@ -4,7 +4,7 @@ import type { GeneratedAdCreativeData } from '../creatives'
 import {
   enforceLanguagePurityGate,
   resolveCreativeTargetLanguage,
-} from '../ad-creative-generator/test-exports'
+} from '../creatives/generator/test-exports'
 
 describe('ad-creative-generator language resolution', () => {
   it('falls back to country-language mapping when target language is missing', () => {

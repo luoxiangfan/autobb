@@ -72,7 +72,7 @@ vi.mock('@/lib/offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
-vi.mock('@/lib/ad-creative-generator/index', () => ({
+vi.mock('@/lib/creatives/generator/index', () => ({
   generateAdCreative: generatorFns.generateAdCreative,
 }))
 

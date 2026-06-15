@@ -37,7 +37,7 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     dbFns.getDatabase.mockResolvedValue(db)
 
     const { runAffiliateProductsRawJsonRetirementMaintenance } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
 
     await expect(runAffiliateProductsRawJsonRetirementMaintenance()).resolves.toBeUndefined()
     expect(queryOne).toHaveBeenCalledTimes(1)
@@ -59,7 +59,7 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     dbFns.getDatabase.mockResolvedValue(db)
 
     const { runAffiliateProductsRawJsonRetirementMaintenance } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
 
     await runAffiliateProductsRawJsonRetirementMaintenance({ batchSize: 500 })
 
@@ -91,7 +91,7 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     dbFns.getDatabase.mockResolvedValue(db)
 
     const { runAffiliateProductsRawJsonRetirementMaintenance } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
 
     await runAffiliateProductsRawJsonRetirementMaintenance({ allowDropOutsideWindow: true })
 
@@ -126,7 +126,7 @@ describe('runAffiliateProductsRawJsonRetirementMaintenance', () => {
     dbFns.getDatabase.mockResolvedValue(db)
 
     const { runAffiliateProductsRawJsonRetirementMaintenance } =
-      await import('@/lib/affiliate-products/index')
+      await import('@/lib/affiliate/products/index')
 
     await runAffiliateProductsRawJsonRetirementMaintenance({
       now: new Date('2026-01-01T00:00:00.000Z'),

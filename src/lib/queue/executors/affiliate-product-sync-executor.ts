@@ -15,7 +15,7 @@ import {
   type SyncMode,
   syncAffiliateProducts,
   updateAffiliateProductSyncRun,
-} from '@/lib/affiliate-products/index'
+} from '@/lib/affiliate/products/index'
 import {
   buildProductListCacheHash,
   getLatestProductListQuery,

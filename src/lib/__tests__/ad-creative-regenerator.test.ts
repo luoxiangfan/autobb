@@ -23,7 +23,7 @@ vi.mock('../creatives', () => ({
   createAdCreative: adCreativeFns.createAdCreative,
 }))
 
-vi.mock('../ad-creative-generator/index', () => ({
+vi.mock('../creatives/generator/index', () => ({
   getThemeByBucket: generatorFns.getThemeByBucket,
 }))
 

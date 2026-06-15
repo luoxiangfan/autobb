@@ -1,6 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { POST } from '@/app/api/ad-strength/batch-evaluate/route'
+import type { POST as PostHandler } from '@/app/api/ad-strength/batch-evaluate/route'
+
+let POST: typeof PostHandler
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -24,17 +26,25 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/offers', () => ({
-  findOfferById: offerFns.findOfferById,
-}))
+vi.mock('@/lib/offers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers')>()
+  return {
+    ...actual,
+    findOfferById: offerFns.findOfferById,
+  }
+})
 
 vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   loadKeywordPoolExpandCredentialsForOffer: authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
 }))
 
-vi.mock('@/lib/ad-strength/evaluate', () => ({
+vi.mock('@/lib/creatives/strength/evaluate', () => ({
   evaluateAdStrength: evaluateFns.evaluateAdStrength,
 }))
+
+beforeAll(async () => {
+  ;({ POST } = await import('@/app/api/ad-strength/batch-evaluate/route'))
+})
 
 function buildCreativePayload(overrides: Record<string, unknown> = {}) {
   return {

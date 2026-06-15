@@ -10,7 +10,7 @@
  */
 
 import { generateContent, type ResponseSchema } from './gemini'
-import { detectAffiliateLandingPageType, type AffiliateProduct } from '../affiliate-products/index'
+import { detectAffiliateLandingPageType, type AffiliateProduct } from '../affiliate/products/index'
 import { LEGACY_AMAZON_MISCLASSIFIED_REASON } from '../launch-score'
 import { withCache } from './ai-cache'
 import { estimateTokenCost, recordTokenUsage } from './ai-token-tracker'

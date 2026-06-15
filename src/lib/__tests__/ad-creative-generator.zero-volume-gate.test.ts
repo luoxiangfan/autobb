@@ -4,7 +4,7 @@ import {
   normalizeKeywordSourceAuditForGeneratorList,
   normalizeSourceTypeFromLegacySource,
   shouldAllowZeroVolumeKeywordForMerge,
-} from '../ad-creative-generator/test-exports'
+} from '../creatives/generator/test-exports'
 
 describe('ad-creative-generator zero-volume gate', () => {
   it('maps legacy sources into normalized source types', () => {

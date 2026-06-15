@@ -81,7 +81,7 @@ describe('listAffiliateProducts link count query strategy', () => {
   })
 
   it('scopes offer-link aggregation to paged rows for non-relatedOfferCount sorting', async () => {
-    const { listAffiliateProducts } = await import('@/lib/affiliate-products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
     await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -98,7 +98,7 @@ describe('listAffiliateProducts link count query strategy', () => {
   })
 
   it('keeps legacy full aggregation path when sorting by relatedOfferCount', async () => {
-    const { listAffiliateProducts } = await import('@/lib/affiliate-products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
     await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -116,7 +116,7 @@ describe('listAffiliateProducts link count query strategy', () => {
   })
 
   it('avoids postgres placeholder collisions when targetCountry is combined with other filters', async () => {
-    const { listAffiliateProducts } = await import('@/lib/affiliate-products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
     await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,

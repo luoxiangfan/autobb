@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { __testOnly } from '../ad-strength/evaluate'
+import { __testOnly } from '../creatives/strength/evaluate'
 
 describe('ad-strength-evaluator AI JSON parse', () => {
   it('parses pure JSON response', () => {

@@ -6,7 +6,7 @@ import {
   buildCreativeKeywordUsagePlan,
   enforceFinalCreativeContract,
   enforceHeadlineUniquenessGate,
-} from '../ad-creative-generator/test-exports'
+} from '../creatives/generator/test-exports'
 
 function buildDraft(): GeneratedAdCreativeData {
   return {

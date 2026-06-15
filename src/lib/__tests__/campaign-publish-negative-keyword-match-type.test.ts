@@ -4,7 +4,7 @@ import {
   normalizeNegativeKeywordMatchTypeMap,
   normalizeMatchType,
   resolveNegativeKeywordMatchType,
-} from '@/lib/campaign-publish/negative-keyword-match-type'
+} from '@/lib/campaign/publish/negative-keyword-match-type'
 
 describe('negative keyword match type', () => {
   it('normalizes supported match types', () => {

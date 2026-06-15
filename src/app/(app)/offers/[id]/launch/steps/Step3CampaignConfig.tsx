@@ -56,8 +56,8 @@ import {
   inferNegativeKeywordMatchType,
   normalizeNegativeKeywordMatchTypeMap,
   type NegativeKeywordMatchType,
-} from '@/lib/campaign-publish/negative-keyword-match-type'
-import { resolvePositiveKeywordMatchType } from '@/lib/campaign-publish/positive-keyword-match-type'
+} from '@/lib/campaign/publish/negative-keyword-match-type'
+import { resolvePositiveKeywordMatchType } from '@/lib/campaign/publish/positive-keyword-match-type'
 
 // 格式化搜索量显示
 const formatSearchVolume = (volume?: number): string => {

@@ -24,13 +24,13 @@ import {
 } from '@/lib/launch-score'
 import { launchScoreHashConfigFromPublishCampaignConfig } from '@/lib/launch-score'
 import { generateNamingScheme, parseAdGroupName } from '@/lib/campaign/naming-convention'
-import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
+import { buildEffectiveCreative } from '@/lib/campaign/publish/effective-creative'
 import {
   buildAlignedPublishCampaignConfig,
   evaluatePublishCampaignConfigOwnership,
   hasPublishCampaignConfigOwnershipViolation,
-} from '@/lib/campaign-publish/aligned-campaign-config'
-import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
+} from '@/lib/campaign/publish/aligned-campaign-config'
+import { resolveTaskCampaignKeywords } from '@/lib/campaign/publish/task-keyword-fallback'
 import { isGoogleAdsAccountAccessError } from '@/lib/google-ads/oauth/login-customer'
 import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign'
 import { normalizeCampaignPublishRequestBody } from '@/lib/common'

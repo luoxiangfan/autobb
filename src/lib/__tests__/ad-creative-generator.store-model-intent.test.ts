@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { evaluateStoreModelIntentReadiness } from '../ad-creative-generator/test-exports'
+import { evaluateStoreModelIntentReadiness } from '../creatives/generator/test-exports'
 
 describe('evaluateStoreModelIntentReadiness', () => {
   it('passes when store model intent has verified hot products with model anchors', () => {

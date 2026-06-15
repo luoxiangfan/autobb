@@ -49,18 +49,18 @@ import { invalidateOfferCache } from '@/lib/common'
 import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
 import { addUrlSwapTargetForOfferCampaign } from '@/lib/url-swap'
 import { applyCampaignTransition } from '@/lib/campaign'
-import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate-products/index'
+import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate/products/index'
 import {
   normalizeNegativeKeywordMatchTypeMap,
   resolveCampaignNegativeKeywordMatchTypeInput,
   resolveNegativeKeywordMatchType,
-} from '@/lib/campaign-publish/negative-keyword-match-type'
+} from '@/lib/campaign/publish/negative-keyword-match-type'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import {
   normalizePositiveKeywordMatchType,
   resolvePositiveKeywordMatchType,
   type PositiveKeywordMatchType,
-} from '@/lib/campaign-publish/positive-keyword-match-type'
+} from '@/lib/campaign/publish/positive-keyword-match-type'
 import {
   extractGoogleAdsRetryDelaySeconds,
   isGoogleAdsQuotaRateError,
@@ -83,8 +83,8 @@ import {
   REQUIRED_RSA_DESCRIPTION_COUNT,
   REQUIRED_RSA_HEADLINE_COUNT,
   resolvePublishRsaAssets,
-} from '@/lib/campaign-publish/rsa-assets'
-import { buildPublishErrorLogObject } from '@/lib/campaign-publish/publish-error-log'
+} from '@/lib/campaign/publish/rsa-assets'
+import { buildPublishErrorLogObject } from '@/lib/campaign/publish/publish-error-log'
 import { getPositiveIntFromEnv } from '@/lib/common'
 
 export type { CampaignPublishRollbackContext } from '@/lib/campaign'

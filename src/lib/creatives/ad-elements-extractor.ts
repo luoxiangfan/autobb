@@ -30,10 +30,10 @@ import type {
   ExtractedAdElements,
   ProductInfo,
   CategoryThreshold,
-} from '../ad-elements/types'
+} from './elements/types'
 
 // Re-export types for backward compatibility
-export type { ExtractedAdElements, ProductInfo } from '../ad-elements/types'
+export type { ExtractedAdElements, ProductInfo } from './elements/types'
 
 type ExtractedKeywordRow = {
   keyword: string

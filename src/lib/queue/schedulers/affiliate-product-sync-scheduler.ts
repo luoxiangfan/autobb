@@ -17,7 +17,7 @@ import {
   runAffiliateProductsRawJsonRetirementMaintenance,
   type SyncMode,
   updateAffiliateProductSyncRun,
-} from '../../affiliate-products/index'
+} from '../../affiliate/products/index'
 import { getQueueManagerForTaskType } from '../queue-routing'
 import { isYeahPromosManualSyncOnly } from '../../affiliate'
 import { buildUserExecutionEligibleSql } from '../../campaign'

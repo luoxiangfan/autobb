@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GeneratedAdCreativeData, HeadlineAsset } from '../creatives'
-import { enforceTitlePriorityTopHeadlines } from '../ad-creative-generator/test-exports'
+import { enforceTitlePriorityTopHeadlines } from '../creatives/generator/test-exports'
 
 function buildCreativeDraft(): GeneratedAdCreativeData {
   const headlines = [

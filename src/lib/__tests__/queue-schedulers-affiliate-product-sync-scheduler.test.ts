@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: mocks.getDatabase,
 }))
 
-vi.mock('@/lib/affiliate-products', () => ({
+vi.mock('@/lib/affiliate', () => ({
   checkAffiliatePlatformConfig: mocks.checkAffiliatePlatformConfig,
   createAffiliateProductSyncRun: mocks.createAffiliateProductSyncRun,
   getLatestFailedAffiliateProductSyncRun: mocks.getLatestFailedAffiliateProductSyncRun,

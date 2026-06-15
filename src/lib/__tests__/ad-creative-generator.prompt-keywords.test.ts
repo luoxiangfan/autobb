@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { resolveAdCreativePromptKeywordPlan } from '../ad-creative-generator/test-exports'
+import { resolveAdCreativePromptKeywordPlan } from '../creatives/generator/test-exports'
 
 describe('resolveAdCreativePromptKeywordPlan', () => {
   it('combines validated extracted keywords with capped title/about seeds', () => {

@@ -31,7 +31,7 @@ const evaluateAdStrengthMock = vi.hoisted(() =>
   })
 )
 
-vi.mock('../ad-strength/evaluate', () => ({
+vi.mock('../creatives/strength/evaluate', () => ({
   evaluateAdStrength: evaluateAdStrengthMock,
 }))
 

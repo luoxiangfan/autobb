@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
+import { buildEffectiveCreative } from '@/lib/campaign/publish/effective-creative'
 
 describe('buildEffectiveCreative', () => {
   it('prefers campaignConfig overrides when provided', () => {

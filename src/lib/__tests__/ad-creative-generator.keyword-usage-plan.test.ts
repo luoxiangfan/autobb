@@ -4,7 +4,7 @@ import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../creat
 import {
   buildCreativeKeywordUsagePlan,
   enforceRetainedKeywordSlotCoverage,
-} from '../ad-creative-generator/test-exports'
+} from '../creatives/generator/test-exports'
 
 function buildCreativeDraft(): GeneratedAdCreativeData {
   return {

@@ -6,7 +6,7 @@ import {
   normalizeAffiliatePlatform,
   normalizeAffiliateProductStatusFilter,
   type ProductListOptions,
-} from '@/lib/affiliate-products/index'
+} from '@/lib/affiliate/products/index'
 import { getDatabase } from '@/lib/db'
 import {
   buildProductSummaryCacheHash,

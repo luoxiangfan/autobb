@@ -3,7 +3,7 @@ import type { GeneratedAdCreativeData } from '../creatives'
 import {
   enforceHeadlineComplementarity,
   softlyReinforceTypeCopy,
-} from '../ad-creative-generator/test-exports'
+} from '../creatives/generator/test-exports'
 
 function buildCreativeDraft(): GeneratedAdCreativeData {
   return {

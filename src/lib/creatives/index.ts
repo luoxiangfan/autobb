@@ -1,4 +1,29 @@
 // Public barrel for @/lib/creatives
+export {
+  applyKeywordSupplementationOnce,
+  generateAdCreative,
+  getThemeByBucket,
+} from './generator/index'
+export type {
+  AdCreativePromptKeywordPlan,
+  BucketType,
+  CreativePriceEvidenceResolution,
+  CreativeSalesRankSignal,
+  CreativeTargetLanguageResolution,
+  IntentCategory,
+  KeywordSupplementationReport,
+  KeywordWithVolume,
+  SearchTermFeedbackHintsInput,
+} from './generator/index'
+export { evaluateAdStrength } from './strength/evaluate'
+export type { AdStrengthEvaluation } from './strength/types'
+export type {
+  CategoryThreshold,
+  EnrichedStoreProduct,
+  ExtractedAdElements,
+  ProductInfo,
+  StoreProduct,
+} from './elements/types'
 export * from './ad-creative'
 export * from './ad-creative-generation-mode'
 export * from './ad-creative-quality-constants'

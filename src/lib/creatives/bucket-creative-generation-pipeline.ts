@@ -4,7 +4,7 @@
  * 供队列执行器、同步 API、备份 Regenerator 复用，避免逻辑漂移。
  */
 
-import { generateAdCreative } from '@/lib/ad-creative-generator/index'
+import { generateAdCreative } from './generator/index'
 import type { AdCreativeGenerationModeProfile } from '@/lib/creatives'
 import {
   applyCreativeKeywordSetToCreative,
@@ -28,7 +28,7 @@ import {
   type CanonicalCreativeType,
   type CreativeBucketSlot,
 } from '@/lib/creatives'
-import { getThemeByBucket } from '@/lib/ad-creative-generator/index'
+import { getThemeByBucket } from './generator/index'
 import { getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
 import type {
   KeywordPlannerPreparedSession,
@@ -37,7 +37,7 @@ import type {
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
 import type { Offer } from '@/lib/offers'
 import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/keywords'
-import type { SearchTermFeedbackHintsInput } from '@/lib/ad-creative-generator/index'
+import type { SearchTermFeedbackHintsInput } from './generator/index'
 import { parseBooleanEnv } from '@/lib/common'
 import type { RetryFailureType } from '@/lib/creatives'
 

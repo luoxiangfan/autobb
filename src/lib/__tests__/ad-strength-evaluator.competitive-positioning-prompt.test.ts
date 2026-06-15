@@ -47,7 +47,7 @@ vi.mock('../ai', async (importOriginal) => {
   }
 })
 
-import { evaluateAdStrength } from '../ad-strength/evaluate'
+import { evaluateAdStrength } from '../creatives/strength/evaluate'
 
 describe('ad-strength competitive positioning prompt guardrails', () => {
   beforeEach(() => {

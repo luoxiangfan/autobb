@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { shouldRunGapAnalysisForCreative } from '../ad-creative-generator/test-exports'
+import { shouldRunGapAnalysisForCreative } from '../creatives/generator/test-exports'
 
 describe('shouldRunGapAnalysisForCreative', () => {
   it('runs for default and product-intent creatives only', () => {

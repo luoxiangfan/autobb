@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   selectCreativeKeywords: vi.fn(),
 }))
 
-vi.mock('../ad-creative-generator/index', () => ({
+vi.mock('../creatives/generator/index', () => ({
   applyKeywordSupplementationOnce: mocks.applyKeywordSupplementationOnce,
 }))
 

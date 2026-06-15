@@ -1,4 +1,4 @@
-import { DEFAULT_PARTNERBOOST_BASE_URL } from '@/lib/affiliate'
+import { DEFAULT_PARTNERBOOST_BASE_URL } from './affiliate-sync-config'
 
 type ValidationResult = {
   platform: 'partnerboost' | 'yeahpromos'
