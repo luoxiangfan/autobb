@@ -25,34 +25,7 @@ import {
   isUserExecutionSuspendedError,
   USER_EXECUTION_SUSPENDED_ERROR_CODE,
 } from '@/lib/user-execution-eligibility'
-
-function getPositiveIntFromEnv(key: string, fallback: number): number {
-  const raw = process.env[key]
-  if (!raw) return fallback
-
-  const parsed = parseInt(raw, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
-
-  return parsed
-}
-
-function getBoundedFloatFromEnv(key: string, fallback: number, min: number, max: number): number {
-  const raw = process.env[key]
-  if (!raw) return fallback
-
-  const parsed = parseFloat(raw)
-  if (!Number.isFinite(parsed)) return fallback
-  return Math.min(max, Math.max(min, parsed))
-}
-
-function getBooleanFromEnv(key: string, fallback: boolean): boolean {
-  const raw = process.env[key]
-  if (!raw) return fallback
-  const normalized = raw.trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-  return fallback
-}
+import { getBooleanFromEnv, getBoundedFloatFromEnv, getPositiveIntFromEnv } from '@/lib/env-utils'
 
 function isBackgroundWorkerProcess(): boolean {
   return getBooleanFromEnv('QUEUE_BACKGROUND_WORKER', false)

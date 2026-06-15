@@ -33,6 +33,7 @@ import {
   validateAdStrengthConfig,
 } from './ad-strength-config'
 import type { CanonicalCreativeType } from './creative-type'
+import { normalizeCreativeBucketSlot } from './creative-type'
 import {
   buildUntrustedInputGuardrail,
   sanitizePromptBlockValue,
@@ -2982,10 +2983,8 @@ const MODEL_NUMERIC_SPEC_PATTERN =
 function normalizeBucketTypeForCopyMetrics(
   bucketType?: 'A' | 'B' | 'C' | 'D' | 'S'
 ): 'A' | 'B' | 'D' | 'UNSPECIFIED' {
-  if (bucketType === 'A') return 'A'
-  if (bucketType === 'B' || bucketType === 'C') return 'B'
-  if (bucketType === 'D' || bucketType === 'S') return 'D'
-  return 'UNSPECIFIED'
+  const slot = normalizeCreativeBucketSlot(bucketType ?? null)
+  return slot ?? 'UNSPECIFIED'
 }
 
 function normalizeCreativeTypeForCopyMetrics(

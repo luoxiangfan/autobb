@@ -15,13 +15,7 @@ import {
   createOrRefreshCommandConfirmation,
   expireStaleCommandConfirmations,
   recordOpenclawCallbackEvent } from './confirm-service'
-
-const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
-
-function isEnvTrue(value?: string | null): boolean {
-  if (!value) return false
-  return TRUE_VALUES.has(value.toLowerCase())
-}
+import { isEnvTrue } from '@/lib/env-utils'
 
 async function resolveOpenclawCommandQueueManager() {
   const routedQueue = getQueueManagerForTaskType('openclaw-command')

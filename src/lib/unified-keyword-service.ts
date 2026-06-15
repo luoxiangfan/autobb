@@ -2717,7 +2717,6 @@ export async function getKeywordVolumesForExisting(params: {
   brandName?: string
   serviceAccountId?: string
   offerId?: number
-  enableExpansion?: boolean // 已废弃，忽略
 }): Promise<UnifiedKeywordData[]> {
   const { baseKeywords, country, language, userId, brandName, serviceAccountId, offerId } = params
 

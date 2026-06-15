@@ -25,6 +25,7 @@ import {
 } from '@/lib/ad-creative-quality-loop'
 import {
   getCreativeTypeForBucketSlot,
+  normalizeCreativeBucketSlot,
   type CanonicalCreativeType,
   type CreativeBucketSlot,
 } from '@/lib/creative-type'
@@ -118,15 +119,7 @@ export function assertPostGenerationPersistenceGate(params: {
 export function normalizePipelineBucket(
   bucket: string | null | undefined
 ): CreativeBucketSlot | null {
-  const normalized = String(bucket || '')
-    .trim()
-    .toUpperCase()
-  if (normalized === 'C') return 'B'
-  if (normalized === 'S') return 'D'
-  if (normalized === 'A' || normalized === 'B' || normalized === 'D') {
-    return normalized
-  }
-  return null
+  return normalizeCreativeBucketSlot(bucket)
 }
 
 export interface BucketKeywordContext {

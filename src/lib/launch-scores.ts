@@ -41,7 +41,7 @@ export interface LaunchScore {
  * 4. 基础配置 (10分) - 国家/语言5 + Final URL 5
  *
  * 变更说明 (v4.14 → v4.15)：
- * - 移除profitScore (10分) → 改为profitScore = 0 (已废弃)
+ * - 取消利润空间得分（profitMargin 保留为 0，不再参与评分）
  * - 增加竞争度评分: 10分 → 15分
  * - 新增市场潜力评分 (0-10分) = 品牌搜索量与竞争度的综合评估
  * - 移除预算合理性评分 (基础配置: 15分 → 10分)
@@ -54,7 +54,6 @@ export interface ScoreAnalysis {
     brandSearchVolume: number // 品牌词月搜索量
     brandSearchScore: number // 0-15
     profitMargin: number // 保留但不再评估，始终为0
-    profitScore: number // 已废弃，始终为0
     competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' // 竞争度
     competitionScore: number // 0-15 (v4.15: 从0-10改为0-15)
     marketPotentialScore: number // 0-10 (v4.15新增: 基于品牌搜索量+竞争度的综合评估)
@@ -93,7 +92,6 @@ export interface ScoreAnalysis {
     score: number // 0-10 (v4.15: 从0-15改为0-10)
     countryLanguageScore: number // 国家/语言匹配 0-5
     finalUrlScore: number // Final URL可访问性 0-5 (v4.15: 仅检查可访问性)
-    budgetScore: number // 已废弃，始终为0
     targetCountry: string
     targetLanguage: string
     finalUrl: string
@@ -420,7 +418,7 @@ export async function createLaunchScore(
   const legacyKeywordScore = analysis.keywordStrategy.score || 0
   const legacyMarketFitScore = analysis.launchViability.score || 0
   const legacyLandingPageScore = analysis.basicConfig.finalUrl ? 5 : 0 // 基于Final URL存在性评估
-  const legacyBudgetScore = analysis.basicConfig.budgetScore || 0
+  const legacyBudgetScore = 0
   const legacyContentScore = analysis.adQuality.score || 0
 
   const info = await db.exec(
@@ -702,7 +700,6 @@ function getDefaultLaunchViability(): ScoreAnalysis['launchViability'] {
     brandSearchVolume: 0,
     brandSearchScore: 0,
     profitMargin: 0,
-    profitScore: 0,
     competitionLevel: 'MEDIUM',
     competitionScore: 0,
     marketPotentialScore: 0, // v4.15新增
@@ -738,7 +735,6 @@ function getDefaultBasicConfig(): ScoreAnalysis['basicConfig'] {
     score: 0,
     countryLanguageScore: 0,
     finalUrlScore: 0,
-    budgetScore: 0,
     targetCountry: '',
     targetLanguage: '',
     finalUrl: '',

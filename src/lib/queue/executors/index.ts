@@ -26,13 +26,7 @@ import { executeProductScoreCalculation } from './product-score-calculation-exec
 import { executeGoogleAdsCampaignSyncTask } from './google-ads-campaign-sync-executor'
 import { executeCampaignBatchCreate } from './campaign-batch-create-executor'
 import { logger } from '@/lib/structured-logger'
-
-const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
-
-function isEnvTrue(value?: string | null): boolean {
-  if (!value) return false
-  return TRUE_VALUES.has(value.toLowerCase())
-}
+import { isEnvTrue } from '@/lib/env-utils'
 
 function shouldRegisterBackgroundExecutors(): { allowed: boolean; reason: string } {
   const splitFlag = isEnvTrue(process.env.QUEUE_SPLIT_BACKGROUND)

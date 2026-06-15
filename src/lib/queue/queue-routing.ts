@@ -3,13 +3,7 @@ import { isBackgroundTaskType } from './task-category'
 import { getBackgroundQueueManager, getQueueManager } from './unified-queue-manager'
 import type { UnifiedQueueManager } from './unified-queue-manager'
 import { logger } from '@/lib/structured-logger'
-
-const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
-
-function isEnvTrue(value?: string | null): boolean {
-  if (!value) return false
-  return TRUE_VALUES.has(value.toLowerCase())
-}
+import { isEnvTrue } from '@/lib/env-utils'
 
 let splitDecisionLogged = false
 let splitMisconfigLogged = false

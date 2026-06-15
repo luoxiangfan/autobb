@@ -26,37 +26,6 @@ import {
   logGoogleAdsCredentialsInfo,
 } from '@/lib/google-ads/auth/route-logger'
 
-const GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE =
-  'POST /api/google-ads/credentials 已移除。请使用 PUT /api/settings（category=google_ads）保存 OAuth 配置字段，并通过「启动 OAuth 授权」完成 refresh_token 写入。'
-
-/**
- * POST /api/google-ads/credentials
- *
- * @deprecated 已返回 410。请使用 PUT /api/settings 保存 OAuth 字段；refresh_token 由 OAuth 回调写入。
- */
-export async function POST(_request: NextRequest) {
-  return NextResponse.json(
-    {
-      error: GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE,
-      code: 'ENDPOINT_DEPRECATED',
-      message: GOOGLE_ADS_CREDENTIALS_POST_DEPRECATED_MESSAGE,
-      replacement: {
-        method: 'PUT',
-        path: '/api/settings',
-        notes:
-          '保存 google_ads 分类下的 OAuth 字段；refresh_token 由 /api/google-ads/oauth/start 与回调写入',
-      },
-    },
-    {
-      status: 410,
-      headers: {
-        Deprecation: 'true',
-        Link: '</api/settings>; rel="successor-version"',
-      },
-    }
-  )
-}
-
 /**
  * GET /api/google-ads/credentials
  * 获取Google Ads凭证状态（包括OAuth和服务账号）

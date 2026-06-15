@@ -34,6 +34,7 @@ function normalizeTextArray(value: unknown): string[] {
   return []
 }
 
+/** Canonical bucket slot normalization (legacy C→B, S→D). */
 export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot | null {
   const upper = String(value || '')
     .trim()

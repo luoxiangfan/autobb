@@ -95,8 +95,6 @@ export function useGoogleAdsAuthSettings({
   const googleAdsDualStack = Boolean(googleAdsCredentialStatus?.dualStack)
   /** 禁止保存 / OAuth / 服务账号写入；双栈时仍允许删除其中一种认证 */
   const googleAdsAuthWriteBlocked = googleAdsAuthReadOnly || googleAdsDualStack
-  /** @deprecated 使用 googleAdsAuthWriteBlocked；verify 在只读共享场景仍可用 */
-  const googleAdsAuthModifyBlocked = googleAdsAuthWriteBlocked
   const googleAdsAuthMethodLocked = isGoogleAdsAuthMethodLocked(googleAdsCredentialStatus)
   const effectiveGoogleAdsAuthMethod = resolveEffectiveGoogleAdsAuthMethod(
     googleAdsCredentialStatus,
@@ -648,7 +646,6 @@ export function useGoogleAdsAuthSettings({
     googleAdsAuthReadOnly,
     googleAdsDualStack,
     googleAdsAuthWriteBlocked,
-    googleAdsAuthModifyBlocked,
     isGoogleAdsSharedAdminHiddenSecret,
     oauthHasUnsavedChanges,
     fetchServiceAccounts,

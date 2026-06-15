@@ -14,6 +14,7 @@ import { GEMINI_PROVIDERS, type GeminiProvider } from './gemini-config'
 import { GEMINI_ACTIVE_MODEL, normalizeModelForProvider } from './gemini-models'
 import { REDIS_PREFIX_CONFIG } from './config'
 import { getRedisClient } from './redis-client'
+import { isEnvTrue } from './env-utils'
 
 interface DailyQuotaBreakerState {
   untilMs: number
@@ -31,12 +32,6 @@ function normalizeProvider(value?: string | null): GeminiProvider {
   }
 
   return 'official'
-}
-
-function isEnvTrue(value?: string | null): boolean {
-  if (!value) return false
-  const normalized = value.trim().toLowerCase()
-  return normalized === 'true' || normalized === '1' || normalized === 'yes'
 }
 
 function shouldLogFullGeminiResponse(): boolean {
