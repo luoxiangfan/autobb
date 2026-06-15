@@ -52,9 +52,6 @@ import {
   TrendingUp,
   Coins,
   Wallet,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
   Package,
   Loader2,
   MoreHorizontal,
@@ -88,8 +85,26 @@ import {
   type OfferTasksToggleAction,
 } from '@/lib/offer-tasks-toggle'
 import { CampaignsActionDialogs } from './CampaignsActionDialogs'
+import { buildOverallRoasStatistics } from './build-overall-roas-statistics'
+import { buildOverallRoasImageDataUrl } from './export-overall-roas-image'
+import { CampaignSortableHeader } from './CampaignSortableHeader'
+import {
+  anonymizeCampaignName,
+  calculateCampaignRoas,
+  convertAmountForDisplay,
+  formatCurrencyWithCode,
+  formatPercentNumber,
+  formatRoasNumber,
+  roundTo2,
+} from './campaign-metrics-utils'
+import type {
+  CampaignRoasRankItem,
+  CampaignSortDirection,
+  CampaignSortField,
+  OverallRoasStatistics,
+} from './types'
 import { matchesCampaignSearch } from '@/lib/campaign-search'
-import { convertCurrency, formatCurrency } from '@/lib/currency'
+import { formatCurrency } from '@/lib/currency'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
 
 const CampaignsTrendsSection = dynamic(() => import('./CampaignsTrendsSection'), {
@@ -247,67 +262,6 @@ const formatDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
-const roundTo2 = (value: number): number => Math.round(value * 100) / 100
-
-const getCampaignCommissionValue = (campaign: Campaign): number | null => {
-  const raw = campaign.performance?.commission ?? campaign.performance?.conversions
-  if (raw === null || raw === undefined) return null
-  const normalized = Number(raw)
-  return Number.isFinite(normalized) ? normalized : null
-}
-
-const getCampaignCostValue = (campaign: Campaign): number | null => {
-  const raw = campaign.performance?.costLocal ?? campaign.performance?.costUsd
-  if (raw === null || raw === undefined) return null
-  const normalized = Number(raw)
-  return Number.isFinite(normalized) ? normalized : null
-}
-
-const calculateCampaignRoas = (campaign: Campaign): number | null => {
-  const commission = getCampaignCommissionValue(campaign)
-  const cost = getCampaignCostValue(campaign)
-  if (commission === null || cost === null || cost <= 0) return null
-  return Math.round((commission / cost) * 100) / 100
-}
-
-const convertAmountForDisplay = (
-  amount: number,
-  fromCurrency: string,
-  toCurrency: string
-): number => {
-  if (!Number.isFinite(amount)) return 0
-
-  const sourceCurrency = String(fromCurrency || '')
-    .trim()
-    .toUpperCase()
-  const targetCurrency = String(toCurrency || '')
-    .trim()
-    .toUpperCase()
-
-  if (!sourceCurrency || !targetCurrency || sourceCurrency === targetCurrency) {
-    return amount
-  }
-
-  try {
-    return convertCurrency(amount, sourceCurrency, targetCurrency)
-  } catch {
-    return amount
-  }
-}
-
-const formatCurrencyWithCode = (
-  amounts: Array<{ currency: string; amount: number }>,
-  fallbackCurrency: string
-): string => {
-  if (!Array.isArray(amounts) || amounts.length === 0) {
-    return formatCurrencyDashboard(0, fallbackCurrency)
-  }
-
-  return amounts
-    .map(({ currency, amount }) => `${currency} ${formatCurrencyDashboard(amount, currency)}`)
-    .join(', ')
-}
-
 interface CampaignsClientPageProps {
   campaignsReqDedupEnabled?: boolean
   campaignsServerPagingEnabled?: boolean
@@ -321,36 +275,6 @@ type SelectedCampaignSnapshot = {
   id: number
   campaignName: string
   status: string
-}
-
-type CampaignRoasRankItem = {
-  id: number
-  campaignName: string
-  spend: number
-  commission: number
-  impressions: number
-  clicks: number
-  roas: number | null
-  actualCpc: number | null
-}
-
-type OverallRoasStatistics = {
-  generatedAt: string
-  timeRangeLabel: string
-  currency: string
-  campaignCount: number
-  totalSpend: number
-  totalCommission: number
-  totalRoas: number | null
-  avgActualCpc: number | null
-  highestActualCpc: CampaignRoasRankItem | null
-  lowestActualCpc: CampaignRoasRankItem | null
-  totalImpressions: number
-  totalClicks: number
-  averageCtr: number | null
-  campaigns: CampaignRoasRankItem[]
-  bestTop3: CampaignRoasRankItem[]
-  worstBottom3: CampaignRoasRankItem[]
 }
 
 function CampaignsTrendsSectionSkeleton() {
@@ -479,22 +403,8 @@ export default function CampaignsClientPage({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   // Sorting states
-  type SortField =
-    | 'campaignName'
-    | 'budgetAmount'
-    | 'impressions'
-    | 'clicks'
-    | 'ctr'
-    | 'cpc'
-    | 'configuredMaxCpc'
-    | 'conversions'
-    | 'cost'
-    | 'roas'
-    | 'status'
-    | 'servingStartDate'
-  type SortDirection = 'asc' | 'desc' | null
-  const [sortField, setSortField] = useState<SortField | null>(null)
-  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+  const [sortField, setSortField] = useState<CampaignSortField | null>(null)
+  const [sortDirection, setSortDirection] = useState<CampaignSortDirection>(null)
   const filterKeyRef = useRef<string>('')
   const silentRefreshCountRef = useRef(0)
   const campaignsInFlightRef = useRef<Map<string, Promise<void>>>(new Map())
@@ -815,24 +725,13 @@ export default function CampaignsClientPage({
         ? `${appliedCustomRange.startDate} ~ ${appliedCustomRange.endDate}`
         : '自定义时间范围'
       : `最近${timeRange}天`
-  const formatRoasNumber = (value: number | null): string =>
-    value === null || !Number.isFinite(value) ? '--' : `${value.toFixed(2)}x`
-  const formatPercentNumber = (value: number | null): string =>
-    value === null || !Number.isFinite(value) ? '--' : `${value.toFixed(2)}%`
   const chartPalette = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6']
-  const anonymizeCampaignName = useCallback((campaignName: string): string => {
-    const normalized = String(campaignName || '').trim()
-    if (!normalized) return 'Unknown'
-    const firstUnderscore = normalized.indexOf('_')
-    if (firstUnderscore <= 0) return 'Unknown'
-    return `Unknown${normalized.slice(firstUnderscore)}`
-  }, [])
   const getCampaignDisplayName = useCallback(
     (campaign: CampaignRoasRankItem): string => {
       if (!hideBrandNames) return campaign.campaignName
       return anonymizeCampaignName(campaign.campaignName)
     },
-    [anonymizeCampaignName, hideBrandNames]
+    [hideBrandNames]
   )
   const overallRoasRankTrendData = useMemo(() => {
     if (!overallRoasStats) return []
@@ -2269,505 +2168,6 @@ export default function CampaignsClientPage({
     return selected
   }
 
-  const normalizeMetricValue = (value: unknown): number => {
-    const normalized = Number(value ?? 0)
-    return Number.isFinite(normalized) ? normalized : 0
-  }
-
-  const buildOverallRoasStatistics = (selectedCampaigns: Campaign[]): OverallRoasStatistics => {
-    const campaignMetrics: CampaignRoasRankItem[] = selectedCampaigns.map((campaign) => {
-      const metricCurrency = String(
-        campaign.performanceCurrency ||
-          campaign.adsAccountCurrency ||
-          summaryDisplayCurrency ||
-          'USD'
-      ).toUpperCase()
-      const rawSpend = normalizeMetricValue(
-        campaign.performance?.costLocal ?? campaign.performance?.costUsd
-      )
-      const rawCommission = normalizeMetricValue(
-        campaign.performance?.commission ?? campaign.performance?.conversions
-      )
-      const impressions = normalizeMetricValue(campaign.performance?.impressions)
-      const clicks = normalizeMetricValue(campaign.performance?.clicks)
-
-      const spend = normalizeMetricValue(
-        convertAmountForDisplay(rawSpend, metricCurrency, summaryDisplayCurrency)
-      )
-      const commission = normalizeMetricValue(
-        convertAmountForDisplay(rawCommission, metricCurrency, summaryDisplayCurrency)
-      )
-      const roas = spend > 0 ? commission / spend : null
-      const actualCpc = clicks > 0 ? spend / clicks : null
-
-      return {
-        id: campaign.id,
-        campaignName: campaign.campaignName,
-        spend,
-        commission,
-        impressions,
-        clicks,
-        roas,
-        actualCpc,
-      }
-    })
-
-    const totalSpend = campaignMetrics.reduce((sum, item) => sum + item.spend, 0)
-    const totalCommission = campaignMetrics.reduce((sum, item) => sum + item.commission, 0)
-    const totalImpressions = campaignMetrics.reduce((sum, item) => sum + item.impressions, 0)
-    const totalClicks = campaignMetrics.reduce((sum, item) => sum + item.clicks, 0)
-    const totalRoas = totalSpend > 0 ? totalCommission / totalSpend : null
-    const avgActualCpc = totalClicks > 0 ? totalSpend / totalClicks : null
-    const averageCtr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : null
-
-    const sortedByActualCpc = campaignMetrics
-      .filter((item) => item.actualCpc !== null)
-      .sort((a, b) => Number(a.actualCpc) - Number(b.actualCpc))
-    const lowestActualCpc = sortedByActualCpc[0] || null
-    const highestActualCpc =
-      sortedByActualCpc.length > 0 ? sortedByActualCpc[sortedByActualCpc.length - 1] : null
-
-    const sortedByRoasDesc = campaignMetrics
-      .filter((item) => item.roas !== null)
-      .sort((a, b) => {
-        const roasGap = Number(b.roas) - Number(a.roas)
-        if (roasGap !== 0) return roasGap
-        return b.commission - a.commission
-      })
-    const sortedByRoasAsc = [...sortedByRoasDesc].reverse()
-
-    return {
-      generatedAt: new Date().toLocaleString('zh-CN', {
-        hour12: false,
-        timeZone: 'Asia/Shanghai',
-      }),
-      timeRangeLabel: overallRoasTimeRangeLabel,
-      currency: summaryDisplayCurrency,
-      campaignCount: selectedCampaigns.length,
-      totalSpend,
-      totalCommission,
-      totalRoas,
-      avgActualCpc,
-      highestActualCpc,
-      lowestActualCpc,
-      totalImpressions,
-      totalClicks,
-      averageCtr,
-      campaigns: campaignMetrics,
-      bestTop3: sortedByRoasDesc.slice(0, 3),
-      worstBottom3: sortedByRoasAsc.slice(0, 3),
-    }
-  }
-
-  const buildOverallRoasImageDataUrl = (
-    stats: OverallRoasStatistics,
-    options?: { hideBrandNames?: boolean }
-  ): string => {
-    const canvasWidth = 1600
-    const canvasHeight = 2000
-    const canvas = document.createElement('canvas')
-    canvas.width = canvasWidth
-    canvas.height = canvasHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      throw new Error('浏览器不支持 Canvas 导出')
-    }
-
-    const hideNames = options?.hideBrandNames === true
-    const getDisplayName = (item: CampaignRoasRankItem): string => {
-      if (!hideNames) return item.campaignName
-      return anonymizeCampaignName(item.campaignName)
-    }
-
-    const trimToFit = (text: string, maxWidth: number): string => {
-      if (ctx.measureText(text).width <= maxWidth) return text
-      let next = text
-      while (next.length > 0 && ctx.measureText(`${next}...`).width > maxWidth) {
-        next = next.slice(0, -1)
-      }
-      return next ? `${next}...` : '...'
-    }
-
-    const drawWrappedText = (
-      text: string,
-      x: number,
-      startY: number,
-      maxWidth: number,
-      lineHeight: number,
-      maxLines: number
-    ) => {
-      const chunks = text.split('')
-      let current = ''
-      let line = 0
-      for (let i = 0; i < chunks.length; i += 1) {
-        const next = `${current}${chunks[i]}`
-        if (ctx.measureText(next).width <= maxWidth) {
-          current = next
-          continue
-        }
-
-        const render = line === maxLines - 1 ? `${current}...` : current
-        ctx.fillText(render, x, startY + line * lineHeight)
-        line += 1
-        if (line >= maxLines) return
-        current = chunks[i]
-      }
-
-      if (current && line < maxLines) {
-        ctx.fillText(current, x, startY + line * lineHeight)
-      }
-    }
-
-    const drawPanel = (x: number, y: number, width: number, height: number, title?: string) => {
-      ctx.fillStyle = '#ffffff'
-      ctx.strokeStyle = '#dbeafe'
-      ctx.lineWidth = 2
-      ctx.beginPath()
-      ctx.roundRect(x, y, width, height, 18)
-      ctx.fill()
-      ctx.stroke()
-
-      if (title) {
-        ctx.fillStyle = '#0f172a'
-        ctx.font = 'bold 28px "PingFang SC", "Microsoft YaHei", sans-serif'
-        ctx.fillText(title, x + 20, y + 42)
-      }
-    }
-
-    const shareHeadline = (() => {
-      const best = stats.bestTop3[0]
-      const worst = stats.worstBottom3[0]
-      if (best && best.roas !== null) {
-        const bestName = getDisplayName(best)
-        const bestRoas = formatRoasNumber(best.roas)
-        const totalRoas = formatRoasNumber(stats.totalRoas)
-        if (worst && worst.roas !== null) {
-          return `亮点：${bestName} ROAS 达 ${bestRoas}，显著领先尾部系列，拉动整体 ROAS 至 ${totalRoas}。`
-        }
-        return `亮点：${bestName} ROAS 达 ${bestRoas}，整体 ROAS 为 ${totalRoas}。`
-      }
-      return `本周期覆盖 ${stats.campaignCount} 个广告系列，总花费 ${formatCurrencyDashboard(stats.totalSpend, stats.currency)}。`
-    })()
-
-    const headerGradient = ctx.createLinearGradient(0, 0, canvasWidth, 0)
-    headerGradient.addColorStop(0, '#0b1220')
-    headerGradient.addColorStop(0.5, '#1d4ed8')
-    headerGradient.addColorStop(1, '#0369a1')
-    ctx.fillStyle = '#eef5ff'
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-    ctx.fillStyle = headerGradient
-    ctx.fillRect(0, 0, canvasWidth, 210)
-
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 58px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText('广告系列整体 ROAS 社交战报', 48, 96)
-    ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText(`${stats.timeRangeLabel} | ${stats.generatedAt}`, 48, 146)
-    ctx.fillText(`统计币种：${stats.currency}`, 48, 182)
-    if (hideNames) {
-      ctx.fillStyle = '#dbeafe'
-      ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
-      ctx.fillText('已隐藏品牌名', canvasWidth - 190, 182)
-    }
-
-    drawPanel(48, 236, 1504, 120)
-    ctx.fillStyle = '#1e3a8a'
-    ctx.font = 'bold 30px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText('一句话结论', 78, 284)
-    ctx.fillStyle = '#334155'
-    ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif'
-    drawWrappedText(shareHeadline, 78, 324, 1440, 34, 2)
-
-    const metricCards = [
-      {
-        title: `总花费(${stats.currency})`,
-        value: formatCurrencyDashboard(stats.totalSpend, stats.currency),
-      },
-      {
-        title: `总佣金(${stats.currency})`,
-        value: formatCurrencyDashboard(stats.totalCommission, stats.currency),
-      },
-      { title: '总 ROAS', value: formatRoasNumber(stats.totalRoas) },
-      {
-        title: `平均实际 CPC(${stats.currency})`,
-        value:
-          stats.avgActualCpc === null
-            ? '--'
-            : formatCurrencyDashboard(stats.avgActualCpc, stats.currency),
-      },
-      { title: '总展示', value: stats.totalImpressions.toLocaleString('zh-CN') },
-      { title: '总点击', value: stats.totalClicks.toLocaleString('zh-CN') },
-      { title: '平均点击率', value: formatPercentNumber(stats.averageCtr) },
-      { title: '广告系列数量', value: `${stats.campaignCount}` },
-    ]
-    const metricsTop = 380
-    const metricsColumns = 4
-    const metricWidth = 364
-    const metricHeight = 116
-    const metricGapX = 16
-    const metricGapY = 16
-    metricCards.forEach((card, index) => {
-      const col = index % metricsColumns
-      const row = Math.floor(index / metricsColumns)
-      const x = 48 + col * (metricWidth + metricGapX)
-      const y = metricsTop + row * (metricHeight + metricGapY)
-      drawPanel(x, y, metricWidth, metricHeight)
-      ctx.fillStyle = '#64748b'
-      ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
-      ctx.fillText(card.title, x + 20, y + 42)
-      ctx.fillStyle = '#0f172a'
-      ctx.font = 'bold 31px "PingFang SC", "Microsoft YaHei", sans-serif'
-      ctx.fillText(card.value, x + 20, y + 86)
-    })
-
-    const trendPanelX = 48
-    const trendPanelY = 644
-    const trendPanelWidth = 1504
-    const trendPanelHeight = 376
-    drawPanel(trendPanelX, trendPanelY, trendPanelWidth, trendPanelHeight, 'ROAS 排名趋势（Top 8）')
-    const roasSeries = [...stats.campaigns]
-      .filter((item) => item.roas !== null)
-      .sort((a, b) => Number(b.roas) - Number(a.roas))
-      .slice(0, 8)
-
-    if (roasSeries.length > 0) {
-      const chartX = trendPanelX + 52
-      const chartY = trendPanelY + 102
-      const chartWidth = trendPanelWidth - 104
-      const chartHeight = 216
-      const maxRoas = Math.max(...roasSeries.map((item) => Number(item.roas || 0)), 1)
-      const minRoas = Math.min(...roasSeries.map((item) => Number(item.roas || 0)), 0)
-      const span = Math.max(0.2, maxRoas - minRoas)
-
-      ctx.strokeStyle = '#dbeafe'
-      ctx.lineWidth = 1
-      for (let i = 0; i <= 4; i += 1) {
-        const y = chartY + (chartHeight / 4) * i
-        ctx.beginPath()
-        ctx.moveTo(chartX, y)
-        ctx.lineTo(chartX + chartWidth, y)
-        ctx.stroke()
-      }
-
-      const points = roasSeries.map((item, index) => {
-        const x = chartX + (index * chartWidth) / Math.max(1, roasSeries.length - 1)
-        const roas = Number(item.roas || 0)
-        const y = chartY + chartHeight - ((roas - minRoas) / span) * chartHeight
-        return { x, y, roas, item, rank: index + 1 }
-      })
-
-      const gradient = ctx.createLinearGradient(chartX, chartY, chartX, chartY + chartHeight)
-      gradient.addColorStop(0, 'rgba(37, 99, 235, 0.24)')
-      gradient.addColorStop(1, 'rgba(37, 99, 235, 0.02)')
-      ctx.beginPath()
-      points.forEach((point, index) => {
-        if (index === 0) ctx.moveTo(point.x, point.y)
-        else ctx.lineTo(point.x, point.y)
-      })
-      ctx.lineTo(chartX + chartWidth, chartY + chartHeight)
-      ctx.lineTo(chartX, chartY + chartHeight)
-      ctx.closePath()
-      ctx.fillStyle = gradient
-      ctx.fill()
-
-      ctx.strokeStyle = '#1d4ed8'
-      ctx.lineWidth = 4
-      ctx.beginPath()
-      points.forEach((point, index) => {
-        if (index === 0) ctx.moveTo(point.x, point.y)
-        else ctx.lineTo(point.x, point.y)
-      })
-      ctx.stroke()
-
-      points.forEach((point) => {
-        ctx.fillStyle = '#ffffff'
-        ctx.beginPath()
-        ctx.arc(point.x, point.y, 7, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.strokeStyle = '#1d4ed8'
-        ctx.lineWidth = 3
-        ctx.stroke()
-
-        ctx.fillStyle = '#1e3a8a'
-        ctx.font = 'bold 18px "PingFang SC", "Microsoft YaHei", sans-serif'
-        const roasLabel = `${point.roas.toFixed(2)}x`
-        ctx.fillText(roasLabel, point.x - ctx.measureText(roasLabel).width / 2, point.y - 14)
-
-        ctx.fillStyle = '#475569'
-        ctx.font = '16px "PingFang SC", "Microsoft YaHei", sans-serif'
-        const rankLabel = `#${point.rank}`
-        ctx.fillText(
-          rankLabel,
-          point.x - ctx.measureText(rankLabel).width / 2,
-          chartY + chartHeight + 26
-        )
-      })
-    } else {
-      ctx.fillStyle = '#64748b'
-      ctx.font = '24px "PingFang SC", "Microsoft YaHei", sans-serif'
-      ctx.fillText('暂无可绘制的 ROAS 趋势数据', trendPanelX + 62, trendPanelY + 188)
-    }
-
-    const insightPanelY = 1044
-    const spendPanelX = 48
-    const spendPanelY = insightPanelY
-    const spendPanelWidth = 1018
-    const spendPanelHeight = 360
-    drawPanel(
-      spendPanelX,
-      spendPanelY,
-      spendPanelWidth,
-      spendPanelHeight,
-      '花费占比结构（Top 5 + 其他）'
-    )
-    const spendSeries = [...stats.campaigns].sort((a, b) => b.spend - a.spend)
-    const spendEntries = spendSeries.slice(0, 5).map((item) => ({
-      name: getDisplayName(item),
-      value: item.spend,
-    }))
-    const spendOthers = spendSeries.slice(5).reduce((sum, item) => sum + item.spend, 0)
-    if (spendOthers > 0) {
-      spendEntries.push({
-        name: hideNames ? '其他品牌' : '其他广告系列',
-        value: spendOthers,
-      })
-    }
-
-    const pieCx = spendPanelX + 246
-    const pieCy = spendPanelY + 214
-    const pieOuter = 126
-    const pieInner = 72
-    const pieColors = ['#2563eb', '#0ea5e9', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6']
-    const pieTotal = spendEntries.reduce((sum, entry) => sum + entry.value, 0)
-    const spendPanelRight = spendPanelX + spendPanelWidth
-    const legendDotX = Math.max(spendPanelX + 354, pieCx + pieOuter + 36)
-    const legendTextX = legendDotX + 28
-    const legendTextMaxWidth = Math.max(120, spendPanelRight - legendTextX - 24)
-    let pieAngle = -Math.PI / 2
-
-    if (pieTotal > 0) {
-      spendEntries.forEach((entry, index) => {
-        const ratio = entry.value / pieTotal
-        const next = pieAngle + Math.PI * 2 * ratio
-        ctx.beginPath()
-        ctx.moveTo(pieCx, pieCy)
-        ctx.arc(pieCx, pieCy, pieOuter, pieAngle, next)
-        ctx.closePath()
-        ctx.fillStyle = pieColors[index % pieColors.length]
-        ctx.fill()
-        pieAngle = next
-      })
-
-      ctx.beginPath()
-      ctx.arc(pieCx, pieCy, pieInner, 0, Math.PI * 2)
-      ctx.fillStyle = '#ffffff'
-      ctx.fill()
-    } else {
-      ctx.fillStyle = '#64748b'
-      ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
-      ctx.fillText('暂无花费占比数据', spendPanelX + 92, spendPanelY + 220)
-    }
-
-    spendEntries.forEach((entry, index) => {
-      const y = spendPanelY + 108 + index * 38
-      ctx.fillStyle = pieColors[index % pieColors.length]
-      ctx.fillRect(legendDotX, y - 14, 16, 16)
-      ctx.fillStyle = '#334155'
-      ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
-      const pct = pieTotal > 0 ? `${((entry.value / pieTotal) * 100).toFixed(1)}%` : '0%'
-      const label = trimToFit(entry.name, legendTextMaxWidth)
-      ctx.fillText(`${label} ${pct}`, legendTextX, y)
-    })
-
-    const cpcPanelX = 1088
-    const cpcPanelY = insightPanelY
-    const cpcPanelWidth = 464
-    const cpcPanelHeight = 360
-    drawPanel(cpcPanelX, cpcPanelY, cpcPanelWidth, cpcPanelHeight, 'CPC 极值洞察')
-    ctx.fillStyle = '#475569'
-    ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText('最高实际 CPC', cpcPanelX + 32, cpcPanelY + 78)
-    ctx.fillStyle = '#0f172a'
-    ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
-    const highestName = stats.highestActualCpc
-      ? trimToFit(getDisplayName(stats.highestActualCpc), 360)
-      : '--'
-    ctx.fillText(highestName, cpcPanelX + 32, cpcPanelY + 116)
-    ctx.fillStyle = '#1d4ed8'
-    ctx.font = 'bold 24px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText(
-      stats.highestActualCpc
-        ? formatCurrencyDashboard(Number(stats.highestActualCpc.actualCpc || 0), stats.currency)
-        : '--',
-      cpcPanelX + 32,
-      cpcPanelY + 150
-    )
-
-    ctx.fillStyle = '#475569'
-    ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText('最低实际 CPC', cpcPanelX + 32, cpcPanelY + 214)
-    ctx.fillStyle = '#0f172a'
-    ctx.font = 'bold 22px "PingFang SC", "Microsoft YaHei", sans-serif'
-    const lowestName = stats.lowestActualCpc
-      ? trimToFit(getDisplayName(stats.lowestActualCpc), 360)
-      : '--'
-    ctx.fillText(lowestName, cpcPanelX + 32, cpcPanelY + 252)
-    ctx.fillStyle = '#059669'
-    ctx.font = 'bold 24px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText(
-      stats.lowestActualCpc
-        ? formatCurrencyDashboard(Number(stats.lowestActualCpc.actualCpc || 0), stats.currency)
-        : '--',
-      cpcPanelX + 32,
-      cpcPanelY + 286
-    )
-
-    const drawCampaignList = (
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-      title: string,
-      list: CampaignRoasRankItem[]
-    ) => {
-      drawPanel(x, y, width, height, title)
-      if (list.length === 0) {
-        ctx.fillStyle = '#64748b'
-        ctx.font = '20px "PingFang SC", "Microsoft YaHei", sans-serif'
-        ctx.fillText('暂无可计算 ROAS 的广告系列', x + 22, y + 92)
-        return
-      }
-
-      list.forEach((item, index) => {
-        const rowY = y + 86 + index * 64
-        ctx.fillStyle = '#f8fafc'
-        ctx.fillRect(x + 18, rowY - 30, width - 36, 52)
-
-        ctx.fillStyle = '#334155'
-        ctx.font = 'bold 19px "PingFang SC", "Microsoft YaHei", sans-serif'
-        const titleText = `${index + 1}. ${trimToFit(getDisplayName(item), width - 320)}`
-        ctx.fillText(titleText, x + 28, rowY)
-
-        ctx.fillStyle = '#1d4ed8'
-        ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
-        const metricsText = trimToFit(
-          `ROAS ${formatRoasNumber(item.roas)} | 花费 ${formatCurrencyDashboard(item.spend, stats.currency)} | 佣金 ${formatCurrencyDashboard(item.commission, stats.currency)}`,
-          width - 56
-        )
-        ctx.fillText(metricsText, x + 28, rowY + 26)
-      })
-    }
-
-    drawCampaignList(48, 1430, 742, 300, 'Top 3 优秀广告系列', stats.bestTop3)
-    drawCampaignList(810, 1430, 742, 300, 'Bottom 3 待优化广告系列', stats.worstBottom3)
-
-    ctx.fillStyle = '#64748b'
-    ctx.font = '18px "PingFang SC", "Microsoft YaHei", sans-serif'
-    ctx.fillText('提示：该战报用于分享决策参考，建议结合归因口径与预算目标复核。', 48, 1770)
-
-    return canvas.toDataURL('image/png')
-  }
-
   const handleOpenOverallRoasDialog = async () => {
     if (!hasMultipleCampaignSelection || overallRoasLoading) return
 
@@ -2783,7 +2183,13 @@ export default function CampaignsClientPage({
         return
       }
 
-      setOverallRoasStats(buildOverallRoasStatistics(selectedCampaigns))
+      setOverallRoasStats(
+        buildOverallRoasStatistics({
+          selectedCampaigns,
+          timeRangeLabel: overallRoasTimeRangeLabel,
+          summaryDisplayCurrency,
+        })
+      )
     } catch (err: any) {
       if (err?.message === 'UNAUTHORIZED') return
       setOverallRoasError(err?.message || '计算整体 ROAS 失败')
@@ -3721,7 +3127,7 @@ export default function CampaignsClientPage({
   }
 
   // 排序处理函数
-  const handleSort = (field: SortField) => {
+  const handleSort = (field: CampaignSortField) => {
     if (isServerPagingMode && currentPage !== 1) {
       setCurrentPage(1)
     }
@@ -3741,38 +3147,6 @@ export default function CampaignsClientPage({
       setSortField(field)
       setSortDirection('asc')
     }
-  }
-
-  // 可排序表头组件
-  const SortableHeader = ({
-    field,
-    children,
-    className = '',
-  }: {
-    field: SortField
-    children: React.ReactNode
-    className?: string
-  }) => {
-    const isActive = sortField === field
-    return (
-      <TableHead
-        className={`cursor-pointer select-none hover:bg-gray-50 ${className}`}
-        onClick={() => handleSort(field)}
-      >
-        <div className="flex items-center gap-0.5">
-          {children}
-          {isActive ? (
-            sortDirection === 'asc' ? (
-              <ArrowUp className="w-3.5 h-3.5" />
-            ) : (
-              <ArrowDown className="w-3.5 h-3.5" />
-            )
-          ) : (
-            <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />
-          )}
-        </div>
-      </TableHead>
-    )
   }
 
   if (loading) {
@@ -4383,54 +3757,108 @@ export default function CampaignsClientPage({
                           aria-label="全选"
                         />
                       </TableHead>
-                      <SortableHeader field="campaignName" className="w-[300px] whitespace-nowrap">
+                      <CampaignSortableHeader
+                        field="campaignName"
+                        className="w-[300px] whitespace-nowrap"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         系列名称
-                      </SortableHeader>
+                      </CampaignSortableHeader>
                       <TableHead className="w-[200px] whitespace-nowrap">自定义名称</TableHead>
-                      <SortableHeader field="budgetAmount" className="w-[86px] whitespace-nowrap">
+                      <CampaignSortableHeader
+                        field="budgetAmount"
+                        className="w-[86px] whitespace-nowrap"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         预算
-                      </SortableHeader>
-                      <SortableHeader
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
                         field="impressions"
                         className="w-[58px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
                       >
                         展示
-                      </SortableHeader>
-                      <SortableHeader field="clicks" className="w-[58px] whitespace-nowrap px-0.5!">
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
+                        field="clicks"
+                        className="w-[58px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         点击
-                      </SortableHeader>
-                      <SortableHeader field="ctr" className="w-[56px] whitespace-nowrap px-0.5!">
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
+                        field="ctr"
+                        className="w-[56px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         点击率
-                      </SortableHeader>
-                      <SortableHeader field="cpc" className="w-[94px] whitespace-nowrap px-0.5!">
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
+                        field="cpc"
+                        className="w-[94px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         实际CPC
-                      </SortableHeader>
-                      <SortableHeader
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
                         field="configuredMaxCpc"
                         className="w-[94px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
                       >
                         配置CPC
-                      </SortableHeader>
-                      <SortableHeader
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
                         field="conversions"
                         className="w-[94px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
                       >
                         佣金
-                      </SortableHeader>
-                      <SortableHeader field="cost" className="w-[94px] whitespace-nowrap px-0.5!">
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
+                        field="cost"
+                        className="w-[94px] whitespace-nowrap px-0.5!"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         花费
-                      </SortableHeader>
+                      </CampaignSortableHeader>
                       <TableHead className="w-[100px] whitespace-nowrap">运营状态</TableHead>
                       <TableHead className="w-[100px] whitespace-nowrap">关联 Offer 任务</TableHead>
-                      <SortableHeader field="status" className="w-[78px] whitespace-nowrap">
+                      <CampaignSortableHeader
+                        field="status"
+                        className="w-[78px] whitespace-nowrap"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                      >
                         投放状态
-                      </SortableHeader>
-                      <SortableHeader
+                      </CampaignSortableHeader>
+                      <CampaignSortableHeader
                         field="servingStartDate"
                         className="w-[74px] whitespace-nowrap"
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
                       >
                         投放日期
-                      </SortableHeader>
+                      </CampaignSortableHeader>
                       <TableHead className="w-[48px] whitespace-nowrap text-center">操作</TableHead>
                     </TableRow>
                   </TableHeader>

@@ -27,7 +27,7 @@ import {
   applyDescriptionTextGuardrail,
   applyHeadlineTextGuardrail,
   MODEL_INTENT_TRANSACTIONAL_MODIFIER_PATTERN,
-} from '../contract'
+} from '../contract/enforcement'
 
 export type { ResponseSchema } from '../../gemini'
 

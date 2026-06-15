@@ -68,3 +68,49 @@ export type BatchOfflinePendingState = {
   failures: BatchOfflineFailure[]
   accountIssues: BatchOfflineAccountIssue[]
 }
+
+export type CampaignRoasRankItem = {
+  id: number
+  campaignName: string
+  spend: number
+  commission: number
+  impressions: number
+  clicks: number
+  roas: number | null
+  actualCpc: number | null
+}
+
+export type OverallRoasStatistics = {
+  generatedAt: string
+  timeRangeLabel: string
+  currency: string
+  campaignCount: number
+  totalSpend: number
+  totalCommission: number
+  totalRoas: number | null
+  avgActualCpc: number | null
+  highestActualCpc: CampaignRoasRankItem | null
+  lowestActualCpc: CampaignRoasRankItem | null
+  totalImpressions: number
+  totalClicks: number
+  averageCtr: number | null
+  campaigns: CampaignRoasRankItem[]
+  bestTop3: CampaignRoasRankItem[]
+  worstBottom3: CampaignRoasRankItem[]
+}
+
+export type CampaignSortField =
+  | 'campaignName'
+  | 'budgetAmount'
+  | 'impressions'
+  | 'clicks'
+  | 'ctr'
+  | 'cpc'
+  | 'configuredMaxCpc'
+  | 'conversions'
+  | 'cost'
+  | 'roas'
+  | 'status'
+  | 'servingStartDate'
+
+export type CampaignSortDirection = 'asc' | 'desc' | null
