@@ -392,7 +392,7 @@ async function insertDefaultSystemSettings(): Promise<void> {
     },
     {
       category: 'system',
-      key: 'sync_interval_hours',
+      key: 'data_sync_interval_hours',
       dataType: 'number',
       isSensitive: false,
       isRequired: true,

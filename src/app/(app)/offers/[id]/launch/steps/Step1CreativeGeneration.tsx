@@ -128,7 +128,7 @@ interface Creative {
   // 🆕 canonical creativeType（兼容历史旧 key）
   creativeType?: CanonicalCreativeType | 'brand_focus' | 'model_focus' | 'brand_product' | null
   // 🆕 关键词分桶字段 (v4.10)
-  keywordBucket?: 'A' | 'B' | 'C' | 'D' | 'S' // 兼容槽位标识：A=品牌意图, B/C=型号意图, D/S=商品需求意图
+  keywordBucket?: 'A' | 'B' | 'D'
   bucketIntent?: string // 创意类型说明（KISS-3：A=品牌意图，B=商品型号/产品族意图，D=商品需求意图）
   isSynthetic?: boolean // 兼容旧 coverage 标记（不代表第4种创意类型）
 

@@ -319,11 +319,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     expect(queueFns.getQueueManager).not.toHaveBeenCalled()
   })
 
-  it('falls back legacy bucket C requests to bucket D when model-anchor evidence is missing', async () => {
-    keywordPoolFns.getAvailableBuckets.mockResolvedValue(['D'])
-    creativeTypeFns.deriveCanonicalCreativeType.mockReturnValueOnce('product_intent')
-    dbFns.exec.mockResolvedValue(undefined)
-
+  it('rejects legacy bucket C requests', async () => {
     const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-queue', {
       method: 'POST',
       headers: {
@@ -338,19 +334,9 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(queueFns.enqueue).toHaveBeenCalledWith(
-      'ad-creative',
-      expect.objectContaining({
-        offerId: 96,
-        bucket: 'D',
-      }),
-      1,
-      expect.objectContaining({
-        taskId: expect.any(String),
-      })
-    )
-    expect(data.bucket).toBe('D')
+    expect(res.status).toBe(400)
+    expect(data.error).toBe('Invalid bucket')
+    expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
   it('keeps canonical bucket B without legacy fallback when creativeType is omitted', async () => {

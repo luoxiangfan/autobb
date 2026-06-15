@@ -44,7 +44,7 @@ describe('GET /api/offers/:id/creatives', () => {
         ],
         theme: 'Robot Vacuum Needs',
         creative_type: null,
-        keyword_bucket: 'S',
+        keyword_bucket: 'D',
         final_url: 'https://example.com/store',
         score: 83,
         creation_status: 'draft',

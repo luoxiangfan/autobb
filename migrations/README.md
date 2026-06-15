@@ -55,8 +55,11 @@ npm run validate-schema
 | 编号 | 说明 | 部署注意 |
 |------|------|----------|
 | **247** | `ad_creatives.generation_mode`、`creative_tasks.generation_mode` | 已有库须 `npm run db:migrate`；全新 consolidated 库可跳过 |
-| **254** | Google Ads OAuth 配置合并至 `google_ads_credentials` | 须 `npm run db:migrate`；回填依赖 `JWT_SECRET` |
+| **254** | Google Ads OAuth 配置合并至 `google_ads_credentials` | 须 `npm run db:migrate`；回填由 **257** SQL 完成 |
 | **255** | 移除 `google_ads_test_credentials` 表 | 须 `npm run db:migrate` |
+| **256** | 将 `system.sync_interval_hours` 用户覆盖迁移至 `data_sync_interval_hours` | 须 `npm run db:migrate` |
+| **257** | 清理 `system_settings` 遗留 OAuth 用户实例并回填凭证表 | 须 `npm run db:migrate` |
+| **258** | `ad_creatives.keyword_bucket` 约束收紧为 A/B/D | 须 `npm run db:migrate` |
 
 创意生成模式 API 与 UI 依赖上述列；未迁移时入队/列表可能报错。
 

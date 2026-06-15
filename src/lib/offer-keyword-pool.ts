@@ -61,7 +61,7 @@ import {
   hasModelAnchorEvidence,
   mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType,
-  normalizeCreativeBucketSlot,
+  normalizeKeywordPoolBucketQuery,
   type CanonicalCreativeType,
 } from './creative-type'
 import { resolveOfferLinkType } from './offer-link-type'
@@ -8246,7 +8246,7 @@ function resolveCanonicalGetKeywordsBucket(
   creativeType?: GetKeywordsOptions['creativeType']
 ): CanonicalGetKeywordsBucket {
   if (bucket && bucket !== 'ALL') {
-    const normalizedBucket = normalizeCreativeBucketSlot(bucket)
+    const normalizedBucket = normalizeKeywordPoolBucketQuery(bucket)
     if (normalizedBucket) {
       return normalizedBucket
     }

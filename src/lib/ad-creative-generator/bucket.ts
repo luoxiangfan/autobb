@@ -9,12 +9,12 @@ import { getBucketInfo, type OfferKeywordPool, type PoolKeywordData } from '../o
 // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 
-import { normalizeCreativeBucketSlot } from '../creative-type'
+import { normalizeKeywordPoolBucketQuery } from '../creative-type'
 import type { BucketType, NormalizedCreativeBucket } from './types'
 import { decodeUriComponentSafe, safeParseJson } from './utils'
 
 export function normalizeCreativeBucketType(bucket?: string | null): NormalizedCreativeBucket {
-  return normalizeCreativeBucketSlot(bucket)
+  return normalizeKeywordPoolBucketQuery(bucket)
 }
 
 export function resolveCreativeBucketPoolKeywords(
@@ -268,8 +268,10 @@ export function dedupeStoreProductNames(productNames: string[], limit = 3): stri
 }
 
 export function getThemeByBucket(bucket: BucketType, linkType: 'product' | 'store'): string {
-  const normalizedBucket: 'A' | 'B' | 'D' =
-    bucket === 'C' ? 'B' : bucket === 'S' ? 'D' : (bucket as 'A' | 'B' | 'D')
+  const normalizedBucket = normalizeKeywordPoolBucketQuery(bucket)
+  if (!normalizedBucket) {
+    return ''
+  }
   if (linkType === 'store') {
     const themes: Record<'A' | 'B' | 'D', string> = {
       A: '品牌意图导向 - 广告语和关键词必须同时关联品牌与真实商品集合',

@@ -70,16 +70,6 @@ async function migratePostgres() {
       console.log(`🔄 执行: ${file}`)
 
       try {
-        if (migrationName.includes('254_merge_google_ads_settings_into_credentials')) {
-          console.log('   ↳ 回填 OAuth 配置到凭证表…')
-          const dotenv = await import('dotenv')
-          dotenv.config({ path: path.join(process.cwd(), '.env.local') })
-          dotenv.config()
-          const { migrateLegacyGoogleAdsSettingsStorage } =
-            await import('../src/lib/google-ads-settings-store')
-          await migrateLegacyGoogleAdsSettingsStorage()
-        }
-
         const sqlContent = normalizeMigrationSql(
           fs.readFileSync(resolveMigrationFilePath(migrationsPath, file), 'utf-8')
         )

@@ -417,8 +417,6 @@ async function syncDataTask() {
 
   try {
     // 获取所有活跃用户及其同步配置
-    // 🔥 修复（2025-12-13）：只选择配置了Google Ads凭证（refresh_token）的用户
-    // 🔧 修复（2026-03-03）：优先读取 data_sync_interval_hours，兼容旧键 sync_interval_hours
     const activeUsers = await db.query<{
       id: number
       username: string
@@ -434,18 +432,10 @@ async function syncDataTask() {
         COALESCE(
           (
             SELECT value
-            FROM system_settings ss_interval_new
-            WHERE ss_interval_new.user_id = u.id
-              AND ss_interval_new.category = 'system'
-              AND ss_interval_new.key = 'data_sync_interval_hours'
-            LIMIT 1
-          ),
-          (
-            SELECT value
-            FROM system_settings ss_interval_legacy
-            WHERE ss_interval_legacy.user_id = u.id
-              AND ss_interval_legacy.category = 'system'
-              AND ss_interval_legacy.key = 'sync_interval_hours'
+            FROM system_settings ss_interval
+            WHERE ss_interval.user_id = u.id
+              AND ss_interval.category = 'system'
+              AND ss_interval.key = 'data_sync_interval_hours'
             LIMIT 1
           ),
           '${DEFAULT_DATA_SYNC_INTERVAL_HOURS}'

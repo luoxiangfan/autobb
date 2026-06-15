@@ -1691,7 +1691,7 @@ export const DEFAULT_SETTINGS = [
   },
   {
     category: 'system',
-    key: 'sync_interval_hours',
+    key: 'data_sync_interval_hours',
     dataType: 'number',
     isSensitive: false,
     isRequired: true,

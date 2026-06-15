@@ -67,28 +67,26 @@ function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean 
 function resolveRegenerationBucketContext(
   previousCreative: Awaited<ReturnType<typeof findAdCreativeById>>,
   campaignConfig: Record<string, any>
-): { slotBucket: CreativeBucketSlot | null; generationBucket: string | null } {
+): {
+  slotBucket: CreativeBucketSlot | null
+  generationBucket: string | null
+  invalidBucket?: string
+} {
   const raw =
     previousCreative?.keyword_bucket ??
     campaignConfig?.keyword_bucket ??
     campaignConfig?.keywordBucket ??
     campaignConfig?.bucket
-  if (typeof raw !== 'string') {
+  if (typeof raw !== 'string' || !raw.trim()) {
     return { slotBucket: null, generationBucket: null }
   }
 
   const slotBucket = normalizeCreativeBucketSlot(raw)
   if (!slotBucket) {
-    return { slotBucket: null, generationBucket: null }
+    return { slotBucket: null, generationBucket: null, invalidBucket: raw.trim() }
   }
 
-  const upper = raw.trim().toUpperCase()
-  const generationBucket =
-    (upper === 'C' && slotBucket === 'B') || (upper === 'S' && slotBucket === 'D')
-      ? upper
-      : slotBucket
-
-  return { slotBucket, generationBucket }
+  return { slotBucket, generationBucket: slotBucket }
 }
 
 /**
@@ -108,10 +106,17 @@ export async function regenerateAdCreative(
         campaignConfigForTask?.generationMode
     )
     const generationProfile = getAdCreativeGenerationModeProfile(inheritedMode)
-    const { slotBucket: bucket, generationBucket } = resolveRegenerationBucketContext(
-      previousCreative,
-      campaignConfigForTask
-    )
+    const {
+      slotBucket: bucket,
+      generationBucket,
+      invalidBucket,
+    } = resolveRegenerationBucketContext(previousCreative, campaignConfigForTask)
+    if (invalidBucket) {
+      return {
+        success: false,
+        error: `无法确定创意桶：keyword_bucket "${invalidBucket}" 仅支持 A/B/D`,
+      }
+    }
     const hardPersistenceGateEnabled = parseBooleanEnv(
       process.env.AD_CREATIVE_HARD_PERSISTENCE_GATE_ENABLED,
       true

@@ -372,14 +372,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
-  it('falls back legacy C bucket to D when model-anchor evidence is missing', async () => {
-    dbFns.query
-      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
-      .mockResolvedValueOnce([])
-    dbFns.exec.mockResolvedValue(undefined)
-    keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])
-    creativeTypeFns.deriveCanonicalCreativeType.mockReturnValueOnce('product_intent')
-
+  it('rejects legacy bucket C requests', async () => {
     const req = new NextRequest('http://localhost/api/offers/batch/generate-creatives-queue', {
       method: 'POST',
       headers: {
@@ -395,21 +388,9 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     const res = await POST(req)
     const data = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(queueFns.enqueue).toHaveBeenCalledWith(
-      'ad-creative',
-      expect.objectContaining({
-        offerId: 102,
-        bucket: 'D',
-        forceGenerateOnQualityGate: true,
-        qualityGateBypassReason: 'offers_batch_auto_bypass_quality_gate',
-      }),
-      1,
-      expect.objectContaining({
-        taskId: 'task-102',
-      })
-    )
-    expect(data.enqueuedCount).toBe(1)
+    expect(res.status).toBe(400)
+    expect(data.error).toBe('Invalid bucket')
+    expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
   it('keeps canonical bucket B without legacy fallback when creativeType is omitted', async () => {

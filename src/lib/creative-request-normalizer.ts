@@ -19,7 +19,6 @@ export type NormalizeSingleCreativeSelectionParams = {
   bucket: unknown
   hasExplicitCreativeType: boolean
   hasExplicitBucket: boolean
-  resolveLegacyModelIntent?: () => boolean
 }
 
 export type NormalizeSingleCreativeSelectionResult = {
@@ -28,7 +27,6 @@ export type NormalizeSingleCreativeSelectionResult = {
   bucketFromCreativeType: CreativeBucketSlot | null
   requestedBucket: CreativeBucketSlot | null
   errorCode: CreativeSelectionErrorCode | null
-  legacyFallbackToProduct: boolean
 }
 
 export function normalizeSingleCreativeSelection(
@@ -45,7 +43,6 @@ export function normalizeSingleCreativeSelection(
       bucketFromCreativeType,
       requestedBucket: null,
       errorCode: 'invalid-creative-type',
-      legacyFallbackToProduct: false,
     }
   }
 
@@ -56,7 +53,6 @@ export function normalizeSingleCreativeSelection(
       bucketFromCreativeType,
       requestedBucket: null,
       errorCode: 'invalid-bucket',
-      legacyFallbackToProduct: false,
     }
   }
 
@@ -71,27 +67,11 @@ export function normalizeSingleCreativeSelection(
       bucketFromCreativeType,
       requestedBucket: null,
       errorCode: 'creative-type-bucket-conflict',
-      legacyFallbackToProduct: false,
     }
   }
 
-  let requestedBucket: CreativeBucketSlot | null =
+  const requestedBucket: CreativeBucketSlot | null =
     bucketFromCreativeType || bucketSelection.normalizedBucket
-  let legacyFallbackToProduct = false
-
-  if (
-    !bucketFromCreativeType &&
-    bucketSelection.legacyModelHint &&
-    bucketSelection.normalizedBucket === 'B'
-  ) {
-    const shouldKeepModelIntent = params.resolveLegacyModelIntent
-      ? params.resolveLegacyModelIntent()
-      : true
-    if (!shouldKeepModelIntent) {
-      requestedBucket = 'D'
-      legacyFallbackToProduct = true
-    }
-  }
 
   return {
     normalizedCreativeType,
@@ -99,6 +79,5 @@ export function normalizeSingleCreativeSelection(
     bucketFromCreativeType,
     requestedBucket,
     errorCode: null,
-    legacyFallbackToProduct,
   }
 }

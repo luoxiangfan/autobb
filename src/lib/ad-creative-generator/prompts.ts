@@ -27,6 +27,7 @@ import {
 } from '@/lib/google-ads/policy/policy-guard'
 import { createCreativeRuleContext, filterPromptExtrasByRelevance } from '../ad-creative-rule-gate'
 
+import { normalizeCreativeBucketSlot } from '../creative-type'
 import { normalizeCreativeBucketType } from './bucket'
 import {
   RETAINED_KEYWORD_DESCRIPTION_SLOT_START_INDEX,
@@ -936,7 +937,7 @@ export async function buildAdCreativePrompt(
   if (extractedElements?.bucketInfo) {
     const { bucket, intent, intentEn, keywordCount } = extractedElements.bucketInfo
     // 🆕 KISS-3: 归一化创意类型（兼容历史 C/S）
-    const kissBucket = bucket === 'C' ? 'B' : bucket === 'S' ? 'D' : bucket
+    const kissBucket = normalizeCreativeBucketSlot(bucket) ?? bucket
 
     // 🆕 v4.16: 店铺链接特殊桶处理
     if (linkType === 'store') {
@@ -2697,7 +2698,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   // 这些变量名需要与 prompt 模板中的占位符匹配
   if (extractedElements?.bucketInfo) {
     const { bucket, intent, intentEn, keywordCount } = extractedElements.bucketInfo
-    const kissBucket = bucket === 'C' ? 'B' : bucket === 'S' ? 'D' : bucket
+    const kissBucket = normalizeCreativeBucketSlot(bucket) ?? bucket
     variables.bucket_type = kissBucket
     variables.bucket_intent = intent || intentEn || ''
     variables.bucket_info_section = `

@@ -7,8 +7,10 @@ export type LegacyCreativeType = 'brand_focus' | 'model_focus' | 'brand_product'
 
 export type CreativeTypeValue = CanonicalCreativeType | LegacyCreativeType
 
-export type LegacyCreativeBucket = 'A' | 'B' | 'C' | 'D' | 'S'
 export type CreativeBucketSlot = 'A' | 'B' | 'D'
+
+/** keyword_pool 查询参数仍可能传入历史桶 C/S（非 ad_creatives 字段） */
+export type LegacyKeywordPoolBucketQuery = 'C' | 'S'
 
 function normalizeTextArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -34,15 +36,25 @@ function normalizeTextArray(value: unknown): string[] {
   return []
 }
 
-/** Canonical bucket slot normalization (legacy C→B, S→D). */
+/** Canonical 创意槽位：仅 A/B/D（ad_creatives.keyword_bucket） */
 export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot | null {
   const upper = String(value || '')
     .trim()
     .toUpperCase()
   if (upper === 'A') return 'A'
-  if (upper === 'B' || upper === 'C') return 'B'
-  if (upper === 'D' || upper === 'S') return 'D'
+  if (upper === 'B') return 'B'
+  if (upper === 'D') return 'D'
   return null
+}
+
+/** keyword_pool 查询：历史 C→B、S→D（不影响 ad_creatives 存储） */
+export function normalizeKeywordPoolBucketQuery(value: unknown): CreativeBucketSlot | null {
+  const upper = String(value || '')
+    .trim()
+    .toUpperCase()
+  if (upper === 'C') return 'B'
+  if (upper === 'S') return 'D'
+  return normalizeCreativeBucketSlot(upper)
 }
 
 export function normalizeCanonicalCreativeType(value: unknown): CanonicalCreativeType | null {

@@ -222,8 +222,6 @@ export interface CampaignPublishTaskData {
   enableCampaignImmediately?: boolean // 是否立即启用Campaign
   /** 续发：复用上次失败/未完成发布创建的远端资源 */
   resumePublish?: boolean
-  /** @deprecated 暂停旧系列由 publish API 在入队前处理，执行器不再读取 */
-  pauseOldCampaigns?: boolean
   /** 从 campaign_backups 恢复发布时传入，成功后回写备份快照 */
   sourceBackupId?: number
 }
@@ -353,35 +351,9 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
   }
 
   const db = await getDatabase()
-  const legacyVariants = (
-    task.data as {
-      variants?: Array<{
-        creative?: CampaignPublishTaskData['creative']
-        campaignConfig?: CampaignPublishTaskData['campaignConfig']
-        naming?: CampaignPublishTaskData['naming']
-      }>
-    }
-  ).variants
-
-  let creative = task.data.creative
-  let campaignConfig = task.data.campaignConfig
-  let naming = task.data.naming
-
-  if (legacyVariants?.length) {
-    console.warn(
-      `[Publish] 忽略遗留 variants（${legacyVariants.length} 项），仅发布 1 Campaign + 1 Ad Group`
-    )
-    const fallback = legacyVariants[0]
-    if (!creative?.finalUrl && fallback?.creative) {
-      creative = fallback.creative
-    }
-    if (fallback?.campaignConfig) {
-      campaignConfig = { ...campaignConfig, ...fallback.campaignConfig }
-    }
-    if (fallback?.naming) {
-      naming = { ...naming, ...fallback.naming }
-    }
-  }
+  const creative = task.data.creative
+  const campaignConfig = task.data.campaignConfig
+  const naming = task.data.naming
 
   const {
     campaignId,

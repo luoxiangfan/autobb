@@ -1403,7 +1403,6 @@ export async function POST(request: NextRequest) {
           brandName: offer.brand,
           forcePublish: _forcePublish,
           enableCampaignImmediately: _enableCampaignImmediately,
-          pauseOldCampaigns: _pauseOldCampaigns,
         }
 
         await queue.enqueue('campaign-publish', taskData, userId, {

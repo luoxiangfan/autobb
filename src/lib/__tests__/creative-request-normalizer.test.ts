@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
 
 describe('normalizeSingleCreativeSelection', () => {
@@ -26,6 +26,30 @@ describe('normalizeSingleCreativeSelection', () => {
     expect(result.requestedBucket).toBeNull()
   })
 
+  it('rejects legacy bucket C', () => {
+    const result = normalizeSingleCreativeSelection({
+      creativeType: undefined,
+      bucket: 'C',
+      hasExplicitCreativeType: false,
+      hasExplicitBucket: true,
+    })
+
+    expect(result.errorCode).toBe('invalid-bucket')
+    expect(result.requestedBucket).toBeNull()
+  })
+
+  it('rejects legacy bucket S', () => {
+    const result = normalizeSingleCreativeSelection({
+      creativeType: undefined,
+      bucket: 'S',
+      hasExplicitCreativeType: false,
+      hasExplicitBucket: true,
+    })
+
+    expect(result.errorCode).toBe('invalid-bucket')
+    expect(result.requestedBucket).toBeNull()
+  })
+
   it('rejects creativeType and bucket conflicts', () => {
     const result = normalizeSingleCreativeSelection({
       creativeType: 'model_intent',
@@ -38,35 +62,15 @@ describe('normalizeSingleCreativeSelection', () => {
     expect(result.requestedBucket).toBeNull()
   })
 
-  it('falls back legacy C to D when model intent evidence is not verified', () => {
-    const resolveLegacyModelIntent = vi.fn(() => false)
-    const result = normalizeSingleCreativeSelection({
-      creativeType: undefined,
-      bucket: 'C',
-      hasExplicitCreativeType: false,
-      hasExplicitBucket: true,
-      resolveLegacyModelIntent,
-    })
-
-    expect(resolveLegacyModelIntent).toHaveBeenCalledTimes(1)
-    expect(result.errorCode).toBeNull()
-    expect(result.requestedBucket).toBe('D')
-    expect(result.legacyFallbackToProduct).toBe(true)
-  })
-
-  it('keeps canonical B as-is without triggering legacy fallback callback', () => {
-    const resolveLegacyModelIntent = vi.fn(() => false)
+  it('keeps canonical B as-is', () => {
     const result = normalizeSingleCreativeSelection({
       creativeType: undefined,
       bucket: 'B',
       hasExplicitCreativeType: false,
       hasExplicitBucket: true,
-      resolveLegacyModelIntent,
     })
 
-    expect(resolveLegacyModelIntent).not.toHaveBeenCalled()
     expect(result.errorCode).toBeNull()
     expect(result.requestedBucket).toBe('B')
-    expect(result.legacyFallbackToProduct).toBe(false)
   })
 })

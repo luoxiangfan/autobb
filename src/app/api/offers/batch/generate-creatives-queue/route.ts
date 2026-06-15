@@ -29,8 +29,6 @@ import {
   resolveCreativeGenerationRuntime,
 } from '@/lib/ad-creative-generation-mode'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
-import { deriveCanonicalCreativeType } from '@/lib/creative-type'
-import { extractModelAnchorTextsFromScrapedData } from '@/lib/model-anchor-evidence'
 import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
 
 export const maxDuration = 60
@@ -160,7 +158,6 @@ export async function POST(request: NextRequest) {
       hasExplicitCreativeType,
       hasExplicitBucket: parsed.data.bucket !== undefined,
     })
-    const bucketSelection = normalizedSelection.bucketSelection
     const requestedBucket = normalizedSelection.requestedBucket
     const requestedBucketFromCreativeType = normalizedSelection.bucketFromCreativeType
 
@@ -179,7 +176,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Invalid bucket',
-          message: 'bucket 仅支持 A / B / D（兼容旧值：C→B，S→D）',
+          message: 'bucket 仅支持 A / B / D',
         },
         { status: 400 }
       )
@@ -355,33 +352,8 @@ export async function POST(request: NextRequest) {
         continue
       }
 
-      let requestedType: NormalizedCreativeBucket | null =
+      const requestedType: NormalizedCreativeBucket | null =
         requestedBucketFromCreativeType || requestedBucket
-      if (
-        !requestedBucketFromCreativeType &&
-        bucketSelection.legacyModelHint &&
-        requestedBucket === 'B'
-      ) {
-        const scrapedModelTexts = extractModelAnchorTextsFromScrapedData(offer.scraped_data)
-        const normalizedLegacyType = deriveCanonicalCreativeType({
-          keywordBucket: bucketSelection.rawBucket,
-          keywords: [offer.product_name, offer.extracted_keywords, ...scrapedModelTexts],
-          headlines: [offer.extracted_headlines],
-          descriptions: [
-            offer.brand_description,
-            offer.unique_selling_points,
-            offer.product_highlights,
-            offer.extracted_descriptions,
-          ],
-          theme: [offer.offer_name, offer.category],
-        })
-        requestedType = normalizedLegacyType === 'model_intent' ? 'B' : 'D'
-        if (requestedType === 'D') {
-          console.warn(
-            `[BatchCreativeGeneration] Offer ${offerId}: legacy bucket ${bucketSelection.rawBucket} fallback to D/product_intent because no verifiable model anchor evidence was found`
-          )
-        }
-      }
 
       if (requestedType && !availableBuckets.includes(requestedType)) {
         stats.skipped++

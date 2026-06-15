@@ -8709,7 +8709,7 @@ DROP CONSTRAINT IF EXISTS ad_creatives_keyword_bucket_check;
 
 ALTER TABLE ad_creatives
 ADD CONSTRAINT ad_creatives_keyword_bucket_check
-CHECK (keyword_bucket IN ('A', 'B', 'C', 'D', 'S'));
+CHECK (keyword_bucket IS NULL OR keyword_bucket IN ('A', 'B', 'D'));
 
 -- ====================================================================
 -- SOURCE: migrations/090_update_keyword_intent_clustering_v4.15.pg.sql
@@ -26539,7 +26539,10 @@ INSERT INTO migration_history (migration_name) VALUES
   ('250_google_ads_auth_assignments.pg.sql'),
   ('251_openclaw_affiliate_commission_raw_sync_payloads_updated_at.pg.sql'),
   ('252_google_ads_accounts_async_refresh_state.pg.sql'),
-  ('253_affiliate_commission_report_perf.pg.sql')
+  ('253_affiliate_commission_report_perf.pg.sql'),
+  ('256_migrate_data_sync_interval_hours.pg.sql'),
+  ('257_purge_legacy_google_ads_oauth_system_settings.pg.sql'),
+  ('258_ad_creatives_keyword_bucket_abd_only.pg.sql')
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- ==========================================

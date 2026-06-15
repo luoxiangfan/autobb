@@ -16,6 +16,7 @@ import {
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
+  normalizeCreativeBucketSlot,
   type CanonicalCreativeType,
 } from './creative-type'
 import {
@@ -105,8 +106,8 @@ export interface AdCreative {
   generationMode?: AdCreativeGenerationMode | string | null
   is_selected: number // 是否被用户选中
   creative_type?: CanonicalCreativeType | null
-  keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
-  keywordBucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
+  keyword_bucket?: 'A' | 'B' | 'D' | null
+  keywordBucket?: 'A' | 'B' | 'D' | null
   bucket_intent?: string | null
 
   // Google Ads同步信息
@@ -220,7 +221,7 @@ export interface GeneratedAdCreativeData {
   theme: string
   explanation: string // 创意说明
   ai_model?: string // 🎯 新增：实际使用的AI模型
-  keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | null
+  keyword_bucket?: 'A' | 'B' | 'D' | null
   bucket_intent?: string | null
 
   // 🆕 v4.7: RSA Display Path (展示URL路径)
@@ -750,7 +751,7 @@ export async function createAdCreative(
       keywordSourceAudit?: CreativeKeywordSourceAudit
     }
     // 🆕 v4.10: 关键词池桶信息
-    keyword_bucket?: 'A' | 'B' | 'C' | 'D' | 'S' // A/B/C/D=关键词桶, S=兼容旧综合创意 key（运行时归一化到 D）
+    keyword_bucket?: 'A' | 'B' | 'D'
     keyword_pool_id?: number
     bucket_intent?: string
     creative_type?: CanonicalCreativeType
@@ -1110,14 +1111,7 @@ export async function findAdCreativeById(id: number, userId: number): Promise<Ad
 }
 
 function normalizeBucketSlot(value: unknown): 'A' | 'B' | 'D' | null {
-  const upper = String(value || '')
-    .trim()
-    .toUpperCase()
-  if (!upper) return null
-  if (upper === 'A') return 'A'
-  if (upper === 'B' || upper === 'C') return 'B'
-  if (upper === 'D' || upper === 'S') return 'D'
-  return null
+  return normalizeCreativeBucketSlot(value)
 }
 
 function isGeneratingPlaceholderCreative(creative: AdCreative): boolean {

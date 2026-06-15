@@ -179,11 +179,11 @@ describe('regenerateAdCreative', () => {
     expect(adCreativeFns.createAdCreative).not.toHaveBeenCalled()
   })
 
-  it('maps legacy keyword_bucket C to slot B and passes generationBucket C to pipeline', async () => {
+  it('regenerates canonical bucket B creatives', async () => {
     adCreativeFns.findAdCreativeById.mockResolvedValueOnce({
       id: 401,
       generation_mode: 'balanced',
-      keyword_bucket: 'C',
+      keyword_bucket: 'B',
     })
 
     const result = await regenerateAdCreative({
@@ -197,7 +197,7 @@ describe('regenerateAdCreative', () => {
     expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
         bucket: 'B',
-        generationBucket: 'C',
+        generationBucket: 'B',
         keywordPool: { id: 77, brandKeywords: [] },
       })
     )
@@ -210,15 +210,12 @@ describe('regenerateAdCreative', () => {
     )
   })
 
-  it('maps legacy keyword_bucket S to slot D and passes generationBucket S to pipeline', async () => {
+  it('rejects legacy keyword_bucket C', async () => {
     adCreativeFns.findAdCreativeById.mockResolvedValueOnce({
       id: 401,
       generation_mode: 'balanced',
-      keyword_bucket: 'S',
+      keyword_bucket: 'C',
     })
-    generatorFns.getThemeByBucket.mockReturnValueOnce(
-      '商品需求意图导向 - 聚焦商品功能/场景需求，承接高覆盖需求流量'
-    )
 
     const result = await regenerateAdCreative({
       userId: 1,
@@ -227,22 +224,9 @@ describe('regenerateAdCreative', () => {
       campaignConfigForTask: {},
     })
 
-    expect(result.success).toBe(true)
-    expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
-      expect.objectContaining({
-        bucket: 'D',
-        generationBucket: 'S',
-        keywordPool: { id: 77, brandKeywords: [] },
-      })
-    )
-    expect(adCreativeFns.createAdCreative).toHaveBeenCalledWith(
-      1,
-      96,
-      expect.objectContaining({
-        keyword_bucket: 'D',
-        creative_type: 'product_intent',
-      })
-    )
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('仅支持 A/B/D')
+    expect(pipelineFns.runBucketCreativeGeneration).not.toHaveBeenCalled()
   })
 
   it('falls back to campaign config generation mode when previous row is missing', async () => {

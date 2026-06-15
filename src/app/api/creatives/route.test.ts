@@ -76,7 +76,7 @@ describe('GET /api/creatives', () => {
         generation_prompt: null,
         theme: 'X200 Series',
         creative_type: null,
-        keyword_bucket: 'C',
+        keyword_bucket: 'B',
         creation_status: 'draft',
         creation_error: null,
         ad_id: null,

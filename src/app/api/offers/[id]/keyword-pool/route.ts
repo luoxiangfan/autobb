@@ -74,20 +74,6 @@ function buildCanonicalBucketDetails(params: {
   )
 }
 
-function buildCanonicalBucketAliases(pool: OfferKeywordPool) {
-  const bucketA = getBucketInfo(pool, 'A')
-  const bucketB = getBucketInfo(pool, 'B')
-  const bucketC = getBucketInfo(pool, 'C')
-  const bucketD = getBucketInfo(pool, 'D')
-
-  return {
-    A: bucketA,
-    B: bucketB,
-    C: bucketC,
-    D: bucketD,
-  }
-}
-
 function buildRawBucketDetails(params: { pool: OfferKeywordPool; usedBuckets: BucketType[] }) {
   return {
     A: {
@@ -183,7 +169,9 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     // 获取桶使用情况
     const usedBuckets = await getUsedBuckets(offerId)
     const availableBuckets = await getAvailableBuckets(offerId)
-    const canonicalBuckets = buildCanonicalBucketAliases(pool)
+    const bucketA = getBucketInfo(pool, 'A')
+    const bucketB = getBucketInfo(pool, 'B')
+    const bucketD = getBucketInfo(pool, 'D')
     const rawBucketCounts = buildRawBucketCounts(pool)
 
     // 解析 query 参数
@@ -201,10 +189,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
         // 统计信息
         totalKeywords: pool.totalKeywords,
         brandKeywordsCount: pool.brandKeywords.length,
-        bucketACount: canonicalBuckets.A.keywords.length,
-        bucketBCount: canonicalBuckets.B.keywords.length,
-        bucketCCount: canonicalBuckets.C.keywords.length,
-        bucketDCount: canonicalBuckets.D.keywords.length,
+        bucketACount: bucketA.keywords.length,
+        bucketBCount: bucketB.keywords.length,
+        bucketCCount: rawBucketCounts.C,
+        bucketDCount: bucketD.keywords.length,
         rawBucketCounts,
 
         // 桶使用情况
@@ -233,34 +221,26 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
           description: '纯品牌词（所有创意共享）',
         },
         A: {
-          intent: canonicalBuckets.A.intent,
-          intentEn: canonicalBuckets.A.intentEn,
-          keywords: canonicalBuckets.A.keywords,
-          count: canonicalBuckets.A.keywords.length,
+          intent: bucketA.intent,
+          intentEn: bucketA.intentEn,
+          keywords: bucketA.keywords,
+          count: bucketA.keywords.length,
           isUsed: usedBuckets.includes('A'),
           description: 'canonical creative slot：品牌意图关键词集合',
         },
         B: {
-          intent: canonicalBuckets.B.intent,
-          intentEn: canonicalBuckets.B.intentEn,
-          keywords: canonicalBuckets.B.keywords,
-          count: canonicalBuckets.B.keywords.length,
+          intent: bucketB.intent,
+          intentEn: bucketB.intentEn,
+          keywords: bucketB.keywords,
+          count: bucketB.keywords.length,
           isUsed: usedBuckets.includes('B'),
           description: 'canonical creative slot：商品型号/产品族意图关键词集合',
         },
-        C: {
-          intent: canonicalBuckets.C.intent,
-          intentEn: canonicalBuckets.C.intentEn,
-          keywords: canonicalBuckets.C.keywords,
-          count: canonicalBuckets.C.keywords.length,
-          isUsed: usedBuckets.includes('B'),
-          description: '兼容别名：旧 C 桶在当前策略下等价于商品型号/产品族意图',
-        },
         D: {
-          intent: canonicalBuckets.D.intent,
-          intentEn: canonicalBuckets.D.intentEn,
-          keywords: canonicalBuckets.D.keywords,
-          count: canonicalBuckets.D.keywords.length,
+          intent: bucketD.intent,
+          intentEn: bucketD.intentEn,
+          keywords: bucketD.keywords,
+          count: bucketD.keywords.length,
           isUsed: usedBuckets.includes('D'),
           description: 'canonical creative slot：商品需求意图关键词集合',
         },
@@ -365,7 +345,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     // 获取可用桶
     const availableBuckets = await getAvailableBuckets(offerId)
-    const canonicalBuckets = buildCanonicalBucketAliases(pool)
+    const bucketA = getBucketInfo(pool, 'A')
+    const bucketB = getBucketInfo(pool, 'B')
+    const bucketD = getBucketInfo(pool, 'D')
     const rawBucketCounts = buildRawBucketCounts(pool)
 
     return NextResponse.json({
@@ -379,10 +361,10 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
         // 统计信息
         brandKeywordsCount: pool.brandKeywords.length,
-        bucketACount: canonicalBuckets.A.keywords.length,
-        bucketBCount: canonicalBuckets.B.keywords.length,
-        bucketCCount: canonicalBuckets.C.keywords.length,
-        bucketDCount: canonicalBuckets.D.keywords.length,
+        bucketACount: bucketA.keywords.length,
+        bucketBCount: bucketB.keywords.length,
+        bucketCCount: rawBucketCounts.C,
+        bucketDCount: bucketD.keywords.length,
         rawBucketCounts,
 
         // 质量指标

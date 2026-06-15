@@ -249,7 +249,7 @@ describe('GET /api/offers/:id/keyword-pool', () => {
     expect(res.status).toBe(200)
     expect(data.data.bucketACount).toBe(1)
     expect(data.data.bucketBCount).toBe(2)
-    expect(data.data.bucketCCount).toBe(2)
+    expect(data.data.bucketCCount).toBe(1)
     expect(data.data.bucketDCount).toBe(4)
     expect(data.data.rawBucketCounts).toEqual({
       A: 1,
@@ -262,7 +262,6 @@ describe('GET /api/offers/:id/keyword-pool', () => {
     expect(data.data.creativeSlots.B.creativeType).toBe('model_intent')
     expect(data.data.creativeSlots.D.creativeType).toBe('product_intent')
     expect(data.data.buckets.B.intentEn).toBe('Model Intent')
-    expect(data.data.buckets.C.intentEn).toBe('Model Intent')
     expect(data.data.buckets.D.intentEn).toBe('Product Demand Intent')
     expect(data.data.rawBuckets.D.intentEn).toBe('Demand Expansion')
   })

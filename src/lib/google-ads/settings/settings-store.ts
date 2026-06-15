@@ -13,8 +13,6 @@ import {
   type GoogleAdsCredentials,
 } from '@/lib/google-ads/oauth/oauth'
 import { developerTokenLooksInvalid } from '@/lib/google-ads/accounts/auth/developer-token-heal'
-import { googleAdsSettingsLogger } from '@/lib/google-ads/common/logger'
-import { getUserOnlySetting } from '../../settings'
 import type { SettingValue } from '../../settings'
 
 export const GOOGLE_ADS_OAUTH_CONFIG_KEYS = [
@@ -27,13 +25,6 @@ export const GOOGLE_ADS_OAUTH_CONFIG_KEYS = [
 export type GoogleAdsOAuthConfigKey = (typeof GOOGLE_ADS_OAUTH_CONFIG_KEYS)[number]
 
 export const GOOGLE_ADS_CREDENTIAL_BACKED_SETTING_KEYS = [...GOOGLE_ADS_OAUTH_CONFIG_KEYS] as const
-
-const OAUTH_KEY_TO_COLUMN: Record<GoogleAdsOAuthConfigKey, keyof GoogleAdsCredentials> = {
-  login_customer_id: 'login_customer_id',
-  client_id: 'client_id',
-  client_secret: 'client_secret',
-  developer_token: 'developer_token',
-}
 
 export type GoogleAdsOAuthSettingsSyncFields = Partial<Record<GoogleAdsOAuthConfigKey, string>>
 
@@ -170,8 +161,6 @@ function validateLoginCustomerIdForSettings(raw: string, fieldName?: string): st
     throw error
   }
 }
-
-const LEGACY_OAUTH_SETTING_KEYS = [...GOOGLE_ADS_OAUTH_CONFIG_KEYS]
 
 function isCredentialBackedGoogleAdsSettingKey(key: string): boolean {
   return (GOOGLE_ADS_CREDENTIAL_BACKED_SETTING_KEYS as readonly string[]).includes(key)
@@ -487,71 +476,4 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
   }
 
   return { synced: true, oauthClientCredentialsChanged }
-}
-
-/**
- * 一次性：将 system_settings 中遗留的 OAuth 用户实例迁移到凭证表并删除重复行。
- */
-export async function migrateLegacyGoogleAdsSettingsStorage(): Promise<void> {
-  const db = await getDatabase()
-  const placeholders = LEGACY_OAUTH_SETTING_KEYS.map(() => '?').join(', ')
-  const users = (await db.query(
-    `
-    SELECT DISTINCT user_id AS user_id
-    FROM system_settings
-    WHERE category = 'google_ads'
-      AND user_id IS NOT NULL
-      AND key IN (${placeholders})
-  `,
-    [...LEGACY_OAUTH_SETTING_KEYS]
-  )) as Array<{ user_id: number }>
-
-  if (users.length === 0) {
-    return
-  }
-
-  googleAdsSettingsLogger.info('oauth_config_migration_started', { userCount: users.length })
-
-  for (const { user_id: userId } of users) {
-    const oauthPatch: Partial<Record<GoogleAdsOAuthConfigKey, string>> = {}
-
-    for (const key of GOOGLE_ADS_OAUTH_CONFIG_KEYS) {
-      const legacy = await getUserOnlySetting('google_ads', key, userId)
-      if (legacy?.value?.trim()) {
-        oauthPatch[key] = legacy.value.trim()
-      }
-    }
-
-    const existingOauth = await getGoogleAdsCredentialRowByUserId(userId)
-    const oauthFields = await getGoogleAdsOAuthConfigFields(userId)
-    const mergedOauth: Partial<Record<GoogleAdsOAuthConfigKey, string>> = {}
-
-    for (const key of GOOGLE_ADS_OAUTH_CONFIG_KEYS) {
-      const column = OAUTH_KEY_TO_COLUMN[key]
-      const fromCredential = oauthFields[key]
-      const fromLegacy = oauthPatch[key]
-      const existingValue = String(existingOauth?.[column] || '').trim()
-      const chosen = fromCredential || existingValue || fromLegacy
-      if (chosen) {
-        mergedOauth[key] = chosen
-      }
-    }
-
-    if (Object.keys(mergedOauth).length > 0) {
-      await upsertGoogleAdsOAuthConfigFromSettings(userId, mergedOauth, {
-        skipAuthContextInvalidate: true,
-        skipAuthConflictCheck: true,
-      })
-    }
-  }
-
-  await db.exec(
-    `
-    DELETE FROM system_settings
-    WHERE category = 'google_ads'
-      AND user_id IS NOT NULL
-      AND key IN (${placeholders})
-  `,
-    [...LEGACY_OAUTH_SETTING_KEYS]
-  )
 }

@@ -8,7 +8,6 @@ import {
 } from './bucket-creative-generation-pipeline'
 import { resolveStoredGenerationMode } from './ad-creative-generation-mode'
 import { getAdCreativeGenerationModeProfile } from './ad-creative-generation-mode'
-import { getCreativeTypeForBucketSlot } from './creative-type'
 
 const qualityFns = vi.hoisted(() => ({
   evaluateCreativeForQuality: vi.fn(),
@@ -82,17 +81,14 @@ describe('bucket-creative-generation-pipeline', () => {
     expect(resolveStoredGenerationMode('fast')).toBe('fast')
   })
 
-  it('normalizePipelineBucket maps legacy C/S slots', () => {
-    expect(normalizePipelineBucket('C')).toBe('B')
-    expect(normalizePipelineBucket('S')).toBe('D')
+  it('normalizePipelineBucket accepts canonical A/B/D slots only', () => {
+    expect(normalizePipelineBucket('A')).toBe('A')
+    expect(normalizePipelineBucket('B')).toBe('B')
+    expect(normalizePipelineBucket('D')).toBe('D')
     expect(normalizePipelineBucket('a')).toBe('A')
+    expect(normalizePipelineBucket('C')).toBeNull()
+    expect(normalizePipelineBucket('S')).toBeNull()
     expect(normalizePipelineBucket('')).toBeNull()
-  })
-
-  it('normalizePipelineBucket keeps model_intent for bucket C generation', () => {
-    const pipelineBucket = normalizePipelineBucket('C')
-    expect(pipelineBucket).toBe('B')
-    expect(getCreativeTypeForBucketSlot(pipelineBucket!)).toBe('model_intent')
   })
 
   it('resolveOfferLinkType prefers page_type over link_type', () => {
