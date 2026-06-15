@@ -46,7 +46,7 @@ import {
   TableActionIconButton,
   TableActionSlot,
 } from '@/components/ui/table-action-buttons'
-import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap-types'
+import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap/url-swap-types'
 import UrlSwapTaskModal from '@/components/UrlSwapTaskModal'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
 

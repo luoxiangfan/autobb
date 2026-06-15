@@ -26,7 +26,7 @@ vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
   getProxyIp: mocks.getProxyIp,
 }))
 
-vi.mock('@/lib/user-execution-eligibility', () => ({
+vi.mock('@/lib/campaign', () => ({
   assertUserExecutionAllowed: mocks.assertUserExecutionAllowed,
 }))
 

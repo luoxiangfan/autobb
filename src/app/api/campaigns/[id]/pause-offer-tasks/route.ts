@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { pauseOfferTasks } from '@/lib/campaign-offer-tasks'
+import { pauseOfferTasks } from '@/lib/campaign'
 
 /**
  * POST /api/campaigns/:id/pause-offer-tasks

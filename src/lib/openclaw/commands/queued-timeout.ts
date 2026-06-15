@@ -1,5 +1,5 @@
 import type { DatabaseAdapter } from '@/lib/db'
-import { nowFunc } from '@/lib/db-helpers'
+import { nowFunc } from '@/lib/db'
 
 const OPENCLAW_QUEUED_STALE_SECONDS_DEFAULT = 15 * 60
 const OPENCLAW_QUEUED_STALE_SECONDS_MIN = 60

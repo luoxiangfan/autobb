@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findCampaignById, updateCampaign, deleteCampaign } from '@/lib/campaigns'
-import { invalidateDashboardCache } from '@/lib/api-cache'
+import { findCampaignById, updateCampaign, deleteCampaign } from '@/lib/campaign'
+import { invalidateDashboardCache } from '@/lib/common'
 
 /**
  * GET /api/campaigns/:id

@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 import { scheduleProductScoreCalculation } from '@/lib/queue/schedulers/product-score-scheduler'
-import { isProductScoreCalculationPausedError } from '@/lib/product-score-control'
+import { isProductScoreCalculationPausedError } from '@/lib/launch-score'
 
 /**
  * POST /api/products/calculate-scores

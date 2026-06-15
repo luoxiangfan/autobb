@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applySmartFilters, UnifiedKeywordData } from '../unified-keyword-service'
+import { applySmartFilters, UnifiedKeywordData } from '../keywords'
 
 function kw(keyword: string, searchVolume: number): UnifiedKeywordData {
   return {

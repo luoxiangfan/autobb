@@ -1,6 +1,6 @@
-import type { HeadlineAsset, DescriptionAsset } from '../ad-creative'
-import type { CanonicalCreativeType } from '../creative-type'
-import { normalizeCreativeBucketSlot } from '../creative-type'
+import type { HeadlineAsset, DescriptionAsset } from '../creatives'
+import type { CanonicalCreativeType } from '../creatives'
+import { normalizeCreativeBucketSlot } from '../creatives'
 import { containsLocalizedPhrase, resolveLanguageKey } from './keyword-matching'
 export type CopyIntentTag = 'brand' | 'scenario' | 'solution' | 'transactional' | 'other'
 

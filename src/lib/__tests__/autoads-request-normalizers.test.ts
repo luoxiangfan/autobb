@@ -4,8 +4,8 @@ import {
   normalizeCampaignPublishRequestBody,
   normalizeClickFarmTaskRequestBody,
   normalizeOfferExtractRequestBody,
-} from '@/lib/autoads-request-normalizers'
-import { resolveExtractPageInput } from '@/lib/offer-extraction-task'
+} from '@/lib/common'
+import { resolveExtractPageInput } from '@/lib/offers'
 
 describe('autoads request normalizers', () => {
   it('normalizes campaign.publish payload aliases and defaults', () => {

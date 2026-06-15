@@ -9,15 +9,15 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../unified-keyword-service', () => ({
+vi.mock('../keywords', () => ({
   expandKeywordsWithSeeds: (...args: any[]) => mockExpandKeywordsWithSeeds(...args),
 }))
 
-vi.mock('../keyword-planner', () => ({
+vi.mock('../keywords', () => ({
   getKeywordSearchVolumes: (...args: any[]) => mockGetKeywordSearchVolumes(...args),
 }))
 
-vi.mock('../google-suggestions', () => ({
+vi.mock('../keywords', () => ({
   detectCountryInKeyword: vi.fn(() => []),
   filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),
   filterMismatchedGeoKeywords: vi.fn((keywords: string[]) => keywords),
@@ -104,7 +104,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
   })
 
   it('queries global_keywords with normalized country (GB) when targetCountry is UK', async () => {
-    const { expandAllKeywords } = await import('../keyword-pool-helpers')
+    const { expandAllKeywords } = await import('../keywords')
     const initial: PoolKeywordData[] = [
       { keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
     ]
@@ -130,7 +130,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
   })
 
   it('queries global_keywords with language aliases (de + German) for DE offers', async () => {
-    const { expandAllKeywords } = await import('../keyword-pool-helpers')
+    const { expandAllKeywords } = await import('../keywords')
     const initial: PoolKeywordData[] = [
       { keyword: 'midea', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
     ]
@@ -167,7 +167,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
       },
     ])
 
-    const { expandAllKeywords } = await import('../keyword-pool-helpers')
+    const { expandAllKeywords } = await import('../keywords')
     const initial: PoolKeywordData[] = [
       { keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
     ]
@@ -228,7 +228,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
       },
     ])
 
-    const { expandAllKeywords } = await import('../keyword-pool-helpers')
+    const { expandAllKeywords } = await import('../keywords')
     const initial: PoolKeywordData[] = [
       { keyword: 'novilla', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
     ]
@@ -287,7 +287,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth global candidates)', () 
   })
 
   it('keeps platform keyword when semantic term matches product URL platform', async () => {
-    const { expandAllKeywords } = await import('../keyword-pool-helpers')
+    const { expandAllKeywords } = await import('../keywords')
     const initial: PoolKeywordData[] = [
       { keyword: 'hoover', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
     ]

@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { getCampaignStatusLabel } from '@/lib/i18n-constants'
+import { getCampaignStatusLabel } from '@/lib/common'
 import {
   ENABLE_CAMPAIGN_OFFER_TASK_HINTS,
   PAUSE_CAMPAIGN_OFFER_TASK_HINTS,
@@ -22,7 +22,7 @@ import {
   buildBatchAccountIssueSampleNames,
   buildBatchAccountStatusSummary,
 } from './batch-dialog-utils'
-import type { OfferTasksToggleAction } from '@/lib/offer-tasks-toggle'
+import type { OfferTasksToggleAction } from '@/lib/offers'
 import type { BatchOfflinePendingState, Campaign } from './types'
 
 export type CampaignsActionDialogsProps = {

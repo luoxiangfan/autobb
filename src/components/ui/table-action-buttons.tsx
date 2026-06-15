@@ -8,7 +8,7 @@
  */
 
 import * as React from 'react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/common'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,

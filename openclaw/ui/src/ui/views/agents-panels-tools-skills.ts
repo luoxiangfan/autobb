@@ -1,5 +1,5 @@
 import { html, nothing } from "lit";
-import type { SkillStatusEntry, SkillStatusReport } from "../types.ts";
+import type { SkillStatusEntry, SkillStatusReport } from "../types";
 import { normalizeToolName } from "../../../../src/agents/tool-policy.js";
 import {
   isAllowedByPolicy,
@@ -8,7 +8,7 @@ import {
   resolveAgentConfig,
   resolveToolProfile,
   TOOL_SECTIONS,
-} from "./agents-utils.ts";
+} from "./agents-utils";
 
 export function renderAgentTools(params: {
   agentId: string;

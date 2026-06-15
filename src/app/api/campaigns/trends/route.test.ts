@@ -24,7 +24,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/campaigns-read-cache', () => ({
+vi.mock('@/lib/campaign', () => ({
   buildCampaignTrendsCacheHash: campaignCacheFns.buildCampaignTrendsCacheHash,
   getCachedCampaignTrends: campaignCacheFns.getCachedCampaignTrends,
   setCachedCampaignTrends: campaignCacheFns.setCachedCampaignTrends,

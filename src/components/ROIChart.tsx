@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/currency'
+import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/common'
 
 export const ROITrendChart = memo(function ROITrendChart({
   data,

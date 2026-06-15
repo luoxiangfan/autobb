@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { logKeywordSourceAudit, summarizeKeywordSourceAudit } from '../creative-keyword-audit-log'
+import { logKeywordSourceAudit, summarizeKeywordSourceAudit } from '../keywords'
 
 describe('creative-keyword-audit-log', () => {
   afterEach(() => {

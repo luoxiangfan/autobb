@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { load } from 'cheerio'
-import { extractLandingDescription } from '@/lib/landing-page-scrape-utils'
+import { extractLandingDescription } from '@/lib/scraping'
 
 describe('extractLandingDescription', () => {
   it('prefers meta description over navigation/account body text', () => {

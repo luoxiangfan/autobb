@@ -11,7 +11,7 @@ const {
 vi.mock('@/lib/auth', () => ({
   findUserById: findUserByIdMock }))
 
-vi.mock('@/lib/jwt', () => ({
+vi.mock('@/lib/auth', () => ({
   generateToken: generateTokenMock }))
 
 import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'

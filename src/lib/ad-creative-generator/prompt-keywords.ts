@@ -5,13 +5,13 @@
 // 🎯 购买意图评分
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
 
-import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
-import { isBrandConcatenation } from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
+import { containsPureBrand, getPureBrandKeywords } from '../keywords'
+import { isBrandConcatenation } from '../keywords' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 
-import { classifyKeywordIntent } from '../keyword-intent'
-import { KEYWORD_POLICY } from '../keyword-policy'
-import { analyzeKeywordLanguageCompatibility } from '../keyword-validity'
+import { classifyKeywordIntent } from '../keywords'
+import { KEYWORD_POLICY } from '../keywords'
+import { analyzeKeywordLanguageCompatibility } from '../keywords'
 import {
   type GoogleAdsPolicyGuardMode,
   resolveGoogleAdsPolicyGuardMode,

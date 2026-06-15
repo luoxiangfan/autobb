@@ -3,7 +3,7 @@ import {
   getPerformanceReleaseSnapshot,
   type PerformanceReleaseFlagName,
   validatePerformanceReleaseDependencies,
-} from '../src/lib/feature-flags'
+} from '../src/lib/common/feature-flags'
 
 type GovernanceCommand = 'check' | 'rollback-template' | 'drill'
 

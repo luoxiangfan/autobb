@@ -6,7 +6,7 @@ vi.mock('@/lib/offers', () => ({
   deleteOffer: vi.fn(async () => ({ success: true, message: 'ok' })),
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: vi.fn(),
 }))
 

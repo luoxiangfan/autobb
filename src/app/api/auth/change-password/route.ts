@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { verifyPassword, hashPassword } from '@/lib/crypto'
-import { verifyToken, generateToken } from '@/lib/jwt'
+import { verifyPassword, hashPassword } from '@/lib/auth'
+import { verifyToken, generateToken } from '@/lib/auth'
 
 /**
  * POST /api/auth/change-password

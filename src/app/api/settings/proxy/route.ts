@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllProxyUrls } from '@/lib/settings'
+import { getAllProxyUrls } from '@/lib/common'
 
 /**
  * GET /api/settings/proxy?country=us

@@ -12,13 +12,13 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, RefreshCw, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/lib/currency'
+import { formatCurrency } from '@/lib/common'
 import {
   applyCurrencyFromApiResponse,
   buildReportCurrencyQueryParam,
   resolveSelectedReportCurrency,
   type ReportCurrencyInfo,
-} from '@/lib/report-currency'
+} from '@/lib/common'
 
 interface TrendData {
   date: string

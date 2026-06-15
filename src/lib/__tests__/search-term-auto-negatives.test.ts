@@ -2,7 +2,7 @@ import {
   getSearchTermAutoNegativeConfigFromEnv,
   getSearchTermAutoPositiveConfigFromEnv,
   isDuplicateKeywordErrorMessage,
-} from '../search-term-auto-negatives'
+} from '../keywords'
 
 describe('search-term-auto-negatives', () => {
   const originalEnv = process.env

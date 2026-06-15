@@ -11,7 +11,7 @@ const {
   getOpenclawGatewayTokenMock: vi.fn(),
   collectUserFeishuAccountsMock: vi.fn() }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/lib/common', () => ({
   getSettingsByCategory: getSettingsByCategoryMock }))
 
 vi.mock('@/lib/openclaw/auth', () => ({

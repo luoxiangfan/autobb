@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { parseJsonField } from '@/lib/json-field'
+import { parseJsonField } from '@/lib/db'
 
 /**
  * GET /api/admin/audit-logs

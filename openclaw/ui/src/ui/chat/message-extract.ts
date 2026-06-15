@@ -1,4 +1,4 @@
-import { stripThinkingTags } from "../format.ts";
+import { stripThinkingTags } from "../format";
 
 const ENVELOPE_PREFIX = /^\[([^\]]+)\]\s*/;
 const ENVELOPE_CHANNELS = [

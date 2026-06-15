@@ -1,14 +1,14 @@
 import { html, svg, nothing } from "lit";
-import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration.ts";
-import { parseToolSummary } from "../usage-helpers.ts";
-import { charsToTokens, formatCost, formatTokens } from "./usage-metrics.ts";
-import { renderInsightList } from "./usage-render-overview.ts";
+import { formatDurationCompact } from "../../../../src/infra/format-time/format-duration";
+import { parseToolSummary } from "../usage-helpers";
+import { charsToTokens, formatCost, formatTokens } from "./usage-metrics";
+import { renderInsightList } from "./usage-render-overview";
 import {
   SessionLogEntry,
   SessionLogRole,
   TimeSeriesPoint,
   UsageSessionEntry,
-} from "./usageTypes.ts";
+} from "./usageTypes";
 
 function pct(part: number, total: number): number {
   if (!total || total <= 0) {

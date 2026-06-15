@@ -15,7 +15,7 @@ const affiliateValidationFns = vi.hoisted(() => ({
   validateAffiliateSyncConfig: vi.fn(),
 }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/lib/common', () => ({
   validateGoogleAdsConfig: validateFns.validateGoogleAdsConfig,
   validateGeminiConfig: validateFns.validateGeminiConfig,
 }))
@@ -24,7 +24,7 @@ vi.mock('@/lib/openclaw/settings', () => ({
   getAffiliateSyncSettingsMap: settingsFns.getAffiliateSyncSettingsMap,
 }))
 
-vi.mock('@/lib/affiliate-sync-validation', () => ({
+vi.mock('@/lib/affiliate', () => ({
   validateAffiliateSyncConfig: affiliateValidationFns.validateAffiliateSyncConfig,
 }))
 

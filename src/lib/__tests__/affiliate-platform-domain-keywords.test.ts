@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  affiliateLinkMatchesPlatform,
-  resolveAffiliatePlatformForLink,
-} from '@/lib/affiliate-platform-domain-keywords'
+import { affiliateLinkMatchesPlatform, resolveAffiliatePlatformForLink } from '@/lib/keywords'
 
 describe('affiliate-platform-domain-keywords', () => {
   it('affiliateLinkMatchesPlatform uses domain keywords', () => {

@@ -4,7 +4,7 @@ import {
   getYeahPromosSessionState,
   isYeahPromosManualSyncOnly,
   maskSessionId,
-} from '@/lib/yeahpromos-session'
+} from '@/lib/affiliate'
 
 // 使用了 request.cookies（经由 verifyAuth），必须强制动态渲染避免静态构建阶段报 DYNAMIC_SERVER_USAGE
 export const dynamic = 'force-dynamic'

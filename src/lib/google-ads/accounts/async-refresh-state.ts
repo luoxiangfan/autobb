@@ -1,7 +1,7 @@
-import { REDIS_PREFIX_CONFIG } from '@/lib/config'
+import { REDIS_PREFIX_CONFIG } from '@/lib/common'
 import { getDatabase } from '@/lib/db'
-import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db-helpers'
-import { getRedisClient } from '@/lib/redis-client'
+import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db'
+import { getRedisClient } from '@/lib/common'
 
 /** 异步账号刷新状态 TTL（与 Redis key 过期、running  freshness 一致） */
 const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS = 10 * 60 * 1000

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { sleep } from "../utils.ts";
+import { sleep } from "../utils";
 
 const callGatewayMock = vi.fn();
 vi.mock("../gateway/call.js", () => ({

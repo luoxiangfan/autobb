@@ -11,11 +11,11 @@ vi.mock('axios', () => ({
   create: createMock,
 }))
 
-vi.mock('../settings', () => ({
+vi.mock('../common', () => ({
   getUserOnlySetting: getUserOnlySettingMock,
 }))
 
-vi.mock('../redis-client', () => ({
+vi.mock('../common', () => ({
   getRedisClient: vi.fn(() => null),
 }))
 
@@ -46,7 +46,7 @@ describe('gemini-axios usage parsing', () => {
       },
     })
 
-    const { generateContent } = await import('../gemini-axios')
+    const { generateContent } = await import('../ai')
     const result = await generateContent(
       {
         model: 'gemini-3-flash-preview',
@@ -73,7 +73,7 @@ describe('gemini-axios usage parsing', () => {
       ].join('\n'),
     })
 
-    const { generateContent } = await import('../gemini-axios')
+    const { generateContent } = await import('../ai')
     const result = await generateContent(
       {
         model: 'gpt-5.2',
@@ -99,7 +99,7 @@ describe('gemini-axios usage parsing', () => {
       ].join('\n'),
     })
 
-    const { generateContent } = await import('../gemini-axios')
+    const { generateContent } = await import('../ai')
     const result = await generateContent(
       {
         model: 'gpt-5.2',

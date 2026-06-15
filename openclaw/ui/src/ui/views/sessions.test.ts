@@ -1,7 +1,7 @@
 import { render } from "lit";
 import { describe, expect, it } from "vitest";
-import type { SessionsListResult } from "../types.ts";
-import { renderSessions, type SessionsProps } from "./sessions.ts";
+import type { SessionsListResult } from "../types";
+import { renderSessions, type SessionsProps } from "./sessions";
 
 function buildResult(session: SessionsListResult["sessions"][number]): SessionsListResult {
   return {

@@ -12,7 +12,7 @@
  */
 
 import type { Task, TaskExecutor } from '../types'
-import { backupDatabase } from '@/lib/backup'
+import { backupDatabase } from '@/lib/common'
 
 /**
  * Backup 任务数据接口

@@ -1,11 +1,8 @@
-import type { HeadlineAsset, DescriptionAsset } from '../../ad-creative'
-import { recordTokenUsage, estimateTokenCost } from '../../ai-token-tracker'
-import { generateContent } from '../../gemini'
-import { loadPrompt, interpolateTemplate } from '../../prompt-loader'
-import {
-  CP_AI_FEATURE_FLAG,
-  AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG,
-} from '../../ad-strength-config'
+import type { HeadlineAsset, DescriptionAsset } from '../../creatives'
+import { recordTokenUsage, estimateTokenCost } from '../../ai'
+import { generateContent } from '../../ai'
+import { loadPrompt, interpolateTemplate } from '../../ai'
+import { CP_AI_FEATURE_FLAG, AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG } from '../../creatives'
 import {
   parseCompetitivePositioningAiScores,
   type CompetitivePositioningAIScores,
@@ -15,7 +12,7 @@ import {
   sanitizePromptBlockValue,
   sanitizePromptInlineValue,
   type InputReview,
-} from '../../llm-input-guard'
+} from '../../ai'
 
 function isCompetitivePositioningAiEnabled(): boolean {
   return String(process.env[CP_AI_FEATURE_FLAG] || '').toLowerCase() === 'true'
@@ -262,7 +259,7 @@ async function isRedisAvailable(): Promise<boolean> {
   }
 
   try {
-    const { getRedisClient } = await import('../../redis')
+    const { getRedisClient } = await import('../../common')
     const client = getRedisClient()
     if (!client) {
       redisAvailable = false
@@ -303,7 +300,7 @@ async function getCachedResult(adCopyText: string): Promise<CachedResult | null>
   // 尝试从Redis获取
   if (await isRedisAvailable()) {
     try {
-      const { getRedisClient } = await import('../../redis')
+      const { getRedisClient } = await import('../../common')
       const client = getRedisClient()
       if (!client) return null
       const data = await client.get(key)
@@ -342,7 +339,7 @@ async function setCachedResult(adCopyText: string, result: CachedResult) {
   // 尝试保存到Redis
   if (await isRedisAvailable()) {
     try {
-      const { getRedisClient } = await import('../../redis')
+      const { getRedisClient } = await import('../../common')
       const client = getRedisClient()
       if (!client) return
       await client.setex(key, CACHE_TTL_SECONDS, JSON.stringify(resultWithTimestamp))

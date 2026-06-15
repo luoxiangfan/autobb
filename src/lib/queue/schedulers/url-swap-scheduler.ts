@@ -163,7 +163,7 @@ class UrlSwapScheduler {
       console.log(`  📊 找到 ${tasks.length} 个待执行的换链接任务`)
 
       // 动态导入避免循环依赖
-      const { triggerAllUrlSwapTasks } = await import('../../url-swap-scheduler')
+      const { triggerAllUrlSwapTasks } = await import('../../url-swap/url-swap-scheduler')
       const result = await triggerAllUrlSwapTasks()
 
       // 记录检查结果

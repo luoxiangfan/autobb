@@ -9,7 +9,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { safeJsonParse } from '@/lib/api-error-handler'
+import { safeJsonParse } from '@/lib/common'
 import {
   Table,
   TableBody,
@@ -34,14 +34,14 @@ import { usePagination } from '@/hooks/usePagination'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
-import { getScrapeStatusLabel } from '@/lib/i18n-constants'
-import { showError, showInfo, showSuccess } from '@/lib/toast-utils'
+import { getScrapeStatusLabel } from '@/lib/common'
+import { showError, showInfo, showSuccess } from '@/lib/common'
 import {
   getAdCreativeGenerationModeLabel,
   loadStoredAdCreativeGenerationMode,
   saveStoredAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/ad-creative-generation-mode'
+} from '@/lib/creatives'
 import type { OfferListItem, UnlinkTarget } from './types'
 import { PlayCircle } from 'lucide-react'
 
@@ -1226,7 +1226,7 @@ export default function OffersClientPage({
   // P2-2: 导出Offer数据
   const handleExport = async () => {
     try {
-      const { exportOffers } = await import('@/lib/export-utils')
+      const { exportOffers } = await import('@/lib/common')
       let exportSource = offers
       if (isServerPagingMode) {
         const response = await fetch(

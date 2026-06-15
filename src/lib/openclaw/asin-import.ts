@@ -1,9 +1,9 @@
 import crypto from 'crypto'
 import Papa from 'papaparse'
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { decodeCsvTextSmart, normalizeCsvHeaderCell } from '@/lib/offers/batch-offer-csv'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { getInsertedId } from '@/lib/db'
+import { decodeCsvTextSmart, normalizeCsvHeaderCell } from '@/lib/offers'
+import { toDbJsonObjectField } from '@/lib/db'
 
 type ParsedAsinItem = {
   asin: string | null

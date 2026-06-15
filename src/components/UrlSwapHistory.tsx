@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Loader2, Calendar, CheckCircle, XCircle, RefreshCw, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
-import type { SwapHistoryEntry } from '@/lib/url-swap-types'
+import type { SwapHistoryEntry } from '@/lib/url-swap/url-swap-types'
 
 interface UrlSwapHistoryProps {
   open: boolean

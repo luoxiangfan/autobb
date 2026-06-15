@@ -24,7 +24,7 @@ const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
 }))
 
-vi.mock('@/lib/campaigns', () => ({
+vi.mock('@/lib/campaign', () => ({
   findCampaignById: campaignFns.findCampaignById,
   updateCampaign: campaignFns.updateCampaign,
 }))
@@ -45,7 +45,7 @@ vi.mock('@/lib/db', () => ({
   }),
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateDashboardCache: vi.fn(),
 }))
 

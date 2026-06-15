@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateUrl } from '@/lib/scraper'
+import { validateUrl } from '@/lib/scraping'
 
 /**
  * POST /api/offers/:id/validate-url

@@ -1,8 +1,8 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { toNumber } from '@/lib/utils'
-import { estimateTokenCost } from '@/lib/ai-token-tracker'
+import { toNumber } from '@/lib/common'
+import { estimateTokenCost } from '@/lib/ai'
 
 function formatUtcYmd(date: Date): string {
   // Keep the read path aligned with recordTokenUsage(), which persists UTC YYYY-MM-DD.

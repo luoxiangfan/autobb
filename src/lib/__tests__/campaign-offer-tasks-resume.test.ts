@@ -14,11 +14,11 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/batch-start-tasks', () => ({
+vi.mock('@/lib/campaign', () => ({
   batchStartTasksForOffers: batchStartFns.batchStartTasksForOffers,
 }))
 
-import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'
+import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign'
 
 describe('resumeOfferTasksOnCampaignEnable', () => {
   beforeEach(() => {

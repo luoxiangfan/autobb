@@ -5,7 +5,7 @@ const recordTokenUsageMock = vi.fn()
 const estimateTokenCostMock = vi.fn(() => 0.1234)
 const getUserOnlySettingMock = vi.fn()
 
-vi.mock('../gemini', () => ({
+vi.mock('../ai', () => ({
   generateContent: generateContentMock,
 }))
 
@@ -14,7 +14,7 @@ vi.mock('../ai-token-tracker', () => ({
   estimateTokenCost: estimateTokenCostMock,
 }))
 
-vi.mock('../settings', () => ({
+vi.mock('../common', () => ({
   getUserOnlySetting: getUserOnlySettingMock,
 }))
 
@@ -90,8 +90,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('reranks only the configured top-k products with AI', async () => {
-    const { calculateHybridProductRecommendationScores } =
-      await import('../product-recommendation-scoring')
+    const { calculateHybridProductRecommendationScores } = await import('../ai')
     const products = Array.from({ length: 12 }, (_, index) => createProduct(index + 1))
 
     const result = await calculateHybridProductRecommendationScores(products as any, 1, {
@@ -110,8 +109,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('loads combined analysis prompt templates and uses higher output token budget', async () => {
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
 
     await calculateProductRecommendationScore(createProduct(3001) as any, 11, {
       includeSeasonalityAnalysis: true,
@@ -163,8 +161,7 @@ describe('product recommendation scoring', () => {
       apiType: 'direct-api',
     })
 
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(createProduct(3002) as any, 11, {
       includeSeasonalityAnalysis: true,
     })
@@ -205,8 +202,7 @@ describe('product recommendation scoring', () => {
         apiType: 'direct-api',
       })
 
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(createProduct(3003) as any, 11, {
       includeSeasonalityAnalysis: true,
     })
@@ -247,8 +243,7 @@ describe('product recommendation scoring', () => {
         apiType: 'direct-api',
       })
 
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(createProduct(3004) as any, 11, {
       includeSeasonalityAnalysis: true,
     })
@@ -261,8 +256,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('caches AI analysis results and records token usage only on cache miss', async () => {
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const product = createProduct(1001, { product_name: 'Cached Product' })
 
     await calculateProductRecommendationScore(product as any, 7, {
@@ -284,8 +278,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('does not share cached AI analysis across different ASINs', async () => {
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const baseOverrides = {
       product_name: 'Same Product',
       brand: 'Same Brand',
@@ -309,8 +302,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('treats ASIN products with empty landing URL as Amazon product pages', async () => {
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(
       createProduct(4001, {
         asin: 'B0ASINONLY01',
@@ -334,8 +326,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('treats non-canonical Amazon URLs as Amazon store pages', async () => {
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(
       createProduct(4002, {
         asin: null,
@@ -360,8 +351,7 @@ describe('product recommendation scoring', () => {
   it('skips AI combined analysis for relay provider users and uses deterministic fallback', async () => {
     getUserOnlySettingMock.mockResolvedValueOnce({ value: 'relay' })
 
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(createProduct(5001) as any, 42, {
       includeSeasonalityAnalysis: true,
     })
@@ -372,8 +362,7 @@ describe('product recommendation scoring', () => {
   })
 
   it('keeps non-Amazon store URLs as lower-trust landing pages', async () => {
-    const { calculateProductRecommendationScore } =
-      await import('../product-recommendation-scoring')
+    const { calculateProductRecommendationScore } = await import('../ai')
     const result = await calculateProductRecommendationScore(
       createProduct(4003, {
         asin: null,

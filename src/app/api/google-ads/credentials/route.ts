@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     logGoogleAdsCredentialsError('get_credentials_failed', error)
 
-    const { formatPythonAdsServiceUnavailableError } = await import('@/lib/python-ads-client')
+    const { formatPythonAdsServiceUnavailableError } = await import('@/lib/campaign')
     const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
     if (serviceUnavailable) {
       return NextResponse.json(

@@ -8,7 +8,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-import { buildPublishResumePlan, persistPublishGoogleAdsIds } from '@/lib/campaign-publish-resume'
+import { buildPublishResumePlan, persistPublishGoogleAdsIds } from '@/lib/campaign'
 
 describe('campaign-publish-resume', () => {
   beforeEach(() => {

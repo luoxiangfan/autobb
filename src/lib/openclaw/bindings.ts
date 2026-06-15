@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { isUniqueConstraintViolation } from '@/lib/db-helpers'
+import { isUniqueConstraintViolation } from '@/lib/db'
 import {
   collectUserFeishuBindingAccounts,
   parseFeishuAccountUserId } from '@/lib/openclaw/feishu-accounts'

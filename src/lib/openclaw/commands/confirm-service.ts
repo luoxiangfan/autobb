@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { boolParam, nowFunc } from '@/lib/db-helpers'
+import { boolParam, nowFunc } from '@/lib/db'
 
 const DEFAULT_CONFIRM_TTL_SECONDS = 10 * 60
 

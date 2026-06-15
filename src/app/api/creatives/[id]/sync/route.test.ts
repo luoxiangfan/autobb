@@ -28,16 +28,16 @@ const oauthAccountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
-vi.mock('@/lib/ad-creative', () => ({
+vi.mock('@/lib/creatives', () => ({
   findAdCreativeById: creativeFns.findAdCreativeById,
   updateAdCreative: creativeFns.updateAdCreative,
 }))
 
-vi.mock('@/lib/ad-groups', () => ({
+vi.mock('@/lib/campaign', () => ({
   findAdGroupById: adGroupFns.findAdGroupById,
 }))
 
-vi.mock('@/lib/campaigns', () => ({
+vi.mock('@/lib/campaign', () => ({
   findCampaignById: campaignFns.findCampaignById,
 }))
 

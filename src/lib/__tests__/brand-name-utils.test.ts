@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isLikelyInvalidBrandName } from '@/lib/brand-name-utils'
+import { isLikelyInvalidBrandName } from '@/lib/scraping'
 
 describe('isLikelyInvalidBrandName', () => {
   it('treats French storefront boilerplate as invalid', () => {

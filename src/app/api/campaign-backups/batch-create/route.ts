@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue/unified-queue-manager'
-import { validateCampaignBackupsForBatchCreate } from '@/lib/campaign-backup-restore'
+import { validateCampaignBackupsForBatchCreate } from '@/lib/campaign'
 import { createHash } from 'crypto'
 
 const MAX_BATCH_BACKUP_COUNT = 50

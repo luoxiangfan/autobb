@@ -30,7 +30,7 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/active-campaigns-query', () => ({
+vi.mock('@/lib/campaign', () => ({
   queryActiveCampaigns: campaignsFns.queryActiveCampaigns,
   pauseCampaigns: campaignsFns.pauseCampaigns,
 }))
@@ -39,12 +39,12 @@ vi.mock('@/lib/openclaw/action-logs', () => ({
   recordOpenclawAction: actionLogFns.recordOpenclawAction,
 }))
 
-vi.mock('@/lib/campaign-state-machine', () => ({
+vi.mock('@/lib/campaign', () => ({
   applyCampaignTransitionByGoogleCampaignIds:
     transitionFns.applyCampaignTransitionByGoogleCampaignIds,
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
 }))
 

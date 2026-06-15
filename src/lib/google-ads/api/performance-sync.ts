@@ -8,14 +8,14 @@
  */
 
 import { getDatabase } from '../../db'
-import { saveCreativePerformance, PerformanceData } from '../../bonus-score-calculator'
+import { saveCreativePerformance, PerformanceData } from '../../launch-score'
 import { getCustomerWithCredentials } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { executeGAQLQueryPython } from '../../python-ads-client'
+import { executeGAQLQueryPython } from '../../campaign'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { googleAdsPerformanceLogger } from '@/lib/google-ads/common/logger'
 

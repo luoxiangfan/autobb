@@ -4,10 +4,10 @@ import {
   assertPostGenerationPersistenceGate,
   evaluateCreativeWithPersistenceGate,
   resolveOfferLinkType,
-} from '../bucket-creative-generation-pipeline'
-import { normalizeCreativeBucketSlot } from '../creative-type'
-import { resolveStoredGenerationMode } from '../ad-creative-generation-mode'
-import { getAdCreativeGenerationModeProfile } from '../ad-creative-generation-mode'
+} from '../creatives'
+import { normalizeCreativeBucketSlot } from '../creatives'
+import { resolveStoredGenerationMode } from '../creatives'
+import { getAdCreativeGenerationModeProfile } from '../creatives'
 
 const qualityFns = vi.hoisted(() => ({
   evaluateCreativeForQuality: vi.fn(),
@@ -18,16 +18,16 @@ const keywordRuntimeFns = vi.hoisted(() => ({
   createCreativeQualityEvaluationInput: vi.fn((input: unknown) => input),
 }))
 
-vi.mock('../ad-creative-quality-loop', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../ad-creative-quality-loop')>()
+vi.mock('../creatives', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../creatives')>()
   return {
     ...actual,
     evaluateCreativeForQuality: qualityFns.evaluateCreativeForQuality,
   }
 })
 
-vi.mock('../creative-keyword-runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../creative-keyword-runtime')>()
+vi.mock('../keywords', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../keywords')>()
   return {
     ...actual,
     evaluateCreativePersistenceHardGate: keywordRuntimeFns.evaluateCreativePersistenceHardGate,

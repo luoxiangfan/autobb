@@ -13,9 +13,9 @@ import {
   type BucketType,
 } from '@/lib/offer-keyword-pool'
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
-import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
+import { getCreativeTypeForBucketSlot } from '@/lib/creatives'
 import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads/accounts/auth/index'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 type CanonicalBucketSlot = 'A' | 'B' | 'D'
 

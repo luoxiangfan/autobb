@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getUserOnlySetting } from '@/lib/common'
 import { resolveAffiliateSettingCategory } from '@/lib/openclaw/settings'
 import type { AffiliatePlatform } from './types'
 import { PLATFORM_KEY_REQUIREMENTS, type PlatformConfigCheck } from './constants'

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { withPerformanceMonitoring } from '@/lib/common'
 import { countUrlSwapUrgentAlerts, queryUrlSwapUrgentAlerts } from '@/lib/url-swap/urgent-alerts'
 
 export const dynamic = 'force-dynamic'

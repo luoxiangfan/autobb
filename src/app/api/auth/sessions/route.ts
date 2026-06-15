@@ -6,7 +6,7 @@ import {
   revokeAllSessions,
   getTrustedDevices,
   getUserAlerts,
-} from '@/lib/user-sessions'
+} from '@/lib/auth'
 
 /**
  * GET /api/auth/sessions

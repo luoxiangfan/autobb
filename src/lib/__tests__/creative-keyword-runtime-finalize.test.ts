@@ -4,11 +4,11 @@ const builderFns = vi.hoisted(() => ({
   buildCreativeKeywordSet: vi.fn(),
 }))
 
-vi.mock('@/lib/creative-keyword-set-builder', () => ({
+vi.mock('@/lib/keywords', () => ({
   buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
 }))
 
-import { finalizeCreativeKeywordSet } from '../creative-keyword-runtime'
+import { finalizeCreativeKeywordSet } from '../keywords'
 
 describe('finalizeCreativeKeywordSet', () => {
   beforeEach(() => {

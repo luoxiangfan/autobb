@@ -1,5 +1,5 @@
 import CampaignsClientPage from './CampaignsClientPage'
-import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
+import { isPerformanceReleaseEnabled } from '@/lib/common'
 
 export default function CampaignsPage() {
   const campaignsReqDedupEnabled = isPerformanceReleaseEnabled('campaignsReqDedup')

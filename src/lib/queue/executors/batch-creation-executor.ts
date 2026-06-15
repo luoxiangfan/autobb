@@ -18,7 +18,7 @@ import { createHash } from 'crypto'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '../unified-queue-manager'
 import type { OfferExtractionTaskData } from './offer-extraction-executor'
-import { normalizeOfferExtractionMode } from '@/lib/offer-extraction-mode'
+import { normalizeOfferExtractionMode } from '@/lib/offers'
 
 /**
  * 批量创建任务数据接口

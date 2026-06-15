@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { triggerDataSync } from '@/lib/queue-triggers'
+import { triggerDataSync } from '@/lib/queue/queue-triggers'
 
 export const dynamic = 'force-dynamic'
 

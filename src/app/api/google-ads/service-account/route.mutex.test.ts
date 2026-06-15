@@ -43,7 +43,7 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   })),
 }))
 
-vi.mock('@/lib/crypto', () => ({
+vi.mock('@/lib/auth', () => ({
   encrypt: vi.fn((value: string) => `enc:${value}`),
 }))
 

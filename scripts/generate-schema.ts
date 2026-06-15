@@ -10,7 +10,7 @@
 
 import fs from 'fs'
 import path from 'path'
-import { generatePostgresSchema, TABLE_COUNT, SCHEMA_VERSION } from '../src/lib/db-schema-generator'
+import { generatePostgresSchema, TABLE_COUNT, SCHEMA_VERSION } from '../src/lib/db/db-schema-generator'
 
 const migrationsDir = path.join(process.cwd(), 'migrations')
 

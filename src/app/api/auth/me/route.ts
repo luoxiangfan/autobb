@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findUserById } from '@/lib/auth'
-import { verifyToken } from '@/lib/jwt'
+import { verifyToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 

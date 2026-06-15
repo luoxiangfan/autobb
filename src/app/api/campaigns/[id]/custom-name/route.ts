@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { updateCampaign } from '@/lib/campaigns'
-import { invalidateDashboardCache } from '@/lib/api-cache'
+import { updateCampaign } from '@/lib/campaign'
+import { invalidateDashboardCache } from '@/lib/common'
 
 /**
  * PUT /api/campaigns/:id/custom-name

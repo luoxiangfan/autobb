@@ -1,8 +1,8 @@
 import { createOffer, deleteOffer, findOfferById } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
-import { enqueueExistingOfferExtractionAndMarkQueued } from '@/lib/offer-extraction-task'
+import { enqueueExistingOfferExtractionAndMarkQueued } from '@/lib/offers'
 
-import { toBool } from '@/lib/db-helpers'
+import { toBool } from '@/lib/db'
 import type {
   AffiliateProduct,
   AffiliateProductOfferLinkCreatedVia,

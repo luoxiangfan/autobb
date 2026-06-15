@@ -4,11 +4,11 @@ const generateContentMock = vi.fn()
 const loadKeywordPoolExpandMock = vi.fn()
 const loadPromptMock = vi.hoisted(() => vi.fn())
 
-vi.mock('../gemini', () => ({
+vi.mock('../ai', () => ({
   generateContent: generateContentMock,
 }))
 
-vi.mock('../prompt-loader', () => ({
+vi.mock('../ai', () => ({
   loadPrompt: loadPromptMock,
   interpolateTemplate: (template: string) => template,
 }))
@@ -119,7 +119,7 @@ describe('calculateLaunchScore planner prepare', () => {
   })
 
   it('skips keyword pool expand prepare when creative already has ad_strength', async () => {
-    const { calculateLaunchScore } = await import('../scoring')
+    const { calculateLaunchScore } = await import('../launch-score')
 
     await calculateLaunchScore(
       {
@@ -145,7 +145,7 @@ describe('calculateLaunchScore planner prepare', () => {
   })
 
   it('prepares keyword pool expand only when ad_strength must be evaluated', async () => {
-    const { calculateLaunchScore } = await import('../scoring')
+    const { calculateLaunchScore } = await import('../launch-score')
 
     await calculateLaunchScore(
       {
@@ -172,7 +172,7 @@ describe('calculateLaunchScore planner prepare', () => {
   })
 
   it('calculateLaunchScoresForCreatives prepares expand once for multiple creatives', async () => {
-    const { calculateLaunchScoresForCreatives } = await import('../scoring')
+    const { calculateLaunchScoresForCreatives } = await import('../launch-score')
     loadKeywordPoolExpandMock.mockClear()
     loadPromptMock.mockClear()
 
@@ -203,7 +203,7 @@ describe('calculateLaunchScore planner prepare', () => {
   })
 
   it('reuses adStrengthPlanner from campaignConfig without calling expand again', async () => {
-    const { calculateLaunchScore } = await import('../scoring')
+    const { calculateLaunchScore } = await import('../launch-score')
 
     const prepared = {
       plannerSession: { volumeAuth: { authType: 'oauth' } },
@@ -237,7 +237,7 @@ describe('calculateLaunchScore planner prepare', () => {
     loadKeywordPoolExpandMock.mockResolvedValueOnce({ ok: false })
     evaluateAdStrengthMock.mockClear()
 
-    const { calculateLaunchScore } = await import('../scoring')
+    const { calculateLaunchScore } = await import('../launch-score')
 
     await calculateLaunchScore(
       {

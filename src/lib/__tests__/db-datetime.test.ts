@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  parseDbDateTimeAsUtc,
-  normalizeDateOnly,
-  normalizeTimestampToIso,
-  utcNowIso,
-} from '../db-datetime'
+import { parseDbDateTimeAsUtc, normalizeDateOnly, normalizeTimestampToIso, utcNowIso } from '../db'
 
 describe('db-datetime', () => {
   it('parses date-only as UTC midnight', () => {

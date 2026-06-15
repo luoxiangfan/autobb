@@ -12,9 +12,9 @@
 import { getBackgroundQueueManager } from './lib/queue/unified-queue-manager'
 import { registerBackgroundExecutors } from './lib/queue/executors/background-executors'
 import type { QueueConfig } from './lib/queue/types'
-import { getDatabase } from './lib/db'
+import { getDatabase } from './lib/db/database'
 import { getQueueRoutingDiagnostics } from './lib/queue/queue-routing'
-import { logger } from './lib/structured-logger'
+import { logger } from './lib/common/structured-logger'
 import {
   setBackgroundWorkerHeartbeat,
   getBackgroundWorkerHeartbeatKey,

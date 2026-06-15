@@ -24,7 +24,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: mocks.getDatabase,
 }))
 
-vi.mock('@/lib/active-campaigns-query', () => ({
+vi.mock('@/lib/campaign', () => ({
   queryActiveCampaigns: mocks.queryActiveCampaigns,
 }))
 
@@ -46,8 +46,8 @@ vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/launch-scores', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/launch-scores')>()
+vi.mock('@/lib/launch-score', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/launch-score')>()
   return {
     ...actual,
     createLaunchScore: vi.fn(),
@@ -62,18 +62,18 @@ vi.mock('@/lib/queue/init-queue', () => ({
   getOrCreateQueueManager: mocks.getOrCreateQueueManager,
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: mocks.invalidateOfferCache,
 }))
 
-vi.mock('@/lib/scoring', () => ({
+vi.mock('@/lib/launch-score', () => ({
   calculateLaunchScore: vi.fn().mockResolvedValue({
     totalScore: 90,
     analysis: {},
   }),
 }))
 
-vi.mock('@/lib/launch-score-cache', () => ({
+vi.mock('@/lib/launch-score', () => ({
   buildLaunchScoreHashes: vi.fn().mockReturnValue({
     contentHash: 'content-hash',
     campaignConfigHash: 'config-hash',

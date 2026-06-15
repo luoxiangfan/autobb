@@ -1,18 +1,18 @@
 /**
  * AI keyword intent clustering + deterministic fallback.
  */
-import { generateContent } from '../gemini'
-import { repairJsonText } from '../ai-json'
-import { loadPrompt } from '../prompt-loader'
-import { recordTokenUsage, estimateTokenCost } from '../ai-token-tracker'
+import { generateContent } from '../ai'
+import { repairJsonText } from '../ai'
+import { loadPrompt } from '../ai'
+import { recordTokenUsage, estimateTokenCost } from '../ai'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { classifyKeywordIntent } from '../keyword-intent'
+import { classifyKeywordIntent } from '../keywords'
 import {
   getKeywordSourcePriorityScore as getUnifiedKeywordSourcePriorityScore,
   getKeywordSourcePriorityScoreFromInput,
-} from '../creative-keyword-source-priority'
-import { isPureBrandKeyword } from '../brand-keyword-utils'
-import { resolveOfferLinkType } from '../offer-link-type'
+} from '../keywords'
+import { isPureBrandKeyword } from '../keywords'
+import { resolveOfferLinkType } from '../offers'
 import type { Offer } from '../offers'
 import {
   DEFAULT_PRODUCT_CLUSTER_BUCKETS,

@@ -1,5 +1,5 @@
 import { getDatabase } from '../../../db'
-import { nowFunc } from '../../../db-helpers'
+import { nowFunc } from '../../../db'
 import { getGoogleAdsOAuthConfigValue } from '@/lib/google-ads/settings/settings-store'
 import {
   resolveGoogleAdsAuthReadyFailure,

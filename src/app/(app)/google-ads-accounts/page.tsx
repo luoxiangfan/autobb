@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { showSuccess, showError, showWarning } from '@/lib/toast-utils'
+import { showSuccess, showError, showWarning } from '@/lib/common'
 import { buildDeleteAccountRemoteMessage } from '@/lib/google-ads/account-delete-messages'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

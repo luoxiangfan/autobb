@@ -6,7 +6,7 @@ import {
   isAmazonProductPath,
   isAmazonStorePath,
   isAmazonVanityStorePath,
-} from '../amazon-url-utils'
+} from '../scraping'
 
 describe('amazon-url-utils', () => {
   it('detects Amazon hostnames', () => {

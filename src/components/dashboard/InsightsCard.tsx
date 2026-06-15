@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle, Info, AlertTriangle, TrendingUp, Lightbulb } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { safeToFixed } from '@/lib/utils'
+import { safeToFixed } from '@/lib/common'
 
 interface Insight {
   id: string

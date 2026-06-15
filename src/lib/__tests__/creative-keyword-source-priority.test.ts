@@ -7,7 +7,7 @@ import {
   inferKeywordRawSource,
   normalizeKeywordSourceSubtype,
   resolveKeywordPrioritySource,
-} from '../creative-keyword-source-priority'
+} from '../keywords'
 
 describe('creative-keyword-source-priority', () => {
   afterEach(() => {

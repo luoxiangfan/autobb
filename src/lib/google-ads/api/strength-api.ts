@@ -18,7 +18,7 @@ import {
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { getDatabase } from '../../db'
 import type { AdStrengthRating } from '../../ad-strength/types'
-import { executeGAQLQueryPython } from '../../python-ads-client'
+import { executeGAQLQueryPython } from '../../campaign'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
 

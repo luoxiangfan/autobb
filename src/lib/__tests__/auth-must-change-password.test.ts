@@ -13,7 +13,7 @@ vi.mock('../db', () => ({
   getDatabase: async () => mockDb,
 }))
 
-vi.mock('../crypto', () => ({
+vi.mock('../auth', () => ({
   verifyPassword: vi.fn(async () => true),
   hashPassword: vi.fn(async () => 'hash'),
 }))
@@ -25,7 +25,7 @@ vi.mock('../auth-security', () => ({
   logLoginAttempt: vi.fn(async () => undefined),
 }))
 
-vi.mock('../jwt', () => ({
+vi.mock('../auth', () => ({
   generateToken: vi.fn(() => 'token'),
   verifyToken: vi.fn(() => null),
 }))
@@ -65,7 +65,7 @@ describe('loginWithPassword mustChangePassword', () => {
   beforeEach(async () => {
     vi.resetModules()
     ;({ loginWithPassword } = await import('../auth'))
-    ;({ generateToken: generateTokenMock } = await import('../jwt'))
+    ;({ generateToken: generateTokenMock } = await import('../auth'))
   })
 
   afterEach(() => {

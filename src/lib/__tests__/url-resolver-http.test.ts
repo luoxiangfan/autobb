@@ -1,6 +1,6 @@
 import http from 'node:http'
 import { describe, expect, it } from 'vitest'
-import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from '../url-resolver-http'
+import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from '../scraping'
 
 function listen(server: http.Server): Promise<{ port: number; close: () => Promise<void> }> {
   return new Promise((resolve, reject) => {

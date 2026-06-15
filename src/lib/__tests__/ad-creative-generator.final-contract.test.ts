@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../ad-creative'
+import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../creatives'
 import { sanitizeGoogleAdsAdText } from '@/lib/google-ads/common/ad-text'
 import {
   buildCreativeKeywordUsagePlan,

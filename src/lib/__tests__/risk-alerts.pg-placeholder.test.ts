@@ -16,9 +16,9 @@ vi.mock('@/lib/db', () => ({
   getDatabase: async () => stubDb,
 }))
 
-import { createRiskAlert } from '@/lib/risk-alerts'
-import { getRiskStatistics } from '@/lib/risk-alerts'
-import { saveQueueConfig } from '@/lib/queue-config'
+import { createRiskAlert } from '@/lib/optimization'
+import { getRiskStatistics } from '@/lib/optimization'
+import { saveQueueConfig } from '@/lib/queue/queue-config'
 
 describe('PostgreSQL placeholder type inference guards', () => {
   beforeEach(() => {

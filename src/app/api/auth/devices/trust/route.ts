@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withAuth, AuthenticatedHandler } from '@/lib/auth'
-import { trustDevice, untrustDevice, generateDeviceFingerprint } from '@/lib/user-sessions'
+import { trustDevice, untrustDevice, generateDeviceFingerprint } from '@/lib/auth'
 
 /**
  * POST /api/auth/devices/trust

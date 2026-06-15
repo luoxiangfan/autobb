@@ -39,7 +39,7 @@ import {
   resolveOfferTasksToggleAction,
   shouldShowIndividualOfferTaskMenuItems,
   shouldShowOfferTasksMenuItem,
-} from '@/lib/offer-tasks-toggle'
+} from '@/lib/offers'
 import { CampaignSortableHeader } from './CampaignSortableHeader'
 import type { Campaign, CampaignSortDirection, CampaignSortField } from './types'
 

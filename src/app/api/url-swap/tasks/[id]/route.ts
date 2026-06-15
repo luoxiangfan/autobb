@@ -10,10 +10,13 @@ import {
   updateUrlSwapTask,
   getUrlSwapTaskTargets,
 } from '@/lib/url-swap'
-import { findInvalidAffiliateLinks, normalizeAffiliateLinksInput } from '@/lib/url-swap-link-utils'
-import type { UpdateUrlSwapTaskRequest } from '@/lib/url-swap-types'
+import {
+  findInvalidAffiliateLinks,
+  normalizeAffiliateLinksInput,
+} from '@/lib/url-swap/url-swap-link-utils'
+import type { UpdateUrlSwapTaskRequest } from '@/lib/url-swap/url-swap-types'
 import { getDatabase } from '@/lib/db'
-import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler'
+import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 
 interface RouteParams {

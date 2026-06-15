@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 /**
  * GET /api/offers/:id/google-ads-ids

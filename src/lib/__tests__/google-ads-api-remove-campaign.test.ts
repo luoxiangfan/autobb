@@ -12,12 +12,12 @@ vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/python-ads-client', () => ({
+vi.mock('@/lib/campaign', () => ({
   removeCampaignPython: vi.fn(),
 }))
 
 import * as googleAdsApi from '@/lib/google-ads/api/api'
-import { removeCampaignPython } from '@/lib/python-ads-client'
+import { removeCampaignPython } from '@/lib/campaign'
 
 describe('removeGoogleAdsCampaign', () => {
   beforeEach(() => {

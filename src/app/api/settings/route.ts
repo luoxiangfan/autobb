@@ -6,18 +6,14 @@ import {
   getSettingsByCategory,
   getUserOnlySettingsByCategory,
   updateSettings,
-} from '@/lib/settings'
-import { invalidateProxyPoolCache } from '@/lib/offer-utils'
-import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/gemini-config'
-import {
-  GEMINI_ACTIVE_MODEL,
-  isDeprecatedGeminiModel,
-  normalizeModelForProvider,
-} from '@/lib/gemini-models'
+} from '@/lib/common'
+import { invalidateProxyPoolCache } from '@/lib/offers'
+import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/ai'
+import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/ai'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
-import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate-sync-config'
+import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   collectCredentialBackedFieldUpdates,

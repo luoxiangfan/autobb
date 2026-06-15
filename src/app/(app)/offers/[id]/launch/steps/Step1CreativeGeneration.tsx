@@ -35,7 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { showError, showSuccess } from '@/lib/toast-utils'
+import { showError, showSuccess } from '@/lib/common'
 import ScoreRadarChart from '@/components/charts/ScoreRadarChart'
 import { CreativeTypeProgress } from '@/components/CreativeTypeProgress'
 import {
@@ -43,15 +43,15 @@ import {
   mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType,
   type CanonicalCreativeType,
-} from '@/lib/creative-type'
-import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
+} from '@/lib/creatives'
+import { normalizeCreativeTaskError } from '@/lib/creatives'
 import {
   getAdCreativeGenerationModeLabel,
   loadStoredAdCreativeGenerationMode,
   resolveGenerationModeInput,
   saveStoredAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/ad-creative-generation-mode'
+} from '@/lib/creatives'
 import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
 
 interface Props {

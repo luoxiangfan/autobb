@@ -1,8 +1,8 @@
 import { nothing } from "lit";
-import type { AppViewState } from "./app-view-state.ts";
-import type { UsageState } from "./controllers/usage.ts";
-import { loadUsage, loadSessionTimeSeries, loadSessionLogs } from "./controllers/usage.ts";
-import { renderUsage } from "./views/usage.ts";
+import type { AppViewState } from "./app-view-state";
+import type { UsageState } from "./controllers/usage";
+import { loadUsage, loadSessionTimeSeries, loadSessionLogs } from "./controllers/usage";
+import { renderUsage } from "./views/usage";
 
 // Module-scope debounce for usage date changes (avoids type-unsafe hacks on state object)
 let usageDateDebounceTimeout: number | null = null;
@@ -50,7 +50,7 @@ export function renderUsageTab(state: AppViewState) {
     sessionSortDir: state.usageSessionSortDir,
     recentSessions: state.usageRecentSessions,
     sessionsTab: state.usageSessionsTab,
-    visibleColumns: state.usageVisibleColumns as import("./views/usage.ts").UsageColumnId[],
+    visibleColumns: state.usageVisibleColumns as import("./views/usage").UsageColumnId[],
     timeZone: state.usageTimeZone,
     contextExpanded: state.usageContextExpanded,
     headerPinned: state.usageHeaderPinned,

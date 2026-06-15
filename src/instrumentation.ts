@@ -8,8 +8,8 @@
 export async function register() {
   // 只在 Node.js 运行时执行，不在 Edge Runtime 执行
   if (process.env.NEXT_RUNTIME === 'nodejs') {
-    const { patchConsoleToJsonOnce } = await import('./lib/console-json')
-    const { initializeDatabase } = await import('./lib/db-init')
+    const { patchConsoleToJsonOnce } = await import('./lib/common/console-json')
+    const { initializeDatabase } = await import('./lib/db/db-init')
     const { recoverBatchTaskStatus } = await import('./lib/queue/batch-recovery')
     const skipRuntimeDbInit = process.env.SKIP_RUNTIME_DB_INIT === 'true'
 
@@ -36,7 +36,7 @@ export async function register() {
     const defaultMs = process.env.VERCEL ? 0 : 60 * 60 * 1000
     const intervalMs = disabled ? 0 : Number(raw || defaultMs)
     const tick = () => {
-      void import('./lib/exchange-rates-service')
+      void import('./lib/common/exchange-rates-service')
         .then((m) => m.loadUsdRatesFromDatabase())
         .catch((e) => console.warn('[exchange-rates] periodic cache reload failed:', e))
     }

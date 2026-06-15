@@ -1,5 +1,5 @@
 import { html, nothing, type TemplateResult } from "lit";
-import type { ConfigUiHints } from "../types.ts";
+import type { ConfigUiHints } from "../types";
 import {
   defaultValue,
   hintForPath,
@@ -7,7 +7,7 @@ import {
   pathKey,
   schemaType,
   type JsonSchema,
-} from "./config-form.shared.ts";
+} from "./config-form.shared";
 
 const META_KEYS = new Set(["title", "description", "default", "nullable"]);
 

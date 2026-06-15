@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { showSuccess, showError, showInfo } from '@/lib/toast-utils'
+import { showSuccess, showError, showInfo } from '@/lib/common'
 import { GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT } from '@/lib/google-ads/campaign/sync-events'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,14 +39,14 @@ import {
 } from 'lucide-react'
 import type { TrendChartData, TrendChartMetric } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
-import { getCampaignStatusLabel } from '@/lib/i18n-constants'
+import { getCampaignStatusLabel } from '@/lib/common'
 import { formatToggleStatusWarnings } from './toggle-status-warning'
 import {
   campaignHasBoundOffer,
   isCampaignEnabled,
   resolveOfferTasksToggleAction,
   type OfferTasksToggleAction,
-} from '@/lib/offer-tasks-toggle'
+} from '@/lib/offers'
 import { CampaignsActionDialogs } from './CampaignsActionDialogs'
 import { CampaignOverallRoasDialog } from './CampaignOverallRoasDialog'
 import { CampaignsTable } from './CampaignsTable'
@@ -56,9 +56,9 @@ import {
   formatCurrencyWithCode,
 } from './campaign-metrics-utils'
 import type { CampaignSortDirection, CampaignSortField } from './types'
-import { matchesCampaignSearch } from '@/lib/campaign-search'
-import { formatCurrency } from '@/lib/currency'
-import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/utils'
+import { matchesCampaignSearch } from '@/lib/campaign'
+import { formatCurrency } from '@/lib/common'
+import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/common'
 
 const CampaignsTrendsSection = dynamic(() => import('./CampaignsTrendsSection'), {
   ssr: false,

@@ -1,4 +1,4 @@
-import { getGoogleAdsConfig } from '../../../keyword-planner'
+import { getGoogleAdsConfig } from '../../../keywords'
 import {
   clearGoogleAdsLinkedAccountPrepareCache,
   createGoogleAdsLinkedAccountPrepareCache,

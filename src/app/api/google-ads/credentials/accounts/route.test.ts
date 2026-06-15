@@ -68,11 +68,11 @@ vi.mock('@/lib/google-ads/accounts/sync', () => ({
   syncAccountsFromAPI: syncFns.syncAccountsFromAPI,
 }))
 
-vi.mock('@/lib/api-performance', () => ({
+vi.mock('@/lib/common', () => ({
   withPerformanceMonitoring: (handler: unknown) => handler,
 }))
 
-vi.mock('@/lib/redis-client', () => ({
+vi.mock('@/lib/common', () => ({
   getRedisClient: vi.fn(() => null),
 }))
 

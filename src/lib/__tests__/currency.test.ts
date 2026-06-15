@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeCurrencyCode, USD_BASE_CURRENCY } from '../currency'
+import { normalizeCurrencyCode, USD_BASE_CURRENCY } from '../common'
 
 describe('currency helpers', () => {
   it('exposes USD as the base currency constant', () => {

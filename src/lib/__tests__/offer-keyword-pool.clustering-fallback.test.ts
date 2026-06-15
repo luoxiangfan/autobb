@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('../prompt-loader', () => ({
+vi.mock('../ai', () => ({
   loadPrompt: vi.fn(async () =>
     [
       'brand={{brandName}}',
@@ -11,7 +11,7 @@ vi.mock('../prompt-loader', () => ({
   ),
 }))
 
-vi.mock('../gemini', () => ({
+vi.mock('../ai', () => ({
   generateContent: vi.fn(async () => {
     const error: any = new Error('Gemini API调用失败: 403 Forbidden')
     error.response = { status: 403 }

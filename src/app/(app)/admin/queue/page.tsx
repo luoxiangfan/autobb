@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { toast } from 'sonner'
-import { fetchWithRetry } from '@/lib/api-error-handler'
+import { fetchWithRetry } from '@/lib/common'
 
 interface QueueStats {
   global: {

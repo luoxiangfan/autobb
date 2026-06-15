@@ -17,7 +17,7 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap-types'
+import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap/url-swap-types'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
 
 function groupTargetsByAccount(targets: UrlSwapTaskTarget[]) {

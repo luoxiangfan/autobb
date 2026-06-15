@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { showError } from '@/lib/toast-utils'
+import { showError } from '@/lib/common'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,8 +30,8 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useBudgetAnalytics } from '@/lib/hooks/useAnalytics'
-import { formatCurrency } from '@/lib/currency'
-import { resolveSelectedReportCurrency } from '@/lib/report-currency'
+import { formatCurrency } from '@/lib/common'
+import { resolveSelectedReportCurrency } from '@/lib/common'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 type BudgetAnalyticsTimeRange = '7' | '14' | '30' | 'custom'

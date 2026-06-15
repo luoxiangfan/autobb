@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findAdCreativeById, updateAdCreative, deleteAdCreative } from '@/lib/ad-creative'
+import { findAdCreativeById, updateAdCreative, deleteAdCreative } from '@/lib/creatives'
 
 /**
  * GET /api/creatives/:id

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { hasModelAnchorEvidenceFromOffer, hasModelAnchorInText } from '../model-anchor-evidence'
+import { hasModelAnchorEvidenceFromOffer, hasModelAnchorInText } from '../creatives'
 
 describe('hasModelAnchorEvidenceFromOffer', () => {
   it('does not treat family-marker marketing fragments as model anchors in plain text', () => {

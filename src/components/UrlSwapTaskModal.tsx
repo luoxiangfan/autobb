@@ -18,13 +18,16 @@ import { Alert } from '@/components/ui/alert'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, AlertCircle, Link, Globe, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
-import type { UrlSwapTask } from '@/lib/url-swap-types'
+import type { UrlSwapTask } from '@/lib/url-swap/url-swap-types'
 import {
   URL_SWAP_INTERVAL_OPTIONS,
   URL_SWAP_ALLOWED_INTERVALS_MINUTES,
-} from '@/lib/url-swap-intervals'
-import { parseAffiliateLinksText, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils'
-import { BATCH_URL_SWAP_TASK_DEFAULTS } from '@/lib/batch-task-defaults'
+} from '@/lib/url-swap/url-swap-intervals'
+import {
+  parseAffiliateLinksText,
+  findInvalidAffiliateLinks,
+} from '@/lib/url-swap/url-swap-link-utils'
+import { BATCH_URL_SWAP_TASK_DEFAULTS } from '@/lib/campaign'
 
 interface UrlSwapTaskModalProps {
   open: boolean

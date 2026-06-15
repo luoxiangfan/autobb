@@ -3,7 +3,7 @@
  * 兜底 pause/disable 路径未调用 queue-cleanup 或清理失败留下的脏数据。
  */
 import { getDatabase } from '@/lib/db'
-import { notDeletedClause } from '@/lib/db-helpers'
+import { notDeletedClause } from '@/lib/db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 

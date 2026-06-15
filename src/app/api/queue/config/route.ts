@@ -11,7 +11,7 @@ import { getQueueManager } from '@/lib/queue'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
-import { zErr } from '@/lib/zod-errors'
+import { zErr } from '@/lib/common'
 
 const GLOBAL_CONCURRENCY_MAX = 1000
 const PER_USER_CONCURRENCY_MAX = 1000

@@ -1,5 +1,5 @@
-import { generateContent } from '../../gemini'
-import { recordTokenUsage, estimateTokenCost } from '../../ai-token-tracker'
+import { generateContent } from '../../ai'
+import { recordTokenUsage, estimateTokenCost } from '../../ai'
 import { headlineContainsKeyword } from './keyword-usage'
 
 export async function recordAdCreativeOperationTokenUsage(input: {

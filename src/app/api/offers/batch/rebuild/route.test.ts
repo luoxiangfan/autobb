@@ -32,8 +32,8 @@ vi.mock('@/lib/offers', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/offer-extraction-task', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offer-extraction-task')>()
+vi.mock('@/lib/offers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers')>()
   return {
     ...actual,
     enqueueExistingOfferExtractionAndMarkQueued:
@@ -45,7 +45,7 @@ vi.mock('@/lib/offer-keyword-pool', () => ({
   deleteKeywordPool: keywordFns.deleteKeywordPool,
 }))
 
-import { OfferExtractRequestError } from '@/lib/offer-extract-request'
+import { OfferExtractRequestError } from '@/lib/offers'
 import { POST } from '@/app/api/offers/batch/rebuild/route'
 
 describe('POST /api/offers/batch/rebuild', () => {

@@ -2,9 +2,9 @@ import { html, nothing } from "lit";
 import type {
   ExecApprovalsAllowlistEntry,
   ExecApprovalsFile,
-} from "../controllers/exec-approvals.ts";
-import type { NodesProps } from "./nodes.ts";
-import { clampText, formatRelativeTimestamp } from "../format.ts";
+} from "../controllers/exec-approvals";
+import type { NodesProps } from "./nodes";
+import { clampText, formatRelativeTimestamp } from "../format";
 
 type ExecSecurity = "deny" | "allowlist" | "full";
 type ExecAsk = "off" | "on-miss" | "always";

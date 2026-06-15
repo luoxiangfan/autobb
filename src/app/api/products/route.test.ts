@@ -26,7 +26,7 @@ vi.mock('@/lib/affiliate-products/index', () => ({
   normalizeAffiliateProductStatusFilter: (value: string | null) => value || 'all',
 }))
 
-vi.mock('@/lib/products-cache', () => ({
+vi.mock('@/lib/common', () => ({
   buildProductListCacheHash: cacheFns.buildProductListCacheHash,
   buildProductSummaryCacheHash: cacheFns.buildProductSummaryCacheHash,
   getCachedProductList: cacheFns.getCachedProductList,

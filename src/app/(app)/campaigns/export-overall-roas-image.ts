@@ -1,4 +1,4 @@
-import { formatCurrency as formatCurrencyDashboard } from '@/lib/utils'
+import { formatCurrency as formatCurrencyDashboard } from '@/lib/common'
 import type { CampaignRoasRankItem, OverallRoasStatistics } from './types'
 import {
   anonymizeCampaignName,

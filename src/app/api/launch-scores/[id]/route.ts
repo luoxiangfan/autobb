@@ -4,8 +4,8 @@ import {
   findLaunchScoreById,
   deleteLaunchScore,
   parseLaunchScoreAnalysis,
-} from '@/lib/launch-scores'
-import { parsePositiveIntegerId } from '@/lib/parse-offer-id'
+} from '@/lib/launch-score'
+import { parsePositiveIntegerId } from '@/lib/offers'
 
 /**
  * GET /api/launch-scores/:id

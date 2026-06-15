@@ -10,7 +10,7 @@ import {
   resolveStorePath,
 } from "../config/sessions.js";
 import { callGateway } from "../gateway/call.js";
-import { formatDurationCompact } from "../infra/format-time/format-duration.ts";
+import { formatDurationCompact } from "../infra/format-time/format-duration";
 import { normalizeMainKey } from "../routing/session-key.js";
 import { defaultRuntime } from "../runtime.js";
 import {

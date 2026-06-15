@@ -21,23 +21,23 @@ vi.mock('../ai', () => ({
   })),
 }))
 
-vi.mock('../settings', () => ({
+vi.mock('../common', () => ({
   getProxyUrlForCountry: vi.fn(async () => 'https://proxy-provider.example/api?cc=US'),
 }))
 
-vi.mock('@/lib/review-analyzer', () => ({
+vi.mock('@/lib/creatives', () => ({
   scrapeAmazonReviews: vi.fn(async () => {
     throw new Error('blocked or captcha')
   }),
 }))
 
-vi.mock('@/lib/competitor-analyzer', () => ({
+vi.mock('@/lib/creatives', () => ({
   scrapeAmazonCompetitors: vi.fn(async () => {
     throw new Error('blocked or captcha')
   }),
 }))
 
-vi.mock('@/lib/playwright-pool', () => ({
+vi.mock('@/lib/scraping', () => ({
   getPlaywrightPool: () => ({ acquire, release }),
 }))
 

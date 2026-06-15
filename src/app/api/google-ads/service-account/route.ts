@@ -5,7 +5,7 @@ import {
   parseServiceAccountJson,
   replaceGoogleAdsServiceAccountForUser,
 } from '@/lib/google-ads/service-account/service-account'
-import { encrypt } from '@/lib/crypto'
+import { encrypt } from '@/lib/auth'
 import { verifyAuth, findUserById } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {

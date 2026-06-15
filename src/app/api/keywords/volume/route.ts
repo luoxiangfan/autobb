@@ -6,7 +6,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getKeywordSearchVolumesForPlannerContext } from '@/lib/google-ads/accounts/auth/index'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 export const dynamic = 'force-dynamic'
 

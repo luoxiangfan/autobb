@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/zod-errors'
+import { zErr } from '@/lib/common'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 import { resolveOpenclawUserFromBindingDebug } from '@/lib/openclaw/bindings'
 

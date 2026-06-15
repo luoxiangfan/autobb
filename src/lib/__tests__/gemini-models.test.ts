@@ -5,7 +5,7 @@ import {
   isModelSupportedByProvider,
   normalizeGeminiModel,
   normalizeModelForProvider,
-} from '../gemini-models'
+} from '../ai'
 
 describe('gemini-models', () => {
   it('normalizes gpt-5.2 as a supported AI model', () => {

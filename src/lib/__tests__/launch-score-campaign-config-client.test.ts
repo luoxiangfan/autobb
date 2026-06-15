@@ -5,7 +5,7 @@ import {
   parseLaunchScoreHashCampaignConfigFromSearchParamsClient,
   pickLaunchScoreHashCampaignConfigFromStep3,
   serializeLaunchScoreCampaignConfigQueryKey,
-} from '../launch-score-campaign-config-client'
+} from '../launch-score'
 
 describe('pickLaunchScoreHashCampaignConfigFromStep3', () => {
   it('extracts hash fields from step3 config', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeKeywordLanguageCompatibility } from '../keyword-validity'
+import { analyzeKeywordLanguageCompatibility } from '../keywords'
 
 describe('keyword-validity language governance', () => {
   it('enforces target-language-only hints in IT market while rejecting English/German content words', () => {

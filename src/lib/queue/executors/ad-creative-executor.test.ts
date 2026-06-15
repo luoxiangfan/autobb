@@ -76,15 +76,15 @@ vi.mock('@/lib/ad-creative-generator/index', () => ({
   generateAdCreative: generatorFns.generateAdCreative,
 }))
 
-vi.mock('@/lib/search-term-feedback-hints', () => ({
+vi.mock('@/lib/keywords', () => ({
   getSearchTermFeedbackHints: feedbackFns.getSearchTermFeedbackHints,
 }))
 
-vi.mock('@/lib/creative-keyword-set-builder', () => ({
+vi.mock('@/lib/keywords', () => ({
   buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
 }))
 
-vi.mock('@/lib/ad-creative-quality-loop', () => ({
+vi.mock('@/lib/creatives', () => ({
   AD_CREATIVE_MAX_AUTO_RETRIES: 2,
   AD_CREATIVE_REQUIRED_MIN_SCORE: 70,
   evaluateCreativeForQuality: qualityLoopFns.evaluateCreativeForQuality,
@@ -97,20 +97,20 @@ vi.mock('@/lib/offer-keyword-pool', () => ({
   getBucketInfo: keywordPoolFns.getBucketInfo,
 }))
 
-vi.mock('@/lib/creative-type', () => ({
+vi.mock('@/lib/creatives', () => ({
   getCreativeTypeForBucketSlot: creativeTypeFns.getCreativeTypeForBucketSlot,
 }))
 
-vi.mock('@/lib/creative-keyword-runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/creative-keyword-runtime')>()
+vi.mock('@/lib/keywords', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords')>()
   return {
     ...actual,
     buildPreGenerationCreativeKeywordSet: keywordRuntimeFns.buildPreGenerationCreativeKeywordSet,
   }
 })
 
-vi.mock('@/lib/bucket-creative-generation-pipeline', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/bucket-creative-generation-pipeline')>()
+vi.mock('@/lib/creatives', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives')>()
   return {
     ...actual,
     prepareBucketKeywordContext: pipelineFns.prepareBucketKeywordContext,
@@ -118,7 +118,7 @@ vi.mock('@/lib/bucket-creative-generation-pipeline', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/json-field', () => ({
+vi.mock('@/lib/db', () => ({
   toDbJsonObjectField: (value: unknown) => value,
 }))
 
@@ -223,9 +223,7 @@ describe('executeAdCreativeGeneration', () => {
       precomputedKeywordSet: defaultPrecomputedKeywordSet,
     })
     pipelineFns.runBucketCreativeGeneration.mockImplementation(async (params) => {
-      const actual = await vi.importActual<
-        typeof import('@/lib/bucket-creative-generation-pipeline')
-      >('@/lib/bucket-creative-generation-pipeline')
+      const actual = await vi.importActual<typeof import('@/lib/creatives')>('@/lib/creatives')
       return actual.runBucketCreativeGeneration(params)
     })
 

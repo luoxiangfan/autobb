@@ -92,7 +92,7 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
         },
       ])
 
-    const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
+    const { queryActiveCampaigns } = await import('@/lib/campaign')
     const result = await queryActiveCampaigns(1, 775, 42)
 
     expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(42, null)
@@ -136,7 +136,7 @@ describe('queryActiveCampaigns login_customer_id fallback', () => {
 
     apiFns.listGoogleAdsCampaigns.mockResolvedValueOnce([])
 
-    const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
+    const { queryActiveCampaigns } = await import('@/lib/campaign')
     await queryActiveCampaigns(1, 775, 42)
 
     expect(accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount).toHaveBeenCalledWith(
@@ -187,7 +187,7 @@ describe('pauseCampaigns authContext forwarding', () => {
   })
 
   it('passes prepared authContext to updateGoogleAdsCampaignStatus', async () => {
-    const { pauseCampaigns } = await import('@/lib/active-campaigns-query')
+    const { pauseCampaigns } = await import('@/lib/campaign')
 
     await pauseCampaigns([{ id: '123', name: 'Test-Campaign', status: 'ENABLED' }], 775, 42)
 

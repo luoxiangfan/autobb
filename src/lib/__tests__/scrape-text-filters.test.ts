@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { filterNavigationLabels, isLikelyNavigationLabel } from '../scrape-text-filters'
+import { filterNavigationLabels, isLikelyNavigationLabel } from '../scraping'
 
 describe('scrape text filters', () => {
   it('detects account/nav labels (Boscovs example)', () => {

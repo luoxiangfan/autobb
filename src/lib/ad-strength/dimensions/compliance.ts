@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../../ad-creative'
+import type { HeadlineAsset, DescriptionAsset } from '../../creatives'
 import { FORBIDDEN_WORDS } from '../lexicons'
 import { calculateSimilarity } from '../text-similarity'
 

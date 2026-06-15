@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { datetimeMinusHours } from '@/lib/db-helpers'
+import { datetimeMinusHours } from '@/lib/db'
 import { failStaleQueuedCommandRuns } from './commands/queued-timeout'
 
 export type FeishuChatHealthDecision = 'allowed' | 'blocked' | 'error'

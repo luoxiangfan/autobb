@@ -19,7 +19,7 @@ import {
   resolveGoogleAdsApiAccessLevelFromContext,
   type GoogleAdsAuthAssignment,
 } from '@/lib/google-ads/auth/assignment'
-import { boolCondition, isDbRowActive } from '../../db-helpers'
+import { boolCondition, isDbRowActive } from '../../db'
 import { getDatabase } from '../../db'
 import {
   getGoogleAdsCredentials,
@@ -466,7 +466,7 @@ async function invalidateGadsApiCacheForOwner(
   ownerUserId: number,
   dependents: number[]
 ): Promise<void> {
-  const { invalidateGadsApiCacheForUser } = await import('../../cache')
+  const { invalidateGadsApiCacheForUser } = await import('../../common')
 
   invalidateGadsApiCacheForUser(ownerUserId)
   for (const userId of dependents) {

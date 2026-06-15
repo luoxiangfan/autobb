@@ -18,8 +18,8 @@ import {
   stopScheduledCronJob,
   validateCronExpression,
   type ScheduledCronJob,
-} from './lib/cron-schedule'
-import { getDatabase } from './lib/db'
+} from './lib/common/cron-schedule'
+import { getDatabase } from './lib/db/database'
 import { getQueueManagerForTaskType } from './lib/queue/queue-routing'
 import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings'
 // 🔄 已迁移到统一队列系统
@@ -28,11 +28,11 @@ import {
   triggerBackup,
   triggerLinkCheck,
   triggerCleanup,
-} from './lib/queue-triggers'
+} from './lib/queue/queue-triggers'
 import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/context'
-import { buildUserExecutionEligibleSql } from './lib/user-execution-eligibility'
+import { buildUserExecutionEligibleSql } from './lib/campaign/user-execution-eligibility'
 import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
-import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/product-score-control'
+import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/launch-score/product-score-control'
 
 // 日志函数
 function log(message: string) {
@@ -275,7 +275,7 @@ async function urlSwapSchedulerTask() {
 
   try {
     // 直接调用内部触发函数
-    const { triggerAllUrlSwapTasks } = await import('./lib/url-swap-scheduler')
+    const { triggerAllUrlSwapTasks } = await import('./lib/url-swap/url-swap-scheduler')
     const result = await triggerAllUrlSwapTasks()
 
     log(
@@ -542,7 +542,7 @@ async function exchangeRatesDailyTask() {
   }
   try {
     const { getExchangeRateApiKey, syncExchangeRatesFromRemote } =
-      await import('./lib/exchange-rates-service')
+      await import('./lib/common/exchange-rates-service')
     if (!getExchangeRateApiKey()) {
       log('⏭️  USD 汇率同步跳过：未配置 EXCHANGE_RATE_API_KEY')
       return
@@ -649,7 +649,7 @@ async function suspendInactiveOrExpiredUserTasksTask() {
 
   try {
     const { suspendBackgroundTasksForInactiveOrExpiredUsers } =
-      await import('./lib/background-task-suspension')
+      await import('./lib/common/background-task-suspension')
     const result = await suspendBackgroundTasksForInactiveOrExpiredUsers({ purgeQueue: true })
 
     log(
@@ -1070,7 +1070,7 @@ async function creativePublishTimeoutAlertTask() {
   )
 
   try {
-    const { checkCreativePublishTimeouts } = await import('./lib/creative-publish-alerts')
+    const { checkCreativePublishTimeouts } = await import('./lib/creatives/creative-publish-alerts')
     const result = await checkCreativePublishTimeouts({
       thresholdMinutes,
       lookbackHours,

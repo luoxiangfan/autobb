@@ -39,7 +39,7 @@ import {
   type BatchProgressErrorDetail,
 } from '@/components/BatchProgressIndicator'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
-import { backupHasCampaignConfig } from '@/lib/campaign-backup-config'
+import { backupHasCampaignConfig } from '@/lib/campaign'
 
 interface CampaignBackup {
   id: number

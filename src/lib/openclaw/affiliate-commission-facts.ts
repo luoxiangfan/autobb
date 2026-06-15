@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db-helpers'
+import { nowFunc } from '@/lib/db'
 import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
 import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
 

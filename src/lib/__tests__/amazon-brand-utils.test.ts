@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractAmazonBrandFromByline } from '@/lib/amazon-brand-utils'
+import { extractAmazonBrandFromByline } from '@/lib/scraping'
 
 describe('extractAmazonBrandFromByline', () => {
   it('extracts brand from German byline text with Store suffix', () => {

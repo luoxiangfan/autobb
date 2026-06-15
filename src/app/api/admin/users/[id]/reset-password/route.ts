@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { hash as bcryptHash } from '@/lib/bcrypt'
+import { hash as bcryptHash } from '@/lib/auth'
 import crypto from 'crypto'
-import { logPasswordReset, UserManagementContext } from '@/lib/audit-logger'
+import { logPasswordReset, UserManagementContext } from '@/lib/common'
 
 // 获取客户端IP地址
 function getClientIP(request: NextRequest): string {

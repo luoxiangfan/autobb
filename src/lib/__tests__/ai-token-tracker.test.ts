@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { estimateTokenCost } from '@/lib/ai-token-tracker'
+import { estimateTokenCost } from '@/lib/ai'
 
 describe('estimateTokenCost', () => {
   it('uses gpt-5.2 pricing (USD per 1M) and converts to CNY', () => {

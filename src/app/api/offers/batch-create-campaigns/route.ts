@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { createCampaign } from '@/lib/campaigns'
+import { createCampaign } from '@/lib/campaign'
 import {
   abandonStalePendingCampaignsForOffer,
   getActiveCampaignConflictForOffer,
-} from '@/lib/campaign-offer-constraint'
+} from '@/lib/campaign'
 
 /**
  * POST /api/offers/batch-create-campaigns

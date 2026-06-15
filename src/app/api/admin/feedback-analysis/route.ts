@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateContent } from '@/lib/gemini'
-import { recordTokenUsage, estimateTokenCost } from '@/lib/ai-token-tracker'
+import { generateContent } from '@/lib/ai'
+import { recordTokenUsage, estimateTokenCost } from '@/lib/ai'
 
 interface Message {
   role: 'user' | 'assistant'

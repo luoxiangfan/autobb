@@ -4,15 +4,15 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { normalizeOfferExtractRequestBody } from '@/lib/autoads-request-normalizers'
-import { resolveExtractionModeInput } from '@/lib/offer-extraction-mode'
-import { resolveExtractPageInput } from '@/lib/offer-extraction-task'
-import { applyOfferUpdateFromBody } from '@/lib/offer-update-from-body'
+import { normalizeOfferExtractRequestBody } from '@/lib/common'
+import { resolveExtractionModeInput } from '@/lib/offers'
+import { resolveExtractPageInput } from '@/lib/offers'
+import { applyOfferUpdateFromBody } from '@/lib/offers'
 import {
   OfferExtractRequestError,
   parseNewOfferExtractRequest,
   validateExistingOfferForExtraction,
-} from '@/lib/offer-extract-request'
+} from '@/lib/offers'
 import { vi, beforeEach } from 'vitest'
 
 vi.mock('@/lib/offers', () => ({
@@ -20,12 +20,12 @@ vi.mock('@/lib/offers', () => ({
   updateOffer: vi.fn(),
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: vi.fn(),
 }))
 
 import { findOfferById, updateOffer } from '@/lib/offers'
-import { invalidateOfferCache } from '@/lib/api-cache'
+import { invalidateOfferCache } from '@/lib/common'
 
 const mockOffer = {
   id: 1,

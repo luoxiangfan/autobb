@@ -35,7 +35,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/products-cache', () => ({
+vi.mock('@/lib/common', () => ({
   buildProductSummaryCacheHash: cacheFns.buildProductSummaryCacheHash,
   buildProductSummaryRouteCacheHash: cacheFns.buildProductSummaryRouteCacheHash,
   getCachedProductSummaryRoute: cacheFns.getCachedProductSummaryRoute,

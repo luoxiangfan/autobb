@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { getSettingsByCategory } from '@/lib/settings'
+import { getSettingsByCategory } from '@/lib/common'
 import { syncOpenclawConfig } from '@/lib/openclaw/config'
 import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
 

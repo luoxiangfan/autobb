@@ -9,7 +9,7 @@ import { getBucketInfo, type OfferKeywordPool, type PoolKeywordData } from '../o
 // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 
-import { normalizeKeywordPoolBucketQuery } from '../creative-type'
+import { normalizeKeywordPoolBucketQuery } from '../creatives'
 import type { BucketType, NormalizedCreativeBucket } from './types'
 import { decodeUriComponentSafe, safeParseJson } from './utils'
 

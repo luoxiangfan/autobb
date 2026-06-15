@@ -1,15 +1,15 @@
 import { getDatabase } from '../db'
-import type { GeneratedAdCreativeData } from '../ad-creative'
+import type { GeneratedAdCreativeData } from '../creatives'
 import type { Offer } from '../offers'
-import { creativeCache, generateCreativeCacheKey } from '../cache'
+import { creativeCache, generateCreativeCacheKey } from '../common'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
   type KeywordPoolExpandLoadResult,
 } from '@/lib/google-ads/accounts/auth/index'
 import { type OfferKeywordPool } from '../offer-keyword-pool' // 🔥 AI语义分类
-import { generateContent, getGeminiMode } from '../gemini'
-import { generateNegativeKeywords } from '../keyword-generator' // 🎯 新增：导入否定关键词生成函数
+import { generateContent, getGeminiMode } from '../ai'
+import { generateNegativeKeywords } from '../keywords' // 🎯 新增：导入否定关键词生成函数
 // 🎯 新增：导入token追踪函数
 // 🎯 v3.0: 导入数据库prompt加载函数
 // 🎯 购买意图评分
@@ -18,17 +18,13 @@ import {
   deduplicateKeywordsWithPriority,
   logDuplicateKeywords,
 } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
-import { getKeywordSourcePriorityScoreFromInput } from '../creative-keyword-source-priority'
+import { getKeywordSourcePriorityScoreFromInput } from '../keywords'
 
-import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
-import {
-  filterKeywordQuality,
-  generateFilterReport,
-  isBrandConcatenation,
-} from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
+import { containsPureBrand, getPureBrandKeywords } from '../keywords'
+import { filterKeywordQuality, generateFilterReport, isBrandConcatenation } from '../keywords' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
-import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keyword-context-filter'
-import { normalizeLanguageCode } from '../language-country-codes'
+import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keywords'
+import { normalizeLanguageCode } from '../common'
 
 import {
   type GoogleAdsPolicyGuardMode,
@@ -658,7 +654,7 @@ export async function generateAdCreative(
   ) {
     try {
       console.log('[Gap Analysis] 开始关键词缺口分析...')
-      const { analyzeKeywordGapsPreGeneration } = await import('../scoring')
+      const { analyzeKeywordGapsPreGeneration } = await import('../launch-score')
 
       const gapAnalysis = await analyzeKeywordGapsPreGeneration({
         offer: offer as any,
@@ -956,7 +952,7 @@ export async function generateAdCreative(
     }
     result.keywords = policySafeGeneratedKeywords.items
 
-    const { filterKeywordQuality } = await import('../keyword-quality-filter')
+    const { filterKeywordQuality } = await import('../keywords')
     const keywordData = result.keywords.map((kw) => ({
       keyword: kw,
       searchVolume: 0,
@@ -1116,7 +1112,7 @@ export async function generateAdCreative(
     )
 
     // 🎯 使用统一服务：确保所有搜索量来自Historical Metrics API（精确匹配）
-    const { getKeywordVolumesForExisting } = await import('@/lib/unified-keyword-service')
+    const { getKeywordVolumesForExisting } = await import('@/lib/keywords')
     const unifiedData = await getKeywordVolumesForExisting({
       baseKeywords: result.keywords,
       country: targetCountry,

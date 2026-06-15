@@ -21,7 +21,7 @@ import {
 import { getQueueManagerForTaskType } from '../queue-routing'
 import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/context'
 import { userHasGoogleAdsMccAssignments } from '@/lib/google-ads/campaign/sync/index'
-import { buildUserExecutionEligibleSql } from '../../user-execution-eligibility'
+import { buildUserExecutionEligibleSql } from '../../campaign'
 
 /**
  * Google Ads 广告系列同步任务数据

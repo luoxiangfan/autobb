@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
-import { zErr } from '@/lib/zod-errors'
+import { zErr } from '@/lib/common'
 
 function parsePossiblyNestedJson(value: unknown, maxDepth = 2): unknown {
   let current = value

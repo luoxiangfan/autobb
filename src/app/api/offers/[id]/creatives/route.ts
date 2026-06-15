@@ -1,13 +1,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findAdCreativesByOfferId } from '@/lib/ad-creative'
+import { findAdCreativesByOfferId } from '@/lib/creatives'
 import { findOfferById } from '@/lib/offers'
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
   normalizeCreativeBucketSlot,
-} from '@/lib/creative-type'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+} from '@/lib/creatives'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 function resolveCreativeIdentity(creative: any): {
   creativeType: 'brand_intent' | 'model_intent' | 'product_intent' | null

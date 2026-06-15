@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { resolveAffiliatePlatformForLink } from '@/lib/affiliate-platform-domain-keywords'
-import { campaignAffiliateAlignedFilterSql } from '@/lib/campaign-affiliate-scope'
+import { resolveAffiliatePlatformForLink } from '@/lib/keywords'
+import { campaignAffiliateAlignedFilterSql } from '@/lib/campaign'
 
 /**
  * GET /api/campaigns/affiliate-platforms

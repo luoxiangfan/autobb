@@ -6,7 +6,7 @@ import {
   isKeywordInProductModelFamily,
   MODEL_INTENT_MIN_KEYWORD_FLOOR,
   supplementModelIntentKeywordsWithFallback,
-} from '../model-intent-family-filter'
+} from '../creatives'
 
 describe('model-intent-family-filter', () => {
   it('extracts current product model family signals from product evidence', () => {

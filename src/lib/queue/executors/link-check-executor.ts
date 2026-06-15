@@ -17,10 +17,10 @@ import {
   createRiskAlertWithDedupMeta,
   dailyLinkCheck,
   refreshActiveRiskAlertContent,
-} from '@/lib/risk-alerts'
+} from '@/lib/optimization'
 import type { DatabaseAdapter } from '@/lib/db'
 import { getDatabase } from '@/lib/db'
-import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
+import { resolveAffiliateLink } from '@/lib/scraping'
 import { analyzeProxyError } from './proxy-error-handler'
 import { pauseClickFarmTasksByOfferId } from '../../click-farm'
 import {

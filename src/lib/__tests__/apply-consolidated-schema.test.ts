@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isIgnorablePostgresSchemaError } from '../apply-consolidated-schema'
+import { isIgnorablePostgresSchemaError } from '../db'
 
 describe('isIgnorablePostgresSchemaError', () => {
   it('accepts duplicate key in English and Chinese messages', () => {

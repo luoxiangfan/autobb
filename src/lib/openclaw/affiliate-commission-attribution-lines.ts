@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { parseJsonField } from '@/lib/json-field'
+import { parseJsonField } from '@/lib/db'
 import {
   extractBrandFromRaw } from '@/lib/openclaw/affiliate-commission-attribution'
 import type { AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission-platform'

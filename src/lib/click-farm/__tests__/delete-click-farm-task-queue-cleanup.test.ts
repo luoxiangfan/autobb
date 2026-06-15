@@ -29,7 +29,7 @@ describe('deleteClickFarmTask queue cleanup', () => {
   })
 
   it('removes pending queue tasks for deleted click-farm task', async () => {
-    const { deleteClickFarmTask } = await import('../../click-farm')
+    const { deleteClickFarmTask } = await import('..')
 
     await deleteClickFarmTask('cf-task-1001', 8)
 

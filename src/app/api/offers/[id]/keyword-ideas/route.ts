@@ -15,12 +15,15 @@ import {
   formatSearchVolume,
   getKeywordMetrics,
 } from '@/lib/google-ads/keyword/planner'
-import { getBrandSearchSuggestions, filterMismatchedGeoKeywords } from '@/lib/google-suggestions'
-import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keyword-intent'
-import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keyword-planner-site-filter'
-import { ensureOfferBrandOfficialSite } from '@/lib/offer-official-site'
-import { normalizeLanguageCode } from '@/lib/language-country-codes'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import {
+  getBrandSearchSuggestions,
+  filterMismatchedGeoKeywords,
+} from '@/lib/keywords/google-suggestions'
+import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords'
+import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keywords'
+import { ensureOfferBrandOfficialSite } from '@/lib/offers'
+import { normalizeLanguageCode } from '@/lib/common'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 /**
  * POST /api/offers/:id/keyword-ideas
@@ -114,7 +117,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     )
 
     // 🔧 修复(2025-12-25): 支持OAuth和服务账号两种认证方式
-    const { getGoogleAdsConfig } = await import('@/lib/keyword-planner')
+    const { getGoogleAdsConfig } = await import('@/lib/keywords')
     const config = await getGoogleAdsConfig(
       numericUserId,
       apiAuth.authType,

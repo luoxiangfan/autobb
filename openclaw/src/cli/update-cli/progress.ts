@@ -5,7 +5,7 @@ import type {
   UpdateStepProgress,
 } from "../../infra/update-runner.js";
 import type { UpdateCommandOptions } from "./shared.js";
-import { formatDurationPrecise } from "../../infra/format-time/format-duration.ts";
+import { formatDurationPrecise } from "../../infra/format-time/format-duration";
 import { defaultRuntime } from "../../runtime.js";
 import { theme } from "../../terminal/theme.js";
 

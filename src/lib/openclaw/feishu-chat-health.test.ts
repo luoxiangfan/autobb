@@ -10,7 +10,7 @@ const dbHelperFns = vi.hoisted(() => ({
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase }))
 
-vi.mock('@/lib/db-helpers', () => ({
+vi.mock('@/lib/db', () => ({
   datetimeMinusHours: dbHelperFns.datetimeMinusHours,
   nowFunc: dbHelperFns.nowFunc }))
 

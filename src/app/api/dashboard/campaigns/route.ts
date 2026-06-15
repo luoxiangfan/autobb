@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { toNumber } from '@/lib/utils'
-import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { toNumber } from '@/lib/common'
+import { withPerformanceMonitoring } from '@/lib/common'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 /**

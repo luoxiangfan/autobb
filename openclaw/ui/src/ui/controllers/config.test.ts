@@ -6,7 +6,7 @@ import {
   saveConfig,
   updateConfigFormValue,
   type ConfigState,
-} from "./config.ts";
+} from "./config";
 
 function createState(): ConfigState {
   return {

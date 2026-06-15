@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { showInfo } from '@/lib/toast-utils'
+import { showInfo } from '@/lib/common'
 import { GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT } from '@/lib/google-ads/campaign/sync-events'
 
 type SsePayload =

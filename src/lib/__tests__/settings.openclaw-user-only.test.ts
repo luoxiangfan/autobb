@@ -10,7 +10,7 @@ vi.mock('../db', () => ({
   }),
 }))
 
-vi.mock('../crypto', () => ({
+vi.mock('../auth', () => ({
   decrypt: (value: string) => `decrypted:${value}`,
   encrypt: (value: string) => value,
   hashPassword: async (value: string) => value,
@@ -18,7 +18,7 @@ vi.mock('../crypto', () => ({
   generateRandomKey: () => 'k',
 }))
 
-import { getUserOnlySettingsByCategory } from '../settings'
+import { getUserOnlySettingsByCategory } from '../common'
 
 describe('getUserOnlySettingsByCategory', () => {
   beforeEach(() => {

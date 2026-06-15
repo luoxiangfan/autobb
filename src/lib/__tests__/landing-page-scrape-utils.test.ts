@@ -13,7 +13,7 @@ vi.mock('bcrypt', () => ({
 
 describe('landing-page-scrape-utils (presell/int funnels)', () => {
   it('treats /int* and /checkout as presell-style urls', async () => {
-    const { isPresellStyleUrl } = await import('../landing-page-scrape-utils')
+    const { isPresellStyleUrl } = await import('../scraping')
     expect(
       isPresellStyleUrl('https://offer.happybirdy.co/wuzutech/smartbirdfeeder/en/us/int1')
     ).toBe(true)
@@ -23,7 +23,7 @@ describe('landing-page-scrape-utils (presell/int funnels)', () => {
   })
 
   it('extracts product name from "Brand - Product" title on funnel pages', async () => {
-    const { extractLandingProductName } = await import('../landing-page-scrape-utils')
+    const { extractLandingProductName } = await import('../scraping')
     const html = `
       <html>
         <head><title>Happy Birdy - Smart Bird Feeder</title></head>
@@ -39,7 +39,7 @@ describe('landing-page-scrape-utils (presell/int funnels)', () => {
   })
 
   it('prefers domain-derived brand over path slug when current brand is missing', async () => {
-    const { refineBrandNameForLandingPage } = await import('../landing-page-scrape-utils')
+    const { refineBrandNameForLandingPage } = await import('../scraping')
     const $ = load('<html><head><title>Some Page</title></head><body></body></html>')
     const refined = refineBrandNameForLandingPage({
       url: 'https://offer.happybirdy.co/wuzutech/smartbirdfeeder/en/us/int1',

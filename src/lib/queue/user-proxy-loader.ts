@@ -7,7 +7,7 @@
  * 重要：代理配置只使用用户自己的配置，不使用全局配置
  */
 
-import { normalizeCountryCode } from '@/lib/language-country-codes'
+import { normalizeCountryCode } from '@/lib/common'
 
 /**
  * 代理配置接口（与settings页面保持一致）
@@ -257,7 +257,7 @@ async function getUserOnlyProxyUrls(userId: number): Promise<ProxyUrlConfig[]> {
     let value = row.value
 
     if (isSensitive && row.encrypted_value) {
-      const { decrypt } = await import('@/lib/crypto')
+      const { decrypt } = await import('@/lib/auth')
       value = decrypt(row.encrypted_value)
     }
 

@@ -1,6 +1,6 @@
 import { sanitizeGoogleAdsAdText } from '@/lib/google-ads/common/ad-text'
-import type { CreativeKeywordUsagePlan } from '../../ad-creative'
-import { getPureBrandKeywords } from '../../brand-keyword-utils'
+import type { CreativeKeywordUsagePlan } from '../../creatives'
+import { getPureBrandKeywords } from '../../keywords'
 import { resolveSoftCopyLanguage } from '../language'
 import { buildHardKeywordHeadlineCandidate, preferredHeadlineSeed } from './hard-retained-contract'
 import { hasBrandAnchorInHeadline, normalizeBrandNameForHeadline } from './headline-candidates'

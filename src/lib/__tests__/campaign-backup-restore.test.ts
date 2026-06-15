@@ -13,8 +13,8 @@ vi.mock('@/lib/db', () => ({
 const mockAbandonStaleForOffers = vi.fn()
 const mockGetConflictsForOffers = vi.fn()
 
-vi.mock('@/lib/campaign-offer-constraint', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/campaign-offer-constraint')>()
+vi.mock('@/lib/campaign', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/campaign')>()
   return {
     ...actual,
     abandonStalePendingCampaignsForOffers: (...args: unknown[]) =>
@@ -26,7 +26,7 @@ vi.mock('@/lib/campaign-offer-constraint', async (importOriginal) => {
 import {
   BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
   validateCampaignBackupsForBatchCreate,
-} from '@/lib/campaign-backup-restore'
+} from '@/lib/campaign'
 
 describe('validateCampaignBackupsForBatchCreate', () => {
   beforeEach(() => {

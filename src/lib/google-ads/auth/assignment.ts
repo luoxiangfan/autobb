@@ -6,7 +6,7 @@
  * - 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
  */
 import { getDatabase } from '../../db'
-import { boolCondition, nowFunc } from '../../db-helpers'
+import { boolCondition, nowFunc } from '../../db'
 import type { GoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
 
 export type GoogleAdsAuthAssignmentMode = 'own' | 'shared_admin'

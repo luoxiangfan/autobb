@@ -51,7 +51,7 @@ vi.mock('@/lib/offer-keyword-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
 }))
 
-vi.mock('@/lib/creative-type', () => ({
+vi.mock('@/lib/creatives', () => ({
   deriveCanonicalCreativeType: creativeTypeFns.deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot: creativeTypeFns.mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType: creativeTypeFns.normalizeCanonicalCreativeType,

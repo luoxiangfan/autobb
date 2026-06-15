@@ -12,7 +12,7 @@ const {
   generateContentMock: vi.fn(),
 }))
 
-vi.mock('../keyword-planner', () => ({
+vi.mock('../keywords', () => ({
   getKeywordSearchVolumes: getKeywordSearchVolumesMock,
 }))
 
@@ -29,12 +29,12 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('../gemini', () => ({
+vi.mock('../ai', () => ({
   generateContent: generateContentMock,
 }))
 
-vi.mock('../prompt-loader', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../prompt-loader')>()
+vi.mock('../ai', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../ai')>()
   return {
     ...actual,
     loadPrompt: vi.fn(async (promptId: string) => {

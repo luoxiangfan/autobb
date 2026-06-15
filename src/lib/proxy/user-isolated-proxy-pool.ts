@@ -12,8 +12,8 @@
 import os from 'os'
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'
-import { getUserOnlySetting } from '../settings'
-import { normalizeCountryCode } from '../language-country-codes'
+import { getUserOnlySetting } from '../common'
+import { normalizeCountryCode } from '../common'
 
 // ============ Types ============
 

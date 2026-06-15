@@ -24,7 +24,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/queue-triggers', () => ({
+vi.mock('@/lib/queue/queue-triggers', () => ({
   triggerDataSync: queueFns.triggerDataSync,
 }))
 

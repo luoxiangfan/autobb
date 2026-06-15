@@ -3,7 +3,7 @@
  * 使用 src/lib/backup.ts 中的核心逻辑
  */
 
-import { backupDatabase } from '../src/lib/backup'
+import { backupDatabase } from '../src/lib/common/backup'
 
 /**
  * 命令行执行

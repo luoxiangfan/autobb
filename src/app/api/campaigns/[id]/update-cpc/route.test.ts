@@ -78,7 +78,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/python-ads-client', () => ({
+vi.mock('@/lib/campaign', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
   updateCampaignPython: pythonFns.updateCampaignPython,
   updateAdGroupPython: pythonFns.updateAdGroupPython,
@@ -97,12 +97,12 @@ vi.mock('@/lib/google-ads/api/tracker', () => ({
   },
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 
-vi.mock('@/lib/redis-client', () => ({
+vi.mock('@/lib/common', () => ({
   getRedisClient: redisFns.getRedisClient,
 }))
 

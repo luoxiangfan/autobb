@@ -1,12 +1,12 @@
 import {
   normalizeCampaignPublishRequestBody,
   normalizeClickFarmTaskRequestBody,
-  normalizeOfferExtractRequestBody } from '@/lib/autoads-request-normalizers'
+  normalizeOfferExtractRequestBody } from '@/lib/common'
 import {
   getCurrencyCodeByCountry,
   getCurrencySymbolByCode,
-  parseMoneyValue } from '@/lib/offer-monetization'
-import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
+  parseMoneyValue } from '@/lib/offers'
+import { pickFirstTwoLetterCountryCode } from '@/lib/common'
 
 type PlainObject = Record<string, any>
 

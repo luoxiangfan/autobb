@@ -6,7 +6,7 @@ import { Loader2, ArrowRight, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { fetchWithRetry } from '@/lib/api-error-handler'
+import { fetchWithRetry } from '@/lib/common'
 
 function LoginForm() {
   const router = useRouter()

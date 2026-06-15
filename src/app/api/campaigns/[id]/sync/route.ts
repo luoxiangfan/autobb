@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findCampaignById, updateCampaign } from '@/lib/campaigns'
+import { findCampaignById, updateCampaign } from '@/lib/campaign'
 import { findGoogleAdsAccountById } from '@/lib/google-ads/accounts/accounts'
 import { createGoogleAdsCampaign } from '@/lib/google-ads/api/api'
 import {
@@ -8,7 +8,7 @@ import {
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { invalidateOfferCache } from '@/lib/api-cache'
+import { invalidateOfferCache } from '@/lib/common'
 
 /**
  * POST /api/campaigns/:id/sync

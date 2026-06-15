@@ -6,7 +6,7 @@
  */
 
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { dateMinusDays, datetimeMinusHours } from '@/lib/db-helpers'
+import { dateMinusDays, datetimeMinusHours } from '@/lib/db'
 
 const AVG_LATENCY_MS_SQL = 'AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)'
 

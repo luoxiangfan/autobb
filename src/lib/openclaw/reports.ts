@@ -6,8 +6,8 @@ import { resolveUserFeishuAccountId } from '@/lib/openclaw/feishu-accounts'
 import { writeDailyReportToBitable, writeDailyReportToDoc } from '@/lib/openclaw/feishu-docs'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import { getStrategyRecommendations, type StrategyRecommendation } from '@/lib/openclaw/strategy-recommendations'
-import { toDbJsonObjectField } from '@/lib/json-field'
-import { createRiskAlert } from '@/lib/risk-alerts'
+import { toDbJsonObjectField } from '@/lib/db'
+import { createRiskAlert } from '@/lib/optimization'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 type DailyReportPayload = {

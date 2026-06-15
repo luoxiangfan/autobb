@@ -1,11 +1,11 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { toBool } from '@/lib/db-helpers'
+import { toBool } from '@/lib/db'
 import {
   buildProductSummaryCacheHash,
   getCachedProductSummary,
   setCachedProductSummary,
   type ProductSummaryCachePayload,
-} from '@/lib/products-cache'
+} from '@/lib/common'
 import { PRODUCT_SCORE_VALIDITY_DAYS, PRODUCT_SCORE_VALIDITY_WINDOW_MS } from './types'
 import type {
   AffiliateLandingPageType,

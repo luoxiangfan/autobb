@@ -1,7 +1,4 @@
-import {
-  AD_STRENGTH_RATING_THRESHOLDS,
-  AD_STRENGTH_SUGGESTION_THRESHOLDS,
-} from '../ad-strength-config'
+import { AD_STRENGTH_RATING_THRESHOLDS, AD_STRENGTH_SUGGESTION_THRESHOLDS } from '../creatives'
 import type { AdStrengthRating } from './types'
 export function scoreToRating(score: number): AdStrengthRating {
   if (score >= AD_STRENGTH_RATING_THRESHOLDS.excellent) return 'EXCELLENT'

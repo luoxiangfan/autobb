@@ -11,13 +11,13 @@ const cacheFns = vi.hoisted(() => ({
   invalidateDashboardCache: vi.fn(),
 }))
 
-vi.mock('@/lib/campaigns', () => ({
+vi.mock('@/lib/campaign', () => ({
   findCampaignById: vi.fn(),
   updateCampaign: campaignFns.updateCampaign,
   deleteCampaign: campaignFns.deleteCampaign,
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 

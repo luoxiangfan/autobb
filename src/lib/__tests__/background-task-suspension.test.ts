@@ -15,7 +15,7 @@ import {
   suspendBackgroundTasksForInactiveOrExpiredUsers,
   suspendUserBackgroundTasks,
   USER_SUSPENDED_TASK_TYPES,
-} from '@/lib/background-task-suspension'
+} from '@/lib/common'
 
 describe('background-task-suspension', () => {
   const exec = vi.fn()

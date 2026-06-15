@@ -6,15 +6,15 @@ import type {
   ChannelsStatusSnapshot,
   CronJob,
   CronStatus,
-} from "../types.ts";
-import { formatRelativeTimestamp } from "../format.ts";
+} from "../types";
+import { formatRelativeTimestamp } from "../format";
 import {
   formatCronPayload,
   formatCronSchedule,
   formatCronState,
   formatNextRun,
-} from "../presenter.ts";
-import { formatBytes, type AgentContext } from "./agents-utils.ts";
+} from "../presenter";
+import { formatBytes, type AgentContext } from "./agents-utils";
 
 function renderAgentContextCard(context: AgentContext, subtitle: string) {
   return html`

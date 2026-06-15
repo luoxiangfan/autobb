@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildCreativeKeywordSet } from '../creative-keyword-set-builder'
+import { buildCreativeKeywordSet } from '../keywords'
 
 const mocks = vi.hoisted(() => ({
   applyKeywordSupplementationOnce: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('../ad-creative-generator/index', () => ({
   applyKeywordSupplementationOnce: mocks.applyKeywordSupplementationOnce,
 }))
 
-vi.mock('../creative-keyword-context-filter', () => ({
+vi.mock('../keywords', () => ({
   filterCreativeKeywordsByOfferContext: (params: any) =>
     mocks.filterCreativeKeywordsByOfferContextDetailed(params).keywords,
   filterCreativeKeywordsByOfferContextDetailed: mocks.filterCreativeKeywordsByOfferContextDetailed,
@@ -21,7 +21,7 @@ vi.mock('../creative-keyword-context-filter', () => ({
     mocks.normalizeCreativeKeywordCandidatesForContextFilter,
 }))
 
-vi.mock('../creative-keyword-selection', () => ({
+vi.mock('../keywords', () => ({
   CREATIVE_BRAND_KEYWORD_RESERVE: 10,
   CREATIVE_KEYWORD_MAX_COUNT: 50,
   selectCreativeKeywords: mocks.selectCreativeKeywords,

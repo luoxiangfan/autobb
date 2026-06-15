@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { showSuccess, showError } from '@/lib/toast-utils'
+import { showSuccess, showError } from '@/lib/common'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { fetchWithRetry } from '@/lib/api-error-handler'
+import { fetchWithRetry } from '@/lib/common'
 
 interface SyncStatus {
   isRunning: boolean

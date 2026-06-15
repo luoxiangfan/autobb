@@ -64,7 +64,7 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   replaceGoogleAdsServiceAccountForUser: serviceAccountFns.replaceGoogleAdsServiceAccountForUser,
 }))
 
-vi.mock('@/lib/crypto', () => ({
+vi.mock('@/lib/auth', () => ({
   encrypt: vi.fn((value: string) => value),
 }))
 

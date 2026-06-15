@@ -49,9 +49,9 @@ import {
   Trash2,
   GripVertical,
 } from 'lucide-react'
-import { showError, showSuccess } from '@/lib/toast-utils'
-import { generateNamingScheme } from '@/lib/naming-convention'
-import { CURRENCY_SYMBOLS, calculateMaxCPC } from '@/lib/currency'
+import { showError, showSuccess } from '@/lib/common'
+import { generateNamingScheme } from '@/lib/campaign/naming-convention'
+import { CURRENCY_SYMBOLS, calculateMaxCPC } from '@/lib/common'
 import {
   inferNegativeKeywordMatchType,
   normalizeNegativeKeywordMatchTypeMap,

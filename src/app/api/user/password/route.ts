@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findUserById } from '@/lib/auth'
-import { verifyPassword, hashPassword } from '@/lib/crypto'
-import { verifyToken } from '@/lib/jwt'
+import { verifyPassword, hashPassword } from '@/lib/auth'
+import { verifyToken } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 
 /**

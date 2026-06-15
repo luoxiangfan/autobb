@@ -30,7 +30,7 @@ vi.mock('@/lib/google-ads/service-account/service-account', async (importOrigina
   }
 })
 
-vi.mock('@/lib/crypto', () => ({
+vi.mock('@/lib/auth', () => ({
   encrypt: vi.fn((value: string) => `enc:${value}`),
 }))
 

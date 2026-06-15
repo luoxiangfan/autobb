@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { dataSyncService } from '@/lib/data-sync-service'
+import { dataSyncService } from '@/lib/campaign'
 
 // 强制动态渲染（使用了request.cookies）
 export const dynamic = 'force-dynamic'

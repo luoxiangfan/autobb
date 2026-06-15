@@ -15,7 +15,7 @@ const campaignRouteAuthFns = vi.hoisted(() => ({
 const oauthAccountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
-import { executeGAQLQueryPython } from '@/lib/python-ads-client'
+import { executeGAQLQueryPython } from '@/lib/campaign'
 
 const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
@@ -52,11 +52,11 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
   resolveGoogleAdsApiAuthFromContext: campaignRouteAuthFns.resolveGoogleAdsApiAuthFromContext,
 }))
 
-vi.mock('@/lib/redis-client', () => ({
+vi.mock('@/lib/common', () => ({
   getRedisClient: vi.fn(() => null),
 }))
 
-vi.mock('@/lib/python-ads-client', () => ({
+vi.mock('@/lib/campaign', () => ({
   executeGAQLQueryPython: vi.fn(),
 }))
 

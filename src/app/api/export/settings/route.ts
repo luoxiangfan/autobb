@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { decrypt } from '@/lib/crypto'
+import { decrypt } from '@/lib/auth'
 import {
   isGoogleAdsCredentialBackedSettingKey,
   overlayGoogleAdsOAuthFieldsForSettingsExport,

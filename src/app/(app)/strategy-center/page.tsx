@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { showError, showSuccess, showWarning } from '@/lib/toast-utils'
+import { showError, showSuccess, showWarning } from '@/lib/common'
 import { Loader2, FlaskConical, RefreshCw } from 'lucide-react'
 
 type StrategyRecommendationType =

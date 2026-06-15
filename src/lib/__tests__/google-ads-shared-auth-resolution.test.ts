@@ -14,7 +14,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/db-helpers', () => ({
+vi.mock('@/lib/db', () => ({
   boolCondition: () => 'is_active = 1',
 }))
 

@@ -8,7 +8,7 @@ import {
   shouldRunPlaywrightReviewDeepScrape,
   shouldRunCompetitorDetailScrapingInAi,
   shouldSkipAmazonCompetitorExtractionOnExtract,
-} from '../offer-extraction-performance'
+} from '../offers'
 
 describe('offer-extraction-performance', () => {
   it('uses mode-specific deep scrape counts', () => {

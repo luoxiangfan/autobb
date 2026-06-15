@@ -4,9 +4,12 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createUrlSwapTask, getUrlSwapTasks, hasUrlSwapTask } from '@/lib/url-swap'
-import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler'
-import type { CreateUrlSwapTaskRequest } from '@/lib/url-swap-types'
-import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from '@/lib/url-swap-link-utils'
+import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
+import type { CreateUrlSwapTaskRequest } from '@/lib/url-swap/url-swap-types'
+import {
+  normalizeAffiliateLinksInput,
+  findInvalidAffiliateLinks,
+} from '@/lib/url-swap/url-swap-link-utils'
 
 function parseBooleanQuery(value: string | null): boolean {
   if (!value) return false

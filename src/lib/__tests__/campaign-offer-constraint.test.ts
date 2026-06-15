@@ -24,7 +24,7 @@ import {
   offerOccupyingCampaignFilterSql,
   offerOccupyingCampaignWhereClause,
   rollbackPendingCampaignAfterEnqueueFailure,
-} from '@/lib/campaign-offer-constraint'
+} from '@/lib/campaign'
 
 describe('campaign-offer-constraint', () => {
   beforeEach(() => {

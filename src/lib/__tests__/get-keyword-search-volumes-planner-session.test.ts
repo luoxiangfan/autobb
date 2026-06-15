@@ -4,7 +4,7 @@ const volumeFns = vi.hoisted(() => ({
   getKeywordSearchVolumes: vi.fn(),
 }))
 
-vi.mock('@/lib/keyword-planner', () => ({
+vi.mock('@/lib/keywords', () => ({
   getKeywordSearchVolumes: volumeFns.getKeywordSearchVolumes,
 }))
 

@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { toNumber } from '@/lib/utils'
+import { toNumber } from '@/lib/common'
 
 /**
  * GET /api/optimization/metrics

@@ -1,8 +1,8 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { toNumber } from '@/lib/utils'
+import { getInsertedId } from '@/lib/db'
+import { toNumber } from '@/lib/common'
 
 /**
  * GET /api/ad-strength/analytics

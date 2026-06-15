@@ -56,7 +56,7 @@ vi.mock('@/lib/click-farm/distribution', () => ({
   balanceDistribution: utilFns.balanceDistribution,
 }))
 
-vi.mock('@/lib/timezone-utils', () => ({
+vi.mock('@/lib/common', () => ({
   getTimezoneByCountry: utilFns.getTimezoneByCountry,
   getDateInTimezone: utilFns.getDateInTimezone,
 }))

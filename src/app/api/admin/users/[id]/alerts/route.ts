@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withAuth, AuthenticatedHandler } from '@/lib/auth'
-import { getUserAlerts } from '@/lib/user-sessions'
+import { getUserAlerts } from '@/lib/auth'
 
 /**
  * GET /api/admin/users/[id]/alerts

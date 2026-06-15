@@ -7,4 +7,4 @@ export {
   levenshteinDistance,
   calculateNgramSimilarity,
   getNgrams,
-} from '../text-similarity'
+} from '../creatives'

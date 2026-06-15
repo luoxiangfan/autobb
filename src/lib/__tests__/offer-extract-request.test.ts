@@ -9,7 +9,7 @@ import {
   parseNewOfferExtractRequest,
   resolveValidatedTargetCountry,
   validateExistingOfferForExtraction,
-} from '../offer-extract-request'
+} from '../offers'
 
 describe('resolveValidatedTargetCountry', () => {
   it('normalizes UK to GB', () => {

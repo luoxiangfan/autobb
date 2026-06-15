@@ -3,7 +3,7 @@ import { oauthGetCustomerParams } from '@/lib/google-ads/oauth/customer-params'
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { withRetry } from '../../retry'
+import { withRetry } from '../../common'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
 import {
@@ -102,7 +102,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { createKeywordsPython } = await import('../../python-ads-client')
+    const { createKeywordsPython } = await import('../../campaign')
 
     const adGroupResourceName = `customers/${params.customerId}/adGroups/${params.adGroupId}`
     const keywordInputs = params.keywords

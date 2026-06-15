@@ -45,15 +45,15 @@ vi.mock('@/lib/url-swap', () => ({
   markUrlSwapTargetsRemovedByOfferAccount: markRemovedFns.markUrlSwapTargetsRemovedByOfferAccount,
 }))
 
-vi.mock('@/lib/campaign-offer-tasks', () => ({
+vi.mock('@/lib/campaign', () => ({
   pauseOfferTasks: pauseFns.pauseOfferTasks,
 }))
 
-vi.mock('@/lib/campaign-offer-constraint', () => ({
+vi.mock('@/lib/campaign', () => ({
   hasActiveCampaignForOffer: constraintFns.hasActiveCampaignForOffer,
 }))
 
-vi.mock('@/lib/campaign-state-machine', () => ({
+vi.mock('@/lib/campaign', () => ({
   applyCampaignTransitionByIds: stateMachineFns.applyCampaignTransitionByIds,
 }))
 

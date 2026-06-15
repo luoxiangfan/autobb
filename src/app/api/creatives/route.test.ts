@@ -7,7 +7,7 @@ const adCreativeFns = vi.hoisted(() => ({
   findAdCreativesByUserId: vi.fn(),
 }))
 
-vi.mock('@/lib/ad-creative', () => ({
+vi.mock('@/lib/creatives', () => ({
   findAdCreativesByOfferId: adCreativeFns.findAdCreativesByOfferId,
   findAdCreativesByUserId: adCreativeFns.findAdCreativesByUserId,
 }))

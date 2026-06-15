@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { triggerDataSync } from '@/lib/queue-triggers'
+import { triggerDataSync } from '@/lib/queue/queue-triggers'
 
 /**
  * POST /api/sync/trigger

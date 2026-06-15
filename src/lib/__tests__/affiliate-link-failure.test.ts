@@ -4,7 +4,7 @@ import {
   detectDomainChangeAffiliateFailure,
   isAffiliateLinkExpiredMessage,
   normalizeNestedResolveErrorMessage,
-} from '../affiliate-link-failure'
+} from '../affiliate'
 
 describe('affiliate-link-failure', () => {
   it('detects PartnerBoost invalid-link page', () => {

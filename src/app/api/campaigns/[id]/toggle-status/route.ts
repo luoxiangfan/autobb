@@ -2,16 +2,16 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getDatabase } from '@/lib/db'
-import { findCampaignById } from '@/lib/campaigns'
+import { findCampaignById } from '@/lib/campaign'
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { applyCampaignTransition } from '@/lib/campaign-state-machine'
-import { invalidateDashboardCache } from '@/lib/api-cache'
-import { pauseOfferTasks, resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'
+import { applyCampaignTransition } from '@/lib/campaign'
+import { invalidateDashboardCache } from '@/lib/common'
+import { pauseOfferTasks, resumeOfferTasksOnCampaignEnable } from '@/lib/campaign'
 
 type ToggleStatusBody = {
   status?: string

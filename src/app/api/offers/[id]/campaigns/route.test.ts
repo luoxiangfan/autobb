@@ -68,7 +68,7 @@ vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/python-ads-client', () => ({
+vi.mock('@/lib/campaign', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
 }))
 

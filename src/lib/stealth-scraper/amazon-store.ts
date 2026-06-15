@@ -6,9 +6,9 @@
 
 import { load, type CheerioAPI } from 'cheerio'
 import { Page } from 'playwright'
-import { normalizeBrandName } from '../offer-utils'
-import { getPlaywrightPool } from '../playwright-pool'
-import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
+import { normalizeBrandName } from '../offers'
+import { getPlaywrightPool } from '../scraping'
+import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
 import { isProxyConnectionError } from './proxy-utils'
 import {
   createStealthBrowser,

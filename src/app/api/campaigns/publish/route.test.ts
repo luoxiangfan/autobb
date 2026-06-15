@@ -34,7 +34,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/active-campaigns-query', () => ({
+vi.mock('@/lib/campaign', () => ({
   queryActiveCampaigns: campaignsFns.queryActiveCampaigns,
 }))
 

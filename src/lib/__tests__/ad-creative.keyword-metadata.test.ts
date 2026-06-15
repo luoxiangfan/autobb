@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createAdCreative } from '../ad-creative'
+import { createAdCreative } from '../creatives'
 
 const dbState = vi.hoisted(() => ({
   queryOne: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('../db', () => ({
   })),
 }))
 
-vi.mock('../search-term-auto-negatives', () => ({
+vi.mock('../keywords', () => ({
   getSearchTermAutoNegativeConfigFromEnv: vi.fn(() => ({
     enabled: false,
     lookbackDays: 7,

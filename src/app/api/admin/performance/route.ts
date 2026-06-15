@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { frontendErrorMonitor, performanceMonitor, webVitalsMonitor } from '@/lib/api-performance'
-import { apiCache } from '@/lib/api-cache'
+import { frontendErrorMonitor, performanceMonitor, webVitalsMonitor } from '@/lib/common'
+import { apiCache } from '@/lib/common'
 
 /**
  * GET /api/admin/performance

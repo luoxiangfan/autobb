@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { updateTaskStatus } from '@/lib/optimization-tasks'
+import { updateTaskStatus } from '@/lib/optimization'
 import { getDatabase } from '@/lib/db'
 
 /**

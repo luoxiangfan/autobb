@@ -15,7 +15,7 @@ import { normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import { assertUserExecutionAllowed } from '@/lib/campaign'
 
 export type OpenclawStrategyTaskData = {
   userId: number

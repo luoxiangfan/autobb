@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getWaitOptimizationStats } from '@/lib/smart-wait-strategy'
+import { getWaitOptimizationStats } from '@/lib/scraping'
 
 /**
  * GET /api/smart-wait/stats

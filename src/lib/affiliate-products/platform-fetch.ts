@@ -2,9 +2,9 @@ import axios from 'axios'
 import { load as loadHtml } from 'cheerio'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { fetchProxyIp } from '@/lib/proxy/fetch-proxy-ip'
-import { generateRandomFingerprint } from '@/lib/browser-fingerprint'
-import { getYeahPromosSessionCookieForSync } from '@/lib/yeahpromos-session'
-import { getSetting, getUserOnlySetting } from '@/lib/settings'
+import { generateRandomFingerprint } from '@/lib/scraping'
+import { getYeahPromosSessionCookieForSync } from '@/lib/affiliate'
+import { getSetting, getUserOnlySetting } from '@/lib/common'
 import type { AffiliateCommissionRateMode, AffiliatePlatform } from './types'
 import type { NormalizedAffiliateProduct } from './types'
 import { ConfigRequiredError } from './types'
@@ -1838,7 +1838,7 @@ export async function fetchYeahPromosPromotableProductsWithMeta(params: {
   })
 
   // 导入session检查函数
-  const { checkYeahPromosSessionValidForSync } = await import('@/lib/yeahpromos-session')
+  const { checkYeahPromosSessionValidForSync } = await import('@/lib/affiliate')
   const sessionCheck = await checkYeahPromosSessionValidForSync(
     params.userId,
     minSessionRemainingMs

@@ -12,7 +12,7 @@ vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   }
 })
 
-import { getGoogleAdsConfig } from '@/lib/keyword-planner'
+import { getGoogleAdsConfig } from '@/lib/keywords'
 
 describe('getGoogleAdsConfig dual-stack guard', () => {
   beforeEach(() => {

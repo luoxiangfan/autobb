@@ -2,10 +2,10 @@ import {
   persistAffiliateCommissionAttributions,
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
-import { nowFunc } from '@/lib/db-helpers'
+import { nowFunc } from '@/lib/db'
 import { getDatabase } from '@/lib/db'
-import { toDbJsonObjectField } from '@/lib/json-field'
-import { serializeJsonPayloadForStorage } from '@/lib/json-payload-compression'
+import { toDbJsonObjectField } from '@/lib/db'
+import { serializeJsonPayloadForStorage } from '@/lib/common'
 import { invalidateAffiliateCommissionReportCache } from '@/lib/openclaw/affiliate-commission-report-cache'
 import { rebuildAffiliateCommissionLineFactsForUserDate } from '@/lib/openclaw/affiliate-commission-raw-report'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'

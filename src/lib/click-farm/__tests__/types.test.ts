@@ -16,7 +16,7 @@ import type {
   SubTask,
   ClickResult,
   ClickFarmNotificationType,
-} from '@/lib/click-farm-types'
+} from '@/lib/click-farm/click-farm-types'
 
 describe('ClickFarm Types', () => {
   describe('ClickFarmTaskStatus', () => {

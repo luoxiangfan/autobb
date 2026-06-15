@@ -3,8 +3,8 @@ import { unlinkOfferFromAccount } from '@/lib/offers'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
-import { parseTruthyFlag } from '@/lib/parse-truthy-flag'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parseTruthyFlag } from '@/lib/common'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 /**
  * POST /api/offers/:id/unlink

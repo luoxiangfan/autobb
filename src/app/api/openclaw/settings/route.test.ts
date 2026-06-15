@@ -19,7 +19,7 @@ const auditFns = vi.hoisted(() => ({
 vi.mock('@/lib/openclaw/request-auth', () => ({
   verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/lib/common', () => ({
   getSettingsByCategory: settingsFns.getSettingsByCategory,
   getUserOnlySettingsByCategory: settingsFns.getUserOnlySettingsByCategory,
   updateSettings: settingsFns.updateSettings }))

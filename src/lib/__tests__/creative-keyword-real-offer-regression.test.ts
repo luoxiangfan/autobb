@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
-import { buildCreativeKeywordSet } from '../creative-keyword-set-builder'
-import { selectCreativeKeywords } from '../creative-keyword-selection'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords'
+import { buildCreativeKeywordSet } from '../keywords'
+import { selectCreativeKeywords } from '../keywords'
 
 type FixtureKeyword = {
   keyword: string

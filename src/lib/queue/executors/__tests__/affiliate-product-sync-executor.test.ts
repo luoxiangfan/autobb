@@ -33,7 +33,7 @@ vi.mock('@/lib/affiliate-products/index', () => ({
   updateAffiliateProductSyncRun: mocks.updateAffiliateProductSyncRun,
 }))
 
-vi.mock('@/lib/products-cache', () => ({
+vi.mock('@/lib/common', () => ({
   buildProductListCacheHash: mocks.buildProductListCacheHash,
   getLatestProductListQuery: mocks.getLatestProductListQuery,
   invalidateProductListCache: mocks.invalidateProductListCache,

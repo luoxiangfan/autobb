@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 let mockDb: any
-let updateOffer: typeof import('../offers').updateOffer
+let updateOffer: typeof import('../offers/task-modal-helpers').updateOffer
 
 const mockGenerateOfferName = vi.fn()
 const mockIsOfferNameUnique = vi.fn()
@@ -11,7 +11,7 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../offer-utils', () => ({
+vi.mock('../offers', () => ({
   generateOfferName: mockGenerateOfferName,
   isOfferNameUnique: mockIsOfferNameUnique,
   getTargetLanguage: mockGetTargetLanguage,
@@ -42,7 +42,7 @@ describe('updateOffer: sync offer_name with brand/country', () => {
     mockGenerateOfferName.mockReset()
     mockIsOfferNameUnique.mockReset()
     mockGetTargetLanguage.mockReset()
-    ;({ updateOffer } = await import('../offers'))
+    ;({ updateOffer } = await import('../offers/task-modal-helpers'))
   })
 
   afterEach(() => {

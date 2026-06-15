@@ -12,8 +12,8 @@ import {
   resolveGoogleAdsCampaignSyncLogOutcome,
 } from '@/lib/google-ads/campaign/sync/index'
 import { markStaleGoogleAdsCampaignSyncLogs } from '@/lib/google-ads/campaign/sync-pipeline-status'
-import { createRiskAlert } from '../../risk-alerts'
-import { utcNowIso } from '../../db-datetime'
+import { createRiskAlert } from '../../optimization'
+import { utcNowIso } from '../../db'
 
 /**
  * Google Ads 广告系列同步任务数据

@@ -10,7 +10,7 @@
  */
 
 import type { Task } from '../types'
-import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
+import { resolveAffiliateLink } from '@/lib/scraping'
 import {
   updateTaskAfterManualAdvance,
   updateTaskAfterSwap,
@@ -21,7 +21,7 @@ import {
   markUrlSwapTargetFailure,
   type UrlSwapErrorType,
 } from '@/lib/url-swap'
-import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap-types'
+import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap/url-swap-types'
 import { getDatabase } from '@/lib/db'
 import {
   updateCampaignFinalUrlSuffix,
@@ -37,12 +37,9 @@ import {
   type GoogleAdsLinkedAccountPrepareCache,
 } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
-import { initializeProxyPool } from '@/lib/offer-utils'
-import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
-import {
-  detectDomainChangeAffiliateFailure,
-  isAffiliateLinkExpiredMessage,
-} from '@/lib/affiliate-link-failure'
+import { initializeProxyPool } from '@/lib/offers'
+import { assertUserExecutionAllowed } from '@/lib/campaign'
+import { detectDomainChangeAffiliateFailure, isAffiliateLinkExpiredMessage } from '@/lib/affiliate'
 
 /**
  * URL域名验证
@@ -865,7 +862,7 @@ async function updateTaskStats(taskId: string, success: boolean, changed: boolea
     return
   }
 
-  const { calculateNextSwapAt } = await import('@/lib/url-swap-time')
+  const { calculateNextSwapAt } = await import('@/lib/url-swap/url-swap-time')
   const nextSwapAt = calculateNextSwapAt(taskRow.swap_interval_minutes)
 
   if (success) {

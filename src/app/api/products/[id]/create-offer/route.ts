@@ -1,11 +1,11 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/zod-errors'
+import { zErr } from '@/lib/common'
 import { createOfferFromAffiliateProduct } from '@/lib/affiliate-products/index'
-import { repairOfferAffiliateLinksFromProducts } from '@/lib/offer-affiliate-link-repair'
-import { invalidateOfferCache } from '@/lib/api-cache'
-import { invalidateProductListCache } from '@/lib/products-cache'
+import { repairOfferAffiliateLinksFromProducts } from '@/lib/offers'
+import { invalidateOfferCache } from '@/lib/common'
+import { invalidateProductListCache } from '@/lib/common'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 const bodySchema = z.object({

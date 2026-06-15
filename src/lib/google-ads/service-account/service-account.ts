@@ -1,6 +1,6 @@
 import { getDatabase } from '../../db'
-import { boolCondition } from '../../db-helpers'
-import { decrypt } from '../../crypto'
+import { boolCondition } from '../../db'
+import { decrypt } from '../../auth'
 import { getGoogleAdsClient } from '@/lib/google-ads/api/api'
 import {
   resolveGoogleAdsCredentialOwnerId,
@@ -176,7 +176,7 @@ export async function replaceGoogleAdsServiceAccountForUser(
   params: ReplaceGoogleAdsServiceAccountParams
 ): Promise<string> {
   const db = await getDatabase()
-  const { nowFunc } = await import('../../db-helpers')
+  const { nowFunc } = await import('../../db')
   const nowSql = nowFunc()
   const id = crypto.randomUUID()
 
@@ -323,7 +323,7 @@ export async function getUnifiedGoogleAdsClient(config: {
       _customerId: config.customerId,
 
       async query(query: string) {
-        const { executeGAQLQueryPython } = await import('../../python-ads-client')
+        const { executeGAQLQueryPython } = await import('../../campaign')
         return executeGAQLQueryPython({
           userId: authConfig.userId,
           serviceAccountId: authConfig.serviceAccountId,

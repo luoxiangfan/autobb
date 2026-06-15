@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { keywordPlannerIdeasBlockedReason } from '@/lib/unified-keyword-service'
-import type { KeywordPlannerSessionAuthResult } from '@/lib/unified-keyword-service'
+import { keywordPlannerIdeasBlockedReason } from '@/lib/keywords'
+import type { KeywordPlannerSessionAuthResult } from '@/lib/keywords'
 
 describe('keywordPlannerIdeasBlockedReason', () => {
   it('returns prepare failure message when session auth failed', () => {

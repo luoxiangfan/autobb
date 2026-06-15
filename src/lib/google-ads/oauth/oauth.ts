@@ -1,5 +1,5 @@
 import { getDatabase } from '../../db'
-import { boolCondition, nowFunc as sqlNowFunc } from '../../db-helpers'
+import { boolCondition, nowFunc as sqlNowFunc } from '../../db'
 import {
   resolveGoogleAdsCredentialOwnerId,
   type GoogleAdsCredentialOwnerResolutionInput,
@@ -488,7 +488,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         serviceAccountId: String(serviceAccount.id),
       })
 
-      const { listAccessibleCustomersPython } = await import('../../python-ads-client')
+      const { listAccessibleCustomersPython } = await import('../../campaign')
 
       try {
         const resourceNames = await listAccessibleCustomersPython({
@@ -519,7 +519,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
           authContext: ctx,
         }
       } catch (error: unknown) {
-        const { formatPythonAdsServiceUnavailableError } = await import('../../python-ads-client')
+        const { formatPythonAdsServiceUnavailableError } = await import('../../campaign')
         const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
         if (serviceUnavailable) {
           logGoogleAdsVerifyError('python_ads_service_unavailable', serviceUnavailable, { userId })

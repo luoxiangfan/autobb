@@ -5,18 +5,18 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClickFarmTask, getClickFarmTasks } from '@/lib/click-farm'
 import { generateDefaultDistribution, validateDistribution } from '@/lib/click-farm/distribution'
-import type { CreateClickFarmTaskRequest, TaskFilters } from '@/lib/click-farm-types'
+import type { CreateClickFarmTaskRequest, TaskFilters } from '@/lib/click-farm/click-farm-types'
 import { getDatabase } from '@/lib/db'
-import { getTimezoneByCountry, getDateInTimezone } from '@/lib/timezone-utils'
+import { getTimezoneByCountry, getDateInTimezone } from '@/lib/common'
 import { enqueueClickFarmTriggerRequest } from '@/lib/click-farm/click-farm-scheduler-trigger'
-import { getAllProxyUrls } from '@/lib/settings'
+import { getAllProxyUrls } from '@/lib/common'
 import { getQueueManagerForTaskType } from '@/lib/queue'
 import { getQueueRoutingDiagnostics } from '@/lib/queue/queue-routing'
 import {
   isBackgroundWorkerAlive,
   getBackgroundWorkerHeartbeatKey,
 } from '@/lib/queue/background-worker-heartbeat'
-import { normalizeClickFarmTaskRequestBody } from '@/lib/autoads-request-normalizers'
+import { normalizeClickFarmTaskRequestBody } from '@/lib/common'
 
 function parseBooleanQuery(value: string | null): boolean {
   if (!value) return false

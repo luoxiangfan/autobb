@@ -300,7 +300,7 @@ export async function updateApiAccessLevel(
 ): Promise<void> {
   const db = await getDatabase()
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
-  const { nowFunc } = await import('../../db-helpers')
+  const { nowFunc } = await import('../../db')
   const updatedAt = nowFunc()
 
   if (authType === 'oauth') {

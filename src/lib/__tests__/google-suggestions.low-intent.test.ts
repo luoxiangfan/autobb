@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterLowIntentKeywords } from '../google-suggestions'
+import { filterLowIntentKeywords } from '../keywords/google-suggestions'
 
 describe('google-suggestions filterLowIntentKeywords', () => {
   it('filters visual-asset and sizing lookup terms', () => {

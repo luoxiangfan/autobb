@@ -1,5 +1,5 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { toDbJsonObjectField } from '@/lib/db'
 import {
   resolveAffiliateAttributionFailureReasonCode,
   type AffiliateAttributionBaseFailureReasonCode,

@@ -33,7 +33,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { toast } from 'sonner'
 import { Loader2, Plus, Trash2, CheckCircle2, Users, Building2, ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/common'
 
 interface User {
   id: number

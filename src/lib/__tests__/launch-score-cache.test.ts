@@ -5,8 +5,8 @@ const createLaunchScoreMock = vi.fn()
 const findLatestLaunchScoreMock = vi.fn()
 const resolveLaunchScoreForCreativeCompareMock = vi.fn()
 
-vi.mock('../launch-scores', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../launch-scores')>()
+vi.mock('../launch-score', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../launch-score')>()
   return {
     ...actual,
     findCachedLaunchScore: (...args: unknown[]) => findCachedLaunchScoreMock(...args),
@@ -17,14 +17,14 @@ vi.mock('../launch-scores', async (importOriginal) => {
   }
 })
 
-import { computeContentHash } from '../launch-scores'
+import { computeContentHash } from '../launch-score'
 import {
   buildLaunchScoreHashes,
   pickBestAdCreativeByScore,
   readLaunchScoreForCreative,
   resolveLaunchScoreGetForCreative,
   saveLaunchScoreWithContentCache,
-} from '../launch-score-cache'
+} from '../launch-score'
 
 describe('buildLaunchScoreHashes', () => {
   const offer = {
@@ -264,7 +264,7 @@ describe('pickBestAdCreativeByScore', () => {
 
 const findAdCreativesByOfferIdMock = vi.fn()
 
-vi.mock('../ad-creative', () => ({
+vi.mock('../creatives', () => ({
   findAdCreativesByOfferId: (...args: unknown[]) => findAdCreativesByOfferIdMock(...args),
 }))
 

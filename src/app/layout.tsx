@@ -3,7 +3,7 @@ import localFont from 'next/font/local'
 import { ToasterProvider } from '@/components/ToasterProvider'
 import FrontendErrorReporter from '@/components/monitoring/FrontendErrorReporter'
 import WebVitalsReporter from '@/components/monitoring/WebVitalsReporter'
-import { getPerformanceReleaseSnapshot, isPerformanceReleaseEnabled } from '@/lib/feature-flags'
+import { getPerformanceReleaseSnapshot, isPerformanceReleaseEnabled } from '@/lib/common'
 import './globals.css'
 
 // ⚡ P0性能优化: 移除全局force-dynamic，按需在各页面单独设置

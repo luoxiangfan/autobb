@@ -24,7 +24,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbMock),
 }))
 
-vi.mock('@/lib/db-helpers', () => ({
+vi.mock('@/lib/db', () => ({
   nowFunc: vi.fn(() => 'NOW()'),
 }))
 
@@ -32,24 +32,24 @@ vi.mock('@/lib/queue/queue-routing', () => ({
   getQueueManagerForTaskType: vi.fn(async () => queueMock),
 }))
 
-vi.mock('@/lib/product-recommendation-scoring', () => ({
+vi.mock('@/lib/ai', () => ({
   calculateHybridProductRecommendationScores: calculateHybridProductRecommendationScoresMock,
 }))
 
-vi.mock('@/lib/product-score-cache', () => ({
+vi.mock('@/lib/launch-score', () => ({
   batchGetCachedProductRecommendationScores: batchGetCachedProductRecommendationScoresMock,
   cacheProductRecommendationScore: cacheProductRecommendationScoreMock,
 }))
 
-vi.mock('@/lib/product-score-coordination', () => ({
+vi.mock('@/lib/launch-score', () => ({
   acquireProductScoreExecutionMutex: acquireProductScoreExecutionMutexMock,
   consumeProductScoreRequeueRequest: consumeProductScoreRequeueRequestMock,
   findExistingProductScoreTask: findExistingProductScoreTaskMock,
   markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
 }))
 
-vi.mock('@/lib/product-score-control', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/product-score-control')>()
+vi.mock('@/lib/launch-score', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/launch-score')>()
   return {
     ...actual,
     isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,

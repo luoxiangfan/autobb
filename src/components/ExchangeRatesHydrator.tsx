@@ -1,7 +1,7 @@
 'use client'
 
 import { useLayoutEffect } from 'react'
-import { setUsdRatesMemoryCache } from '@/lib/exchange-rates-cache'
+import { setUsdRatesMemoryCache } from '@/lib/common'
 
 type ExchangeRatesHydratorProps = {
   rates: Record<string, number>

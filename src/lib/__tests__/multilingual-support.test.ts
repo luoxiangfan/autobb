@@ -12,7 +12,7 @@ import {
   getCountryName,
   getGoogleAdsLanguageCode,
   LANGUAGE_COUNTRY_PAIRS,
-} from '../language-country-codes'
+} from '../common'
 
 describe('多语言支持 - 国际化配置验证', () => {
   describe('语言代码映射', () => {

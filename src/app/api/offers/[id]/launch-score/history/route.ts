@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findLaunchScoresByOfferId, parseLaunchScoreAnalysis } from '@/lib/launch-scores'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { findLaunchScoresByOfferId, parseLaunchScoreAnalysis } from '@/lib/launch-score'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 /**
  * GET /api/offers/[id]/launch-score/history

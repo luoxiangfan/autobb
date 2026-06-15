@@ -16,11 +16,11 @@ vi.mock('@/lib/db', () => ({
   getDatabase: async () => stubDb,
 }))
 
-vi.mock('@/lib/risk-alerts', () => ({
+vi.mock('@/lib/optimization', () => ({
   createRiskAlert: createRiskAlertMock,
 }))
 
-import { checkCreativePublishTimeouts } from '@/lib/creative-publish-alerts'
+import { checkCreativePublishTimeouts } from '@/lib/creatives'
 
 describe('checkCreativePublishTimeouts', () => {
   beforeEach(() => {

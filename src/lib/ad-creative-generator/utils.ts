@@ -8,7 +8,7 @@ import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' 
 // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 
-import { repairJsonText } from '../ai-json'
+import { repairJsonText } from '../ai'
 
 export function safeParseJson(value: any, defaultValue: any = null): any {
   if (value === null || value === undefined) return defaultValue
@@ -280,4 +280,4 @@ export function extractJsonCandidates(text: string): string[] {
   return candidates
 }
 
-export { calculateTextSimilarity, calculateEditDistance, getNgrams } from '../text-similarity'
+export { calculateTextSimilarity, calculateEditDistance, getNgrams } from '../creatives'

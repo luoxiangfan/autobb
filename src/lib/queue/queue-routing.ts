@@ -2,8 +2,8 @@ import type { TaskType } from './types'
 import { isBackgroundTaskType } from './task-category'
 import { getBackgroundQueueManager, getQueueManager } from './unified-queue-manager'
 import type { UnifiedQueueManager } from './unified-queue-manager'
-import { logger } from '@/lib/structured-logger'
-import { isEnvTrue } from '@/lib/env-utils'
+import { logger } from '@/lib/common'
+import { isEnvTrue } from '@/lib/common'
 
 let splitDecisionLogged = false
 let splitMisconfigLogged = false

@@ -3,7 +3,7 @@ import { verifyProductManagementSessionAuth } from '@/lib/openclaw/request-auth'
 import {
   buildYeahPromosCaptureBookmarklet,
   createYeahPromosCaptureChallenge,
-} from '@/lib/yeahpromos-session'
+} from '@/lib/affiliate'
 
 function normalizeHost(rawHost: string | null | undefined): string | null {
   const host = String(rawHost || '').trim()

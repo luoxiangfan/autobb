@@ -26,7 +26,7 @@ describe('disableUrlSwapTask queue cleanup', () => {
   })
 
   it('removes pending queue tasks for disabled url-swap task', async () => {
-    const { disableUrlSwapTask } = await import('../../url-swap')
+    const { disableUrlSwapTask } = await import('..')
 
     await disableUrlSwapTask('us-task-1001', 8)
 

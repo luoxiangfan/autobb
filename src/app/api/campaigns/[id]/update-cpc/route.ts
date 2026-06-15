@@ -7,10 +7,10 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import { getDatabase } from '@/lib/db'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { executeGAQLQueryPython, updateCampaignPython } from '@/lib/python-ads-client'
+import { executeGAQLQueryPython, updateCampaignPython } from '@/lib/campaign'
 import { normalizeGoogleAdsApiUpdateOperations } from '@/lib/google-ads/common/mutate-helpers'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/api-cache'
+import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/common'
 
 function extractSearchResults(result: any): any[] {
   if (Array.isArray(result)) return result
@@ -64,7 +64,7 @@ async function mutateResources(
 ): Promise<void> {
   if (isServiceAccount) {
     // 服务账号模式：使用 Python 服务更新
-    const { updateCampaignPython, updateAdGroupPython } = await import('@/lib/python-ads-client')
+    const { updateCampaignPython, updateAdGroupPython } = await import('@/lib/campaign')
 
     for (const op of operations) {
       const resourceName = op.update.resource_name
@@ -404,7 +404,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
           }
         }
         try {
-          const { getRedisClient } = await import('@/lib/redis-client')
+          const { getRedisClient } = await import('@/lib/common')
           const redis = getRedisClient()
           if (redis) {
             const cacheKey = `cpc:history:v2:user:${numericUserId}:campaign:${campaignIdNum}`

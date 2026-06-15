@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { showSuccess } from '@/lib/toast-utils'
+import { showSuccess } from '@/lib/common'
 
 export default function ChangePasswordPage() {
   const router = useRouter()

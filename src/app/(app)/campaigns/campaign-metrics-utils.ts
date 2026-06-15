@@ -1,5 +1,5 @@
-import { formatCurrency as formatCurrencyDashboard } from '@/lib/utils'
-import { convertCurrency } from '@/lib/currency'
+import { formatCurrency as formatCurrencyDashboard } from '@/lib/common'
+import { convertCurrency } from '@/lib/common'
 import type { Campaign } from './types'
 
 export const roundTo2 = (value: number): number => Math.round(value * 100) / 100

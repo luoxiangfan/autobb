@@ -16,7 +16,7 @@ vi.mock('@/lib/google-ads/accounts/cache', () => ({
   upsertAccount: upsertFns.upsertAccount,
 }))
 
-vi.mock('@/lib/python-ads-client', () => ({
+vi.mock('@/lib/campaign', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
 }))
 

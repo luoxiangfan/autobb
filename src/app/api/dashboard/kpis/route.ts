@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { apiCache, generateCacheKey } from '@/lib/api-cache'
-import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { apiCache, generateCacheKey } from '@/lib/common'
+import { withPerformanceMonitoring } from '@/lib/common'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
-import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
-import { convertCurrency } from '@/lib/currency'
+import { isPerformanceReleaseEnabled } from '@/lib/common'
+import { convertCurrency } from '@/lib/common'
 
 /**
  * KPI数据响应

@@ -6,7 +6,7 @@ import {
   createOptimizationEngine,
   OptimizationRulesEngine,
   type CampaignMetrics,
-} from '../optimization-rules'
+} from '../optimization'
 
 describe('OptimizationRulesEngine', () => {
   let engine: OptimizationRulesEngine

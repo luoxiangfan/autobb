@@ -4,7 +4,7 @@
  * Proxy connection detection, retry logic, and backoff strategies
  */
 
-import { getPlaywrightPool } from '../playwright-pool'
+import { getPlaywrightPool } from '../scraping'
 
 /**
  * 🔥 P1优化：判断是否为代理连接错误（全局可用）

@@ -22,7 +22,7 @@ import {
   invalidateProductListCache,
   type ProductListCachePayload,
   setCachedProductList,
-} from '@/lib/products-cache'
+} from '@/lib/common'
 import { getDatabase } from '@/lib/db'
 
 export type AffiliateProductSyncTaskData = {

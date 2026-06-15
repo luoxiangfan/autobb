@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseClickFarmTask } from '../../click-farm'
+import { parseClickFarmTask } from '..'
 
 describe('parseClickFarmTask', () => {
   it('normalizes DATE/TIMESTAMP fields to strings', () => {

@@ -1,5 +1,5 @@
 import { findUserById } from '@/lib/auth'
-import { generateToken } from '@/lib/jwt'
+import { generateToken } from '@/lib/auth'
 
 type CachedUser = {
   user: { id: number; email: string; role: string; package_type: string }

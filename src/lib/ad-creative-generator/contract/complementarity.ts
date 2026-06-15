@@ -1,4 +1,4 @@
-import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../../ad-creative'
+import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../../creatives'
 import { resolveSoftCopyLanguage } from '../language'
 import { detectKeywordIntentsForPrompt } from '../prompts'
 import type { NormalizedCreativeBucket } from '../types'

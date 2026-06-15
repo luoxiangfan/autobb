@@ -8,24 +8,24 @@
  */
 
 import type { Task } from '../types'
-import { extractOffer } from '@/lib/offer-extraction-core'
+import { extractOffer } from '@/lib/offers'
 import {
   getOfferExtractionModeProfile,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offer-extraction-mode'
+} from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
-import { executeAIAnalysis } from '@/lib/ai-analysis-service'
-import { getTargetLanguage, normalizeBrandName } from '@/lib/offer-utils'
+import { executeAIAnalysis } from '@/lib/ai'
+import { getTargetLanguage, normalizeBrandName } from '@/lib/offers'
 import { createOffer, updateOfferScrapeStatus, updateOffer } from '@/lib/offers'
-import type { BrandSearchSupplement, SerpSitelink } from '@/lib/google-brand-search'
-import { deriveCategoryFromScrapedData } from '@/lib/offer-category'
-import { filterNavigationLabels } from '@/lib/scrape-text-filters'
-import { parsePrice } from '@/lib/pricing-utils'
-import { toDbJsonObjectField } from '@/lib/json-field'
-import { extractScenariosFromReviews } from '@/lib/scenario-extractor'
-import { syncScrapedProductsFromExtractData } from '@/lib/offer-scraped-products-sync'
-import { stripTrailingCountryCodeSuffix } from '@/lib/brand-suffix-utils'
+import type { BrandSearchSupplement, SerpSitelink } from '@/lib/keywords'
+import { deriveCategoryFromScrapedData } from '@/lib/offers'
+import { filterNavigationLabels } from '@/lib/scraping'
+import { parsePrice } from '@/lib/common'
+import { toDbJsonObjectField } from '@/lib/db'
+import { extractScenariosFromReviews } from '@/lib/creatives'
+import { syncScrapedProductsFromExtractData } from '@/lib/offers'
+import { stripTrailingCountryCodeSuffix } from '@/lib/keywords'
 
 function mergeUniqueStrings(
   primary: string[] | null | undefined,

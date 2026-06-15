@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { load } from 'cheerio'
-import { normalizeBrandName } from '@/lib/offer-utils'
-import { refineBrandNameForLandingPage } from '@/lib/landing-page-scrape-utils'
+import { normalizeBrandName } from '@/lib/offers'
+import { refineBrandNameForLandingPage } from '@/lib/scraping'
 
 describe('normalizeBrandName', () => {
   it('normalizes BJ’s/BJ\'s/bjs to "BJs"', () => {

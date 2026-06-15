@@ -5,7 +5,7 @@ const mockedEligibility = vi.hoisted(() => ({
   isUserExecutionSuspendedError: vi.fn((error: any) => error?.code === 'USER_EXECUTION_SUSPENDED'),
 }))
 
-vi.mock('@/lib/user-execution-eligibility', () => ({
+vi.mock('@/lib/campaign', () => ({
   assertUserExecutionAllowed: mockedEligibility.assertUserExecutionAllowed,
   isUserExecutionSuspendedError: mockedEligibility.isUserExecutionSuspendedError,
   USER_EXECUTION_SUSPENDED_ERROR_CODE: 'USER_EXECUTION_SUSPENDED',

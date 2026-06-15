@@ -2,18 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { showSuccess } from '@/lib/toast-utils'
+import { showSuccess } from '@/lib/common'
 import {
   buildLaunchScoreApiQueryString,
   buildLaunchScorePagePath,
   resolveLaunchScoreHashCampaignConfigForClient,
   type LaunchScoreHashCampaignConfigClient,
-} from '@/lib/launch-score-campaign-config-client'
-import type {
-  LaunchScorePerformanceApiPayload,
-  PredictionComparison,
-} from '@/lib/launch-score-performance'
-import { formatCurrency } from '@/lib/currency'
+} from '@/lib/launch-score'
+import type { LaunchScorePerformanceApiPayload, PredictionComparison } from '@/lib/launch-score'
+import { formatCurrency } from '@/lib/common'
 
 /**
  * Launch Score v4.0 - 4维度评分系统

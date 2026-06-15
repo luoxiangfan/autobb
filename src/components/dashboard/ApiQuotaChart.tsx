@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Activity, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react'
-import { safeToFixed } from '@/lib/utils'
+import { safeToFixed } from '@/lib/common'
 
 interface ApiQuotaData {
   today: {

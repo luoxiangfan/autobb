@@ -3,7 +3,7 @@ import {
   consumeYeahPromosCaptureChallenge,
   saveYeahPromosSessionCookie,
   validateYeahPromosCaptureToken,
-} from '@/lib/yeahpromos-session'
+} from '@/lib/affiliate'
 
 function escapeHtml(value: string): string {
   return value

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { validateAffiliateSyncConfig } from '@/lib/affiliate-sync-validation'
+import { validateAffiliateSyncConfig } from '@/lib/affiliate'
 
 describe('validateAffiliateSyncConfig partnerboost', () => {
   const fetchMock = vi.fn()

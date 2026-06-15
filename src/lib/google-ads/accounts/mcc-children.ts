@@ -64,7 +64,7 @@ export async function processMccChildAccounts(
   let mccApiRequestCount = 0
 
   try {
-    const { executeGAQLQueryPython } = await import('@/lib/python-ads-client')
+    const { executeGAQLQueryPython } = await import('@/lib/campaign')
 
     let customerForQuery = managerCustomer
     if (!ctx.isServiceAccount) {

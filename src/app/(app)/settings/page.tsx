@@ -40,19 +40,19 @@ import {
   AlertCircle,
   BookOpen,
 } from 'lucide-react'
-import { getCountryOptionsForUI } from '@/lib/language-country-codes'
+import { getCountryOptionsForUI } from '@/lib/common'
 import {
   GEMINI_ACTIVE_MODEL,
   RELAY_GPT_52_MODEL,
   isModelSupportedByProvider,
   normalizeModelForProvider,
-} from '@/lib/gemini-models'
-import { getGeminiEndpoint, type GeminiProvider } from '@/lib/gemini-config'
+} from '@/lib/ai'
+import { getGeminiEndpoint, type GeminiProvider } from '@/lib/ai'
 import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
   getFixedAffiliateSyncSettingValue,
-} from '@/lib/affiliate-sync-config'
+} from '@/lib/affiliate'
 import {
   GOOGLE_ADS_CATEGORY_FIELDS,
   GOOGLE_ADS_SETTING_METADATA,

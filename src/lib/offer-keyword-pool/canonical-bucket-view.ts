@@ -3,16 +3,16 @@
  */
 import { getDatabase } from '../db'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { containsPureBrand, isPureBrandKeyword } from '../brand-keyword-utils'
-import { filterCreativeKeywordsByOfferContextDetailed } from '../creative-keyword-context-filter'
-import { hasModelAnchorEvidence, type CanonicalCreativeType } from '../creative-type'
-import { classifyKeywordIntent } from '../keyword-intent'
+import { containsPureBrand, isPureBrandKeyword } from '../keywords'
+import { filterCreativeKeywordsByOfferContextDetailed } from '../keywords'
+import { hasModelAnchorEvidence, type CanonicalCreativeType } from '../creatives'
+import { classifyKeywordIntent } from '../keywords'
 import {
   buildProductModelFamilyContext,
   buildProductModelFamilyFallbackKeywords,
   filterKeywordObjectsByProductModelFamily,
   MODEL_INTENT_MIN_KEYWORD_FLOOR,
-} from '../model-intent-family-filter'
+} from '../creatives'
 import {
   getKeywordSourcePriorityForPoolItem,
   normalizeMatchTypePriority,

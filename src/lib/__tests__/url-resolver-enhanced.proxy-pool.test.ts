@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { ProxyPoolManager } from '../url-resolver-enhanced'
+import { ProxyPoolManager } from '../scraping'
 
 describe('ProxyPoolManager failure classification', () => {
   it('treats HTTP status code errors as temporary failures', async () => {

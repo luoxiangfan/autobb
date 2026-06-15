@@ -41,7 +41,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/campaigns', () => ({
+vi.mock('@/lib/campaign', () => ({
   findCampaignById: campaignFns.findCampaignById,
 }))
 
@@ -58,15 +58,15 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/campaign-state-machine', () => ({
+vi.mock('@/lib/campaign', () => ({
   applyCampaignTransition: transitionFns.applyCampaignTransition,
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 
-vi.mock('@/lib/campaign-offer-tasks', () => ({
+vi.mock('@/lib/campaign', () => ({
   pauseOfferTasks: offerTaskFns.pauseOfferTasks,
   resumeOfferTasksOnCampaignEnable: offerTaskFns.resumeOfferTasksOnCampaignEnable,
 }))

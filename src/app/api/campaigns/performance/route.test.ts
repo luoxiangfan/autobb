@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/campaigns/performance/route'
-import { convertCurrency } from '@/lib/currency'
+import { convertCurrency } from '@/lib/common'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -25,13 +25,13 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/campaigns-read-cache', () => ({
+vi.mock('@/lib/campaign', () => ({
   buildCampaignPerformanceCacheHash: campaignCacheFns.buildCampaignPerformanceCacheHash,
   getCachedCampaignPerformance: campaignCacheFns.getCachedCampaignPerformance,
   setCachedCampaignPerformance: campaignCacheFns.setCachedCampaignPerformance,
 }))
 
-vi.mock('@/lib/feature-flags', () => ({
+vi.mock('@/lib/common', () => ({
   isPerformanceReleaseEnabled: vi.fn((flag: string) => flag !== 'campaignsParallel'),
 }))
 

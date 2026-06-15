@@ -1,6 +1,6 @@
 import os from "node:os";
 import { defineConfig } from "vitest/config";
-import baseConfig from "./vitest.config.ts";
+import baseConfig from "./vitest.config";
 
 const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
 const cpuCount = os.cpus().length;

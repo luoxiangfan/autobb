@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { getCreativePerformance } from '@/lib/bonus-score-calculator'
+import { getCreativePerformance } from '@/lib/launch-score'
 
 export const dynamic = 'force-dynamic'
 

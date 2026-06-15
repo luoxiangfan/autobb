@@ -2,7 +2,7 @@ import {
   classifyKeywordIntent,
   isHardNegativeIntent,
   recommendMatchTypeForKeyword,
-} from '../keyword-intent'
+} from '../keywords'
 
 describe('keyword-intent', () => {
   it('classifies review/vs terms as commercial (non-hard-negative)', () => {

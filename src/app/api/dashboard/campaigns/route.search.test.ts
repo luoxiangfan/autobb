@@ -20,7 +20,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/api-performance', () => ({
+vi.mock('@/lib/common', () => ({
   withPerformanceMonitoring: (handler: any) => handler,
 }))
 

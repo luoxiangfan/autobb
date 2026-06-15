@@ -5,12 +5,12 @@ import {
   getOfferExtractionModeProfile,
   normalizeOfferExtractionMode,
   parseExtractionModeFromRequestBody,
-} from '../offer-extraction-mode'
+} from '../offers'
 import {
   getOfferAmazonProductMaxProxyRetries,
   shouldRunCompetitorDetailScrapingInAi,
   shouldSkipAmazonCompetitorExtractionOnExtract,
-} from '../offer-extraction-performance'
+} from '../offers'
 
 describe('offer-extraction-mode', () => {
   it('normalizes aliases', () => {

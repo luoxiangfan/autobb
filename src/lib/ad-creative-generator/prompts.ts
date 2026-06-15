@@ -1,30 +1,30 @@
-import type { CreativeKeywordUsagePlan } from '../ad-creative'
+import type { CreativeKeywordUsagePlan } from '../creatives'
 
 // 🔥 AI语义分类
 // 🎯 新增：导入否定关键词生成函数
 // 🎯 新增：导入token追踪函数
-import { loadPrompt } from '../prompt-loader' // 🎯 v3.0: 导入数据库prompt加载函数
+import { loadPrompt } from '../ai' // 🎯 v3.0: 导入数据库prompt加载函数
 // 🎯 购买意图评分
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
 
-import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
-import { isBrandConcatenation } from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
+import { containsPureBrand, getPureBrandKeywords } from '../keywords'
+import { isBrandConcatenation } from '../keywords' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
-import { normalizeLanguageCode } from '../language-country-codes'
-import { parsePrice } from '../pricing-utils'
+import { normalizeLanguageCode } from '../common'
+import { parsePrice } from '../common'
 import { getGoogleAdsTextEffectiveLength } from '@/lib/google-ads/common/ad-text'
-import { getLocalizedDkiOfficialSuffix, type DkiLocaleOptions } from '../dki-localization'
-import { classifyKeywordIntent } from '../keyword-intent'
-import { resolveNonBrandMinSearchVolumeByBrandKeywordCount } from '../keyword-policy'
+import { getLocalizedDkiOfficialSuffix, type DkiLocaleOptions } from '../creatives'
+import { classifyKeywordIntent } from '../keywords'
+import { resolveNonBrandMinSearchVolumeByBrandKeywordCount } from '../keywords'
 import {
   buildGoogleAdsPolicyPromptGuardrails,
   extractGoogleAdsPolicySensitiveTerms,
   resolveGoogleAdsPolicyGuardMode,
   sanitizeGoogleAdsPolicyText,
 } from '@/lib/google-ads/policy/policy-guard'
-import { createCreativeRuleContext, filterPromptExtrasByRelevance } from '../ad-creative-rule-gate'
+import { createCreativeRuleContext, filterPromptExtrasByRelevance } from '../creatives'
 
-import { normalizeCreativeBucketSlot } from '../creative-type'
+import { normalizeCreativeBucketSlot } from '../creatives'
 import { normalizeCreativeBucketType } from './bucket'
 import {
   RETAINED_KEYWORD_DESCRIPTION_SLOT_START_INDEX,

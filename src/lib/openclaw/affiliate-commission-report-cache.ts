@@ -1,10 +1,10 @@
 import { createHash } from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db-helpers'
+import { nowFunc } from '@/lib/db'
 import {
   compressJsonPayloadText,
   decompressJsonPayloadText,
-  type JsonPayloadCodec } from '@/lib/json-payload-compression'
+  type JsonPayloadCodec } from '@/lib/common'
 import type {
   AffiliateCommissionDateBounds,
   AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'

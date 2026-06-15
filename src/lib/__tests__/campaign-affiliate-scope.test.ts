@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  campaignAffiliateAlignedFilterSql,
-  isCampaignAffiliateAlignedRow,
-} from '@/lib/campaign-affiliate-scope'
+import { campaignAffiliateAlignedFilterSql, isCampaignAffiliateAlignedRow } from '@/lib/campaign'
 
 describe('campaign-affiliate-scope', () => {
   it('campaignAffiliateAlignedFilterSql matches affiliate-platforms occupying + offer filters', () => {

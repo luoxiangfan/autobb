@@ -14,7 +14,7 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/active-campaigns-query', () => ({
+vi.mock('@/lib/campaign', () => ({
   queryActiveCampaigns: campaignsFns.queryActiveCampaigns,
 }))
 

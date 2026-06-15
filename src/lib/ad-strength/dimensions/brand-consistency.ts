@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../../ad-creative'
+import type { HeadlineAsset, DescriptionAsset } from '../../creatives'
 export function calculateBrandContentConsistency(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],

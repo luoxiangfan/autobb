@@ -1,5 +1,5 @@
-export { formatTimeAgo } from "../../infra/format-time/format-relative.ts";
-export { formatDurationPrecise } from "../../infra/format-time/format-duration.ts";
+export { formatTimeAgo } from "../../infra/format-time/format-relative";
+export { formatDurationPrecise } from "../../infra/format-time/format-duration";
 
 export function formatGatewayAuthUsed(
   auth: {

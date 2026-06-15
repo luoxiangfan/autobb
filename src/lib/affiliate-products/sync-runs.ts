@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { getUserOnlySetting } from '@/lib/settings'
+import { getInsertedId } from '@/lib/db'
+import { getUserOnlySetting } from '@/lib/common'
 import type { AffiliatePlatform, SyncMode } from './types'
 import { AFFILIATE_YP_ACCESS_PRODUCTS_TARGET_KEY } from './constants'
 import { roundTo2 } from './parsing'

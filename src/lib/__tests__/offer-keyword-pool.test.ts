@@ -18,12 +18,12 @@ import {
   type OfferKeywordPool,
 } from '../offer-keyword-pool'
 
-import { getPureBrandKeywords, containsPureBrand, isPureBrandKeyword } from '../brand-keyword-utils'
+import { getPureBrandKeywords, containsPureBrand, isPureBrandKeyword } from '../keywords'
 import {
   isBrandIrrelevant,
   filterLowIntentKeywords,
   calculateSearchVolumeThreshold,
-} from '../keyword-quality-filter'
+} from '../keywords'
 
 // Mock 数据
 const mockKeywordPool: OfferKeywordPool = {

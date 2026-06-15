@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
-import { enableAccount } from '@/lib/auth-security'
-import { logAuditEvent, AuditEventType } from '@/lib/audit-logger'
+import { enableAccount } from '@/lib/auth'
+import { logAuditEvent, AuditEventType } from '@/lib/common'
 
 /**
  * POST /api/admin/users/:id/unlock

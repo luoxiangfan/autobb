@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getHostMetricsPayload } from '@/lib/host-metrics'
+import { getHostMetricsPayload } from '@/lib/common'
 
 export const dynamic = 'force-dynamic'
 

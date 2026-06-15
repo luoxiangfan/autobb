@@ -1,19 +1,19 @@
 // 🔥 AI语义分类
-import { generateContent, type ResponseSchema } from '../gemini'
+import { generateContent, type ResponseSchema } from '../ai'
 // 🎯 新增：导入否定关键词生成函数
-import { recordTokenUsage, estimateTokenCost } from '../ai-token-tracker' // 🎯 新增：导入token追踪函数
-import { loadPrompt, interpolateTemplate } from '../prompt-loader' // 🎯 v3.0: 导入数据库prompt加载函数
+import { recordTokenUsage, estimateTokenCost } from '../ai' // 🎯 新增：导入token追踪函数
+import { loadPrompt, interpolateTemplate } from '../ai' // 🎯 v3.0: 导入数据库prompt加载函数
 // 🎯 购买意图评分
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
-import { hasModelAnchorEvidence } from '../creative-type'
+import { hasModelAnchorEvidence } from '../creatives'
 
-import { isCreativeKeywordSupplementThresholdGateEnabled } from '../creative-keyword-feature-flags'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
-import { shouldUseExactMatch, isBrandVariant, isSemanticQuery } from '../keyword-quality-filter'
-import { normalizeLanguageCode } from '../language-country-codes'
-import { repairJsonText } from '../ai-json'
+import { isCreativeKeywordSupplementThresholdGateEnabled } from '../keywords'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords'
+import { shouldUseExactMatch, isBrandVariant, isSemanticQuery } from '../keywords'
+import { normalizeLanguageCode } from '../common'
+import { repairJsonText } from '../ai'
 
-import { classifyKeywordIntent } from '../keyword-intent'
+import { classifyKeywordIntent } from '../keywords'
 
 import { resolveCreativeBucketPoolKeywords } from './bucket'
 import { extractTitleAndAboutSignals } from './prompt-keywords'

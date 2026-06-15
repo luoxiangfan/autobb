@@ -11,7 +11,7 @@ vi.mock('axios', () => {
 describe('resolveAffiliateLinkWithHttp (Amazon 5xx)', () => {
   it('accepts Amazon 503 as resolved final URL after meta refresh', async () => {
     const axios = await import('axios')
-    const { resolveAffiliateLinkWithHttp } = await import('../url-resolver-http')
+    const { resolveAffiliateLinkWithHttp } = await import('../scraping')
 
     const affiliateLink = 'https://yeahpromos.com/index/index/openurlproduct?track=abc&pid=100001'
     const amazonUrl =

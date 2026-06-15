@@ -63,7 +63,7 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getUnifiedGoogleAdsClient: serviceAccountFns.getUnifiedGoogleAdsClient,
 }))
 
-vi.mock('@/lib/python-ads-client', () => ({
+vi.mock('@/lib/campaign', () => ({
   executeGAQLQueryPython: pythonAdsFns.executeGAQLQueryPython,
 }))
 

@@ -1,5 +1,5 @@
 import { html } from "lit";
-import type { AgentIdentityResult, AgentsFilesListResult, AgentsListResult } from "../types.ts";
+import type { AgentIdentityResult, AgentsFilesListResult, AgentsListResult } from "../types";
 import {
   expandToolGroups,
   normalizeToolName,

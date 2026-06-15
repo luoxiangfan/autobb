@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGoogleAuthUrl } from '@/lib/google-oauth'
+import { getGoogleAuthUrl } from '@/lib/auth'
 
 /**
  * GET /api/auth/google

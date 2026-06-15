@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
-import { resolveCreativeKeywordMinimumOutputCount } from '../creative-keyword-output-floor'
-import { hasModelAnchorEvidence } from '../creative-type'
+import { getPureBrandKeywords, isPureBrandKeyword } from '../keywords'
+import { resolveCreativeKeywordMinimumOutputCount } from '../keywords'
+import { hasModelAnchorEvidence } from '../creatives'
 import {
   CREATIVE_BRAND_KEYWORD_RESERVE,
   CREATIVE_KEYWORD_MAX_COUNT,
   CREATIVE_KEYWORD_MAX_WORDS,
   selectCreativeKeywords,
-} from '../creative-keyword-selection'
+} from '../keywords'
 
 describe('creative-keyword-selection', () => {
   it('uses intent-specific minimum output floors', () => {

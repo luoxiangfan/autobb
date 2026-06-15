@@ -38,8 +38,8 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
   GOOGLE_ADS_DUAL_STACK_WARNING: DUAL_STACK_WARNING,
 }))
 
-vi.mock('@/lib/python-ads-client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/python-ads-client')>()
+vi.mock('@/lib/campaign', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/campaign')>()
   return {
     ...actual,
     listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,

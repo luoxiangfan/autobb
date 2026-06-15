@@ -16,7 +16,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/currency'
+import { CURRENCY_SYMBOLS, formatCurrency } from '@/lib/common'
 
 const COLORS = [
   '#6366f1',

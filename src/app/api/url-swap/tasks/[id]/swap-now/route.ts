@@ -3,7 +3,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getUrlSwapTaskById } from '@/lib/url-swap'
-import { triggerUrlSwapScheduling } from '@/lib/url-swap-scheduler'
+import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
 
 interface RouteParams {
   params: Promise<{ id: string }>

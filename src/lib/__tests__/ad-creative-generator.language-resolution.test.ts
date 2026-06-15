@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { GeneratedAdCreativeData } from '../ad-creative'
+import type { GeneratedAdCreativeData } from '../creatives'
 import {
   enforceLanguagePurityGate,
   resolveCreativeTargetLanguage,

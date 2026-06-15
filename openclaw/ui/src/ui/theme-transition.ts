@@ -1,4 +1,4 @@
-import type { ThemeMode } from "./theme.ts";
+import type { ThemeMode } from "./theme";
 
 export type ThemeTransitionContext = {
   element?: HTMLElement | null;

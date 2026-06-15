@@ -1,6 +1,6 @@
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db-helpers'
+import { nowFunc } from '@/lib/db'
 import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'
 import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
@@ -14,9 +14,9 @@ import {
   inferNegativeKeywordMatchType,
   normalizeMatchType,
 } from '@/lib/campaign-publish/negative-keyword-match-type'
-import { normalizeCampaignPublishCampaignConfig } from '@/lib/autoads-request-normalizers'
-import { parseCommissionPayoutValue } from '@/lib/offer-monetization'
-import { pickFirstTwoLetterCountryCode } from '@/lib/two-letter-country-code'
+import { normalizeCampaignPublishCampaignConfig } from '@/lib/common'
+import { parseCommissionPayoutValue } from '@/lib/offers'
+import { pickFirstTwoLetterCountryCode } from '@/lib/common'
 
 export type OpenclawCommandTaskData = {
   runId: string

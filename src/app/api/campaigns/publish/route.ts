@@ -1,29 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
+import { getInsertedId } from '@/lib/db'
 
 import {
   getGoogleAdsAuthContext,
   resolveGoogleAdsAuthReadyFailure,
 } from '@/lib/google-ads/auth/context'
-import { createError, ErrorCode, AppError } from '@/lib/errors'
-import { calculateLaunchScore } from '@/lib/scoring'
-import type { AdCreative } from '@/lib/ad-creative'
-import type { ScoreAnalysis } from '@/lib/launch-scores'
+import { createError, ErrorCode, AppError } from '@/lib/common'
+import { calculateLaunchScore } from '@/lib/launch-score'
+import type { AdCreative } from '@/lib/creatives'
+import type { ScoreAnalysis } from '@/lib/launch-score'
 import {
   buildLaunchScoreHashes,
   enrichCreativeForLaunchScore,
   saveLaunchScoreWithContentCache,
-} from '@/lib/launch-score-cache'
+} from '@/lib/launch-score/launch-score-cache'
 import {
   findCachedLaunchScore,
   parseLaunchScoreAnalysis,
   mapKeywordVolumeForLaunchScore,
   parseKeywordsWithVolumeJson,
-} from '@/lib/launch-scores'
-import { launchScoreHashConfigFromPublishCampaignConfig } from '@/lib/launch-score-campaign-config'
-import { generateNamingScheme, parseAdGroupName } from '@/lib/naming-convention'
+} from '@/lib/launch-score'
+import { launchScoreHashConfigFromPublishCampaignConfig } from '@/lib/launch-score'
+import { generateNamingScheme, parseAdGroupName } from '@/lib/campaign/naming-convention'
 import { buildEffectiveCreative } from '@/lib/campaign-publish/effective-creative'
 import {
   buildAlignedPublishCampaignConfig,
@@ -32,20 +32,20 @@ import {
 } from '@/lib/campaign-publish/aligned-campaign-config'
 import { resolveTaskCampaignKeywords } from '@/lib/campaign-publish/task-keyword-fallback'
 import { isGoogleAdsAccountAccessError } from '@/lib/google-ads/oauth/login-customer'
-import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign-state-machine'
-import { normalizeCampaignPublishRequestBody } from '@/lib/autoads-request-normalizers'
-import { invalidateOfferCache } from '@/lib/api-cache'
+import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign'
+import { normalizeCampaignPublishRequestBody } from '@/lib/common'
+import { invalidateOfferCache } from '@/lib/common'
 import {
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,
   abandonStalePendingCampaignsForOffer,
   getActiveCampaignConflictForOffer,
   isCampaignOfferUniqueViolation,
   rollbackPendingCampaignAfterEnqueueFailure,
-} from '@/lib/campaign-offer-constraint'
+} from '@/lib/campaign'
 import {
   findResumablePublishCampaignForOffer,
   reactivateCampaignForPublishResume,
-} from '@/lib/campaign-publish-resume'
+} from '@/lib/campaign'
 
 const SINGLE_BRAND_PER_ACCOUNT_ENFORCED =
   (process.env.CAMPAIGN_PUBLISH_ENFORCE_SINGLE_BRAND_PER_ACCOUNT || 'true').trim().toLowerCase() !==
@@ -470,7 +470,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 🔍 验证2：查询Google Ads账号中真实激活的广告系列（使用命名规范关联）
-    const { queryActiveCampaigns } = await import('@/lib/active-campaigns-query')
+    const { queryActiveCampaigns } = await import('@/lib/campaign')
     let activeCampaignsResult
     try {
       activeCampaignsResult = await queryActiveCampaigns(
@@ -652,7 +652,7 @@ export async function POST(request: NextRequest) {
       console.log(`   - 属于其他Offer/品牌: ${activeCampaignsResult.otherCampaigns.length}`)
 
       // 批量暂停（串行执行，避免并发冲突）
-      const { pauseCampaigns } = await import('@/lib/active-campaigns-query')
+      const { pauseCampaigns } = await import('@/lib/campaign')
       const pauseResult = await pauseCampaigns(campaignsToPause, resolvedGoogleAdsAccountId, userId)
       pausedOldCampaignsSummary = {
         attemptedCount: pauseResult.attemptedCount,

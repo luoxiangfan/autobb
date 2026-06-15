@@ -3,7 +3,7 @@
  */
 
 import type { Offer } from '../offers'
-import type { GeneratedAdCreativeData, HeadlineAsset, DescriptionAsset } from '../ad-creative'
+import type { GeneratedAdCreativeData, HeadlineAsset, DescriptionAsset } from '../creatives'
 
 /**
  * Mock Offer 数据

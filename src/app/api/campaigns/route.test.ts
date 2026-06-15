@@ -18,7 +18,7 @@ const cacheFns = vi.hoisted(() => ({
   invalidateOfferCache: vi.fn(),
 }))
 
-vi.mock('@/lib/campaigns', () => ({
+vi.mock('@/lib/campaign', () => ({
   createCampaign: campaignFns.createCampaign,
   findCampaignsByUserId: vi.fn(),
   findCampaignsByOfferId: vi.fn(),
@@ -32,7 +32,7 @@ vi.mock('@/lib/google-ads/accounts/accounts', () => ({
   findGoogleAdsAccountById: adsAccountFns.findGoogleAdsAccountById,
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
 }))
 

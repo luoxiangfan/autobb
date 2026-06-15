@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { URL_SWAP_ALLOWED_INTERVALS_MINUTES } from '../url-swap-intervals'
+import { URL_SWAP_ALLOWED_INTERVALS_MINUTES } from '../url-swap/url-swap-intervals'
 
 // Avoid native bcrypt binary issues in test environments (arch mismatch).
 vi.mock('bcrypt', () => {
@@ -17,7 +17,7 @@ vi.mock('bcrypt', () => {
 
 describe('validateTaskConfig', () => {
   it('允许所有配置的换链间隔', async () => {
-    const { validateTaskConfig } = await import('../url-swap-validator')
+    const { validateTaskConfig } = await import('../url-swap/url-swap-validator')
     for (const interval of URL_SWAP_ALLOWED_INTERVALS_MINUTES) {
       const result = validateTaskConfig(interval, 7)
       expect(result.valid).toBe(true)
@@ -25,7 +25,7 @@ describe('validateTaskConfig', () => {
   })
 
   it('拒绝非法换链间隔并给出可选列表', async () => {
-    const { validateTaskConfig } = await import('../url-swap-validator')
+    const { validateTaskConfig } = await import('../url-swap/url-swap-validator')
     const result = validateTaskConfig(7, 7)
     expect(result.valid).toBe(false)
     expect(result.error).toContain('换链间隔必须是以下值之一：')

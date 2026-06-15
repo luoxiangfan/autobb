@@ -4,8 +4,8 @@
  * Base URL scraping and affiliate link resolution
  */
 
-import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
-import { getPlaywrightPool } from '../playwright-pool'
+import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
+import { getPlaywrightPool } from '../scraping'
 import { retryWithBackoff, isProxyConnectionError } from './proxy-utils'
 import {
   createStealthBrowser,
@@ -256,7 +256,7 @@ export async function scrapeUrlWithBrowser(
 
               // 只有当JavaScript成功执行后（a-js=true 或 a-no-js=false）才检测语言
               if (finalPageStatus.hasJsClass || !finalPageStatus.hasNoJsClass) {
-                const { getLanguageCodeForCountry } = await import('../language-country-codes')
+                const { getLanguageCodeForCountry } = await import('../common')
                 const expectedLangCode = getLanguageCodeForCountry(options.targetCountry)
                 const actualLang = finalPageStatus.htmlLang.toLowerCase().split('-')[0] // 'en-gb' -> 'en'
 

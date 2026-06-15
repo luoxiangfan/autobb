@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { sleep } from "../utils.ts";
+import { sleep } from "../utils";
 import {
   removeAckReactionAfterReply,
   shouldAckReaction,

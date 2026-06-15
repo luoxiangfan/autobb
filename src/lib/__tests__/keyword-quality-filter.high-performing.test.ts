@@ -1,4 +1,4 @@
-import { filterKeywordQuality } from '../keyword-quality-filter'
+import { filterKeywordQuality } from '../keywords'
 import type { PoolKeywordData } from '../offer-keyword-pool'
 
 describe('filterKeywordQuality - High Performing Search Terms', () => {

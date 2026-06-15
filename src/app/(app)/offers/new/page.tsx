@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getLanguageNameForCountry, getCountryOptionsForUI } from '@/lib/language-country-codes'
-import { normalizeOfferCommissionInput } from '@/lib/offer-monetization'
+import { getLanguageNameForCountry, getCountryOptionsForUI } from '@/lib/common'
+import { normalizeOfferCommissionInput } from '@/lib/offers'
 
 export default function NewOfferPage() {
   const router = useRouter()

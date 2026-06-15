@@ -4,7 +4,7 @@ const { getSettingMock, getOpenclawGatewayTokenMock } = vi.hoisted(() => ({
   getSettingMock: vi.fn(),
   getOpenclawGatewayTokenMock: vi.fn() }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/lib/common', () => ({
   getSetting: getSettingMock }))
 
 vi.mock('@/lib/openclaw/auth', () => ({

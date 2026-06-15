@@ -14,7 +14,7 @@ import {
   normalizeUsageDisplay,
   resolveResponseUsageMode,
 } from "../auto-reply/thinking.js";
-import { formatRelativeTimestamp } from "../infra/format-time/format-relative.ts";
+import { formatRelativeTimestamp } from "../infra/format-time/format-relative";
 import { normalizeAgentId } from "../routing/session-key.js";
 import { helpText, parseCommand } from "./commands.js";
 import {

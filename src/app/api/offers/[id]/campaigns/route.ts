@@ -18,9 +18,9 @@ import {
   resolveEffectiveServiceAccountId,
   resolveGoogleAdsAuthReadyFailure,
 } from '@/lib/google-ads/auth/context'
-import { executeGAQLQueryPython } from '@/lib/python-ads-client'
+import { executeGAQLQueryPython } from '@/lib/campaign'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 // Google Ads CampaignStatus 枚举值映射
 // https://developers.google.com/google-ads/api/reference/rpc/latest/CampaignStatusEnum.CampaignStatus

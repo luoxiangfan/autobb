@@ -1,5 +1,5 @@
 import { html } from "lit";
-import { UsageSessionEntry, UsageTotals, UsageAggregates } from "./usageTypes.ts";
+import { UsageSessionEntry, UsageTotals, UsageAggregates } from "./usageTypes";
 
 const CHARS_PER_TOKEN = 4;
 

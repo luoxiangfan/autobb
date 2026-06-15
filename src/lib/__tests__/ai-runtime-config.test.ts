@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GEMINI_ACTIVE_MODEL, RELAY_GPT_52_MODEL } from '../gemini-models'
+import { GEMINI_ACTIVE_MODEL, RELAY_GPT_52_MODEL } from '../ai'
 
 type SettingValue = { value: any } | null
 
@@ -13,7 +13,7 @@ function getSettingValue(category: string, key: string, userId: number): Setting
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('../settings', () => ({
+vi.mock('../common', () => ({
   getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
     return getSettingValue(category, key, userId)
   }),

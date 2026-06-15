@@ -2,11 +2,11 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { listOffers } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
-import { boolCondition } from '@/lib/db-helpers'
-import { toNumber } from '@/lib/utils'
-import { apiCache, generateCacheKey } from '@/lib/api-cache'
-import { withPerformanceMonitoring } from '@/lib/api-performance'
-import { parsePositiveIntegerOfferIdList } from '@/lib/parse-offer-id'
+import { boolCondition } from '@/lib/db'
+import { toNumber } from '@/lib/common'
+import { apiCache, generateCacheKey } from '@/lib/common'
+import { withPerformanceMonitoring } from '@/lib/common'
+import { parsePositiveIntegerOfferIdList } from '@/lib/offers'
 
 const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
   'offerName',

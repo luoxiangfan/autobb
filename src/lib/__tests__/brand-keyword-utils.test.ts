@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords'
 
 describe('brand-keyword-utils', () => {
   it('treats spaced tokens as equivalent to concatenated brand', () => {

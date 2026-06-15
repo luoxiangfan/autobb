@@ -14,7 +14,7 @@ import { getGoogleAdsAccountDeleteRemoteConfig } from '@/lib/google-ads/account-
 import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
 import { parseDeleteGoogleAdsAccountRequest } from '@/lib/google-ads/account-delete'
 import { buildDeleteAccountApiWarnings } from '@/lib/google-ads/account-delete'
-import { parseTruthyFlag } from '@/lib/parse-truthy-flag'
+import { parseTruthyFlag } from '@/lib/common'
 import type { GoogleAdsCampaignRemoteActionSummary } from '@/lib/google-ads/campaign/remote-actions'
 
 function emptyGoogleAdsRemoteSummary(): GoogleAdsCampaignRemoteActionSummary {

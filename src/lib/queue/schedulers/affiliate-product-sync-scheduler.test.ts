@@ -29,7 +29,7 @@ vi.mock('../queue-routing', () => ({
   getQueueManagerForTaskType: mocks.getQueueManagerForTaskType,
 }))
 
-vi.mock('../../yeahpromos-session', () => ({
+vi.mock('../../affiliate', () => ({
   isYeahPromosManualSyncOnly: mocks.isYeahPromosManualSyncOnly,
   getYeahPromosSessionState: mocks.getYeahPromosSessionState,
 }))

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GEMINI_ACTIVE_MODEL, RELAY_GPT_52_MODEL } from '../gemini-models'
+import { GEMINI_ACTIVE_MODEL, RELAY_GPT_52_MODEL } from '../ai'
 
 type SettingValue = { value: any } | null
 
@@ -13,7 +13,7 @@ const getSettingValue = (category: string, key: string, userId?: number): Settin
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('../settings', () => ({
+vi.mock('../common', () => ({
   getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
     return getSettingValue(category, key, userId)
   }),
@@ -31,7 +31,7 @@ const axiosGenerate = vi.fn(async (...args: any[]) => {
   }
 })
 
-vi.mock('../gemini-axios', () => ({
+vi.mock('../ai', () => ({
   generateContent: axiosGenerate,
 }))
 
@@ -48,7 +48,7 @@ describe('Gemini relay model lock', () => {
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userId), 'relay-key')
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     const result = await generateContent(
       {
         prompt: 'hello',
@@ -70,7 +70,7 @@ describe('Gemini relay model lock', () => {
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userId), 'relay-key')
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'hello',
@@ -90,7 +90,7 @@ describe('Gemini relay model lock', () => {
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userId), 'relay-key')
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
 
     await generateContent(
       {
@@ -123,7 +123,7 @@ describe('Gemini relay model lock', () => {
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userA), 'relay-key-a')
     settingStore.set(getStoreKey('ai', 'gemini_model', userA), RELAY_GPT_52_MODEL)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
 
     await expect(
       generateContent(
@@ -146,7 +146,7 @@ describe('Gemini relay model lock', () => {
     settingStore.set(getStoreKey('ai', 'gemini_api_key', userId), 'official-key')
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'structured output',
@@ -173,7 +173,7 @@ describe('Gemini relay model lock', () => {
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userId), 'relay-key')
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'structured output',

@@ -41,12 +41,12 @@ import {
   Settings,
   Link2,
 } from 'lucide-react'
-import { CURRENCY_SYMBOLS } from '@/lib/currency'
+import { CURRENCY_SYMBOLS } from '@/lib/common'
 import {
   buildLaunchScorePagePath,
   pickLaunchScoreHashCampaignConfigFromStep3,
-} from '@/lib/launch-score-campaign-config-client'
-import { cn } from '@/lib/utils'
+} from '@/lib/launch-score'
+import { cn } from '@/lib/common'
 
 interface Props {
   offer: any

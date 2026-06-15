@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
-import { generateUpsertSql } from '@/lib/db-helpers'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { generateUpsertSql } from '@/lib/db'
+import { toDbJsonObjectField } from '@/lib/db'
 
 export type AffiliateProductRecord = {
   id: number

@@ -43,7 +43,7 @@ import {
   ArrowDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { getDateInTimezone } from '@/lib/timezone-utils'
+import { getDateInTimezone } from '@/lib/common'
 import ClickFarmTaskModal from '@/components/ClickFarmTaskModal'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import {
@@ -51,8 +51,8 @@ import {
   TableActionIconButton,
   TableActionSlot,
 } from '@/components/ui/table-action-buttons'
-import type { ClickFarmTaskListItem, ClickFarmStats } from '@/lib/click-farm-types'
-import { safeJsonParse } from '@/lib/api-error-handler'
+import type { ClickFarmTaskListItem, ClickFarmStats } from '@/lib/click-farm/click-farm-types'
+import { safeJsonParse } from '@/lib/common'
 
 export default function ClickFarmPage() {
   const router = useRouter()

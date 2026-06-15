@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { encrypt } from '../../crypto'
+import { encrypt } from '../../auth'
 import {
   parseServiceAccountJson,
   replaceGoogleAdsServiceAccountForUser,

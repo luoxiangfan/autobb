@@ -3,9 +3,9 @@ import {
   comparePredictionVsActual,
   generatePerformanceAdjustedRecommendations,
   toLaunchScorePerformanceApiPayload,
-  type PerformanceData,
-} from '../launch-score-performance'
-import type { LaunchScore } from '../launch-scores'
+  type LaunchScoreOfferPerformanceData,
+} from '../launch-score'
+import type { LaunchScore } from '../launch-score'
 
 function scoreRow(overrides: Partial<LaunchScore>): LaunchScore {
   return {
@@ -32,7 +32,7 @@ function scoreRow(overrides: Partial<LaunchScore>): LaunchScore {
   }
 }
 
-const performanceSample: PerformanceData = {
+const performanceSample: LaunchScoreOfferPerformanceData = {
   totalImpressions: 10_000,
   totalClicks: 250,
   totalConversions: 12,
@@ -77,7 +77,7 @@ describe('toLaunchScorePerformanceApiPayload', () => {
 
 describe('generatePerformanceAdjustedRecommendations', () => {
   it('flags low CTR when ratio is below 1%', () => {
-    const lowCtr: PerformanceData = {
+    const lowCtr: LaunchScoreOfferPerformanceData = {
       ...performanceSample,
       avgCtr: 0.005,
       conversionRate: 0.03,
@@ -92,7 +92,7 @@ describe('generatePerformanceAdjustedRecommendations', () => {
   })
 
   it('flags strong CTR when ratio is above 5%', () => {
-    const highCtr: PerformanceData = {
+    const highCtr: LaunchScoreOfferPerformanceData = {
       ...performanceSample,
       avgCtr: 0.06,
     }

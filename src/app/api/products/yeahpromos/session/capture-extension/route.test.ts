@@ -16,7 +16,7 @@ vi.mock('@/lib/openclaw/request-auth', () => ({
   verifyProductManagementSessionAuth: authFns.verifyProductManagementSessionAuth,
 }))
 
-vi.mock('@/lib/yeahpromos-session', () => ({
+vi.mock('@/lib/affiliate', () => ({
   saveYeahPromosSessionCookie: ypSessionFns.saveYeahPromosSessionCookie,
   getYeahPromosSessionState: ypSessionFns.getYeahPromosSessionState,
   maskSessionId: ypSessionFns.maskSessionId,

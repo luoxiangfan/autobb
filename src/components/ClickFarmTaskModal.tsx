@@ -17,13 +17,13 @@ import { Select, SelectContent, SelectItem } from '@/components/ui/select'
 import { Alert } from '@/components/ui/alert'
 import { Loader2, AlertCircle, TrendingUp, RotateCcw, Clock, Globe, Link, Tag } from 'lucide-react'
 import { toast } from 'sonner'
-import { getTimezoneByCountry, getDateInTimezone } from '@/lib/timezone-utils'
-import { BATCH_CLICK_FARM_TASK_DEFAULTS } from '@/lib/batch-task-defaults'
+import { getTimezoneByCountry, getDateInTimezone } from '@/lib/common'
+import { BATCH_CLICK_FARM_TASK_DEFAULTS } from '@/lib/campaign'
 import {
   REFERER_OPTIONS,
   SOCIAL_MEDIA_REFERRERS,
   CreateClickFarmTaskRequest,
-} from '@/lib/click-farm-types'
+} from '@/lib/click-farm/click-farm-types'
 import { balanceDistribution } from '@/lib/click-farm/distribution'
 import HourlyDistributionEditor from '@/components/ui/HourlyDistributionEditor'
 

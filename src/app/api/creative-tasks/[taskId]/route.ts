@@ -7,12 +7,9 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { parseJsonField } from '@/lib/json-field'
-import { normalizeAdCreativeGenerationMode } from '@/lib/ad-creative-generation-mode'
-import {
-  normalizeCreativeTaskError,
-  toCreativeTaskErrorResponseFields,
-} from '@/lib/creative-task-error'
+import { parseJsonField } from '@/lib/db'
+import { normalizeAdCreativeGenerationMode } from '@/lib/creatives'
+import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creatives'
 
 interface CreativeTaskRow {
   id: string

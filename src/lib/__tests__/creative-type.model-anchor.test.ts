@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { hasModelAnchorEvidence } from '../creative-type'
+import { hasModelAnchorEvidence } from '../creatives'
 
 describe('creative-type model anchor detection', () => {
   it('does not treat ASIN-like identifiers as model anchors', () => {

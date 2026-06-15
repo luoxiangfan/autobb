@@ -1,7 +1,7 @@
 import type { Task } from '../types'
 import type { ClickFarmTaskData } from './click-farm-executor'
 import type { ClickFarmBatchTaskData } from '@/lib/click-farm/queue-task-types'
-import { createDateInTimezone, getDateInTimezone } from '@/lib/timezone-utils'
+import { createDateInTimezone, getDateInTimezone } from '@/lib/common'
 import { getQueueManagerForTaskType } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { getHeapStatistics } from 'v8'

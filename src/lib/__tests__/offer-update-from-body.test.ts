@@ -3,19 +3,19 @@ import {
   applyOfferUpdateFromBody,
   pickOfferUpdateBody,
   resolveStoreProductLinksForUpdate,
-} from '../offer-update-from-body'
+} from '../offers'
 
 vi.mock('@/lib/offers', () => ({
   findOfferById: vi.fn(),
   updateOffer: vi.fn(),
 }))
 
-vi.mock('@/lib/api-cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateOfferCache: vi.fn(),
 }))
 
 import { findOfferById, updateOffer } from '@/lib/offers'
-import { invalidateOfferCache } from '@/lib/api-cache'
+import { invalidateOfferCache } from '@/lib/common'
 
 const mockOffer = {
   id: 1,

@@ -46,13 +46,13 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/lib/common', () => ({
   getSetting: settingsFns.getSetting,
   getUserOnlySetting: settingsFns.getUserOnlySetting,
   updateSetting: settingsFns.updateSetting,
 }))
 
-vi.mock('@/lib/offer-utils', () => ({
+vi.mock('@/lib/offers', () => ({
   invalidateProxyPoolCache: offerFns.invalidateProxyPoolCache,
 }))
 

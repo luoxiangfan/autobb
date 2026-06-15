@@ -1,7 +1,7 @@
-import type { GatewayBrowserClient } from "../gateway.ts";
-import type { CronJob, CronRunLogEntry, CronStatus } from "../types.ts";
-import type { CronFormState } from "../ui-types.ts";
-import { toNumber } from "../format.ts";
+import type { GatewayBrowserClient } from "../gateway";
+import type { CronJob, CronRunLogEntry, CronStatus } from "../types";
+import type { CronFormState } from "../ui-types";
+import { toNumber } from "../format";
 
 export type CronState = {
   client: GatewayBrowserClient | null;

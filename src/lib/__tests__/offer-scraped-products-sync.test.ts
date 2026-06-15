@@ -16,7 +16,7 @@ describe('syncScrapedProductsFromExtractData', () => {
   })
 
   it('syncs store products with amazon_store source', async () => {
-    const { syncScrapedProductsFromExtractData } = await import('../offer-scraped-products-sync')
+    const { syncScrapedProductsFromExtractData } = await import('../offers/task-modal-helpers')
     await syncScrapedProductsFromExtractData(1, 2, {
       products: [{ name: 'A', productUrl: 'https://a' }],
       debug: { isAmazonStore: true },
@@ -29,7 +29,7 @@ describe('syncScrapedProductsFromExtractData', () => {
   })
 
   it('syncs single product when productName present without products array', async () => {
-    const { syncScrapedProductsFromExtractData } = await import('../offer-scraped-products-sync')
+    const { syncScrapedProductsFromExtractData } = await import('../offers/task-modal-helpers')
     await syncScrapedProductsFromExtractData(3, 4, {
       productName: 'Widget',
       finalUrl: 'https://amazon.com/dp/X',

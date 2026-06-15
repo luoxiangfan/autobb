@@ -66,7 +66,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/cache', () => ({
+vi.mock('@/lib/common', () => ({
   invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
 }))
 
@@ -75,7 +75,7 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfigMetadata: serviceAccountFns.getServiceAccountConfigMetadata,
 }))
 
-vi.mock('@/lib/redis-client', () => ({
+vi.mock('@/lib/common', () => ({
   getRedisClient: vi.fn(() => null),
 }))
 

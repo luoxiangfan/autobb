@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getGoogleUserInfo } from '@/lib/google-oauth'
+import { getGoogleUserInfo } from '@/lib/auth'
 import { loginWithGoogle } from '@/lib/auth'
-import { createUserSession, getUserAlerts } from '@/lib/user-sessions'
+import { createUserSession, getUserAlerts } from '@/lib/auth'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'

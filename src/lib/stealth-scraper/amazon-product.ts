@@ -4,15 +4,15 @@
  * Single Amazon product page scraping with comprehensive data extraction
  */
 
-import { normalizeBrandName } from '../offer-utils'
-import { parsePrice } from '../pricing-utils' // 🔥 新增：统一价格解析函数
-import { getPlaywrightPool } from '../playwright-pool'
-import { extractAmazonBrandFromByline } from '../amazon-brand-utils'
-import { isLikelyInvalidBrandName } from '../brand-name-utils'
+import { normalizeBrandName } from '../offers'
+import { parsePrice } from '../common' // 🔥 新增：统一价格解析函数
+import { getPlaywrightPool } from '../scraping'
+import { extractAmazonBrandFromByline } from '../scraping'
+import { isLikelyInvalidBrandName } from '../scraping'
 import { isProxyConnectionError } from './proxy-utils'
 import { configureStealthPage, randomDelay } from './browser-stealth'
 import { scrapeUrlWithBrowser } from './core'
-import { smartWaitForLoad } from '../smart-wait-strategy'
+import { smartWaitForLoad } from '../scraping'
 import type { BrowserContext } from 'playwright'
 import type { AmazonProductData } from './types'
 

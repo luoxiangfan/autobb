@@ -3,7 +3,7 @@ import type {
   DescriptionAsset,
   GeneratedAdCreativeData,
   HeadlineAsset,
-} from '../../ad-creative'
+} from '../../creatives'
 import {
   buildLanguageSafeUsagePlan,
   enforceLanguagePurityGate,

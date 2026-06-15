@@ -9,11 +9,11 @@ vi.mock('@/lib/db', () => ({
   getDatabase: async () => ({
     query: hoisted.queryMock }) }))
 
-vi.mock('@/lib/crypto', () => ({
+vi.mock('@/lib/auth', () => ({
   decrypt: hoisted.decryptMock }))
 
-vi.mock('@/lib/settings', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/settings')>('@/lib/settings')
+vi.mock('@/lib/common', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/common')>('@/lib/common')
   return {
     ...actual,
     getUserOnlySetting: hoisted.getUserOnlySettingMock }

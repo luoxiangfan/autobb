@@ -12,7 +12,7 @@ import {
   OFFER_EXTRACTION_MODE_DESCRIPTIONS,
   OFFER_EXTRACTION_MODE_LABELS,
   type OfferExtractionMode,
-} from '@/lib/offer-extraction-mode'
+} from '@/lib/offers'
 
 type OfferExtractionModeFieldProps = {
   id?: string

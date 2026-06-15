@@ -4,15 +4,15 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(),
 }))
 
-vi.mock('@/lib/url-resolver-enhanced', () => ({
+vi.mock('@/lib/scraping', () => ({
   resolveAffiliateLink: vi.fn(),
 }))
 
-vi.mock('@/lib/offer-utils', () => ({
+vi.mock('@/lib/offers', () => ({
   initializeProxyPool: vi.fn(),
 }))
 
-vi.mock('@/lib/user-execution-eligibility', () => ({
+vi.mock('@/lib/campaign', () => ({
   assertUserExecutionAllowed: vi.fn(),
 }))
 
@@ -49,11 +49,11 @@ vi.mock('@/lib/url-swap', () => ({
 }))
 
 import { getDatabase } from '@/lib/db'
-import { resolveAffiliateLink } from '@/lib/url-resolver-enhanced'
-import { initializeProxyPool } from '@/lib/offer-utils'
+import { resolveAffiliateLink } from '@/lib/scraping'
+import { initializeProxyPool } from '@/lib/offers'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads/api/api'
 import { getUrlSwapTaskTargets, recordSwapHistory, setTaskError } from '@/lib/url-swap'
-import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import { assertUserExecutionAllowed } from '@/lib/campaign'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,

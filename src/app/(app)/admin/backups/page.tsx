@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { showSuccess, showError, showConfirm } from '@/lib/toast-utils'
+import { showSuccess, showError, showConfirm } from '@/lib/common'
 
 /**
  * 🔧 修复(2025-12-11): 统一使用 camelCase 字段名

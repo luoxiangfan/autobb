@@ -11,11 +11,11 @@ const redisFns = vi.hoisted(() => ({
   } | null,
 }))
 
-vi.mock('@/lib/redis-client', () => ({
+vi.mock('@/lib/common', () => ({
   getRedisClient: vi.fn(() => redisFns.client),
 }))
 
-import { getRedisClient } from '@/lib/redis-client'
+import { getRedisClient } from '@/lib/common'
 import {
   GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS,
   GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC,

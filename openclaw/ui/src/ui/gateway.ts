@@ -5,9 +5,9 @@ import {
   type GatewayClientMode,
   type GatewayClientName,
 } from "../../../src/gateway/protocol/client-info.js";
-import { clearDeviceAuthToken, loadDeviceAuthToken, storeDeviceAuthToken } from "./device-auth.ts";
-import { loadOrCreateDeviceIdentity, signDevicePayload } from "./device-identity.ts";
-import { generateUUID } from "./uuid.ts";
+import { clearDeviceAuthToken, loadDeviceAuthToken, storeDeviceAuthToken } from "./device-auth";
+import { loadOrCreateDeviceIdentity, signDevicePayload } from "./device-identity";
+import { generateUUID } from "./uuid";
 
 export type GatewayEventFrame = {
   type: "event";

@@ -17,11 +17,11 @@
 
 import { getQueueManager } from './index'
 import { registerAllExecutors } from './executors'
-import { NODE_ENV, REDIS_PREFIX_CONFIG } from '../config'
+import { NODE_ENV, REDIS_PREFIX_CONFIG } from '../common'
 import type { UnifiedQueueManager } from './unified-queue-manager'
 import type { QueueConfig } from './types'
 import { getQueueRoutingDiagnostics } from './queue-routing'
-import { logger } from '@/lib/structured-logger'
+import { logger } from '@/lib/common'
 
 // 🔧 修复(2025-01-01): 防止队列重复初始化
 let __queueInitialized = false

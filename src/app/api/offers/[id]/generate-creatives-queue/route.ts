@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers'
 import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
-import { createError } from '@/lib/errors'
+import { createError } from '@/lib/common'
 import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads/accounts/auth/index'
 import {
   clearCreativeGenerationAuthCache,
@@ -21,14 +21,14 @@ import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-execu
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
   resolveCreativeGenerationRuntime,
-} from '@/lib/ad-creative-generation-mode'
-import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
+} from '@/lib/creatives'
+import { normalizeSingleCreativeSelection } from '@/lib/creatives'
 import {
   normalizeCreativeTaskError,
   toCreativeTaskErrorResponseFields,
   type CreativeTaskErrorCategory,
-} from '@/lib/creative-task-error'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+} from '@/lib/creatives'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 type QueueErrorResponseInput = {
   status: number

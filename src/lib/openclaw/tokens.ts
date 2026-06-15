@@ -1,8 +1,8 @@
 import { getDatabase } from '@/lib/db'
-import { encrypt, generateRandomKey } from '@/lib/crypto'
+import { encrypt, generateRandomKey } from '@/lib/auth'
 import { hashOpenclawToken } from '@/lib/openclaw/auth'
-import { getInsertedId } from '@/lib/db-helpers'
-import { toDbJsonArrayField } from '@/lib/json-field'
+import { getInsertedId } from '@/lib/db'
+import { toDbJsonArrayField } from '@/lib/db'
 
 export type OpenclawTokenRecord = {
   id: number

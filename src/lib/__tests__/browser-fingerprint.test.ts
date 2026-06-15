@@ -4,7 +4,7 @@ import {
   getFingerprintByIndex,
   getUserAgentPoolSize,
   getAllUserAgents,
-} from '../browser-fingerprint'
+} from '../scraping'
 
 describe('Browser Fingerprint', () => {
   describe('generateRandomFingerprint', () => {

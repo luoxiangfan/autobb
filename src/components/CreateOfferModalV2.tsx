@@ -31,11 +31,8 @@ import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Trash2 } from 'lucide-react'
 import ProgressTracker from '@/components/ProgressTracker'
 import { useOfferExtractionV2 } from '@/hooks/useOfferExtractionV2'
-import { getCountryOptionsForUI } from '@/lib/language-country-codes'
-import {
-  getDefaultOfferExtractionMode,
-  type OfferExtractionMode,
-} from '@/lib/offer-extraction-mode'
+import { getCountryOptionsForUI } from '@/lib/common'
+import { getDefaultOfferExtractionMode, type OfferExtractionMode } from '@/lib/offers'
 import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
 
 interface CreateOfferModalV2Props {

@@ -6,7 +6,7 @@ import {
   sanitizePromptBlockValue,
   sanitizePromptInlineValue,
   sanitizeUntrustedInlineText,
-} from '../llm-input-guard'
+} from '../ai'
 
 describe('llm-input-guard', () => {
   it('normalizes and truncates untrusted inline text', () => {

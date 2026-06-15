@@ -14,7 +14,7 @@ vi.mock('../queue-routing', () => ({
   getQueueManagerForTaskType: vi.fn(async () => queueMock),
 }))
 
-vi.mock('@/lib/product-score-coordination', () => ({
+vi.mock('@/lib/launch-score', () => ({
   findExistingProductScoreTask: vi.fn(async (queue: any, userId: number) => {
     await queue.initialize()
     const [running, pending] = await Promise.all([queue.getRunningTasks(), queue.getPendingTasks()])
@@ -23,7 +23,7 @@ vi.mock('@/lib/product-score-coordination', () => ({
   markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
 }))
 
-vi.mock('@/lib/product-score-control', () => ({
+vi.mock('@/lib/launch-score', () => ({
   isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,
   ProductScoreCalculationPausedError: class ProductScoreCalculationPausedError extends Error {},
 }))

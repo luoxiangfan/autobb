@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GEMINI_ACTIVE_MODEL } from '../gemini-models'
+import { GEMINI_ACTIVE_MODEL } from '../ai'
 
 type SettingValue = { value: any } | null
 
@@ -13,7 +13,7 @@ const getSettingValue = (category: string, key: string, userId?: number): Settin
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('../settings', () => ({
+vi.mock('../common', () => ({
   getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
     return getSettingValue(category, key, userId)
   }),
@@ -21,7 +21,7 @@ vi.mock('../settings', () => ({
 
 const axiosGenerate = vi.fn()
 
-vi.mock('../gemini-axios', () => ({
+vi.mock('../ai', () => ({
   generateContent: axiosGenerate,
 }))
 
@@ -49,7 +49,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'test prompt',
@@ -80,7 +80,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
 
     axiosGenerate.mockRejectedValueOnce(maxTokensError)
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
 
     await expect(
       generateContent(
@@ -117,7 +117,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'test prompt',
@@ -154,7 +154,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'return json',
@@ -186,7 +186,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../gemini')
+    const { generateContent } = await import('../ai')
     await generateContent(
       {
         prompt: 'return json',

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { regenerateAdCreative } from '../ad-creative-regenerator'
+import { regenerateAdCreative } from '../creatives'
 
 const offerFns = vi.hoisted(() => ({
   findOfferById: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('../offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
-vi.mock('../ad-creative', () => ({
+vi.mock('../creatives', () => ({
   findAdCreativeById: adCreativeFns.findAdCreativeById,
   createAdCreative: adCreativeFns.createAdCreative,
 }))
@@ -39,7 +39,7 @@ vi.mock('../offer-keyword-pool', () => ({
   resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 
-vi.mock('../bucket-creative-generation-pipeline', () => ({
+vi.mock('../creatives', () => ({
   assertPostGenerationPersistenceGate: vi.fn(),
   formatBucketGenerationRejectedError: (result: {
     selectedEvaluation?: {

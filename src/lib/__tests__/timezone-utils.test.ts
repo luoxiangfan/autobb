@@ -9,7 +9,7 @@ import {
   getHourInTimezone,
   createDateInTimezone,
   getTimezoneByCountry,
-} from '../timezone-utils'
+} from '../common'
 
 describe('Timezone Utilities', () => {
   describe('getDateInTimezone', () => {

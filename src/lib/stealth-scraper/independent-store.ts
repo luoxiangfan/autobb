@@ -11,9 +11,9 @@
  */
 
 import { Page } from 'playwright'
-import { getPlaywrightPool } from '../playwright-pool'
-import { normalizeBrandName } from '../offer-utils'
-import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
+import { getPlaywrightPool } from '../scraping'
+import { normalizeBrandName } from '../offers'
+import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
 import {
   createStealthBrowser,
   releaseBrowser,
@@ -32,8 +32,8 @@ import {
   isPresellStyleUrl,
   getRegistrableDomainLabelFromUrl,
   refineBrandNameForLandingPage,
-} from '../landing-page-scrape-utils'
-import { isLikelyNavigationLabel, normalizeScrapedTextLine } from '../scrape-text-filters'
+} from '../scraping'
+import { isLikelyNavigationLabel, normalizeScrapedTextLine } from '../scraping'
 
 const PROXY_URL = process.env.PROXY_URL || ''
 

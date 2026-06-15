@@ -41,7 +41,7 @@ vi.mock('@/lib/url-swap/queue-cleanup', () => ({
   removePendingUrlSwapQueueTasksByTaskIds: queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds,
 }))
 
-vi.mock('@/lib/url-swap-scheduler', () => ({
+vi.mock('@/lib/url-swap/url-swap-scheduler', () => ({
   triggerUrlSwapScheduling: vi.fn(async () => {}),
 }))
 

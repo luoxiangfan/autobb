@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { getSettingsByCategory } from '@/lib/settings'
+import { getSettingsByCategory } from '@/lib/common'
 import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
 import { collectUserFeishuAccounts } from '@/lib/openclaw/feishu-accounts'
 import { parseAiModelsJson } from '@/lib/openclaw/ai-models'

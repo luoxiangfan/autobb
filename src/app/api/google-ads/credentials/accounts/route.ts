@@ -20,8 +20,8 @@ import {
 } from '@/lib/google-ads/accounts/cache'
 import { syncAccountsFromAPI } from '@/lib/google-ads/accounts/sync'
 import { getDatabase } from '@/lib/db'
-import { toNumber } from '@/lib/utils'
-import { withPerformanceMonitoring } from '@/lib/api-performance'
+import { toNumber } from '@/lib/common'
+import { withPerformanceMonitoring } from '@/lib/common'
 import {
   logGoogleAdsAccountsDebug,
   logGoogleAdsAccountsError,
@@ -36,7 +36,7 @@ import {
   tryStartGoogleAdsAccountAsyncRefresh,
   waitForGoogleAdsAccountAsyncRefreshToSettle,
 } from '@/lib/google-ads/accounts/async-refresh-state'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 // 该接口返回用户私有数据（账号列表/关联Offer），必须禁用任何层面的静态缓存
 export const dynamic = 'force-dynamic'
@@ -818,7 +818,7 @@ async function get(request: NextRequest) {
       )
     }
 
-    const { formatPythonAdsServiceUnavailableError } = await import('@/lib/python-ads-client')
+    const { formatPythonAdsServiceUnavailableError } = await import('@/lib/campaign')
     const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
     if (serviceUnavailable) {
       return jsonNoStore(

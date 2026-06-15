@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { getInsertedId } from '@/lib/db'
+import { toDbJsonObjectField } from '@/lib/db'
 
 export async function createStrategyRun(params: {
   userId: number

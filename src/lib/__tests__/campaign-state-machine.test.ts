@@ -25,7 +25,7 @@ const {
   normalizeCampaignTransitionPatch,
   applyCampaignTransition,
   applyCampaignTransitionByGoogleCampaignIds,
-} = await import('../campaign-state-machine')
+} = await import('../campaign')
 
 describe('campaign-state-machine', () => {
   beforeEach(() => {

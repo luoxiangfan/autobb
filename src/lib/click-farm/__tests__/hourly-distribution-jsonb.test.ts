@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDateInTimezone } from '../../timezone-utils'
+import { getDateInTimezone } from '../../common'
 
 let mockDb: any
 
@@ -26,7 +26,7 @@ describe('getHourlyDistribution JSONB compatibility', () => {
   })
 
   it('supports native jsonb array/object payloads', async () => {
-    const { getHourlyDistribution } = await import('../../click-farm')
+    const { getHourlyDistribution } = await import('..')
     const todayInTaskTimezone = getDateInTimezone(new Date(), 'America/New_York')
     const distribution = Array.from({ length: 24 }, (_, hour) => (hour === 0 ? 3 : 0))
 
@@ -50,7 +50,7 @@ describe('getHourlyDistribution JSONB compatibility', () => {
   })
 
   it('keeps compatibility with legacy json string payloads', async () => {
-    const { getHourlyDistribution } = await import('../../click-farm')
+    const { getHourlyDistribution } = await import('..')
     const todayInTaskTimezone = getDateInTimezone(new Date(), 'America/New_York')
     const distribution = Array.from({ length: 24 }, (_, hour) => (hour === 0 ? 4 : 0))
 

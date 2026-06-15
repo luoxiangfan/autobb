@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { splitSqlStatements } from '@/lib/sql-splitter'
+import { splitSqlStatements } from '@/lib/db'
 
 describe('splitSqlStatements', () => {
   it('splits basic statements', () => {

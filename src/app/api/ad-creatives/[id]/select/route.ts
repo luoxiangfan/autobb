@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { selectAdCreative, findAdCreativeById } from '@/lib/ad-creative'
+import { selectAdCreative, findAdCreativeById } from '@/lib/creatives'
 
 /**
  * POST /api/ad-creatives/[id]/select

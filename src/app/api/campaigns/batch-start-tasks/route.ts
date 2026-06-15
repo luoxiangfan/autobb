@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { batchStartTasksForOffers } from '@/lib/batch-start-tasks'
+import { batchStartTasksForOffers } from '@/lib/campaign'
 import {
   buildBatchStartTasksHttpParts,
   coerceBatchStartTaskFlag,
   logBatchStartTasksHttpOutcome,
   normalizeBatchStartClientRequestId,
   parseBatchStartRequestBody,
-} from '@/lib/batch-start-tasks-route-helpers'
+} from '@/lib/campaign'
 
 /**
  * POST /api/campaigns/batch-start-tasks

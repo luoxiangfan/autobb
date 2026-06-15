@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign-offer-tasks'
+import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign'
 
 function formatResumeErrors(errors: Array<{ type?: string; error?: string }>): string {
   return errors

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { X, Loader2 } from 'lucide-react'
-import { showSuccess, showError } from '@/lib/toast-utils'
+import { showSuccess, showError } from '@/lib/common'
 
 interface EditableCampaignNameProps {
   campaignId: number

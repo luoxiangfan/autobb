@@ -3,26 +3,26 @@ import { clusterKeywordsByIntent } from '../offer-keyword-pool' // 🔥 AI语义
 // 🎯 新增：导入否定关键词生成函数
 // 🎯 新增：导入token追踪函数
 // 🎯 v3.0: 导入数据库prompt加载函数
-import { calculateIntentScore, getIntentLevel } from '../keyword-priority-classifier' // 🎯 购买意图评分
+import { calculateIntentScore, getIntentLevel } from '../keywords' // 🎯 购买意图评分
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
-import { hasModelAnchorEvidence } from '../creative-type'
+import { hasModelAnchorEvidence } from '../creatives'
 import {
   getKeywordSourcePriorityScoreFromInput,
   inferKeywordDerivedTags,
   inferKeywordRawSource,
   normalizeKeywordSourceSubtype,
-} from '../creative-keyword-source-priority'
-import { isCreativeKeywordAiSourceSubtypeEnabled } from '../creative-keyword-feature-flags'
-import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
-import { shouldUseExactMatch, isBrandConcatenation } from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
+} from '../keywords'
+import { isCreativeKeywordAiSourceSubtypeEnabled } from '../keywords'
+import { containsPureBrand, getPureBrandKeywords } from '../keywords'
+import { shouldUseExactMatch, isBrandConcatenation } from '../keywords' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 
-import { classifyKeywordIntent } from '../keyword-intent'
+import { classifyKeywordIntent } from '../keywords'
 import {
   KEYWORD_POLICY,
   getRatioCappedCount,
   resolveNonBrandMinSearchVolumeByBrandKeywordCount,
-} from '../keyword-policy'
+} from '../keywords'
 
 import {
   buildStoreProductCandidatesFromLinks,
@@ -647,7 +647,7 @@ export async function finalizeKeywordsWithSingleExit(
 
   // 高价值通用词提取
   console.log(`\n📌 高价值通用词提取`)
-  const { extractGenericHighValueKeywords } = await import('@/lib/unified-keyword-service')
+  const { extractGenericHighValueKeywords } = await import('@/lib/keywords')
   const extractedGenericKeywords = extractGenericHighValueKeywords(
     keywordsWithVolume,
     offerBrand,

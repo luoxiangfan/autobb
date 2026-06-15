@@ -7,11 +7,11 @@ import type {
   GeneratedKeywordCandidateMetadata,
   HeadlineAsset,
   DescriptionAsset,
-} from '../../ad-creative'
+} from '../../creatives'
 import type { AdCreativeRetryPlan, NormalizedCreativeBucket } from '../types'
-import { type ResponseSchema } from '../../gemini'
+import { type ResponseSchema } from '../../ai'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { hasModelAnchorEvidence } from '../../creative-type'
+import { hasModelAnchorEvidence } from '../../creatives'
 
 import { sanitizeGoogleAdsSymbols } from '@/lib/google-ads/common/ad-text'
 import {
@@ -28,7 +28,7 @@ import {
   MODEL_INTENT_TRANSACTIONAL_MODIFIER_PATTERN,
 } from './text-guardrails'
 
-export type { ResponseSchema } from '../../gemini'
+export type { ResponseSchema } from '../../ai'
 
 export {
   HEADLINE2_INTENT_TOKENS,

@@ -18,12 +18,12 @@ import Stepper, { type Step } from '@/components/ui/stepper'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
-import { showError } from '@/lib/toast-utils'
+import { showError } from '@/lib/common'
 import {
   pickLaunchScoreHashCampaignConfigFromStep3,
   saveLaunchScoreCampaignConfigForOffer,
   clearLaunchScoreCampaignConfigForOffer,
-} from '@/lib/launch-score-campaign-config-client'
+} from '@/lib/launch-score'
 
 const loadStep1CreativeGeneration = () => import('./steps/Step1CreativeGeneration')
 const loadStep2AccountLinking = () => import('./steps/Step2AccountLinking')

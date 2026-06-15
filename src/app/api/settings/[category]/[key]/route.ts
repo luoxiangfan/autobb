@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getSetting, getUserOnlySetting, updateSetting } from '@/lib/settings'
-import { invalidateProxyPoolCache } from '@/lib/offer-utils'
+import { getSetting, getUserOnlySetting, updateSetting } from '@/lib/common'
+import { invalidateProxyPoolCache } from '@/lib/offers'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   getGoogleAdsCredentialBackedSettingValue,

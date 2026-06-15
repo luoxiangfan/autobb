@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { getInsertedId } from '@/lib/db'
+import { toDbJsonObjectField } from '@/lib/db'
 
 // Offer评分引擎 - 从联盟平台数据评估Offer盈利概率
 // 评分维度：佣金收益(30%) + 市场需求(25%) + 竞争程度(25%) + 转化概率(20%)

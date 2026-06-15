@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { compactCategoryLabel, deriveCategoryFromScrapedData } from '../offer-category'
+import { compactCategoryLabel, deriveCategoryFromScrapedData } from '../offers'
 
 describe('offer-category', () => {
   describe('compactCategoryLabel', () => {

@@ -5,7 +5,7 @@ vi.mock('@/lib/google-ads/api/api', () => ({
 }))
 
 import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
-import { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign-publish-orphan-cleanup'
+import { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign'
 
 describe('pauseOrphanGoogleAdsCampaignAfterPublishFailure', () => {
   beforeEach(() => {

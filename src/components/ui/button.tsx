@@ -1,6 +1,6 @@
 import React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/common'
 
 // 导出 buttonVariants 以供其他组件使用（如 alert-dialog）
 export const buttonVariants = cva(

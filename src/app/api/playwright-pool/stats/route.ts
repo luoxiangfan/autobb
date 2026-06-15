@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getPlaywrightPoolStats } from '@/lib/playwright-pool'
+import { getPlaywrightPoolStats } from '@/lib/scraping'
 
 /**
  * GET /api/playwright-pool/stats

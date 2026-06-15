@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { OfferExtractRequestError } from '../offer-extract-request'
+import { OfferExtractRequestError } from '../offers'
 import {
   assertOfferAvailableForExtractionEnqueue,
   buildExtractionTaskParamsFromOffer,
@@ -10,7 +10,7 @@ import {
   parseStoreProductLinks,
   parseStoreProductLinksInput,
   resolveExtractPageInput,
-} from '../offer-extraction-task'
+} from '../offers'
 
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),

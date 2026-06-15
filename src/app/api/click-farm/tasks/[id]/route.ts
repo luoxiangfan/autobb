@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getClickFarmTaskById, updateClickFarmTask, deleteClickFarmTask } from '@/lib/click-farm'
 import { validateDistribution, generateDefaultDistribution } from '@/lib/click-farm/distribution'
 import { enqueueClickFarmTriggerRequest } from '@/lib/click-farm/click-farm-scheduler-trigger'
-import type { UpdateClickFarmTaskRequest } from '@/lib/click-farm-types'
+import type { UpdateClickFarmTaskRequest } from '@/lib/click-farm/click-farm-types'
 
 /**
  * 按比例调整分布总和
@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       }
     } else if (updatedTask.status === 'pending') {
       // pending 状态仅在“今天开始”时触发
-      const { getDateInTimezone } = await import('@/lib/timezone-utils')
+      const { getDateInTimezone } = await import('@/lib/common')
       const todayInTaskTimezone = getDateInTimezone(new Date(), updatedTask.timezone)
       if (updatedTask.scheduled_start_date === todayInTaskTimezone) {
         try {

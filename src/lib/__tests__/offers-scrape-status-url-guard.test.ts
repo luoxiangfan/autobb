@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let mockDb: any
-let updateOfferScrapeStatus: typeof import('../offers').updateOfferScrapeStatus
+let updateOfferScrapeStatus: typeof import('../offers/task-modal-helpers').updateOfferScrapeStatus
 
 const mockInvalidateOfferCache = vi.fn()
 
@@ -9,11 +9,11 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../api-cache', () => ({
+vi.mock('../common', () => ({
   invalidateOfferCache: mockInvalidateOfferCache,
 }))
 
-vi.mock('../offer-utils', () => ({
+vi.mock('../offers', () => ({
   generateOfferName: vi.fn(),
   getTargetLanguage: vi.fn(() => 'English'),
   isOfferNameUnique: vi.fn().mockResolvedValue(true),
@@ -22,7 +22,7 @@ vi.mock('../offer-utils', () => ({
   validateBrandName: () => ({ valid: true as const }),
 }))
 
-vi.mock('../brand-name-utils', () => ({
+vi.mock('../scraping', () => ({
   deriveBrandFromProductTitle: vi.fn(() => null),
   isLikelyInvalidBrandName: vi.fn(() => false),
 }))
@@ -41,7 +41,7 @@ describe('updateOfferScrapeStatus final_url guard', () => {
 
     mockInvalidateOfferCache.mockReset()
     vi.resetModules()
-    ;({ updateOfferScrapeStatus } = await import('../offers'))
+    ;({ updateOfferScrapeStatus } = await import('../offers/task-modal-helpers'))
   })
 
   afterEach(() => {

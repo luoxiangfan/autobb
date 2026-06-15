@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
+import { getInsertedId } from '@/lib/db'
 
 /**
  * GET /api/admin/prompts

@@ -4,10 +4,10 @@ import type {
   DeviceTokenSummary,
   PairedDevice,
   PendingDevice,
-} from "../controllers/devices.ts";
-import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "../controllers/exec-approvals.ts";
-import { formatRelativeTimestamp, formatList } from "../format.ts";
-import { renderExecApprovals, resolveExecApprovalsState } from "./nodes-exec-approvals.ts";
+} from "../controllers/devices";
+import type { ExecApprovalsFile, ExecApprovalsSnapshot } from "../controllers/exec-approvals";
+import { formatRelativeTimestamp, formatList } from "../format";
+import { renderExecApprovals, resolveExecApprovalsState } from "./nodes-exec-approvals";
 export type NodesProps = {
   loading: boolean;
   nodes: Array<Record<string, unknown>>;

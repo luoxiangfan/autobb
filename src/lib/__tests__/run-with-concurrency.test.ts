@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mapWithConcurrency, resolveBatchEvaluateConcurrency } from '../run-with-concurrency'
+import { mapWithConcurrency, resolveBatchEvaluateConcurrency } from '../common'
 
 describe('run-with-concurrency', () => {
   it('mapWithConcurrency preserves order with bounded parallelism', async () => {

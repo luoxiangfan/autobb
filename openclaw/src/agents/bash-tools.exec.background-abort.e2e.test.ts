@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "vitest";
-import { sleep } from "../utils.ts";
+import { sleep } from "../utils";
 import {
   getFinishedSession,
   getSession,

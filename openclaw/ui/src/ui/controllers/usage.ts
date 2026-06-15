@@ -1,6 +1,6 @@
-import type { GatewayBrowserClient } from "../gateway.ts";
-import type { SessionsUsageResult, CostUsageSummary, SessionUsageTimeSeries } from "../types.ts";
-import type { SessionLogEntry } from "../views/usage.ts";
+import type { GatewayBrowserClient } from "../gateway";
+import type { SessionsUsageResult, CostUsageSummary, SessionUsageTimeSeries } from "../types";
+import type { SessionLogEntry } from "../views/usage";
 
 export type UsageState = {
   client: GatewayBrowserClient | null;

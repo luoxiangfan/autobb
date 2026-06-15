@@ -2,7 +2,7 @@
  * Google Ads 账号列表 DB 缓存与 upsert
  */
 import { getDatabase } from '../../db'
-import { getInsertedId } from '../../db-helpers'
+import { getInsertedId } from '../../db'
 import { googleAdsAccountsLogger } from '../common/logger'
 
 export interface CachedAccount {

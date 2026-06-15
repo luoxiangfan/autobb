@@ -1,7 +1,7 @@
 'use client'
 
 import CampaignsClientPage from '../campaigns/CampaignsClientPage'
-import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
+import { isPerformanceReleaseEnabled } from '@/lib/common'
 import { Loader2 } from 'lucide-react'
 
 /**

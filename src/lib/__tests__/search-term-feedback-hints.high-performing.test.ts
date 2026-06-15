@@ -1,5 +1,5 @@
-import { classifySearchTermFeedbackTerms } from '../search-term-feedback-hints'
-import type { SearchTermFeedbackAggregateRow } from '../search-term-feedback-hints'
+import { classifySearchTermFeedbackTerms } from '../keywords'
+import type { SearchTermFeedbackAggregateRow } from '../keywords'
 
 describe('classifySearchTermFeedbackTerms - High Performing Terms', () => {
   it('should identify high-performing terms by CTR', () => {

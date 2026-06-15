@@ -6,7 +6,7 @@ import {
   normalizeOfferProductPriceInput,
   parseCommissionPayoutValue,
   resolveLegacyBareNumericMode,
-} from '@/lib/offer-monetization'
+} from '@/lib/offers'
 
 describe('offer monetization helpers', () => {
   it('normalizes plain product price using target-country symbol', () => {

@@ -1,5 +1,5 @@
-import { REDIS_PREFIX_CONFIG } from '@/lib/config'
-import { getRedisClient } from '@/lib/redis-client'
+import { REDIS_PREFIX_CONFIG } from '@/lib/common'
+import { getRedisClient } from '@/lib/common'
 import {
   stripGoogleAdsAuthContextForCache,
   normalizeCachedAuthContextPayload,

@@ -35,8 +35,8 @@ import {
   DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
-import { showError } from '@/lib/toast-utils'
-import { formatCurrency } from '@/lib/currency'
+import { showError } from '@/lib/common'
+import { formatCurrency } from '@/lib/common'
 import {
   filterAffiliatesWithRawCommissionSupport,
   getAffiliatePlatformDisplayName,

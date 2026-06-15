@@ -4,7 +4,7 @@ import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
   normalizeAffiliateSyncMode,
-} from '../affiliate-sync-config'
+} from '../affiliate'
 
 describe('affiliate sync config helpers', () => {
   it('overrides fixed affiliate settings with system defaults', () => {

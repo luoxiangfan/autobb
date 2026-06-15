@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Clock, TrendingUp, CheckCircle, Activity, Play, Square } from 'lucide-react'
 import { toast } from 'sonner'
-import { getDateInTimezone } from '@/lib/timezone-utils'
+import { getDateInTimezone } from '@/lib/common'
 
 const TaskDetailAnalyticsSection = dynamic(() => import('./TaskDetailAnalyticsSection'), {
   ssr: false,

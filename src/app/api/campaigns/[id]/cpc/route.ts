@@ -7,8 +7,8 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import { runOAuthGaqlWithLoginCustomerFallback } from '@/lib/google-ads/oauth/gaql'
 import { getDatabase } from '@/lib/db'
-import { getRedisClient } from '@/lib/redis-client'
-import { executeGAQLQueryPython } from '@/lib/python-ads-client'
+import { getRedisClient } from '@/lib/common'
+import { executeGAQLQueryPython } from '@/lib/campaign'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 
 function extractSearchResults(result: any): any[] {

@@ -20,10 +20,10 @@ import {
   estimateTraffic,
   formatBytes,
 } from '../distribution'
-import type { ClickFarmTask, CreateClickFarmTaskRequest } from '@/lib/click-farm-types'
+import type { ClickFarmTask, CreateClickFarmTaskRequest } from '@/lib/click-farm/click-farm-types'
 
 // Mock timezone-utils
-vi.mock('../timezone-utils', () => ({
+vi.mock('../../common', () => ({
   createDateInTimezone: vi.fn((dateStr: string, timeStr: string, _timezone: string) => {
     const [year, month, day] = dateStr.split('-').map(Number)
     const [hour, minute] = timeStr.split(':').map(Number)

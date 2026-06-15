@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { withPerformanceMonitoring } from '@/lib/api-performance'
-import { getUserRiskAlerts, getRiskStatistics, checkAllUserLinks } from '@/lib/risk-alerts'
+import { withPerformanceMonitoring } from '@/lib/common'
+import { getUserRiskAlerts, getRiskStatistics, checkAllUserLinks } from '@/lib/optimization'
 
 /**
  * GET - 获取风险提示列表

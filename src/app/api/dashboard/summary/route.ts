@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { apiCache, generateCacheKey } from '@/lib/api-cache'
+import { apiCache, generateCacheKey } from '@/lib/common'
 import { getDatabase } from '@/lib/db'
 import { listOffers } from '@/lib/offers'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'

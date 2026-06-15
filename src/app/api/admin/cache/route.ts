@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getCachedPageData } from '@/lib/redis'
+import { getCachedPageData } from '@/lib/common'
 
 // 强制动态渲染（使用了request.headers）
 export const dynamic = 'force-dynamic'

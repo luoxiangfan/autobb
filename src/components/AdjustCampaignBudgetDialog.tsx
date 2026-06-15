@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { showError, showSuccess } from '@/lib/toast-utils'
+import { showError, showSuccess } from '@/lib/common'
 
 interface AdjustCampaignBudgetDialogProps {
   open: boolean

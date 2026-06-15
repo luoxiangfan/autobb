@@ -43,7 +43,7 @@ import {
   Loader2,
   Info,
 } from 'lucide-react'
-import { showError, showSuccess } from '@/lib/toast-utils'
+import { showError, showSuccess } from '@/lib/common'
 import {
   applyGoogleAdsAccountsFetchUiEffects,
   resolveGoogleAdsAccountsFetchUiEffects,

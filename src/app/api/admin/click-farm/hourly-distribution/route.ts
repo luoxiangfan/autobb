@@ -3,7 +3,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { parseJsonField } from '@/lib/json-field'
+import { parseJsonField } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 

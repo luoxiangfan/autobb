@@ -149,7 +149,7 @@ export async function createGoogleAdsResponsiveSearchAd(params: {
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { createResponsiveSearchAdPython } = await import('../../python-ads-client')
+    const { createResponsiveSearchAdPython } = await import('../../campaign')
 
     const adGroupResourceName = `customers/${params.customerId}/adGroups/${params.adGroupId}`
     const adResourceName = await createResponsiveSearchAdPython({

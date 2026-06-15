@@ -1,12 +1,12 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById, deleteOffer } from '@/lib/offers'
-import { invalidateOfferCache } from '@/lib/api-cache'
-import { compactCategoryLabel, deriveCategoryFromScrapedData } from '@/lib/offer-category'
-import { filterNavigationLabels } from '@/lib/scrape-text-filters'
-import { normalizeOfferExtractionMode } from '@/lib/offer-extraction-mode'
-import { applyOfferUpdateFromBody, mapOfferToPutResponse } from '@/lib/offer-update-from-body'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { invalidateOfferCache } from '@/lib/common'
+import { compactCategoryLabel, deriveCategoryFromScrapedData } from '@/lib/offers'
+import { filterNavigationLabels } from '@/lib/scraping'
+import { normalizeOfferExtractionMode } from '@/lib/offers'
+import { applyOfferUpdateFromBody, mapOfferToPutResponse } from '@/lib/offers'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 function safeParseJson<T>(input: unknown): T | null {
   if (typeof input !== 'string' || !input.trim()) return null

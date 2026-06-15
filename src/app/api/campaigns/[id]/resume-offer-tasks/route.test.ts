@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/campaign-offer-tasks', () => ({
+vi.mock('@/lib/campaign', () => ({
   resumeOfferTasksOnCampaignEnable: resumeFns.resumeOfferTasksOnCampaignEnable,
 }))
 

@@ -1,8 +1,8 @@
 import AppLayout from '@/components/layout/AppLayout'
 import { ExchangeRatesHydrator } from '@/components/ExchangeRatesHydrator'
-import { generateMetadata as createMetadata } from '@/lib/seo' // P2-1: SEO优化
-import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
-import { loadAndGetUsdExchangeRates } from '@/lib/exchange-rates-snapshot'
+import { generateMetadata as createMetadata } from '@/lib/common' // P2-1: SEO优化
+import { isPerformanceReleaseEnabled } from '@/lib/common'
+import { loadAndGetUsdExchangeRates } from '@/lib/common'
 
 // 强制动态渲染，避免静态生成时的 Context 错误
 export const dynamic = 'force-dynamic'

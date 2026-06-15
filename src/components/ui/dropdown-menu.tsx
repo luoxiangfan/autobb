@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { Slot } from '@radix-ui/react-slot'
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/common'
 
 const DropdownMenuContext = React.createContext<{
   open: boolean

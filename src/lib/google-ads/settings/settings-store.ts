@@ -3,7 +3,7 @@
  * system_settings 仅保留 user_id IS NULL 的字段元数据（及 campaign_sync 等非 OAuth 键）。
  */
 import { getDatabase, type DatabaseAdapter } from '../../db'
-import { nowFunc as sqlNowFunc } from '../../db-helpers'
+import { nowFunc as sqlNowFunc } from '../../db'
 import {
   isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId,
@@ -13,7 +13,7 @@ import {
   type GoogleAdsCredentials,
 } from '@/lib/google-ads/oauth/oauth'
 import { developerTokenLooksInvalid } from '@/lib/google-ads/accounts/auth/developer-token-heal'
-import type { SettingValue } from '../../settings'
+import type { SettingValue } from '../../common'
 
 export const GOOGLE_ADS_OAUTH_CONFIG_KEYS = [
   'login_customer_id',

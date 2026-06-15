@@ -12,8 +12,8 @@ const pythonFns = vi.hoisted(() => ({
   listAccessibleCustomersPython: vi.fn(),
 }))
 
-vi.mock('../python-ads-client', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../python-ads-client')>()
+vi.mock('../campaign', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../campaign')>()
   return {
     ...actual,
     listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,

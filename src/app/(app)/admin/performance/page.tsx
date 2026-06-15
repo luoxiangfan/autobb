@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, AlertTriangle, Gauge, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { fetchWithRetry } from '@/lib/api-error-handler'
-import { showError, showSuccess } from '@/lib/toast-utils'
+import { fetchWithRetry } from '@/lib/common'
+import { showError, showSuccess } from '@/lib/common'
 
 type OverallStats = {
   avgDuration: number

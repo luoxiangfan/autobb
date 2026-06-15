@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import Step3CampaignConfig from './Step3CampaignConfig'
 
-vi.mock('@/lib/toast-utils', () => ({
+vi.mock('@/lib/common', () => ({
   showError: vi.fn(),
   showSuccess: vi.fn(),
 }))

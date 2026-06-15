@@ -22,7 +22,7 @@ import {
   Rocket,
   RefreshCw,
 } from 'lucide-react'
-import { formatCurrency, formatMultiCurrency } from '@/lib/utils'
+import { formatCurrency, formatMultiCurrency } from '@/lib/common'
 import { DateRangePicker, type DateRange } from '@/components/ui/date-range-picker'
 
 interface KPIData {

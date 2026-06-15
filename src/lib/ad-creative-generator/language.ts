@@ -1,4 +1,4 @@
-import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../ad-creative'
+import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../creatives'
 
 // 🔥 AI语义分类
 // 🎯 新增：导入否定关键词生成函数
@@ -16,7 +16,7 @@ import {
   getLanguageNameForCountry,
   normalizeCountryCode,
   normalizeLanguageCode,
-} from '../language-country-codes'
+} from '../common'
 
 import {
   applyDescriptionTextGuardrail,

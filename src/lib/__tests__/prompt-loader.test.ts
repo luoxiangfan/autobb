@@ -11,7 +11,7 @@ vi.mock('../db', () => ({
   getDatabase: mocks.getDatabaseMock,
 }))
 
-import { clearPromptCache, loadPrompt } from '../prompt-loader'
+import { clearPromptCache, loadPrompt } from '../ai'
 
 describe('prompt-loader fallback behavior', () => {
   beforeEach(() => {

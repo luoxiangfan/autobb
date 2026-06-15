@@ -20,7 +20,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { RefreshCw, CheckCircle2, XCircle, Activity, AlertCircle } from 'lucide-react'
-import { fetchWithRetry } from '@/lib/api-error-handler'
+import { fetchWithRetry } from '@/lib/common'
 
 interface ProxyHealth {
   url: string

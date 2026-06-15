@@ -12,8 +12,8 @@ import {
   getAdCreativeGenerationModeProfile,
   normalizeAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/ad-creative-generation-mode'
-import { createAdCreative } from '@/lib/ad-creative'
+} from '@/lib/creatives'
+import { createAdCreative } from '@/lib/creatives'
 import {
   createCreativeAdStrengthPayload,
   createCreativeOptimizationPayload,
@@ -22,20 +22,17 @@ import {
   createCreativeScoreBreakdown,
   createCreativeTaskRetryHistory,
   resolveCreativeKeywordAudit,
-} from '@/lib/creative-keyword-runtime'
+} from '@/lib/keywords'
 import {
   assertPostGenerationPersistenceGate,
   prepareBucketKeywordContext,
   runBucketCreativeGeneration,
-} from '@/lib/bucket-creative-generation-pipeline'
-import type { CreativeBucketSlot } from '@/lib/creative-type'
+} from '@/lib/creatives'
+import type { CreativeBucketSlot } from '@/lib/creatives'
 import { findOfferById } from '@/lib/offers'
 import { getDatabase } from '@/lib/db'
-import { toDbJsonObjectField } from '@/lib/json-field'
-import {
-  AD_CREATIVE_MAX_AUTO_RETRIES,
-  AD_CREATIVE_REQUIRED_MIN_SCORE,
-} from '@/lib/ad-creative-quality-loop'
+import { toDbJsonObjectField } from '@/lib/db'
+import { AD_CREATIVE_MAX_AUTO_RETRIES, AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/creatives'
 // 🆕 v4.10: 关键词池集成
 import {
   getAvailableBuckets,
@@ -45,10 +42,10 @@ import {
   type OfferKeywordPool,
   type PoolKeywordData,
 } from '@/lib/offer-keyword-pool'
-import { deriveSkipKeywordPoolExpandLoad } from '@/lib/parse-offer-id'
-import { getCreativeTypeForBucketSlot } from '@/lib/creative-type'
-import { normalizeCreativeTaskError } from '@/lib/creative-task-error'
-import { getSearchTermFeedbackHints } from '@/lib/search-term-feedback-hints'
+import { deriveSkipKeywordPoolExpandLoad } from '@/lib/offers'
+import { getCreativeTypeForBucketSlot } from '@/lib/creatives'
+import { normalizeCreativeTaskError } from '@/lib/creatives'
+import { getSearchTermFeedbackHints } from '@/lib/keywords'
 import type { KeywordPlannerPreparedSession } from '@/lib/google-ads/accounts/auth/index'
 
 /**

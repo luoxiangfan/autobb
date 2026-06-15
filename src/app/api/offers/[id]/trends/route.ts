@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { findOfferById } from '@/lib/offers'
-import { getOfferCurrencyInfo, getOfferPerformanceTrend } from '@/lib/offer-performance'
-import { parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { getOfferCurrencyInfo, getOfferPerformanceTrend } from '@/lib/offers'
+import { parsePositiveIntegerOfferId } from '@/lib/offers'
 
 /**
  * GET /api/offers/:id/trends

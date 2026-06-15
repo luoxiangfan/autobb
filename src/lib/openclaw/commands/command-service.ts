@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { boolParam, nowFunc } from '@/lib/db-helpers'
+import { boolParam, nowFunc } from '@/lib/db'
 import { getQueueManagerForTaskType, isBackgroundQueueSplitEnabled } from '@/lib/queue/queue-routing'
 import { getQueueManager } from '@/lib/queue/unified-queue-manager'
 import { isBackgroundWorkerAlive } from '@/lib/queue/background-worker-heartbeat'
@@ -15,7 +15,7 @@ import {
   createOrRefreshCommandConfirmation,
   expireStaleCommandConfirmations,
   recordOpenclawCallbackEvent } from './confirm-service'
-import { isEnvTrue } from '@/lib/env-utils'
+import { isEnvTrue } from '@/lib/common'
 
 async function resolveOpenclawCommandQueueManager() {
   const routedQueue = getQueueManagerForTaskType('openclaw-command')

@@ -14,7 +14,7 @@ import {
   getLanguageConstraintsSummary,
   compareLanguageConstraints,
   getLanguageSpecificAdvice,
-} from '../language-constraints'
+} from '../creatives'
 
 describe('LanguageConstraints', () => {
   describe('getLanguageConstraints', () => {

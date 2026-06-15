@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 let mockDb: any
-let getKeywordSearchVolumes: typeof import('../keyword-planner').getKeywordSearchVolumes
+let getKeywordSearchVolumes: typeof import('../keywords').getKeywordSearchVolumes
 
 const mockGetBatchCachedVolumes = vi.fn()
 
@@ -9,7 +9,7 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../redis', () => ({
+vi.mock('../common', () => ({
   getCachedKeywordVolume: vi.fn(),
   cacheKeywordVolume: vi.fn(),
   getBatchCachedVolumes: (...args: any[]) => mockGetBatchCachedVolumes(...args),
@@ -29,7 +29,7 @@ describe('KeywordPlanner DB cache cutoff', () => {
   beforeEach(async () => {
     vi.resetModules()
     mockGetBatchCachedVolumes.mockReset()
-    ;({ getKeywordSearchVolumes } = await import('../keyword-planner'))
+    ;({ getKeywordSearchVolumes } = await import('../keywords'))
   })
 
   afterEach(() => {

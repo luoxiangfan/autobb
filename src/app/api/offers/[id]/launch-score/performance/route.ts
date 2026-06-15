@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score-performance'
-import { resolveLaunchScoreForPerformanceApi } from '@/lib/launch-score-cache'
+import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score'
+import { resolveLaunchScoreForPerformanceApi } from '@/lib/launch-score/launch-score-cache'
 import { findOfferById } from '@/lib/offers'
-import { parseLaunchScoreHashCampaignConfigFromSearchParams } from '@/lib/launch-score-campaign-config'
-import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/parse-offer-id'
+import { parseLaunchScoreHashCampaignConfigFromSearchParams } from '@/lib/launch-score'
+import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/offers'
 
 /**
  * GET /api/offers/:id/launch-score/performance

@@ -40,8 +40,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { showError, showSuccess } from '@/lib/toast-utils'
-import { parseJsonField } from '@/lib/json-field'
+import { showError, showSuccess } from '@/lib/common'
+import { parseJsonField } from '@/lib/db'
 
 interface RiskAlert {
   id: number

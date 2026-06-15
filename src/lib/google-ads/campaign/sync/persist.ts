@@ -1,9 +1,9 @@
 import { getDatabase } from '../../../db'
-import { toDbCampaignConfigTextField } from '../../../campaign-backups'
-import { getInsertedId } from '../../../db-helpers'
+import { toDbCampaignConfigTextField } from '../../../campaign'
+import { getInsertedId } from '../../../db'
 import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
 import { firstNonEmptyFinalUrlFromCampaignConfig } from '@/lib/google-ads/campaign/final-url'
-import { offerOccupyingCampaignWhereClause } from '../../../campaign-offer-constraint'
+import { offerOccupyingCampaignWhereClause } from '../../../campaign'
 import type { GoogleAdsCampaign } from './types'
 import { extractBrandFromGoogleAdsCampaignName } from './types'
 

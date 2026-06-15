@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { convertCurrency } from '@/lib/currency'
+import { convertCurrency } from '@/lib/common'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
-import { isPerformanceReleaseEnabled } from '@/lib/feature-flags'
-import { matchesCampaignSearch } from '@/lib/campaign-search'
+import { isPerformanceReleaseEnabled } from '@/lib/common'
+import { matchesCampaignSearch } from '@/lib/campaign'
 import {
   buildCampaignPerformanceCacheHash,
   getCachedCampaignPerformance,
   setCachedCampaignPerformance,
-} from '@/lib/campaigns-read-cache'
-import { getAffiliateDomainKeywords } from '@/lib/affiliate-platform-domain-keywords'
+} from '@/lib/campaign'
+import { getAffiliateDomainKeywords } from '@/lib/keywords'
 import {
   buildCampaignAffiliateAlignedWhereClause,
   isCampaignAffiliateAlignedRow,
-} from '@/lib/campaign-affiliate-scope'
+} from '@/lib/campaign'
 
 function formatAsYmd(value: unknown): string | null {
   if (value === null || value === undefined) return null

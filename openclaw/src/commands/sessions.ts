@@ -11,7 +11,7 @@ import {
 } from "../config/sessions.js";
 import { classifySessionKey, resolveSessionModelRef } from "../gateway/session-utils.js";
 import { info } from "../globals.js";
-import { formatTimeAgo } from "../infra/format-time/format-relative.ts";
+import { formatTimeAgo } from "../infra/format-time/format-relative";
 import { parseAgentSessionKey } from "../routing/session-key.js";
 import { isRich, theme } from "../terminal/theme.js";
 

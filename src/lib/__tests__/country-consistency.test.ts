@@ -3,7 +3,7 @@ import {
   getSupportedCountries,
   hasGoogleAdsGeoTargetId,
   resolveCountryCodeFromGoogleAdsGeoTargetId,
-} from '@/lib/language-country-codes'
+} from '@/lib/common'
 import { validateProxyUrl } from '@/lib/proxy/validate-url'
 
 describe('country consistency', () => {

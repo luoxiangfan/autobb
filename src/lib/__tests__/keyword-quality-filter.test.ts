@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { filterKeywordQuality, isBrandVariant } from '../keyword-quality-filter'
+import { filterKeywordQuality, isBrandVariant } from '../keywords'
 
 describe('keyword-quality-filter', () => {
   describe('isBrandVariant', () => {

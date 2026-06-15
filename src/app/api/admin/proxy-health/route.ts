@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getProxyPoolHealth, disableProxy, enableProxy } from '@/lib/url-resolver-enhanced'
+import { getProxyPoolHealth, disableProxy, enableProxy } from '@/lib/scraping'
 
 export async function GET(_request: NextRequest) {
   try {

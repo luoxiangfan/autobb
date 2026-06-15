@@ -1,8 +1,8 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { encrypt } from '@/lib/crypto'
-import { nowFunc as sqlNowFunc } from '@/lib/db-helpers'
+import { encrypt } from '@/lib/auth'
+import { nowFunc as sqlNowFunc } from '@/lib/db'
 import { z } from 'zod'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {

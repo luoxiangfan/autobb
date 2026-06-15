@@ -1,8 +1,8 @@
 import { type Customer, enums } from 'google-ads-api'
 import { isGoogleAdsAccountAccessError } from '@/lib/google-ads/oauth/login-customer'
-import { getGoogleAdsGeoTargetId } from '../../language-country-codes'
+import { getGoogleAdsGeoTargetId } from '../../common'
 import { ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { withRetry } from '../../retry'
+import { withRetry } from '../../common'
 import { trackOAuthApiCall } from './shared'
 
 export function getGeoTargetConstantId(countryCode: string): number | null {

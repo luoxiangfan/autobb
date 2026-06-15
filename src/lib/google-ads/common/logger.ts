@@ -1,4 +1,4 @@
-import { logger } from '@/lib/structured-logger'
+import { logger } from '@/lib/common'
 
 export type GoogleAdsLogScope =
   | 'oauth'

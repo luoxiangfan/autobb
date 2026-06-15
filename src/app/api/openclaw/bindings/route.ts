@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/zod-errors'
+import { zErr } from '@/lib/common'
 import { getDatabase } from '@/lib/db'
-import { isUniqueConstraintViolation } from '@/lib/db-helpers'
+import { isUniqueConstraintViolation } from '@/lib/db'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
 const createBindingSchema = z.object({

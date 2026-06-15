@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { calculateBonusScore } from '@/lib/bonus-score-calculator'
+import { getInsertedId } from '@/lib/db'
+import { calculateBonusScore } from '@/lib/launch-score'
 import { verifyAuth } from '@/lib/auth'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

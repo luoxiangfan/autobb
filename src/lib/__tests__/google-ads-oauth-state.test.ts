@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/config', () => ({
+vi.mock('@/lib/common', () => ({
   JWT_SECRET: 'test-jwt-secret-at-least-32-chars-long!!',
 }))
 

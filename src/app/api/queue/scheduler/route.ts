@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { triggerAllUrlSwapTasks } from '@/lib/url-swap-scheduler'
+import { triggerAllUrlSwapTasks } from '@/lib/url-swap/url-swap-scheduler'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 

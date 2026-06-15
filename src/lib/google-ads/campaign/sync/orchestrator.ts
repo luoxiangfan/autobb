@@ -4,7 +4,7 @@ import {
   findLatestGoogleAdsBackupForOffer,
   hasAutoadsLikeBackupForOffer,
   toDbCampaignBackupJsonField,
-} from '../../../campaign-backups'
+} from '../../../campaign'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
@@ -12,7 +12,7 @@ import {
   resolveSyncAuthForAccount,
   type GoogleAdsLinkedAccountPrepareCache,
 } from '@/lib/google-ads/accounts/auth/index'
-import { createRiskAlert } from '../../../risk-alerts'
+import { createRiskAlert } from '../../../optimization'
 import type { SyncResult } from './types'
 import { fetchCampaignsFromGoogleAds } from './fetch'
 import { createOfferFirst, saveCampaignToDatabase, updateCampaignConfig } from './persist'

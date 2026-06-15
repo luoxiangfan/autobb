@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
-import { getInsertedId } from '@/lib/db-helpers'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { getInsertedId } from '@/lib/db'
+import { toDbJsonObjectField } from '@/lib/db'
 
 export type OfferScoreRecord = {
   id: number

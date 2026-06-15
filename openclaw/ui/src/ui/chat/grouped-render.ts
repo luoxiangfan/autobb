@@ -1,17 +1,17 @@
 import { html, nothing } from "lit";
 import { unsafeHTML } from "lit/directives/unsafe-html.js";
-import type { AssistantIdentity } from "../assistant-identity.ts";
-import type { MessageGroup } from "../types/chat-types.ts";
-import { toSanitizedMarkdownHtml } from "../markdown.ts";
-import { detectTextDirection } from "../text-direction.ts";
-import { renderCopyAsMarkdownButton } from "./copy-as-markdown.ts";
+import type { AssistantIdentity } from "../assistant-identity";
+import type { MessageGroup } from "../types/chat-types";
+import { toSanitizedMarkdownHtml } from "../markdown";
+import { detectTextDirection } from "../text-direction";
+import { renderCopyAsMarkdownButton } from "./copy-as-markdown";
 import {
   extractTextCached,
   extractThinkingCached,
   formatReasoningMarkdown,
-} from "./message-extract.ts";
-import { isToolResultMessage, normalizeRoleForGrouping } from "./message-normalizer.ts";
-import { extractToolCards, renderToolCardSidebar } from "./tool-cards.ts";
+} from "./message-extract";
+import { isToolResultMessage, normalizeRoleForGrouping } from "./message-normalizer";
+import { extractToolCards, renderToolCardSidebar } from "./tool-cards";
 
 type ImageBlock = {
   url: string;

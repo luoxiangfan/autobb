@@ -1,4 +1,4 @@
-import { generateMetadata as createMetadata } from '@/lib/seo'
+import { generateMetadata as createMetadata } from '@/lib/common'
 
 // 强制动态渲染
 export const dynamic = 'force-dynamic'

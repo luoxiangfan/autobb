@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { isUniqueConstraintViolation } from '@/lib/db-helpers'
+import { isUniqueConstraintViolation } from '@/lib/db'
 import {
   createGoogleAdsAccount,
   findGoogleAdsAccountsByUserId,

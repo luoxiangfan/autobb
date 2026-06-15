@@ -48,7 +48,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/crypto', () => ({
+vi.mock('@/lib/auth', () => ({
   encrypt: vi.fn((value: string) => `enc:${value}`),
 }))
 

@@ -13,7 +13,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/zod-errors'
+import { zErr } from '@/lib/common'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import {
@@ -23,13 +23,13 @@ import {
   type CreativeGenerationAuthCache,
 } from '@/lib/google-ads/accounts/auth/index'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
-import { toDbJsonObjectField } from '@/lib/json-field'
+import { toDbJsonObjectField } from '@/lib/db'
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
   resolveCreativeGenerationRuntime,
-} from '@/lib/ad-creative-generation-mode'
+} from '@/lib/creatives'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
-import { normalizeSingleCreativeSelection } from '@/lib/creative-request-normalizer'
+import { normalizeSingleCreativeSelection } from '@/lib/creatives'
 
 export const maxDuration = 60
 

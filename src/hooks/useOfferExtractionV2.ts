@@ -17,7 +17,7 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { getDefaultOfferExtractionMode } from '@/lib/offer-extraction-mode'
+import { getDefaultOfferExtractionMode } from '@/lib/offers'
 import type { ProgressStage, ProgressStatus } from '@/types/progress'
 
 interface ExtractionResult {

@@ -33,7 +33,7 @@ describe('ProxyPoolManager.checkProxyHealth', () => {
   })
 
   it('resolves provider URL (IPRocket) to proxy address before creating agent', async () => {
-    const { ProxyPoolManager } = await import('../url-resolver-enhanced')
+    const { ProxyPoolManager } = await import('../scraping')
     const pool = new ProxyPoolManager()
 
     const providerUrl =
@@ -47,7 +47,7 @@ describe('ProxyPoolManager.checkProxyHealth', () => {
   })
 
   it('does not call getProxyIp for direct proxy URLs', async () => {
-    const { ProxyPoolManager } = await import('../url-resolver-enhanced')
+    const { ProxyPoolManager } = await import('../scraping')
     const pool = new ProxyPoolManager()
 
     const directProxyUrl = 'http://user:pass@8.8.8.8:8080'

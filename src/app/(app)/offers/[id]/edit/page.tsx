@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { getLanguageNameForCountry, getCountryOptionsForUI } from '@/lib/language-country-codes'
-import { normalizeOfferCommissionInput, parseCommissionPayoutValue } from '@/lib/offer-monetization'
+import { getLanguageNameForCountry, getCountryOptionsForUI } from '@/lib/common'
+import { normalizeOfferCommissionInput, parseCommissionPayoutValue } from '@/lib/offers'
 import {
   getDefaultOfferExtractionMode,
   getOfferExtractionModeLabel,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offer-extraction-mode'
+} from '@/lib/offers'
 import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
-import { showSuccess } from '@/lib/toast-utils'
+import { showSuccess } from '@/lib/common'
 
 export default function EditOfferPage() {
   const router = useRouter()

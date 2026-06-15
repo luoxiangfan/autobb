@@ -5,7 +5,7 @@ import {
   BATCH_URL_SWAP_TASK_DEFAULTS,
   isClickFarmTaskUsingBatchDefaults,
   isUrlSwapTaskUsingBatchDefaults,
-} from '@/lib/batch-task-defaults'
+} from '@/lib/campaign'
 
 describe('isClickFarmTaskUsingBatchDefaults', () => {
   it('matches batch default click-farm configuration', () => {

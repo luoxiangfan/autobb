@@ -2,14 +2,14 @@
  * Ad Strength 主评估编排器
  */
 
-import type { HeadlineAsset, DescriptionAsset } from '../ad-creative'
+import type { HeadlineAsset, DescriptionAsset } from '../creatives'
 import type { KeywordPlannerPreparedSession } from '@/lib/google-ads/accounts/auth/index'
-import type { CanonicalCreativeType } from '../creative-type'
+import type { CanonicalCreativeType } from '../creatives'
 import {
   AD_STRENGTH_DIMENSION_CONFIG,
   mapRawScoreToTarget,
   validateAdStrengthConfig,
-} from '../ad-strength-config'
+} from '../creatives'
 import type { AdStrengthEvaluation } from './types'
 import { parseCompetitivePositioningAiScores } from './competitive-positioning-ai-parse'
 import { calculateCopyIntentMetrics } from './copy-intent-metrics'

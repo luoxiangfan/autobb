@@ -12,9 +12,9 @@
  */
 
 import type { Task, TaskExecutor } from '../types'
-import { dataSyncService } from '@/lib/data-sync-service'
-import type { SyncLog } from '@/lib/data-sync-service'
-import { assertUserExecutionAllowed } from '@/lib/user-execution-eligibility'
+import { dataSyncService } from '@/lib/campaign'
+import type { SyncLog } from '@/lib/campaign'
+import { assertUserExecutionAllowed } from '@/lib/campaign'
 
 /**
  * Sync 任务数据接口

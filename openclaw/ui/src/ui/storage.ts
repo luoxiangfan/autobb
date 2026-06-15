@@ -1,6 +1,6 @@
 const KEY = "openclaw.control.settings.v1";
 
-import type { ThemeMode } from "./theme.ts";
+import type { ThemeMode } from "./theme";
 
 export type UiSettings = {
   gatewayUrl: string;

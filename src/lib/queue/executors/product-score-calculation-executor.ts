@@ -10,25 +10,25 @@
 import { createHash } from 'crypto'
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db-helpers'
+import { nowFunc } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { calculateHybridProductRecommendationScores } from '@/lib/product-recommendation-scoring'
+import { calculateHybridProductRecommendationScores } from '@/lib/ai'
 import type { AffiliateProduct } from '@/lib/affiliate-products/index'
 import {
   batchGetCachedProductRecommendationScores,
   cacheProductRecommendationScore,
   type CachedRecommendationScore,
-} from '@/lib/product-score-cache'
+} from '@/lib/launch-score'
 import {
   acquireProductScoreExecutionMutex,
   consumeProductScoreRequeueRequest,
   findExistingProductScoreTask,
   markProductScoreRequeueNeeded,
-} from '@/lib/product-score-coordination'
+} from '@/lib/launch-score'
 import {
   isProductScoreCalculationPaused,
   LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION,
-} from '@/lib/product-score-control'
+} from '@/lib/launch-score'
 
 export type ProductScoreCalculationTaskData = {
   userId: number

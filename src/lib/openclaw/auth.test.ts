@@ -9,7 +9,7 @@ const {
   getSettingMock: vi.fn(),
   updateSettingsMock: vi.fn() }))
 
-vi.mock('@/lib/settings', () => ({
+vi.mock('@/lib/common', () => ({
   getSetting: getSettingMock,
   updateSettings: updateSettingsMock }))
 

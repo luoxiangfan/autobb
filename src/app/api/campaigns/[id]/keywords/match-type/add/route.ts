@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { boolCondition, boolParam, getInsertedId } from '@/lib/db-helpers'
+import { boolCondition, boolParam, getInsertedId } from '@/lib/db'
 import {
   createGoogleAdsKeywordsBatch,
   updateGoogleAdsKeywordStatus,
@@ -12,10 +12,7 @@ import {
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import {
-  patchCampaignConfigKeywords,
-  type CampaignConfigKeyword,
-} from '@/lib/campaign-config-keywords'
+import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign'
 
 type KeywordInput =
   | string

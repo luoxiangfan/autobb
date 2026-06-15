@@ -1,5 +1,5 @@
-import type { HeadlineAsset, DescriptionAsset } from '../../ad-creative'
-import { AD_STRENGTH_RELEVANCE_THRESHOLDS } from '../../ad-strength-config'
+import type { HeadlineAsset, DescriptionAsset } from '../../creatives'
+import { AD_STRENGTH_RELEVANCE_THRESHOLDS } from '../../creatives'
 
 import {
   calculateKeywordDensityByToken,

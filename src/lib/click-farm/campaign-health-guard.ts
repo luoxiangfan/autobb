@@ -1,5 +1,5 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { notDeletedClause } from '@/lib/db-helpers'
+import { notDeletedClause } from '@/lib/db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 
 type ClickFarmTaskCandidate = {
