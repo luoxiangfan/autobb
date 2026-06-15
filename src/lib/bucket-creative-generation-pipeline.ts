@@ -4,7 +4,7 @@
  * 供队列执行器、同步 API、备份 Regenerator 复用，避免逻辑漂移。
  */
 
-import { generateAdCreative } from '@/lib/ad-creative-gen'
+import { generateAdCreative } from '@/lib/ad-creative-generator/index'
 import type { AdCreativeGenerationModeProfile } from '@/lib/ad-creative-generation-mode'
 import {
   applyCreativeKeywordSetToCreative,

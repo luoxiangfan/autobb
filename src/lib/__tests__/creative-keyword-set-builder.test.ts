@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   dbQuery: vi.fn(),
 }))
 
-vi.mock('../ad-creative-gen', () => ({
+vi.mock('../ad-creative-generator/index', () => ({
   applyKeywordSupplementationOnce: mocks.applyKeywordSupplementationOnce,
 }))
 

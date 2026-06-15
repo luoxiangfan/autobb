@@ -1,7 +1,7 @@
 import {
   applyKeywordSupplementationOnce,
   type KeywordSupplementationReport,
-} from './ad-creative-gen'
+} from './ad-creative-generator/index'
 import {
   filterCreativeKeywordsByOfferContextDetailed,
   normalizeCreativeKeywordCandidatesForContextFilter,
