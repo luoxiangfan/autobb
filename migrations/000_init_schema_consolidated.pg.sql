@@ -17871,7 +17871,7 @@ INSERT INTO prompt_versions (
   '产品分析',
   '单品产品分析v4.17',
   '修复 productDescription 生成逻辑，确保输出品牌描述而非产品特性列表',
-  'src/lib/prompts/product-analysis-single-v4.17.txt',
+  'prompts/product_analysis_single_v4.17.txt',
   'analyzeProductPage',
   -- prompt_content
   $PROMPT$You are a professional product analyst. Analyze the following product page data comprehensively.
