@@ -32,7 +32,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   loadKeywordPoolExpandCredentialsForOffer: authExpandFns.loadKeywordPoolExpandCredentialsForOffer,
 }))
 
-vi.mock('@/lib/ad-strength-evaluator', () => ({
+vi.mock('@/lib/ad-strength/evaluate', () => ({
   evaluateAdStrength: evaluateFns.evaluateAdStrength,
 }))
 

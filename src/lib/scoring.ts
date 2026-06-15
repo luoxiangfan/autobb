@@ -4,11 +4,8 @@ import { loadPrompt, interpolateTemplate } from './prompt-loader'
 import type { ScoreAnalysis } from './launch-scores'
 import type { Offer } from './offers'
 import type { AdCreative, HeadlineAsset, DescriptionAsset } from './ad-creative'
-import {
-  evaluateAdStrength,
-  type AdStrengthEvaluation,
-  type AdStrengthRating,
-} from './ad-strength-evaluator'
+import { evaluateAdStrength } from './ad-strength/evaluate'
+import type { AdStrengthEvaluation, AdStrengthRating } from './ad-strength/types'
 import type { CanonicalCreativeType } from './creative-type'
 import { validateExcellentStandard } from '@/lib/google-ads/api/strength-api'
 import { detectAmazonPageTypeFromUrl } from './amazon-url-utils'

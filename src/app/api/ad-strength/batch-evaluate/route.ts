@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { evaluateAdStrength } from '@/lib/ad-strength-evaluator'
+import { evaluateAdStrength } from '@/lib/ad-strength/evaluate'
 import type { HeadlineAsset, DescriptionAsset } from '@/lib/ad-creative'
 import { findOfferById } from '@/lib/offers'
 import {

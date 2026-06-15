@@ -46,7 +46,7 @@ vi.mock('../prompt-loader', async (importOriginal) => {
   }
 })
 
-import { evaluateAdStrength } from '../ad-strength-evaluator'
+import { evaluateAdStrength } from '../ad-strength/evaluate'
 
 describe('ad-strength-evaluator KISS optimizations', () => {
   beforeEach(() => {
