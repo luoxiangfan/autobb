@@ -52,6 +52,7 @@ import { applyCampaignTransition } from '@/lib/campaign-state-machine'
 import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate-products/index'
 import {
   normalizeNegativeKeywordMatchTypeMap,
+  resolveCampaignNegativeKeywordMatchTypeInput,
   resolveNegativeKeywordMatchType,
 } from '@/lib/campaign-publish/negative-keyword-match-type'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
@@ -74,83 +75,19 @@ import {
   trySyncCampaignBackupAfterPublish,
 } from '@/lib/campaign-backups'
 
+import {
+  assertRequiredRsaAssetCounts,
+  MIN_FORCE_PUBLISH_DESCRIPTION_COUNT,
+  MIN_FORCE_PUBLISH_HEADLINE_COUNT,
+  normalizeCreativeTextAssets,
+  REQUIRED_RSA_DESCRIPTION_COUNT,
+  REQUIRED_RSA_HEADLINE_COUNT,
+  resolvePublishRsaAssets,
+} from '@/lib/campaign-publish/rsa-assets'
+import { buildPublishErrorLogObject } from '@/lib/campaign-publish/publish-error-log'
+import { getPositiveIntFromEnv } from '@/lib/env-utils'
+
 export type { CampaignPublishRollbackContext } from '@/lib/campaign-publish-orphan-cleanup'
-
-function parsePositiveIntEnv(value: string | undefined, fallback: number): number {
-  if (!value) return fallback
-  const parsed = Number.parseInt(value, 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback
-  return parsed
-}
-
-const REQUIRED_RSA_HEADLINE_COUNT = 15
-const REQUIRED_RSA_DESCRIPTION_COUNT = 4
-const MIN_FORCE_PUBLISH_HEADLINE_COUNT = 3
-const MIN_FORCE_PUBLISH_DESCRIPTION_COUNT = 2
-
-function normalizeCreativeTextAssets(rawAssets: unknown): string[] {
-  if (!Array.isArray(rawAssets)) return []
-  return rawAssets.map((asset) => String(asset || '').trim()).filter((asset) => asset.length > 0)
-}
-
-function assertRequiredRsaAssetCounts(creative: CampaignPublishTaskData['creative']) {
-  const headlineCount = normalizeCreativeTextAssets(creative?.headlines).length
-  const descriptionCount = normalizeCreativeTextAssets(creative?.descriptions).length
-
-  if (headlineCount !== REQUIRED_RSA_HEADLINE_COUNT) {
-    throw new Error(
-      `Headlines必须正好${REQUIRED_RSA_HEADLINE_COUNT}个，当前提供了${headlineCount}个。如果从广告创意中获得的标题数量不足，请报错。`
-    )
-  }
-
-  if (descriptionCount !== REQUIRED_RSA_DESCRIPTION_COUNT) {
-    throw new Error(
-      `Descriptions必须正好${REQUIRED_RSA_DESCRIPTION_COUNT}个，当前提供了${descriptionCount}个。如果从广告创意中获得的描述数量不足，请报错。`
-    )
-  }
-}
-
-function resolvePublishRsaAssets(
-  assets: string[],
-  minimumCount: number,
-  requiredCount: number,
-  assetLabel: 'Headlines' | 'Descriptions',
-  forcePublish: boolean
-): string[] {
-  const normalized = normalizeCreativeTextAssets(assets)
-
-  if (!forcePublish) {
-    if (normalized.length !== requiredCount) {
-      throw new Error(
-        `${assetLabel}必须正好${requiredCount}个，当前提供了${normalized.length}个。如果从广告创意中获得的${assetLabel === 'Headlines' ? '标题' : '描述'}数量不足，请报错。`
-      )
-    }
-    return normalized
-  }
-
-  if (normalized.length < minimumCount) {
-    throw new Error(
-      `强制发布失败：${assetLabel === 'Headlines' ? `至少保留${minimumCount}个标题` : `至少保留${minimumCount}个描述`}，当前仅${normalized.length}个。`
-    )
-  }
-
-  if (normalized.length >= requiredCount) {
-    return normalized.slice(0, requiredCount)
-  }
-
-  const padded = [...normalized]
-  for (let index = 0; padded.length < requiredCount; index += 1) {
-    padded.push(normalized[index % normalized.length])
-  }
-
-  console.warn(`[Publish] 强制发布资产补齐: ${assetLabel} ${normalized.length} -> ${requiredCount}`)
-
-  return padded
-}
-
-/**
- * 广告系列发布任务数据接口
- */
 export { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign-publish-orphan-cleanup'
 
 export interface CampaignPublishTaskData {
@@ -252,104 +189,6 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     )
   }
 
-  const redactSecrets = (value: unknown, depth: number = 0): unknown => {
-    const MAX_DEPTH = 6
-    if (depth > MAX_DEPTH) return '[Truncated]'
-
-    const SENSITIVE_KEYS = new Set([
-      'private_key',
-      'privateKey',
-      'developer_token',
-      'developerToken',
-      'refresh_token',
-      'refreshToken',
-      'access_token',
-      'accessToken',
-      'authorization',
-      'cookie',
-      'set-cookie',
-    ])
-
-    const redactString = (s: string): string => {
-      if (s.includes('-----BEGIN PRIVATE KEY-----') || s.includes('BEGIN PRIVATE KEY'))
-        return '[REDACTED_PRIVATE_KEY]'
-      if (s.length > 6000) return `[TRUNCATED_STRING len=${s.length}]`
-      return s
-    }
-
-    if (typeof value === 'string') return redactString(value)
-    if (typeof value !== 'object' || value === null) return value
-    if (Array.isArray(value)) return value.map((v) => redactSecrets(v, depth + 1))
-
-    const obj = value as Record<string, unknown>
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(obj)) {
-      if (SENSITIVE_KEYS.has(k)) {
-        out[k] = '[REDACTED]'
-        continue
-      }
-      // AxiosError 常见的大字段：config.data / request / socket 等，既敏感又巨大
-      if (k === 'request' || k === 'socket' || k === 'agent') {
-        out[k] = '[OMITTED]'
-        continue
-      }
-      if (k === 'data' && typeof v === 'string' && v.includes('private_key')) {
-        out[k] = '[REDACTED]'
-        continue
-      }
-      out[k] = redactSecrets(v, depth + 1)
-    }
-    return out
-  }
-
-  const buildErrorLogObject = (err: unknown): Record<string, unknown> => {
-    // 专门处理 AxiosError：避免把 config/request 等敏感和巨大对象打到日志
-    if (err && typeof err === 'object' && (err as any).isAxiosError) {
-      const ax = err as any
-      return redactSecrets({
-        kind: 'AxiosError',
-        name: ax.name,
-        message: ax.message,
-        code: ax.code,
-        url: ax.config?.url,
-        method: ax.config?.method,
-        status: ax.response?.status,
-        pythonRequestId: ax.response?.headers?.['x-request-id'],
-        responseData: ax.response?.data,
-      }) as Record<string, unknown>
-    }
-
-    if (err instanceof Error) {
-      const ownProps: Record<string, unknown> = {}
-      for (const key of Object.getOwnPropertyNames(err)) {
-        ownProps[key] = (err as any)[key]
-      }
-      for (const key of Object.keys(err as any)) {
-        ownProps[key] = (err as any)[key]
-      }
-      return redactSecrets({
-        kind: 'Error',
-        name: err.name,
-        message: err.message,
-        stack: err.stack,
-        ...ownProps,
-      }) as Record<string, unknown>
-    }
-
-    if (typeof err === 'object' && err !== null) {
-      const ownProps: Record<string, unknown> = {}
-      for (const key of Object.getOwnPropertyNames(err)) {
-        ownProps[key] = (err as any)[key]
-      }
-      for (const key of Object.keys(err as any)) {
-        ownProps[key] = (err as any)[key]
-      }
-      return redactSecrets({ kind: typeof err, ...ownProps }) as Record<string, unknown>
-    }
-
-    return redactSecrets({ kind: typeof err, value: err }) as Record<string, unknown>
-  }
-
   const db = await getDatabase()
   const creative = task.data.creative
   const campaignConfig = task.data.campaignConfig
@@ -371,20 +210,17 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
   let apiErrorMessage: string | undefined
   let totalApiOperations = 0
   const nowExpr = 'NOW()'
-  const campaignPublishHeartbeatMs = parsePositiveIntEnv(
-    process.env.CAMPAIGN_PUBLISH_HEARTBEAT_MS,
-    15000
-  )
-  const campaignPublishQuotaRetryMaxRetries = parsePositiveIntEnv(
-    process.env.CAMPAIGN_PUBLISH_QUOTA_MAX_RETRIES,
+  const campaignPublishHeartbeatMs = getPositiveIntFromEnv('CAMPAIGN_PUBLISH_HEARTBEAT_MS', 15000)
+  const campaignPublishQuotaRetryMaxRetries = getPositiveIntFromEnv(
+    'CAMPAIGN_PUBLISH_QUOTA_MAX_RETRIES',
     3
   )
-  const campaignPublishQuotaRetryBaseDelayMs = parsePositiveIntEnv(
-    process.env.CAMPAIGN_PUBLISH_QUOTA_RETRY_BASE_DELAY_MS,
+  const campaignPublishQuotaRetryBaseDelayMs = getPositiveIntFromEnv(
+    'CAMPAIGN_PUBLISH_QUOTA_RETRY_BASE_DELAY_MS',
     3000
   )
-  const campaignPublishQuotaRetryMaxDelayMs = parsePositiveIntEnv(
-    process.env.CAMPAIGN_PUBLISH_QUOTA_RETRY_MAX_DELAY_MS,
+  const campaignPublishQuotaRetryMaxDelayMs = getPositiveIntFromEnv(
+    'CAMPAIGN_PUBLISH_QUOTA_RETRY_MAX_DELAY_MS',
     30000
   )
   const campaignPublishStartedAt = Date.now()
@@ -1053,7 +889,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       .filter((op): op is NonNullable<typeof op> => op !== null)
 
     const negativeKeywordMatchTypeMap = normalizeNegativeKeywordMatchTypeMap(
-      campaignConfig.negativeKeywordMatchType || campaignConfig.negativeKeywordsMatchType
+      resolveCampaignNegativeKeywordMatchTypeInput(campaignConfig)
     )
 
     const rawNegativeKeywords = Array.isArray(campaignConfig.negativeKeywords)
@@ -1611,7 +1447,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       console.error(`   错误代码:`, error.errors[0]?.error_code)
       console.error(`   请求ID: ${error.request_id || 'N/A'}`)
     }
-    console.error('完整错误对象:', safeJsonStringify(buildErrorLogObject(error), 2))
+    console.error('完整错误对象:', safeJsonStringify(buildPublishErrorLogObject(error), 2))
 
     // 更新数据库记录为失败状态
     try {

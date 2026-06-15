@@ -36,6 +36,22 @@ function normalizeTextArray(value: unknown): string[] {
   return []
 }
 
+export type CreativeBucketSelection = {
+  rawBucket: string
+  normalizedBucket: CreativeBucketSlot | null
+}
+
+/** ad_creatives / 创意入队：仅接受 canonical 槽位 A/B/D */
+export function normalizeCreativeBucketSelection(value: unknown): CreativeBucketSelection {
+  const rawBucket = String(value || '')
+    .trim()
+    .toUpperCase()
+  return {
+    rawBucket,
+    normalizedBucket: normalizeCreativeBucketSlot(rawBucket),
+  }
+}
+
 /** Canonical 创意槽位：仅 A/B/D（ad_creatives.keyword_bucket） */
 export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot | null {
   const upper = String(value || '')

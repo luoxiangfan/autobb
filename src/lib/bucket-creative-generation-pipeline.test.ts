@@ -3,9 +3,9 @@ import {
   assertExecutableKeywordsNonEmpty,
   assertPostGenerationPersistenceGate,
   evaluateCreativeWithPersistenceGate,
-  normalizePipelineBucket,
   resolveOfferLinkType,
 } from './bucket-creative-generation-pipeline'
+import { normalizeCreativeBucketSlot } from './creative-type'
 import { resolveStoredGenerationMode } from './ad-creative-generation-mode'
 import { getAdCreativeGenerationModeProfile } from './ad-creative-generation-mode'
 
@@ -81,14 +81,14 @@ describe('bucket-creative-generation-pipeline', () => {
     expect(resolveStoredGenerationMode('fast')).toBe('fast')
   })
 
-  it('normalizePipelineBucket accepts canonical A/B/D slots only', () => {
-    expect(normalizePipelineBucket('A')).toBe('A')
-    expect(normalizePipelineBucket('B')).toBe('B')
-    expect(normalizePipelineBucket('D')).toBe('D')
-    expect(normalizePipelineBucket('a')).toBe('A')
-    expect(normalizePipelineBucket('C')).toBeNull()
-    expect(normalizePipelineBucket('S')).toBeNull()
-    expect(normalizePipelineBucket('')).toBeNull()
+  it('normalizeCreativeBucketSlot accepts canonical A/B/D slots only', () => {
+    expect(normalizeCreativeBucketSlot('A')).toBe('A')
+    expect(normalizeCreativeBucketSlot('B')).toBe('B')
+    expect(normalizeCreativeBucketSlot('D')).toBe('D')
+    expect(normalizeCreativeBucketSlot('a')).toBe('A')
+    expect(normalizeCreativeBucketSlot('C')).toBeNull()
+    expect(normalizeCreativeBucketSlot('S')).toBeNull()
+    expect(normalizeCreativeBucketSlot('')).toBeNull()
   })
 
   it('resolveOfferLinkType prefers page_type over link_type', () => {

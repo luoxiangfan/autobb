@@ -1,13 +1,11 @@
 import {
   mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType,
-  type CanonicalCreativeType,
-} from './creative-type'
-import {
   normalizeCreativeBucketSelection,
+  type CanonicalCreativeType,
   type CreativeBucketSelection,
   type CreativeBucketSlot,
-} from './creative-bucket-selection'
+} from './creative-type'
 
 export type CreativeSelectionErrorCode =
   | 'invalid-creative-type'

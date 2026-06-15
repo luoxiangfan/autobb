@@ -25,7 +25,6 @@ import {
 } from '@/lib/ad-creative-quality-loop'
 import {
   getCreativeTypeForBucketSlot,
-  normalizeCreativeBucketSlot,
   type CanonicalCreativeType,
   type CreativeBucketSlot,
 } from '@/lib/creative-type'
@@ -113,13 +112,6 @@ export function assertPostGenerationPersistenceGate(params: {
       envelope: params.envelope,
     })
   }
-}
-
-/** 将 C/S 等兼容槽位映射为管线使用的 A/B/D */
-export function normalizePipelineBucket(
-  bucket: string | null | undefined
-): CreativeBucketSlot | null {
-  return normalizeCreativeBucketSlot(bucket)
 }
 
 export interface BucketKeywordContext {

@@ -8,22 +8,12 @@ vi.mock('../unified-keyword-service', () => ({
   getKeywordVolumesForExisting: getKeywordVolumesForExistingMock,
 }))
 
-import {
-  DEFAULT_COVERAGE_KEYWORD_CONFIG,
-  canGenerateCoverageCreative,
-  canGenerateSyntheticCreative,
-  getCoverageBucketKeywords,
-} from '../offer-keyword-pool'
+import { DEFAULT_COVERAGE_KEYWORD_CONFIG, getCoverageBucketKeywords } from '../offer-keyword-pool'
 
 describe('offer-keyword-pool coverage aliases', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getKeywordVolumesForExistingMock.mockResolvedValue([])
-  })
-
-  it('keeps legacy synthetic availability helper aligned with coverage helper', async () => {
-    await expect(canGenerateCoverageCreative(1)).resolves.toBe(false)
-    await expect(canGenerateSyntheticCreative(1)).resolves.toBe(false)
   })
 
   it('builds coverage keywords from canonical D coverage candidates, including store coverage buckets', async () => {

@@ -63,8 +63,42 @@ import {
   normalizeCanonicalCreativeType,
   normalizeKeywordPoolBucketQuery,
   type CanonicalCreativeType,
+  type CreativeBucketSlot,
 } from './creative-type'
 import { resolveOfferLinkType } from './offer-link-type'
+import {
+  DEFAULT_COVERAGE_KEYWORD_CONFIG,
+  DEFAULT_PRODUCT_CLUSTER_BUCKETS,
+  DEFAULT_STORE_CLUSTER_BUCKETS,
+  type BucketType,
+  type CoverageKeywordConfig,
+  type GetKeywordsOptions,
+  type GetKeywordsResult,
+  type KeywordBuckets,
+  type KeywordPoolProgressReporter,
+  type OfferKeywordPool,
+  type PoolKeywordData,
+  type StoreKeywordBuckets,
+} from './offer-keyword-pool/types'
+export type {
+  BucketCreativeOptions,
+  BucketType,
+  ClusteringStrategy,
+  CoverageKeywordConfig,
+  GetKeywordsOptions,
+  GetKeywordsResult,
+  KeywordBuckets,
+  OfferKeywordPool,
+  PoolKeywordData,
+  StoreKeywordBuckets,
+  SyntheticKeywordConfig,
+} from './offer-keyword-pool/types'
+export {
+  DEFAULT_COVERAGE_KEYWORD_CONFIG,
+  DEFAULT_PRODUCT_CLUSTER_BUCKETS,
+  DEFAULT_STORE_CLUSTER_BUCKETS,
+} from './offer-keyword-pool/types'
+export { determineClusteringStrategy } from './offer-keyword-pool/clustering-strategy'
 import { filterCreativeKeywordsByOfferContextDetailed } from './creative-keyword-context-filter'
 import {
   buildProductModelFamilyContext,
@@ -140,19 +174,6 @@ const SEED_INFO_QUERY_PATTERNS = [
 
 type GeminiGenerateParams = Parameters<typeof generateContent>[0]
 type GeminiGenerateResult = Awaited<ReturnType<typeof generateContent>>
-type KeywordPoolProgressReporter = (info: {
-  phase?:
-    | 'seed-volume'
-    | 'expand-round'
-    | 'volume-batch'
-    | 'service-step'
-    | 'filter'
-    | 'cluster'
-    | 'save'
-  message: string
-  current?: number
-  total?: number
-}) => Promise<void> | void
 
 function isGeminiTimeoutError(error: unknown): boolean {
   if (!error) return false
@@ -662,133 +683,6 @@ function prioritizeBrandKeywordsFirst(
 
   if (brandKeywords.length === 0 || nonBrandKeywords.length === 0) return keywords
   return [...brandKeywords, ...nonBrandKeywords]
-}
-
-// ============================================
-// 类型定义
-// ============================================
-
-/**
- * 🆕 关键词池数据结构 - 包含完整元数据
- * 用途：存储关键词的搜索量、CPC、竞争度等数据，避免重复调用 Keyword Planner
- *
- * 🔥 2025-12-29: 新增 isPureBrand 属性用于标记纯品牌词
- */
-export interface PoolKeywordData {
-  keyword: string
-  searchVolume: number
-  competition?: string
-  competitionIndex?: number
-  lowTopPageBid?: number // CPC 数据
-  highTopPageBid?: number // CPC 数据
-  source: string
-  matchType?: 'EXACT' | 'PHRASE' | 'BROAD'
-  isPureBrand?: boolean // 🔥 2025-12-29 新增：标记是否为纯品牌词（豁免搜索量过滤）
-  volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS'
-  relevanceScore?: number
-  qualityTier?: 'HIGH' | 'MEDIUM' | 'LOW'
-  sourceType?: string
-  sourceSubtype?: string
-  rawSource?: string
-  derivedTags?: string[]
-}
-
-/**
- * Offer 级关键词池
- * 🆕 v4.16: 支持单品链接和店铺链接的不同分桶策略
- */
-export interface OfferKeywordPool {
-  id: number
-  offerId: number
-  userId: number
-
-  // 共享层：纯品牌词（🔥 升级为 PoolKeywordData[]）
-  brandKeywords: PoolKeywordData[]
-
-  // 独占层：语义分桶（单品链接，内部 raw buckets）- 4个桶
-  bucketAKeywords: PoolKeywordData[] // 品牌/商品锚点候选 (Brand Product Anchor)
-  bucketBKeywords: PoolKeywordData[] // 商品需求场景候选 (Demand Scenario)
-  bucketCKeywords: PoolKeywordData[] // 功能规格候选 (Feature / Spec)
-  bucketDKeywords: PoolKeywordData[] // 商品需求扩展候选 (Demand Expansion)
-
-  // 桶意图描述（单品链接）
-  bucketAIntent: string
-  bucketBIntent: string
-  bucketCIntent: string
-  bucketDIntent: string
-
-  // 🆕 v4.16: 店铺链接分桶（内部 raw buckets）- 5个桶
-  storeBucketAKeywords: PoolKeywordData[] // 品牌商品集合候选 (Brand Collection)
-  storeBucketBKeywords: PoolKeywordData[] // 商品需求场景候选 (Demand Scenario)
-  storeBucketCKeywords: PoolKeywordData[] // 热门商品线候选 (Hot Product Line)
-  storeBucketDKeywords: PoolKeywordData[] // 信任服务信号候选 (Trust Service)
-  storeBucketSKeywords: PoolKeywordData[] // 店铺全量覆盖候选 (Store Coverage)
-
-  // 店铺分桶意图描述
-  storeBucketAIntent: string
-  storeBucketBIntent: string
-  storeBucketCIntent: string
-  storeBucketDIntent: string
-  storeBucketSIntent: string
-
-  // 🆕 v4.16: 链接类型标识
-  linkType: 'product' | 'store' | 'both'
-
-  // 元数据
-  totalKeywords: number
-  clusteringModel: string | null
-  clusteringPromptVersion: string | null
-  balanceScore: number | null
-
-  createdAt: string
-  updatedAt: string
-}
-
-/**
- * 关键词桶（AI 聚类结果）
- * 🔧 2025-12-24: 添加可选的 bucketS 支持店铺链接
- */
-export interface KeywordBuckets {
-  bucketA: {
-    intent: string
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketB: {
-    intent: string
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketC: {
-    intent: string
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketD: {
-    intent: string
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketS?: {
-    // 🔧 可选：店铺链接专用
-    intent: string
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  statistics: {
-    totalKeywords: number
-    bucketACount: number
-    bucketBCount: number
-    bucketCCount: number
-    bucketDCount: number
-    bucketSCount?: number // 🔧 可选：店铺链接专用
-    balanceScore: number
-  }
 }
 
 // ============================================
@@ -1619,152 +1513,6 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
   } catch (error: any) {
     console.warn(`⚠️ 全局核心关键词搜索量补齐失败: ${error?.message || String(error)}`)
   }
-}
-
-/**
- * 🆕 v4.16: 店铺链接关键词桶（5个桶）
- * 用于店铺链接的5种不同创意类型
- */
-export interface StoreKeywordBuckets {
-  bucketA: {
-    intent: string // 品牌商品集合 (Brand Collection)
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketB: {
-    intent: string // 商品需求场景 (Demand Scenario)
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketC: {
-    intent: string // 热门商品线 (Hot Product Line)
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketD: {
-    intent: string // 信任服务信号 (Trust Service)
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  bucketS: {
-    intent: string // 店铺全量覆盖 (Store Coverage)
-    intentEn: string
-    description: string
-    keywords: string[]
-  }
-  statistics: {
-    totalKeywords: number
-    bucketACount: number
-    bucketBCount: number
-    bucketCCount: number
-    bucketDCount: number
-    bucketSCount: number
-    balanceScore: number
-  }
-}
-
-/**
- * 桶类型
- * A = 品牌意图槽位 / 品牌锚点 raw bucket
- * B = 商品型号/产品族意图槽位 / 需求场景 raw bucket
- * C = 历史兼容 raw bucket（现统一并入 B）
- * D = 商品需求意图槽位 / 需求扩展 raw bucket
- * S = 历史兼容 raw bucket（现统一并入 D）
- */
-export type BucketType = 'A' | 'B' | 'C' | 'D' | 'S'
-
-const DEFAULT_PRODUCT_CLUSTER_BUCKETS = {
-  A: {
-    intent: '品牌商品锚点',
-    intentEn: 'Brand Product Anchor',
-    description: '品牌词与商品/型号锚点明确的候选词',
-  },
-  B: {
-    intent: '商品需求场景',
-    intentEn: 'Demand Scenario',
-    description: '用户有明确商品需求或使用场景的候选词',
-  },
-  C: {
-    intent: '功能规格特性',
-    intentEn: 'Feature / Spec',
-    description: '用户关注功能、参数或规格的候选词',
-  },
-  D: {
-    intent: '商品需求扩展',
-    intentEn: 'Demand Expansion',
-    description: '用于补足商品需求覆盖的高相关候选词',
-  },
-} as const
-
-const DEFAULT_STORE_CLUSTER_BUCKETS = {
-  A: {
-    intent: '品牌商品集合',
-    intentEn: 'Brand Collection',
-    description: '用户认可品牌，想了解品牌下的核心商品集合',
-  },
-  B: {
-    intent: '商品需求场景',
-    intentEn: 'Demand Scenario',
-    description: '用户有明确商品需求或使用场景',
-  },
-  C: {
-    intent: '热门商品线',
-    intentEn: 'Hot Product Line',
-    description: '用户想了解店铺热销商品线、系列或热门型号',
-  },
-  D: {
-    intent: '信任服务信号',
-    intentEn: 'Trust Service',
-    description: '用户关注店铺服务、保障和可信信号',
-  },
-  S: {
-    intent: '店铺全量覆盖',
-    intentEn: 'Store Coverage',
-    description: '用户想全面了解店铺商品与产品线',
-  },
-} as const
-
-/**
- * 商品需求 coverage 关键词配置
- * 说明：这是内部 coverage 模式，不代表第 4 种创意类型。
- */
-export interface CoverageKeywordConfig {
-  /** 最大非品牌关键词数量 */
-  maxNonBrandKeywords: number
-  /** 是否按搜索量排序 */
-  sortByVolume: boolean
-  /** 最小搜索量阈值 */
-  minSearchVolume: number
-  /** 关键词搜索量查询语言 */
-  language?: string
-}
-
-/**
- * 兼容旧命名：SyntheticKeywordConfig 实际等价于 CoverageKeywordConfig
- */
-export type SyntheticKeywordConfig = CoverageKeywordConfig
-
-/**
- * 默认商品需求 coverage 配置
- */
-export const DEFAULT_COVERAGE_KEYWORD_CONFIG: CoverageKeywordConfig = {
-  maxNonBrandKeywords: 15, // 从各桶中选择Top15高搜索量关键词
-  sortByVolume: true,
-  minSearchVolume: 100,
-}
-
-/**
- * 创意生成选项（带桶信息）
- */
-export interface BucketCreativeOptions {
-  bucket: BucketType
-  theme: string
-  keywords: string[]
-  bucketIntent: string
 }
 
 // ============================================
@@ -7793,6 +7541,22 @@ async function applyOfferContextToCanonicalKeywords(params: {
   return markOfferContextFilteredKeywords(filtered)
 }
 
+function getKeywordPoolBucketMeta(
+  slot: CreativeBucketSlot,
+  isStore: boolean
+): { intent: string; intentEn: string } {
+  if (slot === 'A') {
+    return { intent: '品牌意图', intentEn: 'Brand Intent' }
+  }
+  if (slot === 'B') {
+    return {
+      intent: isStore ? '热门商品型号/产品族意图' : '商品型号/产品族意图',
+      intentEn: isStore ? 'Store Model Intent' : 'Model Intent',
+    }
+  }
+  return { intent: '商品需求意图', intentEn: 'Product Demand Intent' }
+}
+
 /**
  * 获取桶的关键词和意图信息
  *
@@ -7804,59 +7568,20 @@ export function getBucketInfo(
   pool: OfferKeywordPool,
   bucket: BucketType
 ): { keywords: PoolKeywordData[]; intent: string; intentEn: string } {
+  const slot = normalizeKeywordPoolBucketQuery(bucket)
+  if (!slot) {
+    throw new Error(`Invalid bucket type: ${bucket}`)
+  }
+
   const linkType = pool.linkType === 'store' ? 'store' : 'product'
   const isStore = linkType === 'store'
+  const meta = getKeywordPoolBucketMeta(slot, isStore)
 
-  switch (bucket) {
-    case 'A':
-      return {
-        keywords: buildCanonicalBucketKeywords(pool, 'A', linkType),
-        intent: isStore ? '品牌意图' : '品牌意图',
-        intentEn: 'Brand Intent',
-      }
-    case 'B':
-      return {
-        keywords: buildCanonicalBucketKeywords(pool, 'B', linkType),
-        intent: isStore ? '热门商品型号/产品族意图' : '商品型号/产品族意图',
-        intentEn: isStore ? 'Store Model Intent' : 'Model Intent',
-      }
-    case 'C':
-      return {
-        // 🔧 向后兼容：旧版 C 桶在当前策略下等价于 B（商品型号/产品族意图）
-        keywords: getBucketInfo(pool, 'B').keywords,
-        intent: getBucketInfo(pool, 'B').intent,
-        intentEn: getBucketInfo(pool, 'B').intentEn,
-      }
-    case 'S':
-      // 🔧 向后兼容：旧版 S 桶在 KISS-3 类型方案中等价于 D（商品需求意图）
-      return {
-        keywords: buildCanonicalBucketKeywords(pool, 'D', linkType),
-        intent: isStore ? '商品需求意图' : '商品需求意图',
-        intentEn: 'Product Demand Intent',
-      }
-    case 'D':
-      // ✅ KISS优化：D 桶 = 商品需求意图
-      // D 桶用于“全量覆盖”创意，确保包含全部合格关键词
-      return {
-        keywords: buildCanonicalBucketKeywords(pool, 'D', linkType),
-        intent: isStore ? '商品需求意图' : '商品需求意图',
-        intentEn: 'Product Demand Intent',
-      }
-    default:
-      throw new Error(`Invalid bucket type: ${bucket}`)
+  return {
+    keywords: buildCanonicalBucketKeywords(pool, slot, linkType),
+    intent: meta.intent,
+    intentEn: meta.intentEn,
   }
-}
-
-/**
- * KISS-3类型：将历史bucket映射到仅3个“用户可见创意类型”
- * - A -> A
- * - B/C -> B（商品型号/产品族意图）
- * - D/S -> D（商品需求意图）
- */
-function mapBucketToKissType(bucket: BucketType): 'A' | 'B' | 'D' {
-  if (bucket === 'A') return 'A'
-  if (bucket === 'B' || bucket === 'C') return 'B'
-  return 'D' // D 或 S
 }
 
 /**
@@ -7997,19 +7722,6 @@ export async function getCoverageBucketKeywords(
   }
 
   return result
-} /**
- * KISS-3 方案中不再生成独立的旧 S/综合创意槽位；该 helper 仅保留兼容签名。
- */
-export async function canGenerateCoverageCreative(offerId: number): Promise<boolean> {
-  void offerId
-  return false
-}
-
-/**
- * 兼容旧命名：旧 synthetic helper 已退化为 coverage helper，不再代表单独创意类型。
- */
-export async function canGenerateSyntheticCreative(offerId: number): Promise<boolean> {
-  return canGenerateCoverageCreative(offerId)
 }
 
 /**
@@ -8129,114 +7841,9 @@ export function calculateKeywordOverlapRate(keywords1: string[], keywords2: stri
 }
 
 // ============================================
-// 关键词数量不足处理
-// ============================================
-
-/**
- * 关键词数量不足时的处理策略
- */
-export interface ClusteringStrategy {
-  bucketCount: 1 | 2 | 3
-  strategy: 'single' | 'dual' | 'full'
-  message: string
-}
-
-/**
- * 根据关键词数量确定聚类策略
- *
- * @param keywordCount - 关键词数量
- * @returns 聚类策略
- */
-export function determineClusteringStrategy(keywordCount: number): ClusteringStrategy {
-  if (keywordCount < 15) {
-    return {
-      bucketCount: 1,
-      strategy: 'single',
-      message: '关键词太少 (<15)，只生成 1 个创意',
-    }
-  } else if (keywordCount < 30) {
-    return {
-      bucketCount: 2,
-      strategy: 'dual',
-      message: '关键词较少 (15-29)，生成 2 个创意',
-    }
-  } else {
-    return {
-      bucketCount: 3,
-      strategy: 'full',
-      message: '关键词充足 (>=30)，生成 3 个创意',
-    }
-  }
-}
-
-// ============================================
 // 🔥 KISS 优化：统一关键词检索 API
 // 替代 5 个重叠函数，简化开发者体验
 // ============================================
-
-/**
- * 统一的关键词检索 API
- *
- * 简化了以下 4 个重叠函数：
- * 1. getKeywordPoolByOfferId()
- * 2. getOrCreateKeywordPool()
- * 3. getMultiRoundIntentAwareKeywords()
- * 4. getUnifiedKeywordData()
- *
- * 使用参数化选项替代多个函数，遵循 KISS 原则
- *
- * 注意：此函数仅负责检索。如需创建关键词池，请使用 getOrCreateKeywordPool()
- */
-export interface GetKeywordsOptions {
-  /** 要检索的桶：A/B/C/D/S（兼容旧参数，C→B，S→D）或 ALL（全部） */
-  bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | 'ALL'
-
-  /** 意图过滤：仅在 bucket=ALL 时作为兼容收窄条件（支持 canonical creativeType 别名） */
-  intent?: 'brand' | 'scenario' | 'feature' | 'demand' | CanonicalCreativeType
-
-  /** canonical 创意类型过滤（兼容旧 key），优先级高于 intent */
-  creativeType?: CanonicalCreativeType | 'brand_focus' | 'model_focus' | 'brand_product'
-
-  /** 最小搜索量阈值 */
-  minSearchVolume?: number
-
-  /** 最大关键词数量 */
-  maxKeywords?: number
-}
-
-/**
- * 统一关键词检索结果
- */
-export interface GetKeywordsResult {
-  /** 关键词列表 */
-  keywords: PoolKeywordData[]
-
-  /** 桶信息（如果适用） */
-  buckets?: {
-    A?: { intent: string; keywords: PoolKeywordData[] }
-    B?: { intent: string; keywords: PoolKeywordData[] }
-    C?: { intent: string; keywords: PoolKeywordData[] }
-    D?: { intent: string; keywords: PoolKeywordData[] }
-  }
-
-  /** 统计信息 */
-  stats: {
-    totalCount: number
-    bucketACount?: number
-    bucketBCount?: number
-    bucketCCount?: number
-    bucketDCount?: number
-    searchVolumeRange?: { min: number; max: number }
-  }
-
-  /** 元数据 */
-  meta: {
-    offerId: number
-    createdAt?: string
-    updatedAt?: string
-    hasMultipleRounds?: boolean
-  }
-}
 
 type CanonicalGetKeywordsBucket = 'A' | 'B' | 'D' | 'ALL'
 
@@ -8498,7 +8105,10 @@ export async function getKeywordsByLinkTypeAndBucket(
   const effectivePool =
     keywordPool.linkType === linkType ? keywordPool : { ...keywordPool, linkType }
   const bucketInfo = getBucketInfo(effectivePool as OfferKeywordPool, bucket)
-  const effectiveBucket = mapBucketToKissType(bucket)
+  const effectiveBucket = normalizeKeywordPoolBucketQuery(bucket)
+  if (!effectiveBucket) {
+    throw new Error(`Invalid bucket type: ${bucket}`)
+  }
   const effectiveCreativeType = getCreativeTypeForBucketSlot(effectiveBucket)
   const comprehensivePoolKeywords = getComprehensiveKeywordsForPool(
     effectivePool as OfferKeywordPool,

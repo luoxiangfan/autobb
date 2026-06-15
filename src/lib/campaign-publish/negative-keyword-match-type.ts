@@ -219,3 +219,15 @@ export function resolveNegativeKeywordMatchType(params: {
 
   return inferNegativeKeywordMatchType(params.keyword)
 }
+
+type CampaignNegativeKeywordMatchTypeSource = {
+  negativeKeywordMatchType?: NegativeKeywordMatchTypeInput
+  negativeKeywordsMatchType?: NegativeKeywordMatchTypeInput
+}
+
+/** 兼容 singular/plural 历史字段命名 */
+export function resolveCampaignNegativeKeywordMatchTypeInput(
+  config: CampaignNegativeKeywordMatchTypeSource
+): NegativeKeywordMatchTypeInput {
+  return config.negativeKeywordMatchType ?? config.negativeKeywordsMatchType
+}
