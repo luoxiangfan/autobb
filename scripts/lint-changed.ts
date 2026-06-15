@@ -4,6 +4,7 @@ import {
   batchFilesByPath,
   getChangedFiles,
   getRepoRoot,
+  isUnderSrc,
   pathBatchPrefix,
 } from './lib/git-changed-files'
 
@@ -42,7 +43,9 @@ function runEslintBatch(repoRoot: string, eslintBin: string, batch: string[]): s
 
 function main(): void {
   const repoRoot = getRepoRoot()
-  const files = getChangedFiles(repoRoot).filter((filePath) => LINTABLE.test(filePath))
+  const files = getChangedFiles(repoRoot).filter(
+    (filePath) => isUnderSrc(filePath) && LINTABLE.test(filePath)
+  )
 
   if (files.length === 0) {
     console.log('lint:changed — no modified or new lintable files')

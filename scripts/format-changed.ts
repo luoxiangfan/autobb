@@ -4,6 +4,7 @@ import {
   batchFilesByPath,
   getChangedFiles,
   getRepoRoot,
+  isUnderSrc,
   pathBatchPrefix,
 } from './lib/git-changed-files'
 
@@ -40,7 +41,7 @@ function runPrettierBatch(repoRoot: string, prettierCjs: string, batch: string[]
 
 function main(): void {
   const repoRoot = getRepoRoot()
-  const files = getChangedFiles(repoRoot)
+  const files = getChangedFiles(repoRoot).filter(isUnderSrc)
 
   if (files.length === 0) {
     console.log('format:changed — no modified or new files')

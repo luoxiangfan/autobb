@@ -1,3 +1,7 @@
+# ESLint / Prettier 仅针对 src/；根目录其它路径默认忽略
+/*
+!src/
+
 node_modules/
 .next/
 out/

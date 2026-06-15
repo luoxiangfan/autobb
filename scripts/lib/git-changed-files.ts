@@ -14,6 +14,11 @@ export function getRepoRoot(): string {
   return runGit(['rev-parse', '--show-toplevel'], process.cwd()).trim()
 }
 
+export function isUnderSrc(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/')
+  return normalized === 'src' || normalized.startsWith('src/')
+}
+
 /** Working-tree changes vs HEAD: modified, added, renamed, and untracked files. */
 export function getChangedFiles(repoRoot: string): string[] {
   const tracked = runGit(['diff', '--name-only', '--diff-filter=ACMR', 'HEAD'], repoRoot)

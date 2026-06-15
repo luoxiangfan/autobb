@@ -3,9 +3,12 @@ import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
 import prettier from 'eslint-config-prettier/flat'
 import unusedImports from 'eslint-plugin-unused-imports'
 
+const srcFiles = ['src/**/*.{js,jsx,ts,tsx,mjs,cjs}']
+
 const eslintConfig = defineConfig([
-  ...nextCoreWebVitals,
+  ...nextCoreWebVitals.map((entry) => (entry.files ? entry : { ...entry, files: srcFiles })),
   {
+    files: srcFiles,
     plugins: {
       'unused-imports': unusedImports,
     },
