@@ -62,11 +62,11 @@ describe('creative keyword topN consistency benchmark', () => {
       topN: 20,
       threshold: 0.9,
       entryKeywords: {
-        sync: sync.keywords,
-        stream: stream.keywords,
-        single: single.keywords,
-        differentiated: differentiated.keywords,
-        queue: queue.keywords,
+        sync: sync.executableKeywords,
+        stream: stream.executableKeywords,
+        single: single.executableKeywords,
+        differentiated: differentiated.executableKeywords,
+        queue: queue.executableKeywords,
       },
     })
     const sourceDistribution = evaluateMultiEntryTopSourceDistribution({

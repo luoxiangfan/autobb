@@ -25,6 +25,7 @@ import {
 } from './language-country-codes'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { classifyKeywordIntent } from './keyword-intent'
+import { getPureBrandKeywords, containsPureBrand, isPureBrandKeyword } from './brand-keyword-utils'
 import {
   detectCountryInKeyword,
   filterLowIntentKeywords,
@@ -32,9 +33,6 @@ import {
   getBrandSearchSuggestions,
 } from './google-suggestions'
 import {
-  getPureBrandKeywords,
-  containsPureBrand,
-  isPureBrandKeyword,
   isBrandVariant,
   isSemanticQuery,
   isBrandIrrelevant,

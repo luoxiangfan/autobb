@@ -1,116 +1,15 @@
 import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../../ad-creative'
-import { sanitizeGoogleAdsAdText } from '@/lib/google-ads/common/ad-text'
-import { getPureBrandKeywords } from '../../keyword-quality-filter'
-import { resolveSoftCopyLanguage } from '../language'
-import { buildHardKeywordHeadlineCandidate, preferredHeadlineSeed } from './hard-retained-contract'
+import { syncHeadlineMetadataSlot } from './headline-candidates'
 import {
-  hasBrandAnchorInHeadline,
-  normalizeBrandNameForHeadline,
-  syncHeadlineMetadataSlot,
-} from './headline-candidates'
-import { fitKeywordIntoDiverseHeadline, getHeadlineActionVariants } from './keyword-usage'
+  buildUniqueHeadlineReplacement,
+  normalizeHeadlineAssetKeyForGoogleAds,
+  resolveKeywordTargetForHeadlineSlot,
+} from './headline-uniqueness-variants'
 import {
-  GOOGLE_ADS_HEADLINE_UNIQUENESS_SUFFIXES,
   RETAINED_KEYWORD_HEADLINE_MAX_LENGTH,
-  RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX,
   RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT,
 } from './slot-constants'
-import {
-  applyHeadlineTextGuardrail,
-  stripHeadlineNumericSuffixArtifact,
-} from './text-guardrails'
-
-export function normalizeHeadlineAssetKeyForGoogleAds(text: string): string {
-  return sanitizeGoogleAdsAdText(String(text || ''), 30)
-    .trim()
-    .toLowerCase()
-}
-
-export function buildUniqueHeadlineVariantForGoogleAds(params: {
-  currentHeadline: string
-  keywordTarget: string
-  brandName: string
-  languageCode: string
-  protectedHeadlines: string[]
-  usedAssetKeys: Set<string>
-}): string | null {
-  const {
-    currentHeadline,
-    keywordTarget,
-    brandName,
-    languageCode,
-    protectedHeadlines,
-    usedAssetKeys,
-  } = params
-  const softLanguage = resolveSoftCopyLanguage(languageCode) || 'en'
-  const preferredSeed = preferredHeadlineSeed(currentHeadline, brandName, softLanguage)
-  const normalizedBrand = normalizeBrandNameForHeadline(brandName)
-  const brandTokensToMatch = getPureBrandKeywords(brandName)
-  const actionVariants = Array.from(
-    new Set([
-      ...getHeadlineActionVariants(languageCode),
-      ...GOOGLE_ADS_HEADLINE_UNIQUENESS_SUFFIXES,
-    ])
-  )
-
-  const rawCandidates = [
-    keywordTarget
-      ? fitKeywordIntoDiverseHeadline(
-          currentHeadline,
-          keywordTarget,
-          RETAINED_KEYWORD_HEADLINE_MAX_LENGTH,
-          languageCode,
-          protectedHeadlines,
-          brandName
-        )
-      : null,
-    keywordTarget ? buildHardKeywordHeadlineCandidate(keywordTarget, languageCode) : null,
-    ...actionVariants.map((action) => `${action} ${preferredSeed}`.trim()),
-    ...actionVariants.map((action) => `${preferredSeed} ${action}`.trim()),
-    `${brandName} ${keywordTarget || preferredSeed}`.trim(),
-    preferredSeed,
-  ]
-
-  for (const rawCandidate of rawCandidates) {
-    let candidate = stripHeadlineNumericSuffixArtifact(
-      applyHeadlineTextGuardrail(String(rawCandidate || ''), RETAINED_KEYWORD_HEADLINE_MAX_LENGTH)
-    )
-    if (
-      candidate &&
-      normalizedBrand &&
-      !hasBrandAnchorInHeadline(candidate, normalizedBrand, brandTokensToMatch)
-    ) {
-      candidate = stripHeadlineNumericSuffixArtifact(
-        applyHeadlineTextGuardrail(
-          `${normalizedBrand} ${candidate}`,
-          RETAINED_KEYWORD_HEADLINE_MAX_LENGTH
-        )
-      )
-    }
-    const normalizedKey = normalizeHeadlineAssetKeyForGoogleAds(candidate)
-    if (!candidate || !normalizedKey || usedAssetKeys.has(normalizedKey)) continue
-    usedAssetKeys.add(normalizedKey)
-    return candidate
-  }
-
-  return null
-}
-
-export function resolveKeywordTargetForHeadlineSlot(params: {
-  index: number
-  usagePlan?: CreativeKeywordUsagePlan | null
-  keywords: string[]
-}): string {
-  const { index, usagePlan, keywords } = params
-  if (
-    usagePlan &&
-    index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX &&
-    index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
-  ) {
-    return usagePlan.headlineKeywordTargets[index - RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX]
-  }
-  return keywords[(index - 1) % Math.max(1, keywords.length)] || ''
-}
+import { applyHeadlineTextGuardrail, stripHeadlineNumericSuffixArtifact } from './text-guardrails'
 
 export function enforceGoogleAdsHeadlineAssetUniqueness(
   result: GeneratedAdCreativeData,
@@ -152,13 +51,14 @@ export function enforceGoogleAdsHeadlineAssetUniqueness(
       usagePlan,
       keywords,
     })
-    const replacement = buildUniqueHeadlineVariantForGoogleAds({
+    const replacement = buildUniqueHeadlineReplacement({
       currentHeadline: cleaned,
       keywordTarget,
       brandName,
       languageCode,
       protectedHeadlines,
-      usedAssetKeys,
+      usedKeys: usedAssetKeys,
+      normalization: 'google-ads-asset',
     })
 
     if (!replacement) {

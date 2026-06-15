@@ -20,11 +20,10 @@ import {
 } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
 import { getKeywordSourcePriorityScoreFromInput } from '../creative-keyword-source-priority'
 
+import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
 import {
-  containsPureBrand,
   filterKeywordQuality,
   generateFilterReport,
-  getPureBrandKeywords,
   isBrandConcatenation,
 } from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
@@ -52,7 +51,6 @@ import {
   enforceEmotionBoundaryByBucket,
   enforceFinalCreativeContract,
   enforceHeadlineComplementarity,
-  enforceHeadlineUniquenessGate,
   enforceKeywordEmbedding,
   enforceRetainedKeywordSlotCoverage,
   enforceTitlePriorityTopHeadlines,
@@ -1488,16 +1486,6 @@ export async function generateAdCreative(
     console.log(
       `🔧 语言纯度门控: headlines ${purityFix.headlineFixes} 条, descriptions ${purityFix.descriptionFixes} 条`
     )
-  }
-
-  const dedupeFix = enforceHeadlineUniquenessGate(
-    result,
-    targetLanguage || resolvedLanguage,
-    brandName,
-    effectiveKeywordUsagePlan
-  )
-  if (dedupeFix.fixes > 0) {
-    console.log(`🔧 Headline去重门控: 修复 ${dedupeFix.fixes} 条`)
   }
 
   const finalContractFix = enforceFinalCreativeContract(result, {

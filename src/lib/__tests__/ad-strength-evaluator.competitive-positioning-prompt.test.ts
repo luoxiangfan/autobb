@@ -29,6 +29,24 @@ vi.mock('../ai-token-tracker', () => ({
   estimateTokenCost: vi.fn(() => 0.01),
 }))
 
+vi.mock('../prompt-loader', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../prompt-loader')>()
+  return {
+    ...actual,
+    loadPrompt: vi.fn(async (promptId: string) => {
+      if (promptId === 'competitive_positioning_analysis') {
+        return [
+          '{{inputGuardrail}}',
+          'BEGIN UNTRUSTED COMPETITIVE_POSITIONING_AD_COPY',
+          '{{adCopyText}}',
+          'Price Advantage: {{priceAdvantageScore}}',
+        ].join('\n')
+      }
+      return actual.loadPrompt(promptId)
+    }),
+  }
+})
+
 import { evaluateAdStrength } from '../ad-strength-evaluator'
 
 describe('ad-strength competitive positioning prompt guardrails', () => {

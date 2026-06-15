@@ -1,20 +1,6 @@
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
+import { isPureBrandKeyword } from '@/lib/brand-keyword-utils'
 
 export type PositiveKeywordMatchType = 'EXACT' | 'PHRASE' | 'BROAD'
-
-function normalizeCompact(value: string): string {
-  return value.replace(/\s+/g, '')
-}
-
-function isPureBrandKeyword(keyword: string, brandName: string): boolean {
-  const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
-  const normalizedBrand = normalizeGoogleAdsKeyword(brandName)
-
-  if (!normalizedKeyword || !normalizedBrand) return false
-  if (normalizedKeyword === normalizedBrand) return true
-
-  return normalizeCompact(normalizedKeyword) === normalizeCompact(normalizedBrand)
-}
 
 export function normalizePositiveKeywordMatchType(value: unknown): PositiveKeywordMatchType | null {
   const normalized = String(value || '')

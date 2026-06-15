@@ -3,11 +3,10 @@
  */
 import { getDatabase } from '../db'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { containsPureBrand } from '../brand-keyword-utils'
+import { containsPureBrand, isPureBrandKeyword } from '../brand-keyword-utils'
 import { filterCreativeKeywordsByOfferContextDetailed } from '../creative-keyword-context-filter'
 import { hasModelAnchorEvidence, type CanonicalCreativeType } from '../creative-type'
 import { classifyKeywordIntent } from '../keyword-intent'
-import { isPureBrandKeyword as isPureBrandKeywordInternal } from '../keyword-quality-filter'
 import {
   buildProductModelFamilyContext,
   buildProductModelFamilyFallbackKeywords,
@@ -651,7 +650,7 @@ export function isPureBrandPoolKeyword(
   item: PoolKeywordData,
   pureBrandKeywords: string[]
 ): boolean {
-  return Boolean(item.isPureBrand) || isPureBrandKeywordInternal(item.keyword, pureBrandKeywords)
+  return Boolean(item.isPureBrand) || isPureBrandKeyword(item.keyword, pureBrandKeywords)
 }
 
 function hasStoreModelIntentFamilyRescueSignal(

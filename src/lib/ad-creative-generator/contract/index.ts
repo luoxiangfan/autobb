@@ -29,7 +29,27 @@ export * from './headline-candidates'
 export * from './keyword-usage'
 export * from './operation-utils'
 export * from './copy-intent-enforcement'
+export * from './headline-uniqueness-variants'
 export * from './complementarity'
 export * from './google-ads-uniqueness'
 export * from './hard-retained-contract'
 export * from './final-contract'
+
+export {
+  normalizeBrandFreeText,
+  normalizeHeadline2KeywordCandidate,
+  tokenizeHeadline2Keyword,
+  scoreAdCreativeCandidate,
+  AD_CREATIVE_RESPONSE_SCHEMA,
+  AD_CREATIVE_RETRY_RESPONSE_SCHEMA,
+  AD_CREATIVE_EMERGENCY_RETRY_RESPONSE_SCHEMA,
+  AD_CREATIVE_REQUIRED_COUNTS,
+  AD_CREATIVE_EMERGENCY_RETRY_TEMPERATURE,
+  AD_CREATIVE_SIMPLIFIED_RETRY_MAX_OUTPUT_TOKENS,
+  validateGeneratedAdCreativeBusinessLimits,
+  resolveAdCreativeRetryPlan,
+  selectBestJsonCandidate,
+  filterModelIntentGeneratedKeywords,
+  parseAIResponse,
+  isLikelyModelCodeToken,
+} from './response-handling'

@@ -1,18 +1,11 @@
 import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../../ad-creative'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import {
-  getGoogleAdsTextEffectiveLength,
-} from '@/lib/google-ads/common/ad-text'
+import { getGoogleAdsTextEffectiveLength } from '@/lib/google-ads/common/ad-text'
 import { getKeywordSourcePriorityScoreFromInput } from '../../creative-keyword-source-priority'
-import {
-  getPureBrandKeywords,
-  isBrandVariant,
-  isSemanticQuery,
-} from '../../keyword-quality-filter'
+import { getPureBrandKeywords } from '../../brand-keyword-utils'
+import { isBrandVariant, isSemanticQuery } from '../../keyword-quality-filter'
 import { isPureBrandKeyword } from '../../brand-keyword-utils'
-import {
-  getCtaPhrasesForLanguage,
-} from '../language'
+import { getCtaPhrasesForLanguage } from '../language'
 import type { PrecomputedCreativeKeywordSet } from '../types'
 import { escapeRegex, isUsefulCreativePhrase, calculateTextSimilarity } from '../utils'
 import {
@@ -37,10 +30,7 @@ import {
   RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT,
   RETAINED_KEYWORD_PROTECTED_SIMILARITY_THRESHOLD,
 } from './slot-constants'
-import {
-  normalizeHeadlineCandidateText,
-  stripHeadlineTrailingPunctuation,
-} from './text-guardrails'
+import { normalizeHeadlineCandidateText, stripHeadlineTrailingPunctuation } from './text-guardrails'
 
 export function textContainsKeyword(text: string, keyword: string): boolean {
   const normalizedText = String(text || '').toLowerCase()

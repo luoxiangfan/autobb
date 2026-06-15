@@ -1,7 +1,4 @@
-import {
-  isCreativeKeywordAiSourceSubtypeEnabled,
-  isCreativeKeywordSourcePriorityUnifiedEnabled,
-} from './creative-keyword-feature-flags'
+import { isCreativeKeywordAiSourceSubtypeEnabled } from './creative-keyword-feature-flags'
 
 export type KeywordSourceTier =
   | 'T0'
@@ -73,26 +70,6 @@ const PREFIX_SOURCE_PRIORITY: Array<{ prefix: string; rule: SourcePriorityRule }
   { prefix: 'GLOBAL_', rule: { score: 65, tier: 'T3A' } },
 ]
 
-const LEGACY_EXACT_SOURCE_PRIORITY: Record<string, SourcePriorityRule> = {
-  SCORING_SUGGESTION: { score: 110, tier: 'T3B' },
-  KEYWORD_POOL: { score: 100, tier: 'DERIVED_TRUSTED' },
-  SEARCH_TERM_HIGH_PERFORMING: { score: 80, tier: 'T0' },
-  SEARCH_TERM: { score: 75, tier: 'T0' },
-  KEYWORD_PLANNER: { score: 70, tier: 'T1' },
-  KEYWORD_PLANNER_BRAND: { score: 70, tier: 'T1' },
-  OFFER_EXTRACTED_KEYWORDS: { score: 68, tier: 'T2' },
-  GLOBAL_KEYWORD: { score: 65, tier: 'T3A' },
-  GLOBAL_KEYWORDS: { score: 65, tier: 'T3A' },
-  GOOGLE_SUGGEST: { score: 58, tier: 'T3B' },
-  OFFER_AI_KEYWORDS: { score: 40, tier: 'T4B' },
-  AI_ENHANCED: { score: 50, tier: 'T4A' },
-  AI_ENHANCED_PERSISTED: { score: 50, tier: 'T4A' },
-  AI_GENERATED: { score: 40, tier: 'T4B' },
-  AI_LLM_RAW: { score: 40, tier: 'T4B' },
-  AI_FALLBACK_PLACEHOLDER: { score: 40, tier: 'T4B' },
-  KEYWORD_EXPANSION: { score: 40, tier: 'T4B' },
-}
-
 function normalizeSource(source: string | undefined): string {
   return String(source || '')
     .trim()
@@ -122,13 +99,6 @@ export function resolveKeywordPrioritySource(input: {
   source?: string
   sourceType?: string
 }): string | undefined {
-  if (!isCreativeKeywordSourcePriorityUnifiedEnabled()) {
-    const source = normalizeSource(input.source)
-    if (source && source !== 'UNKNOWN') return source
-    const sourceType = normalizeSource(input.sourceType)
-    return sourceType || undefined
-  }
-
   const sourceType = normalizeSource(input.sourceType)
   const source = normalizeSource(input.source)
   if (shouldPreferRawCanonicalSource({ source, sourceType })) return source
@@ -139,15 +109,6 @@ export function resolveKeywordPrioritySource(input: {
 export function getKeywordSourcePriority(source: string | undefined): SourcePriorityRule {
   const normalized = normalizeSource(source)
   if (!normalized) return { score: 0, tier: 'UNKNOWN' }
-
-  if (!isCreativeKeywordSourcePriorityUnifiedEnabled()) {
-    const legacy = LEGACY_EXACT_SOURCE_PRIORITY[normalized]
-    if (legacy) return legacy
-    for (const { prefix, rule } of PREFIX_SOURCE_PRIORITY) {
-      if (normalized.startsWith(prefix)) return rule
-    }
-    return { score: 20, tier: 'UNKNOWN' }
-  }
 
   const exact = EXACT_SOURCE_PRIORITY[normalized]
   if (exact) return exact

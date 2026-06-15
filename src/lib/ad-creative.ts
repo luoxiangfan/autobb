@@ -247,8 +247,6 @@ export interface GeneratedAdCreativeData {
     supplementCapApplied: boolean
   }
   audit?: CreativeKeywordAudit
-  // Deprecated compatibility field. Prefer `audit`.
-  keywordSourceAudit?: CreativeKeywordSourceAudit
 }
 
 function normalizeCreativeAuditForCompat(audit: unknown): CreativeKeywordSourceAudit | undefined {
@@ -748,7 +746,6 @@ export async function createAdCreative(
       dimensions: any
       suggestions?: string[]
       audit?: CreativeKeywordAudit
-      keywordSourceAudit?: CreativeKeywordSourceAudit
     }
     // 🆕 v4.10: 关键词池桶信息
     keyword_bucket?: 'A' | 'B' | 'D'
@@ -800,11 +797,9 @@ export async function createAdCreative(
     data.adStrength && typeof data.adStrength === 'object' ? { ...data.adStrength } : undefined
   if (normalizedAdStrength && providedCreativeAudit) {
     ;(normalizedAdStrength as any).audit = providedCreativeAudit
-    ;(normalizedAdStrength as any).keywordSourceAudit = providedCreativeAudit
   } else if (!normalizedAdStrength && providedCreativeAudit) {
     normalizedAdStrength = {
       audit: providedCreativeAudit,
-      keywordSourceAudit: providedCreativeAudit,
     } as any
   }
 
@@ -1293,12 +1288,7 @@ function parseAdCreativeRow(row: any): AdCreative {
   const normalizedAdStrength = parsedAdStrength
     ? {
         ...parsedAdStrength,
-        ...(parsedAdStrengthAudit
-          ? {
-              audit: parsedAdStrengthAudit,
-              keywordSourceAudit: parsedAdStrengthAudit,
-            }
-          : {}),
+        ...(parsedAdStrengthAudit ? { audit: parsedAdStrengthAudit } : {}),
       }
     : undefined
   const normalizedCreativeType = deriveCanonicalCreativeType({

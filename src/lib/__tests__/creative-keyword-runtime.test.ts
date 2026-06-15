@@ -236,7 +236,6 @@ describe('creative-keyword-runtime', () => {
       },
       suggestions: ['Add offer'],
       audit,
-      keywordSourceAudit: audit,
     })
   })
 
@@ -463,7 +462,6 @@ describe('creative-keyword-runtime', () => {
         supplementCapApplied: false,
       },
       audit,
-      keywordSourceAudit: audit,
     })
   })
 

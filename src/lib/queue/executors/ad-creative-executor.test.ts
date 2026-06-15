@@ -181,7 +181,6 @@ describe('executeAdCreativeGeneration', () => {
       executableKeywords: ['brandx x200 vacuum'],
       executableKeywordCandidates: [],
       candidatePool: [],
-      keywords: ['brandx x200 vacuum'],
       keywordsWithVolume: [
         { keyword: 'brandx x200 vacuum', searchVolume: 1200, matchType: 'EXACT' },
       ],
@@ -209,7 +208,6 @@ describe('executeAdCreativeGeneration', () => {
         creativeAffinityByLabel: {},
         creativeAffinityByLevel: {},
       },
-      keywordSourceAudit: { totalKeywords: 1 },
     }
 
     keywordRuntimeFns.buildPreGenerationCreativeKeywordSet.mockResolvedValue(
@@ -257,7 +255,6 @@ describe('executeAdCreativeGeneration', () => {
         executableKeywords: ['brandx x200 replacement filter'],
         executableKeywordCandidates: [],
         candidatePool: [],
-        keywords: ['brandx x200 replacement filter'],
         keywordsWithVolume: [
           { keyword: 'brandx x200 replacement filter', searchVolume: 260, matchType: 'PHRASE' },
         ],
@@ -285,15 +282,11 @@ describe('executeAdCreativeGeneration', () => {
           creativeAffinityByLabel: {},
           creativeAffinityByLevel: {},
         },
-        keywordSourceAudit: {
-          totalKeywords: 1,
-        },
       })
       .mockResolvedValueOnce({
         executableKeywords: ['brandx x200 vacuum'],
         executableKeywordCandidates: [],
         candidatePool: [],
-        keywords: ['brandx x200 vacuum'],
         keywordsWithVolume: [
           { keyword: 'brandx x200 vacuum', searchVolume: 1200, matchType: 'EXACT' },
         ],
@@ -320,9 +313,6 @@ describe('executeAdCreativeGeneration', () => {
           bySourceField: {},
           creativeAffinityByLabel: {},
           creativeAffinityByLevel: {},
-        },
-        keywordSourceAudit: {
-          totalKeywords: 1,
         },
       })
 
@@ -411,9 +401,6 @@ describe('executeAdCreativeGeneration', () => {
     expect(result.creative.audit).toMatchObject({
       totalKeywords: 1,
       contextFallbackStrategy: 'filtered',
-    })
-    expect(result.creative.keywordSourceAudit).toMatchObject({
-      totalKeywords: 1,
     })
     expect(result.adStrength.audit).toMatchObject({
       totalKeywords: 1,
@@ -595,7 +582,6 @@ describe('executeAdCreativeGeneration', () => {
       executableKeywords: ['novilla'],
       executableKeywordCandidates: [],
       candidatePool: [],
-      keywords: ['novilla'],
       keywordsWithVolume: [
         {
           keyword: 'novilla',
@@ -629,9 +615,6 @@ describe('executeAdCreativeGeneration', () => {
         bySourceField: {},
         creativeAffinityByLabel: {},
         creativeAffinityByLevel: {},
-      },
-      keywordSourceAudit: {
-        totalKeywords: 1,
       },
     })
 
@@ -686,7 +669,6 @@ describe('executeAdCreativeGeneration', () => {
         executableKeywords: ['brandx x200 replacement filter'],
         executableKeywordCandidates: [],
         candidatePool: [],
-        keywords: ['brandx x200 replacement filter'],
         keywordsWithVolume: [
           { keyword: 'brandx x200 replacement filter', searchVolume: 260, matchType: 'PHRASE' },
         ],
@@ -714,13 +696,11 @@ describe('executeAdCreativeGeneration', () => {
           creativeAffinityByLabel: {},
           creativeAffinityByLevel: {},
         },
-        keywordSourceAudit: { totalKeywords: 1 },
       })
       .mockResolvedValueOnce({
         executableKeywords: ['x200 vacuum'],
         executableKeywordCandidates: [],
         candidatePool: [],
-        keywords: ['x200 vacuum'],
         keywordsWithVolume: [{ keyword: 'x200 vacuum', searchVolume: 1200, matchType: 'EXACT' }],
         promptKeywords: ['x200 vacuum'],
         keywordSupplementation: {
@@ -746,13 +726,11 @@ describe('executeAdCreativeGeneration', () => {
           creativeAffinityByLabel: {},
           creativeAffinityByLevel: {},
         },
-        keywordSourceAudit: { totalKeywords: 1 },
       })
       .mockResolvedValueOnce({
         executableKeywords: ['x300 vacuum'],
         executableKeywordCandidates: [],
         candidatePool: [],
-        keywords: ['x300 vacuum'],
         keywordsWithVolume: [{ keyword: 'x300 vacuum', searchVolume: 900, matchType: 'EXACT' }],
         promptKeywords: ['x300 vacuum'],
         keywordSupplementation: {
@@ -778,7 +756,6 @@ describe('executeAdCreativeGeneration', () => {
           creativeAffinityByLabel: {},
           creativeAffinityByLevel: {},
         },
-        keywordSourceAudit: { totalKeywords: 1 },
       })
 
     generatorFns.generateAdCreative

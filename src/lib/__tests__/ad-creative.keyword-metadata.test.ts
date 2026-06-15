@@ -193,7 +193,7 @@ describe('createAdCreative keyword metadata', () => {
     })
   })
 
-  it('persists audit as primary field and keeps keywordSourceAudit alias in adStrength payload', async () => {
+  it('persists audit as primary field in adStrength payload', async () => {
     const creative = await createAdCreative(1, 96, {
       headlines: ['BrandX X200 Vacuum'],
       descriptions: ['Clean faster with BrandX X200'],
@@ -292,24 +292,8 @@ describe('createAdCreative keyword metadata', () => {
         SEARCH_TERM: { count: 1, ratio: 0.5 },
       },
     })
-    expect(persistedAdStrength.keywordSourceAudit).toMatchObject({
-      totalKeywords: 2,
-      noVolumeMode: true,
-      sourceQuotaAudit: {
-        deferredRefillTriggered: true,
-      },
-      byRawSource: {
-        SEARCH_TERM: { count: 1, ratio: 0.5 },
-      },
-    })
 
     expect((creative as any).adStrength?.audit).toMatchObject({
-      totalKeywords: 2,
-      sourceQuotaAudit: {
-        deferredRefillTriggered: true,
-      },
-    })
-    expect((creative as any).adStrength?.keywordSourceAudit).toMatchObject({
       totalKeywords: 2,
       sourceQuotaAudit: {
         deferredRefillTriggered: true,
@@ -430,7 +414,7 @@ describe('createAdCreative keyword metadata', () => {
       headlines: ['BrandX X200 Vacuum'],
       descriptions: ['Clean faster with BrandX X200'],
       keywords: ['brandx x200 vacuum'],
-      keywordSourceAudit: {
+      audit: {
         totalKeywords: 1,
         withSearchVolumeKeywords: 1,
         zeroVolumeKeywords: 0,

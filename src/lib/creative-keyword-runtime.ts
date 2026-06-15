@@ -212,6 +212,7 @@ type CreativeKeywordRuntimeCarrier = Pick<
 > & {
   executableKeywords?: string[]
   audit?: CreativeKeywordSourceAudit
+  /** @deprecated Read-compat for persisted creatives before audit field migration */
   keywordSourceAudit?: CreativeKeywordSourceAudit
   adStrength?: {
     audit?: CreativeKeywordSourceAudit
@@ -547,7 +548,6 @@ export function createCreativeAdStrengthPayload(
     dimensions: evaluation.localEvaluation.dimensions,
     suggestions: evaluation.combinedSuggestions,
     audit,
-    keywordSourceAudit: audit,
   }
 }
 
@@ -643,7 +643,6 @@ export function createCreativeResponsePayload(input: CreateCreativeResponsePaylo
       ? { keywordSupplementation: input.creative.keywordSupplementation || null }
       : {}),
     audit: input.audit,
-    keywordSourceAudit: input.audit,
   }
 }
 

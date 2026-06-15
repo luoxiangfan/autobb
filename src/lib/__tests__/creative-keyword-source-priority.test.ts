@@ -84,16 +84,6 @@ describe('creative-keyword-source-priority', () => {
     )
   })
 
-  it('supports rollback to legacy source ranking when unified priority is disabled', () => {
-    vi.stubEnv('CREATIVE_KEYWORD_SOURCE_PRIORITY_UNIFIED_ENABLED', 'false')
-
-    const scoring = getKeywordSourcePriorityScore('SCORING_SUGGESTION')
-    const searchTerm = getKeywordSourcePriorityScore('SEARCH_TERM_HIGH_PERFORMING')
-
-    expect(scoring).toBeGreaterThan(searchTerm)
-    expect(getKeywordSourcePriority('KEYWORD_POOL').score).toBeGreaterThan(searchTerm)
-  })
-
   it('falls back to legacy source-only subtype when ai source subtype flag is disabled', () => {
     vi.stubEnv('CREATIVE_KEYWORD_AI_SOURCE_SUBTYPE_ENABLED', 'false')
 

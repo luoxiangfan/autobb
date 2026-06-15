@@ -33,6 +33,19 @@ vi.mock('../gemini', () => ({
   generateContent: generateContentMock,
 }))
 
+vi.mock('../prompt-loader', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../prompt-loader')>()
+  return {
+    ...actual,
+    loadPrompt: vi.fn(async (promptId: string) => {
+      if (promptId === 'competitive_positioning_analysis') {
+        return '{{inputGuardrail}}\n{{adCopyText}}'
+      }
+      return actual.loadPrompt(promptId)
+    }),
+  }
+})
+
 import { evaluateAdStrength } from '../ad-strength-evaluator'
 
 describe('ad-strength-evaluator KISS optimizations', () => {

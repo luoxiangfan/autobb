@@ -10,10 +10,7 @@ import {
   getCtaRegexForLanguage,
 } from '../language'
 import type { NormalizedCreativeBucket } from '../types'
-import {
-  classifyCopyIntentFromText,
-  classifyDescriptionStructure,
-} from './copy-intent-enforcement'
+import { classifyCopyIntentFromText, classifyDescriptionStructure } from './copy-intent-enforcement'
 import { enforceHeadlineUniquenessGate } from './complementarity'
 import { enforceGoogleAdsHeadlineAssetUniqueness } from './google-ads-uniqueness'
 import {
@@ -87,12 +84,6 @@ export function enforceFinalCreativeContract(
     options.languageCode,
     options.brandName
   )
-  const uniquenessFix = enforceHeadlineUniquenessGate(
-    result,
-    options.languageCode,
-    options.brandName,
-    languageSafeUsagePlan
-  )
   const hardRetainedFix = enforceHardRetainedKeywordContract(
     result,
     languageSafeUsagePlan,
@@ -105,13 +96,13 @@ export function enforceFinalCreativeContract(
     options.languageCode,
     options.brandName
   )
-  const finalUniquenessFix = enforceHeadlineUniquenessGate(
+  const finalNormalizeFix = normalizeCreativeAssetText(result)
+  const protectedUniquenessFix = enforceHeadlineUniquenessGate(
     result,
     options.languageCode,
     options.brandName,
     languageSafeUsagePlan
   )
-  const finalNormalizeFix = normalizeCreativeAssetText(result)
   const googleAdsUniquenessFix = enforceGoogleAdsHeadlineAssetUniqueness(
     result,
     options.languageCode,
@@ -141,7 +132,7 @@ export function enforceFinalCreativeContract(
       headlineFixes: languageFixesBefore.headlineFixes + languageFixesAfter.headlineFixes,
       descriptionFixes: languageFixesBefore.descriptionFixes + languageFixesAfter.descriptionFixes,
     },
-    uniquenessFixes: uniquenessFix.fixes + finalUniquenessFix.fixes + googleAdsUniquenessFix.fixes,
+    uniquenessFixes: protectedUniquenessFix.fixes + googleAdsUniquenessFix.fixes,
   }
 }
 

@@ -141,8 +141,7 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
       fallbackMode: true,
     })
 
-    expect(result.keywords).toEqual(['brandx x200 vacuum', 'brandx vacuum cleaner'])
-    expect(result.executableKeywords).toEqual(result.keywords)
+    expect(result.executableKeywords).toEqual(['brandx x200 vacuum', 'brandx vacuum cleaner'])
     expect(result.promptKeywords).toEqual(['brandx x200 vacuum', 'brandx vacuum cleaner'])
     expect(result).toEqual(
       expect.objectContaining({
@@ -152,8 +151,7 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         audit: expect.any(Object),
       })
     )
-    expect(result.audit).toEqual(result.keywordSourceAudit)
-    expect(result.keywordSourceAudit).toMatchObject({
+    expect(result.audit).toMatchObject({
       totalKeywords: 2,
       withSearchVolumeKeywords: 1,
       zeroVolumeKeywords: 1,
@@ -1769,10 +1767,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
     )
     expect(result.executableKeywords.length).toBeGreaterThanOrEqual(2)
     expect(result.executableKeywords.length).toBeLessThanOrEqual(expectedFloor)
-    expect(result.keywordSourceAudit.sourceQuotaAudit.acceptedCount).toBe(
-      result.executableKeywords.length
-    )
-    expect(result.keywordSourceAudit.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(
+    expect(result.audit.sourceQuotaAudit.acceptedCount).toBe(result.executableKeywords.length)
+    expect(result.audit.sourceQuotaAudit.targetCount).toBeGreaterThanOrEqual(
       result.executableKeywords.length
     )
     expect(result.audit.pipeline).toMatchObject({
@@ -3072,7 +3068,7 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         'max lily wood bed frame',
       ])
     )
-    expect(result.keywordSourceAudit.pipeline.nonEmptyRescueTriggered).toBe(false)
+    expect(result.audit.pipeline.nonEmptyRescueTriggered).toBe(false)
     expect(
       result.keywordsWithVolume.some(
         (item) =>
@@ -3166,8 +3162,8 @@ describe('buildCreativeKeywordSet keyword source audit', () => {
         'max lily wood bed frame',
       ])
     )
-    expect(result.keywordSourceAudit.contextFallbackStrategy).toBe('filtered')
-    expect(result.keywordSourceAudit.pipeline.nonEmptyRescueTriggered).toBe(false)
+    expect(result.audit.contextFallbackStrategy).toBe('filtered')
+    expect(result.audit.pipeline.nonEmptyRescueTriggered).toBe(false)
     expect(
       result.keywordsWithVolume.some(
         (item) =>

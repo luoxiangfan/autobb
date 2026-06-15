@@ -20,7 +20,6 @@ describe('finalizeCreativeKeywordSet', () => {
       executableKeywords: ['brandx x200 vacuum'],
       executableKeywordCandidates: [],
       candidatePool: [],
-      keywords: ['brandx x200 vacuum'],
       keywordsWithVolume: [
         {
           keyword: 'brandx x200 vacuum',
@@ -45,9 +44,6 @@ describe('finalizeCreativeKeywordSet', () => {
         bySourceField: {},
         creativeAffinityByLabel: {},
         creativeAffinityByLevel: {},
-      },
-      keywordSourceAudit: {
-        totalKeywords: 1,
       },
     })
 

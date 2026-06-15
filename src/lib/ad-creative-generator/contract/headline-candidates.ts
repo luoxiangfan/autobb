@@ -1,6 +1,6 @@
 import type { GeneratedAdCreativeData } from '../../ad-creative'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { getPureBrandKeywords, containsPureBrand } from '../../keyword-quality-filter'
+import { containsPureBrand, getPureBrandKeywords } from '../../brand-keyword-utils'
 import { getCtaRegexForLanguage, isHeadlineCompatibleWithTargetLanguage } from '../language'
 import type { BrandAnchoredHeadlineCandidate, HeadlineCandidateSource } from '../types'
 import {

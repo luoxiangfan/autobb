@@ -107,7 +107,7 @@ export function containsPureBrand(keyword: string, pureBrandKeywords: string[]):
   return false
 }
 
-export function isPureBrandKeyword(keyword: string, pureBrandKeywords: string[]): boolean {
+function isPureBrandKeywordInList(keyword: string, pureBrandKeywords: string[]): boolean {
   if (!keyword || !pureBrandKeywords || pureBrandKeywords.length === 0) {
     return false
   }
@@ -123,4 +123,16 @@ export function isPureBrandKeyword(keyword: string, pureBrandKeywords: string[])
     if (kwNorm === brandNorm) return true
     return kwCompact === brandNorm.replace(/\s+/g, '')
   })
+}
+
+/** Exact brand match against a brand name (convenience wrapper). */
+export function isPureBrandKeyword(keyword: string, brandName: string): boolean
+/** Exact brand match against precomputed pure-brand keyword variants. */
+export function isPureBrandKeyword(keyword: string, pureBrandKeywords: string[]): boolean
+export function isPureBrandKeyword(keyword: string, second: string | string[]): boolean {
+  if (typeof second === 'string') {
+    if (!keyword || !second) return false
+    return isPureBrandKeywordInList(keyword, getPureBrandKeywords(second))
+  }
+  return isPureBrandKeywordInList(keyword, second)
 }

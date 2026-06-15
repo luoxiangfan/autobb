@@ -7,11 +7,8 @@ import { loadPrompt } from '../prompt-loader' // 🎯 v3.0: 导入数据库promp
 // 🎯 购买意图评分
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
 
-import {
-  containsPureBrand,
-  getPureBrandKeywords,
-  isBrandConcatenation,
-} from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
+import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
+import { isBrandConcatenation } from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 import { normalizeLanguageCode } from '../language-country-codes'
 import { parsePrice } from '../pricing-utils'

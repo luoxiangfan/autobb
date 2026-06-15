@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { containsPureBrand, getPureBrandKeywords } from '../brand-keyword-utils'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
 
 describe('brand-keyword-utils', () => {
   it('treats spaced tokens as equivalent to concatenated brand', () => {
@@ -16,5 +16,14 @@ describe('brand-keyword-utils', () => {
   it('keeps existing concatenated brand matching', () => {
     const pure = getPureBrandKeywords('Anker Solix')
     expect(containsPureBrand('ankersolix', pure)).toBe(true)
+  })
+
+  it('supports brand-name and pure-brand-list overloads for isPureBrandKeyword', () => {
+    expect(isPureBrandKeyword('eufy', 'Eufy')).toBe(true)
+    expect(isPureBrandKeyword('eufy camera', 'Eufy')).toBe(false)
+
+    const pure = getPureBrandKeywords('Eufy')
+    expect(isPureBrandKeyword('eufy', pure)).toBe(true)
+    expect(isPureBrandKeyword('eufy camera', pure)).toBe(false)
   })
 })

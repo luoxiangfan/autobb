@@ -73,14 +73,10 @@ export interface BuildCreativeKeywordSetOutput {
   executableKeywords: string[]
   executableKeywordCandidates: CreativeKeywordCandidate[]
   candidatePool: CreativeKeywordCandidate[]
-  // Deprecated compatibility projection. Prefer `executableKeywords`.
-  keywords: string[]
   keywordsWithVolume: PoolKeywordData[]
   keywordSupplementation?: KeywordSupplementationReport
   contextFallbackStrategy: 'filtered' | 'keyword_pool' | 'original'
   audit: CreativeKeywordAudit
-  // Deprecated compatibility field. Prefer `audit`.
-  keywordSourceAudit: CreativeKeywordSourceAudit
 }
 
 interface CreativeKeywordCandidateProvenance {
@@ -1956,7 +1952,7 @@ function compactRescueTokens(
       .trim()
       .toLowerCase()
 
-    if (isNumeric && /^0{3 }\d*$/.test(dedupeKey)) continue
+    if (isNumeric && /^0{3}\d*$/.test(dedupeKey)) continue
 
     if (
       isNumeric &&
@@ -2005,7 +2001,7 @@ function getNonEmptyRescueCandidateRejectionReason(params: {
     return 'forbidden_topic_fragment'
   }
 
-  if (tokens.some((token) => /^0{3 }\d*$/.test(token))) {
+  if (tokens.some((token) => /^0{3}\d*$/.test(token))) {
     return 'numeric_fragment'
   }
 
@@ -2211,7 +2207,7 @@ function buildNonEmptyRescueCandidates(input: BuildCreativeKeywordSetInput): Poo
       const tokens = normalizeGoogleAdsKeyword(candidate).split(/\s+/).filter(Boolean)
       if (tokens.length < 2) return null
       const tail = tokens[tokens.length - 1] || ''
-      if (!/^[a-z]{4 }$/i.test(tail)) return null
+      if (!/^[a-z]{4,}$/i.test(tail)) return null
       if (RESCUE_PREFIX_NOISE_TOKENS.has(tail) || RESCUE_INLINE_SKIP_TOKENS.has(tail)) return null
       return tail
     })
@@ -3134,11 +3130,9 @@ export async function buildCreativeKeywordSet(
     executableKeywords: selected.keywords,
     executableKeywordCandidates,
     candidatePool,
-    keywords: selected.keywords,
     keywordsWithVolume: selected.keywordsWithVolume as PoolKeywordData[],
     keywordSupplementation,
     contextFallbackStrategy: selectionStrategy,
     audit,
-    keywordSourceAudit: audit,
   }
 }

@@ -9,13 +9,6 @@ function envEnabled(name: string, defaultEnabled = true): boolean {
 }
 
 /**
- * 对应方案文档：keyword.source_priority_unified.enabled
- */
-export function isCreativeKeywordSourcePriorityUnifiedEnabled(): boolean {
-  return envEnabled('CREATIVE_KEYWORD_SOURCE_PRIORITY_UNIFIED_ENABLED', true)
-}
-
-/**
  * 对应方案文档：keyword.supplement.threshold_gate.enabled
  */
 export function isCreativeKeywordSupplementThresholdGateEnabled(): boolean {

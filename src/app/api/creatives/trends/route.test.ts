@@ -178,15 +178,6 @@ describe('GET /api/creatives/trends', () => {
         AI: 2,
         KEYWORD_PLANNER: 3,
       },
-    })
-    expect(body.distributions.keywordSourceAudit).toMatchObject({
-      creativesWithAudit: 2,
-      totalKeywords: 7,
-      byRawSource: {
-        SEARCH_TERM: 2,
-        AI: 2,
-        KEYWORD_PLANNER: 3,
-      },
       bySourceSubtype: {
         SEARCH_TERM_HIGH_PERFORMING: 2,
         AI_LLM_RAW: 2,

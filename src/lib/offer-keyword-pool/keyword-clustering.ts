@@ -11,7 +11,7 @@ import {
   getKeywordSourcePriorityScore as getUnifiedKeywordSourcePriorityScore,
   getKeywordSourcePriorityScoreFromInput,
 } from '../creative-keyword-source-priority'
-import { isPureBrandKeyword as isPureBrandKeywordInternal } from '../keyword-quality-filter'
+import { isPureBrandKeyword } from '../brand-keyword-utils'
 import { resolveOfferLinkType } from '../offer-link-type'
 import type { Offer } from '../offers'
 import {
@@ -618,7 +618,7 @@ export function prioritizeBrandKeywordsFirst(
   const nonBrandKeywords: PoolKeywordData[] = []
 
   for (const kw of keywords) {
-    if (isPureBrandKeywordInternal(kw.keyword, pureBrandKeywords)) {
+    if (isPureBrandKeyword(kw.keyword, pureBrandKeywords)) {
       brandKeywords.push(kw)
     } else {
       nonBrandKeywords.push(kw)

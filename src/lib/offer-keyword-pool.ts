@@ -28,12 +28,10 @@ import {
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
 import { extractVerifiedKeywordSourcePool } from './unified-keyword-service'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import {
   filterKeywordQuality,
   generateFilterReport,
-  containsPureBrand,
-  getPureBrandKeywords,
-  isPureBrandKeyword as isPureBrandKeywordInternal,
   calculateSearchVolumeThreshold,
   detectPlatformsInKeyword,
   extractPlatformFromUrl,
@@ -973,20 +971,11 @@ async function hydrateGlobalCoreKeywordSearchVolumes(
 // 纯品牌词识别
 // ============================================
 
-/**
- * 判断关键词是否为纯品牌词（基于品牌名生成纯品牌词集合）
- */
-export function isPureBrandKeyword(keyword: string, brandName: string): boolean {
-  if (!keyword || !brandName) return false
-  const pureBrandKeywords = getPureBrandKeywords(brandName)
-  return isPureBrandKeywordInternal(keyword, pureBrandKeywords)
-}
-
 function inferDefaultKeywordMatchType(
   keyword: string,
   pureBrandKeywords: string[]
 ): 'EXACT' | 'PHRASE' {
-  return isPureBrandKeywordInternal(keyword, pureBrandKeywords) ? 'EXACT' : 'PHRASE'
+  return isPureBrandKeyword(keyword, pureBrandKeywords) ? 'EXACT' : 'PHRASE'
 }
 
 /**
@@ -1005,7 +994,7 @@ export function separateBrandKeywords(
   const pureBrandKeywords = getPureBrandKeywords(brandName)
 
   for (const keyword of keywords) {
-    if (isPureBrandKeywordInternal(keyword, pureBrandKeywords)) {
+    if (isPureBrandKeyword(keyword, pureBrandKeywords)) {
       brandKeywords.push(keyword)
     } else {
       nonBrandKeywords.push(keyword)
@@ -1619,7 +1608,7 @@ function shouldAttemptTranslationForKeyword(params: {
 }): boolean {
   const normalized = normalizeGoogleAdsKeyword(params.keyword)
   if (!normalized) return false
-  if (isPureBrandKeywordInternal(normalized, params.pureBrandKeywords)) return false
+  if (isPureBrandKeyword(normalized, params.pureBrandKeywords)) return false
 
   const neutralTokens = buildTranslationNeutralTokenSet(params.pureBrandKeywords)
   const tokens = normalized.split(/\s+/).filter(Boolean)
@@ -2928,7 +2917,7 @@ export async function generateOfferKeywordPool(
   // 在保持上下文/语义过滤前提下，回补少量高意图非纯品牌词，避免关键词池坍缩为单词。
   if (pageTypeForContextFilter === 'product' && pureBrandKeywordsForFilter.length > 0) {
     const strictNonPureCount = finalFilteredKeywords.filter(
-      (kw) => !isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)
+      (kw) => !isPureBrandKeyword(kw.keyword, pureBrandKeywordsForFilter)
     ).length
 
     if (strictNonPureCount < 3) {
@@ -2955,7 +2944,7 @@ export async function generateOfferKeywordPool(
       const relaxedCandidates = prioritizeKeywordsForClustering(
         relaxedQualityFiltered.filtered
           .map((kw): PoolKeywordData | null => {
-            if (isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)) return null
+            if (isPureBrandKeyword(kw.keyword, pureBrandKeywordsForFilter)) return null
             if (
               !hasCommercialIntentForProductRelaxedRetention(
                 kw.keyword,
@@ -3023,8 +3012,7 @@ export async function generateOfferKeywordPool(
   if (hasAnyVolume && !volumeUnavailable) {
     const beforeVolumeFilter = finalFilteredKeywords.length
     finalFilteredKeywords = finalFilteredKeywords.filter(
-      (kw) =>
-        kw.searchVolume > 0 || isPureBrandKeywordInternal(kw.keyword, pureBrandKeywordsForFilter)
+      (kw) => kw.searchVolume > 0 || isPureBrandKeyword(kw.keyword, pureBrandKeywordsForFilter)
     )
     if (beforeVolumeFilter !== finalFilteredKeywords.length) {
       console.log(
@@ -3718,7 +3706,7 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
         normalizedKeyword,
         pureBrandKeywords
       ),
-      isPureBrand: isPureBrandKeywordInternal(normalizedKeyword, pureBrandKeywords),
+      isPureBrand: isPureBrandKeyword(normalizedKeyword, pureBrandKeywords),
       derivedTags: ['STRATEGY_PROMOTED'],
     })
   }

@@ -3,23 +3,15 @@ import { resolveSoftCopyLanguage } from '../language'
 import { detectKeywordIntentsForPrompt } from '../prompts'
 import type { NormalizedCreativeBucket } from '../types'
 import { classifyCopyIntentFromText, mapToComplementarityTag } from './copy-intent-enforcement'
-import { preferredHeadlineSeed } from './hard-retained-contract'
+import {
+  buildUniqueHeadlineReplacement,
+  resolveKeywordTargetForHeadlineSlot,
+} from './headline-uniqueness-variants'
 import { syncHeadlineMetadataSlot } from './headline-candidates'
-import {
-  fitKeywordIntoDiverseHeadline,
-  getHeadlineActionVariants,
-  normalizeHeadlineForProtectedSimilarity,
-} from './keyword-usage'
-import { getDefaultProductNoun, getSoftCopyTemplates } from './soft-copy-templates'
+import { normalizeHeadlineForProtectedSimilarity } from './keyword-usage'
 import { fitLocalizedHeadline } from './localized-fit'
-import {
-  RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX,
-  RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT,
-} from './slot-constants'
-import {
-  applyHeadlineTextGuardrail,
-  stripHeadlineNumericSuffixArtifact,
-} from './text-guardrails'
+import { getDefaultProductNoun, getSoftCopyTemplates } from './soft-copy-templates'
+import { RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT } from './slot-constants'
 
 export function enforceHeadlineComplementarity(
   result: GeneratedAdCreativeData,
@@ -189,21 +181,10 @@ export function enforceHeadlineUniquenessGate(
     Math.min(RETAINED_KEYWORD_PROTECTED_HEADLINE_COUNT, headlines.length)
   )
   const seen = new Set<string>()
-  const softLanguage = resolveSoftCopyLanguage(languageCode) || 'en'
   let fixes = 0
 
   const normalize = (value: string) =>
     normalizeHeadlineForProtectedSimilarity(value, brandName, languageCode)
-  const pickKeywordTarget = (index: number): string => {
-    if (
-      usagePlan &&
-      index >= RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX &&
-      index < RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX + usagePlan.headlineKeywordTargets.length
-    ) {
-      return usagePlan.headlineKeywordTargets[index - RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX]
-    }
-    return keywords[(index - 1) % Math.max(1, keywords.length)] || ''
-  }
 
   for (let index = 0; index < headlines.length; index += 1) {
     const current = headlines[index]
@@ -214,48 +195,24 @@ export function enforceHeadlineUniquenessGate(
       continue
     }
 
-    const keywordTarget = pickKeywordTarget(index)
-    let replacement = keywordTarget
-      ? fitKeywordIntoDiverseHeadline(
-          current,
-          keywordTarget,
-          30,
-          languageCode,
-          protectedHeadlines,
-          brandName
-        )
-      : null
-
-    if (!replacement) {
-      const base = keywordTarget || preferredHeadlineSeed(current, brandName, softLanguage)
-      const actionVariants = getHeadlineActionVariants(languageCode)
-      const rawCandidates = [
-        ...actionVariants.map((action) => `${action} ${base}`.trim()),
-        ...actionVariants.map((action) => `${base} ${action}`.trim()),
-        `${brandName} ${base}`.trim(),
-        base,
-      ]
-      replacement =
-        rawCandidates
-          .map((candidate) => applyHeadlineTextGuardrail(fitLocalizedHeadline(candidate, 30), 30))
-          .map((candidate) => stripHeadlineNumericSuffixArtifact(candidate))
-          .find((candidate) => {
-            const normalizedCandidate = normalize(candidate)
-            return (
-              Boolean(candidate) && Boolean(normalizedCandidate) && !seen.has(normalizedCandidate)
-            )
-          }) || null
-    }
-
-    replacement = stripHeadlineNumericSuffixArtifact(
-      applyHeadlineTextGuardrail(String(replacement || ''), 30)
-    )
-    const normalizedReplacement = normalize(replacement)
-    if (!replacement || !normalizedReplacement || seen.has(normalizedReplacement)) continue
+    const keywordTarget = resolveKeywordTargetForHeadlineSlot({
+      index,
+      usagePlan,
+      keywords,
+    })
+    const replacement = buildUniqueHeadlineReplacement({
+      currentHeadline: current,
+      keywordTarget,
+      brandName,
+      languageCode,
+      protectedHeadlines,
+      usedKeys: seen,
+      normalization: 'protected-similarity',
+    })
+    if (!replacement) continue
 
     headlines[index] = replacement
     syncHeadlineMetadataSlot(result, index, replacement)
-    seen.add(normalizedReplacement)
     fixes += 1
   }
 

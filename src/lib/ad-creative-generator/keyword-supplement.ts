@@ -8,14 +8,8 @@ import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' 
 import { hasModelAnchorEvidence } from '../creative-type'
 
 import { isCreativeKeywordSupplementThresholdGateEnabled } from '../creative-keyword-feature-flags'
-import {
-  containsPureBrand,
-  getPureBrandKeywords,
-  shouldUseExactMatch,
-  isBrandVariant,
-  isSemanticQuery,
-} from '../keyword-quality-filter' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-import { isPureBrandKeyword } from '../brand-keyword-utils' // 🔥 2026-03-13: 导入纯品牌词判断函数
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../brand-keyword-utils'
+import { shouldUseExactMatch, isBrandVariant, isSemanticQuery } from '../keyword-quality-filter'
 import { normalizeLanguageCode } from '../language-country-codes'
 import { repairJsonText } from '../ai-json'
 

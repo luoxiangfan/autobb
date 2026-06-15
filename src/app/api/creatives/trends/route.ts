@@ -442,7 +442,7 @@ export async function GET(request: NextRequest) {
         qualityCount: qualityDistribution.length,
         themeCount: themeDistribution.length,
         keywordAuditCreatives: creativesWithKeywordAudit,
-        keywordSourceAuditKeywords: totalKeywordsFromAudit,
+        keywordAuditKeywords: totalKeywordsFromAudit,
       },
       usage: {
         total: Number(usageStats?.total) || 0,
@@ -508,10 +508,8 @@ export async function GET(request: NextRequest) {
           },
           {} as Record<string, number>
         ),
-        // 关键词来源审计聚合（主字段）
+        // 关键词来源审计聚合（主字段 ad_strength_data.audit）
         audit: keywordAuditDistribution,
-        // 兼容别名（逐步淘汰）
-        keywordSourceAudit: keywordAuditDistribution,
       },
       // 使用统计（确保转换为 number）
       usage: {
