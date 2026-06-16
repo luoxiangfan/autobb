@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-vi.mock('../ai/ai', () => ({
+vi.mock('@/lib/ai/server', () => ({
   loadPrompt: vi.fn(async () =>
     [
       'brand={{brandName}}',
@@ -9,22 +9,17 @@ vi.mock('../ai/ai', () => ({
       '{{keywords}}',
     ].join('\n')
   ),
-}))
-
-vi.mock('../ai/ai', () => ({
   generateContent: vi.fn(async () => {
     const error: any = new Error('Gemini API调用失败: 403 Forbidden')
     error.response = { status: 403 }
     throw error
   }),
-}))
-
-vi.mock('../ai-token-tracker', () => ({
   recordTokenUsage: vi.fn(async () => undefined),
   estimateTokenCost: vi.fn(() => 0),
+  repairJsonText: vi.fn((text: string) => text),
 }))
 
-import { clusterKeywordsByIntent } from '../offer-keyword-pool'
+import { clusterKeywordsByIntent } from '../keywords/offer-pool'
 
 describe('clusterKeywordsByIntent fallback', () => {
   it('falls back to deterministic product buckets when AI clustering returns 403', async () => {

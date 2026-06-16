@@ -44,7 +44,7 @@ import {
   type BucketType,
   type OfferKeywordPool,
   type PoolKeywordData,
-} from '@/lib/offer-keyword-pool'
+} from '@/lib/keywords/offer-pool'
 import { deriveSkipKeywordPoolExpandLoad } from '@/lib/offers/server'
 import { getCreativeTypeForBucketSlot } from '@/lib/creatives/server'
 import { normalizeCreativeTaskError } from '@/lib/creatives/server'

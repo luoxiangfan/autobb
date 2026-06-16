@@ -35,7 +35,7 @@ const pipelineFns = vi.hoisted(() => ({
   runBucketCreativeGeneration: vi.fn(),
 }))
 
-vi.mock('../offer-keyword-pool', () => ({
+vi.mock('../keywords/offer-pool', () => ({
   resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 

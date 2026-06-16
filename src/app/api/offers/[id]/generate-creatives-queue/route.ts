@@ -16,7 +16,7 @@ import {
   clearCreativeGenerationAuthCache,
   createCreativeGenerationAuthCache,
 } from '@/lib/google-ads/accounts/auth/creative-generation-auth'
-import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
+import { getAvailableBuckets } from '@/lib/keywords/offer-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,

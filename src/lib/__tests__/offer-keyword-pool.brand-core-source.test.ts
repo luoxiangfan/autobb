@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { __testOnly, resolveBrandCoreKeywordSourceMeta } from '../offer-keyword-pool'
+import { __testOnly, resolveBrandCoreKeywordSourceMeta } from '../keywords/offer-pool'
 
 describe('resolveBrandCoreKeywordSourceMeta', () => {
   it('preserves search term source semantics when source_mask contains search_term', () => {

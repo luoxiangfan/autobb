@@ -621,7 +621,7 @@ export function buildTitleAboutSupplementCandidates(
 
 export async function loadPoolCandidatesForSupplement(offerId: number): Promise<string[]> {
   try {
-    const { getKeywordPoolByOfferId } = await import('../../offer-keyword-pool')
+    const { getKeywordPoolByOfferId } = await import('../../keywords/offer-pool')
     const { getDatabase } = await import('../../db')
 
     const pool = await getKeywordPoolByOfferId(offerId)

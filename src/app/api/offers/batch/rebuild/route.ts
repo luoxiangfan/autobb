@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { findOfferById } from '@/lib/offers/server'
-import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
+import { deleteKeywordPool } from '@/lib/keywords/offer-pool'
 import {
   enqueueExistingOfferExtractionAndMarkQueued,
   findOfferIdsWithActiveExtractionTasks,

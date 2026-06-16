@@ -1,4 +1,4 @@
-import type { PoolKeywordData } from '@/lib/offer-keyword-pool'
+import type { PoolKeywordData } from '@/lib/keywords/offer-pool'
 
 export function resolveKeywordCandidatesAfterContextFilter(params: {
   contextFilteredCandidates: PoolKeywordData[]

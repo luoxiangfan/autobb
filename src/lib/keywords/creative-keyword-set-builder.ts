@@ -22,7 +22,7 @@ import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './b
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { KEYWORD_POLICY } from './keyword-policy'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
-import type { PoolKeywordData } from '../offer-keyword-pool/index'
+import type { PoolKeywordData } from './offer-pool'
 import { createRiskAlert } from '../optimization'
 import { getDatabase } from '../db'
 import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'

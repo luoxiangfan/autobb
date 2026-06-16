@@ -47,7 +47,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
     authFns.validateGoogleAdsConfigForCreativeGeneration,
 }))
 
-vi.mock('@/lib/offer-keyword-pool', () => ({
+vi.mock('@/lib/keywords/offer-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
 }))
 

@@ -28,7 +28,7 @@ import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
   resolveCreativeGenerationRuntime,
 } from '@/lib/creatives/server'
-import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
+import { getAvailableBuckets } from '@/lib/keywords/offer-pool'
 import { normalizeSingleCreativeSelection } from '@/lib/creatives/server'
 
 export const maxDuration = 60

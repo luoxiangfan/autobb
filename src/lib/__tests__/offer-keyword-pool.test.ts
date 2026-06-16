@@ -16,7 +16,7 @@ import {
   calculateKeywordOverlapRate,
   determineClusteringStrategy,
   type OfferKeywordPool,
-} from '../offer-keyword-pool'
+} from '../keywords/offer-pool'
 
 import { getPureBrandKeywords, containsPureBrand, isPureBrandKeyword } from '../keywords/server'
 import {

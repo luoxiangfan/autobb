@@ -29,7 +29,7 @@ vi.mock('@/lib/offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
-vi.mock('@/lib/offer-keyword-pool', () => ({
+vi.mock('@/lib/keywords/offer-pool', () => ({
   getKeywordPoolByOfferId: keywordPoolFns.getKeywordPoolByOfferId,
   getOrCreateKeywordPool: keywordPoolFns.getOrCreateKeywordPool,
   generateOfferKeywordPool: keywordPoolFns.generateOfferKeywordPool,

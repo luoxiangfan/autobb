@@ -91,7 +91,7 @@ vi.mock('@/lib/creatives/server', () => ({
   runCreativeGenerationQualityLoop: qualityLoopFns.runCreativeGenerationQualityLoop,
 }))
 
-vi.mock('@/lib/offer-keyword-pool', () => ({
+vi.mock('@/lib/keywords/offer-pool', () => ({
   resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getBucketInfo: keywordPoolFns.getBucketInfo,

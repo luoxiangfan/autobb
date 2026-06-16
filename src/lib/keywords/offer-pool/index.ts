@@ -14,12 +14,12 @@
  * @see docs/Offer 级广告创意优化方案.md
  */
 
-import { getDatabase } from '../db'
-import { generateContent } from '../ai/server'
-import { repairJsonText } from '../ai/server'
-import { loadPrompt, interpolateTemplate } from '../ai/server'
-import { findOfferById, type Offer } from '../offers/server'
-import { recordTokenUsage, estimateTokenCost } from '../ai/server'
+import { getDatabase } from '../../db'
+import { generateContent } from '../../ai/server'
+import { repairJsonText } from '../../ai/server'
+import { loadPrompt, interpolateTemplate } from '../../ai/server'
+import { findOfferById, type Offer } from '../../offers/server'
+import { recordTokenUsage, estimateTokenCost } from '../../ai/server'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
@@ -27,27 +27,27 @@ import {
   type KeywordPoolPreparedExpand,
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
-import { extractVerifiedKeywordSourcePool } from '../keywords/server'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords/server'
+import { extractVerifiedKeywordSourcePool } from '../server'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../server'
 import {
   filterKeywordQuality,
   generateFilterReport,
   calculateSearchVolumeThreshold,
   detectPlatformsInKeyword,
   extractPlatformFromUrl,
-} from '../keywords/server'
-import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keywords/server'
+} from '../server'
+import { getMinContextTokenMatchesForKeywordQualityFilter } from '../server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
+import { isInvalidKeyword } from '../keyword-invalid-filter'
 import {
   getBrandCoreKeywords,
   refreshBrandCoreKeywordCache,
   updateBrandCoreKeywordSearchVolumes,
-} from '../keywords/server'
-import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../common/server'
-import { DEFAULTS } from '../keywords/server'
-import { parseJsonField, toDbJsonArrayField } from '../db'
-import { analyzeKeywordLanguageCompatibility } from '../keywords/server'
+} from '../server'
+import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../../common/server'
+import { DEFAULTS } from '../server'
+import { parseJsonField, toDbJsonArrayField } from '../../db'
+import { analyzeKeywordLanguageCompatibility } from '../server'
 import {
   deriveCanonicalCreativeType,
   getCreativeTypeForBucketSlot,
@@ -57,7 +57,7 @@ import {
   normalizeKeywordPoolBucketQuery,
   type CanonicalCreativeType,
   type CreativeBucketSlot,
-} from '../creatives/server'
+} from '../../creatives/server'
 import {
   DEFAULT_COVERAGE_KEYWORD_CONFIG,
   DEFAULT_PRODUCT_CLUSTER_BUCKETS,
@@ -92,18 +92,18 @@ export {
 } from './types'
 export { clusterKeywordsByIntent } from './keyword-clustering'
 export { determineClusteringStrategy } from './clustering-strategy'
-import { filterCreativeKeywordsByOfferContextDetailed } from '../keywords/server'
+import { filterCreativeKeywordsByOfferContextDetailed } from '../server'
 import {
   createPlannerNonBrandPolicy,
   type PlannerDecision,
   type PlannerNonBrandPolicy,
-} from '../keywords/server'
+} from '../server'
 import {
   buildUntrustedInputGuardrail,
   sanitizePromptBlockValue,
   sanitizePromptInlineValue,
   type InputReview,
-} from '../ai/server'
+} from '../../ai/server'
 
 import {
   calculateBalanceScore,
@@ -2614,7 +2614,7 @@ export async function generateOfferKeywordPool(
 
   // 1.5 Marketplace场景：尽量补全“品牌官网”，用于Keyword Planner的站点过滤（best-effort）
   try {
-    const { ensureOfferBrandOfficialSite } = await import('../offers/offer-official-site')
+    const { ensureOfferBrandOfficialSite } = await import('../../offers/offer-official-site')
     const official = await ensureOfferBrandOfficialSite({
       offerId: offer.id,
       userId,
@@ -2826,7 +2826,7 @@ export async function generateOfferKeywordPool(
   }
 
   // 3. 🆕 全量扩展（v2.0：根据认证类型分发）
-  const { expandAllKeywords, filterKeywords } = await import('../keywords/server')
+  const { expandAllKeywords, filterKeywords } = await import('../server')
 
   const plannerDecision: PlannerDecision = {
     allowNonBrandFromPlanner: allowPlannerNonBrand,
@@ -4139,7 +4139,7 @@ async function extractKeywordsFromOffer(
 
       // 3) 尝试复用统一关键词服务的“意图感知种子词”构建逻辑（仅在兜底路径加载）
       try {
-        const { buildIntentAwareSeedPool } = await import('../keywords/server')
+        const { buildIntentAwareSeedPool } = await import('../server')
         const seedPool = buildIntentAwareSeedPool({
           brand: offer.brand,
           category: offer.category,
@@ -4328,7 +4328,7 @@ export async function getCoverageBucketKeywords(
 
   if (config.sortByVolume && allNonBrandKeywords.size > 0) {
     try {
-      const { getKeywordVolumesForExisting } = await import('../keywords/server')
+      const { getKeywordVolumesForExisting } = await import('../server')
       const volumeData = await getKeywordVolumesForExisting({
         baseKeywords: Array.from(allNonBrandKeywords),
         country,

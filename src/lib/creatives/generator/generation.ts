@@ -7,7 +7,7 @@ import {
   type KeywordPlannerPreparedSession,
   type KeywordPoolExpandLoadResult,
 } from '@/lib/google-ads/accounts/auth/index'
-import { type OfferKeywordPool } from '../../offer-keyword-pool' // 🔥 AI语义分类
+import { type OfferKeywordPool } from '../../keywords/offer-pool' // 🔥 AI语义分类
 import { generateContent, getGeminiMode } from '../../ai/server'
 import { generateNegativeKeywords } from '../../keywords/server' // 🎯 新增：导入否定关键词生成函数
 // 🎯 新增：导入token追踪函数
@@ -295,7 +295,7 @@ export async function generateAdCreative(
   try {
     // 🔥 修复(2025-12-26): 优先从关键词池获取关键词，而非使用旧的extracted_keywords
     // 关键词池已经过Keyword Planner扩展验证，包含高质量关键词
-    const { getKeywordPoolByOfferId } = await import('../../offer-keyword-pool')
+    const { getKeywordPoolByOfferId } = await import('../../keywords/offer-pool')
     const keywordPool =
       (options?.keywordPool as OfferKeywordPool | undefined) ||
       (await getKeywordPoolByOfferId(offer.id))
@@ -531,7 +531,7 @@ export async function generateAdCreative(
     )
   } else if (options?.bucket) {
     // 🆕 v4.16: 自动根据链接类型和bucket获取关键词
-    const { getKeywordsByLinkTypeAndBucket } = await import('../../offer-keyword-pool')
+    const { getKeywordsByLinkTypeAndBucket } = await import('../../keywords/offer-pool')
 
     const bucketType = options.bucket as 'A' | 'B' | 'C' | 'D' | 'S'
 
@@ -675,7 +675,7 @@ export async function generateAdCreative(
         )
 
         // 应用品牌前缀
-        const { composeGlobalCoreBrandedKeyword } = await import('../../offer-keyword-pool')
+        const { composeGlobalCoreBrandedKeyword } = await import('../../keywords/offer-pool')
         const { normalizeGoogleAdsKeyword } = await import('@/lib/google-ads/keyword/normalizer')
         const brandedGapKeywords: string[] = []
 
@@ -1228,7 +1228,7 @@ export async function generateAdCreative(
         } else {
           // 🔥 统一架构(2025-12-16): 使用关键词池替代3轮Keyword Planner扩展
           console.log(`\n🔍 从关键词池获取关键词...`)
-          const { getOrCreateKeywordPool } = await import('@/lib/offer-keyword-pool')
+          const { getOrCreateKeywordPool } = await import('@/lib/keywords/offer-pool')
 
           const keywordPool =
             (options?.keywordPool as OfferKeywordPool | undefined) ||

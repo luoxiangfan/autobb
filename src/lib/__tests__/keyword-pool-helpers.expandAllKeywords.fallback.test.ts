@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { PoolKeywordData } from '../offer-keyword-pool'
+import type { PoolKeywordData } from '../keywords/offer-pool'
 
 // Avoid native bcrypt binary issues in test environments (arch mismatch).
 vi.mock('bcrypt', () => {

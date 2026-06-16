@@ -4,11 +4,15 @@ const { getKeywordVolumesForExistingMock } = vi.hoisted(() => ({
   getKeywordVolumesForExistingMock: vi.fn(),
 }))
 
-vi.mock('../keywords/server', () => ({
-  getKeywordVolumesForExisting: getKeywordVolumesForExistingMock,
-}))
+vi.mock('@/lib/keywords/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords/server')>()
+  return {
+    ...actual,
+    getKeywordVolumesForExisting: getKeywordVolumesForExistingMock,
+  }
+})
 
-import { DEFAULT_COVERAGE_KEYWORD_CONFIG, getCoverageBucketKeywords } from '../offer-keyword-pool'
+import { DEFAULT_COVERAGE_KEYWORD_CONFIG, getCoverageBucketKeywords } from '../keywords/offer-pool'
 
 describe('offer-keyword-pool coverage aliases', () => {
   beforeEach(() => {

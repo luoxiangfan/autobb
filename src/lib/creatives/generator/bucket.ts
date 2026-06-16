@@ -2,7 +2,7 @@ import {
   getBucketInfo,
   type OfferKeywordPool,
   type PoolKeywordData,
-} from '../../offer-keyword-pool' // 🔥 AI语义分类
+} from '../../keywords/offer-pool' // 🔥 AI语义分类
 // 🎯 新增：导入否定关键词生成函数
 // 🎯 新增：导入token追踪函数
 // 🎯 v3.0: 导入数据库prompt加载函数

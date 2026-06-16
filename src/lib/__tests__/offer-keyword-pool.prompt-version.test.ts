@@ -6,11 +6,15 @@ const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
 
-vi.mock('../db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
-import { saveKeywordPool } from '../offer-keyword-pool'
+import { saveKeywordPool } from '../keywords/offer-pool'
 
 describe('saveKeywordPool prompt version resolution', () => {
   beforeEach(() => {

@@ -7,7 +7,7 @@
  * - 服务账号模式：Google下拉词 + 增强提取 + Google Trends
  */
 
-import type { PoolKeywordData } from '../offer-keyword-pool/index'
+import type { PoolKeywordData } from './offer-pool'
 import { expandKeywordsWithSeeds } from './unified-keyword-service'
 import { getDatabase } from '../db'
 import {
@@ -1153,7 +1153,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
           if (allowRawPlannerNonBrand && plannerUseCase) {
             metadata = buildPlannerNonBrandMetadata(plannerUseCase)
           } else if (plannerUseCase && kw.searchVolume > 1000) {
-            const { composeGlobalCoreBrandedKeyword } = await import('../offer-keyword-pool/index')
+            const { composeGlobalCoreBrandedKeyword } = await import('./offer-pool')
             const branded = composeGlobalCoreBrandedKeyword(keywordText, brandName, 5)
 
             if (branded) {

@@ -15,7 +15,7 @@
  * - 支持OAuth和服务账号两种模式
  */
 
-import type { PoolKeywordData } from '../offer-keyword-pool/index'
+import type { PoolKeywordData } from './offer-pool'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import {
   containsPureBrand,

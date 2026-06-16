@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PoolKeywordData } from '../offer-keyword-pool'
+import type { PoolKeywordData } from '../keywords/offer-pool'
 
 let mockDb: any
 const mockExpandKeywordsWithSeeds = vi.fn()

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { filterCreativeKeywordsByOfferContextDetailed } from '../keywords/server'
-import type { PoolKeywordData } from '../offer-keyword-pool'
+import type { PoolKeywordData } from '../keywords/offer-pool'
 
 function kw(keyword: string, searchVolume = 0): PoolKeywordData {
   return {

@@ -4,7 +4,7 @@ import { filterKeywordQuality } from './keyword-quality-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import type { CanonicalCreativeType } from '../creatives/server'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
-import type { PoolKeywordData } from '../offer-keyword-pool/index'
+import type { PoolKeywordData } from './offer-pool'
 import {
   buildProductModelFamilyContext,
   buildProductModelFamilyFallbackKeywords,

@@ -44,7 +44,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/offer-keyword-pool', () => ({
+vi.mock('@/lib/keywords/offer-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
 }))
 

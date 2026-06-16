@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { filterKeywords } from '../keywords/server'
-import type { PoolKeywordData } from '../offer-keyword-pool'
+import type { PoolKeywordData } from '../keywords/offer-pool'
 
 describe('keyword-pool-helpers.filterKeywords', () => {
   it('keeps only brand-containing keywords', () => {

@@ -5,11 +5,15 @@ const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
 }))
 
-vi.mock('../db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
-import { getKeywords, getKeywordsByLinkTypeAndBucket } from '../offer-keyword-pool'
+import { getKeywords, getKeywordsByLinkTypeAndBucket } from '../keywords/offer-pool'
 
 function createKeywordRow() {
   return {

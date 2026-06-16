@@ -8,9 +8,9 @@ const { getKeywordPoolByOfferIdMock } = vi.hoisted(() => ({
   getKeywordPoolByOfferIdMock: vi.fn(),
 }))
 
-vi.mock('../offer-keyword-pool', async () => {
+vi.mock('../keywords/offer-pool', async () => {
   const actual =
-    await vi.importActual<typeof import('../offer-keyword-pool')>('../offer-keyword-pool')
+    await vi.importActual<typeof import('../keywords/offer-pool')>('../keywords/offer-pool')
   return {
     ...actual,
     getKeywordPoolByOfferId: getKeywordPoolByOfferIdMock,

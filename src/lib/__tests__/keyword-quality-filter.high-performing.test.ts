@@ -1,5 +1,5 @@
 import { filterKeywordQuality } from '../keywords/server'
-import type { PoolKeywordData } from '../offer-keyword-pool'
+import type { PoolKeywordData } from '../keywords/offer-pool'
 
 describe('filterKeywordQuality - High Performing Search Terms', () => {
   it('should keep high-performing search terms when they satisfy brand gate', () => {

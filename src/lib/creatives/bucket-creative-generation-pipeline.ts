@@ -29,12 +29,12 @@ import {
   type CreativeBucketSlot,
 } from '@/lib/creatives/server'
 import { getThemeByBucket } from './generator/index'
-import { getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
+import { getKeywordsByLinkTypeAndBucket } from '@/lib/keywords/offer-pool'
 import type {
   KeywordPlannerPreparedSession,
   KeywordPoolPreparedExpand,
 } from '@/lib/google-ads/accounts/auth/index'
-import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
+import type { OfferKeywordPool, PoolKeywordData } from '@/lib/keywords/offer-pool'
 import type { Offer } from '@/lib/offers/server'
 import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/keywords/server'
 import type { SearchTermFeedbackHintsInput } from './generator/index'

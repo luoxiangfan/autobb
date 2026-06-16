@@ -20,7 +20,7 @@ import {
   runBucketCreativeGeneration,
 } from './bucket-creative-generation-pipeline'
 import { findOfferById } from '../offers/server'
-import { resolveKeywordPoolForCreativeGeneration } from '../offer-keyword-pool/index'
+import { resolveKeywordPoolForCreativeGeneration } from '../keywords/offer-pool'
 import { deriveSkipKeywordPoolExpandLoad } from '../offers/server'
 import {
   createCreativeAdStrengthPayload,

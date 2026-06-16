@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import type { Offer } from '../offers/server'
-import { __testOnly } from '../offer-keyword-pool'
+import { __testOnly } from '../keywords/offer-pool'
 
 describe('offer-keyword-pool store_product_links fallback', () => {
   it('extracts store product names from link payload', () => {

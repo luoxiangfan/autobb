@@ -41,7 +41,7 @@ vi.mock('@/lib/offers', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/offer-keyword-pool', () => ({
+vi.mock('@/lib/keywords/offer-pool', () => ({
   deleteKeywordPool: keywordFns.deleteKeywordPool,
 }))
 

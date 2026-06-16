@@ -11,7 +11,7 @@ import {
   determineClusteringStrategy,
   type OfferKeywordPool,
   type BucketType,
-} from '@/lib/offer-keyword-pool'
+} from '@/lib/keywords/offer-pool'
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
 import { getCreativeTypeForBucketSlot } from '@/lib/creatives/server'
 import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads/accounts/auth/index'
