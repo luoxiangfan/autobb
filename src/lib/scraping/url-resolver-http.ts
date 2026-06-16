@@ -7,7 +7,7 @@
 import axios, { AxiosInstance } from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import type { Readable } from 'stream'
-import { getProxyIp } from '../proxy/fetch-proxy-ip'
+import { getProxyIp } from './proxy/fetch-proxy-ip'
 
 export interface HttpResolvedUrl {
   finalUrl: string

@@ -1,0 +1,11 @@
+// Public barrel for @/lib/scraping/proxy
+export * from './fetch-proxy-ip'
+export * from './proxy-errors'
+export * from './types'
+export * from './validate-url'
+export * from './providers/provider-registry'
+export type { ProxyProvider, ValidationResult } from './providers/base-provider'
+export { ProxyPoolManager, getProxyPoolManager } from './proxy-pool'
+export type { ProxyPoolEntry } from './proxy-pool'
+export { UserIsolatedProxyPoolManager, ResourceMonitor } from './user-isolated-proxy-pool'
+export type { UserProxyPoolEntry } from './user-isolated-proxy-pool'

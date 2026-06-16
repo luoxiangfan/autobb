@@ -4,7 +4,7 @@
 
 import axios from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { maskProxyUrl } from '../proxy/validate-url'
+import { maskProxyUrl } from './proxy/validate-url'
 
 /**
  * 解析代理IP字符串
@@ -59,7 +59,7 @@ function parseProxyIP(proxyIP: string): ProxyCredentials | null {
 async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
   try {
     // 🔥 检查代理URL格式，使用Provider系统
-    const { ProxyProviderRegistry } = await import('../proxy/providers/provider-registry')
+    const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
 
     let provider
     try {
@@ -357,7 +357,7 @@ async function triggerProxyVisitsWithSingleProxy(
 ): Promise<boolean> {
   try {
     // 使用Provider系统解析代理信息
-    const { ProxyProviderRegistry } = await import('../proxy/providers/provider-registry')
+    const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
     const provider = ProxyProviderRegistry.getProvider(proxyUrl)
     const credentials = await provider.extractCredentials(proxyUrl)
 
@@ -457,7 +457,7 @@ export async function warmupAffiliateLink(
     console.log(`🔥 开始推广链接预热: ${maskProxyUrl(proxyUrl)}`)
 
     // 使用Provider系统检测代理格式
-    const { ProxyProviderRegistry } = await import('../proxy/providers/provider-registry')
+    const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
 
     let provider
     try {

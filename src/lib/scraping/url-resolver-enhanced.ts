@@ -9,7 +9,7 @@ import { resolveAffiliateLinkWithPlaywright } from './url-resolver-playwright'
 import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from './url-resolver-http'
 import { getOptimalResolver, extractDomain } from './resolver-domains'
 import { REDIS_PREFIX_CONFIG } from '../common/server'
-import { maskProxyUrl } from '../proxy/validate-url'
+import { maskProxyUrl } from './proxy/validate-url'
 import { normalizeCountryCode } from '../common/server'
 import { isAffiliateLinkExpiredMessage, normalizeNestedResolveErrorMessage } from '../affiliate'
 
@@ -421,13 +421,13 @@ export class ProxyPoolManager {
     try {
       const axios = (await import('axios')).default
       const { HttpsProxyAgent } = await import('https-proxy-agent')
-      const { ProxyProviderRegistry } = await import('../proxy/providers/provider-registry')
+      const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
 
       // 支持”代理provider URL”（如 IPRocket API URL），先解析成真实代理IP再创建 agent
       // 健康检查不属于用户请求路径，强制刷新（不走缓存）
       let effectiveProxyUrl = proxyUrl
       if (ProxyProviderRegistry.isSupported(proxyUrl)) {
-        const { getProxyIp } = await import('../proxy/fetch-proxy-ip')
+        const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
         const creds = await getProxyIp(proxyUrl, true) // forceRefresh=true，不走缓存
         effectiveProxyUrl = `http://${creds.username}:${creds.password}@${creds.host}:${creds.port}`
       }

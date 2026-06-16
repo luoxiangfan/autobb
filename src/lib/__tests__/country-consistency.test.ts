@@ -4,7 +4,7 @@ import {
   hasGoogleAdsGeoTargetId,
   resolveCountryCodeFromGoogleAdsGeoTargetId,
 } from '@/lib/common/server'
-import { validateProxyUrl } from '@/lib/proxy/validate-url'
+import { validateProxyUrl } from '@/lib/scraping/proxy/validate-url'
 
 describe('country consistency', () => {
   it('Google Ads geo targets cover all supported countries', () => {

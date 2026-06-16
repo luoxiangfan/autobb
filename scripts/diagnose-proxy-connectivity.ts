@@ -19,9 +19,9 @@
 import 'dotenv/config'
 import axios from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import type { ProxyCredentials } from '@/lib/proxy/types'
-import { fetchProxyIp, getProxyIp, tcpPing } from '@/lib/proxy/fetch-proxy-ip'
-import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
+import type { ProxyCredentials } from '@/lib/scraping/proxy/types'
+import { fetchProxyIp, getProxyIp, tcpPing } from '@/lib/scraping/proxy/fetch-proxy-ip'
+import { ProxyProviderRegistry } from '@/lib/scraping/proxy/providers/provider-registry'
 
 const DEFAULT_YEAHPROMOS_URL =
   'https://yeahpromos.com/index/index/openurl?track=b8c4365a831c6232&url='

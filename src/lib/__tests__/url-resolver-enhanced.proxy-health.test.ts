@@ -8,7 +8,7 @@ const getProxyIp = vi.fn(async () => ({
   fullAddress: '1.2.3.4:3128',
 }))
 
-vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
+vi.mock('@/lib/scraping/proxy/fetch-proxy-ip', () => ({
   getProxyIp,
 }))
 

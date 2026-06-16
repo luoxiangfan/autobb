@@ -16,7 +16,7 @@ import {
 } from '@/lib/ai/server'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
-import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
+import { ProxyProviderRegistry } from '@/lib/scraping/proxy/providers/provider-registry'
 import { getFixedAffiliateSyncSettingValue } from '@/lib/affiliate'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {

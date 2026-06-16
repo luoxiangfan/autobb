@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { load as loadHtml } from 'cheerio'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { fetchProxyIp } from '@/lib/proxy/fetch-proxy-ip'
+import { fetchProxyIp } from '@/lib/scraping/proxy/fetch-proxy-ip'
 import { generateRandomFingerprint } from '@/lib/scraping'
 import { getYeahPromosSessionCookieForSync } from '../yeahpromos-session'
 import { getSetting, getUserOnlySetting } from '@/lib/common/server'

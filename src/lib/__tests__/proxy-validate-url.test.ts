@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getCountryName, validateProxyUrl } from '@/lib/proxy/validate-url'
+import { getCountryName, validateProxyUrl } from '@/lib/scraping/proxy/validate-url'
 
 describe('validateProxyUrl', () => {
   it('accepts IE (Ireland) cc code', () => {

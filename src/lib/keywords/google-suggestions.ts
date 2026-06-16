@@ -3,7 +3,7 @@
  * 需求11：通过Google搜索获取品牌词的下拉建议
  */
 
-import { getProxyConfig } from '../scraping/proxy'
+import { getProxyConfig } from '../scraping/env-proxy-config'
 
 /**
  * 从产品名称中提取核心词（用于生成查询变体）

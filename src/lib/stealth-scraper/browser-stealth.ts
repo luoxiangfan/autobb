@@ -5,9 +5,9 @@
  */
 
 import { chromium, Page } from 'playwright'
-import { getProxyIp } from '../proxy/fetch-proxy-ip'
-import { maskProxyUrl } from '../proxy/validate-url'
-import { getProxyPoolManager } from '../proxy/proxy-pool'
+import { getProxyIp } from '../scraping/proxy/fetch-proxy-ip'
+import { maskProxyUrl } from '../scraping/proxy/validate-url'
+import { getProxyPoolManager } from '../scraping/proxy/proxy-pool'
 import { getPlaywrightPool } from '../scraping'
 import { assessPageComplexity } from '../scraping'
 import type { StealthBrowserResult } from './types'

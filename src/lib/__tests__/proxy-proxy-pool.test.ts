@@ -8,13 +8,13 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(),
 }))
 
-vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
+vi.mock('@/lib/scraping/proxy/fetch-proxy-ip', () => ({
   fetchProxyIp: mocks.fetchProxyIp,
   getProxyIp: vi.fn(),
 }))
 
 import { getDatabase } from '@/lib/db'
-import { ProxyPoolManager } from '@/lib/proxy/proxy-pool'
+import { ProxyPoolManager } from '@/lib/scraping/proxy/proxy-pool'
 
 describe('ProxyPoolManager country alias matching', () => {
   const queryOne = vi.fn()

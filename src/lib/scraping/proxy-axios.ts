@@ -11,7 +11,7 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import { getProxyIp } from '../proxy/fetch-proxy-ip'
+import { getProxyIp } from './proxy/fetch-proxy-ip'
 
 /**
  * 代理 Axios 实例缓存

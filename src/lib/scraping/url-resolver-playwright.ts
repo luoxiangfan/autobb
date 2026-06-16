@@ -214,7 +214,7 @@ async function getBrowserFromPoolWithProxyRefresh(
 
   if (targetCountry && !proxyUrl) {
     try {
-      const { getProxyPoolManager } = await import('../proxy/proxy-pool')
+      const { getProxyPoolManager } = await import('./proxy/proxy-pool')
       const proxyPool = getProxyPoolManager()
       const cachedProxy = await proxyPool.getHealthyProxy(targetCountry)
 
@@ -236,7 +236,7 @@ async function getBrowserFromPoolWithProxyRefresh(
 
   if (proxyUrl && forceRefreshProxy) {
     try {
-      const { getProxyIp } = await import('../proxy/fetch-proxy-ip')
+      const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
       proxyCredentials = await getProxyIp(proxyUrl, true, userId)
       console.log(
         `🔁 [Playwright] 重试阶段强制刷新代理IP: ${proxyCredentials.host}:${proxyCredentials.port}`

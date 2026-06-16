@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { validateProxyUrl, getCountryName } from '@/lib/proxy/validate-url'
-import { fetchProxyIp } from '@/lib/proxy/fetch-proxy-ip'
+import { validateProxyUrl, getCountryName } from '@/lib/scraping/proxy/validate-url'
+import { fetchProxyIp } from '@/lib/scraping/proxy/fetch-proxy-ip'
 
 /**
  * POST /api/settings/proxy/validate

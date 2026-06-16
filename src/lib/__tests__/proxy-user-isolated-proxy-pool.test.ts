@@ -5,15 +5,19 @@ const mocks = vi.hoisted(() => ({
   fetchProxyIp: vi.fn(),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getUserOnlySetting: mocks.getUserOnlySetting,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getUserOnlySetting: mocks.getUserOnlySetting,
+  }
+})
 
-vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
+vi.mock('@/lib/scraping/proxy/fetch-proxy-ip', () => ({
   fetchProxyIp: mocks.fetchProxyIp,
 }))
 
-import { UserIsolatedProxyPoolManager } from '@/lib/proxy/user-isolated-proxy-pool'
+import { UserIsolatedProxyPoolManager } from '@/lib/scraping/proxy/user-isolated-proxy-pool'
 
 describe('UserIsolatedProxyPoolManager country alias matching', () => {
   beforeEach(() => {

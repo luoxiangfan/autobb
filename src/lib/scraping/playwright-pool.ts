@@ -10,7 +10,7 @@
  */
 
 import { chromium, Browser, BrowserContext } from 'playwright'
-import { maskProxyUrl } from '../proxy/validate-url'
+import { maskProxyUrl } from './proxy/validate-url'
 
 /**
  * 连接池配置
@@ -796,7 +796,7 @@ class PlaywrightPool {
       // 🔥 根据 allowCredentialsCache 和 userId 决定是否使用缓存
       // - 换链接任务: allowCredentialsCache = true + userId，启用用户级别缓存
       // - 补点击任务: allowCredentialsCache = false，每次获取新 IP
-      const { getProxyIp } = await import('../proxy/fetch-proxy-ip')
+      const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
       if (allowCredentialsCache && userId) {
         proxy = await getProxyIp(proxyUrl, false, userId) // 启用用户级别缓存
         console.log(`🔒 [API+缓存] 使用代理: ${proxy.host}:${proxy.port}`)

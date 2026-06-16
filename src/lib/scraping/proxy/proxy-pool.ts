@@ -7,8 +7,8 @@
 
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'
-import { getDatabase } from '../db'
-import { normalizeCountryCode } from '../common/server'
+import { getDatabase } from '../../db'
+import { normalizeCountryCode } from '../../common/server'
 
 const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
   GB: ['UK'],

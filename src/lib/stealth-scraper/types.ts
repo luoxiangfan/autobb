@@ -5,11 +5,11 @@
  */
 
 import type { Browser, BrowserContext } from 'playwright'
-import type { ProxyCredentials } from '../proxy/types'
+import type { ProxyCredentials } from '../scraping/proxy/types'
 import type { SupplementalProductResult } from '../offers/offer-supplemental-product-types'
 
 // Re-export ProxyCredentials for external use
-export type { ProxyCredentials } from '../proxy/types'
+export type { ProxyCredentials } from '../scraping/proxy/types'
 
 /**
  * 浏览器实例结果（支持连接池和独立创建两种模式）

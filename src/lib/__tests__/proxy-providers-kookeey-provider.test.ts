@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { KookeeyProvider } from '@/lib/proxy/providers/kookeey-provider'
-import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
+import { KookeeyProvider } from '@/lib/scraping/proxy/providers/kookeey-provider'
+import { ProxyProviderRegistry } from '@/lib/scraping/proxy/providers/provider-registry'
 
 describe('KookeeyProvider', () => {
   it('validates Kookeey direct format and extracts country code from password suffix', () => {

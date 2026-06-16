@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { CliproxyProvider } from '@/lib/proxy/providers/cliproxy-provider'
-import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
+import { CliproxyProvider } from '@/lib/scraping/proxy/providers/cliproxy-provider'
+import { ProxyProviderRegistry } from '@/lib/scraping/proxy/providers/provider-registry'
 
 describe('CliproxyProvider', () => {
   it('validates Cliproxy direct format and extracts country code from username', () => {

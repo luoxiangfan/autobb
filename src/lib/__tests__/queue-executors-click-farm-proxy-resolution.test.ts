@@ -22,7 +22,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/proxy/fetch-proxy-ip', () => ({
+vi.mock('@/lib/scraping/proxy/fetch-proxy-ip', () => ({
   getProxyIp: mocks.getProxyIp,
 }))
 

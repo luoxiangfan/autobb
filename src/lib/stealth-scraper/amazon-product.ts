@@ -71,7 +71,7 @@ export async function scrapeAmazonProduct(
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 🔥 清理代理IP缓存，强制获取新IP
-        const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
+        const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         // 🔥 额外等待，确保新代理IP被分配
@@ -105,7 +105,7 @@ export async function scrapeAmazonProduct(
           console.warn(`🔄 a-no-js重试 ${noJsRetry}/${maxNoJsRetries}，清理代理缓存并使用新IP...`)
 
           // 清理代理IP缓存，强制获取新IP
-          const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
+          const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
           clearProxyCache(effectiveProxyUrl)
           console.log(`🧹 已清理代理IP缓存，下次将获取新IP`)
 
