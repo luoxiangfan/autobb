@@ -136,7 +136,7 @@ export const TABLES: TableDef[] = [
       { name: 'target_language', type: 'TEXT' },
       { name: 'offer_name', type: 'TEXT', unique: true },
       { name: 'affiliate_link', type: 'TEXT' },
-      { name: 'store_product_links', type: 'TEXT' }, // 店铺模式：最多3个单品推广链接（JSON）
+      { name: 'store_product_links', type: 'TEXT' }, // 店铺模式：最多6个单品推广链接（JSON）
       { name: 'brand_description', type: 'TEXT' },
       { name: 'unique_selling_points', type: 'TEXT' },
       { name: 'product_highlights', type: 'TEXT' },

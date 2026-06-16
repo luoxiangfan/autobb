@@ -58,6 +58,7 @@ import {
   substitutePlaceholders,
   truncateSnippetByWords,
 } from './utils'
+import { MAX_STORE_PRODUCT_LINKS } from '@/lib/offers/store-product-links'
 
 export function buildRetainedKeywordSlotSection(plan: CreativeKeywordUsagePlan): string {
   if (plan.retainedNonBrandKeywords.length === 0) {
@@ -1616,39 +1617,44 @@ This creative focuses on "${intent || intentEn}" user intent.
           .filter(Boolean)
 
         if (supplementalNames.length > 0) {
-          topProducts = [...topProducts, ...supplementalNames].slice(0, 5)
+          topProducts = [...topProducts, ...supplementalNames].slice(0, MAX_STORE_PRODUCT_LINKS + 2)
         }
 
-        const supplementalFeatured = Array.from(new Set(supplementalNames)).slice(0, 3)
+        const supplementalFeatured = Array.from(new Set(supplementalNames)).slice(
+          0,
+          MAX_STORE_PRODUCT_LINKS
+        )
         if (supplementalFeatured.length > 0) {
           extras.push(`SUPPLEMENTAL PICKS: ${supplementalFeatured.join(', ')}`)
         }
 
-        const supplementalHooks = supplementalItems.slice(0, 3).map((item: any) => {
-          const name = formatSupplementalName(item.name)
-          const featureBits = (item.features || [])
-            .map((f: string) => formatSupplementalFeature(f))
-            .filter(Boolean)
-            .slice(0, 2)
-          const valueBits: string[] = []
-          if (item.rating) valueBits.push(`${item.rating}★`)
-          if (item.reviewCount) valueBits.push(`${item.reviewCount} reviews`)
-          if (item.price) valueBits.push(item.price)
-          if (featureBits.length > 0) {
-            return `${name}: ${featureBits.join(' | ')}`
-          }
-          if (valueBits.length > 0) {
-            return `${name}: ${valueBits.join(', ')}`
-          }
-          return name
-        })
+        const supplementalHooks = supplementalItems
+          .slice(0, MAX_STORE_PRODUCT_LINKS)
+          .map((item: any) => {
+            const name = formatSupplementalName(item.name)
+            const featureBits = (item.features || [])
+              .map((f: string) => formatSupplementalFeature(f))
+              .filter(Boolean)
+              .slice(0, 2)
+            const valueBits: string[] = []
+            if (item.rating) valueBits.push(`${item.rating}★`)
+            if (item.reviewCount) valueBits.push(`${item.reviewCount} reviews`)
+            if (item.price) valueBits.push(item.price)
+            if (featureBits.length > 0) {
+              return `${name}: ${featureBits.join(' | ')}`
+            }
+            if (valueBits.length > 0) {
+              return `${name}: ${valueBits.join(', ')}`
+            }
+            return name
+          })
         if (supplementalHooks.length > 0) {
           supplementalHookLines.push(...supplementalHooks)
           extras.push(`SUPPLEMENTAL HOOKS: ${supplementalHooks.join(' || ')}`)
         }
 
         // 收集可验证事实（仅单品链接来源）
-        supplementalItems.slice(0, 3).forEach((item: any) => {
+        supplementalItems.slice(0, MAX_STORE_PRODUCT_LINKS).forEach((item: any) => {
           const name = formatSupplementalName(item.name)
           if (item.price)
             supplementalVerifiedFacts.push(`- SUPPLEMENTAL ${name} PRICE: ${item.price}`)
@@ -1689,7 +1695,7 @@ This creative focuses on "${intent || intentEn}" user intent.
   // 如果是Store页面，添加热销洞察到Prompt
   if (hotInsights && topProducts.length > 0) {
     extras.push(
-      `STORE HOT PRODUCTS: ${topProducts.slice(0, 3).join(', ')} (Avg: ${hotInsights.avgRating.toFixed(1)} stars, ${hotInsights.avgReviews} reviews)`
+      `STORE HOT PRODUCTS: ${topProducts.slice(0, MAX_STORE_PRODUCT_LINKS).join(', ')} (Avg: ${hotInsights.avgRating.toFixed(1)} stars, ${hotInsights.avgReviews} reviews)`
     )
   }
 
@@ -2266,7 +2272,11 @@ ${hooksList}
   if (averageRating > 0) verifiedFacts.push(`- AVERAGE RATING: ${averageRating}`)
   if (linkType === 'store' && topProducts.length > 0) {
     verifiedFacts.push(
-      `- VERIFIED HOT PRODUCTS: ${topProducts.slice(0, 3).map(formatSupplementalName).filter(Boolean).join(', ')}`
+      `- VERIFIED HOT PRODUCTS: ${topProducts
+        .slice(0, MAX_STORE_PRODUCT_LINKS)
+        .map(formatSupplementalName)
+        .filter(Boolean)
+        .join(', ')}`
     )
   }
   if (supplementalVerifiedFacts.length > 0) {
@@ -2279,7 +2289,7 @@ ${hooksList}
         `🧹 Verified facts 去噪: 移除 ${filteredSupplementalFacts.removed.length} 条疑似离题事实`
       )
     }
-    verifiedFacts.push(...filteredSupplementalFacts.filtered.slice(0, 6))
+    verifiedFacts.push(...filteredSupplementalFacts.filtered.slice(0, MAX_STORE_PRODUCT_LINKS))
   }
   if (quantitativeHighlights.length > 0) {
     verifiedFacts.push(
@@ -2592,7 +2602,10 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     productName: verifiedPrimaryProduct,
     targetCountry: String(offer.target_country || ''),
     targetLanguage,
-    topProducts: topProducts.slice(0, 3).map(formatSupplementalName).filter(Boolean),
+    topProducts: topProducts
+      .slice(0, MAX_STORE_PRODUCT_LINKS)
+      .map(formatSupplementalName)
+      .filter(Boolean),
     keywords: keywordsForPrompt,
   })
   const typeIntentGuidanceSection = buildTypeIntentGuidanceSection(

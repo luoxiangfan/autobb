@@ -11,6 +11,7 @@ import {
   parseStoreProductLinksInput,
   resolveExtractPageInput,
 } from '../offers/server'
+import { storeProductLinksTypeError } from '../offers/store-product-links'
 
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
@@ -209,7 +210,7 @@ describe('offer-extraction-task helpers', () => {
           affiliateLink: 'https://example.com/item',
           storeProductLinks: 'not-an-array',
         })
-      ).toEqual({ error: 'store_product_links 必须为URL数组（最多3个）' })
+      ).toEqual({ error: storeProductLinksTypeError() })
     })
 
     it('returns empty store links for product page type', () => {

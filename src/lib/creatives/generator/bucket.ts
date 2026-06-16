@@ -16,6 +16,7 @@ import {
 import { normalizeKeywordPoolBucketQuery } from '../server'
 import type { BucketType, NormalizedCreativeBucket } from './types'
 import { decodeUriComponentSafe, safeParseJson } from './utils'
+import { MAX_STORE_PRODUCT_LINKS } from '@/lib/offers/store-product-links'
 
 export function normalizeCreativeBucketType(bucket?: string | null): NormalizedCreativeBucket {
   return normalizeKeywordPoolBucketQuery(bucket)
@@ -252,7 +253,10 @@ export function buildStoreProductCandidatesFromLinks(rawStoreProductLinks: unkno
   return candidates
 }
 
-export function dedupeStoreProductNames(productNames: string[], limit = 3): string[] {
+export function dedupeStoreProductNames(
+  productNames: string[],
+  limit = MAX_STORE_PRODUCT_LINKS
+): string[] {
   const deduped: string[] = []
   const seen = new Set<string>()
 

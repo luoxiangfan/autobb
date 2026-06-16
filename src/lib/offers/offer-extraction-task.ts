@@ -18,6 +18,11 @@ import {
   resolveValidatedTargetCountry,
   validateExistingOfferForExtraction,
 } from '@/lib/offers/server'
+import {
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
+  storeProductLinksTypeError,
+} from '@/lib/offers/store-product-links'
 
 /** offer_tasks 中视为“占用中”、不可重复入队的状态 */
 const ACTIVE_OFFER_EXTRACTION_TASK_STATUSES = ['pending', 'running'] as const
@@ -103,17 +108,11 @@ export type CreateOfferExtractionTaskForExistingOfferParams = {
 
 function normalizeLinks(links: string[] | null | undefined): string[] | undefined {
   if (!Array.isArray(links)) return undefined
-  const normalized = Array.from(
-    new Set(
-      links
-        .map((link) => (typeof link === 'string' ? link.trim() : ''))
-        .filter((link) => Boolean(link))
-    )
-  ).slice(0, 3)
+  const normalized = normalizeStoreProductLinkList(links)
   return normalized.length > 0 ? normalized : undefined
 }
 
-/** 解析 offers.store_product_links JSON 字段（最多 3 条去重链接） */
+/** 解析 offers.store_product_links JSON 字段（最多 {@link MAX_STORE_PRODUCT_LINKS} 条去重链接） */
 export function parseStoreProductLinks(raw: string | null | undefined): string[] | undefined {
   if (!raw?.trim()) return undefined
   try {
@@ -143,7 +142,7 @@ export function inferOfferPageType(params: {
   return 'product'
 }
 
-const STORE_PRODUCT_LINKS_TYPE_ERROR = 'store_product_links 必须为URL数组（最多3个）'
+const STORE_PRODUCT_LINKS_TYPE_ERROR = storeProductLinksTypeError()
 
 /** 解析 API 请求体中的店铺单品链接（不依赖 page_type，供先推断页类型再校验） */
 export function parseStoreProductLinksInput(
@@ -155,11 +154,9 @@ export function parseStoreProductLinksInput(
   if (!Array.isArray(storeProductLinks)) {
     return { error: STORE_PRODUCT_LINKS_TYPE_ERROR }
   }
-  const links = Array.from(
-    new Set(
-      storeProductLinks.map((link) => (typeof link === 'string' ? link.trim() : '')).filter(Boolean)
-    )
-  ).slice(0, 3)
+  const links = normalizeStoreProductLinkList(
+    storeProductLinks.map((link) => (typeof link === 'string' ? link.trim() : '')).filter(Boolean)
+  )
   for (const link of links) {
     try {
       new URL(link)

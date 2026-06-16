@@ -44,7 +44,7 @@ export interface Offer {
   target_language: string | null
   offer_name: string | null
   affiliate_link: string | null
-  store_product_links: string | null // 店铺模式：最多3个单品推广链接（JSON）
+  store_product_links: string | null // 店铺模式：最多6个单品推广链接（JSON）
   brand_description: string | null
   unique_selling_points: string | null
   product_highlights: string | null

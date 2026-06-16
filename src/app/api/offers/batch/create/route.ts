@@ -18,7 +18,7 @@
  * - 可选列：产品价格/product_price（店铺类型可填平均产品价格）
  * - 可选列：佣金比例/commission_payout（兼容旧列）
  * - 可选列：commission_type + commission_value（推荐），可附带 commission_currency
- * - 店铺类型可选列：单品推广链接 product_link_1~3（最多3个）
+ * - 店铺类型可选列：单品推广链接 product_link_1~6（最多6个）
  * - 可选列：提取模式/extraction_mode（fast/balanced/original，缺省为系统默认）
  * - 编码：UTF-8
  * - 最大有效行数：500行
@@ -34,6 +34,8 @@ import {
   canonicalizeOfferBatchCsvHeader,
   decodeCsvTextSmart,
   normalizeCsvHeaderCell,
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
 } from '@/lib/offers/server'
 import { toDbJsonObjectField } from '@/lib/db'
 import { normalizeOfferCommissionInput } from '@/lib/offers/server'
@@ -135,9 +137,9 @@ export async function POST(req: NextRequest) {
     const commissionValueIdx = headers.indexOf('commission_value')
     const commissionCurrencyIdx = headers.indexOf('commission_currency')
     const pageTypeIdx = headers.indexOf('page_type')
-    const productLink1Idx = headers.indexOf('product_link_1')
-    const productLink2Idx = headers.indexOf('product_link_2')
-    const productLink3Idx = headers.indexOf('product_link_3')
+    const productLinkIndices = Array.from({ length: MAX_STORE_PRODUCT_LINKS }, (_, index) =>
+      headers.indexOf(`product_link_${index + 1}`)
+    )
     const extractionModeIdx = headers.indexOf('extraction_mode')
 
     // 解析数据行，只保留必填参数完整的行
@@ -280,15 +282,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const productLinkCandidates = [
-        productLink1Idx !== -1 ? values[productLink1Idx] : '',
-        productLink2Idx !== -1 ? values[productLink2Idx] : '',
-        productLink3Idx !== -1 ? values[productLink3Idx] : '',
-      ]
-      const normalizedProductLinks = productLinkCandidates
-        .map((v) => (v || '').trim())
-        .filter((v) => Boolean(v))
-      const uniqueProductLinks = Array.from(new Set(normalizedProductLinks)).slice(0, 3)
+      const productLinkCandidates = productLinkIndices.map((idx) => (idx !== -1 ? values[idx] : ''))
+      const uniqueProductLinks = normalizeStoreProductLinkList(productLinkCandidates)
 
       let resolvedPageType = parsedPageType
       if (!resolvedPageType && uniqueProductLinks.length > 0) {

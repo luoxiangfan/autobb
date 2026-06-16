@@ -24,6 +24,10 @@ import {
   normalizeBrandName,
 } from '@/lib/offers/server'
 import { scrapeSupplementalProducts, type SupplementalProductResult } from '@/lib/offers/server'
+import {
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
+} from '@/lib/offers/store-product-links'
 import { warmupAffiliateLink } from '@/lib/scraping/proxy-warmup'
 import { getProxyUrlForCountry } from '@/lib/common/server'
 import { fetchBrandSearchSupplement, type BrandSearchSupplement } from '@/lib/keywords/server'
@@ -65,7 +69,7 @@ export interface ExtractOfferOptions {
   skipWarmup?: boolean
   /** 用户选择的页面类型（店铺/单品），用于覆盖自动判断 */
   pageTypeOverride?: 'store' | 'product'
-  /** 店铺模式下的单品推广链接（最多3个） */
+  /** 店铺模式下的单品推广链接（最多 {@link MAX_STORE_PRODUCT_LINKS} 个） */
   storeProductLinks?: string[]
   /** SSE进度回调函数（可选） */
   progressCallback?: ProgressCallback
@@ -1111,16 +1115,8 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         console.log(`✅ 独立站单品识别成功: ${brandName || '未知品牌'}, 产品数: ${productCount}`)
       }
 
-      // 店铺模式：补充抓取最多3个单品推广链接
-      const normalizedStoreLinks = Array.isArray(storeProductLinks)
-        ? Array.from(
-            new Set(
-              storeProductLinks
-                .map((link) => (typeof link === 'string' ? link.trim() : ''))
-                .filter(Boolean)
-            )
-          ).slice(0, 3)
-        : []
+      // 店铺模式：补充抓取最多 MAX_STORE_PRODUCT_LINKS 个单品推广链接
+      const normalizedStoreLinks = normalizeStoreProductLinkList(storeProductLinks)
       supplementalRequested = normalizedStoreLinks.length
 
       if (normalizedStoreLinks.length > 0) {
@@ -1138,7 +1134,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           targetCountry,
           userId,
           proxyUrl: proxyApiUrl,
-          maxLinks: 3,
+          maxLinks: MAX_STORE_PRODUCT_LINKS,
           concurrency: 2,
           onItem: ({ index, total, link }) => {
             progressCallback?.(

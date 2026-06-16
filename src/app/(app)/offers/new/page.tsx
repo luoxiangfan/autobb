@@ -5,6 +5,10 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { getLanguageNameForCountry, getCountryOptionsForUI } from '@/lib/common'
 import { normalizeOfferCommissionInput } from '@/lib/offers'
+import {
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
+} from '@/lib/offers/store-product-links'
 
 export default function NewOfferPage() {
   const router = useRouter()
@@ -105,10 +109,7 @@ export default function NewOfferPage() {
         if (!affiliateLink.trim()) {
           throw new Error('店铺类型需填写店铺推广链接')
         }
-        const normalizedLinks = storeProductLinks
-          .map((link) => link.trim())
-          .filter((link) => Boolean(link))
-        uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
+        uniqueLinks = normalizeStoreProductLinkList(storeProductLinks)
         for (const link of uniqueLinks) {
           try {
             new URL(link)
@@ -264,7 +265,7 @@ export default function NewOfferPage() {
   }
 
   const addStoreProductLink = () => {
-    setStoreProductLinks((prev) => (prev.length >= 3 ? prev : [...prev, '']))
+    setStoreProductLinks((prev) => (prev.length >= MAX_STORE_PRODUCT_LINKS ? prev : [...prev, '']))
   }
 
   const removeStoreProductLink = (index: number) => {
@@ -337,7 +338,7 @@ export default function NewOfferPage() {
                       ))}
                     </div>
                     <p className="mt-1 text-sm text-gray-500">
-                      店铺类型可选填写单品推广链接（最多3个）
+                      店铺类型可选填写单品推广链接（最多{MAX_STORE_PRODUCT_LINKS}个）
                     </p>
                   </div>
 
@@ -437,7 +438,7 @@ export default function NewOfferPage() {
                   {linkType === 'store' && (
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        单品推广链接（最多3个）
+                        单品推广链接（最多{MAX_STORE_PRODUCT_LINKS}个）
                       </label>
                       <div className="space-y-2">
                         {storeProductLinks.map((link, idx) => (
@@ -467,7 +468,7 @@ export default function NewOfferPage() {
                         type="button"
                         className="text-sm text-indigo-600 hover:text-indigo-500"
                         onClick={addStoreProductLink}
-                        disabled={storeProductLinks.length >= 3}
+                        disabled={storeProductLinks.length >= MAX_STORE_PRODUCT_LINKS}
                       >
                         + 添加单品链接
                       </button>

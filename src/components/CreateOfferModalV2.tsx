@@ -33,6 +33,10 @@ import ProgressTracker from '@/components/ProgressTracker'
 import { useOfferExtractionV2 } from '@/hooks/useOfferExtractionV2'
 import { getCountryOptionsForUI } from '@/lib/common'
 import { getDefaultOfferExtractionMode, type OfferExtractionMode } from '@/lib/offers'
+import {
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
+} from '@/lib/offers/store-product-links'
 import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
 
 interface CreateOfferModalV2Props {
@@ -218,7 +222,7 @@ export default function CreateOfferModalV2({
 
   const addStoreProductLink = () => {
     setStoreProductLinks((prev) => {
-      if (prev.length >= 3) return prev
+      if (prev.length >= MAX_STORE_PRODUCT_LINKS) return prev
       return [...prev, '']
     })
   }
@@ -230,10 +234,7 @@ export default function CreateOfferModalV2({
     })
   }
 
-  const normalizeStoreProductLinks = () => {
-    const normalized = storeProductLinks.map((link) => link.trim()).filter((link) => Boolean(link))
-    return Array.from(new Set(normalized)).slice(0, 3)
-  }
+  const normalizeStoreProductLinks = () => normalizeStoreProductLinkList(storeProductLinks)
 
   // ========== 步骤1: 提交用户输入，开始自动提取 ==========
   const handleExtract = async (e: React.FormEvent) => {
@@ -420,7 +421,7 @@ export default function CreateOfferModalV2({
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 mt-1">
-                  店铺类型可选填写最多3个单品推广链接，用于补充单品数据
+                  店铺类型可选填写最多{MAX_STORE_PRODUCT_LINKS}个单品推广链接，用于补充单品数据
                 </p>
               </div>
 
@@ -447,7 +448,7 @@ export default function CreateOfferModalV2({
 
               {linkType === 'store' && (
                 <div className="space-y-2">
-                  <Label>单品推广链接（最多3个）</Label>
+                  <Label>单品推广链接（最多{MAX_STORE_PRODUCT_LINKS}个）</Label>
                   <div className="space-y-2">
                     {storeProductLinks.map((link, idx) => (
                       <div key={`store-product-link-${idx}`} className="flex items-center gap-2">
@@ -477,12 +478,14 @@ export default function CreateOfferModalV2({
                       variant="outline"
                       size="sm"
                       onClick={addStoreProductLink}
-                      disabled={storeProductLinks.length >= 3}
+                      disabled={storeProductLinks.length >= MAX_STORE_PRODUCT_LINKS}
                     >
                       添加单品链接
                     </Button>
                   </div>
-                  <p className="text-xs text-slate-500">仅用于补充单品数据，最多3个</p>
+                  <p className="text-xs text-slate-500">
+                    仅用于补充单品数据，最多{MAX_STORE_PRODUCT_LINKS}个
+                  </p>
                 </div>
               )}
 

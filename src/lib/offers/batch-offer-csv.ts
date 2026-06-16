@@ -72,6 +72,45 @@ export function canonicalizeOfferBatchCsvHeader(value: unknown) {
   ) {
     return 'product_link_3'
   }
+  if (
+    has(
+      (t) =>
+        t.includes('productlink4') ||
+        t.includes('storeproductlink4') ||
+        t.includes('单品链接4') ||
+        t.includes('单品推广链接4') ||
+        t.includes('商品链接4') ||
+        t.includes('产品链接4')
+    )
+  ) {
+    return 'product_link_4'
+  }
+  if (
+    has(
+      (t) =>
+        t.includes('productlink5') ||
+        t.includes('storeproductlink5') ||
+        t.includes('单品链接5') ||
+        t.includes('单品推广链接5') ||
+        t.includes('商品链接5') ||
+        t.includes('产品链接5')
+    )
+  ) {
+    return 'product_link_5'
+  }
+  if (
+    has(
+      (t) =>
+        t.includes('productlink6') ||
+        t.includes('storeproductlink6') ||
+        t.includes('单品链接6') ||
+        t.includes('单品推广链接6') ||
+        t.includes('商品链接6') ||
+        t.includes('产品链接6')
+    )
+  ) {
+    return 'product_link_6'
+  }
   if (has((t) => t === 'affiliatelink' || t.includes('affiliatelink') || t.includes('推广链接'))) {
     return 'affiliate_link'
   }

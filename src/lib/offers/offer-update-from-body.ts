@@ -19,6 +19,10 @@ import {
   normalizeOfferExtractionMode,
   resolveExtractionModeInput,
 } from '@/lib/offers/offer-extraction-mode'
+import {
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
+} from '@/lib/offers/store-product-links'
 
 const extractionModeSchema = z
   .union([z.string(), z.undefined(), z.null(), z.literal('')])
@@ -53,7 +57,10 @@ const updateOfferBodySchema = z.object({
   product_highlights: z.string().optional(),
   target_audience: z.string().optional(),
   page_type: z.enum(['store', 'product']).optional(),
-  store_product_links: z.array(z.url(zErr.invalidUrl)).max(3, zErr.maxItems(3)).optional(),
+  store_product_links: z
+    .array(z.url(zErr.invalidUrl))
+    .max(MAX_STORE_PRODUCT_LINKS, zErr.maxItems(MAX_STORE_PRODUCT_LINKS))
+    .optional(),
   product_price: z.string().optional(),
   commission_payout: z.string().optional(),
   commission_type: z.enum(['percent', 'amount']).optional(),
@@ -113,9 +120,7 @@ export function resolveStoreProductLinksForUpdate(
     return null
   }
   if (pageType === 'store' && linksInput !== undefined) {
-    const normalized = Array.from(
-      new Set(linksInput.map((link) => link.trim()).filter(Boolean))
-    ).slice(0, 3)
+    const normalized = normalizeStoreProductLinkList(linksInput)
     return normalized.length > 0 ? JSON.stringify(normalized) : null
   }
   return undefined

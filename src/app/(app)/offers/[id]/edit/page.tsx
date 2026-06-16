@@ -12,6 +12,10 @@ import {
 } from '@/lib/offers'
 import { OfferExtractionModeField } from '@/components/offers/OfferExtractionModeField'
 import { showSuccess } from '@/lib/common'
+import {
+  MAX_STORE_PRODUCT_LINKS,
+  normalizeStoreProductLinkList,
+} from '@/lib/offers/store-product-links'
 
 export default function EditOfferPage() {
   const router = useRouter()
@@ -201,10 +205,7 @@ export default function EditOfferPage() {
   const buildUpdatePayload = async () => {
     let uniqueLinks: string[] = []
     if (linkType === 'store') {
-      const normalizedLinks = storeProductLinks
-        .map((link) => link.trim())
-        .filter((link) => Boolean(link))
-      uniqueLinks = Array.from(new Set(normalizedLinks)).slice(0, 3)
+      uniqueLinks = normalizeStoreProductLinkList(storeProductLinks)
       for (const link of uniqueLinks) {
         try {
           new URL(link)
@@ -321,7 +322,7 @@ export default function EditOfferPage() {
   }
 
   const addStoreProductLink = () => {
-    setStoreProductLinks((prev) => (prev.length >= 3 ? prev : [...prev, '']))
+    setStoreProductLinks((prev) => (prev.length >= MAX_STORE_PRODUCT_LINKS ? prev : [...prev, '']))
   }
 
   const removeStoreProductLink = (index: number) => {
@@ -440,7 +441,7 @@ export default function EditOfferPage() {
                       ))}
                     </div>
                     <p className="mt-1 text-sm text-gray-500">
-                      店铺类型可选填写单品推广链接（最多3个）
+                      店铺类型可选填写单品推广链接（最多{MAX_STORE_PRODUCT_LINKS}个）
                     </p>
                   </div>
 
@@ -554,7 +555,7 @@ export default function EditOfferPage() {
                   {linkType === 'store' && (
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">
-                        单品推广链接（最多3个）
+                        单品推广链接（最多{MAX_STORE_PRODUCT_LINKS}个）
                       </label>
                       <div className="space-y-2">
                         {storeProductLinks.map((link, idx) => (
@@ -584,11 +585,13 @@ export default function EditOfferPage() {
                         type="button"
                         className="text-sm text-indigo-600 hover:text-indigo-500"
                         onClick={addStoreProductLink}
-                        disabled={storeProductLinks.length >= 3}
+                        disabled={storeProductLinks.length >= MAX_STORE_PRODUCT_LINKS}
                       >
                         + 添加单品链接
                       </button>
-                      <p className="text-xs text-gray-500">仅用于补充单品数据，最多3个</p>
+                      <p className="text-xs text-gray-500">
+                        仅用于补充单品数据，最多{MAX_STORE_PRODUCT_LINKS}个
+                      </p>
                     </div>
                   )}
                 </div>

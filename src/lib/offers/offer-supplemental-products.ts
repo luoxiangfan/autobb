@@ -3,6 +3,7 @@ import { extractProductInfo } from '@/lib/scraping'
 import { detectPageType } from '@/lib/offers/server'
 import { scrapeAmazonProduct } from '@/lib/scraping/stealth'
 import type { SupplementalProductResult } from './offer-supplemental-product-types'
+import { MAX_STORE_PRODUCT_LINKS, normalizeStoreProductLinkList } from './store-product-links'
 
 export type { SupplementalProductResult } from './offer-supplemental-product-types'
 
@@ -18,13 +19,6 @@ type ScrapeOptions = {
     link: string
     result: SupplementalProductResult
   }) => void
-}
-
-function normalizeLinks(links: string[], maxLinks = 3): string[] {
-  const normalized = links
-    .map((link) => (typeof link === 'string' ? link.trim() : ''))
-    .filter(Boolean)
-  return Array.from(new Set(normalized)).slice(0, maxLinks)
 }
 
 async function scrapeSupplementalProductLink(
@@ -162,7 +156,10 @@ export async function scrapeSupplementalProducts(
   links: string[],
   options: ScrapeOptions
 ): Promise<SupplementalProductResult[]> {
-  const normalizedLinks = normalizeLinks(links, options.maxLinks ?? 3)
+  const normalizedLinks = normalizeStoreProductLinkList(links).slice(
+    0,
+    options.maxLinks ?? MAX_STORE_PRODUCT_LINKS
+  )
   if (normalizedLinks.length === 0) return []
 
   const total = normalizedLinks.length
