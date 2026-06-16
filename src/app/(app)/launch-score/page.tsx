@@ -9,7 +9,10 @@ import {
   resolveLaunchScoreHashCampaignConfigForClient,
   type LaunchScoreHashCampaignConfigClient,
 } from '@/lib/launch-score'
-import type { LaunchScorePerformanceApiPayload, PredictionComparison } from '@/lib/launch-score'
+import type {
+  LaunchScorePerformanceApiPayload,
+  PredictionComparison,
+} from '@/lib/launch-score/launch-score-performance-types'
 import { formatCurrency } from '@/lib/common'
 
 /**

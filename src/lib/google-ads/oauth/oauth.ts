@@ -488,7 +488,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         serviceAccountId: String(serviceAccount.id),
       })
 
-      const { listAccessibleCustomersPython } = await import('../../campaign')
+      const { listAccessibleCustomersPython } = await import('../../campaign/server')
 
       try {
         const resourceNames = await listAccessibleCustomersPython({
@@ -519,7 +519,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
           authContext: ctx,
         }
       } catch (error: unknown) {
-        const { formatPythonAdsServiceUnavailableError } = await import('../../campaign')
+        const { formatPythonAdsServiceUnavailableError } = await import('../../campaign/server')
         const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
         if (serviceUnavailable) {
           logGoogleAdsVerifyError('python_ads_service_unavailable', serviceUnavailable, { userId })

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { dataSyncService } from '@/lib/campaign'
+import { dataSyncService } from '@/lib/campaign/server'
 
 /**
  * GET /api/sync/logs

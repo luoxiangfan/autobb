@@ -27,7 +27,11 @@ vi.mock('@/lib/url-swap/queue-cleanup', () => ({
   removePendingUrlSwapQueueTasksByTaskIds: queueCleanupFns.removePendingUrlSwapQueueTasksByTaskIds,
 }))
 
-import { campaignOfferTaskActions, pauseOfferTasks, pauseOfferTasksBatch } from '@/lib/campaign'
+import {
+  campaignOfferTaskActions,
+  pauseOfferTasks,
+  pauseOfferTasksBatch,
+} from '@/lib/campaign/server'
 
 describe('pauseOfferTasks', () => {
   beforeEach(() => {

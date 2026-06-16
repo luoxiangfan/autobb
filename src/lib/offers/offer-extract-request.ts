@@ -2,15 +2,18 @@
  * 新建 Offer 提取请求解析（extract / extract/stream 共用）
  */
 
-import { normalizeOfferExtractRequestBody, type NormalizeOfferExtractOptions } from '@/lib/common'
+import {
+  normalizeOfferExtractRequestBody,
+  type NormalizeOfferExtractOptions,
+} from '@/lib/common/server'
 import {
   getDefaultOfferExtractionMode,
   getExtractionModeFromRequestBody,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offers'
-import { normalizeOfferTargetCountry } from '@/lib/offers'
-import { resolveExtractPageInput, type OfferPageType } from '@/lib/offers'
+} from '@/lib/offers/server'
+import { normalizeOfferTargetCountry } from '@/lib/offers/server'
+import { resolveExtractPageInput, type OfferPageType } from '@/lib/offers/server'
 
 export class OfferExtractRequestError extends Error {
   constructor(

@@ -6,7 +6,7 @@
 
 import { load, type CheerioAPI } from 'cheerio'
 import { Page } from 'playwright'
-import { normalizeBrandName } from '../offers'
+import { normalizeBrandName } from '../offers/server'
 import { getPlaywrightPool } from '../scraping'
 import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
 import { isProxyConnectionError } from './proxy-utils'

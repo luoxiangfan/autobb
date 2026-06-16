@@ -5,9 +5,9 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { apiCache, generateCacheKey } from '@/lib/common'
+import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
-import { listOffers } from '@/lib/offers'
+import { listOffers } from '@/lib/offers/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 function parseBooleanParam(value: string | null): boolean {

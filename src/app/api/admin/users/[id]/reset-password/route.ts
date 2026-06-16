@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { hash as bcryptHash } from '@/lib/auth'
 import crypto from 'crypto'
-import { logPasswordReset, UserManagementContext } from '@/lib/common'
+import { logPasswordReset, UserManagementContext } from '@/lib/common/server'
 
 // 获取客户端IP地址
 function getClientIP(request: NextRequest): string {

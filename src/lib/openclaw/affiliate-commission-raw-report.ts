@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
-import { parseStoredJsonPayload } from '@/lib/common'
+import { parseStoredJsonPayload } from '@/lib/common/server'
 import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-platform'
 import {
   affiliateCommissionFactsCoverRawRange,

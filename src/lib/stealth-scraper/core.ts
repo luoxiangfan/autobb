@@ -256,7 +256,7 @@ export async function scrapeUrlWithBrowser(
 
               // 只有当JavaScript成功执行后（a-js=true 或 a-no-js=false）才检测语言
               if (finalPageStatus.hasJsClass || !finalPageStatus.hasNoJsClass) {
-                const { getLanguageCodeForCountry } = await import('../common')
+                const { getLanguageCodeForCountry } = await import('../common/server')
                 const expectedLangCode = getLanguageCodeForCountry(options.targetCountry)
                 const actualLang = finalPageStatus.htmlLang.toLowerCase().split('-')[0] // 'en-gb' -> 'en'
 

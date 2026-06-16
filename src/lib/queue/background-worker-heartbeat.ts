@@ -1,5 +1,5 @@
-import { getRedisClient } from '@/lib/common'
-import { REDIS_PREFIX_CONFIG } from '@/lib/common'
+import { getRedisClient } from '@/lib/common/server'
+import { REDIS_PREFIX_CONFIG } from '@/lib/common/server'
 
 const HEARTBEAT_TTL_SECONDS = (() => {
   const n = parseInt(process.env.BACKGROUND_WORKER_HEARTBEAT_TTL || '15', 10)

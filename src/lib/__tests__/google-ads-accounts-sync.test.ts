@@ -13,7 +13,7 @@ const pythonFns = vi.hoisted(() => ({
 }))
 
 vi.mock('../campaign', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../campaign')>()
+  const actual = await importOriginal<typeof import('../campaign/server')>()
   return {
     ...actual,
     listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,

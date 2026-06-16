@@ -10,7 +10,7 @@
 import { getDatabase } from '@/lib/db'
 import { nowFunc, dateMinusDays } from '@/lib/db'
 import { proxyHead } from '../scraping'
-import { buildUserExecutionEligibleSql } from '@/lib/campaign'
+import { buildUserExecutionEligibleSql } from '@/lib/campaign/server'
 
 export interface RiskAlert {
   id: number

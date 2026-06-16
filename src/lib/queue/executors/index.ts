@@ -25,8 +25,8 @@ import { executeOpenclawReportSend } from './openclaw-report-send-executor'
 import { executeProductScoreCalculation } from './product-score-calculation-executor'
 import { executeGoogleAdsCampaignSyncTask } from './google-ads-campaign-sync-executor'
 import { executeCampaignBatchCreate } from './campaign-batch-create-executor'
-import { logger } from '@/lib/common'
-import { isEnvTrue } from '@/lib/common'
+import { logger } from '@/lib/common/server'
+import { isEnvTrue } from '@/lib/common/server'
 
 function shouldRegisterBackgroundExecutors(): { allowed: boolean; reason: string } {
   const splitFlag = isEnvTrue(process.env.QUEUE_SPLIT_BACKGROUND)

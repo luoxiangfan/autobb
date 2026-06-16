@@ -1,5 +1,5 @@
 import { getDatabase } from '../db'
-import { convertCurrency } from '../common'
+import { convertCurrency } from '../common/server'
 
 /**
  * Offer Performance Analytics

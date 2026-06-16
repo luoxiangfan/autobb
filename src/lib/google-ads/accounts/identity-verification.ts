@@ -84,7 +84,7 @@ export async function fetchIdentityVerificationSnapshot(params: {
   const startTime = Date.now()
   try {
     if (params.authType === 'service_account') {
-      const { getIdentityVerificationPython } = await import('@/lib/campaign')
+      const { getIdentityVerificationPython } = await import('@/lib/campaign/server')
       const resp = await getIdentityVerificationPython({
         userId: params.userId,
         serviceAccountId: params.serviceAccountConfig?.id?.toString(),

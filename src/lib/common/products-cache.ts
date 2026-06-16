@@ -1,6 +1,6 @@
 import crypto from 'crypto'
-import { REDIS_PREFIX_CONFIG } from '@/lib/common'
-import { getRedisClient } from '@/lib/common'
+import { REDIS_PREFIX_CONFIG } from './config'
+import { getRedisClient } from './redis-client'
 
 const LIST_TTL_SECONDS = 300
 const SUMMARY_TTL_SECONDS = 300

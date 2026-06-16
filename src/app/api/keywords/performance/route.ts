@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { convertCurrency } from '@/lib/common'
-import { getCommissionPerConversion as getOfferCommissionPerConversion } from '@/lib/offers'
+import { convertCurrency } from '@/lib/common/server'
+import { getCommissionPerConversion as getOfferCommissionPerConversion } from '@/lib/offers/server'
 
 function toNumber(value: unknown, fallback = 0): number {
   const parsed = Number(value)

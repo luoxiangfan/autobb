@@ -6,8 +6,8 @@ import { getClickFarmTaskById, restartClickFarmTask } from '@/lib/click-farm'
 import { hasEnabledCampaignForOffer } from '@/lib/click-farm/campaign-health-guard'
 import { notifyTaskResumed } from '@/lib/click-farm/notifications'
 import { getDatabase } from '@/lib/db'
-import { getAllProxyUrls } from '@/lib/common' // 🔧 修复：导入新的代理查询函数
-import { getDateInTimezone } from '@/lib/common'
+import { getAllProxyUrls } from '@/lib/common/server' // 🔧 修复：导入新的代理查询函数
+import { getDateInTimezone } from '@/lib/common/server'
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {

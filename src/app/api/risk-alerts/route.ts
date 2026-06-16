@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { withPerformanceMonitoring } from '@/lib/common'
+import { withPerformanceMonitoring } from '@/lib/common/server'
 import { getUserRiskAlerts, getRiskStatistics, checkAllUserLinks } from '@/lib/optimization'
 
 /**

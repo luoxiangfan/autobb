@@ -323,7 +323,7 @@ export async function getUnifiedGoogleAdsClient(config: {
       _customerId: config.customerId,
 
       async query(query: string) {
-        const { executeGAQLQueryPython } = await import('../../campaign')
+        const { executeGAQLQueryPython } = await import('../../campaign/server')
         return executeGAQLQueryPython({
           userId: authConfig.userId,
           serviceAccountId: authConfig.serviceAccountId,

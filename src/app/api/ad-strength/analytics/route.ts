@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
-import { toNumber } from '@/lib/common'
+import { toNumber } from '@/lib/common/server'
 
 /**
  * GET /api/ad-strength/analytics

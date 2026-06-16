@@ -25,7 +25,7 @@ import {
   resolveBackupScalarFieldsForSync,
   syncCampaignBackupAfterPublish,
   trySyncCampaignBackupAfterPublish,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 describe('campaign-backups helpers', () => {
   it('isAutoadsLikeBackupSource treats publish as autoads', () => {

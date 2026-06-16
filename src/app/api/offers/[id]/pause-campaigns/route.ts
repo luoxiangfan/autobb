@@ -12,8 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
-import { applyCampaignTransition } from '@/lib/campaign'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { applyCampaignTransition } from '@/lib/campaign/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 interface RouteContext {
   params: Promise<{

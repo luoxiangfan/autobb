@@ -8,11 +8,14 @@
 
 import { getQueueManagerForTaskType } from '../queue-routing'
 import type { ProductScoreCalculationTaskData } from '../executors/product-score-calculation-executor'
-import { findExistingProductScoreTask, markProductScoreRequeueNeeded } from '@/lib/launch-score'
+import {
+  findExistingProductScoreTask,
+  markProductScoreRequeueNeeded,
+} from '@/lib/launch-score/server'
 import {
   isProductScoreCalculationPaused,
   ProductScoreCalculationPausedError,
-} from '@/lib/launch-score'
+} from '@/lib/launch-score/server'
 
 /**
  * 调度商品推荐指数计算任务

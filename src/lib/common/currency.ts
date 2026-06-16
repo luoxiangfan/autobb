@@ -4,8 +4,8 @@
  * 运行时使用数据库中的 USD 基准汇率（由 ExchangeRate-API 定时同步）；
  * 若库中无数据或未配置 API Key，则回退到下方静态表。
  */
-import { parseCommissionPayoutValue, parseProductPriceMoney } from '@/lib/offers'
-import { getEffectiveUsdRates } from '@/lib/common'
+import { parseCommissionPayoutValue, parseProductPriceMoney } from '@/lib/offers/offer-monetization'
+import { getEffectiveUsdRates } from './exchange-rates-cache'
 
 export const USD_BASE_CURRENCY = 'USD'
 

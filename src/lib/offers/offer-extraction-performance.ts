@@ -6,7 +6,7 @@ import {
   getDefaultOfferExtractionMode,
   getOfferExtractionModeProfile,
   type OfferExtractionMode,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 
 function profileFor(mode?: OfferExtractionMode | string | null) {
   return getOfferExtractionModeProfile(mode ?? getDefaultOfferExtractionMode())

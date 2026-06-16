@@ -12,9 +12,9 @@ import { Agent as HttpsAgent } from 'https'
 import axios, { AxiosInstance } from 'axios'
 import { GEMINI_PROVIDERS, type GeminiProvider } from './gemini-config'
 import { GEMINI_ACTIVE_MODEL, normalizeModelForProvider } from './gemini-models'
-import { REDIS_PREFIX_CONFIG } from '../common'
-import { getRedisClient } from '../common'
-import { isEnvTrue } from '../common'
+import { REDIS_PREFIX_CONFIG } from '../common/server'
+import { getRedisClient } from '../common/server'
+import { isEnvTrue } from '../common/server'
 
 interface DailyQuotaBreakerState {
   untilMs: number
@@ -841,7 +841,7 @@ function parseRelayResponse(responseData: any, fallbackModel: string): GeminiAxi
  * @returns API Key
  */
 async function getGeminiApiKey(userId: number, provider: GeminiProvider): Promise<string> {
-  const { getUserOnlySetting } = await import('../common')
+  const { getUserOnlySetting } = await import('../common/server')
 
   // 根据服务商选择对应的字段
   const keyField = provider === 'relay' ? 'gemini_relay_api_key' : 'gemini_api_key'
@@ -926,7 +926,7 @@ async function createGeminiAxiosClient(
  * 🔧 关键修复(2025-12-30): 使用 getSetting() 正确处理配置字段
  */
 async function getGeminiProvider(userId: number): Promise<GeminiProvider> {
-  const { getUserOnlySetting } = await import('../common')
+  const { getUserOnlySetting } = await import('../common/server')
   const setting = await getUserOnlySetting('ai', 'gemini_provider', userId)
 
   return normalizeProvider(setting?.value)

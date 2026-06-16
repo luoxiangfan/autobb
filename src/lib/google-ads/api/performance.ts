@@ -50,7 +50,7 @@ export async function getCampaignPerformance(params: {
     let response: any[]
 
     if (authType === 'service_account') {
-      const { executeGAQLQueryPython } = await import('../../campaign')
+      const { executeGAQLQueryPython } = await import('../../campaign/server')
       const result = await executeGAQLQueryPython({
         userId: params.userId,
         serviceAccountId: params.serviceAccountId,
@@ -144,7 +144,7 @@ export async function getAdGroupPerformance(params: {
     let response: any[]
 
     if (authType === 'service_account') {
-      const { executeGAQLQueryPython } = await import('../../campaign')
+      const { executeGAQLQueryPython } = await import('../../campaign/server')
       const result = await executeGAQLQueryPython({
         userId: params.userId,
         serviceAccountId: params.serviceAccountId,
@@ -238,7 +238,7 @@ export async function getAdPerformance(params: {
     let response: any[]
 
     if (authType === 'service_account') {
-      const { executeGAQLQueryPython } = await import('../../campaign')
+      const { executeGAQLQueryPython } = await import('../../campaign/server')
       const result = await executeGAQLQueryPython({
         userId: params.userId,
         serviceAccountId: params.serviceAccountId,
@@ -338,7 +338,7 @@ export async function getBatchCampaignPerformance(params: {
     let response: any[]
 
     if (authType === 'service_account') {
-      const { executeGAQLQueryPython } = await import('../../campaign')
+      const { executeGAQLQueryPython } = await import('../../campaign/server')
       const result = await executeGAQLQueryPython({
         userId: params.userId,
         serviceAccountId: params.serviceAccountId,

@@ -4,7 +4,7 @@ import { nowFunc } from '@/lib/db'
 import {
   compressJsonPayloadText,
   decompressJsonPayloadText,
-  type JsonPayloadCodec } from '@/lib/common'
+  type JsonPayloadCodec } from '@/lib/common/server'
 import type {
   AffiliateCommissionDateBounds,
   AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'

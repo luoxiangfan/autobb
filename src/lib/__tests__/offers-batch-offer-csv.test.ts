@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canonicalizeOfferBatchCsvHeader, decodeCsvTextSmart } from '@/lib/offers'
+import { canonicalizeOfferBatchCsvHeader, decodeCsvTextSmart } from '@/lib/offers/server'
 
 describe('offer batch csv header', () => {
   it('supports Chinese headers (with BOM)', () => {

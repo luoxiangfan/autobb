@@ -12,7 +12,7 @@
 
 import type { Task, TaskExecutor } from '../types'
 import { getDatabase } from '@/lib/db'
-import { resolveBackupDir } from '@/lib/common'
+import { resolveBackupDir } from '@/lib/common/server'
 import fs from 'fs'
 import path from 'path'
 

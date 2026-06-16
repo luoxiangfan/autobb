@@ -13,7 +13,7 @@ import {
   type GoogleAdsCredentials,
 } from '@/lib/google-ads/oauth/oauth'
 import { developerTokenLooksInvalid } from '@/lib/google-ads/accounts/auth/developer-token-heal'
-import type { SettingValue } from '../../common'
+import type { SettingValue } from '../../common/server'
 
 export const GOOGLE_ADS_OAUTH_CONFIG_KEYS = [
   'login_customer_id',

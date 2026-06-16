@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { getUserOnlySettingsByCategory, getSettingsByCategory, type SettingValue } from '@/lib/common'
+import { getUserOnlySettingsByCategory, getSettingsByCategory, type SettingValue } from '@/lib/common/server'
 import { applyFixedAffiliateSyncValues } from '@/lib/affiliate'
 
 export type OpenclawSettingMap = Record<string, string | null>

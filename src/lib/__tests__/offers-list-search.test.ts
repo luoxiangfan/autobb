@@ -20,7 +20,7 @@ describe('listOffers search query', () => {
   })
 
   it('uses case-insensitive postgres search over id/brand/offer_name/url/final_url/category', async () => {
-    const { listOffers } = await import('@/lib/offers')
+    const { listOffers } = await import('@/lib/offers/server')
 
     await listOffers(7, { searchQuery: 'roborock' })
 

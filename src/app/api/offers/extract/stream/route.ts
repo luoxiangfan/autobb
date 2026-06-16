@@ -23,13 +23,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { createOfferExtractionTaskForNewOffer } from '@/lib/offers'
+import { createOfferExtractionTaskForNewOffer } from '@/lib/offers/server'
 import { parseJsonField } from '@/lib/db'
 import {
   OfferExtractRequestError,
   offerExtractApiErrorBody,
   parseNewOfferExtractRequest,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 900 // 15分钟（店铺深度抓取+竞品分析可能需要10-15分钟）

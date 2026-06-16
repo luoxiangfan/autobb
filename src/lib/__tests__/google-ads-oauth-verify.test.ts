@@ -39,7 +39,7 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
 }))
 
 vi.mock('@/lib/campaign', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/campaign')>()
+  const actual = await importOriginal<typeof import('@/lib/campaign/server')>()
   return {
     ...actual,
     listAccessibleCustomersPython: pythonFns.listAccessibleCustomersPython,

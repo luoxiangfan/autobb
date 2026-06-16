@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { queryActiveCampaigns } from '@/lib/campaign'
-import { parseCampaignName } from '@/lib/campaign'
+import { queryActiveCampaigns } from '@/lib/campaign/server'
+import { parseCampaignName } from '@/lib/campaign/server'
 
 export const dynamic = 'force-dynamic'
 

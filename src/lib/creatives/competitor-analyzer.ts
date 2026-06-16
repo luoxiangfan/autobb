@@ -22,7 +22,7 @@ import {
 } from './competitor-compressor'
 import { withCache } from '../ai'
 import { loadPrompt } from '../ai'
-import { parsePrice } from '../common'
+import { parsePrice } from '../common/server'
 
 // ==================== 数据结构定义 ====================
 

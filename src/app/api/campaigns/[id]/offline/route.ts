@@ -8,11 +8,11 @@ import {
 } from '@/lib/google-ads/api/api'
 import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { invalidateOfferCache } from '@/lib/common'
+import { invalidateOfferCache } from '@/lib/common/server'
 import { pauseUrlSwapTargetsByOfferId } from '@/lib/url-swap'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
-import { applyCampaignTransition } from '@/lib/campaign'
+import { applyCampaignTransition } from '@/lib/campaign/server'
 
 type OfflineBody = {
   blacklistOffer?: boolean
@@ -426,7 +426,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
                 if (removeGoogleAdsCampaign) {
                   try {
                     if (authType === 'service_account') {
-                      const { removeCampaignPython } = await import('@/lib/campaign')
+                      const { removeCampaignPython } = await import('@/lib/campaign/server')
                       const resourceName = `customers/${customerIdValue}/campaigns/${id}`
                       await removeCampaignPython({
                         userId,

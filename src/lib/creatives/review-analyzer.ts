@@ -14,7 +14,7 @@
 
 import { generateContent } from '../ai'
 import { recordTokenUsage, estimateTokenCost } from '../ai'
-import { getLanguageNameForCountry } from '../common'
+import { getLanguageNameForCountry } from '../common/server'
 import { compressReviews, type RawReview as CompressorRawReview } from './review-compressor'
 import { withCache } from '../ai'
 import { loadPrompt } from '../ai'

@@ -18,17 +18,17 @@ import {
   batchGetCachedProductRecommendationScores,
   cacheProductRecommendationScore,
   type CachedRecommendationScore,
-} from '@/lib/launch-score'
+} from '@/lib/launch-score/server'
 import {
   acquireProductScoreExecutionMutex,
   consumeProductScoreRequeueRequest,
   findExistingProductScoreTask,
   markProductScoreRequeueNeeded,
-} from '@/lib/launch-score'
+} from '@/lib/launch-score/server'
 import {
   isProductScoreCalculationPaused,
   LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION,
-} from '@/lib/launch-score'
+} from '@/lib/launch-score/server'
 
 export type ProductScoreCalculationTaskData = {
   userId: number

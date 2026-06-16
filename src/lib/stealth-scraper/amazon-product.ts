@@ -4,8 +4,8 @@
  * Single Amazon product page scraping with comprehensive data extraction
  */
 
-import { normalizeBrandName } from '../offers'
-import { parsePrice } from '../common' // 🔥 新增：统一价格解析函数
+import { normalizeBrandName } from '../offers/server'
+import { parsePrice } from '../common/server' // 🔥 新增：统一价格解析函数
 import { getPlaywrightPool } from '../scraping'
 import { extractAmazonBrandFromByline } from '../scraping'
 import { isLikelyInvalidBrandName } from '../scraping'

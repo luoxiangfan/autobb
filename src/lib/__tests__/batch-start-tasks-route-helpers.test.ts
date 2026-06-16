@@ -5,7 +5,7 @@ import {
   buildBatchStartTasksHttpParts,
   coerceBatchStartTaskFlag,
   parseBatchStartRequestBody,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 describe('coerceBatchStartTaskFlag', () => {
   it('treats string false as off', () => {

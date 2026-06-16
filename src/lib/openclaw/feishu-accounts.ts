@@ -1,7 +1,7 @@
 import { decrypt } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import type { SystemSetting } from '@/lib/common'
-import { getUserOnlySetting } from '@/lib/common'
+import type { SystemSetting } from '@/lib/common/server'
+import { getUserOnlySetting } from '@/lib/common/server'
 
 const FEISHU_USER_ACCOUNT_PREFIX = 'user-'
 const FEISHU_USER_KEYS = [

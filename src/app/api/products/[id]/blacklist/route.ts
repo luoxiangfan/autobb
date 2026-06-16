@@ -4,7 +4,7 @@ import {
   getAffiliateProductById,
   setAffiliateProductBlacklist,
 } from '@/lib/affiliate/products/index'
-import { invalidateProductListCache } from '@/lib/common'
+import { invalidateProductListCache } from '@/lib/common/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 type RouteParams = {

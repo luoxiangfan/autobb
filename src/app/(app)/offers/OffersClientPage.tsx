@@ -41,7 +41,7 @@ import {
   loadStoredAdCreativeGenerationMode,
   saveStoredAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/creatives'
+} from '@/lib/creatives/ad-creative-generation-mode'
 import type { OfferListItem, UnlinkTarget } from './types'
 import { PlayCircle } from 'lucide-react'
 

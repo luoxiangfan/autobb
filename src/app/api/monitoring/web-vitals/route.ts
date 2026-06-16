@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { withPerformanceMonitoring, webVitalsMonitor } from '@/lib/common'
-import { isPerformanceReleaseEnabled } from '@/lib/common'
+import { withPerformanceMonitoring, webVitalsMonitor } from '@/lib/common/server'
+import { isPerformanceReleaseEnabled } from '@/lib/common/server'
 
 type WebVitalPayload = {
   id?: unknown

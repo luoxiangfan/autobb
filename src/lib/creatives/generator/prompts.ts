@@ -10,8 +10,8 @@ import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' 
 import { containsPureBrand, getPureBrandKeywords } from '../../keywords'
 import { isBrandConcatenation } from '../../keywords' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
-import { normalizeLanguageCode } from '../../common'
-import { parsePrice } from '../../common'
+import { normalizeLanguageCode } from '../../common/server'
+import { parsePrice } from '../../common/server'
 import { getGoogleAdsTextEffectiveLength } from '@/lib/google-ads/common/ad-text'
 import { getLocalizedDkiOfficialSuffix, type DkiLocaleOptions } from '..'
 import { classifyKeywordIntent } from '../../keywords'

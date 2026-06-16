@@ -7,8 +7,8 @@ import {
   logUserEnabled,
   logUserDeleted,
   UserManagementContext,
-} from '@/lib/common'
-import { clearUserExecutionEligibilityCache } from '@/lib/campaign'
+} from '@/lib/common/server'
+import { clearUserExecutionEligibilityCache } from '@/lib/campaign/server'
 import { purgeGoogleAdsAuthConfigForUser } from '@/lib/google-ads/auth/assignment'
 
 // 获取客户端IP地址
@@ -205,7 +205,7 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
         // 🔒 用户被禁用后：停止该用户的补点击任务 + 暂停换链接任务，并清理队列中已入队的 pending/delayed 任务
         // 任务保持停止/暂停状态，后续启用用户后由用户手动重新开启
         try {
-          const { suspendUserBackgroundTasks } = await import('@/lib/common')
+          const { suspendUserBackgroundTasks } = await import('@/lib/common/server')
           await suspendUserBackgroundTasks(userId, { reason: 'manual_disable', purgeQueue: true })
         } catch (e: any) {
           console.warn('[Admin] suspendUserBackgroundTasks failed:', e?.message || String(e))

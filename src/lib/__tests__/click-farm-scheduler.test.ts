@@ -14,7 +14,7 @@ import {
 import type { ClickFarmTask } from '@/lib/click-farm/click-farm-types'
 
 // Mock timezone-utils
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   createDateInTimezone: vi.fn((dateStr: string, timeStr: string, _timezone: string) => {
     // 返回一个基于输入构造的Date对象
     const [year, month, day] = dateStr.split('-').map(Number)

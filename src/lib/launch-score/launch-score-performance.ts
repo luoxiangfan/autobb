@@ -28,13 +28,15 @@ export interface LaunchScoreOfferPerformanceData {
   }
 }
 
-export interface PredictionComparison {
-  metric: string
-  predicted: number | string
-  actual: number | string
-  accuracy: number | null // 准确度百分比 (null表示无法计算)
-  variance: string // 差异描述
-}
+import type {
+  LaunchScorePerformanceApiPayload,
+  PredictionComparison,
+} from './launch-score-performance-types'
+
+export type {
+  LaunchScorePerformanceApiPayload,
+  PredictionComparison,
+} from './launch-score-performance-types'
 
 export interface PerformanceEnhancedAnalysis {
   launchScore: LaunchScore
@@ -54,15 +56,6 @@ function formatPerformanceMoney(amount: number, currency: string): string {
   } catch {
     return `${currency} ${amount.toFixed(2)}`
   }
-}
-
-/** GET launch-score / performance 接口共用的性能对比载荷（不含 accuracyScore） */
-export type LaunchScorePerformanceApiPayload = {
-  hasPerformanceData: boolean
-  performanceData: LaunchScoreOfferPerformanceData | null
-  comparisons: PredictionComparison[]
-  adjustedRecommendations: string[]
-  message?: string
 }
 
 /** 基于已解析的 Launch Score 构建 performance 载荷（不再 readLaunchScoreForCreative） */

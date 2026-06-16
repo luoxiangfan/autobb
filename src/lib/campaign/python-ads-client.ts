@@ -5,7 +5,7 @@
 import axios from 'axios'
 import { getServiceAccountConfig } from '@/lib/google-ads/service-account/service-account'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { logger } from '../common'
+import { logger } from '../common/server'
 
 const PYTHON_SERVICE_URL = process.env.PYTHON_ADS_SERVICE_URL || 'http://localhost:8001'
 

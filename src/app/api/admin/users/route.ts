@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth, createUser } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { logUserCreated, UserManagementContext } from '@/lib/common'
+import { logUserCreated, UserManagementContext } from '@/lib/common/server'
 import { buildAdminUsersOrderBy } from '@/lib/admin/users-query'
-import { isExpiredOverDays } from '@/lib/campaign'
+import { isExpiredOverDays } from '@/lib/campaign/server'
 
 // 获取客户端IP地址
 function getClientIP(request: NextRequest): string {

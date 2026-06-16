@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
-import type { Offer } from '@/lib/offers'
-import { updateOffer, updateOfferScrapeStatus } from '@/lib/offers'
+import type { Offer } from '@/lib/offers/server'
+import { updateOffer, updateOfferScrapeStatus } from '@/lib/offers/server'
 import { getQueueManager } from '@/lib/queue/unified-queue-manager'
 import type { Task } from '@/lib/queue/types'
 import {
@@ -12,12 +12,12 @@ import {
   getDefaultOfferExtractionMode,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 import {
   OfferExtractRequestError,
   resolveValidatedTargetCountry,
   validateExistingOfferForExtraction,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 
 /** offer_tasks 中视为“占用中”、不可重复入队的状态 */
 const ACTIVE_OFFER_EXTRACTION_TASK_STATUSES = ['pending', 'running'] as const

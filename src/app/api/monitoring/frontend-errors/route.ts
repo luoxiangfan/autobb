@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { frontendErrorMonitor, withPerformanceMonitoring } from '@/lib/common'
-import { isPerformanceReleaseEnabled } from '@/lib/common'
+import { frontendErrorMonitor, withPerformanceMonitoring } from '@/lib/common/server'
+import { isPerformanceReleaseEnabled } from '@/lib/common/server'
 
 type FrontendErrorPayload = {
   type?: unknown

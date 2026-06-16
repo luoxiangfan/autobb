@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { toNumber } from '@/lib/common'
+import { toNumber } from '@/lib/common/server'
 import { estimateTokenCost } from '@/lib/ai'
 
 function formatUtcYmd(date: Date): string {

@@ -1,4 +1,4 @@
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 import type { CampaignConfigData } from './launch-scores'
 import type { LaunchScoreCampaignConfig } from './scoring'
 

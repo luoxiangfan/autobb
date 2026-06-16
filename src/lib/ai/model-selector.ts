@@ -14,7 +14,7 @@
  * 实际调用会在统一入口做降级映射。
  */
 
-import { getUserOnlySetting } from '../common'
+import { getUserOnlySetting } from '../common/server'
 import { GEMINI_ACTIVE_MODEL, type AIModel, normalizeModelForProvider } from './gemini-models'
 
 // 支持的AI模型（官方/中转）

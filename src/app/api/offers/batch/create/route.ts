@@ -34,10 +34,10 @@ import {
   canonicalizeOfferBatchCsvHeader,
   decodeCsvTextSmart,
   normalizeCsvHeaderCell,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 import { toDbJsonObjectField } from '@/lib/db'
-import { normalizeOfferCommissionInput } from '@/lib/offers'
-import { resolveExtractionModeInput } from '@/lib/offers'
+import { normalizeOfferCommissionInput } from '@/lib/offers/server'
+import { resolveExtractionModeInput } from '@/lib/offers/server'
 import Papa from 'papaparse'
 
 export const maxDuration = 60

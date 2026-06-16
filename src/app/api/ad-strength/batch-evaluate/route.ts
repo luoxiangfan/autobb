@@ -2,13 +2,13 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateAdStrength } from '@/lib/creatives/strength/evaluate'
 import type { HeadlineAsset, DescriptionAsset } from '@/lib/creatives'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
-import { mapWithConcurrency, resolveBatchEvaluateConcurrency } from '@/lib/common'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
+import { mapWithConcurrency, resolveBatchEvaluateConcurrency } from '@/lib/common/server'
 
 const BATCH_EVALUATE_CONCURRENCY = resolveBatchEvaluateConcurrency(
   process.env.BATCH_EVALUATE_CONCURRENCY

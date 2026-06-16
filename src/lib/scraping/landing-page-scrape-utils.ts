@@ -1,4 +1,4 @@
-import { normalizeBrandName } from '../offers'
+import { normalizeBrandName } from '../offers/server'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from './brand-name-utils'
 
 function normalizeForCompare(value: string): string {

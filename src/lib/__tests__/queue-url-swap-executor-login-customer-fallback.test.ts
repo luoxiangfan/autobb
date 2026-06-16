@@ -50,9 +50,9 @@ vi.mock('@/lib/url-swap', () => ({
 
 import { getDatabase } from '@/lib/db'
 import { resolveAffiliateLink } from '@/lib/scraping'
-import { initializeProxyPool } from '@/lib/offers'
+import { initializeProxyPool } from '@/lib/offers/server'
 import { updateCampaignFinalUrlSuffix } from '@/lib/google-ads/api/api'
-import { assertUserExecutionAllowed } from '@/lib/campaign'
+import { assertUserExecutionAllowed } from '@/lib/campaign/server'
 import {
   getGoogleAdsAuthContext,
   hasConfiguredGoogleAdsAuthFromContext,

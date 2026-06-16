@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { validateGoogleAdsConfig, validateGeminiConfig } from '@/lib/common'
+import { validateGoogleAdsConfig, validateGeminiConfig } from '@/lib/common/server'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
 import { normalizeGeminiModel } from '@/lib/ai'
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: '验证AI配置需要登录' }, { status: 401 })
         }
 
-        const { getUserOnlySetting } = await import('@/lib/common')
+        const { getUserOnlySetting } = await import('@/lib/common/server')
 
         let geminiApiKey: string
         let geminiRelayApiKey: string

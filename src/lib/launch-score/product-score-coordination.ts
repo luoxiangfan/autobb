@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto'
 
-import { REDIS_PREFIX_CONFIG } from '@/lib/common'
+import { REDIS_PREFIX_CONFIG } from '@/lib/common/server'
 import type { Task } from '@/lib/queue/types'
-import { getRedisClient } from '@/lib/common'
+import { getRedisClient } from '@/lib/common/server'
 
 export type ProductScoreTrigger = 'manual' | 'schedule' | 'sync-complete'
 

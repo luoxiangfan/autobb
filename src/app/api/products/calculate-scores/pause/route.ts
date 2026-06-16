@@ -4,7 +4,7 @@ import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 import {
   isProductScoreCalculationPaused,
   setProductScoreCalculationPaused,
-} from '@/lib/launch-score'
+} from '@/lib/launch-score/server'
 
 async function parseUserId(request: NextRequest): Promise<number | null> {
   const authResult = await verifyAuth(request)

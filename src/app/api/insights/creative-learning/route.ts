@@ -10,7 +10,7 @@ import {
   analyzeSuccessFeatures,
   type SuccessFeatures,
 } from '@/lib/creatives'
-import { toNumber } from '@/lib/common'
+import { toNumber } from '@/lib/common/server'
 
 export const dynamic = 'force-dynamic'
 

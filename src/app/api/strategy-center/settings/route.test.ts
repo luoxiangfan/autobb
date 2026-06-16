@@ -20,7 +20,7 @@ vi.mock('@/lib/openclaw/request-auth', () => ({
   verifyStrategyCenterSessionAuth: authFns.verifyStrategyCenterSessionAuth,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getSettingsByCategory: settingsFns.getSettingsByCategory,
   getUserOnlySettingsByCategory: settingsFns.getUserOnlySettingsByCategory,
   updateSettings: settingsFns.updateSettings,

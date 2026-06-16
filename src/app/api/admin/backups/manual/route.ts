@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { backupDatabase } from '@/lib/common'
+import { backupDatabase } from '@/lib/common/server'
 
 /**
  * POST /api/admin/backups/manual

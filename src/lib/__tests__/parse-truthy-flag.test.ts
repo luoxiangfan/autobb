@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseTruthyFlag } from '@/lib/common'
+import { parseTruthyFlag } from '@/lib/common/server'
 
 describe('parseTruthyFlag', () => {
   it('returns true only for explicit truthy values', () => {

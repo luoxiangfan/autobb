@@ -7,7 +7,11 @@ import {
   normalizeOfferTargetCountry,
   validateBrandName,
 } from './offer-utils'
-import { generatePricingJSON, initializePromotionsJSON, initializeScrapedDataJSON } from '../common'
+import {
+  generatePricingJSON,
+  initializePromotionsJSON,
+  initializeScrapedDataJSON,
+} from '../common/server'
 import { compactCategoryLabel, deriveCategoryFromScrapedData } from './offer-category'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from '../scraping'
 import {
@@ -19,8 +23,8 @@ import {
   markUrlSwapTargetsRemovedByOfferId,
   pauseUrlSwapTargetsByOfferId,
 } from '../url-swap/index'
-import { applyCampaignTransition, applyCampaignTransitionByIds } from '../campaign'
-import { offerOccupyingCampaignIdSubquerySql } from '../campaign'
+import { applyCampaignTransition, applyCampaignTransitionByIds } from '../campaign/server'
+import { offerOccupyingCampaignIdSubquerySql } from '../campaign/server'
 import { toDbJsonObjectField } from '../db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '../click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '../url-swap/queue-cleanup'
@@ -372,7 +376,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
 
   // 🔥 2025-12-17修复：新创建的Offer需要清理API缓存，确保前端轮询立即获取到最新数据
   // 这样当批量上传中的单个offer创建完成时，GET /api/offers 能返回最新的offer列表
-  const { invalidateOfferCache } = await import('../common')
+  const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId)
 
   return offer
@@ -921,7 +925,7 @@ export async function updateOffer(
     throw new Error('Offer更新失败')
   }
 
-  const { invalidateOfferCache } = await import('../common')
+  const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, id)
 
   return updated
@@ -940,7 +944,7 @@ export async function updateOfferExtractionMetadata(
   const db = await getDatabase()
   const nowFunc = 'NOW()'
 
-  const { invalidateOfferCache } = await import('../common')
+  const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, id)
 
   await db.exec(
@@ -1391,7 +1395,7 @@ export async function unlinkOfferFromAccount(
   await markUrlSwapTargetsRemovedByOfferAccount(offerId, accountId)
 
   // 🔥 2025-12-19修复：清理API缓存，确保前端立即看到解绑效果
-  const { invalidateOfferCache } = await import('../common')
+  const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, offerId)
 
   // TODO: 实现闲置账号标记功能（需要先添加 is_idle 列到 google_ads_accounts 表）
@@ -1509,7 +1513,7 @@ export async function updateOfferScrapeStatus(
   const db = await getDatabase()
 
   // 🔥 2025-12-17修复：更新状态前先清理API缓存，确保前端显示最新状态
-  const { invalidateOfferCache } = await import('../common')
+  const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, id)
 
   if (status === 'completed' && scrapedData) {

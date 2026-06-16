@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { queryActiveCampaigns, pauseCampaigns } from '@/lib/campaign'
+import { queryActiveCampaigns, pauseCampaigns } from '@/lib/campaign/server'
 import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
-import type { GoogleAdsCampaignInfo } from '@/lib/campaign'
-import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign'
-import { invalidateOfferCache } from '@/lib/common'
+import type { GoogleAdsCampaignInfo } from '@/lib/campaign/server'
+import { applyCampaignTransitionByGoogleCampaignIds } from '@/lib/campaign/server'
+import { invalidateOfferCache } from '@/lib/common/server'
 
 export const dynamic = 'force-dynamic'
 

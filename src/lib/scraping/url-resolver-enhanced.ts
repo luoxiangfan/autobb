@@ -4,13 +4,13 @@
  * 环境隔离：使用环境特定前缀，防止开发/生产缓存混淆
  */
 
-import { getRedisClient } from '../common'
+import { getRedisClient } from '../common/server'
 import { resolveAffiliateLinkWithPlaywright } from './url-resolver-playwright'
 import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from './url-resolver-http'
 import { getOptimalResolver, extractDomain } from './resolver-domains'
-import { REDIS_PREFIX_CONFIG } from '../common'
+import { REDIS_PREFIX_CONFIG } from '../common/server'
 import { maskProxyUrl } from '../proxy/validate-url'
-import { normalizeCountryCode } from '../common'
+import { normalizeCountryCode } from '../common/server'
 import { isAffiliateLinkExpiredMessage, normalizeNestedResolveErrorMessage } from '../affiliate'
 
 // ==================== 类型定义 ====================

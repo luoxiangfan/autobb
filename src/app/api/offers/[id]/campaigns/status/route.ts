@@ -1,8 +1,8 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { offerOccupyingCampaignWhereClause } from '@/lib/campaign'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { offerOccupyingCampaignWhereClause } from '@/lib/campaign/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 /**
  * GET /api/offers/:id/campaigns/status?campaignId=:campaignId

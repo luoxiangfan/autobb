@@ -4,7 +4,7 @@
  */
 
 import { getDatabase } from '../db'
-import { getIndustryBenchmark } from '../offers'
+import { getIndustryBenchmark } from '../offers/server'
 
 export interface PerformanceData {
   clicks: number

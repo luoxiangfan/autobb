@@ -55,7 +55,7 @@ vi.mock('@/lib/url-swap', () => ({
   pauseUrlSwapTargetsByOfferId: vi.fn(async () => {}),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: vi.fn(),
 }))
 
@@ -121,10 +121,10 @@ vi.mock('@/lib/google-ads/oauth/login-customer', () => ({
   ),
 }))
 
-const { invalidateOfferCache } = await import('@/lib/common')
+const { invalidateOfferCache } = await import('@/lib/common/server')
 const { removePendingClickFarmQueueTasksByTaskIds } = await import('@/lib/click-farm/queue-cleanup')
 const { removePendingUrlSwapQueueTasksByTaskIds } = await import('@/lib/url-swap/queue-cleanup')
-const { applyCampaignTransition } = await import('@/lib/campaign')
+const { applyCampaignTransition } = await import('@/lib/campaign/server')
 const { updateGoogleAdsCampaignStatus, getCustomerWithCredentials } =
   await import('@/lib/google-ads/api/api')
 describe('POST /api/campaigns/:id/offline', () => {

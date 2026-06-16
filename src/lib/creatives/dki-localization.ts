@@ -1,4 +1,4 @@
-import { getLanguageCodeForCountry, normalizeLanguageCode } from '../common'
+import { getLanguageCodeForCountry, normalizeLanguageCode } from '../common/server'
 
 export interface DkiLocaleOptions {
   targetLanguage?: string | null

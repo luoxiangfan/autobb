@@ -35,10 +35,10 @@ import type {
   KeywordPoolPreparedExpand,
 } from '@/lib/google-ads/accounts/auth/index'
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
-import type { Offer } from '@/lib/offers'
+import type { Offer } from '@/lib/offers/server'
 import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/keywords'
 import type { SearchTermFeedbackHintsInput } from './generator/index'
-import { parseBooleanEnv } from '@/lib/common'
+import { parseBooleanEnv } from '@/lib/common/server'
 import type { RetryFailureType } from '@/lib/creatives'
 
 export type GeneratedAdCreative = Awaited<ReturnType<typeof generateAdCreative>>

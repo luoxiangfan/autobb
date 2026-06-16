@@ -17,7 +17,7 @@ import {
 } from './index'
 import { shouldCompleteTask } from '../click-farm/scheduler'
 import { getProxyPool } from '../scraping'
-import { initializeProxyPool } from '../offers'
+import { initializeProxyPool } from '../offers/server'
 import { getQueueManagerForTaskType } from '../queue/index'
 import type { UrlSwapTaskData, TriggerResult } from './url-swap-types'
 

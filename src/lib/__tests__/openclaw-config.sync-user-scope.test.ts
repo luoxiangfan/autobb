@@ -10,7 +10,7 @@ const { getSettingsByCategoryMock, getOpenclawGatewayTokenMock, collectUserFeish
     collectUserFeishuAccountsMock: vi.fn(),
   }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getSettingsByCategory: getSettingsByCategoryMock,
 }))
 

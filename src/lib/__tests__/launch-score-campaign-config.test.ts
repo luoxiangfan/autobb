@@ -4,7 +4,7 @@ import {
   parseLaunchScoreHashCampaignConfig,
   parseLaunchScoreHashCampaignConfigFromSearchParams,
   toCampaignConfigHashData,
-} from '../launch-score'
+} from '../launch-score/server'
 
 describe('parseLaunchScoreHashCampaignConfig', () => {
   it('parses object fields', () => {

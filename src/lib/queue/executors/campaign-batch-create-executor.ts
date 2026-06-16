@@ -4,18 +4,18 @@
 
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
-import { parseCampaignBackup } from '@/lib/campaign'
+import { parseCampaignBackup } from '@/lib/campaign/server'
 import {
   createCampaignRowFromBackup,
   enqueueCampaignPublishFromBackup,
   validateGoogleAdsAccountForRestore,
-} from '@/lib/campaign'
-import { BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE } from '@/lib/campaign'
+} from '@/lib/campaign/server'
+import { BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE } from '@/lib/campaign/server'
 import {
   abandonStalePendingCampaignsForOffers,
   getActiveCampaignConflictsForOffers,
   rollbackPendingCampaignAfterEnqueueFailure,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 export interface CampaignBatchCreateTaskData {
   batchId: string

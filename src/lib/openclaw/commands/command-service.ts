@@ -15,7 +15,7 @@ import {
   createOrRefreshCommandConfirmation,
   expireStaleCommandConfirmations,
   recordOpenclawCallbackEvent } from './confirm-service'
-import { isEnvTrue } from '@/lib/common'
+import { isEnvTrue } from '@/lib/common/server'
 
 async function resolveOpenclawCommandQueueManager() {
   const routedQueue = getQueueManagerForTaskType('openclaw-command')

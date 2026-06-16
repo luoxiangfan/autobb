@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { loginWithPassword } from '@/lib/auth'
-import { checkRateLimit } from '@/lib/common'
+import { checkRateLimit } from '@/lib/common/server'
 import { createUserSession, getUserAlerts } from '@/lib/auth'
 import { z } from 'zod'
-import { zErr } from '@/lib/common'
+import { zErr } from '@/lib/common/server'
 
 const loginSchema = z.object({
   username: z.string().min(1, zErr.usernameRequired),

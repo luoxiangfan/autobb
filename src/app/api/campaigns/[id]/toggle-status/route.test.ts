@@ -62,7 +62,7 @@ vi.mock('@/lib/campaign', () => ({
   applyCampaignTransition: transitionFns.applyCampaignTransition,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 

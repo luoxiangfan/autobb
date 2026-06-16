@@ -4,7 +4,7 @@ import {
   findLatestGoogleAdsBackupForOffer,
   hasAutoadsLikeBackupForOffer,
   toDbCampaignBackupJsonField,
-} from '../../../campaign'
+} from '../../../campaign/server'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,

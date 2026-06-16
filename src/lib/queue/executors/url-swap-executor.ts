@@ -37,8 +37,8 @@ import {
   type GoogleAdsLinkedAccountPrepareCache,
 } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
-import { initializeProxyPool } from '@/lib/offers'
-import { assertUserExecutionAllowed } from '@/lib/campaign'
+import { initializeProxyPool } from '@/lib/offers/server'
+import { assertUserExecutionAllowed } from '@/lib/campaign/server'
 import { detectDomainChangeAffiliateFailure, isAffiliateLinkExpiredMessage } from '@/lib/affiliate'
 
 /**

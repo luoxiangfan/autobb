@@ -1,4 +1,4 @@
-import { logger } from '@/lib/common'
+import { logger } from '@/lib/common/server'
 
 export type GoogleAdsLogScope =
   | 'oauth'

@@ -25,7 +25,7 @@ import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import type { PoolKeywordData } from '../offer-keyword-pool/index'
 import { createRiskAlert } from '../optimization'
 import { getDatabase } from '../db'
-import { normalizeCountryCode, normalizeLanguageCode } from '../common'
+import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'
 
 export interface BuildCreativeKeywordSetInput {
   offer: {

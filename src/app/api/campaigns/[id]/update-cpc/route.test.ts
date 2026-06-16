@@ -97,12 +97,12 @@ vi.mock('@/lib/google-ads/api/tracker', () => ({
   },
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getRedisClient: redisFns.getRedisClient,
 }))
 

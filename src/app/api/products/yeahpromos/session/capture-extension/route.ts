@@ -4,7 +4,7 @@ import {
   getYeahPromosSessionState,
   maskSessionId,
   saveYeahPromosSessionCookie,
-} from '@/lib/affiliate'
+} from '@/lib/affiliate/server'
 
 const MAX_CAPTURE_COOKIE_LENGTH = 16000
 

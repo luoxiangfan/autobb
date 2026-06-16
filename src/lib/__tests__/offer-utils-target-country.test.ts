@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeOfferTargetCountry } from '@/lib/offers'
+import { normalizeOfferTargetCountry } from '@/lib/offers/server'
 
 describe('normalizeOfferTargetCountry', () => {
   it('returns empty string for blank input (no silent US)', () => {

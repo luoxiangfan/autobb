@@ -6,7 +6,7 @@ import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
-import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/common'
+import { invalidateDashboardCache, invalidateOfferCache } from '@/lib/common/server'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 
 function normalizeGoogleCampaignId(value: unknown): string | null {

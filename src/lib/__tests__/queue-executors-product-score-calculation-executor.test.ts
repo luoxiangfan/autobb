@@ -49,7 +49,7 @@ vi.mock('@/lib/launch-score', () => ({
 }))
 
 vi.mock('@/lib/launch-score', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/launch-score')>()
+  const actual = await importOriginal<typeof import('@/lib/launch-score/server')>()
   return {
     ...actual,
     isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,

@@ -15,7 +15,7 @@
  * - QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX: 用户并发硬上限（默认 16）
  */
 
-import { runCampaignPausedTaskCheck } from '@/lib/campaign'
+import { runCampaignPausedTaskCheck } from '@/lib/campaign/server'
 
 function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
   if (rawValue === undefined) return defaultValue

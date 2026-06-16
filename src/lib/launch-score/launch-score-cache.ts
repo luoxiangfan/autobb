@@ -1,6 +1,6 @@
 import type { AdCreative } from '../creatives'
 import { findAdCreativeById, findAdCreativesByOfferId } from '../creatives'
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 import {
   type LaunchScoreHashCampaignConfig,
   toCampaignConfigHashData,

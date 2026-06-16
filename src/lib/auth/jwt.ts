@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { JWT_SECRET, JWT_EXPIRES_IN } from '../common'
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../common/server'
 
 export interface JWTPayload {
   userId: number

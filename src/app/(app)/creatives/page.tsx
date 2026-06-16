@@ -59,7 +59,7 @@ import {
   loadStoredAdCreativeGenerationMode,
   saveStoredAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/creatives'
+} from '@/lib/creatives/ad-creative-generation-mode'
 import type { TrendChartData } from '@/components/charts/TrendChart'
 import type { DateRange } from '@/components/ui/date-range-picker'
 

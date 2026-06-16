@@ -13,16 +13,16 @@ import {
 } from '../creatives'
 import { extractAdElements } from '../creatives'
 import { scrapeAmazonProduct } from '../stealth-scraper/amazon-product'
-import { parsePrice } from '../common'
+import { parsePrice } from '../common/server'
 import {
   getOfferAiCompetitorDetailLimit,
   getOfferProductReviewDeepScrapeLimit,
   shouldRunCompetitorDetailScrapingInAi,
   shouldRunPlaywrightCompetitorDeepScrape,
   shouldRunPlaywrightReviewDeepScrape,
-} from '../offers'
-import type { OfferExtractionMode } from '../offers'
-import { getProxyUrlForCountry } from '../common' // 🔥 修复（2025-12-09）：动态获取代理URL
+} from '../offers/server'
+import type { OfferExtractionMode } from '../offers/server'
+import { getProxyUrlForCountry } from '../common/server' // 🔥 修复（2025-12-09）：动态获取代理URL
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
 import {

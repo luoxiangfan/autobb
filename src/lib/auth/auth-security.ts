@@ -8,7 +8,7 @@
  */
 
 import { getDatabase } from '../db'
-import { logAuditEvent, AuditEventType } from '../common'
+import { logAuditEvent, AuditEventType } from '../common/server'
 import { boolParam } from '../db'
 
 // 安全配置

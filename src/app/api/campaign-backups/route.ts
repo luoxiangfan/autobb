@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { listCampaignBackups } from '@/lib/campaign'
+import { listCampaignBackups } from '@/lib/campaign/server'
 
 /**
  * GET /api/campaign-backups

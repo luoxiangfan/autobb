@@ -5,7 +5,7 @@
  */
 
 import { scrapeUrl } from './scraper'
-import { getLanguageCodeForCountry } from '../common'
+import { getLanguageCodeForCountry } from '../common/server'
 
 export interface BrandServices {
   shipping: string[] // 配送相关服务

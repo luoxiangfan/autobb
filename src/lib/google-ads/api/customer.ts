@@ -1,6 +1,6 @@
 import type { Customer } from 'google-ads-api'
 import { updateGoogleAdsAccount } from '@/lib/google-ads/accounts/accounts'
-import { withRetry } from '../../common'
+import { withRetry } from '../../common/server'
 import {
   resolveOAuthClientCredentialsForUser,
   type OAuthApiCredentialsFields,

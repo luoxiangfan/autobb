@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getIdleAdsAccounts } from '@/lib/offers'
+import { getIdleAdsAccounts } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 
 // 强制动态渲染（使用了request.headers）

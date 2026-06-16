@@ -44,7 +44,7 @@ vi.mock('@/lib/campaign', () => ({
     transitionFns.applyCampaignTransitionByGoogleCampaignIds,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
 }))
 

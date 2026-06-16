@@ -1,11 +1,11 @@
 import { type Customer, enums } from 'google-ads-api'
-import { gadsApiCache, generateGadsApiCacheKey } from '../../common'
+import { gadsApiCache, generateGadsApiCacheKey } from '../../common/server'
 import { sanitizeGoogleAdsFinalUrlSuffix } from '@/lib/google-ads/common/ad-text'
 import { oauthGetCustomerParams } from '@/lib/google-ads/oauth/customer-params'
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { withRetry } from '../../common'
+import { withRetry } from '../../common/server'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
 import {
@@ -48,7 +48,7 @@ export async function findGoogleAdsCampaignByName(params: {
   let results: any[]
 
   if (authType === 'service_account') {
-    const { executeGAQLQueryPython } = await import('../../campaign')
+    const { executeGAQLQueryPython } = await import('../../campaign/server')
     const response = await executeGAQLQueryPython({
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
@@ -137,7 +137,8 @@ export async function createGoogleAdsCampaign(params: {
       )
     }
 
-    const { createCampaignBudgetPython, createCampaignPython } = await import('../../campaign')
+    const { createCampaignBudgetPython, createCampaignPython } =
+      await import('../../campaign/server')
 
     // 1. 创建预算
     const budgetResourceName = await createCampaignBudgetPython({
@@ -508,7 +509,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { updateCampaignStatusPython } = await import('../../campaign')
+    const { updateCampaignStatusPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     await updateCampaignStatusPython({
       userId: params.userId,
@@ -583,7 +584,7 @@ export async function updateGoogleAdsCampaignName(params: {
 
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
   if (authType === 'service_account') {
-    const { updateCampaignPython } = await import('../../campaign')
+    const { updateCampaignPython } = await import('../../campaign/server')
     await updateCampaignPython({
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
@@ -646,7 +647,7 @@ export async function removeGoogleAdsCampaign(params: {
   const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
 
   if (authType === 'service_account') {
-    const { removeCampaignPython } = await import('../../campaign')
+    const { removeCampaignPython } = await import('../../campaign/server')
     await removeCampaignPython({
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
@@ -701,7 +702,7 @@ export async function updateGoogleAdsCampaignBudget(params: {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { updateCampaignBudgetPython } = await import('../../campaign')
+    const { updateCampaignBudgetPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     await updateCampaignBudgetPython({
       userId: params.userId,
@@ -809,7 +810,7 @@ export async function getGoogleAdsCampaign(params: {
       WHERE campaign.id = ${params.campaignId}
     `
 
-    const { executeGAQLQueryPython } = await import('../../campaign')
+    const { executeGAQLQueryPython } = await import('../../campaign/server')
     const result = await executeGAQLQueryPython({
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
@@ -888,7 +889,7 @@ export async function listGoogleAdsCampaigns(params: {
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { executeGAQLQueryPython } = await import('../../campaign')
+    const { executeGAQLQueryPython } = await import('../../campaign/server')
     const query = `
       SELECT
         campaign.id,
@@ -976,7 +977,7 @@ export async function updateCampaignFinalUrlSuffix(params: {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
   // 🔧 修复(2025-01-03): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { updateCampaignFinalUrlSuffixPython } = await import('../../campaign')
+    const { updateCampaignFinalUrlSuffixPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     await updateCampaignFinalUrlSuffixPython({
       userId: params.userId,

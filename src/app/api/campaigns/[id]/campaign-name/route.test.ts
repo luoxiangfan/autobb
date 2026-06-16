@@ -45,7 +45,7 @@ vi.mock('@/lib/db', () => ({
   }),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateDashboardCache: vi.fn(),
 }))
 

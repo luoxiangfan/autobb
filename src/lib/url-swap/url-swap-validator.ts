@@ -9,7 +9,8 @@
 
 import { getDatabase } from '../db'
 import { getProxyPool } from '../scraping'
-import { initializeProxyPool } from '../offers'
+import { initializeProxyPool } from '../offers/offer-utils'
+import { getOptimalResolver } from '../scraping/resolver-domains'
 import type { UrlSwapValidationResult } from './url-swap-types'
 import { URL_SWAP_ALLOWED_INTERVALS_MINUTES } from './url-swap-intervals'
 
@@ -98,8 +99,6 @@ export function validateTaskConfig(
  * @returns 警告信息（如果有）
  */
 function checkDomainType(affiliateLink: string): string | null {
-  const { getOptimalResolver } = require('./resolver-domains')
-
   const resolverMethod = getOptimalResolver(affiliateLink)
 
   if (resolverMethod === 'playwright') {

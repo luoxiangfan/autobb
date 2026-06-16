@@ -8,23 +8,23 @@
  */
 
 import type { Task } from '../types'
-import { extractOffer } from '@/lib/offers'
+import { extractOffer } from '@/lib/offers/server'
 import {
   getOfferExtractionModeProfile,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 import { executeAIAnalysis } from '@/lib/ai'
-import { getTargetLanguage, normalizeBrandName } from '@/lib/offers'
-import { createOffer, updateOfferScrapeStatus, updateOffer } from '@/lib/offers'
+import { getTargetLanguage, normalizeBrandName } from '@/lib/offers/server'
+import { createOffer, updateOfferScrapeStatus, updateOffer } from '@/lib/offers/server'
 import type { BrandSearchSupplement, SerpSitelink } from '@/lib/keywords'
-import { deriveCategoryFromScrapedData } from '@/lib/offers'
+import { deriveCategoryFromScrapedData } from '@/lib/offers/server'
 import { filterNavigationLabels } from '@/lib/scraping'
-import { parsePrice } from '@/lib/common'
+import { parsePrice } from '@/lib/common/server'
 import { toDbJsonObjectField } from '@/lib/db'
 import { extractScenariosFromReviews } from '@/lib/creatives'
-import { syncScrapedProductsFromExtractData } from '@/lib/offers'
+import { syncScrapedProductsFromExtractData } from '@/lib/offers/server'
 import { stripTrailingCountryCodeSuffix } from '@/lib/keywords'
 
 function mergeUniqueStrings(

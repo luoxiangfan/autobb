@@ -3,7 +3,7 @@
 
 import { getDatabase } from '../db'
 import { generateNextRunAt } from './scheduler'
-import { getDateInTimezone, createDateInTimezone } from '../common'
+import { getDateInTimezone, createDateInTimezone } from '../common/server'
 import { estimateTraffic } from './distribution'
 import { normalizeDateOnly, normalizeTimestampToIso } from '../db'
 import { boolParam, datetimeMinusHours } from '../db'

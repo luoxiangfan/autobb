@@ -7,8 +7,8 @@
  * - 自动失效机制
  */
 
-import { REDIS_PREFIX_CONFIG } from '@/lib/common'
-import { getRedisClient } from '@/lib/common'
+import { REDIS_PREFIX_CONFIG } from '@/lib/common/server'
+import { getRedisClient } from '@/lib/common/server'
 
 // 缓存TTL: 24小时
 const RECOMMENDATION_SCORE_TTL_SECONDS = 24 * 60 * 60

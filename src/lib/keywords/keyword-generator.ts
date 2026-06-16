@@ -9,7 +9,7 @@
  * @see unified-keyword-service.ts 获取正向关键词
  */
 
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 
 /**
  * 生成否定关键词（排除不相关流量）

@@ -6,7 +6,7 @@ const extractionFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers')>()
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
   return {
     ...actual,
     createOfferExtractionTaskForNewOffer: extractionFns.createOfferExtractionTaskForNewOffer,

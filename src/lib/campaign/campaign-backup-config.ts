@@ -1,4 +1,4 @@
-import { parseJsonField } from '../db'
+import { parseJsonField } from '@/lib/db/json-field'
 
 /** 备份 / 列表校验：campaign_config 是否为非空 JSON 对象 */
 export function backupHasCampaignConfig(value: unknown): boolean {

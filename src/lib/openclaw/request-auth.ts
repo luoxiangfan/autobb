@@ -4,7 +4,7 @@ import { getDatabase } from '@/lib/db'
 import { verifyOpenclawGatewayToken } from '@/lib/openclaw/auth'
 import { verifyOpenclawUserToken } from '@/lib/openclaw/tokens'
 import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
-import { hasPackageExpired } from '@/lib/campaign'
+import { hasPackageExpired } from '@/lib/campaign/server'
 
 type ResolvedUser = {
   userId: number

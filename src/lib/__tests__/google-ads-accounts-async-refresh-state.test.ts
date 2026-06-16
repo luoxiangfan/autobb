@@ -16,7 +16,7 @@ const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getRedisClient: vi.fn(() => redisFns.client),
 }))
 
@@ -27,7 +27,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-import { getRedisClient } from '@/lib/common'
+import { getRedisClient } from '@/lib/common/server'
 import {
   buildGoogleAdsAccountSyncKey,
   cleanupStaleGoogleAdsAccountAsyncRefreshRows,

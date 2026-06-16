@@ -7,7 +7,7 @@
  * 重要：代理配置只使用用户自己的配置，不使用全局配置
  */
 
-import { normalizeCountryCode } from '@/lib/common'
+import { normalizeCountryCode } from '@/lib/common/server'
 
 /**
  * 代理配置接口（与settings页面保持一致）

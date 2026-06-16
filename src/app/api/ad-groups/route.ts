@@ -1,7 +1,11 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdGroup, findAdGroupsByUserId, findAdGroupsByCampaignId } from '@/lib/campaign'
-import { findCampaignById } from '@/lib/campaign'
+import {
+  createAdGroup,
+  findAdGroupsByUserId,
+  findAdGroupsByCampaignId,
+} from '@/lib/campaign/server'
+import { findCampaignById } from '@/lib/campaign/server'
 
 /**
  * GET /api/ad-groups?campaignId=:id

@@ -1,4 +1,4 @@
-import { pageMetadata } from '@/lib/common'
+import { pageMetadata } from '@/lib/common/server'
 
 // 强制动态渲染，避免静态生成时的 Context 错误
 export const dynamic = 'force-dynamic'

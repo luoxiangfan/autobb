@@ -31,7 +31,7 @@ vi.mock('@/lib/google-ads/campaign/remote-actions', () => ({
   })),
 }))
 
-const { unlinkOfferFromAccount } = await import('@/lib/offers')
+const { unlinkOfferFromAccount } = await import('@/lib/offers/server')
 
 describe('POST /api/offers/:id/unlink', () => {
   beforeEach(() => {

@@ -11,11 +11,11 @@
 
 import { generateContent, type ResponseSchema } from './gemini'
 import { detectAffiliateLandingPageType, type AffiliateProduct } from '../affiliate/products/index'
-import { LEGACY_AMAZON_MISCLASSIFIED_REASON } from '../launch-score'
+import { LEGACY_AMAZON_MISCLASSIFIED_REASON } from '../launch-score/server'
 import { withCache } from './ai-cache'
 import { estimateTokenCost, recordTokenUsage } from './ai-token-tracker'
 import { loadPrompt, interpolateTemplate } from './prompt-loader'
-import { getUserOnlySetting } from '../common'
+import { getUserOnlySetting } from '../common/server'
 import {
   buildUntrustedInputGuardrail,
   sanitizePromptBlockValue,

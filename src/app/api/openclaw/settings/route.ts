@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { validateCronExpression } from '@/lib/common'
-import { getSettingsByCategory, getUserOnlySettingsByCategory, updateSettings } from '@/lib/common'
+import { validateCronExpression } from '@/lib/common/server'
+import { getSettingsByCategory, getUserOnlySettingsByCategory, updateSettings } from '@/lib/common/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 import { auditOpenclawAiAuthOverrides } from '@/lib/openclaw/ai-auth-audit'
 

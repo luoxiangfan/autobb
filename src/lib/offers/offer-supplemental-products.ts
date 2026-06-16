@@ -1,26 +1,10 @@
 import { resolveAffiliateLink } from '@/lib/scraping'
 import { extractProductInfo } from '@/lib/scraping'
-import { detectPageType } from '@/lib/offers'
+import { detectPageType } from '@/lib/offers/server'
 import { scrapeAmazonProduct } from '@/lib/stealth-scraper'
+import type { SupplementalProductResult } from './offer-supplemental-product-types'
 
-export type SupplementalProductResult = {
-  sourceAffiliateLink: string
-  finalUrl: string | null
-  finalUrlSuffix?: string | null
-  pageType?: string | null
-  productName?: string | null
-  productPrice?: string | null
-  productDescription?: string | null
-  brandName?: string | null
-  productFeatures?: string[] | null
-  rating?: string | null
-  reviewCount?: string | null
-  reviewHighlights?: string[] | null
-  topReviews?: string[] | null
-  imageUrls?: string[] | null
-  category?: string | null
-  error?: string | null
-}
+export type { SupplementalProductResult } from './offer-supplemental-product-types'
 
 type ScrapeOptions = {
   targetCountry: string

@@ -1,9 +1,13 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { createCampaign, findCampaignsByUserId, findCampaignsByOfferId } from '@/lib/campaign'
-import { findOfferById } from '@/lib/offers'
+import {
+  createCampaign,
+  findCampaignsByUserId,
+  findCampaignsByOfferId,
+} from '@/lib/campaign/server'
+import { findOfferById } from '@/lib/offers/server'
 import { findGoogleAdsAccountById } from '@/lib/google-ads/accounts/accounts'
-import { invalidateOfferCache } from '@/lib/common'
+import { invalidateOfferCache } from '@/lib/common/server'
 
 /**
  * GET /api/campaigns?offerId=:id

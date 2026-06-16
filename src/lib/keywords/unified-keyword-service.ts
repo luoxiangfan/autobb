@@ -25,7 +25,7 @@ import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { normalizeLanguageCode } from '../common'
+import { normalizeLanguageCode } from '../common/server'
 import { hasModelAnchorEvidence } from '../creatives'
 import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from '../creatives'
 

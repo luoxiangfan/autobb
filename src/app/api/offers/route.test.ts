@@ -25,7 +25,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   apiCache: {
     getOrSet: cacheFns.getOrSet,
     set: cacheFns.set,
@@ -34,7 +34,7 @@ vi.mock('@/lib/common', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   withPerformanceMonitoring: (handler: any) => handler,
 }))
 

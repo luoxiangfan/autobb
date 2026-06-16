@@ -3,8 +3,8 @@ import { load } from 'cheerio'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { getProxyIp } from '../proxy/fetch-proxy-ip'
 import type { ProxyCredentials } from '../proxy/types'
-import { normalizeBrandName } from '../offers'
-import { getAcceptLanguageHeader, getLanguageCodeForCountry } from '../common'
+import { normalizeBrandName } from '../offers/server'
+import { getAcceptLanguageHeader, getLanguageCodeForCountry } from '../common/server'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from './brand-name-utils'
 import {
   extractLandingDescription,

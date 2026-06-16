@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import fs from 'fs'
-import { getSetting, updateSettings } from '@/lib/common'
+import { getSetting, updateSettings } from '@/lib/common/server'
 import { generateRandomKey } from '@/lib/auth'
 import { resolveOpenclawConfigPath } from '@/lib/openclaw/workspace-paths'
 

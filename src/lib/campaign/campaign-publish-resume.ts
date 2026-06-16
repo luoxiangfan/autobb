@@ -6,7 +6,7 @@ import {
   computeContentHash,
   type CampaignConfigData,
   type CreativeContentData,
-} from '../launch-score'
+} from '../launch-score/server'
 
 export type ResumablePublishCampaignRow = {
   id: number

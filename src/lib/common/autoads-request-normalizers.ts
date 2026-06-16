@@ -3,10 +3,10 @@ import {
   normalizeOfferCommissionPayoutInput,
   normalizeOfferProductPriceInput,
   resolveLegacyBareNumericMode,
-} from '@/lib/offers'
-import { inferOfferPageType } from '@/lib/offers'
-import { pickFirstTwoLetterCountryCode } from '@/lib/common'
-import { resolveExtractionModeInput } from '@/lib/offers'
+} from '@/lib/offers/server'
+import { inferOfferPageType } from '@/lib/offers/server'
+import { pickFirstTwoLetterCountryCode } from './two-letter-country-code'
+import { resolveExtractionModeInput } from '@/lib/offers/server'
 type PlainObject = Record<string, any>
 
 function isPlainObject(value: unknown): value is PlainObject {

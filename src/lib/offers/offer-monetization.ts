@@ -1,4 +1,4 @@
-import { parsePrice } from '@/lib/common'
+import { parsePrice } from '@/lib/common/pricing-utils'
 
 const COUNTRY_CURRENCY_MAP: Readonly<Record<string, string>> = {
   US: 'USD',

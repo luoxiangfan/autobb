@@ -3,7 +3,7 @@ import { boolParam, nowFunc, toBool } from '@/lib/db'
 import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 import { ALL_TASK_TYPES, type TaskType } from '@/lib/queue/types'
 import { pauseUrlSwapTargetsByUserIds } from '@/lib/url-swap'
-import { clearUserExecutionEligibilityCache } from '@/lib/campaign'
+import { clearUserExecutionEligibilityCache } from '@/lib/campaign/server'
 
 // 队列止血默认覆盖所有用户任务类型；通过 userId 维度删除，不影响系统任务（userId<=0）。
 export const USER_SUSPENDED_TASK_TYPES: TaskType[] = [...ALL_TASK_TYPES]

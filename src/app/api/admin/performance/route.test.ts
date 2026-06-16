@@ -34,13 +34,13 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   performanceMonitor: perfFns.performanceMonitor,
   webVitalsMonitor: perfFns.webVitalsMonitor,
   frontendErrorMonitor: perfFns.frontendErrorMonitor,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   apiCache: cacheFns.apiCache,
 }))
 

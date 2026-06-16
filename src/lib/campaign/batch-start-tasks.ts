@@ -3,7 +3,7 @@ import {
   getBatchClickFarmRuntimeConfig,
   isClickFarmTaskUsingBatchDefaults,
   isUrlSwapTaskUsingBatchDefaults,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 import {
   createClickFarmTask,
   getClickFarmTaskByOfferId,

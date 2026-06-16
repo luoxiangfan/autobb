@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   fetchProxyIp: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getUserOnlySetting: mocks.getUserOnlySetting,
 }))
 

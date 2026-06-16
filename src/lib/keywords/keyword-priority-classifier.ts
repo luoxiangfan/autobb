@@ -5,7 +5,7 @@
  * 验证20-30个关键词是否满足优先级分布要求
  */
 
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 
 export type KeywordPriority = 'Brand' | 'Core' | 'Intent' | 'LongTail'
 

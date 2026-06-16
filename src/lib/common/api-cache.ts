@@ -2,7 +2,7 @@
  * API响应缓存工具
  * 使用内存缓存减少重复计算和数据库查询
  */
-import { invalidateCampaignReadCache } from '@/lib/campaign'
+import { invalidateCampaignReadCache } from '@/lib/campaign/server'
 
 interface CacheEntry<T> {
   data: T

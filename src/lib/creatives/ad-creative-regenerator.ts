@@ -19,9 +19,9 @@ import {
   resolveOfferLinkType,
   runBucketCreativeGeneration,
 } from './bucket-creative-generation-pipeline'
-import { findOfferById } from '../offers'
+import { findOfferById } from '../offers/server'
 import { resolveKeywordPoolForCreativeGeneration } from '../offer-keyword-pool/index'
-import { deriveSkipKeywordPoolExpandLoad } from '../offers'
+import { deriveSkipKeywordPoolExpandLoad } from '../offers/server'
 import {
   createCreativeAdStrengthPayload,
   createCreativeScoreBreakdown,

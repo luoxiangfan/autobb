@@ -18,7 +18,7 @@ vi.mock('../auth', () => ({
   generateRandomKey: () => 'k',
 }))
 
-import { getUserOnlySettingsByCategory } from '../common'
+import { getUserOnlySettingsByCategory } from '../common/server'
 
 describe('getUserOnlySettingsByCategory', () => {
   beforeEach(() => {

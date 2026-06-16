@@ -18,8 +18,8 @@ import {
 import { notifyTaskPaused, notifyTaskCompleted } from '@/lib/click-farm/notifications'
 import { getQueueManagerForTaskType } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
-import { getDateInTimezone, getHourInTimezone } from '@/lib/common'
-import { getAllProxyUrls } from '@/lib/common' // 🔧 修复：导入新的代理查询函数
+import { getDateInTimezone, getHourInTimezone } from '@/lib/common/server'
+import { getAllProxyUrls } from '@/lib/common/server' // 🔧 修复：导入新的代理查询函数
 import { hasEnabledCampaignForOffer } from '@/lib/click-farm/campaign-health-guard'
 import type { ClickFarmTask } from '@/lib/click-farm/click-farm-types'
 import type { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'

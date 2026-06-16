@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
-import type { AdCreativeGenerationMode } from '@/lib/creatives'
+import type { AdCreativeGenerationMode } from '@/lib/creatives/ad-creative-generation-mode'
 import { Label } from '@/components/ui/label'
 import type { OfferListItem, UnlinkTarget } from './types'
 

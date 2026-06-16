@@ -5,7 +5,7 @@ import {
   isSameReportCurrencyInfo,
   resolveSelectedReportCurrency,
   type ReportCurrencyInfo,
-} from '../common'
+} from '../common/server'
 
 describe('report-currency', () => {
   const payload = {

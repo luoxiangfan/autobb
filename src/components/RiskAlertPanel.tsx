@@ -41,7 +41,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { showError, showSuccess } from '@/lib/common'
-import { parseJsonField } from '@/lib/db'
+import { parseJsonField } from '@/lib/db/json-field'
 
 interface RiskAlert {
   id: number

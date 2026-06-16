@@ -46,7 +46,7 @@ import { updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import {
   findHistoricalOrphanCampaignsForOffer,
   pauseHistoricalOrphanGoogleCampaignsForOffer,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 describe('campaign-publish-orphan-cleanup', () => {
   beforeEach(() => {

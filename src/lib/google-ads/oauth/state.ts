@@ -1,5 +1,5 @@
 import crypto from 'crypto'
-import { JWT_SECRET } from '../../common'
+import { JWT_SECRET } from '../../common/server'
 
 export type GoogleAdsOAuthStatePurpose = 'google_ads'
 

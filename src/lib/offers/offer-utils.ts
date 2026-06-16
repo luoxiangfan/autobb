@@ -1,8 +1,8 @@
 import { getDatabase } from '@/lib/db'
-import { getAllProxyUrls } from '@/lib/common'
+import { getAllProxyUrls } from '@/lib/common/server'
 import { getProxyPool, clearProxyPool } from '@/lib/scraping'
-import { getLanguageNameForCountry, normalizeCountryCode } from '@/lib/common'
-import { pickFirstTwoLetterCountryCode } from '@/lib/common'
+import { getLanguageNameForCountry, normalizeCountryCode } from '@/lib/common/server'
+import { pickFirstTwoLetterCountryCode } from '@/lib/common/server'
 
 /**
  * Offer相关的辅助函数库

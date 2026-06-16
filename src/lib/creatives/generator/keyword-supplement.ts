@@ -10,7 +10,7 @@ import { hasModelAnchorEvidence } from '..'
 import { isCreativeKeywordSupplementThresholdGateEnabled } from '../../keywords'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../../keywords'
 import { shouldUseExactMatch, isBrandVariant, isSemanticQuery } from '../../keywords'
-import { normalizeLanguageCode } from '../../common'
+import { normalizeLanguageCode } from '../../common/server'
 import { repairJsonText } from '../../ai'
 
 import { classifyKeywordIntent } from '../../keywords'

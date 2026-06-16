@@ -39,7 +39,7 @@ export async function findGoogleAdsAdGroupByName(params: {
   let results: any[]
 
   if (authType === 'service_account') {
-    const { executeGAQLQueryPython } = await import('../../campaign')
+    const { executeGAQLQueryPython } = await import('../../campaign/server')
     const response = await executeGAQLQueryPython({
       userId: params.userId,
       serviceAccountId: params.serviceAccountId,
@@ -140,7 +140,7 @@ export async function createGoogleAdsAdGroup(params: {
       return existing
     }
 
-    const { createAdGroupPython } = await import('../../campaign')
+    const { createAdGroupPython } = await import('../../campaign/server')
 
     const campaignResourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     let adGroupResourceName: string

@@ -12,7 +12,7 @@
 
 import { Page } from 'playwright'
 import { getPlaywrightPool } from '../scraping'
-import { normalizeBrandName } from '../offers'
+import { normalizeBrandName } from '../offers/server'
 import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
 import {
   createStealthBrowser,

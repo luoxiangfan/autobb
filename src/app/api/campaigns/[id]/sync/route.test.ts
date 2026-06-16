@@ -46,7 +46,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
 }))
 

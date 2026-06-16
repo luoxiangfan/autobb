@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/common'
+import { zErr } from '@/lib/common/server'
 import { createOpenclawToken, listOpenclawTokens } from '@/lib/openclaw/tokens'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 

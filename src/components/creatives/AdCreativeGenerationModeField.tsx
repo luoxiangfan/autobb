@@ -8,7 +8,7 @@ import {
   AD_CREATIVE_GENERATION_MODE_DESCRIPTIONS,
   AD_CREATIVE_GENERATION_MODE_SELECT_LABELS,
   type AdCreativeGenerationMode,
-} from '@/lib/creatives'
+} from '@/lib/creatives/ad-creative-generation-mode'
 
 type AdCreativeGenerationModeFieldProps = {
   id?: string

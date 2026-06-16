@@ -16,8 +16,8 @@ import {
   setCachedProductSummary,
   setLatestProductListQuery,
   setCachedProductList,
-} from '@/lib/common'
-import { repairOfferAffiliateLinksFromProducts } from '@/lib/offers'
+} from '@/lib/common/server'
+import { repairOfferAffiliateLinksFromProducts } from '@/lib/offers/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 const ALLOWED_SORT_FIELDS: Set<ProductSortField> = new Set([

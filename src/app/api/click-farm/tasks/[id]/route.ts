@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       }
     } else if (updatedTask.status === 'pending') {
       // pending 状态仅在“今天开始”时触发
-      const { getDateInTimezone } = await import('@/lib/common')
+      const { getDateInTimezone } = await import('@/lib/common/server')
       const todayInTaskTimezone = getDateInTimezone(new Date(), updatedTask.timezone)
       if (updatedTask.scheduled_start_date === todayInTaskTimezone) {
         try {

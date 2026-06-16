@@ -1,5 +1,5 @@
 import { fetchBrandSearchSupplement } from '../keywords'
-import { getProxyUrlForCountry } from '../common'
+import { getProxyUrlForCountry } from '../common/server'
 import { updateOfferExtractionMetadata } from './offers'
 
 export interface BrandOfficialSite {

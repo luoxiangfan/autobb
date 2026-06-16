@@ -13,7 +13,7 @@ import {
   type GoogleAdsAuthContext,
 } from '@/lib/google-ads/auth/context'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from '../../common'
+import { getGoogleAdsLanguageCode, getGoogleAdsGeoTargetId } from '../../common/server'
 import { googleAdsKeywordLogger } from '../common/logger'
 
 /**
@@ -218,7 +218,7 @@ export async function getKeywordIdeas(params: {
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { getKeywordIdeasPython } = await import('../../campaign')
+    const { getKeywordIdeasPython } = await import('../../campaign/server')
 
     const result = await getKeywordIdeasPython({
       userId: params.userId,
@@ -406,7 +406,7 @@ export async function getKeywordMetrics(params: {
 
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { getKeywordHistoricalMetricsPython } = await import('../../campaign')
+    const { getKeywordHistoricalMetricsPython } = await import('../../campaign/server')
 
     const result = await getKeywordHistoricalMetricsPython({
       userId: params.userId,

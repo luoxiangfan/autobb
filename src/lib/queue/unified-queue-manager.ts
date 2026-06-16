@@ -17,15 +17,19 @@ import { RedisQueueAdapter } from './redis-adapter'
 import { SimpleProxyManager } from './proxy-manager'
 import { isProxyRequiredForTaskType, getProxyForCountry } from './user-proxy-loader'
 import { isBackgroundTaskType } from './task-category'
-import { logger } from '@/lib/common'
-import { runWithLogContext } from '@/lib/common'
+import { logger } from '@/lib/common/server'
+import { runWithLogContext } from '@/lib/common/server'
 import { toDbJsonObjectField } from '@/lib/db'
 import {
   assertUserExecutionAllowed,
   isUserExecutionSuspendedError,
   USER_EXECUTION_SUSPENDED_ERROR_CODE,
-} from '@/lib/campaign'
-import { getBooleanFromEnv, getBoundedFloatFromEnv, getPositiveIntFromEnv } from '@/lib/common'
+} from '@/lib/campaign/server'
+import {
+  getBooleanFromEnv,
+  getBoundedFloatFromEnv,
+  getPositiveIntFromEnv,
+} from '@/lib/common/server'
 
 function isBackgroundWorkerProcess(): boolean {
   return getBooleanFromEnv('QUEUE_BACKGROUND_WORKER', false)

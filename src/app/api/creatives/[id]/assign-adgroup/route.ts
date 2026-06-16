@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative } from '@/lib/creatives'
-import { findAdGroupById } from '@/lib/campaign'
+import { findAdGroupById } from '@/lib/campaign/server'
 
 /**
  * POST /api/creatives/:id/assign-adgroup

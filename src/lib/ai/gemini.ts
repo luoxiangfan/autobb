@@ -6,7 +6,7 @@
  * - AI API 调用不使用代理（代理仅用于网页爬取）
  */
 
-import { getUserOnlySetting } from '../common'
+import { getUserOnlySetting } from '../common/server'
 import { getUserProModel, selectOptimalModel } from './model-selector'
 import { type GeminiProvider } from './gemini-config'
 import {

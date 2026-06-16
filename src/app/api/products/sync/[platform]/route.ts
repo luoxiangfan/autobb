@@ -12,7 +12,10 @@ import {
 import { getDatabase } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
-import { getYeahPromosSessionState, checkYeahPromosSessionValidForSync } from '@/lib/affiliate'
+import {
+  getYeahPromosSessionState,
+  checkYeahPromosSessionValidForSync,
+} from '@/lib/affiliate/server'
 
 type RouteParams = {
   platform: string

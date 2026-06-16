@@ -16,7 +16,7 @@ vi.mock('@/lib/auth', () => ({
   decrypt: hoisted.decryptMock,
 }))
 
-vi.mock('@/lib/common', async () => {
+vi.mock('@/lib/common/server', async () => {
   const settings =
     await vi.importActual<typeof import('@/lib/common/settings')>('@/lib/common/settings')
   return {

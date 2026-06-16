@@ -1,7 +1,7 @@
 import { generateContent } from './gemini'
 import { recordTokenUsage, estimateTokenCost } from './ai-token-tracker'
 import { loadPrompt } from './prompt-loader'
-import { logger } from '../common'
+import { logger } from '../common/server'
 
 export interface ProductInfo {
   brandDescription: string

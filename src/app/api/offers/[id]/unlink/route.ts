@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { unlinkOfferFromAccount } from '@/lib/offers'
+import { unlinkOfferFromAccount } from '@/lib/offers/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
-import { parseTruthyFlag } from '@/lib/common'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { parseTruthyFlag } from '@/lib/common/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 /**
  * POST /api/offers/:id/unlink

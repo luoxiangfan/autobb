@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { logGoogleAdsAccountsError } from '@/lib/google-ads/auth/route-logger'
-import { getIdleAdsAccounts } from '@/lib/offers'
+import { getIdleAdsAccounts } from '@/lib/offers/server'
 
 /**
  * GET /api/google-ads/idle-accounts

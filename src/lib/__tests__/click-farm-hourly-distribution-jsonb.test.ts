@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getDateInTimezone } from '@/lib/common'
+import { getDateInTimezone } from '@/lib/common/server'
 
 let mockDb: any
 

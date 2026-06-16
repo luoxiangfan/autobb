@@ -1,12 +1,12 @@
 import {
   normalizeCampaignPublishRequestBody,
   normalizeClickFarmTaskRequestBody,
-  normalizeOfferExtractRequestBody } from '@/lib/common'
+  normalizeOfferExtractRequestBody } from '@/lib/common/server'
 import {
   getCurrencyCodeByCountry,
   getCurrencySymbolByCode,
-  parseMoneyValue } from '@/lib/offers'
-import { pickFirstTwoLetterCountryCode } from '@/lib/common'
+  parseMoneyValue } from '@/lib/offers/server'
+import { pickFirstTwoLetterCountryCode } from '@/lib/common/server'
 
 type PlainObject = Record<string, any>
 

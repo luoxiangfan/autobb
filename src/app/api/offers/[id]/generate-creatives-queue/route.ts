@@ -7,10 +7,10 @@
 
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
-import { createError } from '@/lib/common'
+import { createError } from '@/lib/common/server'
 import { validateGoogleAdsConfigForCreativeGeneration } from '@/lib/google-ads/accounts/auth/index'
 import {
   clearCreativeGenerationAuthCache,
@@ -28,7 +28,7 @@ import {
   toCreativeTaskErrorResponseFields,
   type CreativeTaskErrorCategory,
 } from '@/lib/creatives'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 type QueueErrorResponseInput = {
   status: number

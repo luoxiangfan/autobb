@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/common'
+import { zErr } from '@/lib/common/server'
 import { executeOpenclawCommand } from '@/lib/openclaw/commands/command-service'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {

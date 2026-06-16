@@ -6,8 +6,8 @@ import {
   getCampaignPerformanceComparison,
   calculateOfferROI,
   getOfferCurrencyInfo,
-} from '@/lib/offers'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+} from '@/lib/offers/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 /**
  * GET /api/offers/[id]/performance

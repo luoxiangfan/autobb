@@ -20,8 +20,8 @@
  * - 格式：autoads:{NODE_ENV}:cache:ai:{operationType}:{version}:{hash}
  */
 
-import { getRedisClient } from '../common'
-import { REDIS_PREFIX_CONFIG } from '../common'
+import { getRedisClient } from '../common/server'
+import { REDIS_PREFIX_CONFIG } from '../common/server'
 
 export interface CacheOptions {
   ttl?: number // 缓存时间（秒），默认使用operationType的默认TTL

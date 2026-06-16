@@ -1,9 +1,9 @@
 import crypto from 'crypto'
 import { getDatabase } from '@/lib/db'
 import { boolParam } from '@/lib/db'
-import { getUserOnlySetting } from '@/lib/common'
+import { getUserOnlySetting } from '@/lib/common/server'
 import { encrypt } from '@/lib/auth'
-import { JWT_SECRET } from '@/lib/common'
+import { JWT_SECRET } from '@/lib/common/server'
 
 const SYSTEM_CATEGORY = 'system'
 

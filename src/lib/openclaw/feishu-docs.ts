@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { updateSettings } from '@/lib/common'
+import { updateSettings } from '@/lib/common/server'
 import { getOpenclawFeishuDocConfig } from '@/lib/openclaw/feishu-config'
 import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu-api'
 

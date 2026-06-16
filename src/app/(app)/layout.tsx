@@ -1,8 +1,7 @@
 import AppLayout from '@/components/layout/AppLayout'
 import { ExchangeRatesHydrator } from '@/components/ExchangeRatesHydrator'
-import { generateMetadata as createMetadata } from '@/lib/common' // P2-1: SEO优化
+import { generateMetadata as createMetadata } from '@/lib/common/seo' // P2-1: SEO优化
 import { isPerformanceReleaseEnabled } from '@/lib/common'
-import { loadAndGetUsdExchangeRates } from '@/lib/common'
 
 // 强制动态渲染，避免静态生成时的 Context 错误
 export const dynamic = 'force-dynamic'
@@ -16,6 +15,7 @@ export const metadata = createMetadata({
 
 export default async function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const navLinkEnabled = isPerformanceReleaseEnabled('navLink')
+  const { loadAndGetUsdExchangeRates } = await import('@/lib/common/exchange-rates-snapshot')
   const exchangeRates = await loadAndGetUsdExchangeRates()
 
   return (

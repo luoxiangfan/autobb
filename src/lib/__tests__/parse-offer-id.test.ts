@@ -5,7 +5,7 @@ import {
   parsePositiveIntegerOfferId,
   parsePositiveIntegerOfferIdList,
   parseUniquePositiveIntegerIds,
-} from '../offers'
+} from '../offers/server'
 
 describe('parsePositiveIntegerId', () => {
   it('accepts positive integers', () => {

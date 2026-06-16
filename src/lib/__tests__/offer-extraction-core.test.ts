@@ -23,7 +23,7 @@ vi.mock('@/lib/stealth-scraper', () => ({
   scrapeIndependentProduct: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getProxyUrlForCountry: vi.fn(),
 }))
 
@@ -84,11 +84,11 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('falls back to domain brand when independent product scraping times out', async () => {
-    const { extractOffer } = await import('@/lib/offers')
+    const { extractOffer } = await import('@/lib/offers/server')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { extractProductInfo } = await import('@/lib/scraping')
     const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
-    const { getProxyUrlForCountry } = await import('@/lib/common')
+    const { getProxyUrlForCountry } = await import('@/lib/common/server')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
     vi.mocked(resolveAffiliateLink).mockResolvedValue({
@@ -127,10 +127,10 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('retries Amazon product scraping with canonical URL when tracked URL data is insufficient', async () => {
-    const { extractOffer } = await import('@/lib/offers')
+    const { extractOffer } = await import('@/lib/offers/server')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
-    const { getProxyUrlForCountry } = await import('@/lib/common')
-    const { detectPageType } = await import('@/lib/offers')
+    const { getProxyUrlForCountry } = await import('@/lib/common/server')
+    const { detectPageType } = await import('@/lib/offers/server')
     const { scrapeAmazonProduct } = await import('@/lib/stealth-scraper')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
@@ -209,11 +209,11 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('skips Playwright when independent light scrape already has offer baseline fields', async () => {
-    const { extractOffer } = await import('@/lib/offers')
+    const { extractOffer } = await import('@/lib/offers/server')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { extractProductInfo } = await import('@/lib/scraping')
     const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
-    const { getProxyUrlForCountry } = await import('@/lib/common')
+    const { getProxyUrlForCountry } = await import('@/lib/common/server')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
     vi.mocked(resolveAffiliateLink).mockResolvedValue({
@@ -308,11 +308,11 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('falls back to Playwright when independent baseline fields are missing', async () => {
-    const { extractOffer } = await import('@/lib/offers')
+    const { extractOffer } = await import('@/lib/offers/server')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { extractProductInfo } = await import('@/lib/scraping')
     const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
-    const { getProxyUrlForCountry } = await import('@/lib/common')
+    const { getProxyUrlForCountry } = await import('@/lib/common/server')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
     vi.mocked(resolveAffiliateLink).mockResolvedValue({

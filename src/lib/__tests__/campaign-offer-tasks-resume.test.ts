@@ -18,7 +18,7 @@ vi.mock('@/lib/campaign', () => ({
   batchStartTasksForOffers: batchStartFns.batchStartTasksForOffers,
 }))
 
-import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign'
+import { resumeOfferTasksOnCampaignEnable } from '@/lib/campaign/server'
 
 describe('resumeOfferTasksOnCampaignEnable', () => {
   beforeEach(() => {

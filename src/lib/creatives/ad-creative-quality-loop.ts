@@ -1,5 +1,8 @@
 import type { DescriptionAsset, GeneratedAdCreativeData, HeadlineAsset } from './ad-creative'
-import { evaluateCreativeAdStrength, type ComprehensiveAdStrengthResult } from '../launch-score'
+import {
+  evaluateCreativeAdStrength,
+  type ComprehensiveAdStrengthResult,
+} from '../launch-score/server'
 import {
   AD_CREATIVE_MAX_AUTO_RETRIES,
   AD_CREATIVE_REQUIRED_MIN_SCORE,

@@ -7,16 +7,16 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/common'
+import { zErr } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
 import {
   enqueueExistingOfferExtractionAndMarkQueued,
   findOfferIdsWithActiveExtractionTasks,
   isOfferScrapeStatusBusy,
-} from '@/lib/offers'
-import { normalizeOfferExtractionMode } from '@/lib/offers'
+} from '@/lib/offers/server'
+import { normalizeOfferExtractionMode } from '@/lib/offers/server'
 
 export const maxDuration = 120
 

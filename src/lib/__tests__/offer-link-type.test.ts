@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveOfferLinkTypeFromScrapedData, resolveOfferLinkType } from '../offers'
+import { deriveOfferLinkTypeFromScrapedData, resolveOfferLinkType } from '../offers/server'
 
 describe('offer-link-type resolution', () => {
   it('keeps explicit product page_type even when scraped data looks like store', () => {

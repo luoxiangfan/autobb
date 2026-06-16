@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { pauseOfferTasksBatch } from '@/lib/campaign'
+import { pauseOfferTasksBatch } from '@/lib/campaign/server'
 
 interface PausedCampaignOfferPair {
   user_id: number

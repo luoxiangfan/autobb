@@ -11,7 +11,7 @@
  */
 
 import type { Page } from 'playwright'
-import { getLanguageCodeForCountry } from '@/lib/common'
+import { getLanguageCodeForCountry } from '@/lib/common/server'
 import { getPlaywrightPool } from '@/lib/scraping'
 import { clearProxyCache } from '@/lib/proxy/fetch-proxy-ip'
 import { smartWaitForLoad } from '@/lib/scraping'

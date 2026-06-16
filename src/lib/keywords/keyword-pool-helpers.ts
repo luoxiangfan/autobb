@@ -18,7 +18,7 @@ import {
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 import { DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerUrlSeedForOffer } from './keyword-planner-site-filter'
-import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../common'
+import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../common/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { classifyKeywordIntent } from './keyword-intent'
 import { getPureBrandKeywords, containsPureBrand, isPureBrandKeyword } from './brand-keyword-utils'
@@ -54,7 +54,7 @@ import {
   type PlannerNonBrandPolicy,
   type PlannerNonBrandUseCase,
 } from './planner-non-brand-policy'
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 
 // ============================================
 // 动态过滤逻辑（无硬编码配置）

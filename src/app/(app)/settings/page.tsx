@@ -46,13 +46,13 @@ import {
   RELAY_GPT_52_MODEL,
   isModelSupportedByProvider,
   normalizeModelForProvider,
-} from '@/lib/ai'
-import { getGeminiEndpoint, type GeminiProvider } from '@/lib/ai'
+} from '@/lib/ai/gemini-models'
+import { getGeminiEndpoint, type GeminiProvider } from '@/lib/ai/gemini-config'
 import {
   DEFAULT_AFFILIATE_SYNC_INTERVAL_HOURS,
   DEFAULT_PARTNERBOOST_BASE_URL,
   getFixedAffiliateSyncSettingValue,
-} from '@/lib/affiliate'
+} from '@/lib/affiliate/affiliate-sync-config'
 import {
   GOOGLE_ADS_CATEGORY_FIELDS,
   GOOGLE_ADS_SETTING_METADATA,

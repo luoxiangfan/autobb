@@ -19,8 +19,8 @@ import {
   updateAffiliateProductSyncRun,
 } from '../../affiliate/products/index'
 import { getQueueManagerForTaskType } from '../queue-routing'
-import { isYeahPromosManualSyncOnly } from '../../affiliate'
-import { buildUserExecutionEligibleSql } from '../../campaign'
+import { isYeahPromosManualSyncOnly } from '../../affiliate/server'
+import { buildUserExecutionEligibleSql } from '../../campaign/server'
 
 const DEFAULT_DELTA_INTERVAL_MINUTES = 6 * 60
 const DEFAULT_FULL_INTERVAL_HOURS = 24
@@ -279,7 +279,7 @@ export class AffiliateProductSyncScheduler {
     }
 
     // ✅ 新增：检查YP登录态是否有效，避免调度无效任务
-    const { getYeahPromosSessionState } = await import('@/lib/affiliate')
+    const { getYeahPromosSessionState } = await import('@/lib/affiliate/server')
     const ypSession = await getYeahPromosSessionState(userId)
     if (!ypSession.hasSession) {
       // 登录态缺失或过期，跳过调度

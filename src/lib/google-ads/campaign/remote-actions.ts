@@ -5,7 +5,7 @@ import {
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { removeGoogleAdsCampaign, updateGoogleAdsCampaignStatus } from '@/lib/google-ads/api/api'
 import { getGoogleAdsAccountDeleteRemoteConfig } from '@/lib/google-ads/account-delete'
-import { runWithConcurrency, withTimeout } from '../../common'
+import { runWithConcurrency, withTimeout } from '../../common/server'
 import { googleAdsCampaignLogger } from '@/lib/google-ads/common/logger'
 
 export interface GoogleAdsAccountRemoteRef {

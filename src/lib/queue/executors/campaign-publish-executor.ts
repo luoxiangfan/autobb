@@ -41,14 +41,14 @@ import {
   persistPublishGoogleAdsIds,
   type PublishResumePlan,
   type ResumablePublishCampaignRow,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads/conversion/conversion-goals'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { type NamingScheme } from '@/lib/campaign/naming-convention'
-import { invalidateOfferCache } from '@/lib/common'
+import { invalidateOfferCache } from '@/lib/common/server'
 import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
 import { addUrlSwapTargetForOfferCampaign } from '@/lib/url-swap'
-import { applyCampaignTransition } from '@/lib/campaign'
+import { applyCampaignTransition } from '@/lib/campaign/server'
 import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate/products/index'
 import {
   normalizeNegativeKeywordMatchTypeMap,
@@ -69,11 +69,11 @@ import {
   pauseHistoricalOrphanGoogleCampaignsForOffer,
   pauseOrphanGoogleAdsCampaignAfterPublishFailure,
   type CampaignPublishRollbackContext,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 import {
   buildPublishedCampaignBackupSnapshot,
   trySyncCampaignBackupAfterPublish,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 import {
   assertRequiredRsaAssetCounts,
@@ -85,10 +85,10 @@ import {
   resolvePublishRsaAssets,
 } from '@/lib/campaign/publish/rsa-assets'
 import { buildPublishErrorLogObject } from '@/lib/campaign/publish/publish-error-log'
-import { getPositiveIntFromEnv } from '@/lib/common'
+import { getPositiveIntFromEnv } from '@/lib/common/server'
 
-export type { CampaignPublishRollbackContext } from '@/lib/campaign'
-export { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign'
+export type { CampaignPublishRollbackContext } from '@/lib/campaign/server'
+export { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign/server'
 
 export interface CampaignPublishTaskData {
   // 基础信息

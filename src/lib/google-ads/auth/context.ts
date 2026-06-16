@@ -466,7 +466,7 @@ async function invalidateGadsApiCacheForOwner(
   ownerUserId: number,
   dependents: number[]
 ): Promise<void> {
-  const { invalidateGadsApiCacheForUser } = await import('../../common')
+  const { invalidateGadsApiCacheForUser } = await import('../../common/server')
 
   invalidateGadsApiCacheForUser(ownerUserId)
   for (const userId of dependents) {

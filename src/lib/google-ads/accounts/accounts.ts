@@ -1,8 +1,8 @@
 import { getDatabase } from '../../db'
 import { markUrlSwapTargetsRemovedByOfferAccount } from '../../url-swap'
-import { pauseOfferTasks } from '../../campaign'
-import { hasActiveCampaignForOffer } from '../../campaign'
-import { applyCampaignTransitionByIds } from '../../campaign'
+import { pauseOfferTasks } from '../../campaign/server'
+import { hasActiveCampaignForOffer } from '../../campaign/server'
+import { applyCampaignTransitionByIds } from '../../campaign/server'
 import { getInsertedId, nowFunc, toBool } from '../../db'
 import { googleAdsAccountsLogger } from '../common/logger'
 

@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import {
   getKeywordPoolByOfferId,
   generateOfferKeywordPool,
@@ -15,7 +15,7 @@ import {
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
 import { getCreativeTypeForBucketSlot } from '@/lib/creatives'
 import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads/accounts/auth/index'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 type CanonicalBucketSlot = 'A' | 'B' | 'D'
 

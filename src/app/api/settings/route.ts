@@ -6,8 +6,8 @@ import {
   getSettingsByCategory,
   getUserOnlySettingsByCategory,
   updateSettings,
-} from '@/lib/common'
-import { invalidateProxyPoolCache } from '@/lib/offers'
+} from '@/lib/common/server'
+import { invalidateProxyPoolCache } from '@/lib/offers/server'
 import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/ai'
 import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/ai'
 import { getDatabase } from '@/lib/db'

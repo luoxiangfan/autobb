@@ -1,6 +1,6 @@
 import { getGeminiEndpoint, type GeminiProvider } from './gemini-config'
 import { GEMINI_ACTIVE_MODEL, type AIModel, normalizeModelForProvider } from './gemini-models'
-import { getUserOnlySetting } from '../common'
+import { getUserOnlySetting } from '../common/server'
 
 export interface ResolvedAIConfig {
   type: 'gemini-api' | null

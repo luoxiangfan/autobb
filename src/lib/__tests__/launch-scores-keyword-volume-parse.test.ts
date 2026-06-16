@@ -4,7 +4,7 @@ import {
   parseKeywordsWithVolumeJson,
   resolveKeywordsWithVolumeForLaunch,
   resolveKeywordsWithVolumeForLaunchScore,
-} from '../launch-score'
+} from '../launch-score/server'
 
 describe('parseKeywordsWithVolumeJson', () => {
   it('returns empty array for blank input', () => {

@@ -27,7 +27,7 @@ vi.mock('@/lib/auth', () => ({
 }))
 
 vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers')>()
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
   return {
     ...actual,
     findOfferById: offerFns.findOfferById,

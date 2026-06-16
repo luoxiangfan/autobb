@@ -1,10 +1,12 @@
+import 'server-only'
+
 /**
  * ExchangeRate-API v6 sync: fetch USD-latest rates, persist, refresh in-memory cache.
  * API key: EXCHANGE_RATE_API_KEY (or EXCHANGERATE_API_KEY).
  */
 
 import { getDatabase } from '@/lib/db'
-import { setUsdRatesMemoryCache } from '@/lib/common'
+import { setUsdRatesMemoryCache } from './exchange-rates-cache'
 
 export type ExchangeRateApiPayload = {
   result: string

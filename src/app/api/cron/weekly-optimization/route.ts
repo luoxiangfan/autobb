@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateWeeklyOptimizationTasks, cleanupOldTasks } from '@/lib/optimization'
 import { runCreativeOptimizationLoop } from '@/lib/creatives'
 import { getDatabase } from '@/lib/db'
-import { buildUserExecutionEligibleSql } from '@/lib/campaign'
+import { buildUserExecutionEligibleSql } from '@/lib/campaign/server'
 
 export async function POST(request: NextRequest) {
   try {

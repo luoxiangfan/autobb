@@ -37,7 +37,7 @@ const queueFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers')>()
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
   return {
     ...actual,
     createOfferExtractionTaskForNewOffer: extractionFns.createOfferExtractionTaskForNewOffer,
@@ -49,7 +49,7 @@ vi.mock('@/lib/offers', async (importOriginal) => {
 })
 
 vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers')>()
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
   return {
     ...actual,
     applyOfferUpdateFromBody: updateFns.applyOfferUpdateFromBody,
@@ -57,7 +57,7 @@ vi.mock('@/lib/offers', async (importOriginal) => {
 })
 
 vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers')>()
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
   return {
     ...actual,
     updateOfferScrapeStatus: offerFns.updateOfferScrapeStatus,
@@ -226,7 +226,7 @@ describe('POST /api/offers/:id/rebuild', () => {
     updateFns.applyOfferUpdateFromBody.mockResolvedValue({
       offer: makeOffer({ target_country: '' }),
     })
-    const { OfferExtractRequestError } = await import('@/lib/offers')
+    const { OfferExtractRequestError } = await import('@/lib/offers/server')
     extractionFns.enqueueExistingOfferExtractionAndMarkQueued.mockRejectedValue(
       new OfferExtractRequestError(400, 'Offer缺少推广国家，无法提取')
     )
@@ -262,7 +262,7 @@ describe('POST /api/offers/:id/rebuild', () => {
   })
 
   it('returns 409 when offer is already extracting', async () => {
-    const { OfferExtractRequestError } = await import('@/lib/offers')
+    const { OfferExtractRequestError } = await import('@/lib/offers/server')
     updateFns.applyOfferUpdateFromBody.mockResolvedValue({
       offer: makeOffer({ scrape_status: 'in_progress' }),
     })

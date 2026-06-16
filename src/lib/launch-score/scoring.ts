@@ -2,10 +2,11 @@ import { generateContent } from '../ai'
 import { recordTokenUsage, estimateTokenCost } from '../ai'
 import { loadPrompt, interpolateTemplate } from '../ai'
 import type { ScoreAnalysis } from './launch-scores'
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 import type { AdCreative, HeadlineAsset, DescriptionAsset } from '../creatives'
 import { evaluateAdStrength } from '../creatives/strength/evaluate'
 import type { AdStrengthEvaluation, AdStrengthRating } from '../creatives/strength/types'
+import type { ComprehensiveAdStrengthResult } from './comprehensive-ad-strength-result'
 import type { CanonicalCreativeType } from '../creatives'
 import { validateExcellentStandard } from '@/lib/google-ads/api/strength-api'
 import { detectAmazonPageTypeFromUrl } from '../scraping'
@@ -15,7 +16,7 @@ import {
   sanitizePromptInlineValue,
   type InputReview,
 } from '../ai'
-import { USD_BASE_CURRENCY, normalizeCurrencyCode } from '../common'
+import { USD_BASE_CURRENCY, normalizeCurrencyCode } from '../common/server'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
@@ -601,38 +602,7 @@ function validateScoresV4(analysis: ScoreAnalysis): void {
 /**
  * 综合评估结果（本地 + Google API）
  */
-export interface ComprehensiveAdStrengthResult {
-  // 本地评估结果
-  localEvaluation: AdStrengthEvaluation
-
-  // RSA专用质量门（新增：用于发布前阻断）
-  rsaQualityGate: {
-    intentAlignmentScore: number // 0-100
-    evidenceAlignmentScore: number // 0-100
-    queryLandingAlignmentScore: number // 0-100
-    passed: boolean
-    reasons: string[]
-  }
-
-  // Google API验证结果（可选）
-  googleValidation?: {
-    adStrength: AdStrengthRating
-    isExcellent: boolean
-    recommendations: string[]
-    assetPerformance?: {
-      bestHeadlines: string[]
-      bestDescriptions: string[]
-      lowPerformingAssets: string[]
-    }
-  }
-
-  // 最终评级（优先使用Google API结果，否则使用本地结果）
-  finalRating: AdStrengthRating
-  finalScore: number
-
-  // 综合建议
-  combinedSuggestions: string[]
-}
+export type { ComprehensiveAdStrengthResult } from './comprehensive-ad-strength-result'
 
 const RSA_QUALITY_THRESHOLDS = {
   intentAlignmentScore: 70,

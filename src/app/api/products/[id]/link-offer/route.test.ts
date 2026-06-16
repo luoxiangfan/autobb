@@ -22,7 +22,7 @@ vi.mock('@/lib/openclaw/request-auth', () => ({
   isProductManagementEnabledForUser: authFns.isProductManagementEnabledForUser,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateProductListCache: cacheFns.invalidateProductListCache,
 }))
 

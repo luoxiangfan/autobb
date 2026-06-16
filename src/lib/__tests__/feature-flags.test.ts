@@ -4,7 +4,7 @@ import {
   getPerformanceReleaseSnapshot,
   isPerformanceReleaseEnabled,
   validatePerformanceReleaseDependencies,
-} from '@/lib/common'
+} from '@/lib/common/server'
 
 describe('performance release flags', () => {
   afterEach(() => {

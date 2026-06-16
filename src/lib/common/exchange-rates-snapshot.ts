@@ -1,5 +1,7 @@
-import { EXCHANGE_RATES } from '@/lib/common'
-import { getEffectiveUsdRates } from '@/lib/common'
+import 'server-only'
+
+import { EXCHANGE_RATES } from './currency'
+import { getEffectiveUsdRates } from './exchange-rates-cache'
 import { loadUsdRatesFromDatabase } from '@/lib/common/exchange-rates-service'
 
 /**

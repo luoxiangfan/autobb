@@ -1,7 +1,7 @@
 import { getDatabase } from '../../db'
 import type { GeneratedAdCreativeData } from '..'
-import type { Offer } from '../../offers'
-import { creativeCache, generateCreativeCacheKey } from '../../common'
+import type { Offer } from '../../offers/server'
+import { creativeCache, generateCreativeCacheKey } from '../../common/server'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
@@ -24,7 +24,7 @@ import { containsPureBrand, getPureBrandKeywords } from '../../keywords'
 import { filterKeywordQuality, generateFilterReport, isBrandConcatenation } from '../../keywords' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 import { getMinContextTokenMatchesForKeywordQualityFilter } from '../../keywords'
-import { normalizeLanguageCode } from '../../common'
+import { normalizeLanguageCode } from '../../common/server'
 
 import {
   type GoogleAdsPolicyGuardMode,
@@ -654,7 +654,7 @@ export async function generateAdCreative(
   ) {
     try {
       console.log('[Gap Analysis] 开始关键词缺口分析...')
-      const { analyzeKeywordGapsPreGeneration } = await import('../../launch-score')
+      const { analyzeKeywordGapsPreGeneration } = await import('../../launch-score/server')
 
       const gapAnalysis = await analyzeKeywordGapsPreGeneration({
         offer: offer as any,

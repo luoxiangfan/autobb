@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { convertCurrency } from '@/lib/common'
+import { convertCurrency } from '@/lib/common/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 import {
   buildCampaignTrendsCacheHash,
   getCachedCampaignTrends,
   setCachedCampaignTrends,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 import {
   filterCampaignRowIdsForTrendsScope,
   parseAffiliateTrendsParam,
   queryCampaignRowsForTrendsScope,
   resolveEffectiveUserIdsForCampaignScope,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '')

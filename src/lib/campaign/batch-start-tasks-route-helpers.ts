@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import type { BatchStartTasksResult } from '@/lib/campaign'
+import type { BatchStartTasksResult } from '@/lib/campaign/server'
 
 export type BatchStartSelectionIdKind = 'offer' | 'campaign'
 

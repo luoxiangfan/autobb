@@ -4,7 +4,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 export const dynamic = 'force-dynamic'
 

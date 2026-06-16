@@ -10,11 +10,11 @@ import { deleteKeywordPool } from '@/lib/offer-keyword-pool'
 import {
   assertOfferAvailableForExtractionEnqueue,
   enqueueExistingOfferExtractionAndMarkQueued,
-} from '@/lib/offers'
-import { getExtractionModeFromRequestBody, normalizeOfferExtractionMode } from '@/lib/offers'
-import { applyOfferUpdateFromBody, pickOfferUpdateBody } from '@/lib/offers'
-import { offerExtractApiErrorBody } from '@/lib/offers'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+} from '@/lib/offers/server'
+import { getExtractionModeFromRequestBody, normalizeOfferExtractionMode } from '@/lib/offers/server'
+import { applyOfferUpdateFromBody, pickOfferUpdateBody } from '@/lib/offers/server'
+import { offerExtractApiErrorBody } from '@/lib/offers/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 export const maxDuration = 120
 

@@ -17,7 +17,7 @@ vi.mock('@/lib/campaign', () => ({
 }))
 
 import * as googleAdsApi from '@/lib/google-ads/api/api'
-import { removeCampaignPython } from '@/lib/campaign'
+import { removeCampaignPython } from '@/lib/campaign/server'
 
 describe('removeGoogleAdsCampaign', () => {
   beforeEach(() => {

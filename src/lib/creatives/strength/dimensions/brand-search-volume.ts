@@ -3,7 +3,7 @@ import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
-import { normalizeLanguageCode } from '../../../common'
+import { normalizeLanguageCode } from '../../../common/server'
 
 export async function calculateBrandSearchVolume(
   brandName: string | undefined,

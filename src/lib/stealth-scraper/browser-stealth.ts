@@ -177,7 +177,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
   let navigatorLanguages = ['en-US', 'en'] // 默认语言列表
 
   if (targetCountry) {
-    const { getLanguageCodeForCountry, getAcceptLanguageHeader } = await import('../common')
+    const { getLanguageCodeForCountry, getAcceptLanguageHeader } = await import('../common/server')
     const langCode = getLanguageCodeForCountry(targetCountry)
     acceptLanguage = getAcceptLanguageHeader(langCode)
 

@@ -6,7 +6,7 @@ const findLatestLaunchScoreMock = vi.fn()
 const resolveLaunchScoreForCreativeCompareMock = vi.fn()
 
 vi.mock('../launch-score', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../launch-score')>()
+  const actual = await importOriginal<typeof import('../launch-score/server')>()
   return {
     ...actual,
     findCachedLaunchScore: (...args: unknown[]) => findCachedLaunchScoreMock(...args),
@@ -17,14 +17,14 @@ vi.mock('../launch-score', async (importOriginal) => {
   }
 })
 
-import { computeContentHash } from '../launch-score'
+import { computeContentHash } from '../launch-score/server'
 import {
   buildLaunchScoreHashes,
   pickBestAdCreativeByScore,
   readLaunchScoreForCreative,
   resolveLaunchScoreGetForCreative,
   saveLaunchScoreWithContentCache,
-} from '../launch-score'
+} from '../launch-score/server'
 
 describe('buildLaunchScoreHashes', () => {
   const offer = {

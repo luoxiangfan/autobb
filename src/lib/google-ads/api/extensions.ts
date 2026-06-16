@@ -39,7 +39,7 @@ export async function createGoogleAdsCalloutExtensions(params: {
     const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
     // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
     if (authType === 'service_account') {
-      const { createCalloutExtensionsPython } = await import('../../campaign')
+      const { createCalloutExtensionsPython } = await import('../../campaign/server')
       const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
       const assetResourceNames = await createCalloutExtensionsPython({
         userId: params.userId,
@@ -194,7 +194,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
   // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    const { createSitelinkExtensionsPython } = await import('../../campaign')
+    const { createSitelinkExtensionsPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
     const assetResourceNames = await createSitelinkExtensionsPython({
       userId: params.userId,

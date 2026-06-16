@@ -1,9 +1,9 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import { findAdCreativeById, findAdCreativesByOfferId, type AdCreative } from '@/lib/creatives'
-import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score'
-import { parseLaunchScoreAnalysis } from '@/lib/launch-score'
+import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score/server'
+import { parseLaunchScoreAnalysis } from '@/lib/launch-score/server'
 import {
   ensureLaunchScoreForCreative,
   pickBestCreativeForLaunchScoreRead,
@@ -12,8 +12,8 @@ import {
 import {
   parseLaunchScoreHashCampaignConfig,
   parseLaunchScoreHashCampaignConfigFromSearchParams,
-} from '@/lib/launch-score'
-import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/offers'
+} from '@/lib/launch-score/server'
+import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 /**
  * POST /api/offers/:id/launch-score

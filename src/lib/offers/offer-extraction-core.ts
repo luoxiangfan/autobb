@@ -16,16 +16,16 @@ import {
   scrapeIndependentStoreDeep, // 🔥 修改：使用深度抓取版本，与Amazon Store保持一致
   scrapeAmazonProduct,
 } from '@/lib/stealth-scraper'
-import { AppError } from '@/lib/common'
+import { AppError } from '@/lib/common/server'
 import {
   detectPageType,
   initializeProxyPool,
   getTargetLanguage,
   normalizeBrandName,
-} from '@/lib/offers'
-import { scrapeSupplementalProducts, type SupplementalProductResult } from '@/lib/offers'
+} from '@/lib/offers/server'
+import { scrapeSupplementalProducts, type SupplementalProductResult } from '@/lib/offers/server'
 import { warmupAffiliateLink } from '@/lib/scraping/proxy-warmup'
-import { getProxyUrlForCountry } from '@/lib/common'
+import { getProxyUrlForCountry } from '@/lib/common/server'
 import { fetchBrandSearchSupplement, type BrandSearchSupplement } from '@/lib/keywords'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from '@/lib/scraping'
 import {
@@ -37,12 +37,12 @@ import {
   hasMinimalIndependentProductBaseline,
   shouldFallbackToRenderedIndependentProductForOffer,
   shouldSkipAmazonCompetitorExtractionOnExtract,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 import {
   getOfferExtractionModeProfile,
   normalizeOfferExtractionMode,
   type OfferExtractionMode,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 import type { ProgressStage } from '@/types/progress'
 
 /**

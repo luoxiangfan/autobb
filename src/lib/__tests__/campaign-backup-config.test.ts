@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backupHasCampaignConfig } from '@/lib/campaign'
+import { backupHasCampaignConfig } from '@/lib/campaign/server'
 
 describe('backupHasCampaignConfig', () => {
   it('returns false for null, empty string, and empty object', () => {

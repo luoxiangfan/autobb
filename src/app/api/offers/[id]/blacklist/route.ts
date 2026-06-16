@@ -7,8 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { verifyAuth } from '@/lib/auth'
-import { invalidateOfferCache } from '@/lib/common'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { invalidateOfferCache } from '@/lib/common/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

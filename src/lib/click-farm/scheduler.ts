@@ -3,7 +3,7 @@
 
 import type { ClickFarmTask, SubTask } from '@/lib/click-farm/click-farm-types'
 import crypto from 'crypto'
-import { createDateInTimezone, getDateInTimezone, getHourInTimezone } from '../common'
+import { createDateInTimezone, getDateInTimezone, getHourInTimezone } from '../common/server'
 
 /**
  * 生成子任务

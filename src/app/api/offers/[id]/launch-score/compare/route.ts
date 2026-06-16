@@ -1,10 +1,10 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { parseLaunchScoreAnalysis, type LaunchScore } from '@/lib/launch-score'
+import { parseLaunchScoreAnalysis, type LaunchScore } from '@/lib/launch-score/server'
 import { findAdCreativeById } from '@/lib/creatives'
 import type { AdCreative } from '@/lib/creatives'
-import { findOfferById } from '@/lib/offers'
-import type { Offer } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
+import type { Offer } from '@/lib/offers/server'
 import {
   enrichCreativeForLaunchScore,
   findCachedLaunchScoresForCreatives,
@@ -14,10 +14,10 @@ import {
 import {
   parseLaunchScoreHashCampaignConfig,
   toLaunchScoreScoringCampaignConfig,
-} from '@/lib/launch-score'
-import { parsePositiveIntegerOfferId, parseUniquePositiveIntegerIds } from '@/lib/offers'
-import { calculateLaunchScoresForCreatives } from '@/lib/launch-score'
-import type { LaunchScoreResult } from '@/lib/launch-score'
+} from '@/lib/launch-score/server'
+import { parsePositiveIntegerOfferId, parseUniquePositiveIntegerIds } from '@/lib/offers/server'
+import { calculateLaunchScoresForCreatives } from '@/lib/launch-score/server'
+import type { LaunchScoreResult } from '@/lib/launch-score/server'
 
 /**
  * POST /api/offers/[id]/launch-score/compare

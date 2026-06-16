@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { parseTruthyFlag } from '../common'
+import { parseTruthyFlag } from '../common/server'
 import { getDatabase } from '../db'
 
 export { buildDeleteAccountRemoteMessage } from './account-delete-messages'

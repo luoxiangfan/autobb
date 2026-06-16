@@ -1,4 +1,4 @@
-import { getSetting } from '@/lib/common'
+import { getSetting } from '@/lib/common/server'
 import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
 import { createHash } from 'crypto'
 

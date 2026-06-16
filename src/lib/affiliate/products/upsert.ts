@@ -1,5 +1,5 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { getUserOnlySetting } from '@/lib/common'
+import { getUserOnlySetting } from '@/lib/common/server'
 import type { AffiliatePlatform, AffiliateProductSyncProgress } from './types'
 import type { NormalizedAffiliateProduct } from './types'
 import {

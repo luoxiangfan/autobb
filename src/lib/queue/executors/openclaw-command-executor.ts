@@ -14,9 +14,9 @@ import {
   inferNegativeKeywordMatchType,
   normalizeMatchType,
 } from '@/lib/campaign/publish/negative-keyword-match-type'
-import { normalizeCampaignPublishCampaignConfig } from '@/lib/common'
-import { parseCommissionPayoutValue } from '@/lib/offers'
-import { pickFirstTwoLetterCountryCode } from '@/lib/common'
+import { normalizeCampaignPublishCampaignConfig } from '@/lib/common/server'
+import { parseCommissionPayoutValue } from '@/lib/offers/server'
+import { pickFirstTwoLetterCountryCode } from '@/lib/common/server'
 
 export type OpenclawCommandTaskData = {
   runId: string

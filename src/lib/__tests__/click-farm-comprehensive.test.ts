@@ -23,7 +23,7 @@ import {
 import type { ClickFarmTask, CreateClickFarmTaskRequest } from '@/lib/click-farm/click-farm-types'
 
 // Mock timezone-utils
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   createDateInTimezone: vi.fn((dateStr: string, timeStr: string, _timezone: string) => {
     const [year, month, day] = dateStr.split('-').map(Number)
     const [hour, minute] = timeStr.split(':').map(Number)

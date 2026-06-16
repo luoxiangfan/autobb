@@ -13,7 +13,7 @@ import {
   getUserExecutionEligibility,
   hasPackageExpired,
   isExpiredOverDays,
-} from '@/lib/campaign'
+} from '@/lib/campaign/server'
 
 describe('user-execution-eligibility', () => {
   const queryOne = vi.fn()

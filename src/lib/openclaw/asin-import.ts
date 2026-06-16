@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import Papa from 'papaparse'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
-import { decodeCsvTextSmart, normalizeCsvHeaderCell } from '@/lib/offers'
+import { decodeCsvTextSmart, normalizeCsvHeaderCell } from '@/lib/offers/server'
 import { toDbJsonObjectField } from '@/lib/db'
 
 type ParsedAsinItem = {

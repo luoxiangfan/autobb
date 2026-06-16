@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findAdGroupById, updateAdGroup, deleteAdGroup } from '@/lib/campaign'
+import { findAdGroupById, updateAdGroup, deleteAdGroup } from '@/lib/campaign/server'
 
 /**
  * GET /api/ad-groups/:id

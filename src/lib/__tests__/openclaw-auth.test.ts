@@ -8,7 +8,7 @@ const { getSettingMock, updateSettingsMock } = vi.hoisted(() => ({
   updateSettingsMock: vi.fn(),
 }))
 
-vi.mock('@/lib/common', async () => {
+vi.mock('@/lib/common/server', async () => {
   const config = await vi.importActual<typeof import('@/lib/common/config')>('@/lib/common/config')
   return {
     ...config,

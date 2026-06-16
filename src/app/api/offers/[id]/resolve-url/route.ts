@@ -1,9 +1,9 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveAffiliateLink, getProxyPool } from '@/lib/scraping' // 🔥 使用新的增强版API
-import { findOfferById } from '@/lib/offers'
-import { getAllProxyUrls } from '@/lib/common'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
+import { getAllProxyUrls } from '@/lib/common/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 /**
  * POST /api/offers/:id/resolve-url

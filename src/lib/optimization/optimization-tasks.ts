@@ -10,8 +10,8 @@
 import { getDatabase } from '@/lib/db'
 import { dateMinusDays } from '@/lib/db'
 import { createOptimizationEngine, type CampaignMetrics } from './optimization-rules'
-import { getCommissionPerConversion as getOfferCommissionPerConversion } from '../offers'
-import { buildUserExecutionEligibleSql, getUserExecutionEligibility } from '../campaign'
+import { getCommissionPerConversion as getOfferCommissionPerConversion } from '../offers/server'
+import { buildUserExecutionEligibleSql, getUserExecutionEligibility } from '../campaign/server'
 
 export interface OptimizationTask {
   id: number

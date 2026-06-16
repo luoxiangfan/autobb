@@ -2,7 +2,7 @@
  * 测试工具和Mock数据
  */
 
-import type { Offer } from '../offers'
+import type { Offer } from '../offers/server'
 import type { GeneratedAdCreativeData, HeadlineAsset, DescriptionAsset } from '../creatives'
 
 /**

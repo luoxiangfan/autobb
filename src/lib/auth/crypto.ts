@@ -1,6 +1,6 @@
 import crypto from 'crypto'
 import { compare as bcryptCompare, hash as bcryptHash } from './bcrypt'
-import { ENCRYPTION_KEY, ENCRYPTION_IV_LENGTH, BCRYPT_SALT_ROUNDS } from '../common'
+import { ENCRYPTION_KEY, ENCRYPTION_IV_LENGTH, BCRYPT_SALT_ROUNDS } from '../common/config'
 
 const IV_LENGTH = ENCRYPTION_IV_LENGTH
 

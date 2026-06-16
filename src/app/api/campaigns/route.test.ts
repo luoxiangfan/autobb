@@ -32,7 +32,7 @@ vi.mock('@/lib/google-ads/accounts/accounts', () => ({
   findGoogleAdsAccountById: adsAccountFns.findGoogleAdsAccountById,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: cacheFns.invalidateOfferCache,
 }))
 

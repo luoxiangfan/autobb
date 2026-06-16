@@ -13,7 +13,7 @@ import {
 import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from '../creatives'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
-import type { ComprehensiveAdStrengthResult } from '../launch-score'
+import type { ComprehensiveAdStrengthResult } from '../launch-score/server'
 
 type CreativeKeywordSupplementation = GeneratedAdCreativeData['keywordSupplementation']
 type CreativeKeywordsWithVolume = BuildCreativeKeywordSetOutput['keywordsWithVolume']

@@ -5,7 +5,7 @@ import {
   getCachedProductSummary,
   setCachedProductSummary,
   type ProductSummaryCachePayload,
-} from '@/lib/common'
+} from '@/lib/common/server'
 import { PRODUCT_SCORE_VALIDITY_DAYS, PRODUCT_SCORE_VALIDITY_WINDOW_MS } from './types'
 import type {
   AffiliateLandingPageType,

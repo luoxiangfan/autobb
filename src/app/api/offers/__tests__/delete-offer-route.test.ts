@@ -6,11 +6,11 @@ vi.mock('@/lib/offers', () => ({
   deleteOffer: vi.fn(async () => ({ success: true, message: 'ok' })),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: vi.fn(),
 }))
 
-const { deleteOffer } = await import('@/lib/offers')
+const { deleteOffer } = await import('@/lib/offers/server')
 
 describe('DELETE /api/offers/:id', () => {
   beforeEach(() => {

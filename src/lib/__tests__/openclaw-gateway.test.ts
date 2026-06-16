@@ -5,7 +5,7 @@ const { getSettingMock, getOpenclawGatewayTokenMock } = vi.hoisted(() => ({
   getOpenclawGatewayTokenMock: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getSetting: getSettingMock,
 }))
 

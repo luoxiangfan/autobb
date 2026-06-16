@@ -43,15 +43,15 @@ import {
   mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType,
   type CanonicalCreativeType,
-} from '@/lib/creatives'
-import { normalizeCreativeTaskError } from '@/lib/creatives'
+} from '@/lib/creatives/creative-type'
+import { normalizeCreativeTaskError } from '@/lib/creatives/creative-task-error'
 import {
   getAdCreativeGenerationModeLabel,
   loadStoredAdCreativeGenerationMode,
   resolveGenerationModeInput,
   saveStoredAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/creatives'
+} from '@/lib/creatives/ad-creative-generation-mode'
 import { AdCreativeGenerationModeField } from '@/components/creatives/AdCreativeGenerationModeField'
 
 interface Props {

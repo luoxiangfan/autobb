@@ -47,7 +47,7 @@ vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
 })
 
 vi.mock('@/lib/launch-score', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/launch-score')>()
+  const actual = await importOriginal<typeof import('@/lib/launch-score/server')>()
   return {
     ...actual,
     createLaunchScore: vi.fn(),
@@ -62,7 +62,7 @@ vi.mock('@/lib/queue/init-queue', () => ({
   getOrCreateQueueManager: mocks.getOrCreateQueueManager,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: mocks.invalidateOfferCache,
 }))
 

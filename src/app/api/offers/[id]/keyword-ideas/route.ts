@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads/accounts/accounts'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
@@ -21,9 +21,9 @@ import {
 } from '@/lib/keywords/google-suggestions'
 import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords'
 import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keywords'
-import { ensureOfferBrandOfficialSite } from '@/lib/offers'
-import { normalizeLanguageCode } from '@/lib/common'
-import { parsePositiveIntegerOfferId } from '@/lib/offers'
+import { ensureOfferBrandOfficialSite } from '@/lib/offers/server'
+import { normalizeLanguageCode } from '@/lib/common/server'
+import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 /**
  * POST /api/offers/:id/keyword-ideas

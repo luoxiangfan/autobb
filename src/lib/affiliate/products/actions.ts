@@ -1,6 +1,6 @@
-import { createOffer, deleteOffer, findOfferById } from '@/lib/offers'
+import { createOffer, deleteOffer, findOfferById } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
-import { enqueueExistingOfferExtractionAndMarkQueued } from '@/lib/offers'
+import { enqueueExistingOfferExtractionAndMarkQueued } from '@/lib/offers/server'
 
 import { toBool } from '@/lib/db'
 import type {

@@ -259,7 +259,7 @@ async function isRedisAvailable(): Promise<boolean> {
   }
 
   try {
-    const { getRedisClient } = await import('../../../common')
+    const { getRedisClient } = await import('../../../common/server')
     const client = getRedisClient()
     if (!client) {
       redisAvailable = false
@@ -300,7 +300,7 @@ async function getCachedResult(adCopyText: string): Promise<CachedResult | null>
   // 尝试从Redis获取
   if (await isRedisAvailable()) {
     try {
-      const { getRedisClient } = await import('../../../common')
+      const { getRedisClient } = await import('../../../common/server')
       const client = getRedisClient()
       if (!client) return null
       const data = await client.get(key)
@@ -339,7 +339,7 @@ async function setCachedResult(adCopyText: string, result: CachedResult) {
   // 尝试保存到Redis
   if (await isRedisAvailable()) {
     try {
-      const { getRedisClient } = await import('../../../common')
+      const { getRedisClient } = await import('../../../common/server')
       const client = getRedisClient()
       if (!client) return
       await client.setex(key, CACHE_TTL_SECONDS, JSON.stringify(resultWithTimestamp))

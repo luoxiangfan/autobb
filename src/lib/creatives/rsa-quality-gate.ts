@@ -1,4 +1,4 @@
-import type { ComprehensiveAdStrengthResult } from '../launch-score'
+import type { ComprehensiveAdStrengthResult } from '../launch-score/comprehensive-ad-strength-result'
 
 export type RetryFailureType = 'evidence_fail' | 'intent_fail' | 'format_fail'
 

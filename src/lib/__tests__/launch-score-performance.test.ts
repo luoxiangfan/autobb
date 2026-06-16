@@ -4,8 +4,8 @@ import {
   generatePerformanceAdjustedRecommendations,
   toLaunchScorePerformanceApiPayload,
   type LaunchScoreOfferPerformanceData,
-} from '../launch-score'
-import type { LaunchScore } from '../launch-score'
+} from '../launch-score/server'
+import type { LaunchScore } from '../launch-score/server'
 
 function scoreRow(overrides: Partial<LaunchScore>): LaunchScore {
   return {

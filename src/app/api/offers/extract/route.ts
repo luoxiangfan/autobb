@@ -4,8 +4,8 @@
 
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { createOfferExtractionTaskForNewOffer } from '@/lib/offers'
-import { OfferExtractRequestError, parseNewOfferExtractRequest } from '@/lib/offers'
+import { createOfferExtractionTaskForNewOffer } from '@/lib/offers/server'
+import { OfferExtractRequestError, parseNewOfferExtractRequest } from '@/lib/offers/server'
 
 export const maxDuration = 120
 

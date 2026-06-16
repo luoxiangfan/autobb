@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { zErr } from '@/lib/common'
+import { zErr } from '@/lib/common/server'
 import { listOfferScores, createOfferScore } from '@/lib/openclaw/offer-scores'
 import { batchScoreOffers, rankOffers, type AffiliateProduct } from '@/lib/openclaw/offer-scoring'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'

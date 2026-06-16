@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { resolveAffiliatePlatformForLink } from '@/lib/keywords'
-import { campaignAffiliateAlignedFilterSql } from '@/lib/campaign'
+import { campaignAffiliateAlignedFilterSql } from '@/lib/campaign/server'
 
 /**
  * GET /api/campaigns/affiliate-platforms

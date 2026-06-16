@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveBatchStartTasksConcurrency } from '@/lib/campaign'
+import { resolveBatchStartTasksConcurrency } from '@/lib/campaign/server'
 
 describe('resolveBatchStartTasksConcurrency', () => {
   it('falls back to default when value is invalid', () => {

@@ -21,12 +21,12 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   withPerformanceMonitoring: perfFns.withPerformanceMonitoring,
   webVitalsMonitor: perfFns.webVitalsMonitor,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   isPerformanceReleaseEnabled: flagFns.isPerformanceReleaseEnabled,
 }))
 

@@ -15,7 +15,7 @@ const affiliateValidationFns = vi.hoisted(() => ({
   validateAffiliateSyncConfig: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   validateGoogleAdsConfig: validateFns.validateGoogleAdsConfig,
   validateGeminiConfig: validateFns.validateGeminiConfig,
 }))

@@ -5,7 +5,7 @@ import {
 import { nowFunc } from '@/lib/db'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/db'
-import { serializeJsonPayloadForStorage } from '@/lib/common'
+import { serializeJsonPayloadForStorage } from '@/lib/common/server'
 import { invalidateAffiliateCommissionReportCache } from '@/lib/openclaw/affiliate-commission-report-cache'
 import { rebuildAffiliateCommissionLineFactsForUserDate } from '@/lib/openclaw/affiliate-commission-raw-report'
 import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'

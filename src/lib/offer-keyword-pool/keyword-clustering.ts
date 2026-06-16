@@ -12,8 +12,8 @@ import {
   getKeywordSourcePriorityScoreFromInput,
 } from '../keywords'
 import { isPureBrandKeyword } from '../keywords'
-import { resolveOfferLinkType } from '../offers'
-import type { Offer } from '../offers'
+import { resolveOfferLinkType } from '../offers/server'
+import type { Offer } from '../offers/server'
 import {
   DEFAULT_PRODUCT_CLUSTER_BUCKETS,
   DEFAULT_STORE_CLUSTER_BUCKETS,

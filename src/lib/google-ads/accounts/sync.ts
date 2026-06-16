@@ -58,7 +58,7 @@ export async function syncAccountsFromAPI(
     googleAdsAccountsLogger.debug('service_account_auth_started', { userId })
 
     try {
-      const { listAccessibleCustomersPython } = await import('@/lib/campaign')
+      const { listAccessibleCustomersPython } = await import('@/lib/campaign/server')
       resourceNames = await listAccessibleCustomersPython({
         userId,
         serviceAccountId: serviceAccountConfig.id.toString(),
@@ -68,7 +68,7 @@ export async function syncAccountsFromAPI(
         accountCount: resourceNames.length,
       })
     } catch (error: unknown) {
-      const { formatPythonAdsServiceUnavailableError } = await import('@/lib/campaign')
+      const { formatPythonAdsServiceUnavailableError } = await import('@/lib/campaign/server')
       const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
       if (serviceUnavailable) {
         throw new Error(serviceUnavailable)
@@ -188,7 +188,7 @@ export async function syncAccountsFromAPI(
         try {
           if (isServiceAccount) {
             // 🔧 修复(2025-12-26): 使用 Python 服务执行 GAQL 查询
-            const { executeGAQLQueryPython } = await import('@/lib/campaign')
+            const { executeGAQLQueryPython } = await import('@/lib/campaign/server')
             const testQuery = `SELECT customer.id FROM customer WHERE customer.id = ${customerId} LIMIT 1`
 
             await executeGAQLQueryPython({
@@ -315,7 +315,7 @@ export async function syncAccountsFromAPI(
         } else {
           let searchResult
           if (isServiceAccount) {
-            const { executeGAQLQueryPython } = await import('@/lib/campaign')
+            const { executeGAQLQueryPython } = await import('@/lib/campaign/server')
             searchResult = await executeGAQLQueryPython({
               userId,
               serviceAccountId: serviceAccountConfig.id.toString(),
@@ -340,7 +340,7 @@ export async function syncAccountsFromAPI(
             `
             let statusResult
             if (isServiceAccount) {
-              const { executeGAQLQueryPython } = await import('@/lib/campaign')
+              const { executeGAQLQueryPython } = await import('@/lib/campaign/server')
               statusResult = await executeGAQLQueryPython({
                 userId,
                 serviceAccountId: serviceAccountConfig.id.toString(),
@@ -398,7 +398,7 @@ export async function syncAccountsFromAPI(
             LIMIT 1
           `
           // 🔧 修复(2025-12-26): 服务账号模式使用 executeGAQLQueryPython，而不是错误的 customer.search()
-          const { executeGAQLQueryPython } = await import('@/lib/campaign')
+          const { executeGAQLQueryPython } = await import('@/lib/campaign/server')
           const budgetResult = isServiceAccount
             ? await executeGAQLQueryPython({
                 userId,

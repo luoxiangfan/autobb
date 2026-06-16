@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { getSettingsByCategory } from '@/lib/common'
+import { getSettingsByCategory } from '@/lib/common/server'
 import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
 
 function parseJsonObject(value?: string | null): Record<string, any> | undefined {

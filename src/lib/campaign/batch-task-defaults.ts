@@ -3,7 +3,16 @@
  * （补点击：每日 10、06:00–24:00、不限期、均衡分布、无 Referer；换链：自动、24h、不限期）
  */
 import { balanceDistribution } from '@/lib/click-farm/distribution'
-import { getDateInTimezone, getTimezoneByCountry } from '@/lib/common'
+import { getDateInTimezone, getTimezoneByCountry } from '@/lib/common/server'
+import {
+  BATCH_CLICK_FARM_TASK_DEFAULTS,
+  BATCH_URL_SWAP_TASK_DEFAULTS,
+} from './batch-task-defaults-constants'
+
+export {
+  BATCH_CLICK_FARM_TASK_DEFAULTS,
+  BATCH_URL_SWAP_TASK_DEFAULTS,
+} from './batch-task-defaults-constants'
 
 /** 与 `BatchStartOfferTarget` 形状一致，避免与 `batch-start-tasks` 循环依赖 */
 export type BatchOfferTargetForDefaults = {
@@ -11,29 +20,7 @@ export type BatchOfferTargetForDefaults = {
   targetCountry?: string | null
 }
 
-export const BATCH_CLICK_FARM_TASK_DEFAULTS: {
-  dailyClickCount: number
-  startTime: string
-  endTime: string
-  durationDays: number
-} = {
-  dailyClickCount: 10,
-  startTime: '06:00',
-  endTime: '24:00',
-  durationDays: 9999,
-}
-
 const BATCH_CLICK_FARM_REFERER_DEFAULT = { type: 'none' as const }
-
-export const BATCH_URL_SWAP_TASK_DEFAULTS: {
-  swapMode: 'auto' | 'manual'
-  swapIntervalMinutes: number
-  durationDays: number
-} = {
-  swapMode: 'auto',
-  swapIntervalMinutes: 1440,
-  durationDays: -1,
-}
 
 export function batchDefaultBalancedHourlyDistribution(): number[] {
   return balanceDistribution(

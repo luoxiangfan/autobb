@@ -15,7 +15,7 @@ import {
   getCachedProductSummaryRoute,
   setCachedProductSummaryRoute,
   type ProductSummaryRouteCachePayload,
-} from '@/lib/common'
+} from '@/lib/common/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 function parseNumericFilter(searchParams: URLSearchParams, key: string): number | null {

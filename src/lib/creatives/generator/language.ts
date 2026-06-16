@@ -16,7 +16,7 @@ import {
   getLanguageNameForCountry,
   normalizeCountryCode,
   normalizeLanguageCode,
-} from '../../common'
+} from '../../common/server'
 
 import {
   applyDescriptionTextGuardrail,

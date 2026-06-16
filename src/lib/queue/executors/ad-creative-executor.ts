@@ -29,7 +29,7 @@ import {
   runBucketCreativeGeneration,
 } from '@/lib/creatives'
 import type { CreativeBucketSlot } from '@/lib/creatives'
-import { findOfferById } from '@/lib/offers'
+import { findOfferById } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/db'
 import { AD_CREATIVE_MAX_AUTO_RETRIES, AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/creatives'
@@ -42,7 +42,7 @@ import {
   type OfferKeywordPool,
   type PoolKeywordData,
 } from '@/lib/offer-keyword-pool'
-import { deriveSkipKeywordPoolExpandLoad } from '@/lib/offers'
+import { deriveSkipKeywordPoolExpandLoad } from '@/lib/offers/server'
 import { getCreativeTypeForBucketSlot } from '@/lib/creatives'
 import { normalizeCreativeTaskError } from '@/lib/creatives'
 import { getSearchTermFeedbackHints } from '@/lib/keywords'

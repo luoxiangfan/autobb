@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createKeyword, findKeywordsByUserId, findKeywordsByAdGroupId } from '@/lib/keywords'
-import { findAdGroupById } from '@/lib/campaign'
+import { findAdGroupById } from '@/lib/campaign/server'
 
 /**
  * GET /api/keywords?adGroupId=:id

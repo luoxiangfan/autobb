@@ -10,7 +10,7 @@ import {
   shouldShowOfferTasksMenuItem,
   urlSwapTaskNeedsPause,
   urlSwapTaskNeedsStart,
-} from '@/lib/offers'
+} from '@/lib/offers/server'
 
 describe('resolveOfferTasksToggleAction', () => {
   it('prefers pause when click-farm is pending or running', () => {

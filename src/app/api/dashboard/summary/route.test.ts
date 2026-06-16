@@ -26,7 +26,7 @@ vi.mock('@/lib/auth', () => ({
   verifyAuth: authFns.verifyAuth,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   apiCache: {
     get: cacheFns.get,
     set: cacheFns.set,

@@ -4,7 +4,7 @@ import {
   compressJsonPayloadText,
   decompressJsonPayloadText,
   serializeJsonPayloadForStorage,
-} from '@/lib/common'
+} from '@/lib/common/server'
 
 describe('offer-asin', () => {
   it('extracts ASIN from amazon urls', () => {

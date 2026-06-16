@@ -17,7 +17,7 @@ vi.mock('@/lib/campaign', () => ({
   deleteCampaign: campaignFns.deleteCampaign,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
 }))
 

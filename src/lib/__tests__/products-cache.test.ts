@@ -4,13 +4,13 @@ const redisFns = vi.hoisted(() => ({
   get: vi.fn(),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   getRedisClient: () => ({
     get: redisFns.get,
   }),
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   REDIS_PREFIX_CONFIG: {
     cache: 'test:',
   },
@@ -52,7 +52,7 @@ describe('products-cache latest query normalization', () => {
       )
       .mockResolvedValueOnce(null)
 
-    const { getLatestProductListQuery } = await import('@/lib/common')
+    const { getLatestProductListQuery } = await import('@/lib/common/server')
     const latestQuery = await getLatestProductListQuery(7)
 
     expect(latestQuery).toEqual(

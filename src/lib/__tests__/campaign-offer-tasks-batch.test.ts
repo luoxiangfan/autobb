@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { pauseOfferTasksBatch } from '@/lib/campaign'
+import { pauseOfferTasksBatch } from '@/lib/campaign/server'
 
 const dbFns = vi.hoisted(() => ({
   query: vi.fn(),

@@ -53,7 +53,7 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
 
-vi.mock('@/lib/common', () => ({
+vi.mock('@/lib/common/server', () => ({
   clearUserSettings: settingsFns.clearUserSettings,
   getAllSettings: settingsFns.getAllSettings,
   getSettingsByCategory: settingsFns.getSettingsByCategory,

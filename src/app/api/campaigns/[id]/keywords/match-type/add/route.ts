@@ -12,7 +12,7 @@ import {
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign'
+import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign/server'
 
 type KeywordInput =
   | string

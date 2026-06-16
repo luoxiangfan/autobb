@@ -1,7 +1,7 @@
 import type { DatabaseAdapter } from '@/lib/db'
-import { matchesCampaignSearch } from '@/lib/campaign'
+import { matchesCampaignSearch } from '@/lib/campaign/server'
 import { getAffiliateDomainKeywords } from '@/lib/keywords'
-import { buildCampaignAffiliateAlignedWhereClause } from '@/lib/campaign'
+import { buildCampaignAffiliateAlignedWhereClause } from '@/lib/campaign/server'
 
 export type CampaignTrendsScopeAuth = {
   userId: number

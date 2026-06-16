@@ -1,12 +1,12 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { listOffers } from '@/lib/offers'
+import { listOffers } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 import { boolCondition } from '@/lib/db'
-import { toNumber } from '@/lib/common'
-import { apiCache, generateCacheKey } from '@/lib/common'
-import { withPerformanceMonitoring } from '@/lib/common'
-import { parsePositiveIntegerOfferIdList } from '@/lib/offers'
+import { toNumber } from '@/lib/common/server'
+import { apiCache, generateCacheKey } from '@/lib/common/server'
+import { withPerformanceMonitoring } from '@/lib/common/server'
+import { parsePositiveIntegerOfferIdList } from '@/lib/offers/server'
 
 const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
   'offerName',

@@ -6,7 +6,7 @@
 
 import type { Browser, BrowserContext } from 'playwright'
 import type { ProxyCredentials } from '../proxy/types'
-import type { SupplementalProductResult } from '../offers'
+import type { SupplementalProductResult } from '../offers/offer-supplemental-product-types'
 
 // Re-export ProxyCredentials for external use
 export type { ProxyCredentials } from '../proxy/types'

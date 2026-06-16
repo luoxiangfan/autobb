@@ -1347,7 +1347,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
 // 导入Redis客户端
 async function getRedisClient(): Promise<any> {
   try {
-    const { getRedisClient } = await import('@/lib/common')
+    const { getRedisClient } = await import('@/lib/common/server')
     return getRedisClient()
   } catch (error) {
     console.error('导入Redis客户端失败:', error)

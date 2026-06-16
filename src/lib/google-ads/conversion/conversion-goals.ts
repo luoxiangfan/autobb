@@ -9,7 +9,7 @@
  * - 需要手动设置为 true 才能让Campaign优化该转化目标
  */
 
-import { withRetry } from '../../common'
+import { withRetry } from '../../common/server'
 import {
   getCustomerWithCredentials,
   resolveAuthTypeForGoogleAdsApiCall,
