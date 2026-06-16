@@ -11,7 +11,10 @@ import {
   syncCampaignsFromGoogleAds,
   resolveGoogleAdsCampaignSyncLogOutcome,
 } from '@/lib/google-ads/campaign/sync/index'
-import { markStaleGoogleAdsCampaignSyncLogs } from '@/lib/google-ads/campaign/sync-pipeline-status'
+import {
+  markStaleGoogleAdsCampaignSyncLogs,
+  reconcileStaleGoogleAdsCampaignSyncPendingTasks,
+} from '@/lib/google-ads/campaign/sync-pipeline-status'
 import { createRiskAlert } from '../../optimization'
 import { utcNowIso } from '../../db'
 
@@ -193,6 +196,17 @@ export async function executeGoogleAdsCampaignSyncTask(
       errors: result.errors.length,
     })
 
+    try {
+      const reconciled = await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
+      if (reconciled.removed > 0) {
+        console.log(
+          `🧹 [GoogleAdsSyncExecutor] 已清理用户 #${userId} 的 ${reconciled.removed} 条残留 pending 同步任务`
+        )
+      }
+    } catch (reconcileError) {
+      console.warn(`⚠️ [GoogleAdsSyncExecutor] 清理残留 pending 同步任务失败:`, reconcileError)
+    }
+
     return {
       success: logOutcome.status === 'success',
       syncedCount: result.syncedCount,
@@ -262,6 +276,12 @@ export async function executeGoogleAdsCampaignSyncTask(
       )
     } catch (alertError) {
       console.error(`❌ [GoogleAdsSyncExecutor] 创建风险预警失败:`, alertError)
+    }
+
+    try {
+      await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
+    } catch (reconcileError) {
+      console.warn(`⚠️ [GoogleAdsSyncExecutor] 清理残留 pending 同步任务失败:`, reconcileError)
     }
 
     return {

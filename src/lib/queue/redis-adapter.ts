@@ -506,12 +506,41 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
     const taskIds = await this.client.zrange(queueKey, 0, -1)
     const tasks: Task[] = []
+    const danglingIds: string[] = []
 
     for (const taskId of taskIds) {
       const taskJson = await this.client.hget(this.getKey('tasks'), taskId)
-      if (taskJson) {
-        tasks.push(JSON.parse(taskJson))
+      if (!taskJson) {
+        danglingIds.push(taskId)
+        continue
       }
+
+      let task: Task
+      try {
+        task = JSON.parse(taskJson) as Task
+      } catch {
+        danglingIds.push(taskId)
+        continue
+      }
+
+      if (task.status !== 'pending') {
+        danglingIds.push(taskId)
+        continue
+      }
+
+      tasks.push(task)
+    }
+
+    if (danglingIds.length > 0) {
+      const pipeline = this.client.pipeline()
+      for (const taskId of danglingIds) {
+        pipeline.zrem(queueKey, taskId)
+        pipeline.zrem(this.getKey('pending:all'), taskId)
+        if (type) {
+          pipeline.zrem(this.getKey(`pending:${type}`), taskId)
+        }
+      }
+      await pipeline.exec()
     }
 
     return tasks

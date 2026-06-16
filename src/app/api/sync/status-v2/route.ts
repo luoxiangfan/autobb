@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       [userId]
     )) as any
 
-    await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
+    const reconcileResult = await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
     const googleAdsCampaignSyncQueue = await getGoogleAdsCampaignSyncQueueCountsForUser(userId)
 
     return NextResponse.json({
@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
           }
         : null,
       googleAdsCampaignSyncQueue,
+      googleAdsCampaignSyncQueueReconciled: reconcileResult.removed,
     })
   } catch (error: any) {
     console.error('检查同步状态失败:', error)

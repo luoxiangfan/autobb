@@ -124,4 +124,23 @@ describe('@/lib/google-ads/campaign/sync-pipeline-status', () => {
     expect(result.removed).toBe(1)
     expect(queueMocks.removeTask).toHaveBeenCalledWith('stale-1')
   })
+
+  it('reconcileStaleGoogleAdsCampaignSyncPendingTasks removes never-started pending tasks after timeout', async () => {
+    const staleCreatedAt = Date.now() - 130_000
+    queueMocks.getPendingTasksForType.mockResolvedValue([
+      {
+        id: 'stale-timeout',
+        type: GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE,
+        userId: 2,
+        status: 'pending',
+        createdAt: staleCreatedAt,
+      },
+    ])
+    dbMocks.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+
+    const result = await reconcileStaleGoogleAdsCampaignSyncPendingTasks(2)
+
+    expect(result.removed).toBe(1)
+    expect(queueMocks.removeTask).toHaveBeenCalledWith('stale-timeout')
+  })
 })

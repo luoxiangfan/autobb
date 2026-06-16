@@ -16,6 +16,8 @@ export const GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE = 'google_ads_campaign_sync' as c
 const DEFAULT_STALE_RUNNING_LOG_MINUTES = 45
 /** 该时长内的 running 日志视为「仍在同步」，调度器不会重复入队 */
 const DEFAULT_ACTIVE_RUNNING_LOG_MINUTES = 30
+/** pending 任务超过该时长仍未 dequeue（无 startedAt）则视为僵尸任务并清理 */
+const DEFAULT_STALE_PENDING_SYNC_TASK_MS = 120_000
 
 function parsePositiveIntEnv(raw: string | undefined, defaultValue: number): number {
   if (raw === undefined) return defaultValue
@@ -136,7 +138,7 @@ async function removeGoogleAdsCampaignSyncTaskFromQueues(taskId: string): Promis
 }
 
 /**
- * 移除已被更新的 sync_logs 结果覆盖的 pending 同步任务（重复入队 / 全局入队残留）。
+ * 移除已被 sync_logs 覆盖或长期未执行的 pending 同步任务（重复入队 / Worker 未消费残留）。
  * 仅在该用户无 running 队列任务且无 running 日志时执行。
  */
 export async function reconcileStaleGoogleAdsCampaignSyncPendingTasks(
@@ -187,27 +189,40 @@ export async function reconcileStaleGoogleAdsCampaignSyncPendingTasks(
     [userId, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
   )) as { completed_at: string } | null
 
-  if (!lastCompleted?.completed_at) {
-    return { removed: 0 }
-  }
+  const completedAtMs = lastCompleted?.completed_at
+    ? Date.parse(lastCompleted.completed_at)
+    : Number.NaN
+  const hasValidCompletedAt = Number.isFinite(completedAtMs)
 
-  const completedAtMs = Date.parse(lastCompleted.completed_at)
-  if (!Number.isFinite(completedAtMs)) {
-    return { removed: 0 }
-  }
+  const stalePendingMs = parsePositiveIntEnv(
+    process.env.GOOGLE_ADS_SYNC_STALE_PENDING_MS,
+    DEFAULT_STALE_PENDING_SYNC_TASK_MS
+  )
+  const now = Date.now()
 
   const { pending } = await listGoogleAdsCampaignSyncTasksForUser(userId)
+  if (pending.length === 0) {
+    return { removed: 0 }
+  }
+
   let removed = 0
   for (const task of pending) {
-    if (completedAtMs >= task.createdAt) {
-      if (await removeGoogleAdsCampaignSyncTaskFromQueues(task.id)) {
-        removed++
-      }
+    const supersededByCompletedLog = hasValidCompletedAt && completedAtMs >= task.createdAt
+    const neverStartedStale = !task.startedAt && now - task.createdAt >= stalePendingMs
+    if (!supersededByCompletedLog && !neverStartedStale) {
+      continue
+    }
+    if (await removeGoogleAdsCampaignSyncTaskFromQueues(task.id)) {
+      removed++
     }
   }
 
   if (removed > 0) {
-    googleAdsSyncLogger.info('reconciled_stale_pending_sync_tasks', { userId, removed })
+    googleAdsSyncLogger.info('reconciled_stale_pending_sync_tasks', {
+      userId,
+      removed,
+      stalePendingMs,
+    })
   }
 
   return { removed }
