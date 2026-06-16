@@ -6,6 +6,7 @@ import { firstNonEmptyFinalUrlFromCampaignConfig } from '@/lib/google-ads/campai
 import { offerOccupyingCampaignWhereClause } from '../../../campaign/server'
 import type { GoogleAdsCampaign } from './types'
 import { extractBrandFromGoogleAdsCampaignName } from './types'
+import { inferPageTypeFromUrls } from '@/lib/offers/offer-link-type'
 
 import { googleAdsSyncLogger } from '../../common/logger'
 
@@ -184,8 +185,10 @@ export async function createOfferFirst(params: {
   const brandExtractSucceeded = derivedBrand !== campaignNameTrimmed
 
   // 1. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
+  const pageType = inferPageTypeFromUrls({ url, finalUrl })
+
   const existingOffer = (await db.queryOne(
-    'SELECT id, sync_source, url, final_url, final_url_suffix, brand FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
+    'SELECT id, sync_source, url, final_url, final_url_suffix, brand, page_type FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   )) as
     | {
@@ -195,6 +198,7 @@ export async function createOfferFirst(params: {
         final_url?: string | null
         final_url_suffix?: string | null
         brand?: string | null
+        page_type?: string | null
       }
     | undefined
 
@@ -246,6 +250,16 @@ export async function createOfferFirst(params: {
         updateParams.push(derivedBrand)
       }
 
+      const existingPageType =
+        typeof existingOffer.page_type === 'string' ? existingOffer.page_type.trim() : ''
+      const shouldSetPageType =
+        !existingPageType ||
+        updates.some((entry) => entry.startsWith('url =') || entry.startsWith('final_url ='))
+      if (shouldSetPageType) {
+        updates.push('page_type = ?')
+        updateParams.push(inferPageTypeFromUrls({ url: nextUrl, finalUrl: nextFinalUrl }))
+      }
+
       if (updates.length > 0) {
         await db.exec(`UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`, [
           ...updateParams,
@@ -291,8 +305,9 @@ export async function createOfferFirst(params: {
       sync_source,
       needs_completion,
       scrape_status,
-      is_active
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      is_active,
+      page_type
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       url,
@@ -308,6 +323,7 @@ export async function createOfferFirst(params: {
       'TRUE', // 新创建的 Offer 标记为需要完善
       'pending',
       'TRUE',
+      pageType,
     ]
   )
 

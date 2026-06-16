@@ -1,3 +1,5 @@
+import { detectPageType } from '@/lib/offers/offer-utils'
+
 export type OfferLinkType = 'product' | 'store'
 
 function normalizeOfferLinkType(value: unknown): OfferLinkType | null {
@@ -36,6 +38,24 @@ export function deriveOfferLinkTypeFromScrapedData(scrapedData: any): OfferLinkT
 
   if (hasStoreName || hasDeep || productsLen >= 2) return 'store'
   return null
+}
+
+/** 从推广链接 / final URL 推断 page_type（广告系列同步、批量导入等无 scraped_data 场景） */
+export function inferPageTypeFromUrls(params: {
+  url?: string | null
+  finalUrl?: string | null
+}): OfferLinkType {
+  for (const candidate of [params.finalUrl, params.url]) {
+    if (typeof candidate !== 'string' || !candidate.trim()) continue
+    const detected = detectPageType(candidate.trim())
+    if (detected.isAmazonStore || detected.isIndependentStore) return 'store'
+    if (detected.isAmazonProductPage) return 'product'
+  }
+
+  const link = (params.finalUrl || params.url || '').trim().toLowerCase()
+  if (!link) return 'product'
+  if (link.includes('/stores/') || link.includes('/store/')) return 'store'
+  return 'product'
 }
 
 export function resolveOfferLinkType(

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveOfferLinkTypeFromScrapedData, resolveOfferLinkType } from '../offers/server'
+import {
+  deriveOfferLinkTypeFromScrapedData,
+  inferPageTypeFromUrls,
+  resolveOfferLinkType,
+} from '../offers/server'
 
 describe('offer-link-type resolution', () => {
   it('keeps explicit product page_type even when scraped data looks like store', () => {
@@ -80,5 +84,35 @@ describe('offer-link-type resolution', () => {
     })
 
     expect(derived).toBeNull()
+  })
+
+  describe('inferPageTypeFromUrls', () => {
+    it('detects Amazon product pages', () => {
+      expect(
+        inferPageTypeFromUrls({
+          finalUrl: 'https://www.amazon.com/dp/B0ABCDEF12',
+        })
+      ).toBe('product')
+    })
+
+    it('detects Amazon store pages', () => {
+      expect(
+        inferPageTypeFromUrls({
+          finalUrl: 'https://www.amazon.com/stores/acme-brand/page/ABC',
+        })
+      ).toBe('store')
+    })
+
+    it('detects independent store homepages', () => {
+      expect(
+        inferPageTypeFromUrls({
+          finalUrl: 'https://brand.example.com/collections/all',
+        })
+      ).toBe('store')
+    })
+
+    it('defaults to product when URLs are missing', () => {
+      expect(inferPageTypeFromUrls({})).toBe('product')
+    })
   })
 })
