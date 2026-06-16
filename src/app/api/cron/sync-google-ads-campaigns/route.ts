@@ -3,13 +3,13 @@
  * 定时任务：从 Google Ads 同步广告系列到数据库
  *
  * 功能：
- * 1. 为每个符合条件的用户入队 `google-ads-campaign-sync` 后台任务（异步执行）
+ * 1. 为符合条件的用户入队 `google-ads-campaign-sync` 后台任务（异步执行）
  * 2. 任务执行时为每个广告系列创建关联的 Offer，并标记需完善信息
  *
  * 调用方式：
- * 1. 本地测试：直接 POST 请求（立即返回 202，实际同步由队列 Worker 执行）
- * 2. 生产环境：配置 Cron 任务（建议每 6 小时一次）
- *    - 需保证 Redis 与后台队列消费进程（QUEUE_BACKGROUND_WORKER）可用
+ * 1. 广告系列页「同步」：登录用户 Cookie，仅为当前用户入队
+ * 2. 运维批量 Cron：`Authorization: Bearer $CRON_SECRET` 且 `?scope=all`，为所有活跃用户入队
+ * 3. 实际同步由队列 Worker（QUEUE_BACKGROUND_WORKER）执行
  *
  * 说明：同步由后台队列任务执行，各用户执行结果见 `sync_logs`（由任务执行器写入）。
  */
@@ -18,38 +18,74 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getGoogleAdsCampaignSyncScheduler } from '@/lib/queue/schedulers/google-ads-campaign-sync-scheduler'
+import {
+  enqueueGoogleAdsCampaignSyncForUser,
+  userHasActiveGoogleAdsCampaignSyncWork,
+} from '@/lib/google-ads/campaign/sync-pipeline-status'
+
+function isCronBatchRequest(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) return false
+  const authHeader = request.headers.get('authorization')
+  return (
+    authHeader === `Bearer ${cronSecret}` && request.nextUrl.searchParams.get('scope') === 'all'
+  )
+}
 
 /**
- * POST — 为所有活跃用户入队同步任务（异步）
+ * POST — 入队 Google Ads 广告系列同步任务（异步）
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const batchAllUsers = isCronBatchRequest(request)
+    let targetUserIds: number[] = []
+
+    if (batchAllUsers) {
+      const db = await getDatabase()
+      const users = (await db.query(
+        `SELECT id FROM users WHERE role != 'admin' AND is_active = ${'TRUE'}`
+      )) as { id: number }[]
+      targetUserIds = users.map((row) => row.id)
+    } else {
+      const authResult = await verifyAuth(request)
+      if (!authResult.authenticated || !authResult.user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+      targetUserIds = [authResult.user.userId]
     }
 
     const startedAt = new Date().toISOString()
-    console.log('[Cron] Enqueue Google Ads campaign sync jobs...', startedAt)
-
-    const db = await getDatabase()
-    const users = (await db.query(
-      `SELECT id FROM users WHERE role != 'admin' AND is_active = ${'TRUE'}`
-    )) as { id: number }[]
+    console.log('[Cron] Enqueue Google Ads campaign sync jobs...', {
+      startedAt,
+      batchAllUsers,
+      targetUsers: targetUserIds.length,
+    })
 
     const scheduler = getGoogleAdsCampaignSyncScheduler()
     const taskIds: string[] = []
     let enqueueFailures = 0
+    let skippedActive = 0
 
-    for (const row of users) {
+    for (const userId of targetUserIds) {
       try {
-        const taskId = await scheduler.triggerManualSync(row.id)
+        const activeWork = await userHasActiveGoogleAdsCampaignSyncWork(userId)
+        if (activeWork.active) {
+          skippedActive++
+          console.log(
+            `[Cron] Skip user #${userId}: active sync (${activeWork.reason}, pending=${activeWork.pending}, running=${activeWork.running})`
+          )
+          continue
+        }
+
+        const taskId = batchAllUsers
+          ? await scheduler.triggerManualSync(userId)
+          : await enqueueGoogleAdsCampaignSyncForUser(userId, { syncType: 'manual' })
         taskIds.push(taskId)
       } catch (err) {
         enqueueFailures++
-        console.error(`[Cron] Failed to enqueue google-ads-campaign-sync for user ${row.id}:`, err)
+        console.error(`[Cron] Failed to enqueue google-ads-campaign-sync for user ${userId}:`, err)
       }
     }
 
@@ -58,9 +94,11 @@ export async function POST(request: NextRequest) {
 
     console.log('[Cron] Google Ads campaign sync enqueue completed:', {
       duration: `${duration}ms`,
-      totalUsers: users.length,
+      totalUsers: targetUserIds.length,
       enqueued: taskIds.length,
+      skippedActive,
       enqueueFailures,
+      batchAllUsers,
     })
 
     const taskIdsSample = taskIds.length > 40 ? taskIds.slice(0, 40) : taskIds
@@ -72,16 +110,22 @@ export async function POST(request: NextRequest) {
         timestamp: completedAt,
         duration: `${duration}ms`,
         summary: {
-          totalUsers: users.length,
+          totalUsers: targetUserIds.length,
           enqueued: taskIds.length,
+          skippedActive,
           enqueueFailures,
+          batchAllUsers,
         },
         taskIds: taskIdsSample,
         taskIdsTruncated: taskIds.length > taskIdsSample.length,
         message:
           taskIds.length === 0
-            ? '未将任何用户加入同步队列（无活跃用户或全部入队失败）'
-            : `已将 ${taskIds.length} 个用户的同步任务加入后台队列，请等待 Worker 执行`,
+            ? skippedActive > 0
+              ? '同步任务已在队列或执行中，未重复入队'
+              : '未将任何用户加入同步队列（无目标用户或全部入队失败）'
+            : batchAllUsers
+              ? `已将 ${taskIds.length} 个用户的同步任务加入后台队列，请等待 Worker 执行`
+              : '同步任务已加入后台队列，请等待 Worker 执行',
       },
       { status: 202 }
     )
@@ -111,10 +155,12 @@ export async function GET() {
     service: 'google-ads-campaign-sync-cron',
     status: 'healthy',
     description:
-      'POST 时为活跃用户入队 google-ads-campaign-sync 异步任务；实际拉数由队列 Worker 完成',
+      'POST 时为当前登录用户（或 scope=all + CRON_SECRET 时为全部活跃用户）入队 google-ads-campaign-sync 异步任务',
     schedule: 'Every 6 hours (recommended)',
     endpoints: {
       sync: 'POST /api/cron/sync-google-ads-campaigns',
+      syncAllUsers:
+        'POST /api/cron/sync-google-ads-campaigns?scope=all (Authorization: Bearer CRON_SECRET)',
       health: 'GET /api/cron/sync-google-ads-campaigns',
     },
     environment: {

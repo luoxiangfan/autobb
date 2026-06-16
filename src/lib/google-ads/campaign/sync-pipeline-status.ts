@@ -3,6 +3,7 @@ import { utcNowIso } from '@/lib/db'
 import {
   getBackgroundQueueManager,
   getQueueManager,
+  getQueueManagerForTaskType,
   isBackgroundQueueSplitEnabled,
 } from '@/lib/queue'
 import type { Task } from '@/lib/queue/types'
@@ -67,41 +68,149 @@ export async function getGoogleAdsCampaignSyncQueueCounts(): Promise<{
   }
 }
 
+function matchGoogleAdsCampaignSyncTaskForUser(userId: number) {
+  return (task: Task) =>
+    task.type === GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE && Number(task.userId) === userId
+}
+
+async function listGoogleAdsCampaignSyncTasksForUser(
+  userId: number
+): Promise<{ pending: Task[]; running: Task[] }> {
+  const matchUser = matchGoogleAdsCampaignSyncTaskForUser(userId)
+  const pending: Task[] = []
+  const running: Task[] = []
+
+  const coreQueueManager = getQueueManager()
+  await coreQueueManager.ensureInitialized()
+  const [corePendingTasks, coreRunningTasks] = await Promise.all([
+    coreQueueManager.getPendingTasksForType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE),
+    coreQueueManager.getRunningTasks(),
+  ])
+  pending.push(...corePendingTasks.filter((t) => matchUser(t) && t.status === 'pending'))
+  running.push(...coreRunningTasks.filter((t) => matchUser(t) && t.status === 'running'))
+
+  if (isBackgroundQueueSplitEnabled()) {
+    const backgroundQueueManager = getBackgroundQueueManager()
+    await backgroundQueueManager.ensureInitialized()
+    const [bgPendingTasks, bgRunningTasks] = await Promise.all([
+      backgroundQueueManager.getPendingTasksForType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE),
+      backgroundQueueManager.getRunningTasks(),
+    ])
+    pending.push(...bgPendingTasks.filter((t) => matchUser(t) && t.status === 'pending'))
+    running.push(...bgRunningTasks.filter((t) => matchUser(t) && t.status === 'running'))
+  }
+
+  return { pending, running }
+}
+
 /**
  * 指定用户在 core + background 队列中的 google-ads-campaign-sync 待处理/执行中任务数。
  */
-async function getGoogleAdsCampaignSyncQueueCountsForUser(
+export async function getGoogleAdsCampaignSyncQueueCountsForUser(
   userId: number
 ): Promise<{ pending: number; running: number }> {
-  const matchUser = (task: Task) =>
-    task.type === GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE && Number(task.userId) === userId
-
   try {
-    const coreQueueManager = getQueueManager()
-    await coreQueueManager.ensureInitialized()
-    const [corePendingTasks, coreRunningTasks] = await Promise.all([
-      coreQueueManager.getPendingTasksForType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE),
-      coreQueueManager.getRunningTasks(),
-    ])
-    let pending = corePendingTasks.filter(matchUser).length
-    let running = coreRunningTasks.filter(matchUser).length
-
-    if (isBackgroundQueueSplitEnabled()) {
-      const backgroundQueueManager = getBackgroundQueueManager()
-      await backgroundQueueManager.ensureInitialized()
-      const [bgPendingTasks, bgRunningTasks] = await Promise.all([
-        backgroundQueueManager.getPendingTasksForType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE),
-        backgroundQueueManager.getRunningTasks(),
-      ])
-      pending += bgPendingTasks.filter(matchUser).length
-      running += bgRunningTasks.filter(matchUser).length
-    }
-
-    return { pending, running }
+    const { pending, running } = await listGoogleAdsCampaignSyncTasksForUser(userId)
+    return { pending: pending.length, running: running.length }
   } catch (e) {
     googleAdsSyncLogger.warn('queue_stats_unavailable_for_user', { userId }, e)
     return { pending: 0, running: 0 }
   }
+}
+
+async function removeGoogleAdsCampaignSyncTaskFromQueues(taskId: string): Promise<boolean> {
+  let removed = false
+  const coreQueueManager = getQueueManager()
+  await coreQueueManager.ensureInitialized()
+  if (await coreQueueManager.removeTask(taskId)) {
+    removed = true
+  }
+  if (isBackgroundQueueSplitEnabled()) {
+    const backgroundQueueManager = getBackgroundQueueManager()
+    await backgroundQueueManager.ensureInitialized()
+    if (await backgroundQueueManager.removeTask(taskId)) {
+      removed = true
+    }
+  }
+  return removed
+}
+
+/**
+ * 移除已被更新的 sync_logs 结果覆盖的 pending 同步任务（重复入队 / 全局入队残留）。
+ * 仅在该用户无 running 队列任务且无 running 日志时执行。
+ */
+export async function reconcileStaleGoogleAdsCampaignSyncPendingTasks(
+  userId: number
+): Promise<{ removed: number }> {
+  const { running } = await getGoogleAdsCampaignSyncQueueCountsForUser(userId)
+  if (running > 0) {
+    return { removed: 0 }
+  }
+
+  const db = await getDatabase()
+  const startedAtField = startedAtSqlField()
+  const activeLogThreshold = staleRunningThresholdSql(
+    parsePositiveIntEnv(
+      process.env.GOOGLE_ADS_SYNC_LOG_ACTIVE_MINUTES,
+      DEFAULT_ACTIVE_RUNNING_LOG_MINUTES
+    )
+  )
+
+  const runningLog = (await db.queryOne(
+    `
+      SELECT id
+      FROM sync_logs
+      WHERE user_id = ?
+        AND sync_type = ?
+        AND status = 'running'
+        AND ${startedAtField} >= ${activeLogThreshold}
+      LIMIT 1
+    `,
+    [userId, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
+  )) as { id: number } | null
+
+  if (runningLog) {
+    return { removed: 0 }
+  }
+
+  const lastCompleted = (await db.queryOne(
+    `
+      SELECT completed_at
+      FROM sync_logs
+      WHERE user_id = ?
+        AND sync_type = ?
+        AND status IN ('success', 'partial', 'failed')
+        AND completed_at IS NOT NULL
+      ORDER BY completed_at DESC
+      LIMIT 1
+    `,
+    [userId, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
+  )) as { completed_at: string } | null
+
+  if (!lastCompleted?.completed_at) {
+    return { removed: 0 }
+  }
+
+  const completedAtMs = Date.parse(lastCompleted.completed_at)
+  if (!Number.isFinite(completedAtMs)) {
+    return { removed: 0 }
+  }
+
+  const { pending } = await listGoogleAdsCampaignSyncTasksForUser(userId)
+  let removed = 0
+  for (const task of pending) {
+    if (completedAtMs >= task.createdAt) {
+      if (await removeGoogleAdsCampaignSyncTaskFromQueues(task.id)) {
+        removed++
+      }
+    }
+  }
+
+  if (removed > 0) {
+    googleAdsSyncLogger.info('reconciled_stale_pending_sync_tasks', { userId, removed })
+  }
+
+  return { removed }
 }
 
 /**
@@ -202,8 +311,30 @@ export async function getGoogleAdsCampaignSyncPipelineSnapshot(): Promise<{
   running: number
 }> {
   const { pending, running } = await getGoogleAdsCampaignSyncQueueCounts()
-  const db = await getDatabase()
+  const logBusy = await hasGlobalGoogleAdsCampaignSyncRunningLog()
+  const busy = pending + running > 0 || logBusy
 
+  return { busy, pending, running }
+}
+
+/**
+ * 指定用户的 Google Ads 广告系列同步管线是否仍忙（供 status-v2 / SSE 使用）。
+ */
+export async function getGoogleAdsCampaignSyncPipelineSnapshotForUser(userId: number): Promise<{
+  busy: boolean
+  pending: number
+  running: number
+}> {
+  await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
+  const { pending, running } = await getGoogleAdsCampaignSyncQueueCountsForUser(userId)
+  const logBusy = await hasUserGoogleAdsCampaignSyncRunningLog(userId)
+  const busy = pending + running > 0 || logBusy
+
+  return { busy, pending, running }
+}
+
+async function hasGlobalGoogleAdsCampaignSyncRunningLog(): Promise<boolean> {
+  const db = await getDatabase()
   const startedAtField = startedAtSqlField()
   const timeThreshold = staleRunningThresholdSql(30)
 
@@ -220,8 +351,58 @@ export async function getGoogleAdsCampaignSyncPipelineSnapshot(): Promise<{
     [GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
   )) as { sync_type: string } | null
 
-  const logBusy = runningSync?.sync_type === GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE
-  const busy = pending + running > 0 || logBusy
+  return runningSync?.sync_type === GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE
+}
 
-  return { busy, pending, running }
+async function hasUserGoogleAdsCampaignSyncRunningLog(userId: number): Promise<boolean> {
+  const db = await getDatabase()
+  const startedAtField = startedAtSqlField()
+  const timeThreshold = staleRunningThresholdSql(
+    parsePositiveIntEnv(
+      process.env.GOOGLE_ADS_SYNC_LOG_ACTIVE_MINUTES,
+      DEFAULT_ACTIVE_RUNNING_LOG_MINUTES
+    )
+  )
+
+  const runningSync = (await db.queryOne(
+    `
+      SELECT id
+      FROM sync_logs
+      WHERE user_id = ?
+        AND sync_type = ?
+        AND status = 'running'
+        AND ${startedAtField} >= ${timeThreshold}
+      LIMIT 1
+    `,
+    [userId, GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE]
+  )) as { id: number } | null
+
+  return Boolean(runningSync)
+}
+
+/** 为指定用户入队 Google Ads 广告系列同步（手动触发入口复用） */
+export async function enqueueGoogleAdsCampaignSyncForUser(
+  userId: number,
+  options: {
+    syncType?: 'manual' | 'auto'
+    customerId?: string
+    dryRun?: boolean
+  } = {}
+): Promise<string> {
+  const queue = getQueueManagerForTaskType(GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE)
+  const taskId = await queue.enqueue(
+    GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE,
+    {
+      userId,
+      syncType: options.syncType || 'manual',
+      customerId: options.customerId,
+      dryRun: options.dryRun,
+    },
+    userId,
+    {
+      priority: options.syncType === 'auto' ? 'normal' : 'high',
+      maxRetries: 3,
+    }
+  )
+  return taskId
 }

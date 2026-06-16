@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getGoogleAdsCampaignSyncPipelineSnapshot } from '@/lib/google-ads/campaign/sync-pipeline-status'
+import { getGoogleAdsCampaignSyncPipelineSnapshotForUser } from '@/lib/google-ads/campaign/sync-pipeline-status'
 
 const POLL_MS = 2000
 const STREAM_MAX_MS = 20 * 60 * 1000
@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     if (!authResult.authenticated || !authResult.user) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
+
+    const userId = authResult.user.userId
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
@@ -56,12 +58,12 @@ export async function GET(request: NextRequest) {
           request.signal.removeEventListener('abort', onAbort)
         }
 
-        let prevBusy = (await getGoogleAdsCampaignSyncPipelineSnapshot()).busy
+        let prevBusy = (await getGoogleAdsCampaignSyncPipelineSnapshotForUser(userId)).busy
         send({ type: 'hello', busy: prevBusy, ts: Date.now() })
 
         const poll = async () => {
           try {
-            const snap = await getGoogleAdsCampaignSyncPipelineSnapshot()
+            const snap = await getGoogleAdsCampaignSyncPipelineSnapshotForUser(userId)
             send({
               type: 'status',
               busy: snap.busy,

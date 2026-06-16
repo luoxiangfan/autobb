@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { getGoogleAdsCampaignSyncQueueCounts } from '@/lib/google-ads/campaign/sync-pipeline-status'
+import {
+  getGoogleAdsCampaignSyncQueueCountsForUser,
+  reconcileStaleGoogleAdsCampaignSyncPendingTasks,
+} from '@/lib/google-ads/campaign/sync-pipeline-status'
 
 /**
  * GET /api/sync/status-v2
@@ -29,7 +32,8 @@ export async function GET(request: NextRequest) {
 
     const startedAtField = 'started_at::timestamptz'
 
-    const runningSync = (await db.queryOne(`
+    const runningSync = (await db.queryOne(
+      `
       SELECT 
         id,
         user_id,
@@ -39,11 +43,14 @@ export async function GET(request: NextRequest) {
         is_manual,
         ${runningSecondsSql} as running_seconds
       FROM sync_logs
-      WHERE ${runningCheck}
+      WHERE user_id = ?
+        AND ${runningCheck}
         AND ${startedAtField} >= ${timeThreshold}
       ORDER BY ${startedAtField} DESC
       LIMIT 1
-    `)) as any
+    `,
+      [userId]
+    )) as any
 
     // 查询最近一次同步完成的时间
     const lastCompletedSync = (await db.queryOne(
@@ -62,7 +69,8 @@ export async function GET(request: NextRequest) {
       [userId]
     )) as any
 
-    const googleAdsCampaignSyncQueue = await getGoogleAdsCampaignSyncQueueCounts()
+    await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
+    const googleAdsCampaignSyncQueue = await getGoogleAdsCampaignSyncQueueCountsForUser(userId)
 
     return NextResponse.json({
       hasRunningSync: !!runningSync,

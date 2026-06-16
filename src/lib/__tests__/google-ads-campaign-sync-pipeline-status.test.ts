@@ -9,6 +9,7 @@ const queueMocks = vi.hoisted(() => ({
   getPendingTasksForType: vi.fn(),
   getRunningTasks: vi.fn(),
   ensureInitialized: vi.fn(),
+  removeTask: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/lib/db', () => ({
     queryOne: dbMocks.queryOne,
     exec: dbMocks.exec,
   })),
+  utcNowIso: vi.fn(() => '2026-06-16T08:50:08.453Z'),
 }))
 
 vi.mock('@/lib/queue', () => ({
@@ -23,15 +25,22 @@ vi.mock('@/lib/queue', () => ({
     ensureInitialized: queueMocks.ensureInitialized,
     getPendingTasksForType: queueMocks.getPendingTasksForType,
     getRunningTasks: queueMocks.getRunningTasks,
+    removeTask: queueMocks.removeTask,
   })),
   getBackgroundQueueManager: vi.fn(),
   isBackgroundQueueSplitEnabled: vi.fn(() => false),
+  getQueueManagerForTaskType: vi.fn(() => ({
+    ensureInitialized: queueMocks.ensureInitialized,
+    enqueue: vi.fn(),
+  })),
 }))
 
 import {
   GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE,
   GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE,
+  getGoogleAdsCampaignSyncQueueCountsForUser,
   markStaleGoogleAdsCampaignSyncLogs,
+  reconcileStaleGoogleAdsCampaignSyncPendingTasks,
   userHasActiveGoogleAdsCampaignSyncWork,
 } from '@/lib/google-ads/campaign/sync-pipeline-status'
 
@@ -40,6 +49,7 @@ describe('@/lib/google-ads/campaign/sync-pipeline-status', () => {
     vi.clearAllMocks()
     queueMocks.getPendingTasksForType.mockResolvedValue([])
     queueMocks.getRunningTasks.mockResolvedValue([])
+    queueMocks.removeTask.mockResolvedValue(true)
     dbMocks.queryOne.mockResolvedValue(null)
     dbMocks.exec.mockResolvedValue({ changes: 2 })
   })
@@ -78,5 +88,40 @@ describe('@/lib/google-ads/campaign/sync-pipeline-status', () => {
     expect(sql).toContain('sync_type = ?')
     expect(dbMocks.exec.mock.calls[0][1][2]).toBe(GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE)
     expect(dbMocks.exec.mock.calls[0][1][3]).toBe(2)
+  })
+
+  it('getGoogleAdsCampaignSyncQueueCountsForUser only counts pending/running tasks for user', async () => {
+    queueMocks.getPendingTasksForType.mockResolvedValue([
+      { id: 'a', type: GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE, userId: 2, status: 'pending' },
+      { id: 'b', type: GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE, userId: 3, status: 'pending' },
+      { id: 'c', type: GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE, userId: 2, status: 'completed' },
+    ])
+    queueMocks.getRunningTasks.mockResolvedValue([
+      { id: 'd', type: GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE, userId: 2, status: 'running' },
+    ])
+
+    const result = await getGoogleAdsCampaignSyncQueueCountsForUser(2)
+
+    expect(result).toEqual({ pending: 1, running: 1 })
+  })
+
+  it('reconcileStaleGoogleAdsCampaignSyncPendingTasks removes pending tasks superseded by completed sync_log', async () => {
+    queueMocks.getPendingTasksForType.mockResolvedValue([
+      {
+        id: 'stale-1',
+        type: GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE,
+        userId: 2,
+        status: 'pending',
+        createdAt: 1_000,
+      },
+    ])
+    dbMocks.queryOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ completed_at: '2026-06-16T08:50:08.453Z' })
+
+    const result = await reconcileStaleGoogleAdsCampaignSyncPendingTasks(2)
+
+    expect(result.removed).toBe(1)
+    expect(queueMocks.removeTask).toHaveBeenCalledWith('stale-1')
   })
 })
