@@ -4,15 +4,15 @@
  * Single Amazon product page scraping with comprehensive data extraction
  */
 
-import { normalizeBrandName } from '../offers/server'
-import { parsePrice } from '../common/server' // 🔥 新增：统一价格解析函数
-import { getPlaywrightPool } from '../scraping'
-import { extractAmazonBrandFromByline } from '../scraping'
-import { isLikelyInvalidBrandName } from '../scraping'
+import { normalizeBrandName } from '../../offers/server'
+import { parsePrice } from '../../common/server'
+import { getPlaywrightPool } from '../playwright-pool'
+import { extractAmazonBrandFromByline } from '../amazon-brand-utils'
+import { isLikelyInvalidBrandName } from '../brand-name-utils'
 import { isProxyConnectionError } from './proxy-utils'
 import { configureStealthPage, randomDelay } from './browser-stealth'
 import { scrapeUrlWithBrowser } from './core'
-import { smartWaitForLoad } from '../scraping'
+import { smartWaitForLoad } from '../smart-wait-strategy'
 import type { BrowserContext } from 'playwright'
 import type { AmazonProductData } from './types'
 
@@ -71,7 +71,7 @@ export async function scrapeAmazonProduct(
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 🔥 清理代理IP缓存，强制获取新IP
-        const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
+        const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         // 🔥 额外等待，确保新代理IP被分配
@@ -105,7 +105,7 @@ export async function scrapeAmazonProduct(
           console.warn(`🔄 a-no-js重试 ${noJsRetry}/${maxNoJsRetries}，清理代理缓存并使用新IP...`)
 
           // 清理代理IP缓存，强制获取新IP
-          const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
+          const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
           clearProxyCache(effectiveProxyUrl)
           console.log(`🧹 已清理代理IP缓存，下次将获取新IP`)
 

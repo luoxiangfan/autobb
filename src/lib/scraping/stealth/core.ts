@@ -4,8 +4,8 @@
  * Base URL scraping and affiliate link resolution
  */
 
-import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
-import { getPlaywrightPool } from '../scraping'
+import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
+import { getPlaywrightPool } from '../playwright-pool'
 import { retryWithBackoff, isProxyConnectionError } from './proxy-utils'
 import {
   createStealthBrowser,
@@ -256,7 +256,7 @@ export async function scrapeUrlWithBrowser(
 
               // 只有当JavaScript成功执行后（a-js=true 或 a-no-js=false）才检测语言
               if (finalPageStatus.hasJsClass || !finalPageStatus.hasNoJsClass) {
-                const { getLanguageCodeForCountry } = await import('../common/server')
+                const { getLanguageCodeForCountry } = await import('../../common/server')
                 const expectedLangCode = getLanguageCodeForCountry(options.targetCountry)
                 const actualLang = finalPageStatus.htmlLang.toLowerCase().split('-')[0] // 'en-gb' -> 'en'
 
@@ -606,7 +606,7 @@ export async function resolveAffiliateLink(
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 🔥 清理代理IP缓存，强制获取新IP
-        const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
+        const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         await new Promise((resolve) => setTimeout(resolve, 2000))

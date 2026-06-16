@@ -15,14 +15,14 @@ import { getLanguageCodeForCountry } from '@/lib/common/server'
 import { getPlaywrightPool } from '@/lib/scraping'
 import { clearProxyCache } from '@/lib/scraping/proxy/fetch-proxy-ip'
 import { smartWaitForLoad } from '@/lib/scraping'
-import { isProxyConnectionError } from '@/lib/stealth-scraper/proxy-utils'
+import { isProxyConnectionError } from '@/lib/scraping/proxy-connection-errors'
 import {
   createStealthBrowser,
   configureStealthPage,
   getDynamicTimeout,
   randomDelay,
   releaseBrowser,
-} from '@/lib/stealth-scraper/browser-stealth'
+} from '@/lib/scraping/stealth/browser-stealth'
 import { scrapeUrl } from '@/lib/scraping'
 import {
   extractBrandServices,

@@ -1,55 +1,76 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/scraping', () => ({
-  resolveAffiliateLink: vi.fn(),
-  BATCH_MODE_RETRY_CONFIG: { retryCount: 1, timeout: 3000 },
-  getProxyPool: () => ({
-    getProxyInfo: () => ({
-      proxy: null,
-      isTargetCountryMatch: true,
-      usedCountry: 'US',
+vi.mock('@/lib/scraping', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/scraping')>()
+  return {
+    ...actual,
+    resolveAffiliateLink: vi.fn(),
+    extractProductInfo: vi.fn(),
+    BATCH_MODE_RETRY_CONFIG: { retryCount: 1, timeout: 3000 },
+    getProxyPool: () => ({
+      getProxyInfo: () => ({
+        proxy: null,
+        isTargetCountryMatch: true,
+        usedCountry: 'US',
+      }),
     }),
-  }),
+  }
+})
+
+vi.mock('@/lib/scraping/proxy-warmup', () => ({
+  warmupAffiliateLink: vi.fn(),
 }))
 
-vi.mock('@/lib/scraping', () => ({
-  extractProductInfo: vi.fn(),
-}))
-
-vi.mock('@/lib/stealth-scraper', () => ({
+vi.mock('@/lib/scraping/stealth', () => ({
   scrapeAmazonStoreDeep: vi.fn(),
   scrapeIndependentStoreDeep: vi.fn(),
   scrapeAmazonProduct: vi.fn(),
   scrapeIndependentProduct: vi.fn(),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getProxyUrlForCountry: vi.fn(),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getProxyUrlForCountry: vi.fn(),
+  }
+})
 
-vi.mock('@/lib/scraping', () => ({
-  warmupAffiliateLink: vi.fn(),
-}))
+vi.mock('@/lib/keywords/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords/server')>()
+  return {
+    ...actual,
+    fetchBrandSearchSupplement: vi.fn(),
+  }
+})
 
-vi.mock('@/lib/keywords', () => ({
-  fetchBrandSearchSupplement: vi.fn(),
-}))
+vi.mock('@/lib/offers/server', async () => {
+  const mode = await vi.importActual<typeof import('@/lib/offers/offer-extraction-mode')>(
+    '@/lib/offers/offer-extraction-mode'
+  )
+  const performance = await vi.importActual<
+    typeof import('@/lib/offers/offer-extraction-performance')
+  >('@/lib/offers/offer-extraction-performance')
 
-vi.mock('@/lib/offers', () => ({
-  detectPageType: vi.fn(() => ({
-    pageType: 'unknown',
-    isAmazonStore: false,
-    isAmazonProductPage: false,
-    isIndependentStore: false,
-  })),
-  initializeProxyPool: vi.fn(async () => {}),
-  getTargetLanguage: vi.fn(() => 'en'),
-  normalizeBrandName: (brand: string) => {
-    const trimmed = typeof brand === 'string' ? brand.trim() : ''
-    if (!trimmed) return trimmed
-    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
-  },
-}))
+  return {
+    ...mode,
+    ...performance,
+    detectPageType: vi.fn(() => ({
+      pageType: 'unknown',
+      isAmazonStore: false,
+      isAmazonProductPage: false,
+      isIndependentStore: false,
+    })),
+    initializeProxyPool: vi.fn(async () => {}),
+    getTargetLanguage: vi.fn(() => 'en'),
+    normalizeBrandName: (brand: string) => {
+      const trimmed = typeof brand === 'string' ? brand.trim() : ''
+      if (!trimmed) return trimmed
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+    },
+    scrapeSupplementalProducts: vi.fn(async () => []),
+  }
+})
 
 function createAmazonProductMock(overrides: Record<string, any> = {}) {
   return {
@@ -84,10 +105,10 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('falls back to domain brand when independent product scraping times out', async () => {
-    const { extractOffer } = await import('@/lib/offers/server')
+    const { extractOffer } = await import('@/lib/offers/offer-extraction-core')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { extractProductInfo } = await import('@/lib/scraping')
-    const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
+    const { scrapeIndependentProduct } = await import('@/lib/scraping/stealth')
     const { getProxyUrlForCountry } = await import('@/lib/common/server')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
@@ -127,11 +148,11 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('retries Amazon product scraping with canonical URL when tracked URL data is insufficient', async () => {
-    const { extractOffer } = await import('@/lib/offers/server')
+    const { extractOffer } = await import('@/lib/offers/offer-extraction-core')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { getProxyUrlForCountry } = await import('@/lib/common/server')
     const { detectPageType } = await import('@/lib/offers/server')
-    const { scrapeAmazonProduct } = await import('@/lib/stealth-scraper')
+    const { scrapeAmazonProduct } = await import('@/lib/scraping/stealth')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
     vi.mocked(resolveAffiliateLink).mockResolvedValue({
@@ -209,10 +230,10 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('skips Playwright when independent light scrape already has offer baseline fields', async () => {
-    const { extractOffer } = await import('@/lib/offers/server')
+    const { extractOffer } = await import('@/lib/offers/offer-extraction-core')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { extractProductInfo } = await import('@/lib/scraping')
-    const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
+    const { scrapeIndependentProduct } = await import('@/lib/scraping/stealth')
     const { getProxyUrlForCountry } = await import('@/lib/common/server')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')
@@ -308,10 +329,10 @@ describe('extractOffer brand fallback', () => {
   })
 
   it('falls back to Playwright when independent baseline fields are missing', async () => {
-    const { extractOffer } = await import('@/lib/offers/server')
+    const { extractOffer } = await import('@/lib/offers/offer-extraction-core')
     const { resolveAffiliateLink } = await import('@/lib/scraping')
     const { extractProductInfo } = await import('@/lib/scraping')
-    const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
+    const { scrapeIndependentProduct } = await import('@/lib/scraping/stealth')
     const { getProxyUrlForCountry } = await import('@/lib/common/server')
 
     vi.mocked(getProxyUrlForCountry).mockResolvedValue('https://proxy-provider.example/api?cc=US')

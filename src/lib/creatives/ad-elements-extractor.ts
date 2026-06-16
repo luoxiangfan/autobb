@@ -23,7 +23,7 @@ import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../
 import { loadPrompt, interpolateTemplate } from '../ai/server'
 import { classifyKeywordIntent } from '../keywords/server'
 import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
-import type { AmazonProductData } from '../stealth-scraper/index'
+import type { AmazonProductData } from '../scraping/stealth'
 import type {
   StoreProduct,
   EnrichedStoreProduct,

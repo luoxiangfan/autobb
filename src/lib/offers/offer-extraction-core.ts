@@ -15,7 +15,7 @@ import {
   scrapeAmazonStoreDeep,
   scrapeIndependentStoreDeep, // 🔥 修改：使用深度抓取版本，与Amazon Store保持一致
   scrapeAmazonProduct,
-} from '@/lib/stealth-scraper'
+} from '@/lib/scraping/stealth'
 import { AppError } from '@/lib/common/server'
 import {
   detectPageType,
@@ -1045,7 +1045,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
           try {
             // 导入独立站产品scraper（Playwright版本）
-            const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
+            const { scrapeIndependentProduct } = await import('@/lib/scraping/stealth')
 
             const independentProductData = await scrapeIndependentProduct(
               fullTargetUrl,

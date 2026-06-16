@@ -6,9 +6,9 @@
 
 import { load, type CheerioAPI } from 'cheerio'
 import { Page } from 'playwright'
-import { normalizeBrandName } from '../offers/server'
-import { getPlaywrightPool } from '../scraping'
-import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
+import { normalizeBrandName } from '../../offers/server'
+import { getPlaywrightPool } from '../playwright-pool'
+import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
 import { isProxyConnectionError } from './proxy-utils'
 import {
   createStealthBrowser,
@@ -104,7 +104,7 @@ export async function scrapeAmazonStore(
         )
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
-        const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
+        const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         await new Promise((resolve) => setTimeout(resolve, 2000))

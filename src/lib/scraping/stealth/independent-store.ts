@@ -11,9 +11,9 @@
  */
 
 import { Page } from 'playwright'
-import { getPlaywrightPool } from '../scraping'
-import { normalizeBrandName } from '../offers/server'
-import { smartWaitForLoad, recordWaitOptimization } from '../scraping'
+import { getPlaywrightPool } from '../playwright-pool'
+import { normalizeBrandName } from '../../offers/server'
+import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
 import {
   createStealthBrowser,
   releaseBrowser,
@@ -23,7 +23,7 @@ import {
 } from './browser-stealth'
 import { isProxyConnectionError } from './proxy-utils'
 import type { IndependentStoreData, IndependentProductData } from './types'
-import { maskProxyUrl } from '../scraping/proxy/validate-url'
+import { maskProxyUrl } from '../proxy/validate-url'
 import {
   extractLandingDescription,
   extractLandingImages,
@@ -32,8 +32,8 @@ import {
   isPresellStyleUrl,
   getRegistrableDomainLabelFromUrl,
   refineBrandNameForLandingPage,
-} from '../scraping'
-import { isLikelyNavigationLabel, normalizeScrapedTextLine } from '../scraping'
+} from '../landing-page-scrape-utils'
+import { isLikelyNavigationLabel, normalizeScrapedTextLine } from '../scrape-text-filters'
 
 const PROXY_URL = process.env.PROXY_URL || ''
 
@@ -297,7 +297,7 @@ export async function scrapeIndependentStore(
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 🔥 清理代理IP缓存，强制获取新IP
-        const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
+        const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${maskProxyUrl(effectiveProxyUrl)}`)
         await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -614,7 +614,7 @@ export async function scrapeIndependentProduct(
         console.log(`🔄 独立站产品抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}`)
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
-        const { clearProxyCache } = await import('../scraping/proxy/fetch-proxy-ip')
+        const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }

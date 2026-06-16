@@ -5,11 +5,11 @@
  */
 
 import { chromium, Page } from 'playwright'
-import { getProxyIp } from '../scraping/proxy/fetch-proxy-ip'
-import { maskProxyUrl } from '../scraping/proxy/validate-url'
-import { getProxyPoolManager } from '../scraping/proxy/proxy-pool'
-import { getPlaywrightPool } from '../scraping'
-import { assessPageComplexity } from '../scraping'
+import { getProxyIp } from '../proxy/fetch-proxy-ip'
+import { maskProxyUrl } from '../proxy/validate-url'
+import { getProxyPoolManager } from '../proxy/proxy-pool'
+import { getPlaywrightPool } from '../playwright-pool'
+import { assessPageComplexity } from '../smart-wait-strategy'
 import type { StealthBrowserResult } from './types'
 
 // 标记是否使用连接池（便于测试和回退）
@@ -177,7 +177,8 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
   let navigatorLanguages = ['en-US', 'en'] // 默认语言列表
 
   if (targetCountry) {
-    const { getLanguageCodeForCountry, getAcceptLanguageHeader } = await import('../common/server')
+    const { getLanguageCodeForCountry, getAcceptLanguageHeader } =
+      await import('../../common/server')
     const langCode = getLanguageCodeForCountry(targetCountry)
     acceptLanguage = getAcceptLanguageHeader(langCode)
 

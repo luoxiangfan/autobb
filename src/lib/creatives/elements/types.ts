@@ -2,7 +2,7 @@
  * Ad Elements Extractor - Type Definitions
  */
 
-import type { AmazonProductData, AmazonStoreData } from '../../stealth-scraper'
+import type { AmazonProductData, AmazonStoreData } from '../../scraping/stealth'
 
 // Type alias for Store Product (extracted from AmazonStoreData.products)
 export type StoreProduct = AmazonStoreData['products'][number]

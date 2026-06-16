@@ -12,7 +12,7 @@ import {
   type CompetitorProduct,
 } from '../creatives/server'
 import { extractAdElements } from '../creatives/server'
-import { scrapeAmazonProduct } from '../stealth-scraper/amazon-product'
+import { scrapeAmazonProduct } from '../scraping/stealth/amazon-product'
 import { parsePrice } from '../common/server'
 import {
   getOfferAiCompetitorDetailLimit,

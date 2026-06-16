@@ -6,7 +6,7 @@ import {
   recordWaitOptimization,
 } from './smart-wait-strategy'
 import { detectAffiliateLinkFailure } from '../affiliate'
-import { isProxyConnectionError } from '../stealth-scraper/index'
+import { isProxyConnectionError } from './proxy-connection-errors'
 
 /**
  * User-Agent rotation pool (2024 browsers)

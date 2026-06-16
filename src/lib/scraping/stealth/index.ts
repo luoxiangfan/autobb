@@ -1,16 +1,5 @@
 /**
- * Stealth Scraper Module - Unified Exports
- *
- * This module provides stealth browser-based scraping capabilities for:
- * - Amazon product pages
- * - Amazon store pages
- * - Independent e-commerce stores (Shopify, WooCommerce, etc.)
- *
- * All scrapers use:
- * - Playwright connection pooling for performance
- * - Browser fingerprint spoofing for anti-bot bypass
- * - Proxy rotation with automatic retry on failure
- * - Smart wait strategies for optimal page loading
+ * Stealth browser scraping — Amazon / independent store pages.
  */
 
 // Types

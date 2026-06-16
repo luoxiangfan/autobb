@@ -1,7 +1,7 @@
 import { resolveAffiliateLink } from '@/lib/scraping'
 import { extractProductInfo } from '@/lib/scraping'
 import { detectPageType } from '@/lib/offers/server'
-import { scrapeAmazonProduct } from '@/lib/stealth-scraper'
+import { scrapeAmazonProduct } from '@/lib/scraping/stealth'
 import type { SupplementalProductResult } from './offer-supplemental-product-types'
 
 export type { SupplementalProductResult } from './offer-supplemental-product-types'
@@ -101,7 +101,7 @@ async function scrapeSupplementalProductLink(
 
     if (!scrapedData || (!scrapedData.brandName && !scrapedData.productName)) {
       try {
-        const { scrapeIndependentProduct } = await import('@/lib/stealth-scraper')
+        const { scrapeIndependentProduct } = await import('@/lib/scraping/stealth')
         const independentProductData = await scrapeIndependentProduct(
           fullTargetUrl,
           proxyUrl || undefined,
