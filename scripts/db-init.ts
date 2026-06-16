@@ -8,7 +8,7 @@ import postgres from 'postgres'
 import { readFileSync, existsSync, readdirSync } from 'fs'
 import { resolve } from 'path'
 import crypto from 'crypto'
-import { hashPassword } from '../src/lib/crypto.js'
+import { hashPassword } from '../src/lib/auth/crypto'
 import { splitSqlStatements } from '../src/lib/db/sql-splitter'
 import {
   applyConsolidatedSchemaStatements,

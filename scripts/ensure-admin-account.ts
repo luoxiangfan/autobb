@@ -6,7 +6,7 @@
  */
 
 import { getDatabase, closeDatabase } from '../src/lib/db.js'
-import { hashPassword } from '../src/lib/crypto.js'
+import { hashPassword } from '../src/lib/auth/crypto'
 
 async function ensureAdminAccount() {
   const password = process.env.DEFAULT_ADMIN_PASSWORD
