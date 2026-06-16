@@ -262,6 +262,14 @@ async function fetchAllDataFromGoogleAds(params: {
       results5 = oauthQueryResults.results5
     }
 
+    googleAdsSyncLogger.info('sync_log', {
+      message: String(
+        `[GoogleAds Sync] Fetched ${results3.length} asset rows (CALLOUT/SITELINK) for customer ${customerId}`
+      ),
+      customerId,
+      assetRowCount: results3.length,
+    })
+
     // 🔧 在内存中处理数据，按 ID 分组
     const campaignMap = new Map<string, GoogleAdsCampaign>()
     const query1ByCampaign = new Map<string, any[]>()
@@ -369,13 +377,26 @@ async function fetchAllDataFromGoogleAds(params: {
     // 处理查询 3 结果（素材资源）
     for (const row of results3) {
       const campaignId = String(row.campaign?.id || '')
+      const assetType = String(row.asset?.type || '')
+      googleAdsSyncLogger.info('sync_log', {
+        message: String(
+          `[GoogleAds Sync] Asset for campaign ${campaignId}: type=${assetType}, callout=${row.asset?.callout_asset?.callout_text ?? ''}, sitelink=${row.asset?.sitelink_asset?.link_text ?? ''}, final_urls=${JSON.stringify(row.asset?.final_urls ?? [])}`
+        ),
+        customerId,
+        campaignId,
+        assetType,
+        calloutText: row.asset?.callout_asset?.callout_text ?? null,
+        sitelinkText: row.asset?.sitelink_asset?.link_text ?? null,
+        sitelinkDescription1: row.asset?.sitelink_asset?.description1 ?? null,
+        sitelinkDescription2: row.asset?.sitelink_asset?.description2 ?? null,
+        finalUrls: row.asset?.final_urls ?? [],
+      })
+
       if (campaignId) {
         const rows = query3ByCampaign.get(campaignId) || []
         rows.push(row)
         query3ByCampaign.set(campaignId, rows)
       }
-
-      const assetType = String(row.asset?.type || '')
 
       if (assetType === 'CALLOUT' && row.asset?.callout_asset?.callout_text) {
         const callouts = calloutsMap.get(campaignId) || []
@@ -385,7 +406,7 @@ async function fetchAllDataFromGoogleAds(params: {
         const sitelinks = sitelinksMap.get(campaignId) || []
         sitelinks.push({
           text: row.asset?.sitelink_asset?.link_text || '',
-          url: (row.asset?.sitelink_asset?.final_urls ?? [])?.[0] || '',
+          url: (row.asset?.final_urls ?? [])?.[0] || '',
           description:
             row.asset?.sitelink_asset?.description1 ||
             row.asset?.sitelink_asset?.description2 ||
@@ -394,6 +415,28 @@ async function fetchAllDataFromGoogleAds(params: {
         sitelinksMap.set(campaignId, sitelinks)
       }
     }
+
+    googleAdsSyncLogger.info('sync_log', {
+      message: String(
+        `[GoogleAds Sync] Aggregated assets for customer ${customerId}: callouts=${calloutsMap.size} campaigns, sitelinks=${sitelinksMap.size} campaigns`
+      ),
+      customerId,
+      calloutCampaignCount: calloutsMap.size,
+      sitelinkCampaignCount: sitelinksMap.size,
+      calloutsByCampaign: Object.fromEntries(
+        Array.from(calloutsMap.entries()).map(([id, items]) => [id, items.map((c) => c.text)])
+      ),
+      sitelinksByCampaign: Object.fromEntries(
+        Array.from(sitelinksMap.entries()).map(([id, items]) => [
+          id,
+          items.map((s) => ({
+            text: s.text,
+            url: s.url,
+            description: s.description,
+          })),
+        ])
+      ),
+    })
 
     // 处理查询 4 结果（定位）
     for (const row of results4) {
