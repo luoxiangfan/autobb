@@ -3,7 +3,7 @@ import {
   deriveCanonicalCreativeType,
   hasModelAnchorEvidence,
   type CanonicalCreativeType,
-} from '../creatives'
+} from '../creatives/server'
 import {
   getKeywordSourcePriority,
   getKeywordSourceRankFromInput,
@@ -14,7 +14,7 @@ import {
 } from './creative-keyword-source-priority'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { containsAsinLikeToken } from '../creatives'
+import { containsAsinLikeToken } from '../creatives/server'
 import {
   analyzeKeywordLanguageCompatibility,
   type KeywordLanguageCompatibility,

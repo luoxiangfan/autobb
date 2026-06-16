@@ -5,7 +5,7 @@
  */
 
 import { generateAdCreative } from './generator/index'
-import type { AdCreativeGenerationModeProfile } from '@/lib/creatives'
+import type { AdCreativeGenerationModeProfile } from '@/lib/creatives/server'
 import {
   applyCreativeKeywordSetToCreative,
   buildPreGenerationCreativeKeywordSet,
@@ -15,19 +15,19 @@ import {
   finalizeCreativeKeywordSet,
   mergeUsedKeywordsExcludingBrand,
   resolveCreativeKeywordsForRetryExclusion,
-} from '@/lib/keywords'
+} from '@/lib/keywords/server'
 import {
   AD_CREATIVE_REQUIRED_MIN_SCORE,
   evaluateCreativeForQuality,
   runCreativeGenerationQualityLoop,
   type CreativeAttemptEvaluation,
   type CreativeGenerationLoopResult,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 import {
   getCreativeTypeForBucketSlot,
   type CanonicalCreativeType,
   type CreativeBucketSlot,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 import { getThemeByBucket } from './generator/index'
 import { getKeywordsByLinkTypeAndBucket } from '@/lib/offer-keyword-pool'
 import type {
@@ -36,10 +36,10 @@ import type {
 } from '@/lib/google-ads/accounts/auth/index'
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/offer-keyword-pool'
 import type { Offer } from '@/lib/offers/server'
-import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/keywords'
+import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/keywords/server'
 import type { SearchTermFeedbackHintsInput } from './generator/index'
 import { parseBooleanEnv } from '@/lib/common/server'
-import type { RetryFailureType } from '@/lib/creatives'
+import type { RetryFailureType } from '@/lib/creatives/server'
 
 export type GeneratedAdCreative = Awaited<ReturnType<typeof generateAdCreative>>
 

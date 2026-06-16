@@ -1,4 +1,4 @@
-import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '..'
+import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../server'
 
 // 🔥 AI语义分类
 // 🎯 新增：导入否定关键词生成函数

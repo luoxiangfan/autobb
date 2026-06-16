@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { compareAdCreatives } from '@/lib/creatives'
+import { compareAdCreatives } from '@/lib/creatives/server'
 
 /**
  * POST /api/ad-creatives/compare

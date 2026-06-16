@@ -1,4 +1,4 @@
-import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../..'
+import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../../server'
 import { syncHeadlineMetadataSlot } from './headline-candidates'
 import {
   buildUniqueHeadlineReplacement,

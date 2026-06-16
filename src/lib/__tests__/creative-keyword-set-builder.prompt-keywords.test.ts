@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildCreativeKeywordSet } from '../keywords'
+import { buildCreativeKeywordSet } from '../keywords/server'
 
 const mocks = vi.hoisted(() => ({
   applyKeywordSupplementationOnce: vi.fn(),

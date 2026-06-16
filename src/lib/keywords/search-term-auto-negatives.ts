@@ -10,8 +10,8 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords'
-import { KEYWORD_POLICY } from '@/lib/keywords'
+import { classifyKeywordIntent, recommendMatchTypeForKeyword } from './keyword-intent'
+import { KEYWORD_POLICY } from './keyword-policy'
 
 export interface SearchTermAutoNegativeOptions {
   userId?: number

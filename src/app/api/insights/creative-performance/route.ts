@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { scoreCreativePerformance, scoreAllCreatives } from '@/lib/creatives'
+import { scoreCreativePerformance, scoreAllCreatives } from '@/lib/creatives/server'
 
 export const dynamic = 'force-dynamic'
 

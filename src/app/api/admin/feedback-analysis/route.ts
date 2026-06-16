@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateContent } from '@/lib/ai'
-import { recordTokenUsage, estimateTokenCost } from '@/lib/ai'
+import { generateContent } from '@/lib/ai/server'
+import { recordTokenUsage, estimateTokenCost } from '@/lib/ai/server'
 
 interface Message {
   role: 'user' | 'assistant'

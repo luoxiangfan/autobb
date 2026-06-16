@@ -1,5 +1,5 @@
-import type { AdCreative } from '../creatives'
-import { findAdCreativeById, findAdCreativesByOfferId } from '../creatives'
+import type { AdCreative } from '../creatives/server'
+import { findAdCreativeById, findAdCreativesByOfferId } from '../creatives/server'
 import type { Offer } from '../offers/server'
 import {
   type LaunchScoreHashCampaignConfig,

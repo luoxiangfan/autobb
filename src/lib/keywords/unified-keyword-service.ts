@@ -26,8 +26,8 @@ import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-f
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { normalizeLanguageCode } from '../common/server'
-import { hasModelAnchorEvidence } from '../creatives'
-import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from '../creatives'
+import { hasModelAnchorEvidence } from '../creatives/server'
+import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from '../creatives/server'
 
 export type KeywordPlannerSessionAuth = KeywordPlannerPreparedSession
 

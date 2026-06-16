@@ -13,7 +13,7 @@ import {
 import { generateNamingScheme } from './naming-convention'
 import { buildEffectiveCreative } from './publish/effective-creative'
 import { resolveTaskCampaignKeywords } from './publish/task-keyword-fallback'
-import { regenerateAdCreative } from '../creatives'
+import { regenerateAdCreative } from '../creatives/server'
 import {
   abandonStalePendingCampaignsForOffers,
   CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE,

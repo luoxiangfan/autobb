@@ -1,8 +1,8 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
-import { recordTokenUsage, estimateTokenCost } from '../../../ai'
-import { generateContent } from '../../../ai'
-import { loadPrompt, interpolateTemplate } from '../../../ai'
-import { CP_AI_FEATURE_FLAG, AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
+import { recordTokenUsage, estimateTokenCost } from '../../../ai/server'
+import { generateContent } from '../../../ai/server'
+import { loadPrompt, interpolateTemplate } from '../../../ai/server'
+import { CP_AI_FEATURE_FLAG, AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG } from '../../server'
 import {
   parseCompetitivePositioningAiScores,
   type CompetitivePositioningAIScores,
@@ -12,7 +12,7 @@ import {
   sanitizePromptBlockValue,
   sanitizePromptInlineValue,
   type InputReview,
-} from '../../../ai'
+} from '../../../ai/server'
 
 function isCompetitivePositioningAiEnabled(): boolean {
   return String(process.env[CP_AI_FEATURE_FLAG] || '').toLowerCase() === 'true'

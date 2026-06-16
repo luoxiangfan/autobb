@@ -13,7 +13,7 @@ import {
   type BucketType,
 } from '@/lib/offer-keyword-pool'
 import { POST as rebuildOfferPost } from '@/app/api/offers/[id]/rebuild/route'
-import { getCreativeTypeForBucketSlot } from '@/lib/creatives'
+import { getCreativeTypeForBucketSlot } from '@/lib/creatives/server'
 import { loadKeywordPoolExpandCredentialsForOffer } from '@/lib/google-ads/accounts/auth/index'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 

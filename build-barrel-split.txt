@@ -1,0 +1,387 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> autoads@2.0.0 build
+> npm run perf:flags:check && npm run openclaw:prebuilt:verify-meta && next build
+
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> autoads@2.0.0 perf:flags:check
+> tsx scripts/performance-release-governance.ts check
+
+[performance-release] flag snapshot
+- navLink: enabled=true source=default env=FF_NAV_LINK owner=frontend removeAfter=2026-06-30 deps=-
+- dashboardDefer: enabled=true source=default env=FF_DASHBOARD_DEFER owner=frontend removeAfter=2026-06-30 deps=-
+- campaignsParallel: enabled=true source=default env=FF_CAMPAIGNS_PARALLEL owner=backend removeAfter=2026-06-30 deps=-
+- offersIncrementalPoll: enabled=true source=default env=FF_OFFERS_INCREMENTAL_POLL owner=frontend removeAfter=2026-06-30 deps=-
+- offersServerPaging: enabled=true source=default env=FF_OFFERS_SERVER_PAGING owner=fullstack removeAfter=2026-06-30 deps=offersIncrementalPoll
+- campaignsReqDedup: enabled=true source=default env=FF_CAMPAIGNS_REQ_DEDUP owner=frontend removeAfter=2026-06-30 deps=-
+- campaignsServerPaging: enabled=true source=default env=FF_CAMPAIGNS_SERVER_PAGING owner=fullstack removeAfter=2026-06-30 deps=campaignsReqDedup
+- kpiShortTtl: enabled=true source=default env=FF_KPI_SHORT_TTL owner=backend removeAfter=2026-06-30 deps=-
+- webVitalsMonitoring: enabled=false source=default env=FF_WEB_VITALS_MONITORING owner=frontend removeAfter=2026-06-30 deps=-
+- frontendErrorMonitoring: enabled=false source=default env=FF_FRONTEND_ERROR_MONITORING owner=frontend removeAfter=2026-06-30 deps=-
+[performance-release] dependency validation passed
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> autoads@2.0.0 openclaw:prebuilt:verify-meta
+> node scripts/verify-openclaw-prebuilt-meta.js
+
+鉁?OpenClaw 棰勭紪璇戝厓鏁版嵁鏍￠獙閫氳繃
+Warning: Custom Cache-Control headers detected for the following routes:
+  - /_next/static/:path*
+
+Setting a custom Cache-Control header can break Next.js development behavior.
+鈻?Next.js 16.2.7 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+鉁?Compiled successfully in 10.1min
+  Running TypeScript ...
+  Finished TypeScript in 75s ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/75) ...
+  Generating static pages using 7 workers (18/75) 
+  Generating static pages using 7 workers (37/75) 
+  Generating static pages using 7 workers (56/75) 
+鉁?Generating static pages using 7 workers (75/75) in 2.9s
+  Finalizing page optimization ...
+
+Route (app)
+鈹?鈼?/
+鈹?鈼?/_not-found
+鈹?茠 /admin/backups
+鈹?茠 /admin/click-farm
+鈹?茠 /admin/mcc-assignment
+鈹?茠 /admin/performance
+鈹?茠 /admin/prompts
+鈹?茠 /admin/proxy-health
+鈹?茠 /admin/queue
+鈹?茠 /admin/url-swap
+鈹?茠 /admin/users
+鈹?茠 /analytics/budget
+鈹?茠 /analytics/roi
+鈹?茠 /api/ad-creatives
+鈹?茠 /api/ad-creatives/[id]
+鈹?茠 /api/ad-creatives/[id]/bonus-score
+鈹?茠 /api/ad-creatives/[id]/conversion-feedback
+鈹?茠 /api/ad-creatives/[id]/select
+鈹?茠 /api/ad-creatives/compare
+鈹?茠 /api/ad-groups
+鈹?茠 /api/ad-groups/[id]
+鈹?茠 /api/ad-strength/analytics
+鈹?茠 /api/ad-strength/batch-evaluate
+鈹?茠 /api/admin/audit-logs
+鈹?茠 /api/admin/backups
+鈹?茠 /api/admin/backups/cleanup-soft-deleted
+鈹?茠 /api/admin/backups/manual
+鈹?茠 /api/admin/cache
+鈹?茠 /api/admin/cleanup
+鈹?茠 /api/admin/cleanup/preview
+鈹?茠 /api/admin/click-farm/health
+鈹?茠 /api/admin/click-farm/hourly-distribution
+鈹?茠 /api/admin/click-farm/stats
+鈹?茠 /api/admin/click-farm/tasks
+鈹?茠 /api/admin/click-farm/top-users
+鈹?茠 /api/admin/feedback-analysis
+鈹?茠 /api/admin/host-metrics
+鈹?茠 /api/admin/performance
+鈹?茠 /api/admin/performance-analysis
+鈹?茠 /api/admin/prompts
+鈹?茠 /api/admin/prompts/[promptId]
+鈹?茠 /api/admin/prompts/validate
+鈹?茠 /api/admin/proxy-health
+鈹?茠 /api/admin/queue/sync
+鈹?茠 /api/admin/scheduled-tasks
+鈹?茠 /api/admin/url-swap/health
+鈹?茠 /api/admin/url-swap/stats
+鈹?茠 /api/admin/url-swap/tasks
+鈹?茠 /api/admin/url-swap/tasks/[id]/retry
+鈹?茠 /api/admin/user-mcc
+鈹?茠 /api/admin/user-mcc/all
+鈹?茠 /api/admin/users
+鈹?茠 /api/admin/users/[id]
+鈹?茠 /api/admin/users/[id]/alerts
+鈹?茠 /api/admin/users/[id]/google-ads-auth
+鈹?茠 /api/admin/users/[id]/login-history
+鈹?茠 /api/admin/users/[id]/reset-password
+鈹?茠 /api/admin/users/[id]/unlock
+鈹?茠 /api/admin/zombie-tasks
+鈹?茠 /api/ads-accounts/idle
+鈹?茠 /api/analytics/budget
+鈹?茠 /api/analytics/roi
+鈹?茠 /api/analytics/spend-realtime
+鈹?茠 /api/auth/change-password
+鈹?茠 /api/auth/devices/trust
+鈹?茠 /api/auth/google
+鈹?茠 /api/auth/google-ads/authorize
+鈹?茠 /api/auth/google-ads/callback
+鈹?茠 /api/auth/google/callback
+鈹?茠 /api/auth/login
+鈹?茠 /api/auth/logout
+鈹?茠 /api/auth/me
+鈹?茠 /api/auth/sessions
+鈹?茠 /api/campaign-backups
+鈹?茠 /api/campaign-backups/batch-create
+鈹?茠 /api/campaign-backups/batch-create/status/[batchId]
+鈹?茠 /api/campaign-backups/batch-create/stream/[batchId]
+鈹?茠 /api/campaigns
+鈹?茠 /api/campaigns/[id]
+鈹?茠 /api/campaigns/[id]/campaign-name
+鈹?茠 /api/campaigns/[id]/cpc
+鈹?茠 /api/campaigns/[id]/custom-name
+鈹?茠 /api/campaigns/[id]/keywords/add
+鈹?茠 /api/campaigns/[id]/keywords/match-type/add
+鈹?茠 /api/campaigns/[id]/keywords/negatives/add
+鈹?茠 /api/campaigns/[id]/offline
+鈹?茠 /api/campaigns/[id]/pause-offer-tasks
+鈹?茠 /api/campaigns/[id]/resume-offer-tasks
+鈹?茠 /api/campaigns/[id]/status-category
+鈹?茠 /api/campaigns/[id]/sync
+鈹?茠 /api/campaigns/[id]/toggle-status
+鈹?茠 /api/campaigns/[id]/update-budget
+鈹?茠 /api/campaigns/[id]/update-cpc
+鈹?茠 /api/campaigns/active-brand-snapshot
+鈹?茠 /api/campaigns/affiliate-platforms
+鈹?茠 /api/campaigns/batch-start-tasks
+鈹?茠 /api/campaigns/circuit-break
+鈹?茠 /api/campaigns/compare
+鈹?茠 /api/campaigns/performance
+鈹?茠 /api/campaigns/publish
+鈹?茠 /api/campaigns/trends
+鈹?茠 /api/click-farm/distribution/generate
+鈹?茠 /api/click-farm/distribution/normalize
+鈹?茠 /api/click-farm/hourly-distribution
+鈹?茠 /api/click-farm/notifications
+鈹?茠 /api/click-farm/stats
+鈹?茠 /api/click-farm/tasks
+鈹?茠 /api/click-farm/tasks/[id]
+鈹?茠 /api/click-farm/tasks/[id]/details
+鈹?茠 /api/click-farm/tasks/[id]/restart
+鈹?茠 /api/click-farm/tasks/[id]/stop
+鈹?茠 /api/click-farm/tasks/[id]/trigger
+鈹?茠 /api/creative-tasks/[taskId]
+鈹?茠 /api/creative-tasks/[taskId]/stream
+鈹?茠 /api/creatives
+鈹?茠 /api/creatives/[id]
+鈹?茠 /api/creatives/[id]/assign-adgroup
+鈹?茠 /api/creatives/[id]/check-compliance
+鈹?茠 /api/creatives/[id]/sync
+鈹?茠 /api/creatives/[id]/versions
+鈹?茠 /api/creatives/[id]/versions/[versionNumber]/rollback
+鈹?茠 /api/creatives/experiments
+鈹?茠 /api/creatives/performance
+鈹?茠 /api/creatives/trends
+鈹?茠 /api/cron/daily-link-check
+鈹?茠 /api/cron/sync-google-ads-campaigns
+鈹?茠 /api/cron/weekly-optimization
+鈹?茠 /api/dashboard/ai-token-cost
+鈹?茠 /api/dashboard/api-quota
+鈹?茠 /api/dashboard/campaigns
+鈹?茠 /api/dashboard/insights
+鈹?茠 /api/dashboard/kpis
+鈹?茠 /api/dashboard/summary
+鈹?茠 /api/dashboard/trends
+鈹?茠 /api/exchange-rates
+鈹?茠 /api/export/campaigns
+鈹?茠 /api/export/google-ads-service-account
+鈹?茠 /api/export/offers
+鈹?茠 /api/export/settings
+鈹?茠 /api/google-ads-accounts
+鈹?茠 /api/google-ads-accounts/[id]
+鈹?茠 /api/google-ads/credentials
+鈹?茠 /api/google-ads/credentials/accounts
+鈹?茠 /api/google-ads/credentials/verify
+鈹?茠 /api/google-ads/idle-accounts
+鈹?茠 /api/google-ads/oauth/callback
+鈹?茠 /api/google-ads/oauth/start
+鈹?茠 /api/google-ads/service-account
+鈹?茠 /api/health
+鈹?茠 /api/import/google-ads-service-account
+鈹?茠 /api/import/settings
+鈹?茠 /api/insights/creative-learning
+鈹?茠 /api/insights/creative-performance
+鈹?茠 /api/keywords
+鈹?茠 /api/keywords/[id]
+鈹?茠 /api/keywords/performance
+鈹?茠 /api/keywords/volume
+鈹?茠 /api/launch-scores/[id]
+鈹?茠 /api/monitoring/frontend-errors
+鈹?茠 /api/monitoring/web-vitals
+鈹?茠 /api/offers
+鈹?茠 /api/offers/[id]
+鈹?茠 /api/offers/[id]/blacklist
+鈹?茠 /api/offers/[id]/campaigns
+鈹?茠 /api/offers/[id]/campaigns/status
+鈹?茠 /api/offers/[id]/click-farm-task
+鈹?茠 /api/offers/[id]/creatives
+鈹?茠 /api/offers/[id]/generate-creatives-queue
+鈹?茠 /api/offers/[id]/google-ads-ids
+鈹?茠 /api/offers/[id]/keyword-ideas
+鈹?茠 /api/offers/[id]/keyword-pool
+鈹?茠 /api/offers/[id]/launch-score
+鈹?茠 /api/offers/[id]/launch-score/compare
+鈹?茠 /api/offers/[id]/launch-score/history
+鈹?茠 /api/offers/[id]/launch-score/performance
+鈹?茠 /api/offers/[id]/pause-campaigns
+鈹?茠 /api/offers/[id]/performance
+鈹?茠 /api/offers/[id]/rebuild
+鈹?茠 /api/offers/[id]/resolve-url
+鈹?茠 /api/offers/[id]/trends
+鈹?茠 /api/offers/[id]/unlink
+鈹?茠 /api/offers/[id]/url-swap-task
+鈹?茠 /api/offers/[id]/validate-url
+鈹?茠 /api/offers/batch-create-campaigns
+鈹?茠 /api/offers/batch-start-tasks
+鈹?茠 /api/offers/batch-template
+鈹?茠 /api/offers/batch/[batchId]/cancel
+鈹?茠 /api/offers/batch/create
+鈹?茠 /api/offers/batch/generate-creatives-queue
+鈹?茠 /api/offers/batch/rebuild
+鈹?茠 /api/offers/batch/status/[batchId]
+鈹?茠 /api/offers/batch/stream/[batchId]
+鈹?茠 /api/offers/batch/upload-records
+鈹?茠 /api/offers/batch/upload-records/[recordId]
+鈹?茠 /api/offers/extract
+鈹?茠 /api/offers/extract/status/[taskId]
+鈹?茠 /api/offers/extract/stream
+鈹?茠 /api/offers/extract/stream/[taskId]
+鈹?茠 /api/openclaw/affiliate-commission-report
+鈹?茠 /api/openclaw/affiliate-products
+鈹?茠 /api/openclaw/affiliate-sync
+鈹?茠 /api/openclaw/asin-import
+鈹?茠 /api/openclaw/asin-items
+鈹?茠 /api/openclaw/bindings
+鈹?茠 /api/openclaw/bindings/diagnose
+鈹?茠 /api/openclaw/commands/confirm
+鈹?茠 /api/openclaw/commands/execute
+鈹?茠 /api/openclaw/commands/parse
+鈹?茠 /api/openclaw/commands/runs
+鈹?茠 /api/openclaw/experiments
+鈹?茠 /api/openclaw/feishu/chat-health
+鈹?茠 /api/openclaw/feishu/chat-health/ingest
+鈹?茠 /api/openclaw/feishu/test
+鈹?茠 /api/openclaw/feishu/verify
+鈹?茠 /api/openclaw/gateway/reload
+鈹?茠 /api/openclaw/gateway/status
+鈹?茠 /api/openclaw/knowledge
+鈹?茠 /api/openclaw/offer-scores
+鈹?茠 /api/openclaw/proxy
+鈹?茠 /api/openclaw/reports/daily
+鈹?茠 /api/openclaw/settings
+鈹?茠 /api/openclaw/strategy/recommendations
+鈹?茠 /api/openclaw/strategy/recommendations/[id]/dismiss
+鈹?茠 /api/openclaw/strategy/recommendations/[id]/execute
+鈹?茠 /api/openclaw/strategy/runs/[id]/explanations
+鈹?茠 /api/openclaw/tokens
+鈹?茠 /api/openclaw/tokens/[id]
+鈹?茠 /api/openclaw/workspace/bootstrap
+鈹?茠 /api/openclaw/workspace/status
+鈹?茠 /api/optimization-tasks
+鈹?茠 /api/optimization-tasks/[id]
+鈹?茠 /api/optimization/metrics
+鈹?茠 /api/optimization/top-creatives
+鈹?茠 /api/playwright-pool/stats
+鈹?茠 /api/products
+鈹?茠 /api/products/[id]/blacklist
+鈹?茠 /api/products/[id]/create-offer
+鈹?茠 /api/products/[id]/link-offer
+鈹?茠 /api/products/[id]/offline
+鈹?茠 /api/products/[id]/sync
+鈹?茠 /api/products/batch-create-offers
+鈹?茠 /api/products/batch-offline
+鈹?茠 /api/products/calculate-scores
+鈹?茠 /api/products/calculate-scores/pause
+鈹?茠 /api/products/clear
+鈹?茠 /api/products/summary
+鈹?茠 /api/products/sync-runs
+鈹?茠 /api/products/sync/[platform]
+鈹?茠 /api/products/yeahpromos/session/capture
+鈹?茠 /api/products/yeahpromos/session/capture-extension
+鈹?茠 /api/products/yeahpromos/session/request-capture
+鈹?茠 /api/products/yeahpromos/session/status
+鈹?茠 /api/queue/config
+鈹?茠 /api/queue/init
+鈹?茠 /api/queue/scheduler
+鈹?茠 /api/queue/stats
+鈹?茠 /api/risk-alerts
+鈹?茠 /api/risk-alerts/[id]
+鈹?茠 /api/settings
+鈹?茠 /api/settings/[category]/[key]
+鈹?茠 /api/settings/proxy
+鈹?茠 /api/settings/proxy/validate
+鈹?茠 /api/settings/validate
+鈹?茠 /api/smart-wait/stats
+鈹?茠 /api/strategy-center/feishu/test
+鈹?茠 /api/strategy-center/recommendations
+鈹?茠 /api/strategy-center/recommendations/[id]/dismiss
+鈹?茠 /api/strategy-center/recommendations/[id]/execute
+鈹?茠 /api/strategy-center/settings
+鈹?茠 /api/sync-performance
+鈹?茠 /api/sync/config
+鈹?茠 /api/sync/google-ads-campaign-sse
+鈹?茠 /api/sync/logs
+鈹?茠 /api/sync/scheduler
+鈹?茠 /api/sync/status
+鈹?茠 /api/sync/status-v2
+鈹?茠 /api/sync/trigger
+鈹?茠 /api/url-swap/stats
+鈹?茠 /api/url-swap/tasks
+鈹?茠 /api/url-swap/tasks/[id]
+鈹?茠 /api/url-swap/tasks/[id]/disable
+鈹?茠 /api/url-swap/tasks/[id]/enable
+鈹?茠 /api/url-swap/tasks/[id]/history
+鈹?茠 /api/url-swap/tasks/[id]/swap-now
+鈹?茠 /api/url-swap/tasks/[id]/targets/refresh
+鈹?茠 /api/url-swap/urgent-alerts
+鈹?茠 /api/user/password
+鈹?茠 /campaign-backups
+鈹?茠 /campaigns
+鈹?茠 /change-password
+鈹?茠 /click-farm
+鈹?茠 /click-farm/tasks/[id]
+鈹?茠 /creatives
+鈹?茠 /creatives-dashboard
+鈹?茠 /dashboard
+鈹?茠 /data-management
+鈹?茠 /google-ads
+鈹?茠 /google-ads-accounts
+鈹?茠 /help/google-ads-setup
+鈹?茠 /help/openclaw-config
+鈹?茠 /launch-score
+鈹?茠 /login
+鈹?茠 /offers
+鈹?茠 /offers/[id]
+鈹?茠 /offers/[id]/edit
+鈹?茠 /offers/[id]/launch
+鈹?茠 /offers/batch
+鈹?茠 /offers/new
+鈹?茠 /openclaw
+鈹?茠 /openclaw/affiliate-commission
+鈹?茠 /optimization
+鈹?茠 /optimization/competitors
+鈹?茠 /optimization/creative-learning
+鈹?茠 /optimization/overview
+鈹?茠 /optimization/tasks
+鈹?茠 /optimization/trends
+鈹?茠 /products
+鈹?茠 /recent-14-days-campaigns
+鈹?茠 /risk-alerts
+鈹?鈼?/robots.txt
+鈹?茠 /settings
+鈹?鈼?/sitemap.xml
+鈹?茠 /strategy-center
+鈹?茠 /sync
+鈹?茠 /sync/settings
+鈹?茠 /url-swap
+鈹?茠 /url-swap/[id]
+
+
+茠 Proxy (Middleware)
+
+鈼? (Static)   prerendered as static content
+茠  (Dynamic)  server-rendered on demand
+
+npm notice
+npm notice New minor version of npm available! 11.13.0 -> 11.17.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.17.0
+npm notice To update run: npm install -g npm@11.17.0
+npm notice

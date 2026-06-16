@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { GeneratedAdCreativeData } from '../creatives'
+import type { GeneratedAdCreativeData } from '../creatives/server'
 import {
   CREATIVE_RELEVANCE_NOISE_TERMS,
   createCreativeRuleContext,
   evaluateCreativeRuleGate,
   filterPromptExtrasByRelevance,
-} from '../creatives'
+} from '../creatives/server'
 
 function buildCreative(partial?: Partial<GeneratedAdCreativeData>): GeneratedAdCreativeData {
   return {

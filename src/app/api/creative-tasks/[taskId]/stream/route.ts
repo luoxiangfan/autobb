@@ -12,8 +12,11 @@ import {
   isCreativeTaskStreamTerminal,
   shouldPushCreativeTaskUpdate,
   type CreativeTaskStreamRow,
-} from '@/lib/creatives'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '@/lib/creatives'
+} from '@/lib/creatives/server'
+import {
+  normalizeCreativeTaskError,
+  toCreativeTaskErrorResponseFields,
+} from '@/lib/creatives/server'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 1200 // 20分钟

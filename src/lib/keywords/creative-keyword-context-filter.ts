@@ -2,7 +2,7 @@ import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { getMinContextTokenMatchesForKeywordQualityFilter } from './keyword-context-filter'
 import { filterKeywordQuality } from './keyword-quality-filter'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
-import type { CanonicalCreativeType } from '../creatives'
+import type { CanonicalCreativeType } from '../creatives/server'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import type { PoolKeywordData } from '../offer-keyword-pool/index'
 import {
@@ -13,7 +13,7 @@ import {
   MODEL_INTENT_MIN_KEYWORD_FLOOR,
   type ProductModelFamilyContext,
   supplementModelIntentKeywordsWithFallback,
-} from '../creatives'
+} from '../creatives/server'
 
 interface OfferKeywordContext {
   brand?: string | null

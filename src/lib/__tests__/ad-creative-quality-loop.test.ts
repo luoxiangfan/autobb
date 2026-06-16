@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { GeneratedAdCreativeData } from '../creatives'
-import { runCreativeGenerationQualityLoop, type CreativeAttemptEvaluation } from '../creatives'
+import type { GeneratedAdCreativeData } from '../creatives/server'
+import {
+  runCreativeGenerationQualityLoop,
+  type CreativeAttemptEvaluation,
+} from '../creatives/server'
 
 function buildCreative(attempt: number): GeneratedAdCreativeData {
   return {

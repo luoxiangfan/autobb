@@ -11,7 +11,7 @@ import {
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
-import { recommendMatchTypeForKeyword } from '@/lib/keywords'
+import { recommendMatchTypeForKeyword } from '@/lib/keywords/server'
 import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign/server'
 import { promoteKeywordsToOfferKeywordPool } from '@/lib/offer-keyword-pool'
 

@@ -12,8 +12,8 @@ import {
   getAdCreativeGenerationModeProfile,
   normalizeAdCreativeGenerationMode,
   type AdCreativeGenerationMode,
-} from '@/lib/creatives'
-import { createAdCreative } from '@/lib/creatives'
+} from '@/lib/creatives/server'
+import { createAdCreative } from '@/lib/creatives/server'
 import {
   createCreativeAdStrengthPayload,
   createCreativeOptimizationPayload,
@@ -22,17 +22,20 @@ import {
   createCreativeScoreBreakdown,
   createCreativeTaskRetryHistory,
   resolveCreativeKeywordAudit,
-} from '@/lib/keywords'
+} from '@/lib/keywords/server'
 import {
   assertPostGenerationPersistenceGate,
   prepareBucketKeywordContext,
   runBucketCreativeGeneration,
-} from '@/lib/creatives'
-import type { CreativeBucketSlot } from '@/lib/creatives'
+} from '@/lib/creatives/server'
+import type { CreativeBucketSlot } from '@/lib/creatives/server'
 import { findOfferById } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/db'
-import { AD_CREATIVE_MAX_AUTO_RETRIES, AD_CREATIVE_REQUIRED_MIN_SCORE } from '@/lib/creatives'
+import {
+  AD_CREATIVE_MAX_AUTO_RETRIES,
+  AD_CREATIVE_REQUIRED_MIN_SCORE,
+} from '@/lib/creatives/server'
 // 🆕 v4.10: 关键词池集成
 import {
   getAvailableBuckets,
@@ -43,9 +46,9 @@ import {
   type PoolKeywordData,
 } from '@/lib/offer-keyword-pool'
 import { deriveSkipKeywordPoolExpandLoad } from '@/lib/offers/server'
-import { getCreativeTypeForBucketSlot } from '@/lib/creatives'
-import { normalizeCreativeTaskError } from '@/lib/creatives'
-import { getSearchTermFeedbackHints } from '@/lib/keywords'
+import { getCreativeTypeForBucketSlot } from '@/lib/creatives/server'
+import { normalizeCreativeTaskError } from '@/lib/creatives/server'
+import { getSearchTermFeedbackHints } from '@/lib/keywords/server'
 import type { KeywordPlannerPreparedSession } from '@/lib/google-ads/accounts/auth/index'
 
 /**

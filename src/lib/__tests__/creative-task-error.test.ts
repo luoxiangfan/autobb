@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '../creatives'
+import { normalizeCreativeTaskError, toCreativeTaskErrorResponseFields } from '../creatives/server'
 
 describe('creative-task-error', () => {
   it('classifies keyword clustering upstream 400 correctly', () => {

@@ -19,7 +19,7 @@ import {
   mergeUsedKeywordsExcludingBrand,
   resolveCreativeKeywordAudit,
   resolveCreativeKeywordsForRetryExclusion,
-} from '../keywords'
+} from '../keywords/server'
 
 describe('creative-keyword-runtime', () => {
   it('applies keyword set fields back to generated creative payload', () => {

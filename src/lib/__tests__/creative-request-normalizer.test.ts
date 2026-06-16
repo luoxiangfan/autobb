@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeSingleCreativeSelection } from '@/lib/creatives'
+import { normalizeSingleCreativeSelection } from '@/lib/creatives/server'
 
 describe('normalizeSingleCreativeSelection', () => {
   it('rejects invalid explicit creativeType', () => {

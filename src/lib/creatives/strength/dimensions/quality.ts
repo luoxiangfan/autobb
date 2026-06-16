@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
 import { MULTILINGUAL_CTA_WORDS, MULTILINGUAL_URGENCY_WORDS } from '../lexicons'
 import { resolveLanguageKey, containsLocalizedPhrase } from '../keyword-matching'
 import { calculateDifferentiation } from './differentiation'

@@ -1,4 +1,4 @@
-import type { CanonicalCreativeType } from '../creatives'
+import type { CanonicalCreativeType } from '../creatives/server'
 
 /**
  * 关键词池生成进度回调

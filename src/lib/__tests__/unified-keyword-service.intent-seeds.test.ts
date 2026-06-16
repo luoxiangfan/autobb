@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildIntentAwareSeedPool, extractVerifiedKeywordSourcePool } from '../keywords'
+import { buildIntentAwareSeedPool, extractVerifiedKeywordSourcePool } from '../keywords/server'
 
 describe('buildIntentAwareSeedPool', () => {
   it('aggregates recurring product-line seeds from store products', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { stripTrailingCountryCodeSuffix } from '@/lib/keywords'
+import { stripTrailingCountryCodeSuffix } from '@/lib/keywords/server'
 
 describe('stripTrailingCountryCodeSuffix', () => {
   it('removes common trailing country code suffixes', () => {

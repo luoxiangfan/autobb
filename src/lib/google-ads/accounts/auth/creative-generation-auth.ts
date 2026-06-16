@@ -1,4 +1,4 @@
-import { getGoogleAdsConfig } from '../../../keywords'
+import { getGoogleAdsConfig } from '../../../keywords/server'
 import {
   clearGoogleAdsLinkedAccountPrepareCache,
   createGoogleAdsLinkedAccountPrepareCache,

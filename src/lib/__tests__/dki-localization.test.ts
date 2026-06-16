@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getLocalizedDkiOfficialSuffix, resolveDkiLanguageCode } from '../creatives'
+import { getLocalizedDkiOfficialSuffix, resolveDkiLanguageCode } from '../creatives/server'
 
 describe('dki-localization', () => {
   it('resolves language code from targetLanguage first', () => {

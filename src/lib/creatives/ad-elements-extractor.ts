@@ -10,8 +10,8 @@
  * 5. 通过Keyword Planner查询搜索量并过滤
  */
 
-import { generateContent } from '../ai'
-import { recordTokenUsage, estimateTokenCost } from '../ai'
+import { generateContent } from '../ai/server'
+import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
@@ -19,9 +19,9 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import { getHighIntentKeywords } from '../keywords/google-suggestions'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords'
-import { loadPrompt, interpolateTemplate } from '../ai'
-import { classifyKeywordIntent } from '../keywords'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords/server'
+import { loadPrompt, interpolateTemplate } from '../ai/server'
+import { classifyKeywordIntent } from '../keywords/server'
 import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
 import type { AmazonProductData } from '../stealth-scraper/index'
 import type {

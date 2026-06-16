@@ -27,9 +27,9 @@ import { toDbJsonObjectField } from '@/lib/db'
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
   resolveCreativeGenerationRuntime,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 import { getAvailableBuckets } from '@/lib/offer-keyword-pool'
-import { normalizeSingleCreativeSelection } from '@/lib/creatives'
+import { normalizeSingleCreativeSelection } from '@/lib/creatives/server'
 
 export const maxDuration = 60
 

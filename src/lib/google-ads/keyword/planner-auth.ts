@@ -1,6 +1,6 @@
 import { getDatabase } from '../../db'
 import type { KeywordIdeasPreparedOAuth } from './planner'
-import { getKeywordSearchVolumes } from '../../keywords'
+import { getKeywordSearchVolumes } from '../../keywords/server'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
   preparedAuthContextField,

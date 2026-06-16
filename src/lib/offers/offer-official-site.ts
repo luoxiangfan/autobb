@@ -1,4 +1,4 @@
-import { fetchBrandSearchSupplement } from '../keywords'
+import { fetchBrandSearchSupplement } from '../keywords/server'
 import { getProxyUrlForCountry } from '../common/server'
 import { updateOfferExtractionMetadata } from './offers'
 

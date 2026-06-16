@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filterKeywords } from '../keywords'
+import { filterKeywords } from '../keywords/server'
 import type { PoolKeywordData } from '../offer-keyword-pool'
 
 describe('keyword-pool-helpers.filterKeywords', () => {

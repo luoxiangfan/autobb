@@ -14,7 +14,7 @@ import { resolveKeywordPlannerLinkedServiceAccountId } from '@/lib/google-ads/ac
 import {
   keywordPlannerIdeasAuthFromSession,
   type KeywordPlannerSessionAuthResult,
-} from '@/lib/keywords'
+} from '@/lib/keywords/server'
 
 describe('resolveKeywordPlannerLinkedServiceAccountId', () => {
   beforeEach(() => {

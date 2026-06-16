@@ -1,19 +1,19 @@
 // 🔥 AI语义分类
-import { generateContent, type ResponseSchema } from '../../ai'
+import { generateContent, type ResponseSchema } from '../../ai/server'
 // 🎯 新增：导入否定关键词生成函数
-import { recordTokenUsage, estimateTokenCost } from '../../ai' // 🎯 新增：导入token追踪函数
-import { loadPrompt, interpolateTemplate } from '../../ai' // 🎯 v3.0: 导入数据库prompt加载函数
+import { recordTokenUsage, estimateTokenCost } from '../../ai/server' // 🎯 新增：导入token追踪函数
+import { loadPrompt, interpolateTemplate } from '../../ai/server' // 🎯 v3.0: 导入数据库prompt加载函数
 // 🎯 购买意图评分
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
-import { hasModelAnchorEvidence } from '..'
+import { hasModelAnchorEvidence } from '../server'
 
-import { isCreativeKeywordSupplementThresholdGateEnabled } from '../../keywords'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../../keywords'
-import { shouldUseExactMatch, isBrandVariant, isSemanticQuery } from '../../keywords'
+import { isCreativeKeywordSupplementThresholdGateEnabled } from '../../keywords/server'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../../keywords/server'
+import { shouldUseExactMatch, isBrandVariant, isSemanticQuery } from '../../keywords/server'
 import { normalizeLanguageCode } from '../../common/server'
-import { repairJsonText } from '../../ai'
+import { repairJsonText } from '../../ai/server'
 
-import { classifyKeywordIntent } from '../../keywords'
+import { classifyKeywordIntent } from '../../keywords/server'
 
 import { resolveCreativeBucketPoolKeywords } from './bucket'
 import { extractTitleAndAboutSignals } from './prompt-keywords'

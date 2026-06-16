@@ -1,7 +1,11 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers/server'
-import { findAdCreativeById, findAdCreativesByOfferId, type AdCreative } from '@/lib/creatives'
+import {
+  findAdCreativeById,
+  findAdCreativesByOfferId,
+  type AdCreative,
+} from '@/lib/creatives/server'
 import { buildLaunchScorePerformanceApiPayload } from '@/lib/launch-score/server'
 import { parseLaunchScoreAnalysis } from '@/lib/launch-score/server'
 import {

@@ -1,12 +1,12 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findAdCreativesByOfferId, findAdCreativesByUserId } from '@/lib/creatives'
-import { hasRequiredRsaAssetCounts } from '@/lib/creatives'
+import { findAdCreativesByOfferId, findAdCreativesByUserId } from '@/lib/creatives/server'
+import { hasRequiredRsaAssetCounts } from '@/lib/creatives/server'
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
   normalizeCreativeBucketSlot,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 
 function resolveCreativeIdentity(creative: any): {
   creativeType: 'brand_intent' | 'model_intent' | 'product_intent' | null

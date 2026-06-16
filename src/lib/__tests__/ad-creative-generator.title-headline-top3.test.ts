@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GeneratedAdCreativeData, HeadlineAsset } from '../creatives'
+import type { GeneratedAdCreativeData, HeadlineAsset } from '../creatives/server'
 import { enforceTitlePriorityTopHeadlines } from '../creatives/generator/test-exports'
 
 function buildCreativeDraft(): GeneratedAdCreativeData {

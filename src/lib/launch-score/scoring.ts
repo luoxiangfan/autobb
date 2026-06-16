@@ -1,13 +1,13 @@
-import { generateContent } from '../ai'
-import { recordTokenUsage, estimateTokenCost } from '../ai'
-import { loadPrompt, interpolateTemplate } from '../ai'
+import { generateContent } from '../ai/server'
+import { recordTokenUsage, estimateTokenCost } from '../ai/server'
+import { loadPrompt, interpolateTemplate } from '../ai/server'
 import type { ScoreAnalysis } from './launch-scores'
 import type { Offer } from '../offers/server'
-import type { AdCreative, HeadlineAsset, DescriptionAsset } from '../creatives'
+import type { AdCreative, HeadlineAsset, DescriptionAsset } from '../creatives/server'
 import { evaluateAdStrength } from '../creatives/strength/evaluate'
 import type { AdStrengthEvaluation, AdStrengthRating } from '../creatives/strength/types'
 import type { ComprehensiveAdStrengthResult } from './comprehensive-ad-strength-result'
-import type { CanonicalCreativeType } from '../creatives'
+import type { CanonicalCreativeType } from '../creatives/server'
 import { validateExcellentStandard } from '@/lib/google-ads/api/strength-api'
 import { detectAmazonPageTypeFromUrl } from '../scraping'
 import {
@@ -15,7 +15,7 @@ import {
   sanitizePromptBlockValue,
   sanitizePromptInlineValue,
   type InputReview,
-} from '../ai'
+} from '../ai/server'
 import { USD_BASE_CURRENCY, normalizeCurrencyCode } from '../common/server'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
@@ -958,8 +958,8 @@ export async function analyzeKeywordGapsPreGeneration(params: {
     console.log(`[Gap Analysis] 现有关键词数量: ${params.existingKeywords.length}`)
 
     // 🆕 优化：使用专门的 AI prompt 直接提取关键词，而不是依赖评分系统
-    const { generateContent } = await import('../ai')
-    const { repairJsonText } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
+    const { repairJsonText } = await import('../ai/server')
 
     // 构建关键词缺口分析 prompt
     const existingKeywordsList = params.existingKeywords

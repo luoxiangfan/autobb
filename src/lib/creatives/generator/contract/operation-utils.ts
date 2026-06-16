@@ -1,5 +1,5 @@
-import { generateContent } from '../../../ai'
-import { recordTokenUsage, estimateTokenCost } from '../../../ai'
+import { generateContent } from '../../../ai/server'
+import { recordTokenUsage, estimateTokenCost } from '../../../ai/server'
 import { headlineContainsKeyword } from './keyword-usage'
 
 export async function recordAdCreativeOperationTokenUsage(input: {

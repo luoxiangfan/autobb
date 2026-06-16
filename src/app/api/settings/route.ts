@@ -8,8 +8,12 @@ import {
   updateSettings,
 } from '@/lib/common/server'
 import { invalidateProxyPoolCache } from '@/lib/offers/server'
-import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/ai'
-import { GEMINI_ACTIVE_MODEL, isDeprecatedGeminiModel, normalizeModelForProvider } from '@/lib/ai'
+import { getGeminiEndpoint, getGeminiApiKeyUrl, type GeminiProvider } from '@/lib/ai/server'
+import {
+  GEMINI_ACTIVE_MODEL,
+  isDeprecatedGeminiModel,
+  normalizeModelForProvider,
+} from '@/lib/ai/server'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'

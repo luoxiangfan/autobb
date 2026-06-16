@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../creatives'
+import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../creatives/server'
 import {
   buildCreativeKeywordUsagePlan,
   enforceRetainedKeywordSlotCoverage,

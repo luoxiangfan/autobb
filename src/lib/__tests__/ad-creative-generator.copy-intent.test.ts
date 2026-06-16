@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { GeneratedAdCreativeData } from '../creatives'
+import type { GeneratedAdCreativeData } from '../creatives/server'
 import {
   enforceHeadlineComplementarity,
   softlyReinforceTypeCopy,

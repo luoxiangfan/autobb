@@ -19,8 +19,8 @@ import {
   getBrandSearchSuggestions,
   filterMismatchedGeoKeywords,
 } from '@/lib/keywords/google-suggestions'
-import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords'
-import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keywords'
+import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords/server'
+import { getKeywordPlannerSiteFilterUrlForOffer } from '@/lib/keywords/server'
 import { ensureOfferBrandOfficialSite } from '@/lib/offers/server'
 import { normalizeLanguageCode } from '@/lib/common/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     )
 
     // 🔧 修复(2025-12-25): 支持OAuth和服务账号两种认证方式
-    const { getGoogleAdsConfig } = await import('@/lib/keywords')
+    const { getGoogleAdsConfig } = await import('@/lib/keywords/server')
     const config = await getGoogleAdsConfig(
       numericUserId,
       apiAuth.authType,

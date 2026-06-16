@@ -3,7 +3,7 @@ import {
   buildCreativeTaskStreamEvents,
   resolveCreativeTaskStreamGenerationMode,
   shouldPushCreativeTaskUpdate,
-} from '../creatives'
+} from '../creatives/server'
 
 const baseTask = {
   id: 'task-1',

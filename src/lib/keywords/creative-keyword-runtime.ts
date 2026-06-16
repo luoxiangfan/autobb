@@ -1,16 +1,16 @@
-import type { GeneratedAdCreativeData } from '../creatives'
+import type { GeneratedAdCreativeData } from '../creatives/server'
 import type {
   CreativeAttemptEvaluation,
   CreativeGenerationHistoryItem,
   CreativeQualityEvaluationInput,
-} from '../creatives'
+} from '../creatives/server'
 import {
   buildCreativeKeywordSet,
   type BuildCreativeKeywordSetInput,
   type BuildCreativeKeywordSetOutput,
   type CreativeKeywordSourceAudit,
 } from './creative-keyword-set-builder'
-import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from '../creatives'
+import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from '../creatives/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import type { ComprehensiveAdStrengthResult } from '../launch-score/server'

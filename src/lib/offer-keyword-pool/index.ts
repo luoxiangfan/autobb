@@ -15,11 +15,11 @@
  */
 
 import { getDatabase } from '../db'
-import { generateContent } from '../ai'
-import { repairJsonText } from '../ai'
-import { loadPrompt, interpolateTemplate } from '../ai'
+import { generateContent } from '../ai/server'
+import { repairJsonText } from '../ai/server'
+import { loadPrompt, interpolateTemplate } from '../ai/server'
 import { findOfferById, type Offer } from '../offers/server'
-import { recordTokenUsage, estimateTokenCost } from '../ai'
+import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
@@ -27,27 +27,27 @@ import {
   type KeywordPoolPreparedExpand,
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
-import { extractVerifiedKeywordSourcePool } from '../keywords'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords'
+import { extractVerifiedKeywordSourcePool } from '../keywords/server'
+import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords/server'
 import {
   filterKeywordQuality,
   generateFilterReport,
   calculateSearchVolumeThreshold,
   detectPlatformsInKeyword,
   extractPlatformFromUrl,
-} from '../keywords'
-import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keywords'
+} from '../keywords/server'
+import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keywords/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
 import {
   getBrandCoreKeywords,
   refreshBrandCoreKeywordCache,
   updateBrandCoreKeywordSearchVolumes,
-} from '../keywords'
+} from '../keywords/server'
 import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../common/server'
-import { DEFAULTS } from '../keywords'
+import { DEFAULTS } from '../keywords/server'
 import { parseJsonField, toDbJsonArrayField } from '../db'
-import { analyzeKeywordLanguageCompatibility } from '../keywords'
+import { analyzeKeywordLanguageCompatibility } from '../keywords/server'
 import {
   deriveCanonicalCreativeType,
   getCreativeTypeForBucketSlot,
@@ -57,7 +57,7 @@ import {
   normalizeKeywordPoolBucketQuery,
   type CanonicalCreativeType,
   type CreativeBucketSlot,
-} from '../creatives'
+} from '../creatives/server'
 import {
   DEFAULT_COVERAGE_KEYWORD_CONFIG,
   DEFAULT_PRODUCT_CLUSTER_BUCKETS,
@@ -92,18 +92,18 @@ export {
 } from './types'
 export { clusterKeywordsByIntent } from './keyword-clustering'
 export { determineClusteringStrategy } from './clustering-strategy'
-import { filterCreativeKeywordsByOfferContextDetailed } from '../keywords'
+import { filterCreativeKeywordsByOfferContextDetailed } from '../keywords/server'
 import {
   createPlannerNonBrandPolicy,
   type PlannerDecision,
   type PlannerNonBrandPolicy,
-} from '../keywords'
+} from '../keywords/server'
 import {
   buildUntrustedInputGuardrail,
   sanitizePromptBlockValue,
   sanitizePromptInlineValue,
   type InputReview,
-} from '../ai'
+} from '../ai/server'
 
 import {
   calculateBalanceScore,
@@ -2826,7 +2826,7 @@ export async function generateOfferKeywordPool(
   }
 
   // 3. 🆕 全量扩展（v2.0：根据认证类型分发）
-  const { expandAllKeywords, filterKeywords } = await import('../keywords')
+  const { expandAllKeywords, filterKeywords } = await import('../keywords/server')
 
   const plannerDecision: PlannerDecision = {
     allowNonBrandFromPlanner: allowPlannerNonBrand,
@@ -4139,7 +4139,7 @@ async function extractKeywordsFromOffer(
 
       // 3) 尝试复用统一关键词服务的“意图感知种子词”构建逻辑（仅在兜底路径加载）
       try {
-        const { buildIntentAwareSeedPool } = await import('../keywords')
+        const { buildIntentAwareSeedPool } = await import('../keywords/server')
         const seedPool = buildIntentAwareSeedPool({
           brand: offer.brand,
           category: offer.category,
@@ -4328,7 +4328,7 @@ export async function getCoverageBucketKeywords(
 
   if (config.sortByVolume && allNonBrandKeywords.size > 0) {
     try {
-      const { getKeywordVolumesForExisting } = await import('../keywords')
+      const { getKeywordVolumesForExisting } = await import('../keywords/server')
       const volumeData = await getKeywordVolumesForExisting({
         baseKeywords: Array.from(allNonBrandKeywords),
         country,

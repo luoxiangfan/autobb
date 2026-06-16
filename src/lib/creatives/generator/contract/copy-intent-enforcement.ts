@@ -1,5 +1,5 @@
-import type { GeneratedAdCreativeData } from '../..'
-import { classifyKeywordIntent } from '../../../keywords'
+import type { GeneratedAdCreativeData } from '../../server'
+import { classifyKeywordIntent } from '../../../keywords/server'
 import { getCopyPatterns, resolveSoftCopyLanguage } from '../language'
 import type {
   ComplementarityTag,

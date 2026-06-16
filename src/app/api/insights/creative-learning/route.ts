@@ -9,7 +9,7 @@ import {
   queryHighPerformingCreatives,
   analyzeSuccessFeatures,
   type SuccessFeatures,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 import { toNumber } from '@/lib/common/server'
 
 export const dynamic = 'force-dynamic'

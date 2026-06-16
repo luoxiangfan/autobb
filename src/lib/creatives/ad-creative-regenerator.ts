@@ -26,7 +26,7 @@ import {
   createCreativeAdStrengthPayload,
   createCreativeScoreBreakdown,
   resolveCreativeKeywordAudit,
-} from '../keywords'
+} from '../keywords/server'
 import {
   getCreativeTypeForBucketSlot,
   normalizeCreativeBucketSlot,

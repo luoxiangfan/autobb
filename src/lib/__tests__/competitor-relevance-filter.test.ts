@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { CompetitorProduct } from '../creatives'
+import type { CompetitorProduct } from '../creatives/server'
 import {
   createCompetitorRelevanceContext,
   filterRelevantCompetitors,
   isCompetitorRelevant,
-} from '../creatives'
+} from '../creatives/server'
 
 function makeCompetitor(
   name: string,

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateGoogleAdsConfig, validateGeminiConfig } from '@/lib/common/server'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/proxy/providers/provider-registry'
-import { normalizeGeminiModel } from '@/lib/ai'
+import { normalizeGeminiModel } from '@/lib/ai/server'
 import { getAffiliateSyncSettingsMap } from '@/lib/openclaw/settings'
 import { validateAffiliateSyncConfig } from '@/lib/affiliate'
 

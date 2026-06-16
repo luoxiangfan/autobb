@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GEMINI_ACTIVE_MODEL } from '../ai'
+import { GEMINI_ACTIVE_MODEL } from '../ai/server'
 
 type SettingValue = { value: any } | null
 

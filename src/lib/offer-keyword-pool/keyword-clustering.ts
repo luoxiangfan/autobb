@@ -1,17 +1,17 @@
 /**
  * AI keyword intent clustering + deterministic fallback.
  */
-import { generateContent } from '../ai'
-import { repairJsonText } from '../ai'
-import { loadPrompt } from '../ai'
-import { recordTokenUsage, estimateTokenCost } from '../ai'
+import { generateContent } from '../ai/server'
+import { repairJsonText } from '../ai/server'
+import { loadPrompt } from '../ai/server'
+import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { classifyKeywordIntent } from '../keywords'
+import { classifyKeywordIntent } from '../keywords/server'
 import {
   getKeywordSourcePriorityScore as getUnifiedKeywordSourcePriorityScore,
   getKeywordSourcePriorityScoreFromInput,
-} from '../keywords'
-import { isPureBrandKeyword } from '../keywords'
+} from '../keywords/server'
+import { isPureBrandKeyword } from '../keywords/server'
 import { resolveOfferLinkType } from '../offers/server'
 import type { Offer } from '../offers/server'
 import {

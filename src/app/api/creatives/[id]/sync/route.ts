@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findAdCreativeById, updateAdCreative } from '@/lib/creatives'
+import { findAdCreativeById, updateAdCreative } from '@/lib/creatives/server'
 import { findAdGroupById } from '@/lib/campaign/server'
 import { findCampaignById } from '@/lib/campaign/server'
 import { findGoogleAdsAccountById } from '@/lib/google-ads/accounts/accounts'

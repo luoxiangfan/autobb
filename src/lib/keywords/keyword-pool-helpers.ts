@@ -37,12 +37,12 @@ import {
   detectPlatformsInKeyword,
   extractPlatformFromUrl,
 } from './keyword-quality-filter'
-import { containsAsinLikeToken } from '../creatives'
+import { containsAsinLikeToken } from '../creatives/server'
 import {
   buildProductModelFamilyContext,
   type ProductModelFamilyContext,
   isKeywordInProductModelFamily,
-} from '../creatives'
+} from '../creatives/server'
 import {
   createPlannerNonBrandPolicy,
   normalizePlannerNonBrandPolicy,

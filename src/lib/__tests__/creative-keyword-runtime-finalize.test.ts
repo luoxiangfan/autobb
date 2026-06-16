@@ -8,7 +8,7 @@ vi.mock('@/lib/keywords', () => ({
   buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
 }))
 
-import { finalizeCreativeKeywordSet } from '../keywords'
+import { finalizeCreativeKeywordSet } from '../keywords/server'
 
 describe('finalizeCreativeKeywordSet', () => {
   beforeEach(() => {

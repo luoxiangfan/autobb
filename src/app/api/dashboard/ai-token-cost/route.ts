@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
-import { estimateTokenCost } from '@/lib/ai'
+import { estimateTokenCost } from '@/lib/ai/server'
 
 function formatUtcYmd(date: Date): string {
   // Keep the read path aligned with recordTokenUsage(), which persists UTC YYYY-MM-DD.

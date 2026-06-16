@@ -1,7 +1,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { evaluateAdStrength } from '@/lib/creatives/strength/evaluate'
-import type { HeadlineAsset, DescriptionAsset } from '@/lib/creatives'
+import type { HeadlineAsset, DescriptionAsset } from '@/lib/creatives/server'
 import { findOfferById } from '@/lib/offers/server'
 import {
   loadKeywordPoolExpandCredentialsForOffer,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateRsaQualityGate } from '../creatives'
+import { evaluateRsaQualityGate } from '../creatives/server'
 
 function buildEvaluation(params: {
   expectedBucket: 'A' | 'B' | 'D' | 'UNSPECIFIED'

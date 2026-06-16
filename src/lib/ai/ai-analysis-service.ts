@@ -4,14 +4,14 @@
  */
 
 import { analyzeProductPage } from './ai'
-import { analyzeReviewsWithAI, type RawReview } from '../creatives'
+import { analyzeReviewsWithAI, type RawReview } from '../creatives/server'
 import {
   analyzeCompetitorsWithAI,
   inferCompetitorKeywords,
   searchCompetitorsOnAmazon,
   type CompetitorProduct,
-} from '../creatives'
-import { extractAdElements } from '../creatives'
+} from '../creatives/server'
+import { extractAdElements } from '../creatives/server'
 import { scrapeAmazonProduct } from '../stealth-scraper/amazon-product'
 import { parsePrice } from '../common/server'
 import {
@@ -29,7 +29,7 @@ import {
   createCompetitorRelevanceContext,
   filterRelevantCompetitors,
   type CompetitorRelevanceContext,
-} from '../creatives'
+} from '../creatives/server'
 
 export interface AIAnalysisInput {
   extractResult: {
@@ -928,7 +928,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
           try {
             const { getPlaywrightPool } = await import('@/lib/scraping')
-            const { scrapeAmazonReviews } = await import('@/lib/creatives')
+            const { scrapeAmazonReviews } = await import('@/lib/creatives/server')
             const pool = getPlaywrightPool()
 
             let deepScrapeProxyUrl: string | undefined
@@ -1364,7 +1364,7 @@ export async function executeAIAnalysis(input: AIAnalysisInput): Promise<AIAnaly
 
           try {
             const { getPlaywrightPool } = await import('@/lib/scraping')
-            const { scrapeAmazonCompetitors } = await import('@/lib/creatives')
+            const { scrapeAmazonCompetitors } = await import('@/lib/creatives/server')
             const pool = getPlaywrightPool()
 
             let deepScrapeProxyUrl: string | undefined

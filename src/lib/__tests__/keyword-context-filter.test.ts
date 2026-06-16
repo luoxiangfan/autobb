@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keywords'
+import { getMinContextTokenMatchesForKeywordQualityFilter } from '../keywords/server'
 
 describe('getMinContextTokenMatchesForKeywordQualityFilter', () => {
   it('returns 0 for store pages', () => {

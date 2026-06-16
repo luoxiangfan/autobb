@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
 import { FORBIDDEN_WORDS } from '../lexicons'
 import { calculateSimilarity } from '../text-similarity'
 

@@ -9,7 +9,7 @@ import {
   AD_STRENGTH_SUGGESTION_THRESHOLDS,
   mapRawScoreToTarget,
   validateAdStrengthConfig,
-} from '../creatives'
+} from '../creatives/server'
 
 describe('ad-strength-config consistency', () => {
   it('keeps dimension weights and target scores internally consistent', () => {

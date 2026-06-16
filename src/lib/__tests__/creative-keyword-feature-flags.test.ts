@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   isCreativeKeywordAiSourceSubtypeEnabled,
   isCreativeKeywordSupplementThresholdGateEnabled,
-} from '../keywords'
+} from '../keywords/server'
 
 describe('creative-keyword-feature-flags', () => {
   afterEach(() => {

@@ -20,7 +20,7 @@ vi.mock('@/lib/optimization', () => ({
   createRiskAlert: createRiskAlertMock,
 }))
 
-import { checkCreativePublishTimeouts } from '@/lib/creatives'
+import { checkCreativePublishTimeouts } from '@/lib/creatives/server'
 
 describe('checkCreativePublishTimeouts', () => {
   beforeEach(() => {

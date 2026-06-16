@@ -1,5 +1,5 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
-import { AD_STRENGTH_RELEVANCE_THRESHOLDS } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
+import { AD_STRENGTH_RELEVANCE_THRESHOLDS } from '../../server'
 
 import {
   calculateKeywordDensityByToken,

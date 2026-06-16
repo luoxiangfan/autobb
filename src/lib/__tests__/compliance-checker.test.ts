@@ -2,7 +2,7 @@
  * 合规性检查规则引擎单元测试
  */
 
-import { checkCompliance, getAutoFixSuggestions, type CreativeContent } from '../creatives'
+import { checkCompliance, getAutoFixSuggestions, type CreativeContent } from '../creatives/server'
 
 describe('Compliance Checker', () => {
   describe('禁用词汇检查', () => {

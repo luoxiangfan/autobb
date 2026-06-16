@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { generateWeeklyOptimizationTasks, cleanupOldTasks } from '@/lib/optimization'
-import { runCreativeOptimizationLoop } from '@/lib/creatives'
+import { runCreativeOptimizationLoop } from '@/lib/creatives/server'
 import { getDatabase } from '@/lib/db'
 import { buildUserExecutionEligibleSql } from '@/lib/campaign/server'
 

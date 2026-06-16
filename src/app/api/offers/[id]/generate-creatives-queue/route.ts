@@ -21,13 +21,13 @@ import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-execu
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
   resolveCreativeGenerationRuntime,
-} from '@/lib/creatives'
-import { normalizeSingleCreativeSelection } from '@/lib/creatives'
+} from '@/lib/creatives/server'
+import { normalizeSingleCreativeSelection } from '@/lib/creatives/server'
 import {
   normalizeCreativeTaskError,
   toCreativeTaskErrorResponseFields,
   type CreativeTaskErrorCategory,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 type QueueErrorResponseInput = {

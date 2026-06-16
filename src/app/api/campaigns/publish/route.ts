@@ -9,7 +9,7 @@ import {
 } from '@/lib/google-ads/auth/context'
 import { createError, ErrorCode, AppError } from '@/lib/common/server'
 import { calculateLaunchScore } from '@/lib/launch-score/server'
-import type { AdCreative } from '@/lib/creatives'
+import type { AdCreative } from '@/lib/creatives/server'
 import type { ScoreAnalysis } from '@/lib/launch-score/server'
 import {
   buildLaunchScoreHashes,

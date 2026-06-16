@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createAdCreative } from '../creatives'
+import { createAdCreative } from '../creatives/server'
 
 const dbState = vi.hoisted(() => ({
   queryOne: vi.fn(),

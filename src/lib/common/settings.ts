@@ -2,8 +2,12 @@ import { getDatabase } from '../db'
 import { nowFunc as sqlNowFunc } from '../db'
 import { encrypt, decrypt } from '../auth'
 import { normalizeCountryCode } from './language-country-codes'
-import { GEMINI_ACTIVE_MODEL, getSupportedModelsForProvider, normalizeGeminiModel } from '../ai'
-import { estimateTokenCost, recordTokenUsage } from '../ai'
+import {
+  GEMINI_ACTIVE_MODEL,
+  getSupportedModelsForProvider,
+  normalizeGeminiModel,
+} from '../ai/server'
+import { estimateTokenCost, recordTokenUsage } from '../ai/server'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
 import {
   looksLikeOAuthAccessToken,

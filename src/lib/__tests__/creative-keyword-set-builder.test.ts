@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { buildCreativeKeywordSet } from '../keywords'
-import { resolveCreativeKeywordMinimumOutputCount } from '../keywords'
+import { buildCreativeKeywordSet } from '../keywords/server'
+import { resolveCreativeKeywordMinimumOutputCount } from '../keywords/server'
 
 const mocks = vi.hoisted(() => ({
   applyKeywordSupplementationOnce: vi.fn(),

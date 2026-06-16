@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { regenerateAdCreative } from '../creatives'
+import { regenerateAdCreative } from '../creatives/server'
 
 const offerFns = vi.hoisted(() => ({
   findOfferById: vi.fn(),

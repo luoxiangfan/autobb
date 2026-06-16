@@ -5,9 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { findAdCreativeById } from '@/lib/creatives'
+import { findAdCreativeById } from '@/lib/creatives/server'
 import { findOfferById } from '@/lib/offers/server'
-import { checkCompliance, type CreativeContent } from '@/lib/creatives'
+import { checkCompliance, type CreativeContent } from '@/lib/creatives/server'
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params

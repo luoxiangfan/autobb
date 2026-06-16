@@ -1,4 +1,4 @@
-import type { CanonicalCreativeType } from '../creatives'
+import type { CanonicalCreativeType } from '../creatives/creative-type'
 
 const BRAND_INTENT_MIN_OUTPUT_KEYWORDS = 3
 const DEMAND_INTENT_MIN_OUTPUT_KEYWORDS = 4

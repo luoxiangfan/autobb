@@ -1,14 +1,5 @@
-// Public barrel for @/lib/ai
-export * from './ai'
-export * from './ai-analysis-service'
-export * from './ai-cache'
+// Public barrel for @/lib/ai — client-safe only (no DB / Redis / Gemini API call deps).
 export * from './ai-json'
-export * from './ai-runtime-config'
-export * from './ai-token-tracker'
-export * from './gemini'
 export * from './gemini-config'
 export * from './gemini-models'
 export * from './llm-input-guard'
-export * from './model-selector'
-export * from './product-recommendation-scoring'
-export * from './prompt-loader'

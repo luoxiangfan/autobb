@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { getSearchTermFeedbackHints } from '../keywords'
+import { getSearchTermFeedbackHints } from '../keywords/server'
 import { getDatabase } from '../db'
 
 describe('getSearchTermFeedbackHints - Layered Fallback', () => {

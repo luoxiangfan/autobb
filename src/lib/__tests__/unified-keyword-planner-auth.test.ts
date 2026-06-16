@@ -21,7 +21,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
 })
 
 import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads/accounts/auth/index'
-import { prepareKeywordPlannerSessionAuth } from '@/lib/keywords'
+import { prepareKeywordPlannerSessionAuth } from '@/lib/keywords/server'
 
 describe('prepareKeywordPlannerSessionAuth', () => {
   beforeEach(() => {

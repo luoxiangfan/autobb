@@ -14,14 +14,14 @@
  * - 广告质量分数: +20%（相关性和独特性）
  */
 
-import { generateContent } from '../ai'
-import { recordTokenUsage, estimateTokenCost } from '../ai'
+import { generateContent } from '../ai/server'
+import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import {
   compressCompetitors,
   type CompetitorInfo as CompressorCompetitorInfo,
 } from './competitor-compressor'
-import { withCache } from '../ai'
-import { loadPrompt } from '../ai'
+import { withCache } from '../ai/server'
+import { loadPrompt } from '../ai/server'
 import { parsePrice } from '../common/server'
 
 // ==================== 数据结构定义 ====================

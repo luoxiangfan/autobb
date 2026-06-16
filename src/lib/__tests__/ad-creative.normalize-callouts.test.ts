@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeCallouts } from '../creatives'
+import { normalizeCallouts } from '../creatives/server'
 
 describe('normalizeCallouts', () => {
   it('normalizes mixed callout shapes into trimmed strings', () => {

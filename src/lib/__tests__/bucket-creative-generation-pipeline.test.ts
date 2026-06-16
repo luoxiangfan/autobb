@@ -4,10 +4,10 @@ import {
   assertPostGenerationPersistenceGate,
   evaluateCreativeWithPersistenceGate,
   resolveOfferLinkType,
-} from '../creatives'
-import { normalizeCreativeBucketSlot } from '../creatives'
-import { resolveStoredGenerationMode } from '../creatives'
-import { getAdCreativeGenerationModeProfile } from '../creatives'
+} from '../creatives/server'
+import { normalizeCreativeBucketSlot } from '../creatives/server'
+import { resolveStoredGenerationMode } from '../creatives/server'
+import { getAdCreativeGenerationModeProfile } from '../creatives/server'
 
 const qualityFns = vi.hoisted(() => ({
   evaluateCreativeForQuality: vi.fn(),

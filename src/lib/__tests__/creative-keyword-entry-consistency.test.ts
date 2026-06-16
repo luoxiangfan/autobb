@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildCreativeKeywordSet } from '../keywords'
+import { buildCreativeKeywordSet } from '../keywords/server'
 import {
   evaluateMultiEntryTopNConsistency,
   evaluateMultiEntryTopSourceDistribution,
-} from '../keywords'
+} from '../keywords/server'
 
 describe('creative keyword topN consistency benchmark', () => {
   it('keeps >=90% top20 overlap across entry profiles for same offer+bucket input', async () => {

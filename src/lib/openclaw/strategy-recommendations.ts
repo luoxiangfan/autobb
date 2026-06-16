@@ -5,10 +5,10 @@ import { toDbJsonObjectField } from '@/lib/db'
 import { fetchAutoadsJson } from '@/lib/openclaw/autoads-client'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import { getCommissionPerConversion } from '@/lib/offers/server'
-import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords'
-import { classifySearchTermFeedbackTerms } from '@/lib/keywords'
+import { classifyKeywordIntent, recommendMatchTypeForKeyword } from '@/lib/keywords/server'
+import { classifySearchTermFeedbackTerms } from '@/lib/keywords/server'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { containsPureBrand, getPureBrandKeywords } from '@/lib/keywords'
+import { containsPureBrand, getPureBrandKeywords } from '@/lib/keywords/server'
 import {
   extractCampaignConfigKeywords,
   extractCampaignConfigNegativeKeywords } from '@/lib/campaign/server'

@@ -5,14 +5,14 @@ import {
 } from './ad-creative-generation-mode'
 import { getDatabase } from '../db'
 import { getInsertedId, nowFunc } from '../db'
-import { GEMINI_ACTIVE_MODEL } from '../ai'
+import { GEMINI_ACTIVE_MODEL } from '../ai/server'
 import {
   CREATIVE_BRAND_KEYWORD_RESERVE,
   CREATIVE_KEYWORD_MAX_COUNT,
   selectCreativeKeywords,
   type CreativeKeywordMatchType,
   type KeywordAuditMetadata,
-} from '../keywords'
+} from '../keywords/server'
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
@@ -23,16 +23,16 @@ import {
   inferKeywordDerivedTags,
   inferKeywordRawSource,
   normalizeKeywordSourceSubtype,
-} from '../keywords'
-import { isCreativeKeywordAiSourceSubtypeEnabled } from '../keywords'
-import type { CreativeKeywordAudit, CreativeKeywordSourceAudit } from '../keywords'
+} from '../keywords/server'
+import { isCreativeKeywordAiSourceSubtypeEnabled } from '../keywords/server'
+import type { CreativeKeywordAudit, CreativeKeywordSourceAudit } from '../keywords/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import {
   getSearchTermAutoNegativeConfigFromEnv,
   getSearchTermAutoPositiveConfigFromEnv,
   runSearchTermAutoNegatives,
   runSearchTermAutoPositiveKeywords,
-} from '../keywords'
+} from '../keywords/server'
 
 /**
  * 关键词搜索量数据

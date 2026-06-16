@@ -7,7 +7,7 @@ import {
   validatePriorityDistribution,
   suggestKeywordsForMissingPriority,
   generatePriorityDistributionSummary,
-} from '../keywords'
+} from '../keywords/server'
 import { mockKeywords, mockOffers } from './test-utils'
 
 describe('KeywordPriorityClassifier', () => {

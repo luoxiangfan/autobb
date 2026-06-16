@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
 export function calculateProductFocus(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],

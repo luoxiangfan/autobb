@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
 export function calculateBrandContentConsistency(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],

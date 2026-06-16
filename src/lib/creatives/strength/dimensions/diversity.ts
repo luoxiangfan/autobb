@@ -1,4 +1,4 @@
-import type { HeadlineAsset, DescriptionAsset } from '../..'
+import type { HeadlineAsset, DescriptionAsset } from '../../server'
 
 import { calculateTextUniqueness } from './text-uniqueness'
 export function calculateDiversity(headlines: HeadlineAsset[], descriptions: DescriptionAsset[]) {

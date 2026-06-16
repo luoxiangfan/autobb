@@ -15,17 +15,17 @@ import {
   type OfferExtractionMode,
 } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
-import { executeAIAnalysis } from '@/lib/ai'
+import { executeAIAnalysis } from '@/lib/ai/server'
 import { getTargetLanguage, normalizeBrandName } from '@/lib/offers/server'
 import { createOffer, updateOfferScrapeStatus, updateOffer } from '@/lib/offers/server'
-import type { BrandSearchSupplement, SerpSitelink } from '@/lib/keywords'
+import type { BrandSearchSupplement, SerpSitelink } from '@/lib/keywords/server'
 import { deriveCategoryFromScrapedData } from '@/lib/offers/server'
 import { filterNavigationLabels } from '@/lib/scraping'
 import { parsePrice } from '@/lib/common/server'
 import { toDbJsonObjectField } from '@/lib/db'
-import { extractScenariosFromReviews } from '@/lib/creatives'
+import { extractScenariosFromReviews } from '@/lib/creatives/server'
 import { syncScrapedProductsFromExtractData } from '@/lib/offers/server'
-import { stripTrailingCountryCodeSuffix } from '@/lib/keywords'
+import { stripTrailingCountryCodeSuffix } from '@/lib/keywords/server'
 
 function mergeUniqueStrings(
   primary: string[] | null | undefined,

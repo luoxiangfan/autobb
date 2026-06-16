@@ -12,7 +12,7 @@ import {
 } from './creative-keyword-selection'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import { logKeywordSourceAudit } from './creative-keyword-audit-log'
-import type { CanonicalCreativeType } from '../creatives'
+import type { CanonicalCreativeType } from '../creatives/server'
 import {
   getKeywordSourcePriorityScoreFromInput,
   inferKeywordRawSource,

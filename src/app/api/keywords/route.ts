@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { createKeyword, findKeywordsByUserId, findKeywordsByAdGroupId } from '@/lib/keywords'
+import { createKeyword, findKeywordsByUserId, findKeywordsByAdGroupId } from '@/lib/keywords/server'
 import { findAdGroupById } from '@/lib/campaign/server'
 
 /**

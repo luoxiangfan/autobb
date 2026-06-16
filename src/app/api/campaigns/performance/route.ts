@@ -10,7 +10,7 @@ import {
   getCachedCampaignPerformance,
   setCachedCampaignPerformance,
 } from '@/lib/campaign/server'
-import { getAffiliateDomainKeywords } from '@/lib/keywords'
+import { getAffiliateDomainKeywords } from '@/lib/keywords/server'
 import {
   buildCampaignAffiliateAlignedWhereClause,
   isCampaignAffiliateAlignedRow,

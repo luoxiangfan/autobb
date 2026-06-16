@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findKeywordById, updateKeyword, deleteKeyword } from '@/lib/keywords'
+import { findKeywordById, updateKeyword, deleteKeyword } from '@/lib/keywords/server'
 
 /**
  * GET /api/keywords/:id

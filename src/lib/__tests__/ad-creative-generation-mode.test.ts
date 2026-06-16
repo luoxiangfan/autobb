@@ -8,8 +8,8 @@ import {
   normalizeAdCreativeGenerationMode,
   resolveCreativeGenerationRuntime,
   resolveStoredGenerationMode,
-} from '../creatives'
-import { AD_CREATIVE_MAX_AUTO_RETRIES } from '../creatives'
+} from '../creatives/server'
+import { AD_CREATIVE_MAX_AUTO_RETRIES } from '../creatives/server'
 
 describe('ad-creative-generation-mode', () => {
   it('defaults to original mode', () => {

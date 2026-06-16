@@ -26,7 +26,7 @@ import {
 import { scrapeSupplementalProducts, type SupplementalProductResult } from '@/lib/offers/server'
 import { warmupAffiliateLink } from '@/lib/scraping/proxy-warmup'
 import { getProxyUrlForCountry } from '@/lib/common/server'
-import { fetchBrandSearchSupplement, type BrandSearchSupplement } from '@/lib/keywords'
+import { fetchBrandSearchSupplement, type BrandSearchSupplement } from '@/lib/keywords/server'
 import { deriveBrandFromProductTitle, isLikelyInvalidBrandName } from '@/lib/scraping'
 import {
   getAmazonScrapeOptionsForMode,

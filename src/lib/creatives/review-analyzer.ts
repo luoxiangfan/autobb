@@ -12,12 +12,12 @@
  * - 广告相关性评分: +25%（匹配用户搜索意图）
  */
 
-import { generateContent } from '../ai'
-import { recordTokenUsage, estimateTokenCost } from '../ai'
+import { generateContent } from '../ai/server'
+import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import { getLanguageNameForCountry } from '../common/server'
 import { compressReviews, type RawReview as CompressorRawReview } from './review-compressor'
-import { withCache } from '../ai'
-import { loadPrompt } from '../ai'
+import { withCache } from '../ai/server'
+import { loadPrompt } from '../ai/server'
 
 // ==================== 数据结构定义 ====================
 

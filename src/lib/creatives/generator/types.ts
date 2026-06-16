@@ -7,7 +7,7 @@ import { type KeywordPlannerPreparedSession } from '@/lib/google-ads/accounts/au
 // 🎯 购买意图评分
 
 // 🔥 优化：Google Ads关键词标准化去重
-import type { CreativeKeywordMatchType, KeywordAuditMetadata } from '../../keywords'
+import type { CreativeKeywordMatchType, KeywordAuditMetadata } from '../../keywords/server'
 
 // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
 // 🔥 2026-03-13: 导入纯品牌词判断函数

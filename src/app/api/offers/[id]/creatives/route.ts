@@ -1,12 +1,12 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { findAdCreativesByOfferId } from '@/lib/creatives'
+import { findAdCreativesByOfferId } from '@/lib/creatives/server'
 import { findOfferById } from '@/lib/offers/server'
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
   normalizeCreativeBucketSlot,
-} from '@/lib/creatives'
+} from '@/lib/creatives/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 function resolveCreativeIdentity(creative: any): {
