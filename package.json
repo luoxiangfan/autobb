@@ -15,6 +15,7 @@
     "gnx:analyze:embeddings": "bash scripts/gnx-analyze.sh --embeddings",
     "gnx:detect-changes": "tsx scripts/gnx-detect-changes.ts",
     "build": "npm run perf:flags:check && npm run openclaw:prebuilt:verify-meta && next build",
+    "build:next": "next build",
     "build:scheduler": "node build-scheduler.js",
     "start": "next start",
     "lint": "eslint src --max-warnings 0",
