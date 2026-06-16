@@ -1,9 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  getAffiliateProductSyncRuns,
-  getYeahPromosSyncMonitor,
-} from '@/lib/affiliate/products/index'
+import { getAffiliateProductSyncRuns, getYeahPromosSyncMonitor } from '@/lib/affiliate/products'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'

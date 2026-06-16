@@ -26,7 +26,7 @@ vi.mock('@/lib/google-ads/accounts/auth/api-prepare', async (importOriginal) => 
   }
 })
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   getGoogleAdsConfig: keywordPlannerFns.getGoogleAdsConfig,
 }))
 

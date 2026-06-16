@@ -264,7 +264,7 @@ describe('pickBestAdCreativeByScore', () => {
 
 const findAdCreativesByOfferIdMock = vi.fn()
 
-vi.mock('../creatives', () => ({
+vi.mock('../creatives/server', () => ({
   findAdCreativesByOfferId: (...args: unknown[]) => findAdCreativesByOfferIdMock(...args),
 }))
 

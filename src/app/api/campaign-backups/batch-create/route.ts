@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getQueueManager } from '@/lib/queue'
 import { validateCampaignBackupsForBatchCreate } from '@/lib/campaign/server'
 import { createHash } from 'crypto'
 

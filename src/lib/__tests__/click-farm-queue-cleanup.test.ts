@@ -19,7 +19,7 @@ const bgQueue = {
   removeTask: removeTaskBg,
 }
 
-vi.mock('@/lib/queue/unified-queue-manager', () => ({
+vi.mock('@/lib/queue', () => ({
   getQueueManager: vi.fn(() => coreQueue),
   getBackgroundQueueManager: vi.fn(() => bgQueue),
 }))

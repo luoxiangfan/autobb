@@ -14,7 +14,7 @@ const cacheFns = vi.hoisted(() => ({
   invalidateProductListCache: vi.fn(),
 }))
 
-vi.mock('@/lib/affiliate/products/index', () => ({
+vi.mock('@/lib/affiliate/products', () => ({
   linkOfferToAffiliateProduct: affiliateProductFns.linkOfferToAffiliateProduct,
 }))
 

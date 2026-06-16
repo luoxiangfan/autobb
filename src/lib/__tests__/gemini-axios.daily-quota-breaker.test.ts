@@ -14,11 +14,11 @@ vi.mock('axios', () => ({
   create: createMock,
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getUserOnlySetting: getUserOnlySettingMock,
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getRedisClient: vi.fn(() => null),
 }))
 
@@ -71,7 +71,7 @@ describe('gemini-axios daily quota breaker', () => {
       message: 'Request failed with status code 429',
     })
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
 
     await expect(generateContent({ prompt: 'hello' }, 1)).rejects.toThrow('每日配额已耗尽')
     await expect(generateContent({ prompt: 'hello again' }, 1)).rejects.toThrow('每日配额已耗尽')

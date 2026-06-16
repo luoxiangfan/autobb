@@ -18,7 +18,7 @@ vi.mock('../offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
-vi.mock('../creatives', () => ({
+vi.mock('../creatives/server', () => ({
   findAdCreativeById: adCreativeFns.findAdCreativeById,
   createAdCreative: adCreativeFns.createAdCreative,
 }))
@@ -39,7 +39,7 @@ vi.mock('../offer-keyword-pool', () => ({
   resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 
-vi.mock('../creatives', () => ({
+vi.mock('../creatives/server', () => ({
   assertPostGenerationPersistenceGate: vi.fn(),
   formatBucketGenerationRejectedError: (result: {
     selectedEvaluation?: {

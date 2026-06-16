@@ -1,19 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let mockDb: any
-let updateOfferScrapeStatus: typeof import('../offers/task-modal-helpers').updateOfferScrapeStatus
+let updateOfferScrapeStatus: typeof import('../offers/offers').updateOfferScrapeStatus
 
 const mockInvalidateOfferCache = vi.fn()
 
 vi.mock('../db', () => ({
   getDatabase: () => mockDb,
+  toDbJsonObjectField: (value: unknown, fallback: unknown = null) => value ?? fallback,
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   invalidateOfferCache: mockInvalidateOfferCache,
 }))
 
-vi.mock('../offers', () => ({
+vi.mock('../offers/offer-utils', () => ({
   generateOfferName: vi.fn(),
   getTargetLanguage: vi.fn(() => 'English'),
   isOfferNameUnique: vi.fn().mockResolvedValue(true),
@@ -41,7 +42,7 @@ describe('updateOfferScrapeStatus final_url guard', () => {
 
     mockInvalidateOfferCache.mockReset()
     vi.resetModules()
-    ;({ updateOfferScrapeStatus } = await import('../offers/task-modal-helpers'))
+    ;({ updateOfferScrapeStatus } = await import('../offers/offers'))
   })
 
   afterEach(() => {

@@ -84,7 +84,7 @@ vi.mock('@/lib/keywords', () => ({
   buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
 }))
 
-vi.mock('@/lib/creatives', () => ({
+vi.mock('@/lib/creatives/server', () => ({
   AD_CREATIVE_MAX_AUTO_RETRIES: 2,
   AD_CREATIVE_REQUIRED_MIN_SCORE: 70,
   evaluateCreativeForQuality: qualityLoopFns.evaluateCreativeForQuality,
@@ -97,7 +97,7 @@ vi.mock('@/lib/offer-keyword-pool', () => ({
   getBucketInfo: keywordPoolFns.getBucketInfo,
 }))
 
-vi.mock('@/lib/creatives', () => ({
+vi.mock('@/lib/creatives/server', () => ({
   getCreativeTypeForBucketSlot: creativeTypeFns.getCreativeTypeForBucketSlot,
 }))
 

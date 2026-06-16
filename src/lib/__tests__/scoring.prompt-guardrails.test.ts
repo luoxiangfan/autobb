@@ -4,7 +4,7 @@ const generateContentMock = vi.fn()
 const recordTokenUsageMock = vi.fn()
 const estimateTokenCostMock = vi.fn(() => 0.01)
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   generateContent: generateContentMock,
 }))
 
@@ -13,7 +13,7 @@ vi.mock('../ai-token-tracker', () => ({
   estimateTokenCost: estimateTokenCostMock,
 }))
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   loadPrompt: vi.fn(async (promptId: string) => {
     if (promptId === 'keyword_gap_analysis') {
       return ['{{inputGuardrail}}', 'Existing keywords:', '{{existingKeywords}}'].join('\n')

@@ -8,13 +8,13 @@
 import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
-import { splitSqlStatements } from '../src/lib/db/sql-splitter'
+import { splitSqlStatements } from '@/lib/db/sql-splitter'
 import {
   listIncrementalMigrationFiles,
   migrationHistoryName,
   resolveMigrationFilePath,
-} from '../src/lib/db/migration-file-discovery'
-import { normalizeMigrationSql } from '../src/lib/db/migration-sql-preprocess'
+} from '@/lib/db/migration-file-discovery'
+import { normalizeMigrationSql } from '@/lib/db/migration-sql-preprocess'
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (

@@ -20,7 +20,7 @@ describe('offer-utils: offer name casing consistency', () => {
     }
     getDatabaseMock.mockResolvedValue(mockDb)
 
-    const { generateOfferName } = await import('../offers/task-modal-helpers')
+    const { generateOfferName } = await import('../offers/offer-utils')
     const result = await generateOfferName('IDOO', 'US', 1)
 
     expect(result).toBe('IDOO_US_03')
@@ -44,7 +44,7 @@ describe('offer-utils: offer name casing consistency', () => {
     }
     getDatabaseMock.mockResolvedValue(mockDb)
 
-    const { generateOfferName } = await import('../offers/task-modal-helpers')
+    const { generateOfferName } = await import('../offers/offer-utils')
     const result = await generateOfferName('Idoo', 'US', 1)
 
     expect(result).toBe('Idoo_US_02')
@@ -56,7 +56,7 @@ describe('offer-utils: offer name casing consistency', () => {
     }
     getDatabaseMock.mockResolvedValue(mockDb)
 
-    const { isOfferNameUnique } = await import('../offers/task-modal-helpers')
+    const { isOfferNameUnique } = await import('../offers/offer-utils')
     const result = await isOfferNameUnique('IDOO_US_01', 1, 3692)
 
     expect(result).toBe(false)
@@ -71,7 +71,7 @@ describe('offer-utils: offer name casing consistency', () => {
     }
     getDatabaseMock.mockResolvedValue(mockDb)
 
-    const { generateOfferName } = await import('../offers/task-modal-helpers')
+    const { generateOfferName } = await import('../offers/offer-utils')
     const result = await generateOfferName('Ringconn', 'UK', 1)
 
     expect(result).toBe('Ringconn_GB_01')

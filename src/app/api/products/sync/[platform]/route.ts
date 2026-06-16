@@ -8,7 +8,7 @@ import {
   normalizeAffiliatePlatform,
   type SyncMode,
   updateAffiliateProductSyncRun,
-} from '@/lib/affiliate/products/index'
+} from '@/lib/affiliate/products'
 import { getDatabase } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'

@@ -10,7 +10,7 @@ vi.mock('bcrypt', () => {
   return { default: stub, ...stub }
 })
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   detectCountryInKeyword: vi.fn(() => []),
   filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),
   filterMismatchedGeoKeywords: vi.fn((keywords: string[]) => keywords),
@@ -20,7 +20,7 @@ vi.mock('../keywords', () => ({
   ]),
 }))
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   extractKeywordsEnhanced: vi.fn(async () => [
     { keyword: 'midland all hazards radio', competition: 'UNKNOWN' },
   ]),
@@ -34,7 +34,7 @@ vi.mock('../db', () => ({
 
 describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
   it('falls back to initialKeywords when customerId is missing (prevents empty pool)', async () => {
-    const { expandAllKeywords } = await import('../keywords')
+    const { expandAllKeywords } = await import('../keywords/server')
     const initial: PoolKeywordData[] = [
       { keyword: 'midland', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
       { keyword: 'midland weather radio', searchVolume: 0, source: 'TEST', matchType: 'BROAD' },
@@ -56,7 +56,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
   })
 
   it('falls back to pure brand keywords when initialKeywords is empty', async () => {
-    const { expandAllKeywords } = await import('../keywords')
+    const { expandAllKeywords } = await import('../keywords/server')
     const out = await expandAllKeywords(
       [],
       'Midland',
@@ -74,7 +74,7 @@ describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
   })
 
   it('uses PHRASE for non-pure-brand keywords in service-account fallback path', async () => {
-    const { expandAllKeywords } = await import('../keywords')
+    const { expandAllKeywords } = await import('../keywords/server')
     const out = await expandAllKeywords(
       [],
       'Midland',

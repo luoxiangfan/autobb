@@ -4,11 +4,11 @@ const generateContentMock = vi.fn()
 const loadKeywordPoolExpandMock = vi.fn()
 const loadPromptMock = vi.hoisted(() => vi.fn())
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   generateContent: generateContentMock,
 }))
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   loadPrompt: loadPromptMock,
   interpolateTemplate: (template: string) => template,
 }))

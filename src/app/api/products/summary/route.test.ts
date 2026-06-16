@@ -22,7 +22,7 @@ const authFns = vi.hoisted(() => ({
   isProductManagementEnabledForUser: vi.fn(),
 }))
 
-vi.mock('@/lib/affiliate/products/index', () => ({
+vi.mock('@/lib/affiliate/products', () => ({
   listAffiliateProducts: productsFns.listAffiliateProducts,
   normalizeAffiliatePlatform: (value: string | null) => value,
   normalizeAffiliateLandingPageTypeFilter: (value: string | null) => value || 'all',

@@ -35,7 +35,7 @@ vi.mock('@/lib/offers', () => ({
   updateOfferScrapeStatus: offerStatusFns.updateOfferScrapeStatus,
 }))
 
-vi.mock('@/lib/queue/unified-queue-manager', () => ({
+vi.mock('@/lib/queue', () => ({
   getQueueManager: () => ({
     removeTask: queueFns.removeTask,
   }),

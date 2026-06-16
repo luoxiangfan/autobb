@@ -18,16 +18,16 @@ const keywordRuntimeFns = vi.hoisted(() => ({
   createCreativeQualityEvaluationInput: vi.fn((input: unknown) => input),
 }))
 
-vi.mock('../creatives', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../creatives')>()
+vi.mock('../creatives/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../creatives/server')>()
   return {
     ...actual,
     evaluateCreativeForQuality: qualityFns.evaluateCreativeForQuality,
   }
 })
 
-vi.mock('../keywords', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../keywords')>()
+vi.mock('../keywords/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../keywords/server')>()
   return {
     ...actual,
     evaluateCreativePersistenceHardGate: keywordRuntimeFns.evaluateCreativePersistenceHardGate,

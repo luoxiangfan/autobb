@@ -11,7 +11,7 @@ vi.mock('@/lib/campaign', () => ({
   USER_EXECUTION_SUSPENDED_ERROR_CODE: 'USER_EXECUTION_SUSPENDED',
 }))
 
-import { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'
+import { UnifiedQueueManager } from '@/lib/queue'
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 

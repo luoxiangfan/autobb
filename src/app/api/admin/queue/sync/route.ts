@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getQueueManager } from '@/lib/queue'
 import { withAuth } from '@/lib/auth'
 
 export const maxDuration = 60

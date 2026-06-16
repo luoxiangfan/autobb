@@ -4,7 +4,7 @@ const { getKeywordVolumesForExistingMock } = vi.hoisted(() => ({
   getKeywordVolumesForExistingMock: vi.fn(),
 }))
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   getKeywordVolumesForExisting: getKeywordVolumesForExistingMock,
 }))
 

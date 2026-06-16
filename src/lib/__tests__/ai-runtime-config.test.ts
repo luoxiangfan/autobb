@@ -13,7 +13,7 @@ function getSettingValue(category: string, key: string, userId: number): Setting
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
     return getSettingValue(category, key, userId)
   }),
@@ -30,7 +30,7 @@ describe('resolveActiveAIConfig', () => {
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
     settingStore.set(getStoreKey('ai', 'gemini_relay_api_key', userId), 'relay-key-1')
 
-    const { resolveActiveAIConfig } = await import('../ai-runtime-config')
+    const { resolveActiveAIConfig } = await import('../ai/ai-runtime-config')
     const config = await resolveActiveAIConfig(userId)
 
     expect(config.type).toBe('gemini-api')
@@ -47,7 +47,7 @@ describe('resolveActiveAIConfig', () => {
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), RELAY_GPT_52_MODEL)
     settingStore.set(getStoreKey('ai', 'gemini_api_key', userId), 'official-key-only')
 
-    const { resolveActiveAIConfig } = await import('../ai-runtime-config')
+    const { resolveActiveAIConfig } = await import('../ai/ai-runtime-config')
     const config = await resolveActiveAIConfig(userId)
 
     expect(config.type).toBeNull()
@@ -63,7 +63,7 @@ describe('resolveActiveAIConfig', () => {
     settingStore.set(getStoreKey('ai', 'gemini_model', userId), GEMINI_ACTIVE_MODEL)
     settingStore.set(getStoreKey('ai', 'gemini_api_key', userId), 'official-key-1')
 
-    const { resolveActiveAIConfig } = await import('../ai-runtime-config')
+    const { resolveActiveAIConfig } = await import('../ai/ai-runtime-config')
     const config = await resolveActiveAIConfig(userId)
 
     expect(config.type).toBe('gemini-api')

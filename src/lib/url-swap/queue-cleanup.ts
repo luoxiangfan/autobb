@@ -1,6 +1,6 @@
-import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 import type { Task } from '@/lib/queue/types'
-import type { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'
+import type { UnifiedQueueManager } from '@/lib/queue'
 
 function getQueueManagers(): UnifiedQueueManager[] {
   const coreQueue = getQueueManager()

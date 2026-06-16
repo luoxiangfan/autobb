@@ -13,7 +13,7 @@ const getSettingValue = (category: string, key: string, userId?: number): Settin
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
     return getSettingValue(category, key, userId)
   }),
@@ -21,7 +21,7 @@ vi.mock('../common', () => ({
 
 const axiosGenerate = vi.fn()
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   generateContent: axiosGenerate,
 }))
 
@@ -49,7 +49,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
     await generateContent(
       {
         prompt: 'test prompt',
@@ -80,7 +80,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
 
     axiosGenerate.mockRejectedValueOnce(maxTokensError)
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
 
     await expect(
       generateContent(
@@ -117,7 +117,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
     await generateContent(
       {
         prompt: 'test prompt',
@@ -154,7 +154,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
     await generateContent(
       {
         prompt: 'return json',
@@ -186,7 +186,7 @@ describe('Gemini MAX_TOKENS retry bump', () => {
       model: GEMINI_ACTIVE_MODEL,
     })
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
     await generateContent(
       {
         prompt: 'return json',

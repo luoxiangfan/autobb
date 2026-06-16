@@ -45,7 +45,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
       { platform: 'partnerboost', total_count: 182650 },
     ])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     const result = await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -69,7 +69,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
       { platform: 'partnerboost', total_count: 10, product_count: 8, store_count: 1 },
     ])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -96,7 +96,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
         { platform: 'partnerboost', visible_count: 172107 },
       ])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     const result = await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -120,7 +120,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
   it('filters by targetCountry using postgres jsonb containment with UK/GB alias', async () => {
     dbFns.query.mockResolvedValueOnce([{ platform: 'partnerboost', total_count: 42 }])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -148,7 +148,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
       },
     ])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -183,7 +183,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
       },
     ])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     const result = await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -243,7 +243,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
         },
       ])
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     const result = await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,
@@ -274,7 +274,7 @@ describe('listAffiliateProducts fastSummary platform stats', () => {
     })
     dbFns.query.mockRejectedValueOnce(timeoutError)
 
-    const { listAffiliateProducts } = await import('@/lib/affiliate/products/index')
+    const { listAffiliateProducts } = await import('@/lib/affiliate/products')
     const result = await listAffiliateProducts(1, {
       page: 1,
       pageSize: 20,

@@ -11,7 +11,7 @@ const acquire = vi.fn(async (_proxyUrl: string) => ({
 }))
 const release = vi.fn()
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   analyzeProductPage: vi.fn(async () => ({
     brandDescription: 'bd',
     uniqueSellingPoints: ['usp'],
@@ -21,21 +21,22 @@ vi.mock('../ai', () => ({
   })),
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getProxyUrlForCountry: vi.fn(async () => 'https://proxy-provider.example/api?cc=US'),
 }))
 
-vi.mock('@/lib/creatives', () => ({
-  scrapeAmazonReviews: vi.fn(async () => {
-    throw new Error('blocked or captcha')
-  }),
-}))
-
-vi.mock('@/lib/creatives', () => ({
-  scrapeAmazonCompetitors: vi.fn(async () => {
-    throw new Error('blocked or captcha')
-  }),
-}))
+vi.mock('@/lib/creatives/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives/server')>()
+  return {
+    ...actual,
+    scrapeAmazonReviews: vi.fn(async () => {
+      throw new Error('blocked or captcha')
+    }),
+    scrapeAmazonCompetitors: vi.fn(async () => {
+      throw new Error('blocked or captcha')
+    }),
+  }
+})
 
 vi.mock('@/lib/scraping', () => ({
   getPlaywrightPool: () => ({ acquire, release }),
@@ -43,7 +44,7 @@ vi.mock('@/lib/scraping', () => ({
 
 describe('executeAIAnalysis deep scraping uses proxy', () => {
   it('passes proxyUrl into PlaywrightPool.acquire for Amazon review/competitor deep scraping', async () => {
-    const { executeAIAnalysis } = await import('../ai-analysis-service')
+    const { executeAIAnalysis } = await import('../ai/ai-analysis-service')
 
     await executeAIAnalysis({
       extractResult: {

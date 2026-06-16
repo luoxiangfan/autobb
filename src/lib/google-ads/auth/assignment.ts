@@ -1,7 +1,7 @@
 /**
  * Google Ads 认证分配（共享管理员 / 自有凭证 owner 解析）。
  *
- * - 按 userId 判断是否已配置：请用 `hasConfiguredGoogleAdsAuth`（委托 `google-ads-auth-context`）。
+ * - 按 userId 判断是否已配置：请用 `hasConfiguredGoogleAdsAuth`（委托 `google-ads/auth/context`）。
  * - 发起 Google Ads API 调用：请用 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
  * - 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
  */
@@ -193,7 +193,7 @@ export function resolveGoogleAdsApiAccessLevelFromContext(ctx: {
 }
 
 /**
- * Re-export：实现位于 google-ads-auth-context（避免 assignment ↔ context 静态循环依赖）。
+ * Re-export：实现位于 google-ads/auth/context（避免 assignment ↔ context 静态循环依赖）。
  * 新代码请优先从 `@/lib/google-ads/auth/context` 导入 `resolveGoogleAdsApiAccessLevel`。
  */
 export { resolveGoogleAdsApiAccessLevel } from '@/lib/google-ads/auth/context'

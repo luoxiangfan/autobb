@@ -22,7 +22,7 @@ import { getDateInTimezone, getHourInTimezone } from '@/lib/common/server'
 import { getAllProxyUrls } from '@/lib/common/server' // 🔧 修复：导入新的代理查询函数
 import { hasEnabledCampaignForOffer } from '@/lib/click-farm/campaign-health-guard'
 import type { ClickFarmTask } from '@/lib/click-farm/click-farm-types'
-import type { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'
+import type { UnifiedQueueManager } from '@/lib/queue'
 import { getHeapStatistics } from 'v8'
 import type {
   ClickFarmBatchTaskData,

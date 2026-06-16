@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'
+import { UnifiedQueueManager } from '@/lib/queue'
 
 describe('UnifiedQueueManager.purgePendingTasksByUserAndTypes', () => {
   it('purges pending tasks without starting the worker loop', async () => {

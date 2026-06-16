@@ -1297,7 +1297,8 @@ async function expandWithoutKeywordPlanner(params: {
   // 5. 与其他来源重复度高
   //
   // try {
-  //   const { getTrendsKeywords } = await import('../google-trends')
+  // try {
+  //   const trendsKeywords = await getTrendsKeywords(...) // google-trends module removed
   //   const seedKeywords = Array.from(keywordMap.values())
   //     .slice(0, 10)
   //     .map(kw => kw.keyword)

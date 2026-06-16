@@ -970,7 +970,7 @@ export class UnifiedQueueManager {
         const runId = Number(task.data?.runId)
         if (!Number.isFinite(runId) || runId <= 0) return
 
-        const { updateAffiliateProductSyncRun } = await import('@/lib/affiliate/products/index')
+        const { updateAffiliateProductSyncRun } = await import('@/lib/affiliate/products')
         await updateAffiliateProductSyncRun({
           runId,
           status: 'failed',

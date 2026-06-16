@@ -8,14 +8,14 @@ import postgres from 'postgres'
 import { readFileSync, existsSync, readdirSync } from 'fs'
 import { resolve } from 'path'
 import crypto from 'crypto'
-import { hashPassword } from '../src/lib/auth/crypto'
-import { splitSqlStatements } from '../src/lib/db/sql-splitter'
+import { hashPassword } from '@/lib/auth/crypto'
+import { splitSqlStatements } from '@/lib/db/sql-splitter'
 import {
   applyConsolidatedSchemaStatements,
   loadConsolidatedSchemaStatements,
   isIgnorablePostgresSchemaError,
   resolveConsolidatedSchemaPath,
-} from '../src/lib/db/apply-consolidated-schema'
+} from '@/lib/db/apply-consolidated-schema'
 
 const DATABASE_URL = process.env.DATABASE_URL
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD

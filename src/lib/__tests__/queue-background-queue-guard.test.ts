@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { getBackgroundQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getBackgroundQueueManager } from '@/lib/queue'
 
 const ENV_KEYS = [
   'QUEUE_SPLIT_BACKGROUND',

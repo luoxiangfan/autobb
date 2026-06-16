@@ -106,7 +106,7 @@ npm test -- <受影响模块的 test 文件或路径>
 2. 是否已配置用 `hasConfiguredGoogleAdsAuthFromContext` 或 `hasConfiguredGoogleAdsAuth`；勿仅用 `auth.serviceAccountId` 判断服务账号。
 3. 发起 API 调用时用 `resolveGoogleAdsApiAuthFromContext(ctx, linkedAccountServiceAccountId)`。`linkedAccountServiceAccountId` 仅在**当前用户认证类型为服务账号**时参与解析（见 `resolveEffectiveServiceAccountId`）；OAuth 用户不会按账号 SA 改走服务账号 API。
 4. 账号同步/发布等预检用 `resolveGoogleAdsApiAuthForAccount`，勿仅用 `google_ads_accounts.refresh_token` 判断 OAuth 是否可用。
-5. 模块说明见 `src/lib/google-ads-auth-context.ts` 文件头注释。
+5. 模块说明见 `src/lib/google-ads/auth/context.ts` 文件头注释。
 
 ## GitNexus 使用规范（本仓库）
 

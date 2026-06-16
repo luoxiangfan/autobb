@@ -13,7 +13,7 @@ vi.mock('../creatives/generator/index', () => ({
   applyKeywordSupplementationOnce: mocks.applyKeywordSupplementationOnce,
 }))
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   filterCreativeKeywordsByOfferContext: (params: any) =>
     mocks.filterCreativeKeywordsByOfferContextDetailed(params).keywords,
   filterCreativeKeywordsByOfferContextDetailed: mocks.filterCreativeKeywordsByOfferContextDetailed,
@@ -21,7 +21,7 @@ vi.mock('../keywords', () => ({
     mocks.normalizeCreativeKeywordCandidatesForContextFilter,
 }))
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   CREATIVE_BRAND_KEYWORD_RESERVE: 10,
   CREATIVE_KEYWORD_MAX_COUNT: 50,
   selectCreativeKeywords: mocks.selectCreativeKeywords,

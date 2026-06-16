@@ -49,7 +49,7 @@ import { invalidateOfferCache } from '@/lib/common/server'
 import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
 import { addUrlSwapTargetForOfferCampaign } from '@/lib/url-swap'
 import { applyCampaignTransition } from '@/lib/campaign/server'
-import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate/products/index'
+import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate/products'
 import {
   normalizeNegativeKeywordMatchTypeMap,
   resolveCampaignNegativeKeywordMatchTypeInput,

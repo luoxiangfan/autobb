@@ -6,7 +6,7 @@
  * 2. Ensures default admin account exists
  */
 
-import { getDatabase, closeDatabase } from '../src/lib/db.js'
+import { getDatabase, closeDatabase } from '@/lib/db'
 import * as bcrypt from 'bcrypt'
 import crypto from 'crypto'
 

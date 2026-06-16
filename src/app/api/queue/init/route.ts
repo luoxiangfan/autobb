@@ -8,7 +8,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import type { QueueConfig } from '@/lib/queue/types'
 import { getUrlSwapScheduler } from '@/lib/queue/schedulers/url-swap-scheduler'

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { UnifiedQueueManager } from '@/lib/queue/unified-queue-manager'
+import { UnifiedQueueManager } from '@/lib/queue'
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 

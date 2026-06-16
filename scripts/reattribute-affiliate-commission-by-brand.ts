@@ -1,12 +1,12 @@
 #!/usr/bin/env tsx
 import 'dotenv/config'
 
-import { getDatabase, type DatabaseAdapter } from '../src/lib/db'
+import { getDatabase, type DatabaseAdapter } from '@/lib/db'
 import {
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform,
   persistAffiliateCommissionAttributions,
-} from '../src/lib/openclaw/affiliate-commission-attribution'
+} from '@/lib/openclaw/affiliate-commission-attribution'
 
 type CliArgs = {
   userId: number

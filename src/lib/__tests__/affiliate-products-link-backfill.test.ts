@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { __testOnly } from '@/lib/affiliate/products/index'
+import { __testOnly } from '@/lib/affiliate/products'
 
 describe('affiliate products publish backfill helpers', () => {
   it('extracts asin from common amazon url patterns', () => {

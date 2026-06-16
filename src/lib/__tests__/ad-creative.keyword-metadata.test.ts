@@ -14,7 +14,7 @@ vi.mock('../db', () => ({
   })),
 }))
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   getSearchTermAutoNegativeConfigFromEnv: vi.fn(() => ({
     enabled: false,
     lookbackDays: 7,

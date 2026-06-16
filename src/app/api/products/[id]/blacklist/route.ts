@@ -1,9 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import {
-  getAffiliateProductById,
-  setAffiliateProductBlacklist,
-} from '@/lib/affiliate/products/index'
+import { getAffiliateProductById, setAffiliateProductBlacklist } from '@/lib/affiliate/products'
 import { invalidateProductListCache } from '@/lib/common/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
 

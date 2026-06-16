@@ -3,7 +3,7 @@ import {
   getQueueManagerForTaskType,
   isBackgroundQueueSplitEnabled,
 } from '@/lib/queue/queue-routing'
-import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 
 describe('openclaw-strategy queue routing', () => {
   it('routes to background queue when split enabled', () => {

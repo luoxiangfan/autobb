@@ -19,7 +19,7 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getQueueManager } from '@/lib/queue'
 
 export const maxDuration = 30
 

@@ -72,7 +72,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/queue/unified-queue-manager', () => ({
+vi.mock('@/lib/queue', () => ({
   getQueueManager: () => ({
     enqueue: queueFns.enqueue,
   }),

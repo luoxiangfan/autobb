@@ -26,8 +26,7 @@ describe('getLatestFailedAffiliateProductSyncRun', () => {
   it('returns null when no failed cursor run exists', async () => {
     dbFns.queryOne.mockResolvedValueOnce(null)
 
-    const { getLatestFailedAffiliateProductSyncRun } =
-      await import('@/lib/affiliate/products/index')
+    const { getLatestFailedAffiliateProductSyncRun } = await import('@/lib/affiliate/products')
     const result = await getLatestFailedAffiliateProductSyncRun({
       userId: 1,
       platform: 'yeahpromos',
@@ -63,8 +62,7 @@ describe('getLatestFailedAffiliateProductSyncRun', () => {
       })
       .mockResolvedValueOnce(null)
 
-    const { getLatestFailedAffiliateProductSyncRun } =
-      await import('@/lib/affiliate/products/index')
+    const { getLatestFailedAffiliateProductSyncRun } = await import('@/lib/affiliate/products')
     const result = await getLatestFailedAffiliateProductSyncRun({
       userId: 1,
       platform: 'yeahpromos',
@@ -105,8 +103,7 @@ describe('getLatestFailedAffiliateProductSyncRun', () => {
       })
       .mockResolvedValueOnce({ id: 112 })
 
-    const { getLatestFailedAffiliateProductSyncRun } =
-      await import('@/lib/affiliate/products/index')
+    const { getLatestFailedAffiliateProductSyncRun } = await import('@/lib/affiliate/products')
     const result = await getLatestFailedAffiliateProductSyncRun({
       userId: 1,
       platform: 'yeahpromos',

@@ -1,7 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import type { Offer } from '@/lib/offers/server'
 import { updateOffer, updateOfferScrapeStatus } from '@/lib/offers/server'
-import { getQueueManager } from '@/lib/queue/unified-queue-manager'
+import { getQueueManager } from '@/lib/queue'
 import type { Task } from '@/lib/queue/types'
 import {
   executeOfferExtraction,

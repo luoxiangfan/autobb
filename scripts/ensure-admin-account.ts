@@ -5,8 +5,8 @@
  * 密码来自环境变量 DEFAULT_ADMIN_PASSWORD
  */
 
-import { getDatabase, closeDatabase } from '../src/lib/db.js'
-import { hashPassword } from '../src/lib/auth/crypto'
+import { getDatabase, closeDatabase } from '@/lib/db'
+import { hashPassword } from '@/lib/auth/crypto'
 
 async function ensureAdminAccount() {
   const password = process.env.DEFAULT_ADMIN_PASSWORD

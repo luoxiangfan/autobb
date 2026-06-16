@@ -11,11 +11,11 @@ vi.mock('axios', () => ({
   create: createMock,
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getUserOnlySetting: getUserOnlySettingMock,
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getRedisClient: vi.fn(() => null),
 }))
 
@@ -58,7 +58,7 @@ describe('gemini-axios MAX_TOKENS runaway handling', () => {
       },
     })
 
-    const { generateContent } = await import('../ai')
+    const { generateContent } = await import('../ai/server')
 
     let thrown: any
     try {

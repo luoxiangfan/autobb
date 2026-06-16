@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 let mockDb: any
-let getKeywordSearchVolumes: typeof import('../keywords').getKeywordSearchVolumes
+let getKeywordSearchVolumes: typeof import('../keywords/server').getKeywordSearchVolumes
 
 const mockGetBatchCachedVolumes = vi.fn()
 const mockBatchCacheVolumes = vi.fn()
@@ -12,7 +12,7 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../common', () => ({
+vi.mock('../common/server', () => ({
   getCachedKeywordVolume: vi.fn(),
   cacheKeywordVolume: vi.fn(),
   getBatchCachedVolumes: (...args: any[]) => mockGetBatchCachedVolumes(...args),
@@ -106,7 +106,7 @@ describe('KeywordPlanner developer token access handling', () => {
     mockGetBatchCachedVolumes.mockReset()
     mockBatchCacheVolumes.mockReset()
     mockGenerateKeywordHistoricalMetrics.mockReset()
-    ;({ getKeywordSearchVolumes } = await import('../keywords'))
+    ;({ getKeywordSearchVolumes } = await import('../keywords/server'))
   })
 
   afterEach(() => {

@@ -12,7 +12,7 @@ const {
   recordTokenUsageMock: vi.fn(),
 }))
 
-vi.mock('../keywords', () => ({
+vi.mock('../keywords/server', () => ({
   getKeywordSearchVolumes: getKeywordSearchVolumesMock,
 }))
 
@@ -20,7 +20,7 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
   tryGetConfiguredGoogleAdsApiAuthForUser: tryGetConfiguredGoogleAdsApiAuthForUserMock,
 }))
 
-vi.mock('../ai', () => ({
+vi.mock('../ai/ai', () => ({
   generateContent: generateContentMock,
 }))
 
@@ -30,7 +30,7 @@ vi.mock('../ai-token-tracker', () => ({
 }))
 
 vi.mock('../ai', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../ai')>()
+  const actual = await importOriginal<typeof import('../ai/server')>()
   return {
     ...actual,
     loadPrompt: vi.fn(async (promptId: string) => {
