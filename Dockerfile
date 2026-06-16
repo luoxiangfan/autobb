@@ -38,32 +38,19 @@ WORKDIR /app
 
 # 安装所有依赖（包括devDependencies）
 COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+RUN npm ci
 
-# 复制源代码（CI 预构建时含 .next/standalone 与 dist/*.js）
+# 复制源代码
 COPY . .
 
+# Next.js环境变量
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS=--max-old-space-size=8192
 
-# CI 预构建时可跳过（见 deploy.yml）；本地 docker build 仍在此阶段完整编译
-ARG SKIP_NEXT_BUILD=0
-RUN --mount=type=cache,target=/app/.next/cache \
-    set -eux; \
-    if [ "$SKIP_NEXT_BUILD" = "1" ] && [ -f .next/standalone/server.js ]; then \
-      echo "Using CI pre-built Next.js standalone output"; \
-    else \
-      npm run build:next; \
-    fi
+# 构建Next.js应用
+RUN npm run build
 
-ARG SKIP_SCHEDULER_BUILD=0
-RUN set -eux; \
-    if [ "$SKIP_SCHEDULER_BUILD" = "1" ] && [ -f dist/scheduler.js ]; then \
-      echo "Using CI pre-built scheduler bundles"; \
-    else \
-      node build-scheduler.js; \
-    fi
+# 构建调度器
+RUN node build-scheduler.js
 
 # ============================================
 # Stage 2.5: OpenClaw 运行时瘦身（仅保留 Linux 需要的预编译依赖）

@@ -11,14 +11,10 @@ package-lock.json.bak
 # ============================================
 # Next.js
 # ============================================
-# 排除构建缓存；保留 CI 预构建的 standalone/static 供 Docker 组装
-.next/*
-!.next/standalone/**
-!.next/static/**
+.next/
 out/
 build/
-dist/*
-!dist/*.js
+dist/
 .vercel/
 
 # ============================================

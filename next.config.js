@@ -12,16 +12,6 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  optimizePackageImports: [
-    'lucide-react',
-    'recharts',
-    'date-fns',
-    '@radix-ui/react-dialog',
-    '@radix-ui/react-popover',
-    '@radix-ui/react-tooltip',
-    '@radix-ui/react-alert-dialog',
-  ],
-
   serverExternalPackages: [
     'cheerio',
     'postgres',
@@ -36,12 +26,6 @@ const nextConfig = {
     'fingerprint-generator',
     'fingerprint-injector',
     'header-generator',
-    'google-ads-api',
-    'google-auth-library',
-    'bcrypt',
-    'bcryptjs',
-    'ioredis',
-    'xlsx',
   ],
 
   // Next.js 16 默认 Turbopack；显式声明以允许保留 webpack 回退选项
@@ -75,13 +59,7 @@ const nextConfig = {
         '@crawlee/types',
         'fingerprint-generator',
         'fingerprint-injector',
-        'header-generator',
-        'google-ads-api',
-        'google-auth-library',
-        'bcrypt',
-        'bcryptjs',
-        'ioredis',
-        'xlsx'
+        'header-generator'
       )
     }
     return config
