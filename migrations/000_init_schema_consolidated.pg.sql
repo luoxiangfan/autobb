@@ -24084,7 +24084,6 @@ CREATE TABLE IF NOT EXISTS campaign_backups (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,
   offer_id INTEGER NOT NULL,
-  campaign_data JSONB NOT NULL,
   campaign_config JSONB,
   backup_type TEXT NOT NULL DEFAULT 'auto',
   backup_source TEXT NOT NULL DEFAULT 'autoads',
@@ -24115,7 +24114,6 @@ COMMENT ON TABLE campaign_backups IS '广告系列备份表：支持 autoads 和
 COMMENT ON COLUMN campaign_backups.backup_type IS '备份类型：auto=自动备份，manual=手动备份';
 COMMENT ON COLUMN campaign_backups.backup_source IS '备份来源：autoads=平台创建，google_ads=Google Ads 同步';
 COMMENT ON COLUMN campaign_backups.backup_version IS '备份版本：google_ads 会备份 2 次（初始 + 第 7 天），version 1=初始，version 2=第 7 天';
-COMMENT ON COLUMN campaign_backups.campaign_data IS '完整的广告系列数据（JSONB 格式），包含所有字段';
 COMMENT ON COLUMN campaign_backups.campaign_config IS '广告系列配置（JSONB 格式），包含出价策略、投放设置等';
 
 -- ====================================================================
@@ -26542,7 +26540,8 @@ INSERT INTO migration_history (migration_name) VALUES
   ('253_affiliate_commission_report_perf.pg.sql'),
   ('256_migrate_data_sync_interval_hours.pg.sql'),
   ('257_purge_legacy_google_ads_oauth_system_settings.pg.sql'),
-  ('258_ad_creatives_keyword_bucket_abd_only.pg.sql')
+  ('258_ad_creatives_keyword_bucket_abd_only.pg.sql'),
+  ('259_drop_campaign_backups_campaign_data.pg.sql')
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- ==========================================

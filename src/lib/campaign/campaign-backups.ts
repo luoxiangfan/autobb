@@ -18,37 +18,12 @@ import { parseJsonField, toDbJsonObjectField } from '../db'
 
 export { backupHasCampaignConfig } from './campaign-backup-config'
 
-/** 写入备份的 campaign_data 快照（与发布 upsert 字段对齐，不含 campaigns 表元数据） */
-export function buildCampaignBackupDataFromRow(campaign: {
-  campaign_id?: string | null
-  offer_id: number
-  google_ads_account_id?: number | null
-  campaign_name?: string | null
-  budget_amount?: number | null
-  budget_type?: string | null
-  max_cpc?: number | null
-  target_cpa?: number | null
-  status?: string | null
-}): Record<string, unknown> {
-  return {
-    campaign_id: campaign.campaign_id ?? null,
-    offer_id: campaign.offer_id,
-    google_ads_account_id: campaign.google_ads_account_id ?? null,
-    campaign_name: campaign.campaign_name ?? null,
-    budget_amount: campaign.budget_amount ?? null,
-    budget_type: campaign.budget_type ?? null,
-    max_cpc: campaign.max_cpc ?? null,
-    target_cpa: campaign.target_cpa ?? null,
-    status: campaign.status ?? null,
-  }
-}
-
 /** 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
 export function isAutoadsLikeBackupSource(source: string): boolean {
   return source === 'autoads' || source === 'publish'
 }
 
-/** campaign_backups.campaign_data / campaign_config（PostgreSQL JSONB） */
+/** campaign_backups.campaign_config（PostgreSQL JSONB） */
 export function toDbCampaignBackupJsonField(value: unknown): unknown {
   return toDbJsonObjectField(value, null)
 }
@@ -193,7 +168,6 @@ export interface CampaignBackup {
   id: number
   userId: number
   offerId: number
-  campaignData: any // JSON 格式的完整广告系列数据
   campaignConfig: any | null // 🔧 新增：广告系列配置
   backupType: 'auto' | 'manual'
   backupSource: 'autoads' | 'google_ads'
@@ -217,7 +191,6 @@ export interface CampaignBackup {
 export interface CreateCampaignBackupInput {
   userId: number
   offerId: number
-  campaignData: any
   campaignConfig?: any | null // 🔧 新增：广告系列配置
   backupType?: 'auto' | 'manual'
   backupSource?: 'autoads' | 'google_ads'
@@ -255,7 +228,6 @@ export interface CampaignBackupListItem {
   user_id: number
   offer_id: number
   ad_creative_id: number | null
-  campaign_data: unknown
   campaign_config: unknown | null
   backup_type: string
   backup_source: string
@@ -279,7 +251,6 @@ function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignB
     user_id: row.user_id as number,
     offer_id: row.offer_id as number,
     ad_creative_id: (row.ad_creative_id as number | null) ?? null,
-    campaign_data: parseCampaignBackupJsonField(row.campaign_data) ?? {},
     campaign_config: parseCampaignBackupJsonField(row.campaign_config),
     backup_type: row.backup_type as string,
     backup_source: row.backup_source as string,
@@ -318,7 +289,6 @@ async function updateCampaignBackupFromInput(
     backupId,
     userId: input.userId,
     adCreativeId: input.adCreativeId ?? null,
-    campaignData: input.campaignData,
     campaignConfig: input.campaignConfig,
     campaignName: input.campaignName,
     budgetAmount: input.budgetAmount,
@@ -348,26 +318,24 @@ export async function createCampaignBackup(
 
   const now = new Date().toISOString()
 
-  const campaignDataDb = toDbCampaignBackupJsonField(input.campaignData)
   const campaignConfigDb = toDbCampaignBackupJsonField(input.campaignConfig)
 
   try {
     const result = await db.exec(
       `
       INSERT INTO campaign_backups (
-        user_id, offer_id, campaign_data, campaign_config,
+        user_id, offer_id, campaign_config,
         backup_type, backup_source, backup_version,
         custom_name, campaign_name,
         budget_amount, budget_type,
         target_cpa, max_cpc,
         status, google_ads_account_id,
         created_at, updated_at, ad_creative_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
         input.userId,
         input.offerId,
-        campaignDataDb,
         campaignConfigDb,
         input.backupType || 'auto',
         input.backupSource || 'autoads',
@@ -485,7 +453,6 @@ export async function listCampaignBackups(filters: CampaignBackupFilters): Promi
         cb.user_id,
         cb.offer_id,
         cb.ad_creative_id,
-        cb.campaign_data,
         cb.campaign_config,
         cb.backup_type,
         cb.backup_source,
@@ -537,7 +504,6 @@ export interface UpsertCampaignBackupAfterPublishInput {
   userId: number
   offerId: number
   adCreativeId?: number | null
-  campaignData: Record<string, unknown>
   campaignConfig: unknown
   campaignName: string
   budgetAmount: number
@@ -643,7 +609,6 @@ async function updateCampaignBackupSnapshot(
     backupId: number
     userId: number
     adCreativeId: number | null
-    campaignData: Record<string, unknown>
     campaignConfig: unknown
     campaignName: string
     budgetAmount: number
@@ -658,7 +623,6 @@ async function updateCampaignBackupSnapshot(
   }
 ): Promise<void> {
   const now = new Date().toISOString()
-  const campaignDataDb = toDbCampaignBackupJsonField(params.campaignData)
   const campaignConfigDb = toDbCampaignBackupJsonField(params.campaignConfig)
 
   await db.exec(
@@ -666,7 +630,6 @@ async function updateCampaignBackupSnapshot(
     UPDATE campaign_backups
     SET
       ad_creative_id = ?,
-      campaign_data = ?,
       campaign_config = ?,
       backup_type = 'auto',
       backup_source = ?,
@@ -684,7 +647,6 @@ async function updateCampaignBackupSnapshot(
   `,
     [
       params.adCreativeId,
-      campaignDataDb,
       campaignConfigDb,
       params.backupSource ?? 'autoads',
       params.backupVersion ?? 1,
@@ -706,7 +668,6 @@ async function updateCampaignBackupSnapshot(
 type PublishedCampaignBackupPayload = {
   offerId: number
   adCreativeId: number | null
-  campaignData: Record<string, unknown>
   campaignConfig: unknown
   campaignName: string
   budgetAmount: number
@@ -750,12 +711,6 @@ async function buildPublishedCampaignBackupPayload(params: {
     ? String(snapshot.campaignName)
     : String(campaign.campaign_name ?? 'Campaign')
 
-  const resolvedGoogleCampaignId =
-    snapshot?.googleCampaignId?.trim() ||
-    (campaign.campaign_id as string | null) ||
-    (campaign.google_campaign_id as string | null) ||
-    null
-
   const resolvedAdCreativeId =
     snapshot?.creative?.id ?? (campaign.ad_creative_id as number | null) ?? null
 
@@ -768,17 +723,6 @@ async function buildPublishedCampaignBackupPayload(params: {
   return {
     offerId,
     adCreativeId: resolvedAdCreativeId,
-    campaignData: buildCampaignBackupDataFromRow({
-      campaign_id: resolvedGoogleCampaignId,
-      offer_id: offerId,
-      google_ads_account_id: (campaign.google_ads_account_id as number | null) ?? null,
-      campaign_name: resolvedCampaignName,
-      budget_amount: scalars.budgetAmount,
-      budget_type: scalars.budgetType,
-      max_cpc: scalars.maxCpc,
-      target_cpa: scalars.targetCpa,
-      status: (campaign.status as string | null) ?? null,
-    }),
     campaignConfig,
     campaignName: resolvedCampaignName,
     budgetAmount: scalars.budgetAmount,
@@ -835,7 +779,6 @@ export async function syncCampaignBackupAfterPublish(params: {
     backupId: params.backupId,
     userId: params.userId,
     adCreativeId: payload.adCreativeId,
-    campaignData: payload.campaignData,
     campaignConfig: payload.campaignConfig,
     campaignName: payload.campaignName,
     budgetAmount: payload.budgetAmount,
@@ -904,7 +847,6 @@ export async function trySyncCampaignBackupAfterPublish(params: {
       userId: params.userId,
       offerId: payload.offerId,
       adCreativeId: payload.adCreativeId,
-      campaignData: payload.campaignData,
       campaignConfig: payload.campaignConfig,
       campaignName: payload.campaignName,
       budgetAmount: payload.budgetAmount,
@@ -933,7 +875,6 @@ async function upsertCampaignBackupAfterPublish(
       backupId: existingBackupId,
       userId: input.userId,
       adCreativeId: input.adCreativeId ?? null,
-      campaignData: input.campaignData,
       campaignConfig: input.campaignConfig,
       campaignName: input.campaignName,
       budgetAmount: input.budgetAmount,
@@ -958,7 +899,6 @@ async function upsertCampaignBackupAfterPublish(
   await createCampaignBackup({
     userId: input.userId,
     offerId: input.offerId,
-    campaignData: input.campaignData,
     campaignConfig: input.campaignConfig,
     backupType: 'auto',
     backupSource: 'autoads',
@@ -984,7 +924,6 @@ export function parseCampaignBackup(row: any): CampaignBackup {
     id: row.id,
     userId: row.user_id,
     offerId: row.offer_id,
-    campaignData: parseCampaignBackupJsonField(row.campaign_data) ?? {},
     campaignConfig: parseCampaignBackupJsonField(row.campaign_config),
     backupType: row.backup_type,
     backupSource: row.backup_source,
@@ -1039,7 +978,6 @@ export async function autoBackupCampaign(params: {
     await createCampaignBackup({
       userId: params.userId,
       offerId: campaign.offer_id,
-      campaignData: buildCampaignBackupDataFromRow(campaign),
       campaignConfig: campaign.campaign_config,
       backupType: 'auto',
       backupSource: params.backupSource,
@@ -1099,7 +1037,6 @@ export async function autoBackupCampaign(params: {
       `
       UPDATE campaign_backups
       SET
-        campaign_data = ?,
         campaign_config = ?,
         backup_type = 'auto',
         backup_source = 'autoads',
@@ -1117,7 +1054,6 @@ export async function autoBackupCampaign(params: {
       WHERE id = ? AND user_id = ?
     `,
       [
-        toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign)),
         toDbCampaignBackupJsonField(campaign.campaign_config),
         campaign.custom_name,
         campaign.campaign_name,
@@ -1163,15 +1099,13 @@ export async function autoBackupCampaign(params: {
   await db.exec(
     `
     UPDATE campaign_backups
-    SET campaign_data = ?,
-        campaign_config = ?,
+    SET campaign_config = ?,
         backup_source = ?,
         backup_version = 2,
         updated_at = ?
     WHERE id = ? AND user_id = ?
   `,
     [
-      toDbCampaignBackupJsonField(buildCampaignBackupDataFromRow(campaign)),
       toDbCampaignBackupJsonField(campaign.campaign_config),
       'google_ads',
       new Date().toISOString(),

@@ -46,7 +46,6 @@ interface CampaignBackup {
   user_id: number
   offer_id: number
   ad_creative_id: number | null
-  campaign_data: any
   campaign_config: any
   backup_type: string
   backup_source: string

@@ -60,6 +60,7 @@ npm run validate-schema
 | **256** | 将 `system.sync_interval_hours` 用户覆盖迁移至 `data_sync_interval_hours` | 须 `npm run db:migrate` |
 | **257** | 清理 `system_settings` 遗留 OAuth 用户实例并回填凭证表 | 须 `npm run db:migrate` |
 | **258** | `ad_creatives.keyword_bucket` 约束收紧为 A/B/D | 须 `npm run db:migrate` |
+| **259** | 移除冗余列 `campaign_backups.campaign_data` | 须 `npm run db:migrate` |
 
 创意生成模式 API 与 UI 依赖上述列；未迁移时入队/列表可能报错。
 

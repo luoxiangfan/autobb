@@ -215,17 +215,10 @@ export async function createCampaignRowFromBackup(params: {
       }
     }
 
-    const campaignData = backup.campaignData
     const campaignConfig = backup.campaignConfig
-    const campaignName =
-      campaignConfig?.campaignName ||
-      campaignData?.campaign_name ||
-      backup.campaignName ||
-      'Campaign'
-    const resolvedGoogleAdsAccountId =
-      googleAdsAccountId ?? backup.googleAdsAccountId ?? campaignData?.google_ads_account_id ?? null
-    const adCreativeId =
-      backup.adCreativeId ?? campaignData?.ad_creative_id ?? campaignConfig?.adCreativeId ?? null
+    const campaignName = campaignConfig?.campaignName || backup.campaignName || 'Campaign'
+    const resolvedGoogleAdsAccountId = googleAdsAccountId ?? backup.googleAdsAccountId ?? null
+    const adCreativeId = backup.adCreativeId ?? campaignConfig?.adCreativeId ?? null
 
     const result = await db.exec(
       `
@@ -247,10 +240,10 @@ export async function createCampaignRowFromBackup(params: {
         null,
         campaignName,
         backup.customName,
-        campaignData?.budget_amount ?? backup.budgetAmount,
-        campaignData?.budget_type ?? backup.budgetType,
-        campaignData?.target_cpa ?? backup.targetCpa,
-        campaignData?.max_cpc ?? backup.maxCpc,
+        backup.budgetAmount,
+        backup.budgetType,
+        backup.targetCpa,
+        backup.maxCpc,
         adCreativeId,
         toDbCampaignConfigTextField(campaignConfig),
         'PAUSED',

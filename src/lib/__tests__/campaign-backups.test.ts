@@ -4,16 +4,19 @@ const mockQuery = vi.fn()
 const mockQueryOne = vi.fn()
 const mockExec = vi.fn()
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    query: mockQuery,
-    queryOne: mockQueryOne,
-    exec: mockExec,
-  })),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => ({
+      query: mockQuery,
+      queryOne: mockQueryOne,
+      exec: mockExec,
+    })),
+  }
+})
 
 import {
-  buildCampaignBackupDataFromRow,
   createCampaignBackup,
   getBackupRankOrderSql,
   isAutoadsLikeBackupSource,
@@ -34,33 +37,6 @@ describe('campaign-backups helpers', () => {
     expect(isAutoadsLikeBackupSource('google_ads')).toBe(false)
   })
 
-  it('buildCampaignBackupDataFromRow omits campaigns table metadata', () => {
-    const data = buildCampaignBackupDataFromRow({
-      campaign_id: 'g-1',
-      offer_id: 9,
-      google_ads_account_id: 3,
-      campaign_name: 'Test',
-      budget_amount: 10,
-      budget_type: 'DAILY',
-      max_cpc: 1.2,
-      target_cpa: null,
-      status: 'PAUSED',
-    })
-    expect(data).toEqual({
-      campaign_id: 'g-1',
-      offer_id: 9,
-      google_ads_account_id: 3,
-      campaign_name: 'Test',
-      budget_amount: 10,
-      budget_type: 'DAILY',
-      max_cpc: 1.2,
-      target_cpa: null,
-      status: 'PAUSED',
-    })
-    expect(data).not.toHaveProperty('id')
-    expect(data).not.toHaveProperty('user_id')
-  })
-
   it('getBackupRankOrderSql prefers config, version, and updated_at', () => {
     const orderSql = getBackupRankOrderSql('cb')
     expect(orderSql).toContain('cb.backup_version DESC')
@@ -75,7 +51,6 @@ describe('campaign-backups helpers', () => {
       id: 1,
       user_id: 7,
       offer_id: 9,
-      campaign_data: '{"offer_id":9}',
       campaign_config: '{"x":1}',
       backup_type: 'auto',
       backup_source: 'autoads',
@@ -93,7 +68,6 @@ describe('campaign-backups helpers', () => {
       ad_creative_id: 11,
     })
     expect(backup.userId).toBe(7)
-    expect(backup.campaignData).toEqual({ offer_id: 9 })
     expect(backup.campaignConfig).toEqual({ x: 1 })
     expect(backup.adCreativeId).toBe(11)
   })
@@ -143,7 +117,6 @@ describe('createCampaignBackup', () => {
       id: 42,
       user_id: 7,
       offer_id: 9,
-      campaign_data: '{}',
       campaign_config: null,
       backup_type: 'auto',
       backup_source: 'autoads',
@@ -166,7 +139,6 @@ describe('createCampaignBackup', () => {
     const backup = await createCampaignBackup({
       userId: 7,
       offerId: 9,
-      campaignData: { offer_id: 9 },
       campaignName: 'Updated',
       budgetAmount: 30,
       budgetType: 'DAILY',
@@ -188,7 +160,6 @@ describe('createCampaignBackup', () => {
         id: 99,
         user_id: 7,
         offer_id: 9,
-        campaign_data: '{}',
         campaign_config: null,
         backup_type: 'auto',
         backup_source: 'google_ads',
@@ -217,7 +188,6 @@ describe('createCampaignBackup', () => {
     const backup = await createCampaignBackup({
       userId: 7,
       offerId: 9,
-      campaignData: { offer_id: 9 },
       campaignName: 'Raced',
       budgetAmount: 30,
       budgetType: 'DAILY',
@@ -336,18 +306,12 @@ describe('syncCampaignBackupAfterPublish', () => {
       },
     })
 
-    const configDb = mockExec.mock.calls[0]?.[1]?.[2]
+    const configDb = mockExec.mock.calls[0]?.[1]?.[1]
     const config =
       typeof configDb === 'string' ? JSON.parse(configDb) : (configDb as Record<string, unknown>)
     expect(config.keywords).toEqual(['published'])
     expect(config.headlines).toEqual(['new-h'])
     expect(config.campaignName).toBe('Remote Name')
-
-    const dataDb = mockExec.mock.calls[0]?.[1]?.[1]
-    const data =
-      typeof dataDb === 'string' ? JSON.parse(dataDb) : (dataDb as Record<string, unknown>)
-    expect(data.campaign_id).toBe('google-999')
-    expect(data.campaign_name).toBe('Remote Name')
 
     expect(mockExec.mock.calls[0]?.[1]).toEqual(
       expect.arrayContaining(['Remote Name', 99, 'DAILY', 3.5, 100, 7])
@@ -451,7 +415,6 @@ describe('trySyncCampaignBackupAfterPublish', () => {
       id: 300,
       user_id: 7,
       offer_id: 9,
-      campaign_data: '{}',
       campaign_config: { budgetAmount: 20 },
       backup_type: 'auto',
       backup_source: 'autoads',
@@ -530,7 +493,6 @@ describe('listCampaignBackups', () => {
         user_id: 7,
         offer_id: 9,
         ad_creative_id: null,
-        campaign_data: '{}',
         campaign_config: null,
         backup_type: 'auto',
         backup_source: 'autoads',
