@@ -17,7 +17,7 @@ vi.mock('@/lib/common/server', async () => {
   }
 })
 
-import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
+import { getOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
 
 describe('openclaw auth gateway token', () => {
   const previousConfigPath = process.env.OPENCLAW_CONFIG_PATH

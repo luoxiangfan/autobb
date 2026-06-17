@@ -21,7 +21,7 @@ import {
 } from './lib/common/cron-schedule'
 import { getDatabase } from './lib/db/database'
 import { getQueueManagerForTaskType } from './lib/queue/queue-routing'
-import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/settings'
+import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/config/settings'
 // 🔄 已迁移到统一队列系统
 import {
   triggerDataSync,

@@ -1,4 +1,4 @@
-import { getOpenclawSettingsMap, parseBoolean, parseJsonArray, parseNumber } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsMap, parseBoolean, parseJsonArray, parseNumber } from '@/lib/openclaw/config/settings'
 
 export type OpenclawStrategyConfig = {
   enabled: boolean

@@ -4,10 +4,10 @@ import { zErr } from '@/lib/common/server'
 import {
   confirmOpenclawCommand,
   confirmOpenclawCommandByOwner } from '@/lib/openclaw/commands/command-service'
-import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
+import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
 import {
   resolveOpenclawParentRequestId,
-  resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/request-correlation'
+  resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/gateway/request-correlation'
 
 export const dynamic = 'force-dynamic'
 

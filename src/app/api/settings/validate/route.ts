@@ -4,7 +4,7 @@ import { validateGoogleAdsConfig, validateGeminiConfig } from '@/lib/common/serv
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/scraping/proxy/providers/provider-registry'
 import { normalizeGeminiModel } from '@/lib/ai/server'
-import { getAffiliateSyncSettingsMap } from '@/lib/openclaw/settings'
+import { getAffiliateSyncSettingsMap } from '@/lib/openclaw/config/settings'
 import { validateAffiliateSyncConfig } from '@/lib/affiliate'
 
 const validateSchema = z.object({

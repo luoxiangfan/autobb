@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
-import { createOpenclawToken, listOpenclawTokens } from '@/lib/openclaw/tokens'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
+import { createOpenclawToken, listOpenclawTokens } from '@/lib/openclaw/config/tokens'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 
 const createTokenSchema = z.object({
   name: z.string().min(1, zErr.required).max(100, zErr.maxChars(100)).optional(),

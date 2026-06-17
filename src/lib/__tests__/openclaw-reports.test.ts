@@ -23,7 +23,7 @@ vi.mock('@/lib/openclaw/autoads-client', () => ({
   fetchAutoadsJson: hoisted.fetchAutoadsJsonMock,
 }))
 
-vi.mock('@/lib/openclaw/gateway', () => ({
+vi.mock('@/lib/openclaw/gateway/gateway', () => ({
   invokeOpenclawTool: hoisted.invokeOpenclawToolMock,
 }))
 

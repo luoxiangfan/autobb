@@ -9,7 +9,7 @@ const dbFns = vi.hoisted(() => ({
   queryOne: vi.fn(),
   query: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/db', () => ({

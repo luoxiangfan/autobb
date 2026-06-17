@@ -79,7 +79,7 @@ vi.mock('@/lib/openclaw/reports', () => ({
   refreshOpenclawDailyReportSnapshot: reportFns.refreshOpenclawDailyReportSnapshot,
 }))
 
-vi.mock('@/lib/openclaw/settings', () => ({
+vi.mock('@/lib/openclaw/config/settings', () => ({
   getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap,
 }))
 

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { resolveStrategyCenterRequestUser } from '@/lib/openclaw/request-auth'
+import { resolveStrategyCenterRequestUser } from '@/lib/openclaw/gateway/request-auth'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import {
   getStrategyRecommendations,
   persistStrategyRecommendationExecutionRuntime,
 } from '@/lib/openclaw/strategy/strategy-recommendations'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
-import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsMap } from '@/lib/openclaw/config/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 
 export const dynamic = 'force-dynamic'

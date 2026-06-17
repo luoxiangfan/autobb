@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS } from '../openclaw/canonical-routes'
+import { OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS } from '../openclaw/gateway/canonical-routes'
 import {
   OPENCLAW_COMMAND_PAYLOAD_POLICIES,
   OPENCLAW_COMMAND_QUERY_POLICIES,

@@ -8,7 +8,7 @@ import { toDbJsonObjectField } from '@/lib/db'
 import { serializeJsonPayloadForStorage } from '@/lib/common/server'
 import { invalidateAffiliateCommissionReportCache } from '@/lib/openclaw/affiliate-commission/affiliate-commission-report-cache'
 import { rebuildAffiliateCommissionLineFactsForUserDate } from '@/lib/openclaw/affiliate-commission/affiliate-commission-raw-report'
-import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsWithAffiliateSyncMap, parseNumber } from '@/lib/openclaw/config/settings'
 
 type PlatformQueryError = {
   platform: AffiliatePlatform | 'attribution' | 'raw_audit'

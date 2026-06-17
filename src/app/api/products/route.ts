@@ -18,7 +18,7 @@ import {
   setCachedProductList,
 } from '@/lib/common/server'
 import { repairOfferAffiliateLinksFromProducts } from '@/lib/offers/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 const ALLOWED_SORT_FIELDS: Set<ProductSortField> = new Set([
   'serial',

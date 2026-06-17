@@ -1,16 +1,16 @@
-import { verifyOpenclawGatewayToken } from '@/lib/openclaw/auth'
-import { verifyOpenclawUserToken } from '@/lib/openclaw/tokens'
+import { verifyOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
+import { verifyOpenclawUserToken } from '@/lib/openclaw/config/tokens'
 import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'
 import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
-import { checkOpenclawRateLimit } from '@/lib/openclaw/rate-limit'
-import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
-import { isOpenclawEnabledForUser } from '@/lib/openclaw/request-auth'
+import { checkOpenclawRateLimit } from '@/lib/openclaw/gateway/rate-limit'
+import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/gateway/bindings'
+import { isOpenclawEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 import { executeOpenclawCommand } from '@/lib/openclaw/commands/command-service'
-import { resolveOpenclawParentRequestId, type OpenclawParentRequestIdSource } from '@/lib/openclaw/request-correlation'
+import { resolveOpenclawParentRequestId, type OpenclawParentRequestIdSource } from '@/lib/openclaw/gateway/request-correlation'
 import {
   assertOpenclawProxyRouteAllowed,
   isOpenclawWriteMethod,
-  validateOpenclawApiRequest } from '@/lib/openclaw/canonical-routes'
+  validateOpenclawApiRequest } from '@/lib/openclaw/gateway/canonical-routes'
 
 export type OpenclawProxyRequest = {
   method: string

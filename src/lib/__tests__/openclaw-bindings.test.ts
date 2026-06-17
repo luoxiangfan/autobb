@@ -28,7 +28,7 @@ vi.mock('../openclaw/feishu/feishu-accounts', () => ({
 import {
   resolveOpenclawUserFromBinding,
   resolveOpenclawUserFromBindingDebug,
-} from '../openclaw/bindings'
+} from '../openclaw/gateway/bindings'
 
 describe('openclaw bindings isolation', () => {
   const previousAuthMode = process.env.OPENCLAW_FEISHU_AUTH_MODE

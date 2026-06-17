@@ -77,7 +77,7 @@ async function main() {
 
   process.env.DATABASE_URL = databaseUrl
 
-  const { resolveOpenclawUserFromBindingDebug } = await import('@/lib/openclaw/bindings')
+  const { resolveOpenclawUserFromBindingDebug } = await import('@/lib/openclaw/gateway/bindings')
 
   const result = await resolveOpenclawUserFromBindingDebug(channel, sender, {
     accountId,

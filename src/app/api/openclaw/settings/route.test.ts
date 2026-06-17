@@ -16,7 +16,7 @@ const syncFns = vi.hoisted(() => ({
 const auditFns = vi.hoisted(() => ({
   auditOpenclawAiAuthOverrides: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/common/server', () => ({
@@ -24,10 +24,10 @@ vi.mock('@/lib/common/server', () => ({
   getUserOnlySettingsByCategory: settingsFns.getUserOnlySettingsByCategory,
   updateSettings: settingsFns.updateSettings }))
 
-vi.mock('@/lib/openclaw/config', () => ({
+vi.mock('@/lib/openclaw/config/config', () => ({
   syncOpenclawConfig: syncFns.syncOpenclawConfig }))
 
-vi.mock('@/lib/openclaw/ai-auth-audit', () => ({
+vi.mock('@/lib/openclaw/config/ai-auth-audit', () => ({
   auditOpenclawAiAuthOverrides: auditFns.auditOpenclawAiAuthOverrides }))
 
 describe('openclaw settings route AI global permissions', () => {

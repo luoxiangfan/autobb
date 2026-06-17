@@ -7,7 +7,7 @@ import { isBackgroundWorkerAlive } from '@/lib/queue/background-worker-heartbeat
 import { failStaleQueuedCommandRuns } from './queued-timeout'
 import type { OpenclawCommandRiskLevel } from './risk-policy'
 import { deriveOpenclawCommandRiskLevel, requiresOpenclawCommandConfirmation } from './risk-policy'
-import { assertOpenclawCommandRouteAllowed } from '@/lib/openclaw/canonical-routes'
+import { assertOpenclawCommandRouteAllowed } from '@/lib/openclaw/gateway/canonical-routes'
 import { normalizeOpenclawCommandPayload, normalizeOpenclawCommandQuery } from './payload-policy'
 import {
   consumeCommandConfirmation,

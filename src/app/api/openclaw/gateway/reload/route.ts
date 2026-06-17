@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { syncOpenclawConfig } from '@/lib/openclaw/config'
-import { getOpenclawGatewaySnapshot, requestOpenclawGatewayRestart } from '@/lib/openclaw/gateway-ws'
-import { auditOpenclawAiAuthOverrides } from '@/lib/openclaw/ai-auth-audit'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
+import { syncOpenclawConfig } from '@/lib/openclaw/config/config'
+import { getOpenclawGatewaySnapshot, requestOpenclawGatewayRestart } from '@/lib/openclaw/gateway/gateway-ws'
+import { auditOpenclawAiAuthOverrides } from '@/lib/openclaw/config/ai-auth-audit'
 
 type GatewayStatusPayload = {
   success: boolean

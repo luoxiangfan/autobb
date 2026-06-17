@@ -18,7 +18,7 @@ vi.mock('@/lib/affiliate/products', () => ({
   linkOfferToAffiliateProduct: affiliateProductFns.linkOfferToAffiliateProduct,
 }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   isProductManagementEnabledForUser: authFns.isProductManagementEnabledForUser,
 }))
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
+import { getOpenclawSettingsMap } from '@/lib/openclaw/config/settings'
 import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu/feishu-api'
 
 const feishuTestSchema = z.object({

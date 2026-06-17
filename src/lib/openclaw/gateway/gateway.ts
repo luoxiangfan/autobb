@@ -1,5 +1,5 @@
 import { getSetting } from '@/lib/common/server'
-import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
+import { getOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
 import { createHash } from 'crypto'
 
 const DEFAULT_GATEWAY_PORT = 18789

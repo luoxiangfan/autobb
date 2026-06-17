@@ -1,9 +1,9 @@
 import type { NextRequest } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { verifyOpenclawGatewayToken } from '@/lib/openclaw/auth'
-import { verifyOpenclawUserToken } from '@/lib/openclaw/tokens'
-import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
+import { verifyOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
+import { verifyOpenclawUserToken } from '@/lib/openclaw/config/tokens'
+import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/gateway/bindings'
 import { hasPackageExpired } from '@/lib/campaign/server'
 
 type ResolvedUser = {

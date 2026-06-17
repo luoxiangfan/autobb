@@ -5,10 +5,10 @@ import {
   type FeishuChatHealthDecision,
   backfillFeishuChatHealthRunLinks,
   recordFeishuChatHealthLog } from '@/lib/openclaw/feishu/feishu-chat-health'
-import { verifyOpenclawGatewayToken } from '@/lib/openclaw/auth'
+import { verifyOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
 import { parseFeishuAccountUserId } from '@/lib/openclaw/feishu/feishu-accounts'
-import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
+import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/gateway/bindings'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 
 const ingestSchema = z.record(z.string(), z.any())
 

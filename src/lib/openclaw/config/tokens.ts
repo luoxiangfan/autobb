@@ -1,6 +1,6 @@
 import { getDatabase } from '@/lib/db'
 import { encrypt, generateRandomKey } from '@/lib/auth'
-import { hashOpenclawToken } from '@/lib/openclaw/auth'
+import { hashOpenclawToken } from '@/lib/openclaw/config/auth'
 import { getInsertedId } from '@/lib/db'
 import { toDbJsonArrayField } from '@/lib/db'
 

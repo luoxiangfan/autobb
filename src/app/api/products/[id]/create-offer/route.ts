@@ -6,7 +6,7 @@ import { createOfferFromAffiliateProduct } from '@/lib/affiliate/products'
 import { repairOfferAffiliateLinksFromProducts } from '@/lib/offers/server'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { invalidateProductListCache } from '@/lib/common/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 const bodySchema = z.object({
   targetCountry: z.string().min(2, zErr.targetCountryMin).max(8, zErr.countryCode).optional(),

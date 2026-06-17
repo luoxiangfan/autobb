@@ -2,7 +2,7 @@ import crypto from 'crypto'
 import fs from 'fs'
 import { getSetting, updateSettings } from '@/lib/common/server'
 import { generateRandomKey } from '@/lib/auth'
-import { resolveOpenclawConfigPath } from '@/lib/openclaw/workspace-paths'
+import { resolveOpenclawConfigPath } from '@/lib/openclaw/workspace/workspace-paths'
 
 const GATEWAY_TOKEN_KEY = 'gateway_token'
 

@@ -8,7 +8,7 @@ const authFns = vi.hoisted(() => ({
 const runsFns = vi.hoisted(() => ({
   listOpenclawCommandRuns: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/commands/runs-service', () => ({

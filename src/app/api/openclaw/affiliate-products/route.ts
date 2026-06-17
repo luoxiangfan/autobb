@@ -4,7 +4,7 @@ import { zErr } from '@/lib/common/server'
 import {
   listAffiliateProducts,
   upsertAffiliateProducts } from '@/lib/openclaw/affiliate-commission/affiliate-products'
-import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
+import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
 
 export const dynamic = 'force-dynamic'
 

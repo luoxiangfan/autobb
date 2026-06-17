@@ -5,7 +5,7 @@ import {
   FEISHU_CHAT_HEALTH_WINDOW_HOURS,
   getFeishuChatHealthExecutionMissingSeconds,
   listFeishuChatHealthLogs } from '@/lib/openclaw/feishu/feishu-chat-health'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 
 function clampLimit(value: unknown): number {
   const parsed = Number(value)

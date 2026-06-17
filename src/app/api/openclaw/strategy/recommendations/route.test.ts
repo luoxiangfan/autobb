@@ -33,7 +33,7 @@ const queueFns = vi.hoisted(() => ({
     enqueue: vi.fn(),
     getTask: vi.fn() } }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/strategy/strategy-recommendations', () => ({
@@ -43,7 +43,7 @@ vi.mock('@/lib/openclaw/strategy/strategy-recommendations', () => ({
 vi.mock('@/lib/openclaw/reports', () => ({
   refreshOpenclawDailyReportSnapshot: reportFns.refreshOpenclawDailyReportSnapshot }))
 
-vi.mock('@/lib/openclaw/settings', () => ({
+vi.mock('@/lib/openclaw/config/settings', () => ({
   getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap }))
 
 vi.mock('@/lib/queue/queue-routing', () => ({

@@ -22,23 +22,23 @@ const {
   resolveOpenclawParentRequestIdMock: vi.fn(),
 }))
 
-vi.mock('../openclaw/auth', () => ({
+vi.mock('../openclaw/config/auth', () => ({
   verifyOpenclawGatewayToken: verifyOpenclawGatewayTokenMock,
 }))
 
-vi.mock('../openclaw/tokens', () => ({
+vi.mock('../openclaw/config/tokens', () => ({
   verifyOpenclawUserToken: verifyOpenclawUserTokenMock,
 }))
 
-vi.mock('../openclaw/bindings', () => ({
+vi.mock('../openclaw/gateway/bindings', () => ({
   resolveOpenclawUserFromBinding: resolveOpenclawUserFromBindingMock,
 }))
 
-vi.mock('../openclaw/request-auth', () => ({
+vi.mock('../openclaw/gateway/request-auth', () => ({
   isOpenclawEnabledForUser: isOpenclawEnabledForUserMock,
 }))
 
-vi.mock('../openclaw/rate-limit', () => ({
+vi.mock('../openclaw/gateway/rate-limit', () => ({
   checkOpenclawRateLimit: checkOpenclawRateLimitMock,
 }))
 
@@ -54,11 +54,11 @@ vi.mock('../openclaw/commands/command-service', () => ({
   executeOpenclawCommand: executeOpenclawCommandMock,
 }))
 
-vi.mock('../openclaw/request-correlation', () => ({
+vi.mock('../openclaw/gateway/request-correlation', () => ({
   resolveOpenclawParentRequestId: resolveOpenclawParentRequestIdMock,
 }))
 
-import { handleOpenclawProxyRequest } from '../openclaw/proxy'
+import { handleOpenclawProxyRequest } from '../openclaw/gateway/proxy'
 
 describe('openclaw proxy write bridge', () => {
   beforeEach(() => {

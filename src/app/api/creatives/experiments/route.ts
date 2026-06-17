@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
+import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
 import { getDatabase } from '@/lib/db'
 
 function parsePositiveInt(value: string | null, fallback: number): number {

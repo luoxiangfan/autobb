@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildOpenclawDailyReport, getOrCreateDailyReport } from '@/lib/openclaw/reports'
-import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
-import { getAffiliateSyncSettingsMap } from '@/lib/openclaw/settings'
+import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
+import { getAffiliateSyncSettingsMap } from '@/lib/openclaw/config/settings'
 
 function parseBooleanQuery(value: string | null): boolean {
   if (!value) return false

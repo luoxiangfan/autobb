@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 import { getSettingsByCategory } from '@/lib/common/server'
-import { syncOpenclawConfig } from '@/lib/openclaw/config'
-import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
+import { syncOpenclawConfig } from '@/lib/openclaw/config/config'
+import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace/workspace-paths'
 
 function parseJsonObject(value?: string | null): Record<string, any> | undefined {
   if (!value) return undefined
@@ -23,7 +23,7 @@ async function buildWorkspaceStatus(params: {
   canReloadGateway: boolean
 }) {
   const { inspectOpenclawWorkspace } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace-bootstrap'
+    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
   )
   const inspected = inspectOpenclawWorkspace(params.workspaceDir)
   return {
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     preferredWorkspace })
 
   const { ensureOpenclawWorkspaceBootstrap } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace-bootstrap'
+    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
   )
   const bootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,

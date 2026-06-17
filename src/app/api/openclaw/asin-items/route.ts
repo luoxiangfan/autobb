@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
+import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
 
 export const dynamic = 'force-dynamic'
 

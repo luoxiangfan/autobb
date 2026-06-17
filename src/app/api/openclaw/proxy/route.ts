@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
-import { handleOpenclawProxyRequest } from '@/lib/openclaw/proxy'
-import { resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/request-correlation'
+import { handleOpenclawProxyRequest } from '@/lib/openclaw/gateway/proxy'
+import { resolveOpenclawParentRequestIdFromHeaders } from '@/lib/openclaw/gateway/request-correlation'
 
 const proxySchema = z.object({
   method: z.string().min(1, zErr.required),

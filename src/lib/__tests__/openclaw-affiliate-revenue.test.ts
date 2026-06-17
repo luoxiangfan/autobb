@@ -8,7 +8,7 @@ const hoisted = vi.hoisted(() => ({
   dbTransactionMock: vi.fn(),
 }))
 
-vi.mock('@/lib/openclaw/settings', () => ({
+vi.mock('@/lib/openclaw/config/settings', () => ({
   getOpenclawSettingsWithAffiliateSyncMap: hoisted.getOpenclawSettingsWithAffiliateSyncMapMock,
   parseNumber: (value: unknown, fallback = 0) => {
     const parsed = Number(value)

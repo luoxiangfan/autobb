@@ -9,7 +9,7 @@ vi.mock('@/lib/common/server', () => ({
   getSetting: getSettingMock,
 }))
 
-vi.mock('@/lib/openclaw/auth', () => ({
+vi.mock('@/lib/openclaw/config/auth', () => ({
   getOpenclawGatewayToken: getOpenclawGatewayTokenMock,
 }))
 
@@ -17,7 +17,7 @@ import {
   invokeOpenclawTool,
   resolveOpenclawGatewayBaseUrl,
   resetOpenclawGatewayInvokeCachesForTests,
-} from '@/lib/openclaw/gateway'
+} from '@/lib/openclaw/gateway/gateway'
 
 describe('openclaw gateway base url', () => {
   beforeEach(() => {

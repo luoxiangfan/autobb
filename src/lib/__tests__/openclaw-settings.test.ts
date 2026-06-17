@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseNumber } from '@/lib/openclaw/settings'
+import { parseNumber } from '@/lib/openclaw/config/settings'
 
 describe('openclaw settings parseNumber', () => {
   it('returns fallback when value is empty string', () => {

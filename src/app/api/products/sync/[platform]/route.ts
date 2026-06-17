@@ -11,7 +11,7 @@ import {
 } from '@/lib/affiliate/products'
 import { getDatabase } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 import {
   getYeahPromosSessionState,
   checkYeahPromosSessionValidForSync,

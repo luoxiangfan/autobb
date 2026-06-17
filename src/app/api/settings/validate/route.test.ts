@@ -20,7 +20,7 @@ vi.mock('@/lib/common/server', () => ({
   validateGeminiConfig: validateFns.validateGeminiConfig,
 }))
 
-vi.mock('@/lib/openclaw/settings', () => ({
+vi.mock('@/lib/openclaw/config/settings', () => ({
   getAffiliateSyncSettingsMap: settingsFns.getAffiliateSyncSettingsMap,
 }))
 

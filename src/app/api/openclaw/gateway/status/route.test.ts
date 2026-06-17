@@ -11,13 +11,13 @@ const configFns = vi.hoisted(() => ({
 const gatewayFns = vi.hoisted(() => ({
   getOpenclawGatewaySnapshot: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
-vi.mock('@/lib/openclaw/config', () => ({
+vi.mock('@/lib/openclaw/config/config', () => ({
   syncOpenclawConfig: configFns.syncOpenclawConfig }))
 
-vi.mock('@/lib/openclaw/gateway-ws', () => ({
+vi.mock('@/lib/openclaw/gateway/gateway-ws', () => ({
   getOpenclawGatewaySnapshot: gatewayFns.getOpenclawGatewaySnapshot }))
 
 describe('GET /api/openclaw/gateway/status', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeOpenclawProxyTarget } from '../openclaw/proxy'
-import { assertOpenclawProxyRouteAllowed } from '../openclaw/canonical-routes'
+import { normalizeOpenclawProxyTarget } from '../openclaw/gateway/proxy'
+import { assertOpenclawProxyRouteAllowed } from '../openclaw/gateway/canonical-routes'
 
 describe('normalizeOpenclawProxyTarget', () => {
   it('keeps current valid path unchanged', () => {

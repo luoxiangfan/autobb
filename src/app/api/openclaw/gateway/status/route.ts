@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOpenclawGatewaySnapshot } from '@/lib/openclaw/gateway-ws'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { syncOpenclawConfig } from '@/lib/openclaw/config'
+import { getOpenclawGatewaySnapshot } from '@/lib/openclaw/gateway/gateway-ws'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
+import { syncOpenclawConfig } from '@/lib/openclaw/config/config'
 
 function asRecord(value: unknown): Record<string, any> | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null

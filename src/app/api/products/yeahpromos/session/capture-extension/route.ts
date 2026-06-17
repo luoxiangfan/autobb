@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyProductManagementSessionAuth } from '@/lib/openclaw/request-auth'
+import { verifyProductManagementSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 import {
   getYeahPromosSessionState,
   maskSessionId,

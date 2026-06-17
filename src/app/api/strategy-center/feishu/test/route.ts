@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { verifyStrategyCenterSessionAuth } from '@/lib/openclaw/request-auth'
-import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
+import { verifyStrategyCenterSessionAuth } from '@/lib/openclaw/gateway/request-auth'
+import { getOpenclawSettingsMap } from '@/lib/openclaw/config/settings'
 import {
   feishuRequest,
   getTenantAccessToken,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseAiModelsJson, setAiModelsSelectedModel } from '@/lib/openclaw/ai-models'
+import { parseAiModelsJson, setAiModelsSelectedModel } from '@/lib/openclaw/config/ai-models'
 
 describe('parseAiModelsJson', () => {
   it('reads models.providers and resolves current model from agents.defaults.model.primary', () => {

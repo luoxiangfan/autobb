@@ -13,7 +13,7 @@ const healthFns = vi.hoisted(() => ({
   FEISHU_CHAT_HEALTH_EXECUTION_MISSING_SECONDS: 180,
   getFeishuChatHealthExecutionMissingSeconds: vi.fn().mockReturnValue(180) }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/feishu/feishu-chat-health', () => ({

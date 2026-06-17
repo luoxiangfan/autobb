@@ -13,7 +13,7 @@ import {
 } from '@/lib/openclaw/strategy/strategy-recommendations'
 import { normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
-import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsMap } from '@/lib/openclaw/config/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { assertUserExecutionAllowed } from '@/lib/campaign/server'
 

@@ -1,6 +1,6 @@
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 import { scheduleProductScoreCalculation } from '@/lib/queue/schedulers/product-score-scheduler'
 import { isProductScoreCalculationPausedError } from '@/lib/launch-score/server'
 

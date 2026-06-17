@@ -4,7 +4,7 @@ import {
   assertOpenclawProxyRouteAllowed,
   normalizeOpenclawApiPath,
   validateOpenclawApiRequest,
-} from '../openclaw/canonical-routes'
+} from '../openclaw/gateway/canonical-routes'
 
 describe('openclaw canonical routes', () => {
   it('normalizes query/hash/trailing slash from path', () => {

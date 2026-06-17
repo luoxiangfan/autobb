@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
-import { resolveOpenclawGatewayBaseUrl } from '@/lib/openclaw/gateway'
-import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
+import { resolveOpenclawGatewayBaseUrl } from '@/lib/openclaw/gateway/gateway'
+import { getOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
 
 const PROTOCOL_VERSION = 3
 const DEFAULT_TIMEOUT_MS = 10_000

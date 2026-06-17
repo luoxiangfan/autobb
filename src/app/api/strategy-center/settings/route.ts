@@ -6,7 +6,7 @@ import {
   getUserOnlySettingsByCategory,
   updateSettings,
 } from '@/lib/common/server'
-import { verifyStrategyCenterSessionAuth } from '@/lib/openclaw/request-auth'
+import { verifyStrategyCenterSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 
 const STRATEGY_CENTER_USER_KEYS = new Set([
   'openclaw_strategy_enabled',
@@ -178,7 +178,7 @@ export async function PUT(request: NextRequest) {
     )
 
     try {
-      const { syncOpenclawConfig } = await import('@/lib/openclaw/config')
+      const { syncOpenclawConfig } = await import('@/lib/openclaw/config/config')
       await syncOpenclawConfig({
         reason: 'strategy-center-settings',
         actorUserId: auth.user.userId,

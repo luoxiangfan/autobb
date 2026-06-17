@@ -21,10 +21,10 @@ const bindingFns = vi.hoisted(() => ({
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn() }))
 
-vi.mock('@/lib/openclaw/auth', () => ({
+vi.mock('@/lib/openclaw/config/auth', () => ({
   verifyOpenclawGatewayToken: gatewayAuthFns.verifyOpenclawGatewayToken }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyOpenclawSessionAuth: sessionAuthFns.verifyOpenclawSessionAuth }))
 
 vi.mock('@/lib/openclaw/feishu/feishu-chat-health', () => ({
@@ -34,7 +34,7 @@ vi.mock('@/lib/openclaw/feishu/feishu-chat-health', () => ({
 vi.mock('@/lib/openclaw/feishu/feishu-accounts', () => ({
   parseFeishuAccountUserId: accountFns.parseFeishuAccountUserId }))
 
-vi.mock('@/lib/openclaw/bindings', () => ({
+vi.mock('@/lib/openclaw/gateway/bindings', () => ({
   resolveOpenclawUserFromBinding: bindingFns.resolveOpenclawUserFromBinding }))
 
 vi.mock('@/lib/db', () => ({

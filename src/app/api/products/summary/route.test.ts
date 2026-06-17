@@ -43,7 +43,7 @@ vi.mock('@/lib/common/server', () => ({
   setCachedProductSummaryRoute: cacheFns.setCachedProductSummaryRoute,
 }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   isProductManagementEnabledForUser: authFns.isProductManagementEnabledForUser,
 }))
 

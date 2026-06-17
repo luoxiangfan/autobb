@@ -1,6 +1,6 @@
 import type { OpenclawCommandRiskLevel } from './risk-policy'
 import { deriveOpenclawCommandRiskLevel, requiresOpenclawCommandConfirmation } from './risk-policy'
-import { validateOpenclawApiRequest } from '@/lib/openclaw/canonical-routes'
+import { validateOpenclawApiRequest } from '@/lib/openclaw/gateway/canonical-routes'
 
 export type ParseOpenclawCommandInput = {
   method: string

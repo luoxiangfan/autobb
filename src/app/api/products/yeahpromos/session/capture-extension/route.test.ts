@@ -12,7 +12,7 @@ const ypSessionFns = vi.hoisted(() => ({
   maskSessionId: vi.fn(),
 }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyProductManagementSessionAuth: authFns.verifyProductManagementSessionAuth,
 }))
 

@@ -12,13 +12,13 @@ const correlationFns = vi.hoisted(() => ({
   resolveOpenclawParentRequestId: vi.fn(),
   resolveOpenclawParentRequestIdFromHeaders: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/commands/command-service', () => ({
   executeOpenclawCommand: commandFns.executeOpenclawCommand }))
 
-vi.mock('@/lib/openclaw/request-correlation', () => ({
+vi.mock('@/lib/openclaw/gateway/request-correlation', () => ({
   resolveOpenclawParentRequestId: correlationFns.resolveOpenclawParentRequestId,
   resolveOpenclawParentRequestIdFromHeaders: correlationFns.resolveOpenclawParentRequestIdFromHeaders }))
 

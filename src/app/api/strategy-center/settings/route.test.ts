@@ -16,7 +16,7 @@ const configFns = vi.hoisted(() => ({
   syncOpenclawConfig: vi.fn(),
 }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyStrategyCenterSessionAuth: authFns.verifyStrategyCenterSessionAuth,
 }))
 
@@ -26,7 +26,7 @@ vi.mock('@/lib/common/server', () => ({
   updateSettings: settingsFns.updateSettings,
 }))
 
-vi.mock('@/lib/openclaw/config', () => ({
+vi.mock('@/lib/openclaw/config/config', () => ({
   syncOpenclawConfig: configFns.syncOpenclawConfig,
 }))
 

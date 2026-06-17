@@ -5,7 +5,7 @@ import { zErr } from '@/lib/common/server'
 import { batchOfflineAffiliateProducts } from '@/lib/affiliate/products'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { invalidateProductListCache } from '@/lib/common/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 const bodySchema = z.object({
   productIds: z

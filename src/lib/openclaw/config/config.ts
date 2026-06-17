@@ -1,10 +1,10 @@
 import fs from 'fs'
 import { getSettingsByCategory } from '@/lib/common/server'
-import { getOpenclawGatewayToken } from '@/lib/openclaw/auth'
+import { getOpenclawGatewayToken } from '@/lib/openclaw/config/auth'
 import { collectUserFeishuAccounts } from '@/lib/openclaw/feishu/feishu-accounts'
-import { parseAiModelsJson } from '@/lib/openclaw/ai-models'
-import { syncOpenclawManagedAiAuthProfiles } from '@/lib/openclaw/ai-auth-audit'
-import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace-paths'
+import { parseAiModelsJson } from '@/lib/openclaw/config/ai-models'
+import { syncOpenclawManagedAiAuthProfiles } from '@/lib/openclaw/config/ai-auth-audit'
+import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace/workspace-paths'
 
 type SyncOpenclawConfigOptions = {
   reason?: string
@@ -391,7 +391,7 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
     : ''
 
   const { ensureOpenclawWorkspaceBootstrap } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace-bootstrap'
+    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
   )
   const workspaceBootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,

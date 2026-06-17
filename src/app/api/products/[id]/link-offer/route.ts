@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { linkOfferToAffiliateProduct } from '@/lib/affiliate/products'
 import { invalidateProductListCache } from '@/lib/common/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 const bodySchema = z.object({
   offerId: z.number().int(zErr.int).positive(zErr.positiveInt),

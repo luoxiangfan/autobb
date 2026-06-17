@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace-paths'
+import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace/workspace-paths'
 
 type JsonRecord = Record<string, unknown>
 

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   auditOpenclawAiAuthOverrides,
   syncOpenclawManagedAiAuthProfiles,
-} from '@/lib/openclaw/ai-auth-audit'
+} from '@/lib/openclaw/config/ai-auth-audit'
 
 describe('auditOpenclawAiAuthOverrides', () => {
   const envBackup = {

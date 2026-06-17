@@ -12,14 +12,14 @@ const reportFns = vi.hoisted(() => ({
 const settingsFns = vi.hoisted(() => ({
   getAffiliateSyncSettingsMap: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
 vi.mock('@/lib/openclaw/reports', () => ({
   getOrCreateDailyReport: reportFns.getOrCreateDailyReport,
   buildOpenclawDailyReport: reportFns.buildOpenclawDailyReport }))
 
-vi.mock('@/lib/openclaw/settings', () => ({
+vi.mock('@/lib/openclaw/config/settings', () => ({
   getAffiliateSyncSettingsMap: settingsFns.getAffiliateSyncSettingsMap }))
 
 describe('openclaw reports daily route', () => {

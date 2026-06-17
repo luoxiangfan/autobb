@@ -6,7 +6,7 @@ import { batchCreateOffersFromAffiliateProducts } from '@/lib/affiliate/products
 import { repairOfferAffiliateLinksFromProducts } from '@/lib/offers/server'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { invalidateProductListCache } from '@/lib/common/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 const itemSchema = z.object({
   productId: z.number().int(zErr.int).positive(zErr.positiveInt),

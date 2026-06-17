@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS } from '../openclaw/canonical-routes'
+import { OPENCLAW_CANONICAL_WRITE_ROUTE_DEFINITIONS } from '../openclaw/gateway/canonical-routes'
 import { OPENCLAW_COMMAND_ROUTE_RISK_POLICIES } from '../openclaw/commands/risk-policy'
 
 function toRouteKey(method: string, path: string): string {

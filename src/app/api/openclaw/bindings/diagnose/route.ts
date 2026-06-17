@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { resolveOpenclawUserFromBindingDebug } from '@/lib/openclaw/bindings'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
+import { resolveOpenclawUserFromBindingDebug } from '@/lib/openclaw/gateway/bindings'
 
 export const dynamic = 'force-dynamic'
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   resolveOpenclawParentRequestId,
   resolveOpenclawParentRequestIdFromHeaders,
-} from '@/lib/openclaw/request-correlation'
+} from '@/lib/openclaw/gateway/request-correlation'
 
 describe('openclaw request correlation', () => {
   it('resolves parent request id from headers with expected priority', () => {

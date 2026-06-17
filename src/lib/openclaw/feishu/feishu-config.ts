@@ -1,4 +1,4 @@
-import { getOpenclawSettingsMap, readSecretFile } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsMap, readSecretFile } from '@/lib/openclaw/config/settings'
 
 export type OpenclawFeishuDocConfig = {
   appId?: string

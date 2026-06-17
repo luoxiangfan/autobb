@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { isOpenclawEnabledForUser, resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
+import { isOpenclawEnabledForUser, resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
 import {
   resolveAffiliateCommissionPlatformFilter,
   type AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'

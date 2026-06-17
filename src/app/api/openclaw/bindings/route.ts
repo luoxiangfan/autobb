@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { isUniqueConstraintViolation } from '@/lib/db'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 
 const createBindingSchema = z.object({
   channel: z.string().min(1, zErr.required),

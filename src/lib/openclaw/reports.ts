@@ -1,7 +1,7 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
 import { fetchAutoadsJson } from '@/lib/openclaw/autoads-client'
 import { fetchAffiliateCommissionRevenue, type AffiliateCommissionRevenue } from '@/lib/openclaw/affiliate-commission/affiliate-revenue'
-import { invokeOpenclawTool } from '@/lib/openclaw/gateway'
+import { invokeOpenclawTool } from '@/lib/openclaw/gateway/gateway'
 import { resolveUserFeishuAccountId } from '@/lib/openclaw/feishu/feishu-accounts'
 import { writeDailyReportToBitable, writeDailyReportToDoc } from '@/lib/openclaw/feishu/feishu-docs'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'

@@ -1,4 +1,4 @@
-import { syncOpenclawConfig } from './lib/openclaw/config'
+import { syncOpenclawConfig } from './lib/openclaw/config/config'
 
 async function main() {
   await syncOpenclawConfig({ reason: 'startup-sync' })

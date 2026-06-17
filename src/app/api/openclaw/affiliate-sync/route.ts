@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
+import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
-import { getOpenclawSettingsWithAffiliateSyncMap } from '@/lib/openclaw/settings'
+import { getOpenclawSettingsWithAffiliateSyncMap } from '@/lib/openclaw/config/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 
 export const dynamic = 'force-dynamic'

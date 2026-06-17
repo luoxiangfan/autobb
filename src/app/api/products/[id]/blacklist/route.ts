@@ -2,7 +2,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAffiliateProductById, setAffiliateProductBlacklist } from '@/lib/affiliate/products'
 import { invalidateProductListCache } from '@/lib/common/server'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 type RouteParams = {
   id: string

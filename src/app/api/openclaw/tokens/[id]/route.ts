@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { revokeOpenclawToken } from '@/lib/openclaw/tokens'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
+import { revokeOpenclawToken } from '@/lib/openclaw/config/tokens'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 
 export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

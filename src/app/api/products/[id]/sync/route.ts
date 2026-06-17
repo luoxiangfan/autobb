@@ -7,7 +7,7 @@ import {
   getAffiliateProductById,
 } from '@/lib/affiliate/products'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { isProductManagementEnabledForUser } from '@/lib/openclaw/request-auth'
+import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 
 type RouteParams = {
   id: string

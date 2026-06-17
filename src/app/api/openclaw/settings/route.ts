@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { validateCronExpression } from '@/lib/common/server'
 import { getSettingsByCategory, getUserOnlySettingsByCategory, updateSettings } from '@/lib/common/server'
-import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { auditOpenclawAiAuthOverrides } from '@/lib/openclaw/ai-auth-audit'
+import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
+import { auditOpenclawAiAuthOverrides } from '@/lib/openclaw/config/ai-auth-audit'
 
 const GLOBAL_AI_KEYS = new Set([
   'ai_models_json',
@@ -244,7 +244,7 @@ export async function PUT(request: NextRequest) {
   let aiAuthOverrideWarnings: ReturnType<typeof auditOpenclawAiAuthOverrides> = []
   if (appliedUpdates.length > 0) {
     try {
-      const { syncOpenclawConfig } = await import('@/lib/openclaw/config')
+      const { syncOpenclawConfig } = await import('@/lib/openclaw/config/config')
       const hasGlobalSync = appliedUpdates.some(item => GLOBAL_SYNC_KEYS.has(item.key))
       const hasUserSync = appliedUpdates.some(item => USER_SYNC_KEYS.has(item.key))
       const reason = hasGlobalSync

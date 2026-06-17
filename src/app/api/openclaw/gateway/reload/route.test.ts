@@ -15,17 +15,17 @@ const gatewayFns = vi.hoisted(() => ({
 const auditFns = vi.hoisted(() => ({
   auditOpenclawAiAuthOverrides: vi.fn() }))
 
-vi.mock('@/lib/openclaw/request-auth', () => ({
+vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
-vi.mock('@/lib/openclaw/config', () => ({
+vi.mock('@/lib/openclaw/config/config', () => ({
   syncOpenclawConfig: configFns.syncOpenclawConfig }))
 
-vi.mock('@/lib/openclaw/gateway-ws', () => ({
+vi.mock('@/lib/openclaw/gateway/gateway-ws', () => ({
   getOpenclawGatewaySnapshot: gatewayFns.getOpenclawGatewaySnapshot,
   requestOpenclawGatewayRestart: gatewayFns.requestOpenclawGatewayRestart }))
 
-vi.mock('@/lib/openclaw/ai-auth-audit', () => ({
+vi.mock('@/lib/openclaw/config/ai-auth-audit', () => ({
   auditOpenclawAiAuthOverrides: auditFns.auditOpenclawAiAuthOverrides }))
 
 describe('POST /api/openclaw/gateway/reload', () => {

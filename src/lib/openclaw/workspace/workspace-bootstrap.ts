@@ -4,12 +4,12 @@ import {
   formatOpenclawDateInShanghai,
   getOpenclawDailyMemoryFileName,
   normalizeOpenclawUserPath,
-  resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
+  resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace/workspace-paths'
 
 export {
   getOpenclawDailyMemoryFileName,
   normalizeOpenclawUserPath,
-  resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace-paths'
+  resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace/workspace-paths'
 
 type EnsureOpenclawWorkspaceOptions = {
   stateDir: string

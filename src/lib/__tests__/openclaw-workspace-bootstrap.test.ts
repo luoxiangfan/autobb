@@ -2,7 +2,7 @@ import fs from 'fs'
 import os from 'os'
 import path from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { ensureOpenclawWorkspaceBootstrap } from '@/lib/openclaw/workspace-bootstrap'
+import { ensureOpenclawWorkspaceBootstrap } from '@/lib/openclaw/workspace/workspace-bootstrap'
 
 const tmpDirs: string[] = []
 

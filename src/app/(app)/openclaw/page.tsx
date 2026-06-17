@@ -19,7 +19,7 @@ import { TrendChartDynamic } from '@/components/charts/dynamic'
 import { toast } from 'sonner'
 import { Eye } from 'lucide-react'
 import { usePagination } from '@/hooks'
-import { parseAiModelsJson, setAiModelsSelectedModel } from '@/lib/openclaw/ai-models'
+import { parseAiModelsJson, setAiModelsSelectedModel } from '@/lib/openclaw/config/ai-models'
 
 type SettingItem = {
   key: string

@@ -14,7 +14,7 @@ vi.mock('@/lib/common/server', () => ({
   getSettingsByCategory: getSettingsByCategoryMock,
 }))
 
-vi.mock('@/lib/openclaw/auth', () => ({
+vi.mock('@/lib/openclaw/config/auth', () => ({
   getOpenclawGatewayToken: getOpenclawGatewayTokenMock,
 }))
 
@@ -22,7 +22,7 @@ vi.mock('@/lib/openclaw/feishu/feishu-accounts', () => ({
   collectUserFeishuAccounts: collectUserFeishuAccountsMock,
 }))
 
-import { syncOpenclawConfig } from '@/lib/openclaw/config'
+import { syncOpenclawConfig } from '@/lib/openclaw/config/config'
 
 describe('syncOpenclawConfig user scope', () => {
   let tempDir = ''
