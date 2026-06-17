@@ -471,7 +471,7 @@ export default function CampaignsClientPage({
 
   const [syncing, setSyncing] = useState(false)
   /** 后台队列执行 Google Ads 同步时，轮询 /api/sync/status-v2 的间隔与上限 */
-  const GOOGLE_ADS_SYNC_POLL_MS = 2000
+  const GOOGLE_ADS_SYNC_POLL_MS = 3000
   const GOOGLE_ADS_SYNC_WAIT_MAX_MS = 15 * 60 * 1000
   const GOOGLE_ADS_SYNC_QUEUE_LAG_MS = 1000
   const GOOGLE_ADS_SYNC_QUEUE_STUCK_MS = 120_000
@@ -495,41 +495,57 @@ export default function CampaignsClientPage({
   const allowIdleClearSyncingRef = useRef(false)
   /** 正在 await 队列排空循环时禁止根据 status-v2 清 syncing（避免重复点击） */
   const googleAdsSyncWaitLoopActiveRef = useRef(false)
+  /** 合并并发 status-v2 请求，避免 interval 与 wait loop 同时触发 */
+  const syncStatusCheckInFlightRef = useRef<Promise<Record<string, unknown> | null> | null>(null)
 
   const checkGlobalSyncStatus = useCallback(async () => {
-    try {
-      const response = await fetch('/api/sync/status-v2', { credentials: 'include' })
-      if (response.ok) {
-        const data = await response.json()
-        setGlobalSyncStatus(data)
-        if (allowIdleClearSyncingRef.current && !googleAdsSyncWaitLoopActiveRef.current) {
-          const qp = Number(data.googleAdsCampaignSyncQueue?.pending ?? 0)
-          const qr = Number(data.googleAdsCampaignSyncQueue?.running ?? 0)
-          const logBusy =
-            data.hasRunningSync === true &&
-            data.runningSync?.syncType === 'google_ads_campaign_sync'
-          if (qp + qr === 0 && !logBusy) {
-            setSyncing(false)
-          }
-        }
-        return data
-      }
-    } catch (error) {
-      console.error('检查同步状态失败:', error)
+    if (syncStatusCheckInFlightRef.current) {
+      return syncStatusCheckInFlightRef.current
     }
-    return null
+
+    const run = (async () => {
+      try {
+        const response = await fetch('/api/sync/status-v2', { credentials: 'include' })
+        if (response.ok) {
+          const data = await response.json()
+          setGlobalSyncStatus(data)
+          if (allowIdleClearSyncingRef.current && !googleAdsSyncWaitLoopActiveRef.current) {
+            const qp = Number(data.googleAdsCampaignSyncQueue?.pending ?? 0)
+            const qr = Number(data.googleAdsCampaignSyncQueue?.running ?? 0)
+            const logBusy =
+              data.hasRunningSync === true &&
+              data.runningSync?.syncType === 'google_ads_campaign_sync'
+            if (qp + qr === 0 && !logBusy) {
+              setSyncing(false)
+            }
+          }
+          return data
+        }
+      } catch (error) {
+        console.error('检查同步状态失败:', error)
+      }
+      return null
+    })()
+
+    syncStatusCheckInFlightRef.current = run
+    try {
+      return await run
+    } finally {
+      if (syncStatusCheckInFlightRef.current === run) {
+        syncStatusCheckInFlightRef.current = null
+      }
+    }
   }, [])
 
-  // 🔧 启动轮询（每 3 秒检查一次）
+  // 🔧 启动轮询（与 GOOGLE_ADS_SYNC_POLL_MS 一致；手动同步 wait loop 期间不启动）
   const startPolling = useCallback(() => {
-    if (pollingRef.current) {
-      // 已经存在轮询，不需要重复启动
+    if (pollingRef.current || googleAdsSyncWaitLoopActiveRef.current) {
       return
     }
     setIsPolling(true)
     pollingRef.current = setInterval(() => {
       void checkGlobalSyncStatus()
-    }, 3000)
+    }, GOOGLE_ADS_SYNC_POLL_MS)
     console.log('[Sync] Started polling for sync status')
   }, [checkGlobalSyncStatus])
 
@@ -874,6 +890,9 @@ export default function CampaignsClientPage({
 
   // 🔧 监听同步状态，自动管理轮询（含：仅有队列任务但 sync_logs 尚未写入 running 的阶段）
   useEffect(() => {
+    if (googleAdsSyncWaitLoopActiveRef.current) {
+      return
+    }
     const st = globalSyncStatus
     const queueTotal =
       Number(st?.googleAdsCampaignSyncQueue?.pending ?? 0) +
@@ -2322,6 +2341,7 @@ export default function CampaignsClientPage({
           let everBusy = false
           let consecutiveIdle = 0
           let exitedOnIdle = false
+          stopPolling()
           googleAdsSyncWaitLoopActiveRef.current = true
           try {
             await new Promise((r) => setTimeout(r, GOOGLE_ADS_SYNC_QUEUE_LAG_MS))
@@ -2356,6 +2376,7 @@ export default function CampaignsClientPage({
             }
           } finally {
             googleAdsSyncWaitLoopActiveRef.current = false
+            void checkGlobalSyncStatus()
           }
         } else {
           showInfo(
