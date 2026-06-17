@@ -219,6 +219,8 @@ function toAssetTexts(creative: GeneratedAdCreativeData): string[] {
   for (const callout of creative.callouts || []) texts.push(callout)
   for (const sitelink of creative.sitelinks || []) {
     texts.push(sitelink.text || '')
+    if (sitelink.description1) texts.push(sitelink.description1)
+    if (sitelink.description2) texts.push(sitelink.description2)
     if (sitelink.description) texts.push(sitelink.description)
   }
   return texts.map((text) => String(text || '').trim()).filter(Boolean)
@@ -445,7 +447,9 @@ function evaluateConversion(
   const texts = [
     ...(creative.descriptions || []),
     ...(creative.callouts || []),
-    ...(creative.sitelinks || []).map((s) => `${s.text || ''} ${s.description || ''}`),
+    ...(creative.sitelinks || []).map(
+      (s) => `${s.text || ''} ${s.description1 || s.description || ''} ${s.description2 || ''}`
+    ),
   ]
     .map((text) => String(text || '').trim())
     .filter(Boolean)
@@ -471,7 +475,9 @@ function evaluateConversion(
     ...(creative.headlines || []),
     ...(creative.descriptions || []),
     ...(creative.callouts || []),
-    ...(creative.sitelinks || []).map((s) => `${s.text || ''} ${s.description || ''}`),
+    ...(creative.sitelinks || []).map(
+      (s) => `${s.text || ''} ${s.description1 || s.description || ''} ${s.description2 || ''}`
+    ),
   ].join(' ')
   const strongNegativeMatches =
     allAssetText.match(new RegExp(STRONG_NEGATIVE_PATTERN.source, 'gi')) || []

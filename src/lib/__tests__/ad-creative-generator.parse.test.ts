@@ -331,7 +331,9 @@ line2", "type": "feature-benefit-cta", "length": 10},
       ...result.headlines,
       ...result.descriptions,
       ...(result.callouts || []),
-      ...(result.sitelinks || []).map((s) => `${s.text} ${s.description || ''}`),
+      ...(result.sitelinks || []).map(
+        (s) => `${s.text} ${s.description1 || s.description || ''} ${s.description2 || ''}`
+      ),
       ...result.keywords,
     ]
       .join(' ')

@@ -436,10 +436,8 @@ async function fetchAllDataFromGoogleAds(params: {
         sitelinks.push({
           text: row.asset?.sitelink_asset?.link_text || '',
           url: (row.asset?.final_urls ?? [])?.[0] || '',
-          description:
-            row.asset?.sitelink_asset?.description1 ||
-            row.asset?.sitelink_asset?.description2 ||
-            '',
+          description1: row.asset?.sitelink_asset?.description1 || '',
+          description2: row.asset?.sitelink_asset?.description2 || '',
         })
         sitelinksMap.set(campaignId, sitelinks)
       }
@@ -461,7 +459,8 @@ async function fetchAllDataFromGoogleAds(params: {
           items.map((s) => ({
             text: s.text,
             url: s.url,
-            description: s.description,
+            description1: s.description1,
+            description2: s.description2,
           })),
         ])
       ),
@@ -571,7 +570,8 @@ async function fetchAllDataFromGoogleAds(params: {
           sitelinks: sitelinks.map((s: any) => ({
             text: s.text,
             url: s.url,
-            description: s.description,
+            description1: s.description1,
+            description2: s.description2,
           })),
         },
       }

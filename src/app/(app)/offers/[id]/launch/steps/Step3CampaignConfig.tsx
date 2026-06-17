@@ -12,6 +12,15 @@
  */
 
 import { useState, useEffect, useRef, useCallback, type DragEvent } from 'react'
+import {
+  emptySitelinkItem,
+  normalizeSitelinkList,
+  readSitelinkDescription1,
+  readSitelinkDescription2,
+  readSitelinkText,
+  readSitelinkUrl,
+  type SitelinkItem,
+} from '@/lib/creatives/sitelink-utils'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -207,35 +216,15 @@ const getCalloutText = (callout: string | { text?: string } | any): string => {
 
 /**
  * 🔧 修复(2026-01-06): 安全获取sitelink文本
- * 兼容两种格式：字符串和对象 {text, url, description}
+ * 兼容两种格式：字符串和对象 {text, url, description1, description2}
  */
-const getSitelinkText = (sitelink: string | { text?: string } | any): string => {
-  if (typeof sitelink === 'string') return sitelink
-  if (typeof sitelink === 'object' && sitelink !== null && 'text' in sitelink) {
-    return String(sitelink.text)
-  }
-  return String(sitelink)
-}
+const getSitelinkText = readSitelinkText
+const getSitelinkDescription1 = readSitelinkDescription1
+const getSitelinkDescription2 = readSitelinkDescription2
+const getSitelinkUrl = readSitelinkUrl
 
-/**
- * 🔧 修复(2026-01-06): 安全获取sitelink描述
- */
-const getSitelinkDescription = (sitelink: string | { description?: string } | any): string => {
-  if (typeof sitelink === 'object' && sitelink !== null && 'description' in sitelink) {
-    return String(sitelink.description || '')
-  }
-  return ''
-}
-
-/**
- * 🔧 修复(2026-01-06): 安全获取sitelink URL
- */
-const getSitelinkUrl = (sitelink: string | { url?: string } | any): string => {
-  if (typeof sitelink === 'object' && sitelink !== null && 'url' in sitelink) {
-    return String(sitelink.url || '')
-  }
-  return ''
-}
+const normalizeConfigSitelinks = (sitelinks: unknown, fallbackUrl?: string): SitelinkItem[] =>
+  normalizeSitelinkList(Array.isArray(sitelinks) ? sitelinks : [], fallbackUrl)
 
 /**
  * 🆕 P0-1优化：动态CPC出价计算
@@ -331,7 +320,7 @@ interface CampaignConfig {
 
   // Extensions
   callouts: string[]
-  sitelinks: Array<{ text: string; description: string; url: string }>
+  sitelinks: SitelinkItem[]
 }
 
 export default function Step3CampaignConfig({
@@ -476,7 +465,10 @@ export default function Step3CampaignConfig({
 
       // Extensions
       callouts: selectedCreative?.callouts || [],
-      sitelinks: selectedCreative?.sitelinks || [],
+      sitelinks: normalizeConfigSitelinks(
+        selectedCreative?.sitelinks || [],
+        selectedCreative?.finalUrl || offer.finalUrl || offer.url
+      ),
     }
   })
 
@@ -548,7 +540,10 @@ export default function Step3CampaignConfig({
       finalUrls: [selectedCreative?.finalUrl || offer.finalUrl || offer.url],
 
       callouts: selectedCreative?.callouts || [],
-      sitelinks: selectedCreative?.sitelinks || [],
+      sitelinks: normalizeConfigSitelinks(
+        selectedCreative?.sitelinks || [],
+        selectedCreative?.finalUrl || offer.finalUrl || offer.url
+      ),
     })
 
     setValidationErrors([])
@@ -785,12 +780,13 @@ export default function Step3CampaignConfig({
   }
 
   const handleAddSitelink = () => {
-    handleChange('sitelinks', [...config.sitelinks, { text: '', description: '', url: '' }])
+    const fallbackUrl = config.finalUrls[0] || ''
+    handleChange('sitelinks', [...config.sitelinks, emptySitelinkItem(fallbackUrl)])
   }
 
   const handleSitelinkChange = (
     index: number,
-    field: 'text' | 'description' | 'url',
+    field: 'text' | 'description1' | 'description2' | 'url',
     value: string
   ) => {
     const newSitelinks = [...config.sitelinks]
@@ -1788,27 +1784,33 @@ export default function Step3CampaignConfig({
             </div>
             <div className="space-y-3">
               {config.sitelinks.map((sitelink, index) => (
-                <div key={index} className="grid md:grid-cols-3 gap-2 p-3 border rounded-lg">
-                  <Input
-                    value={getSitelinkText(sitelink)}
-                    onChange={(e) => handleSitelinkChange(index, 'text', e.target.value)}
-                    placeholder="链接文字 (Link Text)"
-                  />
-                  <Input
-                    value={getSitelinkDescription(sitelink)}
-                    onChange={(e) => handleSitelinkChange(index, 'description', e.target.value)}
-                    placeholder="描述 (Description)"
-                  />
-                  <div className="flex gap-2">
+                <div key={index} className="space-y-2 p-3 border rounded-lg">
+                  <div className="grid md:grid-cols-[1fr_1fr_auto] gap-2">
+                    <Input
+                      value={getSitelinkText(sitelink)}
+                      onChange={(e) => handleSitelinkChange(index, 'text', e.target.value)}
+                      placeholder="链接文字 (Link Text)"
+                    />
                     <Input
                       value={getSitelinkUrl(sitelink)}
                       onChange={(e) => handleSitelinkChange(index, 'url', e.target.value)}
                       placeholder="链接地址 (URL)"
-                      className="flex-1"
                     />
                     <Button variant="ghost" size="sm" onClick={() => handleRemoveSitelink(index)}>
                       <X className="w-4 h-4" />
                     </Button>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-2">
+                    <Input
+                      value={getSitelinkDescription1(sitelink)}
+                      onChange={(e) => handleSitelinkChange(index, 'description1', e.target.value)}
+                      placeholder="描述行 1 (Description line 1)"
+                    />
+                    <Input
+                      value={getSitelinkDescription2(sitelink)}
+                      onChange={(e) => handleSitelinkChange(index, 'description2', e.target.value)}
+                      placeholder="描述行 2 (Description line 2)"
+                    />
                   </div>
                 </div>
               ))}

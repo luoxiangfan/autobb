@@ -72,7 +72,7 @@ describe('buildEffectiveCreative', () => {
     expect(result.negativeKeywords).toEqual(['db neg'])
     expect(result.callouts).toEqual(['DB C1'])
     expect(result.sitelinks).toEqual([
-      { text: 'DB SL', url: 'https://db.example', description: 'db' },
+      { text: 'DB SL', url: 'https://db.example', description1: 'db' },
     ])
     expect(result.finalUrl).toBe('https://db.final')
     expect(result.finalUrlSuffix).toBe('db_suffix')

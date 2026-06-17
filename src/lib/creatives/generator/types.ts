@@ -68,7 +68,7 @@ export interface TitleAboutSignals {
   aboutClaims: string[]
   keywordSeeds: string[]
   calloutIdeas: string[]
-  sitelinkIdeas: Array<{ text: string; description: string }>
+  sitelinkIdeas: Array<{ text: string; description1: string; description2?: string }>
 }
 
 export type HeadlineCandidateSource = 'title' | 'about'

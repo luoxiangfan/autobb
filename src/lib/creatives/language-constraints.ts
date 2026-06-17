@@ -334,7 +334,7 @@ export function getLanguageConstraintsSummary(language: string): string {
   lines.push(`  Description Length: ≤${constraints.descriptionLength} characters`)
   lines.push(`  Callout Length: ≤${constraints.calloutLength} characters`)
   lines.push(`  Sitelink Text: ≤${constraints.sitelinkTextLength} characters`)
-  lines.push(`  Sitelink Description: ≤${constraints.sitelinkDescLength} characters`)
+  lines.push(`  Sitelink Description lines: ≤${constraints.sitelinkDescLength} characters each`)
   lines.push(`  Keyword Max Words: ${constraints.keywordMaxWords}`)
   lines.push(`  Keyword Min Search Volume: ${constraints.keywordMinSearchVolume}/month`)
 

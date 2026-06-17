@@ -90,11 +90,12 @@ interface KeywordWithVolume {
   competition?: string
 }
 
-interface Sitelink {
-  text: unknown
-  url: unknown
-  description?: unknown
-}
+import {
+  formatSitelinkDescriptionsDisplay,
+  readSitelinkDescription1,
+  readSitelinkDescription2,
+  type SitelinkItem,
+} from '@/lib/creatives/sitelink-utils'
 
 interface Creative {
   id: number
@@ -104,7 +105,7 @@ interface Creative {
   keywords: string[]
   keywordsWithVolume?: KeywordWithVolume[]
   callouts: unknown[]
-  sitelinks: Sitelink[]
+  sitelinks: SitelinkItem[]
   finalUrl: string
   path1: string | null
   path2: string | null
@@ -1487,9 +1488,10 @@ export default function CreativesPage() {
                         <p className="text-xs text-gray-500 truncate">
                           {String(sitelink.url ?? '')}
                         </p>
-                        {getTextContent(sitelink.description).trim() && (
+                        {(readSitelinkDescription1(sitelink) ||
+                          readSitelinkDescription2(sitelink)) && (
                           <p className="text-xs text-gray-600 mt-1">
-                            {getTextContent(sitelink.description)}
+                            {formatSitelinkDescriptionsDisplay(sitelink)}
                           </p>
                         )}
                       </div>

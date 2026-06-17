@@ -44,6 +44,7 @@ import {
 } from '@/lib/campaign/server'
 import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads/conversion/conversion-goals'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
+import { formatSitelinkForPublish, normalizeSitelinkItem } from '@/lib/creatives/sitelink-utils'
 import { type NamingScheme } from '@/lib/campaign/naming-convention'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
@@ -739,49 +740,6 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       )
     }
 
-    function generateSitelinkDescriptions(
-      text: string,
-      baseDescription: string = ''
-    ): { desc1: string; desc2: string } {
-      const predefinedDescriptions: Record<string, [string, string]> = {
-        products: ['Browse our full catalog', 'Latest security solutions'],
-        '4k': ['8, 16, & 32 channel kits', 'Professional security solutions'],
-        'security systems': ['Complete surveillance kits', 'Easy DIY installation'],
-        about: ['Learn about our mission', 'Trusted by millions worldwide'],
-        company: ['Our story & values', 'Industry leader since 2012'],
-        compare: ['Compare features & prices', 'Find your perfect match'],
-        poe: ['Wired vs wireless options', 'Expert buying guide'],
-        wifi: ['No cables, easy setup', 'Flexible placement'],
-        cameras: ['Indoor & outdoor models', 'HD & 4K resolution'],
-        review: ['See customer reviews', '4.5+ star average rating'],
-        rating: ['Real user feedback', 'Join 1M+ happy customers'],
-        testimonial: ['What customers say', 'Proven track record'],
-        support: ['Get help and manuals', '24/7 technical assistance'],
-        help: ['Step-by-step guides', 'Video tutorials included'],
-        faq: ['Common questions answered', 'Quick solutions'],
-        contact: ['Have questions? Get in touch', 'Expert team ready to help'],
-        call: ['Speak to an expert', 'Free consultation'],
-        email: ['Send us a message', 'Fast response time'],
-      }
-
-      const safeText = typeof text === 'string' ? text : ''
-      const safeBaseDescription = typeof baseDescription === 'string' ? baseDescription : ''
-      const textLower = safeText.toLowerCase()
-      const sortedKeys = Object.keys(predefinedDescriptions).sort((a, b) => b.length - a.length)
-      for (const key of sortedKeys) {
-        if (textLower.includes(key)) {
-          const [desc1, desc2] = predefinedDescriptions[key]
-          return { desc1, desc2 }
-        }
-      }
-
-      if (safeBaseDescription) {
-        return { desc1: safeBaseDescription, desc2: 'Learn more about this' }
-      }
-
-      return { desc1: 'Learn more', desc2: 'Discover our solutions' }
-    }
-
     const adGroupStartTime = Date.now()
     const adGroupName = naming?.adGroupName || `AdGroup_${creative.id}`
 
@@ -1046,43 +1004,31 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
     const normalizedSitelinks = (extensionCreative.sitelinks || [])
       .map((link: any) => {
-        if (typeof link === 'string') {
-          const text = link.trim()
-          if (!text) return null
-          return {
-            text,
-            url: extensionCreative.finalUrl,
-            description: undefined as string | undefined,
-          }
-        }
-        if (typeof link !== 'object' || link === null) return null
-        const rawText = typeof link.text === 'string' ? link.text.trim() : ''
-        const rawUrl = typeof link.url === 'string' ? link.url.trim() : ''
-        const url = rawUrl || extensionCreative.finalUrl
-        if (!rawText || !url) return null
-        const description =
-          typeof link.description === 'string' ? link.description.trim() : undefined
-        return { text: rawText, url, description }
+        const normalized = normalizeSitelinkItem(link, extensionCreative.finalUrl)
+        if (!normalized) return null
+        return formatSitelinkForPublish(normalized)
       })
       .filter((l): l is NonNullable<typeof l> => l !== null)
 
     let finalSitelinks = normalizedSitelinks
     if (finalSitelinks.length === 0) {
       finalSitelinks = [
-        { text: 'Products', url: extensionCreative.finalUrl, description: 'Browse all products' },
-        { text: 'Support', url: extensionCreative.finalUrl, description: 'Get help' },
+        {
+          text: 'Products',
+          url: extensionCreative.finalUrl,
+          description1: 'Browse all products',
+          description2: 'Shop the full catalog',
+        },
+        {
+          text: 'Support',
+          url: extensionCreative.finalUrl,
+          description1: 'Get help',
+          description2: 'Contact our team',
+        },
       ]
     }
 
-    const formattedSitelinks = finalSitelinks.map((link) => {
-      const descriptions = generateSitelinkDescriptions(link.text, link.description)
-      return {
-        text: link.text,
-        url: link.url,
-        description1: descriptions.desc1,
-        description2: descriptions.desc2,
-      }
-    })
+    const formattedSitelinks = finalSitelinks
 
     // 13. 串行执行：Extensions（避免并发修改Campaign资源冲突）
     // 🔧 修复(2026-01-05): Extensions是可选扩展，失败不应影响核心发布状态

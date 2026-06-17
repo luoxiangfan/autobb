@@ -2,7 +2,13 @@ import type { HeadlineAsset, DescriptionAsset } from '../../server'
 export function calculateProductFocus(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],
-  sitelinks?: Array<{ text: string; url: string; description?: string }>,
+  sitelinks?: Array<{
+    text: string
+    url: string
+    description1?: string
+    description2?: string
+    description?: string
+  }>,
   callouts?: string[],
   categoryWhitelist?: string[] // 动态传入目标品类白名单
 ): { score: number; issues: string[] } {
@@ -12,7 +18,13 @@ export function calculateProductFocus(
   const allHeadlines = headlines.map((h) => h.text.toLowerCase())
   const allDescriptions = descriptions.map((d) => d.text.toLowerCase())
   const allSitelinkTexts = (sitelinks || []).map((s) =>
-    (s.text + ' ' + (s.description || '')).toLowerCase()
+    (
+      s.text +
+      ' ' +
+      (s.description1 || s.description || '') +
+      ' ' +
+      (s.description2 || '')
+    ).toLowerCase()
   )
   const allCallouts = (callouts || []).map((c) => c.toLowerCase())
   const allTexts = [...allHeadlines, ...allDescriptions, ...allSitelinkTexts, ...allCallouts]

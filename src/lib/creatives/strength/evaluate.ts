@@ -39,7 +39,7 @@ export async function evaluateAdStrength(
     targetLanguage?: string
     userId?: number
     offerId?: number
-    sitelinks?: Array<{ text: string; url: string; description?: string }>
+    sitelinks?: Array<{ text: string; url: string; description1?: string; description2?: string; description?: string }>
     callouts?: string[]
     keywordsWithVolume?: Array<{
       keyword: string

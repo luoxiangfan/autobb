@@ -8,6 +8,11 @@
  */
 
 import { useState } from 'react'
+import {
+  formatSitelinkDescriptionsDisplay,
+  readSitelinkText,
+  readSitelinkUrl,
+} from '@/lib/creatives/sitelink-utils'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -142,24 +147,9 @@ export default function Step4PublishSummary({
       .filter((v: string) => v.length > 0)
   }
 
-  const getSitelinkText = (sitelink: any): string => {
-    if (typeof sitelink === 'string') return sitelink
-    if (sitelink && typeof sitelink === 'object' && typeof sitelink.text === 'string')
-      return sitelink.text
-    return ''
-  }
-
-  const getSitelinkUrl = (sitelink: any): string => {
-    if (sitelink && typeof sitelink === 'object' && typeof sitelink.url === 'string')
-      return sitelink.url
-    return ''
-  }
-
-  const getSitelinkDescription = (sitelink: any): string => {
-    if (sitelink && typeof sitelink === 'object' && typeof sitelink.description === 'string')
-      return sitelink.description
-    return ''
-  }
+  const getSitelinkText = readSitelinkText
+  const getSitelinkUrl = readSitelinkUrl
+  const getSitelinkDescriptions = formatSitelinkDescriptionsDisplay
 
   // Step 3 配置优先：Step 4 预览应展示“实际将要发布”的内容，而不是Step 1原始创意
   const effectiveHeadlines =
@@ -2916,8 +2906,8 @@ export default function Step4PublishSummary({
                     {getSitelinkUrl(sl) ? (
                       <span className="text-gray-400"> ({getSitelinkUrl(sl)})</span>
                     ) : null}
-                    {getSitelinkDescription(sl) ? (
-                      <span className="text-gray-400"> - {getSitelinkDescription(sl)}</span>
+                    {getSitelinkDescriptions(sl) ? (
+                      <span className="text-gray-400"> - {getSitelinkDescriptions(sl)}</span>
                     ) : null}
                   </div>
                 ))}

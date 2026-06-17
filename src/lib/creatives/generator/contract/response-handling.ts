@@ -21,6 +21,7 @@ import {
   sanitizeKeywordListForGoogleAdsPolicy,
 } from '@/lib/google-ads/policy/policy-guard'
 
+import { normalizeSitelinkItem } from '../../sitelink-utils'
 import { escapeRegex, extractJsonCandidates, sanitizeJsonText } from '../utils'
 import {
   applyDescriptionTextGuardrail,
@@ -982,47 +983,24 @@ export function parseAIResponse(
     // ============================================================================
     let sitelinksArray = Array.isArray(data.sitelinks) ? data.sitelinks : []
 
-    // 兼容：AI 有时会输出 description1/description2 或 description_1/description_2
-    // 统一归一为 { text, url, description? }，以匹配前端 & 数据库约定
+    // 兼容：AI 有时输出 description1/description2、description 或 description_1/description_2
+    // 统一归一为 { text, url, description1?, description2? }
     const normalizeSitelink = (raw: any) => {
-      if (!raw) return null
+      const normalized = normalizeSitelinkItem(raw, '/')
+      if (!normalized) return null
 
-      // 兼容：旧数据可能是 string 数组
-      if (typeof raw === 'string') {
-        const text = sanitizePolicySensitiveText(removeProhibitedSymbols(raw).trim(), 25)
-        if (!text) return null
-        return { text, url: '/', description: undefined as string | undefined }
-      }
-
-      if (typeof raw !== 'object') return null
-
-      const textRaw =
-        (typeof raw.text === 'string' && raw.text) ||
-        (typeof (raw as any).title === 'string' && (raw as any).title) ||
-        ''
-      const text = sanitizePolicySensitiveText(removeProhibitedSymbols(textRaw).trim(), 25)
+      const text = sanitizePolicySensitiveText(removeProhibitedSymbols(normalized.text).trim(), 25)
       if (!text) return null
 
-      const urlRaw = typeof raw.url === 'string' ? raw.url : '/'
-      const url = String(urlRaw).trim() || '/'
-
-      const descriptionCandidates = [
-        raw.description,
-        (raw as any).desc,
-        (raw as any).description1,
-        (raw as any).description_1,
-        (raw as any).description2,
-        (raw as any).description_2,
-        Array.isArray((raw as any).descriptions) ? (raw as any).descriptions[0] : undefined,
-      ]
-      const descriptionValue = descriptionCandidates.find(
-        (v: any) => typeof v === 'string' && v.trim().length > 0
-      ) as string | undefined
-      const description = descriptionValue
-        ? sanitizePolicySensitiveText(removeProhibitedSymbols(descriptionValue).trim(), 35)
+      const url = String(normalized.url).trim() || '/'
+      const description1 = normalized.description1
+        ? sanitizePolicySensitiveText(removeProhibitedSymbols(normalized.description1).trim(), 35)
+        : undefined
+      const description2 = normalized.description2
+        ? sanitizePolicySensitiveText(removeProhibitedSymbols(normalized.description2).trim(), 35)
         : undefined
 
-      return { text, url, description }
+      return { text, url, description1, description2 }
     }
 
     sitelinksArray = sitelinksArray.map(normalizeSitelink).filter((v: any) => v !== null)
@@ -1032,23 +1010,29 @@ export function parseAIResponse(
       if (!s) return s
       let changed = false
       let text = s.text
-      let description = s.description
+      let description1 = s.description1
+      let description2 = s.description2
       if (typeof text === 'string' && isExcessiveCaps(text)) {
         text = toTitleCase(text)
         changed = true
       }
-      if (typeof description === 'string' && isExcessiveCaps(description)) {
-        description = toTitleCase(description)
+      if (typeof description1 === 'string' && isExcessiveCaps(description1)) {
+        description1 = toTitleCase(description1)
+        changed = true
+      }
+      if (typeof description2 === 'string' && isExcessiveCaps(description2)) {
+        description2 = toTitleCase(description2)
         changed = true
       }
       if (changed) {
         console.log(`🔧 修正全大写sitelink: "${s.text}" → "${text}"`)
       }
-      return changed ? { ...s, text, description } : s
+      return changed ? { ...s, text, description1, description2 } : s
     })
 
     const invalidSitelinks = sitelinksArray.filter(
-      (s: any) => s && (s.text?.length > 25 || s.description?.length > 35)
+      (s: any) =>
+        s && (s.text?.length > 25 || s.description1?.length > 35 || s.description2?.length > 35)
     )
     if (invalidSitelinks.length > 0) {
       // 理论上已在 normalize 中截断，这里仅用于兜底日志
@@ -1058,8 +1042,10 @@ export function parseAIResponse(
         return {
           ...s,
           text: typeof s.text === 'string' ? s.text.substring(0, 25) : s.text,
-          description:
-            typeof s.description === 'string' ? s.description.substring(0, 35) : s.description,
+          description1:
+            typeof s.description1 === 'string' ? s.description1.substring(0, 35) : s.description1,
+          description2:
+            typeof s.description2 === 'string' ? s.description2.substring(0, 35) : s.description2,
         }
       })
     }

@@ -2434,7 +2434,9 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     if (titleAndAboutSignals.sitelinkIdeas.length > 0) {
       const sitelinkHints = titleAndAboutSignals.sitelinkIdeas
         .slice(0, 6)
-        .map((item) => `${item.text} - ${item.description}`)
+        .map((item) =>
+          [item.text, item.description1, item.description2].filter(Boolean).join(' - ')
+        )
       extracted_elements_section += `\n**ABOUT-DERIVED SITELINK IDEAS** (text/desc style):\n${sitelinkHints.join(' | ')}\n`
     }
 
@@ -2805,7 +2807,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   "evidenceProducts": ["verified product / hot product names actually referenced"],
   "cannotGenerateReason": "...",
   "callouts": ["..."],
-  "sitelinks": [{"text": "...", "url": "/", "description": "..."}],
+  "sitelinks": [{"text": "...", "url": "/", "description1": "...", "description2": "..."}],
   "path1": "...",
   "path2": "...",
   "theme": "..."
@@ -2821,7 +2823,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
 - Descriptions: EXACTLY 4 items, each ≤ 90 chars
 - Keywords: 10-20 items (no more than 20)
 - Callouts: EXACTLY 6 items, each ≤ 25 chars
-- Sitelinks: EXACTLY 6 items, text ≤ 25, description ≤ 35
+- Sitelinks: EXACTLY 6 items, text ≤ 25, description1/description2 each ≤ 35
 
 **STRUCTURED METADATA RULES:**
 - copyAngle / evidenceProducts / keywordCandidates / cannotGenerateReason are OPTIONAL but strongly recommended.
@@ -3248,7 +3250,7 @@ Return ONLY one valid JSON object with these top-level fields:
   "descriptions": [{"text": "...", "type": "...", "length": N}],
   "keywords": ["..."],
   "callouts": ["..."],
-  "sitelinks": [{"text": "...", "url": "/", "description": "..."}],
+  "sitelinks": [{"text": "...", "url": "/", "description1": "...", "description2": "..."}],
   "path1": "...",
   "path2": "...",
   "theme": "..."
@@ -3260,7 +3262,7 @@ Strict rules:
 - 10-20 keywords
 - For model_intent output, never include transactional+model template keywords (no forms like "buy x200", "x200 price", "order gen 2")
 - EXACTLY 6 callouts, each <= 25 chars
-- EXACTLY 6 sitelinks, text <= 25 chars, description <= 35 chars
+- EXACTLY 6 sitelinks, text <= 25 chars, description1/description2 <= 35 chars each
 - Do NOT return copyAngle, keywordCandidates, evidenceProducts, cannotGenerateReason, explanation, quality_metrics, or any other metadata
 - No markdown, no prose, no comments
 - Stop immediately after the final closing brace`
@@ -3278,7 +3280,7 @@ Return ONLY the five required top-level fields:
   "descriptions": [{"text": "...", "type": "..."}],
   "keywords": ["..."],
   "callouts": ["..."],
-  "sitelinks": [{"text": "...", "url": "/", "description": "..."}]
+  "sitelinks": [{"text": "...", "url": "/", "description1": "...", "description2": "..."}]
 }
 
 Emergency rules:

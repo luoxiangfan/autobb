@@ -13,7 +13,13 @@ export function calculateRelevance(
   headlines: HeadlineAsset[],
   descriptions: DescriptionAsset[],
   keywords: string[],
-  sitelinks?: Array<{ text: string; url: string; description?: string }>,
+  sitelinks?: Array<{
+    text: string
+    url: string
+    description1?: string
+    description2?: string
+    description?: string
+  }>,
   callouts?: string[],
   brandName?: string,
   category?: string

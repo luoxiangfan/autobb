@@ -1,3 +1,5 @@
+import { normalizeSitelinkList } from '../../creatives/sitelink-utils'
+
 type JsonArrayLike = unknown[] | string | null | undefined
 
 const parseJsonArray = (value: JsonArrayLike): unknown[] => {
@@ -32,32 +34,7 @@ const normalizeKeywordsFromConfig = (value: unknown): string[] => {
 
 const normalizeSitelinks = (value: unknown): any[] => {
   const arr = Array.isArray(value) ? value : parseJsonArray(value as any)
-  return arr
-    .map((sl: any) => {
-      if (typeof sl === 'string') {
-        const text = sl.trim()
-        return text ? text : null
-      }
-      if (!sl || typeof sl !== 'object') return null
-      const text = typeof sl.text === 'string' ? sl.text.trim() : ''
-      const url = typeof sl.url === 'string' ? sl.url.trim() : ''
-      const descriptionCandidates = [
-        sl.description,
-        sl.desc,
-        sl.description1,
-        sl.description_1,
-        sl.description2,
-        sl.description_2,
-        Array.isArray(sl.descriptions) ? sl.descriptions[0] : undefined,
-      ]
-      const descriptionValue = descriptionCandidates.find(
-        (v: any) => typeof v === 'string' && v.trim().length > 0
-      ) as string | undefined
-      const description = descriptionValue ? descriptionValue.trim() : undefined
-      if (!text && !url && !description) return null
-      return { ...sl, text, url, description }
-    })
-    .filter(Boolean)
+  return normalizeSitelinkList(arr)
 }
 
 export interface EffectiveCreativeInput {

@@ -3,6 +3,7 @@ import {
   resolveStoredGenerationMode,
   type AdCreativeGenerationMode,
 } from './ad-creative-generation-mode'
+import { normalizeSitelinkList } from './sitelink-utils'
 import { getDatabase } from '../db'
 import { getInsertedId, nowFunc } from '../db'
 import { GEMINI_ACTIVE_MODEL } from '../ai/server'
@@ -70,7 +71,10 @@ export interface AdCreative {
     // 站点链接
     text: string // 链接文本（最多25字符）
     url: string // 链接URL
-    description?: string // 链接描述（最多35字符）
+    description1?: string // 描述行1（最多35字符）
+    description2?: string // 描述行2（最多35字符）
+    /** @deprecated 兼容旧数据，读取时映射到 description1 */
+    description?: string
   }>
 
   // URL配置
@@ -213,6 +217,9 @@ export interface GeneratedAdCreativeData {
   sitelinks?: Array<{
     text: string
     url: string
+    description1?: string
+    description2?: string
+    /** @deprecated 兼容旧数据 */
     description?: string
   }>
   theme: string
@@ -1212,64 +1219,9 @@ export async function selectAdCreative(id: number, userId: number): Promise<void
   )
 }
 
-function normalizeSitelinks(
-  raw: any,
-  fallbackUrl?: string
-): Array<{ text: string; url: string; description?: string }> | undefined {
+function normalizeSitelinks(raw: any, fallbackUrl?: string) {
   if (!Array.isArray(raw)) return undefined
-
-  const normalized = raw
-    .map((link: any) => {
-      if (!link) return null
-
-      // 兼容：旧数据可能是 string 数组
-      if (typeof link === 'string') {
-        const text = link.trim().substring(0, 25)
-        if (!text) return null
-        const url = (fallbackUrl || '/').trim()
-        return { text, url }
-      }
-
-      if (typeof link !== 'object') return null
-
-      const textRaw =
-        (typeof link.text === 'string' && link.text) ||
-        (typeof link.title === 'string' && link.title) ||
-        (typeof link.name === 'string' && link.name) ||
-        ''
-      const text = String(textRaw).trim().substring(0, 25)
-      if (!text) return null
-
-      const urlRaw =
-        (typeof link.url === 'string' && link.url) ||
-        (typeof link.href === 'string' && link.href) ||
-        (typeof link.link === 'string' && link.link) ||
-        fallbackUrl ||
-        '/'
-      const url = String(urlRaw).trim()
-      if (!url) return null
-
-      const descriptionCandidates = [
-        link.description,
-        link.desc,
-        link.description1,
-        link.description_1,
-        link.description2,
-        link.description_2,
-        Array.isArray(link.descriptions) ? link.descriptions[0] : undefined,
-      ]
-      const description = descriptionCandidates.find(
-        (v: any) => typeof v === 'string' && v.trim().length > 0
-      ) as string | undefined
-
-      return {
-        text,
-        url,
-        description: description ? description.trim().substring(0, 35) : undefined,
-      }
-    })
-    .filter((v: any): v is { text: string; url: string; description?: string } => v !== null)
-
+  const normalized = normalizeSitelinkList(raw, fallbackUrl)
   return normalized.length > 0 ? normalized : undefined
 }
 

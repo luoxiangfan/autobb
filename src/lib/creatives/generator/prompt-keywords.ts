@@ -184,7 +184,7 @@ export function extractTitleAndAboutSignals(
   const aboutClaims: string[] = []
   const keywordSeeds: string[] = []
   const calloutIdeas: string[] = []
-  const sitelinkIdeas: Array<{ text: string; description: string }> = []
+  const sitelinkIdeas: Array<{ text: string; description1: string; description2?: string }> = []
 
   const addUniquePhrase = (
     target: string[],
@@ -207,19 +207,30 @@ export function extractTitleAndAboutSignals(
     keywordSeeds.push(cleaned)
   }
 
-  const addSitelinkIdea = (text: string, description: string) => {
+  const addSitelinkIdea = (text: string, description1: string, description2?: string) => {
     const linkText = truncateSnippetByWords(text, 25)
-    const linkDescription = truncateSnippetByWords(description, 35)
-    if (!isUsefulCreativePhrase(linkText, 3, 25) || !isUsefulCreativePhrase(linkDescription, 4, 35))
+    const linkDescription1 = truncateSnippetByWords(description1, 35)
+    const linkDescription2 = description2 ? truncateSnippetByWords(description2, 35) : undefined
+    if (
+      !isUsefulCreativePhrase(linkText, 3, 25) ||
+      !isUsefulCreativePhrase(linkDescription1, 4, 35)
+    )
       return
-    const key = `${linkText.toLowerCase()}__${linkDescription.toLowerCase()}`
+    if (linkDescription2 && !isUsefulCreativePhrase(linkDescription2, 4, 35)) return
+    const key = `${linkText.toLowerCase()}__${linkDescription1.toLowerCase()}__${(linkDescription2 || '').toLowerCase()}`
     if (
       sitelinkIdeas.some(
-        (item) => `${item.text.toLowerCase()}__${item.description.toLowerCase()}` === key
+        (item) =>
+          `${item.text.toLowerCase()}__${item.description1.toLowerCase()}__${(item.description2 || '').toLowerCase()}` ===
+          key
       )
     )
       return
-    sitelinkIdeas.push({ text: linkText, description: linkDescription })
+    sitelinkIdeas.push({
+      text: linkText,
+      description1: linkDescription1,
+      ...(linkDescription2 ? { description2: linkDescription2 } : {}),
+    })
   }
 
   if (productTitle) {
@@ -299,13 +310,20 @@ export function extractTitleAndAboutSignals(
         targetLanguage: options?.targetLanguage,
         pureBrandKeywords,
       }).phrases.length > 0
-    const descriptionSafe =
+    const description1Safe =
       filterPhrasesByTargetLanguageGate({
-        phrases: [item.description],
+        phrases: [item.description1],
         targetLanguage: options?.targetLanguage,
         pureBrandKeywords,
       }).phrases.length > 0
-    return textSafe && descriptionSafe
+    const description2Safe =
+      !item.description2 ||
+      filterPhrasesByTargetLanguageGate({
+        phrases: [item.description2],
+        targetLanguage: options?.targetLanguage,
+        pureBrandKeywords,
+      }).phrases.length > 0
+    return textSafe && description1Safe && description2Safe
   })
 
   return {
