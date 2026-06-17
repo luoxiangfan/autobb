@@ -268,14 +268,15 @@ export async function syncCampaignsFromGoogleAds(
               try {
                 if (campaign_config && Object.keys(campaign_config).length > 0) {
                   // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
-                  const updated = await updateCampaignConfig(
+                  const configUpdate = await updateCampaignConfig(
                     campaignId,
                     campaign_config,
                     adGroupId || null,
                     adId || null
                   )
 
-                  if (updated) {
+                  if (configUpdate.updated) {
+                    const configForBackup = configUpdate.savedConfig ?? campaign_config
                     const googleBackup = await findLatestGoogleAdsBackupForOffer(
                       offerResult.offerId,
                       userId
@@ -290,7 +291,7 @@ export async function syncCampaignsFromGoogleAds(
                         WHERE id = ? AND user_id = ?
                       `,
                         [
-                          toDbCampaignBackupJsonField(campaign_config),
+                          toDbCampaignBackupJsonField(configForBackup),
                           new Date(),
                           googleBackup.id,
                           userId,

@@ -1,4 +1,4 @@
-import { getDatabase, utcNowIso } from '../../../db'
+import { getDatabase, utcNowIso, parseJsonField } from '../../../db'
 import { toDbCampaignConfigTextField } from '../../../campaign/server'
 import { getInsertedId } from '../../../db'
 import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
@@ -9,6 +9,43 @@ import { extractBrandFromGoogleAdsCampaignName } from './types'
 import { inferPageTypeFromUrls } from '@/lib/offers/offer-link-type'
 
 import { googleAdsSyncLogger } from '../../common/logger'
+
+/** Array fields in campaign_config that Google Ads sync may backfill when empty. */
+const SYNC_BACKFILL_ARRAY_FIELDS = [
+  'callouts',
+  'sitelinks',
+  'keywords',
+  'negativeKeywords',
+  'headlines',
+  'descriptions',
+  'finalUrls',
+] as const
+
+function isEmptyArrayField(value: unknown): boolean {
+  return value == null || (Array.isArray(value) && value.length === 0)
+}
+
+/** Backfill empty array fields in existing config from Google Ads sync payload. */
+export function mergeEmptyCampaignConfigArraysFromSync(
+  existing: Record<string, unknown>,
+  synced: Record<string, unknown>
+): { merged: Record<string, unknown>; changed: boolean; backfilledFields: string[] } {
+  const merged = { ...existing }
+  const backfilledFields: string[] = []
+
+  for (const field of SYNC_BACKFILL_ARRAY_FIELDS) {
+    if (!isEmptyArrayField(existing[field])) {
+      continue
+    }
+    const syncedValue = synced[field]
+    if (Array.isArray(syncedValue) && syncedValue.length > 0) {
+      merged[field] = syncedValue
+      backfilledFields.push(field)
+    }
+  }
+
+  return { merged, changed: backfilledFields.length > 0, backfilledFields }
+}
 
 export async function saveCampaignToDatabase(params: {
   userId: number
@@ -350,12 +387,12 @@ export async function updateCampaignConfig(
   campaignConfig: any,
   adGroupId: number | null,
   adId: number | null
-): Promise<boolean> {
+): Promise<{ updated: boolean; savedConfig?: Record<string, unknown> }> {
   const db = await getDatabase()
 
   const campaign = (await db.queryOne(
     `
-    SELECT id, synced_from_google_ads, campaign_config
+    SELECT id, synced_from_google_ads, campaign_config, ad_creative_id
     FROM campaigns
     WHERE campaign_id = ?
   `,
@@ -373,18 +410,54 @@ export async function updateCampaignConfig(
     googleAdsSyncLogger.info('sync_log', {
       message: String(`[Campaign Config] Campaign ${campaignId} not found, skipping config update`),
     })
-    return false
+    return { updated: false }
   }
 
-  const haveConfig = campaign.ad_creative_id && campaign.ad_creative_id != null
+  const hasAdCreative = campaign.ad_creative_id != null
+  let configToSave: Record<string, unknown> =
+    campaignConfig && typeof campaignConfig === 'object'
+      ? (campaignConfig as Record<string, unknown>)
+      : {}
 
-  if (haveConfig) {
+  if (hasAdCreative) {
+    const existingConfig = parseJsonField<Record<string, unknown>>(campaign.campaign_config, {})
+    const syncedConfig = configToSave
+    const { merged, changed, backfilledFields } = mergeEmptyCampaignConfigArraysFromSync(
+      existingConfig,
+      syncedConfig
+    )
+
+    if (!changed) {
+      googleAdsSyncLogger.info('sync_log', {
+        message: String(
+          `[Campaign Config] Campaign ${campaignId} has ad_creative_id and no empty array fields to backfill, skipping config update`
+        ),
+      })
+      return { updated: false }
+    }
+
+    configToSave = merged
     googleAdsSyncLogger.info('sync_log', {
       message: String(
-        `[Campaign Config] Campaign ${campaignId} is already configured, skipping config update`
+        `[Campaign Config] Campaign ${campaignId} has ad_creative_id; backfilling empty array fields: ${backfilledFields.join(', ')}`
       ),
+      backfilledFields,
     })
-    return false
+
+    await db.exec(
+      `
+      UPDATE campaigns
+      SET campaign_config = ?,
+          updated_at = ?
+      WHERE campaign_id = ?
+    `,
+      [toDbCampaignConfigTextField(configToSave), new Date(), campaignId]
+    )
+
+    googleAdsSyncLogger.info('sync_log', {
+      message: String(`[Campaign Config] Partially updated for campaign ${campaignId}`),
+    })
+    return { updated: true, savedConfig: configToSave }
   }
 
   await db.exec(
@@ -397,7 +470,7 @@ export async function updateCampaignConfig(
     WHERE campaign_id = ?
   `,
     [
-      toDbCampaignConfigTextField(campaignConfig),
+      toDbCampaignConfigTextField(configToSave),
       new Date(),
       `${adGroupId}` || null,
       `${adGroupId}~${adId}` || null,
@@ -408,5 +481,5 @@ export async function updateCampaignConfig(
   googleAdsSyncLogger.info('sync_log', {
     message: String(`[Campaign Config] Updated for campaign ${campaignId}`),
   })
-  return true
+  return { updated: true, savedConfig: configToSave }
 }
