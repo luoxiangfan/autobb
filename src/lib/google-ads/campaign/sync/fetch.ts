@@ -10,6 +10,32 @@ import { getLanguageName } from './types'
 import { saveCampaignSyncAuditRows } from './audit'
 
 import { googleAdsSyncLogger } from '../../common/logger'
+
+type CampaignExtensionAssetType = 'CALLOUT' | 'SITELINK'
+
+/** Resolve extension type from campaign_asset.field_type, asset.type, or nested asset fields. */
+function resolveCampaignExtensionAssetType(row: any): CampaignExtensionAssetType | null {
+  const fieldType = String(row.campaign_asset?.field_type || '').toUpperCase()
+  if (fieldType === 'CALLOUT' || fieldType === 'SITELINK') {
+    return fieldType
+  }
+
+  const assetType = String(row.asset?.type || '').toUpperCase()
+  if (assetType === 'CALLOUT' || assetType === 'SITELINK') {
+    return assetType
+  }
+
+  // Python MessageToDict may omit asset.type even when sitelink/callout sub-assets are present.
+  if (row.asset?.sitelink_asset?.link_text) {
+    return 'SITELINK'
+  }
+  if (row.asset?.callout_asset?.callout_text) {
+    return 'CALLOUT'
+  }
+
+  return null
+}
+
 async function fetchAllDataFromGoogleAds(params: {
   userId: number
   customerId: string
@@ -79,6 +105,7 @@ async function fetchAllDataFromGoogleAds(params: {
       SELECT
         campaign.id,
         campaign.status,
+        campaign_asset.field_type,
         asset.type,
         asset.final_urls,
         asset.callout_asset.callout_text,
@@ -88,7 +115,7 @@ async function fetchAllDataFromGoogleAds(params: {
       FROM campaign_asset
       WHERE campaign.status != 'REMOVED'
         AND campaign_asset.status != 'REMOVED'
-        AND asset.type IN ('CALLOUT', 'SITELINK')
+        AND campaign_asset.field_type IN ('CALLOUT', 'SITELINK')
     `
 
     // 🔧 查询 4：获取广告系列层级的定位（国家/语言）
@@ -377,14 +404,16 @@ async function fetchAllDataFromGoogleAds(params: {
     // 处理查询 3 结果（素材资源）
     for (const row of results3) {
       const campaignId = String(row.campaign?.id || '')
-      const assetType = String(row.asset?.type || '')
+      const assetType = resolveCampaignExtensionAssetType(row)
       googleAdsSyncLogger.info('sync_log', {
         message: String(
-          `[GoogleAds Sync] Asset for campaign ${campaignId}: type=${assetType}, callout=${row.asset?.callout_asset?.callout_text ?? ''}, sitelink=${row.asset?.sitelink_asset?.link_text ?? ''}, final_urls=${JSON.stringify(row.asset?.final_urls ?? [])}`
+          `[GoogleAds Sync] Asset for campaign ${campaignId}: field_type=${row.campaign_asset?.field_type ?? ''}, type=${row.asset?.type ?? ''}, resolved=${assetType ?? ''}, callout=${row.asset?.callout_asset?.callout_text ?? ''}, sitelink=${row.asset?.sitelink_asset?.link_text ?? ''}, final_urls=${JSON.stringify(row.asset?.final_urls ?? [])}`
         ),
         customerId,
         campaignId,
-        assetType,
+        fieldType: row.campaign_asset?.field_type ?? null,
+        assetType: row.asset?.type ?? null,
+        resolvedAssetType: assetType,
         calloutText: row.asset?.callout_asset?.callout_text ?? null,
         sitelinkText: row.asset?.sitelink_asset?.link_text ?? null,
         sitelinkDescription1: row.asset?.sitelink_asset?.description1 ?? null,
