@@ -27,11 +27,11 @@ vi.mock('@/lib/openclaw/gateway', () => ({
   invokeOpenclawTool: hoisted.invokeOpenclawToolMock,
 }))
 
-vi.mock('@/lib/openclaw/feishu-accounts', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-accounts', () => ({
   resolveUserFeishuAccountId: hoisted.resolveUserFeishuAccountIdMock,
 }))
 
-vi.mock('@/lib/openclaw/feishu-docs', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-docs', () => ({
   writeDailyReportToBitable: hoisted.writeDailyReportToBitableMock,
   writeDailyReportToDoc: hoisted.writeDailyReportToDocMock,
 }))

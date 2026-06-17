@@ -1,7 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import { updateSettings } from '@/lib/common/server'
-import { getOpenclawFeishuDocConfig } from '@/lib/openclaw/feishu-config'
-import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu-api'
+import { getOpenclawFeishuDocConfig } from '@/lib/openclaw/feishu/feishu-config'
+import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu/feishu-api'
 
 type DailyReportPayload = {
   date: string

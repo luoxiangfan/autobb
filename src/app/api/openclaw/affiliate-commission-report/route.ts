@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { isOpenclawEnabledForUser, resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import {
   resolveAffiliateCommissionPlatformFilter,
-  type AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission-platform'
+  type AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'
 import {
   buildUserLabelMap,
   getAffiliateCommissionBrandDetail,
@@ -11,7 +11,7 @@ import {
   getAffiliateCommissionDateBoundsCached,
   getAffiliateCommissionReport,
   parseRequestedUserIds,
-  resolveTargetUserIds } from '@/lib/openclaw/affiliate-commission-raw-report'
+  resolveTargetUserIds } from '@/lib/openclaw/affiliate-commission/affiliate-commission-raw-report'
 
 export const dynamic = 'force-dynamic'
 

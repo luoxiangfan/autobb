@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractAsinFromOfferUrls, normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
+import { extractAsinFromOfferUrls, normalizeOfferAsin } from '@/lib/openclaw/offers/offer-asin'
 import {
   compressJsonPayloadText,
   decompressJsonPayloadText,

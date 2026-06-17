@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
-import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu-api'
+import { feishuRequest, getTenantAccessToken, resolveFeishuApiBase } from '@/lib/openclaw/feishu/feishu-api'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
 
 type FeishuReceiveIdType = 'open_id' | 'union_id' | 'chat_id'

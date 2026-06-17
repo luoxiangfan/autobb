@@ -14,7 +14,7 @@ vi.mock('../db', () => ({
     String((error as { code?: string })?.code || '') === '23505',
 }))
 
-vi.mock('../openclaw/feishu-accounts', () => ({
+vi.mock('../openclaw/feishu/feishu-accounts', () => ({
   parseFeishuAccountUserId: (accountId?: string | null) => {
     if (!accountId) return null
     const normalized = accountId.trim()

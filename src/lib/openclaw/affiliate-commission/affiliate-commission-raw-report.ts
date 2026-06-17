@@ -1,7 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import { parseStoredJsonPayload } from '@/lib/common/server'
-import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-platform'
+import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'
 import {
   affiliateCommissionFactsCoverRawRange,
   factRowsToLineItems,
@@ -11,10 +11,10 @@ import {
   loadAffiliateCommissionLineFacts,
   replaceAffiliateCommissionLineFacts,
   sumAffiliateCommissionFromFacts,
-  type AffiliateCommissionFactsBrandAggregate } from '@/lib/openclaw/affiliate-commission-facts'
+  type AffiliateCommissionFactsBrandAggregate } from '@/lib/openclaw/affiliate-commission/affiliate-commission-facts'
 import type {
   AffiliateCommissionReportPlatformFilter,
-  AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission-platform'
+  AffiliateCommissionReportViewMode } from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'
 import {
   buildAffiliateCommissionDateBoundsCacheKey,
   buildAffiliateCommissionLineItemsCacheKey,
@@ -23,7 +23,7 @@ import {
   readAffiliateCommissionLineItemsMemoryCache,
   writeAffiliateCommissionDateBoundsMemoryCache,
   writeAffiliateCommissionLineItemsDbCache,
-  writeAffiliateCommissionLineItemsMemoryCache } from '@/lib/openclaw/affiliate-commission-report-cache'
+  writeAffiliateCommissionLineItemsMemoryCache } from '@/lib/openclaw/affiliate-commission/affiliate-commission-report-cache'
 import type {
   ActiveNonAdminUser,
   AffiliateCommissionBrandDetailRow,
@@ -32,13 +32,13 @@ import type {
   AffiliateCommissionDateDetailRow,
   AffiliateCommissionDateSummary,
   AffiliateCommissionLineItem,
-  AffiliateCommissionReportResult } from '@/lib/openclaw/affiliate-commission-types'
-import { normalizeOfferAsin } from '@/lib/openclaw/offer-asin'
-import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
-import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
+  AffiliateCommissionReportResult } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
+import { normalizeOfferAsin } from '@/lib/openclaw/offers/offer-asin'
+import { collectPartnerboostReportRows } from '@/lib/openclaw/affiliate-commission/partnerboost-commission-rows'
+import { collectYeahPromosReportRows } from '@/lib/openclaw/affiliate-commission/yeahpromos-commission-rows'
 import {
   reconcileAffiliateCommissionLineItems,
-  sumAttributionCommissionTotals } from '@/lib/openclaw/affiliate-commission-attribution-lines'
+  sumAttributionCommissionTotals } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution-lines'
 
 // Facts built before aligned PartnerBoost/YeahPromos parsing under-count commission vs campaigns.
 const AFFILIATE_COMMISSION_FACTS_MIN_REBUILT_AT = '2026-06-05T00:00:00.000Z'

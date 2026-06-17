@@ -13,7 +13,7 @@ import {
 import {
   normalizeOpenclawStrategyConfig,
   type OpenclawStrategyConfig,
-} from '@/lib/openclaw/strategy-config'
+} from '@/lib/openclaw/strategy/strategy-config'
 
 function baseConfig(): OpenclawStrategyConfig {
   return {

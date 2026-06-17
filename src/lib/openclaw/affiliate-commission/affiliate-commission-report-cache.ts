@@ -7,7 +7,7 @@ import {
   type JsonPayloadCodec } from '@/lib/common/server'
 import type {
   AffiliateCommissionDateBounds,
-  AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
+  AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
 
 const MEMORY_CACHE_TTL_MS = 5 * 60 * 1000
 const MEMORY_CACHE_MAX_ENTRIES = 32

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   detectAndFixZombieSyncTasks,
   getZombieTaskStats,
-} from '@/lib/queue/affiliate-sync-zombie-detector'
+} from '@/lib/affiliate/affiliate-sync-zombie-detector'
 
 export const dynamic = 'force-dynamic'
 

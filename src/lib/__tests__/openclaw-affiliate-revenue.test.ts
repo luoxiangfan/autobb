@@ -16,15 +16,19 @@ vi.mock('@/lib/openclaw/settings', () => ({
   },
 }))
 
-vi.mock('@/lib/openclaw/affiliate-commission-attribution', () => ({
+vi.mock('@/lib/openclaw/affiliate-commission/affiliate-commission-attribution', () => ({
   persistAffiliateCommissionAttributions: hoisted.persistAffiliateCommissionAttributionsMock,
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: hoisted.getDatabaseMock,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: hoisted.getDatabaseMock,
+  }
+})
 
-import { fetchAffiliateCommissionRevenue } from '@/lib/openclaw/affiliate-revenue'
+import { fetchAffiliateCommissionRevenue } from '@/lib/openclaw/affiliate-commission/affiliate-revenue'
 
 function makeOkJsonResponse(payload: any): any {
   return {

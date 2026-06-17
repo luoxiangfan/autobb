@@ -4,7 +4,7 @@ import {
   FEISHU_CHAT_HEALTH_RETENTION_DAYS,
   FEISHU_CHAT_HEALTH_WINDOW_HOURS,
   getFeishuChatHealthExecutionMissingSeconds,
-  listFeishuChatHealthLogs } from '@/lib/openclaw/feishu-chat-health'
+  listFeishuChatHealthLogs } from '@/lib/openclaw/feishu/feishu-chat-health'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 
 function clampLimit(value: unknown): number {

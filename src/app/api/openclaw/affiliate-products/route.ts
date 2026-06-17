@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import {
   listAffiliateProducts,
-  upsertAffiliateProducts } from '@/lib/openclaw/affiliate-products'
+  upsertAffiliateProducts } from '@/lib/openclaw/affiliate-commission/affiliate-products'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'

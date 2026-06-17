@@ -64,11 +64,11 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/openclaw/strategy-config', () => ({
+vi.mock('@/lib/openclaw/strategy/strategy-config', () => ({
   getOpenclawStrategyConfig: configFns.getOpenclawStrategyConfig,
 }))
 
-vi.mock('@/lib/openclaw/strategy-recommendations', () => ({
+vi.mock('@/lib/openclaw/strategy/strategy-recommendations', () => ({
   getStrategyRecommendations: recommendationFns.getStrategyRecommendations,
   executeStrategyRecommendation: recommendationFns.executeStrategyRecommendation,
   markStrategyRecommendationReviewQueued: recommendationFns.markStrategyRecommendationReviewQueued,
@@ -87,7 +87,7 @@ vi.mock('@/lib/queue/queue-routing', () => ({
   getQueueManagerForTaskType: queueFns.getQueueManagerForTaskType,
 }))
 
-vi.mock('@/lib/openclaw/strategy-store', () => ({
+vi.mock('@/lib/openclaw/strategy/strategy-store', () => ({
   createStrategyRun: storeFns.createStrategyRun,
   recordStrategyAction: storeFns.recordStrategyAction,
   touchStrategyRun: storeFns.touchStrategyRun,

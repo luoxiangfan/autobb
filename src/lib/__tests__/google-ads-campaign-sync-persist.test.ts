@@ -21,7 +21,7 @@ vi.mock('@/lib/google-ads/campaign/final-url', () => ({
   firstNonEmptyFinalUrlFromCampaignConfig: vi.fn(() => 'https://www.amazon.com/stores/page/store'),
 }))
 
-vi.mock('@/lib/openclaw/offer-asin', () => ({
+vi.mock('@/lib/openclaw/offers/offer-asin', () => ({
   extractAsinFromOfferUrls: vi.fn(() => null),
 }))
 

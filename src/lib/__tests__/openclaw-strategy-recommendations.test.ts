@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { __testUtils } from '@/lib/openclaw/strategy-recommendations'
+import { __testUtils } from '@/lib/openclaw/strategy/strategy-recommendations'
 
 const now = Date.now()
 

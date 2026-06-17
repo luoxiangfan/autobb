@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
-import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 import { isPerformanceReleaseEnabled } from '@/lib/common/server'
 import { convertCurrency } from '@/lib/common/server'
 

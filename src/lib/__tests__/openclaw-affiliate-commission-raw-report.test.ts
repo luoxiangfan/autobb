@@ -8,31 +8,46 @@ const hoisted = vi.hoisted(() => ({
   reconcileLinesMock: vi.fn(),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: hoisted.getDatabaseMock,
-}))
-
-vi.mock('@/lib/openclaw/affiliate-commission-facts', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/openclaw/affiliate-commission-facts')>()
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
   return {
     ...actual,
-    affiliateCommissionFactsCoverRawRange: hoisted.factsCoverMock,
+    getDatabase: hoisted.getDatabaseMock,
   }
 })
 
-vi.mock('@/lib/openclaw/affiliate-commission-attribution-lines', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('@/lib/openclaw/affiliate-commission-attribution-lines')>()
-  return {
-    ...actual,
-    reconcileAffiliateCommissionLineItems: hoisted.reconcileLinesMock,
+vi.mock(
+  '@/lib/openclaw/affiliate-commission/affiliate-commission-facts',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('@/lib/openclaw/affiliate-commission/affiliate-commission-facts')
+      >()
+    return {
+      ...actual,
+      affiliateCommissionFactsCoverRawRange: hoisted.factsCoverMock,
+    }
   }
-})
+)
+
+vi.mock(
+  '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution-lines',
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import('@/lib/openclaw/affiliate-commission/affiliate-commission-attribution-lines')
+      >()
+    return {
+      ...actual,
+      reconcileAffiliateCommissionLineItems: hoisted.reconcileLinesMock,
+    }
+  }
+)
 
 import {
   resolveAffiliateCommissionPlatformFilter,
   filterAffiliatesWithRawCommissionSupport,
-} from '@/lib/openclaw/affiliate-commission-platform'
+} from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'
 import {
   getAffiliateCommissionBrandDetail,
   getAffiliateCommissionDateDetail,
@@ -42,8 +57,8 @@ import {
   offerUrlsContainAsin,
   resolvePartnerboostDisplayBrand,
   resolveTargetUserIds,
-} from '@/lib/openclaw/affiliate-commission-raw-report'
-import { clearAffiliateCommissionLineItemsMemoryCache } from '@/lib/openclaw/affiliate-commission-report-cache'
+} from '@/lib/openclaw/affiliate-commission/affiliate-commission-raw-report'
+import { clearAffiliateCommissionLineItemsMemoryCache } from '@/lib/openclaw/affiliate-commission/affiliate-commission-report-cache'
 
 describe('affiliate-commission-raw-report', () => {
   beforeEach(() => {

@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(),
+const hoisted = vi.hoisted(() => ({
+  getDatabaseMock: vi.fn(),
 }))
 
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: hoisted.getDatabaseMock,
+  }
+})
+
 import { getDatabase } from '@/lib/db'
-import { persistAffiliateCommissionAttributions } from '@/lib/openclaw/affiliate-commission-attribution'
+import { persistAffiliateCommissionAttributions } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
 
 function formatLocalYmd(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -760,7 +768,9 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     // Verify it's attributed to campaign 5001 (index 7: campaign_id)
     expect((attributionInsertCalls[0]?.[1] as any[])[7]).toBe(5001)
     // Verify attribution rule is brand_equal_split
-    const rawPayload = JSON.parse((attributionInsertCalls[0]?.[1] as any[])[10])
+    const rawPayloadValue = (attributionInsertCalls[0]?.[1] as any[])[10]
+    const rawPayload =
+      typeof rawPayloadValue === 'string' ? JSON.parse(rawPayloadValue) : rawPayloadValue
     expect(rawPayload._autoads_attribution_rule).toBe('brand_equal_split')
   })
 
@@ -839,7 +849,9 @@ describe('persistAffiliateCommissionAttributions simplified attribution', () => 
     expect((attributionInsertCalls[0]?.[1] as any[])[6]).toBe(6194)
     expect((attributionInsertCalls[0]?.[1] as any[])[7]).toBe(4970)
 
-    const rawPayload = JSON.parse((attributionInsertCalls[0]?.[1] as any[])[10])
+    const rawPayloadValue = (attributionInsertCalls[0]?.[1] as any[])[10]
+    const rawPayload =
+      typeof rawPayloadValue === 'string' ? JSON.parse(rawPayloadValue) : rawPayloadValue
     expect(rawPayload._autoads_attribution_rule).toBe('brand_equal_split')
 
     const failureInsertCalls = exec.mock.calls.filter(

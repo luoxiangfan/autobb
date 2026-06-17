@@ -27,11 +27,11 @@ vi.mock('@/lib/openclaw/auth', () => ({
 vi.mock('@/lib/openclaw/request-auth', () => ({
   verifyOpenclawSessionAuth: sessionAuthFns.verifyOpenclawSessionAuth }))
 
-vi.mock('@/lib/openclaw/feishu-chat-health', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-chat-health', () => ({
   recordFeishuChatHealthLog: healthFns.recordFeishuChatHealthLog,
   backfillFeishuChatHealthRunLinks: healthFns.backfillFeishuChatHealthRunLinks }))
 
-vi.mock('@/lib/openclaw/feishu-accounts', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-accounts', () => ({
   parseFeishuAccountUserId: accountFns.parseFeishuAccountUserId }))
 
 vi.mock('@/lib/openclaw/bindings', () => ({

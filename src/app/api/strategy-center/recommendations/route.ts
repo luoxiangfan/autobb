@@ -4,7 +4,7 @@ import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/open
 import {
   getStrategyRecommendations,
   persistStrategyRecommendationExecutionRuntime,
-} from '@/lib/openclaw/strategy-recommendations'
+} from '@/lib/openclaw/strategy/strategy-recommendations'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'

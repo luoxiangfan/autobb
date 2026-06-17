@@ -4,9 +4,9 @@ import { getDatabase } from '@/lib/db'
 import {
   type FeishuChatHealthDecision,
   backfillFeishuChatHealthRunLinks,
-  recordFeishuChatHealthLog } from '@/lib/openclaw/feishu-chat-health'
+  recordFeishuChatHealthLog } from '@/lib/openclaw/feishu/feishu-chat-health'
 import { verifyOpenclawGatewayToken } from '@/lib/openclaw/auth'
-import { parseFeishuAccountUserId } from '@/lib/openclaw/feishu-accounts'
+import { parseFeishuAccountUserId } from '@/lib/openclaw/feishu/feishu-accounts'
 import { resolveOpenclawUserFromBinding } from '@/lib/openclaw/bindings'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/request-auth'
 

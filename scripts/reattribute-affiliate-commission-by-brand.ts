@@ -6,7 +6,7 @@ import {
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform,
   persistAffiliateCommissionAttributions,
-} from '@/lib/openclaw/affiliate-commission-attribution'
+} from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
 
 type CliArgs = {
   userId: number

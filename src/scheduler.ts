@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 持续运行的定时任务调度服务
  * 使用 cron 实现定时调度，由supervisord管理进程
  *
@@ -31,8 +31,8 @@ import {
 } from './lib/queue/queue-triggers'
 import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/context'
 import { buildUserExecutionEligibleSql } from './lib/campaign/user-execution-eligibility'
-import { detectAndFixZombieSyncTasks } from './lib/queue/affiliate-sync-zombie-detector'
-import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/launch-score/product-score-control'
+import { detectAndFixZombieSyncTasks } from './lib/affiliate/affiliate-sync-zombie-detector'
+import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/launch-score/product-score/product-score-control'
 
 // 日志函数
 function log(message: string) {

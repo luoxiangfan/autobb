@@ -36,7 +36,7 @@ const queueFns = vi.hoisted(() => ({
 vi.mock('@/lib/openclaw/request-auth', () => ({
   resolveOpenclawRequestUser: authFns.resolveOpenclawRequestUser }))
 
-vi.mock('@/lib/openclaw/strategy-recommendations', () => ({
+vi.mock('@/lib/openclaw/strategy/strategy-recommendations', () => ({
   getStrategyRecommendations: recommendationFns.getStrategyRecommendations,
   persistStrategyRecommendationExecutionRuntime: recommendationFns.persistStrategyRecommendationExecutionRuntime }))
 

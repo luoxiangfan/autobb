@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveStrategyCenterRequestUser } from '@/lib/openclaw/request-auth'
-import { queueStrategyRecommendationExecution } from '@/lib/openclaw/strategy-recommendations'
+import { queueStrategyRecommendationExecution } from '@/lib/openclaw/strategy/strategy-recommendations'
 
 export const dynamic = 'force-dynamic'
 

@@ -40,7 +40,7 @@ import { formatCurrency } from '@/lib/common'
 import {
   filterAffiliatesWithRawCommissionSupport,
   getAffiliatePlatformDisplayName,
-  type AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission-platform'
+  type AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'
 
 type ViewMode = 'brand' | 'date'
 

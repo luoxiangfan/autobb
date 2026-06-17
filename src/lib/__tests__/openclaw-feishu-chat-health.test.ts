@@ -19,7 +19,7 @@ import {
   backfillFeishuChatHealthRunLinks,
   listFeishuChatHealthLogs,
   recordFeishuChatHealthLog,
-} from '@/lib/openclaw/feishu-chat-health'
+} from '@/lib/openclaw/feishu/feishu-chat-health'
 
 describe('feishu chat health lib', () => {
   beforeEach(() => {

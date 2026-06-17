@@ -1,6 +1,6 @@
 /**
  * 换链接任务调度器
- * src/lib/url-swap-scheduler.ts
+ * src/lib/url-swap/url-swap-scheduler.ts
  *
  * 功能：触发和管理换链接任务的执行
  * - 事件驱动：任务创建后立即触发调度

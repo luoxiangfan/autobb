@@ -18,7 +18,7 @@ vi.mock('@/lib/openclaw/auth', () => ({
   getOpenclawGatewayToken: getOpenclawGatewayTokenMock,
 }))
 
-vi.mock('@/lib/openclaw/feishu-accounts', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-accounts', () => ({
   collectUserFeishuAccounts: collectUserFeishuAccountsMock,
 }))
 

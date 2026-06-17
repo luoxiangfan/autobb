@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
-import { importAsinFile } from '@/lib/openclaw/asin-import'
+import { importAsinFile } from '@/lib/openclaw/offers/asin-import'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60

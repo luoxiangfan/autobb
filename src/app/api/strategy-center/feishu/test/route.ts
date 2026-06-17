@@ -6,7 +6,7 @@ import {
   feishuRequest,
   getTenantAccessToken,
   resolveFeishuApiBase,
-} from '@/lib/openclaw/feishu-api'
+} from '@/lib/openclaw/feishu/feishu-api'
 
 const feishuTestSchema = z.object({
   appId: z.string().optional(),

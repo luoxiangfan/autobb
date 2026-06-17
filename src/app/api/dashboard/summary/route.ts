@@ -8,7 +8,7 @@ import { verifyAuth } from '@/lib/auth'
 import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { listOffers } from '@/lib/offers/server'
-import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 
 function parseBooleanParam(value: string | null): boolean {
   if (value === null) return false

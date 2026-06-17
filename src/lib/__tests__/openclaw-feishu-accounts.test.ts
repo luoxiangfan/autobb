@@ -28,7 +28,7 @@ vi.mock('@/lib/common/server', async () => {
 import {
   collectUserFeishuAccounts,
   collectUserFeishuBindingAccounts,
-} from '@/lib/openclaw/feishu-accounts'
+} from '@/lib/openclaw/feishu/feishu-accounts'
 
 describe('collectUserFeishuAccounts', () => {
   beforeEach(() => {

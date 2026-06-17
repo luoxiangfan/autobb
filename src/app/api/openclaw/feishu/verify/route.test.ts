@@ -19,7 +19,7 @@ vi.mock('@/lib/openclaw/request-auth', () => ({
 vi.mock('@/lib/openclaw/settings', () => ({
   getOpenclawSettingsMap: settingsFns.getOpenclawSettingsMap }))
 
-vi.mock('@/lib/openclaw/feishu-api', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-api', () => ({
   getTenantAccessToken: feishuApiFns.getTenantAccessToken,
   feishuRequest: feishuApiFns.feishuRequest,
   resolveFeishuApiBase: feishuApiFns.resolveFeishuApiBase }))

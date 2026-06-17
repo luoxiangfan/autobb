@@ -16,7 +16,7 @@ const healthFns = vi.hoisted(() => ({
 vi.mock('@/lib/openclaw/request-auth', () => ({
   verifyOpenclawSessionAuth: authFns.verifyOpenclawSessionAuth }))
 
-vi.mock('@/lib/openclaw/feishu-chat-health', () => ({
+vi.mock('@/lib/openclaw/feishu/feishu-chat-health', () => ({
   listFeishuChatHealthLogs: healthFns.listFeishuChatHealthLogs,
   FEISHU_CHAT_HEALTH_WINDOW_HOURS: healthFns.FEISHU_CHAT_HEALTH_WINDOW_HOURS,
   FEISHU_CHAT_HEALTH_RETENTION_DAYS: healthFns.FEISHU_CHAT_HEALTH_RETENTION_DAYS,

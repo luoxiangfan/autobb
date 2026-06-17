@@ -2,7 +2,7 @@ import { getDatabase } from '@/lib/db'
 import { isUniqueConstraintViolation } from '@/lib/db'
 import {
   collectUserFeishuBindingAccounts,
-  parseFeishuAccountUserId } from '@/lib/openclaw/feishu-accounts'
+  parseFeishuAccountUserId } from '@/lib/openclaw/feishu/feishu-accounts'
 
 type FeishuAuthMode = 'strict' | 'compat'
 type FeishuAuthSettings = {

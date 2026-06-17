@@ -16,8 +16,8 @@ import {
   getAffiliateCommissionAttributionUpdatedAt,
   reconcileAffiliateCommissionLineItems,
   sumAttributionCommissionTotals,
-} from '@/lib/openclaw/affiliate-commission-attribution-lines'
-import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
+} from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution-lines'
+import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
 
 function makeItem(commission: number): AffiliateCommissionLineItem {
   return {

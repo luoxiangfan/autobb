@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   buildAffiliateUnattributedFailureFilter,
   resolveAffiliateAttributionFailureReasonCode,
-} from '@/lib/openclaw/affiliate-attribution-failures'
+} from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 
 describe('affiliate attribution failures', () => {
   it('uses pending reason for recoverable misses within grace window', () => {

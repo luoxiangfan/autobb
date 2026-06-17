@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   preferAttributionLineItemsIfHigher,
   sumAffiliateCommissionLineItems,
-} from '@/lib/openclaw/affiliate-commission-attribution-lines'
-import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
+} from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution-lines'
+import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
 
 function makeItem(commission: number): AffiliateCommissionLineItem {
   return {

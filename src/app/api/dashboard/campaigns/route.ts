@@ -3,7 +3,7 @@ import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
-import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
+import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 
 /**
  * Campaign性能数据

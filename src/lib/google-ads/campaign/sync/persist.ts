@@ -1,7 +1,7 @@
 import { getDatabase, utcNowIso, parseJsonField } from '../../../db'
 import { toDbCampaignConfigTextField } from '../../../campaign/server'
 import { getInsertedId } from '../../../db'
-import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
+import { extractAsinFromOfferUrls } from '@/lib/openclaw/offers/offer-asin'
 import { firstNonEmptyFinalUrlFromCampaignConfig } from '@/lib/google-ads/campaign/final-url'
 import { offerOccupyingCampaignWhereClause } from '../../../campaign/server'
 import type { GoogleAdsCampaign } from './types'

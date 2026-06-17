@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
-import { dismissStrategyRecommendation } from '@/lib/openclaw/strategy-recommendations'
+import { dismissStrategyRecommendation } from '@/lib/openclaw/strategy/strategy-recommendations'
 
 export const dynamic = 'force-dynamic'
 

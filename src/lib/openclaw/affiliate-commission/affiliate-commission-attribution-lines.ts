@@ -1,11 +1,11 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import {
-  extractBrandFromRaw } from '@/lib/openclaw/affiliate-commission-attribution'
-import type { AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission-platform'
-import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
-import { extractPartnerboostBrandFromRow } from '@/lib/openclaw/partnerboost-commission-rows'
-import { getYeahPromosFieldValue } from '@/lib/openclaw/yeahpromos-commission-rows'
+  extractBrandFromRaw } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
+import type { AffiliateCommissionReportPlatformFilter } from '@/lib/openclaw/affiliate-commission/affiliate-commission-platform'
+import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
+import { extractPartnerboostBrandFromRow } from '@/lib/openclaw/affiliate-commission/partnerboost-commission-rows'
+import { getYeahPromosFieldValue } from '@/lib/openclaw/affiliate-commission/yeahpromos-commission-rows'
 
 const YEAHPROMOS_ADVERT_ID_ALIASES = ['advert_id', 'advertId', 'mid']
 const YEAHPROMOS_ADVERT_NAME_ALIASES = ['advert_name', 'advertName']

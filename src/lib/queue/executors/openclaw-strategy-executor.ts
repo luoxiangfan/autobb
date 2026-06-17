@@ -3,14 +3,14 @@ import { getDatabase } from '@/lib/db'
 import {
   getOpenclawStrategyConfig,
   type OpenclawStrategyConfig,
-} from '@/lib/openclaw/strategy-config'
+} from '@/lib/openclaw/strategy/strategy-config'
 import {
   executeStrategyRecommendation,
   getStrategyRecommendations,
   markStrategyRecommendationReviewQueued,
   reviewStrategyRecommendationEffect,
   type StrategyRecommendationQueueTaskData,
-} from '@/lib/openclaw/strategy-recommendations'
+} from '@/lib/openclaw/strategy/strategy-recommendations'
 import { normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'

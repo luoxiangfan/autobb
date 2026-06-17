@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectYeahPromosReportRows } from '@/lib/openclaw/yeahpromos-commission-rows'
+import { collectYeahPromosReportRows } from '@/lib/openclaw/affiliate-commission/yeahpromos-commission-rows'
 
 describe('collectYeahPromosReportRows', () => {
   it('parses nested data.Data rows with sale_comm', () => {

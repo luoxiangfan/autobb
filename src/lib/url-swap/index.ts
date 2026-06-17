@@ -1,6 +1,6 @@
 /**
  * 换链接任务核心业务逻辑
- * src/lib/url-swap.ts
+ * src/lib/url-swap/index.ts
  *
  * 功能：换链接任务的CRUD操作和数据访问
  */

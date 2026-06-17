@@ -3,7 +3,7 @@ import { toDbJsonObjectField } from '@/lib/db'
 import {
   resolveAffiliateAttributionFailureReasonCode,
   type AffiliateAttributionBaseFailureReasonCode,
-  type AffiliateAttributionFailureReasonCode } from '@/lib/openclaw/affiliate-attribution-failures'
+  type AffiliateAttributionFailureReasonCode } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 
 export type AffiliatePlatform = 'partnerboost' | 'yeahpromos'
 

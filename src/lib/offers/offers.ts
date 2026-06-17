@@ -31,7 +31,7 @@ import { removePendingUrlSwapQueueTasksByTaskIds } from '../url-swap/queue-clean
 import type { OfferExtractionMode } from './offer-extraction-mode'
 import { normalizeOfferExtractionMode } from './offer-extraction-mode'
 import { executeGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
-import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
+import { extractAsinFromOfferUrls } from '@/lib/openclaw/offers/offer-asin'
 
 export interface Offer {
   id: number

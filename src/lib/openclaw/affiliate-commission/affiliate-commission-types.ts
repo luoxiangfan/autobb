@@ -1,4 +1,4 @@
-import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
+import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
 
 export type AffiliateCommissionLineItem = {
   userId: number
@@ -53,8 +53,8 @@ export type ActiveNonAdminUser = {
 export type AffiliateCommissionReportResult = {
   startDate: string
   endDate: string
-  platform: import('@/lib/openclaw/affiliate-commission-platform').AffiliateCommissionReportPlatformFilter
-  viewMode: import('@/lib/openclaw/affiliate-commission-platform').AffiliateCommissionReportViewMode
+  platform: import('@/lib/openclaw/affiliate-commission/affiliate-commission-platform').AffiliateCommissionReportPlatformFilter
+  viewMode: import('@/lib/openclaw/affiliate-commission/affiliate-commission-platform').AffiliateCommissionReportViewMode
   currency: string
   totalCommission: number
   showUserScope: boolean

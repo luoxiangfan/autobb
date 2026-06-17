@@ -10,7 +10,7 @@
  */
 
 import { getDatabase } from '@/lib/db'
-import { persistAffiliateCommissionAttributions } from '@/lib/openclaw/affiliate-commission-attribution'
+import { persistAffiliateCommissionAttributions } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
 
 async function main() {
   const db = await getDatabase()

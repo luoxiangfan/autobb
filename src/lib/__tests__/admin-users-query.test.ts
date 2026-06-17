@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { buildAdminUsersOrderBy } from '../admin/users-query'
+import { buildAdminUsersOrderBy } from '../auth/admin-users-query'
 
-describe('admin/users-query', () => {
+describe('auth/admin-users-query', () => {
   it('builds status orderBy for postgres with timestamptz cast (locked_until is TEXT)', () => {
     const orderBy = buildAdminUsersOrderBy({
       sortBy: 'status',

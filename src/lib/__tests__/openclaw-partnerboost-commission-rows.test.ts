@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectPartnerboostReportRows } from '@/lib/openclaw/partnerboost-commission-rows'
+import { collectPartnerboostReportRows } from '@/lib/openclaw/affiliate-commission/partnerboost-commission-rows'
 
 describe('collectPartnerboostReportRows', () => {
   it('prefers transaction rows over amazon_report when both exist', () => {

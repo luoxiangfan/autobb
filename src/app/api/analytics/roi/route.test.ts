@@ -26,7 +26,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/openclaw/affiliate-attribution-failures', () => ({
+vi.mock('@/lib/openclaw/affiliate-commission/affiliate-attribution-failures', () => ({
   buildAffiliateUnattributedFailureFilter: failureFilterFns.buildAffiliateUnattributedFailureFilter,
 }))
 

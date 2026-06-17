@@ -3,7 +3,7 @@ import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import {
   getStrategyRecommendations,
-  persistStrategyRecommendationExecutionRuntime } from '@/lib/openclaw/strategy-recommendations'
+  persistStrategyRecommendationExecutionRuntime } from '@/lib/openclaw/strategy/strategy-recommendations'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'

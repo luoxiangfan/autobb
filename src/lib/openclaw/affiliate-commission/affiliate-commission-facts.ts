@@ -1,7 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import { nowFunc } from '@/lib/db'
-import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission-types'
-import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission-attribution'
+import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
+import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
 
 type LineFactRow = {
   user_id: number

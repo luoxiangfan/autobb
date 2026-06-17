@@ -12,7 +12,7 @@
  */
 
 import { getDatabase } from '@/lib/db'
-import { getAffiliateAttributionPendingGraceDays } from '@/lib/openclaw/affiliate-attribution-failures'
+import { getAffiliateAttributionPendingGraceDays } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 
 interface HealthMetrics {
   unattributedCommission: number

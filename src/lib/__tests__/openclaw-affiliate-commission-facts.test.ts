@@ -10,7 +10,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-import { affiliateCommissionFactsCoverRawRange } from '@/lib/openclaw/affiliate-commission-facts'
+import { affiliateCommissionFactsCoverRawRange } from '@/lib/openclaw/affiliate-commission/affiliate-commission-facts'
 
 describe('affiliateCommissionFactsCoverRawRange', () => {
   beforeEach(() => {

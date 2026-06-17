@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
-import { listOfferScores, createOfferScore } from '@/lib/openclaw/offer-scores'
-import { batchScoreOffers, rankOffers, type AffiliateProduct } from '@/lib/openclaw/offer-scoring'
+import { listOfferScores, createOfferScore } from '@/lib/openclaw/offers/offer-scores'
+import { batchScoreOffers, rankOffers, type AffiliateProduct } from '@/lib/openclaw/offers/offer-scoring'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/request-auth'
 
 export const dynamic = 'force-dynamic'
