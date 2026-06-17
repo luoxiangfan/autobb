@@ -672,6 +672,16 @@ export async function executeClickFarmTask(
       return { success: false, traffic: 0 }
     }
 
+    console.log(`[ClickFarm] 开始执行任务`, {
+      clickFarmTaskId: taskId,
+      queueTaskId: task.id,
+      userId: task.userId,
+      offerId: task.data.offerId,
+      scheduledAt: scheduledAt ?? null,
+      timezone: timezone ?? null,
+      url: url.length > 80 ? `${url.substring(0, 80)}...` : url,
+    })
+
     // 控制真实 in-flight 请求数，避免同时堆出大量 HTTP 请求
     const release = await clickFarmSemaphore.acquire()
     let released = false
