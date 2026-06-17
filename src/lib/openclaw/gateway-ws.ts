@@ -70,16 +70,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function resolveWebSocketImpl(): Promise<any> {
+function resolveWebSocketImpl(): typeof WebSocket {
   if (typeof WebSocket !== 'undefined') {
     return WebSocket
   }
-  try {
-    const mod = await import('ws')
-    return (mod as any).WebSocket || (mod as any).default || mod
-  } catch (_error) {
-    throw new Error('当前运行环境不支持 WebSocket')
-  }
+  throw new Error('当前运行环境不支持 WebSocket（需要 Node.js 24+ 或浏览器 WebSocket）')
 }
 
 function toWsUrl(httpUrl: string): string {
@@ -138,7 +133,7 @@ function resolveMessagePayload(eventOrData: any): string | null {
 }
 
 async function openGatewaySocket(url: string, timeoutMs: number): Promise<any> {
-  const WebSocketImpl = await resolveWebSocketImpl()
+  const WebSocketImpl = resolveWebSocketImpl()
   const ws = new WebSocketImpl(url)
   return await new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
