@@ -5,6 +5,7 @@ import { collectUserFeishuAccounts } from '@/lib/openclaw/feishu/feishu-accounts
 import { parseAiModelsJson } from '@/lib/openclaw/config/ai-models'
 import { syncOpenclawManagedAiAuthProfiles } from '@/lib/openclaw/config/ai-auth-audit'
 import { resolveOpenclawRuntimePaths } from '@/lib/openclaw/workspace/workspace-paths'
+import { ensureOpenclawWorkspaceBootstrap } from '@/lib/openclaw/workspace/workspace-bootstrap'
 
 type SyncOpenclawConfigOptions = {
   reason?: string
@@ -390,9 +391,6 @@ export async function syncOpenclawConfig(options: SyncOpenclawConfigOptions = {}
     ? agentDefaults.workspace.trim()
     : ''
 
-  const { ensureOpenclawWorkspaceBootstrap } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
-  )
   const workspaceBootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,
     actorUserId,

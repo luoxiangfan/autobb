@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 import { getSettingsByCategory } from '@/lib/common/server'
 import { syncOpenclawConfig } from '@/lib/openclaw/config/config'
+import {
+  ensureOpenclawWorkspaceBootstrap,
+  inspectOpenclawWorkspace,
+} from '@/lib/openclaw/workspace/workspace-bootstrap'
 import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace/workspace-paths'
 
 function parseJsonObject(value?: string | null): Record<string, any> | undefined {
@@ -22,9 +26,6 @@ async function buildWorkspaceStatus(params: {
   computedWorkspaceDir: string
   canReloadGateway: boolean
 }) {
-  const { inspectOpenclawWorkspace } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
-  )
   const inspected = inspectOpenclawWorkspace(params.workspaceDir)
   return {
     success: true,
@@ -58,9 +59,6 @@ export async function POST(request: NextRequest) {
     actorUserId: auth.user.userId,
     preferredWorkspace })
 
-  const { ensureOpenclawWorkspaceBootstrap } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
-  )
   const bootstrap = ensureOpenclawWorkspaceBootstrap({
     stateDir,
     actorUserId: auth.user.userId,

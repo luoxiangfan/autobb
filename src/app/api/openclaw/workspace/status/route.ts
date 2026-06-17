@@ -2,6 +2,7 @@ import fs from 'fs'
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyOpenclawSessionAuth } from '@/lib/openclaw/gateway/request-auth'
 import { getSettingsByCategory } from '@/lib/common/server'
+import { inspectOpenclawWorkspace } from '@/lib/openclaw/workspace/workspace-bootstrap'
 import { resolveOpenclawRuntimePaths, resolveOpenclawWorkspaceDir } from '@/lib/openclaw/workspace/workspace-paths'
 
 function parseJsonObject(value?: string | null): Record<string, any> | undefined {
@@ -57,9 +58,6 @@ export async function GET(request: NextRequest) {
     preferredWorkspace })
   const runtimeWorkspaceDir = readRuntimeWorkspaceDir(configPath)
   const effectiveWorkspaceDir = runtimeWorkspaceDir || computedWorkspaceDir
-  const { inspectOpenclawWorkspace } = await import(
-    /* turbopackIgnore: true */ '@/lib/openclaw/workspace/workspace-bootstrap'
-  )
   const status = inspectOpenclawWorkspace(effectiveWorkspaceDir)
 
   return NextResponse.json({
