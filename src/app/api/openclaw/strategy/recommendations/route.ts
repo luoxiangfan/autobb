@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
-import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
+import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/runtime/report-date'
 import {
   getStrategyRecommendations,
   persistStrategyRecommendationExecutionRuntime } from '@/lib/openclaw/strategy/strategy-recommendations'

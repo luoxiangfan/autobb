@@ -11,7 +11,7 @@ import {
   reviewStrategyRecommendationEffect,
   type StrategyRecommendationQueueTaskData,
 } from '@/lib/openclaw/strategy/strategy-recommendations'
-import { normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
+import { normalizeOpenclawReportDate } from '@/lib/openclaw/runtime/report-date'
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/config/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'

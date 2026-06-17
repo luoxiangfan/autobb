@@ -42,11 +42,11 @@ vi.mock('../openclaw/gateway/rate-limit', () => ({
   checkOpenclawRateLimit: checkOpenclawRateLimitMock,
 }))
 
-vi.mock('../openclaw/autoads-client', () => ({
+vi.mock('../openclaw/runtime/autoads-client', () => ({
   fetchAutoadsAsUser: fetchAutoadsAsUserMock,
 }))
 
-vi.mock('../openclaw/action-logs', () => ({
+vi.mock('../openclaw/runtime/action-logs', () => ({
   recordOpenclawAction: recordOpenclawActionMock,
 }))
 

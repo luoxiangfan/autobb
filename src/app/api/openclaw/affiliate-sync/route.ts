@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveOpenclawRequestUser } from '@/lib/openclaw/gateway/request-auth'
-import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
+import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/runtime/report-date'
 import { getOpenclawSettingsWithAffiliateSyncMap } from '@/lib/openclaw/config/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 

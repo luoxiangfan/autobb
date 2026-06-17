@@ -9,7 +9,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: mocks.getDatabase,
 }))
 
-import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
+import { recordOpenclawAction } from '@/lib/openclaw/runtime/action-logs'
 
 describe('openclaw action logs redaction', () => {
   beforeEach(() => {

@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import process from 'process'
 import { getDatabase } from '@/lib/db'
-import { redactOpenclawActionLogText } from '@/lib/openclaw/action-logs'
+import { redactOpenclawActionLogText } from '@/lib/openclaw/runtime/action-logs'
 
 type ActionLogRow = {
   id: number

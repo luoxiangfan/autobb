@@ -1,8 +1,8 @@
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
 import { nowFunc } from '@/lib/db'
-import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'
-import { recordOpenclawAction } from '@/lib/openclaw/action-logs'
+import { fetchAutoadsAsUser } from '@/lib/openclaw/runtime/autoads-client'
+import { recordOpenclawAction } from '@/lib/openclaw/runtime/action-logs'
 import { buildEffectiveCreative } from '@/lib/campaign/publish/effective-creative'
 import {
   buildAlignedPublishCampaignConfig,

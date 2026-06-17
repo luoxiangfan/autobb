@@ -1,4 +1,4 @@
-import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
+import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/runtime/report-date'
 
 const DEFAULT_PENDING_GRACE_DAYS = 7
 const MIN_PENDING_GRACE_DAYS = 1

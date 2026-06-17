@@ -10,11 +10,11 @@ vi.mock('@/lib/db', () => ({
   getDatabase: mocks.getDatabase,
 }))
 
-vi.mock('@/lib/openclaw/autoads-client', () => ({
+vi.mock('@/lib/openclaw/runtime/autoads-client', () => ({
   fetchAutoadsAsUser: mocks.fetchAutoadsAsUser,
 }))
 
-vi.mock('@/lib/openclaw/action-logs', () => ({
+vi.mock('@/lib/openclaw/runtime/action-logs', () => ({
   recordOpenclawAction: mocks.recordOpenclawAction,
 }))
 

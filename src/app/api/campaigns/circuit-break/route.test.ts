@@ -35,7 +35,7 @@ vi.mock('@/lib/campaign', () => ({
   pauseCampaigns: campaignsFns.pauseCampaigns,
 }))
 
-vi.mock('@/lib/openclaw/action-logs', () => ({
+vi.mock('@/lib/openclaw/runtime/action-logs', () => ({
   recordOpenclawAction: actionLogFns.recordOpenclawAction,
 }))
 

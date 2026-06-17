@@ -11,7 +11,7 @@ vi.mock('@/lib/auth', () => ({
   generateToken: generateTokenMock,
 }))
 
-import { fetchAutoadsAsUser } from '@/lib/openclaw/autoads-client'
+import { fetchAutoadsAsUser } from '@/lib/openclaw/runtime/autoads-client'
 
 describe('openclaw autoads client base url', () => {
   const originalInternalAppUrl = process.env.INTERNAL_APP_URL
