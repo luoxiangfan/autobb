@@ -202,14 +202,14 @@ export async function syncCampaignsFromGoogleAds(
             result.syncedCount++
             if (offerResult.created) {
               result.createdOffersCount++
-            } else if (offerResult.offerUrlFieldsUpdated) {
+            } else if (offerResult.offerFieldsUpdated) {
               result.updatedOffersCount++
             }
 
             const offerSyncLabel = offerResult.created
               ? 'created'
-              : offerResult.offerUrlFieldsUpdated
-                ? 'linked (backfilled empty url / final_url / final_url_suffix)'
+              : offerResult.offerFieldsUpdated
+                ? 'linked (backfilled url / brand / page_type from Google Ads)'
                 : 'linked'
             googleAdsSyncLogger.info('sync_campaign_saved', {
               campaignId: campaign.campaign_id,

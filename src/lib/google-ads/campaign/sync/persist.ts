@@ -1,4 +1,4 @@
-import { getDatabase } from '../../../db'
+import { getDatabase, utcNowIso } from '../../../db'
 import { toDbCampaignConfigTextField } from '../../../campaign/server'
 import { getInsertedId } from '../../../db'
 import { extractAsinFromOfferUrls } from '@/lib/openclaw/offer-asin'
@@ -169,7 +169,7 @@ export async function createOfferFirst(params: {
   userId: number
   campaign: GoogleAdsCampaign
   campaignConfig?: GoogleAdsCampaign['campaign_config']
-}): Promise<{ offerId: number; created: boolean; offerUrlFieldsUpdated: boolean }> {
+}): Promise<{ offerId: number; created: boolean; offerFieldsUpdated: boolean }> {
   const { userId, campaign, campaignConfig } = params
   const db = await getDatabase()
   const finalUrl = firstNonEmptyFinalUrlFromCampaignConfig(campaignConfig)
@@ -203,7 +203,7 @@ export async function createOfferFirst(params: {
     | undefined
 
   if (existingOffer) {
-    let offerUrlFieldsUpdated = false
+    let offerFieldsUpdated = false
     if (existingOffer.sync_source === 'google_ads_sync') {
       const updates: string[] = []
       const updateParams: unknown[] = []
@@ -252,24 +252,27 @@ export async function createOfferFirst(params: {
 
       const existingPageType =
         typeof existingOffer.page_type === 'string' ? existingOffer.page_type.trim() : ''
+      const inferredPageType = inferPageTypeFromUrls({ url: nextUrl, finalUrl: nextFinalUrl })
       const shouldSetPageType =
         !existingPageType ||
+        inferredPageType !== existingPageType ||
         updates.some((entry) => entry.startsWith('url =') || entry.startsWith('final_url ='))
-      if (shouldSetPageType) {
+      if (shouldSetPageType && inferredPageType !== existingPageType) {
         updates.push('page_type = ?')
-        updateParams.push(inferPageTypeFromUrls({ url: nextUrl, finalUrl: nextFinalUrl }))
+        updateParams.push(inferredPageType)
       }
 
       if (updates.length > 0) {
-        await db.exec(`UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ?`, [
-          ...updateParams,
-          new Date(),
-          existingOffer.id,
-        ])
-        offerUrlFieldsUpdated = true
+        const updatedAt = utcNowIso()
+        await db.exec(
+          `UPDATE offers SET ${updates.join(', ')}, updated_at = ? WHERE id = ? AND user_id = ?`,
+          [...updateParams, updatedAt, existingOffer.id, userId]
+        )
+        offerFieldsUpdated = true
         googleAdsSyncLogger.info('offer_updated', {
           offerId: existingOffer.id,
           fields: updates.join(', '),
+          updatedAt,
         })
       }
     }
@@ -279,7 +282,7 @@ export async function createOfferFirst(params: {
         `[GoogleAds Sync] Found existing offer ${existingOffer.id} for campaign ${campaign.campaign_id}`
       ),
     })
-    return { offerId: existingOffer.id, created: false, offerUrlFieldsUpdated }
+    return { offerId: existingOffer.id, created: false, offerFieldsUpdated }
   }
 
   // 2. 创建新 Offer
@@ -289,6 +292,7 @@ export async function createOfferFirst(params: {
 
   // 生成唯一的 offer_name
   const offerName = campaign.campaign_name
+  const now = utcNowIso()
 
   const result = await db.exec(
     `INSERT INTO offers (
@@ -306,8 +310,10 @@ export async function createOfferFirst(params: {
       needs_completion,
       scrape_status,
       is_active,
-      page_type
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      page_type,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       url,
@@ -324,6 +330,8 @@ export async function createOfferFirst(params: {
       'pending',
       'TRUE',
       pageType,
+      now,
+      now,
     ]
   )
 
@@ -334,7 +342,7 @@ export async function createOfferFirst(params: {
     ),
   })
 
-  return { offerId, created: true, offerUrlFieldsUpdated: false }
+  return { offerId, created: true, offerFieldsUpdated: false }
 }
 
 export async function updateCampaignConfig(
