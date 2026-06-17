@@ -1,4 +1,4 @@
-import 'server-only'
+// Intentionally no `server-only`: standalone Node bundles must not evaluate that guard.
 
 import { EXCHANGE_RATES } from './currency'
 import { getEffectiveUsdRates } from './exchange-rates-cache'

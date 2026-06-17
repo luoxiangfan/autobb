@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { loadAndGetUsdExchangeRates } from '@/lib/common/server'
+import { loadAndGetUsdExchangeRates } from '@/lib/common/exchange-rates-snapshot'
 import { countUsdExchangeRateRows } from '@/lib/common/exchange-rates-service'
 
 export const dynamic = 'force-dynamic'

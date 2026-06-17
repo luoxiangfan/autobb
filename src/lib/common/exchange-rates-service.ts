@@ -1,5 +1,4 @@
-import 'server-only'
-
+// Intentionally no `server-only`: scheduler/db-init bundles import this module directly.
 /**
  * ExchangeRate-API v6 sync: fetch USD-latest rates, persist, refresh in-memory cache.
  * API key: EXCHANGE_RATE_API_KEY (or EXCHANGERATE_API_KEY).
