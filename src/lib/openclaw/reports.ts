@@ -7,7 +7,7 @@ import { writeDailyReportToBitable, writeDailyReportToDoc } from '@/lib/openclaw
 import { formatOpenclawLocalDate, normalizeOpenclawReportDate } from '@/lib/openclaw/report-date'
 import { getStrategyRecommendations, type StrategyRecommendation } from '@/lib/openclaw/strategy-recommendations'
 import { toDbJsonObjectField } from '@/lib/db'
-import { createRiskAlert } from '@/lib/optimization'
+import { createRiskAlert } from '@/lib/campaign/optimization'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-attribution-failures'
 
 type DailyReportPayload = {

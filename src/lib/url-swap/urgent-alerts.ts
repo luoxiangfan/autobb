@@ -5,7 +5,10 @@
 
 import { getDatabase } from '@/lib/db'
 import { boolParam, nowFunc } from '@/lib/db'
-import { createRiskAlertWithDedupMeta, refreshActiveRiskAlertContent } from '@/lib/optimization'
+import {
+  createRiskAlertWithDedupMeta,
+  refreshActiveRiskAlertContent,
+} from '@/lib/campaign/optimization'
 import type { UrlSwapErrorType } from '@/lib/url-swap'
 
 export interface UrlSwapUrgentAlert {

@@ -17,7 +17,7 @@ import {
   createRiskAlertWithDedupMeta,
   dailyLinkCheck,
   refreshActiveRiskAlertContent,
-} from '@/lib/optimization'
+} from '@/lib/campaign/optimization'
 import type { DatabaseAdapter } from '@/lib/db'
 import { getDatabase } from '@/lib/db'
 import { resolveAffiliateLink } from '@/lib/scraping'

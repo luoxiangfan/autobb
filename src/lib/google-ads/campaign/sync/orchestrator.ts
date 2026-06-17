@@ -12,7 +12,7 @@ import {
   resolveSyncAuthForAccount,
   type GoogleAdsLinkedAccountPrepareCache,
 } from '@/lib/google-ads/accounts/auth/index'
-import { createRiskAlert } from '../../../optimization'
+import { createRiskAlert } from '../../../campaign/optimization'
 import type { SyncResult } from './types'
 import { fetchCampaignsFromGoogleAds } from './fetch'
 import { createOfferFirst, saveCampaignToDatabase, updateCampaignConfig } from './persist'

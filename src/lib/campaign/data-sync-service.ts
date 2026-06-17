@@ -22,7 +22,7 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import { executeGAQLQueryPython } from './python-ads-client'
 import { getInsertedId, nowFunc } from '../db'
-import { createRiskAlert } from '../optimization'
+import { createRiskAlert } from './optimization'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'

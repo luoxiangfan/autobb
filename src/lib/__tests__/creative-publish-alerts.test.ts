@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: async () => stubDb,
 }))
 
-vi.mock('@/lib/optimization', () => ({
+vi.mock('@/lib/campaign/optimization', () => ({
   createRiskAlert: createRiskAlertMock,
 }))
 

@@ -23,7 +23,7 @@ import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { KEYWORD_POLICY } from './keyword-policy'
 import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
 import type { PoolKeywordData } from './offer-pool'
-import { createRiskAlert } from '../optimization'
+import { createRiskAlert } from '../campaign/optimization'
 import { getDatabase } from '../db'
 import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'
 

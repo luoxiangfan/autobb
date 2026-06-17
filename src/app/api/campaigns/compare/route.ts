@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { createOptimizationEngine, type CampaignMetrics } from '@/lib/optimization'
+import { createOptimizationEngine, type CampaignMetrics } from '@/lib/campaign/optimization'
 import { convertCurrency } from '@/lib/common/server'
 import { getCommissionPerConversion as getOfferCommissionPerConversion } from '@/lib/offers/server'
 

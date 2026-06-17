@@ -15,7 +15,7 @@ import {
   markStaleGoogleAdsCampaignSyncLogs,
   reconcileStaleGoogleAdsCampaignSyncPendingTasks,
 } from '@/lib/google-ads/campaign/sync-pipeline-status'
-import { createRiskAlert } from '../../optimization'
+import { createRiskAlert } from '../../campaign/optimization'
 import { utcNowIso } from '../../db'
 
 /**

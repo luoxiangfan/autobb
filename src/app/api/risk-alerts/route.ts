@@ -6,7 +6,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
 import { withPerformanceMonitoring } from '@/lib/common/server'
-import { getUserRiskAlerts, getRiskStatistics, checkAllUserLinks } from '@/lib/optimization'
+import {
+  getUserRiskAlerts,
+  getRiskStatistics,
+  checkAllUserLinks,
+} from '@/lib/campaign/optimization'
 
 /**
  * GET - 获取风险提示列表

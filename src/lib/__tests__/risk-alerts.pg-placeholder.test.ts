@@ -12,12 +12,16 @@ const stubDb: StubDb = {
   exec: vi.fn(),
 }
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: async () => stubDb,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: async () => stubDb,
+  }
+})
 
-import { createRiskAlert } from '@/lib/optimization'
-import { getRiskStatistics } from '@/lib/optimization'
+import { createRiskAlert } from '@/lib/campaign/optimization'
+import { getRiskStatistics } from '@/lib/campaign/optimization'
 import { saveQueueConfig } from '@/lib/queue/queue-config'
 
 describe('PostgreSQL placeholder type inference guards', () => {

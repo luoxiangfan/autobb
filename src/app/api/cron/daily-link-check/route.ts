@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { dailyLinkCheck } from '@/lib/optimization'
+import { dailyLinkCheck } from '@/lib/campaign/optimization'
 
 export async function POST(request: NextRequest) {
   try {

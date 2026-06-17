@@ -9,7 +9,7 @@ import {
   getUserOptimizationTasks,
   generateOptimizationTasksForUser,
   getTaskStatistics,
-} from '@/lib/optimization'
+} from '@/lib/campaign/optimization'
 
 /**
  * GET - 获取优化任务列表

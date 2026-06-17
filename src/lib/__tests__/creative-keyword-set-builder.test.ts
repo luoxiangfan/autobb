@@ -29,7 +29,7 @@ vi.mock('../keywords/server', () => ({
   selectCreativeKeywords: mocks.selectCreativeKeywords,
 }))
 
-vi.mock('../optimization', () => ({
+vi.mock('../campaign/optimization', () => ({
   createRiskAlert: mocks.createRiskAlert,
 }))
 

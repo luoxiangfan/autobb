@@ -1,7 +1,7 @@
 import { getDatabase } from '@/lib/db'
 import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db'
 import { normalizeTimestampToIso, parseDbDateTimeAsUtc } from '@/lib/db'
-import { createRiskAlert } from '@/lib/optimization'
+import { createRiskAlert } from '@/lib/campaign/optimization'
 
 export interface CreativePublishTimeoutCheckOptions {
   thresholdMinutes?: number
