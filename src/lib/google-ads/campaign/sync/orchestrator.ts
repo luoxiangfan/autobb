@@ -209,7 +209,7 @@ export async function syncCampaignsFromGoogleAds(
             const offerSyncLabel = offerResult.created
               ? 'created'
               : offerResult.offerFieldsUpdated
-                ? 'linked (backfilled url / brand / page_type from Google Ads)'
+                ? 'linked (backfilled url / brand / page_type / store_product_links from Google Ads)'
                 : 'linked'
             googleAdsSyncLogger.info('sync_campaign_saved', {
               campaignId: campaign.campaign_id,

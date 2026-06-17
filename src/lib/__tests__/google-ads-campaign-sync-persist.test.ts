@@ -42,6 +42,7 @@ describe('google-ads-campaign-sync/persist.createOfferFirst', () => {
       final_url_suffix: '',
       brand: 'Acme',
       page_type: 'product',
+      store_product_links: null,
     })
 
     const result = await createOfferFirst({
@@ -68,5 +69,45 @@ describe('google-ads-campaign-sync/persist.createOfferFirst', () => {
     expect(params).toContain('2026-06-16T10:00:00.000Z')
     expect(params).toContain(42)
     expect(params).toContain(7)
+  })
+
+  it('updates store_product_links when page_type is store and sitelinks contain product URLs', async () => {
+    dbMocks.queryOne.mockResolvedValue({
+      id: 42,
+      sync_source: 'google_ads_sync',
+      url: 'https://www.amazon.com/stores/page/store',
+      final_url: 'https://www.amazon.com/stores/page/store',
+      final_url_suffix: '',
+      brand: 'Acme',
+      page_type: 'store',
+      store_product_links: null,
+    })
+
+    const result = await createOfferFirst({
+      userId: 7,
+      campaign: {
+        campaign_id: '123',
+        campaign_name: 'Acme - US',
+        budget_amount: 10,
+        budget_type: 'DAILY',
+        status: 'ENABLED',
+        customer_id: '999',
+      },
+      campaignConfig: {
+        finalUrls: ['https://www.amazon.com/stores/page/store'],
+        sitelinks: [
+          { text: 'Product A', url: 'https://www.amazon.com/dp/B001' },
+          { text: 'Product B', url: 'https://www.amazon.com/dp/B002' },
+        ],
+      },
+    })
+
+    expect(result.offerFieldsUpdated).toBe(true)
+    expect(dbMocks.exec).toHaveBeenCalledTimes(1)
+    const [sql, params] = dbMocks.exec.mock.calls[0]
+    expect(String(sql)).toContain('store_product_links = ?')
+    expect(params).toContain(
+      JSON.stringify(['https://www.amazon.com/dp/B001', 'https://www.amazon.com/dp/B002'])
+    )
   })
 })
