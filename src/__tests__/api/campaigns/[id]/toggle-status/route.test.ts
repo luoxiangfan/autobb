@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import {
   defaultOAuthApiCredentialsFields,
   defaultPreparedGoogleAdsApiCallForLinkedAccount,
-} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+} from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
 import { PUT } from '@/app/api/campaigns/[id]/toggle-status/route'
 
 const dbFns = vi.hoisted(() => ({

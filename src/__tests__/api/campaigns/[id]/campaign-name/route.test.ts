@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 import {
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
-} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+} from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
 import { PUT } from '@/app/api/campaigns/[id]/campaign-name/route'
 
 const campaignRouteAuthFns = vi.hoisted(() => ({

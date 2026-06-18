@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { defaultOAuthAuthContext } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+import { defaultOAuthAuthContext } from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth', async () => {
   const { createWithAuthMock } =
-    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+    await import('@/__tests__/lib/helpers/campaign-route-with-auth-mock')
   return {
     verifyAuth: authFns.verifyAuth,
     withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>

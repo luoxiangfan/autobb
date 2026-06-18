@@ -14,7 +14,7 @@ const authContextFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth', async () => {
   const { createWithAuthMock } =
-    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+    await import('@/__tests__/lib/helpers/campaign-route-with-auth-mock')
   const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,

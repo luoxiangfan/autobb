@@ -11,7 +11,7 @@
 2. Run dependency and flag validation:
    - `npm run perf:flags:check`
 3. Run core contract/regression tests:
-   - `npm run test -- 'src/lib/__tests__/feature-flags.test.ts' 'src/__tests__/api/offers/route.test.ts' 'src/__tests__/api/campaigns/performance/route.test.ts' 'src/__tests__/api/dashboard/kpis/route.test.ts' 'src/__tests__/api/monitoring/web-vitals/route.test.ts' 'src/__tests__/api/monitoring/frontend-errors/route.test.ts'`
+   - `npm run test -- 'src/__tests__/lib/feature-flags.test.ts' 'src/__tests__/api/offers/route.test.ts' 'src/__tests__/api/campaigns/performance/route.test.ts' 'src/__tests__/api/dashboard/kpis/route.test.ts' 'src/__tests__/api/monitoring/web-vitals/route.test.ts' 'src/__tests__/api/monitoring/frontend-errors/route.test.ts'`
 4. Build:
    - `npm run build`
 5. Confirm release owner/oncall/rollback owner in the same chat thread.

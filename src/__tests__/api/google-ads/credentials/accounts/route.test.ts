@@ -4,7 +4,7 @@ import {
   defaultOAuthApiAuth,
   defaultOAuthAuthContext,
   resetCampaignRouteAuthMocksOAuth,
-} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+} from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
 import { GET } from '@/app/api/google-ads/credentials/accounts/route'
 import { resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests } from '@/lib/google-ads/accounts/async-refresh-state'
 
@@ -41,7 +41,7 @@ vi.mock('@/lib/google-ads/settings/settings-store', () => ({
 
 vi.mock('@/lib/auth', async () => {
   const { createWithAuthMock } =
-    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+    await import('@/__tests__/lib/helpers/campaign-route-with-auth-mock')
   const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
   return {
     ...actual,

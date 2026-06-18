@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { defaultPreparedGoogleAdsAccountApiCall } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+import { defaultPreparedGoogleAdsAccountApiCall } from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
 import { POST } from '@/app/api/creatives/[id]/sync/route'
 
 const creativeFns = vi.hoisted(() => ({

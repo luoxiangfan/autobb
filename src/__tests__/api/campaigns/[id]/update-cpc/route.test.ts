@@ -4,7 +4,7 @@ import {
   defaultPreparedGoogleAdsApiCallForLinkedAccount,
   hasConfiguredGoogleAdsAuthFromContextMock,
   resetCampaignRouteAuthMocksOAuth,
-} from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
+} from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
 import { PUT } from '@/app/api/campaigns/[id]/update-cpc/route'
 
 const campaignRouteAuthFns = vi.hoisted(() => ({
@@ -50,7 +50,7 @@ const oauthAccountsAuthFns = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth', async () => {
   const { createWithAuthMock } =
-    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+    await import('@/__tests__/lib/helpers/campaign-route-with-auth-mock')
   return {
     verifyAuth: authFns.verifyAuth,
     withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
