@@ -3,8 +3,8 @@
  * POST /api/risk-alerts/check-links - 手动检查链接
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
 import {
   getUserRiskAlerts,
@@ -12,18 +12,10 @@ import {
   checkAllUserLinks,
 } from '@/lib/campaign/optimization'
 
-/**
- * GET - 获取风险提示列表
- */
-async function get(request: NextRequest) {
+const get = withAuth(async (request, user) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-    const userId = auth.user.userId
+    const userId = user.userId
 
-    // 获取查询参数
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status') as any
     const limitRaw = searchParams.get('limit')
@@ -32,7 +24,6 @@ async function get(request: NextRequest) {
     const normalizedLimit =
       limit && Number.isFinite(limit) ? Math.max(1, Math.min(limit, 50)) : undefined
 
-    // 验证status参数
     if (status && !['active', 'acknowledged', 'resolved'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status parameter' }, { status: 400 })
     }
@@ -52,20 +43,11 @@ async function get(request: NextRequest) {
     console.error('Get risk alerts error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-/**
- * POST - 手动检查所有链接
- */
-async function post(request: NextRequest) {
+const post = withAuth(async (request, user) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 检查所有链接
-    const result = await checkAllUserLinks(auth.user.userId)
+    const result = await checkAllUserLinks(user.userId)
 
     return NextResponse.json({
       success: true,
@@ -75,7 +57,7 @@ async function post(request: NextRequest) {
     console.error('Check links error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export const GET = withPerformanceMonitoring<any>(get, { path: '/api/risk-alerts' })
-export const POST = withPerformanceMonitoring<any>(post, { path: '/api/risk-alerts' })
+export const GET = withPerformanceMonitoring<any>(get as any, { path: '/api/risk-alerts' })
+export const POST = withPerformanceMonitoring<any>(post as any, { path: '/api/risk-alerts' })
