@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import {
   findLaunchScoreById,
   deleteLaunchScore,
@@ -13,19 +13,14 @@ import { parsePositiveIntegerId } from '@/lib/offers/server'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const scoreId = parsePositiveIntegerId(params.id)
+    const scoreId = parsePositiveIntegerId(context?.params?.id)
     if (!scoreId) {
       return NextResponse.json({ error: 'Launch Score ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const launchScore = await findLaunchScoreById(scoreId, userId)
 
@@ -38,7 +33,6 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       )
     }
 
-    // 解析详细分析数据
     const analysis = parseLaunchScoreAnalysis(launchScore)
 
     return NextResponse.json({
@@ -56,25 +50,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/launch-scores/:id
  * 删除Launch Score
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const scoreId = parsePositiveIntegerId(params.id)
+    const scoreId = parsePositiveIntegerId(context?.params?.id)
     if (!scoreId) {
       return NextResponse.json({ error: 'Launch Score ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const success = await deleteLaunchScore(scoreId, userId)
 
@@ -101,4 +90,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       { status: 500 }
     )
   }
-}
+})

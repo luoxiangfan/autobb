@@ -3,23 +3,22 @@
  * DELETE /api/optimization-tasks/:id - 删除任务
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { updateTaskStatus } from '@/lib/campaign/optimization'
 import { getDatabase } from '@/lib/db'
 
 /**
  * PATCH - 更新任务状态
  */
-export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PATCH = withAuth(async (request, user, context) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
     }
 
-    const taskId = parseInt(params.id)
+    const taskId = parseInt(id, 10)
     if (isNaN(taskId)) {
       return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
     }
@@ -27,13 +26,11 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     const body = await request.json()
     const { status, note } = body
 
-    // 验证status
     if (!['in_progress', 'completed', 'dismissed'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
     }
 
-    // 更新任务
-    const updated = await updateTaskStatus(taskId, auth.user!.userId, status, note)
+    const updated = await updateTaskStatus(taskId, user.userId, status, note)
 
     if (!updated) {
       return NextResponse.json({ error: 'Task not found or no permission' }, { status: 404 })
@@ -47,20 +44,19 @@ export async function PATCH(request: NextRequest, props: { params: Promise<{ id:
     console.error('Update task error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 /**
  * DELETE - 删除任务
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
     }
 
-    const taskId = parseInt(params.id)
+    const taskId = parseInt(id, 10)
     if (isNaN(taskId)) {
       return NextResponse.json({ error: 'Invalid task ID' }, { status: 400 })
     }
@@ -71,7 +67,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       DELETE FROM optimization_tasks
       WHERE id = ? AND user_id = ?
     `,
-      [taskId, auth.user!.userId]
+      [taskId, user.userId]
     )
 
     if (result.changes === 0) {
@@ -86,4 +82,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     console.error('Delete task error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
