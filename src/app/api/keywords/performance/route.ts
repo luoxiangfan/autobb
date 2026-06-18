@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { convertCurrency } from '@/lib/common/server'
 import { getCommissionPerConversion as getOfferCommissionPerConversion } from '@/lib/offers/server'
@@ -65,13 +65,8 @@ function getCommissionPerConversion(
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const days = Math.min(parsePositiveInt(searchParams.get('days'), 7), 90)
     const limit = Math.min(parsePositiveInt(searchParams.get('limit'), 100), 500)
@@ -81,7 +76,7 @@ export async function GET(request: NextRequest) {
       ? normalizeCurrency(searchParams.get('currency'))
       : null
 
-    const userId = auth.user.userId
+    const userId = user.userId
     const db = await getDatabase()
 
     const endDate = new Date().toISOString().slice(0, 10)
@@ -287,4 +282,4 @@ export async function GET(request: NextRequest) {
     console.error('获取关键词表现失败:', error)
     return NextResponse.json({ error: error?.message || '获取关键词表现失败' }, { status: 500 })
   }
-}
+})

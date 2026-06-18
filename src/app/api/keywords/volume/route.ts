@@ -3,20 +3,16 @@
  * GET /api/keywords/volume?keywords=kw1,kw2&country=US&language=en
  * Optional: offerId, googleAdsAccountId (for linked service_account_id)
  */
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getKeywordSearchVolumesForPlannerContext } from '@/lib/google-ads/accounts/auth/index'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const searchParams = request.nextUrl.searchParams
     const keywordsParam = searchParams.get('keywords')
@@ -79,4 +75,4 @@ export async function GET(request: NextRequest) {
     console.error('[KeywordsVolume] Error:', error)
     return NextResponse.json({ error: 'Failed to fetch keyword volumes' }, { status: 500 })
   }
-}
+})

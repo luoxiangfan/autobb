@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findAdGroupById, updateAdGroup, deleteAdGroup } from '@/lib/campaign/server'
 
 /**
@@ -8,16 +8,14 @@ import { findAdGroupById, updateAdGroup, deleteAdGroup } from '@/lib/campaign/se
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Ad Group ID无效' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const adGroup = await findAdGroupById(parseInt(id, 10), userId)
 
@@ -44,22 +42,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * PUT /api/ad-groups/:id
  * 更新Ad Group
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Ad Group ID无效' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const body = await request.json()
     const { adGroupName, status, cpcBidMicros } = body
@@ -94,22 +90,20 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/ad-groups/:id
  * 删除Ad Group
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Ad Group ID无效' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const success = await deleteAdGroup(parseInt(id, 10), userId)
 
@@ -136,4 +130,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       { status: 500 }
     )
   }
-}
+})
