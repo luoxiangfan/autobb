@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
 import { scheduleProductScoreCalculation } from '@/lib/queue/schedulers/product-score-scheduler'
 import { isProductScoreCalculationPausedError } from '@/lib/launch-score/server'
@@ -8,13 +8,9 @@ import { isProductScoreCalculationPausedError } from '@/lib/launch-score/server'
  * POST /api/products/calculate-scores
  * 批量计算商品推荐指数(通过队列系统异步执行)
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const productManagementEnabled = await isProductManagementEnabledForUser(userId)
     if (!productManagementEnabled) {
@@ -78,4 +74,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

@@ -22,9 +22,13 @@ vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   isProductManagementEnabledForUser: authFns.isProductManagementEnabledForUser,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  invalidateProductListCache: cacheFns.invalidateProductListCache,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    invalidateProductListCache: cacheFns.invalidateProductListCache,
+  }
+})
 
 describe('POST /api/products/:id/link-offer', () => {
   beforeEach(() => {

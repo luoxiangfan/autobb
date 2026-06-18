@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { batchCreateOffersFromAffiliateProducts } from '@/lib/affiliate/products'
@@ -17,13 +17,9 @@ const bodySchema = z.object({
   items: z.array(itemSchema).min(1, zErr.minItems(1)).max(200, zErr.maxItems(200)),
 })
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const productManagementEnabled = await isProductManagementEnabledForUser(userId)
     if (!productManagementEnabled) {
@@ -80,4 +76,4 @@ export async function POST(request: NextRequest) {
     console.error('[POST /api/products/batch-create-offers] failed:', error)
     return NextResponse.json({ error: error?.message || '批量创建Offer失败' }, { status: 500 })
   }
-}
+})

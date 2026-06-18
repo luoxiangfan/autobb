@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { createOfferFromAffiliateProduct } from '@/lib/affiliate/products'
@@ -12,25 +12,16 @@ const bodySchema = z.object({
   targetCountry: z.string().min(2, zErr.targetCountryMin).max(8, zErr.countryCode).optional(),
 })
 
-type RouteParams = {
-  id: string
-}
-
-export async function POST(request: NextRequest, { params }: { params: Promise<RouteParams> }) {
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const productManagementEnabled = await isProductManagementEnabledForUser(userId)
     if (!productManagementEnabled) {
       return NextResponse.json({ error: '商品管理功能未开启' }, { status: 403 })
     }
 
-    const { id } = await params
-    const productId = Number(id)
+    const productId = Number(context?.params?.id)
     if (!Number.isFinite(productId) || productId <= 0) {
       return NextResponse.json({ error: '无效的商品ID' }, { status: 400 })
     }
@@ -77,4 +68,4 @@ export async function POST(request: NextRequest, { params }: { params: Promise<R
     console.error('[POST /api/products/:id/create-offer] failed:', error)
     return NextResponse.json({ error: error?.message || '创建Offer失败' }, { status: 500 })
   }
-}
+})
