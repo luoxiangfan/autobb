@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withOptionalAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getSetting, getUserOnlySetting, updateSetting } from '@/lib/common/server'
 import { invalidateProxyPoolCache } from '@/lib/offers/server'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
@@ -18,17 +18,15 @@ import { z } from 'zod'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: NextRequest,
-  props: { params: Promise<{ category: string; key: string }> }
-) {
-  const params = await props.params
+export const GET = withOptionalAuth(async (_request, user, context) => {
   try {
-    const { category, key } = params
+    const category = context?.params?.category
+    const key = context?.params?.key
+    if (!category || !key) {
+      return NextResponse.json({ error: '缺少 category 或 key' }, { status: 400 })
+    }
 
-    const authResult = await verifyAuth(request)
-    const userIdNum =
-      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum = user?.userId
 
     if (category === 'affiliate_sync' && !userIdNum) {
       return NextResponse.json({ error: '获取联盟同步配置需要登录' }, { status: 401 })
@@ -83,7 +81,7 @@ export async function GET(
       { status: 500 }
     )
   }
-}
+})
 
 const updateSettingSchema = z.object({
   value: z.string(),
@@ -93,17 +91,15 @@ const updateSettingSchema = z.object({
  * PUT /api/settings/:category/:key
  * 更新单个配置项
  */
-export async function PUT(
-  request: NextRequest,
-  props: { params: Promise<{ category: string; key: string }> }
-) {
-  const params = await props.params
+export const PUT = withOptionalAuth(async (request, user, context) => {
   try {
-    const { category, key } = params
+    const category = context?.params?.category
+    const key = context?.params?.key
+    if (!category || !key) {
+      return NextResponse.json({ error: '缺少 category 或 key' }, { status: 400 })
+    }
 
-    const authResult = await verifyAuth(request)
-    const userIdNum =
-      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum = user?.userId
 
     const body = await request.json()
 
@@ -130,7 +126,7 @@ export async function PUT(
       }
 
       try {
-        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
+        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, user!.role)
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : '无法修改 Google Ads 认证配置'
         return NextResponse.json({ error: message }, { status: 403 })
@@ -185,4 +181,4 @@ export async function PUT(
       { status: 500 }
     )
   }
-}
+})

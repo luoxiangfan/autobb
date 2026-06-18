@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getIdleAdsAccounts } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 
@@ -11,13 +11,9 @@ export const dynamic = 'force-dynamic'
  * 获取闲置的Ads账号列表
  * 需求25: 无关联关系的Ads账号放入闲置Ads账号列表
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 获取闲置账号列表
     const accounts = await getIdleAdsAccounts(userId)
@@ -91,4 +87,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

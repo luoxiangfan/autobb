@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { evaluateAdStrength } from '@/lib/creatives/strength/evaluate'
 import type { HeadlineAsset, DescriptionAsset } from '@/lib/creatives/server'
 import { findOfferById } from '@/lib/offers/server'
@@ -71,13 +71,9 @@ function computeAverageEvaluationScore(
  * 2. 批量筛选：从大量创意中筛选最优
  * 3. 历史回测：评估历史创意质量
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const body = await request.json()
     const { creatives, returnBestOnly = false } = body
@@ -229,7 +225,7 @@ export async function POST(request: NextRequest) {
     console.error('批量评估失败:', error)
     return NextResponse.json({ error: error.message || '批量评估失败' }, { status: 500 })
   }
-}
+})
 
 /**
  * GET /api/ad-strength/batch-evaluate

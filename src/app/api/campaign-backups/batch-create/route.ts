@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import { validateCampaignBackupsForBatchCreate } from '@/lib/campaign/server'
@@ -25,14 +25,9 @@ const MAX_BATCH_BACKUP_COUNT = 50
  *   total_count: number
  * }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const body = await request.json()
     const { backupIds, googleAdsAccountId, regenerateCreativeMap } = body
 
@@ -160,4 +155,4 @@ export async function POST(request: NextRequest) {
     console.error('批量创建任务失败:', error)
     return NextResponse.json({ error: error.message || '批量创建失败' }, { status: 500 })
   }
-}
+})

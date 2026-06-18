@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { triggerDataSync } from '@/lib/queue/queue-triggers'
 
@@ -58,14 +58,9 @@ function normalizeCurrency(value: unknown): string {
   return normalized || 'USD'
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = auth.user.userId
+    const userId = user.userId
     const { searchParams } = new URL(request.url)
     const accountId = parsePositiveInteger(searchParams.get('accountId'))
     if (!accountId) {
@@ -216,4 +211,4 @@ export async function GET(request: NextRequest) {
     console.error('获取实时花费失败:', error)
     return NextResponse.json({ error: error?.message || '获取实时花费失败' }, { status: 500 })
   }
-}
+})

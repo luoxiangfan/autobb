@@ -1,4 +1,4 @@
-import { verifyAuth, withAuth } from '@/lib/auth'
+import { withAuth, withOptionalAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   clearUserSettings,
@@ -36,11 +36,9 @@ import {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withOptionalAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    const userIdNum =
-      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum = user?.userId
 
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
@@ -198,7 +196,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 const updateSettingsSchema = z.object({
   updates: z.array(
@@ -214,11 +212,9 @@ const updateSettingsSchema = z.object({
  * PUT /api/settings
  * 批量更新配置
  */
-export async function PUT(request: NextRequest) {
+export const PUT = withOptionalAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    const userIdNum =
-      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum = user?.userId
 
     const body = await request.json()
 
@@ -246,7 +242,7 @@ export async function PUT(request: NextRequest) {
     }
     if (hasGoogleAdsOAuthCredentialUpdate && userIdNum) {
       try {
-        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user!.role)
+        await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, user!.role)
       } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 403 })
       }
@@ -434,7 +430,7 @@ export async function PUT(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 const deleteSettingsSchema = z.discriminatedUnion('category', [
   z.object({

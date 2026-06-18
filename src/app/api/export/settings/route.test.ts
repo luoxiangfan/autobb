@@ -13,16 +13,21 @@ const settingsStoreFns = vi.hoisted(() => ({
   overlayGoogleAdsOAuthFieldsForSettingsExport: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    decrypt: vi.fn((value: string) => `decrypted:${value}`),
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
-}))
-
-vi.mock('@/lib/auth', () => ({
-  decrypt: vi.fn((value: string) => `decrypted:${value}`),
 }))
 
 vi.mock('@/lib/google-ads/settings/settings-store', async (importOriginal) => {

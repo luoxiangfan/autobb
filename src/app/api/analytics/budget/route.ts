@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
 
@@ -13,13 +13,8 @@ function roundTo2(value: number): number {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
@@ -35,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 构建查询条件
     const baseWhereConditions = ['cp.user_id = ?']
@@ -402,4 +397,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

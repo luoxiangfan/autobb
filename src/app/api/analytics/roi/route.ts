@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 import { toNumber } from '@/lib/common/server'
@@ -19,13 +19,8 @@ function normalizeCurrency(value: unknown): string {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const startDate = searchParams.get('start_date')
     const endDate = searchParams.get('end_date')
@@ -47,7 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const db = await getDatabase()
-    const userId = authResult.user.userId
+    const userId = user.userId
     const unattributedFailureFilter = buildAffiliateUnattributedFailureFilter({
       includePendingWithinGrace: true,
       includeAllFailures: true,
@@ -550,4 +545,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

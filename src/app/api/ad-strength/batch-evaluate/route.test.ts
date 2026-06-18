@@ -1,8 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import type { POST as PostHandler } from '@/app/api/ad-strength/batch-evaluate/route'
-
-let POST: typeof PostHandler
 
 const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
@@ -22,9 +19,15 @@ const evaluateFns = vi.hoisted(() => ({
 
 const mockPlannerSession = { volumeAuth: { authType: 'oauth' as const } }
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/offers', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/offers/server')>()
@@ -42,9 +45,7 @@ vi.mock('@/lib/creatives/strength/evaluate', () => ({
   evaluateAdStrength: evaluateFns.evaluateAdStrength,
 }))
 
-beforeAll(async () => {
-  ;({ POST } = await import('@/app/api/ad-strength/batch-evaluate/route'))
-})
+import { POST } from '@/app/api/ad-strength/batch-evaluate/route'
 
 function buildCreativePayload(overrides: Record<string, unknown> = {}) {
   return {

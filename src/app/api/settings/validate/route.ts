@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withOptionalAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { validateGoogleAdsConfig, validateGeminiConfig } from '@/lib/common/server'
 import { z } from 'zod'
 import { ProxyProviderRegistry } from '@/lib/scraping/proxy/providers/provider-registry'
@@ -16,11 +16,9 @@ const validateSchema = z.object({
  * POST /api/settings/validate
  * 验证配置
  */
-export async function POST(request: NextRequest) {
+export const POST = withOptionalAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    const userIdNum =
-      authResult.authenticated && authResult.user ? authResult.user.userId : undefined
+    const userIdNum = user?.userId
 
     const body = await request.json()
 
@@ -255,4 +253,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

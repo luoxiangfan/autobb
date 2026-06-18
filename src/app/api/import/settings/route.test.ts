@@ -28,9 +28,16 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
     authContextFns.invalidateGoogleAdsAuthContextForCredentialUser,
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    encrypt: vi.fn((value: string) => `enc:${value}`),
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/google-ads/auth/assignment', () => ({
   assertUserCanModifyGoogleAdsAuth: assignmentFns.assertUserCanModifyGoogleAdsAuth,
@@ -44,13 +51,13 @@ vi.mock('@/lib/google-ads/settings/settings-store', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => dbFns),
-}))
-
-vi.mock('@/lib/auth', () => ({
-  encrypt: vi.fn((value: string) => `enc:${value}`),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => dbFns),
+  }
+})
 
 import { POST } from '@/app/api/import/settings/route'
 

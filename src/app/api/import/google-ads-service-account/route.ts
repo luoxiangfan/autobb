@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
@@ -15,17 +15,12 @@ export const dynamic = 'force-dynamic'
  * POST /api/import/google-ads-service-account
  * 从专用备份文件恢复 Google Ads 服务账号配置
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, user.role)
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '无法导入服务账号配置'
       return NextResponse.json({ error: message }, { status: 403 })
@@ -75,4 +70,4 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : '导入失败'
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})

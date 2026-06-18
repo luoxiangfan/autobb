@@ -3,8 +3,8 @@
  * 获取用户的创意学习洞察
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import {
   queryHighPerformingCreatives,
   analyzeSuccessFeatures,
@@ -14,27 +14,15 @@ import { toNumber } from '@/lib/common/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    // 验证用户身份
-    const auth = await verifyAuth(request)
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 获取查询参数
     const searchParams = request.nextUrl.searchParams
     const minCtr = parseFloat(searchParams.get('min_ctr') || '0.03')
     const minClicks = parseInt(searchParams.get('min_clicks') || '100')
     const limit = parseInt(searchParams.get('limit') || '50')
 
     // 查询高表现创意
-    const highPerformers = await queryHighPerformingCreatives(
-      auth.user!.userId,
-      minCtr,
-      minClicks,
-      limit
-    )
+    const highPerformers = await queryHighPerformingCreatives(user.userId, minCtr, minClicks, limit)
 
     if (highPerformers.length === 0) {
       return NextResponse.json({
@@ -77,7 +65,7 @@ export async function GET(request: NextRequest) {
     console.error('Creative learning insights error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 /**
  * 格式化特征以便前端展示

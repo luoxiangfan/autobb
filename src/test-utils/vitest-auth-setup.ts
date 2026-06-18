@@ -74,9 +74,32 @@ vi.mock('@/lib/auth', async (importOriginal) => {
     }
   }
 
+  const withOptionalAuth: typeof actual.withOptionalAuth = (handler) => {
+    return async (
+      request: NextRequest,
+      routeContext?: { params?: Promise<Record<string, string>> }
+    ) => {
+      const { NextResponse } = await import('next/server')
+
+      const authResult = await verifyAuth(request)
+      const user = authResult.authenticated && authResult.user ? authResult.user : null
+
+      const resolvedParams = routeContext?.params ? await routeContext.params : undefined
+      const context = resolvedParams ? { params: resolvedParams } : undefined
+
+      try {
+        return await handler(request, user, context)
+      } catch (error: any) {
+        console.error('API处理错误:', error)
+        return NextResponse.json({ error: error.message || '服务器内部错误' }, { status: 500 })
+      }
+    }
+  }
+
   return {
     ...actual,
     verifyAuth,
     withAuth,
+    withOptionalAuth,
   }
 })

@@ -557,3 +557,34 @@ export function withAuth(
     }
   }
 }
+
+/**
+ * 可选 session 鉴权：未登录时 user 为 null，由 handler 按业务决定是否要求登录。
+ */
+export type OptionalAuthHandler = (
+  request: NextRequest,
+  user: AuthenticatedUser | null,
+  context?: { params?: Record<string, string> }
+) => Promise<Response>
+
+export function withOptionalAuth(handler: OptionalAuthHandler) {
+  return async (
+    request: NextRequest,
+    routeContext?: { params?: Promise<Record<string, string>> }
+  ): Promise<Response> => {
+    const { NextResponse } = await import('next/server')
+
+    const authResult = await verifyAuth(request)
+    const user = authResult.authenticated && authResult.user ? authResult.user : null
+
+    const resolvedParams = routeContext?.params ? await routeContext.params : undefined
+    const context = resolvedParams ? { params: resolvedParams } : undefined
+
+    try {
+      return await handler(request, user, context)
+    } catch (error: any) {
+      console.error('API处理错误:', error)
+      return NextResponse.json({ error: error.message || '服务器内部错误' }, { status: 500 })
+    }
+  }
+}

@@ -4,21 +4,15 @@
  * GET /api/insights/creative-performance?creativeId=123 - 获取单个创意评分
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { scoreCreativePerformance, scoreAllCreatives } from '@/lib/creatives/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const { searchParams } = new URL(request.url)
     const creativeId = searchParams.get('creativeId')
 
@@ -54,4 +48,4 @@ export async function GET(request: NextRequest) {
     console.error('创意评分失败:', error)
     return NextResponse.json({ error: error.message || '创意评分失败' }, { status: 500 })
   }
-}
+})

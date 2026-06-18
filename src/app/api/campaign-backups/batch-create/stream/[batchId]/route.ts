@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
 function parseBatchMetadata(raw: unknown): unknown | null {
@@ -20,16 +20,13 @@ function parseBatchMetadata(raw: unknown): unknown | null {
  * data: {"type":"progress","status":"running","completed":5,"failed":1,"total":20,"progress":30}
  * data: {"type":"complete","status":"completed","completed":20,"failed":0,"total":20}
  */
-export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const userId = user.userId
+    const batchId = context?.params?.batchId
+    if (!batchId) {
+      return NextResponse.json({ error: '任务不存在' }, { status: 404 })
     }
-
-    const userId = authResult.user.userId
-    const { batchId } = params
 
     const db = await getDatabase()
 
@@ -163,4 +160,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
     console.error('SSE 流错误:', error)
     return NextResponse.json({ error: error.message || 'SSE 流失败' }, { status: 500 })
   }
-}
+})

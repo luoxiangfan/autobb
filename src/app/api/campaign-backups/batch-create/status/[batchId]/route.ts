@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
 function parseBatchMetadata(raw: unknown): unknown | null {
@@ -16,16 +16,13 @@ function parseBatchMetadata(raw: unknown): unknown | null {
  * GET /api/campaign-backups/batch-create/status/[batchId]
  * 查询批量创建任务状态（轮询 fallback）
  */
-export async function GET(request: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const userId = user.userId
+    const batchId = context?.params?.batchId
+    if (!batchId) {
+      return NextResponse.json({ error: '任务不存在' }, { status: 404 })
     }
-
-    const userId = authResult.user.userId
-    const { batchId } = params
 
     const db = await getDatabase()
 
@@ -73,4 +70,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ batch
     console.error('查询任务状态失败:', error)
     return NextResponse.json({ error: error.message || '查询失败' }, { status: 500 })
   }
-}
+})

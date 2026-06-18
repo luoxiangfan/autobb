@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { generateOAuthUrl } from '@/lib/google-ads/oauth/oauth'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
 import { createGoogleAdsOAuthState } from '@/lib/google-ads/oauth/state'
@@ -16,17 +16,12 @@ function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, user.role)
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '无法修改 Google Ads 认证配置'
       return NextResponse.redirect(
@@ -60,4 +55,4 @@ export async function GET(request: NextRequest) {
       )}&category=google_ads`
     )
   }
-}
+})

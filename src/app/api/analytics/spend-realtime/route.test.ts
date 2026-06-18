@@ -14,15 +14,25 @@ const queueFns = vi.hoisted(() => ({
   triggerDataSync: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    queryOne: dbFns.queryOne,
-  })),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => ({
+      queryOne: dbFns.queryOne,
+    })),
+  }
+})
 
 vi.mock('@/lib/queue/queue-triggers', () => ({
   triggerDataSync: queueFns.triggerDataSync,

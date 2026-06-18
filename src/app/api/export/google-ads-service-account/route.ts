@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import { getOwnServiceAccountConfigForBackup } from '@/lib/google-ads/service-account/service-account'
 import { buildGoogleAdsServiceAccountBackupPayload } from '@/lib/google-ads/service-account/backup'
@@ -10,17 +10,12 @@ export const dynamic = 'force-dynamic'
  * GET /api/export/google-ads-service-account
  * 导出当前用户自有的 Google Ads 服务账号配置（专用备份格式）
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, user.role)
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '无法导出服务账号配置'
       return NextResponse.json({ error: message }, { status: 403 })
@@ -63,4 +58,4 @@ export async function GET(request: NextRequest) {
     const message = error instanceof Error ? error.message : '导出失败'
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})

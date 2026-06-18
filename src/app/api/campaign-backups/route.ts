@@ -1,19 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { listCampaignBackups } from '@/lib/campaign/server'
 
 /**
  * GET /api/campaign-backups
  * 获取广告系列备份列表
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const { searchParams } = new URL(request.url)
 
     const startDate = searchParams.get('startDate') || undefined
@@ -52,4 +47,4 @@ export async function GET(request: NextRequest) {
     console.error('获取备份列表失败:', error)
     return NextResponse.json({ error: error.message || '获取失败' }, { status: 500 })
   }
-}
+})

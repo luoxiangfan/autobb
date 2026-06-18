@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { encrypt } from '@/lib/auth'
 import { nowFunc as sqlNowFunc } from '@/lib/db'
@@ -44,13 +44,9 @@ type ImportSettingEntry = {
  * POST /api/import/settings
  * 导入用户配置数据
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
     const body = await request.json()
 
     const validationResult = importSettingsSchema.safeParse(body)
@@ -177,7 +173,7 @@ export async function POST(request: NextRequest) {
     if (hasDbWork) {
       try {
         if (googleAdsFieldCount > 0) {
-          await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, authResult.user.role)
+          await assertUserCanModifyGoogleAdsAuth(userIdNum, userIdNum, user.role)
         }
 
         await db.transaction(async () => {
@@ -240,4 +236,4 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : '导入失败'
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})
