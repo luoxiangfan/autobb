@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
@@ -8,33 +8,24 @@ import { getDatabase } from '@/lib/db'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    if (authResult.user.role !== 'admin') {
-      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
-    }
+export const GET = withAuth(
+  async (request: NextRequest) => {
+    try {
+      const { searchParams } = new URL(request.url)
+      const limit = parseInt(searchParams.get('limit') || '30')
 
-    const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '30')
+      const db = getDatabase()
 
-    const db = getDatabase()
-
-    // 查询备份历史
-    const backups = await db.query(
-      `
+      const backups = await db.query(
+        `
       SELECT * FROM backup_logs
       ORDER BY created_at DESC
       LIMIT ?
     `,
-      [limit]
-    )
+        [limit]
+      )
 
-    // 统计信息
-    const stats = (await db.queryOne(`
+      const stats = (await db.queryOne(`
       SELECT
         COUNT(*) as total_backups,
         SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as successful_backups,
@@ -43,20 +34,22 @@ export async function GET(request: NextRequest) {
       FROM backup_logs
     `)) as any
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        backups,
-        stats: {
-          totalBackups: stats.total_backups,
-          successfulBackups: stats.successful_backups,
-          failedBackups: stats.failed_backups,
-          totalSizeBytes: stats.total_size_bytes,
+      return NextResponse.json({
+        success: true,
+        data: {
+          backups,
+          stats: {
+            totalBackups: stats.total_backups,
+            successfulBackups: stats.successful_backups,
+            failedBackups: stats.failed_backups,
+            totalSizeBytes: stats.total_size_bytes,
+          },
         },
-      },
-    })
-  } catch (error) {
-    console.error('获取备份历史失败:', error)
-    return NextResponse.json({ error: '获取备份历史失败' }, { status: 500 })
-  }
-}
+      })
+    } catch (error) {
+      console.error('获取备份历史失败:', error)
+      return NextResponse.json({ error: '获取备份历史失败' }, { status: 500 })
+    }
+  },
+  { requireAdmin: true }
+)

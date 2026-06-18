@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { generateContent } from '@/lib/ai/server'
 import { recordTokenUsage, estimateTokenCost } from '@/lib/ai/server'
@@ -7,34 +7,26 @@ import { recordTokenUsage, estimateTokenCost } from '@/lib/ai/server'
  * POST /api/admin/performance-analysis
  * 基于Google Ads实际投放数据进行AI分析和优化建议
  */
-export async function POST(request: NextRequest) {
-  try {
-    // 验证管理员权限
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-    if (!userId || authResult.user.role !== 'admin') {
-      return NextResponse.json({ error: '无权访问' }, { status: 403 })
-    }
+export const POST = withAuth(
+  async (request: NextRequest, user) => {
+    try {
+      const userId = user.userId
+      const body = await request.json()
+      const { performanceData } = body
 
-    const body = await request.json()
-    const { performanceData } = body
-
-    // 构建AI分析Prompt
-    let analysisPrompt = `你是AutoAds系统的数据分析专家，专门负责分析Google Ads投放数据并提供优化建议。
+      // 构建AI分析Prompt
+      let analysisPrompt = `你是AutoAds系统的数据分析专家，专门负责分析Google Ads投放数据并提供优化建议。
 
 ## 分析任务
 基于实际的Google Ads投放数据，深入分析创意表现，识别成功模式和失败模式，提供具体的优化建议。
 
 ## 投放数据概览`
 
-    if (performanceData && performanceData.length > 0) {
-      analysisPrompt += `\n\n### 广告创意投放表现\n`
+      if (performanceData && performanceData.length > 0) {
+        analysisPrompt += `\n\n### 广告创意投放表现\n`
 
-      performanceData.forEach((ad: any, index: number) => {
-        analysisPrompt += `
+        performanceData.forEach((ad: any, index: number) => {
+          analysisPrompt += `
 **创意 ${index + 1}**
 - 标题: ${ad.headline1} | ${ad.headline2} | ${ad.headline3}
 - 描述: ${ad.description1} | ${ad.description2}
@@ -50,10 +42,10 @@ export async function POST(request: NextRequest) {
   * 单次转化成本: $${ad.costPerConversion?.toFixed(2) || 'N/A'}
   * 平均排名: ${ad.avgPosition?.toFixed(1) || 'N/A'}
 `
-      })
-    }
+        })
+      }
 
-    analysisPrompt += `
+      analysisPrompt += `
 
 ## 分析维度
 
@@ -102,54 +94,54 @@ export async function POST(request: NextRequest) {
 
 保持专业、数据驱动、可执行。`
 
-    // 调用AI生成分析报告（使用用户级AI配置）
-    const analysis = await generateContent(
-      {
-        operationType: 'admin_performance_analysis',
-        prompt: analysisPrompt,
-        temperature: 0.7,
-        maxOutputTokens: 8192, // 🔴 Pro模型统一使用8192
-      },
-      userId
-    )
-
-    // 记录token使用
-    if (analysis.usage) {
-      const cost = estimateTokenCost(
-        analysis.model,
-        analysis.usage.inputTokens,
-        analysis.usage.outputTokens
+      // 调用AI生成分析报告（使用用户级AI配置）
+      const analysis = await generateContent(
+        {
+          operationType: 'admin_performance_analysis',
+          prompt: analysisPrompt,
+          temperature: 0.7,
+          maxOutputTokens: 8192, // 🔴 Pro模型统一使用8192
+        },
+        userId
       )
-      await recordTokenUsage({
-        userId: userId,
-        model: analysis.model,
-        operationType: 'admin_performance_analysis',
-        inputTokens: analysis.usage.inputTokens,
-        outputTokens: analysis.usage.outputTokens,
-        totalTokens: analysis.usage.totalTokens,
-        cost,
-        apiType: analysis.apiType,
-      })
-    }
 
-    // 如果有足够的数据，生成具体的Prompt优化建议
-    let promptOptimization = null
+      // 记录token使用
+      if (analysis.usage) {
+        const cost = estimateTokenCost(
+          analysis.model,
+          analysis.usage.inputTokens,
+          analysis.usage.outputTokens
+        )
+        await recordTokenUsage({
+          userId: userId,
+          model: analysis.model,
+          operationType: 'admin_performance_analysis',
+          inputTokens: analysis.usage.inputTokens,
+          outputTokens: analysis.usage.outputTokens,
+          totalTokens: analysis.usage.totalTokens,
+          cost,
+          apiType: analysis.apiType,
+        })
+      }
 
-    if (performanceData && performanceData.length >= 3) {
-      // 识别最佳表现的创意
-      const sortedByPerformance = [...performanceData].sort((a, b) => {
-        // 综合评分：CTR权重40%，转化率权重40%，质量得分权重20%
-        const scoreA =
-          (a.ctr || 0) * 0.4 + (a.conversionRate || 0) * 0.4 + ((a.qualityScore || 0) / 10) * 0.2
-        const scoreB =
-          (b.ctr || 0) * 0.4 + (b.conversionRate || 0) * 0.4 + ((b.qualityScore || 0) / 10) * 0.2
-        return scoreB - scoreA
-      })
+      // 如果有足够的数据，生成具体的Prompt优化建议
+      let promptOptimization = null
 
-      const topPerformers = sortedByPerformance.slice(0, Math.ceil(performanceData.length / 3))
-      const lowPerformers = sortedByPerformance.slice(-Math.ceil(performanceData.length / 3))
+      if (performanceData && performanceData.length >= 3) {
+        // 识别最佳表现的创意
+        const sortedByPerformance = [...performanceData].sort((a, b) => {
+          // 综合评分：CTR权重40%，转化率权重40%，质量得分权重20%
+          const scoreA =
+            (a.ctr || 0) * 0.4 + (a.conversionRate || 0) * 0.4 + ((a.qualityScore || 0) / 10) * 0.2
+          const scoreB =
+            (b.ctr || 0) * 0.4 + (b.conversionRate || 0) * 0.4 + ((b.qualityScore || 0) / 10) * 0.2
+          return scoreB - scoreA
+        })
 
-      const optimizationPrompt = `基于以下投放数据，生成具体的Prompt优化建议：
+        const topPerformers = sortedByPerformance.slice(0, Math.ceil(performanceData.length / 3))
+        const lowPerformers = sortedByPerformance.slice(-Math.ceil(performanceData.length / 3))
+
+        const optimizationPrompt = `基于以下投放数据，生成具体的Prompt优化建议：
 
 ## 高表现创意特征
 ${topPerformers
@@ -182,56 +174,58 @@ ${i + 1}. ${ad.headline1}
 
 只返回具体建议，不要解释。`
 
-      promptOptimization = await generateContent(
-        {
-          operationType: 'admin_prompt_optimization',
-          prompt: optimizationPrompt,
-          temperature: 0.5,
-          maxOutputTokens: 4096,
-        },
-        userId
-      )
-
-      // 记录token使用
-      if (promptOptimization.usage) {
-        const cost = estimateTokenCost(
-          promptOptimization.model,
-          promptOptimization.usage.inputTokens,
-          promptOptimization.usage.outputTokens
+        promptOptimization = await generateContent(
+          {
+            operationType: 'admin_prompt_optimization',
+            prompt: optimizationPrompt,
+            temperature: 0.5,
+            maxOutputTokens: 4096,
+          },
+          userId
         )
-        await recordTokenUsage({
-          userId: userId,
-          model: promptOptimization.model,
-          operationType: 'admin_prompt_optimization',
-          inputTokens: promptOptimization.usage.inputTokens,
-          outputTokens: promptOptimization.usage.outputTokens,
-          totalTokens: promptOptimization.usage.totalTokens,
-          cost,
-          apiType: promptOptimization.apiType,
-        })
-      }
-    }
 
-    return NextResponse.json({
-      success: true,
-      analysis,
-      promptOptimization,
-      insights: {
-        totalCreatives: performanceData?.length || 0,
-        avgCtr:
-          performanceData?.reduce((sum: number, ad: any) => sum + (ad.ctr || 0), 0) /
-          (performanceData?.length || 1),
-        avgConversionRate:
-          performanceData?.reduce((sum: number, ad: any) => sum + (ad.conversionRate || 0), 0) /
-          (performanceData?.length || 1),
-        avgQualityScore:
-          performanceData?.reduce((sum: number, ad: any) => sum + (ad.qualityScore || 0), 0) /
-          (performanceData?.length || 1),
-      },
-      timestamp: new Date().toISOString(),
-    })
-  } catch (error: any) {
-    console.error('投放数据分析失败:', error)
-    return NextResponse.json({ error: error.message || '投放数据分析失败' }, { status: 500 })
-  }
-}
+        // 记录token使用
+        if (promptOptimization.usage) {
+          const cost = estimateTokenCost(
+            promptOptimization.model,
+            promptOptimization.usage.inputTokens,
+            promptOptimization.usage.outputTokens
+          )
+          await recordTokenUsage({
+            userId: userId,
+            model: promptOptimization.model,
+            operationType: 'admin_prompt_optimization',
+            inputTokens: promptOptimization.usage.inputTokens,
+            outputTokens: promptOptimization.usage.outputTokens,
+            totalTokens: promptOptimization.usage.totalTokens,
+            cost,
+            apiType: promptOptimization.apiType,
+          })
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        analysis,
+        promptOptimization,
+        insights: {
+          totalCreatives: performanceData?.length || 0,
+          avgCtr:
+            performanceData?.reduce((sum: number, ad: any) => sum + (ad.ctr || 0), 0) /
+            (performanceData?.length || 1),
+          avgConversionRate:
+            performanceData?.reduce((sum: number, ad: any) => sum + (ad.conversionRate || 0), 0) /
+            (performanceData?.length || 1),
+          avgQualityScore:
+            performanceData?.reduce((sum: number, ad: any) => sum + (ad.qualityScore || 0), 0) /
+            (performanceData?.length || 1),
+        },
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error: any) {
+      console.error('投放数据分析失败:', error)
+      return NextResponse.json({ error: error.message || '投放数据分析失败' }, { status: 500 })
+    }
+  },
+  { requireAdmin: true }
+)

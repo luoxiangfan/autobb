@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { GET } from '@/app/api/admin/users/route'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
-}))
+const authUser = {
+  userId: 1,
+  role: 'admin',
+  packageType: 'enterprise',
+}
 
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
@@ -13,7 +14,9 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => handler(request, authUser)
+  },
   createUser: vi.fn(),
   generateUniqueUsername: vi.fn(),
 }))
@@ -22,13 +25,11 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
+import { GET } from '@/app/api/admin/users/route'
+
 describe('GET /api/admin/users search operator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { role: 'admin', userId: 1 },
-    })
     dbFns.getDatabase.mockReturnValue({
       queryOne: dbFns.queryOne,
       query: dbFns.query,

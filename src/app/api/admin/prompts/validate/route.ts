@@ -1,41 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 
 /**
  * POST /api/admin/prompts/validate
  * 验证 Prompt 模板变量
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { promptContent } = body
+export const POST = withAuth(
+  async (request: NextRequest) => {
+    try {
+      const body = await request.json()
+      const { promptContent } = body
 
-    if (!promptContent) {
-      return NextResponse.json(
-        { success: false, error: '缺少 promptContent 字段' },
-        { status: 400 }
-      )
+      if (!promptContent) {
+        return NextResponse.json(
+          { success: false, error: '缺少 promptContent 字段' },
+          { status: 400 }
+        )
+      }
+
+      // 提取所有模板变量
+      const variables = extractTemplateVariables(promptContent)
+
+      // 分析变量
+      const analysis = analyzeVariables(variables, promptContent)
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          variables,
+          analysis,
+          total: variables.length,
+          unique: [...new Set(variables.map((v) => v.name))].length,
+        },
+      })
+    } catch (error: any) {
+      console.error('验证 Prompt 变量失败:', error)
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
-
-    // 提取所有模板变量
-    const variables = extractTemplateVariables(promptContent)
-
-    // 分析变量
-    const analysis = analyzeVariables(variables, promptContent)
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        variables,
-        analysis,
-        total: variables.length,
-        unique: [...new Set(variables.map((v) => v.name))].length,
-      },
-    })
-  } catch (error: any) {
-    console.error('验证 Prompt 变量失败:', error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)
 
 /**
  * 提取 Prompt 中的所有模板变量

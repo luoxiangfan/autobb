@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
+const authUser = { userId: 1, role: 'admin' }
+
 const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
   findUserById: vi.fn(),
 }))
 
@@ -29,8 +30,18 @@ const serviceAccountFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (
+      request: NextRequest,
+      routeContext?: { params?: Promise<Record<string, string>> }
+    ) => {
+      const resolvedParams = routeContext?.params ? await routeContext.params : undefined
+      const context = resolvedParams ? { params: resolvedParams } : undefined
+      return handler(request, authUser, context)
+    }
+  },
   findUserById: authFns.findUserById,
+  encrypt: vi.fn((value: string) => value),
 }))
 
 vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
@@ -64,20 +75,12 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   replaceGoogleAdsServiceAccountForUser: serviceAccountFns.replaceGoogleAdsServiceAccountForUser,
 }))
 
-vi.mock('@/lib/auth', () => ({
-  encrypt: vi.fn((value: string) => value),
-}))
-
 import { PUT, DELETE } from '@/app/api/admin/users/[id]/google-ads-auth/route'
 import { GOOGLE_ADS_DUAL_STACK_WARNING } from '@/lib/google-ads/auth/context'
 
 describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 1, role: 'admin' },
-    })
     authFns.findUserById.mockResolvedValue({ id: 2, username: 'user2' })
     contextFns.adminHasConfiguredAuth.mockResolvedValue(true)
     assignmentFns.upsertGoogleAdsAuthAssignment.mockResolvedValue({})
@@ -244,10 +247,6 @@ describe('PUT /api/admin/users/[id]/google-ads-auth', () => {
 describe('DELETE /api/admin/users/[id]/google-ads-auth', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 1, role: 'admin' },
-    })
     authFns.findUserById.mockResolvedValue({ id: 2, username: 'user2' })
     oauthFns.deleteGoogleAdsCredentials.mockResolvedValue(undefined)
     serviceAccountFns.deleteAllGoogleAdsServiceAccountsForUser.mockResolvedValue(undefined)

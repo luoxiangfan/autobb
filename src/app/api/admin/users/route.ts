@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth, createUser } from '@/lib/auth'
+import { withAuth, createUser } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { logUserCreated, UserManagementContext } from '@/lib/common/server'
 import { buildAdminUsersOrderBy } from '@/lib/auth/admin-users-query'
@@ -54,26 +54,22 @@ function transformUserToApiResponse(user: any, now: Date) {
 // GET: List all users (paginated)
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  const auth = await verifyAuth(request)
-  if (!auth.authenticated || auth.user?.role !== 'admin') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const GET = withAuth(
+  async (request: NextRequest) => {
+    try {
+      const searchParams = request.nextUrl.searchParams
+      const page = parseInt(searchParams.get('page') || '1')
+      const limit = parseInt(searchParams.get('limit') || '10')
+      const offset = (page - 1) * limit
 
-  try {
-    const searchParams = request.nextUrl.searchParams
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const offset = (page - 1) * limit
+      const db = getDatabase()
+      const likeOperator = 'ILIKE'
 
-    const db = getDatabase()
-    const likeOperator = 'ILIKE'
+      const sortBy = (searchParams.get('sortBy') || 'createdAt') as string
+      const sortOrderRaw = (searchParams.get('sortOrder') || 'desc').toLowerCase()
+      const sortOrder = sortOrderRaw === 'asc' ? 'ASC' : 'DESC'
 
-    const sortBy = (searchParams.get('sortBy') || 'createdAt') as string
-    const sortOrderRaw = (searchParams.get('sortOrder') || 'desc').toLowerCase()
-    const sortOrder = sortOrderRaw === 'asc' ? 'ASC' : 'DESC'
-
-    let query = `
+      let query = `
       SELECT
         id,
         username,
@@ -93,162 +89,164 @@ export async function GET(request: NextRequest) {
       FROM users
       WHERE 1=1
     `
-    let countQuery = `SELECT COUNT(*) as count FROM users WHERE 1=1`
-    const params: any[] = []
+      let countQuery = `SELECT COUNT(*) as count FROM users WHERE 1=1`
+      const params: any[] = []
 
-    // Search filter
-    const search = (searchParams.get('search') || '').trim()
-    if (search) {
-      const searchCondition = ` AND (username ${likeOperator} ? OR email ${likeOperator} ?)`
-      query += searchCondition
-      countQuery += searchCondition
-      params.push(`%${search}%`, `%${search}%`)
+      // Search filter
+      const search = (searchParams.get('search') || '').trim()
+      if (search) {
+        const searchCondition = ` AND (username ${likeOperator} ? OR email ${likeOperator} ?)`
+        query += searchCondition
+        countQuery += searchCondition
+        params.push(`%${search}%`, `%${search}%`)
+      }
+
+      // Role filter
+      const role = searchParams.get('role')
+      if (role && role !== 'all') {
+        const roleCondition = ` AND role = ?`
+        query += roleCondition
+        countQuery += roleCondition
+        params.push(role)
+      }
+
+      // Status filter
+      const status = searchParams.get('status')
+      if (status && status !== 'all') {
+        const statusCondition = ` AND is_active = ?`
+        query += statusCondition
+        countQuery += statusCondition
+        // 🔧 修复(2025-12-30): PostgreSQL兼容性 - 发送boolean值
+        params.push(status === 'active')
+      }
+
+      // Package type filter
+      const packageType = searchParams.get('package')
+      if (packageType && packageType !== 'all') {
+        const packageCondition = ` AND package_type = ?`
+        query += packageCondition
+        countQuery += packageCondition
+        params.push(packageType)
+      }
+
+      const orderBy = buildAdminUsersOrderBy({
+        sortBy,
+        sortOrder,
+      })
+
+      // Pagination + sorting (ORDER BY validated above)
+      query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+
+      // Get total count
+      const total = (await db.queryOne(countQuery, [...params])) as { count: number }
+
+      // Get users
+      const users = await db.query(query, [...params, limit, offset])
+
+      const now = new Date()
+
+      return NextResponse.json({
+        users: users.map((user) => transformUserToApiResponse(user, now)),
+        pagination: {
+          total: total.count,
+          page,
+          limit,
+          totalPages: Math.ceil(total.count / limit),
+        },
+      })
+    } catch (error: any) {
+      console.error('[admin/users] list users failed', {
+        message: error?.message || String(error),
+        stack: error?.stack,
+      })
+      return NextResponse.json({ error: 'Failed to load users' }, { status: 500 })
     }
-
-    // Role filter
-    const role = searchParams.get('role')
-    if (role && role !== 'all') {
-      const roleCondition = ` AND role = ?`
-      query += roleCondition
-      countQuery += roleCondition
-      params.push(role)
-    }
-
-    // Status filter
-    const status = searchParams.get('status')
-    if (status && status !== 'all') {
-      const statusCondition = ` AND is_active = ?`
-      query += statusCondition
-      countQuery += statusCondition
-      // 🔧 修复(2025-12-30): PostgreSQL兼容性 - 发送boolean值
-      params.push(status === 'active')
-    }
-
-    // Package type filter
-    const packageType = searchParams.get('package')
-    if (packageType && packageType !== 'all') {
-      const packageCondition = ` AND package_type = ?`
-      query += packageCondition
-      countQuery += packageCondition
-      params.push(packageType)
-    }
-
-    const orderBy = buildAdminUsersOrderBy({
-      sortBy,
-      sortOrder,
-    })
-
-    // Pagination + sorting (ORDER BY validated above)
-    query += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`
-
-    // Get total count
-    const total = (await db.queryOne(countQuery, [...params])) as { count: number }
-
-    // Get users
-    const users = await db.query(query, [...params, limit, offset])
-
-    const now = new Date()
-
-    return NextResponse.json({
-      users: users.map((user) => transformUserToApiResponse(user, now)),
-      pagination: {
-        total: total.count,
-        page,
-        limit,
-        totalPages: Math.ceil(total.count / limit),
-      },
-    })
-  } catch (error: any) {
-    console.error('[admin/users] list users failed', {
-      message: error?.message || String(error),
-      stack: error?.stack,
-    })
-    return NextResponse.json({ error: 'Failed to load users' }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)
 
 // POST: Create new user
-export async function POST(request: NextRequest) {
-  const auth = await verifyAuth(request)
-  if (!auth.authenticated || auth.user?.role !== 'admin') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const POST = withAuth(
+  async (request: NextRequest, user) => {
+    try {
+      const body = await request.json()
+      const {
+        username,
+        displayName,
+        email,
+        packageType,
+        packageExpiresAt,
+        validUntil, // 前端可能发送此字段
+        role,
+      } = body
 
-  try {
-    const body = await request.json()
-    const {
-      username,
-      displayName,
-      email,
-      packageType,
-      packageExpiresAt,
-      validUntil, // 前端可能发送此字段
-      role,
-    } = body
+      // 支持前端发送 validUntil 或 packageExpiresAt
+      const expiresAt = packageExpiresAt || validUntil
 
-    // 支持前端发送 validUntil 或 packageExpiresAt
-    const expiresAt = packageExpiresAt || validUntil
-
-    if (!expiresAt) {
-      return NextResponse.json({ error: 'Package expiry date is required' }, { status: 400 })
-    }
-
-    // Default password: auto11@20ads
-    const defaultPassword = 'auto11@20ads'
-
-    // 如果提供了username，检查是否已存在
-    if (username) {
-      const db = getDatabase()
-      const existingUser = await db.queryOne('SELECT id FROM users WHERE username = ?', [username])
-      if (existingUser) {
-        return NextResponse.json({ error: '用户名已存在，请重新生成' }, { status: 400 })
+      if (!expiresAt) {
+        return NextResponse.json({ error: 'Package expiry date is required' }, { status: 400 })
       }
+
+      // Default password: auto11@20ads
+      const defaultPassword = 'auto11@20ads'
+
+      // 如果提供了username，检查是否已存在
+      if (username) {
+        const db = getDatabase()
+        const existingUser = await db.queryOne('SELECT id FROM users WHERE username = ?', [
+          username,
+        ])
+        if (existingUser) {
+          return NextResponse.json({ error: '用户名已存在，请重新生成' }, { status: 400 })
+        }
+      }
+
+      const newUser = await createUser({
+        username: username || undefined, // 让createUser自动生成
+        displayName: displayName || undefined,
+        email: email || undefined, // 可选字段
+        password: defaultPassword,
+        role: role || 'user',
+        packageType: packageType || 'trial',
+        packageExpiresAt: expiresAt,
+        mustChangePassword: 1, // Force password change
+      })
+
+      // 获取操作者的username（从数据库查询）
+      const db = getDatabase()
+      const operator = (await db.queryOne('SELECT username FROM users WHERE id = ?', [
+        user.userId,
+      ])) as { username: string } | undefined
+
+      // 记录审计日志
+      const auditContext: UserManagementContext = {
+        operatorId: user.userId,
+        operatorUsername: operator?.username || `user_${user.userId}`,
+        targetUserId: newUser.id,
+        targetUsername: newUser.username || `user_${newUser.id}`,
+        ipAddress: getClientIP(request),
+        userAgent: request.headers.get('user-agent') || 'Unknown',
+      }
+      await logUserCreated(auditContext, {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        display_name: newUser.display_name, // 使用snake_case字段名
+        role: newUser.role,
+        package_type: newUser.package_type, // 使用snake_case字段名
+        package_expires_at: newUser.package_expires_at, // 使用snake_case字段名
+      })
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          user: newUser,
+          defaultPassword, // Return this so admin can share it with the user
+        },
+      })
+    } catch (error: any) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
-
-    const newUser = await createUser({
-      username: username || undefined, // 让createUser自动生成
-      displayName: displayName || undefined,
-      email: email || undefined, // 可选字段
-      password: defaultPassword,
-      role: role || 'user',
-      packageType: packageType || 'trial',
-      packageExpiresAt: expiresAt,
-      mustChangePassword: 1, // Force password change
-    })
-
-    // 获取操作者的username（从数据库查询）
-    const db = getDatabase()
-    const operator = (await db.queryOne('SELECT username FROM users WHERE id = ?', [
-      auth.user!.userId,
-    ])) as { username: string } | undefined
-
-    // 记录审计日志
-    const auditContext: UserManagementContext = {
-      operatorId: auth.user!.userId,
-      operatorUsername: operator?.username || `user_${auth.user!.userId}`,
-      targetUserId: newUser.id,
-      targetUsername: newUser.username || `user_${newUser.id}`,
-      ipAddress: getClientIP(request),
-      userAgent: request.headers.get('user-agent') || 'Unknown',
-    }
-    await logUserCreated(auditContext, {
-      id: newUser.id,
-      username: newUser.username,
-      email: newUser.email,
-      display_name: newUser.display_name, // 使用snake_case字段名
-      role: newUser.role,
-      package_type: newUser.package_type, // 使用snake_case字段名
-      package_expires_at: newUser.package_expires_at, // 使用snake_case字段名
-    })
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        user: newUser,
-        defaultPassword, // Return this so admin can share it with the user
-      },
-    })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)

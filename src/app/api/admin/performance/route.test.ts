@@ -2,9 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { DELETE, GET } from '@/app/api/admin/performance/route'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
-}))
+const authUser = {
+  userId: 1,
+  email: 'admin@autoads.dev',
+  role: 'admin',
+  packageType: 'enterprise',
+}
 
 const perfFns = vi.hoisted(() => ({
   performanceMonitor: {
@@ -31,26 +34,21 @@ const cacheFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => handler(request, authUser)
+  },
 }))
 
 vi.mock('@/lib/common/server', () => ({
   performanceMonitor: perfFns.performanceMonitor,
   webVitalsMonitor: perfFns.webVitalsMonitor,
   frontendErrorMonitor: perfFns.frontendErrorMonitor,
-}))
-
-vi.mock('@/lib/common/server', () => ({
   apiCache: cacheFns.apiCache,
 }))
 
 describe('admin performance api', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 1, role: 'admin' },
-    })
 
     perfFns.performanceMonitor.getStats.mockReturnValue({
       avgDuration: 100,
