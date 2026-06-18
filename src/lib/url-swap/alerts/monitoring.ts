@@ -12,7 +12,7 @@
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import type { UrlSwapTask } from '@/lib/url-swap/url-swap-types'
-import { pauseUrlSwapTargetsByTaskId } from '@/lib/url-swap'
+import { pauseUrlSwapTargetsByTaskId } from '@/lib/url-swap/url-swap-targets'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 import { notifySwapError, notifyUrlSwapTaskPaused } from './notifications'
 

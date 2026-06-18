@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 let mockDb: any
-let setTaskError: typeof import('../url-swap').setTaskError
+let setTaskError: typeof import('../url-swap/url-swap-task-lifecycle').setTaskError
 
 vi.mock('../db', () => ({
   getDatabase: () => mockDb,
@@ -31,7 +31,7 @@ describe('setTaskError', () => {
 
   beforeEach(async () => {
     vi.resetModules()
-    ;({ setTaskError } = await import('../url-swap'))
+    ;({ setTaskError } = await import('../url-swap/url-swap-task-lifecycle'))
   }, 30_000)
 
   afterEach(() => {
