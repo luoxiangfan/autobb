@@ -1,5 +1,5 @@
 // 补点击通知工具
-// src/lib/click-farm/notifications.ts
+// src/lib/click-farm/alerts/notifications.ts
 
 import { getDatabase } from '@/lib/db'
 
@@ -105,7 +105,7 @@ export async function notifyTaskResumed(userId: number, taskId: string): Promise
  * 简化版本：返回需要用户关注的任务状态变化
  */
 export async function getUserNotifications(userId: number): Promise<ClickFarmNotification[]> {
-  const db = getDatabase()
+  const db = await getDatabase()
 
   // 查询最近发生状态变化的任务
   const tasks = await db.query<any>(

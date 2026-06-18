@@ -5,9 +5,13 @@ const mocks = vi.hoisted(() => ({
   removePendingClickFarmQueueTasksByTaskIds: vi.fn(),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: mocks.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: mocks.getDatabase,
+  }
+})
 
 vi.mock('@/lib/click-farm/queue-cleanup', () => ({
   removePendingClickFarmQueueTasksByTaskIds: mocks.removePendingClickFarmQueueTasksByTaskIds,

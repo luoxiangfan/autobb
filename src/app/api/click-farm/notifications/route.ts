@@ -3,7 +3,7 @@
 
 import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserNotifications } from '@/lib/click-farm/notifications'
+import { getUserNotifications } from '@/lib/click-farm/alerts'
 
 export const dynamic = 'force-dynamic'
 

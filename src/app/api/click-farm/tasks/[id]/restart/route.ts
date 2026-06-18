@@ -4,7 +4,7 @@ import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickFarmTaskById, restartClickFarmTask } from '@/lib/click-farm'
 import { hasEnabledCampaignForOffer } from '@/lib/click-farm/campaign-health-guard'
-import { notifyTaskResumed } from '@/lib/click-farm/notifications'
+import { notifyTaskResumed } from '@/lib/click-farm/alerts/notifications'
 import { getDatabase } from '@/lib/db'
 import { getAllProxyUrls } from '@/lib/common/server' // 🔧 修复：导入新的代理查询函数
 import { getDateInTimezone } from '@/lib/common/server'

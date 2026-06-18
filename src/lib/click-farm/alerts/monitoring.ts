@@ -1,6 +1,6 @@
 /**
  * 补点击系统健康监控
- * src/lib/click-farm/monitoring.ts
+ * src/lib/click-farm/alerts/monitoring.ts
  *
  * 用于监控系统在高负载下的表现（432k+ daily clicks）
  */

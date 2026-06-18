@@ -3,19 +3,16 @@
  * 用于创建任务后立即触发调度（无需外部Cron）
  */
 
-import {
-  getPendingTasks,
-  updateTaskStatus,
-  pauseClickFarmTask,
-  initializeDailyHistory,
-  parseClickFarmTask,
-} from '@/lib/click-farm'
+import { getPendingTasks } from '@/lib/click-farm/click-farm-queries'
+import { updateTaskStatus, pauseClickFarmTask } from '@/lib/click-farm/click-farm-task-lifecycle'
+import { initializeDailyHistory } from '@/lib/click-farm/click-farm-stats'
+import { parseClickFarmTask } from '@/lib/click-farm/click-farm-row'
 import {
   shouldCompleteTask,
   generateNextRunAt,
   isWithinExecutionTimeRange,
 } from '@/lib/click-farm/scheduler'
-import { notifyTaskPaused, notifyTaskCompleted } from '@/lib/click-farm/notifications'
+import { notifyTaskPaused, notifyTaskCompleted } from '@/lib/click-farm/alerts/notifications'
 import { getQueueManagerForTaskType } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { getDateInTimezone, getHourInTimezone } from '@/lib/common/server'
