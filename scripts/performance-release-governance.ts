@@ -93,7 +93,9 @@ function runDrill(includeMonitoring: boolean): void {
   console.log('3. Prepare rollback env from template above')
   console.log('4. Execute smoke tests on dashboard/offers/campaigns/products')
   console.log('5. If KPI error or API p95 exceeds threshold, apply rollback env immediately')
-  console.log('6. Record incident timeline using runbooks template')
+  console.log(
+    '6. Record incident timeline using docs/operations/performance-runbooks/FRONTEND_PERFORMANCE_POSTMORTEM_TEMPLATE.md'
+  )
   if (!valid) {
     process.exitCode = 1
   }
