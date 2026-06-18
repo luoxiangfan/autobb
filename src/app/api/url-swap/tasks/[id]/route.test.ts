@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { DELETE } from './route'
+
+const authUser = {
+  userId: 1,
+  email: 'test@example.com',
+  role: 'user',
+  packageType: 'pro',
+}
 
 const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
@@ -20,6 +26,19 @@ const urlSwapFns = vi.hoisted(() => ({
   getUrlSwapTaskStats: vi.fn(async () => ({})),
   updateUrlSwapTask: vi.fn(async () => ({})),
   getUrlSwapTaskTargets: vi.fn(async () => []),
+}))
+
+vi.mock('@/lib/auth', () => ({
+  withAuth: (handler: any) => {
+    return async (
+      request: NextRequest,
+      routeContext?: { params?: Promise<Record<string, string>> }
+    ) => {
+      const resolvedParams = routeContext?.params ? await routeContext.params : undefined
+      const context = resolvedParams ? { params: resolvedParams } : undefined
+      return handler(request, authUser, context)
+    }
+  },
 }))
 
 vi.mock('@/lib/url-swap', () => ({
@@ -44,6 +63,8 @@ vi.mock('@/lib/url-swap/queue-cleanup', () => ({
 vi.mock('@/lib/url-swap/url-swap-scheduler', () => ({
   triggerUrlSwapScheduling: vi.fn(async () => {}),
 }))
+
+import { DELETE } from './route'
 
 describe('DELETE /api/url-swap/tasks/[id]', () => {
   beforeEach(() => {
