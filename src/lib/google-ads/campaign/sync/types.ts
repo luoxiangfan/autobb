@@ -62,12 +62,6 @@ export interface GoogleAdsCampaign {
     marketingObjective?: string
     finalUrlSuffix?: string
     finalUrls?: string[]
-    sitelinks?: Array<{
-      text?: string
-      url?: string
-      description1?: string
-      description2?: string
-    }>
     [key: string]: any
   }
   start_date_time?: string

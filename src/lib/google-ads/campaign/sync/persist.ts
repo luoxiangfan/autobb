@@ -7,12 +7,6 @@ import { offerOccupyingCampaignWhereClause } from '../../../campaign/server'
 import type { GoogleAdsCampaign } from './types'
 import { extractBrandFromGoogleAdsCampaignName } from './types'
 import { inferPageTypeFromUrls } from '@/lib/offers/offer-link-type'
-import {
-  extractStoreProductLinksFromCampaignConfig,
-  parseOfferStoreProductLinksColumn,
-  serializeStoreProductLinks,
-  storeProductLinksEqual,
-} from './store-product-links'
 
 import { googleAdsSyncLogger } from '../../common/logger'
 
@@ -229,10 +223,9 @@ export async function createOfferFirst(params: {
 
   // 1. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）
   const pageType = inferPageTypeFromUrls({ url, finalUrl })
-  const syncedStoreProductLinks = extractStoreProductLinksFromCampaignConfig(campaignConfig)
 
   const existingOffer = (await db.queryOne(
-    'SELECT id, sync_source, url, final_url, final_url_suffix, brand, page_type, store_product_links FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
+    'SELECT id, sync_source, url, final_url, final_url_suffix, brand, page_type FROM offers WHERE google_ads_campaign_id = ? AND user_id = ?',
     [campaign.campaign_id, userId]
   )) as
     | {
@@ -243,7 +236,6 @@ export async function createOfferFirst(params: {
         final_url_suffix?: string | null
         brand?: string | null
         page_type?: string | null
-        store_product_links?: string | null
       }
     | undefined
 
@@ -307,26 +299,6 @@ export async function createOfferFirst(params: {
         updateParams.push(inferredPageType)
       }
 
-      const effectivePageType =
-        shouldSetPageType && inferredPageType !== existingPageType
-          ? inferredPageType
-          : existingPageType || inferredPageType
-
-      if (effectivePageType === 'store' && syncedStoreProductLinks.length > 0) {
-        const existingLinks = parseOfferStoreProductLinksColumn(existingOffer.store_product_links)
-        if (!storeProductLinksEqual(existingLinks, syncedStoreProductLinks)) {
-          updates.push('store_product_links = ?')
-          updateParams.push(serializeStoreProductLinks(syncedStoreProductLinks))
-        }
-      } else if (
-        shouldSetPageType &&
-        inferredPageType === 'product' &&
-        existingPageType === 'store'
-      ) {
-        updates.push('store_product_links = ?')
-        updateParams.push(null)
-      }
-
       if (updates.length > 0) {
         const updatedAt = utcNowIso()
         await db.exec(
@@ -359,11 +331,6 @@ export async function createOfferFirst(params: {
   const offerName = campaign.campaign_name
   const now = utcNowIso()
 
-  const storeProductLinksForInsert =
-    pageType === 'store' && syncedStoreProductLinks.length > 0
-      ? serializeStoreProductLinks(syncedStoreProductLinks)
-      : null
-
   const result = await db.exec(
     `INSERT INTO offers (
       user_id,
@@ -381,10 +348,9 @@ export async function createOfferFirst(params: {
       scrape_status,
       is_active,
       page_type,
-      store_product_links,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       url,
@@ -401,7 +367,6 @@ export async function createOfferFirst(params: {
       'pending',
       'TRUE',
       pageType,
-      storeProductLinksForInsert,
       now,
       now,
     ]
