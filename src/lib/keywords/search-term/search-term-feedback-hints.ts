@@ -1,5 +1,5 @@
-import { getDatabase } from '../db'
-import { containsPureBrand, getPureBrandKeywords } from './brand-keyword-utils'
+import { getDatabase } from '../../db'
+import { containsPureBrand, getPureBrandKeywords } from '../brand/brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 
 export interface SearchTermFeedbackHints {

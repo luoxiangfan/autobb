@@ -1,9 +1,13 @@
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
+import {
+  containsPureBrand,
+  getPureBrandKeywords,
+  isPureBrandKeyword,
+} from '../brand/brand-keyword-utils'
 import {
   deriveCanonicalCreativeType,
   hasModelAnchorEvidence,
   type CanonicalCreativeType,
-} from '../creatives/server'
+} from '../../creatives/server'
 import {
   getKeywordSourcePriority,
   getKeywordSourceRankFromInput,
@@ -14,11 +18,11 @@ import {
 } from './creative-keyword-source-priority'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { containsAsinLikeToken } from '../creatives/server'
+import { containsAsinLikeToken } from '../../creatives/server'
 import {
   analyzeKeywordLanguageCompatibility,
   type KeywordLanguageCompatibility,
-} from './keyword-validity'
+} from '../planner/keyword-validity'
 
 export const CREATIVE_KEYWORD_MAX_COUNT = 50
 export const CREATIVE_BRAND_KEYWORD_RESERVE = 10

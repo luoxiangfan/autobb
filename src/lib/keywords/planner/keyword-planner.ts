@@ -3,13 +3,13 @@
  * 获取真实的关键词搜索量数据
  */
 import { enums } from 'google-ads-api'
-import { getDatabase } from '../db'
+import { getDatabase } from '../../db'
 import {
   resolveGoogleAdsAuthReadyFailure,
   resolveConfiguredGoogleAdsAuthType,
 } from '@/lib/google-ads/auth/context'
-import { dateMinusDays } from '../db'
-import { getBatchCachedVolumes, batchCacheVolumes } from '../common/server'
+import { dateMinusDays } from '../../db'
+import { getBatchCachedVolumes, batchCacheVolumes } from '../../common/server'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { refreshAccessToken } from '@/lib/google-ads/oauth/oauth'
 import { getGoogleAdsAuthContext, type GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
@@ -19,7 +19,7 @@ import {
   getGoogleAdsGeoTargetId,
   normalizeCountryCode,
   normalizeLanguageCode,
-} from '../common/server'
+} from '../../common/server'
 import { getGoogleAdsClient } from '@/lib/google-ads/api/api'
 import { getServiceAccountConfig, AuthType } from '@/lib/google-ads/service-account/service-account'
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'

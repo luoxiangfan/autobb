@@ -1,8 +1,8 @@
-import { getDatabase } from '../db'
-import { nowFunc } from '../db'
-import { REDIS_PREFIX_CONFIG } from '../common/server'
-import { getRedisClient } from '../common/server'
-import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'
+import { getDatabase } from '../../db'
+import { nowFunc } from '../../db'
+import { REDIS_PREFIX_CONFIG } from '../../common/server'
+import { getRedisClient } from '../../common/server'
+import { normalizeCountryCode, normalizeLanguageCode } from '../../common/server'
 
 export interface BrandCoreKeyword {
   keywordNorm: string

@@ -1,5 +1,5 @@
-import { applyKeywordSupplementationOnce } from '../creatives/generator/keyword-supplement'
-import type { KeywordSupplementationReport } from '../creatives/generator/types'
+import { applyKeywordSupplementationOnce } from '../../creatives/generator/keyword-supplement'
+import type { KeywordSupplementationReport } from '../../creatives/generator/types'
 import {
   filterCreativeKeywordsByOfferContextDetailed,
   normalizeCreativeKeywordCandidatesForContextFilter,
@@ -12,20 +12,24 @@ import {
 } from './creative-keyword-selection'
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import { logKeywordSourceAudit } from './creative-keyword-audit-log'
-import type { CanonicalCreativeType } from '../creatives/server'
+import type { CanonicalCreativeType } from '../../creatives/server'
 import {
   getKeywordSourcePriorityScoreFromInput,
   inferKeywordRawSource,
   normalizeKeywordSourceSubtype,
 } from './creative-keyword-source-priority'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
+import {
+  containsPureBrand,
+  getPureBrandKeywords,
+  isPureBrandKeyword,
+} from '../brand/brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { KEYWORD_POLICY } from './keyword-policy'
-import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
-import type { PoolKeywordData } from './offer-pool'
-import { createRiskAlert } from '../campaign/optimization'
-import { getDatabase } from '../db'
-import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'
+import { KEYWORD_POLICY } from '../planner/keyword-policy'
+import { analyzeKeywordLanguageCompatibility } from '../planner/keyword-validity'
+import type { PoolKeywordData } from '../offer-pool'
+import { createRiskAlert } from '../../campaign/optimization'
+import { getDatabase } from '../../db'
+import { normalizeCountryCode, normalizeLanguageCode } from '../../common/server'
 
 export interface BuildCreativeKeywordSetInput {
   offer: {

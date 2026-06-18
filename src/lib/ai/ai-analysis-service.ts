@@ -24,7 +24,7 @@ import {
 import type { OfferExtractionMode } from '../offers/server'
 import { getProxyUrlForCountry } from '../common/server' // 🔥 修复（2025-12-09）：动态获取代理URL
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
+import { isInvalidKeyword } from '../keywords/planner/keyword-invalid-filter'
 import {
   createCompetitorRelevanceContext,
   filterRelevantCompetitors,

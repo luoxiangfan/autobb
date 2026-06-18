@@ -22,17 +22,17 @@ import {
   getPureBrandKeywords,
   isPureBrandKeyword,
   PRODUCT_WORD_PATTERNS,
-} from './brand-keyword-utils'
+} from './brand/brand-keyword-utils'
 import {
   normalizePlannerNonBrandPolicy,
   shouldAllowPlannerNonBrandKeyword,
   type PlannerNonBrandPolicy,
-} from './planner-non-brand-policy'
+} from './planner/planner-non-brand-policy'
 import {
   buildKeywordIntegrityAnchors,
   getSplitAnchorDistortionReason,
   isKeywordLanguageMismatch,
-} from './keyword-validity'
+} from './planner/keyword-validity'
 
 const BRAND_CONNECTOR_TOKENS = new Set(['and', 'plus'])
 

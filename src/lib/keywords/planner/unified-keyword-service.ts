@@ -21,13 +21,17 @@ import {
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
 import { getKeywordIdeas, type KeywordIdeasPreparedOAuth } from '@/lib/google-ads/keyword/planner'
-import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from './keyword-constants'
+import { PLATFORMS, BRAND_PATTERNS, DEFAULTS } from '../keyword-constants'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
+import {
+  containsPureBrand,
+  getPureBrandKeywords,
+  isPureBrandKeyword,
+} from '../brand/brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { normalizeLanguageCode } from '../common/server'
-import { hasModelAnchorEvidence } from '../creatives/server'
-import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from '../creatives/server'
+import { normalizeLanguageCode } from '../../common/server'
+import { hasModelAnchorEvidence } from '../../creatives/server'
+import { containsAsinLikeToken, extractModelIdentifierTokensFromText } from '../../creatives/server'
 
 export type KeywordPlannerSessionAuth = KeywordPlannerPreparedSession
 
@@ -1229,7 +1233,7 @@ async function expandWithoutKeywordPlanner(params: {
   pureBrandKeywords.forEach((kw) => addKeyword(kw, 'BRAND'))
 
   try {
-    const { getBrandSearchSuggestions } = await import('./google-suggestions')
+    const { getBrandSearchSuggestions } = await import('../google-suggestions')
     const suggestions = await getBrandSearchSuggestions({
       brand: offer.brand,
       country,
@@ -1246,7 +1250,7 @@ async function expandWithoutKeywordPlanner(params: {
 
   if (userId) {
     try {
-      const { extractKeywordsEnhanced } = await import('./enhanced-keyword-extractor')
+      const { extractKeywordsEnhanced } = await import('../enhanced-keyword-extractor')
       const features = (() => {
         if (!offer.productFeatures) return []
         try {

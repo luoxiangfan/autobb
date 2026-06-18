@@ -1,5 +1,9 @@
-import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from './brand-keyword-utils'
-import { normalizeLanguageCode } from '../common/server'
+import {
+  containsPureBrand,
+  getPureBrandKeywords,
+  isPureBrandKeyword,
+} from '../brand/brand-keyword-utils'
+import { normalizeLanguageCode } from '../../common/server'
 
 export type KeywordIntent =
   | 'TRANSACTIONAL'

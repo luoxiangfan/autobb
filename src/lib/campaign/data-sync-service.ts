@@ -27,7 +27,7 @@ import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/l
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { normalizeCountryCode, normalizeLanguageCode } from '../common/server'
 import { normalizeBrandKey, refreshBrandCoreKeywordCache } from '../keywords/server'
-import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
+import { isInvalidKeyword } from '../keywords/planner/keyword-invalid-filter'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
 
 /**

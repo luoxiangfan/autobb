@@ -1,6 +1,6 @@
-import { containsPureBrand, isPureBrandKeyword } from './brand-keyword-utils'
+import { containsPureBrand, isPureBrandKeyword } from '../brand/brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { normalizeLanguageCode } from '../common/server'
+import { normalizeLanguageCode } from '../../common/server'
 
 type ScriptFamily =
   | 'latin'

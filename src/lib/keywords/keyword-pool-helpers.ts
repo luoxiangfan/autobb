@@ -8,7 +8,7 @@
  */
 
 import type { PoolKeywordData } from './offer-pool'
-import { expandKeywordsWithSeeds } from './unified-keyword-service'
+import { expandKeywordsWithSeeds } from './planner/unified-keyword-service'
 import { getDatabase } from '../db'
 import {
   getKeywordSearchVolumesForPlannerContext,
@@ -17,11 +17,15 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 // 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 import { DEFAULTS } from './keyword-constants'
-import { getKeywordPlannerUrlSeedForOffer } from './keyword-planner-site-filter'
+import { getKeywordPlannerUrlSeedForOffer } from './planner/keyword-planner-site-filter'
 import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../common/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { classifyKeywordIntent } from './keyword-intent'
-import { getPureBrandKeywords, containsPureBrand, isPureBrandKeyword } from './brand-keyword-utils'
+import { classifyKeywordIntent } from './planner/keyword-intent'
+import {
+  getPureBrandKeywords,
+  containsPureBrand,
+  isPureBrandKeyword,
+} from './brand/brand-keyword-utils'
 import {
   detectCountryInKeyword,
   filterLowIntentKeywords,
@@ -53,7 +57,7 @@ import {
   type PlannerDecision,
   type PlannerNonBrandPolicy,
   type PlannerNonBrandUseCase,
-} from './planner-non-brand-policy'
+} from './planner/planner-non-brand-policy'
 import type { Offer } from '../offers/server'
 
 // ============================================

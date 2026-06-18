@@ -1,4 +1,4 @@
-import { isPureBrandKeyword } from '@/lib/keywords/brand-keyword-utils'
+import { isPureBrandKeyword } from '@/lib/keywords/brand/brand-keyword-utils'
 
 export type PositiveKeywordMatchType = 'EXACT' | 'PHRASE' | 'BROAD'
 

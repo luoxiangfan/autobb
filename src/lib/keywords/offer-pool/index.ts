@@ -38,7 +38,7 @@ import {
 } from '../server'
 import { getMinContextTokenMatchesForKeywordQualityFilter } from '../server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { isInvalidKeyword } from '../keyword-invalid-filter'
+import { isInvalidKeyword } from '../planner/keyword-invalid-filter'
 import {
   getBrandCoreKeywords,
   refreshBrandCoreKeywordCache,

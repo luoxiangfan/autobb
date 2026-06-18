@@ -1,19 +1,19 @@
-import type { GeneratedAdCreativeData } from '../creatives/server'
+import type { GeneratedAdCreativeData } from '../../creatives/server'
 import type {
   CreativeAttemptEvaluation,
   CreativeGenerationHistoryItem,
   CreativeQualityEvaluationInput,
-} from '../creatives/server'
+} from '../../creatives/server'
 import {
   buildCreativeKeywordSet,
   type BuildCreativeKeywordSetInput,
   type BuildCreativeKeywordSetOutput,
   type CreativeKeywordSourceAudit,
 } from './creative-keyword-set-builder'
-import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from '../creatives/server'
+import { normalizeCanonicalCreativeType, type CanonicalCreativeType } from '../../creatives/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import { analyzeKeywordLanguageCompatibility } from './keyword-validity'
-import type { ComprehensiveAdStrengthResult } from '../launch-score/server'
+import { analyzeKeywordLanguageCompatibility } from '../planner/keyword-validity'
+import type { ComprehensiveAdStrengthResult } from '../../launch-score/server'
 
 type CreativeKeywordSupplementation = GeneratedAdCreativeData['keywordSupplementation']
 type CreativeKeywordsWithVolume = BuildCreativeKeywordSetOutput['keywordsWithVolume']

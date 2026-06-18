@@ -10,7 +10,7 @@ import { isBrandConcatenation } from '../../keywords/server' // 🔥 2025-12-28:
 // 🔥 2026-03-13: 导入纯品牌词判断函数
 
 import { classifyKeywordIntent } from '../../keywords/server'
-import { KEYWORD_POLICY } from '../../keywords/keyword-policy'
+import { KEYWORD_POLICY } from '../../keywords/planner/keyword-policy'
 import { analyzeKeywordLanguageCompatibility } from '../../keywords/server'
 import {
   type GoogleAdsPolicyGuardMode,

@@ -22,7 +22,7 @@ import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { containsPureBrand, getPureBrandKeywords, isPureBrandKeyword } from '../keywords/server'
 import { loadPrompt, interpolateTemplate } from '../ai/server'
 import { classifyKeywordIntent } from '../keywords/server'
-import { isInvalidKeyword } from '../keywords/keyword-invalid-filter'
+import { isInvalidKeyword } from '../keywords/planner/keyword-invalid-filter'
 import type { AmazonProductData } from '../scraping/stealth'
 import type {
   StoreProduct,
