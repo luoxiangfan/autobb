@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative, deleteAdCreative } from '@/lib/creatives/server'
 
 /**
@@ -8,16 +8,14 @@ import { findAdCreativeById, updateAdCreative, deleteAdCreative } from '@/lib/cr
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的创意ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const creative = await findAdCreativeById(parseInt(id, 10), userId)
 
@@ -44,22 +42,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * PUT /api/creatives/:id
  * 更新创意内容
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的创意ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const body = await request.json()
     const { headlines, descriptions, keywords, path_1, path_2, final_url, score } = body
@@ -108,22 +104,20 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/creatives/:id
  * 删除创意
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的创意ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const success = deleteAdCreative(parseInt(id, 10), userId)
 
@@ -150,4 +144,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       { status: 500 }
     )
   }
-}
+})

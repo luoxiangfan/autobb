@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 
 function parsePossiblyNestedJsonObject(value: unknown, maxDepth = 2): Record<string, any> | null {
@@ -115,15 +115,9 @@ function parseLocalYmdToDate(value: string): Date {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    // 1. 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const { searchParams } = new URL(request.url)
     const rawDaysBack = parseInt(searchParams.get('daysBack') || '7', 10)
     const daysBack = Number.isFinite(rawDaysBack) ? Math.min(Math.max(rawDaysBack, 1), 3650) : 7
@@ -531,4 +525,4 @@ export async function GET(request: NextRequest) {
     console.error('Get creatives trends error:', error)
     return NextResponse.json({ error: error.message || '获取趋势数据失败' }, { status: 500 })
   }
-}
+})

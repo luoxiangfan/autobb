@@ -2,31 +2,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET } from './route'
 
-const mocks = vi.hoisted(() => ({
+const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
+}))
+
+const dbMocks = vi.hoisted(() => ({
   getDatabase: vi.fn(),
   query: vi.fn(),
   queryOne: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: mocks.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: mocks.getDatabase,
+  getDatabase: dbMocks.getDatabase,
 }))
 
 describe('GET /api/creatives/trends', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mocks.verifyAuth.mockResolvedValue({
+    authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
       user: { userId: 7 },
     })
 
-    mocks.query.mockImplementation(async (sql: string) => {
+    dbMocks.query.mockImplementation(async (sql: string) => {
       if (sql.includes('GROUP BY (created_at::date)')) {
         return [
           {
@@ -148,15 +157,15 @@ describe('GET /api/creatives/trends', () => {
       return []
     })
 
-    mocks.queryOne.mockResolvedValue({
+    dbMocks.queryOne.mockResolvedValue({
       selected: 1,
       notSelected: 2,
       total: 3,
     })
 
-    mocks.getDatabase.mockResolvedValue({
-      query: mocks.query,
-      queryOne: mocks.queryOne,
+    dbMocks.getDatabase.mockResolvedValue({
+      query: dbMocks.query,
+      queryOne: dbMocks.queryOne,
     })
   })
 

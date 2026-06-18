@@ -1,33 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { selectAdCreative, findAdCreativeById } from '@/lib/creatives/server'
 
 /**
  * POST /api/ad-creatives/[id]/select
  * 选择指定的广告创意
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的创意ID' }, { status: 400 })
     }
 
-    const creativeId = parseInt(params.id)
+    const creativeId = parseInt(id)
     if (isNaN(creativeId)) {
       return NextResponse.json({ error: '无效的创意ID' }, { status: 400 })
     }
 
     // 验证创意存在且属于当前用户
-    const creative = await findAdCreativeById(creativeId, authResult.user.userId)
+    const creative = await findAdCreativeById(creativeId, user.userId)
     if (!creative) {
       return NextResponse.json({ error: '广告创意不存在或无权访问' }, { status: 404 })
     }
 
     // 标记为已选中
-    selectAdCreative(creativeId, authResult.user.userId)
+    selectAdCreative(creativeId, user.userId)
 
     console.log(`✅ 已选择广告创意 #${creativeId}`)
     console.log(`   Offer: #${creative.offer_id}`)
@@ -52,4 +50,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})

@@ -1,19 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { compareAdCreatives } from '@/lib/creatives/server'
 
 /**
  * POST /api/ad-creatives/compare
  * 对比多个广告创意
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
     // 解析请求参数
     const body = await request.json()
     const { creative_ids } = body
@@ -27,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 对比广告创意
-    const result = await compareAdCreatives(creative_ids, authResult.user.userId)
+    const result = await compareAdCreatives(creative_ids, user.userId)
 
     console.log(`📊 对比广告创意: ${creative_ids.join(', ')}`)
     console.log(`   推荐: #${result.comparison.best_overall}`)
@@ -47,4 +41,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

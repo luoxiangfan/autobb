@@ -3,22 +3,20 @@
  * 获取广告创意的加分数据
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getCreativePerformance } from '@/lib/launch-score/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withAuth(async (request, user, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid ad creative ID' }, { status: 400 })
     }
 
-    const { id } = await params
     const adCreativeId = parseInt(id)
 
     if (isNaN(adCreativeId)) {
@@ -34,7 +32,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       FROM ad_creatives
       WHERE id = ? AND user_id = ?
     `,
-      [adCreativeId, authResult.user.userId]
+      [adCreativeId, user.userId]
     )
 
     if (!creative) {
@@ -50,7 +48,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       WHERE c.user_id = ? AND c.ad_creative_id = ?
       LIMIT 1
     `,
-      [authResult.user.userId, adCreativeId]
+      [user.userId, adCreativeId]
     )
 
     const fallbackCurrencyRow =
@@ -63,7 +61,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           WHERE c.user_id = ? AND c.google_campaign_id = ?
           LIMIT 1
         `,
-            [authResult.user.userId, creative.google_campaign_id]
+            [user.userId, creative.google_campaign_id]
           )
         : null
 
@@ -98,4 +96,4 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     console.error('Get bonus score error:', error)
     return NextResponse.json({ error: 'Failed to get bonus score' }, { status: 500 })
   }
-}
+})

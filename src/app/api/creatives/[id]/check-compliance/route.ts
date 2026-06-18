@@ -3,34 +3,32 @@
  * POST /api/creatives/:id/check-compliance
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { findAdCreativeById } from '@/lib/creatives/server'
 import { findOfferById } from '@/lib/offers/server'
 import { checkCompliance, type CreativeContent } from '@/lib/creatives/server'
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    // 验证用户身份
-    const auth = await verifyAuth(request)
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid creative ID' }, { status: 400 })
     }
 
-    const creativeId = parseInt(params.id)
+    const creativeId = parseInt(id)
     if (isNaN(creativeId)) {
       return NextResponse.json({ error: 'Invalid creative ID' }, { status: 400 })
     }
 
     // 获取Creative信息
-    const creative = await findAdCreativeById(creativeId, auth.user!.userId)
+    const creative = await findAdCreativeById(creativeId, user.userId)
     if (!creative) {
       return NextResponse.json({ error: 'Creative not found' }, { status: 404 })
     }
 
     // 获取Offer信息（用于品牌名）
-    const offer = await findOfferById(creative.offer_id, auth.user!.userId)
+    const offer = await findOfferById(creative.offer_id, user.userId)
     if (!offer) {
       return NextResponse.json({ error: 'Associated offer not found' }, { status: 404 })
     }
@@ -51,4 +49,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     console.error('Compliance check error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

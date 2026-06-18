@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative } from '@/lib/creatives/server'
 import { findAdGroupById } from '@/lib/campaign/server'
 
@@ -7,18 +7,17 @@ import { findAdGroupById } from '@/lib/campaign/server'
  * POST /api/creatives/:id/assign-adgroup
  * 将Creative关联到Ad Group
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的Creative ID' }, { status: 400 })
+    }
+
     const body = await request.json()
     const { adGroupId } = body
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 验证参数
     if (!adGroupId) {
@@ -80,4 +79,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})

@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
@@ -36,16 +36,14 @@ function normalizeObjectField(value: unknown): Record<string, any> | undefined {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的广告创意ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const db = await getDatabase()
     const creative = await db.queryOne(
@@ -87,7 +85,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 const updateCreativeSchema = z.object({
   headlines: z.array(z.string()).min(3, zErr.minItems(3)).max(15, zErr.maxItems(15)).optional(),
@@ -117,16 +115,14 @@ const updateCreativeSchema = z.object({
  * PUT /api/ad-creatives/:id
  * 更新广告创意
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的广告创意ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const body = await request.json()
 
@@ -269,22 +265,20 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/ad-creatives/:id
  * 删除广告创意
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的广告创意ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const db = await getDatabase()
 
@@ -343,4 +337,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       { status: 500 }
     )
   }
-}
+})

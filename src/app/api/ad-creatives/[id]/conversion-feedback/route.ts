@@ -7,18 +7,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
 import { calculateBonusScore } from '@/lib/launch-score/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAuth(async (request, user, context) => {
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const userId = user.userId.toString()
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid ad creative ID' }, { status: 400 })
     }
 
-    const userId = authResult.user.userId.toString()
-    const { id } = await params
     const adCreativeId = parseInt(id)
 
     if (isNaN(adCreativeId)) {
@@ -145,7 +143,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     console.error('Conversion feedback error:', error)
     return NextResponse.json({ error: 'Failed to save conversion feedback' }, { status: 500 })
   }
-}
+})
 
 export const dynamic = 'force-dynamic'
 

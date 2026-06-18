@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findAdCreativeById, updateAdCreative } from '@/lib/creatives/server'
 import { findAdGroupById } from '@/lib/campaign/server'
 import { findCampaignById } from '@/lib/campaign/server'
@@ -15,16 +15,14 @@ import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/l
  * POST /api/creatives/:id/sync
  * 同步Creative到Google Ads (创建Responsive Search Ad)
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的Creative ID' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+
+    const userId = user.userId
 
     const creative = await findAdCreativeById(parseInt(id, 10), userId)
     if (!creative) {
@@ -151,4 +149,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     return NextResponse.json({ error: error.message || '同步Creative失败' }, { status: 500 })
   }
-}
+})

@@ -7,9 +7,13 @@ const dbFns = vi.hoisted(() => ({
   query: vi.fn(),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
 describe('GET /api/creative-tasks/[taskId]', () => {
   beforeEach(() => {

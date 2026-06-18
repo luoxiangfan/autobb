@@ -7,9 +7,25 @@ const adCreativeFns = vi.hoisted(() => ({
   findAdCreativesByUserId: vi.fn(),
 }))
 
-vi.mock('@/lib/creatives', () => ({
+vi.mock('@/lib/creatives/server', () => ({
   findAdCreativesByOfferId: adCreativeFns.findAdCreativesByOfferId,
   findAdCreativesByUserId: adCreativeFns.findAdCreativesByUserId,
+  hasRequiredRsaAssetCounts: (creative: { headlines?: unknown; descriptions?: unknown }) => {
+    const headlines = Array.isArray(creative.headlines) ? creative.headlines : []
+    const descriptions = Array.isArray(creative.descriptions) ? creative.descriptions : []
+    return headlines.length >= 3 && descriptions.length >= 2
+  },
+  deriveCanonicalCreativeType: vi.fn(({ creativeType, keywordBucket }: any) => {
+    if (creativeType === 'brand_focus') return 'brand_intent'
+    if (keywordBucket === 'B') return 'model_intent'
+    return creativeType ?? null
+  }),
+  mapCreativeTypeToBucketSlot: vi.fn((creativeType: string | null) => {
+    if (creativeType === 'brand_intent') return 'A'
+    if (creativeType === 'model_intent') return 'B'
+    return null
+  }),
+  normalizeCreativeBucketSlot: vi.fn((bucket: string | null | undefined) => bucket ?? null),
 }))
 
 describe('GET /api/creatives', () => {

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
 
@@ -9,21 +9,20 @@ import { getInsertedId } from '@/lib/db'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const userId = user.userId
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的Creative ID' }, { status: 400 })
     }
 
-    const creativeId = parseInt(params.id, 10)
+    const creativeId = parseInt(id, 10)
     if (isNaN(creativeId)) {
       return NextResponse.json({ error: '无效的Creative ID' }, { status: 400 })
     }
 
     const db = await getDatabase()
-    const userId = authResult.user.userId
 
     // 验证Creative所有权
     const creative = await db.queryOne<{ user_id: number }>(
@@ -105,21 +104,21 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * POST /api/creatives/:id/versions
  * 创建新版本（保存编辑后的内容）
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const userId = user.userId
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '无效的Creative ID' }, { status: 400 })
     }
 
-    const creativeId = parseInt(params.id, 10)
+    const creativeId = parseInt(id, 10)
     if (isNaN(creativeId)) {
       return NextResponse.json({ error: '无效的Creative ID' }, { status: 400 })
     }
@@ -181,7 +180,6 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     }
 
     const db = await getDatabase()
-    const userId = authResult.user.userId
 
     // 验证Creative所有权
     const creative = await db.queryOne<{ user_id: number }>(
@@ -284,4 +282,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})

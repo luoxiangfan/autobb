@@ -4,8 +4,8 @@
  * 轮询查询 - 获取创意生成任务状态（用于SSE断开后的fallback）
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import { normalizeAdCreativeGenerationMode } from '@/lib/creatives/server'
@@ -63,17 +63,18 @@ function resolveRecommendedPollIntervalMs(task: CreativeTaskRow): number {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (req, user, context) => {
   const db = getDatabase()
-  const { taskId } = params
+  const taskId = context?.params?.taskId
+  if (!taskId) {
+    return NextResponse.json(
+      { error: 'Not found', message: '任务不存在或无权访问' },
+      { status: 404 }
+    )
+  }
 
   try {
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     const waitForUpdate = parseBooleanQuery(req.nextUrl.searchParams.get('waitForUpdate'))
     const lastUpdatedAt = req.nextUrl.searchParams.get('lastUpdatedAt')
@@ -166,4 +167,4 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
       { status: 500 }
     )
   }
-}
+})

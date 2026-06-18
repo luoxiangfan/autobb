@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
 
@@ -7,26 +7,24 @@ import { getInsertedId } from '@/lib/db'
  * POST /api/creatives/:id/versions/:versionNumber/rollback
  * 回滚到指定版本
  */
-export async function POST(
-  request: NextRequest,
-  props: { params: Promise<{ id: string; versionNumber: string }> }
-) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+    const userId = user.userId
+    const id = context?.params?.id
+    const versionNumberParam = context?.params?.versionNumber
+
+    if (!id || !versionNumberParam) {
+      return NextResponse.json({ error: '无效的Creative ID或版本号' }, { status: 400 })
     }
 
-    const creativeId = parseInt(params.id, 10)
-    const versionNumber = parseInt(params.versionNumber, 10)
+    const creativeId = parseInt(id, 10)
+    const versionNumber = parseInt(versionNumberParam, 10)
 
     if (isNaN(creativeId) || isNaN(versionNumber)) {
       return NextResponse.json({ error: '无效的Creative ID或版本号' }, { status: 400 })
     }
 
     const db = await getDatabase()
-    const userId = authResult.user.userId
 
     // 验证Creative所有权
     const creative = await db.queryOne<{ user_id: number }>(
@@ -181,4 +179,4 @@ export async function POST(
       { status: 500 }
     )
   }
-}
+})

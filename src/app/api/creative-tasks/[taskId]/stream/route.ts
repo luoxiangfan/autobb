@@ -4,8 +4,7 @@
  * SSE订阅 - 实时推送创意生成任务进度
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import {
   buildCreativeTaskStreamEvents,
@@ -21,19 +20,14 @@ import {
 export const dynamic = 'force-dynamic'
 export const maxDuration = 1200 // 20分钟
 
-export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (req, user, context) => {
   const db = getDatabase()
-  const { taskId } = params
-
-  const authResult = await verifyAuth(req)
-  if (!authResult.authenticated || !authResult.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  const taskId = context?.params?.taskId
+  if (!taskId) {
+    return new Response('Task not found', { status: 404 })
   }
-  const userIdNum = authResult.user.userId
+
+  const userIdNum = user.userId
 
   try {
     const taskRows = await db.query<CreativeTaskStreamRow>(
@@ -187,4 +181,4 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
       headers: { 'Content-Type': 'application/json' },
     })
   }
-}
+})

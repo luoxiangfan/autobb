@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findAdCreativesByOfferId, findAdCreativesByUserId } from '@/lib/creatives/server'
 import { hasRequiredRsaAssetCounts } from '@/lib/creatives/server'
 import {
@@ -79,13 +79,9 @@ function transformCreativeToApiResponse(creative: any) {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const { searchParams } = new URL(request.url)
     const offerIdParam = searchParams.get('offerId')
@@ -142,4 +138,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
