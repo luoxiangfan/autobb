@@ -9,7 +9,7 @@ import {
   createRiskAlertWithDedupMeta,
   refreshActiveRiskAlertContent,
 } from '@/lib/campaign/optimization'
-import type { UrlSwapErrorType } from '@/lib/url-swap'
+import type { UrlSwapErrorType } from '@/lib/url-swap/url-swap-types'
 
 export interface UrlSwapUrgentAlert {
   taskId: string

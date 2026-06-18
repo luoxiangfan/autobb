@@ -33,7 +33,7 @@ import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 import { GoogleAdsCampaignSyncSseBridge } from '@/components/GoogleAdsCampaignSyncSseBridge'
 import { UrlSwapUrgentBanner } from '@/components/layout/UrlSwapUrgentBanner'
-import type { UrlSwapUrgentAlert } from '@/lib/url-swap/urgent-alerts'
+import type { UrlSwapUrgentAlert } from '@/lib/url-swap/alerts'
 
 // 动态导入模态框组件，实现代码分割
 const UserProfileModal = dynamic(

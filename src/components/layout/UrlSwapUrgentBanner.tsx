@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { AlertTriangle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { UrlSwapUrgentAlert } from '@/lib/url-swap/urgent-alerts'
+import type { UrlSwapUrgentAlert } from '@/lib/url-swap/alerts'
 
 interface UrlSwapUrgentBannerProps {
   alerts: UrlSwapUrgentAlert[]

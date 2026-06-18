@@ -42,7 +42,7 @@ import {
 import { toast } from 'sonner'
 import { ResponsivePagination } from '@/components/ui/responsive-pagination'
 import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap/url-swap-types'
-import type { UrlSwapHealthStatus } from '@/lib/url-swap/monitoring'
+import type { UrlSwapHealthStatus } from '@/lib/url-swap/alerts'
 
 interface UrlSwapAdminStats extends UrlSwapGlobalStats {
   userTaskDistribution: {

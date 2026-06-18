@@ -23,6 +23,11 @@ export type UrlSwapTaskStatus =
 export type UrlSwapMode = 'auto' | 'manual'
 
 /**
+ * 换链任务错误类型（用于告警分级与错误文案）
+ */
+export type UrlSwapErrorType = 'link_resolution' | 'google_ads_api' | 'other'
+
+/**
  * 调度结果状态
  */
 export type TriggerResultStatus =

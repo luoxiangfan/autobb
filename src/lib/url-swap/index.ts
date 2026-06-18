@@ -13,7 +13,10 @@ import { boolParam } from '../db'
 import { normalizeAffiliateLinksInput, findInvalidAffiliateLinks } from './url-swap-link-utils'
 import { removePendingUrlSwapQueueTasksByTaskIds } from './queue-cleanup'
 import { isAffiliateLinkExpiredMessage } from '../affiliate'
-import { resolveUrlSwapUrgentRiskAlertsForOffer, syncUrlSwapUrgentRiskAlert } from './urgent-alerts'
+import {
+  resolveUrlSwapUrgentRiskAlertsForOffer,
+  syncUrlSwapUrgentRiskAlert,
+} from './alerts/urgent-alerts'
 import { parseJsonField, toDbJsonObjectField } from '../db'
 import type {
   UrlSwapTask,
@@ -26,6 +29,7 @@ import type {
   UrlSwapGlobalStats,
   UrlSwapTaskListItem,
   UrlSwapTaskTarget,
+  UrlSwapErrorType,
 } from './url-swap-types'
 
 type UrlSwapTargetInput = {
@@ -974,10 +978,7 @@ export async function enableUrlSwapTask(id: string, userId: number): Promise<voi
   console.log(`[url-swap] 启用任务: ${id}`)
 }
 
-/**
- * 错误类型
- */
-export type UrlSwapErrorType = 'link_resolution' | 'google_ads_api' | 'other'
+export type { UrlSwapErrorType } from './url-swap-types'
 
 const URL_SWAP_ERROR_THRESHOLD = 3
 

@@ -4,7 +4,7 @@ import { getDatabase } from '@/lib/db'
 import {
   excludeDisabledUrlSwapTasksSql,
   requireEnabledCampaignForOfferSql,
-} from '@/lib/url-swap/urgent-alerts'
+} from '@/lib/url-swap/alerts'
 
 /**
  * 智能洞察

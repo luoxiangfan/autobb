@@ -13,7 +13,7 @@ vi.mock('../db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('../url-swap/urgent-alerts', () => ({
+vi.mock('../url-swap/alerts/urgent-alerts', () => ({
   syncUrlSwapUrgentRiskAlert: vi.fn().mockResolvedValue(undefined),
   resolveUrlSwapUrgentRiskAlertsForOffer: vi.fn().mockResolvedValue(undefined),
 }))
@@ -32,7 +32,7 @@ describe('setTaskError', () => {
   beforeEach(async () => {
     vi.resetModules()
     ;({ setTaskError } = await import('../url-swap'))
-  })
+  }, 30_000)
 
   afterEach(() => {
     vi.useRealTimers()

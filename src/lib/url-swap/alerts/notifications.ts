@@ -1,14 +1,11 @@
 /**
  * URL Swap 通知系统
- * src/lib/url-swap/notifications.ts
+ * src/lib/url-swap/alerts/notifications.ts
  *
  * 功能：发送换链接任务的通知到Dashboard智能洞察
  * - 任务状态变更通知（暂停、完成）
  * - URL变化通知
  * - 错误通知
- *
- * 🆕 新增(2025-01-03): 日志记录
- * 🔧 修改(2025-01-03): 移除邮件和Webhook功能，通知信息直接显示在Dashboard智能洞察中
  */
 
 import { getDatabase } from '@/lib/db'
@@ -20,12 +17,6 @@ export type NotificationLevel = 'info' | 'warning' | 'error'
 
 /**
  * 发送通知（核心函数）
- *
- * @param userId 用户ID
- * @param level 通知级别
- * @param title 通知标题
- * @param message 通知内容
- * @param metadata 附加元数据
  */
 async function sendNotification(
   userId: number,
@@ -34,7 +25,6 @@ async function sendNotification(
   message: string,
   metadata?: Record<string, any>
 ): Promise<void> {
-  // 日志通知（用于调试）
   const levelEmoji = {
     info: 'ℹ️',
     warning: '⚠️',
@@ -49,9 +39,6 @@ async function sendNotification(
   }
 }
 
-/**
- * 获取任务信息（用于生成通知内容）
- */
 async function getTaskInfo(taskId: string): Promise<{
   userId: number
   offerId: number
@@ -75,7 +62,6 @@ async function getTaskInfo(taskId: string): Promise<{
 
   if (!task) return null
 
-  // 转换为 camelCase
   return {
     userId: task.user_id,
     offerId: task.offer_id,
@@ -84,22 +70,6 @@ async function getTaskInfo(taskId: string): Promise<{
   }
 }
 
-// ==================== 公开的通知函数 ====================
-
-/**
- * 任务暂停通知
- *
- * 触发时机：
- * - 任务因错误被自动暂停
- * - 用户手动暂停任务
- * - 达到最大失败次数
- *
- * @param taskId 任务ID
- * @param reason 暂停原因
- *
- * @example
- * await notifyUrlSwapTaskPaused('task-123', '连续失败3次，已自动暂停')
- */
 export async function notifyUrlSwapTaskPaused(taskId: string, reason: string): Promise<void> {
   const taskInfo = await getTaskInfo(taskId)
   if (!taskInfo) {
@@ -121,21 +91,6 @@ export async function notifyUrlSwapTaskPaused(taskId: string, reason: string): P
   )
 }
 
-/**
- * 换链错误通知
- *
- * 触发时机：
- * - 推广链接解析失败
- * - Google Ads API更新失败
- * - 域名发生非预期变化
- * - 其他系统错误
- *
- * @param taskId 任务ID
- * @param errorMessage 错误信息
- *
- * @example
- * await notifySwapError('task-123', 'Google Ads API调用失败: 401 Unauthorized')
- */
 export async function notifySwapError(taskId: string, errorMessage: string): Promise<void> {
   const taskInfo = await getTaskInfo(taskId)
   if (!taskInfo) {

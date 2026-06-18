@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyAuth } from '@/lib/auth'
-import { getUrlSwapHealth } from '@/lib/url-swap/monitoring'
+import { getUrlSwapHealth } from '@/lib/url-swap/alerts'
 
 /**
  * GET /api/admin/url-swap/health
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 执行健康检查和自动修复
-    const { performHealthCheckAndAutoFix } = await import('@/lib/url-swap/monitoring')
+    const { performHealthCheckAndAutoFix } = await import('@/lib/url-swap/alerts')
     const result = await performHealthCheckAndAutoFix()
 
     return NextResponse.json({
