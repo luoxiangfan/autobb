@@ -10,6 +10,10 @@ const authContextFns = vi.hoisted(() => ({
   assertNoConflictingGoogleAdsAuth: vi.fn(),
 }))
 
+const authFns = vi.hoisted(() => ({
+  verifyAuth: vi.fn(),
+}))
+
 const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
@@ -23,13 +27,18 @@ vi.mock('@/lib/google-ads/auth/context', () => ({
   invalidateGoogleAdsAuthContextCache: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: vi.fn(async () => ({
-    authenticated: true,
-    user: { userId: 7, email: 'u@test.com', role: 'user' },
-  })),
-  findUserById: vi.fn(async () => ({ id: 7, role: 'user' })),
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    encrypt: vi.fn((value: string) => `enc:${value}`),
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(() => dbFns),
@@ -43,13 +52,13 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   })),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  encrypt: vi.fn((value: string) => `enc:${value}`),
-}))
-
 describe('POST /api/google-ads/service-account auth mutex', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 7, email: 'u@test.com', role: 'user' },
+    })
     authAssignmentFns.assertUserCanModifyGoogleAdsAuth.mockResolvedValue(undefined)
     authContextFns.assertNoConflictingGoogleAdsAuth.mockResolvedValue(undefined)
     dbFns.exec.mockResolvedValue(undefined)

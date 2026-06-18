@@ -2,19 +2,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/google-ads/service-account/route'
 
+const authFns = vi.hoisted(() => ({
+  verifyAuth: vi.fn(),
+}))
+
 const listServiceAccountsFn = vi.hoisted(() => vi.fn())
 const authContextFns = vi.hoisted(() => ({
   getGoogleAdsAuthContextMetadata: vi.fn(),
   resolveGoogleAdsDisplayAuthType: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: vi.fn(async () => ({
-    authenticated: true,
-    user: { userId: 2, email: 'shared@test.com', role: 'user' },
-  })),
-  findUserById: vi.fn(async () => ({ id: 2, role: 'user' })),
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/google-ads/auth/context', () => ({
   getGoogleAdsAuthContextMetadata: authContextFns.getGoogleAdsAuthContextMetadata,
@@ -34,6 +42,10 @@ vi.mock('@/lib/google-ads/service-account/service-account', async (importOrigina
 describe('GET /api/google-ads/service-account', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 2, email: 'shared@test.com', role: 'user' },
+    })
     authContextFns.getGoogleAdsAuthContextMetadata.mockResolvedValue({ userId: 2 })
   })
 

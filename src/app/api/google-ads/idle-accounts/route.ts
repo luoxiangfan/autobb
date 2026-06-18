@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { logGoogleAdsAccountsError } from '@/lib/google-ads/auth/route-logger'
 import { getIdleAdsAccounts } from '@/lib/offers/server'
 
@@ -10,15 +10,10 @@ import { getIdleAdsAccounts } from '@/lib/offers/server'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  let userId: number | undefined
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    userId = authResult.user.userId
+export const GET = withAuth(async (_request, user) => {
+  const userId = user.userId
 
+  try {
     const idleAccounts = await getIdleAdsAccounts(userId)
 
     return NextResponse.json({
@@ -35,11 +30,7 @@ export async function GET(request: NextRequest) {
       total: idleAccounts.length,
     })
   } catch (error: any) {
-    logGoogleAdsAccountsError(
-      'get_idle_accounts_failed',
-      error,
-      userId != null ? { userId } : undefined
-    )
+    logGoogleAdsAccountsError('get_idle_accounts_failed', error, { userId })
 
     return NextResponse.json(
       {
@@ -48,4 +39,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

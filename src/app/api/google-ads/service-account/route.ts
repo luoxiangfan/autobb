@@ -1,12 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import {
   deleteGoogleAdsServiceAccountForUser,
   listServiceAccounts,
   parseServiceAccountJson,
   replaceGoogleAdsServiceAccountForUser,
 } from '@/lib/google-ads/service-account/service-account'
-import { encrypt } from '@/lib/auth'
-import { verifyAuth, findUserById } from '@/lib/auth'
+import { encrypt, withAuth } from '@/lib/auth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
   assertNoConflictingGoogleAdsAuth,
@@ -14,27 +13,19 @@ import {
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads/auth/context'
 
-async function getAuthenticatedUser(request: NextRequest) {
-  const authResult = await verifyAuth(request)
-  if (!authResult.authenticated || !authResult.user) return null
-  return await findUserById(authResult.user.userId)
-}
-
-export async function POST(req: NextRequest) {
-  const user = await getAuthenticatedUser(req)
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const POST = withAuth(async (req, user) => {
+  const userId = user.userId
+  const userRole = user.role
 
   try {
-    await assertUserCanModifyGoogleAdsAuth(user.id, user.id, user.role)
+    await assertUserCanModifyGoogleAdsAuth(userId, userId, userRole)
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 403 })
   }
 
   try {
     try {
-      await assertNoConflictingGoogleAdsAuth(user.id, 'service_account')
+      await assertNoConflictingGoogleAdsAuth(userId, 'service_account')
     } catch (error: any) {
       return NextResponse.json({ error: error.message }, { status: 409 })
     }
@@ -44,7 +35,7 @@ export async function POST(req: NextRequest) {
     const { clientEmail, privateKey, projectId } = parseServiceAccountJson(serviceAccountJson)
     const encryptedPrivateKey = encrypt(privateKey)
 
-    const id = await replaceGoogleAdsServiceAccountForUser(user.id, {
+    const id = await replaceGoogleAdsServiceAccountForUser(userId, {
       name,
       mccCustomerId,
       developerToken,
@@ -57,34 +48,29 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
-}
+})
 
-export async function GET(req: NextRequest) {
-  const user = await getAuthenticatedUser(req)
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const GET = withAuth(async (_req, user) => {
+  const userId = user.userId
 
-  const ctx = await getGoogleAdsAuthContextMetadata(user.id)
+  const ctx = await getGoogleAdsAuthContextMetadata(userId)
   const displayAuthType = resolveGoogleAdsDisplayAuthType(ctx)
   const allowListForDualStackCleanup = ctx.dualStack && ctx.canModify
   if (displayAuthType !== 'service_account' && !allowListForDualStackCleanup) {
     return NextResponse.json({ accounts: [] })
   }
 
-  const accounts = await listServiceAccounts(user.id)
+  const accounts = await listServiceAccounts(userId)
 
   return NextResponse.json({ accounts })
-}
+})
 
-export async function DELETE(req: NextRequest) {
-  const user = await getAuthenticatedUser(req)
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export const DELETE = withAuth(async (req, user) => {
+  const userId = user.userId
+  const userRole = user.role
 
   try {
-    await assertUserCanModifyGoogleAdsAuth(user.id, user.id, user.role)
+    await assertUserCanModifyGoogleAdsAuth(userId, userId, userRole)
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 403 })
   }
@@ -97,10 +83,10 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 })
     }
 
-    await deleteGoogleAdsServiceAccountForUser(user.id, id)
+    await deleteGoogleAdsServiceAccountForUser(userId, id)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 })
   }
-}
+})

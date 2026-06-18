@@ -20,10 +20,18 @@ const authContextFns = vi.hoisted(() => ({
   serviceAccountConfiguredFromContext: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-  findUserById: authFns.findUserById,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    findUserById: authFns.findUserById,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()

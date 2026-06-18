@@ -2,17 +2,37 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { GET } from '@/app/api/google-ads/idle-accounts/route'
 
+const authFns = vi.hoisted(() => ({
+  verifyAuth: vi.fn(),
+}))
+
 const mocks = vi.hoisted(() => ({
   getIdleAdsAccounts: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
+
+vi.mock('@/lib/offers/server', () => ({
   getIdleAdsAccounts: mocks.getIdleAdsAccounts,
 }))
 
 describe('GET /api/google-ads/idle-accounts', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 1, role: 'user' },
+    })
   })
 
   it('maps is_active consistently for postgres boolean values', async () => {

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { verifyGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
 import { autoDetectAndUpdateAccessLevel } from '@/lib/google-ads/settings/access-level-detector'
 import {
@@ -21,15 +21,9 @@ import {
  * POST /api/google-ads/credentials/verify
  * 验证Google Ads凭证是否有效
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (_request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const metadataCtx = await getGoogleAdsAuthContextMetadata(userId)
     const authFailure = resolveGoogleAdsAuthReadyFailure(metadataCtx)
@@ -100,4 +94,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

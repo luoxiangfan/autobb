@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth, findUserById } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth, findUserById } from '@/lib/auth'
 import { deleteGoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import { updateApiAccessLevel } from '@/lib/google-ads/settings/access-level-detector'
@@ -32,15 +32,9 @@ import {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const metadataCtx = await getGoogleAdsAuthContextMetadata(userId)
     const assignment = metadataCtx.assignment
     const authConfigWarning = googleAdsAuthContextDualStackError(metadataCtx)
@@ -149,24 +143,19 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/google-ads/credentials
  * 删除Google Ads凭证
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (_request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
+    const userRole = user.role
 
     try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, userRole)
     } catch (error: any) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
@@ -191,25 +180,20 @@ export async function DELETE(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * PATCH /api/google-ads/credentials
  * 更新 Google Ads API 访问级别。
  * 设置页仅展示自动检测结果；本接口供验证流程、内部脚本或后续管理功能调用。
  */
-export async function PATCH(request: NextRequest) {
+export const PATCH = withAuth(async (request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
+    const userRole = user.role
 
     try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, userRole)
     } catch (error: any) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
@@ -258,4 +242,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

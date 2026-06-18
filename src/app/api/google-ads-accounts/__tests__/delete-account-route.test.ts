@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { DELETE } from '@/app/api/google-ads-accounts/[id]/route'
 
+const authFns = vi.hoisted(() => ({
+  verifyAuth: vi.fn(),
+}))
+
 const accountFns = vi.hoisted(() => ({
   findGoogleAdsAccountById: vi.fn(),
   deleteGoogleAdsAccount: vi.fn(async () => true),
@@ -37,12 +41,35 @@ const remoteFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/google-ads/accounts/accounts', () => accountFns)
-vi.mock('@/lib/google-ads/account-delete', () => campaignListFns)
+vi.mock('@/lib/google-ads/account-delete', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/account-delete')>()
+  return {
+    ...actual,
+    listDeletableRemoteCampaignsForAccount: campaignListFns.listDeletableRemoteCampaignsForAccount,
+    limitDeletableRemoteCampaigns: campaignListFns.limitDeletableRemoteCampaigns,
+  }
+})
 vi.mock('@/lib/google-ads/campaign/remote-actions', () => remoteFns)
+
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 describe('DELETE /api/google-ads-accounts/:id', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authFns.verifyAuth.mockResolvedValue({
+      authenticated: true,
+      user: { userId: 7, role: 'user' },
+    })
     accountFns.findGoogleAdsAccountById.mockResolvedValue({
       id: 9,
       customerId: '1234567890',

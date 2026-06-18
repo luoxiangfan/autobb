@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { generateOAuthUrl } from '@/lib/google-ads/oauth/oauth'
 import { looksLikeOAuthClientSecret } from '@/lib/google-ads/accounts/auth/developer-token-heal'
 import { getGoogleAdsOAuthConfigFields } from '@/lib/google-ads/settings/settings-store'
@@ -24,17 +24,13 @@ import {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
+    const userRole = user.role
 
     try {
-      await assertUserCanModifyGoogleAdsAuth(userId, userId, authResult.user.role)
+      await assertUserCanModifyGoogleAdsAuth(userId, userId, userRole)
     } catch (error: any) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
@@ -132,4 +128,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

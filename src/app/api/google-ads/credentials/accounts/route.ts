@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import {
   getGoogleAdsAuthContext,
   googleAdsAuthReadyFailureHttpStatus,
@@ -149,14 +149,9 @@ function getOAuthErrorFromResponse(error: any): { error?: string; errorDescripti
 /** 同步路径在其它实例持锁时的短等待，避免 HTTP 长时间阻塞 */
 const GOOGLE_ADS_ACCOUNTS_SYNC_PEER_WAIT_MS = 15_000
 
-async function get(request: NextRequest) {
+const get = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return jsonNoStore({ error: '未授权访问' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const authContext = await getGoogleAdsAuthContext(userId)
     const authFailure = resolveGoogleAdsAuthReadyFailure(authContext)
     if (authFailure) {
@@ -602,7 +597,7 @@ async function get(request: NextRequest) {
     // - 普通用户：只返回 parentMcc 在用户分配的 MCC 列表中的非 MCC 账号
     // - 管理员：跳过过滤，显示所有非 MCC 账号
     const filterByUserMcc = searchParams.get('filterByUserMcc') === 'true'
-    const isAdmin = authResult.user.role === 'admin'
+    const isAdmin = user.role === 'admin'
 
     let finalAccounts = accountsWithOffers
 
@@ -840,7 +835,7 @@ async function get(request: NextRequest) {
       { status: statusCode }
     )
   }
-}
-export const GET = withPerformanceMonitoring<any>(get, {
+})
+export const GET = withPerformanceMonitoring<any>(get as any, {
   path: '/api/google-ads/credentials/accounts',
 })

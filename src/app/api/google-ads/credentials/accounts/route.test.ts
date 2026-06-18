@@ -39,9 +39,17 @@ vi.mock('@/lib/google-ads/settings/settings-store', () => ({
   getGoogleAdsOAuthConfigValue: settingsStoreFns.getGoogleAdsOAuthConfigValue,
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  const actual = await vi.importActual<typeof import('@/lib/auth')>('@/lib/auth')
+  return {
+    ...actual,
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
@@ -56,25 +64,30 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    query: dbFns.query,
-    queryOne: dbFns.queryOne,
-    exec: dbFns.exec,
-  })),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => ({
+      query: dbFns.query,
+      queryOne: dbFns.queryOne,
+      exec: dbFns.exec,
+    })),
+  }
+})
 
 vi.mock('@/lib/google-ads/accounts/sync', () => ({
   syncAccountsFromAPI: syncFns.syncAccountsFromAPI,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  withPerformanceMonitoring: (handler: unknown) => handler,
-}))
-
-vi.mock('@/lib/common/server', () => ({
-  getRedisClient: vi.fn(() => null),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    withPerformanceMonitoring: (handler: unknown) => handler,
+    getRedisClient: vi.fn(() => null),
+  }
+})
 
 const oauthCredentialsFull = {
   refresh_token: 'oauth-refresh-token',
