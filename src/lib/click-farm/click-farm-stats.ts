@@ -561,25 +561,20 @@ export async function getAdminClickFarmStats(): Promise<{
  * 🔧 修复P1-5：从daily_history的hourly_breakdown中提取实际执行分布
  * 支持用户查看"配置分布" vs "实际执行分布"的对比
  */
-export async function getHourlyDistribution(userId: number): Promise<HourlyDistribution> {
-  const db = await getDatabase()
+type HourlyDistributionSourceRow = {
+  hourly_distribution: unknown
+  timezone: string
+  daily_history: unknown
+}
 
-  // 获取今日所有任务的配置分布（汇总）
-  const tasks = await db.query<any>(
-    `
-    SELECT hourly_distribution, timezone, daily_history, started_at
-    FROM click_farm_tasks
-    WHERE user_id = ? AND is_deleted = FALSE AND status IN ('running', 'completed')
-  `,
-    [userId]
-  )
-
+function aggregateHourlyDistributionFromTasks(tasks: HourlyDistributionSourceRow[]): {
+  hourlyConfigured: number[]
+  hourlyActual: number[]
+} {
   const hourlyConfigured = new Array(24).fill(0)
   const hourlyActual = new Array(24).fill(0)
-  const todayStr = getDateInTimezone(new Date(), 'UTC') // 使用UTC作为参考
 
-  // 聚合所有任务的配置和实际执行分布
-  tasks.forEach((task: any) => {
+  tasks.forEach((task) => {
     const distribution = parseJsonField<number[]>(task.hourly_distribution, [])
     if (!Array.isArray(distribution)) {
       console.warn('[getHourlyDistribution] hourly_distribution 不是数组，已跳过')
@@ -589,12 +584,9 @@ export async function getHourlyDistribution(userId: number): Promise<HourlyDistr
       hourlyConfigured[hour] += Number(count) || 0
     })
 
-    // 🆕 P1-5：从daily_history的hourly_breakdown中提取实际执行数
     const dailyHistory = parseJsonField<DailyHistoryEntry[]>(task.daily_history, [])
     if (!Array.isArray(dailyHistory)) return
 
-    // 找到对应今天的daily_history条目
-    // 这里使用任务的timezone来确定"今天"
     const todayInTaskTimezone = getDateInTimezone(new Date(), task.timezone)
     const todayEntry = dailyHistory.find(
       (entry: DailyHistoryEntry) => entry.date === todayInTaskTimezone
@@ -607,7 +599,47 @@ export async function getHourlyDistribution(userId: number): Promise<HourlyDistr
     }
   })
 
-  // 计算匹配度
+  return { hourlyConfigured, hourlyActual }
+}
+
+export async function getHourlyDistribution(userId: number): Promise<HourlyDistribution> {
+  const db = await getDatabase()
+
+  const tasks = await db.query<HourlyDistributionSourceRow>(
+    `
+    SELECT hourly_distribution, timezone, daily_history
+    FROM click_farm_tasks
+    WHERE user_id = ? AND is_deleted = FALSE AND status IN ('running', 'completed')
+  `,
+    [userId]
+  )
+
+  const { hourlyConfigured, hourlyActual } = aggregateHourlyDistributionFromTasks(tasks)
+  const todayStr = getDateInTimezone(new Date(), 'UTC')
+  const matchRate = calculateMatchRate(hourlyActual, hourlyConfigured)
+
+  return {
+    date: todayStr,
+    hourlyActual,
+    hourlyConfigured,
+    matchRate,
+  }
+}
+
+export async function getAdminHourlyDistribution(): Promise<HourlyDistribution> {
+  const db = await getDatabase()
+
+  const tasks = await db.query<HourlyDistributionSourceRow>(
+    `
+    SELECT hourly_distribution, timezone, daily_history
+    FROM click_farm_tasks
+    WHERE is_deleted = FALSE AND status IN ('running', 'completed')
+  `,
+    []
+  )
+
+  const { hourlyConfigured, hourlyActual } = aggregateHourlyDistributionFromTasks(tasks)
+  const todayStr = getDateInTimezone(new Date(), 'UTC')
   const matchRate = calculateMatchRate(hourlyActual, hourlyConfigured)
 
   return {

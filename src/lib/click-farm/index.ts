@@ -28,6 +28,7 @@ export {
   getClickFarmStats,
   getAdminClickFarmStats,
   getHourlyDistribution,
+  getAdminHourlyDistribution,
   initializeDailyHistory,
   updateTaskStats,
 } from './click-farm-stats'

@@ -1,23 +1,14 @@
 // GET /api/admin/click-farm/top-users - Top 10用户排行
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { estimateTraffic } from '@/lib/click-farm/distribution'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-    if (!userId || authResult.user.role !== 'admin') {
-      return NextResponse.json({ error: 'forbidden', message: '需要管理员权限' }, { status: 403 })
-    }
-
+export const GET = withAuth(
+  async () => {
     const db = await getDatabase()
 
     const topUsers = await db.query<any>(
@@ -46,15 +37,13 @@ export async function GET(request: NextRequest) {
         user.total_clicks > 0
           ? parseFloat(((user.success_clicks / user.total_clicks) * 100).toFixed(1))
           : 0,
-      traffic: estimateTraffic(user.total_clicks), // 🔧 统一使用估算函数
+      traffic: estimateTraffic(user.total_clicks),
     }))
 
     return NextResponse.json({
       success: true,
       data: result,
     })
-  } catch (error) {
-    console.error('获取Top用户失败:', error)
-    return NextResponse.json({ error: 'server_error', message: '获取Top用户失败' }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)

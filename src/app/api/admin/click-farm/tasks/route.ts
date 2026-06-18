@@ -1,23 +1,14 @@
 // GET /api/admin/click-farm/tasks - 所有用户任务列表
 
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { estimateTraffic } from '@/lib/click-farm/distribution'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-    if (!userId || authResult.user.role !== 'admin') {
-      return NextResponse.json({ error: 'forbidden', message: '需要管理员权限' }, { status: 403 })
-    }
-
+export const GET = withAuth(
+  async (request: NextRequest) => {
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -25,7 +16,6 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
 
-    // 获取总数
     const countResult = await db.queryOne<{ count: number }>(
       `
       SELECT COUNT(*) as count
@@ -37,7 +27,6 @@ export async function GET(request: NextRequest) {
 
     const total = countResult?.count || 0
 
-    // 获取任务列表
     const tasks = await db.query<any>(
       `
       SELECT
@@ -68,7 +57,7 @@ export async function GET(request: NextRequest) {
         task.total_clicks > 0
           ? parseFloat(((task.success_clicks / task.total_clicks) * 100).toFixed(1))
           : 0,
-      traffic: estimateTraffic(task.total_clicks), // 🔧 统一使用估算函数
+      traffic: estimateTraffic(task.total_clicks),
       createdAt: task.created_at,
     }))
 
@@ -81,11 +70,6 @@ export async function GET(request: NextRequest) {
         limit,
       },
     })
-  } catch (error) {
-    console.error('获取所有任务失败:', error)
-    return NextResponse.json(
-      { error: 'server_error', message: '获取任务列表失败' },
-      { status: 500 }
-    )
-  }
-}
+  },
+  { requireAdmin: true }
+)

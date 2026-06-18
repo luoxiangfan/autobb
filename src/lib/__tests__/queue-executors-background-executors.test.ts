@@ -11,11 +11,12 @@ describe('registerBackgroundExecutors (background worker)', () => {
     const registeredTaskTypes = registerExecutor.mock.calls.map((call) => call[0]).sort()
 
     expect(registeredTaskTypes).toEqual([
+      '@/lib/google-ads/campaign/sync',
       'affiliate-product-sync',
+      'campaign-batch-create',
       'click-farm',
       'click-farm-batch',
       'click-farm-trigger',
-      '@/lib/google-ads/campaign/sync',
       'openclaw-affiliate-sync',
       'openclaw-command',
       'openclaw-report-send',

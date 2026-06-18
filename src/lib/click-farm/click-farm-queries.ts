@@ -2,6 +2,7 @@
  * Click-farm task read/query operations.
  */
 import { getDatabase, boolParam } from '@/lib/db'
+import { filterRowsByUserPackageExpiry } from '@/lib/common/task-scheduling'
 import type { ClickFarmTask, ClickFarmTaskListItem, TaskFilters } from './click-farm-types'
 import { parseClickFarmTask } from './click-farm-row'
 
@@ -114,14 +115,7 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
     [boolParam(true)]
   )
 
-  const now = Date.now()
-  const tasks = rows.filter((row: any) => {
-    const expiresAt = row.user_package_expires_at as string | null | undefined
-    if (!expiresAt) return true
-    const expiry = new Date(expiresAt)
-    if (!Number.isFinite(expiry.getTime())) return false
-    return expiry.getTime() >= now
-  })
+  const tasks = filterRowsByUserPackageExpiry(rows)
 
   // 🔧 添加调试日志
   if (process.env.DEBUG_CLICK_FARM === 'true') {

@@ -190,7 +190,7 @@ export default function AdminUrlSwapPage() {
   const handleHealthCheck = async () => {
     try {
       setHealthCheckLoading(true)
-      const response = await fetch('/api/admin/url-swap/health/auto-fix', {
+      const response = await fetch('/api/admin/url-swap/health', {
         method: 'POST',
       })
 

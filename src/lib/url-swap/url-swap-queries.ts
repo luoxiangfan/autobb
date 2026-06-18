@@ -2,6 +2,7 @@
  * Url-swap task read/query operations.
  */
 import { getDatabase, boolParam } from '@/lib/db'
+import { filterRowsByUserPackageExpiry } from '@/lib/common/task-scheduling'
 import type { UrlSwapTask, UrlSwapTaskStatus, UrlSwapTaskListItem } from './url-swap-types'
 import { parseUrlSwapTask } from './url-swap-row'
 
@@ -159,14 +160,7 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
     [boolParam(true)]
   )
 
-  const now = Date.now()
-  const tasks = rows.filter((row: any) => {
-    const expiresAt = row.user_package_expires_at as string | null | undefined
-    if (!expiresAt) return true
-    const expiry = new Date(expiresAt)
-    if (!Number.isFinite(expiry.getTime())) return false
-    return expiry.getTime() >= now
-  })
+  const tasks = filterRowsByUserPackageExpiry(rows)
 
   return tasks.map(parseUrlSwapTask)
 }
