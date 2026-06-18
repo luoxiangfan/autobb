@@ -9,8 +9,8 @@
  * 3. 包括关联的batch_tasks信息
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 
@@ -36,18 +36,12 @@ interface UploadRecordDetail {
   batch_failed_count: number
 }
 
-export async function GET(req: NextRequest, props: { params: Promise<{ recordId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (req, user, context) => {
   const db = getDatabase()
-  const { recordId } = params
+  const recordId = context?.params?.recordId
 
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     // 查询上传记录详情（联表查询batch_tasks）
     const records = await db.query<UploadRecordDetail>(
@@ -103,4 +97,4 @@ export async function GET(req: NextRequest, props: { params: Promise<{ recordId:
       { status: 500 }
     )
   }
-}
+})

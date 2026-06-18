@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { queryActiveCampaigns, pauseCampaigns } from '@/lib/campaign/server'
 import { recordOpenclawAction } from '@/lib/openclaw/runtime/action-logs'
 import type { GoogleAdsCampaignInfo } from '@/lib/campaign/server'
@@ -71,15 +71,10 @@ async function syncLocalCampaignStatus(params: {
   }
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
     const body = (await request.json().catch(() => ({}))) as CircuitBreakBody
-    const userId = auth.user.userId
+    const userId = user.userId
     const accountId = parsePositiveInteger(body.accountId ?? body.googleAdsAccountId)
 
     if (!accountId) {
@@ -197,4 +192,4 @@ export async function POST(request: NextRequest) {
     console.error('执行一键熔断失败:', error)
     return NextResponse.json({ error: error?.message || '执行一键熔断失败' }, { status: 500 })
   }
-}
+})

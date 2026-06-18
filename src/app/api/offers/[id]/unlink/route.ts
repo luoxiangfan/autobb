@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { unlinkOfferFromAccount } from '@/lib/offers/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { queueGoogleAdsCampaignRemoteActions } from '@/lib/google-ads/campaign/remote-actions'
 import { parseTruthyFlag } from '@/lib/common/server'
@@ -11,17 +11,11 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  * 手动解除Offer与Ads账号的关联
  * 需求25: 增加Offer手动解除与已关联的Ads账号解除关联的功能
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
+    const id = context?.params?.id
 
-    // 统一鉴权：避免仅依赖可伪造的 x-user-id
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 从请求体获取要解除关联的Ads账号ID
     const body = await request.json()
@@ -117,4 +111,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})

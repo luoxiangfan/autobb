@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { batchStartTasksForOffers } from '@/lib/campaign/server'
 import {
@@ -18,14 +18,9 @@ import {
  * - 补点击：每日点击数 10、开始日期（当前日期）、时间段 - 白天 (06:00-24:00)、持续时长（不限期）、Referer 类型（留空）、时间分布曲线（均衡分布）
  * - 换链接：换链方式（方式一：自动访问推广链接解析）、换链间隔（24 小时）、任务持续（不限期）
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const parsed = await parseBatchStartRequestBody(request)
     if (!parsed.ok) {
       return parsed.response
@@ -110,4 +105,4 @@ export async function POST(request: NextRequest) {
     console.error('批量开启任务失败:', error)
     return NextResponse.json({ error: error.message || '批量开启任务失败' }, { status: 500 })
   }
-}
+})

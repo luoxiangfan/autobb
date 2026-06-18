@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import {
   getBackgroundQueueManager,
   getQueueManager,
@@ -94,16 +94,10 @@ function mergePendingEligibilityStats(
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // 验证身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-    const isAdmin = authResult.user.role === 'admin'
+    const userId = user.userId
+    const isAdmin = user.role === 'admin'
 
     // 获取统一队列管理器
     const coreQueueManager = getQueueManager()
@@ -305,4 +299,4 @@ export async function GET(request: NextRequest) {
     console.error('[UnifiedQueueStats] 获取队列统计失败:', error)
     return NextResponse.json({ error: error.message || '获取队列统计失败' }, { status: 500 })
   }
-}
+})

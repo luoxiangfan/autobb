@@ -9,8 +9,8 @@
  * - 生成规则化优化建议
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { createOptimizationEngine, type CampaignMetrics } from '@/lib/campaign/optimization'
 import { convertCurrency } from '@/lib/common/server'
@@ -98,14 +98,8 @@ function mapOptimizationType(
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    // 验证用户身份
-    const auth = await verifyAuth(request)
-    if (!auth) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
     const offerIdStr = searchParams.get('offer_id')
@@ -135,7 +129,7 @@ export async function GET(request: NextRequest) {
       FROM offers
       WHERE id = ? AND user_id = ?
     `,
-      [offerId, auth.user!.userId]
+      [offerId, user.userId]
     )
 
     if (!offer) {
@@ -159,7 +153,7 @@ export async function GET(request: NextRequest) {
       WHERE c.offer_id = ? AND c.user_id = ?
       ORDER BY currency ASC
     `,
-      [offerId, auth.user!.userId]
+      [offerId, user.userId]
     )
 
     const currencies = Array.from(
@@ -194,7 +188,7 @@ export async function GET(request: NextRequest) {
       WHERE c.offer_id = ? AND c.user_id = ?
         AND COALESCE(gaa.currency, 'USD') = ?
     `,
-      [offerId, auth.user!.userId, reportingCurrency]
+      [offerId, user.userId, reportingCurrency]
     )
 
     if (campaigns.length === 0) {
@@ -272,7 +266,7 @@ export async function GET(request: NextRequest) {
         AND date <= ?
       GROUP BY campaign_id
     `,
-      [...campaignIds, auth.user!.userId, reportingCurrency, startDateStr, endDateStr]
+      [...campaignIds, user.userId, reportingCurrency, startDateStr, endDateStr]
     )
 
     // 建立Map: campaign_id → aggregate data
@@ -299,7 +293,7 @@ export async function GET(request: NextRequest) {
       GROUP BY campaign_id, date
       ORDER BY campaign_id, date ASC
     `,
-      [...campaignIds, auth.user!.userId, reportingCurrency, startDateStr, endDateStr]
+      [...campaignIds, user.userId, reportingCurrency, startDateStr, endDateStr]
     )
 
     // 建立Map: campaign_id → daily trends array
@@ -453,4 +447,4 @@ export async function GET(request: NextRequest) {
     console.error('Campaign comparison error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

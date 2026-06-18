@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
@@ -15,13 +15,9 @@ function formatUtcYmd(date: Date): string {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '缺少用户认证信息' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '7', 10)
 
@@ -239,4 +235,4 @@ export async function GET(request: NextRequest) {
     console.error('获取AI Token成本数据失败:', error)
     return NextResponse.json({ error: '获取数据失败', message: error.message }, { status: 500 })
   }
-}
+})

@@ -43,6 +43,9 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/lib/campaign', () => ({
   findCampaignById: campaignFns.findCampaignById,
+  applyCampaignTransition: transitionFns.applyCampaignTransition,
+  pauseOfferTasks: offerTaskFns.pauseOfferTasks,
+  resumeOfferTasksOnCampaignEnable: offerTaskFns.resumeOfferTasksOnCampaignEnable,
 }))
 
 vi.mock('@/lib/google-ads/api/api', () => ({
@@ -58,17 +61,8 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/campaign', () => ({
-  applyCampaignTransition: transitionFns.applyCampaignTransition,
-}))
-
 vi.mock('@/lib/common/server', () => ({
   invalidateDashboardCache: cacheFns.invalidateDashboardCache,
-}))
-
-vi.mock('@/lib/campaign', () => ({
-  pauseOfferTasks: offerTaskFns.pauseOfferTasks,
-  resumeOfferTasksOnCampaignEnable: offerTaskFns.resumeOfferTasksOnCampaignEnable,
 }))
 
 describe('PUT /api/campaigns/:id/toggle-status', () => {

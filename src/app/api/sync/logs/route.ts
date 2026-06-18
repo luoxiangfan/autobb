@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { dataSyncService } from '@/lib/campaign/server'
 
 /**
@@ -9,22 +9,12 @@ import { dataSyncService } from '@/lib/campaign/server'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-
-    // 获取查询参数
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20', 10)
 
-    // 获取同步日志
-    const logs = await dataSyncService.getSyncLogs(userId, limit)
+    const logs = await dataSyncService.getSyncLogs(user.userId, limit)
 
     return NextResponse.json({
       success: true,
@@ -41,4 +31,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

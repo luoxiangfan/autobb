@@ -27,9 +27,13 @@ const creativeTypeFns = vi.hoisted(() => ({
   normalizeCanonicalCreativeType: vi.fn(),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
 vi.mock('@/lib/queue', () => ({
   getQueueManager: queueFns.getQueueManager,
@@ -48,11 +52,15 @@ vi.mock('@/lib/keywords/offer-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
 }))
 
-vi.mock('@/lib/creatives', () => ({
-  deriveCanonicalCreativeType: creativeTypeFns.deriveCanonicalCreativeType,
-  mapCreativeTypeToBucketSlot: creativeTypeFns.mapCreativeTypeToBucketSlot,
-  normalizeCanonicalCreativeType: creativeTypeFns.normalizeCanonicalCreativeType,
-}))
+vi.mock('@/lib/creatives/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives/server')>()
+  return {
+    ...actual,
+    deriveCanonicalCreativeType: creativeTypeFns.deriveCanonicalCreativeType,
+    mapCreativeTypeToBucketSlot: creativeTypeFns.mapCreativeTypeToBucketSlot,
+    normalizeCanonicalCreativeType: creativeTypeFns.normalizeCanonicalCreativeType,
+  }
+})
 
 describe('POST /api/offers/batch/generate-creatives-queue', () => {
   beforeEach(() => {
@@ -108,7 +116,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('uses canonical available buckets per offer and skips quota-full offers without raw bucket aggregation', async () => {

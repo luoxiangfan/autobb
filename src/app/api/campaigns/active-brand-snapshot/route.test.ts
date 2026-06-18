@@ -10,9 +10,15 @@ const campaignsFns = vi.hoisted(() => ({
   queryActiveCampaigns: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/campaign', () => ({
   queryActiveCampaigns: campaignsFns.queryActiveCampaigns,

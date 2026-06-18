@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { parseLaunchScoreAnalysis, type LaunchScore } from '@/lib/launch-score/server'
 import { findAdCreativeById } from '@/lib/creatives/server'
 import type { AdCreative } from '@/lib/creatives/server'
@@ -84,19 +84,14 @@ function buildCreativeSummary(creative: AdCreative) {
   }
 }
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
     if (!userId) {
       return NextResponse.json({ error: '未授权访问' }, { status: 401 })
     }
 
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
@@ -281,4 +276,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     console.error('对比Creative评分失败:', error)
     return NextResponse.json({ error: error.message || '对比评分失败' }, { status: 500 })
   }
-}
+})

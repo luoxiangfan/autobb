@@ -2,22 +2,18 @@
  * POST /api/offers/extract — 创建新建 Offer 提取任务（入队 offer-extraction）
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { createOfferExtractionTaskForNewOffer } from '@/lib/offers/server'
 import { OfferExtractRequestError, parseNewOfferExtractRequest } from '@/lib/offers/server'
 
 export const maxDuration = 120
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   const parentRequestId = req.headers.get('x-request-id') || undefined
 
   try {
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     let rawBody: unknown
     try {
@@ -76,4 +72,4 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: 'Internal server error', message }, { status: 500 })
   }
-}
+})

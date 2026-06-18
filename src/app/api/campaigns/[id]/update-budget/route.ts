@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { updateGoogleAdsCampaignBudget } from '@/lib/google-ads/api/api'
 import {
@@ -32,16 +32,10 @@ function roundTo2(value: number): number {
  *
  * - :id 必须是 Google Ads campaign id（google_campaign_id）
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request, user, context) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = auth.user.userId
-    const campaignIdInPath = String(params.id || '').trim()
+    const userId = user.userId
+    const campaignIdInPath = String(context?.params?.id || '').trim()
     const googleCampaignId = normalizeGoogleCampaignId(campaignIdInPath)
     if (!googleCampaignId) {
       return NextResponse.json(
@@ -236,4 +230,4 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     console.error('更新Campaign预算失败:', error)
     return NextResponse.json({ error: error?.message || '更新Campaign预算失败' }, { status: 500 })
   }
-}
+})

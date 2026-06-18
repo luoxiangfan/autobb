@@ -20,8 +20,7 @@
  * - { type: 'error', data: { message, stage, details } }
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { createOfferExtractionTaskForNewOffer } from '@/lib/offers/server'
 import { parseJsonField } from '@/lib/db'
@@ -46,20 +45,12 @@ interface OfferTask {
   updated_at: string
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   const db = getDatabase()
   const parentRequestId = req.headers.get('x-request-id') || undefined
 
   try {
-    // 1. 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     let rawBody: unknown
     try {
@@ -283,4 +274,4 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
     })
   }
-}
+})

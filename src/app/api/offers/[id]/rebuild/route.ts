@@ -4,8 +4,8 @@
  * 重建 Offer：可选先合并保存表单字段，再入队 offer-extraction
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { deleteKeywordPool } from '@/lib/keywords/offer-pool'
 import {
   assertOfferAvailableForExtractionEnqueue,
@@ -18,10 +18,9 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 export const maxDuration = 120
 
-export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (req, user, context) => {
   const parentRequestId = req.headers.get('x-request-id') || undefined
-  const offerId = parsePositiveIntegerOfferId(params.id)
+  const offerId = parsePositiveIntegerOfferId(context?.params?.id)
   if (!offerId) {
     return NextResponse.json(
       { error: 'Invalid request', message: 'Invalid offer ID' },
@@ -30,11 +29,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
   }
 
   try {
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     let requestBody: unknown = {}
     try {
@@ -127,4 +122,4 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       { status: 500 }
     )
   }
-}
+})

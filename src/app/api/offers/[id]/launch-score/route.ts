@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers/server'
 import {
   findAdCreativeById,
@@ -25,19 +25,14 @@ import { parsePositiveIntegerId, parsePositiveIntegerOfferId } from '@/lib/offer
  *
  * Body 可选 campaignConfig、includePerformance、daysBack、avgOrderValue
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const body = await request.json()
     const hashCampaignConfig = parseLaunchScoreHashCampaignConfig(body.campaignConfig)
@@ -132,7 +127,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * GET /api/offers/:id/launch-score
@@ -143,10 +138,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
@@ -160,11 +154,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     const queryCreativeId = parsePositiveIntegerId(searchParams.get('creativeId'))
     const hashCampaignConfig = parseLaunchScoreHashCampaignConfigFromSearchParams(searchParams)
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const offer = await findOfferById(offerId, userId)
 
@@ -250,4 +240,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})

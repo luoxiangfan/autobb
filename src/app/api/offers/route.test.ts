@@ -17,12 +17,18 @@ const cacheFns = vi.hoisted(() => ({
   invalidateOfferCache: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
-  listOffers: offerFns.listOffers,
-}))
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    listOffers: offerFns.listOffers,
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
+  boolCondition: (column: string, value: boolean) =>
+    value ? `${column} = TRUE` : `${column} = FALSE`,
 }))
 
 vi.mock('@/lib/common/server', () => ({
@@ -32,10 +38,8 @@ vi.mock('@/lib/common/server', () => ({
   },
   generateCacheKey: cacheFns.generateCacheKey,
   invalidateOfferCache: cacheFns.invalidateOfferCache,
-}))
-
-vi.mock('@/lib/common/server', () => ({
-  withPerformanceMonitoring: (handler: any) => handler,
+  withPerformanceMonitoring: (handler: unknown) => handler,
+  toNumber: (value: unknown) => Number(value ?? 0),
 }))
 
 function createOfferRow() {

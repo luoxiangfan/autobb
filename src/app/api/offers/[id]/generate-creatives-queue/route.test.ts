@@ -30,9 +30,13 @@ const creativeTypeFns = vi.hoisted(() => ({
   normalizeCanonicalCreativeType: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
-  findOfferById: offerFns.findOfferById,
-}))
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    findOfferById: offerFns.findOfferById,
+  }
+})
 
 vi.mock('@/lib/queue', () => ({
   getQueueManager: queueFns.getQueueManager,
@@ -42,20 +46,28 @@ vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
-  validateGoogleAdsConfigForCreativeGeneration:
-    authFns.validateGoogleAdsConfigForCreativeGeneration,
-}))
+vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
+  return {
+    ...actual,
+    validateGoogleAdsConfigForCreativeGeneration:
+      authFns.validateGoogleAdsConfigForCreativeGeneration,
+  }
+})
 
 vi.mock('@/lib/keywords/offer-pool', () => ({
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
 }))
 
-vi.mock('@/lib/creatives', () => ({
-  deriveCanonicalCreativeType: creativeTypeFns.deriveCanonicalCreativeType,
-  mapCreativeTypeToBucketSlot: creativeTypeFns.mapCreativeTypeToBucketSlot,
-  normalizeCanonicalCreativeType: creativeTypeFns.normalizeCanonicalCreativeType,
-}))
+vi.mock('@/lib/creatives/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives/server')>()
+  return {
+    ...actual,
+    deriveCanonicalCreativeType: creativeTypeFns.deriveCanonicalCreativeType,
+    mapCreativeTypeToBucketSlot: creativeTypeFns.mapCreativeTypeToBucketSlot,
+    normalizeCanonicalCreativeType: creativeTypeFns.normalizeCanonicalCreativeType,
+  }
+})
 
 describe('POST /api/offers/:id/generate-creatives-queue', () => {
   beforeEach(() => {
@@ -114,7 +126,7 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    vi.clearAllMocks()
   })
 
   it('validates Google Ads config with offer-linked SA before enqueue', async () => {

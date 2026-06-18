@@ -23,9 +23,15 @@ const campaignsFns = vi.hoisted(() => ({
   queryActiveCampaigns: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
@@ -397,7 +403,7 @@ describe('POST /api/campaigns/publish AutoAds enforced', () => {
     expect(res.status).not.toBe(422)
     expect(data.action).not.toBe('CONFIRM_PAUSE_OLD_CAMPAIGNS')
     expect(warnSpy).toHaveBeenCalledWith(
-      '⚠️ 检测到品牌冲突（仅警告，不阻断发布）',
+      expect.stringContaining('品牌冲突'),
       expect.objectContaining({
         accountId: 33,
         currentOfferId: 11,

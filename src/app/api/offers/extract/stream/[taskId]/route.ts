@@ -15,8 +15,7 @@
  * - data: { type: 'error', error }
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 
@@ -35,20 +34,11 @@ interface OfferTask {
   updated_at: string
 }
 
-export async function GET(req: NextRequest, props: { params: Promise<{ taskId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (req, user, context) => {
   const db = getDatabase()
-  const { taskId } = params
+  const taskId = context?.params?.taskId
 
-  // 验证用户身份
-  const authResult = await verifyAuth(req)
-  if (!authResult.authenticated || !authResult.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized', message: '请先登录' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
-  const userIdNum = authResult.user.userId
+  const userIdNum = user.userId
 
   try {
     // 验证任务存在且属于当前用户
@@ -219,4 +209,4 @@ export async function GET(req: NextRequest, props: { params: Promise<{ taskId: s
       headers: { 'Content-Type': 'application/json' },
     })
   }
-}
+})

@@ -5,8 +5,7 @@
  * 返回taskId供前端轮询进度
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { findOfferById } from '@/lib/offers/server'
 import { getQueueManager } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
@@ -86,9 +85,8 @@ function createQueueErrorResponse(input: QueueErrorResponseInput): Response {
   )
 }
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
-  const offerId = parsePositiveIntegerOfferId(params.id)
+export const POST = withAuth(async (request, user, context) => {
+  const offerId = parsePositiveIntegerOfferId(context?.params?.id)
   if (!offerId) {
     return createQueueErrorResponse({
       status: 400,
@@ -101,11 +99,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   }
 
   // 验证用户身份
-  const authResult = await verifyAuth(request)
-  if (!authResult.authenticated || !authResult.user) {
-    return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-  }
-  const userId = authResult.user.userId
+  const userId = user.userId
   const parentRequestId = request.headers.get('x-request-id') || undefined
   if (!userId) {
     return createQueueErrorResponse({
@@ -409,4 +403,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   } finally {
     clearCreativeGenerationAuthCache(authCache)
   }
-}
+})

@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { GET } from '@/app/api/dashboard/summary/route'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
-}))
+const authUser = { userId: 7 }
 
 const cacheFns = vi.hoisted(() => ({
   get: vi.fn(),
@@ -23,7 +20,9 @@ const offerFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => handler(request, authUser)
+  },
 }))
 
 vi.mock('@/lib/common/server', () => ({
@@ -42,13 +41,11 @@ vi.mock('@/lib/offers', () => ({
   listOffers: offerFns.listOffers,
 }))
 
+import { GET } from '@/app/api/dashboard/summary/route'
+
 describe('GET /api/dashboard/summary', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 7 },
-    })
     cacheFns.generateCacheKey.mockReturnValue('dashboard-summary:user:7:test')
     cacheFns.get.mockReturnValue(null)
 

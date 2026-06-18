@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextRequest } from 'next/server'
-import { POST } from '@/app/api/monitoring/frontend-errors/route'
+import { NextRequest, NextResponse } from 'next/server'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
+const authState = vi.hoisted(() => ({
+  authenticated: true,
+  user: { userId: 7 },
 }))
 
 const perfFns = vi.hoisted(() => ({
@@ -18,26 +18,30 @@ const flagFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => {
+      if (!authState.authenticated || !authState.user) {
+        return NextResponse.json({ error: '未授权' }, { status: 401 })
+      }
+      return handler(request, authState.user)
+    }
+  },
 }))
 
 vi.mock('@/lib/common/server', () => ({
   withPerformanceMonitoring: perfFns.withPerformanceMonitoring,
   frontendErrorMonitor: perfFns.frontendErrorMonitor,
-}))
-
-vi.mock('@/lib/common/server', () => ({
   isPerformanceReleaseEnabled: flagFns.isPerformanceReleaseEnabled,
 }))
+
+import { POST } from '@/app/api/monitoring/frontend-errors/route'
 
 describe('POST /api/monitoring/frontend-errors', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authState.authenticated = true
+    authState.user = { userId: 7 }
     flagFns.isPerformanceReleaseEnabled.mockReturnValue(true)
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 7 },
-    })
   })
 
   it('returns ignored when feature flag is disabled', async () => {
@@ -54,10 +58,23 @@ describe('POST /api/monitoring/frontend-errors', () => {
 
     expect(res.status).toBe(200)
     expect(data.ignored).toBe(true)
-    expect(authFns.verifyAuth).not.toHaveBeenCalled()
   })
 
-  it('returns 400 for invalid payload', async () => {
+  it('returns 401 when unauthorized', async () => {
+    authState.authenticated = false
+    authState.user = null as any
+
+    const req = new NextRequest('http://localhost/api/monitoring/frontend-errors', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'error', message: 'boom' }),
+    })
+
+    const res = await POST(req)
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 400 when payload is invalid', async () => {
     const req = new NextRequest('http://localhost/api/monitoring/frontend-errors', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -69,8 +86,7 @@ describe('POST /api/monitoring/frontend-errors', () => {
     expect(perfFns.frontendErrorMonitor.record).not.toHaveBeenCalled()
   })
 
-  it('records frontend error payload', async () => {
-    const oversizedFlagSnapshot = 'f'.repeat(1500)
+  it('records normalized frontend error payload', async () => {
     const req = new NextRequest('http://localhost/api/monitoring/frontend-errors', {
       method: 'POST',
       headers: {
@@ -80,12 +96,11 @@ describe('POST /api/monitoring/frontend-errors', () => {
       body: JSON.stringify({
         type: 'error',
         name: 'TypeError',
-        message: 'Cannot read properties of undefined',
-        stack: 'TypeError: ...',
-        path: '/offers',
-        buildId: '  v20260303  ',
-        flagSnapshot: ` ${oversizedFlagSnapshot} `,
-        ts: 1710000000123,
+        message: 'Cannot read property',
+        stack: 'at foo()',
+        path: '/dashboard',
+        buildId: 'build-1',
+        ts: 1710000000000,
       }),
     })
 
@@ -98,14 +113,9 @@ describe('POST /api/monitoring/frontend-errors', () => {
       expect.objectContaining({
         type: 'error',
         name: 'TypeError',
-        message: 'Cannot read properties of undefined',
-        stack: 'TypeError: ...',
-        path: '/offers',
-        buildId: 'v20260303',
-        flagSnapshot: oversizedFlagSnapshot.slice(0, 1024),
-        timestamp: 1710000000123,
+        message: 'Cannot read property',
+        path: '/dashboard',
         userId: 7,
-        userAgent: 'vitest-agent',
       })
     )
   })

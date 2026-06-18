@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { queryActiveCampaigns } from '@/lib/campaign/server'
 import { parseCampaignName } from '@/lib/campaign/server'
 
@@ -52,13 +52,8 @@ function buildSnapshotRows(params: {
   })
 }
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
     const accountId = parsePositiveInteger(searchParams.get('accountId'))
 
@@ -66,7 +61,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '缺少有效的 accountId' }, { status: 400 })
     }
 
-    const userId = auth.user.userId
+    const userId = user.userId
     const snapshot = await queryActiveCampaigns(0, accountId, userId)
 
     const rows: SnapshotRow[] = [
@@ -112,4 +107,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

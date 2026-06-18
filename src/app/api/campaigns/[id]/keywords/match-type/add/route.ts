@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { boolCondition, boolParam, getInsertedId } from '@/lib/db'
 import {
@@ -427,16 +427,10 @@ async function pauseExistingKeywords(params: {
   }
 }
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-    const campaignId = Number(params.id)
+    const userId = user.userId
+    const campaignId = Number(context?.params?.id)
     if (!Number.isFinite(campaignId)) {
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
@@ -766,4 +760,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || '新增关键词失败' }, { status: 500 })
   }
-}
+})

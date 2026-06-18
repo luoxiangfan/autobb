@@ -25,9 +25,13 @@ const authFns = vi.hoisted(() => ({
   loadKeywordPoolExpandCredentialsForOffer: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
-  findOfferById: offerFns.findOfferById,
-}))
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    findOfferById: offerFns.findOfferById,
+  }
+})
 
 vi.mock('@/lib/keywords/offer-pool', () => ({
   getKeywordPoolByOfferId: keywordPoolFns.getKeywordPoolByOfferId,

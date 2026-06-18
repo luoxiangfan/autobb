@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { getDatabase } from '@/lib/db'
@@ -49,16 +49,11 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
  * - :id 为本地 campaigns.id（不是 google_campaign_id）
  * - body: { status: 'PAUSED' | 'ENABLED' }
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request: NextRequest, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
-    const campaignId = Number(params.id)
+    const campaignId = Number(context?.params?.id)
     if (!Number.isFinite(campaignId)) {
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
@@ -343,4 +338,4 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     console.error('更新广告系列状态失败:', error)
     return NextResponse.json({ error: error?.message || '更新广告系列状态失败' }, { status: 500 })
   }
-}
+})

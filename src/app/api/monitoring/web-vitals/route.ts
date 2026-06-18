@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { withPerformanceMonitoring, webVitalsMonitor } from '@/lib/common/server'
 import { isPerformanceReleaseEnabled } from '@/lib/common/server'
 
@@ -51,16 +51,7 @@ function normalizeFlagSnapshot(value: unknown): string | undefined {
   return trimmed ? trimmed.slice(0, 1024) : undefined
 }
 
-const postHandler = async (request: NextRequest) => {
-  if (!isPerformanceReleaseEnabled('webVitalsMonitoring')) {
-    return NextResponse.json({ success: true, ignored: true })
-  }
-
-  const authResult = await verifyAuth(request)
-  if (!authResult.authenticated || !authResult.user) {
-    return NextResponse.json({ error: '未授权' }, { status: 401 })
-  }
-
+const authenticatedPostHandler = withAuth(async (request: NextRequest, user) => {
   const body = (await request.json().catch(() => ({}))) as WebVitalPayload
   const name = String(body.name || '')
     .trim()
@@ -76,7 +67,7 @@ const postHandler = async (request: NextRequest) => {
 
   const delta = toFiniteNumber(body.delta)
   const timestamp = toFiniteNumber(body.ts ?? body.timestamp)
-  const userId = Number(authResult.user.userId)
+  const userId = Number(user.userId)
 
   webVitalsMonitor.record({
     id: typeof body.id === 'string' ? body.id.slice(0, 64) : undefined,
@@ -95,8 +86,19 @@ const postHandler = async (request: NextRequest) => {
   })
 
   return NextResponse.json({ success: true })
+})
+
+const postHandler = async (request: NextRequest) => {
+  if (!isPerformanceReleaseEnabled('webVitalsMonitoring')) {
+    return NextResponse.json({ success: true, ignored: true })
+  }
+
+  return authenticatedPostHandler(request)
 }
 
-export const POST = withPerformanceMonitoring<any>(postHandler, {
-  path: '/api/monitoring/web-vitals',
-})
+export const POST = withPerformanceMonitoring(
+  postHandler as (request: NextRequest) => Promise<NextResponse>,
+  {
+    path: '/api/monitoring/web-vitals',
+  }
+)

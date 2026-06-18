@@ -45,21 +45,7 @@ vi.mock('@/lib/offers', async (importOriginal) => {
       extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
     assertOfferAvailableForExtractionEnqueue:
       extractionFns.assertOfferAvailableForExtractionEnqueue,
-  }
-})
-
-vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
-  return {
-    ...actual,
     applyOfferUpdateFromBody: updateFns.applyOfferUpdateFromBody,
-  }
-})
-
-vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
-  return {
-    ...actual,
     updateOfferScrapeStatus: offerFns.updateOfferScrapeStatus,
   }
 })
@@ -68,9 +54,13 @@ vi.mock('@/lib/keywords/offer-pool', () => ({
   deleteKeywordPool: keywordFns.deleteKeywordPool,
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
 vi.mock('@/lib/queue', () => ({
   getQueueManager: () => ({

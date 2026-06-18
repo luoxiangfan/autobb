@@ -48,9 +48,15 @@ const oauthAccountsAuthFns = vi.hoisted(() => ({
   prepareGoogleAdsApiCallForLinkedAccount: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
@@ -97,14 +103,15 @@ vi.mock('@/lib/google-ads/api/tracker', () => ({
   },
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  invalidateOfferCache: cacheFns.invalidateOfferCache,
-  invalidateDashboardCache: cacheFns.invalidateDashboardCache,
-}))
-
-vi.mock('@/lib/common/server', () => ({
-  getRedisClient: redisFns.getRedisClient,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    invalidateOfferCache: cacheFns.invalidateOfferCache,
+    invalidateDashboardCache: cacheFns.invalidateDashboardCache,
+    getRedisClient: redisFns.getRedisClient,
+  }
+})
 
 describe('PUT /api/campaigns/:id/update-cpc', () => {
   beforeEach(() => {

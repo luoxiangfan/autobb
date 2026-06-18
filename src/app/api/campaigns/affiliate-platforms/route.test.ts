@@ -1,22 +1,31 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
-vi.mock('@/lib/auth', () => ({
+const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
 }))
+
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(),
 }))
 
-import { verifyAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { GET } from './route'
 
 describe('GET /api/campaigns/affiliate-platforms', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(verifyAuth).mockResolvedValue({
+    vi.mocked(authFns.verifyAuth).mockResolvedValue({
       authenticated: true,
       user: { userId: 7 },
     } as any)

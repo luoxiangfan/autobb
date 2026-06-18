@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { updateCampaign } from '@/lib/campaign/server'
 import { invalidateDashboardCache } from '@/lib/common/server'
@@ -7,16 +7,13 @@ import { invalidateDashboardCache } from '@/lib/common/server'
  * PUT /api/campaigns/:id/custom-name
  * 更新广告系列自定义名称
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request: NextRequest, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '缺少 id 参数' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const body = await request.json()
     const { customName } = body
@@ -55,4 +52,4 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})

@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
-import { GET } from '@/app/api/dashboard/campaigns/route'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
-}))
+const authUser = { userId: 7 }
 
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
@@ -13,24 +10,28 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => handler(request, authUser)
+  },
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  withPerformanceMonitoring: (handler: any) => handler,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    withPerformanceMonitoring: (handler: any) => handler,
+  }
+})
+
+import { GET } from '@/app/api/dashboard/campaigns/route'
 
 describe('GET /api/dashboard/campaigns search operator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 7 },
-    })
     dbFns.getDatabase.mockResolvedValue({
       query: dbFns.query,
       queryOne: dbFns.queryOne,

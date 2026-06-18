@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers/server'
 import { findEnabledGoogleAdsAccounts } from '@/lib/google-ads/accounts/accounts'
 import {
@@ -29,19 +29,14 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  * POST /api/offers/:id/keyword-ideas
  * 获取关键词建议
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
     const numericUserId = userId
 
     const body = await request.json()
@@ -424,4 +419,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})

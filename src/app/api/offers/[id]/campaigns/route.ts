@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getCustomerWithCredentials } from '@/lib/google-ads/api/api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
@@ -112,18 +112,13 @@ function logOffersCampaignsGaqlBestEffortFailure(
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   let oauthPrepareCache: GoogleAdsLinkedAccountPrepareCache | undefined
   try {
-    const { id } = params
+    const id = context?.params?.id
     const requestId = request.headers.get('x-request-id') || undefined
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const db = await getDatabase()
     const numericUserId = userId
@@ -726,4 +721,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       clearGoogleAdsLinkedAccountPrepareCache(oauthPrepareCache)
     }
   }
-}
+})

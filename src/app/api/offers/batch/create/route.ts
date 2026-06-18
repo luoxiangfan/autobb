@@ -25,8 +25,8 @@
  * - 缺少必填参数的行会被自动跳过
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 import type { BatchCreationTaskData } from '@/lib/queue/executors/batch-creation-executor'
@@ -44,7 +44,7 @@ import Papa from 'papaparse'
 
 export const maxDuration = 60
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, user) => {
   const db = getDatabase()
   const queue = getQueueManager()
   const parentRequestId = req.headers.get('x-request-id') || undefined
@@ -54,11 +54,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // 1. 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     // 2. 解析FormData
     const formData = await req.formData()
@@ -481,4 +477,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

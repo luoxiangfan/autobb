@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaign/server'
 import { getDatabase } from '@/lib/db'
@@ -32,16 +32,11 @@ function normalizeCampaignName(value: unknown): string | null {
  * PUT /api/campaigns/:id/campaign-name
  * 更新广告系列名称（本地 + 已发布时同步 Google Ads）
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request: NextRequest, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
-    const campaignId = Number(params.id)
+    const campaignId = Number(context?.params?.id)
     if (!Number.isFinite(campaignId)) {
       return NextResponse.json({ error: '无效的 campaignId' }, { status: 400 })
     }
@@ -217,4 +212,4 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     const message = error instanceof Error ? error.message : '更新广告系列名称失败'
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 
@@ -48,15 +48,9 @@ function buildYmdDateRange(startYmd: string, endYmd: string): string[] {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
@@ -287,4 +281,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

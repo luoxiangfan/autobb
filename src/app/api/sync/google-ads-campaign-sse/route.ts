@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getGoogleAdsCampaignSyncPipelineSnapshotForUser } from '@/lib/google-ads/campaign/sync-pipeline-status'
 
 const POLL_MS = 2000
@@ -8,16 +8,10 @@ const STREAM_MAX_MS = 20 * 60 * 1000
 /**
  * GET /api/sync/google-ads-campaign-sse
  * SSE：轮询队列 + sync_logs，在 Google Ads 广告系列同步管线从「忙」→「闲」时推送 `pipeline_idle`。
- * 需登录 Cookie；与 status-v2 数据源一致。
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
@@ -111,7 +105,7 @@ export async function GET(request: NextRequest) {
     console.error('[google-ads-campaign-sse] error:', error)
     return NextResponse.json({ error: error.message || 'SSE 初始化失败' }, { status: 500 })
   }
-}
+})
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

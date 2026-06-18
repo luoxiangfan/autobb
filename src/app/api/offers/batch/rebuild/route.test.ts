@@ -29,13 +29,6 @@ vi.mock('@/lib/offers', async (importOriginal) => {
     ...actual,
     findOfferById: offerFns.findOfferById,
     updateOfferScrapeStatus: offerFns.updateOfferScrapeStatus,
-  }
-})
-
-vi.mock('@/lib/offers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
-  return {
-    ...actual,
     enqueueExistingOfferExtractionAndMarkQueued:
       extractionFns.enqueueExistingOfferExtractionAndMarkQueued,
   }

@@ -1,27 +1,22 @@
 // GET /api/offers/[id]/click-farm-task - 查询 Offer 的补点击任务
 // 返回该 Offer 关联的补点击任务信息（如果有）
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseClickFarmTask } from '@/lib/click-farm'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
     if (!userId) {
       return NextResponse.json({ error: 'unauthorized', message: '未登录' }, { status: 401 })
     }
 
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json(
         { error: 'invalid_params', message: '无效的 Offer ID' },
@@ -115,4 +110,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})

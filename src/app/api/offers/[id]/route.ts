@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findOfferById, deleteOffer } from '@/lib/offers/server'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { compactCategoryLabel, deriveCategoryFromScrapedData } from '@/lib/offers/server'
@@ -231,19 +231,14 @@ function buildStoreDescriptionFromScrapedData(scrapedData: any): {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const offer = await findOfferById(offerId, userId)
 
@@ -375,25 +370,20 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * PUT /api/offers/:id
  * 更新Offer
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const userIdNum = userId
     const body = await request.json()
@@ -423,7 +413,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/offers/:id
@@ -432,19 +422,14 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
  * Query参数：
  * - autoUnlink: boolean (可选) - 是否自动解除关联，默认false
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 获取查询参数
     const { searchParams } = new URL(request.url)
@@ -501,4 +486,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       { status: 500 }
     )
   }
-}
+})

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import {
   getGoogleAdsCampaignSyncQueueCountsForUser,
@@ -10,26 +10,15 @@ import {
  * GET /api/sync/status-v2
  * 检查是否有正在进行的同步任务，并附带 google-ads-campaign-sync 队列深度（供异步同步轮询）
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    // 验证用户登录
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
     const db = await getDatabase()
-    const userId = authResult.user.userId
+    const userId = user.userId
 
-    // 🔧 检查是否有正在进行的同步任务（status = 'running'）
     const runningCheck = "status = 'running'"
-
-    // 查询最近 30 分钟内开始的运行中任务
     const timeThreshold = "(CURRENT_TIMESTAMP - INTERVAL '30 minutes')"
-
     const runningSecondsSql =
       'CAST(EXTRACT(EPOCH FROM (NOW() - started_at::timestamptz)) AS INTEGER)'
-
     const startedAtField = 'started_at::timestamptz'
 
     const runningSync = (await db.queryOne(
@@ -52,7 +41,6 @@ export async function GET(request: NextRequest) {
       [userId]
     )) as any
 
-    // 查询最近一次同步完成的时间
     const lastCompletedSync = (await db.queryOne(
       `
       SELECT 
@@ -100,4 +88,4 @@ export async function GET(request: NextRequest) {
     console.error('检查同步状态失败:', error)
     return NextResponse.json({ error: error.message || '服务器错误' }, { status: 500 })
   }
-}
+})

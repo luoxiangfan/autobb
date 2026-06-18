@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
@@ -9,15 +9,10 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const userIdNum = user.userId
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
@@ -73,4 +68,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})

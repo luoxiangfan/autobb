@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { verifyAuth, withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import {
   clearUserSettings,
@@ -459,18 +459,9 @@ const AFFILIATE_SYNC_DELETE_KEYS = [
  * DELETE /api/settings
  * 删除（清空）指定类型的用户级配置
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request: NextRequest, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-    const userIdNum = userId ? userId : undefined
-    if (!userIdNum) {
-      return NextResponse.json({ error: '删除配置需要登录' }, { status: 401 })
-    }
-
+    const userIdNum = user.userId
     const body = await request.json()
     const parsed = deleteSettingsSchema.safeParse(body)
     if (!parsed.success) {
@@ -515,4 +506,4 @@ export async function DELETE(request: NextRequest) {
     console.error('删除配置失败:', error)
     return NextResponse.json({ error: error.message || '删除配置失败' }, { status: 500 })
   }
-}
+})

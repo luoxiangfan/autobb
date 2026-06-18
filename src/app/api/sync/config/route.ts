@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
 
@@ -32,15 +32,9 @@ const DEFAULT_SYNC_INTERVAL_HOURS = 4
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    // 1. Validate user
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const db = await getDatabase()
 
     // 2. Get sync config (create default if not exists)
@@ -116,22 +110,16 @@ export async function GET(request: NextRequest) {
     console.error('Get sync config error:', error)
     return NextResponse.json({ error: error.message || '获取同步配置失败' }, { status: 500 })
   }
-}
+})
 
 /**
  * PUT /api/sync/config
  *
  * Update user's sync configuration
  */
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request: NextRequest, user) => {
   try {
-    // 1. Validate user
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const body = await request.json()
 
     // 2. Validate input - 🔧 修复(2025-12-11): 接受 camelCase 字段
@@ -281,4 +269,4 @@ export async function PUT(request: NextRequest) {
     console.error('Update sync config error:', error)
     return NextResponse.json({ error: error.message || '更新同步配置失败' }, { status: 500 })
   }
-}
+})

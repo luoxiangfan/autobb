@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextRequest } from 'next/server'
-import { GET } from '@/app/api/dashboard/kpis/route'
+import { NextRequest, NextResponse } from 'next/server'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
+const authState = vi.hoisted(() => ({
+  authenticated: true,
+  user: { userId: 1, role: 'user' as string | undefined },
 }))
 
 const dbFns = vi.hoisted(() => ({
@@ -17,32 +17,40 @@ const cacheFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => {
+      if (!authState.authenticated || !authState.user) {
+        return NextResponse.json({ error: '未授权' }, { status: 401 })
+      }
+      return handler(request, authState.user)
+    }
+  },
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  apiCache: {
-    getOrSet: cacheFns.getOrSet,
-    set: cacheFns.set,
-  },
-  generateCacheKey: cacheFns.generateCacheKey,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    apiCache: {
+      getOrSet: cacheFns.getOrSet,
+      set: cacheFns.set,
+    },
+    generateCacheKey: cacheFns.generateCacheKey,
+    withPerformanceMonitoring: (handler: any) => handler,
+  }
+})
 
-vi.mock('@/lib/common/server', () => ({
-  withPerformanceMonitoring: (handler: any) => handler,
-}))
+import { GET } from '@/app/api/dashboard/kpis/route'
 
 describe('GET /api/dashboard/kpis', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 1 },
-    })
+    authState.authenticated = true
+    authState.user = { userId: 1, role: 'user' }
     cacheFns.generateCacheKey.mockReturnValue('kpis:test')
     cacheFns.getOrSet.mockResolvedValue({ success: true, data: { source: 'cache' } })
   })
@@ -52,7 +60,8 @@ describe('GET /api/dashboard/kpis', () => {
   })
 
   it('returns 401 when unauthorized', async () => {
-    authFns.verifyAuth.mockResolvedValue({ authenticated: false, user: null })
+    authState.authenticated = false
+    authState.user = null as any
 
     const req = new NextRequest('http://localhost/api/dashboard/kpis?days=7')
     const res = await GET(req)
@@ -95,10 +104,7 @@ describe('GET /api/dashboard/kpis', () => {
   it('excludes unattributed failures for admin commission totals', async () => {
     cacheFns.getOrSet.mockReset()
 
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 1, role: 'admin' },
-    })
+    authState.user = { userId: 1, role: 'admin' }
 
     const query = vi.fn(async (sql: string) => {
       if (sql.includes('SELECT DISTINCT currency') && sql.includes('FROM campaign_performance')) {

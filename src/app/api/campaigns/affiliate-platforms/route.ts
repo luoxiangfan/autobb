@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { resolveAffiliatePlatformForLink } from '@/lib/keywords/server'
 import { campaignAffiliateAlignedFilterSql } from '@/lib/campaign/server'
@@ -8,14 +8,9 @@ import { campaignAffiliateAlignedFilterSql } from '@/lib/campaign/server'
  * GET /api/campaigns/affiliate-platforms
  * 获取联盟平台列表（从 system_settings category=affiliate_sync 中提取）
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
     const db = await getDatabase()
 
     const settingsRows = await db.query(
@@ -81,7 +76,7 @@ export async function GET(request: NextRequest) {
     console.error('获取联盟平台列表失败:', error)
     return NextResponse.json({ error: error.message || '获取联盟平台列表失败' }, { status: 500 })
   }
-}
+})
 
 /**
  * 从 system_settings key 中提取联盟平台名称

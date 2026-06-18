@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign } from '@/lib/campaign/server'
 import { findGoogleAdsAccountById } from '@/lib/google-ads/accounts/accounts'
@@ -14,16 +14,13 @@ import { invalidateOfferCache } from '@/lib/common/server'
  * POST /api/campaigns/:id/sync
  * 同步广告系列到Google Ads
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (_request: NextRequest, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '缺少 id 参数' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const campaign = await findCampaignById(parseInt(id, 10), userId)
     if (!campaign) {
@@ -115,4 +112,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     return NextResponse.json({ error: error.message || '同步广告系列失败' }, { status: 500 })
   }
-}
+})

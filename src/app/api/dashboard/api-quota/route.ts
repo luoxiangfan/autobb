@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDailyUsageStats, getUsageTrend, checkQuotaLimit } from '@/lib/google-ads/api/tracker'
 import { hasConfiguredGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
@@ -40,13 +40,9 @@ function formatLocalYmd(date: Date): string {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '7', 10)
@@ -113,7 +109,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * 根据使用情况生成建议

@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 
 import {
@@ -65,15 +65,10 @@ function toPositiveNumberOrNull(value: unknown): number | null {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request: NextRequest, user, context) => {
   try {
     const requestId = request.headers.get('x-request-id') || undefined
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const numericUserId = authResult.user.userId
+    const numericUserId = user.userId
 
     const executeOAuthGaqlWithTracking = async (
       customer: any,
@@ -108,7 +103,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       }
     }
 
-    const campaignIdNum = Number(params.id)
+    const campaignIdNum = Number(context?.params?.id)
     if (!Number.isFinite(campaignIdNum)) {
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
@@ -551,5 +546,5 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 const CPC_HISTORY_CACHE_TTL = 900

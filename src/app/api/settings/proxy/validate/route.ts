@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { validateProxyUrl, getCountryName } from '@/lib/scraping/proxy/validate-url'
 import { fetchProxyIp } from '@/lib/scraping/proxy/fetch-proxy-ip'
 
@@ -7,12 +7,8 @@ import { fetchProxyIp } from '@/lib/scraping/proxy/fetch-proxy-ip'
  * POST /api/settings/proxy/validate
  * 验证Proxy URL格式并测试连接
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: NextRequest) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
     const body = await request.json()
     const { proxy_url } = body
 
@@ -20,7 +16,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'proxy_url参数不能为空' }, { status: 400 })
     }
 
-    // Step 1: 格式验证
     const validation = validateProxyUrl(proxy_url)
 
     if (!validation.isValid) {
@@ -33,7 +28,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 2: 实际测试（获取代理IP）
     try {
       const proxyIp = await fetchProxyIp(proxy_url)
 
@@ -66,4 +60,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

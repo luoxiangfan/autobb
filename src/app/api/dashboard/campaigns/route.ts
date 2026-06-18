@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
@@ -39,20 +39,10 @@ interface CampaignPerformance {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  return getHandler(request)
-}
-
-const getHandler = withPerformanceMonitoring<any>(
-  async (request: NextRequest) => {
+const getHandler = withPerformanceMonitoring(
+  withAuth(async (request: NextRequest, user) => {
     try {
-      // 验证用户身份
-      const authResult = await verifyAuth(request)
-      if (!authResult.authenticated || !authResult.user) {
-        return NextResponse.json({ error: '未授权' }, { status: 401 })
-      }
-
-      const userId = authResult.user.userId
+      const userId = user.userId
 
       // 获取查询参数
       const { searchParams } = new URL(request.url)
@@ -370,9 +360,11 @@ const getHandler = withPerformanceMonitoring<any>(
         { status: 500 }
       )
     }
-  },
+  }) as (request: NextRequest) => Promise<NextResponse>,
   { path: '/api/dashboard/campaigns' }
 )
+
+export const GET = getHandler
 
 /**
  * 格式化日期为 YYYY-MM-DD

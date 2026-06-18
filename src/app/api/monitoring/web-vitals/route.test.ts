@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextRequest } from 'next/server'
-import { POST } from '@/app/api/monitoring/web-vitals/route'
+import { NextRequest, NextResponse } from 'next/server'
 
-const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(),
+const authState = vi.hoisted(() => ({
+  authenticated: true,
+  user: { userId: 7 },
 }))
 
 const perfFns = vi.hoisted(() => ({
@@ -18,26 +18,30 @@ const flagFns = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => {
+      if (!authState.authenticated || !authState.user) {
+        return NextResponse.json({ error: '未授权' }, { status: 401 })
+      }
+      return handler(request, authState.user)
+    }
+  },
 }))
 
 vi.mock('@/lib/common/server', () => ({
   withPerformanceMonitoring: perfFns.withPerformanceMonitoring,
   webVitalsMonitor: perfFns.webVitalsMonitor,
-}))
-
-vi.mock('@/lib/common/server', () => ({
   isPerformanceReleaseEnabled: flagFns.isPerformanceReleaseEnabled,
 }))
+
+import { POST } from '@/app/api/monitoring/web-vitals/route'
 
 describe('POST /api/monitoring/web-vitals', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authState.authenticated = true
+    authState.user = { userId: 7 }
     flagFns.isPerformanceReleaseEnabled.mockReturnValue(true)
-    authFns.verifyAuth.mockResolvedValue({
-      authenticated: true,
-      user: { userId: 7 },
-    })
   })
 
   it('returns ignored when feature flag is disabled', async () => {
@@ -54,14 +58,11 @@ describe('POST /api/monitoring/web-vitals', () => {
 
     expect(res.status).toBe(200)
     expect(data.ignored).toBe(true)
-    expect(authFns.verifyAuth).not.toHaveBeenCalled()
   })
 
   it('returns 401 when unauthorized', async () => {
-    authFns.verifyAuth.mockResolvedValueOnce({
-      authenticated: false,
-      user: null,
-    })
+    authState.authenticated = false
+    authState.user = null as any
 
     const req = new NextRequest('http://localhost/api/monitoring/web-vitals', {
       method: 'POST',

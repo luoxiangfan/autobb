@@ -1,18 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { NextRequest } from 'next/server'
-import { GET } from '@/app/api/dashboard/ai-token-cost/route'
+import { NextRequest, NextResponse } from 'next/server'
+
+const authState = vi.hoisted(() => ({
+  authenticated: true,
+  user: { userId: 1 },
+}))
 
 const dbFns = vi.hoisted(() => ({
   getDatabase: vi.fn(),
+}))
+
+vi.mock('@/lib/auth', () => ({
+  withAuth: (handler: any) => {
+    return async (request: NextRequest) => {
+      if (!authState.authenticated || !authState.user) {
+        return NextResponse.json({ error: '未授权' }, { status: 401 })
+      }
+      return handler(request, authState.user)
+    }
+  },
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
+import { GET } from '@/app/api/dashboard/ai-token-cost/route'
+
 describe('GET /api/dashboard/ai-token-cost', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authState.authenticated = true
+    authState.user = { userId: 1 }
     vi.useFakeTimers()
   })
 
@@ -21,7 +40,10 @@ describe('GET /api/dashboard/ai-token-cost', () => {
     vi.unstubAllEnvs()
   })
 
-  it('returns 401 when x-user-id is missing', async () => {
+  it('returns 401 when unauthorized', async () => {
+    authState.authenticated = false
+    authState.user = null as any
+
     const req = new NextRequest('http://localhost/api/dashboard/ai-token-cost?days=7')
     const res = await GET(req)
 
@@ -83,11 +105,7 @@ describe('GET /api/dashboard/ai-token-cost', () => {
       query,
     })
 
-    const req = new NextRequest('http://localhost/api/dashboard/ai-token-cost?days=7', {
-      headers: new Headers({
-        'x-user-id': '1',
-      }),
-    })
+    const req = new NextRequest('http://localhost/api/dashboard/ai-token-cost?days=7')
     const res = await GET(req)
     const payload = await res.json()
 

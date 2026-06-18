@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { DELETE } from '@/app/api/offers/[id]/route'
 
-vi.mock('@/lib/offers', () => ({
-  deleteOffer: vi.fn(async () => ({ success: true, message: 'ok' })),
-}))
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    deleteOffer: vi.fn(async () => ({ success: true, message: 'ok' })),
+  }
+})
 
 vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: vi.fn(),

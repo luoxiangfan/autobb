@@ -10,13 +10,21 @@ const adCreativeFns = vi.hoisted(() => ({
   findAdCreativesByOfferId: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
-  findOfferById: offerFns.findOfferById,
-}))
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    findOfferById: offerFns.findOfferById,
+  }
+})
 
-vi.mock('@/lib/creatives', () => ({
-  findAdCreativesByOfferId: adCreativeFns.findAdCreativesByOfferId,
-}))
+vi.mock('@/lib/creatives/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives/server')>()
+  return {
+    ...actual,
+    findAdCreativesByOfferId: adCreativeFns.findAdCreativesByOfferId,
+  }
+})
 
 describe('GET /api/offers/:id/creatives', () => {
   beforeEach(() => {

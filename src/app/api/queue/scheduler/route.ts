@@ -4,8 +4,8 @@
  * POST /api/queue/scheduler - 手动触发调度器检查
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { triggerAllUrlSwapTasks } from '@/lib/url-swap/url-swap-scheduler'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
@@ -18,54 +18,47 @@ import { getQueueManager } from '@/lib/queue'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+export const GET = withAuth(
+  async () => {
+    try {
+      const db = await getDatabase()
+
+      // 检查所有调度器的健康状态
+      const [
+        clickFarmHealth,
+        urlSwapHealth,
+        dataSyncHealth,
+        affiliateSyncHealth,
+        zombieCleanupHealth,
+        openclawStrategyHealth,
+      ] = await Promise.all([
+        checkClickFarmSchedulerHealth(db),
+        checkUrlSwapSchedulerHealth(db),
+        checkDataSyncSchedulerHealth(db),
+        checkAffiliateSyncSchedulerHealth(db),
+        checkZombieCleanupSchedulerHealth(db),
+        checkOpenclawStrategySchedulerHealth(db),
+      ])
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          clickFarmScheduler: clickFarmHealth,
+          urlSwapScheduler: urlSwapHealth,
+          dataSyncScheduler: dataSyncHealth,
+          affiliateSyncScheduler: affiliateSyncHealth,
+          zombieCleanupScheduler: zombieCleanupHealth,
+          openclawStrategyScheduler: openclawStrategyHealth,
+          note: '调度器运行在独立的 scheduler 进程中，此处显示的是通过任务执行情况推断的健康状态',
+        },
+      })
+    } catch (error: any) {
+      console.error('[Scheduler API] 获取调度器状态失败:', error)
+      return NextResponse.json({ error: error.message || '获取调度器状态失败' }, { status: 500 })
     }
-
-    const isAdmin = authResult.user.role === 'admin'
-    if (!isAdmin) {
-      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
-    }
-
-    const db = await getDatabase()
-
-    // 检查所有调度器的健康状态
-    const [
-      clickFarmHealth,
-      urlSwapHealth,
-      dataSyncHealth,
-      affiliateSyncHealth,
-      zombieCleanupHealth,
-      openclawStrategyHealth,
-    ] = await Promise.all([
-      checkClickFarmSchedulerHealth(db),
-      checkUrlSwapSchedulerHealth(db),
-      checkDataSyncSchedulerHealth(db),
-      checkAffiliateSyncSchedulerHealth(db),
-      checkZombieCleanupSchedulerHealth(db),
-      checkOpenclawStrategySchedulerHealth(db),
-    ])
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        clickFarmScheduler: clickFarmHealth,
-        urlSwapScheduler: urlSwapHealth,
-        dataSyncScheduler: dataSyncHealth,
-        affiliateSyncScheduler: affiliateSyncHealth,
-        zombieCleanupScheduler: zombieCleanupHealth,
-        openclawStrategyScheduler: openclawStrategyHealth,
-        note: '调度器运行在独立的 scheduler 进程中，此处显示的是通过任务执行情况推断的健康状态',
-      },
-    })
-  } catch (error: any) {
-    console.error('[Scheduler API] 获取调度器状态失败:', error)
-    return NextResponse.json({ error: error.message || '获取调度器状态失败' }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)
 
 /**
  * 检查补点击调度器健康状态
@@ -382,33 +375,26 @@ async function checkOpenclawStrategySchedulerHealth(db: Awaited<ReturnType<typeo
 /**
  * POST - 手动触发调度器检查
  */
-export async function POST(request: NextRequest) {
-  try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
+export const POST = withAuth(
+  async () => {
+    try {
+      console.log('[Scheduler API] 手动触发URL Swap调度器检查...')
+      const result = await triggerAllUrlSwapTasks()
+
+      return NextResponse.json({
+        success: true,
+        message: '调度器检查完成',
+        data: {
+          processed: result.processed,
+          executed: result.executed,
+          skipped: result.skipped,
+          errors: result.errors,
+        },
+      })
+    } catch (error: any) {
+      console.error('[Scheduler API] 手动触发调度器失败:', error)
+      return NextResponse.json({ error: error.message || '手动触发调度器失败' }, { status: 500 })
     }
-
-    const isAdmin = authResult.user.role === 'admin'
-    if (!isAdmin) {
-      return NextResponse.json({ error: '需要管理员权限' }, { status: 403 })
-    }
-
-    console.log('[Scheduler API] 手动触发URL Swap调度器检查...')
-    const result = await triggerAllUrlSwapTasks()
-
-    return NextResponse.json({
-      success: true,
-      message: '调度器检查完成',
-      data: {
-        processed: result.processed,
-        executed: result.executed,
-        skipped: result.skipped,
-        errors: result.errors,
-      },
-    })
-  } catch (error: any) {
-    console.error('[Scheduler API] 手动触发调度器失败:', error)
-    return NextResponse.json({ error: error.message || '手动触发调度器失败' }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)

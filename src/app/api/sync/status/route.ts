@@ -1,26 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { dataSyncService } from '@/lib/campaign/server'
 
-// 强制动态渲染（使用了request.cookies）
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/sync/status
  * 获取当前用户的数据同步状态
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (_request, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-
-    // 获取同步状态
-    const status = dataSyncService.getSyncStatus(userId)
+    const status = dataSyncService.getSyncStatus(user.userId)
 
     return NextResponse.json({
       success: true,
@@ -43,4 +33,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

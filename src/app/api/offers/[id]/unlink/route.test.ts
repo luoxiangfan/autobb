@@ -2,13 +2,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 import { POST } from '@/app/api/offers/[id]/unlink/route'
 
-vi.mock('@/lib/auth', () => ({
+const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(async () => ({ authenticated: true, user: { userId: 1 } })),
 }))
 
-vi.mock('@/lib/offers', () => ({
-  unlinkOfferFromAccount: vi.fn(async () => ({ unlinkedCount: 1 })),
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (
+      handler: Parameters<ReturnType<typeof createWithAuthMock>>[0],
+      options?: { requireAdmin?: boolean }
+    ) => createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
+
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    unlinkOfferFromAccount: vi.fn(async () => ({ unlinkedCount: 1 })),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({

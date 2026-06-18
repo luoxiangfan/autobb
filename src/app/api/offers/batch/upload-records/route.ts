@@ -14,8 +14,8 @@
  * - status: 状态筛选（可选：pending, processing, completed, failed, partial）
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
@@ -35,16 +35,12 @@ interface UploadRecord {
   completed_at: string | null
 }
 
-export async function GET(req: NextRequest) {
+export const GET = withAuth(async (req, user) => {
   const db = getDatabase()
 
   try {
     // 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     // 获取查询参数
     const searchParams = req.nextUrl.searchParams
@@ -141,4 +137,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

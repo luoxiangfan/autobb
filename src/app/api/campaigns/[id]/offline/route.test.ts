@@ -19,24 +19,22 @@ const dbFns = vi.hoisted(() => ({
 }))
 
 const authFns = vi.hoisted(() => ({
-  verifyAuth: vi.fn(async () => ({
-    authenticated: true,
-    user: {
-      userId: 1,
-      email: 'tester@example.com',
-      role: 'user',
-      packageType: 'trial',
-    },
-  })),
+  verifyAuth: vi.fn(),
 }))
 
 const transitionFns = vi.hoisted(() => ({
   applyCampaignTransition: vi.fn(async () => ({ updatedCount: 1, matchedCampaignIds: [123] })),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({

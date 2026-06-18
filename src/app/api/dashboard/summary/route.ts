@@ -4,7 +4,7 @@
  * 添加服务端缓存，提升响应速度
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { listOffers } from '@/lib/offers/server'
@@ -185,15 +185,9 @@ async function getTopOffers(userId: number, limit: number = 5) {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
@@ -247,4 +241,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

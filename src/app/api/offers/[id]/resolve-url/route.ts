@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { resolveAffiliateLink, getProxyPool } from '@/lib/scraping' // 🔥 使用新的增强版API
 import { findOfferById } from '@/lib/offers/server'
 import { getAllProxyUrls } from '@/lib/common/server'
@@ -9,19 +9,14 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  * POST /api/offers/:id/resolve-url
  * 解析Offer的推广链接，获取Final URL和Final URL suffix
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const offerId = parsePositiveIntegerOfferId(params.id)
+    const offerId = parsePositiveIntegerOfferId(context?.params?.id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 验证Offer存在且属于当前用户
     const offer = await findOfferById(offerId, userId)
@@ -89,4 +84,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       { status: 500 }
     )
   }
-}
+})

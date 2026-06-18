@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getCustomerWithCredentials } from '@/lib/google-ads/api/api'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
@@ -150,17 +150,12 @@ async function mutateResources(
  *
  * - :id 必须是 Google Ads campaign id（google_campaign_id）
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request, user, context) => {
   try {
-    const { id: campaignId } = params
+    const campaignId = context?.params?.id
     const requestId = request.headers.get('x-request-id') || undefined
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-    const numericUserId = Number(authResult.user.userId)
+    const numericUserId = Number(user.userId)
     if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
       return NextResponse.json({ error: '未授权' }, { status: 401 })
     }
@@ -744,4 +739,4 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})

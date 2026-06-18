@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { findOfferById } from '@/lib/offers/server'
 import {
   getKeywordPoolByOfferId,
@@ -129,16 +129,10 @@ function buildRawBucketCounts(pool: OfferKeywordPool) {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const id = context?.params?.id
+    const userId = user.userId
 
     const offerId = parsePositiveIntegerOfferId(id)
     if (!offerId) {
@@ -269,7 +263,7 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
     console.error('获取关键词池失败:', error)
     return NextResponse.json({ error: error.message || '获取关键词池失败' }, { status: 500 })
   }
-}
+})
 
 /**
  * POST /api/offers/:id/keyword-pool
@@ -279,16 +273,10 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
  * - forceRegenerate: boolean - 是否触发重建Offer（替代关键词池重建）
  * - keywords: string[] - 可选，指定关键词列表（否则自动提取）
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const id = context?.params?.id
+    const userId = user.userId
 
     const offerId = parsePositiveIntegerOfferId(id)
     if (!offerId) {
@@ -313,7 +301,9 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
 
     if (forceRegenerate) {
       console.log(`🔁 forceRegenerate=true，改为触发 /api/offers/${offerId}/rebuild`)
-      return rebuildOfferPost(request, { params: props.params })
+      return rebuildOfferPost(request, {
+        params: Promise.resolve({ id: context?.params?.id ?? '' }),
+      })
     }
 
     // 检查是否需要生成
@@ -386,22 +376,16 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     console.error('生成关键词池失败:', error)
     return NextResponse.json({ error: error.message || '生成关键词池失败' }, { status: 500 })
   }
-}
+})
 
 /**
  * DELETE /api/offers/:id/keyword-pool
  * 删除 Offer 的关键词池
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const id = context?.params?.id
+    const userId = user.userId
 
     const offerId = parsePositiveIntegerOfferId(id)
     if (!offerId) {
@@ -432,4 +416,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     console.error('删除关键词池失败:', error)
     return NextResponse.json({ error: error.message || '删除关键词池失败' }, { status: 500 })
   }
-}
+})

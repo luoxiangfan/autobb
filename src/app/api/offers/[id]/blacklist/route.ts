@@ -4,21 +4,16 @@
  * DELETE /api/offers/[id]/blacklist - 取消拉黑
  */
 
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
 
-export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-    const { id } = await params
+    const userId = user.userId
+    const id = context?.params?.id
     const offerId = parsePositiveIntegerOfferId(id)
     if (!offerId) {
       return NextResponse.json({ error: '无效的Offer ID' }, { status: 400 })
@@ -67,20 +62,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     console.error('拉黑投放失败:', error)
     return NextResponse.json({ error: error.message || '拉黑投放失败' }, { status: 500 })
   }
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-    const { id } = await params
+    const userId = user.userId
+    const id = context?.params?.id
     const offerId = parsePositiveIntegerOfferId(id)
     if (!offerId) {
       return NextResponse.json({ error: '无效的Offer ID' }, { status: 400 })
@@ -122,4 +109,4 @@ export async function DELETE(
     console.error('取消拉黑失败:', error)
     return NextResponse.json({ error: error.message || '取消拉黑失败' }, { status: 500 })
   }
-}
+})

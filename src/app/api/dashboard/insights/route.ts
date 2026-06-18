@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import {
   excludeDisabledUrlSwapTasksSql,
@@ -42,15 +42,9 @@ interface Insight {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 获取查询参数
     const { searchParams } = new URL(request.url)
@@ -707,7 +701,7 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * 格式化日期为 YYYY-MM-DD

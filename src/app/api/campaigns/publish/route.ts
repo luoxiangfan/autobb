@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
 
@@ -172,17 +172,10 @@ function extractAllSuggestions(analysis: ScoreAnalysis): string[] {
  *   variantCount?: number              // 已废弃，保留字段兼容旧客户端
  * }
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
     const parentRequestId = request.headers.get('x-request-id') || undefined
-    // 1. Verify authentication
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      const error = createError.unauthorized()
-      return NextResponse.json(error.toJSON(), { status: error.httpStatus })
-    }
-
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     // 2. 解析请求体 - 🔧 修复(2025-12-11): 接受camelCase字段名
     const rawBody = await request.json()
@@ -1564,4 +1557,4 @@ export async function POST(request: NextRequest) {
     })
     return NextResponse.json(appError.toJSON(), { status: appError.httpStatus })
   }
-}
+})

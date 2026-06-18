@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import {
   removeGoogleAdsCampaign as removeGoogleAdsCampaignRemote,
@@ -30,16 +30,10 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
   return /^\d+$/.test(raw) ? raw : null
 }
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (request, user, context) => {
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    const userId = authResult.user.userId
-    const campaignId = Number(params.id)
+    const userId = user.userId
+    const campaignId = Number(context?.params?.id)
     if (!Number.isFinite(campaignId)) {
       return NextResponse.json({ error: '无效的campaignId' }, { status: 400 })
     }
@@ -555,4 +549,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     console.error('下线广告系列失败:', error)
     return NextResponse.json({ error: error?.message || '下线广告系列失败' }, { status: 500 })
   }
-}
+})

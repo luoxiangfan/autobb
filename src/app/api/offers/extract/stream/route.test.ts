@@ -41,7 +41,7 @@ describe('POST /api/offers/extract/stream', () => {
     const data = await res.json()
 
     expect(res.status).toBe(401)
-    expect(data).toEqual({ error: 'Unauthorized', message: '请先登录' })
+    expect(data).toEqual({ error: '未提供认证token' })
   })
 
   it('returns 400 JSON for invalid request body', async () => {

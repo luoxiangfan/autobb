@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { defaultOAuthAuthContext } from '@/lib/__tests__/helpers/campaign-route-auth-context-mock'
 
-const mocks = vi.hoisted(() => ({
+const authFns = vi.hoisted(() => ({
   verifyAuth: vi.fn(),
+}))
+
+const mocks = vi.hoisted(() => ({
   getDatabase: vi.fn(),
   queryActiveCampaigns: vi.fn(),
   getGoogleAdsAuthContext: vi.fn(),
@@ -16,13 +19,23 @@ const mocks = vi.hoisted(() => ({
   invalidateOfferCache: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: mocks.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: mocks.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: mocks.getDatabase,
+  }
+})
 
 vi.mock('@/lib/campaign', () => ({
   queryActiveCampaigns: mocks.queryActiveCampaigns,
@@ -62,9 +75,13 @@ vi.mock('@/lib/queue/init-queue', () => ({
   getOrCreateQueueManager: mocks.getOrCreateQueueManager,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  invalidateOfferCache: mocks.invalidateOfferCache,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    invalidateOfferCache: mocks.invalidateOfferCache,
+  }
+})
 
 vi.mock('@/lib/launch-score', () => ({
   calculateLaunchScore: vi.fn().mockResolvedValue({
@@ -157,7 +174,7 @@ describe('POST /api/campaigns/publish URL alignment', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mocks.verifyAuth.mockResolvedValue({
+    authFns.verifyAuth.mockResolvedValue({
       authenticated: true,
       user: { userId: 7 },
     })
@@ -451,10 +468,16 @@ describe('POST /api/campaigns/publish URL alignment', () => {
         error: 'redis unavailable',
       }),
     ])
-    expect(db.exec).toHaveBeenCalledWith(
-      expect.stringContaining("creation_status = 'pending'"),
-      expect.arrayContaining(['队列化失败: redis unavailable', 1970, 7, 11])
+    const rollbackCall = db.exec.mock.calls.find(
+      (call: unknown[]) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('WHERE id = ?') &&
+        call[0].includes("creation_status = 'pending'")
     )
+    expect(rollbackCall).toEqual([
+      expect.stringContaining("creation_status = 'pending'"),
+      expect.arrayContaining([expect.stringContaining('redis unavailable'), 1970, 7, 11]),
+    ])
     expect(mocks.invalidateOfferCache).toHaveBeenCalledWith(7, 11)
   })
 })

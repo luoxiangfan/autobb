@@ -24,8 +24,8 @@
  * }
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 
@@ -47,18 +47,12 @@ interface BatchTask {
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (req, user, context) => {
   const db = getDatabase()
-  const { batchId } = params
+  const batchId = context?.params?.batchId
 
   try {
-    // 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     // 查询批量任务
     const rows = await db.query<BatchTask>(
@@ -108,4 +102,4 @@ export async function GET(req: NextRequest, props: { params: Promise<{ batchId: 
       { status: 500 }
     )
   }
-}
+})

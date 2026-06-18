@@ -1,26 +1,17 @@
-import { verifyAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { getAllProxyUrls } from '@/lib/common/server'
 
 /**
  * GET /api/settings/proxy?country=us
  * 根据国家代码获取代理配置
- *
- * 从 proxy.urls（JSON数组）中查找匹配国家的代理
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request: NextRequest, user) => {
   try {
-    // 从中间件注入的请求头中获取用户ID
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
-    const userIdNum = userId ? userId : undefined
+    const userIdNum = user.userId
 
-    // 获取查询参数
     const searchParams = request.nextUrl.searchParams
     const country = searchParams.get('country')
 
@@ -34,7 +25,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 获取所有代理配置
     const proxyUrls = await getAllProxyUrls(userIdNum)
 
     if (!proxyUrls || proxyUrls.length === 0) {
@@ -47,7 +37,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 查找匹配国家的代理
     const targetCountry = country.toUpperCase()
     const proxy = proxyUrls.find((p) => p.country.toUpperCase() === targetCountry)
 
@@ -79,4 +68,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

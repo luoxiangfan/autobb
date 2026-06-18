@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { pauseOfferTasks } from '@/lib/campaign/server'
@@ -7,16 +7,13 @@ import { pauseOfferTasks } from '@/lib/campaign/server'
  * POST /api/campaigns/:id/pause-offer-tasks
  * 一键暂停关联 Offer 的补点击和换链接任务
  */
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (_request: NextRequest, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '缺少 id 参数' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const db = await getDatabase()
     const numericUserId = userId
@@ -80,4 +77,4 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     console.error('暂停关联 Offer 任务失败:', error)
     return NextResponse.json({ error: error.message || '暂停任务失败' }, { status: 500 })
   }
-}
+})

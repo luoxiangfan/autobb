@@ -1,4 +1,4 @@
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { findCampaignById, updateCampaign, deleteCampaign } from '@/lib/campaign/server'
 import { invalidateDashboardCache } from '@/lib/common/server'
@@ -9,16 +9,13 @@ import { invalidateDashboardCache } from '@/lib/common/server'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (_request: NextRequest, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '缺少 id 参数' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const campaign = await findCampaignById(parseInt(id, 10), userId)
 
@@ -45,22 +42,19 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * PUT /api/campaigns/:id
  * 更新广告系列
  */
-export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const PUT = withAuth(async (request: NextRequest, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '缺少 id 参数' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const body = await request.json()
     const {
@@ -111,22 +105,19 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})
 
 /**
  * DELETE /api/campaigns/:id
  * 删除广告系列（草稿软删除，已移除永久删除）
  */
-export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const DELETE = withAuth(async (_request: NextRequest, user, context) => {
   try {
-    const { id } = params
-
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
+    const id = context?.params?.id
+    if (!id) {
+      return NextResponse.json({ error: '缺少 id 参数' }, { status: 400 })
     }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     const result = await deleteCampaign(parseInt(id, 10), userId)
 
@@ -173,4 +164,4 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
       { status: 500 }
     )
   }
-}
+})

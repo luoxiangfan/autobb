@@ -16,8 +16,8 @@
  * - 用户主动停止任务
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getQueueManager } from '@/lib/queue'
 
@@ -27,8 +27,7 @@ interface CancelRequest {
   reason?: string
 }
 
-export async function POST(req: NextRequest, props: { params: Promise<{ batchId: string }> }) {
-  const params = await props.params
+export const POST = withAuth(async (req, user, context) => {
   const db = getDatabase()
   const queue = getQueueManager()
 
@@ -36,15 +35,16 @@ export async function POST(req: NextRequest, props: { params: Promise<{ batchId:
   const nowFunc = 'NOW()'
 
   try {
-    // 1. 验证用户身份
-    const authResult = await verifyAuth(req)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     // 2. 获取批量任务信息
-    const { batchId } = params
+    const batchId = context?.params?.batchId
+    if (!batchId) {
+      return NextResponse.json(
+        { error: 'Invalid request', message: '缺少 batchId' },
+        { status: 400 }
+      )
+    }
     const task = await db.queryOne<{
       id: string
       user_id: number
@@ -160,4 +160,4 @@ export async function POST(req: NextRequest, props: { params: Promise<{ batchId:
       { status: 500 }
     )
   }
-}
+})

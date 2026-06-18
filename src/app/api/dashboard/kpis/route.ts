@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
@@ -140,43 +140,29 @@ function diffDaysInclusive(startYmd: string, endYmd: string): number {
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  return getHandler(request)
-}
-
-const getHandler = withPerformanceMonitoring<any>(
-  async (request: NextRequest) => {
+const getHandler = withPerformanceMonitoring(
+  withAuth(async (request: NextRequest, user) => {
     try {
-      const authResult = await verifyAuth(request)
-      if (!authResult.authenticated || !authResult.user) {
-        return NextResponse.json({ error: '未授权' }, { status: 401 })
-      }
-
       const { searchParams } = new URL(request.url)
 
-      // 🔧 新增：支持管理员查看所有用户或指定用户数据
       const allUsersParam = searchParams.get('allUsers')
       const targetUserIdParam = searchParams.get('userId')
 
       let userId: number
       let isAllUsers = false
 
-      // 检查是否为管理员
-      const isAdmin = authResult.user.role === 'admin'
+      const isAdmin = user.role === 'admin'
 
       if ((allUsersParam === 'true' || !targetUserIdParam) && isAdmin) {
-        // 管理员查看所有用户总和
-        userId = 0 // 特殊值，表示所有用户
+        userId = 0
         isAllUsers = true
       } else if (targetUserIdParam && isAdmin) {
-        // 管理员查看指定用户
         userId = parseInt(targetUserIdParam, 10)
         if (!Number.isFinite(userId)) {
           return NextResponse.json({ error: '无效的 userId 参数' }, { status: 400 })
         }
       } else {
-        // 普通用户只能查看自己的数据
-        userId = authResult.user.userId
+        userId = user.userId
       }
 
       const rawDays = parseInt(searchParams.get('days') || '7', 10)
@@ -549,9 +535,11 @@ const getHandler = withPerformanceMonitoring<any>(
         { status: 500 }
       )
     }
-  },
+  }) as (request: NextRequest) => Promise<NextResponse>,
   { path: '/api/dashboard/kpis' }
 )
+
+export const GET = getHandler
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {

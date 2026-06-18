@@ -17,23 +17,41 @@ const campaignCacheFns = vi.hoisted(() => ({
   setCachedCampaignPerformance: vi.fn(),
 }))
 
-vi.mock('@/lib/auth', () => ({
-  verifyAuth: authFns.verifyAuth,
-}))
+vi.mock('@/lib/auth', async () => {
+  const { createWithAuthMock } =
+    await import('@/lib/__tests__/helpers/campaign-route-with-auth-mock')
+  return {
+    verifyAuth: authFns.verifyAuth,
+    withAuth: (handler: any, options?: { requireAdmin?: boolean }) =>
+      createWithAuthMock(authFns.verifyAuth)(handler, options),
+  }
+})
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
-vi.mock('@/lib/campaign', () => ({
-  buildCampaignPerformanceCacheHash: campaignCacheFns.buildCampaignPerformanceCacheHash,
-  getCachedCampaignPerformance: campaignCacheFns.getCachedCampaignPerformance,
-  setCachedCampaignPerformance: campaignCacheFns.setCachedCampaignPerformance,
-}))
+vi.mock('@/lib/campaign', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/campaign')>()
+  return {
+    ...actual,
+    buildCampaignPerformanceCacheHash: campaignCacheFns.buildCampaignPerformanceCacheHash,
+    getCachedCampaignPerformance: campaignCacheFns.getCachedCampaignPerformance,
+    setCachedCampaignPerformance: campaignCacheFns.setCachedCampaignPerformance,
+  }
+})
 
-vi.mock('@/lib/common/server', () => ({
-  isPerformanceReleaseEnabled: vi.fn((flag: string) => flag !== 'campaignsParallel'),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    isPerformanceReleaseEnabled: vi.fn((flag: string) => flag !== 'campaignsParallel'),
+  }
+})
 
 function buildPreviousSummaryRows(params: {
   performance?: Array<{

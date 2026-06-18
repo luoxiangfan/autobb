@@ -1,5 +1,5 @@
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { offerOccupyingCampaignWhereClause } from '@/lib/campaign/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
@@ -21,21 +21,16 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
+export const GET = withAuth(async (request, user, context) => {
   try {
-    const { id } = params
+    const id = context?.params?.id
     const offerId = parsePositiveIntegerOfferId(id)
     if (!offerId) {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
     const campaignId = request.nextUrl.searchParams.get('campaignId')
 
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: authResult.error || '未授权' }, { status: 401 })
-    }
-    const userId = authResult.user.userId
+    const userId = user.userId
 
     if (!campaignId) {
       // 向后兼容：某些 OpenClaw 流程会遗漏 campaignId，返回仍占用槽位的 Campaign 状态
@@ -116,4 +111,4 @@ export async function GET(request: NextRequest, props: { params: Promise<{ id: s
       { status: 500 }
     )
   }
-}
+})

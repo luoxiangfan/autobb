@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getQueueManager } from '@/lib/queue'
-import { verifyAuth } from '@/lib/auth'
+import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
@@ -280,15 +280,8 @@ async function saveQueueConfigToDB(config: typeof DEFAULT_QUEUE_CONFIG): Promise
  */
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async () => {
   try {
-    // 验证用户身份
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
-
-    // 🔥 优先从数据库读取配置（确保多实例一致性）；否则返回“当前运行时配置”（避免与初始化环境变量/默认值不一致）
     const dbConfig = await getQueueConfigFromDB()
     const runtimeConfig = getRuntimeQueueConfig()
     const effectiveConfig = dbConfig || runtimeConfig
@@ -321,83 +314,68 @@ export async function GET(request: NextRequest) {
     console.error('[UnifiedQueueConfig] 获取配置失败:', error)
     return NextResponse.json({ error: error.message || '获取配置失败' }, { status: 500 })
   }
-}
+})
 
 /**
  * PUT /api/queue/config
  * 更新统一队列配置（仅管理员）
  * 同时保存到数据库和更新内存，确保多实例环境配置一致
  */
-export async function PUT(request: NextRequest) {
-  try {
-    // 验证用户身份
-    const auth = await verifyAuth(request)
-    if (!auth.authenticated || !auth.user) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 })
-    }
+export const PUT = withAuth(
+  async (request: NextRequest, user) => {
+    try {
+      const body = await request.json()
 
-    // 检查用户是否为管理员
-    if (auth.user.role !== 'admin') {
-      return NextResponse.json(
-        {
-          error: '权限不足',
-          message: '只有管理员可以修改系统队列配置',
+      // 验证配置
+      const validationResult = queueConfigSchema.safeParse(body)
+      if (!validationResult.success) {
+        console.error('[UnifiedQueueConfig] 配置验证失败:', {
+          body,
+          errors: validationResult.error.issues,
+        })
+        return NextResponse.json(
+          { error: '配置格式错误', details: validationResult.error.issues },
+          { status: 400 }
+        )
+      }
+
+      const newConfig = validationResult.data
+
+      // 🔥 先从数据库读取现有配置，合并后保存
+      const dbConfig = await getQueueConfigFromDB()
+      const existingConfig = dbConfig || getRuntimeQueueConfig()
+      const mergedConfig = {
+        ...existingConfig,
+        ...newConfig,
+        // 确保 perTypeConcurrency 也正确合并
+        perTypeConcurrency: {
+          ...existingConfig.perTypeConcurrency,
+          ...(newConfig.perTypeConcurrency || {}),
         },
-        { status: 403 }
+      }
+
+      // 🔥 保存到数据库（持久化）
+      const normalizedConfig = normalizeQueueConfig(mergedConfig)
+      await saveQueueConfigToDB(normalizedConfig)
+
+      // 更新当前实例的内存配置
+      const queueManager = getQueueManager()
+      queueManager.updateConfig(normalizedConfig)
+
+      console.log(
+        `[UnifiedQueueConfig] 管理员 ${user.email} (ID: ${user.userId}) 更新了队列配置:`,
+        newConfig
       )
-    }
 
-    // 解析请求体
-    const body = await request.json()
-
-    // 验证配置
-    const validationResult = queueConfigSchema.safeParse(body)
-    if (!validationResult.success) {
-      console.error('[UnifiedQueueConfig] 配置验证失败:', {
-        body,
-        errors: validationResult.error.issues,
+      return NextResponse.json({
+        success: true,
+        message: '配置已保存到数据库并在当前实例生效',
+        config: normalizedConfig,
       })
-      return NextResponse.json(
-        { error: '配置格式错误', details: validationResult.error.issues },
-        { status: 400 }
-      )
+    } catch (error: any) {
+      console.error('[UnifiedQueueConfig] 更新配置失败:', error)
+      return NextResponse.json({ error: error.message || '更新配置失败' }, { status: 500 })
     }
-
-    const newConfig = validationResult.data
-
-    // 🔥 先从数据库读取现有配置，合并后保存
-    const dbConfig = await getQueueConfigFromDB()
-    const existingConfig = dbConfig || getRuntimeQueueConfig()
-    const mergedConfig = {
-      ...existingConfig,
-      ...newConfig,
-      // 确保 perTypeConcurrency 也正确合并
-      perTypeConcurrency: {
-        ...existingConfig.perTypeConcurrency,
-        ...(newConfig.perTypeConcurrency || {}),
-      },
-    }
-
-    // 🔥 保存到数据库（持久化）
-    const normalizedConfig = normalizeQueueConfig(mergedConfig)
-    await saveQueueConfigToDB(normalizedConfig)
-
-    // 更新当前实例的内存配置
-    const queueManager = getQueueManager()
-    queueManager.updateConfig(normalizedConfig)
-
-    console.log(
-      `[UnifiedQueueConfig] 管理员 ${auth.user.email} (ID: ${auth.user.userId}) 更新了队列配置:`,
-      newConfig
-    )
-
-    return NextResponse.json({
-      success: true,
-      message: '配置已保存到数据库并在当前实例生效',
-      config: normalizedConfig,
-    })
-  } catch (error: any) {
-    console.error('[UnifiedQueueConfig] 更新配置失败:', error)
-    return NextResponse.json({ error: error.message || '更新配置失败' }, { status: 500 })
-  }
-}
+  },
+  { requireAdmin: true }
+)

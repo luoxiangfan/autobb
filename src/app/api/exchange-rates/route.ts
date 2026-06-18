@@ -1,16 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { verifyAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
 import { loadAndGetUsdExchangeRates } from '@/lib/common/exchange-rates-snapshot'
 import { countUsdExchangeRateRows } from '@/lib/common/exchange-rates-service'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  const auth = await verifyAuth(request)
-  if (!auth.authenticated || !auth.user) {
-    return NextResponse.json({ error: '未授权' }, { status: 401 })
-  }
-
+export const GET = withAuth(async () => {
   try {
     const [rates, rowCount] = await Promise.all([
       loadAndGetUsdExchangeRates(),
@@ -25,4 +20,4 @@ export async function GET(request: NextRequest) {
     const message = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})

@@ -4,8 +4,8 @@
  * 批量重建 Offer（与单条 rebuild 共用 createOfferExtractionTaskForExistingOffer）
  */
 
-import { verifyAuth } from '@/lib/auth'
-import { NextRequest, NextResponse } from 'next/server'
+import { withAuth } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { zErr } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
@@ -31,16 +31,12 @@ interface OfferRow {
   id: number
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   const db = getDatabase()
   const parentRequestId = request.headers.get('x-request-id') || undefined
 
   try {
-    const authResult = await verifyAuth(request)
-    if (!authResult.authenticated || !authResult.user) {
-      return NextResponse.json({ error: 'Unauthorized', message: '请先登录' }, { status: 401 })
-    }
-    const userIdNum = authResult.user.userId
+    const userIdNum = user.userId
 
     const body = await request.json()
     const parsed = requestSchema.safeParse(body)
@@ -147,4 +143,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
