@@ -10,7 +10,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['src/**/*.{test,spec}.{js,ts,tsx}'],
+    include: ['src/__tests__/**/*.{test,spec}.{js,ts,tsx}'],
     exclude: ['node_modules', '.next', 'dist'],
     // Performance assertions (ms thresholds) are sensitive to cross-file contention.
     // Running files sequentially keeps these tests stable across environments.

@@ -13,6 +13,19 @@
 
 - 若用户明确要求“不要提问、直接给方案/代码”，则按用户要求直接执行。
 
+## 测试文件位置（必须）
+
+`src/` 下所有 `*.test.ts` / `*.test.tsx` / `*.spec.*` **必须**放在 `src/__tests__/` 下，禁止在 `src/lib/**/__tests__/` 或与源码同目录 colocate。
+
+| 源码 | 测试位置 |
+|------|----------|
+| `src/lib/**` | `src/__tests__/lib/<name>.test.ts` |
+| `src/app/api/**` | `src/__tests__/api/**/route.test.ts` |
+| `src/components/**` | `src/__tests__/components/<name>.test.tsx` |
+| `src/app/(app)/**` | `src/__tests__/app/(app)/**` |
+
+Vitest 仅扫描 `src/__tests__/**`；违反位置的测试文件会被 ESLint 报错且不会被执行。
+
 ## 代码修改后的质量门禁（必须）
 
 凡修改了会影响构建/运行的文件（如 `src/`、`scripts/`、`migrations/`、根目录 TS/JS 配置等），**在向用户汇报「修改完成」之前**，必须在仓库根目录依次执行并通过：

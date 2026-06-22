@@ -39,6 +39,7 @@ dist/
 
 # local AI/agent tooling
 .claude/
+.cursor/
 .openclaw/
 
 # legacy OpenClaw snapshot (do not upload)

@@ -8,6 +8,20 @@ const srcFiles = ['src/**/*.{js,jsx,ts,tsx,mjs,cjs}']
 const eslintConfig = defineConfig([
   ...nextCoreWebVitals.map((entry) => (entry.files ? entry : { ...entry, files: srcFiles })),
   {
+    files: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+    ignores: ['src/__tests__/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Program',
+          message:
+            'Tests must live under src/__tests__/. Example: src/lib/foo.ts → src/__tests__/lib/foo.test.ts',
+        },
+      ],
+    },
+  },
+  {
     files: srcFiles,
     plugins: {
       'unused-imports': unusedImports,
