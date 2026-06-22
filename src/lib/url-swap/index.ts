@@ -1,7 +1,11 @@
 /**
  * Url-swap public API barrel.
  */
-export type { UrlSwapErrorType } from './url-swap-types'
+export type {
+  UrlSwapErrorType,
+  SwapHistorySitelinkUpdate,
+  UrlSwapSitelinkTarget,
+} from './url-swap-types'
 
 export {
   parseUrlSwapTask,
@@ -52,5 +56,30 @@ export {
   updateTaskAfterSwap,
   updateTaskAfterManualAdvance,
 } from './url-swap-task-lifecycle'
+
+export {
+  syncUrlSwapSitelinkTargetsAfterPublish,
+  loadOfferStoreProductLinksForUrlSwap,
+  getActiveUrlSwapSitelinkTargets,
+  getUrlSwapSitelinkTargets,
+  markUrlSwapSitelinkTargetSuccess,
+  markUrlSwapSitelinkTargetFailure,
+  type UrlSwapSitelinkTargetStatus,
+} from './url-swap-sitelink-targets'
+
+export {
+  runUrlSwapSitelinkSuffixPhase,
+  mergeSitelinkPhaseIntoHistory,
+  shouldRunUrlSwapSitelinkPhase,
+  emptyUrlSwapSitelinkPhaseResult,
+  URL_SWAP_SITELINK_ENABLED,
+  type UrlSwapSitelinkPhaseResult,
+} from './url-swap-sitelink-updater'
+
+export {
+  backfillUrlSwapSitelinkTargets,
+  type BackfillUrlSwapSitelinkTargetsOptions,
+  type BackfillUrlSwapSitelinkTargetsResult,
+} from './backfill-sitelink-targets'
 
 export { getUrlSwapTaskStats, getUrlSwapUserStats, getUrlSwapGlobalStats } from './url-swap-stats'

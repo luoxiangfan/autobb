@@ -9,6 +9,7 @@ import {
   getUrlSwapTaskStats,
   updateUrlSwapTask,
   getUrlSwapTaskTargets,
+  getUrlSwapSitelinkTargets,
 } from '@/lib/url-swap'
 import {
   findInvalidAffiliateLinks,
@@ -34,7 +35,8 @@ export const GET = withAuth(async (_request, user, context) => {
 
   const stats = await getUrlSwapTaskStats(id, user.userId)
   const targets = await getUrlSwapTaskTargets(id, user.userId)
-  const taskWithTargets = { ...task, targets }
+  const sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+  const taskWithTargets = { ...task, targets, sitelink_targets }
 
   return NextResponse.json({
     success: true,
@@ -42,6 +44,7 @@ export const GET = withAuth(async (_request, user, context) => {
     task: taskWithTargets,
     stats,
     targets,
+    sitelink_targets,
   })
 })
 

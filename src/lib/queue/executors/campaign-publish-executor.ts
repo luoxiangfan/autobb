@@ -49,6 +49,11 @@ import { type NamingScheme } from '@/lib/campaign/naming-convention'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
 import { addUrlSwapTargetForOfferCampaign } from '@/lib/url-swap'
+import {
+  loadOfferStoreProductLinksForUrlSwap,
+  syncUrlSwapSitelinkTargetsAfterPublish,
+} from '@/lib/url-swap/url-swap-sitelink-targets'
+import { resolveStoreProductSitelinksForPublish } from '@/lib/creatives/sitelink-store-product-links'
 import { applyCampaignTransition } from '@/lib/campaign/server'
 import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate/products'
 import {
@@ -1028,7 +1033,31 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       ]
     }
 
-    const formattedSitelinks = finalSitelinks
+    let formattedSitelinks = finalSitelinks
+
+    try {
+      const { pageType, storeProductLinks } = await loadOfferStoreProductLinksForUrlSwap(
+        offerId,
+        userId
+      )
+      if (pageType === 'store' && storeProductLinks.length > 0 && formattedSitelinks.length > 0) {
+        formattedSitelinks = await resolveStoreProductSitelinksForPublish({
+          sitelinks: formattedSitelinks,
+          storeProductLinks,
+          fallbackUrl: extensionCreative.finalUrl || null,
+          targetCountry: campaignConfig.targetCountry,
+          userId,
+          skipCache: true,
+        })
+        console.log(
+          `  🔗 店铺 Sitelink：已解析 ${Math.min(formattedSitelinks.length, storeProductLinks.length)} 条单品联盟链接`
+        )
+      }
+    } catch (resolveSitelinkError: any) {
+      console.warn(
+        `  ⚠️ 店铺 Sitelink 单品链接解析失败（回退主链 URL）: ${resolveSitelinkError?.message || resolveSitelinkError}`
+      )
+    }
 
     // 13. 串行执行：Extensions（避免并发修改Campaign资源冲突）
     // 🔧 修复(2026-01-05): Extensions是可选扩展，失败不应影响核心发布状态
@@ -1075,22 +1104,50 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
         console.log('⏭️ 续发：扩展未变化，跳过 Sitelink')
       } else {
         totalApiOperations += formattedSitelinks.length + 1
-        await runWithLoginCustomerFallbackAndHeartbeat('创建Sitelink扩展', (loginCustomerId) =>
-          createGoogleAdsSitelinkExtensions({
-            customerId: adsAccount.customer_id,
-            refreshToken: refreshToken,
-            campaignId: googleCampaignId,
-            sitelinks: formattedSitelinks,
-            accountId: adsAccount.id,
-            userId,
-            loginCustomerId,
-            authType: apiAuth.authType,
-            serviceAccountId,
-            credentials: oauthCredentials,
-            ...preparedAuthContextField(prepared),
-          })
+        const sitelinkCreateResult = await runWithLoginCustomerFallbackAndHeartbeat(
+          '创建Sitelink扩展',
+          (loginCustomerId) =>
+            createGoogleAdsSitelinkExtensions({
+              customerId: adsAccount.customer_id,
+              refreshToken: refreshToken,
+              campaignId: googleCampaignId,
+              sitelinks: formattedSitelinks,
+              accountId: adsAccount.id,
+              userId,
+              loginCustomerId,
+              authType: apiAuth.authType,
+              serviceAccountId,
+              credentials: oauthCredentials,
+              ...preparedAuthContextField(prepared),
+            })
         )
         console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
+
+        try {
+          const { pageType, storeProductLinks } = await loadOfferStoreProductLinksForUrlSwap(
+            offerId,
+            userId
+          )
+          if (pageType === 'store' && storeProductLinks.length > 0) {
+            const mapped = await syncUrlSwapSitelinkTargetsAfterPublish({
+              offerId,
+              userId,
+              googleAdsAccountId: adsAccount.id,
+              googleCustomerId: adsAccount.customer_id,
+              googleCampaignId,
+              assetResourceNames: sitelinkCreateResult.assetResourceNames,
+              publishedSitelinks: formattedSitelinks,
+              storeProductLinks,
+            })
+            if (mapped > 0) {
+              console.log(`  🔗 已同步 ${mapped} 条 Sitelink 换链映射`)
+            }
+          }
+        } catch (sitelinkMapError: any) {
+          console.warn(
+            `  ⚠️ Sitelink 换链映射写入失败（非致命）: ${sitelinkMapError?.message || sitelinkMapError}`
+          )
+        }
       }
     } catch (sitelinkError: any) {
       const errorMsg = sitelinkError.message || String(sitelinkError)

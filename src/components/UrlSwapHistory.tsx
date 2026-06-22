@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Loader2, Calendar, CheckCircle, XCircle, RefreshCw, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
-import type { SwapHistoryEntry } from '@/lib/url-swap/url-swap-types'
+import type { SwapHistoryEntry, SwapHistorySitelinkUpdate } from '@/lib/url-swap/url-swap-types'
 
 interface UrlSwapHistoryProps {
   open: boolean
@@ -87,6 +87,17 @@ export default function UrlSwapHistory({ open, onOpenChange, taskId }: UrlSwapHi
         失败
       </Badge>
     )
+  }
+
+  const getSitelinkResultBadge = (update: SwapHistorySitelinkUpdate) => {
+    if (update.skipped) {
+      return (
+        <Badge variant="secondary" className="text-xs">
+          跳过
+        </Badge>
+      )
+    }
+    return getResultBadge(update.success)
   }
 
   return (
@@ -222,6 +233,62 @@ export default function UrlSwapHistory({ open, onOpenChange, taskId }: UrlSwapHi
                     {/* Reason / Error Message */}
                     {entry.error_message && (
                       <p className="text-xs text-red-600">错误: {entry.error_message}</p>
+                    )}
+
+                    {/* Sitelink updates */}
+                    {(entry.sitelink_updates?.length ?? 0) > 0 && (
+                      <div className="mt-3 pt-3 border-t border-dashed border-gray-200/80">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="text-xs font-medium text-gray-700">Sitelink 更新</span>
+                          {(entry.sitelink_success_count ?? 0) > 0 && (
+                            <Badge variant="default" className="bg-green-600 text-xs">
+                              成功 {entry.sitelink_success_count}
+                            </Badge>
+                          )}
+                          {(entry.sitelink_failure_count ?? 0) > 0 && (
+                            <Badge variant="destructive" className="text-xs">
+                              失败 {entry.sitelink_failure_count}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {entry.sitelink_updates!.map((update, sitelinkIndex) => (
+                            <div
+                              key={`${update.asset_id}-${sitelinkIndex}`}
+                              className="rounded border bg-white/60 px-3 py-2 text-xs"
+                            >
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="font-medium">
+                                  {update.link_text || 'Sitelink'}
+                                </span>
+                                <span className="text-muted-foreground font-mono">
+                                  #{update.sort_index + 1} · {update.asset_id}
+                                </span>
+                                {getSitelinkResultBadge(update)}
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-muted-foreground">
+                                <div>
+                                  <span className="text-red-600/80">原 suffix: </span>
+                                  <span className="break-all">
+                                    {update.previous_final_url_suffix || '-'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-green-600/80">新 suffix: </span>
+                                  <span className="break-all">
+                                    {update.new_final_url_suffix || '-'}
+                                  </span>
+                                </div>
+                              </div>
+                              {update.error_message && (
+                                <p className="text-red-600 mt-1 break-all">
+                                  {update.error_message}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}

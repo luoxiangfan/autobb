@@ -794,6 +794,41 @@ export async function updateCampaignFinalUrlSuffixPython(params: {
 }
 
 /**
+ * 更新 Sitelink Asset Final URL Suffix（服务账号模式）
+ */
+export async function updateAssetFinalUrlSuffixPython(params: {
+  userId: number
+  serviceAccountId?: string
+  customerId: string
+  assetResourceName: string
+  finalUrlSuffix: string
+  requestId?: string
+}): Promise<void> {
+  return withTracking(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/asset/update-final-url-suffix',
+    params.requestId,
+    async () => {
+      const serviceAccount = await getServiceAccountAuth(params.userId, params.serviceAccountId)
+      await axios.post(
+        `${PYTHON_SERVICE_URL}/api/google-ads/asset/update-final-url-suffix`,
+        {
+          service_account: withUserIdInServiceAccount(serviceAccount, params.userId),
+          customer_id: params.customerId,
+          asset_resource_name: params.assetResourceName,
+          final_url_suffix: params.finalUrlSuffix,
+        },
+        {
+          headers: getPythonRequestHeaders(params.userId, params.requestId),
+        }
+      )
+    }
+  )
+}
+
+/**
  * 创建附加宣传信息（服务账号模式）
  */
 export async function createCalloutExtensionsPython(params: {
@@ -840,6 +875,7 @@ export async function createSitelinkExtensionsPython(params: {
   sitelinks: Array<{
     linkText: string
     finalUrl: string
+    finalUrlSuffix?: string
     description1?: string
     description2?: string
   }>
@@ -862,6 +898,7 @@ export async function createSitelinkExtensionsPython(params: {
           sitelinks: params.sitelinks.map((sl) => ({
             link_text: sl.linkText,
             final_url: sl.finalUrl,
+            final_url_suffix: sl.finalUrlSuffix,
             description1: sl.description1,
             description2: sl.description2,
           })),

@@ -21,7 +21,17 @@ import {
   markUrlSwapTargetFailure,
   type UrlSwapErrorType,
 } from '@/lib/url-swap'
-import type { UrlSwapTaskData, UrlSwapTaskTarget } from '@/lib/url-swap/url-swap-types'
+import type {
+  UrlSwapTaskData,
+  UrlSwapTaskTarget,
+  SwapHistoryEntry,
+} from '@/lib/url-swap/url-swap-types'
+import {
+  mergeSitelinkPhaseIntoHistory,
+  runUrlSwapSitelinkSuffixPhase,
+  shouldRunUrlSwapSitelinkPhase,
+  emptyUrlSwapSitelinkPhaseResult,
+} from '@/lib/url-swap/url-swap-sitelink-updater'
 import { getDatabase } from '@/lib/db'
 import {
   updateCampaignFinalUrlSuffix,
@@ -346,6 +356,35 @@ async function updateTargetsFinalUrlSuffix(params: {
  */
 export type { UrlSwapTaskData }
 
+async function recordSwapHistoryWithSitelinkPhase(params: {
+  taskId: string
+  offerId: number
+  userId: number
+  targetCountry: string
+  db: Awaited<ReturnType<typeof getDatabase>>
+  entry: SwapHistoryEntry
+  runSitelink: boolean
+}) {
+  const sitelinkPhase = params.runSitelink
+    ? await runUrlSwapSitelinkSuffixPhase({
+        taskId: params.taskId,
+        offerId: params.offerId,
+        userId: params.userId,
+        targetCountry: params.targetCountry,
+        db: params.db,
+      })
+    : emptyUrlSwapSitelinkPhaseResult()
+
+  if (!params.runSitelink) {
+    console.log(
+      `[url-swap-sitelink] 跳过 Sitelink 更新: task=${params.taskId}（Campaign 换链未成功或未执行）`
+    )
+  }
+
+  await recordSwapHistory(params.taskId, mergeSitelinkPhaseIntoHistory(params.entry, sitelinkPhase))
+  return sitelinkPhase
+}
+
 function parseStringArrayJson(input: unknown): string[] {
   if (Array.isArray(input)) {
     return input
@@ -565,40 +604,54 @@ export async function executeUrlSwapTask(
         if (targetsToUpdate.length > 0 && !hasSuccess) {
           throw new Error('Google Ads 更新失败（所有目标均未更新成功）')
         }
-        await recordSwapHistory(taskId, {
-          swapped_at: new Date().toISOString(),
-          previous_final_url: currentUrlFromDb,
-          previous_final_url_suffix: currentSuffixFromDb,
-          new_final_url: resolved.finalUrl,
-          new_final_url_suffix: resolved.finalUrlSuffix,
-          success: true,
-        })
-
-        await updateTaskAfterSwap(taskId, resolved.finalUrl, resolved.finalUrlSuffix, {
-          manualSuffixCursor: nextCursor,
-        })
       } else {
         const hasUpdates = targetsToUpdate.length > 0
         const hasSuccess = (updateResult?.successCount ?? 0) > 0
         if (hasUpdates && !hasSuccess) {
           throw new Error('Google Ads 更新失败（所有目标均未更新成功）')
         }
-
-        // 🔥 修复：即使 URL 未变化，也记录历史，确保统计数据口径一致
-        await recordSwapHistory(taskId, {
-          swapped_at: new Date().toISOString(),
-          previous_final_url: currentUrlFromDb,
-          previous_final_url_suffix: currentSuffixFromDb,
-          new_final_url: resolved.finalUrl,
-          new_final_url_suffix: resolved.finalUrlSuffix,
-          success: true,
-        })
-
-        await updateTaskAfterManualAdvance(taskId, nextCursor)
       }
 
-      console.log(`[url-swap-executor]（manual）换链执行完成: ${taskId}, changed=${urlChanged}`)
-      return { success: true, changed: urlChanged }
+      const historyEntry: SwapHistoryEntry = {
+        swapped_at: new Date().toISOString(),
+        previous_final_url: currentUrlFromDb,
+        previous_final_url_suffix: currentSuffixFromDb,
+        new_final_url: resolved.finalUrl,
+        new_final_url_suffix: resolved.finalUrlSuffix,
+        success: true,
+      }
+      const campaignUpdateAttempted = targetsToUpdate.length > 0
+      const sitelinkPhase = await recordSwapHistoryWithSitelinkPhase({
+        taskId,
+        offerId,
+        userId: task.userId,
+        targetCountry,
+        db,
+        entry: historyEntry,
+        runSitelink: shouldRunUrlSwapSitelinkPhase({
+          campaignUpdateAttempted,
+          campaignUpdateSuccessCount: updateResult?.successCount ?? 0,
+        }),
+      })
+
+      if (urlChanged) {
+        await updateTaskAfterSwap(taskId, resolved.finalUrl, resolved.finalUrlSuffix, {
+          manualSuffixCursor: nextCursor,
+        })
+      } else {
+        await updateTaskAfterManualAdvance(taskId, nextCursor)
+        if (sitelinkPhase.changed) {
+          const now = new Date().toISOString()
+          await db.exec(
+            `UPDATE url_swap_tasks SET url_changed_count = url_changed_count + 1, updated_at = ? WHERE id = ?`,
+            [now, taskId]
+          )
+        }
+      }
+
+      const overallChanged = urlChanged || sitelinkPhase.changed
+      console.log(`[url-swap-executor]（manual）换链执行完成: ${taskId}, changed=${overallChanged}`)
+      return { success: true, changed: overallChanged }
     }
 
     // =========================
@@ -650,7 +703,6 @@ export async function executeUrlSwapTask(
     if (!urlChanged) {
       const retryTargets = taskTargets.filter(shouldRetryTargetOnSameSuffix)
       if (retryTargets.length === 0) {
-        // URL未变化，只更新统计（不算作URL变化）
         console.log(`[url-swap-executor] URL未变化: ${taskId}`)
         await updateTaskStats(taskId, true, false)
         return { success: true, changed: false }
@@ -678,8 +730,27 @@ export async function executeUrlSwapTask(
         throw new Error('Google Ads 更新失败（所有目标均未更新成功）')
       }
 
-      await updateTaskStats(taskId, true, false)
-      return { success: true, changed: false }
+      const sitelinkPhase = await recordSwapHistoryWithSitelinkPhase({
+        taskId,
+        offerId,
+        userId: task.userId,
+        targetCountry,
+        db,
+        entry: {
+          swapped_at: new Date().toISOString(),
+          previous_final_url: effectiveCurrentFinalUrl || '',
+          previous_final_url_suffix: effectiveCurrentFinalUrlSuffix || '',
+          new_final_url: resolved.finalUrl,
+          new_final_url_suffix: resolved.finalUrlSuffix,
+          success: true,
+        },
+        runSitelink: shouldRunUrlSwapSitelinkPhase({
+          campaignUpdateAttempted: retryTargets.length > 0,
+          campaignUpdateSuccessCount: retryResult?.successCount ?? 0,
+        }),
+      })
+      await updateTaskStats(taskId, true, sitelinkPhase.changed)
+      return { success: true, changed: sitelinkPhase.changed }
     }
 
     console.log(`[url-swap-executor] 检测到URL变化: ${taskId}`)
@@ -725,14 +796,25 @@ export async function executeUrlSwapTask(
       throw new Error('Google Ads 更新失败（所有目标均未更新成功）')
     }
 
-    // 5. 记录换链历史
-    await recordSwapHistory(taskId, {
-      swapped_at: new Date().toISOString(),
-      previous_final_url: effectiveCurrentFinalUrl || '',
-      previous_final_url_suffix: effectiveCurrentFinalUrlSuffix || '',
-      new_final_url: resolved.finalUrl,
-      new_final_url_suffix: resolved.finalUrlSuffix,
-      success: true,
+    // 5. 记录换链历史 + Sitelink suffix 更新（Campaign 成功后才联动 Sitelink）
+    await recordSwapHistoryWithSitelinkPhase({
+      taskId,
+      offerId,
+      userId: task.userId,
+      targetCountry,
+      db,
+      entry: {
+        swapped_at: new Date().toISOString(),
+        previous_final_url: effectiveCurrentFinalUrl || '',
+        previous_final_url_suffix: effectiveCurrentFinalUrlSuffix || '',
+        new_final_url: resolved.finalUrl,
+        new_final_url_suffix: resolved.finalUrlSuffix,
+        success: true,
+      },
+      runSitelink: shouldRunUrlSwapSitelinkPhase({
+        campaignUpdateAttempted: targetsToUpdate.length > 0,
+        campaignUpdateSuccessCount: updateResult?.successCount ?? 0,
+      }),
     })
 
     // 6. 更新任务状态

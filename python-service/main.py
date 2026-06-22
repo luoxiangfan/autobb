@@ -1497,6 +1497,41 @@ async def update_campaign_final_url_suffix(request: UpdateCampaignFinalUrlSuffix
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class UpdateAssetFinalUrlSuffixRequest(BaseModel):
+    service_account: ServiceAccountConfig
+    customer_id: str
+    asset_resource_name: str
+    final_url_suffix: str
+
+
+@app.post("/api/google-ads/asset/update-final-url-suffix")
+async def update_asset_final_url_suffix(request: UpdateAssetFinalUrlSuffixRequest):
+    """更新 Sitelink Asset Final URL Suffix（用于 URL Swap 换链接任务）"""
+    user_id = request.service_account.user_id
+    try:
+        client = create_google_ads_client(request.service_account)
+        asset_service = client.get_service("AssetService")
+
+        operation = client.get_type("AssetOperation")
+        asset = operation.update
+        asset.resource_name = request.asset_resource_name
+        asset.final_url_suffix = sanitize_final_url_suffix(request.final_url_suffix)
+        operation.update_mask.paths.append("final_url_suffix")
+
+        asset_service.mutate_assets(
+            customer_id=request.customer_id, operations=[operation]
+        )
+
+        logger.info(
+            f"[user_id={user_id}] Successfully updated asset final URL suffix: {request.asset_resource_name}"
+        )
+        return {"success": True}
+
+    except Exception as e:
+        logger.error(f"[user_id={user_id}] Update asset final URL suffix error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 class CreateCalloutExtensionsRequest(BaseModel):
     service_account: ServiceAccountConfig
     customer_id: str
@@ -1570,6 +1605,7 @@ async def create_callout_extensions(request: CreateCalloutExtensionsRequest):
 class SitelinkData(BaseModel):
     link_text: str
     final_url: str
+    final_url_suffix: Optional[str] = None
     description1: Optional[str] = None
     description2: Optional[str] = None
 
@@ -1600,6 +1636,8 @@ async def create_sitelink_extensions(request: CreateSitelinkExtensionsRequest):
                 continue
             asset.sitelink_asset.link_text = sanitized_link_text
             asset.final_urls.append(sitelink.final_url)
+            if sitelink.final_url_suffix and sitelink.final_url_suffix.strip():
+                asset.final_url_suffix = sanitize_final_url_suffix(sitelink.final_url_suffix)
             # description1 和 description2 最多35个字符
             # 如果 description1 存在但 description2 不存在，用 description1 填充
             if sitelink.description1 and sitelink.description1.strip():

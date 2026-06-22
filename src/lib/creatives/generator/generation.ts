@@ -96,6 +96,11 @@ import type {
   SearchTermFeedbackHintsInput,
 } from './types'
 import { deriveLinkTypeFromScrapedData, safeParseJson } from './utils'
+import {
+  applyStoreProductLinksToCreativeSitelinks,
+  parseOfferStoreProductLinks,
+  resolveOfferFallbackUrlForSitelinks,
+} from '../sitelink-store-product-links'
 
 export async function runAdCreativeModelAttempt(params: {
   userId: number
@@ -1522,30 +1527,32 @@ export async function generateAdCreative(
   // 🆕 添加只读意图元数据（向后兼容，不影响关键词和发布）
   annotateCopyIntentMetadata(result, resolvedLanguage, result.keywords || [])
 
-  // 修正 sitelinks URL 为真实的 offer URL
-  // 需求优化：所有sitelinks统一使用offer的主URL，避免虚构的子路径
+  // 修正 sitelinks URL：店铺模式绑定 store_product_links；否则统一使用 offer 主 URL
   if (result.sitelinks && result.sitelinks.length > 0) {
-    // 优先使用final_url（推广链接解析后的真实URL），否则使用url
-    // 🔧 修复：验证final_url是否为有效URL，排除"null/"等无效值
-    const rawFinalUrl = (offer as { final_url?: string; url?: string }).final_url
-    const offerUrlRaw = (offer as { url?: string }).url
-    // 只有当final_url是有效的URL时才使用，否则fallback到url字段
-    const isFinalUrlValid =
-      rawFinalUrl &&
-      rawFinalUrl !== 'null' &&
-      rawFinalUrl !== 'null/' &&
-      rawFinalUrl !== 'undefined'
-    const offerUrl = isFinalUrlValid ? rawFinalUrl : offerUrlRaw
-    if (offerUrl) {
-      result.sitelinks = result.sitelinks.map((link) => {
-        // 所有sitelinks统一使用offer的主URL（不拼接子路径）
-        // 这确保所有链接都是真实可访问的
-        return {
-          ...link,
-          url: offerUrl, // 优先使用final_url，避免推广链接
-        }
-      })
+    const offerUrl = resolveOfferFallbackUrlForSitelinks(
+      offer as {
+        final_url?: string | null
+        url?: string | null
+      }
+    )
+    const storeProductLinks = parseOfferStoreProductLinks(
+      offer as { page_type?: string | null; store_product_links?: unknown }
+    )
 
+    if (storeProductLinks.length > 0) {
+      result.sitelinks = applyStoreProductLinksToCreativeSitelinks(
+        result.sitelinks,
+        storeProductLinks,
+        offerUrl
+      )
+      console.log(
+        `🔗 店铺模式：${Math.min(result.sitelinks.length, storeProductLinks.length)} 个 Sitelink 已绑定单品推广链接`
+      )
+    } else if (offerUrl) {
+      result.sitelinks = result.sitelinks.map((link) => ({
+        ...link,
+        url: offerUrl,
+      }))
       console.log(
         `🔗 修正 ${result.sitelinks.length} 个附加链接URL为真实offer URL (${offerUrl.substring(0, 50)}...)`
       )

@@ -37,6 +37,34 @@ export type TriggerResultStatus =
   | 'completed' // 已完成
 
 /**
+ * Store Offer Sitelink 子目标（store_product_links[i] ↔ Google Ads Sitelink Asset）
+ */
+export type UrlSwapSitelinkTargetStatus = 'active' | 'invalid' | 'removed'
+
+export interface UrlSwapSitelinkTarget {
+  id: string
+  task_id: string
+  offer_id: number
+  user_id: number
+  sort_index: number
+  affiliate_link: string
+  google_ads_account_id: number
+  google_customer_id: string
+  google_campaign_id: string
+  asset_resource_name: string
+  asset_id: string
+  link_text: string
+  current_final_url: string | null
+  current_final_url_suffix: string | null
+  status: UrlSwapSitelinkTargetStatus
+  consecutive_failures: number
+  last_success_at: string | null
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
  * 换链接任务
  */
 export interface UrlSwapTask {
@@ -94,6 +122,7 @@ export interface UrlSwapTask {
 
   // === 多目标支持（可选） ===
   targets?: UrlSwapTaskTarget[]
+  sitelink_targets?: UrlSwapSitelinkTarget[]
 }
 
 /**
@@ -121,6 +150,17 @@ export interface UrlSwapTaskListItem extends UrlSwapTask {
   offer_name?: string // 该任务对应的Offer的产品标识（如 "Eufy_GB_02"）
 }
 
+export interface SwapHistorySitelinkUpdate {
+  sort_index: number
+  asset_id: string
+  link_text: string
+  previous_final_url_suffix: string
+  new_final_url_suffix: string
+  success: boolean
+  skipped?: boolean
+  error_message?: string
+}
+
 /**
  * 换链历史记录条目
  */
@@ -132,6 +172,9 @@ export interface SwapHistoryEntry {
   new_final_url_suffix: string // 新的Suffix
   success: boolean // 是否成功
   error_message?: string // 错误信息（失败时）
+  sitelink_updates?: SwapHistorySitelinkUpdate[]
+  sitelink_success_count?: number
+  sitelink_failure_count?: number
 }
 
 /**

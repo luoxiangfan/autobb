@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner'
 import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap/url-swap-types'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
+import UrlSwapSitelinkTargetsSection from '@/components/UrlSwapSitelinkTargetsSection'
 
 function groupTargetsByAccount(targets: UrlSwapTaskTarget[]) {
   const groups = new Map<
@@ -242,6 +243,7 @@ export default function UrlSwapTaskDetailPage() {
   const isLegacyTargets = rawTargets.length === 0 && legacyTargets.length > 0
 
   const groupedTargets = targets.length > 0 ? groupTargetsByAccount(targets) : []
+  const sitelinkTargets = task?.sitelink_targets ?? []
 
   if (loading) {
     return (
@@ -550,6 +552,11 @@ export default function UrlSwapTaskDetailPage() {
             )}
           </CardContent>
         </Card>
+
+        <UrlSwapSitelinkTargetsSection
+          sitelinkTargets={sitelinkTargets}
+          formatDateTime={formatDateTime}
+        />
 
         {/* Error Info */}
         {task.status === 'error' && task.error_message && (

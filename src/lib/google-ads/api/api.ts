@@ -59,6 +59,10 @@ export {
   getAdPerformance,
   getBatchCampaignPerformance,
 } from './performance'
-export { createGoogleAdsCalloutExtensions, createGoogleAdsSitelinkExtensions } from './extensions'
+export {
+  createGoogleAdsCalloutExtensions,
+  createGoogleAdsSitelinkExtensions,
+  updateAssetFinalUrlSuffix,
+} from './extensions'
 
 export { enums, GoogleAdsApi } from 'google-ads-api'

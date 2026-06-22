@@ -1,5 +1,8 @@
 import { enums } from 'google-ads-api'
-import { sanitizeGoogleAdsAdText } from '@/lib/google-ads/common/ad-text'
+import {
+  sanitizeGoogleAdsAdText,
+  sanitizeGoogleAdsFinalUrlSuffix,
+} from '@/lib/google-ads/common/ad-text'
 import { oauthGetCustomerParams } from '@/lib/google-ads/oauth/customer-params'
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
@@ -7,6 +10,7 @@ import { ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { trackOAuthApiCall } from './shared'
 import { getCustomerWithCredentials, resolveGoogleAdsApiCallAuth } from './customer'
 import { googleAdsApiLogger } from '@/lib/google-ads/common/logger'
+import { withRetry } from '../../common/server'
 
 export async function createGoogleAdsCalloutExtensions(params: {
   customerId: string
@@ -154,6 +158,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
   sitelinks: Array<{
     text: string
     url: string
+    finalUrlSuffix?: string
     description1?: string
     description2?: string
   }>
@@ -164,7 +169,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
   authContext?: GoogleAdsAuthContext
-}): Promise<{ assetIds: string[] }> {
+}): Promise<{ assetIds: string[]; assetResourceNames: string[] }> {
   const sanitizedSitelinks = params.sitelinks.map((sitelink) => {
     const sanitizedText = sanitizeGoogleAdsAdText(sitelink.text, 25).trim()
     const desc1Raw = sitelink.description1
@@ -173,6 +178,10 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     const desc2Raw = sitelink.description2
       ? sanitizeGoogleAdsAdText(sitelink.description2, 35).trim()
       : ''
+    const finalUrlSuffix =
+      sitelink.finalUrlSuffix && sitelink.finalUrlSuffix.trim()
+        ? sanitizeGoogleAdsFinalUrlSuffix(sitelink.finalUrlSuffix)
+        : undefined
 
     let description1: string | undefined = desc1Raw
     let description2: string | undefined = desc2Raw
@@ -188,6 +197,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       text: sanitizedText,
       description1,
       description2,
+      finalUrlSuffix,
     }
   })
 
@@ -204,16 +214,21 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       sitelinks: sanitizedSitelinks.map((sl) => ({
         linkText: sl.text,
         finalUrl: sl.url,
+        finalUrlSuffix: sl.finalUrlSuffix,
         description1: sl.description1,
         description2: sl.description2,
       })),
     })
-    return { assetIds: assetResourceNames.map((rn) => rn.split('/').pop() || '') }
+    return {
+      assetIds: assetResourceNames.map((rn) => rn.split('/').pop() || ''),
+      assetResourceNames,
+    }
   }
 
   const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
 
   const assetIds: string[] = []
+  const assetResourceNames: string[] = []
 
   try {
     // Step 1: Create Sitelink Assets
@@ -238,9 +253,12 @@ export async function createGoogleAdsSitelinkExtensions(params: {
       }
 
       // 关键修复：final_urls必须在Asset层级，不是sitelink_asset内部
-      const assetObj = {
+      const assetObj: Record<string, unknown> = {
         sitelink_asset: sitelinkAsset,
-        final_urls: [sitelink.url], // final_urls在Asset层级
+        final_urls: [sitelink.url],
+      }
+      if (sitelink.finalUrlSuffix) {
+        assetObj.final_url_suffix = sitelink.finalUrlSuffix
       }
 
       googleAdsApiLogger.debug('sitelink_asset_built', { assetObj })
@@ -262,8 +280,11 @@ export async function createGoogleAdsSitelinkExtensions(params: {
 
     if (assetResponse && assetResponse.results) {
       assetResponse.results.forEach((result: any) => {
-        const assetId = result.resource_name?.split('/').pop() || ''
-        assetIds.push(assetId)
+        const resourceName = result.resource_name || result.resourceName
+        if (!resourceName) return
+        assetResourceNames.push(resourceName)
+        const assetId = resourceName.split('/').pop() || ''
+        if (assetId) assetIds.push(assetId)
       })
       googleAdsApiLogger.info('sitelink_assets_created', { count: assetIds.length })
     }
@@ -285,7 +306,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     )
     googleAdsApiLogger.info('sitelink_assets_linked', { campaignId: params.campaignId })
 
-    return { assetIds }
+    return { assetIds, assetResourceNames }
   } catch (error: any) {
     const errorMessage =
       error?.errors?.[0]?.message ||
@@ -305,4 +326,64 @@ export async function createGoogleAdsSitelinkExtensions(params: {
     )
     throw new Error(`创建Sitelink扩展失败: ${errorMessage}`)
   }
+}
+
+/**
+ * 更新 Sitelink Asset 的 Final URL Suffix（用于换链接任务）
+ */
+export async function updateAssetFinalUrlSuffix(params: {
+  customerId: string
+  refreshToken: string
+  assetResourceName: string
+  finalUrlSuffix: string
+  userId: number
+  loginCustomerId?: string
+  authType?: 'oauth' | 'service_account'
+  serviceAccountId?: string
+  credentials?: OAuthApiCredentialsFields
+  accountParentMccId?: string | null
+  authContext?: GoogleAdsAuthContext
+}): Promise<void> {
+  const sanitizedFinalUrlSuffix = sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
+  const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
+
+  if (authType === 'service_account') {
+    const { updateAssetFinalUrlSuffixPython } = await import('../../campaign/server')
+    await updateAssetFinalUrlSuffixPython({
+      userId: params.userId,
+      serviceAccountId: params.serviceAccountId,
+      customerId: params.customerId,
+      assetResourceName: params.assetResourceName,
+      finalUrlSuffix: sanitizedFinalUrlSuffix,
+    })
+    return
+  }
+
+  const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
+
+  await trackOAuthApiCall(
+    params.userId,
+    params.customerId,
+    ApiOperationType.MUTATE,
+    '/api/google-ads/asset/update-final-url-suffix',
+    () =>
+      withRetry(
+        () =>
+          customer.assets.update([
+            {
+              resource_name: params.assetResourceName,
+              final_url_suffix: sanitizedFinalUrlSuffix,
+            },
+          ]),
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          operationName: `Update Asset Final URL Suffix: ${params.assetResourceName}`,
+        }
+      )
+  )
+
+  googleAdsApiLogger.debug('asset_final_url_suffix_updated', {
+    assetResourceName: params.assetResourceName,
+  })
 }

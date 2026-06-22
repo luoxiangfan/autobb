@@ -45,6 +45,8 @@ interface Offer {
   brand_name?: string
   targetCountry: string
   affiliateLink?: string
+  page_type?: string
+  store_product_links?: string[] | string | null
   // 🆕 关联的Google Ads信息（从Campaign获取）
   googleCustomerId?: string
   googleCampaignId?: string
@@ -58,6 +60,21 @@ const DURATION_OPTIONS = [
   { value: 90, label: '90 天' },
   { value: -1, label: '不限期' },
 ]
+
+function countStoreProductLinks(raw: Offer['store_product_links']): number {
+  if (!raw) return 0
+  if (Array.isArray(raw)) {
+    return raw.filter((link) => typeof link === 'string' && link.trim().length > 0).length
+  }
+  if (typeof raw === 'string') {
+    try {
+      return countStoreProductLinks(JSON.parse(raw) as Offer['store_product_links'])
+    } catch {
+      return 0
+    }
+  }
+  return 0
+}
 
 export default function UrlSwapTaskModal({
   open,
@@ -86,6 +103,9 @@ export default function UrlSwapTaskModal({
   const isEditMode = !!editTaskId
   const canEnableTask =
     isEditMode && !!taskData && (taskData.status === 'disabled' || taskData.status === 'error')
+  const storeProductLinkCount =
+    offer?.page_type === 'store' ? countStoreProductLinks(offer.store_product_links) : 0
+  const showStoreSitelinkHint = storeProductLinkCount > 0
 
   const loadOfferById = useCallback(
     async (id: number) => {
@@ -415,6 +435,20 @@ export default function UrlSwapTaskModal({
                 >
                   前往配置
                 </Button>
+              </div>
+            </Alert>
+          )}
+
+          {showStoreSitelinkHint && (
+            <Alert>
+              <Link className="h-4 w-4" />
+              <div className="ml-2 text-sm">
+                <p className="font-medium">Store Offer · Sitelink 联动换链</p>
+                <p className="text-muted-foreground mt-1">
+                  该 Offer 配置了 {storeProductLinkCount}{' '}
+                  个商品推广链接。创建任务后，每次换链会同步更新 Campaign suffix 与各 Sitelink Asset
+                  的 final_url_suffix；请先创建任务再发布 Sitelink。
+                </p>
               </div>
             </Alert>
           )}

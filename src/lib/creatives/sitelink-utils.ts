@@ -1,8 +1,31 @@
 export interface SitelinkItem {
   text: string
   url: string
+  finalUrlSuffix?: string
+  sourceAffiliateLink?: string
   description1?: string
   description2?: string
+}
+
+export type PublishSitelinkInput = {
+  text: string
+  url: string
+  finalUrlSuffix?: string
+  description1?: string
+  description2?: string
+}
+
+/** 将完整 URL 拆为 Google Ads final_urls 基址与 final_url_suffix */
+export function splitUrlBaseAndSuffix(fullUrl: string): { base: string; suffix: string } {
+  try {
+    const urlObj = new URL(fullUrl)
+    return {
+      base: `${urlObj.origin}${urlObj.pathname}`,
+      suffix: urlObj.search ? urlObj.search.substring(1) : '',
+    }
+  } catch {
+    return { base: fullUrl, suffix: '' }
+  }
 }
 
 const SITELINK_TEXT_MAX = 25
@@ -104,7 +127,15 @@ export function normalizeSitelinkItem(raw: unknown, fallbackUrl?: string): Sitel
     Array.isArray(link.descriptions) ? link.descriptions[1] : undefined,
   ])
 
+  const finalUrlSuffixRaw = firstNonEmptyString([link.finalUrlSuffix, link.final_url_suffix])
+  const sourceAffiliateLink = firstNonEmptyString([
+    link.sourceAffiliateLink,
+    link.source_affiliate_link,
+  ])
+
   const item: SitelinkItem = { text, url }
+  if (finalUrlSuffixRaw) item.finalUrlSuffix = finalUrlSuffixRaw
+  if (sourceAffiliateLink) item.sourceAffiliateLink = sourceAffiliateLink
   if (description1) item.description1 = truncate(description1, SITELINK_DESC_MAX)
   if (description2) item.description2 = truncate(description2, SITELINK_DESC_MAX)
   return item
@@ -117,18 +148,15 @@ export function normalizeSitelinkList(raw: unknown, fallbackUrl?: string): Sitel
     .filter((item): item is SitelinkItem => item !== null)
 }
 
-export function formatSitelinkForPublish(item: SitelinkItem): {
-  text: string
-  url: string
-  description1?: string
-  description2?: string
-} {
+export function formatSitelinkForPublish(item: SitelinkItem): PublishSitelinkInput {
   const desc1 = item.description1?.trim()
   const desc2 = item.description2?.trim()
+  const suffix = item.finalUrlSuffix?.trim()
 
   return {
     text: item.text,
     url: item.url,
+    ...(suffix ? { finalUrlSuffix: suffix } : {}),
     ...(desc1 ? { description1: desc1, description2: desc2 || desc1 } : {}),
   }
 }
