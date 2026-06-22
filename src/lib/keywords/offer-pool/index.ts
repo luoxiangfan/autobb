@@ -51,7 +51,7 @@ import { resolveOfferPageType } from './keyword-clustering'
 import {
   buildVerifiedSourceKeywordData,
   extractStoreProductNamesFromLinks,
-} from './offer-pool-storage'
+} from './offer-pool-verified-source'
 import { filterGlobalCoreKeywordsByOfferContext } from './offer-pool-global-core'
 
 export const __testOnly = {

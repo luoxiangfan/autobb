@@ -58,11 +58,11 @@ import {
   injectGlobalCoreKeywordsForStore,
 } from './offer-pool-global-core'
 import { separateBrandKeywords, inferDefaultKeywordMatchType } from './offer-pool-brand-utils'
+import { saveKeywordPoolWithData } from './offer-pool-storage'
 import {
-  saveKeywordPoolWithData,
   buildVerifiedSourceKeywordData,
   appendVerifiedKeywordsToBucket,
-} from './offer-pool-storage'
+} from './offer-pool-verified-source'
 import { buildExistingKeywordNormSet } from './offer-pool-global-core'
 import { extractCategorySignalsFromScrapedData } from './offer-pool-scraped-signals'
 import { extractKeywordsFromOffer } from './offer-pool-keyword-extract'
