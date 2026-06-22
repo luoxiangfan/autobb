@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { resolveClickFarmTaskMode, resolveUrlSwapTaskMode } from './task-modal-helpers'
+import {
+  resolveClickFarmTaskMode,
+  resolveUrlSwapTaskMode,
+} from '@/app/(app)/offers/task-modal-helpers'
 
 afterEach(() => {
   vi.restoreAllMocks()

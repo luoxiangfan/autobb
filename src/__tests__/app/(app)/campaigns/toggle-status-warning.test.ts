@@ -3,7 +3,7 @@ import {
   ENABLE_CAMPAIGN_OFFER_TASK_HINTS,
   formatToggleStatusWarnings,
   PAUSE_CAMPAIGN_OFFER_TASK_HINTS,
-} from './toggle-status-warning'
+} from '@/app/(app)/campaigns/toggle-status-warning'
 
 describe('PAUSE_CAMPAIGN_OFFER_TASK_HINTS', () => {
   it('includes click-farm pause and url-swap disable hints', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { formatGoogleAdsAuthSaveError } from './api-messages'
-import { resolveGoogleAdsOAuthCallbackErrorMessage } from './oauth-callback-errors'
+import { formatGoogleAdsAuthSaveError } from '@/app/(app)/settings/google-ads/api-messages'
+import { resolveGoogleAdsOAuthCallbackErrorMessage } from '@/app/(app)/settings/google-ads/oauth-callback-errors'
 import {
   validateGoogleAdsOAuthForm,
   validateGoogleAdsOAuthFormForSave,
@@ -13,7 +13,7 @@ import {
   resolveGoogleAdsOAuthVerifyGate,
   validateGoogleAdsServiceAccountForm,
   isGoogleAdsAuthMethodLocked,
-} from './validation'
+} from '@/app/(app)/settings/google-ads/validation'
 
 describe('formatGoogleAdsAuthSaveError', () => {
   it('returns server message for 409 conflicts', () => {

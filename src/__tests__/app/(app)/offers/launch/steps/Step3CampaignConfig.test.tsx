@@ -3,7 +3,7 @@
 import React from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import Step3CampaignConfig from './Step3CampaignConfig'
+import Step3CampaignConfig from '@/app/(app)/offers/[id]/launch/steps/Step3CampaignConfig'
 
 vi.mock('@/lib/common/server', () => ({
   showError: vi.fn(),

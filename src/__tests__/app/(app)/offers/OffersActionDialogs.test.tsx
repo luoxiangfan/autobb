@@ -3,7 +3,7 @@
 import React from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import OffersActionDialogs from './OffersActionDialogs'
+import OffersActionDialogs from '@/app/(app)/offers/OffersActionDialogs'
 
 beforeAll(() => {
   Object.defineProperty(window, 'matchMedia', {
