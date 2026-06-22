@@ -535,6 +535,26 @@ export async function listOffers(
   const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql('o.id', 'o.user_id')
   const listColumnsWithCampaign = `${listColumns}, ${occupyingCampaignIdSubquery} as campaign_id`
 
+  const isManagerCondition =
+    "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
+  const isActiveAccountCondition = "gaa.is_active::text IN ('1', 't', 'true')"
+  const isNotDeletedAccountCondition =
+    "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
+  const linkedAccountCampaignFiltersSql = `
+      AND c.status != 'REMOVED'
+      AND ${isManagerCondition}
+      AND ${isActiveAccountCondition}
+      AND ${isNotDeletedAccountCondition}
+      AND c.google_campaign_id IS NOT NULL
+      AND c.google_campaign_id != ''`
+  const linkedAccountCountSubquery = `(SELECT COUNT(DISTINCT gaa.id)
+    FROM campaigns c
+    INNER JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
+    WHERE c.offer_id = o.id
+      AND c.user_id = o.user_id
+      ${linkedAccountCampaignFiltersSql}
+  )`
+
   const sortableColumnMap: Record<string, string> = {
     offerName: 'o.offer_name',
     brand: 'o.brand',
@@ -544,6 +564,7 @@ export async function listOffers(
     needsCompletion: 'o.needs_completion',
     createdAt: 'o.created_at',
     updatedAt: 'o.updated_at',
+    linkedAccounts: linkedAccountCountSubquery,
   }
 
   const sortColumn =
@@ -572,12 +593,6 @@ export async function listOffers(
     return { offers: [], total: count }
   }
 
-  const isManagerCondition =
-    "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-  const isActiveAccountCondition = "gaa.is_active::text IN ('1', 't', 'true')"
-  const isNotDeletedAccountCondition =
-    "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
-
   // 构建offer IDs的占位符
   const offerIds = offers.map((o) => o.id)
   const placeholders = offerIds.map(() => '?').join(',')
@@ -593,12 +608,7 @@ export async function listOffers(
     INNER JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
     WHERE c.offer_id IN (${placeholders})
       AND c.user_id = ?
-      AND c.status != 'REMOVED'
-      AND ${isManagerCondition}
-      AND ${isActiveAccountCondition}
-      AND ${isNotDeletedAccountCondition}
-      AND c.google_campaign_id IS NOT NULL
-      AND c.google_campaign_id != ''
+      ${linkedAccountCampaignFiltersSql}
     ORDER BY c.offer_id, gaa.account_name
   `
 

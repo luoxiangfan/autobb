@@ -80,18 +80,7 @@ describe('GET /api/dashboard/kpis', () => {
     expect(cacheFns.set).not.toHaveBeenCalled()
   })
 
-  it('falls back to legacy TTL when FF_KPI_SHORT_TTL is explicitly disabled', async () => {
-    vi.stubEnv('FF_KPI_SHORT_TTL', 'false')
-
-    const req = new NextRequest('http://localhost/api/dashboard/kpis?days=7')
-    const res = await GET(req)
-
-    expect(res.status).toBe(200)
-    expect(cacheFns.getOrSet).toHaveBeenCalledWith('kpis:test', expect.any(Function), 5 * 60 * 1000)
-  })
-
-  it('applies short KPI TTL when FF_KPI_SHORT_TTL is enabled', async () => {
-    vi.stubEnv('FF_KPI_SHORT_TTL', 'true')
+  it('applies KPI short TTL override from KPI_SHORT_TTL_MS', async () => {
     vi.stubEnv('KPI_SHORT_TTL_MS', '10000')
 
     const req = new NextRequest('http://localhost/api/dashboard/kpis?days=7')

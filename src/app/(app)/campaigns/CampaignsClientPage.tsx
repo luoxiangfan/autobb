@@ -50,13 +50,8 @@ import {
 import { CampaignsActionDialogs } from './CampaignsActionDialogs'
 import { CampaignOverallRoasDialog } from './CampaignOverallRoasDialog'
 import { CampaignsTable } from './CampaignsTable'
-import {
-  calculateCampaignRoas,
-  convertAmountForDisplay,
-  formatCurrencyWithCode,
-} from './campaign-metrics-utils'
+import { convertAmountForDisplay, formatCurrencyWithCode } from './campaign-metrics-utils'
 import type { CampaignSortDirection, CampaignSortField } from './types'
-import { matchesCampaignSearch } from '@/lib/campaign'
 import { formatCurrency } from '@/lib/common'
 import { formatCurrency as formatCurrencyDashboard, formatMultiCurrency } from '@/lib/common'
 
@@ -204,8 +199,6 @@ const formatDateInputValue = (date: Date): string => {
 }
 
 interface CampaignsClientPageProps {
-  campaignsReqDedupEnabled?: boolean
-  campaignsServerPagingEnabled?: boolean
   defaultTimeRange?: '7' | '14' | '30'
   createdAtStart?: string
   createdAtEnd?: string
@@ -282,8 +275,6 @@ function areUserFilterSelectionsEqual(a: string[], b: string[]): boolean {
 }
 
 export default function CampaignsClientPage({
-  campaignsReqDedupEnabled = false,
-  campaignsServerPagingEnabled = false,
   defaultTimeRange,
   createdAtStart,
   createdAtEnd,
@@ -339,14 +330,12 @@ export default function CampaignsClientPage({
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
-  const isServerPagingMode = campaignsServerPagingEnabled
-  const totalItems = isServerPagingMode ? serverTotal : filteredCampaigns.length
+  const totalItems = serverTotal
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
 
   // Sorting states
   const [sortField, setSortField] = useState<CampaignSortField | null>(null)
   const [sortDirection, setSortDirection] = useState<CampaignSortDirection>(null)
-  const filterKeyRef = useRef<string>('')
   const silentRefreshCountRef = useRef(0)
   const campaignsInFlightRef = useRef<Map<string, Promise<void>>>(new Map())
   const trendsInFlightRef = useRef<Map<string, Promise<void>>>(new Map())
@@ -684,13 +673,11 @@ export default function CampaignsClientPage({
       ).length,
     [selectedCampaignSnapshots]
   )
-  const activeCampaignCount = isServerPagingMode
-    ? Math.max(
-        0,
-        Number(summary?.statusDistribution?.total ?? summary?.totalCampaigns ?? totalItems) -
-          Number(summary?.statusDistribution?.removed ?? 0)
-      )
-    : campaigns.filter((campaign) => !isCampaignDeleted(campaign)).length
+  const activeCampaignCount = Math.max(
+    0,
+    Number(summary?.statusDistribution?.total ?? summary?.totalCampaigns ?? totalItems) -
+      Number(summary?.statusDistribution?.removed ?? 0)
+  )
   const enabledCampaignCount = Number(
     summary?.statusDistribution?.enabled ?? campaigns.filter((c) => c.status === 'ENABLED').length
   )
@@ -779,21 +766,19 @@ export default function CampaignsClientPage({
   const customRangeLabel = appliedCustomRange
     ? `${appliedCustomRange.startDate} ~ ${appliedCustomRange.endDate}`
     : '自定义'
-  const serverListDepsKey = isServerPagingMode
-    ? JSON.stringify({
-        currentPage,
-        pageSize,
-        searchQuery: debouncedSearchQuery.trim(),
-        statusFilter,
-        statusCategoryFilter,
-        needsOfferCompletionFilter,
-        sortField,
-        sortDirection,
-        showDeletedCampaigns,
-        selectedUserFilters: selectedUserFilters.slice().sort(),
-        affiliateFilter,
-      })
-    : ''
+  const serverListDepsKey = JSON.stringify({
+    currentPage,
+    pageSize,
+    searchQuery: debouncedSearchQuery.trim(),
+    statusFilter,
+    statusCategoryFilter,
+    needsOfferCompletionFilter,
+    sortField,
+    sortDirection,
+    showDeletedCampaigns,
+    selectedUserFilters: selectedUserFilters.slice().sort(),
+    affiliateFilter,
+  })
   const allUsersSelected =
     users.length > 0 &&
     selectedUserFilters.length === users.length &&
@@ -808,7 +793,7 @@ export default function CampaignsClientPage({
     userFilterApplied ||
     affiliateFilter !== 'all'
   const trendsFilterDepsKey = JSON.stringify({
-    search: (isServerPagingMode ? debouncedSearchQuery : searchQuery).trim(),
+    search: debouncedSearchQuery.trim(),
     statusFilter,
     statusCategoryFilter,
     needsOfferCompletionFilter,
@@ -917,11 +902,6 @@ export default function CampaignsClientPage({
   }, [])
 
   useEffect(() => {
-    if (!isServerPagingMode) {
-      setDebouncedSearchQuery(searchQuery)
-      return
-    }
-
     const timer = window.setTimeout(() => {
       setDebouncedSearchQuery(searchQuery)
     }, 300)
@@ -929,7 +909,7 @@ export default function CampaignsClientPage({
     return () => {
       window.clearTimeout(timer)
     }
-  }, [isServerPagingMode, searchQuery])
+  }, [searchQuery])
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
     if (!range?.from || !range?.to) {
@@ -1058,11 +1038,9 @@ export default function CampaignsClientPage({
       })
       removeSelectedCampaignSnapshots(uniqueIds)
 
-      if (isServerPagingMode) {
-        setServerTotal((prev) => Math.max(0, prev - uniqueIds.length))
-      }
+      setServerTotal((prev) => Math.max(0, prev - uniqueIds.length))
     },
-    [isServerPagingMode, removeSelectedCampaignSnapshots]
+    [removeSelectedCampaignSnapshots]
   )
 
   const applyLocalCampaignOffline = useCallback((ids: number[]) => {
@@ -1194,177 +1172,11 @@ export default function CampaignsClientPage({
   }, [campaigns, selectedCampaignIds, upsertSelectedCampaignSnapshots])
 
   useEffect(() => {
-    if (isServerPagingMode) {
-      setFilteredCampaigns(campaigns)
-      setCurrentPage((prev) => {
-        return prev > totalPages ? totalPages : prev
-      })
-      return
-    }
-
-    let result = campaigns
-
-    if (!showDeletedCampaigns) {
-      result = result.filter((campaign) => !isCampaignDeleted(campaign))
-    }
-
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      result = result.filter((campaign) => matchesCampaignSearch(query, campaign))
-    }
-
-    // Status filter
-    if (statusFilter !== 'all') {
-      result = result.filter((c) => c.status === statusFilter)
-    }
-
-    if (statusCategoryFilter !== 'all') {
-      result = result.filter((c) => c.statusCategory === statusCategoryFilter)
-    }
-
-    // 按需要完善 Offer 状态筛选
-    if (needsOfferCompletionFilter !== 'all') {
-      const needsCompletion = needsOfferCompletionFilter === 'true'
-      result = result.filter((c) => (c.needsOfferCompletion ?? false) === needsCompletion)
-    }
-
-    // Sorting
-    if (sortField && sortDirection) {
-      result = [...result].sort((a, b) => {
-        if (sortField === 'servingStartDate') {
-          const aDate = a.servingStartDate
-          const bDate = b.servingStartDate
-
-          // 无投放日期的记录，始终排在最后（不随排序方向变化）
-          if (!aDate && !bDate) return 0
-          if (!aDate) return 1
-          if (!bDate) return -1
-
-          if (aDate < bDate) return sortDirection === 'asc' ? -1 : 1
-          if (aDate > bDate) return sortDirection === 'asc' ? 1 : -1
-          return 0
-        }
-        if (sortField === 'roas') {
-          const aRoas = calculateCampaignRoas(a)
-          const bRoas = calculateCampaignRoas(b)
-          if (aRoas === null && bRoas === null) return 0
-          if (aRoas === null) return 1
-          if (bRoas === null) return -1
-          return sortDirection === 'asc' ? aRoas - bRoas : bRoas - aRoas
-        }
-
-        let aVal: number | string = 0
-        let bVal: number | string = 0
-
-        switch (sortField) {
-          case 'campaignName':
-            aVal = a.campaignName.toLowerCase()
-            bVal = b.campaignName.toLowerCase()
-            break
-          case 'budgetAmount':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal = Number(a.budgetAmount) || 0
-            bVal = Number(b.budgetAmount) || 0
-            break
-          case 'impressions':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal = Number(a.performance?.impressions) || 0
-            bVal = Number(b.performance?.impressions) || 0
-            break
-          case 'clicks':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal = Number(a.performance?.clicks) || 0
-            bVal = Number(b.performance?.clicks) || 0
-            break
-          case 'ctr':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal = Number(a.performance?.ctr) || 0
-            bVal = Number(b.performance?.ctr) || 0
-            break
-          case 'cpc':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal =
-              Number(a.performance?.cpcBase ?? a.performance?.cpcLocal ?? a.performance?.cpcUsd) ||
-              0
-            bVal =
-              Number(b.performance?.cpcBase ?? b.performance?.cpcLocal ?? b.performance?.cpcUsd) ||
-              0
-            break
-          case 'configuredMaxCpc':
-            aVal = Number(a.configuredMaxCpc) || 0
-            bVal = Number(b.configuredMaxCpc) || 0
-            break
-          case 'conversions':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal =
-              Number(
-                a.performance?.commissionBase ??
-                  a.performance?.commission ??
-                  a.performance?.conversions
-              ) || 0
-            bVal =
-              Number(
-                b.performance?.commissionBase ??
-                  b.performance?.commission ??
-                  b.performance?.conversions
-              ) || 0
-            break
-          case 'cost':
-            // 🔧 修复(2025-12-29): 确保数值类型比较
-            aVal =
-              Number(
-                a.performance?.costBase ?? a.performance?.costLocal ?? a.performance?.costUsd
-              ) || 0
-            bVal =
-              Number(
-                b.performance?.costBase ?? b.performance?.costLocal ?? b.performance?.costUsd
-              ) || 0
-            break
-          case 'status':
-            aVal = a.status
-            bVal = b.status
-            break
-        }
-
-        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1
-        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1
-        return 0
-      })
-    }
-
-    setFilteredCampaigns(result)
-
-    const filterKey = JSON.stringify({
-      searchQuery,
-      statusFilter,
-      sortField,
-      sortDirection,
-      showDeletedCampaigns,
-      needsOfferCompletionFilter,
-      statusCategoryFilter,
-    })
-    const filtersChanged = filterKeyRef.current !== filterKey
-    filterKeyRef.current = filterKey
-
-    const filteredTotalPages = Math.max(1, Math.ceil(result.length / pageSize))
+    setFilteredCampaigns(campaigns)
     setCurrentPage((prev) => {
-      const nextPage = filtersChanged ? 1 : prev
-      return nextPage > filteredTotalPages ? filteredTotalPages : nextPage
+      return prev > totalPages ? totalPages : prev
     })
-  }, [
-    campaigns,
-    searchQuery,
-    statusFilter,
-    sortField,
-    sortDirection,
-    pageSize,
-    showDeletedCampaigns,
-    isServerPagingMode,
-    totalPages,
-    needsOfferCompletionFilter,
-    statusCategoryFilter,
-  ])
+  }, [campaigns, totalPages])
 
   const buildDateRangeParams = (): URLSearchParams => {
     const params = new URLSearchParams()
@@ -1390,7 +1202,7 @@ export default function CampaignsClientPage({
       return params
     }
 
-    const normalizedSearch = (isServerPagingMode ? debouncedSearchQuery : searchQuery).trim()
+    const normalizedSearch = debouncedSearchQuery.trim()
     if (normalizedSearch) {
       params.set('search', normalizedSearch)
     }
@@ -1407,16 +1219,11 @@ export default function CampaignsClientPage({
       params.set('statusCategory', statusCategoryFilter)
     }
 
-    if (isServerPagingMode) {
-      params.set('limit', String(pageSize))
-      params.set('offset', String((currentPage - 1) * pageSize))
-      params.set('showDeleted', String(showDeletedCampaigns))
-    } else {
-      // 非服务端分页模式也透传软删除筛选，让汇总卡片与列表口径一致
-      params.set('showDeleted', String(showDeletedCampaigns))
-    }
+    params.set('limit', String(pageSize))
+    params.set('offset', String((currentPage - 1) * pageSize))
+    params.set('showDeleted', String(showDeletedCampaigns))
 
-    if (isServerPagingMode && sortField && sortDirection) {
+    if (sortField && sortDirection) {
       params.set('sortBy', sortField)
       params.set('sortOrder', sortDirection)
     }
@@ -1489,12 +1296,7 @@ export default function CampaignsClientPage({
 
         setError('')
         setCampaigns(nextCampaigns)
-        if (isServerPagingMode) {
-          setFilteredCampaigns(nextCampaigns)
-        }
-        // 🔧 修复(2025-12-29): 不要直接设置 filteredCampaigns
-        // 让 useEffect 自动应用排序、过滤等处理逻辑
-        // setFilteredCampaigns(data.campaigns)
+        setFilteredCampaigns(nextCampaigns)
         setSummary(data.summary)
         setServerTotal(nextTotal)
       } catch (err: any) {
@@ -1517,11 +1319,6 @@ export default function CampaignsClientPage({
           campaignsFetchAbortRef.current = null
         }
       }
-    }
-
-    if (!campaignsReqDedupEnabled) {
-      await executeFetchCampaigns()
-      return
     }
 
     const inFlight = campaignsInFlightRef.current.get(dedupKey)
@@ -1556,7 +1353,7 @@ export default function CampaignsClientPage({
   const buildTrendsQueryParams = (): URLSearchParams => {
     const params = buildDateRangeParams()
 
-    const normalizedSearch = (isServerPagingMode ? debouncedSearchQuery : searchQuery).trim()
+    const normalizedSearch = debouncedSearchQuery.trim()
     if (normalizedSearch) {
       params.set('search', normalizedSearch)
     }
@@ -1647,11 +1444,6 @@ export default function CampaignsClientPage({
           trendsFetchAbortRef.current = null
         }
       }
-    }
-
-    if (!campaignsReqDedupEnabled) {
-      await executeFetchTrends()
-      return
     }
 
     const inFlight = trendsInFlightRef.current.get(dedupKey)
@@ -2018,12 +1810,6 @@ export default function CampaignsClientPage({
   const getSelectedCampaigns = async (): Promise<Campaign[]> => {
     const ids = Array.from(selectedCampaignIds)
     if (ids.length === 0) return []
-
-    if (!isServerPagingMode) {
-      const selected = campaigns.filter((campaign) => selectedCampaignIds.has(campaign.id))
-      upsertSelectedCampaignSnapshots(selected)
-      return selected
-    }
 
     const selected = await fetchCampaignsByIds(ids)
     upsertSelectedCampaignSnapshots(selected)
@@ -2805,9 +2591,7 @@ export default function CampaignsClientPage({
   }
 
   // 获取当前页的广告系列
-  const paginatedCampaigns = isServerPagingMode
-    ? filteredCampaigns
-    : filteredCampaigns.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+  const paginatedCampaigns = filteredCampaigns
 
   // 全选/取消全选
   const handleSelectAll = (checked: boolean) => {
@@ -2939,7 +2723,7 @@ export default function CampaignsClientPage({
 
   // 排序处理函数
   const handleSort = (field: CampaignSortField) => {
-    if (isServerPagingMode && currentPage !== 1) {
+    if (currentPage !== 1) {
       setCurrentPage(1)
     }
 
@@ -3304,7 +3088,7 @@ export default function CampaignsClientPage({
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value)
-                    if (isServerPagingMode && currentPage !== 1) {
+                    if (currentPage !== 1) {
                       setCurrentPage(1)
                     }
                   }}
@@ -3318,7 +3102,7 @@ export default function CampaignsClientPage({
                   value={statusFilter}
                   onValueChange={(value) => {
                     setStatusFilter(value)
-                    if (isServerPagingMode && currentPage !== 1) {
+                    if (currentPage !== 1) {
                       setCurrentPage(1)
                     }
                   }}
@@ -3341,7 +3125,7 @@ export default function CampaignsClientPage({
                   value={statusCategoryFilter}
                   onValueChange={(value) => {
                     setStatusCategoryFilter(value)
-                    if (isServerPagingMode && currentPage !== 1) {
+                    if (currentPage !== 1) {
                       setCurrentPage(1)
                     }
                   }}
@@ -3454,7 +3238,7 @@ export default function CampaignsClientPage({
                               selectedUserFilters
                             )
                             setSelectedUserFilters(nextFilters)
-                            if (changed && isServerPagingMode && currentPage !== 1) {
+                            if (changed && currentPage !== 1) {
                               setCurrentPage(1)
                             }
                             setUserFilterMenuOpen(false)
@@ -3474,7 +3258,7 @@ export default function CampaignsClientPage({
                   value={affiliateFilter}
                   onValueChange={(value) => {
                     setAffiliateFilter(value)
-                    if (isServerPagingMode && currentPage !== 1) {
+                    if (currentPage !== 1) {
                       setCurrentPage(1)
                     }
                   }}

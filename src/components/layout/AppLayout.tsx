@@ -299,13 +299,7 @@ let cachedUser: UserInfo | null = null
 let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 
-export default function AppLayout({
-  children,
-  navLinkEnabled = false,
-}: {
-  children: React.ReactNode
-  navLinkEnabled?: boolean
-}) {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [user, setUser] = useState<UserInfo | null>(cachedUser)
@@ -323,7 +317,6 @@ export default function AppLayout({
   const prefetchedNavHrefsRef = useRef(new Set<string>())
 
   const prefetchNavLinkByIntent = (href: string) => {
-    if (!navLinkEnabled) return
     if (prefetchedNavHrefsRef.current.has(href)) return
 
     prefetchedNavHrefsRef.current.add(href)
@@ -582,7 +575,7 @@ export default function AppLayout({
               <SidebarLink
                 key={item.href}
                 href={item.href}
-                useNextLink={navLinkEnabled}
+                useNextLink={true}
                 onIntentPrefetch={prefetchNavLinkByIntent}
                 className={`
                   group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
@@ -635,7 +628,7 @@ export default function AppLayout({
                       <SidebarLink
                         key={item.href}
                         href={item.href}
-                        useNextLink={navLinkEnabled}
+                        useNextLink={true}
                         onIntentPrefetch={prefetchNavLinkByIntent}
                         className={`
                           group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
@@ -689,7 +682,7 @@ export default function AppLayout({
                   <SidebarLink
                     key={item.href}
                     href={item.href}
-                    useNextLink={navLinkEnabled}
+                    useNextLink={true}
                     onIntentPrefetch={prefetchNavLinkByIntent}
                     className={`
                       group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200

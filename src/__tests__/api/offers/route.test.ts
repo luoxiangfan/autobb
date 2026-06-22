@@ -336,7 +336,7 @@ describe('GET /api/offers', () => {
     expect(data.success).toBe(true)
   })
 
-  it('returns compatibility signal and falls back sort when sortBy is unsupported', async () => {
+  it('passes linkedAccounts sort to listOffers when requested', async () => {
     offerFns.listOffers.mockResolvedValue({
       offers: [createOfferRow()],
       total: 1,
@@ -373,14 +373,9 @@ describe('GET /api/offers', () => {
       scrapeStatus: undefined,
       needsCompletion: undefined,
       hasAffiliateLink: undefined,
-      sortBy: undefined,
+      sortBy: 'linkedAccounts',
       sortOrder: 'asc',
     })
-    expect(data.compatibility).toEqual({
-      code: 'PARTIAL_UNSUPPORTED_SORT',
-      requestedSortBy: 'linkedAccounts',
-      appliedSortBy: 'createdAt',
-      appliedSortOrder: 'asc',
-    })
+    expect(data.compatibility).toBeUndefined()
   })
 })

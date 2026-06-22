@@ -1,7 +1,6 @@
 'use client'
 
 import CampaignsClientPage from '../campaigns/CampaignsClientPage'
-import { isPerformanceReleaseEnabled } from '@/lib/common'
 import { Loader2 } from 'lucide-react'
 
 /**
@@ -9,9 +8,6 @@ import { Loader2 } from 'lucide-react'
  * 与广告系列页面使用相同的组件和功能，但只展示最近 14 天内创建的广告系列
  */
 export default function Recent14DaysCampaignsPage() {
-  const campaignsReqDedupEnabled = isPerformanceReleaseEnabled('campaignsReqDedup')
-  const campaignsServerPagingEnabled = isPerformanceReleaseEnabled('campaignsServerPaging')
-
   // 计算 14 天前的日期
   const now = new Date()
   const fourteenDaysAgo = new Date(now)
@@ -36,8 +32,6 @@ export default function Recent14DaysCampaignsPage() {
 
   return (
     <CampaignsClientPage
-      campaignsReqDedupEnabled={campaignsReqDedupEnabled}
-      campaignsServerPagingEnabled={campaignsServerPagingEnabled}
       defaultTimeRange="14"
       createdAtStart={createdAtStart}
       createdAtEnd={createdAtEnd}

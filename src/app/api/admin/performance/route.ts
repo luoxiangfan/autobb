@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
-import { frontendErrorMonitor, performanceMonitor, webVitalsMonitor } from '@/lib/common/server'
+import { performanceMonitor } from '@/lib/common/server'
 import { apiCache } from '@/lib/common/server'
 
 /**
@@ -14,11 +14,6 @@ export const GET = withAuth(
     try {
       const overallStats = performanceMonitor.getStats()
       const recentMetrics = performanceMonitor.getRecentMetrics(50)
-      const webVitalsSummary = webVitalsMonitor.getSummary()
-      const recentWebVitals = webVitalsMonitor.getRecentMetrics(50)
-      const frontendErrorSummary = frontendErrorMonitor.getSummary()
-      const recentFrontendErrors = frontendErrorMonitor.getRecentMetrics(50)
-
       const cacheStats = apiCache.getStats()
 
       const pathStats: Record<string, any> = {}
@@ -35,10 +30,6 @@ export const GET = withAuth(
           cache: cacheStats,
           byPath: pathStats,
           recentRequests: recentMetrics.slice(0, 20),
-          frontendVitals: webVitalsSummary,
-          recentFrontendVitals: recentWebVitals.slice(0, 20),
-          frontendErrors: frontendErrorSummary,
-          recentFrontendErrors: recentFrontendErrors.slice(0, 20),
         },
       })
     } catch (error) {
@@ -63,8 +54,6 @@ export const DELETE = withAuth(
   async () => {
     try {
       performanceMonitor.clear()
-      webVitalsMonitor.clear()
-      frontendErrorMonitor.clear()
 
       return NextResponse.json({
         success: true,

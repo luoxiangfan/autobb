@@ -7,17 +7,7 @@ import { toNumber } from '@/lib/common/server'
 import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
 import { parsePositiveIntegerOfferIdList } from '@/lib/offers/server'
-
-const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
-  'offerName',
-  'brand',
-  'targetCountry',
-  'targetLanguage',
-  'scrapeStatus',
-  'needsCompletion',
-  'createdAt',
-  'updatedAt',
-])
+import { isOffersServerSortSupported } from '@/lib/offers/offers-list-sort'
 
 function parseBooleanParam(value: string | null): boolean {
   if (value === null) return false
@@ -72,21 +62,10 @@ const get = withAuth(async (request, user) => {
           ? false
           : undefined
     const requestedSortBy = searchParams.get('sortBy') || undefined
-    const sortByUnsupported = Boolean(
-      requestedSortBy && !OFFERS_SERVER_SUPPORTED_SORTS.has(requestedSortBy)
-    )
-    const sortBy = sortByUnsupported ? undefined : requestedSortBy
+    const sortBy = isOffersServerSortSupported(requestedSortBy) ? requestedSortBy : undefined
     const sortOrderParam = searchParams.get('sortOrder')
     const sortOrder =
       sortOrderParam === 'asc' || sortOrderParam === 'desc' ? sortOrderParam : undefined
-    const compatibility = sortByUnsupported
-      ? {
-          code: 'PARTIAL_UNSUPPORTED_SORT' as const,
-          requestedSortBy,
-          appliedSortBy: 'createdAt' as const,
-          appliedSortOrder: sortOrder || 'desc',
-        }
-      : undefined
 
     // 如果提供了ids参数，直接查询特定的Offers（用于批量上传进度显示）
     if (idsParam) {
@@ -222,7 +201,6 @@ const get = withAuth(async (request, user) => {
         total,
         limit,
         offset,
-        compatibility,
       }
     }
 

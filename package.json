@@ -14,7 +14,7 @@
     "gnx:analyze": "bash scripts/gnx-analyze.sh",
     "gnx:analyze:embeddings": "bash scripts/gnx-analyze.sh --embeddings",
     "gnx:detect-changes": "tsx scripts/gnx-detect-changes.ts",
-    "build": "npm run perf:flags:check && npm run openclaw:prebuilt:verify-meta && next build",
+    "build": "npm run openclaw:prebuilt:verify-meta && next build",
     "build:scheduler": "node build-scheduler.js",
     "start": "next start",
     "lint": "eslint src --max-warnings 0",
@@ -46,11 +46,7 @@
     "admin:ensure": "tsx scripts/ensure-admin-account.ts",
     "validate-schema": "tsx scripts/validate-db-schema.ts",
     "type-check": "tsc --noEmit",
-    "proxy:diagnose": "tsx scripts/diagnose-proxy-connectivity.ts",
-    "perf:flags:check": "tsx scripts/performance-release-governance.ts check",
-    "perf:rollback:template": "tsx scripts/performance-release-governance.ts rollback-template",
-    "perf:rollback:all:template": "tsx scripts/performance-release-governance.ts rollback-template --all",
-    "perf:rollback:drill": "tsx scripts/performance-release-governance.ts drill"
+    "proxy:diagnose": "tsx scripts/diagnose-proxy-connectivity.ts"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

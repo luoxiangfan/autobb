@@ -61,61 +61,44 @@ interface OfferExportData {
   createdAt: string
 }
 
-interface OffersClientPageProps {
-  offersIncrementalPollEnabled?: boolean
-  offersServerPagingEnabled?: boolean
-}
+export default function OffersClientPage() {
+  const OFFERS_FULL_SYNC_EVERY_POLLS = 10
+  const OFFERS_INCREMENTAL_POLL_MAX_IDS = 200
 
-const OFFERS_POLL_INTERVAL_MS = 30_000
-const OFFERS_FULL_SYNC_EVERY_POLLS = 10
-const OFFERS_INCREMENTAL_POLL_MAX_IDS = 200
-const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
-  'offerName',
-  'brand',
-  'targetCountry',
-  'targetLanguage',
-  'scrapeStatus',
-  'needsCompletion',
-  'createdAt',
-  'updatedAt',
-])
+  const CreateOfferModalV2 = dynamic(() => import('@/components/CreateOfferModalV2'), {
+    ssr: false,
+  })
+  const DeleteOfferConfirmDialog = dynamic(() => import('@/components/DeleteOfferConfirmDialog'), {
+    ssr: false,
+  })
+  const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), {
+    ssr: false,
+  })
+  const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
+  const OffersActionDialogs = dynamic(() => import('./OffersActionDialogs'), { ssr: false })
+  const NoOffersStateDynamic = dynamic(
+    () => import('@/components/ui/empty-state').then((mod) => mod.NoOffersState),
+    { ssr: false }
+  )
+  const NoResultsStateDynamic = dynamic(
+    () => import('@/components/ui/empty-state').then((mod) => mod.NoResultsState),
+    { ssr: false }
+  )
+  const ResponsiveActionCell = dynamic(
+    () => import('@/components/ui/table-action-buttons').then((mod) => mod.ResponsiveActionCell),
+    { ssr: false }
+  )
+  const BatchTasksDialog = dynamic(() => import('@/components/BatchTasksDialog'), { ssr: false })
 
-const CreateOfferModalV2 = dynamic(() => import('@/components/CreateOfferModalV2'), { ssr: false })
-const DeleteOfferConfirmDialog = dynamic(() => import('@/components/DeleteOfferConfirmDialog'), {
-  ssr: false,
-})
-const ClickFarmTaskModal = dynamic(() => import('@/components/ClickFarmTaskModal'), { ssr: false })
-const UrlSwapTaskModal = dynamic(() => import('@/components/UrlSwapTaskModal'), { ssr: false })
-const OffersActionDialogs = dynamic(() => import('./OffersActionDialogs'), { ssr: false })
-const NoOffersStateDynamic = dynamic(
-  () => import('@/components/ui/empty-state').then((mod) => mod.NoOffersState),
-  { ssr: false }
-)
-const NoResultsStateDynamic = dynamic(
-  () => import('@/components/ui/empty-state').then((mod) => mod.NoResultsState),
-  { ssr: false }
-)
-const ResponsiveActionCell = dynamic(
-  () => import('@/components/ui/table-action-buttons').then((mod) => mod.ResponsiveActionCell),
-  { ssr: false }
-)
-const BatchTasksDialog = dynamic(() => import('@/components/BatchTasksDialog'), { ssr: false })
-
-export default function OffersClientPage({
-  offersIncrementalPollEnabled = false,
-  offersServerPagingEnabled = false,
-}: OffersClientPageProps) {
+  const OFFERS_POLL_INTERVAL_MS = 30_000
   const router = useRouter()
   const [offers, setOffers] = useState<Offer[]>([])
-  const [filteredOffers, setFilteredOffers] = useState<Offer[]>([])
   const [serverTotal, setServerTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [manualCompatMode, setManualCompatMode] = useState(false)
   const offersRef = useRef<Offer[]>([])
   const selectedOfferIdsRef = useRef<Set<number>>(new Set())
   const visibleOfferIdsRef = useRef<number[]>([])
-  const compatFallbackSignalRef = useRef<string>('')
   const pollRoundRef = useRef(0)
   const forceFullSyncRef = useRef(false)
   const pollingRef = useRef(false)
@@ -168,30 +151,15 @@ export default function OffersClientPage({
     initialPageSize: 50,
   })
 
-  const hasUnsupportedServerSort = sortBy !== '' && !OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy)
-  const isServerPagingMode =
-    offersServerPagingEnabled && !manualCompatMode && !hasUnsupportedServerSort
-  const totalItems = isServerPagingMode ? serverTotal : filteredOffers.length
+  const totalItems = serverTotal
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
-  const serverLimit = isServerPagingMode ? pageSize : 0
-  const serverOffset = isServerPagingMode ? offset : 0
-  const serverSearchQuery = isServerPagingMode ? debouncedSearchQuery.trim() : ''
-  const serverCountry = isServerPagingMode && countryFilter !== 'all' ? countryFilter : ''
-  const serverScrapeStatus = isServerPagingMode && statusFilter !== 'all' ? statusFilter : ''
-  const serverNeedsCompletion =
-    isServerPagingMode && needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
-  const serverHasAffiliateLink =
-    isServerPagingMode && affiliateLinkFilter !== 'all' ? affiliateLinkFilter : ''
-  const serverSortBy =
-    isServerPagingMode && sortBy && OFFERS_SERVER_SUPPORTED_SORTS.has(sortBy) ? sortBy : ''
-  const serverSortOrder = isServerPagingMode ? sortOrder : 'desc'
+  const serverSearchQuery = debouncedSearchQuery.trim()
+  const serverCountry = countryFilter !== 'all' ? countryFilter : ''
+  const serverScrapeStatus = statusFilter !== 'all' ? statusFilter : ''
+  const serverNeedsCompletion = needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
+  const serverHasAffiliateLink = affiliateLinkFilter !== 'all' ? affiliateLinkFilter : ''
 
   useEffect(() => {
-    if (!isServerPagingMode) {
-      setDebouncedSearchQuery(searchQuery)
-      return
-    }
-
     const timer = window.setTimeout(() => {
       setDebouncedSearchQuery(searchQuery)
     }, 300)
@@ -199,15 +167,9 @@ export default function OffersClientPage({
     return () => {
       window.clearTimeout(timer)
     }
-  }, [isServerPagingMode, searchQuery])
+  }, [searchQuery])
 
-  // 计算分页后的数据
-  const paginatedOffers = useMemo(() => {
-    if (isServerPagingMode) {
-      return offers
-    }
-    return filteredOffers.slice(offset, offset + pageSize)
-  }, [isServerPagingMode, offers, filteredOffers, offset, pageSize])
+  const paginatedOffers = offers
 
   useEffect(() => {
     selectedOfferIdsRef.current = selectedOfferIds
@@ -266,7 +228,7 @@ export default function OffersClientPage({
   }, [router])
 
   const buildOffersListUrl = useCallback(
-    (options?: { ids?: number[]; noCache?: boolean; forceCompatFullList?: boolean }) => {
+    (options?: { ids?: number[]; noCache?: boolean; forExport?: boolean }) => {
       if (options?.ids && options.ids.length > 0) {
         return `/api/offers?ids=${options.ids.join(',')}`
       }
@@ -276,41 +238,39 @@ export default function OffersClientPage({
         params.set('noCache', 'true')
       }
 
-      const useServerPagingForRequest = isServerPagingMode && !options?.forceCompatFullList
-      if (useServerPagingForRequest) {
-        params.set('limit', String(serverLimit))
-        params.set('offset', String(serverOffset))
+      if (!options?.forExport) {
+        params.set('limit', String(pageSize))
+        params.set('offset', String(offset))
+      }
 
-        if (serverSearchQuery) params.set('search', serverSearchQuery)
-        if (serverCountry) params.set('targetCountry', serverCountry)
-        if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
-        if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
-        if (serverHasAffiliateLink) params.set('hasAffiliateLink', serverHasAffiliateLink)
+      if (serverSearchQuery) params.set('search', serverSearchQuery)
+      if (serverCountry) params.set('targetCountry', serverCountry)
+      if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
+      if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
+      if (serverHasAffiliateLink) params.set('hasAffiliateLink', serverHasAffiliateLink)
 
-        if (serverSortBy) {
-          params.set('sortBy', serverSortBy)
-          params.set('sortOrder', serverSortOrder)
-        }
+      if (sortBy) {
+        params.set('sortBy', sortBy)
+        params.set('sortOrder', sortOrder)
       }
 
       return `/api/offers?${params.toString()}`
     },
     [
-      isServerPagingMode,
-      serverLimit,
-      serverOffset,
+      pageSize,
+      offset,
       serverSearchQuery,
       serverCountry,
       serverScrapeStatus,
       serverNeedsCompletion,
       serverHasAffiliateLink,
-      serverSortBy,
-      serverSortOrder,
+      sortBy,
+      sortOrder,
     ]
   )
 
   const fetchOffers = useCallback(
-    async (options?: { forceCompatFullList?: boolean; noCache?: boolean }) => {
+    async (options?: { noCache?: boolean }) => {
       const requestSeq = offersFetchSeqRef.current + 1
       offersFetchSeqRef.current = requestSeq
       offersFetchAbortRef.current?.abort()
@@ -320,7 +280,6 @@ export default function OffersClientPage({
       try {
         const requestUrl = buildOffersListUrl({
           noCache: options?.noCache,
-          forceCompatFullList: options?.forceCompatFullList,
         })
         const response = await fetch(requestUrl, {
           credentials: 'include',
@@ -339,24 +298,6 @@ export default function OffersClientPage({
         }
 
         const data = await response.json()
-        const compatibilityCode =
-          typeof data?.compatibility?.code === 'string' ? data.compatibility.code : ''
-
-        if (
-          compatibilityCode === 'PARTIAL_UNSUPPORTED_SORT' &&
-          isServerPagingMode &&
-          !options?.forceCompatFullList &&
-          !manualCompatMode
-        ) {
-          const signalKey = String(data?.compatibility?.requestedSortBy || '')
-          if (compatFallbackSignalRef.current !== signalKey) {
-            compatFallbackSignalRef.current = signalKey
-            showInfo('当前排序字段暂不支持服务端模式，已自动切换到兼容全量模式。')
-          }
-          setManualCompatMode(true)
-          setPage(1)
-          return
-        }
 
         const nextOffers = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
         const nextTotal = Number.isFinite(Number(data.total))
@@ -368,7 +309,6 @@ export default function OffersClientPage({
         }
 
         setOffers(nextOffers)
-        setFilteredOffers(nextOffers)
         setServerTotal(nextTotal)
       } catch (err: any) {
         if (err?.name === 'AbortError') {
@@ -384,28 +324,23 @@ export default function OffersClientPage({
         }
       }
     },
-    [buildOffersListUrl, handleUnauthorized, isServerPagingMode, manualCompatMode, setPage]
+    [buildOffersListUrl, handleUnauthorized]
   )
 
-  const applyLocalOfferDeletion = useCallback(
-    (ids: number[]) => {
-      const uniqueIds = Array.from(new Set(ids))
-      if (uniqueIds.length === 0) return
-      const idSet = new Set(uniqueIds)
+  const applyLocalOfferDeletion = useCallback((ids: number[]) => {
+    const uniqueIds = Array.from(new Set(ids))
+    if (uniqueIds.length === 0) return
+    const idSet = new Set(uniqueIds)
 
-      setOffers((prev) => prev.filter((offer) => !idSet.has(offer.id)))
-      setSelectedOfferIds((prev) => {
-        const next = new Set(prev)
-        uniqueIds.forEach((id) => next.delete(id))
-        return next
-      })
+    setOffers((prev) => prev.filter((offer) => !idSet.has(offer.id)))
+    setSelectedOfferIds((prev) => {
+      const next = new Set(prev)
+      uniqueIds.forEach((id) => next.delete(id))
+      return next
+    })
 
-      if (isServerPagingMode) {
-        setServerTotal((prev) => Math.max(0, prev - uniqueIds.length))
-      }
-    },
-    [isServerPagingMode]
-  )
+    setServerTotal((prev) => Math.max(0, prev - uniqueIds.length))
+  }, [])
 
   const applyLocalOfferUnlink = useCallback((offerId: number, accountId: number) => {
     setOffers((prev) =>
@@ -442,8 +377,6 @@ export default function OffersClientPage({
   }, [fetchOffers])
 
   useEffect(() => {
-    if (!offersIncrementalPollEnabled) return
-
     const markForceFullSync = () => {
       forceFullSyncRef.current = true
     }
@@ -460,7 +393,7 @@ export default function OffersClientPage({
       window.removeEventListener('focus', markForceFullSync)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [offersIncrementalPollEnabled])
+  }, [])
 
   useEffect(() => {
     const buildIncrementalPollIds = (): number[] => {
@@ -561,7 +494,6 @@ export default function OffersClientPage({
       if (!hasChanges) return
 
       setOffers(nextOffers)
-      setFilteredOffers(nextOffers)
     }
 
     const runPollRequest = async (url: string) => {
@@ -581,13 +513,7 @@ export default function OffersClientPage({
     }
 
     const pollInterval = setInterval(async () => {
-      const isIncrementalMode = offersIncrementalPollEnabled
-
-      if (
-        isIncrementalMode &&
-        typeof document !== 'undefined' &&
-        document.visibilityState === 'hidden'
-      ) {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
         return
       }
       if (pollingRef.current) return
@@ -595,23 +521,6 @@ export default function OffersClientPage({
 
       try {
         const listUrl = buildOffersListUrl({ noCache: true })
-
-        if (!isIncrementalMode) {
-          const data = await runPollRequest(listUrl)
-          if (!data) return
-
-          const nextOffers = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
-          const nextTotal = Number.isFinite(Number(data.total))
-            ? Number(data.total)
-            : nextOffers.length
-          setServerTotal(nextTotal)
-          if (shouldRefreshFullOffers(nextOffers)) {
-            console.log('[Polling] Updating offers list...')
-            setOffers(nextOffers)
-            setFilteredOffers(nextOffers)
-          }
-          return
-        }
 
         pollRoundRef.current += 1
         const incrementalIds = buildIncrementalPollIds()
@@ -635,7 +544,6 @@ export default function OffersClientPage({
           if (shouldRefreshFullOffers(nextOffers)) {
             console.log('[Polling] Updating offers list...')
             setOffers(nextOffers)
-            setFilteredOffers(nextOffers)
           }
           return
         }
@@ -653,123 +561,31 @@ export default function OffersClientPage({
     }, OFFERS_POLL_INTERVAL_MS)
 
     return () => clearInterval(pollInterval)
-  }, [offersIncrementalPollEnabled, buildOffersListUrl, handleUnauthorized])
+  }, [buildOffersListUrl, handleUnauthorized])
 
-  // P1-2 + P2-5: 应用筛选器和排序
+  // P1-2 + P2-5: 筛选/排序变更时重置分页
   useEffect(() => {
-    if (isServerPagingMode) {
-      setFilteredOffers(offers)
-
-      const filterKey = JSON.stringify({
-        searchQuery: debouncedSearchQuery,
-        countryFilter,
-        statusFilter,
-        needsCompletionFilter,
-        affiliateLinkFilter,
-        sortBy,
-        sortOrder,
-      })
-      const filtersChanged = filterKeyRef.current !== filterKey
-      filterKeyRef.current = filterKey
-
-      const nextPage = filtersChanged ? 1 : currentPage
-      setPage(nextPage > totalPages ? totalPages : nextPage)
-      return
-    }
-
-    let filtered = offers
-
-    // 搜索筛选
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-    if (normalizedQuery) {
-      filtered = filtered.filter(
-        (offer) =>
-          String(offer.id).includes(normalizedQuery) ||
-          offer.brand.toLowerCase().includes(normalizedQuery) ||
-          offer.offerName?.toLowerCase().includes(normalizedQuery) ||
-          offer.url.toLowerCase().includes(normalizedQuery) ||
-          offer.finalUrl?.toLowerCase().includes(normalizedQuery)
-      )
-    }
-
-    // 国家筛选
-    if (countryFilter !== 'all') {
-      filtered = filtered.filter((offer) => offer.targetCountry === countryFilter)
-    }
-
-    // 状态筛选
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((offer) => offer.scrapeStatus === statusFilter)
-    }
-
-    // 按需要完善状态筛选
-    if (needsCompletionFilter !== 'all') {
-      const needsCompletion = needsCompletionFilter === 'true'
-      filtered = filtered.filter((offer) => (offer.needsCompletion ?? false) === needsCompletion)
-    }
-
-    if (affiliateLinkFilter !== 'all') {
-      const wantLink = affiliateLinkFilter === 'true'
-      filtered = filtered.filter((offer) => {
-        const has = Boolean(offer.affiliateLink && String(offer.affiliateLink).trim() !== '')
-        return wantLink ? has : !has
-      })
-    }
-
-    // P2-5: 排序（无显式列时默认创建时间降序）
-    const effectiveSortField = sortBy || 'createdAt'
-    const effectiveSortOrder = sortBy ? sortOrder : 'desc'
-    filtered = [...filtered].sort((a, b) => {
-      if (effectiveSortField === 'linkedAccounts') {
-        const aCount = a.linkedAccounts?.length || 0
-        const bCount = b.linkedAccounts?.length || 0
-        return effectiveSortOrder === 'asc' ? aCount - bCount : bCount - aCount
-      }
-
-      const aVal = a[effectiveSortField as keyof Offer]
-      const bVal = b[effectiveSortField as keyof Offer]
-
-      if (aVal === null || aVal === undefined) return 1
-      if (bVal === null || bVal === undefined) return -1
-
-      if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
-        const aNum = aVal ? 1 : 0
-        const bNum = bVal ? 1 : 0
-        return effectiveSortOrder === 'asc' ? aNum - bNum : bNum - aNum
-      }
-
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return effectiveSortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
-      }
-
-      if (typeof aVal === 'number' && typeof bVal === 'number') {
-        return effectiveSortOrder === 'asc' ? aVal - bVal : bVal - aVal
-      }
-
-      return 0
-    })
-
-    setFilteredOffers(filtered)
-
     const filterKey = JSON.stringify({
-      searchQuery,
+      searchQuery: debouncedSearchQuery,
       countryFilter,
       statusFilter,
-      sortBy,
-      sortOrder,
       needsCompletionFilter,
       affiliateLinkFilter,
+      sortBy,
+      sortOrder,
     })
     const filtersChanged = filterKeyRef.current !== filterKey
     filterKeyRef.current = filterKey
 
-    const localTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-    const nextPage = filtersChanged ? 1 : currentPage
-    setPage(nextPage > localTotalPages ? localTotalPages : nextPage)
+    if (filtersChanged) {
+      setPage(1)
+      return
+    }
+
+    if (currentPage > totalPages) {
+      setPage(totalPages)
+    }
   }, [
-    isServerPagingMode,
-    offers,
-    searchQuery,
     debouncedSearchQuery,
     countryFilter,
     statusFilter,
@@ -777,10 +593,9 @@ export default function OffersClientPage({
     affiliateLinkFilter,
     sortBy,
     sortOrder,
-    pageSize,
+    totalPages,
     currentPage,
     setPage,
-    totalPages,
   ])
 
   // P2-5: 排序处理函数
@@ -1217,34 +1032,25 @@ export default function OffersClientPage({
     needsCompletionFilter !== 'all' ||
     affiliateLinkFilter !== 'all'
   )
-  useEffect(() => {
-    if (manualCompatMode && !hasUnsupportedServerSort) {
-      setManualCompatMode(false)
-    }
-  }, [manualCompatMode, hasUnsupportedServerSort])
-
   // P2-2: 导出Offer数据
   const handleExport = async () => {
     try {
       const { exportOffers } = await import('@/lib/common')
-      let exportSource = offers
-      if (isServerPagingMode) {
-        const response = await fetch(
-          buildOffersListUrl({ noCache: true, forceCompatFullList: true }),
-          { credentials: 'include', cache: 'no-store' }
-        )
+      const response = await fetch(buildOffersListUrl({ noCache: true, forExport: true }), {
+        credentials: 'include',
+        cache: 'no-store',
+      })
 
-        if (response.status === 401) {
-          handleUnauthorized()
-          return
-        }
-        if (!response.ok) {
-          throw new Error('导出前拉取全量Offer失败')
-        }
-
-        const data = await response.json()
-        exportSource = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
+      if (response.status === 401) {
+        handleUnauthorized()
+        return
       }
+      if (!response.ok) {
+        throw new Error('导出前拉取全量Offer失败')
+      }
+
+      const data = await response.json()
+      const exportSource = Array.isArray(data.offers) ? (data.offers as Offer[]) : []
 
       const exportData: OfferExportData[] = exportSource.map((offer) => ({
         id: offer.id,
@@ -1494,8 +1300,7 @@ export default function OffersClientPage({
             {hasActiveFilters && (
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-body-sm text-muted-foreground">
-                  显示 {isServerPagingMode ? paginatedOffers.length : filteredOffers.length} /{' '}
-                  {totalItems} 个Offer
+                  显示 {paginatedOffers.length} / {totalItems} 个Offer
                 </p>
                 <Button
                   variant="ghost"
@@ -1523,7 +1328,7 @@ export default function OffersClientPage({
         )}
 
         {/* P2-7: 统一空状态 */}
-        {filteredOffers.length === 0 ? (
+        {paginatedOffers.length === 0 ? (
           totalItems === 0 && !hasActiveFilters ? (
             <NoOffersStateDynamic onAction={() => setIsCreateModalOpen(true)} />
           ) : (

@@ -4,7 +4,6 @@ import { getDatabase } from '@/lib/db'
 import { apiCache, generateCacheKey } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
-import { isPerformanceReleaseEnabled } from '@/lib/common/server'
 import { convertCurrency } from '@/lib/common/server'
 
 /**
@@ -51,7 +50,6 @@ interface KPIData {
   }
 }
 
-const DEFAULT_KPI_CACHE_TTL_MS = 5 * 60 * 1000
 const SHORT_KPI_CACHE_DEFAULT_TTL_MS = 20 * 1000
 const SHORT_KPI_CACHE_MIN_TTL_MS = 15 * 1000
 const SHORT_KPI_CACHE_MAX_TTL_MS = 30 * 1000
@@ -63,10 +61,6 @@ function parseBooleanParam(value: string | null): boolean {
 }
 
 function resolveKpiCacheTtlMs(): number {
-  if (!isPerformanceReleaseEnabled('kpiShortTtl')) {
-    return DEFAULT_KPI_CACHE_TTL_MS
-  }
-
   const parsed = Number.parseInt(process.env.KPI_SHORT_TTL_MS || '', 10)
   if (!Number.isFinite(parsed)) {
     return SHORT_KPI_CACHE_DEFAULT_TTL_MS

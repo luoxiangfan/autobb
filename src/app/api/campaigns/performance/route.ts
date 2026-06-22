@@ -3,7 +3,6 @@ import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
 import { convertCurrency } from '@/lib/common/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
-import { isPerformanceReleaseEnabled } from '@/lib/common/server'
 import { matchesCampaignSearch } from '@/lib/campaign/server'
 import {
   buildCampaignPerformanceCacheHash,
@@ -478,7 +477,6 @@ export const GET = withAuth(async (request, user) => {
       }
     }
 
-    const campaignsParallelEnabled = isPerformanceReleaseEnabled('campaignsParallel')
     const db = await getDatabase()
     const affiliateAlignedWhereClause = hasAffiliateListScope
       ? buildCampaignAffiliateAlignedWhereClause('c', 'o')
@@ -737,45 +735,26 @@ export const GET = withAuth(async (request, user) => {
     let currentAggByCampaign: Map<number, Map<string, Agg>>
     let currentCommissionByCampaign: Map<number, Map<string, number>>
     let currentUnattributedCommissionByCampaign: Map<number, Map<string, number>>
-
-    if (campaignsParallelEnabled) {
-      ;[
-        campaigns,
-        currentAggByCampaign,
-        currentCommissionByCampaign,
-        currentUnattributedCommissionByCampaign,
-      ] = await Promise.all([
-        queryCampaignRows(),
-        aggregateByCampaignCurrency({
-          start: startDateStr,
-          end: endDateStr,
-        }),
-        queryCommissionByCampaignCurrency({
-          start: startDateStr,
-          end: endDateStr,
-        }),
-        queryUnattributedCommissionByCampaignCurrency({
-          start: startDateStr,
-          end: endDateStr,
-        }),
-      ])
-    } else {
-      campaigns = await queryCampaignRows()
-      currentAggByCampaign = await aggregateByCampaignCurrency({
+    ;[
+      campaigns,
+      currentAggByCampaign,
+      currentCommissionByCampaign,
+      currentUnattributedCommissionByCampaign,
+    ] = await Promise.all([
+      queryCampaignRows(),
+      aggregateByCampaignCurrency({
         start: startDateStr,
         end: endDateStr,
-      })
-      currentCommissionByCampaign = await queryCommissionByCampaignCurrency({
+      }),
+      queryCommissionByCampaignCurrency({
         start: startDateStr,
         end: endDateStr,
-      })
-      currentUnattributedCommissionByCampaign = await queryUnattributedCommissionByCampaignCurrency(
-        {
-          start: startDateStr,
-          end: endDateStr,
-        }
-      )
-    }
+      }),
+      queryUnattributedCommissionByCampaignCurrency({
+        start: startDateStr,
+        end: endDateStr,
+      }),
+    ])
     const costs = summarizeCostsByCurrency(currentAggByCampaign)
     const costCurrencies = costs.map((row) => row.currency)
     const reportingCurrency =
@@ -1347,62 +1326,33 @@ export const GET = withAuth(async (request, user) => {
       previousTotal: number
       currentByCurrency: Array<{ currency: string; amount: number }>
     }
-
-    if (campaignsParallelEnabled) {
-      ;[prevSummary, unattributedSummary] = await Promise.all([
-        queryPreviousSummary({
-          start: prevStartDateStr,
-          end: prevEndDateStr,
-          currency: reportingCurrency || undefined,
-        }),
-        queryUnattributedCommissionPeriods({
-          currentStart: startDateStr,
-          currentEnd: endDateStr,
-          previousStart: prevStartDateStr,
-          previousEnd: prevEndDateStr,
-          currency: reportingCurrency || undefined,
-        }),
-      ])
-
-      currentTotals = currentTotalsDerived
-      prevTotals = prevSummary.totals
-      currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
-      prevAttributedCommissionTotal = prevSummary.attributedCommissionTotal
-      currentUnattributedCommissionTotal = currentUnattributedCommissionTotalDerived
-      prevUnattributedCommissionTotal = unattributedSummary.previousTotal
-      currentAttributedCommissionByCurrency = isFilteredByCurrency
-        ? []
-        : currentAttributedCommissionByCurrencyDerived
-      currentUnattributedCommissionByCurrency = isFilteredByCurrency
-        ? []
-        : currentUnattributedCommissionByCurrencyDerived
-    } else {
-      currentTotals = currentTotalsDerived
-
-      prevSummary = await queryPreviousSummary({
+    ;[prevSummary, unattributedSummary] = await Promise.all([
+      queryPreviousSummary({
         start: prevStartDateStr,
         end: prevEndDateStr,
         currency: reportingCurrency || undefined,
-      })
-      prevTotals = prevSummary.totals
-      currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
-      prevAttributedCommissionTotal = prevSummary.attributedCommissionTotal
-      unattributedSummary = await queryUnattributedCommissionPeriods({
+      }),
+      queryUnattributedCommissionPeriods({
         currentStart: startDateStr,
         currentEnd: endDateStr,
         previousStart: prevStartDateStr,
         previousEnd: prevEndDateStr,
         currency: reportingCurrency || undefined,
-      })
-      currentUnattributedCommissionTotal = currentUnattributedCommissionTotalDerived
-      prevUnattributedCommissionTotal = unattributedSummary.previousTotal
-      currentAttributedCommissionByCurrency = isFilteredByCurrency
-        ? []
-        : currentAttributedCommissionByCurrencyDerived
-      currentUnattributedCommissionByCurrency = !isFilteredByCurrency
-        ? currentUnattributedCommissionByCurrencyDerived
-        : []
-    }
+      }),
+    ])
+
+    currentTotals = currentTotalsDerived
+    prevTotals = prevSummary.totals
+    currentAttributedCommissionTotal = currentAttributedCommissionTotalDerived
+    prevAttributedCommissionTotal = prevSummary.attributedCommissionTotal
+    currentUnattributedCommissionTotal = currentUnattributedCommissionTotalDerived
+    prevUnattributedCommissionTotal = unattributedSummary.previousTotal
+    currentAttributedCommissionByCurrency = isFilteredByCurrency
+      ? []
+      : currentAttributedCommissionByCurrencyDerived
+    currentUnattributedCommissionByCurrency = isFilteredByCurrency
+      ? []
+      : currentUnattributedCommissionByCurrencyDerived
     const summaryCostCurrencies = summaryCostsDerived.map((row) => row.currency)
     const commissionCurrencies = Array.from(
       new Set([

@@ -63,10 +63,6 @@ interface OfferSummary {
 
 type DashboardTimeRange = '7' | '14' | '30' | 'custom'
 
-interface DashboardClientPageProps {
-  dashboardDeferEnabled?: boolean
-}
-
 function DeferredWidgetSkeleton({ title }: { title: string }) {
   return (
     <Card>
@@ -119,9 +115,7 @@ const formatDateInputValue = (date: Date): string => {
   return `${year}-${month}-${day}`
 }
 
-export default function DashboardClientPage({
-  dashboardDeferEnabled = false,
-}: DashboardClientPageProps) {
+export default function DashboardClientPage() {
   const router = useRouter()
   const [timeRange, setTimeRange] = useState<DashboardTimeRange>('7')
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
@@ -138,16 +132,11 @@ export default function DashboardClientPage({
   const [offerSummary, setOfferSummary] = useState<OfferSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [deferredWidgetsMounted, setDeferredWidgetsMounted] = useState(!dashboardDeferEnabled)
+  const [deferredWidgetsMounted, setDeferredWidgetsMounted] = useState(false)
   const fetchAbortRef = useRef<AbortController | null>(null)
   const fetchSeqRef = useRef(0)
 
   useEffect(() => {
-    if (!dashboardDeferEnabled) {
-      setDeferredWidgetsMounted(true)
-      return
-    }
-
     const timer = window.setTimeout(() => {
       setDeferredWidgetsMounted(true)
     }, 300)
@@ -155,7 +144,7 @@ export default function DashboardClientPage({
     return () => {
       window.clearTimeout(timer)
     }
-  }, [dashboardDeferEnabled])
+  }, [])
 
   /**
    * 处理401未授权错误 - 跳转到登录页

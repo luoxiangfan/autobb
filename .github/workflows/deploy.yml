@@ -90,7 +90,7 @@ jobs:
         run: npm run lint
 
       - name: 运行预构建检查
-        run: npm run perf:flags:check && npm run openclaw:prebuilt:verify-meta
+        run: npm run openclaw:prebuilt:verify-meta
         env:
           NODE_ENV: production
 

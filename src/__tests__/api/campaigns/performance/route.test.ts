@@ -49,7 +49,6 @@ vi.mock('@/lib/common/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/common/server')>()
   return {
     ...actual,
-    isPerformanceReleaseEnabled: vi.fn((flag: string) => flag !== 'campaignsParallel'),
   }
 })
 
@@ -1487,9 +1486,7 @@ describe('GET /api/campaigns/performance', () => {
     expect(data.campaigns[1]?.campaignName).toBe('Low CPC Campaign')
   })
 
-  it('keeps response contract when campaigns parallel mode is enabled', async () => {
-    vi.stubEnv('FF_CAMPAIGNS_PARALLEL', 'true')
-
+  it('keeps response contract with parallel campaign queries', async () => {
     const query = vi.fn(async (sql: string) => {
       if (sql.includes('FROM campaign_performance') && sql.includes('GROUP BY COALESCE(currency')) {
         return []

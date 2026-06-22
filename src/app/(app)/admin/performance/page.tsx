@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, AlertTriangle, Gauge, RefreshCw, Trash2 } from 'lucide-react'
+import { Activity, Gauge, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { fetchWithRetry } from '@/lib/common'
 import { showError, showSuccess } from '@/lib/common'
@@ -40,57 +40,11 @@ type ApiRequestMetric = {
   statusCode: number
 }
 
-type WebVitalStats = {
-  count: number
-  avg: number
-  min: number
-  max: number
-  p75: number
-  p95: number
-  good: number
-  needsImprovement: number
-  poor: number
-}
-
-type WebVitalMetric = {
-  name: string
-  value: number
-  delta?: number
-  rating?: 'good' | 'needs-improvement' | 'poor'
-  path: string
-  timestamp: number
-}
-
-type FrontendErrorSummary = {
-  total: number
-  byType: {
-    error: number
-    unhandledrejection: number
-  }
-  byPath: Record<string, number>
-}
-
-type FrontendErrorMetric = {
-  type: 'error' | 'unhandledrejection'
-  name?: string
-  message: string
-  stack?: string
-  path: string
-  timestamp: number
-}
-
 type PerformanceData = {
   overall: OverallStats
   cache: CacheStats
   byPath: Record<string, PathStats>
   recentRequests: ApiRequestMetric[]
-  frontendVitals: {
-    total: number
-    byMetric: Record<string, WebVitalStats>
-  }
-  recentFrontendVitals: WebVitalMetric[]
-  frontendErrors: FrontendErrorSummary
-  recentFrontendErrors: FrontendErrorMetric[]
 }
 
 function formatMs(value: number | null | undefined): string {
@@ -107,13 +61,6 @@ function formatTime(value: number | null | undefined): string {
 function formatNumber(value: number | null | undefined): string {
   if (value === null || value === undefined || !Number.isFinite(value)) return '-'
   return value.toLocaleString('zh-CN')
-}
-
-function ratingBadgeClass(rating?: string): string {
-  if (rating === 'good') return 'bg-green-100 text-green-800'
-  if (rating === 'needs-improvement') return 'bg-yellow-100 text-yellow-800'
-  if (rating === 'poor') return 'bg-red-100 text-red-800'
-  return 'bg-gray-100 text-gray-700'
 }
 
 export default function AdminPerformancePage() {
@@ -229,21 +176,6 @@ export default function AdminPerformancePage() {
       .slice(0, 10)
   }, [data])
 
-  const sortedVitalStats = useMemo(() => {
-    if (!data) return []
-    return Object.entries(data.frontendVitals.byMetric)
-      .map(([name, stats]) => ({ name, ...stats }))
-      .sort((a, b) => b.p95 - a.p95)
-  }, [data])
-
-  const topErrorPaths = useMemo(() => {
-    if (!data) return []
-    return Object.entries(data.frontendErrors.byPath)
-      .map(([path, count]) => ({ path, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-  }, [data])
-
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -356,87 +288,6 @@ export default function AdminPerformancePage() {
             </div>
 
             <div className="rounded-lg border bg-white p-4">
-              <h2 className="font-semibold mb-3 flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                前端错误概览
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-gray-500">错误总数</p>
-                  <p className="text-lg font-semibold">{formatNumber(data.frontendErrors.total)}</p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-gray-500">Error</p>
-                  <p className="text-lg font-semibold">
-                    {formatNumber(data.frontendErrors.byType.error)}
-                  </p>
-                </div>
-                <div className="rounded-md border p-3">
-                  <p className="text-xs text-gray-500">Unhandled Rejection</p>
-                  <p className="text-lg font-semibold">
-                    {formatNumber(data.frontendErrors.byType.unhandledrejection)}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {topErrorPaths.length === 0 ? (
-                  <p className="text-sm text-gray-400">暂无路径维度错误数据</p>
-                ) : (
-                  topErrorPaths.map((row) => (
-                    <div key={row.path} className="flex items-center justify-between text-sm">
-                      <span className="font-mono text-xs">{row.path}</span>
-                      <span className="font-medium">{row.count}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-lg border bg-white p-4">
-            <h2 className="font-semibold mb-3">Web Vitals 汇总</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500 border-b">
-                    <th className="py-2 pr-3">指标</th>
-                    <th className="py-2 pr-3">样本</th>
-                    <th className="py-2 pr-3">P75</th>
-                    <th className="py-2 pr-3">P95</th>
-                    <th className="py-2 pr-3">Good</th>
-                    <th className="py-2 pr-3">Needs</th>
-                    <th className="py-2 pr-3">Poor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedVitalStats.length === 0 ? (
-                    <tr>
-                      <td className="py-4 text-gray-400" colSpan={7}>
-                        暂无 Web Vitals 数据
-                      </td>
-                    </tr>
-                  ) : (
-                    sortedVitalStats.map((row) => (
-                      <tr key={row.name} className="border-b last:border-b-0">
-                        <td className="py-2 pr-3 font-semibold">{row.name}</td>
-                        <td className="py-2 pr-3">{formatNumber(row.count)}</td>
-                        <td className="py-2 pr-3">{formatMs(row.p75)}</td>
-                        <td className="py-2 pr-3">{formatMs(row.p95)}</td>
-                        <td className="py-2 pr-3 text-green-700">{formatNumber(row.good)}</td>
-                        <td className="py-2 pr-3 text-yellow-700">
-                          {formatNumber(row.needsImprovement)}
-                        </td>
-                        <td className="py-2 pr-3 text-red-700">{formatNumber(row.poor)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="rounded-lg border bg-white p-4">
               <h2 className="font-semibold mb-3">最近 API 请求</h2>
               <div className="max-h-[360px] overflow-auto space-y-2">
                 {data.recentRequests.length === 0 ? (
@@ -463,58 +314,6 @@ export default function AdminPerformancePage() {
                     </div>
                   ))
                 )}
-              </div>
-            </div>
-
-            <div className="rounded-lg border bg-white p-4">
-              <h2 className="font-semibold mb-3">最近前端指标与错误</h2>
-              <div className="space-y-3 max-h-[360px] overflow-auto">
-                {data.recentFrontendVitals.map((item, index) => (
-                  <div
-                    key={`${item.name}-${item.timestamp}-${index}`}
-                    className="rounded border p-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{item.name}</span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs ${ratingBadgeClass(item.rating)}`}
-                        >
-                          {item.rating || 'unknown'}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-500">{formatTime(item.timestamp)}</span>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-600">
-                      path: <span className="font-mono">{item.path}</span> | value:{' '}
-                      {item.value.toFixed(2)}
-                    </div>
-                  </div>
-                ))}
-
-                {data.recentFrontendErrors.map((item, index) => (
-                  <div
-                    key={`${item.type}-${item.timestamp}-${index}`}
-                    className="rounded border p-3 bg-amber-50/30"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-700">
-                        {item.type}
-                      </span>
-                      <span className="text-xs text-gray-500">{formatTime(item.timestamp)}</span>
-                    </div>
-                    <div className="mt-1 text-sm font-medium">{item.name || 'Error'}</div>
-                    <div className="text-xs text-gray-700 break-all">{item.message}</div>
-                    <div className="mt-1 text-xs text-gray-500">
-                      path: <span className="font-mono">{item.path}</span>
-                    </div>
-                  </div>
-                ))}
-
-                {data.recentFrontendVitals.length === 0 &&
-                data.recentFrontendErrors.length === 0 ? (
-                  <p className="text-sm text-gray-400">暂无前端指标与错误数据</p>
-                ) : null}
               </div>
             </div>
           </section>

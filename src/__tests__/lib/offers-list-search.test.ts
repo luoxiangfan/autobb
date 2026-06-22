@@ -20,7 +20,7 @@ describe('listOffers search query', () => {
   })
 
   it('uses case-insensitive postgres search over id/brand/offer_name/url/final_url/category', async () => {
-    const { listOffers } = await import('@/lib/offers/server')
+    const { listOffers } = await import('@/lib/offers/offers')
 
     await listOffers(7, { searchQuery: 'roborock' })
 
@@ -45,5 +45,17 @@ describe('listOffers search query', () => {
       '%roborock%',
       '%roborock%',
     ])
+  })
+
+  it('orders by linked account count when sortBy is linkedAccounts', async () => {
+    const { listOffers } = await import('@/lib/offers/offers')
+
+    await listOffers(7, { sortBy: 'linkedAccounts', sortOrder: 'asc', limit: 10 })
+
+    const listSql = String(dbFns.query.mock.calls[0]?.[0] || '')
+
+    expect(listSql).toContain('COUNT(DISTINCT gaa.id)')
+    expect(listSql).toContain('ORDER BY (SELECT COUNT(DISTINCT gaa.id)')
+    expect(listSql).toContain('ASC')
   })
 })
