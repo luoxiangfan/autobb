@@ -2,7 +2,12 @@ import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { findOfferById, deleteOffer } from '@/lib/offers/server'
 import { invalidateOfferCache } from '@/lib/common/server'
-import { compactCategoryLabel, deriveCategoryFromScrapedData } from '@/lib/offers/server'
+import {
+  compactCategoryLabel,
+  deriveCategoryFromScrapedData,
+  resolveOfferLinkType,
+} from '@/lib/offers/server'
+import { pickNonEmptyString, pickTopUniqueLines } from '@/lib/common/server'
 import { filterNavigationLabels } from '@/lib/scraping'
 import { normalizeOfferExtractionMode } from '@/lib/offers/server'
 import { applyOfferUpdateFromBody, mapOfferToPutResponse } from '@/lib/offers/server'
@@ -17,30 +22,8 @@ function safeParseJson<T>(input: unknown): T | null {
   }
 }
 
-function pickNonEmptyString(...values: Array<unknown>): string | null {
-  for (const value of values) {
-    if (typeof value !== 'string') continue
-    const trimmed = value.trim()
-    if (trimmed) return trimmed
-  }
-  return null
-}
-
 function pickTopLines(input: unknown, limit: number): string[] {
-  if (!Array.isArray(input) || limit <= 0) return []
-  const out: string[] = []
-  const seen = new Set<string>()
-  for (const item of input) {
-    if (typeof item !== 'string') continue
-    const line = item.replace(/\s+/g, ' ').trim()
-    if (!line) continue
-    const key = line.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(line)
-    if (out.length >= limit) break
-  }
-  return out
+  return pickTopUniqueLines(input, limit)
 }
 
 function normalizeTextCandidate(input: unknown): string | null {
@@ -273,21 +256,10 @@ export const GET = withAuth(async (request, user, context) => {
     )
     const storeDerived = buildStoreDescriptionFromScrapedData(scrapedData)
 
-    // 🔥 修复：历史数据可能错误写入 page_type=product（实际上是店铺）
-    // 规则：如果 scraped_data 体现“店铺结构”（storeName/products/deepScrapeResults），则详情页按店铺展示
-    const pageTypeFromScrapedData = (() => {
-      if (!scrapedData || typeof scrapedData !== 'object') return null
-      const productsLen = Array.isArray(scrapedData.products) ? scrapedData.products.length : 0
-      const hasStoreName =
-        typeof scrapedData.storeName === 'string' && scrapedData.storeName.trim().length > 0
-      const hasDeep = !!scrapedData.deepScrapeResults
-      const explicit = typeof scrapedData.pageType === 'string' ? scrapedData.pageType : null
-      if (explicit === 'store' || explicit === 'product') return explicit
-      if (hasStoreName || hasDeep || productsLen >= 2) return 'store'
-      return null
-    })()
-
-    const pageTypeEffective = pageTypeFromScrapedData || offer.page_type || 'product'
+    const pageTypeEffective = resolveOfferLinkType(
+      { page_type: offer.page_type, scraped_data: offer.scraped_data },
+      { allowProductOverrideByDerivedStore: true }
+    )
     const isStorePage = pageTypeEffective === 'store'
     const storeProductLinks = safeParseJson<string[]>(offer.store_product_links) || []
 

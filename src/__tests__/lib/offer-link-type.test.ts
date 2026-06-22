@@ -77,6 +77,23 @@ describe('offer-link-type resolution', () => {
     expect(resolved).toBe('store')
   })
 
+  it('falls back to legacy link_type when page_type and scraped signals are missing', () => {
+    const resolved = resolveOfferLinkType({
+      link_type: 'store',
+    })
+
+    expect(resolved).toBe('store')
+  })
+
+  it('prefers explicit page_type over link_type', () => {
+    expect(
+      resolveOfferLinkType({
+        page_type: 'product',
+        link_type: 'store',
+      })
+    ).toBe('product')
+  })
+
   it('derives null when scraped signals are insufficient', () => {
     const derived = deriveOfferLinkTypeFromScrapedData({
       pageType: '',

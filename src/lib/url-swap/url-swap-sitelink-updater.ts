@@ -13,7 +13,11 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
-import { resolveAffiliateLink } from '@/lib/scraping'
+import { validateUrlSwapDomainChange } from './url-swap-domain-validation'
+import {
+  resolveAffiliateLinkForUrlSwap,
+  shouldRetryUrlSwapTargetOnSameSuffix,
+} from './url-swap-resolve-config'
 import type { SwapHistoryEntry, SwapHistorySitelinkUpdate } from './url-swap-types'
 import {
   getActiveUrlSwapSitelinkTargets,
@@ -39,38 +43,12 @@ export interface UrlSwapSitelinkPhaseResult {
   updates: SwapHistorySitelinkUpdate[]
 }
 
-function buildUrlSwapResolveRetryConfig() {
-  const rawAttempts = parseInt(process.env.URL_SWAP_PROXY_RETRY_ATTEMPTS || '3', 10)
-  const maxRetries = Number.isFinite(rawAttempts) && rawAttempts >= 1 ? rawAttempts - 1 : 2
-  const baseDelay = parseInt(process.env.URL_SWAP_PROXY_RETRY_BASE_DELAY_MS || '1200', 10)
-  const maxDelay = parseInt(process.env.URL_SWAP_PROXY_RETRY_MAX_DELAY_MS || '6000', 10)
-  return {
-    maxRetries,
-    baseDelay: Number.isFinite(baseDelay) ? baseDelay : 1200,
-    maxDelay: Number.isFinite(maxDelay) ? maxDelay : 6000,
-    retryableErrors: [
-      'timeout',
-      'Timeout',
-      'ETIMEDOUT',
-      'ECONNRESET',
-      'ECONNREFUSED',
-      '状态码 5',
-      'HTTP 5',
-    ],
-  }
-}
-
 async function resolveSitelinkAffiliateLink(params: {
   affiliateLink: string
   targetCountry: string
   userId: number
-}): Promise<Awaited<ReturnType<typeof resolveAffiliateLink>>> {
-  return resolveAffiliateLink(params.affiliateLink, {
-    targetCountry: params.targetCountry,
-    userId: params.userId,
-    skipCache: true,
-    retryConfig: buildUrlSwapResolveRetryConfig(),
-  })
+}) {
+  return resolveAffiliateLinkForUrlSwap(params)
 }
 
 async function resolveSitelinkTargetApiAuth(params: {
@@ -121,25 +99,6 @@ async function resolveSitelinkTargetApiAuth(params: {
     parentMccId: accountMeta?.parent_mcc_id ?? null,
     oauthCredentials: result.oauthCredentials,
     ...preparedAuthContextField(result),
-  }
-}
-
-function validateSitelinkUrlDomainChange(
-  oldUrl: string,
-  newUrl: string
-): { valid: boolean; error?: string } {
-  try {
-    const oldDomain = new URL(oldUrl).hostname
-    const newDomain = new URL(newUrl).hostname
-    if (oldDomain !== newDomain) {
-      return {
-        valid: false,
-        error: `Sitelink 落地页域名发生变化（${oldDomain} → ${newDomain}）`,
-      }
-    }
-    return { valid: true }
-  } catch {
-    return { valid: true }
   }
 }
 
@@ -295,9 +254,10 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
         })
 
         if (target.current_final_url) {
-          const validation = validateSitelinkUrlDomainChange(
+          const validation = validateUrlSwapDomainChange(
             target.current_final_url,
-            resolved.finalUrl
+            resolved.finalUrl,
+            'sitelink'
           )
           if (!validation.valid) {
             throw new Error(validation.error || 'Sitelink 域名校验失败')
@@ -305,7 +265,7 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
         }
 
         const suffixChanged = resolved.finalUrlSuffix !== (target.current_final_url_suffix ?? '')
-        const shouldRetry = (target.consecutive_failures ?? 0) > 0 || Boolean(target.last_error)
+        const shouldRetry = shouldRetryUrlSwapTargetOnSameSuffix(target)
 
         if (!suffixChanged && !shouldRetry) {
           result.skippedCount++

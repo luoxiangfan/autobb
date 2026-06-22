@@ -61,6 +61,7 @@ export function inferPageTypeFromUrls(params: {
 export function resolveOfferLinkType(
   input: {
     page_type?: unknown
+    link_type?: unknown
     scraped_data?: unknown
   },
   options?: {
@@ -79,5 +80,10 @@ export function resolveOfferLinkType(
     return 'product'
   }
 
-  return derived || 'product'
+  if (derived) return derived
+
+  const linkType = normalizeOfferLinkType(input.link_type)
+  if (linkType === 'store') return 'store'
+
+  return 'product'
 }

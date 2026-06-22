@@ -21,7 +21,7 @@ import { createOffer, updateOfferScrapeStatus, updateOffer } from '@/lib/offers/
 import type { BrandSearchSupplement, SerpSitelink } from '@/lib/keywords/server'
 import { deriveCategoryFromScrapedData } from '@/lib/offers/server'
 import { filterNavigationLabels } from '@/lib/scraping'
-import { parsePrice } from '@/lib/common/server'
+import { parsePrice, pickNonEmptyString, pickTopUniqueLines } from '@/lib/common/server'
 import { toDbJsonObjectField } from '@/lib/db'
 import { extractScenariosFromReviews } from '@/lib/creatives/server'
 import { syncScrapedProductsFromExtractData } from '@/lib/offers/server'
@@ -71,32 +71,6 @@ function mergeUniqueSitelinks(
     }
   }
   return out.length > 0 ? out : null
-}
-
-function pickNonEmptyString(...values: Array<unknown>): string | null {
-  for (const value of values) {
-    if (typeof value !== 'string') continue
-    const trimmed = value.trim()
-    if (trimmed) return trimmed
-  }
-  return null
-}
-
-function pickTopUniqueLines(input: unknown, limit: number): string[] {
-  if (!Array.isArray(input) || limit <= 0) return []
-  const out: string[] = []
-  const seen = new Set<string>()
-  for (const item of input) {
-    if (typeof item !== 'string') continue
-    const line = item.replace(/\s+/g, ' ').trim()
-    if (!line) continue
-    const key = line.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(line)
-    if (out.length >= limit) break
-  }
-  return out
 }
 
 function computeAveragePriceFromStrings(prices: Array<unknown>): string | undefined {

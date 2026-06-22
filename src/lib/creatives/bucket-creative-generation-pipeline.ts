@@ -36,6 +36,7 @@ import type {
 } from '@/lib/google-ads/accounts/auth/index'
 import type { OfferKeywordPool, PoolKeywordData } from '@/lib/keywords/offer-pool'
 import type { Offer } from '@/lib/offers/server'
+import { resolveOfferLinkType } from '@/lib/offers/server'
 import { getSearchTermFeedbackHints, type SearchTermFeedbackHints } from '@/lib/keywords/server'
 import type { SearchTermFeedbackHintsInput } from './generator/index'
 import { parseBooleanEnv } from '@/lib/common/server'
@@ -181,19 +182,13 @@ function normalizeKeywordMapKey(value: unknown): string {
     .replace(/\s+/g, ' ')
 }
 
-export function resolveOfferLinkType(offer: Offer): 'product' | 'store' {
+function resolveCreativeOfferLinkType(offer: Offer): 'product' | 'store' {
   const record = offer as unknown as Record<string, unknown>
-  const pageType = String(record.page_type || '')
-    .trim()
-    .toLowerCase()
-  if (pageType === 'store' || pageType === 'product') {
-    return pageType
-  }
-  const linkType = String(record.link_type || '')
-    .trim()
-    .toLowerCase()
-  if (linkType === 'store') return 'store'
-  return 'product'
+  return resolveOfferLinkType({
+    page_type: record.page_type,
+    link_type: record.link_type,
+    scraped_data: record.scraped_data,
+  })
 }
 
 function buildKeywordPoolVolumeHintMap(keywordPool: OfferKeywordPool | null | undefined): Map<
@@ -348,7 +343,7 @@ export async function prepareBucketKeywordContext(params: {
     intentEn: string
   }
 }): Promise<BucketKeywordContext> {
-  const linkType = params.linkType || resolveOfferLinkType(params.offer)
+  const linkType = params.linkType || resolveCreativeOfferLinkType(params.offer)
   const creativeType = getCreativeTypeForBucketSlot(params.bucket)
   const seedCandidates =
     params.seedCandidates ??
@@ -653,7 +648,7 @@ function createBucketCreativeGenerationCallbacks(
 export async function runBucketCreativeGeneration(
   params: RunBucketCreativeGenerationParams
 ): Promise<CreativeGenerationLoopResult<GeneratedAdCreative>> {
-  const linkType = params.linkType || resolveOfferLinkType(params.offer)
+  const linkType = params.linkType || resolveCreativeOfferLinkType(params.offer)
   const searchTermFeedbackHints =
     params.searchTermFeedbackHints ??
     (params.loadSearchTermFeedbackHints !== false

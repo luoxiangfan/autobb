@@ -10,7 +10,6 @@
  */
 
 import type { Task } from '../types'
-import { resolveAffiliateLink } from '@/lib/scraping'
 import {
   updateTaskAfterManualAdvance,
   updateTaskAfterSwap,
@@ -49,47 +48,12 @@ import {
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 import { initializeProxyPool } from '@/lib/offers/server'
 import { assertUserExecutionAllowed } from '@/lib/campaign/server'
-import { detectDomainChangeAffiliateFailure, isAffiliateLinkExpiredMessage } from '@/lib/affiliate'
-
-/**
- * URL域名验证
- */
-function validateUrlDomainChange(
-  oldUrl: string,
-  newUrl: string
-): {
-  valid: boolean
-  error?: string
-  errorType?: UrlSwapErrorType
-} {
-  const affiliateFailure = detectDomainChangeAffiliateFailure(oldUrl, newUrl)
-  if (affiliateFailure) {
-    return {
-      valid: false,
-      error: affiliateFailure.message,
-      errorType: 'link_resolution',
-    }
-  }
-
-  try {
-    const oldDomain = new URL(oldUrl).hostname
-    const newDomain = new URL(newUrl).hostname
-
-    if (oldDomain !== newDomain) {
-      return {
-        valid: false,
-        error:
-          `落地页域名发生变化（${oldDomain} → ${newDomain}），与当前记录的 Final URL 不一致。` +
-          '若推广链接已更换或失效，请在联盟平台确认并更新 Offer 推广链接。',
-        errorType: 'link_resolution',
-      }
-    }
-
-    return { valid: true }
-  } catch (_error) {
-    return { valid: true } // URL解析失败时，允许继续
-  }
-}
+import { isAffiliateLinkExpiredMessage } from '@/lib/affiliate'
+import { validateUrlSwapDomainChange } from '@/lib/url-swap/url-swap-domain-validation'
+import {
+  resolveAffiliateLinkForUrlSwap,
+  shouldRetryUrlSwapTargetOnSameSuffix,
+} from '@/lib/url-swap/url-swap-resolve-config'
 
 function isOAuthInvalidGrantError(message: string): boolean {
   return (
@@ -105,77 +69,6 @@ function formatGoogleAdsError(error: unknown): string {
   const formatted = formatGoogleAdsApiError(responseData ?? error)
   if (formatted && formatted !== 'Google Ads API error') return formatted
   return formatGoogleAdsApiError(error)
-}
-
-function shouldRetryTargetOnSameSuffix(target: UrlSwapTaskTarget): boolean {
-  return Boolean(target.last_error) || (target.consecutive_failures ?? 0) > 0
-}
-
-const URL_SWAP_PROXY_RETRY_ATTEMPTS = (() => {
-  const raw = parseInt(process.env.URL_SWAP_PROXY_RETRY_ATTEMPTS || '3', 10)
-  return Number.isFinite(raw) && raw >= 1 ? raw : 3
-})()
-
-const URL_SWAP_PROXY_RETRY_BASE_DELAY_MS = (() => {
-  const raw = parseInt(process.env.URL_SWAP_PROXY_RETRY_BASE_DELAY_MS || '1200', 10)
-  return Number.isFinite(raw) && raw >= 0 ? raw : 1200
-})()
-
-const URL_SWAP_PROXY_RETRY_MAX_DELAY_MS = (() => {
-  const raw = parseInt(process.env.URL_SWAP_PROXY_RETRY_MAX_DELAY_MS || '6000', 10)
-  const normalized = Number.isFinite(raw) && raw >= 0 ? raw : 6000
-  return Math.max(URL_SWAP_PROXY_RETRY_BASE_DELAY_MS, normalized)
-})()
-
-const URL_SWAP_PROXY_RETRYABLE_ERRORS = [
-  'timeout',
-  'Timeout',
-  'ETIMEDOUT',
-  'ECONNRESET',
-  'ECONNREFUSED',
-  'ENETUNREACH',
-  '状态码 5',
-  'HTTP 5',
-  'EPROTO',
-  'wrong version number',
-  'ssl3_get_record',
-  'ERR_NAME_NOT_RESOLVED',
-  'ERR_EMPTY_RESPONSE',
-  'ERR_CONNECTION_CLOSED',
-  'ERR_HTTP2_PROTOCOL_ERROR',
-  'ERR_PROXY_CONNECTION_FAILED',
-  'net::ERR_EMPTY_RESPONSE',
-  'net::ERR_HTTP2_PROTOCOL_ERROR',
-  'TimeoutError',
-  'waiting until',
-  'IPRocket API business error',
-  'Business abnormality',
-  'business abnormality',
-  '业务异常',
-  'contact customer service',
-  '联系客服',
-]
-
-function buildUrlSwapResolveRetryConfig() {
-  return {
-    maxRetries: Math.max(0, URL_SWAP_PROXY_RETRY_ATTEMPTS - 1),
-    baseDelay: URL_SWAP_PROXY_RETRY_BASE_DELAY_MS,
-    maxDelay: URL_SWAP_PROXY_RETRY_MAX_DELAY_MS,
-    retryableErrors: URL_SWAP_PROXY_RETRYABLE_ERRORS,
-  }
-}
-
-async function resolveAffiliateLinkForUrlSwap(params: {
-  affiliateLink: string
-  targetCountry: string
-  userId: number
-}): Promise<Awaited<ReturnType<typeof resolveAffiliateLink>>> {
-  return resolveAffiliateLink(params.affiliateLink, {
-    targetCountry: params.targetCountry,
-    userId: params.userId,
-    skipCache: true,
-    retryConfig: buildUrlSwapResolveRetryConfig(),
-  })
 }
 
 interface GoogleAdsUpdateAuthContext {
@@ -561,7 +454,7 @@ export async function executeUrlSwapTask(
       }
 
       if (urlChanged && currentUrlFromDb) {
-        const validation = validateUrlDomainChange(currentUrlFromDb, resolved.finalUrl)
+        const validation = validateUrlSwapDomainChange(currentUrlFromDb, resolved.finalUrl)
         if (!validation.valid) {
           console.error(`[url-swap-executor] 落地页校验失败: ${taskId} - ${validation.error}`)
           await setTaskError(taskId, validation.error!, validation.errorType ?? 'link_resolution')
@@ -571,7 +464,7 @@ export async function executeUrlSwapTask(
 
       const targetsToUpdate = urlChanged
         ? taskTargets
-        : taskTargets.filter(shouldRetryTargetOnSameSuffix)
+        : taskTargets.filter(shouldRetryUrlSwapTargetOnSameSuffix)
 
       let updateResult: { successCount: number; failureCount: number; failures: string[] } | null =
         null
@@ -701,7 +594,7 @@ export async function executeUrlSwapTask(
       resolved.finalUrlSuffix !== effectiveCurrentFinalUrlSuffix
 
     if (!urlChanged) {
-      const retryTargets = taskTargets.filter(shouldRetryTargetOnSameSuffix)
+      const retryTargets = taskTargets.filter(shouldRetryUrlSwapTargetOnSameSuffix)
       if (retryTargets.length === 0) {
         console.log(`[url-swap-executor] URL未变化: ${taskId}`)
         await updateTaskStats(taskId, true, false)
@@ -757,7 +650,7 @@ export async function executeUrlSwapTask(
 
     // 3. 验证域名一致性（防止盗链）
     if (effectiveCurrentFinalUrl) {
-      const validation = validateUrlDomainChange(effectiveCurrentFinalUrl, resolved.finalUrl)
+      const validation = validateUrlSwapDomainChange(effectiveCurrentFinalUrl, resolved.finalUrl)
       if (!validation.valid) {
         console.error(`[url-swap-executor] 落地页校验失败: ${taskId} - ${validation.error}`)
         await setTaskError(taskId, validation.error!, validation.errorType ?? 'link_resolution')

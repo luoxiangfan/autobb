@@ -16,10 +16,9 @@ import { getThemeByBucket } from './generator/index'
 import {
   assertPostGenerationPersistenceGate,
   formatBucketGenerationRejectedError,
-  resolveOfferLinkType,
   runBucketCreativeGeneration,
 } from './bucket-creative-generation-pipeline'
-import { findOfferById } from '../offers/server'
+import { findOfferById, resolveOfferLinkType } from '../offers/server'
 import { resolveKeywordPoolForCreativeGeneration } from '../keywords/offer-pool'
 import { deriveSkipKeywordPoolExpandLoad } from '../offers/server'
 import {
@@ -130,7 +129,11 @@ export async function regenerateAdCreative(
       }
     }
 
-    const linkType = resolveOfferLinkType(offer)
+    const linkType = resolveOfferLinkType({
+      page_type: offer.page_type,
+      link_type: (offer as unknown as Record<string, unknown>).link_type,
+      scraped_data: offer.scraped_data,
+    })
     const bucketTheme = bucket ? getThemeByBucket(bucket, linkType) : null
     const bucketIntent =
       bucketTheme?.split(' - ')[0] || previousCreative?.bucket_intent || undefined

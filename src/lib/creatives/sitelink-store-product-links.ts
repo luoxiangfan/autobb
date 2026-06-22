@@ -36,13 +36,6 @@ export function resolveOfferFallbackUrlForSitelinks(offer: {
   final_url?: string | null
   url?: string | null
 }): string | null {
-  return resolveOfferFallbackUrl(offer)
-}
-
-function resolveOfferFallbackUrl(offer: {
-  final_url?: string | null
-  url?: string | null
-}): string | null {
   const rawFinalUrl = offer.final_url
   const isFinalUrlValid =
     rawFinalUrl && rawFinalUrl !== 'null' && rawFinalUrl !== 'null/' && rawFinalUrl !== 'undefined'

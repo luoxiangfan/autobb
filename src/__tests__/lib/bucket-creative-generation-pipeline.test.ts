@@ -3,8 +3,8 @@ import {
   assertExecutableKeywordsNonEmpty,
   assertPostGenerationPersistenceGate,
   evaluateCreativeWithPersistenceGate,
-  resolveOfferLinkType,
 } from '@/lib/creatives/server'
+import { resolveOfferLinkType } from '@/lib/offers/server'
 import { normalizeCreativeBucketSlot } from '@/lib/creatives/server'
 import { resolveStoredGenerationMode } from '@/lib/creatives/server'
 import { getAdCreativeGenerationModeProfile } from '@/lib/creatives/server'

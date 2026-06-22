@@ -1,3 +1,5 @@
+import { pickNonEmptyString } from '@/lib/common/string-utils'
+
 export interface SitelinkItem {
   text: string
   url: string
@@ -31,14 +33,8 @@ export function splitUrlBaseAndSuffix(fullUrl: string): { base: string; suffix: 
 const SITELINK_TEXT_MAX = 25
 const SITELINK_DESC_MAX = 35
 
-const firstNonEmptyString = (candidates: unknown[]): string | undefined => {
-  for (const value of candidates) {
-    if (typeof value === 'string' && value.trim().length > 0) {
-      return value.trim()
-    }
-  }
-  return undefined
-}
+const firstNonEmptyString = (candidates: unknown[]): string | undefined =>
+  pickNonEmptyString(...candidates) ?? undefined
 
 const truncate = (value: string, maxLen: number): string => value.substring(0, maxLen)
 
