@@ -24,21 +24,7 @@ import { getGoogleAdsClient } from '@/lib/google-ads/api/api'
 import { getServiceAccountConfig, AuthType } from '@/lib/google-ads/service-account/service-account'
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/index'
 
-/**
- * 🔧 修复(2025-12-24): 获取 KeywordPlanIdeaService
- * OAuth 模式使用 customer.keywordPlanIdeas
- * 服务账号模式使用 customer.loadService('KeywordPlanIdeaServiceClient')
- */
-function getKeywordPlanIdeaService(customer: any, authType: AuthType | undefined) {
-  if (authType === 'service_account') {
-    // 服务账号模式：使用 loadService 动态加载服务
-    // 注意：@htdangkhoa/google-ads 库的服务名需要加上 Client 后缀
-    return customer.loadService('KeywordPlanIdeaServiceClient')
-  } else {
-    // OAuth 模式：直接访问 keywordPlanIdeas 属性
-    return customer.keywordPlanIdeas
-  }
-}
+import { getKeywordPlanIdeaService } from '@/lib/google-ads/keyword/keyword-plan-idea-service'
 
 interface KeywordVolume {
   keyword: string
