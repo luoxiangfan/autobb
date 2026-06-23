@@ -4,7 +4,7 @@ const builderFns = vi.hoisted(() => ({
   buildCreativeKeywordSet: vi.fn(),
 }))
 
-vi.mock('@/lib/keywords', () => ({
+vi.mock('@/lib/keywords/creative-keyword/creative-keyword-set-builder', () => ({
   buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
 }))
 
