@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { buildCreativeKeywordSet } from '@/lib/keywords/server'
-import { resolveCreativeKeywordMinimumOutputCount } from '@/lib/keywords/server'
+import { buildCreativeKeywordSet } from '@/lib/keywords/creative-keyword/creative-keyword-set-builder'
+import { resolveCreativeKeywordMinimumOutputCount } from '@/lib/keywords/creative-keyword/creative-keyword-output-floor'
 
 const mocks = vi.hoisted(() => ({
   applyKeywordSupplementationOnce: vi.fn(),
@@ -11,11 +11,11 @@ const mocks = vi.hoisted(() => ({
   dbQuery: vi.fn(),
 }))
 
-vi.mock('@/lib/creatives/generator/index', () => ({
+vi.mock('@/lib/creatives/generator/keyword-supplement', () => ({
   applyKeywordSupplementationOnce: mocks.applyKeywordSupplementationOnce,
 }))
 
-vi.mock('@/lib/keywords/server', () => ({
+vi.mock('@/lib/keywords/creative-keyword/creative-keyword-context-filter', () => ({
   filterCreativeKeywordsByOfferContext: (params: any) =>
     mocks.filterCreativeKeywordsByOfferContextDetailed(params).keywords,
   filterCreativeKeywordsByOfferContextDetailed: mocks.filterCreativeKeywordsByOfferContextDetailed,
@@ -23,7 +23,7 @@ vi.mock('@/lib/keywords/server', () => ({
     mocks.normalizeCreativeKeywordCandidatesForContextFilter,
 }))
 
-vi.mock('@/lib/keywords/server', () => ({
+vi.mock('@/lib/keywords/creative-keyword/creative-keyword-selection', () => ({
   CREATIVE_BRAND_KEYWORD_RESERVE: 10,
   CREATIVE_KEYWORD_MAX_COUNT: 50,
   selectCreativeKeywords: mocks.selectCreativeKeywords,
