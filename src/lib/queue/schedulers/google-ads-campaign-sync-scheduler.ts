@@ -65,7 +65,7 @@ class GoogleAdsCampaignSyncScheduler {
   private intervalHandle: NodeJS.Timeout | null = null
   private startupTimeoutHandle: NodeJS.Timeout | null = null
   private isRunning: boolean = false
-  private readonly CHECK_INTERVAL_MS = 60 * 1000 // 每分钟检查一次
+  private readonly CHECK_INTERVAL_MS = 60 * 1000 // 每分钟检查一次 (fallback)
   private readonly RUN_ON_START = parseBooleanEnv(
     process.env.QUEUE_GOOGLE_ADS_SYNC_RUN_ON_START,
     true
@@ -91,35 +91,82 @@ class GoogleAdsCampaignSyncScheduler {
     console.log('🔄 启动 Google Ads 广告系列同步调度器...')
     this.isRunning = true
 
-    // 启动时执行一次检查（支持延迟，降低冷启动竞争）
-    if (this.RUN_ON_START) {
-      if (this.startupTimeoutHandle) {
-        clearTimeout(this.startupTimeoutHandle)
-        this.startupTimeoutHandle = null
-      }
-      if (this.STARTUP_DELAY_MS === 0) {
-        void this.checkAndScheduleSync()
-      } else {
-        console.log(
-          `⏳ Google Ads 同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`
-        )
+    // 支持通过环境变量指定每天固定时间运行（格式: HH:mm，例如 17:00）
+    const dailyAtRaw = process.env.QUEUE_GOOGLE_ADS_SYNC_DAILY_AT?.trim()
+    const dailyAt = this.parseDailyAt(dailyAtRaw)
+
+    if (dailyAt) {
+      // 当配置了每日定时运行时，以该策略为准（忽略 RUN_ON_START 的首次即时执行）
+      console.log(
+        `⏰ 使用每日定时策略: 每天 ${String(dailyAt.hour).padStart(2, '0')}:${String(
+          dailyAt.minute
+        ).padStart(2, '0')}`
+      )
+
+      // 计算到下次执行的延迟并设置定时器；执行后使用 24h 的间隔循环
+      const scheduleDailyRun = () => {
+        const now = new Date()
+        const next = new Date(now)
+        next.setHours(dailyAt.hour, dailyAt.minute, 0, 0)
+        if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1)
+        const msUntilNext = next.getTime() - now.getTime()
+
+        console.log(`⏳ 下一次 Google Ads 同步将在 ${new Date(Date.now() + msUntilNext).toISOString()} 执行`)
+
+        // 清 任已有句柄
+        if (this.startupTimeoutHandle) {
+          clearTimeout(this.startupTimeoutHandle)
+          this.startupTimeoutHandle = null
+        }
+        if (this.intervalHandle) {
+          clearInterval(this.intervalHandle)
+          this.intervalHandle = null
+        }
+
         this.startupTimeoutHandle = setTimeout(() => {
           this.startupTimeoutHandle = null
           void this.checkAndScheduleSync()
-        }, this.STARTUP_DELAY_MS)
+
+          // 执行后每 24 小时运行一次
+          this.intervalHandle = setInterval(() => {
+            void this.checkAndScheduleSync()
+          }, 24 * 60 * 60 * 1000)
+        }, msUntilNext)
       }
+
+      scheduleDailyRun()
+
     } else {
-      console.log('⏭️ 已禁用启动时 Google Ads 同步首轮检查')
+      // 启动时执行一次检查（支持延迟，降低冷启动竞争）
+      if (this.RUN_ON_START) {
+        if (this.startupTimeoutHandle) {
+          clearTimeout(this.startupTimeoutHandle)
+          this.startupTimeoutHandle = null
+        }
+        if (this.STARTUP_DELAY_MS === 0) {
+          void this.checkAndScheduleSync()
+        } else {
+          console.log(
+            `⏳ Google Ads 同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`
+          )
+          this.startupTimeoutHandle = setTimeout(() => {
+            this.startupTimeoutHandle = null
+            void this.checkAndScheduleSync()
+          }, this.STARTUP_DELAY_MS)
+        }
+      } else {
+        console.log('⏭️ 已禁用启动时 Google Ads 同步首轮检查')
+      }
+
+      // 设置定时检查（每分钟）
+      this.intervalHandle = setInterval(() => {
+        this.checkAndScheduleSync()
+      }, this.CHECK_INTERVAL_MS)
+
+      console.log(
+        `✅ Google Ads 广告系列同步调度器已启动 (检查间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟，同步间隔：${this.SYNC_INTERVAL_HOURS}小时)`
+      )
     }
-
-    // 设置定时检查（每分钟）
-    this.intervalHandle = setInterval(() => {
-      this.checkAndScheduleSync()
-    }, this.CHECK_INTERVAL_MS)
-
-    console.log(
-      `✅ Google Ads 广告系列同步调度器已启动 (检查间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟，同步间隔：${this.SYNC_INTERVAL_HOURS}小时)`
-    )
   }
 
   /**
@@ -144,6 +191,19 @@ class GoogleAdsCampaignSyncScheduler {
 
     this.isRunning = false
     console.log('✅ Google Ads 广告系列同步调度器已停止')
+  }
+
+  /**
+   * 解析并验证 daily_at 字符串（支持 HH:mm）
+   */
+  private parseDailyAt(raw: string | undefined): { hour: number; minute: number } | null {
+    if (!raw) return null
+    const m = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)$/)
+    if (!m) return null
+    const hour = Number(m[1])
+    const minute = Number(m[2])
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null
+    return { hour, minute }
   }
 
   /**
@@ -288,7 +348,7 @@ class GoogleAdsCampaignSyncScheduler {
 
       const elapsedMs = Date.now() - checkStartAt
       console.log(
-        `\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证，${noMccCount} 个无 MCC，${activeWorkSkippedCount} 个仍在同步中）（耗时${elapsedMs}ms）`
+        `\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证，${noMccCount} 个无 MCC，${[...Array(activeWorkSkippedCount).keys()].length} 个活跃任务）（耗时 ${elapsedMs}ms）`
       )
     } catch (error) {
       const elapsedMs = Date.now() - checkStartAt
