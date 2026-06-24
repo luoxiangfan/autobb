@@ -448,22 +448,6 @@ async function fetchAllDataFromGoogleAds(params: {
         `[GoogleAds Sync] Aggregated assets for customer ${customerId}: callouts=${calloutsMap.size} campaigns, sitelinks=${sitelinksMap.size} campaigns`
       ),
       customerId,
-      calloutCampaignCount: calloutsMap.size,
-      sitelinkCampaignCount: sitelinksMap.size,
-      calloutsByCampaign: Object.fromEntries(
-        Array.from(calloutsMap.entries()).map(([id, items]) => [id, items.map((c) => c.text)])
-      ),
-      sitelinksByCampaign: Object.fromEntries(
-        Array.from(sitelinksMap.entries()).map(([id, items]) => [
-          id,
-          items.map((s) => ({
-            text: s.text,
-            url: s.url,
-            description1: s.description1,
-            description2: s.description2,
-          })),
-        ])
-      ),
     })
 
     // 处理查询 4 结果（定位）
