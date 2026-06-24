@@ -2,16 +2,8 @@
  * 创意关键词选择：类型、常量与模式
  */
 
-
-
-import {
-  type CanonicalCreativeType,
-} from '../../creatives/server'
-import {
-  type KeywordSourceTier,
-} from './creative-keyword-source-priority'
-
-
+import { type CanonicalCreativeType } from '../../creatives/server'
+import { type KeywordSourceTier } from './creative-keyword-source-priority'
 
 export const CREATIVE_KEYWORD_MAX_COUNT = 50
 export const CREATIVE_BRAND_KEYWORD_RESERVE = 10

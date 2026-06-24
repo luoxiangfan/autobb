@@ -14,8 +14,6 @@ import {
 import { resolveCreativeKeywordMinimumOutputCount } from './creative-keyword-output-floor'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 
-
-
 import {
   CREATIVE_BRAND_KEYWORD_RESERVE,
   MODEL_INTENT_BRAND_FLOOR,
@@ -55,9 +53,7 @@ import {
   isModelIntentRescueKeyword,
   getDemandAnchorTokens,
 } from './creative-keyword-candidate'
-import {
-  classifySourceGovernance,
-} from './creative-keyword-source-quota'
+import { classifySourceGovernance } from './creative-keyword-source-quota'
 
 export function dedupeRankedCandidatePool(candidates: RankedCandidate[]): RankedCandidate[] {
   const deduped = new Map<string, RankedCandidate>()

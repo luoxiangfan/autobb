@@ -2,9 +2,7 @@
  * 创意关键词选择：主流程
  */
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
-import {
-  analyzeKeywordLanguageCompatibility,
-} from '../planner/keyword-validity'
+import { analyzeKeywordLanguageCompatibility } from '../planner/keyword-validity'
 
 import {
   CREATIVE_KEYWORD_MAX_COUNT,
@@ -15,10 +13,7 @@ import {
   type SelectCreativeKeywordsOutput,
   type RankedCandidate,
 } from './creative-keyword-selection-types'
-import {
-  deriveCanonicalCreativeType,
-  containsAsinLikeToken,
-} from '../../creatives/server'
+import { deriveCanonicalCreativeType, containsAsinLikeToken } from '../../creatives/server'
 import { getPureBrandKeywords } from '../brand/brand-keyword-utils'
 import {
   getKeywordSourcePriority,

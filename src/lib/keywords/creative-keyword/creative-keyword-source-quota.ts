@@ -1,16 +1,12 @@
 /**
  * 创意关键词选择：来源配额治理
  */
-import {
-  type CanonicalCreativeType,
-} from '../../creatives/server'
+import { type CanonicalCreativeType } from '../../creatives/server'
 import {
   getKeywordSourcePriority,
   inferKeywordRawSource,
   normalizeKeywordSourceSubtype,
 } from './creative-keyword-source-priority'
-
-
 
 import {
   type CreativeKeywordSourceQuotaAudit,

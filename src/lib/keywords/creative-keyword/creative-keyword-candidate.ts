@@ -1,10 +1,7 @@
 /**
  * 创意关键词选择：候选构建、评分与意图分类
  */
-import {
-  containsPureBrand,
-  getPureBrandKeywords,
-} from '../brand/brand-keyword-utils'
+import { containsPureBrand, getPureBrandKeywords } from '../brand/brand-keyword-utils'
 import {
   deriveCanonicalCreativeType,
   hasModelAnchorEvidence,
