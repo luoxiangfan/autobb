@@ -79,7 +79,6 @@ class PostgresAdapter implements DatabaseAdapter {
       'is_default',
       'is_manager',
       'is_manager_account',
-      'is_idle',
       'enabled',
       'is_deleted',
       'is_sensitive',

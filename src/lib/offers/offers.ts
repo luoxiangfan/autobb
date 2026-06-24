@@ -1408,27 +1408,6 @@ export async function unlinkOfferFromAccount(
   const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, offerId)
 
-  // TODO: 实现闲置账号标记功能（需要先添加 is_idle 列到 google_ads_accounts 表）
-  // 检查该账号是否还有其他活跃关联
-  // const activeCount = await db.queryOne(`
-  //   SELECT COUNT(*) as count
-  //   FROM campaigns c
-  //   JOIN offers o ON c.offer_id = o.id
-  //   WHERE c.google_ads_account_id = ?
-  //     AND c.user_id = ?
-  //     AND o.is_deleted = FALSE
-  //     AND c.status != 'REMOVED'
-  // `, [accountId, userId]) as { count: number }
-
-  // // 如果没有活跃关联，标记账号为闲置
-  // if (activeCount.count === 0) {
-  //   await db.exec(`
-  //     UPDATE google_ads_accounts
-  //     SET is_idle = 1, updated_at = NOW()
-  //     WHERE id = ? AND user_id = ?
-  //   `, [accountId, userId])
-  // }
-
   return { unlinkedCount: updatedCount }
 }
 
