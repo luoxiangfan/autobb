@@ -405,21 +405,6 @@ async function fetchAllDataFromGoogleAds(params: {
     for (const row of results3) {
       const campaignId = String(row.campaign?.id || '')
       const assetType = resolveCampaignExtensionAssetType(row)
-      googleAdsSyncLogger.info('sync_log', {
-        message: String(
-          `[GoogleAds Sync] Asset for campaign ${campaignId}: field_type=${row.campaign_asset?.field_type ?? ''}, type=${row.asset?.type ?? ''}, resolved=${assetType ?? ''}, callout=${row.asset?.callout_asset?.callout_text ?? ''}, sitelink=${row.asset?.sitelink_asset?.link_text ?? ''}, final_urls=${JSON.stringify(row.asset?.final_urls ?? [])}`
-        ),
-        customerId,
-        campaignId,
-        fieldType: row.campaign_asset?.field_type ?? null,
-        assetType: row.asset?.type ?? null,
-        resolvedAssetType: assetType,
-        calloutText: row.asset?.callout_asset?.callout_text ?? null,
-        sitelinkText: row.asset?.sitelink_asset?.link_text ?? null,
-        sitelinkDescription1: row.asset?.sitelink_asset?.description1 ?? null,
-        sitelinkDescription2: row.asset?.sitelink_asset?.description2 ?? null,
-        finalUrls: row.asset?.final_urls ?? [],
-      })
 
       if (campaignId) {
         const rows = query3ByCampaign.get(campaignId) || []
