@@ -80,8 +80,8 @@ export interface AdCreative {
   // URL配置
   final_url: string
   final_url_suffix?: string
-  path_1?: string // URL路径1
-  path_2?: string // URL路径2
+  path1?: string // URL路径1
+  path2?: string // URL路径2
 
   // 评分信息 (Ad Strength 7维度评分体系)
   score: number // 总评分 (0-100)
@@ -1373,8 +1373,8 @@ export async function updateAdCreative(
     descriptions: string[]
     keywords: string[]
     callouts: string[]
-    path_1: string
-    path_2: string
+    path1: string
+    path2: string
     final_url: string
     score: number
     ad_group_id: number
@@ -1411,13 +1411,13 @@ export async function updateAdCreative(
     fields.push('callouts = ?')
     values.push(JSON.stringify(updates.callouts))
   }
-  if (updates.path_1 !== undefined) {
-    fields.push('path_1 = ?')
-    values.push(updates.path_1)
+  if (updates.path1 !== undefined) {
+    fields.push('path1 = ?')
+    values.push(updates.path1)
   }
-  if (updates.path_2 !== undefined) {
-    fields.push('path_2 = ?')
-    values.push(updates.path_2)
+  if (updates.path2 !== undefined) {
+    fields.push('path2 = ?')
+    values.push(updates.path2)
   }
   if (updates.final_url !== undefined) {
     fields.push('final_url = ?')

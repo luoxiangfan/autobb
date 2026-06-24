@@ -134,8 +134,8 @@ function createMockDb() {
           is_selected: 1,
           keywords_with_volume: JSON.stringify([]),
           theme: 'default',
-          path_1: '',
-          path_2: '',
+          path1: '',
+          path2: '',
         }
       }
 

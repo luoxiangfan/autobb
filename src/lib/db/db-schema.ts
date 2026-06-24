@@ -860,8 +860,8 @@ export const TABLES: TableDef[] = [
       { name: 'headlines', type: 'TEXT', notNull: true }, // JSON格式: ["H1", "H2", "H3"]
       { name: 'descriptions', type: 'TEXT', notNull: true }, // JSON格式: ["D1", "D2"]
       { name: 'final_url', type: 'TEXT', notNull: true },
-      { name: 'path_1', type: 'TEXT' },
-      { name: 'path_2', type: 'TEXT' },
+      { name: 'path1', type: 'TEXT' },
+      { name: 'path2', type: 'TEXT' },
       { name: 'quality_score', type: 'INTEGER' },
       { name: 'quality_details', type: 'TEXT' }, // JSON格式
       { name: 'budget_amount', type: 'REAL' },

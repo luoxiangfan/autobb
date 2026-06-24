@@ -45,8 +45,8 @@ export const POST = withAuth(async (request, user, context) => {
       headlines: string
       descriptions: string
       final_url: string
-      path_1: string | null
-      path_2: string | null
+      path1: string | null
+      path2: string | null
       quality_score: number | null
       quality_details: string | null
     }>(
@@ -55,8 +55,8 @@ export const POST = withAuth(async (request, user, context) => {
         headlines,
         descriptions,
         final_url,
-        path_1,
-        path_2,
+        path1,
+        path2,
         quality_score,
         quality_details
       FROM creative_versions
@@ -90,8 +90,8 @@ export const POST = withAuth(async (request, user, context) => {
         headlines,
         descriptions,
         final_url,
-        path_1,
-        path_2,
+        path1,
+        path2,
         quality_score,
         quality_details,
         created_by,
@@ -105,8 +105,8 @@ export const POST = withAuth(async (request, user, context) => {
         JSON.stringify(headlines),
         JSON.stringify(descriptions),
         targetVersion.final_url,
-        targetVersion.path_1,
-        targetVersion.path_2,
+        targetVersion.path1,
+        targetVersion.path2,
         targetVersion.quality_score,
         targetVersion.quality_details,
         userId.toString(),
@@ -133,9 +133,9 @@ export const POST = withAuth(async (request, user, context) => {
         JSON.stringify(headlines),
         JSON.stringify(descriptions),
         targetVersion.final_url,
-        targetVersion.path_1 && targetVersion.path_2
-          ? `${targetVersion.path_1}/${targetVersion.path_2}`
-          : targetVersion.path_1 || null,
+        targetVersion.path1 && targetVersion.path2
+          ? `${targetVersion.path1}/${targetVersion.path2}`
+          : targetVersion.path1 || null,
         creativeId,
       ]
     )
@@ -155,8 +155,8 @@ export const POST = withAuth(async (request, user, context) => {
           headlines: JSON.parse(newVersion.headlines),
           descriptions: JSON.parse(newVersion.descriptions),
           finalUrl: newVersion.final_url,
-          path1: newVersion.path_1,
-          path2: newVersion.path_2,
+          path1: newVersion.path1,
+          path2: newVersion.path2,
           qualityScore: newVersion.quality_score,
           qualityDetails: newVersion.quality_details
             ? JSON.parse(newVersion.quality_details)

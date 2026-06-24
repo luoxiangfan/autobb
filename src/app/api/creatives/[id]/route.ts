@@ -58,7 +58,7 @@ export const PUT = withAuth(async (request, user, context) => {
     const userId = user.userId
 
     const body = await request.json()
-    const { headlines, descriptions, keywords, path_1, path_2, final_url, score } = body
+    const { headlines, descriptions, keywords, path1, path2, final_url, score } = body
 
     // 验证必填字段
     if (!headlines && !descriptions && !final_url && !keywords) {
@@ -74,8 +74,8 @@ export const PUT = withAuth(async (request, user, context) => {
     if (headlines !== undefined) updates.headlines = headlines
     if (descriptions !== undefined) updates.descriptions = descriptions
     if (keywords !== undefined) updates.keywords = keywords
-    if (path_1 !== undefined) updates.path_1 = path_1
-    if (path_2 !== undefined) updates.path_2 = path_2
+    if (path1 !== undefined) updates.path1 = path1
+    if (path2 !== undefined) updates.path2 = path2
     if (final_url !== undefined) updates.final_url = final_url
     if (score !== undefined) updates.score = score
 

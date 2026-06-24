@@ -308,7 +308,7 @@ export const POST = withAuth(async (request, user) => {
     if (_enableSmartOptimization) {
       const bestCreative = (await db.queryOne(
         `
-        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, launch_score, keywords_with_volume, theme, path_1, path_2
+        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, launch_score, keywords_with_volume, theme, path1, path2
         FROM ad_creatives
         WHERE offer_id = ? AND user_id = ?
         ORDER BY
@@ -333,7 +333,7 @@ export const POST = withAuth(async (request, user) => {
       // 单创意模式：验证指定的创意
       const creative = (await db.queryOne(
         `
-        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, is_selected, keywords_with_volume, theme, path_1, path_2
+        SELECT id, headlines, descriptions, keywords, negative_keywords, callouts, sitelinks, final_url, final_url_suffix, is_selected, keywords_with_volume, theme, path1, path2
         FROM ad_creatives
         WHERE id = ? AND offer_id = ? AND user_id = ?
       `,
@@ -874,8 +874,8 @@ export const POST = withAuth(async (request, user) => {
           sitelinks: creativeData.sitelinks,
           final_url: creativeData.finalUrl,
           final_url_suffix: creativeData.finalUrlSuffix,
-          path_1: primaryCreative.path_1,
-          path_2: primaryCreative.path_2,
+          path1: primaryCreative.path1,
+          path2: primaryCreative.path2,
           score: primaryCreative.score || 0,
           score_breakdown: primaryCreative.score_breakdown || {
             relevance: 0,
@@ -1385,8 +1385,8 @@ export const POST = withAuth(async (request, user) => {
             descriptions: effectiveCreativeForTask.descriptions,
             finalUrl: effectiveCreativeForTask.finalUrl,
             finalUrlSuffix: effectiveCreativeForTask.finalUrlSuffix,
-            path1: selectedCreative.path_1,
-            path2: selectedCreative.path_2,
+            path1: selectedCreative.path1,
+            path2: selectedCreative.path2,
             callouts: effectiveCreativeForTask.callouts,
             sitelinks: effectiveCreativeForTask.sitelinks,
             keywordsWithVolume: selectedCreative.keywords_with_volume
