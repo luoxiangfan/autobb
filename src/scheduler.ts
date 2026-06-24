@@ -1207,9 +1207,10 @@ function startScheduler() {
   )
   log(`✅ 数据同步检查任务已启动 (cron: ${dataSyncCheckCron})`)
 
-  // 任务2: 每2小时执行一次 Google Ads 数据同步
+  // 任务2: 每天17:00执行一次 Google Ads 数据同步
+  const googleAdsSyncCron = process.env.GOOGLE_ADS_SYNC_CRON || '0 17 * * *'
   scheduleCronJob(
-    '0 */2 * * *',
+    googleAdsSyncCron,
     async () => {
       await runSyncGoogleAdsTaskSafely('cron')
     },
@@ -1217,7 +1218,7 @@ function startScheduler() {
       timeZone: 'Asia/Shanghai',
     }
   )
-  log('✅ Google Ads 数据同步检查任务已启动 (cron: 0 */2 * * *)')
+  log(`✅ Google Ads 数据同步检查任务已启动 (cron: ${googleAdsSyncCron})`)
   // 任务2: 每天凌晨2点备份数据库
   scheduleCronJob(
     '0 2 * * *',

@@ -76,7 +76,7 @@ class GoogleAdsCampaignSyncScheduler {
   )
   private readonly SYNC_INTERVAL_HOURS = parseNonNegativeIntEnv(
     process.env.QUEUE_GOOGLE_ADS_SYNC_INTERVAL_HOURS,
-    2
+    24
   )
 
   /**
