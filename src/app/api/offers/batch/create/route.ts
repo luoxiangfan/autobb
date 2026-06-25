@@ -3,7 +3,7 @@
  *
  * 批量创建Offer任务
  *
- * 流程：
+ * 流程
  * 1. 接收CSV文件上传（FormData）
  * 2. 解析CSV，校验必填列（推广链接、推广国家）
  * 3. 跳过缺少必填参数的行，只处理有效数据
@@ -11,18 +11,18 @@
  * 5. 创建batch-offer-creation任务并加入队列
  * 6. 返回batchId供前端订阅
  *
- * CSV格式要求：
- * - 必需列：推广链接/affiliate_link, 推广国家/target_country（支持中英文表头）
- * - 可选列：链接类型/page_type（store/product）
- * - 可选列：品牌名/brand_name（或brand）
- * - 可选列：产品价格/product_price（店铺类型可填平均产品价格）
- * - 可选列：佣金比例/commission_payout（兼容旧列）
- * - 可选列：commission_type + commission_value（推荐），可附带 commission_currency
- * - 店铺类型可选列：单品推广链接 product_link_1~6（最多6个）
- * - 可选列：提取模式/extraction_mode（fast/balanced/original，缺省为系统默认）
- * - 编码：UTF-8
- * - 最大有效行数：500行
- * - 缺少必填参数的行会被自动跳过
+ * CSV格式要求
+ * 必需列：推广链接/affiliate_link, 推广国家/target_country（支持中英文表头）
+ * 可选列：链接类型/page_type（store/product）
+ * 可选列：品牌名/brand_name（或brand）
+ * 可选列：产品价格/product_price（店铺类型可填平均产品价格）
+ * 可选列：佣金比例/commission_payout（兼容旧列）
+ * 可选列：commission_type + commission_value（推荐），可附带 commission_currency
+ * 店铺类型可选列：单品推广链接 product_link_1~6（最多6个）
+ * 可选列：提取模式/extraction_mode（fast/balanced/original，缺省为系统默认）
+ * 编码：UTF-8
+ * 最大有效行数：500行
+ * 缺少必填参数的行会被自动跳过
  */
 
 import { withAuth } from '@/lib/auth'
@@ -49,7 +49,7 @@ export const POST = withAuth(async (req, user) => {
   const queue = getQueueManager()
   const parentRequestId = req.headers.get('x-request-id') || undefined
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
 
   try {
@@ -163,7 +163,7 @@ export const POST = withAuth(async (req, user) => {
       const targetCountry = values[targetCountryIdx]
 
       // 校验必填参数
-      // 🔥 2025-12-12修复：加强验证，确保不是空字符串，target_country至少2个字符
+      // 加强验证，确保不是空字符串，target_country至少2个字符
       if (
         !affiliateLink ||
         affiliateLink.trim() === '' ||
@@ -177,7 +177,7 @@ export const POST = withAuth(async (req, user) => {
         continue
       }
 
-      // 🔧 修复：检测无效的推广链接值（如 'null/', 'null' 等）
+      // 检测无效的推广链接值（如 'null/', 'null' 等）
       const normalizedAffiliateLink = affiliateLink.trim()
       if (
         normalizedAffiliateLink === 'null' ||

@@ -1,15 +1,15 @@
 import type { CreativeKeywordUsagePlan } from '../server'
 
-// 🔥 AI语义分类
-// 🎯 新增：导入否定关键词生成函数
-// 🎯 新增：导入token追踪函数
-import { loadPrompt } from '../../ai/server' // 🎯 v3.0: 导入数据库prompt加载函数
-// 🎯 购买意图评分
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
+// AI语义分类
+// 导入否定关键词生成函数
+// 导入token追踪函数
+import { loadPrompt } from '../../ai/server' // v3.0: 导入数据库prompt加载函数
+// 购买意图评分
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // Google Ads关键词标准化去重
 
 import { containsPureBrand, getPureBrandKeywords } from '../../keywords/server'
-import { isBrandConcatenation } from '../../keywords/server' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-// 🔥 2026-03-13: 导入纯品牌词判断函数
+import { isBrandConcatenation } from '../../keywords/server' // 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
+// 导入纯品牌词判断函数
 import { normalizeLanguageCode } from '../../common/server'
 import { parsePrice } from '../../common/server'
 import { getGoogleAdsTextEffectiveLength } from '@/lib/google-ads/common/ad-text'
@@ -687,8 +687,8 @@ export function validateOfferDataQuality(offer: {
     issues,
   }
 } // Keyword with search volume data
-// 🎯 数据来源说明：统一使用Historical Metrics API的精确搜索量
-// 🎯 意图分类（3类）
+// 数据来源说明：统一使用Historical Metrics API的精确搜索量
+// 意图分类（3类）
 
 export function truncateDkiDefaultText(defaultText: string, maxLength: number): string {
   let candidate = defaultText
@@ -765,7 +765,7 @@ export async function buildAdCreativePrompt(
     keywords?: Array<{ keyword: string; searchVolume: number; source: string; priority: string }>
     headlines?: string[]
     descriptions?: string[]
-    // 🎯 P0/P1/P2/P3优化：增强数据字段
+    // P0/P1/P2/增强数据字段
     productInfo?: { features?: string[]; benefits?: string[]; useCases?: string[] }
     reviewAnalysis?: { sentiment?: string; themes?: string[]; insights?: string[] }
     localization?: { currency?: string; culturalNotes?: string[]; localKeywords?: string[] }
@@ -773,7 +773,7 @@ export async function buildAdCreativePrompt(
       positioning?: string
       voice?: string
       competitors?: string[]
-      // 🔥 修复（2025-12-11）：添加店铺分析新字段
+      // 添加店铺分析新字段
       hotProducts?: Array<{
         name: string
         productHighlights?: string[]
@@ -789,7 +789,7 @@ export async function buildAdCreativePrompt(
       sellingPoints?: string[]
     }
     qualityScore?: number
-    // 🆕 v4.10: 关键词池桶信息
+    // v4.10: 关键词池桶信息
     bucketInfo?: {
       bucket: string
       intent?: string
@@ -799,7 +799,7 @@ export async function buildAdCreativePrompt(
   },
   runtimeGuidance?: PromptRuntimeGuidanceOptions
 ): Promise<{ prompt: string; promptKeywords: string[] }> {
-  // 🎯 v3.0 REFACTOR: Load template from database (migration 056)
+  // v3.0 REFACTOR: Load template from database (migration 056)
   const promptTemplate = await loadPrompt('ad_creative_generation')
 
   // Build variables map for simple substitution
@@ -846,7 +846,7 @@ export async function buildAdCreativePrompt(
     { mode: policyGuardMode }
   )
 
-  // 🆕 v4.16: 确定链接类型（含scraped_data兜底）
+  // v4.16: 确定链接类型（含scraped_data兜底）
   const scrapedDataForLinkType = safeParseJson(offer.scraped_data, null)
   const derivedLinkType = deriveLinkTypeFromScrapedData(scrapedDataForLinkType)
   if (offer.page_type && derivedLinkType && offer.page_type !== derivedLinkType) {
@@ -875,11 +875,11 @@ export async function buildAdCreativePrompt(
     target_country: offer.target_country,
     target_language: targetLanguage,
     target_language_code: resolvedLanguage.languageCode,
-    // 🆕 KISS-3类型优化：Headline #2 主关键词（非品牌）
+    // KISS-3类型Headline #2 主关键词（非品牌）
     primary_keyword: '',
-    // 🆕 证据约束：仅允许使用此处可验证事实（避免“编造数字/承诺”）
+    // 证据约束：仅允许使用此处可验证事实（避免“编造数字/承诺”）
     verified_facts_section: '',
-    // 🆕 非破坏式意图增强：只指导文案，不改变关键词列表
+    // 非破坏式意图增强：只指导文案，不改变关键词列表
     type_intent_guidance_section: '',
   }
 
@@ -887,71 +887,71 @@ export async function buildAdCreativePrompt(
   let enhanced_features_section = ''
   let localization_section = ''
   let brand_analysis_section = ''
-  // 🆕 v4.10: 关键词池桶section
+  // v4.10: 关键词池桶section
   let keyword_bucket_section = ''
   let link_type_instructions = ''
   let store_creative_instructions = ''
 
-  // 🆕 v4.16: 添加链接类型信息
+  // v4.16: 添加链接类型信息
   if (linkType === 'store') {
     link_type_instructions = `
-**⚠️ 店铺链接关键词使用规则：**
+* * 店铺链接关键词使用规则：**
 - 品牌词使用比例可适当提高（80%+品牌词）
 - 场景词和品类词用于描述使用场景
 - 强调店铺信誉、官方授权、售后保障
 - 避免过于具体的购买意图词汇`
-    // 🆕 v4.16: 店铺创意特殊指令（KISS-3：A/B/D）
+    // v4.16: 店铺创意特殊指令（KISS-3：A/B/D）
     store_creative_instructions = `
 ## 🏪 店铺链接创意特殊规则（KISS-3：A/B/D）
 
 ### A（品牌意图）
-**目标**: 建立品牌权威，并把品牌与真实商品集合绑定
+* *目标**: 建立品牌权威，并把品牌与真实商品集合绑定
 - 关键词侧重：品牌词 + 商品/品类锚点词
 - 表达重点：品牌背书、代表商品、核心品类、热门商品线
 - CTA：偏“进店/了解品牌商品”（如 "Explore Brand Products", "Shop Brand Direct"）
 
 ### B（热门商品型号/产品族意图）
-**目标**: 承接已锁定热门商品型号/产品族的强购买意图
+* *目标**: 承接已锁定热门商品型号/产品族的强购买意图
 - 关键词侧重：品牌 + 热门商品型号/产品族 + 品类长尾词
 - 表达重点：围绕热门商品型号、产品族和具体购买动作
 - CTA：偏“查看型号/立即购买”（如 "Shop Exact Model", "Buy Now"）
 
 ### D（商品需求意图）
-**目标**: 承接品牌下明确商品需求，但用户尚未锁定具体型号
+* *目标**: 承接品牌下明确商品需求，但用户尚未锁定具体型号
 - 关键词侧重：品牌 + 品类 + 功能/场景/产品线词
 - 表达重点：商品卖点、功能、使用场景、产品线覆盖 + 明确CTA
 
 ⚠️ 兼容性说明：历史桶 \`C→B\`、\`S→D\`，不要在输出中使用/展示 \`C/S\`。`
   } else {
     link_type_instructions = `
-**⚠️ 单品链接关键词使用规则：**
+* * 单品链接关键词使用规则：**
 - 品牌词和非品牌词均衡使用（约50%/50%）
 - 根据创意类型选择对应桶的关键词
 - 强调产品特性和购买优势
 - 明确CTA引导购买行为`
   }
 
-  // 🆕 v4.10: 添加关键词池桶指令
+  // v4.10: 添加关键词池桶指令
   if (extractedElements?.bucketInfo) {
     const { bucket, intent, intentEn, keywordCount } = extractedElements.bucketInfo
-    // 🆕 KISS-3: 归一化创意类型（兼容历史 C/S）
+    // KISS-3: 归一化创意类型（兼容历史 C/S）
     const kissBucket = normalizeCreativeBucketSlot(bucket) ?? bucket
 
-    // 🆕 v4.16: 店铺链接特殊桶处理
+    // v4.16: 店铺链接特殊桶处理
     if (linkType === 'store') {
       const storeBucketInstructions: Record<string, string> = {
         A: `
-**🏪 店铺桶A - 品牌意图导向**
+* *� 店铺桶A - 品牌意图导向**
 - 核心主题: 品牌背书 + 真实商品集合
 - 关键词策略: 品牌词优先，但必须同时覆盖商品/品类锚点
 - 创意重点: 强调品牌优势、核心品类、热门商品线`,
         B: `
-**🏪 店铺桶B - 热门商品型号/产品族意图导向**
+* *� 店铺桶B - 热门商品型号/产品族意图导向**
 - 核心主题: 热门商品型号/产品族购买意图
 - 关键词策略: 品牌 + 热门商品型号/产品族 + 品类，统一完全匹配
 - 创意重点: 默认覆盖多个热门商品，不得退化为泛店铺文案`,
         D: `
-**🏪 店铺桶D - 商品需求意图导向**
+* *� 店铺桶D - 商品需求意图导向**
 - 核心主题: 品牌下商品需求、功能、场景和产品线覆盖
 - 关键词策略: 品牌 + 品类 + 功能/场景/热门商品线词
 - 创意重点: 商品需求覆盖优先，不得退化为纯品牌导航词`,
@@ -959,7 +959,7 @@ export async function buildAdCreativePrompt(
       keyword_bucket_section =
         storeBucketInstructions[kissBucket] ||
         `
-**📦 STORE KEYWORD POOL BUCKET ${kissBucket} - ${intent || intentEn}**
+* * STORE KEYWORD POOL BUCKET ${kissBucket} - ${intent || intentEn}**
 This store creative focuses on "${intent || intentEn}" user intent.
 - ${keywordCount} pre-selected keywords for this intent
 - Keywords optimized for store-level marketing`
@@ -967,18 +967,18 @@ This store creative focuses on "${intent || intentEn}" user intent.
     // 兼容旧 S 桶：仅保留提示说明，运行时语义统一按 D / product_intent 处理
     else if (bucket === 'S') {
       keyword_bucket_section = `
-**🧭 LEGACY BUCKET S（已废弃）**
+* *� LEGACY BUCKET S（已废弃）**
 历史 S 桶不是独立创意类型，在 KISS-3 中统一映射为桶 D（商品需求意图）。
 - 仅在品牌与商品需求锚点明确时才可使用
 - 文案重点：品牌相关商品需求 + 明确CTA + 可信背书
 `
     } else {
-      // 🆕 v4.18: 为每个产品链接桶添加单品聚焦约束
+      // v4.18: 为每个产品链接桶添加单品聚焦约束
       const productBucketInstructions: Record<string, string> = {
         A: `
-**📦 产品桶A - 品牌意图导向 (Brand Intent)**
-**🎯 核心主题**: 建立品牌可信度 + 强化“品牌与当前商品强相关”
-**⚠️ 单品聚焦规则 (CRITICAL)**:
+* * 产品桶A - 品牌意图导向 (Brand Intent)**
+* * 核心主题**: 建立品牌可信度 + 强化“品牌与当前商品强相关”
+* * 单品聚焦规则 (CRITICAL)**
 - ✅ 必须提到具体产品名称/型号: {{product_name}}
 - ✅ 可强调品牌优势、代表商品、品牌背书（仅限可验证事实）
 - ✅ 所有创意元素必须聚焦于这一个产品
@@ -986,9 +986,9 @@ This store creative focuses on "${intent || intentEn}" user intent.
 - ❌ 禁止: 提及同品牌其他品类产品
 - 创意重点: 品牌优先，但必须回到当前商品`,
         B: `
-**📦 产品桶B - 商品型号/产品族意图导向 (Model Intent)**
-**🎯 核心主题**: 当前商品型号/产品族购买意图
-**⚠️ 单品聚焦规则 (CRITICAL)**:
+* * 产品桶B - 商品型号/产品族意图导向 (Model Intent)**
+* * 核心主题**: 当前商品型号/产品族购买意图
+* * 单品聚焦规则 (CRITICAL)**
 - ✅ 广告语和关键词必须围绕这一个产品的型号/产品族
 - ✅ 关键词必须覆盖品牌 + 型号/产品族 + 品类的长尾词
 - ✅ 最终关键词统一完全匹配
@@ -996,9 +996,9 @@ This store creative focuses on "${intent || intentEn}" user intent.
 - ❌ 禁止: 暗示多产品选择或店铺级文案
 - 创意重点: 精准、可投放、强购买意图`,
         D: `
-**📦 产品桶D - 商品需求意图导向 (Product Demand Intent)**
-**🎯 核心主题**: 品牌下商品需求、功能、场景和产品线覆盖
-**⚠️ 单品聚焦规则 (CRITICAL)**:
+* * 产品桶D - 商品需求意图导向 (Product Demand Intent)**
+* * 核心主题**: 品牌下商品需求、功能、场景和产品线覆盖
+* * 单品聚焦规则 (CRITICAL)**
 - ✅ 广告语优先体现商品卖点、功能、场景、产品线
 - ✅ 必须同时和品牌与当前商品有关
 - ✅ 明确CTA: "Buy Now", "Shop Now", "Learn More"
@@ -1009,8 +1009,8 @@ This store creative focuses on "${intent || intentEn}" user intent.
       keyword_bucket_section =
         productBucketInstructions[kissBucket] ||
         `
-**📦 KEYWORD POOL BUCKET ${kissBucket} - ${intent || intentEn}**
-**⚠️ 单品聚焦规则 (CRITICAL)**:
+* * KEYWORD POOL BUCKET ${kissBucket} - ${intent || intentEn}**
+* * 单品聚焦规则 (CRITICAL)**
 - This creative MUST focus on ONE specific product: {{product_name}}
 - ALL headlines and descriptions must reference this specific product
 - Do NOT use generic brand/store descriptions
@@ -1025,7 +1025,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🎯 P0优化：使用增强产品信息
+  // 使用增强产品信息
   if (extractedElements?.productInfo) {
     const { features, benefits, useCases } = extractedElements.productInfo
     if (features && features.length > 0) {
@@ -1039,11 +1039,11 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🎯 P2优化：使用本地化适配数据
+  // 使用本地化适配数据
   if (extractedElements?.localization) {
     const { currency, culturalNotes, localKeywords } = extractedElements.localization
     if (currency) {
-      // 🔥 修复（2025-12-23）：明确指定货币符号，确保AI生成正确格式
+      // 明确指定货币符号，确保AI生成正确格式
       const currencySymbolMap: Record<string, string> = {
         GBP: '£ (British Pound Sterling - UK market)',
         USD: '$ (US Dollar)',
@@ -1055,7 +1055,7 @@ This creative focuses on "${intent || intentEn}" user intent.
       }
       const currencySymbol = currencySymbolMap[currency] || currency
       localization_section += `\n**🌍 LOCAL CURRENCY**: ${currencySymbol}`
-      // 🔥 重要：添加明确指令，要求所有价格使用正确符号
+      // 重要：添加明确指令，要求所有价格使用正确符号
       localization_section += `\n**🔴 CRITICAL**: ALL prices in headlines and descriptions MUST use the correct currency symbol (${currencySymbol}).`
       localization_section += `\nExamples for ${currency}: "Save £170", "Only £499", "£XXX off" - NEVER use "$" or "€" for UK market.`
     }
@@ -1067,7 +1067,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🎯 P3优化：使用品牌分析数据
+  // 使用品牌分析数据
   if (extractedElements?.brandAnalysis) {
     const {
       positioning,
@@ -1086,11 +1086,11 @@ This creative focuses on "${intent || intentEn}" user intent.
     if (competitors && competitors.length > 0) {
       brand_analysis_section += `\n**🏷️ KEY COMPETITORS**: ${competitors.slice(0, 3).join(', ')}`
     }
-    // 🔥 修复（2025-12-11）：添加店铺卖点
+    // 添加店铺卖点
     if (sellingPoints && sellingPoints.length > 0) {
       brand_analysis_section += `\n**🏷️ BRAND SELLING POINTS**: ${sellingPoints.slice(0, 5).join(', ')}`
     }
-    // 🔥 修复（2025-12-11）：添加热销商品产品亮点
+    // 添加热销商品产品亮点
     if (hotProducts && hotProducts.length > 0) {
       const allHighlights: string[] = []
       hotProducts.slice(0, 3).forEach((p) => {
@@ -1102,7 +1102,7 @@ This creative focuses on "${intent || intentEn}" user intent.
         brand_analysis_section += `\n**🔥 HOT PRODUCT HIGHLIGHTS**: ${[...new Set(allHighlights)].slice(0, 8).join(', ')}`
       }
     }
-    // 🔥 修复（2025-12-11）：添加店铺评论分析
+    // 添加店铺评论分析
     if (storeReviewAnalysis) {
       if (storeReviewAnalysis.overallSentiment) {
         brand_analysis_section += `\n**📊 STORE SENTIMENT**: ${storeReviewAnalysis.overallSentiment}`
@@ -1122,7 +1122,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🔥 P0优化：增强数据 - 添加真实折扣、促销、排名、徽章等爬虫抓取的数据
+  // 增强数据 - 添加真实折扣、促销、排名、徽章等爬虫抓取的数据
   const extras: string[] = []
   const supplementalVerifiedFacts: string[] = []
   const supplementalHookLines: string[] = []
@@ -1145,7 +1145,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     return cleaned.length > 90 ? `${cleaned.slice(0, 87).trim()}...` : cleaned
   }
 
-  // 价格证据策略：
+  // 价格证据策略
   // 1) 优先使用 offer.product_price / offer.pricing.current（权威来源）
   // 2) scraped_data.productPrice 仅作为兜底
   // 3) 若权威价与抓取价偏差 >20%，触发熔断：禁止在创意中使用具体价格
@@ -1174,7 +1174,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`ORIGINAL: ${originalPrice} | DISCOUNT: ${discount}`)
   }
 
-  // 🔥 促销信息（优化版 - 完整提取active数组）
+  // 促销信息（优化版 - 完整提取active数组）
   interface PromotionItem {
     description: string
     code?: string | null
@@ -1216,7 +1216,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🔥 P0-2: 销售排名和徽章（社会证明）
+  // P0-2: 销售排名和徽章（社会证明）
   let salesRank: string | null = null
   let badge = null
   if (offer.scraped_data) {
@@ -1241,7 +1241,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`BADGE: ${badge}`)
   }
 
-  // 🔥 P0-3: Prime资格和库存状态
+  // P0-3: Prime资格和库存状态
   let primeEligible = false
   let availability = null
   if (offer.scraped_data) {
@@ -1258,7 +1258,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`STOCK: ${availability}`)
   }
 
-  // 🔥 P1-1: 用户评论洞察（基础）
+  // P1-1: 用户评论洞察（基础）
   let reviewHighlights: string[] = []
   if (offer.scraped_data) {
     try {
@@ -1270,7 +1270,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`REVIEW INSIGHTS: ${reviewHighlights.slice(0, 5).join(', ')}`)
   }
 
-  // 🎯 P0优化: topReviews热门评论（真实用户引用）
+  // topReviews热门评论（真实用户引用）
   let topReviews: string[] = []
   if (offer.scraped_data) {
     try {
@@ -1293,7 +1293,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     // 只使用前2条最优质评论（避免prompt过长）
     extras.push(`TOP REVIEWS (Use for credibility): ${topReviews.slice(0, 2).join(' | ')}`)
 
-    // 🔥 v4.1优化：提取用户语言模式（常用表达词汇）
+    // 提取用户语言模式（常用表达词汇）
     // 从评论中提取2-4词的短语作为自然语言参考
     const userPhrases: string[] = []
     topReviews.slice(0, 5).forEach((review) => {
@@ -1330,22 +1330,22 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🔥 P1-1+: 用户评论深度分析（增强版 - 充分利用所有评论分析字段）
+  // P1-1+: 用户评论深度分析（增强版 - 充分利用所有评论分析字段）
   let commonPraises: string[] = []
   let purchaseReasons: string[] = []
   let useCases: string[] = []
   let commonPainPoints: string[] = []
-  // 🆕 新增字段
+  // 新增字段
   let topPositiveKeywords: Array<{ keyword: string; frequency: number; context?: string }> = []
   let userProfiles: Array<{ profile: string; indicators?: string[] }> = []
   let sentimentDistribution: { positive: number; neutral: number; negative: number } | null = null
   let totalReviews: number = 0
   let averageRating: number = 0
-  // 🔥 v3.2新增：量化数据亮点
+  // v3.2量化数据亮点
   let quantitativeHighlights: Array<{ metric: string; value: string; adCopy: string }> = []
   let competitorMentions: Array<{ brand: string; comparison: string; sentiment: string }> = []
 
-  // 🎯 合并基础和增强评论分析数据
+  // 合并基础和增强评论分析数据
   if (offer.review_analysis) {
     try {
       const reviewAnalysis = JSON.parse(offer.review_analysis)
@@ -1360,19 +1360,19 @@ This creative focuses on "${intent || intentEn}" user intent.
       commonPainPoints = (reviewAnalysis.commonPainPoints || []).map((p: any) =>
         typeof p === 'string' ? p : p.issue || p
       )
-      // 🆕 新增字段提取
+      // 新增字段提取
       topPositiveKeywords = reviewAnalysis.topPositiveKeywords || []
       userProfiles = reviewAnalysis.userProfiles || []
       sentimentDistribution = reviewAnalysis.sentimentDistribution || null
       totalReviews = reviewAnalysis.totalReviews || 0
       averageRating = reviewAnalysis.averageRating || 0
-      // 🔥 v3.2新增字段
+      // v3.2新增字段
       quantitativeHighlights = reviewAnalysis.quantitativeHighlights || []
       competitorMentions = reviewAnalysis.competitorMentions || []
     } catch {}
   }
 
-  // 🎯 P1优化：合并增强评论分析数据（如果有）
+  // 合并增强评论分析数据（如果有）
   if (extractedElements?.reviewAnalysis) {
     const enhanced = extractedElements.reviewAnalysis
     if (enhanced.themes && enhanced.themes.length > 0) {
@@ -1409,7 +1409,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`AVOID: ${commonPainPoints.slice(0, 2).join(', ')}`)
   }
 
-  // 🆕 新增：正面关键词作为关键词参考（高频用户好评词）
+  // 正面关键词作为关键词参考（高频用户好评词）
   if (topPositiveKeywords.length > 0) {
     const positiveKWs = topPositiveKeywords
       .slice(0, 5)
@@ -1418,7 +1418,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`POSITIVE KEYWORDS: ${positiveKWs}`)
   }
 
-  // 🆕 新增：情感分布作为社会证明（高好评率）
+  // 情感分布作为社会证明（高好评率）
   if (sentimentDistribution && totalReviews > 0) {
     const positiveRate = sentimentDistribution.positive
     if (positiveRate >= 80) {
@@ -1432,7 +1432,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🆕 新增：用户画像用于受众定制
+  // 用户画像用于受众定制
   if (userProfiles.length > 0) {
     const profiles = userProfiles
       .slice(0, 3)
@@ -1441,7 +1441,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`TARGET PERSONAS: ${profiles}`)
   }
 
-  // 🔥 v3.2新增：量化数据亮点（评论中的具体数字 - 最有说服力的广告素材）
+  // v3.2量化数据亮点（评论中的具体数字 - 最有说服力的广告素材）
   // 例如："8小时续航"、"2000Pa吸力"、"覆盖2000平方英尺"
   if (quantitativeHighlights.length > 0) {
     const topHighlights = quantitativeHighlights
@@ -1451,7 +1451,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`PROVEN CLAIMS: ${topHighlights}`)
   }
 
-  // 🔥 v3.2新增：竞品对比优势（用户自发的竞品比较）
+  // v3.2竞品对比优势（用户自发的竞品比较）
   if (competitorMentions.length > 0) {
     // 只提取正面对比（用户认为我们比竞品更好的地方）
     const positiveComparisons = competitorMentions
@@ -1464,7 +1464,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🔥 P1-2: 技术规格（关键参数）
+  // P1-2: 技术规格（关键参数）
   let technicalDetails: Record<string, string> = {}
   if (offer.scraped_data) {
     try {
@@ -1481,7 +1481,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`SPECS: ${topSpecs}`)
   }
 
-  // 🔥 2025-12-10优化：提取features和aboutThisItem（产品核心卖点）
+  // 提取features和aboutThisItem（产品核心卖点）
   let productFeatures: string[] = []
   let aboutThisItem: string[] = []
   let scrapedProductTitle = ''
@@ -1528,10 +1528,10 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`ABOUT CORE CLAIMS: ${titleAndAboutSignals.aboutClaims.slice(0, 5).join(' | ')}`)
   }
 
-  // 🔥 P1-3: Store热销数据（新增优化 - 用于Amazon Store或独立站店铺页）
+  // P1-3: Store热销数据（新增优化 - 用于Amazon Store或独立站店铺页）
   let hotInsights: { avgRating: number; avgReviews: number; topProductsCount: number } | null = null
   let topProducts: string[] = []
-  // 🔥 2025-12-10优化：提取销售热度数据
+  // 提取销售热度数据
   let storeSalesVolumes: string[] = []
   let storeDiscounts: string[] = []
   let supplementalProducts: any[] = []
@@ -1572,13 +1572,13 @@ This creative focuses on "${intent || intentEn}" user intent.
           }))
         storePriceSamples = priceSamples
 
-        // 🔥 2025-12-10优化：提取销量数据（"1K+ bought in past month"等）
+        // 提取销量数据（"1K+ bought in past month"等）
         storeSalesVolumes = scrapedData.products
           .filter((p: any) => p.salesVolume)
           .slice(0, 3)
           .map((p: any) => `${(p.name || '').substring(0, 20)}... (${p.salesVolume})`)
 
-        // 🔥 2025-12-10优化：提取折扣数据（"-20%"等）
+        // 提取折扣数据（"-20%"等）
         storeDiscounts = scrapedData.products
           .filter((p: any) => p.discount)
           .slice(0, 3)
@@ -1699,17 +1699,17 @@ This creative focuses on "${intent || intentEn}" user intent.
     )
   }
 
-  // 🔥 2025-12-10优化：添加销售热度数据到Prompt（强社会证明信号）
+  // 添加销售热度数据到Prompt（强社会证明信号）
   if (storeSalesVolumes.length > 0) {
     extras.push(`🔥 SALES MOMENTUM: ${storeSalesVolumes.join(' | ')}`)
   }
 
-  // 🔥 2025-12-10优化：添加折扣数据到Prompt（促销信号）
+  // 添加折扣数据到Prompt（促销信号）
   if (storeDiscounts.length > 0) {
     extras.push(`ACTIVE DISCOUNTS: ${storeDiscounts.join(', ')}`)
   }
 
-  // 🔥 v4.1优化（2025-12-09）：提取店铺深度抓取数据
+  // 提取店铺深度抓取数据
   let storeAggregatedReviews: string[] = []
   let storeAggregatedFeatures: string[] = []
   let storeHotBadges: string[] = []
@@ -1811,7 +1811,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // 🆕 多单品卖点混合（店铺模式）：强约束提示
+  // 多单品卖点混合（店铺模式）：强约束提示
   if (linkType === 'store' && supplementalHookLines.length > 0) {
     const hooksList = supplementalHookLines
       .slice(0, 6)
@@ -1824,12 +1824,12 @@ This creative focuses on "${intent || intentEn}" user intent.
 - 至少 2 条 headlines 或 descriptions 需直接体现单品卖点/特色（可使用短名）
 - 价格/评分只能使用 VERIFIED FACTS 中列出的数字
 
-**可用单品卖点库（混合引用）**:
+* *可用单品卖点库（混合引用）**
 ${hooksList}
 `
   }
 
-  // 🎯 v3.2优化（2025-12-08）：读取v3.2差异化分析数据
+  // 读取v3.2差异化分析数据
   let v32Analysis: {
     storeQualityLevel?: string
     categoryDiversification?: { level: string; categories?: string[]; primaryCategory?: string }
@@ -1846,7 +1846,7 @@ ${hooksList}
     pageType?: 'store' | 'product'
   } | null = null
 
-  // 🔧 修复(2025-12-31): 使用 safeParseJson 处理 PostgreSQL jsonb 字段
+  // 使用 safeParseJson 处理 PostgreSQL jsonb 字段
   if (offer.ai_analysis_v32) {
     v32Analysis = safeParseJson(offer.ai_analysis_v32)
     if (v32Analysis) {
@@ -1912,19 +1912,19 @@ ${hooksList}
     }
   }
 
-  // 🔥 P0优化：竞品分析数据（差异化定位关键）
+  // 竞品分析数据（差异化定位关键）
   if (offer.competitor_analysis) {
     try {
       const compAnalysis = JSON.parse(offer.competitor_analysis)
 
-      // 1. 价格定位营销标签（🔥 v4.2优化：完整价格区间定位）
+      // 1. 价格定位营销标签（ 完整价格区间定位）
       if (compAnalysis.pricePosition) {
         const pricePos = compAnalysis.pricePosition
         // 价格节省信息
         if (pricePos.savingsVsAvg) {
           extras.push(`COMPETITIVE PRICE: ${pricePos.savingsVsAvg}`)
         }
-        // 🔥 新增：完整价格区间营销标签
+        // 完整价格区间营销标签
         switch (pricePos.priceAdvantage) {
           case 'lowest':
             extras.push(`MARKET POSITION: [BEST VALUE] Lowest priced in category`)
@@ -1945,7 +1945,7 @@ ${hooksList}
         }
       }
 
-      // 🔥 新增：评分优势营销标签
+      // 评分优势营销标签
       if (compAnalysis.ratingPosition) {
         const ratingPos = compAnalysis.ratingPosition
         switch (ratingPos.ratingAdvantage) {
@@ -1992,7 +1992,7 @@ ${hooksList}
         }
       }
 
-      // 🔥 v3.2新增：竞品弱点（转化为我们的差异化卖点）
+      // v3.2竞品弱点（转化为我们的差异化卖点）
       // 这是最有说服力的广告素材 - 直接点出竞品问题，暗示我们解决了这些问题
       if (compAnalysis.competitorWeaknesses && compAnalysis.competitorWeaknesses.length > 0) {
         // 提取高频竞品弱点的adCopy
@@ -2016,7 +2016,7 @@ ${hooksList}
         }
       }
 
-      // 🔥 v4.1优化：提取竞品特性用于差异化关键词
+      // 提取竞品特性用于差异化关键词
       if (compAnalysis.competitors && Array.isArray(compAnalysis.competitors)) {
         // 收集所有竞品特性
         const competitorFeatures: string[] = []
@@ -2040,7 +2040,7 @@ ${hooksList}
     }
   }
 
-  // 🔥 2026-01-04新增：处理独立站增强数据字段（reviews、faqs、specifications、packages、socialProof等）
+  // 处理独立站增强数据字段（reviews、faqs、specifications、packages、socialProof等）
   // 这些数据从scraped_data中提取，用于增强广告创意生成
   if (offer.scraped_data) {
     try {
@@ -2161,12 +2161,12 @@ ${hooksList}
     }
   }
 
-  // 🎯 P0优化（2025-12-07）：利用新增AI数据字段
+  // 利用新增AI数据字段
   let aiKeywords: string[] = []
   let aiCompetitiveEdges: any = null
   let aiReviews: any = null
 
-  // 🔧 修复(2025-12-31): 使用 safeParseJson 处理 PostgreSQL jsonb 字段
+  // 使用 safeParseJson 处理 PostgreSQL jsonb 字段
   // 读取AI增强的关键词数据
   if (offer.ai_keywords) {
     aiKeywords = safeParseJson(offer.ai_keywords, [])
@@ -2242,7 +2242,7 @@ ${hooksList}
     ? '\n' + filteredExtrasResult.filtered.join(' | ') + '\n'
     : ''
 
-  // ✅ VERIFIED FACTS（仅允许使用这些可验证信息；为空则不要写数字/承诺）
+  // VERIFIED FACTS（仅允许使用这些可验证信息；为空则不要写数字/承诺）
   // 只使用“产品数据”来源，避免把prompt中的示例数字误当作证据
   const verifiedFacts: string[] = []
   if (priceEvidenceBlocked) {
@@ -2312,18 +2312,18 @@ ${hooksList}
   )
   const hasUrgencyEvidence = !!availability || activePromotions.some((p: any) => !!p?.validUntil)
 
-  // 🔥 Build promotion_section（v2.1新增）
+  // Build promotion_section（v2.1新增）
   let promotion_section = ''
   if (activePromotions.length > 0) {
     const mainPromo = activePromotions[0]
     promotion_section = `\n🔥 **CRITICAL PROMOTION EMPHASIS**:
 This product has ${activePromotions.length} active promotion(s). YOU MUST highlight these in your creative:
 
-**MAIN PROMOTION**: ${mainPromo.description}${mainPromo.code ? ` (Code: ${mainPromo.code})` : ''}
+* *MAIN PROMOTION**: ${mainPromo.description}${mainPromo.code ? ` (Code: ${mainPromo.code})` : ''}
 ${mainPromo.validUntil ? `**VALID UNTIL**: ${mainPromo.validUntil}` : ''}
 ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
 
-**REQUIREMENTS**:
+* *REQUIREMENTS**
 ✅ Include promotion in at least 3-5 headlines (e.g., "20% Off Today", "Use Code ${mainPromo.code || 'SAVE20'}", "Limited Time Offer")
 ✅ Mention promotion in 2-3 descriptions with urgency (e.g., "Don't miss out", "Offer ends soon")
 ✅ Add promotion-related keywords (e.g., "discount", "sale", "promo code", "limited offer")
@@ -2336,7 +2336,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     }
 
     promotion_section += `
-**PROMOTION CREATIVE EXAMPLES**:
+* *PROMOTION CREATIVE EXAMPLES**
 - Headline: "Get 20% Off - Use Code ${mainPromo.code || 'SAVE20'} | ${offer.brand}"
 - Headline: "${offer.brand} - Limited Time Offer | Shop Now"
 - Headline: "Save on ${offer.brand_description || offer.brand} - Deal Ends Soon"
@@ -2368,7 +2368,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   }
   variables.reference_performance_section = reference_performance_section
 
-  // 🎯 Build extracted_elements_section
+  // Build extracted_elements_section
   let extracted_elements_section = ''
   if (extractedElements) {
     if (titleAndAboutSignals.productTitle) {
@@ -2384,8 +2384,8 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     }
 
     if (extractedElements.keywords && extractedElements.keywords.length > 0) {
-      // 🔧 调整(2026-02-03): 将提取关键词数量限制在30个以内，避免Prompt噪声过高
-      // 🔧 修复(2025-12-26): 服务账号模式下无法获取搜索量，保留searchVolume=0的关键词
+      // 调整: 将提取关键词数量限制在30个以内，避免Prompt噪声过高
+      // 服务账号模式下无法获取搜索量，保留searchVolume=0的关键词
       const promptBrandTokens = getPureBrandKeywords(offer.brand || '')
       const promptBrandKeywordCount = countBrandContainingKeywords(
         extractedElements.keywords
@@ -2440,7 +2440,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
       extracted_elements_section += `\n**ABOUT-DERIVED SITELINK IDEAS** (text/desc style):\n${sitelinkHints.join(' | ')}\n`
     }
 
-    // 🔥 独立站增强：从extraction_metadata中读取SERP补充的callout/sitelink（如果有）
+    // 独立站增强：从extraction_metadata中读取SERP补充的callout/sitelink（如果有）
     const extractionMetadata = safeParseJson((offer as any).extraction_metadata, null)
     const serpCalloutsRaw = Array.isArray(extractionMetadata?.serpCallouts)
       ? extractionMetadata.serpCallouts
@@ -2477,10 +2477,10 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   }
   variables.extracted_elements_section = extracted_elements_section
 
-  // 🔧 v4.36: 移除了 primary_keyword 变量设置
+  // v4.36: 移除了 primary_keyword 变量设置
   // 原因：已取消强制Headline #2使用DKI格式，此变量不再需要
 
-  // 🔧 P0修复（2025-12-08）：添加缺失的section变量赋值
+  // 添加缺失的section变量赋值
   variables.enhanced_features_section = enhanced_features_section
   variables.localization_section = localization_section
   variables.brand_analysis_section = brand_analysis_section
@@ -2568,7 +2568,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     excludeKeywordLines.push(`- 搜索词软抑制: ${searchTermFeedbackGuidance.softTerms.join(', ')}`)
   }
 
-  // 🎯 新增：AI关键词section
+  // AI关键词section
   const validatedKeywordsForPrompt = promptKeywordPlan.validatedPromptKeywords
   const titleAboutKeywordSeeds = promptKeywordPlan.contextualPromptKeywords
   const keywordsForPrompt = promptKeywordPlan.promptKeywords
@@ -2594,7 +2594,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     variables.ai_keywords_section = ''
   }
 
-  // 🆕 非破坏式A/B/D意图引导（仅作用于标题/描述表达）
+  // 非破坏式A/B/D意图引导（仅作用于标题/描述表达）
   const normalizedPromptBucket = normalizeCreativeBucketType(extractedElements?.bucketInfo?.bucket)
   const creativeTypeConstraintSection = buildCreativeTypeConstraintSection({
     bucket: normalizedPromptBucket,
@@ -2650,7 +2650,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     .filter(Boolean)
     .join('\n')
 
-  // 🎯 新增：AI竞争优势section
+  // AI竞争优势section
   let ai_competitive_section = ''
   if (aiCompetitiveEdges) {
     if (aiCompetitiveEdges.badges && aiCompetitiveEdges.badges.length > 0) {
@@ -2675,7 +2675,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   }
   variables.ai_competitive_section = ai_competitive_section
 
-  // 🎯 新增：AI评论洞察section
+  // AI评论洞察section
   let ai_reviews_section = ''
   if (aiReviews) {
     if (aiReviews.rating) {
@@ -2706,7 +2706,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   }
   variables.competitive_guidance_section = competitive_guidance_section
 
-  // 🆕 v4.10: 添加关键词池桶相关变量
+  // v4.10: 添加关键词池桶相关变量
   // 这些变量名需要与 prompt 模板中的占位符匹配
   if (extractedElements?.bucketInfo) {
     const { bucket, intent, intentEn, keywordCount } = extractedElements.bucketInfo
@@ -2714,7 +2714,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     variables.bucket_type = kissBucket
     variables.bucket_intent = intent || intentEn || ''
     variables.bucket_info_section = `
-**📦 当前创意桶：${kissBucket} - ${intent || intentEn}**
+* * 当前创意桶：${kissBucket} - ${intent || intentEn}**
 - 桶主题：${intent || intentEn}
 - 预选关键词数量：${keywordCount}
 - 文案风格要求：所有 Headlines 和 Descriptions 必须与"${intent || intentEn}"主题一致`
@@ -2727,24 +2727,24 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   // 兼容性：保留旧的占位符名称
   variables.keyword_bucket_section = keyword_bucket_section
 
-  // 🆕 v4.16: 添加链接类型策略 section
+  // v4.16: 添加链接类型策略 section
   // 根据 offer.page_type 区分单品链接和店铺链接，使用不同的创意策略
   // 注意：linkType 已在第307行声明
   if (linkType === 'store') {
     variables.link_type_section = `
 ## 📍 当前链接类型：店铺页面 (Store Page)
-**目标**：最大化进店，扩大品牌认知（KISS-3：A/B/D）
+* *目标**：最大化进店，扩大品牌认知（KISS-3：A/B/D）
 
-**类型与关键词侧重（用户可见）**:
+* *类型与关键词侧重（用户可见）**
 | 类型 | 主题 | 关键词侧重 | 文案重点 |
 |----|------|-----------|---------|
 | A | 品牌意图 | 品牌词 + 商品/品类锚点 | 品牌背书 + 真实商品集合 + 可信度 |
 | B | 热门商品型号/产品族 | 品牌 + 热门商品型号/产品族 + 品类长尾词 | 热门型号/产品族 + 购买动作 + 完全匹配 |
 | D | 商品需求 | 品牌 + 品类 + 功能/场景/产品线词 | 商品需求覆盖 + 商品卖点 + CTA |
 
-**兼容性**：历史桶 \`C→B\`、\`S→D\`（不要在输出中写 \`C/S\`）。
+* *兼容性**：历史桶 \`C→B\`、\`S→D\`（不要在输出中写 \`C/S\`）。
 
-**核心要求**:
+* *核心要求**
 - 强调品牌官方地位和可信度
 - 突出店铺热销产品和高评价
 - 展示店铺的独特卖点和售后保障
@@ -2754,18 +2754,18 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
     // 默认：单品链接策略
     variables.link_type_section = `
 ## 📍 当前链接类型：产品页面 (Product Page)
-**目标**：最大化转化，让用户购买这个具体产品（KISS-3：A/B/D）
+* *目标**：最大化转化，让用户购买这个具体产品（KISS-3：A/B/D）
 
-**类型与关键词侧重（用户可见）**:
+* *类型与关键词侧重（用户可见）**
 | 类型 | 主题 | 文案重点 |
 |----|------|---------|
 | A | 品牌意图 | 品牌背书 + 当前商品强相关 + 单品聚焦 |
 | B | 商品型号/产品族 | 当前商品型号/产品族 + 品类长尾词 + 单品聚焦 |
 | D | 商品需求 | 品牌 + 商品需求/功能/场景覆盖 + 明确CTA |
 
-**兼容性**：历史桶 \`C→B\`、\`S→D\`（不要在输出中写 \`C/S\`）。
+* *兼容性**：历史桶 \`C→B\`、\`S→D\`（不要在输出中写 \`C/S\`）。
 
-**核心要求**:
+* *核心要求**
 - 标题必须与具体产品相关联
 - 至少 2 个标题包含具体产品型号或参数
 - 有证据时描述可包含价格/折扣/限时等细节；禁止编造
@@ -2773,12 +2773,12 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
 `
   }
 
-  // 🆕 v4.17: 添加链接类型相关变量到模板
+  // v4.17: 添加链接类型相关变量到模板
   variables.link_type_instructions = link_type_instructions
   variables.store_creative_instructions = store_creative_instructions
 
-  // 🆕 v4.17: 添加输出格式要求（解决AI返回非JSON格式问题）
-  // 🔧 2026-01-02: 修复AI只返回1个关键词的问题，明确要求返回多个关键词
+  // v4.17: 添加输出格式要求（解决AI返回非JSON格式问题）
+  // 修复AI只返回1个关键词的问题，明确要求返回多个关键词
   variables.output_format_section = `
 ## 📋 OUTPUT (JSON only, no markdown):
 
@@ -2813,19 +2813,19 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
   "theme": "..."
 }
 
-**TYPE RULES (CRITICAL):**
+* *TYPE RULES (CRITICAL):**
 - headlines[].type 必须是单一值，仅能从以下选一个：brand / feature / promo / cta / urgency / social_proof / question / emotional
 - descriptions[].type 必须是单一值，仅能从以下选一个：feature-benefit-cta / problem-solution-proof / offer-urgency-trust / usp-differentiation
 - 禁止使用“|”拼接多个类型
 
-**STRICT COUNT REQUIREMENTS (MUST MATCH EXACTLY):**
+* *STRICT COUNT REQUIREMENTS (MUST MATCH EXACTLY):**
 - Headlines: EXACTLY 15 items, each ≤ 30 chars
 - Descriptions: EXACTLY 4 items, each ≤ 90 chars
 - Keywords: 10-20 items (no more than 20)
 - Callouts: EXACTLY 6 items, each ≤ 25 chars
 - Sitelinks: EXACTLY 6 items, text ≤ 25, description1/description2 each ≤ 35
 
-**STRUCTURED METADATA RULES:**
+* *STRUCTURED METADATA RULES:**
 - copyAngle / evidenceProducts / keywordCandidates / cannotGenerateReason are OPTIONAL but strongly recommended.
 - evidenceProducts must only contain verified current product names or verified hot product names actually used in copy.
 - keywordCandidates are audit metadata only; keywords[] remains the final executable keyword list.
@@ -2834,7 +2834,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
 - If verified product/model evidence is insufficient, return cannotGenerateReason instead of inventing unsupported models, series, functions, or product lines.
 - Do not fabricate sourceType, sourceField, anchorType, evidence, suggestedMatchType, confidence, evidenceProducts, or cannotGenerateReason.
 
-**IMPORTANT**: Return ONLY valid JSON. No explanations or markdown. All content must be in {{target_language}}.`
+* *IMPORTANT**: Return ONLY valid JSON. No explanations or markdown. All content must be in {{target_language}}.`
 
   // Substitute all placeholders and return
   return {
@@ -2858,7 +2858,7 @@ export function buildHeadlineBrandGuidance(
   return `- Brand (2): ${badge ? `🎯 **P3 CRITICAL - MUST use complete BADGE text**: "${badge}" (e.g., "${badge} | ${offer.brand}", "${badge} - Trusted Quality")` : '"Trusted Brand"'}, ${rankHint}${hotInsights && topProducts.length > 0 ? `. **STORE SPECIAL**: For stores with hot products, create "Best Seller Collection" headlines featuring top products (e.g., "Best ${topProducts[0]?.split(' ').slice(0, 2).join(' ')} Collection")` : ''}${sentimentDistribution && sentimentDistribution.positive >= 80 ? `. **SOCIAL PROOF**: Use review-backed trust phrasing like "Highly Rated by Customers"${averageRating ? `, "Rated ${averageRating} Stars"` : ''}. Avoid "% of people" claims.` : ''}
   * IMPORTANT: Make these 2 brand headlines COMPLETELY DIFFERENT in focus and wording
   * Focus on trust signals, quality, reliability, or unique brand strengths — derived from actual product data
-  * ❌ AVOID: "official", "store", "shop" in any brand headline
+  * AVOID: "official", "store", "shop" in any brand headline
 `
 }
 
@@ -2869,7 +2869,7 @@ export function buildHeadlineFeatureGuidance(
   topPositiveKeywords: Array<{ keyword: string; frequency: number }>,
   productFeatures: string[] = []
 ): string {
-  // 🔥 2025-12-10优化：整合productFeatures到guidance中
+  // 整合productFeatures到guidance中
   const featureExamples =
     productFeatures.length > 0
       ? `\n  * **SCRAPED FEATURES** (use these for authentic headlines): ${productFeatures
@@ -2890,7 +2890,7 @@ export function buildHeadlineFeatureGuidance(
   * Example 2: "Extended Battery Life" (performance benefit)
   * Example 3: "Smart Navigation System" (functionality)
   * Example 4: "Eco-Friendly Design" (sustainability)
-  * ❌ AVOID: "4K Display", "4K Resolution", "High Resolution" (too similar)
+  * AVOID: "4K Display", "4K Resolution", "High Resolution" (too similar)
 `
 }
 
@@ -2907,7 +2907,7 @@ export function buildHeadlinePromoGuidance(
   * Prefer non-numeric value messaging (e.g., "Smart Value", "Quality Choice", "Shop Official Store").`
   }
 
-  // 🔥 修复（2026-02-04）：无证据时禁止要求量化优惠，避免与Evidence-Only冲突
+  // 无证据时禁止要求量化优惠，避免与Evidence-Only冲突
   if (!hasPromoEvidence) {
     return `- Promo (3): If there is NO verified promo/price evidence, do NOT mention discounts, prices, or savings.
   * Use value-focused, non-numeric wording only (e.g., "Smart Value Picks", "Quality That Lasts", "Designed for Modern Homes")`
@@ -2920,22 +2920,22 @@ export function buildHeadlinePromoGuidance(
     const hasAmount = /[£$€]\s*\d+|\d+\s*(?:USD|GBP|EUR)/i.test(discount)
 
     promoGuidance = `- Promo (3): 🎯 **P0 CRITICAL**: Use ONLY VERIFIED savings/price data
-  * ✅ Use the exact amount/price/percent from VERIFIED FACTS. Do NOT estimate or invent.`
+  * Use the exact amount/price/percent from VERIFIED FACTS. Do NOT estimate or invent.`
     if (hasAmount) {
       promoGuidance += `
-  * ✅ Examples (amount verified):
-  *   - "Save £170 Today"
-  *   - "Only £499 - Save £170"
-  *   - "Was £669, Now £499"`
+  * Examples (amount verified)
+  * "Save £170 Today"
+  * "Only £499 - Save £170"
+  * "Was £669, Now £499"`
     }
     if (hasPercent) {
       promoGuidance += `
-  * ✅ Examples (percent verified):
-  *   - "20% Off Today"
-  *   - "Save 20% This Week"`
+  * Examples (percent verified)
+  * "20% Off Today"
+  * "Save 20% This Week"`
     }
     promoGuidance += `
-  * ❌ Avoid: inventing amounts not in VERIFIED FACTS`
+  * Avoid: inventing amounts not in VERIFIED FACTS`
   } else if (activePromotions.length > 0) {
     promoGuidance = `- Promo (3): 🎯 **P0 CRITICAL**: Use ONLY VERIFIED promotion wording
   * Example: "${activePromotions[0].description}" (verbatim or shortened)
@@ -2946,11 +2946,11 @@ export function buildHeadlinePromoGuidance(
 
   promoGuidance += `
   * IMPORTANT: Each promo headline must use a DIFFERENT promotional angle
-  * ✅ Different angles:
-  *   - Verified savings/price angle (if available)
-  *   - Verified price anchoring (if available)
-  *   - Value-focused angle (non-numeric if needed)
-  * ❌ Too similar (avoid): same wording with only tiny changes`
+  * Different angles
+  * Verified savings/price angle (if available)
+  * Verified price anchoring (if available)
+  * Value-focused angle (non-numeric if needed)
+  * Too similar (avoid): same wording with only tiny changes`
 
   return promoGuidance
 }
@@ -2964,7 +2964,7 @@ export function buildHeadlineCTAGuidance(
   * Example 1: "Shop Now" (direct action)
   * Example 2: "Get Yours Today" (possession focus)
   * Example 3: "Claim Your Deal" (exclusivity focus)
-  * ❌ AVOID: "Shop Now", "Shop Today", "Buy Now" (too similar)
+  * AVOID: "Shop Now", "Shop Today", "Buy Now" (too similar)
 `
 }
 
@@ -3013,7 +3013,7 @@ export function buildHeadlineUrgencyGuidance(
   return `- Urgency (0-3): ${urgencyText}
   * If verified stock/expiry evidence exists, include 1-2 urgency headlines using those exact facts.
   * If no verified evidence, skip urgency headlines and use neutral CTAs instead.
-  * ❌ AVOID: unverified time/stock claims ("Limited Time", "Ends Soon", "Only X Left")`
+  * AVOID: unverified time/stock claims ("Limited Time", "Ends Soon", "Only X Left")`
 }
 
 export function buildDescription1Guidance(
@@ -3023,7 +3023,7 @@ export function buildDescription1Guidance(
   return `- **Description 1 (Value-Driven)**: Lead with the PRIMARY benefit or competitive advantage${badge ? `. Optionally mention BADGE: "${badge}" if natural` : ''}${featuredSalesRank ? `. Optional social proof: mention SALES RANK "${featuredSalesRank}" at most once` : `. Do NOT add ranking numbers or "Best Seller" claims without strong evidence`}
   * Focus: What makes this product/brand special (unique value proposition)
   * Example: "Premium design. Built for everyday comfort."
-  * ❌ AVOID: Repeating "shop", "buy", "get" from other descriptions
+  * AVOID: Repeating "shop", "buy", "get" from other descriptions
 `
 }
 
@@ -3031,7 +3031,7 @@ export function buildDescription2Guidance(primeEligible: boolean, activePromotio
   return `- **Description 2 (Action-Oriented)**: Strong CTA with immediate incentive${primeEligible ? ' + Prime eligibility' : ''}${activePromotions.length > 0 ? `. 🎯 **P2 CRITICAL**: MUST mention promotion "${activePromotions[0].description}"${activePromotions[0].code ? ` with code "${activePromotions[0].code}"` : ''}. Example: "Save ${activePromotions[0].description} - Shop Now!"` : ''}
   * Focus: Urgency + convenience + trust signal (action-focused)
   * Example: "Shop now for refined design. Order today."
-  * ❌ AVOID: Using the same CTA verb as Description 1 or 3
+  * AVOID: Using the same CTA verb as Description 1 or 3
 `
 }
 
@@ -3049,7 +3049,7 @@ export function buildDescription3Guidance(
   }
   * Focus: Technical specs, capabilities, or versatility (feature-focused)
   * Example: "Sleek finishes. Smart storage. Designed for modern homes."
-  * ❌ AVOID: Mentioning "award", "rated", "trusted" from other descriptions
+  * AVOID: Mentioning "award", "rated", "trusted" from other descriptions
 `
 }
 
@@ -3069,11 +3069,11 @@ export function buildDescription4Guidance(
           .join(' or ')}`
       : ''
   }${hotInsights && topProducts.length > 0 ? `. **STORE SPECIAL**: Mention product variety and quality (Avg: ${hotInsights.avgRating.toFixed(1)} stars from ${hotInsights.avgReviews}+ reviews)` : ''}${sentimentDistribution && totalReviews > 0 ? `. **SOCIAL PROOF DATA**: Strong positive review sentiment from ${totalReviews} reviews${averageRating ? `, ${averageRating} stars` : ''}. Avoid "% of people" claims.` : ''}
-  * 🎯 **P0 CRITICAL**: If TOP REVIEWS available, use clean and trustworthy wording; avoid slang/colloquial quotes
+  * **P0 CRITICAL**: If TOP REVIEWS available, use clean and trustworthy wording; avoid slang/colloquial quotes
   * Focus: Reviews, ratings, guarantees, customer service (proof-focused)
   * Example with review: "Works perfectly!" - Customer Review. Shop with confidence.
   * Example without review: "Trusted for quality and style. Learn more today."
-  * ❌ AVOID: Repeating "fast", "free", "easy" from other descriptions
+  * AVOID: Repeating "fast", "free", "easy" from other descriptions
 `
 }
 
@@ -3086,7 +3086,7 @@ export function buildReviewDataSummary(
 ): string {
   const parts: string[] = []
 
-  // 🎯 P0优化：优先使用AI增强的评论数据
+  // 优先使用AI增强的评论数据
   if (aiReviews) {
     if (aiReviews.rating) {
       parts.push(`AI分析评分: ${aiReviews.rating}/5.0`)

@@ -2,10 +2,10 @@
  * Timezone 工具函数
  * 用于处理补点击任务的时区转换
  *
- * 设计原则（KISS）：
- * - 数据库存储 UTC 时间戳
- * - 只在需要"本地日期/时间"的地方转换timezone
- * - 使用原生 Intl API，避免重量级库
+ * 设计原则（KISS）
+ * 数据库存储 UTC 时间戳
+ * 只在需要"本地日期/时间"的地方转换timezone
+ * 使用原生 Intl API，避免重量级库
  */
 
 /**
@@ -135,7 +135,7 @@ export function getDateInTimezone(date: Date, timezone: string): string {
 /**
  * 在指定timezone中构造Date对象（返回UTC Date）
  *
- * ⚠️ 重要：JavaScript 没有原生 API 支持"在特定timezone构造Date"
+ * 重要：JavaScript 没有原生 API 支持"在特定timezone构造Date"
  * 这个函数使用 formatToParts 来获取指定timezone的本地时间对应的UTC时间
  *
  * @param dateStr - YYYY-MM-DD 格式的日期
@@ -144,7 +144,7 @@ export function getDateInTimezone(date: Date, timezone: string): string {
  * @returns UTC Date 对象，表示输入的本地时间对应的UTC时间
  *
  * @example
- * createDateInTimezone('2024-12-30', '06:00:30', 'America/New_York')
+ * createDateInTimezone
  * // 纽约时间 2024-12-30 06:00:30 EST (UTC-5) = UTC 2024-12-30 11:00:30
  * // 返回 Date 对象
  */
@@ -152,7 +152,7 @@ export function createDateInTimezone(
   dateStr: string,
   timeStr: string,
   timezone: string,
-  second?: number // 🆕 可选秒数参数
+  second?: number // 可选秒数参数
 ): Date {
   const [year, month, day] = dateStr.split('-').map(Number)
   const timeParts = timeStr.split(':').map(Number)

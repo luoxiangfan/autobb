@@ -1,6 +1,6 @@
 import { offerOccupyingCampaignFilterSql } from '@/lib/campaign/server'
 
-/** 与 affiliate-platforms 计数、performance/trends 联盟筛选共用的 Offer 未删除条件 */
+/* * 与 affiliate-platforms 计数、performance/trends 联盟筛选共用的 Offer 未删除条件 */
 function offerNotDeletedSql(offerAlias = 'o'): string {
   return `${offerAlias}.is_deleted = FALSE`
 }
@@ -29,7 +29,7 @@ type CampaignAffiliateScopeRow = {
   offer_is_deleted?: unknown
 }
 
-/** 内存过滤：与 campaignAffiliateAlignedFilterSql 语义一致 */
+/* * 内存过滤：与 campaignAffiliateAlignedFilterSql 语义一致 */
 export function isCampaignAffiliateAlignedRow(row: CampaignAffiliateScopeRow): boolean {
   const offerDeleted = row.offer_is_deleted === true || row.offer_is_deleted === 1
   if (offerDeleted) return false

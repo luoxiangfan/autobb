@@ -1,5 +1,5 @@
 /**
- * 无效关键词过滤测试（2026-01-26）
+ * 无效关键词过滤测试
  * 测试防止 "unknown" 等无效关键词进入关键词池的逻辑
  */
 import { describe, it, expect } from 'vitest'

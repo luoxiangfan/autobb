@@ -181,7 +181,7 @@ describe('ClickFarm Types', () => {
         daily_click_count: 100,
         start_time: '00:00',
         end_time: '24:00',
-        duration_days: -1, // -1表示无限期
+        duration_days: -1, // 1表示无限期
       }
 
       expect(request.duration_days).toBe(-1)

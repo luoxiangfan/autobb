@@ -73,7 +73,7 @@ export function filterKeywordQuality(
     maxWordCount = 8,
     mustContainBrand = false,
     allowNonBrandFromPlanner = false,
-    productUrl, // 🔥 新增：用于平台冲突检测
+    productUrl, // 用于平台冲突检测
     minContextTokenMatches = 0,
     contextMismatchMode = 'hard',
   } = options
@@ -101,11 +101,11 @@ export function filterKeywordQuality(
       plannerNonBrandPolicy
     )
 
-    // 🆕 高性能搜索词豁免：基于真实表现数据，跳过质量过滤
+    // 高性能搜索词豁免：基于真实表现数据，跳过质量过滤
     const isHighPerformingSearchTerm =
       typeof keywordData.source === 'string' && keywordData.source === 'SEARCH_TERM_HIGH_PERFORMING'
 
-    // 🆕 2026-03-13: 评分建议关键词豁免：基于AI评分分析识别的行业标准关键词
+    // 评分建议关键词豁免：基于AI评分分析识别的行业标准关键词
     const isScoringGapKeyword =
       typeof keywordData.source === 'string' && keywordData.source === 'SCORING_SUGGESTION'
 
@@ -142,10 +142,10 @@ export function filterKeywordQuality(
       }
     }
 
-    // 🔥 修复(2026-03-13): 评分建议关键词保留品牌包含检查（防御性编程）
+    // 评分建议关键词保留品牌包含检查（防御性编程）
     // 虽然品牌化处理已确保包含品牌，但作为最后一道防线仍需检查
     if (isScoringGapKeyword) {
-      // 🛡️ 防御性检查：确保品牌化处理成功
+      // 防御性检查：确保品牌化处理成功
       if (mustContainBrand && !shouldKeepByBrand(keyword, pureBrandKeywords)) {
         removeReason = `SCORING_SUGGESTION 不含品牌词（品牌化失败）: "${keyword}"`
       } else if (isLanguageScriptMismatch({ keyword, targetLanguage, pureBrandKeywords })) {
@@ -195,7 +195,7 @@ export function filterKeywordQuality(
     if (templateGarbageReason) {
       removeReason = templateGarbageReason
     }
-    // 🔧 修复(2026-01-21): 过滤搜索量为0且来源为CLUSTERED的关键词
+    // 过滤搜索量为0且来源为CLUSTERED的关键词
     // 这些是模板化生成的关键词，没有真实搜索量
     // 注意：isPureBrand 标记的纯品牌词豁免此过滤（品牌词可能搜索量为0但仍需保留）
     else if (
@@ -206,7 +206,7 @@ export function filterKeywordQuality(
       removeReason = `无搜索量的模板化关键词: "${keyword}" (source: CLUSTERED)`
     }
     // 1. 检查是否必须包含纯品牌词（使用策略函数）
-    // 🔥 2026-01-05 使用 shouldKeepByBrand 策略函数，明确用途
+    // 使用 shouldKeepByBrand 策略函数，明确用途
     else if (
       mustContainBrand &&
       !shouldKeepByBrand(keyword, pureBrandKeywords) &&
@@ -219,14 +219,14 @@ export function filterKeywordQuality(
     else if (isBrandVariant(keyword, brandName) && !isConcatenatedBrandWithVolume) {
       removeReason = `品牌变体词: "${keyword}"`
     }
-    // 3. 检查品牌无关词（🔥 2025-12-29 新增）
+    // 3. 检查品牌无关词
     else if (isBrandIrrelevant(keyword, brandName)) {
       const pattern = getMatchedIrrelevantPattern(keyword)
       removeReason = pattern
         ? `品牌无关词: "${keyword}" (包含: ${pattern})`
         : `品牌无关词: "${keyword}"`
     }
-    // 4. 🔥 新增：检查平台冲突（2025-12-29）
+    // 4. 检查平台冲突
     else if (productUrl && isPlatformMismatch(keyword, productUrl)) {
       const urlPlatform = extractPlatformFromUrl(productUrl)
       const kwPlatforms = detectPlatformsInKeyword(keyword)
@@ -236,9 +236,9 @@ export function filterKeywordQuality(
     else if (geoMismatch?.mismatch) {
       removeReason = `国家不匹配: "${keyword}" (包含 ${geoMismatch.detectedCountries.join('/')}，目标 ${geoMismatch.targetCountryCode})`
     }
-    // 5. 检查语义查询词（🔥 2025-12-29 优化：如果关键词平台与URL平台匹配，允许通过）
+    // 5. 检查语义查询词
     else if (isSemanticQuery(keyword)) {
-      // 🔥 特殊处理：如果关键词包含的平台名与URL平台匹配，则不过滤
+      // 特殊处理：如果关键词包含的平台名与URL平台匹配，则不过滤
       // 例如：对于Amazon URL，"anker amazon"应该被保留而不是被语义查询词过滤
       const urlPlatform = productUrl ? extractPlatformFromUrl(productUrl) : null
       const kwPlatforms = detectPlatformsInKeyword(keyword)
@@ -528,9 +528,7 @@ export function filterKeywordQuality(
   return { filtered, removed }
 }
 
-// ============================================
 // 统计报告
-// ============================================
 
 /**
  * 生成过滤统计报告

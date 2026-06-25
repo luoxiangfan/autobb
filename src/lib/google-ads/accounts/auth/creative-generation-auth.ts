@@ -202,7 +202,7 @@ export function createCreativeGenerationAuthCache(): CreativeGenerationAuthCache
   }
 }
 
-/** job / 请求结束时显式释放创意生成 auth 缓存（含 prepare slim 与 validation） */
+/* * job / 请求结束时显式释放创意生成 auth 缓存（含 prepare slim 与 validation） */
 export function clearCreativeGenerationAuthCache(cache: CreativeGenerationAuthCache): void {
   clearGoogleAdsLinkedAccountPrepareCache(cache)
   cache.validationByOfferId.clear()

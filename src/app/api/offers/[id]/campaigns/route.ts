@@ -639,9 +639,9 @@ export const GET = withAuth(async (request, user, context) => {
         const biddingStrategyType = normalizeBiddingStrategyType(rawBiddingStrategyType)
 
         // 根据竞价策略类型获取CPC
-        // - Manual CPC: 从 ad_group.cpc_bid_micros 推断当前配置（取第一个非0值）
-        // - Maximize Clicks: target_spend.cpc_bid_ceiling_micros（我们发布时使用 TARGET_SPEND）
-        // - Target CPA: target_cpa_micros（或 maximize_conversions.target_cpa_micros）
+        // Manual CPC: 从 ad_group.cpc_bid_micros 推断当前配置（取第一个非0值）
+        // Maximize Clicks: target_spend.cpc_bid_ceiling_micros（我们发布时使用 TARGET_SPEND）
+        // Target CPA: target_cpa_micros（或 maximize_conversions.target_cpa_micros）
         const ceilingMicros = Number.isFinite(campaignIdNum)
           ? targetSpendCeilingMicrosByCampaignId.get(campaignIdNum) || 0
           : 0

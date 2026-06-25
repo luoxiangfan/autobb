@@ -311,7 +311,7 @@ export async function fetchPartnerboostJsonWithRateLimitRetry<
       const payloadStatusCode = normalizePartnerboostStatusCode(error?.status?.code)
       const payloadStatusMessage = String(error?.status?.msg || message)
 
-      // ❌ 检测代理致命错误（不可重试）
+      // 检测代理致命错误（不可重试）
       if (isProxyFatalError(error)) {
         console.error(`[partnerboost] 代理致命错误，停止重试: ${message}`)
         throw error
@@ -509,7 +509,7 @@ export async function fetchYeahPromosJsonWithRateLimitRetry<
       const statusMatch = message.match(/\((\d{3})\):/)
       responseStatus = statusMatch ? Number(statusMatch[1]) : undefined
 
-      // ❌ 检测代理致命错误（不可重试）
+      // 检测代理致命错误（不可重试）
       if (isProxyFatalError(error)) {
         console.error(`[yeahpromos] 代理致命错误，停止重试: ${message}`)
         throw error
@@ -2028,7 +2028,7 @@ export async function fetchYeahPromosPromotableProductsWithMeta(params: {
       const scopeBudgetReached =
         scopePageBudget !== undefined && currentScopeFetchedPages >= scopePageBudget
 
-      // 切换市场的条件：
+      // 切换市场的条件
       // 1. 页面明确标记没有商品且返回空列表
       // 2. 连续多页返回空列表（避免在已抓完的市场无限翻页）
       // 3. 页面没有下一页链接

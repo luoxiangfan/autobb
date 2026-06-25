@@ -1,14 +1,14 @@
 /**
  * Link Check 任务执行器
  *
- * 负责执行链接可用性检查任务，包括：
- * - 检查Offer的推广链接是否可访问
- * - 复用offer创建时的"推广链接解析"功能（resolveAffiliateLink）
- * - 如果能提取出final url和final url suffix，说明链接有效
- * - 生成风险提示（含代理/网络类检查失败与环境类告警去重）
- * - Google Ads 账号状态：仅在不使用解析器而走 dailyLinkCheck 降级路径时在结果中体现
+ * 负责执行链接可用性检查任务，包括
+ * 检查Offer的推广链接是否可访问
+ * 复用offer创建时的"推广链接解析"功能（resolveAffiliateLink）
+ * 如果能提取出final url和final url suffix，说明链接有效
+ * 生成风险提示（含代理/网络类检查失败与环境类告警去重）
+ * Google Ads 账号状态：仅在不使用解析器而走 dailyLinkCheck 降级路径时在结果中体现
  *
- * 🔄 迁移自 scheduler.ts 中的 linkAndAccountCheckTask()
+ * 迁移自 scheduler.ts 中的 linkAndAccountCheckTask()
  * 优势：支持并发控制、失败重试、按用户隔离执行、复用URL解析逻辑
  */
 
@@ -52,16 +52,16 @@ export interface LinkCheckTaskResult {
   totalAlerts: number
   brokenLinks: number
   validLinks: number
-  pausedCampaigns: number // 🔧 暂停的数据库广告系列数
-  pausedGoogleAdsCampaigns: number // 🔧 暂停成功的 Google Ads 广告系列数（仅当 DB 有新暂停行时）
-  pausedClickFarmTasks: number // 🔧 新增：暂停的补点击任务数
-  /** 对应 url-swap 自动暂停启用前恒为 0 */
+  pausedCampaigns: number // 暂停的数据库广告系列数
+  pausedGoogleAdsCampaigns: number // 暂停成功的 Google Ads 广告系列数（仅当 DB 有新暂停行时）
+  pausedClickFarmTasks: number // 暂停的补点击任务数
+  /* * 对应 url-swap 自动暂停启用前恒为 0 */
   pausedUrlSwapTasks: number
-  /** 仅在流程中真正把 offer 设为不活跃时才递增（当前 resolver 分支恒为 0） */
+  /* * 仅在流程中真正把 offer 设为不活跃时才递增（当前 resolver 分支恒为 0） */
   deactivatedOffers: number
-  /** 因代理/网络等基础设施问题未完成链接判定（未触发自动暂停） */
+  /* * 因代理/网络等基础设施问题未完成链接判定（未触发自动暂停） */
   checksUnresolvedInfrastructure: number
-  /** 仅在 useUrlResolver=false 使用 dailyLinkCheck 时有值；resolver 主路径为占位 0 */
+  /* * 仅在 useUrlResolver=false 使用 dailyLinkCheck 时有值；resolver 主路径为占位 0 */
   accountChecks: {
     totalAccounts: number
     problemAccounts: number
@@ -70,7 +70,7 @@ export interface LinkCheckTaskResult {
   duration: number // 检查耗时（毫秒）
 }
 
-/** 非代理关键词但明显为网络/超时类失败，不应触发「链接失效」自动暂停 */
+/* * 非代理关键词但明显为网络/超时类失败，不应触发「链接失效」自动暂停 */
 function isLikelyNetworkOrTimeoutFailure(error: unknown): boolean {
   const err = error as {
     code?: string
@@ -121,7 +121,7 @@ async function validateLinkWithResolver(
   finalUrl?: string
   finalUrlSuffix?: string
   error?: string
-  /** 代理/配额/网络等与链接本身无关，不应触发自动暂停 */
+  /* * 代理/配额/网络等与链接本身无关，不应触发自动暂停 */
   unresolvedDueToInfrastructure?: boolean
 }> {
   try {
@@ -175,7 +175,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
       if (useUrlResolver) {
         const db = await getDatabase()
 
-        // 🔧 修复: PostgreSQL BOOLEAN 兼容性
+        // PostgreSQL BOOLEAN 兼容性
         const isActiveCondition = 'o.is_active = true'
 
         // 构建查询条件

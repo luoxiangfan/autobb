@@ -36,8 +36,8 @@ interface Insight {
 /**
  * GET /api/dashboard/insights
  * 基于规则引擎生成智能洞察
- * Query参数：
- * - days: 分析天数（默认7）
+ * Query参数
+ * days: 分析天数（默认7）
  */
 
 export const dynamic = 'force-dynamic'
@@ -408,7 +408,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       })
     })
 
-    // ==================== URL Swap 换链接任务洞察 ====================
+    // URL Swap 换链接任务洞察
     const urlSwapDisabledFilter = excludeDisabledUrlSwapTasksSql()
     const urlSwapEnabledCampaignFilter = requireEnabledCampaignForOfferSql()
 

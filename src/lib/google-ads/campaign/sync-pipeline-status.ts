@@ -12,11 +12,11 @@ import { googleAdsSyncLogger } from '../common/logger'
 export const GOOGLE_ADS_CAMPAIGN_SYNC_TASK_TYPE = '@/lib/google-ads/campaign/sync' as const
 export const GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE = 'google_ads_campaign_sync' as const
 
-/** 超过该时长仍为 running 的日志会被自动标为 failed */
+/* * 超过该时长仍为 running 的日志会被自动标为 failed */
 const DEFAULT_STALE_RUNNING_LOG_MINUTES = 45
-/** 该时长内的 running 日志视为「仍在同步」，调度器不会重复入队 */
+/* * 该时长内的 running 日志视为「仍在同步」，调度器不会重复入队 */
 const DEFAULT_ACTIVE_RUNNING_LOG_MINUTES = 30
-/** pending 任务超过该时长仍未 dequeue（无 startedAt）则视为僵尸任务并清理 */
+/* * pending 任务超过该时长仍未 dequeue（无 startedAt）则视为僵尸任务并清理 */
 const DEFAULT_STALE_PENDING_SYNC_TASK_MS = 120_000
 
 function parsePositiveIntEnv(raw: string | undefined, defaultValue: number): number {
@@ -395,7 +395,7 @@ async function hasUserGoogleAdsCampaignSyncRunningLog(userId: number): Promise<b
   return Boolean(runningSync)
 }
 
-/** 为指定用户入队 Google Ads 广告系列同步（手动触发入口复用） */
+/* * 为指定用户入队 Google Ads 广告系列同步（手动触发入口复用） */
 export async function enqueueGoogleAdsCampaignSyncForUser(
   userId: number,
   options: {

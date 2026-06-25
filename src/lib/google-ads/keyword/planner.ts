@@ -18,16 +18,16 @@ import { googleAdsKeywordLogger } from '../common/logger'
 import { getKeywordPlanIdeaService } from './keyword-plan-idea-service'
 
 /**
- * 🔧 修复(2025-12-24): 获取 KeywordPlanIdeaService
+ * 获取 KeywordPlanIdeaService
  * OAuth 模式使用 customer.keywordPlanIdeas
  * 服务账号模式使用 customer.loadService('KeywordPlanIdeaServiceClient')
  */
-/** 路由层已 prepare 时传入，避免 getKeywordIdeas 内重复 heal */
+/* * 路由层已 prepare 时传入，避免 getKeywordIdeas 内重复 heal */
 export type KeywordIdeasPreparedOAuth = {
   refreshToken: string
   credentials: OAuthApiCredentialsFields
   oauthLoginCustomerId?: string
-  /** 路由层 prepare 时传入，避免 getLoginCustomerId 重复加载 auth-context */
+  /* * 路由层 prepare 时传入，避免 getLoginCustomerId 重复加载 auth-context */
   authContext?: GoogleAdsAuthContext
 }
 
@@ -197,7 +197,7 @@ export async function getKeywordIdeas(params: {
   authType?: AuthType
   // 服务账号ID（当authType='service_account'时需要）
   serviceAccountId?: string
-  /** 路由层已 prepare 的 OAuth 凭证，跳过内部重复 heal */
+  /* * 路由层已 prepare 的 OAuth 凭证，跳过内部重复 heal */
   preparedOAuth?: KeywordIdeasPreparedOAuth
 }): Promise<KeywordIdea[]> {
   if (!params.userId) {
@@ -206,7 +206,7 @@ export async function getKeywordIdeas(params: {
 
   const authType = await resolveKeywordPlannerApiAuthType(params)
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { getKeywordIdeasPython } = await import('../../campaign/server')
 
@@ -252,7 +252,7 @@ export async function getKeywordIdeas(params: {
   let errorMessage: string | undefined
 
   try {
-    // 🔧 修复(2025-12-16): Google Ads API限制每次请求最多20个种子关键词
+    // Google Ads API限制每次请求最多20个种子关键词
     // 需要分批处理
     const BATCH_SIZE = 20
     const allKeywordIdeas: KeywordIdea[] = []
@@ -284,11 +284,11 @@ export async function getKeywordIdeas(params: {
         include_adult_keywords: false,
       }
 
-      // ✅ 正确实现 Keyword Planner 的 "keywords + site filter"
-      // GenerateKeywordIdeasRequest 的 seed 是 oneof：
-      // - keyword_seed
-      // - url_seed
-      // - keyword_and_url_seed
+      // 正确实现 Keyword Planner 的 "keywords + site filter"
+      // GenerateKeywordIdeasRequest 的 seed 是 oneof
+      // keyword_seed
+      // url_seed
+      // keyword_and_url_seed
       if (params.pageUrl) {
         if (batch.length > 0) {
           request.keyword_and_url_seed = {
@@ -308,8 +308,8 @@ export async function getKeywordIdeas(params: {
       }
 
       // 调用Keyword Planner API
-      // 🔧 修复(2025-12-24): 使用统一的服务访问方式
-      // 🔧 修复(2025-12-26): gRPC调用需要手动传递metadata（含developer-token）
+      // 使用统一的服务访问方式
+      // gRPC调用需要手动传递metadata（含developer-token）
       const keywordPlanIdeas = getKeywordPlanIdeaService(customer, authType)
       const metadata = (customer as any).callMetadata
       let ideas
@@ -385,7 +385,7 @@ export async function getKeywordMetrics(params: {
   authType?: AuthType
   // 服务账号ID（当authType='service_account'时需要）
   serviceAccountId?: string
-  /** 路由层已 prepare 的 OAuth 凭证，跳过内部重复 heal */
+  /* * 路由层已 prepare 的 OAuth 凭证，跳过内部重复 heal */
   preparedOAuth?: KeywordIdeasPreparedOAuth
 }): Promise<KeywordMetrics[]> {
   if (!params.userId) {
@@ -394,7 +394,7 @@ export async function getKeywordMetrics(params: {
 
   const authType = await resolveKeywordPlannerApiAuthType(params)
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { getKeywordHistoricalMetricsPython } = await import('../../campaign/server')
 
@@ -449,8 +449,8 @@ export async function getKeywordMetrics(params: {
     }
 
     // 调用Historical Metrics API
-    // 🔧 修复(2025-12-24): 使用统一的服务访问方式
-    // 🔧 修复(2025-12-26): gRPC调用需要手动传递metadata（含developer-token）
+    // 使用统一的服务访问方式
+    // gRPC调用需要手动传递metadata（含developer-token）
     const keywordPlanIdeas = getKeywordPlanIdeaService(customer, authType)
     const metadata = (customer as any).callMetadata
     let metrics

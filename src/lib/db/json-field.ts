@@ -63,7 +63,7 @@ export function toDbJsonField(value: unknown): unknown {
   return value
 }
 
-/** TEXT 列 JSON 字段：存 JSON 字符串。 */
+/* * TEXT 列 JSON 字段：存 JSON 字符串。 */
 export function toDbJsonTextField(value: unknown): string | null {
   if (value === undefined || value === null) return null
   if (typeof value === 'string') {
@@ -74,7 +74,7 @@ export function toDbJsonTextField(value: unknown): string | null {
   return JSON.stringify(value)
 }
 
-/** JSONB 结构化字段：仅允许对象/数组。 */
+/* * JSONB 结构化字段：仅允许对象/数组。 */
 export function toDbJsonObjectField(value: unknown, fallback: unknown = null): unknown {
   const normalized = toDbJsonField(value)
 
@@ -87,7 +87,7 @@ export function toDbJsonObjectField(value: unknown, fallback: unknown = null): u
   return fallback
 }
 
-/** JSONB 数组字段：仅允许数组。 */
+/* * JSONB 数组字段：仅允许数组。 */
 export function toDbJsonArrayField(value: unknown, fallback: unknown[] = []): unknown {
   const normalized = toDbJsonField(value ?? fallback)
 

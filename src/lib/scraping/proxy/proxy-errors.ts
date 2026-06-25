@@ -7,9 +7,9 @@
  * 代理错误基类
  */
 export class ProxyError extends Error {
-  /** 是否应该重试 */
+  /* * 是否应该重试 */
   retryable: boolean
-  /** 错误代码 */
+  /* * 错误代码 */
   code: string
 
   constructor(message: string, retryable: boolean, code: string) {

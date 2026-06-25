@@ -1,7 +1,7 @@
 /**
  * Url Swap 间隔配置（前后端共享）
- * - `URL_SWAP_INTERVAL_OPTIONS`：前端下拉框展示的选项
- * - `URL_SWAP_ALLOWED_INTERVALS_MINUTES`：后端允许写入/更新的所有值（包含历史兼容值）
+ * `URL_SWAP_INTERVAL_OPTIONS`：前端下拉框展示的选项
+ * `URL_SWAP_ALLOWED_INTERVALS_MINUTES`：后端允许写入/更新的所有值（包含历史兼容值）
  */
 
 export const URL_SWAP_INTERVAL_OPTIONS = [

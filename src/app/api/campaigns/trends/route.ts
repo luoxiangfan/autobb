@@ -70,7 +70,7 @@ function parseOptionalBooleanParam(value: string | null): boolean | null {
   return null
 }
 
-/** Keep each IN list under PostgreSQL parameter limits (~999) with room for other binds. */
+/* * Keep each IN list under PostgreSQL parameter limits (~999) with room for other binds. */
 const CAMPAIGN_ID_IN_CHUNK = 350
 
 function chunkIds(ids: number[]): number[][] {
@@ -122,10 +122,10 @@ function normalizeDateKey(value: unknown): string {
  * 获取所有 Campaign 的趋势数据（按日期聚合）
  * 转化口径改为佣金。
  *
- * Query Parameters:
- * - daysBack: number (可选，默认7天)
- * - start_date: string (可选，YYYY-MM-DD)
- * - end_date: string (可选，YYYY-MM-DD)
+ * Query Parameters
+ * daysBack: number (可选，默认7天)
+ * start_date: string (可选，YYYY-MM-DD)
+ * end_date: string (可选，YYYY-MM-DD)
  */
 export const dynamic = 'force-dynamic'
 

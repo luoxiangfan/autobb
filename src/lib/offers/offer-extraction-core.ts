@@ -1,8 +1,8 @@
 /**
  * Offer提取核心逻辑（统一真相来源）
- * 🔥 KISS优化：单一提取函数，支持SSE进度推送和批量处理
+ * 单一提取函数，支持SSE进度推送和批量处理
  *
- * 使用场景：
+ * 使用场景
  * 1. 手动创建Offer（非SSE）：/api/offers/extract → extractOffer()
  * 2. 手动创建Offer（SSE）：/api/offers/extract/stream → extractOffer({progressCallback})
  * 3. 批量创建Offer（Worker）：batch-worker → extractOffer({batchMode: true})
@@ -13,7 +13,7 @@ import { extractProductInfo } from '@/lib/scraping'
 import type { ScrapedProductData } from '@/lib/scraping'
 import {
   scrapeAmazonStoreDeep,
-  scrapeIndependentStoreDeep, // 🔥 修改：使用深度抓取版本，与Amazon Store保持一致
+  scrapeIndependentStoreDeep, // 修改：使用深度抓取版本，与Amazon Store保持一致
   scrapeAmazonProduct,
 } from '@/lib/scraping/stealth'
 import { AppError } from '@/lib/common/server'
@@ -53,27 +53,27 @@ import type { ProgressStage } from '@/types/progress'
  * 提取选项
  */
 export interface ExtractOfferOptions {
-  /** 推广链接 */
+  /* * 推广链接 */
   affiliateLink: string
-  /** 目标国家 */
+  /* * 目标国家 */
   targetCountry: string
-  /** 用户ID */
+  /* * 用户ID */
   userId: number
-  /** 用户手动输入的品牌名（可选，独立站Google搜索补充用） */
+  /* * 用户手动输入的品牌名（可选，独立站Google搜索补充用） */
   brandNameInput?: string
-  /** 是否跳过缓存（默认true，确保获取最新URL重定向数据） */
+  /* * 是否跳过缓存（默认true，确保获取最新URL重定向数据） */
   skipCache?: boolean
-  /** 是否批量处理模式（启用快速失败策略） */
+  /* * 是否批量处理模式（启用快速失败策略） */
   batchMode?: boolean
-  /** 是否跳过推广链接预热（默认false，启用预热以触发联盟追踪） */
+  /* * 是否跳过推广链接预热（默认false，启用预热以触发联盟追踪） */
   skipWarmup?: boolean
-  /** 用户选择的页面类型（店铺/单品），用于覆盖自动判断 */
+  /* * 用户选择的页面类型（店铺/单品），用于覆盖自动判断 */
   pageTypeOverride?: 'store' | 'product'
   /** 店铺模式下的单品推广链接（最多 {@link MAX_STORE_PRODUCT_LINKS} 个） */
   storeProductLinks?: string[]
-  /** SSE进度回调函数（可选） */
+  /* * SSE进度回调函数（可选） */
   progressCallback?: ProgressCallback
-  /** 提取模式：fast | balanced | original */
+  /* * 提取模式：fast | balanced | original */
   extractionMode?: OfferExtractionMode | string
 }
 
@@ -105,12 +105,12 @@ export interface ExtractOfferResult {
     productName?: string
     rawProductTitle?: string
     rawAboutThisItem?: string[]
-    productPrice?: string // 🔥 统一字段名：price → productPrice
+    productPrice?: string // 统一字段名：price → productPrice
     productCategory?: string
     productFeatures?: string[]
     metaTitle?: string
     metaDescription?: string
-    // 🔥 2026-01-04新增：独立站增强数据字段（与ScrapedProductData保持一致）
+    // 独立站增强数据字段（与ScrapedProductData保持一致）
     reviews?: Array<{
       rating: number
       date: string
@@ -185,7 +185,7 @@ export interface ExtractOfferResult {
     logoUrl?: string
     platform?: string
 
-    // 🔥 独立站增强：Google品牌词搜索补充数据（可选）
+    // 独立站增强：Google品牌词搜索补充数据（可选）
     brandSearchSupplement?: BrandSearchSupplement | null
 
     // 元数据
@@ -195,7 +195,7 @@ export interface ExtractOfferResult {
     resolveMethod: string
     proxyUsed: string | null
 
-    // 🔥 页面类型标识（用于区分店铺/单品）
+    // 页面类型标识（用于区分店铺/单品）
     pageType: 'store' | 'product'
     pageTypeDetected?: 'store' | 'product'
     pageTypeAdjusted?: boolean
@@ -507,14 +507,14 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
   )
 
   try {
-    // ========== 步骤0: 初始化代理池（必须在预热之前） ==========
+    // 步骤0: 初始化代理池（必须在预热之前）
     const fetchingProxyStartTime = Date.now()
     progressCallback?.('fetching_proxy', 'in_progress', '正在初始化代理池...', undefined, 0)
 
     try {
       await initializeProxyPool(userId, targetCountry)
 
-      // 🔥 检查代理国家是否匹配目标国家
+      // 检查代理国家是否匹配目标国家
       const proxyPool = getProxyPool(userId)
       const proxyInfo = proxyPool.getProxyInfo(targetCountry)
 
@@ -560,7 +560,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       }
     }
 
-    // ========== 步骤1: 推广链接预热（可选） ==========
+    // 步骤1: 推广链接预热（可选）
     const proxyWarmupStartTime = Date.now()
     if (!skipWarmup) {
       const runWarmup = async () => {
@@ -616,11 +616,11 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       console.log('⏩ 跳过推广链接预热（skipWarmup=true）')
     }
 
-    // ========== 步骤2: 检测页面类型（URL解析前） ==========
+    // 步骤2: 检测页面类型（URL解析前）
     const pageTypeByUrl = detectPageType(affiliateLink)
     const isAmazonStoreByUrl = pageTypeByUrl.isAmazonStore
 
-    // ========== 步骤3: 解析推广链接 ==========
+    // 步骤3: 解析推广链接
     const resolvingLinkStartTime = Date.now()
     progressCallback?.('resolving_link', 'in_progress', '正在解析推广链接...', undefined, 0)
 
@@ -697,10 +697,10 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       }
     }
 
-    // ========== 步骤4: 检测页面类型（URL解析后） ==========
+    // 步骤4: 检测页面类型（URL解析后）
     const pageTypeByFinalUrl = detectPageType(resolvedData.finalUrl)
 
-    // 🔥 修复：优先使用finalUrl的页面类型检测结果
+    // 优先使用finalUrl的页面类型检测结果
     // 因为推广链接可能通过多次重定向，finalUrl才是真正的目标页面
     const isAmazonStore = pageTypeByFinalUrl.isAmazonStore
     const isAmazonProductPage = pageTypeByFinalUrl.isAmazonProductPage
@@ -711,7 +711,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     console.log('  - isAmazonStore:', isAmazonStore)
     console.log('  - isAmazonProductPage:', isAmazonProductPage)
 
-    // ========== 步骤5: 访问目标页面 ==========
+    // 步骤5: 访问目标页面
     const accessingPageStartTime = Date.now()
     progressCallback?.(
       'accessing_page',
@@ -730,7 +730,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     let independentStoreData = null
     let amazonProductData = null
     let productCount = 0
-    let scrapingError: string | null = null // 🔥 新增：记录抓取错误
+    let scrapingError: string | null = null // 记录抓取错误
     let proxyApiUrl: string | null = null
     let brandSearchSupplement: BrandSearchSupplement | null = null
     let isIndependentStore = false
@@ -743,7 +743,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       pageTypeOverride === 'store' || pageTypeOverride === 'product' ? pageTypeOverride : 'product'
 
     try {
-      // 🔥 验证finalUrl有效性
+      // 验证finalUrl有效性
       if (
         !resolvedData.finalUrl ||
         resolvedData.finalUrl === 'null/' ||
@@ -787,7 +787,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         effectivePageType = isAmazonStore || isIndependentStore ? 'store' : 'product'
       }
 
-      // 🔥 防御：即使后续抓取失败，也至少用主域名提供一个稳定的品牌fallback
+      // 防御：即使后续抓取失败，也至少用主域名提供一个稳定的品牌fallback
       // 避免被阻断/403/超时时 brandName 为空或被阻断页文本污染
       if (!isAmazonStore && !isAmazonProductPage && !brandName) {
         const brandFromUrlFallback = deriveBrandFromFinalUrl(resolvedData.finalUrl)
@@ -821,7 +821,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         pageTypeAdjusted = true
       }
 
-      // 🔥 修复：拼接完整URL（包含追踪参数），避免Amazon 404拦截
+      // 拼接完整URL（包含追踪参数），避免Amazon 404拦截
       const fullTargetUrl = resolvedData.finalUrlSuffix
         ? `${resolvedData.finalUrl}?${resolvedData.finalUrlSuffix}`
         : resolvedData.finalUrl
@@ -849,7 +849,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         }
       )
 
-      // ========== 步骤6: 抓取产品数据 ==========
+      // 步骤6: 抓取产品数据
       const scrapingProductsStartTime = Date.now()
       progressCallback?.('scraping_products', 'in_progress', '正在抓取产品数据...', undefined, 0)
 
@@ -964,9 +964,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         console.log(`✅ Amazon单品识别成功: ${brandName || 'Unknown'}`)
       } else if (isIndependentStore) {
         console.log('🏬 检测到独立站首页，使用深度抓取模式（包含热销商品详情）...')
-        // 🔥 修改（2025-12-08）：使用深度抓取版本，与Amazon Store保持一致
+        // 修改：使用深度抓取版本，与Amazon Store保持一致
         // 进入前5个热销商品详情页，获取详细评论和竞品数据
-        // 🔥 修复：店铺抓取不需要追踪query，优先使用finalUrl避免触发风控/403（例如 IHG/CJ 链路）
+        // 店铺抓取不需要追踪query，优先使用finalUrl避免触发风控/403（例如 IHG/CJ 链路）
         const storeScrapeUrl = resolvedData.finalUrl
         independentStoreData = await scrapeIndependentStoreDeep(
           storeScrapeUrl,
@@ -975,7 +975,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           targetCountry,
           deepScrapeConcurrency
         )
-        // 🔥 品牌名归一：独立站主域名更稳定，避免 “Brand + 国家/语言” 作为品牌名
+        // 品牌名归一：独立站主域名更稳定，避免 “Brand + 国家/语言” 作为品牌名
         // 例：kaspersky.es 页面标题/店铺名为 “Kaspersky España”，但品牌应为 “kaspersky”
         const brandFromUrl = deriveBrandFromFinalUrl(resolvedData.finalUrl)
         const storeName =
@@ -996,7 +996,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         } else {
           brandCandidate = storeName || brandFromUrl
         }
-        // 🔥 修复：过滤阻断页标题（如 “Access Denied”）被写入品牌名
+        // 过滤阻断页标题（如 “Access Denied”）被写入品牌名
         if (isLikelyInvalidBrandName(brandCandidate)) {
           brandCandidate = brandFromUrl || null
         }
@@ -1007,12 +1007,12 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           `✅ 独立站深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${independentStoreData.deepScrapeResults?.successCount || 0}/${independentStoreData.deepScrapeResults?.totalScraped || 0}`
         )
       } else {
-        // 🔥 2025-12-24优化：独立站单品页面抓取
+        // 独立站单品页面抓取
         // 尝试轻量级axios-cheerio抓取，如果失败则回退到Playwright渲染
         console.log('📦 检测到独立站单品页面，尝试使用轻量级scraper...')
 
-        // 🔥 必须使用包含suffix的完整URL，否则会丢失追踪参数导致落地页不正确（例如 partnermatic/awin 链路）
-        // 🔥 修复：独立站单品axios抓取也需要走代理（否则容易被风控/超时，导致品牌词为空）
+        // 必须使用包含suffix的完整URL，否则会丢失追踪参数导致落地页不正确（例如 partnermatic/awin 链路）
+        // 独立站单品axios抓取也需要走代理（否则容易被风控/超时，导致品牌词为空）
         const lightScrapeTimeoutMs = getOfferProductLightScrapeTimeoutMs(extractionMode)
         try {
           scrapedData = await extractProductInfo(
@@ -1110,7 +1110,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         if (scrapedData?.productDescription) {
           productDescription = scrapedData.productDescription
         }
-        // 🔥 单品页面：productCount应为1
+        // 单品页面：productCount应为1
         productCount = scrapedData ? 1 : 0
         console.log(`✅ 独立站单品识别成功: ${brandName || '未知品牌'}, 产品数: ${productCount}`)
       }
@@ -1170,11 +1170,11 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         }
       )
 
-      // ========== 步骤7: 提取品牌信息 ==========
+      // 步骤7: 提取品牌信息
       const extractingBrandStartTime = Date.now()
       progressCallback?.('extracting_brand', 'in_progress', '正在提取品牌信息...', undefined, 0)
 
-      // 🔥 如果用户已手动输入品牌名：独立站场景下优先使用用户输入
+      // 如果用户已手动输入品牌名：独立站场景下优先使用用户输入
       const brandNameTrimmed = typeof brandNameInput === 'string' ? brandNameInput.trim() : ''
       if (!isAmazonStore && !isAmazonProductPage && brandNameTrimmed) {
         brandName = brandNameTrimmed
@@ -1191,7 +1191,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         }
       )
     } catch (error: any) {
-      // 🔥 改进：详细记录错误信息，方便诊断
+      // 改进：详细记录错误信息，方便诊断
       scrapingError = `${error?.constructor?.name || 'Error'}: ${error?.message || String(error)}` // 保存错误信息
 
       console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
@@ -1234,11 +1234,11 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       )
     }
 
-    // ========== 步骤8: 处理数据 ==========
+    // 步骤8: 处理数据
     const processingDataStartTime = Date.now()
     progressCallback?.('processing_data', 'in_progress', '正在处理数据...', undefined, 0)
 
-    // 🔥 独立站增强：使用用户填写的品牌名进行Google搜索，补充广告元素与官网信息（best-effort）
+    // 独立站增强：使用用户填写的品牌名进行Google搜索，补充广告元素与官网信息（best-effort）
     const brandNameTrimmed = typeof brandNameInput === 'string' ? brandNameInput.trim() : ''
     if (!isAmazonStore && !isAmazonProductPage && brandNameTrimmed && proxyApiUrl) {
       try {
@@ -1270,7 +1270,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       }
     }
 
-    // ========== 步骤9: 确定推广语言 ==========
+    // 步骤9: 确定推广语言
     const targetLanguage = getTargetLanguage(targetCountry)
 
     const fallbackRawAboutFromDescription = (description: string | null | undefined): string[] => {
@@ -1353,7 +1353,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       '数据处理完成'
     )
 
-    // ========== 步骤10: 返回提取结果 ==========
+    // 步骤10: 返回提取结果
     return {
       success: true,
       data: {
@@ -1365,7 +1365,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         targetLanguage,
 
         // 单品页数据（可选）
-        // 🔥 2026-01-04修复：保存完整的scrapedData（包含reviews、faqs、specifications等字段）
+        // 保存完整的scrapedData（包含reviews、faqs、specifications等字段）
         ...(scrapedData && {
           productName: scrapedData.productName,
           rawProductTitle: resolvedRawProductTitle,
@@ -1400,7 +1400,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           reviewCount: amazonProductData.reviewCount,
           reviewHighlights: amazonProductData.reviewHighlights,
           topReviews: amazonProductData.topReviews,
-          // 🆕 补充缺失的重要字段
+          // 补充缺失的重要字段
           features: amazonProductData.features,
           aboutThisItem: amazonProductData.aboutThisItem,
           technicalDetails: amazonProductData.technicalDetails,
@@ -1412,7 +1412,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           primeEligible: amazonProductData.primeEligible,
           asin: amazonProductData.asin,
           category: amazonProductData.category,
-          relatedAsins: amazonProductData.relatedAsins, // 🔥 新增：竞品ASIN列表（已过滤同品牌产品）
+          relatedAsins: amazonProductData.relatedAsins, // 竞品ASIN列表（已过滤同品牌产品）
         }),
 
         // Amazon Store专属数据（可选）
@@ -1427,7 +1427,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         }),
 
         // 独立站专属数据（可选）
-        // 🔥 修改（2025-12-08）：添加hotInsights和deepScrapeResults，与Amazon Store保持一致
+        // 修改：添加hotInsights和deepScrapeResults，与Amazon Store保持一致
         ...(independentStoreData && {
           productCount,
           products: independentStoreData.products,
@@ -1435,12 +1435,12 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           storeDescription: independentStoreData.storeDescription,
           logoUrl: independentStoreData.logoUrl,
           platform: independentStoreData.platform,
-          hotInsights: independentStoreData.hotInsights, // 🔥 新增：热销洞察
+          hotInsights: independentStoreData.hotInsights, // 热销洞察
           productCategories: (independentStoreData as any).productCategories,
-          deepScrapeResults: independentStoreData.deepScrapeResults, // 🔥 新增：深度抓取结果
+          deepScrapeResults: independentStoreData.deepScrapeResults, // 深度抓取结果
         }),
 
-        // 🔥 独立站增强：Google品牌词搜索补充数据
+        // 独立站增强：Google品牌词搜索补充数据
         brandSearchSupplement,
 
         // 元数据
@@ -1450,7 +1450,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         resolveMethod: resolvedData.resolveMethod || 'unknown',
         proxyUsed: resolvedData.proxyUsed || null,
 
-        // 🔥 页面类型标识（尊重用户选择）
+        // 页面类型标识（尊重用户选择）
         pageType: effectivePageType,
         pageTypeDetected: detectedPageType,
         pageTypeAdjusted: pageTypeAdjusted || undefined,
@@ -1470,9 +1470,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         debug: {
           scrapedDataAvailable: !!scrapedData,
           brandAutoDetected: !!brandName,
-          isAmazonStore: pageTypeByFinalUrl.isAmazonStore, // ✅ 修复：基于URL模式判断
-          isAmazonProductPage: pageTypeByFinalUrl.isAmazonProductPage, // ✅ 修复：基于URL模式判断
-          isIndependentStore, // ✅ 修复：区分独立站店铺/单品
+          isAmazonStore: pageTypeByFinalUrl.isAmazonStore, // 基于URL模式判断
+          isAmazonProductPage: pageTypeByFinalUrl.isAmazonProductPage, // 基于URL模式判断
+          isIndependentStore, // 区分独立站店铺/单品
           pageTypeDetected: detectedPageType,
           pageTypeAdjusted: pageTypeAdjusted || undefined,
           productsExtracted: productCount,
@@ -1483,8 +1483,8 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
               : independentStoreData
                 ? 'playwright-independent'
                 : 'axios-cheerio',
-          scrapingError: scrapingError || undefined, // 🔥 新增：包含抓取错误信息
-          // 🆕 新增：数据抓取成功标志（用于诊断）
+          scrapingError: scrapingError || undefined, // 包含抓取错误信息
+          // 数据抓取成功标志（用于诊断）
           amazonProductDataExtracted: !!amazonProductData,
           storeDataExtracted: !!storeData,
           independentStoreDataExtracted: !!independentStoreData,

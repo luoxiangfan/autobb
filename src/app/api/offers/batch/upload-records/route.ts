@@ -3,15 +3,15 @@
  *
  * 获取当前用户的上传文件记录列表
  *
- * 功能：
+ * 功能
  * 1. 验证用户身份
  * 2. 查询用户的上传记录（按上传时间降序）
  * 3. 返回文件名、上传时间、有效数量、处理数量、成功率等信息
  *
- * 查询参数：
- * - page: 页码（默认1）
- * - limit: 每页数量（默认10，最大50）
- * - status: 状态筛选（可选：pending, processing, completed, failed, partial）
+ * 查询参数
+ * page: 页码（默认1）
+ * limit: 每页数量（默认10，最大50）
+ * status: 状态筛选（可选：pending, processing, completed, failed, partial）
  */
 
 import { withAuth } from '@/lib/auth'

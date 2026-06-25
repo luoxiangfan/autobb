@@ -30,7 +30,7 @@ function roundTo2(value: number): number {
  * PUT /api/campaigns/:id/update-budget
  * 更新广告系列预算
  *
- * - :id 必须是 Google Ads campaign id（google_campaign_id）
+ * id 必须是 Google Ads campaign id（google_campaign_id）
  */
 export const PUT = withAuth(async (request, user, context) => {
   try {

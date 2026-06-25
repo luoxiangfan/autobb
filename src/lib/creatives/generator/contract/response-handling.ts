@@ -38,7 +38,7 @@ export {
   HEADLINE_DANGLING_TAIL_TOKENS,
 } from './headline-tokens'
 
-// --- extracted body below ---
+// extracted body below
 
 export function normalizeBrandFreeText(text: string, brandName: string): string {
   if (!text) return ''
@@ -622,7 +622,7 @@ export function parseAIResponse(
     const raw = JSON.parse(jsonText)
     const responsiveSearchAds = raw?.responsive_search_ads ?? raw?.responsiveSearchAds
 
-    // 🔧 兼容新格式：AI 可能返回 { responsive_search_ads: { ... } }
+    // 兼容新格式：AI 可能返回 { responsive_search_ads: { ... } }
     // 旧解析器要求顶层字段 headlines/descriptions/keywords/callouts/sitelinks
     const data =
       responsiveSearchAds && typeof responsiveSearchAds === 'object'
@@ -816,13 +816,13 @@ export function parseAIResponse(
       }))
     }
 
-    // 🔥 修复Ad Customizer标签格式（DKI语法验证）
+    // 修复Ad Customizer标签格式（DKI语法验证）
     // 问题：AI可能生成 "{KeyWord:Text" 缺少结束符 "}"
     const fixDKISyntax = (text: string): string => {
       // 检测未闭合的 {KeyWord: 标签
       const unclosedPattern = /\{KeyWord:([^}]*?)$/i
       if (unclosedPattern.test(text)) {
-        // 尝试修复：如果只是缺少结束符，添加它
+        // 尝试如果只是缺少结束符，添加它
         const match = text.match(unclosedPattern)
         if (match) {
           const defaultText = match[1].trim()
@@ -844,7 +844,7 @@ export function parseAIResponse(
       return text
     }
 
-    // 🔥 过滤Google Ads禁止的符号（Policy Violation防御）
+    // 过滤Google Ads禁止的符号（Policy Violation防御）
     const removeProhibitedSymbols = (text: string): string => {
       const { text: cleaned, removed } = sanitizeGoogleAdsSymbols(text)
       if (removed.length > 0) {
@@ -873,7 +873,7 @@ export function parseAIResponse(
       console.log(`✅ 修复了${fixedCount}个DKI标签格式问题`)
     }
 
-    // 🔥 新增：应用符号过滤到所有headlines和descriptions
+    // 应用符号过滤到所有headlines和descriptions
     headlinesArray = headlinesArray.map((h: string) => removeProhibitedSymbols(h))
     descriptionsArray = descriptionsArray.map((d: string) => removeProhibitedSymbols(d))
     headlinesArray = headlinesArray.map((h: string) => sanitizePolicySensitiveText(h, 30))
@@ -916,9 +916,8 @@ export function parseAIResponse(
       }))
     }
 
-    // ============================================================================
     // Google Ads RSA 数量上限防御（Headlines ≤15, Descriptions ≤4）
-    // ============================================================================
+
     if (headlinesArray.length > 15) {
       console.warn(`⚠️ headlines 超过15个（${headlinesArray.length}），已截断为15个`)
       headlinesArray = headlinesArray.slice(0, 15)
@@ -935,7 +934,7 @@ export function parseAIResponse(
       }
     }
 
-    // 🔧 全大写检测工具函数（Google Ads 会因 excessive capitalization 拒登）
+    // 全大写检测工具函数（Google Ads 会因 excessive capitalization 拒登）
     const isExcessiveCaps = (s: string): boolean => {
       const letters = s.replace(/[^a-zA-Z]/g, '')
       return letters.length >= 3 && letters === letters.toUpperCase()
@@ -944,9 +943,8 @@ export function parseAIResponse(
       return s.toLowerCase().replace(/(?:^|\s)\S/g, (c) => c.toUpperCase())
     }
 
-    // ============================================================================
     // 验证 Callouts 长度 (≤25 字符)
-    // ============================================================================
+
     let calloutsArray = Array.isArray(data.callouts) ? data.callouts : []
     const invalidCallouts = calloutsArray.filter((c: string) => c && c.length > 25)
     if (invalidCallouts.length > 0) {
@@ -968,7 +966,7 @@ export function parseAIResponse(
       sanitizePolicySensitiveText(String(c || ''), 25)
     )
 
-    // 🔧 修复：检测并修正全大写的 callout 文案（与 sitelink 同理）
+    // 检测并修正全大写的 callout 文案（与 sitelink 同理）
     calloutsArray = calloutsArray.map((c: string) => {
       if (typeof c === 'string' && isExcessiveCaps(c)) {
         const fixed = toTitleCase(c)
@@ -978,9 +976,8 @@ export function parseAIResponse(
       return c
     })
 
-    // ============================================================================
     // 验证 Sitelinks 长度 (text≤25, desc≤35)
-    // ============================================================================
+
     let sitelinksArray = Array.isArray(data.sitelinks) ? data.sitelinks : []
 
     // 兼容：AI 有时输出 description1/description2、description 或 description_1/description_2
@@ -1005,7 +1002,7 @@ export function parseAIResponse(
 
     sitelinksArray = sitelinksArray.map(normalizeSitelink).filter((v: any) => v !== null)
 
-    // 🔧 修复：检测并修正全大写的 sitelink 文案
+    // 检测并修正全大写的 sitelink 文案
     sitelinksArray = sitelinksArray.map((s: any) => {
       if (!s) return s
       let changed = false
@@ -1050,11 +1047,10 @@ export function parseAIResponse(
       })
     }
 
-    // ============================================================================
     // 验证关键词长度 (1-10 个单词)
-    // 🔧 修复(2025-12-25): 放宽到10个单词，符合Google Ads实际限制
+    // 放宽到10个单词，符合Google Ads实际限制
     // Google Ads允许最多10个单词的关键词
-    // ============================================================================
+
     let keywordsArray = Array.isArray(data.keywords)
       ? data.keywords.map((k: any) => String(k || '').trim()).filter(Boolean)
       : []
@@ -1088,7 +1084,7 @@ export function parseAIResponse(
       console.warn(`  长度过滤后: ${originalCount} → ${keywordsArray.length}个关键词`)
     }
 
-    // 🔧 修复(2025-12-27): 关键词去重（AI可能生成重复关键词）
+    // 关键词去重（AI可能生成重复关键词）
     const originalKeywordCount = keywordsArray.length
     const seenKeywords = new Set<string>()
     keywordsArray = keywordsArray.filter((k: string) => {
@@ -1118,7 +1114,7 @@ export function parseAIResponse(
       console.log('📊 关键词相关性:', qualityMetrics.keyword_relevance_score)
     }
 
-    // 🆕 v4.7: 解析 Display Path (path1/path2)
+    // v4.7: 解析 Display Path (path1/path2)
     let path1: string | undefined = data.path1
     let path2: string | undefined = data.path2
 
@@ -1156,7 +1152,7 @@ export function parseAIResponse(
       theme: data.theme || '通用广告',
       explanation: data.explanation || '基于产品信息生成的广告创意',
 
-      // 🆕 v4.7: RSA Display Path
+      // v4.7: RSA Display Path
       path1,
       path2,
 

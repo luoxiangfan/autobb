@@ -3,10 +3,10 @@ import type { ProxyConfig, ProxyManager } from './types'
 /**
  * 代理IP池管理器
  *
- * 功能:
- * - 代理IP轮换
- * - 失败代理自动禁用
- * - 代理健康度追踪
+ * 功能
+ * 代理IP轮换
+ * 失败代理自动禁用
+ * 代理健康度追踪
  */
 export class SimpleProxyManager implements ProxyManager {
   private proxyPool: ProxyConfig[] = []

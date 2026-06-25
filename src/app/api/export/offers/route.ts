@@ -5,8 +5,8 @@ import { getDatabase } from '@/lib/db'
 /**
  * GET /api/export/offers
  * 导出用户的Offers数据
- * Query参数:
- * - format: json | csv (默认 json)
+ * Query参数
+ * format: json | csv (默认 json)
  */
 export const dynamic = 'force-dynamic'
 

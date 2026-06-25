@@ -66,7 +66,7 @@ export const PATCH = withAuth(
       }
 
       // Build update query dynamically
-      // 🔧 修复(2025-12-30): 使用结构化对象管理字段更新，避免updates和values数组顺序混乱
+      // 使用结构化对象管理字段更新，避免updates和values数组顺序混乱
       const fieldUpdates: Array<{ sql: string; value: any }> = []
       const changedFields: string[] = []
 
@@ -83,7 +83,7 @@ export const PATCH = withAuth(
         changedFields.push('package_expires_at')
       }
       if (isActive !== undefined) {
-        // 🔧 修复(2025-12-30): PostgreSQL 返回 boolean
+        // PostgreSQL 返回 boolean
         // 使用类型断言避免TypeScript错误，但保持原有的运行时判断逻辑
         const currentIsActive =
           (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
@@ -148,7 +148,7 @@ export const PATCH = withAuth(
       WHERE id = ?
     `
 
-      // 🔧 调试日志
+      // 调试日志
       console.log('🔍 [Admin] 更新用户 SQL:', {
         sql: finalSql.trim(),
         params: values,
@@ -157,7 +157,7 @@ export const PATCH = withAuth(
 
       const result = await db.exec(finalSql, values)
 
-      // 🔧 调试日志
+      // 调试日志
       console.log('🔍 [Admin] 更新结果:', result)
 
       if (result.changes === 0) {
@@ -189,7 +189,7 @@ export const PATCH = withAuth(
       if (changedFields.includes('is_active')) {
         clearUserExecutionEligibilityCache(userId)
 
-        // 🔧 修复(2025-12-30): PostgreSQL 返回 boolean
+        // PostgreSQL 返回 boolean
         const wasActive =
           (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
         const isNowActive =
@@ -199,7 +199,7 @@ export const PATCH = withAuth(
         } else if (wasActive && !isNowActive) {
           await logUserDisabled(auditContext)
 
-          // 🔒 用户被禁用后：停止该用户的补点击任务 + 暂停换链接任务，并清理队列中已入队的 pending/delayed 任务
+          // � 用户被禁用后：停止该用户的补点击任务 + 暂停换链接任务，并清理队列中已入队的 pending/delayed 任务
           // 任务保持停止/暂停状态，后续启用用户后由用户手动重新开启
           try {
             const { suspendUserBackgroundTasks } = await import('@/lib/common/server')
@@ -256,7 +256,7 @@ export const DELETE = withAuth(
       }
 
       // Prevent deleting active users
-      // 🔧 修复(2025-12-30): PostgreSQL 返回 boolean
+      // PostgreSQL 返回 boolean
       if ((user.is_active as any) === true || (user.is_active as any) === 1) {
         return NextResponse.json(
           { error: '无法删除启用状态的用户，请先禁用该用户' },

@@ -12,16 +12,16 @@ export type BrowserFingerprint = {
   language: string
   acceptLanguage: string
   accept: string
-  // 🔥 新增：Chrome 特有的客户端提示头
+  // Chrome 特有的客户端提示头
   secChUa?: string
   secChUaMobile?: string
   secChUaPlatform?: string
-  // 🔥 新增：安全相关头部
+  // 安全相关头部
   secFetchDest?: string
   secFetchMode?: string
   secFetchSite?: string
   secFetchUser?: string
-  // 🔥 新增：其他头部
+  // 其他头部
   dnt?: string
   acceptEncoding?: string
   connection?: string
@@ -122,7 +122,7 @@ export function generateRandomFingerprint(): BrowserFingerprint {
   const language = randomChoice(LANGUAGE_POOL)
   const acceptLanguage = randomChoice(ACCEPT_LANGUAGE_POOL)
 
-  // 🔥 根据 User-Agent 生成匹配的 Sec-CH-UA 头部（参考 browser-stealth.ts）
+  // 根据 User-Agent 生成匹配的 Sec-CH-UA 头部（参考 browser-stealth.ts）
   let secChUa: string | undefined
   let secChUaPlatform: string | undefined
   let secChUaMobile: string | undefined = '?0'

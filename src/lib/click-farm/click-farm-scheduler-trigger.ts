@@ -16,7 +16,7 @@ import { notifyTaskPaused, notifyTaskCompleted } from '@/lib/click-farm/alerts/n
 import { getQueueManagerForTaskType } from '@/lib/queue'
 import { getDatabase } from '@/lib/db'
 import { getDateInTimezone, getHourInTimezone } from '@/lib/common/server'
-import { getAllProxyUrls } from '@/lib/common/server' // 🔧 修复：导入新的代理查询函数
+import { getAllProxyUrls } from '@/lib/common/server' // 导入新的代理查询函数
 import { hasEnabledCampaignForOffer } from '@/lib/click-farm/campaign-health-guard'
 import type { ClickFarmTask } from '@/lib/click-farm/click-farm-types'
 import type { UnifiedQueueManager } from '@/lib/queue'
@@ -26,8 +26,8 @@ import type {
   ClickFarmTriggerTaskData,
 } from '@/lib/click-farm/queue-task-types'
 
-// 🆕 扩展ClickFarmTask类型，支持referer_config
-// 🔧 修复(2025-12-31): ClickFarmTask 已包含 referer_config，不需要额外定义
+// 扩展ClickFarmTask类型，支持referer_config
+// ClickFarmTask 已包含 referer_config，不需要额外定义
 interface TriggerResult {
   taskId: string
   status: 'queued' | 'skipped' | 'paused' | 'completed' | 'error'
@@ -257,7 +257,7 @@ export async function triggerTaskScheduling(
     return { taskId, status: 'error', message: '任务不存在' }
   }
 
-  // 🔧 修复：解析任务数据，确保字段类型正确（hourly_distribution、referer_config 等）
+  // 解析任务数据，确保字段类型正确（hourly_distribution、referer_config 等）
   const task = parseClickFarmTask(taskRow)
 
   // 检查任务状态
@@ -337,7 +337,7 @@ export async function triggerTaskScheduling(
     return { taskId, status: 'paused', message: 'Offer已删除，任务已暂停' }
   }
 
-  // 🔧 修复(2025-12-30): 使用新的代理配置系统（proxy.urls JSON数组）
+  // 使用新的代理配置系统（proxy.urls JSON数组）
   const proxyUrls = await getAllProxyUrls(task.user_id)
   const targetCountry = offer.target_country.toUpperCase()
   const proxyConfig = proxyUrls?.find((p) => p.country.toUpperCase() === targetCountry)
@@ -370,8 +370,8 @@ export async function triggerTaskScheduling(
   })
 
   if (!isWithinExecutionTimeRange(task)) {
-    // 🔧 修复：即使跳过任务，也要更新 next_run_at
-    // 🔧 修复(2026-01-05): 传入完整的 task 对象，确保返回下一个有配额的小时
+    // 即使跳过任务，也要更新 next_run_at
+    // 传入完整的 task 对象，确保返回下一个有配额的小时
     await updateTaskStatus(task.id, 'running', generateNextRunAt(task.timezone, task))
     return {
       taskId,
@@ -406,7 +406,7 @@ export async function triggerTaskScheduling(
   })
 
   if (remainingClickCount === 0) {
-    // 🔧 修复(2026-01-05): 传入完整的 task 对象，确保返回下一个有配额的小时
+    // 传入完整的 task 对象，确保返回下一个有配额的小时
     await updateTaskStatus(task.id, 'running', generateNextRunAt(task.timezone, task))
     return {
       taskId,
@@ -415,8 +415,8 @@ export async function triggerTaskScheduling(
     }
   }
 
-  // 🆕 获取任务的Referer配置
-  // 🔧 修复(2025-12-31): parseClickFarmTask 已经解析好了 referer_config
+  // 获取任务的Referer配置
+  // parseClickFarmTask 已经解析好了 referer_config
   const refererConfig =
     task.referer_config && task.referer_config.type !== 'none' ? task.referer_config : undefined
 
@@ -468,7 +468,7 @@ export async function triggerTaskScheduling(
 
   // 更新状态
   if (queued > 0) {
-    // 🔧 修复(2026-01-05): 传入完整的 task 对象，确保返回下一个有配额的小时
+    // 传入完整的 task 对象，确保返回下一个有配额的小时
     await updateTaskStatus(task.id, 'running', generateNextRunAt(task.timezone, task))
     console.log(`[Trigger] 任务 ${task.id} 已加入 ${queued} 个点击到队列`)
   }

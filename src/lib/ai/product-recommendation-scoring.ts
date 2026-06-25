@@ -1,7 +1,7 @@
 /**
  * 商品推荐指数计算系统
  *
- * 基于5个维度评估商品的Google Ads投放推荐指数:
+ * 基于5个维度评估商品的Google Ads投放推荐指数
  * 1. 商品吸引力 (38%权重)
  * 2. 佣金潜力 (33%权重)
  * 3. 市场适配性 (24%权重)
@@ -35,7 +35,7 @@ export interface ProductRecommendationScore {
     commissionPotential: DimensionScore
     marketFit: DimensionScore
     seasonality: DimensionScore
-    productCharacteristics: DimensionScore // 新增：商品特征维度
+    productCharacteristics: DimensionScore // 商品特征维度
   }
   seasonalityAnalysis?: SeasonalityAnalysis
   productAnalysis?: ProductAnalysis
@@ -1471,7 +1471,7 @@ function resolveHybridRerankCount(totalProducts: number, requestedTopK?: number)
 }
 
 /**
- * 混合精排：
+ * 混合精排
  * 1. 所有商品先走规则粗排
  * 2. 仅对批次 Top-K 商品做 AI 精排
  */

@@ -9,11 +9,11 @@ export interface ProductInfo {
   productHighlights: string
   targetAudience: string
   category?: string
-  // 🆕 增强字段：用于竞品搜索词推断
+  // 增强字段：用于竞品搜索词推断
   sellingPoints?: string[] // 产品卖点列表
   productDescription?: string // 产品描述（完整文本）
 
-  // 🎯 P0优化（2025-12-07）：存储AI返回的完整数据，提升广告创意质量20-30%
+  // 存储AI返回的完整数据，提升广告创意质量20-30%
   keywords?: string[] // AI生成的关键词列表
 
   pricing?: {
@@ -49,7 +49,7 @@ export interface ProductInfo {
     salesRank?: string // 销售排名
   }
 
-  // 🎯 v3.3优化（2025-12-08）：店铺/单品差异化分析字段
+  // 店铺/单品差异化分析字段
   // 店铺分析专用字段
   storeQualityLevel?: 'Premium' | 'Standard' | 'Budget' | 'Unknown'
   categoryDiversification?: {
@@ -120,11 +120,11 @@ export async function analyzeProductPage(
     description: string
     text: string
     targetCountry?: string
-    pageType?: 'product' | 'store' // 新增：页面类型
-    // 🎯 P1优化：新增字段用于增强AI分析
+    pageType?: 'product' | 'store' // 页面类型
+    // 新增字段用于增强AI分析
     technicalDetails?: Record<string, string> // 技术规格
     reviewHighlights?: string[] // 评论摘要
-    // 🔥 2026-01-04新增：独立站增强数据字段（用于AI分析）
+    // 独立站增强数据字段（用于AI分析）
     reviews?: Array<{
       rating: number
       date: string
@@ -169,17 +169,17 @@ export async function analyzeProductPage(
 
     if (pageType === 'store') {
       // 店铺页面专用prompt(从数据库加载)
-      // 📦 从数据库加载prompt模板(版本管理)
+      // 从数据库加载prompt模板(版本管理)
       const promptTemplate = await loadPrompt('brand_analysis_store')
 
-      // 🎨 准备模板变量
+      // � 准备模板变量
       const pageDataUrl = pageData.url
       const pageDataBrand = pageData.brand
       const pageDataTitle = pageData.title
       const pageDataDescription = pageData.description
       const pageDataText = pageData.text.slice(0, 10000)
 
-      // 🔥 2026-01-21：店铺prompt也可能引用增强数据占位符（例如 v4.16）
+      // 店铺prompt也可能引用增强数据占位符（例如 v4.16）
       // 生产环境中若不替换，会让模型看到原样 {{reviews}} 等占位符，导致输出不稳定。
       const reviewsText =
         pageData.reviews && pageData.reviews.length > 0
@@ -222,7 +222,7 @@ export async function analyzeProductPage(
           ? '- ' + pageData.coreFeatures.join('\n- ')
           : 'Not available (store page)'
 
-      // 🎯 P1优化: 格式化technicalDetails和reviewHighlights供AI使用（店铺页面通常无单品数据）
+      // 格式化technicalDetails和reviewHighlights供AI使用（店铺页面通常无单品数据）
       const technicalDetailsText =
         pageData.technicalDetails && Object.keys(pageData.technicalDetails).length > 0
           ? Object.entries(pageData.technicalDetails)
@@ -235,7 +235,7 @@ export async function analyzeProductPage(
           ? '- ' + pageData.reviewHighlights.join('\n- ')
           : 'Not available (store page)'
 
-      // 🎨 插值替换模板变量
+      // � 插值替换模板变量
       prompt = ensureStorePromptHasOutputSchema(promptTemplate)
         .replace(/\{\{pageData\.url\}\}/g, pageDataUrl)
         .replace(/\{\{pageData\.brand\}\}/g, pageDataBrand)
@@ -253,17 +253,17 @@ export async function analyzeProductPage(
         .replace(/\{\{categoryExamples\}\}/g, categoryExamples)
     } else {
       // 单品页面专用prompt(从数据库加载)
-      // 📦 从数据库加载prompt模板(版本管理)
+      // 从数据库加载prompt模板(版本管理)
       const promptTemplate = await loadPrompt('product_analysis_single')
 
-      // 🎨 准备模板变量
+      // � 准备模板变量
       const pageDataUrl = pageData.url
       const pageDataBrand = pageData.brand
       const pageDataTitle = pageData.title
       const pageDataDescription = pageData.description
       const pageDataText = pageData.text.slice(0, 10000)
 
-      // 🎯 P1优化: 格式化technicalDetails和reviewHighlights供AI使用
+      // 格式化technicalDetails和reviewHighlights供AI使用
       const technicalDetailsText =
         pageData.technicalDetails && Object.keys(pageData.technicalDetails).length > 0
           ? Object.entries(pageData.technicalDetails)
@@ -276,7 +276,7 @@ export async function analyzeProductPage(
           ? '- ' + pageData.reviewHighlights.join('\n- ')
           : 'Not available'
 
-      // 🔥 2026-01-04新增：格式化独立站增强数据供AI使用
+      // 格式化独立站增强数据供AI使用
       const reviewsText =
         pageData.reviews && pageData.reviews.length > 0
           ? pageData.reviews
@@ -335,7 +335,7 @@ export async function analyzeProductPage(
           ? '- ' + pageData.secondaryFeatures.join('\n- ')
           : 'Not available'
 
-      // 🎨 插值替换模板变量
+      // � 插值替换模板变量
       prompt = promptTemplate
         .replace('{{pageData.url}}', pageDataUrl)
         .replace('{{pageData.brand}}', pageDataBrand)
@@ -644,7 +644,7 @@ export async function analyzeProductPage(
       }
     }
 
-    // 🔧 修复：确保数组字段转换为字符串（AI可能返回数组或字符串）
+    // 确保数组字段转换为字符串（AI可能返回数组或字符串）
     const ensureString = (value: any): string => {
       if (!value) return ''
       if (Array.isArray(value)) {
@@ -655,10 +655,10 @@ export async function analyzeProductPage(
       return String(value)
     }
 
-    // 🎯 P0优化（2025-12-07）：提取完整AI返回数据，包括 pricing, reviews, competitiveEdges, keywords
+    // 提取完整AI返回数据，包括 pricing, reviews, competitiveEdges, keywords
     logger.debug('🎯 P0优化: 提取完整AI数据...')
 
-    // 🔧 P0修复：字段名映射兼容（Prompt返回字段名 → 代码期望字段名）
+    // 字段名映射兼容（Prompt返回字段名 → 代码期望字段名）
     // Prompt返回: productDescription, sellingPoints, productHighlights
     // 代码期望: brandDescription, uniqueSellingPoints, productHighlights
     const pi = productInfo as any
@@ -672,7 +672,7 @@ export async function analyzeProductPage(
       targetAudience: ensureString(pi.targetAudience),
       category: pi.category,
 
-      // 🆕 完整数据提取
+      // 完整数据提取
       keywords: pi.keywords || undefined,
       sellingPoints: pi.sellingPoints || undefined,
       productDescription: pi.productDescription || undefined,
@@ -726,7 +726,7 @@ export async function analyzeProductPage(
           }
         : undefined,
 
-      // 🎯 v3.3优化（2025-12-08）：店铺/单品差异化分析字段
+      // 店铺/单品差异化分析字段
       // 店铺分析专用字段
       storeQualityLevel: pi.storeQualityLevel || undefined,
       categoryDiversification: pi.categoryDiversification
@@ -786,7 +786,7 @@ export async function analyzeProductPage(
     // 更新productInfo为增强版本
     productInfo = enhancedProductInfo
 
-    // 🔥 修复（2025-12-13）：店铺场景整合热销商品的产品亮点
+    // 店铺场景整合热销商品的产品亮点
     // 问题：店铺场景AI返回的是 hotProducts 数组，每个产品有 productHighlights
     // 解决：使用AI智能整合提炼热销商品的产品亮点，而不是简单汇总
     if (pageType === 'store' && pi.hotProducts && Array.isArray(pi.hotProducts)) {
@@ -808,10 +808,10 @@ export async function analyzeProductPage(
         })
 
         if (allProductHighlights.length > 0) {
-          // 📦 从数据库加载prompt模板(版本管理)
+          // 从数据库加载prompt模板(版本管理)
           const promptTemplate = await loadPrompt('store_highlights_synthesis')
 
-          // 🎨 准备模板变量
+          // � 准备模板变量
           const productCount = allProductHighlights.length.toString()
           const productHighlightsText = allProductHighlights
             .map(
@@ -822,7 +822,7 @@ ${p.highlights.map((h) => `- ${h}`).join('\n')}
             )
             .join('\n')
 
-          // 🎨 插值替换模板变量
+          // � 插值替换模板变量
           const synthesisPrompt = promptTemplate
             .replace('{{productCount}}', productCount)
             .replace('{{productHighlights}}', productHighlightsText)
@@ -833,7 +833,7 @@ ${p.highlights.map((h) => `- ${h}`).join('\n')}
               operationType: 'store_highlights_synthesis',
               prompt: synthesisPrompt,
               temperature: 0.7,
-              maxOutputTokens: 4096, // 🔥 提升到4096，避免店铺产品亮点整合被截断
+              maxOutputTokens: 4096, // 提升到4096，避免店铺产品亮点整合被截断
             },
             userId
           )
@@ -890,7 +890,7 @@ ${p.highlights.map((h) => `- ${h}`).join('\n')}
       }
     }
 
-    // 📊 数据提取统计
+    // 数据提取统计
     logger.debug('📊 AI数据提取统计:')
     logger.debug(
       `  - 基础字段: brandDescription(${productInfo.brandDescription?.length || 0}), uniqueSellingPoints(${productInfo.uniqueSellingPoints?.length || 0})`
@@ -900,7 +900,7 @@ ${p.highlights.map((h) => `- ${h}`).join('\n')}
     logger.debug(`  - reviews: ${productInfo.reviews ? 'YES' : 'NO'}`)
     logger.debug(`  - promotions: ${productInfo.promotions ? 'YES' : 'NO'}`)
     logger.debug(`  - competitiveEdges: ${productInfo.competitiveEdges ? 'YES' : 'NO'}`)
-    // 🎯 v3.3优化：新增字段统计
+    // 新增字段统计
     logger.debug(`  - pageType: ${productInfo.pageType || 'unknown'}`)
     logger.debug(`  - storeQualityLevel: ${productInfo.storeQualityLevel || 'N/A'}`)
     logger.debug(

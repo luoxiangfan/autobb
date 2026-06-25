@@ -1,10 +1,10 @@
 /**
  * Helpers for normalizing Google Ads mutate/update operations.
  *
- * In this codebase we sometimes build "mutate" style ops:
- *   { update: {...}, update_mask: 'field.path' }
- * But the `google-ads-api` Node client `*.update()` expects plain resource objects:
- *   { resource_name: 'customers/...', field: value }
+ * In this codebase we sometimes build "mutate" style ops
+ * { update: {...}, update_mask: 'field.path' }
+ * But the `google-ads-api` Node client `*.update()` expects plain resource objects
+ * { resource_name: 'customers/...', field: value }
  */
 
 export type MutateStyleUpdateOperation = {

@@ -13,7 +13,7 @@ import { googleAdsSyncLogger } from '../../common/logger'
 
 type CampaignExtensionAssetType = 'CALLOUT' | 'SITELINK'
 
-/** Resolve extension type from campaign_asset.field_type, asset.type, or nested asset fields. */
+/* * Resolve extension type from campaign_asset.field_type, asset.type, or nested asset fields. */
 function resolveCampaignExtensionAssetType(row: any): CampaignExtensionAssetType | null {
   const fieldType = String(row.campaign_asset?.field_type || '').toUpperCase()
   if (fieldType === 'CALLOUT' || fieldType === 'SITELINK') {
@@ -64,7 +64,7 @@ async function fetchAllDataFromGoogleAds(params: {
   } = params
 
   try {
-    // 🔧 查询 1：获取广告、广告组、广告系列及预算数据
+    // 查询 1：获取广告、广告组、广告系列及预算数据
     const query1 = `
       SELECT
         campaign.id,
@@ -84,7 +84,7 @@ async function fetchAllDataFromGoogleAds(params: {
         AND ad_group_ad.status != 'REMOVED'
     `
 
-    // 🔧 查询 2：获取关键词数据
+    // 查询 2：获取关键词数据
     const query2 = `
       SELECT
         campaign.id,
@@ -100,7 +100,7 @@ async function fetchAllDataFromGoogleAds(params: {
         AND ad_group_criterion.status != 'REMOVED'
     `
 
-    // 🔧 查询 3：获取素材资源（Assets）数据
+    // 查询 3：获取素材资源（Assets）数据
     const query3 = `
       SELECT
         campaign.id,
@@ -118,7 +118,7 @@ async function fetchAllDataFromGoogleAds(params: {
         AND campaign_asset.field_type IN ('CALLOUT', 'SITELINK')
     `
 
-    // 🔧 查询 4：获取广告系列层级的定位（国家/语言）
+    // 查询 4：获取广告系列层级的定位（国家/语言）
     const query4 = `
       SELECT
         campaign.id,
@@ -151,7 +151,7 @@ async function fetchAllDataFromGoogleAds(params: {
       message: String(`[GoogleAds Sync] Executing GAQL queries for customer ${customerId}...`),
     })
 
-    // 🔧 执行五个查询（串行，间隔 1 秒，避免 API 限流）
+    // 执行五个查询（串行，间隔 1 秒，避免 API 限流）
     let results1: any[] = []
     let results2: any[] = []
     let results3: any[] = []
@@ -168,7 +168,7 @@ async function fetchAllDataFromGoogleAds(params: {
       })
       results1 = r1?.results || []
 
-      // 🔧 等待 1 秒
+      // 等待 1 秒
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 查询 2
@@ -180,7 +180,7 @@ async function fetchAllDataFromGoogleAds(params: {
       })
       results2 = r2?.results || []
 
-      // 🔧 等待 1 秒
+      // 等待 1 秒
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 查询 3
@@ -192,7 +192,7 @@ async function fetchAllDataFromGoogleAds(params: {
       })
       results3 = r3?.results || []
 
-      // 🔧 等待 1 秒
+      // 等待 1 秒
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 查询 4
@@ -204,7 +204,7 @@ async function fetchAllDataFromGoogleAds(params: {
       })
       results4 = r4?.results || []
 
-      // 🔧 等待 1 秒
+      // 等待 1 秒
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 查询 5
@@ -297,7 +297,7 @@ async function fetchAllDataFromGoogleAds(params: {
       assetRowCount: results3.length,
     })
 
-    // 🔧 在内存中处理数据，按 ID 分组
+    // 在内存中处理数据，按 ID 分组
     const campaignMap = new Map<string, GoogleAdsCampaign>()
     const query1ByCampaign = new Map<string, any[]>()
     const query2ByCampaign = new Map<string, any[]>()
@@ -466,7 +466,7 @@ async function fetchAllDataFromGoogleAds(params: {
       }
     }
 
-    // 🔧 聚合成完整的广告系列数据并返回
+    // 聚合成完整的广告系列数据并返回
     const campaigns: any[] = []
     const auditRows: CampaignSyncAuditInsert[] = []
 

@@ -101,7 +101,7 @@ export class IPRocketProvider implements ProxyProvider {
         }
       }
 
-      // 🔍 记录响应内容用于诊断（如果看起来不正常）
+      // 记录响应内容用于诊断（如果看起来不正常）
       if (text.length > 200 || !text.includes(':')) {
         console.warn(`[IPRocket] 响应内容异常（前200字符）: ${text.substring(0, 200)}`)
       }
@@ -113,7 +113,7 @@ export class IPRocketProvider implements ProxyProvider {
 
       const parts = firstLine.split(':')
       if (parts.length !== 4) {
-        // 🔍 记录详细错误信息用于诊断
+        // 记录详细错误信息用于诊断
         console.error(`[IPRocket] 代理格式错误详情:`)
         console.error(`  期望格式: host:port:username:password (4个字段)`)
         console.error(`  实际字段数: ${parts.length}`)
@@ -257,7 +257,7 @@ export class IPRocketProvider implements ProxyProvider {
         }
       }
 
-      // 🔍 记录响应内容用于诊断（如果看起来不正常）
+      // 记录响应内容用于诊断（如果看起来不正常）
       if (text.length > 200 || !text.includes(':')) {
         console.warn(`[IPRocket Playwright] 响应内容异常（前200字符）: ${text.substring(0, 200)}`)
       }
@@ -267,7 +267,7 @@ export class IPRocketProvider implements ProxyProvider {
       const parts = firstLine.split(':')
 
       if (parts.length !== 4) {
-        // 🔍 记录详细错误信息用于诊断
+        // 记录详细错误信息用于诊断
         console.error(`[IPRocket Playwright] 代理格式错误详情:`)
         console.error(`  期望格式: host:port:username:password (4个字段)`)
         console.error(`  实际字段数: ${parts.length}`)

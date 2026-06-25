@@ -33,7 +33,7 @@ interface KeywordVolume {
   competitionIndex: number
   lowTopPageBid: number
   highTopPageBid: number
-  /** 搜索量数据是否可用（如 developer token 无 Basic/Standard access 时不可用） */
+  /* * 搜索量数据是否可用（如 developer token 无 Basic/Standard access 时不可用） */
   volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS'
   requestedCountry?: string
   effectiveCountry?: string
@@ -103,7 +103,7 @@ function isInvalidGrantMessage(message: string): boolean {
   return msg.includes('invalid_grant') || msg.includes('token has been expired or revoked')
 }
 
-// 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整 OAuth 凭证
+// 独立账号模式 - 每个用户必须配置自己的完整 OAuth 凭证
 // Get Google Ads API config - supports both OAuth and Service Account authentication
 export async function getGoogleAdsConfig(
   userId?: number,
@@ -287,13 +287,13 @@ export async function getKeywordSearchVolumes(
       )
     }
 
-    // 🔥 2025-12-16增强：添加详细日志显示缓存命中情况
+    // 添加详细日志显示缓存命中情况
     console.log(`[KeywordPlanner] 接收 ${keywords.length} 个关键词查询请求`)
 
     // 1. Check Redis cache first
     const cachedVolumes = await getBatchCachedVolumes(keywords, effectiveCountry, effectiveLanguage)
     const uncachedKeywords = keywords.filter((kw) => !cachedVolumes.has(kw.toLowerCase()))
-    // 🔧 重要：Redis 中 volume=0 可能来自历史错误/不可用降级，不能直接当作“命中最终值”
+    // 重要：Redis 中 volume=0 可能来自历史错误/不可用降级，不能直接当作“命中最终值”
     // 仍然允许走 DB cache 覆盖（避免“全是0搜索量”的严重退化）。
     const zeroCachedKeywords = keywords.filter((kw) => {
       const cached = cachedVolumes.get(kw.toLowerCase())
@@ -336,7 +336,7 @@ export async function getKeywordSearchVolumes(
       const langPlaceholders = languageCandidates.map(() => '?').join(',')
       const recentCutoffExpr = dateMinusDays(7)
 
-      // 🔧 修复(2026-01-21): 使用规范化的关键词查询，解决标点符号匹配问题
+      // 使用规范化的关键词查询，解决标点符号匹配问题
       // 例如: "dr. mercola" 和 "dr mercola" 应该匹配同一条记录
       const normalizedToOriginals = new Map<string, Set<string>>() // normalized -> originals[]
       for (const original of dbLookupKeywords) {
@@ -381,7 +381,7 @@ export async function getKeywordSearchVolumes(
         }>
 
         rows.forEach((row) => {
-          // 修复(2025-12-19): 从数据库读取competition_level和avg_cpc_micros
+          // 从数据库读取competition_level和avg_cpc_micros
           const avgCpc = (row.avg_cpc_micros || 0) / 1_000_000
           const normalizedDbKeyword = normalizeGoogleAdsKeyword(row.keyword)
           const originals = normalizedToOriginals.get(normalizedDbKeyword)
@@ -427,7 +427,7 @@ export async function getKeywordSearchVolumes(
 
     let shouldRetry = false
     if (needApiKeywords.length > 0) {
-      // 🔧 修复(2025-12-12): 独立账号模式 - 必须传递 userId
+      // 独立账号模式 - 必须传递 userId
       // 支持 OAuth 和服务账号两种认证方式
       const config = await getGoogleAdsConfig(
         userId,
@@ -538,7 +538,7 @@ export async function getKeywordSearchVolumes(
               // 继续执行，google-ads-api 库会使用 refresh_token 自动刷新
             }
 
-            // 🔧 修复(2025-12-26): 使用统一的 getGoogleAdsClient
+            // 使用统一的 getGoogleAdsClient
             const client = getGoogleAdsClient({
               client_id: config.clientId,
               client_secret: config.clientSecret,
@@ -568,10 +568,10 @@ export async function getKeywordSearchVolumes(
 
               while (!success && retries <= maxRetries) {
                 try {
-                  // 🔧 修复(2025-12-24): 使用统一的服务访问方式
+                  // 使用统一的服务访问方式
                   const keywordPlanIdeas = getKeywordPlanIdeaService(customer, config.authType)
 
-                  // 🔧 修复(2025-12-25): 确保customer_id格式正确（去掉横杠）
+                  // 确保customer_id格式正确（去掉横杠）
                   const cleanCustomerId = config.customerId.replace(/-/g, '')
 
                   const requestParams = {
@@ -601,14 +601,14 @@ export async function getKeywordSearchVolumes(
                     `[KeywordPlanner] 解析结果数量: ${Array.isArray(results) ? results.length : 'N/A'}`
                   )
 
-                  // 🔧 修复(2025-12-17): generateKeywordHistoricalMetrics 返回字段可能是
+                  // generateKeywordHistoricalMetrics 返回字段可能是
                   // snake_case (keyword_metrics) 或 camelCase (keywordMetrics)
                   // 或者带下划线前缀 (_keyword_metrics) - protobuf 格式
                   if (results.length > 0) {
                     console.log(
                       `[KeywordPlanner] 首个结果结构: ${Object.keys(results[0] || {}).join(', ')}`
                     )
-                    // 🔍 调试：打印首个结果的完整内容
+                    // 调试：打印首个结果的完整内容
                     console.log(
                       `[KeywordPlanner] 首个结果详情: ${JSON.stringify(results[0], null, 2).slice(0, 800)}`
                     )
@@ -663,7 +663,7 @@ export async function getKeywordSearchVolumes(
                         usedFallbackLanguage,
                       })
                     } else if (text) {
-                      // 🔧 修复(2025-12-24): 有关键词但metrics为null时,返回0搜索量而不是丢弃关键词
+                      // 有关键词但metrics为null时,返回0搜索量而不是丢弃关键词
                       // 原因: 长尾词或不常见关键词可能没有metrics数据,但仍需要返回给调用方
                       console.log(
                         `[KeywordPlanner] 关键词"${text}"缺少metrics数据，返回默认值(搜索量=0)`
@@ -675,7 +675,7 @@ export async function getKeywordSearchVolumes(
                         `  - _keyword_metrics: ${typeof result._keyword_metrics} = ${JSON.stringify(result._keyword_metrics)}`
                       )
 
-                      // ✅ 仍然添加到结果中,避免关键词丢失
+                      // 仍然添加到结果中,避免关键词丢失
                       apiVolumes.set(text.toLowerCase(), {
                         keyword: text,
                         avgMonthlySearches: 0,
@@ -794,7 +794,7 @@ export async function getKeywordSearchVolumes(
                     competition: vol.competition !== 'UNKNOWN' ? vol.competition : undefined,
                     competitionIndex: vol.competitionIndex,
                   })
-                  // 修复(2025-12-19): 同时保存competition_level和avg_cpc_micros
+                  // 同时保存competition_level和avg_cpc_micros
                   await saveToGlobalKeywords(
                     kw,
                     effectiveCountry,
@@ -910,13 +910,13 @@ export async function getKeywordSearchVolumes(
 /**
  * 保存到全局关键词表
  *
- * 缓存策略：
- * - created_at: 首次缓存或搜索量变化时的时间，用于7天过期判断
- * - cached_at: 最后一次API调用时间，用于记录
- * - 如果搜索量变化，重置created_at开始新的7天计时
- * - 如果搜索量未变化，保持created_at不变，确保7天后会重新从API刷新
+ * 缓存策略
+ * created_at: 首次缓存或搜索量变化时的时间，用于7天过期判断
+ * cached_at: 最后一次API调用时间，用于记录
+ * 如果搜索量变化，重置created_at开始新的7天计时
+ * 如果搜索量未变化，保持created_at不变，确保7天后会重新从API刷新
  *
- * 修复(2025-12-19): 保存competition_level和avg_cpc_micros数据
+ * 保存competition_level和avg_cpc_micros数据
  */
 async function saveToGlobalKeywords(
   keyword: string,
@@ -928,7 +928,7 @@ async function saveToGlobalKeywords(
 ): Promise<void> {
   try {
     const { normalizeGoogleAdsKeyword } = await import('@/lib/google-ads/keyword/normalizer')
-    // 🔧 修复(2026-01-21): 存储规范化的关键词，解决标点符号匹配问题
+    // 存储规范化的关键词，解决标点符号匹配问题
     const normalizedKeyword = normalizeGoogleAdsKeyword(keyword)
 
     const db = await getDatabase()

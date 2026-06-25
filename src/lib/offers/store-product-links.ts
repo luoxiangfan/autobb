@@ -1,4 +1,4 @@
-/** 店铺模式下单品推广链接数量上限（输入、存储、抓取、创意生成共用） */
+/* * 店铺模式下单品推广链接数量上限（输入、存储、抓取、创意生成共用） */
 export const MAX_STORE_PRODUCT_LINKS = 6 as const
 
 export function storeProductLinksTypeError(): string {

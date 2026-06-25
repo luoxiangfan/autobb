@@ -42,9 +42,7 @@ export async function calculateCompetitivePositioning(
 
   console.log('🎯 评估竞争定位维度 (混合方案 - 全语言支持):')
 
-  // ========================================
   // 第一层：快速通用检测（支持所有语言）
-  // ========================================
 
   // 1. 价格优势量化检测 (0-3分)
   // 通用货币符号 + 数字模式（支持全球所有货币）
@@ -176,9 +174,8 @@ export async function calculateCompetitivePositioning(
   const totalScore = priceAdvantage + uniqueMarketPosition + competitiveComparison + valueEmphasis
   console.log(`   🎯 竞争定位总分（第一层）: ${totalScore.toFixed(1)}/10`)
 
-  // ========================================
   // 第二层：AI增强分析（按需触发）
-  // ========================================
+
   // 触发条件：快速检测分数 > 6分（说明有较强的竞争定位元素，值得深度分析）
   const AI_ENHANCEMENT_THRESHOLD = AD_STRENGTH_COMPETITIVE_POSITIONING_CONFIG.aiEnhancementThreshold
   const aiEnhancementEnabled =
@@ -220,9 +217,8 @@ export async function calculateCompetitivePositioning(
   }
 }
 
-// ========================================
 // 缓存机制（Redis优先，内存降级）
-// ========================================
+
 interface CachedResult {
   score: number
   weight: 0.1
@@ -365,7 +361,7 @@ async function setCachedResult(adCopyText: string, result: CachedResult) {
 }
 
 /**
- * 🤖 AI增强的竞争定位分析（第二层）
+ * AI增强的竞争定位分析（第二层）
  *
  * 使用Gemini进行深度语义分析，支持所有语言
  * 仅在第一层检测分数 > 6分时触发
@@ -453,7 +449,7 @@ async function enhanceCompetitivePositioningWithAI(
     })
 
     // 智能模型选择：广告强度评估使用Flash模型（简单评分任务）
-    // 🔧 修复：添加try-catch和降级策略
+    // 添加try-catch和降级策略
     let result
     try {
       result = await generateContent(
@@ -461,7 +457,7 @@ async function enhanceCompetitivePositioningWithAI(
           operationType: 'ad_strength_evaluation',
           prompt,
           temperature: 0.3, // 低温度确保一致性
-          maxOutputTokens: 4096, // 🔧 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
+          maxOutputTokens: 4096, // 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
           responseSchema: {
             type: 'OBJECT',
             properties: {
@@ -497,7 +493,7 @@ async function enhanceCompetitivePositioningWithAI(
           operationType: 'ad_strength_evaluation',
           prompt: fallbackPrompt,
           temperature: 0.3,
-          maxOutputTokens: 4096, // 🔧 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
+          maxOutputTokens: 4096, // 增加token限制，避免Gemini 2.5 Pro thinking模式导致MAX_TOKENS错误（thinking tokens ~2000 + response ~500）
         },
         userId
       )
@@ -524,7 +520,7 @@ async function enhanceCompetitivePositioningWithAI(
       })
     }
 
-    // 🔧 健壮的JSON解析
+    // 健壮的JSON解析
     let aiScores: CompetitivePositioningAIScores
     try {
       aiScores = parseCompetitivePositioningAiScores(result.text)

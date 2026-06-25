@@ -172,9 +172,9 @@ const navigationItems: NavItem[] = [
     icon: Lightbulb,
   },
   // {
-  //   label: '投放评分',
-  //   href: '/launch-score',
-  //   icon: Rocket,
+  // label: '投放评分',
+  // href: '/launch-score',
+  // icon: Rocket,
   // },
   {
     label: 'Google Ads账号',

@@ -3,19 +3,19 @@ import { getDatabase } from '@/lib/db'
 import { datetimeMinusHours, datetimeMinusMinutes } from '@/lib/db'
 import { getRedisClient } from '@/lib/common/server'
 
-/** 异步账号刷新状态 TTL（与 Redis key 过期、running  freshness 一致） */
+/* * 异步账号刷新状态 TTL（与 Redis key 过期、running freshness 一致） */
 const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_TTL_MS = 10 * 60 * 1000
 
-/** 已完成刷新在 Redis 中的短 TTL（running 互斥已结束） */
+/* * 已完成刷新在 Redis 中的短 TTL（running 互斥已结束） */
 const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_COMPLETED_TTL_SEC = 60
 
-/** 失败状态保留更久，供 UI 展示 refreshError */
+/* * 失败状态保留更久，供 UI 展示 refreshError */
 const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_FAILED_TTL_SEC = 600
 
-/** 长 sync 期间续期锁的间隔（须小于 TTL） */
+/* * 长 sync 期间续期锁的间隔（须小于 TTL） */
 const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_HEARTBEAT_MS = 3 * 60 * 1000
 
-/** DB 历史行保留时长 */
+/* * DB 历史行保留时长 */
 const GOOGLE_ADS_ACCOUNT_ASYNC_REFRESH_ROW_RETENTION_MS = 24 * 60 * 60 * 1000
 
 export type GoogleAdsAccountAsyncRefreshStatus = 'running' | 'completed' | 'failed'
@@ -298,7 +298,7 @@ export function resetGoogleAdsAccountAsyncRefreshCleanupThrottleForTests(): void
   lastRowCleanupAtMs = 0
 }
 
-/** 删除超过保留期的历史行（节流，避免每次请求都扫表） */
+/* * 删除超过保留期的历史行（节流，避免每次请求都扫表） */
 export async function cleanupStaleGoogleAdsAccountAsyncRefreshRows(): Promise<void> {
   const nowMs = Date.now()
   if (nowMs - lastRowCleanupAtMs < ROW_CLEANUP_INTERVAL_MS) {

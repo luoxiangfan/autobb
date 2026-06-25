@@ -6,11 +6,11 @@ import { getDatabase } from '@/lib/db'
  * POST /api/admin/backups/cleanup-soft-deleted
  * 清理90天前的软删除数据（物理删除）
  *
- * 功能：
- * - 清理campaigns表中90天前软删除的记录
- * - 清理offers表中90天前软删除的记录
- * - 保留关联的performance数据（已由外键CASCADE处理）
- * - 需要管理员权限
+ * 功能
+ * 清理campaigns表中90天前软删除的记录
+ * 清理offers表中90天前软删除的记录
+ * 保留关联的performance数据（已由外键CASCADE处理）
+ * 需要管理员权限
  */
 export const POST = withAuth(
   async (request: NextRequest, user) => {

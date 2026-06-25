@@ -12,7 +12,7 @@ export const GET = withAuth(
     try {
       const db = getDatabase()
 
-      // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
+      // PostgreSQL兼容性：布尔字段兼容性处理
       const isActiveValue = true
 
       // 获取所有激活的Prompt版本
@@ -160,7 +160,7 @@ export const POST = withAuth(
       // 如果是第一个版本，或者请求激活此版本，则取消其他版本的激活状态
       const isActive = body.isActive !== undefined ? body.isActive : true
 
-      // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
+      // PostgreSQL兼容性：布尔字段兼容性处理
       const isActiveFalse = false
 
       if (isActive) {

@@ -2,7 +2,7 @@
  * Google Ads Performance Sync Service
  * 自动同步广告创意效果数据用于加分计算
  *
- * 支持两种认证方式：
+ * 支持两种认证方式
  * 1. OAuth 2.0 (传统方式)
  * 2. 服务账号认证 (Service Account)
  */
@@ -28,7 +28,7 @@ interface SyncResult {
 
 /**
  * 同步单个广告创意的效果数据
- * 🔧 修复(2025-12-26): 使用统一客户端（支持 Python 代理）
+ * 使用统一客户端（支持 Python 代理）
  */
 async function syncCreativePerformance(
   adCreativeId: number,
@@ -174,7 +174,7 @@ async function syncCreativePerformance(
 
 /**
  * 同步用户所有广告创意的效果数据
- * 🔧 修复(2025-12-26): 使用统一客户端（支持 Python 代理）
+ * 使用统一客户端（支持 Python 代理）
  */
 async function syncAllCreativesPerformance(
   userId: string,
@@ -242,7 +242,7 @@ async function syncAllCreativesPerformance(
 
 /**
  * API endpoint helper - Sync performance for a specific user
- * 🔧 修复(2025-12-26): 使用统一客户端（自动选择 OAuth 或服务账号）
+ * 使用统一客户端（自动选择 OAuth 或服务账号）
  */
 export async function syncUserPerformanceData(userId: string): Promise<SyncResult> {
   try {

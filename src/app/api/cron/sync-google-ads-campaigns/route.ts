@@ -2,11 +2,11 @@
  * POST /api/cron/sync-google-ads-campaigns
  * 定时任务：从 Google Ads 同步广告系列到数据库
  *
- * 功能：
+ * 功能
  * 1. 为符合条件的用户入队 `google-ads-campaign-sync` 后台任务（异步执行）
  * 2. 任务执行时为每个广告系列创建关联的 Offer，并标记需完善信息
  *
- * 调用方式：
+ * 调用方式
  * 1. 广告系列页「同步」：登录用户 Cookie，仅为当前用户入队
  * 2. 运维批量 Cron：`Authorization: Bearer $CRON_SECRET` 且 `?scope=all`，为所有活跃用户入队
  * 3. 实际同步由队列 Worker（QUEUE_BACKGROUND_WORKER）执行

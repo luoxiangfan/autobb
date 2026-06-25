@@ -1,10 +1,10 @@
 /**
  * 风险提示系统
  *
- * 功能：
- * - 链接可用性检测
- * - 风险提示创建和管理
- * - 每日自动检查
+ * 功能
+ * 链接可用性检测
+ * 风险提示创建和管理
+ * 每日自动检查
  */
 
 import { getDatabase } from '@/lib/db'
@@ -161,7 +161,7 @@ async function saveLinkCheckResult(
       url,
       result.statusCode,
       result.responseTime,
-      // 🔧 PostgreSQL兼容性：确保boolean转换为正确的值
+      // PostgreSQL兼容性：确保boolean转换为正确的值
       result.isAccessible,
       result.isRedirected,
       result.finalUrl,
@@ -398,7 +398,7 @@ export async function checkAllUserLinks(userId: number): Promise<{
 }> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
+  // PostgreSQL兼容性：布尔字段兼容性处理
   const isDeletedFalse = false
 
   // 获取用户的所有活跃Offers（包含目标国家）
@@ -505,7 +505,7 @@ async function checkAdsAccountStatus(userId: number): Promise<{
 }> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
+  // PostgreSQL兼容性is_active在PostgreSQL中是BOOLEAN类型
   const isActiveCondition = 'is_active = true'
 
   // 获取用户的所有活跃Ads账号
@@ -528,7 +528,7 @@ async function checkAdsAccountStatus(userId: number): Promise<{
     }
   }
 
-  // ⚡ P0性能优化: 修复N+1查询问题
+  // ⚡ P0性能修复N+1查询问题
   // 原问题: 循环N个accounts，每个执行3次查询 = 3N次查询
   // 优化后: 3次批量查询，使用Map分组 = 3次查询（与accounts数量无关）
 
@@ -683,7 +683,7 @@ export async function dailyLinkCheck(): Promise<{
   const db = await getDatabase()
   const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
-  // 🔧 PostgreSQL兼容性：布尔字段兼容性处理
+  // PostgreSQL兼容性：布尔字段兼容性处理
   const isDeletedFalse = false
 
   // 获取所有有Offers的用户

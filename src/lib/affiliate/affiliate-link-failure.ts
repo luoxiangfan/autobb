@@ -17,7 +17,7 @@ export interface AffiliateLinkFailureInfo {
 
 const PARTNERBOOST_INVALID_LINK_PATH = '/partner/invalid-link'
 
-/** YeahPromos openurl 跟踪跳转常见中间域 / 错误页 */
+/* * YeahPromos openurl 跟踪跳转常见中间域 / 错误页 */
 const YEAHPROMOS_TRACKING_HOST_KEYWORDS = ['dailybacks.com', 'earnlygo.com']
 
 const AFFILIATE_PLATFORM_HOST_KEYWORDS = [

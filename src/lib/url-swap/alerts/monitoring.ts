@@ -3,10 +3,10 @@
  * src/lib/url-swap/alerts/monitoring.ts
  *
  * 功能：监控换链接任务的健康状态
- * - 全局健康度评估
- * - 异常任务检测
- * - 性能指标统计
- * - 自动告警触发
+ * 全局健康度评估
+ * 异常任务检测
+ * 性能指标统计
+ * 自动告警触发
  */
 
 import { getDatabase } from '@/lib/db'

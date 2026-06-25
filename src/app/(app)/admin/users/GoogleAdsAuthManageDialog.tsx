@@ -55,7 +55,7 @@ function isAuthConfigured(status: AuthStatus | null): boolean {
   return false
 }
 
-/** 是否仍存在可清除的凭证（含双栈 / 半成品） */
+/* * 是否仍存在可清除的凭证（含双栈 / 半成品） */
 function hasGoogleAdsCredentialsToClear(status: AuthStatus | null): boolean {
   if (!status) return false
   if (status.dualStack) return true

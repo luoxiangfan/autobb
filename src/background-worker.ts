@@ -1,12 +1,12 @@
 /**
  * Background Queue Worker (非核心任务)
  *
- * 目标：
- * - 将 click-farm / url-swap 等非核心任务放到独立进程执行
- * - 通过独立 Redis key prefix 隔离 pending/running 集合，避免与核心任务互相争抢
+ * 目标
+ * 将 click-farm / url-swap 等非核心任务放到独立进程执行
+ * 通过独立 Redis key prefix 隔离 pending/running 集合，避免与核心任务互相争抢
  *
- * 运行方式（生产建议由 supervisord 管理）：
- * - `QUEUE_BACKGROUND_WORKER=1 node dist/background-worker.js`
+ * 运行方式（生产建议由 supervisord 管理）
+ * `QUEUE_BACKGROUND_WORKER=1 node dist/background-worker.js`
  */
 
 import { getBackgroundQueueManager } from './lib/queue/unified-queue-manager'

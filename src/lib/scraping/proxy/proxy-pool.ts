@@ -302,7 +302,7 @@ class ProxyPoolManager {
     await this.refreshPool(country)
   }
 
-  // ============ Private Methods ============
+  // Private Methods
 
   /**
    * Warm up all country pools in parallel
@@ -370,7 +370,7 @@ class ProxyPoolManager {
   }
 }
 
-// ============ Singleton Instance ============
+// Singleton Instance
 
 // 使用 global 对象防止热重载时重置
 declare global {

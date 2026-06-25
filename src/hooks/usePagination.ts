@@ -3,50 +3,50 @@
 /**
  * usePagination - 统一分页状态管理Hook
  *
- * 用途：
- * - 管理分页状态 (currentPage, pageSize)
- * - 提供便捷的分页操作方法
- * - 计算分页元数据
+ * 用途
+ * 管理分页状态 (currentPage, pageSize)
+ * 提供便捷的分页操作方法
+ * 计算分页元数据
  *
- * 使用示例：
+ * 使用示例
  * const { currentPage, pageSize, setPage, setPageSize, offset, resetPage } = usePagination()
  */
 
 import { useState, useCallback, useMemo } from 'react'
 
 export interface UsePaginationOptions {
-  /** 初始页码，默认 1 */
+  /* * 初始页码，默认 1 */
   initialPage?: number
-  /** 初始每页条数，默认 10 */
+  /* * 初始每页条数，默认 10 */
   initialPageSize?: number
-  /** 可选的每页条数选项 */
+  /* * 可选的每页条数选项 */
   pageSizeOptions?: number[]
 }
 
 export interface UsePaginationReturn {
-  /** 当前页码 (1-based) */
+  /* * 当前页码 (1-based) */
   currentPage: number
-  /** 每页条数 */
+  /* * 每页条数 */
   pageSize: number
-  /** 设置页码 */
+  /* * 设置页码 */
   setPage: (page: number) => void
-  /** 设置每页条数（会自动重置到第1页） */
+  /* * 设置每页条数（会自动重置到第1页） */
   setPageSize: (size: number) => void
-  /** 重置到第1页 */
+  /* * 重置到第1页 */
   resetPage: () => void
-  /** 计算 offset (用于 API 查询) */
+  /* * 计算 offset (用于 API 查询) */
   offset: number
-  /** 计算总页数 */
+  /* * 计算总页数 */
   getTotalPages: (total: number) => number
-  /** 是否有下一页 */
+  /* * 是否有下一页 */
   hasNextPage: (total: number) => boolean
-  /** 是否有上一页 */
+  /* * 是否有上一页 */
   hasPrevPage: boolean
-  /** 下一页 */
+  /* * 下一页 */
   nextPage: () => void
-  /** 上一页 */
+  /* * 上一页 */
   prevPage: () => void
-  /** 可选的每页条数选项 */
+  /* * 可选的每页条数选项 */
   pageSizeOptions: number[]
 }
 

@@ -87,12 +87,12 @@ export function getKeywordPlannerSiteFilterUrlForOffer(offer: {
 /**
  * Get a URL seed for Keyword Planner to filter unrelated keywords.
  *
- * Preferred:
- * - Non-marketplace origin (scheme + host)
- * - Brand official site origin (from extraction_metadata)
+ * Preferred
+ * Non-marketplace origin (scheme + host)
+ * Brand official site origin (from extraction_metadata)
  *
- * Fallback (optional):
- * - Marketplace product page URL (full URL) when no official site is available.
+ * Fallback (optional)
+ * Marketplace product page URL (full URL) when no official site is available.
  *
  * This helps disambiguate short/ambiguous brands (e.g. "Rove") to reduce unrelated ideas.
  */

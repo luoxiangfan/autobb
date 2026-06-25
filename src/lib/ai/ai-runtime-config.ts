@@ -26,7 +26,7 @@ function normalizeProvider(value?: string | null): GeminiProvider {
 /**
  * 统一解析用户当前生效的 AI 配置。
  *
- * 规则：
+ * 规则
  * 1. 仅使用用户级配置（不回退全局）
  * 2. 严格按 provider 取 key，不跨 provider 混用 key
  * 3. 只返回“最后保存并可生效”的单一模型

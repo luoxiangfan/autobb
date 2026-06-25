@@ -18,7 +18,7 @@ import {
 import { Settings, Save, RefreshCw, Bell, Clock, AlertTriangle } from 'lucide-react'
 
 /**
- * 🔧 修复(2025-12-11): 统一使用 camelCase 与 API 响应匹配
+ * 统一使用 camelCase 与 API 响应匹配
  */
 interface SyncConfig {
   id: number
@@ -78,7 +78,7 @@ export default function SyncSettingsPage() {
       const data = await response.json()
       setConfig(data.config)
 
-      // Initialize form state - 🔧 修复: 使用 camelCase 字段名
+      // Initialize form state - 使用 camelCase 字段名
       setAutoSyncEnabled(data.config.autoSyncEnabled)
       setSyncInterval(data.config.syncIntervalHours)
       setMaxRetries(data.config.maxRetryAttempts)
@@ -116,7 +116,7 @@ export default function SyncSettingsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        // 🔧 修复(2025-12-11): PUT 请求体使用 camelCase
+        // PUT 请求体使用 camelCase
         body: JSON.stringify({
           autoSyncEnabled: autoSyncEnabled,
           syncIntervalHours: syncInterval,

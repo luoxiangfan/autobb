@@ -41,7 +41,7 @@ export async function createGoogleAdsCalloutExtensions(params: {
     }
 
     const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
-    // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+    // 服务账号模式使用Python服务
     if (authType === 'service_account') {
       const { createCalloutExtensionsPython } = await import('../../campaign/server')
       const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
@@ -202,7 +202,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
   })
 
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { createSitelinkExtensionsPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
@@ -252,7 +252,7 @@ export async function createGoogleAdsSitelinkExtensions(params: {
         sitelinkAsset.description2 = desc2
       }
 
-      // 关键修复：final_urls必须在Asset层级，不是sitelink_asset内部
+      // 关键final_urls必须在Asset层级，不是sitelink_asset内部
       const assetObj: Record<string, unknown> = {
         sitelink_asset: sitelinkAsset,
         final_urls: [sitelink.url],

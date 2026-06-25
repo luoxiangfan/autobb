@@ -86,9 +86,7 @@ export async function getCachedPageData(
   }
 }
 
-// ============================================
 // Keyword Search Volume Caching
-// ============================================
 
 const PREFIX = process.env.REDIS_KEY_PREFIX || 'autoads:'
 
@@ -147,7 +145,7 @@ export async function batchCacheVolumes(
 
     for (const item of data) {
       const key = getKeywordCacheKey(item.keyword, country, language)
-      // 修复(2025-12-19): 保存competition_level数据
+      // 保存competition_level数据
       pipeline.setex(
         key,
         ttlSeconds,

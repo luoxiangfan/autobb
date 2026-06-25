@@ -4,7 +4,7 @@
  * Offer列表页 - P1-2优化版 + P2-2导出功能 + 分页 + 批量删除
  * 使用shadcn/ui Table组件 + 筛选器 + CSV导出
  *
- * 优化：使用usePagination Hook统一分页逻辑
+ * 使用usePagination Hook统一分页逻辑
  */
 
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
@@ -1515,7 +1515,7 @@ export default function OffersClientPage() {
                             {/* P1-11: 显示关联的Google Ads账号（只显示非MCC账号） */}
                             {offer.linkedAccounts && offer.linkedAccounts.length > 0 ? (
                               <div className="space-y-1">
-                                {/* 🔧 修复(2025-12-11): snake_case → camelCase */}
+                                {/* snake_case → camelCase */}
                                 {offer.linkedAccounts.map((account, idx) => (
                                   <div key={idx} className="flex items-center gap-1.5 text-xs">
                                     <span className="text-gray-700 font-mono">
@@ -1551,7 +1551,7 @@ export default function OffersClientPage() {
                             primaryAction={{
                               icon: <span className="text-[10px] font-semibold">GO</span>,
                               label: '发布广告',
-                              href: `/offers/${offer.id}/launch`, // 🔥 2026-01-05: 使用href打开新标签页
+                              href: `/offers/${offer.id}/launch`, // 使用href打开新标签页
                               target: '_blank',
                               disabled:
                                 offer.scrapeStatus !== 'completed' || offer.campaignId !== null,

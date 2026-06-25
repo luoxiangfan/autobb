@@ -43,7 +43,7 @@ interface UserOfferBatch {
   offerIds: number[]
 }
 
-/** 用户级并发默认硬上限（可用 QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX 覆盖） */
+/* * 用户级并发默认硬上限（可用 QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX 覆盖） */
 const DEFAULT_USER_CONCURRENCY_CAP = 16
 
 function parsePositiveIntEnv(rawValue: string | undefined, defaultValue: number): number {

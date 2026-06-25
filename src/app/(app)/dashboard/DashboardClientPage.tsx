@@ -35,8 +35,8 @@ interface KPIData {
     roasInfinite: boolean
     ctr: number
     cpc: number
-    currency?: string // 🔧 新增(2025-12-30): 货币代码
-    costs?: Array<{ currency: string; amount: number }> // 🔧 新增: 多货币详情
+    currency?: string // 货币代码
+    costs?: Array<{ currency: string; amount: number }> // 多货币详情
   }
   changes: {
     impressions: number
@@ -124,7 +124,7 @@ export default function DashboardClientPage() {
     endDate: string
   } | null>(null)
   const [kpiData, setKpiData] = useState<KPIData | null>(null)
-  // 🔧 新增：用户筛选状态
+  // 用户筛选状态
   const [selectedUserId, setSelectedUserId] = useState<string>('all') // 'all' 或用户 ID
   const [users, setUsers] = useState<Array<{ id: number; username: string; email: string }>>([])
   const [isAdmin, setIsAdmin] = useState(false)
@@ -151,7 +151,7 @@ export default function DashboardClientPage() {
    */
   const fetchUsers = async () => {
     try {
-      // 🔧 修复：使用 /api/admin/users API
+      // 使用 /api/admin/users API
       const res = await fetch('/api/admin/users?limit=100', {
         credentials: 'include',
         cache: 'no-store',
@@ -206,7 +206,7 @@ export default function DashboardClientPage() {
         if (showRefresh) {
           kpiParams.set('refresh', 'true')
         }
-        // 🔧 添加用户筛选参数
+        // 添加用户筛选参数
         if (isAdmin) {
           if (selectedUserId === 'all') {
             kpiParams.set('allUsers', 'true')
@@ -255,7 +255,7 @@ export default function DashboardClientPage() {
 
         if (offerRes.ok) {
           const offer = await offerRes.json()
-          // ✅ summary模式：后端直接返回聚合统计，避免拉取完整Offer列表
+          // summary模式：后端直接返回聚合统计，避免拉取完整Offer列表
           if (offer?.summary) {
             setOfferSummary({
               total: offer.summary.total || 0,
@@ -287,7 +287,7 @@ export default function DashboardClientPage() {
     [timeRange, appliedCustomRange, isAdmin, selectedUserId, handleUnauthorized]
   )
 
-  // 🔧 获取用户列表（仅管理员）
+  // 获取用户列表（仅管理员）
   useEffect(() => {
     fetchUsers()
   }, [])
@@ -305,7 +305,7 @@ export default function DashboardClientPage() {
   const formatNumber = (num: number | null | undefined) => (num ?? 0).toLocaleString()
 
   /**
-   * 🔧 修复(2025-12-29): 安全地格式化数值，处理可能为字符串或null的情况
+   * 安全地格式化数值，处理可能为字符串或null的情况
    */
   const safeToFixed = (num: any, decimals: number = 2): string => {
     const value = Number(num ?? 0)
@@ -314,8 +314,8 @@ export default function DashboardClientPage() {
   }
 
   /**
-   * 🔧 新增(2025-12-30): 格式化费用显示（支持多货币）
-   * 🔧 修改(2026-03-10): 多货币时显示转换后的USD总额，与Campaigns页面保持一致
+   * 格式化费用显示（支持多货币）
+   * 修改: 多货币时显示转换后的USD总额，与Campaigns页面保持一致
    */
   const formatCostDisplay = (kpiData: KPIData | null): string => {
     if (!kpiData) return formatCurrency(0, 'USD')
@@ -332,8 +332,8 @@ export default function DashboardClientPage() {
   }
 
   /**
-   * 🔧 新增(2026-03-08): 格式化佣金显示（支持多货币）
-   * 🔧 修改(2026-03-10): 多货币时显示转换后的USD总额，与Campaigns页面保持一致
+   * 格式化佣金显示（支持多货币）
+   * 修改: 多货币时显示转换后的USD总额，与Campaigns页面保持一致
    */
   const formatCommissionDisplay = (kpiData: KPIData | null): string => {
     if (!kpiData) return formatCurrency(0, 'USD')
@@ -350,7 +350,7 @@ export default function DashboardClientPage() {
   }
 
   /**
-   * 🔧 修改(2026-03-10): 多货币时也计算ROAS，与Campaigns页面保持一致
+   * 修改: 多货币时也计算ROAS，与Campaigns页面保持一致
    */
   const formatRoasDisplay = (kpiData: KPIData | null): string => {
     if (!kpiData) return '--'
@@ -361,7 +361,7 @@ export default function DashboardClientPage() {
   }
 
   /**
-   * 🔧 修改(2026-03-10): 多货币时也显示ROAS变化，与Campaigns页面保持一致
+   * 修改: 多货币时也显示ROAS变化，与Campaigns页面保持一致
    */
   const formatRoasChangeText = (kpiData: KPIData | null): string => {
     if (!kpiData) return '--'
@@ -440,7 +440,7 @@ export default function DashboardClientPage() {
             <Button variant="ghost" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </Button>
-            {/* 🔧 用户筛选器（仅管理员） */}
+            {/* 用户筛选器（仅管理员） */}
             {isAdmin && (
               <select
                 value={selectedUserId}

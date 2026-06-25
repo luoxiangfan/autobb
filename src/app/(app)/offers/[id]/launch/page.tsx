@@ -3,8 +3,8 @@
 /**
  * One-Click Ad Launch Page - 一键上广告
  *
- * 🔧 修复(2025-12-13): 调整流程顺序，先绑定账号再配置预算
- * 四步流程：
+ * 调整流程顺序，先绑定账号再配置预算
+ * 四步流程
  * 1. 生成广告创意并评分
  * 2. 关联Google Ads账号（提前到第二步，获取货币信息）
  * 3. 配置广告系列参数（移到第三步，此时已知账号货币）
@@ -74,7 +74,7 @@ const STEP_PRELOADERS: Partial<Record<number, () => Promise<unknown>>> = {
   4: loadStep4PublishSummary,
 }
 
-// 定义步骤 - 🔧 修复(2025-12-13): 调整顺序，先绑定账号再配置预算
+// 定义步骤 - 调整顺序，先绑定账号再配置预算
 const STEPS: Step[] = [
   { id: 1, label: '生成创意', description: 'AI生成广告创意' },
   { id: 2, label: '关联账号', description: '绑定Google Ads' },
@@ -83,7 +83,7 @@ const STEPS: Step[] = [
 ]
 
 /**
- * 🔧 修复(2025-12-11): 统一使用 camelCase 与 API 响应匹配
+ * 统一使用 camelCase 与 API 响应匹配
  */
 interface Offer {
   id: number
@@ -142,7 +142,7 @@ interface GoogleAdsAccount {
   customerId: string
   accountName?: string
   isActive: boolean
-  currencyCode?: string // 🔧 修复(2025-12-13): 新增货币代码字段
+  currencyCode?: string // 新增货币代码字段
   status?: string
 }
 
@@ -182,7 +182,7 @@ export default function LaunchAdPage() {
 
       const data = await response.json()
 
-      // 检查抓取状态 - 🔧 修复(2025-12-11): 使用camelCase
+      // 检查抓取状态 - 使用camelCase
       if (data.offer.scrapeStatus !== 'completed') {
         showError('无法生成广告', '请先完成网页抓取后再生成广告创意')
         router.push('/offers')
@@ -217,7 +217,7 @@ export default function LaunchAdPage() {
     }
   }
 
-  // 🔥 新增：返回第3步（用于发布失败时的"返回修改"）
+  // 返回第3步（用于发布失败时的"返回修改"）
   const handleGoBackToStep3 = () => {
     setCurrentStep(3)
     setCanProceed(true) // 重新启用下一步，因为用户在第3步可以配置广告
@@ -254,7 +254,7 @@ export default function LaunchAdPage() {
   const primarySelectedAccount = selectedAccounts.length > 0 ? selectedAccounts[0] : null
 
   const handlePublishComplete = () => {
-    // 🔥 修复(2025-12-18): 发布成功后不跳转，就留在发布页面
+    // 发布成功后不跳转，就留在发布页面
     // 而不是跳转到 /offers/${offerId}
     // 用户可以通过顶部的"返回Offers"按钮或其他方式离开此页面
     console.log('[LaunchAdPage] 发布成功！用户留在发布页面')
@@ -309,7 +309,7 @@ export default function LaunchAdPage() {
           </div>
         </div>
 
-        {/* Step Content - 🔧 修复(2025-12-13): 调整顺序，Step2和Step3互换 */}
+        {/* Step Content - 调整顺序，Step2和Step3互换 */}
         <div className="mb-6 min-h-[400px]">
           {currentStep === 1 && (
             <Step1CreativeGeneration
@@ -345,7 +345,7 @@ export default function LaunchAdPage() {
               selectedAccount={primarySelectedAccount!}
               selectedAccounts={selectedAccounts}
               onPublishComplete={handlePublishComplete}
-              onGoBackToStep3={handleGoBackToStep3} // 🔥 新增：传递返回第3步的回调
+              onGoBackToStep3={handleGoBackToStep3} // 传递返回第3步的回调
             />
           )}
         </div>

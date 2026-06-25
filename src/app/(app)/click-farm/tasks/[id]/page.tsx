@@ -197,7 +197,7 @@ export default function TaskDetailPage() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
   }
 
-  // 🆕 格式化日期显示（处理Date对象和ISO字符串）
+  // 格式化日期显示（处理Date对象和ISO字符串）
   const formatDate = (dateValue: any): string => {
     if (!dateValue) return '-'
     if (dateValue instanceof Date) {

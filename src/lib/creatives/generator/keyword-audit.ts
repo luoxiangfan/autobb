@@ -1,10 +1,10 @@
 import { getKeywordSearchVolumesForPlannerContext } from '@/lib/google-ads/accounts/auth/index'
-import { clusterKeywordsByIntent } from '../../keywords/offer-pool' // 🔥 AI语义分类
-// 🎯 新增：导入否定关键词生成函数
-// 🎯 新增：导入token追踪函数
-// 🎯 v3.0: 导入数据库prompt加载函数
-import { calculateIntentScore, getIntentLevel } from '../../keywords/server' // 🎯 购买意图评分
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
+import { clusterKeywordsByIntent } from '../../keywords/offer-pool' // AI语义分类
+// 导入否定关键词生成函数
+// 导入token追踪函数
+// v3.0: 导入数据库prompt加载函数
+import { calculateIntentScore, getIntentLevel } from '../../keywords/server' // 购买意图评分
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // Google Ads关键词标准化去重
 import { hasModelAnchorEvidence } from '../server'
 import {
   getKeywordSourcePriorityScoreFromInput,
@@ -14,8 +14,8 @@ import {
 } from '../../keywords/server'
 import { isCreativeKeywordAiSourceSubtypeEnabled } from '../../keywords/server'
 import { containsPureBrand, getPureBrandKeywords } from '../../keywords/server'
-import { shouldUseExactMatch, isBrandConcatenation } from '../../keywords/server' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-// 🔥 2026-03-13: 导入纯品牌词判断函数
+import { shouldUseExactMatch, isBrandConcatenation } from '../../keywords/server' // 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
+// 导入纯品牌词判断函数
 
 import { classifyKeywordIntent } from '../../keywords/server'
 import {
@@ -390,7 +390,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
     )
     let volumeUnavailable = hasSearchVolumeUnavailableFlag(mergedKeywordsWithVolume)
 
-    // 🐛 修复(2026-03-14): 排除 GLOBAL_CATEGORY_BRANDED 来源的关键词
+    // � 排除 GLOBAL_CATEGORY_BRANDED 来源的关键词
     // 这些关键词是品牌前置生成的组合词，不需要查询 Keyword Planner
     const keywordsNeedVolume = extractedKeywords.filter(
       (kw) =>
@@ -594,13 +594,13 @@ export async function finalizeKeywordsWithSingleExit(
   const brandKeywordLower = canonicalBrandKeyword || offerBrand.toLowerCase().trim()
   const containsBrand = (keyword: string, _searchVolume?: number): boolean => {
     if (containsPureBrand(keyword, brandTokensToMatch)) return true
-    // 🔥 修复(2026-03-13): 品牌拼接词即使搜索量为 0 也应该保留（真实品牌词）
+    // 品牌拼接词即使搜索量为 0 也应该保留（真实品牌词）
     // 移除搜索量依赖，避免真实品牌词被意外过滤
     if (isBrandConcatenation(keyword, offerBrand)) return true
     return false
   }
 
-  // 🎯 最终关键词过滤：强制约束
+  // 最终关键词过滤：强制约束
   console.log('\n🔍 执行最终关键词过滤 (强制约束)...')
   const beforeFilterCount = keywordsWithVolume.length
 

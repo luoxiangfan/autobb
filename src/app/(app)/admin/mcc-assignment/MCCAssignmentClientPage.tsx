@@ -59,7 +59,7 @@ interface MCCAssignment {
   assigned_to_user_id: number | null
 }
 
-// 🔧 用于取消未完成的请求
+// 用于取消未完成的请求
 let fetchAssignmentsAbortController: AbortController | null = null
 
 const CACHE_DURATION = 5 * 60 * 1000 // 5 分钟缓存
@@ -75,13 +75,13 @@ export default function MCCAssignmentClientPage() {
   const [assigning, setAssigning] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [isMccSelectOpen, setIsMccSelectOpen] = useState(false)
-  const [removingMccId, setRemovingMccId] = useState<string | null>(null) // 🔧 删除中的 MCC ID
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false) // 🔧 删除确认对话框
-  const [mccToDelete, setMccToDelete] = useState<string | null>(null) // 🔧 待删除的 MCC ID
+  const [removingMccId, setRemovingMccId] = useState<string | null>(null) // 删除中的 MCC ID
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false) // 删除确认对话框
+  const [mccToDelete, setMccToDelete] = useState<string | null>(null) // 待删除的 MCC ID
   const [allAssignments, setAllAssignments] = useState<
     Map<string, { userId: number; username: string }>
-  >(new Map()) // 🔧 所有 MCC 的分配情况
-  const [transferDialogOpen, setTransferDialogOpen] = useState(false) // 🔧 转移对话框
+  >(new Map()) // 所有 MCC 的分配情况
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false) // 转移对话框
   const [mccToTransfer, setMccToTransfer] = useState<{
     mccId: string
     fromUserId: number
@@ -89,18 +89,18 @@ export default function MCCAssignmentClientPage() {
   } | null>(null)
   const [transferTargetUserId, setTransferTargetUserId] = useState<string>('')
   const [transferring, setTransferring] = useState(false)
-  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]) // 🔧 批量操作选中的 MCC
-  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false) // 🔧 批量操作对话框
+  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]) // 批量操作选中的 MCC
+  const [bulkActionDialogOpen, setBulkActionDialogOpen] = useState(false) // 批量操作对话框
   const [bulkActionType, setBulkActionType] = useState<'remove' | 'transfer'>('remove')
-  const [tableSearchTerm, setTableSearchTerm] = useState('') // 🔧 表格搜索
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('') // 🔧 防抖后的搜索词
+  const [tableSearchTerm, setTableSearchTerm] = useState('') // 表格搜索
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('') // 防抖后的搜索词
   const [sortBy, setSortBy] = useState<'assigned_at' | 'mcc_customer_id' | 'account_name'>(
     'assigned_at'
-  ) // 🔧 排序
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc') // 🔧 排序方向
-  const [isRefreshing, setIsRefreshing] = useState(false) // 🔧 刷新状态
+  ) // 排序
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc') // 排序方向
+  const [isRefreshing, setIsRefreshing] = useState(false) // 刷新状态
   const [cache, setCache] = useState<{
-    // 🔧 数据缓存
+    // 数据缓存
     mccAccounts: MCCAccount[]
     allAssignments: Map<string, { userId: number; username: string }>
     timestamp: number
@@ -130,7 +130,7 @@ export default function MCCAssignmentClientPage() {
   const fetchMccAccounts = useCallback(async () => {
     try {
       const cached = cacheRef.current
-      // 🔧 检查缓存
+      // 检查缓存
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         setMccAccounts(cached.mccAccounts)
         setAllAssignments(cached.allAssignments)
@@ -145,7 +145,7 @@ export default function MCCAssignmentClientPage() {
         const accounts = data?.accounts || []
         setMccAccounts(accounts)
 
-        // 🔧 更新缓存
+        // 更新缓存
         setCache({
           mccAccounts: accounts,
           allAssignments: new Map(), // 会被 fetchAllAssignments 更新
@@ -163,7 +163,7 @@ export default function MCCAssignmentClientPage() {
     }
   }, [])
 
-  // 🔧 获取所有 MCC 的分配情况（用于显示哪些 MCC 已被其他用户绑定）
+  // 获取所有 MCC 的分配情况（用于显示哪些 MCC 已被其他用户绑定）
   const fetchAllAssignments = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/user-mcc/all', {
@@ -180,7 +180,7 @@ export default function MCCAssignmentClientPage() {
         })
         setAllAssignments(assignmentMap)
 
-        // 🔧 更新缓存中的分配数据
+        // 更新缓存中的分配数据
         const cached = cacheRef.current
         if (cached) {
           setCache({
@@ -197,10 +197,10 @@ export default function MCCAssignmentClientPage() {
   useEffect(() => {
     fetchUsers()
     fetchMccAccounts()
-    fetchAllAssignments() // 🔧 获取所有 MCC 的分配情况
+    fetchAllAssignments() // 获取所有 MCC 的分配情况
   }, [fetchUsers, fetchMccAccounts, fetchAllAssignments])
 
-  // 🔧 搜索防抖 - 300ms
+  // 搜索防抖 - 300ms
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(tableSearchTerm)
@@ -209,7 +209,7 @@ export default function MCCAssignmentClientPage() {
     return () => clearTimeout(timer)
   }, [tableSearchTerm])
 
-  // 🔧 缓存清理 - 组件卸载时清理过期缓存
+  // 缓存清理 - 组件卸载时清理过期缓存
   useEffect(() => {
     const cleanup = setInterval(() => {
       if (cache && Date.now() - cache.timestamp > CACHE_DURATION) {
@@ -221,7 +221,7 @@ export default function MCCAssignmentClientPage() {
   }, [cache])
 
   const fetchUserAssignments = useCallback(async (userId: string) => {
-    // 🔧 取消未完成的请求
+    // 取消未完成的请求
     if (fetchAssignmentsAbortController) {
       fetchAssignmentsAbortController.abort()
     }
@@ -234,12 +234,12 @@ export default function MCCAssignmentClientPage() {
       })
       if (response.ok) {
         const data = await response.json()
-        // 🔧 直接替换数据，不追加
+        // 直接替换数据，不追加
         setUserAssignments(data.assignments || [])
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
-        // 🔧 请求被取消，不处理
+        // 请求被取消，不处理
         return
       }
       console.error('获取用户 MCC 分配失败:', error)
@@ -252,19 +252,19 @@ export default function MCCAssignmentClientPage() {
 
   useEffect(() => {
     if (selectedUserId) {
-      // 🔧 切换用户时先清除旧数据
+      // 切换用户时先清除旧数据
       setUserAssignments([])
       fetchUserAssignments(selectedUserId)
     }
   }, [selectedUserId, fetchUserAssignments])
 
-  // 🔧 刷新功能
+  // 刷新功能
   const handleRefresh = useCallback(async () => {
     if (isRefreshing) return
 
     setIsRefreshing(true)
     try {
-      // 🔧 清除缓存，强制重新加载
+      // 清除缓存，强制重新加载
       setCache(null)
       await Promise.all([fetchUsers(), fetchMccAccounts(), fetchAllAssignments()])
 
@@ -314,7 +314,7 @@ export default function MCCAssignmentClientPage() {
 
       if (!response.ok) {
         const error = await response.json()
-        // 🔧 特殊处理 MCC 冲突错误
+        // 特殊处理 MCC 冲突错误
         if (response.status === 409 && error.conflicts) {
           const conflictList = error.conflicts
             .map((c: any) => `• ${c.mccCustomerId} - 已绑定给：${c.assignedToUsername}`)
@@ -354,7 +354,7 @@ export default function MCCAssignmentClientPage() {
         duration: 4000,
       })
 
-      // 🔧 自动刷新分配列表
+      // 自动刷新分配列表
       fetchUserAssignments(selectedUserId)
       fetchAllAssignments()
       setIsAssignDialogOpen(false)
@@ -362,7 +362,7 @@ export default function MCCAssignmentClientPage() {
     } catch (error: any) {
       console.error('分配 MCC 失败:', error)
 
-      // 🔧 详细的错误说明
+      // 详细的错误说明
       let errorTitle = '分配失败'
       let errorDescription = error.message || '未知错误'
       let errorDuration = 6000
@@ -450,7 +450,7 @@ export default function MCCAssignmentClientPage() {
         duration: 4000,
       })
 
-      // 🔧 自动刷新分配列表
+      // 自动刷新分配列表
       fetchUserAssignments(selectedUserId)
       fetchAllAssignments()
 
@@ -466,20 +466,20 @@ export default function MCCAssignmentClientPage() {
     }
   }
 
-  // 🔧 打开删除确认对话框
+  // 打开删除确认对话框
   const confirmDelete = (mccCustomerId: string) => {
     setMccToDelete(mccCustomerId)
     setDeleteConfirmOpen(true)
   }
 
-  // 🔧 确认删除
+  // 确认删除
   const handleConfirmDelete = () => {
     if (mccToDelete) {
       handleRemove(mccToDelete)
     }
   }
 
-  // 🔧 打开转移对话框
+  // 打开转移对话框
   const handleTransfer = (assignment: MCCAssignment) => {
     setMccToTransfer({
       mccId: assignment.mcc_customer_id,
@@ -491,7 +491,7 @@ export default function MCCAssignmentClientPage() {
     setTransferDialogOpen(true)
   }
 
-  // 🔧 批量操作处理
+  // 批量操作处理
   const handleBulkAction = async () => {
     if (selectedAssignments.length === 0) {
       toast.error('请选择要操作的 MCC')
@@ -537,7 +537,7 @@ export default function MCCAssignmentClientPage() {
       setSelectedAssignments([])
       setBulkActionDialogOpen(false)
 
-      // 🔧 自动刷新分配列表
+      // 自动刷新分配列表
       fetchUserAssignments(selectedUserId)
       fetchAllAssignments()
     } catch (error: any) {
@@ -556,7 +556,7 @@ export default function MCCAssignmentClientPage() {
     }
   }
 
-  // 🔧 确认转移
+  // 确认转移
   const handleConfirmTransfer = async () => {
     if (!mccToTransfer || !transferTargetUserId) {
       toast.error('请选择目标用户')
@@ -615,7 +615,7 @@ export default function MCCAssignmentClientPage() {
       setMccToTransfer(null)
       setTransferTargetUserId('')
 
-      // 🔧 自动刷新分配列表
+      // 自动刷新分配列表
       if (selectedUserId) {
         fetchUserAssignments(selectedUserId)
       }
@@ -623,7 +623,7 @@ export default function MCCAssignmentClientPage() {
     } catch (error: any) {
       console.error('转移 MCC 失败:', error)
 
-      // 🔧 详细的错误说明
+      // 详细的错误说明
       let errorDescription = error.message || '未知错误'
       if (error.message?.includes('目标用户不存在')) {
         errorDescription = '请刷新页面后重试'
@@ -638,7 +638,7 @@ export default function MCCAssignmentClientPage() {
     }
   }
 
-  // 🔧 使用 useMemo 优化过滤和排序
+  // 使用 useMemo 优化过滤和排序
   const filteredMccAccounts = useMemo(() => {
     return mccAccounts.filter(
       (mcc) =>
@@ -647,12 +647,12 @@ export default function MCCAssignmentClientPage() {
     )
   }, [mccAccounts, searchTerm])
 
-  // 🔧 可用 MCC = 未分配给任何用户的 MCC
+  // 可用 MCC = 未分配给任何用户的 MCC
   const availableMccAccounts = useMemo(() => {
     return filteredMccAccounts.filter((mcc) => !allAssignments.has(mcc.customerId))
   }, [filteredMccAccounts, allAssignments])
 
-  // 🔧 表格数据筛选和排序（使用防抖后的搜索词 + useMemo）
+  // 表格数据筛选和排序（使用防抖后的搜索词 + useMemo）
   const sortedAndFilteredAssignments = useMemo(() => {
     return [...userAssignments]
       .filter((assignment) => {
@@ -1380,7 +1380,7 @@ export default function MCCAssignmentClientPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 🔧 删除确认对话框 */}
+      {/* 删除确认对话框 */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1418,7 +1418,7 @@ export default function MCCAssignmentClientPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 🔧 批量操作对话框 */}
+      {/* 批量操作对话框 */}
       <Dialog open={bulkActionDialogOpen} onOpenChange={setBulkActionDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1517,7 +1517,7 @@ export default function MCCAssignmentClientPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 🔧 MCC 转移对话框 */}
+      {/* MCC 转移对话框 */}
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>

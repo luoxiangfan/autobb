@@ -17,7 +17,7 @@ export type PublishSitelinkInput = {
   description2?: string
 }
 
-/** 将完整 URL 拆为 Google Ads final_urls 基址与 final_url_suffix */
+/* * 将完整 URL 拆为 Google Ads final_urls 基址与 final_url_suffix */
 export function splitUrlBaseAndSuffix(fullUrl: string): { base: string; suffix: string } {
   try {
     const urlObj = new URL(fullUrl)

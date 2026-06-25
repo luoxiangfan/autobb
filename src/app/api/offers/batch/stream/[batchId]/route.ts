@@ -3,18 +3,18 @@
  *
  * SSE订阅 - 实时推送批量任务进度
  *
- * 功能：
+ * 功能
  * 1. 验证用户身份和任务所有权
  * 2. 轮询batch_tasks表获取最新进度
  * 3. 通过SSE推送批量进度更新
  * 4. 可选：推送单个子任务的完成通知
  * 5. 批量任务完成后自动关闭连接
  *
- * SSE消息格式：
- * - data: { type: 'progress', completed: 45, failed: 2, total: 100, progress: 47 }
- * - data: { type: 'item_completed', taskId: 'xxx', offerId: 123 }
- * - data: { type: 'item_failed', taskId: 'xxx', error: '...' }
- * - data: { type: 'complete', status: 'completed' | 'partial', completed: 98, failed: 2 }
+ * SSE消息格式
+ * data: { type: 'progress', completed: 45, failed: 2, total: 100, progress: 47 }
+ * data: { type: 'item_completed', taskId: 'xxx', offerId: 123 }
+ * data: { type: 'item_failed', taskId: 'xxx', error: '...' }
+ * data: { type: 'complete', status: 'completed' | 'partial', completed: 98, failed: 2 }
  */
 
 import { withAuth } from '@/lib/auth'

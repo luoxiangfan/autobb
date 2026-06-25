@@ -26,8 +26,8 @@ export const GET = withAuth(async (request, user) => {
 
     let accounts
     if (filterByUserMcc && userRole !== 'admin') {
-      // 🔧 普通用户：只返回用户 MCC 下的 Google Ads 账号（非 MCC 账号）
-      // 🔧 管理员：跳过过滤，显示所有账号
+      // 普通用户：只返回用户 MCC 下的 Google Ads 账号（非 MCC 账号）
+      // 管理员：跳过过滤，显示所有账号
       accounts = await findGoogleAdsAccountsByUserMcc(userId, manager)
     } else if (activeOnly) {
       accounts = await findActiveGoogleAdsAccounts(userId, manager)

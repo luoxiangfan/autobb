@@ -3,15 +3,15 @@
  *
  * 产品规则：OAuth 与服务账号二选一，切换前须删除当前配置（设置页约束）；勿实现双栈或 OAuth→用户级 SA 自动回退。
  *
- * 约定：
- * - 需要调用 Google Ads API 时，优先 `getGoogleAdsAuthContext(userId)`，勿散落 `getUserAuthType` + `getGoogleAdsCredentials`。
- * - 认证未就绪（双栈 / 未配置）：优先 `resolveGoogleAdsAuthReadyFailure` → `googleAdsAuthReadyFailurePayload` / `googleAdsAuthReadyFailureHttpStatus`。
- * - `linkedAccountServiceAccountId` 仅在用户当前为服务账号认证时生效；OAuth 用户传入账号 SA 不会切换为服务账号调用。
- * - 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`（按 userId 查请用 `google-ads-auth-assignment.hasConfiguredGoogleAdsAuth`），勿仅用 `auth.serviceAccountId` 判断。
- * - 已持有 context 且将直接调 API：须已通过 `resolveGoogleAdsAuthReadyFailure` 或 `prepareGoogleAdsApiCallForLinkedAccount`；禁止在 `dualStack` 时绕过 resolve。
- * - 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（仅拦双栈；未配置由 prepare / resolveGoogleAdsAuthReadyFailure 负责）。
- * - 进程内与 Redis 仅缓存 strip metadata（`secretsStripped: true`）；`getGoogleAdsAuthContext` 返回前 hydrate。
- * - 仅读 metadata（如 apiAccessLevel / hasConfigured）优先 `getGoogleAdsAuthContextMetadata`，勿对 strip context 调 `resolve*FromContext`。
+ * 约定
+ * 需要调用 Google Ads API 时，优先 `getGoogleAdsAuthContext(userId)`，勿散落 `getUserAuthType` + `getGoogleAdsCredentials`。
+ * 认证未就绪（双栈 / 未配置）：优先 `resolveGoogleAdsAuthReadyFailure` → `googleAdsAuthReadyFailurePayload` / `googleAdsAuthReadyFailureHttpStatus`。
+ * `linkedAccountServiceAccountId` 仅在用户当前为服务账号认证时生效；OAuth 用户传入账号 SA 不会切换为服务账号调用。
+ * 是否已配置：用 `hasConfiguredGoogleAdsAuthFromContext`（按 userId 查请用 `google-ads-auth-assignment.hasConfiguredGoogleAdsAuth`），勿仅用 `auth.serviceAccountId` 判断。
+ * 已持有 context 且将直接调 API：须已通过 `resolveGoogleAdsAuthReadyFailure` 或 `prepareGoogleAdsApiCallForLinkedAccount`；禁止在 `dualStack` 时绕过 resolve。
+ * 按 userId 发起 API 前可用 `assertGoogleAdsAuthReadyForApi`（仅拦双栈；未配置由 prepare / resolveGoogleAdsAuthReadyFailure 负责）。
+ * 进程内与 Redis 仅缓存 strip metadata（`secretsStripped: true`）；`getGoogleAdsAuthContext` 返回前 hydrate。
+ * 仅读 metadata（如 apiAccessLevel / hasConfigured）优先 `getGoogleAdsAuthContextMetadata`，勿对 strip context 调 `resolve*FromContext`。
  */
 import {
   isGoogleAdsAuthShared,
@@ -65,7 +65,7 @@ export interface GoogleAdsAuthContext {
   assignment: GoogleAdsAuthAssignment | null
   isShared: boolean
   canModify: boolean
-  /** OAuth refresh_token 与活跃服务账号同时存在（历史双栈残留） */
+  /* * OAuth refresh_token 与活跃服务账号同时存在（历史双栈残留） */
   dualStack: boolean
   auth: {
     authType?: 'oauth' | 'service_account'
@@ -73,12 +73,12 @@ export interface GoogleAdsAuthContext {
   }
   oauthCredentials: Awaited<ReturnType<typeof getGoogleAdsCredentials>>
   serviceAccountConfig: Awaited<ReturnType<typeof getServiceAccountConfig>>
-  /** 与 assignment / 凭证行一致的 API 访问级别（加载 context 时解析一次） */
+  /* * 与 assignment / 凭证行一致的 API 访问级别（加载 context 时解析一次） */
   apiAccessLevel: string | null
-  /** load 时写入；strip 缓存保留，供 hasConfigured 等无需 hydrate 的判断 */
+  /* * load 时写入；strip 缓存保留，供 hasConfigured 等无需 hydrate 的判断 */
   oauthHasRefreshToken?: boolean
   serviceAccountConfigured?: boolean
-  /** slim 缓存条目为 true；API 路径使用前须 hydrate */
+  /* * slim 缓存条目为 true；API 路径使用前须 hydrate */
   secretsStripped?: boolean
 }
 
@@ -86,7 +86,7 @@ async function resolveDualStackOnOwner(
   ownerUserId: number,
   options?: {
     oauthRefreshAlreadyLoaded?: boolean
-    /** 已确认 owner 有活跃 SA 时可传入，避免重复查库 */
+    /* * 已确认 owner 有活跃 SA 时可传入，避免重复查库 */
     hasActiveServiceAccount?: boolean
   }
 ): Promise<{
@@ -135,7 +135,7 @@ function getAuthContextGeneration(userId: number): number {
   return authContextGeneration.get(userId) ?? 0
 }
 
-/** prepare / hydrate 短缓存 generation 绑定（与 invalidate bump 一致） */
+/* * prepare / hydrate 短缓存 generation 绑定（与 invalidate bump 一致） */
 export function getGoogleAdsAuthContextGenerationForHydrate(userId: number): number {
   return getAuthContextGeneration(userId)
 }
@@ -275,7 +275,7 @@ async function loadGoogleAdsAuthContext(userId: number): Promise<GoogleAdsAuthCo
   }
 }
 
-/** 只加载 metadata（不 decrypt OAuth/SA 密钥）；供 getGoogleAdsAuthContextMetadata miss 路径 */
+/* * 只加载 metadata（不 decrypt OAuth/SA 密钥）；供 getGoogleAdsAuthContextMetadata miss 路径 */
 async function loadGoogleAdsAuthContextMetadataOnly(userId: number): Promise<GoogleAdsAuthContext> {
   const resolution = await resolveGoogleAdsCredentialOwnerId(userId)
   const { ownerUserId, assignment, isShared } = resolution
@@ -441,7 +441,7 @@ export async function getGoogleAdsAuthContext(userId: number): Promise<GoogleAds
   return promise
 }
 
-/** 保存/删除凭证后使短时缓存失效 */
+/* * 保存/删除凭证后使短时缓存失效 */
 export function invalidateGoogleAdsAuthContextCache(userId: number): void {
   bumpAuthContextGeneration(userId)
   authContextCache.delete(userId)
@@ -547,7 +547,7 @@ type GoogleAdsAuthTypeHintContext = Pick<
   'auth' | 'oauthCredentials' | 'serviceAccountConfig' | 'assignment' | 'oauthHasRefreshToken'
 >
 
-/** 从 auth / 凭证 / assignment 推断 authType（不含 dualStack / hasConfigured 门禁） */
+/* * 从 auth / 凭证 / assignment 推断 authType（不含 dualStack / hasConfigured 门禁） */
 function resolveGoogleAdsAuthTypeFromCredentialHints(
   ctx: GoogleAdsAuthTypeHintContext,
   options?: { unconfiguredDefault?: 'oauth' | null }
@@ -659,7 +659,7 @@ export function googleAdsAuthNotReadyMessage(ctx: Pick<GoogleAdsAuthContext, 'du
 
 export type GoogleAdsAuthReadyFailureReason = 'dual_stack' | 'not_configured'
 
-/** 认证不可用于 API 时返回原因与文案；已配置则 null。 */
+/* * 认证不可用于 API 时返回原因与文案；已配置则 null。 */
 export function resolveGoogleAdsAuthReadyFailure(
   ctx: GoogleAdsAuthContext
 ): { reason: GoogleAdsAuthReadyFailureReason; message: string } | null {
@@ -672,7 +672,7 @@ export function resolveGoogleAdsAuthReadyFailure(
   }
 }
 
-/** API 路由：认证未就绪时的标准 error body（含双栈 authConfigWarning）。 */
+/* * API 路由：认证未就绪时的标准 error body（含双栈 authConfigWarning）。 */
 export function googleAdsAuthReadyFailurePayload(failure: {
   reason: GoogleAdsAuthReadyFailureReason
   message: string
@@ -697,7 +697,7 @@ export function googleAdsAuthReadyFailureHttpStatus(
   return reason === 'dual_stack' ? 409 : 404
 }
 
-/** 后台同步 / 定时任务：metadata 路径检查凭证是否可用于同步（不 hydrate 密钥）。 */
+/* * 后台同步 / 定时任务：metadata 路径检查凭证是否可用于同步（不 hydrate 密钥）。 */
 export async function resolveGoogleAdsSyncCredentialGate(
   userId: number
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
@@ -777,14 +777,14 @@ export type GoogleAdsAuthSaveTarget = 'oauth' | 'service_account'
 export const GOOGLE_ADS_DUAL_STACK_WARNING =
   '检测到 OAuth 与服务账号同时存在，请先在设置页删除其中一种配置后再使用。'
 
-/** 双栈时返回统一警告文案，否则 null（供 heal/sync 等已持有 context 的路径使用）。 */
+/* * 双栈时返回统一警告文案，否则 null（供 heal/sync 等已持有 context 的路径使用）。 */
 export function googleAdsAuthContextDualStackError(
   ctx: Pick<GoogleAdsAuthContext, 'dualStack'>
 ): string | null {
   return ctx.dualStack ? GOOGLE_ADS_DUAL_STACK_WARNING : null
 }
 
-/** 发起 Google Ads API 调用前加载 context 并拒绝双栈（统一客户端 / getCustomerWithCredentials 等）。 */
+/* * 发起 Google Ads API 调用前加载 context 并拒绝双栈（统一客户端 / getCustomerWithCredentials 等）。 */
 export async function assertGoogleAdsAuthReadyForApi(
   userId: number
 ): Promise<GoogleAdsAuthContext> {
@@ -821,7 +821,7 @@ export async function assertNoConflictingGoogleAdsAuth(
   }
 }
 
-/** owner 凭证表存在任意 OAuth 配置字段（含未授权 refresh 的半成品） */
+/* * owner 凭证表存在任意 OAuth 配置字段（含未授权 refresh 的半成品） */
 function ownerHasConfiguredOAuthCredentialRow(
   credentials: Awaited<ReturnType<typeof getGoogleAdsCredentialsRaw>>
 ): boolean {
@@ -942,7 +942,7 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
   }
 }
 
-/** 只读 / metadata 路径：不 hydrate 密钥的凭证展示字段（供 GET /credentials） */
+/* * 只读 / metadata 路径：不 hydrate 密钥的凭证展示字段（供 GET /credentials） */
 export function resolveGoogleAdsCredentialStatusFieldsFromMetadata(
   ctx: GoogleAdsAuthContext
 ): ReturnType<typeof resolveGoogleAdsCredentialStatusFields> {
@@ -981,7 +981,7 @@ export function resolveGoogleAdsCredentialStatusFieldsFromMetadata(
   }
 }
 
-/** 未配置 / 双栈：无需 hydrate 密钥的凭证摘要（供 GET /credentials metadata 路径） */
+/* * 未配置 / 双栈：无需 hydrate 密钥的凭证摘要（供 GET /credentials metadata 路径） */
 export function resolveGoogleAdsCredentialStatusSummary(ctx: GoogleAdsAuthContext): {
   hasCredentials: boolean
   hasRefreshToken: boolean

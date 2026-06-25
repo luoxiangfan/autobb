@@ -44,7 +44,7 @@ export function randomDelay(min: number = 1000, max: number = 3000): Promise<voi
 }
 
 /**
- * 🔥 P1优化: 根据URL动态计算超时时间
+ * 根据URL动态计算超时时间
  * 基于页面复杂度自动调整，避免固定超时
  */
 export function getDynamicTimeout(url: string): number {
@@ -57,28 +57,28 @@ export function getDynamicTimeout(url: string): number {
 
 /**
  * Create stealth browser context
- * P0优化: 优先使用连接池，减少80-90%启动时间
- * P0优化: 集成代理IP池预热缓存，节省3-5s
+ * 优先使用连接池，减少80-90%启动时间
+ * 集成代理IP池预热缓存，节省3-5s
  */
 export async function createStealthBrowser(
   proxyUrl?: string,
   targetCountry?: string,
   userId?: number
 ): Promise<StealthBrowserResult> {
-  // 🔴 根据需求10：必须使用代理，不允许降级为直连访问
+  // 必须使用代理，不允许降级为直连访问
   const effectiveProxyUrl = proxyUrl || PROXY_URL
   if (!effectiveProxyUrl || typeof effectiveProxyUrl !== 'string') {
     throw new Error(
-      '❌ 代理配置缺失：根据需求10，必须配置代理URL(PROXY_URL环境变量或传入customProxyUrl参数)，不允许直连访问'
+      '❌ 代理配置缺失：必须配置代理URL(PROXY_URL环境变量或传入customProxyUrl参数)，不允许直连访问'
     )
   }
 
-  // 🔥 P0增强: 明确记录targetCountry配置状态
+  // 明确记录targetCountry配置状态
   console.log(
     `🌍 createStealthBrowser: targetCountry=${targetCountry || '(未指定，使用默认en-US)'}, proxyUrl=${maskProxyUrl(effectiveProxyUrl)}`
   )
 
-  // 🔥 P0优化: 使用连接池获取实例（传入targetCountry支持动态语言配置）
+  // 使用连接池获取实例（传入targetCountry支持动态语言配置）
   if (USE_POOL) {
     try {
       const pool = getPlaywrightPool()
@@ -98,7 +98,7 @@ export async function createStealthBrowser(
   }
 
   // 传统方式：独立创建浏览器实例
-  // 🔥 P0优化: 尝试使用代理IP池预热缓存（cache hit = 节省3-5s）
+  // 尝试使用代理IP池预热缓存（cache hit = 节省3-5s）
   let proxy: any = null
 
   if (targetCountry) {
@@ -166,13 +166,13 @@ export async function releaseBrowser(result: StealthBrowserResult): Promise<void
 
 /**
  * Configure page with stealth settings
- * 🔥 增强反爬虫规避：更多浏览器指纹伪装和行为模拟
- * 🌍 支持根据目标国家动态配置语言
+ * 增强反爬虫规避：更多浏览器指纹伪装和行为模拟
+ * 支持根据目标国家动态配置语言
  */
 export async function configureStealthPage(page: Page, targetCountry?: string): Promise<void> {
   const userAgent = getRandomUserAgent()
 
-  // 🌍 根据目标国家动态生成 Accept-Language
+  // 根据目标国家动态生成 Accept-Language
   let acceptLanguage = 'en-US,en;q=0.9' // 默认英语
   let navigatorLanguages = ['en-US', 'en'] // 默认语言列表
 
@@ -188,7 +188,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
     console.log(`🌍 目标国家: ${targetCountry}, Accept-Language: ${acceptLanguage}`)
   }
 
-  // 🔥 2025-12-11优化: 根据User-Agent生成匹配的Sec-CH-UA头部
+  // 根据User-Agent生成匹配的Sec-CH-UA头部
   // 避免UA和Sec-CH-UA不匹配被检测
   let secChUa = '"Chromium";v="131", "Not_A Brand";v="24"'
   let secChUaPlatform = '"Windows"'
@@ -218,7 +218,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
     'User-Agent': userAgent,
     Accept:
       'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': acceptLanguage, // 🌍 动态语言支持
+    'Accept-Language': acceptLanguage, // 动态语言支持
     'Accept-Encoding': 'gzip, deflate, br',
     Connection: 'keep-alive',
     'Upgrade-Insecure-Requests': '1',
@@ -227,7 +227,6 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
     'Sec-Fetch-Site': 'none',
     'Sec-Fetch-User': '?1',
     'Cache-Control': 'max-age=0',
-    // 🔥 添加DNT
     DNT: '1',
   }
 
@@ -240,11 +239,11 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
 
   await page.setExtraHTTPHeaders(headers)
 
-  // 🎲 P0优化: 随机化硬件参数（避免所有请求使用相同值）
+  // 随机化硬件参数（避免所有请求使用相同值）
   const hardwareConcurrency = [4, 8, 16][Math.floor(Math.random() * 3)]
   const deviceMemory = [4, 8, 16][Math.floor(Math.random() * 3)]
 
-  // 🔥 增强浏览器指纹伪装（需要将动态语言传入脚本）
+  // 增强浏览器指纹伪装（需要将动态语言传入脚本）
   const languagesForScript = navigatorLanguages
   await page.addInitScript(
     ({
@@ -256,7 +255,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
       hwConcurrency: number
       devMemory: number
     }) => {
-      // ===== P0优化: Canvas指纹混淆 =====
+      // Canvas 指纹混淆
       const getImageData = HTMLCanvasElement.prototype.toDataURL
       HTMLCanvasElement.prototype.toDataURL = function (type?: string) {
         const context = this.getContext('2d')
@@ -278,7 +277,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
         return getImageData.call(this, type)
       }
 
-      // ===== P0优化: WebGL指纹混淆 =====
+      // WebGL 指纹混淆
       const getParameter = WebGLRenderingContext.prototype.getParameter
       WebGLRenderingContext.prototype.getParameter = function (parameter: number) {
         // 伪装GPU供应商和渲染器（最常见的检测点）
@@ -297,7 +296,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
         }
       }
 
-      // ===== P0优化: AudioContext指纹混淆 =====
+      // AudioContext 指纹混淆
       const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext
       if (AudioContext) {
         const originalCreateAnalyser = AudioContext.prototype.createAnalyser
@@ -321,7 +320,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
         get: () => undefined,
       })
 
-      // 🔥 伪装Chrome运行时
+      // 伪装Chrome运行时
       const win = window as any
       win.chrome = {
         runtime: {},
@@ -347,12 +346,12 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
         ],
       })
 
-      // 🌍 动态语言列表（根据目标国家）
+      // navigator.languages 按目标国家
       Object.defineProperty(navigator, 'languages', {
         get: () => langs,
       })
 
-      // ===== P1优化: 完善Screen对象 =====
+      // 完善 Screen 对象
       Object.defineProperty(screen, 'width', { get: () => 1920 })
       Object.defineProperty(screen, 'height', { get: () => 1080 })
       Object.defineProperty(screen, 'availWidth', { get: () => 1920 })
@@ -360,10 +359,10 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
       Object.defineProperty(screen, 'colorDepth', { get: () => 24 })
       Object.defineProperty(screen, 'pixelDepth', { get: () => 24 })
 
-      // ===== P1优化: 主动屏蔽WebRTC =====
+      // 屏蔽 WebRTC
       Object.defineProperty(navigator, 'mediaDevices', { get: () => undefined })
 
-      // ===== P0优化: 随机化硬件参数 =====
+      // 随机化 hardwareConcurrency / deviceMemory
       Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => hwConcurrency })
       Object.defineProperty(navigator, 'deviceMemory', { get: () => devMemory })
 
@@ -374,7 +373,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
           ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
           : originalQuery(parameters)
 
-      // 🔥 伪装Battery API
+      // 伪装Battery API
       Object.defineProperty(navigator, 'getBattery', {
         value: () =>
           Promise.resolve({
@@ -385,7 +384,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
           }),
       })
 
-      // 🔥 伪装Connection API
+      // 伪装Connection API
       Object.defineProperty(navigator, 'connection', {
         get: () => ({
           effectiveType: '4g',
@@ -395,7 +394,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
         }),
       })
 
-      // ===== P2优化: 隐藏iframe contentWindow =====
+      // 隐藏 iframe contentWindow webdriver
       try {
         const originalContentWindowGetter = Object.getOwnPropertyDescriptor(
           HTMLIFrameElement.prototype,
@@ -416,7 +415,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
         }
       } catch (_e) {}
 
-      // ===== P2优化: 隐藏console.debug =====
+      // 屏蔽 console.debug
       void console.debug
       console.debug = function () {
         return null
@@ -425,9 +424,9 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
     { langs: languagesForScript, hwConcurrency: hardwareConcurrency, devMemory: deviceMemory }
   )
 
-  // 🔥 设置真实的viewport和屏幕分辨率
+  // 设置真实的viewport和屏幕分辨率
   await page.setViewportSize({ width: 1920, height: 1080 })
 
-  // 🔥 模拟鼠标移动（人类行为）
+  // 模拟鼠标移动（人类行为）
   await page.mouse.move(Math.random() * 100, Math.random() * 100)
 }

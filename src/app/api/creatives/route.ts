@@ -29,7 +29,7 @@ function resolveCreativeIdentity(creative: any): {
 }
 
 /**
- * 🔧 修复(2025-12-11): 转换数据库字段名为 camelCase
+ * 转换数据库字段名为 camelCase
  * 规范: API响应使用 camelCase，数据库字段使用 snake_case
  */
 function transformCreativeToApiResponse(creative: any) {
@@ -108,13 +108,13 @@ export const GET = withAuth(async (request, user) => {
       creatives = await findAdCreativesByUserId(userId, limit)
     }
 
-    // 🔧 修复(2025-12-11): 转换为 camelCase 响应
+    // 转换为 camelCase 响应
     let transformedCreatives = creatives.map(transformCreativeToApiResponse)
     if (publishableOnly) {
       transformedCreatives = transformedCreatives.filter(hasRequiredRsaAssetCounts)
     }
 
-    // 🔧 2025-12-24: 添加 generatedBuckets 聚合逻辑，支持创意类型进度
+    // 添加 generatedBuckets 聚合逻辑，支持创意类型进度
     const generatedBuckets = Array.from(
       new Set(
         transformedCreatives.map((c) => c.keywordBucket).filter((b): b is 'A' | 'B' | 'D' => !!b)

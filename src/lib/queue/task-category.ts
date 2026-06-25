@@ -16,7 +16,7 @@ const BACKGROUND_TASK_TYPES: ReadonlySet<TaskType> = new Set([
   '@/lib/google-ads/campaign/sync',
 ])
 
-/** 完成/失败后从队列存储立即移除，避免 Redis tasks hash / 内存膨胀 */
+/* * 完成/失败后从队列存储立即移除，避免 Redis tasks hash / 内存膨胀 */
 const EPHEMERAL_TASK_TYPES: ReadonlySet<TaskType> = new Set([
   'click-farm',
   'click-farm-trigger',

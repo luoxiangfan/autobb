@@ -11,7 +11,7 @@ export type {
   AmazonProductData,
   AmazonStoreData,
   IndependentStoreData,
-  IndependentProductData, // 🔥 新增：独立站产品数据类型
+  IndependentProductData,
 } from './types'
 
 // Proxy utilities
@@ -39,11 +39,11 @@ export { scrapeAmazonStore, scrapeAmazonStoreDeep } from './amazon-store'
 // Independent store scraping
 export {
   scrapeIndependentStore,
-  scrapeIndependentStoreDeep, // 🔥 新增：独立站深度抓取
-  scrapeIndependentProduct, // 🔥 新增：独立站单品抓取
+  scrapeIndependentStoreDeep,
+  scrapeIndependentProduct,
 } from './independent-store'
 
-// Product detail cache (统一缓存模块)
+// Product detail cache (商品详情缓存)
 export {
   getCachedProductDetail,
   setCachedProductDetail,

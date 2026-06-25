@@ -27,7 +27,7 @@ export type ResumablePublishCampaignRow = {
 
 export type PublishResumePlan = {
   resumeMode: boolean
-  /** 本地无 google_campaign_id 时，按 campaign_name 在 Google Ads 侧查找已创建资源 */
+  /* * 本地无 google_campaign_id 时，按 campaign_name 在 Google Ads 侧查找已创建资源 */
   discoverRemoteByName: boolean
   googleCampaignId: string | null
   googleAdGroupId: string | null
@@ -190,9 +190,9 @@ function buildExtensionsFingerprint(
 }
 
 /**
- * 查找可续发的 Campaign：
- * - 优先 pending（非超时）
- * - 其次近期 publish_failed（含 google_campaign_id 为空、仅本地失败记录的情况）
+ * 查找可续发的 Campaign
+ * 优先 pending（非超时）
+ * 其次近期 publish_failed（含 google_campaign_id 为空、仅本地失败记录的情况）
  */
 export async function findResumablePublishCampaignForOffer(
   offerId: number,
@@ -268,7 +268,7 @@ export function buildPublishResumePlan(params: {
     callouts?: string[]
     sitelinks?: unknown[]
   }
-  /** 复用本地失败/未完成记录续发（即使 google_campaign_id 为空） */
+  /* * 复用本地失败/未完成记录续发（即使 google_campaign_id 为空） */
   enableLocalResume?: boolean
 }): PublishResumePlan {
   const googleCampaignId = params.stored

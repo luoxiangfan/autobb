@@ -17,7 +17,7 @@ export type GoogleAdsServiceAccountBackupEntry = {
   serviceAccountEmail: string
   projectId: string | null
   apiAccessLevel?: string
-  /** 完整 Google Cloud 服务账号 JSON（仅 includeSensitive 导出） */
+  /* * 完整 Google Cloud 服务账号 JSON（仅 includeSensitive 导出） */
   serviceAccountJson: string | null
 }
 

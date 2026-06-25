@@ -225,8 +225,8 @@ export async function getClickFarmStats(
     statsParams.push(cutoffDate.toISOString())
   }
 
-  // 🔧 修复：获取所有任务及其对应的timezone，在应用层按每个任务的timezone过滤今日数据
-  // ⚠️ 注意：每个任务可能有不同的timezone（来自offer的target_country）
+  // 获取所有任务及其对应的timezone，在应用层按每个任务的timezone过滤今日数据
+  // 注意：每个任务可能有不同的timezone（来自offer的target_country）
   // 必须按每个任务的timezone单独判断"today"，然后聚合统计
   // 仅扫描最近更新的任务，避免解析大量历史任务导致内存暴涨
   const recentCutoff = datetimeMinusHours(48)
@@ -242,7 +242,7 @@ export async function getClickFarmStats(
     daily_history: string | any[]
   }>(allTasksQuery, statsParams)
 
-  // 🔧 修复：今日统计应该从 daily_history 中按任务的时区查找今天的记录
+  // 今日统计应该从 daily_history 中按任务的时区查找今天的记录
   // 而不是判断 started_at 是否在今天
   // 今日点击数据
   let todayClicks = 0
@@ -334,7 +334,7 @@ export async function getClickFarmStats(
     cumulativeParams
   )
 
-  // 🔧 调试日志：查看PostgreSQL返回的原始数据
+  // 调试日志：查看PostgreSQL返回的原始数据
   if (debug) {
     console.log('🔍 [click-farm] cumulativeResult 原始数据:', JSON.stringify(cumulativeResult))
     console.log('🔍 [click-farm] cumulativeResult 字段:', {
@@ -346,7 +346,7 @@ export async function getClickFarmStats(
     })
   }
 
-  // 🔧 修复: PostgreSQL 列名是小写的（success_clicks 而非 successClicks）
+  // PostgreSQL 列名是小写的（success_clicks 而非 successClicks）
   // 确保所有字段都是数字类型（PostgreSQL numeric 类型可能返回字符串）
   const cumulative = {
     clicks: parseFloat(String(cumulativeResult?.clicks || 0)),
@@ -363,7 +363,7 @@ export async function getClickFarmStats(
       ? parseFloat(((cumulative.successClicks / cumulative.clicks) * 100).toFixed(1))
       : 0
 
-  // 🆕 任务状态分布统计（不含已删除任务）
+  // 任务状态分布统计（不含已删除任务）
   const statusDistribution = await db.query<{ status: string; count: number }>(
     `
     SELECT status, COUNT(*) as count
@@ -386,7 +386,7 @@ export async function getClickFarmStats(
 
   statusDistribution.forEach((row) => {
     const status = row.status as ClickFarmTaskStatus
-    const count = Number(row.count) // 🔧 修复：确保count是数字
+    const count = Number(row.count) // 确保count是数字
     taskStatusDistribution[status] = count
     taskStatusDistribution.total += count
   })
@@ -397,26 +397,26 @@ export async function getClickFarmStats(
       successClicks: todaySuccessClicks,
       failedClicks: todayFailedClicks,
       successRate: parseFloat(todaySuccessRate.toFixed(1)),
-      traffic: estimateTraffic(todayClicks), // 🔧 统一使用估算函数
+      traffic: estimateTraffic(todayClicks), // 统一使用估算函数
     },
     cumulative: {
       clicks: cumulative.clicks,
       successClicks: cumulative.successClicks,
       failedClicks: cumulative.failedClicks,
       successRate: parseFloat(cumulativeSuccessRate.toFixed(1)),
-      traffic: estimateTraffic(cumulative.clicks), // 🔧 统一使用估算函数
+      traffic: estimateTraffic(cumulative.clicks), // 统一使用估算函数
     },
-    taskStatusDistribution, // 🆕 任务状态分布
+    taskStatusDistribution, // 任务状态分布
   }
 }
 
 /**
  * 获取管理员全局统计数据（支持多时区聚合）
- * ⚠️ 重要：统计"今日"是指在每个任务所在时区的"今日"
- * 例如：
- * - 任务A（America/New_York）的"今日"点击 = 60
- * - 任务B（Asia/Shanghai）的"今日"点击 = 50
- * - 管理员看到的总"今日点击" = 110（聚合所有时区）
+ * 重要：统计"今日"是指在每个任务所在时区的"今日"
+ * 例如
+ * 任务A（America/New_York）的"今日"点击 = 60
+ * 任务B（Asia/Shanghai）的"今日"点击 = 50
+ * 管理员看到的总"今日点击" = 110（聚合所有时区）
  */
 export async function getAdminClickFarmStats(): Promise<{
   total_tasks: number
@@ -425,8 +425,8 @@ export async function getAdminClickFarmStats(): Promise<{
   success_clicks: number
   success_rate: number
   today_clicks: number
-  today_success_clicks: number // 🆕 今日成功点击数
-  today_success_rate: number // 🆕 今日成功率
+  today_success_clicks: number // 今日成功点击数
+  today_success_rate: number // 今日成功率
   today_traffic: number
   total_traffic: number
   taskStatusDistribution: {
@@ -440,7 +440,7 @@ export async function getAdminClickFarmStats(): Promise<{
 }> {
   const db = await getDatabase()
 
-  // 1️⃣ 全局统计（包含已删除任务的历史数据，以便保留历史记录）
+  // 1⃣ 全局统计（包含已删除任务的历史数据，以便保留历史记录）
   const global = await db.queryOne<any>(
     `
     SELECT
@@ -457,8 +457,8 @@ export async function getAdminClickFarmStats(): Promise<{
   const successRate =
     global.total_clicks > 0 ? (global.success_clicks / global.total_clicks) * 100 : 0
 
-  // 2️⃣ 今日统计（按每个任务的timezone判断）
-  // 🔧 修复：从每个任务的 daily_history 中提取今日数据
+  // 2⃣ 今日统计（按每个任务的timezone判断）
+  // 从每个任务的 daily_history 中提取今日数据
   // 而不是判断 started_at 是否为今天（started_at 是任务首次开始日期，可能是很久以前）
   // 仅扫描最近更新的任务，避免解析大量历史任务导致内存暴涨
   const recentCutoff = datetimeMinusHours(48)
@@ -513,7 +513,7 @@ export async function getAdminClickFarmStats(): Promise<{
 
   const todaySuccessRate = today.clicks > 0 ? (today.successClicks / today.clicks) * 100 : 0
 
-  // 3️⃣ 任务状态分布统计（不含已删除任务）
+  // 3⃣ 任务状态分布统计（不含已删除任务）
   const statusDistribution = await db.query<{ status: string; count: number }>(
     `
     SELECT status, COUNT(*) as count
@@ -536,7 +536,7 @@ export async function getAdminClickFarmStats(): Promise<{
 
   statusDistribution.forEach((row) => {
     const status = row.status as ClickFarmTaskStatus
-    const count = Number(row.count) // 🔧 修复：确保count是数字
+    const count = Number(row.count) // 确保count是数字
     taskStatusDistribution[status] = count
     taskStatusDistribution.total += count
   })
@@ -548,17 +548,17 @@ export async function getAdminClickFarmStats(): Promise<{
     success_clicks: global.success_clicks,
     success_rate: parseFloat(successRate.toFixed(1)),
     today_clicks: today.clicks,
-    today_success_clicks: today.successClicks, // 🆕 今日成功点击数
-    today_success_rate: parseFloat(todaySuccessRate.toFixed(1)), // 🆕 今日成功率
-    today_traffic: estimateTraffic(today.clicks), // 🔧 统一使用估算函数
-    total_traffic: estimateTraffic(global.total_clicks), // 🔧 统一使用估算函数
+    today_success_clicks: today.successClicks, // 今日成功点击数
+    today_success_rate: parseFloat(todaySuccessRate.toFixed(1)), // 今日成功率
+    today_traffic: estimateTraffic(today.clicks), // 统一使用估算函数
+    total_traffic: estimateTraffic(global.total_clicks), // 统一使用估算函数
     taskStatusDistribution,
   }
 }
 
 /**
  * 获取今日时间分布
- * 🔧 修复P1-5：从daily_history的hourly_breakdown中提取实际执行分布
+ * 修复P1-5：从daily_history的hourly_breakdown中提取实际执行分布
  * 支持用户查看"配置分布" vs "实际执行分布"的对比
  */
 type HourlyDistributionSourceRow = {
@@ -659,7 +659,7 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
   }
 
   // 从scheduled_start_date开始
-  // 🔧 修复(2025-12-31): 确保 scheduled_start_date 是字符串格式 YYYY-MM-DD
+  // 确保 scheduled_start_date 是字符串格式 YYYY-MM-DD
   let currentDateStr: string
   const dateValue = task.scheduled_start_date as any
   if (typeof dateValue === 'string') {
@@ -678,7 +678,7 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
   let endDateStr: string
   if (task.duration_days > 0) {
     // 有限期任务：计算结束日期
-    // 🔧 修复：使用createDateInTimezone确保日期计算在正确的时区
+    // 使用createDateInTimezone确保日期计算在正确的时区
     const startDate = createDateInTimezone(currentDateStr, '00:00', task.timezone)
     const endDate = new Date(startDate)
     endDate.setDate(endDate.getDate() + task.duration_days - 1)
@@ -701,7 +701,7 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
     // 计算该天的目标点击数（基于hourly_distribution）
     const targetClicks = task.hourly_distribution.reduce((sum, count) => sum + count, 0)
 
-    // 🆕 P1-5：初始化hourly_breakdown用于跟踪每小时的执行情况
+    // P1-5：初始化hourly_breakdown用于跟踪每小时的执行情况
     const hourlyBreakdown = task.hourly_distribution.map((target) => ({
       target,
       actual: 0,
@@ -710,12 +710,12 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
     }))
 
     dailyHistory.push({
-      date: currentDateStr, // ⚠️ 这个日期相对于 task.timezone（任务时区的本地日期）
+      date: currentDateStr, // 这个日期相对于 task.timezone（任务时区的本地日期）
       target: targetClicks,
       actual: 0,
       success: 0,
       failed: 0,
-      hourly_breakdown: hourlyBreakdown, // 🆕 添加小时级别追踪
+      hourly_breakdown: hourlyBreakdown, // 添加小时级别追踪
     })
 
     // 日期递增（直接操作字符串+1天）
@@ -740,7 +740,7 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
 /**
  * 获取任务在特定时区的今天日期（YYYY-MM-DD格式）
  *
- * ⚠️ 时区处理：返回的日期是相对于 task.timezone 的本地日期
+ * 时区处理：返回的日期是相对于 task.timezone 的本地日期
  * 例如：task.timezone = "Asia/Shanghai"，当前UTC = 2024-12-28 16:00:00
  * 则返回 "2024-12-29"（上海时间）
  */
@@ -752,9 +752,9 @@ function getTodayInTaskTimezone(task: ClickFarmTask): string {
  * 更新任务执行统计
  * 包括全局统计和每日历史记录
  *
- * 🔧 修复P1-1：使用原子操作避免竞态条件
- * 🔧 修复P1-5：同时更新hourly_breakdown用于实际执行分布追踪
- * 🆕 内存优化：批量累积统计，避免每次点击都读写daily_history
+ * 修复P1-1：使用原子操作避免竞态条件
+ * 修复P1-5：同时更新hourly_breakdown用于实际执行分布追踪
+ * 内存批量累积统计，避免每次点击都读写daily_history
  */
 export async function updateTaskStats(
   id: number | string,

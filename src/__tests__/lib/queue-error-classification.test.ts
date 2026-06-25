@@ -47,7 +47,7 @@ function isRecoverableError(error: any): boolean {
   return true
 }
 
-// ============ 测试用例 ============
+// 测试用例
 
 // 测试不可恢复的错误
 const nonRecoverableErrors = [

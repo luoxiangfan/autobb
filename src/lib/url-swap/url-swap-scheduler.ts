@@ -3,8 +3,8 @@
  * src/lib/url-swap/url-swap-scheduler.ts
  *
  * 功能：触发和管理换链接任务的执行
- * - 事件驱动：任务创建后立即触发调度
- * - Cron备份：每5分钟检查待处理任务
+ * 事件驱动：任务创建后立即触发调度
+ * Cron备份：每5分钟检查待处理任务
  */
 
 import { calculateNextSwapAt } from './url-swap-time'

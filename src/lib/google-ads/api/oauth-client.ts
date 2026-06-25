@@ -4,7 +4,7 @@ import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
 /**
  * 获取Google Ads API客户端实例
  *
- * 🔧 修复(2025-12-22): 移除环境变量依赖,强制要求传入credentials
+ * 移除环境变量依赖,强制要求传入credentials
  * 所有配置必须从数据库读取,支持用户级隔离
  *
  * @param credentials - 必需的用户凭证(从数据库读取)
@@ -30,7 +30,7 @@ export function getGoogleAdsClient(credentials: {
 /**
  * 交换authorization code获取tokens
  *
- * 🔧 修复(2025-12-22): 移除环境变量依赖,从参数获取credentials
+ * 移除环境变量依赖,从参数获取credentials
  *
  * @param code - OAuth authorization code
  * @param credentials - 用户的Google Ads凭证(从数据库读取)
@@ -79,7 +79,7 @@ export async function exchangeCodeForTokens(
 /**
  * 刷新access token
  *
- * 🔧 修复(2025-12-22): 移除环境变量依赖,credentials参数改为必需
+ * 移除环境变量依赖,credentials参数改为必需
  *
  * @param refreshToken - Refresh token
  * @param credentials - 必需的用户凭证(从数据库读取)

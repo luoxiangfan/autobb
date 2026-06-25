@@ -1,7 +1,7 @@
 /**
  * Google Ads 文案工具
- * - DKI（Dynamic Keyword Insertion）: {KeyWord:DefaultText}
- *   Google Ads 字符计数通常按 DefaultText + token 外文本计算（不计入 "{KeyWord:...}" 结构本身）。
+ * DKI（Dynamic Keyword Insertion）: {KeyWord:DefaultText}
+ * Google Ads 字符计数通常按 DefaultText + token 外文本计算（不计入 "{KeyWord:...}" 结构本身）。
  */
 
 const DKI_PATTERN = /\{keyword:([^}]*)\}/gi
@@ -269,7 +269,7 @@ export function sanitizeGoogleAdsAdText(text: string, maxLen: number): string {
   const removed = original.replace(/±/g, '').replace(/[~～]/g, ' ').replace(/\s+/g, ' ').trim()
   if (getGoogleAdsTextEffectiveLength(removed) <= maxLen) return removed
 
-  // 🔧 兜底：自动截断，避免发布失败（包含CJK字符权重 & DKI token 保护）
+  // 兜底：自动截断，避免发布失败（包含CJK字符权重 & DKI token 保护）
   return truncateByEffectiveLength(replaced, maxLen)
 }
 

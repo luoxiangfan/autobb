@@ -1,11 +1,11 @@
 /**
  * Campaign优化规则引擎
  *
- * 功能：
- * - 基于性能数据生成优化建议
- * - 可配置阈值和敏感度
- * - 支持多种优化类型
- * - 优先级评分系统
+ * 功能
+ * 基于性能数据生成优化建议
+ * 可配置阈值和敏感度
+ * 支持多种优化类型
+ * 优先级评分系统
  */
 
 export type OptimizationType =
@@ -40,7 +40,7 @@ export interface CampaignMetrics {
   conversionRate: number
   roi: number
   daysRunning: number
-  // 🆕 P1-1优化：广告疲劳检测所需字段
+  // 广告疲劳检测所需字段
   ctrTrend?: number // CTR变化趋势（正值=增长，负值=下降）
   previousCtr?: number // 上一周期的CTR
 }
@@ -192,7 +192,7 @@ export class OptimizationRulesEngine {
     const newCampaignRec = this.checkNewCampaign(metrics)
     if (newCampaignRec) recommendations.push(newCampaignRec)
 
-    // 🆕 规则10: 广告疲劳检测
+    // 规则10: 广告疲劳检测
     const adFatigueRec = this.checkAdFatigue(metrics)
     if (adFatigueRec) recommendations.push(adFatigueRec)
 
@@ -459,11 +459,11 @@ export class OptimizationRulesEngine {
   }
 
   /**
-   * 🆕 规则10: 广告疲劳检测 (P1-1优化)
+   * 规则10: 广告疲劳检测 (P1-1优化)
    *
-   * 检测条件：
-   * - 运行超过30天
-   * - CTR下降超过15%
+   * 检测条件
+   * 运行超过30天
+   * CTR下降超过15%
    *
    * 广告疲劳现象：长期投放同一创意导致用户审美疲劳，点击率持续下降
    */

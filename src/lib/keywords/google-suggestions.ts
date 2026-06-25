@@ -7,7 +7,7 @@ import { getProxyConfig } from '../scraping/env-proxy-config'
 
 /**
  * 从产品名称中提取核心词（用于生成查询变体）
- * 🔧 优化(2025-12-12): 新增函数
+ * 新增函数
  *
  * @example
  * extractCoreProductWords("Reolink Argus 4 Pro 4K Solar Security Camera", "Reolink")
@@ -21,7 +21,7 @@ function extractCoreProductWords(productName: string, brandName: string): string
 
   // 分词并过滤
   const words = nameWithoutBrand.split(/[\s\-–—]+/).filter((w) => {
-    // 过滤条件：
+    // 过滤条件
     // 1. 太短（<3字符）
     if (w.length < 3) return false
     // 2. 纯数字或规格参数（如 4K, 1080P, 32GB, 2.4GHz）
@@ -45,7 +45,7 @@ function extractCoreProductWords(productName: string, brandName: string): string
  * 购买意图弱的关键词模式 (需求11)
  * 过滤掉这些词，因为它们购买意图不强烈
  *
- * 分类：
+ * 分类
  * 1. 安装配置类：setup, install, configure
  * 2. 教程指导类：how to, tutorial, guide
  * 3. 盗版免费类：free, cracked, pirate
@@ -102,7 +102,7 @@ const LOW_INTENT_PATTERNS = [
   /\b(driver|drivers|firmware|software update|update|upgrade)\b/i,
 
   // 14. 视频内容类
-  // 🔧 修复(2025-12-17): 排除 "video doorbell" 等合法产品类别
+  // 排除 "video doorbell" 等合法产品类别
   // 使用负向前瞻排除 video + 产品词 的组合
   /\b(youtube|vlog|video\s+review|review\s+video)\b/i,
   /\bvideo\b(?!\s+(doorbell|camera|monitor|recorder|intercom|surveillance))/i,
@@ -264,17 +264,17 @@ async function getGoogleSearchSuggestions(params: {
  * 批量获取Google搜索建议
  * 为品牌词生成多个查询变体
  *
- * 🔧 优化(2026-04-02): 证据驱动查询变体
- * - 移除固定交易词模板（official/store/buy/price/sale/discount/shop）
- * - 仅保留品牌、品牌+品类、品牌+产品核心词查询
+ * 证据驱动查询变体
+ * 移除固定交易词模板（official/store/buy/price/sale/discount/shop）
+ * 仅保留品牌、品牌+品类、品牌+产品核心词查询
  */
 export async function getBrandSearchSuggestions(params: {
   brand: string
   country: string
   language: string
   useProxy?: boolean
-  productName?: string // 🔧 新增：产品名称
-  category?: string // 🔧 新增：产品品类
+  productName?: string // 产品名称
+  category?: string // 产品品类
 }): Promise<GoogleSuggestion[]> {
   const { brand, country, language, useProxy, productName, category } = params
 
@@ -380,9 +380,9 @@ export function detectCountryInKeyword(keyword: string): string[] {
 /**
  * 过滤与目标国家不匹配的地理关键词 (用户问题1)
  *
- * 规则：
- * - 如果关键词包含国家/地区信息，只保留与目标国家匹配的
- * - 如果关键词不包含国家信息，保留
+ * 规则
+ * 如果关键词包含国家/地区信息，只保留与目标国家匹配的
+ * 如果关键词不包含国家信息，保留
  *
  * @example
  * filterMismatchedGeoKeywords(["reolink", "reolink australia", "reolink uk"], "AU")

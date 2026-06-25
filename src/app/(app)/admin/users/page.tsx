@@ -141,7 +141,7 @@ interface User {
   role: string
   packageType: string
   packageExpiresAt: string | null
-  // 🔧 修复(2025-12-30): API统一返回boolean类型
+  // API统一返回boolean类型
   isActive: boolean
   openclawEnabled: boolean
   productManagementEnabled: boolean
@@ -209,7 +209,7 @@ export default function UserManagementPage() {
   const [googleAdsAuthUser, setGoogleAdsAuthUser] = useState<User | null>(null)
   const [isGoogleAdsAuthOpen, setIsGoogleAdsAuthOpen] = useState(false)
 
-  // 🔧 新增(2025-12-30): loading状态管理，防止重复提交
+  // loading状态管理，防止重复提交
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Create Form State
@@ -292,7 +292,7 @@ export default function UserManagementPage() {
       const exists = data.users?.some((u: User) => u.username === username)
 
       if (exists) {
-        // 🔧 修复(2025-12-30): 添加return，避免设置冲突的用户名
+        // 添加return，避免设置冲突的用户名
         return generateUsername()
       } else {
         setCreateUsername(username)
@@ -323,7 +323,7 @@ export default function UserManagementPage() {
   const [editEmail, setEditEmail] = useState('')
   const [editPackage, setEditPackage] = useState('')
   const [editExpiry, setEditExpiry] = useState('')
-  // 🔧 修复(2025-12-30): 改为boolean类型匹配API
+  // 改为boolean类型匹配API
   const [editStatus, setEditStatus] = useState(true)
 
   // Reset password dialog
@@ -482,7 +482,7 @@ export default function UserManagementPage() {
       return
     }
 
-    // 🔧 修复(2025-12-30): 防止重复提交
+    // 防止重复提交
     if (isSubmitting) return
     setIsSubmitting(true)
 
@@ -546,7 +546,7 @@ export default function UserManagementPage() {
   const handleEditUser = async () => {
     if (!selectedUser) return
 
-    // 🔧 修复(2025-12-30): 防止重复提交
+    // 防止重复提交
     if (isSubmitting) return
     setIsSubmitting(true)
 
@@ -576,7 +576,7 @@ export default function UserManagementPage() {
   }
 
   const handleDisableUser = (userId: number, username: string, currentStatus: boolean) => {
-    // 🔧 修复(2025-12-30): 改为boolean判断
+    // 改为boolean判断
     const action = currentStatus ? '禁用' : '启用'
     const confirmButtonText = currentStatus ? '禁用用户' : '启用用户'
     setConfirmDialog({
@@ -673,7 +673,7 @@ export default function UserManagementPage() {
 
   const handleDeleteUser = (userId: number, username: string, isActive: boolean) => {
     // 检查用户是否处于启用状态
-    // 🔧 修复(2025-12-30): 改为boolean判断
+    // 改为boolean判断
     if (isActive) {
       toast.error('无法删除启用状态的用户，请先禁用该用户')
       return
@@ -1177,7 +1177,7 @@ export default function UserManagementPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex flex-col gap-1">
-                          {/* 🔧 修复(2025-12-30): 改为boolean判断 */}
+                          {/* 改为boolean判断 */}
                           {!user.isActive ? (
                             <Badge
                               variant="destructive"
@@ -1788,7 +1788,7 @@ export default function UserManagementPage() {
             </div>
             <div className="space-y-2">
               <Label>账号状态</Label>
-              {/* 🔧 修复(2025-12-30): 改为boolean值 */}
+              {/* 改为boolean值 */}
               <Select value={String(editStatus)} onValueChange={(v) => setEditStatus(v === 'true')}>
                 <SelectTrigger>
                   <SelectValue />

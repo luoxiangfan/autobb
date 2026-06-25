@@ -29,6 +29,6 @@ export interface KeywordExtractionInput {
   competitors: string[]
   targetCountry: string
   targetLanguage: string
-  /** 提供时按 Offer linked SA prepare，供搜索量查询复用 session */
+  /* * 提供时按 Offer linked SA prepare，供搜索量查询复用 session */
   offerId?: number
 }

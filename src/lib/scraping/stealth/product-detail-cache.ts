@@ -2,9 +2,9 @@
  * 统一产品详情缓存模块
  *
  * 为店铺热销商品和竞品分析提供统一的缓存机制
- * - 24小时TTL
- * - 支持完整产品详情数据
- * - 避免重复抓取同一ASIN
+ * 24小时TTL
+ * 支持完整产品详情数据
+ * 避免重复抓取同一ASIN
  */
 
 import type { AmazonProductData } from './types'
@@ -35,7 +35,7 @@ export function getCachedProductDetail(
 ): AmazonProductData | null {
   const cached = productDetailCache.get(asin)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    // 🔥 2025-12-12修复：质量检查 - 如果要求features但为空，视为缓存未命中
+    // 质量检查 - 如果要求features但为空，视为缓存未命中
     if (requireFeatures && (!cached.data.features || cached.data.features.length === 0)) {
       if (!silent) {
         console.log(`  ⚠️ 缓存质量不佳: ${asin} (features为空)，需重新抓取`)
@@ -121,7 +121,7 @@ export function checkCacheBatch(
   const uncached: string[] = []
 
   for (const asin of asins) {
-    // 🔥 2025-12-12修复：传递质量检查参数
+    // 传递 requireFeatures 质量检查参数
     const data = getCachedProductDetail(asin, requireFeatures)
     if (data) {
       cached.push({ asin, data })

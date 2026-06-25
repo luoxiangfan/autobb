@@ -8,7 +8,7 @@ export interface KeywordQualityFilterOptions {
   targetLanguage?: string
   minWordCount?: number // 最少单词数
   maxWordCount?: number // 最多单词数
-  productUrl?: string // 🔥 新增：产品URL，用于平台冲突检测
+  productUrl?: string // 产品URL，用于平台冲突检测
   /**
    * 是否必须包含纯品牌词
    * @default true
@@ -22,8 +22,8 @@ export interface KeywordQualityFilterOptions {
   allowNonBrandFromPlanner?: boolean | PlannerNonBrandPolicy
   /**
    * 与商品/品类相关性过滤（防歧义品牌误入无关主题）
-   * - 当品牌词有歧义（如 "Rove"）时，Keyword Planner 可能返回包含品牌但主题无关的关键词（如 rove beetle, rove concept）。
-   * - 启用后：除“纯品牌词”/“型号词”外，关键词必须命中至少 N 个来自 category/productName 的 token 才保留。
+   * 当品牌词有歧义（如 "Rove"）时，Keyword Planner 可能返回包含品牌但主题无关的关键词（如 rove beetle, rove concept）。
+   * 启用后：除“纯品牌词”/“型号词”外，关键词必须命中至少 N 个来自 category/productName 的 token 才保留。
    *
    * @default 0 (关闭)
    */

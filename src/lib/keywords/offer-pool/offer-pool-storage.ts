@@ -82,7 +82,7 @@ export async function saveKeywordPool(
     [offerId]
   )
 
-  // 🔥 2025-12-16修复：使用统一的JSON序列化函数
+  // 使用统一的JSON序列化函数
   const brandKwJson = serializeKeywordArrayForDb(brandKeywords)
   const bucketAJson = serializeKeywordArrayForDb(buckets.bucketA.keywords)
   const bucketBJson = serializeKeywordArrayForDb(buckets.bucketB.keywords)
@@ -169,9 +169,9 @@ export async function saveKeywordPool(
 }
 
 /**
- * 🆕 保存关键词池（PoolKeywordData[] 版本）
- * 🔥 2025-12-22: 添加bucketD支持
- * 🆕 v4.16: 支持店铺链接的5桶存储
+ * 保存关键词池（PoolKeywordData[] 版本）
+ * 添加bucketD支持
+ * v4.16: 支持店铺链接的5桶存储
  */
 export async function saveKeywordPoolWithData(
   offerId: number,
@@ -185,7 +185,7 @@ export async function saveKeywordPoolWithData(
     statistics: { totalKeywords: number; balanceScore: number }
   },
   pageType: 'product' | 'store' = 'product',
-  storeBuckets?: StoreKeywordBuckets, // 🆕 v4.16: 店铺桶数据（可选）
+  storeBuckets?: StoreKeywordBuckets, // v4.16: 店铺桶数据（可选）
   storeBucketData?: {
     bucketA: PoolKeywordData[]
     bucketB: PoolKeywordData[]
@@ -207,7 +207,7 @@ export async function saveKeywordPoolWithData(
   const bucketCJson = serializeKeywordArrayForDb(buckets.bucketC.keywords)
   const bucketDJson = serializeKeywordArrayForDb(buckets.bucketD.keywords)
   const emptyArrayJson = serializeKeywordArrayForDb([])
-  // 🆕 v4.16: 店铺分桶JSON（优先保存带搜索量的数据）
+  // v4.16: 店铺分桶JSON（优先保存带搜索量的数据）
   const storeBucketAJson = storeBucketData
     ? serializeKeywordArrayForDb(storeBucketData.bucketA)
     : storeBuckets
@@ -247,7 +247,7 @@ export async function saveKeywordPoolWithData(
     [offerId]
   )
 
-  // 🆕 v4.16: 店铺分桶意图
+  // v4.16: 店铺分桶意图
   const storeBucketAIntent = storeBuckets?.bucketA.intent || DEFAULT_STORE_CLUSTER_BUCKETS.A.intent
   const storeBucketBIntent = storeBuckets?.bucketB.intent || DEFAULT_STORE_CLUSTER_BUCKETS.B.intent
   const storeBucketCIntent = storeBuckets?.bucketC.intent || DEFAULT_STORE_CLUSTER_BUCKETS.C.intent
@@ -255,7 +255,7 @@ export async function saveKeywordPoolWithData(
   const storeBucketSIntent = storeBuckets?.bucketS.intent || DEFAULT_STORE_CLUSTER_BUCKETS.S.intent
 
   if (existing) {
-    // 🆕 v4.16: 更新现有记录（包含店铺分桶）
+    // v4.16: 更新现有记录（包含店铺分桶）
     const updateFields = [
       'brand_keywords = ?',
       'bucket_a_keywords = ?',
@@ -321,7 +321,7 @@ export async function saveKeywordPoolWithData(
     return getKeywordPoolByOfferId(offerId) as Promise<OfferKeywordPool>
   }
 
-  // 🆕 v4.16: 创建新记录（包含店铺分桶）
+  // v4.16: 创建新记录（包含店铺分桶）
   const insertFields = [
     'offer_id',
     'user_id',
@@ -394,7 +394,7 @@ export async function saveKeywordPoolWithData(
 }
 
 /**
- * 🆕 解析关键词数组（向后兼容）
+ * 解析关键词数组（向后兼容）
  * 处理新格式 PoolKeywordData[] 和旧格式 string[]
  */
 function normalizeParsedPoolKeywordItem(raw: unknown): PoolKeywordData | null {
@@ -473,7 +473,7 @@ function parseKeywordArray(data: unknown): PoolKeywordData[] {
 
 /**
  * 根据 Offer ID 获取关键词池
- * 🆕 v4.16: 添加店铺分桶字段解析
+ * v4.16: 添加店铺分桶字段解析
  */
 export async function getKeywordPoolByOfferId(offerId: number): Promise<OfferKeywordPool | null> {
   const db = await getDatabase()
@@ -484,9 +484,9 @@ export async function getKeywordPoolByOfferId(offerId: number): Promise<OfferKey
 
   if (!row) return null
 
-  // 🔥 2025-12-16升级：使用parseKeywordArray处理新旧格式
-  // 🔥 2025-12-22：添加bucketDKeywords和bucketDIntent
-  // 🔥 2025-12-24：添加店铺分桶字段
+  // 使用parseKeywordArray处理新旧格式
+  // 添加bucketDKeywords和bucketDIntent
+  // 添加店铺分桶字段
   return {
     id: row.id,
     offerId: row.offer_id,
@@ -500,7 +500,7 @@ export async function getKeywordPoolByOfferId(offerId: number): Promise<OfferKey
     bucketBIntent: row.bucket_b_intent || DEFAULT_PRODUCT_CLUSTER_BUCKETS.B.intent,
     bucketCIntent: row.bucket_c_intent || DEFAULT_PRODUCT_CLUSTER_BUCKETS.C.intent,
     bucketDIntent: row.bucket_d_intent || DEFAULT_PRODUCT_CLUSTER_BUCKETS.D.intent,
-    // 🆕 v4.16: 店铺分桶字段
+    // v4.16: 店铺分桶字段
     storeBucketAKeywords: parseKeywordArray(row.store_bucket_a_keywords ?? []),
     storeBucketBKeywords: parseKeywordArray(row.store_bucket_b_keywords ?? []),
     storeBucketCKeywords: parseKeywordArray(row.store_bucket_c_keywords ?? []),

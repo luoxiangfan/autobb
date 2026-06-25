@@ -7,7 +7,7 @@ import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliat
 
 /**
  * Campaign性能数据
- * 🔧 修复(2025-12-30): 增加currency字段支持多货币
+ * 增加currency字段支持多货币
  */
 interface CampaignPerformance {
   campaignId: number
@@ -22,20 +22,20 @@ interface CampaignPerformance {
   cpc: number
   conversionRate: number
   createdAt: string
-  currency?: string // 🔧 新增: 货币代码
+  currency?: string // 货币代码
 }
 
 /**
  * GET /api/dashboard/campaigns
  * 获取Campaign列表及其性能数据
- * Query参数：
- * - days: 统计天数（默认7）
- * - sortBy: 排序字段（cost/clicks/conversions，默认cost）
- * - sortOrder: 排序方向（asc/desc，默认desc）
- * - page: 页码（默认1）
- * - pageSize: 每页数量（默认10）
- * - status: 筛选状态（可选）
- * - search: 搜索关键词（可选）
+ * Query参数
+ * days: 统计天数（默认7）
+ * sortBy: 排序字段（cost/clicks/conversions，默认cost）
+ * sortOrder: 排序方向（asc/desc，默认desc）
+ * page: 页码（默认1）
+ * pageSize: 每页数量（默认10）
+ * status: 筛选状态（可选）
+ * search: 搜索关键词（可选）
  */
 export const dynamic = 'force-dynamic'
 
@@ -107,8 +107,8 @@ const getHandler = withPerformanceMonitoring(
 
       const offset = (page - 1) * pageSize
 
-      // 📌 性能优化：下推排序/分页到数据库，避免全量加载后在内存排序
-      // 🔧 修复(2025-12-30): 增加currency字段支持多货币
+      // 性能下推排序/分页到数据库，避免全量加载后在内存排序
+      // 增加currency字段支持多货币
       const pageQuery = `
       SELECT
         c.id as campaignId,

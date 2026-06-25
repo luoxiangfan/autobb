@@ -32,7 +32,7 @@ interface ClickFarmTaskModalProps {
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
   preSelectedOfferId?: number // 预选的Offer ID
-  editTaskId?: string | number // 🆕 编辑模式：传入任务ID
+  editTaskId?: string | number // 编辑模式：传入任务ID
 }
 
 interface Offer {
@@ -62,7 +62,7 @@ export default function ClickFarmTaskModal({
   onOpenChange,
   onSuccess,
   preSelectedOfferId,
-  editTaskId, // 🆕 编辑模式参数
+  editTaskId, // 编辑模式参数
 }: ClickFarmTaskModalProps) {
   const [loading, setLoading] = useState(false)
   const [offers, setOffers] = useState<Offer[]>([])
@@ -77,7 +77,7 @@ export default function ClickFarmTaskModal({
     `${BATCH_CLICK_FARM_TASK_DEFAULTS.startTime}-${BATCH_CLICK_FARM_TASK_DEFAULTS.endTime}`
   )
   const [durationDays, setDurationDays] = useState(BATCH_CLICK_FARM_TASK_DEFAULTS.durationDays)
-  const [scheduledStartDate, setScheduledStartDate] = useState<string>( // 🆕 开始日期状态
+  const [scheduledStartDate, setScheduledStartDate] = useState<string>( // 开始日期状态
     new Date().toISOString().split('T')[0] // 默认当天
   )
   const [proxyWarning, setProxyWarning] = useState('')
@@ -85,21 +85,21 @@ export default function ClickFarmTaskModal({
   const [isEditingDistribution, setIsEditingDistribution] = useState(false)
   const [isDistributionManuallyModified, setIsDistributionManuallyModified] = useState(false)
   const [, setDraggedHour] = useState<number | null>(null)
-  // 🔧 修复P2-10(2025-12-30): 初始值设为空,避免误导用户,实际值由选择offer时自动设置
+  // 修复P2-10: 初始值设为空,避免误导用户,实际值由选择offer时自动设置
   const [timezone, setTimezone] = useState<string>('')
   const [taskStatus, setTaskStatus] = useState<string | null>(null)
   const [restarting, setRestarting] = useState(false)
 
-  // 🆕 Referer配置状态
+  // Referer配置状态
   const [refererConfig, setRefererConfig] = useState<{
     type: 'none' | 'random' | 'specific' | 'custom'
     referer?: string
   }>({ type: 'none' })
 
-  const isEditMode = !!editTaskId // 🆕 判断是否为编辑模式
+  const isEditMode = !!editTaskId // 判断是否为编辑模式
   const canRestartTask = isEditMode && (taskStatus === 'paused' || taskStatus === 'stopped')
 
-  // 🔧 修复P1-2(2025-12-30): 清理拖拽事件监听器,防止内存泄漏
+  // 修复P1-2: 清理拖拽事件监听器,防止内存泄漏
   useEffect(() => {
     // 当对话框关闭时,清理可能残留的全局事件监听器
     if (!open) {
@@ -108,7 +108,7 @@ export default function ClickFarmTaskModal({
     }
   }, [open])
 
-  // 🆕 加载任务数据
+  // 加载任务数据
   const loadTaskData = useCallback(async () => {
     try {
       const response = await fetch(`/api/click-farm/tasks/${editTaskId}`)
@@ -119,11 +119,11 @@ export default function ClickFarmTaskModal({
       setTaskStatus(task.status || null)
       setSelectedOfferId(task.offer_id)
       setDailyClickCount(task.daily_click_count)
-      // 🔧 修复P0-2(2025-12-30): 直接使用后端返回的时间范围,避免数据丢失
+      // 修复P0-2: 直接使用后端返回的时间范围,避免数据丢失
       setTimePeriod(`${task.start_time}-${task.end_time}`)
-      // 🔧 修复P0-3(2025-12-30): 后端-1表示不限期,前端转换为9999
+      // 修复P0-3: 后端-1表示不限期,前端转换为9999
       setDurationDays(task.duration_days === -1 ? 9999 : task.duration_days)
-      // 🔧 修复(2025-12-31): scheduled_start_date可能是ISO格式，转换为yyyy-MM-dd格式
+      // scheduled_start_date可能是ISO格式，转换为yyyy-MM-dd格式
       const startDateStr = task.scheduled_start_date
       if (startDateStr) {
         const formattedDate =
@@ -133,9 +133,9 @@ export default function ClickFarmTaskModal({
         setScheduledStartDate(new Date().toISOString().split('T')[0])
       }
       setDistribution(task.hourly_distribution)
-      setTimezone(task.timezone) // 🆕 加载timezone
-      // 🆕 加载Referer配置
-      // 🔧 修复(2025-12-31): referer_config可能是对象或字符串，需要先检查类型
+      setTimezone(task.timezone) // 加载timezone
+      // 加载Referer配置
+      // referer_config可能是对象或字符串，需要先检查类型
       const refererConfigValue = task.referer_config
       if (
         refererConfigValue &&
@@ -157,7 +157,7 @@ export default function ClickFarmTaskModal({
       } else {
         setRefererConfig({ type: 'none' })
       }
-      // 🔧 修复P0-1(2025-12-30): 编辑模式下加载的distribution不应被useEffect覆盖
+      // 修复P0-1: 编辑模式下加载的distribution不应被useEffect覆盖
       // 设置为true表示这是从服务器加载的数据,阻止自动生成
       setIsDistributionManuallyModified(true)
     } catch (error) {
@@ -167,7 +167,7 @@ export default function ClickFarmTaskModal({
     }
   }, [editTaskId, onOpenChange])
 
-  // 🆕 加载现有任务数据（编辑模式）
+  // 加载现有任务数据（编辑模式）
   useEffect(() => {
     if (open && editTaskId) {
       void loadTaskData()
@@ -195,7 +195,7 @@ export default function ClickFarmTaskModal({
     }
   }
 
-  // 🔧 修复(2025-12-30): [核心] distribution状态的唯一管理源
+  // [核心] distribution状态的唯一管理源
   // 这是distribution自动生成的唯一入口,避免多处设置导致竞态条件
   // 触发条件: selectedOfferId变化 || dailyClickCount变化 || timePeriod变化 || 手动修改标志重置
   // 手动修改场景(不触发此effect): 拖拽编辑、均衡分布、编辑器修改、编辑模式加载
@@ -208,11 +208,11 @@ export default function ClickFarmTaskModal({
     }
   }, [selectedOfferId, dailyClickCount, timePeriod, isDistributionManuallyModified])
 
-  // 🔧 修复(2025-12-30): loadAuxiliaryData只负责检查代理和设置时区,不涉及distribution
+  // loadAuxiliaryData只负责检查代理和设置时区,不涉及distribution
   // distribution统一由useEffect(line 142-148)管理
   const loadAuxiliaryData = useCallback(
     async (offer: Offer, _offersList: Offer[]) => {
-      // 🔧 修复P2-4(2025-12-30): 添加错误处理,防止时区设置失败影响整体流程
+      // 修复P2-4: 添加错误处理,防止时区设置失败影响整体流程
       try {
         // 并行检查代理
         const proxyResult = await fetch(
@@ -264,7 +264,7 @@ export default function ClickFarmTaskModal({
 
     if (offersData.length > 0) {
       setSelectedOfferId(offersData[0].id)
-      // 🔧 修复(2025-12-30): 异步加载辅助数据,不阻塞主流程
+      // 异步加载辅助数据,不阻塞主流程
       loadAuxiliaryData(offersData[0], offersData).catch((e) => {
         console.error('[ClickFarmTaskModal] loadAuxiliaryData 错误', e)
       })
@@ -276,7 +276,7 @@ export default function ClickFarmTaskModal({
       setLoadingOffers(true)
       console.log('[ClickFarmTaskModal] loadOffers START: preSelectedOfferId =', preSelectedOfferId)
 
-      // 🆕 如果有 preSelectedOfferId，只获取单个Offer的信息
+      // 如果有 preSelectedOfferId，只获取单个Offer的信息
       if (preSelectedOfferId) {
         const response = await fetch(`/api/offers/${preSelectedOfferId}`, {
           credentials: 'include',
@@ -297,7 +297,7 @@ export default function ClickFarmTaskModal({
         if (offerData) {
           setOffers([offerData])
           setSelectedOfferId(preSelectedOfferId)
-          // 🔧 修复(2025-12-30): 异步加载辅助数据(代理检查、时区设置),不阻塞主流程
+          // 异步加载辅助数据(代理检查、时区设置),不阻塞主流程
           // distribution由useEffect自动生成,无需等待
           loadAuxiliaryData(offerData, [offerData]).catch((e) => {
             console.error('[ClickFarmTaskModal] loadAuxiliaryData 错误', e)
@@ -324,9 +324,9 @@ export default function ClickFarmTaskModal({
     }
   }, [open, loadOffers])
 
-  // 🔧 修复(2025-12-30): 简化useLayoutEffect逻辑,避免复杂的调用链
+  // 简化useLayoutEffect逻辑,避免复杂的调用链
   // 该effect只负责设置selectedOfferId,distribution由useEffect(line 142-148)统一管理
-  // 🔧 修复P1-1(2025-12-30): 添加selectedOfferId到依赖数组,避免闭包陈旧值
+  // 修复P1-1: 添加selectedOfferId到依赖数组,避免闭包陈旧值
   useLayoutEffect(() => {
     console.log(
       '[ClickFarmTaskModal] useLayoutEffect EXECUTE: open=',
@@ -363,7 +363,7 @@ export default function ClickFarmTaskModal({
     }
   }, [open, preSelectedOfferId, offers, selectedOfferId, loadAuxiliaryData])
 
-  // 🔧 修复(2025-12-30): 删除重复的useEffect,统一由第142-148行的useEffect管理distribution生成
+  // 删除重复的useEffect,统一由第142-148行的useEffect管理distribution生成
   // 原代码在此处有重复的useEffect,导致distribution被设置两次,引发竞态条件
 
   const generateDistribution = async () => {
@@ -383,7 +383,7 @@ export default function ClickFarmTaskModal({
 
       const data = await response.json()
       setDistribution(data.data.distribution)
-      // 🔧 修复P2-2(2025-12-30): API生成的distribution也标记为手动修改,防止被覆盖
+      // 修复P2-2: API生成的distribution也标记为手动修改,防止被覆盖
       setIsDistributionManuallyModified(true)
     } catch (error) {
       console.error('生成时间分布失败:', error)
@@ -391,7 +391,7 @@ export default function ClickFarmTaskModal({
     }
   }
 
-  // 🔧 修复P2-1(2025-12-30): checkProxy函数未使用,已删除冗余代码
+  // 修复P2-1: checkProxy函数未使用,已删除冗余代码
   // 代理检查逻辑已整合到loadAuxiliaryData中
 
   const handleOfferChange = (offerId: number, offersDataParam?: Offer[]) => {
@@ -420,7 +420,7 @@ export default function ClickFarmTaskModal({
       offer?.targetCountry
     )
     if (offer) {
-      // 🔧 修复(2025-12-30): 异步加载辅助数据,不阻塞
+      // 异步加载辅助数据,不阻塞
       loadAuxiliaryData(offer, offersList).catch((e) => {
         console.error('[ClickFarmTaskModal] loadAuxiliaryData 错误', e)
       })
@@ -453,9 +453,7 @@ export default function ClickFarmTaskModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // ==========================================
     // 第一部分：Offer信息完整性校验
-    // ==========================================
 
     // 1.1 校验Offer是否已选择
     if (!selectedOfferId) {
@@ -512,9 +510,7 @@ export default function ClickFarmTaskModal({
       return
     }
 
-    // ==========================================
     // 第二部分：任务配置校验
-    // ==========================================
 
     // 2.1 校验每日点击数
     if (!dailyClickCount || dailyClickCount < 1) {
@@ -628,21 +624,19 @@ export default function ClickFarmTaskModal({
       return
     }
 
-    // ==========================================
     // 第三部分：外部依赖校验
-    // ==========================================
 
     if (proxyWarning) {
       toast.error('请先配置代理')
       return
     }
 
-    // 🔧 修复P2-8(2025-12-30): 校验refererConfig完整性
+    // 修复P2-8: 校验refererConfig完整性
     if (refererConfig.type === 'specific' && !refererConfig.referer) {
       toast.error('请选择具体的Referer来源')
       return
     }
-    // 🆕 校验自定义Referer URL
+    // 校验自定义Referer URL
     if (refererConfig.type === 'custom' && !refererConfig.referer) {
       toast.error('请输入自定义Referer URL')
       return
@@ -656,9 +650,7 @@ export default function ClickFarmTaskModal({
       }
     }
 
-    // ==========================================
     // 第四部分：提交数据
-    // ==========================================
 
     try {
       setLoading(true)
@@ -672,7 +664,7 @@ export default function ClickFarmTaskModal({
         scheduled_start_date: scheduledStartDate,
         hourly_distribution: distribution,
         timezone: timezone,
-        referer_config: refererConfig, // 🆕 添加Referer配置
+        referer_config: refererConfig, // 添加Referer配置
       }
 
       console.log('[ClickFarmTaskModal] 发送请求数据:', {
@@ -687,7 +679,7 @@ export default function ClickFarmTaskModal({
         referer_config: requestData.referer_config,
       })
 
-      // 🆕 编辑模式：使用PUT方法
+      // 编辑模式：使用PUT方法
       const response = await fetch(
         isEditMode ? `/api/click-farm/tasks/${editTaskId}` : '/api/click-farm/tasks',
         {
@@ -718,7 +710,7 @@ export default function ClickFarmTaskModal({
 
   const selectedOffer = offers.find((o) => o.id === selectedOfferId)
 
-  // 🔧 修复P2-7(2025-12-30): 添加重置表单状态的函数
+  // 修复P2-7: 添加重置表单状态的函数
   const resetFormState = () => {
     setSelectedOfferId(null)
     setDailyClickCount(BATCH_CLICK_FARM_TASK_DEFAULTS.dailyClickCount)
@@ -826,7 +818,7 @@ export default function ClickFarmTaskModal({
                     <span className="font-medium">{selectedOffer.targetCountry}</span>
                   </div>
 
-                  {/* 执行时区 - 🔧 修复P2-10(2025-12-30): 只在timezone有值时显示 */}
+                  {/* 执行时区 - 修复P2-10: 只在timezone有值时显示 */}
                   {timezone && (
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -904,7 +896,7 @@ export default function ClickFarmTaskModal({
                   max={1000}
                   value={dailyClickCount}
                   onChange={(e) => {
-                    // 🔧 修复P2-5(2025-12-30): 改进清空行为,空值时保留NaN而非设为0
+                    // 修复P2-5: 改进清空行为,空值时保留NaN而非设为0
                     const value = e.target.value
                     if (value === '') {
                       setDailyClickCount(0) // 临时设为0,用户继续输入时会更新
@@ -942,7 +934,7 @@ export default function ClickFarmTaskModal({
                   value={timePeriod}
                   onValueChange={(value) => {
                     setTimePeriod(value)
-                    // 🔧 修复P1-3(2025-12-30): 改变时间段时重置手动修改标志,触发distribution重新生成
+                    // 修复P1-3: 改变时间段时重置手动修改标志,触发distribution重新生成
                     setIsDistributionManuallyModified(false)
                   }}
                   required
@@ -1151,7 +1143,7 @@ export default function ClickFarmTaskModal({
                     }
 
                     setDistribution(newDistribution)
-                    // 🔧 修复(2025-12-30): 编辑器修改后标记为手动修改,阻止useEffect自动覆盖
+                    // 编辑器修改后标记为手动修改,阻止useEffect自动覆盖
                     setIsDistributionManuallyModified(true)
                   }}
                 />

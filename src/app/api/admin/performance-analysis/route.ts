@@ -27,7 +27,7 @@ export const POST = withAuth(
 
         performanceData.forEach((ad: any, index: number) => {
           analysisPrompt += `
-**创意 ${index + 1}**
+* *创意 ${index + 1}**
 - 标题: ${ad.headline1} | ${ad.headline2} | ${ad.headline3}
 - 描述: ${ad.description1} | ${ad.description2}
 - 创意导向: ${ad.orientation === 'brand' ? '品牌导向' : ad.orientation === 'product' ? '产品导向' : '促销导向'}
@@ -100,7 +100,7 @@ export const POST = withAuth(
           operationType: 'admin_performance_analysis',
           prompt: analysisPrompt,
           temperature: 0.7,
-          maxOutputTokens: 8192, // 🔴 Pro模型统一使用8192
+          maxOutputTokens: 8192, // Pro模型统一使用8192
         },
         userId
       )

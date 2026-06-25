@@ -122,7 +122,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
     const userId = user.userId
     const body = await request.json()
 
-    // 2. Validate input - 🔧 修复(2025-12-11): 接受 camelCase 字段
+    // 2. Validate input - 接受 camelCase 字段
     const {
       autoSyncEnabled,
       syncIntervalHours,
@@ -152,7 +152,7 @@ export const PUT = withAuth(async (request: NextRequest, user) => {
 
     const db = await getDatabase()
 
-    // 3. Build update query dynamically - 🔧 修复: 使用 camelCase 变量
+    // 3. Build update query dynamically - 使用 camelCase 变量
     const updates: string[] = []
     const values: any[] = []
 

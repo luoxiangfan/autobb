@@ -107,8 +107,8 @@ export function formatCurrency(
  *
  * @example
  * formatMultiCurrency([
- *   { currency: 'USD', amount: 430.79 },
- *   { currency: 'CNY', amount: 1200.50 }
+ * { currency: 'USD', amount: 430.79 },
+ * { currency: 'CNY', amount: 1200.50 }
  * ]) // "$430.79 + ¥1,200.50"
  */
 export function formatMultiCurrency(

@@ -127,10 +127,10 @@ function diffDaysInclusive(startYmd: string, endYmd: string): number {
 /**
  * GET /api/dashboard/kpis
  * 获取核心KPI指标（展示、点击、花费、佣金）
- * Query参数：
- * - days: 统计天数（默认7天）
- * - start_date: 自定义开始日期（可选，YYYY-MM-DD）
- * - end_date: 自定义结束日期（可选，YYYY-MM-DD）
+ * Query参数
+ * days: 统计天数（默认7天）
+ * start_date: 自定义开始日期（可选，YYYY-MM-DD）
+ * end_date: 自定义结束日期（可选，YYYY-MM-DD）
  */
 export const dynamic = 'force-dynamic'
 
@@ -377,7 +377,7 @@ const getHandler = withPerformanceMonitoring(
         )
         const totalClicks = currentData.reduce((sum, row) => sum + (Number(row?.clicks) || 0), 0)
 
-        // 🔧 修复(2026-03-11): 多货币时需要先转换为USD再相加
+        // 多货币时需要先转换为USD再相加
         const totalCost = isMultiCurrency
           ? currentData.reduce((sum, row) => {
               const cost = Number(row?.cost) || 0
@@ -439,7 +439,7 @@ const getHandler = withPerformanceMonitoring(
         }
 
         const roasAvailable = !isMultiCurrency
-        // 🔧 修改(2026-03-10): 多货币时也计算ROAS（基于转换后的USD总额），与Campaigns页面保持一致
+        // 修改: 多货币时也计算ROAS（基于转换后的USD总额），与Campaigns页面保持一致
         const currentRoas = calculateRoas(current.commission, current.cost)
         const previousRoas = calculateRoas(previous.commission, previous.cost)
         current.roas = currentRoas.value

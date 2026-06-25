@@ -207,7 +207,7 @@ async function getBrowserFromPoolWithProxyRefresh(
   userId?: number,
   forceRefreshProxy = false
 ): Promise<{ browser: Browser; context: BrowserContext; instanceId: string; fromPool: boolean }> {
-  // 🔥 P0优化: 如果有targetCountry，尝试从代理池获取预热的代理（节省3-5s）
+  // 如果有targetCountry，尝试从代理池获取预热的代理（节省3-5s）
   let proxyCredentials:
     | { host: string; port: number; username: string; password: string }
     | undefined
@@ -250,9 +250,9 @@ async function getBrowserFromPoolWithProxyRefresh(
   }
 
   const pool = getPlaywrightPool()
-  // 🔥 换链接任务允许使用代理凭证缓存（allowCredentialsCache = true）
+  // 换链接任务允许使用代理凭证缓存（allowCredentialsCache = true）
   // 因为换链接只是解析 URL，不涉及点击行为，同一个代理 IP 多次使用影响不大
-  // 🔥 必须传入 userId 以确保缓存用户级别隔离
+  // 必须传入 userId 以确保缓存用户级别隔离
   const allowCredentialsCache = !forceRefreshProxy
   const { browser, context, instanceId } = await pool.acquire(
     proxyUrl,
@@ -276,7 +276,7 @@ function releaseBrowserToPool(instanceId: string): void {
 /**
  * 使用Playwright解析Affiliate链接
  * 支持JavaScript重定向和动态内容
- * P0优化: 集成代理IP池预热缓存
+ * 集成代理IP池预热缓存
  *
  * @param affiliateLink - Offer推广链接
  * @param proxyUrl - 可选的代理URL
@@ -298,7 +298,7 @@ export async function resolveAffiliateLinkWithPlaywright(
 
   try {
     // 从连接池获取浏览器（复用实例，减少启动时间50%）
-    // P0优化: 如果有targetCountry，尝试使用代理IP池预热缓存（节省3-5s）
+    // 如果有targetCountry，尝试使用代理IP池预热缓存（节省3-5s）
     const result = await getBrowserFromPoolWithProxyRefresh(
       proxyUrl,
       targetCountry,
@@ -349,7 +349,7 @@ export async function resolveAffiliateLinkWithPlaywright(
       timeout: complexity.recommendedTimeout,
     })
 
-    // 🔧 检查导航响应
+    // 检查导航响应
     if (!response) {
       console.error(`❌ Playwright导航失败: 无响应`)
       throw new Error(`Playwright导航失败: 页面无响应，可能是推广链接失效或被拦截`)
@@ -358,7 +358,7 @@ export async function resolveAffiliateLinkWithPlaywright(
     const statusCode = response.status()
     console.log(`   - 响应状态码: ${statusCode}`)
 
-    // 🔥 关键：URL解析阶段不应把4xx当作“无法解析”
+    // 关键：URL解析阶段不应把4xx当作“无法解析”
     // 例如最终站点对代理/爬虫返回403，但finalUrl仍然是有效落地页URL，后续抓取阶段可用更强手段处理
     if (statusCode >= 400) {
       console.warn(`⚠️ Playwright导航返回HTTP ${statusCode}，将继续返回解析结果（不作为解析失败）`)
@@ -422,7 +422,7 @@ export async function resolveAffiliateLinkWithPlaywright(
     const finalFullUrl = page.url()
     const pageTitle = await page.title()
 
-    // 🔧 防御性检查：仅允许可持久化的HTTP(S) URL，避免 chrome-error://... 被写成 null/
+    // 防御性检查：仅允许可持久化的HTTP(S) URL，避免 chrome-error://... 被写成 null/
     if (!isPersistableFinalUrl(finalFullUrl)) {
       console.error(`❌ Playwright解析失败: 页面URL无效`)
       console.error(`   - page.url(): ${finalFullUrl}`)
@@ -480,11 +480,11 @@ export async function resolveAffiliateLinkWithPlaywright(
       statusCode,
     }
   } catch (error: any) {
-    // 🔥 P1优化：检测代理连接错误，提供更清晰的错误信息
+    // 检测代理连接错误，提供更清晰的错误信息
     if (isProxyConnectionError(error)) {
       console.error('❌ Playwright解析失败 - 代理连接问题:', error.message?.substring(0, 100))
 
-      // 🔧 修复(2025-12-25): 代理连接问题时，销毁实例而不是释放回连接池
+      // 代理连接问题时，销毁实例而不是释放回连接池
       // 这样下次重试时会创建新实例，获取新的代理IP
       if (fromPool && instanceId) {
         console.log(`🗑️ 销毁失败的Playwright实例: ${instanceId}`)

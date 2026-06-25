@@ -1,7 +1,7 @@
 /**
  * 数据库自动初始化模块
  *
- * 在应用启动时自动检查并初始化数据库：
+ * 在应用启动时自动检查并初始化数据库
  * 1. 连接 PostgreSQL（DATABASE_URL）
  * 2. 创建数据库表结构（如果不存在）
  * 3. 创建默认管理员账号
@@ -199,13 +199,13 @@ async function createDefaultAdmin(): Promise<void> {
 /**
  * 确保管理员账号存在（启动时检查）
  *
- * 与 createDefaultAdmin() 的区别：
- * - createDefaultAdmin: 仅在数据库初始化时调用（PostgreSQL自动初始化）
- * - ensureAdminAccount: 每次启动都调用
+ * 与 createDefaultAdmin() 的区别
+ * createDefaultAdmin: 仅在数据库初始化时调用（PostgreSQL自动初始化）
+ * ensureAdminAccount: 每次启动都调用
  *
- * 行为：
- * - 如果管理员不存在：创建新账号
- * - 如果管理员已存在：更新密码（如果环境变量中配置了新密码）
+ * 行为
+ * 如果管理员不存在：创建新账号
+ * 如果管理员已存在：更新密码（如果环境变量中配置了新密码）
  */
 async function ensureAdminAccount(): Promise<void> {
   console.log('\n👤 Checking admin account...')
@@ -793,7 +793,7 @@ export async function initializeDatabase(): Promise<void> {
       const { ensureExchangeRatesOnStartup } = await import('../common/exchange-rates-service')
       await ensureExchangeRatesOnStartup()
     })
-    // 🆕 确保管理员账号存在（如果不存在则创建，如果存在则更新密码）
+    // 确保管理员账号存在（如果不存在则创建，如果存在则更新密码）
     await runStep('管理员账号检查', async () => {
       await ensureAdminAccount()
     })
@@ -801,7 +801,7 @@ export async function initializeDatabase(): Promise<void> {
     await runStep('启动任务清理', async () => {
       await checkUnfinishedQueueTasks()
     })
-    // 🆕 初始化队列系统（统一开发和生产环境）
+    // 初始化队列系统（统一开发和生产环境）
     await runStep('统一队列初始化', async () => {
       await initializeQueueSystem()
     })
@@ -823,7 +823,7 @@ export async function initializeDatabase(): Promise<void> {
     const { ensureExchangeRatesOnStartup } = await import('../common/exchange-rates-service')
     await ensureExchangeRatesOnStartup()
   })
-  // 🆕 初始化队列系统（统一开发和生产环境）
+  // 初始化队列系统（统一开发和生产环境）
   await runStep('统一队列初始化', async () => {
     await initializeQueueSystem()
   })
@@ -882,10 +882,10 @@ async function alignPostgresSequences(): Promise<void> {
 /**
  * 自动执行增量迁移（支持内容变更检测）
  *
- * 核心功能：
+ * 核心功能
  * 1. 扫描 migrations/ 目录下的所有 .sql 文件
  * 2. 检查 migration_history 表，跳过已执行且内容未变更的迁移
- * 3. 🆕 如果迁移文件内容有变更，重新执行该迁移
+ * 3. 如果迁移文件内容有变更，重新执行该迁移
  * 4. 按文件名顺序执行未执行的迁移
  * 5. 记录执行结果和文件 hash 到 migration_history 表
  *
@@ -1133,7 +1133,7 @@ declare global {
  * 场景：服务重启时，内存队列中的任务会丢失
  * 解决：Redis优先恢复scrape任务，如果Redis不可用则从数据库恢复
  *
- * 恢复策略：
+ * 恢复策略
  * 1. Redis优先：从Redis队列读取pending/running状态的scrape任务
  * 2. 数据库回退：从offers表查询scrape_status为pending/in_progress的记录
  *
@@ -1142,10 +1142,10 @@ declare global {
  *
  * 恢复执行：由 @/lib/queue-recovery.ts 的 executeQueueRecoveryIfNeeded() 函数完成
  *
- * 🔥 KISS优化：避免任务堆积导致启动卡住
- * - 启动时清理过期任务（超过1小时）而非恢复
- * - 限制恢复数量（最多50个最近任务）
- * - 过期任务直接从Redis删除，不再尝试恢复
+ * 避免任务堆积导致启动卡住
+ * 启动时清理过期任务（超过1小时）而非恢复
+ * 限制恢复数量（最多50个最近任务）
+ * 过期任务直接从Redis删除，不再尝试恢复
  */
 async function checkUnfinishedQueueTasks(): Promise<void> {
   const db = await getDatabase()
@@ -1153,8 +1153,8 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
   try {
     console.log('🔄 启动清理：清空所有未完成任务...')
 
-    // 🔥 启动时清空所有未完成任务
-    // 理由：
+    // 启动时清空所有未完成任务
+    // 理由
     // 1. 队列恢复功能已禁用，未完成任务无法恢复
     // 2. Redis是唯一真相来源，数据库pending/running状态已无效
     // 3. 应用重启时，running任务已失败，不应重试
@@ -1176,7 +1176,7 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
     }
 
     // 2. 清空数据库中的pending/running任务（保留completed/failed历史）
-    // 🔥 新增：检查offer_tasks表是否存在，避免在数据库未初始化时报错
+    // 检查offer_tasks表是否存在，避免在数据库未初始化时报错
     let dbClearedCount = 0
     try {
       const tableResult = await db.query<{ exists: boolean }>(
@@ -1213,7 +1213,7 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
 /**
  * 清空Redis中的所有未完成任务
  *
- * 🔥 全面清理策略（解决僵尸任务问题）：
+ * 全面清理策略（解决僵尸任务问题）
  * 1. 使用正确的key prefix (autoads:queue:)
  * 2. 清空所有pending队列
  * 3. 清空running集合（关键：服务重启后所有running任务都是僵尸）
@@ -1263,7 +1263,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
       }
     }
 
-    // 🔥 关键修复：使用与UnifiedQueueManager一致的key prefix
+    // 关键使用与UnifiedQueueManager一致的key prefix
     const redisKeyPrefix = process.env.REDIS_KEY_PREFIX || 'autoads:queue:'
 
     let pendingCleared = 0
@@ -1274,7 +1274,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
     const pendingTaskIds = await redisClient.zrange(`${redisKeyPrefix}pending:all`, 0, -1)
     pendingCleared = pendingTaskIds.length
 
-    // 2. 获取所有running任务ID（🔥 关键：这些都是僵尸任务）
+    // 2. 获取所有running任务ID（ 关键：这些都是僵尸任务）
     const runningTaskIds = await redisClient.smembers(`${redisKeyPrefix}running`)
     runningCleared = runningTaskIds.length
 
@@ -1306,7 +1306,7 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
     // 5. 删除全局pending队列
     pipeline.del(`${redisKeyPrefix}pending:all`)
 
-    // 6. 🔥 关键：删除running集合（清除所有僵尸任务）
+    // 6. 关键：删除running集合（清除所有僵尸任务）
     pipeline.del(`${redisKeyPrefix}running`)
 
     // 7. 删除所有用户pending队列

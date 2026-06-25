@@ -1,13 +1,13 @@
 /**
  * 联盟商品同步僵尸任务检测和自动修复
  *
- * 问题历史：
- * - 2025-12-29: 修复sync_log僵尸任务（commit 55edc7c5）
- * - 2026-02-18: 加固PB同步状态和心跳（commit ed7f870a）
- * - 2026-03-07: 添加状态更新日志（commit 29233db9, 75462993）
- * - 2026-03-07: 发现status字段在continuation时被重置为queued（本次修复）
+ * 问题历史
+ * 修复sync_log僵尸任务（commit 55edc7c5）
+ * 加固PB同步状态和心跳（commit ed7f870a）
+ * 添加状态更新日志（commit 29233db9, 75462993）
+ * 发现status字段在continuation时被重置为queued（本次修复）
  *
- * 本模块提供：
+ * 本模块提供
  * 1. 自动检测卡住的同步任务（超时、无心跳、状态异常）
  * 2. 自动修复僵尸任务状态
  * 3. 定期清理和报告
@@ -36,7 +36,7 @@ export type ZombieTaskDetectionResult = {
 const MAX_RUNNING_HOURS = 48 // 超过48小时视为异常
 const MAX_HEARTBEAT_GAP_HOURS = 0.5 // 心跳超过30分钟未更新视为异常（YP登录态失效通常立即体现）
 
-/** EXTRACT/聚合等数值在 PG 驱动下可能为 string，统一为有限 number */
+/* * EXTRACT/聚合等数值在 PG 驱动下可能为 string，统一为有限 number */
 function coerceHours(value: unknown): number {
   if (value == null) return 0
   const n = typeof value === 'number' ? value : Number(value)

@@ -39,9 +39,8 @@ import {
 
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { getKeywordPoolByOfferId } from './offer-pool-storage'
-// ============================================
+
 // 创意生成辅助
-// ============================================
 
 function getKeywordPoolBucketMeta(
   slot: CreativeBucketSlot,
@@ -87,9 +86,9 @@ export function getBucketInfo(
 }
 
 /**
- * 🆕 2025-12-22: 获取综合桶关键词（第5个创意专用）
+ * 获取综合桶关键词（第5个创意专用）
  *
- * 策略：
+ * 策略
  * 1. 包含所有品牌关键词（100%）
  * 2. 从A+B+C+D各桶中选择搜索量最高的非品牌关键词
  * 3. 按搜索量降序排序
@@ -175,7 +174,7 @@ export async function getCoverageBucketKeywords(
       nonBrandWithVolume.sort((a, b) => b.searchVolume - a.searchVolume)
 
       // 过滤低于阈值的关键词
-      // 🔧 修复(2026-03-05): Explorer/权限受限返回 volumeUnavailableReason 时，跳过全部搜索量过滤
+      // Explorer/权限受限返回 volumeUnavailableReason 时，跳过全部搜索量过滤
       const hasAnyVolume = nonBrandWithVolume.some((kw) => kw.searchVolume > 0)
       const volumeUnavailable = hasSearchVolumeUnavailableFlag(
         nonBrandWithVolume as Array<{ volumeUnavailableReason?: unknown }>
@@ -235,8 +234,8 @@ export async function getCoverageBucketKeywords(
 export async function getAvailableBuckets(offerId: number): Promise<BucketType[]> {
   const db = await getDatabase()
 
-  // 🔧 修复(2025-01-02): 只查询未删除的创意，排除软删除的创意
-  // 🔥 修复(2026-03-15): 同时排除 creation_status='generating' 的占位记录（防止并发竞态）
+  // 只查询未删除的创意，排除软删除的创意
+  // 同时排除 creation_status='generating' 的占位记录（防止并发竞态）
   const usedCreatives = await db.query<{
     creative_type: string | null
     keyword_bucket: string | null
@@ -286,7 +285,7 @@ export async function getAvailableBuckets(offerId: number): Promise<BucketType[]
 export async function getUsedBuckets(offerId: number): Promise<BucketType[]> {
   const db = await getDatabase()
 
-  // 🔧 修复(2025-01-02): 只查询未删除的创意，排除软删除的创意
+  // 只查询未删除的创意，排除软删除的创意
   const usedCreatives = await db.query<{
     creative_type: string | null
     keyword_bucket: string | null
@@ -342,10 +341,8 @@ export function calculateKeywordOverlapRate(keywords1: string[], keywords2: stri
   return overlap / total
 }
 
-// ============================================
-// 🔥 KISS 优化：统一关键词检索 API
+// KISS 统一关键词检索 API
 // 替代 5 个重叠函数，简化开发者体验
-// ============================================
 
 type CanonicalGetKeywordsBucket = 'A' | 'B' | 'D' | 'ALL'
 
@@ -443,9 +440,9 @@ function ensurePureBrandFallbackWithinLimit(params: {
 }
 
 /**
- * 🔥 核心 API：统一关键词检索
+ * 核心 API：统一关键词检索
  *
- * 示例用法：
+ * 示例用法
  * ```typescript
  * // 获取所有关键词
  * const all = await getKeywords(123)
@@ -512,7 +509,7 @@ export async function getKeywords(
   }
 
   // 4. 按搜索量过滤（纯品牌词豁免）
-  // 🔧 修复(2025-12-26): 服务账号模式下无法获取搜索量，跳过过滤
+  // 服务账号模式下无法获取搜索量，跳过过滤
   const hasAnyVolume = keywords.some((kw) => kw.searchVolume > 0)
   const volumeUnavailable = hasSearchVolumeUnavailableFlag(keywords)
   if (hasAnyVolume && !volumeUnavailable) {
@@ -585,7 +582,7 @@ export async function getKeywords(
 }
 
 /**
- * 🆕 v4.16: 根据链接类型和创意桶获取关键词
+ * v4.16: 根据链接类型和创意桶获取关键词
  *
  * @param offerId - Offer ID
  * @param linkType - 链接类型 ('product' | 'store')

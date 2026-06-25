@@ -478,7 +478,7 @@ export function refineBrandNameForLandingPage(options: {
     if (domainBrand && wordCount >= 2) return domainBrand
   }
 
-  // 🔥 presell/pre落地页：优先相信“商品名/CTA/域名”推导出的品牌，而不是<title>等发布方字段
+  // presell/pre落地页：优先相信“商品名/CTA/域名”推导出的品牌，而不是<title>等发布方字段
   if (isPresellStyleUrl(url)) {
     const best = chooseBestFallback()
     if (best && normalizeForCompare(best) !== normalizeForCompare(normalizedCurrent)) return best

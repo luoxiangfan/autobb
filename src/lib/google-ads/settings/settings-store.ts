@@ -30,14 +30,14 @@ export type GoogleAdsOAuthSettingsSyncFields = Partial<Record<GoogleAdsOAuthConf
 
 export type SyncGoogleAdsOAuthFieldsResult = {
   synced: boolean
-  /** client_id 或 client_secret 相对 DB 发生变更且仍有 refresh_token */
+  /* * client_id 或 client_secret 相对 DB 发生变更且仍有 refresh_token */
   oauthClientCredentialsChanged: boolean
 }
 
 export type GoogleAdsOAuthConfigUpsertOptions = {
   skipAuthContextInvalidate?: boolean
   skipAuthConflictCheck?: boolean
-  /** 与调用方同一 DatabaseAdapter / transaction 上下文（import、settings 批量保存） */
+  /* * 与调用方同一 DatabaseAdapter / transaction 上下文（import、settings 批量保存） */
   db?: DatabaseAdapter
 }
 
@@ -49,7 +49,7 @@ export class GoogleAdsSettingsValidationError extends Error {
   }
 }
 
-/** OAuth 与服务账号互斥冲突（与 credentials / oauth 路由 409 语义一致） */
+/* * OAuth 与服务账号互斥冲突（与 credentials / oauth 路由 409 语义一致） */
 export class GoogleAdsSettingsAuthConflictError extends Error {
   readonly name = 'GoogleAdsSettingsAuthConflictError'
 
@@ -72,11 +72,11 @@ export function isGoogleAdsSettingsAuthConflictError(
 
 export type GoogleAdsSettingsReadContext = {
   readOnly: boolean
-  /** 生产 OAuth 字段读取目标 user_id（共享 OAuth 时为管理员） */
+  /* * 生产 OAuth 字段读取目标 user_id（共享 OAuth 时为管理员） */
   oauthUserId: number
 }
 
-/** 一次解析：只读标记 + 生产 OAuth 凭证 user_id */
+/* * 一次解析：只读标记 + 生产 OAuth 凭证 user_id */
 export async function resolveGoogleAdsSettingsReadContext(
   userId: number
 ): Promise<GoogleAdsSettingsReadContext> {
@@ -88,7 +88,7 @@ export async function resolveGoogleAdsSettingsReadContext(
   }
 }
 
-/** 共享 OAuth 子用户只读：Settings API 不返回明文密钥 */
+/* * 共享 OAuth 子用户只读：Settings API 不返回明文密钥 */
 export async function isGoogleAdsSettingsReadOnly(userId: number): Promise<boolean> {
   const ctx = await resolveGoogleAdsSettingsReadContext(userId)
   return ctx.readOnly
@@ -109,13 +109,13 @@ export function maskGoogleAdsCredentialSettingValueForReadOnly(
   return value
 }
 
-/** credentials GET：只读用户可见的 clientId / 配置标记（不暴露明文密钥） */
+/* * credentials GET：只读用户可见的 clientId / 配置标记（不暴露明文密钥） */
 export function resolveGoogleAdsCredentialFieldsForReadOnlyApi(params: {
   canModify: boolean
   clientId: string | null | undefined
   developerToken: string | null | undefined
   clientSecret: string | null | undefined
-  /** metadata 路径：无明文时仍标记已配置 */
+  /* * metadata 路径：无明文时仍标记已配置 */
   clientSecretConfiguredOverride?: boolean
   developerTokenConfiguredOverride?: boolean
 }): {
@@ -170,7 +170,7 @@ export function isGoogleAdsCredentialBackedSettingKey(key: string): boolean {
   return isCredentialBackedGoogleAdsSettingKey(key)
 }
 
-/** 共享 OAuth 读管理员凭证行；其余读当前用户 */
+/* * 共享 OAuth 读管理员凭证行；其余读当前用户 */
 export async function resolveGoogleAdsOAuthSettingsReadUserId(userId: number): Promise<number> {
   const ctx = await resolveGoogleAdsSettingsReadContext(userId)
   return ctx.oauthUserId
@@ -303,7 +303,7 @@ function maskSensitiveExportValue(raw: string): string {
   return '****'
 }
 
-/** 导出配置：从凭证表 overlay google_ads OAuth 字段（与 import 路径对齐；共享只读用户跳过） */
+/* * 导出配置：从凭证表 overlay google_ads OAuth 字段（与 import 路径对齐；共享只读用户跳过） */
 export async function overlayGoogleAdsOAuthFieldsForSettingsExport(
   exportData: Record<string, Record<string, SettingsExportEntry>>,
   userId: number,

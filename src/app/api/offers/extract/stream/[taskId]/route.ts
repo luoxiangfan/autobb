@@ -3,16 +3,16 @@
  *
  * SSE订阅 - 实时推送Offer提取任务进度
  *
- * 功能：
+ * 功能
  * 1. 验证用户身份和任务所有权
  * 2. 轮询offer_tasks表获取最新进度
  * 3. 通过SSE推送进度更新
  * 4. 任务完成或失败后自动关闭连接
  *
- * SSE消息格式：
- * - data: { type: 'progress', stage, progress, message }
- * - data: { type: 'complete', result }
- * - data: { type: 'error', error }
+ * SSE消息格式
+ * data: { type: 'progress', stage, progress, message }
+ * data: { type: 'complete', result }
+ * data: { type: 'error', error }
  */
 
 import { withAuth } from '@/lib/auth'

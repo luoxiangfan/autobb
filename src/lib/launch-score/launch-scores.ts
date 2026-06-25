@@ -34,18 +34,18 @@ export interface LaunchScore {
 /**
  * Launch Score 评分体系 v4.15
  *
- * 4维度评分系统（总分100）：
+ * 4维度评分系统（总分100）
  * 1. 投放可行性 (40分) - 品牌词搜索量15 + 竞争度15 + 市场潜力10
  * 2. 广告质量 (30分) - Ad Strength 15 + 标题多样性8 + 描述质量7
  * 3. 关键词策略 (20分) - 关键词相关性8 + 匹配类型6 + 否定关键词6
  * 4. 基础配置 (10分) - 国家/语言5 + Final URL 5
  *
- * 变更说明 (v4.14 → v4.15)：
- * - 取消利润空间得分（profitMargin 保留为 0，不再参与评分）
- * - 增加竞争度评分: 10分 → 15分
- * - 新增市场潜力评分 (0-10分) = 品牌搜索量与竞争度的综合评估
- * - 移除预算合理性评分 (基础配置: 15分 → 10分)
- * - Final URL: 仅检查可访问性，满分5分
+ * 变更说明 (v4.14 → v4.15)
+ * 取消利润空间得分（profitMargin 保留为 0，不再参与评分）
+ * 增加竞争度评分: 10分 → 15分
+ * 新增市场潜力评分 (0-10分) = 品牌搜索量与竞争度的综合评估
+ * 移除预算合理性评分 (基础配置: 15分 → 10分)
+ * Final URL: 仅检查可访问性，满分5分
  */
 export interface ScoreAnalysis {
   // 维度1：投放可行性 (40分)
@@ -56,7 +56,7 @@ export interface ScoreAnalysis {
     profitMargin: number // 保留但不再评估，始终为0
     competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH' // 竞争度
     competitionScore: number // 0-15 (v4.15: 从0-10改为0-15)
-    marketPotentialScore: number // 0-10 (v4.15新增: 基于品牌搜索量+竞争度的综合评估)
+    marketPotentialScore: number // 0-10 (v4.15基于品牌搜索量+竞争度的综合评估)
     issues?: string[]
     suggestions?: string[]
   }
@@ -104,7 +104,7 @@ export interface ScoreAnalysis {
   overallRecommendations: string[]
 }
 
-/** 纳入内容哈希的关键词量数据（稳定、可排序） */
+/* * 纳入内容哈希的关键词量数据（稳定、可排序） */
 export type KeywordVolumeHashEntry = {
   keyword: string
   searchVolume: number
@@ -122,7 +122,7 @@ export type KeywordVolumeHashInput = {
   volumeUnavailableReason?: 'DEV_TOKEN_INSUFFICIENT_ACCESS' | 'DEV_TOKEN_TEST_ONLY'
 }
 
-/** 安全解析 DB / 配置中的 keywords_with_volume JSON */
+/* * 安全解析 DB / 配置中的 keywords_with_volume JSON */
 export function parseKeywordsWithVolumeJson(
   raw: string | null | undefined
 ): KeywordVolumeHashInput[] {
@@ -137,7 +137,7 @@ export function parseKeywordsWithVolumeJson(
   }
 }
 
-/** Step3 优先：与发布路径一致的关键词解析（用于 contentHash 与计分） */
+/* * Step3 优先：与发布路径一致的关键词解析（用于 contentHash 与计分） */
 export function resolveKeywordsWithVolumeForLaunchScore(
   creative: {
     keywords?: string[] | null
@@ -158,7 +158,7 @@ export function resolveKeywordsWithVolumeForLaunchScore(
   })
 }
 
-/** 发布/计分：解析 keywordsWithVolume 优先级（配置 > DB JSON > 创意 keywords） */
+/* * 发布/计分：解析 keywordsWithVolume 优先级（配置 > DB JSON > 创意 keywords） */
 export function resolveKeywordsWithVolumeForLaunch(input: {
   configKeywords?: unknown[] | null
   keywordsWithVolumeJson?: string | null
@@ -177,7 +177,7 @@ export function resolveKeywordsWithVolumeForLaunch(input: {
   return input.fallbackKeywords.map(mapCampaignKeywordToVolumeInput)
 }
 
-/** 计分用：在 mapCampaignKeywordToVolumeInput 基础上保留出价等扩展字段 */
+/* * 计分用：在 mapCampaignKeywordToVolumeInput 基础上保留出价等扩展字段 */
 export function mapKeywordVolumeForLaunchScore(kw: unknown): KeywordVolumeHashInput & {
   text?: string
   lowTopPageBid?: unknown
@@ -194,7 +194,7 @@ export function mapKeywordVolumeForLaunchScore(kw: unknown): KeywordVolumeHashIn
   }
 }
 
-/** 将发布/配置中的关键词项转为哈希与计分共用的结构 */
+/* * 将发布/配置中的关键词项转为哈希与计分共用的结构 */
 export function mapCampaignKeywordToVolumeInput(kw: unknown): KeywordVolumeHashInput {
   if (typeof kw === 'string') {
     return { keyword: kw, matchType: 'PHRASE' }
@@ -412,7 +412,7 @@ export async function createLaunchScore(
   const allIssues = extractAllIssues(analysis)
   const allSuggestions = extractAllSuggestions(analysis)
 
-  // 🔧 修复(2025-12-17): 为兼容旧版本字段提供默认值（v3.0字段为NOT NULL）
+  // 为兼容旧版本字段提供默认值（v3.0字段为NOT NULL）
   // v3.0字段：keyword_score, market_fit_score, landing_page_score, budget_score, content_score
   // v4.16字段：launch_viability_score, ad_quality_score, keyword_strategy_score, basic_config_score
   const legacyKeywordScore = analysis.keywordStrategy.score || 0
@@ -539,7 +539,7 @@ export async function findLatestLaunchScore(
 
 export type LaunchScoreCompareSource = 'creative' | 'offer_latest'
 
-/** offer 最新一条记录在 per-creative 未命中时的对比回退（可单测） */
+/* * offer 最新一条记录在 per-creative 未命中时的对比回退（可单测） */
 export function resolveOfferLatestLaunchScoreForCompare(
   offerLatest: LaunchScore | null,
   creativeId: number,
@@ -595,7 +595,7 @@ export async function findLatestLaunchScoresByCreativeIds(
   return result
 }
 
-/** 读库对比：结合批量 per-creative 结果与 offer 最新回退 */
+/* * 读库对比：结合批量 per-creative 结果与 offer 最新回退 */
 export function resolveLaunchScoreForCreativeCompareFromMaps(
   creativeId: number,
   scoresByCreativeId: Map<number, LaunchScore>,

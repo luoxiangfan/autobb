@@ -1,9 +1,9 @@
 /**
  * 统一的 Gemini AI 调用入口（仅 Gemini API）
  *
- * 重要：
- * - 只使用用户级配置，不回退全局
- * - AI API 调用不使用代理（代理仅用于网页爬取）
+ * 重要
+ * 只使用用户级配置，不回退全局
+ * AI API 调用不使用代理（代理仅用于网页爬取）
  */
 
 import { getUserOnlySetting } from '../common/server'
@@ -112,7 +112,7 @@ async function isGeminiAPIConfigured(userId: number): Promise<boolean> {
 }
 
 /**
- * ✅ Token使用率监控：防止输出截断
+ * Token使用率监控：防止输出截断
  */
 function checkTokenUtilization(
   outputTokens: number,

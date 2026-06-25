@@ -95,7 +95,7 @@ export function resolveGeoMismatch(params: { keyword: string; targetCountry?: st
 }
 
 /**
- * 过滤地理不匹配关键词（🔥 2025-12-29 新增）
+ * 过滤地理不匹配关键词
  *
  * @param keywords - 关键词数组
  * @param targetCountry - 目标国家
@@ -115,17 +115,15 @@ export function filterMismatchedGeoKeywords(keywords: string[], _targetCountry: 
   })
 }
 
-// ============================================
-// 搜索量阈值计算（🔥 2025-12-29 新增）
-// ============================================
+// 搜索量阈值计算
 
 /**
  * 计算搜索量阈值
  *
- * 阈值计算逻辑：
- * - 如果有足够数据（>=5个关键词），取中位数的10%作为阈值
- * - 如果数据不足，返回最小阈值50
- * - 如果所有搜索量都很低（最大值<500），阈值设为0（不过滤）
+ * 阈值计算逻辑
+ * 如果有足够数据（>=5个关键词），取中位数的10%作为阈值
+ * 如果数据不足，返回最小阈值50
+ * 如果所有搜索量都很低（最大值<500），阈值设为0（不过滤）
  *
  * @param searchVolumes - 搜索量数组
  * @param minThreshold - 最小阈值（默认50）

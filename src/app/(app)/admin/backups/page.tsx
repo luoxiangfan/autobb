@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { showSuccess, showError, showConfirm } from '@/lib/common'
 
 /**
- * 🔧 修复(2025-12-11): 统一使用 camelCase 字段名
+ * 统一使用 camelCase 字段名
  */
 interface Backup {
   id: number
@@ -19,7 +19,7 @@ interface Backup {
 }
 
 /**
- * 🔧 修复(2025-12-11): 统一使用 camelCase 字段名
+ * 统一使用 camelCase 字段名
  */
 interface SyncLog {
   id: number
@@ -74,7 +74,7 @@ export default function AdminScheduledTasksPage() {
   const [error, setError] = useState('')
   const [backupLoading, setBackupLoading] = useState(false)
 
-  // 🔧 数据清理相关state
+  // 数据清理相关state
   const [cleanupStats, setCleanupStats] = useState<any>(null)
   const [cleanupLoading, setCleanupLoading] = useState(false)
   const [cleanupResult, setCleanupResult] = useState<{

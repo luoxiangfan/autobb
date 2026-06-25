@@ -1,12 +1,12 @@
 /**
  * 联盟商品同步调度器（PB + YP）
  *
- * 目标：
- * - PB 快速刷新（delta）默认每6小时
- * - PB 全量补齐（platform）默认每24小时
- * - YP 快速刷新（delta）默认每6小时
- * - YP 全量补齐（platform）默认每24小时
- * - 复用现有队列与 run 记录，避免引入额外基础设施
+ * 目标
+ * PB 快速刷新（delta）默认每6小时
+ * PB 全量补齐（platform）默认每24小时
+ * YP 快速刷新（delta）默认每6小时
+ * YP 全量补齐（platform）默认每24小时
+ * 复用现有队列与 run 记录，避免引入额外基础设施
  */
 
 import { getDatabase } from '../../db'
@@ -278,7 +278,7 @@ export class AffiliateProductSyncScheduler {
       return false
     }
 
-    // ✅ 新增：检查YP登录态是否有效，避免调度无效任务
+    // 检查YP登录态是否有效，避免调度无效任务
     const { getYeahPromosSessionState } = await import('@/lib/affiliate/server')
     const ypSession = await getYeahPromosSessionState(userId)
     if (!ypSession.hasSession) {

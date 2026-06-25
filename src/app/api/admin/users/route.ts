@@ -19,8 +19,8 @@ function getClientIP(request: NextRequest): string {
 }
 
 /**
- * 🔧 修复(2025-12-11): 转换数据库字段名为 camelCase
- * 🔧 修复(2025-12-30): 统一isActive为boolean类型（PostgreSQL）
+ * 转换数据库字段名为 camelCase
+ * 统一isActive为boolean类型（PostgreSQL）
  * 规范: API响应使用 camelCase，数据库字段使用 snake_case
  */
 function transformUserToApiResponse(user: any, now: Date) {
@@ -116,7 +116,7 @@ export const GET = withAuth(
         const statusCondition = ` AND is_active = ?`
         query += statusCondition
         countQuery += statusCondition
-        // 🔧 修复(2025-12-30): PostgreSQL兼容性 - 发送boolean值
+        // PostgreSQL兼容性 - 发送boolean值
         params.push(status === 'active')
       }
 

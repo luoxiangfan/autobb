@@ -30,13 +30,13 @@ function formatLocalYmd(date: Date): string {
  * GET /api/dashboard/api-quota
  * 获取Google Ads API配额使用情况
  *
- * 🔧 修复(2025-12-12): 独立账号模式 - 每个用户只能查看自己的API使用统计
- * - 如果用户配置了自己的Google Ads API凭证 → 显示该用户的API使用统计
- * - 如果用户未配置凭证 → 返回空数据，不再回退到管理员数据
+ * 独立账号模式 - 每个用户只能查看自己的API使用统计
+ * 如果用户配置了自己的Google Ads API凭证 → 显示该用户的API使用统计
+ * 如果用户未配置凭证 → 返回空数据，不再回退到管理员数据
  *
- * 🔧 修复(2025-01-05): 同时支持 OAuth 和服务账号两种认证模式
- * - OAuth 用户: 检查 google_ads_credentials 表
- * - 服务账号用户: 检查 google_ads_service_accounts 表
+ * 同时支持 OAuth 和服务账号两种认证模式
+ * OAuth 用户: 检查 google_ads_credentials 表
+ * 服务账号用户: 检查 google_ads_service_accounts 表
  */
 export const dynamic = 'force-dynamic'
 
@@ -84,7 +84,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     // 检查配额限制
     const quotaCheck = await checkQuotaLimit(currentUserId, 0.8)
 
-    // 🔧 友好化：提取当天最常见的失败原因，给出更具体的建议
+    // 友好化：提取当天最常见的失败原因，给出更具体的建议
     const topFailureMessage = await getTopFailureMessageForToday(currentUserId)
     const latestRateLimitEvent = await getLatestRateLimitEventForToday(currentUserId)
 

@@ -1,6 +1,6 @@
 /**
  * API 性能监控工具
- * - 记录接口响应耗时
+ * 记录接口响应耗时
  */
 
 import { NextRequest, NextResponse } from 'next/server'

@@ -1,12 +1,12 @@
 /**
  * 通用代理 Axios 客户端
  *
- * 统一的 axios + HttpsProxyAgent 方案，用于所有需要代理的业务场景：
- * - 网页爬取 (scraper.ts)
- * - URL 解析 (url-resolver.ts)
- * - 链接检测 (risk-alerts.ts)
- * - Google 搜索建议 (google-suggestions.ts)
- * - 等其他需要真实地理位置访问的场景
+ * 统一的 axios + HttpsProxyAgent 方案，用于所有需要代理的业务场景
+ * 网页爬取 (scraper.ts)
+ * URL 解析 (url-resolver.ts)
+ * 链接检测 (risk-alerts.ts)
+ * Google 搜索建议 (google-suggestions.ts)
+ * 等其他需要真实地理位置访问的场景
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'

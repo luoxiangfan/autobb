@@ -31,7 +31,7 @@ export function serializeGoogleAdsError(error: unknown): string {
 }
 
 /**
- * 🔧 新增(2025-01-05): OAuth API 调用追踪包装器
+ * OAuth API 调用追踪包装器
  * 用于在 OAuth 模式下追踪 Google Ads API 调用
  */
 export async function trackOAuthApiCall<T>(

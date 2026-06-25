@@ -384,17 +384,15 @@ export function generatePriorityDistributionSummary(report: PriorityDistribution
   return lines.join('\n')
 }
 
-// ============================================
-// 🆕 P1-2优化：关键词购买意图强度评分
-// ============================================
+// 关键词购买意图强度评分
 
 /**
  * 购买意图信号词及对应分数
  * 分数范围: 0-100
- * - 高购买意图 (80-100): buy, purchase, order, shop, get, need
- * - 中等购买意图 (50-79): price, cost, deal, discount, best, top, cheap, affordable
- * - 低购买意图 (20-49): review, compare, vs, alternative
- * - 信息查询意图 (0-19): how to, what is, tutorial, guide
+ * 高购买意图 (80-100): buy, purchase, order, shop, get, need
+ * 中等购买意图 (50-79): price, cost, deal, discount, best, top, cheap, affordable
+ * 低购买意图 (20-49): review, compare, vs, alternative
+ * 信息查询意图 (0-19): how to, what is, tutorial, guide
  */
 const INTENT_SIGNALS: Record<string, number> = {
   // 高购买意图 (80-100)
@@ -461,7 +459,7 @@ export function calculateIntentScore(keyword: string, brandName?: string): numbe
   const kwLower = keyword.toLowerCase()
   let maxScore = 40 // 默认中等意图
 
-  // 🔥 优化(2025-12-17): 品牌词和产品词隐性购买意图识别
+  // 品牌词和产品词隐性购买意图识别
   // 问题：品牌词"reolink"和产品词"security camera"都被评为40分（低购买意图）
   // 真实情况：品牌词本身就是高购买意图（用户已认品牌），产品词是中等购买意图
 

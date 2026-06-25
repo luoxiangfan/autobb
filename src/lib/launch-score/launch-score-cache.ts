@@ -30,7 +30,7 @@ export {
   DEFAULT_LAUNCH_SCORE_MAX_CPC,
 } from './launch-score-campaign-config'
 
-/** 按 ad_creatives.score 选最高分创意（无 hash 命中时的回退） */
+/* * 按 ad_creatives.score 选最高分创意（无 hash 命中时的回退） */
 export function pickBestAdCreativeByScore(creatives: AdCreative[]): AdCreative | null {
   if (creatives.length === 0) {
     return null
@@ -40,7 +40,7 @@ export function pickBestAdCreativeByScore(creatives: AdCreative[]): AdCreative |
   )
 }
 
-/** Step3 关键词优先：构建与发布路径一致的 contentHash 输入 */
+/* * Step3 关键词优先：构建与发布路径一致的 contentHash 输入 */
 function buildLaunchScoreCreativeContentData(
   creative: AdCreative,
   offer: Offer,
@@ -57,7 +57,7 @@ function buildLaunchScoreCreativeContentData(
   }
 }
 
-/** 计分前注入 Step3 解析后的 keywordsWithVolume */
+/* * 计分前注入 Step3 解析后的 keywordsWithVolume */
 export function enrichCreativeForLaunchScore(
   creative: AdCreative,
   offer: Offer,
@@ -132,13 +132,13 @@ async function findCachedLaunchScoreForCreative(
 }
 
 export type CreativeLaunchScoreReadResult = {
-  /** 与当前创意 contentHash 精确匹配的记录 */
+  /* * 与当前创意 contentHash 精确匹配的记录 */
   score: LaunchScore | null
-  /** 库中该创意最新一条，但与当前 contentHash / campaignConfigHash 不一致 */
+  /* * 库中该创意最新一条，但与当前 contentHash / campaignConfigHash 不一致 */
   staleScore: LaunchScore | null
 }
 
-/** 仅 per-creative 旧记录算过期；legacy offer 级分数不算 stale */
+/* * 仅 per-creative 旧记录算过期；legacy offer 级分数不算 stale */
 function staleScoreFromCreativeCompare(
   score: LaunchScore | null,
   scoreSource: LaunchScoreCompareSource | null
@@ -173,7 +173,7 @@ export async function readLaunchScoreForCreative(
   return { score: null, staleScore: staleScoreFromCreativeCompare(score, scoreSource) }
 }
 
-/** 并行查询多创意的 contentHash 缓存（compare 等批量场景） */
+/* * 并行查询多创意的 contentHash 缓存（compare 等批量场景） */
 export async function findCachedLaunchScoresForCreatives(
   creatives: AdCreative[],
   offer: Offer,
@@ -196,7 +196,7 @@ export async function findCachedLaunchScoresForCreatives(
   return result
 }
 
-/** 并行 readLaunchScoreForCreative（只读对比）；批量复用 offer / per-creative 最新分查询 */
+/* * 并行 readLaunchScoreForCreative（只读对比）；批量复用 offer / per-creative 最新分查询 */
 export async function readLaunchScoresForCreatives(
   creatives: AdCreative[],
   offer: Offer,
@@ -353,7 +353,7 @@ export type LaunchScoreGetForCreativeResponse = {
   hint?: string
 }
 
-/** GET 单创意读分：hash 命中 / autoCalculate / stale / 空 */
+/* * GET 单创意读分：hash 命中 / autoCalculate / stale / 空 */
 export async function resolveLaunchScoreGetForCreative(
   userId: number,
   offer: Offer,
@@ -416,7 +416,7 @@ export async function resolveLaunchScoreGetForCreative(
 
 export type SaveLaunchScoreWithContentCacheOptions = {
   campaignConfig?: LaunchScoreHashCampaignConfig
-  /** 与 findCachedLaunchScore 查询使用相同哈希时可传入，避免发布路径手工哈希不一致 */
+  /* * 与 findCachedLaunchScore 查询使用相同哈希时可传入，避免发布路径手工哈希不一致 */
   contentHash?: string
   campaignConfigHash?: string
 }

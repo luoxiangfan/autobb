@@ -1,20 +1,20 @@
 /**
  * 批量任务状态恢复模块
  *
- * 功能：
+ * 功能
  * 1. 在系统启动时，队列清理后，同步更新数据库状态
  * 2. 基于子任务实际状态，更新batch_tasks和upload_records状态
  * 3. 修复服务重启导致的队列与数据库状态不一致问题
  *
- * 执行时机：
- * - 在队列系统调用clearAllUnfinished()清理Redis任务后执行
- * - 确保数据库状态与队列系统保持一致
+ * 执行时机
+ * 在队列系统调用clearAllUnfinished()清理Redis任务后执行
+ * 确保数据库状态与队列系统保持一致
  *
- * 关键设计：
- * - 队列清理（Redis）：clearAllUnfinished() 清理所有未完成的队列任务
- * - 数据库同步（PostgreSQL）：本模块同步更新数据库中的状态记录
+ * 关键设计
+ * 队列清理（Redis）：clearAllUnfinished() 清理所有未完成的队列任务
+ * 数据库同步（PostgreSQL）：本模块同步更新数据库中的状态记录
  *
- * 🔥 修复（2025-12-11）：解决服务重启后upload_records一直显示"处理中"的问题
+ * 解决服务重启后upload_records一直显示"处理中"的问题
  */
 
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
@@ -22,7 +22,7 @@ import { getDatabase, type DatabaseAdapter } from '@/lib/db'
 /**
  * 恢复所有未完成的批量任务状态
  *
- * 策略：
+ * 策略
  * 1. 队列清理后，所有running/pending的队列任务已被删除
  * 2. 数据库中offer_tasks的状态是最终真相来源
  * 3. 基于offer_tasks状态，同步更新batch_tasks和upload_records
@@ -34,7 +34,7 @@ export async function recoverBatchTaskStatus(): Promise<void> {
     console.log('🔍 开始同步批量任务数据库状态...')
 
     // 1. 查询所有未完成的upload_records（status为pending或processing）
-    // 🔧 2025-12-23: 先检查表是否存在，避免表未初始化错误
+    // 先检查表是否存在，避免表未初始化错误
     let pendingRecords: any[] = []
     try {
       // 检查 upload_records 表是否存在（PostgreSQL information_schema）
@@ -99,12 +99,12 @@ export async function recoverBatchTaskStatus(): Promise<void> {
 /**
  * 恢复单个批量任务的状态
  *
- * 逻辑：
+ * 逻辑
  * 1. 队列已清理：服务重启时，Redis中的任务队列已被清空
  * 2. 数据库真相：offer_tasks表中的状态是唯一可靠的真相来源
- * 3. 状态判断：
- *    - 如果所有子任务都是completed/failed → 批量任务已完成
- *    - 如果还有pending/running的子任务 → 保留原状态（但实际队列已清空，这些任务不会再执行）
+ * 3. 状态判断
+ * 如果所有子任务都是completed/failed → 批量任务已完成
+ * 如果还有pending/running的子任务 → 保留原状态（但实际队列已清空，这些任务不会再执行）
  */
 async function recoverSingleBatchTask(
   db: DatabaseAdapter,
@@ -112,7 +112,7 @@ async function recoverSingleBatchTask(
   uploadRecordId: string,
   validCount: number
 ): Promise<void> {
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
 
   // 1. 查询所有子任务的实际状态（数据库是唯一真相来源）
@@ -148,7 +148,7 @@ async function recoverSingleBatchTask(
   // 3. 判断最终状态
   let finalStatus: 'completed' | 'failed' | 'partial'
 
-  // 🔥 关键修复：服务重启后，即使数据库中有pending/running的子任务记录，
+  // 关键服务重启后，即使数据库中有pending/running的子任务记录，
   // 由于队列已被清空，这些任务实际上不会再执行，应该标记为最终状态
 
   if (completed + failed === 0) {

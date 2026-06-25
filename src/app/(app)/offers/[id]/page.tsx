@@ -150,7 +150,7 @@ function OfferTrendsSectionSkeleton() {
 
 /**
  * 根据国家代码获取Amazon域名
- * 🔧 2025-12-11添加：用于前端生成正确的竞品链接
+ * 用于前端生成正确的竞品链接
  */
 function getAmazonDomain(countryCode: string): string {
   const domainMap: Record<string, string> = {
@@ -1324,7 +1324,7 @@ export default function OfferDetailPage() {
                           <dd className="text-sm text-gray-900">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {reviewData.userProfiles.map((profile: any, idx: number) => {
-                                // 🔥 2025-12-16修复：适配字符串格式（AI返回）和对象格式（TypeScript定义）
+                                // 适配字符串格式（AI返回）和对象格式（TypeScript定义）
                                 const isString = typeof profile === 'string'
                                 // 解析字符串格式："The Multi-Pet Owner: Their primary challenge..."
                                 const [title, ...descParts] = isString ? profile.split(': ') : []
@@ -1425,7 +1425,7 @@ export default function OfferDetailPage() {
                               <ul className="space-y-2">
                                 {reviewData.quantitativeHighlights.map((item: any, idx: number) => (
                                   <li key={idx} className="bg-blue-50 p-2 rounded">
-                                    {/* 🔥 2025-12-16修复：适配多种数据格式 */}
+                                    {/* 适配多种数据格式 */}
                                     {/* AI返回格式: {label, quote, value} */}
                                     {/* TypeScript定义: {metric, value, source, adCopy} */}
                                     {/* 旧格式: {highlight, description/evidence} */}
@@ -1461,7 +1461,7 @@ export default function OfferDetailPage() {
                                 {reviewData.competitorMentions.map((item: any, idx: number) => (
                                   <li key={idx} className="bg-gray-50 p-2 rounded">
                                     <div className="flex items-center gap-2">
-                                      {/* 🔥 2025-12-16修复：适配多种数据格式 */}
+                                      {/* 适配多种数据格式 */}
                                       {/* AI返回格式: {brand, context} */}
                                       {/* TypeScript定义: {brand, context, sentiment} */}
                                       {/* 旧格式: {competitor, sentiment, context} */}
@@ -1515,7 +1515,7 @@ export default function OfferDetailPage() {
                       )}
                       {competitorData.overallCompetitiveness !== undefined &&
                         (() => {
-                          // 🔥 2025-12-16修复：适配对象格式 {score, summary} 和数字格式
+                          // 适配对象格式 {score, summary} 和数字格式
                           const competitivenessScore =
                             typeof competitorData.overallCompetitiveness === 'object'
                               ? competitorData.overallCompetitiveness.score
@@ -1768,7 +1768,7 @@ export default function OfferDetailPage() {
                                   {competitorData.competitors
                                     .slice(0, 8)
                                     .map((comp: any, idx: number) => {
-                                      // 🔧 2025-12-11修复：使用getCompetitorUrl获取正确的竞品链接
+                                      // 使用getCompetitorUrl获取正确的竞品链接
                                       const competitorUrl = getCompetitorUrl(
                                         comp,
                                         offer.targetCountry

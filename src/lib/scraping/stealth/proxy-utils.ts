@@ -10,7 +10,7 @@ import { isProxyConnectionError } from '../proxy-connection-errors'
 export { isProxyConnectionError } from '../proxy-connection-errors'
 
 /**
- * 🔥 P1优化：带代理换新重试的执行包装器
+ * 带代理换新重试的执行包装器
  * 当代理连接失败时，清理连接池并获取新代理重试
  */
 export async function withProxyRetry<T>(

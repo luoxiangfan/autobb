@@ -92,7 +92,7 @@ interface Campaign {
   performanceCurrency?: string | null
   configuredMaxCpc?: number | null
   createdAt: string
-  // 🔧 新增: 软删除状态字段
+  // 软删除状态字段
   isDeleted?: boolean | number
   deletedAt?: string | null
   offerIsDeleted?: boolean | number
@@ -459,7 +459,7 @@ export default function CampaignsClientPage({
   const [urlSwapLoading, setUrlSwapLoading] = useState(false)
 
   const [syncing, setSyncing] = useState(false)
-  /** 后台队列执行 Google Ads 同步时，轮询 /api/sync/status-v2 的间隔与上限 */
+  /* * 后台队列执行 Google Ads 同步时，轮询 /api/sync/status-v2 的间隔与上限 */
   const GOOGLE_ADS_SYNC_POLL_MS = 3000
   const GOOGLE_ADS_SYNC_WAIT_MAX_MS = 15 * 60 * 1000
   const GOOGLE_ADS_SYNC_QUEUE_LAG_MS = 1000
@@ -474,17 +474,17 @@ export default function CampaignsClientPage({
     googleAdsCampaignSyncQueue?: { pending: number; running: number }
   } | null>(null)
 
-  // 🔧 优化 (2026-04-17): 轮询状态管理
+  // 优化 : 轮询状态管理
   const [, setIsPolling] = useState(false)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const userSelectionInitializedRef = useRef(false)
-  /** SSE / 管线 idle 时抑制 toast（本页刚点完「同步」与完成提示去重） */
+  /* * SSE / 管线 idle 时抑制 toast（本页刚点完「同步」与完成提示去重） */
   const pipelineIdleToastSuppressedUntilRef = useRef(0)
-  /** 仅在「同步广告系列」请求已成功返回后，允许根据 status-v2 自动结束 syncing，避免误清 */
+  /* * 仅在「同步广告系列」请求已成功返回后，允许根据 status-v2 自动结束 syncing，避免误清 */
   const allowIdleClearSyncingRef = useRef(false)
-  /** 正在 await 队列排空循环时禁止根据 status-v2 清 syncing（避免重复点击） */
+  /* * 正在 await 队列排空循环时禁止根据 status-v2 清 syncing（避免重复点击） */
   const googleAdsSyncWaitLoopActiveRef = useRef(false)
-  /** 合并并发 status-v2 请求，避免 interval 与 wait loop 同时触发 */
+  /* * 合并并发 status-v2 请求，避免 interval 与 wait loop 同时触发 */
   const syncStatusCheckInFlightRef = useRef<Promise<Record<string, unknown> | null> | null>(null)
 
   const checkGlobalSyncStatus = useCallback(async () => {
@@ -526,7 +526,7 @@ export default function CampaignsClientPage({
     }
   }, [])
 
-  // 🔧 启动轮询（与 GOOGLE_ADS_SYNC_POLL_MS 一致；手动同步 wait loop 期间不启动）
+  // 启动轮询（与 GOOGLE_ADS_SYNC_POLL_MS 一致；手动同步 wait loop 期间不启动）
   const startPolling = useCallback(() => {
     if (pollingRef.current || googleAdsSyncWaitLoopActiveRef.current) {
       return
@@ -538,7 +538,7 @@ export default function CampaignsClientPage({
     console.log('[Sync] Started polling for sync status')
   }, [checkGlobalSyncStatus])
 
-  // 🔧 停止轮询
+  // 停止轮询
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current)
@@ -804,17 +804,17 @@ export default function CampaignsClientPage({
     createdAtEnd: createdAtEnd ?? '',
   })
 
-  // 🔧 初始检查同步状态
+  // 初始检查同步状态
   useEffect(() => {
     void checkGlobalSyncStatus()
   }, [checkGlobalSyncStatus])
 
-  // 🔧 检查管理员权限并加载用户列表（管理员功能）- 参考 dashboard 页面实现
+  // 检查管理员权限并加载用户列表（管理员功能）- 参考 dashboard 页面实现
   useEffect(() => {
     const checkAdminAndLoadUsers = async () => {
       try {
         setUsersLoading(true)
-        // 🔧 直接使用 /api/admin/users 验证管理员权限（403=非管理员）
+        // 直接使用 /api/admin/users 验证管理员权限（403=非管理员）
         const usersResponse = await fetch('/api/admin/users?limit=100', {
           credentials: 'include',
           cache: 'no-store',
@@ -852,7 +852,7 @@ export default function CampaignsClientPage({
     void checkAdminAndLoadUsers()
   }, [])
 
-  // 🔧 加载联盟平台列表（用于筛选）
+  // 加载联盟平台列表（用于筛选）
   useEffect(() => {
     const loadAffiliates = async () => {
       setAffiliatesLoading(true)
@@ -873,7 +873,7 @@ export default function CampaignsClientPage({
     void loadAffiliates()
   }, [])
 
-  // 🔧 监听同步状态，自动管理轮询（含：仅有队列任务但 sync_logs 尚未写入 running 的阶段）
+  // 监听同步状态，自动管理轮询（含：仅有队列任务但 sync_logs 尚未写入 running 的阶段）
   useEffect(() => {
     if (googleAdsSyncWaitLoopActiveRef.current) {
       return
@@ -890,7 +890,7 @@ export default function CampaignsClientPage({
     }
   }, [globalSyncStatus, startPolling, stopPolling])
 
-  // 🔧 清理轮询（组件卸载时）
+  // 清理轮询（组件卸载时）
   useEffect(() => {
     return () => {
       if (pollingRef.current) {
@@ -1228,7 +1228,7 @@ export default function CampaignsClientPage({
       params.set('sortOrder', sortDirection)
     }
 
-    // 🔧 新增：支持按创建时间过滤（用于"最近 14 天新增"页面）
+    // 支持按创建时间过滤（用于"最近 14 天新增"页面）
     if (createdAtStart) {
       params.set('createdAtStart', createdAtStart)
     }
@@ -1236,12 +1236,12 @@ export default function CampaignsClientPage({
       params.set('createdAtEnd', createdAtEnd)
     }
 
-    // 🔧 新增：支持按多个用户筛选（管理员功能）
+    // 支持按多个用户筛选（管理员功能）
     if (userFilterApplied) {
       params.set('userIds', selectedUserFilters.join(','))
     }
 
-    // 🔧 新增：支持按联盟筛选
+    // 支持按联盟筛选
     if (affiliateFilter && affiliateFilter !== 'all') {
       params.set('affiliate', affiliateFilter)
     }
@@ -2050,7 +2050,7 @@ export default function CampaignsClientPage({
   }
 
   const syncCampaigns = async () => {
-    // 🔧 检查是否有其他同步任务正在进行
+    // 检查是否有其他同步任务正在进行
     const status = await checkGlobalSyncStatus()
     const queuePending =
       Number(status?.googleAdsCampaignSyncQueue?.pending ?? 0) +
@@ -2067,7 +2067,7 @@ export default function CampaignsClientPage({
       }
       return
     }
-    // 🔧 检查当前是否正在同步
+    // 检查当前是否正在同步
     if (syncing) {
       showInfo('同步进行中', '请勿重复点击')
       return
@@ -3142,7 +3142,7 @@ export default function CampaignsClientPage({
                 </Select>
               </div>
 
-              {/* 🔧 新增：用户筛选（管理员功能） */}
+              {/* 用户筛选（管理员功能） */}
               {isAdmin && (
                 <div className="w-auto">
                   <DropdownMenu
@@ -3252,7 +3252,7 @@ export default function CampaignsClientPage({
                 </div>
               )}
 
-              {/* 🔧 新增：联盟平台筛选 */}
+              {/* 联盟平台筛选 */}
               <div className="w-full sm:w-[220px] md:w-[200px]">
                 <Select
                   value={affiliateFilter}

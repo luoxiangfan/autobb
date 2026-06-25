@@ -125,9 +125,9 @@ function isPureBrandKeywordInList(keyword: string, pureBrandKeywords: string[]):
   })
 }
 
-/** Exact brand match against a brand name (convenience wrapper). */
+/* * Exact brand match against a brand name (convenience wrapper). */
 export function isPureBrandKeyword(keyword: string, brandName: string): boolean
-/** Exact brand match against precomputed pure-brand keyword variants. */
+/* * Exact brand match against precomputed pure-brand keyword variants. */
 export function isPureBrandKeyword(keyword: string, pureBrandKeywords: string[]): boolean
 export function isPureBrandKeyword(keyword: string, second: string | string[]): boolean {
   if (typeof second === 'string') {

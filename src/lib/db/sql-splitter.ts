@@ -1,11 +1,11 @@
 /**
  * Split SQL text into top-level statements.
  *
- * Supports:
- * - PostgreSQL: `CREATE TRIGGER ... BEGIN ... END;` blocks (do not split on inner semicolons)
- * - PostgreSQL: dollar-quoted blocks (`$$`, `$tag$`) such as `DO $$ ... $$;` or function bodies
- * - Quotes: avoids splitting on semicolons inside string/identifier quotes
- * - Comments: ignores `--` line comments and block comments (slash-star ... star-slash)
+ * Supports
+ * PostgreSQL: `CREATE TRIGGER ... BEGIN ... END;` blocks (do not split on inner semicolons)
+ * PostgreSQL: dollar-quoted blocks (`$$`, `$tag$`) such as `DO $$ ... $$;` or function bodies
+ * Quotes: avoids splitting on semicolons inside string/identifier quotes
+ * Comments: ignores `--` line comments and block comments (slash-star ... star-slash)
  */
 export function splitSqlStatements(sql: string): string[] {
   const statements: string[] = []

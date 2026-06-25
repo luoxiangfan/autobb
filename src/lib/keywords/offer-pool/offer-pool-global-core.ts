@@ -31,9 +31,8 @@ import {
 } from './keyword-clustering'
 
 import { extractCategorySignalsFromScrapedData } from './offer-pool-scraped-signals'
-// ============================================
+
 // 全局核心关键词补充逻辑
-// ============================================
 
 const GLOBAL_CORE_PROMO_PRICE_PATTERNS =
   /\b(discount|sale|deal|coupon|promo|code|offer|clearance|price|cost|cheap|affordable|budget)\b/i
@@ -276,7 +275,7 @@ function adaptGlobalCoreKeywordsWithBrandPrefix(params: {
       continue
     }
 
-    // 🐛 修复(2026-03-14): 品牌前置后的关键词不应继承原始搜索量
+    // � 品牌前置后的关键词不应继承原始搜索量
     const next: PoolKeywordData = {
       ...item,
       keyword: branded,

@@ -39,7 +39,7 @@ interface Offer {
       rating?: number
       reviewCount?: number
       features?: string[]
-      // 🔥 新增：商品链接（用于跳转到Amazon商品详情页）
+      // 商品链接（用于跳转到Amazon商品详情页）
       productUrl?: string | null
     }>
     pricePosition?: {

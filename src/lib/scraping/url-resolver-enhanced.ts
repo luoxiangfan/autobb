@@ -13,17 +13,17 @@ import { maskProxyUrl } from './proxy/validate-url'
 import { normalizeCountryCode } from '../common/server'
 import { isAffiliateLinkExpiredMessage, normalizeNestedResolveErrorMessage } from '../affiliate'
 
-// ==================== 类型定义 ====================
+// 类型定义
 
 export interface ProxyConfig {
   url: string
   country: string
   failureCount: number
   lastFailureTime: number | null
-  lastTemporaryFailureTime: number | null // 🔥 临时失败时间戳（timeout等）
-  lastPermanentFailureTime: number | null // 🔥 永久失败时间戳（connection refused等）
-  temporaryFailureCount: number // 🔥 临时失败计数
-  permanentFailureCount: number // 🔥 永久失败计数
+  lastTemporaryFailureTime: number | null // 临时失败时间戳（timeout 等）
+  lastPermanentFailureTime: number | null // 永久失败时间戳（connection refused 等）
+  temporaryFailureCount: number // 临时失败计数
+  permanentFailureCount: number // 永久失败计数
   successCount: number
   avgResponseTime: number
   isHealthy: boolean
@@ -89,15 +89,15 @@ function getPrimaryCountryCode(country: string): string {
   )
 }
 
-// ==================== 代理池管理 ====================
+// 代理池管理
 
 export class ProxyPoolManager {
   private proxies: Map<string, ProxyConfig> = new Map()
   private readonly HEALTH_CHECK_INTERVAL = 3600000 // 1小时
   private readonly MAX_FAILURES_THRESHOLD = 3 // 永久失败阈值
-  private readonly TEMPORARY_FAILURE_THRESHOLD = 5 // 🔥 临时失败阈值（更宽容）
+  private readonly TEMPORARY_FAILURE_THRESHOLD = 5 // 临时失败阈值
   private readonly FAILURE_RESET_TIME = 3600000 // 1小时后重置失败计数（永久失败）
-  private readonly TEMPORARY_FAILURE_RESET_TIME = 300000 // 🔥 5分钟后重置临时失败
+  private readonly TEMPORARY_FAILURE_RESET_TIME = 300000 // 5 分钟后重置临时失败计数
   private readonly AUTO_HEAL_THRESHOLD = 5 // 失败5次后，1小时自动恢复
   private lastHealthCheckTime: number = 0
   private isHealthCheckRunning: boolean = false
@@ -125,10 +125,10 @@ export class ProxyPoolManager {
         country: normalizedCountry,
         failureCount: 0,
         lastFailureTime: null,
-        lastTemporaryFailureTime: null, // 🔥 初始化临时失败时间
-        lastPermanentFailureTime: null, // 🔥 初始化永久失败时间
-        temporaryFailureCount: 0, // 🔥 初始化临时失败计数
-        permanentFailureCount: 0, // 🔥 初始化永久失败计数
+        lastTemporaryFailureTime: null, // 临时失败时间初始值
+        lastPermanentFailureTime: null, // 永久失败时间初始值
+        temporaryFailureCount: 0, // 临时失败计数初始值
+        permanentFailureCount: 0, // 永久失败计数初始值
         successCount: 0,
         avgResponseTime: 0,
         isHealthy: true,
@@ -236,8 +236,8 @@ export class ProxyPoolManager {
 
     proxy.successCount++
     proxy.failureCount = Math.max(0, proxy.failureCount - 1) // 成功后减少失败计数
-    proxy.temporaryFailureCount = Math.max(0, proxy.temporaryFailureCount - 1) // 🔥 减少临时失败计数
-    proxy.permanentFailureCount = Math.max(0, proxy.permanentFailureCount - 1) // 🔥 减少永久失败计数
+    proxy.temporaryFailureCount = Math.max(0, proxy.temporaryFailureCount - 1) // 衰减临时失败计数
+    proxy.permanentFailureCount = Math.max(0, proxy.permanentFailureCount - 1) // 衰减永久失败计数
     proxy.avgResponseTime = (proxy.avgResponseTime + responseTime) / 2
     proxy.isHealthy = true
 
@@ -294,7 +294,7 @@ export class ProxyPoolManager {
     proxy.lastFailureTime = now
 
     if (isTemporary) {
-      // 🔥 临时失败：更宽容的处理
+      // 临时失败：更宽容的处理
       proxy.temporaryFailureCount++
       proxy.lastTemporaryFailureTime = now
 
@@ -310,7 +310,7 @@ export class ProxyPoolManager {
         )
       }
     } else {
-      // 🔥 永久失败：严格处理
+      // 永久失败：严格处理
       proxy.permanentFailureCount++
       proxy.lastPermanentFailureTime = now
 
@@ -340,7 +340,7 @@ export class ProxyPoolManager {
       let shouldRecover = false
       let recoveryReason = ''
 
-      // 🔥 策略1: 临时失败5分钟后自动恢复
+      // 策略1: 临时失败5分钟后自动恢复
       if (
         !proxy.isHealthy &&
         proxy.lastTemporaryFailureTime &&
@@ -353,7 +353,7 @@ export class ProxyPoolManager {
         proxy.lastTemporaryFailureTime = null
       }
 
-      // 🔥 策略2: 永久失败1小时后自动恢复（仅当失败次数<阈值）
+      // 策略2: 永久失败1小时后自动恢复（仅当失败次数<阈值）
       if (
         !proxy.isHealthy &&
         proxy.lastPermanentFailureTime &&
@@ -374,7 +374,7 @@ export class ProxyPoolManager {
         console.log(`♻️ 代理已自动恢复: ${proxy.country} (${recoveryReason})`)
       }
 
-      // 🔥 策略3: 逐步衰减失败计数（即使代理仍不健康）
+      // 策略3: 逐步衰减失败计数（即使代理仍不健康）
       if (
         proxy.lastTemporaryFailureTime &&
         now - proxy.lastTemporaryFailureTime > this.TEMPORARY_FAILURE_RESET_TIME
@@ -577,7 +577,7 @@ export function clearProxyPool(userId?: number): void {
   }
 }
 
-// ==================== Redis缓存管理 ====================
+// Redis缓存管理
 
 /**
  * 生成缓存键
@@ -612,7 +612,9 @@ async function getCachedRedirect(
     console.error('Redis缓存读取失败:', error)
     return null
   }
-} // ==================== 智能重试策略 ====================
+}
+
+// 智能重试策略
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -620,7 +622,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxDelay: 16000, // 16秒
   retryableErrors: [
     'timeout',
-    'Timeout', // 🔥 P0修复：Playwright超时错误应该可以重试
+    'Timeout', // Playwright超时错误应该可以重试
     'ETIMEDOUT',
     'ECONNRESET',
     'ECONNREFUSED',
@@ -637,8 +639,8 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
     'ERR_PROXY_CONNECTION_FAILED', // 代理连接失败
     'net::ERR_EMPTY_RESPONSE', // Playwright格式的空响应错误
     'net::ERR_HTTP2_PROTOCOL_ERROR', // Playwright格式的HTTP2协议错误
-    'TimeoutError', // 🔥 P0修复：Playwright TimeoutError应该可以重试
-    'waiting until', // 🔥 P0修复：Playwright waiting until错误应该可以重试
+    'TimeoutError', // Playwright TimeoutError应该可以重试
+    'waiting until', // Playwright waiting until错误应该可以重试
   ],
 }
 
@@ -676,7 +678,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-// ==================== HTTP请求方式（Level 1） ====================
+// HTTP请求方式（Level 1）
 
 async function resolveWithHttp(
   affiliateLink: string,
@@ -804,7 +806,7 @@ function shouldFailFastWithoutPlaywrightFallback(error: unknown): boolean {
   )
 }
 
-// ==================== Playwright方式（Level 2） ====================
+// Playwright方式（Level 2）
 
 async function resolveWithPlaywright(
   affiliateLink: string,
@@ -835,7 +837,7 @@ async function resolveWithPlaywright(
   }
 }
 
-// ==================== 核心解析函数（集成所有优化） ====================
+// 核心解析函数（集成所有优化）
 
 export interface ResolveOptions {
   targetCountry: string
@@ -854,7 +856,7 @@ export async function resolveAffiliateLink(
 ): Promise<ResolvedUrlData> {
   const { targetCountry, userId, skipCache = true, retryConfig: customRetryConfig } = options // 默认禁用缓存
 
-  // 🔥 P0优化：检测短链接服务，使用更激进的重试策略
+  // 检测短链接服务，使用更激进的重试策略
   const isShortLink =
     /bit\.ly|tinyurl|ow\.ly|rebrand\.ly|pboost\.me|short\.link|is\.gd|buff\.ly|t\.co|goo\.gl|clk\.|fbuy\.me|amzn\.to|flip\.it|linktr\.ee|soo\.gd|click-ecom\.com/i.test(
       affiliateLink
@@ -862,7 +864,7 @@ export async function resolveAffiliateLink(
 
   const retryConfig = {
     ...DEFAULT_RETRY_CONFIG,
-    ...(isShortLink ? { maxRetries: 5 } : {}), // 🔥 短链接服务增加重试次数到5次
+    ...(isShortLink ? { maxRetries: 5 } : {}), // 短链接 maxRetries=5
     ...customRetryConfig,
   }
 
@@ -870,7 +872,7 @@ export async function resolveAffiliateLink(
     console.log(`🔗 检测到短链接服务，增加重试次数到${retryConfig.maxRetries}次`)
   }
 
-  // ========== 步骤1: 检查Redis缓存（默认禁用，确保获取最新追踪参数） ==========
+  // 步骤1: 检查Redis缓存（默认禁用，确保获取最新追踪参数）
   if (!skipCache) {
     const cached = await getCachedRedirect(affiliateLink, targetCountry)
     if (cached) {
@@ -881,7 +883,7 @@ export async function resolveAffiliateLink(
     console.log(`🔄 跳过缓存，直接解析URL（确保获取最新追踪参数）`)
   }
 
-  // ========== 步骤2: 获取代理池 ==========
+  // 步骤2: 获取代理池
   const proxyPool = getProxyPool(userId)
   proxyPool.resetOldFailures() // 重置长时间未失败的代理
 
@@ -889,7 +891,7 @@ export async function resolveAffiliateLink(
   let attempt = 0
   let usedProxyForAttempt: ProxyConfig | null = null
 
-  // ========== 步骤3: 智能重试循环 ==========
+  // 步骤3: 智能重试循环
   while (attempt <= retryConfig.maxRetries) {
     usedProxyForAttempt = null
     try {
@@ -905,7 +907,7 @@ export async function resolveAffiliateLink(
 
       const startTime = Date.now()
 
-      // ========== 步骤4: 智能路由降级方案 ==========
+      // 步骤4: 智能路由降级方案
       let result: ResolvedUrlData
 
       // 使用智能路由决策
@@ -927,7 +929,7 @@ export async function resolveAffiliateLink(
         // 已知HTTP重定向域名（包括Meta Refresh），先使用HTTP
         try {
           console.log(`   尝试HTTP解析（已知HTTP/Meta Refresh重定向）`)
-          // 🔥 重试时强制刷新代理IP，避免复用失败的IP
+          // 重试时刷新代理 IP
           result = await resolveWithHttp(affiliateLink, proxy.url, userId, attempt > 0)
 
           const blocked = isBlockedHttpResolution(result)
@@ -957,7 +959,7 @@ export async function resolveAffiliateLink(
             if (isTrackingUrl) {
               console.log(`   ⚠️ 检测到tracking URL，可能需要继续追踪`)
               console.log(`   降级到Playwright完成后续重定向...`)
-              // 🔥 必须带上HTTP解析得到的suffix，否则会丢失关键追踪参数（例如 partnermatic 的 ?url=...）
+              // 重试须保留 HTTP 解析的 suffix（如 partnermatic ?url=）
               const fullTrackingUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
               const playwrightResult = await resolveWithPlaywright(
                 fullTrackingUrl,
@@ -979,7 +981,7 @@ export async function resolveAffiliateLink(
             }
           }
         } catch (httpError: any) {
-          // 🔥 修复：HTTP失败时降级到Playwright
+          // HTTP失败时降级到Playwright
           console.log(`   HTTP失败: ${httpError.message}`)
           if (shouldFailFastWithoutPlaywrightFallback(httpError)) {
             console.log(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
@@ -1002,7 +1004,7 @@ export async function resolveAffiliateLink(
         // 未知域名，先尝试HTTP，失败则降级到Playwright
         try {
           console.log(`   尝试HTTP解析（未知域名）...`)
-          // 🔥 重试时强制刷新代理IP，避免复用失败的IP
+          // 重试时刷新代理 IP
           result = await resolveWithHttp(affiliateLink, proxy.url, userId, attempt > 0)
 
           const blocked = isBlockedHttpResolution(result)
@@ -1022,7 +1024,7 @@ export async function resolveAffiliateLink(
               redirectCount: result.redirectCount + playwrightResult.redirectCount,
             }
           } else {
-            // 🔥 重要：即使HTTP有重定向，也可能停在 tracking 中间页（例如 partnermatic track），需要继续用Playwright追踪
+            // HTTP 可能停在 tracking 中间页，需 Playwright 继续追踪
             const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
             const isTrackingUrl =
               /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
@@ -1102,13 +1104,13 @@ export async function resolveAffiliateLink(
 
       const responseTime = Date.now() - startTime
 
-      // 🔥 兜底：tracking URL仍未解析时，尝试提取嵌入的目标URL
+      // 兜底：从 tracking URL 提取嵌入目标 URL
       result = applyEmbeddedTargetFallback(result)
 
       // 记录代理成功
       proxyPool.recordSuccess(proxy.url, responseTime)
 
-      // ========== 步骤5: 不再保存到缓存（确保每次获取最新追踪参数） ==========
+      // 步骤5: 不再写入竞品缓存（确保每次获取最新追踪参数）
       // 注释掉缓存保存逻辑
       // await setCachedRedirect(affiliateLink, targetCountry, result)
 
@@ -1143,7 +1145,7 @@ export async function resolveAffiliateLink(
     }
   }
 
-  // ========== 所有重试都失败 ==========
+  // 所有重试都失败
   const normalizedError = normalizeNestedResolveErrorMessage(lastError?.message || '未知错误')
   if (isAffiliateLinkExpiredMessage(normalizedError)) {
     throw new Error(normalizedError)
@@ -1152,7 +1154,7 @@ export async function resolveAffiliateLink(
   throw new Error(`URL解析失败（${retryConfig.maxRetries + 1}次尝试后）: ${normalizedError}`)
 }
 
-// ==================== 代理健康监控 ====================
+// 代理健康监控
 
 /**
  * 获取代理池健康状态（供管理员页面使用）

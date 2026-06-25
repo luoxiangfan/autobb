@@ -326,10 +326,10 @@ function getCampaignRoasValue(campaign: any): number | null {
  *
  * Get performance data for all campaigns
  *
- * Query Parameters:
- * - daysBack: number (default: 7)
- * - start_date: string (optional, YYYY-MM-DD)
- * - end_date: string (optional, YYYY-MM-DD)
+ * Query Parameters
+ * daysBack: number (default: 7)
+ * start_date: string (optional, YYYY-MM-DD)
+ * end_date: string (optional, YYYY-MM-DD)
  */
 export const dynamic = 'force-dynamic'
 
@@ -382,10 +382,10 @@ export const GET = withAuth(async (request, user) => {
           .map((id) => Number.parseInt(id.trim(), 10))
           .filter((id) => Number.isFinite(id) && id > 0)
       : []
-    // 🔧 新增：按创建时间过滤（用于"最近 14 天新增"页面）
+    // 按创建时间过滤（用于"最近 14 天新增"页面）
     const createdAtStartParam = searchParams.get('createdAtStart')
     const createdAtEndParam = searchParams.get('createdAtEnd')
-    // 🔧 新增：按用户筛选（管理员功能，支持多选）
+    // 按用户筛选（管理员功能，支持多选）
     const userIdsParam = (searchParams.get('userIds') || '').trim()
     const requestedUserIds = userIdsParam
       ? Array.from(
@@ -414,7 +414,7 @@ export const GET = withAuth(async (request, user) => {
       }
       return null
     })()
-    // 🔧 新增：按联盟筛选（affiliate platform）
+    // 按联盟筛选（affiliate platform）
     const affiliateFilterParam = searchParams.get('affiliate')
     let affiliateFilter: string | null = null
     if (affiliateFilterParam) {

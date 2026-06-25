@@ -131,7 +131,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
       .slice(0, days)
 
-    // 🆕 Token优化：操作类型分布（用于优化监控）
+    // Token操作类型分布（用于优化监控）
     const operationTypeMap = new Map()
     for (const row of todayData) {
       const opType = row.operation_type || 'unknown'
@@ -183,7 +183,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       recommendations.push('💡 考虑在非关键场景使用flash模型以降低成本（5x成本减少）')
     }
 
-    // 🆕 高成本操作建议
+    // 高成本操作建议
     if (highCostOperations.length > 0) {
       const topCostOp = highCostOperations[0]
       const opName = topCostOp.operationType.replace(/_/g, ' ')
@@ -192,7 +192,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       )
     }
 
-    // 🆕 Token优化进度提示
+    // Token优化进度提示
     const compressionEnabled = Array.from(operationTypeMap.values()).some(
       (op) => op.operationType === 'competitor_analysis'
     )

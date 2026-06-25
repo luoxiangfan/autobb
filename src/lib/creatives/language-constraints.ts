@@ -22,10 +22,10 @@ export interface LanguageConstraints {
  * 语言约束配置表
  *
  * 基准：英文
- * - 标题：≤30字符
- * - 描述：≤90字符
- * - 关键词：1-4个单词
- * - 最小搜索量：500/月
+ * 标题：≤30字符
+ * 描述：≤90字符
+ * 关键词：1-4个单词
+ * 最小搜索量：500/月
  */
 const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
   en: {
@@ -49,8 +49,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3, // -1 (复合词通常较长)
-    keywordMinSearchVolume: 400, // -100
+    keywordMaxWords: 3, // 1 (复合词通常较长)
+    keywordMinSearchVolume: 400, // 100
     description: 'German - longer compound words, adjusted for complexity',
   },
 
@@ -63,7 +63,7 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4, // 保持不变
-    keywordMinSearchVolume: 300, // -200 (小语言市场)
+    keywordMinSearchVolume: 300, // 200 (小语言市场)
     description: 'Italian - more verbose expressions, smaller market',
   },
 
@@ -76,7 +76,7 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
-    keywordMinSearchVolume: 350, // -150
+    keywordMinSearchVolume: 350, // 150
     description: 'Spanish - similar to Italian, moderate market',
   },
 
@@ -89,7 +89,7 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
-    keywordMinSearchVolume: 400, // -100
+    keywordMinSearchVolume: 400, // 100
     description: 'French - verbose expressions, moderate market',
   },
 
@@ -102,7 +102,7 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
     keywordMaxWords: 4,
-    keywordMinSearchVolume: 300, // -200
+    keywordMinSearchVolume: 300, // 200
     description: 'Portuguese - verbose, smaller market',
   },
 
@@ -114,8 +114,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 2, // -2 (字符更紧凑，通常用2个词)
-    keywordMinSearchVolume: 250, // -250
+    keywordMaxWords: 2, // 2 (字符更紧凑，通常用2个词)
+    keywordMinSearchVolume: 250, // 250
     description: 'Japanese - compact characters, fewer words needed',
   },
 
@@ -127,8 +127,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 2, // -2
-    keywordMinSearchVolume: 250, // -250
+    keywordMaxWords: 2, // 2
+    keywordMinSearchVolume: 250, // 250
     description: 'Korean - compact characters, fewer words needed',
   },
 
@@ -140,8 +140,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3, // -1 (字符紧凑，但可能需要3个词)
-    keywordMinSearchVolume: 300, // -200
+    keywordMaxWords: 3, // 1 (字符紧凑，但可能需要3个词)
+    keywordMinSearchVolume: 300, // 200
     description: 'Chinese - compact characters, moderate market',
   },
 
@@ -153,8 +153,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3, // -1
-    keywordMinSearchVolume: 300, // -200
+    keywordMaxWords: 3, // 1
+    keywordMinSearchVolume: 300, // 200
     description: 'Russian - Cyrillic characters, smaller market',
   },
 
@@ -166,8 +166,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3, // -1
-    keywordMinSearchVolume: 250, // -250
+    keywordMaxWords: 3, // 1
+    keywordMinSearchVolume: 250, // 250
     description: 'Arabic - right-to-left, smaller market',
   },
 
@@ -179,8 +179,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3, // -1
-    keywordMinSearchVolume: 300, // -200
+    keywordMaxWords: 3, // 1
+    keywordMinSearchVolume: 300, // 200
     description: 'Swedish - compound words, smaller market',
   },
 
@@ -192,8 +192,8 @@ const LANGUAGE_CONSTRAINTS: Record<string, LanguageConstraints> = {
     calloutLength: 25,
     sitelinkTextLength: 25,
     sitelinkDescLength: 35,
-    keywordMaxWords: 3, // -1
-    keywordMinSearchVolume: 350, // -150
+    keywordMaxWords: 3, // 1
+    keywordMinSearchVolume: 350, // 150
     description: 'Swiss German - similar to German, smaller market',
   },
 }

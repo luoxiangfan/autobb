@@ -3,15 +3,15 @@
  *
  * 任务队列架构版本的Offer提取Hook
  *
- * 流程：
+ * 流程
  * 1. 调用 POST /api/offers/extract 创建任务，获取taskId
  * 2. 使用 GET /api/offers/extract/stream/[taskId] 订阅SSE进度推送
  * 3. SSE失败时自动fallback到轮询 GET /api/offers/extract/status/[taskId]
  *
- * 优势：
- * - 任务持久化，支持页面刷新后重连
- * - SSE连接与任务执行解耦，避免controller closed错误
- * - 自动fallback机制，提高稳定性
+ * 优势
+ * 任务持久化，支持页面刷新后重连
+ * SSE连接与任务执行解耦，避免controller closed错误
+ * 自动fallback机制，提高稳定性
  */
 
 'use client'
@@ -112,7 +112,7 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
     setResult(null)
     setError(null)
     setCurrentDuration(undefined)
-    setStageDurations(new Map()) // 🔥 重置阶段耗时记录
+    setStageDurations(new Map()) // 重置阶段耗时记录
     stageStartTimeRef.current = Date.now()
     lastStageRef.current = 'resolving_link'
   }, [cleanup])
@@ -206,13 +206,13 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
                 const newStage = progressData.stage as ProgressStage
                 const newStatus = progressData.status || 'in_progress'
 
-                // 🔥 阶段耗时计算逻辑（前端计算）
+                // 阶段耗时计算逻辑（前端计算）
                 // 如果是新阶段开始，重置计时器
                 if (newStage !== lastStageRef.current && newStatus === 'in_progress') {
                   // 保存上一个阶段的完成耗时
                   if (lastStageRef.current) {
                     let previousElapsed = Date.now() - stageStartTimeRef.current
-                    // 🔥 修复：如果阶段切换太快（<1秒），显示为1秒
+                    // 如果阶段切换太快（<1秒），显示为1秒
                     if (previousElapsed < 1000) previousElapsed = 1000
                     setStageDurations((prev) =>
                       new Map(prev).set(lastStageRef.current, previousElapsed)
@@ -224,7 +224,7 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
                   lastStageRef.current = newStage
                 }
 
-                // 🔥 修复：如果是新阶段直接完成（没有先经过in_progress），也需要保存上一个阶段的耗时
+                // 如果是新阶段直接完成（没有先经过in_progress），也需要保存上一个阶段的耗时
                 if (newStage !== lastStageRef.current && newStatus === 'completed') {
                   // 保存上一个阶段的完成耗时（如果还没保存）
                   if (lastStageRef.current) {
@@ -233,7 +233,7 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
                       // 只有当上一个阶段还没有耗时记录时才保存
                       if (!newMap.has(lastStageRef.current)) {
                         let previousElapsed = Date.now() - stageStartTimeRef.current
-                        // 🔥 修复：如果阶段切换太快（<1秒），显示为1秒
+                        // 如果阶段切换太快（<1秒），显示为1秒
                         if (previousElapsed < 1000) previousElapsed = 1000
                         newMap.set(lastStageRef.current, previousElapsed)
                       }
@@ -255,12 +255,12 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
                 // 如果阶段完成，保存完成耗时到stageDurations
                 if (newStatus === 'completed') {
                   let elapsed = Date.now() - stageStartTimeRef.current
-                  // 🔥 修复：如果阶段切换太快导致计算不准确（<1秒），显示为1秒
+                  // 如果阶段切换太快导致计算不准确（<1秒），显示为1秒
                   if (elapsed < 1000) {
                     elapsed = 1000
                   }
                   setCurrentDuration(elapsed)
-                  // 🔥 保存当前阶段的完成耗时
+                  // 保存当前阶段的完成耗时
                   setStageDurations((prev) => new Map(prev).set(newStage, elapsed))
                 }
 
@@ -346,7 +346,7 @@ export function useOfferExtractionV2(): UseOfferExtractionV2Return {
     result,
     error,
     currentDuration,
-    stageDurations, // 🔥 导出已完成阶段的耗时Map
+    stageDurations, // 导出已完成阶段的耗时Map
     connectionType,
     startExtraction,
     reconnect,

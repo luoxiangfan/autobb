@@ -1,7 +1,7 @@
 /**
  * 使用 axios 调用 Gemini API
  *
- * 重要：
+ * 重要
  * 1. API密钥从用户配置获取，不使用全局配置
  * 2. 不使用代理，直接访问Google API
  */
@@ -462,8 +462,8 @@ export interface GeminiRequest {
     thinkingConfig?: {
       thinkingBudget?: number
     }
-    responseMimeType?: string // 🆕 Token优化：MIME类型
-    responseSchema?: any // 🆕 Token优化：JSON schema
+    responseMimeType?: string // TokenMIME类型
+    responseSchema?: any // TokenJSON schema
   }
 }
 
@@ -868,17 +868,17 @@ function getEndpointByProvider(provider: GeminiProvider): string {
 /**
  * 创建 axios 实例用于 Gemini API
  *
- * 🔧 2025-12-29 更新：支持动态端点
- * - 根据用户配置自动选择官方或中转端点
- * - 直连访问，不使用代理
+ * 更新：支持动态端点
+ * 根据用户配置自动选择官方或中转端点
+ * 直连访问，不使用代理
  *
- * 超时设置：
- * - 180秒（3分钟）
- * - 原因：平衡可靠性与响应时间
+ * 超时设置
+ * 180秒（3分钟）
+ * 原因：平衡可靠性与响应时间
  *
- * 🔧 2025-12-31 修复：
- * - relay 服务商使用 Cloudflare 防护，需要浏览器特征 headers 绕过检测
- * - official 服务商不需要这些 headers（官方API不使用Cloudflare）
+ *
+ * relay 服务商使用 Cloudflare 防护，需要浏览器特征 headers 绕过检测
+ * official 服务商不需要这些 headers（官方API不使用Cloudflare）
  */
 async function createGeminiAxiosClient(
   userId: number,
@@ -888,7 +888,7 @@ async function createGeminiAxiosClient(
   const endpoint = getEndpointByProvider(geminiProvider)
   const endpointUrl = new URL(endpoint)
 
-  // 🔧 2025-12-31 修复：relay 服务商需要浏览器特征 headers 绕过 Cloudflare
+  // relay 服务商需要浏览器特征 headers 绕过 Cloudflare
   // ThunderRelay 使用 Cloudflare 防护，服务器请求需要模拟浏览器行为
   const isRelayProvider = geminiProvider === 'relay'
 
@@ -899,7 +899,7 @@ async function createGeminiAxiosClient(
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   }
 
-  // 🔧 relay 服务商需要额外的浏览器特征 headers 绕过 Cloudflare
+  // relay 服务商需要额外的浏览器特征 headers 绕过 Cloudflare
   if (isRelayProvider) {
     const relayOrigin = `${endpointUrl.protocol}//${endpointUrl.host}`
     headers['Origin'] = relayOrigin
@@ -923,7 +923,7 @@ async function createGeminiAxiosClient(
 /**
  * 获取用户配置的服务商类型
  *
- * 🔧 关键修复(2025-12-30): 使用 getSetting() 正确处理配置字段
+ * 关键使用 getSetting() 正确处理配置字段
  */
 async function getGeminiProvider(userId: number): Promise<GeminiProvider> {
   const { getUserOnlySetting } = await import('../common/server')
@@ -959,8 +959,8 @@ export async function generateContent(
     maxOutputTokens?: number
     thinkingBudget?: number
     timeoutMs?: number
-    responseSchema?: any // 🆕 Token优化：JSON schema
-    responseMimeType?: string // 🆕 Token优化：MIME类型
+    responseSchema?: any // TokenJSON schema
+    responseMimeType?: string // TokenMIME类型
   },
   userId: number,
   overrideConfig?: { provider: string; apiKey: string }
@@ -972,11 +972,11 @@ export async function generateContent(
     maxOutputTokens = 8192,
     thinkingBudget,
     timeoutMs,
-    responseSchema, // 🆕 Token优化：JSON schema
-    responseMimeType, // 🆕 Token优化：MIME类型
+    responseSchema, // TokenJSON schema
+    responseMimeType, // TokenMIME类型
   } = params
 
-  // 🔧 关键修复(2025-12-30): 支持临时配置覆盖（用于验证未保存的配置）
+  // 关键支持临时配置覆盖（用于验证未保存的配置）
   // 根据用户配置获取服务商类型和对应的 API Key
   const provider = overrideConfig
     ? (overrideConfig.provider as GeminiProvider)
@@ -995,7 +995,7 @@ export async function generateContent(
     throw buildDailyQuotaBreakerError(activeBreaker)
   }
 
-  // 🔧 2025-12-31 修复：传递 provider 参数以确保正确设置 headers（relay 需要 Cloudflare 绕过 headers）
+  // 传递 provider 参数以确保正确设置 headers（relay 需要 Cloudflare 绕过 headers）
   const client = await createGeminiAxiosClient(userId, provider)
 
   // 构建请求
@@ -1008,7 +1008,7 @@ export async function generateContent(
     ? Math.max(0, Math.floor(Number(thinkingBudget)))
     : undefined
 
-  // 🔧 2026-02-01: 恢复 Gemini 3 thinking 模式
+  // 恢复 Gemini 3 thinking 模式
   // 结构化任务可通过 thinkingBudget=0 关闭 thinking，避免抢占输出 token 配额
   if (model.includes('gemini-3')) {
     if (normalizedThinkingBudget !== undefined) {
@@ -1023,7 +1023,7 @@ export async function generateContent(
     }
   }
 
-  // 🆕 Token优化：结构化JSON输出约束
+  // Token结构化JSON输出约束
   if (responseSchema) {
     generationConfig.responseMimeType = responseMimeType || 'application/json'
     generationConfig.responseSchema = responseSchema
@@ -1054,9 +1054,9 @@ export async function generateContent(
     }
     console.log(`   - temperature: ${temperature}`)
 
-    // 服务商鉴权方式：
-    // - 官方API: query参数 ?key=xxx
-    // - 第三方中转: header x-api-key: xxx
+    // 服务商鉴权方式
+    // 官方API: query参数 ?key=xxx
+    // 第三方中转: header x-api-key: xxx
     const timeoutConfig = timeoutMs ? { timeout: timeoutMs } : {}
     const relayRequestConfig = {
       headers: {
@@ -1072,7 +1072,7 @@ export async function generateContent(
     }
     const requestConfig = provider === 'relay' ? relayRequestConfig : officialRequestConfig
 
-    // 🔧 2026-02-01: 提高上限到65536（Gemini 3 Flash Preview 支持的最大值）
+    // 提高上限到65536（Gemini 3 Flash Preview 支持的最大值）
     // 原问题：gemini-3-flash-preview 可能生成36k+ tokens，超过原来的49152上限
     const MAX_OUTPUT_TOKENS_CAP = 65536
     const MAX_TOKENS_RETRY_BUMP = 16384 // 更大的增量，减少重试次数
@@ -1248,7 +1248,7 @@ export async function generateContent(
 
       const candidate = response.data.candidates[0]
 
-      // 🔧 修复(2025-12-11): 检查finishReason，如果是MAX_TOKENS，说明输出被截断
+      // 检查finishReason，如果是MAX_TOKENS，说明输出被截断
       if (candidate.finishReason && candidate.finishReason !== 'STOP') {
         console.warn(`⚠️ Gemini API finishReason: ${candidate.finishReason}`)
         if (candidate.finishReason === 'MAX_TOKENS') {
@@ -1333,7 +1333,7 @@ export async function generateContent(
       }
       console.log(`✓ Gemini API 调用成功，返回 ${text.length} 字符`)
 
-      // 🔧 调试(2026-01-31): 记录响应内容详情，排查输出过大问题
+      // 调试: 记录响应内容详情，排查输出过大问题
       const usage = response.data.usageMetadata
       const thoughtsTokenCount = usage?.thoughtsTokenCount || 0
       const candidatesTokenCount = usage?.candidatesTokenCount || 0
@@ -1435,12 +1435,12 @@ export async function generateContent(
 
     throw new Error('Gemini API调用失败: 超过最大重试次数')
   } catch (error: any) {
-    // 🔧 修复(2025-12-11): 对所有错误打印详细信息
+    // 对所有错误打印详细信息
     console.error(`❌ Gemini API调用失败:`)
     console.error(`   - HTTP状态: ${error.response?.status}`)
     console.error(`   - 错误消息: ${error.message}`)
 
-    // 🔧 修复(2025-12-30): 正确处理可能是Buffer或压缩数据的错误响应
+    // 正确处理可能是Buffer或压缩数据的错误响应
     if (error.response?.data) {
       try {
         // 如果是Buffer，转换为字符串
@@ -1494,7 +1494,7 @@ export async function generateContent(
       throw error
     }
 
-    // 🔧 修复(2025-12-30): 针对403错误给出更明确的提示
+    // 针对403错误给出更明确的提示
     if (error.response?.status === 403) {
       const providerName = GEMINI_PROVIDERS[provider]?.name || '当前服务商'
       throw new Error(
@@ -1520,7 +1520,7 @@ export async function generateContent(
       )
     }
 
-    // 🔧 新增(2025-12-30): 针对402错误（余额不足）给出明确提示
+    // 针对402错误（余额不足）给出明确提示
     if (error.response?.status === 402) {
       const providerName = GEMINI_PROVIDERS[provider]?.name || '当前服务商'
       const errorData = error.response?.data
@@ -1528,7 +1528,7 @@ export async function generateContent(
       const message = errorData?.message || '账户余额不足'
       const errorCode = errorData?.error
 
-      // 🔧 新增(2025-12-30): 处理BILLING_BINDING_MISSING错误
+      // 处理BILLING_BINDING_MISSING错误
       if (errorCode === 'BILLING_BINDING_MISSING') {
         throw new Error(
           `Gemini API调用失败: 需要绑定专属账户\n` +
@@ -1562,7 +1562,7 @@ export async function generateContent(
     }
 
     // 其他错误直接抛出
-    // 🔧 修复(2025-12-11): 增加详细错误信息，便于排查400错误
+    // 增加详细错误信息，便于排查400错误
     const errorDetails = error.response?.data?.error
     if (errorDetails) {
       console.error('❌ Gemini API错误详情:')
@@ -1573,7 +1573,7 @@ export async function generateContent(
         console.error('   - details:', JSON.stringify(errorDetails.details, null, 2))
       }
 
-      // 🔧 地理位置限制的友好错误提示
+      // 地理位置限制的友好错误提示
       if (
         errorDetails.message?.includes('location is not supported') ||
         errorDetails.status === 'FAILED_PRECONDITION'

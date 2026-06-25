@@ -52,7 +52,7 @@ export interface CreateCampaignInput {
   status?: string
   startDate?: string
   endDate?: string
-  // 🔧 新增：广告系列排期和定位字段
+  // 广告系列排期和定位字段
   startDateTime?: string // ISO 8601 格式
   endDateTime?: string // ISO 8601 格式
   targetCountry?: string // 国家代码
@@ -103,7 +103,7 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
   const insertedId = getInsertedId(result)
   const campaign = (await findCampaignById(insertedId, input.userId))!
 
-  // 🔧 优化 (2026-04-20): 创建广告系列时自动备份
+  // 优化 : 创建广告系列时自动备份
   try {
     await autoBackupCampaign({
       userId: input.userId,
@@ -145,7 +145,7 @@ export async function findCampaignById(id: number, userId: number): Promise<Camp
 export async function findCampaignsByOfferId(offerId: number, userId: number): Promise<Campaign[]> {
   const db = await getDatabase()
 
-  // 🔧 修复: PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
+  // PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
   // 避免 prepared statement 中的 boolean = integer 类型不匹配问题
   const isDeletedCheck = 'is_deleted = FALSE'
 
@@ -167,7 +167,7 @@ export async function findCampaignsByOfferId(offerId: number, userId: number): P
 export async function findCampaignsByUserId(userId: number, limit?: number): Promise<Campaign[]> {
   const db = await getDatabase()
 
-  // 🔧 修复: PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
+  // PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
   const isDeletedCheck = 'is_deleted = FALSE'
 
   let sql = `
@@ -312,9 +312,9 @@ export type DeleteCampaignResult =
 
 /**
  * 删除广告系列
- * - 草稿广告系列：软删除（保留历史）
- * - 已移除广告系列：永久删除（不再出现在列表）
- * - Ads 账号不可用/已解绑：仅本地下线并删除（不再调用 Google Ads）
+ * 草稿广告系列：软删除（保留历史）
+ * 已移除广告系列：永久删除（不再出现在列表）
+ * Ads 账号不可用/已解绑：仅本地下线并删除（不再调用 Google Ads）
  */
 export async function deleteCampaign(id: number, userId: number): Promise<DeleteCampaignResult> {
   const db = await getDatabase()

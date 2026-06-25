@@ -1,7 +1,7 @@
 /**
  * 广告系列启停时同步处理关联 Offer 的补点击和换链接任务
  *
- * 用于：
+ * 用于
  * 1. 暂停：广告系列状态修改为暂停时即时触发
  * 2. 启用：广告系列恢复投放时，按默认参数恢复/创建任务（复用 batch-start-tasks）
  * 3. 定时任务批量检测暂停的广告系列
@@ -56,7 +56,7 @@ export type ResumeOfferTasksResult = Pick<
   | 'partialSuccess'
 >
 
-/** 供批处理与测试替换实现的入口（避免 ESM 内部直接绑定导致 spy 无效） */
+/* * 供批处理与测试替换实现的入口（避免 ESM 内部直接绑定导致 spy 无效） */
 export const campaignOfferTaskActions: {
   pauseOfferTasks: (
     offerId: number,
@@ -185,8 +185,8 @@ campaignOfferTaskActions.pauseOfferTasks = pauseOfferTasks
 
 /**
  * 启用广告系列时，按批量开启任务的默认参数恢复或创建关联 Offer 任务。
- * - 任务仍存在：更新为默认参数并 restart/enable（调度器会重新入队）
- * - 任务不存在或已完成：使用默认参数新建
+ * 任务仍存在：更新为默认参数并 restart/enable（调度器会重新入队）
+ * 任务不存在或已完成：使用默认参数新建
  */
 export async function resumeOfferTasksOnCampaignEnable(
   offerId: number,

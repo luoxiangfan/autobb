@@ -34,7 +34,7 @@ const ALLOWED_SORT_FIELDS: Set<ProductSortField> = new Set([
   'promoLink',
   'relatedOfferCount',
   'updatedAt',
-  'recommendationScore', // 新增: 推荐指数排序
+  'recommendationScore', // 推荐指数排序
 ])
 
 function parseNumericFilter(searchParams: URLSearchParams, key: string): number | null {

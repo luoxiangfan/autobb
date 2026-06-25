@@ -12,7 +12,7 @@ import {
  * 支持管理员共享认证配置。
  */
 export type GoogleAdsUserAuthType = {
-  /** 未配置且无 assignment 偏好时为 undefined，避免误判为 OAuth */
+  /* * 未配置且无 assignment 偏好时为 undefined，避免误判为 OAuth */
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
 }
@@ -104,7 +104,7 @@ export function formatAndValidateLoginCustomerId(
 
 /**
  * Google Ads OAuth凭证接口
- * 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整凭证
+ * 独立账号模式 - 每个用户必须配置自己的完整凭证
  */
 export interface GoogleAdsCredentials {
   id: number
@@ -125,8 +125,8 @@ export interface GoogleAdsCredentials {
 
 /**
  * 保存或更新Google Ads凭证
- * 🔧 修复(2025-12-12): 独立账号模式 - 所有凭证字段必填
- * 🔧 修复(2025-12-26): 验证 login_customer_id 格式
+ * 独立账号模式 - 所有凭证字段必填
+ * 验证 login_customer_id 格式
  */
 export async function saveGoogleAdsCredentials(
   userId: number,
@@ -142,7 +142,7 @@ export async function saveGoogleAdsCredentials(
 ): Promise<GoogleAdsCredentials> {
   const db = await getDatabase()
 
-  // 🔧 修复(2026-01-15): 清理凭证中的前后空格/换行
+  // 清理凭证中的前后空格/换行
   // 避免出现 "The developer token is not valid." 这类由多余空白字符触发的错误
   const cleanedCredentials = {
     client_id: String(credentials.client_id ?? '').trim(),
@@ -154,13 +154,13 @@ export async function saveGoogleAdsCredentials(
     access_token_expires_at: credentials.access_token_expires_at,
   }
 
-  // 🔧 修复(2025-12-26): 验证并格式化 login_customer_id
+  // 验证并格式化 login_customer_id
   const formattedLoginCustomerId = formatAndValidateLoginCustomerId(
     cleanedCredentials.login_customer_id,
     'login_customer_id'
   )
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowSql = sqlNowFunc()
 
   // is_active 列为 BOOLEAN
@@ -194,9 +194,9 @@ export async function saveGoogleAdsCredentials(
       [
         cleanedCredentials.client_id,
         cleanedCredentials.client_secret,
-        cleanedCredentials.refresh_token, // 🔧 修复：正确的参数顺序
-        cleanedCredentials.developer_token, // 🔧 修复：正确的参数顺序
-        formattedLoginCustomerId, // 🔧 修复：正确的参数顺序
+        cleanedCredentials.refresh_token, // 正确的参数顺序
+        cleanedCredentials.developer_token, // 正确的参数顺序
+        formattedLoginCustomerId, // 正确的参数顺序
         cleanedCredentials.access_token || null,
         cleanedCredentials.access_token_expires_at || null,
         isActiveValue,
@@ -274,7 +274,7 @@ export async function getGoogleAdsCredentials(
   return getGoogleAdsCredentialsRaw(ownerUserId)
 }
 
-/** metadata-only：不解密/不读取 client_secret、developer_token 等密钥列 */
+/* * metadata-only：不解密/不读取 client_secret、developer_token 等密钥列 */
 export type GoogleAdsCredentialsMetadata = {
   client_id: string
   login_customer_id: string
@@ -342,7 +342,7 @@ export function googleAdsCredentialsFromMetadata(
 export async function deleteGoogleAdsCredentials(userId: number): Promise<void> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowSql = sqlNowFunc()
 
   // is_active 列为 BOOLEAN
@@ -385,7 +385,7 @@ export async function refreshAccessToken(userId: number): Promise<{
     throw new Error('Google Ads凭证不存在')
   }
 
-  // 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须有自己的完整凭证
+  // 独立账号模式 - 每个用户必须有自己的完整凭证
   // 不再回退到平台共享配置或管理员配置
   const clientId = credentials.client_id
   const clientSecret = credentials.client_secret
@@ -423,7 +423,7 @@ export async function refreshAccessToken(userId: number): Promise<{
   // 更新数据库
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowSql = sqlNowFunc()
 
   await db.exec(

@@ -4,11 +4,11 @@
  * Step 2: Google Ads Account Linking
  * 关联Google Ads账号、OAuth授权
  *
- * 账号筛选规则：
+ * 账号筛选规则
  * 1. 不能是 MCC 账号（manager !== true）
  * 2. 过滤取消/关闭等不可用账号
  *
- * 🔓 KISS优化(2025-12-12): 移除独占约束，允许多个Offer共享同一Ads账号
+ * � 移除独占约束，允许多个Offer共享同一Ads账号
  * 优先级排序：当前Offer已用 > 同品牌Offer已用 > 未使用
  */
 
@@ -97,7 +97,7 @@ interface GoogleAdsAccount {
     isActive: boolean
     campaignCount: number
   }>
-  // 🔓 KISS优化(2025-12-12): 优先级标识
+  // � 优先级标识
   priority?: 'current' | 'same-brand' | 'none'
   priorityScore?: number
 }
@@ -655,7 +655,7 @@ export default function Step2AccountLinking({ offer, onAccountsLinked, selectedA
                           {getAccountStatusBadge(account.status)}
                         </TableCell>
                         <TableCell className="w-[90px] whitespace-nowrap">
-                          {/* 🔓 KISS优化(2025-12-12): 优先级标识 */}
+                          {/* 优先级标识 */}
                           {account.priority === 'current' && (
                             <Badge className="bg-green-100 text-green-800 border-green-300">
                               <CheckCircle2 className="w-3 h-3 mr-1" />

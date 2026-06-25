@@ -4,12 +4,12 @@
  * 集成到统一队列系统中的内置调度器
  * 功能：定时检查用户的 Google Ads 账户，自动创建广告系列同步任务并入队
  *
- * 优势：
- * - 不需要外部 crontab
- * - 与队列系统生命周期绑定
- * - 统一管理和监控
- * - 支持动态配置
- * - 已有关联 Offer 时自动跳过
+ * 优势
+ * 不需要外部 crontab
+ * 与队列系统生命周期绑定
+ * 统一管理和监控
+ * 支持动态配置
+ * 已有关联 Offer 时自动跳过
  */
 
 import { getDatabase } from '../../db'
@@ -307,7 +307,7 @@ class GoogleAdsCampaignSyncScheduler {
       dryRun?: boolean
     } = {}
   ): Promise<string> {
-    // 🆕 修复：使用 getQueueManagerForTaskType 确保任务被路由到正确的队列
+    // 使用 getQueueManagerForTaskType 确保任务被路由到正确的队列
     // google-ads-campaign-sync 属于后台任务，应该入队到 background 队列
     const queue = getQueueManagerForTaskType('@/lib/google-ads/campaign/sync')
 

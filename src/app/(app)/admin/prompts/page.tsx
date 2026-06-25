@@ -315,7 +315,7 @@ export default function PromptsManagementPage() {
     setPredictedNextVersion('')
   }
 
-  // ========== 内联编辑功能 ==========
+  // 内联编辑功能
 
   // 开始内联编辑
   const startInlineEdit = async (prompt: PromptData) => {
@@ -349,7 +349,7 @@ export default function PromptsManagementPage() {
     setInlineChangeNotes('')
   }
 
-  // ========== 变量验证功能 ==========
+  // 变量验证功能
 
   // 验证 Prompt 变量
   const validatePromptVariables = async (content: string) => {

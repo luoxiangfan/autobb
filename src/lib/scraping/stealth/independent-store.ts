@@ -4,10 +4,10 @@
  * Scrapes independent e-commerce sites (Shopify, WooCommerce, BigCommerce, etc.)
  * Extracts brand info and product listings for AI creative generation
  *
- * 🔥 增强版（2025-12-08）：
- * - 支持深度抓取热门商品详情（与Amazon Store一致）
- * - 支持评论抓取和评分提取
- * - 支持hotInsights计算
+ * 增强版
+ * 支持深度抓取热门商品详情（与Amazon Store一致）
+ * 支持评论抓取和评分提取
+ * 支持hotInsights计算
  */
 
 import { Page } from 'playwright'
@@ -273,9 +273,9 @@ function mergeCapturedCommentApiData(
 /**
  * Scrape independent e-commerce store page
  * Extracts brand info and product listings for AI creative generation
- * P0优化: 使用连接池减少启动时间
- * P1优化: 代理失败时自动换新代理重试
- * 🌍 支持根据目标国家动态配置语言
+ * 使用连接池减少启动时间
+ * 代理失败时自动换新代理重试
+ * 支持根据目标国家动态配置语言
  */
 export async function scrapeIndependentStore(
   url: string,
@@ -296,7 +296,7 @@ export async function scrapeIndependentStore(
         )
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
-        // 🔥 清理代理IP缓存，强制获取新IP
+        // 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${maskProxyUrl(effectiveProxyUrl)}`)
@@ -322,12 +322,12 @@ export async function scrapeIndependentStore(
         const httpStatus = response.status()
         console.log(`📊 HTTP状态: ${httpStatus}`)
 
-        // 🔥 FIX: 处理429限流
+        // FIX: 处理429限流
         if (httpStatus === 429) {
           throw new Error('HTTP 429: Rate limit, need retry with new proxy')
         }
 
-        // 🔥 防御：403/401等常见阻断，必须换代理重试，避免把阻断页<title>当作店铺名
+        // 防御：403/401等常见阻断，必须换代理重试，避免把阻断页<title>当作店铺名
         if (httpStatus === 401 || httpStatus === 403 || httpStatus === 407) {
           throw new Error(`HTTP ${httpStatus}: Access denied, need retry with new proxy`)
         }
@@ -378,7 +378,7 @@ export async function scrapeIndependentStore(
 
         return storeData
       } finally {
-        // 🔥 2025-12-12 内存优化：确保Page在finally中关闭，防止内存泄漏
+        // 内存确保Page在finally中关闭，防止内存泄漏
         if (page) {
           await page.close().catch((e) => {
             console.warn(`⚠️ [独立站] Page关闭失败: ${e.message}`)
@@ -402,7 +402,7 @@ export async function scrapeIndependentStore(
           console.error(`❌ 已用尽所有代理重试次数 (${maxProxyRetries + 1}次)`)
         }
       } else {
-        // 🔥 非代理错误：立即失败，不继续重试
+        // 非代理错误：立即失败，不继续重试
         console.error(`❌ 非代理错误，停止重试: ${error.message?.substring(0, 100)}`)
         throw error
       }
@@ -414,7 +414,7 @@ export async function scrapeIndependentStore(
 }
 
 /**
- * 🔥 新增：独立站店铺深度抓取 - 对热销商品进入详情页获取评价和竞品数据
+ * 独立站店铺深度抓取 - 对热销商品进入详情页获取评价和竞品数据
  * 与Amazon Store的scrapeAmazonStoreDeep保持一致
  */
 export async function scrapeIndependentStoreDeep(
@@ -595,7 +595,7 @@ export async function scrapeIndependentStoreDeep(
 }
 
 /**
- * 🔥 新增：抓取独立站单个产品详情页
+ * 抓取独立站单个产品详情页
  */
 export async function scrapeIndependentProduct(
   url: string,
@@ -656,7 +656,7 @@ export async function scrapeIndependentProduct(
         if (!response) throw new Error('No response received')
 
         const httpStatus = response.status()
-        // 🔥 防御：403/401等常见阻断，必须换代理重试，避免把阻断页标题/内容当作产品信息
+        // 防御：403/401等常见阻断，必须换代理重试，避免把阻断页标题/内容当作产品信息
         if (httpStatus === 429) {
           throw new Error('HTTP 429: Rate limit, need retry with new proxy')
         }
@@ -679,7 +679,7 @@ export async function scrapeIndependentProduct(
           await randomDelay(400, 600)
         }
 
-        // 🔥 等待评论组件加载（独立站评论通常由第三方插件动态加载）
+        // 等待评论组件加载（独立站评论通常由第三方插件动态加载）
         const reviewSelectors = [
           // Judge.me
           '.jdgm-rev__body',
@@ -769,7 +769,7 @@ export async function scrapeIndependentProduct(
 
         return mergeCapturedCommentApiData(productData, capturedCommentApiData)
       } finally {
-        // 🔥 2025-12-12 内存优化：确保Page在finally中关闭，防止内存泄漏
+        // 内存确保Page在finally中关闭，防止内存泄漏
         if (page) {
           await page.close().catch((e) => {
             console.warn(`⚠️ [独立站产品] Page关闭失败: ${e.message}`)
@@ -807,7 +807,7 @@ async function parseIndependentProductHtml(
   // Detect platform for platform-specific extraction
   const platform = detectPlatform($)
 
-  // 🔥 2026-01-14：支持“pre/presell advertorial”独立站落地页
+  // 支持“pre/presell advertorial”独立站落地页
   // 这类页面的meta title/og:title经常是频道名，不是商品名；商品名更可能出现在CTA/强调文本中
   const baseProductName =
     $('meta[property="og:title"]').attr('content') ||
@@ -839,7 +839,7 @@ async function parseIndependentProductHtml(
   // Calculate discount
   const discount = calculateDiscount(productPrice, originalPrice)
 
-  // Extract brand name - 🔥 2025-12-24优化：增强品牌提取，防止捕获导航菜单
+  // Extract brand name - 增强品牌提取，防止捕获导航菜单
   // 优先级：结构化数据 > 页面meta标签 > 专用品牌字段（限定选择器） > 产品名第一词
   const brandName = refineBrandNameForLandingPage({
     url,
@@ -878,7 +878,7 @@ async function parseIndependentProductHtml(
     $('meta[property="product:category"]').attr('content') ||
     null
 
-  // 🔥 2025-12-24增强：提取实用的独立站特定数据（非Amazon风格，而是真实可用的）
+  // 提取实用的独立站特定数据（非Amazon风格，而是真实可用的）
   // 1. 库存状态（不同平台有不同表示）
   const stockStatus = extractStockStatus($)
 
@@ -913,7 +913,7 @@ async function parseIndependentProductHtml(
     coreFeatures: coreFeatures.length > 0 ? coreFeatures : undefined,
     secondaryFeatures: secondaryFeatures.length > 0 ? secondaryFeatures : undefined,
     socialProof: socialProof.length > 0 ? socialProof : undefined,
-    // 🔥 增强的可选字段（有的话提取，没有也不强求）
+    // 增强的可选字段（有的话提取，没有也不强求）
     ...(stockStatus && { stockStatus }),
     ...(shippingInfo && { shippingInfo }),
     ...(badge && { badge }),
@@ -1182,12 +1182,12 @@ function extractRatingAndReviews(
 }
 
 /**
- * Extract product reviews - 🔥 增强版：支持主流评论插件
+ * Extract product reviews - 增强版：支持主流评论插件
  */
 function extractProductReviews($: ReturnType<typeof import('cheerio').load>): string[] {
   const reviews: string[] = []
 
-  // 🔥 增强：支持主流Shopify评论插件
+  // 增强：支持主流Shopify评论插件
   const reviewSelectors = [
     // Judge.me (最流行的Shopify评论插件)
     '.jdgm-rev__body',
@@ -1285,7 +1285,7 @@ function extractTechnicalDetails(
 }
 
 /**
- * 🔥 新增：计算独立站产品热销分数
+ * 计算独立站产品热销分数
  */
 function calculateIndependentHotScores(
   products: IndependentStoreData['products']
@@ -1426,9 +1426,9 @@ async function parseIndependentStoreHtml(
 }
 
 /**
- * 🔥 2025-12-24新增：从独立站产品页提取品牌名
+ * 从独立站产品页提取品牌名
  *
- * 多渠道提取策略，防止捕获导航菜单和页脚内容：
+ * 多渠道提取策略，防止捕获导航菜单和页脚内容
  * 1. JSON-LD结构化数据（最可靠）
  * 2. 页面meta标签（og:brand, twitter:brand）
  * 3. 产品详情meta标签（og:site_name, application-name）
@@ -1488,7 +1488,7 @@ function extractBrandFromIndependentProduct(
   }
 
   // 渠道4: 限定范围的品牌字段提取（仅主要内容区域，不从导航/页脚）
-  // 🔥 关键优化：只在主要内容区域搜索，排除header/footer/nav
+  // 关键只在主要内容区域搜索，排除header/footer/nav
   const mainContent = $(
     'main, [class*="content"], [class*="product-details"], [class*="product-main"]'
   ).first()
@@ -1628,11 +1628,11 @@ function extractProducts(
       // Extract product link
       const productUrl = $el.find('a').first().attr('href') || $el.attr('href') || null
 
-      // 🔥 新增：提取图片URL
+      // 提取图片URL
       const imageUrl =
         $el.find('img').first().attr('src') || $el.find('img').first().attr('data-src') || null
 
-      // 🔥 新增：尝试提取评分和评论数（平台特定）
+      // 尝试提取评分和评论数（平台特定）
       const { rating, reviewCount } = extractProductCardRating($el, platform)
 
       // Add product if we have a valid name
@@ -1667,7 +1667,7 @@ function extractProducts(
 }
 
 /**
- * 🔥 新增：从产品卡片提取评分信息
+ * 从产品卡片提取评分信息
  */
 function extractProductCardRating(
   $el: ReturnType<ReturnType<typeof import('cheerio').load>>,
@@ -1778,7 +1778,7 @@ function extractProductsFromImages(
 }
 
 /**
- * 🔥 2025-12-24新增：提取库存状态
+ * 提取库存状态
  * 支持多个平台的库存表示方式（Out of Stock, Sold Out, Limited Stock等）
  */
 function extractStockStatus($: ReturnType<typeof import('cheerio').load>): string | null {
@@ -1815,7 +1815,7 @@ function extractStockStatus($: ReturnType<typeof import('cheerio').load>): strin
 }
 
 /**
- * 🔥 2025-12-24新增：提取配送信息
+ * 提取配送信息
  * 包括：免邮、运费、预计送达时间、配送限制等
  */
 function extractShippingInfo($: ReturnType<typeof import('cheerio').load>): string | null {
@@ -1861,7 +1861,7 @@ function extractShippingInfo($: ReturnType<typeof import('cheerio').load>): stri
 }
 
 /**
- * 🔥 2025-12-24新增：提取产品徽章/标签
+ * 提取产品徽章/标签
  * 如：Best Seller, Limited Offer, Flash Sale, Featured等
  */
 function extractProductBadge(

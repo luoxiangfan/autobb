@@ -3,9 +3,9 @@
  * src/lib/url-swap/alerts/notifications.ts
  *
  * 功能：发送换链接任务的通知到Dashboard智能洞察
- * - 任务状态变更通知（暂停、完成）
- * - URL变化通知
- * - 错误通知
+ * 任务状态变更通知（暂停、完成）
+ * URL变化通知
+ * 错误通知
  */
 
 import { getDatabase } from '@/lib/db'

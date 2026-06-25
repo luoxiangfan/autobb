@@ -5,7 +5,7 @@ import type { GoogleAdsApiAuthFields, GoogleAdsAuthContext } from '@/lib/google-
 import type { KeywordIdeasPreparedOAuth } from '@/lib/google-ads/keyword/planner'
 import type { getServiceAccountConfig } from '@/lib/google-ads/service-account/service-account'
 
-/** 账号列表同步/API 客户端所需的扁平凭证 */
+/* * 账号列表同步/API 客户端所需的扁平凭证 */
 export interface AccountsRouteCredentials {
   client_id: string
   client_secret: string
@@ -33,7 +33,7 @@ export type SyncUserCredentials = {
   login_customer_id?: string
 }
 
-/** OAuth API 客户端三元组（不含 refresh_token） */
+/* * OAuth API 客户端三元组（不含 refresh_token） */
 export type OAuthApiCredentialsFields = {
   client_id: string
   client_secret: string
@@ -50,7 +50,7 @@ export function toOAuthApiCredentialsFields(
   }
 }
 
-/** 含 login_customer_id 的 OAuth 客户端凭证 */
+/* * 含 login_customer_id 的 OAuth 客户端凭证 */
 export type OAuthApiClientCredentials = OAuthApiCredentialsFields & {
   login_customer_id: string
 }
@@ -71,7 +71,7 @@ export type GoogleAdsLinkedAccountPrepareResult =
   | ({ ok: true; authContext: GoogleAdsAuthContext } & PreparedGoogleAdsAccountApiCall)
   | { ok: false; message: string }
 
-/** Keyword Planner Historical Metrics 调用所需的 heal 后凭证 */
+/* * Keyword Planner Historical Metrics 调用所需的 heal 后凭证 */
 export type KeywordPlannerVolumeAuth = {
   authType: 'oauth' | 'service_account'
   serviceAccountId?: string
@@ -89,7 +89,7 @@ export type KeywordPlannerVolumeAuthLoadResult =
   | { ok: true; volumeAuth: KeywordPlannerVolumeAuth }
   | { ok: false; message: string }
 
-/** Keyword Planner Ideas + Historical Metrics 共用 session */
+/* * Keyword Planner Ideas + Historical Metrics 共用 session */
 export type KeywordPlannerPreparedSession = {
   preparedOAuth?: KeywordIdeasPreparedOAuth
   volumeAuth: KeywordPlannerVolumeAuth
@@ -104,39 +104,39 @@ export type CreativeGenerationGoogleAdsValidationResult =
     }
   | {
       ok: true
-      /** 缓存命中或未请求 API 校验时可省略；fresh validate 会填充 */
+      /* * 缓存命中或未请求 API 校验时可省略；fresh validate 会填充 */
       authContext?: GoogleAdsAuthContext
       apiAuth?: GoogleAdsApiAuthFields
     }
 
-/** 批任务 prepare 缓存条目：不含 refresh_token / client_secret 等密钥 */
+/* * 批任务 prepare 缓存条目：不含 refresh_token / client_secret 等密钥 */
 export type SlimPreparedGoogleAdsAccountApiCall = {
   authContext: GoogleAdsAuthContext
   apiAuth: GoogleAdsApiAuthFields
   oauthLoginCustomerId?: string
-  /** prepare 写入时的 auth generation；与当前 generation 不一致时视为 stale */
+  /* * prepare 写入时的 auth generation；与当前 generation 不一致时视为 stale */
   generationAtPrepare: number
 }
 
 /**
  * Job / 请求级 prepare 缓存（不含密钥；须在 job / 请求结束时显式 clear）。
  *
- * - `prepareByLinkedSa`：slim 条目，同 job 内 rehydrate 复用
- * - `prepareInflight`：同 (userId, linkedSa) 并发 prepare 合并
- * - `healedOAuthBundleByOwner`：OAuth heal bundle（key=`ownerUserId`，generation 绑定；共享认证多子用户复用）
+ * `prepareByLinkedSa`：slim 条目，同 job 内 rehydrate 复用
+ * `prepareInflight`：同 (userId, linkedSa) 并发 prepare 合并
+ * `healedOAuthBundleByOwner`：OAuth heal bundle（key=`ownerUserId`，generation 绑定；共享认证多子用户复用）
  *
  * 凭证变更须依赖 `invalidateGoogleAdsAuthContextCacheForOwner` bump generation；
  * **勿跨 request / job 复用**实例。`clear*` 不触碰进程级 `hydratedSecrets` 短缓存。
  */
 export type GoogleAdsLinkedAccountPrepareCache = {
   prepareByLinkedSa: Map<string, SlimPreparedGoogleAdsAccountApiCall>
-  /** 同 (userId, linkedSa) 并发 prepare 合并 */
+  /* * 同 (userId, linkedSa) 并发 prepare 合并 */
   prepareInflight: Map<string, Promise<GoogleAdsLinkedAccountPrepareResult>>
-  /** job 内 OAuth heal bundle 短缓存（key=ownerUserId，generation 绑定） */
+  /* * job 内 OAuth heal bundle 短缓存（key=ownerUserId，generation 绑定） */
   healedOAuthBundleByOwner: Map<number, { generation: number; bundle: OAuthGoogleAdsCallBundle }>
 }
 
-/** validation 缓存条目：不含 authContext / apiAuth 密钥 */
+/* * validation 缓存条目：不含 authContext / apiAuth 密钥 */
 export type CreativeGenerationValidationCacheEntry =
   | {
       ok: false
@@ -144,7 +144,7 @@ export type CreativeGenerationValidationCacheEntry =
       authType?: 'oauth' | 'service_account'
       missingFields?: string[]
       generationAtValidate: number
-      /** 共享认证：凭证 owner（ownerUserId !== 请求 userId 时写入） */
+      /* * 共享认证：凭证 owner（ownerUserId !== 请求 userId 时写入） */
       ownerUserId?: number
       ownerGenerationAtValidate?: number
     }

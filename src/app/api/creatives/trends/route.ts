@@ -102,16 +102,16 @@ function parseLocalYmdToDate(value: string): Date {
  * GET /api/creatives/trends
  *
  * 获取创意维度的统计趋势数据（按日期聚合）
- * - 每日新增创意数量
- * - 创意质量评分分布
- * - 创意状态分布
- * - Ad Strength分布
+ * 每日新增创意数量
+ * 创意质量评分分布
+ * 创意状态分布
+ * Ad Strength分布
  *
- * Query Parameters:
- * - daysBack: number (可选，默认7天)
- * - start_date: string (可选，YYYY-MM-DD)
- * - end_date: string (可选，YYYY-MM-DD)
- * - offerId: number (可选，筛选特定Offer的创意)
+ * Query Parameters
+ * daysBack: number (可选，默认7天)
+ * start_date: string (可选，YYYY-MM-DD)
+ * end_date: string (可选，YYYY-MM-DD)
+ * offerId: number (可选，筛选特定Offer的创意)
  */
 export const dynamic = 'force-dynamic'
 
@@ -180,7 +180,7 @@ export const GET = withAuth(async (request, user) => {
     const dateFunc = '(created_at::date)'
 
     // 3. 查询每日新增创意数量趋势
-    // 🔧 修复(2025-01-01): 使用正确的日期参数占位符，不要在SQL中包含::date转换
+    // 使用正确的日期参数占位符，不要在SQL中包含::date转换
     let dailyCreativesQuery = `
       SELECT
         ${dateFunc} as date,
@@ -208,7 +208,7 @@ export const GET = withAuth(async (request, user) => {
 
     const dailyTrends = (await db.query(dailyCreativesQuery, params)) as any[]
 
-    // 🔧 调试日志：检查原始查询结果
+    // 调试日志：检查原始查询结果
     console.log('[Trends API] 原始查询结果:', JSON.stringify(dailyTrends, null, 2))
     console.log('[Trends API] 日期范围:', {
       startDateStr,
@@ -247,7 +247,7 @@ export const GET = withAuth(async (request, user) => {
       }
     })
 
-    // 🔧 调试日志：检查格式化后的结果
+    // 调试日志：检查格式化后的结果
     console.log('[Trends API] 完整趋势数据（含缺失日期）:', JSON.stringify(completeTrends, null, 2))
 
     // 4. 查询创意是否被选中的分布（使用is_selected字段）
@@ -427,7 +427,7 @@ export const GET = withAuth(async (request, user) => {
 
     const usageStats = (await db.queryOne(usageQuery, usageParams)) as any
 
-    // 🔧 调试日志：检查最终返回数据
+    // 调试日志：检查最终返回数据
     console.log('[Trends API] 最终返回数据:', {
       trendsCount: completeTrends.length,
       trendsSample: completeTrends.slice(0, 3),

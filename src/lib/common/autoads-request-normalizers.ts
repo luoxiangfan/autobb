@@ -37,7 +37,7 @@ function isMissingRequiredValue(value: unknown): boolean {
   return false
 }
 
-/** 请求体是否带有非空的店铺单品链接（用于决定是否默认 page_type=product） */
+/* * 请求体是否带有非空的店铺单品链接（用于决定是否默认 page_type=product） */
 function hasNonEmptyStoreProductLinksInput(value: unknown): boolean {
   if (value === undefined || value === null) {
     return false
@@ -398,7 +398,7 @@ export function normalizeClickFarmTaskRequestBody(value: unknown): PlainObject |
 export type NormalizeOfferExtractOptions = {
   normalizeMonetization?: boolean
   numericCommissionMode?: 'amount' | 'percent'
-  /** true 时佣金规范化失败将抛出，供 extract API 返回 400 */
+  /* * true 时佣金规范化失败将抛出，供 extract API 返回 400 */
   strictMonetization?: boolean
 }
 

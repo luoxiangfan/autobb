@@ -80,10 +80,10 @@ export const GET = withAuth(async (_request, user) => {
 
 /**
  * 从 system_settings key 中提取联盟平台名称
- * 示例：
- * - yeahpromos_token -> YeahPromos
- * - partnerboost_base_url -> PartnerBoost
- * - cj_api_key -> CJ
+ * 示例
+ * yeahpromos_token -> YeahPromos
+ * partnerboost_base_url -> PartnerBoost
+ * cj_api_key -> CJ
  */
 function extractPlatformNameFromKey(key: string, description: string): string {
   const platformMap: Record<string, string> = {

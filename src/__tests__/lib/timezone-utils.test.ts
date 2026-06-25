@@ -14,35 +14,35 @@ import {
 describe('Timezone Utilities', () => {
   describe('getDateInTimezone', () => {
     it('应该返回正确的日期字符串', () => {
-      // 2024-12-28 12:00:00 UTC
+      // 12:00:00 UTC
       const date = new Date('2024-12-28T12:00:00Z')
       const result = getDateInTimezone(date, 'UTC')
       expect(result).toBe('2024-12-28')
     })
 
     it('应该正确处理美国东部时间', () => {
-      // 2024-12-28 12:00:00 UTC = 2024-12-28 07:00:00 EST
+      // 12:00:00 UTC = 2024-12-28 07:00:00 EST
       const date = new Date('2024-12-28T12:00:00Z')
       const result = getDateInTimezone(date, 'America/New_York')
       expect(result).toBe('2024-12-28')
     })
 
     it('应该正确处理亚洲上海时间（UTC+8）', () => {
-      // 2024-12-28 12:00:00 UTC = 2024-12-28 20:00:00 Shanghai
+      // 12:00:00 UTC = 2024-12-28 20:00:00 Shanghai
       const date = new Date('2024-12-28T12:00:00Z')
       const result = getDateInTimezone(date, 'Asia/Shanghai')
       expect(result).toBe('2024-12-28')
     })
 
     it('应该处理日期边界（跨日后）', () => {
-      // 2024-12-28 23:00:00 UTC = 2024-12-29 07:00:00 Shanghai
+      // 23:00:00 UTC = 2024-12-29 07:00:00 Shanghai
       const date = new Date('2024-12-28T23:00:00Z')
       const result = getDateInTimezone(date, 'Asia/Shanghai')
       expect(result).toBe('2024-12-29')
     })
 
     it('应该处理跨日后返回前一天（美国东部）', () => {
-      // 2024-12-28 02:00:00 UTC = 2024-12-27 21:00:00 EST (前一天)
+      // 02:00:00 UTC = 2024-12-27 21:00:00 EST (前一天)
       const date = new Date('2024-12-28T02:00:00Z')
       const result = getDateInTimezone(date, 'America/New_York')
       expect(result).toBe('2024-12-27')
@@ -77,7 +77,7 @@ describe('Timezone Utilities', () => {
     })
 
     it('应该处理午夜边界', () => {
-      // 2024-12-28 23:30:00 UTC = 2024-12-29 07:30:00 Shanghai
+      // 23:30:00 UTC = 2024-12-29 07:30:00 Shanghai
       const date = new Date('2024-12-28T23:30:00Z')
       const result = getHourInTimezone(date, 'Asia/Shanghai')
       expect(result).toBe(7)

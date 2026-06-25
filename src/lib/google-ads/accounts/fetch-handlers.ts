@@ -16,7 +16,7 @@ export type GoogleAdsAccountsCoreApplyHandlersConfig = {
   onErrorMessage: (message: string) => void
   onPollFailure: (message: string) => void
   onClearForceRefresh: () => void
-  /** 出现可展示的权限错误时隐藏/清空账户列表 */
+  /* * 出现可展示的权限错误时隐藏/清空账户列表 */
   onPermissionAccountsHidden?: () => void
 }
 
@@ -65,7 +65,7 @@ export function withAccountsListSchedulePoll(
   }
 }
 
-/** 关闭权限错误提示并清空可能残留的账户列表状态 */
+/* * 关闭权限错误提示并清空可能残留的账户列表状态 */
 export function createDismissGoogleAdsPermissionErrorHandler(options: {
   setPermissionError: (details: ServiceAccountPermissionDetails | null) => void
   onAccountsHidden?: () => void

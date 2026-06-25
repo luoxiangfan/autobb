@@ -11,7 +11,7 @@ import { inferDefaultKeywordMatchType } from './offer-pool-brand-utils'
 
 /**
  * 从 Offer 现有数据提取关键词
- * 🔥 2025-12-16升级：返回 PoolKeywordData[]，保留完整元数据
+ * 返回 PoolKeywordData[]，保留完整元数据
  */
 export async function extractKeywordsFromOffer(
   offerId: number,
@@ -48,7 +48,7 @@ export async function extractKeywordsFromOffer(
   const addKeywordString = (keyword: string, source: string) => {
     const normalized = keyword?.trim()
     if (!normalized) return
-    // 🔒 关键词质量校验（2026-01-26）：过滤无效关键词
+    // � 关键词质量校验：过滤无效关键词
     if (isInvalidKeyword(normalized)) {
       console.warn(
         `[extractKeywordsFromOffer] ⚠️ 过滤无效关键词: "${normalized}" (source: ${source})`
@@ -86,7 +86,7 @@ export async function extractKeywordsFromOffer(
       if (item && typeof item === 'object') {
         const keyword = (item as any).keyword || (item as any).text
         if (typeof keyword === 'string') {
-          // 🔒 关键词质量校验（2026-01-26）
+          // � 关键词质量校验
           if (isInvalidKeyword(keyword)) {
             console.warn(
               `[extractKeywordsFromOffer] ⚠️ 过滤无效关键词: "${keyword}" (source: ${source})`
@@ -238,7 +238,7 @@ export async function extractKeywordsFromOffer(
 
   const keywords = Array.from(keywordMap.values())
 
-  // 🔧 修复(2026-01-21): 查询提取关键词的搜索量
+  // 查询提取关键词的搜索量
   if (keywords.length > 0) {
     console.log(`📊 查询 ${keywords.length} 个提取关键词的搜索量...`)
     await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })

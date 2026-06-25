@@ -51,7 +51,7 @@ function clampPositiveInt(value: unknown, fallback: number): number {
 /**
  * 统一队列管理器
  *
- * 核心功能:
+ * 核心功能
  * 1. Redis优先 + 内存回退
  * 2. 三层并发控制 (全局/用户/类型)
  * 3. 代理IP池管理
@@ -82,13 +82,13 @@ export class UnifiedQueueManager {
   private startingPromise: Promise<void> | null = null
   private executorsRegistered: boolean = false
 
-  // 🔥 健康检查定时器
+  // 健康检查定时器
   private healthCheckLoop: NodeJS.Timeout | null = null
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000 // 5分钟检查一次
   private readonly STALE_TASK_TIMEOUT = 30 * 60 * 1000 // 30分钟超时
   private readonly BATCH_STATUS_CHECK_INTERVAL = 60 * 1000 // 1分钟检查一次 batch 状态
 
-  // 🔥 错误追踪和退避机制（防止Redis连接问题时的错误刷屏）
+  // 错误追踪和退避机制（防止Redis连接问题时的错误刷屏）
   private consecutiveErrors: number = 0
   private lastErrorTime: number = 0
   private lastRunningSnapshotErrorAt: number = 0
@@ -134,8 +134,8 @@ export class UnifiedQueueManager {
     // 合并默认配置
     this.config = {
       autoStartOnEnqueue: config.autoStartOnEnqueue !== false,
-      globalConcurrency: config.globalConcurrency || 999, // 🔥 全局并发提升至999（补点击需求）
-      perUserConcurrency: config.perUserConcurrency || 999, // 🔥 单用户并发提升至999（补点击需求）
+      globalConcurrency: config.globalConcurrency || 999, // 全局并发提升至999（补点击需求）
+      perUserConcurrency: config.perUserConcurrency || 999, // 单用户并发提升至999（补点击需求）
       perTypeConcurrency: config.perTypeConcurrency || {
         sync: 1,
         backup: 1,
@@ -144,19 +144,19 @@ export class UnifiedQueueManager {
         'offer-extraction': 2, // Offer提取任务并发限制（AI密集型）
         'batch-offer-creation': 1, // 批量任务协调器（串行执行，避免资源竞争）
         'ad-creative': 3, // 创意生成任务并发限制（提高到3，允许多用户同时生成）
-        'campaign-publish': 2, // 🆕 广告系列发布并发限制（Google Ads API限制）
-        'click-farm-trigger': 4, // 🆕 补点击触发任务（控制面）
-        'click-farm-batch': 6, // 🆕 补点击批次分发任务（滚动派发）
-        'click-farm': defaultClickFarmConcurrency, // 🆕 支持通过 QUEUE_CLICK_FARM_CONCURRENCY 覆盖
+        'campaign-publish': 2, // 广告系列发布并发限制（Google Ads API限制）
+        'click-farm-trigger': 4, // 补点击触发任务（控制面）
+        'click-farm-batch': 6, // 补点击批次分发任务（滚动派发）
+        'click-farm': defaultClickFarmConcurrency, // 支持通过 QUEUE_CLICK_FARM_CONCURRENCY 覆盖
         'url-swap': defaultUrlSwapConcurrency, // 支持通过 QUEUE_URL_SWAP_CONCURRENCY 覆盖
-        'openclaw-strategy': 2, // 🆕 OpenClaw 策略任务并发限制（默认2，避免策略批量冲击配额）
-        'affiliate-product-sync': 2, // 🆕 联盟商品同步任务并发限制（默认2，降低平台API冲击）
-        'openclaw-command': 3, // 🆕 OpenClaw 指令执行任务并发限制
-        'openclaw-affiliate-sync': 2, // 🆕 OpenClaw 联盟佣金快照同步任务并发限制
-        'openclaw-report-send': 2, // 🆕 OpenClaw 报表投递任务并发限制
-        'product-score-calculation': 2, // 🆕 商品推荐指数计算任务并发限制（AI密集型）
-        '@/lib/google-ads/campaign/sync': 1, // 🆕 Google Ads广告系列同步任务并发限制
-        'campaign-batch-create': 1, // 🆕 批量从备份创建广告系列任务并发限制（资源密集型）
+        'openclaw-strategy': 2, // OpenClaw 策略任务并发限制（默认2，避免策略批量冲击配额）
+        'affiliate-product-sync': 2, // 联盟商品同步任务并发限制（默认2，降低平台API冲击）
+        'openclaw-command': 3, // OpenClaw 指令执行任务并发限制
+        'openclaw-affiliate-sync': 2, // OpenClaw 联盟佣金快照同步任务并发限制
+        'openclaw-report-send': 2, // OpenClaw 报表投递任务并发限制
+        'product-score-calculation': 2, // 商品推荐指数计算任务并发限制（AI密集型）
+        '@/lib/google-ads/campaign/sync': 1, // Google Ads广告系列同步任务并发限制
+        'campaign-batch-create': 1, // 批量从备份创建广告系列任务并发限制（资源密集型）
       },
       maxQueueSize: config.maxQueueSize || 1000,
       taskTimeout: config.taskTimeout || 900000, // 15分钟超时（店铺深度抓取+竞品分析可能需要10-15分钟）
@@ -319,7 +319,7 @@ export class UnifiedQueueManager {
       this.running = true
       console.log('🚀 队列处理启动中...')
 
-      // 🔥 启启动修复：重启后 running 任务会变成“僵尸”，应回到 pending 而不是直接清空
+      // 启启动重启后 running 任务会变成“僵尸”，应回到 pending 而不是直接清空
       if (this.adapter.requeueAllRunningOnStartup) {
         const requeueStartedAt = Date.now()
         const result = await this.adapter.requeueAllRunningOnStartup()
@@ -338,7 +338,7 @@ export class UnifiedQueueManager {
         console.log(`🧹 僵尸任务清理完成 (elapsed=${Date.now() - zombieCleanupStartedAt}ms)`)
       }
 
-      // 🔥 修复 pending 索引：避免 tasks hash 中的 pending 任务因缺失 zset 索引而永远无法执行
+      // 修复 pending 索引：避免 tasks hash 中的 pending 任务因缺失 zset 索引而永远无法执行
       if (this.adapter.repairPendingIndexes && !this.skipStartupPendingRepair) {
         const repairStartedAt = Date.now()
         const repair = await this.adapter.repairPendingIndexes()
@@ -356,7 +356,7 @@ export class UnifiedQueueManager {
         console.log('⏭️ 启动阶段已跳过 pending 索引修复 (QUEUE_SKIP_STARTUP_PENDING_REPAIR=true)')
       }
 
-      // 🔥 启动时清理URL Swap队列任务（避免重复执行）
+      // 启动时清理URL Swap队列任务（避免重复执行）
       const urlSwapCleanupStartedAt = Date.now()
       await this.cleanupUrlSwapTasksOnStartup()
       console.log(`🧹 URL Swap 启动清理完成 (elapsed=${Date.now() - urlSwapCleanupStartedAt}ms)`)
@@ -366,7 +366,7 @@ export class UnifiedQueueManager {
         this.processQueue()
       }, 100)
 
-      // 🔥 启动健康检查循环
+      // 启动健康检查循环
       this.startHealthCheckLoop()
 
       this.started = true
@@ -391,7 +391,7 @@ export class UnifiedQueueManager {
       this.processingLoop = null
     }
 
-    // 🔥 停止健康检查循环
+    // 停止健康检查循环
     this.stopHealthCheckLoop()
 
     await this.adapter.disconnect()
@@ -552,7 +552,7 @@ export class UnifiedQueueManager {
   private async processQueue(): Promise<void> {
     if (!this.running) return
 
-    // 🔥 检查是否处于错误退避期
+    // 检查是否处于错误退避期
     const now = Date.now()
     if (this.consecutiveErrors >= this.MAX_CONSECUTIVE_ERRORS) {
       const timeSinceLastError = now - this.lastErrorTime
@@ -596,7 +596,7 @@ export class UnifiedQueueManager {
         // 清理 startedAt（否则会被误判为长时间 running / 并影响调试）
         delete (task as any).startedAt
 
-        // 🔥 关键修复：并发受限时不要立刻重新入队到队首，否则会反复 dequeue 同一个任务导致“饥饿”
+        // 关键并发受限时不要立刻重新入队到队首，否则会反复 dequeue 同一个任务导致“饥饿”
         // 为该任务设置短暂退避，让其他用户/类型的任务有机会被执行。
         const deferCount = ((task as any).deferCount || 0) + 1
         ;(task as any).deferCount = deferCount
@@ -618,7 +618,7 @@ export class UnifiedQueueManager {
       this.consecutiveErrors++
       this.lastErrorTime = now
 
-      // 🔥 只在首次错误或达到退避阈值时记录详细错误
+      // 只在首次错误或达到退避阈值时记录详细错误
       if (this.consecutiveErrors === 1) {
         console.error('❌ 队列处理错误:', error.message)
       } else if (this.consecutiveErrors === this.MAX_CONSECUTIVE_ERRORS) {
@@ -710,22 +710,22 @@ export class UnifiedQueueManager {
   /**
    * 检查错误是否可恢复
    *
-   * 不可恢复的错误（直接标记失败，不重试）：
-   * - 配置缺失（Google Ads凭证、API Key等）
-   * - 权限错误
-   * - 认证失败
-   * - 资源不存在
-   * - 数据验证失败
+   * 不可恢复的错误（直接标记失败，不重试）
+   * 配置缺失（Google Ads凭证、API Key等）
+   * 权限错误
+   * 认证失败
+   * 资源不存在
+   * 数据验证失败
    *
-   * 可恢复的错误（重试）：
-   * - 网络超时
-   * - 临时服务故障
-   * - 限流错误（429）
-   * - 数据库连接错误
-   * - 临时故障
+   * 可恢复的错误（重试）
+   * 网络超时
+   * 临时服务故障
+   * 限流错误（429）
+   * 数据库连接错误
+   * 临时故障
    *
-   * 🔧 修复(2025-12-29): 统一错误分类标准，避免因配置不完整导致无效重试
-   * 🔧 修复(2025-12-29): 支持OAuth和服务账号两种认证方式的错误分类
+   * 统一错误分类标准，避免因配置不完整导致无效重试
+   * 支持OAuth和服务账号两种认证方式的错误分类
    */
   private isRecoverableError(error: any): boolean {
     const errorMessage = error?.message || String(error)
@@ -748,8 +748,8 @@ export class UnifiedQueueManager {
       '无效的', // 无效的参数/资源
       '找不到', // 找不到资源
       '上传', // 需要上传文件
-      '权限等级', // Developer Token 权限等级（新增 2025-12-29）
-      'only approved for use with test accounts', // Developer Token 权限错误（新增 2025-12-29）
+      '权限等级', // Developer Token 权限等级
+      'only approved for use with test accounts', // Developer Token 权限错误
       'unauthorized', // 未授权
       'forbidden', // 禁止访问
       'not found', // 未找到
@@ -884,7 +884,7 @@ export class UnifiedQueueManager {
           // 清理 startedAt，避免被误判为长时间 running
           delete (task as any).startedAt
 
-          // 🔧 修复：重试时清除代理配置，强制重新获取新代理
+          // 重试时清除代理配置，强制重新获取新代理
           // 这样可以避免使用失败的代理IP，提高重试成功率
           if (task.type === 'click-farm' && task.data?.proxyUrl) {
             console.log(
@@ -933,7 +933,7 @@ export class UnifiedQueueManager {
         // 减少并发计数
         this.decrementConcurrency(task)
 
-        // 🔥 2025-12-12 内存优化：任务完成后主动清理资源
+        // 内存任务完成后主动清理资源
         // 清理空闲的浏览器实例，释放内存
         if (task.type === 'offer-extraction' || task.type === 'batch-offer-creation') {
           try {
@@ -1119,13 +1119,13 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 清理僵尸任务（启动时调用）
+   * 清理僵尸任务（启动时调用）
    *
-   * 僵尸任务定义：
+   * 僵尸任务定义
    * 1. running状态但实际上没有在执行（服务重启导致）
    * 2. 超时的running任务（执行时间过长）
    *
-   * 清理策略：
+   * 清理策略
    * 1. 启动时：清空所有running任务（因为服务重启后没有任务在执行）
    * 2. 运行时：定期检查超时的running任务并标记为失败
    */
@@ -1174,9 +1174,9 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 执行健康检查
+   * 执行健康检查
    *
-   * 检查内容：
+   * 检查内容
    * 1. 内存中的running计数是否与Redis一致
    * 2. 是否有超时的任务需要清理
    * 3. 队列状态是否正常
@@ -1209,7 +1209,7 @@ export class UnifiedQueueManager {
         // ignore
       }
 
-      // 1b. 🔥 若存在 pending 任务，修复 pending 索引（避免“孤儿 pending 任务”永远无法 dequeue）
+      // 1b. 若存在 pending 任务，修复 pending 索引（避免“孤儿 pending 任务”永远无法 dequeue）
       if (stats.pending > 0 && this.adapter.repairPendingIndexes) {
         const repair = await this.adapter.repairPendingIndexes()
         if (repair.repairedCount > 0) {
@@ -1257,7 +1257,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 清理数据库中超时的 running 任务
+   * 清理数据库中超时的 running 任务
    *
    * 这个方法直接操作数据库，不依赖 Redis 适配器
    * 用于处理那些虽然数据库标记为 running，但实际上已经超时的任务
@@ -1373,7 +1373,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 启动健康检查循环
+   * 启动健康检查循环
    */
   private startHealthCheckLoop(): void {
     if (this.healthCheckLoop) return
@@ -1401,7 +1401,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 停止健康检查循环
+   * 停止健康检查循环
    */
   private stopHealthCheckLoop(): void {
     if (this.healthCheckLoop) {
@@ -1412,12 +1412,12 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 服务启动时清理URL Swap队列任务
+   * 服务启动时清理URL Swap队列任务
    *
    * 目的：避免服务重启时重复执行换链接任务
-   * - 删除所有type='url-swap'且status='pending'或'running'的任务
-   * - 不修改url_swap_tasks表的统计数据
-   * - 调度器会在下一个时间间隔重新入队
+   * 删除所有type='url-swap'且status='pending'或'running'的任务
+   * 不修改url_swap_tasks表的统计数据
+   * 调度器会在下一个时间间隔重新入队
    */
   private async cleanupUrlSwapTasksOnStartup(): Promise<void> {
     try {
@@ -1452,7 +1452,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 取消批量任务的所有子任务
+   * 取消批量任务的所有子任务
    *
    * @param batchId 批量任务ID
    * @returns 取消的任务数量
@@ -1515,7 +1515,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 同步批量任务状态
+   * 同步批量任务状态
    *
    * 检查 batch_tasks 的状态是否与子任务状态一致
    * 如果不一致，自动修正状态
@@ -1672,7 +1672,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 获取所有待处理任务（供外部使用，如清理Offer关联任务）
+   * 获取所有待处理任务（供外部使用，如清理Offer关联任务）
    */
   async getPendingTasks(): Promise<Task[]> {
     try {
@@ -1702,7 +1702,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 从队列中移除指定任务（供外部使用，如清理Offer关联任务）
+   * 从队列中移除指定任务（供外部使用，如清理Offer关联任务）
    */
   async removeTask(taskId: string): Promise<boolean> {
     try {
@@ -1718,7 +1718,7 @@ export class UnifiedQueueManager {
   }
 
   /**
-   * 🔥 按 user + types 批量移除 pending 任务（用于用户禁用/过期等场景的“队列止血”）
+   * 按 user + types 批量移除 pending 任务（用于用户禁用/过期等场景的“队列止血”）
    *
    * 仅移除 pending（含 delayed notBefore）任务；不处理 running 中的任务。
    * 不会自动启动队列处理循环（只需 ensureInitialized 连接存储）。

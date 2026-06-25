@@ -182,7 +182,7 @@ export interface ScrapedProductData {
   imageUrls: string[]
   metaTitle: string | null
   metaDescription: string | null
-  // 🔥 新增：独立站增强数据字段
+  // 独立站增强数据字段
   faqs?: Array<{ question: string; answer: string }>
   specifications?: Record<string, string>
   packages?: Array<{ name: string; price: string | null; includes: string[] }>
@@ -206,7 +206,7 @@ export interface ScrapedProductData {
 }
 
 /**
- * 🌍 检测是否为Amazon域名（支持全球16个站点）
+ * 检测是否为Amazon域名（支持全球16个站点）
  */
 export function isAmazonDomain(url: string): boolean {
   const amazonDomains = [
@@ -407,7 +407,7 @@ async function scrapeProductData(
   try {
     const proxyAgent = await getProxyAgent(customProxyUrl, userId)
 
-    // 🌍 根据目标国家动态生成Accept-Language
+    // 根据目标国家动态生成Accept-Language
     let acceptLanguage = 'en-US,en;q=0.5' // 默认英语
     if (targetCountry) {
       const langCode = getLanguageCodeForCountry(targetCountry)
@@ -420,7 +420,7 @@ async function scrapeProductData(
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': acceptLanguage, // 🌍 动态语言支持
+        'Accept-Language': acceptLanguage, // 动态语言支持
       },
       ...(proxyAgent && { httpsAgent: proxyAgent, httpAgent: proxyAgent as any }),
     })
@@ -428,7 +428,7 @@ async function scrapeProductData(
     const html = response.data
     const $ = load(html)
 
-    // 🌍 Detect site type - 支持全球Amazon站点
+    // Detect site type - 支持全球Amazon站点
     const isAmazon = isAmazonDomain(url)
     const isShopify = $('[data-shopify]').length > 0
 
@@ -440,7 +440,7 @@ async function scrapeProductData(
     } else {
       const baseData = extractGenericData($, url)
 
-      // 🔥 presell/int/checkout漏斗页：价格/图片往往只出现在下一跳（int2/checkout）
+      // presell/int/checkout漏斗页：价格/图片往往只出现在下一跳（int2/checkout）
       const shouldEnrich =
         isPresellStyleUrl(url) &&
         (!baseData.productPrice || (baseData.imageUrls?.length || 0) === 0) &&
@@ -470,7 +470,7 @@ async function scrapeProductData(
  * Extract product data from Amazon pages
  */
 function extractAmazonData($: any, url: string): ScrapedProductData {
-  // 🔍 调试：检查页面状态
+  // 调试：检查页面状态
   const pageTitle = $('title').text().trim()
   const isBlocked = pageTitle.includes('Robot Check') || pageTitle.includes('Sorry!')
   console.log(`🔍 [extractAmazonData] 页面标题: "${pageTitle.slice(0, 60)}"`)
@@ -499,7 +499,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     }
   })
 
-  // 🔥 P1优化：增强图片提取逻辑，优先获取高质量主图
+  // 增强图片提取逻辑，优先获取高质量主图
   const images: string[] = []
 
   // 1. 尝试获取主图（高分辨率）
@@ -536,7 +536,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     }
   }
 
-  // 🔥 P1优化：增强价格提取逻辑，支持更多Amazon价格选择器
+  // 增强价格提取逻辑，支持更多Amazon价格选择器
   let productPrice: string | null = null
 
   // 尝试多种价格选择器（按优先级排序）
@@ -550,7 +550,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     $('.priceToPay .a-offscreen').text().trim() || // 支付价格
     null
 
-  // 🔥 增强品牌提取逻辑 - 支持Amazon Store页面和所有主要市场语言
+  // 增强品牌提取逻辑 - 支持Amazon Store页面和所有主要市场语言
   let bylineInfo = $('#bylineInfo').text().trim()
   const dataBrand = $('[data-brand]').attr('data-brand')
   const poBrand = $('.po-brand .a-size-base').text().trim()
@@ -559,7 +559,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
   console.log(`🔍 [extractAmazonData] [data-brand]: "${dataBrand || '(空)'}"`)
   console.log(`🔍 [extractAmazonData] .po-brand: "${poBrand}"`)
 
-  // 🌍 多语言品牌店铺文本清理 - 支持所有Amazon主要市场
+  // 多语言品牌店铺文本清理 - 支持所有Amazon主要市场
 
   // English (US, CA, AU, GB, IN, SG): "Visit the Brand Store"
   bylineInfo = bylineInfo.replace(/^Visit\s+the\s+/i, '').replace(/\s+Store$/i, '')
@@ -651,7 +651,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     }
   }
 
-  // 🔥 后备方案：从商品标题提取品牌名
+  // 后备方案：从商品标题提取品牌名
   // Amazon商品标题通常以品牌名开头，格式如: "REOLINK 12MP PoE Security Camera..."
   const productTitle = $('#productTitle').text().trim()
   if (!brandName && productTitle) {
@@ -680,10 +680,10 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
 
 /**
  * Extract product data from Shopify stores
- * 🔥 增强版：支持FAQ、技术规格、包装选项、社会证明等独立站特有数据
+ * 增强版：支持FAQ、技术规格、包装选项、社会证明等独立站特有数据
  */
 function extractShopifyData($: any, url: string): ScrapedProductData {
-  // ==================== 1. Features 提取（增强版：区分核心/次要特性）====================
+  // 1. Features 提取（增强版：区分核心/次要特性）
   const coreFeatures: string[] = []
   const secondaryFeatures: string[] = []
 
@@ -705,7 +705,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     }
   })
 
-  // ==================== 2. FAQ 提取 ====================
+  // 2. FAQ 提取
   const faqs: Array<{ question: string; answer: string }> = []
 
   // 常见FAQ结构：accordion、collapsible、details/summary
@@ -740,7 +740,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   console.log(`🔍 [Shopify FAQ] 提取到 ${faqs.length} 个FAQ`)
 
-  // ==================== 3. 技术规格提取 ====================
+  // 3. 技术规格提取
   const specifications: Record<string, string> = {}
 
   // 查找规格表格
@@ -776,7 +776,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   console.log(`🔍 [Shopify Spec] 提取到 ${Object.keys(specifications).length} 个技术参数`)
 
-  // ==================== 4. 包装选项提取 ====================
+  // 4. 包装选项提取
   const packages: Array<{ name: string; price: string | null; includes: string[] }> = []
 
   $(
@@ -806,7 +806,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   console.log(`🔍 [Shopify Package] 提取到 ${packages.length} 个套餐选项`)
 
-  // ==================== 5. 社会证明数据提取 ====================
+  // 5. 社会证明数据提取
   const socialProof: Array<{ metric: string; value: string }> = []
 
   // 查找统计数字（如：18,000+ Installations, 60% Decrease）
@@ -827,7 +827,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   console.log(`🔍 [Shopify Social] 提取到 ${socialProof.length} 个社会证明数据`)
 
-  // ==================== 6. 图片提取（保持原有逻辑：5张）====================
+  // 6. 图片提取（保持原有逻辑：5张）
   const images: string[] = []
   const ogImage = $('meta[property="og:image"]').attr('content')
   if (ogImage) images.push(ogImage)
@@ -841,7 +841,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   console.log(`🔍 [Shopify Images] 提取到 ${images.length} 张图片`)
 
-  // ==================== 7. 品牌提取（保持原有逻辑）====================
+  // 7. 品牌提取（保持原有逻辑）
   const ogSiteName = $('meta[property="og:site_name"]').attr('content')?.trim() || null
   const vendorText = $('.product-vendor').first().text().trim() || null
   const itemPropBrand = $('[itemprop="brand"]').first().text().trim() || null
@@ -872,7 +872,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
       (isPlausibleBrandCandidate(ogSiteName) ? ogSiteName : null) || deriveBrandFromUrl(url)
   }
 
-  // ==================== 8. 评论数据提取（Judge.me系统）====================
+  // 8. 评论数据提取（Judge.me系统）
   const reviews: Array<{
     rating: number
     date: string
@@ -891,7 +891,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     const ratingText = $review.find('.jdgm-rev__rating').attr('data-score')
     const rating = ratingText ? parseInt(ratingText, 10) : 0
 
-    // 提取日期（data-content属性，格式：2024-01-26 00:00:00 UTC）
+    // 提取日期
     const dateText = $review.find('.jdgm-rev__timestamp').attr('data-content')
     const date = dateText ? dateText.split(' ')[0] : '' // 取 YYYY-MM-DD 部分
 
@@ -933,7 +933,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   console.log(`🔍 [Shopify Reviews] 提取到 ${reviews.length} 条评论`)
 
-  // ==================== 9. 商品描述提取（增强版：优先从About区域提取）====================
+  // 9. 商品描述提取（增强版：优先从About区域提取）
   let productDescription: string | null = null
 
   // 尝试1：从 "About [Product Name]" 标题后的列表中提取
@@ -983,7 +983,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     productDescription = $('meta[name="description"]').attr('content') || null
   }
 
-  // ==================== 10. 返回增强的数据结构 ====================
+  // 10. 返回增强的数据结构
   return {
     productName: $('.product-title').text().trim() || $('h1').first().text().trim() || null,
     rawProductTitle: $('.product-title').text().trim() || $('h1').first().text().trim() || null,
@@ -999,7 +999,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     imageUrls: images.slice(0, 5), // 保持原有的5张限制
     metaTitle: $('title').text().trim() || null,
     metaDescription: $('meta[name="description"]').attr('content') || null,
-    // 🔥 新增字段
+    // 新增字段
     faqs: faqs.length > 0 ? faqs : undefined,
     specifications: Object.keys(specifications).length > 0 ? specifications : undefined,
     packages: packages.length > 0 ? packages : undefined,
@@ -1026,7 +1026,7 @@ function extractGenericData($: any, url: string): ScrapedProductData {
   const landingImages = extractLandingImages($, url, 5)
   images.push(...landingImages)
 
-  // 🔥 增强品牌提取逻辑
+  // 增强品牌提取逻辑
   const ogBrand = $('meta[property="og:brand"]').attr('content')?.trim() || null
   const ogSiteName = $('meta[property="og:site_name"]').attr('content')?.trim() || null
   const itemPropBrand = $('[itemprop="brand"]').first().text().trim() || null
@@ -1085,7 +1085,7 @@ function extractGenericData($: any, url: string): ScrapedProductData {
     ? extractLandingProductName($, url) || baseProductName
     : baseProductName
 
-  // 🔥 2026-01-14：补齐“pre/presell advertorial”类型落地页的品牌识别
+  // 补齐“pre/presell advertorial”类型落地页的品牌识别
   // 这类页面的<title>/og:title经常是发布方/频道名（例如 “Smart Home & Garden”），不是商品品牌
   brandName = refineBrandNameForLandingPage({
     url,
@@ -1132,7 +1132,7 @@ function extractGenericData($: any, url: string): ScrapedProductData {
  * @param customProxyUrl - 自定义代理URL
  * @param timeoutMs - 超时时间（毫秒）
  * @param userId - 用户ID（用于代理IP缓存隔离）
- * 🔥 2026-01-04修复：直接返回ScrapedProductData，保留完整的reviews、faqs等数据
+ * 直接返回ScrapedProductData，保留完整的reviews、faqs等数据
  */
 export async function extractProductInfo(
   url: string,
@@ -1142,7 +1142,7 @@ export async function extractProductInfo(
   userId?: number
 ): Promise<ScrapedProductData> {
   try {
-    // 🌍 传入targetCountry到scrapeProductData
+    // 传入targetCountry到scrapeProductData
     const productData = await scrapeProductData(
       url,
       customProxyUrl,
@@ -1151,7 +1151,7 @@ export async function extractProductInfo(
       userId
     )
 
-    // 🔥 直接返回完整的ScrapedProductData，不丢失任何字段
+    // 直接返回完整的ScrapedProductData，不丢失任何字段
     return productData
   } catch (error) {
     console.error('extractProductInfo error:', error)

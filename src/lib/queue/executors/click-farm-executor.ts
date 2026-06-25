@@ -24,10 +24,10 @@ export interface ClickFarmTaskData {
   url: string // 要访问的affiliate链接
   proxyUrl: string // 代理URL
   offerId: number // Offer ID（用于日志）
-  timezone?: string // 🆕 任务时区（用于按 scheduledAt 统计到正确小时，避免每次点击再查库）
-  // 🆕 计划执行时间（用于将点击分散到1小时内不同时间点执行）
+  timezone?: string // 任务时区（用于按 scheduledAt 统计到正确小时，避免每次点击再查库）
+  // 计划执行时间（用于将点击分散到1小时内不同时间点执行）
   scheduledAt?: string // ISO 8601 格式的时间戳字符串
-  // 🆕 Referer配置
+  // Referer配置
   refererConfig?: {
     type: 'none' | 'random' | 'specific' | 'custom'
     referer?: string // specific/custom类型时的固定referer
@@ -58,7 +58,7 @@ export const SOCIAL_MEDIA_REFERRERS = [
 ]
 
 /**
- * 🆕 从社媒列表中随机获取一个referer
+ * 从社媒列表中随机获取一个referer
  */
 function getRandomSocialReferer(): string {
   const randomIndex = Math.floor(Math.random() * SOCIAL_MEDIA_REFERRERS.length)
@@ -259,23 +259,23 @@ async function resolveProxyAddress(
 
   // 优先支持”代理provider URL”（如 IPRocket API / Oxylabs / Kookeey / Cliproxy 等），统一解析成真实代理IP再使用。
   if (ProxyProviderRegistry.isSupported(trimmed)) {
-    // 🔥 补点击任务优化：智能代理IP复用策略
-    //
-    // 目标：
+    // 补点击任务智能代理IP复用策略
+
+    // 目标
     // 1. 减少 IPRocket API 调用次数（避免触发频率限制）
     // 2. 确保同一任务的每次点击使用不同IP（避免被识别为刷量）
-    //
-    // 策略：
+
+    // 策略
     // 1. 启用全局缓存（forceRefresh=false），不同任务可以共享代理IP池
     // 2. 检查缓存的IP是否被当前任务最近使用过
     // 3. 如果被使用过且在冷却期内（5分钟），强制获取新IP
     // 4. 否则使用缓存的IP
-    //
-    // 效果：
-    // - 任务A第1次点击（10:00）：获取IP1，缓存5分钟
-    // - 任务A第2次点击（10:01）：检测到IP1刚被使用，强制获取IP2
-    // - 任务B第1次点击（10:02）：可以使用缓存的IP1（因为任务B没用过IP1）
-    // - 任务A第3次点击（10:06）：可以使用缓存的IP1（因为冷却期已过）
+
+    // 效果
+    // 任务A第1次点击（10:00）：获取IP1，缓存5分钟
+    // 任务A第2次点击（10:01）：检测到IP1刚被使用，强制获取IP2
+    // 任务B第1次点击（10:02）：可以使用缓存的IP1（因为任务B没用过IP1）
+    // 任务A第3次点击（10:06）：可以使用缓存的IP1（因为冷却期已过）
 
     let creds: ProxyCredentials | null = null
     let usedFallbackReuse = false
@@ -417,7 +417,7 @@ function isHeapPressureHigh(): boolean {
 /**
  * 解析代理URL - 支持多种格式
  *
- * 支持的格式：
+ * 支持的格式
  * 1. URL格式: http://host:port
  * 2. URL格式: https://user:pass@host:port
  * 3. 直接格式: host:port:user:pass
@@ -536,21 +536,21 @@ function getRandomAcceptLanguage(): string {
 /**
  * 执行单次点击任务
  *
- * 🔥 需求5：采用Fire & Forget模式（发起请求但异步追踪结果）
- * - 发起HTTP请求后立即返回
- * - 后台异步监听响应，根据HTTP状态码判断成功/失败
- * - 3秒超时（短超时确保快速释放连接）
- * - 准确记录统计（不依赖乐观假设）
+ * 需求5：采用Fire & Forget模式（发起请求但异步追踪结果）
+ * 发起HTTP请求后立即返回
+ * 后台异步监听响应，根据HTTP状态码判断成功/失败
+ * 3秒超时（短超时确保快速释放连接）
+ * 准确记录统计（不依赖乐观假设）
  *
- * 🆕 防爬优化：
- * - 随机User-Agent（模拟不同浏览器）
- * - 随机Accept-Language
- * - 可配置的Referer（模拟不同来源）
- * - 随机请求间隔（避免固定频率）
+ * 防爬
+ * 随机User-Agent（模拟不同浏览器）
+ * 随机Accept-Language
+ * 可配置的Referer（模拟不同来源）
+ * 随机请求间隔（避免固定频率）
  *
- * 🆕 时间分散执行：
- * - 支持 scheduledAt 字段，将点击分散到1小时内的不同时间点执行
- * - 如果当前时间早于 scheduledAt，延迟执行
+ * 时间分散执行
+ * 支持 scheduledAt 字段，将点击分散到1小时内的不同时间点执行
+ * 如果当前时间早于 scheduledAt，延迟执行
  */
 export async function executeClickFarmTask(
   task: Task<ClickFarmTaskData>
@@ -610,7 +610,7 @@ export async function executeClickFarmTask(
     return { success: false, traffic: 0 }
   }
 
-  // 🔧 修复：动态获取代理URL（重试时会清除旧代理，需要重新获取）
+  // 动态获取代理URL（重试时会清除旧代理，需要重新获取）
   let proxyUrl = task.data.proxyUrl
   if (!proxyUrl) {
     console.log(`[ClickFarm] 任务 ${taskId} 未配置代理，尝试动态获取...`)
@@ -656,8 +656,8 @@ export async function executeClickFarmTask(
   }
 
   try {
-    // 🔧 关键修复：支持 IPRocket 这类”provider URL”，先解析出真实代理IP再使用
-    // 🔥 传入 userId 和 taskId 用于用户级别隔离和按任务隔离缓存
+    // 关键支持 IPRocket 这类”provider URL”，先解析出真实代理IP再使用
+    // 传入 userId 和 taskId 用于用户级别隔离和按任务隔离缓存
     let proxyAddress: string | null = null
     try {
       proxyAddress = await resolveProxyAddress(proxyUrl, task.userId, taskId)
@@ -698,7 +698,7 @@ export async function executeClickFarmTask(
       source: `click-farm:before-request:${task.id}`,
     })
 
-    // 🆕 确定Referer
+    // 确定Referer
     let referer: string | undefined
     if (refererConfig) {
       switch (refererConfig.type) {
@@ -717,7 +717,7 @@ export async function executeClickFarmTask(
 
     const startTime = Date.now()
 
-    // 🆕 构建请求头（完整的浏览器指纹，绕过反爬虫）
+    // 构建请求头（完整的浏览器指纹，绕过反爬虫）
     const userAgent = getRandomUserAgent()
     const headers: Record<string, string> = {
       'User-Agent': userAgent,
@@ -735,7 +735,7 @@ export async function executeClickFarmTask(
       DNT: '1',
     }
 
-    // 🆕 添加Chrome特征头（Sec-CH-UA系列）
+    // 添加Chrome特征头（Sec-CH-UA系列）
     if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
       const chromeVersion = userAgent.match(/Chrome\/(\d+)/)?.[1] || '131'
       headers['Sec-CH-UA'] =
@@ -750,12 +750,12 @@ export async function executeClickFarmTask(
       headers['Sec-CH-UA-Platform'] = '"Windows"'
     }
 
-    // 🆕 添加Referer头（如果配置了）
+    // 添加Referer头（如果配置了）
     if (referer) {
       headers['Referer'] = referer
     }
 
-    // 🆕 P0修复：从 scheduledAt 提取计划执行的小时数，而不是使用实际执行时间
+    // 从 scheduledAt 提取计划执行的小时数，而不是使用实际执行时间
     const scheduledHour = getScheduledHour()
 
     // 需求：只要“成功发起请求”就算成功；不等待访问结果
@@ -772,7 +772,7 @@ export async function executeClickFarmTask(
       responseType: 'stream',
     })
 
-    // 🔥 释放名额：不等待结果返回给队列，但仍然跟踪请求结束以控制并发
+    // 释放名额：不等待结果返回给队列，但仍然跟踪请求结束以控制并发
     const hardReleaseTimer = setTimeout(() => {
       safeRelease()
     }, 5000)

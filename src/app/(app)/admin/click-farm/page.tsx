@@ -21,8 +21,8 @@ interface GlobalStats {
   success_clicks: number
   success_rate: number
   today_clicks: number
-  today_success_clicks: number // 🆕 今日成功点击数
-  today_success_rate: number // 🆕 今日成功率
+  today_success_clicks: number // 今日成功点击数
+  today_success_rate: number // 今日成功率
   today_traffic: number
   total_traffic: number
   taskStatusDistribution: {

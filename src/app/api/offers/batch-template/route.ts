@@ -2,18 +2,18 @@
  * GET /api/offers/batch-template
  * 提供批量导入CSV模板下载
  *
- * 调用方式：
- * - 浏览器直接访问：触发文件下载
- * - 前端按钮：window.open('/api/offers/batch-template')
+ * 调用方式
+ * 浏览器直接访问：触发文件下载
+ * 前端按钮：window.open('/api/offers/batch-template')
  *
- * 模板字段说明：
- * - 必填：affiliate_link（推广链接）, target_country（推广国家）
- * - 选填：page_type（链接类型：product/store）, brand_name（品牌名）
- * - 选填：product_price（产品价格/平均产品价格）
- * - 选填（新）：commission_type + commission_value（可选 commission_currency）
- * - 选填（兼容）：commission_payout（佣金比例/平均佣金比例）
- * - 店铺类型可选填：product_link_1~6（单品推广链接，最多6个）
- * - 说明：Final URL、评论分析、竞品分析等信息会通过自动抓取获得
+ * 模板字段说明
+ * 必填：affiliate_link（推广链接）, target_country（推广国家）
+ * 选填：page_type（链接类型：product/store）, brand_name（品牌名）
+ * 选填：product_price（产品价格/平均产品价格）
+ * 选填（新）：commission_type + commission_value（可选 commission_currency）
+ * 选填（兼容）：commission_payout（佣金比例/平均佣金比例）
+ * 店铺类型可选填：product_link_1~6（单品推广链接，最多6个）
+ * 说明：Final URL、评论分析、竞品分析等信息会通过自动抓取获得
  */
 
 import { NextResponse } from 'next/server'

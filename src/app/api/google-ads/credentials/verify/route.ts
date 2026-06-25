@@ -55,7 +55,7 @@ export const POST = withAuth(async (_request, user) => {
         logGoogleAdsVerifyWarn('access_level_detect_failed', detectError, { userId })
       }
 
-      // 🔧 修复(2025-12-11): snake_case → camelCase
+      // snake_case → camelCase
       return NextResponse.json({
         success: true,
         message: 'Google Ads凭证有效',

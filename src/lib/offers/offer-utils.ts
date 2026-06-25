@@ -138,14 +138,14 @@ let proxyPoolInitializedConfigSignature: string | null = null
  * 清除代理池缓存
  * 当用户更新代理配置时调用，强制下次使用时重新加载
  *
- * 🔥 修复（2025-12-11）：
+ *
  * 解决用户更新代理配置后，系统仍使用旧配置的问题
  *
- * 🔥 优化（2025-12-11）：用户隔离
- * - 只重置模块级缓存标记，不清除全局代理池实例
- * - 下次 initializeProxyPool 会根据 userId 判断是否需要重新加载
- * - initializeProxyPool 会调用 loadProxies() 覆盖旧配置
- * - 这样不会影响其他用户正在进行的操作
+ * 用户隔离
+ * 只重置模块级缓存标记，不清除全局代理池实例
+ * 下次 initializeProxyPool 会根据 userId 判断是否需要重新加载
+ * initializeProxyPool 会调用 loadProxies() 覆盖旧配置
+ * 这样不会影响其他用户正在进行的操作
  */
 export function invalidateProxyPoolCache(userId?: number): void {
   console.log(`🗑️ [invalidateProxyPoolCache] 清除代理池缓存 (userId: ${userId || 'all'})`)
@@ -195,7 +195,7 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
     throw error
   }
 
-  // 🔥 2026-01-06: 使用配置签名检测变更，避免“更新后仍使用旧配置”
+  // 使用配置签名检测变更，避免“更新后仍使用旧配置”
   const configSignature = proxyUrls
     .map((p) => `${String(p.country).trim().toUpperCase()}:${String(p.url).trim()}`)
     .join('|')
@@ -223,7 +223,7 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
     )
   }
 
-  // 🔥 修复:所有代理都不设置为 default（emergency）优先级
+  // 所有代理都不设置为 default（emergency）优先级
   // 代理池会自动将第一个代理作为兜底代理（如果需要）
   const proxiesWithDefault = proxyUrls.map((p: any) => ({
     url: p.url,
@@ -249,9 +249,9 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
 
 /**
  * 规范化品牌名称
- * - 首字母大写格式（Title Case）："apple" → "Apple", "APPLE" → "Apple"
- * - 多个单词："outdoor life" → "Outdoor Life"
- * - 保留常见全大写缩写：IBM, BMW, HP, LG, etc.
+ * 首字母大写格式（Title Case）："apple" → "Apple", "APPLE" → "Apple"
+ * 多个单词："outdoor life" → "Outdoor Life"
+ * 保留常见全大写缩写：IBM, BMW, HP, LG, etc.
  *
  * @param brand - 原始品牌名称
  * @returns 规范化后的品牌名称
@@ -342,7 +342,7 @@ export function normalizeBrandName(brand: string): string {
  *
  * 需求1: 自动生成的字段
  *
- * 🔥 修复（2025-12-09）：
+ *
  * 1. 排除软删除的记录（deleted_at IS NULL）
  * 2. 显式转换count为数字（PostgreSQL bigint可能返回字符串）
  * 3. 添加唯一性循环检查，避免重名
@@ -355,7 +355,7 @@ export async function generateOfferName(
   const db = await getDatabase()
   const normalizedCountryCode = normalizeOfferTargetCountry(countryCode)
 
-  // 🔥 修复：查询该用户下同品牌同国家的Offer数量（排除软删除）
+  // 查询该用户下同品牌同国家的Offer数量（排除软删除）
   const result = await db.queryOne<{ count: number | string }>(
     `
     SELECT COUNT(*) as count
@@ -368,10 +368,10 @@ export async function generateOfferName(
     [userId, brandName, normalizedCountryCode]
   )
 
-  // 🔥 修复：显式转换为数字（PostgreSQL bigint可能返回字符串）
+  // 显式转换为数字（PostgreSQL bigint可能返回字符串）
   const existingCount = Number(result?.count) || 0
 
-  // 🔥 修复：循环检查确保生成的offer_name唯一
+  // 循环检查确保生成的offer_name唯一
   let sequenceNum = existingCount + 1
   let maxAttempts = 100 // 防止无限循环
 
@@ -432,9 +432,9 @@ export function normalizeOfferTargetCountry(countryCode: string): string {
  * 根据国家代码获取推广语言
  *
  * 需求5: 根据国家确定推广语言
- * 示例：
- * - 美国US → English
- * - 德国DE → German
+ * 示例
+ * 美国US → English
+ * 德国DE → German
  *
  * 使用全局统一映射，支持69+国家
  */
@@ -463,7 +463,7 @@ export function validateBrandName(brandName: string): {
 
 /**
  * 验证Offer名称是否唯一
- * 🔥 修复（2025-12-09）：显式转换count为数字（PostgreSQL bigint可能返回字符串）
+ * 显式转换count为数字（PostgreSQL bigint可能返回字符串）
  */
 export async function isOfferNameUnique(
   offerName: string,
@@ -480,6 +480,6 @@ export async function isOfferNameUnique(
 
   const result = await db.queryOne<{ count: number | string }>(query, params)
 
-  // 🔥 修复：显式转换为数字
+  // 显式转换为数字
   return Number(result?.count || 0) === 0
 }

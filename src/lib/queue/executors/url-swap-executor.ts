@@ -3,10 +3,10 @@
  * src/lib/queue/executors/url-swap-executor.ts
  *
  * 功能：执行换链接任务
- * - 解析推广链接（禁用缓存）
- * - 检测URL变化
- * - 更新Google Ads（如有变化）
- * - 记录历史
+ * 解析推广链接（禁用缓存）
+ * 检测URL变化
+ * 更新Google Ads（如有变化）
+ * 记录历史
  */
 
 import type { Task } from '../types'
@@ -138,9 +138,8 @@ export async function executeUrlSwapTask(
         : []
     const taskTargets = activeTargets.length > 0 ? activeTargets : fallbackTargets
 
-    // =========================
     // 方式二：手动轮询推广链接列表
-    // =========================
+
     if (swapMode === 'manual') {
       const manualAffiliateLinks = parseUrlSwapStringArrayJson(taskRow.manual_affiliate_links)
       if (manualAffiliateLinks.length === 0) {
@@ -294,9 +293,8 @@ export async function executeUrlSwapTask(
       return { success: true, changed: overallChanged }
     }
 
-    // =========================
     // 方式一：自动解析推广链接
-    // =========================
+
     if (!taskTargets.length) {
       const message =
         '缺少 Customer ID 或 Campaign ID，无法更新 Google Ads Final URL suffix。\n' +

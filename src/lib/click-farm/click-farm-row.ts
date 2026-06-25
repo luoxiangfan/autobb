@@ -25,21 +25,21 @@ export function calculateMatchRate(actual: number[], configured: number[]): numb
 
 /**
  * 解析数据库任务对象
- * 🔧 修复(2025-12-31): PostgreSQL jsonb 类型会被自动解析为 JS 对象/数组，
+ * PostgreSQL jsonb 类型会被自动解析为 JS 对象/数组，
  * 不需要再调用 JSON.parse。部分驱动可能返回字符串，需要解析。
- * 🔧 额外修复：PostgreSQL time without time zone 类型返回 Date 对象，
+ * 额外PostgreSQL time without time zone 类型返回 Date 对象，
  * 需要转换为字符串格式 "HH:mm" 才能使用 split() 方法。
  */
 export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
   // 安全解析函数：处理 JSON 字符串或已解析的 jsonb 对象
-  // 🔧 修复(2025-12-31): 增强类型检查，确保返回正确类型
-  // 🔧 修复(2026-01-05): 处理双重JSON编码问题（PostgreSQL jsonb存储了JSON字符串）
+  // 增强类型检查，确保返回正确类型
+  // 处理双重JSON编码问题（PostgreSQL jsonb存储了JSON字符串）
   const safeParse = (value: any, defaultValue: any = null): any => {
     if (value === null || value === undefined) return defaultValue
     if (typeof value === 'string') {
       try {
         let parsed = JSON.parse(value)
-        // 🔧 修复：如果解析结果仍然是字符串（双重编码），再解析一次
+        // 如果解析结果仍然是字符串（双重编码），再解析一次
         if (typeof parsed === 'string') {
           try {
             parsed = JSON.parse(parsed)
@@ -91,12 +91,12 @@ export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
     refererConfig = safeParse(row.referer_config, null)
   }
 
-  // 🔧 修复：动态计算进度（按时间进度，而非数据库中的静态值）
-  // 进度计算逻辑：
-  // - pending: 0%
-  // - paused/stopped: 保持当前时间进度
-  // - running: (已执行天数 / 总天数) * 100
-  // - completed: 100%
+  // 动态计算进度（按时间进度，而非数据库中的静态值）
+  // 进度计算逻辑
+  // pending: 0%
+  // paused/stopped: 保持当前时间进度
+  // running: (已执行天数 / 总天数) * 100
+  // completed: 100%
   let calculatedProgress = 0
   if (row.status === 'completed') {
     calculatedProgress = 100
@@ -135,7 +135,7 @@ export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
     pause_reason: row.pause_reason,
     pause_message: row.pause_message,
     paused_at: normalizeTimestampToIso(row.paused_at),
-    progress: calculatedProgress, // 🔧 使用动态计算的值
+    progress: calculatedProgress, // 使用动态计算的值
     total_clicks: row.total_clicks,
     success_clicks: row.success_clicks,
     failed_clicks: row.failed_clicks,
@@ -156,7 +156,7 @@ export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
     task.target_country = row.target_country
   }
 
-  // 🆕 如果有offer_name字段（从JOIN查询返回），保留它用于前端显示（产品标识，如 "Eufy_GB_02"）
+  // 如果有offer_name字段（从JOIN查询返回），保留它用于前端显示（产品标识，如 "Eufy_GB_02"）
   if (row.offer_name) {
     task.offer_name = row.offer_name
   }

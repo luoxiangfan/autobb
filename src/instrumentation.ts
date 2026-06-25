@@ -45,11 +45,11 @@ export async function register() {
       setInterval(tick, intervalMs)
     }
 
-    // 🔥 修复（2025-01-02）：移除重复的队列初始化
+    // 移除重复的队列初始化
     // initializeDatabase() 内部已调用 initializeQueueSystem()，此处无需重复调用
     // 原来重复调用会导致日志重复输出
 
-    // 🔥 修复（2025-12-11）：恢复未完成的批量任务状态
+    // 恢复未完成的批量任务状态
     // 解决服务重启后，upload_records状态一直停留在"processing"的问题
     try {
       await recoverBatchTaskStatus()

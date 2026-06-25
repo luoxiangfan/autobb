@@ -1,5 +1,5 @@
 /**
- * ⚡ P0性能优化: 仪表盘数据聚合API
+ * ⚡ P0性能仪表盘数据聚合API
  * 将3个独立的API请求合并为一个，减少网络往返时间
  * 添加服务端缓存，提升响应速度
  */
@@ -32,7 +32,7 @@ async function getKPIs(userId: number, days: number = 30) {
   // 这里调用kpis API的核心逻辑
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
+  // PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
   const notDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
 
   const startDateStr = resolveStartDateYmd(days)
@@ -116,7 +116,7 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
   const db = await getDatabase()
   const startDateStr = resolveStartDateYmd(7)
 
-  // 🔧 PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
+  // PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
   const notDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
 
   // 获取最近7天的风险警报

@@ -65,7 +65,7 @@ interface KeywordWithVolume {
   searchVolume: number
   competition?: string
   competitionIndex?: number
-  // 🔥 修复(2025-12-18): 添加matchType字段确保前后端类型定义一致
+  // 添加matchType字段确保前后端类型定义一致
   matchType?: 'EXACT' | 'PHRASE' | 'BROAD' | 'BROAD_MATCH_MODIFIER'
   lowTopPageBid?: number
   highTopPageBid?: number
@@ -101,14 +101,14 @@ interface Creative {
   descriptions: string[]
   keywords: string[]
   keywordsWithVolume?: KeywordWithVolume[]
-  negativeKeywords?: string[] // 🎯 新增：否定关键词
+  negativeKeywords?: string[] // 否定关键词
   callouts?: string[]
   sitelinks?: Array<{
     text: string
     url: string
     description?: string
   }>
-  // 🔧 修复(2025-12-11): 与API响应保持一致 - camelCase
+  // 与API响应保持一致 - camelCase
   finalUrl: string
   score: number
   scoreBreakdown: {
@@ -119,15 +119,15 @@ interface Creative {
     clarity: number
   }
   scoreExplanation: string
-  // 🔧 修复(2025-12-11): snake_case → camelCase
+  // snake_case → camelCase
   generationRound: number
   theme: string
   aiModel: string
   generationMode?: AdCreativeGenerationMode | string | null
 
-  // 🆕 canonical creativeType（兼容历史旧 key）
+  // canonical creativeType（兼容历史旧 key）
   creativeType?: CanonicalCreativeType | 'brand_focus' | 'model_focus' | 'brand_product' | null
-  // 🆕 关键词分桶字段 (v4.10)
+  // 关键词分桶字段 (v4.10)
   keywordBucket?: 'A' | 'B' | 'D'
   bucketIntent?: string // 创意类型说明（KISS-3：A=品牌意图，B=商品型号/产品族意图，D=商品需求意图）
   isSynthetic?: boolean // 兼容旧 coverage 标记（不代表第4种创意类型）
@@ -1019,7 +1019,7 @@ export default function Step1CreativeGeneration({
   const [selectedId, setSelectedId] = useState<number | null>(selectedCreative?.id || null)
   const [generationCount, setGenerationCount] = useState(0)
 
-  // 🆕 v4.16: 已生成的bucket列表
+  // v4.16: 已生成的bucket列表
   const [generatedBuckets, setGeneratedBuckets] = useState<string[]>([])
 
   // 生成进度状态
@@ -1039,7 +1039,7 @@ export default function Step1CreativeGeneration({
     router.push(`/login?redirect=${redirectUrl}`)
   }, [router])
 
-  // 🆕 错误状态
+  // 错误状态
   const [generationError, setGenerationError] = useState<GenerationErrorState | null>(null)
   const [qualityGateDialog, setQualityGateDialog] =
     useState<QualityGateInterceptDialogState | null>(null)
@@ -1058,7 +1058,7 @@ export default function Step1CreativeGeneration({
   const [creativeToDelete, setCreativeToDelete] = useState<number | null>(null)
   const [deleting, setDeleting] = useState(false)
 
-  // 🆕 SSE超时处理状态
+  // SSE超时处理状态
   const [sseTimeout, setSseTimeout] = useState(false)
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null)
   const [pollingTimer, setPollingTimer] = useState<NodeJS.Timeout | null>(null)
@@ -1082,7 +1082,7 @@ export default function Step1CreativeGeneration({
         ? `生成${nextBucketMeta.fullLabel}`
         : '已达到 3 个创意类型的生成上限'
 
-  // 🆕 处理错误解决方案的操作
+  // 处理错误解决方案的操作
   const handleErrorAction = (action?: string) => {
     if (!action) return
 
@@ -1110,7 +1110,7 @@ export default function Step1CreativeGeneration({
     }
   }
 
-  // 🆕 轮询检查任务状态（SSE断开后使用）
+  // 轮询检查任务状态（SSE断开后使用）
   const pollTaskStatus = async (taskId: string) => {
     try {
       const response = await fetch(`/api/creative-tasks/${taskId}`, {
@@ -1176,7 +1176,7 @@ export default function Step1CreativeGeneration({
     }
   }
 
-  // 🆕 开始轮询任务状态
+  // 开始轮询任务状态
   const startPolling = (taskId: string) => {
     // 立即检查一次
     pollTaskStatus(taskId).then((status) => {
@@ -1194,7 +1194,7 @@ export default function Step1CreativeGeneration({
     })
   }
 
-  // 🆕 清理轮询定时器
+  // 清理轮询定时器
   useEffect(() => {
     return () => {
       if (pollingTimer) {
@@ -1235,7 +1235,7 @@ export default function Step1CreativeGeneration({
       if (data.creatives && data.creatives.length > 0) {
         // 转换数据库创意为前端需要的格式（构造adStrength对象）
         const formattedCreatives = data.creatives.map((c: any) => {
-          // 🔧 确保 score 是数字类型（数据库可能返回字符串）
+          // 确保 score 是数字类型（数据库可能返回字符串）
           const numericScore = typeof c.score === 'number' ? c.score : parseFloat(c.score) || 0
           const calculatedRating =
             numericScore >= 85
@@ -1264,7 +1264,7 @@ export default function Step1CreativeGeneration({
             generationMode: c.generationMode ?? c.generation_mode ?? null,
             creativeType: canonicalCreativeType,
             keywordBucket: normalizedBucket || c.keywordBucket || c.keyword_bucket,
-            score: numericScore, // 🔧 确保 score 始终是数字
+            score: numericScore, // 确保 score 始终是数字
             // 构造adStrength对象（如果不存在）- 必须包含完整的7个维度
             adStrength: c.adStrength || {
               rating: calculatedRating,
@@ -1295,7 +1295,7 @@ export default function Step1CreativeGeneration({
                   weight: 0.08,
                   details: '',
                 },
-                // 🔧 新增：品牌搜索量维度 (18%)
+                // 品牌搜索量维度 (18%)
                 brandSearchVolume: {
                   score: c.scoreBreakdown?.brandSearchVolume || 0,
                   weight: 0.18,
@@ -1305,7 +1305,7 @@ export default function Step1CreativeGeneration({
                     dataSource: 'unavailable',
                   },
                 },
-                // 🔧 新增：竞争定位维度 (10%)
+                // 竞争定位维度 (10%)
                 competitivePositioning: {
                   score: c.scoreBreakdown?.competitivePositioning || 0,
                   weight: 0.1,
@@ -1322,7 +1322,7 @@ export default function Step1CreativeGeneration({
           }
         })
 
-        // 🎯 排序：按分数从高到低，若分数相同则按创建时间从新到旧
+        // 排序：按分数从高到低，若分数相同则按创建时间从新到旧
         const sortedCreatives = formattedCreatives
           .sort((a: any, b: any) => {
             // 首先按分数从高到低排序
@@ -1334,12 +1334,12 @@ export default function Step1CreativeGeneration({
             const timeB = new Date(b.createdAt).getTime()
             return timeB - timeA
           })
-          // 🎯 只取前 3 个最佳创意
+          // 只取前 3 个最佳创意
           .slice(0, 3)
 
         setCreatives(sortedCreatives)
 
-        // ✅ KISS-3类型：generationCount 表示“已生成的创意类型数”（最多3：A/B/D）
+        // KISS-3类型：generationCount 表示“已生成的创意类型数”（最多3：A/B/D）
         const usedTypesSet = new Set(
           formattedCreatives
             .map((c: Creative) => normalizeCreativeBucket(c.keywordBucket, c.creativeType))
@@ -1349,7 +1349,7 @@ export default function Step1CreativeGeneration({
         const orderedTypes = CREATIVE_BUCKET_ORDER.filter((t) => usedTypesSet.has(t))
         setGenerationCount(orderedTypes.length)
 
-        // 🆕 v4.16: 从API响应获取已生成的bucket列表
+        // v4.16: 从API响应获取已生成的bucket列表
         if (data.generatedBuckets && Array.isArray(data.generatedBuckets)) {
           const normalized = (data.generatedBuckets as string[])
             .map((b) => normalizeCreativeBucket(b))
@@ -1409,7 +1409,7 @@ export default function Step1CreativeGeneration({
 
     try {
       setGenerating(true)
-      setGenerationError(null) // 🆕 清除之前的错误
+      setGenerationError(null) // 清除之前的错误
       setQualityGateDialog(null)
       setSseTimeout(false)
       setTaskStatus(null)
@@ -1434,7 +1434,7 @@ export default function Step1CreativeGeneration({
           QUALITY_GATE_BYPASS_REASON
       }
 
-      // 🔥 Step 1: 入队获取taskId（KISS-3类型：后端自动选择A/B/D）
+      // Step 1: 入队获取taskId（KISS-3类型：后端自动选择A/B/D）
       const enqueueResponse = await fetch(`/api/offers/${offer.id}/generate-creatives-queue`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1459,13 +1459,13 @@ export default function Step1CreativeGeneration({
       const enqueueData = await enqueueResponse.json()
       const { taskId, generationMode: enqueuedGenerationMode } = enqueueData
       queuedTaskId = taskId
-      setCurrentTaskId(taskId) // 🆕 保存taskId用于轮询
+      setCurrentTaskId(taskId) // 保存taskId用于轮询
       const enqueuedMode = resolveGenerationModeInput(String(enqueuedGenerationMode ?? ''))
       if (enqueuedMode) {
         setGenerationMode(enqueuedMode)
       }
 
-      // 🔥 Step 2: 订阅SSE流
+      // Step 2: 订阅SSE流
       const response = await fetch(`/api/creative-tasks/${taskId}/stream`, {
         credentials: 'include',
       })
@@ -1513,7 +1513,7 @@ export default function Step1CreativeGeneration({
                 const rating = data.adStrength.rating
                 const score = data.adStrength.score
 
-                // 🔧 修复(2025-12-22): 质量低于70分时显示警告提示
+                // 质量低于70分时显示警告提示
                 const MINIMUM_SCORE = 70
                 const hasQualityWarning = score < MINIMUM_SCORE
 
@@ -1535,7 +1535,7 @@ export default function Step1CreativeGeneration({
                 throw createClientGenerationError(normalizedStreamError)
               }
             } catch (parseError: any) {
-              // 🔧 修复(2026-01-26): 区分JSON解析错误和业务错误
+              // 区分JSON解析错误和业务错误
               // 只有真正的JSON解析错误才吞掉，业务错误（从SSE type:error抛出的）必须重新抛出
               const isJsonParseError =
                 parseError instanceof SyntaxError ||
@@ -1557,13 +1557,13 @@ export default function Step1CreativeGeneration({
       const normalizedError = normalizeGenerationTaskError(error, '生成失败')
       const errorMessage = normalizedError.message || normalizedError.userMessage || '生成失败'
 
-      // 🔧 修复(2025-12-27): 判断是否为SSE超时
+      // 判断是否为SSE超时
       const isSSETimeout =
         normalizedError.code === 'CREATIVE_TASK_STREAM_TIMEOUT' ||
         errorMessage === 'SSE timeout' ||
         errorMessage.includes('SSE timeout')
 
-      // 🔧 修复(2025-12-27): 判断是否为网络错误
+      // 判断是否为网络错误
       const lowerErrorMessage = errorMessage.toLowerCase()
       const isNetworkError =
         !errorMessage ||
@@ -1594,7 +1594,7 @@ export default function Step1CreativeGeneration({
       setGenerationError(finalErrorState)
       showError(finalErrorState.solution.title, finalErrorState.solution.description)
     } finally {
-      // 🆕 如果SSE正常完成或任务已完成，才清理状态
+      // 如果SSE正常完成或任务已完成，才清理状态
       if (!shouldKeepTaskTracking) {
         setGenerating(false)
         setGenerationProgress(null)
@@ -1715,7 +1715,7 @@ export default function Step1CreativeGeneration({
     const displayItems = isExpanded ? items : items.slice(0, defaultShow)
     const hasMore = items.length > defaultShow
 
-    // 🔧 修复(2025-12-24): 处理对象数组（如{text: '...'}）和字符串数组
+    // 处理对象数组（如{text: '...'}）和字符串数组
     const getItemText = (item: any): string => {
       if (typeof item === 'string') return item
       if (typeof item === 'object' && item !== null && 'text' in item) return item.text
@@ -1834,7 +1834,7 @@ export default function Step1CreativeGeneration({
         offer={offer}
       />
 
-      {/* 🆕 错误提示（当已有创意但生成新创意失败时显示） */}
+      {/* 错误提示（当已有创意但生成新创意失败时显示） */}
       {generationError && creatives.length > 0 && (
         <Alert className="border-red-200 bg-red-50">
           <AlertCircle className="h-4 w-4 text-red-600" />
@@ -1871,7 +1871,7 @@ export default function Step1CreativeGeneration({
       {creatives.length === 0 ? (
         <Card className="border-dashed border-2 border-gray-200 bg-gray-50/50 py-8">
           <CardContent className="text-center">
-            {/* 🆕 SSE超时但任务仍在运行中 */}
+            {/* SSE超时但任务仍在运行中 */}
             {sseTimeout && taskStatus === 'running' && (
               <div className="space-y-4">
                 <div className="w-16 h-16 bg-linear-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto">
@@ -1914,7 +1914,7 @@ export default function Step1CreativeGeneration({
               </div>
             )}
 
-            {/* 🆕 SSE超时且任务已完成 */}
+            {/* SSE超时且任务已完成 */}
             {sseTimeout && taskStatus === 'completed' && (
               <div className="space-y-4">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
@@ -1941,7 +1941,7 @@ export default function Step1CreativeGeneration({
               </div>
             )}
 
-            {/* 🆕 SSE超时且任务失败 */}
+            {/* SSE超时且任务失败 */}
             {sseTimeout && taskStatus === 'failed' && (
               <div className="space-y-4">
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
@@ -1968,7 +1968,7 @@ export default function Step1CreativeGeneration({
               </div>
             )}
 
-            {/* 🆕 SSE超时但轮询中（无明确状态） */}
+            {/* SSE超时但轮询中（无明确状态） */}
             {sseTimeout && !taskStatus && (
               <div className="space-y-4">
                 <div className="w-16 h-16 bg-linear-to-br from-purple-100 to-blue-100 rounded-full flex items-center justify-center mx-auto">
@@ -2071,7 +2071,7 @@ export default function Step1CreativeGeneration({
                 </p>
               </div>
             ) : generationError ? (
-              // 🆕 显示错误状态和解决方案
+              // 显示错误状态和解决方案
               <div className="space-y-4">
                 <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto">
                   <AlertCircle className="w-8 h-8 text-red-500" />

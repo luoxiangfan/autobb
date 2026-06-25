@@ -37,7 +37,7 @@ interface AiTokenData {
     totalTokens: number
     totalCalls: number
     modelUsage: TokenUsage[]
-    operationUsage?: OperationUsage[] // 🆕 操作类型分布
+    operationUsage?: OperationUsage[] // 操作类型分布
   }
   trend: Array<{
     date: string
@@ -45,7 +45,7 @@ interface AiTokenData {
     totalTokens: number
   }>
   recommendations: string[]
-  highCostOperations?: OperationUsage[] // 🆕 高成本操作
+  highCostOperations?: OperationUsage[] // 高成本操作
 }
 
 interface Props {
@@ -254,7 +254,7 @@ export function AiTokenCostChart({ days = 7 }: Props) {
           </Alert>
         )}
 
-        {/* 🆕 操作类型分布（优先显示，更重要）*/}
+        {/* 操作类型分布（优先显示，更重要） */}
         {today.operationUsage && today.operationUsage.length > 0 && (
           <div className="pt-2 border-t">
             <div className="text-xs text-gray-500 mb-2">高成本操作类型（Top 5）</div>

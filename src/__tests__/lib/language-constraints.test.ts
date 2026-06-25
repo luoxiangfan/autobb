@@ -207,7 +207,7 @@ describe('LanguageConstraints', () => {
 
     it('should validate German keyword word count', () => {
       expect(validateKeywordWordCount('robot vacuum', 'de')).toBe(true)
-      expect(validateKeywordWordCount('robot vacuum cleaner', 'de')).toBe(true) // 修复: 3个词，德语max=3
+      expect(validateKeywordWordCount('robot vacuum cleaner', 'de')).toBe(true) // 3个词，德语max=3
     })
 
     it('should validate Japanese keyword word count', () => {

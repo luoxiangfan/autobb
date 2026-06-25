@@ -346,9 +346,9 @@ export type ResolveLegacyBareNumericModeParams = {
 
 /**
  * 推断 legacy commission_payout 裸数字语义（extract / PUT 共用）
- * - 显式 numericCommissionMode 优先
- * - 有结构化 commission_type/value 时走默认 amount 推断
- * - 仅有 commission_payout 时保留裸数字（percent）
+ * 显式 numericCommissionMode 优先
+ * 有结构化 commission_type/value 时走默认 amount 推断
+ * 仅有 commission_payout 时保留裸数字（percent）
  */
 export function resolveLegacyBareNumericMode(
   params: ResolveLegacyBareNumericModeParams
@@ -379,9 +379,9 @@ export type NormalizeOfferCommissionInputParams = {
   commissionCurrency?: string | null
   commissionPayout?: string | null
   /**
-   * 裸数字 commission_payout（>1 且无 %/货币）的语义：
-   * - amount（默认）：推断为固定佣金金额
-   * - percent：保留原字符串，不自动加 $ 或 %
+   * 裸数字 commission_payout（>1 且无 %/货币）的语义
+   * amount（默认）：推断为固定佣金金额
+   * percent：保留原字符串，不自动加 $ 或 %
    */
   legacyBareNumericMode?: 'amount' | 'percent'
 }

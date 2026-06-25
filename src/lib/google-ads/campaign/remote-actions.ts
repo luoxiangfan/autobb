@@ -67,7 +67,7 @@ export interface ExecuteGoogleAdsCampaignRemoteActionsParams {
     maxCampaigns: number
   }
   remoteConfig?: ReturnType<typeof getGoogleAdsAccountDeleteRemoteConfig>
-  /** 单项远端操作完成时回调（用于同步本地状态，如 Offer 删除） */
+  /* * 单项远端操作完成时回调（用于同步本地状态，如 Offer 删除） */
   onCampaignOutcome?: (event: GoogleAdsCampaignRemoteActionOutcomeEvent) => void | Promise<void>
 }
 

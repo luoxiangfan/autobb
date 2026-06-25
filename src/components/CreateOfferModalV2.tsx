@@ -58,7 +58,7 @@ interface ExtractedData {
   targetLanguage: string
   redirectCount: number
   resolveMethod: string
-  // 🔥 页面类型标识（店铺/单品）
+  // 页面类型标识（店铺/单品）
   pageType: 'store' | 'product'
   pageTypeDetected?: 'store' | 'product'
   pageTypeAdjusted?: boolean
@@ -83,7 +83,7 @@ interface ExtractedData {
   extractedHeadlines: any[] | null
   extractedDescriptions: any[] | null
   extractionMetadata: any | null
-  // 🔥 2025-12-16新增：后端自动创建的Offer ID
+  // 后端自动创建的Offer ID
   offerId: number | null
 }
 
@@ -116,7 +116,7 @@ export default function CreateOfferModalV2({
   // 步骤3：用户可修正的字段
   const [brandName, setBrandName] = useState('')
 
-  // 🔥 任务队列 + SSE进度跟踪
+  // 任务队列 + SSE进度跟踪
   const {
     isExtracting,
     taskId,
@@ -126,13 +126,13 @@ export default function CreateOfferModalV2({
     result: extractionResult,
     error: extractionError,
     currentDuration,
-    stageDurations, // 🔥 获取已完成阶段的耗时Map
+    stageDurations, // 获取已完成阶段的耗时Map
     connectionType,
     startExtraction,
     reset: resetExtraction,
   } = useOfferExtractionV2()
 
-  // 🔥 监听提取完成，自动进入确认步骤
+  // 监听提取完成，自动进入确认步骤
   useEffect(() => {
     console.log('🔍 useEffect triggered:', { extractionResult, currentStage, currentStep })
 
@@ -148,7 +148,7 @@ export default function CreateOfferModalV2({
         targetLanguage: extractionResult.targetLanguage || 'English',
         redirectCount: extractionResult.redirectCount || 0,
         resolveMethod: 'sse-stream',
-        // 🔥 页面类型标识（店铺/单品）
+        // 页面类型标识（店铺/单品）
         pageType: extractionResult.pageType || 'product',
         pageTypeDetected: extractionResult.pageTypeDetected || null,
         pageTypeAdjusted: extractionResult.pageTypeAdjusted || false,
@@ -169,16 +169,16 @@ export default function CreateOfferModalV2({
         extractedHeadlines: extractionResult.extractedHeadlines || null,
         extractedDescriptions: extractionResult.extractedDescriptions || null,
         extractionMetadata: extractionResult.extractionMetadata || null,
-        // 🔥 2025-12-16新增：后端自动创建的Offer ID
+        // 后端自动创建的Offer ID
         offerId: extractionResult.offerId || null,
       })
-      // 🔥 如果用户已提前填写品牌名，优先保留用户输入；否则使用自动识别结果
+      // 如果用户已提前填写品牌名，优先保留用户输入；否则使用自动识别结果
       setBrandName((prev) => prev || extractionResult.brand || '')
       setCurrentStep('confirm')
     }
   }, [extractionResult, currentStage, currentStep])
 
-  // 🔥 监听提取错误
+  // 监听提取错误
   useEffect(() => {
     if (extractionError) {
       // 检查是否为代理连接问题
@@ -236,7 +236,7 @@ export default function CreateOfferModalV2({
 
   const normalizeStoreProductLinks = () => normalizeStoreProductLinkList(storeProductLinks)
 
-  // ========== 步骤1: 提交用户输入，开始自动提取 ==========
+  // 步骤1: 提交用户输入，开始自动提取
   const handleExtract = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -257,7 +257,7 @@ export default function CreateOfferModalV2({
       }
     }
 
-    // 🔥 启动SSE流式提取
+    // 启动SSE流式提取
     startExtraction(
       affiliateLink,
       targetCountry,
@@ -272,8 +272,8 @@ export default function CreateOfferModalV2({
     )
   }
 
-  // ========== 步骤3: 用户确认后跳转到Offer详情页 ==========
-  // 🔥 2025-12-16重构：Offer已在后端自动创建，用户确认只是跳转到详情页
+  // 步骤3: 用户确认后跳转到Offer详情页
+  // Offer已在后端自动创建，用户确认只是跳转到详情页
   const handleConfirm = async () => {
     if (!extractedData?.offerId) {
       setError('Offer创建失败，请重试')
@@ -288,7 +288,7 @@ export default function CreateOfferModalV2({
 
     setLoading(true)
     try {
-      // 🔥 将用户确认/修正后的品牌名持久化到Offer
+      // 将用户确认/修正后的品牌名持久化到Offer
       const res = await fetch(`/api/offers/${extractedData.offerId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -327,7 +327,7 @@ export default function CreateOfferModalV2({
     setCurrentStep('input')
     setError('')
     setLoading(false)
-    resetExtraction() // 🔥 重置SSE提取状态
+    resetExtraction() // 重置SSE提取状态
   }
 
   const handleClose = () => {
@@ -341,10 +341,10 @@ export default function CreateOfferModalV2({
     setCurrentStep('input')
     setExtractedData(null)
     setError('')
-    resetExtraction() // 🔥 重置SSE提取状态
+    resetExtraction() // 重置SSE提取状态
   }
 
-  // ========== 渲染不同步骤 ==========
+  // 渲染不同步骤
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
@@ -384,7 +384,7 @@ export default function CreateOfferModalV2({
           </div>
         )}
 
-        {/* ========== 步骤1: 用户输入 ========== */}
+        {/* 步骤1: 用户输入 */}
         {currentStep === 'input' && (
           <form onSubmit={handleExtract} className="space-y-4 py-4">
             <div className="space-y-4">
@@ -621,7 +621,7 @@ export default function CreateOfferModalV2({
           </form>
         )}
 
-        {/* ========== 步骤2: 自动提取中（任务队列 + SSE实时进度） ========== */}
+        {/* 步骤2: 自动提取中（任务队列 + SSE实时进度） */}
         {currentStep === 'extracting' && (
           <div className="py-6">
             {/* 显示连接类型 */}
@@ -641,13 +641,13 @@ export default function CreateOfferModalV2({
               currentMessage={currentMessage}
               events={[]} // V2不再提供详细events
               details={undefined} // V2不再提供details
-              currentDuration={currentDuration} // 🔥 传递前端计算的当前阶段实时耗时
-              stageDurations={stageDurations} // 🔥 传递已完成阶段的耗时Map
+              currentDuration={currentDuration} // 传递前端计算的当前阶段实时耗时
+              stageDurations={stageDurations} // 传递已完成阶段的耗时Map
             />
           </div>
         )}
 
-        {/* ========== 步骤3: 用户确认 ========== */}
+        {/* 步骤3: 用户确认 */}
         {currentStep === 'confirm' && extractedData && (
           <div className="space-y-4 py-4">
             {/* 成功提示 */}

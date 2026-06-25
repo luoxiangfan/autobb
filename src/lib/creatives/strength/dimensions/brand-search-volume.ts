@@ -85,9 +85,8 @@ export async function calculateBrandSearchVolume(
       isSearchVolumeUnavailableReason(kw.volumeUnavailableReason)
     )
 
-    // ========================================
     // 1. 计算品牌名搜索量（brandNameSearchVolume）
-    // ========================================
+
     const normalizedLanguage = normalizeLanguageCode(targetLanguage)
 
     const exactBrandKeywordEntry = normalizedKeywordsWithVolume.find(
@@ -197,9 +196,8 @@ export async function calculateBrandSearchVolume(
       console.log('⚠️ 未提供keywordsWithVolume，跳过品牌关键词搜索量计算')
     }
 
-    // ========================================
     // 3. 计算总分（品牌名搜索量 + 品牌关键词搜索量）
-    // ========================================
+
     const totalBrandSearchVolume = resolvedBrandNameSearchVolume + brandKeywordSearchVolume
     const volumeUnavailable = Boolean(
       plannerUnavailableReason || keywordVolumeUnavailable || skipKeywordPoolExpandLoad

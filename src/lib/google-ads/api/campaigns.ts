@@ -96,7 +96,7 @@ export async function createGoogleAdsCampaign(params: {
   endDate?: string
   accountId?: number
   userId: number // 改为必填
-  loginCustomerId?: string // 🔥 经理账号ID（用于访问客户账号）
+  loginCustomerId?: string // 经理账号ID（用于访问客户账号）
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -108,9 +108,9 @@ export async function createGoogleAdsCampaign(params: {
       ? sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
       : ''
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
-    // ♻️ 幂等：如果同名Campaign已存在（常见于任务重试），直接复用避免报错/产生孤儿预算
+    // 幂等：如果同名Campaign已存在（常见于任务重试），直接复用避免报错/产生孤儿预算
     try {
       const existing = await findGoogleAdsCampaignByName({
         customerId: params.customerId,
@@ -198,7 +198,7 @@ export async function createGoogleAdsCampaign(params: {
   // OAuth模式：使用原有逻辑
   const customer = await getCustomerWithCredentials(oauthGetCustomerParams(params, authContext))
 
-  // ♻️ 幂等：如果同名Campaign已存在（常见于任务重试），直接复用避免报错/产生孤儿预算
+  // 幂等：如果同名Campaign已存在（常见于任务重试），直接复用避免报错/产生孤儿预算
   try {
     const existing = await findGoogleAdsCampaignByName({
       customerId: params.customerId,
@@ -241,7 +241,7 @@ export async function createGoogleAdsCampaign(params: {
     // 官方推荐：创建时使用PAUSED状态，添加完定位和广告后再启用
     status: enums.CampaignStatus.PAUSED,
     advertising_channel_type: enums.AdvertisingChannelType.SEARCH,
-    // 🚀 修复(2025-12-18): 移除SEARCH_STANDARD子类型
+    // 移除SEARCH_STANDARD子类型
     // SEARCH_STANDARD不是有效的枚举值，标准搜索广告不需要设置子类型
     // advertising_channel_sub_type会默认为标准搜索广告
     campaign_budget: budgetResourceName,
@@ -254,9 +254,9 @@ export async function createGoogleAdsCampaign(params: {
     },
   }
 
-  // 🔧 修复(2025-12-30): 移除不兼容的字段
-  // - final_url_expansion_opt_out: 仅支持Performance Max和AI Max Search，普通Search Campaign不支持
-  // - goal_config_settings: Campaign对象中不存在此字段，应使用ConversionGoalCampaignConfig资源
+  // 移除不兼容的字段
+  // final_url_expansion_opt_out: 仅支持Performance Max和AI Max Search，普通Search Campaign不支持
+  // goal_config_settings: Campaign对象中不存在此字段，应使用ConversionGoalCampaignConfig资源
   // 转化目标将使用账号级别的默认配置
 
   // 设置出价策略 - Maximize Clicks (TARGET_SPEND)
@@ -302,7 +302,7 @@ export async function createGoogleAdsCampaign(params: {
     ;(campaign as any).end_date_time = formatCampaignDateTimeForMutate(params.endDate, true)
   }
 
-  // 🚀 优化(2025-12-18): 简化日志输出，减少噪音
+  // 简化日志输出，减少噪音
   // DEBUG: 完整的Campaign对象（仅在开发环境打印）
   if (process.env.NODE_ENV === 'development') {
     googleAdsApiLogger.debug('campaign_config', {
@@ -494,7 +494,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
   accountId?: number
   userId: number
   loginCustomerId?: string
-  // 🔧 修复(2025-12-25): 支持服务账号认证
+  // 支持服务账号认证
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -507,7 +507,7 @@ export async function updateGoogleAdsCampaignStatus(params: {
     googleAdsApiLogger.warn('campaign_remove_disabled_pausing', { campaignId: params.campaignId })
   }
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { updateCampaignStatusPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
@@ -700,7 +700,7 @@ export async function updateGoogleAdsCampaignBudget(params: {
   authContext?: GoogleAdsAuthContext
 }): Promise<void> {
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { updateCampaignBudgetPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`
@@ -867,7 +867,7 @@ export async function listGoogleAdsCampaigns(params: {
   userId: number
   skipCache?: boolean
   loginCustomerId?: string
-  // 🔧 修复(2025-12-25): 支持服务账号认证
+  // 支持服务账号认证
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -887,7 +887,7 @@ export async function listGoogleAdsCampaigns(params: {
 
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { executeGAQLQueryPython } = await import('../../campaign/server')
     const query = `
@@ -975,7 +975,7 @@ export async function updateCampaignFinalUrlSuffix(params: {
 }): Promise<void> {
   const sanitizedFinalUrlSuffix = sanitizeGoogleAdsFinalUrlSuffix(params.finalUrlSuffix)
   const { authType, authContext } = await resolveGoogleAdsApiCallAuth(params)
-  // 🔧 修复(2025-01-03): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { updateCampaignFinalUrlSuffixPython } = await import('../../campaign/server')
     const resourceName = `customers/${params.customerId}/campaigns/${params.campaignId}`

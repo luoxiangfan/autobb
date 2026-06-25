@@ -91,7 +91,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     )
   }
 
-  // 🆕 NEW-4：验证时间格式（如果提供了的话）
+  // NEW-4：验证时间格式（如果提供了的话）
   const timeFormatRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$|^24:00$/
   const normalizedStartTime =
     typeof body.start_time === 'string' ? body.start_time.trim() : body.start_time
@@ -116,11 +116,11 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     )
   }
 
-  // 🔧 修复(2026-02-13): 防止将 null 写入 DB 触发 NOT NULL 约束
+  // 防止将 null 写入 DB 触发 NOT NULL 约束
   const effectiveStartTime = normalizedStartTime || '06:00'
   const effectiveEndTime = normalizedEndTime || '24:00'
 
-  // 🆕 NEW-2：验证duration_days范围
+  // NEW-2：验证duration_days范围
   const durationDays = body.duration_days
   if (durationDays !== undefined && durationDays !== null && durationDays !== -1) {
     if (durationDays < 1 || durationDays > 365) {
@@ -146,7 +146,7 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     return NextResponse.json({ error: 'not_found', message: 'Offer不存在' }, { status: 404 })
   }
 
-  // 🔧 修复(2025-12-28): 使用新的代理配置系统（proxy.urls JSON数组）
+  // 使用新的代理配置系统（proxy.urls JSON数组）
   const proxyUrls = await getAllProxyUrls(userIdNum)
 
   if (!proxyUrls || proxyUrls.length === 0) {
@@ -196,8 +196,8 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     }
   }
 
-  // 🆕 如果没有提供timezone，从offer的target_country自动获取
-  // 🔧 修复(2026-01-03): 强制验证并修正timezone，确保与target_country一致
+  // 如果没有提供timezone，从offer的target_country自动获取
+  // 强制验证并修正timezone，确保与target_country一致
   const expectedTimezone = getTimezoneByCountry(offer.target_country)
   let timezone = body.timezone
 
@@ -224,10 +224,10 @@ export const POST = withAuth(async (request: NextRequest, user) => {
     start_time: effectiveStartTime,
     end_time: effectiveEndTime,
     hourly_distribution: hourlyDistribution,
-    timezone, // 🆕 使用自动匹配的timezone
+    timezone, // 使用自动匹配的timezone
   })
 
-  // 🆕 如果开始日期是今天，异步触发调度（避免阻塞请求/放大内存峰值）
+  // 如果开始日期是今天，异步触发调度（避免阻塞请求/放大内存峰值）
   let triggerResult: any = null
   const todayInTaskTimezone = getDateInTimezone(new Date(), timezone)
   const scheduledDate = task.scheduled_start_date || todayInTaskTimezone

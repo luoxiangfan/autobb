@@ -83,7 +83,7 @@ function createCreativePersistenceGateError(params: {
   return error
 }
 
-/** 落库前 persistence 硬门禁（质量环内已检查时，路由侧无需再调用） */
+/* * 落库前 persistence 硬门禁（质量环内已检查时，路由侧无需再调用） */
 export function assertPostGenerationPersistenceGate(params: {
   enabled: boolean
   creative: GeneratedAdCreative
@@ -142,17 +142,17 @@ export interface RunBucketCreativeGenerationParams {
   scopeLabel: string
   linkType?: 'product' | 'store'
   keywordPool?: OfferKeywordPool | null
-  /** 与 keywordPool 同次 resolveKeywordPoolForCreativeGeneration prepare，避免 generateAdCreative 重复 load */
+  /* * 与 keywordPool 同次 resolveKeywordPoolForCreativeGeneration prepare，避免 generateAdCreative 重复 load */
   plannerSession?: KeywordPlannerPreparedSession
   preparedExpand?: KeywordPoolPreparedExpand
-  /** expand prepare 未成功时避免质量评估重复 load */
+  /* * expand prepare 未成功时避免质量评估重复 load */
   skipKeywordPoolExpandLoad?: boolean
   searchTermFeedbackHints?: SearchTermFeedbackHintsInput
   loadSearchTermFeedbackHints?: boolean
   referencePerformance?: unknown
   theme?: string
   skipCache?: boolean
-  /** 为 true 时仅第 2 轮起 skipCache（同步 API 行为） */
+  /* * 为 true 时仅第 2 轮起 skipCache（同步 API 行为） */
   skipCacheOnRetryOnly?: boolean
   hardPersistenceGateEnabled?: boolean
   requireNonEmptyKeywords?: boolean
@@ -164,13 +164,13 @@ export interface RunBucketCreativeGenerationParams {
   }
   bucketIntent?: string
   bucketIntentEn?: string
-  /** 调用方已构建的关键词上下文（避免重复 buildPreGeneration） */
+  /* * 调用方已构建的关键词上下文（避免重复 buildPreGeneration） */
   preparedBucketContext?: BucketKeywordContext | null
-  /** 传给 generateAdCreative 的桶标识（可与 pipeline bucket 不同，如 C/S） */
+  /* * 传给 generateAdCreative 的桶标识（可与 pipeline bucket 不同，如 C/S） */
   generationBucket?: string | null
-  /** finalize 时是否写入 keywordSupplementation（批量首稿为 false） */
+  /* * finalize 时是否写入 keywordSupplementation（批量首稿为 false） */
   finalizeIncludeKeywordSupplementation?: boolean
-  /** 指定轮次复用已生成创意，跳过 AI 调用（批量首稿） */
+  /* * 指定轮次复用已生成创意，跳过 AI 调用（批量首稿） */
   getSeedCreativeForAttempt?: (attempt: number) => GeneratedAdCreative | undefined
   hooks?: BucketCreativeGenerationHooks
 }

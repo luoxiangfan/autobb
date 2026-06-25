@@ -1,11 +1,11 @@
 /**
  * 从 Google Ads campaign_name 提取 offer brand。
  * 若名称中不含 `@`，不做解析，直接返回 trim 后的原文。
- * 含 `@` 时依次尝试：
- * - {字母}{数字}-{brand}@后缀（例：B0023-{brand}@xxx）
- * - {纯字母前缀}-{brand}@后缀（例：PB-{brand}@xxx）
- * - {brand}_国家码_数字_数字_数字（行尾地理后缀形态）
- * - {字母}{数字}-{brand}（整串剩余段，作兜底）
+ * 含 `@` 时依次尝试
+ * {字母}{数字}-{brand}@后缀（例：B0023-{brand}@xxx）
+ * {纯字母前缀}-{brand}@后缀（例：PB-{brand}@xxx）
+ * {brand}_国家码_数字_数字_数字（行尾地理后缀形态）
+ * {字母}{数字}-{brand}（整串剩余段，作兜底）
  * 仍无法识别时返回原文。
  */
 export function extractBrandFromGoogleAdsCampaignName(campaignName: string): string {
@@ -138,7 +138,7 @@ const languageMap: { [key: string]: string } = {
 }
 
 /**
- * 🔧 将语言代码转换为语言名称
+ * 将语言代码转换为语言名称
  */
 export function getLanguageName(languageCode: string): string {
   return languageMap[languageCode] || languageCode

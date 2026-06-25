@@ -5,9 +5,9 @@ import { getDatabase } from '@/lib/db'
 /**
  * GET /api/admin/scheduled-tasks
  * 获取定时任务执行历史(仅管理员)
- * Query参数:
- * - type: backup | sync | all (默认 all)
- * - limit: 数量限制 (默认 50)
+ * Query参数
+ * type: backup | sync | all (默认 all)
+ * limit: 数量限制 (默认 50)
  */
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +25,7 @@ export const GET = withAuth(
       let syncLogs: any[] = []
 
       if (type === 'all' || type === 'backup') {
-        // 🔧 修复(2025-12-11): 使用 AS 别名返回 camelCase 字段
+        // 使用 AS 别名返回 camelCase 字段
         backups = (await db.query(
           `
         SELECT
@@ -47,7 +47,7 @@ export const GET = withAuth(
       }
 
       if (type === 'all' || type === 'sync') {
-        // 🔧 修复(2025-12-11): 使用 AS 别名返回 camelCase 字段
+        // 使用 AS 别名返回 camelCase 字段
         syncLogs = (await db.query(
           `
         SELECT

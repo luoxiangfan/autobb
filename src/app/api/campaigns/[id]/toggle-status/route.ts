@@ -46,8 +46,8 @@ function normalizeGoogleCampaignId(value: unknown): string | null {
  * PUT /api/campaigns/:id/toggle-status
  * 用户手动暂停/启用广告系列（同时更新 Google Ads 和本地数据库）
  *
- * - :id 为本地 campaigns.id（不是 google_campaign_id）
- * - body: { status: 'PAUSED' | 'ENABLED' }
+ * id 为本地 campaigns.id（不是 google_campaign_id）
+ * body: { status: 'PAUSED' | 'ENABLED' }
  */
 export const PUT = withAuth(async (request: NextRequest, user, context) => {
   try {

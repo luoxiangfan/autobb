@@ -33,7 +33,7 @@ export default function NewOfferPage() {
   const [commissionValue, setCommissionValue] = useState('')
   const [commissionCurrency, setCommissionCurrency] = useState('')
 
-  // ========== 需求1和需求5: 实时预览自动生成的字段 ==========
+  // 需求1和需求5: 实时预览自动生成的字段
   // 国家到语言的映射（使用全局统一映射，支持80+国家）
   const getTargetLanguage = (countryCode: string): string => {
     return getLanguageNameForCountry(countryCode)
@@ -477,7 +477,7 @@ export default function NewOfferPage() {
                 </div>
               </div>
 
-              {/* ========== 需求28：定价信息（可选）========== */}
+              {/* 需求28：定价信息（可选） */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   定价信息
@@ -592,7 +592,7 @@ export default function NewOfferPage() {
                 )}
               </div>
 
-              {/* ========== 自动生成信息（需求1和需求5）========== */}
+              {/* 自动生成信息（需求1和需求5） */}
               <div className="border-t pt-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   自动生成信息

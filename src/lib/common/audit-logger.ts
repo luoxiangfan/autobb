@@ -1,20 +1,18 @@
 /**
  * 安全审计日志系统
  *
- * 功能：
- * - 记录所有安全相关事件
- * - 支持事件类型分类
- * - 提供查询和分析接口
- * - User-Agent解析（设备类型、浏览器、操作系统）
- * - 用户管理操作审计
+ * 功能
+ * 记录所有安全相关事件
+ * 支持事件类型分类
+ * 提供查询和分析接口
+ * User-Agent解析（设备类型、浏览器、操作系统）
+ * 用户管理操作审计
  */
 
 import { getDatabase } from '../db'
 import { toDbJsonObjectField } from '../db'
 
-// ============================================================================
 // User-Agent 解析工具
-// ============================================================================
 
 export interface ParsedUserAgent {
   deviceType: 'Desktop' | 'Mobile' | 'Tablet' | 'Bot' | 'Unknown'
@@ -193,25 +191,23 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   }
 }
 
-// ============================================================================
 // 用户管理操作审计 - 统一接口
-// ============================================================================
 
 /**
  * 用户管理操作上下文
  */
 export interface UserManagementContext {
-  /** 操作人ID（管理员） */
+  /* * 操作人ID（管理员） */
   operatorId: number
-  /** 操作人用户名 */
+  /* * 操作人用户名 */
   operatorUsername: string
-  /** 目标用户ID */
+  /* * 目标用户ID */
   targetUserId: number
-  /** 目标用户名 */
+  /* * 目标用户名 */
   targetUsername: string
-  /** IP地址 */
+  /* * IP地址 */
   ipAddress: string
-  /** User-Agent */
+  /* * User-Agent */
   userAgent: string
 }
 
@@ -232,13 +228,13 @@ export type UserManagementAction =
  * 用户管理操作详情
  */
 export interface UserManagementDetails {
-  /** 操作前的值 */
+  /* * 操作前的值 */
   before?: Record<string, any>
-  /** 操作后的值 */
+  /* * 操作后的值 */
   after?: Record<string, any>
-  /** 变更字段列表 */
+  /* * 变更字段列表 */
   changedFields?: string[]
-  /** 额外信息 */
+  /* * 额外信息 */
   extra?: Record<string, any>
 }
 

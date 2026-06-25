@@ -148,28 +148,28 @@ function extractAllSuggestions(analysis: ScoreAnalysis): string[] {
  *
  * 发布广告系列到Google Ads
  *
- * Request Body (🔧 修复2025-12-11: 统一使用camelCase):
+ * Request Body
  * {
- *   offerId: number
- *   adCreativeId: number  // 单创意模式：指定创意ID；智能优化模式：忽略（自动选 launch_score 最高 1 条）
- *   googleAdsAccountId: number
- *   campaignConfig: {
- *     campaignName: string
- *     budgetAmount: number
- *     budgetType: 'DAILY' | 'TOTAL'
- *     targetCountry: string
- *     targetLanguage: string
- *     biddingStrategy: string
- *     finalUrlSuffix: string
- *     adGroupName: string
- *     maxCpcBid: number
- *     keywords: string[]
- *     negativeKeywords: string[]
- *     negativeKeywordMatchType?: Record<string, 'EXACT' | 'PHRASE' | 'BROAD'>
- *   }
- *   pauseOldCampaigns: boolean
- *   enableSmartOptimization?: boolean  // 启用智能优化：自动选用 launch_score 最高的 1 个创意（1 Campaign + 1 Ad Group）
- *   variantCount?: number              // 已废弃，保留字段兼容旧客户端
+ * offerId: number
+ * adCreativeId: number // 单创意模式：指定创意ID；智能优化模式：忽略（自动选 launch_score 最高 1 条）
+ * googleAdsAccountId: number
+ * campaignConfig: {
+ * campaignName: string
+ * budgetAmount: number
+ * budgetType: 'DAILY' | 'TOTAL'
+ * targetCountry: string
+ * targetLanguage: string
+ * biddingStrategy: string
+ * finalUrlSuffix: string
+ * adGroupName: string
+ * maxCpcBid: number
+ * keywords: string[]
+ * negativeKeywords: string[]
+ * negativeKeywordMatchType?: Record<string, 'EXACT' | 'PHRASE' | 'BROAD'>
+ * }
+ * pauseOldCampaigns: boolean
+ * enableSmartOptimization?: boolean // 启用智能自动选用 launch_score 最高的 1 个创意（1 Campaign + 1 Ad Group）
+ * variantCount?: number // 已废弃，保留字段兼容旧客户端
  * }
  */
 export const POST = withAuth(async (request, user) => {
@@ -177,7 +177,7 @@ export const POST = withAuth(async (request, user) => {
     const parentRequestId = request.headers.get('x-request-id') || undefined
     const userId = user.userId
 
-    // 2. 解析请求体 - 🔧 修复(2025-12-11): 接受camelCase字段名
+    // 2. 解析请求体 - 接受camelCase字段名
     const rawBody = await request.json()
     const body = normalizeCampaignPublishRequestBody(rawBody) || rawBody
     const {
@@ -462,7 +462,7 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json(error.toJSON(), { status: error.httpStatus })
     }
 
-    // 🔍 验证2：查询Google Ads账号中真实激活的广告系列（使用命名规范关联）
+    // 验证2：查询Google Ads账号中真实激活的广告系列（使用命名规范关联）
     const { queryActiveCampaigns } = await import('@/lib/campaign/server')
     let activeCampaignsResult
     try {
@@ -562,7 +562,7 @@ export const POST = withAuth(async (request, user) => {
         }
       | undefined
 
-    // ⚠️ 验证3：如果有需要暂停的广告系列且用户未确认，返回确认提示
+    // 验证3：如果有需要暂停的广告系列且用户未确认，返回确认提示
     if (campaignsRequireConfirm.length > 0 && !_pauseOldCampaigns && !_forcePublish) {
       console.log(`⚠️ 需要用户确认: 是否暂停${campaignsRequireConfirm.length}个已激活的Campaign`)
 
@@ -794,7 +794,7 @@ export const POST = withAuth(async (request, user) => {
       offerUrlFallback: offer.url,
     })
 
-    // 🔥 新增：调试日志 - 追踪creativeData中的否定关键词
+    // 调试日志 - 追踪creativeData中的否定关键词
     console.log(`[Publish] 创意ID: ${primaryCreative.id}`)
     console.log(
       `[Publish] creativeData.negativeKeywords长度: ${creativeData.negativeKeywords.length}`
@@ -821,7 +821,7 @@ export const POST = withAuth(async (request, user) => {
     )
     console.log(`📝 内容哈希: ${contentHash}, 配置哈希: ${campaignConfigHash}`)
 
-    // 🔥 新增(2025-12-17): 检查缓存的Launch Score
+    // 检查缓存的Launch Score
     let cachedLaunchScore = null
     try {
       cachedLaunchScore = await findCachedLaunchScore(
@@ -837,7 +837,7 @@ export const POST = withAuth(async (request, user) => {
       console.warn(`⚠️ 缓存查询失败: ${cacheError.message}，将重新计算`)
     }
 
-    // 🔥 修复(2025-12-19): 在try块外声明变量，以便在返回响应时使用
+    // 在try块外声明变量，以便在返回响应时使用
     let launchScore: number = 0
     let scoreAnalysis: ScoreAnalysis | undefined
     let analysis: any
@@ -850,14 +850,14 @@ export const POST = withAuth(async (request, user) => {
         scoreAnalysis = parseLaunchScoreAnalysis(cachedLaunchScore)
         console.log(`📦 使用缓存的Launch Score: ${launchScore}分`)
       } else {
-        // 🔥 修复(2025-12-18)：使用用户在第2步配置的关键词，而非创意原始数据
+        // 使用用户在第2步配置的关键词，而非创意原始数据
         // 关键词及其matchType应该来自campaignConfig（用户配置），而不是创意数据库记录
         const keywordsWithVolumeForScoring =
           (_campaignConfig.keywords || []).length > 0
             ? (_campaignConfig.keywords || []).map(mapKeywordVolumeForLaunchScore)
             : undefined
 
-        // 🔥 修复：明确构建创意对象，避免字段冲突
+        // 明确构建创意对象，避免字段冲突
         const creativeForLaunchScoreBase = {
           id: primaryCreative.id,
           offer_id: primaryCreative.offer_id,
@@ -907,7 +907,7 @@ export const POST = withAuth(async (request, user) => {
           publishHashCampaignConfig
         )
 
-        // 🔥 新增(2025-12-18)：调试日志 - 追踪关键词matchType一致性
+        // 调试日志 - 追踪关键词matchType一致性
         console.log(`[Publish] 关键词matchType一致性检查:`)
         console.log(`   - 用户配置关键词数量: ${_campaignConfig.keywords?.length || 0}`)
         const kwForLog = creativeForLaunchScore.keywordsWithVolume || []
@@ -928,7 +928,7 @@ export const POST = withAuth(async (request, user) => {
           }
         }
 
-        // 🔥 新增：调试日志 - 追踪构建的创意对象
+        // 调试日志 - 追踪构建的创意对象
         console.log(`[Publish] 构建的创意对象ID: ${creativeForLaunchScore.id}`)
         console.log(
           `[Publish] keywordsWithVolume长度: ${creativeForLaunchScore.keywordsWithVolume?.length || 0}`
@@ -971,13 +971,13 @@ export const POST = withAuth(async (request, user) => {
             budgetAmount: _campaignConfig.budgetAmount,
             maxCpcBid: _campaignConfig.maxCpcBid,
             budgetType: _campaignConfig.budgetType,
-            finalUrl: creativeForLaunchScore.final_url, // 🔧 使用（可能被Step 3覆盖的）Final URL
+            finalUrl: creativeForLaunchScore.final_url, // 使用（可能被Step 3覆盖的）Final URL
             targetCountry: _campaignConfig.targetCountry,
             targetLanguage: _campaignConfig.targetLanguage,
           }
         )
 
-        // 🔥 新增：调试日志 - 追踪传递给Launch Score的campaignConfig参数
+        // 调试日志 - 追踪传递给Launch Score的campaignConfig参数
         console.log(`[Publish] 传递给Launch Score的campaignConfig:`)
         console.log(`   - budgetAmount: ${_campaignConfig.budgetAmount}/day`)
         console.log(`   - maxCpcBid: ${_campaignConfig.maxCpcBid}`)
@@ -1029,10 +1029,10 @@ export const POST = withAuth(async (request, user) => {
         }
       }
 
-      // 🎯 从scoreAnalysis中提取各维度分数（v4.16 - 4维度智能matchType评分）
+      // 从scoreAnalysis中提取各维度分数（v4.16 - 4维度智能matchType评分）
       analysis = scoreAnalysis
 
-      // 🔧 修复：确保overallRecommendations在所有路径中可用
+      // 确保overallRecommendations在所有路径中可用
       overallRecommendations =
         scoreAnalysis?.overallRecommendations || extractAllSuggestions(scoreAnalysis)
 
@@ -1069,7 +1069,7 @@ export const POST = withAuth(async (request, user) => {
         // 强制阻断：<40分
         console.error(`❌ Launch Score过低: ${launchScore}分 < ${CRITICAL_THRESHOLD}分，强制阻断`)
 
-        // 🎯 收集所有维度的问题和建议
+        // 收集所有维度的问题和建议
         const allIssues = extractAllIssues(scoreAnalysis)
         const allSuggestions = extractAllSuggestions(scoreAnalysis)
 
@@ -1087,7 +1087,7 @@ export const POST = withAuth(async (request, user) => {
               },
               issues: allIssues,
               suggestions: allSuggestions,
-              overallRecommendations: overallRecommendations, // 🔧 修复：使用正确的变量
+              overallRecommendations: overallRecommendations, // 使用正确的变量
             },
             action: 'LAUNCH_SCORE_BLOCKED',
           },
@@ -1099,7 +1099,7 @@ export const POST = withAuth(async (request, user) => {
           `⚠️ Launch Score偏低: ${launchScore}分 < ${WARNING_THRESHOLD}分，建议优化后再发布`
         )
 
-        // 🎯 收集所有维度的问题和建议
+        // 收集所有维度的问题和建议
         const allIssues = extractAllIssues(scoreAnalysis)
         const allSuggestions = extractAllSuggestions(scoreAnalysis)
 
@@ -1117,7 +1117,7 @@ export const POST = withAuth(async (request, user) => {
               },
               issues: allIssues,
               suggestions: allSuggestions,
-              overallRecommendations: overallRecommendations, // 🔧 修复：使用正确的变量
+              overallRecommendations: overallRecommendations, // 使用正确的变量
               canForcePublish: true, // 允许强制发布
             },
             action: 'LAUNCH_SCORE_WARNING',
@@ -1133,7 +1133,7 @@ export const POST = withAuth(async (request, user) => {
       console.warn('⚠️ Launch Score评估失败，跳过风险评估')
     }
 
-    // 8. A/B测试功能已下线 (KISS optimization 2025-12-08)
+    // 8. A/B测试功能已下线
     // 保留ab_test_id变量以保持向后兼容性，但始终为null
     const abTestId: number | null = null
     // A/B测试记录创建已移除 - 原代码: INSERT INTO ab_tests ...
@@ -1436,7 +1436,7 @@ export const POST = withAuth(async (request, user) => {
         })
       }
 
-      // A/B测试功能已下线 (KISS optimization 2025-12-08)
+      // A/B测试功能已下线
       // ab_test_variants记录创建已移除 - abTestId始终为null
 
       const numericOfferId = Number(_offerId)
@@ -1449,7 +1449,7 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json(
         {
           success: publishResults.length > 0,
-          abTestId: abTestId, // 🔧 修复(2025-12-11): ab_test_id → abTestId
+          abTestId: abTestId, // ab_test_id → abTestId
           campaigns: publishResults,
           failed: failedCampaigns,
           pausedOldCampaigns: pausedOldCampaignsSummary,
@@ -1459,7 +1459,7 @@ export const POST = withAuth(async (request, user) => {
             successful: publishResults.length,
             failed: failedCampaigns.length,
           },
-          // 🔥 新增(2025-12-19): Launch Score评分结果
+          // Launch Score评分结果
           launchScore:
             launchScore > 0 && analysis
               ? {
@@ -1473,7 +1473,7 @@ export const POST = withAuth(async (request, user) => {
                   overallRecommendations: overallRecommendations || [],
                 }
               : undefined,
-          // 🔧 修复(2025-12-19): 强调这是异步队列状态，不是最终结果
+          // 强调这是异步队列状态，不是最终结果
           // 前端应该轮询campaign.creation_status而不仅仅依赖HTTP响应码
           message:
             publishResults.length > 0

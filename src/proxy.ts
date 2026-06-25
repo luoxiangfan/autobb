@@ -4,7 +4,7 @@ import { jwtVerify } from 'jose'
 
 // Middleware在Edge Runtime中运行，使用jose库进行JWT验证
 // 注意：Edge Runtime不支持直接import config.ts，需要直接读取环境变量
-// 🔴 重要：必须验证环境变量存在，否则会静默失败导致所有用户被登出
+// 重要：必须验证环境变量存在，否则会静默失败导致所有用户被登出
 const JWT_SECRET_RAW = process.env.JWT_SECRET
 if (!JWT_SECRET_RAW) {
   console.error('❌ CRITICAL: JWT_SECRET environment variable is not defined in Edge Runtime!')
@@ -17,7 +17,7 @@ const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW || '')
  * 验证JWT Token（Edge Runtime兼容）
  */
 async function verifyTokenEdge(token: string): Promise<any | null> {
-  // 🔴 检查 JWT_SECRET 是否正确加载
+  // 检查 JWT_SECRET 是否正确加载
   if (JWT_SECRET.length === 0) {
     console.error('❌ JWT_SECRET is empty! Token verification will fail.')
     console.error(
@@ -64,13 +64,13 @@ const passwordChangeAllowedPaths = [
   '/api/auth/me', // 获取用户信息API（页面需要）
 ]
 
-// 🛡️ 第一层防御：通用危险文件扩展名拦截
+// 第一层防御：通用危险文件扩展名拦截
 // 这些扩展名在Web根目录下不应该被公开访问，直接返回404
 // 这比黑名单更有效，因为它基于"行为模式"而非"具体文件名"
 const DANGEROUS_EXTENSIONS =
   /^\/?[^\/]+\.(zip|rar|tar|tgz|tar\.gz|7z|bz2|gz|sql|mdb|accdb|bak|backup|old|orig|swp|swo|tmp|temp|log|env|ini|conf|cfg|config|yml|yaml|json\.bak|xml\.bak|htaccess|htpasswd|npmrc|dockerignore|gitignore|ssh|pem|key|crt|pfx|p12)$/i
 
-// 🛡️ 第二层防御：恶意请求路径模式拦截
+// 第二层防御：恶意请求路径模式拦截
 // 这些是自动化漏洞扫描器常见的攻击路径
 const MALICIOUS_PATTERNS = [
   // PHP文件（本项目是Next.js，不存在PHP）
@@ -204,7 +204,7 @@ const MALICIOUS_PATTERNS = [
   /^\/mah\//i, // 常见后门路径
 ]
 
-// 🛡️ 合法路径白名单（优先于恶意模式检查）
+// 合法路径白名单（优先于恶意模式检查）
 const LEGITIMATE_PATHS = [
   /^\/admin\//, // /admin/queue, /admin/users 等合法管理页面
   /^\/api\//, // API路由
@@ -233,13 +233,13 @@ export async function proxy(request: NextRequest) {
     return response
   }
 
-  // 🛡️ 第一道防线：危险文件扩展名拦截（最高优先级）
+  // 第一道防线：危险文件扩展名拦截（最高优先级）
   // 无论文件名是什么，根目录下的 .zip/.sql/.bak 等文件都不应该被访问
   if (DANGEROUS_EXTENSIONS.test(pathname)) {
     return attachRequestId(new NextResponse(null, { status: 404 }))
   }
 
-  // 🛡️ 第二道防线：恶意路径模式拦截
+  // 第二道防线：恶意路径模式拦截
   // 先检查白名单，避免误拦截合法路径
   const isLegitimate = LEGITIMATE_PATHS.some((pattern) => pattern.test(pathname))
   if (!isLegitimate && MALICIOUS_PATTERNS.some((pattern) => pattern.test(pathname))) {
@@ -309,7 +309,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // 🔐 强制修改密码检查
+  // � 强制修改密码检查
   // 如果用户需要强制修改密码，只允许访问特定路径
   if (payload.mustChangePassword === true) {
     const isPasswordChangeAllowed = passwordChangeAllowedPaths.some((path) => {
@@ -347,11 +347,11 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * 匹配所有请求路径，除了：
-     * - _next/static (静态文件)
-     * - _next/image (图片优化)
-     * - favicon.ico (网站图标)
-     * - public folder
+     * 匹配所有请求路径，除了
+     * _next/static (静态文件)
+     * _next/image (图片优化)
+     * favicon.ico (网站图标)
+     * public folder
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],

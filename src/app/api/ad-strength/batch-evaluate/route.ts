@@ -66,7 +66,7 @@ function computeAverageEvaluationScore(
  * POST /api/ad-strength/batch-evaluate
  * 批量评估多个广告创意的Ad Strength
  *
- * 用途：
+ * 用途
  * 1. A/B测试：一次评估多个创意变体
  * 2. 批量筛选：从大量创意中筛选最优
  * 3. 历史回测：评估历史创意质量

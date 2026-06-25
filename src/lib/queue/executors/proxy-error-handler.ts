@@ -2,11 +2,11 @@
  * 统一的代理错误处理工具
  * 用于所有执行器中的代理错误检测和提示
  *
- * 使用场景：
- * - url-swap-executor（换链接任务）
- * - click-farm-executor（补点击任务）
- * - link-check-executor（链接检查任务）
- * - offer-extraction-executor（Offer 提取任务）
+ * 使用场景
+ * url-swap-executor（换链接任务）
+ * click-farm-executor（补点击任务）
+ * link-check-executor（链接检查任务）
+ * offer-extraction-executor（Offer 提取任务）
  */
 
 export interface ProxyErrorAnalysis {
@@ -26,13 +26,13 @@ export interface ProxyErrorAnalysis {
  * @example
  * ```typescript
  * try {
- *   await fetchProxyIp(proxyUrl)
+ * await fetchProxyIp(proxyUrl)
  * } catch (error) {
- *   const analysis = analyzeProxyError(error)
- *   if (analysis.isIPRocketBusinessError) {
- *     console.error(analysis.enhancedMessage)
- *     // 通知用户检查 IPRocket 账户
- *   }
+ * const analysis = analyzeProxyError(error)
+ * if (analysis.isIPRocketBusinessError) {
+ * console.error(analysis.enhancedMessage)
+ * // 通知用户检查 IPRocket 账户
+ * }
  * }
  * ```
  */

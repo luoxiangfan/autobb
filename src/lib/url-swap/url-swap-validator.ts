@@ -3,8 +3,8 @@
  * src/lib/url-swap-validator.ts
  *
  * 功能：验证换链接任务是否可以执行
- * - 代理配置验证
- * - 域名类型检查
+ * 代理配置验证
+ * 域名类型检查
  */
 
 import { getDatabase } from '../db'

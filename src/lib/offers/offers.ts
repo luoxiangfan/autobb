@@ -68,7 +68,7 @@ export interface Offer {
   google_ads_campaign_id: string | null
   sync_source: string | null
   needs_completion: boolean | number
-  // P0优化: 分析结果字段
+  // 分析结果字段
   review_analysis: string | null
   competitor_analysis: string | null
   visual_analysis: string | null
@@ -88,26 +88,26 @@ export interface Offer {
   deleted_at: string | null // 软删除时间戳（数据库字段，之前遗漏）
   is_deleted: number // 软删除标记（数据库字段，之前遗漏）
   // 增强数据字段（JSON格式存储）
-  // ❌ 已删除冗余字段（2025-12-04）: pricing (与scraped_data重复)
+  // 已删除冗余字段: pricing (与scraped_data重复)
   promotions: string | null // 促销信息JSON
   scraped_data: string | null // 原始爬虫数据（包含discount, salesRank, badge, reviews等所有字段）
-  // 🎯 AI分析结果字段（数据库同步）
+  // AI分析结果字段（数据库同步）
   ai_keywords: string | null // AI生成的关键词JSON（从competitor_analysis等提取）
   ai_reviews: string | null // AI分析的评论总结
   ai_competitive_edges: string | null // AI分析的竞争优势
   ai_analysis_v32: string | null // 新版AI分析结果JSON（v3.2架构）
   page_type: string | null // 页面类型：'product' | 'store'
   extraction_mode: string | null // 提取模式：fast | balanced | original
-  generated_buckets: string | null // 🆕 v4.16: 已生成的创意类型列表（JSON数组）
+  generated_buckets: string | null // v4.16: 已生成的创意类型列表（JSON数组）
   // P1-11: 关联的Google Ads账号信息（运行时计算字段，非数据库字段）
-  // 🔧 修复(2025-12-11): snake_case → camelCase
+  // snake_case → camelCase
   linked_accounts?: Array<{
     accountId: number
     accountName: string | null
     customerId: string
     campaignCount: number
   }>
-  // 🔥 黑名单标记（运行时计算字段）
+  // 黑名单标记（运行时计算字段）
   is_blacklisted?: boolean
 }
 
@@ -173,7 +173,7 @@ export interface CreateOfferInput {
   commission_type?: 'percent' | 'amount'
   commission_value?: string | number
   commission_currency?: string
-  // 🔥 2025-12-16修复：添加product_name字段
+  // 添加product_name字段
   product_name?: string
   // AI分析结果字段（JSON字符串格式）
   review_analysis?: string
@@ -182,7 +182,7 @@ export interface CreateOfferInput {
   extracted_headlines?: string
   extracted_descriptions?: string
   extraction_metadata?: string
-  // 🔥 页面类型标识（店铺/单品）
+  // 页面类型标识（店铺/单品）
   page_type?: 'store' | 'product'
   extraction_mode?: OfferExtractionMode | string
 }
@@ -213,7 +213,7 @@ export interface UpdateOfferInput {
   extracted_keywords?: string
   extracted_headlines?: string
   extracted_descriptions?: string
-  // P0/P1/P2/P3优化：增强提取字段
+  // P0/P1/P2/增强提取字段
   enhanced_keywords?: string
   enhanced_product_info?: string
   enhanced_review_analysis?: string
@@ -243,7 +243,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
   const db = await getDatabase()
   const normalizedTargetCountry = normalizeOfferTargetCountry(input.target_country) || 'US'
 
-  // ========== 需求1和需求5: 自动生成字段 ==========
+  // 需求1和需求5: 自动生成字段
   // 如果没有提供brand，使用临时值"Unknown"，等抓取完成后更新
   const brandValue = input.brand || 'Unknown'
 
@@ -276,7 +276,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     commissionPayout: input.commission_payout,
   })
 
-  // ========== 自动生成pricing、promotions、scraped_data JSON ==========
+  // 自动生成pricing、promotions、scraped_data JSON
   // 1. 如果有product_price，自动解析并生成pricing JSON
   const pricingJSON = normalizedProductPrice ? generatePricingJSON(normalizedProductPrice) : null
 
@@ -308,7 +308,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     normalizedCommission.commissionType || null,
     normalizedCommission.commissionValue || null,
     normalizedCommission.commissionCurrency || null,
-    // 🔥 2025-12-16修复：添加product_name字段
+    // 添加product_name字段
     input.product_name || null,
     // 自动生成的JSON字段
     pricingJSON, // 从product_price解析
@@ -321,7 +321,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     input.extracted_headlines || null,
     input.extracted_descriptions || null,
     input.extraction_metadata || null,
-    // P1-3修复: 如果有任何AI分析或广告元素提取结果，记录提取时间
+    // P1-3如果有任何AI分析或广告元素提取结果，记录提取时间
     input.review_analysis ||
     input.competitor_analysis ||
     input.extracted_keywords ||
@@ -329,7 +329,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     input.extracted_descriptions
       ? new Date().toISOString()
       : null,
-    // 🔥 页面类型标识（店铺/单品）
+    // 页面类型标识（店铺/单品）
     input.page_type || 'product', // 默认为'product'
     normalizeOfferExtractionMode(input.extraction_mode),
   ]
@@ -374,7 +374,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     throw new Error('Offer创建失败')
   }
 
-  // 🔥 2025-12-17修复：新创建的Offer需要清理API缓存，确保前端轮询立即获取到最新数据
+  // 新创建的Offer需要清理API缓存，确保前端轮询立即获取到最新数据
   // 这样当批量上传中的单个offer创建完成时，GET /api/offers 能返回最新的offer列表
   const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId)
@@ -412,7 +412,7 @@ export async function listOffers(
     searchQuery?: string
     scrapeStatus?: string
     needsCompletion?: boolean
-    /** true: 有非空联盟链接；false: 无或仅空白 */
+    /* * true: 有非空联盟链接；false: 无或仅空白 */
     hasAffiliateLink?: boolean
     sortBy?: string
     sortOrder?: 'asc' | 'desc'
@@ -451,9 +451,9 @@ export async function listOffers(
   if (options?.searchQuery) {
     const normalizedQuery = String(options.searchQuery).trim()
     if (normalizedQuery) {
-      // Keep server-side search behavior aligned with client-side filtering:
-      // - case-insensitive matching
-      // - include id / brand / offer_name / url / final_url / category
+      // Keep server-side search behavior aligned with client-side filtering
+      // case-insensitive matching
+      // include id / brand / offer_name / url / final_url / category
       const likeOperator = 'ILIKE'
       const searchPattern = `%${normalizedQuery}%`
       whereConditions.push(
@@ -584,10 +584,10 @@ export async function listOffers(
 
   const offers = (await db.query(listQuery, params)) as OfferListRow[]
 
-  // ⚡ P0性能优化: 使用单次JOIN查询关联账号，避免N+1查询问题
+  // ⚡ P0性能使用单次JOIN查询关联账号，避免N+1查询问题
   // 为每个offer查询关联的Google Ads账号信息
   // 只显示活跃的campaigns（排除REMOVED状态），且排除MCC账号
-  // ⚠️ 修复：忽略未成功发布到Google Ads的campaigns(google_campaign_id为空)
+  // 忽略未成功发布到Google Ads的campaigns(google_campaign_id为空)
 
   if (offers.length === 0) {
     return { offers: [], total: count }
@@ -620,7 +620,7 @@ export async function listOffers(
   }>
 
   // 按offer_id分组关联账号
-  // 🔧 修复(2025-12-11): snake_case → camelCase
+  // snake_case → camelCase
   const accountsByOfferId = new Map<
     number,
     Array<{
@@ -650,7 +650,7 @@ export async function listOffers(
     campaign_id: offer.campaign_id ?? null,
   }))
 
-  // 🔥 检查黑名单并标记风险
+  // 检查黑名单并标记风险
   const blacklistQuery = `
     SELECT brand, target_country
     FROM offer_blacklist
@@ -713,8 +713,8 @@ export async function updateOffer(
     normalizedInputTargetCountry !== normalizedExistingTargetCountry
 
   // 需求：当用户手动修改 brand/target_country 时，同步更新“产品标识”offer_name（以及目标语言）
-  // - offer_name 格式：品牌_国家_序号
-  // - 优先复用现有序号，若冲突则重新生成唯一名称
+  // offer_name 格式：品牌_国家_序号
+  // 优先复用现有序号，若冲突则重新生成唯一名称
   let derivedOfferName: string | null = null
   let derivedTargetLanguage: string | null = null
 
@@ -864,7 +864,7 @@ export async function updateOffer(
     updates.push('extracted_descriptions = ?')
     params.push(input.extracted_descriptions)
   }
-  // P0/P1/P2/P3优化：增强提取字段
+  // P0/P1/P2/增强提取字段
   if (input.enhanced_keywords !== undefined) {
     updates.push('enhanced_keywords = ?')
     params.push(input.enhanced_keywords)
@@ -1007,7 +1007,7 @@ export async function deleteOffer(
 ): Promise<DeleteOfferResult> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数和布尔值
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数和布尔值
   const nowFunc = 'NOW()'
   const isDeletedTrue = true
   const isActiveFalse = false
@@ -1022,7 +1022,7 @@ export async function deleteOffer(
 
   // 获取关联的Ads账号和Campaign详情
   // 使用INNER JOIN确保只检查有效账号，忽略孤儿campaigns
-  // ⚠️ 修复：忽略未成功发布到Google Ads的campaigns(google_campaign_id为空)
+  // 忽略未成功发布到Google Ads的campaigns(google_campaign_id为空)
   const linkedAccounts = (await db.query(
     `
     SELECT
@@ -1058,7 +1058,7 @@ export async function deleteOffer(
     }
   }
 
-  // 🔥 自动暂停关联的已启用广告系列（防止 Offer 删除后仍在花费）
+  // 自动暂停关联的已启用广告系列（防止 Offer 删除后仍在花费）
   // 仅处理已成功发布到 Google Ads 的 campaign（google_campaign_id 非空）
   const campaignStatusCondition = removeGoogleAdsCampaigns
     ? "c.status != 'REMOVED'"
@@ -1231,7 +1231,7 @@ export async function deleteOffer(
     await markUrlSwapTargetsRemovedByOfferId(id)
   }
 
-  // 🔥 需求：终止并软删除关联的补点击任务
+  // 需求：终止并软删除关联的补点击任务
   // 1. 停止所有运行中/待执行的补点击任务
   // 2. 软删除任务（保留历史统计数据）
   const isDeletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
@@ -1282,7 +1282,7 @@ export async function deleteOffer(
     }
   }
 
-  // 🔥 需求：禁用关联的URL Swap换链接任务
+  // 需求：禁用关联的URL Swap换链接任务
   // 当Offer删除后，换链接任务自动禁用（保留历史统计数据）
   const urlSwapTasks = await db.query<any>(
     `
@@ -1404,7 +1404,7 @@ export async function unlinkOfferFromAccount(
 
   await markUrlSwapTargetsRemovedByOfferAccount(offerId, accountId)
 
-  // 🔥 2025-12-19修复：清理API缓存，确保前端立即看到解绑效果
+  // 清理API缓存，确保前端立即看到解绑效果
   const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, offerId)
 
@@ -1461,9 +1461,9 @@ export async function updateOfferScrapeStatus(
     url?: string
     // 可选显式传入 final_url（否则从 url / scraped_data 派生）
     final_url?: string
-    // 🔥 2025-12-16修复：添加final_url_suffix字段到类型定义
+    // 添加final_url_suffix字段到类型定义
     final_url_suffix?: string
-    // 🔥 2025-12-16修复：添加product_name字段到类型定义
+    // 添加product_name字段到类型定义
     product_name?: string
     brand_description?: string
     unique_selling_points?: string
@@ -1475,33 +1475,33 @@ export async function updateOfferScrapeStatus(
     reviews?: string
     promotions?: string
     competitive_edges?: string
-    // P0优化: 分析结果字段
+    // 分析结果字段
     review_analysis?: string
     competitor_analysis?: string
     visual_analysis?: string
-    // 🎯 需求34: 广告元素提取结果字段
+    // 需求34: 广告元素提取结果字段
     extracted_keywords?: string
     extracted_headlines?: string
     extracted_descriptions?: string
     extraction_metadata?: string
     extracted_at?: string
-    // 🎯 P0优化: 原始爬虫数据（JSON格式存储所有scraped字段）
+    // 原始爬虫数据（JSON格式存储所有scraped字段）
     scraped_data?: string
-    // 🆕 Phase 2: 产品分类元数据（Store Metadata Enhancement）
+    // Phase 2: 产品分类元数据（Store Metadata Enhancement）
     product_categories?: string
-    // 🔥 页面类型标识（店铺/单品）
+    // 页面类型标识（店铺/单品）
     page_type?: 'store' | 'product'
-    // 🔥 v3.2 AI分析结果（包含pageType、关键词策略等）
+    // v3.2 AI分析结果（包含pageType、关键词策略等）
     ai_analysis_v32?: unknown
-    // 🔥 v3.2 AI提取的关键词
+    // v3.2 AI提取的关键词
     ai_keywords?: unknown
-    // 🔥 v3.2 AI分析的竞品优势
+    // v3.2 AI分析的竞品优势
     ai_competitive_edges?: unknown
   }
 ): Promise<void> {
   const db = await getDatabase()
 
-  // 🔥 2025-12-17修复：更新状态前先清理API缓存，确保前端显示最新状态
+  // 更新状态前先清理API缓存，确保前端显示最新状态
   const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, id)
 
@@ -1683,7 +1683,7 @@ export async function updateOfferScrapeStatus(
     })()
     const brandForWrite = rawBrandForWrite ? normalizeBrandName(rawBrandForWrite).trim() : null
 
-    // 🔧 修复：当品牌名更新时，同步更新offer_name
+    // 当品牌名更新时，同步更新offer_name
     // 需要先查询当前的offer_name以提取序号
     let currentOffer:
       | { offer_name: string; target_country: string; url: string | null; final_url: string | null }
@@ -1717,7 +1717,7 @@ export async function updateOfferScrapeStatus(
         const sequenceNumber = parts.length >= 3 ? parts[parts.length - 1] : '01'
         const proposedOfferName = `${brandForWrite}_${normalizedTargetCountry}_${sequenceNumber}`
 
-        // 🔧 修复：检查新offer_name是否已被占用，如果是则重新生成唯一名称
+        // 检查新offer_name是否已被占用，如果是则重新生成唯一名称
         const isUnique = await isOfferNameUnique(proposedOfferName, userId, id)
         if (isUnique) {
           newOfferName = proposedOfferName
@@ -1727,18 +1727,18 @@ export async function updateOfferScrapeStatus(
         }
       }
     } catch (nameError: any) {
-      // 🔥 修复（2025-12-10）: offer_name更新失败不应阻止状态更新
+      // offer_name更新失败不应阻止状态更新
       console.error('❌ offer_name更新失败:', nameError.message)
       // 继续使用原有的offer_name
     }
 
-    // 🔧 PostgreSQL兼容性修复：使用NOW()替代NOW()
+    // PostgreSQL兼容性使用NOW()替代NOW()
     const nowFunc = 'NOW()'
     const effectiveUrl = urlForWrite ?? currentOffer?.url ?? null
     const effectiveFinalUrl = finalUrlForWrite ?? currentOffer?.final_url ?? null
     const asinForWrite = extractAsinFromOfferUrls(effectiveUrl, effectiveFinalUrl)
 
-    // 🔥 修复（2025-12-11）: 移除不存在的列 reviews 和 competitive_edges
+    // 移除不存在的列 reviews 和 competitive_edges
     // PostgreSQL offers表中没有这两个字段，导致UPDATE语句失败
     // reviews数据应该存储在 review_analysis 或 ai_reviews 字段
     // competitive_edges数据应该存储在 competitor_analysis 或 ai_competitive_edges 字段
@@ -1813,9 +1813,9 @@ export async function updateOfferScrapeStatus(
       ]
     )
   } else {
-    // 🔧 修复: 为了兼容PostgreSQL，使用条件更新而不是CASE表达式
+    // 为了兼容PostgreSQL，使用条件更新而不是CASE表达式
     // scraped_at 为 TIMESTAMP，CASE 分支须保持类型一致
-    // 🔧 PostgreSQL兼容性修复：使用NOW()替代NOW()
+    // PostgreSQL兼容性使用NOW()替代NOW()
     const nowFunc = 'NOW()'
 
     if (status === 'completed') {

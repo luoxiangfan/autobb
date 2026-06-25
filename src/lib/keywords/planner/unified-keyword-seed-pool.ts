@@ -699,10 +699,10 @@ export function extractVerifiedKeywordSourcePool(offer: OfferData): VerifiedKeyw
 /**
  * 构建意图感知的种子词池 v2.0
  *
- * 三类创意相关的 raw seeds 生成策略：
- * - legacy 桶A: 品牌名 + 产品类型/型号/系列词
- * - legacy 桶B: 使用场景/应用环境/问题解决
- * - legacy 桶C: 技术规格/功能特性/需求扩展
+ * 三类创意相关的 raw seeds 生成策略
+ * legacy 桶A: 品牌名 + 产品类型/型号/系列词
+ * legacy 桶B: 使用场景/应用环境/问题解决
+ * legacy 桶C: 技术规格/功能特性/需求扩展
  *
  * @param offer - Offer 数据
  * @returns 按意图分类的种子词池
@@ -726,9 +726,8 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   const featureSeeds = new Set<string>()
   const verifiedSourcePool = extractVerifiedKeywordSourcePool(offer)
 
-  // ==========================================
   // legacy 桶A: 品牌商品锚点种子词
-  // ==========================================
+
   const brandSeeds = new Set<string>()
 
   // A1. 品牌名变体
@@ -781,9 +780,8 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
     } catch {}
   }
 
-  // ==========================================
   // legacy 桶B: 商品需求场景种子词
-  // ==========================================
+
   const scenarioSeeds = new Set<string>()
 
   // B1. 仅基于证据文本提取（不再使用品类模板造词）
@@ -805,9 +803,8 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
     if (categoryCore) scenarioSeeds.add(`${brandName.toLowerCase()} ${categoryCore}`)
   }
 
-  // ==========================================
   // legacy 桶C: 功能规格 / 需求扩展种子词
-  // ==========================================
+
   // C1. 仅使用证据来源词，不再拼接模板功能词
   if (offer.productFeatures) {
     const featureFromDesc = extractFeatureSeeds(offer.productFeatures, brandName)
@@ -822,9 +819,8 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
     if (categoryCore) featureSeeds.add(`${brandName.toLowerCase()} ${categoryCore}`)
   }
 
-  // ==========================================
   // 合并去重
-  // ==========================================
+
   const allSeedsSet = new Set<string>()
   brandSeeds.forEach((s) => allSeedsSet.add(s.toLowerCase().trim()))
   scenarioSeeds.forEach((s) => allSeedsSet.add(s.toLowerCase().trim()))
@@ -919,11 +915,11 @@ function extractEvidenceScenarioSeedsFromText(
  * 从 Offer 数据提取品牌相关的种子词，用于 Keyword Planner 查询
  * 品牌相关种子词 → Keyword Planner 返回更相关结果
  *
- * 优化(2025-12-14): 添加品牌名变体生成，覆盖常见搜索变体
- * 优化(2025-12-16): 使用意图感知种子词构建，最大化覆盖三个意图桶
+ * 添加品牌名变体生成，覆盖常见搜索变体
+ * 使用意图感知种子词构建，最大化覆盖三个意图桶
  */
 export function buildSmartSeedPool(offer: OfferData): string[] {
-  // 🆕 v2.0: 使用意图感知种子词构建
+  // v2.0: 使用意图感知种子词构建
   const intentPool = buildIntentAwareSeedPool(offer)
   return intentPool.allSeeds
 }
@@ -1022,25 +1018,25 @@ export async function expandWithoutKeywordPlanner(params: {
     }
   }
 
-  // 🔥 2026-03-13: 移除 TRENDS 关键词生成
-  // 原因：
+  // 移除 TRENDS 关键词生成
+  // 原因
   // 1. Title/About补充已覆盖产品特征词
   // 2. 行业通用词（Scoring建议）已覆盖行业标准词
   // 3. TRENDS关键词质量不可控（品类识别错误、无意义组合）
   // 4. 无搜索量数据验证（Explorer限制）
   // 5. 与其他来源重复度高
-  //
+
   // try {
   // try {
-  //   const trendsKeywords = await getTrendsKeywords(...) // google-trends module removed
-  //   const seedKeywords = Array.from(keywordMap.values())
-  //     .slice(0, 10)
-  //     .map(kw => kw.keyword)
-  //
-  //   const trends = await getTrendsKeywords(seedKeywords, offer.brand, offer.category || '')
-  //   trends.forEach(kw => addKeyword(kw.keyword, 'EXPANSION'))
+  // const trendsKeywords = await getTrendsKeywords(...) // google-trends module removed
+  // const seedKeywords = Array.from(keywordMap.values())
+  // .slice(0, 10)
+  // .map(kw => kw.keyword)
+
+  // const trends = await getTrendsKeywords(seedKeywords, offer.brand, offer.category || '')
+  // trends.forEach(kw => addKeyword(kw.keyword, 'EXPANSION'))
   // } catch (error: any) {
-  //   console.warn('   ⚠️ Google Trends扩展失败，跳过补充:', error.message)
+  // console.warn(' Google Trends扩展失败，跳过补充:', error.message)
   // }
 
   return Array.from(keywordMap.values())

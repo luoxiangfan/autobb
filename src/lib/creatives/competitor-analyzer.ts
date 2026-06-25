@@ -1,17 +1,17 @@
 /**
- * P0高级优化：竞品对比分析
+ * P0高级竞品对比分析
  *
- * 功能：
+ * 功能
  * 1. 智能识别竞品（从多个来源）
  * 2. 提取竞品数据（价格、评分、特性）
  * 3. AI分析竞争定位（价格优势、评分优势、功能对比）
  * 4. 识别独特卖点（USP）和竞品优势
  * 5. 为广告创意生成提供差异化洞察
  *
- * 预期效果：
- * - 差异化定位显著提升
- * - 转化率提升: +15-20%（明确价值主张）
- * - 广告质量分数: +20%（相关性和独特性）
+ * 预期效果
+ * 差异化定位显著提升
+ * 转化率提升: +15-20%（明确价值主张）
+ * 广告质量分数: +20%（相关性和独特性）
  */
 
 import { generateContent } from '../ai/server'
@@ -24,7 +24,7 @@ import { withCache } from '../ai/server'
 import { loadPrompt } from '../ai/server'
 import { parsePrice } from '../common/server'
 
-// ==================== 数据结构定义 ====================
+// 数据结构定义
 
 /**
  * 单个竞品的基础信息
@@ -38,7 +38,7 @@ export interface CompetitorProduct {
   rating: number | null
   reviewCount: number | null
   imageUrl: string | null
-  // 🔥 新增：商品链接（用于前端展示可点击链接）
+  // 商品链接（用于前端展示可点击链接）
   productUrl?: string | null
 
   // 竞品来源
@@ -112,7 +112,7 @@ export interface CompetitorAdvantage {
 }
 
 /**
- * 🔥 v3.2新增：竞品弱点（可转化为我们的卖点）
+ * v3.2竞品弱点（可转化为我们的卖点）
  * 从竞品的负面评论、用户抱怨中提取
  */
 export interface CompetitorWeakness {
@@ -146,7 +146,7 @@ export interface CompetitorAnalysisResult {
   // 竞品优势
   competitorAdvantages: CompetitorAdvantage[]
 
-  // 🔥 v3.2新增：竞品弱点（可转化为我们的卖点）
+  // v3.2竞品弱点（可转化为我们的卖点）
   competitorWeaknesses?: CompetitorWeakness[]
 
   // 综合竞争力评分（0-100）
@@ -156,7 +156,7 @@ export interface CompetitorAnalysisResult {
   analyzedAt: string
 }
 
-// ==================== AI驱动的竞品发现逻辑 ====================
+// AI驱动的竞品发现逻辑
 
 /**
  * 从产品名称中提取核心产品类型关键词
@@ -262,7 +262,7 @@ export async function inferCompetitorKeywords(
     category: string
     price: number | null
     targetCountry: string
-    // 🆕 增强字段：提供更多上下文帮助AI推断更准确的搜索词
+    // 增强字段：提供更多上下文帮助AI推断更准确的搜索词
     features?: string[] // 产品特性列表
     aboutThisItem?: string[] // 关于此商品
     sellingPoints?: string[] // 卖点
@@ -272,10 +272,10 @@ export async function inferCompetitorKeywords(
 ): Promise<string[]> {
   console.log(`🤖 AI推断竞品搜索关键词...`)
 
-  // 📦 从数据库加载prompt模板 (版本管理)
+  // 从数据库加载prompt模板 (版本管理)
   const promptTemplate = await loadPrompt('competitor_keyword_inference')
 
-  // 🆕 构建产品特性文本（用于AI更好地理解产品类型）
+  // 构建产品特性文本（用于AI更好地理解产品类型）
   const featuresText =
     [
       ...(productInfo.features || []),
@@ -285,7 +285,7 @@ export async function inferCompetitorKeywords(
       .slice(0, 10)
       .join('\n- ') || 'Not provided'
 
-  // 🎨 插值替换模板变量
+  // � 插值替换模板变量
   const prompt = promptTemplate
     .replace('{{productInfo.name}}', productInfo.name)
     .replace('{{productInfo.brand}}', productInfo.brand || 'Unknown')
@@ -304,7 +304,7 @@ export async function inferCompetitorKeywords(
         operationType: 'competitor_summary',
         prompt,
         temperature: 0.3, // 低温度保证稳定输出
-        maxOutputTokens: 8192, // ✅ 修复：增加到8192，确保复杂产品的JSON输出完整
+        maxOutputTokens: 8192, // 增加到8192，确保复杂产品的JSON输出完整
       },
       userId
     )
@@ -339,7 +339,7 @@ export async function inferCompetitorKeywords(
       console.warn('⚠️ AI返回格式错误，使用智能降级方案')
       console.warn(`   AI原始返回: ${aiResponse.text.substring(0, 200)}...`)
 
-      // ✅ 改进降级方案：结合产品名称和品类生成搜索词
+      // 改进降级方案：结合产品名称和品类生成搜索词
       const fallbackTerms = []
 
       // 1. 如果有产品名称（不是Unknown），使用产品名称的核心词
@@ -374,7 +374,7 @@ export async function inferCompetitorKeywords(
     const result = JSON.parse(jsonMatch[0])
     let searchTerms = result.searchTerms || []
 
-    // ✅ 修复: 确保searchTerms是字符串数组，处理AI返回对象的情况
+    // 确保searchTerms是字符串数组，处理AI返回对象的情况
     if (!Array.isArray(searchTerms)) {
       console.warn(`⚠️ AI返回的searchTerms不是数组，尝试修复...`)
       searchTerms = []
@@ -398,7 +398,7 @@ export async function inferCompetitorKeywords(
 
     console.log(`🔍 AI返回了${searchTerms.length}个搜索词，类型检查通过`)
 
-    // 🔍 品类验证：提取产品名称中的核心类型关键词
+    // 品类验证：提取产品名称中的核心类型关键词
     const productNameLower = productInfo.name.toLowerCase()
     const coreTypeKeywords = extractCoreProductType(productNameLower)
 
@@ -432,11 +432,11 @@ export async function inferCompetitorKeywords(
 }
 
 /**
- * 🔥 优化：从长搜索词中提取简短版本
+ * 从长搜索词中提取简短版本
  * "Hikvision telecamera di sorveglianza bullet" → ["Hikvision", "Hikvision camera"]
  */
 function generateSearchVariants(term: string): string[] {
-  // ✅ 修复: 确保term是字符串
+  // 确保term是字符串
   if (typeof term !== 'string' || !term) {
     console.warn(`⚠️ generateSearchVariants收到非字符串参数: ${typeof term}`)
     return []
@@ -488,7 +488,7 @@ function generateSearchVariants(term: string): string[] {
 }
 
 /**
- * 🔥 优化：执行单次Amazon搜索，提取结果
+ * 执行单次Amazon搜索，提取结果
  *
  * @param page Playwright页面对象
  * @param searchTerm 搜索关键词
@@ -516,7 +516,7 @@ async function executeAmazonSearch(
         await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
       }
 
-      // 🔥 修复：使用动态超时，国际站点需要更长时间
+      // 使用动态超时，国际站点需要更长时间
       // Amazon搜索页面复杂度较高，统一使用60秒超时
       await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 })
 
@@ -574,7 +574,7 @@ async function executeAmazonSearch(
           let asin = el.getAttribute('data-asin')
           if (!asin) continue
 
-          // 🔧 修复: 清理ASIN中的deal标识符后缀 (如 :amzn1.deal.xxx)
+          // 清理ASIN中的deal标识符后缀 (如 :amzn1.deal.xxx)
           // Amazon搜索结果的data-asin有时包含deal参数，需要移除
           if (asin.includes(':')) {
             asin = asin.split(':')[0]
@@ -637,7 +637,7 @@ async function executeAmazonSearch(
 /**
  * 在Amazon上搜索验证竞品
  *
- * 🔥 优化：智能搜索策略
+ * 智能搜索策略
  * 1. 先尝试完整搜索词
  * 2. 如果无结果，自动降级到简短搜索词（仅品牌名或品牌+通用类型）
  * 3. 记录搜索效果，用于后续优化
@@ -666,7 +666,7 @@ export async function searchCompetitorsOnAmazon(
     console.log(`   搜索: "${term}"`)
 
     try {
-      // 🔥 生成搜索变体（原始词 + 简短版本）
+      // 生成搜索变体（原始词 + 简短版本）
       const variants = generateSearchVariants(term)
       let foundResults = false
 
@@ -734,12 +734,12 @@ function getAmazonDomain(countryCode: string): string {
   return domainMap[countryCode] || 'amazon.com'
 }
 
-// ==================== 竞品抓取逻辑（保留作为补充数据源）====================
+// 竞品抓取逻辑（保留作为补充数据源）
 
 /**
  * 从Playwright页面对象中抓取Amazon竞品信息
  *
- * 策略：
+ * 策略
  * 1. 优先从"Compare with similar items"区域抓取（最相关）
  * 2. 如果没有，从"Customers also viewed"抓取
  * 3. 如果还是没有，从"Similar items"抓取
@@ -757,7 +757,7 @@ export async function scrapeAmazonCompetitors(
   const competitors: CompetitorProduct[] = []
 
   try {
-    // 🔥 2025-12-13 KISS优化：快速检测竞品区域是否存在
+    // 快速检测竞品区域是否存在
     const debugContainers = await page
       .evaluate(() => {
         return {
@@ -993,7 +993,7 @@ async function scrapeRelatedToItemsYouViewed(
 
             if (!name) name = 'Unknown'
 
-            // 🔧 修复：精确提取价格，排除CSS样式代码
+            // 精确提取价格，排除CSS样式代码
             const priceEl = el.querySelector('.a-price .a-offscreen')
             let priceText = priceEl?.textContent?.trim() || null
 
@@ -1082,7 +1082,7 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
             const nameEl = el.querySelector('.a-truncate-full, .p13n-sc-truncated')
             const name = nameEl?.textContent?.trim() || 'Unknown'
 
-            // 🔧 修复：精确提取价格，排除CSS样式代码
+            // 精确提取价格，排除CSS样式代码
             const priceEl = el.querySelector('.a-price .a-offscreen')
             let priceText = priceEl?.textContent?.trim() || null
 
@@ -1144,9 +1144,9 @@ async function scrapeAlsoViewed(page: any, limit: number): Promise<CompetitorPro
 /**
  * 从"Similar items"/"Products related to this item"区域抓取竞品
  *
- * 🔥 2025-12-10修复：支持Amazon赞助商品(Sponsored Products)的新DOM结构
- * - 旧结构: a[href*="/dp/"] 直接链接
- * - 新结构: id="sp_detail_B0DZ321NP2" 或 /sspa/click?...url=%2Fdp%2F... URL编码链接
+ * 支持Amazon赞助商品(Sponsored Products)的新DOM结构
+ * 旧结构: a[href*="/dp/"] 直接链接
+ * 新结构: id="sp_detail_B0DZ321NP2" 或 /sspa/click?...url=%2Fdp%2F... URL编码链接
  */
 async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorProduct[]> {
   try {
@@ -1162,7 +1162,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
         return isNaN(num) ? null : num
       }
 
-      // 🔥 新增：从多种来源提取ASIN
+      // 从多种来源提取ASIN
       function extractAsin(el: Element): string | null {
         // 方法1: 从 id="sp_detail_B0DZ321NP2" 格式提取 (赞助商品)
         const spDetailDiv = el.querySelector('[id^="sp_detail_"]')
@@ -1212,7 +1212,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
         return null
       }
 
-      // 🔥 新增：从赞助商品提取商品名称
+      // 从赞助商品提取商品名称
       function extractName(el: Element): string {
         // 尝试从 data-adfeedbackdetails 提取标题
         const feedbackEl = el.querySelector('[data-adfeedbackdetails]')
@@ -1248,7 +1248,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
 
       // "Similar items" / "Products related to this item" 区域选择器
       const selectors = [
-        '#sp_detail .a-carousel-card', // 🔥 赞助商品优先
+        '#sp_detail .a-carousel-card', // 赞助商品优先
         '[data-a-carousel-options*="sims"] .a-carousel-card', // 赞助商品变体
         '[cel_widget_id*="sims"] .a-carousel-card', // 赞助商品变体
         '[data-a-carousel-options*="similar"] .a-carousel-card', // 传统similar
@@ -1266,7 +1266,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
             const asin = extractAsin(el)
             const name = extractName(el)
 
-            // 🔧 修复：精确提取价格，排除CSS样式代码
+            // 精确提取价格，排除CSS样式代码
             const priceEl = el.querySelector('.a-price .a-offscreen')
             let priceText = priceEl?.textContent?.trim() || null
 
@@ -1296,7 +1296,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
             const imageEl = el.querySelector('img')
             const imageUrl = imageEl?.src || imageEl?.getAttribute('data-src') || null
 
-            // 🔥 改进：即使name是Unknown，只要有ASIN也保留
+            // 改进：即使name是Unknown，只要有ASIN也保留
             if (asin || name !== 'Unknown') {
               items.push({
                 asin,
@@ -1343,7 +1343,7 @@ function deduplicateCompetitors(competitors: CompetitorProduct[]): CompetitorPro
   return unique
 }
 
-// ==================== AI竞品分析逻辑 ====================
+// AI竞品分析逻辑
 
 /**
  * 使用AI分析竞品对比，识别竞争优势和劣势
@@ -1358,12 +1358,12 @@ function deduplicateCompetitors(competitors: CompetitorProduct[]): CompetitorPro
 export async function analyzeCompetitorsWithAI(
   ourProduct: {
     name: string
-    brand?: string | null // 🆕 品牌名
+    brand?: string | null // 品牌名
     price: number | null
     rating: number | null
     reviewCount: number | null
     features: string[]
-    sellingPoints?: string // 🆕 卖点描述
+    sellingPoints?: string // 卖点描述
   },
   competitors: CompetitorProduct[],
   _targetCountry: string = 'US',
@@ -1390,7 +1390,7 @@ export async function analyzeCompetitorsWithAI(
   let compressionStats: any = null
 
   if (options?.enableCompression) {
-    // 🆕 Token优化:使用压缩格式(40-50%减少)
+    // Token使用压缩格式(40-50%减少)
     console.log('🗜️ 启用竞品数据压缩优化...')
     const compressorInput: CompressorCompetitorInfo[] = competitors.slice(0, 10).map((c) => ({
       name: c.name,
@@ -1425,10 +1425,10 @@ export async function analyzeCompetitorsWithAI(
       .join('\n\n')
   }
 
-  // 📦 从数据库加载prompt模板(版本管理)
+  // 从数据库加载prompt模板(版本管理)
   const promptTemplate = await loadPrompt('competitor_analysis')
 
-  // 🎨 准备模板变量（匹配 prompt 模板中的变量名）
+  // � 准备模板变量（匹配 prompt 模板中的变量名）
   const productName = ourProduct.name
   const brand = ourProduct.brand || 'Unknown'
   const price = ourProduct.price ? `$${ourProduct.price.toFixed(2)}` : 'N/A'
@@ -1437,7 +1437,7 @@ export async function analyzeCompetitorsWithAI(
   const features = ourProduct.features.slice(0, 10).join('; ') || 'Not specified'
   const sellingPoints = ourProduct.sellingPoints || 'Not specified'
 
-  // 🎨 插值替换模板变量（✅ 修复：变量名与 prompt 模板一致）
+  // � 插值替换模板变量（ 变量名与 prompt 模板一致）
   const prompt = promptTemplate
     .replace('{{productName}}', productName)
     .replace('{{brand}}', brand)
@@ -1454,7 +1454,7 @@ export async function analyzeCompetitorsWithAI(
       throw new Error('竞品分析需要用户ID,请确保已登录')
     }
 
-    // 🆕 Token优化：支持缓存（3天TTL）
+    // Token支持缓存（3天TTL）
     const cacheKey = options?.cacheKey || `${ourProduct.name}:${competitors.length}competitors`
     const performAnalysis = async () => {
       // 智能模型选择：竞品分析使用Pro模型（复杂分析任务）
@@ -1515,7 +1515,7 @@ export async function analyzeCompetitorsWithAI(
       featureComparison: analysisData.featureComparison || [],
       uniqueSellingPoints: analysisData.uniqueSellingPoints || [],
       competitorAdvantages: analysisData.competitorAdvantages || [],
-      // 🔥 v3.2新增：竞品弱点
+      // v3.2竞品弱点
       competitorWeaknesses: analysisData.competitorWeaknesses || [],
       overallCompetitiveness: analysisData.overallCompetitiveness || 50,
       analyzedAt: new Date().toISOString(),
@@ -1524,7 +1524,7 @@ export async function analyzeCompetitorsWithAI(
     console.log('✅ AI竞品分析完成')
     console.log(`   - 识别${result.uniqueSellingPoints.length}个独特卖点`)
     console.log(`   - 发现${result.competitorAdvantages.length}个竞品优势需应对`)
-    // 🔥 v3.2新增
+    // v3.2新增
     console.log(`   - 挖掘${result.competitorWeaknesses?.length || 0}个竞品弱点可利用`)
     console.log(`   - 综合竞争力: ${result.overallCompetitiveness}/100`)
 
@@ -1655,4 +1655,4 @@ function getEmptyCompetitorAnalysis(): CompetitorAnalysisResult {
   }
 }
 
-// ==================== 辅助函数 ====================
+// 辅助函数

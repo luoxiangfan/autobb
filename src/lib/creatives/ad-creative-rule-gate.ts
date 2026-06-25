@@ -469,7 +469,7 @@ function evaluateConversion(
   if (requireTrust && !hasTrust) reasons.push('missing trust/proof signal')
   if (requireValue && !hasValue) reasons.push('missing value/benefit signal')
 
-  // 分桶情绪规则（KISS）：
+  // 分桶情绪规则（KISS）
   // A/D：避免强负面情绪；B：允许轻痛点，但限制强负面并要求至少1条痛点表达。
   const allAssetText = [
     ...(creative.headlines || []),

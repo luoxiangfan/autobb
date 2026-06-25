@@ -9,7 +9,7 @@ import { createDateInTimezone, getDateInTimezone, getHourInTimezone } from '../c
  * 生成子任务
  * 将每小时的点击数分散到随机的秒级时间点
  *
- * ⚠️ 时区处理：targetHour 相对于 task.timezone（目标时区）的小时
+ * 时区处理：targetHour 相对于 task.timezone（目标时区）的小时
  * 必须使用 createDateInTimezone 确保时间在正确的时区中构造
  *
  * @param task - 点击任务
@@ -36,9 +36,9 @@ export function generateSubTasks(
     // 随机秒（0-59），避免整点整分整秒
     const second = Math.floor(Math.random() * 60)
 
-    // 🔧 修复：使用 createDateInTimezone 在目标时区中构造时间
+    // 使用 createDateInTimezone 在目标时区中构造时间
     // 这样确保 targetHour 相对于 task.timezone
-    // 🆕 使用随机秒数，避免整点整分整秒的触发时间
+    // 使用随机秒数，避免整点整分整秒的触发时间
     const scheduledAt = createDateInTimezone(
       todayInTimezone,
       `${targetHour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
@@ -63,18 +63,18 @@ export function generateSubTasks(
 /**
  * 检查当前时间是否在任务的执行时间范围内
  *
- * ⚠️ 时区处理：start_time 和 end_time 都是相对于 task.timezone（目标时区）的本地时间
+ * 时区处理：start_time 和 end_time 都是相对于 task.timezone（目标时区）的本地时间
  * 例如：task.timezone = "Asia/Shanghai"，start_time = "06:00"，end_time = "18:00"
  * 表示只在上海时间的 06:00 到 18:00 之间执行
  *
- * ⚠️ 支持跨越午夜的时间范围：
+ * 支持跨越午夜的时间范围
  * start_time = "22:00", end_time = "06:00" 表示从晚上22:00执行到早上06:00
  *
  * @param task - 点击任务
  * @returns 当前时间是否在 [start_time, end_time] 范围内
  */
 export function isWithinExecutionTimeRange(task: ClickFarmTask): boolean {
-  // 🔧 修复：防御性检查，确保 task 字段有有效值
+  // 防御性检查，确保 task 字段有有效值
   if (!task) return false
 
   // 获取任务时区的当前小时和分钟
@@ -91,14 +91,14 @@ export function isWithinExecutionTimeRange(task: ClickFarmTask): boolean {
   const currentMinute = parseInt(minuteStr)
 
   // 解析 start_time (格式: "HH:mm")
-  // 🔧 修复：防御性检查 start_time 是否为有效字符串
+  // 防御性检查 start_time 是否为有效字符串
   const startTime = task.start_time || '06:00'
   const [startHourStr, startMinuteStr] = startTime.split(':')
   const startHour = parseInt(startHourStr)
   const startMinute = parseInt(startMinuteStr)
 
   // 解析 end_time (格式: "HH:mm" 或 "24:00")
-  // 🔧 修复：防御性检查 end_time 是否为有效字符串
+  // 防御性检查 end_time 是否为有效字符串
   const endTime = task.end_time || '24:00'
   const [endHourStr, endMinuteStr] = endTime.split(':')
   let endHour = parseInt(endHourStr)
@@ -115,7 +115,7 @@ export function isWithinExecutionTimeRange(task: ClickFarmTask): boolean {
   const startMinutes = startHour * 60 + startMinute
   const endMinutes = endHour * 60 + endMinute
 
-  // 🔧 修复：支持跨越午夜的时间范围
+  // 支持跨越午夜的时间范围
   if (startMinutes <= endMinutes) {
     // 正常范围（不跨越午夜）：[start_time, end_time]
     // 例如：[06:00, 18:00] 表示6点到18点
@@ -131,7 +131,7 @@ export function isWithinExecutionTimeRange(task: ClickFarmTask): boolean {
 /**
  * 计算任务进度
  *
- * ⚠️ 时区处理：应该按照任务时区计算"完整日期数"，而不是按UTC秒数
+ * 时区处理：应该按照任务时区计算"完整日期数"，而不是按UTC秒数
  * 与 shouldCompleteTask 使用相同的时区感知逻辑
  *
  * @param task - 点击任务
@@ -149,7 +149,7 @@ export function calculateProgress(task: ClickFarmTask): number {
     return 0
   }
 
-  // 🔧 修复：按任务时区计算"完整日期数"
+  // 按任务时区计算"完整日期数"
   // 转换 started_at 为任务时区的本地日期
   const startedAtInTimezone = getDateInTimezone(new Date(task.started_at), task.timezone)
   // 转换 当前时间 为任务时区的本地日期
@@ -174,15 +174,15 @@ export function calculateProgress(task: ClickFarmTask): number {
 /**
  * 检查任务是否应该完成
  *
- * ⚠️ 时区处理：duration_days 应该按照任务时区计算"完整日期数"，而不是按UTC秒数计算
- * 例如：
- * - task.timezone = "Asia/Shanghai"
- * - started_at = UTC 2024-12-29 22:00:00（对应上海 2024-12-30 06:00:00）
- * - 当前时间 = UTC 2025-01-01 15:00:00（对应上海 2025-01-02 23:00:00）
- * - duration_days = 3
+ * 时区处理：duration_days 应该按照任务时区计算"完整日期数"，而不是按UTC秒数计算
+ * 例如
+ * task.timezone = "Asia/Shanghai"
+ * started_at = UTC 2024-12-29 22:00:00
+ * 当前时间 = UTC 2025-01-01 15:00:00
+ * duration_days = 3
  *
- * ❌ 错误做法：按UTC秒数计算，会得到 2.708...天，floor后是2天，不完成
- * ✅ 正确做法：按上海时区的日期计算，从 2024-12-30 到 2025-01-02 是3个完整日期，应该完成
+ * 错误做法：按UTC秒数计算，会得到 2.708...天，floor后是2天，不完成
+ * 正确做法：按上海时区的日期计算，从 到 是3个完整日期，应该完成
  *
  * @param task - 点击任务
  * @returns 是否应该完成
@@ -197,7 +197,7 @@ export function shouldCompleteTask(task: ClickFarmTask): boolean {
     return false
   }
 
-  // 🔧 修复：使用 UTC 时间戳计算经过的天数，避免时区边界问题
+  // 使用 UTC 时间戳计算经过的天数，避免时区边界问题
   // 例如：如果 started_at 是 2025-12-31 23:00:00 UTC，duration_days = 1
   // 应该等到 2026-01-01 23:00:00 UTC 才算完成，而不是 2026-01-01 00:00:01 UTC
   const startedAtUTC = new Date(task.started_at).getTime()
@@ -209,7 +209,7 @@ export function shouldCompleteTask(task: ClickFarmTask): boolean {
 
   const shouldComplete = elapsedDays >= task.duration_days
 
-  // 🔧 添加调试日志
+  // 添加调试日志
   if (process.env.NODE_ENV === 'development' || process.env.DEBUG_CLICK_FARM === 'true') {
     console.log('[shouldCompleteTask] 调试信息:', {
       taskId: task.id,
@@ -229,11 +229,11 @@ export function shouldCompleteTask(task: ClickFarmTask): boolean {
 /**
  * 生成下次执行时间
  *
- * ⚠️ 注意：此函数返回的是 Date 对象，其内部存储的是 UTC 时间戳
+ * 注意：此函数返回的是 Date 对象，其内部存储的是 UTC 时间戳
  * 在 updateTaskStatus 中会通过 toISOString() 转换为 ISO 8601 格式（UTC）存储到数据库
  * 数据库查询时使用 next_run_at <= NOW() 进行比较（NOW()返回UTC）
  *
- * 🔧 修复(2025-12-31): 所有"下一个整点"的计算必须基于任务时区，而不是服务器本地时间
+ * 所有"下一个整点"的计算必须基于任务时区，而不是服务器本地时间
  *
  * @param timezone - 时区
  * @param task - 可选，任务对象（用于计算首次执行时间）
@@ -242,7 +242,7 @@ export function shouldCompleteTask(task: ClickFarmTask): boolean {
 export function generateNextRunAt(timezone: string, task?: ClickFarmTask): Date {
   const now = new Date()
 
-  // 🔧 修复(2025-12-31): 防御性检查，确保 task 是有效对象
+  // 防御性检查，确保 task 是有效对象
   if (!task || typeof task !== 'object') {
     console.warn('[generateNextRunAt] 无效的任务对象，返回任务时区的下一个整点')
     return getNextHourInTimezone(now, timezone)
@@ -250,12 +250,12 @@ export function generateNextRunAt(timezone: string, task?: ClickFarmTask): Date 
 
   // 如果提供了任务对象且任务未开始，计算首次执行时间
   if (task.scheduled_start_date && !task.started_at) {
-    // 🔧 修复(2025-12-31): 确保 scheduled_start_date 是 "YYYY-MM-DD" 格式的字符串
+    // 确保 scheduled_start_date 是 "YYYY-MM-DD" 格式的字符串
     // PostgreSQL date 类型返回 Date 对象，需要转换
     let scheduledStartDateStr: string
     const dateValue = task.scheduled_start_date as any
     if (typeof dateValue === 'string') {
-      // 如果已经是字符串，提取日期部分（处理 "2025-12-31T00:00:00.000Z" 格式）
+      // 如果已经是字符串，提取日期部分
       scheduledStartDateStr = dateValue.split('T')[0]
     } else if (dateValue instanceof Date) {
       // 如果是 Date 对象，转换为 YYYY-MM-DD 格式
@@ -292,7 +292,7 @@ export function generateNextRunAt(timezone: string, task?: ClickFarmTask): Date 
       // 使用第一个活跃小时和start_time中较大的那个
       const targetHour = Math.max(firstActiveHour, startHour)
 
-      // 🔧 修复(2025-12-31): 使用字符串格式的日期传递给 createDateInTimezone
+      // 使用字符串格式的日期传递给 createDateInTimezone
       const firstRunAt = createDateInTimezone(scheduledStartDateStr, `${targetHour}:00`, timezone)
 
       // 如果计算出的时间是过去，返回任务时区的下一个整点
@@ -305,12 +305,12 @@ export function generateNextRunAt(timezone: string, task?: ClickFarmTask): Date 
   }
 
   // 默认逻辑：返回任务时区中下一个有配额的小时
-  // 🔧 优化：直接跳到下一个有配额且在执行范围内的小时，避免逐小时跳过
+  // 直接跳到下一个有配额且在执行范围内的小时，避免逐小时跳过
   return getNextHourWithQuota(now, task)
 }
 
 /**
- * 🆕 获取指定时区的下一个整点时间
+ * 获取指定时区的下一个整点时间
  *
  * @param now - 当前时间
  * @param timezone - 目标时区
@@ -345,14 +345,14 @@ function getNextHourInTimezone(now: Date, timezone: string): Date {
 }
 
 /**
- * 🆕 获取任务时区中下一个有配额的小时
+ * 获取任务时区中下一个有配额的小时
  * 用于优化 next_run_at，避免逐小时跳过
  *
  * @param now - 当前时间
  * @param task - 任务对象
  * @returns 下一个有配额小时的执行时间（UTC）
  *
- * 🔧 修复(2026-01-05): 添加调试日志追踪调度决策
+ * 添加调试日志追踪调度决策
  */
 function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
   const currentHour = getHourInTimezone(now, task.timezone)
@@ -384,7 +384,7 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
 
     const hasQuota = hourlyDistribution[checkHour] > 0
 
-    // 🔧 记录每次检查
+    // 记录每次检查
     if (process.env.DEBUG_CLICK_FARM === 'true') {
       console.log(
         `[getNextHourWithQuota] 检查: hour=${checkHour}, date=${checkDate}, inRange=${isInTimeRange}, quota=${hourlyDistribution[checkHour]}`
@@ -392,7 +392,7 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
     }
 
     if (isInTimeRange && hasQuota) {
-      // 🔧 找到目标小时，记录日志
+      // 找到目标小时，记录日志
       console.log(
         `[getNextHourWithQuota] ✅ 找到目标小时: taskId=${task.id}, currentHour=${currentHour}, targetHour=${checkHour}, targetDate=${checkDate}, quota=${hourlyDistribution[checkHour]}`
       )
@@ -435,7 +435,7 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
 }
 
 /**
- * 🆕 日期字符串 +1 天
+ * 日期字符串 +1 天
  */
 function incrementDate(dateStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number)

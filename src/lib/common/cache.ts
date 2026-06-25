@@ -1,12 +1,12 @@
 /**
  * 内存缓存工具
  *
- * 功能：
- * - 为AI创意生成、Google Ads API等提供缓存
- * - 支持TTL（过期时间）
- * - 支持缓存键生成
- * - 自动清理过期缓存
- * - 支持缓存统计
+ * 功能
+ * 为AI创意生成、Google Ads API等提供缓存
+ * 支持TTL（过期时间）
+ * 支持缓存键生成
+ * 自动清理过期缓存
+ * 支持缓存统计
  */
 
 export interface CacheEntry<T> {
@@ -121,7 +121,7 @@ class MemoryCache<T = any> {
     this.misses = 0
   }
 
-  /** 删除 key 以 prefix 开头的条目（用于按用户粒度失效 Google Ads API 缓存） */
+  /* * 删除 key 以 prefix 开头的条目（用于按用户粒度失效 Google Ads API 缓存） */
   deleteByPrefix(prefix: string): number {
     let removed = 0
     for (const key of this.cache.keys()) {
@@ -252,7 +252,7 @@ export function generateGadsApiCacheKey(
   return `gads_${parts.join('_')}`
 }
 
-// ========== 全局缓存实例 ==========
+// 全局缓存实例
 
 /**
  * AI创意生成缓存（1小时TTL，最多500个条目）
@@ -264,7 +264,7 @@ export const creativeCache = new MemoryCache(3600000, 500)
  */
 export const gadsApiCache = new MemoryCache(1800000, 1000)
 
-/** 按用户失效 Google Ads API 内存缓存（settings 保存凭证后调用） */
+/* * 按用户失效 Google Ads API 内存缓存（settings 保存凭证后调用） */
 export function invalidateGadsApiCacheForUser(userId: number): void {
   const removed = gadsApiCache.deleteByPrefix(`gads_user_${userId}_`)
   if (removed > 0) {

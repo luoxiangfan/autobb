@@ -17,7 +17,7 @@ type AdCreativeGenerationModeFieldProps = {
   disabled?: boolean
   className?: string
   descriptionClassName?: string
-  /** stacked: label + select + description; inline: compact row with tooltip for description */
+  /* * stacked: label + select + description; inline: compact row with tooltip for description */
   layout?: 'stacked' | 'inline'
 }
 

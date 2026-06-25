@@ -7,9 +7,7 @@
  * 表数量: 41 (added brand_core_keywords, brand_core_keyword_daily)
  */
 
-// ============================================================================
 // 类型定义
-// ============================================================================
 
 export interface ColumnDef {
   name: string
@@ -30,7 +28,7 @@ export interface IndexDef {
   name: string
   columns: string[]
   unique?: boolean
-  /** Partial index 谓词（PostgreSQL） */
+  /* * Partial index 谓词（PostgreSQL） */
   where?: string
 }
 
@@ -41,14 +39,11 @@ export interface TableDef {
   uniqueConstraints?: string[][]
 }
 
-// ============================================================================
 // 表定义
-// ============================================================================
 
 export const TABLES: TableDef[] = [
-  // -------------------------------------------------------------------------
   // 1. users - 用户信息
-  // -------------------------------------------------------------------------
+
   {
     name: 'users',
     columns: [
@@ -77,9 +72,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 2. google_ads_accounts - Google Ads 账户关联
-  // -------------------------------------------------------------------------
+
   {
     name: 'google_ads_accounts',
     columns: [
@@ -115,9 +109,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['user_id', 'customer_id']],
   },
 
-  // -------------------------------------------------------------------------
   // 3. offers - Offer 产品信息
-  // -------------------------------------------------------------------------
+
   {
     name: 'offers',
     columns: [
@@ -197,9 +190,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 4. ad_creatives - AI 生成的广告创意
-  // -------------------------------------------------------------------------
+
   {
     name: 'ad_creatives',
     columns: [
@@ -250,9 +242,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 5. campaigns - 广告系列
-  // -------------------------------------------------------------------------
+
   {
     name: 'campaigns',
     columns: [
@@ -269,7 +260,7 @@ export const TABLES: TableDef[] = [
         notNull: true,
         references: { table: 'offers', column: 'id', onDelete: 'CASCADE' },
       },
-      // 🔧 修复(2025-12-25): google_ads_account_id 改为可空
+      // google_ads_account_id 改为可空
       // 删除Ads账号时，Campaign应保留（历史数据），只将account_id设为NULL
       {
         name: 'google_ads_account_id',
@@ -331,9 +322,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 6. ad_groups - 广告组
-  // -------------------------------------------------------------------------
+
   {
     name: 'ad_groups',
     columns: [
@@ -366,9 +356,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 7. keywords - 关键词
-  // -------------------------------------------------------------------------
+
   {
     name: 'keywords',
     columns: [
@@ -408,14 +397,13 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 8. global_keywords - 全局关键词库
-  // -------------------------------------------------------------------------
+
   {
     name: 'global_keywords',
     columns: [
       { name: 'id', type: 'INTEGER', primaryKey: true, autoIncrement: true },
-      { name: 'keyword', type: 'TEXT', notNull: true }, // 🔧 修复(2025-12-22): 从 keyword_text 改为 keyword (migration 075)
+      { name: 'keyword', type: 'TEXT', notNull: true }, // 从 keyword_text 改为 keyword (migration 075)
       { name: 'country', type: 'TEXT', notNull: true, default: 'US' },
       { name: 'language', type: 'TEXT', notNull: true, default: 'en' },
       { name: 'search_volume', type: 'INTEGER', default: 0 },
@@ -434,9 +422,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 9. launch_scores - Launch Score 评分
-  // -------------------------------------------------------------------------
+
   {
     name: 'launch_scores',
     columns: [
@@ -469,9 +456,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 10. weekly_recommendations - 每周优化建议
-  // -------------------------------------------------------------------------
+
   {
     name: 'weekly_recommendations',
     columns: [
@@ -482,7 +468,7 @@ export const TABLES: TableDef[] = [
         notNull: true,
         references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
       },
-      // 🔧 修复(2025-12-25): 删除Ads账号时保留历史数据，设为NULL
+      // 删除Ads账号时保留历史数据，设为NULL
       {
         name: 'google_ads_account_id',
         type: 'INTEGER',
@@ -498,9 +484,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 11. optimization_recommendations - 优化建议
-  // -------------------------------------------------------------------------
+
   {
     name: 'optimization_recommendations',
     columns: [
@@ -511,7 +496,7 @@ export const TABLES: TableDef[] = [
         notNull: true,
         references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
       },
-      // 🔧 修复(2025-12-25): 删除Ads账号时保留历史数据，设为NULL
+      // 删除Ads账号时保留历史数据，设为NULL
       {
         name: 'google_ads_account_id',
         type: 'INTEGER',
@@ -528,9 +513,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 12. optimization_tasks - 优化任务
-  // -------------------------------------------------------------------------
+
   {
     name: 'optimization_tasks',
     columns: [
@@ -553,9 +537,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 13. campaign_performance - 广告系列性能数据
-  // -------------------------------------------------------------------------
+
   {
     name: 'campaign_performance',
     columns: [
@@ -590,9 +573,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['campaign_id', 'date']],
   },
 
-  // -------------------------------------------------------------------------
   // 14. search_term_reports - 搜索词报告
-  // -------------------------------------------------------------------------
+
   {
     name: 'search_term_reports',
     columns: [
@@ -637,9 +619,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 15. brand_core_keywords - 品牌全局核心关键词池（跨用户共享）
-  // -------------------------------------------------------------------------
+
   {
     name: 'brand_core_keywords',
     columns: [
@@ -668,9 +649,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['brand_key', 'target_country', 'target_language', 'keyword_norm']],
   },
 
-  // -------------------------------------------------------------------------
   // 16. brand_core_keyword_daily - 核心关键词每日汇总（滚动窗口）
-  // -------------------------------------------------------------------------
+
   {
     name: 'brand_core_keyword_daily',
     columns: [
@@ -688,9 +668,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['brand_key', 'target_country', 'target_language', 'keyword_norm', 'date']],
   },
 
-  // -------------------------------------------------------------------------
   // 17. rate_limits - API 速率限制记录
-  // -------------------------------------------------------------------------
+
   {
     name: 'rate_limits',
     columns: [
@@ -710,9 +689,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 17. system_settings - 系统配置
-  // -------------------------------------------------------------------------
+
   {
     name: 'system_settings',
     columns: [
@@ -739,9 +717,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 18. cpc_adjustment_history - CPC 调整历史
-  // -------------------------------------------------------------------------
+
   {
     name: 'cpc_adjustment_history',
     columns: [
@@ -770,9 +747,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 19. risk_alerts - 风险预警
-  // -------------------------------------------------------------------------
+
   {
     name: 'risk_alerts',
     columns: [
@@ -810,9 +786,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 20. link_check_history - 链接检查历史
-  // -------------------------------------------------------------------------
+
   {
     name: 'link_check_history',
     columns: [
@@ -843,9 +818,8 @@ export const TABLES: TableDef[] = [
     indexes: [{ name: 'idx_link_check_offer', columns: ['offer_id'] }],
   },
 
-  // -------------------------------------------------------------------------
   // 21. creative_versions - 创意版本历史
-  // -------------------------------------------------------------------------
+
   {
     name: 'creative_versions',
     columns: [
@@ -880,9 +854,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 22. sync_logs - 数据同步日志
-  // -------------------------------------------------------------------------
+
   {
     name: 'sync_logs',
     columns: [
@@ -893,7 +866,7 @@ export const TABLES: TableDef[] = [
         notNull: true,
         references: { table: 'users', column: 'id', onDelete: 'CASCADE' },
       },
-      // 🔧 修复(2025-12-25): 删除Ads账号时保留历史数据，设为NULL
+      // 删除Ads账号时保留历史数据，设为NULL
       {
         name: 'google_ads_account_id',
         type: 'INTEGER',
@@ -911,9 +884,8 @@ export const TABLES: TableDef[] = [
     indexes: [{ name: 'idx_sync_logs_user', columns: ['user_id', 'started_at'] }],
   },
 
-  // -------------------------------------------------------------------------
   // 23. creative_learning_patterns - 创意学习模式
-  // -------------------------------------------------------------------------
+
   {
     name: 'creative_learning_patterns',
     columns: [
@@ -936,9 +908,8 @@ export const TABLES: TableDef[] = [
     indexes: [{ name: 'idx_creative_learning_user_id', columns: ['user_id'] }],
   },
 
-  // -------------------------------------------------------------------------
   // 24. scraped_products - 抓取的产品数据
-  // -------------------------------------------------------------------------
+
   {
     name: 'scraped_products',
     columns: [
@@ -968,9 +939,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 25. backup_logs - 备份日志
-  // -------------------------------------------------------------------------
+
   {
     name: 'backup_logs',
     columns: [
@@ -994,9 +964,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 26. ab_tests - A/B 测试
-  // -------------------------------------------------------------------------
+
   {
     name: 'ab_tests',
     columns: [
@@ -1066,9 +1035,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 27. ab_test_variants - A/B 测试变体
-  // -------------------------------------------------------------------------
+
   {
     name: 'ab_test_variants',
     columns: [
@@ -1116,9 +1084,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['ab_test_id', 'variant_name']],
   },
 
-  // -------------------------------------------------------------------------
   // 28. google_ads_credentials - Google Ads 凭证
-  // -------------------------------------------------------------------------
+
   {
     name: 'google_ads_credentials',
     columns: [
@@ -1144,9 +1111,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 29. google_ads_api_usage - Google Ads API 使用统计
-  // -------------------------------------------------------------------------
+
   {
     name: 'google_ads_api_usage',
     columns: [
@@ -1174,9 +1140,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 30. ad_strength_history - Ad Strength 历史
-  // -------------------------------------------------------------------------
+
   {
     name: 'ad_strength_history',
     columns: [
@@ -1242,9 +1207,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 31. industry_benchmarks - 行业基准数据
-  // -------------------------------------------------------------------------
+
   {
     name: 'industry_benchmarks',
     columns: [
@@ -1265,9 +1229,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 32. ad_creative_performance - 广告创意效果数据
-  // -------------------------------------------------------------------------
+
   {
     name: 'ad_creative_performance',
     columns: [
@@ -1310,9 +1273,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['ad_creative_id', 'sync_date']],
   },
 
-  // -------------------------------------------------------------------------
   // 33. conversion_feedback - 用户转化反馈
-  // -------------------------------------------------------------------------
+
   {
     name: 'conversion_feedback',
     columns: [
@@ -1337,9 +1299,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 34. score_analysis_history - 评分分析历史
-  // -------------------------------------------------------------------------
+
   {
     name: 'score_analysis_history',
     columns: [
@@ -1363,9 +1324,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 35. ai_token_usage - AI Token 使用统计
-  // -------------------------------------------------------------------------
+
   {
     name: 'ai_token_usage',
     columns: [
@@ -1394,9 +1354,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 36. prompt_versions - Prompt 版本管理
-  // -------------------------------------------------------------------------
+
   {
     name: 'prompt_versions',
     columns: [
@@ -1427,9 +1386,8 @@ export const TABLES: TableDef[] = [
     uniqueConstraints: [['prompt_id', 'version']],
   },
 
-  // -------------------------------------------------------------------------
   // 37. offer_tasks - Offer任务队列 (Migration 058, Database v2.0)
-  // -------------------------------------------------------------------------
+
   {
     name: 'offer_tasks',
     columns: [
@@ -1485,9 +1443,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 38. batch_tasks - 批量任务管理 (Migration 059, Database v2.0)
-  // -------------------------------------------------------------------------
+
   {
     name: 'batch_tasks',
     columns: [
@@ -1524,9 +1481,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 39. migration_history - 迁移历史
-  // -------------------------------------------------------------------------
+
   {
     name: 'migration_history',
     columns: [
@@ -1536,9 +1492,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 40. offer_keyword_pools - Offer级关键词池 (Database v2.1)
-  // -------------------------------------------------------------------------
+
   {
     name: 'offer_keyword_pools',
     columns: [
@@ -1579,9 +1534,8 @@ export const TABLES: TableDef[] = [
     ],
   },
 
-  // -------------------------------------------------------------------------
   // 41. offer_blacklist - Offer拉黑投放黑名单库（品牌+国家）
-  // -------------------------------------------------------------------------
+
   {
     name: 'offer_blacklist',
     columns: [
@@ -1610,9 +1564,7 @@ export const TABLES: TableDef[] = [
   },
 ]
 
-// ============================================================================
 // 默认系统配置
-// ============================================================================
 
 export const DEFAULT_SETTINGS = [
   // Google Ads API配置
@@ -1718,9 +1670,7 @@ export const DEFAULT_SETTINGS = [
   },
 ]
 
-// ============================================================================
 // 导出表数量常量
-// ============================================================================
 
 export const SCHEMA_VERSION = '2.1.0'
 export const TABLE_COUNT = TABLES.length

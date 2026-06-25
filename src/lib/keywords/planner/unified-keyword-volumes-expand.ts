@@ -105,9 +105,7 @@ export async function getKeywordVolumesForExisting(params: {
   }
 }
 
-// ============================================
 // 向后兼容：使用自定义种子词扩展关键词
-// ============================================
 
 /**
  * 使用自定义种子词扩展关键词
@@ -140,7 +138,7 @@ export async function expandKeywordsWithSeeds(params: {
   linkedServiceAccountId?: string | null
   /** @deprecated 请用 linkedServiceAccountId */
   serviceAccountId?: string
-  /** 已由关键词池 expand 单次 prepare 时传入，避免每轮重复 heal */
+  /* * 已由关键词池 expand 单次 prepare 时传入，避免每轮重复 heal */
   plannerSession?: KeywordPlannerSessionAuth
   minSearchVolume?: number
   maxKeywords?: number
@@ -171,7 +169,7 @@ export async function expandKeywordsWithSeeds(params: {
     return []
   }
 
-  // 🔧 优化(2025-12-26): 多词品牌名添加可用的短品牌词种子
+  // 多词品牌名添加可用的短品牌词种子
   // 解决：当品牌名为"Wahl Professional"时，Keyword Planner只返回包含完整品牌名的关键词，
   // 无法获取"wahl detailer"、"wahl peanut"等只包含短品牌词的产品型号关键词
   let finalSeedKeywords = [...expansionSeeds]
@@ -259,7 +257,7 @@ export async function expandKeywordsWithSeeds(params: {
       }
     }
 
-    // 2. 按搜索量降序排序（关键修复：先排序再截取）
+    // 2. 按搜索量降序排序（关键先排序再截取）
     let results = Array.from(keywordMap.values())
     results.sort((a, b) => b.searchVolume - a.searchVolume)
 
@@ -276,7 +274,7 @@ export async function expandKeywordsWithSeeds(params: {
     console.log(`   📊 准备查询 ${totalKeywords} 个关键词的精确搜索量`)
 
     let disableSearchVolumeFilter = false
-    // 🔧 修复(2026-01-22): 跟踪已验证的关键词，防止使用 Keyword Ideas 的估算值
+    // 跟踪已验证的关键词，防止使用 Keyword Ideas 的估算值
     const verifiedKeywords = new Set<string>()
 
     if (totalKeywords > 0) {
@@ -334,7 +332,7 @@ export async function expandKeywordsWithSeeds(params: {
             if (!canonical) return
             const existing = keywordMap.get(canonical)
             if (existing) {
-              // 🔧 修复(2026-01-22): 标记为已验证
+              // 标记为已验证
               verifiedKeywords.add(canonical)
               keywordMap.set(canonical, {
                 ...existing,
@@ -356,7 +354,7 @@ export async function expandKeywordsWithSeeds(params: {
 
       console.log(`   ✅ 所有关键词搜索量查询完成`)
 
-      // 🔧 修复(2026-01-22): 对于未被验证的关键词，将搜索量设为 0
+      // 对于未被验证的关键词，将搜索量设为 0
       // 这些关键词使用的是 Keyword Ideas 的估算值，而非 Historical Metrics 的真实值
       if (!disableSearchVolumeFilter) {
         let unverifiedCount = 0
@@ -389,7 +387,7 @@ export async function expandKeywordsWithSeeds(params: {
     }
 
     // 搜索量过滤
-    // 🔧 修复(2025-12-26): 搜索量不可用（服务账号 / developer token 无 Basic access）时跳过过滤
+    // 搜索量不可用（服务账号 / developer token 无 Basic access）时跳过过滤
     if (disableSearchVolumeFilter) {
       console.log(
         '⚠️ 搜索量数据不可用（可能是服务账号或 developer token 无 Basic/Standard access），跳过搜索量过滤'
@@ -426,24 +424,22 @@ export async function expandKeywordsWithSeeds(params: {
   }
 }
 
-// ============================================
-// 🆕 通用词提取（从已生成的关键词中提取）
-// ============================================
+// 通用词提取（从已生成的关键词中提取）
 
 /**
  * 从已生成的关键词中提取高价值通用词
  *
  * 用途：从Keyword Planner API返回的混合关键词中提取纯通用词（不含品牌名）
- * 策略：
+ * 策略
  * 1. 过滤掉所有含品牌名的词（包括自身品牌和竞品）
  * 2. 只保留搜索量 > 10000 的高价值词
  * 3. 过滤掉信息查询词（review, tutorial等）
  * 4. 按搜索量排序
  *
- * 优势：
- * - 无需额外API调用，直接复用现有数据
- * - 通用方案，对所有品牌都适用
- * - 自动化提取，无需维护词库
+ * 优势
+ * 无需额外API调用，直接复用现有数据
+ * 通用方案，对所有品牌都适用
+ * 自动化提取，无需维护词库
  *
  * @param allKeywords Keyword Planner返回的所有关键词
  * @param brandName 自身品牌名
@@ -481,7 +477,7 @@ export function extractGenericHighValueKeywords(
   console.log(`\n📌 步骤2: 高价值词过滤 (搜索量 > 10,000)`)
 
   const beforeVolumeFilter = genericKeywords.length
-  // 🔧 修复(2025-12-26): 如果所有关键词搜索量都为0（服务账号模式），跳过搜索量过滤
+  // 如果所有关键词搜索量都为0（服务账号模式），跳过搜索量过滤
   const hasAnyVolume = genericKeywords.some((kw) => kw.searchVolume > 0)
   if (hasAnyVolume) {
     genericKeywords = genericKeywords.filter((kw) => kw.searchVolume > 10000)

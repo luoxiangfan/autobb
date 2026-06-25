@@ -19,7 +19,7 @@ export async function createClickFarmTask(
 ): Promise<ClickFarmTask> {
   const db = await getDatabase()
 
-  // 🆕 scheduled_start_date默认为“任务时区当天”，避免 UTC 日期导致西半球任务延后一天启动
+  // scheduled_start_date默认为“任务时区当天”，避免 UTC 日期导致西半球任务延后一天启动
   const taskTimezone = input.timezone || 'America/New_York'
   const scheduledStartDate =
     input.scheduled_start_date || getDateInTimezone(new Date(), taskTimezone)
@@ -33,12 +33,12 @@ export async function createClickFarmTask(
   })
 
   try {
-    // 🔧 修复(2025-12-31): 使用标准 UUID 格式（带 -），PostgreSQL 的 uuid 类型可以正确识别
+    // 使用标准 UUID 格式（带 -），PostgreSQL 的 uuid 类型可以正确识别
     const taskId = crypto.randomUUID().toLowerCase()
 
     console.log('[createClickFarmTask] 生成任务ID:', taskId)
 
-    // 🔧 修复(2026-02-20): PostgreSQL JSONB 传原生数组，避免双重编码
+    // PostgreSQL JSONB 传原生数组，避免双重编码
     const hourlyDistributionJson = toDbJsonObjectField(input.hourly_distribution, [])
     const refererConfigJson = input.referer_config ? JSON.stringify(input.referer_config) : null
 
@@ -50,7 +50,7 @@ export async function createClickFarmTask(
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
       [
-        taskId, // 🔧 修复：使用标准 UUID 格式
+        taskId, // 使用标准 UUID 格式
         userId,
         input.offer_id,
         input.daily_click_count,
@@ -71,7 +71,7 @@ export async function createClickFarmTask(
 
     const task = (await getClickFarmTaskById(insertedId, userId))!
 
-    // 🔧 修复(2025-12-31): 详细日志追踪问题
+    // 详细日志追踪问题
     console.log('[createClickFarmTask] 任务对象:', {
       id: task?.id,
       id_type: typeof task?.id,
@@ -88,7 +88,7 @@ export async function createClickFarmTask(
       hourly_distribution_isArray: Array.isArray(task?.hourly_distribution),
     })
 
-    // 🆕 计算并设置 next_run_at
+    // 计算并设置 next_run_at
     const nextRunAt = generateNextRunAt(task.timezone, task)
     await db.exec(
       `
@@ -141,7 +141,7 @@ export async function updateClickFarmTask(
     values.push(updates.duration_days)
   }
 
-  // 🆕 支持更新scheduled_start_date
+  // 支持更新scheduled_start_date
   if (updates.scheduled_start_date !== undefined) {
     fields.push('scheduled_start_date = ?')
     values.push(updates.scheduled_start_date)
@@ -152,13 +152,13 @@ export async function updateClickFarmTask(
     values.push(toDbJsonObjectField(updates.hourly_distribution, []))
   }
 
-  // 🆕 支持更新timezone
+  // 支持更新timezone
   if (updates.timezone !== undefined) {
     fields.push('timezone = ?')
     values.push(updates.timezone)
   }
 
-  // 🔧 修复(2025-12-30): 支持更新referer_config
+  // 支持更新referer_config
   if (updates.referer_config !== undefined) {
     fields.push('referer_config = ?')
     values.push(updates.referer_config ? JSON.stringify(updates.referer_config) : null)
@@ -288,7 +288,7 @@ export async function pauseClickFarmTask(
 }
 
 /**
- * 🔧 优化 (2026-04-15): 批量暂停补点击任务（按 offer_id）
+ * 优化 : 批量暂停补点击任务（按 offer_id）
  */
 export async function pauseClickFarmTasksByOfferId(
   offerId: number,

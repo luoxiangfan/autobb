@@ -1,9 +1,9 @@
 /**
  * Google Ads 认证分配（共享管理员 / 自有凭证 owner 解析）。
  *
- * - 按 userId 判断是否已配置：请用 `hasConfiguredGoogleAdsAuth`（委托 `google-ads/auth/context`）。
- * - 发起 Google Ads API 调用：请用 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
- * - 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
+ * 按 userId 判断是否已配置：请用 `hasConfiguredGoogleAdsAuth`（委托 `google-ads/auth/context`）。
+ * 发起 Google Ads API 调用：请用 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
+ * 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
  */
 import { getDatabase } from '../../db'
 import { boolCondition, nowFunc } from '../../db'
@@ -28,7 +28,7 @@ export interface GoogleAdsCredentialOwnerResolution {
   isShared: boolean
 }
 
-/** Optional pre-resolved owner (avoids duplicate assignment queries in auth-context load). */
+/* * Optional pre-resolved owner (avoids duplicate assignment queries in auth-context load). */
 export type GoogleAdsCredentialOwnerResolutionInput = GoogleAdsCredentialOwnerResolution
 
 type AssignmentRow = {
@@ -90,7 +90,7 @@ export function isGoogleAdsAuthShared(assignment: GoogleAdsAuthAssignment | null
   return assignment?.assignmentMode === 'shared_admin'
 }
 
-/** 列出将指定用户作为共享管理员的子用户 id（用于凭证变更缓存级联失效）。 */
+/* * 列出将指定用户作为共享管理员的子用户 id（用于凭证变更缓存级联失效）。 */
 export async function listGoogleAdsSharedDependentUserIds(ownerUserId: number): Promise<number[]> {
   const db = await getDatabase()
   const rows = await db.query<{ user_id: number }>(

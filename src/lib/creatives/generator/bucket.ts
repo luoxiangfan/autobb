@@ -2,16 +2,16 @@ import {
   getBucketInfo,
   type OfferKeywordPool,
   type PoolKeywordData,
-} from '../../keywords/offer-pool' // 🔥 AI语义分类
-// 🎯 新增：导入否定关键词生成函数
-// 🎯 新增：导入token追踪函数
-// 🎯 v3.0: 导入数据库prompt加载函数
-// 🎯 购买意图评分
+} from '../../keywords/offer-pool' // AI语义分类
+// 导入否定关键词生成函数
+// 导入token追踪函数
+// v3.0: 导入数据库prompt加载函数
+// 购买意图评分
 
-// 🔥 优化：Google Ads关键词标准化去重
+// Google Ads关键词标准化去重
 
-// 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-// 🔥 2026-03-13: 导入纯品牌词判断函数
+// 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
+// 导入纯品牌词判断函数
 
 import { normalizeKeywordPoolBucketQuery } from '../server'
 import type { BucketType, NormalizedCreativeBucket } from './types'

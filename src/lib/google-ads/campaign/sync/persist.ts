@@ -10,7 +10,7 @@ import { inferPageTypeFromUrls } from '@/lib/offers/offer-link-type'
 
 import { googleAdsSyncLogger } from '../../common/logger'
 
-/** Array fields in campaign_config that Google Ads sync may backfill when empty. */
+/* * Array fields in campaign_config that Google Ads sync may backfill when empty. */
 const SYNC_BACKFILL_ARRAY_FIELDS = [
   'callouts',
   'sitelinks',
@@ -25,7 +25,7 @@ function isEmptyArrayField(value: unknown): boolean {
   return value == null || (Array.isArray(value) && value.length === 0)
 }
 
-/** Backfill empty array fields in existing config from Google Ads sync payload. */
+/* * Backfill empty array fields in existing config from Google Ads sync payload. */
 export function mergeEmptyCampaignConfigArraysFromSync(
   existing: Record<string, unknown>,
   synced: Record<string, unknown>
@@ -51,9 +51,9 @@ export async function saveCampaignToDatabase(params: {
   userId: number
   googleAdsAccountId: number
   campaign: GoogleAdsCampaign
-  offerId?: number // 🆕 可选的 offer_id
-  adGroupId?: number | null // 🆕 可选的 ad_group_id
-  adId?: number | null // 🆕 可选的 ad_id
+  offerId?: number // 可选的 offer_id
+  adGroupId?: number | null // 可选的 ad_group_id
+  adId?: number | null // 可选的 ad_id
 }): Promise<string> {
   const { userId, googleAdsAccountId, campaign, offerId, adGroupId, adId } = params
   const db = await getDatabase()
@@ -84,15 +84,15 @@ export async function saveCampaignToDatabase(params: {
         google_ad_id = ?
       WHERE campaign_id = ?`,
       [
-        campaign.cpc_bid_ceiling_micros || null, // 🆕 可选的 max_cpc 字段
+        campaign.cpc_bid_ceiling_micros || null, // 可选的 max_cpc 字段
         campaign.campaign_name,
         campaign.budget_amount,
         campaign.budget_type,
         campaign.status,
         googleAdsAccountId,
         new Date(),
-        `${adGroupId}` || null, // 🆕 可选的 ad_group_id 字段
-        `${adGroupId}~${adId}` || null, // 🆕 可选的 ad_id 字段
+        `${adGroupId}` || null, // 可选的 ad_group_id 字段
+        `${adGroupId}~${adId}` || null, // 可选的 ad_id 字段
         existing.campaign_id,
       ]
     )
@@ -187,8 +187,8 @@ export async function saveCampaignToDatabase(params: {
       campaign.budget_amount,
       campaign.budget_type,
       campaign.status,
-      offerId || null, // 🆕 如果提供了 offerId，则关联
-      campaign.cpc_bid_ceiling_micros || null, // 🆕 可选的 max_cpc 字段
+      offerId || null, // 如果提供了 offerId，则关联
+      campaign.cpc_bid_ceiling_micros || null, // 可选的 max_cpc 字段
       campaign.campaign_id, // google_campaign_id
       googleAdGroupId,
       googleAdId,
@@ -218,7 +218,7 @@ export async function createOfferFirst(params: {
 
   const campaignNameTrimmed = campaign.campaign_name.trim()
   const derivedBrand = extractBrandFromGoogleAdsCampaignName(campaign.campaign_name)
-  /** 仅当解析结果与完整 campaign_name 不同，视为提取成功（否则不碰已有 offer 的 brand） */
+  /* * 仅当解析结果与完整 campaign_name 不同，视为提取成功（否则不碰已有 offer 的 brand） */
   const brandExtractSucceeded = derivedBrand !== campaignNameTrimmed
 
   // 1. 检查是否已存在关联的 Offer（通过 google_ads_campaign_id）

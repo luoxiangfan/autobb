@@ -1,13 +1,13 @@
-// 🔥 AI语义分类
-// 🎯 新增：导入否定关键词生成函数
-// 🎯 新增：导入token追踪函数
-// 🎯 v3.0: 导入数据库prompt加载函数
-// 🎯 购买意图评分
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
+// AI语义分类
+// 导入否定关键词生成函数
+// 导入token追踪函数
+// v3.0: 导入数据库prompt加载函数
+// 购买意图评分
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // Google Ads关键词标准化去重
 
 import { containsPureBrand, getPureBrandKeywords } from '../../keywords/server'
-import { isBrandConcatenation } from '../../keywords/server' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-// 🔥 2026-03-13: 导入纯品牌词判断函数
+import { isBrandConcatenation } from '../../keywords/server' // 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
+// 导入纯品牌词判断函数
 
 import { classifyKeywordIntent } from '../../keywords/server'
 import { KEYWORD_POLICY } from '../../keywords/planner/keyword-policy'
@@ -40,7 +40,7 @@ export function filterHighIntentKeywordSeeds(keywords: string[], language: strin
 
 export function getSeedCapByRatio(validatedKeywordCount: number): number {
   if (validatedKeywordCount <= 0) return 0
-  // seed/(validated+seed) <= 20%  => seed <= validated * 0.25
+  // seed/(validated+seed) <= 20% => seed <= validated * 0.25
   return Math.floor(
     validatedKeywordCount * (TITLE_ABOUT_SEED_RATIO_CAP / (1 - TITLE_ABOUT_SEED_RATIO_CAP))
   )

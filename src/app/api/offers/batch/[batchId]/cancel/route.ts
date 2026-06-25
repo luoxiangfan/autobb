@@ -3,17 +3,17 @@
  *
  * 取消批量Offer创建任务
  *
- * 功能：
+ * 功能
  * 1. 验证用户权限（只能取消自己的任务）
  * 2. 检查任务状态（只能取消pending/running状态）
  * 3. 更新batch_tasks状态为cancelled
  * 4. 同步更新upload_records状态
  * 5. 从队列中移除未执行的子任务
  *
- * 使用场景：
- * - 代理质量差导致大量失败
- * - 上传错误的CSV文件
- * - 用户主动停止任务
+ * 使用场景
+ * 代理质量差导致大量失败
+ * 上传错误的CSV文件
+ * 用户主动停止任务
  */
 
 import { withAuth } from '@/lib/auth'
@@ -31,7 +31,7 @@ export const POST = withAuth(async (req, user, context) => {
   const db = getDatabase()
   const queue = getQueueManager()
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
 
   try {

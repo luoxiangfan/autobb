@@ -185,7 +185,7 @@ export function buildUniqueHeadlineReplacement(params: {
   return null
 }
 
-/** Google Ads asset-key uniqueness variant builder. */
+/* * Google Ads asset-key uniqueness variant builder. */
 export function buildUniqueHeadlineVariantForGoogleAds(params: {
   currentHeadline: string
   keywordTarget: string

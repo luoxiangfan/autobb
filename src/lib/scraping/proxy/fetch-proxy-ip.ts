@@ -4,7 +4,7 @@ import type { ProxyCredentials } from './types'
 import { shouldRetry, getRetryDelay, ProxyError, ProxyHealthCheckError } from './proxy-errors'
 
 /**
- * 🔥 全局 IPRocket API 调用频率限制
+ * 全局 IPRocket API 调用频率限制
  *
  * 问题：IPRocket API 有频率限制，50ms 间隔会在第 6 次调用后触发"业务异常"错误
  * 解决：添加全局调用队列，确保调用间隔 >= 100ms
@@ -87,7 +87,7 @@ export interface HealthCheckResult {
 }
 
 /**
- * 🔥 P1优化：快速TCP连接测试
+ * 快速TCP连接测试
  * 使用纯TCP连接测试代理IP的连通性，比HTTP请求快5-10倍
  *
  * @param host - 代理服务器地址
@@ -125,10 +125,10 @@ export async function tcpPing(host: string, port: number, timeoutMs = 2000): Pro
 }
 
 /**
- * 🔥 P0优化：测试代理IP健康状态
- * 支持两种模式：
- * - 快速模式（默认）：仅TCP连接测试，耗时1-2秒
- * - 完整模式：HTTP请求测试，耗时3-10秒
+ * 测试代理IP健康状态
+ * 支持两种模式
+ * 快速模式（默认）：仅TCP连接测试，耗时1-2秒
+ * 完整模式：HTTP请求测试，耗时3-10秒
  *
  * @param credentials - 代理凭证
  * @param timeoutMs - 测试超时时间（默认3秒）
@@ -142,7 +142,7 @@ async function testProxyHealth(
 ): Promise<HealthCheckResult> {
   const startTime = Date.now()
 
-  // 🔥 快速模式：仅TCP连接测试
+  // 快速模式：仅TCP连接测试
   if (!fullCheck) {
     const tcpTime = await tcpPing(credentials.host, credentials.port, timeoutMs)
     const responseTime = Date.now() - startTime
@@ -173,7 +173,7 @@ async function testProxyHealth(
 
   // 完整模式：HTTP请求测试
   try {
-    // 🔥 使用Amazon本身测试，因为我们的目标就是访问Amazon
+    // 使用Amazon本身测试，因为我们的目标就是访问Amazon
     // 使用robots.txt作为测试端点（轻量级，无反爬虫）
     const testUrl = 'https://www.amazon.com/robots.txt'
     const proxyUrl = `http://${credentials.username}:${credentials.password}@${credentials.host}:${credentials.port}`
@@ -185,7 +185,7 @@ async function testProxyHealth(
 
     const agent = new HttpsProxyAgent(proxyUrl)
 
-    // 🔥 修复：使用AbortController代替AbortSignal.timeout (更可靠的超时控制)
+    // 使用AbortController代替AbortSignal.timeout (更可靠的超时控制)
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
@@ -205,7 +205,7 @@ async function testProxyHealth(
 
       const responseTime = Date.now() - startTime
 
-      // 健康标准：
+      // 健康标准
       // 1. HTTP状态码正常 (200-399)
       // 2. 响应时间 < 8秒（放宽阈值，提高代理可用率）
       const healthy = response.ok && responseTime < 8000
@@ -241,10 +241,10 @@ async function testProxyHealth(
 } /**
  * 从代理服务商获取代理IP（支持多种代理格式）
  *
- * 🔥 P1优化：新增多Provider支持
- * - 自动检测URL格式并选择合适的Provider
- * - 支持IPRocket（API调用）和直连格式（如 Oxylabs / Kookeey / Cliproxy）
- * - 统一接口，外部调用无感知
+ * 新增多Provider支持
+ * 自动检测URL格式并选择合适的Provider
+ * 支持IPRocket（API调用）和直连格式（如 Oxylabs / Kookeey / Cliproxy）
+ * 统一接口，外部调用无感知
  *
  * @param proxyUrl - 代理服务商URL
  * @param maxRetries - 最大重试次数，默认3次
@@ -283,12 +283,12 @@ export async function fetchProxyIp(
     try {
       console.log(`🔍 [${provider.name} ${attempt}/${maxRetries}] 开始获取...`)
 
-      // 🔥 使用频率限制包装器调用 Provider 提取凭证
+      // 使用频率限制包装器调用 Provider 提取凭证
       const credentials = await throttleIprocketCall(provider.name, () =>
         provider.extractCredentials(proxyUrl)
       )
 
-      // 🔥 P0优化：阻塞式健康检查，失败时重试获取新代理
+      // 阻塞式健康检查，失败时重试获取新代理
       if (!skipHealthCheck) {
         const healthCheck = await testProxyHealth(credentials, 10000)
         if (!healthCheck.healthy) {
@@ -311,7 +311,7 @@ export async function fetchProxyIp(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error('未知错误')
 
-      // 🎯 智能重试判断
+      // 智能重试判断
       const canRetry = shouldRetry(error)
       const isLastAttempt = attempt >= maxRetries
 
@@ -348,10 +348,10 @@ export async function fetchProxyIp(
  * 代理IP缓存
  * 避免频繁请求代理服务商API
  *
- * 缓存策略：
- * - 默认缓存5分钟（CACHE_DURATION）
- * - 按用户隔离缓存（必须传入 userId）
- * - 支持按 cacheKey 进一步隔离（用于补点击任务按 taskId 隔离）
+ * 缓存策略
+ * 默认缓存5分钟（CACHE_DURATION）
+ * 按用户隔离缓存（必须传入 userId）
+ * 支持按 cacheKey 进一步隔离（用于补点击任务按 taskId 隔离）
  */
 interface CachedProxy {
   credentials: ProxyCredentials
@@ -399,7 +399,7 @@ export async function getProxyIp(
 ): Promise<ProxyCredentials> {
   const now = Date.now()
 
-  // 🔥 如果启用缓存但没有提供 userId，抛出错误（防止跨用户缓存泄露）
+  // 如果启用缓存但没有提供 userId，抛出错误（防止跨用户缓存泄露）
   if (!forceRefresh && !userId) {
     throw new Error('启用代理IP缓存时必须提供 userId 参数以隔离不同用户')
   }
@@ -416,7 +416,7 @@ export async function getProxyIp(
       return cached.credentials
     }
 
-    // 🔥 防止并发”打爆”同一个provider：同一proxyUrl只允许一个在飞请求
+    // 防止并发”打爆”同一个provider：同一proxyUrl只允许一个在飞请求
     const inflight = proxyInFlight.get(fullCacheKey)
     if (inflight) {
       return await inflight

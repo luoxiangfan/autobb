@@ -2,11 +2,11 @@
  * User-Isolated Proxy Pool Manager
  *
  * Purpose: Maintain pre-warmed proxy pools with strict user isolation
- * Key Features:
- * - Each user has independent proxy pools (userId → country → proxies)
- * - Users only use their own configured proxy URLs
- * - Dynamic resource-based concurrency adjustment
- * - Auto-refresh and health monitoring
+ * Key Features
+ * Each user has independent proxy pools (userId → country → proxies)
+ * Users only use their own configured proxy URLs
+ * Dynamic resource-based concurrency adjustment
+ * Auto-refresh and health monitoring
  */
 
 import os from 'os'
@@ -15,7 +15,7 @@ import { fetchProxyIp } from './fetch-proxy-ip'
 import { getUserOnlySetting } from '../../common/server'
 import { normalizeCountryCode } from '../../common/server'
 
-// ============ Types ============
+// Types
 
 interface ProxyConfig {
   country: string
@@ -107,7 +107,7 @@ function expandProxyConfigs(proxyConfigs: ProxyConfig[]): ProxyConfig[] {
   return expanded
 }
 
-// ============ Resource Monitor ============
+// Resource Monitor
 
 /**
  * 动态监控系统资源并调整并发数
@@ -165,7 +165,7 @@ class ResourceMonitor {
   }
 }
 
-// ============ User-Isolated Proxy Pool Manager ============
+// User-Isolated Proxy Pool Manager
 
 class UserIsolatedProxyPoolManager {
   private userPools: Map<number, UserPoolData> = new Map()
@@ -336,7 +336,7 @@ class UserIsolatedProxyPoolManager {
     await this.refreshCountryPool(userId, targetCountry)
   }
 
-  // ============ Private Methods ============
+  // Private Methods
 
   /**
    * 确保用户池已初始化
@@ -556,7 +556,7 @@ class UserIsolatedProxyPoolManager {
   }
 }
 
-// ============ Singleton Instance ============
+// Singleton Instance
 
 // 使用 global 对象防止热重载时重置
 declare global {

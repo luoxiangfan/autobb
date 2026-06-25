@@ -6,7 +6,7 @@ export type OfferExtractionMode = 'fast' | 'balanced' | 'original'
 
 export const OFFER_EXTRACTION_MODES: OfferExtractionMode[] = ['fast', 'balanced', 'original']
 
-/** 未指定或无效时的默认提取模式 */
+/* * 未指定或无效时的默认提取模式 */
 const OFFER_EXTRACTION_MODE_DEFAULT: OfferExtractionMode = 'original'
 
 export const OFFER_EXTRACTION_MODE_LABELS: Record<OfferExtractionMode, string> = {
@@ -22,33 +22,33 @@ export const OFFER_EXTRACTION_MODE_DESCRIPTIONS: Record<OfferExtractionMode, str
 }
 
 export interface OfferExtractionModeProfile {
-  /** 是否阻塞等待预热完成（原模式） */
+  /* * 是否阻塞等待预热完成（原模式） */
   warmupBlocking: boolean
-  /** Amazon 是否优先 canonical /dp/ URL */
+  /* * Amazon 是否优先 canonical /dp/ URL */
   preferCanonicalAmazonUrlFirst: boolean
-  /** Amazon 单品 fast 抓取（更短超时、更少重试） */
+  /* * Amazon 单品 fast 抓取（更短超时、更少重试） */
   amazonFastScrape: boolean
   amazonWaitMs: number
   amazonMaxNoJsRetries: number
   amazonMaxProxyRetries: number
-  /** 提取阶段跳过 HTML 内竞品 ASIN 解析 */
+  /* * 提取阶段跳过 HTML 内竞品 ASIN 解析 */
   skipAmazonCompetitorExtraction: boolean
-  /** 独立站 axios 超时 */
+  /* * 独立站 axios 超时 */
   lightScrapeTimeoutMs: number
-  /** 基础字段齐全时跳过 Playwright（仅快速模式） */
+  /* * 基础字段齐全时跳过 Playwright（仅快速模式） */
   skipPlaywrightWhenMinimalBaseline: boolean
-  /** 使用旧版「丰富度」Playwright 回退判断（更完整） */
+  /* * 使用旧版「丰富度」Playwright 回退判断（更完整） */
   useLegacyIndependentPlaywrightFallback: boolean
-  /** 店铺深度抓取商品数 */
+  /* * 店铺深度抓取商品数 */
   deepScrapeTopN: number
   deepScrapeConcurrency: number
-  /** AI：允许 Playwright 评论/竞品二次抓取总开关 */
+  /* * AI：允许 Playwright 评论/竞品二次抓取总开关 */
   aiPlaywrightDeepScrapeEnabled: boolean
-  /** AI：无 relatedAsins 时 Playwright 抓竞品列表 */
+  /* * AI：无 relatedAsins 时 Playwright 抓竞品列表 */
   aiPlaywrightCompetitorDeepScrape: boolean
-  /** AI：批量打开竞品详情页 */
+  /* * AI：批量打开竞品详情页 */
   aiCompetitorDetailScrape: boolean
-  /** AI：竞品详情最多抓取个数 */
+  /* * AI：竞品详情最多抓取个数 */
   aiCompetitorDetailLimit: number
   minTopReviewsToSkipReviewDeepScrape: number
   minReviewHighlightsToSkipReviewDeepScrape: number
@@ -161,12 +161,12 @@ export function normalizeOfferExtractionMode(value: unknown): OfferExtractionMod
   return MODE_ALIASES[key] || getDefaultOfferExtractionMode()
 }
 
-/** 展示用标签（未知值回退为默认模式） */
+/* * 展示用标签（未知值回退为默认模式） */
 export function getOfferExtractionModeLabel(mode: unknown): string {
   return OFFER_EXTRACTION_MODE_LABELS[normalizeOfferExtractionMode(mode)]
 }
 
-/** 将用户输入解析为已知模式；未知值返回 null */
+/* * 将用户输入解析为已知模式；未知值返回 null */
 export function resolveExtractionModeInput(raw: unknown): OfferExtractionMode | null {
   if (typeof raw !== 'string' || !raw.trim()) return null
   const key = raw.trim().toLowerCase()
@@ -178,7 +178,7 @@ export type ExtractionModeFromBodyResult =
   | { provided: true; mode: OfferExtractionMode }
   | { provided: true; invalid: true }
 
-/** 从 API 请求体解析提取模式；非法值返回 invalid */
+/* * 从 API 请求体解析提取模式；非法值返回 invalid */
 export function getExtractionModeFromRequestBody(body: unknown): ExtractionModeFromBodyResult {
   if (!body || typeof body !== 'object') return { provided: false }
   const record = body as Record<string, unknown>
@@ -189,7 +189,7 @@ export function getExtractionModeFromRequestBody(body: unknown): ExtractionModeF
   return { provided: true, mode }
 }
 
-/** 从 API 请求体解析提取模式（省略时 undefined；非法值视为未提供，请用 getExtractionModeFromRequestBody） */
+/* * 从 API 请求体解析提取模式（省略时 undefined；非法值视为未提供，请用 getExtractionModeFromRequestBody） */
 export function parseExtractionModeFromRequestBody(body: unknown): OfferExtractionMode | undefined {
   const parsed = getExtractionModeFromRequestBody(body)
   if ('mode' in parsed && parsed.mode) return parsed.mode

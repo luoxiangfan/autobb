@@ -1,14 +1,14 @@
 /**
  * 广告系列备份服务
  *
- * 功能：
+ * 功能
  * 1. 创建广告系列时自动备份
  * 2. Google Ads 同步时备份（初始 + 第 7 天）
  * 3. 通过备份快速创建广告系列
  *
  * 策略：每个 (user_id, offer_id) 仅一条备份（与 backup_source 无关），由 DB 唯一索引约束。
  *
- * 🔧 更新 (2026-04-20): 新增 campaign_config 字段备份
+ * 更新 : 新增 campaign_config 字段备份
  */
 
 import { getDatabase } from '../db'
@@ -18,17 +18,17 @@ import { parseJsonField, toDbJsonObjectField } from '../db'
 
 export { backupHasCampaignConfig } from './campaign-backup-config'
 
-/** 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
+/* * 历史 publish 来源与 autoads 等价（发布时会归一为 autoads） */
 export function isAutoadsLikeBackupSource(source: string): boolean {
   return source === 'autoads' || source === 'publish'
 }
 
-/** campaign_backups.campaign_config（PostgreSQL JSONB） */
+/* * campaign_backups.campaign_config（PostgreSQL JSONB） */
 export function toDbCampaignBackupJsonField(value: unknown): unknown {
   return toDbJsonObjectField(value, null)
 }
 
-/** campaigns.campaign_config 列为 TEXT */
+/* * campaigns.campaign_config 列为 TEXT */
 export { toDbJsonTextField as toDbCampaignConfigTextField } from '../db'
 
 function parseCampaignBackupJsonField(value: unknown): unknown | null {
@@ -36,7 +36,7 @@ function parseCampaignBackupJsonField(value: unknown): unknown | null {
   return parseJsonField(value, null)
 }
 
-/** 发布任务侧最终快照（优先于 campaigns 表内可能滞后的 campaign_config） */
+/* * 发布任务侧最终快照（优先于 campaigns 表内可能滞后的 campaign_config） */
 export type PublishedCampaignBackupSnapshot = {
   campaignName?: string
   campaignConfig?: Record<string, unknown>
@@ -106,7 +106,7 @@ export function mergeCampaignConfigForBackupSync(
   return Object.keys(base).length > 0 ? base : null
 }
 
-/** 备份表标量字段：合并后的 campaign_config 优先，其次 campaigns 行 */
+/* * 备份表标量字段：合并后的 campaign_config 优先，其次 campaigns 行 */
 export function resolveBackupScalarFieldsForSync(
   campaign: Record<string, unknown>,
   campaignConfig: Record<string, unknown> | null
@@ -135,7 +135,7 @@ export function resolveBackupScalarFieldsForSync(
   }
 }
 
-/** 从 campaign-publish 任务上下文构建备份回写快照 */
+/* * 从 campaign-publish 任务上下文构建备份回写快照 */
 export function buildPublishedCampaignBackupSnapshot(input: {
   campaignName: string
   campaignConfig: Record<string, unknown>
@@ -168,7 +168,7 @@ export interface CampaignBackup {
   id: number
   userId: number
   offerId: number
-  campaignConfig: any | null // 🔧 新增：广告系列配置
+  campaignConfig: any | null // 广告系列配置
   backupType: 'auto' | 'manual'
   backupSource: 'autoads' | 'google_ads'
   backupVersion: number // 1=初始备份，2=第 7 天备份
@@ -182,7 +182,7 @@ export interface CampaignBackup {
   googleAdsAccountId: number | null
   createdAt: string
   updatedAt: string
-  adCreativeId?: number | null // 🔧 新增：广告创意 ID
+  adCreativeId?: number | null // 广告创意 ID
 }
 
 /**
@@ -191,7 +191,7 @@ export interface CampaignBackup {
 export interface CreateCampaignBackupInput {
   userId: number
   offerId: number
-  campaignConfig?: any | null // 🔧 新增：广告系列配置
+  campaignConfig?: any | null // 广告系列配置
   backupType?: 'auto' | 'manual'
   backupSource?: 'autoads' | 'google_ads'
   backupVersion?: number
@@ -218,11 +218,11 @@ export interface CampaignBackupFilters {
   endDate?: string
   limit?: number
   offset?: number
-  /** 关联 offers 表，返回 offer_name / brand（列表 API 使用） */
+  /* * 关联 offers 表，返回 offer_name / brand（列表 API 使用） */
   withOfferInfo?: boolean
 }
 
-/** 列表 API / 页面使用的备份行（snake_case，含 JSON 已解析字段） */
+/* * 列表 API / 页面使用的备份行（snake_case，含 JSON 已解析字段） */
 export interface CampaignBackupListItem {
   id: number
   user_id: number
@@ -240,7 +240,7 @@ export interface CampaignBackupListItem {
   updated_at: string
   offer_name?: string | null
   brand?: string | null
-  /** Offer 是否已有占用槽位的 campaign（不可再从该备份创建） */
+  /* * Offer 是否已有占用槽位的 campaign（不可再从该备份创建） */
   has_active_campaign?: boolean
   active_campaign_id?: number | null
 }
@@ -272,7 +272,7 @@ function mapRowToCampaignBackupListItem(row: Record<string, unknown>): CampaignB
   }
 }
 
-/** 并发 INSERT 撞上 (user_id, offer_id) 唯一索引时的错误识别 */
+/* * 并发 INSERT 撞上 (user_id, offer_id) 唯一索引时的错误识别 */
 export function isCampaignBackupOfferUniqueViolation(error: unknown): boolean {
   return isUniqueConstraintViolation(error, {
     constraint: 'idx_campaign_backups_user_offer_unique',
@@ -488,7 +488,7 @@ export async function listCampaignBackups(filters: CampaignBackupFilters): Promi
   }
 }
 
-/** 与 dedup 脚本一致的备份优先级排序（用于 SQL ORDER BY） */
+/* * 与 dedup 脚本一致的备份优先级排序（用于 SQL ORDER BY） */
 export function getBackupRankOrderSql(tableAlias?: string): string {
   const p = tableAlias ? `${tableAlias}.` : ''
   const hasConfig = `${p}campaign_config IS NOT NULL AND ${p}campaign_config::text NOT IN ('null', '{}')`
@@ -515,7 +515,7 @@ export interface UpsertCampaignBackupAfterPublishInput {
   status?: string
 }
 
-/** 每个 (user_id, offer_id) 仅允许一条备份时，取排名最高的一条 id */
+/* * 每个 (user_id, offer_id) 仅允许一条备份时，取排名最高的一条 id */
 async function findCampaignBackupIdForOffer(
   offerId: number,
   userId: number
@@ -679,7 +679,7 @@ type PublishedCampaignBackupPayload = {
   customName: string | null
 }
 
-/** 从已发布 campaign 行 + 任务快照构建备份写入载荷 */
+/* * 从已发布 campaign 行 + 任务快照构建备份写入载荷 */
 async function buildPublishedCampaignBackupPayload(params: {
   userId: number
   campaignId: number
@@ -938,7 +938,7 @@ export function parseCampaignBackup(row: any): CampaignBackup {
     googleAdsAccountId: row.google_ads_account_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    adCreativeId: row.ad_creative_id, // 🔧 新增：广告创意 ID
+    adCreativeId: row.ad_creative_id, // 广告创意 ID
   }
 }
 

@@ -24,14 +24,14 @@ import {
   storeProductLinksTypeError,
 } from '@/lib/offers/store-product-links'
 
-/** offer_tasks 中视为“占用中”、不可重复入队的状态 */
+/* * offer_tasks 中视为“占用中”、不可重复入队的状态 */
 const ACTIVE_OFFER_EXTRACTION_TASK_STATUSES = ['pending', 'running'] as const
 
 export function isOfferScrapeStatusBusy(scrapeStatus: string | null | undefined): boolean {
   return scrapeStatus === 'queued' || scrapeStatus === 'in_progress'
 }
 
-/** 查询已有进行中的 offer-extraction 任务（pending / running） */
+/* * 查询已有进行中的 offer-extraction 任务（pending / running） */
 export async function findOfferIdsWithActiveExtractionTasks(
   offerIds: number[]
 ): Promise<Set<number>> {
@@ -52,7 +52,7 @@ export async function findOfferIdsWithActiveExtractionTasks(
   return new Set(rows.map((row) => row.offer_id))
 }
 
-/** 单条 rebuild/scrape 入队前防重（scrape_status + offer_tasks） */
+/* * 单条 rebuild/scrape 入队前防重（scrape_status + offer_tasks） */
 export async function assertOfferAvailableForExtractionEnqueue(offer: {
   id: number
   scrape_status?: string | null
@@ -98,11 +98,11 @@ export type CreateOfferExtractionTaskForExistingOfferParams = {
   skipCache?: boolean
   skipWarmup?: boolean
   extractionMode?: OfferExtractionMode | string
-  /** 复用已有队列/任务 ID（遗留 scrape 任务内联执行） */
+  /* * 复用已有队列/任务 ID（遗留 scrape 任务内联执行） */
   taskId?: string
-  /** 不入队，在当前 worker 内直接执行 extract+AI（避免 scrape→extraction 双任务） */
+  /* * 不入队，在当前 worker 内直接执行 extract+AI（避免 scrape→extraction 双任务） */
   runInline?: boolean
-  /** apply/rebuild 已写入 extraction_mode 时跳过重复 updateOffer */
+  /* * apply/rebuild 已写入 extraction_mode 时跳过重复 updateOffer */
   skipExtractionModePersist?: boolean
 }
 
@@ -123,7 +123,7 @@ export function parseStoreProductLinks(raw: string | null | undefined): string[]
   }
 }
 
-/** 推断 page_type：显式字段 > 店铺单品链接 > Amazon stores URL */
+/* * 推断 page_type：显式字段 > 店铺单品链接 > Amazon stores URL */
 export function inferOfferPageType(params: {
   pageType?: string | null
   affiliateLink?: string | null
@@ -144,7 +144,7 @@ export function inferOfferPageType(params: {
 
 const STORE_PRODUCT_LINKS_TYPE_ERROR = storeProductLinksTypeError()
 
-/** 解析 API 请求体中的店铺单品链接（不依赖 page_type，供先推断页类型再校验） */
+/* * 解析 API 请求体中的店铺单品链接（不依赖 page_type，供先推断页类型再校验） */
 export function parseStoreProductLinksInput(
   storeProductLinks: unknown
 ): { links: string[] } | { error: string } {
@@ -167,7 +167,7 @@ export function parseStoreProductLinksInput(
   return { links }
 }
 
-/** 先解析链接、再 infer page_type（extract / extract/stream 共用） */
+/* * 先解析链接、再 infer page_type（extract / extract/stream 共用） */
 export function resolveExtractPageInput(params: {
   pageType?: string | null
   affiliateLink: string
@@ -190,7 +190,7 @@ export function resolveExtractPageInput(params: {
   }
 }
 
-/** 从 Offer 记录组装提取任务参数（rebuild / scrape 共用） */
+/* * 从 Offer 记录组装提取任务参数（rebuild / scrape 共用） */
 export function buildExtractionTaskParamsFromOffer(
   offer: OfferExtractionOfferInput,
   overrides: Partial<CreateOfferExtractionTaskForExistingOfferParams> & {
@@ -360,7 +360,7 @@ export type EnqueueExistingOfferExtractionParams = {
   brandName?: string | null
 }
 
-/** rebuild / scrape / batch/rebuild 共用：校验前置条件并入队 */
+/* * rebuild / scrape / batch/rebuild 共用：校验前置条件并入队 */
 async function enqueueExistingOfferExtraction(
   params: EnqueueExistingOfferExtractionParams
 ): Promise<{
@@ -395,7 +395,7 @@ async function enqueueExistingOfferExtraction(
   return { taskId, extractionMode, affiliateLink, targetCountry }
 }
 
-/** 入队成功但后续状态同步失败时：移出队列并标记任务/Offer 失败 */
+/* * 入队成功但后续状态同步失败时：移出队列并标记任务/Offer 失败 */
 export async function compensateOfferExtractionEnqueueFailure(params: {
   taskId: string
   offerId: number
@@ -620,7 +620,7 @@ export type CreateOfferExtractionTaskForNewOfferParams = {
   maxRetries?: number
 }
 
-/** 新建 Offer 提取任务（offer_tasks.offer_id 为空，由 executor 创建 Offer） */
+/* * 新建 Offer 提取任务（offer_tasks.offer_id 为空，由 executor 创建 Offer） */
 export async function createOfferExtractionTaskForNewOffer(
   params: CreateOfferExtractionTaskForNewOfferParams
 ): Promise<string> {

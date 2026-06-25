@@ -34,7 +34,7 @@ function getStalePendingMinutes(): number {
   return Math.floor(parsed)
 }
 
-/** ISO 时间阈值：与 publish 写入的 updated_at（ISO 字符串）可比较。 */
+/* * ISO 时间阈值：与 publish 写入的 updated_at（ISO 字符串）可比较。 */
 export function getStaleUpdatedAtThresholdIso(staleMinutes?: number): string | null {
   const minutes = staleMinutes ?? getStalePendingMinutes()
   if (minutes <= 0) {

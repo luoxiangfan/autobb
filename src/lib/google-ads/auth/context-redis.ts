@@ -6,20 +6,20 @@ import {
 } from '@/lib/google-ads/auth/context-cache'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 
-/** 与进程内 authContextCache TTL 对齐（写路径有 generation 失效，可适当拉长减轻 DB 压力） */
+/* * 与进程内 authContextCache TTL 对齐（写路径有 generation 失效，可适当拉长减轻 DB 压力） */
 export const GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC = 30
 
-/** 进程内 auth-context 缓存 TTL（毫秒），须与 Redis EX 一致 */
+/* * 进程内 auth-context 缓存 TTL（毫秒），须与 Redis EX 一致 */
 export const GOOGLE_ADS_AUTH_CONTEXT_CACHE_TTL_MS =
   GOOGLE_ADS_AUTH_CONTEXT_REDIS_CACHE_TTL_SEC * 1000
 
-/** 跨实例 inflight 锁 TTL（加载应在数秒内完成） */
+/* * 跨实例 inflight 锁 TTL（加载应在数秒内完成） */
 const GOOGLE_ADS_AUTH_CONTEXT_INFLIGHT_LOCK_TTL_SEC = 8
 
-/** 等待其它实例写入 Redis 缓存的最长时间 */
+/* * 等待其它实例写入 Redis 缓存的最长时间 */
 const GOOGLE_ADS_AUTH_CONTEXT_PEER_WAIT_MS = 7_000
 
-/** 二次 peer 等待（锁重试后） */
+/* * 二次 peer 等待（锁重试后） */
 export const GOOGLE_ADS_AUTH_CONTEXT_PEER_RETRY_WAIT_MS = 2_000
 
 const PEER_POLL_INTERVAL_MS = 50

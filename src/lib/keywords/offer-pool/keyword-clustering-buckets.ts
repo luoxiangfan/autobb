@@ -29,7 +29,7 @@ export function createEmptyBuckets(): KeywordBuckets {
 }
 
 /**
- * 🆕 v4.16: 创建店铺链接空桶（5个桶）
+ * v4.16: 创建店铺链接空桶（5个桶）
  */
 export function createEmptyStoreBuckets(): StoreKeywordBuckets {
   return {
@@ -54,7 +54,7 @@ export function createEmptyStoreBuckets(): StoreKeywordBuckets {
  * 验证桶结果
  */
 export function validateBuckets(buckets: KeywordBuckets, originalKeywords: string[]): void {
-  // 🔥 2025-12-22 添加安全检查，防止undefined错误
+  // 添加安全检查，防止undefined错误
   if (!buckets) {
     throw new Error('聚类结果为空')
   }
@@ -92,8 +92,8 @@ export function validateBuckets(buckets: KeywordBuckets, originalKeywords: strin
 }
 
 /**
- * 🆕 v4.16: 验证店铺桶结果（5个桶）
- * 🔥 2025-12-24: 添加均衡性检查，不均衡时抛出错误让上层重试
+ * v4.16: 验证店铺桶结果（5个桶）
+ * 添加均衡性检查，不均衡时抛出错误让上层重试
  */
 export function validateStoreBuckets(
   buckets: StoreKeywordBuckets,
@@ -135,7 +135,7 @@ export function validateStoreBuckets(
     console.warn(`⚠️ 有 ${duplicates.length} 个店铺关键词重复分配:`, duplicates.slice(0, 5))
   }
 
-  // 🔥 2025-12-24 新增：均衡性检查
+  // 均衡性检查
   const counts = [
     buckets.bucketA?.keywords?.length || 0,
     buckets.bucketB?.keywords?.length || 0,
@@ -157,7 +157,7 @@ export function validateStoreBuckets(
   console.log(`   📊 有效桶数: ${nonZeroCounts}/5, 最大桶=${maxCount}, 最小非空桶=${minCount}`)
   console.log(`   📊 均衡度: ${reportedBalanceScore.toFixed(2)}`)
 
-  // ⚠️ 2026-01-11: 店铺链接在小样本/概念型站点（如SaaS落地页）上，AI 可能倾向把词都放到桶S。
+  // 店铺链接在小样本/概念型站点（如SaaS落地页）上，AI 可能倾向把词都放到桶S。
   // 这里不再直接抛错阻断创意生成，而是记录告警；上层会做兜底分桶/默认关键词降级。
   if (originalKeywords.length >= 8 && nonZeroCounts <= 1) {
     const warnMsg = `聚类结果不均衡: 只有 ${nonZeroCounts}/5 个桶有数据 (A=${counts[0]}, B=${counts[1]}, C=${counts[2]}, D=${counts[3]}, S=${counts[4]})`
@@ -171,7 +171,7 @@ export function validateStoreBuckets(
 }
 
 /**
- * 🔥 2025-12-24: 计算均衡度
+ * 计算均衡度
  */
 export function calculateBalanceScore(counts: number[]): number {
   if (counts.length === 0) return 1.0
@@ -325,11 +325,11 @@ export function redistributeStoreBucketsFromS(
 }
 
 /**
- * 🔥 v4.18 新增：店铺桶后处理规则
+ * v4.18 店铺桶后处理规则
  *
  * 目的：修正 AI 聚类可能的错误分配，作为双重保障
  *
- * 规则：
+ * 规则
  * 1. 促销/价格词 → 从其他桶移到桶S
  * 2. 具体型号词 → 从桶A/B/D移到桶C
  * 3. 评价词 → 从桶A/B/C移到桶D

@@ -1,17 +1,17 @@
 /**
  * Google Ads关键词标准化工具
  *
- * Google Ads会自动标准化关键词，规则包括：
+ * Google Ads会自动标准化关键词，规则包括
  * 1. 去除前导和尾随空格
  * 2. 去除多余的内部空格（多个空格变一个）
  * 3. 将常见分隔符（-、_、.、/ 等）归一为空格
  * 4. 去除标点/符号（保留字母、数字和空格）
  * 5. 转换为小写
  *
- * 例如：
- * - "dr. mercola" → "dr mercola"
- * - "dr_mercola" → "dr mercola"
- * - "  Dr.-Mercola  " → "dr mercola"
+ * 例如
+ * "dr. mercola" → "dr mercola"
+ * "dr_mercola" → "dr mercola"
+ * " Dr.-Mercola " → "dr mercola"
  */
 /**
  * 标准化关键词（用于去重/缓存键归一）

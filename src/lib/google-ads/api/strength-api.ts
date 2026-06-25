@@ -1,7 +1,7 @@
 /**
  * Google Ads API集成 - Ad Strength实时验证
  *
- * 功能：
+ * 功能
  * 1. 获取已发布广告的Ad Strength评级
  * 2. 获取Ad Strength改进建议（Recommendations API）
  * 3. 查询资产性能数据（Asset Performance）

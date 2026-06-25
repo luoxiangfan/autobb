@@ -67,7 +67,7 @@ interface QueueStats {
   config: {
     globalConcurrency: number
     perUserConcurrency: number
-    perTypeConcurrency?: PerTypeConcurrency // 新增：类型并发配置
+    perTypeConcurrency?: PerTypeConcurrency // 类型并发配置
     maxQueueSize: number
     taskTimeout: number
     enablePriority: boolean
@@ -86,14 +86,14 @@ interface PerTypeConcurrency {
   'offer-extraction': number
   'batch-offer-creation': number
   'ad-creative': number
-  'campaign-publish': number // 🆕 广告系列发布
-  'click-farm': number // 🆕 补点击任务
-  'url-swap': number // 🆕 换链接任务
-  'openclaw-strategy': number // 🆕 OpenClaw 策略任务
-  'affiliate-product-sync': number // 🆕 联盟商品同步任务
-  'openclaw-command': number // 🆕 OpenClaw 指令执行任务
-  'openclaw-affiliate-sync': number // 🆕 OpenClaw 联盟佣金快照同步任务
-  'openclaw-report-send': number // 🆕 OpenClaw 报表投递任务
+  'campaign-publish': number // 广告系列发布
+  'click-farm': number // 补点击任务
+  'url-swap': number // 换链接任务
+  'openclaw-strategy': number // OpenClaw 策略任务
+  'affiliate-product-sync': number // 联盟商品同步任务
+  'openclaw-command': number // OpenClaw 指令执行任务
+  'openclaw-affiliate-sync': number // OpenClaw 联盟佣金快照同步任务
+  'openclaw-report-send': number // OpenClaw 报表投递任务
   [key: string]: number // 允许其他自定义类型
 }
 
@@ -107,13 +107,13 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   'batch-offer-creation': '批量创建',
   'ad-creative': '广告创意生成',
   'campaign-publish': '广告系列发布',
-  'click-farm': '补点击任务', // 🆕 补点击任务
-  'url-swap': '换链接任务', // 🆕 换链接任务
-  'openclaw-strategy': 'OpenClaw策略', // 🆕 OpenClaw 策略任务
-  'affiliate-product-sync': '商品同步', // 🆕 联盟商品同步任务
-  'openclaw-command': 'OpenClaw指令', // 🆕 OpenClaw 指令执行任务
-  'openclaw-affiliate-sync': '联盟佣金同步', // 🆕 OpenClaw 联盟佣金快照同步任务
-  'openclaw-report-send': '报表投递', // 🆕 OpenClaw 报表投递任务
+  'click-farm': '补点击任务', // 补点击任务
+  'url-swap': '换链接任务', // 换链接任务
+  'openclaw-strategy': 'OpenClaw策略', // OpenClaw 策略任务
+  'affiliate-product-sync': '商品同步', // 联盟商品同步任务
+  'openclaw-command': 'OpenClaw指令', // OpenClaw 指令执行任务
+  'openclaw-affiliate-sync': '联盟佣金同步', // OpenClaw 联盟佣金快照同步任务
+  'openclaw-report-send': '报表投递', // OpenClaw 报表投递任务
 }
 
 const PACKAGE_TYPE_LABELS: Record<string, string> = {
@@ -133,7 +133,7 @@ const PACKAGE_TYPE_SORT_ORDER: Record<string, number> = {
 interface QueueConfig {
   globalConcurrency: number
   perUserConcurrency: number
-  perTypeConcurrency: PerTypeConcurrency // 新增：类型并发配置
+  perTypeConcurrency: PerTypeConcurrency // 类型并发配置
   maxQueueSize: number
   taskTimeout: number
   enablePriority: boolean
@@ -417,14 +417,14 @@ export default function QueueManagementPage() {
         'offer-extraction': 2,
         'batch-offer-creation': 1,
         'ad-creative': 3,
-        'campaign-publish': 2, // 🆕 广告系列发布（Google Ads API限制）
-        'click-farm': 50, // 🆕 补点击任务（默认保守，避免小规格容器资源耗尽；可在管理台调整）
-        'url-swap': 3, // 🆕 换链接任务（定时监测，中等并发）
-        'openclaw-strategy': 2, // 🆕 OpenClaw 策略任务
-        'affiliate-product-sync': 2, // 🆕 联盟商品同步任务
-        'openclaw-command': 3, // 🆕 OpenClaw 指令执行任务
-        'openclaw-affiliate-sync': 2, // 🆕 OpenClaw 联盟佣金快照同步任务
-        'openclaw-report-send': 2, // 🆕 OpenClaw 报表投递任务
+        'campaign-publish': 2, // 广告系列发布（Google Ads API限制）
+        'click-farm': 50, // 补点击任务（默认保守，避免小规格容器资源耗尽；可在管理台调整）
+        'url-swap': 3, // 换链接任务（定时监测，中等并发）
+        'openclaw-strategy': 2, // OpenClaw 策略任务
+        'affiliate-product-sync': 2, // 联盟商品同步任务
+        'openclaw-command': 3, // OpenClaw 指令执行任务
+        'openclaw-affiliate-sync': 2, // OpenClaw 联盟佣金快照同步任务
+        'openclaw-report-send': 2, // OpenClaw 报表投递任务
       },
       maxQueueSize: 1000,
       taskTimeout: 900000,
@@ -584,7 +584,7 @@ export default function QueueManagementPage() {
           }
 
           if (syncConfig) {
-            // 🔥 修复：从 /api/queue/config 获取配置，而不是用硬编码默认值
+            // 从 /api/queue/config 获取配置，而不是用硬编码默认值
             // stats API 不返回 perTypeConcurrency，需要单独获取
             try {
               const configResult = await fetchWithRetry('/api/queue/config')
@@ -742,7 +742,7 @@ export default function QueueManagementPage() {
   const saveConfig = async () => {
     setSavingConfig(true)
     try {
-      // 🔥 记录发送的配置，便于调试
+      // 记录发送的配置，便于调试
       console.log('[QueueConfig] 保存配置:', config)
 
       const result = await fetchWithRetry('/api/queue/config', {
@@ -760,7 +760,7 @@ export default function QueueManagementPage() {
         return
       }
 
-      // 🔥 修复：使用API返回的新配置更新状态，而不是重新fetchStats
+      // 使用API返回的新配置更新状态，而不是重新fetchStats
       const savedConfig = result.data?.config
       if (savedConfig) {
         setConfig((prev) => ({
@@ -778,7 +778,7 @@ export default function QueueManagementPage() {
       toast.success('配置已保存并生效')
 
       // 刷新统计信息（但不覆盖刚保存的配置）
-      // await fetchStats()  // 移除：避免用旧配置覆盖新配置
+      // await fetchStats() // 移除：避免用旧配置覆盖新配置
     } catch (error: any) {
       console.error('保存配置失败:', error)
       toast.error('保存配置时发生未知错误')

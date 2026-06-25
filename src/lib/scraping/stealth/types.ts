@@ -42,7 +42,7 @@ export interface AmazonProductData {
   rating: string | null
   reviewCount: string | null
   salesRank: string | null
-  badge: string | null // 🎯 P3优化: Amazon trust badges (Amazon's Choice, Best Seller等)
+  badge: string | null // Amazon trust badges (Amazon's Choice, Best Seller等)
   availability: string | null
   primeEligible: boolean
   reviewHighlights: string[]
@@ -50,10 +50,10 @@ export interface AmazonProductData {
   technicalDetails: Record<string, string>
   asin: string | null
   category: string | null
-  // 🔥 竞品候选ASIN列表（从"Frequently bought together"、"Customers also viewed"等提取）
-  // 🔥 KISS优化（2025-12-09）：只存储ASIN，品牌/价格通过详情页抓取获取（更准确）
+  // 竞品候选ASIN列表（从"Frequently bought together"、"Customers also viewed"等提取）
+  // 只存储ASIN，品牌/价格通过详情页抓取获取（更准确）
   relatedAsins: string[]
-  // 🔥 P2优化: 评论主题/关键词（Amazon的Review Topics，用于广告创意）
+  // 评论主题/关键词（Amazon的Review Topics，用于广告创意）
   reviewKeywords?: string[]
 }
 
@@ -70,18 +70,16 @@ export interface AmazonStoreData {
     rating: string | null
     reviewCount: string | null
     asin: string | null
-    hotScore?: number // 🔥 新增：热销分数
-    rank?: number // 🔥 新增：热销排名
-    isHot?: boolean // 🔥 新增：是否为热销商品（Top 5）
-    hotLabel?: string // 🔥 新增：热销标签
-    // 🎯 Phase 3: 数据维度增强
+    hotScore?: number // 热销分数
+    rank?: number // 热销排名
+    isHot?: boolean // 是否为热销商品（Top 5）
+    hotLabel?: string // 热销标签
     promotion?: string | null // 促销信息：折扣、优惠券、限时优惠
     badge?: string | null // 徽章：Amazon's Choice、Best Seller、#1 in Category
     isPrime?: boolean // Prime标识
-    // 🔥 新增：完整详情页数据（用于hotScore优化）
+    // 完整详情页数据（用于hotScore优化）
     salesRank?: string | null // 销量排名
     features?: string[] // 产品特性
-    // 🔥 2025-12-10优化：从店铺页直接提取的销售热度
     salesVolume?: string | null // 销售热度："1K+ bought in past month"
     discount?: string | null // 折扣百分比："-20%"
     deliveryInfo?: string | null // 配送信息："Get it by Tuesday, December 16"
@@ -89,13 +87,13 @@ export interface AmazonStoreData {
   }>
   totalProducts: number
   storeUrl: string
-  // 🔥 新增：热销洞察
+  // 热销洞察
   hotInsights?: {
     avgRating: number
     avgReviews: number
     topProductsCount: number
   }
-  // 🆕 Phase 2: 产品分类（全局店铺理解）
+  // 产品分类（全局店铺理解）
   productCategories?: {
     primaryCategories: Array<{
       name: string
@@ -107,22 +105,21 @@ export interface AmazonStoreData {
     }
     totalCategories: number
   }
-  // 🔥 增强版：深度抓取结果（热销商品详情页数据）
+  // 深度抓取结果（热销商品详情页数据）
   deepScrapeResults?: {
     topProducts: Array<{
       asin: string
       productData: AmazonProductData | null
       reviews: string[] // 评价摘要
-      reviewHighlights?: string[] // 🔥 新增：评价亮点
+      reviewHighlights?: string[] // 评价亮点
       competitorAsins: string[] // 竞品ASIN列表
-      features?: string[] // 🔥 新增：产品特性
+      features?: string[] // 产品特性
       scrapeStatus: 'success' | 'failed' | 'skipped'
       error?: string
     }>
     totalScraped: number
     successCount: number
     failedCount: number
-    // 🔥 新增：聚合数据用于AI分析
     aggregatedReviews?: string[] // 聚合所有热销商品的评论
     aggregatedCompetitorAsins?: string[] // 聚合所有竞品ASIN（去重）
     aggregatedFeatures?: string[] // 聚合所有产品特性（去重）
@@ -132,7 +129,7 @@ export interface AmazonStoreData {
 
 /**
  * Independent site store data structure
- * 🔥 增强版：与AmazonStoreData保持一致的数据结构
+ * 与AmazonStoreData保持一致的数据结构
  */
 export interface IndependentStoreData {
   storeName: string | null
@@ -142,7 +139,6 @@ export interface IndependentStoreData {
     name: string
     price: string | null
     productUrl: string | null
-    // 🔥 新增：与Amazon产品一致的字段
     rating?: string | null
     reviewCount?: string | null
     hotScore?: number // 热销分数
@@ -154,13 +150,13 @@ export interface IndependentStoreData {
   totalProducts: number
   storeUrl: string
   platform: string | null // shopify, woocommerce, generic
-  // 🔥 新增：热销洞察（与Amazon Store一致）
+  // 热销洞察（与Amazon Store一致）
   hotInsights?: {
     avgRating: number
     avgReviews: number
     topProductsCount: number
   }
-  // 🆕 产品分类（独立站店铺理解，与Amazon Store对齐）
+  // 产品分类（独立站店铺理解，与Amazon Store对齐）
   productCategories?: {
     primaryCategories: Array<{
       name: string
@@ -169,7 +165,7 @@ export interface IndependentStoreData {
     }>
     totalCategories: number
   }
-  // 🔥 新增：深度抓取结果（热销商品详情页数据）
+  // 深度抓取结果（热销商品详情页数据）
   deepScrapeResults?: {
     topProducts: Array<{
       productUrl: string
@@ -188,7 +184,7 @@ export interface IndependentStoreData {
 
 /**
  * Independent site product data structure (for deep scraping)
- * 🔥 2025-12-24增强：与AmazonProductData保持一致的数据结构
+ * 与AmazonProductData保持一致的数据结构
  * 包含详细的产品、评价、技术信息和竞品数据
  */
 export interface IndependentProductData {
@@ -205,7 +201,7 @@ export interface IndependentProductData {
   // 详细特性和信息（Amazon-style）
   features: string[]
   imageUrls: string[]
-  technicalDetails?: Record<string, string> // 🔥 新增：技术规格表
+  technicalDetails?: Record<string, string> // 技术规格表
   category: string | null
 
   // 评价和社交证明
@@ -213,9 +209,9 @@ export interface IndependentProductData {
   reviewCount: string | null
   availability: string | null
   reviews: string[]
-  reviewHighlights?: string[] // 🔥 新增：评价亮点总结
-  topReviews?: string[] // 🔥 新增：TOP评价（最有帮助的评价）
-  reviewKeywords?: string[] // 🔥 新增：评价关键词主题
+  reviewHighlights?: string[] // 评价亮点总结
+  topReviews?: string[] // TOP评价（最有帮助的评价）
+  reviewKeywords?: string[] // 评价关键词主题
   structuredReviews?: Array<{
     rating: number
     date: string
@@ -237,16 +233,16 @@ export interface IndependentProductData {
   secondaryFeatures?: string[]
 
   // 信任徽章和促销
-  badge?: string | null // 🔥 新增："Best Seller", "Featured", "Limited Edition"等
-  promotion?: string | null // 🔥 新增：促销信息
+  badge?: string | null // "Best Seller", "Featured", "Limited Edition"等
+  promotion?: string | null // 促销信息
 
   // 竞品和相关产品
-  relatedProductUrls?: string[] // 🔥 新增：相关产品URL（类似Amazon竞品）
-  competitorUrls?: string[] // 🔥 新增：竞品URL列表
+  relatedProductUrls?: string[] // 相关产品URL（类似Amazon竞品）
+  competitorUrls?: string[] // 竞品URL列表
 
   // 库存和配送信息
-  stockStatus?: string | null // 🔥 新增：库存状态
-  shippingInfo?: string | null // 🔥 新增：配送信息
+  stockStatus?: string | null // 库存状态
+  shippingInfo?: string | null // 配送信息
 }
 
 /**

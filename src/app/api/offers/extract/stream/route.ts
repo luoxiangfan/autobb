@@ -3,21 +3,21 @@
  *
  * 合并API：创建Offer提取任务并订阅SSE进度流
  *
- * 流程：
+ * 流程
  * 1. 创建offer_tasks记录
  * 2. 将任务加入UnifiedQueueManager
  * 3. 建立SSE流，轮询任务进度并实时推送
  *
- * 请求体：
- * - affiliate_link: 推广链接
- * - target_country: 目标国家
- * - commission_type + commission_value (+ commission_currency): 结构化佣金（推荐）
- * - commission_payout: 佣金（兼容旧字段）
+ * 请求体
+ * affiliate_link: 推广链接
+ * target_country: 目标国家
+ * commission_type + commission_value (+ commission_currency): 结构化佣金（推荐）
+ * commission_payout: 佣金（兼容旧字段）
  *
- * SSE消息格式：
- * - { type: 'progress', data: { stage, status, message, timestamp, duration, details } }
- * - { type: 'complete', data: { success, finalUrl, brand, ... } }
- * - { type: 'error', data: { message, stage, details } }
+ * SSE消息格式
+ * { type: 'progress', data: { stage, status, message, timestamp, duration, details } }
+ * { type: 'complete', data: { success, finalUrl, brand, ... } }
+ * { type: 'error', data: { message, stage, details } }
  */
 
 import { withAuth } from '@/lib/auth'

@@ -6,7 +6,7 @@ export function calculateDiversity(headlines: HeadlineAsset[], descriptions: Des
   const headlineTypes = new Set(headlines.map((h) => h.type).filter(Boolean))
   let typeDistribution = Math.min(8, headlineTypes.size * 1.6) // 5种类型 * 1.6分/种
 
-  // 优化：如果所有headlines都没有type属性，使用启发式规则估算多样性
+  // 如果所有headlines都没有type属性，使用启发式规则估算多样性
   if (headlineTypes.size === 0 && headlines.length >= 10) {
     console.log('⚠️ Headlines缺少type属性，使用启发式规则评估多样性')
 

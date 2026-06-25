@@ -308,7 +308,7 @@ export const POST = withAuth(async (request, user, context) => {
       }
     }
 
-    // 🔥 可选：移除队列中的待处理任务（best-effort）
+    // 可选：移除队列中的待处理任务（best-effort）
     if (pauseClickFarmTasks || pauseUrlSwapTasks) {
       try {
         const { getOrCreateQueueManager } = await import('@/lib/queue/init-queue')

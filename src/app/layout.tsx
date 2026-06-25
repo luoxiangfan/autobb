@@ -3,7 +3,7 @@ import localFont from 'next/font/local'
 import { ToasterProvider } from '@/components/ToasterProvider'
 import './globals.css'
 
-// ⚡ P0性能优化: 移除全局force-dynamic，按需在各页面单独设置
+// ⚡ P0性能移除全局force-dynamic，按需在各页面单独设置
 // 这允许静态页面（如登录页、文档页）使用Next.js静态优化
 // 实时数据页面（dashboard、offers等）在各自的page.tsx中设置dynamic='force-dynamic'
 

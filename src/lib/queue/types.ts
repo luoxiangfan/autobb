@@ -16,19 +16,19 @@ export type TaskType =
   | 'offer-extraction' // Offer信息提取（完整流程：URL解析 + 品牌识别 + AI分析）
   | 'batch-offer-creation' // 批量Offer创建（父任务：协调多个offer-extraction子任务）
   | 'ad-creative' // 广告创意生成（多轮优化 + Ad Strength评估）
-  | 'campaign-publish' // 🆕 广告系列发布到Google Ads（异步处理，避免504超时）
-  | 'click-farm-trigger' // 🆕 补点击触发请求（控制面任务：仅触发调度，不直接执行点击）
-  | 'click-farm-batch' // 🆕 补点击批次分发（将整小时点击拆分为小批量滚动入队）
-  | 'click-farm' // 🆕 补点击任务（单次点击执行，带代理和超时控制）
-  | 'url-swap' // 🆕 换链接任务（自动监测和更新Google Ads广告链接）
-  | 'openclaw-strategy' // 🆕 OpenClaw 自进化策略任务
-  | 'affiliate-product-sync' // 🆕 联盟商品同步任务（YP/PB）
-  | 'openclaw-command' // 🆕 OpenClaw 指令执行任务（可含确认流）
-  | 'openclaw-affiliate-sync' // 🆕 OpenClaw 联盟成交/佣金快照同步任务
-  | 'openclaw-report-send' // 🆕 OpenClaw 每日报表投递任务
-  | 'product-score-calculation' // 🆕 商品推荐指数计算任务
-  | '@/lib/google-ads/campaign/sync' // 🆕 Google Ads广告系列同步任务
-  | 'campaign-batch-create' // 🆕 批量从备份创建广告系列任务
+  | 'campaign-publish' // 广告系列发布到Google Ads（异步处理，避免504超时）
+  | 'click-farm-trigger' // 补点击触发请求（控制面任务：仅触发调度，不直接执行点击）
+  | 'click-farm-batch' // 补点击批次分发（将整小时点击拆分为小批量滚动入队）
+  | 'click-farm' // 补点击任务（单次点击执行，带代理和超时控制）
+  | 'url-swap' // 换链接任务（自动监测和更新Google Ads广告链接）
+  | 'openclaw-strategy' // OpenClaw 自进化策略任务
+  | 'affiliate-product-sync' // 联盟商品同步任务（YP/PB）
+  | 'openclaw-command' // OpenClaw 指令执行任务（可含确认流）
+  | 'openclaw-affiliate-sync' // OpenClaw 联盟成交/佣金快照同步任务
+  | 'openclaw-report-send' // OpenClaw 每日报表投递任务
+  | 'product-score-calculation' // 商品推荐指数计算任务
+  | '@/lib/google-ads/campaign/sync' // Google Ads广告系列同步任务
+  | 'campaign-batch-create' // 批量从备份创建广告系列任务
 
 export const ALL_TASK_TYPES: TaskType[] = [
   'sync',
@@ -129,7 +129,7 @@ export interface QueueStats {
   completed: number
   failed: number
   byType: Record<TaskType, number>
-  // 🔥 运行中任务按类型统计（用于并发利用率展示）
+  // 运行中任务按类型统计（用于并发利用率展示）
   byTypeRunning: Record<TaskType, number>
   byUser: Record<
     number,
@@ -138,7 +138,7 @@ export interface QueueStats {
       running: number
       completed: number
       failed: number
-      // 🔥 按“核心/非核心”细分完成/失败（用于管理台快速判断SLA风险）
+      // 按“核心/非核心”细分完成/失败（用于管理台快速判断SLA风险）
       coreCompleted?: number
       backgroundCompleted?: number
       coreFailed?: number
@@ -150,9 +150,9 @@ export interface QueueStats {
 /**
  * pending 任务可执行性统计
  *
- * 用于区分：
- * - eligiblePending: 当前时间已到，可立即被 dequeue 的 pending 任务
- * - delayedPending: 因 notBefore/scheduledAt/重试延迟/退避而暂不可执行的 pending 任务
+ * 用于区分
+ * eligiblePending: 当前时间已到，可立即被 dequeue 的 pending 任务
+ * delayedPending: 因 notBefore/scheduledAt/重试延迟/退避而暂不可执行的 pending 任务
  */
 export interface PendingEligibilityStats {
   pendingTotal: number
@@ -186,8 +186,8 @@ export interface QueueConfig {
   /**
    * 是否在 enqueue 时自动启动队列处理循环（并自动注册执行器）。
    *
-   * - `true`（默认）：保持旧行为，任何调用 enqueue 的进程都会启动处理循环（适用于单进程/简化部署）。
-   * - `false`：仅连接存储并写入 pending；由独立 worker 进程负责 start() 与执行（适用于拆分 worker）。
+   * `true`（默认）：保持旧行为，任何调用 enqueue 的进程都会启动处理循环（适用于单进程/简化部署）。
+   * `false`：仅连接存储并写入 pending；由独立 worker 进程负责 start() 与执行（适用于拆分 worker）。
    */
   autoStartOnEnqueue?: boolean
 
@@ -243,10 +243,10 @@ export interface QueueStorageAdapter {
   clearCompleted(): Promise<number>
   clearFailed(): Promise<number>
 
-  // 🔥 按类型和状态删除任务（用于服务重启时清理特定任务）
+  // 按类型和状态删除任务（用于服务重启时清理特定任务）
   deleteTasksByTypeAndStatus?(type: TaskType, status: 'pending' | 'running'): Promise<number>
 
-  // 🔥 启动时清理操作（可选，Redis适配器实现）
+  // 启动时清理操作（可选，Redis适配器实现）
   clearAllUnfinished?(): Promise<{
     pendingCleared: number
     runningCleared: number
@@ -255,7 +255,7 @@ export interface QueueStorageAdapter {
   }>
 
   /**
-   * 🔥 启动时恢复 running 僵尸任务（可选，Redis适配器实现）
+   * 启动时恢复 running 僵尸任务（可选，Redis适配器实现）
    * 将 running 集合中的任务重新放回 pending 队列（pending:all / pending:type / user pending），避免重启后卡死。
    */
   requeueAllRunningOnStartup?(): Promise<{
@@ -265,7 +265,7 @@ export interface QueueStorageAdapter {
   }>
 
   /**
-   * 🔥 修复 pending 索引（可选，Redis适配器实现）
+   * 修复 pending 索引（可选，Redis适配器实现）
    * 解决 tasks hash 中 status=pending 但未进入 pending zset 的“孤儿任务”，导致队列永远 dequeue 不到。
    */
   repairPendingIndexes?(): Promise<{
@@ -273,19 +273,19 @@ export interface QueueStorageAdapter {
     scannedCount: number
   }>
 
-  // 🔥 超时任务清理（可选，Redis适配器实现）
+  // 超时任务清理（可选，Redis适配器实现）
   cleanupStaleRunningTasks?(timeoutMs?: number): Promise<{
     cleanedCount: number
     cleanedTaskIds: string[]
   }>
 
-  // 🔥 无效用户任务清理（可选，Redis适配器实现）
+  // 无效用户任务清理（可选，Redis适配器实现）
   cleanupInvalidUserTasks?(): Promise<{
     cleanedCount: number
     cleanedTaskIds: string[]
   }>
 
-  // 🔥 批量任务取消支持（可选）
+  // 批量任务取消支持（可选）
   getAllPendingTasks?(): Promise<Task[]>
   removeTask?(taskId: string): Promise<void>
   removePendingTasksByUserAndTypes?(
@@ -294,7 +294,7 @@ export interface QueueStorageAdapter {
   ): Promise<{ removedCount: number; removedTaskIds: string[] }>
 
   /**
-   * 🔥 pending 可执行性统计（可选）
+   * pending 可执行性统计（可选）
    * 用于管理台解释“队列中但不执行”的常见原因（scheduledAt/notBefore）。
    */
   getPendingEligibilityStats?(): Promise<PendingEligibilityStats>

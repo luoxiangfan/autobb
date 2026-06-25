@@ -96,11 +96,11 @@ type ParsedProxyEndpoint = {
 
 /**
  * 需要代理的任务类型
- * - offer-extraction: 网页抓取需要代理以避免 IP 封禁
+ * offer-extraction: 网页抓取需要代理以避免 IP 封禁
  *
- * 不需要代理的任务类型：
- * - sync: Google Ads数据同步使用官方API，不需要代理
- * - backup: 备份任务是内部操作
+ * 不需要代理的任务类型
+ * sync: Google Ads数据同步使用官方API，不需要代理
+ * backup: 备份任务是内部操作
  */
 const PROXY_REQUIRED_TASK_TYPES = ['offer-extraction'] as const
 

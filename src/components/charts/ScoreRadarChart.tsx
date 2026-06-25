@@ -26,7 +26,7 @@ interface ScoreRadarChartProps {
     competitivePositioning?: number // 竞争定位（可选，7维度新增）
   }
   size?: 'sm' | 'md' | 'lg'
-  // 新增：支持自定义最大值（用于适配Ad Strength评分体系）
+  // 支持自定义最大值（用于适配Ad Strength评分体系）
   maxScores?: {
     relevance: number
     quality: number

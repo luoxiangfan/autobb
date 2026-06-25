@@ -1,23 +1,23 @@
 /**
  * AI结果缓存管理器
  *
- * 支持的缓存后端：
+ * 支持的缓存后端
  * 1. Redis (推荐，生产环境)
  * 2. Memory (开发/测试，降级方案)
  *
- * 缓存策略：
- * - 评论分析：7天TTL
- * - 竞品分析：3天TTL
- * - 关键词生成：不缓存（实时性要求高）
+ * 缓存策略
+ * 评论分析：7天TTL
+ * 竞品分析：3天TTL
+ * 关键词生成：不缓存（实时性要求高）
  *
- * 预期收益：
- * - 评论分析命中率：40-50% → 节省$880/年
- * - 竞品分析命中率：30-40% → 节省$240/年
+ * 预期收益
+ * 评论分析命中率：40-50% → 节省$880/年
+ * 竞品分析命中率：30-40% → 节省$240/年
  *
- * 环境隔离（2025-12-10优化为方案3）：
- * - 使用结构化REDIS_PREFIX_CONFIG配置
- * - 统一的cache命名空间
- * - 格式：autoads:{NODE_ENV}:cache:ai:{operationType}:{version}:{hash}
+ * 环境隔离
+ * 使用结构化REDIS_PREFIX_CONFIG配置
+ * 统一的cache命名空间
+ * 格式：autoads:{NODE_ENV}:cache:ai:{operationType}:{version}:{hash}
  */
 
 import { getRedisClient } from '../common/server'

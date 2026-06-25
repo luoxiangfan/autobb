@@ -50,7 +50,7 @@ export function generateSuggestions(
   if (relevance.details.keywordCoverage < thresholds.relevance.keywordCoverage) {
     suggestions.push('💡 提高关键词覆盖率：至少80%的关键词应出现在创意中')
   }
-  // v3.3 CTR优化：关键词嵌入率建议
+  // v3.3 CTR关键词嵌入率建议
   if (relevance.details.keywordEmbeddingRate < thresholds.relevance.keywordEmbeddingRate) {
     suggestions.push(
       `🔑 提高关键词嵌入率：当前${relevance.details.keywordEmbeddingRate}%，目标${thresholds.relevance.keywordEmbeddingRate}%+ (8/15 headlines含关键词)`

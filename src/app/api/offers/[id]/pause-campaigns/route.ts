@@ -3,10 +3,10 @@
  *
  * POST /api/offers/[id]/pause-campaigns
  *
- * 功能：
- * - 查询指定Offer的所有已启用广告系列
- * - 调用Google Ads API批量暂停
- * - 更新数据库中的广告系列状态
+ * 功能
+ * 查询指定Offer的所有已启用广告系列
+ * 调用Google Ads API批量暂停
+ * 更新数据库中的广告系列状态
  */
 
 import { NextRequest, NextResponse } from 'next/server'

@@ -1,4 +1,4 @@
-/** Shared batch click-farm / url-swap defaults (client-safe constants). */
+/* * Shared batch click-farm / url-swap defaults (client-safe constants). */
 export const BATCH_CLICK_FARM_TASK_DEFAULTS: {
   dailyClickCount: number
   startTime: string

@@ -69,14 +69,14 @@ export async function createGoogleAdsKeywordsBatch(params: {
   keywords: Array<{
     keywordText: string
     matchType: 'BROAD' | 'PHRASE' | 'EXACT'
-    negativeKeywordMatchType?: 'BROAD' | 'PHRASE' | 'EXACT' // ← 新增：负向词的匹配类型
+    negativeKeywordMatchType?: 'BROAD' | 'PHRASE' | 'EXACT' // ← 负向词的匹配类型
     status: 'ENABLED' | 'PAUSED'
     finalUrl?: string
     isNegative?: boolean
   }>
   accountId?: number
   userId: number
-  loginCustomerId?: string // 🔧 添加MCC权限参数
+  loginCustomerId?: string // 添加MCC权限参数
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -100,7 +100,7 @@ export async function createGoogleAdsKeywordsBatch(params: {
     })
   }
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const { createKeywordsPython } = await import('../../campaign/server')
 

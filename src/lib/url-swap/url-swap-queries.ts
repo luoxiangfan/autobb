@@ -142,7 +142,7 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
   const isDeletedCondition = '(ust.is_deleted = FALSE OR ust.is_deleted IS NULL)'
   const nowCondition = 'CURRENT_TIMESTAMP'
 
-  // 🔒 用户禁用/过期后不再调度其任务（避免继续入队）
+  // � 用户禁用/过期后不再调度其任务（避免继续入队）
   const rows = await db.query<any>(
     `
     SELECT

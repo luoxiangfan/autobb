@@ -1,7 +1,7 @@
 /**
  * Offer提取任务执行器
  *
- * 功能：
+ * 功能
  * 1. 调用核心extractOffer函数
  * 2. 将进度更新到offer_tasks表
  * 3. 支持SSE实时推送（通过数据库轮询）
@@ -286,15 +286,15 @@ export interface OfferExtractionTaskData {
   targetCountry: string
   skipCache?: boolean
   skipWarmup?: boolean
-  // 🔥 新增：产品价格和佣金比例（用于批量上传创建Offer）
+  // 产品价格和佣金比例（用于批量上传创建Offer）
   productPrice?: string
   commissionPayout?: string
   commissionType?: 'percent' | 'amount'
   commissionValue?: string
   commissionCurrency?: string
-  // 🔥 新增：用户手动输入的品牌名（独立站Google搜索补充用）
+  // 用户手动输入的品牌名（独立站Google搜索补充用）
   brandName?: string
-  // 🔥 链接类型与店铺补充单品链接
+  // 链接类型与店铺补充单品链接
   pageType?: 'store' | 'product'
   storeProductLinks?: string[]
   extractionMode?: OfferExtractionMode | string
@@ -323,7 +323,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
   const modeProfile = getOfferExtractionModeProfile(extractionMode)
   const db = getDatabase()
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
   const toDbJson = (value: any): any => toDbJsonObjectField(value, null)
 
@@ -411,9 +411,9 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       console.warn(`⚠️ 检测到无效finalUrl，已跳过持久化: ${extractResult.data.finalUrl}`)
     }
 
-    // ========== 🔥 2025-12-16重构：提取完成后立即创建Offer（增量保存第一阶段）==========
+    // 提取完成后立即创建Offer（增量保存第一阶段）
     // 问题：之前等到SSE流程完全结束才创建Offer，如果AI分析失败或用户刷新页面，数据全部丢失
-    // 修复：提取完成后立即创建Offer，AI分析结果后续增量更新
+    // 提取完成后立即创建Offer，AI分析结果后续增量更新
     let createdOfferId: number | null = null
     const taskRow = await db.queryOne<{ batch_id: string | null; offer_id: number | null }>(
       `
@@ -463,9 +463,9 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       await updateOfferScrapeStatus(taskRow.offer_id, task.userId, 'in_progress', undefined, {
         brand: brandForPersistence,
         url: resolvedFinalUrl || undefined,
-        // 🔥 2025-12-16修复：保存final_url_suffix到数据库
+        // 保存final_url_suffix到数据库
         final_url_suffix: resolvedFinalUrlSuffix,
-        // 🔥 2025-12-16修复：保存product_name到数据库
+        // 保存product_name到数据库
         product_name: extractResult.data.productName || undefined,
         scraped_data: JSON.stringify(extractResult.data),
         page_type: pageTypeToPersist,
@@ -483,9 +483,9 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
             ? JSON.stringify(storeProductLinks)
             : undefined,
         final_url: resolvedFinalUrl || undefined,
-        // 🔥 2025-12-16修复：保存final_url_suffix到数据库
+        // 保存final_url_suffix到数据库
         final_url_suffix: resolvedFinalUrlSuffix,
-        // 🔥 2025-12-16修复：保存product_name到数据库
+        // 保存product_name到数据库
         product_name: extractResult.data.productName || undefined,
         product_price:
           productPrice ||
@@ -520,9 +520,9 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
             ? JSON.stringify(storeProductLinks)
             : undefined,
         final_url: resolvedFinalUrl || undefined,
-        // 🔥 2025-12-16修复：保存final_url_suffix到数据库
+        // 保存final_url_suffix到数据库
         final_url_suffix: resolvedFinalUrlSuffix,
-        // 🔥 2025-12-16修复：保存product_name到数据库
+        // 保存product_name到数据库
         product_name: extractResult.data.productName || undefined,
         product_price:
           productPrice ||
@@ -557,7 +557,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       }
     }
 
-    // ========== 执行AI分析 ==========
+    // 执行AI分析
     console.log(`🤖 开始AI分析: ${task.id}`)
 
     // 更新进度到ai_analysis阶段
@@ -639,7 +639,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       }
     }
 
-    // 🔥 独立站增强：合并Google品牌词搜索补充数据到“已提取广告元素”维度中
+    // 独立站增强：合并Google品牌词搜索补充数据到“已提取广告元素”维度中
     const brandSearchSupplement: BrandSearchSupplement | null =
       (extractResult.data as any)?.brandSearchSupplement || null
 
@@ -675,7 +675,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
     const aiProductInfo = aiAnalysisResult?.aiProductInfo || {}
     const finalResult = {
       ...extractResult.data,
-      // 🔥 展平AI分析结果到顶层（与CreateOfferModalV2.tsx期望的结构匹配）
+      // 展平AI分析结果到顶层（与CreateOfferModalV2.tsx期望的结构匹配）
       brandDescription: aiProductInfo.brandDescription || null,
       uniqueSellingPoints: aiProductInfo.uniqueSellingPoints || null,
       productHighlights: aiProductInfo.productHighlights || null,
@@ -692,13 +692,13 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         Object.keys(mergedExtractionMetadata).length > 0 ? mergedExtractionMetadata : null,
     }
 
-    // ========== 🔥 2025-12-16重构：AI分析完成后更新Offer（增量保存第二阶段）==========
+    // AI分析完成后更新Offer（增量保存第二阶段）
     // Offer已在提取完成后创建，这里只更新AI分析结果
     if (createdOfferId) {
       try {
         const fallbackProductInfo = deriveFallbackProductInfoFromExtractData(extractResult.data)
 
-        // 🔥 2026-01-04修复：将AI生成的关键词持久化到offers.ai_keywords
+        // 将AI生成的关键词持久化到offers.ai_keywords
         // 关键词池生成依赖 ai_keywords / extracted_keywords；若不保存，独立站等场景可能出现“无可用关键词”
         const aiKeywordSeeds: string[] | null =
           Array.isArray((aiProductInfo as any)?.keywords) &&
@@ -712,9 +712,9 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         await updateOfferScrapeStatus(createdOfferId, task.userId, 'completed', undefined, {
           brand: brandForPersistence,
           url: resolvedFinalUrl || undefined,
-          // 🔥 2025-12-16修复：保存final_url_suffix到数据库
+          // 保存final_url_suffix到数据库
           final_url_suffix: resolvedFinalUrlSuffix,
-          // 🔥 2025-12-16修复：保存product_name到数据库
+          // 保存product_name到数据库
           product_name: extractResult.data.productName || undefined,
           brand_description:
             aiProductInfo.brandDescription || fallbackProductInfo.brandDescription || undefined,
@@ -762,7 +762,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
           page_type: pageTypeToPersist,
         })
 
-        // 🎯 Intent-driven optimization: Auto-extract scenarios from review_analysis
+        // Intent-driven optimization: Auto-extract scenarios from review_analysis
         // Graceful degradation: If no review data, these fields remain null
         if (aiAnalysisResult?.reviewAnalysis) {
           try {
@@ -798,7 +798,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       }
     }
 
-    // 🔥 2025-12-16修复：保存到数据库的result必须包含offerId，否则前端无法获取
+    // 保存到数据库的result必须包含offerId，否则前端无法获取
     const resultWithOfferId = {
       ...finalResult,
       offerId: createdOfferId,

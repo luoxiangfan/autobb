@@ -60,7 +60,7 @@ export async function healAccountsRouteDeveloperToken(params: {
   clientSecret: string
   serviceAccountId?: string | null
   serviceAccountConfig?: { developerToken?: string } | null
-  /** 必填：共享认证 / 双栈须以调用方 userId 视角解析 */
+  /* * 必填：共享认证 / 双栈须以调用方 userId 视角解析 */
   authContext: GoogleAdsAuthContext
 }): Promise<DeveloperTokenHealResult> {
   const authFailure = resolveGoogleAdsAuthReadyFailure(params.authContext)

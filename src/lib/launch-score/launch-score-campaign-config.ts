@@ -2,13 +2,13 @@ import type { Offer } from '../offers/server'
 import type { CampaignConfigData } from './launch-scores'
 import type { LaunchScoreCampaignConfig } from './scoring'
 
-/** 与 contentHash 缓存查询一致的投放配置（Step3：预算/国家/语言/关键词） */
+/* * 与 contentHash 缓存查询一致的投放配置（Step3：预算/国家/语言/关键词） */
 export type LaunchScoreHashCampaignConfig = {
   budgetAmount?: number
   maxCpcBid?: number
   targetCountry?: string
   targetLanguage?: string
-  /** Step3 用户配置关键词（优先于创意 DB 的 keywords_with_volume） */
+  /* * Step3 用户配置关键词（优先于创意 DB 的 keywords_with_volume） */
   keywords?: unknown[]
 }
 
@@ -83,7 +83,7 @@ export function parseLaunchScoreHashCampaignConfig(
   }
 }
 
-/** 从 GET query 解析 campaignConfig（支持 JSON 或独立字段） */
+/* * 从 GET query 解析 campaignConfig（支持 JSON 或独立字段） */
 export function parseLaunchScoreHashCampaignConfigFromSearchParams(
   searchParams: URLSearchParams
 ): LaunchScoreHashCampaignConfig | undefined {
@@ -135,7 +135,7 @@ export function toLaunchScoreScoringCampaignConfig(
   }
 }
 
-/** 发布路径：将 API campaignConfig 转为 hash 用结构（0 表示未配置，与发布逻辑一致） */
+/* * 发布路径：将 API campaignConfig 转为 hash 用结构（0 表示未配置，与发布逻辑一致） */
 export function launchScoreHashConfigFromPublishCampaignConfig(config: {
   targetCountry?: string
   targetLanguage?: string

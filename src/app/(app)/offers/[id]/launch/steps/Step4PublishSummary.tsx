@@ -60,7 +60,7 @@ interface Props {
   selectedAccount: any
   selectedAccounts?: any[]
   onPublishComplete: () => void
-  onGoBackToStep3: () => void // 🔥 新增：返回第3步的回调函数
+  onGoBackToStep3: () => void // 返回第3步的回调函数
 }
 
 export default function Step4PublishSummary({
@@ -70,7 +70,7 @@ export default function Step4PublishSummary({
   selectedAccount,
   selectedAccounts = [],
   onPublishComplete,
-  onGoBackToStep3, // 🔥 新增：返回第3步的回调函数
+  onGoBackToStep3, // 返回第3步的回调函数
 }: Props) {
   const accountsToPublish =
     Array.isArray(selectedAccounts) && selectedAccounts.length > 0
@@ -86,7 +86,7 @@ export default function Step4PublishSummary({
   const [needsReauth, setNeedsReauth] = useState(false)
   const [reauthMessage, setReauthMessage] = useState<string>('')
 
-  // 🔥 新增：Google Ads API 限流状态
+  // Google Ads API 限流状态
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [rateLimitInfo, setRateLimitInfo] = useState<{
     retryAfter: number // 等待秒数
@@ -112,7 +112,7 @@ export default function Step4PublishSummary({
 
   const BULK_PUBLISH_CONCURRENCY = 3
 
-  // 🔧 修复(2025-12-24): 获取正确的货币符号
+  // 获取正确的货币符号
   const accountCurrency = primaryAccount?.currencyCode || 'USD'
   const currencySymbol = CURRENCY_SYMBOLS[accountCurrency] || '$'
 
@@ -190,7 +190,7 @@ export default function Step4PublishSummary({
       data?.error?.code === 'GADS_4006' || // GADS_CREDENTIALS_INVALID
       data?.error?.details?.needsReauth === true
 
-    // 🔥 新增：检测 Google Ads API 限流错误 (429)
+    // 检测 Google Ads API 限流错误 (429)
     const isRateLimitedFlag =
       data?.error?.code === 429 ||
       data?.code === 'ERR_BAD_RESPONSE' ||
@@ -198,7 +198,7 @@ export default function Step4PublishSummary({
       (typeof data?.detail === 'string' && data.detail.includes('exhausted')) ||
       (typeof data?.detail === 'string' && data.detail.includes('Too many requests'))
 
-    // 🔥 新增：解析重试时间（秒）
+    // 解析重试时间（秒）
     let retryAfter: number | undefined
     if (isRateLimitedFlag) {
       // 从错误信息中提取重试时间
@@ -223,7 +223,7 @@ export default function Step4PublishSummary({
     return { message, needsReauth: needsReauthFlag, isRateLimited: isRateLimitedFlag, retryAfter }
   }
 
-  // 🔥 新增：调试日志 - 追踪selectedCreative中的否定关键词
+  // 调试日志 - 追踪selectedCreative中的否定关键词
   console.log(`[Step4] selectedCreative ID: ${selectedCreative.id}`)
   console.log(
     `[Step4] selectedCreative.negativeKeywords存在: ${!!selectedCreative.negativeKeywords}`
@@ -235,14 +235,14 @@ export default function Step4PublishSummary({
     `[Step4] selectedCreative.negativeKeywords示例: ${selectedCreative.negativeKeywords?.slice(0, 5).join(', ') || 'NONE'}`
   )
 
-  // 🔧 修复(2026-01-05): 添加warnings字段支持
+  // 添加warnings字段支持
   const [publishStatus, setPublishStatus] = useState<{
     step: string
     message: string
     success: boolean
   } | null>(null)
 
-  // 🔥 新增：发布流程步骤记录
+  // 发布流程步骤记录
   const [publishSteps, setPublishSteps] = useState<
     Array<{
       step: string
@@ -252,39 +252,39 @@ export default function Step4PublishSummary({
     }>
   >([])
 
-  // 🔥 新增：发布结果模式（点击发布后切换）
+  // 发布结果模式（点击发布后切换）
   const [showPublishResult, setShowPublishResult] = useState(false)
 
-  // 🔥 新增：用于“超时后继续检查”的Campaign IDs
+  // 用于“超时后继续检查”的Campaign IDs
   const [lastPublishCampaignIds, setLastPublishCampaignIds] = useState<number[]>([])
 
-  // 🔥 新增(2025-12-19)：Launch Score评分结果（成功时显示）
+  // Launch Score评分结果（成功时显示）
   const [launchScoreSuccess, setLaunchScoreSuccess] = useState<{
     totalScore: number
     breakdown: any
     overallRecommendations: string[]
   } | null>(null)
 
-  // 🔥 新增：Launch Score 阻止详情
+  // Launch Score 阻止详情
   const [launchScoreBlockDetails, setLaunchScoreBlockDetails] = useState<{
     launchScore: number
     threshold: number
     breakdown: any
     issues: string[]
     suggestions: string[]
-    overallRecommendations: string[] // 🔧 新增：整体建议字段
-    canForcePublish?: boolean // 🔥 新增：是否可以强制发布（40-80分时为true）
+    overallRecommendations: string[] // 整体建议字段
+    canForcePublish?: boolean // 是否可以强制发布（40-80分时为true）
   } | null>(null)
 
-  // 🔥 新增：确认暂停对话框相关state
+  // 确认暂停对话框相关state
   const [showPauseConfirm, setShowPauseConfirm] = useState(false)
   const [existingCampaigns, setExistingCampaigns] = useState<any[]>([])
   const [pauseConfirmMessage, setPauseConfirmMessage] = useState('')
 
-  // 🔥 新增：强制发布确认对话框
+  // 强制发布确认对话框
   const [showForcePublishConfirm, setShowForcePublishConfirm] = useState(false)
 
-  // 🔥 辅助函数：添加/更新发布步骤
+  // 辅助函数：添加/更新发布步骤
   const addPublishStep = (
     step: string,
     message: string,
@@ -918,13 +918,13 @@ export default function Step4PublishSummary({
     }
   }
 
-  // 🔥 新增：重置发布状态（用于"返回修改"）- 现在会直接跳转到第3步
+  // 重置发布状态（用于"返回修改"）- 现在会直接跳转到第3步
   const resetPublishState = () => {
     // 直接跳转到第3步，让用户修改广告配置
     onGoBackToStep3()
   }
 
-  // 🔥 新增：强制发布处理函数（用于40-80分警告时）
+  // 强制发布处理函数（用于40-80分警告时）
   const handleForcePublish = async () => {
     try {
       setShowForcePublishConfirm(false)
@@ -953,7 +953,7 @@ export default function Step4PublishSummary({
           campaignConfig: campaignConfig,
           pauseOldCampaigns: pauseOldCampaigns,
           enableCampaignImmediately: enableCampaignImmediately,
-          forcePublish: true, // 🔥 关键：强制发布标志
+          forcePublish: true, // 关键：强制发布标志
         }),
       })
 
@@ -1016,7 +1016,7 @@ export default function Step4PublishSummary({
         throw new Error(apiError.message)
       }
 
-      // 🔥 修复：202 Accepted 表示后台异步队列，必须轮询 DB 状态确认
+      // 202 Accepted 表示后台异步队列，必须轮询 DB 状态确认
       if (response.status === 202) {
         addPublishStep('creating', '创建广告系列结构', 'success')
         addPublishStep('syncing', '同步到Google Ads...(轮询中)', 'running')
@@ -1153,7 +1153,7 @@ export default function Step4PublishSummary({
       }
 
       setPublishing(true)
-      setShowPublishResult(true) // 🔥 切换到发布结果模式
+      setShowPublishResult(true) // 切换到发布结果模式
       setPublishSteps([]) // 清空之前的步骤
       setLaunchScoreBlockDetails(null) // 清空之前的阻止详情
 
@@ -1167,7 +1167,7 @@ export default function Step4PublishSummary({
       // Step 1: Pause old campaigns if requested
       addPublishStep('preparing', '准备发布数据', 'success')
 
-      // ⚠️ 注意：旧广告系列暂停由 /api/campaigns/publish 在服务端基于“真实Google Ads状态”执行，
+      // 注意：旧广告系列暂停由 /api/campaigns/publish 在服务端基于“真实Google Ads状态”执行，
       // 避免依赖本地DB状态导致误显示“已暂停0个广告系列”。
       if (pauseOldCampaigns) {
         addPublishStep('pausing', '检测并暂停已激活的旧广告系列...', 'running')
@@ -1206,7 +1206,7 @@ export default function Step4PublishSummary({
       const data = await response.json()
       const apiError = parseApiError(data)
 
-      // 🔥 处理Launch Score过低的情况（422状态码）- 在卡片中显示而不是toast
+      // 处理Launch Score过低的情况（422状态码）- 在卡片中显示而不是toast
       if (response.status === 422 && data.action === 'LAUNCH_SCORE_BLOCKED') {
         console.error('❌ Launch Score过低:', data)
         const details = data.details || {}
@@ -1218,7 +1218,7 @@ export default function Step4PublishSummary({
           breakdown: details.breakdown || {},
           issues: details.issues || [],
           suggestions: details.suggestions || [],
-          overallRecommendations: details.overallRecommendations || [], // 🔧 新增：整体建议
+          overallRecommendations: details.overallRecommendations || [], // 整体建议
         })
 
         addPublishStep(
@@ -1235,7 +1235,7 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 处理Launch Score警告的情况（422状态码）- 显示建议但不阻止发布
+      // 处理Launch Score警告的情况（422状态码）- 显示建议但不阻止发布
       if (response.status === 422 && data.action === 'LAUNCH_SCORE_WARNING') {
         console.warn('⚠️ Launch Score偏低:', data)
         const details = data.details || {}
@@ -1247,8 +1247,8 @@ export default function Step4PublishSummary({
           breakdown: details.breakdown || {},
           issues: details.issues || [],
           suggestions: details.suggestions || [],
-          overallRecommendations: details.overallRecommendations || [], // 🔧 新增：整体建议
-          canForcePublish: details.canForcePublish === true, // 🔥 新增：标记可以强制发布
+          overallRecommendations: details.overallRecommendations || [], // 整体建议
+          canForcePublish: details.canForcePublish === true, // 标记可以强制发布
         })
 
         addPublishStep(
@@ -1265,11 +1265,11 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 处理需要确认暂停的情况（422状态码）- 使用新的数据结构
+      // 处理需要确认暂停的情况（422状态码）- 使用新的数据结构
       if (response.status === 422 && data.action === 'CONFIRM_PAUSE_OLD_CAMPAIGNS') {
         console.log('⚠️ 需要用户确认是否暂停旧Campaign:', data)
 
-        // 🔥 新数据结构：区分系统创建和用户手动创建的广告系列
+        // 新数据结构：区分系统创建和用户手动创建的广告系列
         const ownCampaigns = data.existingCampaigns?.own || []
         const manualCampaigns = data.existingCampaigns?.manual || []
 
@@ -1290,7 +1290,7 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 处理Ads账号被其他Offer占用的情况（409状态码）- 在卡片中显示而不是toast
+      // 处理Ads账号被其他Offer占用的情况（409状态码）- 在卡片中显示而不是toast
       if (response.status === 409) {
         console.error('❌ Ads账号冲突:', data)
         const errorMessage =
@@ -1306,11 +1306,11 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 新增(2025-12-18)：422通用处理（兜底） - 处理任何422错误，即使action不匹配
+      // 422通用处理（兜底） - 处理任何422错误，即使action不匹配
       // 这确保即使后端返回意外的422状态和action值，前端也能正确处理而不会卡在加载中
       if (response.status === 422) {
         console.error('❌ 422错误（未识别的action或其他422错误）:', data)
-        setPublishing(false) // 🔥 关键：停止加载动画
+        setPublishing(false) // 关键：停止加载动画
         addPublishStep('creating', apiError.message, 'failed')
         setPublishStatus({
           step: 'failed',
@@ -1334,7 +1334,7 @@ export default function Step4PublishSummary({
           return
         }
 
-        // 🔥 新增：处理 Google Ads API 限流错误 (429)
+        // 处理 Google Ads API 限流错误 (429)
         if (apiError.isRateLimited) {
           setIsRateLimited(true)
           setRateLimitInfo({
@@ -1354,12 +1354,12 @@ export default function Step4PublishSummary({
         throw new Error(apiError.message)
       }
 
-      // 🔥 修复(2025-12-19): 202 Accepted表示任务已提交到后台队列
+      // 202 Accepted表示任务已提交到后台队列
       // 不能立即认为成功，必须轮询campaign.creation_status直到synced或failed
       if (response.status === 202) {
         console.log('📦 任务已提交到后台队列，开始轮询状态...')
 
-        // 🔥 暂停旧广告系列结果（由后端返回）
+        // 暂停旧广告系列结果（由后端返回）
         if (pauseOldCampaigns) {
           const pausedCount =
             typeof data?.pausedOldCampaigns?.pausedCount === 'number'
@@ -1379,7 +1379,7 @@ export default function Step4PublishSummary({
           )
         }
 
-        // 🔥 新增(2025-12-19)：保存Launch Score评分结果
+        // 保存Launch Score评分结果
         if (data.launchScore) {
           setLaunchScoreSuccess({
             totalScore: data.launchScore.totalScore,
@@ -1478,12 +1478,12 @@ export default function Step4PublishSummary({
     }
   }
 
-  // 🔥 新增：用户确认暂停并发布
+  // 用户确认暂停并发布
   const handleConfirmPauseAndPublish = async () => {
     try {
       setShowPauseConfirm(false)
       setPublishing(true)
-      setShowPublishResult(true) // 🔥 切换到发布结果模式
+      setShowPublishResult(true) // 切换到发布结果模式
       setPublishSteps([]) // 清空之前的步骤
       setLaunchScoreBlockDetails(null) // 清空之前的阻止详情
 
@@ -1514,7 +1514,7 @@ export default function Step4PublishSummary({
       const data = await response.json()
       const apiError = parseApiError(data)
 
-      // 🔥 处理Launch Score过低的情况 - 在卡片中显示而不是toast (handleConfirmPauseAndPublish)
+      // 处理Launch Score过低的情况 - 在卡片中显示而不是toast (handleConfirmPauseAndPublish)
       if (response.status === 422 && data.action === 'LAUNCH_SCORE_BLOCKED') {
         console.error('❌ Launch Score过低:', data)
         const details = data.details || {}
@@ -1526,7 +1526,7 @@ export default function Step4PublishSummary({
           breakdown: details.breakdown || {},
           issues: details.issues || [],
           suggestions: details.suggestions || [],
-          overallRecommendations: details.overallRecommendations || [], // 🔧 新增：整体建议
+          overallRecommendations: details.overallRecommendations || [], // 整体建议
         })
 
         addPublishStep('pausing', `已暂停${existingCampaigns.length}个旧广告系列`, 'success')
@@ -1544,7 +1544,7 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 处理Launch Score警告的情况 - 显示建议但不阻止发布 (handleConfirmPauseAndPublish)
+      // 处理Launch Score警告的情况 - 显示建议但不阻止发布 (handleConfirmPauseAndPublish)
       if (response.status === 422 && data.action === 'LAUNCH_SCORE_WARNING') {
         console.warn('⚠️ Launch Score偏低:', data)
         const details = data.details || {}
@@ -1556,8 +1556,8 @@ export default function Step4PublishSummary({
           breakdown: details.breakdown || {},
           issues: details.issues || [],
           suggestions: details.suggestions || [],
-          overallRecommendations: details.overallRecommendations || [], // 🔧 新增：整体建议
-          canForcePublish: details.canForcePublish === true, // 🔥 新增：标记可以强制发布
+          overallRecommendations: details.overallRecommendations || [], // 整体建议
+          canForcePublish: details.canForcePublish === true, // 标记可以强制发布
         })
 
         addPublishStep('pausing', `已暂停${existingCampaigns.length}个旧广告系列`, 'success')
@@ -1575,10 +1575,10 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 新增(2025-12-18)：422通用处理（兜底）- 在handleConfirmPauseAndPublish中也需要
+      // 422通用处理（兜底）- 在handleConfirmPauseAndPublish中也需要
       if (response.status === 422) {
         console.error('❌ 422错误（未识别的action或其他422错误）:', data)
-        setPublishing(false) // 🔥 关键：停止加载动画
+        setPublishing(false) // 关键：停止加载动画
         addPublishStep('pausing', `已暂停${existingCampaigns.length}个旧广告系列`, 'success')
         addPublishStep('creating', apiError.message, 'failed')
         setPublishStatus({
@@ -1696,12 +1696,12 @@ export default function Step4PublishSummary({
     }
   }
 
-  // 🔥 新增：用户选择直接发布（A/B测试模式）
+  // 用户选择直接发布（A/B测试模式）
   const handlePublishTogether = async () => {
     try {
       setShowPauseConfirm(false)
       setPublishing(true)
-      setShowPublishResult(true) // 🔥 切换到发布结果模式
+      setShowPublishResult(true) // 切换到发布结果模式
       setPublishSteps([]) // 清空之前的步骤
       setLaunchScoreBlockDetails(null) // 清空之前的阻止详情
 
@@ -1732,7 +1732,7 @@ export default function Step4PublishSummary({
       const data = await response.json()
       const apiError = parseApiError(data)
 
-      // 🔥 处理Launch Score过低的情况 - 在卡片中显示而不是toast (handlePublishTogether)
+      // 处理Launch Score过低的情况 - 在卡片中显示而不是toast (handlePublishTogether)
       if (response.status === 422 && data.action === 'LAUNCH_SCORE_BLOCKED') {
         console.error('❌ Launch Score过低:', data)
         const details = data.details || {}
@@ -1744,7 +1744,7 @@ export default function Step4PublishSummary({
           breakdown: details.breakdown || {},
           issues: details.issues || [],
           suggestions: details.suggestions || [],
-          overallRecommendations: details.overallRecommendations || [], // 🔧 新增：整体建议
+          overallRecommendations: details.overallRecommendations || [], // 整体建议
         })
 
         addPublishStep(
@@ -1761,7 +1761,7 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 处理Launch Score警告的情况 - 显示建议但不阻止发布 (handlePublishTogether)
+      // 处理Launch Score警告的情况 - 显示建议但不阻止发布 (handlePublishTogether)
       if (response.status === 422 && data.action === 'LAUNCH_SCORE_WARNING') {
         console.warn('⚠️ Launch Score偏低:', data)
         const details = data.details || {}
@@ -1773,8 +1773,8 @@ export default function Step4PublishSummary({
           breakdown: details.breakdown || {},
           issues: details.issues || [],
           suggestions: details.suggestions || [],
-          overallRecommendations: details.overallRecommendations || [], // 🔧 新增：整体建议
-          canForcePublish: details.canForcePublish === true, // 🔥 新增：标记可以强制发布
+          overallRecommendations: details.overallRecommendations || [], // 整体建议
+          canForcePublish: details.canForcePublish === true, // 标记可以强制发布
         })
 
         addPublishStep(
@@ -1791,10 +1791,10 @@ export default function Step4PublishSummary({
         return
       }
 
-      // 🔥 新增(2025-12-18)：422通用处理（兜底）- 在handlePublishTogether中也需要
+      // 422通用处理（兜底）- 在handlePublishTogether中也需要
       if (response.status === 422) {
         console.error('❌ 422错误（未识别的action或其他422错误）:', data)
-        setPublishing(false) // 🔥 关键：停止加载动画
+        setPublishing(false) // 关键：停止加载动画
         addPublishStep('creating', apiError.message, 'failed')
         setPublishStatus({
           step: 'failed',
@@ -1946,7 +1946,7 @@ export default function Step4PublishSummary({
         </CardHeader>
       </Card>
 
-      {/* 🚀 两列布局：左侧发布选项，右侧发布结果 */}
+      {/* 两列布局：左侧发布选项，右侧发布结果 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 左列：Publish Options & Button */}
         <Card className="border-2 border-blue-200 bg-blue-50/50 lg:h-[400px] flex flex-col">
@@ -2103,7 +2103,7 @@ export default function Step4PublishSummary({
                 </Alert>
               )}
 
-              {/* 🔥 新增：Google Ads API 限流友好提示 */}
+              {/* Google Ads API 限流友好提示 */}
               {isRateLimited && rateLimitInfo && (
                 <Alert className="border-amber-200 bg-amber-50">
                   <AlertDescription className="space-y-3">
@@ -2433,9 +2433,9 @@ export default function Step4PublishSummary({
                         </div>
                       </div>
 
-                      {/* 🔧 优化：操作按钮移到卡片顶部，用户一眼就能看到 */}
+                      {/* 操作按钮移到卡片顶部，用户一眼就能看到 */}
                       <div className="mb-4 pb-4 border-b border-red-200 space-y-3">
-                        {/* 🔥 新增：强制发布按钮（仅在40-80分警告时显示）- 优先显示 */}
+                        {/* 强制发布按钮（仅在40-80分警告时显示）- 优先显示 */}
                         {launchScoreBlockDetails.canForcePublish && (
                           <Button
                             variant="destructive"
@@ -2504,7 +2504,7 @@ export default function Step4PublishSummary({
                           </div>
                         )}
 
-                      {/* 主要问题 - 🔥 添加中英文翻译 */}
+                      {/* 主要问题 - 添加中英文翻译 */}
                       {launchScoreBlockDetails.issues &&
                         launchScoreBlockDetails.issues.length > 0 && (
                           <div className="mb-3">
@@ -2550,7 +2550,7 @@ export default function Step4PublishSummary({
                           </div>
                         )}
 
-                      {/* 🔧 新增：整体建议 */}
+                      {/* 整体建议 */}
                       {launchScoreBlockDetails.overallRecommendations &&
                         launchScoreBlockDetails.overallRecommendations.length > 0 && (
                           <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -2576,7 +2576,7 @@ export default function Step4PublishSummary({
                     </div>
                   )}
 
-                  {/* 🔥 新增(2025-12-19)：Launch Score评分结果（成功时显示） */}
+                  {/* Launch Score评分结果（成功时显示） */}
                   {launchScoreSuccess && (
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                       {/* 标题和总分 */}
@@ -3036,7 +3036,7 @@ export default function Step4PublishSummary({
         </AlertDescription>
       </Alert>
 
-      {/* 🔥 暂停确认对话框 */}
+      {/* 暂停确认对话框 */}
       <Dialog open={showPauseConfirm} onOpenChange={setShowPauseConfirm}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
@@ -3094,7 +3094,7 @@ export default function Step4PublishSummary({
         </DialogContent>
       </Dialog>
 
-      {/* 🔥 新增：强制发布确认对话框（40-80分警告时）*/}
+      {/* 强制发布确认对话框（40-80分警告时） */}
       <Dialog open={showForcePublishConfirm} onOpenChange={setShowForcePublishConfirm}>
         <DialogContent className="max-w-md">
           <DialogHeader>

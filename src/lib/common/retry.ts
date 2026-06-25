@@ -1,11 +1,11 @@
 /**
  * 通用错误重试工具
  *
- * 功能：
- * - 指数退避重试策略
- * - 可配置重试次数和延迟
- * - 支持自定义错误判断
- * - 详细的重试日志
+ * 功能
+ * 指数退避重试策略
+ * 可配置重试次数和延迟
+ * 支持自定义错误判断
+ * 详细的重试日志
  */
 
 export interface RetryOptions {
@@ -57,14 +57,14 @@ export interface RetryOptions {
  * @example
  * ```typescript
  * const result = await withRetry(
- *   async () => {
- *     return await apiClient.call()
- *   },
- *   {
- *     maxRetries: 3,
- *     initialDelay: 1000,
- *     operationName: 'API Call'
- *   }
+ * async () => {
+ * return await apiClient.call()
+ * },
+ * {
+ * maxRetries: 3,
+ * initialDelay: 1000,
+ * operationName: 'API Call'
+ * }
  * )
  * ```
  */
@@ -122,10 +122,10 @@ export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions =
 
 /**
  * 默认的重试判断函数
- * - 网络错误：重试
- * - 服务器错误 (500-599)：重试
- * - 速率限制错误 (429)：重试
- * - 客户端错误 (400-499，除429外)：不重试
+ * 网络错误：重试
+ * 服务器错误 (500-599)：重试
+ * 速率限制错误 (429)：重试
+ * 客户端错误 (400-499，除429外)：不重试
  */
 function defaultShouldRetry(error: any, _attempt: number): boolean {
   // 网络错误

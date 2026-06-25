@@ -20,7 +20,7 @@ export function calculateTextSimilarity(text1: string, text2: string): number {
   return Math.min(1, Math.max(0, weightedSimilarity))
 }
 
-/** Alias retained for ad-strength modules. */
+/* * Alias retained for ad-strength modules. */
 export const calculateSimilarity = calculateTextSimilarity
 
 export function calculateJaccardSimilarity(text1: string, text2: string): number {
@@ -112,7 +112,7 @@ export function levenshteinDistance(str1: string, str2: string): number {
   return matrix[str2.length][str1.length]
 }
 
-/** Alias retained for ad-creative-generator utils consumers. */
+/* * Alias retained for ad-creative-generator utils consumers. */
 export const calculateEditDistance = levenshteinDistance
 
 export function calculateNgramSimilarity(text1: string, text2: string, n: number = 2): number {

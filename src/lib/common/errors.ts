@@ -1,41 +1,41 @@
 /**
  * 统一错误码系统
  *
- * 功能：
- * - 标准化的错误码和错误消息
- * - 分类管理（认证、授权、业务逻辑、外部API等）
- * - 国际化支持（中英文错误消息）
- * - 结构化错误对象
+ * 功能
+ * 标准化的错误码和错误消息
+ * 分类管理（认证、授权、业务逻辑、外部API等）
+ * 国际化支持（中英文错误消息）
+ * 结构化错误对象
  */
 
 /**
  * 错误码分类前缀
- * - AUTH_xxx: 认证相关 (1xxx)
- * - PERM_xxx: 权限相关 (2xxx)
- * - OFFER_xxx: Offer业务逻辑 (3xxx)
- * - GADS_xxx: Google Ads API (4xxx)
- * - CREA_xxx: 广告创意 (5xxx)
- * - CAMP_xxx: 广告系列 (6xxx)
- * - SYNC_xxx: 数据同步 (7xxx)
- * - SYS_xxx: 系统错误 (8xxx)
- * - VAL_xxx: 数据验证 (9xxx)
+ * AUTH_xxx: 认证相关 (1xxx)
+ * PERM_xxx: 权限相关 (2xxx)
+ * OFFER_xxx: Offer业务逻辑 (3xxx)
+ * GADS_xxx: Google Ads API (4xxx)
+ * CREA_xxx: 广告创意 (5xxx)
+ * CAMP_xxx: 广告系列 (6xxx)
+ * SYNC_xxx: 数据同步 (7xxx)
+ * SYS_xxx: 系统错误 (8xxx)
+ * VAL_xxx: 数据验证 (9xxx)
  */
 
 export enum ErrorCode {
-  // ===== 认证错误 (1xxx) =====
+  // 认证错误 (1xxx)
   AUTH_UNAUTHORIZED = 'AUTH_1001',
   AUTH_TOKEN_EXPIRED = 'AUTH_1002',
   AUTH_TOKEN_INVALID = 'AUTH_1003',
   AUTH_SESSION_EXPIRED = 'AUTH_1004',
   AUTH_CREDENTIALS_INVALID = 'AUTH_1005',
 
-  // ===== 权限错误 (2xxx) =====
+  // 权限错误 (2xxx)
   PERM_ACCESS_DENIED = 'PERM_2001',
   PERM_RESOURCE_NOT_OWNED = 'PERM_2002',
   PERM_INSUFFICIENT_PRIVILEGES = 'PERM_2003',
   PERM_ACCOUNT_SUSPENDED = 'PERM_2004',
 
-  // ===== Offer业务逻辑错误 (3xxx) =====
+  // Offer业务逻辑错误 (3xxx)
   OFFER_NOT_FOUND = 'OFFER_3001',
   OFFER_INVALID_ID = 'OFFER_3002',
   OFFER_SCRAPE_FAILED = 'OFFER_3003',
@@ -43,7 +43,7 @@ export enum ErrorCode {
   OFFER_URL_INVALID = 'OFFER_3005',
   OFFER_DUPLICATE = 'OFFER_3006',
 
-  // ===== Google Ads API错误 (4xxx) =====
+  // Google Ads API错误 (4xxx)
   GADS_API_ERROR = 'GADS_4001',
   GADS_RATE_LIMITED = 'GADS_4002',
   GADS_ACCOUNT_NOT_FOUND = 'GADS_4003',
@@ -55,7 +55,7 @@ export enum ErrorCode {
   GADS_CAMPAIGN_CREATE_FAILED = 'GADS_4009',
   GADS_BUDGET_EXCEEDED = 'GADS_4010',
 
-  // ===== 广告创意错误 (5xxx) =====
+  // 广告创意错误 (5xxx)
   CREA_NOT_FOUND = 'CREA_5001',
   CREA_GENERATION_FAILED = 'CREA_5002',
   CREA_AI_UNAVAILABLE = 'CREA_5003',
@@ -63,7 +63,7 @@ export enum ErrorCode {
   CREA_SCORE_TOO_LOW = 'CREA_5005',
   CREA_MAX_ATTEMPTS_REACHED = 'CREA_5006',
 
-  // ===== 广告系列错误 (6xxx) =====
+  // 广告系列错误 (6xxx)
   CAMP_NOT_FOUND = 'CAMP_6001',
   CAMP_CREATE_FAILED = 'CAMP_6002',
   CAMP_UPDATE_FAILED = 'CAMP_6003',
@@ -76,14 +76,14 @@ export enum ErrorCode {
   TEST_INVALID_STATUS = 'CAMP_6010',
   CAMP_ADS_ACCOUNT_ALREADY_LINKED = 'CAMP_6011',
 
-  // ===== 数据同步错误 (7xxx) =====
+  // 数据同步错误 (7xxx)
   SYNC_FAILED = 'SYNC_7001',
   SYNC_TIMEOUT = 'SYNC_7002',
   SYNC_PARTIAL_FAILURE = 'SYNC_7003',
   SYNC_NO_ACCOUNTS = 'SYNC_7004',
   SYNC_ALREADY_RUNNING = 'SYNC_7005',
 
-  // ===== 系统错误 (8xxx) =====
+  // 系统错误 (8xxx)
   SYS_INTERNAL_ERROR = 'SYS_8001',
   SYS_DATABASE_ERROR = 'SYS_8002',
   SYS_NETWORK_ERROR = 'SYS_8003',
@@ -91,7 +91,7 @@ export enum ErrorCode {
   SYS_TIMEOUT = 'SYS_8005',
   SYS_CONFIG_MISSING = 'SYS_8006',
 
-  // ===== 数据验证错误 (9xxx) =====
+  // 数据验证错误 (9xxx)
   VAL_REQUIRED_FIELD = 'VAL_9001',
   VAL_INVALID_FORMAT = 'VAL_9002',
   VAL_OUT_OF_RANGE = 'VAL_9003',

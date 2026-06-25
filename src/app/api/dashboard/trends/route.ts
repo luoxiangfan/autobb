@@ -70,9 +70,9 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       includeAllFailures: true,
     })
 
-    // 查询货币分布：
-    // - 先按最近有数据的日期排序，避免默认命中“高花费但已停更”的旧币种
-    // - 再按花费排序作为同日并列时的次级依据
+    // 查询货币分布
+    // 先按最近有数据的日期排序，避免默认命中“高花费但已停更”的旧币种
+    // 再按花费排序作为同日并列时的次级依据
     const currencyRows = await db.query<any>(
       `
       SELECT

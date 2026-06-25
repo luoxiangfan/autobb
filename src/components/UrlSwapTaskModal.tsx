@@ -47,7 +47,7 @@ interface Offer {
   affiliateLink?: string
   page_type?: string
   store_product_links?: string[] | string | null
-  // 🆕 关联的Google Ads信息（从Campaign获取）
+  // 关联的Google Ads信息（从Campaign获取）
   googleCustomerId?: string
   googleCampaignId?: string
 }
@@ -120,7 +120,7 @@ export default function UrlSwapTaskModal({
         const offerData = data.offer || data.data
 
         if (offerData) {
-          // 🆕 从本地DB获取该Offer关联的Google Ads信息（不依赖Google Ads API）
+          // 从本地DB获取该Offer关联的Google Ads信息（不依赖Google Ads API）
           try {
             const idsResponse = await fetch(`/api/offers/${id}/google-ads-ids`)
             if (idsResponse.ok) {

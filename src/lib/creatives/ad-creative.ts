@@ -38,9 +38,9 @@ import {
 /**
  * 关键词搜索量数据
  *
- * 🎯 数据来源说明：
- * - Historical Metrics API：精确匹配搜索量（优先使用）
- * - Keyword Ideas API：关键词发现的估算值（已用精确值校准）
+ * 数据来源说明
+ * Historical Metrics API：精确匹配搜索量（优先使用）
+ * Keyword Ideas API：关键词发现的估算值（已用精确值校准）
  */
 export interface KeywordWithVolume extends KeywordAuditMetadata {
   keyword: string
@@ -65,7 +65,7 @@ export interface AdCreative {
   descriptions: string[] // 最多4个description，每个最多90字符
   keywords: string[] // 关键词列表（向后兼容）
   keywordsWithVolume?: KeywordWithVolume[] // 带搜索量的关键词数据
-  negativeKeywords?: string[] // 🎯 新增：否定关键词列表
+  negativeKeywords?: string[] // 否定关键词列表
   callouts?: string[] // 标注（每个最多25字符）
   sitelinks?: Array<{
     // 站点链接
@@ -103,7 +103,7 @@ export interface AdCreative {
   theme: string // 广告主题
   ai_model: string // 使用的AI模型
   generation_mode?: AdCreativeGenerationMode | string | null
-  /** camelCase 展示字段，与 generation_mode 同步 */
+  /* * camelCase 展示字段，与 generation_mode 同步 */
   generationMode?: AdCreativeGenerationMode | string | null
   is_selected: number // 是否被用户选中
   creative_type?: CanonicalCreativeType | null
@@ -212,7 +212,7 @@ export interface GeneratedAdCreativeData {
   keywords: string[]
   executableKeywords?: string[]
   keywordsWithVolume?: KeywordWithVolume[] // 带搜索量的关键词
-  negativeKeywords?: string[] // 🎯 新增：否定关键词列表
+  negativeKeywords?: string[] // 否定关键词列表
   callouts?: string[]
   sitelinks?: Array<{
     text: string
@@ -224,15 +224,15 @@ export interface GeneratedAdCreativeData {
   }>
   theme: string
   explanation: string // 创意说明
-  ai_model?: string // 🎯 新增：实际使用的AI模型
+  ai_model?: string // 实际使用的AI模型
   keyword_bucket?: 'A' | 'B' | 'D' | null
   bucket_intent?: string | null
 
-  // 🆕 v4.7: RSA Display Path (展示URL路径)
+  // v4.7: RSA Display Path (展示URL路径)
   path1?: string // RSA Display URL路径1，最多15字符
   path2?: string // RSA Display URL路径2，最多15字符
 
-  // 新增：带标注的资产（可选，用于Ad Strength评估）
+  // 带标注的资产（可选，用于Ad Strength评估）
   headlinesWithMetadata?: HeadlineAsset[]
   descriptionsWithMetadata?: DescriptionAsset[]
   qualityMetrics?: QualityMetrics
@@ -731,7 +731,7 @@ export async function createAdCreative(
     final_url_suffix?: string
     ai_model?: string
     generation_round?: number
-    // 新增：允许外部传入评分（Ad Strength 7维度评估结果）
+    // 允许外部传入评分（Ad Strength 7维度评估结果）
     score?: number
     score_breakdown?: {
       relevance: number
@@ -742,7 +742,7 @@ export async function createAdCreative(
       brandSearchVolume: number
       competitivePositioning: number
     }
-    // 🔧 新增：完整的 Ad Strength 评估数据（7维度）
+    // 完整的 Ad Strength 评估数据（7维度）
     adStrength?: {
       rating: string
       score: number
@@ -751,7 +751,7 @@ export async function createAdCreative(
       suggestions?: string[]
       audit?: CreativeKeywordAudit
     }
-    // 🆕 v4.10: 关键词池桶信息
+    // v4.10: 关键词池桶信息
     keyword_bucket?: 'A' | 'B' | 'D'
     keyword_pool_id?: number
     bucket_intent?: string
@@ -895,22 +895,22 @@ export async function createAdCreative(
     JSON.stringify(normalizedDescriptions),
     JSON.stringify(finalKeywords),
     serializedKeywordsWithVolume,
-    normalizedNegativeKeywords.length > 0 ? JSON.stringify(normalizedNegativeKeywords) : null, // 🎯 新增：保存否定关键词
+    normalizedNegativeKeywords.length > 0 ? JSON.stringify(normalizedNegativeKeywords) : null, // 保存否定关键词
     normalizedCallouts ? JSON.stringify(normalizedCallouts) : null,
     normalizedSitelinks ? JSON.stringify(normalizedSitelinks) : null,
     data.final_url,
     data.final_url_suffix || null,
-    data.path1 || null, // 🆕 v4.7: RSA Display Path
-    data.path2 || null, // 🆕 v4.7: RSA Display Path
+    data.path1 || null, // v4.7: RSA Display Path
+    data.path2 || null, // v4.7: RSA Display Path
     scoreResult.total_score,
     JSON.stringify(scoreResult.breakdown),
     scoreResult.explanation,
     data.generation_round || 1,
     data.theme,
     data.ai_model || GEMINI_ACTIVE_MODEL,
-    normalizedAdStrength ? JSON.stringify(normalizedAdStrength) : null, // 🔧 保存完整的 Ad Strength 数据
+    normalizedAdStrength ? JSON.stringify(normalizedAdStrength) : null, // 保存完整的 Ad Strength 数据
     creativeType,
-    // 🆕 v4.10: 关键词池桶信息
+    // v4.10: 关键词池桶信息
     bucketForStorage,
     data.keyword_pool_id || null,
     data.bucket_intent || null,
@@ -1265,7 +1265,7 @@ function parseAdCreativeRow(row: any): AdCreative {
     descriptions: ensureStringArray(row.descriptions),
     keywords: ensureStringArray(row.keywords),
     keywordsWithVolume: normalizeKeywordsWithVolume(row.keywords_with_volume),
-    negativeKeywords: ensureStringArray(row.negative_keywords), // 🎯 新增：解析否定关键词
+    negativeKeywords: ensureStringArray(row.negative_keywords), // 解析否定关键词
     callouts: normalizeCallouts(parsePossiblyNestedJson(row.callouts)),
     // 兼容：历史/AI不稳定输出可能产生 description1/description_1 等字段
     sitelinks: normalizeSitelinks(parsePossiblyNestedJson(row.sitelinks), row.final_url),
@@ -1278,7 +1278,7 @@ function parseAdCreativeRow(row: any): AdCreative {
       brandSearchVolume: Number(parsedScoreBreakdown.brandSearchVolume || 0),
       competitivePositioning: Number(parsedScoreBreakdown.competitivePositioning || 0),
     },
-    // 🔧 解析完整的 Ad Strength 评估数据（7维度）
+    // 解析完整的 Ad Strength 评估数据（7维度）
     adStrength: normalizedAdStrength,
   }
 }
@@ -1470,8 +1470,8 @@ export async function updateAdCreative(
 /**
  * 删除广告创意（软删除）
  *
- * 🔧 修改历史：
- * - 2025-12-29: 改为软删除，保留performance数据和创意历史
+ * 修改历史
+ * 改为软删除，保留performance数据和创意历史
  */
 export async function deleteAdCreative(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()

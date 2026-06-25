@@ -3,12 +3,12 @@
 /**
  * 风险提示面板组件 - P1-4优化版
  *
- * 功能：
- * - 显示风险提示列表
- * - 按严重程度分类
- * - 确认/解决提示
- * - 手动触发链接检查
- * - 增强视觉设计和动画效果
+ * 功能
+ * 显示风险提示列表
+ * 按严重程度分类
+ * 确认/解决提示
+ * 手动触发链接检查
+ * 增强视觉设计和动画效果
  */
 
 import { useState, useEffect } from 'react'
@@ -468,7 +468,7 @@ export default function RiskAlertPanel() {
                                 </Card>
                               )}
 
-                              {/* 🆕 快捷操作按钮 - OAuth token过期等需要立即处理的警报 */}
+                              {/* 快捷操作按钮 - OAuth token过期等需要立即处理的警报 */}
                               {actionUrl && (
                                 <Button
                                   size="sm"

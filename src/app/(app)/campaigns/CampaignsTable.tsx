@@ -273,7 +273,7 @@ export function CampaignsTable({
             </TableHeader>
             <TableBody>
               {paginatedCampaigns.map((campaign) => {
-                // 🔧 检查 is_deleted 布尔值
+                // 检查 is_deleted 布尔值
                 const isDeleted = isCampaignDeleted(campaign)
                 const offerDeleted = isOfferDeleted(campaign)
                 const googleCampaignId = getCampaignGoogleId(campaign)

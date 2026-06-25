@@ -6,7 +6,7 @@
 /**
  * 销售平台和智能家居生态系统白名单（不应被当作竞品过滤）
  *
- * 包含两类：
+ * 包含两类
  * 1. 销售平台：表示销售渠道的购买词（如 "argus 3 pro amazon"）
  * 2. 智能家居平台：表示兼容性/集成特性的功能词（如 "eufycam homekit"）
  * 3. 大型科技公司平台：表示兼容性或集成特性（如 "works with google", "apple certified"）
@@ -47,10 +47,10 @@ export const PLATFORMS = [
 /**
  * 已知竞品品牌列表（用于竞品词过滤）
  *
- * 注意事项：
- * - 销售平台（如amazon）已从此列表移除 → 移至PLATFORMS白名单
- * - 智能家居平台（如homekit、alexa）已从此列表移除 → 移至PLATFORMS白名单
- * - 只保留真正的竞品品牌（提供类似产品的其他厂商）
+ * 注意事项
+ * 销售平台（如amazon）已从此列表移除 → 移至PLATFORMS白名单
+ * 智能家居平台（如homekit、alexa）已从此列表移除 → 移至PLATFORMS白名单
+ * 只保留真正的竞品品牌（提供类似产品的其他厂商）
  */
 export const BRAND_PATTERNS = [
   // 安防/摄像头竞品品牌
@@ -97,19 +97,19 @@ export const BRAND_PATTERNS = [
  * 默认配置常量
  */
 export const DEFAULTS = {
-  /** 默认最小搜索量阈值 */
-  minSearchVolume: 500, // 🔥 2025-12-17: 从100提高到500，只保留高价值关键词
+  /* * 默认最小搜索量阈值 */
+  minSearchVolume: 500, // 从100提高到500，只保留高价值关键词
 
-  /** 默认最大关键词数量 */
+  /* * 默认最大关键词数量 */
   maxKeywords: 5000,
 
-  /** 智能过滤的最小期望关键词数 */
+  /* * 智能过滤的最小期望关键词数 */
   minKeywordsTarget: 15,
 
-  /** 智能过滤的最大尝试次数 */
+  /* * 智能过滤的最大尝试次数 */
   maxFilterAttempts: 4,
 
-  /** Redis缓存TTL（天） */
+  /* * Redis缓存TTL（天） */
   cacheTtlDays: 7,
 } as const
 
@@ -145,15 +145,13 @@ const _SOURCES = {
   EXPANDED: 'EXPANDED',
   AI_GENERATED: 'AI_GENERATED',
   SEED: 'SEED',
-  TRENDS: 'TRENDS', // 🔥 2025-12-24: Google Trends 来源
-  POPULAR: 'POPULAR', // 🔥 2025-12-24: 热门品类词来源
+  TRENDS: 'TRENDS', // Google Trends 来源
+  POPULAR: 'POPULAR', // 热门品类词来源
 } as const
 
-// ============================================
-// 🔥 2025-12-24: Google Trends 相关常量（避免硬编码）
-// =================================================================================
-// 🔥 2025-12-25: 品类同义词词库（用于品类白名单过滤）
-// ============================================
+// Google Trends 相关常量（避免硬编码）
+
+// 品类同义词词库（用于品类白名单过滤）
 
 /**
  * 品类同义词词库
@@ -161,59 +159,59 @@ const _SOURCES = {
  *
  * 优化目标：对于单品链接Offer，只保留包含该产品品类词的关键词
  * 例如：Eufy Argus 3 Pro（安防摄像头）只保留包含 camera/security/outdoor 等品类词的关键词
- *       排除同品牌其他品类词（如 doorbell、vacuum、breast pump）
+ * 排除同品牌其他品类词（如 doorbell、vacuum、breast pump）
  */
 const _CATEGORY_SYNONYMS: Record<string, string[]> = {
-  // ==================== 摄像头类 ====================
+  // 摄像头类
   camera: ['cam', 'video', 'surveillance', 'monitoring', 'vision', 'webcam', 'recorder', 'cctv'],
   security: ['safety', 'protection', 'guard', 'alarm', 'secure', 'watch'],
   outdoor: ['weather', 'waterproof', 'exterior', 'outside', 'resistant'],
   indoor: ['interior', 'inside', 'room', 'home'],
   doorbell: ['door', 'bell', 'chime', 'ring', 'entry', 'entrance'],
 
-  // ==================== 吸尘器类 ====================
+  // 吸尘器类
   vacuum: ['cleaner', 'cleaning', 'sweeper', 'mop', 'robot', 'hoover'],
   robot: ['robotic', 'automatic', 'auto', 'smart'],
   floor: ['ground', 'carpet', 'hardwood', 'tile'],
 
-  // ==================== 智能家居类 ====================
+  // 智能家居类
   'smart home': ['iot', 'smart', 'connected', 'automation', 'intelligent'],
   lock: ['keyless', 'deadbolt', 'entry', 'door lock', 'secure'],
   light: ['lighting', 'lamp', 'bulb', 'led', 'brightness'],
   switch: ['dimmer', 'control', 'button', 'toggle'],
   sensor: ['detector', 'detection', 'monitor', 'sense'],
 
-  // ==================== 音频设备类 ====================
+  // 音频设备类
   speaker: ['audio', 'sound', 'music', 'bluetooth', 'wireless'],
   headphones: ['earphones', 'earbuds', 'headset', 'ear', 'buds'],
   microphone: ['mic', 'recording', 'voice', 'audio input'],
 
-  // ==================== 智能可穿戴类 ====================
+  // 智能可穿戴类
   watch: ['smartwatch', 'wearable', 'fitness', 'tracker'],
   band: ['bracelet', 'wristband', 'strap', 'fitness band'],
   ring: ['smart ring', 'wearable ring', 'finger'],
 
-  // ==================== 母婴类 ====================
+  // 母婴类
   'breast pump': ['pump', 'breastfeeding', 'nursing', 'lactation', 'expressing'],
   'baby monitor': ['baby cam', 'nursery', 'infant', 'child'],
   thermometer: ['temperature', 'fever', 'digital'],
 
-  // ==================== 厨房电器类 ====================
+  // 厨房电器类
   coffee: ['espresso', 'brew', 'maker', 'grinder', 'café'],
   kettle: ['boiler', 'water heater', 'pot'],
   blender: ['mixer', 'juicer', 'smoothie', 'processor'],
 
-  // ==================== 个人护理类 ====================
+  // 个人护理类
   toothbrush: ['dental', 'oral', 'teeth', 'brush'],
   shaver: ['razor', 'trimmer', 'grooming', 'beard'],
   'hair dryer': ['blow dryer', 'styling', 'hair'],
 
-  // ==================== 健康设备类 ====================
+  // 健康设备类
   scale: ['weighing', 'weight', 'body', 'fat', 'bmi'],
   'blood pressure': ['bp', 'monitor', 'sphygmomanometer', 'heart'],
   oximeter: ['oxygen', 'pulse', 'spo2', 'saturation'],
 
-  // ==================== 通用修饰词 ====================
+  // 通用修饰词
   wireless: ['wifi', 'bluetooth', 'cordless', 'cable-free'],
   portable: ['handheld', 'mobile', 'travel', 'compact'],
   rechargeable: ['battery', 'charging', 'powered', 'cordless'],

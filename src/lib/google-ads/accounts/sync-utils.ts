@@ -66,7 +66,7 @@ export function parseStatus(status: any): string {
   return statusStr
 }
 
-/** 提取搜索结果数组（处理不同库的返回结构） */
+/* * 提取搜索结果数组（处理不同库的返回结构） */
 export function extractSearchResults(searchResult: any): any[] {
   if (!searchResult) return []
   if (Array.isArray(searchResult)) return searchResult

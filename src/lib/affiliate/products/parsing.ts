@@ -216,12 +216,12 @@ export function isTransientHttpStatus(responseStatus?: number): boolean {
 export function isTransientNetworkErrorMessage(message: string): boolean {
   const normalized = message.toLowerCase()
 
-  // ❌ 代理认证错误 - 不可重试（配额用完或凭证失效）
+  // 代理认证错误 - 不可重试（配额用完或凭证失效）
   if (normalized.includes('407') || normalized.includes('proxy authentication required')) {
     return false
   }
 
-  // ❌ 代理配额/余额错误 - 不可重试
+  // 代理配额/余额错误 - 不可重试
   if (
     normalized.includes('business abnormality') ||
     normalized.includes('account abnormal') ||
@@ -234,7 +234,7 @@ export function isTransientNetworkErrorMessage(message: string): boolean {
     return false
   }
 
-  // ✅ 临时网络错误 - 可重试
+  // 临时网络错误 - 可重试
   return (
     normalized.includes('fetch failed') ||
     normalized.includes('network error') ||
@@ -335,7 +335,7 @@ export function isPartnerboostRateLimitError(error: unknown): boolean {
 export function isPartnerboostTransientError(error: unknown): boolean {
   if (!error) return false
 
-  // ❌ 代理致命错误 - 不可重试
+  // 代理致命错误 - 不可重试
   if (isProxyFatalError(error)) return false
 
   const raw = error as {
@@ -394,7 +394,7 @@ export function isYeahPromosRateLimited(
 export function isYeahPromosTransientError(error: unknown): boolean {
   if (!error) return false
 
-  // ❌ 代理致命错误 - 不可重试
+  // 代理致命错误 - 不可重试
   if (isProxyFatalError(error)) return false
 
   const raw = error as {

@@ -14,7 +14,7 @@ class ApiCache {
   private cache: Map<string, CacheEntry<any>> = new Map()
   private inFlight: Map<string, Promise<any>> = new Map()
   private defaultTTL: number = 5 * 60 * 1000 // 默认5分钟
-  // ⚡ P0性能优化: 添加LRU缓存限制，防止内存泄漏
+  // ⚡ P0性能添加LRU缓存限制，防止内存泄漏
   private maxSize: number = 1000 // 最大1000条缓存
   private accessOrder: string[] = [] // LRU访问顺序跟踪
 

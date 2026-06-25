@@ -601,9 +601,9 @@ export default function SettingsPage() {
         },
       }
 
-      // 🆕 当 gemini_provider 改变时，自动更新 gemini_model / gemini_endpoint
+      // 当 gemini_provider 改变时，自动更新 gemini_model / gemini_endpoint
       if (category === 'ai' && key === 'gemini_provider') {
-        // 🔧 修复(2025-12-30): 切换服务商时，清空另一个服务商的API Key显示值
+        // 切换服务商时，清空另一个服务商的API Key显示值
         // 避免用户困惑（虽然两个API Key可能都已配置，但只会使用当前选中的）
         if (value === 'official') {
           // 切换到官方：清空中转API Key的显示（不影响数据库，只是前端显示）
@@ -619,7 +619,7 @@ export default function SettingsPage() {
         updated.ai.gemini_endpoint = resolveGeminiEndpoint(value, normalizedModel)
       }
 
-      // 🆕 当 gemini_model 改变时，自动更新 gemini_endpoint
+      // 当 gemini_model 改变时，自动更新 gemini_endpoint
       if (category === 'ai' && key === 'gemini_model') {
         const provider = updated.ai.gemini_provider || 'official'
         const normalizedModel = normalizeModelForProvider(value, provider)
@@ -633,7 +633,7 @@ export default function SettingsPage() {
 
   // 代理URL操作函数
   const addProxyUrl = () => {
-    // 🔥 检查是否所有支持的国家都已配置
+    // 检查是否所有支持的国家都已配置
     const usedCountries = new Set(proxyUrls.map((p) => p.country))
     const availableCountries = SUPPORTED_COUNTRIES.filter((c) => !usedCountries.has(c.code))
 
@@ -651,7 +651,7 @@ export default function SettingsPage() {
   }
 
   const updateProxyUrl = (index: number, field: 'country' | 'url', value: string) => {
-    // 🔥 如果是修改国家，检查该国家是否已被其他配置使用
+    // 如果是修改国家，检查该国家是否已被其他配置使用
     if (field === 'country') {
       const isDuplicate = proxyUrls.some((item, i) => i !== index && item.country === value)
       if (isDuplicate) {
@@ -660,7 +660,7 @@ export default function SettingsPage() {
       }
     }
 
-    // 🔥 验证代理URL格式（使用简单客户端验证，避免打包playwright）
+    // 验证代理URL格式（使用简单客户端验证，避免打包playwright）
     if (field === 'url' && value.trim()) {
       const validation = validateProxyUrlFormat(value)
       setProxyUrls((prev) =>
@@ -677,7 +677,7 @@ export default function SettingsPage() {
     setSaving(true)
 
     try {
-      // 🔧 修复(2025-12-12): Google Ads 所有参数必填验证
+      // Google Ads 所有参数必填验证
       if (category === 'google_ads') {
         const oauthValidationError = validateGoogleAdsOAuthFormForSave(
           formData.google_ads,
@@ -744,7 +744,7 @@ export default function SettingsPage() {
           return
         }
 
-        // 🔥 检查是否有验证错误
+        // 检查是否有验证错误
         const proxyWithErrors = proxyUrls.filter((item) => item.error)
         if (proxyWithErrors.length > 0) {
           toast.error(`存在不支持的代理URL格式，请修改后保存`)
@@ -827,7 +827,7 @@ export default function SettingsPage() {
         await googleAdsAuth.notifyOAuthSaveComplete()
       }
 
-      // 🔥 重要：刷新后清除编辑状态，让敏感字段重新显示为占位符
+      // 重要：刷新后清除编辑状态，让敏感字段重新显示为占位符
       setEditingField(null)
     } catch (err: any) {
       toast.error(err.message || '保存失败')
@@ -897,7 +897,7 @@ export default function SettingsPage() {
         toast.error(data.message)
       }
 
-      // 🔧 修复(2025-12-24): 验证后不刷新整个配置，避免覆盖用户未保存的修改
+      // 验证后不刷新整个配置，避免覆盖用户未保存的修改
       // 只需要显示验证成功的toast即可，验证状态会在下次保存后自动更新
       // await fetchSettings()
     } catch (err: any) {
@@ -1081,7 +1081,7 @@ export default function SettingsPage() {
     const metadata = SETTING_METADATA[metaKey]
     const value = formData[category]?.[setting.key] || ''
 
-    // 🆕 gemini_endpoint 只读显示
+    // gemini_endpoint 只读显示
     if (isReadOnlySetting(category, setting.key)) {
       return (
         <Input
@@ -1687,7 +1687,7 @@ export default function SettingsPage() {
                                 {isRequired && (
                                   <span className="text-caption text-red-500">*必填</span>
                                 )}
-                                {/* 🔧 修复(2025-12-30): 移除持久化验证状态图标
+                                {/* 已移除持久化验证状态图标（验证结果应通过 toast 临时反馈，不在刷新后保留）
                                   验证结果应该是临时反馈（通过toast），不应该在刷新页面、切换模型后仍然显示
                                   {setting.validationStatus && (
                                     <span>{getValidationIcon(setting.validationStatus)}</span>
@@ -1714,7 +1714,7 @@ export default function SettingsPage() {
 
                             {renderInput(category, setting)}
 
-                            {/* 🔧 修复(2025-12-30): 移除持久化验证消息的显示
+                            {/* 已移除持久化验证消息展示（验证结果应通过 toast 临时反馈）
                               验证结果应该是临时反馈（通过toast），不应该在刷新页面、切换模型后仍然显示
                               {setting.validationMessage && (
                                 <p className={`text-caption ${setting.validationStatus === 'valid' ? 'text-green-600' : 'text-red-600'}`}>

@@ -15,7 +15,7 @@ export function getGeoTargetConstantId(countryCode: string): number | null {
  * 语言代码/名称到Language Constant ID的映射
  * 参考: https://developers.google.com/google-ads/api/reference/data/codes-formats
  *
- * 支持两种输入格式：
+ * 支持两种输入格式
  * 1. 语言代码：'en', 'zh', 'es' 等
  * 2. 语言名称：'English', 'Chinese', 'Spanish' 等
  */

@@ -24,7 +24,7 @@ export function stripPreparedGoogleAdsAccountApiCallForCache(
   }
 }
 
-/** 首次 prepare 成功后种子化 secrets 短缓存，便于同 job 内 rehydrate 免重复查库 */
+/* * 首次 prepare 成功后种子化 secrets 短缓存，便于同 job 内 rehydrate 免重复查库 */
 export function seedPrepareCacheHydratedSecrets(
   prepared: { authContext: GoogleAdsAuthContext } & PreparedGoogleAdsAccountApiCall
 ): void {
@@ -35,7 +35,7 @@ export function seedPrepareCacheHydratedSecrets(
   )
 }
 
-/** job / 请求结束时显式释放 prepare slim 缓存（不含密钥；不触碰进程级 secrets 短缓存） */
+/* * job / 请求结束时显式释放 prepare slim 缓存（不含密钥；不触碰进程级 secrets 短缓存） */
 export function clearGoogleAdsLinkedAccountPrepareCache(
   cache: GoogleAdsLinkedAccountPrepareCache
 ): void {

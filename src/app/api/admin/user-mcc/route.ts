@@ -119,7 +119,7 @@ export const POST = withAuth(
         )
       }
 
-      // 🔧 检查 MCC 账号是否已被其他用户绑定（一个 MCC 只能绑定一个用户）
+      // 检查 MCC 账号是否已被其他用户绑定（一个 MCC 只能绑定一个用户）
       const placeholders = mccCustomerIds.map(() => '?').join(',')
       const existingAssignments = (await db.query(
         `

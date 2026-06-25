@@ -24,7 +24,7 @@ export async function runOAuthGaqlWithLoginCustomerFallback<T>(params: {
   oauthLoginCustomerId?: string
   serviceAccountMccId?: string
   serviceAccountId?: string
-  /** prepare 后传入，避免重复 assert / 加载 auth-context */
+  /* * prepare 后传入，避免重复 assert / 加载 auth-context */
   authContext?: GoogleAdsAuthContext
   actionName: string
   query: (customer: GoogleAdsCustomer) => Promise<T>

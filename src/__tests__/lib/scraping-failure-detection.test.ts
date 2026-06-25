@@ -1,5 +1,5 @@
 /**
- * 抓取失败检测测试（2026-01-26）
+ * 抓取失败检测测试
  * 测试HTTP 407代理认证失败和其他抓取错误的检测逻辑
  */
 import { describe, it, expect } from 'vitest'

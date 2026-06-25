@@ -33,7 +33,7 @@ export function boolParam(value: boolean): boolean {
   return value
 }
 
-/** SQL fragment: row not soft-deleted (BOOLEAN is_deleted). */
+/* * SQL fragment: row not soft-deleted (BOOLEAN is_deleted). */
 export function notDeletedClause(alias: string): string {
   return `(${alias}.is_deleted = FALSE OR ${alias}.is_deleted IS NULL)`
 }
@@ -54,17 +54,17 @@ export function datetimeMinusMinutes(minutes: number): string {
   return `CURRENT_TIMESTAMP - INTERVAL '${minutes} minutes'`
 }
 
-/** Timestamp comparison: now minus N whole days. */
+/* * Timestamp comparison: now minus N whole days. */
 export function datetimeMinusDays(days: number): string {
   return `CURRENT_TIMESTAMP - INTERVAL '${days} days'`
 }
 
-/** Parameterized: CURRENT_TIMESTAMP - (? * INTERVAL '1 day'). */
+/* * Parameterized: CURRENT_TIMESTAMP - (? * INTERVAL '1 day'). */
 export function datetimeMinusDaysParam(param = '?'): string {
   return `CURRENT_TIMESTAMP - (${param} * INTERVAL '1 day')`
 }
 
-/** Parameterized: CURRENT_TIMESTAMP - (? * INTERVAL '1 hour'). */
+/* * Parameterized: CURRENT_TIMESTAMP - (? * INTERVAL '1 hour'). */
 export function datetimeMinusHoursParam(param = '?'): string {
   return `CURRENT_TIMESTAMP - (${param} * INTERVAL '1 hour')`
 }
@@ -95,13 +95,13 @@ export function generateUpsertSql(
 }
 
 export type UniqueConstraintMatchOptions = {
-  /** PostgreSQL constraint name substring */
+  /* * PostgreSQL constraint name substring */
   constraint?: string
-  /** Table name substring in error message */
+  /* * Table name substring in error message */
   table?: string
 }
 
-/** Detect PostgreSQL unique constraint violations (SQLSTATE 23505). */
+/* * Detect PostgreSQL unique constraint violations (SQLSTATE 23505). */
 export function isUniqueConstraintViolation(
   error: unknown,
   options?: UniqueConstraintMatchOptions

@@ -44,7 +44,7 @@ export interface SyncStatus {
 
 /**
  * 同步日志
- * 🔧 修复(2025-12-11): 统一使用 camelCase 字段名
+ * 统一使用 camelCase 字段名
  */
 export interface SyncLog {
   id: number
@@ -61,8 +61,8 @@ export interface SyncLog {
 
 /**
  * GAQL查询参数
- * 🔧 修复(2025-12-12): 独立账号模式 - 添加凭证参数
- * 🔧 修复(2025-12-24): 服务账号模式支持
+ * 独立账号模式 - 添加凭证参数
+ * 服务账号模式支持
  */
 export interface GAQLQueryParams {
   customerId: string
@@ -80,7 +80,7 @@ export interface GAQLQueryParams {
   }
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
-  /** prepare 后传入，避免 OAuth GAQL 重复 assert */
+  /* * prepare 后传入，避免 OAuth GAQL 重复 assert */
   authContext?: GoogleAdsAuthContext
 }
 
@@ -286,9 +286,9 @@ class DataSyncService {
 
   /**
    * 执行数据同步（手动触发或定时任务）
-   * 🔧 修复(2025-12-12): 独立账号模式 - 使用用户凭证
-   * 🔧 修复(2025-12-28): 添加僵尸任务清理机制
-   * 🔧 修复(2025-12-28): 智能补齐过去7天缺失数据
+   * 独立账号模式 - 使用用户凭证
+   * 添加僵尸任务清理机制
+   * 智能补齐过去7天缺失数据
    */
   async syncPerformanceData(
     userId: number,
@@ -304,7 +304,7 @@ class DataSyncService {
     const startTime = Date.now()
     const startedAt = new Date().toISOString()
 
-    // 🔧 修复(2025-12-28): 清理僵尸任务（超过2小时仍为running状态的任务）
+    // 清理僵尸任务（超过2小时仍为running状态的任务）
     const zombieThreshold = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
     await db.exec(
       `
@@ -364,12 +364,12 @@ class DataSyncService {
         serviceAccountJobCredentials = syncCredentialsResolved.userCredentials
       }
 
-      // 🔧 PostgreSQL兼容性修复: is_active在PostgreSQL中是BOOLEAN类型
+      // PostgreSQL兼容性is_active在PostgreSQL中是BOOLEAN类型
       const isActiveCondition = 'is_active = true'
 
       // 1. 获取用户的所有Google Ads账户
-      // 🔧 修复(2025-12-30): 添加currency字段以支持多货币账户
-      // 🔧 修复(2026-01-03): 添加account_name字段用于风险警报显示
+      // 添加currency字段以支持多货币账户
+      // 添加account_name字段用于风险警报显示
       const accounts = (await db.query(
         `
         SELECT id, customer_id, parent_mcc_id, account_name, user_id, service_account_id, currency
@@ -457,7 +457,7 @@ class DataSyncService {
 
           if (campaigns.length === 0) {
             console.log(`账户 ${account.customer_id} 没有已同步的Campaigns，跳过`)
-            // 🔧 修复(2025-12-28): 清理没有campaigns的账户的sync_log（标记为success，但record_count=0）
+            // 清理没有campaigns的账户的sync_log（标记为success，但record_count=0）
             await db.exec(
               `
               UPDATE sync_logs
@@ -533,7 +533,7 @@ class DataSyncService {
             console.warn(
               `⚠️ 用户 ${userId} OAuth模式下缺少refresh_token，跳过账户 ${account.customer_id}`
             )
-            // 🔧 修复(2025-12-28): 清理因凭证缺失而无法同步的sync_log
+            // 清理因凭证缺失而无法同步的sync_log
             await db.exec(
               `
                 UPDATE sync_logs
@@ -567,7 +567,7 @@ class DataSyncService {
             ...preparedAuthContextField(accountPrepared),
           })
 
-          // 🔧 修复(2026-01-15): 从 Google Ads API 获取账户真实币种/时区并回写到google_ads_accounts
+          // 从 Google Ads API 获取账户真实币种/时区并回写到google_ads_accounts
           // 避免账号初次创建时默认USD导致全站显示"$"
           const derivedCurrency = this.normalizeCurrency(
             performanceData[0]?.currency_code || account.currency
@@ -609,7 +609,7 @@ class DataSyncService {
 
               const cpa = record.conversions > 0 ? record.cost / record.conversions : 0
 
-              // 🔧 修复(2025-12-30): 支持多货币账户
+              // 支持多货币账户
               // Google Ads API返回的cost_micros是账户货币的微单位，需要保存原始货币信息
               const accountCurrency = derivedCurrency
 
@@ -689,7 +689,7 @@ class DataSyncService {
             account.id,
           ])
 
-          // 🔧 修复(2025-12-28): 更新该账户的sync_log为success
+          // 更新该账户的sync_log为success
           await db.exec(
             `
             UPDATE sync_logs
@@ -699,7 +699,7 @@ class DataSyncService {
             [accountRecordCount, Date.now() - startTime, new Date().toISOString(), accountSyncLogId]
           )
         } catch (accountError) {
-          // 🔧 修复(2025-12-28): 为该账户的sync_log记录错误
+          // 为该账户的sync_log记录错误
           const errorMessage = this.buildSyncErrorMessage(accountError)
 
           if (accountSyncLogId) {
@@ -720,7 +720,7 @@ class DataSyncService {
             `performance:${account.customer_id}`
           )
 
-          // 🆕 修复(2026-01-02): 检测OAuth token过期错误并创建风险警报
+          // 检测OAuth token过期错误并创建风险警报
           const isTokenExpiredError =
             errorMessage.includes('invalid_grant') ||
             errorMessage.includes('Token has been expired') ||
@@ -788,7 +788,7 @@ class DataSyncService {
         lastSyncError: null,
       })
 
-      // 🔧 修复(2025-12-11): 返回 camelCase 字段名
+      // 返回 camelCase 字段名
       return {
         id: syncLogId!,
         userId: userId,
@@ -838,8 +838,8 @@ class DataSyncService {
 
   /**
    * 使用GAQL查询性能数据
-   * 🔧 修复(2025-12-12): 独立账号模式 - 传递用户凭证
-   * 🔧 修复(2025-12-24): 服务账号模式支持
+   * 独立账号模式 - 传递用户凭证
+   * 服务账号模式支持
    */
   private async queryPerformanceData(params: GAQLQueryParams): Promise<CampaignPerformanceData[]> {
     const {
@@ -1827,7 +1827,7 @@ class DataSyncService {
 
   /**
    * 获取同步日志
-   * 🔧 修复(2025-12-11): 使用 AS 别名返回 camelCase 字段
+   * 使用 AS 别名返回 camelCase 字段
    */
   async getSyncLogs(userId: number, limit: number = 20): Promise<SyncLog[]> {
     const db = await getDatabase()

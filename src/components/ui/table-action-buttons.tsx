@@ -1,10 +1,10 @@
 /**
  * 响应式表格操作按钮组件
  *
- * 针对移动端优化的表格操作区域：
- * - 移动端：只显示图标，隐藏文字
- * - 桌面端：显示图标+文字
- * - 次要操作统一放入下拉菜单
+ * 针对移动端优化的表格操作区域
+ * 移动端：只显示图标，隐藏文字
+ * 桌面端：显示图标+文字
+ * 次要操作统一放入下拉菜单
  */
 
 import * as React from 'react'
@@ -31,8 +31,8 @@ interface TableActionButtonProps {
 
 /**
  * 单个表格操作按钮
- * - 移动端只显示图标
- * - 桌面端显示图标+文字
+ * 移动端只显示图标
+ * 桌面端显示图标+文字
  */
 export function TableActionButton({
   icon,
@@ -71,8 +71,8 @@ interface TableActionGroupProps {
 
 /**
  * 操作按钮组
- * - 移动端：水平排列，可能换行
- * - 桌面端：水平排列，不换行
+ * 移动端：水平排列，可能换行
+ * 桌面端：水平排列，不换行
  */
 export function TableActionGroup({ children, className }: TableActionGroupProps) {
   return (
@@ -138,12 +138,12 @@ interface ResponsiveActionCellProps {
   primaryAction?: {
     icon: React.ReactNode
     label: string
-    href?: string // 🔥 2026-01-05: 支持链接（用于打开新标签页）
+    href?: string // 支持链接（用于打开新标签页）
     onClick?: () => void
     disabled?: boolean
     variant?: 'default' | 'outline' | 'ghost'
     title?: string
-    target?: string // 🔥 2026-01-05: a标签的target属性
+    target?: string // a标签的target属性
   }
   secondaryActions?: Array<{
     icon: React.ReactNode
@@ -171,7 +171,7 @@ export function ResponsiveActionCell({
       {/* 主要操作按钮 - 支持链接或onClick */}
       {primaryAction &&
         (primaryAction.href ? (
-          // 🔥 2026-01-05: 使用<a>标签支持href和target
+          // 使用<a>标签支持href和target
           <a
             href={primaryAction.href}
             target={primaryAction.target}

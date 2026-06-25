@@ -56,7 +56,7 @@ const SOFT_MIN_CLICKS = 6
 const SOFT_MIN_IMPRESSIONS_FOR_CTR = 250
 const SOFT_MAX_CTR = 0.018 // 1.8%
 
-// 🆕 正向反馈阈值
+// 正向反馈阈值
 const HIGH_PERFORMING_MIN_CLICKS = 5
 const HIGH_PERFORMING_MIN_CTR = 0.03 // 3%
 const HIGH_PERFORMING_MIN_CONVERSIONS = 2
@@ -320,7 +320,7 @@ export function classifySearchTermFeedbackTerms(
     const ctr = impressions > 0 ? clicks / impressions : 0
     const conversionRate = clicks > 0 ? conversions / clicks : 0
 
-    // 🆕 High performing: strong CTR and conversion signals
+    // High performing: strong CTR and conversion signals
     const highByCtr = clicks >= HIGH_PERFORMING_MIN_CLICKS && ctr >= HIGH_PERFORMING_MIN_CTR
     const highByConversion =
       conversions >= HIGH_PERFORMING_MIN_CONVERSIONS &&
@@ -376,7 +376,7 @@ export function classifySearchTermFeedbackTerms(
 }
 
 /**
- * 🆕 阶段1: 获取用户品牌级别高性能搜索词
+ * 阶段1: 获取用户品牌级别高性能搜索词
  * 从同一用户的其他 Offer（同品牌）中获取高性能搜索词
  */
 async function getUserBrandLevelHighPerformingTerms(params: {
@@ -448,7 +448,7 @@ async function getUserBrandLevelHighPerformingTerms(params: {
 }
 
 /**
- * 🆕 阶段2: 获取全局品牌级别高性能搜索词
+ * 阶段2: 获取全局品牌级别高性能搜索词
  * 从所有用户的同品牌 Offer 中聚合高性能搜索词（品牌全局优先）
  */
 async function getGlobalBrandLevelHighPerformingTerms(params: {
@@ -523,11 +523,11 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
 
 /**
  * Build search term feedback hints from search term reports.
- * 🆕 Now includes high-performing terms for positive reinforcement.
- * 🆕 分层策略（品牌全局优先）：全局品牌 + Offer + 用户品牌
- * - hardNegativeTerms: clear spend waste by clicks/cost + poor efficiency (CPC/CTR)
- * - softSuppressTerms: moderate inefficiency that should be deprioritized in copy
- * - highPerformingTerms: strong CTR/conversion signals for keyword expansion
+ * Now includes high-performing terms for positive reinforcement.
+ * 分层策略（品牌全局优先）：全局品牌 + Offer + 用户品牌
+ * hardNegativeTerms: clear spend waste by clicks/cost + poor efficiency (CPC/CTR)
+ * softSuppressTerms: moderate inefficiency that should be deprioritized in copy
+ * highPerformingTerms: strong CTR/conversion signals for keyword expansion
  */
 export async function getSearchTermFeedbackHints(params: {
   offerId: number
@@ -573,7 +573,7 @@ export async function getSearchTermFeedbackHints(params: {
     .trim()
     .toUpperCase()
 
-  // 🎯 阶段1: Offer 级别数据（最精准）
+  // 阶段1: Offer 级别数据（最精准）
   const rows = await db.query<SearchTermFeedbackAggregateRow>(
     `SELECT
        str.search_term,
@@ -604,7 +604,7 @@ export async function getSearchTermFeedbackHints(params: {
   )
   const offerLevelCount = offerLevelTerms.length
 
-  // 🎯 阶段2: 用户品牌级别补充（同用户其他 Offer）
+  // 阶段2: 用户品牌级别补充（同用户其他 Offer）
   let userBrandTerms: string[] = []
   let userBrandLevelCount = 0
   try {
@@ -623,7 +623,7 @@ export async function getSearchTermFeedbackHints(params: {
     console.warn('⚠️ 用户品牌级别补充失败:', error)
   }
 
-  // 🎯 阶段3: 全局品牌级别补充（所有用户聚合，品牌全局优先）
+  // 阶段3: 全局品牌级别补充（所有用户聚合，品牌全局优先）
   let globalBrandTerms: string[] = []
   let globalBrandLevelCount = 0
   try {

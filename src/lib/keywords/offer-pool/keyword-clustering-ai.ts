@@ -33,22 +33,20 @@ import {
   recalculateStoreBucketStatistics,
 } from './keyword-clustering-buckets'
 
-// ============================================
 // AI 语义聚类
-// ============================================
 
 /**
- * 🔥 2025-12-22 重大优化：分批处理大规模关键词聚类
+ * 重大分批处理大规模关键词聚类
  *
  * 问题：249个关键词一次性聚类导致超时（即使flash模型也需要180s+）
  * 解决：将关键词分批处理，每批80-100个关键词，并行处理后合并结果
  *
- * 性能提升：
- * - 批量处理：每批处理时间从180s+降至45-60s
- * - 并行执行：3个批次并行处理，总时间减少60%
- * - 超时风险：从>90%降至<1%
+ * 性能提升
+ * 批量处理：每批处理时间从180s+降至45-60s
+ * 并行执行：3个批次并行处理，总时间减少60%
+ * 超时风险：从>90%降至<1%
  *
- * 策略：
+ * 策略
  * 1. 关键词数量 <= 100：直接处理（原逻辑）
  * 2. 关键词数量 > 100：分批处理（3批次并行）
  * 3. 每批次独立聚类，保持桶A/B/C结构
@@ -57,7 +55,7 @@ import {
 
 /**
  * 批量聚类单个批次
- * 🆕 v4.16: 支持店铺链接的5桶模式
+ * v4.16: 支持店铺链接的5桶模式
  */
 async function clusterBatchKeywords(
   batchKeywords: string[],
@@ -81,7 +79,7 @@ async function clusterBatchKeywords(
     .replace('{{brandName}}', brandName)
     .replace('{{productCategory}}', category || '未分类')
     .replace('{{keywords}}', batchKeywords.join('\n'))
-    // 🆕 v4.16: 添加链接类型参数到 prompt
+    // v4.16: 添加链接类型参数到 prompt
     .replace(/\{\{linkType\}\}/g, pageType)
   prompt = appendKeywordClusteringOutputGuardrails(prompt)
 
@@ -130,7 +128,7 @@ async function clusterBatchKeywords(
         },
         required: ['intent', 'intentEn', 'description', 'keywords'],
       },
-      // 🆕 v4.16: 店铺链接添加 bucketS
+      // v4.16: 店铺链接添加 bucketS
       ...(isStore
         ? {
             bucketS: {
@@ -153,7 +151,7 @@ async function clusterBatchKeywords(
           bucketBCount: { type: 'INTEGER' as const },
           bucketCCount: { type: 'INTEGER' as const },
           bucketDCount: { type: 'INTEGER' as const },
-          // 🆕 v4.16: 店铺链接添加 bucketSCount
+          // v4.16: 店铺链接添加 bucketSCount
           ...(isStore ? { bucketSCount: { type: 'INTEGER' as const } } : {}),
           balanceScore: { type: 'NUMBER' as const },
         },
@@ -261,8 +259,8 @@ async function clusterBatchKeywords(
     throw new Error(`JSON解析失败: ${errorMessage}`)
   }
 
-  // 🔥 2025-12-22 添加数据结构验证（支持4个桶）
-  // 🆕 v4.16: 店铺链接支持5个桶
+  // 添加数据结构验证（支持4个桶）
+  // v4.16: 店铺链接支持5个桶
   if (isStore) {
     // 店铺链接：验证5个桶
     if (
@@ -322,7 +320,7 @@ async function clusterBatchKeywords(
 
 /**
  * 合并多个批次的聚类结果（支持4桶和5桶模式）
- * 🔧 修复(2025-12-24): 支持店铺链接的bucketS
+ * 支持店铺链接的bucketS
  */
 function mergeBatchResults(
   batchResults: Array<{
@@ -330,7 +328,7 @@ function mergeBatchResults(
     bucketB: { intent: string; intentEn: string; description: string; keywords: string[] }
     bucketC: { intent: string; intentEn: string; description: string; keywords: string[] }
     bucketD: { intent: string; intentEn: string; description: string; keywords: string[] }
-    bucketS?: { intent: string; intentEn: string; description: string; keywords: string[] } // 🔧 可选：店铺链接专用
+    bucketS?: { intent: string; intentEn: string; description: string; keywords: string[] } // 可选：店铺链接专用
     statistics: {
       totalKeywords: number
       bucketACount: number
@@ -349,7 +347,7 @@ function mergeBatchResults(
   const allBucketDKeywords = Array.from(new Set(batchResults.flatMap((r) => r.bucketD.keywords)))
   const allBucketSKeywords = Array.from(
     new Set(batchResults.flatMap((r) => r.bucketS?.keywords || []))
-  ) // 🔧 处理可选的bucketS
+  ) // 处理可选的bucketS
 
   // 选择最详细的意图描述（选择最长的描述）
   const bucketAIntent = batchResults.reduce((best, current) =>
@@ -368,7 +366,7 @@ function mergeBatchResults(
     current.bucketD.description.length > best.bucketD.description.length ? current : best
   ).bucketD
 
-  // 🔧 处理bucketS（店铺链接专用）
+  // 处理bucketS（店铺链接专用）
   const bucketSIntent = batchResults.find((r) => r.bucketS)?.bucketS
 
   // 计算统计数据
@@ -387,7 +385,7 @@ function mergeBatchResults(
   console.log(`   桶C: ${allBucketCKeywords.length} 个关键词`)
   console.log(`   桶D: ${allBucketDKeywords.length} 个关键词`)
   if (allBucketSKeywords.length > 0) {
-    console.log(`   桶S: ${allBucketSKeywords.length} 个关键词`) // 🔧 店铺链接显示bucketS
+    console.log(`   桶S: ${allBucketSKeywords.length} 个关键词`) // 店铺链接显示bucketS
   }
   console.log(`   平均均衡度: ${averageBalanceScore.toFixed(2)}`)
 
@@ -406,7 +404,7 @@ function mergeBatchResults(
     },
   }
 
-  // 🔧 添加bucketS（如果存在）
+  // 添加bucketS（如果存在）
   if (bucketSIntent && allBucketSKeywords.length > 0) {
     result.bucketS = { ...bucketSIntent, keywords: allBucketSKeywords }
     result.statistics.bucketSCount = allBucketSKeywords.length
@@ -418,22 +416,22 @@ function mergeBatchResults(
 /**
  * AI 语义聚类：将非品牌关键词分成 3 个语义桶（优化版）
  *
- * 🔥 2025-12-22 重大优化：
- * - 小批量（<=100）：直接处理
- * - 大批量（>100）：分批并行处理
- * - 解决249个关键词超时问题
+ * 重大
+ * 小批量（<=100）：直接处理
+ * 大批量（>100）：分批并行处理
+ * 解决249个关键词超时问题
  *
- * 🔥 2025-12-22 整合优化：
- * - 支持4个桶（A/B/C/D）的聚类
- * - 商品需求扩展词也参与AI语义聚类
- * - 保持语义聚类的一致性
+ * 整合
+ * 支持4个桶（A/B/C/D）的聚类
+ * 商品需求扩展词也参与AI语义聚类
+ * 保持语义聚类的一致性
  *
  * 桶A：品牌商品锚点（品牌与商品/型号强相关）
  * 桶B：商品需求场景（用户有明确商品需求或使用场景）
  * 桶C：功能规格特性（关注技术规格、功能与参数）
  * 桶D：商品需求扩展（补足高相关需求覆盖）
  *
- * 🆕 v4.16: 店铺链接支持5个桶
+ * v4.16: 店铺链接支持5个桶
  * 桶A：品牌商品集合
  * 桶B：商品需求场景
  * 桶C：热门商品线
@@ -470,7 +468,7 @@ export async function clusterKeywordsByIntent(
   const allKeywordsForClustering = [...keywords]
   console.log(`📊 总计聚类关键词: ${allKeywordsForClustering.length} 个`)
 
-  // 🔥 2026-02-04 优化：进一步减小批次大小，降低超时风险
+  // 进一步减小批次大小，降低超时风险
   // 原因：减小单次请求处理量，提高稳定性
   const BATCH_SIZE = 30 // 每批30个关键词（降低超时风险）
   const needsBatching = allKeywordsForClustering.length > 40 // 从60改为40
@@ -531,7 +529,7 @@ export async function clusterKeywordsByIntent(
 
   console.log(`📦 批次划分: ${batches.map((b, i) => `批次${i + 1}=${b.length}个`).join(', ')}`)
 
-  // 2. 🔥 2025-12-27 优化：有限并发处理以支持多用户并发
+  // 2. 有限并发处理以支持多用户并发
   // 原因：纯串行会影响吞吐量，过度并发又会增加超时风险
   // 优化措施：限制并发 + 增大重试次数 + 随机抖动
   const maxRetries = 3 // 从2改为3（4次尝试）
@@ -625,7 +623,7 @@ export async function clusterKeywordsByIntent(
       const retryable = isRetryableClusteringError(error)
 
       if (retryCount < maxRetries && retryable) {
-        // 🔥 2025-12-27 优化：添加随机抖动，避免重试风暴
+        // 添加随机抖动，避免重试风暴
         const baseDelayMs = baseDelay * Math.pow(2, retryCount)
         const jitter = Math.random() * 2000 // 0-2秒随机抖动
         const delay = Math.min(baseDelayMs + jitter, 60000) // 最多60秒
@@ -663,8 +661,8 @@ export async function clusterKeywordsByIntent(
 
 /**
  * 直接处理小批量关键词聚类（原逻辑）
- * 🆕 v4.16: 支持店铺链接的5桶模式
- * 🔥 2025-12-27: 增加重试次数，与分批处理保持一致
+ * v4.16: 支持店铺链接的5桶模式
+ * 增加重试次数，与分批处理保持一致
  */
 async function clusterKeywordsDirectly(
   keywords: string[],
@@ -673,8 +671,8 @@ async function clusterKeywordsDirectly(
   userId: number,
   pageType: 'product' | 'store' = 'product'
 ): Promise<KeywordBuckets | StoreKeywordBuckets> {
-  // 🔥 2025-12-27: 增加重试次数，与分批处理保持一致
-  const maxRetries = 3 // 🔥 从2改为3（4次尝试）
+  // 增加重试次数，与分批处理保持一致
+  const maxRetries = 3 // 从2改为3（4次尝试）
   const baseDelay = 5000
   let lastError: any
 
@@ -688,7 +686,7 @@ async function clusterKeywordsDirectly(
         .replace('{{brandName}}', brandName)
         .replace('{{productCategory}}', category || '未分类')
         .replace('{{keywords}}', keywords.join('\n'))
-        // 🆕 v4.16: 添加链接类型参数到 prompt
+        // v4.16: 添加链接类型参数到 prompt
         .replace(/\{\{linkType\}\}/g, pageType)
       prompt = appendKeywordClusteringOutputGuardrails(prompt)
 
@@ -737,7 +735,7 @@ async function clusterKeywordsDirectly(
             },
             required: ['intent', 'intentEn', 'description', 'keywords'],
           },
-          // 🆕 v4.16: 店铺链接添加 bucketS
+          // v4.16: 店铺链接添加 bucketS
           ...(isStore
             ? {
                 bucketS: {
@@ -760,7 +758,7 @@ async function clusterKeywordsDirectly(
               bucketBCount: { type: 'INTEGER' as const },
               bucketCCount: { type: 'INTEGER' as const },
               bucketDCount: { type: 'INTEGER' as const },
-              // 🆕 v4.16: 店铺链接添加 bucketSCount
+              // v4.16: 店铺链接添加 bucketSCount
               ...(isStore ? { bucketSCount: { type: 'INTEGER' as const } } : {}),
               balanceScore: { type: 'NUMBER' as const },
             },
@@ -868,8 +866,8 @@ async function clusterKeywordsDirectly(
         }
       }
 
-      // 🔥 2025-12-22 添加数据结构验证（支持4个桶）
-      // 🆕 v4.16: 店铺链接支持5个桶
+      // 添加数据结构验证（支持4个桶）
+      // v4.16: 店铺链接支持5个桶
       if (isStore) {
         // 店铺链接：验证5个桶
         const storeBuckets = buckets as StoreKeywordBuckets
@@ -895,11 +893,11 @@ async function clusterKeywordsDirectly(
           throw new Error('AI返回的keywords不是数组')
         }
 
-        // 🔧 2026-01-11: 兜底修复 - 避免关键词全部落入桶S导致后续桶A-D无词
+        // 兜底修复 - 避免关键词全部落入桶S导致后续桶A-D无词
         // 先尝试从桶S/原始关键词中恢复 A/B/C/D 的基础分布，再应用后处理规则。
         redistributeStoreBucketsFromS(storeBuckets, keywords)
 
-        // 🔥 v4.18 新增：后处理规则修正错误分配（促销/型号/评价/地理）
+        // v4.18 后处理规则修正错误分配（促销/型号/评价/地理）
         applyStoreBucketPostProcessing(storeBuckets)
         recalculateStoreBucketStatistics(storeBuckets)
 
@@ -954,7 +952,7 @@ async function clusterKeywordsDirectly(
       const retryable = isRetryableClusteringError(error)
 
       if (retryCount < maxRetries && retryable) {
-        // 🔥 2025-12-27 优化：添加随机抖动，避免重试风暴
+        // 添加随机抖动，避免重试风暴
         const baseDelayMs = baseDelay * Math.pow(2, retryCount)
         const jitter = Math.random() * 2000 // 0-2秒随机抖动
         const delay = Math.min(baseDelayMs + jitter, 60000) // 最多60秒

@@ -1,13 +1,13 @@
 /**
  * Sync 任务执行器
  *
- * 负责执行Google Ads数据同步任务，包括：
- * - 从Google Ads API拉取性能数据
- * - 存储到 PostgreSQL
- * - 自动重试机制
- * - 任务状态追踪
+ * 负责执行Google Ads数据同步任务，包括
+ * 从Google Ads API拉取性能数据
+ * 存储到 PostgreSQL
+ * 自动重试机制
+ * 任务状态追踪
  *
- * 🔄 替换原有的 SyncScheduler
+ * 替换原有的 SyncScheduler
  * 优势：支持并发控制、任务恢复、失败重试
  */
 

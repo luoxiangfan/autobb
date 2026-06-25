@@ -5,9 +5,8 @@
  */
 
 describe('字符限制验证', () => {
-  // ============================================================================
   // Callouts 长度验证 (≤25 字符)
-  // ============================================================================
+
   describe('Callouts 长度验证 (≤25 字符)', () => {
     test('应该接受 ≤25 字符的 callouts', () => {
       const callouts = [
@@ -42,7 +41,7 @@ describe('字符限制验证', () => {
       ]
 
       const truncated = callouts.map((c) => c.substring(0, 25))
-      // 修复: substring(0, 25) 的实际结果
+      // substring(0, 25) 的实际结果
       expect(truncated[0]).toBe('Free Shipping Worldwide T')
       expect(truncated[0].length).toBe(25)
       expect(truncated[1]).toBe('Money Back Guarantee Fore')
@@ -70,9 +69,8 @@ describe('字符限制验证', () => {
     })
   })
 
-  // ============================================================================
   // Sitelinks 长度验证 (text ≤25, desc ≤35)
-  // ============================================================================
+
   describe('Sitelinks 长度验证 (text ≤25, desc ≤35)', () => {
     test('应该接受符合要求的 sitelinks', () => {
       const sitelinks = [
@@ -124,7 +122,7 @@ describe('字符限制验证', () => {
 
       expect(truncated[0].text).toBe('Compra Ahora en Oferta Es')
       expect(truncated[0].text.length).toBe(25)
-      // 修复: 'Entrega gratuita en 2 días para miembros Prime'.substring(0, 35) 的实际结果
+      // 'Entrega gratuita en 2 días para miembros Prime'.substring(0, 35) 的实际结果
       expect(truncated[0].description).toBe('Entrega gratuita en 2 días para mie')
       expect(truncated[0].description.length).toBe(35)
     })
@@ -158,9 +156,8 @@ describe('字符限制验证', () => {
     })
   })
 
-  // ============================================================================
   // 关键词长度验证 (1-4 个单词)
-  // ============================================================================
+
   describe('关键词长度验证 (1-4 个单词)', () => {
     test('应该接受 1-4 个单词的关键词', () => {
       const keywords = [
@@ -196,7 +193,7 @@ describe('字符限制验证', () => {
       const keywords = ['Samsung', '', '  ', 'Galaxy S24', null, undefined]
 
       const validKeywords = keywords.filter((k) => {
-        if (!k || !k.trim()) return false // 修复: 先检查trim后是否为空
+        if (!k || !k.trim()) return false // 先检查trim后是否为空
         const wordCount = k.trim().split(/\s+/).length
         return wordCount >= 1 && wordCount <= 4
       })
@@ -263,9 +260,8 @@ describe('字符限制验证', () => {
     })
   })
 
-  // ============================================================================
   // 综合验证测试
-  // ============================================================================
+
   describe('综合验证', () => {
     test('应该同时验证 callouts、sitelinks 和关键词', () => {
       const creative = {

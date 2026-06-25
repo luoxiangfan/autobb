@@ -1,4 +1,4 @@
-/** Google Ads Keyword Planner API、标准化与认证解析 */
+/* * Google Ads Keyword Planner API、标准化与认证解析 */
 export type { KeywordIdeasPreparedOAuth, KeywordIdea, KeywordMetrics } from './planner'
 export {
   getKeywordIdeas,

@@ -35,14 +35,14 @@ function readHydratedSecrets(userId: number, generation: number): HydratedSecret
   return hit.secrets
 }
 
-/** slim 缓存条目为 true；API / resolve 路径使用前须 hydrate */
+/* * slim 缓存条目为 true；API / resolve 路径使用前须 hydrate */
 function authContextSecretsLookStripped(
   ctx: Pick<GoogleAdsAuthContext, 'secretsStripped'>
 ): boolean {
   return ctx.secretsStripped === true
 }
 
-/** 未 hydrate 的 strip context 传入 resolve / API 路径时抛错 */
+/* * 未 hydrate 的 strip context 传入 resolve / API 路径时抛错 */
 export function assertAuthContextSecretsHydrated(
   ctx: Pick<GoogleAdsAuthContext, 'secretsStripped' | 'userId'>
 ): void {
@@ -89,7 +89,7 @@ function computeServiceAccountConfigured(
   return Boolean(ctx.serviceAccountConfig?.id || ctx.auth.serviceAccountId)
 }
 
-/** 是否已配置 OAuth refresh（strip metadata 或 hydrate 后均可） */
+/* * 是否已配置 OAuth refresh（strip metadata 或 hydrate 后均可） */
 export function oauthRefreshConfiguredFromContext(
   ctx: Pick<GoogleAdsAuthContext, 'oauthHasRefreshToken' | 'oauthCredentials'>
 ): boolean {
@@ -100,7 +100,7 @@ function oauthFieldHasValue(value: string | null | undefined): boolean {
   return Boolean(String(value ?? '').trim())
 }
 
-/** 凭证表是否存在 OAuth 配置字段（含 refresh 或半成品 client_id 等；metadata 路径可用） */
+/* * 凭证表是否存在 OAuth 配置字段（含 refresh 或半成品 client_id 等；metadata 路径可用） */
 export function oauthCredentialFieldsPresentFromContext(
   ctx: Pick<GoogleAdsAuthContext, 'oauthHasRefreshToken' | 'oauthCredentials'>
 ): boolean {
@@ -119,7 +119,7 @@ export function oauthCredentialFieldsPresentFromContext(
   )
 }
 
-/** 是否已配置服务账号（strip metadata 或 hydrate 后均可） */
+/* * 是否已配置服务账号（strip metadata 或 hydrate 后均可） */
 export function serviceAccountConfiguredFromContext(
   ctx: Pick<GoogleAdsAuthContext, 'serviceAccountConfigured' | 'serviceAccountConfig' | 'auth'>
 ): boolean {
@@ -158,7 +158,7 @@ export function stripGoogleAdsAuthContextForCache(ctx: GoogleAdsAuthContext): Go
   }
 }
 
-/** 旧版 Redis payload 或误写入的明文条目：读后立即 strip */
+/* * 旧版 Redis payload 或误写入的明文条目：读后立即 strip */
 export function normalizeCachedAuthContextPayload(ctx: GoogleAdsAuthContext): GoogleAdsAuthContext {
   if (authContextSecretsLookStripped(ctx)) {
     return ctx
@@ -185,7 +185,7 @@ function credentialOwnerResolution(ctx: GoogleAdsAuthContext) {
   }
 }
 
-/** strip 后的 context 或密钥字段缺失时需从 DB 补全 */
+/* * strip 后的 context 或密钥字段缺失时需从 DB 补全 */
 export function googleAdsAuthContextNeedsSecretHydration(ctx: GoogleAdsAuthContext): boolean {
   if (!authContextSecretsLookStripped(ctx)) {
     return false
@@ -297,7 +297,7 @@ export async function hydrateGoogleAdsAuthContextSecrets(
   return mergeHydratedSecrets(ctx, secrets)
 }
 
-/** load / commit 后种子化 secrets 短缓存，避免紧接的 hydrate 重复查库 */
+/* * load / commit 后种子化 secrets 短缓存，避免紧接的 hydrate 重复查库 */
 export function seedHydratedSecretsCacheFromFullContext(
   userId: number,
   generation: number,

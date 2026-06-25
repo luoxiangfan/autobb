@@ -7,9 +7,9 @@ import { getDatabase } from '@/lib/db'
  *
  * 执行数据清理 - 清理90天前的软删除记录
  *
- * 请求体参数：
- * - tables: 要清理的表数组，默认 ['scraped_products', 'ad_creatives', 'google_ads_accounts']
- * - dryRun: 干运行模式，只返回统计信息不实际删除
+ * 请求体参数
+ * tables: 要清理的表数组，默认 ['scraped_products', 'ad_creatives', 'google_ads_accounts']
+ * dryRun: 干运行模式，只返回统计信息不实际删除
  */
 export const POST = withAuth(
   async (request: NextRequest) => {

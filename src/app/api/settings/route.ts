@@ -124,7 +124,7 @@ export const GET = withOptionalAuth(async (request, user) => {
       })
     }
 
-    // 🔧 2025-12-29: 为 AI 分类添加动态计算字段
+    // 为 AI 分类添加动态计算字段
     if (groupedSettings['ai']) {
       // 获取 gemini_provider 值
       const providerSetting = groupedSettings['ai'].find((s) => s.key === 'gemini_provider')
@@ -262,7 +262,7 @@ export const PUT = withOptionalAuth(async (request, user) => {
       }
     }
 
-    // 🔧 同步更新：AI配置变更时，按“服务商 + 模型”自动填充 gemini_endpoint
+    // 同步更新：AI配置变更时，按“服务商 + 模型”自动填充 gemini_endpoint
     const hasAIUpdate = updates.some((u) => u.category === 'ai')
     if (hasAIUpdate) {
       const currentAISettings = userIdNum ? await getSettingsByCategory('ai', userIdNum) : []
@@ -314,7 +314,7 @@ export const PUT = withOptionalAuth(async (request, user) => {
       )
     }
 
-    // 🔥 2026-01-06: 保存前强制校验代理URL（避免客户端校验遗漏导致运行时失败）
+    // 保存前强制校验代理URL（避免客户端校验遗漏导致运行时失败）
     const proxyUrlsUpdate = updates.find((u) => u.category === 'proxy' && u.key === 'urls')
     if (proxyUrlsUpdate) {
       let proxyUrls: Array<{ country?: string; url?: string }>
@@ -397,7 +397,7 @@ export const PUT = withOptionalAuth(async (request, user) => {
       return NextResponse.json({ error: message }, { status })
     }
 
-    // 🔥 修复（2025-12-11）：如果更新了代理配置，清除代理池缓存
+    // 如果更新了代理配置，清除代理池缓存
     const hasProxyUpdate = updates.some((u) => u.category === 'proxy')
     if (hasProxyUpdate) {
       console.log('🔄 检测到代理配置更新，清除代理池缓存')

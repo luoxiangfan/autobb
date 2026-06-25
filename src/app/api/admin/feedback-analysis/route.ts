@@ -93,7 +93,7 @@ export const POST = withAuth(
           operationType: 'admin_feedback_analysis',
           prompt: conversationContext,
           temperature: 0.8,
-          maxOutputTokens: 8192, // 🔴 Pro模型统一使用8192
+          maxOutputTokens: 8192, // Pro模型统一使用8192
         },
         userId
       )

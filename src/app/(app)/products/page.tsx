@@ -122,7 +122,7 @@ type SortField =
   | 'promoLink'
   | 'relatedOfferCount'
   | 'updatedAt'
-  | 'recommendationScore' // 新增: 推荐指数排序
+  | 'recommendationScore' // 推荐指数排序
 
 type ProductListItem = {
   id: number
@@ -150,9 +150,9 @@ type ProductListItem = {
   historicalOfferCount: number
   relatedOfferCount: number
   isBlacklisted: boolean
-  recommendationScore: number | null // 新增: 推荐指数
-  recommendationReasons: string[] | null // 新增: 推荐理由
-  seasonalityScore: number | null // 新增: 季节性评分
+  recommendationScore: number | null // 推荐指数
+  recommendationReasons: string[] | null // 推荐理由
+  seasonalityScore: number | null // 季节性评分
   lastSyncedAt: string | null
   createdAt: string
   updatedAt: string
@@ -1340,7 +1340,7 @@ export default function ProductsPage() {
     if (ypPreparingCapture) return
     setYpPreparingCapture(true)
 
-    // 🔥 修复：在用户点击时立即打开空白窗口，避免被浏览器弹窗拦截器阻止
+    // 在用户点击时立即打开空白窗口，避免被浏览器弹窗拦截器阻止
     // 这个窗口引用会在API返回后更新URL
     let newWindow: Window | null = null
     try {
@@ -1390,7 +1390,7 @@ export default function ProductsPage() {
       setYpCaptureDialogOpen(true)
       console.log('[YP采集] Dialog状态已设置为true')
 
-      // 🔥 修复：更新已打开窗口的URL，而不是重新打开
+      // 更新已打开窗口的URL，而不是重新打开
       console.log('[YP采集] 更新窗口URL...')
       if (newWindow && !newWindow.closed) {
         try {
@@ -1498,7 +1498,7 @@ export default function ProductsPage() {
     }
   }, [])
 
-  // 🔥 调试：监控Dialog状态变化
+  // 调试：监控Dialog状态变化
   useEffect(() => {
     console.log('[YP采集] Dialog状态变化:', ypCaptureDialogOpen)
   }, [ypCaptureDialogOpen])
@@ -1513,7 +1513,7 @@ export default function ProductsPage() {
     return () => window.clearInterval(timer)
   }, [ypCaptureDialogOpen])
 
-  // 🔥 修复：只有在Dialog打开期间登录态从无到有时才自动关闭
+  // 只有在Dialog打开期间登录态从无到有时才自动关闭
   // 避免在Dialog刚打开时就因为已有登录态而立即关闭
   useEffect(() => {
     if (!ypCaptureDialogOpen) return

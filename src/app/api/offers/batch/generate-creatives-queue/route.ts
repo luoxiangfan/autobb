@@ -3,11 +3,11 @@
  *
  * 批量将广告创意生成任务加入队列（每个Offer最多入队1个任务）
  *
- * 规则：
- * - 单次最多50个Offer
- * - 仅处理 scrape_status = 'completed' 的Offer；pending/in_progress/failed 跳过
- * - 若该Offer已存在 pending/running 的创意任务，则跳过
- * - 若该Offer已生成满3种类型（A/B/D），则跳过
+ * 规则
+ * 单次最多50个Offer
+ * 仅处理 scrape_status = 'completed' 的Offer；pending/in_progress/failed 跳过
+ * 若该Offer已存在 pending/running 的创意任务，则跳过
+ * 若该Offer已生成满3种类型（A/B/D），则跳过
  */
 
 import { withAuth } from '@/lib/auth'

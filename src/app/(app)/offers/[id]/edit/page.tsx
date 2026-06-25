@@ -70,7 +70,7 @@ export default function EditOfferPage() {
         const data = await response.json()
         const offer = data.offer
 
-        // 填充表单 - 🔧 修复(2025-12-11): 使用camelCase匹配API返回的字段名
+        // 填充表单 - 使用camelCase匹配API返回的字段名
         setUrl(offer.url || '')
         setLinkType(
           offer.pageType === 'store' || offer.pageType === 'product' ? offer.pageType : 'product'

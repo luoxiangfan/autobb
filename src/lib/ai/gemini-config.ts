@@ -3,9 +3,9 @@
  *
  * 职责：统一管理 Gemini API 的服务商端点和配置信息
  *
- * 支持的服务商：
- * - official: Google Gemini 官方 API
- * - relay: 第三方中转服务
+ * 支持的服务商
+ * official: Google Gemini 官方 API
+ * relay: 第三方中转服务
  */
 
 /**

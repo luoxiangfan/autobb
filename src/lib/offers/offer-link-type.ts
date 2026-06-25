@@ -40,7 +40,7 @@ export function deriveOfferLinkTypeFromScrapedData(scrapedData: any): OfferLinkT
   return null
 }
 
-/** 从推广链接 / final URL 推断 page_type（广告系列同步、批量导入等无 scraped_data 场景） */
+/* * 从推广链接 / final URL 推断 page_type（广告系列同步、批量导入等无 scraped_data 场景） */
 export function inferPageTypeFromUrls(params: {
   url?: string | null
   finalUrl?: string | null

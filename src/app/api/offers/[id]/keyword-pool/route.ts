@@ -124,8 +124,8 @@ function buildRawBucketCounts(pool: OfferKeywordPool) {
  * GET /api/offers/:id/keyword-pool
  * 获取 Offer 的关键词池
  *
- * Query Parameters:
- * - includeBucketDetails: boolean - 是否包含各桶详情
+ * Query Parameters
+ * includeBucketDetails: boolean - 是否包含各桶详情
  */
 export const dynamic = 'force-dynamic'
 
@@ -269,9 +269,9 @@ export const GET = withAuth(async (request, user, context) => {
  * POST /api/offers/:id/keyword-pool
  * 生成 Offer 的关键词池
  *
- * Request Body:
- * - forceRegenerate: boolean - 是否触发重建Offer（替代关键词池重建）
- * - keywords: string[] - 可选，指定关键词列表（否则自动提取）
+ * Request Body
+ * forceRegenerate: boolean - 是否触发重建Offer（替代关键词池重建）
+ * keywords: string[] - 可选，指定关键词列表（否则自动提取）
  */
 export const POST = withAuth(async (request, user, context) => {
   try {

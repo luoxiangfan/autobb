@@ -3,16 +3,16 @@
  *
  * 功能：定时检测所有已暂停的广告系列，自动暂停关联 offer 的补点击和换链接任务
  *
- * 架构说明：
- * - 运行在 scheduler 进程中
- * - 与 URL Swap、补点击任务调度器采用相同架构
- * - 定时检测 + 队列任务执行
+ * 架构说明
+ * 运行在 scheduler 进程中
+ * 与 URL Swap、补点击任务调度器采用相同架构
+ * 定时检测 + 队列任务执行
  *
- * 配置项：
- * - QUEUE_CAMPAIGN_PAUSED_CHECK_INTERVAL_MS: 检测间隔（默认 30 分钟）
- * - QUEUE_CAMPAIGN_PAUSED_RUN_ON_START: 启动时是否立即执行一次（默认 true）
- * - QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY: 按用户并发处理上限（默认 3，受 MAX 收敛）
- * - QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX: 用户并发硬上限（默认 16）
+ * 配置项
+ * QUEUE_CAMPAIGN_PAUSED_CHECK_INTERVAL_MS: 检测间隔（默认 30 分钟）
+ * QUEUE_CAMPAIGN_PAUSED_RUN_ON_START: 启动时是否立即执行一次（默认 true）
+ * QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY: 按用户并发处理上限（默认 3，受 MAX 收敛）
+ * QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX: 用户并发硬上限（默认 16）
  */
 
 import { runCampaignPausedTaskCheck } from '@/lib/campaign/server'

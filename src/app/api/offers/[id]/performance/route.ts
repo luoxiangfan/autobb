@@ -14,13 +14,13 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  *
  * 获取 Offer 级别性能数据（含佣金）
  *
- * 注意：
- * - 广告花费和佣金保持原始货币（CNY 和 USD）
- * - ROI 计算时统一转换为 USD
+ * 注意
+ * 广告花费和佣金保持原始货币（CNY 和 USD）
+ * ROI 计算时统一转换为 USD
  *
- * Query Parameters:
- * - daysBack: number (可选，默认30天)
- * - avgOrderValue: number (保留兼容，不再作为佣金口径主计算依据)
+ * Query Parameters
+ * daysBack: number (可选，默认30天)
+ * avgOrderValue: number (保留兼容，不再作为佣金口径主计算依据)
  */
 export const dynamic = 'force-dynamic'
 

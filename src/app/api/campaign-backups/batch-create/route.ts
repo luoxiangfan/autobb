@@ -11,18 +11,18 @@ const MAX_BATCH_BACKUP_COUNT = 50
  * POST /api/campaign-backups/batch-create
  * 批量从备份创建广告系列（异步队列）
  *
- * 请求体：
+ * 请求体
  * {
- *   backupIds: number[]
- *   googleAdsAccountId?: number
- *   regenerateCreativeMap?: Record<number, boolean>
+ * backupIds: number[]
+ * googleAdsAccountId?: number
+ * regenerateCreativeMap?: Record<number, boolean>
  * }
  *
- * 响应：
+ * 响应
  * {
- *   success: true
- *   batchId: string
- *   total_count: number
+ * success: true
+ * batchId: string
+ * total_count: number
  * }
  */
 export const POST = withAuth(async (request, user) => {

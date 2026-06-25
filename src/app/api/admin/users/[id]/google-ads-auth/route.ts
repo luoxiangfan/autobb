@@ -27,7 +27,7 @@ import {
   resolveGoogleAdsDisplayAuthType,
 } from '@/lib/google-ads/auth/context'
 
-/** 清除用户自有凭证（双栈时 OAuth + SA 均删；含半成品 OAuth 行） */
+/* * 清除用户自有凭证（双栈时 OAuth + SA 均删；含半成品 OAuth 行） */
 async function clearOwnGoogleAdsCredentialsForUser(userId: number): Promise<'cleared' | 'none'> {
   const ctx = await getGoogleAdsAuthContextMetadata(userId)
   const summary = resolveGoogleAdsCredentialStatusSummary(ctx)

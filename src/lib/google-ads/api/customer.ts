@@ -11,7 +11,7 @@ import {
 } from '@/lib/google-ads/auth/context'
 import { getGoogleAdsClient, refreshAccessToken } from './oauth-client'
 
-/** prepare 后可选传入，高层 API 透传至 getCustomerWithCredentials */
+/* * prepare 后可选传入，高层 API 透传至 getCustomerWithCredentials */
 export type GoogleAdsApiAuthContextField = {
   authContext?: GoogleAdsAuthContext
 }
@@ -32,9 +32,9 @@ export async function getCustomer(
     throw new Error('缺少Google Ads凭证,必须从数据库提供 credentials 参数')
   }
 
-  // login_customer_id:
-  // - 通过MCC访问子账户时，通常需要设置为MCC customer_id
-  // - 直接访问账户(非通过管理账户)时，根据Google Ads API文档可省略
+  // login_customer_id
+  // 通过MCC访问子账户时，通常需要设置为MCC customer_id
+  // 直接访问账户(非通过管理账户)时，根据Google Ads API文档可省略
   // 此处允许传入 null 来显式省略 login_customer_id（用于自动降级策略）
   if (loginCustomerId === undefined) {
     throw new Error('缺少 Login Customer ID(MCC账户ID)。如需省略，请显式传入 null。')
@@ -119,7 +119,7 @@ export async function resolveGoogleAdsApiCallAuth(params: {
   return { authType, authContext }
 }
 
-/** 高层 API：解析 authType（含与 context 冲突检测；勿使用 `|| 'oauth'`）。 */
+/* * 高层 API：解析 authType（含与 context 冲突检测；勿使用 `|| 'oauth'`）。 */
 export async function resolveAuthTypeForGoogleAdsApiCall(params: {
   authType?: 'oauth' | 'service_account'
   userId: number
@@ -133,12 +133,12 @@ export async function resolveAuthTypeForGoogleAdsApiCall(params: {
  * 辅助函数：从数据库获取凭证并创建 Customer 实例。
  * 支持 OAuth 与服务账号；服务账号模式不需要 client_id/client_secret。
  *
- * 调用约定（与「OAuth / 服务账号二选一」一致）：
- * - 业务入口应优先 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`，
- *   勿在双栈（`dualStack`）或仅残留凭证时直接传入 `authType: 'service_account'` 绕过校验。
- * - OAuth 且未传 `credentials` 时会经 `resolveOAuthClientCredentialsForUser`（含双栈拦截）。
- * - 服务账号走 `getUnifiedGoogleAdsClient`（复用本函数已 assert 的 authContext，避免重复加载）。
- * - OAuth 可传 `authContext`（如 Keyword Planner prepare 后），避免重复 assert / 加载。
+ * 调用约定（与「OAuth / 服务账号二选一」一致）
+ * 业务入口应优先 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`，
+ * 勿在双栈（`dualStack`）或仅残留凭证时直接传入 `authType: 'service_account'` 绕过校验。
+ * OAuth 且未传 `credentials` 时会经 `resolveOAuthClientCredentialsForUser`（含双栈拦截）。
+ * 服务账号走 `getUnifiedGoogleAdsClient`（复用本函数已 assert 的 authContext，避免重复加载）。
+ * OAuth 可传 `authContext`（如 Keyword Planner prepare 后），避免重复 assert / 加载。
  */
 export async function getCustomerWithCredentials(params: {
   customerId: string
@@ -147,13 +147,13 @@ export async function getCustomerWithCredentials(params: {
   userId: number
   loginCustomerId?: string | null
   credentials?: OAuthApiCredentialsFields
-  /** 已传 credentials 且未显式传 loginCustomerId 时，用于推导 header */
+  /* * 已传 credentials 且未显式传 loginCustomerId 时，用于推导 header */
   accountParentMccId?: string | null
   oauthLoginCustomerIdHint?: string
   // 服务账号认证参数
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
-  /** 调用方已校验双栈时传入，避免重复加载 auth-context */
+  /* * 调用方已校验双栈时传入，避免重复加载 auth-context */
   authContext?: GoogleAdsAuthContext
 }): Promise<Customer> {
   if (!params.userId) {

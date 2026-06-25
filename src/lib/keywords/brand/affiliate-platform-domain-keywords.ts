@@ -34,7 +34,7 @@ export function getAffiliateDomainKeywords(platformName: string): string[] {
   return platformDomainMap[platformName] || [platformName.toLowerCase()]
 }
 
-/** 判断 offer.affiliate_link 是否属于指定联盟平台（与 performance / trends 筛选一致）。 */
+/* * 判断 offer.affiliate_link 是否属于指定联盟平台（与 performance / trends 筛选一致）。 */
 export function affiliateLinkMatchesPlatform(
   affiliateLink: string | null | undefined,
   platformName: string

@@ -93,7 +93,7 @@ const OFFER_UPDATE_KEYS = new Set([
   'extractionMode',
 ])
 
-/** 从 rebuild 请求体中剥离 Offer 更新字段 */
+/* * 从 rebuild 请求体中剥离 Offer 更新字段 */
 export function pickOfferUpdateBody(body: unknown): Record<string, unknown> | null {
   if (!body || typeof body !== 'object') return null
   const record = body as Record<string, unknown>
@@ -107,10 +107,10 @@ export function pickOfferUpdateBody(body: unknown): Record<string, unknown> | nu
 }
 
 /**
- * 解析 store_product_links 列更新值：
- * - undefined：不更新该列
- * - null：清空（显式改为单品页时）
- * - string：JSON 数组写入
+ * 解析 store_product_links 列更新值
+ * undefined：不更新该列
+ * null：清空（显式改为单品页时）
+ * string：JSON 数组写入
  */
 export function resolveStoreProductLinksForUpdate(
   pageType: 'store' | 'product' | undefined,

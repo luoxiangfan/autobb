@@ -58,7 +58,7 @@ function parseProxyIP(proxyIP: string): ProxyCredentials | null {
  */
 async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
   try {
-    // 🔥 检查代理URL格式，使用Provider系统
+    // 检查代理URL格式，使用Provider系统
     const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
 
     let provider
@@ -71,13 +71,13 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 
     console.log(`📋 检测到代理格式: ${provider.name}`)
 
-    // 🔥 Oxylabs格式不需要预热（已经是直接的代理服务器）
+    // Oxylabs格式不需要预热（已经是直接的代理服务器）
     if (provider.name === 'Oxylabs') {
       console.log(`ℹ️ Oxylabs代理无需预热，直接使用`)
       return []
     }
 
-    // 🔥 IPRocket格式：添加ips=12参数获取多个代理IP
+    // IPRocket格式：添加ips=12参数获取多个代理IP
     if (provider.name === 'IPRocket') {
       // 移除URL中已存在的ips参数，然后添加ips=12
       let modifiedUrl = proxyUrl
@@ -91,7 +91,7 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 
       console.log(`🌐 获取12个代理IP: ${maskProxyUrl(modifiedUrl)}`)
 
-      // 🔥 使用增强版Stealth配置绕过CloudFlare
+      // 使用增强版Stealth配置绕过CloudFlare
       const { chromium } = await import('playwright')
       const browser = await chromium.launch({
         headless: true,
@@ -149,7 +149,7 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 
         const page = await context.newPage()
 
-        // ========== 核心Stealth脚本 ==========
+        // 核心Stealth脚本
         // @ts-ignore - 此代码在浏览器端执行，非Node.js环境
         await page.addInitScript(() => {
           // 1. 移除webdriver特征
@@ -271,10 +271,10 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
 /**
  * 使用多个代理IP发起推广链接访问（fire-and-forget模式）
  *
- * 注意：
- * - 此函数会真正通过每个代理IP发送HTTP请求访问推广链接
- * - 函数只负责发起访问，不等待访问完成（后台执行）
- * - 主要用于触发affiliate跟踪和链接预热
+ * 注意
+ * 此函数会真正通过每个代理IP发送HTTP请求访问推广链接
+ * 函数只负责发起访问，不等待访问完成（后台执行）
+ * 主要用于触发affiliate跟踪和链接预热
  *
  * @param proxyIPs - 代理IP数组（格式：host:port:username:password）
  * @param affiliateLink - 推广链接
@@ -469,13 +469,13 @@ export async function warmupAffiliateLink(
 
     console.log(`📋 检测到代理格式: ${provider.name}`)
 
-    // 🔥 Oxylabs格式：直接使用单个代理发起多次访问
+    // Oxylabs格式：直接使用单个代理发起多次访问
     if (provider.name === 'Oxylabs') {
       console.log(`ℹ️ Oxylabs代理直接预热（使用单个代理发起12次访问）`)
       return await triggerProxyVisitsWithSingleProxy(proxyUrl, affiliateLink, 12)
     }
 
-    // 🔥 IPRocket格式：先获取多个代理IP，然后用这些IP发起访问
+    // IPRocket格式：先获取多个代理IP，然后用这些IP发起访问
     if (provider.name === 'IPRocket') {
       // 步骤1: 获取12个代理IP（等待完成）
       const proxyIPs = await fetch12ProxyIPs(proxyUrl)

@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * 🆕 v4.16: 创意类型进度指示器组件
- * ✅ KISS-3类型：显示3个创意类型的生成状态：已生成、待生成
+ * v4.16: 创意类型进度指示器组件
+ * KISS-3类型：显示3个创意类型的生成状态：已生成、待生成
  */
 
 import { CheckCircle2, Circle, Loader2 } from 'lucide-react'

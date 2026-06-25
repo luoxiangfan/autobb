@@ -82,10 +82,10 @@ export type AffiliateProductListItem = {
   historicalOfferCount: number
   relatedOfferCount: number
   isBlacklisted: boolean
-  recommendationScore: number | null // 新增: 推荐指数
-  recommendationReasons: string[] | null // 新增: 推荐理由
-  seasonalityScore: number | null // 新增: 季节性评分
-  productAnalysis: any | null // 新增: 商品综合AI分析结果
+  recommendationScore: number | null // 推荐指数
+  recommendationReasons: string[] | null // 推荐理由
+  seasonalityScore: number | null // 季节性评分
+  productAnalysis: any | null // 商品综合AI分析结果
   lastSyncedAt: string | null
   createdAt: string
   updatedAt: string
@@ -126,7 +126,7 @@ export type ProductSortField =
   | 'promoLink'
   | 'relatedOfferCount'
   | 'updatedAt'
-  | 'recommendationScore' // 新增: 推荐指数排序
+  | 'recommendationScore' // 推荐指数排序
 
 export type ProductSortOrder = 'asc' | 'desc'
 

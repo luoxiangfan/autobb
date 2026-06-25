@@ -1,7 +1,7 @@
 import type { OAuthApiCredentialsFields } from '@/lib/google-ads/accounts/auth/types'
 import type { GoogleAdsAuthContext } from '@/lib/google-ads/auth/context'
 
-/** 高层 API 共用的 Customer 凭证字段（不含 authContext）。 */
+/* * 高层 API 共用的 Customer 凭证字段（不含 authContext）。 */
 export type GoogleAdsCustomerCredentialParams = {
   customerId: string
   refreshToken?: string
@@ -14,7 +14,7 @@ export type GoogleAdsCustomerCredentialParams = {
   oauthLoginCustomerIdHint?: string
 }
 
-/** OAuth 分支 getCustomerWithCredentials 入参（与 google-ads-api 约定一致）。 */
+/* * OAuth 分支 getCustomerWithCredentials 入参（与 google-ads-api 约定一致）。 */
 export type OAuthGetCustomerWithCredentialsParams = {
   customerId: string
   refreshToken: string

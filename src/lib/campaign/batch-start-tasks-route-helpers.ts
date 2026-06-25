@@ -4,11 +4,11 @@ import type { BatchStartTasksResult } from '@/lib/campaign/server'
 export type BatchStartSelectionIdKind = 'offer' | 'campaign'
 
 export type BatchStartTasksApiData = BatchStartTasksResult & {
-  /** 请求体中去重后的 ID 语义：Offer ID 或 Campaign ID */
+  /* * 请求体中去重后的 ID 语义：Offer ID 或 Campaign ID */
   selectionIdKind: BatchStartSelectionIdKind
-  /** 请求体中去重后的 ID 个数 */
+  /* * 请求体中去重后的 ID 个数 */
   requestedIdsCount: number
-  /** 数据库命中并参与批量处理的 Offer 行数 */
+  /* * 数据库命中并参与批量处理的 Offer 行数 */
   matchedOfferCount: number
   /**
    * max(0, requestedIdsCount - matchedOfferCount)。
@@ -16,11 +16,11 @@ export type BatchStartTasksApiData = BatchStartTasksResult & {
    * Campaign：去重系列数与 DISTINCT Offer 行数之差；多系列同 Offer 时会计入，仅作参考。
    */
   unmatchedIdsCount: number
-  /** 客户端可选传入，用于日志与排障 */
+  /* * 客户端可选传入，用于日志与排障 */
   clientRequestId?: string
 }
 
-/** 将 JSON 中的开关规范为布尔，避免 `"false"` 被当成 true。 */
+/* * 将 JSON 中的开关规范为布尔，避免 `"false"` 被当成 true。 */
 export function coerceBatchStartTaskFlag(value: unknown, defaultValue: boolean): boolean {
   if (value === undefined) return defaultValue
   if (typeof value === 'string') {
@@ -101,7 +101,7 @@ export function buildBatchStartTasksApiData(
   }
 }
 
-/** 计算 HTTP status、对用户展示 message、以及带路由元数据的 data。 */
+/* * 计算 HTTP status、对用户展示 message、以及带路由元数据的 data。 */
 export function buildBatchStartTasksHttpParts(params: {
   result: BatchStartTasksResult
   requestedIdsCount: number

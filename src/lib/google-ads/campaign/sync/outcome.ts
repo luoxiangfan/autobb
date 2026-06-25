@@ -1,7 +1,7 @@
 import { getDatabase } from '../../../db'
 import type { SyncResult } from './types'
 
-/** 用户是否已在 admin MCC 分配页绑定 MCC（campaign sync 前置条件） */
+/* * 用户是否已在 admin MCC 分配页绑定 MCC（campaign sync 前置条件） */
 export async function userHasGoogleAdsMccAssignments(userId: number): Promise<boolean> {
   const db = await getDatabase()
   const row = await db.queryOne<{ ok: number }>(
@@ -11,7 +11,7 @@ export async function userHasGoogleAdsMccAssignments(userId: number): Promise<bo
   return Boolean(row)
 }
 
-/** 将 sync 结果映射为 sync_logs 行状态（含 warnings 可观测性） */
+/* * 将 sync 结果映射为 sync_logs 行状态（含 warnings 可观测性） */
 export function resolveGoogleAdsCampaignSyncLogOutcome(result: SyncResult): {
   status: 'success' | 'partial' | 'failed'
   errorMessage: string | null

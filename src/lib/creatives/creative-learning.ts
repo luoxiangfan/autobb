@@ -1,11 +1,11 @@
 /**
  * AI创意学习系统
  *
- * 功能：
- * - 分析历史高表现创意
- * - 提取成功特征模式
- * - 优化AI生成Prompt
- * - 提供个性化创意建议
+ * 功能
+ * 分析历史高表现创意
+ * 提取成功特征模式
+ * 优化AI生成Prompt
+ * 提供个性化创意建议
  */
 
 import { getDatabase } from '@/lib/db'
@@ -77,8 +77,8 @@ export interface SuccessFeatures {
  * 查询高表现历史创意
  *
  * 注意：creative_versions 表使用 JSON 格式存储 headlines 和 descriptions
- * - headlines: JSON数组 ["H1", "H2", "H3"]
- * - descriptions: JSON数组 ["D1", "D2"]
+ * headlines: JSON数组 ["H1", "H2", "H3"]
+ * descriptions: JSON数组 ["D1", "D2"]
  */
 export async function queryHighPerformingCreatives(
   userId: number,
@@ -551,32 +551,32 @@ export interface CreativePerformanceScore {
 /**
  * 多维度创意效果评分系统（基于可获取数据）
  *
- * 评分维度（5个维度，总分100）：
+ * 评分维度（5个维度，总分100）
  * 1. CTR（点击率）- 30分
- *    - 直接反映广告质量和用户兴趣
- *    - 行业基准：搜索广告平均CTR为2-3%
+ * 直接反映广告质量和用户兴趣
+ * 行业基准：搜索广告平均CTR为2-3%
  *
  * 2. CPC效率（成本控制）- 25分
- *    - CPC相对于预算的比例
- *    - 成本越低效率越高
+ * CPC相对于预算的比例
+ * 成本越低效率越高
  *
  * 3. 展示量（Impressions）- 20分
- *    - 广告曝光能力和覆盖范围
- *    - 反映广告投放规模
+ * 广告曝光能力和覆盖范围
+ * 反映广告投放规模
  *
  * 4. 点击量规模 - 15分
- *    - 绝对点击量，反映广告影响力
- *    - 兼顾质量（CTR）和规模（Clicks）
+ * 绝对点击量，反映广告影响力
+ * 兼顾质量（CTR）和规模（Clicks）
  *
  * 5. 预算利用率 - 10分
- *    - 实际花费/预算
- *    - 资源利用效率
+ * 实际花费/预算
+ * 资源利用效率
  *
  * 总分：100分
- * - Excellent: 85-100分（优秀创意）
- * - Good: 70-84分（良好创意）
- * - Average: 50-69分（普通创意）
- * - Poor: 0-49分（待优化创意）
+ * Excellent: 85-100分（优秀创意）
+ * Good: 70-84分（良好创意）
+ * Average: 50-69分（普通创意）
+ * Poor: 0-49分（待优化创意）
  */
 export async function scoreCreativePerformance(
   creativeId: number,
@@ -626,7 +626,7 @@ export async function scoreCreativePerformance(
   // 初始化评分
   let totalScore = 0
 
-  // ========== 1. CTR评分（30分）- 最重要指标 ==========
+  // 1. CTR评分（30分）- 最重要指标
   let ctrScore = 0
   const ctrPercent = ctr * 100
 
@@ -657,7 +657,7 @@ export async function scoreCreativePerformance(
   }
   totalScore += ctrScore
 
-  // ========== 2. CPC效率评分（25分）- 成本控制 ==========
+  // 2. CPC效率评分（25分）- 成本控制
   let cpcScore = 0
   const cpcRatio = cpc / (budget * 0.01) // CPC相对于预算1%的比例
 
@@ -688,7 +688,7 @@ export async function scoreCreativePerformance(
   }
   totalScore += cpcScore
 
-  // ========== 3. 展示量评分（20分）- 曝光能力 ==========
+  // 3. 展示量评分（20分）- 曝光能力
   let impressionsScore = 0
 
   if (impressions >= 100000) {
@@ -712,7 +712,7 @@ export async function scoreCreativePerformance(
   }
   totalScore += impressionsScore
 
-  // ========== 4. 点击量规模评分（15分）- 效果规模 ==========
+  // 4. 点击量规模评分（15分）- 效果规模
   let clicksScore = 0
 
   if (clicks >= 1000) {
@@ -736,7 +736,7 @@ export async function scoreCreativePerformance(
   }
   totalScore += clicksScore
 
-  // ========== 5. 预算利用率评分（10分）- 资源利用 ==========
+  // 5. 预算利用率评分（10分）- 资源利用
   let budgetScore = 0
   const budgetUsage = cost / budget
 
@@ -773,7 +773,7 @@ export async function scoreCreativePerformance(
 
   totalScore += budgetScore
 
-  // ========== 最终评分和评级 ==========
+  // 最终评分和评级
   const score = Math.min(100, Math.max(0, Math.round(totalScore)))
   let rating: 'excellent' | 'good' | 'average' | 'poor'
 
@@ -939,7 +939,7 @@ async function saveCreativeScore(userId: number, score: CreativePerformanceScore
 /**
  * 运行完整的创意优化闭环（供定时任务调用）
  *
- * 流程：
+ * 流程
  * 1. 评分所有创意
  * 2. 筛选高表现创意
  * 3. 分析成功特征

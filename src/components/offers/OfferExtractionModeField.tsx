@@ -18,7 +18,7 @@ type OfferExtractionModeFieldProps = {
   id?: string
   value: OfferExtractionMode
   onChange: (mode: OfferExtractionMode) => void
-  /** shadcn Select（弹窗/创建）或 native select（编辑页表单） */
+  /* * shadcn Select（弹窗/创建）或 native select（编辑页表单） */
   variant?: 'shadcn' | 'native'
   label?: string
   className?: string

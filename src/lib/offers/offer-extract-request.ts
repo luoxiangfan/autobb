@@ -47,7 +47,7 @@ export type ExistingOfferExtractionPrerequisites = {
   targetCountry: string
 }
 
-/** 解析并校验目标国家（禁止空白；不默认 US） */
+/* * 解析并校验目标国家（禁止空白；不默认 US） */
 export function resolveValidatedTargetCountry(
   value: string | null | undefined,
   options?: { missingMessage?: string; invalidMessage?: string }
@@ -71,7 +71,7 @@ export function resolveValidatedTargetCountry(
   return normalized
 }
 
-/** 已有 Offer 入队前校验（rebuild / scrape / batch/rebuild 共用） */
+/* * 已有 Offer 入队前校验（rebuild / scrape / batch/rebuild 共用） */
 export function validateExistingOfferForExtraction(offer: {
   affiliate_link?: string | null
   url?: string | null
@@ -86,7 +86,7 @@ export function validateExistingOfferForExtraction(offer: {
   return { affiliateLink, targetCountry }
 }
 
-/** 路由层统一错误 JSON（extract / rebuild / scrape） */
+/* * 路由层统一错误 JSON（extract / rebuild / scrape） */
 export function offerExtractApiErrorBody(
   error: unknown,
   fallbackError = 'Invalid data'
@@ -103,7 +103,7 @@ export function offerExtractApiErrorBody(
   return null
 }
 
-/** 解析并校验 POST /api/offers/extract 类请求体 */
+/* * 解析并校验 POST /api/offers/extract 类请求体 */
 export function parseNewOfferExtractRequest(
   rawBody: unknown,
   normalizeOptions?: NormalizeOfferExtractOptions

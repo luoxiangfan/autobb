@@ -1,13 +1,13 @@
 /**
  * Google品牌词搜索（独立站增强）
  *
- * 目标：
- * - 使用品牌词（优先用户输入）在Google搜索
- * - 尝试提取：官网（首个自然结果）+ 搜索广告元素（headline/description/callout/sitelink）
+ * 目标
+ * 使用品牌词（优先用户输入）在Google搜索
+ * 尝试提取：官网（首个自然结果）+ 搜索广告元素（headline/description/callout/sitelink）
  *
- * 约束：
- * - 反爬失败不影响主流程（best-effort）
- * - 解析规则以“稳定优先”为目标，尽量使用语义/结构选择器而非易变class
+ * 约束
+ * 反爬失败不影响主流程（best-effort）
+ * 解析规则以“稳定优先”为目标，尽量使用语义/结构选择器而非易变class
  */
 
 import type { Page } from 'playwright'
@@ -217,9 +217,9 @@ export async function fetchBrandSearchSupplement(options: {
           try {
             const u = new URL(href, location.origin)
 
-            // Google 常见跳转包装：
-            // - /url?q=https://...
-            // - /aclk?adurl=https://...
+            // Google 常见跳转包装
+            // /url?q=https://...
+            // /aclk?adurl=https://...
             if (isGoogleHost(u.hostname)) {
               const path = u.pathname || ''
               if (
@@ -433,7 +433,7 @@ export async function fetchBrandSearchSupplement(options: {
         ? organicCandidates.find((o) => o.url === bestCandidate.url) || null
         : null
 
-      // 🔥 额外抓取官网页面信息（best-effort）：补充meta title/description + 真实callout/sitelink建议
+      // 额外抓取官网页面信息（best-effort）：补充meta title/description + 真实callout/sitelink建议
       let officialMetaTitle: string | undefined
       let officialMetaDescription: string | undefined
       let officialCallouts: string[] = []

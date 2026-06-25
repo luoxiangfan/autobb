@@ -95,8 +95,8 @@ export const PUT = withAuth(async (request, user, context) => {
  * DELETE /api/offers/:id
  * 删除Offer
  *
- * Query参数：
- * - autoUnlink: boolean (可选) - 是否自动解除关联，默认false
+ * Query参数
+ * autoUnlink: boolean (可选) - 是否自动解除关联，默认false
  */
 export const DELETE = withAuth(async (request, user, context) => {
   try {

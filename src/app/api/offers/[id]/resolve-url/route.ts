@@ -1,6 +1,6 @@
 import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import { resolveAffiliateLink, getProxyPool } from '@/lib/scraping' // 🔥 使用新的增强版API
+import { resolveAffiliateLink, getProxyPool } from '@/lib/scraping' // 使用新的增强版API
 import { findOfferById } from '@/lib/offers/server'
 import { getAllProxyUrls } from '@/lib/common/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
@@ -25,7 +25,7 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
     }
 
-    // 🔥 加载代理池配置（使用新的增强版API）
+    // 加载代理池配置（使用新的增强版API）
     const userIdNum = userId
     const targetCountry = offer.target_country || 'US'
 
@@ -51,11 +51,11 @@ export const POST = withAuth(async (request, user, context) => {
     console.log(`目标国家: ${targetCountry}`)
     console.log(`🔥 强制跳过缓存，确保获取最新重定向数据`)
 
-    // 🔥 使用新的增强版API，强制skipCache确保获取最新数据
+    // 使用新的增强版API，强制skipCache确保获取最新数据
     const resolved = await resolveAffiliateLink(offer.affiliate_link, {
       targetCountry,
       userId: userId,
-      skipCache: true, // 🔥 关键：强制跳过缓存
+      skipCache: true, // 关键：强制跳过缓存
     })
 
     return NextResponse.json({

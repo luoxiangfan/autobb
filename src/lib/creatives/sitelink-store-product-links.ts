@@ -129,7 +129,7 @@ export async function resolveStoreProductSitelinksForPublish(params: {
   return resolved
 }
 
-/** 从 Google Ads 拉取的 Sitelink 行 → 发布/映射输入 */
+/* * 从 Google Ads 拉取的 Sitelink 行 → 发布/映射输入 */
 export function mapRemoteSitelinkRowToPublishInput(row: {
   linkText: string
   finalUrl: string

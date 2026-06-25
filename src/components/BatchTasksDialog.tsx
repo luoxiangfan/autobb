@@ -30,7 +30,7 @@ function isAbortError(error: unknown): boolean {
   return name === 'AbortError'
 }
 
-/** 仅接受普通对象，排除数组与 null，避免误把 `data: []` 当业务载荷 */
+/* * 仅接受普通对象，排除数组与 null，避免误把 `data: []` 当业务载荷 */
 function batchResponseDataObject(data: unknown): Record<string, unknown> {
   if (data === null || typeof data !== 'object' || Array.isArray(data)) {
     return {}
@@ -38,7 +38,7 @@ function batchResponseDataObject(data: unknown): Record<string, unknown> {
   return data as Record<string, unknown>
 }
 
-/** 与路由 `appendUnmatchedHint` 等文案对齐：message/error 任一已说明未命中时，客户端不再重复前缀 */
+/* * 与路由 `appendUnmatchedHint` 等文案对齐：message/error 任一已说明未命中时，客户端不再重复前缀 */
 function batchApiPayloadMentionsUnmatched(message: unknown, error: unknown): boolean {
   const pieces = [message, error].filter(
     (x): x is string => typeof x === 'string' && x.trim().length > 0
@@ -52,14 +52,14 @@ function finiteNonNegativeInt(raw: unknown, fallback: number): number {
   return Math.floor(n)
 }
 
-/** API 常见 `{ message?, error? }`，优先非空 trim 后的 message */
+/* * API 常见 `{ message?, error? }`，优先非空 trim 后的 message */
 function firstTrimmedApiString(message: unknown, error: unknown, fallback: string): string {
   if (typeof message === 'string' && message.trim().length > 0) return message.trim()
   if (typeof error === 'string' && error.trim().length > 0) return error.trim()
   return fallback
 }
 
-/** Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
+/* * Strict Mode 会重复挂载；模块级保证 dev 下「缺 variant」只告警一次 */
 let batchTasksDialogVariantDevWarned = false
 
 export type BatchTasksDialogVariant = 'offers' | 'campaigns'
@@ -109,7 +109,7 @@ export default function BatchTasksDialog({
   const isCampaignMode = useMemo(() => {
     if (variant === 'campaigns') return true
     if (variant === 'offers') return false
-    /** 依据 `.length` 推断：空数组为 false（勿用 `!!campaignIds`，空数组在 JS 中为真值） */
+    /* * 依据 `.length` 推断：空数组为 false（勿用 `!!campaignIds`，空数组在 JS 中为真值） */
     return Boolean(campaignIds?.length)
   }, [variant, campaignIds])
   const selectionIdCount = useMemo(

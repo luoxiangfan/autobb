@@ -68,7 +68,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     this.tasks.set(task.id, task)
     this.pendingQueue.push(task)
 
-    // 排序规则与 Redis 一致：
+    // 排序规则与 Redis 一致
     // 1) 先按可执行时间（notBefore/createdAt）排序，避免未来任务阻塞当前可执行任务
     // 2) 同一时间点内按优先级排序（high > normal > low）
     // 3) 最后按 createdAt 兜底
@@ -158,7 +158,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
       }
     }
 
-    // 🔥 修复：过滤有效用户，确保全局和用户统计一致
+    // 过滤有效用户，确保全局和用户统计一致
     const allTasks = Array.from(this.tasks.values()).filter(
       (task) => task.userId && task.userId > 0
     )
@@ -334,7 +334,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 按类型和状态删除任务（用于服务重启时清理特定任务）
+   * 按类型和状态删除任务（用于服务重启时清理特定任务）
    *
    * @param type 任务类型（如 'url-swap'）
    * @param status 任务状态（'pending' 或 'running'）
@@ -386,7 +386,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 获取所有pending任务（用于批量任务取消）
+   * 获取所有pending任务（用于批量任务取消）
    */
   async getAllPendingTasks(): Promise<Task[]> {
     if (!this.connected) return []
@@ -394,7 +394,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 按 user + types 批量移除 pending 任务
+   * 按 user + types 批量移除 pending 任务
    */
   async removePendingTasksByUserAndTypes(
     userId: number,
@@ -423,7 +423,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 从队列中移除指定任务（用于批量任务取消）
+   * 从队列中移除指定任务（用于批量任务取消）
    */
   async removeTask(taskId: string): Promise<void> {
     if (!this.connected) return

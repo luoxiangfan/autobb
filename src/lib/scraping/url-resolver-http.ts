@@ -239,9 +239,9 @@ export async function resolveAffiliateLinkWithHttp(
     if (proxyUrl) {
       try {
         console.log('🔄 获取代理IP...')
-        // 🔥 代理IP缓存策略：
-        // - 正常请求：启用缓存（5分钟），避免频繁调用IPRocket API触发频率限制
-        // - 重试请求：强制刷新，获取新的代理IP以绕过可能被封禁的IP
+        // 代理IP缓存策略
+        // 正常请求：启用缓存（5分钟），避免频繁调用IPRocket API触发频率限制
+        // 重试请求：强制刷新，获取新的代理IP以绕过可能被封禁的IP
         const proxyCredentials = await getProxyIp(proxyUrl, forceRefreshProxy, userId)
 
         // 配置代理
@@ -534,7 +534,7 @@ export async function resolveAffiliateLinkWithHttp(
         // 没有meta refresh，成功到达最终页面
         break
       } else if (response.status >= 400 && response.status < 500) {
-        // 🔥 关键：URL解析阶段不应把4xx当作“无法解析”
+        // 关键：URL解析阶段不应把4xx当作“无法解析”
         // 例如最终站点对代理/爬虫返回403，但finalUrl仍然是有效落地页URL，后续抓取阶段可用更强手段处理
         console.warn(`⚠️ HTTP到达最终URL但返回状态码 ${response.status}，停止继续重定向追踪`)
         break
@@ -632,8 +632,10 @@ export async function resolveAffiliateLinkWithHttp(
     // 这些错误应该降级到Playwright
     throw new Error(`HTTP请求失败（可能需要Playwright）: ${error.message}`)
   }
-} /**
- * 🔥 从tracking域名URL中提取嵌入的目标URL
+}
+
+/**
+ * 从tracking域名URL中提取嵌入的目标URL
  *
  * 某些tracking服务（如partnermatic.com）会将目标URL嵌入到查询参数中
  * 例如: https://app.partnermatic.com/track/xxx?url=https://byinsomnia.com/

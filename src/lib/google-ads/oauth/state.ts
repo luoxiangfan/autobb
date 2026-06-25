@@ -11,14 +11,14 @@ export type GoogleAdsOAuthStatePayload = {
 
 export const GOOGLE_ADS_OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000
 
-/** 允许 state 时间戳相对当前时间的未来偏移（时钟偏差） */
+/* * 允许 state 时间戳相对当前时间的未来偏移（时钟偏差） */
 export const GOOGLE_ADS_OAUTH_STATE_FUTURE_SKEW_MS = 60_000
 
 function signPayloadBase64(payloadBase64: string): string {
   return crypto.createHmac('sha256', JWT_SECRET).update(payloadBase64).digest('base64url')
 }
 
-/** 生成带 HMAC 签名的 OAuth state（防伪造 user_id / CSRF）。 */
+/* * 生成带 HMAC 签名的 OAuth state（防伪造 user_id / CSRF）。 */
 export function createGoogleAdsOAuthState(payload: GoogleAdsOAuthStatePayload): string {
   const payloadBase64 = Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url')
   return `${payloadBase64}.${signPayloadBase64(payloadBase64)}`
@@ -28,7 +28,7 @@ export type GoogleAdsOAuthStateVerifyResult =
   | { ok: true; payload: GoogleAdsOAuthStatePayload }
   | { ok: false; error: string }
 
-/** 校验 OAuth state 签名、时效与可选 purpose / userId。 */
+/* * 校验 OAuth state 签名、时效与可选 purpose / userId。 */
 export function verifyGoogleAdsOAuthState(
   state: string,
   options: {

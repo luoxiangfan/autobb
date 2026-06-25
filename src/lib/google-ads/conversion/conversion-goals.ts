@@ -1,12 +1,12 @@
 /**
  * Google Ads 转化目标配置模块
  *
- * 🎯 功能：配置Campaign级别的转化目标
- * 📋 场景：在创建Campaign后，需要将"网页浏览"(PAGE_VIEW)设置为可竞价(biddable: true)
+ * 功能：配置Campaign级别的转化目标
+ * 场景：在创建Campaign后，需要将"网页浏览"(PAGE_VIEW)设置为可竞价(biddable: true)
  *
- * 重要说明：
- * - 默认情况下，PAGE_VIEW + WEBSITE origin 的 biddable = false
- * - 需要手动设置为 true 才能让Campaign优化该转化目标
+ * 重要说明
+ * 默认情况下，PAGE_VIEW + WEBSITE origin 的 biddable = false
+ * 需要手动设置为 true 才能让Campaign优化该转化目标
  */
 
 import { withRetry } from '../../common/server'
@@ -82,7 +82,7 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
       authType,
     })
 
-    // 🚫 服务账号模式暂不支持（需要Python服务实现）
+    // � 服务账号模式暂不支持（需要Python服务实现）
     if (authType === 'service_account') {
       googleAdsConversionLogger.warn('service_account_not_supported', {
         hint: 'Configure manually in Google Ads UI',
@@ -93,7 +93,7 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
     // OAuth 模式：使用 getCustomerWithCredentials
     const customer = await getCustomerWithCredentials(params)
 
-    // 🔧 修复(2025-12-30): 使用字符串名称而非枚举数字值
+    // 使用字符串名称而非枚举数字值
     // 构建 CampaignConversionGoal 的 resource_name
     // 格式: customers/{customer_id}/campaignConversionGoals/{campaign_id}~{category}~{origin}
     // 注意：category 和 origin 必须使用字符串名称，不能使用枚举数字
@@ -112,7 +112,7 @@ export async function setCampaignPageViewGoalWithCredentials(params: {
     await withRetry(() => customer.campaignConversionGoals.update([campaignConversionGoal]), {
       maxRetries: 3,
       initialDelay: 1000,
-      // 🔧 性能优化：NOT_FOUND / 权限类错误通常不可通过重试恢复，避免无意义的指数退避等待
+      // 性能NOT_FOUND / 权限类错误通常不可通过重试恢复，避免无意义的指数退避等待
       shouldRetry: (error) => {
         if (isNotFoundLikeError(error)) return false
         if (isPermissionLikeError(error)) return false

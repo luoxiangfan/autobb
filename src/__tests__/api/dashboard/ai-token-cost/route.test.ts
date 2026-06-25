@@ -51,7 +51,7 @@ describe('GET /api/dashboard/ai-token-cost', () => {
   })
 
   it('uses UTC date boundaries for today and trend queries', async () => {
-    // 2026-03-26 17:15 UTC = 2026-03-27 01:15 in Asia/Shanghai.
+    // 17:15 UTC = 2026-03-27 01:15 in Asia/Shanghai.
     vi.setSystemTime(new Date('2026-03-26T17:15:39.053Z'))
     vi.stubEnv('TZ', 'Asia/Shanghai')
 

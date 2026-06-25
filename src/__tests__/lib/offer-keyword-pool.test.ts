@@ -1,7 +1,7 @@
 /**
  * Offer 级关键词池服务单元测试
  *
- * 测试覆盖：
+ * 测试覆盖
  * 1. 纯品牌词识别
  * 2. 品牌词/非品牌词分离
  * 3. 降级分桶策略
@@ -950,7 +950,7 @@ describe('OfferKeywordPool', () => {
     })
   })
 
-  // ========== 新增测试：纯品牌词函数 ==========
+  // 新增测试：纯品牌词函数
   describe('getPureBrandKeywords - 多词品牌识别', () => {
     it('should return only full brand name for multi-word brands', () => {
       const result = getPureBrandKeywords('Eufy Security')
@@ -1051,7 +1051,7 @@ describe('OfferKeywordPool', () => {
     })
   })
 
-  // ========== 新增测试：isPureBrandKeyword 精确匹配（2026-01-05） ==========
+  // 新增测试：isPureBrandKeyword 精确匹配
   describe('isPureBrandKeyword - 精确品牌匹配', () => {
     it('should return true for exact brand match', () => {
       const pureBrandKeywords = ['eufy security', 'eufy']
@@ -1060,7 +1060,7 @@ describe('OfferKeywordPool', () => {
     })
 
     it('should return false for keywords containing brand but not equal', () => {
-      // 🔥 2026-01-05 修复：这是精确匹配，不是部分匹配
+      // 这是精确匹配，不是部分匹配
       const pureBrandKeywords = ['eufy']
       expect(isPureBrandKeyword('eufy camera', pureBrandKeywords)).toBe(false)
       expect(isPureBrandKeyword('eufy security camera', pureBrandKeywords)).toBe(false)
@@ -1094,7 +1094,7 @@ describe('OfferKeywordPool', () => {
     })
   })
 
-  // ========== 新增测试：品牌无关词过滤（多语言公司后缀） ==========
+  // 新增测试：品牌无关词过滤（多语言公司后缀）
   describe('isBrandIrrelevant - 多语言公司后缀过滤', () => {
     describe('Italian suffixes', () => {
       it('should detect Italian company suffixes', () => {
@@ -1189,7 +1189,7 @@ describe('OfferKeywordPool', () => {
     })
   })
 
-  // ========== 新增测试：低意图关键词过滤 ==========
+  // 新增测试：低意图关键词过滤
   describe('filterLowIntentKeywords - 低购买意图过滤', () => {
     it('should filter out informational queries', () => {
       const keywords = [
@@ -1235,7 +1235,7 @@ describe('OfferKeywordPool', () => {
     })
   })
 
-  // ========== 新增测试：搜索量阈值计算 ==========
+  // 新增测试：搜索量阈值计算
   describe('calculateSearchVolumeThreshold - 动态阈值计算', () => {
     it('should calculate threshold based on median volume', () => {
       const volumes = [100, 200, 300, 400, 500, 1000, 2000, 5000, 10000]

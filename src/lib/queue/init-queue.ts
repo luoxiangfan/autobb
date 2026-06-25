@@ -3,16 +3,16 @@
  *
  * 在应用启动时自动初始化统一队列管理器
  *
- * 代理配置说明：
- * - 代理不在初始化时全局加载，而是在任务执行时按需加载
- * - 每个用户使用自己配置的代理，不使用全局代理
- * - 只有特定任务类型（如 offer-extraction）需要代理
+ * 代理配置说明
+ * 代理不在初始化时全局加载，而是在任务执行时按需加载
+ * 每个用户使用自己配置的代理，不使用全局代理
+ * 只有特定任务类型（如 offer-extraction）需要代理
  *
- * 🔥 Redis环境隔离 (2025-12-10优化为方案3):
- * - 使用结构化REDIS_PREFIX_CONFIG配置
- * - 队列: autoads:{NODE_ENV}:queue:
- * - 缓存: autoads:{NODE_ENV}:cache:
- * - 统一的命名空间设计
+ * Redis环境隔离
+ * 使用结构化REDIS_PREFIX_CONFIG配置
+ * 队列: autoads:{NODE_ENV}:queue
+ * 缓存: autoads:{NODE_ENV}:cache
+ * 统一的命名空间设计
  */
 
 import { getQueueManager } from './index'
@@ -23,7 +23,7 @@ import type { QueueConfig } from './types'
 import { getQueueRoutingDiagnostics } from './queue-routing'
 import { logger } from '@/lib/common/server'
 
-// 🔧 修复(2025-01-01): 防止队列重复初始化
+// 防止队列重复初始化
 let __queueInitialized = false
 let __queueInitPromise: Promise<UnifiedQueueManager> | null = null
 
@@ -31,7 +31,7 @@ let __queueInitPromise: Promise<UnifiedQueueManager> | null = null
  * 初始化统一队列系统
  */
 export async function initializeQueue(): Promise<UnifiedQueueManager> {
-  // 🔧 修复(2025-01-01): 防止重复初始化
+  // 防止重复初始化
   if (__queueInitialized) {
     console.log('⏭️ 队列系统已初始化，跳过重复初始化')
     return getQueueManager()
@@ -56,14 +56,14 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     // 注意：不再在初始化时加载代理池，代理在任务执行时按需加载
     const queue = getQueueManager({
       // 从环境变量读取配置
-      globalConcurrency: parseInt(process.env.QUEUE_GLOBAL_CONCURRENCY || '999'), // 🔥 全局并发提升至999（补点击需求）
-      perUserConcurrency: parseInt(process.env.QUEUE_PER_USER_CONCURRENCY || '999'), // 🔥 单用户并发提升至999（补点击需求）
+      globalConcurrency: parseInt(process.env.QUEUE_GLOBAL_CONCURRENCY || '999'), // 全局并发提升至999（补点击需求）
+      perUserConcurrency: parseInt(process.env.QUEUE_PER_USER_CONCURRENCY || '999'), // 单用户并发提升至999（补点击需求）
       maxQueueSize: parseInt(process.env.QUEUE_MAX_SIZE || '1000'),
-      taskTimeout: parseInt(process.env.QUEUE_TASK_TIMEOUT || '600000'), // 🔥 修复（2025-12-10）：默认10分钟（Offer提取约需5分钟）
+      taskTimeout: parseInt(process.env.QUEUE_TASK_TIMEOUT || '600000'), // 默认10分钟（Offer提取约需5分钟）
       defaultMaxRetries: parseInt(process.env.QUEUE_MAX_RETRIES || '3'),
       retryDelay: parseInt(process.env.QUEUE_RETRY_DELAY || '5000'),
       redisUrl: process.env.REDIS_URL,
-      redisKeyPrefix: REDIS_PREFIX_CONFIG.queue, // 🔥 使用环境隔离的prefix
+      redisKeyPrefix: REDIS_PREFIX_CONFIG.queue, // 使用环境隔离的prefix
       // 代理池为空，代理在任务执行时按需从用户配置加载
       proxyPool: [],
     })
@@ -84,11 +84,11 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     // 数据同步由独立 scheduler 进程负责，队列初始化阶段不再启动内置数据同步调度器
     console.log('⏭️ 跳过内置数据同步调度器（由独立 scheduler 进程负责）')
 
-    // 🔄 URL Swap 调度器已迁移到独立 scheduler 进程（与补点击任务架构一致）
+    // URL Swap 调度器已迁移到独立 scheduler 进程（与补点击任务架构一致）
     // 原因：补点击任务只在 scheduler 进程运行且工作正常，换链接任务采用相同架构
     console.log('⏭️ 跳过内置 URL Swap 调度器（由独立 scheduler 进程负责）')
 
-    // 🔄 联盟商品同步调度器已迁移到独立 scheduler 进程（与补点击任务架构一致）
+    // 联盟商品同步调度器已迁移到独立 scheduler 进程（与补点击任务架构一致）
     // 原因：补点击任务只在 scheduler 进程运行且工作正常，联盟商品同步采用相同架构
     console.log('⏭️ 跳过内置联盟商品同步调度器（由独立 scheduler 进程负责）')
 
@@ -96,7 +96,7 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     console.log('📝 代理配置：任务执行时按需从用户设置加载')
     console.log('🔄 所有调度器已迁移至独立 scheduler 进程')
 
-    // 🔧 修复(2025-01-01): 标记为已初始化
+    // 标记为已初始化
     __queueInitialized = true
 
     return queue

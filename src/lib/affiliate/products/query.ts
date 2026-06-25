@@ -74,7 +74,7 @@ const SORT_FIELD_SQL: Record<ProductSortField, string> = {
   promoLink: 'COALESCE(p.short_promo_link, p.promo_link)',
   relatedOfferCount: 'related_offer_count',
   updatedAt: 'p.updated_at',
-  recommendationScore: 'p.recommendation_score', // 新增: 推荐指数排序
+  recommendationScore: 'p.recommendation_score', // 推荐指数排序
 }
 
 const NUMERIC_SORT_FIELDS_WITH_NULLS_LAST: Set<ProductSortField> = new Set([
@@ -82,7 +82,7 @@ const NUMERIC_SORT_FIELDS_WITH_NULLS_LAST: Set<ProductSortField> = new Set([
   'commissionRate',
   'commissionAmount',
   'reviewCount',
-  'recommendationScore', // 新增: 推荐指数排序时NULL值放最后
+  'recommendationScore', // 推荐指数排序时NULL值放最后
 ])
 
 export function buildAffiliateProductsOrderBy(params: {

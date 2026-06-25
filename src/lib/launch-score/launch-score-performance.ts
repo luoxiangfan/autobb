@@ -11,14 +11,14 @@ export interface LaunchScoreOfferPerformanceData {
   totalImpressions: number
   totalClicks: number
   totalConversions: number
-  /** 广告账户原始币种下的总花费 */
+  /* * 广告账户原始币种下的总花费 */
   totalCost: number
   costCurrency: string
-  /** 点击率，0–1 小数（如 0.025 = 2.5%） */
+  /* * 点击率，0–1 小数（如 0.025 = 2.5%） */
   avgCtr: number
-  /** 每次点击成本（与 costCurrency 一致） */
+  /* * 每次点击成本（与 costCurrency 一致） */
   avgCpc: number
-  /** 转化率，0–1 小数 */
+  /* * 转化率，0–1 小数 */
   conversionRate: number
   actualRoi: number | null
   dateRange: {
@@ -58,7 +58,7 @@ function formatPerformanceMoney(amount: number, currency: string): string {
   }
 }
 
-/** 基于已解析的 Launch Score 构建 performance 载荷（不再 readLaunchScoreForCreative） */
+/* * 基于已解析的 Launch Score 构建 performance 载荷（不再 readLaunchScoreForCreative） */
 export async function buildLaunchScorePerformanceApiPayload(
   launchScore: LaunchScore,
   userId: number,

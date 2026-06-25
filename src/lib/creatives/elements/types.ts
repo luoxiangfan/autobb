@@ -56,7 +56,7 @@ export interface ExtractedAdElements {
 
 /**
  * 商品数据接口（兼容单商品和店铺商品）
- * 🎯 P1修复: 同步ai.ts中的ProductInfo字段定义
+ * 同步ai.ts中的ProductInfo字段定义
  */
 export interface ProductInfo {
   name: string
@@ -73,7 +73,7 @@ export interface ProductInfo {
   brandDescription?: string
   category?: string
 
-  // 🎯 P1修复: 以下字段与ai.ts ProductInfo同步
+  // 以下字段与ai.ts ProductInfo同步
   pricing?: {
     current?: string
     original?: string
@@ -107,7 +107,7 @@ export interface ProductInfo {
     salesRank?: string
   }
 
-  // 🔥 v3.2新增：深度数据增强字段
+  // v3.2深度数据增强字段
   storeDeepData?: {
     aggregatedReviews?: string[] // 热销商品评论聚合
     aggregatedFeatures?: string[] // 热销商品特性聚合

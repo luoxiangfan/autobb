@@ -26,19 +26,17 @@ export function isBrandConcatenation(keyword: string, brandName: string): boolea
   return nextChar !== ' '
 }
 
-// ============================================
-// 品牌词匹配策略（🔥 2026-01-05 新增：明确用途，避免混用）
-// ============================================
+// 品牌词匹配策略
 
 /**
  * 品牌词匹配策略说明
  *
  * ┌─────────────────────────────────────────────────────────────────┐
- * │  场景1: 关键词过滤（保留包含品牌词的关键词）                      │
- * │  → shouldKeepByBrand() - 部分匹配（"reolink argus" ✅）          │
- * │                                                                 │
- * │  场景2: 匹配类型分配（判断是否"纯品牌词"用 EXACT）                │
- * │  → shouldUseExactMatch() - 精确匹配（"reolink" ✅, "reolink argus" ❌）│
+ * │ 场景1: 关键词过滤（保留包含品牌词的关键词） │
+ * │ → shouldKeepByBrand() - 部分匹配（"reolink argus" ） │
+ * │ │
+ * │ 场景2: 匹配类型分配（判断是否"纯品牌词"用 EXACT） │
+ * │ → shouldUseExactMatch() - 精确匹配（"reolink" , "reolink argus" ）│
  * └─────────────────────────────────────────────────────────────────┘
  */
 
@@ -110,22 +108,20 @@ export function shouldUseExactMatch(keyword: string, pureBrandKeywords: string[]
   return isPureBrandKeyword(keyword, pureBrandKeywords)
 }
 
-// ============================================
 // 品牌变体词检测
-// ============================================
 
 /**
  * 检测是否为品牌变体词
  *
- * 品牌变体词特征：
- * - 品牌名 + 3个以上无意义字母后缀
- * - 例如：eureka + ddl = eurekaddl
+ * 品牌变体词特征
+ * 品牌名 + 3个以上无意义字母后缀
+ * 例如：eureka + ddl = eurekaddl
  *
- * 🔥 2026-01-02 优化：
- * - 包含数字的后缀不是变体词（产品型号，如 j15, x20）
- * - 后缀完全等于常见产品词的不是变体词（如 pro, ultra, max）
- * - 后缀以"产品词+"开头的（如 pro-）的不是变体词
- * - 纯品牌词（后缀为空）豁免
+ *
+ * 包含数字的后缀不是变体词（产品型号，如 j15, x20）
+ * 后缀完全等于常见产品词的不是变体词（如 pro, ultra, max）
+ * 后缀以"产品词+"开头的（如 pro-）的不是变体词
+ * 纯品牌词（后缀为空）豁免
  *
  * @param keyword - 关键词
  * @param brandName - 品牌名称
@@ -142,9 +138,9 @@ export function isBrandVariant(keyword: string, brandName: string): boolean {
     return false
   }
 
-  // 🔧 关键修复：仅把“品牌名后直接拼接的后缀”视为变体词
-  // 例如：eurekaddl（brand+ddl）✅
-  // 例如：auxito led / auxito-led / auxito_led ❌（这是正常的品牌+产品词组合）
+  // 关键仅把“品牌名后直接拼接的后缀”视为变体词
+  // 例如：eurekaddl（brand+ddl）
+  // 例如：auxito led / auxito-led / auxito_led （这是正常的品牌+产品词组合）
   const boundaryChar = normalized.charAt(brand.length)
   if (boundaryChar && !/[a-z0-9]/.test(boundaryChar)) {
     return false
@@ -182,9 +178,9 @@ export function isBrandVariant(keyword: string, brandName: string): boolean {
   // 4. 检查后缀长度：3-10个字母后缀认为是变体词
   const suffixLength = suffix.length
   return suffixLength >= 3 && suffixLength <= 10
-} // ============================================
-// 品牌无关词检测（🔥 2025-12-29 新增：多语言支持）
-// ============================================
+}
+
+// 品牌无关词检测
 
 /**
  * 多语言企业类型后缀模式
@@ -217,9 +213,9 @@ const BRAND_IRRELEVANT_PATTERNS: RegExp[] = [
 /**
  * 检测关键词是否为品牌无关词
  *
- * 品牌无关词特征：
- * - 包含企业类型后缀（unito, gmbh, inc等）
- * - 不包含纯品牌词
+ * 品牌无关词特征
+ * 包含企业类型后缀（unito, gmbh, inc等）
+ * 不包含纯品牌词
  *
  * @param keyword - 要检测的关键词
  * @param brandName - 品牌名称

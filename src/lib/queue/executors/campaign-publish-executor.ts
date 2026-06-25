@@ -1,12 +1,12 @@
 /**
  * 广告系列发布任务执行器
  *
- * 🚀 优化(2025-12-18)：处理长耗时的Google Ads API调用
- *   - 从同步API调用改为后台任务处理
- *   - 避免Nginx 504超时（30s限制）
- *   - 支持进度追踪和错误恢复
+ * 处理长耗时的Google Ads API调用
+ * 从同步API调用改为后台任务处理
+ * 避免Nginx 504超时（30s限制）
+ * 支持进度追踪和错误恢复
  *
- * 工作流程：
+ * 工作流程
  * 1. 验证请求数据和权限
  * 2. 保存campaign到数据库（pending状态）
  * 3. 批量创建到Google Ads
@@ -104,7 +104,7 @@ export interface CampaignPublishTaskData {
   userId: number
 
   // 命名规范
-  naming?: NamingScheme // 🔥 使用NamingScheme类型，包含associativeCampaignName
+  naming?: NamingScheme // 使用NamingScheme类型，包含associativeCampaignName
 
   // 配置信息
   campaignConfig: {
@@ -163,9 +163,9 @@ export interface CampaignPublishTaskData {
   // 可选标志
   forcePublish?: boolean // 是否强制发布（允许非15/4创意）
   enableCampaignImmediately?: boolean // 是否立即启用Campaign
-  /** 续发：复用上次失败/未完成发布创建的远端资源 */
+  /* * 续发：复用上次失败/未完成发布创建的远端资源 */
   resumePublish?: boolean
-  /** 从 campaign_backups 恢复发布时传入，成功后回写备份快照 */
+  /* * 从 campaign_backups 恢复发布时传入，成功后回写备份快照 */
   sourceBackupId?: number
 }
 
@@ -571,13 +571,13 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     }
 
     // 4. 创建Campaign到Google Ads
-    // 注意: 营销目标设置已移除 (2025-12-26)
+    // 注意: 营销目标设置已移除
     // Google Ads会自动推断营销目标，无需手动设置
     totalApiOperations++ // Campaign creation = 1 operation
-    // 🔧 修复(2025-12-26): 确保CPC是计费单位的倍数（10000微单位）
+    // 确保CPC是计费单位的倍数（10000微单位）
     const rawCpcBid = campaignConfig.maxCpcBid || getDefaultCPC(adsAccount.currency)
     const effectiveMaxCpcBid = Math.round(rawCpcBid * 100) / 100 // 四舍五入到0.01
-    // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
+    // 确保micros值是10000的倍数（Google Ads计费单位要求）
     const cpcBidMicros = Math.round(effectiveMaxCpcBid * 100) * 10000 // 转换为micros并确保是10000的倍数
 
     const storedCampaignConfig = resumableCampaignRow?.campaign_config
@@ -670,11 +670,11 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
           createGoogleAdsCampaign({
             customerId: adsAccount.customer_id,
             refreshToken: refreshToken,
-            campaignName: campaignName, // 🔥 使用规范化命名
+            campaignName: campaignName, // 使用规范化命名
             budgetAmount: campaignConfig.budgetAmount,
             budgetType: campaignConfig.budgetType,
             biddingStrategy: campaignConfig.biddingStrategy,
-            cpcBidCeilingMicros: cpcBidMicros, // 🔥 使用用户配置或货币默认值（已确保是10000的倍数）
+            cpcBidCeilingMicros: cpcBidMicros, // 使用用户配置或货币默认值（已确保是10000的倍数）
             targetCountry: campaignConfig.targetCountry,
             targetLanguage: campaignConfig.targetLanguage,
             finalUrlSuffix: creative.finalUrlSuffix || undefined,
@@ -1060,7 +1060,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     }
 
     // 13. 串行执行：Extensions（避免并发修改Campaign资源冲突）
-    // 🔧 修复(2026-01-05): Extensions是可选扩展，失败不应影响核心发布状态
+    // Extensions是可选扩展，失败不应影响核心发布状态
     console.log(`\n🔄 开始串行执行Extensions（避免并发冲突）...`)
     const extensionsStartTime = Date.now()
 
@@ -1206,7 +1206,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     }
 
     // 16. 更新数据库记录
-    // 🔧 修复(2026-01-05): 核心成功但Extensions失败时，仍计为成功，只记录警告信息
+    // 核心成功但Extensions失败时，仍计为成功，只记录警告信息
     let finalCreationError: string | null = null
 
     if (extensionsErrors.length > 0) {
@@ -1381,10 +1381,10 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       )
     }
 
-    // 🔧 发布完成后立即失效 Offer 列表缓存，确保 /offers 页面"关联Ads账号"及时更新
+    // 发布完成后立即失效 Offer 列表缓存，确保 /offers 页面"关联Ads账号"及时更新
     invalidateOfferCache(userId, offerId)
 
-    // 🔥 新增：发布成功后自动追加换链接任务目标（多账号/多Campaign）
+    // 发布成功后自动追加换链接任务目标（多账号/多Campaign）
     try {
       if (adsAccount?.customer_id) {
         const added = await addUrlSwapTargetForOfferCampaign({
@@ -1412,7 +1412,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       publishedSnapshot: buildBackupSyncSnapshot(),
     })
 
-    // 🔧 修复(2026-01-05): 区分完全成功和部分成功
+    // 区分完全成功和部分成功
     if (extensionsErrors.length === 0) {
       console.log(`\n🎉 Campaign发布成功完成！`)
       console.log(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)

@@ -1,19 +1,19 @@
 /**
  * 安全配置管理 - 移除硬编码默认值
  *
- * 用途：
- * - 集中管理所有敏感配置
- * - 运行时验证必需的环境变量（延迟加载）
- * - 确保密钥强度符合安全标准
+ * 用途
+ * 集中管理所有敏感配置
+ * 运行时验证必需的环境变量（延迟加载）
+ * 确保密钥强度符合安全标准
  *
  * 注意：构建时和测试时不验证，只在运行时验证
  */
 
 // 标记是否为构建阶段或测试环境
-// 🔥 修复：只在真正的构建阶段跳过验证，不能在运行时跳过
+// 只在真正的构建阶段跳过验证，不能在运行时跳过
 // Next.js 构建时会设置 NEXT_PHASE，但某些部署环境可能在运行时也保留这个变量
-//
-// 判断逻辑：
+
+// 判断逻辑
 // 1. NEXT_PHASE === 'phase-production-build' → 构建阶段
 // 2. 但如果同时存在 SKIP_ENV_VALIDATION=false → 强制验证（运行时场景）
 // 3. 测试环境也跳过验证
@@ -29,7 +29,7 @@ function getRequiredEnvVar(name: string, minLength?: number): string {
   const value = process.env[name]
 
   // 构建时或测试时返回占位符，避免失败
-  // 🔥 生产环境运行时永远不跳过验证，即使 NEXT_PHASE 存在
+  // 生产环境运行时永远不跳过验证，即使 NEXT_PHASE 存在
   if (SKIP_VALIDATION) {
     return 'placeholder-for-build-or-test'.padEnd(minLength || 32, '0')
   }
@@ -58,30 +58,30 @@ function getOptionalEnvVar(name: string, defaultValue: string): string {
   return process.env[name] || defaultValue
 }
 
-// ==================== JWT配置 ====================
+// JWT配置
 export const JWT_SECRET = getRequiredEnvVar('JWT_SECRET', 32)
 export const JWT_EXPIRES_IN = getOptionalEnvVar('JWT_EXPIRES_IN', '7d')
 
-// ==================== 加密配置 ====================
+// 加密配置
 export const ENCRYPTION_KEY = getRequiredEnvVar('ENCRYPTION_KEY', 64) // 32字节 = 64 hex字符
 export const ENCRYPTION_IV_LENGTH = parseInt(getOptionalEnvVar('ENCRYPTION_IV_LENGTH', '16'), 10)
 
-// ==================== 密码哈希配置 ====================
+// 密码哈希配置
 export const BCRYPT_SALT_ROUNDS = parseInt(getOptionalEnvVar('BCRYPT_SALT_ROUNDS', '12'), 10)
 
-// ==================== 数据库配置 ====================
+// 数据库配置
 export const DATABASE_URL_REQUIRED = 'postgresql:// (set DATABASE_URL in .env)'
 export const NODE_ENV = getOptionalEnvVar('NODE_ENV', 'development')
 const IS_PRODUCTION = NODE_ENV === 'production'
 const IS_DEVELOPMENT = NODE_ENV === 'development'
 
-// ==================== Redis配置 ====================
+// Redis配置
 export const REDIS_URL = getOptionalEnvVar('REDIS_URL', 'redis://localhost:6379')
 
-// 🔥 Redis前缀配置（结构化，2025-12-10优化为方案3）
+// Redis前缀配置
 export const REDIS_PREFIX_CONFIG = {
   queue: `autoads:${NODE_ENV}:queue:`,
-  // 🔥 非核心任务队列（click-farm/url-swap 等）独立前缀，避免与核心任务互相争抢资源
+  // 非核心任务队列（click-farm/url-swap 等）独立前缀，避免与核心任务互相争抢资源
   queueBackground: `autoads:${NODE_ENV}:queue:bg:`,
   cache: `autoads:${NODE_ENV}:cache:`,
 } as const
@@ -89,7 +89,7 @@ export const REDIS_PREFIX_CONFIG = {
 // 向后兼容：保留REDIS_KEY_PREFIX（队列专用）
 export const REDIS_KEY_PREFIX = REDIS_PREFIX_CONFIG.queue
 
-// ==================== 运行时验证（仅在非构建/测试时执行） ====================
+// 运行时验证（仅在非构建/测试时执行）
 if (!SKIP_VALIDATION) {
   // 验证bcrypt强度
   if (BCRYPT_SALT_ROUNDS < 10) {
@@ -137,7 +137,7 @@ if (!SKIP_VALIDATION) {
     }
   }
 
-  // ==================== 配置摘要（启动日志） ====================
+  // 配置摘要（启动日志）
   if (IS_DEVELOPMENT) {
     console.log('\n✅ Security configuration loaded successfully:')
     console.log(`   - JWT_SECRET: ${JWT_SECRET.substring(0, 10)}... (${JWT_SECRET.length} chars)`)

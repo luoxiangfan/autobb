@@ -22,7 +22,7 @@ export type GoogleAdsAccountsFetchParams = {
   isPoll?: boolean
   skipCredentialsRefresh?: boolean
   fallbackServiceAccountId?: string | null
-  /** 额外 query（如 filterByUserMcc、offerId） */
+  /* * 额外 query（如 filterByUserMcc、offerId） */
   query?: Record<string, string | undefined>
 }
 
@@ -101,7 +101,7 @@ export function shouldRefreshCredentialsAfterAccountsFetchOk(
   return effects.kind === 'ok' && !effects.shouldSchedulePoll
 }
 
-/** 合并 query 后再由 forceRefresh 强制 refresh/async，避免 caller query 覆盖 forceRefresh */
+/* * 合并 query 后再由 forceRefresh 强制 refresh/async，避免 caller query 覆盖 forceRefresh */
 export function buildGoogleAdsAccountsSearchParams(
   params: Pick<GoogleAdsAccountsFetchParams, 'forceRefresh' | 'query'>
 ): URLSearchParams {
@@ -260,7 +260,7 @@ function notifyPermissionDeniedFallback(handlers: GoogleAdsAccountsFetchUiHandle
   handlers.onErrorMessage?.(SERVICE_ACCOUNT_PERMISSION_DENIED_FALLBACK_MESSAGE)
 }
 
-/** 将 resolveGoogleAdsAccountsFetchUiEffects 的结果应用到页面 state / toast */
+/* * 将 resolveGoogleAdsAccountsFetchUiEffects 的结果应用到页面 state / toast */
 export function applyGoogleAdsAccountsFetchUiEffects(
   effects: GoogleAdsAccountsFetchUiEffects,
   handlers: GoogleAdsAccountsFetchUiHandlers

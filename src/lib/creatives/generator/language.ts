@@ -1,15 +1,15 @@
 import type { CreativeKeywordUsagePlan, GeneratedAdCreativeData } from '../server'
 
-// 🔥 AI语义分类
-// 🎯 新增：导入否定关键词生成函数
-// 🎯 新增：导入token追踪函数
-// 🎯 v3.0: 导入数据库prompt加载函数
-// 🎯 购买意图评分
+// AI语义分类
+// 导入否定关键词生成函数
+// 导入token追踪函数
+// v3.0: 导入数据库prompt加载函数
+// 购买意图评分
 
-// 🔥 优化：Google Ads关键词标准化去重
+// Google Ads关键词标准化去重
 
-// 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-// 🔥 2026-03-13: 导入纯品牌词判断函数
+// 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
+// 导入纯品牌词判断函数
 import {
   LANGUAGE_CODE_MAP,
   getLanguageName,
@@ -649,12 +649,12 @@ ${fallbackNote}`.trim()
 
 /**
  * 生成广告创意的Prompt（优化版 - 减少40%+ token消耗）
- * 🎯 需求34: 新增 extractedElements 参数，包含从爬虫阶段提取的关键词、标题、描述
+ * 需求34: 新增 extractedElements 参数，包含从爬虫阶段提取的关键词、标题、描述
  *
- * @version v2.8 (2025-12-04)
+ * @version v2.8
  * @changes P3优化 - badge徽章突出展示
- *   - Headlines Brand: badge优先级提升，明确指令使用完整badge文本
- *   - Callouts: badge改为P3 CRITICAL级别（与P2促销同级）
+ * Headlines Brand: badge优先级提升，明确指令使用完整badge文本
+ * Callouts: badge改为P3 CRITICAL级别（与P2促销同级）
  * @previous v2.7 - P2 promotion促销强化
  *
  * @previous v2.6 - P1优化（availability紧迫感 + primeEligible验证）

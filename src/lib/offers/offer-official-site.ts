@@ -295,9 +295,9 @@ async function tryResolveOfficialSiteByHeuristic(params: {
       const html = (await readTextUpTo(res, 96 * 1024)).toLowerCase()
       if (!html) continue
 
-      // Strict validation to reduce false positives:
-      // - Must mention the brand
-      // - Must mention at least one context token (e.g. "dash", "camera", "vacuum")
+      // Strict validation to reduce false positives
+      // Must mention the brand
+      // Must mention at least one context token (e.g. "dash", "camera", "vacuum")
       if (brandKey && !html.includes(brandKey)) continue
 
       const hasContext = Array.from(contextTokens).some((t) => t && html.includes(t))

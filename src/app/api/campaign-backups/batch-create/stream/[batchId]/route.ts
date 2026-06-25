@@ -16,7 +16,7 @@ function parseBatchMetadata(raw: unknown): unknown | null {
  * GET /api/campaign-backups/batch-create/stream/[batchId]
  * 订阅批量创建任务进度（SSE 流）
  *
- * 响应格式：
+ * 响应格式
  * data: {"type":"progress","status":"running","completed":5,"failed":1,"total":20,"progress":30}
  * data: {"type":"complete","status":"completed","completed":20,"failed":0,"total":20}
  */

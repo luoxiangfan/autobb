@@ -319,8 +319,8 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       }
     }
 
-    // 🔥 修复：统一从任务详情计算统计，确保全局和用户统计一致
-    // 🔧 内存优化：使用 HSCAN 分批处理，避免 hvals() 在高任务量时占用巨量内存
+    // 统一从任务详情计算统计，确保全局和用户统计一致
+    // 内存使用 HSCAN 分批处理，避免 hvals() 在高任务量时占用巨量内存
     const byType: Record<TaskType, number> = {} as Record<TaskType, number>
     const byTypeRunning: Record<TaskType, number> = {} as Record<TaskType, number>
     const byUser: QueueStats['byUser'] = {}
@@ -349,7 +349,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
           continue
         }
 
-        // 🔥 过滤无效用户ID（userId <= 0 是无效的）
+        // 过滤无效用户ID（userId <= 0 是无效的）
         // 无效用户的任务不计入任何统计
         if (!task.userId || task.userId <= 0) {
           continue
@@ -581,7 +581,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 按类型和状态删除任务（用于服务重启时清理特定任务）
+   * 按类型和状态删除任务（用于服务重启时清理特定任务）
    *
    * 使用场景：服务重启时清理URL Swap任务，避免重复执行
    *
@@ -655,9 +655,9 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 全面清理所有未完成任务（启动时使用）
+   * 全面清理所有未完成任务（启动时使用）
    *
-   * 解决僵尸任务问题：
+   * 解决僵尸任务问题
    * 1. 清空所有pending队列
    * 2. 清空running集合（关键：服务重启后所有running任务都是僵尸）
    * 3. 清空用户相关队列
@@ -800,7 +800,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 清理无效用户的任务数据
+   * 清理无效用户的任务数据
    *
    * 删除 userId <= 0 的任务记录
    * 用于清理历史脏数据
@@ -861,7 +861,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 获取所有pending任务（用于批量任务取消）
+   * 获取所有pending任务（用于批量任务取消）
    */
   async getAllPendingTasks(): Promise<Task[]> {
     if (!this.client) throw new Error('Redis not connected')
@@ -983,7 +983,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 从队列中移除指定任务（用于批量任务取消）
+   * 从队列中移除指定任务（用于批量任务取消）
    */
   async removeTask(taskId: string): Promise<void> {
     if (!this.client) throw new Error('Redis not connected')
@@ -1024,10 +1024,10 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   /**
    * 计算优先级分数
    *
-   * 设计目标：
-   * - 先按“可执行时间”排序（notBefore/createdAt），避免未来任务阻塞当前可执行任务
-   * - 同一秒内按 priority 排序（high > normal > low）
-   * - 同一秒内再按毫秒余数排序，尽量保持近似 FIFO
+   * 设计目标
+   * 先按“可执行时间”排序（notBefore/createdAt），避免未来任务阻塞当前可执行任务
+   * 同一秒内按 priority 排序（high > normal > low）
+   * 同一秒内再按毫秒余数排序，尽量保持近似 FIFO
    */
   private getPriorityScore(task: Task): number {
     const availableAt = (task as any).notBefore ?? task.createdAt ?? Date.now()
@@ -1044,7 +1044,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 启动时将 running 僵尸任务重新放回 pending 队列
+   * 启动时将 running 僵尸任务重新放回 pending 队列
    */
   async requeueAllRunningOnStartup(): Promise<{
     requeuedCount: number
@@ -1111,7 +1111,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
   }
 
   /**
-   * 🔥 修复 pending 索引：把 tasks hash 中的 pending 任务补齐到 pending zset
+   * 修复 pending 索引：把 tasks hash 中的 pending 任务补齐到 pending zset
    */
   async repairPendingIndexes(): Promise<{ repairedCount: number; scannedCount: number }> {
     if (!this.client) {

@@ -17,10 +17,10 @@ import {
  * GET /api/google-ads/oauth/start
  * 启动Google Ads OAuth授权流程
  *
- * 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须配置自己的完整OAuth凭证
- * - client_id, client_secret, developer_token 必须由用户自己配置
- * - login_customer_id 必须由用户自己配置（必填项）
- * - 不再支持平台共享配置，确保用户数据完全隔离
+ * 独立账号模式 - 每个用户必须配置自己的完整OAuth凭证
+ * client_id, client_secret, developer_token 必须由用户自己配置
+ * login_customer_id 必须由用户自己配置（必填项）
+ * 不再支持平台共享配置，确保用户数据完全隔离
  */
 export const dynamic = 'force-dynamic'
 

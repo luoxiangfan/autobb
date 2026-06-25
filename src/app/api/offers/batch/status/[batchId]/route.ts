@@ -3,24 +3,24 @@
  *
  * 查询批量任务状态
  *
- * 功能：
+ * 功能
  * 1. 验证用户身份和任务所有权
  * 2. 返回批量任务状态和进度统计
  * 3. 支持SSE失败后的fallback
  *
- * 返回格式：
+ * 返回格式
  * {
- *   batchId: string
- *   status: 'pending' | 'running' | 'completed' | 'failed' | 'partial'
- *   total_count: number
- *   completed_count: number
- *   failed_count: number
- *   progress: number (0-100)
- *   source_file: string
- *   createdAt: string
- *   updatedAt: string
- *   startedAt?: string
- *   completedAt?: string
+ * batchId: string
+ * status: 'pending' | 'running' | 'completed' | 'failed' | 'partial'
+ * total_count: number
+ * completed_count: number
+ * failed_count: number
+ * progress: number (0-100)
+ * source_file: string
+ * createdAt: string
+ * updatedAt: string
+ * startedAt?: string
+ * completedAt?: string
  * }
  */
 

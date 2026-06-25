@@ -35,7 +35,7 @@ interface SyncStatus {
 }
 
 /**
- * 🔧 修复(2025-12-11): 统一使用 camelCase 字段名
+ * 统一使用 camelCase 字段名
  */
 interface SyncLog {
   id: number
@@ -146,7 +146,7 @@ export default function SyncManagementPage() {
       }
 
       const data = result.data
-      // 🔧 修复(2025-12-28): API已改为异步队列，无法立即返回recordCount和duration
+      // API已改为异步队列，无法立即返回recordCount和duration
       // 改为显示任务已加入队列的提示
       showSuccess(
         '数据同步任务已加入队列',

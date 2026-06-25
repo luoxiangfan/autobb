@@ -3,7 +3,7 @@
  * GET /api/queue/config - 获取配置
  * PUT /api/queue/config - 更新配置（仅管理员）
  *
- * 🔥 修复：配置持久化到数据库，解决多实例环境配置不同步问题
+ * 配置持久化到数据库，解决多实例环境配置不同步问题
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -24,8 +24,8 @@ const RETRY_DELAY_MAX_MS = 60000
 
 // 默认队列配置
 const DEFAULT_QUEUE_CONFIG = {
-  globalConcurrency: 999, // 🔥 全局并发提升至999（补点击需求）
-  perUserConcurrency: 999, // 🔥 单用户并发提升至999（补点击需求）
+  globalConcurrency: 999, // 全局并发提升至999（补点击需求）
+  perUserConcurrency: 999, // 单用户并发提升至999（补点击需求）
   perTypeConcurrency: {
     sync: 1,
     backup: 1,
@@ -165,12 +165,12 @@ const queueConfigSchema = z.looseObject({
     .number()
     .min(1, zErr.minNumber(1))
     .max(GLOBAL_CONCURRENCY_MAX, zErr.maxNumber(GLOBAL_CONCURRENCY_MAX))
-    .optional(), // 🔥 提升上限至1000（支持补点击999并发）
+    .optional(), // 提升上限至1000（支持补点击999并发）
   perUserConcurrency: z
     .number()
     .min(1, zErr.minNumber(1))
     .max(PER_USER_CONCURRENCY_MAX, zErr.maxNumber(PER_USER_CONCURRENCY_MAX))
-    .optional(), // 🔥 提升上限至1000（支持补点击999并发）
+    .optional(), // 提升上限至1000（支持补点击999并发）
   perTypeConcurrency: z
     .record(
       z.string(),
@@ -179,7 +179,7 @@ const queueConfigSchema = z.looseObject({
         .min(1, zErr.minNumber(1))
         .max(PER_TYPE_CONCURRENCY_MAX, zErr.maxNumber(PER_TYPE_CONCURRENCY_MAX))
     )
-    .optional(), // 🔥 提升上限至1000（支持补点击999并发）
+    .optional(), // 提升上限至1000（支持补点击999并发）
   maxQueueSize: z
     .number()
     .min(10, zErr.minNumber(10))
@@ -197,7 +197,7 @@ const queueConfigSchema = z.looseObject({
     .min(1000, zErr.minNumber(1000))
     .max(RETRY_DELAY_MAX_MS, zErr.maxNumber(RETRY_DELAY_MAX_MS))
     .optional(),
-}) // 🔥 允许额外字段（如 enablePriority, storageType 等前端状态字段）
+}) // 允许额外字段（如 enablePriority, storageType 等前端状态字段）
 
 function getRuntimeQueueConfig(): typeof DEFAULT_QUEUE_CONFIG {
   const queueManager = getQueueManager()
@@ -305,7 +305,7 @@ export const GET = withAuth(async () => {
         // 状态信息
         storageType: process.env.REDIS_URL ? 'redis' : 'memory',
         redisConnected: !!process.env.REDIS_URL,
-        // 🔥 新增：标识配置来源
+        // 标识配置来源
         configSource: dbConfig ? 'database' : 'runtime',
         knownTaskTypes: ALL_TASK_TYPES,
       },
@@ -341,7 +341,7 @@ export const PUT = withAuth(
 
       const newConfig = validationResult.data
 
-      // 🔥 先从数据库读取现有配置，合并后保存
+      // 先从数据库读取现有配置，合并后保存
       const dbConfig = await getQueueConfigFromDB()
       const existingConfig = dbConfig || getRuntimeQueueConfig()
       const mergedConfig = {
@@ -354,7 +354,7 @@ export const PUT = withAuth(
         },
       }
 
-      // 🔥 保存到数据库（持久化）
+      // 保存到数据库（持久化）
       const normalizedConfig = normalizeQueueConfig(mergedConfig)
       await saveQueueConfigToDB(normalizedConfig)
 

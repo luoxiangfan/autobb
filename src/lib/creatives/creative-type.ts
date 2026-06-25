@@ -9,7 +9,7 @@ export type CreativeTypeValue = CanonicalCreativeType | LegacyCreativeType
 
 export type CreativeBucketSlot = 'A' | 'B' | 'D'
 
-/** keyword_pool 查询参数仍可能传入历史桶 C/S（非 ad_creatives 字段） */
+/* * keyword_pool 查询参数仍可能传入历史桶 C/S（非 ad_creatives 字段） */
 export type LegacyKeywordPoolBucketQuery = 'C' | 'S'
 
 function normalizeTextArray(value: unknown): string[] {
@@ -41,7 +41,7 @@ export type CreativeBucketSelection = {
   normalizedBucket: CreativeBucketSlot | null
 }
 
-/** ad_creatives / 创意入队：仅接受 canonical 槽位 A/B/D */
+/* * ad_creatives / 创意入队：仅接受 canonical 槽位 A/B/D */
 export function normalizeCreativeBucketSelection(value: unknown): CreativeBucketSelection {
   const rawBucket = String(value || '')
     .trim()
@@ -52,7 +52,7 @@ export function normalizeCreativeBucketSelection(value: unknown): CreativeBucket
   }
 }
 
-/** Canonical 创意槽位：仅 A/B/D（ad_creatives.keyword_bucket） */
+/* * Canonical 创意槽位：仅 A/B/D（ad_creatives.keyword_bucket） */
 export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot | null {
   const upper = String(value || '')
     .trim()
@@ -63,7 +63,7 @@ export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot 
   return null
 }
 
-/** keyword_pool 查询：历史 C→B、S→D（不影响 ad_creatives 存储） */
+/* * keyword_pool 查询：历史 C→B、S→D（不影响 ad_creatives 存储） */
 export function normalizeKeywordPoolBucketQuery(value: unknown): CreativeBucketSlot | null {
   const upper = String(value || '')
     .trim()

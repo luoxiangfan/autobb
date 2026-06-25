@@ -22,11 +22,11 @@ export function parseDbDateTimeAsUtc(value: string): Date {
   }
 
   // Split timezone suffix if present.
-  // Supported:
-  // - Z
-  // - +HH, -HH
-  // - +HHMM, -HHMM
-  // - +HH:MM, -HH:MM
+  // Supported
+  // Z
+  // +HH, -HH
+  // +HHMM, -HHMM
+  // +HH:MM, -HH:MM
   const tzMatch = raw.match(/(Z|[+-]\d{2}(?::?\d{2})?)$/i)
   let tz = tzMatch?.[1] ?? 'Z'
   let base = tzMatch ? raw.slice(0, -tz.length) : raw
@@ -34,8 +34,8 @@ export function parseDbDateTimeAsUtc(value: string): Date {
   // Normalize separator: "YYYY-MM-DD HH:mm:ss" -> "YYYY-MM-DDTHH:mm:ss"
   base = base.replace(' ', 'T')
 
-  // Normalize timezone offsets for JS Date:
-  // +00  -> +00:00
+  // Normalize timezone offsets for JS Date
+  // +00 -> +00:00
   // +0800 -> +08:00
   if (/^[+-]\d{2}$/i.test(tz)) {
     tz = `${tz}:00`
@@ -69,7 +69,7 @@ export function normalizeDateOnly(value: unknown): string | null {
   return String(value).split('T')[0].split(' ')[0]
 }
 
-/** UTC ISO-8601 timestamp for DB writes (sync_logs, etc.). */
+/* * UTC ISO-8601 timestamp for DB writes (sync_logs, etc.). */
 export function utcNowIso(): string {
   return new Date().toISOString()
 }

@@ -12,7 +12,7 @@ export const GET = withAuth(
       const promptId = context?.params?.promptId
       const db = getDatabase()
 
-      // 🔧 PostgreSQL 兼容性：布尔字段兼容性处理
+      // PostgreSQL 兼容性：布尔字段兼容性处理
       const isActiveValue = true
 
       // 获取当前激活版本
@@ -90,7 +90,7 @@ export const GET = withAuth(
 
 /**
  * PUT /api/admin/prompts/[promptId]
- * 支持两种操作：
+ * 支持两种操作
  * 1. 激活指定版本（当只传入 version 字段时）
  * 2. 编辑并创建新版本（当传入 promptContent 字段时）
  */
@@ -101,7 +101,7 @@ export const PUT = withAuth(
       const body = await request.json()
       const db = getDatabase()
 
-      // 🔧 PostgreSQL 兼容性：布尔字段兼容性处理
+      // PostgreSQL 兼容性：布尔字段兼容性处理
       const isActiveFalse = false
       const isActiveTrue = true
 
@@ -109,7 +109,7 @@ export const PUT = withAuth(
       const isEditOperation = body.promptContent !== undefined
 
       if (isEditOperation) {
-        // ============ 编辑并创建新版本 ============
+        // 编辑并创建新版本
         const {
           version, // 可选：自定义版本号（如 v5.0），不传则自动递增
           promptContent, // 编辑后的内容
@@ -216,7 +216,7 @@ export const PUT = withAuth(
           },
         })
       } else {
-        // ============ 激活指定版本（原有逻辑） ============
+        // 激活指定版本（原有逻辑）
         const { version } = body
 
         if (!version) {
@@ -260,7 +260,7 @@ export const PUT = withAuth(
 
 /**
  * 计算下一个版本号
- * 策略：
+ * 策略
  * 1. 解析当前版本号的数字部分（如 v4.8 → 4.8）
  * 2. 递增最后一位（如 4.8 → 4.9）
  * 3. 如果生成的版本号已存在，继续递增直到找到未使用的版本

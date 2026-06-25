@@ -34,7 +34,7 @@ export async function syncAccountsFromAPI(
 
   const isServiceAccount = authType === 'service_account' && serviceAccountConfig
 
-  // 🔧 修复(2025-12-12): 独立账号模式 - 每个用户必须有自己的完整凭证
+  // 独立账号模式 - 每个用户必须有自己的完整凭证
   // 不再回退到管理员配置，确保用户数据完全隔离
   const clientId = credentials.client_id
   const clientSecret = credentials.client_secret
@@ -51,7 +51,7 @@ export async function syncAccountsFromAPI(
     developer_token: developerToken,
   })
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用 Python 服务
+  // 服务账号模式使用 Python 服务
   let resourceNames: string[]
   if (isServiceAccount) {
     // 服务账号模式：使用 Python 服务
@@ -158,10 +158,10 @@ export async function syncAccountsFromAPI(
         WHERE customer.id = ${customerId}
       `
 
-      // 🔧 修复(2025-12-25): 服务账号模式自动降级login_customer_id
+      // 服务账号模式自动降级login_customer_id
       // 策略：MCC ID → 子账户ID → null(省略login_customer_id)
       // 原因：根据Google Ads API文档，当直接访问账户(非通过管理账户)时，
-      //       login_customer_id应该省略或设置为账户自己的ID
+      // login_customer_id应该省略或设置为账户自己的ID
       const loginCustomerIds = isServiceAccount
         ? [serviceAccountConfig.mccCustomerId, customerId, null] // MCC → 子账户 → null
         : [credentials.login_customer_id, customerId, null]
@@ -169,7 +169,7 @@ export async function syncAccountsFromAPI(
       let customer: any
       let preloadedAccountInfo: any[] | null = null
 
-      // 🔧 修复(2025-12-25): 尝试多个login_customer_id直到成功
+      // 尝试多个login_customer_id直到成功
       // 重点：每次尝试都需要重新创建客户端，因为@htdangkhoa/google-ads在实例化时固化了login_customer_id
       const loginAttempts: Array<{
         loginCustomerId: string | null
@@ -187,7 +187,7 @@ export async function syncAccountsFromAPI(
 
         try {
           if (isServiceAccount) {
-            // 🔧 修复(2025-12-26): 使用 Python 服务执行 GAQL 查询
+            // 使用 Python 服务执行 GAQL 查询
             const { executeGAQLQueryPython } = await import('@/lib/campaign/server')
             const testQuery = `SELECT customer.id FROM customer WHERE customer.id = ${customerId} LIMIT 1`
 
@@ -263,7 +263,7 @@ export async function syncAccountsFromAPI(
           (attempt) => attempt.error && attempt.error.includes('PERMISSION_DENIED')
         )
 
-        // 🆕 构建用户友好的错误信息
+        // 构建用户友好的错误信息
         let friendlyErrorMessage = '无法访问该账户。'
 
         if (hasPermissionDenied && isServiceAccount) {
@@ -300,16 +300,16 @@ export async function syncAccountsFromAPI(
         throw enhancedError
       }
 
-      // 🔧 修复(2025-12-25): 分步查询，先查基本信息，再查 status
+      // 分步查询，先查基本信息，再查 status
       // 有些账户的 status 字段可能有权限问题导致 field_violations 错误
-      // 🔧 修复(2025-12-25): 增加详细的错误捕获，处理 field_violations 等解析错误
-      // 🔧 修复(2025-12-25): @htdangkhoa/google-ads库的search方法返回结构可能是 { results: [...] }
+      // 增加详细的错误捕获，处理 field_violations 等解析错误
+      // @htdangkhoa/google-ads库的search方法返回结构可能是 { results: [...] }
       let accountInfo: any[]
       let rawStatus: any = 'UNKNOWN'
 
       try {
         // 先查询基本信息（不包含 status，避免权限问题）
-        // 🔧 修复(2025-12-26): 服务账号模式调用Python服务，OAuth模式使用query()
+        // 服务账号模式调用Python服务，OAuth模式使用query()
         if (!isServiceAccount && preloadedAccountInfo) {
           accountInfo = preloadedAccountInfo
         } else {
@@ -397,7 +397,7 @@ export async function syncAccountsFromAPI(
             ORDER BY account_budget.id DESC
             LIMIT 1
           `
-          // 🔧 修复(2025-12-26): 服务账号模式使用 executeGAQLQueryPython，而不是错误的 customer.search()
+          // 服务账号模式使用 executeGAQLQueryPython，而不是错误的 customer.search()
           const { executeGAQLQueryPython } = await import('@/lib/campaign/server')
           const budgetResult = isServiceAccount
             ? await executeGAQLQueryPython({
@@ -419,9 +419,9 @@ export async function syncAccountsFromAPI(
             const billingOwnerCustomerId =
               extractCustomerIdFromResourceName(billingSetupResourceName)
 
-            // ✅ 更严格的“合并/代付账单”识别：
-            // - budget.resource_name 可能仍显示为子账户 customer（导致误判为“每个子账户都有相同余额”）
-            // - billing_setup 归属通常能反映真实付款主体（paying manager / consolidated billing）
+            // 更严格的“合并/代付账单”识别
+            // budget.resource_name 可能仍显示为子账户 customer（导致误判为“每个子账户都有相同余额”）
+            // billing_setup 归属通常能反映真实付款主体（paying manager / consolidated billing）
             if (billingOwnerCustomerId && billingOwnerCustomerId !== String(customerId)) {
               googleAdsAccountsLogger.debug('billing_owner_mismatch_skipped', {
                 customerId,
@@ -450,7 +450,7 @@ export async function syncAccountsFromAPI(
           googleAdsAccountsLogger.debug('account_budget_unavailable', { customerId })
         }
 
-        // 🔧 修复(2025-12-18): 计算parent_mcc字段
+        // 计算parent_mcc字段
         // 默认使用登录的MCC账户ID；在MCC层级遍历中会更新为真实父级
         const isManagerAccount = account.customer?.manager || false
         const parentMcc = isManagerAccount
@@ -459,7 +459,7 @@ export async function syncAccountsFromAPI(
             ? serviceAccountConfig.mccCustomerId
             : credentials.login_customer_id
 
-        // 🆕 身份验证（广告主验证）状态：用于识别“因未完成验证导致暂停但 customer.status 仍为 ENABLED”的情况
+        // 身份验证（广告主验证）状态：用于识别“因未完成验证导致暂停但 customer.status 仍为 ENABLED”的情况
         const identityVerification =
           !isManagerAccount && parsedStatus === 'ENABLED'
             ? await fetchIdentityVerificationSnapshot({
@@ -485,7 +485,7 @@ export async function syncAccountsFromAPI(
           test_account: account.customer?.test_account || false,
           status: effectiveStatus,
           account_balance: accountBalance,
-          parent_mcc: parentMcc, // 🆕 设置parent_mcc：子账户的parent_mcc是MCC账户ID，MCC账户的parent_mcc为null
+          parent_mcc: parentMcc, // 设置parent_mcc：子账户的parent_mcc是MCC账户ID，MCC账户的parent_mcc为null
           identity_verification_program_status: identityVerification.programStatus,
           identity_verification_start_deadline_time:
             identityVerification.verificationStartDeadlineTime,
@@ -560,7 +560,7 @@ export async function syncAccountsFromAPI(
     await processMccChildAccounts(mccCtx, managerId)
   }
 
-  // 🔥 清理：如果用户在MCC中解除部分账号关联，API不会返回这些账号
+  // 清理：如果用户在MCC中解除部分账号关联，API不会返回这些账号
   // 这里将“本次没再出现”的账号标记为 is_active=false，避免继续展示/使用。
   await deactivateMissingAccounts({
     userId,

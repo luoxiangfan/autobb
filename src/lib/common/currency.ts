@@ -188,7 +188,7 @@ export function calculateMaxCPC(
     targetCurrency
   )
 
-  // 🔧 修复(2025-12-26): 四舍五入到计费单位（0.01货币单位）
+  // 四舍五入到计费单位（0.01货币单位）
   const roundedMaxCPC = Math.round(maxCPCInTargetCurrency * 100) / 100
 
   // 格式化

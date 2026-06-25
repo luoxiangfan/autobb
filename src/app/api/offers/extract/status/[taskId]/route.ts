@@ -3,22 +3,22 @@
  *
  * 轮询查询 - 获取Offer提取任务状态
  *
- * 功能：
+ * 功能
  * 1. 验证用户身份和任务所有权
  * 2. 返回任务当前状态、进度、结果
  * 3. 支持SSE失败后的fallback
  *
- * 返回格式：
+ * 返回格式
  * {
- *   taskId: string
- *   status: 'pending' | 'running' | 'completed' | 'failed'
- *   stage: string | null
- *   progress: number (0-100)
- *   message: string | null
- *   result: object | null (completed时)
- *   error: object | null (failed时)
- *   createdAt: string
- *   updatedAt: string
+ * taskId: string
+ * status: 'pending' | 'running' | 'completed' | 'failed'
+ * stage: string | null
+ * progress: number (0-100)
+ * message: string | null
+ * result: object | null (completed时)
+ * error: object | null (failed时)
+ * createdAt: string
+ * updatedAt: string
  * }
  */
 

@@ -93,7 +93,7 @@ export const POST = withAuth(async (request, user) => {
           continue
         }
 
-        // 🔧 自动选择第一个广告创意
+        // 自动选择第一个广告创意
         const creative = (await db.queryOne(
           `
           SELECT id, creative_name, keyword_bucket
@@ -111,7 +111,7 @@ export const POST = withAuth(async (request, user) => {
           continue
         }
 
-        // 🔧 自动生成广告系列名称（参考发布广告功能）
+        // 自动生成广告系列名称（参考发布广告功能）
         const dateStr = new Date()
           .toISOString()
           .split('T')[0]
@@ -123,7 +123,7 @@ export const POST = withAuth(async (request, user) => {
 
         const campaignName = campaignConfig?.campaignName || `${brandName}_${country}_${dateStr}`
 
-        // 🔧 使用默认配置创建广告系列
+        // 使用默认配置创建广告系列
         await createCampaign({
           userId: userId,
           offerId,
@@ -140,7 +140,7 @@ export const POST = withAuth(async (request, user) => {
           `[Batch Create] Created campaign for offer ${offerId} with creative ${creative.id}`
         )
 
-        // 🔧 清除 Offer 的解除关联信息（防止重复创建）
+        // 清除 Offer 的解除关联信息（防止重复创建）
         try {
           await db.exec(
             `

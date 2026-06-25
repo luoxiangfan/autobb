@@ -51,7 +51,7 @@ export function useGoogleAdsAccountsAuth(options: UseGoogleAdsAccountsAuthOption
     async (opts: {
       forceRefresh?: boolean
       isPoll?: boolean
-      /** 已有快照时跳过 /credentials（如刚 syncFromCredentialsResponse 或上一轮已 forceRefresh） */
+      /* * 已有快照时跳过 /credentials（如刚 syncFromCredentialsResponse 或上一轮已 forceRefresh） */
       skipCredentialsRefresh?: boolean
     }): Promise<ParsedGoogleAdsCredentialsStatus> => {
       const forceRefresh = Boolean(opts.forceRefresh)

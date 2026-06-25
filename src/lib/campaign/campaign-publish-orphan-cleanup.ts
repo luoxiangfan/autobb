@@ -161,7 +161,7 @@ async function buildPublishRollbackContextForAdsAccount(
   }
 }
 
-/** 发布中途失败时暂停本次刚创建的远端 Campaign。 */
+/* * 发布中途失败时暂停本次刚创建的远端 Campaign。 */
 export async function pauseOrphanGoogleAdsCampaignAfterPublishFailure(
   ctx: CampaignPublishRollbackContext,
   googleCampaignId: string

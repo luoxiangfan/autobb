@@ -111,7 +111,7 @@ export const POST = withAuth(async (request, user, context) => {
       `获取关键词建议: seeds=${finalSeedKeywords.join(', ')}, url=${useUrl ? offer.url : 'none'}`
     )
 
-    // 🔧 修复(2025-12-25): 支持OAuth和服务账号两种认证方式
+    // 支持OAuth和服务账号两种认证方式
     const { getGoogleAdsConfig } = await import('@/lib/keywords/server')
     const config = await getGoogleAdsConfig(
       numericUserId,

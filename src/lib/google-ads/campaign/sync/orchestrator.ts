@@ -39,12 +39,12 @@ export async function syncCampaignsFromGoogleAds(
   try {
     googleAdsSyncLogger.info('sync_start', { userId })
 
-    // 🔧 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
+    // 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
     const isActiveCondition = 'is_active = TRUE'
     const isManagerCondition = 'is_manager_account = FALSE'
     const isDeletedCondition = 'is_deleted = FALSE'
 
-    // 🔧 获取用户分配的 MCC 账号列表
+    // 获取用户分配的 MCC 账号列表
     let mccCustomerIds: string[] = []
     const mccAssignments = (await db.query(
       `
@@ -181,7 +181,7 @@ export async function syncCampaignsFromGoogleAds(
           }
 
           try {
-            // 🆕 修复：使用事务确保广告系列和 Offer 的原子性
+            // 使用事务确保广告系列和 Offer 的原子性
             // 先创建 Offer，再保存广告系列并关联 offer_id
             const offerResult = await createOfferFirst({
               userId,
@@ -264,10 +264,10 @@ export async function syncCampaignsFromGoogleAds(
             }
 
             if (shouldSyncComponents) {
-              // 🔧 通过 Google Ads API 同步广告组件并保存为 campaign_config
+              // 通过 Google Ads API 同步广告组件并保存为 campaign_config
               try {
                 if (campaign_config && Object.keys(campaign_config).length > 0) {
-                  // 🔧 更新 campaign_config（只更新从 Google 同步的广告系列）
+                  // 更新 campaign_config（只更新从 Google 同步的广告系列）
                   const configUpdate = await updateCampaignConfig(
                     campaignId,
                     campaign_config,

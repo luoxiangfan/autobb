@@ -102,7 +102,7 @@ function loadLaunchScoreCampaignConfigForOffer(
   }
 }
 
-/** 从 Launch Score 页 URL 查询参数解析（与 API parseLaunchScoreHashCampaignConfigFromSearchParams 一致） */
+/* * 从 Launch Score 页 URL 查询参数解析（与 API parseLaunchScoreHashCampaignConfigFromSearchParams 一致） */
 type SearchParamsLike = Pick<URLSearchParams, 'get'>
 
 export function parseLaunchScoreHashCampaignConfigFromSearchParamsClient(
@@ -138,7 +138,7 @@ export function parseLaunchScoreHashCampaignConfigFromSearchParamsClient(
   }
 }
 
-/** URL 优先，其次 sessionStorage（Launch Step3 写入） */
+/* * URL 优先，其次 sessionStorage（Launch Step3 写入） */
 export function resolveLaunchScoreHashCampaignConfigForClient(
   offerId: number,
   searchParams: SearchParamsLike
@@ -214,7 +214,7 @@ export function buildLaunchScoreApiQueryString(
   return query ? `?${query}` : ''
 }
 
-/** Launch Score 独立页路径（含 offerId / creativeId / Step3 投放配置） */
+/* * Launch Score 独立页路径（含 offerId / creativeId / Step3 投放配置） */
 export function buildLaunchScorePagePath(input: {
   offerId: number
   creativeId?: number | null
@@ -240,7 +240,7 @@ export function clearLaunchScoreCampaignConfigForOffer(offerId: number): void {
   }
 }
 
-/** 稳定序列化 URL 查询中的 campaignConfig 字段（用于 React 依赖） */
+/* * 稳定序列化 URL 查询中的 campaignConfig 字段（用于 React 依赖） */
 export function serializeLaunchScoreCampaignConfigQueryKey(searchParams: SearchParamsLike): string {
   return [
     searchParams.get('budgetAmount') ?? '',

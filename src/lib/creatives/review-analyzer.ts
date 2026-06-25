@@ -1,15 +1,15 @@
 /**
- * P0高级优化：用户评论深度分析
+ * P0高级用户评论深度分析
  *
- * 功能：
+ * 功能
  * 1. 抓取Amazon产品评论（30-50条）
  * 2. AI智能分析：情感分布、高频关键词、真实场景、痛点挖掘
  * 3. 为广告创意生成提供真实用户洞察
  *
- * 预期效果：
- * - CTR提升: +20-30%（使用用户真实语言）
- * - 转化率提升: +15-25%（解决用户痛点）
- * - 广告相关性评分: +25%（匹配用户搜索意图）
+ * 预期效果
+ * CTR提升: +20-30%（使用用户真实语言）
+ * 转化率提升: +15-25%（解决用户痛点）
+ * 广告相关性评分: +25%（匹配用户搜索意图）
  */
 
 import { generateContent } from '../ai/server'
@@ -19,7 +19,7 @@ import { compressReviews, type RawReview as CompressorRawReview } from './review
 import { withCache } from '../ai/server'
 import { loadPrompt } from '../ai/server'
 
-// ==================== 数据结构定义 ====================
+// 数据结构定义
 
 /**
  * 单条评论原始数据
@@ -89,7 +89,7 @@ export interface PainPoint {
 }
 
 /**
- * 🔥 v3.2新增：量化数据亮点（评论中提到的具体数字）
+ * v3.2量化数据亮点（评论中提到的具体数字）
  * 这些数字是广告创意的黄金素材！
  */
 export interface QuantitativeHighlight {
@@ -100,7 +100,7 @@ export interface QuantitativeHighlight {
 }
 
 /**
- * 🔥 v3.2新增：用户提及的竞品
+ * v3.2用户提及的竞品
  */
 export interface CompetitorMention {
   brand: string // "Roomba", "Dyson", "iRobot"
@@ -135,10 +135,10 @@ export interface ReviewAnalysisResult {
   // 痛点挖掘
   commonPainPoints: PainPoint[]
 
-  // 🔥 v3.2新增：量化数据亮点
+  // v3.2量化数据亮点
   quantitativeHighlights?: QuantitativeHighlight[]
 
-  // 🔥 v3.2新增：用户提及的竞品
+  // v3.2用户提及的竞品
   competitorMentions?: CompetitorMention[]
 
   // 原始数据统计
@@ -146,7 +146,7 @@ export interface ReviewAnalysisResult {
   verifiedReviewCount: number // 认证购买评论数
 }
 
-// ==================== 评论抓取逻辑 ====================
+// 评论抓取逻辑
 
 /**
  * 从Playwright页面对象中抓取Amazon产品评论
@@ -168,7 +168,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
         // 直接在URL后添加#customer-reviews_feature_div锚点，浏览器会自动滚动到评论区域
         const reviewsUrl = currentUrl.split('#')[0] + '#customer-reviews_feature_div'
         console.log(`🔗 导航到评论区域: ${reviewsUrl}`)
-        // 🔧 优化(2025-12-11): 使用networkidle等待，确保动态内容加载完成
+        // 使用networkidle等待，确保动态内容加载完成
         await page.goto(reviewsUrl, { waitUntil: 'networkidle', timeout: 15000 })
         console.log('✅ 已导航到评论区域')
       } catch (navError) {
@@ -176,7 +176,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
       }
     }
 
-    // 🔥 2025-12-13 KISS优化v2：评论区在页面底部(~9945px)，必须先深度滚动触发懒加载
+    // KISS优化v2：评论区在页面底部(~9945px)，必须先深度滚动触发懒加载
     // 顺序：深度滚动 → 检测容器 → 快速失败
     console.log('📜 开始深度滚动到页面底部触发评论区懒加载...')
     try {
@@ -227,7 +227,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
     }
     console.log(`✅ 发现评论容器: ${hasReviewContainer}`)
 
-    // 🔧 优化(2025-12-11): 优先等待实际评论元素，而非容器
+    // 优先等待实际评论元素，而非容器
     // 评论容器可能存在但内部评论元素是懒加载的
     const reviewElementSelectors = [
       '[data-hook="review"]', // 标准评论元素（最可靠）
@@ -239,7 +239,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
 
     let reviewSelectorFound = false
 
-    // 🔧 优化(2025-12-11): 增加重试机制，每次等待更长时间
+    // 增加重试机制，每次等待更长时间
     for (let attempt = 1; attempt <= 3; attempt++) {
       console.log(`🔄 尝试第${attempt}次查找评论元素...`)
 
@@ -270,7 +270,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
 
     if (!reviewSelectorFound) {
       console.log('⚠️ 所有评论选择器均未找到，尝试通用抓取')
-      // 🔧 优化(2025-12-11): 输出调试信息帮助诊断
+      // 输出调试信息帮助诊断
       const debugInfo = await page.evaluate(() => {
         return {
           hasReviewContainer: !!document.querySelector('#customer-reviews_feature_div'),
@@ -287,7 +287,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
     const reviews: RawReview[] = await page.evaluate((maxReviews: number) => {
       console.log('🔍 [Browser Context] 开始查找评论元素...')
 
-      // 🔧 优化(2025-12-11): 添加更多Amazon国际站点的选择器fallback
+      // 添加更多Amazon国际站点的选择器fallback
       const selectorGroups = [
         // 优先级1: 产品评论区域内的标准评论（最常见）
         '#customer-reviews_feature_div [data-hook="review"]',
@@ -339,7 +339,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
 
       if (!reviewElements || reviewElements.length === 0) {
         console.log('❌ [Browser Context] 所有选择器都未找到评论元素')
-        // 🔍 调试信息：输出页面中的可能评论容器
+        // 调试信息：输出页面中的可能评论容器
         const debugContainers = [
           '#customer-reviews_feature_div',
           '#reviews-medley-footer',
@@ -361,7 +361,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
       reviewElements.forEach((el, index) => {
         if (index >= maxReviews) return
 
-        // 🔧 优化(2025-12-11): 增强评分提取，支持更多格式
+        // 增强评分提取，支持更多格式
         const ratingEl = el.querySelector(
           '[data-hook="review-star-rating"], ' +
             '[data-hook="cmps-review-star-rating"], ' +
@@ -375,7 +375,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
           ratingEl?.getAttribute('title') ||
           null
 
-        // 🔧 优化(2025-12-11): 增强标题提取
+        // 增强标题提取
         const titleEl = el.querySelector(
           '[data-hook="review-title"], ' +
             '[data-hook="review-title-content"], ' +
@@ -391,7 +391,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
           title = title.replace(/^\d+(\.\d+)?\s+out of\s+\d+\s+stars\s*/i, '').trim()
         }
 
-        // 🔧 优化(2025-12-11): 增强正文提取
+        // 增强正文提取
         const bodyEl = el.querySelector(
           '[data-hook="review-body"], ' +
             '[data-hook="review-collapsed-text"], ' +
@@ -414,7 +414,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
         )
         const helpful = helpfulEl?.textContent?.trim() || null
 
-        // 🔧 优化(2025-12-11): 增强认证购买检测
+        // 增强认证购买检测
         const verifiedEl = el.querySelector(
           '[data-hook="avp-badge"], ' +
             '[data-hook="avp-badge-linkless"], ' +
@@ -470,7 +470,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
   }
 }
 
-// ==================== AI分析逻辑 ====================
+// AI分析逻辑
 
 /**
  * 使用AI分析评论数据，提取深度洞察
@@ -498,7 +498,7 @@ export async function analyzeReviewsWithAI(
     return getEmptyAnalysisResult()
   }
 
-  // 🔧 P1优化: 评论数量少（<5条）时，直接使用简化分析而非调用AI（节省API成本+避免超时）
+  // 评论数量少（<5条）时，直接使用简化分析而非调用AI（节省API成本+避免超时）
   if (reviews.length < 5) {
     console.log(`⚠️ 评论数量较少(${reviews.length}条)，使用简化分析...`)
     return generateSimplifiedAnalysis(reviews)
@@ -522,7 +522,7 @@ export async function analyzeReviewsWithAI(
   let compressionStats: any = null
 
   if (options?.enableCompression) {
-    // 🆕 Token优化：使用压缩评论（60-70%减少）
+    // Token使用压缩评论（60-70%减少）
     console.log('🗜️ 启用评论压缩优化...')
     const compressed = compressReviews(reviews as CompressorRawReview[], 40)
     reviewTexts = compressed.compressed
@@ -548,21 +548,21 @@ export async function analyzeReviewsWithAI(
       .join('\n\n---\n\n')
   }
 
-  // 📦 从数据库加载prompt模板(版本管理)
+  // 从数据库加载prompt模板(版本管理)
   const promptTemplate = await loadPrompt('review_analysis')
 
-  // 🎨 准备模板变量
+  // � 准备模板变量
   const productNameVar = productName
   const totalReviewsVar = reviews.length.toString()
 
-  // 🎨 插值替换模板变量
+  // � 插值替换模板变量
   const prompt = promptTemplate
     .replace('{{productName}}', productNameVar)
     .replace('{{totalReviews}}', totalReviewsVar)
     .replace(/\{\{langName\}\}/g, langName)
     .replace('{{reviewTexts}}', reviewTexts)
 
-  // 🔥 2025-12-13修复：强制追加语言指令，确保AI输出目标语言
+  // 强制追加语言指令，确保AI输出目标语言
   // 即使评论是其他语言（如Amazon.com上的意大利语评论），输出也必须是targetCountry语言
   const languageEnforcedPrompt =
     prompt +
@@ -574,8 +574,8 @@ export async function analyzeReviewsWithAI(
       throw new Error('评论分析需要用户ID，请确保已登录')
     }
 
-    // 🆕 Token优化：支持缓存（7天TTL）
-    // 🔥 2025-12-16修复：cacheKey必须包含URL，避免不同offer共享缓存
+    // Token支持缓存（7天TTL）
+    // cacheKey必须包含URL，避免不同offer共享缓存
     // 如果未提供cacheKey，使用productName+targetCountry作为fallback（但强烈建议传入URL）
     const cacheKey = options?.cacheKey || `${productName}_${targetCountry}`
     if (!options?.cacheKey) {
@@ -585,7 +585,7 @@ export async function analyzeReviewsWithAI(
       const aiResponse = await generateContent(
         {
           operationType: 'review_analysis',
-          prompt: languageEnforcedPrompt, // 🔥 使用强制语言指令的prompt
+          prompt: languageEnforcedPrompt, // 使用强制语言指令的prompt
           temperature: 0.5, // 降低温度确保更准确的提取
           maxOutputTokens: 8192, // 增加到8192以避免评论分析被截断
         },
@@ -645,7 +645,7 @@ export async function analyzeReviewsWithAI(
       purchaseReasons: analysisData.purchaseReasons || [],
       userProfiles: analysisData.userProfiles || [],
       commonPainPoints: analysisData.commonPainPoints || [],
-      // 🔥 v3.2新增字段
+      // v3.2新增字段
       quantitativeHighlights: analysisData.quantitativeHighlights || [],
       competitorMentions: analysisData.competitorMentions || [],
       analyzedReviewCount: reviews.length,
@@ -657,7 +657,7 @@ export async function analyzeReviewsWithAI(
     console.log(`   - 负面关键词: ${result.topNegativeKeywords.length}个`)
     console.log(`   - 使用场景: ${result.realUseCases.length}个`)
     console.log(`   - 痛点: ${result.commonPainPoints.length}个`)
-    // 🔥 v3.2新增日志
+    // v3.2新增日志
     if (result.quantitativeHighlights && result.quantitativeHighlights.length > 0) {
       console.log(
         `   - 量化数据: ${result.quantitativeHighlights.length}个 (${result.quantitativeHighlights.map((q) => q.adCopy).join(', ')})`
@@ -694,13 +694,13 @@ function getEmptyAnalysisResult(): ReviewAnalysisResult {
 }
 
 /**
- * 🔧 P1优化: 为评论数量少（<5条）的产品生成简化分析
+ * 为评论数量少（<5条）的产品生成简化分析
  * 直接从原始评论中提取基础统计，而非调用AI
  *
- * 优势：
- * - 节省AI API成本
- * - 避免超时问题
- * - 仍能提供有价值的基础洞察
+ * 优势
+ * 节省AI API成本
+ * 避免超时问题
+ * 仍能提供有价值的基础洞察
  */
 function generateSimplifiedAnalysis(reviews: RawReview[]): ReviewAnalysisResult {
   // 计算基础统计
@@ -755,4 +755,4 @@ function generateSimplifiedAnalysis(reviews: RawReview[]): ReviewAnalysisResult 
   }
 }
 
-// ==================== 辅助函数 ====================
+// 辅助函数

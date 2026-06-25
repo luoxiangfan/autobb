@@ -1,4 +1,4 @@
-/** Headline token sets shared by response parsing and contract enforcement. */
+/* * Headline token sets shared by response parsing and contract enforcement. */
 export const HEADLINE2_INTENT_TOKENS = new Set([
   'buy',
   'purchase',

@@ -13,7 +13,7 @@ type AuthenticatedHandler = (
   context?: { params?: Record<string, string> }
 ) => Promise<Response>
 
-/** Wrap a route handler like production withAuth, driven by a mocked verifyAuth. */
+/* * Wrap a route handler like production withAuth, driven by a mocked verifyAuth. */
 export function buildWithAuthFromVerifyAuth(
   verifyAuth: MockVerifyAuth,
   handler: AuthenticatedHandler,
@@ -47,7 +47,7 @@ export function createWithAuthMock(verifyAuth: MockVerifyAuth) {
     buildWithAuthFromVerifyAuth(verifyAuth, handler, options)
 }
 
-/** Use inside vi.hoisted(() => createCampaignAuthMocks()) so withAuth is available when vi.mock runs. */
+/* * Use inside vi.hoisted(() => createCampaignAuthMocks()) so withAuth is available when vi.mock runs. */
 export function createCampaignAuthMocks() {
   const verifyAuth = vi.fn<MockVerifyAuth>()
   const withAuth = (handler: AuthenticatedHandler, options?: { requireAdmin?: boolean }) =>

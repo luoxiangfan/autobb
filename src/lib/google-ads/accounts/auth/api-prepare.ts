@@ -26,7 +26,7 @@ import {
 import { hydrateGoogleAdsAuthContextSecrets } from '@/lib/google-ads/auth/context-cache'
 import { getGoogleAdsAuthContextGenerationForHydrate } from '@/lib/google-ads/auth/context'
 
-/** campaign-sync / 定时任务：按账户解析认证方式与 token（与 syncCampaignsFromGoogleAds 一致） */
+/* * campaign-sync / 定时任务：按账户解析认证方式与 token（与 syncCampaignsFromGoogleAds 一致） */
 export function resolveSyncAuthForAccount(
   accountApiAuth: GoogleAdsApiAuthFields,
   oauthCredentials: GoogleAdsAuthContext['oauthCredentials'],
@@ -254,7 +254,7 @@ function normalizeLinkedSaForPrepareCache(linkedSa: string | null | undefined): 
   return trimmed || null
 }
 
-/** job 内 OAuth heal bundle 按 ownerUserId 键（共享认证多子用户复用） */
+/* * job 内 OAuth heal bundle 按 ownerUserId 键（共享认证多子用户复用） */
 function healedOAuthBundleCacheKey(ctx: GoogleAdsAuthContext): number {
   return ctx.ownerUserId
 }

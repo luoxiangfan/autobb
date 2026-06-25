@@ -19,7 +19,7 @@ const AD_CREATIVE_GENERATION_MODE_LABELS: Record<AdCreativeGenerationMode, strin
   original: '标准',
 }
 
-/** 下拉框展示用短文案（避免与描述前半段重复拼接） */
+/* * 下拉框展示用短文案（避免与描述前半段重复拼接） */
 export const AD_CREATIVE_GENERATION_MODE_SELECT_LABELS: Record<AdCreativeGenerationMode, string> = {
   fast: '快速',
   balanced: '均衡',
@@ -119,7 +119,7 @@ export function getAdCreativeGenerationModeLabel(mode: unknown): string {
   return AD_CREATIVE_GENERATION_MODE_LABELS[normalizeAdCreativeGenerationMode(mode)]
 }
 
-/** 解析任务/DB 中的模式值：已知别名 → 规范枚举；未知字符串原样保留 */
+/* * 解析任务/DB 中的模式值：已知别名 → 规范枚举；未知字符串原样保留 */
 export function resolveStoredGenerationMode(
   value: unknown
 ): AdCreativeGenerationMode | string | null {
@@ -173,7 +173,7 @@ function resolveModeAndProfileFromRequest(body: unknown): {
   }
 }
 
-/** 从请求体解析模式 + 配置，并将 maxRetries 限制在模式上限内 */
+/* * 从请求体解析模式 + 配置，并将 maxRetries 限制在模式上限内 */
 export function resolveCreativeGenerationRuntime(body: unknown): {
   runtime: CreativeGenerationRuntime
   invalidMode: boolean

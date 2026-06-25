@@ -132,7 +132,7 @@ export async function loadPrompt(promptId: string): Promise<string> {
   if (cached && !isExpired(cached)) {
     const now = Date.now()
 
-    // 🔧 解决“切换active版本后仍使用旧缓存”的问题：周期性检查active版本
+    // 解决“切换active版本后仍使用旧缓存”的问题：周期性检查active版本
     if (!cached.lastVerifiedAt || now - cached.lastVerifiedAt > VERSION_CHECK_TTL) {
       const db = await getDatabase()
       const currentVersion = await queryCurrentPromptVersion(db, promptId)
@@ -207,8 +207,8 @@ export function clearPromptCache(promptId?: string): void {
  *
  * @example
  * const result = interpolateTemplate(
- *   'Brand: {{offer.brand}}, Price: {{offer.price}}',
- *   { offer: { brand: 'Sony', price: '$299' } }
+ * 'Brand: {{offer.brand}}, Price: {{offer.price}}',
+ * { offer: { brand: 'Sony', price: '$299' } }
  * )
  * // result: 'Brand: Sony, Price: $299'
  */

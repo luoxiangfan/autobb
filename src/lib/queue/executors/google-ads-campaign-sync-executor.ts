@@ -62,7 +62,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       )
     }
 
-    // 🔧 优化：同步开始时写入 running 状态的记录
+    // 同步开始时写入 running 状态的记录
     try {
       const logResult = await db.exec(
         `INSERT INTO sync_logs (user_id, sync_type, status, record_count, duration_ms, started_at, completed_at, created_at, is_manual)
@@ -79,7 +79,7 @@ export async function executeGoogleAdsCampaignSyncTask(
           isManualSync,
         ]
       )
-      // 🔧 获取插入的 id（RETURNING / lastInsertRowid）
+      // 获取插入的 id（RETURNING / lastInsertRowid）
       syncLogId = logResult.lastInsertRowid || null
       console.log(`📝 [GoogleAdsSyncExecutor] 创建同步日志记录 ID: ${syncLogId}`)
     } catch (logError) {
@@ -96,7 +96,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     const duration = Date.now() - startTime
     const completedAt = utcNowIso()
 
-    // 🔧 优化：同步完成后更新记录（而不是插入新记录）
+    // 同步完成后更新记录（而不是插入新记录）
     if (syncLogId !== null) {
       try {
         await db.exec(
@@ -220,7 +220,7 @@ export async function executeGoogleAdsCampaignSyncTask(
 
     console.error(`❌ [GoogleAdsSyncExecutor] 同步任务失败：${taskId}`, error)
 
-    // 🔧 优化：同步失败时更新记录
+    // 同步失败时更新记录
     if (syncLogId !== null) {
       try {
         await db.exec(

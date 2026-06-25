@@ -1,16 +1,16 @@
 /**
  * 批量Offer创建任务执行器
  *
- * 功能：
+ * 功能
  * 1. 解析CSV行数据
  * 2. 为每行创建一个offer_task (关联batch_id)
  * 3. 将所有offer_tasks加入队列
  * 4. 监控子任务完成情况，更新batch_tasks进度
  *
- * 注意：
- * - 这是一个协调器任务，本身不执行提取逻辑
- * - 真正的提取由offer-extraction executor执行
- * - 通过batch_id关联父子任务
+ * 注意
+ * 这是一个协调器任务，本身不执行提取逻辑
+ * 真正的提取由offer-extraction executor执行
+ * 通过batch_id关联父子任务
  */
 
 import type { Task } from '../types'
@@ -58,7 +58,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
   const db = getDatabase()
   const queue = getQueueManager()
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
 
   console.log(`🚀 开始执行批量创建任务: batch=${batchId}, count=${rows.length}`)
@@ -152,7 +152,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
         targetCountry: row.target_country,
         skipCache: false,
         skipWarmup: false,
-        // 🔥 修复（2025-12-08）：传递产品价格和佣金比例，用于创建Offer记录
+        // 传递产品价格和佣金比例，用于创建Offer记录
         productPrice: row.product_price,
         commissionPayout: row.commission_payout,
         commissionType: row.commission_type,
@@ -294,7 +294,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
   } catch (error: any) {
     console.error(`❌ 批量创建任务失败: batch=${batchId}:`, error.message)
 
-    // 🔧 PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
+    // PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
     const nowFuncErr = 'NOW()'
 
     // 更新batch_tasks和upload_records为失败状态

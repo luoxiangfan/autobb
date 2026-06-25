@@ -5,7 +5,7 @@ import { getDatabase } from '../db'
 export { buildDeleteAccountRemoteMessage } from './account-delete-messages'
 export { buildDeleteAccountApiWarnings } from './account-delete-warnings'
 
-// --- from google-ads-account-delete-config.ts ---
+// from google-ads-account-delete-config.ts
 function parseBoundedInt(
   raw: string | undefined,
   fallback: number,
@@ -48,7 +48,7 @@ export function getGoogleAdsAccountDeleteRemoteConfig(): GoogleAdsAccountDeleteR
   }
 }
 
-// --- from google-ads-account-delete-campaigns.ts ---
+// from google-ads-account-delete-campaigns.ts
 
 export interface DeletableRemoteCampaignRow {
   google_campaign_id: string
@@ -102,7 +102,7 @@ export function limitDeletableRemoteCampaigns<T extends DeletableRemoteCampaignR
   }
 }
 
-// --- from google-ads-account-delete-request.ts ---
+// from google-ads-account-delete-request.ts
 
 export interface DeleteGoogleAdsAccountRequestOptions {
   removeGoogleAdsCampaigns: boolean

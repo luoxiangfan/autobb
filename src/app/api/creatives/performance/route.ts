@@ -8,10 +8,10 @@ import { toNumber } from '@/lib/common/server'
  *
  * 获取所有Creative的性能数据汇总和对比
  *
- * Query Parameters:
- * - daysBack: number (可选，默认30天)
- * - sortBy: 'score' | 'performance' | 'recent' (可选，默认score)
- * - limit: number (可选，限制返回数量)
+ * Query Parameters
+ * daysBack: number (可选，默认30天)
+ * sortBy: 'score' | 'performance' | 'recent' (可选，默认score)
+ * limit: number (可选，限制返回数量)
  */
 export const dynamic = 'force-dynamic'
 

@@ -14,7 +14,7 @@ export {
   BATCH_URL_SWAP_TASK_DEFAULTS,
 } from './batch-task-defaults-constants'
 
-/** 与 `BatchStartOfferTarget` 形状一致，避免与 `batch-start-tasks` 循环依赖 */
+/* * 与 `BatchStartOfferTarget` 形状一致，避免与 `batch-start-tasks` 循环依赖 */
 export type BatchOfferTargetForDefaults = {
   offerId: number
   targetCountry?: string | null
@@ -30,7 +30,7 @@ export function batchDefaultBalancedHourlyDistribution(): number[] {
   )
 }
 
-/** 与 batch-start-tasks 中每 Offer 的补点击配置一致 */
+/* * 与 batch-start-tasks 中每 Offer 的补点击配置一致 */
 function hourlyDistributionsEqual(left: number[], right: number[]): boolean {
   if (left.length !== right.length) return false
   return left.every((value, index) => value === right[index])

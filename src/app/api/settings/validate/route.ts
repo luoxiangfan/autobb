@@ -159,7 +159,7 @@ export const POST = withOptionalAuth(async (request, user) => {
                 continue
               }
 
-              // 🔧 调试：记录原始URL
+              // 调试：记录原始URL
               console.log(`🔍 验证代理 #${i + 1}:`, {
                 country: item.country,
                 url: item.url,
@@ -168,7 +168,7 @@ export const POST = withOptionalAuth(async (request, user) => {
                 trimmedUrl: item.url.trim(),
               })
 
-              // 🔥 使用新的Provider系统验证URL
+              // 使用新的Provider系统验证URL
               try {
                 const trimmedUrl = item.url.trim()
                 const provider = ProxyProviderRegistry.getProvider(trimmedUrl)

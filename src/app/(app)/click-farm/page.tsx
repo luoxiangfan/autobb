@@ -70,7 +70,7 @@ export default function ClickFarmPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 
-  // 🆕 批量选择状态
+  // 批量选择状态
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set())
   const [isBatchDeleteDialogOpen, setIsBatchDeleteDialogOpen] = useState(false)
   const [batchDeleting, setBatchDeleting] = useState(false)
@@ -279,13 +279,13 @@ export default function ClickFarmPage() {
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
   }
 
-  // 🆕 安全格式化百分比（处理NaN、undefined等）
+  // 安全格式化百分比（处理NaN、undefined等）
   const formatPercent = (value: number | undefined | null): string => {
     if (value === undefined || value === null || isNaN(value)) return '0%'
     return `${value.toFixed(1)}%`
   }
 
-  // 🆕 格式化日期显示（处理 Date 对象和字符串格式）
+  // 格式化日期显示（处理 Date 对象和字符串格式）
   const formatDate = (dateValue: any): string => {
     if (!dateValue) return '-'
     // 如果是 Date 对象
@@ -452,7 +452,7 @@ export default function ClickFarmPage() {
     }
   }
 
-  // 🆕 全选/取消全选
+  // 全选/取消全选
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const allIds = new Set(paginatedTasks.filter((task) => !task.is_deleted).map((t) => t.id))
@@ -462,7 +462,7 @@ export default function ClickFarmPage() {
     }
   }
 
-  // 🆕 单选切换
+  // 单选切换
   const handleSelectTask = (taskId: string, checked: boolean) => {
     const newSelected = new Set(selectedTaskIds)
     if (checked) {
@@ -473,7 +473,7 @@ export default function ClickFarmPage() {
     setSelectedTaskIds(newSelected)
   }
 
-  // 🆕 批量删除处理函数
+  // 批量删除处理函数
   const handleBatchDelete = async () => {
     if (selectedTaskIds.size === 0) return
 
@@ -643,7 +643,7 @@ export default function ClickFarmPage() {
               </Badge>
             </div>
             <div className="flex items-center gap-3">
-              {/* 🆕 批量删除按钮 - 有选中项时显示 */}
+              {/* 批量删除按钮 - 有选中项时显示 */}
               {selectedTaskIds.size > 0 && (
                 <Button
                   variant="destructive"
@@ -859,7 +859,7 @@ export default function ClickFarmPage() {
               <Table className="[&_thead_th]:bg-white">
                 <TableHeader>
                   <TableRow>
-                    {/* 🆕 全选复选框 */}
+                    {/* 全选复选框 */}
                     <TableHead className="w-[50px]">
                       <Checkbox
                         checked={
@@ -901,7 +901,7 @@ export default function ClickFarmPage() {
                 <TableBody>
                   {paginatedTasks.map((task) => (
                     <TableRow key={task.id} className="hover:bg-gray-50/50">
-                      {/* 🆕 行选择复选框 */}
+                      {/* 行选择复选框 */}
                       <TableCell>
                         <Checkbox
                           checked={selectedTaskIds.has(task.id)}
@@ -1099,7 +1099,7 @@ export default function ClickFarmPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* 🆕 Batch Delete Confirmation Dialog */}
+      {/* Batch Delete Confirmation Dialog */}
       <AlertDialog open={isBatchDeleteDialogOpen} onOpenChange={setIsBatchDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1109,7 +1109,7 @@ export default function ClickFarmPage() {
               个任务吗？这些任务将被标记为已删除，但历史统计数据会被保留。此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {/* 🆕 显示批量删除错误信息 */}
+          {/* 显示批量删除错误信息 */}
           {batchDeleteError && (
             <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
               {batchDeleteError}

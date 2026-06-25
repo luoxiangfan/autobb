@@ -22,7 +22,7 @@ import {
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
 
-/** 同一 Offer 多次 Launch Score 时复用，避免重复 prepare Keyword Planner expand */
+/* * 同一 Offer 多次 Launch Score 时复用，避免重复 prepare Keyword Planner expand */
 export type LaunchScoreAdStrengthPlannerContext = {
   plannerSession?: KeywordPlannerPreparedSession
   skipKeywordPoolExpandLoad: boolean
@@ -86,11 +86,11 @@ export async function calculateLaunchScoresForCreatives(
 /**
  * Launch Score 4维度评分系统 v4.0
  *
- * 维度权重：
- * - 投放可行性：35分（品牌词搜索量15 + 利润空间10 + 竞争度10）
- * - 广告质量：30分（Ad Strength 15 + 标题多样性8 + 描述质量7）
- * - 关键词策略：20分（相关性8 + 匹配类型6 + 否定关键词6）
- * - 基础配置：15分（国家/语言5 + Final URL 5 + 预算5）
+ * 维度权重
+ * 投放可行性：35分（品牌词搜索量15 + 利润空间10 + 竞争度10）
+ * 广告质量：30分（Ad Strength 15 + 标题多样性8 + 描述质量7）
+ * 关键词策略：20分（相关性8 + 匹配类型6 + 否定关键词6）
+ * 基础配置：15分（国家/语言5 + Final URL 5 + 预算5）
  */
 export async function calculateLaunchScore(
   offer: Offer,
@@ -117,12 +117,12 @@ export async function calculateLaunchScore(
           ? 'store'
           : 'product'
 
-    // 🎯 获取创意中的关键词数据
+    // 获取创意中的关键词数据
     const creativeKeywords = creative.keywords || []
     const negativeKeywords = (creative as any).negativeKeywords || []
     const keywordsWithVolume = (creative as any).keywordsWithVolume || []
 
-    // 🔥 新增：调试日志 - 追踪否定关键词
+    // 调试日志 - 追踪否定关键词
     console.log(`[LaunchScore] 创意ID: ${(creative as any).id || 'N/A'}`)
     console.log(`[LaunchScore] 否定关键词数量: ${negativeKeywords.length}`)
     console.log(`[LaunchScore] 否定关键词示例: ${negativeKeywords.slice(0, 5).join(', ')}`)
@@ -131,7 +131,7 @@ export async function calculateLaunchScore(
     )
     console.log(`[LaunchScore] creative完整字段: ${Object.keys(creative).join(', ')}`)
 
-    // 🎯 计算品牌词搜索量（从keywordsWithVolume中提取品牌相关词）
+    // 计算品牌词搜索量（从keywordsWithVolume中提取品牌相关词）
     const brandKeywords = keywordsWithVolume.filter((kw: any) =>
       kw.keyword?.toLowerCase().includes(offer.brand?.toLowerCase() || '')
     )
@@ -142,7 +142,7 @@ export async function calculateLaunchScore(
     const brandCompetition =
       brandKeywords.length > 0 ? brandKeywords[0]?.competition || 'MEDIUM' : 'MEDIUM'
 
-    // 🎯 计算投放可行性评估（基于用户配置，不依赖Offer可选字段）
+    // 计算投放可行性评估（基于用户配置，不依赖Offer可选字段）
     // 评估预算是否合理（CPC vs 预算比例）
     const budgetAmount = campaignConfig?.budgetAmount || 10
     const maxCpcBid = campaignConfig?.maxCpcBid || 0.17
@@ -158,13 +158,13 @@ export async function calculateLaunchScore(
     const cpcToBudgetRatio = maxCpcBid / dailyBudget
     const isCpcReasonable = cpcToBudgetRatio <= 0.1 // CPC不超过日预算的10%
 
-    // 🎯 计算标题多样性
+    // 计算标题多样性
     const headlines = creative.headlines || []
     const uniqueHeadlines = new Set(headlines.map((h: string) => h.toLowerCase().trim()))
     const headlineDiversity =
       headlines.length > 0 ? Math.round((uniqueHeadlines.size / headlines.length) * 100) : 0
 
-    // 🎯 获取Ad Strength（优先使用已有的，否则评估）
+    // 获取Ad Strength（优先使用已有的，否则评估）
     let adStrength: AdStrengthRating = 'AVERAGE'
     if ((creative as any).ad_strength) {
       adStrength = (creative as any).ad_strength as AdStrengthRating
@@ -203,7 +203,7 @@ export async function calculateLaunchScore(
       })
     }
 
-    // 🎯 准备关键词搜索量文本（包含matchType信息）
+    // 准备关键词搜索量文本（包含matchType信息）
     const keywordsWithVolumeText =
       keywordsWithVolume.length > 0
         ? keywordsWithVolume
@@ -215,7 +215,7 @@ export async function calculateLaunchScore(
             .join('\n')
         : '暂无关键词搜索量数据'
 
-    // 🔥 新增(2025-12-18)：检查keywordsWithVolume中是否有competition数据
+    // 检查keywordsWithVolume中是否有competition数据
     const keywordsWithCompetition = keywordsWithVolume.filter((kw: any) => kw.competition)
     console.log(`[LaunchScore] 关键词competition数据检查:`)
     console.log(`   - 总关键词数: ${keywordsWithVolume.length}`)
@@ -227,7 +227,7 @@ export async function calculateLaunchScore(
       console.log(`   - 第一个关键词的完整字段: ${JSON.stringify(keywordsWithVolume[0])}`)
     }
 
-    // 🎯 计算匹配类型分布
+    // 计算匹配类型分布
     const matchTypes: Record<string, number> = {}
     keywordsWithVolume.forEach((kw: any) => {
       const type = kw.matchType || 'PHRASE' // 缺失matchType时按PHRASE统计，避免误判为BROAD
@@ -238,7 +238,7 @@ export async function calculateLaunchScore(
         .map(([type, count]) => `${type}: ${count}`)
         .join(', ') || 'Not specified'
 
-    // 🔥 新增(2025-12-18)：调试日志 - 追踪匹配类型分布
+    // 调试日志 - 追踪匹配类型分布
     console.log(`[LaunchScore] 关键词匹配类型分布:`)
     console.log(`   - 总关键词数: ${keywordsWithVolume.length}`)
     console.log(`   - 分布详情: ${matchTypeDistribution}`)
@@ -248,13 +248,13 @@ export async function calculateLaunchScore(
       console.log(`   - 第一个matchType: ${firstKw.matchType || '(未设置)'}`)
     }
 
-    // 🔥 新增：调试日志 - 追踪prompt中的否定关键词
+    // 调试日志 - 追踪prompt中的否定关键词
     console.log(`[LaunchScore] 准备替换到prompt中的否定关键词数量: ${negativeKeywords.length}`)
     console.log(
       `[LaunchScore] 否定关键词内容: ${negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE'}`
     )
 
-    // 📦 加载 Launch Score prompt（放在 Ad Strength 之后，已有 ad_strength 时可跳过）
+    // 加载 Launch Score prompt（放在 Ad Strength 之后，已有 ad_strength 时可跳过）
     const promptTemplate = await loadPrompt('launch_score')
 
     const reviewedInputs: InputReview[] = []
@@ -401,7 +401,7 @@ export async function calculateLaunchScore(
       ...promptVariables,
     })
 
-    // 🤖 调用AI评分
+    // 调用AI评分
     const aiResponse = await generateContent(
       {
         operationType: 'launch_score_calculation',
@@ -458,7 +458,7 @@ export async function calculateLaunchScore(
       )
     }
 
-    // 🔥 调试日志 - v4.16: 显示所有4个维度的评分（版本由prompt_loader自动确定）
+    // 调试日志 - v4.16: 显示所有4个维度的评分（版本由prompt_loader自动确定）
     const promptVersion = promptTemplate.includes('marketPotentialScore') ? 'v4.15+' : 'v4.0'
     console.log(`[LaunchScore] ===== ${promptVersion} 四维度评分详情 =====`)
     console.log(`[LaunchScore] 1️⃣ 投放可行性: ${rawAnalysis.launchViability.score}/40`)
@@ -499,13 +499,13 @@ export async function calculateLaunchScore(
     // 验证评分范围
     validateScoresV4(rawAnalysis)
 
-    // 🎯 补充缺失数据
+    // 补充缺失数据
     rawAnalysis.launchViability.brandSearchVolume =
       rawAnalysis.launchViability.brandSearchVolume || brandSearchVolume
     // v4.15: 确保新增字段有默认值
     rawAnalysis.launchViability.marketPotentialScore =
       rawAnalysis.launchViability.marketPotentialScore ?? 0
-    // 修复(2025-12-19): 如果AI返回无效值或为空，用本地计算的值覆盖
+    // 如果AI返回无效值或为空，用本地计算的值覆盖
     rawAnalysis.adQuality.adStrength =
       !rawAnalysis.adQuality.adStrength ||
       !['POOR', 'AVERAGE', 'GOOD', 'EXCELLENT', 'PENDING'].includes(
@@ -539,7 +539,7 @@ export async function calculateLaunchScore(
       (rawAnalysis.basicConfig as typeof rawAnalysis.basicConfig & { currencyCode?: string })
         .currencyCode || campaignCurrencyCode
 
-    // 🎯 计算总分
+    // 计算总分
     const totalScore =
       rawAnalysis.launchViability.score +
       rawAnalysis.adQuality.score +
@@ -582,7 +582,7 @@ function validateScoresV4(analysis: ScoreAnalysis): void {
   }
 
   // v4.15: 验证总分在合理范围内（0-100）
-  // 🔧 修复(2025-12-18): 总分是各维度独立评分之和，不强制等于100
+  // 总分是各维度独立评分之和，不强制等于100
   const totalScore =
     analysis.launchViability.score +
     analysis.adQuality.score +
@@ -593,10 +593,10 @@ function validateScoresV4(analysis: ScoreAnalysis): void {
     throw new Error(`总分超出范围(0-100): ${totalScore}`)
   }
 } /**
- * ========================================
+ *
  * Ad Strength评估系统（NEW）
  * 结合本地算法 + Google Ads API验证
- * ========================================
+ *
  */
 
 /**
@@ -828,9 +828,9 @@ async function getQuickAdStrength(
 }
 
 /**
- * ========================================
+ *
  * Pre-Generation Keyword Gap Analysis
- * ========================================
+ *
  */
 
 /**
@@ -885,11 +885,11 @@ function extractKeywordsFromSuggestion(suggestion: string): string[] {
 /**
  * 验证提取的关键词是否有效
  *
- * 🔥 2026-03-13优化：动态词数限制，根据上下文放宽规则
- * - 高搜索量关键词：1-8词（允许单词和长尾词）
- * - 品牌词：1-8词
- * - 行业通用词（SCORING_SUGGESTION）：1-8词
- * - 默认：2-6词
+ * 动态词数限制，根据上下文放宽规则
+ * 高搜索量关键词：1-8词（允许单词和长尾词）
+ * 品牌词：1-8词
+ * 行业通用词（SCORING_SUGGESTION）：1-8词
+ * 默认：2-6词
  */
 function isValidExtractedKeyword(
   keyword: string,
@@ -957,7 +957,7 @@ export async function analyzeKeywordGapsPreGeneration(params: {
     console.log('[Gap Analysis] 开始关键词缺口分析...')
     console.log(`[Gap Analysis] 现有关键词数量: ${params.existingKeywords.length}`)
 
-    // 🆕 优化：使用专门的 AI prompt 直接提取关键词，而不是依赖评分系统
+    // 使用专门的 AI prompt 直接提取关键词，而不是依赖评分系统
     const { generateContent } = await import('../ai/server')
     const { repairJsonText } = await import('../ai/server')
 
@@ -1105,7 +1105,7 @@ export async function analyzeKeywordGapsPreGeneration(params: {
 
     const suggestedKeywords = Array.from(extractedKeywords)
 
-    // 🎯 限制数量：最多10个行业通用核心词
+    // 限制数量：最多10个行业通用核心词
     const MAX_GAP_KEYWORDS = 10
     const limitedKeywords = suggestedKeywords.slice(0, MAX_GAP_KEYWORDS)
 

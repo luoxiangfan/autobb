@@ -32,9 +32,9 @@ export type CampaignTrendsCachePayload = {
   startDate: string
   endDate: string
   currency: string | null
-  /** When set, trend series match the same offer-link filter as /api/campaigns/performance */
+  /* * When set, trend series match the same offer-link filter as /api/campaigns/performance */
   affiliate?: string | null
-  /** Same list-scoping as /api/campaigns/performance (excluding limit/offset/sort). */
+  /* * Same list-scoping as /api/campaigns/performance (excluding limit/offset/sort). */
   search: string
   status: string
   needsOfferCompletion: string

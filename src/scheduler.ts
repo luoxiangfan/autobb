@@ -2,7 +2,7 @@
  * 持续运行的定时任务调度服务
  * 使用 cron 实现定时调度，由supervisord管理进程
  *
- * 功能：
+ * 功能
  * 1. 每小时执行补点击任务（迁移到统一队列系统）
  * 2. 每5分钟检查一次，按用户配置间隔同步Google Ads数据
  * 3. 每天凌晨2点备份数据库
@@ -22,7 +22,7 @@ import {
 import { getDatabase } from './lib/db/database'
 import { getQueueManagerForTaskType } from './lib/queue/queue-routing'
 import { getOpenclawSettingsWithAffiliateSyncMap } from './lib/openclaw/config/settings'
-// 🔄 已迁移到统一队列系统
+// 已迁移到统一队列系统
 import {
   triggerDataSync,
   triggerBackup,
@@ -246,7 +246,7 @@ async function refreshOpenclawStrategySchedules() {
 /**
  * 任务0: 补点击任务调度
  * 频率: 每小时执行一次
- * 🔄 已迁移到统一队列系统，自动检查并执行待处理的补点击任务
+ * 已迁移到统一队列系统，自动检查并执行待处理的补点击任务
  */
 async function clickFarmSchedulerTask() {
   log('🖱️ 开始执行补点击任务调度...')
@@ -267,8 +267,8 @@ async function clickFarmSchedulerTask() {
 /**
  * 任务0.1: 换链接任务调度
  * 频率: 每分钟执行一次
- * 🔄 已迁移到统一队列系统，自动检查并执行待处理的换链接任务
- * 📍 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
+ * 已迁移到统一队列系统，自动检查并执行待处理的换链接任务
+ * � 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
  */
 async function urlSwapSchedulerTask() {
   log('🔄 开始执行换链接任务调度...')
@@ -302,8 +302,8 @@ async function urlSwapSchedulerTask() {
 /**
  * 任务0.2: 联盟商品同步调度
  * 频率: 每10分钟执行一次
- * 🔄 检查并触发 PartnerBoost/YeahPromos 商品同步任务
- * 📍 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
+ * 检查并触发 PartnerBoost/YeahPromos 商品同步任务
+ * � 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
  */
 async function affiliateProductSyncSchedulerTask() {
   log('🛍️ 开始执行联盟商品同步调度...')
@@ -326,10 +326,10 @@ async function affiliateProductSyncSchedulerTask() {
 /**
  * 任务0.3: 推荐指数自愈调度
  * 频率: 默认每小时执行一次
- * 目标:
- * - 兜底补齐 recommendation_score 为空的商品
- * - 兜底补齐“同步后评分过期”的商品（score_calculated_at < last_synced_at）
- * - 避免仅依赖 sync-complete/manual 触发导致的长期积压
+ * 目标
+ * 兜底补齐 recommendation_score 为空的商品
+ * 兜底补齐“同步后评分过期”的商品（score_calculated_at < last_synced_at）
+ * 避免仅依赖 sync-complete/manual 触发导致的长期积压
  */
 async function productScoreSchedulerTask() {
   const maxUsers = parsePositiveInt(process.env.PRODUCT_SCORE_SCHEDULER_MAX_USERS, 50)
@@ -406,7 +406,7 @@ async function productScoreSchedulerTask() {
 /**
  * 任务1: 数据同步任务
  * 频率：根据用户在/settings页面配置的数据同步间隔执行
- * 🔄 已迁移到统一队列系统，按用户配置执行
+ * 已迁移到统一队列系统，按用户配置执行
  */
 async function syncDataTask() {
   log('📊 开始执行数据同步任务...')
@@ -474,7 +474,7 @@ async function syncDataTask() {
       log(`⏭️ 当前有 ${usersWithActiveSyncTasks.size} 个用户存在进行中的同步任务，将跳过重复入队`)
     }
 
-    // 🔄 为每个用户检查是否需要同步
+    // 为每个用户检查是否需要同步
     for (const user of activeUsers) {
       if (usersWithActiveSyncTasks.has(user.id)) {
         log(`⏭️ 用户 ${user.username} 跳过同步（队列中已有 pending/running sync 任务）`)
@@ -595,13 +595,13 @@ async function runSyncGoogleAdsTaskSafely(trigger: 'cron' | 'startup') {
 /**
  * 任务2: 数据库备份任务
  * 频率：每天凌晨2点
- * 🔄 已迁移到统一队列系统
+ * 已迁移到统一队列系统
  */
 async function backupDatabaseTask() {
   log('💾 开始执行数据库备份任务...')
 
   try {
-    // 🔄 使用队列系统触发备份任务
+    // 使用队列系统触发备份任务
     const taskId = await triggerBackup({
       backupType: 'auto',
     })
@@ -614,13 +614,13 @@ async function backupDatabaseTask() {
 /**
  * 任务3: 清理旧数据任务
  * 频率：每天凌晨3点
- * 🔄 已迁移到统一队列系统
+ * 已迁移到统一队列系统
  */
 async function cleanupOldDataTask() {
   log('🗑️ 开始执行数据清理任务...')
 
   try {
-    // 🔄 使用队列系统触发清理任务
+    // 使用队列系统触发清理任务
     const taskId = await triggerCleanup({
       cleanupType: 'daily',
       retentionDays: 90,
@@ -637,10 +637,10 @@ async function cleanupOldDataTask() {
  * 任务5: 禁用/过期用户后台任务暂停
  * 频率：每天一次（可配置）
  *
- * 策略：
- * - click-farm：标记为 stopped
- * - url-swap：标记为 disabled
- * - 清理队列中已入队但未执行的 click-farm/url-swap 任务（pending/delayed）
+ * 策略
+ * click-farm：标记为 stopped
+ * url-swap：标记为 disabled
+ * 清理队列中已入队但未执行的 click-farm/url-swap 任务（pending/delayed）
  *
  * 注意：任务不会在用户重新启用/续费后自动恢复，需用户手动重新开启。
  */
@@ -964,8 +964,8 @@ async function openclawAffiliateRevenueSnapshotTask() {
 /**
  * 任务4: 链接可用性和账号状态检查
  * 频率：根据用户在/settings页面配置的link_check_time执行
- * 需求20优化：后续异步操作 - Ads账号状态检测、推广链接检测
- * 🔄 已迁移到统一队列系统，按用户配置执行
+ * 需求20后续异步操作 - Ads账号状态检测、推广链接检测
+ * 已迁移到统一队列系统，按用户配置执行
  */
 async function linkAndAccountCheckTask() {
   log('🔍 开始执行链接可用性和账号状态检查任务...')
@@ -1011,7 +1011,7 @@ async function linkAndAccountCheckTask() {
       }
 
       try {
-        // 🔄 使用队列系统触发链接检查任务
+        // 使用队列系统触发链接检查任务
         const taskId = await triggerLinkCheck({
           checkType: 'daily',
           userId: config.user_id,
@@ -1131,7 +1131,7 @@ function startScheduler() {
   })
 
   // 任务0.1: 每分钟执行换链接任务调度
-  // 📍 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
+  // � 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
   const urlSwapCheckCron = process.env.URL_SWAP_CHECK_CRON || '* * * * *'
   scheduleCronJob(
     urlSwapCheckCron,
@@ -1145,7 +1145,7 @@ function startScheduler() {
   log(`✅ 换链接任务调度已启动 (cron: ${urlSwapCheckCron})`)
 
   // 任务0.2: 每10分钟执行联盟商品同步调度
-  // 📍 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
+  // � 唯一调度位置：只在 scheduler 进程运行（与补点击任务架构一致）
   const affiliateProductSyncCron = process.env.AFFILIATE_PRODUCT_SYNC_CRON || '*/10 * * * *'
   scheduleCronJob(
     affiliateProductSyncCron,

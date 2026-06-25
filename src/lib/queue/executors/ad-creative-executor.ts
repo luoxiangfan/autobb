@@ -1,7 +1,7 @@
 /**
  * 广告创意生成任务执行器
  *
- * 功能：
+ * 功能
  * 1. 调用核心generateAdCreative函数
  * 2. 将进度更新到creative_tasks表
  * 3. 支持SSE实时推送（通过数据库轮询）
@@ -36,7 +36,7 @@ import {
   AD_CREATIVE_MAX_AUTO_RETRIES,
   AD_CREATIVE_REQUIRED_MIN_SCORE,
 } from '@/lib/creatives/server'
-// 🆕 v4.10: 关键词池集成
+// v4.10: 关键词池集成
 import {
   getAvailableBuckets,
   getBucketInfo,
@@ -154,8 +154,8 @@ export interface AdCreativeTaskData {
   maxRetries?: number
   targetRating?: 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR'
   generationMode?: AdCreativeGenerationMode
-  coverage?: boolean // ✅ 新命名：coverage 模式，运行时仍统一映射到 D / product_intent
-  synthetic?: boolean // 🔧 向后兼容：旧版 coverage 标记（运行时映射到 D / product_intent）
+  coverage?: boolean // 新命名：coverage 模式，运行时仍统一映射到 D / product_intent
+  synthetic?: boolean // 向后兼容：旧版 coverage 标记（运行时映射到 D / product_intent）
   bucket?: 'A' | 'B' | 'C' | 'D' | 'S'
   forceGenerateOnQualityGate?: boolean
   qualityGateBypassReason?: string
@@ -207,11 +207,11 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       .trim()
       .slice(0, 240) || null
 
-  // 🔧 PostgreSQL兼容性：根据数据库类型选择NOW函数
+  // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
   const toDbJson = (value: any): any => toDbJsonObjectField(value, null)
 
-  // 🔒 占位记录 ID（声明在 try 外，确保 catch 块可访问）
+  // � 占位记录 ID（声明在 try 外，确保 catch 块可访问）
   let placeholderCreativeId: number | null = null
 
   try {
@@ -266,7 +266,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       )
     }
 
-    // 🆕 v4.10: 获取或创建关键词池（复用已有数据，避免重复AI调用）
+    // v4.10: 获取或创建关键词池（复用已有数据，避免重复AI调用）
     let keywordPool: OfferKeywordPool | null = null
     let plannerSessionForGeneration: KeywordPlannerPreparedSession | undefined
     let preparedExpandForGeneration: Awaited<
@@ -361,7 +361,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       plannerSessionForGeneration = resolvedPool.plannerSession
       preparedExpandForGeneration = resolvedPool.preparedExpand
 
-      // 🔒 使用事务级 advisory lock + 占位记录防止并发竞态
+      // � 使用事务级 advisory lock + 占位记录防止并发竞态
       // 在事务内完成：加锁 → 查询可用桶 → 插入占位记录
       // 事务提交后锁自动释放，但占位记录已写入，其他任务能看到桶被占用
       await db.transaction(async () => {
@@ -465,7 +465,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
           `📦 使用关键词池桶 ${selectedBucket} (${bucketInfo.intent}): ${bucketInfo.keywords.length} 个关键词`
         )
 
-        // 🔥 关键修复：立即插入占位记录，标记桶已被占用
+        // 关键立即插入占位记录，标记桶已被占用
         // 使用最小化数据（后续 AI 生成完成后更新）
         const placeholderUrl = offer.final_url || offer.url || 'https://placeholder.com'
         const placeholderResult = await db.exec(
@@ -513,7 +513,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         poolError.message?.includes('并发冲突') ||
         poolError.message?.includes('创意类型')
       if (isBucketError) throw poolError
-      // 🔥 统一架构(2025-12-16): 关键词池是必需的，失败直接抛错
+      // 统一架构: 关键词池是必需的，失败直接抛错
       console.error(`❌ 关键词池创建失败: ${poolError.message}`)
       throw new Error(`关键词池创建失败，无法生成创意: ${poolError.message}`)
     }
@@ -752,7 +752,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
     // 保存到数据库（包含完整的7维度Ad Strength数据）
     let savedCreative: any
     if (placeholderCreativeId) {
-      // 🔥 修复：更新占位记录为真实创意数据
+      // 更新占位记录为真实创意数据
       console.log(`📝 更新占位记录 id=${placeholderCreativeId} 为真实创意数据`)
 
       const finalUrl = (() => {
@@ -936,7 +936,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
   } catch (error: any) {
     console.error(`❌ 创意生成任务失败: ${task.id}:`, error.message)
 
-    // 🔥 如果有占位记录但生成失败，删除占位记录避免桶被永久占用
+    // 如果有占位记录但生成失败，删除占位记录避免桶被永久占用
     if (placeholderCreativeId) {
       try {
         await db.exec('DELETE FROM ad_creatives WHERE id = ?', [placeholderCreativeId])
@@ -946,7 +946,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       }
     }
 
-    // 🔧 PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
+    // PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
     const nowFuncErr = 'NOW()'
     const structuredError = normalizeCreativeTaskError(error, '创意生成任务失败')
     const errorMessage = structuredError.userMessage || structuredError.message || '任务失败'

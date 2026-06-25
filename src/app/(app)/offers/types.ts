@@ -11,7 +11,7 @@ export interface OfferListItem {
   targetCountry: string
   affiliateLink: string | null
   brandDescription: string | null
-  scrapeStatus: string // 🔧 修复(2025-12-11): snake_case → camelCase
+  scrapeStatus: string // snake_case → camelCase
   scrapeError?: string | null
   isActive: boolean
   createdAt: string
@@ -23,12 +23,12 @@ export interface OfferListItem {
   commissionValue?: string | null
   commissionCurrency?: string | null
   // P1-11: 关联的Google Ads账号信息（只显示非MCC账号）
-  // 🔧 修复(2025-12-11): snake_case → camelCase
+  // snake_case → camelCase
   linkedAccounts?: Array<{
     accountId: number
     customerId: string
   }>
-  // 🔥 黑名单标记
+  // 黑名单标记
   isBlacklisted?: boolean
   googleAdsCampaignId?: string | null
   syncSource?: string | null
@@ -37,7 +37,7 @@ export interface OfferListItem {
   campaignId?: number | null
 }
 
-export type SortField = 'brand' | 'targetCountry' | 'scrapeStatus' | 'createdAt' | '' // 🔧 修复
+export type SortField = 'brand' | 'targetCountry' | 'scrapeStatus' | 'createdAt' | '' // 修复
 export type SortOrder = 'asc' | 'desc'
 
 export interface OfferFilters {

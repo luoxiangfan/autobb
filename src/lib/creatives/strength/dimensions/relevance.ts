@@ -90,7 +90,7 @@ export function calculateRelevance(
   // 检查创意是否100%聚焦单品，排除其他品类
   const productFocus = calculateProductFocus(headlines, descriptions, sitelinks, callouts)
 
-  // 2.5 品牌-内容一致性检查 (0分或扣分) - v4.19新增（2026-01-26）
+  // 2.5 品牌-内容一致性检查 (0分或扣分) - v4.19新增
   // 检测创意内容是否与声明的品牌一致，防止因抓取错误导致的品牌错配
   const brandConsistencyPenalty = calculateBrandContentConsistency(
     headlines,
@@ -112,7 +112,7 @@ export function calculateRelevance(
     details: {
       keywordCoverage: Math.round(keywordCoverage),
       keywordEmbedding: Math.round(keywordEmbedding), // v3.3新增
-      keywordEmbeddingRate: Math.round(embeddingRate * 100), // v3.3新增：百分比
+      keywordEmbeddingRate: Math.round(embeddingRate * 100), // v3.3百分比
       keywordNaturalness: Math.round(naturalness),
       productFocus: Math.round(productFocus.score), // v4.18新增
       brandConsistencyPenalty: brandConsistencyPenalty.penalty, // v4.19新增

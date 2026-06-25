@@ -44,21 +44,21 @@ export interface ClickFarmTask {
    * 格式: "HH:mm"（24小时制）
    */
   end_time: string
-  duration_days: number // -1表示无限期
+  duration_days: number // 1表示无限期
   /**
    * scheduled_start_date: "2024-12-30" 表示任务的计划开始日期
-   * ⚠️ 重要：这是相对于 timezone（目标国家时区）的本地日期，不是 UTC 日期
+   * 重要：这是相对于 timezone（目标国家时区）的本地日期，不是 UTC 日期
    * 例如：timezone = "America/New_York"，scheduled_start_date = "2024-12-30"
-   * 则任务会在纽约时间 2024-12-30 的 start_time 时刻开始执行
+   * 则任务会在纽约时间 的 start_time 时刻开始执行
    * 格式: "YYYY-MM-DD"
    */
   scheduled_start_date: string
   /**
    * hourly_distribution: [10, 5, 8, ..., 12] 长度为24的数组
-   * ⚠️ 重要：索引 i（0-23）表示任务 timezone（目标国家时区）的第 i 个小时
+   * 重要：索引 i（0-23）表示任务 timezone（目标国家时区）的第 i 个小时
    * hourly_distribution[0] = 10 表示该时区的 00:00-01:00 内执行 10 次点击
    * hourly_distribution[6] = 30 表示该时区的 06:00-07:00 内执行 30 次点击
-   * ❌ 注意：这不是 UTC 小时数，而是目标时区的本地小时数
+   * 注意：这不是 UTC 小时数，而是目标时区的本地小时数
    * 例如：timezone = "Asia/Shanghai"，hourly_distribution[6] = 30
    * 表示上海时间 06:00-07:00，而不是 UTC 06:00-07:00
    */
@@ -82,15 +82,15 @@ export interface ClickFarmTask {
   /**
    * timezone: "America/New_York" 任务执行的目标时区
    * 这是一个 IANA 时区标识符，自动从 offer.target_country（目标国家代码）匹配得到
-   * ⚠️ 重要：所有与时间相关的字段都相对于这个 timezone：
-   * - start_time: "06:00" 表示该时区的 06:00
-   * - end_time: "24:00" 表示该时区的 24:00
-   * - scheduled_start_date: "2024-12-30" 表示该时区的 2024-12-30
-   * - hourly_distribution[i] 表示该时区的第 i 个小时（0-23）
-   * - started_at: 当 Cron 首次在该时区达到 scheduled_start_date 时设置
-   * - completed_at: 当任务运行 duration_days 天后自动完成
+   * 重要：所有与时间相关的字段都相对于这个 timezone
+   * start_time: "06:00" 表示该时区的 06:00
+   * end_time: "24:00" 表示该时区的 24:00
+   * scheduled_start_date: "2024-12-30" 表示该时区的 2024-12-30
+   * hourly_distribution[i] 表示该时区的第 i 个小时（0-23）
+   * started_at: 当 Cron 首次在该时区达到 scheduled_start_date 时设置
+   * completed_at: 当任务运行 duration_days 天后自动完成
    *
-   * 示例：
+   * 示例
    * timezone = "Asia/Shanghai"，scheduled_start_date = "2024-12-30"
    * 则任务在上海时间 2024-12-30 00:00:00 后的下一个 start_time 时刻开始执行
    * 而不是 UTC 的 2024-12-30 00:00:00
@@ -100,7 +100,7 @@ export interface ClickFarmTask {
   timezone: string
 
   /**
-   * 🆕 referer_config: Referer 头配置
+   * referer_config: Referer 头配置
    * 控制点击请求的 Referer 头，模拟不同来源的流量
    */
   referer_config: { type: 'none' | 'random' | 'specific' | 'custom'; referer?: string } | null
@@ -123,7 +123,7 @@ export interface ClickFarmTask {
 export interface DailyHistoryEntry {
   /**
    * date: "2024-12-30" 表示任务时区的本地日期
-   * ⚠️ 重要：必须相对于 task.timezone（目标国家时区）的本地日期
+   * 重要：必须相对于 task.timezone（目标国家时区）的本地日期
    * 例如：task.timezone = "Asia/Shanghai"
    * 则 date = "2024-12-30" 表示上海时间的 2024-12-30，而不是 UTC 的 2024-12-30
    * 格式: "YYYY-MM-DD"
@@ -135,7 +135,7 @@ export interface DailyHistoryEntry {
   failed: number // 失败次数
 
   /**
-   * 🆕 hourly_breakdown：每小时的详细执行数据
+   * hourly_breakdown：每小时的详细执行数据
    * 用于支持"实际执行分布"vs"配置分布"的对比功能
    * 索引0-23对应0点到23点（相对于task.timezone）
    */
@@ -149,7 +149,7 @@ export interface DailyHistoryEntry {
 
 /**
  * 创建任务请求
- * ⚠️ 时区说明：所有时间参数都相对于创建时自动匹配的 timezone
+ * 时区说明：所有时间参数都相对于创建时自动匹配的 timezone
  * 系统会从 offer.target_country 自动推导 timezone，用户无需手动指定
  */
 export interface CreateClickFarmTaskRequest {
@@ -170,7 +170,7 @@ export interface CreateClickFarmTaskRequest {
    * scheduled_start_date: "2024-12-30" 相对于该任务的 timezone（目标国家时区的本地日期）
    * 格式 YYYY-MM-DD，默认当天。任务会在该日期的 start_time 时刻开始执行
    * 例如：timezone = "America/New_York"，scheduled_start_date = "2024-12-30"
-   * 则任务在纽约时间 2024-12-30 的 start_time 时刻开始
+   * 则任务在纽约时间 的 start_time 时刻开始
    */
   scheduled_start_date?: string
   /**
@@ -186,12 +186,12 @@ export interface CreateClickFarmTaskRequest {
    */
   timezone?: string
   /**
-   * 🆕 refererConfig: Referer来源配置
+   * refererConfig: Referer来源配置
    * 用于防止反爬检测，模拟真实用户来源
-   * - none: 不设置Referer头
-   * - random: 每次点击随机从社交媒体列表中选择Referer
-   * - specific: 使用指定的固定社交媒体Referer URL
-   * - custom: 使用用户自定义的Referer URL
+   * none: 不设置Referer头
+   * random: 每次点击随机从社交媒体列表中选择Referer
+   * specific: 使用指定的固定社交媒体Referer URL
+   * custom: 使用用户自定义的Referer URL
    */
   referer_config?: {
     type: 'none' | 'random' | 'specific' | 'custom'
@@ -200,12 +200,12 @@ export interface CreateClickFarmTaskRequest {
 }
 
 /**
- * 🆕 Referer配置类型
+ * Referer配置类型
  */
 export type RefererConfigType = 'none' | 'random' | 'specific' | 'custom'
 
 /**
- * 🆕 社交媒体Referer选项（用于UI下拉选择）
+ * 社交媒体Referer选项（用于UI下拉选择）
  */
 export const REFERER_OPTIONS = [
   { value: 'none', label: '留空', description: '不设置Referer头' },
@@ -225,7 +225,7 @@ export const SOCIAL_MEDIA_REFERRERS = [
   { value: 'https://www.reddit.com/', label: 'Reddit' },
   { value: 'https://www.snapchat.com/', label: 'Snapchat' },
   { value: 'https://www.tiktok.com/', label: 'TikTok' },
-  { value: 'https://x.com/', label: 'Twitter/X' }, // 🔥 2026-01-05: Twitter/X 官网已变更为 x.com
+  { value: 'https://x.com/', label: 'Twitter/X' }, // Twitter/X 官网已变更为 x.com
   { value: 'https://wa.me/', label: 'WhatsApp' },
   { value: 'https://www.youtube.com/', label: 'YouTube' },
 ] as const
@@ -238,11 +238,11 @@ export interface UpdateClickFarmTaskRequest {
   start_time?: string
   end_time?: string
   duration_days?: number
-  scheduled_start_date?: string // 🆕 YYYY-MM-DD格式
+  scheduled_start_date?: string // YYYY-MM-DD格式
   hourly_distribution?: number[]
-  timezone?: string // 🆕 允许更新timezone（用于offer变更场景）
+  timezone?: string // 允许更新timezone（用于offer变更场景）
   referer_config?: {
-    // 🆕 Referer配置
+    // Referer配置
     type: 'none' | 'random' | 'specific' | 'custom'
     referer?: string
   }
@@ -285,7 +285,7 @@ export interface ClickFarmStats {
     successRate: number // 百分比
     traffic: number // bytes
   }
-  // 🆕 任务状态分布
+  // 任务状态分布
   taskStatusDistribution: {
     pending: number // 等待开始
     running: number // 运行中

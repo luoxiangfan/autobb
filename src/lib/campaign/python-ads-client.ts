@@ -16,7 +16,7 @@ export function getPythonAdsServiceUrl(): string {
 const PYTHON_ADS_SERVICE_UNAVAILABLE_MESSAGE =
   'Python Ads 服务不可用。服务账号认证需要部署 Python Ads Service 并配置环境变量 PYTHON_ADS_SERVICE_URL。'
 
-/** 连接/超时等导致 Python Ads Service 不可达（非凭证本身无效）。 */
+/* * 连接/超时等导致 Python Ads Service 不可达（非凭证本身无效）。 */
 export function isPythonAdsServiceConnectionError(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
     return false
@@ -34,7 +34,7 @@ export function isPythonAdsServiceConnectionError(error: unknown): boolean {
   return Boolean(err.isAxiosError && !err.response)
 }
 
-/** 服务账号验证/同步路径：区分 Python 服务不可用与凭证错误。 */
+/* * 服务账号验证/同步路径：区分 Python 服务不可用与凭证错误。 */
 export function formatPythonAdsServiceUnavailableError(error: unknown): string | null {
   if (!isPythonAdsServiceConnectionError(error)) {
     return null
@@ -82,7 +82,7 @@ async function withTracking<T>(
     })
     return result
   } catch (error: any) {
-    // 🔧 修复(2025-12-29): 改进 Developer Token 权限错误的诊断信息
+    // 改进 Developer Token 权限错误的诊断信息
     let enhancedError = error
     const stringifyDetail = (detail: unknown): string => {
       if (detail == null) return ''
@@ -226,7 +226,7 @@ async function getServiceAccountAuth(
     throw new Error('Service account not found')
   }
 
-  // 🔧 修复(2025-12-29): 验证 Developer Token 权限等级
+  // 验证 Developer Token 权限等级
   const tokenValidation = validateDeveloperToken(sa.developerToken)
   if (tokenValidation.warnings.length > 0) {
     logger.warn('developer_token_warning', {
@@ -235,7 +235,7 @@ async function getServiceAccountAuth(
     })
   }
 
-  // 🔧 调试：输出 developer_token 信息（避免在默认日志里泄露敏感信息）
+  // 调试：输出 developer_token 信息（避免在默认日志里泄露敏感信息）
   const tokenPreview = sa.developerToken.substring(0, 10) + '...'
   logger.debug('service_account_loaded', {
     userId,
@@ -249,7 +249,7 @@ async function getServiceAccountAuth(
     email: sa.serviceAccountEmail,
     private_key: sa.privateKey || '',
     developer_token: sa.developerToken,
-    // 🔧 修复(2025-12-26): 格式化 login_customer_id，移除空格和横杠
+    // 格式化 login_customer_id，移除空格和横杠
     login_customer_id: formatCustomerId(sa.mccCustomerId),
   }
 }
@@ -759,7 +759,7 @@ export async function updateCampaignBudgetPython(params: {
 
 /**
  * 更新广告系列 Final URL Suffix（服务账号模式）
- * 🆕 新增(2025-01-03): 用于换链接任务系统自动更新Campaign的追踪参数
+ * 用于换链接任务系统自动更新Campaign的追踪参数
  */
 export async function updateCampaignFinalUrlSuffixPython(params: {
   userId: number
@@ -912,19 +912,19 @@ export async function createSitelinkExtensionsPython(params: {
   )
 }
 
-// ==================== Conversion Goal Functions Removed ====================
-//
-// 🔧 移除说明 (2025-12-26):
-// - ensureConversionGoalPython: 确保转化目标存在（服务账号模式）
-// - updateCampaignConversionGoalPython: 更新CampaignConversionGoal的biddable状态
-//
+// Conversion Goal Functions Removed
+
+// 移除说明
+// ensureConversionGoalPython: 确保转化目标存在（服务账号模式）
+// updateCampaignConversionGoalPython: 更新CampaignConversionGoal的biddable状态
+
 // 原因: 对应的Node.js函数ensureAccountConversionGoal已移除，这些函数不再使用
 
-// ==================== Campaign Update Functions ====================
+// Campaign Update Functions
 
 /**
  * 更新广告系列（服务账号模式）
- * 🔧 新增(2025-12-26): 支持更新任意字段，通过 update_mask 指定
+ * 支持更新任意字段，通过 update_mask 指定
  */
 export async function updateCampaignPython(params: {
   userId: number
@@ -969,7 +969,7 @@ export async function updateCampaignPython(params: {
 
 /**
  * 更新广告组（服务账号模式）
- * 🔧 新增(2025-12-26): 支持更新 adgroup 的 cpc_bid_micros
+ * 支持更新 adgroup 的 cpc_bid_micros
  */
 export async function updateAdGroupPython(params: {
   userId: number

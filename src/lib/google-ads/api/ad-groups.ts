@@ -94,7 +94,7 @@ export async function createGoogleAdsAdGroup(params: {
   status: 'ENABLED' | 'PAUSED'
   accountId?: number
   userId: number
-  loginCustomerId?: string // 🔥 经理账号ID
+  loginCustomerId?: string // 经理账号ID
   authType?: 'oauth' | 'service_account'
   serviceAccountId?: string
   credentials?: OAuthApiCredentialsFields
@@ -129,7 +129,7 @@ export async function createGoogleAdsAdGroup(params: {
     }
   }
 
-  // 🔧 修复(2025-12-26): 服务账号模式使用Python服务
+  // 服务账号模式使用Python服务
   if (authType === 'service_account') {
     const existing = await reuseExistingAdGroup()
     if (existing) {

@@ -2,7 +2,7 @@ import type { GoogleAdsCredentialStatus } from './types'
 
 const PLACEHOLDER = '············'
 
-/** 已配置且非双栈时锁定为后端 authType；否则跟随用户 Tab 选择 */
+/* * 已配置且非双栈时锁定为后端 authType；否则跟随用户 Tab 选择 */
 export function resolveEffectiveGoogleAdsAuthMethod(
   credentialStatus: Pick<
     GoogleAdsCredentialStatus,
@@ -127,7 +127,7 @@ export function shouldApplyGoogleAdsAuthMethodFromCredentialStatus(
   return false
 }
 
-/** 凭证状态刷新后应展示的 Tab（未跃迁时保留 currentAuthMethod）。 */
+/* * 凭证状态刷新后应展示的 Tab（未跃迁时保留 currentAuthMethod）。 */
 export function resolveAuthMethodAfterCredentialStatusRefresh(
   previous: GoogleAdsAuthMethodTabState | null | undefined,
   next: GoogleAdsAuthMethodTabState,
@@ -140,7 +140,7 @@ export function resolveAuthMethodAfterCredentialStatusRefresh(
   return currentAuthMethod
 }
 
-/** 是否应拉取服务账号列表（与凭证 GET 语义对齐，供设置页与双栈清理复用）。 */
+/* * 是否应拉取服务账号列表（与凭证 GET 语义对齐，供设置页与双栈清理复用）。 */
 export function shouldFetchGoogleAdsServiceAccounts(
   status: Pick<GoogleAdsCredentialStatus, 'authType' | 'hasServiceAccount'> | null | undefined
 ): boolean {
@@ -260,7 +260,7 @@ export function hasGoogleAdsUnsavedChanges(
   )
 }
 
-/** OAuth 启动授权：以 GET /credentials 快照为准，不依赖表单 focus 后的 clientId 占位状态 */
+/* * OAuth 启动授权：以 GET /credentials 快照为准，不依赖表单 focus 后的 clientId 占位状态 */
 export function resolveGoogleAdsOAuthStartGate(
   status: OAuthCredentialStatusForGate | null | undefined
 ): { ok: true } | { ok: false; message: string } {
@@ -288,7 +288,7 @@ export function resolveGoogleAdsOAuthStartGate(
   return { ok: true }
 }
 
-/** OAuth 验证凭证：credential status 已保存字段齐全，且表单无未保存 OAuth 修改 */
+/* * OAuth 验证凭证：credential status 已保存字段齐全，且表单无未保存 OAuth 修改 */
 export function resolveGoogleAdsOAuthVerifyGate(
   status: OAuthCredentialStatusForGate | null | undefined,
   hasUnsavedOAuthChanges: boolean

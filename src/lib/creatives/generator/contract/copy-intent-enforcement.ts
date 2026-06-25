@@ -40,7 +40,7 @@ export function mapToComplementarityTag(tag: CopyIntentTag): ComplementarityTag 
   if (tag === 'brand' || tag === 'scenario' || tag === 'transactional') {
     return tag
   }
-  // Keep compatibility with existing keyword intent taxonomy (brand/scenario/function):
+  // Keep compatibility with existing keyword intent taxonomy (brand/scenario/function)
   // "solution/function-like" copy is treated as scenario-equivalent for complementarity.
   if (tag === 'solution') {
     return 'scenario'

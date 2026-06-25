@@ -30,10 +30,10 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/creatives/experiments
- * Query:
- * - campaignId: number (optional)
- * - status: string (optional)
- * - limit: number (default 50, max 200)
+ * Query
+ * campaignId: number (optional)
+ * status: string (optional)
+ * limit: number (default 50, max 200)
  */
 export async function GET(request: NextRequest) {
   const auth = await resolveOpenclawRequestUser(request)

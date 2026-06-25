@@ -9,12 +9,12 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  *
  * 获取 Offer 趋势数据（按日期聚合，转化口径改为佣金）
  *
- * 注意：
- * - 广告花费和佣金保持原始货币（CNY 和 USD）
- * - 不支持货币选择
+ * 注意
+ * 广告花费和佣金保持原始货币（CNY 和 USD）
+ * 不支持货币选择
  *
- * Query Parameters:
- * - daysBack: number (可选，默认30天)
+ * Query Parameters
+ * daysBack: number (可选，默认30天)
  */
 export const dynamic = 'force-dynamic'
 

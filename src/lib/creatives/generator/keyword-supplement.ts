@@ -1,10 +1,10 @@
-// 🔥 AI语义分类
+// AI语义分类
 import { generateContent, type ResponseSchema } from '../../ai/server'
-// 🎯 新增：导入否定关键词生成函数
-import { recordTokenUsage, estimateTokenCost } from '../../ai/server' // 🎯 新增：导入token追踪函数
-import { loadPrompt, interpolateTemplate } from '../../ai/server' // 🎯 v3.0: 导入数据库prompt加载函数
-// 🎯 购买意图评分
-import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
+// 导入否定关键词生成函数
+import { recordTokenUsage, estimateTokenCost } from '../../ai/server' // 导入token追踪函数
+import { loadPrompt, interpolateTemplate } from '../../ai/server' // v3.0: 导入数据库prompt加载函数
+// 购买意图评分
+import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer' // Google Ads关键词标准化去重
 import { hasModelAnchorEvidence } from '../server'
 
 import { isCreativeKeywordSupplementThresholdGateEnabled } from '../../keywords/server'
@@ -627,7 +627,7 @@ export async function loadPoolCandidatesForSupplement(offerId: number): Promise<
     const pool = await getKeywordPoolByOfferId(offerId)
     if (!pool) return []
 
-    // 🔥 优化(2026-03-13): 获取品牌名用于质量过滤
+    // 获取品牌名用于质量过滤
     const db = await getDatabase()
     const offerRow = await db.queryOne<{ brand: string | null }>(
       'SELECT brand FROM offers WHERE id = ?',
@@ -644,7 +644,7 @@ export async function loadPoolCandidatesForSupplement(offerId: number): Promise<
     // 统一走 canonical D 视图，避免补词阶段继续消费旧的 raw A/B/C/D/S 分桶语义。
     const rawKeywords = extractKeywords(resolveCreativeBucketPoolKeywords(pool, 'D', 'D'))
 
-    // 🔥 优化(2026-03-13): 二次质量过滤，防止关键词池污染
+    // 二次质量过滤，防止关键词池污染
     // 确保池中关键词仍然符合当前质量标准
     if (!brandName) {
       // 无品牌名时跳过质量过滤，直接返回原始关键词
@@ -776,7 +776,7 @@ export async function applyKeywordSupplementationOnce(
   const rawContextForRelevance = extractRawTitleAndAboutForSupplement(input.offer)
   const contextTokens = buildSupplementContextTokens(rawContextForRelevance.title, beforeKeywords)
 
-  // 🔥 优化(2026-03-13): 定义 bucket 与意图类型的兼容性（基于意图权重）
+  // 定义 bucket 与意图类型的兼容性（基于意图权重）
   // 使用软过滤策略：只过滤明确不兼容的意图，而不是硬编码允许列表
   const BUCKET_INCOMPATIBLE_INTENTS: Record<string, Set<string>> = {
     A: new Set(['SUPPORT', 'DOWNLOAD', 'JOBS', 'PIRACY']), // 品牌商品锚点：排除支持、下载、招聘、盗版
@@ -786,7 +786,7 @@ export async function applyKeywordSupplementationOnce(
     S: new Set(['JOBS', 'PIRACY']), // 综合需求：只排除招聘、盗版
   }
 
-  // 🔥 优化(2026-03-13): 监控统计
+  // 监控统计
   const filterStats = {
     total: 0,
     structured: 0,
@@ -815,7 +815,7 @@ export async function applyKeywordSupplementationOnce(
       return
     }
 
-    // 🔥 优化(2026-03-13): 意图兼容性检查（软过滤）
+    // 意图兼容性检查（软过滤）
     // 策略：只过滤明确不兼容的意图，而不是要求匹配允许列表
     if (input.bucket && BUCKET_INCOMPATIBLE_INTENTS[input.bucket]) {
       const incompatibleIntents = BUCKET_INCOMPATIBLE_INTENTS[input.bucket]
@@ -915,7 +915,7 @@ export async function applyKeywordSupplementationOnce(
   const afterCount = merged.length
   const supplementCapApplied = beforeCount < supplementCap && afterCount >= supplementCap
 
-  // 🔥 优化(2026-03-13): 详细的监控日志
+  // 详细的监控日志
   console.log(
     `[KeywordSupplement] offer=${input.offer?.id || 'unknown'} bucket=${input.bucket || 'unknown'} triggered=true before=${beforeCount} after=${afterCount} added=${added.length} cap=${supplementCap}`
   )

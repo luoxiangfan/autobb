@@ -34,7 +34,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
  * 标准化小数分隔符：将逗号小数点转换为点小数点
  * 处理欧洲价格格式 (€319,00 → €319.00)
  *
- * 逻辑:
+ * 逻辑
  * 1. 如果价格只有一个逗号且逗号后只有2位数字（如 "€319,00"），则是欧洲格式小数点
  * 2. 如果有多个逗号或千位分隔符（如 "€1,234,567.89"），则去除逗号
  * 3. 最后保留纯数字和小数点
@@ -46,7 +46,7 @@ function normalizeDecimalSeparator(priceStr: string): string {
   // 移除货币符号和空格
   let cleaned = priceStr.replace(/[€$£¥₹A-Z]/g, '').trim()
 
-  // 🔧 修复: 检测欧洲格式（逗号作为小数点）
+  // 检测欧洲格式（逗号作为小数点）
   // 模式: 数字,数字数字（最多2位小数）并且后面没有更多数字
   const europeanFormat = /^[\d\s.]*(\d),(\d{1,2})$/
   const match = cleaned.match(europeanFormat)
@@ -67,12 +67,12 @@ function normalizeDecimalSeparator(priceStr: string): string {
 
 /**
  * 解析产品价格字符串
- * 支持格式:
- * - "$99.99"
- * - "€79.99"
- * - "$99.99 (20% OFF)"
- * - "$119.99 → $99.99" (折扣价格)
- * - "¥599"
+ * 支持格式
+ * "$99.99"
+ * "€79.99"
+ * "$99.99 (20% OFF)"
+ * "$119.99 → $99.99" (折扣价格)
+ * "¥599"
  *
  * @param productPrice - 价格字符串
  * @returns 解析后的价格对象，如果无法解析则返回null
@@ -96,7 +96,7 @@ function parseProductPrice(productPrice: string | null | undefined): ParsedPrice
     const currentPrice = arrowMatch[2].trim()
 
     // 提取数值用于计算折扣
-    // 🔧 修复: 先处理欧洲格式的逗号小数点，再移除其他非数字字符
+    // 先处理欧洲格式的逗号小数点，再移除其他非数字字符
     const originalValue = parseFloat(normalizeDecimalSeparator(originalPrice))
     const currentValue = parseFloat(normalizeDecimalSeparator(currentPrice))
 
@@ -126,7 +126,7 @@ function parseProductPrice(productPrice: string | null | undefined): ParsedPrice
     const percentMatch = discountLabel.match(/(\d+)%/)
     if (percentMatch) {
       const discountPercent = parseInt(percentMatch[1], 10)
-      // 🔧 修复: 使用normalizeDecimalSeparator处理欧洲格式
+      // 使用normalizeDecimalSeparator处理欧洲格式
       const currentValue = parseFloat(normalizeDecimalSeparator(currentPrice))
 
       if (!isNaN(currentValue) && !isNaN(discountPercent)) {
@@ -171,17 +171,17 @@ export function generatePricingJSON(productPrice: string | null | undefined): st
 }
 
 /**
- * 🔧 通用价格解析函数 - 智能检测欧洲/美国价格格式
+ * 通用价格解析函数 - 智能检测欧洲/美国价格格式
  *
- * 支持格式:
- * - 欧洲格式: "319,00 €", "1.299,99€", "245,08 €"
- * - 美国格式: "$319.00", "$1,299.99", "245.08"
- * - 混合格式: "€319", "$319", "319"
+ * 支持格式
+ * 欧洲格式: "319,00 €", "1.299,99€", "245,08 €"
+ * 美国格式: "$319.00", "$1,299.99", "245.08"
+ * 混合格式: "€319", "$319", "319"
  *
- * 检测逻辑:
- * - 如果逗号在最后（且后面只有1-2位数字），则是欧洲格式（逗号=小数点）
- * - 如果点在最后（且后面只有1-2位数字），则是美国格式（点=小数点）
- * - 其他情况按千位分隔符处理
+ * 检测逻辑
+ * 如果逗号在最后（且后面只有1-2位数字），则是欧洲格式（逗号=小数点）
+ * 如果点在最后（且后面只有1-2位数字），则是美国格式（点=小数点）
+ * 其他情况按千位分隔符处理
  *
  * @param priceText - 价格文本（可能包含货币符号）
  * @returns 解析后的数值，如果无法解析则返回null

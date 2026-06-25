@@ -8,15 +8,15 @@ import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
  * GET /api/offers/:id/campaigns/status?campaignId=:campaignId
  * 获取单个campaign的创建状态（用于轮询）
  *
- * 响应格式:
+ * 响应格式
  * {
- *   "campaign": {
- *     "id": number,
- *     "offer_id": number,
- *     "creation_status": "pending" | "synced" | "failed",
- *     "creation_error": string | null,
- *     "google_campaign_id": string | null
- *   }
+ * "campaign": {
+ * "id": number,
+ * "offer_id": number,
+ * "creation_status": "pending" | "synced" | "failed",
+ * "creation_error": string | null,
+ * "google_campaign_id": string | null
+ * }
  * }
  */
 export const dynamic = 'force-dynamic'

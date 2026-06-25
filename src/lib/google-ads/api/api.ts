@@ -10,10 +10,10 @@ export { oauthGetCustomerParams } from '@/lib/google-ads/oauth/customer-params'
 export type { OAuthApiCredentialsFields }
 
 /**
- * Google Ads API 高层 mutate/search 约定：
- * - 业务入口须 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
- * - 调用本文件函数时传入 `apiAuth.authType` 与 `preparedAuthContextField(prepared)`。
- * - 勿使用 `authType || 'oauth'`；未传 authType 时由 `resolveGoogleAdsApiCallAuth` / `resolveAuthTypeForGoogleAdsApiCall` 从 context 推断；嵌套调用须透传 `authContext`。
+ * Google Ads API 高层 mutate/search 约定
+ * 业务入口须 `prepareGoogleAdsApiCallForLinkedAccount` / `resolveGoogleAdsApiAuthForAccount`。
+ * 调用本文件函数时传入 `apiAuth.authType` 与 `preparedAuthContextField(prepared)`。
+ * 勿使用 `authType || 'oauth'`；未传 authType 时由 `resolveGoogleAdsApiCallAuth` / `resolveAuthTypeForGoogleAdsApiCall` 从 context 推断；嵌套调用须透传 `authContext`。
  */
 
 export type { GoogleAdsApiAuthContextField } from './customer'

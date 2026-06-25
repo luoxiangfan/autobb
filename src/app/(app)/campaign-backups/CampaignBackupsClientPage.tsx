@@ -82,12 +82,12 @@ export default function CampaignBackupsClientPage() {
   >([])
   const [selectedGoogleAdsAccountId, setSelectedGoogleAdsAccountId] = useState<number | null>(null)
 
-  // 🔧 重新生成广告创意选项 - 每条记录独立选择
+  // 重新生成广告创意选项 - 每条记录独立选择
   const [regenerateCreativeMap, setRegenerateCreativeMap] = useState<Map<number, boolean>>(
     new Map()
   )
 
-  // 🔥 异步批量创建状态
+  // 异步批量创建状态
   const [showProgressDialog, setShowProgressDialog] = useState(false)
   const [batchId, setBatchId] = useState<string | null>(null)
   const [batchStatus, setBatchStatus] = useState<string | null>(null)
@@ -143,7 +143,7 @@ export default function CampaignBackupsClientPage() {
 
   const fetchGoogleAdsAccounts = useCallback(async () => {
     try {
-      // 🔧 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
+      // 添加 filterByUserMcc=true，只获取用户 MCC 下的 Google Ads 账号（非 MCC 账号）
       const response = await fetch('/api/google-ads-accounts?filterByUserMcc=true', {
         credentials: 'include',
       })
@@ -351,7 +351,7 @@ export default function CampaignBackupsClientPage() {
   }
 
   const handleOpenBatchCreateDialog = () => {
-    // 🔧 初始化每条记录的选择状态
+    // 初始化每条记录的选择状态
     const newMap = new Map<number, boolean>()
     selectedBackupIds.forEach((id) => {
       const backup = backups.find((b) => b.id === id)
@@ -914,7 +914,7 @@ export default function CampaignBackupsClientPage() {
               </div>
             </Alert>
 
-            {/* 🔧 显示每条记录的选择状态 */}
+            {/* 显示每条记录的选择状态 */}
             <div className="space-y-2 max-h-60 overflow-y-auto">
               <Label className="text-sm font-medium">重新生成广告创意设置</Label>
               {selectedBackupIds.length === 0 ? (
@@ -1054,7 +1054,7 @@ export default function CampaignBackupsClientPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 🔥 进度指示器 */}
+      {/* 进度指示器 */}
       <BatchProgressIndicator
         open={showProgressDialog}
         onOpenChange={setShowProgressDialog}

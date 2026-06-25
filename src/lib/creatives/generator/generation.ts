@@ -7,17 +7,17 @@ import {
   type KeywordPlannerPreparedSession,
   type KeywordPoolExpandLoadResult,
 } from '@/lib/google-ads/accounts/auth/index'
-import { type OfferKeywordPool } from '../../keywords/offer-pool' // 🔥 AI语义分类
+import { type OfferKeywordPool } from '../../keywords/offer-pool' // AI语义分类
 import { generateContent, getGeminiMode } from '../../ai/server'
-import { generateNegativeKeywords } from '../../keywords/server' // 🎯 新增：导入否定关键词生成函数
-// 🎯 新增：导入token追踪函数
-// 🎯 v3.0: 导入数据库prompt加载函数
-// 🎯 购买意图评分
+import { generateNegativeKeywords } from '../../keywords/server' // 导入否定关键词生成函数
+// 导入token追踪函数
+// v3.0: 导入数据库prompt加载函数
+// 购买意图评分
 import {
   normalizeGoogleAdsKeyword,
   deduplicateKeywordsWithPriority,
   logDuplicateKeywords,
-} from '@/lib/google-ads/keyword/normalizer' // 🔥 优化：Google Ads关键词标准化去重
+} from '@/lib/google-ads/keyword/normalizer' // Google Ads关键词标准化去重
 import { getKeywordSourcePriorityScoreFromInput } from '../../keywords/server'
 
 import { containsPureBrand, getPureBrandKeywords } from '../../keywords/server'
@@ -25,8 +25,8 @@ import {
   filterKeywordQuality,
   generateFilterReport,
   isBrandConcatenation,
-} from '../../keywords/server' // 🔥 2025-12-28: 导入关键词质量过滤函数 🔥 2026-01-02: 补充导入纯品牌词函数 🔥 2026-01-05: 改为 shouldUseExactMatch 策略函数 🔥 2026-03-13: 补充导入品牌变体和语义查询过滤函数
-// 🔥 2026-03-13: 导入纯品牌词判断函数
+} from '../../keywords/server' // 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
+// 导入纯品牌词判断函数
 import { getMinContextTokenMatchesForKeywordQualityFilter } from '../../keywords/server'
 import { normalizeLanguageCode } from '../../common/server'
 
@@ -151,12 +151,12 @@ export async function runAdCreativeModelAttempt(params: {
 /**
  * 主函数：生成广告创意（带缓存）
  *
- * ✅ 安全修复：userId改为必需参数，确保用户只能访问自己的Offer
+ * 安全userId改为必需参数，确保用户只能访问自己的Offer
  */
 
 export async function generateAdCreative(
   offerId: number,
-  userId: number, // ✅ 修复：改为必需参数
+  userId: number, // 改为必需参数
   options?: {
     theme?: string
     referencePerformance?: any
@@ -165,9 +165,9 @@ export async function generateAdCreative(
     retryFailureType?: RetryFailureType
     searchTermFeedbackHints?: SearchTermFeedbackHintsInput
     policyGuardMode?: GoogleAdsPolicyGuardMode
-    // 🆕 v4.10: 关键词池参数
+    // v4.10: 关键词池参数
     keywordPool?: any // OfferKeywordPool
-    bucket?: 'A' | 'B' | 'C' | 'S' | 'D' // 🔥 2025-12-22: 添加D（高购买意图）桶支持
+    bucket?: 'A' | 'B' | 'C' | 'S' | 'D' // 添加D（高购买意图）桶支持
     bucketKeywords?: string[]
     bucketIntent?: string
     bucketIntentEn?: string
@@ -179,7 +179,7 @@ export async function generateAdCreative(
     isSyntheticCreative?: boolean
     coverageKeywordsWithVolume?: Array<{ keyword: string; searchVolume: number; isBrand: boolean }>
     syntheticKeywordsWithVolume?: Array<{ keyword: string; searchVolume: number; isBrand: boolean }>
-    /** 上游已 prepare 时传入，避免重复 loadKeywordPoolExpandCredentialsForOffer */
+    /* * 上游已 prepare 时传入，避免重复 loadKeywordPoolExpandCredentialsForOffer */
     plannerSession?: KeywordPlannerPreparedSession
     preparedExpand?: KeywordPoolExpandLoadResult
   }
@@ -203,7 +203,7 @@ export async function generateAdCreative(
 
   const db = await getDatabase()
 
-  // ✅ 安全修复：获取Offer数据时验证user_id，防止跨用户访问
+  // 安全获取Offer数据时验证user_id，防止跨用户访问
   const offer = await db.queryOne(
     `
     SELECT * FROM offers WHERE id = ? AND user_id = ?
@@ -215,7 +215,7 @@ export async function generateAdCreative(
     throw new Error('Offer不存在或无权访问')
   }
 
-  // 🔒 前置数据质量校验（2026-01-26）：防止使用错误数据生成创意
+  // � 前置数据质量校验：防止使用错误数据生成创意
   const preGenerationValidation = validateOfferDataQuality(offer as any)
   if (!preGenerationValidation.isValid) {
     console.error(`[generateAdCreative] ❌ 前置校验失败，阻止创意生成:`)
@@ -248,13 +248,13 @@ export async function generateAdCreative(
 
   const containsBrand = (keyword: string, _searchVolume?: number): boolean => {
     if (containsPureBrand(keyword, brandTokensToMatch)) return true
-    // 🔥 修复(2026-03-13): 品牌拼接词即使搜索量为 0 也应该保留（真实品牌词）
+    // 品牌拼接词即使搜索量为 0 也应该保留（真实品牌词）
     // 移除搜索量依赖，避免真实品牌词被意外过滤
     if (isBrandConcatenation(keyword, offerBrand)) return true
     return false
   }
 
-  // 🎯 需求34: 读取已提取的广告元素（从爬虫阶段保存的数据）
+  // 需求34: 读取已提取的广告元素（从爬虫阶段保存的数据）
   let extractedElements: {
     keywords?: Array<{
       keyword: string
@@ -267,7 +267,7 @@ export async function generateAdCreative(
     descriptions?: string[]
   } = {}
 
-  // 🎯 P0/P1/P2/P3优化: 读取AI增强的提取数据
+  // P0/P1/P2/读取AI增强的提取数据
   let enhancedData: {
     keywords?: Array<{ keyword: string; volume: number; competition: string; score: number }>
     productInfo?: { features?: string[]; benefits?: string[]; useCases?: string[] }
@@ -280,7 +280,7 @@ export async function generateAdCreative(
       positioning?: string
       voice?: string
       competitors?: string[]
-      // 🔥 修复（2025-12-11）：添加店铺分析新字段
+      // 添加店铺分析新字段
       hotProducts?: Array<{
         name: string
         productHighlights?: string[]
@@ -298,7 +298,7 @@ export async function generateAdCreative(
   } = {}
 
   try {
-    // 🔥 修复(2025-12-26): 优先从关键词池获取关键词，而非使用旧的extracted_keywords
+    // 优先从关键词池获取关键词，而非使用旧的extracted_keywords
     // 关键词池已经过Keyword Planner扩展验证，包含高质量关键词
     const { getKeywordPoolByOfferId } = await import('../../keywords/offer-pool')
     const keywordPool =
@@ -306,12 +306,12 @@ export async function generateAdCreative(
       (await getKeywordPoolByOfferId(offer.id))
 
     if (keywordPool && keywordPool.totalKeywords > 0) {
-      // 统一走 canonical creative bucket 视图：
+      // 统一走 canonical creative bucket 视图
       // A=brand_intent, B/C=model_intent, D/S=product_intent
       const poolKeywords = resolveCreativeBucketPoolKeywords(keywordPool, normalizedBucket, 'A')
 
       // 转换为extractedElements格式
-      // 🔧 修复(2026-01-21): 保留原始 source 字段，用于后续过滤 CLUSTERED 关键词
+      // 保留原始 source 字段，用于后续过滤 CLUSTERED 关键词
       extractedElements.keywords = poolKeywords.map((kw) => ({
         keyword: kw.keyword,
         searchVolume: kw.searchVolume || 0,
@@ -321,12 +321,12 @@ export async function generateAdCreative(
           sourceType: (kw as any).sourceType,
         }),
         priority: 'HIGH' as const,
-        isPureBrand: kw.isPureBrand, // 🔧 保留纯品牌词标记
+        isPureBrand: kw.isPureBrand, // 保留纯品牌词标记
       }))
 
-      // 🔥 2025-12-28: 关键词质量过滤
+      // 关键词质量过滤
       // 从关键词池获取关键词后再次过滤，确保移除品牌变体词和语义查询词
-      // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
+      // � 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
       const keywordFilterResult = filterKeywordQuality(extractedElements.keywords, {
         brandName: offerBrand,
         category: offer.category || undefined,
@@ -368,7 +368,7 @@ export async function generateAdCreative(
       // Fallback: 关键词池不存在时，使用旧的extracted_keywords
       const rawKeywords = JSON.parse((offer as any).extracted_keywords)
 
-      // 🔧 修复(2025-12-17): 兼容两种数据格式
+      // 兼容两种数据格式
       // 格式1: 字符串数组 ["Reolink", "reolink camera", ...]
       // 格式2: 对象数组 [{keyword: "Reolink", searchVolume: 90500}, ...]
       if (Array.isArray(rawKeywords) && rawKeywords.length > 0) {
@@ -392,9 +392,9 @@ export async function generateAdCreative(
           console.warn(`⚠️ extracted_keywords格式未知，跳过`)
         }
 
-        // 🔥 2025-12-28: 关键词质量过滤（Fallback路径也需要过滤）
+        // 关键词质量过滤（Fallback路径也需要过滤）
         // 只有当 keywords 存在且非空时才进行过滤
-        // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
+        // � 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
         if (extractedElements.keywords && extractedElements.keywords.length > 0) {
           const keywordFilterResult = filterKeywordQuality(extractedElements.keywords, {
             brandName: offerBrand,
@@ -438,7 +438,7 @@ export async function generateAdCreative(
       console.log(`📦 读取到 ${extractedElements.descriptions?.length || 0} 个提取的描述`)
     }
 
-    // 🎯 读取增强数据（优先使用，因为质量更高）
+    // 读取增强数据（优先使用，因为质量更高）
     if ((offer as any).enhanced_keywords) {
       let rawKeywords: Array<{
         keyword: string
@@ -448,7 +448,7 @@ export async function generateAdCreative(
       }> = JSON.parse((offer as any).enhanced_keywords)
       console.log(`✨ 读取到 ${rawKeywords?.length || 0} 个增强关键词`)
 
-      // 🔥 2026-01-02: 移除品类过滤 - 避免误杀有效关键词
+      // 移除品类过滤 - 避免误杀有效关键词
       // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
       // 保留其他过滤机制：竞品品牌、品牌变体、语义查询、搜索量过滤
       enhancedData.keywords = rawKeywords.map((kw) => ({
@@ -494,7 +494,7 @@ export async function generateAdCreative(
     console.warn('⚠️ 解析提取的广告元素失败，将使用AI全新生成:', parseError.message)
   }
 
-  // 🎯 合并数据：将enhanced和extracted数据合并（去重）
+  // 合并数据：将enhanced和extracted数据合并（去重）
   // 统一关键词格式为extracted格式（因为buildAdCreativePrompt期望这个格式）
   let normalizedEnhancedKeywords = (enhancedData.keywords || []).map((kw) => ({
     keyword: kw.keyword,
@@ -514,7 +514,7 @@ export async function generateAdCreative(
   }
   normalizedEnhancedKeywords = policySafeEnhancedKeywords.items
 
-  // 🆕 v4.10: 如果传入了桶关键词，将其作为最高优先级关键词
+  // v4.10: 如果传入了桶关键词，将其作为最高优先级关键词
   let bucketKeywordsNormalized: Array<{
     keyword: string
     searchVolume: number
@@ -522,7 +522,7 @@ export async function generateAdCreative(
     priority: string
   }> = []
 
-  // 🆕 v4.16: 如果没有传入桶关键词，根据链接类型和bucket自动获取
+  // v4.16: 如果没有传入桶关键词，根据链接类型和bucket自动获取
   if (options?.bucketKeywords && options.bucketKeywords.length > 0) {
     bucketKeywordsNormalized = options.bucketKeywords.map((kw) => ({
       keyword: kw,
@@ -535,7 +535,7 @@ export async function generateAdCreative(
       `📦 v4.10 关键词池: 使用桶 ${options.bucket} (${options.bucketIntent}) 的 ${bucketKeywordsNormalized.length} 个关键词`
     )
   } else if (options?.bucket) {
-    // 🆕 v4.16: 自动根据链接类型和bucket获取关键词
+    // v4.16: 自动根据链接类型和bucket获取关键词
     const { getKeywordsByLinkTypeAndBucket } = await import('../../keywords/offer-pool')
 
     const bucketType = options.bucket as 'A' | 'B' | 'C' | 'D' | 'S'
@@ -574,7 +574,7 @@ export async function generateAdCreative(
   }
   bucketKeywordsNormalized = policySafeBucketKeywords.items
 
-  // 🔥 2025-12-16修复：统一extracted关键词格式（可能是字符串数组或对象数组）
+  // 统一extracted关键词格式（可能是字符串数组或对象数组）
   let normalizedExtractedKeywords = (extractedElements.keywords || [])
     .map((kw: any) => {
       // 如果是字符串，转换为对象格式
@@ -614,7 +614,7 @@ export async function generateAdCreative(
   }
   normalizedExtractedKeywords = policySafeExtractedKeywords.items
 
-  // 🆕 处理高性能搜索词（从实际广告表现中学习）
+  // 处理高性能搜索词（从实际广告表现中学习）
   let searchTermKeywords: Array<{
     keyword: string
     searchVolume: number
@@ -635,8 +635,8 @@ export async function generateAdCreative(
     console.log(`🔍 添加 ${searchTermKeywords.length} 个高性能搜索词作为关键词候选`)
   }
 
-  // 🆕 v4.10: 桶关键词优先，然后是高性能搜索词，增强关键词，最后是基础关键词
-  // 🔥 优化(2025-12-22): 使用Google Ads标准化规则去重
+  // v4.10: 桶关键词优先，然后是高性能搜索词，增强关键词，最后是基础关键词
+  // 使用Google Ads标准化规则去重
   let mergedKeywords = [
     ...bucketKeywordsNormalized,
     ...searchTermKeywords,
@@ -653,7 +653,7 @@ export async function generateAdCreative(
   }
   mergedKeywords = policySafeMergedKeywords.items
 
-  // 🆕 2026-03-13: 关键词缺口分析 - 在创意生成前识别缺失的行业标准关键词
+  // 关键词缺口分析 - 在创意生成前识别缺失的行业标准关键词
   if (
     shouldRunGapAnalysisForCreative({
       bucket: normalizedBucket,
@@ -695,7 +695,7 @@ export async function generateAdCreative(
           const brandedKeyword = composeGlobalCoreBrandedKeyword(keyword, offerBrand, 5)
           const finalKeyword = brandedKeyword || keyword
 
-          // 🔥 关键修复：检查品牌化后的关键词是否已存在
+          // 关键检查品牌化后的关键词是否已存在
           const normalizedFinal = normalizeGoogleAdsKeyword(finalKeyword)
           if (existingKeywordsNormalized.has(normalizedFinal)) {
             console.log(`[Gap Analysis] ⏭️ 跳过已存在的关键词: ${finalKeyword}`)
@@ -707,7 +707,7 @@ export async function generateAdCreative(
             brandedGapKeywords.push(brandedKeyword)
             console.log(`[Gap Analysis] ✅ 品牌化关键词: ${keyword} → ${brandedKeyword}`)
           } else {
-            // 🔥 修复(2026-03-13): 品牌化失败时丢弃关键词，确保所有SCORING_SUGGESTION关键词都包含品牌
+            // 品牌化失败时丢弃关键词，确保所有SCORING_SUGGESTION关键词都包含品牌
             console.log(`[Gap Analysis] ❌ 品牌化失败（超过5词），丢弃关键词: ${keyword}`)
             brandingFailedCount++
             // 不添加到 brandedGapKeywords，避免不含品牌的行业词进入关键词池
@@ -731,7 +731,7 @@ export async function generateAdCreative(
           source: 'SCORING_SUGGESTION',
           sourceType: 'GAP_INDUSTRY_BRANDED',
           priority: 'HIGH',
-          matchType: 'PHRASE' as const, // 🎯 需求：默认词组匹配
+          matchType: 'PHRASE' as const, // 需求：默认词组匹配
         }))
 
         // 合并到现有关键词
@@ -747,7 +747,7 @@ export async function generateAdCreative(
     }
   }
 
-  // 🔥 优化：使用Google Ads标准化进行去重，保留最高优先级的关键词
+  // 使用Google Ads标准化进行去重，保留最高优先级的关键词
   const uniqueKeywords = deduplicateKeywordsWithPriority(
     mergedKeywords,
     (kw) => kw.keyword,
@@ -761,9 +761,9 @@ export async function generateAdCreative(
     }
   )
 
-  // 🔥 2025-12-28: 最终关键词质量过滤
+  // 最终关键词质量过滤
   // 确保所有来源的关键词都经过过滤，移除品牌变体词和语义查询词
-  // 🔒 强制：最终只保留包含“纯品牌词”的关键词（不拼接造词）
+  // � 强制：最终只保留包含“纯品牌词”的关键词（不拼接造词）
   const finalKeywordFilter = filterKeywordQuality(uniqueKeywords, {
     brandName: offerBrand,
     category: offer.category || undefined,
@@ -791,7 +791,7 @@ export async function generateAdCreative(
     priority: 'MEDIUM' as const,
   }))
 
-  // 🔥 调试：打印去重信息
+  // 调试：打印去重信息
   logDuplicateKeywords(
     mergedKeywords.map((kw) => kw.keyword),
     '合并前关键词'
@@ -820,7 +820,7 @@ export async function generateAdCreative(
     localization: enhancedData.localization,
     brandAnalysis: enhancedData.brandAnalysis,
     qualityScore: enhancedData.qualityScore,
-    // 🆕 v4.10: 添加桶信息到合并数据中
+    // v4.10: 添加桶信息到合并数据中
     bucketInfo: options?.bucket
       ? {
           bucket: options.bucket,
@@ -884,7 +884,7 @@ export async function generateAdCreative(
     options?.theme,
     options?.referencePerformance,
     options?.excludeKeywords,
-    mergedData, // 🎯 传入合并后的增强数据
+    mergedData, // 传入合并后的增强数据
     {
       retryFailureType: options?.retryFailureType,
       searchTermFeedbackHints: options?.searchTermFeedbackHints,
@@ -945,7 +945,7 @@ export async function generateAdCreative(
   result.promptKeywords = promptKeywords
   result.keywordUsagePlan = initialKeywordUsagePlan
 
-  // 🔧 修复(2025-12-27): 对AI生成的关键词进行质量过滤（移除品牌变体词和语义查询词）
+  // 对AI生成的关键词进行质量过滤（移除品牌变体词和语义查询词）
   const brandName = offerBrand || 'Brand'
   if (result.keywords && result.keywords.length > 0) {
     const policySafeGeneratedKeywords = sanitizeKeywordListForGoogleAdsPolicy(result.keywords, {
@@ -972,7 +972,7 @@ export async function generateAdCreative(
       brandName,
       minWordCount: 1,
       maxWordCount: 8,
-      // 🔒 强制：AI生成关键词也必须包含纯品牌词（不拼接造词）
+      // � 强制：AI生成关键词也必须包含纯品牌词（不拼接造词）
       mustContainBrand,
     })
 
@@ -985,11 +985,11 @@ export async function generateAdCreative(
 
     result.keywords = filtered.filtered.map((kw) => kw.keyword)
 
-    // 🔥 2026-01-02: 移除品类过滤 - 避免误杀有效关键词
+    // 移除品类过滤 - 避免误杀有效关键词
     // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
     console.log(`✅ 关键词质量过滤完成，共 ${result.keywords.length} 个关键词`)
 
-    // 🔧 修复(2025-12-27): 添加Google Ads标准化去重，消除AI生成的重复关键词
+    // 添加Google Ads标准化去重，消除AI生成的重复关键词
     const { deduplicateKeywordsWithPriority } = await import('@/lib/google-ads/keyword/normalizer')
     const keywordsAfterDedup = deduplicateKeywordsWithPriority(
       result.keywords,
@@ -1005,7 +1005,7 @@ export async function generateAdCreative(
     console.log(`📝 关键词去重后: ${result.keywords.length} 个唯一关键词`)
   }
 
-  // 🔥 强制第一个headline为DKI品牌格式（自动处理30字符限制）
+  // 强制第一个headline为DKI品牌格式（自动处理30字符限制）
   const HEADLINE_MAX_LENGTH = 30
   const targetCountryRaw = (offer as { target_country?: string }).target_country || 'US'
   const resolvedCreativeLanguage = resolveCreativeTargetLanguage(
@@ -1098,7 +1098,7 @@ export async function generateAdCreative(
     )
   }
 
-  // 🔧 v4.36: 移除强制Headline #2使用DKI格式的限制
+  // v4.36: 移除强制Headline #2使用DKI格式的限制
   // 原因：效果不佳，让AI自由生成更多样化的标题
   // 保留Headline #1的品牌DKI格式不变
 
@@ -1107,11 +1107,11 @@ export async function generateAdCreative(
   console.log(`   - Descriptions: ${result.descriptions.length}个`)
   console.log(`   - Keywords: ${result.keywords.length}个`)
 
-  // 🔄 使用统一关键词服务获取精确搜索量
+  // 使用统一关键词服务获取精确搜索量
   console.time('⏱️ 获取关键词搜索量')
   let keywordsWithVolume: KeywordWithVolume[] = []
 
-  // 🔧 修复(2025-12-24): 提取到外层作用域，供后续clusterKeywordsByIntent使用
+  // 提取到外层作用域，供后续clusterKeywordsByIntent使用
   const resolvedTargetLanguage = targetLanguage
   const language = resolvedCreativeLanguage.languageCode
 
@@ -1120,7 +1120,7 @@ export async function generateAdCreative(
       `🔍 获取关键词精确搜索量: ${result.keywords.length}个关键词, 国家=${targetCountry}, 语言=${language} (${resolvedTargetLanguage})`
     )
 
-    // 🎯 使用统一服务：确保所有搜索量来自Historical Metrics API（精确匹配）
+    // 使用统一服务：确保所有搜索量来自Historical Metrics API（精确匹配）
     const { getKeywordVolumesForExisting } = await import('@/lib/keywords/server')
     const unifiedData = await getKeywordVolumesForExisting({
       baseKeywords: result.keywords,
@@ -1130,10 +1130,10 @@ export async function generateAdCreative(
       brandName,
     })
 
-    // 🎯 修复：添加matchType字段（智能分配）+ lowTopPageBid/highTopPageBid竞价数据
+    // 添加matchType字段（智能分配）+ lowTopPageBid/highTopPageBid竞价数据
     // 注意：这里仅做初始化，会在v4.16优化逻辑（行~2730）中根据品牌/非品牌/品牌相关分类重新分配
     keywordsWithVolume = unifiedData.map((v) => {
-      // 🔥 修复(2025-12-18): 不在初始阶段做复杂的品牌分类，改为统一使用PHRASE
+      // 不在初始阶段做复杂的品牌分类，改为统一使用PHRASE
       // 这样可以在v4.16优化阶段（行2708-2758）准确地重新分配matchType
       // 纯品牌词 → EXACT
       // 品牌相关词 → PHRASE
@@ -1145,8 +1145,8 @@ export async function generateAdCreative(
         searchVolume: v.searchVolume,
         competition: v.competition,
         competitionIndex: v.competitionIndex,
-        lowTopPageBid: v.lowTopPageBid || 0, // 🆕 添加页首最低出价
-        highTopPageBid: v.highTopPageBid || 0, // 🆕 添加页首最高出价
+        lowTopPageBid: v.lowTopPageBid || 0, // 添加页首最低出价
+        highTopPageBid: v.highTopPageBid || 0, // 添加页首最高出价
         volumeUnavailableReason: v.volumeUnavailableReason,
         matchType,
       }
@@ -1154,23 +1154,23 @@ export async function generateAdCreative(
     console.log(`✅ 关键词精确搜索量获取完成（来源: Historical Metrics API）`)
   } catch (error) {
     console.warn('⚠️ 获取关键词搜索量失败，使用默认值:', error)
-    // 🎯 修复：即使失败也要添加matchType和竞价数据
+    // 即使失败也要添加matchType和竞价数据
     keywordsWithVolume = result.keywords.map((kw) => {
-      // 🔥 修复(2025-12-18): 同上，初始化时统一使用PHRASE，让v4.16优化逻辑处理分类
+      // 同上，初始化时统一使用PHRASE，让v4.16优化逻辑处理分类
       let matchType: 'BROAD' | 'PHRASE' | 'EXACT' = 'PHRASE'
 
       return {
         keyword: kw,
         searchVolume: 0,
-        lowTopPageBid: 0, // 🆕 默认为0
-        highTopPageBid: 0, // 🆕 默认为0
+        lowTopPageBid: 0, // 默认为0
+        highTopPageBid: 0, // 默认为0
         matchType,
       }
     })
   }
   console.timeEnd('⏱️ 获取关键词搜索量')
 
-  // 🔒 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
+  // � 强制：只保留包含“纯品牌词”的关键词（不拼接造词）
   const originalKeywordCount = keywordsWithVolume.length
   const validKeywords = keywordsWithVolume.filter((kw) =>
     containsBrand(kw.keyword, kw.searchVolume)
@@ -1190,7 +1190,7 @@ export async function generateAdCreative(
   result.keywords = validKeywords.map((kw) => kw.keyword)
   keywordsWithVolume = validKeywords
 
-  // 🎯 通过Keyword Planner扩展高搜索量关键词（多角度3轮查询策略）
+  // 通过Keyword Planner扩展高搜索量关键词（多角度3轮查询策略）
   // 策略: 使用不同角度的种子词进行3轮查询，最大化获取高搜索量关键词提示
   let plannerSessionForCreative: KeywordPlannerPreparedSession | undefined = options?.plannerSession
   try {
@@ -1224,14 +1224,14 @@ export async function generateAdCreative(
 
         console.log(`🌍 Keyword Planner 查询语言: ${language} (${targetLanguage})`)
 
-        // 🔧 2025-12-17: 如果已传入特定桶的关键词，跳过从关键词池获取所有关键词
+        // 如果已传入特定桶的关键词，跳过从关键词池获取所有关键词
         // 这确保差异化创意只使用对应桶的关键词，而不是所有桶的关键词混合
         if (options?.bucketKeywords && options.bucketKeywords.length > 0) {
           console.log(
             `📦 已有桶 ${options.bucket} (${options.bucketIntent}) 的 ${options.bucketKeywords.length} 个关键词，跳过关键词池合并`
           )
         } else {
-          // 🔥 统一架构(2025-12-16): 使用关键词池替代3轮Keyword Planner扩展
+          // 统一架构: 使用关键词池替代3轮Keyword Planner扩展
           console.log(`\n🔍 从关键词池获取关键词...`)
           const { getOrCreateKeywordPool } = await import('@/lib/keywords/offer-pool')
 
@@ -1252,7 +1252,7 @@ export async function generateAdCreative(
               'D'
             )
 
-            // 🔥 优化(2025-12-22): 使用Google Ads标准化去重
+            // 使用Google Ads标准化去重
             const existingKeywordsSet = new Set(
               result.keywords.map((kw) => normalizeGoogleAdsKeyword(kw))
             )
@@ -1312,10 +1312,10 @@ export async function generateAdCreative(
     keywordsWithVolume = normalizeKeywordSourceAuditForGeneratorList(keywordsWithVolume)
     result.keywords = keywordsWithVolume.map((kw) => kw.keyword)
   } else {
-    // 🔥 方案A优化(2025-12-16): 合并extracted_keywords到最终关键词列表
+    // 方案A合并extracted_keywords到最终关键词列表
     // 原问题：31个高质量Google下拉词仅作为prompt参考，未直接使用
     // 解决方案：将已验证搜索量的extracted_keywords直接合并，确保100%利用
-    // 🔥 优化(2025-12-16): 使用AI语义分类（keyword_intent_clustering prompt）
+    // 使用AI语义分类（keyword_intent_clustering prompt）
     const extractedMergeResult = await mergeExtractedKeywordsWithSingleExit({
       keywordsWithVolume,
       extractedKeywords: extractedElements.keywords || [],
@@ -1356,7 +1356,7 @@ export async function generateAdCreative(
         targetLanguage: resolvedTargetLanguage,
         keywordsWithVolume,
         poolCandidates: Array.isArray(options?.bucketKeywords) ? options.bucketKeywords : undefined,
-        bucket: options?.bucket || null, // 🔥 优化(2026-03-13): 传递 bucket 用于意图一致性检查
+        bucket: options?.bucket || null, // 传递 bucket 用于意图一致性检查
       })
       keywordsWithVolume = supplemented.keywordsWithVolume
       result.keywords = supplemented.keywords
@@ -1384,7 +1384,7 @@ export async function generateAdCreative(
   })
   result.keywordUsagePlan = effectiveKeywordUsagePlan
 
-  // ✅ 基础约束修复：CTA（多语言软补强）与关键词嵌入率（English）
+  // 基础约束CTA（多语言软补强）与关键词嵌入率（English）
   const resolvedLanguage = normalizeLanguageCode(targetLanguage)
   const resolvedSoftLanguage = resolveSoftCopyLanguage(targetLanguage || resolvedLanguage)
   if (resolvedSoftLanguage) {
@@ -1417,7 +1417,7 @@ export async function generateAdCreative(
     }
   }
 
-  // 🆕 非破坏式A/B/D文案补强：仅调整标题/描述表达，不修改关键词策略
+  // 非破坏式A/B/D文案补强：仅调整标题/描述表达，不修改关键词策略
   const softFix = softlyReinforceTypeCopy(
     result,
     normalizedBucket,
@@ -1524,7 +1524,7 @@ export async function generateAdCreative(
     )
   }
 
-  // 🆕 添加只读意图元数据（向后兼容，不影响关键词和发布）
+  // 添加只读意图元数据（向后兼容，不影响关键词和发布）
   annotateCopyIntentMetadata(result, resolvedLanguage, result.keywords || [])
 
   // 修正 sitelinks URL：店铺模式绑定 store_product_links；否则统一使用 offer 主 URL
@@ -1559,7 +1559,7 @@ export async function generateAdCreative(
     }
   }
 
-  // 🎯 生成否定关键词（排除不相关流量）
+  // 生成否定关键词（排除不相关流量）
   let negativeKeywords: string[] = []
   try {
     console.log('🔍 生成否定关键词...')
@@ -1579,7 +1579,7 @@ export async function generateAdCreative(
   const fullResult = {
     ...result,
     keywordsWithVolume,
-    negativeKeywords, // 🎯 新增：添加否定关键词到结果
+    negativeKeywords, // 添加否定关键词到结果
     keywordSupplementation: keywordSupplementationReport,
     ai_model: aiModel,
   }

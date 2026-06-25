@@ -1,10 +1,10 @@
 /**
  * 商品推荐指数Redis缓存
  *
- * 功能:
- * - 缓存商品推荐指数数据
- * - 用户级别隔离
- * - 自动失效机制
+ * 功能
+ * 缓存商品推荐指数数据
+ * 用户级别隔离
+ * 自动失效机制
  */
 
 import { REDIS_PREFIX_CONFIG } from '@/lib/common/server'

@@ -225,7 +225,7 @@ type CampaignNegativeKeywordMatchTypeSource = {
   negativeKeywordsMatchType?: NegativeKeywordMatchTypeInput
 }
 
-/** 兼容 singular/plural 历史字段命名 */
+/* * 兼容 singular/plural 历史字段命名 */
 export function resolveCampaignNegativeKeywordMatchTypeInput(
   config: CampaignNegativeKeywordMatchTypeSource
 ): NegativeKeywordMatchTypeInput {

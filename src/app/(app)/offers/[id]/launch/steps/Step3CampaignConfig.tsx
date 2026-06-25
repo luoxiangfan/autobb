@@ -4,7 +4,7 @@
  * Step 3: Campaign Configuration (完整版)
  * 根据业务规范：显示所有广告配置参数，用户可修改，2列布局
  *
- * 优化：
+ *
  * 1. Target Country/Language 与 Offer 保持一致且只读
  * 2. Final URL Suffix 为必填项
  * 3. 使用统一命名规范自动生成 Campaign/AdGroup/Ad 名称
@@ -203,7 +203,7 @@ const buildInitialKeywords = (
 }
 
 /**
- * 🔧 修复(2026-01-06): 安全获取callout文本
+ * 安全获取callout文本
  * 兼容两种格式：字符串数组 ['text'] 和对象数组 [{text: 'text'}]
  */
 const getCalloutText = (callout: string | { text?: string } | any): string => {
@@ -215,7 +215,7 @@ const getCalloutText = (callout: string | { text?: string } | any): string => {
 }
 
 /**
- * 🔧 修复(2026-01-06): 安全获取sitelink文本
+ * 安全获取sitelink文本
  * 兼容两种格式：字符串和对象 {text, url, description1, description2}
  */
 const getSitelinkText = readSitelinkText
@@ -227,7 +227,7 @@ const normalizeConfigSitelinks = (sitelinks: unknown, fallbackUrl?: string): Sit
   normalizeSitelinkList(Array.isArray(sitelinks) ? sitelinks : [], fallbackUrl)
 
 /**
- * 🆕 P0-1优化：动态CPC出价计算
+ * 动态CPC出价计算
  * 基于关键词的lowTopPageBid搜索量加权平均，上浮20%确保竞争力
  * 公式：Σ(lowTopPageBid × searchVolume) / Σ(searchVolume) × 1.2
  */
@@ -273,7 +273,7 @@ const calculateDynamicCpc = (
     INR: 8.3,
   }
 
-  // 🔧 修复(2025-12-26): 四舍五入到计费单位（0.01货币单位）
+  // 四舍五入到计费单位（0.01货币单位）
   const rawCpc = Math.max(suggestedCpc, minCpc[currency] || 0.1)
   return Math.round(rawCpc * 100) / 100
 }
@@ -281,7 +281,7 @@ const calculateDynamicCpc = (
 interface Props {
   offer: any
   selectedCreative: any
-  selectedAccount: any // 🔧 修复(2025-12-13): 新增selectedAccount参数，用于获取货币信息
+  selectedAccount: any // 新增selectedAccount参数，用于获取货币信息
   onConfigured: (config: any) => void
   initialConfig: any | null
 }
@@ -295,13 +295,13 @@ interface CampaignConfig {
   targetLanguage: string
   biddingStrategy: string
   finalUrlSuffix: string
-  marketingObjective: 'WEB_TRAFFIC' | 'SALES' | 'LEADS' | 'STORE_VISITS' // 🔧 新增(2025-12-24): 营销目标
+  marketingObjective: 'WEB_TRAFFIC' | 'SALES' | 'LEADS' | 'STORE_VISITS' // 营销目标
 
   // Ad Group Level
   adGroupName: string
   maxCpcBid: number
 
-  // Keywords Level - 🆕 P0-1优化：增加lowTopPageBid和highTopPageBid用于动态CPC计算
+  // Keywords Level - 增加lowTopPageBid和highTopPageBid用于动态CPC计算
   keywords: Array<{
     text: string
     matchType: 'BROAD' | 'PHRASE' | 'EXACT'
@@ -330,11 +330,11 @@ export default function Step3CampaignConfig({
   onConfigured,
   initialConfig,
 }: Props) {
-  // 🔧 修复(2025-12-13): 从selectedAccount获取货币信息
+  // 从selectedAccount获取货币信息
   const accountCurrency = selectedAccount?.currencyCode || 'USD'
   const currencySymbol = CURRENCY_SYMBOLS[accountCurrency] || '$'
 
-  // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
+  // 根据货币提供合理的默认值
   const getDefaultBudget = (currency: string): number => {
     const defaults: Record<string, number> = {
       USD: 10,
@@ -371,7 +371,7 @@ export default function Step3CampaignConfig({
     return defaults[currency] || 0.17
   }
 
-  // 🔧 修复(2025-12-27): 提取命名生成逻辑为独立函数，避免依赖循环
+  // 提取命名生成逻辑为独立函数，避免依赖循环
   const generateInitialNaming = useCallback(() => {
     const budgetAmount = initialConfig?.budgetAmount || getDefaultBudget(accountCurrency)
     const maxCpcBid = initialConfig?.maxCpcBid || getDefaultCPC(accountCurrency)
@@ -411,7 +411,7 @@ export default function Step3CampaignConfig({
 
       return {
         ...initialConfig,
-        // 🔧 兼容：历史/AI不稳定输出可能生成超出Google Ads限制的数量（>15 headlines 或 >4 descriptions）
+        // 兼容：历史/AI不稳定输出可能生成超出Google Ads限制的数量（>15 headlines 或 >4 descriptions）
         headlines: Array.isArray(initialConfig.headlines)
           ? initialConfig.headlines.slice(0, 15)
           : [],
@@ -431,26 +431,26 @@ export default function Step3CampaignConfig({
     return {
       // Campaign Level - 使用统一命名规范
       campaignName: initialNaming.campaignName,
-      budgetAmount: getDefaultBudget(accountCurrency), // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
+      budgetAmount: getDefaultBudget(accountCurrency), // 根据货币提供合理的默认值
       budgetType: 'DAILY' as const, // 固定每日预算
-      // 🔒 Target Country/Language 强制与 Offer 保持一致
-      // 🔧 修复(2025-12-11): 使用驼峰命名 targetCountry（与API返回一致）
+      // � Target Country/Language 强制与 Offer 保持一致
+      // 使用驼峰命名 targetCountry（与API返回一致）
       targetCountry: offer.targetCountry || 'US',
       targetLanguage: offer.targetLanguage || 'en',
       biddingStrategy: 'MAXIMIZE_CLICKS', // 业务规范：网站流量营销目标
-      marketingObjective: 'WEB_TRAFFIC' as const, // 🔧 新增(2025-12-24): 营销目标默认为网站流量
-      // 🔧 修复(2025-12-11): API已统一返回camelCase，移除snake_case fallback
+      marketingObjective: 'WEB_TRAFFIC' as const, // 营销目标默认为网站流量
+      // API已统一返回camelCase，移除snake_case fallback
       finalUrlSuffix: selectedCreative?.finalUrlSuffix || offer.finalUrlSuffix || '',
 
       // Ad Group Level - 使用统一命名规范
       adGroupName: initialNaming.adGroupName,
-      maxCpcBid: getDefaultCPC(accountCurrency), // 🔧 修复(2025-12-13): 根据货币提供合理的默认值
+      maxCpcBid: getDefaultCPC(accountCurrency), // 根据货币提供合理的默认值
 
       // Keywords Level - 优先使用keywordsWithVolume（包含搜索量）
-      // 🆕 P0-1优化：同时提取lowTopPageBid和highTopPageBid用于动态CPC计算
+      // 同时提取lowTopPageBid和highTopPageBid用于动态CPC计算
       // 业务约束：型号/产品族意图导向（bucket B）关键词默认全部精确匹配
       keywords: buildInitialKeywords(selectedCreative, offer?.brand || selectedCreative?.brand),
-      // 🎯 新增：从创意中读取否定关键词
+      // 从创意中读取否定关键词
       negativeKeywords: negativeKeywordState.negativeKeywords,
       negativeKeywordMatchType: negativeKeywordState.negativeKeywordMatchType,
 
@@ -460,7 +460,7 @@ export default function Step3CampaignConfig({
         `RSA_${selectedCreative?.theme || 'Default'}_C${selectedCreative?.id || 0}`,
       headlines: (selectedCreative?.headlines || []).slice(0, 15),
       descriptions: (selectedCreative?.descriptions || []).slice(0, 4),
-      // 🔧 修复(2025-12-11): API已统一返回camelCase，移除snake_case fallback
+      // API已统一返回camelCase，移除snake_case fallback
       finalUrls: [selectedCreative?.finalUrl || offer.finalUrl || offer.url],
 
       // Extensions
@@ -473,7 +473,7 @@ export default function Step3CampaignConfig({
   })
 
   const [validationErrors, setValidationErrors] = useState<string[]>([])
-  // 🆕 P0-1优化：动态CPC出价开关
+  // 动态CPC出价开关
   const [enableDynamicCpc, setEnableDynamicCpc] = useState(false)
   const [batchKeywordDialogOpen, setBatchKeywordDialogOpen] = useState(false)
   const [batchKeywordInput, setBatchKeywordInput] = useState('')
@@ -551,10 +551,10 @@ export default function Step3CampaignConfig({
     setSelectedKeywordIndexes(new Set())
   }, [accountCurrency, generateInitialNaming, offer, selectedCreative])
 
-  // 🆕 P0-1优化：计算动态CPC建议值
+  // 计算动态CPC建议值
   const suggestedCpc = calculateDynamicCpc(config.keywords, accountCurrency)
 
-  // 🆕 P0-1优化：当启用动态CPC时，自动更新出价
+  // 当启用动态CPC时，自动更新出价
   useEffect(() => {
     if (enableDynamicCpc && suggestedCpc !== null) {
       handleChange('maxCpcBid', suggestedCpc)
@@ -809,7 +809,7 @@ export default function Step3CampaignConfig({
     if (config.budgetAmount <= 0) {
       errors.push('预算金额必须大于0')
     }
-    // 🔒 Final URL Suffix 必填验证
+    // � Final URL Suffix 必填验证
     if (!config.finalUrlSuffix.trim()) {
       errors.push('Final URL Suffix为必填项，用于追踪广告效果')
     }
@@ -821,8 +821,8 @@ export default function Step3CampaignConfig({
     if (config.maxCpcBid <= 0) {
       errors.push('CPC出价必须大于0')
     }
-    // 🔧 修复(2025-12-26): 验证CPC是计费单位的倍数
-    // 🔧 修复(2026-03-07): 使用正确的转换方式确保是10000的倍数
+    // 验证CPC是计费单位的倍数
+    // 使用正确的转换方式确保是10000的倍数
     const cpcMicros = Math.round(config.maxCpcBid * 100) * 10000
     if (cpcMicros % 10000 !== 0) {
       errors.push(`CPC出价必须是计费单位的倍数（0.01 ${accountCurrency}）`)
@@ -1013,7 +1013,7 @@ export default function Step3CampaignConfig({
               />
             </div>
 
-            {/* Budget Amount + Type - 🔧 修复(2025-12-13): 使用动态货币符号 */}
+            {/* Budget Amount + Type - 使用动态货币符号 */}
             <div className="space-y-2">
               <Label>
                 预算 (Budget){' '}
@@ -1052,7 +1052,7 @@ export default function Step3CampaignConfig({
                       }
                       const value = parseFloat(inputValue)
                       if (!isNaN(value) && value > 0) {
-                        // 🔧 修复(2025-12-26): 自动四舍五入到整数（预算以货币单位计）
+                        // 自动四舍五入到整数（预算以货币单位计）
                         const roundedValue = Math.round(value)
                         handleChange('budgetAmount', roundedValue)
                       }
@@ -1065,7 +1065,7 @@ export default function Step3CampaignConfig({
               </div>
             </div>
 
-            {/* Target Country - 🔒 只读，与Offer保持一致 */}
+            {/* Target Country - � 只读，与Offer保持一致 */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 目标国家 (Target Country)
@@ -1080,7 +1080,7 @@ export default function Step3CampaignConfig({
               </div>
             </div>
 
-            {/* Target Language - 🔒 只读，与Offer保持一致 */}
+            {/* Target Language - � 只读，与Offer保持一致 */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 目标语言 (Target Language)
@@ -1145,7 +1145,7 @@ export default function Step3CampaignConfig({
               </Select>
             </div>
 
-            {/* Final URL Suffix - 🔒 必填 */}
+            {/* Final URL Suffix - � 必填 */}
             <div className="space-y-2">
               <Label>
                 最终链接后缀 (Final URL Suffix){' '}
@@ -1201,7 +1201,7 @@ export default function Step3CampaignConfig({
               />
             </div>
 
-            {/* Max CPC Bid - 🔧 修复(2025-12-13): 使用动态货币符号 */}
+            {/* Max CPC Bid - 使用动态货币符号 */}
             <div className="space-y-2">
               <Label>
                 点击出价 (CPC Bid){' '}
@@ -1227,11 +1227,11 @@ export default function Step3CampaignConfig({
                     }
                     const value = parseFloat(inputValue)
                     if (!isNaN(value) && value > 0) {
-                      // 🔧 修复(2025-12-26): 自动四舍五入到计费单位（0.01货币单位）
+                      // 自动四舍五入到计费单位（0.01货币单位）
                       const roundedValue = Math.round(value * 100) / 100
                       handleChange('maxCpcBid', roundedValue)
                     }
-                    // 🆕 P0-1优化：手动修改CPC时关闭动态CPC
+                    // 手动修改CPC时关闭动态CPC
                     if (enableDynamicCpc) {
                       setEnableDynamicCpc(false)
                     }
@@ -1242,7 +1242,7 @@ export default function Step3CampaignConfig({
                 />
               </div>
 
-              {/* 🆕 P0-1优化：动态CPC出价开关 */}
+              {/* 动态CPC出价开关 */}
               <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-amber-600" />
@@ -1263,7 +1263,7 @@ export default function Step3CampaignConfig({
                 />
               </div>
 
-              {/* 🆕 P0-1优化：显示动态CPC建议值 */}
+              {/* 显示动态CPC建议值 */}
               {enableDynamicCpc && suggestedCpc !== null && (
                 <div className="p-2 bg-green-50 border border-green-200 rounded text-sm text-green-800">
                   <CheckCircle2 className="inline h-4 w-4 mr-1" />
@@ -1284,7 +1284,7 @@ export default function Step3CampaignConfig({
                 </div>
               )}
 
-              {/* 🔧 修复(2025-12-13): 使用货币转换工具计算建议CPC */}
+              {/* 使用货币转换工具计算建议CPC */}
               {offer.productPrice &&
                 offer.commissionPayout &&
                 (() => {

@@ -36,7 +36,7 @@ vi.mock('@/lib/campaign', () => ({
   setCachedCampaignTrends: campaignCacheFns.setCachedCampaignTrends,
 }))
 
-/** One campaign row so scoped performance/commission queries run (matches queryCampaignRowsForTrendsScope). */
+/* * One campaign row so scoped performance/commission queries run (matches queryCampaignRowsForTrendsScope). */
 const mockTrendsScopeCampaignRow = {
   id: 1,
   status: 'ENABLED',

@@ -2,7 +2,7 @@
  * POST /api/cron/weekly-optimization
  * 每周定时任务：为所有用户生成优化任务
  *
- * 调用方式：
+ * 调用方式
  * 1. 本地测试：直接POST请求
  * 2. 生产环境：配置Vercel Cron或Cloud Scheduler
  */

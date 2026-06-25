@@ -20,8 +20,8 @@ const PROXY_URL = process.env.PROXY_URL || ''
 
 /**
  * Scrape URL with JavaScript rendering and stealth mode
- * P0优化: 使用连接池减少启动时间
- * 🌍 支持根据目标国家动态配置语言
+ * 使用连接池减少启动时间
+ * 支持根据目标国家动态配置语言
  */
 export async function scrapeUrlWithBrowser(
   url: string,
@@ -30,10 +30,10 @@ export async function scrapeUrlWithBrowser(
     waitForSelector?: string
     waitForTimeout?: number
     followRedirects?: boolean
-    targetCountry?: string // 🌍 目标国家参数
+    targetCountry?: string // 目标国家参数
   } = {}
 ): Promise<ScrapeUrlResult> {
-  // 🔥 P0修复: 必须传入targetCountry到createStealthBrowser
+  // 必须传入targetCountry到createStealthBrowser
   // 之前漏传导致浏览器locale/timezone/languages使用默认en-US配置
   // 这会触发Amazon反爬虫检测（访问amazon.it但浏览器是英语配置）
   const browserResult = await createStealthBrowser(customProxyUrl, options.targetCountry)
@@ -43,9 +43,9 @@ export async function scrapeUrlWithBrowser(
       // 连接池模式已有context，独立模式需要创建
       const page = await browserResult.context.newPage()
 
-      // 🔥 2025-12-12 内存优化：使用try-finally确保Page在任何情况下都被关闭
+      // 内存使用try-finally确保Page在任何情况下都被关闭
       try {
-        await configureStealthPage(page, options.targetCountry) // 🌍 传入目标国家
+        await configureStealthPage(page, options.targetCountry) // 传入目标国家
 
         // Track redirects
         const redirectChain: string[] = [url]
@@ -61,10 +61,10 @@ export async function scrapeUrlWithBrowser(
 
         console.log(`🌐 访问URL: ${url}`)
 
-        // 🔥 增强人类行为模拟：导航前随机延迟
+        // 增强人类行为模拟：导航前随机延迟
         await randomDelay(500, 1500)
 
-        // 🔥 P1修复: 两阶段智能等待策略
+        // 两阶段智能等待策略
         // 阶段1: 快速提交导航，不等待完整加载（避免被第三方资源阻塞）
         let response: any
         try {
@@ -93,13 +93,13 @@ export async function scrapeUrlWithBrowser(
           throw new Error(`HTTP ${status} error`)
         }
 
-        // 🔥 P0修复: commit后等待DOM开始加载,否则页面可能是空壳HTML
+        // commit后等待DOM开始加载,否则页面可能是空壳HTML
         // Amazon反爬策略:返回200状态但HTML为空,需等待JavaScript执行渲染DOM
         try {
           await page.waitForLoadState('domcontentloaded', { timeout: 5000 })
           console.log(`✅ DOM加载完成`)
 
-          // ✅ 方案2修复: DOM加载后立即添加延迟，给JavaScript执行时间
+          // 方案2DOM加载后立即添加延迟，给JavaScript执行时间
           // Amazon的JavaScript可能在DOM加载后1-2秒才开始执行
           const initialWait = 1000 + Math.random() * 2000 // 1-3秒
           console.log(`⏰ DOM加载后等待: ${Math.round(initialWait)}ms`)
@@ -108,7 +108,7 @@ export async function scrapeUrlWithBrowser(
           console.warn(`⚠️ DOM加载超时,但继续执行`)
         }
 
-        // 🔧 修复: Amazon 欧洲站点需要等待网络空闲才能完整渲染内容
+        // Amazon 欧洲站点需要等待网络空闲才能完整渲染内容
         // 特别是 IT/DE/FR/ES 站点，JavaScript 加载较慢
         if (
           url.includes('amazon.it') ||
@@ -127,10 +127,10 @@ export async function scrapeUrlWithBrowser(
           }
         }
 
-        // 🔥 P1修复: 检测Amazon的a-no-js标记，表示JavaScript未执行完成
+        // 检测Amazon的a-no-js标记，表示JavaScript未执行完成
         // 如果检测到a-no-js，需要额外等待JavaScript渲染
         try {
-          // 🔥 P0增强: 同时获取页面语言信息用于诊断
+          // P0增强: 同时获取页面语言信息用于诊断
           const pageStatus = await page.evaluate(() => {
             const html = document.documentElement
             return {
@@ -149,7 +149,7 @@ export async function scrapeUrlWithBrowser(
           if (pageStatus.hasNoJsClass) {
             console.log(`🔄 检测到a-no-js标记，等待JavaScript渲染...`)
 
-            // 🔥 2025-12-11优化: 先尝试刷新页面（有时能绕过反爬虫）
+            // 先尝试刷新页面（有时能绕过反爬虫）
             // Amazon的a-no-js检测有时是临时的，刷新后可能恢复正常
             try {
               console.log(`🔄 尝试刷新页面绕过a-no-js检测...`)
@@ -181,12 +181,12 @@ export async function scrapeUrlWithBrowser(
               console.warn(`⚠️ 刷新页面失败: ${(refreshError as Error).message}`)
             }
 
-            // ✅ 修复1: 添加随机延迟（模拟人类阅读时间）
+            // 修复1: 添加随机延迟（模拟人类阅读时间）
             const humanDelay = 2000 + Math.random() * 3000 // 2-5秒
             console.log(`⏰ 模拟人类行为延迟: ${Math.round(humanDelay)}ms`)
             await new Promise((resolve) => setTimeout(resolve, humanDelay))
 
-            // ✅ 修复2: 模拟更真实的鼠标移动（贝塞尔曲线路径）
+            // 修复2: 模拟更真实的鼠标移动（贝塞尔曲线路径）
             try {
               // 生成多个点模拟人类鼠标移动路径
               const startX = Math.random() * 200 + 50
@@ -211,7 +211,7 @@ export async function scrapeUrlWithBrowser(
               console.warn(`⚠️ 鼠标模拟失败，继续执行`)
             }
 
-            // ✅ 修复3: 增加超时时间 8秒 → 15秒
+            // 修复3: 增加超时时间 8秒 → 15秒
             // 等待a-no-js变为a-js，或者等待networkidle
             try {
               await Promise.race([
@@ -222,22 +222,22 @@ export async function scrapeUrlWithBrowser(
                     return !html.classList.contains('a-no-js') || html.classList.contains('a-js')
                   },
                   { timeout: 15000 }
-                ), // ✅ 8秒 → 15秒
+                ), // 8秒 → 15秒
                 // 或者等待网络空闲
-                page.waitForLoadState('networkidle', { timeout: 15000 }), // ✅ 8秒 → 15秒
+                page.waitForLoadState('networkidle', { timeout: 15000 }), // 8秒 → 15秒
               ])
               console.log(`✅ JavaScript渲染完成`)
             } catch (_waitError) {
               console.warn(`⚠️ JavaScript渲染等待超时，继续执行`)
 
-              // ✅ 修复4: 超时后再等待一次（给Amazon最后机会）
+              // 修复4: 超时后再等待一次（给Amazon最后机会）
               console.log(`🔄 最后尝试：再等待5秒...`)
               await new Promise((resolve) => setTimeout(resolve, 5000))
             }
           }
 
-          // 🔥 P0增强: JavaScript执行后，检查页面语言是否与目标国家匹配
-          // ✅ 修复: 只在JavaScript成功执行后（a-js存在）才检测语言，避免误报
+          // P0增强: JavaScript执行后，检查页面语言是否与目标国家匹配
+          // 只在JavaScript成功执行后（a-js存在）才检测语言，避免误报
           if (options.targetCountry) {
             try {
               // 重新获取JavaScript执行后的页面状态
@@ -285,7 +285,7 @@ export async function scrapeUrlWithBrowser(
         if (options.waitForSelector) {
           console.log(`⏳ 等待关键元素: ${options.waitForSelector}`)
 
-          // 🔥 多选择器容错策略：尝试多个可能的选择器（包含桌面版和移动版）
+          // 多选择器容错策略：尝试多个可能的选择器（包含桌面版和移动版）
           const productSelectors = [
             // === 桌面版选择器 ===
             '#productTitle', // 美国/英国站常用
@@ -304,7 +304,7 @@ export async function scrapeUrlWithBrowser(
             '#ppd', // 产品页面容器
           ]
 
-          // 🔧 修复: Amazon IT/DE/FR/ES 需要更长的等待时间
+          // Amazon IT/DE/FR/ES 需要更长的等待时间
           const isEuropeanAmazon =
             url.includes('amazon.it') ||
             url.includes('amazon.de') ||
@@ -318,7 +318,7 @@ export async function scrapeUrlWithBrowser(
           for (const selector of productSelectors) {
             const found = await page
               .waitForSelector(selector, {
-                timeout: selectorTimeout, // 🔧 根据地区动态调整超时时间
+                timeout: selectorTimeout, // 根据地区动态调整超时时间
                 state: 'visible',
               })
               .then(() => true)
@@ -339,7 +339,7 @@ export async function scrapeUrlWithBrowser(
           if (!selectorFound) {
             console.warn(`⚠️ 关键元素未找到: ${options.waitForSelector}`)
 
-            // 🔥 检测是否遇到反爬虫保护页面
+            // 检测是否遇到反爬虫保护页面
             const pageTitle = await page.title().catch(() => '')
             const pageUrl = page.url()
 
@@ -365,7 +365,7 @@ export async function scrapeUrlWithBrowser(
               throw new Error(`Amazon错误页面: ${pageTitle}`)
             }
 
-            // 🔥 P0增强调试: 提取页面中所有可能的标题元素
+            // P0增强调试: 提取页面中所有可能的标题元素
             try {
               const debugInfo = await page.evaluate(() => {
                 const h1s = Array.from(document.querySelectorAll('h1')).map((el) => ({
@@ -385,12 +385,12 @@ export async function scrapeUrlWithBrowser(
                     text: el.textContent?.substring(0, 100) || '',
                   }))
                 const bodyClass = document.body?.className || ''
-                // 🔥 检测移动版页面标识
+                // 检测移动版页面标识
                 const isMobilePage = bodyClass.includes('a-m-') || bodyClass.includes('a-mobile')
                 return { h1s, spans, bodyClass, isMobilePage }
               })
 
-              // 🔥 移动版页面警告
+              // 移动版页面警告
               if (debugInfo.isMobilePage) {
                 console.warn(`📱 检测到Amazon移动版页面 (a-m-* class)，DOM结构可能与桌面版不同`)
               }
@@ -408,13 +408,13 @@ export async function scrapeUrlWithBrowser(
             console.warn(`📄 页面预览: ${htmlPreview}...`)
 
             // 如果没有明确的反爬虫特征，但选择器未找到，可能是页面结构变化
-            // 🔥 P0修复: 不再抛出错误，而是继续处理（允许降级抓取）
+            // 不再抛出错误，而是继续处理（允许降级抓取）
             console.warn(`⚠️ 页面加载成功但关键选择器未找到，将尝试降级提取数据`)
           } else {
             console.log(`✅ 关键元素已加载: ${foundSelector || options.waitForSelector}`)
           }
 
-          // 🔥 增强人类行为模拟：页面加载后模拟鼠标活动和滚动
+          // 增强人类行为模拟：页面加载后模拟鼠标活动和滚动
           await page.mouse
             .move(Math.floor(Math.random() * 200) + 100, Math.floor(Math.random() * 200) + 100)
             .catch(() => {})
@@ -425,7 +425,7 @@ export async function scrapeUrlWithBrowser(
             })
             .catch(() => {})
         } else {
-          // 🔥 P1优化: 使用智能等待策略
+          // 使用智能等待策略
           const waitResult = await smartWaitForLoad(page, url).catch(() => ({
             waited: 10000,
             loadComplete: false,
@@ -443,7 +443,7 @@ export async function scrapeUrlWithBrowser(
         await randomDelay(1000, 2000)
 
         // Simulate human scrolling
-        // 🔥 2025-12-12优化：针对Amazon产品页面，滚动到feature-bullets区域触发懒加载
+        // 针对Amazon产品页面，滚动到feature-bullets区域触发懒加载
         const isAmazonProduct =
           url.includes('amazon.') && (url.includes('/dp/') || url.includes('/gp/product/'))
         if (isAmazonProduct) {
@@ -480,7 +480,7 @@ export async function scrapeUrlWithBrowser(
 
           if (!featureLoaded) {
             console.warn(`⚠️ feature-bullets未加载，可能页面结构不同`)
-            // 🔥 调试：检查页面中是否有其他可能的feature容器
+            // 调试：检查页面中是否有其他可能的feature容器
             const featureDebug = await page
               .evaluate(() => {
                 const selectors = [
@@ -536,7 +536,7 @@ export async function scrapeUrlWithBrowser(
         try {
           screenshot = await page.screenshot({
             fullPage: false,
-            timeout: 30000, // 🔥 修复: 增加到30秒超时（代理网络可能较慢）
+            timeout: 30000, // 增加到30秒超时（代理网络可能较慢）
             animations: 'disabled', // 禁用动画加速截图
           })
         } catch (error) {
@@ -567,7 +567,7 @@ export async function scrapeUrlWithBrowser(
           screenshot,
         }
       } finally {
-        // 🔥 2025-12-12 内存优化：确保Page在任何情况下都被关闭
+        // 内存确保Page在任何情况下都被关闭
         await page.close().catch((e) => {
           console.warn(`⚠️ Page关闭失败: ${e.message}`)
         })
@@ -580,9 +580,9 @@ export async function scrapeUrlWithBrowser(
 
 /**
  * Resolve affiliate link redirects
- * P0优化: 使用连接池减少启动时间
- * P0优化: 集成代理IP池预热缓存
- * P1优化: 代理失败时自动换新代理重试
+ * 使用连接池减少启动时间
+ * 集成代理IP池预热缓存
+ * 代理失败时自动换新代理重试
  */
 export async function resolveAffiliateLink(
   affiliateLink: string,
@@ -605,7 +605,7 @@ export async function resolveAffiliateLink(
         )
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
-        // 🔥 清理代理IP缓存，强制获取新IP
+        // 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
@@ -618,7 +618,7 @@ export async function resolveAffiliateLink(
         return await retryWithBackoff(async () => {
           const page = await browserResult.context.newPage()
           try {
-            await configureStealthPage(page, targetCountry) // 🌍 传入目标国家
+            await configureStealthPage(page, targetCountry) // 传入目标国家
 
             const redirectChain: string[] = [affiliateLink]
 
@@ -635,11 +635,11 @@ export async function resolveAffiliateLink(
 
             await page.goto(affiliateLink, {
               waitUntil: 'domcontentloaded',
-              timeout: getDynamicTimeout(affiliateLink), // 🔥 P1优化: 动态超时
+              timeout: getDynamicTimeout(affiliateLink), // 动态超时
             })
 
             // Wait for any JavaScript redirects
-            // 🔥 P1优化: 使用智能等待策略
+            // 使用智能等待策略
             const waitResult = await smartWaitForLoad(page, affiliateLink, {
               maxWaitTime: 15000,
             }).catch(() => ({
@@ -655,7 +655,7 @@ export async function resolveAffiliateLink(
 
             await randomDelay(1000, 2000)
 
-            // 🔥 修复：使用page.evaluate获取完整URL，包括Cloudflare拦截页的URL
+            // 使用page.evaluate获取完整URL，包括Cloudflare拦截页的URL
             // page.url()在某些情况下可能返回不完整的URL
             const finalUrl = await page.evaluate(() => window.location.href).catch(() => page.url())
 
@@ -669,7 +669,7 @@ export async function resolveAffiliateLink(
               `🔧 URL Suffix: ${suffix.substring(0, 100)}${suffix.length > 100 ? '...' : ''}`
             )
 
-            // 🔥 新增：如果suffix为空但finalUrl包含查询参数，记录警告
+            // 如果suffix为空但finalUrl包含查询参数，记录警告
             if (!suffix && finalUrl.includes('?')) {
               console.warn(`⚠️ URL Suffix提取警告: finalUrl包含?但suffix为空`)
               console.warn(`   finalUrl: ${finalUrl}`)
@@ -683,7 +683,7 @@ export async function resolveAffiliateLink(
               redirectCount: redirectChain.length - 1,
             }
           } finally {
-            // 🔥 内存优化：确保Page在任何情况下都关闭
+            // 内存确保Page在任何情况下都关闭
             await page.close().catch((e) => {
               console.warn(`⚠️ [resolveAffiliateLink] Page关闭失败: ${e.message}`)
             })

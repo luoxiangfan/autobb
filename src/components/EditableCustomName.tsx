@@ -16,7 +16,7 @@ interface EditableCustomNameProps {
 /**
  * 可编辑的自定义名称组件
  *
- * 功能：
+ * 功能
  * 1. 默认显示自定义名称（如果有），否则显示占位符
  * 2. 点击后进入编辑模式
  * 3. 失焦或按 Enter 保存，按 ESC 取消

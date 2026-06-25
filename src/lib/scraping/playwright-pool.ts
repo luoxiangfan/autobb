@@ -2,11 +2,11 @@
  * Playwright浏览器连接池 v2
  *
  * 目标: 支持更高并发抓取
- * 优化:
- * - 扩容到10个实例
- * - 支持同一代理多实例（并发抓取）
- * - 添加等待队列机制
- * - 预热功能
+ *
+ * 扩容到10个实例
+ * 支持同一代理多实例（并发抓取）
+ * 添加等待队列机制
+ * 预热功能
  */
 
 import { chromium, Browser, BrowserContext } from 'playwright'
@@ -14,18 +14,18 @@ import { maskProxyUrl } from './proxy/validate-url'
 
 /**
  * 连接池配置
- * 🔥 2025-12-12 内存优化：
- * - 减少最大实例数：10 → 5（配合深度抓取复用Context优化）
- * - 缩短空闲时间：5分钟 → 1分钟（更快释放内存）
- * - 减少每代理实例数：5 → 2（避免同一代理过多实例）
+ * 内存
+ * 减少最大实例数：10 → 5（配合深度抓取复用Context优化）
+ * 缩短空闲时间：5分钟 → 1分钟（更快释放内存）
+ * 减少每代理实例数：5 → 2（避免同一代理过多实例）
  */
 const POOL_CONFIG = {
   maxInstances: 8, // 调整：从5提升到8，减少高并发等待
-  maxInstancesPerProxy: 3, // 🔥 放宽：避免高并发场景频繁等待超时
-  maxIdleTime: 60 * 1000, // 🔥 内存优化：从5分钟减到1分钟
+  maxInstancesPerProxy: 3, // 放宽：避免高并发场景频繁等待超时
+  maxIdleTime: 60 * 1000, // 内存从5分钟减到1分钟
   launchTimeout: 30000, // 启动超时30秒
   acquireTimeout: 180000, // 获取实例超时（短链/慢代理可能占用更久）
-  warmupCount: 1, // 🔥 内存优化：从2减到1
+  warmupCount: 1, // 内存从2减到1
 }
 
 function formatProxyKeyForLog(proxyKey: string): string {
@@ -52,7 +52,7 @@ interface BrowserInstance {
  */
 interface WaitingRequest {
   proxyKey: string
-  targetCountry?: string // 🌍 增加目标国家字段
+  targetCountry?: string // 增加目标国家字段
   resolve: (result: { browser: Browser; context: BrowserContext; instanceId: string }) => void
   reject: (error: Error) => void
   timeout: NodeJS.Timeout
@@ -67,7 +67,7 @@ class PlaywrightPool {
   private cleanupInterval: NodeJS.Timeout | null = null
   private instanceCounter = 0
 
-  // 🔥 User-Agent池，供contextOptions生成使用
+  // User-Agent池，供contextOptions生成使用
   private static readonly USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -76,7 +76,7 @@ class PlaywrightPool {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0',
   ]
 
-  // 🌍 国家配置映射
+  // 国家配置映射
   private static readonly COUNTRY_CONFIG: Record<string, { locale: string; timezone: string }> = {
     US: { locale: 'en-US', timezone: 'America/New_York' },
     GB: { locale: 'en-GB', timezone: 'Europe/London' },
@@ -105,8 +105,8 @@ class PlaywrightPool {
   }
 
   /**
-   * 🔥 根据目标国家动态生成contextOptions
-   * P0修复: 复用实例时必须使用当前targetCountry生成新的配置
+   * 根据目标国家动态生成contextOptions
+   * 复用实例时必须使用当前targetCountry生成新的配置
    */
   private generateContextOptions(targetCountry?: string): any {
     const randomUserAgent =
@@ -142,12 +142,12 @@ class PlaywrightPool {
   }
 
   /**
-   * 🔥 为context添加stealth脚本（增强版：Canvas/WebGL指纹混淆）
-   * P0修复: 之前的plugins=[1,2,3,4,5]是严重错误，导致Amazon检测到机器人
+   * 为context添加stealth脚本（增强版：Canvas/WebGL指纹混淆）
+   * 之前的plugins=[1,2,3,4,5]是严重错误，导致Amazon检测到机器人
    * P0增强: 添加Canvas/WebGL/AudioContext指纹混淆，防止高级反爬虫检测
    */
   private async addStealthScripts(context: BrowserContext, targetCountry?: string): Promise<void> {
-    // 🌍 根据目标国家动态生成语言配置
+    // 根据目标国家动态生成语言配置
     let navigatorLanguages = ['en-US', 'en'] // 默认英语
 
     if (targetCountry) {
@@ -175,7 +175,7 @@ class PlaywrightPool {
       navigatorLanguages = countryLanguageMap[targetCountry.toUpperCase()] || ['en-US', 'en']
     }
 
-    // 🎲 P0优化: 随机化硬件参数（避免所有请求使用相同值）
+    // 随机化硬件参数（避免所有请求使用相同值）
     const hardwareConcurrency = [4, 8, 16][Math.floor(Math.random() * 3)]
     const deviceMemory = [4, 8, 16][Math.floor(Math.random() * 3)]
 
@@ -191,14 +191,14 @@ class PlaywrightPool {
         hwConcurrency: number
         devMemory: number
       }) => {
-        // ===== 基础反检测 =====
+        // 基础反检测
 
         // Override navigator.webdriver
         Object.defineProperty(navigator, 'webdriver', {
           get: () => undefined,
         })
 
-        // 🔥 伪装Chrome运行时（关键！）
+        // 伪装Chrome运行时（关键！）
         const win = window as any
         win.chrome = {
           runtime: {},
@@ -207,8 +207,8 @@ class PlaywrightPool {
           app: {},
         }
 
-        // 🔥 P0修复: 使用真实的plugins对象结构（之前是[1,2,3,4,5]是严重错误）
-        // 🔥 P0增强: 添加完整的Plugin对象属性、length、item()、namedItem()方法
+        // 使用真实的plugins对象结构（之前是[1,2,3,4,5]是严重错误）
+        // P0增强: 添加完整的Plugin对象属性、length、item()、namedItem()方法
         const pluginsArray: any[] = [
           {
             0: {
@@ -296,14 +296,14 @@ class PlaywrightPool {
           configurable: true,
         })
 
-        // 🌍 动态语言列表（根据目标国家）
+        // 动态语言列表（根据目标国家）
         Object.defineProperty(navigator, 'languages', {
           get: () => langs,
         })
 
-        // ===== 硬件参数伪装 =====
+        // 硬件参数伪装
 
-        // 🔥 伪装真实屏幕分辨率和颜色深度
+        // 伪装真实屏幕分辨率和颜色深度
         Object.defineProperty(screen, 'colorDepth', {
           get: () => 24,
         })
@@ -311,17 +311,17 @@ class PlaywrightPool {
           get: () => 24,
         })
 
-        // 🎲 P0优化: 随机化硬件并发数（4/8/16核）
+        // 随机化硬件并发数（4/8/16核）
         Object.defineProperty(navigator, 'hardwareConcurrency', {
           get: () => hwConcurrency,
         })
 
-        // 🎲 P0优化: 随机化设备内存（4/8/16GB）
+        // 随机化设备内存（4/8/16GB）
         Object.defineProperty(navigator, 'deviceMemory', {
           get: () => devMemory,
         })
 
-        // ===== P1增强: 完善Screen对象 =====
+        // P1增强: 完善Screen对象
 
         Object.defineProperty(screen, 'width', {
           get: () => 1920,
@@ -336,7 +336,7 @@ class PlaywrightPool {
           get: () => 1040, // 减去任务栏高度
         })
 
-        // ===== Permissions API =====
+        // Permissions API
 
         const originalQuery = window.navigator.permissions.query
         window.navigator.permissions.query = (parameters: any) =>
@@ -344,7 +344,7 @@ class PlaywrightPool {
             ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
             : originalQuery(parameters)
 
-        // 🔥 伪装Battery API
+        // 伪装Battery API
         Object.defineProperty(navigator, 'getBattery', {
           value: () =>
             Promise.resolve({
@@ -355,7 +355,7 @@ class PlaywrightPool {
             }),
         })
 
-        // 🔥 伪装Connection API
+        // 伪装Connection API
         Object.defineProperty(navigator, 'connection', {
           get: () => ({
             effectiveType: '4g',
@@ -365,17 +365,17 @@ class PlaywrightPool {
           }),
         })
 
-        // ===== P1增强: 主动屏蔽WebRTC =====
+        // P1增强: 主动屏蔽WebRTC
 
         Object.defineProperty(navigator, 'mediaDevices', {
           get: () => undefined,
         })
 
-        // ===== P0增强: Canvas指纹混淆 =====
+        // P0增强: Canvas指纹混淆
 
         const getImageData = HTMLCanvasElement.prototype.toDataURL
         HTMLCanvasElement.prototype.toDataURL = function (type?: string) {
-          // 🎲 添加随机噪声混淆Canvas指纹
+          // 添加随机噪声混淆Canvas指纹
           const context = this.getContext('2d')
           if (context) {
             const originalImageData = context.getImageData(0, 0, this.width, this.height)
@@ -395,11 +395,11 @@ class PlaywrightPool {
           return getImageData.call(this, type)
         }
 
-        // ===== P0增强: WebGL指纹混淆 =====
+        // P0增强: WebGL指纹混淆
 
         const getParameter = WebGLRenderingContext.prototype.getParameter
         WebGLRenderingContext.prototype.getParameter = function (parameter: number) {
-          // 🎭 伪装关键WebGL参数
+          // 伪装关键WebGL参数
           if (parameter === 37445) {
             // UNMASKED_VENDOR_WEBGL
             return 'Intel Inc.'
@@ -421,7 +421,7 @@ class PlaywrightPool {
           }
         }
 
-        // ===== P0增强: AudioContext指纹混淆 =====
+        // P0增强: AudioContext指纹混淆
 
         const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext
         if (AudioContext) {
@@ -431,7 +431,7 @@ class PlaywrightPool {
             const originalGetFloatFrequencyData = analyser.getFloatFrequencyData
             analyser.getFloatFrequencyData = function (array: Float32Array) {
               originalGetFloatFrequencyData.call(this, array)
-              // 🎲 添加微小噪声混淆AudioContext指纹
+              // 添加微小噪声混淆AudioContext指纹
               for (let i = 0; i < array.length; i++) {
                 array[i] += (Math.random() - 0.5) * 0.0001
               }
@@ -441,7 +441,7 @@ class PlaywrightPool {
           }
         }
 
-        // ===== P2增强: 其他反检测措施 =====
+        // P2增强: 其他反检测措施
 
         // 隐藏iframe contentWindow检测
         Object.defineProperty(HTMLIFrameElement.prototype, 'contentWindow', {
@@ -512,14 +512,14 @@ class PlaywrightPool {
     // 1. 尝试复用现有空闲实例
     const existing = this.findIdleInstance(proxyKey)
     if (existing) {
-      // 🔒 先标记为占用，避免并发获取同一实例导致context被重复关闭
+      // � 先标记为占用，避免并发获取同一实例导致context被重复关闭
       existing.inUse = true
       existing.lastUsedAt = Date.now()
       try {
         // 验证实例是否仍然有效
         const isConnected = existing.browser.isConnected()
         if (isConnected) {
-          // 🔥 P0修复: 复用实例时，必须根据当前targetCountry动态生成contextOptions
+          // 复用实例时，必须根据当前targetCountry动态生成contextOptions
           // 不能使用existing.contextOptions，因为它可能包含旧的locale/timezone配置
           const dynamicContextOptions = this.generateContextOptions(targetCountry)
 
@@ -527,7 +527,7 @@ class PlaywrightPool {
           await existing.context.close().catch(() => {})
           const newContext = await existing.browser.newContext(dynamicContextOptions)
 
-          // 🔥 关键：为复用的context添加stealth脚本（传入targetCountry）
+          // 关键：为复用的context添加stealth脚本（传入targetCountry）
           await this.addStealthScripts(newContext, targetCountry)
 
           existing.context = newContext
@@ -607,7 +607,7 @@ class PlaywrightPool {
 
       this.waitingQueue.push({
         proxyKey,
-        targetCountry, // 🌍 保存目标国家信息
+        targetCountry, // 保存目标国家信息
         resolve,
         reject,
         timeout,
@@ -673,7 +673,7 @@ class PlaywrightPool {
   }
 
   /**
-   * 🔥 P1优化：作废并关闭指定实例（用于代理失效场景）
+   * 作废并关闭指定实例（用于代理失效场景）
    * 当检测到代理连接问题时调用此方法，强制关闭失效实例
    */
   async invalidate(instanceId: string): Promise<void> {
@@ -691,7 +691,7 @@ class PlaywrightPool {
   }
 
   /**
-   * 🔥 P1优化：清理所有空闲实例（public方法，用于代理重试场景）
+   * 清理所有空闲实例（public方法，用于代理重试场景）
    */
   async clearIdleInstances(): Promise<number> {
     let clearedCount = 0
@@ -728,7 +728,7 @@ class PlaywrightPool {
       const idleInstance = this.findIdleInstance(waiting.proxyKey)
 
       if (idleInstance) {
-        // 🔒 先标记为占用，避免并发复用同一实例
+        // � 先标记为占用，避免并发复用同一实例
         idleInstance.inUse = true
         idleInstance.lastUsedAt = Date.now()
         // 移除等待请求
@@ -740,7 +740,7 @@ class PlaywrightPool {
           await idleInstance.context.close().catch(() => {})
           const newContext = await idleInstance.browser.newContext(idleInstance.contextOptions)
 
-          // 🔥 关键：为复用的context添加stealth脚本（传入targetCountry）
+          // 关键：为复用的context添加stealth脚本（传入targetCountry）
           await this.addStealthScripts(newContext, waiting.targetCountry)
 
           idleInstance.context = newContext
@@ -772,11 +772,11 @@ class PlaywrightPool {
     allowCredentialsCache: boolean = false,
     userId?: number
   ): Promise<{ browser: Browser; context: BrowserContext; contextOptions: any }> {
-    // 🔥 代理必须在browser.launch时配置，无法在newContext时动态配置
+    // 代理必须在browser.launch时配置，无法在newContext时动态配置
     let launchOptions: any = {
       headless: true,
       args: [
-        '--disable-blink-features=AutomationControlled', // 🔥 反爬虫关键参数
+        '--disable-blink-features=AutomationControlled', // 反爬虫关键参数
         '--disable-dev-shm-usage',
         '--disable-setuid-sandbox',
         '--no-sandbox',
@@ -793,9 +793,9 @@ class PlaywrightPool {
       proxy = proxyCredentials
       console.log(`🔒 [代理池] 使用代理: ${proxy.host}:${proxy.port}`)
     } else if (proxyUrl) {
-      // 🔥 根据 allowCredentialsCache 和 userId 决定是否使用缓存
-      // - 换链接任务: allowCredentialsCache = true + userId，启用用户级别缓存
-      // - 补点击任务: allowCredentialsCache = false，每次获取新 IP
+      // 根据 allowCredentialsCache 和 userId 决定是否使用缓存
+      // 换链接任务: allowCredentialsCache = true + userId，启用用户级别缓存
+      // 补点击任务: allowCredentialsCache = false，每次获取新 IP
       const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
       if (allowCredentialsCache && userId) {
         proxy = await getProxyIp(proxyUrl, false, userId) // 启用用户级别缓存
@@ -813,7 +813,7 @@ class PlaywrightPool {
         password: proxy.password,
       }
 
-      // 🔥 代理链路上 Chromium 的 HTTP/2 更容易触发 PROTOCOL_ERROR（部分中转域名/代理不兼容）
+      // 代理链路上 Chromium 的 HTTP/2 更容易触发 PROTOCOL_ERROR（部分中转域名/代理不兼容）
       // 强制降级为更兼容的 HTTP/1.1 以提高解析成功率。
       launchOptions.args.push('--disable-http2')
       launchOptions.args.push('--disable-quic')
@@ -824,12 +824,12 @@ class PlaywrightPool {
 
     const browser = await chromium.launch(launchOptions)
 
-    // 🔥 使用统一的方法生成contextOptions（复用与首次创建保持一致）
+    // 使用统一的方法生成contextOptions（复用与首次创建保持一致）
     const contextOptions = this.generateContextOptions(targetCountry)
 
     const context = await browser.newContext(contextOptions)
 
-    // 🔥 关键：添加stealth脚本到context（传入targetCountry支持动态语言）
+    // 关键：添加stealth脚本到context（传入targetCountry支持动态语言）
     await this.addStealthScripts(context, targetCountry)
 
     return { browser, context, contextOptions }
@@ -902,7 +902,7 @@ class PlaywrightPool {
     this.cleanupInterval = setInterval(async () => {
       await this.cleanupIdleInstances()
 
-      // 🔥 P2优化: 定期检测泄露
+      // 定期检测泄露
       const leaks = this.detectLeaks()
       if (leaks.hasLeaks) {
         console.warn(`⚠️ 连接池泄露检测报告:`)
@@ -973,7 +973,7 @@ class PlaywrightPool {
   }
 
   /**
-   * 🔥 P2优化: 资源泄露检测
+   * 资源泄露检测
    * 检测长时间inUse的实例（可能忘记release）
    */
   detectLeaks(): {
@@ -1036,7 +1036,7 @@ class PlaywrightPool {
   }
 
   /**
-   * 🔥 P2优化: 强制释放泄露的实例
+   * 强制释放泄露的实例
    */
   async forceReleaseLeaks(): Promise<number> {
     const leaks = this.detectLeaks()

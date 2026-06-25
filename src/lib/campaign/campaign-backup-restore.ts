@@ -193,7 +193,7 @@ export async function createCampaignRowFromBackup(params: {
   userId: number
   googleAdsAccountId?: number | null
   db: DatabaseAdapter
-  /** 调用方已批量做过 abandon + 占用检查时跳过（如 batch-create 执行器） */
+  /* * 调用方已批量做过 abandon + 占用检查时跳过（如 batch-create 执行器） */
   skipOccupancyPrecheck?: boolean
 }): Promise<BatchDbCreateDetail> {
   const { backup, userId, googleAdsAccountId, db, skipOccupancyPrecheck = false } = params

@@ -365,7 +365,7 @@ describe('GET /api/campaigns/performance', () => {
   it('treats daysBack as an inclusive date window (daysBack=7 => today + previous 6 days)', async () => {
     vi.useFakeTimers()
     try {
-      vi.setSystemTime(new Date('2026-02-25T04:00:00.000Z')) // 2026-02-25 12:00 Asia/Shanghai
+      vi.setSystemTime(new Date('2026-02-25T04:00:00.000Z')) // 12:00 Asia/Shanghai
 
       let capturedRange: { start?: string; end?: string } = {}
 

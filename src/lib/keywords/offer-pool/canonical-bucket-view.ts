@@ -19,8 +19,6 @@ import {
 } from './keyword-clustering'
 import type { OfferKeywordPool, PoolKeywordData } from './types'
 
-// ============================================
-
 type KeywordItem = PoolKeywordData | string
 
 function normalizeKeywordItem(item: KeywordItem): PoolKeywordData | null {

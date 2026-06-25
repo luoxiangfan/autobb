@@ -2,11 +2,11 @@
  * Campaign对比视图API
  * GET /api/campaigns/compare?offer_id=X&days=7
  *
- * 功能：
- * - 获取同一Offer的所有Campaign对比数据
- * - 聚合近7天/30天性能数据
- * - 自动标识Winner
- * - 生成规则化优化建议
+ * 功能
+ * 获取同一Offer的所有Campaign对比数据
+ * 聚合近7天/30天性能数据
+ * 自动标识Winner
+ * 生成规则化优化建议
  */
 
 import { NextResponse } from 'next/server'
@@ -210,7 +210,7 @@ export const GET = withAuth(async (request, user) => {
       })
     }
 
-    // ⚡ P0性能优化: 修复N+1查询问题
+    // ⚡ P0性能修复N+1查询问题
     // 原问题: 循环N个campaigns，每个执行2次查询 = 2N次查询
     // 优化后: 2次批量查询，使用Map分组 = 2次查询（与campaigns数量无关）
 

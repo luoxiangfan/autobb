@@ -133,7 +133,7 @@ export async function findActiveGoogleAdsAccounts(
 ): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL 兼容性修复：is_active 在 PostgreSQL 中是 BOOLEAN 类型
+  // PostgreSQL 兼容性is_active 在 PostgreSQL 中是 BOOLEAN 类型
   const isActiveCondition = 'is_active = true'
   const isDeletedCheck = 'is_deleted = FALSE'
   const isManagerCondition = 'is_manager_account = TRUE'
@@ -161,7 +161,7 @@ export async function findActiveGoogleAdsAccounts(
 export async function findEnabledGoogleAdsAccounts(userId: number): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  // 🔧 PostgreSQL 兼容性修复：布尔字段在 PostgreSQL 中是 BOOLEAN 类型
+  // PostgreSQL 兼容性布尔字段在 PostgreSQL 中是 BOOLEAN 类型
   // 使用 SQL 条件而非参数绑定，避免类型不匹配
   const isActiveCondition = 'is_active = true'
   const isManagerCondition = 'is_manager_account = false'
@@ -190,7 +190,7 @@ export async function findEnabledGoogleAdsAccounts(userId: number): Promise<Goog
  * 查找用户 MCC 下的 Google Ads 账号（非 Manager 账号）
  * 只返回 parent_mcc_id 在用户分配的 MCC 列表中的账号
  *
- * 🔧 修复 (2026-04-30): 移除 user_id 限制
+ * 修复 : 移除 user_id 限制
  * 原因：Google Ads 账号可能是管理员同步的，user_id 字段可能是管理员 ID
  * 正确逻辑：只要 parent_mcc_id 在用户分配的 MCC 列表中，就应该返回
  */
@@ -315,8 +315,8 @@ export async function updateGoogleAdsAccount(
 /**
  * 删除 Google Ads 账号（软删除）
  *
- * 🔧 修改历史：
- * - 2025-12-29: 改为软删除，防止 campaigns 关联断裂
+ * 修改历史
+ * 改为软删除，防止 campaigns 关联断裂
  */
 export async function deleteGoogleAdsAccount(id: number, userId: number): Promise<boolean> {
   const db = await getDatabase()

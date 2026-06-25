@@ -17,8 +17,8 @@ export type UrlSwapTaskStatus =
 
 /**
  * 换链方式
- * - auto：方式一，自动访问推广链接解析suffix
- * - manual：方式二，用户配置推广链接列表轮询并解析
+ * auto：方式一，自动访问推广链接解析suffix
+ * manual：方式二，用户配置推广链接列表轮询并解析
  */
 export type UrlSwapMode = 'auto' | 'manual'
 

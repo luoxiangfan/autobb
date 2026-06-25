@@ -19,7 +19,7 @@ import type { AmazonProductData } from './types'
 const PROXY_URL = process.env.PROXY_URL || ''
 
 /**
- * 🔥 KISS优化：清理ASIN格式
+ * 清理ASIN格式
  * Amazon页面数据中ASIN可能包含deal后缀如 "B0DCFNZF32:amzn1.deal.xxx"
  * 只保留标准10位ASIN部分
  */
@@ -37,11 +37,11 @@ function cleanAsin(asin: string | null | undefined): string | null {
 /**
  * Scrape Amazon product page with enhanced anti-bot bypass
  * Extracts comprehensive data for AI creative generation
- * 🔥 P1优化：代理失败时自动换新代理重试
- * 🌍 支持根据目标国家动态配置语言
+ * 代理失败时自动换新代理重试
+ * 支持根据目标国家动态配置语言
  */
 export type ScrapeAmazonProductOptions = {
-  /** 更短等待、更少 a-no-js 重试 */
+  /* * 更短等待、更少 a-no-js 重试 */
   fastMode?: boolean
   waitMs?: number
   maxNoJsRetries?: number
@@ -50,9 +50,9 @@ export type ScrapeAmazonProductOptions = {
 export async function scrapeAmazonProduct(
   url: string,
   customProxyUrl?: string,
-  targetCountry?: string, // 🌍 目标国家参数
+  targetCountry?: string, // 目标国家参数
   maxProxyRetries: number = 2, // 代理失败最多重试2次
-  skipCompetitorExtraction: boolean = false, // 🔥 修复：跳过竞品ASIN提取（用于竞品详情页抓取，避免二级循环）
+  skipCompetitorExtraction: boolean = false, // 跳过竞品ASIN提取（用于竞品详情页抓取，避免二级循环）
   scrapeOptions: ScrapeAmazonProductOptions = {}
 ): Promise<AmazonProductData> {
   const fastMode = scrapeOptions.fastMode === true
@@ -67,14 +67,14 @@ export async function scrapeAmazonProduct(
     try {
       if (proxyAttempt > 0) {
         console.log(`🔄 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`)
-        // 🔥 关键优化：清理连接池实例，避免复用已被Amazon标记的代理IP
+        // 关键清理连接池实例，避免复用已被Amazon标记的代理IP
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
-        // 🔥 清理代理IP缓存，强制获取新IP
+        // 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
         console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
-        // 🔥 额外等待，确保新代理IP被分配
+        // 额外等待，确保新代理IP被分配
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
@@ -85,8 +85,8 @@ export async function scrapeAmazonProduct(
         targetCountry,
       })
 
-      // ✅ 方案4修复: 如果检测到a-no-js失败，清理池并重试一次
-      // 🔥 Bug修复: 使用正则表达式精确匹配<html>标签中的class属性，避免匹配JS/CSS中的字符串
+      // 方案4如果检测到a-no-js失败，清理池并重试一次
+      // Bug使用正则表达式精确匹配<html>标签中的class属性，避免匹配JS/CSS中的字符串
       const htmlTagMatch = result.html?.match(/<html[^>]*class="([^"]*)"/)
       const htmlClasses = htmlTagMatch ? htmlTagMatch[1] : ''
       const hasRealNoJs = htmlClasses.includes('a-no-js') && !htmlClasses.includes('a-js')
@@ -95,7 +95,7 @@ export async function scrapeAmazonProduct(
         console.warn(`⚠️ 检测到<html>标签中有a-no-js类，页面JavaScript未正常执行`)
         console.warn(`🔍 <html>标签classes: ${htmlClasses.substring(0, 100)}...`)
 
-        // 🔥 P1增强: 记录页面语言状态，帮助诊断语言不匹配问题
+        // P1增强: 记录页面语言状态，帮助诊断语言不匹配问题
         const langMatch = result.html.match(/<html[^>]*lang="([^"]*)"/)
         const pageLang = langMatch ? langMatch[1] : '(未设置)'
         console.warn(`🌍 页面语言: ${pageLang} (目标国家: ${targetCountry})`)
@@ -113,7 +113,7 @@ export async function scrapeAmazonProduct(
           const pool = getPlaywrightPool()
           await pool.clearIdleInstances()
 
-          // 🔥 2025-12-11优化: 增加重试间隔，避免触发频率限制
+          // 增加重试间隔，避免触发频率限制
           // 第一次重试等待3-5秒，第二次等待5-8秒
           const retryDelay =
             noJsRetry === 1 ? 3000 + Math.random() * 2000 : 5000 + Math.random() * 3000
@@ -133,7 +133,7 @@ export async function scrapeAmazonProduct(
           const retryHasNoJs =
             retryHtmlClasses.includes('a-no-js') && !retryHtmlClasses.includes('a-js')
 
-          // 🔥 P1增强: 记录重试后的页面语言状态
+          // P1增强: 记录重试后的页面语言状态
           const retryLangMatch = result.html?.match(/<html[^>]*lang="([^"]*)"/)
           const retryPageLang = retryLangMatch ? retryLangMatch[1] : '(未设置)'
 
@@ -173,13 +173,13 @@ export async function scrapeAmazonProduct(
           console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
           // 短暂延迟后重试
           await new Promise((resolve) => setTimeout(resolve, 2000))
-          continue // ✅ 进入下一次代理重试循环
+          continue // 进入下一次代理重试循环
         } else {
           console.error(`❌ 已用尽所有代理重试次数 (${maxProxyRetries + 1}次)`)
-          // ❌ 不要在这里throw，让循环自然结束，在外面统一抛出lastError
+          // 不要在这里throw，让循环自然结束，在外面统一抛出lastError
         }
       } else {
-        // 🔥 非代理错误：立即失败，不继续重试
+        // 非代理错误：立即失败，不继续重试
         console.error(`❌ 非代理错误，停止重试: ${error.message?.substring(0, 100)}`)
         throw error
       }
@@ -191,7 +191,7 @@ export async function scrapeAmazonProduct(
 }
 
 /**
- * 🔥 2025-12-12 内存优化: 复用已有BrowserContext抓取产品
+ * 内存复用已有BrowserContext抓取产品
  *
  * 用于深度抓取场景，避免每个商品都创建新浏览器实例
  * 内存节省: 从6个浏览器/Offer降低到1个浏览器/Offer
@@ -255,7 +255,7 @@ export async function scrapeAmazonProductWithContext(
     // 智能等待页面加载
     await smartWaitForLoad(page, url, { maxWaitTime: 8000 }).catch(() => {})
 
-    // 🔥 2025-12-12优化：分段滚动触发懒加载，确保feature-bullets加载
+    // 分段滚动触发懒加载，确保feature-bullets加载
     // Amazon产品特性(About this item)通常在页面中下部，需要滚动触发懒加载
     // KISS原则：分两次滚动，覆盖更大范围
     await page
@@ -295,12 +295,12 @@ export async function scrapeAmazonProductWithContext(
     console.log(
       `🔍 [复用Context] 滚动策略: ${scrollResult.method}, featureBulletsFound=${scrollResult.found}`
     )
-    await randomDelay(2000, 3000) // 🔥 增加等待时间: 800-1200ms → 2000-3000ms
+    await randomDelay(2000, 3000) // 增加等待时间: 800-1200ms → 2000-3000ms
 
     // 等待feature-bullets元素出现（最多等待5秒）
     const featureLoaded = await page
       .waitForSelector('#feature-bullets li, #featurebullets_feature_div li', {
-        timeout: 5000, // 🔥 增加超时: 3秒 → 5秒
+        timeout: 5000, // 增加超时: 3秒 → 5秒
         state: 'visible',
       })
       .then(() => true)
@@ -308,7 +308,7 @@ export async function scrapeAmazonProductWithContext(
 
     if (!featureLoaded) {
       console.warn(`⚠️ [复用Context] feature-bullets未加载，尝试第三次滚动到70%位置...`)
-      // 🔥 2025-12-13 KISS优化：第三次滚动到页面70%位置，覆盖更多懒加载区域
+      // 第三次滚动到页面70%位置，覆盖更多懒加载区域
       await page
         .evaluate(() => {
           const scrollHeight = document.body.scrollHeight
@@ -335,7 +335,7 @@ export async function scrapeAmazonProductWithContext(
       console.log(`✅ [复用Context] feature-bullets已加载`)
     }
 
-    // 🔥 2025-12-13修复：当需要竞品ASIN时，额外滚动到页面底部触发竞品推荐懒加载
+    // 当需要竞品ASIN时，额外滚动到页面底部触发竞品推荐懒加载
     // 竞品推荐区域通常在页面80%-100%位置，需要滚动触发
     if (!skipCompetitorExtraction) {
       console.log(`🔍 [复用Context] 需要竞品ASIN，额外滚动触发推荐区域懒加载...`)
@@ -357,7 +357,7 @@ export async function scrapeAmazonProductWithContext(
         })
         .catch(() => {})
 
-      // 🔥 关键修复：等待网络空闲，确保竞品推荐区域的AJAX请求完成
+      // 关键等待网络空闲，确保竞品推荐区域的AJAX请求完成
       // 这是单品链接能拿到竞品数据、店铺场景拿不到的根本原因
       console.log(`⏳ [复用Context] 等待竞品推荐区域AJAX加载...`)
       try {
@@ -394,7 +394,7 @@ export async function scrapeAmazonProductWithContext(
       }
     }
 
-    // 🔥 2025-12-16修复：等待评论区加载，确保topReviews数据可用
+    // 等待评论区加载，确保topReviews数据可用
     // 问题：offer 150抓取时topReviews为空，导致后续评论分析无法执行
     console.log(`📝 [复用Context] 等待评论区加载...`)
     try {
@@ -453,7 +453,7 @@ export async function scrapeAmazonProductWithContext(
 
     return productData
   } finally {
-    // 🔥 关键：确保Page在finally中关闭，防止内存泄漏
+    // 关键：确保Page在finally中关闭，防止内存泄漏
     await page.close().catch((e) => {
       console.warn(`⚠️ [复用Context] Page关闭失败: ${e.message}`)
     })
@@ -461,7 +461,7 @@ export async function scrapeAmazonProductWithContext(
 }
 
 /**
- * 🔥 P1优化: 从JSON-LD结构化数据提取产品信息（最稳定的数据源）
+ * 从JSON-LD结构化数据提取产品信息（最稳定的数据源）
  * Amazon页面通常包含Schema.org格式的JSON-LD数据，比DOM选择器更稳定
  */
 interface JsonLdProductData {
@@ -607,16 +607,16 @@ function parseAmazonProductHtml(
   url: string,
   skipCompetitorExtraction: boolean = false
 ): AmazonProductData {
-  // 🎯 核心优化：限定选择器范围到核心产品区域，避免抓取推荐商品
+  // 核心限定选择器范围到核心产品区域，避免抓取推荐商品
 
   // 检查元素是否在推荐区域
-  // 🔥 2025-12-13修复：限制检查深度，避免检查到body/html等大容器导致误判
+  // 限制检查深度，避免检查到body/html等大容器导致误判
   // 问题：之前检查所有父元素的text，body包含整个页面文字，会误判所有元素都在推荐区域
   const isInRecommendationArea = (el: any): boolean => {
     const $el = $(el)
     const parents = $el.parents().toArray()
 
-    // 🔥 关键修复：只检查最近的5层父元素，避免检查到body等大容器
+    // 关键只检查最近的5层父元素，避免检查到body等大容器
     const maxDepth = Math.min(parents.length, 5)
 
     for (let i = 0; i < maxDepth; i++) {
@@ -625,7 +625,7 @@ function parseAmazonProductHtml(
       const id = ($parent.attr('id') || '').toLowerCase()
       const className = ($parent.attr('class') || '').toLowerCase()
 
-      // 🔥 修复：如果到达核心产品区域的已知安全容器，停止检查
+      // 如果到达核心产品区域的已知安全容器，停止检查
       if (
         id === 'feature-bullets' ||
         id === 'featurebullets_feature_div' ||
@@ -655,11 +655,11 @@ function parseAmazonProductHtml(
     return false
   }
 
-  // 🔥 P1优化: 首先提取JSON-LD结构化数据作为可靠的备份数据源
+  // 首先提取JSON-LD结构化数据作为可靠的备份数据源
   const jsonLdData = extractJsonLdData($)
 
   // Extract product features - 限定在核心产品区域
-  // 🔥 2025-12-12优化：增加移动版选择器支持
+  // 增加移动版选择器支持
   const features: string[] = []
   const featureSelectors = [
     // === 桌面版选择器 ===
@@ -720,8 +720,8 @@ function parseAmazonProductHtml(
     console.warn(`⚠️ 产品特性提取为空，可能页面结构变化或懒加载未完成`)
   }
 
-  // ========== 图片提取已移除 ==========
-  // 📝 说明：Google Search Ads仅显示文本（标题、描述、链接、附加信息），不展示图片
+  // 图片提取已移除
+  // 说明：Google Search Ads仅显示文本（标题、描述、链接、附加信息），不展示图片
   // 因此移除了imageUrls提取逻辑，降低抓取复杂度和数据冗余
   const imageUrls: string[] = [] // 保留空数组以维持接口兼容性
 
@@ -758,7 +758,7 @@ function parseAmazonProductHtml(
     $('th:contains("Best Sellers Rank")').next().text().trim()
   const salesRank = salesRankText ? salesRankText.match(/#[\d,]+/)?.[0] || null : null
 
-  // 🎯 P3优化: Extract badge (Amazon's Choice, Best Seller, etc.) - 支持桌面版和移动版
+  // Extract badge (Amazon's Choice, Best Seller, etc.) - 支持桌面版和移动版
   let badge: string | null = null
 
   // Strategy 1: Amazon's Choice badge (最常见)
@@ -816,7 +816,7 @@ function parseAmazonProductHtml(
   }
 
   // Extract availability - 支持桌面版和移动版
-  // 🔥 2025-12-10优化：避免#availability包含JavaScript代码污染的问题
+  // 避免#availability包含JavaScript代码污染的问题
   // 优先使用更精确的选择器，按可靠性顺序排列
   const availability = (() => {
     // 策略1: 使用颜色类选择器（最可靠，避免JS代码）
@@ -885,7 +885,7 @@ function parseAmazonProductHtml(
     })
 
   // Extract top reviews
-  // 🔥 2025-12-16修复：过滤掉未渲染的JavaScript代码
+  // 过滤掉未渲染的JavaScript代码
   const topReviews: string[] = []
   $('[data-hook="review"]')
     .slice(0, 5)
@@ -912,7 +912,7 @@ function parseAmazonProductHtml(
       }
     })
 
-  // 🔥 P2优化: 提取评论关键词/主题（Amazon Review Topics，用于广告创意）
+  // 提取评论关键词/主题（Amazon Review Topics，用于广告创意）
   const reviewKeywords: string[] = []
 
   // 策略1: 从"Read reviews that mention"部分提取
@@ -986,6 +986,7 @@ function parseAmazonProductHtml(
 
   // Extract technical details - 支持桌面版和移动版
   const technicalDetails: Record<string, string> = {}
+
   // === 桌面版选择器 ===
   $('#productDetails_techSpec_section_1 tr, #productDetails_detailBullets_sections1 tr').each(
     (i: number, el: any) => {
@@ -1012,7 +1013,7 @@ function parseAmazonProductHtml(
       technicalDetails[key] = value
     }
   })
-  // 🔥 2025-12-10优化：Product Overview表格提取（包含带图标的属性）
+  // Product Overview表格提取（包含带图标的属性）
   // 使用.a-text-bold和.po-break-word精确分离label和value
   $('#productOverview_feature_div tr, #poExpander tr').each((i: number, el: any) => {
     // 跳过嵌套表格的父行（cellCount > 2 表示是包含嵌套表格的容器行）
@@ -1058,22 +1059,22 @@ function parseAmazonProductHtml(
   }
   const category = categoryParts.join(' > ') || null
 
-  // 🎯 优化品牌名提取 - 多源策略应对反爬虫（提前提取用于竞品过滤）
+  // 优化品牌名提取 - 多源策略应对反爬虫（提前提取用于竞品过滤）
   let brandName: string | null = extractBrandName($, url, null, technicalDetails)
 
-  // 🔥 KISS优化（2025-12-09）：只提取候选ASIN，品牌过滤移到详情页抓取后进行
+  // 只提取候选ASIN，品牌过滤移到详情页抓取后进行
   // 原因：列表页的品牌提取不可靠（颜色/尺寸词被误识别为品牌）
   const relatedAsins: string[] = []
 
-  // 🛡️ 如果是竞品详情页抓取，跳过竞品ASIN提取（避免"竞品的竞品"循环）
+  // 如果是竞品详情页抓取，跳过竞品ASIN提取（避免"竞品的竞品"循环）
   if (skipCompetitorExtraction) {
     console.log(`⏭️ 跳过竞品ASIN提取（skipCompetitorExtraction=true）`)
   } else {
-    // 🔥 2025-12-12优化：精确竞品提取策略
+    // 精确竞品提取策略
     // 核心原则：只提取真正的竞品，排除配件/耗材/经常一起购买
     console.log(`🔍 开始精确竞品ASIN提取...`)
 
-    // ========== 🎯 优先级0（最高）: A+内容比较表格 ==========
+    // 优先级0（最高）: A+内容比较表格
     // 品牌官方的竞品对比，最具参考价值
     const aplusCompetitors: string[] = []
     $('#aplus table [data-asin], #aplus [data-csa-c-item-id]').each((_i: number, el: any) => {
@@ -1099,7 +1100,7 @@ function parseAmazonProductHtml(
       console.log(`✅ A+比较表格: 找到 ${aplusCompetitors.length} 个官方竞品`)
     }
 
-    // ========== 🎯 优先级1: "Compare with similar items" 官方对比表格 ==========
+    // 优先级1: "Compare with similar items" 官方对比表格
     if (relatedAsins.length < 10) {
       $('#HLCXComparisonTable [data-asin], [data-feature-name="comparison"] [data-asin]').each(
         (_i: number, el: any) => {
@@ -1113,14 +1114,14 @@ function parseAmazonProductHtml(
       )
     }
 
-    // ========== 🎯 优先级2: "Products related to this item" ==========
+    // 优先级2: "Products related to this item"
     if (relatedAsins.length < 10) {
       const relatedSelectors = [
         '#sp_detail .a-carousel-card a[href*="/dp/"]',
         '[data-component-type="sp_detail"] .a-carousel-card a[href*="/dp/"]',
         '#similarities_feature_div a[href*="/dp/"]',
         '[data-feature-name="similarities"] a[href*="/dp/"]',
-        // 🔥 2025-12-13新增：更多Amazon推荐区域选择器
+        // 更多Amazon推荐区域选择器
         '#sp_detail2 a[href*="/dp/"]', // 第二个推荐区域
         '[data-component-type="sp_detail2"] a[href*="/dp/"]',
         '#sponsored-products-detail a[href*="/dp/"]', // 赞助商品
@@ -1139,13 +1140,13 @@ function parseAmazonProductHtml(
       }
     }
 
-    // ========== 🎯 优先级3: "Customers who viewed this item also viewed" ==========
+    // 优先级3: "Customers who viewed this item also viewed"
     if (relatedAsins.length < 10) {
       const viewedSelectors = [
         '#sims-simsContainer_feature_div_01 a[href*="/dp/"]',
         '[data-csa-c-slot-id="sims_viewed"] a[href*="/dp/"]',
         '#sims-simsContainer_feature_div_11 a[href*="/dp/"]',
-        // 🔥 2025-12-13新增：更多浏览历史相关选择器
+        // 更多浏览历史相关选择器
         '#sims-consolidated-1_feature_div a[href*="/dp/"]', // 合并的推荐区域
         '#sims-consolidated-2_feature_div a[href*="/dp/"]',
         '[data-component-type="s-product-image"] a[href*="/dp/"]', // 产品图片链接
@@ -1165,7 +1166,7 @@ function parseAmazonProductHtml(
       }
     }
 
-    // ========== 🚫 排除非竞品区域 ==========
+    // � 排除非竞品区域
     // 不从以下区域提取：配件、耗材、经常一起购买
     const excludedContainers = [
       '#sims-fbt', // "Frequently bought together" - 配件/耗材
@@ -1176,7 +1177,7 @@ function parseAmazonProductHtml(
       '#addon-selector', // 加购选项
     ]
 
-    // ========== 🔄 Fallback: data-asin全局搜索（排除非竞品区域）==========
+    // Fallback: data-asin全局搜索（排除非竞品区域）
     if (relatedAsins.length < 5) {
       console.log(`🔄 精确提取不足（${relatedAsins.length}个），启用Fallback策略...`)
 
@@ -1215,7 +1216,7 @@ function parseAmazonProductHtml(
   }
 
   // Extract prices - 支持桌面版和移动版
-  // 🔧 修复（2026-02-21）：
+
   // 1) 避免误抓分期/月供价格（如 "$37.95/mo"）
   // 2) 当DOM价格与JSON-LD价格明显冲突时，优先结构化JSON-LD价格
   const installmentContextPattern =
@@ -1286,7 +1287,7 @@ function parseAmazonProductHtml(
     $('[data-a-color="price"] .a-text-price').text().trim() ||
     null
 
-  // 🎯 优化产品名称提取 - 按优先级尝试核心产品区域（包含桌面版和移动版）
+  // 优化产品名称提取 - 按优先级尝试核心产品区域（包含桌面版和移动版）
   const titleSelectors = [
     // === 桌面版选择器 ===
     '#ppd #productTitle',
@@ -1327,7 +1328,7 @@ function parseAmazonProductHtml(
     }
   }
 
-  // 🎯 优化产品描述提取 - 限定在核心产品区域（包含桌面版和移动版）
+  // 优化产品描述提取 - 限定在核心产品区域（包含桌面版和移动版）
   const descriptionSelectors = [
     // === 桌面版选择器 ===
     '#ppd #feature-bullets',
@@ -1373,7 +1374,7 @@ function parseAmazonProductHtml(
     brandName = extractBrandName($, url, productName, technicalDetails)
   }
 
-  // 🔥 P1优化: 使用JSON-LD数据作为备份（当DOM选择器失败时）
+  // 使用JSON-LD数据作为备份（当DOM选择器失败时）
   const finalProductName = productName || jsonLdData?.name || null
   const finalBrandName = brandName || jsonLdData?.brand || null
   const finalRating = rating || jsonLdData?.rating || null
@@ -1443,7 +1444,7 @@ function parseAmazonProductHtml(
     rating: finalRating,
     reviewCount: finalReviewCount,
     salesRank,
-    badge, // 🎯 P3优化: Amazon trust badge
+    badge, // Amazon trust badge
     availability: finalAvailability,
     primeEligible,
     reviewHighlights: reviewHighlights.slice(0, 10),
@@ -1451,8 +1452,8 @@ function parseAmazonProductHtml(
     technicalDetails,
     asin: finalAsin,
     category: finalCategory,
-    relatedAsins, // 🔥 新增：竞品ASIN列表
-    // 🔥 P2优化: 评论关键词（用于广告创意）
+    relatedAsins, // 竞品ASIN列表
+    // 评论关键词（用于广告创意）
     reviewKeywords: reviewKeywords.slice(0, 15), // 最多15个关键词
   }
 
@@ -1460,14 +1461,14 @@ function parseAmazonProductHtml(
   console.log(
     `⭐ 评分: ${finalRating || 'N/A'}, 评论数: ${finalReviewCount || 'N/A'}, 销量排名: ${salesRank || 'N/A'}`
   )
-  console.log(`🎯 P3 Badge: ${badge || 'None'}`) // P3优化: 显示badge提取结果
+  console.log(`🎯 P3 Badge: ${badge || 'None'}`) // 显示badge提取结果
 
   return productData
 }
 
 /**
  * Extract brand name using multiple strategies with cross-validation
- * 🔥 2025-12-12重构：多渠道交叉验证，提高品牌提取准确性
+ * 多渠道交叉验证，提高品牌提取准确性
  */
 function extractBrandName(
   $: any,
@@ -1475,7 +1476,7 @@ function extractBrandName(
   productName: string | null,
   technicalDetails: Record<string, string>
 ): string | null {
-  // 🔥 多渠道收集品牌名候选
+  // 多渠道收集品牌名候选
   interface BrandCandidate {
     value: string
     source: string
@@ -1484,12 +1485,12 @@ function extractBrandName(
   const candidates: BrandCandidate[] = []
 
   // 检查元素是否在推荐区域
-  // 🔥 2025-12-13修复：限制检查深度，避免检查到body/html等大容器导致误判
+  // 限制检查深度，避免检查到body/html等大容器导致误判
   const isInRecommendationArea = (el: any): boolean => {
     const $el = $(el)
     const parents = $el.parents().toArray()
 
-    // 🔥 关键修复：只检查最近的5层父元素，避免检查到body等大容器
+    // 关键只检查最近的5层父元素，避免检查到body等大容器
     const maxDepth = Math.min(parents.length, 5)
 
     for (let i = 0; i < maxDepth; i++) {
@@ -1498,7 +1499,7 @@ function extractBrandName(
       const id = ($parent.attr('id') || '').toLowerCase()
       const className = ($parent.attr('class') || '').toLowerCase()
 
-      // 🔥 修复：如果到达核心产品区域的已知安全容器，停止检查
+      // 如果到达核心产品区域的已知安全容器，停止检查
       if (
         id === 'feature-bullets' ||
         id === 'featurebullets_feature_div' ||
@@ -1530,7 +1531,7 @@ function extractBrandName(
     return false
   }
 
-  // ========== 渠道1: Product Overview表格 (置信度: 5) ==========
+  // 渠道1: Product Overview表格 (置信度: 5)
   $('#productOverview_feature_div tr, #poExpander tr').each((i: number, el: any) => {
     const label = $(el).find('td.a-span3, td:first-child').text().trim().toLowerCase()
     if (
@@ -1557,7 +1558,7 @@ function extractBrandName(
     }
   })
 
-  // ========== 渠道2: bylineInfo品牌链接 (置信度: 4) ==========
+  // 渠道2: bylineInfo品牌链接 (置信度: 4)
   const brandSelectors = [
     '#ppd #bylineInfo',
     '#centerCol #bylineInfo',
@@ -1580,14 +1581,14 @@ function extractBrandName(
     }
   }
 
-  // ========== 渠道3: data-brand属性 (置信度: 5) ==========
+  // 渠道3: data-brand属性 (置信度: 5)
   const dataBrand = $('[data-brand]').attr('data-brand')
   if (dataBrand && dataBrand.length > 1 && dataBrand.length < 50) {
     candidates.push({ value: dataBrand, source: 'data-brand', confidence: 5 })
   }
 
-  // ========== 渠道4: technicalDetails.Brand / Marke / Manufacturer / etc. (置信度: 5) ==========
-  // 🔥 2025-01-19修复：添加 Manufacturer 作为备选，解决 offer 1929 品牌名错误识别问题
+  // 渠道4: technicalDetails.Brand / Marke / Manufacturer / etc. (置信度: 5)
+  // 添加 Manufacturer 作为备选，解决 offer 1929 品牌名错误识别问题
   // Amazon 部分商品页面没有 Brand 字段，但有 Manufacturer 字段（如 HIKMICRO）
   const technicalBrand =
     technicalDetails.Brand ??
@@ -1596,7 +1597,7 @@ function extractBrandName(
     technicalDetails.Marque ??
     technicalDetails.Merk ??
     technicalDetails.Marka ??
-    technicalDetails.Manufacturer // 🔥 新增：Manufacturer 作为最后备选
+    technicalDetails.Manufacturer // Manufacturer 作为最后备选
 
   if (technicalBrand) {
     const techBrand = technicalBrand
@@ -1604,13 +1605,13 @@ function extractBrandName(
       .trim()
       .replace(/^‎/, '')
       .replace(/^Brand:\s*/i, '')
-      .replace(/^Manufacturer:\s*/i, '') // 🔥 新增：清理 Manufacturer 前缀
+      .replace(/^Manufacturer:\s*/i, '') // 清理 Manufacturer 前缀
     if (techBrand && techBrand.length > 1 && techBrand.length < 50) {
       candidates.push({ value: techBrand, source: 'technical-details', confidence: 5 })
     }
   }
 
-  // ========== 渠道5: 产品标题首单词 (置信度: 2) ==========
+  // 渠道5: 产品标题首单词 (置信度: 2)
   if (productName) {
     const titleParts = productName.split(/[\s-,|]+/)
     if (titleParts.length > 0) {
@@ -1625,7 +1626,7 @@ function extractBrandName(
     }
   }
 
-  // ========== 渠道6: 推广链接域名中的品牌 (置信度: 3) ==========
+  // 渠道6: 推广链接域名中的品牌 (置信度: 3)
   // 从affiliate链接域名提取品牌，如: jackeryamazonseller.pxf.io → Jackery
   const affiliateDomainMatch = url.match(
     /https?:\/\/([a-z0-9]+)(?:seller|shop|store)?(?:\.amazon)?\.(?:pxf\.io|dpbolvw|linksynergy|amazon)/i
@@ -1648,7 +1649,7 @@ function extractBrandName(
     }
   }
 
-  // ========== 渠道7: URL中的Amazon品牌 (置信度: 3) ==========
+  // 渠道7: URL中的Amazon品牌 (置信度: 3)
   const urlBrandMatch =
     url.match(/amazon\.[a-z.]+\/stores\/([^\/]+)/) ||
     url.match(/amazon\.[a-z.]+\/([A-Z][A-Za-z0-9-]+)\/s\?/)
@@ -1662,14 +1663,14 @@ function extractBrandName(
     }
   }
 
-  // ========== 渠道7: meta标签 (置信度: 4) ==========
+  // 渠道7: meta标签 (置信度: 4)
   const metaBrand =
     $('meta[property="og:brand"]').attr('content') || $('meta[name="brand"]').attr('content')
   if (metaBrand && metaBrand.length > 1 && metaBrand.length < 50) {
     candidates.push({ value: metaBrand, source: 'meta-tag', confidence: 4 })
   }
 
-  // ========== 渠道8: A+ Brand模块 (置信度: 5) ==========
+  // 渠道8: A+ Brand模块 (置信度: 5)
   const aPlusBrand = $(
     '#aplusBrandAplusModule .a-expander-content, [data-feature-name="aplusBrand"]'
   )
@@ -1679,7 +1680,7 @@ function extractBrandName(
     candidates.push({ value: aPlusBrand, source: 'aplus-brand', confidence: 5 })
   }
 
-  // ========== 渠道9: 产品描述中的品牌提及 (置信度: 3) ==========
+  // 渠道9: 产品描述中的品牌提及 (置信度: 3)
   const productDescription = $(
     '#productDescription, #aplus, [data-feature-name="productDescription"]'
   ).text()
@@ -1695,12 +1696,12 @@ function extractBrandName(
     }
   }
 
-  // ========== 渠道11: 品牌链接文本 (置信度: 4) ==========
+  // 渠道11: 品牌链接文本 (置信度: 4)
   $('a[href*="/stores/"], a[href*="/brand/"]').each((i: number, el: any) => {
     const $el = $(el)
     const text = $el.text().trim()
     if (text && text.length > 1 && text.length < 50 && !isInRecommendationArea(el)) {
-      // 🔍 调试：输出原始品牌链接文本
+      // 调试：输出原始品牌链接文本
       console.log(`🔍 [品牌链接 #${i}] 原始文本: "${text}"`)
 
       // 排除纯"Store"、"Shop"等店铺关键词
@@ -1733,7 +1734,7 @@ function extractBrandName(
     }
   })
 
-  // ========== 交叉验证逻辑 ==========
+  // 交叉验证逻辑
   const validCandidates = candidates.filter((c) => !isLikelyInvalidBrandName(c.value))
 
   if (validCandidates.length === 0) {
@@ -1816,7 +1817,7 @@ function extractBrandName(
     .replace(/\s+(Brand|Official|Store|Shop)$/i, '')
     .trim()
 
-  // 🔥 最终检查：排除纯"Store"等店铺关键词
+  // 最终检查：排除纯"Store"等店铺关键词
   if (
     /^(Store|Shop|Boutique|Tienda|Negozio|Loja|Winkel|Sklep|Shoppen|Mağaza|店铺|Läden)$/i.test(
       finalBrand
@@ -1842,7 +1843,7 @@ function extractBrandName(
 
 /**
  * Clean brand text by removing store visit prefixes in multiple languages
- * 🔥 2025-12-10优化：增强意大利站和欧洲站的品牌清洗
+ * 增强意大利站和欧洲站的品牌清洗
  */
 function cleanBrandText(brand: string): string {
   brand = (brand || '').trim()
@@ -1852,7 +1853,7 @@ function cleanBrandText(brand: string): string {
   // English (US, CA, AU, GB, IN, SG): "Visit the Brand Store"
   brand = brand.replace(/^Visit\s+the\s+/i, '').replace(/\s+Store$/i, '')
 
-  // 🔥 增强：处理纯"Store"或仅有前缀的情况
+  // 增强：处理纯"Store"或仅有前缀的情况
   if (/^(Store|Shop|Boutique)$/i.test(brand)) {
     return ''
   }

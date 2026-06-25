@@ -1,7 +1,7 @@
 /**
  * Url Swap setTaskError 行为测试
- * - 单次失败：保持 enabled
- * - 连续3次失败：进入 error
+ * 单次失败：保持 enabled
+ * 连续3次失败：进入 error
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'

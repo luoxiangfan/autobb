@@ -168,7 +168,7 @@ export const PUT = withAuth(async (request, user, context) => {
  * DELETE /api/google-ads-accounts/:id
  * 删除Google Ads账号
  *
- * 可选参数 removeGoogleAdsCampaigns（query 或 JSON body，body 可无 Content-Type）：
+ * 可选参数 removeGoogleAdsCampaigns（query 或 JSON body，body 可无 Content-Type）
  * 为 true 时，同步 best-effort 在 Google Ads 远端删除该账号下已同步的 Campaign，并在响应中返回结果
  */
 export const DELETE = withAuth(async (request, user, context) => {

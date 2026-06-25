@@ -32,7 +32,7 @@ export const GET = withAuth(
       }
 
       // 查询登录尝试记录（使用username或email匹配，包含设备信息）
-      // P1修复：添加 success 条件来获取所有记录（成功和失败）
+      // 添加 success 条件来获取所有记录（成功和失败）
       // 之前缺少这个条件可能导致某些数据库行为不一致
       const loginAttempts = (await db.query(
         `
@@ -85,7 +85,7 @@ export const GET = withAuth(
         [userId, limit, offset]
       )) as any[]
 
-      // P1修复：确保 success 是布尔值类型，处理不同数据库返回的类型差异
+      // 确保 success 是布尔值类型，处理不同数据库返回的类型差异
       // 驱动可能返回多种标量类型，统一规范化
       const normalizedRecords = [
         ...loginAttempts.map((record) => ({

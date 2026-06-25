@@ -247,7 +247,7 @@ export async function loginWithPassword(
 ): Promise<LoginResponse> {
   const user = await findUserByUsernameOrEmail(usernameOrEmail)
 
-  // P1修复：统一错误消息，防止账户枚举
+  // 统一错误消息，防止账户枚举
   if (!user) {
     await logLoginAttempt(usernameOrEmail, ipAddress, userAgent, false, '用户不存在')
     throw new Error('用户名或密码错误')
@@ -279,7 +279,7 @@ export async function loginWithPassword(
     // P0：记录失败登录，并在达到阈值时锁定账户
     await recordFailedLogin(user.id, ipAddress, userAgent)
     await logLoginAttempt(usernameOrEmail, ipAddress, userAgent, false, '密码错误')
-    // P1修复：统一错误消息
+    // 统一错误消息
     throw new Error('用户名或密码错误')
   }
 
@@ -510,16 +510,16 @@ export type AuthenticatedHandler = (
 /**
  * withAuth 高阶函数 - 统一API认证检查
  *
- * 用法:
+ * 用法
  * ```typescript
  * export const GET = withAuth(async (request, user) => {
- *   // user.userId, user.email, user.role, user.packageType 可用
- *   return NextResponse.json({ data: 'success' })
+ * // user.userId, user.email, user.role, user.packageType 可用
+ * return NextResponse.json({ data: 'success' })
  * })
  *
  * // 需要管理员权限
  * export const POST = withAuth(async (request, user) => {
- *   return NextResponse.json({ data: 'admin only' })
+ * return NextResponse.json({ data: 'admin only' })
  * }, { requireAdmin: true })
  * ```
  */

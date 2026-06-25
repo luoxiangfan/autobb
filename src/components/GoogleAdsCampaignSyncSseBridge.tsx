@@ -12,9 +12,9 @@ type SsePayload =
   | { type: 'end'; reason: string; ts: number }
 
 /**
- * 在已登录应用壳内维持一条 SSE，用于 Google Ads 广告系列同步管线完成时：
- * - 派发 `GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT`（广告系列页监听并刷新列表）
- * - 非广告系列页时 toast 提示
+ * 在已登录应用壳内维持一条 SSE，用于 Google Ads 广告系列同步管线完成时
+ * 派发 `GOOGLE_ADS_CAMPAIGN_PIPELINE_IDLE_EVENT`（广告系列页监听并刷新列表）
+ * 非广告系列页时 toast 提示
  */
 export function GoogleAdsCampaignSyncSseBridge() {
   const pathname = usePathname()

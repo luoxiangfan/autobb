@@ -15,8 +15,8 @@ export const GOOGLE_ADS_KEYWORD_MAX_LENGTH = 80
 
 /**
  * 标准化关键词并应用Google Ads关键词限制
- * - 最多10个单词
- * - 最多80个字符
+ * 最多10个单词
+ * 最多80个字符
  */
 export function sanitizeKeywordForGoogleAds(keyword: string): {
   text: string

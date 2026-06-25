@@ -24,13 +24,13 @@ export interface UrlSwapUrgentAlert {
 const URL_SWAP_URGENT_ALERT_TYPE = 'url_swap_error'
 const URL_SWAP_URGENT_LOOKBACK_HOURS = 72
 
-/** 排除已禁用的换链接任务（无论关联广告系列是否启用）。 */
+/* * 排除已禁用的换链接任务（无论关联广告系列是否启用）。 */
 export function excludeDisabledUrlSwapTasksSql(): string {
   return `
           AND t.status <> 'disabled'`
 }
 
-/** 仅关联 Offer 存在启用中广告系列时才纳入通知。 */
+/* * 仅关联 Offer 存在启用中广告系列时才纳入通知。 */
 export function requireEnabledCampaignForOfferSql(): string {
   return `
           AND EXISTS (

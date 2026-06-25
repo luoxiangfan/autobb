@@ -56,12 +56,12 @@ function getCommissionPerConversion(
 
 /**
  * GET /api/keywords/performance
- * Query:
- * - days: number (default 7)
- * - offerId: number (optional)
- * - campaignId: number (optional)
- * - limit: number (default 100, max 500)
- * - currency: string (optional)
+ * Query
+ * days: number (default 7)
+ * offerId: number (optional)
+ * campaignId: number (optional)
+ * limit: number (default 100, max 500)
+ * currency: string (optional)
  */
 export const dynamic = 'force-dynamic'
 

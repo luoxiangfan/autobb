@@ -8,7 +8,7 @@ import { CliproxyProvider } from './cliproxy-provider'
  * 代理提供商注册表
  * 自动检测URL格式并选择合适的Provider
  *
- * 🔧 修复(2025-12-26): 移除 GenericProxyProvider，不再支持"其他通用代理"
+ * 移除 GenericProxyProvider，不再支持"其他通用代理"
  */
 export class ProxyProviderRegistry {
   private static providers: ProxyProvider[] = [

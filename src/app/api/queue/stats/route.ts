@@ -171,11 +171,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     let globalCoreRunning = 0
     let globalBackgroundRunning = 0
 
-    // 🔥 获取当前配置（从队列管理器内存中读取）
+    // 获取当前配置（从队列管理器内存中读取）
     const currentConfig = coreQueueManager.getConfig()
 
     const userMapPromise = (async () => {
-      // 🔥 获取用户信息（用于显示用户名）
+      // 获取用户信息（用于显示用户名）
       const { getDatabase } = await import('@/lib/db')
       const db = await getDatabase()
 
@@ -281,11 +281,11 @@ export const GET = withAuth(async (request: NextRequest, user) => {
           failed: proxyStats.filter((p) => !p.available).length,
           details: proxyStats,
         },
-        // 🔥 修复：返回当前配置，前端需要此数据显示"当前生效配置"
+        // 返回当前配置，前端需要此数据显示"当前生效配置"
         config: {
           globalConcurrency: currentConfig.globalConcurrency,
           perUserConcurrency: currentConfig.perUserConcurrency,
-          perTypeConcurrency: currentConfig.perTypeConcurrency, // 🔥 新增：任务类型并发限制
+          perTypeConcurrency: currentConfig.perTypeConcurrency, // 任务类型并发限制
           maxQueueSize: currentConfig.maxQueueSize,
           taskTimeout: currentConfig.taskTimeout,
           enablePriority: true, // 统一队列始终启用优先级

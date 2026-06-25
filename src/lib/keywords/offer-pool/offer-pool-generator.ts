@@ -66,9 +66,8 @@ import {
 import { buildExistingKeywordNormSet } from './offer-pool-global-core'
 import { extractCategorySignalsFromScrapedData } from './offer-pool-scraped-signals'
 import { extractKeywordsFromOffer } from './offer-pool-keyword-extract'
-// ============================================
+
 // 主要流程
-// ============================================
 
 /**
  * 生成 Offer 级关键词池（主入口）
@@ -180,7 +179,7 @@ export async function generateOfferKeywordPool(
   // 2. 提取初始关键词（保留 searchVolume）
   let initialKeywords: PoolKeywordData[]
   if (allKeywords) {
-    // 🔧 修复(2026-01-21): 如果提供了关键词列表，查询搜索量而不是硬编码为 0
+    // 如果提供了关键词列表，查询搜索量而不是硬编码为 0
     console.log(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
 
     try {
@@ -242,12 +241,12 @@ export async function generateOfferKeywordPool(
 
   console.log(`📝 初始关键词数: ${initialKeywords.length}`)
 
-  // 2.5 🔧 修复(2025-12-24): 优化种子词过滤策略
+  // 2.5 优化种子词过滤策略
   // 核心问题: 52→12个种子词过滤率太高，导致关键词扩展不足
   const beforeFilterCount = initialKeywords.length
   const offerPlatform = extractPlatformFromUrl(offer.final_url || offer.url || '')
 
-  // 🆕 先提取长尾种子词中的有价值短语
+  // 先提取长尾种子词中的有价值短语
   const extractedSeeds: PoolKeywordData[] = []
   for (const kw of initialKeywords) {
     const wordCount = kw.keyword.trim().split(/\s+/).length
@@ -287,7 +286,7 @@ export async function generateOfferKeywordPool(
     }
 
     // 过滤条件2：排除低质量词
-    // 🔥 2025-12-24优化: 只过滤明确的低质量词，保留高转化词
+    // 只过滤明确的低质量词，保留高转化词
     const invalidPatterns = [
       // 购买渠道（保留store/shop/amazon/ebay，因为这些是正常购买渠道）
       'near me',
@@ -304,10 +303,10 @@ export async function generateOfferKeywordPool(
       '2021',
       'black friday',
       'prime day',
-      // ✅ 保留: 'store', 'shop', 'amazon', 'ebay' - 店铺/销售渠道词
-      // ✅ 保留: 'discount', 'sale', 'deal', 'code', 'coupon' - 商品需求扩展词
-      // ✅ 保留: 'price', 'cost', 'cheap', 'affordable', 'budget' - 高转化词
-      // ✅ 保留: '2024', '2025' - 当前年份
+      // 保留: 'store', 'shop', 'amazon', 'ebay' - 店铺/销售渠道词
+      // 保留: 'discount', 'sale', 'deal', 'code', 'coupon' - 商品需求扩展词
+      // 保留: 'price', 'cost', 'cheap', 'affordable', 'budget' - 高转化词
+      // 保留: '2024', '2025' - 当前年份
     ]
     const keywordLower = keyword.toLowerCase()
     const hasInvalidPattern = invalidPatterns.some((pattern) => keywordLower.includes(pattern))
@@ -360,7 +359,7 @@ export async function generateOfferKeywordPool(
     console.log(`📊 种子词质量过滤: ${beforeFilterCount} → ${initialKeywords.length}`)
   }
 
-  // 3. 🆕 全量扩展（v2.0：根据认证类型分发）
+  // 3. 全量扩展（v2.0：根据认证类型分发）
   const { expandAllKeywords, filterKeywords } = await import('../server')
 
   const plannerDecision: PlannerDecision = {
@@ -374,8 +373,8 @@ export async function generateOfferKeywordPool(
     offer.category || '',
     offer.target_country,
     offer.target_language || 'en',
-    authType, // 🔥 2025-12-29 新增：认证类型
-    offer, // 🔥 2025-12-29 新增：Offer信息（服务账号模式需要）
+    authType, // 认证类型
+    offer, // Offer信息（服务账号模式需要）
     userId,
     customerId,
     refreshToken,
@@ -393,12 +392,12 @@ export async function generateOfferKeywordPool(
   plannerNonBrandPolicy = plannerDecision.nonBrandPolicy || plannerNonBrandPolicy
   allowPlannerNonBrand = plannerDecision.allowNonBrandFromPlanner ?? allowPlannerNonBrand
 
-  // 4. 🆕 智能过滤（竞品+品类+搜索量+地理位置）
+  // 4. 智能过滤（竞品+品类+搜索量+地理位置）
   const filteredKeywords = filterKeywords(
     expandedKeywords,
     offer.brand,
     offer.category || '',
-    offer.target_country, // 🔧 修复(2025-12-17): 传递目标国家进行地理过滤
+    offer.target_country, // 传递目标国家进行地理过滤
     offer.product_name,
     {
       allowNonBrandFromPlanner: plannerNonBrandPolicy,
@@ -409,7 +408,7 @@ export async function generateOfferKeywordPool(
 
   console.log(`📝 第一次过滤后关键词数: ${filteredKeywords.length}`)
 
-  // 🆕 2025-12-27: 关键词质量过滤
+  // 关键词质量过滤
   // 过滤品牌变体词（如 eurekaddl）和语义查询词（如 significato）
   const pageTypeForContextFilter = resolveOfferPageType(offer)
   const pureBrandKeywordsForFilter = getPureBrandKeywords(offer.brand || '')
@@ -429,7 +428,7 @@ export async function generateOfferKeywordPool(
     productUrl: offer.final_url || offer.url || undefined,
     minWordCount: 1,
     maxWordCount: 8,
-    // 🔒 全量强制：最终关键词必须包含“纯品牌词”（不拼接造词）
+    // � 全量强制：最终关键词必须包含“纯品牌词”（不拼接造词）
     mustContainBrand: pureBrandKeywordsForFilter.length > 0,
     allowNonBrandFromPlanner: plannerNonBrandPolicy,
     // 过滤歧义品牌的无关主题（例如 rove beetle / rove concept）
@@ -444,7 +443,7 @@ export async function generateOfferKeywordPool(
   // 使用过滤后的关键词
   let finalFilteredKeywords = qualityFiltered.filtered
 
-  // 产品页放宽策略（仅在严格过滤导致词池接近“纯品牌词独占”时触发）：
+  // 产品页放宽策略（仅在严格过滤导致词池接近“纯品牌词独占”时触发）
   // 在保持上下文/语义过滤前提下，回补少量高意图非纯品牌词，避免关键词池坍缩为单词。
   if (pageTypeForContextFilter === 'product' && pureBrandKeywordsForFilter.length > 0) {
     const strictNonPureCount = finalFilteredKeywords.filter(
@@ -535,7 +534,7 @@ export async function generateOfferKeywordPool(
     }
   }
 
-  // 🔒 有真实搜索量数据时，移除非纯品牌的0搜索量关键词
+  // � 有真实搜索量数据时，移除非纯品牌的0搜索量关键词
   const hasAnyVolume = finalFilteredKeywords.some((kw) => kw.searchVolume > 0)
   const volumeUnavailable =
     plannerDecision.volumeUnavailableFromPlanner ||
@@ -568,7 +567,7 @@ export async function generateOfferKeywordPool(
   let { brandKeywords: brandKwStrings, nonBrandKeywords: nonBrandKwStrings } =
     separateBrandKeywords(keywordStrings, offer.brand)
 
-  // ✅ 确保所有纯品牌词都被纳入（如 "dr mercola" + "mercola"）
+  // 确保所有纯品牌词都被纳入（如 "dr mercola" + "mercola"）
   if (pureBrandKeywordsForFilter.length > 0) {
     const brandKwNormalized = new Set(
       brandKwStrings.map((k) => normalizeGoogleAdsKeyword(k)).filter(Boolean)
@@ -591,7 +590,7 @@ export async function generateOfferKeywordPool(
     }
   }
 
-  // 🔧 防御性兜底：如果未识别到任何纯品牌词，强制注入标准化后的品牌词
+  // 防御性兜底：如果未识别到任何纯品牌词，强制注入标准化后的品牌词
   // 典型场景：Keyword Planner 不返回 seed 本身，且品牌含标点（如 "Dr. Mercola" → "dr mercola"）
   if (brandKwStrings.length === 0) {
     const canonicalBrand = normalizeGoogleAdsKeyword(offer.brand || '')
@@ -621,7 +620,7 @@ export async function generateOfferKeywordPool(
     }))
   }
 
-  // 🆕 聚类输入硬上限：按来源优先级 + 搜索量 选 Top N
+  // 聚类输入硬上限：按来源优先级 + 搜索量 选 Top N
   if (nonBrandKeywordsData.length > KEYWORD_CLUSTERING_INPUT_LIMIT) {
     const prioritized = prioritizeKeywordsForClustering(nonBrandKeywordsData)
     const capped = prioritized.slice(0, KEYWORD_CLUSTERING_INPUT_LIMIT)
@@ -633,7 +632,7 @@ export async function generateOfferKeywordPool(
     )
   }
 
-  // 🔧 强化：补齐/更新纯品牌词的真实搜索量（优先使用缓存/Keyword Planner）
+  // 强化：补齐/更新纯品牌词的真实搜索量（优先使用缓存/Keyword Planner）
   if (pureBrandKeywordsForFilter.length > 0) {
     const brandKeywordMap = new Map<string, PoolKeywordData>()
     for (const kw of brandKeywordsData) {
@@ -717,30 +716,30 @@ export async function generateOfferKeywordPool(
     brandKeywordsData = Array.from(brandKeywordMap.values())
   }
 
-  // 🆕 v4.16: 确定页面类型
+  // v4.16: 确定页面类型
   console.log(`📊 页面类型: ${pageType}`)
 
   // 6. AI 语义聚类（传递国家和语言参数用于查询商品需求扩展词搜索量）
-  // 🆕 v4.16: 传递 pageType 参数
+  // v4.16: 传递 pageType 参数
   await progress?.({ phase: 'cluster', message: '语义聚类准备中' })
   const buckets = await clusterKeywordsByIntent(
     nonBrandKwStrings,
     offer.brand,
     offer.category,
     userId,
-    offer.target_country, // 🔥 2025-12-23 新增：传递目标国家
-    offer.target_language || 'en', // 🔥 2025-12-23 新增：传递目标语言
-    pageType, // 🆕 v4.16: 传递页面类型
+    offer.target_country, // 传递目标国家
+    offer.target_language || 'en', // 传递目标语言
+    pageType, // v4.16: 传递页面类型
     progress
   )
 
-  // 🆕 v4.16: 根据页面类型处理不同的桶结构
+  // v4.16: 根据页面类型处理不同的桶结构
   if (pageType === 'store') {
     // 店铺链接：处理5个桶
     const storeBuckets = buckets as StoreKeywordBuckets
 
     // 7. 将 PoolKeywordData 映射到桶中
-    // 🔧 修复(2026-01-21): 只保留在 nonBrandKeywordsData 中有搜索量数据的关键词
+    // 只保留在 nonBrandKeywordsData 中有搜索量数据的关键词
     const nonBrandMap = new Map<string, PoolKeywordData>()
     for (const k of nonBrandKeywordsData) {
       const key = normalizeGoogleAdsKeyword(k.keyword)
@@ -886,8 +885,8 @@ export async function generateOfferKeywordPool(
         bucketD: { intent: storeBuckets.bucketD.intent, keywords: storeBucketDData },
         statistics: storeBuckets.statistics,
       },
-      pageType, // 🆕 v4.16: 传递页面类型
-      storeBuckets, // 🆕 v4.16: 传递店铺桶数据
+      pageType, // v4.16: 传递页面类型
+      storeBuckets, // v4.16: 传递店铺桶数据
       {
         bucketA: storeBucketAData,
         bucketB: storeBucketBData,
@@ -903,7 +902,7 @@ export async function generateOfferKeywordPool(
     const productBuckets = buckets as KeywordBuckets
 
     // 7. 将 PoolKeywordData 映射到桶中
-    // 🔧 修复(2026-01-21): 只保留在 nonBrandKeywordsData 中有搜索量数据的关键词
+    // 只保留在 nonBrandKeywordsData 中有搜索量数据的关键词
     // 避免保留 AI 生成但无真实搜索量的模板化关键词
     const nonBrandMap = new Map<string, PoolKeywordData>()
     for (const k of nonBrandKeywordsData) {
@@ -1039,7 +1038,7 @@ export async function generateOfferKeywordPool(
         bucketD: { intent: productBuckets.bucketD.intent, keywords: bucketDData },
         statistics: injectedProduct.statistics,
       },
-      pageType // 🆕 v4.16: 传递页面类型
+      pageType // v4.16: 传递页面类型
     )
 
     return pool

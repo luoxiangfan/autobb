@@ -179,10 +179,10 @@ function extractKeywordsFromScenario(scenario: string): string[] {
 
 /**
  * Convert pain point to user question
- * Examples:
- * - "difficult installation" → "Is this easy to install?"
- * - "short battery life" → "How long does the battery last?"
- * - "poor customer service" → "Is customer service reliable?"
+ * Examples
+ * "difficult installation" → "Is this easy to install?"
+ * "short battery life" → "How long does the battery last?"
+ * "poor customer service" → "Is customer service reliable?"
  */
 function convertPainPointToQuestion(painPoint: string): string | null {
   const lower = painPoint.toLowerCase()

@@ -1,6 +1,6 @@
 import type { AdStrengthEvaluation, AdStrengthRating } from '../creatives/strength/types'
 
-/** Local + optional Google API ad strength result (shared type-only module). */
+/* * Local + optional Google API ad strength result (shared type-only module). */
 export interface ComprehensiveAdStrengthResult {
   localEvaluation: AdStrengthEvaluation
   rsaQualityGate: {

@@ -60,7 +60,7 @@ export function registerAllExecutors(queue: UnifiedQueueManager): void {
   // 注册 ad-creative 执行器
   queue.registerExecutor('ad-creative', executeAdCreativeGeneration)
 
-  // 🆕 注册 campaign-publish 执行器（异步Campaign发布，避免504超时）
+  // 注册 campaign-publish 执行器（异步Campaign发布，避免504超时）
   queue.registerExecutor('campaign-publish', executeCampaignPublish)
 
   // OpenClaw 指令是用户交互主链路，始终在 core 队列可执行；

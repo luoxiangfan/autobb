@@ -115,8 +115,8 @@ export const POST = withAuth(async (request, user, context) => {
 
   const body = await request.json()
   const {
-    synthetic = false, // 🔧 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
-    coverage = false, // ✅ 新命名：coverage 模式，本质仍映射到 D / product_intent
+    synthetic = false, // 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
+    coverage = false, // 新命名：coverage 模式，本质仍映射到 D / product_intent
     bucket,
     creativeType,
     forceGenerate,

@@ -67,10 +67,10 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
 /**
  * 估算token成本（基于Google AI定价）
  *
- * 模型定价（USD per 1M tokens）：
- * - gpt-5.2*: Input $1.75, Output $14.00
- * - gemini-3-flash-preview: Input $0.50, Output $3.00
- * - 其他 flash/pro 模型：沿用历史默认单价
+ * 模型定价（USD per 1M tokens）
+ * gpt-5.2*: Input $1.75, Output $14.00
+ * gemini-3-flash-preview: Input $0.50, Output $3.00
+ * 其他 flash/pro 模型：沿用历史默认单价
  *
  * @param model - 模型名称
  * @param inputTokens - 输入token数

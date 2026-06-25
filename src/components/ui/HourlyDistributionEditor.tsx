@@ -4,22 +4,22 @@ import { useState, useMemo, useCallback, useRef } from 'react'
 import { GripVertical } from 'lucide-react'
 
 interface HourlyDistributionEditorProps {
-  /** 24小时分布数据 (0-23时的点击数，必须是正整数) */
+  /* * 24小时分布数据 (0-23时的点击数，必须是正整数) */
   distribution: number[]
-  /** 每日总点击数 */
+  /* * 每日总点击数 */
   dailyClickCount: number
-  /** 时间段，格式: "06:00-24:00" */
+  /* * 时间段，格式: "06:00-24:00" */
   timePeriod?: string
-  /** 是否处于编辑模式 */
+  /* * 是否处于编辑模式 */
   isEditing?: boolean
-  /** 数据点变化回调 */
+  /* * 数据点变化回调 */
   onChange?: (hour: number, newValue: number) => void
 }
 
 /**
  * 时间分布编辑器 - 24小时点击分布可视化 + 拖拽编辑
  *
- * 特性:
+ * 特性
  * 1. 平滑曲线 + 清晰数据点（仅在活跃时段显示）
  * 2. 悬停显示数值
  * 3. 拖拽调整点击数（活跃时段）
@@ -353,7 +353,7 @@ export default function HourlyDistributionEditor({
             })}
           </svg>
 
-          {/* X轴：小时标签（0-23）- 🔧 修复(2025-12-30): 使用绝对定位对齐虚线 */}
+          {/* X轴：小时标签（0-23）- 使用绝对定位对齐虚线 */}
           <div className="relative mt-2 h-4">
             {Array.from({ length: 24 }, (_, i) => i).map((hour) => {
               const xPercent = (hour / 24) * 100

@@ -582,8 +582,8 @@ export default function GoogleAdsPage() {
     )
   }
 
-  // 🔧 修复(2025-12-12): 独立账号模式 - 用户必须配置完整的 Google Ads API 凭证并完成 OAuth 授权
-  // 🔧 修复(2025-12-24): 服务账号模式也支持
+  // 独立账号模式 - 用户必须配置完整的 Google Ads API 凭证并完成 OAuth 授权
+  // 服务账号模式也支持
   const hasRefreshToken = credentials?.hasRefreshToken || false
   const hasServiceAccount = credentials?.hasServiceAccount || false
   const isConfigured = hasRefreshToken || hasServiceAccount

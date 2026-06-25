@@ -16,17 +16,17 @@ import { applySmartFilters, assignMatchTypes, filterByWhitelist } from './unifie
 import type { KeywordServiceParams, UnifiedKeywordData } from './unified-keyword-types'
 
 export interface MultiRoundExpansionResult {
-  /** 品牌商品锚点关键词 (legacy 桶A) */
+  /* * 品牌商品锚点关键词 (legacy 桶A) */
   brandOrientedKeywords: UnifiedKeywordData[]
-  /** 商品需求场景关键词 (legacy 桶B) */
+  /* * 商品需求场景关键词 (legacy 桶B) */
   scenarioOrientedKeywords: UnifiedKeywordData[]
-  /** 功能规格关键词 (legacy 桶C) */
+  /* * 功能规格关键词 (legacy 桶C) */
   featureOrientedKeywords: UnifiedKeywordData[]
-  /** 所有关键词（合并去重） */
+  /* * 所有关键词（合并去重） */
   allKeywords: UnifiedKeywordData[]
-  /** 识别到的竞品品牌 */
+  /* * 识别到的竞品品牌 */
   competitorBrands: string[]
-  /** 扩展统计 */
+  /* * 扩展统计 */
   stats: {
     round1Count: number // 品牌商品锚点
     round2Count: number // 商品需求场景
@@ -39,10 +39,10 @@ export interface MultiRoundExpansionResult {
 /**
  * 多轮意图感知关键词扩展 v2.0
  *
- * 三轮扩展策略：
- * - Round 1: 使用品牌商品锚点种子词 → 获取品牌+产品关键词
- * - Round 2: 使用商品需求场景种子词 → 获取使用场景关键词
- * - Round 3: 使用功能规格/需求扩展种子词 → 获取功能特性关键词
+ * 三轮扩展策略
+ * Round 1: 使用品牌商品锚点种子词 → 获取品牌+产品关键词
+ * Round 2: 使用商品需求场景种子词 → 获取使用场景关键词
+ * Round 3: 使用功能规格/需求扩展种子词 → 获取功能特性关键词
  *
  * @param params - 扩展参数
  * @returns 按意图分类的关键词结果
@@ -218,7 +218,7 @@ export async function getMultiRoundIntentAwareKeywords(
   allKeywords = whitelistResult.filtered as UnifiedKeywordData[]
   whitelistResult.competitorBrands.forEach((b) => competitorBrandsSet.add(b))
 
-  // 🔥 2026-01-02: 移除品类过滤 - 避免误杀有效关键词
+  // 移除品类过滤 - 避免误杀有效关键词
   // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
   console.log(`\n✅ 关键词过滤完成，共 ${allKeywords.length} 个关键词`)
 
@@ -228,7 +228,7 @@ export async function getMultiRoundIntentAwareKeywords(
     console.log(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
   }
 
-  // 7. 按搜索量降序排序（关键修复：先排序再截取）
+  // 7. 按搜索量降序排序（关键先排序再截取）
   console.log('\n📍 Step 7: 按搜索量降序排序')
   allKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
   console.log(

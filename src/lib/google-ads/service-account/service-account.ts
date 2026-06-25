@@ -71,7 +71,7 @@ export async function getServiceAccountConfig(
   return getServiceAccountConfigRaw(ownerUserId, serviceAccountId)
 }
 
-/** metadata-only：不读取/解密 private_key、developer_token */
+/* * metadata-only：不读取/解密 private_key、developer_token */
 async function getServiceAccountConfigMetadataRaw(userId: number, serviceAccountId?: string) {
   const db = await getDatabase()
   const isActiveCondition = 'is_active = true'
@@ -170,7 +170,7 @@ export type ReplaceGoogleAdsServiceAccountParams = {
   projectId: string | null
 }
 
-/** 替换用户的服务账号（仅保留 1 个）并失效 auth-context 缓存 */
+/* * 替换用户的服务账号（仅保留 1 个）并失效 auth-context 缓存 */
 export async function replaceGoogleAdsServiceAccountForUser(
   userId: number,
   params: ReplaceGoogleAdsServiceAccountParams
@@ -205,7 +205,7 @@ export async function replaceGoogleAdsServiceAccountForUser(
   return id
 }
 
-/** 按 id 删除用户的服务账号并失效 auth-context 缓存 */
+/* * 按 id 删除用户的服务账号并失效 auth-context 缓存 */
 export async function deleteGoogleAdsServiceAccountForUser(
   userId: number,
   serviceAccountId: string
@@ -221,7 +221,7 @@ export async function deleteGoogleAdsServiceAccountForUser(
   await invalidateGoogleAdsAuthContextForCredentialUser(userId)
 }
 
-/** 删除用户全部服务账号并失效 auth-context 缓存 */
+/* * 删除用户全部服务账号并失效 auth-context 缓存 */
 export async function deleteAllGoogleAdsServiceAccountsForUser(userId: number): Promise<void> {
   const db = await getDatabase()
   await db.exec(`DELETE FROM google_ads_service_accounts WHERE user_id = ?`, [userId])
@@ -259,7 +259,7 @@ export interface UnifiedAuthConfig {
   serviceAccountId?: string
 }
 
-/** 双栈等无效配置时抛错；OAuth 路径可复用返回的 context 避免重复加载。 */
+/* * 双栈等无效配置时抛错；OAuth 路径可复用返回的 context 避免重复加载。 */
 async function loadGoogleAdsAuthContextForUnifiedClient(userId: number) {
   const { assertGoogleAdsAuthReadyForApi } = await import('@/lib/google-ads/auth/context')
   return assertGoogleAdsAuthReadyForApi(userId)
@@ -285,8 +285,8 @@ async function resolveAuthContextForUnifiedClient(
  * 根据认证类型自动选择 OAuth 或服务账号认证
  *
  * @returns 兼容两种认证模式的 Google Ads 客户端
- *   - OAuth 模式: 返回 google-ads-api 的 Customer 实例
- *   - 服务账号模式: 返回 Python 代理对象
+ * OAuth 模式: 返回 google-ads-api 的 Customer 实例
+ * 服务账号模式: 返回 Python 代理对象
  */
 export async function getUnifiedGoogleAdsClient(config: {
   customerId: string
@@ -296,10 +296,10 @@ export async function getUnifiedGoogleAdsClient(config: {
     developer_token: string
   }
   authConfig: UnifiedAuthConfig
-  /** 路由层已解析时传入，避免重复加载 auth-context */
+  /* * 路由层已解析时传入，避免重复加载 auth-context */
   oauthRefreshToken?: string
   oauthLoginCustomerId?: string
-  /** 调用方已 assert 时传入，避免重复加载 auth-context */
+  /* * 调用方已 assert 时传入，避免重复加载 auth-context */
   authContext?: GoogleAdsAuthContext
 }): Promise<any> {
   const { authConfig, credentials } = config

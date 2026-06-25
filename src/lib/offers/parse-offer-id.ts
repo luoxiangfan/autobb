@@ -29,7 +29,7 @@ export function parsePositiveIntegerOfferId(value: unknown): number | undefined 
   return parsePositiveIntegerId(value)
 }
 
-/** Parse comma-separated offer ids (e.g. query `ids=1,2,3`); dedupes while preserving order. */
+/* * Parse comma-separated offer ids (e.g. query `ids=1,2,3`); dedupes while preserving order. */
 export function parsePositiveIntegerOfferIdList(raw: string): number[] {
   const ids = raw
     .split(',')

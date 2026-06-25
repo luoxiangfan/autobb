@@ -10,11 +10,11 @@ export interface ProxyUrlValidation {
 /**
  * 验证Proxy URL格式是否正确
  *
- * 必需参数:
- * - cc: 国家代码 (如 US/UK/CA/IE/NZ/ROW 等，具体以代理商支持为准)
- * - ips: IP数量 (整数)
- * - proxyType: 代理类型 (必须是http)
- * - responseType: 响应格式 (必须是txt)
+ * 必需参数
+ * cc: 国家代码 (如 US/UK/CA/IE/NZ/ROW 等，具体以代理商支持为准)
+ * ips: IP数量 (整数)
+ * proxyType: 代理类型 (必须是http)
+ * responseType: 响应格式 (必须是txt)
  *
  * @param proxyUrl - 代理服务商提供的API URL
  * @returns 验证结果

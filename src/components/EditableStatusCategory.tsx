@@ -27,7 +27,7 @@ interface EditableStatusCategoryProps {
 /**
  * 可编辑的运营状态组件
  *
- * 功能：
+ * 功能
  * 1. 默认显示运营状态（Badge 形式）
  * 2. 点击后显示下拉选择框
  * 3. 选择新值后自动保存

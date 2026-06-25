@@ -113,7 +113,7 @@ function generateShortRandomSuffix(length: number = 3): string {
 }
 
 /**
- * - 截断到最大25个字符
+ * 截断到最大25个字符
  */
 function simplifyTheme(theme: string): string {
   if (!theme) return 'Default'
@@ -215,7 +215,7 @@ export function generateAdName(params: {
 
   const parts = [
     'RSA',
-    simplifyTheme(theme || '').substring(0, 15), // 🔧 修复(2025-12-16): 使用简化主题函数
+    simplifyTheme(theme || '').substring(0, 15), // 使用简化主题函数
     `C${creativeId}`,
   ]
 
@@ -339,7 +339,7 @@ export function generateNamingScheme(params: {
     creativeId: creative?.id ?? 0,
   }
 
-  // 🔥 生成远端（Google Ads中真实Campaign.name）的权威命名
+  // 生成远端（Google Ads中真实Campaign.name）的权威命名
   const associativeCampaignName = creative
     ? generateAssociativeCampaignName({
         offerId: offer.id,
@@ -379,15 +379,15 @@ export function generateNamingScheme(params: {
     campaignName,
     adGroupName,
     adName,
-    associativeCampaignName, // 🔥 新增：用于关联的Campaign名称
+    associativeCampaignName, // 用于关联的Campaign名称
   }
 }
 
 /**
- * ========================================
+ *
  * 广告系列关联管理（新增）
  * 用于建立广告创意与Google Ads账号中真实广告系列的关联关系
- * ========================================
+ *
  */
 
 /**
@@ -397,7 +397,7 @@ export interface NamingScheme {
   campaignName: string
   adGroupName: string
   adName?: string
-  associativeCampaignName?: string // 🔥 新增：用于关联的Campaign名称
+  associativeCampaignName?: string // 用于关联的Campaign名称
 }
 
 /**
@@ -406,8 +406,8 @@ export interface NamingScheme {
  * 格式: 品牌名_国家_OfferID_创意ID_时间戳(毫秒)
  * 例如: Reolink_US_173_456_20260213123456789
  *
- * 🔧 修复(2025-12-19): 添加时间戳确保唯一性，避免DUPLICATE_CAMPAIGN_NAME错误
- * 🔧 修复(2025-12-25): 添加国家参数，便于区分不同市场的广告系列
+ * 添加时间戳确保唯一性，避免DUPLICATE_CAMPAIGN_NAME错误
+ * 添加国家参数，便于区分不同市场的广告系列
  * 当同一个Offer+Creative组合重复发布时，时间戳确保每次生成不同的名称
  *
  * 这个命名规范用于建立广告创意与Google Ads账号中真实广告系列的关联关系
@@ -418,11 +418,11 @@ export function generateAssociativeCampaignName(params: {
   brand: string
   country: string
   campaignType?: string
-  date?: Date // 🔧 新增：可选的日期参数，用于测试或指定特定时间
+  date?: Date // 可选的日期参数，用于测试或指定特定时间
 }): string {
   const { offerId, creativeId, brand, country, date = new Date() } = params
 
-  // 新格式（远端Google Ads中真实Campaign.name）：
+  // 新格式（远端Google Ads中真实Campaign.name）
   // 品牌名_国家_OfferID_创意ID_时间戳(毫秒)
   // 例：Reolink_US_173_456_20260213123456789
   const safeOfferId = Number.isFinite(offerId) ? Math.max(0, Math.floor(offerId)) : 0
@@ -453,7 +453,7 @@ export function generateAssociativeCampaignName(params: {
 /**
  * 解析关联Campaign名称
  *
- * 支持多代格式（新旧兼容）：
+ * 支持多代格式（新旧兼容）
  * 1) 新格式（下划线）：品牌名_国家_OfferID_创意ID_时间戳(毫秒)
  * 2) 旧格式（连字符）：offerId-creativeId-brand-country-type-timestamp
  * 3) 更旧格式（连字符）：offerId-creativeId-brand-type-timestamp / offerId-creativeId-brand-type
@@ -467,9 +467,9 @@ export function parseAssociativeCampaignName(name: string): {
   brand: string
   country?: string
   campaignType: string
-  timestamp?: string // 🔧 新增：可选的时间戳字段
+  timestamp?: string // 可选的时间戳字段
 } | null {
-  // 🔥 新格式（下划线分隔）：
+  // 新格式（下划线分隔）
   // 品牌名_国家_OfferID_创意ID_时间戳(毫秒)
   // 例：Reolink_US_173_456_20260213123456789
   // 备注：品牌名允许包含下划线，因此从尾部固定段回溯解析。
@@ -500,7 +500,7 @@ export function parseAssociativeCampaignName(name: string): {
     }
   }
 
-  // 🔧 最新格式：[数字]-[数字]-[文本]-[国家]-[文本]-[14位数字时间戳]
+  // 最新格式：[数字]-[数字]-[文本]-[国家]-[文本]-[14位数字时间戳]
   const newWithCountryPattern = /^(\d+)-(\d+)-([^-]+)-([A-Z]{2})-([^-]+)-(\d{14})$/
   const newWithCountryMatch = name.match(newWithCountryPattern)
 
@@ -517,7 +517,7 @@ export function parseAssociativeCampaignName(name: string): {
     }
   }
 
-  // 🔧 旧格式：[数字]-[数字]-[文本]-[文本]-[14位数字时间戳]（无国家）
+  // 旧格式：[数字]-[数字]-[文本]-[文本]-[14位数字时间戳]（无国家）
   const oldPattern = /^(\d+)-(\d+)-([^-]+)-([^-]+)-(\d{14})$/
   const oldMatch = name.match(oldPattern)
 
@@ -532,7 +532,7 @@ export function parseAssociativeCampaignName(name: string): {
     }
   }
 
-  // 🔧 兼容更旧格式：[数字]-[数字]-[文本]-[文本]（无时间戳、无国家）
+  // 兼容更旧格式：[数字]-[数字]-[文本]-[文本]（无时间戳、无国家）
   const oldestPattern = /^(\d+)-(\d+)-([^-]+)-([^-]+)$/
   const oldestMatch = name.match(oldestPattern)
 

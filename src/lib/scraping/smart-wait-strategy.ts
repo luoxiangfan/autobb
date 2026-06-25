@@ -40,7 +40,7 @@ export function assessPageComplexity(url: string): PageComplexity {
     }
   }
 
-  // 🔥 P0修复：短链接服务需要更长超时（反爬虫验证 + 多次重定向）
+  // 短链接服务需要更长超时（反爬虫验证 + 多次重定向）
   // 常见短链接服务：bit.ly, tinyurl, ow.ly, rebrand.ly, pboost.me, etc.
   const shortLinkDomains = [
     'bit.ly',
@@ -65,13 +65,13 @@ export function assessPageComplexity(url: string): PageComplexity {
       complexity: 'complex',
       estimatedLoadTime: 15000,
       recommendedWaitTime: 10000,
-      recommendedTimeout: 180000, // 🔥 3分钟超时，应对短链接服务的反爬虫验证
+      recommendedTimeout: 180000, // 3分钟超时，应对短链接服务的反爬虫验证
     }
   }
 
   // 复杂页面：电商、社交媒体、SPA应用
   if (
-    urlLower.includes('amazon.') || // 🔥 修复：支持所有Amazon域名（.com/.it/.de/.fr等）
+    urlLower.includes('amazon.') || // 支持所有Amazon域名（.com/.it/.de/.fr等）
     urlLower.includes('ebay.com') ||
     urlLower.includes('facebook.com') ||
     urlLower.includes('twitter.com') ||
@@ -83,7 +83,7 @@ export function assessPageComplexity(url: string): PageComplexity {
       complexity: 'complex',
       estimatedLoadTime: 8000,
       recommendedWaitTime: 5000,
-      recommendedTimeout: 120000, // 🔥 增加到120秒，应对慢速代理和多次重定向
+      recommendedTimeout: 120000, // 增加到120秒，应对慢速代理和多次重定向
     }
   }
 
@@ -92,14 +92,14 @@ export function assessPageComplexity(url: string): PageComplexity {
     complexity: 'medium',
     estimatedLoadTime: 4000,
     recommendedWaitTime: 2000,
-    recommendedTimeout: 90000, // 🔥 增加到90秒，应对代理延迟和页面加载慢
+    recommendedTimeout: 90000, // 增加到90秒，应对代理延迟和页面加载慢
   }
 }
 
 /**
  * 智能等待页面加载完成
  *
- * 相比固定的waitUntil: 'networkidle'，这个策略更灵活：
+ * 相比固定的waitUntil: 'networkidle'，这个策略更灵活
  * 1. 根据页面复杂度动态调整
  * 2. 使用多个信号判断加载完成
  * 3. 提前检测完成，避免不必要的等待
@@ -129,7 +129,7 @@ export async function smartWaitForLoad(
     console.warn('DOM加载超时')
   }
 
-  // 🔥 优化：并行检测多个完成信号，而不是串行等待
+  // 并行检测多个完成信号，而不是串行等待
   const checkPromises: Promise<string | null>[] = []
 
   // 信号1: 网络空闲检测（短超时，不阻塞）
@@ -162,14 +162,14 @@ export async function smartWaitForLoad(
   // 信号3: 主要内容已渲染（轮询检测，但更积极）
   checkPromises.push(
     (async () => {
-      const endTime = startTime + Math.min(maxWaitTime, 3000) // 🔥 最多轮询3秒
-      const shortInterval = 200 // 🔥 缩短检查间隔到200ms
+      const endTime = startTime + Math.min(maxWaitTime, 3000) // 最多轮询3秒
+      const shortInterval = 200 // 缩短检查间隔到200ms
 
       while (Date.now() < endTime) {
         try {
           const hasContent = await page.evaluate(() => {
             const body = document.body
-            // 🔥 降低内容长度要求，Amazon页面DOM加载后即可
+            // 降低内容长度要求，Amazon页面DOM加载后即可
             return body && body.textContent && body.textContent.trim().length > 50
           })
 
@@ -186,7 +186,7 @@ export async function smartWaitForLoad(
     })()
   )
 
-  // 🔥 优化：等待任意一个信号完成即可，不需要全部完成
+  // 等待任意一个信号完成即可，不需要全部完成
   const firstSignal = await Promise.race(checkPromises).catch(() => null)
   if (firstSignal) {
     signals.push(firstSignal)

@@ -1,10 +1,10 @@
 /**
  * 关键词池辅助函数 (v2.0)
- * 🔥 2025-12-29 优化：根据认证类型分发不同扩展策略
+ * 根据认证类型分发不同扩展策略
  *
- * 策略：
- * - OAuth模式：Keyword Planner迭代查询（移除Trends）
- * - 服务账号模式：Google下拉词 + 增强提取 + Google Trends
+ * 策略
+ * OAuth模式：Keyword Planner迭代查询（移除Trends）
+ * 服务账号模式：Google下拉词 + 增强提取 + Google Trends
  */
 
 import type { PoolKeywordData } from './offer-pool'
@@ -15,7 +15,7 @@ import {
   resolveKeywordPlannerLinkedServiceAccountId,
   type KeywordPlannerPreparedSession,
 } from '@/lib/google-ads/accounts/auth/index'
-// 🔥 2026-03-13: 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
+// 移除 TRENDS 关键词生成，由 Title/About补充 + 行业通用词替代
 import { DEFAULTS } from './keyword-constants'
 import { getKeywordPlannerUrlSeedForOffer } from './planner/keyword-planner-site-filter'
 import { getLanguageName, normalizeCountryCode, normalizeLanguageCode } from '../common/server'
@@ -60,9 +60,7 @@ import {
 } from './planner/planner-non-brand-policy'
 import type { Offer } from '../offers/server'
 
-// ============================================
 // 动态过滤逻辑（无硬编码配置）
-// ============================================
 
 function buildPlannerBrandKeywords(brandName: string, _category: string): string[] {
   const normalizedFull = normalizeGoogleAdsKeyword(brandName)
@@ -694,16 +692,14 @@ function shouldFilterSemanticKeyword(keyword: string, productUrl?: string): bool
   return !keywordPlatforms.includes(urlPlatform)
 }
 
-// ============================================
-// 主入口：根据认证类型分发扩展策略（🔥 2025-12-29 新增）
-// ============================================
+// 主入口：根据认证类型分发扩展策略
 
 /**
  * 全量关键词扩展（v2.0）
  *
- * 根据认证类型选择不同的扩展策略：
- * - OAuth模式：Keyword Planner迭代查询（移除Trends）
- * - 服务账号模式：Google下拉词 + 增强提取 + Google Trends
+ * 根据认证类型选择不同的扩展策略
+ * OAuth模式：Keyword Planner迭代查询（移除Trends）
+ * 服务账号模式：Google下拉词 + 增强提取 + Google Trends
  *
  * @param initialKeywords - 初始关键词
  * @param brandName - 品牌名称
@@ -800,9 +796,7 @@ export async function expandAllKeywords(
   }
 }
 
-// ============================================
 // OAuth模式：Keyword Planner迭代查询
-// ============================================
 
 interface OAuthExpandParams {
   initialKeywords: PoolKeywordData[]
@@ -842,7 +836,7 @@ interface OAuthExpandParams {
 /**
  * OAuth模式关键词扩展：Keyword Planner迭代查询
  *
- * 策略：
+ * 策略
  * 1. 生成纯品牌词种子
  * 2. 迭代查询Keyword Planner（最多3轮，Top20）
  * 3. 质量过滤（品牌变体/语义/品牌无关/低意图）
@@ -937,7 +931,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     return fallbackKeywords
   }
 
-  // ✅ Always seed with the canonical pure-brand keyword to avoid empty brand bucket
+  // Always seed with the canonical pure-brand keyword to avoid empty brand bucket
   // when Keyword Planner doesn't return the seed itself (e.g. "Dr. Mercola" → "dr mercola").
   for (const token of pureBrandKeywords) {
     const canonical = normalizeGoogleAdsKeyword(token)
@@ -956,7 +950,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     })
   }
 
-  // 🔧 兜底：缺少 OAuth 必要信息时，不生成“空关键词池”
+  // 兜底：缺少 OAuth 必要信息时，不生成“空关键词池”
   if (!customerId || !userId) {
     console.warn(
       `   ⚠️ 缺少 customerId 或 userId，跳过Keyword Planner查询，回退到初始关键词(${fallbackKeywords.length}个)`
@@ -1124,7 +1118,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
       let updatedCount = 0
       let brandRelatedAdded = 0
       let genericSkipped = 0
-      let brandedFromGeneric = 0 // 🆕 统计品牌化的行业词
+      let brandedFromGeneric = 0 // 统计品牌化的行业词
 
       for (const kw of results) {
         const keywordText = normalizeGoogleAdsKeyword(kw.keyword)
@@ -1272,7 +1266,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
 
     console.log(`\n   📊 Keyword Planner 迭代完成: ${allKeywords.size} 个关键词`)
 
-    // 🔧 修复(2026-01-22): 查询品牌词的真实搜索量
+    // 查询品牌词的真实搜索量
     // 品牌词以 BRAND_SEED 来源初始化时 searchVolume=0，需要查询真实搜索量
     const brandSeedKeywords = Array.from(allKeywords.values()).filter(
       (kw) => kw.source === 'BRAND_SEED' && kw.searchVolume === 0
@@ -1494,9 +1488,7 @@ function qualityFilterOAuth(
   return filtered
 }
 
-// ============================================
-// 服务账号模式：Google下拉词 + 增强提取 + Google Trends（🔥 2025-12-29 新增）
-// ============================================
+// 服务账号模式：Google下拉词 + 增强提取 + Google Trends
 
 interface ServiceAccountExpandParams {
   initialKeywords: PoolKeywordData[]
@@ -1524,7 +1516,7 @@ interface ServiceAccountExpandParams {
 /**
  * 服务账号模式关键词扩展
  *
- * 策略：
+ * 策略
  * 1. Google下拉词
  * 2. 增强提取
  * 3. Google Trends扩展
@@ -1548,7 +1540,7 @@ async function expandForServiceAccount(
   const allKeywords = new Map<string, PoolKeywordData>()
 
   try {
-    // ✅ Seed pure-brand keywords (avoid empty brand bucket)
+    // Seed pure-brand keywords (avoid empty brand bucket)
     for (const token of pureBrandKeywords) {
       const canonical = normalizeGoogleAdsKeyword(token)
       if (!canonical) continue
@@ -1581,7 +1573,7 @@ async function expandForServiceAccount(
       }
     }
 
-    // ========== 阶段1: Google下拉词 ==========
+    // 阶段1: Google下拉词
     await progress?.({
       phase: 'service-step',
       current: 1,
@@ -1634,7 +1626,7 @@ async function expandForServiceAccount(
       console.warn(`   ⚠️ Google下拉词获取失败: ${error.message}`)
     }
 
-    // ========== 阶段2: 增强提取 ==========
+    // 阶段2: 增强提取
     await progress?.({
       phase: 'service-step',
       current: 2,
@@ -1690,7 +1682,7 @@ async function expandForServiceAccount(
       console.warn(`   ⚠️ 增强提取失败: ${error.message}`)
     }
 
-    // 🔥 2026-03-13: 移除 Google Trends 关键词生成
+    // 移除 Google Trends 关键词生成
     // 原因：Title/About补充 + 行业通用词（Scoring建议）已完全覆盖
     // TRENDS关键词质量不可控（品类识别错误、无意义组合、无搜索量验证）
     console.log(`\n   📊 阶段3: Google Trends扩展 [已移除，由Title/About补充+行业通用词替代]`)
@@ -1814,9 +1806,7 @@ function qualityFilterServiceAccount(
   return filtered
 }
 
-// ============================================
 // 辅助函数
-// ============================================
 
 /**
  * 将语言名称转换为语言代码
@@ -1943,22 +1933,20 @@ function calculateDynamicThreshold(keywords: PoolKeywordData[]): number {
   return Math.min(500, Math.max(100, Math.floor(medianVolume * 0.1)))
 }
 
-// ============================================
 // 智能过滤（保留向后兼容）
-// ============================================
 
 /**
  * 智能过滤（2层过滤：地理位置 + 分层搜索量）
  *
- * 🔥 2025-12-17优化：
+ *
  * 1. 移除竞品词穷举过滤（无法穷举所有竞品）
  * 2. 新增地理位置过滤（过滤非目标国家的关键词）
  *
- * 🔥 2026-01-02优化：策略A（保守）- 品牌词为主 + 少量高搜索量品类词
- * - 纯品牌词：100%豁免所有过滤（无搜索量要求）
- * - 品牌相关词：保留所有有效搜索量（≥10）
- * - 品类词：只保留头部词（≥10000），用于品牌曝光
- * - 理由：品牌词高购买意图、高转化率、低CPC；品类词ROI不确定
+ * 策略A（保守）- 品牌词为主 + 少量高搜索量品类词
+ * 纯品牌词：100%豁免所有过滤（无搜索量要求）
+ * 品牌相关词：保留所有有效搜索量（≥10）
+ * 品类词：只保留头部词（≥10000），用于品牌曝光
+ * 理由：品牌词高购买意图、高转化率、低CPC；品类词ROI不确定
  */
 export function filterKeywords(
   keywords: PoolKeywordData[],
@@ -1989,8 +1977,8 @@ export function filterKeywords(
 
   for (const kw of keywords) {
     if (applyBrandGate) {
-      // 🔒 全量强制：只保留包含“纯品牌词”的关键词（不拼接造词）
-      // 🆕 例外：店铺页允许 Keyword Planner 返回的非品牌词进入后续流程
+      // � 全量强制：只保留包含“纯品牌词”的关键词（不拼接造词）
+      // 例外：店铺页允许 Keyword Planner 返回的非品牌词进入后续流程
       if (!containsPureBrand(kw.keyword, pureBrandKeywords)) {
         const isConcatenatedBrandWithVolume =
           (kw.searchVolume || 0) > 0 && isBrandConcatenation(kw.keyword, brandName)
@@ -2007,7 +1995,7 @@ export function filterKeywords(
       }
     }
 
-    // ✅ 地理位置过滤（过滤非目标国家的关键词）
+    // 地理位置过滤（过滤非目标国家的关键词）
     if (isGeoMismatch(kw.keyword, targetCountry)) {
       geoFilteredCount++
       continue
@@ -2038,16 +2026,14 @@ export function filterKeywords(
   return kept
 }
 
-// ============================================
 // 智能选择
-// ============================================// ============================================
-// 🔥 2025-12-22新增：增强去重算法
-// ============================================
+// //
+// 增强去重算法
 
 /**
  * 增强版关键词去重函数
  *
- * 功能：
+ * 功能
  * 1. 基础字符串去重（保留现有逻辑）
  * 2. 品牌变体归一化（解决品牌名变体重复问题）
  * 3. 语义去重（解决语义相似关键词问题）
@@ -2078,7 +2064,7 @@ export function deduplicateKeywords(
  *
  * @param keyword - 待处理的关键词
  * @param brandVariants - 品牌变体映射表（从配置获取）
- *                        示例：{ 'brandinc': 'brand', 'brandy': 'brand' }
+ * 示例：{ 'brandinc': 'brand', 'brandy': 'brand' }
  */
 function normalizeBrandVariants(keyword: string, brandVariants: Record<string, string>): string {
   let normalized = keyword.toLowerCase()
@@ -2092,19 +2078,19 @@ function normalizeBrandVariants(keyword: string, brandVariants: Record<string, s
  * 语义去重
  * 识别并合并语义相似的关键词组
  *
- * 策略：
+ * 策略
  * 1. 移除修饰词（购买意图词、数字、单位等）
  * 2. 生成语义键
  * 3. 按语义键分组
  * 4. 每组选择最优关键词
  *
- * 🔥 2025-12-26优化：增强语言学去重规则
- * - 复数/单数变体合并（clipper/clippers）
- * - 连字符/空格变体合并（hair-clipper/hair clipper）
- * - 通用修饰词移除（best, new, for 等）
+ * 增强语言学去重规则
+ * 复数/单数变体合并（clipper/clippers）
+ * 连字符/空格变体合并（hair-clipper/hair clipper）
+ * 通用修饰词移除（best, new, for 等）
  */
 function performSemanticDeduplication(keywords: string[]): string[] {
-  // 🔥 2025-12-26：预处理：构建关键词变体映射
+  // 预处理：构建关键词变体映射
   const keywordVariants = new Map<string, string>() // 变体 -> 规范形式
   for (const keyword of keywords) {
     const normalized = normalizeKeyword(keyword)
@@ -2145,7 +2131,7 @@ function performSemanticDeduplication(keywords: string[]): string[] {
  * 关键词规范化
  * 将关键词转换为统一形式用于比较
  *
- * 规则：
+ * 规则
  * 1. 转小写
  * 2. 移除连字符/下划线（替换为空格）
  * 3. 移除结尾的s（复数处理）

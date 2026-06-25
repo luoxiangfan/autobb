@@ -42,7 +42,7 @@ function toPositiveNumberOrNull(value: unknown): number | null {
 
 /**
  * 统一的 Mutate 操作（支持 OAuth 和服务账号两种认证模式）
- * 🔧 修复(2025-12-26): 服务账号模式使用 Python 服务更新
+ * 服务账号模式使用 Python 服务更新
  *
  * @param customer - Google Ads 客户端
  * @param isServiceAccount - 是否为服务账号模式
@@ -148,7 +148,7 @@ async function mutateResources(
  * PUT /api/campaigns/:id/update-cpc
  * 更新广告系列的CPC出价
  *
- * - :id 必须是 Google Ads campaign id（google_campaign_id）
+ * id 必须是 Google Ads campaign id（google_campaign_id）
  */
 export const PUT = withAuth(async (request, user, context) => {
   try {
@@ -560,7 +560,7 @@ export const PUT = withAuth(async (request, user, context) => {
       }
 
       // 更新每个Ad Group的CPC
-      // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
+      // 确保micros值是10000的倍数（Google Ads计费单位要求）
       const cpcMicros = Math.round(newCpc * 100) * 10000 // 转换为微单位并确保是10000的倍数
 
       const adGroupOperations = adGroups.map((adGroup: any) => ({
@@ -595,7 +595,7 @@ export const PUT = withAuth(async (request, user, context) => {
       })
     } else if (biddingStrategyType === 'TARGET_SPEND') {
       // TARGET_SPEND: 历史上的 Maximize Clicks（设置 target_spend.cpc_bid_ceiling_micros）
-      // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
+      // 确保micros值是10000的倍数（Google Ads计费单位要求）
       const cpcMicros = Math.round(newCpc * 100) * 10000
 
       if (useServiceAccount) {
@@ -641,7 +641,7 @@ export const PUT = withAuth(async (request, user, context) => {
       })
     } else if (biddingStrategyType === 'MAXIMIZE_CLICKS') {
       // MAXIMIZE_CLICKS: 这里统一按 TARGET_SPEND 处理（发布时即使用 TARGET_SPEND + target_spend ceiling）
-      // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
+      // 确保micros值是10000的倍数（Google Ads计费单位要求）
       const cpcMicros = Math.round(newCpc * 100) * 10000
 
       if (useServiceAccount) {
@@ -687,7 +687,7 @@ export const PUT = withAuth(async (request, user, context) => {
       })
     } else if (biddingStrategyType === 'TARGET_CPA') {
       // Target CPA: 更新目标CPA
-      // 🔧 修复(2026-03-07): 确保micros值是10000的倍数（Google Ads计费单位要求）
+      // 确保micros值是10000的倍数（Google Ads计费单位要求）
       const cpaMicros = Math.round(newCpc * 100) * 10000
 
       const campaignOperation = {

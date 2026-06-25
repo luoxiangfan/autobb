@@ -23,10 +23,10 @@ import type { LaunchScoreResult } from '@/lib/launch-score/server'
  * POST /api/offers/[id]/launch-score/compare
  * 批量获取多个Creative的Launch Score用于对比 (v4.0 - 4维度)
  *
- * Body:
- * - creativeIds: number[]（最多 5，不可重复）
- * - autoCalculate?: boolean — 默认 true；为 true 时现场计算（共享 Planner expand），命中 contentHash 缓存则跳过 AI
- * - campaignConfig?: { budgetAmount?, maxCpcBid?, targetCountry?, targetLanguage? } — 与 hash/计分一致
+ * Body
+ * creativeIds: number[]（最多 5，不可重复）
+ * autoCalculate?: boolean — 默认 true；为 true 时现场计算（共享 Planner expand），命中 contentHash 缓存则跳过 AI
+ * campaignConfig?: { budgetAmount?, maxCpcBid?, targetCountry?, targetLanguage? } — 与 hash/计分一致
  */
 function buildCompareScoreFromStored(score: LaunchScore, options?: { fromCache?: boolean }) {
   const analysis = parseLaunchScoreAnalysis(score)

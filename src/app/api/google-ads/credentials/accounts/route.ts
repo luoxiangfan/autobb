@@ -146,7 +146,7 @@ function getOAuthErrorFromResponse(error: any): { error?: string; errorDescripti
   return { error: oauthError, errorDescription: oauthErrorDescription }
 }
 
-/** 同步路径在其它实例持锁时的短等待，避免 HTTP 长时间阻塞 */
+/* * 同步路径在其它实例持锁时的短等待，避免 HTTP 长时间阻塞 */
 const GOOGLE_ADS_ACCOUNTS_SYNC_PEER_WAIT_MS = 15_000
 
 const get = withAuth(async (request, user) => {
@@ -436,7 +436,7 @@ const get = withAuth(async (request, user) => {
     // 查询关联的 Offer 信息
     const db = await getDatabase()
 
-    // 🔓 KISS优化(2025-12-12): 获取当前Offer的品牌名（用于同品牌优先级计算）
+    // � 获取当前Offer的品牌名（用于同品牌优先级计算）
     let currentOfferBrand: string | null = null
     if (offerId) {
       const currentOffer = (await db.queryOne(
@@ -448,7 +448,7 @@ const get = withAuth(async (request, user) => {
       currentOfferBrand = currentOffer?.brand || null
     }
 
-    // 🔧 修复(2026-02-08): 关联Offer查询使用更稳健的“未删除”判定
+    // 关联Offer查询使用更稳健的“未删除”判定
     // 兼容历史数据（is_deleted 为空）并兜底 deleted_at 软删除标记，避免已删除Offer仍显示在关联列表中。
     const offerNotDeletedCondition =
       '(o.is_deleted = FALSE OR o.is_deleted IS NULL) AND o.deleted_at IS NULL'
@@ -460,7 +460,7 @@ const get = withAuth(async (request, user) => {
       allAccounts.map(async (account) => {
         const dbAccountId = account.db_account_id
         if (!dbAccountId) {
-          // 🔧 修复(2025-12-11): 转换snake_case为camelCase，保持API响应一致性
+          // 转换snake_case为camelCase，保持API响应一致性
           return {
             customerId: account.customer_id,
             descriptiveName: account.descriptive_name,
@@ -482,7 +482,7 @@ const get = withAuth(async (request, user) => {
             dbAccountId: account.db_account_id,
             lastSyncAt: account.last_sync_at,
             linkedOffers: [],
-            // 🔓 KISS优化(2025-12-12): 优先级标识
+            // � 优先级标识
             priority: 'none' as const,
             priorityScore: 0,
           }
@@ -516,7 +516,7 @@ const get = withAuth(async (request, user) => {
           [dbAccountId, userId, userId]
         )
 
-        // 🔧 修复(2025-12-11): 转换snake_case为camelCase，保持API响应一致性
+        // 转换snake_case为camelCase，保持API响应一致性
         const linkedOffersMapped = linkedOffers.map((offer: any) => ({
           id: offer.id,
           offerName: offer.offer_name,
@@ -526,7 +526,7 @@ const get = withAuth(async (request, user) => {
           campaignCount: offer.campaign_count,
         }))
 
-        // 🔓 KISS优化(2025-12-12): 计算账号优先级
+        // � 计算账号优先级
         // priority: 'current' = 当前Offer已用过 | 'same-brand' = 同品牌Offer用过 | 'none' = 未使用
         // priorityScore: 用于排序 (2=current, 1=same-brand, 0=none)
         let priority: 'current' | 'same-brand' | 'none' = 'none'
@@ -570,14 +570,14 @@ const get = withAuth(async (request, user) => {
           dbAccountId: account.db_account_id,
           lastSyncAt: account.last_sync_at,
           linkedOffers: linkedOffersMapped,
-          // 🔓 KISS优化(2025-12-12): 优先级标识
+          // � 优先级标识
           priority,
           priorityScore,
         }
       })
     )
 
-    // 🔓 KISS优化(2025-12-12): 按优先级排序
+    // � 按优先级排序
     // 排序规则: priorityScore DESC > is_manager_account DESC > account_name ASC
     accountsWithOffers.sort((a, b) => {
       // 1. 优先级分数高的在前
@@ -592,10 +592,10 @@ const get = withAuth(async (request, user) => {
       return (a.descriptiveName || '').localeCompare(b.descriptiveName || '')
     })
 
-    // 🔧 过滤：只返回用户 MCC 下的账号（非 MCC 账号）
-    // 当 filterByUserMcc=true 时：
-    // - 普通用户：只返回 parentMcc 在用户分配的 MCC 列表中的非 MCC 账号
-    // - 管理员：跳过过滤，显示所有非 MCC 账号
+    // 过滤：只返回用户 MCC 下的账号（非 MCC 账号）
+    // 当 filterByUserMcc=true 时
+    // 普通用户：只返回 parentMcc 在用户分配的 MCC 列表中的非 MCC 账号
+    // 管理员：跳过过滤，显示所有非 MCC 账号
     const filterByUserMcc = searchParams.get('filterByUserMcc') === 'true'
     const isAdmin = user.role === 'admin'
 
@@ -661,13 +661,13 @@ const get = withAuth(async (request, user) => {
   } catch (error: any) {
     logGoogleAdsAccountsError('get_accounts_failed', error)
 
-    // 🔧 修复(2025-12-24): 根据错误类型返回合适的 HTTP 状态码
+    // 根据错误类型返回合适的 HTTP 状态码
     let statusCode = 500
     let errorCode = 'UNKNOWN_ERROR'
     const extractedMessage = extractGoogleAdsErrorMessage(error)
     const extractedMessageLower = extractedMessage.toLowerCase()
 
-    // 🆕 检测权限错误并构建详细响应
+    // 检测权限错误并构建详细响应
     if (error.isPermissionError && error.serviceAccountEmail && error.mccCustomerId) {
       statusCode = 403
       errorCode = 'SERVICE_ACCOUNT_PERMISSION_DENIED'
@@ -699,7 +699,7 @@ const get = withAuth(async (request, user) => {
       )
     }
 
-    // 🔧 修复(2026-01-04): 检测 OAuth refresh token 过期错误
+    // 检测 OAuth refresh token 过期错误
     const oauthError = getOAuthErrorFromResponse(error)
     const httpStatus = getErrorHttpStatus(error)
 
@@ -718,7 +718,7 @@ const get = withAuth(async (request, user) => {
       )
     }
 
-    // 🔧 更稳健：invalid_client 通常来自 client_id/client_secret 配置错误或已变更
+    // 更稳健：invalid_client 通常来自 client_id/client_secret 配置错误或已变更
     if (
       oauthError.error === 'invalid_client' ||
       error.message?.includes('invalid_client') ||

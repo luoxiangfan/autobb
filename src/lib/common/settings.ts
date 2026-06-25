@@ -350,7 +350,7 @@ export async function updateSetting(
   // 注意：PostgreSQL 返回 boolean
   const isSensitive = metadata.is_sensitive === true || metadata.is_sensitive === 1
 
-  // 🔥 阻止保存空的敏感字段（防止加密空字符串导致验证失败）
+  // 阻止保存空的敏感字段（防止加密空字符串导致验证失败）
   if (isSensitive && (!normalizedValue || normalizedValue.trim() === '')) {
     throw new Error(`敏感字段 ${category}.${key} 不能为空`)
   }
@@ -423,9 +423,9 @@ export async function updateSettings(
 /**
  * 清空用户级配置（不影响全局模板配置）
  *
- * 说明：
- * - 仅删除 user_id 对应的配置行（user_id IS NULL 的模板行保留）
- * - 用于“删除配置”场景，确保数据库中对应用户配置彻底清空
+ * 说明
+ * 仅删除 user_id 对应的配置行（user_id IS NULL 的模板行保留）
+ * 用于“删除配置”场景，确保数据库中对应用户配置彻底清空
  */
 export async function clearUserSettings(
   category: string,
@@ -493,7 +493,7 @@ function cleanExpiredCache(): void {
 /**
  * 验证Google Ads API配置
  *
- * 验证步骤：
+ * 验证步骤
  * 1. 检查缓存
  * 2. 基础格式验证
  * 3. 尝试创建GoogleAdsApi实例
@@ -545,7 +545,7 @@ export async function validateGoogleAdsConfig(
       }
     }
 
-    // 🧯 防误填：developer_token 常被误填为 client_secret / client_id / access_token
+    // � 防误填：developer_token 常被误填为 client_secret / client_id / access_token
     // 典型误填：developer_token 以 GOCSPX- 开头（这通常是 OAuth Client Secret）
     if (developerToken.trim() === clientSecret.trim()) {
       return {
@@ -702,7 +702,7 @@ export async function validateGeminiConfig(
   apiKey: string,
   model: string = GEMINI_ACTIVE_MODEL,
   userId: number,
-  provider?: string // 🔧 关键修复(2025-12-30): 新增 provider 参数，用于验证未保存配置
+  provider?: string // 关键新增 provider 参数，用于验证未保存配置
 ): Promise<{ valid: boolean; message: string }> {
   // Step 1: 基础验证
   if (!apiKey) {
@@ -734,7 +734,7 @@ export async function validateGeminiConfig(
   try {
     const { generateContent } = await import('../ai/gemini-axios')
 
-    // 🔧 关键修复(2025-12-30): 使用临时配置覆盖参数
+    // 关键使用临时配置覆盖参数
     // 避免 generateContent → getGeminiApiKey 从数据库读取空值
     const overrideConfig = provider
       ? {
@@ -751,7 +751,7 @@ export async function validateGeminiConfig(
         model: normalizedModel,
         prompt: 'Say "OK" if you can hear me.',
         temperature: 0.1,
-        maxOutputTokens: 4096, // 🔧 修复(2025-12-11): 增加token限制以容纳思考过程和实际输出
+        maxOutputTokens: 4096, // 增加token限制以容纳思考过程和实际输出
       },
       userId,
       overrideConfig

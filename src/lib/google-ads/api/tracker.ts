@@ -3,11 +3,11 @@
  * 用于记录和监控API配额使用情况
  *
  * 根据 https://developers.google.com/google-ads/api/docs/best-practices/quotas
- * - Explorer Access: 2,880 次操作/天
- * - Basic Access: 15,000 次操作/天
- * - Standard Access: 无限次/天
- * - Mutate操作权重更高
- * - Report/Search操作权重较低
+ * Explorer Access: 2,880 次操作/天
+ * Basic Access: 15,000 次操作/天
+ * Standard Access: 无限次/天
+ * Mutate操作权重更高
+ * Report/Search操作权重较低
  */
 
 import { getDatabase } from '../../db'
@@ -21,7 +21,7 @@ const QUOTA_LIMITS = {
   test: 0, // Test access: 只能访问测试账号，生产环境配额为0
   explorer: 2880,
   basic: 15000,
-  standard: -1, // -1 表示无限配额
+  standard: -1, // 1 表示无限配额
 } as const
 
 const DEFAULT_EXPLORER_DAILY_QUOTA_LIMIT = QUOTA_LIMITS.explorer
@@ -147,7 +147,7 @@ export async function trackApiUsage(record: ApiUsageRecord): Promise<void> {
       ]
     )
 
-    // 🆕 如果API调用失败且有错误消息，尝试检测访问级别
+    // 如果API调用失败且有错误消息，尝试检测访问级别
     if (!record.isSuccess && record.errorMessage) {
       try {
         const { detectAndUpdateFromError } =

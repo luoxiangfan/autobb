@@ -223,7 +223,7 @@ describe('OptimizationRulesEngine', () => {
       const campaign = createMockCampaign({
         cost: 100,
         conversions: 1,
-        roi: -0.5, // -50%
+        roi: -0.5, // 50%
       })
 
       const recommendations = engine.generateRecommendations(campaign)
