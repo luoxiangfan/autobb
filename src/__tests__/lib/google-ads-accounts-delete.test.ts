@@ -65,9 +65,6 @@ describe('deleteGoogleAdsAccount', () => {
       if (sql.includes('FROM google_ads_accounts')) {
         return { customer_id: '123-456-7890' }
       }
-      if (sql.includes('FROM offers')) {
-        return { unlinked_from_customer_ids: null }
-      }
       return undefined
     })
     dbFns.query.mockResolvedValue([

@@ -372,60 +372,6 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
       })
     }
 
-    const now = new Date().toISOString()
-    for (const offerId of offerIds) {
-      try {
-        const offer = (await db.queryOne(
-          `
-          SELECT unlinked_from_customer_ids FROM offers
-          WHERE id = ? AND user_id = ?
-        `,
-          [offerId, userId]
-        )) as { unlinked_from_customer_ids: string | null } | undefined
-
-        if (!offer) continue
-
-        let unlinkedCustomerIds: string[] = []
-        if (offer.unlinked_from_customer_ids) {
-          try {
-            unlinkedCustomerIds = JSON.parse(offer.unlinked_from_customer_ids)
-            if (!Array.isArray(unlinkedCustomerIds)) {
-              unlinkedCustomerIds = []
-            }
-          } catch {
-            unlinkedCustomerIds = []
-          }
-        }
-
-        if (!unlinkedCustomerIds.includes(customerId)) {
-          unlinkedCustomerIds.push(customerId)
-        }
-
-        await db.exec(
-          `
-          UPDATE offers
-          SET unlinked_from_customer_ids = ?,
-              last_unlinked_at = ?
-          WHERE id = ? AND user_id = ?
-        `,
-          [JSON.stringify(unlinkedCustomerIds), now, offerId, userId]
-        )
-      } catch (error) {
-        googleAdsAccountsLogger.error(
-          'delete_account_unlinked_time_failed',
-          { offerId, customerId },
-          error
-        )
-      }
-    }
-
-    if (offerIds.length > 0) {
-      googleAdsAccountsLogger.info('delete_account_unlinked_recorded', {
-        customerId,
-        offerCount: offerIds.length,
-      })
-    }
-
     const accountResult = await db.exec(
       `
       UPDATE google_ads_accounts
