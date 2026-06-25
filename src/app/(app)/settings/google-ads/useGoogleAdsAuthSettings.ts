@@ -67,7 +67,10 @@ export function useGoogleAdsAuthSettings({
   )
 
   const { fetchAccounts, scheduleAccountsPoll } = useGoogleAdsAccountsList()
-  const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({})
+  const accountsListBaseQuery = { filterByUserMcc: 'true' } as const
+  const accountsPollBaseParamsRef = useRef<GoogleAdsAccountsFetchParams>({
+    query: { ...accountsListBaseQuery },
+  })
   const [serviceAccountForm, setServiceAccountForm] = useState({
     name: '',
     mccCustomerId: '',
@@ -434,6 +437,7 @@ export function useGoogleAdsAuthSettings({
         forceRefresh: true,
         fallbackServiceAccountId:
           serviceAccounts[0]?.id ?? googleAdsCredentialStatus?.serviceAccountId,
+        query: { ...accountsListBaseQuery },
       }
       accountsPollBaseParamsRef.current = baseParams
 
