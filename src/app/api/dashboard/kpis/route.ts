@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { apiCache, generateCacheKey } from '@/lib/common/server'
+import {
+  apiCache,
+  generateCacheKey,
+  parseQueryBooleanParam,
+  parseYmdQueryParam,
+} from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 import { convertCurrency } from '@/lib/common/server'
@@ -54,12 +59,6 @@ const SHORT_KPI_CACHE_DEFAULT_TTL_MS = 20 * 1000
 const SHORT_KPI_CACHE_MIN_TTL_MS = 15 * 1000
 const SHORT_KPI_CACHE_MAX_TTL_MS = 30 * 1000
 
-function parseBooleanParam(value: string | null): boolean {
-  if (value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-}
-
 function resolveKpiCacheTtlMs(): number {
   const parsed = Number.parseInt(process.env.KPI_SHORT_TTL_MS || '', 10)
   if (!Number.isFinite(parsed)) {
@@ -90,24 +89,6 @@ function calculateRoas(
     value: roundTo2(normalizedCommission / normalizedCost),
     infinite: false,
   }
-}
-
-function parseYmdParam(value: string | null): string | null {
-  if (!value) return null
-  const normalized = String(value).trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null
-
-  const [year, month, day] = normalized.split('-').map((part) => Number(part))
-  const date = new Date(Date.UTC(year, month - 1, day))
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) {
-    return null
-  }
-
-  return normalized
 }
 
 function shiftYmd(ymd: string, deltaDays: number): string {
@@ -161,8 +142,8 @@ const getHandler = withPerformanceMonitoring(
 
       const rawDays = parseInt(searchParams.get('days') || '7', 10)
       const days = Number.isFinite(rawDays) ? Math.min(Math.max(rawDays, 1), 3650) : 7
-      const startDateQuery = parseYmdParam(searchParams.get('start_date'))
-      const endDateQuery = parseYmdParam(searchParams.get('end_date'))
+      const startDateQuery = parseYmdQueryParam(searchParams.get('start_date'))
+      const endDateQuery = parseYmdQueryParam(searchParams.get('end_date'))
       const hasCustomRangeQuery = searchParams.has('start_date') || searchParams.has('end_date')
       if (hasCustomRangeQuery) {
         if (!startDateQuery || !endDateQuery) {
@@ -175,8 +156,8 @@ const getHandler = withPerformanceMonitoring(
           return NextResponse.json({ error: 'start_date 不能晚于 end_date' }, { status: 400 })
         }
       }
-      const refresh = parseBooleanParam(searchParams.get('refresh'))
-      const noCache = parseBooleanParam(searchParams.get('noCache'))
+      const refresh = parseQueryBooleanParam(searchParams.get('refresh'))
+      const noCache = parseQueryBooleanParam(searchParams.get('noCache'))
       const shouldBypassReadCache = refresh || noCache
       const shouldWriteCache = !noCache
       const kpiCacheTtlMs = resolveKpiCacheTtlMs()

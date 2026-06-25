@@ -5,16 +5,10 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
-import { apiCache, generateCacheKey } from '@/lib/common/server'
+import { apiCache, generateCacheKey, parseQueryBooleanParam } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { listOffers } from '@/lib/offers/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
-
-function parseBooleanParam(value: string | null): boolean {
-  if (value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-}
 
 function resolveStartDateYmd(days: number): string {
   const startDate = new Date()
@@ -192,8 +186,8 @@ export const GET = withAuth(async (request: NextRequest, user) => {
     // 获取查询参数
     const searchParams = request.nextUrl.searchParams
     const days = parseInt(searchParams.get('days') || '30')
-    const refresh = parseBooleanParam(searchParams.get('refresh'))
-    const noCache = parseBooleanParam(searchParams.get('noCache'))
+    const refresh = parseQueryBooleanParam(searchParams.get('refresh'))
+    const noCache = parseQueryBooleanParam(searchParams.get('noCache'))
     const shouldBypassReadCache = refresh || noCache
     const shouldWriteCache = !noCache
 

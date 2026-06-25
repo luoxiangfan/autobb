@@ -1,5 +1,6 @@
 // Public barrel for @/lib/common — client-safe only (no Node / DB / queue / Google Ads deps).
 export * from './api-error-handler'
+export * from './api-query-params'
 export * from './cache'
 export * from './currency'
 export * from './env-utils'

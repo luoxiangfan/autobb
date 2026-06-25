@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { convertCurrency } from '@/lib/common/server'
+import { convertCurrency, formatAsYmd, parseYmdQueryParam } from '@/lib/common/server'
 import { buildAffiliateUnattributedFailureFilter } from '@/lib/openclaw/affiliate-commission/affiliate-attribution-failures'
 import { matchesCampaignSearch } from '@/lib/campaign/server'
 import {
@@ -14,19 +14,6 @@ import {
   buildCampaignAffiliateAlignedWhereClause,
   isCampaignAffiliateAlignedRow,
 } from '@/lib/campaign/server'
-
-function formatAsYmd(value: unknown): string | null {
-  if (value === null || value === undefined) return null
-  const raw = String(value)
-  if (!raw.trim()) return null
-
-  const m = raw.match(/^(\d{4}-\d{2}-\d{2})/)
-  if (m) return m[1]
-
-  const t = Date.parse(raw)
-  if (!Number.isFinite(t)) return null
-  return new Date(t).toISOString().slice(0, 10)
-}
 
 function normalizeCurrency(value: unknown): string {
   const normalized = String(value ?? '')
@@ -42,24 +29,6 @@ function formatLocalYmd(date: Date): string {
     month: '2-digit',
     day: '2-digit',
   }).format(date)
-}
-
-function parseYmdParam(value: string | null): string | null {
-  if (!value) return null
-  const normalized = String(value).trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null
-
-  const [year, month, day] = normalized.split('-').map((part) => Number(part))
-  const date = new Date(Date.UTC(year, month - 1, day))
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) {
-    return null
-  }
-
-  return normalized
 }
 
 function shiftYmd(ymd: string, deltaDays: number): string {
@@ -339,8 +308,8 @@ export const GET = withAuth(async (request, user) => {
     const { searchParams } = new URL(request.url)
     const rawDaysBack = parseInt(searchParams.get('daysBack') || '7', 10)
     const daysBack = Number.isFinite(rawDaysBack) ? Math.min(Math.max(rawDaysBack, 1), 3650) : 7
-    const startDateQuery = parseYmdParam(searchParams.get('start_date'))
-    const endDateQuery = parseYmdParam(searchParams.get('end_date'))
+    const startDateQuery = parseYmdQueryParam(searchParams.get('start_date'))
+    const endDateQuery = parseYmdQueryParam(searchParams.get('end_date'))
     const hasCustomRangeQuery = searchParams.has('start_date') || searchParams.has('end_date')
     if (hasCustomRangeQuery) {
       if (!startDateQuery || !endDateQuery) {

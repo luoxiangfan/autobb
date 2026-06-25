@@ -11,16 +11,10 @@ import {
 import { refreshOpenclawDailyReportSnapshot } from '@/lib/openclaw/reports'
 import { getOpenclawSettingsMap } from '@/lib/openclaw/config/settings'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
+import { parseQueryBooleanParam } from '@/lib/common/server'
 
 export const dynamic = 'force-dynamic'
 const STRATEGY_QUEUE_TASK_MISS_THRESHOLD = 3
-
-function parseBooleanParam(value: string | null): boolean {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-}
 
 function parseLimitParam(value: unknown, fallback = 100): number {
   if (value === null || value === undefined) return fallback
@@ -178,7 +172,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'date 参数不合法' }, { status: 400 })
   }
-  const forceRefresh = parseBooleanParam(request.nextUrl.searchParams.get('refresh'))
+  const forceRefresh = parseQueryBooleanParam(request.nextUrl.searchParams.get('refresh'))
   const limit = parseLimitParam(request.nextUrl.searchParams.get('limit'), 100)
   const normalizedReportDate = normalizeOpenclawReportDate(reportDate)
   const serverDate = formatOpenclawLocalDate(new Date())

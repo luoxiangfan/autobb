@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
+import { parseYmdQueryParam } from '@/lib/common/server'
 
 function parsePossiblyNestedJsonObject(value: unknown, maxDepth = 2): Record<string, any> | null {
   let current: unknown = value
@@ -68,24 +69,6 @@ function formatLocalYmd(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-function parseYmdParam(value: string | null): string | null {
-  if (!value) return null
-  const normalized = String(value).trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return null
-
-  const [year, month, day] = normalized.split('-').map((part) => Number(part))
-  const date = new Date(Date.UTC(year, month - 1, day))
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) {
-    return null
-  }
-
-  return normalized
-}
-
 function diffDaysInclusive(startYmd: string, endYmd: string): number {
   const startTs = Date.parse(`${startYmd}T00:00:00Z`)
   const endTs = Date.parse(`${endYmd}T00:00:00Z`)
@@ -121,8 +104,8 @@ export const GET = withAuth(async (request, user) => {
     const { searchParams } = new URL(request.url)
     const rawDaysBack = parseInt(searchParams.get('daysBack') || '7', 10)
     const daysBack = Number.isFinite(rawDaysBack) ? Math.min(Math.max(rawDaysBack, 1), 3650) : 7
-    const startDateQuery = parseYmdParam(searchParams.get('start_date'))
-    const endDateQuery = parseYmdParam(searchParams.get('end_date'))
+    const startDateQuery = parseYmdQueryParam(searchParams.get('start_date'))
+    const endDateQuery = parseYmdQueryParam(searchParams.get('end_date'))
     const hasCustomRangeQuery = searchParams.has('start_date') || searchParams.has('end_date')
     if (hasCustomRangeQuery) {
       if (!startDateQuery || !endDateQuery) {

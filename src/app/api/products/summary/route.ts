@@ -15,44 +15,12 @@ import {
   getCachedProductSummaryRoute,
   setCachedProductSummaryRoute,
   type ProductSummaryRouteCachePayload,
+  parseCountryCodeQueryParam,
+  parseNumericQueryParam,
+  parseQueryBooleanParam,
+  parseYmdSearchParam,
 } from '@/lib/common/server'
 import { isProductManagementEnabledForUser } from '@/lib/openclaw/gateway/request-auth'
-
-function parseNumericFilter(searchParams: URLSearchParams, key: string): number | null {
-  const raw = (searchParams.get(key) || '').trim()
-  if (!raw) return null
-
-  const parsed = Number(raw)
-  if (!Number.isFinite(parsed)) {
-    return null
-  }
-
-  return parsed
-}
-
-function parseDateFilter(searchParams: URLSearchParams, key: string): string | null {
-  const raw = (searchParams.get(key) || '').trim()
-  if (!raw) return null
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null
-
-  const parsed = new Date(`${raw}T00:00:00.000Z`)
-  if (Number.isNaN(parsed.getTime())) return null
-  if (parsed.toISOString().slice(0, 10) !== raw) return null
-  return raw
-}
-
-function parseCountryFilter(searchParams: URLSearchParams, key: string): string {
-  const raw = (searchParams.get(key) || '').trim().toUpperCase()
-  if (!raw || raw === 'ALL') return 'all'
-  if (!/^[A-Z]{2,3}$/.test(raw)) return 'all'
-  return raw
-}
-
-function parseBooleanParam(value: string | null): boolean {
-  if (value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-}
 
 export const dynamic = 'force-dynamic'
 const PRODUCT_SCORE_VALIDITY_DAYS = 30
@@ -92,23 +60,23 @@ export const GET = withAuth(async (request, user) => {
     const landingPageType = normalizeAffiliateLandingPageTypeFilter(
       searchParams.get('landingPageType')
     )
-    const targetCountry = parseCountryFilter(searchParams, 'targetCountry')
+    const targetCountry = parseCountryCodeQueryParam(searchParams, 'targetCountry')
     const status = normalizeAffiliateProductStatusFilter(searchParams.get('status'))
 
-    const reviewCountMin = parseNumericFilter(searchParams, 'reviewCountMin')
-    const reviewCountMax = parseNumericFilter(searchParams, 'reviewCountMax')
-    const priceAmountMin = parseNumericFilter(searchParams, 'priceAmountMin')
-    const priceAmountMax = parseNumericFilter(searchParams, 'priceAmountMax')
-    const commissionRateMin = parseNumericFilter(searchParams, 'commissionRateMin')
-    const commissionRateMax = parseNumericFilter(searchParams, 'commissionRateMax')
-    const commissionAmountMin = parseNumericFilter(searchParams, 'commissionAmountMin')
-    const commissionAmountMax = parseNumericFilter(searchParams, 'commissionAmountMax')
-    const recommendationScoreMin = parseNumericFilter(searchParams, 'recommendationScoreMin')
-    const recommendationScoreMax = parseNumericFilter(searchParams, 'recommendationScoreMax')
-    const createdAtFrom = parseDateFilter(searchParams, 'createdAtFrom')
-    const createdAtTo = parseDateFilter(searchParams, 'createdAtTo')
-    const refresh = parseBooleanParam(searchParams.get('refresh'))
-    const noCache = parseBooleanParam(searchParams.get('noCache'))
+    const reviewCountMin = parseNumericQueryParam(searchParams, 'reviewCountMin')
+    const reviewCountMax = parseNumericQueryParam(searchParams, 'reviewCountMax')
+    const priceAmountMin = parseNumericQueryParam(searchParams, 'priceAmountMin')
+    const priceAmountMax = parseNumericQueryParam(searchParams, 'priceAmountMax')
+    const commissionRateMin = parseNumericQueryParam(searchParams, 'commissionRateMin')
+    const commissionRateMax = parseNumericQueryParam(searchParams, 'commissionRateMax')
+    const commissionAmountMin = parseNumericQueryParam(searchParams, 'commissionAmountMin')
+    const commissionAmountMax = parseNumericQueryParam(searchParams, 'commissionAmountMax')
+    const recommendationScoreMin = parseNumericQueryParam(searchParams, 'recommendationScoreMin')
+    const recommendationScoreMax = parseNumericQueryParam(searchParams, 'recommendationScoreMax')
+    const createdAtFrom = parseYmdSearchParam(searchParams, 'createdAtFrom')
+    const createdAtTo = parseYmdSearchParam(searchParams, 'createdAtTo')
+    const refresh = parseQueryBooleanParam(searchParams.get('refresh'))
+    const noCache = parseQueryBooleanParam(searchParams.get('noCache'))
     const shouldBypassReadCache = refresh || noCache
     const shouldWriteCache = !noCache
 

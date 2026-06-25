@@ -4,16 +4,10 @@ import { listOffers } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 import { boolCondition } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
-import { apiCache, generateCacheKey } from '@/lib/common/server'
+import { apiCache, generateCacheKey, parseQueryBooleanParam } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
 import { parsePositiveIntegerOfferIdList } from '@/lib/offers/server'
 import { isOffersServerSortSupported } from '@/lib/offers/offers-list-sort'
-
-function parseBooleanParam(value: string | null): boolean {
-  if (value === null) return false
-  const normalized = String(value).trim().toLowerCase()
-  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on'
-}
 
 /**
  * GET /api/offers
@@ -28,8 +22,8 @@ const get = withAuth(async (request, user) => {
     const searchParams = request.nextUrl.searchParams
     const idsParam = searchParams.get('ids') // 批量查询特定ID的Offers
     const summary = searchParams.get('summary') === 'true' // Dashboard等轻量场景仅需概要统计
-    const refresh = parseBooleanParam(searchParams.get('refresh'))
-    const noCache = parseBooleanParam(searchParams.get('noCache'))
+    const refresh = parseQueryBooleanParam(searchParams.get('refresh'))
+    const noCache = parseQueryBooleanParam(searchParams.get('noCache'))
     const shouldBypassReadCache = refresh || noCache
     const shouldWriteCache = !noCache
     const limitParam = searchParams.get('limit')
