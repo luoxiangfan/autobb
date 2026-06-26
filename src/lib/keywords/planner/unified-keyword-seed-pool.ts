@@ -1019,26 +1019,7 @@ export async function expandWithoutKeywordPlanner(params: {
     }
   }
 
-  // 移除 TRENDS 关键词生成
-  // 原因
-  // 1. Title/About补充已覆盖产品特征词
-  // 2. 行业通用词（Scoring建议）已覆盖行业标准词
-  // 3. TRENDS关键词质量不可控（品类识别错误、无意义组合）
-  // 4. 无搜索量数据验证（Explorer限制）
-  // 5. 与其他来源重复度高
-
-  // try {
-  // try {
-  // const trendsKeywords = await getTrendsKeywords(...) // google-trends module removed
-  // const seedKeywords = Array.from(keywordMap.values())
-  // .slice(0, 10)
-  // .map(kw => kw.keyword)
-
-  // const trends = await getTrendsKeywords(seedKeywords, offer.brand, offer.category || '')
-  // trends.forEach(kw => addKeyword(kw.keyword, 'EXPANSION'))
-  // } catch (error: any) {
-  // console.warn(' Google Trends扩展失败，跳过补充:', error.message)
-  // }
+  // Google Trends 扩展已移除：质量不可控且无搜索量校验，由 Title/About 与行业通用词覆盖
 
   return Array.from(keywordMap.values())
 }

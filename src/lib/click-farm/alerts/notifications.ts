@@ -45,9 +45,6 @@ async function logClickFarmEvent(
     message,
     timestamp: new Date().toISOString(),
   })
-
-  // 可选：发送到外部通知服务（邮件、Slack等）
-  // await sendExternalNotification(userId, type, title, message);
 }
 
 /**

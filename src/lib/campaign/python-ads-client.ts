@@ -912,16 +912,6 @@ export async function createSitelinkExtensionsPython(params: {
   )
 }
 
-// Conversion Goal Functions Removed
-
-// 移除说明
-// ensureConversionGoalPython: 确保转化目标存在（服务账号模式）
-// updateCampaignConversionGoalPython: 更新CampaignConversionGoal的biddable状态
-
-// 原因: 对应的Node.js函数ensureAccountConversionGoal已移除，这些函数不再使用
-
-// Campaign Update Functions
-
 /**
  * 更新广告系列（服务账号模式）
  * 支持更新任意字段，通过 update_mask 指定

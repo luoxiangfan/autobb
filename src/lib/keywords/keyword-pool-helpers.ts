@@ -2,9 +2,8 @@
  * 关键词池辅助函数 (v2.0)
  * 根据认证类型分发不同扩展策略
  *
- * 策略
- * OAuth模式：Keyword Planner迭代查询（移除Trends）
- * 服务账号模式：Google下拉词 + 增强提取 + Google Trends
+ * OAuth 模式：Keyword Planner 迭代查询
+ * 服务账号模式：Google 下拉词 + 增强提取
  */
 
 import { logger } from '@/lib/common/server'

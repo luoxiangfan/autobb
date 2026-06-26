@@ -1111,9 +1111,7 @@ export async function resolveAffiliateLink(
       // 记录代理成功
       proxyPool.recordSuccess(proxy.url, responseTime)
 
-      // 步骤5: 不再写入竞品缓存（确保每次获取最新追踪参数）
-      // 注释掉缓存保存逻辑
-      // await setCachedRedirect(affiliateLink, targetCountry, result)
+      // 不写入 redirect 缓存，确保每次获取最新追踪参数
 
       logger.debug(`✅ 解析成功: ${result.finalUrl} (${responseTime}ms)`)
       return result

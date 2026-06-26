@@ -43,7 +43,6 @@ export async function executeGoogleAdsCampaignSyncTask(
 }> {
   const startTime = Date.now()
   const startedAt = utcNowIso()
-  // const { userId, syncType, customerId, dryRun } = taskData
   const { id: taskId, data: taskData, userId } = task
   const { syncType, customerId, dryRun } = taskData
   const isManualSync = syncType === 'manual'
