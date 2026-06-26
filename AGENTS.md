@@ -73,7 +73,7 @@ npm run type-check
 ### 设计与迁移
 
 1. **Schema 变更**：在 `migrations/{N}_*.pg.sql` 添加增量迁移，并同步更新 `migrations/000_init_schema_consolidated.pg.sql`（全新库）。见 `migrations/README.md`。
-2. **优先复用** `src/lib/db/db-helpers.ts`（如 `getInsertedId`、`notDeletedClause`、`datetimeMinusHours`），避免重复手写相同 SQL 片段。
+2. **优先复用** `src/lib/db/db-helpers.ts`（如 `getInsertedId`、`datetimeMinusHours`），避免重复手写相同 SQL 片段。
 3. **占位符**：经 `DatabaseAdapter` 的 SQL 统一用 `?`；勿在应用层混用未转换的 `$1` 风格（适配层会自动转换）。
 4. **PostgreSQL 写法（应用层 SQL）**：
    - 布尔条件与字面量：SQL 内联 `true` / `false`（小写）；`params` 绑定布尔值时直接传 `true` / `false`，勿用 `boolParam` 等包装。

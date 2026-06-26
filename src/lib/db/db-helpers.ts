@@ -25,11 +25,6 @@ export function isDbRowActive(value: unknown): boolean {
   return value === true || value === 1
 }
 
-/* * SQL fragment: row not soft-deleted (BOOLEAN is_deleted). */
-export function notDeletedClause(alias: string): string {
-  return `(${alias}.is_deleted = false OR ${alias}.is_deleted IS NULL)`
-}
-
 export function dateMinusDays(days: number): string {
   return `CURRENT_DATE - INTERVAL '${days} days'`
 }

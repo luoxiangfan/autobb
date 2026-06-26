@@ -1,5 +1,4 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { notDeletedClause } from '@/lib/db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 
 type ClickFarmTaskCandidate = {
@@ -15,7 +14,6 @@ export async function hasEnabledCampaignForOffer(params: {
   db?: DatabaseAdapter
 }): Promise<boolean> {
   const db = params.db || (await getDatabase())
-  const campaignNotDeleted = notDeletedClause('c')
 
   const row = await db.queryOne(
     `SELECT c.id
@@ -23,7 +21,7 @@ export async function hasEnabledCampaignForOffer(params: {
      WHERE c.user_id = ?
        AND c.offer_id = ?
        AND c.status = 'ENABLED'
-       AND ${campaignNotDeleted}
+       AND (c.is_deleted = false OR c.is_deleted IS NULL)
      ORDER BY c.updated_at DESC
      LIMIT 1`,
     [params.userId, params.offerId]
@@ -39,10 +37,11 @@ async function findClickFarmTasksWithoutEnabledCampaign(params: {
 }): Promise<ClickFarmTaskCandidate[]> {
   const db = params.db || (await getDatabase())
   const limit = Math.max(1, Math.min(Number(params.limit || 200), 1000))
-  const taskNotDeleted = notDeletedClause('t')
-  const campaignNotDeleted = notDeletedClause('c')
 
-  const whereParts = [`t.status IN ('pending', 'running')`, taskNotDeleted]
+  const whereParts = [
+    `t.status IN ('pending', 'running')`,
+    `(t.is_deleted = false OR t.is_deleted IS NULL)`,
+  ]
   const queryParams: Array<string | number> = []
 
   if (typeof params.userId === 'number') {
@@ -60,7 +59,7 @@ async function findClickFarmTasksWithoutEnabledCampaign(params: {
          WHERE c.user_id = t.user_id
            AND c.offer_id = t.offer_id
            AND c.status = 'ENABLED'
-           AND ${campaignNotDeleted}
+           AND (c.is_deleted = false OR c.is_deleted IS NULL)
        )
      ORDER BY t.updated_at DESC
      LIMIT ?`,
@@ -86,7 +85,6 @@ export async function pauseClickFarmTasksWithoutEnabledCampaign(params?: {
   const dryRun = params?.dryRun === true
   const message =
     params?.pauseMessage || '未检测到可用Campaign，系统自动暂停，请先发布广告后重启任务'
-  const taskNotDeleted = notDeletedClause('click_farm_tasks')
 
   const tasks = await findClickFarmTasksWithoutEnabledCampaign({
     userId: params?.userId,
@@ -117,7 +115,7 @@ export async function pauseClickFarmTasksWithoutEnabledCampaign(params?: {
        WHERE id = ?
          AND user_id = ?
          AND status IN ('pending', 'running')
-         AND ${taskNotDeleted}`,
+         AND (is_deleted = false OR is_deleted IS NULL)`,
       ['no_campaign', message, task.id, task.user_id]
     )
 

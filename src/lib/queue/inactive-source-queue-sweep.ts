@@ -3,7 +3,6 @@
  * 兜底 pause/disable 路径未调用 queue-cleanup 或清理失败留下的脏数据。
  */
 import { getDatabase } from '@/lib/db'
-import { notDeletedClause } from '@/lib/db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 
@@ -24,13 +23,11 @@ export async function sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap(optio
     1,
     Math.min(Number(options?.maxIdsPerSource ?? DEFAULT_MAX_IDS) || DEFAULT_MAX_IDS, 10_000)
   )
-  const taskNotDeleted = notDeletedClause('t')
-
   const pausedRows = await db.query<{ id: string | number }>(
     `SELECT t.id
      FROM click_farm_tasks t
      WHERE t.status = 'paused'
-       AND ${taskNotDeleted}
+       AND (t.is_deleted = false OR t.is_deleted IS NULL)
      LIMIT ?`,
     [limit]
   )

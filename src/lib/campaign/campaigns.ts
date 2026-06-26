@@ -1,7 +1,5 @@
 import { logger } from '@/lib/common/server'
-import { getDatabase } from '../db'
-import { notDeletedClause } from '../db'
-import { getInsertedId } from '../db'
+import { getDatabase, getInsertedId } from '../db'
 import {
   markUrlSwapTargetsRemovedByCampaignId,
   getUrlSwapTaskByOfferId,
@@ -482,7 +480,8 @@ async function getClickFarmTaskByOfferId(offerId: number, userId: number): Promi
   const task = await db.queryOne<any>(
     `
     SELECT * FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND ${notDeletedClause('click_farm_tasks')}
+    WHERE offer_id = ? AND user_id = ?
+      AND (is_deleted = false OR is_deleted IS NULL)
     ORDER BY created_at DESC
     LIMIT 1
   `,
