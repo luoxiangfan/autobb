@@ -20,6 +20,7 @@
  * 格式：autoads:{NODE_ENV}:cache:ai:{operationType}:{version}:{hash}
  */
 
+import { logger } from '@/lib/common/server'
 import { getRedisClient } from '../common/server'
 import { REDIS_PREFIX_CONFIG } from '../common/server'
 
@@ -174,7 +175,7 @@ class AICacheManager {
         if (cached) {
           const parsed = JSON.parse(cached) as T
           this.recordHit(operationType, config.avgCost)
-          console.log(
+          logger.debug(
             `✅ 缓存命中(Redis): ${operationType} (节省成本: ¥${config.avgCost.toFixed(4)})`
           )
           return parsed
@@ -184,7 +185,7 @@ class AICacheManager {
         const cached = this.getFromMemory<T>(cacheKey)
         if (cached) {
           this.recordHit(operationType, config.avgCost)
-          console.log(
+          logger.debug(
             `✅ 缓存命中(Memory): ${operationType} (节省成本: ¥${config.avgCost.toFixed(4)})`
           )
           return cached
@@ -228,13 +229,13 @@ class AICacheManager {
       // 优先使用Redis
       if (redis && redis.status === 'ready') {
         await redis.set(cacheKey, JSON.stringify(value), 'EX', ttl)
-        console.log(
+        logger.debug(
           `💾 缓存已设置(Redis): ${operationType} (TTL: ${(ttl / 60 / 60).toFixed(1)}小时)`
         )
       } else {
         // 降级到内存缓存
         this.setToMemory(cacheKey, value, ttl)
-        console.log(
+        logger.debug(
           `💾 缓存已设置(Memory): ${operationType} (TTL: ${(ttl / 60 / 60).toFixed(1)}小时)`
         )
       }
@@ -260,7 +261,7 @@ class AICacheManager {
       }
 
       this.memoryCache.delete(cacheKey)
-      console.log(`🗑️ 缓存已删除: ${operationType}`)
+      logger.debug(`🗑️ 缓存已删除: ${operationType}`)
     } catch (error) {
       console.warn(`缓存删除失败: ${operationType}`, error)
     }
@@ -286,7 +287,7 @@ class AICacheManager {
         })
 
         stream.on('end', () => {
-          console.log(`🗑️ 批量删除缓存完成: ${pattern}`)
+          logger.debug(`🗑️ 批量删除缓存完成: ${pattern}`)
         })
       }
 
@@ -355,13 +356,13 @@ class AICacheManager {
    * 打印统计报告
    */
   printStats() {
-    console.log('\n📊 AI缓存统计报告:\n')
+    logger.debug('\n📊 AI缓存统计报告:\n')
     this.stats.forEach((stats, operationType) => {
-      console.log(`${operationType}:`)
-      console.log(`  命中: ${stats.hits}`)
-      console.log(`  未命中: ${stats.misses}`)
-      console.log(`  命中率: ${(stats.hitRate * 100).toFixed(1)}%`)
-      console.log(`  节省成本: ¥${stats.totalSavings.toFixed(4)}\n`)
+      logger.debug(`${operationType}:`)
+      logger.debug(`  命中: ${stats.hits}`)
+      logger.debug(`  未命中: ${stats.misses}`)
+      logger.debug(`  命中率: ${(stats.hitRate * 100).toFixed(1)}%`)
+      logger.debug(`  节省成本: ¥${stats.totalSavings.toFixed(4)}\n`)
     })
   }
 }

@@ -1,6 +1,7 @@
 /**
  * Url-swap task lifecycle: create, update, enable/disable, execution state.
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase, toDbJsonObjectField } from '@/lib/db'
 import { resolveAffiliateLink } from '@/lib/scraping'
 import { calculateNextSwapAt } from './url-swap-time'
@@ -222,7 +223,7 @@ export async function createUrlSwapTask(
 
   await ensureUrlSwapTaskTargets(taskId, input.offer_id, userId, targets)
 
-  console.log(`[url-swap] 创建换链接任务成功: ${taskId}`)
+  logger.debug(`[url-swap] 创建换链接任务成功: ${taskId}`)
 
   const task = await getUrlSwapTaskById(taskId, userId)
   if (!task) {
@@ -350,7 +351,7 @@ export async function updateUrlSwapTask(
     values
   )
 
-  console.log(`[url-swap] 更新任务配置: ${id}`)
+  logger.debug(`[url-swap] 更新任务配置: ${id}`)
 
   return (await getUrlSwapTaskById(id, userId))!
 }
@@ -396,7 +397,7 @@ export async function disableUrlSwapTask(id: string, userId: number): Promise<vo
     }
   }
 
-  console.log(`[url-swap] 禁用任务: ${id}`)
+  logger.debug(`[url-swap] 禁用任务: ${id}`)
 }
 
 /**
@@ -439,7 +440,7 @@ export async function enableUrlSwapTask(id: string, userId: number): Promise<voi
     console.warn(`[url-swap] 清理换链风险告警失败: ${id}`, error?.message || error)
   }
 
-  console.log(`[url-swap] 启用任务: ${id}`)
+  logger.debug(`[url-swap] 启用任务: ${id}`)
 }
 
 const URL_SWAP_ERROR_THRESHOLD = 3
@@ -550,7 +551,7 @@ export async function setTaskError(
     [newStatus, enhancedMessage, now, newConsecutiveFailures, nextSwapAt.toISOString(), now, id]
   )
 
-  console.log(
+  logger.debug(
     `[url-swap] 任务错误已记录: ${id} (连续失败: ${newConsecutiveFailures}, 状态: ${newStatus})`
   )
 
@@ -673,7 +674,7 @@ export async function updateTaskAfterSwap(
     [newFinalUrl, newFinalUrlSuffix, ...extraValues, nextSwapAt.toISOString(), now, taskId]
   )
 
-  console.log(`[url-swap] 换链成功更新: ${taskId}`)
+  logger.debug(`[url-swap] 换链成功更新: ${taskId}`)
 }
 
 /**

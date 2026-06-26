@@ -9,6 +9,7 @@
  * 自动告警触发
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import type { UrlSwapTask } from '@/lib/url-swap/url-swap-types'
@@ -235,7 +236,7 @@ async function autoFixStuckTask(taskId: string): Promise<boolean> {
       [now, now, taskId]
     )
 
-    console.log(`✅ 已自动修复卡住的任务: ${taskId}`)
+    logger.debug(`✅ 已自动修复卡住的任务: ${taskId}`)
     return true
   } catch (error: any) {
     console.error(`❌ 自动修复失败: ${taskId}`, error.message)
@@ -287,7 +288,7 @@ async function autoDisableHighFailureTask(taskId: string): Promise<boolean> {
       `失败率过高 (${failureRate.toFixed(1)}%)，系统已自动禁用任务`
     )
 
-    console.log(`✅ 已自动禁用高失败率任务: ${taskId}`)
+    logger.debug(`✅ 已自动禁用高失败率任务: ${taskId}`)
     return true
   } catch (error: any) {
     console.error(`❌ 自动禁用失败: ${taskId}`, error.message)
@@ -319,11 +320,11 @@ export async function performHealthCheckAndAutoFix(): Promise<{
     }
   }
 
-  console.log(`🏥 健康检查完成:`)
-  console.log(`   - 整体状态: ${health.overall}`)
-  console.log(`   - 修复卡住任务: ${stuckFixed}`)
-  console.log(`   - 自动禁用任务: ${disabledCount}`)
-  console.log(`   - 告警数量: ${health.alerts.length}`)
+  logger.debug(`🏥 健康检查完成:`)
+  logger.debug(`   - 整体状态: ${health.overall}`)
+  logger.debug(`   - 修复卡住任务: ${stuckFixed}`)
+  logger.debug(`   - 自动禁用任务: ${disabledCount}`)
+  logger.debug(`   - 告警数量: ${health.alerts.length}`)
 
   return {
     health,

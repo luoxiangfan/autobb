@@ -2,6 +2,7 @@
  * 关键词池获取、解析与晋升
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 
 import { findOfferById, type Offer } from '../../offers/server'
@@ -58,7 +59,7 @@ export async function getOrCreateKeywordPool(
   if (!forceRegenerate) {
     const existing = await getKeywordPoolByOfferId(offerId)
     if (existing) {
-      console.log(`✅ 使用现有关键词池: Offer #${offerId}`)
+      logger.debug(`✅ 使用现有关键词池: Offer #${offerId}`)
       return existing
     }
   }
@@ -364,7 +365,7 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
       }
     )
 
-    console.log(
+    logger.debug(
       `[KeywordPoolPromotion] offer=${params.offerId} created=true promoted=${promotedCandidates.length} skipped=${skippedCount} reason=${params.reason || 'campaign_keywords_add'}`
     )
     return {
@@ -451,7 +452,7 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
     ]
   )
 
-  console.log(
+  logger.debug(
     `[KeywordPoolPromotion] offer=${params.offerId} created=false promoted=${promotedCandidates.length} skipped=${skippedCount} reason=${params.reason || 'campaign_keywords_add'}`
   )
   return {

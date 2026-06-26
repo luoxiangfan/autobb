@@ -12,6 +12,7 @@
  * 优势：支持并发控制、失败重试、按用户隔离执行、复用URL解析逻辑
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task, TaskExecutor } from '../types'
 import {
   createRiskAlertWithDedupMeta,
@@ -164,7 +165,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
   return async (task: Task<LinkCheckTaskData>) => {
     const { checkType, userId, offerId, useUrlResolver = true } = task.data
 
-    console.log(
+    logger.debug(
       `🔍 [LinkCheckExecutor] 开始链接检查任务: 类型=${checkType}, 用户=${userId || 'all'}, Offer=${offerId || 'all'}, 使用URL解析器=${useUrlResolver}`
     )
 
@@ -204,7 +205,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
           offer_name: string | null
         }>(query, params)
 
-        console.log(`   找到 ${offers.length} 个需要检查的Offer`)
+        logger.debug(`   找到 ${offers.length} 个需要检查的Offer`)
 
         let validLinks = 0
         let brokenLinks = 0
@@ -220,7 +221,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
           1,
           Math.min(20, parseInt(process.env.LINK_CHECK_CONCURRENCY || '5', 10) || 5)
         )
-        console.log(`   并发检查数=${linkCheckConcurrency}`)
+        logger.debug(`   并发检查数=${linkCheckConcurrency}`)
 
         type OfferRow = (typeof offers)[number]
         type LinkCheckOfferDelta = {
@@ -257,12 +258,12 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
           )
 
           if (result.isValid) {
-            console.log(`   ✅ ${displayName}: 链接有效`)
+            logger.debug(`   ✅ ${displayName}: 链接有效`)
             return { ...zero(), validInc: 1 }
           }
 
           if (result.unresolvedDueToInfrastructure) {
-            console.log(
+            logger.debug(
               `   ⚠️ ${displayName}: 链接检查未完成（代理/网络环境）-${result.error?.slice(0, 160)}`
             )
 
@@ -306,7 +307,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
             }
           }
 
-          console.log(`   ❌ ${displayName}: 链接失效 - ${result.error}`)
+          logger.debug(`   ❌ ${displayName}: 链接失效 - ${result.error}`)
 
           const isDeletedFalse = 'FALSE'
           let campaignsToSyncGoogle: Array<{
@@ -350,7 +351,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                 `,
                 [new Date(), offer.id]
               )
-              console.log(`   ⏸️  已暂停 ${upd.changes || 0} 个广告系列（数据库）`)
+              logger.debug(`   ⏸️  已暂停 ${upd.changes || 0} 个广告系列（数据库）`)
 
               const pausedInDb = upd.changes || 0
               let pausedInGoogleAds = 0
@@ -430,7 +431,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                             }),
                         })
                         pausedInGoogleAds++
-                        console.log(`   ⏸️  已暂停 Google Ads 广告系列 ${campaign.campaign_id}`)
+                        logger.debug(`   ⏸️  已暂停 Google Ads 广告系列 ${campaign.campaign_id}`)
                       }
                     } catch (error: any) {
                       console.error(
@@ -465,7 +466,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
               reason: 'broken_link',
               message: 'Offer 推广链接失效，任务已自动暂停',
             })
-            console.log(`   ⏸️  已暂停 ${pausedClickFarmForOffer} 个补点击任务`)
+            logger.debug(`   ⏸️  已暂停 ${pausedClickFarmForOffer} 个补点击任务`)
           } catch (error: any) {
             console.error(`   ⚠️  暂停补点击任务失败:`, error.message)
           }
@@ -522,10 +523,10 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
         const duration = Date.now() - startTime
 
-        console.log(
+        logger.debug(
           `✅ [LinkCheckExecutor] 链接检查完成: 有效=${validLinks}, 失效=${brokenLinks}, 未完成(基础设施)=${checksUnresolvedInfrastructure}, 新风险提示=${totalAlerts}, 耗时=${duration}ms`
         )
-        console.log(
+        logger.debug(
           `📊 [LinkCheckExecutor] 自动暂停统计: DB广告系列=${pausedCampaigns}, GoogleAds广告系列=${pausedGoogleAdsCampaigns}, 补点击任务=${pausedClickFarmTasks}`
         )
 
@@ -557,7 +558,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
       const duration = Date.now() - startTime
 
-      console.log(
+      logger.debug(
         `✅ [LinkCheckExecutor] 链接检查完成: 用户数=${result.totalUsers}, 链接数=${result.totalLinks}, 新风险提示=${result.totalAlerts}, 耗时=${duration}ms`
       )
 

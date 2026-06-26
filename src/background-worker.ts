@@ -103,7 +103,7 @@ async function main() {
   queue.registerAllExecutors()
 
   await queue.start()
-  console.log('✅ Background queue worker started')
+  logger.debug('background_worker_started')
 
   const heartbeatKey = getBackgroundWorkerHeartbeatKey()
   const heartbeatTtl = getBackgroundWorkerHeartbeatTtlSeconds()
@@ -218,7 +218,7 @@ async function main() {
 
   const shutdown = async (signal: string) => {
     try {
-      console.log(`⏹️ Background queue worker stopping (${signal})...`)
+      logger.debug('background_worker_stopping', { signal })
       clearInterval(refreshTimer)
       clearInterval(heartbeatTimer)
       clearInterval(clickFarmSelfHealTimer)

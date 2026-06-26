@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import { isUniqueConstraintViolation } from '../db'
 
@@ -153,7 +154,7 @@ export async function abandonStalePendingCampaignsForOffer(
 
   const abandoned = result.changes || 0
   if (abandoned > 0) {
-    console.log(
+    logger.debug(
       `[CampaignOfferConstraint] 已放弃 ${abandoned} 条超时 pending campaign（offer=${offerId}，阈值=${staleMinutes}min）`
     )
   }
@@ -206,7 +207,7 @@ export async function abandonStalePendingCampaignsForOffers(
 
   const abandoned = result.changes || 0
   if (abandoned > 0) {
-    console.log(
+    logger.debug(
       `[CampaignOfferConstraint] 已批量放弃 ${abandoned} 条超时 pending campaign（offers=${uniqueOfferIds.length}，阈值=${getStalePendingMinutes()}min）`
     )
   }
@@ -343,7 +344,7 @@ export async function rollbackPendingCampaignAfterEnqueueFailure(params: {
 
   const rolledBack = (result.changes || 0) > 0
   if (rolledBack) {
-    console.log(
+    logger.debug(
       `[CampaignOfferConstraint] 已回滚 pending campaign ${campaignId}（offer=${offerId}），释放一对一占用`
     )
   } else {

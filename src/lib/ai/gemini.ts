@@ -6,6 +6,7 @@
  * AI API 调用不使用代理（代理仅用于网页爬取）
  */
 
+import { logger } from '@/lib/common/server'
 import { getUserOnlySetting } from '../common/server'
 import { getUserProModel, selectOptimalModel } from './model-selector'
 import { type GeminiProvider } from './gemini-config'
@@ -137,7 +138,7 @@ function checkTokenUtilization(
         `💡 建议: 考虑适当增加maxOutputTokens配置`
     )
   } else {
-    console.log(
+    logger.debug(
       `✅ Token使用正常: ${operationType || 'unknown'} ` +
         `输出${outputTokens}/${maxOutputTokens} tokens (${percentage}%)`
     )
@@ -175,15 +176,15 @@ export async function generateContent(
       hasResponseSchema: !!responseSchema,
     })
     finalModel = selection.model
-    console.log(
+    logger.debug(
       `🤖 智能模型选择 (User ${userId}): ${operationType} → ${finalModel} (${selection.reason})`
     )
   } else if (requestedModel) {
     finalModel = normalizeGeminiModel(requestedModel)
-    console.log(`📝 使用显式指定模型: ${finalModel}`)
+    logger.debug(`📝 使用显式指定模型: ${finalModel}`)
   } else {
     finalModel = await getUserProModel(userId)
-    console.log(`⚠️ 未指定operationType，默认使用用户已保存模型: ${finalModel}`)
+    logger.debug(`⚠️ 未指定operationType，默认使用用户已保存模型: ${finalModel}`)
   }
 
   const normalizedThinkingBudget = Number.isFinite(Number(thinkingBudget))
@@ -198,7 +199,7 @@ export async function generateContent(
     normalizedThinkingBudget === undefined &&
     shouldDisableThinkingForStructuredOutput
   ) {
-    console.log(`🧠 结构化任务自动关闭 thinking 模式 (模型: ${finalModel})`)
+    logger.debug(`🧠 结构化任务自动关闭 thinking 模式 (模型: ${finalModel})`)
   }
 
   const hasGeminiAPI = await isGeminiAPIConfigured(userId)
@@ -210,7 +211,7 @@ export async function generateContent(
     )
   }
 
-  console.log(`🌐 使用用户(ID=${userId})的 Gemini API 配置`)
+  logger.debug(`🌐 使用用户(ID=${userId})的 Gemini API 配置`)
   return await callDirectAPI(
     {
       model: finalModel,
@@ -261,7 +262,7 @@ async function callDirectAPI(
         provider: 'official',
         apiKey: officialApiKeySetting.value,
       }
-      console.log(`🌐 结构化输出任务强制使用 Gemini 官方链路以确保 responseSchema 生效`)
+      logger.debug(`🌐 结构化输出任务强制使用 Gemini 官方链路以确保 responseSchema 生效`)
     } else {
       console.warn(
         `⚠️ 结构化输出任务需要 schema 约束，但用户未配置官方 Gemini key，继续使用 relay（schema 可能不生效）`
@@ -276,7 +277,7 @@ async function callDirectAPI(
         `用户(ID=${userId})未配置第三方中转 API 密钥。请在设置页面配置您自己的 relay API 密钥。`
       )
     }
-    console.log(`🌐 使用用户(ID=${userId})的第三方中转 API`)
+    logger.debug(`🌐 使用用户(ID=${userId})的第三方中转 API`)
   } else {
     if (!forcedProviderConfig?.apiKey) {
       const apiKeySetting = await getUserOnlySetting('ai', 'gemini_api_key', userId)
@@ -286,7 +287,7 @@ async function callDirectAPI(
         )
       }
     }
-    console.log(`🌐 使用用户(ID=${userId})的 Gemini 官方 API`)
+    logger.debug(`🌐 使用用户(ID=${userId})的 Gemini 官方 API`)
   }
 
   const { generateContent: axiosGenerate } = await import('./gemini-axios')

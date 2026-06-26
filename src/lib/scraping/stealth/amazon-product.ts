@@ -4,6 +4,7 @@
  * Single Amazon product page scraping with comprehensive data extraction
  */
 
+import { logger } from '@/lib/common/server'
 import { normalizeBrandName } from '../../offers/server'
 import { parsePrice } from '../../common/server'
 import { getPlaywrightPool } from '../playwright-pool'
@@ -56,7 +57,7 @@ export async function scrapeAmazonProduct(
   scrapeOptions: ScrapeAmazonProductOptions = {}
 ): Promise<AmazonProductData> {
   const fastMode = scrapeOptions.fastMode === true
-  console.log(
+  logger.debug(
     `🛒 抓取Amazon产品: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}${fastMode ? ' [fast]' : ''}`
   )
 
@@ -66,14 +67,14 @@ export async function scrapeAmazonProduct(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(`🔄 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`)
+        logger.debug(`🔄 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`)
         // 关键清理连接池实例，避免复用已被Amazon标记的代理IP
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         // 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
-        console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
+        logger.debug(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         // 额外等待，确保新代理IP被分配
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
@@ -107,7 +108,7 @@ export async function scrapeAmazonProduct(
           // 清理代理IP缓存，强制获取新IP
           const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
           clearProxyCache(effectiveProxyUrl)
-          console.log(`🧹 已清理代理IP缓存，下次将获取新IP`)
+          logger.debug(`🧹 已清理代理IP缓存，下次将获取新IP`)
 
           // 清理连接池实例（确保不复用被标记的浏览器实例）
           const pool = getPlaywrightPool()
@@ -117,7 +118,7 @@ export async function scrapeAmazonProduct(
           // 第一次重试等待3-5秒，第二次等待5-8秒
           const retryDelay =
             noJsRetry === 1 ? 3000 + Math.random() * 2000 : 5000 + Math.random() * 3000
-          console.log(`⏰ 等待${Math.round(retryDelay)}ms后使用新代理IP重试...`)
+          logger.debug(`⏰ 等待${Math.round(retryDelay)}ms后使用新代理IP重试...`)
           await new Promise((resolve) => setTimeout(resolve, retryDelay))
 
           // 重新抓取（会自动获取新的代理IP）
@@ -138,8 +139,8 @@ export async function scrapeAmazonProduct(
           const retryPageLang = retryLangMatch ? retryLangMatch[1] : '(未设置)'
 
           if (!retryHasNoJs) {
-            console.log(`✅ a-no-js重试${noJsRetry}成功，<html>标签已正确包含a-js类`)
-            console.log(`🌍 重试后页面语言: ${retryPageLang} (目标国家: ${targetCountry})`)
+            logger.debug(`✅ a-no-js重试${noJsRetry}成功，<html>标签已正确包含a-js类`)
+            logger.debug(`🌍 重试后页面语言: ${retryPageLang} (目标国家: ${targetCountry})`)
             break // 成功，退出重试循环
           } else if (noJsRetry < maxNoJsRetries) {
             console.warn(`⚠️ a-no-js重试${noJsRetry}失败，继续重试...`)
@@ -170,7 +171,7 @@ export async function scrapeAmazonProduct(
       // 如果是代理连接错误，尝试换新代理
       if (isProxyConnectionError(error)) {
         if (proxyAttempt < maxProxyRetries) {
-          console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
+          logger.debug(`🔄 检测到代理连接问题，准备换新代理重试...`)
           // 短暂延迟后重试
           await new Promise((resolve) => setTimeout(resolve, 2000))
           continue // 进入下一次代理重试循环
@@ -207,7 +208,7 @@ export async function scrapeAmazonProductWithContext(
   targetCountry?: string,
   skipCompetitorExtraction: boolean = true
 ): Promise<AmazonProductData> {
-  console.log(`🛒 [复用Context] 抓取Amazon产品: ${url}`)
+  logger.debug(`🛒 [复用Context] 抓取Amazon产品: ${url}`)
 
   const page = await context.newPage()
 
@@ -292,7 +293,7 @@ export async function scrapeAmazonProductWithContext(
       })
       .catch(() => ({ found: false, method: 'error' }))
 
-    console.log(
+    logger.debug(
       `🔍 [复用Context] 滚动策略: ${scrollResult.method}, featureBulletsFound=${scrollResult.found}`
     )
     await randomDelay(2000, 3000) // 增加等待时间: 800-1200ms → 2000-3000ms
@@ -327,18 +328,18 @@ export async function scrapeAmazonProductWithContext(
         .catch(() => false)
 
       if (retryLoaded) {
-        console.log(`✅ [复用Context] 第三次滚动后feature-bullets已加载`)
+        logger.debug(`✅ [复用Context] 第三次滚动后feature-bullets已加载`)
       } else {
         console.warn(`⚠️ [复用Context] feature-bullets仍未加载，可能页面结构不同`)
       }
     } else {
-      console.log(`✅ [复用Context] feature-bullets已加载`)
+      logger.debug(`✅ [复用Context] feature-bullets已加载`)
     }
 
     // 当需要竞品ASIN时，额外滚动到页面底部触发竞品推荐懒加载
     // 竞品推荐区域通常在页面80%-100%位置，需要滚动触发
     if (!skipCompetitorExtraction) {
-      console.log(`🔍 [复用Context] 需要竞品ASIN，额外滚动触发推荐区域懒加载...`)
+      logger.debug(`🔍 [复用Context] 需要竞品ASIN，额外滚动触发推荐区域懒加载...`)
 
       // 滚动到页面底部区域（分两步，确保懒加载触发）
       await page
@@ -359,13 +360,13 @@ export async function scrapeAmazonProductWithContext(
 
       // 关键等待网络空闲，确保竞品推荐区域的AJAX请求完成
       // 这是单品链接能拿到竞品数据、店铺场景拿不到的根本原因
-      console.log(`⏳ [复用Context] 等待竞品推荐区域AJAX加载...`)
+      logger.debug(`⏳ [复用Context] 等待竞品推荐区域AJAX加载...`)
       try {
         await page.waitForLoadState('networkidle', { timeout: 5000 })
-        console.log(`✅ [复用Context] 网络空闲，竞品推荐AJAX加载完成`)
+        logger.debug(`✅ [复用Context] 网络空闲，竞品推荐AJAX加载完成`)
       } catch {
         // 超时不是错误，继续处理
-        console.log(`⚠️ [复用Context] 网络空闲等待超时，继续处理`)
+        logger.debug(`⚠️ [复用Context] 网络空闲等待超时，继续处理`)
       }
       await randomDelay(500, 1000)
 
@@ -388,7 +389,7 @@ export async function scrapeAmazonProductWithContext(
         .catch(() => null)
 
       if (hasCompetitorSections) {
-        console.log(`✅ [复用Context] 发现竞品推荐区域: ${hasCompetitorSections}`)
+        logger.debug(`✅ [复用Context] 发现竞品推荐区域: ${hasCompetitorSections}`)
       } else {
         console.warn(`⚠️ [复用Context] 未发现竞品推荐区域，可能页面未包含或选择器需更新`)
       }
@@ -396,7 +397,7 @@ export async function scrapeAmazonProductWithContext(
 
     // 等待评论区加载，确保topReviews数据可用
     // 问题：offer 150抓取时topReviews为空，导致后续评论分析无法执行
-    console.log(`📝 [复用Context] 等待评论区加载...`)
+    logger.debug(`📝 [复用Context] 等待评论区加载...`)
     try {
       // 先滚动到评论区位置（通常在页面中下部）
       await page
@@ -427,7 +428,7 @@ export async function scrapeAmazonProductWithContext(
       if (reviewLoaded) {
         // 额外等待评论内容渲染
         await randomDelay(1000, 1500)
-        console.log(`✅ [复用Context] 评论区已加载`)
+        logger.debug(`✅ [复用Context] 评论区已加载`)
       } else {
         console.warn(`⚠️ [复用Context] 评论区未加载，可能产品无评论或页面结构不同`)
       }
@@ -447,7 +448,7 @@ export async function scrapeAmazonProductWithContext(
     // 解析产品数据
     const productData = parseAmazonProductHtml($, url, skipCompetitorExtraction)
 
-    console.log(
+    logger.debug(
       `✅ [复用Context] 抓取成功: ${productData.productName?.substring(0, 50) || 'Unknown'}...`
     )
 
@@ -584,11 +585,11 @@ function extractJsonLdData($: any): JsonLdProductData | null {
     })
 
     if (foundProduct) {
-      console.log(`✅ JSON-LD提取成功: ${result.name?.substring(0, 50) || 'Unknown'}...`)
-      console.log(
+      logger.debug(`✅ JSON-LD提取成功: ${result.name?.substring(0, 50) || 'Unknown'}...`)
+      logger.debug(
         `   品牌: ${result.brand || 'N/A'}, 价格: ${result.price || 'N/A'} ${result.currency || ''}`
       )
-      console.log(`   评分: ${result.rating || 'N/A'}, 评论数: ${result.reviewCount || 'N/A'}`)
+      logger.debug(`   评分: ${result.rating || 'N/A'}, 评论数: ${result.reviewCount || 'N/A'}`)
       return result
     }
   } catch (error) {
@@ -683,7 +684,7 @@ function parseAmazonProductHtml(
   const featureBulletsLiCount = $('#feature-bullets li').length
   // 仅在异常情况下输出调试信息
   if (featureBulletsExists && featureBulletsLiCount === 0) {
-    console.log(`⚠️ feature-bullets元素存在但li为空，可能需要检查页面结构`)
+    logger.debug(`⚠️ feature-bullets元素存在但li为空，可能需要检查页面结构`)
   }
 
   for (const selector of featureSelectors) {
@@ -713,7 +714,7 @@ function parseAmazonProductHtml(
 
   // 记录features提取结果
   if (features.length > 0) {
-    console.log(
+    logger.debug(
       `📝 产品特性提取成功: ${features.length} 条 (前50字: ${features[0]?.substring(0, 50)}...)`
     )
   } else {
@@ -896,7 +897,7 @@ function parseAmazonProductHtml(
 
       // 过滤掉包含JavaScript代码的无效评论内容
       if ((reviewText && reviewText.includes('function()')) || reviewText.includes('P.when(')) {
-        console.log(`⚠️ 跳过未渲染的评论: ${reviewText.substring(0, 50)}...`)
+        logger.debug(`⚠️ 跳过未渲染的评论: ${reviewText.substring(0, 50)}...`)
         reviewText = '' // 清空无效内容
       }
 
@@ -979,7 +980,7 @@ function parseAmazonProductHtml(
   }
 
   if (reviewKeywords.length > 0) {
-    console.log(
+    logger.debug(
       `🏷️ 评论关键词: ${reviewKeywords.slice(0, 5).join(', ')}${reviewKeywords.length > 5 ? '...' : ''}`
     )
   }
@@ -1068,11 +1069,11 @@ function parseAmazonProductHtml(
 
   // 如果是竞品详情页抓取，跳过竞品ASIN提取（避免"竞品的竞品"循环）
   if (skipCompetitorExtraction) {
-    console.log(`⏭️ 跳过竞品ASIN提取（skipCompetitorExtraction=true）`)
+    logger.debug(`⏭️ 跳过竞品ASIN提取（skipCompetitorExtraction=true）`)
   } else {
     // 精确竞品提取策略
     // 核心原则：只提取真正的竞品，排除配件/耗材/经常一起购买
-    console.log(`🔍 开始精确竞品ASIN提取...`)
+    logger.debug(`🔍 开始精确竞品ASIN提取...`)
 
     // 优先级0（最高）: A+内容比较表格
     // 品牌官方的竞品对比，最具参考价值
@@ -1092,12 +1093,12 @@ function parseAmazonProductHtml(
 
       if (competitorAsin && competitorAsin !== asin && !aplusCompetitors.includes(competitorAsin)) {
         aplusCompetitors.push(competitorAsin)
-        console.log(`  📊 A+比较表格竞品: ${competitorAsin}`)
+        logger.debug(`  📊 A+比较表格竞品: ${competitorAsin}`)
       }
     })
     relatedAsins.push(...aplusCompetitors)
     if (aplusCompetitors.length > 0) {
-      console.log(`✅ A+比较表格: 找到 ${aplusCompetitors.length} 个官方竞品`)
+      logger.debug(`✅ A+比较表格: 找到 ${aplusCompetitors.length} 个官方竞品`)
     }
 
     // 优先级1: "Compare with similar items" 官方对比表格
@@ -1179,7 +1180,7 @@ function parseAmazonProductHtml(
 
     // Fallback: data-asin全局搜索（排除非竞品区域）
     if (relatedAsins.length < 5) {
-      console.log(`🔄 精确提取不足（${relatedAsins.length}个），启用Fallback策略...`)
+      logger.debug(`🔄 精确提取不足（${relatedAsins.length}个），启用Fallback策略...`)
 
       // 构建排除选择器
       const excludeSelector = excludedContainers.join(', ')
@@ -1210,7 +1211,7 @@ function parseAmazonProductHtml(
         })
     }
 
-    console.log(
+    logger.debug(
       `🔥 精确竞品提取完成: ${relatedAsins.length} 个候选（A+:${aplusCompetitors.length}）`
     )
   }
@@ -1426,7 +1427,7 @@ function parseAmazonProductHtml(
     jsonLdFallbacks.push('price-installment-guard')
 
   if (jsonLdFallbacks.length > 0) {
-    console.log(`📋 JSON-LD备份字段: ${jsonLdFallbacks.join(', ')}`)
+    logger.debug(`📋 JSON-LD备份字段: ${jsonLdFallbacks.join(', ')}`)
   }
 
   const productData: AmazonProductData = {
@@ -1457,11 +1458,11 @@ function parseAmazonProductHtml(
     reviewKeywords: reviewKeywords.slice(0, 15), // 最多15个关键词
   }
 
-  console.log(`✅ 抓取成功: ${productData.productName || 'Unknown'}`)
-  console.log(
+  logger.debug(`✅ 抓取成功: ${productData.productName || 'Unknown'}`)
+  logger.debug(
     `⭐ 评分: ${finalRating || 'N/A'}, 评论数: ${finalReviewCount || 'N/A'}, 销量排名: ${salesRank || 'N/A'}`
   )
-  console.log(`🎯 P3 Badge: ${badge || 'None'}`) // 显示badge提取结果
+  logger.debug(`🎯 P3 Badge: ${badge || 'None'}`) // 显示badge提取结果
 
   return productData
 }
@@ -1702,7 +1703,7 @@ function extractBrandName(
     const text = $el.text().trim()
     if (text && text.length > 1 && text.length < 50 && !isInRecommendationArea(el)) {
       // 调试：输出原始品牌链接文本
-      console.log(`🔍 [品牌链接 #${i}] 原始文本: "${text}"`)
+      logger.debug(`🔍 [品牌链接 #${i}] 原始文本: "${text}"`)
 
       // 排除纯"Store"、"Shop"等店铺关键词
       if (
@@ -1713,7 +1714,7 @@ function extractBrandName(
         return // 跳过纯店铺关键词
       }
       const cleanText = cleanBrandText(text)
-      console.log(`🔍 [品牌链接 #${i}] 清洗后: "${cleanText}"`)
+      logger.debug(`🔍 [品牌链接 #${i}] 清洗后: "${cleanText}"`)
 
       // 验证清洗后的文本是否有效
       const isValid =
@@ -1725,9 +1726,9 @@ function extractBrandName(
 
       if (isValid) {
         candidates.push({ value: cleanText, source: 'brand-link', confidence: 4 })
-        console.log(`✅ [品牌链接 #${i}] 已添加到候选: "${cleanText}"`)
+        logger.debug(`✅ [品牌链接 #${i}] 已添加到候选: "${cleanText}"`)
       } else {
-        console.log(
+        logger.debug(
           `⚠️ [品牌链接 #${i}] 跳过: cleanText="${cleanText}", length=${cleanText?.length}, same=${cleanText === text}`
         )
       }
@@ -1795,7 +1796,7 @@ function extractBrandName(
 
   // 输出交叉验证结果
   const verificationStatus = bestBrand.data.sources.length >= 2 ? '✅ 多渠道验证' : '⚠️ 单渠道'
-  console.log(
+  logger.debug(
     `${verificationStatus} 品牌名: "${bestBrand.data.originalValue}" (得分: ${bestBrand.data.totalScore}, 来源: ${bestBrand.data.sources.join(', ')})`
   )
 
@@ -1837,7 +1838,7 @@ function extractBrandName(
     }
   }
 
-  console.log(`🔍 最终品牌提取结果: "${finalBrand}"`)
+  logger.debug(`🔍 最终品牌提取结果: "${finalBrand}"`)
   return finalBrand
 }
 

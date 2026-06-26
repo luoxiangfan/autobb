@@ -8,6 +8,7 @@
  * 错误通知
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 
 /**
@@ -32,10 +33,10 @@ async function sendNotification(
   }
 
   const prefix = levelEmoji[level] || '📢'
-  console.log(`${prefix} [URL Swap Notification] [User ${userId}] ${title}`)
-  console.log(`   ${message}`)
+  logger.debug(`${prefix} [URL Swap Notification] [User ${userId}] ${title}`)
+  logger.debug(`   ${message}`)
   if (metadata) {
-    console.log(`   Metadata:`, JSON.stringify(metadata, null, 2))
+    logger.debug(`   Metadata:`, JSON.stringify(metadata, null, 2))
   }
 }
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import type { DatabaseAdapter } from '../db'
 
@@ -142,11 +143,11 @@ export async function loadPrompt(promptId: string): Promise<string> {
       if (currentVersion && currentVersion !== cached.version) {
         promptCache.delete(promptId)
       } else {
-        console.log(`✅ Prompt cache hit: ${promptId} (${cached.version})`)
+        logger.debug(`✅ Prompt cache hit: ${promptId} (${cached.version})`)
         return cached.content
       }
     } else {
-      console.log(`✅ Prompt cache hit: ${promptId} (${cached.version})`)
+      logger.debug(`✅ Prompt cache hit: ${promptId} (${cached.version})`)
       return cached.content
     }
   }
@@ -180,7 +181,7 @@ export async function loadPrompt(promptId: string): Promise<string> {
     lastVerifiedAt: Date.now(),
   })
 
-  console.log(
+  logger.debug(
     `📦 Loaded prompt from database: ${resolvedPrompt.prompt.name} (${promptId} ${resolvedPrompt.prompt.version})`
   )
 
@@ -193,10 +194,10 @@ export async function loadPrompt(promptId: string): Promise<string> {
 export function clearPromptCache(promptId?: string): void {
   if (promptId) {
     promptCache.delete(promptId)
-    console.log(`🗑️ Cleared cache for prompt: ${promptId}`)
+    logger.debug(`🗑️ Cleared cache for prompt: ${promptId}`)
   } else {
     promptCache.clear()
-    console.log(`🗑️ Cleared all prompt cache`)
+    logger.debug(`🗑️ Cleared all prompt cache`)
   }
 } /**
  * 模板变量插值工具函数

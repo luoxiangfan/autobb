@@ -14,6 +14,7 @@
  * 5. 处理失败情况并支持重试
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
@@ -252,7 +253,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       lastHeartbeatLogAt = now
       lastHeartbeatStage = stage
       const elapsedSeconds = Math.floor((now - campaignPublishStartedAt) / 1000)
-      console.log(`💓 Campaign发布心跳: ${task.id} - ${stage} (${elapsedSeconds}s)`)
+      logger.debug(`💓 Campaign发布心跳: ${task.id} - ${stage} (${elapsedSeconds}s)`)
     }
   }
 
@@ -330,7 +331,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
   }
 
   try {
-    console.log(`🚀 开始执行Campaign发布任务: ${task.id}`)
+    logger.debug(`🚀 开始执行Campaign发布任务: ${task.id}`)
 
     const campaignSnapshot = await db.queryOne<{
       status: string | null
@@ -351,14 +352,14 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       String(campaignSnapshot?.status || '').toUpperCase() === 'REMOVED'
 
     if (!campaignSnapshot || campaignAlreadyRemoved) {
-      console.log(
+      logger.debug(
         `⏭️ 跳过Campaign发布任务：campaign已下线或不存在（campaignId=${campaignId}, taskId=${task.id}）`
       )
       apiSuccess = true
       return { success: true }
     }
 
-    console.log(
+    logger.debug(
       `[Publish] RSA资产数量校验: headlines=${Array.isArray(creative.headlines) ? creative.headlines.length : 0}, descriptions=${Array.isArray(creative.descriptions) ? creative.descriptions.length : 0}`
     )
     if (!forcePublish) {
@@ -395,7 +396,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       throw new Error(`Google Ads账号不存在或未激活: ${googleAdsAccountId}`)
     }
 
-    console.log(`💰 使用账号货币: ${adsAccount.currency}`)
+    logger.debug(`💰 使用账号货币: ${adsAccount.currency}`)
 
     const prepared = await prepareGoogleAdsApiCallForLinkedAccount(
       userId,
@@ -501,7 +502,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     })
 
     if (resumePlan.resumeMode) {
-      console.log(
+      logger.debug(
         `[Publish] 续发模式: discoverRemote=${resumePlan.discoverRemoteByName}, ` +
           `campaign=${resumePlan.googleCampaignId || '-'}, ` +
           `adGroup=${resumePlan.googleAdGroupId || '-'}, ad=${resumePlan.googleAdId || '-'}`
@@ -632,7 +633,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
         if (discovered?.campaignId) {
           googleCampaignId = discovered.campaignId
-          console.log(`🔍 续发：按名称匹配到远端 Campaign ${googleCampaignId}（${candidateName}）`)
+          logger.debug(`🔍 续发：按名称匹配到远端 Campaign ${googleCampaignId}（${candidateName}）`)
           await flushPublishGoogleIds({ googleCampaignId })
           break
         }
@@ -640,7 +641,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     }
 
     if (googleCampaignId) {
-      console.log(`♻️ 续发复用 Campaign (Google ID: ${googleCampaignId})`)
+      logger.debug(`♻️ 续发复用 Campaign (Google ID: ${googleCampaignId})`)
       if (resumePlan.campaignSettingsChanged) {
         totalApiOperations++
         await runWithLoginCustomerFallbackAndHeartbeat('更新Campaign预算', (loginCustomerId) =>
@@ -659,9 +660,9 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
             ...preparedAuthContextField(prepared),
           })
         )
-        console.log(`✅ Campaign预算已更新 (Google ID: ${googleCampaignId})`)
+        logger.debug(`✅ Campaign预算已更新 (Google ID: ${googleCampaignId})`)
       } else {
-        console.log(`⏭️ Campaign 配置未变化，跳过更新`)
+        logger.debug(`⏭️ Campaign 配置未变化，跳过更新`)
       }
     } else {
       const createdCampaign = await runWithLoginCustomerFallbackAndHeartbeat(
@@ -689,12 +690,12 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
           })
       )
       googleCampaignId = createdCampaign.campaignId
-      console.log(`✅ Campaign创建成功 (Google ID: ${googleCampaignId})`)
+      logger.debug(`✅ Campaign创建成功 (Google ID: ${googleCampaignId})`)
     }
 
     orphanGoogleCampaignId = googleCampaignId
     await flushPublishGoogleIds({ googleCampaignId })
-    console.log(`📝 使用命名: Campaign=${campaignName}（1 Campaign + 1 Ad Group）`)
+    logger.debug(`📝 使用命名: Campaign=${campaignName}（1 Campaign + 1 Ad Group）`)
 
     // 回读远端Google Ads中的真实Campaign名称，作为本地权威名称
     let authoritativeCampaignName = campaignName
@@ -722,7 +723,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
         authoritativeCampaignName = remoteCampaignName
       }
       if (authoritativeCampaignName !== campaignName) {
-        console.log(`🔁 远端名称校准: ${campaignName} -> ${authoritativeCampaignName}`)
+        logger.debug(`🔁 远端名称校准: ${campaignName} -> ${authoritativeCampaignName}`)
       }
     } catch (readNameError: any) {
       console.warn(
@@ -768,18 +769,18 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
       if (discoveredAdGroup?.adGroupId) {
         googleAdGroupId = discoveredAdGroup.adGroupId
-        console.log(`🔍 续发：按名称匹配到远端 Ad Group ${googleAdGroupId}`)
+        logger.debug(`🔍 续发：按名称匹配到远端 Ad Group ${googleAdGroupId}`)
         await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId })
       }
     }
 
     if (resumePlan.googleAdGroupId && !resumePlan.adGroupSettingsChanged) {
       googleAdGroupId = resumePlan.googleAdGroupId
-      console.log(`♻️ 续发复用 Ad Group (Google ID: ${googleAdGroupId})，配置未变化`)
+      logger.debug(`♻️ 续发复用 Ad Group (Google ID: ${googleAdGroupId})，配置未变化`)
     } else if (googleAdGroupId && resumePlan.resumeMode && !resumePlan.adGroupSettingsChanged) {
-      console.log(`♻️ 续发复用 Ad Group (Google ID: ${googleAdGroupId})，配置未变化`)
+      logger.debug(`♻️ 续发复用 Ad Group (Google ID: ${googleAdGroupId})，配置未变化`)
     } else {
-      console.log(`\n🧩 创建 Ad Group: ${adGroupName}`)
+      logger.debug(`\n🧩 创建 Ad Group: ${adGroupName}`)
       totalApiOperations++
       const { adGroupId: createdAdGroupId } = await runWithLoginCustomerFallbackAndHeartbeat(
         '创建Ad Group',
@@ -802,7 +803,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       )
 
       googleAdGroupId = createdAdGroupId
-      console.log(`✅ Ad Group创建成功 (Google ID: ${googleAdGroupId})`)
+      logger.debug(`✅ Ad Group创建成功 (Google ID: ${googleAdGroupId})`)
       await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId })
     }
 
@@ -961,7 +962,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
     if (resumePlan.googleAdId && !resumePlan.rsaChanged) {
       googleAdId = resumePlan.googleAdId
-      console.log(`♻️ 续发复用 RSA (Google ID: ${googleAdId})，创意未变化`)
+      logger.debug(`♻️ 续发复用 RSA (Google ID: ${googleAdId})，创意未变化`)
     } else {
       totalApiOperations++
       const adResult = await runWithLoginCustomerFallbackAndHeartbeat(
@@ -989,7 +990,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       googleAdId = adResult.adId
       await flushPublishGoogleIds({ googleCampaignId, googleAdGroupId, googleAdId })
     }
-    console.log(
+    logger.debug(
       `✅ Ad Group + RSA 发布完成 (AdGroup=${googleAdGroupId}, Ad=${googleAdId})，耗时: ${Date.now() - adGroupStartTime}ms`
     )
 
@@ -1049,7 +1050,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
           userId,
           skipCache: true,
         })
-        console.log(
+        logger.debug(
           `  🔗 店铺 Sitelink：已解析 ${Math.min(formattedSitelinks.length, storeProductLinks.length)} 条单品联盟链接`
         )
       }
@@ -1061,7 +1062,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
     // 13. 串行执行：Extensions（避免并发修改Campaign资源冲突）
     // Extensions是可选扩展，失败不应影响核心发布状态
-    console.log(`\n🔄 开始串行执行Extensions（避免并发冲突）...`)
+    logger.debug(`\n🔄 开始串行执行Extensions（避免并发冲突）...`)
     const extensionsStartTime = Date.now()
 
     // 跟踪Extensions执行结果（非致命错误）
@@ -1072,7 +1073,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     // 13.1 添加Callout Extensions（非致命，失败时记录错误但继续）
     try {
       if (!shouldCreateExtensions) {
-        console.log('⏭️ 续发：扩展未变化，跳过 Callout')
+        logger.debug('⏭️ 续发：扩展未变化，跳过 Callout')
       } else {
         totalApiOperations += finalCallouts.length + 1
         await runWithLoginCustomerFallbackAndHeartbeat('创建Callout扩展', (loginCustomerId) =>
@@ -1090,7 +1091,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
             ...preparedAuthContextField(prepared),
           })
         )
-        console.log(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
+        logger.debug(`  ✅ [串行1/2] 成功添加${finalCallouts.length}个Callout扩展`)
       }
     } catch (calloutError: any) {
       const errorMsg = calloutError.message || String(calloutError)
@@ -1101,7 +1102,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     // 13.2 添加Sitelink Extensions（非致命，失败时记录错误但继续）
     try {
       if (!shouldCreateExtensions) {
-        console.log('⏭️ 续发：扩展未变化，跳过 Sitelink')
+        logger.debug('⏭️ 续发：扩展未变化，跳过 Sitelink')
       } else {
         totalApiOperations += formattedSitelinks.length + 1
         const sitelinkCreateResult = await runWithLoginCustomerFallbackAndHeartbeat(
@@ -1121,7 +1122,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
               ...preparedAuthContextField(prepared),
             })
         )
-        console.log(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
+        logger.debug(`  ✅ [串行2/2] 成功添加${formattedSitelinks.length}个Sitelink扩展`)
 
         try {
           const { pageType, storeProductLinks } = await loadOfferStoreProductLinksForUrlSwap(
@@ -1140,7 +1141,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
               storeProductLinks,
             })
             if (mapped > 0) {
-              console.log(`  🔗 已同步 ${mapped} 条 Sitelink 换链映射`)
+              logger.debug(`  🔗 已同步 ${mapped} 条 Sitelink 换链映射`)
             }
           }
         } catch (sitelinkMapError: any) {
@@ -1156,10 +1157,10 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     }
 
     const extensionsDuration = Date.now() - extensionsStartTime
-    console.log(`🔄 Extensions串行执行完成，耗时: ${extensionsDuration}ms`)
+    logger.debug(`🔄 Extensions串行执行完成，耗时: ${extensionsDuration}ms`)
 
     // 14. 配置Campaign转化目标为"网页浏览"（非阻塞操作）
-    console.log(`\n🎯 配置Campaign转化目标...`)
+    logger.debug(`\n🎯 配置Campaign转化目标...`)
     try {
       await runWithLoginCustomerFallbackAndHeartbeat('配置Page View目标', (loginCustomerId) =>
         setCampaignPageViewGoalWithCredentials({
@@ -1199,7 +1200,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
           })
         )
         finalCampaignStatus = 'ENABLED'
-        console.log(`✅ Campaign已启用`)
+        logger.debug(`✅ Campaign已启用`)
       } catch (enableError: any) {
         console.warn(`⚠️ Campaign启用失败（非致命错误）: ${enableError.message}`)
       }
@@ -1367,11 +1368,11 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
         offerId,
       })
       if (backfillResult.linked) {
-        console.log(
+        logger.debug(
           `🔗 发布后已补齐product-offer链路: offer=${offerId}, product=${backfillResult.productId}, reason=${backfillResult.reason}`
         )
       } else {
-        console.log(
+        logger.debug(
           `ℹ️ 发布后未补齐product-offer链路: offer=${offerId}, reason=${backfillResult.reason}`
         )
       }
@@ -1395,7 +1396,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
           googleCampaignId,
         })
         if (added) {
-          console.log(`🔗 已追加换链接任务目标: offer=${offerId}, campaign=${googleCampaignId}`)
+          logger.debug(`🔗 已追加换链接任务目标: offer=${offerId}, campaign=${googleCampaignId}`)
         }
       }
     } catch (err: any) {
@@ -1414,24 +1415,24 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
     // 区分完全成功和部分成功
     if (extensionsErrors.length === 0) {
-      console.log(`\n🎉 Campaign发布成功完成！`)
-      console.log(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)
-      console.log(`   💰 货币: ${adsAccount.currency}, CPC: ${effectiveMaxCpcBid}`)
-      console.log(
+      logger.debug(`\n🎉 Campaign发布成功完成！`)
+      logger.debug(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)
+      logger.debug(`   💰 货币: ${adsAccount.currency}, CPC: ${effectiveMaxCpcBid}`)
+      logger.debug(
         `   🔗 Google IDs: Campaign=${googleCampaignId}, AdGroup=${googleAdGroupId}, Ad=${googleAdId}`
       )
-      console.log(`   📊 总计 ${totalApiOperations} 个API操作`)
+      logger.debug(`   📊 总计 ${totalApiOperations} 个API操作`)
     } else {
-      console.log(`\n⚠️ Campaign核心发布成功，但部分扩展失败`)
-      console.log(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)
-      console.log(`   💰 货币: ${adsAccount.currency}, CPC: ${effectiveMaxCpcBid}`)
-      console.log(
+      logger.debug(`\n⚠️ Campaign核心发布成功，但部分扩展失败`)
+      logger.debug(`   📋 命名: Campaign=${authoritativeCampaignName}, AdGroup=${googleAdGroupId}`)
+      logger.debug(`   💰 货币: ${adsAccount.currency}, CPC: ${effectiveMaxCpcBid}`)
+      logger.debug(
         `   🔗 Google IDs: Campaign=${googleCampaignId}, AdGroup=${googleAdGroupId}, Ad=${googleAdId}`
       )
-      console.log(`   📊 总计 ${totalApiOperations} 个API操作`)
-      console.log(`   ⚠️ 扩展失败: ${extensionsErrors.length}项`)
+      logger.debug(`   📊 总计 ${totalApiOperations} 个API操作`)
+      logger.debug(`   ⚠️ 扩展失败: ${extensionsErrors.length}项`)
       extensionsErrors.forEach((err, i) => {
-        console.log(`      ${i + 1}. ${err}`)
+        logger.debug(`      ${i + 1}. ${err}`)
       })
     }
 

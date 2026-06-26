@@ -9,6 +9,7 @@
  * 记录历史
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import {
   updateTaskAfterManualAdvance,
@@ -64,7 +65,7 @@ export async function executeUrlSwapTask(
     currentFinalUrlSuffix,
   } = task.data
 
-  console.log(`[url-swap-executor] 开始执行任务: ${taskId}, offer: ${offerId}`)
+  logger.debug(`[url-swap-executor] 开始执行任务: ${taskId}, offer: ${offerId}`)
   await assertUserExecutionAllowed(task.userId, { source: `url-swap:${task.id}` })
 
   let effectiveCurrentFinalUrl: string | null = currentFinalUrl
@@ -98,7 +99,7 @@ export async function executeUrlSwapTask(
     const status = String(taskRow.status || '').toLowerCase()
     const isDeleted = taskRow.is_deleted === true || Number(taskRow.is_deleted) === 1
     if (isDeleted || status !== 'enabled') {
-      console.log(
+      logger.debug(
         `[url-swap-executor] 跳过执行: taskId=${taskId}, status=${status || 'unknown'}, isDeleted=${isDeleted}`
       )
       return { success: false, changed: false }
@@ -169,7 +170,7 @@ export async function executeUrlSwapTask(
         source: `url-swap:manual-before-resolve:${task.id}`,
       })
 
-      console.log(`[url-swap-executor]（manual）解析推广链接: ${selectedLink}`)
+      logger.debug(`[url-swap-executor]（manual）解析推广链接: ${selectedLink}`)
       const resolved = await resolveAffiliateLinkForUrlSwap({
         affiliateLink: selectedLink,
         targetCountry,
@@ -215,7 +216,7 @@ export async function executeUrlSwapTask(
       let updateResult: { successCount: number; failureCount: number; failures: string[] } | null =
         null
       if (targetsToUpdate.length > 0) {
-        console.log(`[url-swap-executor]（manual）更新Google Ads目标数: ${targetsToUpdate.length}`)
+        logger.debug(`[url-swap-executor]（manual）更新Google Ads目标数: ${targetsToUpdate.length}`)
 
         let adsApiError: Error | null = null
 
@@ -289,7 +290,9 @@ export async function executeUrlSwapTask(
       }
 
       const overallChanged = urlChanged || sitelinkPhase.changed
-      console.log(`[url-swap-executor]（manual）换链执行完成: ${taskId}, changed=${overallChanged}`)
+      logger.debug(
+        `[url-swap-executor]（manual）换链执行完成: ${taskId}, changed=${overallChanged}`
+      )
       return { success: true, changed: overallChanged }
     }
 
@@ -322,14 +325,14 @@ export async function executeUrlSwapTask(
     })
 
     // 1. 解析推广链接（禁用缓存，确保获取最新URL）
-    console.log(`[url-swap-executor] 解析推广链接: ${affiliateLink}`)
+    logger.debug(`[url-swap-executor] 解析推广链接: ${affiliateLink}`)
     const resolved = await resolveAffiliateLinkForUrlSwap({
       affiliateLink,
       targetCountry,
       userId: task.userId,
     })
 
-    console.log(
+    logger.debug(
       `[url-swap-executor] 解析结果: finalUrl=${resolved.finalUrl}, suffix=${resolved.finalUrlSuffix}`
     )
 
@@ -341,12 +344,12 @@ export async function executeUrlSwapTask(
     if (!urlChanged) {
       const retryTargets = taskTargets.filter(shouldRetryUrlSwapTargetOnSameSuffix)
       if (retryTargets.length === 0) {
-        console.log(`[url-swap-executor] URL未变化: ${taskId}`)
+        logger.debug(`[url-swap-executor] URL未变化: ${taskId}`)
         await updateTaskStats(taskId, true, false)
         return { success: true, changed: false }
       }
 
-      console.log(`[url-swap-executor] URL未变化，尝试重试失败目标: ${retryTargets.length}`)
+      logger.debug(`[url-swap-executor] URL未变化，尝试重试失败目标: ${retryTargets.length}`)
       let retryResult: { successCount: number; failureCount: number; failures: string[] } | null =
         null
       try {
@@ -391,7 +394,7 @@ export async function executeUrlSwapTask(
       return { success: true, changed: sitelinkPhase.changed }
     }
 
-    console.log(`[url-swap-executor] 检测到URL变化: ${taskId}`)
+    logger.debug(`[url-swap-executor] 检测到URL变化: ${taskId}`)
 
     // 3. 验证域名一致性（防止盗链）
     if (effectiveCurrentFinalUrl) {
@@ -409,7 +412,7 @@ export async function executeUrlSwapTask(
       null
 
     if (targetsToUpdate.length > 0) {
-      console.log(`[url-swap-executor] 更新Google Ads目标数: ${targetsToUpdate.length}`)
+      logger.debug(`[url-swap-executor] 更新Google Ads目标数: ${targetsToUpdate.length}`)
 
       try {
         updateResult = await updateUrlSwapTargetsFinalUrlSuffix({
@@ -419,7 +422,7 @@ export async function executeUrlSwapTask(
           db,
         })
 
-        console.log(`[url-swap-executor] Google Ads更新完成: ${taskId}`)
+        logger.debug(`[url-swap-executor] Google Ads更新完成: ${taskId}`)
       } catch (adsError: any) {
         const message = formatUrlSwapGoogleAdsError(adsError)
         console.error(`[url-swap-executor] Google Ads更新失败: ${taskId}`, message)
@@ -458,7 +461,7 @@ export async function executeUrlSwapTask(
     // 6. 更新任务状态
     await updateTaskAfterSwap(taskId, resolved.finalUrl, resolved.finalUrlSuffix)
 
-    console.log(`[url-swap-executor] 换链成功: ${taskId}`)
+    logger.debug(`[url-swap-executor] 换链成功: ${taskId}`)
     return { success: true, changed: true }
   } catch (error: any) {
     const rawMessage = error?.message || String(error)

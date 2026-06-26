@@ -1,6 +1,7 @@
 /**
  * 统一关键词服务 v2.0 — orchestration entrypoints.
  */
+import { logger } from '@/lib/common/server'
 import { getKeywordIdeas } from '@/lib/google-ads/keyword/planner'
 import { DEFAULTS } from '../keyword-constants'
 import {
@@ -76,12 +77,12 @@ export async function getUnifiedKeywordData(
     maxKeywords = 500,
   } = params
 
-  console.log('\n' + '='.repeat(60))
-  console.log('🔄 统一关键词服务 v2.0 启动')
-  console.log('='.repeat(60))
-  console.log(`品牌: ${offer.brand}`)
-  console.log(`国家: ${country}, 语言: ${language}`)
-  console.log(`认证方式: ${authType}`)
+  logger.debug('\n' + '='.repeat(60))
+  logger.debug('🔄 统一关键词服务 v2.0 启动')
+  logger.debug('='.repeat(60))
+  logger.debug(`品牌: ${offer.brand}`)
+  logger.debug(`国家: ${country}, 语言: ${language}`)
+  logger.debug(`认证方式: ${authType}`)
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
   const plannerAuth = await prepareKeywordPlannerSessionForServiceParams(userId, {
@@ -109,19 +110,19 @@ export async function getUnifiedKeywordData(
 
   // Step 1: 构建智能种子词池
 
-  console.log('\n📍 Step 1: 构建智能种子词池')
+  logger.debug('\n📍 Step 1: 构建智能种子词池')
   const smartSeeds = buildSmartSeedPool(offer)
   const brandRelatedSeeds = smartSeeds.filter((seed) => containsPureBrand(seed, pureBrandKeywords))
   const seedKeywordsForPlanner = Array.from(new Set([...pureBrandKeywords, ...brandRelatedSeeds]))
 
   if (smartSeeds.length === 0) {
-    console.log('   ⚠️ 无法构建种子词池，返回空结果')
+    logger.debug('   ⚠️ 无法构建种子词池，返回空结果')
     return { keywords: [], competitorBrands: [] }
   }
 
   // Step 2: Keyword Planner 查询
 
-  console.log('\n📍 Step 2: Keyword Planner 查询')
+  logger.debug('\n📍 Step 2: Keyword Planner 查询')
 
   if (customerId && userId) {
     if (plannerIdeasBlocked) {
@@ -142,7 +143,7 @@ export async function getUnifiedKeywordData(
           preparedOAuth: ideasAuth.preparedOAuth,
         })
 
-        console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
+        logger.debug(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
         keywordPlannerAvailable = keywordIdeas.length > 0
 
         // 转换为统一格式
@@ -165,7 +166,7 @@ export async function getUnifiedKeywordData(
       }
     }
   } else {
-    console.log('   ⚠️ 缺少 Google Ads 凭证，跳过 Keyword Planner 查询')
+    logger.debug('   ⚠️ 缺少 Google Ads 凭证，跳过 Keyword Planner 查询')
   }
 
   if (!keywordPlannerAvailable) {
@@ -200,21 +201,21 @@ export async function getUnifiedKeywordData(
 
   // Step 2.5: 按搜索量降序排序（关键先排序再截取）
 
-  console.log('\n📍 Step 2.5: 按搜索量降序排序')
+  logger.debug('\n📍 Step 2.5: 按搜索量降序排序')
 
   let allKeywords = Array.from(keywordMap.values())
   allKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
 
-  console.log(`   📊 Keyword Planner返回 ${allKeywords.length} 个关键词`)
+  logger.debug(`   📊 Keyword Planner返回 ${allKeywords.length} 个关键词`)
   if (allKeywords.length > 0) {
-    console.log(
+    logger.debug(
       `   📊 排序后搜索量范围: ${allKeywords[allKeywords.length - 1]?.searchVolume || 0} - ${allKeywords[0]?.searchVolume || 0}`
     )
   }
 
   // Step 2.6: 获取精确搜索量（只对搜索量最高的前1000个）
 
-  console.log('\n📍 Step 2.6: 获取精确搜索量（前1000个）')
+  logger.debug('\n📍 Step 2.6: 获取精确搜索量（前1000个）')
 
   const topKeywordsForVolume = allKeywords.slice(0, 1000).map((kw) => kw.keyword)
 
@@ -251,7 +252,7 @@ export async function getUnifiedKeywordData(
       }
     })
 
-    console.log(`   ✅ 更新 ${volumes.length} 个关键词的精确搜索量`)
+    logger.debug(`   ✅ 更新 ${volumes.length} 个关键词的精确搜索量`)
 
     // 关键：重新从Map生成数组，确保更新后的搜索量生效
     allKeywords = Array.from(keywordMap.values())
@@ -309,7 +310,7 @@ export async function getUnifiedKeywordData(
 
   // Step 3: 品牌词优先 + 按搜索量降序排序
 
-  console.log('\n📍 Step 3: 品牌词优先排序')
+  logger.debug('\n📍 Step 3: 品牌词优先排序')
 
   // 优化2: 品牌词优先排序
   // 排序规则：1. 品牌词优先 2. 按搜索量降序
@@ -331,17 +332,17 @@ export async function getUnifiedKeywordData(
     containsPureBrand(kw.keyword, pureBrandKeywords)
   ).length
 
-  console.log(`   总关键词数: ${allKeywords.length}`)
-  console.log(`   🏷️ 品牌词数量: ${brandKeywordCount}`)
+  logger.debug(`   总关键词数: ${allKeywords.length}`)
+  logger.debug(`   🏷️ 品牌词数量: ${brandKeywordCount}`)
   if (allKeywords.length > 0) {
-    console.log(
+    logger.debug(
       `   搜索量范围: ${allKeywords[allKeywords.length - 1].searchVolume} - ${allKeywords[0].searchVolume}`
     )
   }
 
   // Step 4: 白名单过滤
 
-  console.log('\n📍 Step 4: 白名单过滤')
+  logger.debug('\n📍 Step 4: 白名单过滤')
 
   // 提取竞品品牌用于否定关键词
   const whitelistResult = filterByWhitelist(allKeywords, offer.brand)
@@ -350,12 +351,12 @@ export async function getUnifiedKeywordData(
 
   // 移除品类过滤 - 避免误杀有效关键词
   // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
-  console.log(`\n✅ 关键词过滤完成，共 ${allKeywords.length} 个关键词`)
+  logger.debug(`\n✅ 关键词过滤完成，共 ${allKeywords.length} 个关键词`)
 
   if (pureBrandKeywords.length > 0) {
     const beforeBrandFilter = allKeywords.length
     allKeywords = allKeywords.filter((kw) => containsPureBrand(kw.keyword, pureBrandKeywords))
-    console.log(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
+    logger.debug(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
   }
 
   if (!keywordPlannerMetricsAvailable) {
@@ -364,7 +365,7 @@ export async function getUnifiedKeywordData(
 
   // Step 5: 智能过滤
 
-  console.log('\n📍 Step 5: 智能过滤')
+  logger.debug('\n📍 Step 5: 智能过滤')
 
   allKeywords = applySmartFilters(allKeywords, minSearchVolume, DEFAULTS.minKeywordsTarget, {
     disableSearchVolumeFilter,
@@ -373,7 +374,7 @@ export async function getUnifiedKeywordData(
 
   // Step 6: 智能匹配类型分配
 
-  console.log('\n📍 Step 6: 智能匹配类型分配')
+  logger.debug('\n📍 Step 6: 智能匹配类型分配')
 
   allKeywords = assignMatchTypes(allKeywords, offer.brand)
 
@@ -381,15 +382,15 @@ export async function getUnifiedKeywordData(
 
   const finalKeywords = allKeywords.slice(0, maxKeywords)
 
-  console.log('\n' + '='.repeat(60))
-  console.log('✅ 统一关键词服务完成')
-  console.log('='.repeat(60))
-  console.log(`最终关键词数: ${finalKeywords.length}`)
+  logger.debug('\n' + '='.repeat(60))
+  logger.debug('✅ 统一关键词服务完成')
+  logger.debug('='.repeat(60))
+  logger.debug(`最终关键词数: ${finalKeywords.length}`)
 
   // 打印 Top 10
-  console.log('\n📊 Top 10 关键词:')
+  logger.debug('\n📊 Top 10 关键词:')
   finalKeywords.slice(0, 10).forEach((kw, i) => {
-    console.log(
+    logger.debug(
       `   ${i + 1}. "${kw.keyword}" (${kw.searchVolume.toLocaleString()}/月, ${kw.matchType})`
     )
   })
@@ -403,16 +404,16 @@ export async function getUnifiedKeywordData(
     {} as Record<string, number>
   )
 
-  console.log('\n📊 匹配类型分布:')
+  logger.debug('\n📊 匹配类型分布:')
   Object.entries(matchTypeCounts).forEach(([type, count]) => {
-    console.log(`   ${type}: ${count}`)
+    logger.debug(`   ${type}: ${count}`)
   })
 
   // 输出识别到的竞品品牌
   if (competitorBrands.length > 0) {
-    console.log(`\n🏷️ 识别竞品品牌 (${competitorBrands.length}个，可用作否定关键词):`)
+    logger.debug(`\n🏷️ 识别竞品品牌 (${competitorBrands.length}个，可用作否定关键词):`)
     competitorBrands.forEach((brand) => {
-      console.log(`   - ${brand}`)
+      logger.debug(`   - ${brand}`)
     })
   }
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import crypto from 'crypto'
 import { getDatabase } from '../db'
 import { applyCampaignTransition } from './campaign-state-machine'
@@ -400,7 +401,7 @@ export async function persistPublishGoogleAdsIds(params: {
       googleAdGroupId ? `adGroup=${googleAdGroupId}` : null,
       googleAdId ? `ad=${googleAdId}` : null,
     ].filter(Boolean)
-    console.log(
+    logger.debug(
       `[CampaignPublish] 💾 已即时回写远端 ID（local=${params.campaignId}）: ${parts.join(', ')}`
     )
   }

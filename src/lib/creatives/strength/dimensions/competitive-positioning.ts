@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { HeadlineAsset, DescriptionAsset } from '../../server'
 import { recordTokenUsage, estimateTokenCost } from '../../../ai/server'
 import { generateContent } from '../../../ai/server'
@@ -40,7 +41,7 @@ export async function calculateCompetitivePositioning(
   let competitiveComparison = 0
   let valueEmphasis = 0
 
-  console.log('🎯 评估竞争定位维度 (混合方案 - 全语言支持):')
+  logger.debug('🎯 评估竞争定位维度 (混合方案 - 全语言支持):')
 
   // 第一层：快速通用检测（支持所有语言）
 
@@ -74,12 +75,12 @@ export async function calculateCompetitivePositioning(
 
   if (hasQuantifiedSavings || hasPercentageDiscount || hasNoFees) {
     priceAdvantage = 3
-    if (hasQuantifiedSavings) console.log('   ✅ 价格优势量化（货币+节省） (+3分)')
-    if (hasPercentageDiscount) console.log('   ✅ 价格优势量化（百分比折扣） (+3分)')
-    if (hasNoFees) console.log('   ✅ 价格优势量化（零费用承诺） (+3分)')
+    if (hasQuantifiedSavings) logger.debug('   ✅ 价格优势量化（货币+节省） (+3分)')
+    if (hasPercentageDiscount) logger.debug('   ✅ 价格优势量化（百分比折扣） (+3分)')
+    if (hasNoFees) logger.debug('   ✅ 价格优势量化（零费用承诺） (+3分)')
   } else if (hasFreeOffer) {
     priceAdvantage = 2.5
-    console.log('   ✅ 免费福利（Free offer） (+2.5分)')
+    logger.debug('   ✅ 免费福利（Free offer） (+2.5分)')
   } else if (
     savingsKeywords.test(allTextsLower) ||
     /best value|affordable|budget|cheap|economic|便宜|实惠|划算|お得|저렴|ราคาถูก|رخيص|זול|ucuz|billig|goedkoop|дешевый|barato|bon marché|economico|सस्ता|rẻ|murah/i.test(
@@ -87,9 +88,9 @@ export async function calculateCompetitivePositioning(
     )
   ) {
     priceAdvantage = 1.5
-    console.log('   ⚠️ 价格优势非量化（通用检测） (+1.5分)')
+    logger.debug('   ⚠️ 价格优势非量化（通用检测） (+1.5分)')
   } else {
-    console.log('   ❌ 无价格优势表达 (+0分)')
+    logger.debug('   ❌ 无价格优势表达 (+0分)')
   }
 
   // 2. 独特市场定位检测 (0-3分)
@@ -115,20 +116,20 @@ export async function calculateCompetitivePositioning(
 
   if (hasUniqueness || hasOfficialStatus) {
     uniqueMarketPosition = 3
-    if (hasUniqueness) console.log('   ✅ 独特市场定位（唯一性声明） (+3分)')
-    if (hasOfficialStatus) console.log('   ✅ 独特市场定位（官方/授权） (+3分)')
+    if (hasUniqueness) logger.debug('   ✅ 独特市场定位（唯一性声明） (+3分)')
+    if (hasOfficialStatus) logger.debug('   ✅ 独特市场定位（官方/授权） (+3分)')
   } else if (hasTechnicalDifferentiation) {
     uniqueMarketPosition = 2.5
-    console.log('   ✅ 独特市场定位（技术规格） (+2.5分)')
+    logger.debug('   ✅ 独特市场定位（技术规格） (+2.5分)')
   } else if (
     /top|best|leading|premier|superior|migliore|mejor|meilleur|beste|лучший|最好|最高|ベスト|최고|ดีที่สุด|الأفضل|הטוב|en iyi|सर्वश्रेष्ठ|tốt nhất|terbaik|beste|paras|bästa|καλύτερο|najlepszy/i.test(
       allTextsLower
     )
   ) {
     uniqueMarketPosition = 1.5
-    console.log('   ⚠️ 隐含独特性（通用检测） (+1.5分)')
+    logger.debug('   ⚠️ 隐含独特性（通用检测） (+1.5分)')
   } else {
-    console.log('   ❌ 无独特定位声明 (+0分)')
+    logger.debug('   ❌ 无独特定位声明 (+0分)')
   }
 
   // 3. 竞品对比暗示检测 (0-2分)
@@ -140,16 +141,16 @@ export async function calculateCompetitivePositioning(
 
   if (hasComparison) {
     competitiveComparison = 2
-    console.log('   ✅ 明确竞品对比（通用检测） (+2分)')
+    logger.debug('   ✅ 明确竞品对比（通用检测） (+2分)')
   } else if (
     /better|superior|outperform|migliore|mejor|meilleur|besser|melhor|beter|лучше|更好|优于|より良い|더 좋은|ดีกว่า|أفضل من|טוב יותר|daha iyi|बेहतर|tốt hơn|lebih baik|bedre|parempi|bättre|καλύτερο|lepszy/i.test(
       allTextsLower
     )
   ) {
     competitiveComparison = 1
-    console.log('   ⚠️ 隐含对比（通用检测） (+1分)')
+    logger.debug('   ⚠️ 隐含对比（通用检测） (+1分)')
   } else {
-    console.log('   ❌ 无竞品对比暗示 (+0分)')
+    logger.debug('   ❌ 无竞品对比暗示 (+0分)')
   }
 
   // 4. 性价比强调检测 (0-2分)
@@ -161,18 +162,18 @@ export async function calculateCompetitivePositioning(
 
   if (hasValue) {
     valueEmphasis = 2
-    console.log('   ✅ 性价比强调 (+2分)')
+    logger.debug('   ✅ 性价比强调 (+2分)')
   } else if (
     /great\s+deal|special\s+offer|offerta\s+speciale|ottim[ao]\s+prezzo/i.test(allTextsLower)
   ) {
     valueEmphasis = 1
-    console.log('   ⚠️ 隐含性价比 (+1分)')
+    logger.debug('   ⚠️ 隐含性价比 (+1分)')
   } else {
-    console.log('   ❌ 无性价比强调 (+0分)')
+    logger.debug('   ❌ 无性价比强调 (+0分)')
   }
 
   const totalScore = priceAdvantage + uniqueMarketPosition + competitiveComparison + valueEmphasis
-  console.log(`   🎯 竞争定位总分（第一层）: ${totalScore.toFixed(1)}/10`)
+  logger.debug(`   🎯 竞争定位总分（第一层）: ${totalScore.toFixed(1)}/10`)
 
   // 第二层：AI增强分析（按需触发）
 
@@ -182,7 +183,7 @@ export async function calculateCompetitivePositioning(
     isCompetitivePositioningAiEnabled() && options?.skipAiEnhancement !== true
 
   if (aiEnhancementEnabled && totalScore > AI_ENHANCEMENT_THRESHOLD) {
-    console.log(
+    logger.debug(
       `   🤖 触发AI增强分析（分数${totalScore.toFixed(1)} > ${AI_ENHANCEMENT_THRESHOLD}）`
     )
 
@@ -198,11 +199,11 @@ export async function calculateCompetitivePositioning(
     )
 
     if (aiEnhancedScore) {
-      console.log(`   ✨ AI增强后总分: ${aiEnhancedScore.score.toFixed(1)}/10`)
+      logger.debug(`   ✨ AI增强后总分: ${aiEnhancedScore.score.toFixed(1)}/10`)
       return aiEnhancedScore
     }
   } else if (!aiEnhancementEnabled && totalScore > AI_ENHANCEMENT_THRESHOLD) {
-    console.log(`   ℹ️ 已跳过AI增强（${CP_AI_FEATURE_FLAG}=false）`)
+    logger.debug(`   ℹ️ 已跳过AI增强（${CP_AI_FEATURE_FLAG}=false）`)
   }
 
   return {
@@ -302,7 +303,7 @@ async function getCachedResult(adCopyText: string): Promise<CachedResult | null>
       const data = await client.get(key)
 
       if (data) {
-        console.log('   📦 Redis缓存命中')
+        logger.debug('   📦 Redis缓存命中')
         return JSON.parse(data)
       }
     } catch (error: any) {
@@ -313,7 +314,7 @@ async function getCachedResult(adCopyText: string): Promise<CachedResult | null>
   // 降级到内存缓存
   const cached = memoryCache.get(key)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
-    console.log('   📦 内存缓存命中')
+    logger.debug('   📦 内存缓存命中')
     return cached
   }
 
@@ -339,7 +340,7 @@ async function setCachedResult(adCopyText: string, result: CachedResult) {
       const client = getRedisClient()
       if (!client) return
       await client.setex(key, CACHE_TTL_SECONDS, JSON.stringify(resultWithTimestamp))
-      console.log('   💾 已缓存到Redis（TTL: 24小时）')
+      logger.debug('   💾 已缓存到Redis（TTL: 24小时）')
       return
     } catch (error: any) {
       console.warn(`   ⚠️ Redis写入失败: ${error.message}，降级到内存缓存`)
@@ -354,10 +355,10 @@ async function setCachedResult(adCopyText: string, result: CachedResult) {
     const entries = Array.from(memoryCache.entries())
     entries.sort((a, b) => a[1].timestamp - b[1].timestamp)
     entries.slice(0, 500).forEach(([k]) => memoryCache.delete(k))
-    console.log('   🗑️ 内存缓存清理：删除500条旧记录')
+    logger.debug('   🗑️ 内存缓存清理：删除500条旧记录')
   }
 
-  console.log('   💾 已缓存到内存（TTL: 24小时）')
+  logger.debug('   💾 已缓存到内存（TTL: 24小时）')
 }
 
 /**
@@ -389,14 +390,14 @@ async function enhanceCompetitivePositioningWithAI(
   try {
     // 如果没有userId，无法调用AI，直接返回null
     if (!userId) {
-      console.log('   ⚠️ 无用户ID，跳过AI增强分析')
+      logger.debug('   ⚠️ 无用户ID，跳过AI增强分析')
       return null
     }
 
     // 检查是否有缓存
     const cached = await getCachedResult(adCopyText)
     if (cached) {
-      console.log('   📦 使用缓存结果（AI增强）')
+      logger.debug('   📦 使用缓存结果（AI增强）')
       return {
         score: cached.score,
         weight: cached.weight,
@@ -482,7 +483,7 @@ async function enhanceCompetitivePositioningWithAI(
     } catch (schemaError: any) {
       // 如果schema模式失败，降级到纯文本模式
       console.warn(`   ⚠️ JSON schema模式失败: ${schemaError.message}`)
-      console.log(`   🔄 降级到纯文本模式重试...`)
+      logger.debug(`   🔄 降级到纯文本模式重试...`)
 
       // 修改prompt，要求返回JSON格式但不使用schema约束
       const fallbackPrompt =
@@ -498,7 +499,7 @@ async function enhanceCompetitivePositioningWithAI(
         userId
       )
 
-      console.log(`   ✓ 降级模式成功获取响应`)
+      logger.debug(`   ✓ 降级模式成功获取响应`)
     }
 
     // 记录token使用
@@ -544,21 +545,21 @@ async function enhanceCompetitivePositioningWithAI(
       throw new Error(`AI响应格式错误: ${parseError.message}`)
     }
 
-    console.log(`   🤖 AI分析结果 (置信度: ${(aiScores.confidence * 100).toFixed(0)}%):`)
-    console.log(
+    logger.debug(`   🤖 AI分析结果 (置信度: ${(aiScores.confidence * 100).toFixed(0)}%):`)
+    logger.debug(
       `      价格优势: ${fastDetectionScores.priceAdvantage} → ${aiScores.priceAdvantage}`
     )
-    console.log(
+    logger.debug(
       `      独特定位: ${fastDetectionScores.uniqueMarketPosition} → ${aiScores.uniqueMarketPosition}`
     )
-    console.log(
+    logger.debug(
       `      竞品对比: ${fastDetectionScores.competitiveComparison} → ${aiScores.competitiveComparison}`
     )
-    console.log(`      性价比: ${fastDetectionScores.valueEmphasis} → ${aiScores.valueEmphasis}`)
+    logger.debug(`      性价比: ${fastDetectionScores.valueEmphasis} → ${aiScores.valueEmphasis}`)
 
     // 只有当置信度 >= 0.6 时才使用AI增强结果
     if (aiScores.confidence < 0.6) {
-      console.log(
+      logger.debug(
         `   ⚠️ AI置信度过低 (${(aiScores.confidence * 100).toFixed(0)}%)，使用快速检测结果`
       )
       return null
@@ -584,7 +585,7 @@ async function enhanceCompetitivePositioningWithAI(
 
     // 缓存结果（24小时）
     setCachedResult(adCopyText, { ...enhancedResult, timestamp: Date.now() })
-    console.log(`   💾 结果已缓存（TTL: 24小时）`)
+    logger.debug(`   💾 结果已缓存（TTL: 24小时）`)
 
     return enhancedResult
   } catch (error: any) {

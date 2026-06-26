@@ -3,6 +3,7 @@
  * 需求11：通过Google搜索获取品牌词的下拉建议
  */
 
+import { logger } from '@/lib/common/server'
 import { getProxyConfig } from '../scraping/env-proxy-config'
 
 /**
@@ -189,7 +190,7 @@ async function getGoogleSearchSuggestions(params: {
       query
     )}&gl=${country.toLowerCase()}&hl=${language.toLowerCase()}`
 
-    console.log(`🔍 获取Google搜索建议: "${query}" (${country}, ${language})`)
+    logger.debug(`🔍 获取Google搜索建议: "${query}" (${country}, ${language})`)
 
     let fetchOptions: RequestInit = {
       method: 'GET',
@@ -224,7 +225,7 @@ async function getGoogleSearchSuggestions(params: {
             },
           }
 
-          console.log(`  ✓ 使用代理: ${proxyConfig.host}:${proxyConfig.port} (${country})`)
+          logger.debug(`  ✓ 使用代理: ${proxyConfig.host}:${proxyConfig.port} (${country})`)
         }
       } catch (proxyError) {
         console.warn('  ⚠️ 代理配置失败，使用直连:', proxyError)
@@ -250,7 +251,7 @@ async function getGoogleSearchSuggestions(params: {
       source: 'google_suggest' as const,
     }))
 
-    console.log(`  ✓ 获取到${suggestions.length}个下拉词建议`)
+    logger.debug(`  ✓ 获取到${suggestions.length}个下拉词建议`)
 
     return suggestions
   } catch (error: any) {
@@ -306,7 +307,7 @@ export async function getBrandSearchSuggestions(params: {
   // 去重
   const uniqueQueries = [...new Set(queries)]
 
-  console.log(`🔍 批量获取品牌"${brand}"的搜索建议 (${uniqueQueries.length}个查询变体)...`)
+  logger.debug(`🔍 批量获取品牌"${brand}"的搜索建议 (${uniqueQueries.length}个查询变体)...`)
 
   // 并行获取所有查询的建议
   const allSuggestions = await Promise.all(
@@ -330,7 +331,7 @@ export async function getBrandSearchSuggestions(params: {
   })
 
   const results = Array.from(uniqueSuggestions.values())
-  console.log(`  ✓ 合并去重后共${results.length}个建议`)
+  logger.debug(`  ✓ 合并去重后共${results.length}个建议`)
 
   return results
 }
@@ -343,7 +344,7 @@ export function filterLowIntentKeywords(keywords: string[]): string[] {
     const isLowIntent = LOW_INTENT_PATTERNS.some((pattern) => pattern.test(keyword))
 
     if (isLowIntent) {
-      console.log(`  ⊗ 过滤低意图关键词: "${keyword}"`)
+      logger.debug(`  ⊗ 过滤低意图关键词: "${keyword}"`)
       return false
     }
 
@@ -401,7 +402,7 @@ export function filterMismatchedGeoKeywords(keywords: string[], targetCountry: s
     const isMatch = detectedCountries.includes(targetCountry.toUpperCase())
 
     if (!isMatch) {
-      console.log(
+      logger.debug(
         `  ⊗ 过滤地理不匹配关键词: "${keyword}" (包含${detectedCountries.join(',')}，目标${targetCountry})`
       )
       return false
@@ -426,17 +427,17 @@ export async function getHighIntentKeywords(params: {
 
   // 2. 提取关键词
   const keywords = suggestions.map((s) => s.keyword)
-  console.log(`  → 步骤1: 获取${keywords.length}个原始关键词`)
+  logger.debug(`  → 步骤1: 获取${keywords.length}个原始关键词`)
 
   // 3. 过滤低意图关键词
   const highIntentKeywords = filterLowIntentKeywords(keywords)
-  console.log(`  → 步骤2: 过滤低意图后剩余${highIntentKeywords.length}个关键词`)
+  logger.debug(`  → 步骤2: 过滤低意图后剩余${highIntentKeywords.length}个关键词`)
 
   // 4. 过滤地理不匹配的关键词 (用户问题1)
   const geoFilteredKeywords = filterMismatchedGeoKeywords(highIntentKeywords, country)
-  console.log(`  → 步骤3: 过滤地理不匹配后剩余${geoFilteredKeywords.length}个关键词`)
+  logger.debug(`  → 步骤3: 过滤地理不匹配后剩余${geoFilteredKeywords.length}个关键词`)
 
-  console.log(`  ✓ 最终剩余${geoFilteredKeywords.length}个高质量关键词 (原始${keywords.length}个)`)
+  logger.debug(`  ✓ 最终剩余${geoFilteredKeywords.length}个高质量关键词 (原始${keywords.length}个)`)
 
   return geoFilteredKeywords
 }

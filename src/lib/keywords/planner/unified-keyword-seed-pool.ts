@@ -1,6 +1,7 @@
 /**
  * Seed pool construction for unified keyword service.
  */
+import { logger } from '@/lib/common/server'
 import {
   containsPureBrand,
   getPureBrandKeywords,
@@ -67,7 +68,7 @@ function generateBrandVariants(brand: string): string[] {
 
   const result = Array.from(variants).filter((v) => v.length >= 2)
 
-  console.log(`   🔤 品牌变体: ${result.join(', ')}`)
+  logger.debug(`   🔤 品牌变体: ${result.join(', ')}`)
 
   return result
 }
@@ -720,8 +721,8 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
     }
   }
 
-  console.log('\n🎯 构建意图感知种子词池 v2.0')
-  console.log(`   品牌: ${brandName}, 品类: ${category || '未分类'}`)
+  logger.debug('\n🎯 构建意图感知种子词池 v2.0')
+  logger.debug(`   品牌: ${brandName}, 品类: ${category || '未分类'}`)
 
   const featureSeeds = new Set<string>()
   const verifiedSourcePool = extractVerifiedKeywordSourcePool(offer)
@@ -834,14 +835,14 @@ export function buildIntentAwareSeedPool(offer: OfferData): IntentAwareSeedPool 
   }
 
   // 输出统计
-  console.log(`\n📊 种子词统计 (🔥 2025-12-26 扩大种子池):`)
-  console.log(`   🏷️ 品牌商品锚点 (legacy 桶A): ${result.brandOrientedSeeds.length} 个`)
-  result.brandOrientedSeeds.slice(0, 5).forEach((s) => console.log(`      - "${s}"`))
-  console.log(`   🏠 商品需求场景 (legacy 桶B): ${result.scenarioOrientedSeeds.length} 个`)
-  result.scenarioOrientedSeeds.slice(0, 5).forEach((s) => console.log(`      - "${s}"`))
-  console.log(`   ⚙️ 功能规格/需求扩展 (legacy 桶C): ${result.featureOrientedSeeds.length} 个`)
-  result.featureOrientedSeeds.slice(0, 5).forEach((s) => console.log(`      - "${s}"`))
-  console.log(`   📝 总计: ${result.allSeeds.length} 个去重种子词 (之前: 25)`)
+  logger.debug(`\n📊 种子词统计 (🔥 2025-12-26 扩大种子池):`)
+  logger.debug(`   🏷️ 品牌商品锚点 (legacy 桶A): ${result.brandOrientedSeeds.length} 个`)
+  result.brandOrientedSeeds.slice(0, 5).forEach((s) => logger.debug(`      - "${s}"`))
+  logger.debug(`   🏠 商品需求场景 (legacy 桶B): ${result.scenarioOrientedSeeds.length} 个`)
+  result.scenarioOrientedSeeds.slice(0, 5).forEach((s) => logger.debug(`      - "${s}"`))
+  logger.debug(`   ⚙️ 功能规格/需求扩展 (legacy 桶C): ${result.featureOrientedSeeds.length} 个`)
+  result.featureOrientedSeeds.slice(0, 5).forEach((s) => logger.debug(`      - "${s}"`))
+  logger.debug(`   📝 总计: ${result.allSeeds.length} 个去重种子词 (之前: 25)`)
 
   return result
 }

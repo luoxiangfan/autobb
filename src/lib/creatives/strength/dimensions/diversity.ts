@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { HeadlineAsset, DescriptionAsset } from '../../server'
 
 import { calculateTextUniqueness } from './text-uniqueness'
@@ -8,7 +9,7 @@ export function calculateDiversity(headlines: HeadlineAsset[], descriptions: Des
 
   // 如果所有headlines都没有type属性，使用启发式规则估算多样性
   if (headlineTypes.size === 0 && headlines.length >= 10) {
-    console.log('⚠️ Headlines缺少type属性，使用启发式规则评估多样性')
+    logger.debug('⚠️ Headlines缺少type属性，使用启发式规则评估多样性')
 
     // 基于文本内容的多样性评估
     const hasNumbers = headlines.filter((h) => /\d/.test(h.text)).length
@@ -22,9 +23,9 @@ export function calculateDiversity(headlines: HeadlineAsset[], descriptions: Des
     ).length
     typeDistribution = Math.min(8, estimatedTypes * 1.6 + 1.6) // 基础分1.6分
 
-    console.log(`   估算类型数: ${estimatedTypes}, 多样性得分: ${typeDistribution}`)
+    logger.debug(`   估算类型数: ${estimatedTypes}, 多样性得分: ${typeDistribution}`)
   } else if (headlineTypes.size > 0) {
-    console.log(
+    logger.debug(
       `✅ Headlines类型分布: ${Array.from(headlineTypes).join(', ')} (${headlineTypes.size}种)`
     )
   }
@@ -39,7 +40,7 @@ export function calculateDiversity(headlines: HeadlineAsset[], descriptions: Des
     long: headlines.filter((h) => (h.length || h.text.length) > 25).length,
   }
 
-  console.log(
+  logger.debug(
     `📏 长度分布: 短=${lengthCategories.short}, 中=${lengthCategories.medium}, 长=${lengthCategories.long}`
   )
 
@@ -54,7 +55,7 @@ export function calculateDiversity(headlines: HeadlineAsset[], descriptions: Des
   const uniqueness = calculateTextUniqueness(allTexts)
   const textUniqueness = uniqueness * 4 // 0-1 转为 0-4
 
-  console.log(
+  logger.debug(
     `🎨 文本独特性: ${(uniqueness * 100).toFixed(1)}% (得分: ${textUniqueness.toFixed(1)})`
   )
 

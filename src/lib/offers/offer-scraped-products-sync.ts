@@ -3,6 +3,7 @@
  * （原 scrape 管线中的 saveScrapedProducts 逻辑）
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 
 export type ScrapedProductSource = 'amazon_store' | 'independent_store' | 'amazon_product'
@@ -72,7 +73,7 @@ async function saveScrapedProducts(
     )
   }
 
-  console.log(
+  logger.debug(
     `📊 scraped_products 已同步 ${products.length} 条 (offer_id=${offerId}, source=${source})`
   )
 }

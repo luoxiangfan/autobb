@@ -2,6 +2,7 @@
  * 全局核心关键词补充逻辑
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 
 import { type Offer } from '../../offers/server'
@@ -479,7 +480,7 @@ export function filterGlobalCoreKeywordsByOfferContext(params: {
     const preContextRemoved = preFiltered.removed.filter((item) =>
       item.reason.includes('与商品无关')
     ).length
-    console.log(
+    logger.debug(
       `🧹 GLOBAL_CORE(${scope}) 过滤链路: ${keywords.length} → 预过滤${preFiltered.filtered.length} → 改写${adapted.keywords.length} → 收口${strictFiltered.filtered.length} → 意图收紧${finalFiltered.length} ` +
         `(预过滤移除 ${preFiltered.removed.length}/上下文${preContextRemoved}; 改写 ${adapted.stats.brandedFromNonBrand} 条, 高量阈值 ${adapted.stats.highVolumeThreshold === -1 ? 'N/A' : adapted.stats.highVolumeThreshold}; ` +
         `收口移除 ${strictFiltered.removed.length}/无品牌${brandRemoved}/上下文${contextRemoved}; 意图收紧移除 ${intentTighteningRemoved})`

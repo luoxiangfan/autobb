@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { DEFAULT_PARTNERBOOST_BASE_URL } from './affiliate-sync-config'
 
 type ValidationResult = {
@@ -74,7 +75,7 @@ async function validatePartnerboostConfig(
     const statusCode = Number(payload.status?.code)
 
     // Log for debugging
-    console.log('[PartnerBoost validation] Response:', {
+    logger.debug('[PartnerBoost validation] Response:', {
       statusCode,
       msg: payload.status?.msg,
       hasData: !!payload.data,
@@ -155,7 +156,7 @@ async function validateYeahPromosConfig(
     const codeNum = Number(code)
 
     // Log for debugging
-    console.log('[YeahPromos validation] Response:', {
+    logger.debug('[YeahPromos validation] Response:', {
       code,
       codeNum,
       msg: payload.Msg || payload.msg,

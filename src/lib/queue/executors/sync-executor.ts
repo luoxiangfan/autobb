@@ -11,6 +11,7 @@
  * 优势：支持并发控制、任务恢复、失败重试
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task, TaskExecutor } from '../types'
 import { dataSyncService } from '@/lib/campaign/server'
 import type { SyncLog } from '@/lib/campaign/server'
@@ -34,8 +35,8 @@ export function createSyncExecutor(): TaskExecutor<SyncTaskData> {
   return async (task: Task<SyncTaskData>) => {
     const { userId, syncType, googleAdsAccountId, startDate, endDate } = task.data
 
-    console.log(`🔄 [SyncExecutor] 开始同步任务: 用户 #${userId}, 类型: ${syncType}`)
-    console.log(
+    logger.debug(`🔄 [SyncExecutor] 开始同步任务: 用户 #${userId}, 类型: ${syncType}`)
+    logger.debug(
       `   账户ID: ${googleAdsAccountId || '全部'}, 期间: ${startDate || '默认'} - ${endDate || '默认'}`
     )
 
@@ -46,7 +47,7 @@ export function createSyncExecutor(): TaskExecutor<SyncTaskData> {
       // 注意：现有服务会处理所有账户的同步，不需要传入特定账户ID
       const syncLog: SyncLog = await dataSyncService.syncPerformanceData(userId, syncType)
 
-      console.log(
+      logger.debug(
         `✅ [SyncExecutor] 同步任务完成: 用户 #${userId}, 记录数: ${syncLog.recordCount}, 耗时: ${syncLog.durationMs}ms`
       )
 

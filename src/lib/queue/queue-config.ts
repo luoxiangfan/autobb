@@ -5,6 +5,7 @@
  * 支持全局配置和用户级配置
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import type { QueueConfig } from './types' /**
  * 保存队列配置
@@ -68,7 +69,7 @@ export async function saveQueueConfig(
       )
     }
 
-    console.log(`[QueueConfig] 保存配置成功 (userId=${userId}):`, config)
+    logger.debug(`[QueueConfig] 保存配置成功 (userId=${userId}):`, config)
   } catch (error: any) {
     console.error('[QueueConfig] 保存配置失败:', error.message)
     throw error

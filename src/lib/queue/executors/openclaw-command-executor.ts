@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
 import { nowFunc } from '@/lib/db'
@@ -855,7 +856,7 @@ async function hydrateCampaignPublishRequestBody(params: {
     process.env.NODE_ENV !== 'test' &&
     (alignedCampaignConfig.overridden.finalUrls || alignedCampaignConfig.overridden.finalUrlSuffix)
   ) {
-    console.log(
+    logger.debug(
       `[OpenClawCommand] campaign.publish URL字段按Web来源对齐: inputFinalUrl=${alignedCampaignConfig.overridden.inputFinalUrl || '-'} -> appliedFinalUrl=${alignedCampaignConfig.overridden.appliedFinalUrl || '-'}`
     )
   }
@@ -930,7 +931,7 @@ async function hydrateCampaignPublishRequestBody(params: {
   }
 
   if (process.env.NODE_ENV !== 'test') {
-    console.log(
+    logger.debug(
       `[OpenClawCommand] 补齐campaign.publish默认参数: offerId=${offerId || '-'}, adCreativeId=${adCreativeId || '-'}, currency=${normalizeCurrencyCode(accountCurrency) || 'USD'}, keywords=${resolvedKeywordConfig.keywords.length}, negativeKeywords=${resolvedKeywordConfig.negativeKeywords.length}`
     )
   }

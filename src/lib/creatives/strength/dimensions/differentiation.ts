@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { HeadlineAsset, DescriptionAsset } from '../../server'
 export function calculateDifferentiation(
   headlines: HeadlineAsset[],
@@ -17,7 +18,7 @@ export function calculateDifferentiation(
   const hasTechSpecs = techSpecs.test(allTexts)
   if (hasTechSpecs) {
     score += 1.5
-    console.log(`   ✅ 提及技术规格 (+1.5分)`)
+    logger.debug(`   ✅ 提及技术规格 (+1.5分)`)
   }
 
   // 2. 独特功能提及 (+1.5分)
@@ -27,7 +28,7 @@ export function calculateDifferentiation(
   const hasUniqueFeatures = uniqueFeatures.test(allTexts)
   if (hasUniqueFeatures) {
     score += 1.5
-    console.log(`   ✅ 提及独特功能 (+1.5分)`)
+    logger.debug(`   ✅ 提及独特功能 (+1.5分)`)
   }
 
   // 3. 避免过于通用的标题 (+1分)
@@ -51,12 +52,12 @@ export function calculateDifferentiation(
 
   if (genericHeadlineCount === 0) {
     score += 1
-    console.log(`   ✅ 无通用标题 (+1分)`)
+    logger.debug(`   ✅ 无通用标题 (+1分)`)
   } else if (genericHeadlineCount <= 2) {
     score += 0.5
-    console.log(`   ⚠️ ${genericHeadlineCount}个通用标题 (+0.5分)`)
+    logger.debug(`   ⚠️ ${genericHeadlineCount}个通用标题 (+0.5分)`)
   } else {
-    console.log(`   ❌ ${genericHeadlineCount}个通用标题 (+0分)`)
+    logger.debug(`   ❌ ${genericHeadlineCount}个通用标题 (+0分)`)
   }
 
   // 确保分数在0-4之间

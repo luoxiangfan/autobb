@@ -15,6 +15,7 @@
  * QUEUE_CAMPAIGN_PAUSED_USER_CONCURRENCY_MAX: 用户并发硬上限（默认 16）
  */
 
+import { logger } from '@/lib/common/server'
 import { runCampaignPausedTaskCheck } from '@/lib/campaign/server'
 
 function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
@@ -81,11 +82,11 @@ export class CampaignPausedTaskScheduler {
    */
   start(): void {
     if (this.isRunning) {
-      console.log('⚠️  广告系列暂停任务检测调度器已在运行')
+      logger.debug('⚠️  广告系列暂停任务检测调度器已在运行')
       return
     }
 
-    console.log('🔄 启动广告系列暂停任务检测调度器...')
+    logger.debug('🔄 启动广告系列暂停任务检测调度器...')
     this.isRunning = true
 
     // 启动时执行一次检查（支持延迟）
@@ -93,14 +94,14 @@ export class CampaignPausedTaskScheduler {
       if (this.STARTUP_DELAY_MS === 0) {
         this.checkAndPauseTasks()
       } else {
-        console.log(`⏳ 首次检测将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
+        logger.debug(`⏳ 首次检测将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
         this.startupTimeoutHandle = setTimeout(() => {
           this.startupTimeoutHandle = null
           this.checkAndPauseTasks()
         }, this.STARTUP_DELAY_MS)
       }
     } else {
-      console.log('⏭️ 已禁用启动时首次检测')
+      logger.debug('⏭️ 已禁用启动时首次检测')
     }
 
     // 设置定时检查
@@ -108,7 +109,7 @@ export class CampaignPausedTaskScheduler {
       this.checkAndPauseTasks()
     }, this.CHECK_INTERVAL_MS)
 
-    console.log(
+    logger.debug(
       `✅ 广告系列暂停任务检测调度器已启动 (检测间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟)`
     )
   }
@@ -121,7 +122,7 @@ export class CampaignPausedTaskScheduler {
       return
     }
 
-    console.log('⏹️ 停止广告系列暂停任务检测调度器...')
+    logger.debug('⏹️ 停止广告系列暂停任务检测调度器...')
 
     if (this.intervalHandle) {
       clearInterval(this.intervalHandle)
@@ -134,7 +135,7 @@ export class CampaignPausedTaskScheduler {
     }
 
     this.isRunning = false
-    console.log('✅ 广告系列暂停任务检测调度器已停止')
+    logger.debug('✅ 广告系列暂停任务检测调度器已停止')
   }
 
   /**
@@ -142,7 +143,7 @@ export class CampaignPausedTaskScheduler {
    */
   private async checkAndPauseTasks(): Promise<void> {
     if (this.isChecking) {
-      console.log('⏭️ 上一次暂停任务检测仍在运行，跳过本次执行')
+      logger.debug('⏭️ 上一次暂停任务检测仍在运行，跳过本次执行')
       return
     }
 
@@ -151,7 +152,7 @@ export class CampaignPausedTaskScheduler {
 
     try {
       const now = new Date()
-      console.log(`\n[${now.toISOString()}] 🔄 检测已暂停广告系列的任务...`)
+      logger.debug(`\n[${now.toISOString()}] 🔄 检测已暂停广告系列的任务...`)
 
       const result = await runCampaignPausedTaskCheck(
         'campaign_paused_cron',
@@ -159,7 +160,7 @@ export class CampaignPausedTaskScheduler {
       )
 
       if (result.summary.totalPausedOfferPairs === 0) {
-        console.log('  ℹ️  没有已暂停的广告系列')
+        logger.debug('  ℹ️  没有已暂停的广告系列')
         this.lastCheckAt = new Date()
         this.lastCheckResult = {
           totalPausedCampaigns: result.summary.totalPausedCampaigns,
@@ -177,11 +178,11 @@ export class CampaignPausedTaskScheduler {
         return
       }
 
-      console.log(`  📊 找到 ${result.summary.totalPausedCampaigns} 个已暂停广告系列`)
-      console.log(`  📊 去重后用户-offer 关系数：${result.summary.totalPausedOfferPairs}`)
+      logger.debug(`  📊 找到 ${result.summary.totalPausedCampaigns} 个已暂停广告系列`)
+      logger.debug(`  📊 去重后用户-offer 关系数：${result.summary.totalPausedOfferPairs}`)
 
       for (const userResult of result.details) {
-        console.log(
+        logger.debug(
           `  ✓ 用户 ${userResult.userId}: 处理 ${userResult.offerIds.length} 个 offer, ` +
             `成功 ${userResult.offersSucceeded}，失败 ${userResult.offersFailed}，` +
             `暂停 ${userResult.clickFarmTasksPaused} 个补点击任务，禁用 ${userResult.urlSwapTasksDisabled} 个换链接任务`
@@ -196,18 +197,18 @@ export class CampaignPausedTaskScheduler {
         ...result.summary,
       }
 
-      console.log(`\n✅ 检测完成（耗时 ${elapsedMs}ms）:`)
-      console.log(`   - 已暂停广告系列：${result.summary.totalPausedCampaigns}`)
-      console.log(`   - 去重后用户-offer 关系：${result.summary.totalPausedOfferPairs}`)
-      console.log(`   - 已处理 offer: ${result.summary.totalOffersProcessed}`)
-      console.log(`   - 尝试处理 offer: ${result.summary.totalOffersAttempted}`)
-      console.log(`   - 处理成功 offer: ${result.summary.totalOffersSucceeded}`)
-      console.log(`   - 处理失败 offer: ${result.summary.totalOffersFailed}`)
-      console.log(`   - 发生状态变更 offer: ${result.summary.totalOffersChanged}`)
-      console.log(`   - 无状态变更 offer: ${result.summary.totalOffersNoop}`)
-      console.log(`   - 已暂停补点击任务：${result.summary.clickFarmTasksPaused}`)
-      console.log(`   - 已禁用换链接任务：${result.summary.urlSwapTasksDisabled}`)
-      console.log(`   - 错误数：${result.summary.errors}`)
+      logger.debug(`\n✅ 检测完成（耗时 ${elapsedMs}ms）:`)
+      logger.debug(`   - 已暂停广告系列：${result.summary.totalPausedCampaigns}`)
+      logger.debug(`   - 去重后用户-offer 关系：${result.summary.totalPausedOfferPairs}`)
+      logger.debug(`   - 已处理 offer: ${result.summary.totalOffersProcessed}`)
+      logger.debug(`   - 尝试处理 offer: ${result.summary.totalOffersAttempted}`)
+      logger.debug(`   - 处理成功 offer: ${result.summary.totalOffersSucceeded}`)
+      logger.debug(`   - 处理失败 offer: ${result.summary.totalOffersFailed}`)
+      logger.debug(`   - 发生状态变更 offer: ${result.summary.totalOffersChanged}`)
+      logger.debug(`   - 无状态变更 offer: ${result.summary.totalOffersNoop}`)
+      logger.debug(`   - 已暂停补点击任务：${result.summary.clickFarmTasksPaused}`)
+      logger.debug(`   - 已禁用换链接任务：${result.summary.urlSwapTasksDisabled}`)
+      logger.debug(`   - 错误数：${result.summary.errors}`)
     } catch (error: any) {
       const elapsedMs = Date.now() - checkStartAt
       console.error(`❌ 检测已暂停广告系列任务失败（耗时 ${elapsedMs}ms）:`, error)

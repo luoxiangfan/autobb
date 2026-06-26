@@ -1,6 +1,7 @@
 /**
  * 增强的关键词提取器 (P0优化)
  */
+import { logger } from '@/lib/common/server'
 import {
   loadKeywordPoolExpandCredentialsForOffer,
   type KeywordPlannerPreparedSession,
@@ -38,10 +39,10 @@ export async function extractKeywordsEnhanced(
     targetLanguage,
   } = input
 
-  console.log('🔍 开始增强的关键词提取...')
+  logger.debug('🔍 开始增强的关键词提取...')
 
   try {
-    console.log('📌 提取品牌关键词...')
+    logger.debug('📌 提取品牌关键词...')
     const brandKeywords = await extractBrandKeywords(
       brandName,
       category,
@@ -49,7 +50,7 @@ export async function extractKeywordsEnhanced(
       targetLanguage
     )
 
-    console.log('📌 提取产品核心词...')
+    logger.debug('📌 提取产品核心词...')
     const coreKeywords = await extractCoreKeywords(
       productName,
       category,
@@ -58,7 +59,7 @@ export async function extractKeywordsEnhanced(
       targetLanguage
     )
 
-    console.log('📌 提取购买意图词...')
+    logger.debug('📌 提取购买意图词...')
     const intentKeywords = await extractIntentKeywords(
       category,
       targetCountry,
@@ -66,7 +67,7 @@ export async function extractKeywordsEnhanced(
       brandName
     )
 
-    console.log('📌 提取长尾精准词...')
+    logger.debug('📌 提取长尾精准词...')
     const longtailKeywords = await extractLongtailKeywords(
       features,
       useCases,
@@ -75,7 +76,7 @@ export async function extractKeywordsEnhanced(
       targetLanguage
     )
 
-    console.log('📌 提取竞争对手词...')
+    logger.debug('📌 提取竞争对手词...')
     const competitorKeywords = await extractCompetitorKeywords(
       competitors,
       targetCountry,
@@ -90,10 +91,10 @@ export async function extractKeywordsEnhanced(
       ...competitorKeywords,
     ]
 
-    console.log('🔄 执行关键词去重...')
+    logger.debug('🔄 执行关键词去重...')
     allKeywords = deduplicateKeywords(allKeywords)
 
-    console.log('📊 查询关键词指标...')
+    logger.debug('📊 查询关键词指标...')
     let plannerSession: KeywordPlannerPreparedSession | undefined
     if (input.offerId) {
       const expandLoad = await loadKeywordPoolExpandCredentialsForOffer(userId, input.offerId)
@@ -110,16 +111,16 @@ export async function extractKeywordsEnhanced(
       plannerSession
     )
 
-    console.log('⚙️ 过滤和排序关键词...')
+    logger.debug('⚙️ 过滤和排序关键词...')
     const filtered = filterAndRankKeywords(withMetrics, {
       minSearchVolume: 100,
       maxCPC: 50,
     })
 
-    console.log('🌍 生成多语言变体...')
+    logger.debug('🌍 生成多语言变体...')
     const withVariants = await generateKeywordVariants(filtered, targetLanguage)
 
-    console.log(`✅ 关键词提取完成，共${withVariants.length}个关键词`)
+    logger.debug(`✅ 关键词提取完成，共${withVariants.length}个关键词`)
     return withVariants
   } catch (error) {
     console.error('❌ 关键词提取失败:', error)

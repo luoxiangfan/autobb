@@ -1,6 +1,7 @@
 /**
  * 从 Google Ads 回填 url_swap_sitelink_targets（存量 Campaign）。
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import {
   prepareGoogleAdsApiCallForLinkedAccount,
@@ -237,7 +238,7 @@ export async function backfillUrlSwapSitelinkTargets(
         )
 
         if (dryRun) {
-          console.log(
+          logger.debug(
             `[dry-run] task=${row.task_id} campaign=${campaignTarget.google_campaign_id} would upsert ${pairCount} sitelink mapping(s)`
           )
           result.upsertedMappings += pairCount

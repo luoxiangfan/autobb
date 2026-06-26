@@ -14,6 +14,7 @@
  * 广告质量分数: +20%（相关性和独特性）
  */
 
+import { logger } from '@/lib/common/server'
 import { generateContent } from '../ai/server'
 import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import {
@@ -270,7 +271,7 @@ export async function inferCompetitorKeywords(
   },
   userId: number
 ): Promise<string[]> {
-  console.log(`🤖 AI推断竞品搜索关键词...`)
+  logger.debug(`🤖 AI推断竞品搜索关键词...`)
 
   // 从数据库加载prompt模板 (版本管理)
   const promptTemplate = await loadPrompt('competitor_keyword_inference')
@@ -396,7 +397,7 @@ export async function inferCompetitorKeywords(
       })
       .filter((term: string) => term && term.trim().length > 0) // 过滤空字符串
 
-    console.log(`🔍 AI返回了${searchTerms.length}个搜索词，类型检查通过`)
+    logger.debug(`🔍 AI返回了${searchTerms.length}个搜索词，类型检查通过`)
 
     // 品类验证：提取产品名称中的核心类型关键词
     const productNameLower = productInfo.name.toLowerCase()
@@ -422,7 +423,7 @@ export async function inferCompetitorKeywords(
       searchTerms = validatedTerms.length > 0 ? validatedTerms : searchTerms
     }
 
-    console.log(`✅ AI推断了${searchTerms.length}个搜索词: ${searchTerms.join(', ')}`)
+    logger.debug(`✅ AI推断了${searchTerms.length}个搜索词: ${searchTerms.join(', ')}`)
     return searchTerms
   } catch (error: any) {
     console.error('❌ AI推断失败:', error.message)
@@ -511,7 +512,7 @@ async function executeAmazonSearch(
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
-        console.log(`     ↳ 重试 ${attempt}/${maxRetries}...`)
+        logger.debug(`     ↳ 重试 ${attempt}/${maxRetries}...`)
         // 等待后重试
         await new Promise((resolve) => setTimeout(resolve, 2000 * attempt))
       }
@@ -654,7 +655,7 @@ export async function searchCompetitorsOnAmazon(
   targetCountry: string,
   limit: number = 2
 ): Promise<CompetitorProduct[]> {
-  console.log(`🔍 开始Amazon搜索验证竞品，搜索词数量: ${searchTerms.length}`)
+  logger.debug(`🔍 开始Amazon搜索验证竞品，搜索词数量: ${searchTerms.length}`)
 
   const competitors: CompetitorProduct[] = []
   const domain = getAmazonDomain(targetCountry)
@@ -663,7 +664,7 @@ export async function searchCompetitorsOnAmazon(
   for (const term of searchTerms.slice(0, 5)) {
     // 最多搜索5次
     searchStats.total++
-    console.log(`   搜索: "${term}"`)
+    logger.debug(`   搜索: "${term}"`)
 
     try {
       // 生成搜索变体（原始词 + 简短版本）
@@ -673,13 +674,13 @@ export async function searchCompetitorsOnAmazon(
       for (const variant of variants) {
         const isOriginal = variant === term
         if (!isOriginal) {
-          console.log(`     ↳ 降级搜索: "${variant}"`)
+          logger.debug(`     ↳ 降级搜索: "${variant}"`)
         }
 
         const results = await executeAmazonSearch(page, variant, domain, limit)
 
         if (results.length > 0) {
-          console.log(`   ✅ 找到${results.length}个产品${!isOriginal ? ' (简短搜索词)' : ''}`)
+          logger.debug(`   ✅ 找到${results.length}个产品${!isOriginal ? ' (简短搜索词)' : ''}`)
           competitors.push(...results)
           foundResults = true
           searchStats.success++
@@ -689,12 +690,12 @@ export async function searchCompetitorsOnAmazon(
       }
 
       if (!foundResults) {
-        console.log(`   ⚠️ 未找到结果（已尝试${variants.length}个变体）`)
+        logger.debug(`   ⚠️ 未找到结果（已尝试${variants.length}个变体）`)
       }
 
       // 达到目标数量就停止
       if (competitors.length >= 10) {
-        console.log(`   已收集足够竞品，停止搜索`)
+        logger.debug(`   已收集足够竞品，停止搜索`)
         break
       }
     } catch (error: any) {
@@ -705,8 +706,8 @@ export async function searchCompetitorsOnAmazon(
 
   // 去重
   const uniqueCompetitors = deduplicateCompetitors(competitors)
-  console.log(`✅ 搜索验证完成，共找到${uniqueCompetitors.length}个真实竞品`)
-  console.log(
+  logger.debug(`✅ 搜索验证完成，共找到${uniqueCompetitors.length}个真实竞品`)
+  logger.debug(
     `   📊 搜索统计: ${searchStats.success}/${searchStats.total}成功，${searchStats.fallback}次使用降级搜索`
   )
 
@@ -752,7 +753,7 @@ export async function scrapeAmazonCompetitors(
   page: any,
   limit: number = 10
 ): Promise<CompetitorProduct[]> {
-  console.log(`🔍 开始抓取竞品信息，目标数量: ${limit}`)
+  logger.debug(`🔍 开始抓取竞品信息，目标数量: ${limit}`)
 
   const competitors: CompetitorProduct[] = []
 
@@ -779,19 +780,19 @@ export async function scrapeAmazonCompetitors(
         }
       })
       .catch(() => ({}))
-    console.log(`📊 竞品区域检测: ${JSON.stringify(debugContainers)}`)
+    logger.debug(`📊 竞品区域检测: ${JSON.stringify(debugContainers)}`)
 
     // 如果所有区域都不存在，快速返回
     const hasAnyContainer = Object.values(debugContainers).some((v) => v)
     if (!hasAnyContainer) {
-      console.log('⚠️ 未检测到任何竞品区域，快速跳过')
+      logger.debug('⚠️ 未检测到任何竞品区域，快速跳过')
       return []
     }
 
     // 策略1: 从"Compare with similar items"表格抓取
     const compareTableCompetitors = await scrapeCompareTable(page, limit)
     if (compareTableCompetitors.length > 0) {
-      console.log(`✅ 从Compare Table抓取到${compareTableCompetitors.length}个竞品`)
+      logger.debug(`✅ 从Compare Table抓取到${compareTableCompetitors.length}个竞品`)
       competitors.push(...compareTableCompetitors)
     }
 
@@ -802,7 +803,7 @@ export async function scrapeAmazonCompetitors(
         limit - competitors.length
       )
       if (relatedCompetitors.length > 0) {
-        console.log(`✅ 从Related to items you've viewed抓取到${relatedCompetitors.length}个竞品`)
+        logger.debug(`✅ 从Related to items you've viewed抓取到${relatedCompetitors.length}个竞品`)
         competitors.push(...relatedCompetitors)
       }
     }
@@ -811,7 +812,7 @@ export async function scrapeAmazonCompetitors(
     if (competitors.length < limit) {
       const alsoViewedCompetitors = await scrapeAlsoViewed(page, limit - competitors.length)
       if (alsoViewedCompetitors.length > 0) {
-        console.log(`✅ 从Also Viewed抓取到${alsoViewedCompetitors.length}个竞品`)
+        logger.debug(`✅ 从Also Viewed抓取到${alsoViewedCompetitors.length}个竞品`)
         competitors.push(...alsoViewedCompetitors)
       }
     }
@@ -820,14 +821,14 @@ export async function scrapeAmazonCompetitors(
     if (competitors.length < limit) {
       const similarCompetitors = await scrapeSimilarItems(page, limit - competitors.length)
       if (similarCompetitors.length > 0) {
-        console.log(`✅ 从Similar Items抓取到${similarCompetitors.length}个竞品`)
+        logger.debug(`✅ 从Similar Items抓取到${similarCompetitors.length}个竞品`)
         competitors.push(...similarCompetitors)
       }
     }
 
     // 去重（基于ASIN）
     const uniqueCompetitors = deduplicateCompetitors(competitors)
-    console.log(`✅ 竞品抓取完成，共${uniqueCompetitors.length}个（去重后）`)
+    logger.debug(`✅ 竞品抓取完成，共${uniqueCompetitors.length}个（去重后）`)
 
     return uniqueCompetitors
   } catch (error: any) {
@@ -950,7 +951,7 @@ async function scrapeRelatedToItemsYouViewed(
       for (const selector of selectors) {
         const elements = document.querySelectorAll(selector)
         if (elements.length > 0) {
-          console.log(`✅ 找到Related区域: ${selector}, 共${elements.length}个商品`)
+          logger.debug(`✅ 找到Related区域: ${selector}, 共${elements.length}个商品`)
 
           elements.forEach((el, idx) => {
             if (idx >= maxItems) return
@@ -1258,7 +1259,7 @@ async function scrapeSimilarItems(page: any, limit: number): Promise<CompetitorP
       for (const selector of selectors) {
         const elements = document.querySelectorAll(selector)
         if (elements.length > 0) {
-          console.log(`✅ 找到Related/Similar区域: ${selector}, 共${elements.length}个商品`)
+          logger.debug(`✅ 找到Related/Similar区域: ${selector}, 共${elements.length}个商品`)
 
           elements.forEach((el, idx) => {
             if (idx >= maxItems) return
@@ -1375,11 +1376,11 @@ export async function analyzeCompetitorsWithAI(
   }
 ): Promise<CompetitorAnalysisResult> {
   if (competitors.length === 0) {
-    console.log('⚠️ 无竞品数据，返回空分析结果')
+    logger.debug('⚠️ 无竞品数据，返回空分析结果')
     return getEmptyCompetitorAnalysis()
   }
 
-  console.log(`🤖 开始AI竞品分析,我们的产品vs ${competitors.length}个竞品...`)
+  logger.debug(`🤖 开始AI竞品分析,我们的产品vs ${competitors.length}个竞品...`)
 
   // 计算基础竞争力指标
   const pricePosition = calculatePricePosition(ourProduct, competitors)
@@ -1391,7 +1392,7 @@ export async function analyzeCompetitorsWithAI(
 
   if (options?.enableCompression) {
     // Token使用压缩格式(40-50%减少)
-    console.log('🗜️ 启用竞品数据压缩优化...')
+    logger.debug('🗜️ 启用竞品数据压缩优化...')
     const compressorInput: CompressorCompetitorInfo[] = competitors.slice(0, 10).map((c) => ({
       name: c.name,
       brand: c.brand || undefined,
@@ -1406,7 +1407,7 @@ export async function analyzeCompetitorsWithAI(
     const compressed = compressCompetitors(compressorInput, 20)
     competitorSummaries = compressed.compressed
     compressionStats = compressed.stats
-    console.log(
+    logger.debug(
       `   压缩率: ${compressionStats.compressionRatio}(${compressionStats.originalChars} → ${compressionStats.compressedChars}字符)`
     )
   } else {
@@ -1521,12 +1522,12 @@ export async function analyzeCompetitorsWithAI(
       analyzedAt: new Date().toISOString(),
     }
 
-    console.log('✅ AI竞品分析完成')
-    console.log(`   - 识别${result.uniqueSellingPoints.length}个独特卖点`)
-    console.log(`   - 发现${result.competitorAdvantages.length}个竞品优势需应对`)
+    logger.debug('✅ AI竞品分析完成')
+    logger.debug(`   - 识别${result.uniqueSellingPoints.length}个独特卖点`)
+    logger.debug(`   - 发现${result.competitorAdvantages.length}个竞品优势需应对`)
     // v3.2新增
-    console.log(`   - 挖掘${result.competitorWeaknesses?.length || 0}个竞品弱点可利用`)
-    console.log(`   - 综合竞争力: ${result.overallCompetitiveness}/100`)
+    logger.debug(`   - 挖掘${result.competitorWeaknesses?.length || 0}个竞品弱点可利用`)
+    logger.debug(`   - 综合竞争力: ${result.overallCompetitiveness}/100`)
 
     return result
   } catch (error: any) {

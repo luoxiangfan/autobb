@@ -4,6 +4,7 @@
  * 缺点：不支持JavaScript重定向
  */
 
+import { logger } from '@/lib/common/server'
 import axios, { AxiosInstance } from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import type { Readable } from 'stream'
@@ -238,7 +239,7 @@ export async function resolveAffiliateLinkWithHttp(
     // 如果有代理URL,先获取真实代理IP
     if (proxyUrl) {
       try {
-        console.log('🔄 获取代理IP...')
+        logger.debug('🔄 获取代理IP...')
         // 代理IP缓存策略
         // 正常请求：启用缓存（5分钟），避免频繁调用IPRocket API触发频率限制
         // 重试请求：强制刷新，获取新的代理IP以绕过可能被封禁的IP
@@ -251,7 +252,7 @@ export async function resolveAffiliateLinkWithHttp(
         axiosConfig.httpsAgent = proxyAgent
         axiosConfig.httpAgent = proxyAgent
 
-        console.log(`✅ 使用代理: ${proxyCredentials.fullAddress}`)
+        logger.debug(`✅ 使用代理: ${proxyCredentials.fullAddress}`)
       } catch (proxyError: any) {
         // 代理获取失败 → 抛出错误，触发降级到Playwright
         console.error('❌ 获取代理IP失败:', proxyError.message)
@@ -346,7 +347,7 @@ export async function resolveAffiliateLinkWithHttp(
 
     // 手动跟踪重定向
     while (redirectCount < maxRedirects) {
-      console.log(`HTTP请求: ${currentUrl} (重定向 ${redirectCount}/${maxRedirects})`)
+      logger.debug(`HTTP请求: ${currentUrl} (重定向 ${redirectCount}/${maxRedirects})`)
 
       const response = await client.request({
         method: 'HEAD',
@@ -457,7 +458,7 @@ export async function resolveAffiliateLinkWithHttp(
         const refreshHeader = response.headers.refresh || response.headers.Refresh
 
         if (refreshHeader) {
-          console.log(`🔄 检测到Meta Refresh: ${refreshHeader}`)
+          logger.debug(`🔄 检测到Meta Refresh: ${refreshHeader}`)
 
           // 解析 refresh 头: "0;url=https://example.com"
           const urlMatch = refreshHeader.match(/url=(.+)$/i)
@@ -470,7 +471,7 @@ export async function resolveAffiliateLinkWithHttp(
               currentUrl = nextUrl
               redirectCount++
 
-              console.log(`   → Meta Refresh重定向到: ${nextUrl}`)
+              logger.debug(`   → Meta Refresh重定向到: ${nextUrl}`)
 
               // 添加随机延迟
               await new Promise((resolve) => setTimeout(resolve, 200 + Math.random() * 300))
@@ -585,7 +586,7 @@ export async function resolveAffiliateLinkWithHttp(
           embeddedFinalUrl !== resolvedFinalUrl ||
           embeddedFinalUrlSuffix !== resolvedFinalUrlSuffix
         ) {
-          console.log(`   📎 HTTP解析识别到嵌入目标URL: ${embeddedFinalUrl}`)
+          logger.debug(`   📎 HTTP解析识别到嵌入目标URL: ${embeddedFinalUrl}`)
           redirectChain.push(embeddedUrlObj.toString())
           resolvedFinalUrl = embeddedFinalUrl
           resolvedFinalUrlSuffix = embeddedFinalUrlSuffix
@@ -596,10 +597,10 @@ export async function resolveAffiliateLinkWithHttp(
       }
     }
 
-    console.log(`✅ HTTP解析完成: ${resolvedRedirectCount}次重定向`)
-    console.log(`   Final URL: ${resolvedFinalUrl}`)
+    logger.debug(`✅ HTTP解析完成: ${resolvedRedirectCount}次重定向`)
+    logger.debug(`   Final URL: ${resolvedFinalUrl}`)
     if (!finalUrlSuffix && fallbackSuffix) {
-      console.log(
+      logger.debug(
         `   Final URL Suffix(redirect): ${fallbackSuffix.substring(0, 100)}${fallbackSuffix.length > 100 ? '...' : ''}`
       )
     }
@@ -682,7 +683,7 @@ export function extractEmbeddedTargetUrl(url: string): string | null {
     for (const paramName of targetParamNames) {
       const targetUrl = urlObj.searchParams.get(paramName)
       if (targetUrl && targetUrl.startsWith('http')) {
-        console.log(`   📎 从参数 "${paramName}" 提取目标URL`)
+        logger.debug(`   📎 从参数 "${paramName}" 提取目标URL`)
         return targetUrl
       }
     }
@@ -695,7 +696,7 @@ export function extractEmbeddedTargetUrl(url: string): string | null {
       try {
         const decoded = decodeURIComponent(part)
         if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
-          console.log(`   📎 从路径中提取URL编码的目标URL`)
+          logger.debug(`   📎 从路径中提取URL编码的目标URL`)
           return decoded
         }
       } catch {

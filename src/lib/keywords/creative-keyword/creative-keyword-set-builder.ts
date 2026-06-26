@@ -1,6 +1,7 @@
 /**
  * 创意关键词集合构建：主流程
  */
+import { logger } from '@/lib/common/server'
 import {
   toFallbackKeywords,
   normalizeCandidateKey,
@@ -718,7 +719,7 @@ export async function buildCreativeKeywordSet(
         ...selected,
         keywordsWithVolume: backfilled.keywordsWithVolume as any,
       }
-      console.log(
+      logger.debug(
         `[buildCreativeKeywordSet][monitor] ${input.scopeLabel}: global volume backfill patched ${backfilled.patchedCount} keywords`
       )
     }

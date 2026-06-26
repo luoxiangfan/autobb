@@ -7,6 +7,7 @@
  * 支持季节性分析(可选)
  */
 
+import { logger } from '@/lib/common/server'
 import { createHash } from 'crypto'
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
@@ -157,8 +158,8 @@ export async function executeProductScoreCalculation(
           PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND_DEFAULT
         )
 
-  console.log(`[ProductScoreCalculation] 开始执行任务 ${task.id}`)
-  console.log(
+  logger.debug(`[ProductScoreCalculation] 开始执行任务 ${task.id}`)
+  logger.debug(
     `[ProductScoreCalculation] 用户: ${userId}, 触发: ${trigger}, 批次大小: ${batchSize}, aiRerankTopK: ${aiRerankTopK}`
   )
 
@@ -197,7 +198,7 @@ export async function executeProductScoreCalculation(
   try {
     const paused = await isProductScoreCalculationPaused(userId)
     if (paused && !allowWhenPaused) {
-      console.log(
+      logger.debug(
         `[ProductScoreCalculation] 用户${userId}已暂停推荐指数计算，任务 ${task.id} 直接结束`
       )
       return
@@ -231,9 +232,9 @@ export async function executeProductScoreCalculation(
     )
 
     if (products.length === 0) {
-      console.log(`[ProductScoreCalculation] 没有需要计算的商品`)
+      logger.debug(`[ProductScoreCalculation] 没有需要计算的商品`)
     } else {
-      console.log(`[ProductScoreCalculation] 找到${products.length}个商品需要计算`)
+      logger.debug(`[ProductScoreCalculation] 找到${products.length}个商品需要计算`)
     }
 
     let successCount = 0
@@ -264,7 +265,7 @@ export async function executeProductScoreCalculation(
       }
 
       if (cachedScores.size > 0) {
-        console.log(
+        logger.debug(
           `[ProductScoreCalculation] 命中推荐指数缓存 ${cachedScores.size} 个，跳过对应AI计算`
         )
       }
@@ -289,13 +290,13 @@ export async function executeProductScoreCalculation(
           }
         )
 
-        console.log(
+        logger.debug(
           `[ProductScoreCalculation] 混合精排完成: 规则粗排 ${hybridResults.summary.totalProducts}, ` +
             `AI候选 ${hybridResults.summary.aiCandidates}, AI完成 ${hybridResults.summary.aiCompleted}, ` +
             `规则直出 ${hybridResults.summary.ruleOnly}`
         )
       } else {
-        console.log('[ProductScoreCalculation] 当前批次全部命中缓存，无需触发AI精排')
+        logger.debug('[ProductScoreCalculation] 当前批次全部命中缓存，无需触发AI精排')
       }
 
       const resultByProductId = new Map(hybridResults.results.map((item) => [item.productId, item]))
@@ -337,7 +338,7 @@ export async function executeProductScoreCalculation(
             })
 
             successCount++
-            console.log(
+            logger.debug(
               `[ProductScoreCalculation] ✅ 商品${product.id}: ${cached.recommendationScore}星 [缓存复用]`
             )
           } catch (error: any) {
@@ -404,7 +405,7 @@ export async function executeProductScoreCalculation(
           })
 
           successCount++
-          console.log(
+          logger.debug(
             `[ProductScoreCalculation] ✅ 商品${product.id}: ${score.starRating}星 (${score.totalScore.toFixed(1)}分)` +
               `${result.usedAI ? ' [AI精排]' : ' [规则粗排]'}`
           )
@@ -421,9 +422,9 @@ export async function executeProductScoreCalculation(
 
     const processingTime = Date.now() - startTime
 
-    console.log(`[ProductScoreCalculation] 任务完成`)
-    console.log(`[ProductScoreCalculation] 成功: ${successCount}, 失败: ${failedCount}`)
-    console.log(`[ProductScoreCalculation] 耗时: ${(processingTime / 1000).toFixed(2)}秒`)
+    logger.debug(`[ProductScoreCalculation] 任务完成`)
+    logger.debug(`[ProductScoreCalculation] 成功: ${successCount}, 失败: ${failedCount}`)
+    logger.debug(`[ProductScoreCalculation] 耗时: ${(processingTime / 1000).toFixed(2)}秒`)
 
     if (failedCount > 0) {
       console.warn(`[ProductScoreCalculation] 失败商品列表:`, failedProducts)
@@ -444,7 +445,7 @@ export async function executeProductScoreCalculation(
       try {
         const existingTask = await findExistingProductScoreTask(queue, userId, task.id)
         if (existingTask && existingTask.status === 'pending') {
-          console.log(`[ProductScoreCalculation] 已存在后续任务 ${existingTask.id}，跳过重复续跑`)
+          logger.debug(`[ProductScoreCalculation] 已存在后续任务 ${existingTask.id}，跳过重复续跑`)
         } else {
           const nextTaskId = await queue.enqueue(
             'product-score-calculation',
@@ -462,7 +463,7 @@ export async function executeProductScoreCalculation(
               priority: 'normal',
             }
           )
-          console.log(`[ProductScoreCalculation] 已续跑入队: ${nextTaskId}`)
+          logger.debug(`[ProductScoreCalculation] 已续跑入队: ${nextTaskId}`)
         }
       } catch (enqueueError: any) {
         await markProductScoreRequeueNeeded(userId, {
@@ -477,7 +478,7 @@ export async function executeProductScoreCalculation(
         )
       }
     } else if (shouldScheduleFollowUp && pausedBeforeFollowUp) {
-      console.log(`[ProductScoreCalculation] 用户${userId}已暂停推荐指数计算，跳过续跑入队`)
+      logger.debug(`[ProductScoreCalculation] 用户${userId}已暂停推荐指数计算，跳过续跑入队`)
     }
   } catch (error: any) {
     console.error(`[ProductScoreCalculation] 任务执行失败:`, error)

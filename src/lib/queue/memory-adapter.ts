@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type {
   Task,
   TaskType,
@@ -379,7 +380,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     }
 
     if (deletedCount > 0) {
-      console.log(`[Memory] 删除 ${deletedCount} 个 type=${type} status=${status} 的任务`)
+      logger.debug(`[Memory] 删除 ${deletedCount} 个 type=${type} status=${status} 的任务`)
     }
 
     return deletedCount
@@ -416,7 +417,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     })
 
     if (removedTaskIds.length > 0) {
-      console.log(`🗑️ 已从内存队列移除任务: userId=${userId}, removed=${removedTaskIds.length}`)
+      logger.debug(`🗑️ 已从内存队列移除任务: userId=${userId}, removed=${removedTaskIds.length}`)
     }
 
     return { removedCount: removedTaskIds.length, removedTaskIds }
@@ -432,7 +433,7 @@ export class MemoryQueueAdapter implements QueueStorageAdapter {
     const index = this.pendingQueue.findIndex((t) => t.id === taskId)
     if (index !== -1) {
       this.pendingQueue.splice(index, 1)
-      console.log(`🗑️ 已从内存队列移除任务: ${taskId}`)
+      logger.debug(`🗑️ 已从内存队列移除任务: ${taskId}`)
     }
 
     // 从tasks map中删除

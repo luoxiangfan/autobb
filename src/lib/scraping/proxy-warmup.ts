@@ -2,6 +2,7 @@
  * Proxy warmup utilities for warming up affiliate links with multiple proxy IPs
  */
 
+import { logger } from '@/lib/common/server'
 import axios from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { maskProxyUrl } from './proxy/validate-url'
@@ -69,11 +70,11 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
       return []
     }
 
-    console.log(`📋 检测到代理格式: ${provider.name}`)
+    logger.debug(`📋 检测到代理格式: ${provider.name}`)
 
     // Oxylabs格式不需要预热（已经是直接的代理服务器）
     if (provider.name === 'Oxylabs') {
-      console.log(`ℹ️ Oxylabs代理无需预热，直接使用`)
+      logger.debug(`ℹ️ Oxylabs代理无需预热，直接使用`)
       return []
     }
 
@@ -89,7 +90,7 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
       const separator = modifiedUrl.includes('?') ? '&' : '?'
       modifiedUrl = `${modifiedUrl}${separator}ips=12`
 
-      console.log(`🌐 获取12个代理IP: ${maskProxyUrl(modifiedUrl)}`)
+      logger.debug(`🌐 获取12个代理IP: ${maskProxyUrl(modifiedUrl)}`)
 
       // 使用增强版Stealth配置绕过CloudFlare
       const { chromium } = await import('playwright')
@@ -251,7 +252,7 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
           .map((line) => line.trim())
           .filter((line) => line.length > 0)
 
-        console.log(`✅ 成功获取 ${proxyIPs.length} 个代理IP`)
+        logger.debug(`✅ 成功获取 ${proxyIPs.length} 个代理IP`)
       } finally {
         await browser.close().catch(() => {})
       }
@@ -280,7 +281,7 @@ async function fetch12ProxyIPs(proxyUrl: string): Promise<string[]> {
  * @param affiliateLink - 推广链接
  */
 async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Promise<void> {
-  console.log(`🔥 开始触发 ${proxyIPs.length} 次推广链接访问（通过代理IP）...`)
+  logger.debug(`🔥 开始触发 ${proxyIPs.length} 次推广链接访问（通过代理IP）...`)
 
   // 为每个代理IP创建一个访问Promise（不等待结果）
   const visitPromises = proxyIPs.map(async (proxyIP, index): Promise<boolean> => {
@@ -288,7 +289,7 @@ async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Pr
       // 解析代理IP
       const proxy = parseProxyIP(proxyIP)
       if (!proxy) {
-        console.log(`✗ 访问 #${index + 1} 失败: 代理IP格式错误`)
+        logger.debug(`✗ 访问 #${index + 1} 失败: 代理IP格式错误`)
         return false
       }
 
@@ -316,12 +317,12 @@ async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Pr
       // 使用代理发送请求
       await client.get(affiliateLink)
 
-      console.log(`✓ 访问 #${index + 1} 已触发（代理: ${proxy.fullAddress}）`)
+      logger.debug(`✓ 访问 #${index + 1} 已触发（代理: ${proxy.fullAddress}）`)
       return true
     } catch (error) {
       // 忽略错误，只记录日志
       // 即使访问失败，也不影响主流程
-      console.log(
+      logger.debug(
         `✗ 访问 #${index + 1} 失败:`,
         error instanceof Error ? error.message : String(error)
       )
@@ -334,12 +335,12 @@ async function triggerProxyVisits(proxyIPs: string[], affiliateLink: string): Pr
   Promise.allSettled(visitPromises).then((results) => {
     const successCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length
     const failureCount = results.length - successCount
-    console.log(
+    logger.debug(
       `✅ 所有访问请求已完成: 成功 ${successCount}/${proxyIPs.length}, 失败 ${failureCount}/${proxyIPs.length}`
     )
   })
 
-  console.log(`✅ 已触发 ${proxyIPs.length} 次访问（通过代理IP），不等待访问完成`)
+  logger.debug(`✅ 已触发 ${proxyIPs.length} 次访问（通过代理IP），不等待访问完成`)
 }
 
 /**
@@ -361,7 +362,7 @@ async function triggerProxyVisitsWithSingleProxy(
     const provider = ProxyProviderRegistry.getProvider(proxyUrl)
     const credentials = await provider.extractCredentials(proxyUrl)
 
-    console.log(`🔄 使用单个代理发起 ${visitCount} 次访问: ${credentials.fullAddress}`)
+    logger.debug(`🔄 使用单个代理发起 ${visitCount} 次访问: ${credentials.fullAddress}`)
 
     // 创建不同的User-Agent列表
     const userAgents = [
@@ -412,10 +413,12 @@ async function triggerProxyVisitsWithSingleProxy(
         // 发起请求
         await client.get(affiliateLink)
 
-        console.log(`✓ 访问 #${index + 1}/${visitCount} 已触发（代理: ${credentials.fullAddress}）`)
+        logger.debug(
+          `✓ 访问 #${index + 1}/${visitCount} 已触发（代理: ${credentials.fullAddress}）`
+        )
       } catch (error) {
         // 忽略错误，只记录日志
-        console.log(
+        logger.debug(
           `✗ 访问 #${index + 1}/${visitCount} 失败:`,
           error instanceof Error ? error.message : String(error)
         )
@@ -426,12 +429,12 @@ async function triggerProxyVisitsWithSingleProxy(
     Promise.allSettled(visitPromises).then((results) => {
       const successCount = results.filter((r) => r.status === 'fulfilled').length
       const failureCount = results.filter((r) => r.status === 'rejected').length
-      console.log(
+      logger.debug(
         `✅ 所有访问请求已完成: 成功 ${successCount}/${visitCount}, 失败 ${failureCount}/${visitCount}`
       )
     })
 
-    console.log(`✅ 已触发 ${visitCount} 次访问（通过单个代理），不等待访问完成`)
+    logger.debug(`✅ 已触发 ${visitCount} 次访问（通过单个代理），不等待访问完成`)
     return true
   } catch (error) {
     console.error(`❌ 触发代理访问失败:`, error instanceof Error ? error.message : String(error))
@@ -454,7 +457,7 @@ export async function warmupAffiliateLink(
   affiliateLink: string
 ): Promise<boolean> {
   try {
-    console.log(`🔥 开始推广链接预热: ${maskProxyUrl(proxyUrl)}`)
+    logger.debug(`🔥 开始推广链接预热: ${maskProxyUrl(proxyUrl)}`)
 
     // 使用Provider系统检测代理格式
     const { ProxyProviderRegistry } = await import('./proxy/providers/provider-registry')
@@ -467,11 +470,11 @@ export async function warmupAffiliateLink(
       return false
     }
 
-    console.log(`📋 检测到代理格式: ${provider.name}`)
+    logger.debug(`📋 检测到代理格式: ${provider.name}`)
 
     // Oxylabs格式：直接使用单个代理发起多次访问
     if (provider.name === 'Oxylabs') {
-      console.log(`ℹ️ Oxylabs代理直接预热（使用单个代理发起12次访问）`)
+      logger.debug(`ℹ️ Oxylabs代理直接预热（使用单个代理发起12次访问）`)
       return await triggerProxyVisitsWithSingleProxy(proxyUrl, affiliateLink, 12)
     }
 
@@ -488,7 +491,7 @@ export async function warmupAffiliateLink(
       // 步骤2: 发起代理访问（fire-and-forget，不等待访问完成）
       await triggerProxyVisits(proxyIPs, affiliateLink)
 
-      console.log(`✅ 推广链接预热已触发（${proxyIPs.length}个代理IP）`)
+      logger.debug(`✅ 推广链接预热已触发（${proxyIPs.length}个代理IP）`)
       return true
     }
 

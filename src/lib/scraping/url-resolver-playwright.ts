@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { Browser, BrowserContext, Page } from 'playwright'
 import { getPlaywrightPool } from './playwright-pool'
 import {
@@ -225,7 +226,7 @@ async function getBrowserFromPoolWithProxyRefresh(
           username: cachedProxy.username,
           password: cachedProxy.password,
         }
-        console.log(
+        logger.debug(
           `🔥 [代理池] Cache HIT: ${cachedProxy.host}:${cachedProxy.port} (${targetCountry})`
         )
       }
@@ -238,7 +239,7 @@ async function getBrowserFromPoolWithProxyRefresh(
     try {
       const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
       proxyCredentials = await getProxyIp(proxyUrl, true, userId)
-      console.log(
+      logger.debug(
         `🔁 [Playwright] 重试阶段强制刷新代理IP: ${proxyCredentials.host}:${proxyCredentials.port}`
       )
     } catch (error: any) {
@@ -314,7 +315,7 @@ export async function resolveAffiliateLinkWithPlaywright(
 
     // Apply stealth configuration to bypass anti-bot detection
     await configureStealthPage(page)
-    console.log('✅ Stealth配置已应用')
+    logger.debug('✅ Stealth配置已应用')
 
     // Add random delay before navigation (human-like behavior)
     await randomDelay(500, 1500)
@@ -333,11 +334,11 @@ export async function resolveAffiliateLinkWithPlaywright(
     })
 
     // 访问推广链接
-    console.log(`Playwright访问: ${affiliateLink}`)
+    logger.debug(`Playwright访问: ${affiliateLink}`)
 
     // 使用智能等待策略评估页面复杂度
     const complexity = assessPageComplexity(affiliateLink)
-    console.log(
+    logger.debug(
       `页面复杂度: ${complexity.complexity}, 推荐timeout: ${complexity.recommendedTimeout}ms`
     )
 
@@ -356,7 +357,7 @@ export async function resolveAffiliateLinkWithPlaywright(
     }
 
     const statusCode = response.status()
-    console.log(`   - 响应状态码: ${statusCode}`)
+    logger.debug(`   - 响应状态码: ${statusCode}`)
 
     // 关键：URL解析阶段不应把4xx当作“无法解析”
     // 例如最终站点对代理/爬虫返回403，但finalUrl仍然是有效落地页URL，后续抓取阶段可用更强手段处理
@@ -385,7 +386,7 @@ export async function resolveAffiliateLinkWithPlaywright(
 
     const totalWaitTime = Date.now() - gotoStartTime
 
-    console.log(`智能等待完成: ${smartWait.waited}ms, 信号: ${smartWait.signals.join(', ')}`)
+    logger.debug(`智能等待完成: ${smartWait.waited}ms, 信号: ${smartWait.signals.join(', ')}`)
 
     if (statusCode < 400) {
       // 给JS重定向一点额外时间（部分追踪域名会在短延迟后跳转）
@@ -463,10 +464,10 @@ export async function resolveAffiliateLinkWithPlaywright(
 
     const redirectCount = redirectChain.length - 1
 
-    console.log(`Playwright解析完成: ${redirectCount}次重定向`)
-    console.log(`Final URL: ${finalUrl}`)
+    logger.debug(`Playwright解析完成: ${redirectCount}次重定向`)
+    logger.debug(`Final URL: ${finalUrl}`)
     if (!finalUrlSuffix && fallbackSuffix) {
-      console.log(
+      logger.debug(
         `Final URL Suffix(redirect): ${fallbackSuffix.substring(0, 100)}${fallbackSuffix.length > 100 ? '...' : ''}`
       )
     }
@@ -487,7 +488,7 @@ export async function resolveAffiliateLinkWithPlaywright(
       // 代理连接问题时，销毁实例而不是释放回连接池
       // 这样下次重试时会创建新实例，获取新的代理IP
       if (fromPool && instanceId) {
-        console.log(`🗑️ 销毁失败的Playwright实例: ${instanceId}`)
+        logger.debug(`🗑️ 销毁失败的Playwright实例: ${instanceId}`)
         const pool = getPlaywrightPool()
         await pool.invalidate(instanceId)
         fromPool = false // 标记为已销毁，避免finally块再次处理

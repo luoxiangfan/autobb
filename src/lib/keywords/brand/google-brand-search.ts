@@ -10,6 +10,7 @@
  * 解析规则以“稳定优先”为目标，尽量使用语义/结构选择器而非易变class
  */
 
+import { logger } from '@/lib/common/server'
 import type { Page } from 'playwright'
 import { getLanguageCodeForCountry } from '@/lib/common/server'
 import { getPlaywrightPool } from '@/lib/scraping'
@@ -143,7 +144,7 @@ export async function fetchBrandSearchSupplement(options: {
 
     try {
       if (proxyAttempt > 0) {
-        console.log(`🔄 Google SERP抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}`)
+        logger.debug(`🔄 Google SERP抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}`)
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         clearProxyCache(options.proxyApiUrl)

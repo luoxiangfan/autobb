@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import axios from 'axios'
 import { load as loadHtml } from 'cheerio'
 import { HttpsProxyAgent } from 'https-proxy-agent'
@@ -1031,7 +1032,7 @@ export async function createYeahPromosProxyAgent(params: {
   reason: string
 }): Promise<HttpsProxyAgent<string>> {
   const proxy = await fetchProxyIp(params.proxyProviderUrl, 3, false)
-  console.log(`[yeahpromos] proxy ${params.country} (${params.reason}): ${proxy.fullAddress}`)
+  logger.debug(`[yeahpromos] proxy ${params.country} (${params.reason}): ${proxy.fullAddress}`)
   return new HttpsProxyAgent(
     `http://${proxy.username}:${proxy.password}@${proxy.host}:${proxy.port}`,
     {
@@ -2014,7 +2015,7 @@ export async function fetchYeahPromosPromotableProductsWithMeta(params: {
 
       if (!pageHasItems) {
         consecutiveEmptyPagesInScope += 1
-        console.log(
+        logger.debug(
           `[yeahpromos] scope=${currentTemplate.scope} page=${currentPage} returned empty (${consecutiveEmptyPagesInScope}/${MAX_YP_CONSECUTIVE_EMPTY_PAGES_PER_SCOPE})`
         )
       } else {
@@ -2040,12 +2041,12 @@ export async function fetchYeahPromosPromotableProductsWithMeta(params: {
 
       if (shouldSwitchScope) {
         if (scopeBudgetReached) {
-          console.log(
+          logger.debug(
             `[yeahpromos] switching from scope=${currentTemplate.scope} to next scope: reached delta page budget ${scopePageBudget}`
           )
         }
         if (consecutiveEmptyPagesInScope >= MAX_YP_CONSECUTIVE_EMPTY_PAGES_PER_SCOPE) {
-          console.log(
+          logger.debug(
             `[yeahpromos] switching from scope=${currentTemplate.scope} to next scope: ${consecutiveEmptyPagesInScope} consecutive empty pages`
           )
         }

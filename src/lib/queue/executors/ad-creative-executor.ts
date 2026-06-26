@@ -7,6 +7,7 @@
  * 3. 支持SSE实时推送（通过数据库轮询）
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import {
   getAdCreativeGenerationModeProfile,
@@ -228,7 +229,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       [effectiveMaxRetries, task.id]
     )
 
-    console.log(`🚀 开始执行创意生成任务: ${task.id}`)
+    logger.debug(`🚀 开始执行创意生成任务: ${task.id}`)
 
     // 验证Offer存在
     const offer = await findOfferById(offerId, task.userId)
@@ -257,7 +258,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         softSuppressTerms: hints.softSuppressTerms,
         highPerformingTerms: hints.highPerformingTerms,
       }
-      console.log(
+      logger.debug(
         `🔁 队列搜索词反馈已加载: high=${hints.highPerformingTerms.length}, hard=${hints.hardNegativeTerms.length}, soft=${hints.softSuppressTerms.length}, rows=${hints.sourceRows}`
       )
     } catch (hintError: any) {
@@ -367,7 +368,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       await db.transaction(async () => {
         // 使用 transaction-level advisory lock（事务结束自动释放）
         await db.exec('SELECT pg_advisory_xact_lock($1)', [offerId])
-        console.log(`🔒 已获取 offer ${offerId} 的 transaction-level advisory lock`)
+        logger.debug(`🔒 已获取 offer ${offerId} 的 transaction-level advisory lock`)
 
         // 在锁内查询可用桶（确保看到最新状态，包括其他任务的占位记录）
         const availableBucketsRaw = await getAvailableBuckets(offerId)
@@ -421,7 +422,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         }
 
         if (activeReservedBuckets.size > 0) {
-          console.log(`🔒 检测到运行中占位桶: ${Array.from(activeReservedBuckets).join(', ')}`)
+          logger.debug(`🔒 检测到运行中占位桶: ${Array.from(activeReservedBuckets).join(', ')}`)
         }
 
         const availableBuckets = availableBucketsRaw.filter(
@@ -461,7 +462,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         selectedBucket = preferred
         bucketInfo = getBucketInfo(keywordPool, selectedBucket)
         const selectedCreativeType = getCreativeTypeForBucketSlot(selectedBucket as 'A' | 'B' | 'D')
-        console.log(
+        logger.debug(
           `📦 使用关键词池桶 ${selectedBucket} (${bucketInfo.intent}): ${bucketInfo.keywords.length} 个关键词`
         )
 
@@ -499,13 +500,13 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         )
 
         placeholderCreativeId = Number(placeholderResult.lastInsertRowid) || null
-        console.log(
+        logger.debug(
           `📝 已插入占位记录 id=${placeholderCreativeId}，桶 ${selectedBucket} 已被标记为占用`
         )
       })
 
       // 事务提交后，advisory lock 自动释放，但占位记录已生效
-      console.log(`🔓 事务已提交，advisory lock 已自动释放，桶 ${selectedBucket} 占位记录生效`)
+      logger.debug(`🔓 事务已提交，advisory lock 已自动释放，桶 ${selectedBucket} 占位记录生效`)
     } catch (poolError: any) {
       // 桶选择/并发冲突错误直接透传，不包装成"关键词池失败"
       const isBucketError =
@@ -521,9 +522,9 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       console.warn(`⚠️ queue targetRating=${targetRating} 已忽略，统一使用 GOOD 阈值`)
     }
     if (effectiveMaxRetries < Number(maxRetries)) {
-      console.log(`ℹ️ 已限制自动重试次数: ${maxRetries} → ${effectiveMaxRetries}`)
+      logger.debug(`ℹ️ 已限制自动重试次数: ${maxRetries} → ${effectiveMaxRetries}`)
     }
-    console.log(
+    logger.debug(
       `⚡ 创意生成模式: ${generationMode} (maxRetries=${effectiveMaxRetries}, delayMs=${generationProfile.delayMs}, supplementation=${generationProfile.enableSupplementation})`
     )
     if (!selectedBucket || !bucketInfo) {
@@ -753,7 +754,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
     let savedCreative: any
     if (placeholderCreativeId) {
       // 更新占位记录为真实创意数据
-      console.log(`📝 更新占位记录 id=${placeholderCreativeId} 为真实创意数据`)
+      logger.debug(`📝 更新占位记录 id=${placeholderCreativeId} 为真实创意数据`)
 
       const finalUrl = (() => {
         if (isValidUrl(offer.final_url)) return offer.final_url!
@@ -827,10 +828,10 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         throw new Error(`更新占位记录失败: id=${placeholderCreativeId}`)
       }
       savedCreative.id = placeholderCreativeId
-      console.log(`✅ 占位记录已更新为真实创意 id=${placeholderCreativeId}`)
+      logger.debug(`✅ 占位记录已更新为真实创意 id=${placeholderCreativeId}`)
     } else {
       // 降级：没有占位记录（旧流程），直接插入
-      console.log(`📝 直接插入新创意记录（无占位记录）`)
+      logger.debug(`📝 直接插入新创意记录（无占位记录）`)
       savedCreative = await createAdCreative(task.userId, offerId, {
         headlines: bestCreative.headlines,
         descriptions: bestCreative.descriptions,
@@ -927,9 +928,9 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
     )
 
     if (qualityWarning) {
-      console.log(`⚠️ 创意生成任务完成（质量警告）: ${task.id} - ${bestEvaluation.finalScore}分`)
+      logger.debug(`⚠️ 创意生成任务完成（质量警告）: ${task.id} - ${bestEvaluation.finalScore}分`)
     } else {
-      console.log(`✅ 创意生成任务完成: ${task.id}`)
+      logger.debug(`✅ 创意生成任务完成: ${task.id}`)
     }
 
     return finalResult
@@ -940,7 +941,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
     if (placeholderCreativeId) {
       try {
         await db.exec('DELETE FROM ad_creatives WHERE id = ?', [placeholderCreativeId])
-        console.log(`🗑️ 已删除占位记录 id=${placeholderCreativeId}（任务失败）`)
+        logger.debug(`🗑️ 已删除占位记录 id=${placeholderCreativeId}（任务失败）`)
       } catch (deleteErr: any) {
         console.warn(`⚠️ 删除占位记录失败: ${deleteErr?.message}`)
       }

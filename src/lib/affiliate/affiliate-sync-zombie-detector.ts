@@ -13,6 +13,7 @@
  * 3. 定期清理和报告
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 
 export type ZombieTaskDetectionResult = {
@@ -177,7 +178,7 @@ export async function detectAndFixZombieSyncTasks(
               `,
               [reason, task.id]
             )
-            console.log(`[zombie-detector] 已修复任务 #${task.id} 为 completed: ${reason}`)
+            logger.debug(`[zombie-detector] 已修复任务 #${task.id} 为 completed: ${reason}`)
             fixedCount++
           } else if (shouldMarkAsFailed) {
             await db.exec(
@@ -192,7 +193,7 @@ export async function detectAndFixZombieSyncTasks(
               `,
               [`[自动修复] ${reason}`, task.id]
             )
-            console.log(`[zombie-detector] 已修复任务 #${task.id} 为 failed: ${reason}`)
+            logger.debug(`[zombie-detector] 已修复任务 #${task.id} 为 failed: ${reason}`)
             fixedCount++
           }
         } catch (error: any) {

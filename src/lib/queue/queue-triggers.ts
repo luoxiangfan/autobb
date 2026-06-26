@@ -4,6 +4,7 @@
  * 提供便捷的方法将任务添加到统一队列系统
  */
 
+import { logger } from '@/lib/common/server'
 import { getQueueManager } from './unified-queue-manager'
 import type { SyncTaskData } from './executors/sync-executor'
 import type { BackupTaskData } from './executors/backup-executor'
@@ -43,7 +44,7 @@ export async function triggerDataSync(
     maxRetries: options.maxRetries || 3,
   })
 
-  console.log(
+  logger.debug(
     `📥 [SyncTrigger] 同步任务已入队: ${taskId}, 用户 #${userId}, 类型: ${taskData.syncType}`
   )
   return taskId
@@ -72,7 +73,7 @@ export async function triggerBackup(
     }
   )
 
-  console.log(`📥 [BackupTrigger] 备份任务已入队: ${taskId}, 类型: ${backupData.backupType}`)
+  logger.debug(`📥 [BackupTrigger] 备份任务已入队: ${taskId}, 类型: ${backupData.backupType}`)
   return taskId
 }
 
@@ -95,7 +96,7 @@ export async function triggerLinkCheck(data: LinkCheckTaskData): Promise<string>
     }
   )
 
-  console.log(`📥 [LinkCheckTrigger] 链接检查任务已入队: ${taskId}, 类型: ${data.checkType}`)
+  logger.debug(`📥 [LinkCheckTrigger] 链接检查任务已入队: ${taskId}, 类型: ${data.checkType}`)
   return taskId
 }
 
@@ -118,6 +119,6 @@ export async function triggerCleanup(data: CleanupTaskData): Promise<string> {
     }
   )
 
-  console.log(`📥 [CleanupTrigger] 数据清理任务已入队: ${taskId}, 类型: ${data.cleanupType}`)
+  logger.debug(`📥 [CleanupTrigger] 数据清理任务已入队: ${taskId}, 类型: ${data.cleanupType}`)
   return taskId
 }

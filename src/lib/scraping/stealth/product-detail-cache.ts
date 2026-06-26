@@ -7,6 +7,7 @@
  * 避免重复抓取同一ASIN
  */
 
+import { logger } from '@/lib/common/server'
 import type { AmazonProductData } from './types'
 
 interface CachedProductDetail {
@@ -38,7 +39,7 @@ export function getCachedProductDetail(
     // 质量检查 - 如果要求features但为空，视为缓存未命中
     if (requireFeatures && (!cached.data.features || cached.data.features.length === 0)) {
       if (!silent) {
-        console.log(`  ⚠️ 缓存质量不佳: ${asin} (features为空)，需重新抓取`)
+        logger.debug(`  ⚠️ 缓存质量不佳: ${asin} (features为空)，需重新抓取`)
       }
       cacheMisses++
       return null
@@ -46,7 +47,7 @@ export function getCachedProductDetail(
     cacheHits++
     if (!silent) {
       const featuresCount = cached.data.features?.length || 0
-      console.log(`  📦 缓存命中: ${asin} (features: ${featuresCount}条)`)
+      logger.debug(`  📦 缓存命中: ${asin} (features: ${featuresCount}条)`)
     }
     return cached.data
   }
@@ -101,7 +102,7 @@ export function cleanupExpiredCache(): number {
   }
 
   if (cleaned > 0) {
-    console.log(`🧹 清理了 ${cleaned} 个过期缓存`)
+    logger.debug(`🧹 清理了 ${cleaned} 个过期缓存`)
   }
 
   return cleaned

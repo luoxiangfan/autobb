@@ -7,6 +7,7 @@
  * 3. 支持SSE实时推送（通过数据库轮询）
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import { extractOffer } from '@/lib/offers/server'
 import {
@@ -348,7 +349,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       await updateOfferScrapeStatus(linkedOfferId, task.userId, 'in_progress')
     }
 
-    console.log(`🚀 开始执行Offer提取任务: ${task.id}`)
+    logger.debug(`🚀 开始执行Offer提取任务: ${task.id}`)
 
     // 调用核心提取函数
     const extractResult = await extractOffer({
@@ -388,7 +389,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
           [stage, message, progress, task.id]
         )
 
-        console.log(`  📊 进度更新: ${task.id} - ${stage} (${progress}%) - ${message}`)
+        logger.debug(`  📊 进度更新: ${task.id} - ${stage} (${progress}%) - ${message}`)
       },
     })
 
@@ -459,7 +460,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       const reuseMessage = taskRow.batch_id
         ? '批量任务重试，复用已有Offer基础记录'
         : '重建任务，更新现有Offer基础数据'
-      console.log(`🔄 ${reuseMessage}: taskId=${task.id}, offerId=${taskRow.offer_id}`)
+      logger.debug(`🔄 ${reuseMessage}: taskId=${task.id}, offerId=${taskRow.offer_id}`)
       await updateOfferScrapeStatus(taskRow.offer_id, task.userId, 'in_progress', undefined, {
         brand: brandForPersistence,
         url: resolvedFinalUrl || undefined,
@@ -472,7 +473,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       })
     } else if (taskRow?.batch_id) {
       // 批量任务：创建新Offer记录（基础数据）
-      console.log(`📦 批量任务，创建Offer基础记录: ${task.id}`)
+      logger.debug(`📦 批量任务，创建Offer基础记录: ${task.id}`)
       const offer = await createOffer(task.userId, {
         url: resolvedFinalUrl || affiliateLink,
         brand: brandForCreation,
@@ -506,10 +507,10 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       })
       // 更新offer_tasks关联
       await db.exec(`UPDATE offer_tasks SET offer_id = ? WHERE id = ?`, [offer.id, task.id])
-      console.log(`✅ 批量任务Offer基础创建成功: offer_id=${offer.id}`)
+      logger.debug(`✅ 批量任务Offer基础创建成功: offer_id=${offer.id}`)
     } else {
       // 普通SSE任务：创建新Offer记录（基础数据）
-      console.log(`🆕 普通SSE任务，创建Offer基础记录: ${task.id}`)
+      logger.debug(`🆕 普通SSE任务，创建Offer基础记录: ${task.id}`)
       const offer = await createOffer(task.userId, {
         url: resolvedFinalUrl || affiliateLink,
         brand: brandForCreation,
@@ -543,7 +544,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       })
       // 更新offer_tasks关联
       await db.exec(`UPDATE offer_tasks SET offer_id = ? WHERE id = ?`, [offer.id, task.id])
-      console.log(`✅ 普通SSE任务Offer基础创建成功: offer_id=${offer.id}`)
+      logger.debug(`✅ 普通SSE任务Offer基础创建成功: offer_id=${offer.id}`)
     }
 
     if (createdOfferId) {
@@ -558,7 +559,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
     }
 
     // 执行AI分析
-    console.log(`🤖 开始AI分析: ${task.id}`)
+    logger.debug(`🤖 开始AI分析: ${task.id}`)
 
     // 更新进度到ai_analysis阶段
     await db.exec(
@@ -628,7 +629,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         `AI分析超时（>${Math.floor(aiAnalysisTimeoutMs / 1000)}秒）`
       )
 
-      console.log(`✅ AI分析完成: ${task.id}`)
+      logger.debug(`✅ AI分析完成: ${task.id}`)
     } catch (aiError: any) {
       console.warn(`⚠️ AI分析失败（不影响流程）: ${task.id}:`, aiError.message)
       // AI分析失败不中断流程，继续保存基础数据
@@ -781,7 +782,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
                 user_questions: JSON.stringify(extractedScenarios.userQuestions),
                 scenario_analyzed_at: new Date().toISOString(),
               })
-              console.log(
+              logger.debug(
                 `✅ 场景数据已提取: offer_id=${createdOfferId}, scenarios=${extractedScenarios.scenarios.length}, questions=${extractedScenarios.userQuestions.length}`
               )
             }
@@ -791,7 +792,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
           }
         }
 
-        console.log(`✅ AI分析结果已更新到Offer: offer_id=${createdOfferId}`)
+        logger.debug(`✅ AI分析结果已更新到Offer: offer_id=${createdOfferId}`)
       } catch (offerError: any) {
         console.error(`❌ 更新Offer AI分析结果失败: ${task.id}:`, offerError.message)
         // 更新失败不中断流程
@@ -821,7 +822,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
       [toDbJson(resultWithOfferId), createdOfferId, task.id]
     )
 
-    console.log(`✅ Offer提取任务完成: ${task.id}, offerId=${createdOfferId}`)
+    logger.debug(`✅ Offer提取任务完成: ${task.id}, offerId=${createdOfferId}`)
 
     return resultWithOfferId
   } catch (error: any) {

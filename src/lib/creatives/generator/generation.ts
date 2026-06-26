@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 import type { GeneratedAdCreativeData } from '../server'
 import type { Offer } from '../../offers/server'
@@ -193,10 +194,10 @@ export async function generateAdCreative(
   if (!options?.skipCache) {
     const cached = creativeCache.get(cacheKey)
     if (cached) {
-      console.log('✅ 使用缓存的广告创意')
-      console.log(`   - Cache Key: ${cacheKey}`)
-      console.log(`   - Headlines: ${cached.headlines.length}个`)
-      console.log(`   - Descriptions: ${cached.descriptions.length}个`)
+      logger.debug('✅ 使用缓存的广告创意')
+      logger.debug(`   - Cache Key: ${cacheKey}`)
+      logger.debug(`   - Headlines: ${cached.headlines.length}个`)
+      logger.debug(`   - Descriptions: ${cached.descriptions.length}个`)
       return cached
     }
   }
@@ -224,7 +225,7 @@ export async function generateAdCreative(
   }
 
   const policyGuardMode = resolveGoogleAdsPolicyGuardMode(options?.policyGuardMode)
-  console.log(`[PolicyGuard] 当前策略模式: ${policyGuardMode}`)
+  logger.debug(`[PolicyGuard] 当前策略模式: ${policyGuardMode}`)
   const scrapedDataForOffer = safeParseJson((offer as any).scraped_data, null)
   const derivedOfferLinkType = deriveLinkTypeFromScrapedData(scrapedDataForOffer)
   const effectiveLinkType = (() => {
@@ -348,7 +349,7 @@ export async function generateAdCreative(
         extractedElements.keywords.length,
         keywordFilterResult.removed
       )
-      console.log(filterReport)
+      logger.debug(filterReport)
 
       // 将 PoolKeywordData[] 转换为标准关键词格式并赋值
       extractedElements.keywords = keywordFilterResult.filtered.map((kw) => ({
@@ -361,7 +362,7 @@ export async function generateAdCreative(
         }),
         priority: 'HIGH' as const,
       }))
-      console.log(
+      logger.debug(
         `🎯 从关键词池#${keywordPool.id} 获取 ${poolKeywords.length} 个关键词，过滤后剩余 ${extractedElements.keywords.length} 个 (bucket ${normalizedBucket || 'A'})`
       )
     } else if ((offer as any).extracted_keywords) {
@@ -381,13 +382,13 @@ export async function generateAdCreative(
             sourceType: normalizeSourceTypeFromLegacySource({ source: 'EXTRACTED' }),
             priority: 'MEDIUM',
           }))
-          console.log(
+          logger.debug(
             `📦 读取到 ${extractedElements.keywords?.length || 0} 个提取的关键词（字符串格式，待查询搜索量）`
           )
         } else if (rawKeywords[0]?.keyword !== undefined) {
           // 对象数组 → 直接使用
           extractedElements.keywords = rawKeywords
-          console.log(`📦 读取到 ${extractedElements.keywords.length} 个提取的关键词（对象格式）`)
+          logger.debug(`📦 读取到 ${extractedElements.keywords.length} 个提取的关键词（对象格式）`)
         } else {
           console.warn(`⚠️ extracted_keywords格式未知，跳过`)
         }
@@ -414,7 +415,7 @@ export async function generateAdCreative(
             extractedElements.keywords.length,
             keywordFilterResult.removed
           )
-          console.log(filterReport)
+          logger.debug(filterReport)
           // 将 PoolKeywordData[] 转换为标准关键词格式
           extractedElements.keywords = keywordFilterResult.filtered.map((kw) => ({
             keyword: kw.keyword,
@@ -431,11 +432,11 @@ export async function generateAdCreative(
     }
     if ((offer as any).extracted_headlines) {
       extractedElements.headlines = JSON.parse((offer as any).extracted_headlines)
-      console.log(`📦 读取到 ${extractedElements.headlines?.length || 0} 个提取的标题`)
+      logger.debug(`📦 读取到 ${extractedElements.headlines?.length || 0} 个提取的标题`)
     }
     if ((offer as any).extracted_descriptions) {
       extractedElements.descriptions = JSON.parse((offer as any).extracted_descriptions)
-      console.log(`📦 读取到 ${extractedElements.descriptions?.length || 0} 个提取的描述`)
+      logger.debug(`📦 读取到 ${extractedElements.descriptions?.length || 0} 个提取的描述`)
     }
 
     // 读取增强数据（优先使用，因为质量更高）
@@ -446,7 +447,7 @@ export async function generateAdCreative(
         competition?: string
         score?: number
       }> = JSON.parse((offer as any).enhanced_keywords)
-      console.log(`✨ 读取到 ${rawKeywords?.length || 0} 个增强关键词`)
+      logger.debug(`✨ 读取到 ${rawKeywords?.length || 0} 个增强关键词`)
 
       // 移除品类过滤 - 避免误杀有效关键词
       // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
@@ -457,38 +458,38 @@ export async function generateAdCreative(
         competition: (kw as any).competition || '',
         score: (kw as any).score || 0,
       }))
-      console.log(`✅ 关键词处理完成，共 ${enhancedData.keywords?.length || 0} 个增强关键词`)
+      logger.debug(`✅ 关键词处理完成，共 ${enhancedData.keywords?.length || 0} 个增强关键词`)
     }
     if ((offer as any).enhanced_product_info) {
       enhancedData.productInfo = JSON.parse((offer as any).enhanced_product_info)
-      console.log(`✨ 读取到增强产品信息`)
+      logger.debug(`✨ 读取到增强产品信息`)
     }
     if ((offer as any).enhanced_review_analysis) {
       enhancedData.reviewAnalysis = JSON.parse((offer as any).enhanced_review_analysis)
-      console.log(`✨ 读取到增强评论分析`)
+      logger.debug(`✨ 读取到增强评论分析`)
     }
     if ((offer as any).extraction_quality_score) {
       enhancedData.qualityScore = (offer as any).extraction_quality_score
-      console.log(`✨ 提取质量评分: ${enhancedData.qualityScore}/100`)
+      logger.debug(`✨ 提取质量评分: ${enhancedData.qualityScore}/100`)
     }
     if ((offer as any).enhanced_headlines) {
       enhancedData.headlines = JSON.parse((offer as any).enhanced_headlines)
-      console.log(`✨ 读取到 ${enhancedData.headlines?.length || 0} 个增强标题`)
+      logger.debug(`✨ 读取到 ${enhancedData.headlines?.length || 0} 个增强标题`)
     }
     if ((offer as any).enhanced_descriptions) {
       enhancedData.descriptions = JSON.parse((offer as any).enhanced_descriptions)
-      console.log(`✨ 读取到 ${enhancedData.descriptions?.length || 0} 个增强描述`)
+      logger.debug(`✨ 读取到 ${enhancedData.descriptions?.length || 0} 个增强描述`)
     }
     if ((offer as any).localization_adapt) {
       const rawLocalization = JSON.parse((offer as any).localization_adapt)
       enhancedData.localization = normalizeLocalizationPayload(rawLocalization)
-      console.log(
+      logger.debug(
         `✨ 读取到本地化适配数据${enhancedData.localization ? '（已标准化）' : '（结构不兼容，跳过）'}`
       )
     }
     if ((offer as any).brand_analysis) {
       enhancedData.brandAnalysis = JSON.parse((offer as any).brand_analysis)
-      console.log(`✨ 读取到品牌分析数据`)
+      logger.debug(`✨ 读取到品牌分析数据`)
     }
   } catch (parseError: any) {
     console.warn('⚠️ 解析提取的广告元素失败，将使用AI全新生成:', parseError.message)
@@ -508,7 +509,7 @@ export async function generateAdCreative(
     { mode: policyGuardMode }
   )
   if (policySafeEnhancedKeywords.changedCount > 0 || policySafeEnhancedKeywords.droppedCount > 0) {
-    console.log(
+    logger.debug(
       `[PolicyGuard] 增强关键词净化: 替换${policySafeEnhancedKeywords.changedCount}个, 丢弃${policySafeEnhancedKeywords.droppedCount}个`
     )
   }
@@ -531,7 +532,7 @@ export async function generateAdCreative(
       sourceType: 'CANONICAL_BUCKET_VIEW',
       priority: 'HIGH', // 桶关键词优先级最高
     }))
-    console.log(
+    logger.debug(
       `📦 v4.10 关键词池: 使用桶 ${options.bucket} (${options.bucketIntent}) 的 ${bucketKeywordsNormalized.length} 个关键词`
     )
   } else if (options?.bucket) {
@@ -554,11 +555,11 @@ export async function generateAdCreative(
         sourceType: 'CANONICAL_BUCKET_VIEW',
         priority: 'HIGH',
       }))
-      console.log(
+      logger.debug(
         `📦 v4.16 关键词池: ${effectiveLinkType}链接 - 桶 ${bucketType} (${keywordResult.intent}) 的 ${bucketKeywordsNormalized.length} 个关键词`
       )
     } else {
-      console.log(
+      logger.debug(
         `📦 v4.16 关键词池: ${effectiveLinkType}链接 - 桶 ${bucketType} 暂无关键词，将使用默认关键词`
       )
     }
@@ -568,7 +569,7 @@ export async function generateAdCreative(
     { mode: policyGuardMode }
   )
   if (policySafeBucketKeywords.changedCount > 0 || policySafeBucketKeywords.droppedCount > 0) {
-    console.log(
+    logger.debug(
       `[PolicyGuard] 桶关键词净化: 替换${policySafeBucketKeywords.changedCount}个, 丢弃${policySafeBucketKeywords.droppedCount}个`
     )
   }
@@ -608,7 +609,7 @@ export async function generateAdCreative(
     policySafeExtractedKeywords.changedCount > 0 ||
     policySafeExtractedKeywords.droppedCount > 0
   ) {
-    console.log(
+    logger.debug(
       `[PolicyGuard] 提取关键词净化: 替换${policySafeExtractedKeywords.changedCount}个, 丢弃${policySafeExtractedKeywords.droppedCount}个`
     )
   }
@@ -632,7 +633,7 @@ export async function generateAdCreative(
       sourceType: 'SEARCH_TERM_HIGH_PERFORMING',
       priority: 'HIGH', // 高性能搜索词优先级高
     }))
-    console.log(`🔍 添加 ${searchTermKeywords.length} 个高性能搜索词作为关键词候选`)
+    logger.debug(`🔍 添加 ${searchTermKeywords.length} 个高性能搜索词作为关键词候选`)
   }
 
   // v4.10: 桶关键词优先，然后是高性能搜索词，增强关键词，最后是基础关键词
@@ -647,7 +648,7 @@ export async function generateAdCreative(
     mode: policyGuardMode,
   })
   if (policySafeMergedKeywords.changedCount > 0 || policySafeMergedKeywords.droppedCount > 0) {
-    console.log(
+    logger.debug(
       `[PolicyGuard] 合并关键词兜底净化: 替换${policySafeMergedKeywords.changedCount}个, 丢弃${policySafeMergedKeywords.droppedCount}个`
     )
   }
@@ -662,7 +663,7 @@ export async function generateAdCreative(
     })
   ) {
     try {
-      console.log('[Gap Analysis] 开始关键词缺口分析...')
+      logger.debug('[Gap Analysis] 开始关键词缺口分析...')
       const { analyzeKeywordGapsPreGeneration } = await import('../../launch-score/server')
 
       const gapAnalysis = await analyzeKeywordGapsPreGeneration({
@@ -675,7 +676,7 @@ export async function generateAdCreative(
       })
 
       if (gapAnalysis.suggestedKeywords.length > 0) {
-        console.log(
+        logger.debug(
           `[Gap Analysis] 发现 ${gapAnalysis.suggestedKeywords.length} 个建议关键词（最多添加10个）`
         )
 
@@ -698,28 +699,28 @@ export async function generateAdCreative(
           // 关键检查品牌化后的关键词是否已存在
           const normalizedFinal = normalizeGoogleAdsKeyword(finalKeyword)
           if (existingKeywordsNormalized.has(normalizedFinal)) {
-            console.log(`[Gap Analysis] ⏭️ 跳过已存在的关键词: ${finalKeyword}`)
+            logger.debug(`[Gap Analysis] ⏭️ 跳过已存在的关键词: ${finalKeyword}`)
             skippedExistingCount++
             continue
           }
 
           if (brandedKeyword) {
             brandedGapKeywords.push(brandedKeyword)
-            console.log(`[Gap Analysis] ✅ 品牌化关键词: ${keyword} → ${brandedKeyword}`)
+            logger.debug(`[Gap Analysis] ✅ 品牌化关键词: ${keyword} → ${brandedKeyword}`)
           } else {
             // 品牌化失败时丢弃关键词，确保所有SCORING_SUGGESTION关键词都包含品牌
-            console.log(`[Gap Analysis] ❌ 品牌化失败（超过5词），丢弃关键词: ${keyword}`)
+            logger.debug(`[Gap Analysis] ❌ 品牌化失败（超过5词），丢弃关键词: ${keyword}`)
             brandingFailedCount++
             // 不添加到 brandedGapKeywords，避免不含品牌的行业词进入关键词池
           }
         }
 
         if (skippedExistingCount > 0) {
-          console.log(`[Gap Analysis] 跳过了 ${skippedExistingCount} 个已存在的关键词`)
+          logger.debug(`[Gap Analysis] 跳过了 ${skippedExistingCount} 个已存在的关键词`)
         }
 
         if (brandingFailedCount > 0) {
-          console.log(
+          logger.debug(
             `[Gap Analysis] 丢弃了 ${brandingFailedCount} 个品牌化失败的关键词（品牌化后超过5词）`
           )
         }
@@ -736,11 +737,11 @@ export async function generateAdCreative(
 
         // 合并到现有关键词
         mergedKeywords.push(...gapKeywordsNormalized)
-        console.log(
+        logger.debug(
           `[Gap Analysis] ✅ 最终添加 ${gapKeywordsNormalized.length} 个缺口关键词到关键词池`
         )
       } else {
-        console.log('[Gap Analysis] 未发现关键词缺口')
+        logger.debug('[Gap Analysis] 未发现关键词缺口')
       }
     } catch (gapError: any) {
       console.warn('[Gap Analysis] 缺口分析失败，继续正常流程:', gapError.message)
@@ -775,10 +776,10 @@ export async function generateAdCreative(
   })
 
   if (finalKeywordFilter.removed.length > 0) {
-    console.log(`🧹 最终关键词过滤: 移除 ${finalKeywordFilter.removed.length} 个低质量关键词`)
+    logger.debug(`🧹 最终关键词过滤: 移除 ${finalKeywordFilter.removed.length} 个低质量关键词`)
     finalKeywordFilter.removed.slice(0, 5).forEach((item) => {
       const kw = typeof item.keyword === 'string' ? item.keyword : item.keyword.keyword
-      console.log(`   - "${kw}": ${item.reason}`)
+      logger.debug(`   - "${kw}": ${item.reason}`)
     })
   }
 
@@ -846,31 +847,31 @@ export async function generateAdCreative(
     throw new Error(storeModelIntentReadiness.reason)
   }
   if (effectiveLinkType === 'store' && normalizedBucket === 'B') {
-    console.log(
+    logger.debug(
       `[generateAdCreative] ✅ 店铺型号意图校验通过: hotProducts=${storeModelIntentReadiness.verifiedHotProducts.length}, modelAnchors=${storeModelIntentReadiness.hotProductModelAnchors.join(', ')}`
     )
   }
 
-  console.log('📊 合并后的数据:')
+  logger.debug('📊 合并后的数据:')
   if (options?.bucket) {
-    console.log(`   - 🆕 关键词池桶: ${options.bucket} (${options.bucketIntent})`)
-    console.log(
+    logger.debug(`   - 🆕 关键词池桶: ${options.bucket} (${options.bucketIntent})`)
+    logger.debug(
       `   - 关键词: ${mergedData.keywords?.length || 0}个 (桶${bucketKeywordsNormalized.length} + 增强${enhancedData.keywords?.length || 0} + 基础${extractedElements.keywords?.length || 0})`
     )
   } else {
-    console.log(
+    logger.debug(
       `   - 关键词: ${mergedData.keywords?.length || 0}个 (基础${extractedElements.keywords?.length || 0} + 增强${enhancedData.keywords?.length || 0})`
     )
   }
-  console.log(
+  logger.debug(
     `   - 标题: ${mergedData.headlines?.length || 0}个 (基础${extractedElements.headlines?.length || 0} + 增强${enhancedData.headlines?.length || 0})`
   )
-  console.log(
+  logger.debug(
     `   - 描述: ${mergedData.descriptions?.length || 0}个 (基础${extractedElements.descriptions?.length || 0} + 增强${enhancedData.descriptions?.length || 0})`
   )
-  console.log(`   - 产品信息: ${mergedData.productInfo ? '有✨' : '无'}`)
-  console.log(`   - 本地化: ${mergedData.localization ? '有✨' : '无'}`)
-  console.log(`   - 品牌分析: ${mergedData.brandAnalysis ? '有✨' : '无'}`)
+  logger.debug(`   - 产品信息: ${mergedData.productInfo ? '有✨' : '无'}`)
+  logger.debug(`   - 本地化: ${mergedData.localization ? '有✨' : '无'}`)
+  logger.debug(`   - 品牌分析: ${mergedData.brandAnalysis ? '有✨' : '无'}`)
 
   const precomputedKeywordSet = options?.precomputedKeywordSet || null
   const initialKeywordUsagePlan = buildCreativeKeywordUsagePlan({
@@ -898,7 +899,7 @@ export async function generateAdCreative(
     throw new Error('生成广告创意需要用户ID，请确保已登录')
   }
   const aiMode = await getGeminiMode(userId)
-  console.log(`🤖 使用统一AI入口生成广告创意 (${aiMode})...`)
+  logger.debug(`🤖 使用统一AI入口生成广告创意 (${aiMode})...`)
 
   const timerLabel = `⏱️ AI生成创意 ${offerId}-${userId}-${Date.now()}`
   console.time(timerLabel)
@@ -955,7 +956,7 @@ export async function generateAdCreative(
       policySafeGeneratedKeywords.changedCount > 0 ||
       policySafeGeneratedKeywords.droppedCount > 0
     ) {
-      console.log(
+      logger.debug(
         `[PolicyGuard] AI生成关键词净化: 替换${policySafeGeneratedKeywords.changedCount}个, 丢弃${policySafeGeneratedKeywords.droppedCount}个`
       )
     }
@@ -987,7 +988,7 @@ export async function generateAdCreative(
 
     // 移除品类过滤 - 避免误杀有效关键词
     // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
-    console.log(`✅ 关键词质量过滤完成，共 ${result.keywords.length} 个关键词`)
+    logger.debug(`✅ 关键词质量过滤完成，共 ${result.keywords.length} 个关键词`)
 
     // 添加Google Ads标准化去重，消除AI生成的重复关键词
     const { deduplicateKeywordsWithPriority } = await import('@/lib/google-ads/keyword/normalizer')
@@ -1002,7 +1003,7 @@ export async function generateAdCreative(
       console.warn(`⚠️ 关键词去重: 移除 ${removedDuplicates} 个重复关键词`)
     }
     result.keywords = keywordsAfterDedup
-    console.log(`📝 关键词去重后: ${result.keywords.length} 个唯一关键词`)
+    logger.debug(`📝 关键词去重后: ${result.keywords.length} 个唯一关键词`)
   }
 
   // 强制第一个headline为DKI品牌格式（自动处理30字符限制）
@@ -1068,7 +1069,7 @@ export async function generateAdCreative(
     // 检查第一个headline是否符合要求
     if (result.headlines[0] !== finalFirstHeadline) {
       // 说明：DKI token 本身不计入字符数，因此这里不使用 finalFirstHeadline.length 做判断
-      console.log(`🔧 强制第一个headline: "${result.headlines[0]}" → "${finalFirstHeadline}"`)
+      logger.debug(`🔧 强制第一个headline: "${result.headlines[0]}" → "${finalFirstHeadline}"`)
       result.headlines[0] = finalFirstHeadline
       if (result.headlinesWithMetadata && result.headlinesWithMetadata.length > 0) {
         result.headlinesWithMetadata[0] = {
@@ -1078,7 +1079,7 @@ export async function generateAdCreative(
         }
       }
     } else {
-      console.log(`✅ 第一个headline已符合要求: "${finalFirstHeadline}"`)
+      logger.debug(`✅ 第一个headline已符合要求: "${finalFirstHeadline}"`)
     }
   }
 
@@ -1093,7 +1094,7 @@ export async function generateAdCreative(
     maxLength: HEADLINE_MAX_LENGTH,
   })
   if (titlePriorityPreFix.selected.length > 0) {
-    console.log(
+    logger.debug(
       `🔧 Title优先Top3补强(预处理): 替换${titlePriorityPreFix.replaced}条 (title=${titlePriorityPreFix.titleCount}, about=${titlePriorityPreFix.aboutCount})`
     )
   }
@@ -1102,10 +1103,10 @@ export async function generateAdCreative(
   // 原因：效果不佳，让AI自由生成更多样化的标题
   // 保留Headline #1的品牌DKI格式不变
 
-  console.log('✅ 广告创意生成成功')
-  console.log(`   - Headlines: ${result.headlines.length}个`)
-  console.log(`   - Descriptions: ${result.descriptions.length}个`)
-  console.log(`   - Keywords: ${result.keywords.length}个`)
+  logger.debug('✅ 广告创意生成成功')
+  logger.debug(`   - Headlines: ${result.headlines.length}个`)
+  logger.debug(`   - Descriptions: ${result.descriptions.length}个`)
+  logger.debug(`   - Keywords: ${result.keywords.length}个`)
 
   // 使用统一关键词服务获取精确搜索量
   console.time('⏱️ 获取关键词搜索量')
@@ -1116,7 +1117,7 @@ export async function generateAdCreative(
   const language = resolvedCreativeLanguage.languageCode
 
   try {
-    console.log(
+    logger.debug(
       `🔍 获取关键词精确搜索量: ${result.keywords.length}个关键词, 国家=${targetCountry}, 语言=${language} (${resolvedTargetLanguage})`
     )
 
@@ -1151,7 +1152,7 @@ export async function generateAdCreative(
         matchType,
       }
     })
-    console.log(`✅ 关键词精确搜索量获取完成（来源: Historical Metrics API）`)
+    logger.debug(`✅ 关键词精确搜索量获取完成（来源: Historical Metrics API）`)
   } catch (error) {
     console.warn('⚠️ 获取关键词搜索量失败，使用默认值:', error)
     // 即使失败也要添加matchType和竞价数据
@@ -1180,8 +1181,8 @@ export async function generateAdCreative(
   const removedCount = originalKeywordCount - validKeywords.length
 
   if (removedCount > 0) {
-    console.log(`🔧 已过滤 ${removedCount} 个不含纯品牌词的关键词`)
-    console.log(`📊 剩余关键词: ${validKeywords.length}/${originalKeywordCount}`)
+    logger.debug(`🔧 已过滤 ${removedCount} 个不含纯品牌词的关键词`)
+    logger.debug(`📊 剩余关键词: ${validKeywords.length}/${originalKeywordCount}`)
   }
 
   // 按搜索量从高到低排序
@@ -1195,7 +1196,7 @@ export async function generateAdCreative(
   let plannerSessionForCreative: KeywordPlannerPreparedSession | undefined = options?.plannerSession
   try {
     if (brandName && userId && offer?.id) {
-      console.log(`🔍 启动Keyword Planner多角度3轮查询策略`)
+      logger.debug(`🔍 启动Keyword Planner多角度3轮查询策略`)
       console.time('⏱️ Keyword Planner扩展')
 
       let preparedExpandForPool: KeywordPoolExpandLoadResult | undefined = options?.preparedExpand
@@ -1222,17 +1223,17 @@ export async function generateAdCreative(
         const targetLanguage = plannerLanguage.languageName
         const language = plannerLanguage.languageCode
 
-        console.log(`🌍 Keyword Planner 查询语言: ${language} (${targetLanguage})`)
+        logger.debug(`🌍 Keyword Planner 查询语言: ${language} (${targetLanguage})`)
 
         // 如果已传入特定桶的关键词，跳过从关键词池获取所有关键词
         // 这确保差异化创意只使用对应桶的关键词，而不是所有桶的关键词混合
         if (options?.bucketKeywords && options.bucketKeywords.length > 0) {
-          console.log(
+          logger.debug(
             `📦 已有桶 ${options.bucket} (${options.bucketIntent}) 的 ${options.bucketKeywords.length} 个关键词，跳过关键词池合并`
           )
         } else {
           // 统一架构: 使用关键词池替代3轮Keyword Planner扩展
-          console.log(`\n🔍 从关键词池获取关键词...`)
+          logger.debug(`\n🔍 从关键词池获取关键词...`)
           const { getOrCreateKeywordPool } = await import('@/lib/keywords/offer-pool')
 
           const keywordPool =
@@ -1260,7 +1261,7 @@ export async function generateAdCreative(
               (kw) => !existingKeywordsSet.has(normalizeGoogleAdsKeyword(kw.keyword))
             )
 
-            console.log(
+            logger.debug(
               `📊 关键词池去重: ${poolKeywords.length} → ${newKeywords.length} (过滤掉 ${poolKeywords.length - newKeywords.length} 个重复)`
             )
 
@@ -1283,8 +1284,8 @@ export async function generateAdCreative(
             ]
 
             result.keywords = [...result.keywords, ...newKeywords.map((kw) => kw.keyword)]
-            console.log(`   ✅ 从关键词池获取 ${newKeywords.length} 个新关键词`)
-            console.log(`   📊 当前关键词总数: ${keywordsWithVolume.length} 个`)
+            logger.debug(`   ✅ 从关键词池获取 ${newKeywords.length} 个新关键词`)
+            logger.debug(`   📊 当前关键词总数: ${keywordsWithVolume.length} 个`)
           } else {
             console.warn('   ⚠️ 关键词池不存在，跳过关键词扩展')
           }
@@ -1296,9 +1297,9 @@ export async function generateAdCreative(
       console.timeEnd('⏱️ Keyword Planner扩展')
     } else {
       if (!brandName || !userId) {
-        console.log('ℹ️ Offer缺少品牌名或userId，跳过Keyword Planner扩展')
+        logger.debug('ℹ️ Offer缺少品牌名或userId，跳过Keyword Planner扩展')
       } else if (!offer?.id) {
-        console.log('ℹ️ Offer缺少 id，跳过Keyword Planner扩展')
+        logger.debug('ℹ️ Offer缺少 id，跳过Keyword Planner扩展')
       }
     }
   } catch (plannerError: any) {
@@ -1308,7 +1309,7 @@ export async function generateAdCreative(
 
   let keywordSupplementationReport: KeywordSupplementationReport | undefined
   if (options?.deferKeywordPostProcessingToBuilder) {
-    console.log('[KeywordPipeline] defer legacy keyword post-processing to builder')
+    logger.debug('[KeywordPipeline] defer legacy keyword post-processing to builder')
     keywordsWithVolume = normalizeKeywordSourceAuditForGeneratorList(keywordsWithVolume)
     result.keywords = keywordsWithVolume.map((kw) => kw.keyword)
   } else {
@@ -1368,7 +1369,7 @@ export async function generateAdCreative(
       mode: policyGuardMode,
     })
     if (policySafeFinalKeywords.changedCount > 0 || policySafeFinalKeywords.droppedCount > 0) {
-      console.log(
+      logger.debug(
         `[PolicyGuard] 最终关键词兜底净化: 替换${policySafeFinalKeywords.changedCount}个, 丢弃${policySafeFinalKeywords.droppedCount}个`
       )
     }
@@ -1390,7 +1391,7 @@ export async function generateAdCreative(
   if (resolvedSoftLanguage) {
     const ctaFix = enforceLanguageCtas(result.descriptions, 2, 90, resolvedSoftLanguage)
     if (ctaFix.fixed > 0) {
-      console.log(`🔧 CTA补强: 修复 ${ctaFix.fixed} 条描述`)
+      logger.debug(`🔧 CTA补强: 修复 ${ctaFix.fixed} 条描述`)
       result.descriptions = ctaFix.updated
       if (result.descriptionsWithMetadata) {
         result.descriptionsWithMetadata = result.descriptionsWithMetadata.map((d, idx) => ({
@@ -1405,7 +1406,7 @@ export async function generateAdCreative(
   if (resolvedSoftLanguage === 'en') {
     const embedFix = enforceKeywordEmbedding(result.headlines, result.keywords, 8, 30, [0])
     if (embedFix.fixed > 0) {
-      console.log(`🔧 关键词嵌入率补强: 修复 ${embedFix.fixed} 个标题`)
+      logger.debug(`🔧 关键词嵌入率补强: 修复 ${embedFix.fixed} 个标题`)
       result.headlines = embedFix.updated
       if (result.headlinesWithMetadata) {
         result.headlinesWithMetadata = result.headlinesWithMetadata.map((h, idx) => ({
@@ -1425,7 +1426,7 @@ export async function generateAdCreative(
     brandName
   )
   if (softFix.headlineFixes > 0 || softFix.descriptionFixes > 0) {
-    console.log(
+    logger.debug(
       `🔧 类型化文案补强: headlines ${softFix.headlineFixes} 条, descriptions ${softFix.descriptionFixes} 条`
     )
   }
@@ -1436,7 +1437,7 @@ export async function generateAdCreative(
     targetLanguage || resolvedLanguage
   )
   if (emotionFix.fixes > 0) {
-    console.log(`🔧 情绪边界补强: 中和强负面表达 ${emotionFix.fixes} 处`)
+    logger.debug(`🔧 情绪边界补强: 中和强负面表达 ${emotionFix.fixes} 处`)
   }
 
   const complementarityFix = enforceHeadlineComplementarity(
@@ -1446,7 +1447,7 @@ export async function generateAdCreative(
     normalizedBucket
   )
   if (complementarityFix.fixes > 0) {
-    console.log(
+    logger.debug(
       `🔧 标题互补性补强: ${complementarityFix.fixes} 条 (brand=${complementarityFix.brandCount}, scenario=${complementarityFix.scenarioCount}, transactional=${complementarityFix.transactionalCount})`
     )
   }
@@ -1462,7 +1463,7 @@ export async function generateAdCreative(
     maxLength: HEADLINE_MAX_LENGTH,
   })
   if (titlePriorityPostFix.replaced > 0) {
-    console.log(
+    logger.debug(
       `🔧 Title优先Top3补强(后处理): 替换${titlePriorityPostFix.replaced}条 (title=${titlePriorityPostFix.titleCount}, about=${titlePriorityPostFix.aboutCount})`
     )
   }
@@ -1475,7 +1476,7 @@ export async function generateAdCreative(
       brandName
     )
     if (retainedSlotFix.headlineFixes > 0 || retainedSlotFix.descriptionFixes > 0) {
-      console.log(
+      logger.debug(
         `🔧 Retained关键词slot补强: headlines ${retainedSlotFix.headlineFixes} 条, descriptions ${retainedSlotFix.descriptionFixes} 条`
       )
     }
@@ -1488,7 +1489,7 @@ export async function generateAdCreative(
     brandName
   )
   if (purityFix.headlineFixes > 0 || purityFix.descriptionFixes > 0) {
-    console.log(
+    logger.debug(
       `🔧 语言纯度门控: headlines ${purityFix.headlineFixes} 条, descriptions ${purityFix.descriptionFixes} 条`
     )
   }
@@ -1513,7 +1514,7 @@ export async function generateAdCreative(
     finalContractFix.languageFixes.descriptionFixes > 0 ||
     finalContractFix.uniquenessFixes > 0
   ) {
-    console.log(
+    logger.debug(
       `🔧 最终硬约束收敛: ` +
         `headline=${finalContractFix.headlineFixes}, ` +
         `description=${finalContractFix.descriptionFixes}, ` +
@@ -1545,7 +1546,7 @@ export async function generateAdCreative(
         storeProductLinks,
         offerUrl
       )
-      console.log(
+      logger.debug(
         `🔗 店铺模式：${Math.min(result.sitelinks.length, storeProductLinks.length)} 个 Sitelink 已绑定单品推广链接`
       )
     } else if (offerUrl) {
@@ -1553,7 +1554,7 @@ export async function generateAdCreative(
         ...link,
         url: offerUrl,
       }))
-      console.log(
+      logger.debug(
         `🔗 修正 ${result.sitelinks.length} 个附加链接URL为真实offer URL (${offerUrl.substring(0, 50)}...)`
       )
     }
@@ -1562,11 +1563,11 @@ export async function generateAdCreative(
   // 生成否定关键词（排除不相关流量）
   let negativeKeywords: string[] = []
   try {
-    console.log('🔍 生成否定关键词...')
+    logger.debug('🔍 生成否定关键词...')
     console.time('⏱️ 否定关键词生成')
     negativeKeywords = await generateNegativeKeywords(offer as Offer, userId)
     console.timeEnd('⏱️ 否定关键词生成')
-    console.log(
+    logger.debug(
       `✅ 生成${negativeKeywords.length}个否定关键词:`,
       negativeKeywords.slice(0, 5).join(', '),
       '...'
@@ -1586,7 +1587,7 @@ export async function generateAdCreative(
 
   // 缓存结果（1小时TTL）
   creativeCache.set(cacheKey, fullResult)
-  console.log(`💾 已缓存广告创意: ${cacheKey}`)
+  logger.debug(`💾 已缓存广告创意: ${cacheKey}`)
 
   return fullResult
 }

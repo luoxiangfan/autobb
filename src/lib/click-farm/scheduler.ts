@@ -1,5 +1,6 @@
 // 调度逻辑模块
 // src/lib/click-farm/scheduler.ts
+import { logger } from '@/lib/common/server'
 
 import type { ClickFarmTask, SubTask } from '@/lib/click-farm/click-farm-types'
 import crypto from 'crypto'
@@ -211,7 +212,7 @@ export function shouldCompleteTask(task: ClickFarmTask): boolean {
 
   // 添加调试日志
   if (process.env.NODE_ENV === 'development' || process.env.DEBUG_CLICK_FARM === 'true') {
-    console.log('[shouldCompleteTask] 调试信息:', {
+    logger.debug('[shouldCompleteTask] 调试信息:', {
       taskId: task.id,
       timezone: task.timezone,
       startedAtUTC: new Date(startedAtUTC).toISOString(),
@@ -386,14 +387,14 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
 
     // 记录每次检查
     if (process.env.DEBUG_CLICK_FARM === 'true') {
-      console.log(
+      logger.debug(
         `[getNextHourWithQuota] 检查: hour=${checkHour}, date=${checkDate}, inRange=${isInTimeRange}, quota=${hourlyDistribution[checkHour]}`
       )
     }
 
     if (isInTimeRange && hasQuota) {
       // 找到目标小时，记录日志
-      console.log(
+      logger.debug(
         `[getNextHourWithQuota] ✅ 找到目标小时: taskId=${task.id}, currentHour=${currentHour}, targetHour=${checkHour}, targetDate=${checkDate}, quota=${hourlyDistribution[checkHour]}`
       )
 
@@ -410,7 +411,7 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
   const tomorrowDate = incrementDate(currentDate)
   for (let hour = 0; hour < 24; hour++) {
     if (hourlyDistribution[hour] > 0) {
-      console.log(
+      logger.debug(
         `[getNextHourWithQuota] ⏩ 今日无配额，跳转到明天: taskId=${task.id}, targetHour=${hour}, targetDate=${tomorrowDate}, quota=${hourlyDistribution[hour]}`
       )
 
@@ -423,7 +424,7 @@ function getNextHourWithQuota(now: Date, task: ClickFarmTask): Date {
   }
 
   // 如果没有任何有配额的小时（理论上不应该发生），返回明天的 start_time
-  console.log(
+  logger.debug(
     `[getNextHourWithQuota] ⚠️ 无有效配额，返回明天start_time: taskId=${task.id}, startHour=${startHour}`
   )
 

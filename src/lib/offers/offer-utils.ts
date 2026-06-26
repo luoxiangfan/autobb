@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { getAllProxyUrls } from '@/lib/common/server'
 import { getProxyPool, clearProxyPool } from '@/lib/scraping'
@@ -148,7 +149,7 @@ let proxyPoolInitializedConfigSignature: string | null = null
  * 这样不会影响其他用户正在进行的操作
  */
 export function invalidateProxyPoolCache(userId?: number): void {
-  console.log(`🗑️ [invalidateProxyPoolCache] 清除代理池缓存 (userId: ${userId || 'all'})`)
+  logger.debug(`🗑️ [invalidateProxyPoolCache] 清除代理池缓存 (userId: ${userId || 'all'})`)
 
   // 只清除指定用户的缓存
   if (!userId) {
@@ -157,17 +158,17 @@ export function invalidateProxyPoolCache(userId?: number): void {
     proxyPoolInitializedForUser = null
     proxyPoolInitializedConfigSignature = null
     clearProxyPool() // 清除所有用户的代理池实例
-    console.log(`   - 全局缓存已清除`)
+    logger.debug(`   - 全局缓存已清除`)
   } else if (proxyPoolInitializedForUser === userId || proxyPoolInitializedForUser === null) {
     // 清除当前用户缓存（或缓存未初始化）
     proxyPoolInitialized = false
     proxyPoolInitializedForUser = null
     proxyPoolInitializedConfigSignature = null
     clearProxyPool(userId) // 清除该用户的代理池实例
-    console.log(`   - 用户 ${userId} 的缓存已清除`)
+    logger.debug(`   - 用户 ${userId} 的缓存已清除`)
   } else {
     // 缓存属于其他用户，不清除
-    console.log(
+    logger.debug(
       `   - 跳过清除：当前缓存属于用户 ${proxyPoolInitializedForUser}，请求清除用户 ${userId}`
     )
   }
@@ -206,7 +207,7 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
     proxyPoolInitializedForUser === userId &&
     proxyPoolInitializedConfigSignature === configSignature
   ) {
-    console.log(`✅ [initializeProxyPool] 代理池已初始化且配置未变更，跳过重复初始化`)
+    logger.debug(`✅ [initializeProxyPool] 代理池已初始化且配置未变更，跳过重复初始化`)
     return
   }
 
@@ -216,9 +217,9 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
     proxyPoolInitializedConfigSignature !== null &&
     proxyPoolInitializedConfigSignature !== configSignature
   ) {
-    console.log('🔄 [initializeProxyPool] 检测到代理配置变更，重新加载代理池')
+    logger.debug('🔄 [initializeProxyPool] 检测到代理配置变更，重新加载代理池')
   } else {
-    console.log(
+    logger.debug(
       `🔍 [initializeProxyPool] 开始初始化代理池 (userId=${userId}, country=${targetCountry})`
     )
   }
@@ -233,7 +234,7 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
     is_default: false, // 不自动设置兜底代理，让代理池自行管理
   }))
 
-  console.log(`🔍 [initializeProxyPool] 准备加载${proxiesWithDefault.length}个代理到代理池`)
+  logger.debug(`🔍 [initializeProxyPool] 准备加载${proxiesWithDefault.length}个代理到代理池`)
 
   // 加载代理到代理池（用户级别隔离）
   const proxyPool = getProxyPool(userId)
@@ -244,7 +245,7 @@ export async function initializeProxyPool(userId: number, targetCountry: string)
   proxyPoolInitializedForUser = userId
   proxyPoolInitializedConfigSignature = configSignature
 
-  console.log(`✅ 代理池初始化成功: ${proxiesWithDefault.length}个代理 (用户ID: ${userId})`)
+  logger.debug(`✅ 代理池初始化成功: ${proxiesWithDefault.length}个代理 (用户ID: ${userId})`)
 }
 
 /**

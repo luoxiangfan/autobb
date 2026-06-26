@@ -11,6 +11,7 @@
  * 更新 : 新增 campaign_config 字段备份
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import { getInsertedId, isUniqueConstraintViolation } from '../db'
 import { offerOccupyingCampaignIdSubquerySql } from './campaign-offer-constraint'
@@ -793,7 +794,7 @@ export async function syncCampaignBackupAfterPublish(params: {
   })
 
   await pruneCampaignBackupsForOffer(payload.offerId, params.userId)
-  console.log(
+  logger.debug(
     `[Backup Sync] Updated backup id=${params.backupId} from published campaign id=${params.campaignId}`
   )
 }
@@ -890,7 +891,7 @@ async function upsertCampaignBackupAfterPublish(
 
     const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
 
-    console.log(
+    logger.debug(
       `[Publish Backup] Updated backup id=${existingBackupId} for offer=${input.offerId}, pruned=${pruned}`
     )
     return
@@ -915,7 +916,7 @@ async function upsertCampaignBackupAfterPublish(
   })
 
   const pruned = await pruneCampaignBackupsForOffer(input.offerId, input.userId)
-  console.log(`[Publish Backup] Created backup for offer=${input.offerId}, pruned=${pruned}`)
+  logger.debug(`[Publish Backup] Created backup for offer=${input.offerId}, pruned=${pruned}`)
 } /**
  * 解析备份数据（DB 行或已解析对象）
  */
@@ -974,7 +975,7 @@ export async function autoBackupCampaign(params: {
   const existingBackupId = await findCampaignBackupIdForOffer(campaign.offer_id, params.userId)
 
   if (existingBackupId == null) {
-    console.log('[Auto Backup] Creating new backup for campaign:', params.campaignId)
+    logger.debug('[Auto Backup] Creating new backup for campaign:', params.campaignId)
     await createCampaignBackup({
       userId: params.userId,
       offerId: campaign.offer_id,
@@ -1017,14 +1018,14 @@ export async function autoBackupCampaign(params: {
 
   if (isAutoadsLikeBackupSource(existingRow.backup_source)) {
     if (params.backupSource === 'google_ads') {
-      console.log(
+      logger.debug(
         '[Auto Backup] Skip google_ads backup: autoads-like backup already exists for offer',
         campaign.offer_id
       )
       return
     }
     await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
-    console.log(
+    logger.debug(
       '[Auto Backup] Skip update: autoads backup is immutable after creation:',
       params.campaignId
     )
@@ -1075,7 +1076,7 @@ export async function autoBackupCampaign(params: {
 
   if (existingRow.backup_version >= 2) {
     await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
-    console.log(
+    logger.debug(
       '[Auto Backup] Skip update: google_ads backup already upgraded to version 2:',
       params.campaignId
     )
@@ -1088,14 +1089,14 @@ export async function autoBackupCampaign(params: {
 
   if (!hasReachedDay7) {
     await pruneCampaignBackupsForOffer(campaign.offer_id, params.userId)
-    console.log(
+    logger.debug(
       '[Auto Backup] Skip update: google_ads backup has not reached day 7 yet:',
       params.campaignId
     )
     return
   }
 
-  console.log('[Auto Backup] Day-7 update for google_ads backup:', params.campaignId)
+  logger.debug('[Auto Backup] Day-7 update for google_ads backup:', params.campaignId)
   await db.exec(
     `
     UPDATE campaign_backups

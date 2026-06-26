@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import {
   getCustomerWithCredentials,
   type OAuthApiCredentialsFields,
@@ -318,7 +319,7 @@ class DataSyncService {
     `,
       [startedAt, userId, zombieThreshold]
     )
-    console.log(`🧹 已清理用户 ${userId} 的僵尸同步任务`)
+    logger.debug(`🧹 已清理用户 ${userId} 的僵尸同步任务`)
 
     // 更新同步状态为运行中
     this.syncStatus.set(userId, {
@@ -456,7 +457,7 @@ class DataSyncService {
           }>
 
           if (campaigns.length === 0) {
-            console.log(`账户 ${account.customer_id} 没有已同步的Campaigns，跳过`)
+            logger.debug(`账户 ${account.customer_id} 没有已同步的Campaigns，跳过`)
             // 清理没有campaigns的账户的sync_log（标记为success，但record_count=0）
             await db.exec(
               `
@@ -747,7 +748,7 @@ class DataSyncService {
                   },
                 }
               )
-              console.log(`✅ 已创建OAuth token过期风险警报`)
+              logger.debug(`✅ 已创建OAuth token过期风险警报`)
             } catch (alertError) {
               console.error(`❌ 创建风险警报失败:`, alertError)
               // 不影响主流程

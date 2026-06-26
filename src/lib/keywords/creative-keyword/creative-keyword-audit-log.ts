@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 interface KeywordSourceAuditLike {
   totalKeywords?: unknown
   withSearchVolumeKeywords?: unknown
@@ -255,5 +256,5 @@ export function logKeywordSourceAudit(params: {
     summary: summarizeKeywordSourceAudit(params.audit, params.keywordSupplementation),
   }
 
-  console.log(`[KeywordSourceAudit] ${JSON.stringify(payload)}`)
+  logger.debug(`[KeywordSourceAudit] ${JSON.stringify(payload)}`)
 }

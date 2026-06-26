@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 import {
   getKeywordSearchVolumesForPlannerContext,
@@ -240,7 +241,7 @@ export async function extractKeywordsFromOffer(
 
   // 查询提取关键词的搜索量
   if (keywords.length > 0) {
-    console.log(`📊 查询 ${keywords.length} 个提取关键词的搜索量...`)
+    logger.debug(`📊 查询 ${keywords.length} 个提取关键词的搜索量...`)
     await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
 
     try {
@@ -292,7 +293,7 @@ export async function extractKeywordsFromOffer(
         }
 
         const withVolume = keywords.filter((k) => k.searchVolume > 0).length
-        console.log(`✅ 搜索量查询完成: ${withVolume}/${keywords.length} 个关键词有搜索量`)
+        logger.debug(`✅ 搜索量查询完成: ${withVolume}/${keywords.length} 个关键词有搜索量`)
       }
     } catch (error) {
       console.warn(`⚠️ 查询搜索量失败: ${error}`)

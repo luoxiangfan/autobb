@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
 import { getUserOnlySetting } from '@/lib/common/server'
@@ -61,7 +62,7 @@ export async function updateAffiliateProductSyncRun(params: {
   const values: any[] = []
 
   // Log all update parameters for debugging
-  console.log(`[affiliate-sync] updateAffiliateProductSyncRun called for run #${params.runId}:`, {
+  logger.debug(`[affiliate-sync] updateAffiliateProductSyncRun called for run #${params.runId}:`, {
     status: params.status,
     totalItems: params.totalItems,
     createdCount: params.createdCount,
@@ -138,7 +139,7 @@ export async function updateAffiliateProductSyncRun(params: {
 
     // Log status updates for debugging
     if (params.status) {
-      console.log(`[affiliate-sync] Updated run #${params.runId} status to '${params.status}'`)
+      logger.debug(`[affiliate-sync] Updated run #${params.runId} status to '${params.status}'`)
     }
   } catch (error: any) {
     console.error(

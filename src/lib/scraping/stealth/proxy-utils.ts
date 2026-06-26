@@ -4,6 +4,7 @@
  * Proxy retry logic and backoff strategies for stealth browser scraping.
  */
 
+import { logger } from '@/lib/common/server'
 import { getPlaywrightPool } from '../playwright-pool'
 import { isProxyConnectionError } from '../proxy-connection-errors'
 
@@ -23,7 +24,7 @@ export async function withProxyRetry<T>(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(
+        logger.debug(
           `🔄 ${operationName} - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池...`
         )
         const pool = getPlaywrightPool()
@@ -39,7 +40,7 @@ export async function withProxyRetry<T>(
       )
 
       if (isProxyConnectionError(error) && proxyAttempt < maxProxyRetries) {
-        console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
+        logger.debug(`🔄 检测到代理连接问题，准备换新代理重试...`)
         continue
       }
 
@@ -68,19 +69,19 @@ export async function retryWithBackoff<T>(
       const errorMsg = error.message || ''
 
       if (errorMsg.includes('404') || errorMsg.includes('403')) {
-        console.log(`❌ HTTP错误，不重试: ${errorMsg}`)
+        logger.debug(`❌ HTTP错误，不重试: ${errorMsg}`)
         throw error
       }
 
       if (isProxyConnectionError(error)) {
-        console.log(`❌ 代理连接失败，跳过无效重试: ${errorMsg.substring(0, 100)}`)
+        logger.debug(`❌ 代理连接失败，跳过无效重试: ${errorMsg.substring(0, 100)}`)
         throw error
       }
 
       const delay = baseDelay * Math.pow(2, attempt)
       const jitter = Math.random() * 1000
 
-      console.log(`Retry attempt ${attempt + 1}/${maxRetries}, waiting ${delay + jitter}ms...`)
+      logger.debug(`Retry attempt ${attempt + 1}/${maxRetries}, waiting ${delay + jitter}ms...`)
       await new Promise((resolve) => setTimeout(resolve, delay + jitter))
     }
   }

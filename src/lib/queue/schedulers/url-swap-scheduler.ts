@@ -11,6 +11,7 @@
  * 支持动态配置
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 
 function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
@@ -67,11 +68,11 @@ class UrlSwapScheduler {
    */
   start(): void {
     if (this.isRunning) {
-      console.log('⚠️  URL Swap调度器已在运行')
+      logger.debug('⚠️  URL Swap调度器已在运行')
       return
     }
 
-    console.log('🔄 启动URL Swap调度器...')
+    logger.debug('🔄 启动URL Swap调度器...')
     this.isRunning = true
 
     // 启动时执行一次检查（支持延迟，降低冷启动竞争）
@@ -79,14 +80,14 @@ class UrlSwapScheduler {
       if (this.STARTUP_DELAY_MS === 0) {
         this.checkAndScheduleSwaps()
       } else {
-        console.log(`⏳ URL Swap首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
+        logger.debug(`⏳ URL Swap首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`)
         this.startupTimeoutHandle = setTimeout(() => {
           this.startupTimeoutHandle = null
           this.checkAndScheduleSwaps()
         }, this.STARTUP_DELAY_MS)
       }
     } else {
-      console.log('⏭️ 已禁用启动时URL Swap首轮检查')
+      logger.debug('⏭️ 已禁用启动时URL Swap首轮检查')
     }
 
     // 设置定时检查（每5分钟）
@@ -94,7 +95,7 @@ class UrlSwapScheduler {
       this.checkAndScheduleSwaps()
     }, this.CHECK_INTERVAL_MS)
 
-    console.log(`✅ URL Swap调度器已启动 (检查间隔: ${this.CHECK_INTERVAL_MS / 1000 / 60}分钟)`)
+    logger.debug(`✅ URL Swap调度器已启动 (检查间隔: ${this.CHECK_INTERVAL_MS / 1000 / 60}分钟)`)
   }
 
   /**
@@ -105,7 +106,7 @@ class UrlSwapScheduler {
       return
     }
 
-    console.log('⏹️ 停止URL Swap调度器...')
+    logger.debug('⏹️ 停止URL Swap调度器...')
 
     if (this.intervalHandle) {
       clearInterval(this.intervalHandle)
@@ -118,7 +119,7 @@ class UrlSwapScheduler {
     }
 
     this.isRunning = false
-    console.log('✅ URL Swap调度器已停止')
+    logger.debug('✅ URL Swap调度器已停止')
   }
 
   /**
@@ -130,7 +131,7 @@ class UrlSwapScheduler {
 
     try {
       const now = new Date()
-      console.log(`\n[${now.toISOString()}] 🔄 检查URL Swap任务...`)
+      logger.debug(`\n[${now.toISOString()}] 🔄 检查URL Swap任务...`)
 
       const db = await getDatabase()
 
@@ -156,11 +157,11 @@ class UrlSwapScheduler {
       const tasks = await db.query<UrlSwapTaskInfo>(query)
 
       if (tasks.length === 0) {
-        console.log('  ℹ️  没有待执行的换链接任务')
+        logger.debug('  ℹ️  没有待执行的换链接任务')
         return
       }
 
-      console.log(`  📊 找到 ${tasks.length} 个待执行的换链接任务`)
+      logger.debug(`  📊 找到 ${tasks.length} 个待执行的换链接任务`)
 
       // 动态导入避免循环依赖
       const { triggerAllUrlSwapTasks } = await import('../../url-swap/url-swap-scheduler')
@@ -171,11 +172,11 @@ class UrlSwapScheduler {
       this.lastCheckResult = result
 
       const elapsedMs = Date.now() - checkStartAt
-      console.log(`\n✅ URL Swap检查完成（耗时${elapsedMs}ms）:`)
-      console.log(`   - 已处理: ${result.processed}`)
-      console.log(`   - 已入队: ${result.executed}`)
-      console.log(`   - 已跳过: ${result.skipped}`)
-      console.log(`   - 错误数: ${result.errors}`)
+      logger.debug(`\n✅ URL Swap检查完成（耗时${elapsedMs}ms）:`)
+      logger.debug(`   - 已处理: ${result.processed}`)
+      logger.debug(`   - 已入队: ${result.executed}`)
+      logger.debug(`   - 已跳过: ${result.skipped}`)
+      logger.debug(`   - 错误数: ${result.errors}`)
     } catch (error) {
       const elapsedMs = Date.now() - checkStartAt
       console.error(`❌ 检查URL Swap任务失败（耗时${elapsedMs}ms）:`, error)

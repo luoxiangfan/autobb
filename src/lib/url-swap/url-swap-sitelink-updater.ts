@@ -1,6 +1,7 @@
 /**
  * Url-swap Phase 2: update Sitelink Asset final_url_suffix from store_product_links.
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { updateAssetFinalUrlSuffix } from '@/lib/google-ads/api/extensions'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
@@ -202,7 +203,7 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
 
   const sitelinkTargets = await getActiveUrlSwapSitelinkTargets(params.taskId, params.userId)
   if (sitelinkTargets.length === 0) {
-    console.log(
+    logger.debug(
       `[url-swap-sitelink] 无活跃 Sitelink 映射: task=${params.taskId}（请先发布 Sitelink 并确保已创建换链任务）`
     )
     return emptyResult
@@ -221,7 +222,7 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
   }
 
   try {
-    console.log(
+    logger.debug(
       `[url-swap-sitelink] 开始更新 Sitelink suffix: task=${params.taskId}, targets=${sitelinkTargets.length}`
     )
 
@@ -333,7 +334,7 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
     clearGoogleAdsLinkedAccountPrepareCache(prepareCache)
   }
 
-  console.log(
+  logger.debug(
     `[url-swap-sitelink] 完成: task=${params.taskId}, success=${result.successCount}, failed=${result.failureCount}, skipped=${result.skippedCount}, changed=${result.changed}`
   )
 

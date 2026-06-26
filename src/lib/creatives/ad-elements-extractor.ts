@@ -10,6 +10,7 @@
  * 5. 通过Keyword Planner查询搜索量并过滤
  */
 
+import { logger } from '@/lib/common/server'
 import { generateContent } from '../ai/server'
 import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import {
@@ -88,7 +89,7 @@ function sanitizeKeywordRows(
 function extractJsonFromResponse(response: string): any {
   // 立即记录输入（同步日志确保显示）
   const inputLength = response?.length || 0
-  console.log(`🔍 extractJsonFromResponse: 输入长度=${inputLength}`)
+  logger.debug(`🔍 extractJsonFromResponse: 输入长度=${inputLength}`)
 
   if (!response || typeof response !== 'string') {
     throw new Error(`无效输入: ${typeof response}`)
@@ -109,12 +110,12 @@ function extractJsonFromResponse(response: string): any {
     jsonText = jsonText.slice(thinkingEnd)
   }
 
-  console.log(`🔍 清理后长度=${jsonText.length}`)
+  logger.debug(`🔍 清理后长度=${jsonText.length}`)
 
   // 3. 尝试直接解析（如果整个响应就是JSON）
   try {
     const directParse = JSON.parse(jsonText)
-    console.log(`✅ 直接解析成功`)
+    logger.debug(`✅ 直接解析成功`)
     return directParse
   } catch {
     // 继续尝试其他方法
@@ -127,10 +128,10 @@ function extractJsonFromResponse(response: string): any {
     const possibleJson = jsonText.slice(firstBrace, lastBrace + 1)
     try {
       const parsed = JSON.parse(possibleJson)
-      console.log(`✅ 找到JSON对象，位置: ${firstBrace}-${lastBrace}`)
+      logger.debug(`✅ 找到JSON对象，位置: ${firstBrace}-${lastBrace}`)
       return parsed
     } catch (e) {
-      console.log(`⚠️ JSON对象解析失败: ${(e as Error).message}`)
+      logger.debug(`⚠️ JSON对象解析失败: ${(e as Error).message}`)
     }
   }
 
@@ -141,10 +142,10 @@ function extractJsonFromResponse(response: string): any {
     const possibleArray = jsonText.slice(firstBracket, lastBracket + 1)
     try {
       const parsed = JSON.parse(possibleArray)
-      console.log(`✅ 找到JSON数组，位置: ${firstBracket}-${lastBracket}`)
+      logger.debug(`✅ 找到JSON数组，位置: ${firstBracket}-${lastBracket}`)
       return parsed
     } catch (e) {
-      console.log(`⚠️ JSON数组解析失败: ${(e as Error).message}`)
+      logger.debug(`⚠️ JSON数组解析失败: ${(e as Error).message}`)
     }
   }
 
@@ -154,7 +155,7 @@ function extractJsonFromResponse(response: string): any {
     try {
       const headlinesJson = `{"headlines": [${headlinesMatch[1]}]}`
       const parsed = JSON.parse(headlinesJson)
-      console.log(`✅ 使用正则提取headlines成功`)
+      logger.debug(`✅ 使用正则提取headlines成功`)
       return parsed
     } catch {
       // 继续
@@ -166,7 +167,7 @@ function extractJsonFromResponse(response: string): any {
     try {
       const descriptionsJson = `{"descriptions": [${descriptionsMatch[1]}]}`
       const parsed = JSON.parse(descriptionsJson)
-      console.log(`✅ 使用正则提取descriptions成功`)
+      logger.debug(`✅ 使用正则提取descriptions成功`)
       return parsed
     } catch {
       // 继续
@@ -174,8 +175,8 @@ function extractJsonFromResponse(response: string): any {
   }
 
   // 7. 输出调试信息
-  console.log(`❌ 未找到有效JSON，前300字符: ${response.slice(0, 300)}`)
-  console.log(`❌ 未找到有效JSON，后300字符: ${response.slice(-300)}`)
+  logger.debug(`❌ 未找到有效JSON，前300字符: ${response.slice(0, 300)}`)
+  logger.debug(`❌ 未找到有效JSON，后300字符: ${response.slice(-300)}`)
 
   throw new Error('未找到有效的JSON结构')
 }
@@ -428,8 +429,8 @@ function estimateBrandPopularity(
   const mediumWithRatingThreshold = Math.round(300 * multiplier)
 
   if (category !== 'default') {
-    console.log(`  📂 类目: ${threshold.description} (${category}) - 门槛倍数: ${multiplier}x`)
-    console.log(
+    logger.debug(`  📂 类目: ${threshold.description} (${category}) - 门槛倍数: ${multiplier}x`)
+    logger.debug(
       `     High门槛: ${highThreshold}, Medium门槛: ${mediumThreshold}/${mediumWithRatingThreshold}`
     )
   }
@@ -438,7 +439,7 @@ function estimateBrandPopularity(
   if (!salesRank && numRating >= 4.7) {
     // 评分 >= 4.7 视为高质量信号，评论数权重放大 50%
     numReviews *= 1.5
-    console.log(
+    logger.debug(
       `  📊 无Sales Rank，评分${numRating}较高，评论数权重放大: ${Math.round(numReviews / 1.5)} → ${Math.round(numReviews)}`
     )
   }
@@ -554,7 +555,7 @@ function generateDynamicBrandVariants(
   const brandLower = brandNormalized
 
   if (brandNormalized !== brand.toLowerCase()) {
-    console.log(`  🔧 品牌名标准化: "${brand}" → "${brandNormalized}"`)
+    logger.debug(`  🔧 品牌名标准化: "${brand}" → "${brandNormalized}"`)
   }
 
   // P1.2优化2: 多语言语义重复检测
@@ -563,12 +564,12 @@ function generateDynamicBrandVariants(
   const containsWebsite = containsSemanticKeyword(brandLower, SEMANTIC_KEYWORDS.website)
 
   if (containsStore || containsOfficial || containsWebsite) {
-    console.log(
+    logger.debug(
       `  🌐 多语言检测: store=${containsStore}, official=${containsOfficial}, website=${containsWebsite}`
     )
   }
 
-  console.log(`  ℹ️ 品牌流行度=${popularity}，品牌变体限制为证据安全模式（仅品牌词）`)
+  logger.debug(`  ℹ️ 品牌流行度=${popularity}，品牌变体限制为证据安全模式（仅品牌词）`)
   return [brandLower]
 }
 
@@ -583,7 +584,7 @@ async function extractFromSingleProduct(
   userId: number,
   plannerSession?: KeywordPlannerPreparedSession
 ): Promise<ExtractedAdElements> {
-  console.log('📦 单商品场景：提取广告元素...')
+  logger.debug('📦 单商品场景：提取广告元素...')
 
   const productInfo: ProductInfo = {
     name: product.productName || '',
@@ -603,7 +604,7 @@ async function extractFromSingleProduct(
   if (productInfo.name) {
     const brandProductName = extractBrandProductName(productInfo.name, brand)
     keywordCandidates.push(brandProductName)
-    console.log(`  ✓ 商品标题关键字: "${brandProductName}"`)
+    logger.debug(`  ✓ 商品标题关键字: "${brandProductName}"`)
   }
 
   // 1.1.1 从 About this item / features 提取核心卖点短语
@@ -613,7 +614,7 @@ async function extractFromSingleProduct(
   const aboutKeywordCandidates = extractAboutItemKeywordCandidates(aboutSource, 12, targetLanguage)
   if (aboutKeywordCandidates.length > 0) {
     keywordCandidates.push(...aboutKeywordCandidates)
-    console.log(`  ✓ About this item关键字: ${aboutKeywordCandidates.length}个`)
+    logger.debug(`  ✓ About this item关键字: ${aboutKeywordCandidates.length}个`)
   }
 
   // 1.2 获取Google搜索下拉词（高购买意图）- 调整顺序：先获取Google词
@@ -625,7 +626,7 @@ async function extractFromSingleProduct(
       language: targetLanguage,
       useProxy: true,
     })
-    console.log(`  ✓ Google下拉词: ${googleKeywords.length}个`)
+    logger.debug(`  ✓ Google下拉词: ${googleKeywords.length}个`)
   } catch (error: any) {
     console.warn('  ⚠️ Google下拉词获取失败:', error.message)
   }
@@ -650,13 +651,13 @@ async function extractFromSingleProduct(
 
     // 过滤规则1: 如果Product Title已包含该变体，跳过
     if (productTitle.includes(variantLower)) {
-      console.log(`  ⊘ 跳过品牌变体 "${variant}" (已存在于Product Title)`)
+      logger.debug(`  ⊘ 跳过品牌变体 "${variant}" (已存在于Product Title)`)
       return false
     }
 
     // 过滤规则2: 如果Google Suggest已包含完全相同的关键词，跳过
     if (googleKeywordsLower.has(variantLower)) {
-      console.log(`  ⊘ 跳过品牌变体 "${variant}" (已存在于Google下拉词)`)
+      logger.debug(`  ⊘ 跳过品牌变体 "${variant}" (已存在于Google下拉词)`)
       return false
     }
 
@@ -665,7 +666,7 @@ async function extractFromSingleProduct(
 
   keywordCandidates.push(...googleKeywords)
   keywordCandidates.push(...brandVariants)
-  console.log(
+  logger.debug(
     `  ✓ 品牌变体关键字: ${brandVariants.length}个（已智能过滤${allBrandVariants.length - brandVariants.length}个重复）`
   )
 
@@ -682,7 +683,7 @@ async function extractFromSingleProduct(
       }
     }
     if (addedPureBrand > 0) {
-      console.log(`  ✓ 补充纯品牌词: ${addedPureBrand}个`)
+      logger.debug(`  ✓ 补充纯品牌词: ${addedPureBrand}个`)
     }
   }
 
@@ -702,7 +703,7 @@ async function extractFromSingleProduct(
   const duplicatesRemoved = keywordCountBeforeDedup - deduplicatedKeywords.length
 
   if (duplicatesRemoved > 0) {
-    console.log(
+    logger.debug(
       `\n🔄 关键词去重: ${keywordCountBeforeDedup}个 → ${deduplicatedKeywords.length}个（移除${duplicatesRemoved}个重复）`
     )
   }
@@ -716,14 +717,14 @@ async function extractFromSingleProduct(
     const beforeBrandFilter = keywordCandidates.length
     const brandFiltered = keywordCandidates.filter((kw) => containsPureBrand(kw, pureBrandKeywords))
     if (beforeBrandFilter !== brandFiltered.length) {
-      console.log(`  🔒 品牌强制过滤: ${beforeBrandFilter} → ${brandFiltered.length}`)
+      logger.debug(`  🔒 品牌强制过滤: ${beforeBrandFilter} → ${brandFiltered.length}`)
     }
     keywordCandidates.length = 0
     keywordCandidates.push(...brandFiltered)
   }
 
   // 2. 查询搜索量并过滤
-  console.log(`\n🔍 查询${keywordCandidates.length}个关键字的搜索量...`)
+  logger.debug(`\n🔍 查询${keywordCandidates.length}个关键字的搜索量...`)
   const minSearchVolume = 500 // 最小搜索量阈值
 
   let keywordsWithVolume: ExtractedKeywordRow[] = []
@@ -804,7 +805,7 @@ async function extractFromSingleProduct(
     }
 
     const volumeNote = metricsUnavailable ? '，搜索量不可用' : !hasAnyVolume ? '，搜索量全为0' : ''
-    console.log(
+    logger.debug(
       `  ✓ 过滤后剩余${filteredKeywords.length}个关键字（搜索量>=${minSearchVolume}${volumeNote}）`
     )
 
@@ -843,12 +844,12 @@ async function extractFromSingleProduct(
   }
 
   // 3 & 4. 并行生成标题和描述（节省20-30秒）
-  console.log('\n📝 并行生成广告标题和描述（优化耗时）...')
+  logger.debug('\n📝 并行生成广告标题和描述（优化耗时）...')
   const [headlines, descriptions] = await Promise.all([
     generateHeadlines(productInfo, keywordsWithVolume.slice(0, 10), targetLanguage, userId),
     generateDescriptions(productInfo, targetLanguage, userId),
   ])
-  console.log('✅ 标题和描述生成完成')
+  logger.debug('✅ 标题和描述生成完成')
 
   return {
     keywords: keywordsWithVolume,
@@ -883,7 +884,7 @@ async function extractFromStore(
   userId: number,
   plannerSession?: KeywordPlannerPreparedSession
 ): Promise<ExtractedAdElements> {
-  console.log(`🏪 店铺场景：从${products.length}个热销商品提取广告元素...`)
+  logger.debug(`🏪 店铺场景：从${products.length}个热销商品提取广告元素...`)
   const pureBrandKeywords = getPureBrandKeywords(brand)
 
   // 按热销分数排序，取前5个
@@ -892,9 +893,9 @@ async function extractFromStore(
     .sort((a, b) => (b.hotScore || 0) - (a.hotScore || 0))
     .slice(0, 5)
 
-  console.log(`  → 筛选TOP 5热销商品`)
+  logger.debug(`  → 筛选TOP 5热销商品`)
   topProducts.forEach((p, i) => {
-    console.log(
+    logger.debug(
       `    ${i + 1}. ${p.name} (评分${p.rating}, ${p.reviewCount}评论, 热度${p.hotScore?.toFixed(2)})`
     )
   })
@@ -906,12 +907,12 @@ async function extractFromStore(
     const brandProductName = extractBrandProductName(product.name, brand)
     keywordCandidates.push(brandProductName)
   })
-  console.log(`  ✓ 商品标题关键字: ${keywordCandidates.length}个`)
+  logger.debug(`  ✓ 商品标题关键字: ${keywordCandidates.length}个`)
 
   // 1.2 生成品牌变体关键字（证据安全：仅品牌词）
   const brandVariants = [normalizeBrandName(brand)]
   keywordCandidates.push(...brandVariants)
-  console.log(`  ✓ 品牌变体关键字: ${brandVariants.length}个`)
+  logger.debug(`  ✓ 品牌变体关键字: ${brandVariants.length}个`)
 
   // 1.3 获取Google搜索下拉词
   try {
@@ -922,7 +923,7 @@ async function extractFromStore(
       useProxy: true,
     })
     keywordCandidates.push(...googleKeywords)
-    console.log(`  ✓ Google下拉词: ${googleKeywords.length}个`)
+    logger.debug(`  ✓ Google下拉词: ${googleKeywords.length}个`)
   } catch (error: any) {
     console.warn('  ⚠️ Google下拉词获取失败:', error.message)
   }
@@ -940,7 +941,7 @@ async function extractFromStore(
       }
     }
     if (addedPureBrand > 0) {
-      console.log(`  ✓ 补充纯品牌词: ${addedPureBrand}个`)
+      logger.debug(`  ✓ 补充纯品牌词: ${addedPureBrand}个`)
     }
   }
 
@@ -949,14 +950,14 @@ async function extractFromStore(
     const beforeBrandFilter = keywordCandidates.length
     const brandFiltered = keywordCandidates.filter((kw) => containsPureBrand(kw, pureBrandKeywords))
     if (beforeBrandFilter !== brandFiltered.length) {
-      console.log(`  🔒 品牌强制过滤: ${beforeBrandFilter} → ${brandFiltered.length}`)
+      logger.debug(`  🔒 品牌强制过滤: ${beforeBrandFilter} → ${brandFiltered.length}`)
     }
     keywordCandidates.length = 0
     keywordCandidates.push(...brandFiltered)
   }
 
   // 2. 查询搜索量并过滤
-  console.log(`\n🔍 查询${keywordCandidates.length}个关键字的搜索量...`)
+  logger.debug(`\n🔍 查询${keywordCandidates.length}个关键字的搜索量...`)
   const minSearchVolume = 500
 
   let keywordsWithVolume: ExtractedKeywordRow[] = []
@@ -1019,7 +1020,7 @@ async function extractFromStore(
             k.searchVolume >= minSearchVolume || isPureBrandKeyword(k.keyword, pureBrandKeywords)
         )
     const volumeNote = metricsUnavailable ? '，搜索量不可用' : !hasAnyVolume ? '，搜索量全为0' : ''
-    console.log(
+    logger.debug(
       `  ✓ 过滤后剩余${filteredKeywords.length}个关键字（搜索量>=${minSearchVolume}${volumeNote}）`
     )
 
@@ -1057,7 +1058,7 @@ async function extractFromStore(
   }
 
   // 3. 从多个热销商品生成15个广告标题
-  console.log('\n📝 从TOP 5热销商品生成15个广告标题...')
+  logger.debug('\n📝 从TOP 5热销商品生成15个广告标题...')
   // 传递完整的EnrichedStoreProduct数据（包含深度分析字段）
   const headlines = await generateHeadlinesFromMultipleProducts(
     topProducts,
@@ -1068,7 +1069,7 @@ async function extractFromStore(
   )
 
   // 4. 从多个热销商品生成4个广告描述
-  console.log('\n📝 从TOP 5热销商品生成4个广告描述...')
+  logger.debug('\n📝 从TOP 5热销商品生成4个广告描述...')
   const descriptions = await generateDescriptionsFromMultipleProducts(
     topProducts.map((p) => ({
       name: p.name,
@@ -1263,7 +1264,7 @@ async function generateHeadlines(
       }
     }
 
-    console.log(`  ✓ 成功生成${validHeadlines.length}个广告标题`)
+    logger.debug(`  ✓ 成功生成${validHeadlines.length}个广告标题`)
     return validHeadlines
   } catch (error: any) {
     console.error('  ❌ AI生成标题失败:', error.message)
@@ -1468,7 +1469,7 @@ async function generateHeadlinesFromMultipleProducts(
       }
     }
 
-    console.log(`  ✓ 成功生成${validHeadlines.length}个广告标题`)
+    logger.debug(`  ✓ 成功生成${validHeadlines.length}个广告标题`)
     return validHeadlines
   } catch (error: any) {
     console.error('  ❌ AI生成标题失败:', error.message)
@@ -1618,7 +1619,7 @@ async function generateDescriptions(
       }
     }
 
-    console.log(`  ✓ 成功生成${validDescriptions.length}个广告描述`)
+    logger.debug(`  ✓ 成功生成${validDescriptions.length}个广告描述`)
     return validDescriptions
   } catch (error: any) {
     console.error('  ❌ AI生成描述失败:', error.message)
@@ -1714,7 +1715,7 @@ async function generateDescriptionsFromMultipleProducts(
       }
     }
 
-    console.log(`  ✓ 成功生成${validDescriptions.length}个广告描述`)
+    logger.debug(`  ✓ 成功生成${validDescriptions.length}个广告描述`)
     return validDescriptions
   } catch (error: any) {
     console.error('  ❌ AI生成描述失败:', error.message)
@@ -1929,11 +1930,11 @@ export async function extractAdElements(
   userId: number,
   options?: { offerId?: number }
 ): Promise<ExtractedAdElements> {
-  console.log('\n🎯 开始提取广告关键元素...')
-  console.log(`  - 场景类型: ${scraped.pageType}`)
-  console.log(`  - 品牌: ${brand}`)
-  console.log(`  - 目标国家: ${targetCountry}`)
-  console.log(`  - 目标语言: ${targetLanguage}`)
+  logger.debug('\n🎯 开始提取广告关键元素...')
+  logger.debug(`  - 场景类型: ${scraped.pageType}`)
+  logger.debug(`  - 品牌: ${brand}`)
+  logger.debug(`  - 目标国家: ${targetCountry}`)
+  logger.debug(`  - 目标语言: ${targetLanguage}`)
 
   let plannerSession: KeywordPlannerPreparedSession | undefined
   if (options?.offerId) {

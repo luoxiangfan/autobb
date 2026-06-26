@@ -4,6 +4,7 @@
  * Browser fingerprint spoofing and anti-detection measures
  */
 
+import { logger } from '@/lib/common/server'
 import { chromium, Page } from 'playwright'
 import { getProxyIp } from '../proxy/fetch-proxy-ip'
 import { maskProxyUrl } from '../proxy/validate-url'
@@ -49,7 +50,7 @@ export function randomDelay(min: number = 1000, max: number = 3000): Promise<voi
  */
 export function getDynamicTimeout(url: string): number {
   const complexity = assessPageComplexity(url)
-  console.log(
+  logger.debug(
     `📊 页面复杂度: ${complexity.complexity}, 推荐timeout: ${complexity.recommendedTimeout}ms (URL: ${url})`
   )
   return complexity.recommendedTimeout
@@ -74,7 +75,7 @@ export async function createStealthBrowser(
   }
 
   // 明确记录targetCountry配置状态
-  console.log(
+  logger.debug(
     `🌍 createStealthBrowser: targetCountry=${targetCountry || '(未指定，使用默认en-US)'}, proxyUrl=${maskProxyUrl(effectiveProxyUrl)}`
   )
 
@@ -89,7 +90,7 @@ export async function createStealthBrowser(
         false,
         userId
       )
-      console.log(`🔄 [连接池] 获取Playwright实例: ${instanceId}`)
+      logger.debug(`🔄 [连接池] 获取Playwright实例: ${instanceId}`)
       return { browser, context, instanceId, fromPool: true }
     } catch (poolError: any) {
       console.warn(`⚠️ 连接池获取失败，降级为独立创建: ${poolError.message}`)
@@ -110,7 +111,7 @@ export async function createStealthBrowser(
           ...cachedProxy,
           fullAddress: `${cachedProxy.host}:${cachedProxy.port}:${cachedProxy.username || ''}:${cachedProxy.password || ''}`,
         }
-        console.log(`🔥 [代理池] Cache HIT: ${proxy?.host}:${proxy?.port} (${targetCountry})`)
+        logger.debug(`🔥 [代理池] Cache HIT: ${proxy?.host}:${proxy?.port} (${targetCountry})`)
       }
     } catch (poolError: any) {
       console.warn(`⚠️ 代理池获取失败，降级为直接fetch: ${poolError.message}`)
@@ -120,7 +121,7 @@ export async function createStealthBrowser(
   // 如果代理池未命中，降级为传统getProxyIp（启用5分钟缓存）
   if (!proxy) {
     proxy = await getProxyIp(effectiveProxyUrl, userId ? false : true, userId)
-    console.log(`🔒 [独立] 使用代理: ${proxy.host}:${proxy.port}`)
+    logger.debug(`🔒 [独立] 使用代理: ${proxy.host}:${proxy.port}`)
   }
 
   // Launch browser with stealth settings
@@ -156,11 +157,11 @@ export async function releaseBrowser(result: StealthBrowserResult): Promise<void
   if (result.fromPool && result.instanceId) {
     const pool = getPlaywrightPool()
     pool.release(result.instanceId)
-    console.log(`✅ [连接池] 释放实例: ${result.instanceId}`)
+    logger.debug(`✅ [连接池] 释放实例: ${result.instanceId}`)
   } else {
     await result.context?.close().catch(() => {})
     await result.browser?.close().catch(() => {})
-    console.log(`✅ [独立] 关闭浏览器实例`)
+    logger.debug(`✅ [独立] 关闭浏览器实例`)
   }
 }
 
@@ -185,7 +186,7 @@ export async function configureStealthPage(page: Page, targetCountry?: string): 
     // 从 Accept-Language 解析出语言列表
     navigatorLanguages = acceptLanguage.split(',').map((lang) => lang.split(';')[0].trim())
 
-    console.log(`🌍 目标国家: ${targetCountry}, Accept-Language: ${acceptLanguage}`)
+    logger.debug(`🌍 目标国家: ${targetCountry}, Accept-Language: ${acceptLanguage}`)
   }
 
   // 根据User-Agent生成匹配的Sec-CH-UA头部

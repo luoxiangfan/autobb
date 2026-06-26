@@ -10,6 +10,7 @@
  * 支持hotInsights计算
  */
 
+import { logger } from '@/lib/common/server'
 import { Page } from 'playwright'
 import { getPlaywrightPool } from '../playwright-pool'
 import { normalizeBrandName } from '../../offers/server'
@@ -283,7 +284,7 @@ export async function scrapeIndependentStore(
   targetCountry?: string,
   maxProxyRetries: number = 2
 ): Promise<IndependentStoreData> {
-  console.log(`🏪 抓取独立站店铺: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}`)
+  logger.debug(`🏪 抓取独立站店铺: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}`)
 
   let lastError: Error | undefined
   const effectiveProxyUrl = customProxyUrl || PROXY_URL
@@ -291,7 +292,7 @@ export async function scrapeIndependentStore(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(
+        logger.debug(
           `🔄 独立站抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`
         )
         const pool = getPlaywrightPool()
@@ -299,7 +300,7 @@ export async function scrapeIndependentStore(
         // 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
-        console.log(`🧹 已清理代理IP缓存: ${maskProxyUrl(effectiveProxyUrl)}`)
+        logger.debug(`🧹 已清理代理IP缓存: ${maskProxyUrl(effectiveProxyUrl)}`)
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
@@ -310,7 +311,7 @@ export async function scrapeIndependentStore(
         page = await browserResult.context.newPage()
         await configureStealthPage(page, targetCountry)
 
-        console.log(`🌐 访问URL: ${url}`)
+        logger.debug(`🌐 访问URL: ${url}`)
         await randomDelay(500, 1500)
 
         const response = await page.goto(url, {
@@ -320,7 +321,7 @@ export async function scrapeIndependentStore(
 
         if (!response) throw new Error('No response received')
         const httpStatus = response.status()
-        console.log(`📊 HTTP状态: ${httpStatus}`)
+        logger.debug(`📊 HTTP状态: ${httpStatus}`)
 
         // FIX: 处理429限流
         if (httpStatus === 429) {
@@ -339,13 +340,13 @@ export async function scrapeIndependentStore(
           signals: [] as string[],
         }))
 
-        console.log(
+        logger.debug(
           `⏱️ 独立站页面等待: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`
         )
         recordWaitOptimization(15000, waitResult.waited)
 
         // Scroll down to trigger lazy loading of products
-        console.log('🔄 滚动页面加载更多产品...')
+        logger.debug('🔄 滚动页面加载更多产品...')
         for (let i = 0; i < 5; i++) {
           await page.evaluate(() => window.scrollBy(0, window.innerHeight))
           await randomDelay(600, 1000)
@@ -356,7 +357,7 @@ export async function scrapeIndependentStore(
         await randomDelay(500, 800)
 
         const finalUrl = page.url()
-        console.log(`✅ 最终URL: ${finalUrl}`)
+        logger.debug(`✅ 最终URL: ${finalUrl}`)
 
         const title = await page.title().catch(() => '')
         if (isLikelyBlockedTitle(title)) {
@@ -368,8 +369,8 @@ export async function scrapeIndependentStore(
         // Parse store data from HTML
         const storeData = await parseIndependentStoreHtml(html, finalUrl)
 
-        console.log(`✅ 独立站抓取成功: ${storeData.storeName}`)
-        console.log(`📊 发现 ${storeData.products.length} 个产品`)
+        logger.debug(`✅ 独立站抓取成功: ${storeData.storeName}`)
+        logger.debug(`📊 发现 ${storeData.products.length} 个产品`)
 
         // 进一步防御：解析出的店铺名仍然像阻断页时，直接重试换代理
         if (isLikelyBlockedTitle(storeData.storeName)) {
@@ -395,7 +396,7 @@ export async function scrapeIndependentStore(
       // 如果是代理连接错误，尝试换新代理
       if (shouldRetryWithNewProxy(error)) {
         if (proxyAttempt < maxProxyRetries) {
-          console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
+          logger.debug(`🔄 检测到代理连接问题，准备换新代理重试...`)
           await new Promise((resolve) => setTimeout(resolve, 2000))
           continue
         } else {
@@ -424,12 +425,12 @@ export async function scrapeIndependentStoreDeep(
   targetCountry?: string,
   maxConcurrency: number = 3
 ): Promise<IndependentStoreData> {
-  console.log(`🔍 独立站店铺深度抓取开始: ${storeUrl}, 目标抓取 ${topN} 个热销商品`)
+  logger.debug(`🔍 独立站店铺深度抓取开始: ${storeUrl}, 目标抓取 ${topN} 个热销商品`)
 
   // 1. 首先抓取店铺基本信息和产品列表
   const storeData = await scrapeIndependentStore(storeUrl, customProxyUrl, targetCountry)
 
-  console.log(`📊 scrapeIndependentStore返回产品数: ${storeData.products.length}`)
+  logger.debug(`📊 scrapeIndependentStore返回产品数: ${storeData.products.length}`)
 
   if (storeData.products.length === 0) {
     console.warn(`⚠️ scrapeIndependentStore未返回任何产品`)
@@ -440,7 +441,7 @@ export async function scrapeIndependentStoreDeep(
   const productsWithUrl = storeData.products.filter((p) => p.productUrl)
   const hotProducts = productsWithUrl.slice(0, topN)
 
-  console.log(`📊 筛选出 ${hotProducts.length} 个热销商品准备深度抓取`)
+  logger.debug(`📊 筛选出 ${hotProducts.length} 个热销商品准备深度抓取`)
 
   if (hotProducts.length === 0) {
     console.warn('⚠️ 未找到可抓取的产品URL，跳过深度抓取')
@@ -460,12 +461,12 @@ export async function scrapeIndependentStoreDeep(
   // 批量处理，控制并发
   for (let i = 0; i < hotProducts.length; i += maxConcurrency) {
     const batch = hotProducts.slice(i, i + maxConcurrency)
-    console.log(`🔄 处理批次 ${Math.floor(i / maxConcurrency) + 1}: ${batch.length} 个商品`)
+    logger.debug(`🔄 处理批次 ${Math.floor(i / maxConcurrency) + 1}: ${batch.length} 个商品`)
 
     const batchResults = await Promise.allSettled(
       batch.map(async (product) => {
         const productUrl = product.productUrl!
-        console.log(`  🛒 抓取商品详情: ${product.name?.substring(0, 50)}...`)
+        logger.debug(`  🛒 抓取商品详情: ${product.name?.substring(0, 50)}...`)
 
         try {
           const productData = await scrapeIndependentProduct(
@@ -502,7 +503,7 @@ export async function scrapeIndependentStoreDeep(
         deepResults.topProducts.push(result.value)
         if (result.value.scrapeStatus === 'success') {
           deepResults.successCount++
-          console.log(
+          logger.debug(
             `  ✅ 成功: ${result.value.productUrl.substring(0, 60)}..., 评价数: ${result.value.reviews.length}`
           )
         } else {
@@ -515,7 +516,7 @@ export async function scrapeIndependentStoreDeep(
     }
   }
 
-  console.log(`📊 深度抓取完成: 成功 ${deepResults.successCount}/${deepResults.totalScraped}`)
+  logger.debug(`📊 深度抓取完成: 成功 ${deepResults.successCount}/${deepResults.totalScraped}`)
 
   // 4.5. 聚合产品分类（用于Offer“产品分类”展示/筛选）
   // 说明：独立站店铺页往往缺少统一的分类结构，这里优先从深度抓取到的商品详情 category 汇总。
@@ -578,9 +579,9 @@ export async function scrapeIndependentStoreDeep(
         }
       : undefined
 
-  console.log(`📊 热销商品筛选: ${storeData.products.length} → ${productsWithScores.length}`)
+  logger.debug(`📊 热销商品筛选: ${storeData.products.length} → ${productsWithScores.length}`)
   if (hotInsights) {
-    console.log(
+    logger.debug(
       `💡 热销洞察: 平均评分 ${hotInsights.avgRating.toFixed(1)}⭐, 平均评论 ${hotInsights.avgReviews} 条`
     )
   }
@@ -603,7 +604,7 @@ export async function scrapeIndependentProduct(
   targetCountry?: string,
   maxProxyRetries: number = 2
 ): Promise<IndependentProductData> {
-  console.log(`📦 抓取独立站产品: ${url}`)
+  logger.debug(`📦 抓取独立站产品: ${url}`)
 
   let lastError: Error | undefined
   const effectiveProxyUrl = customProxyUrl || PROXY_URL
@@ -611,7 +612,7 @@ export async function scrapeIndependentProduct(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(`🔄 独立站产品抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}`)
+        logger.debug(`🔄 独立站产品抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}`)
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
@@ -717,7 +718,7 @@ export async function scrapeIndependentProduct(
         for (const selector of reviewSelectors) {
           try {
             await page.waitForSelector(selector, { timeout: 3000 })
-            console.log(`  ✅ 检测到评论组件: ${selector}`)
+            logger.debug(`  ✅ 检测到评论组件: ${selector}`)
             reviewsLoaded = true
             // 额外等待确保评论内容完全加载
             await randomDelay(1500, 2500)
@@ -744,7 +745,7 @@ export async function scrapeIndependentProduct(
               const btn = await page.$(btnSelector)
               if (btn) {
                 await btn.click()
-                console.log(`  🔘 点击评论按钮: ${btnSelector}`)
+                logger.debug(`  🔘 点击评论按钮: ${btnSelector}`)
                 await randomDelay(2000, 3000)
                 break
               }
@@ -1339,7 +1340,7 @@ async function parseIndependentStoreHtml(
 
   // Detect platform
   const platform = detectPlatform($)
-  console.log(`🔍 检测到平台: ${platform || 'generic'}`)
+  logger.debug(`🔍 检测到平台: ${platform || 'generic'}`)
 
   // Extract store name
   const domainLabel = getRegistrableDomainLabelFromUrl(finalUrl)
@@ -1659,7 +1660,7 @@ function extractProducts(
 
   // Fallback: Extract from images with product-like alt text
   if (products.length < 5) {
-    console.log('🔍 尝试从图片提取产品...')
+    logger.debug('🔍 尝试从图片提取产品...')
     extractProductsFromImages($, finalUrl, products)
   }
 

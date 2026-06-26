@@ -2,6 +2,7 @@
  * 创意生成辅助：分桶查询 API
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 
 import { normalizeLanguageCode } from '../../common/server'
@@ -105,7 +106,7 @@ export async function getCoverageBucketKeywords(
   country: string = 'US',
   config: CoverageKeywordConfig = DEFAULT_COVERAGE_KEYWORD_CONFIG
 ): Promise<Array<{ keyword: string; searchVolume: number; isBrand: boolean }>> {
-  console.log(`\n🔮 开始构建商品需求 coverage 关键词池...`)
+  logger.debug(`\n🔮 开始构建商品需求 coverage 关键词池...`)
   const linkType = pool.linkType === 'store' ? 'store' : 'product'
   const pureBrandKeywords = getPoolPureBrandKeywords(pool)
 
@@ -115,7 +116,7 @@ export async function getCoverageBucketKeywords(
     searchVolume: typeof kw === 'string' ? 0 : kw.searchVolume || 0,
     isBrand: true,
   }))
-  console.log(`   品牌词: ${brandKeywords.length}个`)
+  logger.debug(`   品牌词: ${brandKeywords.length}个`)
 
   // 2. 使用 canonical D 视图收集 coverage 候选，避免遗漏 bucketD / 店铺 store buckets。
   const coverageCandidates = buildCanonicalBucketKeywords(pool, 'D', linkType)
@@ -126,7 +127,7 @@ export async function getCoverageBucketKeywords(
       .filter((kw) => !isPureBrandPoolKeyword(kw, pureBrandKeywords))
       .map((kw) => kw.keyword),
   ])
-  console.log(`   非品牌词（去重后）: ${allNonBrandKeywords.size}个`)
+  logger.debug(`   非品牌词（去重后）: ${allNonBrandKeywords.size}个`)
 
   // 4. 如果需要按搜索量排序，获取搜索量数据
   let nonBrandWithVolume: Array<{
@@ -183,11 +184,11 @@ export async function getCoverageBucketKeywords(
         nonBrandWithVolume = nonBrandWithVolume.filter(
           (kw) => kw.searchVolume >= config.minSearchVolume
         )
-        console.log(`   获取搜索量成功，过滤后剩余: ${nonBrandWithVolume.length}个`)
+        logger.debug(`   获取搜索量成功，过滤后剩余: ${nonBrandWithVolume.length}个`)
       } else if (hasAnyVolume && volumeUnavailable) {
-        console.log(`   ⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤`)
+        logger.debug(`   ⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤`)
       } else {
-        console.log(`   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤`)
+        logger.debug(`   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤`)
       }
     } catch (error: any) {
       console.warn(`   ⚠️ 获取搜索量失败，使用原始顺序:`, error.message)
@@ -208,16 +209,16 @@ export async function getCoverageBucketKeywords(
 
   // 5. 取Top N非品牌词
   const topNonBrandKeywords = nonBrandWithVolume.slice(0, config.maxNonBrandKeywords)
-  console.log(`   选取Top${config.maxNonBrandKeywords}高搜索量词: ${topNonBrandKeywords.length}个`)
+  logger.debug(`   选取Top${config.maxNonBrandKeywords}高搜索量词: ${topNonBrandKeywords.length}个`)
 
   // 6. 合并：品牌词 + 高搜索量非品牌词
   const result = [...brandKeywords, ...topNonBrandKeywords]
 
-  console.log(`✅ 商品需求 coverage 关键词池构建完成: 共${result.length}个关键词`)
-  console.log(`   - 品牌词: ${brandKeywords.length}个`)
-  console.log(`   - 高搜索量非品牌词: ${topNonBrandKeywords.length}个`)
+  logger.debug(`✅ 商品需求 coverage 关键词池构建完成: 共${result.length}个关键词`)
+  logger.debug(`   - 品牌词: ${brandKeywords.length}个`)
+  logger.debug(`   - 高搜索量非品牌词: ${topNonBrandKeywords.length}个`)
   if (topNonBrandKeywords.length > 0) {
-    console.log(
+    logger.debug(
       `   - 最高搜索量: ${topNonBrandKeywords[0]?.keyword} (${topNonBrandKeywords[0]?.searchVolume})`
     )
   }
@@ -518,9 +519,9 @@ export async function getKeywords(
       return kw.searchVolume >= minSearchVolume || (normalized && pureBrandSet.has(normalized))
     })
   } else if (hasAnyVolume && volumeUnavailable) {
-    console.log('⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤')
+    logger.debug('⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤')
   } else {
-    console.log('⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤')
+    logger.debug('⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤')
   }
 
   if (effectiveBucket === 'ALL' && keywordPool.brandKeywords.length > 0) {
@@ -575,7 +576,7 @@ export async function getKeywords(
     }
   }
 
-  console.log(
+  logger.debug(
     `[getKeywords] 完成: offerId=${offerId}, bucket=${bucket}, effectiveBucket=${effectiveBucket}, 返回${keywords.length}个关键词`
   )
   return result

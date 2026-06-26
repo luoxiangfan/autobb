@@ -4,6 +4,7 @@
  * 环境隔离：使用环境特定前缀，防止开发/生产缓存混淆
  */
 
+import { logger } from '@/lib/common/server'
 import { getRedisClient } from '../common/server'
 import { resolveAffiliateLinkWithPlaywright } from './url-resolver-playwright'
 import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from './url-resolver-http'
@@ -108,8 +109,8 @@ export class ProxyPoolManager {
   async loadProxies(
     settingsProxies: Array<{ url: string; country: string; is_default: boolean }>
   ): Promise<void> {
-    console.log(`🔍 [loadProxies] 开始加载代理，输入代理数量: ${settingsProxies.length}`)
-    console.log(
+    logger.debug(`🔍 [loadProxies] 开始加载代理，输入代理数量: ${settingsProxies.length}`)
+    logger.debug(
       `🔍 [loadProxies] 输入代理详情:`,
       settingsProxies.map((p) => ({ country: p.country, url: maskProxyUrl(p.url) }))
     )
@@ -135,12 +136,12 @@ export class ProxyPoolManager {
       }
 
       this.proxies.set(proxy.url, config)
-      console.log(`   🔹 添加代理: ${config.country}`)
+      logger.debug(`   🔹 添加代理: ${config.country}`)
     }
 
-    console.log(`✅ [loadProxies] 代理池已加载: ${this.proxies.size}个代理`)
+    logger.debug(`✅ [loadProxies] 代理池已加载: ${this.proxies.size}个代理`)
     if (settingsProxies.length > 0) {
-      console.log(`   - 默认代理（第一个）: ${settingsProxies[0].country}`)
+      logger.debug(`   - 默认代理（第一个）: ${settingsProxies[0].country}`)
     }
   }
 
@@ -168,7 +169,7 @@ export class ProxyPoolManager {
       .sort((a, b) => a.failureCount - b.failureCount)
 
     if (unhealthyCountryProxies.length > 0 && unhealthyCountryProxies[0].failureCount < 10) {
-      console.log(
+      logger.debug(
         `⚠️ [Proxy] ${normalizedTargetCountry}代理不健康，尝试使用 (failures:${unhealthyCountryProxies[0].failureCount})`
       )
       return unhealthyCountryProxies[0]
@@ -180,7 +181,7 @@ export class ProxyPoolManager {
       .sort((a, b) => a.failureCount - b.failureCount || a.avgResponseTime - b.avgResponseTime)
 
     if (healthyProxies.length > 0) {
-      console.log(
+      logger.debug(
         `⚠️ [Proxy] ${normalizedTargetCountry}不可用，降级使用${healthyProxies[0].country}`
       )
       return healthyProxies[0]
@@ -188,11 +189,11 @@ export class ProxyPoolManager {
 
     // 4. 使用第一个代理作为最后的兜底
     if (allProxies.length > 0) {
-      console.log(`⚠️ [Proxy] 所有代理不健康，兜底使用${allProxies[0].country}`)
+      logger.debug(`⚠️ [Proxy] 所有代理不健康，兜底使用${allProxies[0].country}`)
       return allProxies[0]
     }
 
-    console.log(`❌ [Proxy] 没有可用代理`)
+    logger.debug(`❌ [Proxy] 没有可用代理`)
     return null
   }
 
@@ -241,7 +242,7 @@ export class ProxyPoolManager {
     proxy.avgResponseTime = (proxy.avgResponseTime + responseTime) / 2
     proxy.isHealthy = true
 
-    console.log(`✅ 代理成功: ${maskProxyUrl(proxyUrl)} (${responseTime}ms)`)
+    logger.debug(`✅ 代理成功: ${maskProxyUrl(proxyUrl)} (${responseTime}ms)`)
   }
 
   /**
@@ -371,7 +372,7 @@ export class ProxyPoolManager {
         proxy.isHealthy = true
         proxy.failureCount = 0
         proxy.lastFailureTime = null
-        console.log(`♻️ 代理已自动恢复: ${proxy.country} (${recoveryReason})`)
+        logger.debug(`♻️ 代理已自动恢复: ${proxy.country} (${recoveryReason})`)
       }
 
       // 策略3: 逐步衰减失败计数（即使代理仍不健康）
@@ -446,7 +447,7 @@ export class ProxyPoolManager {
       })
       const responseTime = Date.now() - startTime
 
-      console.log(`✅ 代理健康检测通过: ${maskProxyUrl(proxyUrl)} (${responseTime}ms)`)
+      logger.debug(`✅ 代理健康检测通过: ${maskProxyUrl(proxyUrl)} (${responseTime}ms)`)
       return true
     } catch (error: any) {
       console.error(`❌ 代理健康检测失败: ${maskProxyUrl(proxyUrl)}, 错误: ${error.message}`)
@@ -463,7 +464,7 @@ export class ProxyPoolManager {
 
     // 检查是否需要执行健康检测
     if (!force && this.isHealthCheckRunning) {
-      console.log('⏳ 健康检测正在进行中，跳过...')
+      logger.debug('⏳ 健康检测正在进行中，跳过...')
       return
     }
 
@@ -471,14 +472,14 @@ export class ProxyPoolManager {
       const remainingTime = Math.floor(
         (this.HEALTH_CHECK_INTERVAL - (now - this.lastHealthCheckTime)) / 1000 / 60
       )
-      console.log(`⏳ 距离下次健康检测还有 ${remainingTime} 分钟`)
+      logger.debug(`⏳ 距离下次健康检测还有 ${remainingTime} 分钟`)
       return
     }
 
     this.isHealthCheckRunning = true
     this.lastHealthCheckTime = now
 
-    console.log(`🔍 开始批量健康检测 (${this.proxies.size}个代理)...`)
+    logger.debug(`🔍 开始批量健康检测 (${this.proxies.size}个代理)...`)
 
     // 并行检测所有代理
     const healthCheckPromises = Array.from(this.proxies.entries()).map(async ([url, proxy]) => {
@@ -509,7 +510,7 @@ export class ProxyPoolManager {
     const healthyCount = Array.from(this.proxies.values()).filter((p) => p.isHealthy).length
     const unhealthyCount = this.proxies.size - healthyCount
 
-    console.log(`✅ 健康检测完成: ${healthyCount}个健康, ${unhealthyCount}个不健康`)
+    logger.debug(`✅ 健康检测完成: ${healthyCount}个健康, ${unhealthyCount}个不健康`)
   }
 
   /**
@@ -568,12 +569,12 @@ export function clearProxyPool(userId?: number): void {
   if (userId) {
     if (global.__proxyPoolInstances?.has(userId)) {
       global.__proxyPoolInstances.delete(userId)
-      console.log(`🗑️ 清除用户 ${userId} 的代理池缓存`)
+      logger.debug(`🗑️ 清除用户 ${userId} 的代理池缓存`)
     }
   } else {
     global.__proxyPoolInstances?.clear()
     global.__proxyPoolInstance = undefined
-    console.log('🗑️ 清除所有代理池缓存')
+    logger.debug('🗑️ 清除所有代理池缓存')
   }
 }
 
@@ -603,7 +604,7 @@ async function getCachedRedirect(
 
     if (cached) {
       const data = JSON.parse(cached) as ResolvedUrlData
-      console.log(`✅ 缓存命中: ${affiliateLink}`)
+      logger.debug(`✅ 缓存命中: ${affiliateLink}`)
       return { ...data, resolveMethod: 'cache' }
     }
 
@@ -755,7 +756,7 @@ function applyEmbeddedTargetFallback(result: ResolvedUrlData): ResolvedUrlData {
       return result
     }
 
-    console.log(`   📎 tracking URL包含嵌入目标，改用目标URL: ${finalUrl}`)
+    logger.debug(`   📎 tracking URL包含嵌入目标，改用目标URL: ${finalUrl}`)
 
     return {
       ...result,
@@ -869,18 +870,18 @@ export async function resolveAffiliateLink(
   }
 
   if (isShortLink) {
-    console.log(`🔗 检测到短链接服务，增加重试次数到${retryConfig.maxRetries}次`)
+    logger.debug(`🔗 检测到短链接服务，增加重试次数到${retryConfig.maxRetries}次`)
   }
 
   // 步骤1: 检查Redis缓存（默认禁用，确保获取最新追踪参数）
   if (!skipCache) {
     const cached = await getCachedRedirect(affiliateLink, targetCountry)
     if (cached) {
-      console.log(`⚠️ 使用缓存数据（注意：追踪参数可能已过期）`)
+      logger.debug(`⚠️ 使用缓存数据（注意：追踪参数可能已过期）`)
       return applyEmbeddedTargetFallback(cached)
     }
   } else {
-    console.log(`🔄 跳过缓存，直接解析URL（确保获取最新追踪参数）`)
+    logger.debug(`🔄 跳过缓存，直接解析URL（确保获取最新追踪参数）`)
   }
 
   // 步骤2: 获取代理池
@@ -902,8 +903,8 @@ export async function resolveAffiliateLink(
       }
       usedProxyForAttempt = proxy
 
-      console.log(`🔄 尝试解析 (${attempt + 1}/${retryConfig.maxRetries + 1}): ${affiliateLink}`)
-      console.log(`   使用代理: ${proxy.country}`)
+      logger.debug(`🔄 尝试解析 (${attempt + 1}/${retryConfig.maxRetries + 1}): ${affiliateLink}`)
+      logger.debug(`   使用代理: ${proxy.country}`)
 
       const startTime = Date.now()
 
@@ -913,11 +914,11 @@ export async function resolveAffiliateLink(
       // 使用智能路由决策
       const resolverMethod = getOptimalResolver(affiliateLink)
       const domain = extractDomain(affiliateLink)
-      console.log(`   智能路由决策: ${domain} → ${resolverMethod}`)
+      logger.debug(`   智能路由决策: ${domain} → ${resolverMethod}`)
 
       if (resolverMethod === 'playwright') {
         // 已知JavaScript重定向域名，直接使用Playwright
-        console.log(`   直接使用Playwright（已知需要JavaScript）`)
+        logger.debug(`   直接使用Playwright（已知需要JavaScript）`)
         result = await resolveWithPlaywright(
           affiliateLink,
           proxy.url,
@@ -928,14 +929,14 @@ export async function resolveAffiliateLink(
       } else if (resolverMethod === 'http') {
         // 已知HTTP重定向域名（包括Meta Refresh），先使用HTTP
         try {
-          console.log(`   尝试HTTP解析（已知HTTP/Meta Refresh重定向）`)
+          logger.debug(`   尝试HTTP解析（已知HTTP/Meta Refresh重定向）`)
           // 重试时刷新代理 IP
           result = await resolveWithHttp(affiliateLink, proxy.url, userId, attempt > 0)
 
           const blocked = isBlockedHttpResolution(result)
           if (blocked) {
             const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            console.log(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
+            logger.debug(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
             const playwrightResult = await resolveWithPlaywright(
               fullResolvedUrl,
               proxy.url,
@@ -957,8 +958,8 @@ export async function resolveAffiliateLink(
               )
 
             if (isTrackingUrl) {
-              console.log(`   ⚠️ 检测到tracking URL，可能需要继续追踪`)
-              console.log(`   降级到Playwright完成后续重定向...`)
+              logger.debug(`   ⚠️ 检测到tracking URL，可能需要继续追踪`)
+              logger.debug(`   降级到Playwright完成后续重定向...`)
               // 重试须保留 HTTP 解析的 suffix（如 partnermatic ?url=）
               const fullTrackingUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
               const playwrightResult = await resolveWithPlaywright(
@@ -982,16 +983,16 @@ export async function resolveAffiliateLink(
           }
         } catch (httpError: any) {
           // HTTP失败时降级到Playwright
-          console.log(`   HTTP失败: ${httpError.message}`)
+          logger.debug(`   HTTP失败: ${httpError.message}`)
           if (shouldFailFastWithoutPlaywrightFallback(httpError)) {
-            console.log(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
+            logger.debug(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
             throw httpError
           }
           if (shouldRetryHttpInsteadOfFallbackToPlaywright(httpError)) {
-            console.log(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
+            logger.debug(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
             throw httpError
           }
-          console.log(`   降级到Playwright...`)
+          logger.debug(`   降级到Playwright...`)
           result = await resolveWithPlaywright(
             affiliateLink,
             proxy.url,
@@ -1003,14 +1004,14 @@ export async function resolveAffiliateLink(
       } else {
         // 未知域名，先尝试HTTP，失败则降级到Playwright
         try {
-          console.log(`   尝试HTTP解析（未知域名）...`)
+          logger.debug(`   尝试HTTP解析（未知域名）...`)
           // 重试时刷新代理 IP
           result = await resolveWithHttp(affiliateLink, proxy.url, userId, attempt > 0)
 
           const blocked = isBlockedHttpResolution(result)
           if (blocked) {
             const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            console.log(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
+            logger.debug(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
             const playwrightResult = await resolveWithPlaywright(
               fullResolvedUrl,
               proxy.url,
@@ -1031,7 +1032,7 @@ export async function resolveAffiliateLink(
                 fullResolvedUrl
               )
             if (isTrackingUrl) {
-              console.log(`   ⚠️ 检测到tracking URL（未知域名路径），降级到Playwright继续解析...`)
+              logger.debug(`   ⚠️ 检测到tracking URL（未知域名路径），降级到Playwright继续解析...`)
               const fullTrackingUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
               const playwrightResult = await resolveWithPlaywright(
                 fullTrackingUrl,
@@ -1053,7 +1054,7 @@ export async function resolveAffiliateLink(
             // 检查是否真的有重定向（如果redirectCount=0可能需要Playwright）
             if (result.redirectCount === 0 && affiliateLink !== result.finalUrl) {
               // URL改变了但redirectCount为0，可能是JavaScript重定向
-              console.log(`   检测到可能的JavaScript重定向，降级到Playwright`)
+              logger.debug(`   检测到可能的JavaScript重定向，降级到Playwright`)
               result = await resolveWithPlaywright(
                 affiliateLink,
                 proxy.url,
@@ -1063,7 +1064,7 @@ export async function resolveAffiliateLink(
               )
             } else if (result.redirectCount === 0) {
               // URL没变且无重定向，可能是短链接服务
-              console.log(`   ⚠️ 无重定向检测到，尝试Playwright验证`)
+              logger.debug(`   ⚠️ 无重定向检测到，尝试Playwright验证`)
               const playwrightResult = await resolveWithPlaywright(
                 affiliateLink,
                 proxy.url,
@@ -1076,22 +1077,22 @@ export async function resolveAffiliateLink(
                 playwrightResult.finalUrl !== result.finalUrl ||
                 playwrightResult.redirectCount > 0
               ) {
-                console.log(`   ✅ Playwright发现了额外的重定向`)
+                logger.debug(`   ✅ Playwright发现了额外的重定向`)
                 result = playwrightResult
               }
             }
           }
         } catch (httpError: any) {
-          console.log(`   HTTP失败: ${httpError.message}`)
+          logger.debug(`   HTTP失败: ${httpError.message}`)
           if (shouldFailFastWithoutPlaywrightFallback(httpError)) {
-            console.log(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
+            logger.debug(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
             throw httpError
           }
           if (shouldRetryHttpInsteadOfFallbackToPlaywright(httpError)) {
-            console.log(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
+            logger.debug(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
             throw httpError
           }
-          console.log(`   降级到Playwright...`)
+          logger.debug(`   降级到Playwright...`)
           result = await resolveWithPlaywright(
             affiliateLink,
             proxy.url,
@@ -1114,7 +1115,7 @@ export async function resolveAffiliateLink(
       // 注释掉缓存保存逻辑
       // await setCachedRedirect(affiliateLink, targetCountry, result)
 
-      console.log(`✅ 解析成功: ${result.finalUrl} (${responseTime}ms)`)
+      logger.debug(`✅ 解析成功: ${result.finalUrl} (${responseTime}ms)`)
       return result
     } catch (error: any) {
       lastError = error
@@ -1138,7 +1139,7 @@ export async function resolveAffiliateLink(
 
       // 计算延迟并等待
       const backoffDelay = calculateBackoffDelay(attempt, retryConfig)
-      console.log(`⏳ 等待 ${backoffDelay}ms 后重试...`)
+      logger.debug(`⏳ 等待 ${backoffDelay}ms 后重试...`)
       await delay(backoffDelay)
 
       attempt++
@@ -1173,7 +1174,7 @@ export function disableProxy(proxyUrl: string): void {
   const proxy = proxies.get(proxyUrl)
   if (proxy) {
     proxy.isHealthy = false
-    console.log(`⚠️ 代理已手动禁用: ${proxyUrl}`)
+    logger.debug(`⚠️ 代理已手动禁用: ${proxyUrl}`)
   }
 }
 
@@ -1188,6 +1189,6 @@ export function enableProxy(proxyUrl: string): void {
     proxy.isHealthy = true
     proxy.failureCount = 0
     proxy.lastFailureTime = null
-    console.log(`✅ 代理已手动启用: ${proxyUrl}`)
+    logger.debug(`✅ 代理已手动启用: ${proxyUrl}`)
   }
 }

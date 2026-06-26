@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import axios from 'axios'
 import { load } from 'cheerio'
 import { HttpsProxyAgent } from 'https-proxy-agent'
@@ -43,7 +44,7 @@ async function getProxyAgent(
     // 使用新的代理模块获取代理IP（启用5分钟缓存，避免频繁调用IPRocket API）
     const proxy: ProxyCredentials = await getProxyIp(proxyUrl, false, userId)
 
-    console.log(`使用代理: ${proxy.fullAddress}`)
+    logger.debug(`使用代理: ${proxy.fullAddress}`)
 
     // 创建代理Agent (格式: http://username:password@host:port)
     // 添加keepAlive配置以确保稳定的HTTPS隧道连接
@@ -473,8 +474,8 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
   // 调试：检查页面状态
   const pageTitle = $('title').text().trim()
   const isBlocked = pageTitle.includes('Robot Check') || pageTitle.includes('Sorry!')
-  console.log(`🔍 [extractAmazonData] 页面标题: "${pageTitle.slice(0, 60)}"`)
-  console.log(`🔍 [extractAmazonData] 是否被拦截: ${isBlocked}`)
+  logger.debug(`🔍 [extractAmazonData] 页面标题: "${pageTitle.slice(0, 60)}"`)
+  logger.debug(`🔍 [extractAmazonData] 是否被拦截: ${isBlocked}`)
 
   if (isBlocked) {
     console.warn('⚠️ [extractAmazonData] 页面被Amazon拦截，无法提取数据')
@@ -555,9 +556,9 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
   const dataBrand = $('[data-brand]').attr('data-brand')
   const poBrand = $('.po-brand .a-size-base').text().trim()
 
-  console.log(`🔍 [extractAmazonData] #bylineInfo: "${bylineInfo}"`)
-  console.log(`🔍 [extractAmazonData] [data-brand]: "${dataBrand || '(空)'}"`)
-  console.log(`🔍 [extractAmazonData] .po-brand: "${poBrand}"`)
+  logger.debug(`🔍 [extractAmazonData] #bylineInfo: "${bylineInfo}"`)
+  logger.debug(`🔍 [extractAmazonData] [data-brand]: "${dataBrand || '(空)'}"`)
+  logger.debug(`🔍 [extractAmazonData] .po-brand: "${poBrand}"`)
 
   // 多语言品牌店铺文本清理 - 支持所有Amazon主要市场
 
@@ -647,7 +648,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     const urlBrand = extractAmazonStoreSlugFromUrl(url)
     if (urlBrand) {
       brandName = urlBrand
-      console.log(`✅ [Amazon Store] 从URL提取品牌: ${brandName}`)
+      logger.debug(`✅ [Amazon Store] 从URL提取品牌: ${brandName}`)
     }
   }
 
@@ -658,7 +659,7 @@ function extractAmazonData($: any, url: string): ScrapedProductData {
     const derived = deriveBrandFromProductTitle(productTitle)
     if (derived) {
       brandName = derived
-      console.log(`✅ [Amazon] 从商品标题提取品牌: ${brandName}`)
+      logger.debug(`✅ [Amazon] 从商品标题提取品牌: ${brandName}`)
     }
   }
 
@@ -738,7 +739,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     }
   )
 
-  console.log(`🔍 [Shopify FAQ] 提取到 ${faqs.length} 个FAQ`)
+  logger.debug(`🔍 [Shopify FAQ] 提取到 ${faqs.length} 个FAQ`)
 
   // 3. 技术规格提取
   const specifications: Record<string, string> = {}
@@ -774,7 +775,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
       })
   })
 
-  console.log(`🔍 [Shopify Spec] 提取到 ${Object.keys(specifications).length} 个技术参数`)
+  logger.debug(`🔍 [Shopify Spec] 提取到 ${Object.keys(specifications).length} 个技术参数`)
 
   // 4. 包装选项提取
   const packages: Array<{ name: string; price: string | null; includes: string[] }> = []
@@ -804,7 +805,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     }
   })
 
-  console.log(`🔍 [Shopify Package] 提取到 ${packages.length} 个套餐选项`)
+  logger.debug(`🔍 [Shopify Package] 提取到 ${packages.length} 个套餐选项`)
 
   // 5. 社会证明数据提取
   const socialProof: Array<{ metric: string; value: string }> = []
@@ -825,7 +826,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     }
   })
 
-  console.log(`🔍 [Shopify Social] 提取到 ${socialProof.length} 个社会证明数据`)
+  logger.debug(`🔍 [Shopify Social] 提取到 ${socialProof.length} 个社会证明数据`)
 
   // 6. 图片提取（保持原有逻辑：5张）
   const images: string[] = []
@@ -839,7 +840,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     }
   })
 
-  console.log(`🔍 [Shopify Images] 提取到 ${images.length} 张图片`)
+  logger.debug(`🔍 [Shopify Images] 提取到 ${images.length} 张图片`)
 
   // 7. 品牌提取（保持原有逻辑）
   const ogSiteName = $('meta[property="og:site_name"]').attr('content')?.trim() || null
@@ -854,7 +855,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
   if (!brandName) {
     const pageTitle = $('title').text().trim()
-    console.log(`🔍 [Shopify] 尝试从页面标题提取品牌: ${pageTitle}`)
+    logger.debug(`🔍 [Shopify] 尝试从页面标题提取品牌: ${pageTitle}`)
     if (pageTitle) {
       const titleParts = pageTitle.split(/[\|\-]/)
       if (titleParts.length > 0) {
@@ -862,7 +863,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
         brandName = firstPart
           .replace(/\s+(Store|Shop|Official|Site|Online|Outdoor Life)$/i, '')
           .trim()
-        console.log(`✅ [Shopify] 提取的品牌: ${brandName}`)
+        logger.debug(`✅ [Shopify] 提取的品牌: ${brandName}`)
       }
     }
   }
@@ -931,7 +932,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
     }
   })
 
-  console.log(`🔍 [Shopify Reviews] 提取到 ${reviews.length} 条评论`)
+  logger.debug(`🔍 [Shopify Reviews] 提取到 ${reviews.length} 条评论`)
 
   // 9. 商品描述提取（增强版：优先从About区域提取）
   let productDescription: string | null = null
@@ -960,7 +961,7 @@ function extractShopifyData($: any, url: string): ScrapedProductData {
 
     if (descriptionItems.length > 0) {
       productDescription = descriptionItems.join('\n\n')
-      console.log(`🔍 [Shopify Desc] 从About区域提取到 ${descriptionItems.length} 条描述`)
+      logger.debug(`🔍 [Shopify Desc] 从About区域提取到 ${descriptionItems.length} 条描述`)
     }
   }
 
@@ -1044,31 +1045,31 @@ function extractGenericData($: any, url: string): ScrapedProductData {
     const urlBrand = extractAmazonStoreSlugFromUrl(url)
     if (urlBrand) {
       brandName = urlBrand
-      console.log(`✅ 从Amazon店铺URL提取品牌: ${brandName}`)
+      logger.debug(`✅ 从Amazon店铺URL提取品牌: ${brandName}`)
     }
   }
 
   // 如果仍然没有品牌，尝试从页面标题提取
   if (!brandName) {
     const pageTitle = $('title').text().trim()
-    console.log(`🔍 尝试从页面标题提取品牌: ${pageTitle}`)
+    logger.debug(`🔍 尝试从页面标题提取品牌: ${pageTitle}`)
     if (pageTitle) {
       // 从标题中提取第一个单词或品牌名（通常在 | 或 - 之前）
       const titleParts = pageTitle.split(/[\|\-]/)
-      console.log(`📝 标题分割结果:`, titleParts)
+      logger.debug(`📝 标题分割结果:`, titleParts)
       if (titleParts.length > 0) {
         const firstPart = titleParts[0].trim()
-        console.log(`📝 第一部分: ${firstPart}`)
+        logger.debug(`📝 第一部分: ${firstPart}`)
         // 移除常见的后缀词和末尾数字
         brandName = firstPart
           .replace(/\s+(Store|Shop|Official|Site|Online)$/i, '')
           .replace(/\d+$/, '')
           .trim()
-        console.log(`✅ 提取的品牌: ${brandName}`)
+        logger.debug(`✅ 提取的品牌: ${brandName}`)
       }
     }
   } else if (!extractAmazonStoreSlugFromUrl(url)) {
-    console.log(`✅ 从meta标签提取品牌: ${brandName}`)
+    logger.debug(`✅ 从meta标签提取品牌: ${brandName}`)
   }
 
   if (!isPlausibleBrandCandidate(brandName)) {

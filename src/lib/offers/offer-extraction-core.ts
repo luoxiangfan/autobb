@@ -8,6 +8,7 @@
  * 3. 批量创建Offer（Worker）：batch-worker → extractOffer({batchMode: true})
  */
 
+import { logger } from '@/lib/common/server'
 import { resolveAffiliateLink, BATCH_MODE_RETRY_CONFIG, getProxyPool } from '@/lib/scraping'
 import { extractProductInfo } from '@/lib/scraping'
 import type { ScrapedProductData } from '@/lib/scraping'
@@ -502,7 +503,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
   const extractionMode = normalizeOfferExtractionMode(extractionModeInput)
   const modeProfile = getOfferExtractionModeProfile(extractionMode)
 
-  console.log(
+  logger.debug(
     `📍 extractOffer: mode=${extractionMode}, targetCountry="${targetCountry}", userId=${userId}, affiliateLink=${affiliateLink?.substring(0, 50)}...`
   )
 
@@ -613,7 +614,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         )
       }
     } else {
-      console.log('⏩ 跳过推广链接预热（skipWarmup=true）')
+      logger.debug('⏩ 跳过推广链接预热（skipWarmup=true）')
     }
 
     // 步骤2: 检测页面类型（URL解析前）
@@ -628,7 +629,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
     // 如果是Amazon Store页面，跳过URL解析，直接使用原始链接
     if (isAmazonStoreByUrl) {
-      console.log('🏪 检测到Amazon Store页面，跳过URL解析...')
+      logger.debug('🏪 检测到Amazon Store页面，跳过URL解析...')
       resolvedData = {
         finalUrl: affiliateLink,
         finalUrlSuffix: '',
@@ -705,11 +706,11 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
     const isAmazonStore = pageTypeByFinalUrl.isAmazonStore
     const isAmazonProductPage = pageTypeByFinalUrl.isAmazonProductPage
 
-    console.log('🔍 页面类型检测:')
-    console.log('  - finalUrl:', resolvedData.finalUrl)
-    console.log('  - 页面类型:', pageTypeByFinalUrl.pageType)
-    console.log('  - isAmazonStore:', isAmazonStore)
-    console.log('  - isAmazonProductPage:', isAmazonProductPage)
+    logger.debug('🔍 页面类型检测:')
+    logger.debug('  - finalUrl:', resolvedData.finalUrl)
+    logger.debug('  - 页面类型:', pageTypeByFinalUrl.pageType)
+    logger.debug('  - isAmazonStore:', isAmazonStore)
+    logger.debug('  - isAmazonProductPage:', isAmazonProductPage)
 
     // 步骤5: 访问目标页面
     const accessingPageStartTime = Date.now()
@@ -826,9 +827,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         ? `${resolvedData.finalUrl}?${resolvedData.finalUrlSuffix}`
         : resolvedData.finalUrl
 
-      console.log('🔗 完整目标URL:', fullTargetUrl)
-      console.log('  - Final URL:', resolvedData.finalUrl)
-      console.log('  - URL Suffix:', resolvedData.finalUrlSuffix || '(无)')
+      logger.debug('🔗 完整目标URL:', fullTargetUrl)
+      logger.debug('  - Final URL:', resolvedData.finalUrl)
+      logger.debug('  - URL Suffix:', resolvedData.finalUrlSuffix || '(无)')
 
       // 访问目标页面完成
       trackStageProgress(
@@ -858,7 +859,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
       const amazonScrapeOptions = getAmazonScrapeOptionsForMode(extractionMode)
 
       if (isAmazonStore) {
-        console.log(`🏪 检测到Amazon Store页面，使用深度抓取模式（top ${deepScrapeTopN}）...`)
+        logger.debug(`🏪 检测到Amazon Store页面，使用深度抓取模式（top ${deepScrapeTopN}）...`)
         storeData = await scrapeAmazonStoreDeep(
           fullTargetUrl,
           deepScrapeTopN,
@@ -869,7 +870,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         brandName = storeData.brandName || storeData.storeName
         productDescription = storeData.storeDescription
         productCount = storeData.totalProducts
-        console.log(
+        logger.debug(
           `✅ Amazon Store深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${storeData.deepScrapeResults?.successCount || 0}/${storeData.deepScrapeResults?.totalScraped || 0}`
         )
       } else if (isAmazonProductPage) {
@@ -894,7 +895,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
             amazonScrapeOptions
           )
 
-        console.log(
+        logger.debug(
           `📦 检测到Amazon单品页面 [${extractionMode}]，优先抓取: ${preferCanonicalFirst ? 'canonical' : 'full'} URL`
         )
 
@@ -916,7 +917,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
 
             if (secondaryScore >= primaryScore) {
               amazonProductData = secondaryProductData
-              console.log(`✅ Amazon 回退抓取成功（score ${primaryScore} -> ${secondaryScore}）`)
+              logger.debug(`✅ Amazon 回退抓取成功（score ${primaryScore} -> ${secondaryScore}）`)
             } else {
               console.warn(
                 `⚠️ Amazon 回退抓取未提升质量（score ${primaryScore} -> ${secondaryScore}），保留主结果`
@@ -961,9 +962,9 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           reviewHighlights: amazonProductData.reviewHighlights,
           topReviews: amazonProductData.topReviews,
         }
-        console.log(`✅ Amazon单品识别成功: ${brandName || 'Unknown'}`)
+        logger.debug(`✅ Amazon单品识别成功: ${brandName || 'Unknown'}`)
       } else if (isIndependentStore) {
-        console.log('🏬 检测到独立站首页，使用深度抓取模式（包含热销商品详情）...')
+        logger.debug('🏬 检测到独立站首页，使用深度抓取模式（包含热销商品详情）...')
         // 修改：使用深度抓取版本，与Amazon Store保持一致
         // 进入前5个热销商品详情页，获取详细评论和竞品数据
         // 店铺抓取不需要追踪query，优先使用finalUrl避免触发风控/403（例如 IHG/CJ 链路）
@@ -1003,13 +1004,13 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         brandName = brandCandidate
         productDescription = independentStoreData.storeDescription
         productCount = independentStoreData.totalProducts
-        console.log(
+        logger.debug(
           `✅ 独立站深度识别成功: ${brandName}, 产品数: ${productCount}, 深度抓取: ${independentStoreData.deepScrapeResults?.successCount || 0}/${independentStoreData.deepScrapeResults?.totalScraped || 0}`
         )
       } else {
         // 独立站单品页面抓取
         // 尝试轻量级axios-cheerio抓取，如果失败则回退到Playwright渲染
-        console.log('📦 检测到独立站单品页面，尝试使用轻量级scraper...')
+        logger.debug('📦 检测到独立站单品页面，尝试使用轻量级scraper...')
 
         // 必须使用包含suffix的完整URL，否则会丢失追踪参数导致落地页不正确（例如 partnermatic/awin 链路）
         // 独立站单品axios抓取也需要走代理（否则容易被风控/超时，导致品牌词为空）
@@ -1031,7 +1032,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           modeProfile.skipPlaywrightWhenMinimalBaseline &&
           hasMinimalIndependentProductBaseline(scrapedData)
         ) {
-          console.log('✅ 独立站轻量抓取已满足创建 Offer 基础字段，跳过 Playwright 渲染')
+          logger.debug('✅ 独立站轻量抓取已满足创建 Offer 基础字段，跳过 Playwright 渲染')
         }
 
         const needsPlaywrightFallback = modeProfile.useLegacyIndependentPlaywrightFallback
@@ -1088,7 +1089,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
               secondaryFeatures: independentProductData.secondaryFeatures,
             }
 
-            console.log(`✅ Playwright渲染成功: ${independentProductData.brandName || 'Unknown'}`)
+            logger.debug(`✅ Playwright渲染成功: ${independentProductData.brandName || 'Unknown'}`)
           } catch (playwrightError: any) {
             console.warn(
               `⚠️ Playwright回退失败: ${playwrightError.message}, 继续使用轻量级scraper结果`
@@ -1112,7 +1113,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
         }
         // 单品页面：productCount应为1
         productCount = scrapedData ? 1 : 0
-        console.log(`✅ 独立站单品识别成功: ${brandName || '未知品牌'}, 产品数: ${productCount}`)
+        logger.debug(`✅ 独立站单品识别成功: ${brandName || '未知品牌'}, 产品数: ${productCount}`)
       }
 
       // 店铺模式：补充抓取最多 MAX_STORE_PRODUCT_LINKS 个单品推广链接
@@ -1261,7 +1262,7 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
             headlinesCount === 0 && descriptionsCount === 0 && brandSearchSupplement.errors?.length
               ? `, errors=${brandSearchSupplement.errors.slice(0, 2).join(' | ')}`
               : ''
-          console.log(
+          logger.debug(
             `🔎 Google品牌词补充完成: "${brandNameTrimmed}", headlines=${headlinesCount}, descriptions=${descriptionsCount}${errorHint}`
           )
         }

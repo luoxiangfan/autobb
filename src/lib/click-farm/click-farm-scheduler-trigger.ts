@@ -3,6 +3,7 @@
  * 用于创建任务后立即触发调度（无需外部Cron）
  */
 
+import { logger } from '@/lib/common/server'
 import { getPendingTasks } from '@/lib/click-farm/click-farm-queries'
 import { updateTaskStatus, pauseClickFarmTask } from '@/lib/click-farm/click-farm-task-lifecycle'
 import { initializeDailyHistory } from '@/lib/click-farm/click-farm-stats'
@@ -358,7 +359,7 @@ export async function triggerTaskScheduling(
     hour12: false,
   })
 
-  console.log('[TriggerTaskScheduling] 执行时间检查:', {
+  logger.debug('[TriggerTaskScheduling] 执行时间检查:', {
     taskId,
     timezone: task.timezone,
     currentHour,
@@ -420,7 +421,7 @@ export async function triggerTaskScheduling(
   const refererConfig =
     task.referer_config && task.referer_config.type !== 'none' ? task.referer_config : undefined
 
-  console.log(`[Trigger] 创建批次任务`, {
+  logger.debug(`[Trigger] 创建批次任务`, {
     taskId: task.id,
     targetDate: todayInTimezone,
     targetHour: currentHour,
@@ -470,7 +471,7 @@ export async function triggerTaskScheduling(
   if (queued > 0) {
     // 传入完整的 task 对象，确保返回下一个有配额的小时
     await updateTaskStatus(task.id, 'running', generateNextRunAt(task.timezone, task))
-    console.log(`[Trigger] 任务 ${task.id} 已加入 ${queued} 个点击到队列`)
+    logger.debug(`[Trigger] 任务 ${task.id} 已加入 ${queued} 个点击到队列`)
   }
 
   return { taskId, status: 'queued', clickCount: queued }
@@ -487,7 +488,7 @@ export async function triggerAllPendingTasks(): Promise<{
   skipped: number
 }> {
   const tasks = await getPendingTasks()
-  console.log(
+  logger.debug(
     `[TriggerAll] 开始执行，找到 ${tasks.length} 个待处理任务，当前时间: ${new Date().toISOString()}`
   )
 
@@ -510,6 +511,6 @@ export async function triggerAllPendingTasks(): Promise<{
     }
   }
 
-  console.log(`[TriggerAll] 执行完成:`, results)
+  logger.debug(`[TriggerAll] 执行完成:`, results)
   return results
 }

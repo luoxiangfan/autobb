@@ -2,6 +2,7 @@
  * 纯品牌词识别与分离
  */
 
+import { logger } from '@/lib/common/server'
 import { getPureBrandKeywords, isPureBrandKeyword } from '../server'
 export function inferDefaultKeywordMatchType(
   keyword: string,
@@ -33,10 +34,10 @@ export function separateBrandKeywords(
     }
   }
 
-  console.log(
+  logger.debug(
     `🏷️ 纯品牌词分离: ${brandKeywords.length} 个纯品牌词, ${nonBrandKeywords.length} 个非品牌词`
   )
-  console.log(`   纯品牌词: ${brandKeywords.join(', ') || '(无)'}`)
+  logger.debug(`   纯品牌词: ${brandKeywords.join(', ') || '(无)'}`)
 
   return { brandKeywords, nonBrandKeywords }
 }

@@ -1,4 +1,5 @@
 // AI语义分类
+import { logger } from '@/lib/common/server'
 import { generateContent, type ResponseSchema } from '../../ai/server'
 // 导入否定关键词生成函数
 import { recordTokenUsage, estimateTokenCost } from '../../ai/server' // 导入token追踪函数
@@ -692,7 +693,7 @@ export async function loadPoolCandidatesForSupplement(offerId: number): Promise<
     })
 
     if (filteredCount > 0) {
-      console.log(
+      logger.debug(
         `[KeywordSupplement] 关键词池二次过滤: ${rawKeywords.length} → ${filteredKeywords.length} ` +
           `(品牌变体:${brandVariantFiltered}, 语义查询:${semanticFiltered}, 不含品牌:${nonBrandFiltered})`
       )
@@ -824,7 +825,7 @@ export async function applyKeywordSupplementationOnce(
       if (incompatibleIntents.has(intent.intent)) {
         filterStats.intentIncompatible++
         if (filterStats.intentIncompatible <= 3) {
-          console.log(
+          logger.debug(
             `[KeywordSupplement] ❌ 意图不兼容: "${cleaned}" (${intent.intent}) 不适合 bucket ${input.bucket}`
           )
         }
@@ -916,7 +917,7 @@ export async function applyKeywordSupplementationOnce(
   const supplementCapApplied = beforeCount < supplementCap && afterCount >= supplementCap
 
   // 详细的监控日志
-  console.log(
+  logger.debug(
     `[KeywordSupplement] offer=${input.offer?.id || 'unknown'} bucket=${input.bucket || 'unknown'} triggered=true before=${beforeCount} after=${afterCount} added=${added.length} cap=${supplementCap}`
   )
 
@@ -925,12 +926,12 @@ export async function applyKeywordSupplementationOnce(
     filterStats.total > 0
       ? (((filterStats.total - filterStats.added) / filterStats.total) * 100).toFixed(1)
       : '0.0'
-  console.log(
+  logger.debug(
     `[KeywordSupplement] 📊 过滤统计: 总候选=${filterStats.total} ` +
       `过滤=${filterStats.total - filterStats.added} (${filterRate}%) ` +
       `添加=${filterStats.added}`
   )
-  console.log(
+  logger.debug(
     `[KeywordSupplement] 📋 过滤原因: ` +
       `结构化=${filterStats.structured} ` +
       `硬负面=${filterStats.hardNegative} ` +
@@ -957,7 +958,7 @@ export async function applyKeywordSupplementationOnce(
   }
 
   if (added.length > 0) {
-    console.log(
+    logger.debug(
       `[KeywordSupplement] added: ${added
         .map((item) => `${item.keyword} [${item.source}]`)
         .slice(0, 12)

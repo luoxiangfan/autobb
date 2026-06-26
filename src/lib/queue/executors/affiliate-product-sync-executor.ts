@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { Task } from '@/lib/queue/types'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { scheduleProductScoreCalculation } from '@/lib/queue/schedulers/product-score-scheduler'
@@ -792,7 +793,7 @@ export async function executeAffiliateProductSync(task: Task<AffiliateProductSyn
           trigger: 'sync-complete',
           priority: 'normal',
         })
-        console.log(
+        logger.debug(
           `[affiliate-product-sync] 推荐指数计算任务已提交: run=${data.runId}, task=${scoreTaskId}, user=${data.userId}`
         )
       } catch (scoreError: any) {

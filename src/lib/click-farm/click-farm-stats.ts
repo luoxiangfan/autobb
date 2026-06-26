@@ -1,6 +1,7 @@
 /**
  * Click-farm statistics, daily history, and batched click counters.
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase, toDbJsonObjectField, datetimeMinusHours, parseJsonField } from '@/lib/db'
 import { getDateInTimezone, createDateInTimezone } from '@/lib/common/server'
 import { estimateTraffic } from './distribution'
@@ -266,15 +267,15 @@ export async function getClickFarmStats(
       // 用任务的时区获取今天的日期
       const todayInTaskTimezone = getDateInTimezone(new Date(), task.timezone)
       if (debug) {
-        console.log('🔍 [click-farm] 任务时区:', task.timezone, '今日日期:', todayInTaskTimezone)
-        console.log('🔍 [click-farm] daily_history 前3条:', JSON.stringify(history.slice(0, 3)))
+        logger.debug('🔍 [click-farm] 任务时区:', task.timezone, '今日日期:', todayInTaskTimezone)
+        logger.debug('🔍 [click-farm] daily_history 前3条:', JSON.stringify(history.slice(0, 3)))
       }
 
       // 从 daily_history 中找今天的记录
       const todayEntry = history.find((entry: any) => entry.date === todayInTaskTimezone)
       if (todayEntry) {
         if (debug) {
-          console.log('🔍 [click-farm] 找到今日记录:', JSON.stringify(todayEntry))
+          logger.debug('🔍 [click-farm] 找到今日记录:', JSON.stringify(todayEntry))
         }
         todayClicks += todayEntry.actual || 0
         todaySuccessClicks += todayEntry.success || 0
@@ -282,13 +283,13 @@ export async function getClickFarmStats(
       } else {
         const latestEntry = history[history.length - 1]
         if (debug) {
-          console.log('🔍 [click-farm] 未找到今日记录，尝试查找最近日期')
-          console.log('🔍 [click-farm] 最新记录:', JSON.stringify(latestEntry))
+          logger.debug('🔍 [click-farm] 未找到今日记录，尝试查找最近日期')
+          logger.debug('🔍 [click-farm] 最新记录:', JSON.stringify(latestEntry))
         }
       }
     } else {
       if (debug) {
-        console.log(
+        logger.debug(
           '🔍 [click-farm] 跳过任务: history.length=',
           history.length,
           'timezone=',
@@ -299,7 +300,7 @@ export async function getClickFarmStats(
   }
 
   if (debug) {
-    console.log('🔍 [click-farm] 今日统计（从daily_history）:', {
+    logger.debug('🔍 [click-farm] 今日统计（从daily_history）:', {
       clicks: todayClicks,
       successClicks: todaySuccessClicks,
       failedClicks: todayFailedClicks,
@@ -336,8 +337,8 @@ export async function getClickFarmStats(
 
   // 调试日志：查看PostgreSQL返回的原始数据
   if (debug) {
-    console.log('🔍 [click-farm] cumulativeResult 原始数据:', JSON.stringify(cumulativeResult))
-    console.log('🔍 [click-farm] cumulativeResult 字段:', {
+    logger.debug('🔍 [click-farm] cumulativeResult 原始数据:', JSON.stringify(cumulativeResult))
+    logger.debug('🔍 [click-farm] cumulativeResult 字段:', {
       clicks: cumulativeResult?.clicks,
       success_clicks: cumulativeResult?.success_clicks,
       failed_clicks: cumulativeResult?.failed_clicks,
@@ -355,7 +356,7 @@ export async function getClickFarmStats(
   }
 
   if (debug) {
-    console.log('🔍 [click-farm] cumulative 解析后:', cumulative)
+    logger.debug('🔍 [click-farm] cumulative 解析后:', cumulative)
   }
 
   const cumulativeSuccessRate =

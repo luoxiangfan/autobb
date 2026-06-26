@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { HeadlineAsset, DescriptionAsset } from '../../server'
 import { AD_STRENGTH_RELEVANCE_THRESHOLDS } from '../../server'
 
@@ -39,9 +40,9 @@ export function calculateRelevance(
   // 调试输出
   if (coverageRatio < 0.8) {
     const unmatchedKeywords = keywords.filter((kw) => !matchedKeywords.includes(kw))
-    console.log(`⚠️ 关键词覆盖率偏低: ${(coverageRatio * 100).toFixed(0)}%`)
-    console.log(`   匹配成功: ${matchedKeywords.join(', ')}`)
-    console.log(`   匹配失败: ${unmatchedKeywords.join(', ')}`)
+    logger.debug(`⚠️ 关键词覆盖率偏低: ${(coverageRatio * 100).toFixed(0)}%`)
+    logger.debug(`   匹配成功: ${matchedKeywords.join(', ')}`)
+    logger.debug(`   匹配失败: ${unmatchedKeywords.join(', ')}`)
   }
 
   // 2.2 关键词嵌入率 (0-4分) - v3.3 CTR优化新增
@@ -67,13 +68,13 @@ export function calculateRelevance(
     keywordEmbedding = 1
   }
 
-  console.log(
+  logger.debug(
     `🔑 关键词嵌入率: ${headlinesWithKeyword.length}/${headlines.length} (${(embeddingRate * 100).toFixed(0)}%)`
   )
   if (embeddingRate < targetEmbeddingRate) {
-    console.log(`   ⚠️ 低于目标 ${(targetEmbeddingRate * 100).toFixed(0)}%，建议增加关键词嵌入`)
+    logger.debug(`   ⚠️ 低于目标 ${(targetEmbeddingRate * 100).toFixed(0)}%，建议增加关键词嵌入`)
   } else {
-    console.log(`   ✅ 达到目标嵌入率`)
+    logger.debug(`   ✅ 达到目标嵌入率`)
   }
 
   // 2.3 关键词自然度 (0-6分)

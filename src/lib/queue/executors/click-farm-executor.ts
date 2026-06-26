@@ -1,5 +1,6 @@
 // 补点击任务执行器
 // src/lib/queue/executors/click-farm-executor.ts
+import { logger } from '@/lib/common/server'
 
 import axios from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
@@ -298,7 +299,7 @@ async function resolveProxyAddress(
             `[ClickFarm] 任务 ${taskId} 命中IPRocket降级窗口，复用缓存代理 ${proxyAddress}（连续复用 ${streak}/${TASK_FALLBACK_REUSE_MAX_STREAK}）`
           )
         } else {
-          console.log(`[ClickFarm] 任务 ${taskId} 不能重复使用代理 ${proxyAddress}，强制获取新IP`)
+          logger.debug(`[ClickFarm] 任务 ${taskId} 不能重复使用代理 ${proxyAddress}，强制获取新IP`)
           needForceRefresh = true
         }
       }
@@ -579,7 +580,7 @@ export async function executeClickFarmTask(
 
     const status = String(currentTask?.status || '').toLowerCase()
     if (status && status !== 'pending' && status !== 'running') {
-      console.log(`[ClickFarm] 跳过执行: taskId=${taskId}, status=${status}`)
+      logger.debug(`[ClickFarm] 跳过执行: taskId=${taskId}, status=${status}`)
       return { success: false, traffic: 0 }
     }
   } catch (error: any) {
@@ -613,7 +614,7 @@ export async function executeClickFarmTask(
   // 动态获取代理URL（重试时会清除旧代理，需要重新获取）
   let proxyUrl = task.data.proxyUrl
   if (!proxyUrl) {
-    console.log(`[ClickFarm] 任务 ${taskId} 未配置代理，尝试动态获取...`)
+    logger.debug(`[ClickFarm] 任务 ${taskId} 未配置代理，尝试动态获取...`)
     try {
       // 获取任务信息以确定目标国家
       const db = await getDatabase()
@@ -634,7 +635,7 @@ export async function executeClickFarmTask(
 
         if (proxyConfig && proxyConfig.url) {
           proxyUrl = proxyConfig.url
-          console.log(
+          logger.debug(
             `[ClickFarm] 任务 ${taskId} 动态获取到代理: ${targetCountry} (${proxyUrl.substring(0, 30)}...)`
           )
         }
@@ -672,7 +673,7 @@ export async function executeClickFarmTask(
       return { success: false, traffic: 0 }
     }
 
-    console.log(`[ClickFarm] 开始执行任务`, {
+    logger.debug(`[ClickFarm] 开始执行任务`, {
       clickFarmTaskId: taskId,
       queueTaskId: task.id,
       userId: task.userId,
@@ -799,7 +800,7 @@ export async function executeClickFarmTask(
       console.warn(`[ClickFarm] 统计更新失败: ${taskId}`, error)
     }
 
-    console.log(
+    logger.debug(
       `[ClickFarm] 请求已发起: ${url.substring(0, 50)}... [${Date.now() - startTime}ms]` +
         (referer ? ` [Referer: ${referer.substring(0, 30)}...]` : '')
     )

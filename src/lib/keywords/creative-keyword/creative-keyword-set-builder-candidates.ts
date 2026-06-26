@@ -2,6 +2,7 @@
  * 创意关键词集合构建：候选归一化、合并与过滤衔接
  */
 
+import { logger } from '@/lib/common/server'
 import type { CanonicalCreativeType } from '../../creatives/server'
 import {
   getKeywordSourcePriorityScoreFromInput,
@@ -751,7 +752,7 @@ export function prefixStandaloneModelTokensWithBrand(params: {
   })
 
   if (prefixedCount > 0) {
-    console.log(
+    logger.debug(
       `[buildCreativeKeywordSet][monitor] ${params.scopeLabel}: 前置品牌归一 ${prefixedCount} 个裸型号词`
     )
   }

@@ -6,6 +6,7 @@
  * 监听商品同步完成事件,自动触发评分更新
  */
 
+import { logger } from '@/lib/common/server'
 import { getQueueManagerForTaskType } from '../queue-routing'
 import type { ProductScoreCalculationTaskData } from '../executors/product-score-calculation-executor'
 import {
@@ -69,7 +70,7 @@ export async function scheduleProductScoreCalculation(
       })
     }
 
-    console.log(
+    logger.debug(
       `[ProductScoreScheduler] 用户${userId}已存在任务 ${existingTask.id}，本次请求已合并`
     )
     return existingTask.id
@@ -79,7 +80,7 @@ export async function scheduleProductScoreCalculation(
     priority: options?.priority ?? 'normal',
   })
 
-  console.log(
+  logger.debug(
     `[ProductScoreScheduler] 已调度任务 ${taskId} (用户: ${userId}, 触发: ${taskData.trigger})`
   )
 

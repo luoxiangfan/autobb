@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 import { containsPureBrand, getPureBrandKeywords } from '../brand/brand-keyword-utils'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
@@ -653,21 +654,21 @@ export async function getSearchTermFeedbackHints(params: {
   userBrandLevelCount = mergedWithUser.addedCount
 
   if (globalBrandLevelCount > 0) {
-    console.log(`🌍 全局品牌优先: 注入 ${globalBrandLevelCount} 个高性能词 (跨用户聚合)`)
+    logger.debug(`🌍 全局品牌优先: 注入 ${globalBrandLevelCount} 个高性能词 (跨用户聚合)`)
   }
   if (offerLevelAddedCount > 0) {
-    console.log(`🎯 Offer级补充: 添加 ${offerLevelAddedCount} 个高性能词`)
+    logger.debug(`🎯 Offer级补充: 添加 ${offerLevelAddedCount} 个高性能词`)
   }
   if (userBrandLevelCount > 0) {
-    console.log(`🔄 用户品牌级补充: 添加 ${userBrandLevelCount} 个高性能词 (来自同用户其他 Offer)`)
+    logger.debug(`🔄 用户品牌级补充: 添加 ${userBrandLevelCount} 个高性能词 (来自同用户其他 Offer)`)
   }
 
   // 输出统计信息
-  console.log(`📊 高性能搜索词来源统计:`)
-  console.log(`   - Offer 级别: ${offerLevelCount} 个`)
-  console.log(`   - 用户品牌级别: ${userBrandLevelCount} 个`)
-  console.log(`   - 全局品牌级别: ${globalBrandLevelCount} 个`)
-  console.log(`   - 总计: ${highPerformingTerms.length} 个`)
+  logger.debug(`📊 高性能搜索词来源统计:`)
+  logger.debug(`   - Offer 级别: ${offerLevelCount} 个`)
+  logger.debug(`   - 用户品牌级别: ${userBrandLevelCount} 个`)
+  logger.debug(`   - 全局品牌级别: ${globalBrandLevelCount} 个`)
+  logger.debug(`   - 总计: ${highPerformingTerms.length} 个`)
 
   return {
     hardNegativeTerms: classified.hardNegativeTerms,

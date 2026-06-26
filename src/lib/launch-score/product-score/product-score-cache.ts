@@ -7,6 +7,7 @@
  * 自动失效机制
  */
 
+import { logger } from '@/lib/common/server'
 import { REDIS_PREFIX_CONFIG } from '@/lib/common/server'
 import { getRedisClient } from '@/lib/common/server'
 
@@ -55,7 +56,7 @@ export async function cacheProductRecommendationScore(
     }
 
     await redis.setex(key, RECOMMENDATION_SCORE_TTL_SECONDS, JSON.stringify(data))
-    console.log(`[ProductScoreCache] 已缓存商品${productId}的推荐指数 (用户${userId})`)
+    logger.debug(`[ProductScoreCache] 已缓存商品${productId}的推荐指数 (用户${userId})`)
   } catch (error) {
     console.error('[ProductScoreCache] 缓存失败:', error)
     // 缓存失败不影响主流程
@@ -92,7 +93,7 @@ export async function batchGetCachedProductRecommendationScores(
       }
     }
 
-    console.log(
+    logger.debug(
       `[ProductScoreCache] 批量查询: ${productIds.length}个商品, 命中${result.size}个 (用户${userId})`
     )
     return result

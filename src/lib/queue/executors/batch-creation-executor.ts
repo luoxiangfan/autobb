@@ -13,6 +13,7 @@
  * 通过batch_id关联父子任务
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import { createHash } from 'crypto'
 import { getDatabase } from '@/lib/db'
@@ -61,7 +62,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
   // PostgreSQL兼容性：根据数据库类型选择NOW函数
   const nowFunc = 'NOW()'
 
-  console.log(`🚀 开始执行批量创建任务: batch=${batchId}, count=${rows.length}`)
+  logger.debug(`🚀 开始执行批量创建任务: batch=${batchId}, count=${rows.length}`)
 
   try {
     // 1. 更新batch_tasks和upload_records状态为running
@@ -176,13 +177,13 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
         })
         enqueuedTaskCount++
       } else {
-        console.log(`⏭️ 跳过重复入队: childTask=${childTaskId}, status=${statusForEnqueue}`)
+        logger.debug(`⏭️ 跳过重复入队: childTask=${childTaskId}, status=${statusForEnqueue}`)
       }
 
       childTaskIds.push(childTaskId)
     }
 
-    console.log(
+    logger.debug(
       `✅ 批量任务子任务准备完成: total=${childTaskIds.length}, created=${createdTaskCount}, reused=${reusedTaskCount}, enqueued=${enqueuedTaskCount}`
     )
 
@@ -276,7 +277,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
             [finalStatus, batchId]
           )
 
-          console.log(
+          logger.debug(
             `✅ 批量任务完成: batch=${batchId}, status=${finalStatus}, completed=${completed}, failed=${failed}`
           )
         }
@@ -289,7 +290,7 @@ export async function executeBatchCreation(task: Task<BatchCreationTaskData>): P
     // 超时保护：10分钟后自动停止监控（正常情况下子任务会更早完成）
     setTimeout(() => {
       clearInterval(monitorInterval)
-      console.log(`⏱️ 批量任务监控超时: batch=${batchId}`)
+      logger.debug(`⏱️ 批量任务监控超时: batch=${batchId}`)
     }, 600000)
   } catch (error: any) {
     console.error(`❌ 批量创建任务失败: batch=${batchId}:`, error.message)

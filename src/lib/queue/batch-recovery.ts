@@ -17,6 +17,7 @@
  * 解决服务重启后upload_records一直显示"处理中"的问题
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
 
 /**
@@ -31,7 +32,7 @@ export async function recoverBatchTaskStatus(): Promise<void> {
   const db = getDatabase()
 
   try {
-    console.log('🔍 开始同步批量任务数据库状态...')
+    logger.debug('🔍 开始同步批量任务数据库状态...')
 
     // 1. 查询所有未完成的upload_records（status为pending或processing）
     // 先检查表是否存在，避免表未初始化错误
@@ -59,21 +60,21 @@ export async function recoverBatchTaskStatus(): Promise<void> {
           ORDER BY uploaded_at ASC
         `)
       } else {
-        console.log('⚠️ upload_records表不存在，跳过批量任务状态恢复')
+        logger.debug('⚠️ upload_records表不存在，跳过批量任务状态恢复')
         return
       }
     } catch (uploadError) {
       console.warn('⚠️ 检查upload_records表失败:', uploadError)
-      console.log('⚠️ 批量任务状态同步跳过（非关键错误）')
+      logger.debug('⚠️ 批量任务状态同步跳过（非关键错误）')
       return
     }
 
     if (!pendingRecords || pendingRecords.length === 0) {
-      console.log('✅ 没有需要同步的批量任务')
+      logger.debug('✅ 没有需要同步的批量任务')
       return
     }
 
-    console.log(`📦 发现 ${pendingRecords.length} 个未完成的批量任务记录，开始同步状态...`)
+    logger.debug(`📦 发现 ${pendingRecords.length} 个未完成的批量任务记录，开始同步状态...`)
 
     let recoveredCount = 0
     let skippedCount = 0
@@ -89,7 +90,7 @@ export async function recoverBatchTaskStatus(): Promise<void> {
       }
     }
 
-    console.log(`✅ 批量任务状态同步完成: 成功=${recoveredCount}, 跳过=${skippedCount}`)
+    logger.debug(`✅ 批量任务状态同步完成: 成功=${recoveredCount}, 跳过=${skippedCount}`)
   } catch (error: any) {
     console.error('❌ 批量任务状态同步失败:', error)
     throw error
@@ -141,7 +142,7 @@ async function recoverSingleBatchTask(
   const running = statsMap['running'] || 0
   const total = validCount // 使用upload_records中的valid_count作为总数
 
-  console.log(
+  logger.debug(
     `📊 批量任务状态统计: batch_id=${batchId}, total=${total}, completed=${completed}, failed=${failed}, pending=${pending}, running=${running}`
   )
 
@@ -154,7 +155,7 @@ async function recoverSingleBatchTask(
   if (completed + failed === 0) {
     // 特殊情况：没有任何已完成或失败的任务（可能刚创建就重启了）
     finalStatus = 'failed'
-    console.log(`⚠️ 批量任务无进展: batch_id=${batchId}, 标记为失败`)
+    logger.debug(`⚠️ 批量任务无进展: batch_id=${batchId}, 标记为失败`)
   } else if (completed + failed >= total) {
     // 正常情况：所有任务都有最终状态
     if (failed === 0) {
@@ -167,7 +168,7 @@ async function recoverSingleBatchTask(
   } else {
     // 部分任务未完成：由于队列已清理，剩余任务不会执行，标记为partial
     finalStatus = 'partial'
-    console.log(
+    logger.debug(
       `⚠️ 批量任务部分完成: batch_id=${batchId}, completed=${completed}, failed=${failed}, unfinished=${total - completed - failed}`
     )
   }
@@ -206,7 +207,7 @@ async function recoverSingleBatchTask(
     [finalStatus, completed, failed, successRate, uploadRecordId]
   )
 
-  console.log(
+  logger.debug(
     `✅ 批量任务状态已同步: batch_id=${batchId}, status=${finalStatus}, completed=${completed}/${total}, success_rate=${successRate}%`
   )
 }

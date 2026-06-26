@@ -7,6 +7,7 @@
  * 服务账号模式：Google下拉词 + 增强提取 + Google Trends
  */
 
+import { logger } from '@/lib/common/server'
 import type { PoolKeywordData } from './offer-pool'
 import { expandKeywordsWithSeeds } from './planner/unified-keyword-service'
 import { getDatabase } from '../db'
@@ -583,13 +584,13 @@ async function getGlobalKeywordCandidates(params: {
     }
 
     if (candidates.size > 0) {
-      console.log(`   📦 全局关键词库命中: ${candidates.size} 个`)
+      logger.debug(`   📦 全局关键词库命中: ${candidates.size} 个`)
     }
     if (scriptFilteredCount > 0) {
-      console.log(`   🌐 语言脚本过滤: 移除 ${scriptFilteredCount} 个与目标语言不匹配的全局关键词`)
+      logger.debug(`   🌐 语言脚本过滤: 移除 ${scriptFilteredCount} 个与目标语言不匹配的全局关键词`)
     }
     if (templateFilteredCount > 0) {
-      console.log(`   🧹 模板垃圾词过滤: 移除 ${templateFilteredCount} 个全局关键词候选`)
+      logger.debug(`   🧹 模板垃圾词过滤: 移除 ${templateFilteredCount} 个全局关键词候选`)
     }
 
     return Array.from(candidates.values())
@@ -750,9 +751,9 @@ export async function expandAllKeywords(
   linkedServiceAccountId?: string | null,
   plannerSession?: KeywordPlannerPreparedSession
 ): Promise<PoolKeywordData[]> {
-  console.log(`\n📋 关键词扩展策略 (v2.0 - 认证类型: ${authType}):`)
-  console.log(`   初始关键词数量: ${initialKeywords.length}`)
-  console.log(`   品牌: ${brandName}`)
+  logger.debug(`\n📋 关键词扩展策略 (v2.0 - 认证类型: ${authType}):`)
+  logger.debug(`   初始关键词数量: ${initialKeywords.length}`)
+  logger.debug(`   品牌: ${brandName}`)
 
   if (authType === 'oauth') {
     return expandForOAuth({
@@ -966,7 +967,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
   const seedKeywordsSet = new Set<string>([...plannerBrandKeywords, ...initialBrandSeeds])
   let seedKeywords = Array.from(seedKeywordsSet)
 
-  console.log(`   初始种子词: ${seedKeywords.length}个`)
+  logger.debug(`   初始种子词: ${seedKeywords.length}个`)
 
   try {
     const enablePlannerNonBrand = (reason: string) => {
@@ -986,8 +987,8 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         total: maxRounds,
         message: `关键词池扩展 Round ${round}/${maxRounds}`,
       })
-      console.log(`\n   📊 Round ${round}/${maxRounds}: Keyword Planner 查询`)
-      console.log(
+      logger.debug(`\n   📊 Round ${round}/${maxRounds}: Keyword Planner 查询`)
+      logger.debug(
         `      种子词: ${seedKeywords.slice(0, 5).join(', ')}${seedKeywords.length > 5 ? '...' : ''}`
       )
 
@@ -1041,7 +1042,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         fullBrandKeywords.length > 0 &&
         brandCountFromSiteFilter < minFullBrandCount
       ) {
-        console.log(
+        logger.debug(
           `      ⚠️ 站点过滤命中品牌词较少(${brandCountFromSiteFilter}/${minFullBrandCount})，补充无站点过滤查询`
         )
         const supplementalResults = await expandKeywordsWithSeeds({
@@ -1096,7 +1097,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         enablePlannerNonBrand('SITE_FILTER_LOW_BRAND_COVERAGE')
       }
 
-      console.log(`      返回 ${results.length} 个关键词`)
+      logger.debug(`      返回 ${results.length} 个关键词`)
       if (results.length > 0) {
         keywordPlannerReturned = true
       }
@@ -1107,7 +1108,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         ).length
         if (fullBrandCount < minFullBrandCount) {
           enablePlannerNonBrand('FULL_BRAND_LOW_COVERAGE')
-          console.log(
+          logger.debug(
             `      ⚠️ 完整品牌词命中较少(${fullBrandCount}/${minFullBrandCount})，允许保留 Keyword Planner 非品牌词`
           )
         }
@@ -1159,7 +1160,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
               wasBranded = true
               metadata = buildPlannerBrandRewriteMetadata(plannerUseCase)
               brandedFromGeneric++
-              console.log(
+              logger.debug(
                 `      🔄 品牌化: “${keywordText}” (${kw.searchVolume}) → “${finalKeyword}”`
               )
             } else {
@@ -1222,12 +1223,12 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         }
       }
 
-      console.log(
+      logger.debug(
         `      新增 ${newCount} 个关键词 (品牌相关: ${brandRelatedAdded}, 品牌化行业词: ${brandedFromGeneric}, 跳过: ${genericSkipped}, 更新: ${updatedCount})`
       )
 
       if (newCount === 0) {
-        console.log(`      本轮未新增关键词，结束迭代`)
+        logger.debug(`      本轮未新增关键词，结束迭代`)
         break
       }
 
@@ -1248,7 +1249,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
 
       const nextSeeds = Array.from(nextSeedSet)
       if (nextSeeds.length === 0) {
-        console.log(`      种子词为空，结束迭代`)
+        logger.debug(`      种子词为空，结束迭代`)
         break
       }
 
@@ -1259,12 +1260,12 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
       seedKeywords = nextSeeds
 
       if (seedsUnchanged) {
-        console.log(`      种子词未变化，结束迭代`)
+        logger.debug(`      种子词未变化，结束迭代`)
         break
       }
     }
 
-    console.log(`\n   📊 Keyword Planner 迭代完成: ${allKeywords.size} 个关键词`)
+    logger.debug(`\n   📊 Keyword Planner 迭代完成: ${allKeywords.size} 个关键词`)
 
     // 查询品牌词的真实搜索量
     // 品牌词以 BRAND_SEED 来源初始化时 searchVolume=0，需要查询真实搜索量
@@ -1273,7 +1274,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     )
 
     if (brandSeedKeywords.length > 0 && userId) {
-      console.log(`\n   📊 查询 ${brandSeedKeywords.length} 个品牌词的真实搜索量...`)
+      logger.debug(`\n   📊 查询 ${brandSeedKeywords.length} 个品牌词的真实搜索量...`)
       try {
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
@@ -1326,7 +1327,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
             }
           }
         }
-        console.log(`      ✅ 更新了 ${updatedCount}/${brandSeedKeywords.length} 个品牌词的搜索量`)
+        logger.debug(`      ✅ 更新了 ${updatedCount}/${brandSeedKeywords.length} 个品牌词的搜索量`)
       } catch (error: any) {
         console.warn(`      ⚠️ 品牌词搜索量查询失败: ${error.message}`)
       }
@@ -1364,7 +1365,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
         pureBrandKeywords,
         brandName,
       })
-      console.log(`      📦 全局关键词库补充: 新增 ${merged.added}, 更新 ${merged.updated}`)
+      logger.debug(`      📦 全局关键词库补充: 新增 ${merged.added}, 更新 ${merged.updated}`)
     }
 
     if (allKeywords.size === 0) {
@@ -1375,7 +1376,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
     }
 
     // 质量过滤
-    console.log(`\n   📊 质量过滤`)
+    logger.debug(`\n   📊 质量过滤`)
     const filtered = qualityFilterOAuth(
       Array.from(allKeywords.values()),
       brandName,
@@ -1384,7 +1385,7 @@ async function expandForOAuth(params: OAuthExpandParams): Promise<PoolKeywordDat
       pageUrl
     )
 
-    console.log(`   过滤后: ${filtered.length} 个关键词`)
+    logger.debug(`   过滤后: ${filtered.length} 个关键词`)
 
     return filtered.length > 0 ? filtered : fallbackKeywords
   } catch (error: any) {
@@ -1408,7 +1409,7 @@ function qualityFilterOAuth(
   const hasAnyVolume = keywords.some((kw) => kw.searchVolume > 0)
   const volumeUnavailable = hasSearchVolumeUnavailableFlag(keywords)
 
-  console.log(`      动态搜索量阈值: ${dynamicThreshold}`)
+  logger.debug(`      动态搜索量阈值: ${dynamicThreshold}`)
 
   let brandKeptCount = 0
   let brandVariantRemoved = 0
@@ -1476,12 +1477,12 @@ function qualityFilterOAuth(
     return true
   })
 
-  console.log(`      保留: ${filtered.length}`)
-  console.log(`      纯品牌词: ${brandKeptCount}`)
+  logger.debug(`      保留: ${filtered.length}`)
+  logger.debug(`      纯品牌词: ${brandKeptCount}`)
   if (hasAnyVolume && volumeUnavailable) {
-    console.log(`      ⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤`)
+    logger.debug(`      ⚠️ 搜索量数据不可用（Planner 权限受限），跳过搜索量过滤`)
   }
-  console.log(
+  logger.debug(
     `      移除: 模板垃圾(${templateRemoved}) 品牌变体(${brandVariantRemoved}) 语义(${semanticRemoved}) 品牌无关(${irrelevantRemoved}) 低意图(${lowIntentRemoved}) 地理(${geoRemoved}) 语言脚本(${languageRemoved}) 搜索量(${volumeRemoved})`
   )
 
@@ -1580,7 +1581,7 @@ async function expandForServiceAccount(
       total: 3,
       message: '关键词池扩展：Google下拉词 (1/3)',
     })
-    console.log(`\n   📊 阶段1: Google下拉词`)
+    logger.debug(`\n   📊 阶段1: Google下拉词`)
 
     try {
       const googleSuggestKeywords = await getBrandSearchSuggestions({
@@ -1600,7 +1601,7 @@ async function expandForServiceAccount(
         )
       )
 
-      console.log(`      Google下拉词: ${filteredSuggest.length} 个`)
+      logger.debug(`      Google下拉词: ${filteredSuggest.length} 个`)
 
       for (const text of filteredSuggest) {
         const canonical = normalizeGoogleAdsKeyword(text)
@@ -1633,7 +1634,7 @@ async function expandForServiceAccount(
       total: 3,
       message: '关键词池扩展：增强提取 (2/3)',
     })
-    console.log(`\n   📊 阶段2: 增强提取`)
+    logger.debug(`\n   📊 阶段2: 增强提取`)
 
     try {
       // 延迟导入避免循环依赖
@@ -1656,7 +1657,7 @@ async function expandForServiceAccount(
         userId
       )
 
-      console.log(`      增强提取: ${enhancedKeywords.length} 个`)
+      logger.debug(`      增强提取: ${enhancedKeywords.length} 个`)
 
       for (const kw of enhancedKeywords) {
         const canonical = normalizeGoogleAdsKeyword(kw.keyword)
@@ -1685,7 +1686,7 @@ async function expandForServiceAccount(
     // 移除 Google Trends 关键词生成
     // 原因：Title/About补充 + 行业通用词（Scoring建议）已完全覆盖
     // TRENDS关键词质量不可控（品类识别错误、无意义组合、无搜索量验证）
-    console.log(`\n   📊 阶段3: Google Trends扩展 [已移除，由Title/About补充+行业通用词替代]`)
+    logger.debug(`\n   📊 阶段3: Google Trends扩展 [已移除，由Title/About补充+行业通用词替代]`)
 
     const globalCandidates = await getGlobalKeywordCandidates({
       brandName,
@@ -1701,13 +1702,13 @@ async function expandForServiceAccount(
         pureBrandKeywords,
         brandName,
       })
-      console.log(`      📦 全局关键词库补充: 新增 ${merged.added}, 更新 ${merged.updated}`)
+      logger.debug(`      📦 全局关键词库补充: 新增 ${merged.added}, 更新 ${merged.updated}`)
     }
 
-    console.log(`\n   📊 服务账号模式关键词收集完成: ${allKeywords.size} 个`)
+    logger.debug(`\n   📊 服务账号模式关键词收集完成: ${allKeywords.size} 个`)
 
     // 质量过滤（无搜索量过滤）
-    console.log(`\n   📊 质量过滤`)
+    logger.debug(`\n   📊 质量过滤`)
     const filtered = qualityFilterServiceAccount(
       Array.from(allKeywords.values()),
       brandName,
@@ -1716,7 +1717,7 @@ async function expandForServiceAccount(
       offer.final_url || offer.url || undefined
     )
 
-    console.log(`   过滤后: ${filtered.length} 个关键词`)
+    logger.debug(`   过滤后: ${filtered.length} 个关键词`)
 
     return filtered
   } catch (error: any) {
@@ -1797,9 +1798,9 @@ function qualityFilterServiceAccount(
     return true
   })
 
-  console.log(`      保留: ${filtered.length}`)
-  console.log(`      纯品牌词: ${brandKeptCount}`)
-  console.log(
+  logger.debug(`      保留: ${filtered.length}`)
+  logger.debug(`      纯品牌词: ${brandKeptCount}`)
+  logger.debug(
     `      移除: 模板垃圾(${templateRemoved}) 品牌变体(${brandVariantRemoved}) 语义(${semanticRemoved}) 品牌无关(${irrelevantRemoved}) 地理(${geoRemoved}) 语言脚本(${languageRemoved})`
   )
 
@@ -2004,13 +2005,13 @@ export function filterKeywords(
     kept.push(kw)
   }
 
-  console.log(`   过滤: ${keywords.length} → ${kept.length}`)
-  console.log(`      移除非品牌: ${nonBrandRemovedCount}`)
-  console.log(`      拼接品牌保留(有量): ${concatenatedBrandKept}`)
+  logger.debug(`   过滤: ${keywords.length} → ${kept.length}`)
+  logger.debug(`      移除非品牌: ${nonBrandRemovedCount}`)
+  logger.debug(`      拼接品牌保留(有量): ${concatenatedBrandKept}`)
   if (plannerNonBrandKept > 0) {
-    console.log(`      Keyword Planner 非品牌保留: ${plannerNonBrandKept}`)
+    logger.debug(`      Keyword Planner 非品牌保留: ${plannerNonBrandKept}`)
   }
-  console.log(`      地理过滤: ${geoFilteredCount}`)
+  logger.debug(`      地理过滤: ${geoFilteredCount}`)
   const plannerUseCases = [
     plannerNonBrandPolicy.allowNonBrandForPool ? 'pool' : null,
     plannerNonBrandPolicy.allowNonBrandForDemand ? 'demand' : null,
@@ -2021,7 +2022,7 @@ export function filterKeywords(
     : plannerNonBrandPolicyEnabled(plannerNonBrandPolicy)
       ? `品牌包含 + Keyword Planner 例外(${plannerUseCases.join('/') || 'legacy'})`
       : '100%品牌包含'
-  console.log(`      策略: ${strategyLabel}`)
+  logger.debug(`      策略: ${strategyLabel}`)
 
   return kept
 }

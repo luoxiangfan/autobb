@@ -1,6 +1,7 @@
 /**
  * Multi-round intent-aware keyword expansion.
  */
+import { logger } from '@/lib/common/server'
 import { getKeywordIdeas } from '@/lib/google-ads/keyword/planner'
 import { getKeywordPlannerSiteFilterUrlForOffer } from './keyword-planner-site-filter'
 import { containsPureBrand, getPureBrandKeywords } from '../brand/brand-keyword-utils'
@@ -66,13 +67,13 @@ export async function getMultiRoundIntentAwareKeywords(
     maxKeywords = 500,
   } = params
 
-  console.log('\n' + '='.repeat(60))
-  console.log('🎯 多轮意图感知关键词扩展 v2.0')
-  console.log('='.repeat(60))
-  console.log(`品牌: ${offer.brand}`)
-  console.log(`品类: ${offer.category || '未分类'}`)
-  console.log(`国家: ${country}, 语言: ${language}`)
-  console.log(`认证方式: ${authType}`)
+  logger.debug('\n' + '='.repeat(60))
+  logger.debug('🎯 多轮意图感知关键词扩展 v2.0')
+  logger.debug('='.repeat(60))
+  logger.debug(`品牌: ${offer.brand}`)
+  logger.debug(`品类: ${offer.category || '未分类'}`)
+  logger.debug(`国家: ${country}, 语言: ${language}`)
+  logger.debug(`认证方式: ${authType}`)
 
   const pureBrandKeywords = getPureBrandKeywords(offer.brand)
   const plannerAuth = await prepareKeywordPlannerSessionForServiceParams(userId, {
@@ -86,7 +87,7 @@ export async function getMultiRoundIntentAwareKeywords(
   const ideasAuth = keywordPlannerIdeasAuthFromSession(plannerAuth)
 
   // 1. 构建意图感知种子词池
-  console.log('\n📍 Step 1: 构建意图感知种子词池')
+  logger.debug('\n📍 Step 1: 构建意图感知种子词池')
   const intentSeeds = buildIntentAwareSeedPool(offer)
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
@@ -104,12 +105,12 @@ export async function getMultiRoundIntentAwareKeywords(
     roundNum: number
   ): Promise<UnifiedKeywordData[]> => {
     if (roundSeeds.length === 0) {
-      console.log(`   ⚠️ ${roundName}: 无种子词，跳过`)
+      logger.debug(`   ⚠️ ${roundName}: 无种子词，跳过`)
       return []
     }
 
-    console.log(`\n📍 Round ${roundNum}: ${roundName}`)
-    console.log(
+    logger.debug(`\n📍 Round ${roundNum}: ${roundName}`)
+    logger.debug(
       `   种子词: ${roundSeeds.slice(0, 5).join(', ')}${roundSeeds.length > 5 ? '...' : ''}`
     )
 
@@ -139,7 +140,7 @@ export async function getMultiRoundIntentAwareKeywords(
             preparedOAuth: ideasAuth.preparedOAuth,
           })
 
-          console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个建议`)
+          logger.debug(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个建议`)
 
           keywordIdeas.forEach((idea) => {
             roundKeywords.push({
@@ -187,7 +188,7 @@ export async function getMultiRoundIntentAwareKeywords(
   round3Count = featureKeywords.length
 
   // 5. 合并去重
-  console.log('\n📍 Step 5: 合并去重')
+  logger.debug('\n📍 Step 5: 合并去重')
   const totalBeforeDedup = brandKeywords.length + scenarioKeywords.length + featureKeywords.length
 
   // 添加到 keywordMap（自动去重）
@@ -212,7 +213,7 @@ export async function getMultiRoundIntentAwareKeywords(
   addToMap(featureKeywords, 'FEATURE')
 
   // 6. 白名单过滤
-  console.log('\n📍 Step 6: 白名单过滤')
+  logger.debug('\n📍 Step 6: 白名单过滤')
   let allKeywords = Array.from(keywordMap.values())
   const whitelistResult = filterByWhitelist(allKeywords, offer.brand)
   allKeywords = whitelistResult.filtered as UnifiedKeywordData[]
@@ -220,23 +221,23 @@ export async function getMultiRoundIntentAwareKeywords(
 
   // 移除品类过滤 - 避免误杀有效关键词
   // 依赖Google Ads自动优化机制（质量得分、智能出价）淘汰不相关关键词
-  console.log(`\n✅ 关键词过滤完成，共 ${allKeywords.length} 个关键词`)
+  logger.debug(`\n✅ 关键词过滤完成，共 ${allKeywords.length} 个关键词`)
 
   if (pureBrandKeywords.length > 0) {
     const beforeBrandFilter = allKeywords.length
     allKeywords = allKeywords.filter((kw) => containsPureBrand(kw.keyword, pureBrandKeywords))
-    console.log(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
+    logger.debug(`   🔒 品牌强制过滤: ${beforeBrandFilter} → ${allKeywords.length}`)
   }
 
   // 7. 按搜索量降序排序（关键先排序再截取）
-  console.log('\n📍 Step 7: 按搜索量降序排序')
+  logger.debug('\n📍 Step 7: 按搜索量降序排序')
   allKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
-  console.log(
+  logger.debug(
     `   📊 排序后搜索量范围: ${allKeywords[allKeywords.length - 1]?.searchVolume || 0} - ${allKeywords[0]?.searchVolume || 0}`
   )
 
   // 8. 获取精确搜索量（对搜索量最高的前1000个关键词）
-  console.log('\n📍 Step 8: 获取精确搜索量（前1000个）')
+  logger.debug('\n📍 Step 8: 获取精确搜索量（前1000个）')
   let disableSearchVolumeFilter = false
   let metricsAvailable = false
   try {
@@ -275,7 +276,7 @@ export async function getMultiRoundIntentAwareKeywords(
         }
       })
     })
-    console.log(`   ✅ 更新 ${volumes.length} 个关键词的搜索量`)
+    logger.debug(`   ✅ 更新 ${volumes.length} 个关键词的搜索量`)
   } catch (error: any) {
     console.error('   ❌ 获取搜索量失败:', error.message)
   }
@@ -284,7 +285,7 @@ export async function getMultiRoundIntentAwareKeywords(
   }
 
   // 9. 智能过滤 + 匹配类型分配
-  console.log('\n📍 Step 9: 智能过滤')
+  logger.debug('\n📍 Step 9: 智能过滤')
   allKeywords = applySmartFilters(allKeywords, minSearchVolume, 30, {
     disableSearchVolumeFilter,
     pureBrandKeywords,
@@ -341,22 +342,22 @@ export async function getMultiRoundIntentAwareKeywords(
   const featureOrientedKeywords = allKeywords.filter((kw) => classifyByIntent(kw) === 'feature')
 
   // 输出统计
-  console.log('\n' + '='.repeat(60))
-  console.log('✅ 多轮意图感知扩展完成')
-  console.log('='.repeat(60))
-  console.log(`📊 扩展统计:`)
-  console.log(`   Round 1 (品牌商品锚点): ${round1Count} 个`)
-  console.log(`   Round 2 (商品需求场景): ${round2Count} 个`)
-  console.log(`   Round 3 (功能规格/需求扩展): ${round3Count} 个`)
-  console.log(`   合并前总计: ${totalBeforeDedup} 个`)
-  console.log(`   去重后总计: ${allKeywords.length} 个`)
-  console.log(`\n📊 意图分类结果:`)
-  console.log(`   🏷️ 品牌商品锚点: ${brandOrientedKeywords.length} 个`)
-  console.log(`   🏠 商品需求场景: ${scenarioOrientedKeywords.length} 个`)
-  console.log(`   ⚙️ 功能规格/需求扩展: ${featureOrientedKeywords.length} 个`)
+  logger.debug('\n' + '='.repeat(60))
+  logger.debug('✅ 多轮意图感知扩展完成')
+  logger.debug('='.repeat(60))
+  logger.debug(`📊 扩展统计:`)
+  logger.debug(`   Round 1 (品牌商品锚点): ${round1Count} 个`)
+  logger.debug(`   Round 2 (商品需求场景): ${round2Count} 个`)
+  logger.debug(`   Round 3 (功能规格/需求扩展): ${round3Count} 个`)
+  logger.debug(`   合并前总计: ${totalBeforeDedup} 个`)
+  logger.debug(`   去重后总计: ${allKeywords.length} 个`)
+  logger.debug(`\n📊 意图分类结果:`)
+  logger.debug(`   🏷️ 品牌商品锚点: ${brandOrientedKeywords.length} 个`)
+  logger.debug(`   🏠 商品需求场景: ${scenarioOrientedKeywords.length} 个`)
+  logger.debug(`   ⚙️ 功能规格/需求扩展: ${featureOrientedKeywords.length} 个`)
 
   if (competitorBrandsSet.size > 0) {
-    console.log(`\n🏷️ 识别竞品品牌: ${Array.from(competitorBrandsSet).join(', ')}`)
+    logger.debug(`\n🏷️ 识别竞品品牌: ${Array.from(competitorBrandsSet).join(', ')}`)
   }
 
   return {

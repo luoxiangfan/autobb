@@ -2,6 +2,7 @@
  * 批量从备份创建广告系列并发布到 Google Ads
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import { getDatabase } from '@/lib/db'
 import { parseCampaignBackup } from '@/lib/campaign/server'
@@ -31,7 +32,7 @@ export async function executeCampaignBatchCreate(
   const db = await getDatabase()
   const nowFunc = 'NOW()'
 
-  console.log(`🚀 开始执行批量创建广告系列：batch=${batchId}, count=${backupIds.length}`)
+  logger.debug(`🚀 开始执行批量创建广告系列：batch=${batchId}, count=${backupIds.length}`)
 
   if (!googleAdsAccountId) {
     throw new Error('批量创建需要指定 googleAdsAccountId')
@@ -152,7 +153,7 @@ export async function executeCampaignBatchCreate(
           if (publishDetail.warning) {
             warnings.push({ backupId, message: publishDetail.warning })
           }
-          console.log(`✅ 创建并入队发布：backupId=${backupId}, campaignId=${dbDetail.campaignId}`)
+          logger.debug(`✅ 创建并入队发布：backupId=${backupId}, campaignId=${dbDetail.campaignId}`)
         }
 
         await db.exec(
@@ -212,7 +213,7 @@ export async function executeCampaignBatchCreate(
       ]
     )
 
-    console.log(
+    logger.debug(
       `✅ 批量创建完成：batch=${batchId}, status=${finalStatus}, ` +
         `completed=${completed}, failed=${failed}, total=${backupIds.length}`
     )

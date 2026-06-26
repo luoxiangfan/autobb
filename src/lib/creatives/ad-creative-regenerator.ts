@@ -7,6 +7,7 @@
  * 3. 返回新的广告创意 ID 和 campaign_config
  */
 
+import { logger } from '@/lib/common/server'
 import { createAdCreative, findAdCreativeById } from './ad-creative'
 import {
   getAdCreativeGenerationModeProfile,
@@ -155,7 +156,7 @@ export async function regenerateAdCreative(
       preparedExpand = resolved.preparedExpand
     }
 
-    console.log(
+    logger.debug(
       `[Ad Creative Regenerator] Generating for offer ${offerId} (mode=${inheritedMode}, bucket=${bucket || 'none'}, generationBucket=${generationBucket || 'none'}, maxRetries=${generationProfile.maxRetries})`
     )
 
@@ -208,7 +209,7 @@ export async function regenerateAdCreative(
       attempts: generationResult.attempts,
     })
 
-    console.log('[Ad Creative Regenerator] Saving new creative to database...')
+    logger.debug('[Ad Creative Regenerator] Saving new creative to database...')
 
     const selectedEvaluation = generationResult.selectedEvaluation
     const bestEvaluation = selectedEvaluation.adStrength
@@ -235,7 +236,7 @@ export async function regenerateAdCreative(
       }
     }
 
-    console.log(`[Ad Creative Regenerator] New creative saved with ID: ${newCreative.id}`)
+    logger.debug(`[Ad Creative Regenerator] New creative saved with ID: ${newCreative.id}`)
 
     const campaignConfig = {
       ...campaignConfigForTask,

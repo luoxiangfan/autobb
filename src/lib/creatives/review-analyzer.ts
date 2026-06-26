@@ -12,6 +12,7 @@
  * 广告相关性评分: +25%（匹配用户搜索意图）
  */
 
+import { logger } from '@/lib/common/server'
 import { generateContent } from '../ai/server'
 import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import { getLanguageNameForCountry } from '../common/server'
@@ -156,7 +157,7 @@ export interface ReviewAnalysisResult {
  * @returns 评论数组
  */
 export async function scrapeAmazonReviews(page: any, limit: number = 50): Promise<RawReview[]> {
-  console.log(`📝 开始抓取评论，目标数量: ${limit}`)
+  logger.debug(`📝 开始抓取评论，目标数量: ${limit}`)
 
   try {
     // 导航到评论区域（使用#customer-reviews_feature_div锚点直接定位到评论）
@@ -167,18 +168,18 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
       try {
         // 直接在URL后添加#customer-reviews_feature_div锚点，浏览器会自动滚动到评论区域
         const reviewsUrl = currentUrl.split('#')[0] + '#customer-reviews_feature_div'
-        console.log(`🔗 导航到评论区域: ${reviewsUrl}`)
+        logger.debug(`🔗 导航到评论区域: ${reviewsUrl}`)
         // 使用networkidle等待，确保动态内容加载完成
         await page.goto(reviewsUrl, { waitUntil: 'networkidle', timeout: 15000 })
-        console.log('✅ 已导航到评论区域')
+        logger.debug('✅ 已导航到评论区域')
       } catch (navError) {
-        console.log('⚠️ 导航到评论区域失败，在当前页面抓取评论:', navError)
+        logger.debug('⚠️ 导航到评论区域失败，在当前页面抓取评论:', navError)
       }
     }
 
     // KISS优化v2：评论区在页面底部(~9945px)，必须先深度滚动触发懒加载
     // 顺序：深度滚动 → 检测容器 → 快速失败
-    console.log('📜 开始深度滚动到页面底部触发评论区懒加载...')
+    logger.debug('📜 开始深度滚动到页面底部触发评论区懒加载...')
     try {
       // 第一步：滚动到页面80%位置（评论区通常在底部）
       await page.evaluate(() => {
@@ -200,9 +201,9 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
         }
       })
       await page.waitForTimeout(2000)
-      console.log('✅ 深度滚动完成')
+      logger.debug('✅ 深度滚动完成')
     } catch (scrollError) {
-      console.log('⚠️ 深度滚动失败:', scrollError)
+      logger.debug('⚠️ 深度滚动失败:', scrollError)
     }
 
     // 滚动后再检查评论容器是否存在
@@ -222,10 +223,10 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
       .catch(() => null)
 
     if (!hasReviewContainer) {
-      console.log('⚠️ 深度滚动后评论容器仍不存在，快速跳过评论抓取')
+      logger.debug('⚠️ 深度滚动后评论容器仍不存在，快速跳过评论抓取')
       return []
     }
-    console.log(`✅ 发现评论容器: ${hasReviewContainer}`)
+    logger.debug(`✅ 发现评论容器: ${hasReviewContainer}`)
 
     // 优先等待实际评论元素，而非容器
     // 评论容器可能存在但内部评论元素是懒加载的
@@ -241,14 +242,14 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
 
     // 增加重试机制，每次等待更长时间
     for (let attempt = 1; attempt <= 3; attempt++) {
-      console.log(`🔄 尝试第${attempt}次查找评论元素...`)
+      logger.debug(`🔄 尝试第${attempt}次查找评论元素...`)
 
       for (const selector of reviewElementSelectors) {
         try {
           // 增加等待时间：第1次3秒，第2次5秒，第3次8秒
           const timeout = attempt === 1 ? 3000 : attempt === 2 ? 5000 : 8000
           await page.waitForSelector(selector, { timeout })
-          console.log(`✅ 找到评论选择器: ${selector}`)
+          logger.debug(`✅ 找到评论选择器: ${selector}`)
           reviewSelectorFound = true
           break
         } catch {
@@ -260,7 +261,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
 
       // 如果没找到，滚动页面触发更多懒加载
       if (attempt < 3) {
-        console.log(`⚠️ 第${attempt}次未找到评论，滚动页面后重试...`)
+        logger.debug(`⚠️ 第${attempt}次未找到评论，滚动页面后重试...`)
         await page.evaluate(() => {
           window.scrollBy(0, 500)
         })
@@ -269,7 +270,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
     }
 
     if (!reviewSelectorFound) {
-      console.log('⚠️ 所有评论选择器均未找到，尝试通用抓取')
+      logger.debug('⚠️ 所有评论选择器均未找到，尝试通用抓取')
       // 输出调试信息帮助诊断
       const debugInfo = await page.evaluate(() => {
         return {
@@ -280,12 +281,12 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
           pageUrl: window.location.href,
         }
       })
-      console.log('📊 调试信息:', JSON.stringify(debugInfo))
+      logger.debug('📊 调试信息:', JSON.stringify(debugInfo))
     }
 
     // 抓取评论 - 使用增强的选择器组合
     const reviews: RawReview[] = await page.evaluate((maxReviews: number) => {
-      console.log('🔍 [Browser Context] 开始查找评论元素...')
+      logger.debug('🔍 [Browser Context] 开始查找评论元素...')
 
       // 添加更多Amazon国际站点的选择器fallback
       const selectorGroups = [
@@ -327,7 +328,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
           const elements = document.querySelectorAll(selector)
           if (elements.length > 0) {
             reviewElements = elements
-            console.log(
+            logger.debug(
               `✅ [Browser Context] 找到${elements.length}个评论元素，使用选择器: ${selector}`
             )
             break
@@ -338,7 +339,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
       }
 
       if (!reviewElements || reviewElements.length === 0) {
-        console.log('❌ [Browser Context] 所有选择器都未找到评论元素')
+        logger.debug('❌ [Browser Context] 所有选择器都未找到评论元素')
         // 调试信息：输出页面中的可能评论容器
         const debugContainers = [
           '#customer-reviews_feature_div',
@@ -348,7 +349,7 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
         debugContainers.forEach((container) => {
           const el = document.querySelector(container)
           if (el) {
-            console.log(
+            logger.debug(
               `📦 [Browser Context] 找到容器: ${container}, innerHTML长度: ${el.innerHTML.length}`
             )
           }
@@ -452,17 +453,17 @@ export async function scrapeAmazonReviews(page: any, limit: number = 50): Promis
             date,
             author,
           })
-          console.log(
+          logger.debug(
             `✓ [Browser Context] 评论${index + 1}: ${title?.substring(0, 30) || body?.substring(0, 30) || 'N/A'}...`
           )
         }
       })
 
-      console.log(`✅ [Browser Context] 成功提取${results.length}条评论`)
+      logger.debug(`✅ [Browser Context] 成功提取${results.length}条评论`)
       return results
     }, limit)
 
-    console.log(`✅ 成功抓取${reviews.length}条评论`)
+    logger.debug(`✅ 成功抓取${reviews.length}条评论`)
     return reviews
   } catch (error: any) {
     console.error('❌ 评论抓取失败:', error.message)
@@ -494,17 +495,17 @@ export async function analyzeReviewsWithAI(
   }
 ): Promise<ReviewAnalysisResult> {
   if (reviews.length === 0) {
-    console.log('⚠️ 无评论数据，返回空分析结果')
+    logger.debug('⚠️ 无评论数据，返回空分析结果')
     return getEmptyAnalysisResult()
   }
 
   // 评论数量少（<5条）时，直接使用简化分析而非调用AI（节省API成本+避免超时）
   if (reviews.length < 5) {
-    console.log(`⚠️ 评论数量较少(${reviews.length}条)，使用简化分析...`)
+    logger.debug(`⚠️ 评论数量较少(${reviews.length}条)，使用简化分析...`)
     return generateSimplifiedAnalysis(reviews)
   }
 
-  console.log(`🤖 开始AI分析${reviews.length}条评论...`)
+  logger.debug(`🤖 开始AI分析${reviews.length}条评论...`)
 
   // 根据目标国家确定分析语言（使用全局语言映射）
   const langName = getLanguageNameForCountry(targetCountry)
@@ -523,11 +524,11 @@ export async function analyzeReviewsWithAI(
 
   if (options?.enableCompression) {
     // Token使用压缩评论（60-70%减少）
-    console.log('🗜️ 启用评论压缩优化...')
+    logger.debug('🗜️ 启用评论压缩优化...')
     const compressed = compressReviews(reviews as CompressorRawReview[], 40)
     reviewTexts = compressed.compressed
     compressionStats = compressed.stats
-    console.log(
+    logger.debug(
       `   压缩率: ${compressionStats.compressionRatio}（${compressionStats.originalChars} → ${compressionStats.compressedChars}字符）`
     )
   } else {
@@ -652,19 +653,19 @@ export async function analyzeReviewsWithAI(
       verifiedReviewCount: verifiedCount,
     }
 
-    console.log('✅ AI评论分析完成')
-    console.log(`   - 正面关键词: ${result.topPositiveKeywords.length}个`)
-    console.log(`   - 负面关键词: ${result.topNegativeKeywords.length}个`)
-    console.log(`   - 使用场景: ${result.realUseCases.length}个`)
-    console.log(`   - 痛点: ${result.commonPainPoints.length}个`)
+    logger.debug('✅ AI评论分析完成')
+    logger.debug(`   - 正面关键词: ${result.topPositiveKeywords.length}个`)
+    logger.debug(`   - 负面关键词: ${result.topNegativeKeywords.length}个`)
+    logger.debug(`   - 使用场景: ${result.realUseCases.length}个`)
+    logger.debug(`   - 痛点: ${result.commonPainPoints.length}个`)
     // v3.2新增日志
     if (result.quantitativeHighlights && result.quantitativeHighlights.length > 0) {
-      console.log(
+      logger.debug(
         `   - 量化数据: ${result.quantitativeHighlights.length}个 (${result.quantitativeHighlights.map((q) => q.adCopy).join(', ')})`
       )
     }
     if (result.competitorMentions && result.competitorMentions.length > 0) {
-      console.log(`   - 竞品提及: ${result.competitorMentions.map((c) => c.brand).join(', ')}`)
+      logger.debug(`   - 竞品提及: ${result.competitorMentions.map((c) => c.brand).join(', ')}`)
     }
 
     return result
@@ -726,7 +727,7 @@ function generateSimplifiedAnalysis(reviews: RawReview[]): ReviewAnalysisResult 
     .filter((r) => parseFloat(r.rating?.match(/[\d.]+/)?.[0] || '0') <= 2 && r.title)
     .map((r) => r.title!)
 
-  console.log(`✅ 简化分析完成: ${reviews.length}条评论, 平均评分${avgRating.toFixed(1)}星`)
+  logger.debug(`✅ 简化分析完成: ${reviews.length}条评论, 平均评分${avgRating.toFixed(1)}星`)
 
   return {
     totalReviews: reviews.length,

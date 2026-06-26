@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import Redis from 'ioredis'
 import type {
   Task,
@@ -58,7 +59,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
           const delay = Math.min(times * 200, 10000)
           if (times <= 3) {
-            console.log(`⏳ Redis队列重连中... (第${times}次，${delay}ms后重试)`)
+            logger.debug(`⏳ Redis队列重连中... (第${times}次，${delay}ms后重试)`)
           }
           return delay
         },
@@ -73,13 +74,13 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
       // 监听连接状态
       this.client.on('connect', () => {
-        console.log('🔗 Redis队列正在建立连接...')
+        logger.debug('🔗 Redis队列正在建立连接...')
       })
 
       this.client.on('ready', () => {
         this.reconnectAttempts = 0
         this.connected = true
-        console.log('✅ Redis队列已连接')
+        logger.debug('✅ Redis队列已连接')
       })
 
       this.client.on('error', (err) => {
@@ -99,7 +100,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
       this.client.on('reconnecting', (delay: number) => {
         if (this.reconnectAttempts <= 3) {
-          console.log(`🔄 Redis队列正在重连... (延迟${delay}ms)`)
+          logger.debug(`🔄 Redis队列正在重连... (延迟${delay}ms)`)
         }
       })
 
@@ -649,7 +650,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
     await pipeline.exec()
 
-    console.log(`[Redis] 删除 ${tasksToDelete.length} 个 type=${type} status=${status} 的任务`)
+    logger.debug(`[Redis] 删除 ${tasksToDelete.length} 个 type=${type} status=${status} 的任务`)
 
     return tasksToDelete.length
   }
@@ -787,7 +788,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
         await pipeline.exec()
 
         cleanedTaskIds.push(taskId)
-        console.log(
+        logger.debug(
           `⏰ 清理超时任务: ${taskId} (运行时间: ${Math.round((now - startedAt) / 1000 / 60)}分钟)`
         )
       }
@@ -840,18 +841,18 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
 
           await pipeline.exec()
           cleanedTaskIds.push(taskId)
-          console.log(`🧹 清理无效用户任务: ${taskId} (userId=${task.userId})`)
+          logger.debug(`🧹 清理无效用户任务: ${taskId} (userId=${task.userId})`)
         }
       } catch (_e) {
         // 解析失败的任务也清理掉
         await this.client.hdel(this.getKey('tasks'), taskId)
         cleanedTaskIds.push(taskId)
-        console.log(`🧹 清理损坏任务: ${taskId}`)
+        logger.debug(`🧹 清理损坏任务: ${taskId}`)
       }
     }
 
     if (cleanedTaskIds.length > 0) {
-      console.log(`✅ 共清理 ${cleanedTaskIds.length} 个无效用户任务`)
+      logger.debug(`✅ 共清理 ${cleanedTaskIds.length} 个无效用户任务`)
     }
 
     return {
@@ -938,7 +939,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
     }
 
     if (removedTaskIds.length > 0) {
-      console.log(`🗑️ 已从Redis队列移除任务: userId=${userId}, removed=${removedTaskIds.length}`)
+      logger.debug(`🗑️ 已从Redis队列移除任务: userId=${userId}, removed=${removedTaskIds.length}`)
     }
 
     return { removedCount: removedTaskIds.length, removedTaskIds }
@@ -1014,7 +1015,7 @@ export class RedisQueueAdapter implements QueueStorageAdapter {
       }
 
       await pipeline.exec()
-      console.log(`🗑️ 已移除任务: ${taskId}`)
+      logger.debug(`🗑️ 已移除任务: ${taskId}`)
     } catch (e) {
       console.error(`移除任务失败: ${taskId}`, e)
       throw e

@@ -2,6 +2,7 @@
  * Gemini response schemas, business limits, and AI response parsing.
  * Extracted from contract.ts for structural clarity.
  */
+import { logger } from '@/lib/common/server'
 import type {
   GeneratedAdCreativeData,
   GeneratedKeywordCandidateMetadata,
@@ -565,8 +566,8 @@ export function parseAIResponse(
   options?: { policyGuardMode?: GoogleAdsPolicyGuardMode }
 ): GeneratedAdCreativeData {
   const policyGuardMode = resolveGoogleAdsPolicyGuardMode(options?.policyGuardMode)
-  console.log('🔍 AI原始响应长度:', text.length)
-  console.log('🔍 AI原始响应前500字符:', text.substring(0, 500))
+  logger.debug('🔍 AI原始响应长度:', text.length)
+  logger.debug('🔍 AI原始响应前500字符:', text.substring(0, 500))
 
   // 移除可能的markdown代码块标记
   let jsonText = text.trim()
@@ -577,15 +578,15 @@ export function parseAIResponse(
     .replace(/^json\s*/i, '')
     .trim()
 
-  console.log('🔍 清理markdown后长度:', jsonText.length)
-  console.log('🔍 清理markdown后前200字符:', jsonText.substring(0, 200))
+  logger.debug('🔍 清理markdown后长度:', jsonText.length)
+  logger.debug('🔍 清理markdown后前200字符:', jsonText.substring(0, 200))
 
   // 尝试提取JSON对象或数组（如果AI在JSON前后加了其他文本）
   // 优先使用候选扫描，避免误截取 {KeyWord:...} 这类内容
   const selectedCandidate = selectBestJsonCandidate(jsonText)
   if (selectedCandidate) {
     jsonText = selectedCandidate
-    console.log('✅ 选择JSON候选片段，长度:', jsonText.length)
+    logger.debug('✅ 选择JSON候选片段，长度:', jsonText.length)
   } else {
     // 支持 { ... } 和 [ ... ] 两种格式
     const jsonObjectMatch = jsonText.match(/\{[\s\S]*\}/)
@@ -606,7 +607,7 @@ export function parseAIResponse(
     }
 
     if (jsonObjectMatch || jsonArrayMatch) {
-      console.log('✅ 成功提取JSON，长度:', jsonText.length)
+      logger.debug('✅ 成功提取JSON，长度:', jsonText.length)
     }
   }
 
@@ -616,7 +617,7 @@ export function parseAIResponse(
   // 修复常见的JSON格式错误
   jsonText = sanitizeJsonText(jsonText)
 
-  console.log('🔍 修复后JSON前200字符:', jsonText.substring(0, 200))
+  logger.debug('🔍 修复后JSON前200字符:', jsonText.substring(0, 200))
 
   try {
     const raw = JSON.parse(jsonText)
@@ -779,11 +780,11 @@ export function parseAIResponse(
       // 新格式：对象数组（带metadata）
       headlinesWithMetadata = data.headlines as HeadlineAsset[]
       headlinesArray = headlinesWithMetadata.map((h) => h.text)
-      console.log('✅ 检测到新格式headlines（带metadata）')
+      logger.debug('✅ 检测到新格式headlines（带metadata）')
     } else {
       // 旧格式：字符串数组
       headlinesArray = data.headlines as string[]
-      console.log('✅ 检测到旧格式headlines（字符串数组）')
+      logger.debug('✅ 检测到旧格式headlines（字符串数组）')
     }
 
     // 处理descriptions格式
@@ -795,17 +796,17 @@ export function parseAIResponse(
     if (isDescNewFormat) {
       descriptionsWithMetadata = data.descriptions as DescriptionAsset[]
       descriptionsArray = descriptionsWithMetadata.map((d) => d.text)
-      console.log('✅ 检测到新格式descriptions（带metadata）')
+      logger.debug('✅ 检测到新格式descriptions（带metadata）')
     } else {
       descriptionsArray = data.descriptions as string[]
-      console.log('✅ 检测到旧格式descriptions（字符串数组）')
+      logger.debug('✅ 检测到旧格式descriptions（字符串数组）')
     }
 
     // 预先执行文本护栏（长度、断词、括号平衡）
     const headlineGuarded = headlinesArray.map((h: string) => applyHeadlineTextGuardrail(h, 30))
     const headlineGuardFixes = headlineGuarded.filter((h, idx) => h !== headlinesArray[idx]).length
     if (headlineGuardFixes > 0) {
-      console.log(`🔧 Headline文本护栏: 修复 ${headlineGuardFixes} 条`)
+      logger.debug(`🔧 Headline文本护栏: 修复 ${headlineGuardFixes} 条`)
     }
     headlinesArray = headlineGuarded
     if (headlinesWithMetadata) {
@@ -829,12 +830,12 @@ export function parseAIResponse(
           // Google Ads headline限制30字符，DKI的defaultText也应支持到30字符
           if (defaultText.length > 0 && defaultText.length <= 30) {
             // 合理的默认文本长度，添加结束符
-            console.log(`🔧 修复DKI标签: "${text}" → "${text}}"`)
+            logger.debug(`🔧 修复DKI标签: "${text}" → "${text}}"`)
             return text + '}'
           } else {
             // 默认文本过长或为空，移除整个DKI标签
             const fixedText = text.replace(unclosedPattern, match[1].trim() || '')
-            console.log(
+            logger.debug(
               `🔧 移除无效DKI标签（defaultText长度${defaultText.length}）: "${text}" → "${fixedText}"`
             )
             return fixedText
@@ -848,7 +849,7 @@ export function parseAIResponse(
     const removeProhibitedSymbols = (text: string): string => {
       const { text: cleaned, removed } = sanitizeGoogleAdsSymbols(text)
       if (removed.length > 0) {
-        console.log(`🛡️ 移除违规符号: "${text}" → "${cleaned}" (移除: ${removed.join(', ')})`)
+        logger.debug(`🛡️ 移除违规符号: "${text}" → "${cleaned}" (移除: ${removed.join(', ')})`)
       }
       return cleaned
     }
@@ -856,7 +857,7 @@ export function parseAIResponse(
     const sanitizePolicySensitiveText = (text: string, maxLength: number): string => {
       const policySafe = sanitizeGoogleAdsPolicyText(text, { maxLength, mode: policyGuardMode })
       if (policySafe.changed) {
-        console.log(
+        logger.debug(
           `🛡️ 政策敏感词净化: "${text}" → "${policySafe.text}" (命中: ${policySafe.matchedTerms.join(', ')})`
         )
       }
@@ -870,7 +871,7 @@ export function parseAIResponse(
       (h: string, i: number) => h !== originalHeadlines[i]
     ).length
     if (fixedCount > 0) {
-      console.log(`✅ 修复了${fixedCount}个DKI标签格式问题`)
+      logger.debug(`✅ 修复了${fixedCount}个DKI标签格式问题`)
     }
 
     // 应用符号过滤到所有headlines和descriptions
@@ -893,7 +894,7 @@ export function parseAIResponse(
       (d, idx) => d !== descriptionsArray[idx]
     ).length
     if (headlineGuardFixesAfterPolicy > 0 || descriptionGuardFixesAfterPolicy > 0) {
-      console.log(
+      logger.debug(
         `🔧 文本护栏(政策后): headlines ${headlineGuardFixesAfterPolicy} 条, descriptions ${descriptionGuardFixesAfterPolicy} 条`
       )
     }
@@ -970,7 +971,7 @@ export function parseAIResponse(
     calloutsArray = calloutsArray.map((c: string) => {
       if (typeof c === 'string' && isExcessiveCaps(c)) {
         const fixed = toTitleCase(c)
-        console.log(`🔧 修正全大写callout: "${c}" → "${fixed}"`)
+        logger.debug(`🔧 修正全大写callout: "${c}" → "${fixed}"`)
         return fixed
       }
       return c
@@ -1022,7 +1023,7 @@ export function parseAIResponse(
         changed = true
       }
       if (changed) {
-        console.log(`🔧 修正全大写sitelink: "${s.text}" → "${text}"`)
+        logger.debug(`🔧 修正全大写sitelink: "${s.text}" → "${text}"`)
       }
       return changed ? { ...s, text, description1, description2 } : s
     })
@@ -1058,7 +1059,7 @@ export function parseAIResponse(
       mode: policyGuardMode,
     })
     if (policySafeKeywords.changedCount > 0 || policySafeKeywords.droppedCount > 0) {
-      console.log(
+      logger.debug(
         `🛡️ 关键词政策净化: 替换${policySafeKeywords.changedCount}个, 丢弃${policySafeKeywords.droppedCount}个`
       )
     }
@@ -1110,8 +1111,8 @@ export function parseAIResponse(
       : undefined
 
     if (qualityMetrics) {
-      console.log('📊 Headline多样性:', qualityMetrics.headline_diversity_score)
-      console.log('📊 关键词相关性:', qualityMetrics.keyword_relevance_score)
+      logger.debug('📊 Headline多样性:', qualityMetrics.headline_diversity_score)
+      logger.debug('📊 关键词相关性:', qualityMetrics.keyword_relevance_score)
     }
 
     // v4.7: 解析 Display Path (path1/path2)
@@ -1122,12 +1123,12 @@ export function parseAIResponse(
     if (path1 && path1.length > 15) {
       console.warn(`⚠️ path1 超过15字符限制: "${path1}" (${path1.length}字符)`)
       path1 = path1.substring(0, 15)
-      console.log(`  截断为: "${path1}"`)
+      logger.debug(`  截断为: "${path1}"`)
     }
     if (path2 && path2.length > 15) {
       console.warn(`⚠️ path2 超过15字符限制: "${path2}" (${path2.length}字符)`)
       path2 = path2.substring(0, 15)
-      console.log(`  截断为: "${path2}"`)
+      logger.debug(`  截断为: "${path2}"`)
     }
 
     // 移除path中的空格（Google Ads Display Path不允许空格）
@@ -1139,7 +1140,7 @@ export function parseAIResponse(
     }
 
     if (path1 || path2) {
-      console.log(`📍 Display Path: ${path1 || '(无)'}/${path2 || '(无)'}`)
+      logger.debug(`📍 Display Path: ${path1 || '(无)'}/${path2 || '(无)'}`)
     }
 
     return {

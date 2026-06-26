@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { ProxyProvider } from './base-provider'
 import type { ProxyCredentials } from '../types'
 import type { ValidationResult } from './base-provider'
@@ -102,9 +103,9 @@ export class OxylabsProvider implements ProxyProvider {
         throw new Error('密码不能为空')
       }
 
-      console.log(`✅ [Oxylabs] 解析代理凭证: ${credentials.fullAddress}`)
+      logger.debug(`✅ [Oxylabs] 解析代理凭证: ${credentials.fullAddress}`)
       if (validation.countryCode) {
-        console.log(`   国家代码: ${validation.countryCode}`)
+        logger.debug(`   国家代码: ${validation.countryCode}`)
       }
 
       return credentials

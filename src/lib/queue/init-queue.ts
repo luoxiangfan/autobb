@@ -15,6 +15,7 @@
  * 统一的命名空间设计
  */
 
+import { logger } from '@/lib/common/server'
 import { getQueueManager } from './index'
 import { registerAllExecutors } from './executors'
 import { NODE_ENV, REDIS_PREFIX_CONFIG } from '../common/server'
@@ -33,7 +34,7 @@ let __queueInitPromise: Promise<UnifiedQueueManager> | null = null
 export async function initializeQueue(): Promise<UnifiedQueueManager> {
   // 防止重复初始化
   if (__queueInitialized) {
-    console.log('⏭️ 队列系统已初始化，跳过重复初始化')
+    logger.debug('⏭️ 队列系统已初始化，跳过重复初始化')
     return getQueueManager()
   }
 
@@ -43,13 +44,13 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
   }
 
   __queueInitPromise = (async () => {
-    console.log('🚀 初始化统一队列系统...')
+    logger.debug('🚀 初始化统一队列系统...')
 
-    console.log(`📝 环境配置:`)
-    console.log(`   - NODE_ENV: ${NODE_ENV}`)
-    console.log(`   - Redis Queue Prefix: ${REDIS_PREFIX_CONFIG.queue}`)
-    console.log(`   - Redis Cache Prefix: ${REDIS_PREFIX_CONFIG.cache}`)
-    console.log(`   - 任务队列隔离: ✅ 已启用`)
+    logger.debug(`📝 环境配置:`)
+    logger.debug(`   - NODE_ENV: ${NODE_ENV}`)
+    logger.debug(`   - Redis Queue Prefix: ${REDIS_PREFIX_CONFIG.queue}`)
+    logger.debug(`   - Redis Cache Prefix: ${REDIS_PREFIX_CONFIG.cache}`)
+    logger.debug(`   - 任务队列隔离: ✅ 已启用`)
     queueVerboseLog('queue_routing_diagnostics', getQueueRoutingDiagnostics())
 
     // 获取队列管理器实例
@@ -82,19 +83,19 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     await queue.start()
 
     // 数据同步由独立 scheduler 进程负责，队列初始化阶段不再启动内置数据同步调度器
-    console.log('⏭️ 跳过内置数据同步调度器（由独立 scheduler 进程负责）')
+    logger.debug('⏭️ 跳过内置数据同步调度器（由独立 scheduler 进程负责）')
 
     // URL Swap 调度器已迁移到独立 scheduler 进程（与补点击任务架构一致）
     // 原因：补点击任务只在 scheduler 进程运行且工作正常，换链接任务采用相同架构
-    console.log('⏭️ 跳过内置 URL Swap 调度器（由独立 scheduler 进程负责）')
+    logger.debug('⏭️ 跳过内置 URL Swap 调度器（由独立 scheduler 进程负责）')
 
     // 联盟商品同步调度器已迁移到独立 scheduler 进程（与补点击任务架构一致）
     // 原因：补点击任务只在 scheduler 进程运行且工作正常，联盟商品同步采用相同架构
-    console.log('⏭️ 跳过内置联盟商品同步调度器（由独立 scheduler 进程负责）')
+    logger.debug('⏭️ 跳过内置联盟商品同步调度器（由独立 scheduler 进程负责）')
 
-    console.log('✅ 统一队列系统已启动')
-    console.log('📝 代理配置：任务执行时按需从用户设置加载')
-    console.log('🔄 所有调度器已迁移至独立 scheduler 进程')
+    logger.debug('✅ 统一队列系统已启动')
+    logger.debug('📝 代理配置：任务执行时按需从用户设置加载')
+    logger.debug('🔄 所有调度器已迁移至独立 scheduler 进程')
 
     // 标记为已初始化
     __queueInitialized = true
@@ -116,7 +117,7 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
  */
 async function shutdownQueue() {
   try {
-    console.log('⏹️ 关闭队列系统...')
+    logger.debug('⏹️ 关闭队列系统...')
 
     // URL Swap 和联盟商品同步调度器已迁移到独立 scheduler 进程，此处无需停止
 
@@ -124,7 +125,7 @@ async function shutdownQueue() {
     const queue = getQueueManager()
     await queue.stop()
 
-    console.log('✅ 队列系统已关闭')
+    logger.debug('✅ 队列系统已关闭')
   } catch (error: any) {
     console.error('❌ 队列系统关闭失败:', error.message)
   }
@@ -133,13 +134,13 @@ async function shutdownQueue() {
 // 处理进程退出信号
 if (typeof process !== 'undefined') {
   process.on('SIGINT', async () => {
-    console.log('\n收到SIGINT信号...')
+    logger.debug('\n收到SIGINT信号...')
     await shutdownQueue()
     process.exit(0)
   })
 
   process.on('SIGTERM', async () => {
-    console.log('\n收到SIGTERM信号...')
+    logger.debug('\n收到SIGTERM信号...')
     await shutdownQueue()
     process.exit(0)
   })

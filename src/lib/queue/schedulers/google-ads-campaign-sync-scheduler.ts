@@ -12,6 +12,7 @@
  * 已有关联 Offer 时自动跳过
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 import {
   GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE,
@@ -84,11 +85,11 @@ class GoogleAdsCampaignSyncScheduler {
    */
   start(): void {
     if (this.isRunning) {
-      console.log('⚠️  Google Ads 广告系列同步调度器已在运行')
+      logger.debug('⚠️  Google Ads 广告系列同步调度器已在运行')
       return
     }
 
-    console.log('🔄 启动 Google Ads 广告系列同步调度器...')
+    logger.debug('🔄 启动 Google Ads 广告系列同步调度器...')
     this.isRunning = true
 
     // 启动时执行一次检查（支持延迟，降低冷启动竞争）
@@ -100,7 +101,7 @@ class GoogleAdsCampaignSyncScheduler {
       if (this.STARTUP_DELAY_MS === 0) {
         void this.checkAndScheduleSync()
       } else {
-        console.log(
+        logger.debug(
           `⏳ Google Ads 同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`
         )
         this.startupTimeoutHandle = setTimeout(() => {
@@ -109,7 +110,7 @@ class GoogleAdsCampaignSyncScheduler {
         }, this.STARTUP_DELAY_MS)
       }
     } else {
-      console.log('⏭️ 已禁用启动时 Google Ads 同步首轮检查')
+      logger.debug('⏭️ 已禁用启动时 Google Ads 同步首轮检查')
     }
 
     // 设置定时检查（每分钟）
@@ -117,7 +118,7 @@ class GoogleAdsCampaignSyncScheduler {
       this.checkAndScheduleSync()
     }, this.CHECK_INTERVAL_MS)
 
-    console.log(
+    logger.debug(
       `✅ Google Ads 广告系列同步调度器已启动 (检查间隔：${this.CHECK_INTERVAL_MS / 1000 / 60}分钟，同步间隔：${this.SYNC_INTERVAL_HOURS}小时)`
     )
   }
@@ -130,7 +131,7 @@ class GoogleAdsCampaignSyncScheduler {
       return
     }
 
-    console.log('⏹️ 停止 Google Ads 广告系列同步调度器...')
+    logger.debug('⏹️ 停止 Google Ads 广告系列同步调度器...')
 
     if (this.intervalHandle) {
       clearInterval(this.intervalHandle)
@@ -143,7 +144,7 @@ class GoogleAdsCampaignSyncScheduler {
     }
 
     this.isRunning = false
-    console.log('✅ Google Ads 广告系列同步调度器已停止')
+    logger.debug('✅ Google Ads 广告系列同步调度器已停止')
   }
 
   /**
@@ -153,11 +154,11 @@ class GoogleAdsCampaignSyncScheduler {
     const checkStartAt = Date.now()
 
     try {
-      console.log(`\n[${new Date().toISOString()}] 🔄 检查 Google Ads 广告系列同步任务...`)
+      logger.debug(`\n[${new Date().toISOString()}] 🔄 检查 Google Ads 广告系列同步任务...`)
 
       const staleClosed = await markStaleGoogleAdsCampaignSyncLogs()
       if (staleClosed > 0) {
-        console.log(`  🧹 已自动关闭 ${staleClosed} 条超时的 running 同步日志`)
+        logger.debug(`  🧹 已自动关闭 ${staleClosed} 条超时的 running 同步日志`)
       }
 
       const db = await getDatabase()
@@ -200,11 +201,11 @@ class GoogleAdsCampaignSyncScheduler {
       )
 
       if (configs.length === 0) {
-        console.log('  ℹ️  没有启用 Google Ads 广告系列自动同步的用户')
+        logger.debug('  ℹ️  没有启用 Google Ads 广告系列自动同步的用户')
         return
       }
 
-      console.log(`  📊 找到 ${configs.length} 个启用自动同步的用户配置`)
+      logger.debug(`  📊 找到 ${configs.length} 个启用自动同步的用户配置`)
 
       // 遍历用户，检查是否需要触发同步
       let triggeredCount = 0
@@ -230,7 +231,7 @@ class GoogleAdsCampaignSyncScheduler {
         if (hoursSinceLastSync >= intervalHours) {
           const activeWork = await userHasActiveGoogleAdsCampaignSyncWork(userId)
           if (activeWork.active) {
-            console.log(
+            logger.debug(
               `  ⏭️  用户 #${userId}: 已有进行中的同步（${activeWork.reason}, pending=${activeWork.pending}, running=${activeWork.running}），跳过入队`
             )
             activeWorkSkippedCount++
@@ -251,7 +252,7 @@ class GoogleAdsCampaignSyncScheduler {
           }
 
           if (!hasValidCredentials) {
-            console.log(`  ⚠️  用户 #${userId}: ${skipReason}，跳过同步`)
+            logger.debug(`  ⚠️  用户 #${userId}: ${skipReason}，跳过同步`)
             noCredentialsCount++
             skippedCount++
             continue
@@ -259,14 +260,16 @@ class GoogleAdsCampaignSyncScheduler {
 
           const hasMcc = await userHasGoogleAdsMccAssignments(userId)
           if (!hasMcc) {
-            console.log(`  ⏭️  用户 #${userId}: 未分配 MCC，无法同步 Google Ads 广告系列，跳过入队`)
+            logger.debug(
+              `  ⏭️  用户 #${userId}: 未分配 MCC，无法同步 Google Ads 广告系列，跳过入队`
+            )
             noMccCount++
             skippedCount++
             continue
           }
 
           // 4. 凭证有效，创建同步任务
-          console.log(
+          logger.debug(
             `  🔄 用户 #${userId}: 距离上次同步 ${lastSyncAt ? `${hoursSinceLastSync.toFixed(1)}小时` : '从未同步'}, 触发同步 (间隔：${intervalHours}h)`
           )
 
@@ -274,7 +277,7 @@ class GoogleAdsCampaignSyncScheduler {
             const taskId = await this.triggerGoogleAdsCampaignSync(userId, {
               syncType: 'auto',
             })
-            console.log(`     ✅ 同步任务已入队：${taskId}`)
+            logger.debug(`     ✅ 同步任务已入队：${taskId}`)
             triggeredCount++
           } catch (error) {
             console.error(`     ❌ 触发同步失败:`, error)
@@ -282,12 +285,12 @@ class GoogleAdsCampaignSyncScheduler {
           }
         } else {
           const hoursUntilNext = intervalHours - hoursSinceLastSync
-          console.log(`  ⏰ 用户 #${userId}: 距离下次同步还有 ${hoursUntilNext.toFixed(1)} 小时`)
+          logger.debug(`  ⏰ 用户 #${userId}: 距离下次同步还有 ${hoursUntilNext.toFixed(1)} 小时`)
         }
       }
 
       const elapsedMs = Date.now() - checkStartAt
-      console.log(
+      logger.debug(
         `\n✅ 检查完成：触发了 ${triggeredCount}/${configs.length} 个同步任务，跳过 ${skippedCount} 个用户（${noCredentialsCount} 个无凭证，${noMccCount} 个无 MCC，${activeWorkSkippedCount} 个仍在同步中）（耗时${elapsedMs}ms）`
       )
     } catch (error) {
@@ -323,7 +326,7 @@ class GoogleAdsCampaignSyncScheduler {
       maxRetries: 3,
     })
 
-    console.log(
+    logger.debug(
       `📥 [GoogleAdsSyncTrigger] 同步任务已入队：${taskId}, 用户 #${userId}, 类型：${taskData.syncType}`
     )
 
@@ -340,7 +343,7 @@ class GoogleAdsCampaignSyncScheduler {
       dryRun?: boolean
     }
   ): Promise<string> {
-    console.log(`🔧 [GoogleAdsSyncScheduler] 手动触发用户 #${userId} 的同步任务`)
+    logger.debug(`🔧 [GoogleAdsSyncScheduler] 手动触发用户 #${userId} 的同步任务`)
 
     const taskId = await this.triggerGoogleAdsCampaignSync(userId, {
       syncType: 'manual',

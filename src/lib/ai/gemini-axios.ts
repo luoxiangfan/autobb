@@ -6,6 +6,7 @@
  * 2. 不使用代理，直接访问Google API
  */
 
+import { logger } from '@/lib/common/server'
 import { createHash } from 'crypto'
 import { Resolver, lookup as systemLookup } from 'dns'
 import { Agent as HttpsAgent } from 'https'
@@ -986,7 +987,7 @@ export async function generateContent(
   if (requestedModel && requestedModel !== model) {
     console.warn(`⚠️ 服务商 ${provider} 不支持模型 ${requestedModel}，自动切换为 ${model}`)
   }
-  console.log(
+  logger.debug(
     `🌐 使用 ${GEMINI_PROVIDERS[provider].name} 服务商${overrideConfig ? '（临时配置）' : ''}`
   )
 
@@ -1014,12 +1015,12 @@ export async function generateContent(
     if (normalizedThinkingBudget !== undefined) {
       generationConfig.thinkingConfig = { thinkingBudget: normalizedThinkingBudget }
       if (normalizedThinkingBudget === 0) {
-        console.log(`🧠 Gemini 3 thinking 已关闭 (模型: ${model})`)
+        logger.debug(`🧠 Gemini 3 thinking 已关闭 (模型: ${model})`)
       } else {
-        console.log(`🧠 Gemini 3 thinkingBudget=${normalizedThinkingBudget} (模型: ${model})`)
+        logger.debug(`🧠 Gemini 3 thinkingBudget=${normalizedThinkingBudget} (模型: ${model})`)
       }
     } else {
-      console.log(`🧠 Gemini 3 模型使用默认 thinking 模式 (模型: ${model})`)
+      logger.debug(`🧠 Gemini 3 模型使用默认 thinking 模式 (模型: ${model})`)
     }
   }
 
@@ -1028,9 +1029,9 @@ export async function generateContent(
     generationConfig.responseMimeType = responseMimeType || 'application/json'
     generationConfig.responseSchema = responseSchema
     if (provider === 'relay') {
-      console.log(`📋 已请求JSON schema约束（relay链路可能忽略）`)
+      logger.debug(`📋 已请求JSON schema约束（relay链路可能忽略）`)
     } else {
-      console.log(`📋 Gemini API使用JSON schema约束`)
+      logger.debug(`📋 Gemini API使用JSON schema约束`)
     }
   }
 
@@ -1046,13 +1047,13 @@ export async function generateContent(
 
   // 尝试使用主模型
   try {
-    console.log(`🤖 调用 Gemini API: ${model}`)
-    console.log(`   - Prompt长度: ${prompt.length} 字符`)
-    console.log(`   - maxOutputTokens: ${maxOutputTokens}`)
+    logger.debug(`🤖 调用 Gemini API: ${model}`)
+    logger.debug(`   - Prompt长度: ${prompt.length} 字符`)
+    logger.debug(`   - maxOutputTokens: ${maxOutputTokens}`)
     if (timeoutMs) {
-      console.log(`   - timeout: ${timeoutMs}ms`)
+      logger.debug(`   - timeout: ${timeoutMs}ms`)
     }
-    console.log(`   - temperature: ${temperature}`)
+    logger.debug(`   - temperature: ${temperature}`)
 
     // 服务商鉴权方式
     // 官方API: query参数 ?key=xxx
@@ -1117,7 +1118,7 @@ export async function generateContent(
           const relayResponse = await client.post<any>('', relayPayload, relayRequestConfig)
 
           const parsedRelay = parseRelayResponse(relayResponse.data, relayModel)
-          console.log(
+          logger.debug(
             `✓ Relay /v1/messages 调用成功，返回 ${parsedRelay.text.length} 字符 (model=${parsedRelay.model})`
           )
           return parsedRelay
@@ -1162,7 +1163,7 @@ export async function generateContent(
             })
 
             const parsedRelay = parseRelayResponsesResponse(relayResponse.data, model)
-            console.log(`✓ Relay /v1/responses 调用成功，返回 ${parsedRelay.text.length} 字符`)
+            logger.debug(`✓ Relay /v1/responses 调用成功，返回 ${parsedRelay.text.length} 字符`)
             return parsedRelay
           } catch (relayResponsesError: any) {
             const status = Number(relayResponsesError?.response?.status || 0)
@@ -1331,7 +1332,7 @@ export async function generateContent(
         logEmptyCandidate(response.data, candidate)
         throw new Error('Gemini API 返回了空响应（content.parts为空）')
       }
-      console.log(`✓ Gemini API 调用成功，返回 ${text.length} 字符`)
+      logger.debug(`✓ Gemini API 调用成功，返回 ${text.length} 字符`)
 
       // 调试: 记录响应内容详情，排查输出过大问题
       const usage = response.data.usageMetadata
@@ -1339,24 +1340,24 @@ export async function generateContent(
       const candidatesTokenCount = usage?.candidatesTokenCount || 0
       const charsPerToken =
         candidatesTokenCount > 0 ? (text.length / candidatesTokenCount).toFixed(2) : 'N/A'
-      console.log(`📊 响应分析:`)
-      console.log(`   - 文本长度: ${text.length} 字符`)
-      console.log(`   - 输出tokens: ${candidatesTokenCount} (含thinking: ${thoughtsTokenCount})`)
-      console.log(`   - 字符/token比: ${charsPerToken}`)
+      logger.debug(`📊 响应分析:`)
+      logger.debug(`   - 文本长度: ${text.length} 字符`)
+      logger.debug(`   - 输出tokens: ${candidatesTokenCount} (含thinking: ${thoughtsTokenCount})`)
+      logger.debug(`   - 字符/token比: ${charsPerToken}`)
       // 如果输出异常大（超过10k tokens），记录更多信息
       if (candidatesTokenCount > 10000) {
         console.warn(`⚠️ 输出异常大! 预期约1000 tokens，实际 ${candidatesTokenCount} tokens`)
-        console.log(`   - 响应前500字符: ${text.substring(0, 500)}`)
-        console.log(`   - 响应后500字符: ${text.substring(text.length - 500)}`)
+        logger.debug(`   - 响应前500字符: ${text.substring(0, 500)}`)
+        logger.debug(`   - 响应后500字符: ${text.substring(text.length - 500)}`)
         if (shouldLogFullGeminiResponse()) {
-          console.log('   - 响应完整内容开始 >>>')
-          console.log(text)
-          console.log('   - 响应完整内容结束 <<<')
-          console.log('   - Prompt完整内容开始 >>>')
-          console.log(prompt)
-          console.log('   - Prompt完整内容结束 <<<')
+          logger.debug('   - 响应完整内容开始 >>>')
+          logger.debug(text)
+          logger.debug('   - 响应完整内容结束 <<<')
+          logger.debug('   - Prompt完整内容开始 >>>')
+          logger.debug(prompt)
+          logger.debug('   - Prompt完整内容结束 <<<')
         } else {
-          console.log('   - 响应完整内容已省略 (设置 GEMINI_LOG_FULL_RESPONSE=true 开启)')
+          logger.debug('   - 响应完整内容已省略 (设置 GEMINI_LOG_FULL_RESPONSE=true 开启)')
         }
       }
 
@@ -1368,7 +1369,7 @@ export async function generateContent(
           outputTokens: response.data.usageMetadata.candidatesTokenCount || 0,
           totalTokens: response.data.usageMetadata.totalTokenCount || 0,
         }
-        console.log(
+        logger.debug(
           `   Token使用: prompt=${usageResult.inputTokens}, ` +
             `output=${usageResult.outputTokens}, ` +
             `total=${usageResult.totalTokens}`

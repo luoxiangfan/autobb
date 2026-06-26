@@ -3,6 +3,7 @@
  * 用于记录AI模型调用的token使用情况到数据库
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 
 const USD_TO_CNY_EXCHANGE_RATE = 7.2
@@ -55,7 +56,7 @@ export async function recordTokenUsage(params: RecordTokenUsageParams): Promise<
       [userId, model, operationType, inputTokens, outputTokens, totalTokens, cost, apiType, today]
     )
 
-    console.log(
+    logger.debug(
       `✓ Token使用已记录: user=${userId}, model=${model}, tokens=${totalTokens}, cost=¥${cost.toFixed(4)}`
     )
   } catch (error) {

@@ -1,6 +1,7 @@
 /**
  * Click-farm task read/query operations.
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase, boolParam } from '@/lib/db'
 import { filterRowsByUserPackageExpiry } from '@/lib/common/task-scheduling'
 import type { ClickFarmTask, ClickFarmTaskListItem, TaskFilters } from './click-farm-types'
@@ -119,7 +120,7 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
 
   // 添加调试日志
   if (process.env.DEBUG_CLICK_FARM === 'true') {
-    console.log('[getPendingTasks] 查询结果:', {
+    logger.debug('[getPendingTasks] 查询结果:', {
       count: tasks.length,
       now: new Date().toISOString(),
       tasks: tasks.map((t) => ({

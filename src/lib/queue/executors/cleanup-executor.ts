@@ -10,6 +10,7 @@
  * 优势：支持并发控制、失败重试、清理进度追踪
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task, TaskExecutor } from '../types'
 import { getDatabase } from '@/lib/db'
 import { resolveBackupDir } from '@/lib/common/server'
@@ -62,7 +63,7 @@ async function cleanupOldBackups(daysToKeep: number): Promise<number> {
       if (stats.mtimeMs < cutoffTime) {
         fs.unlinkSync(filePath)
         deletedCount++
-        console.log(`🗑️ [CleanupExecutor] 删除旧备份文件: ${file}`)
+        logger.debug(`🗑️ [CleanupExecutor] 删除旧备份文件: ${file}`)
       }
     } catch (err) {
       console.error(`⚠️ [CleanupExecutor] 无法删除备份文件 ${file}:`, err)
@@ -84,7 +85,7 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
       targets = ['performance', 'sync_logs', 'backups', 'link_check_history'],
     } = task.data
 
-    console.log(
+    logger.debug(
       `🗑️ [CleanupExecutor] 开始数据清理任务: 类型=${cleanupType}, 保留天数=${retentionDays}`
     )
 
@@ -109,14 +110,14 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
           cutoffDateStr,
         ])
         deletedPerformanceRows = result.changes || 0
-        console.log(`   ✅ 删除 ${deletedPerformanceRows} 条性能数据`)
+        logger.debug(`   ✅ 删除 ${deletedPerformanceRows} 条性能数据`)
       }
 
       // 清理sync_logs表
       if (targets.includes('sync_logs')) {
         const result = await db.exec('DELETE FROM sync_logs WHERE started_at < ?', [cutoffDateStr])
         deletedSyncLogs = result.changes || 0
-        console.log(`   ✅ 删除 ${deletedSyncLogs} 条同步日志`)
+        logger.debug(`   ✅ 删除 ${deletedSyncLogs} 条同步日志`)
       }
 
       // 清理link_check_history表
@@ -125,18 +126,18 @@ export function createCleanupExecutor(): TaskExecutor<CleanupTaskData, CleanupTa
           cutoffDateStr,
         ])
         deletedLinkCheckHistory = result.changes || 0
-        console.log(`   ✅ 删除 ${deletedLinkCheckHistory} 条链接检查历史`)
+        logger.debug(`   ✅ 删除 ${deletedLinkCheckHistory} 条链接检查历史`)
       }
 
       // 清理旧备份文件
       if (targets.includes('backups')) {
         deletedBackupFiles = await cleanupOldBackups(backupRetentionDays)
-        console.log(`   ✅ 删除 ${deletedBackupFiles} 个旧备份文件`)
+        logger.debug(`   ✅ 删除 ${deletedBackupFiles} 个旧备份文件`)
       }
 
       const duration = Date.now() - startTime
 
-      console.log(
+      logger.debug(
         `✅ [CleanupExecutor] 数据清理完成: 性能数据=${deletedPerformanceRows}, 同步日志=${deletedSyncLogs}, 备份文件=${deletedBackupFiles}, 链接历史=${deletedLinkCheckHistory}, 耗时=${duration}ms`
       )
 

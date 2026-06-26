@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { CreativeKeywordUsagePlan } from '../server'
 
 // AI语义分类
@@ -1162,7 +1163,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     localization_section +=
       '\n**⚠️ PRICE SAFETY RULE**: Conflicting price signals were detected. Do NOT mention any exact price amount in headlines or descriptions.'
   } else if (currentPrice) {
-    console.log(
+    logger.debug(
       `[PriceEvidence] Offer ${offer.id}: using price source=${priceSource}, value=${currentPrice}`
     )
   }
@@ -1233,7 +1234,7 @@ This creative focuses on "${intent || intentEn}" user intent.
   if (salesRankSignal.eligibleForPrompt && salesRankSignal.normalizedRankText) {
     extras.push(`SALES RANK: ${salesRankSignal.normalizedRankText}`)
   } else if (salesRank) {
-    console.log(
+    logger.debug(
       `[SalesRankGuard] Offer ${offer.id}: skip salesRank "${salesRank}" (rank=${salesRankSignal.rankNumber ?? 'N/A'} > ${SALES_RANK_PROMPT_MAX} or unparsable)`
     )
   }
@@ -1283,7 +1284,7 @@ This creative focuses on "${intent || intentEn}" user intent.
         .filter((review): review is string => !!review)
       const droppedTopReviews = rawTopReviews.length - topReviews.length
       if (droppedTopReviews > 0) {
-        console.log(
+        logger.debug(
           `[ReviewQuoteGuard] Offer ${offer.id}: dropped ${droppedTopReviews} low-trust top reviews`
         )
       }
@@ -1850,7 +1851,7 @@ ${hooksList}
   if (offer.ai_analysis_v32) {
     v32Analysis = safeParseJson(offer.ai_analysis_v32)
     if (v32Analysis) {
-      console.log(`[AdCreativeGenerator] 🎯 使用v3.2分析数据: pageType=${v32Analysis?.pageType}`)
+      logger.debug(`[AdCreativeGenerator] 🎯 使用v3.2分析数据: pageType=${v32Analysis?.pageType}`)
     }
   }
 
@@ -2034,7 +2035,7 @@ ${hooksList}
         }
       }
 
-      console.log('✅ 已加载竞品分析数据到Prompt')
+      logger.debug('✅ 已加载竞品分析数据到Prompt')
     } catch (parseError: any) {
       console.warn('⚠️ 解析竞品分析数据失败（非致命错误）:', parseError.message)
     }
@@ -2155,7 +2156,7 @@ ${hooksList}
         extras.push(`ADDITIONAL FEATURES: ${scrapedData.secondaryFeatures.slice(0, 5).join(', ')}`)
       }
 
-      console.log('✅ 已加载独立站增强数据到Prompt')
+      logger.debug('✅ 已加载独立站增强数据到Prompt')
     } catch (parseError: any) {
       console.warn('⚠️ 解析独立站增强数据失败（非致命错误）:', parseError.message)
     }
@@ -2171,7 +2172,7 @@ ${hooksList}
   if (offer.ai_keywords) {
     aiKeywords = safeParseJson(offer.ai_keywords, [])
     if (Array.isArray(aiKeywords)) {
-      console.log(`[AdCreativeGenerator] 🎯 使用AI生成关键词: ${aiKeywords.length}个`)
+      logger.debug(`[AdCreativeGenerator] 🎯 使用AI生成关键词: ${aiKeywords.length}个`)
     } else {
       aiKeywords = []
     }
@@ -2181,7 +2182,7 @@ ${hooksList}
   if (offer.ai_competitive_edges) {
     aiCompetitiveEdges = safeParseJson(offer.ai_competitive_edges, null)
     if (aiCompetitiveEdges) {
-      console.log(`[AdCreativeGenerator] 🏆 使用AI竞争优势数据:`, aiCompetitiveEdges)
+      logger.debug(`[AdCreativeGenerator] 🏆 使用AI竞争优势数据:`, aiCompetitiveEdges)
     }
   }
 
@@ -2189,7 +2190,7 @@ ${hooksList}
   if (offer.ai_reviews) {
     aiReviews = safeParseJson(offer.ai_reviews, null)
     if (aiReviews) {
-      console.log(
+      logger.debug(
         `[AdCreativeGenerator] ⭐ 使用AI评论洞察: rating=${aiReviews.rating}, sentiment=${aiReviews.sentiment}`
       )
     }
@@ -2215,7 +2216,7 @@ ${hooksList}
   })
 
   if (promptKeywordPlan.policyMatchedTerms.length > 0) {
-    console.log(
+    logger.debug(
       `[PolicyGuard] Prompt关键词净化: 命中${promptKeywordPlan.policyMatchedTerms.length}个敏感词`
     )
   }
@@ -2587,7 +2588,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
       aiKeywordSection += `\n**上下文短语（来自TITLE/ABOUT，仅补充，非搜索量验证，占比≤20%）**:\n${titleAboutKeywordSeeds.join(', ')}\n`
     }
     variables.ai_keywords_section = aiKeywordSection
-    console.log(
+    logger.debug(
       `[Prompt] 🔑 提供给AI的关键词数量: ${keywordsForPrompt.length}个 (主关键词${validatedKeywordsForPrompt.length} + 上下文补充${titleAboutKeywordSeeds.length})`
     )
   } else {
@@ -2667,7 +2668,7 @@ ${mainPromo.conditions ? `**CONDITIONS**: ${mainPromo.conditions}` : ''}
       if (aiSalesRankSignal.strongSignal && aiSalesRankSignal.raw) {
         ai_competitive_section += `\n**销售排名**: ${aiSalesRankSignal.raw}\n`
       } else if (aiSalesRankSignal.raw) {
-        console.log(
+        logger.debug(
           `[SalesRankGuard] Offer ${offer.id}: skip ai_competitive salesRank "${aiSalesRankSignal.raw}" (not top-tier)`
         )
       }

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { pauseOfferTasksBatch } from '@/lib/campaign/server'
 
@@ -70,7 +71,7 @@ function getUserConcurrencySettings(): {
 }
 
 function logCampaignPausedTaskCheckComplete(payload: Record<string, unknown>): void {
-  console.log(JSON.stringify({ event: 'campaign_paused_task_check_complete', ...payload }))
+  logger.debug(JSON.stringify({ event: 'campaign_paused_task_check_complete', ...payload }))
 }
 
 async function processUserOfferBatch(

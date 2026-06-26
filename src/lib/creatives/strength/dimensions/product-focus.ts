@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { HeadlineAsset, DescriptionAsset } from '../../server'
 export function calculateProductFocus(
   headlines: HeadlineAsset[],
@@ -224,10 +225,10 @@ export function calculateProductFocus(
 
   // 输出调试信息
   if (score < 4) {
-    console.log(`⚠️ 单品聚焦度评分: ${score}/4 (${problemCount}个问题)`)
-    issues.forEach((issue) => console.log(`   - ${issue}`))
+    logger.debug(`⚠️ 单品聚焦度评分: ${score}/4 (${problemCount}个问题)`)
+    issues.forEach((issue) => logger.debug(`   - ${issue}`))
   } else {
-    console.log(`✅ 单品聚焦度评分: ${score}/4 (无问题)`)
+    logger.debug(`✅ 单品聚焦度评分: ${score}/4 (无问题)`)
   }
 
   return { score, issues }

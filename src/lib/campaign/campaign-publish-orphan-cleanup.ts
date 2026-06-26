@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import {
   updateGoogleAdsCampaignStatus,
@@ -184,7 +185,7 @@ export async function pauseOrphanGoogleAdsCampaignAfterPublishFailure(
           ...(ctx.authContext ? googleAdsAuthContextParam(ctx.authContext) : {}),
         })
     )
-    console.log(`⏸️ 发布失败已暂停远端孤儿 Campaign ${googleCampaignId}`)
+    logger.debug(`⏸️ 发布失败已暂停远端孤儿 Campaign ${googleCampaignId}`)
   } catch (pauseError: any) {
     console.warn(
       `⚠️ 发布失败后暂停远端 Campaign 失败（googleCampaignId=${googleCampaignId}）: ${pauseError?.message || pauseError}`
@@ -241,7 +242,7 @@ export async function pauseHistoricalOrphanGoogleCampaignsForOffer(params: {
     return { attempted: 0, paused: 0, skipped: 0, failed: 0 }
   }
 
-  console.log(
+  logger.debug(
     `[CampaignPublish] 发现 ${orphans.length} 个历史失败残留的远端 Campaign，开始暂停（offer=${params.offerId}，含跨账号）`
   )
 
@@ -300,7 +301,7 @@ export async function pauseHistoricalOrphanGoogleCampaignsForOffer(params: {
         orphanAccountId && orphanAccountId !== params.googleAdsAccountId
           ? `，旧账号=${orphanAccountId}`
           : ''
-      console.log(
+      logger.debug(
         `⏸️ 已暂停历史孤儿 Campaign ${orphan.googleCampaignId}（localId=${orphan.id}${accountNote}）`
       )
     } catch (error: any) {

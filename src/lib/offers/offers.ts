@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import {
   generateOfferName,
@@ -252,16 +253,16 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
 
   // Debug logging for PostgreSQL
   if (process.env.DEBUG_OFFERS) {
-    console.log('[DEBUG] offerName:', offerName)
-    console.log('[DEBUG] offerName type:', typeof offerName)
+    logger.debug('[DEBUG] offerName:', offerName)
+    logger.debug('[DEBUG] offerName type:', typeof offerName)
   }
 
   // 根据国家或用户输入自动映射推广语言（如 US→English, DE→German）
   const targetLanguage = input.target_language || getTargetLanguage(normalizedTargetCountry)
 
   if (process.env.DEBUG_OFFERS) {
-    console.log('[DEBUG] targetLanguage:', targetLanguage)
-    console.log('[DEBUG] targetLanguage type:', typeof targetLanguage)
+    logger.debug('[DEBUG] targetLanguage:', targetLanguage)
+    logger.debug('[DEBUG] targetLanguage type:', typeof targetLanguage)
   }
 
   const normalizedProductPrice = normalizeOfferProductPriceInput(
@@ -1310,14 +1311,14 @@ export async function deleteOffer(
 
     await pauseUrlSwapTargetsByOfferId(id)
 
-    console.log(`[Offer删除] 禁用 ${urlSwapTasks.length} 个关联的URL Swap任务`)
+    logger.debug(`[Offer删除] 禁用 ${urlSwapTasks.length} 个关联的URL Swap任务`)
 
     try {
       const usIds = urlSwapTasks.map((t: { id: unknown }) => String(t.id).trim()).filter(Boolean)
       if (usIds.length > 0) {
         const { removedCount } = await removePendingUrlSwapQueueTasksByTaskIds(usIds, userId)
         if (removedCount > 0) {
-          console.log(`[Offer删除] 从队列移除 ${removedCount} 个待处理的URL Swap任务`)
+          logger.debug(`[Offer删除] 从队列移除 ${removedCount} 个待处理的URL Swap任务`)
         }
       }
     } catch (queueError: unknown) {

@@ -7,6 +7,7 @@
  * Cron备份：每5分钟检查待处理任务
  */
 
+import { logger } from '@/lib/common/server'
 import { calculateNextSwapAt } from './url-swap-time'
 import {
   getPendingTasks,
@@ -31,7 +32,7 @@ export async function triggerAllUrlSwapTasks(): Promise<{
   skipped: number
   errors: number
 }> {
-  console.log('[url-swap-scheduler] 开始触发换链接任务')
+  logger.debug('[url-swap-scheduler] 开始触发换链接任务')
 
   const tasks = await getPendingTasks()
   const results = { processed: 0, executed: 0, skipped: 0, errors: 0 }
@@ -42,7 +43,7 @@ export async function triggerAllUrlSwapTasks(): Promise<{
       // 1. 检查是否应该完成（duration_days）
       if (shouldCompleteTask(task as any)) {
         await updateTaskStatus(task.id, 'completed')
-        console.log(`[url-swap-scheduler] 任务已完成: ${task.id}`)
+        logger.debug(`[url-swap-scheduler] 任务已完成: ${task.id}`)
         results.skipped++
         continue
       }
@@ -96,7 +97,7 @@ export async function triggerAllUrlSwapTasks(): Promise<{
       await updateTaskStatus(task.id, 'enabled', nextSwapAt.toISOString())
 
       results.executed++
-      console.log(`[url-swap-scheduler] 任务已入队: ${task.id}`)
+      logger.debug(`[url-swap-scheduler] 任务已入队: ${task.id}`)
     } catch (error: any) {
       console.error(`[url-swap-scheduler] 任务处理失败: ${task.id}`, error)
       results.errors++
@@ -105,7 +106,7 @@ export async function triggerAllUrlSwapTasks(): Promise<{
     results.processed++
   }
 
-  console.log(
+  logger.debug(
     `[url-swap-scheduler] 完成: processed=${results.processed}, executed=${results.executed}, skipped=${results.skipped}, errors=${results.errors}`
   )
 
@@ -178,7 +179,7 @@ export async function triggerUrlSwapScheduling(taskId: string): Promise<TriggerR
   const nextSwapAt = calculateNextSwapAt(task.swap_interval_minutes)
   await updateTaskStatus(task.id, 'enabled', nextSwapAt.toISOString())
 
-  console.log(`[url-swap-scheduler] 事件驱动调度成功: ${taskId}`)
+  logger.debug(`[url-swap-scheduler] 事件驱动调度成功: ${taskId}`)
 
   return { taskId, status: 'queued', message: '任务已加入队列' }
 }

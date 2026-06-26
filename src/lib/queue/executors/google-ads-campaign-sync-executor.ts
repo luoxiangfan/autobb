@@ -5,6 +5,7 @@
  * 调用同步服务实际执行同步逻辑
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 import type { Task } from '../types'
 import {
@@ -48,7 +49,7 @@ export async function executeGoogleAdsCampaignSyncTask(
   const isManualSync = syncType === 'manual'
   let syncLogId: number | null = null
 
-  console.log(
+  logger.debug(
     `▶️  [GoogleAdsSyncExecutor] 开始执行同步任务：${taskId}, 用户 #${userId}, 类型：${syncType}`
   )
 
@@ -57,7 +58,7 @@ export async function executeGoogleAdsCampaignSyncTask(
   try {
     const staleClosed = await markStaleGoogleAdsCampaignSyncLogs({ userId })
     if (staleClosed > 0) {
-      console.log(
+      logger.debug(
         `🧹 [GoogleAdsSyncExecutor] 已关闭用户 #${userId} 的 ${staleClosed} 条超时 running 同步日志`
       )
     }
@@ -81,7 +82,7 @@ export async function executeGoogleAdsCampaignSyncTask(
       )
       // 获取插入的 id（RETURNING / lastInsertRowid）
       syncLogId = logResult.lastInsertRowid || null
-      console.log(`📝 [GoogleAdsSyncExecutor] 创建同步日志记录 ID: ${syncLogId}`)
+      logger.debug(`📝 [GoogleAdsSyncExecutor] 创建同步日志记录 ID: ${syncLogId}`)
     } catch (logError) {
       console.error(`❌ [GoogleAdsSyncExecutor] 创建初始同步日志失败:`, logError)
     }
@@ -116,7 +117,7 @@ export async function executeGoogleAdsCampaignSyncTask(
             syncLogId,
           ]
         )
-        console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId}`)
+        logger.debug(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId}`)
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 更新同步日志失败:`, logError)
       }
@@ -139,7 +140,7 @@ export async function executeGoogleAdsCampaignSyncTask(
             logOutcome.errorMessage,
           ]
         )
-        console.log(`📝 [GoogleAdsSyncExecutor] 同步日志已记录（fallback）：${taskId}`)
+        logger.debug(`📝 [GoogleAdsSyncExecutor] 同步日志已记录（fallback）：${taskId}`)
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 记录同步日志失败:`, logError)
       }
@@ -164,7 +165,7 @@ export async function executeGoogleAdsCampaignSyncTask(
             resourceId: undefined,
           }
         )
-        console.log(`⚠️  [GoogleAdsSyncExecutor] 风险预警已创建：${taskId}`)
+        logger.debug(`⚠️  [GoogleAdsSyncExecutor] 风险预警已创建：${taskId}`)
       } catch (alertError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 创建风险预警失败:`, alertError)
       }
@@ -187,7 +188,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     }
 
     // 4. 输出统计信息
-    console.log(`✅ [GoogleAdsSyncExecutor] 同步任务完成：${taskId}`, {
+    logger.debug(`✅ [GoogleAdsSyncExecutor] 同步任务完成：${taskId}`, {
       duration: `${duration}ms`,
       synced: result.syncedCount,
       created: result.createdOffersCount,
@@ -199,7 +200,7 @@ export async function executeGoogleAdsCampaignSyncTask(
     try {
       const reconciled = await reconcileStaleGoogleAdsCampaignSyncPendingTasks(userId)
       if (reconciled.removed > 0) {
-        console.log(
+        logger.debug(
           `🧹 [GoogleAdsSyncExecutor] 已清理用户 #${userId} 的 ${reconciled.removed} 条残留 pending 同步任务`
         )
       }
@@ -233,7 +234,7 @@ export async function executeGoogleAdsCampaignSyncTask(
            WHERE id = ?`,
           ['failed', 0, duration, completedAt, errorMessage, syncLogId]
         )
-        console.log(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId} (failed)`)
+        logger.debug(`📝 [GoogleAdsSyncExecutor] 更新同步日志记录 ID: ${syncLogId} (failed)`)
       } catch (logError) {
         console.error(`❌ [GoogleAdsSyncExecutor] 更新同步日志失败:`, logError)
       }

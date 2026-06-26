@@ -202,10 +202,10 @@ export class UnifiedQueueManager {
    */
   private createAdapter(): QueueStorageAdapter {
     if (this.config.redisUrl) {
-      console.log('🔄 尝试连接Redis队列...')
+      logger.debug('🔄 尝试连接Redis队列...')
       return new RedisQueueAdapter(this.config.redisUrl, this.config.redisKeyPrefix)
     } else {
-      console.log('⚠️ REDIS_URL未配置，使用内存队列')
+      logger.debug('⚠️ REDIS_URL未配置，使用内存队列')
       return new MemoryQueueAdapter()
     }
   }
@@ -238,7 +238,7 @@ export class UnifiedQueueManager {
   async initialize(): Promise<void> {
     // 如果已初始化，直接返回
     if (this.initialized) {
-      console.log(`✅ 队列已初始化: ${this.adapter.constructor.name}`)
+      logger.debug(`✅ 队列已初始化: ${this.adapter.constructor.name}`)
       return
     }
 
@@ -252,7 +252,7 @@ export class UnifiedQueueManager {
     this.initializingPromise = (async () => {
       try {
         await this.adapter.connect()
-        console.log(`✅ 队列已初始化: ${this.adapter.constructor.name}`)
+        logger.debug(`✅ 队列已初始化: ${this.adapter.constructor.name}`)
         queueVerboseLog('queue_runtime_info', this.getRuntimeInfo())
         this.initialized = true
       } catch (error: any) {
@@ -261,7 +261,7 @@ export class UnifiedQueueManager {
         // 回退到内存队列
         this.adapter = new MemoryQueueAdapter()
         await this.adapter.connect()
-        console.log('✅ 内存队列已启用')
+        logger.debug('✅ 内存队列已启用')
         logger.warn('queue_runtime_info', {
           ...this.getRuntimeInfo(),
           fallback: 'memory',
@@ -286,7 +286,7 @@ export class UnifiedQueueManager {
 
     // 如果已启动，直接返回
     if (this.started) {
-      console.log('🚀 队列处理已在运行中')
+      logger.debug('🚀 队列处理已在运行中')
       return
     }
 
@@ -318,7 +318,7 @@ export class UnifiedQueueManager {
       if (this.running) return
 
       this.running = true
-      console.log('🚀 队列处理启动中...')
+      logger.debug('🚀 队列处理启动中...')
 
       // 启启动重启后 running 任务会变成“僵尸”，应回到 pending 而不是直接清空
       if (this.adapter.requeueAllRunningOnStartup) {
@@ -326,17 +326,17 @@ export class UnifiedQueueManager {
         const result = await this.adapter.requeueAllRunningOnStartup()
         const requeueElapsedMs = Date.now() - requeueStartedAt
         if (result.requeuedCount > 0 || result.cleanedMissingCount > 0) {
-          console.log(
+          logger.debug(
             `🧹 队列启动修复: requeued=${result.requeuedCount}, cleanedMissing=${result.cleanedMissingCount}, elapsed=${requeueElapsedMs}ms`
           )
         } else {
-          console.log(`🧹 队列启动修复: 无需处理 (elapsed=${requeueElapsedMs}ms)`)
+          logger.debug(`🧹 队列启动修复: 无需处理 (elapsed=${requeueElapsedMs}ms)`)
         }
       } else {
         // 旧适配器兼容：不支持 requeue 时仍然保留原行为（仅清理 running 僵尸可能会丢任务）
         const zombieCleanupStartedAt = Date.now()
         await this.cleanupZombieTasks('startup')
-        console.log(`🧹 僵尸任务清理完成 (elapsed=${Date.now() - zombieCleanupStartedAt}ms)`)
+        logger.debug(`🧹 僵尸任务清理完成 (elapsed=${Date.now() - zombieCleanupStartedAt}ms)`)
       }
 
       // 修复 pending 索引：避免 tasks hash 中的 pending 任务因缺失 zset 索引而永远无法执行
@@ -345,22 +345,22 @@ export class UnifiedQueueManager {
         const repair = await this.adapter.repairPendingIndexes()
         const repairElapsedMs = Date.now() - repairStartedAt
         if (repair.repairedCount > 0) {
-          console.log(
+          logger.debug(
             `🧩 pending 索引修复: repaired=${repair.repairedCount}, scanned=${repair.scannedCount}, elapsed=${repairElapsedMs}ms`
           )
         } else {
-          console.log(
+          logger.debug(
             `🧩 pending 索引修复: 无需处理 (scanned=${repair.scannedCount}, elapsed=${repairElapsedMs}ms)`
           )
         }
       } else if (this.adapter.repairPendingIndexes && this.skipStartupPendingRepair) {
-        console.log('⏭️ 启动阶段已跳过 pending 索引修复 (QUEUE_SKIP_STARTUP_PENDING_REPAIR=true)')
+        logger.debug('⏭️ 启动阶段已跳过 pending 索引修复 (QUEUE_SKIP_STARTUP_PENDING_REPAIR=true)')
       }
 
       // 启动时清理URL Swap队列任务（避免重复执行）
       const urlSwapCleanupStartedAt = Date.now()
       await this.cleanupUrlSwapTasksOnStartup()
-      console.log(`🧹 URL Swap 启动清理完成 (elapsed=${Date.now() - urlSwapCleanupStartedAt}ms)`)
+      logger.debug(`🧹 URL Swap 启动清理完成 (elapsed=${Date.now() - urlSwapCleanupStartedAt}ms)`)
 
       // 启动处理循环（每100ms检查一次）
       this.processingLoop = setInterval(() => {
@@ -371,7 +371,7 @@ export class UnifiedQueueManager {
       this.startHealthCheckLoop()
 
       this.started = true
-      console.log(`🚀 队列处理已启动 (totalElapsed=${Date.now() - startAt}ms)`)
+      logger.debug(`🚀 队列处理已启动 (totalElapsed=${Date.now() - startAt}ms)`)
     })()
 
     await this.startingPromise
@@ -396,7 +396,7 @@ export class UnifiedQueueManager {
     this.stopHealthCheckLoop()
 
     await this.adapter.disconnect()
-    console.log('⏹️ 队列处理已停止')
+    logger.debug('⏹️ 队列处理已停止')
   }
 
   /**
@@ -408,7 +408,7 @@ export class UnifiedQueueManager {
       return // 静默跳过，不输出警告日志
     }
     this.executors.set(type, executor)
-    console.log(`📝 已注册执行器: ${type}`)
+    logger.debug(`📝 已注册执行器: ${type}`)
   }
 
   /**
@@ -416,7 +416,7 @@ export class UnifiedQueueManager {
    */
   registerAllExecutors(): void {
     if (this.executorsRegistered) {
-      console.log('⚠️ 任务执行器已注册，跳过重复注册')
+      logger.debug('⚠️ 任务执行器已注册，跳过重复注册')
       return
     }
     this.executorsRegistered = true
@@ -457,18 +457,18 @@ export class UnifiedQueueManager {
    */
   async registerAllExecutorsSafe(): Promise<void> {
     if (this.executorsRegistered) {
-      console.log('⚠️ 任务执行器已注册，跳过重复注册')
+      logger.debug('⚠️ 任务执行器已注册，跳过重复注册')
       return
     }
 
-    console.log('📝 注册任务执行器...')
+    logger.debug('📝 注册任务执行器...')
 
     // 动态导入执行器注册函数
     const { registerAllExecutors } = await import('./executors')
     registerAllExecutors(this)
 
     this.executorsRegistered = true
-    console.log('📝 任务执行器注册完成')
+    logger.debug('📝 任务执行器注册完成')
   }
 
   /**
@@ -562,7 +562,7 @@ export class UnifiedQueueManager {
         return
       }
       // 退避期结束，重置错误计数
-      console.log('🔄 Redis连接恢复尝试，重置错误计数')
+      logger.debug('🔄 Redis连接恢复尝试，重置错误计数')
       this.consecutiveErrors = 0
     }
 
@@ -828,11 +828,11 @@ export class UnifiedQueueManager {
                 // 保存原始URL用于动态代理服务
                 originalUrl: userProxy.originalUrl,
               } as ProxyConfig
-              console.log(
+              logger.debug(
                 `🔌 任务 ${task.id} 使用用户 ${task.userId} 的代理 (${userProxy.country})`
               )
             } else {
-              console.log(`⚠️ 任务 ${task.id} 需要代理但用户 ${task.userId} 未配置代理`)
+              logger.debug(`⚠️ 任务 ${task.id} 需要代理但用户 ${task.userId} 未配置代理`)
             }
           }
         }
@@ -888,13 +888,13 @@ export class UnifiedQueueManager {
           // 重试时清除代理配置，强制重新获取新代理
           // 这样可以避免使用失败的代理IP，提高重试成功率
           if (task.type === 'click-farm' && task.data?.proxyUrl) {
-            console.log(
+            logger.debug(
               `🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id} - 清除旧代理，准备更换新代理`
             )
             delete task.data.proxyUrl
             task.proxyConfig = undefined
           } else {
-            console.log(`🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id}`)
+            logger.debug(`🔄 任务重试 (${task.retryCount}/${task.maxRetries}): ${task.id}`)
           }
 
           // 延迟后重新入队
@@ -924,7 +924,7 @@ export class UnifiedQueueManager {
                 reason: (error as any)?.reason || undefined,
               })
             }
-            console.log(`⚠️ 不可恢复的错误，不再重试: ${task.id}`)
+            logger.debug(`⚠️ 不可恢复的错误，不再重试: ${task.id}`)
           }
           // 队列恢复功能已移除，用户可重新提交任务
           await this.adapter.updateTaskStatus(task.id, 'failed', error.message)
@@ -941,7 +941,7 @@ export class UnifiedQueueManager {
             const { getPlaywrightPool } = await import('@/lib/scraping')
             const pool = getPlaywrightPool()
             await pool.clearIdleInstances()
-            console.log(`🧹 [内存清理] 任务 ${task.id} 完成后清理空闲浏览器实例`)
+            logger.debug(`🧹 [内存清理] 任务 ${task.id} 完成后清理空闲浏览器实例`)
           } catch (cleanupError) {
             // 清理失败不影响主流程
             console.warn(`⚠️ [内存清理] 清理空闲实例失败: ${cleanupError}`)
@@ -951,7 +951,7 @@ export class UnifiedQueueManager {
           if (global.gc) {
             try {
               global.gc()
-              console.log(`🧹 [内存清理] 触发GC`)
+              logger.debug(`🧹 [内存清理] 触发GC`)
             } catch {
               // GC失败不影响主流程
             }
@@ -1142,8 +1142,8 @@ export class UnifiedQueueManager {
           const details = `pending=${result.pendingCleared}, running(zombie)=${result.runningCleared}, userQueues=${result.userQueuesCleared}`
 
           if (result.totalCleared > 0) {
-            console.log(`🧹 队列启动清理: 清除 ${result.totalCleared} 个僵尸任务`)
-            console.log(`   ${details}`)
+            logger.debug(`🧹 队列启动清理: 清除 ${result.totalCleared} 个僵尸任务`)
+            logger.debug(`   ${details}`)
           }
 
           return {
@@ -1157,7 +1157,7 @@ export class UnifiedQueueManager {
           const result = await this.adapter.cleanupStaleRunningTasks(this.STALE_TASK_TIMEOUT)
 
           if (result.cleanedCount > 0) {
-            console.log(`🧹 队列健康检查: 清理 ${result.cleanedCount} 个超时任务`)
+            logger.debug(`🧹 队列健康检查: 清理 ${result.cleanedCount} 个超时任务`)
           }
 
           return {
@@ -1242,9 +1242,9 @@ export class UnifiedQueueManager {
 
       const healthy = issues.length === 0
       if (!healthy) {
-        console.log(`⚠️ 队列健康检查发现问题:`)
-        issues.forEach((issue) => console.log(`   - ${issue}`))
-        actions.forEach((action) => console.log(`   ✅ ${action}`))
+        logger.debug(`⚠️ 队列健康检查发现问题:`)
+        issues.forEach((issue) => logger.debug(`   - ${issue}`))
+        actions.forEach((action) => logger.debug(`   ✅ ${action}`))
       }
 
       return { healthy, issues, actions }
@@ -1291,7 +1291,7 @@ export class UnifiedQueueManager {
         return { cleanedCount: 0, taskIds: [] }
       }
 
-      console.log(
+      logger.debug(
         `⚠️ 发现 ${staleTasks.length} 个数据库超时任务: ${staleTasks.map((t) => t.id).join(', ')}`
       )
 
@@ -1357,11 +1357,11 @@ export class UnifiedQueueManager {
           `,
             [newStatus, batchId]
           )
-          console.log(`📦 Batch ${batchId} 状态已更新为: ${newStatus}`)
+          logger.debug(`📦 Batch ${batchId} 状态已更新为: ${newStatus}`)
         }
       }
 
-      console.log(`✅ 已清理 ${updateResult.changes} 个超时任务`)
+      logger.debug(`✅ 已清理 ${updateResult.changes} 个超时任务`)
 
       return {
         cleanedCount: updateResult.changes,
@@ -1391,14 +1391,14 @@ export class UnifiedQueueManager {
         // 2. 清理数据库中超时的任务（不依赖 Redis）
         const dbCleanup = await this.cleanupStaleDatabaseTasks()
         if (dbCleanup.cleanedCount > 0) {
-          console.log(`🧹 数据库清理: ${dbCleanup.cleanedCount} 个超时任务已标记为失败`)
+          logger.debug(`🧹 数据库清理: ${dbCleanup.cleanedCount} 个超时任务已标记为失败`)
         }
       } catch (error: any) {
         console.error('❌ 定期健康检查失败:', error.message)
       }
     }, this.HEALTH_CHECK_INTERVAL)
 
-    console.log(`🏥 队列健康检查已启动 (间隔: ${this.HEALTH_CHECK_INTERVAL / 1000}秒)`)
+    logger.debug(`🏥 队列健康检查已启动 (间隔: ${this.HEALTH_CHECK_INTERVAL / 1000}秒)`)
   }
 
   /**
@@ -1408,7 +1408,7 @@ export class UnifiedQueueManager {
     if (this.healthCheckLoop) {
       clearInterval(this.healthCheckLoop)
       this.healthCheckLoop = null
-      console.log('🏥 队列健康检查已停止')
+      logger.debug('🏥 队列健康检查已停止')
     }
   }
 
@@ -1422,11 +1422,11 @@ export class UnifiedQueueManager {
    */
   private async cleanupUrlSwapTasksOnStartup(): Promise<void> {
     try {
-      console.log('[队列健康] 🧹 服务启动，清理换链接队列任务...')
+      logger.debug('[队列健康] 🧹 服务启动，清理换链接队列任务...')
 
       // 检查adapter是否支持deleteTasksByTypeAndStatus
       if (!this.adapter.deleteTasksByTypeAndStatus) {
-        console.log('[队列健康] ⚠️ 当前适配器不支持按类型删除任务，跳过清理')
+        logger.debug('[队列健康] ⚠️ 当前适配器不支持按类型删除任务，跳过清理')
         return
       }
 
@@ -1439,12 +1439,12 @@ export class UnifiedQueueManager {
       const total = runningDeleted + pendingDeleted
 
       if (total > 0) {
-        console.log(
+        logger.debug(
           `[队列健康] ✅ 清理 ${total} 个换链接任务 (running: ${runningDeleted}, pending: ${pendingDeleted})`
         )
-        console.log('[队列健康] ℹ️  任务将在下一个时间间隔由调度器重新入队')
+        logger.debug('[队列健康] ℹ️  任务将在下一个时间间隔由调度器重新入队')
       } else {
-        console.log('[队列健康] ✅ 无需清理换链接任务')
+        logger.debug('[队列健康] ✅ 无需清理换链接任务')
       }
     } catch (error: any) {
       console.error('[队列健康] ❌ 清理换链接任务失败:', error.message)
@@ -1486,7 +1486,7 @@ export class UnifiedQueueManager {
           try {
             await this.adapter.removeTask?.(childTask.id)
             cancelledCount++
-            console.log(`🚫 已从队列移除 pending 任务: ${childTask.id}`)
+            logger.debug(`🚫 已从队列移除 pending 任务: ${childTask.id}`)
           } catch (err) {
             console.warn(`⚠️ 移除任务失败: ${childTask.id}`, err)
           }
@@ -1506,7 +1506,7 @@ export class UnifiedQueueManager {
         [batchId]
       )
 
-      console.log(`✅ 批量任务 ${batchId} 已取消，共处理 ${cancelledCount} 个 pending 任务`)
+      logger.debug(`✅ 批量任务 ${batchId} 已取消，共处理 ${cancelledCount} 个 pending 任务`)
 
       return cancelledCount
     } catch (error: any) {
@@ -1612,7 +1612,7 @@ export class UnifiedQueueManager {
         }
       }
 
-      console.log(`🔄 Batch 状态同步完成: 检查 ${batches.length} 个, 修复 ${fixed} 个`)
+      logger.debug(`🔄 Batch 状态同步完成: 检查 ${batches.length} 个, 修复 ${fixed} 个`)
 
       return {
         checked: batches.length,
@@ -1662,7 +1662,7 @@ export class UnifiedQueueManager {
       // 防御性合并：避免外部只传部分perTypeConcurrency导致其它类型丢失（进而回退到默认2并发）
       perTypeConcurrency: mergedPerTypeConcurrency,
     }
-    console.log('🔄 队列配置已更新')
+    logger.debug('🔄 队列配置已更新')
   }
 
   /**
@@ -1769,7 +1769,7 @@ declare global {
  */
 export function getQueueManager(config?: Partial<QueueConfig>): UnifiedQueueManager {
   if (!globalThis.__queueManager) {
-    console.log('🚀 创建统一队列管理器单例...')
+    logger.debug('🚀 创建统一队列管理器单例...')
     globalThis.__queueManager = new UnifiedQueueManager({
       instanceName: 'core',
       ...config,
@@ -1793,7 +1793,7 @@ export function getBackgroundQueueManager(config?: Partial<QueueConfig>): Unifie
   const effectiveAutoStartOnEnqueue = forceProducerMode ? false : requestedAutoStart
 
   if (!globalThis.__backgroundQueueManager) {
-    console.log('🚀 创建后台队列管理器单例...')
+    logger.debug('🚀 创建后台队列管理器单例...')
     const defaultBackgroundRedisKeyPrefix =
       process.env.REDIS_KEY_PREFIX_BACKGROUND ||
       `autoads:${process.env.NODE_ENV || 'development'}:queue:bg:`

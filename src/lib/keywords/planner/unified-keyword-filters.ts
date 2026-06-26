@@ -1,6 +1,7 @@
 /**
  * Whitelist and smart filters for unified keyword service.
  */
+import { logger } from '@/lib/common/server'
 import { DEFAULTS, PLATFORMS, BRAND_PATTERNS } from '../keyword-constants'
 import {
   containsPureBrand,
@@ -164,7 +165,7 @@ export function filterByWhitelist<T extends { keyword: string }>(
       containsBrandMisspelling(kw.keyword, coreBrand)
     ) {
       misspellingFiltered++
-      console.log(`   ❌ 过滤拼写错误: "${kw.keyword}" (品牌: ${brandName})`)
+      logger.debug(`   ❌ 过滤拼写错误: "${kw.keyword}" (品牌: ${brandName})`)
       return false
     }
 
@@ -194,7 +195,7 @@ export function filterByWhitelist<T extends { keyword: string }>(
       if (hasSelfBrandWord || hasSelfBrandPartial) {
         // 同时包含自身品牌和竞品，保留（跨品牌比较搜索有价值）
         crossBrandKept++
-        console.log(
+        logger.debug(
           `   ✅ 保留跨品牌比较词: "${kw.keyword}" (自身: ${brandName} + 竞品: ${detectedBrand})`
         )
         return true
@@ -203,7 +204,7 @@ export function filterByWhitelist<T extends { keyword: string }>(
       // 纯竞品词（不含自身品牌） → 排除
       competitorFiltered++
       competitorBrandsSet.add(detectedBrand) // 收集竞品品牌
-      console.log(`   ❌ 过滤竞品词: "${kw.keyword}" (检测到竞品: ${detectedBrand})`)
+      logger.debug(`   ❌ 过滤竞品词: "${kw.keyword}" (检测到竞品: ${detectedBrand})`)
       return false
     }
 
@@ -214,14 +215,14 @@ export function filterByWhitelist<T extends { keyword: string }>(
 
   const competitorBrands = Array.from(competitorBrandsSet)
 
-  console.log(`\n📋 白名单过滤结果:`)
-  console.log(`   ✅ 品牌词保留: ${brandKept}`)
-  console.log(`   ✅ 通用词保留: ${genericKept}`)
-  console.log(`   ✅ 跨品牌比较词保留: ${crossBrandKept}`) // 新增
-  console.log(`   ❌ 竞品词过滤: ${competitorFiltered}`)
-  console.log(`   ❌ 拼写错误过滤: ${misspellingFiltered}`) // 新增
+  logger.debug(`\n📋 白名单过滤结果:`)
+  logger.debug(`   ✅ 品牌词保留: ${brandKept}`)
+  logger.debug(`   ✅ 通用词保留: ${genericKept}`)
+  logger.debug(`   ✅ 跨品牌比较词保留: ${crossBrandKept}`) // 新增
+  logger.debug(`   ❌ 竞品词过滤: ${competitorFiltered}`)
+  logger.debug(`   ❌ 拼写错误过滤: ${misspellingFiltered}`) // 新增
   if (competitorBrands.length > 0) {
-    console.log(`   🏷️ 识别竞品品牌: ${competitorBrands.join(', ')}`)
+    logger.debug(`   🏷️ 识别竞品品牌: ${competitorBrands.join(', ')}`)
   }
 
   return {
@@ -280,7 +281,7 @@ export function applySmartFilters(
   const isPureBrand = (keyword: string) => isPureBrandKeyword(keyword, pureBrandKeywords)
 
   if (disableSearchVolumeFilter) {
-    console.log('\n⚠️ 搜索量数据不可用，跳过搜索量阈值过滤（仅过滤研究意图词）')
+    logger.debug('\n⚠️ 搜索量数据不可用，跳过搜索量阈值过滤（仅过滤研究意图词）')
     return keywords.filter((kw) => {
       if (isPureBrand(kw.keyword)) return true
       const keywordLower = kw.keyword.toLowerCase()
@@ -300,7 +301,7 @@ export function applySmartFilters(
   // 计算合理的自适应阈值序列
   const thresholdLevels = calculateAdaptiveThresholds(keywords, minSearchVolume)
 
-  console.log(`\n📊 自适应阈值序列: ${thresholdLevels.join(' → ')}`)
+  logger.debug(`\n📊 自适应阈值序列: ${thresholdLevels.join(' → ')}`)
 
   while (attempts < maxAttempts) {
     currentThreshold = thresholdLevels[Math.min(attempts, thresholdLevels.length - 1)]
@@ -332,13 +333,13 @@ export function applySmartFilters(
 
     // 如果结果足够或已达最低阈值，停止
     if (filtered.length >= minKeywordsTarget || currentThreshold <= 1) {
-      console.log(`\n📊 智能过滤结果 (阈值=${currentThreshold}):`)
-      console.log(`   过滤低搜索量(<${currentThreshold}): ${volumeFiltered}`)
-      console.log(`   过滤研究意图词: ${intentFiltered}`)
-      console.log(`   保留关键词: ${filtered.length}`)
+      logger.debug(`\n📊 智能过滤结果 (阈值=${currentThreshold}):`)
+      logger.debug(`   过滤低搜索量(<${currentThreshold}): ${volumeFiltered}`)
+      logger.debug(`   过滤研究意图词: ${intentFiltered}`)
+      logger.debug(`   保留关键词: ${filtered.length}`)
 
       if (attempts > 0) {
-        console.log(
+        logger.debug(
           `   📉 阈值自适应: ${minSearchVolume} → ${currentThreshold} (第${attempts + 1}次尝试)`
         )
       }
@@ -346,7 +347,7 @@ export function applySmartFilters(
     }
 
     // 结果不足，降低阈值重试
-    console.log(`   ⚠️ 关键词不足(${filtered.length}/${minKeywordsTarget})，降低阈值重试...`)
+    logger.debug(`   ⚠️ 关键词不足(${filtered.length}/${minKeywordsTarget})，降低阈值重试...`)
     attempts++
   }
 

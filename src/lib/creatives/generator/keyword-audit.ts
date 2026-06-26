@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getKeywordSearchVolumesForPlannerContext } from '@/lib/google-ads/accounts/auth/index'
 import { clusterKeywordsByIntent } from '../../keywords/offer-pool' // AI语义分类
 // 导入否定关键词生成函数
@@ -370,7 +371,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
   let mergedCount = 0
 
   if (extractedKeywords.length > 0) {
-    console.log(`\n🔗 合并extracted_keywords到关键词列表...`)
+    logger.debug(`\n🔗 合并extracted_keywords到关键词列表...`)
 
     const existingKeywordsLower = new Set(
       mergedKeywordsWithVolume.filter((k) => k.keyword).map((k) => k.keyword.toLowerCase())
@@ -385,7 +386,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
     const dynamicNonBrandMinSearchVolume = resolveNonBrandMinSearchVolumeByBrandKeywordCount(
       brandKeywordCountForThreshold
     )
-    console.log(
+    logger.debug(
       `   🎚️ 动态非品牌搜索量阈值: >= ${dynamicNonBrandMinSearchVolume} (品牌相关词 ${brandKeywordCountForThreshold} 个)`
     )
     let volumeUnavailable = hasSearchVolumeUnavailableFlag(mergedKeywordsWithVolume)
@@ -401,7 +402,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
     )
 
     if (keywordsNeedVolume.length > 0) {
-      console.log(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
+      logger.debug(`   📊 查询 ${keywordsNeedVolume.length} 个关键词的搜索量...`)
       try {
         const keywordsForVolumeLookup = keywordsNeedVolume
           .map((k) => k.keyword)
@@ -432,7 +433,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
             }
           }
         })
-        console.log(`   ✅ 搜索量查询完成`)
+        logger.debug(`   ✅ 搜索量查询完成`)
       } catch (volumeError) {
         console.warn(`   ⚠️ 搜索量查询失败，使用默认值0:`, volumeError)
         if (isKeywordPlannerVolumePermissionError(volumeError)) {
@@ -445,7 +446,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
     }
 
     if (volumeUnavailable) {
-      console.log('   ℹ️ 搜索量不可用：使用 sourceType + creativeType + fallback 的匹配门禁')
+      logger.debug('   ℹ️ 搜索量不可用：使用 sourceType + creativeType + fallback 的匹配门禁')
     }
 
     const keywordsToMerge = extractedKeywords.filter((kw) => {
@@ -482,11 +483,11 @@ export async function mergeExtractedKeywordsWithSingleExit(
     const skippedCount = extractedKeywords.length - keywordsToMerge.length
 
     if (keywordsToMerge.length === 0) {
-      console.log(`   ℹ️ 无新关键词需要合并（全部重复或搜索量不足）`)
+      logger.debug(`   ℹ️ 无新关键词需要合并（全部重复或搜索量不足）`)
     } else {
       let intentMap = new Map<string, IntentCategory>()
       try {
-        console.log(`   🤖 调用AI语义分类: ${keywordsToMerge.length} 个关键词`)
+        logger.debug(`   🤖 调用AI语义分类: ${keywordsToMerge.length} 个关键词`)
         const buckets = await clusterKeywordsByIntent(
           keywordsToMerge.map((k) => k.keyword).filter(Boolean) as string[],
           brandName || '',
@@ -507,10 +508,10 @@ export async function mergeExtractedKeywordsWithSingleExit(
           .filter(Boolean)
           .forEach((k) => intentMap.set(k.toLowerCase(), 'function'))
 
-        console.log(`   ✅ AI分类完成:`)
-        console.log(`      品牌商品锚点: ${buckets.bucketA.keywords.length} 个`)
-        console.log(`      商品需求场景: ${buckets.bucketB.keywords.length} 个`)
-        console.log(`      功能规格/需求扩展: ${buckets.bucketC.keywords.length} 个`)
+        logger.debug(`   ✅ AI分类完成:`)
+        logger.debug(`      品牌商品锚点: ${buckets.bucketA.keywords.length} 个`)
+        logger.debug(`      商品需求场景: ${buckets.bucketB.keywords.length} 个`)
+        logger.debug(`      功能规格/需求扩展: ${buckets.bucketC.keywords.length} 个`)
       } catch (clusterError: any) {
         console.warn(`   ⚠️ AI语义分类失败，使用默认分类: ${clusterError.message}`)
         keywordsToMerge.forEach((kw) => {
@@ -550,10 +551,10 @@ export async function mergeExtractedKeywordsWithSingleExit(
         mergedCount++
       })
 
-      console.log(
+      logger.debug(
         `   ✅ 合并完成: 新增 ${mergedCount} 个关键词 (跳过 ${skippedCount} 个重复/低质量)`
       )
-      console.log(`   📊 当前关键词总数: ${mergedKeywordsWithVolume.length} 个`)
+      logger.debug(`   📊 当前关键词总数: ${mergedKeywordsWithVolume.length} 个`)
 
       const brandCount = keywordsToMerge.filter(
         (k) => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'brand'
@@ -564,7 +565,7 @@ export async function mergeExtractedKeywordsWithSingleExit(
       const functionCount = keywordsToMerge.filter(
         (k) => k.keyword && intentMap.get(k.keyword.toLowerCase()) === 'function'
       ).length
-      console.log(
+      logger.debug(
         `   📊 意图分类: 品牌=${brandCount}, 场景=${scenarioCount}, 功能=${functionCount}`
       )
     }
@@ -601,7 +602,7 @@ export async function finalizeKeywordsWithSingleExit(
   }
 
   // 最终关键词过滤：强制约束
-  console.log('\n🔍 执行最终关键词过滤 (强制约束)...')
+  logger.debug('\n🔍 执行最终关键词过滤 (强制约束)...')
   const beforeFilterCount = keywordsWithVolume.length
 
   // 第1步：分离品牌词、品牌相关词和非品牌词
@@ -622,32 +623,32 @@ export async function finalizeKeywordsWithSingleExit(
     }
   })
 
-  console.log(
+  logger.debug(
     `   📊 关键词分类结果 (使用纯品牌词列表: [${pureBrandKeywordsList.slice(0, 3).join(', ')}${pureBrandKeywordsList.length > 3 ? '...' : ''}])`
   )
-  console.log(`      🏷️ 纯品牌词: ${pureBrandKeywords.length} 个`)
-  console.log(`      🔗 品牌相关词: ${brandRelatedKeywords.length} 个`)
-  console.log(`      📝 非品牌词: ${nonBrandKeywords.length} 个`)
+  logger.debug(`      🏷️ 纯品牌词: ${pureBrandKeywords.length} 个`)
+  logger.debug(`      🔗 品牌相关词: ${brandRelatedKeywords.length} 个`)
+  logger.debug(`      📝 非品牌词: ${nonBrandKeywords.length} 个`)
 
   // 自动分配matchType（品牌词策略）
-  console.log(`\n📌 自动分配matchType（品牌词策略）`)
+  logger.debug(`\n📌 自动分配matchType（品牌词策略）`)
   pureBrandKeywords.forEach((kw) => {
     kw.matchType = 'EXACT'
   })
-  console.log(`   ✅ 纯品牌词(${pureBrandKeywords.length}个) → EXACT 精准匹配`)
+  logger.debug(`   ✅ 纯品牌词(${pureBrandKeywords.length}个) → EXACT 精准匹配`)
 
   brandRelatedKeywords.forEach((kw) => {
     kw.matchType = 'PHRASE'
   })
-  console.log(`   ✅ 品牌相关词(${brandRelatedKeywords.length}个) → PHRASE 词组匹配`)
+  logger.debug(`   ✅ 品牌相关词(${brandRelatedKeywords.length}个) → PHRASE 词组匹配`)
 
   nonBrandKeywords.forEach((kw) => {
     kw.matchType = 'PHRASE'
   })
-  console.log(`   ✅ 非品牌词(${nonBrandKeywords.length}个) → PHRASE 词组匹配（暂不使用BROAD）`)
+  logger.debug(`   ✅ 非品牌词(${nonBrandKeywords.length}个) → PHRASE 词组匹配（暂不使用BROAD）`)
 
   // 高价值通用词提取
-  console.log(`\n📌 高价值通用词提取`)
+  logger.debug(`\n📌 高价值通用词提取`)
   const { extractGenericHighValueKeywords } = await import('@/lib/keywords/server')
   const extractedGenericKeywords = extractGenericHighValueKeywords(
     keywordsWithVolume,
@@ -657,19 +658,19 @@ export async function finalizeKeywordsWithSingleExit(
   extractedGenericKeywords.forEach((kw) => {
     if (!kw.matchType) kw.matchType = 'PHRASE'
   })
-  console.log(`   🎯 提取到 ${extractedGenericKeywords.length} 个高价值通用词 (matchType=PHRASE)`)
+  logger.debug(`   🎯 提取到 ${extractedGenericKeywords.length} 个高价值通用词 (matchType=PHRASE)`)
 
   const volumeDataUnavailable = keywordsWithVolume.some(
     (kw) => kw.volumeUnavailableReason === 'DEV_TOKEN_INSUFFICIENT_ACCESS'
   )
   if (volumeDataUnavailable) {
-    console.log(`   ⚠️ 搜索量数据不可用（developer token 为 Test/Explorer 权限），跳过搜索量过滤`)
+    logger.debug(`   ⚠️ 搜索量数据不可用（developer token 为 Test/Explorer 权限），跳过搜索量过滤`)
   }
 
   const dynamicNonBrandMinSearchVolume = resolveNonBrandMinSearchVolumeByBrandKeywordCount(
     pureBrandKeywords.length + brandRelatedKeywords.length
   )
-  console.log(
+  logger.debug(
     `   🎚️ 动态非品牌搜索量阈值: >= ${dynamicNonBrandMinSearchVolume} (品牌相关词 ${pureBrandKeywords.length + brandRelatedKeywords.length} 个)`
   )
 
@@ -683,15 +684,15 @@ export async function finalizeKeywordsWithSingleExit(
   const enhancedNonBrandKeywords = [...filteredNonBrandKeywords, ...extractedGenericKeywords]
 
   // 强制约束1：纯品牌词必须添加
-  console.log(`\n📌 强制约束1: 纯品牌词 "${offerBrand}" 必须添加`)
+  logger.debug(`\n📌 强制约束1: 纯品牌词 "${offerBrand}" 必须添加`)
   const existingPureBrand = pureBrandKeywords.find((kw) => kw.searchVolume > 0)
 
   if (existingPureBrand) {
-    console.log(
+    logger.debug(
       `   ✅ 纯品牌词已存在: "${existingPureBrand.keyword}" (${existingPureBrand.searchVolume}/月)`
     )
   } else {
-    console.log(`   ⚠️ 纯品牌词 "${offerBrand}" 需要查询搜索量...`)
+    logger.debug(`   ⚠️ 纯品牌词 "${offerBrand}" 需要查询搜索量...`)
     let brandSearchVolume = 0
 
     try {
@@ -712,7 +713,7 @@ export async function finalizeKeywordsWithSingleExit(
 
       if (row && row.search_volume > 0) {
         brandSearchVolume = row.search_volume
-        console.log(`   ✅ 全局缓存查询到搜索量: ${brandSearchVolume}/月`)
+        logger.debug(`   ✅ 全局缓存查询到搜索量: ${brandSearchVolume}/月`)
       } else {
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
@@ -726,12 +727,12 @@ export async function finalizeKeywordsWithSingleExit(
           const volumes = volumeResult.volumes
           if (volumes.length > 0 && volumes[0].avgMonthlySearches > 0) {
             brandSearchVolume = volumes[0].avgMonthlySearches
-            console.log(`   ✅ Keyword Planner API查询到搜索量: ${brandSearchVolume}/月`)
+            logger.debug(`   ✅ Keyword Planner API查询到搜索量: ${brandSearchVolume}/月`)
           } else {
-            console.log(`   ⚠️ Keyword Planner API未返回搜索量数据`)
+            logger.debug(`   ⚠️ Keyword Planner API未返回搜索量数据`)
           }
         } else {
-          console.log(`   ⚠️ Google Ads 认证未配置，跳过品牌词搜索量 API 查询`)
+          logger.debug(`   ⚠️ Google Ads 认证未配置，跳过品牌词搜索量 API 查询`)
         }
       }
     } catch (err: any) {
@@ -745,19 +746,19 @@ export async function finalizeKeywordsWithSingleExit(
     })
 
     if (brandSearchVolume > 0) {
-      console.log(`   ✅ 纯品牌词 "${offerBrand}" 已添加 (搜索量: ${brandSearchVolume}/月)`)
+      logger.debug(`   ✅ 纯品牌词 "${offerBrand}" 已添加 (搜索量: ${brandSearchVolume}/月)`)
     } else {
-      console.log(`   ⚠️ 纯品牌词 "${offerBrand}" 已添加 (搜索量: 未知，建议手动验证)`)
+      logger.debug(`   ⚠️ 纯品牌词 "${offerBrand}" 已添加 (搜索量: 未知，建议手动验证)`)
     }
   }
 
   // 强制约束2：非品牌词阈值
-  console.log(
+  logger.debug(
     `\n📌 强制约束2: 非品牌词搜索量 >= ${dynamicNonBrandMinSearchVolume} 或来自高价值词提取`
   )
-  console.log(`   - 搜索量达标的非品牌词: ${filteredNonBrandKeywords.length} 个`)
-  console.log(`   - 提取的高价值词 (>10000): ${extractedGenericKeywords.length} 个`)
-  console.log(`   - 合计非品牌词: ${enhancedNonBrandKeywords.length} 个`)
+  logger.debug(`   - 搜索量达标的非品牌词: ${filteredNonBrandKeywords.length} 个`)
+  logger.debug(`   - 提取的高价值词 (>10000): ${extractedGenericKeywords.length} 个`)
+  logger.debug(`   - 合计非品牌词: ${enhancedNonBrandKeywords.length} 个`)
 
   const hasAnyVolumeBrand = brandRelatedKeywords.some((kw) => kw.searchVolume > 0)
   const shouldFilterBrandByVolume = hasAnyVolumeBrand && !volumeDataUnavailable
@@ -768,12 +769,12 @@ export async function finalizeKeywordsWithSingleExit(
     ),
   ]
   let finalKeywords = [...allBrandKeywords, ...enhancedNonBrandKeywords]
-  console.log(
+  logger.debug(
     `   📊 初始合并: ${allBrandKeywords.length} 品牌词 + ${enhancedNonBrandKeywords.length} 非品牌词 = ${finalKeywords.length} 个`
   )
 
   // 强制约束3：移除无搜索量关键词（纯品牌词豁免）
-  console.log(`\n📌 强制约束3: 移除所有搜索量为0或null的关键词（品牌词除外）`)
+  logger.debug(`\n📌 强制约束3: 移除所有搜索量为0或null的关键词（品牌词除外）`)
   const beforeFinalFilter = finalKeywords.length
   const hasAnyVolumeData = finalKeywords.some((kw) => kw.searchVolume > 0)
   const pureBrandKeywordNormalized = new Set(
@@ -788,32 +789,32 @@ export async function finalizeKeywordsWithSingleExit(
 
     const removedZeroVolume = beforeFinalFilter - finalKeywords.length
     if (removedZeroVolume > 0) {
-      console.log(`   ⚠️ 已移除 ${removedZeroVolume} 个搜索量为0的关键词（保留品牌词）`)
+      logger.debug(`   ⚠️ 已移除 ${removedZeroVolume} 个搜索量为0的关键词（保留品牌词）`)
     }
   } else {
     if (volumeDataUnavailable) {
-      console.log(
+      logger.debug(
         `   ⚠️ 搜索量数据不可用（developer token 无 Basic/Standard access 或 服务账号限制），跳过搜索量过滤`
       )
     } else {
-      console.log(`   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤`)
+      logger.debug(`   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤`)
     }
   }
-  console.log(`   ✅ 最终保留 ${finalKeywords.length} 个关键词（含搜索量数据或品牌词）`)
+  logger.debug(`   ✅ 最终保留 ${finalKeywords.length} 个关键词（含搜索量数据或品牌词）`)
 
   const retainedBrandWithZeroVolume = finalKeywords.filter(
     (kw) =>
       kw.searchVolume === 0 && pureBrandKeywordNormalized.has(normalizeGoogleAdsKeyword(kw.keyword))
   )
   if (retainedBrandWithZeroVolume.length > 0) {
-    console.log(`   ℹ️ 保留 ${retainedBrandWithZeroVolume.length} 个搜索量为0的品牌词:`)
+    logger.debug(`   ℹ️ 保留 ${retainedBrandWithZeroVolume.length} 个搜索量为0的品牌词:`)
     retainedBrandWithZeroVolume.forEach((kw) => {
-      console.log(`      - "${kw.keyword}" (品牌词，搜索量未知)`)
+      logger.debug(`      - "${kw.keyword}" (品牌词，搜索量未知)`)
     })
   }
 
   // 强制约束4：购买意图评分过滤
-  console.log(`\n📌 强制约束4: 购买意图评分过滤（移除纯信息查询词）`)
+  logger.debug(`\n📌 强制约束4: 购买意图评分过滤（移除纯信息查询词）`)
   const MIN_INTENT_SCORE = KEYWORD_POLICY.creative.minIntentScore
   const EXPLORE_MIN_INTENT_SCORE = KEYWORD_POLICY.creative.explore.minIntentScore
   const EXPLORE_MAX_INTENT_SCORE = Math.min(
@@ -851,19 +852,19 @@ export async function finalizeKeywordsWithSingleExit(
     )
     .sort((a, b) => (b.searchVolume || 0) - (a.searchVolume || 0))
 
-  console.log(`   📊 意图分布统计:`)
-  console.log(`      🟢 高购买意图 (≥80): ${highIntentKws.length} 个`)
-  console.log(`      🟡 中等意图 (50-79): ${mediumIntentKws.length} 个`)
-  console.log(`      🟠 低购买意图 (20-49): ${lowIntentKws.length} 个`)
-  console.log(`      ⚪ 信息查询 (<20): ${infoIntentKws.length} 个`)
+  logger.debug(`   📊 意图分布统计:`)
+  logger.debug(`      🟢 高购买意图 (≥80): ${highIntentKws.length} 个`)
+  logger.debug(`      🟡 中等意图 (50-79): ${mediumIntentKws.length} 个`)
+  logger.debug(`      🟠 低购买意图 (20-49): ${lowIntentKws.length} 个`)
+  logger.debug(`      ⚪ 信息查询 (<20): ${infoIntentKws.length} 个`)
 
   if (infoIntentKws.length > 0) {
-    console.log(`\n   ⚠️ 将移除 ${infoIntentKws.length} 个信息查询类关键词:`)
+    logger.debug(`\n   ⚠️ 将移除 ${infoIntentKws.length} 个信息查询类关键词:`)
     infoIntentKws.slice(0, 5).forEach((kw) => {
-      console.log(`      - "${kw.keyword}" (意图分数: ${kw.intentScore}, ${kw.intentLevel.label})`)
+      logger.debug(`      - "${kw.keyword}" (意图分数: ${kw.intentScore}, ${kw.intentLevel.label})`)
     })
     if (infoIntentKws.length > 5) {
-      console.log(`      ... 及其他 ${infoIntentKws.length - 5} 个`)
+      logger.debug(`      ... 及其他 ${infoIntentKws.length - 5} 个`)
     }
   }
 
@@ -890,33 +891,35 @@ export async function finalizeKeywordsWithSingleExit(
   finalKeywords = [...primaryKeywords, ...exploreKeywords]
 
   const removedByIntent = beforeIntentFilter - primaryKeywords.length
-  console.log(
+  logger.debug(
     `   ✅ 意图过滤完成: 主池保留 ${primaryKeywords.length} 个，移除 ${removedByIntent} 个低意图词`
   )
   if (exploreKeywords.length > 0) {
-    console.log(
+    logger.debug(
       `   ➕ 覆盖度补齐: 追加 ${exploreKeywords.length}/${exploreQuota} 个探索词 (intent ${EXPLORE_MIN_INTENT_SCORE}-${EXPLORE_MAX_INTENT_SCORE - 1})`
     )
   }
 
   if (mustContainBrand) {
     const preview = brandTokensToMatch.slice(0, 3).join(', ')
-    console.log(
+    logger.debug(
       `\n🔒 强制约束: 只保留包含纯品牌词的关键词 (tokens: [${preview}${brandTokensToMatch.length > 3 ? '...' : ''}])`
     )
     const before = finalKeywords.length
     finalKeywords = finalKeywords.filter((kw) => containsBrand(kw.keyword, kw.searchVolume))
-    console.log(`   ✅ 品牌强制过滤完成: ${before} → ${finalKeywords.length}`)
+    logger.debug(`   ✅ 品牌强制过滤完成: ${before} → ${finalKeywords.length}`)
   }
 
-  console.log(`\n✅ 关键词收集完成，共 ${finalKeywords.length} 个关键词`)
-  console.log(`\n📊 关键词排序规则: 100%品牌包含 + 搜索量优先`)
+  logger.debug(`\n✅ 关键词收集完成，共 ${finalKeywords.length} 个关键词`)
+  logger.debug(`\n📊 关键词排序规则: 100%品牌包含 + 搜索量优先`)
   finalKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
 
   if (finalKeywords.length > 0) {
-    console.log(`\n   🏷️ 品牌相关关键词 TOP 5:`)
+    logger.debug(`\n   🏷️ 品牌相关关键词 TOP 5:`)
     finalKeywords.slice(0, 5).forEach((kw, i) => {
-      console.log(`      ${i + 1}. "${kw.keyword}" (${(kw.searchVolume || 0).toLocaleString()}/月)`)
+      logger.debug(
+        `      ${i + 1}. "${kw.keyword}" (${(kw.searchVolume || 0).toLocaleString()}/月)`
+      )
     })
   }
 
@@ -926,11 +929,11 @@ export async function finalizeKeywordsWithSingleExit(
   ).length
   const brandRatio =
     afterFilterCount > 0 ? Math.round((finalBrandCount / afterFilterCount) * 100) : 0
-  console.log(`\n✅ 过滤完成:`)
-  console.log(`   原始关键词: ${beforeFilterCount} 个`)
-  console.log(`   最终保留: ${afterFilterCount} 个`)
-  console.log(`   - 品牌相关词: ${finalBrandCount} 个 (${brandRatio}%)`)
-  console.log(`   - 通用词: ${afterFilterCount - finalBrandCount} 个 (${100 - brandRatio}%)`)
+  logger.debug(`\n✅ 过滤完成:`)
+  logger.debug(`   原始关键词: ${beforeFilterCount} 个`)
+  logger.debug(`   最终保留: ${afterFilterCount} 个`)
+  logger.debug(`   - 品牌相关词: ${finalBrandCount} 个 (${brandRatio}%)`)
+  logger.debug(`   - 通用词: ${afterFilterCount - finalBrandCount} 个 (${100 - brandRatio}%)`)
 
   // 单一出口前去重
   const beforeFinalDedupe = finalKeywords.length
@@ -959,10 +962,10 @@ export async function finalizeKeywordsWithSingleExit(
         (kw) => kw.keyword.toLowerCase() === brandKeywordLower && kw.searchVolume > 0
       )
 
-  console.log(`\n🎯 最终验证:`)
-  console.log(`   ✅ 关键词总数: ${finalKeywordCount} 个`)
-  console.log(`   ${allHaveVolume ? '✅' : '❌'} 所有关键词都有搜索量数据 (searchVolume > 0)`)
-  console.log(
+  logger.debug(`\n🎯 最终验证:`)
+  logger.debug(`   ✅ 关键词总数: ${finalKeywordCount} 个`)
+  logger.debug(`   ${allHaveVolume ? '✅' : '❌'} 所有关键词都有搜索量数据 (searchVolume > 0)`)
+  logger.debug(
     `   ${hasBrandKeyword ? '✅' : 'ℹ️'} 品牌词 "${offerBrand}" ${hasBrandKeyword ? '有搜索量' : '无搜索量数据，已排除'}`
   )
 

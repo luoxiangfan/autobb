@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { HeadlineAsset, DescriptionAsset } from '../../server'
 import { MULTILINGUAL_CTA_WORDS, MULTILINGUAL_URGENCY_WORDS } from '../lexicons'
 import { resolveLanguageKey, containsLocalizedPhrase } from '../keyword-matching'
@@ -33,13 +34,13 @@ export function calculateQuality(
 
   const totalScore = numberUsage + ctaPresence + urgencyExpression + differentiation
 
-  console.log(`📊 Quality子维度:`)
-  console.log(`   - 数字使用: ${numberUsage.toFixed(1)}/4 (${headlinesWithNumbers}个标题含数字)`)
-  console.log(`   - CTA存在: ${ctaPresence.toFixed(1)}/4 (${descriptionsWithCTA}个描述含CTA)`)
-  console.log(
+  logger.debug(`📊 Quality子维度:`)
+  logger.debug(`   - 数字使用: ${numberUsage.toFixed(1)}/4 (${headlinesWithNumbers}个标题含数字)`)
+  logger.debug(`   - CTA存在: ${ctaPresence.toFixed(1)}/4 (${descriptionsWithCTA}个描述含CTA)`)
+  logger.debug(
     `   - 紧迫感: ${urgencyExpression.toFixed(1)}/3 (${headlinesWithUrgency}个标题含紧迫感)`
   )
-  console.log(`   - 差异化: ${differentiation.toFixed(1)}/4`)
+  logger.debug(`   - 差异化: ${differentiation.toFixed(1)}/4`)
 
   return {
     score: Math.min(15, Math.round(totalScore)), // 确保不超过最大值15

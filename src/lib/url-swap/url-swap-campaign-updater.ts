@@ -1,6 +1,7 @@
 /**
  * Url-swap Campaign final_url_suffix 更新与历史记录辅助。
  */
+import { logger } from '@/lib/common/server'
 import { markUrlSwapTargetSuccess, markUrlSwapTargetFailure } from './url-swap-targets'
 import { recordSwapHistory } from './url-swap-task-lifecycle'
 import type { SwapHistoryEntry, UrlSwapTaskTarget } from './url-swap-types'
@@ -234,7 +235,7 @@ export async function recordUrlSwapHistoryWithSitelinkPhase(params: {
     : emptyUrlSwapSitelinkPhaseResult()
 
   if (!params.runSitelink) {
-    console.log(
+    logger.debug(
       `[url-swap-sitelink] 跳过 Sitelink 更新: task=${params.taskId}（Campaign 换链未成功或未执行）`
     )
   }

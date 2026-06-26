@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { ProxyConfig, ProxyManager } from './types'
 
 /**
@@ -79,7 +80,7 @@ export class SimpleProxyManager implements ProxyManager {
       // 如果之前被禁用，成功后可以恢复
       if (this.failedProxies.has(key)) {
         this.failedProxies.delete(key)
-        console.log(`✅ 代理IP已恢复: ${key}`)
+        logger.debug(`✅ 代理IP已恢复: ${key}`)
       }
     }
   }
@@ -152,6 +153,6 @@ export class SimpleProxyManager implements ProxyManager {
       stats.success = 0
       stats.failed = 0
     })
-    console.log('🔄 所有代理IP状态已重置')
+    logger.debug('🔄 所有代理IP状态已重置')
   }
 }

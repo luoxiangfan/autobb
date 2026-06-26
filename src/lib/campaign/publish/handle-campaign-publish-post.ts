@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { getInsertedId } from '@/lib/db'
@@ -314,11 +315,11 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
       throw new Error(`Invalid google_ads_accounts.id: ${adsAccount.id}`)
     }
 
-    console.log(
+    logger.debug(
       `✅ Ads账号 ${rawGoogleAdsAccountId} 可供Offer #${_offerId} 使用（内部ID: ${resolvedGoogleAdsAccountId}）`
     )
     if (accountLookupBy === 'customer_id') {
-      console.log(
+      logger.debug(
         `ℹ️ 发布账号自动映射: customer_id=${normalizedCustomerId} -> account.id=${resolvedGoogleAdsAccountId}`
       )
     }
@@ -402,10 +403,10 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
       throw error
     }
 
-    console.log(`📊 Google Ads账号中广告系列统计:`)
-    console.log(`   - 属于当前Offer: ${activeCampaignsResult.ownCampaigns.length}`)
-    console.log(`   - 用户手动创建: ${activeCampaignsResult.manualCampaigns.length}`)
-    console.log(`   - 属于其他Offer: ${activeCampaignsResult.otherCampaigns.length}`)
+    logger.debug(`📊 Google Ads账号中广告系列统计:`)
+    logger.debug(`   - 属于当前Offer: ${activeCampaignsResult.ownCampaigns.length}`)
+    logger.debug(`   - 用户手动创建: ${activeCampaignsResult.manualCampaigns.length}`)
+    logger.debug(`   - 属于其他Offer: ${activeCampaignsResult.otherCampaigns.length}`)
 
     const currentBrandNormalized = normalizeBrand(offer.brand)
     const publishWarnings: string[] = []
@@ -456,7 +457,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
 
     // 验证3：如果有需要暂停的广告系列且用户未确认，返回确认提示
     if (campaignsRequireConfirm.length > 0 && !_pauseOldCampaigns && !_forcePublish) {
-      console.log(`⚠️ 需要用户确认: 是否暂停${campaignsRequireConfirm.length}个已激活的Campaign`)
+      logger.debug(`⚠️ 需要用户确认: 是否暂停${campaignsRequireConfirm.length}个已激活的Campaign`)
 
       // 构建确认信息
       const ownCampaignsInfo = activeCampaignsResult.ownCampaigns.map((c) => ({
@@ -522,7 +523,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
 
     // 7. 暂停旧广告系列（如果请求）- 使用真实的Google Ads查询结果
     if (_pauseOldCampaigns) {
-      console.log(`⏸️ 开始暂停旧广告系列...`)
+      logger.debug(`⏸️ 开始暂停旧广告系列...`)
 
       // 使用之前查询的真实广告系列数据
       const campaignsToPause = [
@@ -531,10 +532,10 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         ...activeCampaignsResult.otherCampaigns,
       ]
 
-      console.log(`   - 需要暂停的广告系列数量: ${campaignsToPause.length}`)
-      console.log(`   - 属于当前Offer: ${activeCampaignsResult.ownCampaigns.length}`)
-      console.log(`   - 用户手动创建: ${activeCampaignsResult.manualCampaigns.length}`)
-      console.log(`   - 属于其他Offer/品牌: ${activeCampaignsResult.otherCampaigns.length}`)
+      logger.debug(`   - 需要暂停的广告系列数量: ${campaignsToPause.length}`)
+      logger.debug(`   - 属于当前Offer: ${activeCampaignsResult.ownCampaigns.length}`)
+      logger.debug(`   - 用户手动创建: ${activeCampaignsResult.manualCampaigns.length}`)
+      logger.debug(`   - 属于其他Offer/品牌: ${activeCampaignsResult.otherCampaigns.length}`)
 
       // 批量暂停（串行执行，避免并发冲突）
       const { pauseCampaigns } = await import('@/lib/campaign/server')
@@ -566,7 +567,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         }
       }
 
-      console.log(`✅ 旧广告系列暂停完成`)
+      logger.debug(`✅ 旧广告系列暂停完成`)
     }
 
     const campaignConfigBaseObject = (
@@ -654,7 +655,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         (alignedCampaignConfig.overridden.finalUrls ||
           alignedCampaignConfig.overridden.finalUrlSuffix)
       ) {
-        console.log(
+        logger.debug(
           `[CampaignPublish] [${stage}] URL字段按字段归属对齐: inputFinalUrl=${alignedCampaignConfig.overridden.inputFinalUrl || '-'} -> appliedFinalUrl=${alignedCampaignConfig.overridden.appliedFinalUrl || '-'}`
         )
       }
@@ -663,7 +664,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
     }
 
     // 7.5 Launch Score评估（投放风险评估）
-    console.log(`\n🎯 开始Launch Score评估...`)
+    logger.debug(`\n🎯 开始Launch Score评估...`)
     const primaryCreative = creatives[0]
 
     const campaignConfigForCreativeContent = buildAlignedCampaignConfigForCreative(
@@ -687,11 +688,11 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
     })
 
     // 调试日志 - 追踪creativeData中的否定关键词
-    console.log(`[Publish] 创意ID: ${primaryCreative.id}`)
-    console.log(
+    logger.debug(`[Publish] 创意ID: ${primaryCreative.id}`)
+    logger.debug(
       `[Publish] creativeData.negativeKeywords长度: ${creativeData.negativeKeywords.length}`
     )
-    console.log(
+    logger.debug(
       `[Publish] creativeData.negativeKeywords示例: ${creativeData.negativeKeywords.slice(0, 5).join(', ')}`
     )
 
@@ -711,7 +712,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
       publishHashCampaignConfig,
       { useZeroBudgetFallback: true }
     )
-    console.log(`📝 内容哈希: ${contentHash}, 配置哈希: ${campaignConfigHash}`)
+    logger.debug(`📝 内容哈希: ${contentHash}, 配置哈希: ${campaignConfigHash}`)
 
     // 检查缓存的Launch Score
     let cachedLaunchScore = null
@@ -723,7 +724,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         userId
       )
       if (cachedLaunchScore) {
-        console.log(`✅ 找到缓存的Launch Score (ID: ${cachedLaunchScore.id})，跳过重新计算`)
+        logger.debug(`✅ 找到缓存的Launch Score (ID: ${cachedLaunchScore.id})，跳过重新计算`)
       }
     } catch (cacheError: any) {
       console.warn(`⚠️ 缓存查询失败: ${cacheError.message}，将重新计算`)
@@ -740,7 +741,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         // 使用缓存的数据
         launchScore = cachedLaunchScore.totalScore
         scoreAnalysis = parseLaunchScoreAnalysis(cachedLaunchScore)
-        console.log(`📦 使用缓存的Launch Score: ${launchScore}分`)
+        logger.debug(`📦 使用缓存的Launch Score: ${launchScore}分`)
       } else {
         // 使用用户在第2步配置的关键词，而非创意原始数据
         // 关键词及其matchType应该来自campaignConfig（用户配置），而不是创意数据库记录
@@ -800,8 +801,8 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         )
 
         // 调试日志 - 追踪关键词matchType一致性
-        console.log(`[Publish] 关键词matchType一致性检查:`)
-        console.log(`   - 用户配置关键词数量: ${_campaignConfig.keywords?.length || 0}`)
+        logger.debug(`[Publish] 关键词matchType一致性检查:`)
+        logger.debug(`   - 用户配置关键词数量: ${_campaignConfig.keywords?.length || 0}`)
         const kwForLog = creativeForLaunchScore.keywordsWithVolume || []
         if (kwForLog.length > 0) {
           const matchTypeDist = kwForLog.reduce((acc: any, kw: any) => {
@@ -809,20 +810,20 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
             acc[type] = (acc[type] || 0) + 1
             return acc
           }, {})
-          console.log(
+          logger.debug(
             `   - 用户配置的matchType分布:`,
             Object.entries(matchTypeDist)
               .map(([type, count]) => `${type}: ${count}`)
               .join(', ')
           )
           if (kwForLog.length > 0) {
-            console.log(`   - 示例关键词 #1: ${kwForLog[0].keyword} (${kwForLog[0].matchType})`)
+            logger.debug(`   - 示例关键词 #1: ${kwForLog[0].keyword} (${kwForLog[0].matchType})`)
           }
         }
 
         // 调试日志 - 追踪构建的创意对象
-        console.log(`[Publish] 构建的创意对象ID: ${creativeForLaunchScore.id}`)
-        console.log(
+        logger.debug(`[Publish] 构建的创意对象ID: ${creativeForLaunchScore.id}`)
+        logger.debug(
           `[Publish] keywordsWithVolume长度: ${creativeForLaunchScore.keywordsWithVolume?.length || 0}`
         )
         if (
@@ -837,20 +838,20 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
             },
             {}
           )
-          console.log(
+          logger.debug(
             `   - keywordsWithVolume的matchType分布:`,
             Object.entries(kwMatchTypeDist)
               .map(([type, count]) => `${type}: ${count}`)
               .join(', ')
           )
         }
-        console.log(
+        logger.debug(
           `[Publish] negativeKeywords字段存在: ${!!creativeForLaunchScore.negativeKeywords}`
         )
-        console.log(
+        logger.debug(
           `[Publish] negativeKeywords长度: ${creativeForLaunchScore.negativeKeywords?.length || 0}`
         )
-        console.log(
+        logger.debug(
           `[Publish] negativeKeywords示例: ${creativeForLaunchScore.negativeKeywords?.slice(0, 5).join(', ') || 'NONE'}`
         )
 
@@ -870,16 +871,16 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         )
 
         // 调试日志 - 追踪传递给Launch Score的campaignConfig参数
-        console.log(`[Publish] 传递给Launch Score的campaignConfig:`)
-        console.log(`   - budgetAmount: ${_campaignConfig.budgetAmount}/day`)
-        console.log(`   - maxCpcBid: ${_campaignConfig.maxCpcBid}`)
-        console.log(`   - finalUrl: ${creativeForLaunchScore.final_url}`)
-        console.log(`   - targetCountry: ${_campaignConfig.targetCountry}`)
-        console.log(`   - targetLanguage: ${_campaignConfig.targetLanguage}`)
-        console.log(
+        logger.debug(`[Publish] 传递给Launch Score的campaignConfig:`)
+        logger.debug(`   - budgetAmount: ${_campaignConfig.budgetAmount}/day`)
+        logger.debug(`   - maxCpcBid: ${_campaignConfig.maxCpcBid}`)
+        logger.debug(`   - finalUrl: ${creativeForLaunchScore.final_url}`)
+        logger.debug(`   - targetCountry: ${_campaignConfig.targetCountry}`)
+        logger.debug(`   - targetLanguage: ${_campaignConfig.targetLanguage}`)
+        logger.debug(
           `[Publish] 传递给Launch Score的negativeKeywords长度: ${creativeData.negativeKeywords.length}`
         )
-        console.log(
+        logger.debug(
           `[Publish] 传递给Launch Score的negativeKeywords示例: ${creativeData.negativeKeywords.slice(0, 5).join(', ')}`
         )
 
@@ -899,7 +900,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
               campaignConfigHash,
             }
           )
-          console.log(
+          logger.debug(
             created
               ? `✅ Launch Score已保存到launch_scores表（带缓存信息）`
               : `♻️ 复用已有 Launch Score 记录（相同内容哈希），跳过重复 INSERT`
@@ -914,7 +915,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
           `,
             [launchScore, primaryCreative.id]
           )
-          console.log(`✅ ad_creatives.launch_score已更新为${launchScore}`)
+          logger.debug(`✅ ad_creatives.launch_score已更新为${launchScore}`)
         } catch (saveError: any) {
           // 保存失败不阻断流程，只记录警告
           console.warn(`⚠️ 保存Launch Score失败: ${saveError.message}`)
@@ -928,30 +929,30 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
       overallRecommendations =
         scoreAnalysis?.overallRecommendations || extractAllSuggestions(scoreAnalysis)
 
-      console.log(`📊 Launch Score评估结果 (v4.16): ${launchScore}分`)
-      console.log(`   - 投放可行性: ${analysis.launchViability.score}/40`)
-      console.log(
+      logger.debug(`📊 Launch Score评估结果 (v4.16): ${launchScore}分`)
+      logger.debug(`   - 投放可行性: ${analysis.launchViability.score}/40`)
+      logger.debug(
         `      • 品牌搜索量得分: ${analysis.launchViability.brandSearchScore}/15 (搜索量: ${analysis.launchViability.brandSearchVolume})`
       )
-      console.log(
+      logger.debug(
         `      • 竞争度得分: ${analysis.launchViability.competitionScore}/15 (${analysis.launchViability.competitionLevel})`
       )
-      console.log(`      • 市场潜力得分: ${analysis.launchViability.marketPotentialScore || 0}/10`)
-      console.log(`   - 广告质量: ${analysis.adQuality.score}/30`)
-      console.log(
+      logger.debug(`      • 市场潜力得分: ${analysis.launchViability.marketPotentialScore || 0}/10`)
+      logger.debug(`   - 广告质量: ${analysis.adQuality.score}/30`)
+      logger.debug(
         `      • 广告强度: ${analysis.adQuality.adStrengthScore}/15 (${analysis.adQuality.adStrength})`
       )
-      console.log(
+      logger.debug(
         `      • 标题多样性得分: ${analysis.adQuality.headlineDiversityScore}/8 (${analysis.adQuality.headlineDiversity}%)`
       )
-      console.log(`      • 描述质量得分: ${analysis.adQuality.descriptionQualityScore}/7`)
-      console.log(`   - 关键词策略: ${analysis.keywordStrategy.score}/20`)
-      console.log(`      • 相关性得分: ${analysis.keywordStrategy.relevanceScore}/8`)
-      console.log(`      • 匹配类型策略: ${analysis.keywordStrategy.matchTypeScore}/6`)
-      console.log(`      • 否定关键词得分: ${analysis.keywordStrategy.negativeKeywordsScore}/6`)
-      console.log(`   - 基础配置: ${analysis.basicConfig.score}/10`)
-      console.log(`      • 国家/语言得分: ${analysis.basicConfig.countryLanguageScore}/5`)
-      console.log(`      • Final URL得分: ${analysis.basicConfig.finalUrlScore}/5`)
+      logger.debug(`      • 描述质量得分: ${analysis.adQuality.descriptionQualityScore}/7`)
+      logger.debug(`   - 关键词策略: ${analysis.keywordStrategy.score}/20`)
+      logger.debug(`      • 相关性得分: ${analysis.keywordStrategy.relevanceScore}/8`)
+      logger.debug(`      • 匹配类型策略: ${analysis.keywordStrategy.matchTypeScore}/6`)
+      logger.debug(`      • 否定关键词得分: ${analysis.keywordStrategy.negativeKeywordsScore}/6`)
+      logger.debug(`   - 基础配置: ${analysis.basicConfig.score}/10`)
+      logger.debug(`      • 国家/语言得分: ${analysis.basicConfig.countryLanguageScore}/5`)
+      logger.debug(`      • Final URL得分: ${analysis.basicConfig.finalUrlScore}/5`)
 
       // 阻断规则
       const CRITICAL_THRESHOLD = 40 // 严重问题阈值
@@ -1018,7 +1019,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
         )
       }
 
-      console.log(`✅ Launch Score评估通过: ${launchScore}分 ${_forcePublish ? '(强制发布)' : ''}`)
+      logger.debug(`✅ Launch Score评估通过: ${launchScore}分 ${_forcePublish ? '(强制发布)' : ''}`)
     } catch (error: any) {
       console.error('Launch Score评估失败:', error.message)
       // Launch Score评估失败不阻断发布，只记录日志
@@ -1120,7 +1121,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
     const persistedMaxCpc =
       Number.isFinite(normalizedMaxCpc) && normalizedMaxCpc > 0 ? normalizedMaxCpc : null
 
-    console.log(
+    logger.debug(
       `📝 生成命名: Campaign=${resolvedCampaignName}, AdGroup=${resolvedAdGroupName}, Ad=${resolvedAdName || naming.adName}`
     )
 
@@ -1142,7 +1143,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
           budgetType: String(normalizedBudgetType || _campaignConfig.budgetType || 'DAILY'),
           maxCpc: persistedMaxCpc,
         })
-        console.log(
+        logger.debug(
           `[CampaignPublish] 续发复用 Campaign ${campaignId}（offer=${_offerId}, status=${resumableCampaign.creation_status}）`
         )
       } else {
@@ -1295,7 +1296,7 @@ export async function handleCampaignPublishPost(request: Request, user: Campaign
           priority: 'high',
         })
 
-        console.log(`✅ Campaign发布任务已入队 ID: ${campaignId}（1 Campaign + 1 Ad Group）`)
+        logger.debug(`✅ Campaign发布任务已入队 ID: ${campaignId}（1 Campaign + 1 Ad Group）`)
 
         publishResults.push({
           id: campaignId,

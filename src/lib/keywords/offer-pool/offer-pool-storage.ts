@@ -1,6 +1,7 @@
 /**
  * 关键词池数据库操作与持久化
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase, parseJsonField, toDbJsonArrayField } from '../../db'
 
 import {
@@ -88,12 +89,12 @@ export async function saveKeywordPool(
   const bucketBJson = serializeKeywordArrayForDb(buckets.bucketB.keywords)
   const bucketCJson = serializeKeywordArrayForDb(buckets.bucketC.keywords)
   const bucketDJson = serializeKeywordArrayForDb(buckets.bucketD.keywords)
-  console.log(`📊 保存关键词池:`)
-  console.log(`   brand_keywords: ${brandKeywords.length}个 → ${typeof brandKwJson}`)
-  console.log(`   bucket_a: ${buckets.bucketA.keywords.length}个`)
-  console.log(`   bucket_b: ${buckets.bucketB.keywords.length}个`)
-  console.log(`   bucket_c: ${buckets.bucketC.keywords.length}个`)
-  console.log(`   bucket_d: ${buckets.bucketD.keywords.length}个`)
+  logger.debug(`📊 保存关键词池:`)
+  logger.debug(`   brand_keywords: ${brandKeywords.length}个 → ${typeof brandKwJson}`)
+  logger.debug(`   bucket_a: ${buckets.bucketA.keywords.length}个`)
+  logger.debug(`   bucket_b: ${buckets.bucketB.keywords.length}个`)
+  logger.debug(`   bucket_c: ${buckets.bucketC.keywords.length}个`)
+  logger.debug(`   bucket_d: ${buckets.bucketD.keywords.length}个`)
 
   if (existing) {
     // 更新现有记录
@@ -132,7 +133,7 @@ export async function saveKeywordPool(
       ]
     )
 
-    console.log(`✅ 关键词池已更新: Offer #${offerId}`)
+    logger.debug(`✅ 关键词池已更新: Offer #${offerId}`)
     return getKeywordPoolByOfferId(offerId) as Promise<OfferKeywordPool>
   }
 
@@ -164,7 +165,7 @@ export async function saveKeywordPool(
     ]
   )
 
-  console.log(`✅ 关键词池已创建: Offer #${offerId}, ID #${result.lastInsertRowid}`)
+  logger.debug(`✅ 关键词池已创建: Offer #${offerId}, ID #${result.lastInsertRowid}`)
   return getKeywordPoolByOfferId(offerId) as Promise<OfferKeywordPool>
 }
 
@@ -317,7 +318,7 @@ export async function saveKeywordPoolWithData(
       updateValues
     )
 
-    console.log(`✅ 关键词池已更新: Offer #${offerId} (${pageType}链接)`)
+    logger.debug(`✅ 关键词池已更新: Offer #${offerId} (${pageType}链接)`)
     return getKeywordPoolByOfferId(offerId) as Promise<OfferKeywordPool>
   }
 
@@ -387,7 +388,7 @@ export async function saveKeywordPoolWithData(
     insertValues
   )
 
-  console.log(
+  logger.debug(
     `✅ 关键词池已创建: Offer #${offerId}, ID #${result.lastInsertRowid} (${pageType}链接, 店铺5桶: ${storeBuckets ? '是' : '否'})`
   )
   return getKeywordPoolByOfferId(offerId) as Promise<OfferKeywordPool>
@@ -532,7 +533,7 @@ export async function deleteKeywordPool(offerId: number): Promise<void> {
   )
 
   if (!existing) {
-    console.log(`ℹ️ 关键词池不存在: Offer #${offerId}`)
+    logger.debug(`ℹ️ 关键词池不存在: Offer #${offerId}`)
     return
   }
 
@@ -546,5 +547,5 @@ export async function deleteKeywordPool(offerId: number): Promise<void> {
     await db.exec('DELETE FROM offer_keyword_pools WHERE id = ?', [existing.id])
   })
 
-  console.log(`🗑️ 关键词池已删除: Offer #${offerId} (清理创意引用: ${cleared})`)
+  logger.debug(`🗑️ 关键词池已删除: Offer #${offerId} (清理创意引用: ${cleared})`)
 }

@@ -1,6 +1,7 @@
 /**
  * 关键词池：verified source 与结构化扩展
  */
+import { logger } from '@/lib/common/server'
 import { parseJsonField } from '../../db'
 import { type Offer } from '../../offers/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
@@ -489,18 +490,18 @@ export async function buildVerifiedSourceKeywordData(
   })
   const languageRemovedCount = sumVerifiedSourceNormalizationMetric(normalizedByKey, 'removed')
   if (languageRemovedCount > 0) {
-    console.log(
+    logger.debug(
       `[VerifiedSource] 目标语净化移除 ${languageRemovedCount} 个候选词 (offer=${offer.id}, target=${targetLanguage || 'n/a'})`
     )
   }
   const translatedCount = sumVerifiedSourceNormalizationMetric(normalizedByKey, 'translated')
   if (translatedCount > 0) {
-    console.log(
+    logger.debug(
       `[VerifiedSource] 目标语净化翻译 ${translatedCount} 个候选词 (offer=${offer.id}, target=${targetLanguage || 'n/a'})`
     )
   }
   if (normalizedByKey.STRUCTURED_EXPANSION.keywords.length > 0) {
-    console.log(
+    logger.debug(
       `[VerifiedSource] 商品化扩词注入 ${normalizedByKey.STRUCTURED_EXPANSION.keywords.length} 个型号/规格/认证候选 (offer=${offer.id})`
     )
   }

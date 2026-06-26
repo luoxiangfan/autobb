@@ -5,6 +5,7 @@
  * Expected Benefit: Save 3-5s per request by eliminating cold-start health checks
  */
 
+import { logger } from '@/lib/common/server'
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'
 import { getDatabase } from '../../db'
@@ -105,7 +106,7 @@ async function fetchHealthyProxyIPs(country: string, count: number): Promise<Pro
     // 如果没有找到对应国家的配置，使用第一个作为默认值
     if (!proxyUrl && proxyConfigs.length > 0) {
       proxyUrl = proxyConfigs[0].url
-      console.log(`使用默认代理URL (${proxyConfigs[0].country})`)
+      logger.debug(`使用默认代理URL (${proxyConfigs[0].country})`)
     }
 
     if (!proxyUrl) {
@@ -181,10 +182,10 @@ class ProxyPoolManager {
    * Start the pool preheating process
    */
   async start(): Promise<void> {
-    console.log('🚀 Starting Proxy Pool Manager...')
-    console.log(`   Refresh interval: ${this.config.refreshIntervalMs / 1000}s`)
-    console.log(`   Countries: ${this.config.countries.join(', ')}`)
-    console.log(`   Min healthy proxies: ${this.config.minHealthyProxies}`)
+    logger.debug('🚀 Starting Proxy Pool Manager...')
+    logger.debug(`   Refresh interval: ${this.config.refreshIntervalMs / 1000}s`)
+    logger.debug(`   Countries: ${this.config.countries.join(', ')}`)
+    logger.debug(`   Min healthy proxies: ${this.config.minHealthyProxies}`)
 
     // Initial warm-up for all countries
     await this.warmUpAllPools()
@@ -196,7 +197,7 @@ class ProxyPoolManager {
       })
     }, this.config.refreshIntervalMs)
 
-    console.log('✅ Proxy Pool Manager started')
+    logger.debug('✅ Proxy Pool Manager started')
   }
 
   /**
@@ -206,7 +207,7 @@ class ProxyPoolManager {
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
       this.refreshTimer = null
-      console.log('🛑 Proxy Pool Manager stopped')
+      logger.debug('🛑 Proxy Pool Manager stopped')
     }
   }
 
@@ -226,7 +227,7 @@ class ProxyPoolManager {
     // If pool has healthy proxies, return immediately (cache hit)
     if (pool.healthyProxies.length > 0) {
       const proxy = pool.healthyProxies[Math.floor(Math.random() * pool.healthyProxies.length)]
-      console.log(
+      logger.debug(
         `✅ Proxy pool cache HIT for ${country} (${pool.healthyProxies.length} available)`
       )
       return proxy
@@ -260,7 +261,7 @@ class ProxyPoolManager {
     // If pool has enough proxies, return from cache
     if (pool.healthyProxies.length >= count) {
       const proxies = pool.healthyProxies.slice(0, count)
-      console.log(
+      logger.debug(
         `✅ Proxy pool cache HIT for ${country} (requested ${count}, available ${pool.healthyProxies.length})`
       )
       return proxies
@@ -308,7 +309,7 @@ class ProxyPoolManager {
    * Warm up all country pools in parallel
    */
   private async warmUpAllPools(): Promise<void> {
-    console.log('🔥 Warming up proxy pools...')
+    logger.debug('🔥 Warming up proxy pools...')
 
     const refreshPromises = this.config.countries.map((country) =>
       this.refreshPool(country).catch((error) => {
@@ -318,8 +319,8 @@ class ProxyPoolManager {
 
     await Promise.allSettled(refreshPromises)
 
-    console.log('✅ Proxy pools warmed up')
-    console.log('📊 Pool stats:', this.getStats())
+    logger.debug('✅ Proxy pools warmed up')
+    logger.debug('📊 Pool stats:', this.getStats())
   }
 
   /**
@@ -331,14 +332,14 @@ class ProxyPoolManager {
 
     // Prevent duplicate refreshes
     if (pool.refreshing) {
-      console.log(`⏳ Pool refresh already in progress for ${country}, skipping...`)
+      logger.debug(`⏳ Pool refresh already in progress for ${country}, skipping...`)
       return
     }
 
     pool.refreshing = true
 
     try {
-      console.log(`🔄 Refreshing proxy pool for ${country}...`)
+      logger.debug(`🔄 Refreshing proxy pool for ${country}...`)
 
       // Fetch healthy proxies
       const proxies = await fetchHealthyProxyIPs(country, this.config.maxPoolSize)
@@ -347,7 +348,7 @@ class ProxyPoolManager {
       pool.healthyProxies = proxies
       pool.lastRefresh = new Date()
 
-      console.log(`✅ Proxy pool refreshed for ${country}: ${proxies.length} healthy proxies`)
+      logger.debug(`✅ Proxy pool refreshed for ${country}: ${proxies.length} healthy proxies`)
     } catch (error: any) {
       console.error(`❌ Failed to refresh proxy pool for ${country}:`, error.message)
     } finally {

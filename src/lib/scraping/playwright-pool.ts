@@ -9,6 +9,7 @@
  * 预热功能
  */
 
+import { logger } from '@/lib/common/server'
 import { chromium, Browser, BrowserContext } from 'playwright'
 import { maskProxyUrl } from './proxy/validate-url'
 
@@ -120,7 +121,7 @@ class PlaywrightPool {
       if (config) {
         locale = config.locale
         timezoneId = config.timezone
-        console.log(
+        logger.debug(
           `🌍 [contextOptions] 目标国家: ${targetCountry}, locale: ${locale}, timezone: ${timezoneId}`
         )
       }
@@ -533,11 +534,11 @@ class PlaywrightPool {
           existing.context = newContext
           existing.inUse = true
           existing.lastUsedAt = Date.now()
-          console.log(`🔄 复用Playwright实例: ${existing.id} (${formatProxyKeyForLog(proxyKey)})`)
+          logger.debug(`🔄 复用Playwright实例: ${existing.id} (${formatProxyKeyForLog(proxyKey)})`)
           return { browser: existing.browser, context: newContext, instanceId: existing.id }
         } else {
           // 实例已断开，清理
-          console.log(`❌ 实例已断开，清理: ${existing.id}`)
+          logger.debug(`❌ 实例已断开，清理: ${existing.id}`)
           await existing.context?.close().catch(() => {})
           await existing.browser?.close().catch(() => {})
           this.instances.delete(existing.id)
@@ -595,7 +596,7 @@ class PlaywrightPool {
     }
 
     // 4. 加入等待队列
-    console.log(`⏳ 实例池已满，加入等待队列: ${formatProxyKeyForLog(proxyKey)}`)
+    logger.debug(`⏳ 实例池已满，加入等待队列: ${formatProxyKeyForLog(proxyKey)}`)
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         const index = this.waitingQueue.findIndex((w) => w.resolve === resolve)
@@ -630,7 +631,7 @@ class PlaywrightPool {
       : proxyUrl || 'no-proxy'
     const instanceId = this.generateInstanceId()
 
-    console.log(`🚀 创建新Playwright实例: ${instanceId} (${formatProxyKeyForLog(proxyKey)})`)
+    logger.debug(`🚀 创建新Playwright实例: ${instanceId} (${formatProxyKeyForLog(proxyKey)})`)
     const { browser, context, contextOptions } = await this.createInstance(
       proxyUrl,
       proxyCredentials,
@@ -651,7 +652,7 @@ class PlaywrightPool {
     }
 
     this.instances.set(instanceId, instance)
-    console.log(`📊 连接池状态: ${this.instances.size}/${POOL_CONFIG.maxInstances} 实例`)
+    logger.debug(`📊 连接池状态: ${this.instances.size}/${POOL_CONFIG.maxInstances} 实例`)
 
     return { browser, context, instanceId }
   }
@@ -665,7 +666,7 @@ class PlaywrightPool {
     if (instance) {
       instance.inUse = false
       instance.lastUsedAt = Date.now()
-      console.log(`✅ 释放Playwright实例: ${instanceId}`)
+      logger.debug(`✅ 释放Playwright实例: ${instanceId}`)
 
       // 检查等待队列，唤醒等待的请求
       this.processWaitingQueue()
@@ -679,7 +680,7 @@ class PlaywrightPool {
   async invalidate(instanceId: string): Promise<void> {
     const instance = this.instances.get(instanceId)
     if (instance) {
-      console.log(`🗑️ 作废并关闭失效实例: ${instanceId}`)
+      logger.debug(`🗑️ 作废并关闭失效实例: ${instanceId}`)
       try {
         await instance.context?.close().catch(() => {})
         await instance.browser?.close().catch(() => {})
@@ -711,7 +712,7 @@ class PlaywrightPool {
     }
 
     if (clearedCount > 0) {
-      console.log(`🧹 清理了 ${clearedCount} 个空闲实例`)
+      logger.debug(`🧹 清理了 ${clearedCount} 个空闲实例`)
     }
     return clearedCount
   }
@@ -747,7 +748,7 @@ class PlaywrightPool {
           idleInstance.inUse = true
           idleInstance.lastUsedAt = Date.now()
 
-          console.log(`🔄 从队列唤醒，复用实例: ${idleInstance.id}`)
+          logger.debug(`🔄 从队列唤醒，复用实例: ${idleInstance.id}`)
           waiting.resolve({
             browser: idleInstance.browser,
             context: newContext,
@@ -791,7 +792,7 @@ class PlaywrightPool {
     let proxy: any = null
     if (proxyCredentials) {
       proxy = proxyCredentials
-      console.log(`🔒 [代理池] 使用代理: ${proxy.host}:${proxy.port}`)
+      logger.debug(`🔒 [代理池] 使用代理: ${proxy.host}:${proxy.port}`)
     } else if (proxyUrl) {
       // 根据 allowCredentialsCache 和 userId 决定是否使用缓存
       // 换链接任务: allowCredentialsCache = true + userId，启用用户级别缓存
@@ -799,10 +800,10 @@ class PlaywrightPool {
       const { getProxyIp } = await import('./proxy/fetch-proxy-ip')
       if (allowCredentialsCache && userId) {
         proxy = await getProxyIp(proxyUrl, false, userId) // 启用用户级别缓存
-        console.log(`🔒 [API+缓存] 使用代理: ${proxy.host}:${proxy.port}`)
+        logger.debug(`🔒 [API+缓存] 使用代理: ${proxy.host}:${proxy.port}`)
       } else {
         proxy = await getProxyIp(proxyUrl, true) // 强制刷新，不走缓存
-        console.log(`🔒 [API独立] 使用代理: ${proxy.host}:${proxy.port} (不缓存)`)
+        logger.debug(`🔒 [API独立] 使用代理: ${proxy.host}:${proxy.port} (不缓存)`)
       }
     }
 
@@ -819,7 +820,7 @@ class PlaywrightPool {
       launchOptions.args.push('--disable-quic')
 
       const proxySource = proxyCredentials ? '[缓存]' : '[独立]'
-      console.log(`✅ Playwright实例使用代理 ${proxySource}: ${proxy.host}:${proxy.port}`)
+      logger.debug(`✅ Playwright实例使用代理 ${proxySource}: ${proxy.host}:${proxy.port}`)
     }
 
     const browser = await chromium.launch(launchOptions)
@@ -853,7 +854,7 @@ class PlaywrightPool {
     }
 
     if (instancesToClean.length > 0) {
-      console.log(`清理${instancesToClean.length}个空闲Playwright实例`)
+      logger.debug(`清理${instancesToClean.length}个空闲Playwright实例`)
     }
   }
 
@@ -872,7 +873,7 @@ class PlaywrightPool {
     }
 
     if (oldestKey) {
-      console.log(`清理最旧的Playwright实例: ${oldestKey}`)
+      logger.debug(`清理最旧的Playwright实例: ${oldestKey}`)
       await this.closeInstance(oldestKey)
     }
   }
@@ -933,7 +934,7 @@ class PlaywrightPool {
   async closeAll(): Promise<void> {
     this.stopCleanupTask()
 
-    console.log(`关闭Playwright连接池，共${this.instances.size}个实例`)
+    logger.debug(`关闭Playwright连接池，共${this.instances.size}个实例`)
 
     const closePromises = Array.from(this.instances.keys()).map((key) => this.closeInstance(key))
 

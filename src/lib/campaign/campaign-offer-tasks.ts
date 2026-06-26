@@ -7,6 +7,7 @@
  * 3. 定时任务批量检测暂停的广告系列
  */
 
+import { logger } from '@/lib/common/server'
 import { batchStartTasksForOffers, type BatchStartTasksResult } from './batch-start-tasks'
 import { getDatabase } from '../db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '../click-farm/queue-cleanup'
@@ -159,7 +160,7 @@ export async function pauseOfferTasks(
         error?.message || error
       )
     }
-    console.log(
+    logger.debug(
       `[pauseOfferTasks] 已暂停补点击任务 (offerId=${offerId}, taskCount=${result.clickFarmTaskCount})`
     )
   }
@@ -173,7 +174,7 @@ export async function pauseOfferTasks(
         error?.message || error
       )
     }
-    console.log(
+    logger.debug(
       `[pauseOfferTasks] 已禁用换链接任务 (offerId=${offerId}, taskCount=${result.urlSwapTaskCount})`
     )
   }

@@ -4,6 +4,7 @@
  * Base URL scraping and affiliate link resolution
  */
 
+import { logger } from '@/lib/common/server'
 import { smartWaitForLoad, recordWaitOptimization } from '../smart-wait-strategy'
 import { getPlaywrightPool } from '../playwright-pool'
 import { retryWithBackoff, isProxyConnectionError } from './proxy-utils'
@@ -59,7 +60,7 @@ export async function scrapeUrlWithBrowser(
           }
         })
 
-        console.log(`🌐 访问URL: ${url}`)
+        logger.debug(`🌐 访问URL: ${url}`)
 
         // 增强人类行为模拟：导航前随机延迟
         await randomDelay(500, 1500)
@@ -83,7 +84,7 @@ export async function scrapeUrlWithBrowser(
         }
 
         const status = response.status()
-        console.log(`📊 HTTP状态: ${status}`)
+        logger.debug(`📊 HTTP状态: ${status}`)
 
         if (status === 429) {
           throw new Error('429 Too Many Requests - 触发限流，将重试')
@@ -97,12 +98,12 @@ export async function scrapeUrlWithBrowser(
         // Amazon反爬策略:返回200状态但HTML为空,需等待JavaScript执行渲染DOM
         try {
           await page.waitForLoadState('domcontentloaded', { timeout: 5000 })
-          console.log(`✅ DOM加载完成`)
+          logger.debug(`✅ DOM加载完成`)
 
           // 方案2DOM加载后立即添加延迟，给JavaScript执行时间
           // Amazon的JavaScript可能在DOM加载后1-2秒才开始执行
           const initialWait = 1000 + Math.random() * 2000 // 1-3秒
-          console.log(`⏰ DOM加载后等待: ${Math.round(initialWait)}ms`)
+          logger.debug(`⏰ DOM加载后等待: ${Math.round(initialWait)}ms`)
           await new Promise((resolve) => setTimeout(resolve, initialWait))
         } catch (_e) {
           console.warn(`⚠️ DOM加载超时,但继续执行`)
@@ -116,12 +117,12 @@ export async function scrapeUrlWithBrowser(
           url.includes('amazon.fr') ||
           url.includes('amazon.es')
         ) {
-          console.log(
+          logger.debug(
             `🇪🇺 Amazon欧洲站点检测到 (${url.match(/amazon\.(it|de|fr|es)/)?.[1]?.toUpperCase()}), 等待网络空闲...`
           )
           try {
             await page.waitForLoadState('networkidle', { timeout: 15000 })
-            console.log(`✅ 网络空闲等待完成`)
+            logger.debug(`✅ 网络空闲等待完成`)
           } catch (_networkError) {
             console.warn(`⚠️ Network idle timeout (15s), continuing...`)
           }
@@ -142,17 +143,17 @@ export async function scrapeUrlWithBrowser(
             }
           })
 
-          console.log(
+          logger.debug(
             `🔍 页面状态: lang=${pageStatus.htmlLang}, a-js=${pageStatus.hasJsClass}, a-no-js=${pageStatus.hasNoJsClass}`
           )
 
           if (pageStatus.hasNoJsClass) {
-            console.log(`🔄 检测到a-no-js标记，等待JavaScript渲染...`)
+            logger.debug(`🔄 检测到a-no-js标记，等待JavaScript渲染...`)
 
             // 先尝试刷新页面（有时能绕过反爬虫）
             // Amazon的a-no-js检测有时是临时的，刷新后可能恢复正常
             try {
-              console.log(`🔄 尝试刷新页面绕过a-no-js检测...`)
+              logger.debug(`🔄 尝试刷新页面绕过a-no-js检测...`)
 
               // 在刷新前添加随机延迟（模拟人类犹豫）
               await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 2000))
@@ -173,7 +174,7 @@ export async function scrapeUrlWithBrowser(
               })
 
               if (!refreshedStatus.hasNoJsClass || refreshedStatus.hasJsClass) {
-                console.log(`✅ 刷新后a-no-js已消除，页面恢复正常`)
+                logger.debug(`✅ 刷新后a-no-js已消除，页面恢复正常`)
               } else {
                 console.warn(`⚠️ 刷新后仍有a-no-js，继续尝试其他方法...`)
               }
@@ -183,7 +184,7 @@ export async function scrapeUrlWithBrowser(
 
             // 修复1: 添加随机延迟（模拟人类阅读时间）
             const humanDelay = 2000 + Math.random() * 3000 // 2-5秒
-            console.log(`⏰ 模拟人类行为延迟: ${Math.round(humanDelay)}ms`)
+            logger.debug(`⏰ 模拟人类行为延迟: ${Math.round(humanDelay)}ms`)
             await new Promise((resolve) => setTimeout(resolve, humanDelay))
 
             // 修复2: 模拟更真实的鼠标移动（贝塞尔曲线路径）
@@ -206,7 +207,7 @@ export async function scrapeUrlWithBrowser(
 
               // 滚动页面
               await page.mouse.wheel(0, Math.random() * 300 + 100)
-              console.log(`🖱️ 已模拟人类鼠标移动路径和滚动`)
+              logger.debug(`🖱️ 已模拟人类鼠标移动路径和滚动`)
             } catch (_e) {
               console.warn(`⚠️ 鼠标模拟失败，继续执行`)
             }
@@ -226,12 +227,12 @@ export async function scrapeUrlWithBrowser(
                 // 或者等待网络空闲
                 page.waitForLoadState('networkidle', { timeout: 15000 }), // 8秒 → 15秒
               ])
-              console.log(`✅ JavaScript渲染完成`)
+              logger.debug(`✅ JavaScript渲染完成`)
             } catch (_waitError) {
               console.warn(`⚠️ JavaScript渲染等待超时，继续执行`)
 
               // 修复4: 超时后再等待一次（给Amazon最后机会）
-              console.log(`🔄 最后尝试：再等待5秒...`)
+              logger.debug(`🔄 最后尝试：再等待5秒...`)
               await new Promise((resolve) => setTimeout(resolve, 5000))
             }
           }
@@ -250,7 +251,7 @@ export async function scrapeUrlWithBrowser(
                 }
               })
 
-              console.log(
+              logger.debug(
                 `🌍 最终页面状态: lang=${finalPageStatus.htmlLang}, a-js=${finalPageStatus.hasJsClass}, a-no-js=${finalPageStatus.hasNoJsClass}`
               )
 
@@ -268,7 +269,7 @@ export async function scrapeUrlWithBrowser(
                     `   可能原因: 1) 代理IP不在目标国家 2) Amazon根据浏览器指纹判断用户偏好其他语言`
                   )
                 } else {
-                  console.log(`✅ 语言匹配成功: 期望${expectedLangCode}，实际${actualLang}`)
+                  logger.debug(`✅ 语言匹配成功: 期望${expectedLangCode}，实际${actualLang}`)
                 }
               } else {
                 console.warn(`⚠️ JavaScript未正常执行 (a-no-js存在)，跳过语言检测以避免误报`)
@@ -283,7 +284,7 @@ export async function scrapeUrlWithBrowser(
 
         // 阶段2: 等待关键元素出现（Amazon产品页面的核心内容）
         if (options.waitForSelector) {
-          console.log(`⏳ 等待关键元素: ${options.waitForSelector}`)
+          logger.debug(`⏳ 等待关键元素: ${options.waitForSelector}`)
 
           // 多选择器容错策略：尝试多个可能的选择器（包含桌面版和移动版）
           const productSelectors = [
@@ -327,7 +328,7 @@ export async function scrapeUrlWithBrowser(
             if (found) {
               selectorFound = true
               foundSelector = selector
-              console.log(`✅ 找到元素: ${selector}`)
+              logger.debug(`✅ 找到元素: ${selector}`)
               break
             }
           }
@@ -411,7 +412,7 @@ export async function scrapeUrlWithBrowser(
             // 不再抛出错误，而是继续处理（允许降级抓取）
             console.warn(`⚠️ 页面加载成功但关键选择器未找到，将尝试降级提取数据`)
           } else {
-            console.log(`✅ 关键元素已加载: ${foundSelector || options.waitForSelector}`)
+            logger.debug(`✅ 关键元素已加载: ${foundSelector || options.waitForSelector}`)
           }
 
           // 增强人类行为模拟：页面加载后模拟鼠标活动和滚动
@@ -431,7 +432,7 @@ export async function scrapeUrlWithBrowser(
             loadComplete: false,
             signals: [],
           }))
-          console.log(
+          logger.debug(
             `⏱️ 智能等待完成: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`
           )
 
@@ -464,7 +465,7 @@ export async function scrapeUrlWithBrowser(
             })
             .catch(() => ({ found: false, selector: null }))
 
-          console.log(
+          logger.debug(
             `🔍 feature-bullets滚动: found=${scrollResult.found}, selector=${scrollResult.selector}`
           )
           await randomDelay(800, 1200) // 等待懒加载内容渲染
@@ -501,10 +502,10 @@ export async function scrapeUrlWithBrowser(
               .catch(() => null)
 
             if (featureDebug) {
-              console.log(`🔍 feature容器调试: ${JSON.stringify(featureDebug)}`)
+              logger.debug(`🔍 feature容器调试: ${JSON.stringify(featureDebug)}`)
             }
           } else {
-            console.log(`✅ feature-bullets已加载`)
+            logger.debug(`✅ feature-bullets已加载`)
           }
 
           // 滚动回顶部
@@ -524,8 +525,8 @@ export async function scrapeUrlWithBrowser(
           redirectChain.push(finalUrl)
         }
 
-        console.log(`✅ 最终URL: ${finalUrl}`)
-        console.log(`🔄 重定向次数: ${redirectChain.length - 1}`)
+        logger.debug(`✅ 最终URL: ${finalUrl}`)
+        logger.debug(`🔄 重定向次数: ${redirectChain.length - 1}`)
 
         // Extract data
         const html = await page.content()
@@ -552,7 +553,7 @@ export async function scrapeUrlWithBrowser(
               })
               .catch(() => undefined)
             if (screenshot) {
-              console.log('✅ 第二次尝试截图成功（未等待字体加载）')
+              logger.debug('✅ 第二次尝试截图成功（未等待字体加载）')
             }
           } catch (_retryError) {
             console.warn('⚠️ 第二次截图也失败，跳过截图继续执行')
@@ -590,7 +591,7 @@ export async function resolveAffiliateLink(
   targetCountry?: string,
   maxProxyRetries: number = 2 // 代理失败最多重试2次
 ): Promise<AffiliateLinkResult> {
-  console.log(
+  logger.debug(
     `🔗 解析推广链接: ${affiliateLink}${targetCountry ? ` (国家: ${targetCountry})` : ''}`
   )
 
@@ -600,7 +601,7 @@ export async function resolveAffiliateLink(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(
+        logger.debug(
           `🔄 链接解析 - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`
         )
         const pool = getPlaywrightPool()
@@ -608,7 +609,7 @@ export async function resolveAffiliateLink(
         // 清理代理IP缓存，强制获取新IP
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
-        console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
+        logger.debug(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
@@ -648,7 +649,7 @@ export async function resolveAffiliateLink(
               signals: [],
             }))
 
-            console.log(
+            logger.debug(
               `⏱️ 链接解析等待: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`
             )
             recordWaitOptimization(15000, waitResult.waited)
@@ -664,8 +665,8 @@ export async function resolveAffiliateLink(
             const basePath = `${urlObj.origin}${urlObj.pathname}`
             const suffix = urlObj.search.substring(1) // Remove leading '?'
 
-            console.log(`✅ 最终URL: ${basePath}`)
-            console.log(
+            logger.debug(`✅ 最终URL: ${basePath}`)
+            logger.debug(
               `🔧 URL Suffix: ${suffix.substring(0, 100)}${suffix.length > 100 ? '...' : ''}`
             )
 
@@ -698,7 +699,7 @@ export async function resolveAffiliateLink(
 
       // 如果是代理连接错误，尝试换新代理
       if (isProxyConnectionError(error) && proxyAttempt < maxProxyRetries) {
-        console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
+        logger.debug(`🔄 检测到代理连接问题，准备换新代理重试...`)
         continue
       }
 

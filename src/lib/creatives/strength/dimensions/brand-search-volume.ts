@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import {
   getKeywordSearchVolumesForPlannerContext,
   loadKeywordPoolExpandCredentialsForOffer,
@@ -45,7 +46,7 @@ export async function calculateBrandSearchVolume(
 
   // 如果没有品牌名称，返回0分
   if (!brandName || brandName.trim() === '') {
-    console.log('⚠️ 未提供品牌名称，品牌搜索量得分为0')
+    logger.debug('⚠️ 未提供品牌名称，品牌搜索量得分为0')
     return {
       score: 0,
       weight: 0.2 as const,
@@ -111,7 +112,7 @@ export async function calculateBrandSearchVolume(
       resolvedBrandNameSearchVolume = exactBrandKeywordSearchVolume
       hasPlannerData = true
       dataSource = 'database'
-      console.log(
+      logger.debug(
         `♻️ 使用创意内精确品牌词搜索量，跳过品牌名 Planner 查询: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`
       )
     } else {
@@ -134,7 +135,7 @@ export async function calculateBrandSearchVolume(
             ? unavailableFromKeywords
             : 'DEV_TOKEN_INSUFFICIENT_ACCESS'
         }
-        console.log('♻️ expand 预加载已失败，跳过品牌名 Planner 查询')
+        logger.debug('♻️ expand 预加载已失败，跳过品牌名 Planner 查询')
       } else if (userId) {
         const volumeResult = await getKeywordSearchVolumesForPlannerContext({
           userId,
@@ -183,17 +184,17 @@ export async function calculateBrandSearchVolume(
         resolvedBrandNameSearchVolume = exactBrandKeywordSearchVolume
         dataSource = 'database'
         fallbackMode = 'exact_brand_keyword_backfill'
-        console.log(
+        logger.debug(
           `♻️ Planner不可用，回填精确品牌词搜索量: ${exactBrandKeywordSearchVolume.toLocaleString()}/月`
         )
       }
     }
 
     if (normalizedKeywordsWithVolume.length > 0) {
-      console.log(`🏷️ 品牌关键词: 发现${brandKeywordsCount}个包含"${brandName}"的关键词`)
-      console.log(`   品牌关键词搜索量: ${brandKeywordSearchVolume.toLocaleString()}/月`)
+      logger.debug(`🏷️ 品牌关键词: 发现${brandKeywordsCount}个包含"${brandName}"的关键词`)
+      logger.debug(`   品牌关键词搜索量: ${brandKeywordSearchVolume.toLocaleString()}/月`)
     } else {
-      console.log('⚠️ 未提供keywordsWithVolume，跳过品牌关键词搜索量计算')
+      logger.debug('⚠️ 未提供keywordsWithVolume，跳过品牌关键词搜索量计算')
     }
 
     // 3. 计算总分（品牌名搜索量 + 品牌关键词搜索量）
@@ -208,7 +209,7 @@ export async function calculateBrandSearchVolume(
         brandKeywordsCount,
         hasExactBrandKeyword
       )
-      console.log(`⚠️ 品牌搜索量不可用，使用品牌信号代理评分: ${proxyScore}分`)
+      logger.debug(`⚠️ 品牌搜索量不可用，使用品牌信号代理评分: ${proxyScore}分`)
       return {
         score: proxyScore,
         weight: 0.2 as const,
@@ -227,10 +228,10 @@ export async function calculateBrandSearchVolume(
       }
     }
 
-    console.log(`📊 品牌"${brandName}"搜索量分析:`)
-    console.log(`   品牌名搜索量: ${resolvedBrandNameSearchVolume.toLocaleString()}/月`)
-    console.log(`   品牌关键词搜索量: ${brandKeywordSearchVolume.toLocaleString()}/月`)
-    console.log(`   总计: ${totalBrandSearchVolume.toLocaleString()}/月`)
+    logger.debug(`📊 品牌"${brandName}"搜索量分析:`)
+    logger.debug(`   品牌名搜索量: ${resolvedBrandNameSearchVolume.toLocaleString()}/月`)
+    logger.debug(`   品牌关键词搜索量: ${brandKeywordSearchVolume.toLocaleString()}/月`)
+    logger.debug(`   总计: ${totalBrandSearchVolume.toLocaleString()}/月`)
 
     // 根据总搜索量确定流量级别和分数（对数缩放）
     let volumeLevel: 'micro' | 'small' | 'medium' | 'large' | 'xlarge'
@@ -285,7 +286,7 @@ export async function calculateBrandSearchVolume(
       score = 0
     }
 
-    console.log(`   流量级别: ${volumeLevel}, 评分: ${score}分`)
+    logger.debug(`   流量级别: ${volumeLevel}, 评分: ${score}分`)
 
     return {
       score,

@@ -11,6 +11,7 @@
  * 优势：支持并发控制、任务恢复、失败重试
  */
 
+import { logger } from '@/lib/common/server'
 import type { Task, TaskExecutor } from '../types'
 import { backupDatabase } from '@/lib/common/server'
 
@@ -42,7 +43,7 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
   return async (task: Task<BackupTaskData>) => {
     const { backupType, createdBy } = task.data
 
-    console.log(
+    logger.debug(
       `💾 [BackupExecutor] 开始备份任务: 类型=${backupType}, 用户=${createdBy || 'system'}`
     )
 
@@ -55,7 +56,7 @@ export function createBackupExecutor(): TaskExecutor<BackupTaskData, BackupTaskR
       const duration = Date.now() - startTime
 
       if (result.success) {
-        console.log(
+        logger.debug(
           `✅ [BackupExecutor] 备份任务完成: ${result.errorMessage || 'ok'}, 耗时=${duration}ms`
         )
       } else {

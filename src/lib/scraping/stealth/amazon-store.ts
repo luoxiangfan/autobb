@@ -4,6 +4,7 @@
  * Amazon store page scraping with product listing extraction
  */
 
+import { logger } from '@/lib/common/server'
 import { load, type CheerioAPI } from 'cheerio'
 import { Page } from 'playwright'
 import { normalizeBrandName } from '../../offers/server'
@@ -91,7 +92,7 @@ export async function scrapeAmazonStore(
   targetCountry?: string,
   maxProxyRetries: number = 2
 ): Promise<AmazonStoreData> {
-  console.log(`📦 抓取Amazon Store: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}`)
+  logger.debug(`📦 抓取Amazon Store: ${url}${targetCountry ? ` (国家: ${targetCountry})` : ''}`)
 
   let lastError: Error | undefined
   const effectiveProxyUrl = customProxyUrl || PROXY_URL
@@ -99,14 +100,14 @@ export async function scrapeAmazonStore(
   for (let proxyAttempt = 0; proxyAttempt <= maxProxyRetries; proxyAttempt++) {
     try {
       if (proxyAttempt > 0) {
-        console.log(
+        logger.debug(
           `🔄 Amazon Store抓取 - 代理重试 ${proxyAttempt}/${maxProxyRetries}，清理连接池并获取新代理...`
         )
         const pool = getPlaywrightPool()
         await pool.clearIdleInstances()
         const { clearProxyCache } = await import('../proxy/fetch-proxy-ip')
         clearProxyCache(effectiveProxyUrl)
-        console.log(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
+        logger.debug(`🧹 已清理代理IP缓存: ${effectiveProxyUrl}`)
         await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
@@ -138,7 +139,7 @@ export async function scrapeAmazonStore(
 
       if (isProxyConnectionError(error)) {
         if (proxyAttempt < maxProxyRetries) {
-          console.log(`🔄 检测到代理连接问题，准备换新代理重试...`)
+          logger.debug(`🔄 检测到代理连接问题，准备换新代理重试...`)
           await new Promise((resolve) => setTimeout(resolve, 2000))
           continue
         } else {
@@ -172,7 +173,7 @@ async function scrapeStorePageContent(
     }
   })
 
-  console.log(`🌐 访问URL: ${url}`)
+  logger.debug(`🌐 访问URL: ${url}`)
   await randomDelay(500, 1500)
 
   // Navigate with retry
@@ -182,7 +183,7 @@ async function scrapeStorePageContent(
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
-      console.log(`🔄 尝试访问 (${attempt + 1}/${MAX_RETRIES})...`)
+      logger.debug(`🔄 尝试访问 (${attempt + 1}/${MAX_RETRIES})...`)
 
       response = await page.goto(url, {
         waitUntil: 'domcontentloaded',
@@ -191,7 +192,7 @@ async function scrapeStorePageContent(
 
       if (!response) throw new Error('No response received')
       const httpStatus = response.status()
-      console.log(`📊 HTTP状态: ${httpStatus}`)
+      logger.debug(`📊 HTTP状态: ${httpStatus}`)
 
       // FIX: 429 (Too Many Requests) 应该触发重试，而不是继续解析
       if (httpStatus === 429) {
@@ -204,7 +205,7 @@ async function scrapeStorePageContent(
         console.warn(`⚠️ 检测到404页面，尝试使用完整参数URL`)
 
         if (finalUrlWithParams !== url && finalUrlWithParams.includes('?')) {
-          console.log(`🔄 重新访问带完整参数的URL...`)
+          logger.debug(`🔄 重新访问带完整参数的URL...`)
           response = await page.goto(finalUrlWithParams, {
             waitUntil: 'domcontentloaded',
             timeout: getDynamicTimeout(finalUrlWithParams),
@@ -227,7 +228,7 @@ async function scrapeStorePageContent(
 
       if (attempt < MAX_RETRIES - 1) {
         const waitTime = 2000 * (attempt + 1)
-        console.log(`⏳ 等待 ${waitTime}ms 后重试...`)
+        logger.debug(`⏳ 等待 ${waitTime}ms 后重试...`)
         await new Promise((resolve) => setTimeout(resolve, waitTime))
       }
     }
@@ -244,12 +245,12 @@ async function scrapeStorePageContent(
     signals: [],
   }))
 
-  console.log(`⏱️ Store页面等待: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`)
+  logger.debug(`⏱️ Store页面等待: ${waitResult.waited}ms, 信号: ${waitResult.signals.join(', ')}`)
   recordWaitOptimization(15000, waitResult.waited)
 
   // Scroll to trigger lazy loading
-  console.log('⏳ 等待产品内容渲染（优化版）...')
-  console.log('🔄 滚动页面触发懒加载...')
+  logger.debug('⏳ 等待产品内容渲染（优化版）...')
+  logger.debug('🔄 滚动页面触发懒加载...')
 
   for (let i = 0; i < 4; i++) {
     await page.evaluate(() => window.scrollBy(0, window.innerHeight))
@@ -259,14 +260,14 @@ async function scrapeStorePageContent(
   await page.evaluate(() => window.scrollTo(0, 0))
   await randomDelay(1000, 1500)
 
-  console.log('🔄 二次滚动...')
+  logger.debug('🔄 二次滚动...')
   for (let i = 0; i < 3; i++) {
     await page.evaluate(() => window.scrollBy(0, window.innerHeight))
     await randomDelay(800, 1200)
   }
 
   // Check for lazy-loaded product grid
-  console.log('🔍 检测懒加载productgrid widget...')
+  logger.debug('🔍 检测懒加载productgrid widget...')
   const hasLazyProductGrid = await page.evaluate(() => {
     const lazyWidgets = document.querySelectorAll(
       '.stores-widget-btf[id*=""], div[class*="productgrid"]'
@@ -275,7 +276,7 @@ async function scrapeStorePageContent(
   })
 
   if (hasLazyProductGrid) {
-    console.log('✅ 发现懒加载widget，滚动到widget位置并等待加载...')
+    logger.debug('✅ 发现懒加载widget，滚动到widget位置并等待加载...')
 
     await page.evaluate(() => {
       const widget = document.querySelector('.stores-widget-btf, div[class*="productgrid"]')
@@ -306,10 +307,10 @@ async function scrapeStorePageContent(
     for (const selector of productSelectors) {
       try {
         await page.waitForSelector(selector, { timeout: 8000 })
-        console.log(`✅ 产品DOM已渲染: ${selector}`)
+        logger.debug(`✅ 产品DOM已渲染: ${selector}`)
         break
       } catch (_e) {
-        console.log(`⏳ 选择器 ${selector} 未找到，尝试下一个...`)
+        logger.debug(`⏳ 选择器 ${selector} 未找到，尝试下一个...`)
       }
     }
 
@@ -317,19 +318,19 @@ async function scrapeStorePageContent(
   }
 
   // Wait for product images
-  console.log('⏳ 等待产品图片渲染...')
+  logger.debug('⏳ 等待产品图片渲染...')
   await page.waitForSelector('img[src*="images-amazon"]', { timeout: 8000 }).catch(() => {
     console.warn('⚠️ 产品图片加载超时，继续处理')
   })
 
-  console.log('⏳ 等待JavaScript完成...')
+  logger.debug('⏳ 等待JavaScript完成...')
   await randomDelay(1500, 2500)
 
   await page.evaluate(() => window.scrollTo(0, 0))
   await randomDelay(300, 500)
 
   const finalUrl = page.url()
-  console.log(`✅ 最终URL: ${finalUrl}`)
+  logger.debug(`✅ 最终URL: ${finalUrl}`)
 
   const html = await page.content()
 
@@ -357,7 +358,7 @@ async function scrapeStorePageContent(
         animations: 'disabled',
       })
 
-      console.log(`📁 调试文件已保存: HTML: ${htmlFile}`)
+      logger.debug(`📁 调试文件已保存: HTML: ${htmlFile}`)
     } catch (error: any) {
       console.warn(`⚠️ 保存调试文件失败: ${error.message}`)
     }
@@ -469,7 +470,7 @@ async function scrapeStorePageContent(
 
         // 如果第二部分很短（<=15字符）或包含常见分类关键词，则只保留第一部分
         if (isLikelyCategory || secondPart.length <= 15) {
-          console.log(
+          logger.debug(
             `🔧 品牌名清理: "${brandName}" → "${firstPart}" (移除分类后缀: "${parts.slice(1).join(':')}")`
           )
           brandName = firstPart
@@ -545,7 +546,7 @@ async function scrapeStorePageContent(
           .slice(1)
           .some((w) => productTypeWords.includes(w.toLowerCase()))
         if (hasProductType) {
-          console.log(`🔧 品牌名精简: "${brandName}" → "${firstWord}" (移除产品类型词)`)
+          logger.debug(`🔧 品牌名精简: "${brandName}" → "${firstWord}" (移除产品类型词)`)
           brandName = firstWord
         }
       }
@@ -564,16 +565,16 @@ async function scrapeStorePageContent(
   const productAsins: Set<string> = new Set()
 
   // Strategy A0: Extract from embedded JavaScript JSON
-  console.log('📍 策略A0: 从嵌入的JavaScript JSON中提取产品数据...')
+  logger.debug('📍 策略A0: 从嵌入的JavaScript JSON中提取产品数据...')
   extractProductsFromJson(html, products, productAsins)
 
   // Strategy A2: Extract complete data from ProductGridItem
   // 这个策略可以直接从页面提取完整数据，避免访问详情页
-  console.log('📍 策略A2: 从ProductGridItem提取完整数据...')
+  logger.debug('📍 策略A2: 从ProductGridItem提取完整数据...')
   extractFromProductGridItems($, products, productAsins)
 
   // Strategy A1: Extract ASINs from HTML links (补充A0和A2未覆盖的ASIN)
-  console.log('📍 策略A1: 从Store页面HTML提取产品ASIN...')
+  logger.debug('📍 策略A1: 从Store页面HTML提取产品ASIN...')
   $('a[href*="/dp/"]').each((i, el) => {
     const href = $(el).attr('href') || ''
     const asinMatch = href.match(/\/dp\/([A-Z0-9]{10})/)
@@ -589,7 +590,7 @@ async function scrapeStorePageContent(
     }
   })
 
-  console.log(`📊 策略A1结果: 找到 ${productAsins.size} 个产品ASIN`)
+  logger.debug(`📊 策略A1结果: 找到 ${productAsins.size} 个产品ASIN`)
 
   // 检查是否已有足够完整的数据，避免不必要的详情页抓取
   const productsWithCompleteData = products.filter(
@@ -597,7 +598,7 @@ async function scrapeStorePageContent(
   )
   const hasCompleteData = productsWithCompleteData.length >= 5
 
-  console.log(
+  logger.debug(
     `📊 数据完整性检查: ${productsWithCompleteData.length}/${products.length} 个产品有完整数据`
   )
 
@@ -605,21 +606,21 @@ async function scrapeStorePageContent(
   // 如果已有完整数据，跳过详情页抓取
   const needPhase2 = products.length === 0 && productAsins.size > 0
 
-  console.log(
+  logger.debug(
     `🔍 Phase 2检查: products.length: ${products.length}, productAsins.size: ${productAsins.size}, needPhase2: ${needPhase2}${hasCompleteData ? ' (已有完整数据，跳过)' : ''}`
   )
 
   if (needPhase2) {
-    console.log(`📦 阶段2: 批量抓取产品详情页`)
+    logger.debug(`📦 阶段2: 批量抓取产品详情页`)
     await scrapeStoreProductDetailsIntoList(products, productAsins, effectiveProxyUrl)
   }
 
   // Phase 3: If still no products, try scraping from categories
   const needPhase3 = products.length === 0 && productAsins.size === 0
-  console.log(`🔍 Phase 3检查: products.length: ${products.length}, needPhase3: ${needPhase3}`)
+  logger.debug(`🔍 Phase 3检查: products.length: ${products.length}, needPhase3: ${needPhase3}`)
 
   if (needPhase3) {
-    console.log(`📂 策略B: 从产品分类页抓取ASIN...`)
+    logger.debug(`📂 策略B: 从产品分类页抓取ASIN...`)
 
     // Try to scrape categories first if not already done
     let categoriesToScrape: Array<{ name: string; url?: string }> = []
@@ -628,7 +629,7 @@ async function scrapeStorePageContent(
       const productCategories = await scrapeStoreCategories(page)
       if (productCategories.totalCategories > 0) {
         categoriesToScrape = productCategories.primaryCategories.filter((c) => c.url)
-        console.log(`✅ 找到 ${categoriesToScrape.length} 个可访问的分类`)
+        logger.debug(`✅ 找到 ${categoriesToScrape.length} 个可访问的分类`)
       }
     } catch (error: any) {
       console.warn(`⚠️ 分类抓取失败: ${error.message}`)
@@ -637,7 +638,7 @@ async function scrapeStorePageContent(
     if (categoriesToScrape.length > 0) {
       // Scrape products from top 3 categories
       const maxCategories = Math.min(3, categoriesToScrape.length)
-      console.log(`📂 准备从前 ${maxCategories} 个分类抓取产品...`)
+      logger.debug(`📂 准备从前 ${maxCategories} 个分类抓取产品...`)
 
       await scrapeCategoryProducts(
         page,
@@ -646,17 +647,17 @@ async function scrapeStorePageContent(
         effectiveProxyUrl
       )
 
-      console.log(`📊 策略B结果: 从分类页找到 ${productAsins.size} 个产品ASIN`)
+      logger.debug(`📊 策略B结果: 从分类页找到 ${productAsins.size} 个产品ASIN`)
 
       if (productAsins.size > 0) {
-        console.log(`📦 阶段3: 批量抓取产品详情页`)
+        logger.debug(`📦 阶段3: 批量抓取产品详情页`)
         await scrapeStoreProductDetailsIntoList(products, productAsins, effectiveProxyUrl)
       }
     }
   }
 
   // Filter and enhance products
-  console.log(`📊 原始产品数量: ${products.length}`)
+  logger.debug(`📊 原始产品数量: ${products.length}`)
   const validProducts = products.filter((p) => {
     const isPlaceholder = /^Product [A-Z0-9]{10}$/.test(p.name)
     const hasPrice = p.price && p.price !== 'null'
@@ -665,7 +666,7 @@ async function scrapeStorePageContent(
     }
     return true
   })
-  console.log(`📊 过滤后产品数量: ${validProducts.length}`)
+  logger.debug(`📊 过滤后产品数量: ${validProducts.length}`)
 
   // Calculate hot scores
   const enhancedProducts = calculateHotScores(validProducts)
@@ -708,16 +709,16 @@ async function scrapeStorePageContent(
     const productCategories = await scrapeStoreCategories(page)
     if (productCategories.totalCategories > 0) {
       storeData.productCategories = productCategories
-      console.log(`✅ 成功抓取 ${productCategories.totalCategories} 个产品分类`)
+      logger.debug(`✅ 成功抓取 ${productCategories.totalCategories} 个产品分类`)
     }
   } catch (error: any) {
     console.warn(`⚠️ 类别抓取失败（非致命错误）: ${error.message}`)
   }
 
-  console.log(`✅ Store抓取成功: ${storeName}`)
-  console.log(`📊 热销商品筛选: ${products.length} → ${enhancedProducts.length}`)
+  logger.debug(`✅ Store抓取成功: ${storeName}`)
+  logger.debug(`📊 热销商品筛选: ${products.length} → ${enhancedProducts.length}`)
   if (hotInsights) {
-    console.log(
+    logger.debug(
       `💡 热销洞察: 平均评分 ${hotInsights.avgRating.toFixed(1)}⭐, 平均评论 ${hotInsights.avgReviews} 条`
     )
   }
@@ -742,7 +743,7 @@ function extractProductsFromJson(
       const jsonStr = JSON.parse(jsonMatch[1])
       const carouselData = jsonStr
 
-      console.log(`📊 找到嵌入的产品数据对象`)
+      logger.debug(`📊 找到嵌入的产品数据对象`)
 
       const preloadProducts = carouselData.preloadProducts || {}
 
@@ -764,7 +765,7 @@ function extractProductsFromJson(
         productAsins.add(asin)
       }
 
-      console.log(`📊 策略A0成功: 从preloadProducts提取 ${products.length} 个产品`)
+      logger.debug(`📊 策略A0成功: 从preloadProducts提取 ${products.length} 个产品`)
 
       // Extract from segments
       const segments = carouselData.segments || []
@@ -800,10 +801,10 @@ function extractProductsFromJson(
       }
 
       if (segmentAsinCount > 0) {
-        console.log(`📊 A0c成功: 从segments补充 ${segmentAsinCount} 个产品`)
+        logger.debug(`📊 A0c成功: 从segments补充 ${segmentAsinCount} 个产品`)
       }
     } else {
-      console.log('⚠️ 未找到嵌入的JavaScript产品数据')
+      logger.debug('⚠️ 未找到嵌入的JavaScript产品数据')
     }
   } catch (error: any) {
     console.error(`❌ 解析JavaScript JSON失败: ${error.message}`)
@@ -828,7 +829,7 @@ function extractFromProductGridItems(
   products: AmazonStoreData['products'],
   productAsins: Set<string>
 ): void {
-  console.log('📍 策略A2: 从ProductGridItem提取完整数据...')
+  logger.debug('📍 策略A2: 从ProductGridItem提取完整数据...')
 
   let extractedCount = 0
 
@@ -844,7 +845,7 @@ function extractFromProductGridItems(
     const items = $(selector)
     if (items.length === 0) continue
 
-    console.log(`  ✓ 选择器 "${selector}" 匹配到 ${items.length} 个产品项`)
+    logger.debug(`  ✓ 选择器 "${selector}" 匹配到 ${items.length} 个产品项`)
 
     items.each((i, el) => {
       const $item = $(el)
@@ -996,13 +997,13 @@ function extractFromProductGridItems(
 
     // 如果已成功提取产品，跳出循环
     if (extractedCount > 0) {
-      console.log(`📊 策略A2成功: 从ProductGridItem提取 ${extractedCount} 个产品（含完整数据）`)
+      logger.debug(`📊 策略A2成功: 从ProductGridItem提取 ${extractedCount} 个产品（含完整数据）`)
       break
     }
   }
 
   if (extractedCount === 0) {
-    console.log('⚠️ 策略A2未找到ProductGridItem产品')
+    logger.debug('⚠️ 策略A2未找到ProductGridItem产品')
   }
 }
 
@@ -1022,7 +1023,7 @@ async function scrapeCategoryProducts(
     if (!category.url) continue
 
     try {
-      console.log(`📂 访问分类: ${category.name}`)
+      logger.debug(`📂 访问分类: ${category.name}`)
 
       // Build full category URL
       const categoryUrl = category.url.startsWith('http')
@@ -1042,7 +1043,7 @@ async function scrapeCategoryProducts(
           timeout: 10000,
         })
         .catch(() => {
-          console.log('  ⚠️ 未找到产品网格，尝试其他选择器...')
+          logger.debug('  ⚠️ 未找到产品网格，尝试其他选择器...')
         })
 
       await randomDelay(1000, 2000)
@@ -1070,7 +1071,7 @@ async function scrapeCategoryProducts(
         }
       })
 
-      console.log(`  ✅ 从 "${category.name}" 提取到 ${foundAsins.size} 个ASIN`)
+      logger.debug(`  ✅ 从 "${category.name}" 提取到 ${foundAsins.size} 个ASIN`)
 
       // Add to main ASIN set (limit to first 20 per category)
       let count = 0
@@ -1106,18 +1107,18 @@ async function batchScrapeProductDetailsComplete(
   maxCount: number = 10
 ): Promise<AmazonProductData[]> {
   const asinsToProcess = Array.from(productAsins).slice(0, maxCount)
-  console.log(`📦 批量抓取产品详情 (最多${maxCount}个)...`)
-  console.log(`📊 缓存状态: ${JSON.stringify(getProductCacheStats())}`)
+  logger.debug(`📦 批量抓取产品详情 (最多${maxCount}个)...`)
+  logger.debug(`📊 缓存状态: ${JSON.stringify(getProductCacheStats())}`)
 
   // Step 1: 检查缓存 - 启用质量检查，要求features不为空
   const { cached, uncached } = checkCacheBatch(asinsToProcess, true)
-  console.log(`📦 缓存: ${cached.length}个命中(质量合格), ${uncached.length}个需抓取`)
+  logger.debug(`📦 缓存: ${cached.length}个命中(质量合格), ${uncached.length}个需抓取`)
 
   const results: AmazonProductData[] = cached.map((c) => c.data)
 
   // Step 2: 抓取未缓存的产品
   if (uncached.length === 0) {
-    console.log(`✅ 全部命中缓存，无需抓取`)
+    logger.debug(`✅ 全部命中缓存，无需抓取`)
     return results
   }
 
@@ -1125,13 +1126,13 @@ async function batchScrapeProductDetailsComplete(
   const batchSize = 3
   for (let i = 0; i < uncached.length; i += batchSize) {
     const batch = uncached.slice(i, i + batchSize)
-    console.log(`🔄 处理批次 ${Math.floor(i / batchSize) + 1}: ${batch.length} 个商品`)
+    logger.debug(`🔄 处理批次 ${Math.floor(i / batchSize) + 1}: ${batch.length} 个商品`)
 
     const batchResults = await Promise.allSettled(
       batch.map(async (asin) => {
         const amazonDomain = getAmazonDomain(targetCountry)
         const productUrl = `https://${amazonDomain}/dp/${asin}`
-        console.log(`  🛒 抓取产品: ${asin} (${amazonDomain})`)
+        logger.debug(`  🛒 抓取产品: ${asin} (${amazonDomain})`)
 
         try {
           // 使用完整的 scrapeAmazonProduct 获取所有数据
@@ -1148,7 +1149,7 @@ async function batchScrapeProductDetailsComplete(
             setCachedProductDetail(productData.asin, productData)
           }
 
-          console.log(
+          logger.debug(
             `  ✅ 成功: ${productData.productName?.substring(0, 50)}... (${productData.rating || 'N/A'}⭐, ${productData.reviewCount || '0'} 评论, Badge: ${productData.badge || 'None'})`
           )
           return productData
@@ -1172,7 +1173,7 @@ async function batchScrapeProductDetailsComplete(
     }
   }
 
-  console.log(
+  logger.debug(
     `✅ 批量抓取完成: 缓存${cached.length}个 + 新抓取${results.length - cached.length}/${uncached.length}个`
   )
   return results
@@ -1366,7 +1367,7 @@ function parseSalesVolume(salesVolume: string): number {
 async function scrapeStoreCategories(
   page: Page
 ): Promise<NonNullable<AmazonStoreData['productCategories']>> {
-  console.log('🔍 开始抓取店铺产品分类...')
+  logger.debug('🔍 开始抓取店铺产品分类...')
 
   const categories: Array<{ name: string; count: number; url?: string }> = []
 
@@ -1392,7 +1393,7 @@ async function scrapeStoreCategories(
 
       if (elements.length === 0) continue
 
-      console.log(`  ✓ 选择器 "${selector}" 匹配到 ${elements.length} 个元素`)
+      logger.debug(`  ✓ 选择器 "${selector}" 匹配到 ${elements.length} 个元素`)
 
       for (const el of elements) {
         try {
@@ -1422,7 +1423,7 @@ async function scrapeStoreCategories(
       }
 
       if (categories.length > 0) {
-        console.log(`✅ 成功抓取 ${categories.length} 个产品类别`)
+        logger.debug(`✅ 成功抓取 ${categories.length} 个产品类别`)
         break
       }
     } catch (_error: any) {
@@ -1459,12 +1460,12 @@ export async function scrapeAmazonStoreDeep(
   targetCountry?: string,
   _maxConcurrency: number = 2 // 降低并发，因为复用同一个Context
 ): Promise<AmazonStoreData> {
-  console.log(`🔍 店铺深度抓取开始: ${storeUrl}, 目标抓取 ${topN} 个热销商品`)
-  console.log(`📊 产品缓存状态: ${JSON.stringify(getProductCacheStats())}`)
+  logger.debug(`🔍 店铺深度抓取开始: ${storeUrl}, 目标抓取 ${topN} 个热销商品`)
+  logger.debug(`📊 产品缓存状态: ${JSON.stringify(getProductCacheStats())}`)
 
   const storeData = await scrapeAmazonStore(storeUrl, customProxyUrl, targetCountry)
 
-  console.log(`📊 scrapeAmazonStore返回产品数: ${storeData.products.length}`)
+  logger.debug(`📊 scrapeAmazonStore返回产品数: ${storeData.products.length}`)
 
   if (storeData.products.length === 0) {
     console.warn(`⚠️ scrapeAmazonStore未返回任何产品`)
@@ -1476,7 +1477,7 @@ export async function scrapeAmazonStoreDeep(
     .filter((p) => p.isHot || (p.rank && p.rank <= topN))
     .slice(0, topN)
 
-  console.log(`📊 筛选出 ${hotProducts.length} 个热销商品准备深度抓取`)
+  logger.debug(`📊 筛选出 ${hotProducts.length} 个热销商品准备深度抓取`)
 
   if (hotProducts.length === 0) {
     console.warn('⚠️ 未找到热销商品，跳过深度抓取')
@@ -1505,7 +1506,7 @@ export async function scrapeAmazonStoreDeep(
   try {
     // 创建浏览器实例用于所有商品详情抓取
     browserResult = await createStealthBrowser(effectiveProxyUrl, targetCountry)
-    console.log(`🔄 [内存优化] 创建单个浏览器实例，将复用Context抓取 ${hotProducts.length} 个商品`)
+    logger.debug(`🔄 [内存优化] 创建单个浏览器实例，将复用Context抓取 ${hotProducts.length} 个商品`)
 
     // 串行处理，避免同一Context并发过多Page导致不稳定
     for (let i = 0; i < hotProducts.length; i++) {
@@ -1518,7 +1519,7 @@ export async function scrapeAmazonStoreDeep(
       const amazonDomain = getAmazonDomain(targetCountry)
       const productUrl = `https://${amazonDomain}/dp/${asin}`
 
-      console.log(
+      logger.debug(
         `  🛒 [${i + 1}/${hotProducts.length}] 抓取商品详情: ${product.name?.substring(0, 50)}... (${asin}) [${amazonDomain}]`
       )
 
@@ -1572,14 +1573,14 @@ export async function scrapeAmazonStoreDeep(
         aggregateProductData(successResult, deepResults, seenCompetitorAsins, seenFeatures)
 
         // 记录每个商品的features提取结果
-        console.log(
+        logger.debug(
           `  ✅ 成功: ${asin}, 评价数: ${successResult.reviews.length}, 竞品数: ${successResult.competitorAsins.length}, features: ${successResult.features.length}条`
         )
 
         // 商品间添加随机延迟，模拟人类行为
         if (i < hotProducts.length - 1) {
           const delay = 1000 + Math.random() * 2000
-          console.log(`  ⏰ 等待 ${Math.round(delay)}ms 后继续...`)
+          logger.debug(`  ⏰ 等待 ${Math.round(delay)}ms 后继续...`)
           await new Promise((resolve) => setTimeout(resolve, delay))
         }
       } catch (error: any) {
@@ -1604,12 +1605,12 @@ export async function scrapeAmazonStoreDeep(
     // 确保浏览器实例被释放
     if (browserResult) {
       await releaseBrowser(browserResult)
-      console.log(`🔄 [内存优化] 浏览器实例已释放`)
+      logger.debug(`🔄 [内存优化] 浏览器实例已释放`)
     }
   }
 
-  console.log(`📊 深度抓取完成: 成功 ${deepResults.successCount}/${deepResults.totalScraped}`)
-  console.log(
+  logger.debug(`📊 深度抓取完成: 成功 ${deepResults.successCount}/${deepResults.totalScraped}`)
+  logger.debug(
     `📊 聚合数据: 评论 ${deepResults.aggregatedReviews?.length || 0} 条, 竞品ASIN ${deepResults.aggregatedCompetitorAsins?.length || 0} 个, 特性 ${deepResults.aggregatedFeatures?.length || 0} 条`
   )
 

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
 import { nowFunc, notDeletedClause } from '../db'
 import { getInsertedId } from '../db'
@@ -111,7 +112,9 @@ export async function createCampaign(input: CreateCampaignInput): Promise<Campai
       campaignId: insertedId,
       backupSource: 'autoads',
     })
-    console.log(`[Campaign Created] Auto backed up campaign ${insertedId} for user ${input.userId}`)
+    logger.debug(
+      `[Campaign Created] Auto backed up campaign ${insertedId} for user ${input.userId}`
+    )
   } catch (error) {
     console.error('[Campaign Created] Failed to auto backup campaign:', error)
     // 备份失败不影响广告系列创建，只记录日志
@@ -463,14 +466,14 @@ async function pauseOfferTasks(offerId: number, userId: number): Promise<void> {
     const clickFarmTask = await getClickFarmTaskByOfferId(offerId, userId)
     if (clickFarmTask && ['pending', 'running', 'paused'].includes(clickFarmTask.status)) {
       await stopClickFarmTask(String(clickFarmTask.id), userId)
-      console.log(`[campaigns] 已暂停补点击任务 (offerId=${offerId}, taskId=${clickFarmTask.id})`)
+      logger.debug(`[campaigns] 已暂停补点击任务 (offerId=${offerId}, taskId=${clickFarmTask.id})`)
     }
 
     // 禁用换链接任务
     const urlSwapTask = await getUrlSwapTaskByOfferId(offerId, userId)
     if (urlSwapTask && urlSwapTask.status !== 'disabled') {
       await disableUrlSwapTask(String(urlSwapTask.id), userId)
-      console.log(`[campaigns] 已禁用换链接任务 (offerId=${offerId}, taskId=${urlSwapTask.id})`)
+      logger.debug(`[campaigns] 已禁用换链接任务 (offerId=${offerId}, taskId=${urlSwapTask.id})`)
     }
   } catch (error: any) {
     console.error(`[campaigns] 暂停 Offer 任务失败 (offerId=${offerId}):`, error)

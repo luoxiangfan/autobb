@@ -1,6 +1,7 @@
 /**
  * 创意关键词上下文过滤：主流程
  */
+import { logger } from '@/lib/common/server'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
 import { getMinContextTokenMatchesForKeywordQualityFilter } from '../planner/keyword-context-filter'
 import { filterKeywordQuality } from '../keyword-quality-filter'
@@ -180,7 +181,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
     addBlockedKeywordKey(blockedKeywordKeys, item.keyword?.keyword)
   }
   if (qualityFiltered.removed.length > 0) {
-    console.log(
+    logger.debug(
       `🧹 创意关键词过滤(${scopeLabel}): ${keywordsWithVolume.length} → ${qualityFiltered.filtered.length} ` +
         `(移除 ${qualityFiltered.removed.length}，其中上下文不相关 ${contextMismatchRemovedCount})`
     )
@@ -214,7 +215,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
       for (const item of modelFamilyFiltered.removed) {
         addBlockedKeywordKey(blockedKeywordKeys, item.item?.keyword)
       }
-      console.log(
+      logger.debug(
         `🧬 model_intent 型号族过滤(${scopeLabel}): ${qualityFiltered.filtered.length} → ${modelFamilyFiltered.filtered.length} ` +
           `(移除 ${modelFamilyFiltered.removed.length})`
       )
@@ -272,7 +273,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
 
       if (supplemented.addedKeywords.length > 0) {
         modelFamilyFilteredKeywords = supplemented.items
-        console.log(
+        logger.debug(
           `🧩 model_intent 关键词补足(${scopeLabel}): +${supplemented.addedKeywords.length} ` +
             `(总计 ${modelFamilyFilteredKeywords.length})`
         )
@@ -367,7 +368,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
           })
           if (underfillSupplement.length > 0) {
             tightenedResult = [...tightenedResult, ...underfillSupplement]
-            console.log(
+            logger.debug(
               `🧩 ${creativeType} 上下文收紧后补位(${scopeLabel}): ${tightened.length} → ${tightenedResult.length}`
             )
           }
@@ -440,7 +441,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
                 .slice(0, MODEL_INTENT_MIN_KEYWORD_FLOOR - tightenedResult.length)
               if (guardSupplement.length > 0) {
                 tightenedResult = [...tightenedResult, ...guardSupplement]
-                console.log(
+                logger.debug(
                   `🧩 ${creativeType} 收紧后安全补位(${scopeLabel}): ${tightened.length} → ${tightenedResult.length}`
                 )
               }
@@ -475,7 +476,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
           })
           if (underfillSupplement.length > 0) {
             tightenedResult = [...tightenedResult, ...underfillSupplement]
-            console.log(
+            logger.debug(
               `🧩 ${creativeType} 收紧后补位(${scopeLabel}): ${tightened.length} → ${tightenedResult.length}`
             )
           }
@@ -494,7 +495,7 @@ export function filterCreativeKeywordsByOfferContextDetailed(params: {
           }
         }
         if (intentTighteningRemovedCount > 0) {
-          console.log(
+          logger.debug(
             `🎯 ${creativeType} 上下文收紧(${scopeLabel}): ${modelFamilyFilteredKeywords.length} → ${tightenedResult.length}`
           )
         }

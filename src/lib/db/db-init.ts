@@ -10,6 +10,7 @@
  * 6. 自动执行增量迁移（新增）
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from './database'
 import { hashPassword } from '../auth'
 import {
@@ -71,11 +72,11 @@ async function isDatabaseInitialized(): Promise<boolean> {
         [table]
       )
       if (!result[0].exists) {
-        console.log(`⚠️ 数据库初始化检查: 缺少关键表 '${table}'`)
+        logger.debug(`⚠️ 数据库初始化检查: 缺少关键表 '${table}'`)
         return false
       }
     }
-    console.log('✅ 数据库初始化检查: 所有关键表都存在')
+    logger.debug('✅ 数据库初始化检查: 所有关键表都存在')
     return true
   } catch (error) {
     console.error('❌ 数据库初始化检查失败:', error)
@@ -87,7 +88,7 @@ async function isDatabaseInitialized(): Promise<boolean> {
  * 初始化 PostgreSQL 数据库
  */
 async function initializePostgreSQL(): Promise<void> {
-  console.log('🐘 Initializing PostgreSQL database...')
+  logger.debug('🐘 Initializing PostgreSQL database...')
 
   try {
     // 1. 从生成的SQL文件创建表结构
@@ -98,7 +99,7 @@ async function initializePostgreSQL(): Promise<void> {
 
     const statements = loadConsolidatedSchemaStatements(sqlPath)
 
-    console.log('\n📋 Creating database tables...')
+    logger.debug('\n📋 Creating database tables...')
     const databaseUrl = process.env.DATABASE_URL
     if (
       !databaseUrl ||
@@ -110,7 +111,7 @@ async function initializePostgreSQL(): Promise<void> {
     const initSql = postgres(databaseUrl, { max: 1 })
     try {
       const { ok, skipped } = await applyConsolidatedSchemaStatements(initSql, statements)
-      console.log(
+      logger.debug(
         `✅ Schema created from migrations/000_init_schema_consolidated.pg.sql (${ok} statements, ${skipped} skipped)`
       )
     } finally {
@@ -129,7 +130,7 @@ async function initializePostgreSQL(): Promise<void> {
     // 5. 插入行业基准数据
     await insertIndustryBenchmarks()
 
-    console.log('\n✅ PostgreSQL database initialized successfully!')
+    logger.debug('\n✅ PostgreSQL database initialized successfully!')
   } catch (error) {
     console.error('❌ PostgreSQL initialization failed:', error)
     throw error
@@ -140,7 +141,7 @@ async function initializePostgreSQL(): Promise<void> {
  * 创建默认管理员账号
  */
 async function createDefaultAdmin(): Promise<void> {
-  console.log('\n👤 Creating default admin account...')
+  logger.debug('\n👤 Creating default admin account...')
 
   const db = await getDatabase()
 
@@ -153,14 +154,14 @@ async function createDefaultAdmin(): Promise<void> {
     const passwordHash = await hashPassword(DEFAULT_ADMIN.password)
 
     if (existingAdmin) {
-      console.log('⚠️  Admin account already exists, updating password...')
+      logger.debug('⚠️  Admin account already exists, updating password...')
 
       await db.exec(
         'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
         [passwordHash, DEFAULT_ADMIN.username, 'admin']
       )
 
-      console.log('✅ Admin password updated')
+      logger.debug('✅ Admin password updated')
     } else {
       await db.exec(
         `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
@@ -176,18 +177,18 @@ async function createDefaultAdmin(): Promise<void> {
         ]
       )
 
-      console.log('✅ Default admin account created')
-      console.log('\n🔑 Admin credentials:')
-      console.log(`   Username: ${DEFAULT_ADMIN.username}`)
-      console.log(`   Password: ${DEFAULT_ADMIN.password}`)
-      console.log(`   Email: ${DEFAULT_ADMIN.email}`)
-      console.log('\n⚠️  Security Notice:')
+      logger.debug('✅ Default admin account created')
+      logger.debug('\n🔑 Admin credentials:')
+      logger.debug(`   Username: ${DEFAULT_ADMIN.username}`)
+      logger.debug(`   Password: ${DEFAULT_ADMIN.password}`)
+      logger.debug(`   Email: ${DEFAULT_ADMIN.email}`)
+      logger.debug('\n⚠️  Security Notice:')
       if (process.env.DEFAULT_ADMIN_PASSWORD) {
-        console.log('   ✅ Using password from DEFAULT_ADMIN_PASSWORD environment variable')
+        logger.debug('   ✅ Using password from DEFAULT_ADMIN_PASSWORD environment variable')
       } else {
-        console.log('   ⚠️  Random password generated! Please save it immediately:')
-        console.log(`   👉 ${DEFAULT_ADMIN.password}`)
-        console.log('   Recommended: Set DEFAULT_ADMIN_PASSWORD in production environment')
+        logger.debug('   ⚠️  Random password generated! Please save it immediately:')
+        logger.debug(`   👉 ${DEFAULT_ADMIN.password}`)
+        logger.debug('   Recommended: Set DEFAULT_ADMIN_PASSWORD in production environment')
       }
     }
   } catch (error) {
@@ -208,7 +209,7 @@ async function createDefaultAdmin(): Promise<void> {
  * 如果管理员已存在：更新密码（如果环境变量中配置了新密码）
  */
 async function ensureAdminAccount(): Promise<void> {
-  console.log('\n👤 Checking admin account...')
+  logger.debug('\n👤 Checking admin account...')
 
   const db = await getDatabase()
 
@@ -222,23 +223,23 @@ async function ensureAdminAccount(): Promise<void> {
 
     if (existingAdmin) {
       if (process.env.DEFAULT_ADMIN_PASSWORD) {
-        console.log('⚠️  Admin account exists, updating password from environment variable...')
+        logger.debug('⚠️  Admin account exists, updating password from environment variable...')
 
         await db.exec(
           'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
           [passwordHash, DEFAULT_ADMIN.username, 'admin']
         )
 
-        console.log('✅ Admin password updated')
+        logger.debug('✅ Admin password updated')
       } else {
         await db.exec(
           'UPDATE users SET must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
           [DEFAULT_ADMIN.username, 'admin']
         )
-        console.log('✅ Admin account exists (password unchanged)')
+        logger.debug('✅ Admin account exists (password unchanged)')
       }
     } else {
-      console.log('⚠️  Admin account not found, creating...')
+      logger.debug('⚠️  Admin account not found, creating...')
 
       await db.exec(
         `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
@@ -254,18 +255,18 @@ async function ensureAdminAccount(): Promise<void> {
         ]
       )
 
-      console.log('✅ Admin account created')
-      console.log('\n🔑 Admin credentials:')
-      console.log(`   Username: ${DEFAULT_ADMIN.username}`)
-      console.log(`   Password: ${DEFAULT_ADMIN.password}`)
-      console.log(`   Email: ${DEFAULT_ADMIN.email}`)
-      console.log('\n⚠️  Security Notice:')
+      logger.debug('✅ Admin account created')
+      logger.debug('\n🔑 Admin credentials:')
+      logger.debug(`   Username: ${DEFAULT_ADMIN.username}`)
+      logger.debug(`   Password: ${DEFAULT_ADMIN.password}`)
+      logger.debug(`   Email: ${DEFAULT_ADMIN.email}`)
+      logger.debug('\n⚠️  Security Notice:')
       if (process.env.DEFAULT_ADMIN_PASSWORD) {
-        console.log('   ✅ Using password from DEFAULT_ADMIN_PASSWORD environment variable')
+        logger.debug('   ✅ Using password from DEFAULT_ADMIN_PASSWORD environment variable')
       } else {
-        console.log('   ⚠️  Random password generated! Please save it immediately:')
-        console.log(`   👉 ${DEFAULT_ADMIN.password}`)
-        console.log('   Recommended: Set DEFAULT_ADMIN_PASSWORD in .env.local')
+        logger.debug('   ⚠️  Random password generated! Please save it immediately:')
+        logger.debug(`   👉 ${DEFAULT_ADMIN.password}`)
+        logger.debug('   Recommended: Set DEFAULT_ADMIN_PASSWORD in .env.local')
       }
     }
   } catch (error) {
@@ -278,7 +279,7 @@ async function ensureAdminAccount(): Promise<void> {
  * 插入默认系统配置
  */
 async function insertDefaultSystemSettings(): Promise<void> {
-  console.log('\n⚙️  Inserting default system settings...')
+  logger.debug('\n⚙️  Inserting default system settings...')
 
   const db = await getDatabase()
 
@@ -452,7 +453,7 @@ async function insertDefaultSystemSettings(): Promise<void> {
       }
     }
 
-    console.log(`✅ Inserted ${defaultSettings.length} default settings`)
+    logger.debug(`✅ Inserted ${defaultSettings.length} default settings`)
   } catch (error) {
     console.error('❌ Failed to insert default settings:', error)
     throw error
@@ -464,11 +465,11 @@ async function insertDefaultSystemSettings(): Promise<void> {
  */
 async function importAdminConfig(): Promise<void> {
   if (!fs.existsSync(CONFIG_EXPORT_PATH)) {
-    console.log('\n⏭️  No admin config export file found, skipping import')
+    logger.debug('\n⏭️  No admin config export file found, skipping import')
     return
   }
 
-  console.log('\n📥 Importing admin configuration...')
+  logger.debug('\n📥 Importing admin configuration...')
 
   try {
     const exportData = JSON.parse(fs.readFileSync(CONFIG_EXPORT_PATH, 'utf-8'))
@@ -523,7 +524,7 @@ async function importAdminConfig(): Promise<void> {
       }
     }
 
-    console.log(`✅ Imported ${exportData.settings.length} admin settings`)
+    logger.debug(`✅ Imported ${exportData.settings.length} admin settings`)
   } catch (error) {
     console.error('❌ Failed to import admin config:', error)
     throw error
@@ -534,7 +535,7 @@ async function importAdminConfig(): Promise<void> {
  * 插入行业基准数据
  */
 async function insertIndustryBenchmarks(): Promise<void> {
-  console.log('\n📊 Inserting industry benchmarks...')
+  logger.debug('\n📊 Inserting industry benchmarks...')
 
   const db = await getDatabase()
 
@@ -760,7 +761,7 @@ async function insertIndustryBenchmarks(): Promise<void> {
       )
     }
 
-    console.log(`✅ Inserted ${benchmarks.length} industry benchmarks`)
+    logger.debug(`✅ Inserted ${benchmarks.length} industry benchmarks`)
   } catch (error) {
     console.error('❌ Failed to insert industry benchmarks:', error)
     throw error
@@ -772,19 +773,19 @@ async function insertIndustryBenchmarks(): Promise<void> {
  */
 export async function initializeDatabase(): Promise<void> {
   const startupBeginAt = Date.now()
-  console.log('🔍 Checking database initialization status...')
+  logger.debug('🔍 Checking database initialization status...')
 
   async function runStep(stepName: string, fn: () => Promise<void>): Promise<void> {
     const stepStartedAt = Date.now()
     await fn()
     const stepElapsedMs = Date.now() - stepStartedAt
-    console.log(`⏱️  ${stepName} 完成 (${stepElapsedMs}ms)`)
+    logger.debug(`⏱️  ${stepName} 完成 (${stepElapsedMs}ms)`)
   }
 
   const isInitialized = await isDatabaseInitialized()
 
   if (isInitialized) {
-    console.log('✅ Database already initialized, checking for pending migrations...')
+    logger.debug('✅ Database already initialized, checking for pending migrations...')
     // 数据库已初始化，执行增量迁移
     await runStep('增量迁移检查', async () => {
       await runPendingMigrations()
@@ -805,11 +806,11 @@ export async function initializeDatabase(): Promise<void> {
     await runStep('统一队列初始化', async () => {
       await initializeQueueSystem()
     })
-    console.log(`✅ 启动初始化完成（总耗时${Date.now() - startupBeginAt}ms）`)
+    logger.debug(`✅ 启动初始化完成（总耗时${Date.now() - startupBeginAt}ms）`)
     return
   }
 
-  console.log('⚠️  Database not initialized, starting initialization...\n')
+  logger.debug('⚠️  Database not initialized, starting initialization...\n')
 
   await runStep('PostgreSQL初始化', async () => {
     await initializePostgreSQL()
@@ -828,7 +829,7 @@ export async function initializeDatabase(): Promise<void> {
     await initializeQueueSystem()
   })
 
-  console.log(`✅ 启动初始化完成（总耗时${Date.now() - startupBeginAt}ms）`)
+  logger.debug(`✅ 启动初始化完成（总耗时${Date.now() - startupBeginAt}ms）`)
 }
 
 /**
@@ -897,11 +898,11 @@ async function runPendingMigrations(): Promise<void> {
 
   const migrationsDir = path.join(process.cwd(), 'migrations')
 
-  console.log(`🔍 Checking migrations in: ${migrationsDir}`)
+  logger.debug(`🔍 Checking migrations in: ${migrationsDir}`)
 
   // 检查迁移目录是否存在
   if (!fs.existsSync(migrationsDir)) {
-    console.log('⚠️  Migrations directory not found, skipping migrations')
+    logger.debug('⚠️  Migrations directory not found, skipping migrations')
     return
   }
 
@@ -912,7 +913,7 @@ async function runPendingMigrations(): Promise<void> {
   const migrationFiles = listIncrementalMigrationFiles(migrationsDir)
 
   if (migrationFiles.length === 0) {
-    console.log('📋 No migration files found')
+    logger.debug('📋 No migration files found')
     return
   }
 
@@ -941,7 +942,7 @@ async function runPendingMigrations(): Promise<void> {
   }
 
   if (pendingMigrations.length === 0) {
-    console.log('✅ All migrations are up to date')
+    logger.debug('✅ All migrations are up to date')
     return
   }
 
@@ -949,16 +950,16 @@ async function runPendingMigrations(): Promise<void> {
   const newMigrations = pendingMigrations.filter((m) => m.reason === 'new')
   const changedMigrations = pendingMigrations.filter((m) => m.reason === 'changed')
 
-  console.log(`\n📦 Found ${pendingMigrations.length} migrations to execute:`)
+  logger.debug(`\n📦 Found ${pendingMigrations.length} migrations to execute:`)
   if (newMigrations.length > 0) {
-    console.log(`   🆕 New: ${newMigrations.length}`)
-    newMigrations.forEach((m) => console.log(`      - ${m.file}`))
+    logger.debug(`   🆕 New: ${newMigrations.length}`)
+    newMigrations.forEach((m) => logger.debug(`      - ${m.file}`))
   }
   if (changedMigrations.length > 0) {
-    console.log(`   🔄 Changed: ${changedMigrations.length}`)
-    changedMigrations.forEach((m) => console.log(`      - ${m.file}`))
+    logger.debug(`   🔄 Changed: ${changedMigrations.length}`)
+    changedMigrations.forEach((m) => logger.debug(`      - ${m.file}`))
   }
-  console.log('')
+  logger.debug('')
 
   // 执行每个迁移
   let successCount = 0
@@ -971,12 +972,12 @@ async function runPendingMigrations(): Promise<void> {
     const fileHash = calculateFileHash(sqlContent)
 
     const reasonIcon = reason === 'new' ? '🆕' : '🔄'
-    console.log(`${reasonIcon} Executing: ${migrationFile}`)
+    logger.debug(`${reasonIcon} Executing: ${migrationFile}`)
 
     try {
       await executeMigration(historyName, sqlContent)
       await recordMigration(historyName, fileHash)
-      console.log(`✅ Completed: ${migrationFile}`)
+      logger.debug(`✅ Completed: ${migrationFile}`)
       successCount++
     } catch (error) {
       console.error(`❌ Failed: ${migrationFile}`)
@@ -987,11 +988,11 @@ async function runPendingMigrations(): Promise<void> {
     }
   }
 
-  console.log(`\n📊 Migration summary:`)
-  console.log(`   ✅ Success: ${successCount}`)
+  logger.debug(`\n📊 Migration summary:`)
+  logger.debug(`   ✅ Success: ${successCount}`)
   if (failCount > 0) {
-    console.log(`   ❌ Failed: ${failCount}`)
-    console.log(`   ⚠️  Please check failed migrations and fix manually`)
+    logger.debug(`   ❌ Failed: ${failCount}`)
+    logger.debug(`   ⚠️  Please check failed migrations and fix manually`)
   }
 }
 
@@ -1083,7 +1084,7 @@ async function executeMigration(name: string, sql: string): Promise<void> {
           errorMsg.includes('already exists') ||
           errorMsg.includes('duplicate key value violates unique constraint')
         ) {
-          console.log(`   ⏭️  Skipped (already exists): ${stmt.substring(0, 60)}...`)
+          logger.debug(`   ⏭️  Skipped (already exists): ${stmt.substring(0, 60)}...`)
         } else {
           throw error
         }
@@ -1151,7 +1152,7 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
   const db = await getDatabase()
 
   try {
-    console.log('🔄 启动清理：清空所有未完成任务...')
+    logger.debug('🔄 启动清理：清空所有未完成任务...')
 
     // 启动时清空所有未完成任务
     // 理由
@@ -1167,9 +1168,9 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
       const redisCleanup = await clearRedisAllUnfinishedTasks()
       redisClearedCount = redisCleanup.clearedCount
       if (redisClearedCount > 0 || redisCleanup.details.userQueuesCleared > 0) {
-        console.log(`  ✅ Redis: 已清空 ${redisClearedCount} 个未完成任务`)
+        logger.debug(`  ✅ Redis: 已清空 ${redisClearedCount} 个未完成任务`)
       } else {
-        console.log(`  ✅ Redis: 队列状态正常，无需清理`)
+        logger.debug(`  ✅ Redis: 队列状态正常，无需清理`)
       }
     } catch (error) {
       console.warn('  ⚠️ Redis清理失败（非关键错误）:', error)
@@ -1185,7 +1186,7 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
       const tableExists = tableResult[0].exists
 
       if (!tableExists) {
-        console.log('  ℹ️  数据库: offer_tasks表不存在，跳过清理')
+        logger.debug('  ℹ️  数据库: offer_tasks表不存在，跳过清理')
       } else {
         const result = await db.exec(`
           DELETE FROM offer_tasks
@@ -1193,7 +1194,7 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
         `)
         dbClearedCount = result.changes
         if (dbClearedCount > 0) {
-          console.log(`  ✅ 数据库: 已清空 ${dbClearedCount} 个未完成任务`)
+          logger.debug(`  ✅ 数据库: 已清空 ${dbClearedCount} 个未完成任务`)
         }
       }
     } catch (error) {
@@ -1204,7 +1205,7 @@ async function checkUnfinishedQueueTasks(): Promise<void> {
     global.__queueRecoveryPending = false
     global.__queueRecoveryData = []
 
-    console.log('✅ 启动清理完成：系统状态已重置，用户可重新提交任务')
+    logger.debug('✅ 启动清理完成：系统状态已重置，用户可重新提交任务')
   } catch (error) {
     console.error('❌ 启动清理失败:', error)
   }
@@ -1325,10 +1326,10 @@ async function clearRedisAllUnfinishedTasks(): Promise<{
 
     // 输出详细清理日志
     if (clearedCount > 0 || userQueuesCleared > 0) {
-      console.log(`  📊 Redis清理详情:`)
-      console.log(`     - pending任务: ${pendingCleared}`)
-      console.log(`     - running任务(僵尸): ${runningCleared}`)
-      console.log(`     - 用户队列: ${userQueuesCleared}`)
+      logger.debug(`  📊 Redis清理详情:`)
+      logger.debug(`     - pending任务: ${pendingCleared}`)
+      logger.debug(`     - running任务(僵尸): ${runningCleared}`)
+      logger.debug(`     - 用户队列: ${userQueuesCleared}`)
     }
 
     return {

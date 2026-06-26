@@ -9,6 +9,7 @@
  * 复用现有队列与 run 记录，避免引入额外基础设施
  */
 
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '../../db'
 import {
   checkAffiliatePlatformConfig,
@@ -101,12 +102,12 @@ export class AffiliateProductSyncScheduler {
 
   start(): void {
     if (this.isRunning) {
-      console.log('⚠️  联盟商品同步调度器已在运行')
+      logger.debug('⚠️  联盟商品同步调度器已在运行')
       return
     }
 
     this.isRunning = true
-    console.log('🔄 启动联盟商品同步调度器...')
+    logger.debug('🔄 启动联盟商品同步调度器...')
 
     if (this.RUN_ON_START) {
       if (this.STARTUP_DELAY_MS === 0) {
@@ -114,7 +115,7 @@ export class AffiliateProductSyncScheduler {
           console.error('❌ 联盟商品同步启动检查失败:', error)
         })
       } else {
-        console.log(
+        logger.debug(
           `⏳ 联盟商品同步首次检查将在 ${Math.round(this.STARTUP_DELAY_MS / 1000)} 秒后执行`
         )
         this.startupTimeoutHandle = setTimeout(() => {
@@ -125,7 +126,7 @@ export class AffiliateProductSyncScheduler {
         }, this.STARTUP_DELAY_MS)
       }
     } else {
-      console.log('⏭️ 已禁用联盟商品同步启动首轮检查')
+      logger.debug('⏭️ 已禁用联盟商品同步启动首轮检查')
     }
 
     this.intervalHandle = setInterval(() => {
@@ -134,13 +135,13 @@ export class AffiliateProductSyncScheduler {
       })
     }, CHECK_INTERVAL_MS)
 
-    console.log(`✅ 联盟商品同步调度器已启动 (检查间隔: ${CHECK_INTERVAL_MS / 1000 / 60}分钟)`)
+    logger.debug(`✅ 联盟商品同步调度器已启动 (检查间隔: ${CHECK_INTERVAL_MS / 1000 / 60}分钟)`)
   }
 
   stop(): void {
     if (!this.isRunning) return
 
-    console.log('⏹️ 停止联盟商品同步调度器...')
+    logger.debug('⏹️ 停止联盟商品同步调度器...')
 
     if (this.intervalHandle) {
       clearInterval(this.intervalHandle)
@@ -152,7 +153,7 @@ export class AffiliateProductSyncScheduler {
     }
 
     this.isRunning = false
-    console.log('✅ 联盟商品同步调度器已停止')
+    logger.debug('✅ 联盟商品同步调度器已停止')
   }
 
   getStatus(): { isRunning: boolean; checkIntervalMs: number } {
@@ -169,7 +170,7 @@ export class AffiliateProductSyncScheduler {
     const now = new Date()
     const nowIso = now.toISOString()
 
-    console.log(`\n[${nowIso}] 🔄 检查联盟商品同步任务...`)
+    logger.debug(`\n[${nowIso}] 🔄 检查联盟商品同步任务...`)
 
     try {
       try {
@@ -182,7 +183,7 @@ export class AffiliateProductSyncScheduler {
 
       const users = await this.listEligibleUsers()
       if (users.length === 0) {
-        console.log('  ℹ️  没有符合条件的用户')
+        logger.debug('  ℹ️  没有符合条件的用户')
         return
       }
 
@@ -206,7 +207,7 @@ export class AffiliateProductSyncScheduler {
       }
 
       const elapsedMs = Date.now() - checkStartAt
-      console.log(
+      logger.debug(
         `✅ 联盟商品同步检查完成: 入队 ${queuedCount}，跳过 ${skippedCount}（耗时 ${elapsedMs}ms）`
       )
     } catch (error) {
@@ -388,7 +389,7 @@ export class AffiliateProductSyncScheduler {
           completedAt: null,
         })
 
-        console.log(
+        logger.debug(
           `[affiliate-product-sync-scheduler] 续跑失败任务: user=${params.userId}, platform=${params.platform}, run=${runId}, resumeFrom=${latestFailedRun.id}, cursor=${cursorScope || 'default'}:${cursorPage}`
         )
       }

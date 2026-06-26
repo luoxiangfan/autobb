@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { generateContent } from '../ai/server'
 import { recordTokenUsage, estimateTokenCost } from '../ai/server'
 import { loadPrompt, interpolateTemplate } from '../ai/server'
@@ -123,13 +124,13 @@ export async function calculateLaunchScore(
     const keywordsWithVolume = (creative as any).keywordsWithVolume || []
 
     // 调试日志 - 追踪否定关键词
-    console.log(`[LaunchScore] 创意ID: ${(creative as any).id || 'N/A'}`)
-    console.log(`[LaunchScore] 否定关键词数量: ${negativeKeywords.length}`)
-    console.log(`[LaunchScore] 否定关键词示例: ${negativeKeywords.slice(0, 5).join(', ')}`)
-    console.log(
+    logger.debug(`[LaunchScore] 创意ID: ${(creative as any).id || 'N/A'}`)
+    logger.debug(`[LaunchScore] 否定关键词数量: ${negativeKeywords.length}`)
+    logger.debug(`[LaunchScore] 否定关键词示例: ${negativeKeywords.slice(0, 5).join(', ')}`)
+    logger.debug(
       `[LaunchScore] creative.negativeKeywords存在: ${!!(creative as any).negativeKeywords}`
     )
-    console.log(`[LaunchScore] creative完整字段: ${Object.keys(creative).join(', ')}`)
+    logger.debug(`[LaunchScore] creative完整字段: ${Object.keys(creative).join(', ')}`)
 
     // 计算品牌词搜索量（从keywordsWithVolume中提取品牌相关词）
     const brandKeywords = keywordsWithVolume.filter((kw: any) =>
@@ -217,14 +218,14 @@ export async function calculateLaunchScore(
 
     // 检查keywordsWithVolume中是否有competition数据
     const keywordsWithCompetition = keywordsWithVolume.filter((kw: any) => kw.competition)
-    console.log(`[LaunchScore] 关键词competition数据检查:`)
-    console.log(`   - 总关键词数: ${keywordsWithVolume.length}`)
-    console.log(`   - 有competition数据的关键词: ${keywordsWithCompetition.length}`)
+    logger.debug(`[LaunchScore] 关键词competition数据检查:`)
+    logger.debug(`   - 总关键词数: ${keywordsWithVolume.length}`)
+    logger.debug(`   - 有competition数据的关键词: ${keywordsWithCompetition.length}`)
     if (keywordsWithVolume.length > 0) {
-      console.log(
+      logger.debug(
         `   - 第一个关键词的competition: ${keywordsWithVolume[0].competition || '(缺失)'}`
       )
-      console.log(`   - 第一个关键词的完整字段: ${JSON.stringify(keywordsWithVolume[0])}`)
+      logger.debug(`   - 第一个关键词的完整字段: ${JSON.stringify(keywordsWithVolume[0])}`)
     }
 
     // 计算匹配类型分布
@@ -239,18 +240,18 @@ export async function calculateLaunchScore(
         .join(', ') || 'Not specified'
 
     // 调试日志 - 追踪匹配类型分布
-    console.log(`[LaunchScore] 关键词匹配类型分布:`)
-    console.log(`   - 总关键词数: ${keywordsWithVolume.length}`)
-    console.log(`   - 分布详情: ${matchTypeDistribution}`)
+    logger.debug(`[LaunchScore] 关键词匹配类型分布:`)
+    logger.debug(`   - 总关键词数: ${keywordsWithVolume.length}`)
+    logger.debug(`   - 分布详情: ${matchTypeDistribution}`)
     if (keywordsWithVolume.length > 0) {
       const firstKw = keywordsWithVolume[0]
-      console.log(`   - 第一个关键词: ${firstKw.keyword}`)
-      console.log(`   - 第一个matchType: ${firstKw.matchType || '(未设置)'}`)
+      logger.debug(`   - 第一个关键词: ${firstKw.keyword}`)
+      logger.debug(`   - 第一个matchType: ${firstKw.matchType || '(未设置)'}`)
     }
 
     // 调试日志 - 追踪prompt中的否定关键词
-    console.log(`[LaunchScore] 准备替换到prompt中的否定关键词数量: ${negativeKeywords.length}`)
-    console.log(
+    logger.debug(`[LaunchScore] 准备替换到prompt中的否定关键词数量: ${negativeKeywords.length}`)
+    logger.debug(
       `[LaunchScore] 否定关键词内容: ${negativeKeywords.length > 0 ? negativeKeywords.join(', ') : 'NONE'}`
     )
 
@@ -460,31 +461,31 @@ export async function calculateLaunchScore(
 
     // 调试日志 - v4.16: 显示所有4个维度的评分（版本由prompt_loader自动确定）
     const promptVersion = promptTemplate.includes('marketPotentialScore') ? 'v4.15+' : 'v4.0'
-    console.log(`[LaunchScore] ===== ${promptVersion} 四维度评分详情 =====`)
-    console.log(`[LaunchScore] 1️⃣ 投放可行性: ${rawAnalysis.launchViability.score}/40`)
-    console.log(`   - 品牌搜索量得分: ${rawAnalysis.launchViability.brandSearchScore}/15`)
-    console.log(`   - 竞争度得分: ${rawAnalysis.launchViability.competitionScore}/15`)
-    console.log(`   - 市场潜力得分: ${rawAnalysis.launchViability.marketPotentialScore}/10`)
-    console.log(`   - 竞争度级别: ${rawAnalysis.launchViability.competitionLevel}`)
+    logger.debug(`[LaunchScore] ===== ${promptVersion} 四维度评分详情 =====`)
+    logger.debug(`[LaunchScore] 1️⃣ 投放可行性: ${rawAnalysis.launchViability.score}/40`)
+    logger.debug(`   - 品牌搜索量得分: ${rawAnalysis.launchViability.brandSearchScore}/15`)
+    logger.debug(`   - 竞争度得分: ${rawAnalysis.launchViability.competitionScore}/15`)
+    logger.debug(`   - 市场潜力得分: ${rawAnalysis.launchViability.marketPotentialScore}/10`)
+    logger.debug(`   - 竞争度级别: ${rawAnalysis.launchViability.competitionLevel}`)
 
-    console.log(`[LaunchScore] 2️⃣ 广告质量: ${rawAnalysis.adQuality.score}/30`)
-    console.log(
+    logger.debug(`[LaunchScore] 2️⃣ 广告质量: ${rawAnalysis.adQuality.score}/30`)
+    logger.debug(
       `   - Ad Strength得分: ${rawAnalysis.adQuality.adStrengthScore}/15 (${rawAnalysis.adQuality.adStrength})`
     )
-    console.log(`   - 标题多样性得分: ${rawAnalysis.adQuality.headlineDiversityScore}/8`)
-    console.log(`   - 描述质量得分: ${rawAnalysis.adQuality.descriptionQualityScore}/7`)
+    logger.debug(`   - 标题多样性得分: ${rawAnalysis.adQuality.headlineDiversityScore}/8`)
+    logger.debug(`   - 描述质量得分: ${rawAnalysis.adQuality.descriptionQualityScore}/7`)
 
-    console.log(`[LaunchScore] 3️⃣ 关键词策略: ${rawAnalysis.keywordStrategy.score}/20`)
-    console.log(`   - 关键词相关性: ${rawAnalysis.keywordStrategy.relevanceScore}/8`)
-    console.log(`   - 匹配类型策略: ${rawAnalysis.keywordStrategy.matchTypeScore}/6`)
-    console.log(`   - 否定关键词: ${rawAnalysis.keywordStrategy.negativeKeywordsScore}/6`)
+    logger.debug(`[LaunchScore] 3️⃣ 关键词策略: ${rawAnalysis.keywordStrategy.score}/20`)
+    logger.debug(`   - 关键词相关性: ${rawAnalysis.keywordStrategy.relevanceScore}/8`)
+    logger.debug(`   - 匹配类型策略: ${rawAnalysis.keywordStrategy.matchTypeScore}/6`)
+    logger.debug(`   - 否定关键词: ${rawAnalysis.keywordStrategy.negativeKeywordsScore}/6`)
 
-    console.log(`[LaunchScore] 4️⃣ 基础配置: ${rawAnalysis.basicConfig.score}/10`)
-    console.log(`   - 国家/语言得分: ${rawAnalysis.basicConfig.countryLanguageScore}/5`)
-    console.log(`   - Final URL得分: ${rawAnalysis.basicConfig.finalUrlScore}/5`)
-    console.log(`   - 目标国家: ${rawAnalysis.basicConfig.targetCountry}`)
-    console.log(`   - 目标语言: ${rawAnalysis.basicConfig.targetLanguage}`)
-    console.log(`   - Final URL: ${rawAnalysis.basicConfig.finalUrl}`)
+    logger.debug(`[LaunchScore] 4️⃣ 基础配置: ${rawAnalysis.basicConfig.score}/10`)
+    logger.debug(`   - 国家/语言得分: ${rawAnalysis.basicConfig.countryLanguageScore}/5`)
+    logger.debug(`   - Final URL得分: ${rawAnalysis.basicConfig.finalUrlScore}/5`)
+    logger.debug(`   - 目标国家: ${rawAnalysis.basicConfig.targetCountry}`)
+    logger.debug(`   - 目标语言: ${rawAnalysis.basicConfig.targetLanguage}`)
+    logger.debug(`   - Final URL: ${rawAnalysis.basicConfig.finalUrl}`)
 
     const calculatedTotal =
       rawAnalysis.launchViability.score +
@@ -492,9 +493,12 @@ export async function calculateLaunchScore(
       rawAnalysis.keywordStrategy.score +
       rawAnalysis.basicConfig.score
 
-    console.log(`[LaunchScore] 🎯 总分: ${calculatedTotal}/100`)
-    console.log(`[LaunchScore] AI返回的overallRecommendations:`, rawAnalysis.overallRecommendations)
-    console.log(`[LaunchScore] =====================================`)
+    logger.debug(`[LaunchScore] 🎯 总分: ${calculatedTotal}/100`)
+    logger.debug(
+      `[LaunchScore] AI返回的overallRecommendations:`,
+      rawAnalysis.overallRecommendations
+    )
+    logger.debug(`[LaunchScore] =====================================`)
 
     // 验证评分范围
     validateScoresV4(rawAnalysis)
@@ -722,7 +726,7 @@ export async function evaluateCreativeAdStrength(
     skipKeywordPoolExpandLoad?: boolean
   }
 ): Promise<ComprehensiveAdStrengthResult> {
-  console.log('🎯 开始Ad Strength评估...')
+  logger.debug('🎯 开始Ad Strength评估...')
 
   // 1. 本地评估（快速，无需API调用）
   const localEvaluation = await evaluateAdStrength(headlines, descriptions, keywords, {
@@ -739,14 +743,14 @@ export async function evaluateCreativeAdStrength(
     skipKeywordPoolExpandLoad: options?.skipKeywordPoolExpandLoad,
   })
 
-  console.log(`📊 本地评估: ${localEvaluation.rating} (${localEvaluation.overallScore}分)`)
+  logger.debug(`📊 本地评估: ${localEvaluation.rating} (${localEvaluation.overallScore}分)`)
 
   // 2. Google API验证（可选）
   let googleValidation: ComprehensiveAdStrengthResult['googleValidation'] | undefined
 
   if (options?.googleValidation) {
     try {
-      console.log('🔍 正在调用Google Ads API验证...')
+      logger.debug('🔍 正在调用Google Ads API验证...')
 
       const { customerId, campaignId, userId } = options.googleValidation
 
@@ -759,7 +763,7 @@ export async function evaluateCreativeAdStrength(
         assetPerformance: validationResult.assetPerformance,
       }
 
-      console.log(`✅ Google API验证: ${validationResult.currentStrength}`)
+      logger.debug(`✅ Google API验证: ${validationResult.currentStrength}`)
     } catch (error) {
       console.warn('⚠️ Google API验证失败，使用本地评估结果:', error)
     }
@@ -779,9 +783,9 @@ export async function evaluateCreativeAdStrength(
   // 去重建议
   const uniqueSuggestions = Array.from(new Set(combinedSuggestions))
 
-  console.log(`🎯 最终评级: ${finalRating} (${finalScore}分)`)
-  console.log(`💡 改进建议: ${uniqueSuggestions.length}条`)
-  console.log(
+  logger.debug(`🎯 最终评级: ${finalRating} (${finalScore}分)`)
+  logger.debug(`💡 改进建议: ${uniqueSuggestions.length}条`)
+  logger.debug(
     `🧪 RSA质量门: intent=${rsaQualityGate.intentAlignmentScore}, evidence=${rsaQualityGate.evidenceAlignmentScore}, queryLanding=${rsaQualityGate.queryLandingAlignmentScore}, passed=${rsaQualityGate.passed}`
   )
 
@@ -954,8 +958,8 @@ export async function analyzeKeywordGapsPreGeneration(params: {
   error?: string
 }> {
   try {
-    console.log('[Gap Analysis] 开始关键词缺口分析...')
-    console.log(`[Gap Analysis] 现有关键词数量: ${params.existingKeywords.length}`)
+    logger.debug('[Gap Analysis] 开始关键词缺口分析...')
+    logger.debug(`[Gap Analysis] 现有关键词数量: ${params.existingKeywords.length}`)
 
     // 使用专门的 AI prompt 直接提取关键词，而不是依赖评分系统
     const { generateContent } = await import('../ai/server')
@@ -1017,7 +1021,7 @@ export async function analyzeKeywordGapsPreGeneration(params: {
       ...promptVariables,
     })
 
-    console.log('[Gap Analysis] 调用 AI 提取关键词...')
+    logger.debug('[Gap Analysis] 调用 AI 提取关键词...')
     const response = await generateContent(
       {
         operationType: 'keyword_gap_analysis',
@@ -1085,20 +1089,20 @@ export async function analyzeKeywordGapsPreGeneration(params: {
             brandName: params.brandName,
           })
         ) {
-          console.log(`[Gap Analysis] 跳过无效关键词: ${keyword}`)
+          logger.debug(`[Gap Analysis] 跳过无效关键词: ${keyword}`)
           continue
         }
 
         // 去重
         if (existingKeywordsLower.has(normalizedKeyword)) {
-          console.log(`[Gap Analysis] 跳过重复关键词: ${keyword}`)
+          logger.debug(`[Gap Analysis] 跳过重复关键词: ${keyword}`)
           continue
         }
 
         // 只保留高优先级和中优先级的关键词
         if (item.priority === 'high' || item.priority === 'medium') {
           extractedKeywords.add(keyword)
-          console.log(`[Gap Analysis] ✅ 提取关键词: ${keyword} (${item.priority})`)
+          logger.debug(`[Gap Analysis] ✅ 提取关键词: ${keyword} (${item.priority})`)
         }
       }
     }
@@ -1110,11 +1114,11 @@ export async function analyzeKeywordGapsPreGeneration(params: {
     const limitedKeywords = suggestedKeywords.slice(0, MAX_GAP_KEYWORDS)
 
     if (suggestedKeywords.length > MAX_GAP_KEYWORDS) {
-      console.log(
+      logger.debug(
         `[Gap Analysis] 提取了 ${suggestedKeywords.length} 个关键词，限制为前 ${MAX_GAP_KEYWORDS} 个`
       )
     } else {
-      console.log(`[Gap Analysis] 完成，提取 ${limitedKeywords.length} 个建议关键词`)
+      logger.debug(`[Gap Analysis] 完成，提取 ${limitedKeywords.length} 个建议关键词`)
     }
 
     return {

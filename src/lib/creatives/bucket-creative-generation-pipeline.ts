@@ -4,6 +4,7 @@
  * 供队列执行器、同步 API、备份 Regenerator 复用，避免逻辑漂移。
  */
 
+import { logger } from '@/lib/common/server'
 import { generateAdCreative } from './generator/index'
 import type { AdCreativeGenerationModeProfile } from '@/lib/creatives/server'
 import {
@@ -285,7 +286,7 @@ function backfillCreativeKeywordVolumesFromPoolHints(
   })
 
   if (patched > 0) {
-    console.log(`ℹ️ [${scopeLabel}] 已从关键词池回填 ${patched} 个关键词搜索量`)
+    logger.debug(`ℹ️ [${scopeLabel}] 已从关键词池回填 ${patched} 个关键词搜索量`)
   }
 }
 
@@ -295,7 +296,7 @@ async function loadSearchTermFeedbackHintsForGeneration(
 ): Promise<SearchTermFeedbackHintsInput | undefined> {
   try {
     const hints: SearchTermFeedbackHints = await getSearchTermFeedbackHints({ offerId, userId })
-    console.log(
+    logger.debug(
       `🔁 搜索词反馈已加载: high=${hints.highPerformingTerms.length}, hard=${hints.hardNegativeTerms.length}, soft=${hints.softSuppressTerms.length}, rows=${hints.sourceRows}`
     )
     return {

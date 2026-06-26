@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { ProxyProvider, ValidationResult } from './base-provider'
 import type { ProxyCredentials } from '../types'
 
@@ -109,9 +110,9 @@ export class CliproxyProvider implements ProxyProvider {
         throw new Error('密码不能为空')
       }
 
-      console.log(`✅ [Cliproxy] 解析代理凭证: ${credentials.fullAddress}`)
+      logger.debug(`✅ [Cliproxy] 解析代理凭证: ${credentials.fullAddress}`)
       if (validation.countryCode) {
-        console.log(`   国家代码: ${validation.countryCode}`)
+        logger.debug(`   国家代码: ${validation.countryCode}`)
       }
 
       return credentials

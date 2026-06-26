@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { ProxyProvider } from './base-provider'
 import { IPRocketProvider } from './iprocket-provider'
 import { OxylabsProvider } from './oxylabs-provider'
@@ -24,7 +25,7 @@ export class ProxyProviderRegistry {
    */
   static register(provider: ProxyProvider): void {
     this.providers.push(provider)
-    console.log(`✅ 已注册代理Provider: ${provider.name}`)
+    logger.debug(`✅ 已注册代理Provider: ${provider.name}`)
   }
 
   /**

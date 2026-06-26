@@ -1,6 +1,7 @@
 /**
  * Keyword volume lookup and seed-based expansion helpers.
  */
+import { logger } from '@/lib/common/server'
 import { getKeywordIdeas } from '@/lib/google-ads/keyword/planner'
 import {
   containsPureBrand,
@@ -34,7 +35,7 @@ export async function getKeywordVolumesForExisting(params: {
     return []
   }
 
-  console.log(`\n📊 获取 ${baseKeywords.length} 个关键词的搜索量数据`)
+  logger.debug(`\n📊 获取 ${baseKeywords.length} 个关键词的搜索量数据`)
 
   try {
     const linkedSa = userId
@@ -86,7 +87,7 @@ export async function getKeywordVolumesForExisting(params: {
       }
     })
 
-    console.log(`✅ 获取搜索量完成: ${results.length} 个关键词`)
+    logger.debug(`✅ 获取搜索量完成: ${results.length} 个关键词`)
 
     return results
   } catch (error: any) {
@@ -163,7 +164,7 @@ export async function expandKeywordsWithSeeds(params: {
     onProgress,
   } = params
 
-  console.log(`认证方式: ${authType}`)
+  logger.debug(`认证方式: ${authType}`)
 
   if (!expansionSeeds || expansionSeeds.length === 0) {
     return []
@@ -192,16 +193,16 @@ export async function expandKeywordsWithSeeds(params: {
       for (const seed of additionalSeeds) {
         if (!finalSeedKeywords.some((s) => s.toLowerCase() === seed.toLowerCase())) {
           finalSeedKeywords.push(seed)
-          console.log(`   + 短品牌词种子: "${seed}"`)
+          logger.debug(`   + 短品牌词种子: "${seed}"`)
         }
       }
 
-      console.log(`   📊 种子词增强: ${expansionSeeds.length} → ${finalSeedKeywords.length} 个`)
+      logger.debug(`   📊 种子词增强: ${expansionSeeds.length} → ${finalSeedKeywords.length} 个`)
     }
   }
 
-  console.log(`\n🔄 使用 ${finalSeedKeywords.length} 个种子词扩展关键词`)
-  finalSeedKeywords.forEach((seed, i) => console.log(`   ${i + 1}. "${seed}"`))
+  logger.debug(`\n🔄 使用 ${finalSeedKeywords.length} 个种子词扩展关键词`)
+  finalSeedKeywords.forEach((seed, i) => logger.debug(`   ${i + 1}. "${seed}"`))
 
   const keywordMap = new Map<string, UnifiedKeywordData>()
   const plannerAuth = preloadedPlannerSession
@@ -236,7 +237,7 @@ export async function expandKeywordsWithSeeds(params: {
           preparedOAuth: ideasAuth.preparedOAuth,
         })
 
-        console.log(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
+        logger.debug(`   📋 Keyword Planner 返回 ${keywordIdeas.length} 个关键词建议`)
 
         keywordIdeas.forEach((idea) => {
           const canonical = normalizeGoogleAdsKeyword(idea.text)
@@ -261,9 +262,9 @@ export async function expandKeywordsWithSeeds(params: {
     let results = Array.from(keywordMap.values())
     results.sort((a, b) => b.searchVolume - a.searchVolume)
 
-    console.log(`   📊 扩展关键词排序: ${results.length} 个`)
+    logger.debug(`   📊 扩展关键词排序: ${results.length} 个`)
     if (results.length > 0) {
-      console.log(
+      logger.debug(
         `   📊 搜索量范围: ${results[results.length - 1]?.searchVolume || 0} - ${results[0]?.searchVolume || 0}`
       )
     }
@@ -271,7 +272,7 @@ export async function expandKeywordsWithSeeds(params: {
     // 3. 获取精确搜索量（分批查询所有关键词）
     const BATCH_SIZE = 1000
     const totalKeywords = results.length
-    console.log(`   📊 准备查询 ${totalKeywords} 个关键词的精确搜索量`)
+    logger.debug(`   📊 准备查询 ${totalKeywords} 个关键词的精确搜索量`)
 
     let disableSearchVolumeFilter = false
     // 跟踪已验证的关键词，防止使用 Keyword Ideas 的估算值
@@ -293,7 +294,7 @@ export async function expandKeywordsWithSeeds(params: {
           })
         } catch {}
 
-        console.log(
+        logger.debug(
           `   📊 查询批次 ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(totalKeywords / BATCH_SIZE)}: ${batchKeywords.length} 个关键词`
         )
 
@@ -352,7 +353,7 @@ export async function expandKeywordsWithSeeds(params: {
         }
       }
 
-      console.log(`   ✅ 所有关键词搜索量查询完成`)
+      logger.debug(`   ✅ 所有关键词搜索量查询完成`)
 
       // 对于未被验证的关键词，将搜索量设为 0
       // 这些关键词使用的是 Keyword Ideas 的估算值，而非 Historical Metrics 的真实值
@@ -368,7 +369,7 @@ export async function expandKeywordsWithSeeds(params: {
           }
         }
         if (unverifiedCount > 0) {
-          console.log(
+          logger.debug(
             `   ⚠️ 重置了 ${unverifiedCount} 个未验证关键词的搜索量（Keyword Ideas 估算值 → 0）`
           )
         }
@@ -389,7 +390,7 @@ export async function expandKeywordsWithSeeds(params: {
     // 搜索量过滤
     // 搜索量不可用（服务账号 / developer token 无 Basic access）时跳过过滤
     if (disableSearchVolumeFilter) {
-      console.log(
+      logger.debug(
         '⚠️ 搜索量数据不可用（可能是服务账号或 developer token 无 Basic/Standard access），跳过搜索量过滤'
       )
     } else {
@@ -403,7 +404,7 @@ export async function expandKeywordsWithSeeds(params: {
           return kw.searchVolume >= minSearchVolume
         })
       } else {
-        console.log('⚠️ 所有关键词搜索量为0（可能是API未返回数据），跳过搜索量过滤')
+        logger.debug('⚠️ 所有关键词搜索量为0（可能是API未返回数据），跳过搜索量过滤')
       }
     }
 
@@ -415,7 +416,7 @@ export async function expandKeywordsWithSeeds(params: {
     // 限制数量
     results = results.slice(0, maxKeywords)
 
-    console.log(`✅ 扩展关键词完成: ${results.length} 个关键词`)
+    logger.debug(`✅ 扩展关键词完成: ${results.length} 个关键词`)
 
     return results
   } catch (error: any) {
@@ -451,11 +452,11 @@ export function extractGenericHighValueKeywords(
   brandName: string,
   competitorBrands: string[] = []
 ): any[] {
-  console.log(`\n🆕 通用词提取 - 从已生成关键词中提取高价值通用词`)
-  console.log(`================================`)
+  logger.debug(`\n🆕 通用词提取 - 从已生成关键词中提取高价值通用词`)
+  logger.debug(`================================`)
 
   // 步骤1：过滤掉所有含品牌名的词
-  console.log(`📌 步骤1: 排除含品牌名的词`)
+  logger.debug(`📌 步骤1: 排除含品牌名的词`)
 
   const allBrands = [brandName, ...competitorBrands]
   const beforeBrandFilter = allKeywords.length
@@ -470,11 +471,11 @@ export function extractGenericHighValueKeywords(
   })
 
   const brandFiltered = beforeBrandFilter - genericKeywords.length
-  console.log(`   排除的品牌词: ${brandFiltered}`)
-  console.log(`   保留的非品牌词: ${genericKeywords.length}`)
+  logger.debug(`   排除的品牌词: ${brandFiltered}`)
+  logger.debug(`   保留的非品牌词: ${genericKeywords.length}`)
 
   // 步骤2：只保留搜索量 > 10000 的高价值词
-  console.log(`\n📌 步骤2: 高价值词过滤 (搜索量 > 10,000)`)
+  logger.debug(`\n📌 步骤2: 高价值词过滤 (搜索量 > 10,000)`)
 
   const beforeVolumeFilter = genericKeywords.length
   // 如果所有关键词搜索量都为0（服务账号模式），跳过搜索量过滤
@@ -482,12 +483,12 @@ export function extractGenericHighValueKeywords(
   if (hasAnyVolume) {
     genericKeywords = genericKeywords.filter((kw) => kw.searchVolume > 10000)
   } else {
-    console.log('   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤')
+    logger.debug('   ⚠️ 所有关键词搜索量为0（可能是服务账号模式），跳过搜索量过滤')
   }
 
   const volumeFiltered = beforeVolumeFilter - genericKeywords.length
-  console.log(`   搜索量<10000的词: ${volumeFiltered}`)
-  console.log(`   保留的高价值词: ${genericKeywords.length}`)
+  logger.debug(`   搜索量<10000的词: ${volumeFiltered}`)
+  logger.debug(`   保留的高价值词: ${genericKeywords.length}`)
 
   if (genericKeywords.length === 0) {
     console.warn(`   ⚠️ 没有搜索量>10000的通用词`)
@@ -495,7 +496,7 @@ export function extractGenericHighValueKeywords(
   }
 
   // 步骤3：过滤掉信息查询词
-  console.log(`\n📌 步骤3: 排除低购买意图词`)
+  logger.debug(`\n📌 步骤3: 排除低购买意图词`)
 
   const RESEARCH_INTENT_PATTERNS = [
     'review',
@@ -534,17 +535,17 @@ export function extractGenericHighValueKeywords(
   })
 
   const intentFiltered = beforeIntentFilter - genericKeywords.length
-  console.log(`   排除的低意图词: ${intentFiltered}`)
-  console.log(`   保留的高意图词: ${genericKeywords.length}`)
+  logger.debug(`   排除的低意图词: ${intentFiltered}`)
+  logger.debug(`   保留的高意图词: ${genericKeywords.length}`)
 
   // 步骤4：按搜索量排序
   genericKeywords.sort((a, b) => b.searchVolume - a.searchVolume)
 
-  console.log(`\n✅ 通用词提取完成: ${genericKeywords.length} 个高价值词`)
+  logger.debug(`\n✅ 通用词提取完成: ${genericKeywords.length} 个高价值词`)
   if (genericKeywords.length > 0) {
-    console.log(`   Top 5:`)
+    logger.debug(`   Top 5:`)
     genericKeywords.slice(0, 5).forEach((kw, i) => {
-      console.log(`   ${i + 1}. "${kw.keyword}" (${kw.searchVolume.toLocaleString()}/月)`)
+      logger.debug(`   ${i + 1}. "${kw.keyword}" (${kw.searchVolume.toLocaleString()}/月)`)
     })
   }
 

@@ -1,5 +1,6 @@
 // 补点击通知工具
 // src/lib/click-farm/alerts/notifications.ts
+import { logger } from '@/lib/common/server'
 
 import { getDatabase } from '@/lib/db'
 
@@ -38,7 +39,7 @@ async function logClickFarmEvent(
 ): Promise<void> {
   // 记录到任务备注字段（简化方案）
   // 或者可以创建专门的事件日志表
-  console.log(`[ClickFarm Notification] User ${userId} - ${type}:`, {
+  logger.debug(`[ClickFarm Notification] User ${userId} - ${type}:`, {
     task_id: taskId,
     title,
     message,

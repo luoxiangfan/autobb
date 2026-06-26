@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import type { Task } from '../types'
 import type { ClickFarmTaskData } from './click-farm-executor'
 import type { ClickFarmBatchTaskData } from '@/lib/click-farm/queue-task-types'
@@ -199,7 +200,7 @@ export async function executeClickFarmBatchTask(
   const newDispatched = dispatchedClicks + dispatched
   const remaining = Math.max(0, totalClicks - newDispatched)
 
-  console.log(`[BatchExecutor] 批次分发完成`, {
+  logger.debug(`[BatchExecutor] 批次分发完成`, {
     clickFarmTaskId,
     targetDate,
     targetHour,

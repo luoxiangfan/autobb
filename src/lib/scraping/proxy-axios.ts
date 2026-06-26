@@ -9,6 +9,7 @@
  * 等其他需要真实地理位置访问的场景
  */
 
+import { logger } from '@/lib/common/server'
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { getProxyIp } from './proxy/fetch-proxy-ip'
@@ -87,7 +88,7 @@ export async function createProxyAxiosClient(options?: {
 
   // 如果不需要代理，返回普通 axios 实例
   if (!proxyEnabled && !customProxyUrl) {
-    console.log('代理未启用，使用直连')
+    logger.debug('代理未启用，使用直连')
     return axios.create({
       baseURL,
       timeout,
@@ -113,7 +114,7 @@ export async function createProxyAxiosClient(options?: {
     const cached = proxyClientCache.get(cacheKey)
 
     if (cached && now < cached.expiresAt) {
-      console.log(`使用缓存的代理客户端: ${cached.proxyAddress}`)
+      logger.debug(`使用缓存的代理客户端: ${cached.proxyAddress}`)
       return cached.client
     }
 
@@ -124,11 +125,11 @@ export async function createProxyAxiosClient(options?: {
   }
 
   try {
-    console.log('🔧 配置代理 axios 客户端...')
+    logger.debug('🔧 配置代理 axios 客户端...')
 
     // 获取代理凭证（启用5分钟缓存，避免频繁调用IPRocket API）
     const proxy = await getProxyIp(proxyUrl, false, userId)
-    console.log(`✓ 代理IP: ${proxy.fullAddress}`)
+    logger.debug(`✓ 代理IP: ${proxy.fullAddress}`)
 
     // 创建 HttpsProxyAgent
     const proxyAgent = new HttpsProxyAgent(
@@ -149,7 +150,7 @@ export async function createProxyAxiosClient(options?: {
       },
     })
 
-    console.log('✓ 代理 axios 客户端配置成功')
+    logger.debug('✓ 代理 axios 客户端配置成功')
 
     // 存入缓存
     if (useCache) {
@@ -160,7 +161,7 @@ export async function createProxyAxiosClient(options?: {
         createdAt: now,
         expiresAt: now + CACHE_DURATION,
       })
-      console.log(`代理客户端已缓存（${CACHE_DURATION / 1000}秒）`)
+      logger.debug(`代理客户端已缓存（${CACHE_DURATION / 1000}秒）`)
     }
 
     return client
@@ -180,8 +181,8 @@ export async function createProxyAxiosClient(options?: {
  *
  * @example
  * const response = await proxyHead('https://example.com')
- * console.log('Status:', response.status)
- * console.log('Redirected:', response.request.res.responseUrl !== url)
+ * logger.debug('Status:', response.status)
+ * logger.debug('Redirected:', response.request.res.responseUrl !== url)
  */
 export async function proxyHead<T = any>(
   url: string,

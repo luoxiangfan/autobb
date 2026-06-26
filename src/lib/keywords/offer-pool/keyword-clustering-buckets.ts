@@ -1,6 +1,7 @@
 /**
  * 关键词聚类：桶校验与后处理
  */
+import { logger } from '@/lib/common/server'
 import {
   DEFAULT_PRODUCT_CLUSTER_BUCKETS,
   DEFAULT_STORE_CLUSTER_BUCKETS,
@@ -151,11 +152,11 @@ export function validateStoreBuckets(
   const reportedBalanceScore = buckets.statistics?.balanceScore ?? calculateBalanceScore(counts)
 
   // 打印各桶分布情况，便于调试
-  console.log(
+  logger.debug(
     `   📊 店铺桶分布: A=${counts[0]}, B=${counts[1]}, C=${counts[2]}, D=${counts[3]}, S=${counts[4]}`
   )
-  console.log(`   📊 有效桶数: ${nonZeroCounts}/5, 最大桶=${maxCount}, 最小非空桶=${minCount}`)
-  console.log(`   📊 均衡度: ${reportedBalanceScore.toFixed(2)}`)
+  logger.debug(`   📊 有效桶数: ${nonZeroCounts}/5, 最大桶=${maxCount}, 最小非空桶=${minCount}`)
+  logger.debug(`   📊 均衡度: ${reportedBalanceScore.toFixed(2)}`)
 
   // 店铺链接在小样本/概念型站点（如SaaS落地页）上，AI 可能倾向把词都放到桶S。
   // 这里不再直接抛错阻断创意生成，而是记录告警；上层会做兜底分桶/默认关键词降级。
@@ -336,7 +337,7 @@ export function redistributeStoreBucketsFromS(
  * 4. 地理位置词 → 从桶A/B移到桶S
  */
 export function applyStoreBucketPostProcessing(buckets: StoreKeywordBuckets): void {
-  console.log(`\n🔧 应用后处理规则修正关键词分配...`)
+  logger.debug(`\n🔧 应用后处理规则修正关键词分配...`)
 
   let totalMoved = 0
   const moves: Array<{ keyword: string; from: string; to: string; reason: string }> = []
@@ -462,14 +463,14 @@ export function applyStoreBucketPostProcessing(buckets: StoreKeywordBuckets): vo
 
   // 输出日志
   if (totalMoved > 0) {
-    console.log(`   ✅ 后处理完成：移动 ${totalMoved} 个关键词`)
+    logger.debug(`   ✅ 后处理完成：移动 ${totalMoved} 个关键词`)
     moves.slice(0, 10).forEach((m) => {
-      console.log(`      "${m.keyword}" (${m.from} → ${m.to}: ${m.reason})`)
+      logger.debug(`      "${m.keyword}" (${m.from} → ${m.to}: ${m.reason})`)
     })
     if (moves.length > 10) {
-      console.log(`      ... 共 ${moves.length} 个移动`)
+      logger.debug(`      ... 共 ${moves.length} 个移动`)
     }
   } else {
-    console.log(`   ✅ 后处理完成：无需调整（AI聚类已正确）`)
+    logger.debug(`   ✅ 后处理完成：无需调整（AI聚类已正确）`)
   }
 }

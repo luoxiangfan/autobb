@@ -1,6 +1,7 @@
 /**
  * Url-swap Sitelink Asset target mapping (store_product_links ↔ Google Ads Sitelink).
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { splitUrlBaseAndSuffix, type PublishSitelinkInput } from '@/lib/creatives/sitelink-utils'
 import type { UrlSwapSitelinkTarget, UrlSwapSitelinkTargetStatus } from './url-swap-types'
@@ -74,7 +75,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
 
   const task = await getUrlSwapTaskByOfferId(input.offerId, input.userId)
   if (!task) {
-    console.log(
+    logger.debug(
       `[url-swap] 跳过 Sitelink 映射：Offer ${input.offerId} 尚无换链任务（可先创建任务后重新发布 Sitelink）`
     )
     return 0
@@ -164,7 +165,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
     [now, task.id, input.googleCampaignId, pairCount]
   )
 
-  console.log(
+  logger.debug(
     `[url-swap] Sitelink 映射已同步: task=${task.id}, campaign=${input.googleCampaignId}, count=${upserted}`
   )
   return upserted

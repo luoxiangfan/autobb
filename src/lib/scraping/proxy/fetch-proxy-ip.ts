@@ -1,3 +1,4 @@
+import { logger } from '@/lib/common/server'
 import { maskProxyUrl } from './validate-url'
 import { ProxyProviderRegistry } from './providers/provider-registry'
 import type { ProxyCredentials } from './types'
@@ -37,7 +38,7 @@ async function throttleIprocketCall<T>(providerName: string, fn: () => Promise<T
 
         if (timeSinceLastCall < MIN_IPROCKET_CALL_INTERVAL) {
           const waitTime = MIN_IPROCKET_CALL_INTERVAL - timeSinceLastCall
-          console.log(`⏳ [IPRocket 频率限制] 等待 ${waitTime}ms...`)
+          logger.debug(`⏳ [IPRocket 频率限制] 等待 ${waitTime}ms...`)
           await new Promise((r) => setTimeout(r, waitTime))
         }
 
@@ -160,7 +161,7 @@ async function testProxyHealth(
     const healthy = tcpTime < 3000 // TCP连接小于3秒认为健康
 
     if (healthy) {
-      console.log(`✅ 代理TCP测试通过: ${credentials.fullAddress} (${tcpTime}ms)`)
+      logger.debug(`✅ 代理TCP测试通过: ${credentials.fullAddress} (${tcpTime}ms)`)
     } else {
       console.warn(`⚠️ 代理TCP响应慢: ${credentials.fullAddress} (${tcpTime}ms)`)
     }
@@ -211,7 +212,7 @@ async function testProxyHealth(
       const healthy = response.ok && responseTime < 8000
 
       if (healthy) {
-        console.log(`✅ 代理IP健康检查通过: ${credentials.fullAddress} (${responseTime}ms)`)
+        logger.debug(`✅ 代理IP健康检查通过: ${credentials.fullAddress} (${responseTime}ms)`)
       } else {
         console.warn(`⚠️ 代理IP响应慢: ${credentials.fullAddress} (${responseTime}ms)`)
       }
@@ -274,14 +275,14 @@ export async function fetchProxyIp(
     )
   }
 
-  console.log(`✅ 使用${provider.name} Provider处理URL: ${maskProxyUrl(proxyUrl)}`)
+  logger.debug(`✅ 使用${provider.name} Provider处理URL: ${maskProxyUrl(proxyUrl)}`)
 
   // Step 2: 带智能重试的获取代理凭证
   let lastError: Error | null = null
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔍 [${provider.name} ${attempt}/${maxRetries}] 开始获取...`)
+      logger.debug(`🔍 [${provider.name} ${attempt}/${maxRetries}] 开始获取...`)
 
       // 使用频率限制包装器调用 Provider 提取凭证
       const credentials = await throttleIprocketCall(provider.name, () =>
@@ -300,11 +301,11 @@ export async function fetchProxyIp(
             credentials.fullAddress
           )
         }
-        console.log(
+        logger.debug(
           `✅ [${provider.name}] ${credentials.fullAddress} 健康检查通过 (${healthCheck.responseTime}ms)`
         )
       } else {
-        console.log(`✅ [${provider.name}] ${credentials.fullAddress} (跳过健康检查)`)
+        logger.debug(`✅ [${provider.name}] ${credentials.fullAddress} (跳过健康检查)`)
       }
 
       return credentials
@@ -334,7 +335,7 @@ export async function fetchProxyIp(
         const waitTime =
           error instanceof ProxyError ? getRetryDelay(attempt, error) : attempt * 1000
 
-        console.log(`⏳ 等待 ${waitTime}ms 后重试...`)
+        logger.debug(`⏳ 等待 ${waitTime}ms 后重试...`)
         await new Promise((resolve) => setTimeout(resolve, waitTime))
       }
     }
@@ -410,7 +411,7 @@ export async function getProxyIp(
   if (!forceRefresh && userId) {
     const cached = proxyCache.get(fullCacheKey)
     if (cached && now < cached.expiresAt) {
-      console.log(
+      logger.debug(
         `使用缓存的代理IP: ${cached.credentials.fullAddress} (user: ${userId}${cacheKey ? `, key: ${cacheKey}` : ''})`
       )
       return cached.credentials
@@ -460,11 +461,11 @@ export function clearProxyCache(proxyUrl?: string): void {
   if (proxyUrl) {
     proxyCache.delete(proxyUrl)
     proxyInFlight.delete(proxyUrl)
-    console.log(`已清除代理缓存: ${maskProxyUrl(proxyUrl)}`)
+    logger.debug(`已清除代理缓存: ${maskProxyUrl(proxyUrl)}`)
   } else {
     const size = proxyCache.size
     proxyCache.clear()
     proxyInFlight.clear()
-    console.log(`已清除所有代理缓存 (${size}个)`)
+    logger.debug(`已清除所有代理缓存 (${size}个)`)
   }
 }

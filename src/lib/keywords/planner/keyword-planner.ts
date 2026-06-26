@@ -2,6 +2,7 @@
  * Google Ads Keyword Planner API Service
  * 获取真实的关键词搜索量数据
  */
+import { logger } from '@/lib/common/server'
 import { enums } from 'google-ads-api'
 import { getDatabase } from '../../db'
 import {
@@ -149,7 +150,7 @@ export async function getGoogleAdsConfig(
         }
         const loginCustomerId =
           healedOAuth.loginCustomerId || authContext.oauthCredentials?.login_customer_id || ''
-        console.log(
+        logger.debug(
           `[KeywordPlanner] Using OAuth authentication for user ${userId} (healed credentials)`
         )
         return {
@@ -171,7 +172,7 @@ export async function getGoogleAdsConfig(
         return null
       }
 
-      console.log(`[KeywordPlanner] Using OAuth authentication for user ${userId}`)
+      logger.debug(`[KeywordPlanner] Using OAuth authentication for user ${userId}`)
 
       return {
         clientId: credentials.client_id,
@@ -197,8 +198,8 @@ export async function getGoogleAdsConfig(
         : undefined
     )
     if (serviceAccount) {
-      console.log(`[KeywordPlanner] Using service account authentication for user ${userId}`)
-      console.log(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
+      logger.debug(`[KeywordPlanner] Using service account authentication for user ${userId}`)
+      logger.debug(`[KeywordPlanner] MCC Customer ID: ${serviceAccount.mccCustomerId}`)
 
       return {
         clientId: '',
@@ -288,7 +289,7 @@ export async function getKeywordSearchVolumes(
     }
 
     // 添加详细日志显示缓存命中情况
-    console.log(`[KeywordPlanner] 接收 ${keywords.length} 个关键词查询请求`)
+    logger.debug(`[KeywordPlanner] 接收 ${keywords.length} 个关键词查询请求`)
 
     // 1. Check Redis cache first
     const cachedVolumes = await getBatchCachedVolumes(keywords, effectiveCountry, effectiveLanguage)
@@ -301,11 +302,13 @@ export async function getKeywordSearchVolumes(
     })
     const dbLookupKeywords = [...uncachedKeywords, ...zeroCachedKeywords]
 
-    console.log(`[KeywordPlanner] Redis缓存命中: ${cachedVolumes.size}/${keywords.length} 个关键词`)
+    logger.debug(
+      `[KeywordPlanner] Redis缓存命中: ${cachedVolumes.size}/${keywords.length} 个关键词`
+    )
 
     // If all cached, return from cache
     if (uncachedKeywords.length === 0 && zeroCachedKeywords.length === 0) {
-      console.log(`[KeywordPlanner] 全部命中Redis缓存，无需API调用`)
+      logger.debug(`[KeywordPlanner] 全部命中Redis缓存，无需API调用`)
       return keywords.map((kw) => {
         const cached = cachedVolumes.get(kw.toLowerCase())
         return {
@@ -359,7 +362,7 @@ export async function getKeywordSearchVolumes(
 
       const normalizedKeywords = Array.from(normalizedToOriginals.keys())
       if (normalizedKeywords.length === 0) {
-        console.log(`[KeywordPlanner] 数据库缓存命中: 0/${dbLookupKeywords.length} 个关键词`)
+        logger.debug(`[KeywordPlanner] 数据库缓存命中: 0/${dbLookupKeywords.length} 个关键词`)
       } else {
         const placeholders = normalizedKeywords.map(() => '?').join(',')
 
@@ -404,7 +407,7 @@ export async function getKeywordSearchVolumes(
             })
           }
         })
-        console.log(
+        logger.debug(
           `[KeywordPlanner] 数据库缓存命中: ${dbVolumes.size}/${dbLookupKeywords.length} 个关键词`
         )
       }
@@ -418,7 +421,7 @@ export async function getKeywordSearchVolumes(
 
     // Keywords still needing API call
     const needApiKeywords = uncachedKeywords.filter((kw) => !dbVolumes.has(kw.toLowerCase()))
-    console.log(
+    logger.debug(
       `[KeywordPlanner] 需要API查询: ${needApiKeywords.length} 个关键词 (总${keywords.length} - Redis${cachedVolumes.size} - DB${dbVolumes.size})`
     )
 
@@ -452,7 +455,7 @@ export async function getKeywordSearchVolumes(
           keywordBatches.push(needApiKeywords.slice(i, i + BATCH_SIZE))
         }
 
-        console.log(
+        logger.debug(
           `[KeywordPlanner] Processing ${needApiKeywords.length} keywords in ${keywordBatches.length} batches (auth: ${config.authType ?? 'unknown'})`
         )
 
@@ -513,7 +516,7 @@ export async function getKeywordSearchVolumes(
             apiSuccess = true // 标记为成功，避免记录为API错误
           } else {
             // 非 test：允许进行真实 Historical Metrics 探测（包含 basic/standard 以及 explorer 历史误标场景）
-            console.log(
+            logger.debug(
               `[KeywordPlanner] Developer Token 访问级别: ${apiAccessLevel || 'unknown'}, 认证方式: ${config.authType ?? 'unknown'}`
             )
             if (apiAccessLevel === 'explorer') {
@@ -525,7 +528,7 @@ export async function getKeywordSearchVolumes(
             // 刷新 access token 以确保有效
             try {
               await refreshAccessToken(userId || 1)
-              console.log('[KeywordPlanner] Access token refreshed successfully')
+              logger.debug('[KeywordPlanner] Access token refreshed successfully')
             } catch (refreshError: any) {
               const refreshMessage = refreshError?.message || String(refreshError)
               if (isInvalidGrantMessage(refreshMessage)) {
@@ -558,7 +561,7 @@ export async function getKeywordSearchVolumes(
             let stopProcessingBatches = false
             for (let batchIndex = 0; batchIndex < keywordBatches.length; batchIndex++) {
               const batch = keywordBatches[batchIndex]
-              console.log(
+              logger.debug(
                 `[KeywordPlanner] Processing batch ${batchIndex + 1}/${keywordBatches.length} (${batch.length} keywords)`
               )
 
@@ -582,7 +585,7 @@ export async function getKeywordSearchVolumes(
                     keyword_plan_network: enums.KeywordPlanNetwork.GOOGLE_SEARCH,
                   }
 
-                  console.log(
+                  logger.debug(
                     `[KeywordPlanner] 🔍 请求参数: customer_id=${cleanCustomerId}, keywords=${batch.length}, authType=${config.authType}`
                   )
 
@@ -593,11 +596,11 @@ export async function getKeywordSearchVolumes(
 
                   totalApiCalls++
 
-                  console.log(
+                  logger.debug(
                     `[KeywordPlanner] API响应类型: ${typeof response}, 结构: ${Object.keys(response || {}).join(', ')}`
                   )
                   const results = (response as any).results || response || []
-                  console.log(
+                  logger.debug(
                     `[KeywordPlanner] 解析结果数量: ${Array.isArray(results) ? results.length : 'N/A'}`
                   )
 
@@ -605,11 +608,11 @@ export async function getKeywordSearchVolumes(
                   // snake_case (keyword_metrics) 或 camelCase (keywordMetrics)
                   // 或者带下划线前缀 (_keyword_metrics) - protobuf 格式
                   if (results.length > 0) {
-                    console.log(
+                    logger.debug(
                       `[KeywordPlanner] 首个结果结构: ${Object.keys(results[0] || {}).join(', ')}`
                     )
                     // 调试：打印首个结果的完整内容
-                    console.log(
+                    logger.debug(
                       `[KeywordPlanner] 首个结果详情: ${JSON.stringify(results[0], null, 2).slice(0, 800)}`
                     )
                   }
@@ -665,13 +668,13 @@ export async function getKeywordSearchVolumes(
                     } else if (text) {
                       // 有关键词但metrics为null时,返回0搜索量而不是丢弃关键词
                       // 原因: 长尾词或不常见关键词可能没有metrics数据,但仍需要返回给调用方
-                      console.log(
+                      logger.debug(
                         `[KeywordPlanner] 关键词"${text}"缺少metrics数据，返回默认值(搜索量=0)`
                       )
-                      console.log(
+                      logger.debug(
                         `  - keyword_metrics: ${typeof result.keyword_metrics} = ${JSON.stringify(result.keyword_metrics)}`
                       )
-                      console.log(
+                      logger.debug(
                         `  - _keyword_metrics: ${typeof result._keyword_metrics} = ${JSON.stringify(result._keyword_metrics)}`
                       )
 
@@ -737,7 +740,7 @@ export async function getKeywordSearchVolumes(
                   if (errorMsg.includes('Too many requests')) {
                     retries++
                     const waitTime = Math.min(5000 * Math.pow(2, retries - 1), 30000) // 5s, 10s, 20s, max 30s
-                    console.log(
+                    logger.debug(
                       `[KeywordPlanner] Rate limit hit, retry ${retries}/${maxRetries} after ${waitTime}ms`
                     )
                     await new Promise((resolve) => setTimeout(resolve, waitTime))
@@ -775,7 +778,7 @@ export async function getKeywordSearchVolumes(
             }
 
             if (!shouldRetry) {
-              console.log(
+              logger.debug(
                 `[KeywordPlanner] Completed ${totalApiCalls} API calls, retrieved ${apiVolumes.size} keyword volumes`
               )
 

@@ -1,6 +1,7 @@
 /**
  * 关键词聚类：AI 语义聚类引擎
  */
+import { logger } from '@/lib/common/server'
 import { loadPrompt } from '../../ai/server'
 import { recordTokenUsage, estimateTokenCost } from '../../ai/server'
 import {
@@ -67,7 +68,7 @@ async function clusterBatchKeywords(
   pageType: 'product' | 'store' = 'product',
   splitDepth: number = 0
 ): Promise<KeywordBuckets | StoreKeywordBuckets> {
-  console.log(
+  logger.debug(
     `📦 处理批次 ${batchIndex}/${totalBatches}: ${batchKeywords.length} 个关键词 (${pageType}链接)`
   )
 
@@ -285,7 +286,7 @@ async function clusterBatchKeywords(
       throw new Error('AI返回的keywords不是数组')
     }
 
-    console.log(
+    logger.debug(
       `✅ 批次 ${batchIndex} 完成 (店铺5桶): A=${batchResult.bucketA.keywords.length}, B=${batchResult.bucketB.keywords.length}, C=${batchResult.bucketC.keywords.length}, D=${batchResult.bucketD.keywords.length}, S=${batchResult.bucketS.keywords.length}`
     )
   } else {
@@ -310,7 +311,7 @@ async function clusterBatchKeywords(
       throw new Error('AI返回的keywords不是数组')
     }
 
-    console.log(
+    logger.debug(
       `✅ 批次 ${batchIndex} 完成 (产品4桶): A=${batchResult.bucketA.keywords.length}, B=${batchResult.bucketB.keywords.length}, C=${batchResult.bucketC.keywords.length}, D=${batchResult.bucketD.keywords.length}`
     )
   }
@@ -379,15 +380,15 @@ function mergeBatchResults(
   const averageBalanceScore =
     batchResults.reduce((sum, r) => sum + r.statistics.balanceScore, 0) / batchResults.length
 
-  console.log(`🔄 合并 ${batchResults.length} 个批次结果:`)
-  console.log(`   桶A: ${allBucketAKeywords.length} 个关键词`)
-  console.log(`   桶B: ${allBucketBKeywords.length} 个关键词`)
-  console.log(`   桶C: ${allBucketCKeywords.length} 个关键词`)
-  console.log(`   桶D: ${allBucketDKeywords.length} 个关键词`)
+  logger.debug(`🔄 合并 ${batchResults.length} 个批次结果:`)
+  logger.debug(`   桶A: ${allBucketAKeywords.length} 个关键词`)
+  logger.debug(`   桶B: ${allBucketBKeywords.length} 个关键词`)
+  logger.debug(`   桶C: ${allBucketCKeywords.length} 个关键词`)
+  logger.debug(`   桶D: ${allBucketDKeywords.length} 个关键词`)
   if (allBucketSKeywords.length > 0) {
-    console.log(`   桶S: ${allBucketSKeywords.length} 个关键词`) // 店铺链接显示bucketS
+    logger.debug(`   桶S: ${allBucketSKeywords.length} 个关键词`) // 店铺链接显示bucketS
   }
-  console.log(`   平均均衡度: ${averageBalanceScore.toFixed(2)}`)
+  logger.debug(`   平均均衡度: ${averageBalanceScore.toFixed(2)}`)
 
   const result: KeywordBuckets = {
     bucketA: { ...bucketAIntent, keywords: allBucketAKeywords },
@@ -458,15 +459,15 @@ export async function clusterKeywordsByIntent(
   progress?: KeywordPoolProgressReporter
 ): Promise<KeywordBuckets> {
   if (keywords.length === 0) {
-    console.log('⚠️ 无关键词需要聚类，返回空桶')
+    logger.debug('⚠️ 无关键词需要聚类，返回空桶')
     return pageType === 'store' ? createEmptyStoreBuckets() : createEmptyBuckets()
   }
 
-  console.log(`🎯 开始 AI 语义聚类: ${keywords.length} 个关键词 (${pageType}链接)`)
+  logger.debug(`🎯 开始 AI 语义聚类: ${keywords.length} 个关键词 (${pageType}链接)`)
   await progress?.({ phase: 'cluster', message: `语义聚类准备中 (${keywords.length}个关键词)` })
 
   const allKeywordsForClustering = [...keywords]
-  console.log(`📊 总计聚类关键词: ${allKeywordsForClustering.length} 个`)
+  logger.debug(`📊 总计聚类关键词: ${allKeywordsForClustering.length} 个`)
 
   // 进一步减小批次大小，降低超时风险
   // 原因：减小单次请求处理量，提高稳定性
@@ -476,7 +477,7 @@ export async function clusterKeywordsByIntent(
 
   if (!needsBatching) {
     // 小批量：直接处理（原逻辑）
-    console.log(`📝 小批量模式：直接处理 ${allKeywordsForClustering.length} 个关键词`)
+    logger.debug(`📝 小批量模式：直接处理 ${allKeywordsForClustering.length} 个关键词`)
     await progress?.({
       phase: 'cluster',
       message: `语义聚类：小批量处理(${allKeywordsForClustering.length})`,
@@ -514,7 +515,7 @@ export async function clusterKeywordsByIntent(
 
   // 大批量：分批处理（有限并发）
   const MAX_CONCURRENT_BATCHES = 3
-  console.log(
+  logger.debug(
     `🚀 大批量模式：将 ${allKeywordsForClustering.length} 个关键词分成 ${batchCount} 个批次并发处理 (最大并发 ${MAX_CONCURRENT_BATCHES})`
   )
   await progress?.({ phase: 'cluster', message: `语义聚类：分批处理(${batchCount}批)` })
@@ -527,7 +528,7 @@ export async function clusterKeywordsByIntent(
     batches.push(allKeywordsForClustering.slice(start, end))
   }
 
-  console.log(`📦 批次划分: ${batches.map((b, i) => `批次${i + 1}=${b.length}个`).join(', ')}`)
+  logger.debug(`📦 批次划分: ${batches.map((b, i) => `批次${i + 1}=${b.length}个`).join(', ')}`)
 
   // 2. 有限并发处理以支持多用户并发
   // 原因：纯串行会影响吞吐量，过度并发又会增加超时风险
@@ -598,22 +599,22 @@ export async function clusterKeywordsByIntent(
         recalculateStoreBucketStatistics(storeBuckets)
         validateStoreBuckets(storeBuckets, allKeywordsForClustering)
 
-        console.log(`✅ 分批 AI 聚类完成 (店铺):`)
-        console.log(`   桶A [品牌商品集合]: ${storeBuckets.bucketA.keywords.length} 个`)
-        console.log(`   桶B [商品需求场景]: ${storeBuckets.bucketB.keywords.length} 个`)
-        console.log(`   桶C [热门商品线]: ${storeBuckets.bucketC.keywords.length} 个`)
-        console.log(`   桶D [信任服务信号]: ${storeBuckets.bucketD.keywords.length} 个`)
-        console.log(`   桶S [店铺全量覆盖]: ${storeBuckets.bucketS.keywords.length} 个`)
-        console.log(`   均衡度得分: ${storeBuckets.statistics.balanceScore.toFixed(2)}`)
+        logger.debug(`✅ 分批 AI 聚类完成 (店铺):`)
+        logger.debug(`   桶A [品牌商品集合]: ${storeBuckets.bucketA.keywords.length} 个`)
+        logger.debug(`   桶B [商品需求场景]: ${storeBuckets.bucketB.keywords.length} 个`)
+        logger.debug(`   桶C [热门商品线]: ${storeBuckets.bucketC.keywords.length} 个`)
+        logger.debug(`   桶D [信任服务信号]: ${storeBuckets.bucketD.keywords.length} 个`)
+        logger.debug(`   桶S [店铺全量覆盖]: ${storeBuckets.bucketS.keywords.length} 个`)
+        logger.debug(`   均衡度得分: ${storeBuckets.statistics.balanceScore.toFixed(2)}`)
       } else {
         validateBuckets(mergedBuckets, allKeywordsForClustering)
 
-        console.log(`✅ 分批 AI 聚类完成:`)
-        console.log(`   桶A [品牌商品锚点]: ${mergedBuckets.bucketA.keywords.length} 个`)
-        console.log(`   桶B [商品需求场景]: ${mergedBuckets.bucketB.keywords.length} 个`)
-        console.log(`   桶C [功能规格特性]: ${mergedBuckets.bucketC.keywords.length} 个`)
-        console.log(`   桶D [商品需求扩展]: ${mergedBuckets.bucketD.keywords.length} 个`)
-        console.log(`   均衡度得分: ${mergedBuckets.statistics.balanceScore.toFixed(2)}`)
+        logger.debug(`✅ 分批 AI 聚类完成:`)
+        logger.debug(`   桶A [品牌商品锚点]: ${mergedBuckets.bucketA.keywords.length} 个`)
+        logger.debug(`   桶B [商品需求场景]: ${mergedBuckets.bucketB.keywords.length} 个`)
+        logger.debug(`   桶C [功能规格特性]: ${mergedBuckets.bucketC.keywords.length} 个`)
+        logger.debug(`   桶D [商品需求扩展]: ${mergedBuckets.bucketD.keywords.length} 个`)
+        logger.debug(`   均衡度得分: ${mergedBuckets.statistics.balanceScore.toFixed(2)}`)
       }
 
       return mergedBuckets
@@ -904,13 +905,13 @@ async function clusterKeywordsDirectly(
         // 验证店铺结果（只告警，不阻断创意生成）
         validateStoreBuckets(storeBuckets, keywords)
 
-        console.log(`✅ AI 聚类完成 (店铺 5桶):`)
-        console.log(`   桶A [品牌信任]: ${storeBuckets.bucketA.keywords.length} 个`)
-        console.log(`   桶B [场景解决]: ${storeBuckets.bucketB.keywords.length} 个`)
-        console.log(`   桶C [精选推荐]: ${storeBuckets.bucketC.keywords.length} 个`)
-        console.log(`   桶D [信任信号]: ${storeBuckets.bucketD.keywords.length} 个`)
-        console.log(`   桶S [店铺全景]: ${storeBuckets.bucketS.keywords.length} 个`)
-        console.log(`   均衡度得分: ${storeBuckets.statistics.balanceScore.toFixed(2)}`)
+        logger.debug(`✅ AI 聚类完成 (店铺 5桶):`)
+        logger.debug(`   桶A [品牌信任]: ${storeBuckets.bucketA.keywords.length} 个`)
+        logger.debug(`   桶B [场景解决]: ${storeBuckets.bucketB.keywords.length} 个`)
+        logger.debug(`   桶C [精选推荐]: ${storeBuckets.bucketC.keywords.length} 个`)
+        logger.debug(`   桶D [信任信号]: ${storeBuckets.bucketD.keywords.length} 个`)
+        logger.debug(`   桶S [店铺全景]: ${storeBuckets.bucketS.keywords.length} 个`)
+        logger.debug(`   均衡度得分: ${storeBuckets.statistics.balanceScore.toFixed(2)}`)
       } else {
         // 产品链接：验证4个桶
         const productBuckets = buckets as KeywordBuckets
@@ -937,12 +938,12 @@ async function clusterKeywordsDirectly(
         // 验证产品结果
         validateBuckets(productBuckets, keywords)
 
-        console.log(`✅ AI 聚类完成 (产品 4桶):`)
-        console.log(`   桶A [产品型号]: ${productBuckets.bucketA.keywords.length} 个`)
-        console.log(`   桶B [购买意图]: ${productBuckets.bucketB.keywords.length} 个`)
-        console.log(`   桶C [功能特性]: ${productBuckets.bucketC.keywords.length} 个`)
-        console.log(`   桶D [紧迫促销]: ${productBuckets.bucketD.keywords.length} 个`)
-        console.log(`   均衡度得分: ${productBuckets.statistics.balanceScore.toFixed(2)}`)
+        logger.debug(`✅ AI 聚类完成 (产品 4桶):`)
+        logger.debug(`   桶A [产品型号]: ${productBuckets.bucketA.keywords.length} 个`)
+        logger.debug(`   桶B [购买意图]: ${productBuckets.bucketB.keywords.length} 个`)
+        logger.debug(`   桶C [功能特性]: ${productBuckets.bucketC.keywords.length} 个`)
+        logger.debug(`   桶D [紧迫促销]: ${productBuckets.bucketD.keywords.length} 个`)
+        logger.debug(`   均衡度得分: ${productBuckets.statistics.balanceScore.toFixed(2)}`)
       }
 
       return buckets

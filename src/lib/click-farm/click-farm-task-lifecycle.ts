@@ -1,6 +1,7 @@
 /**
  * Click-farm task lifecycle: create, update, stop/restart/pause.
  */
+import { logger } from '@/lib/common/server'
 import { getDatabase, toDbJsonObjectField } from '@/lib/db'
 import { getDateInTimezone } from '@/lib/common/server'
 import { generateNextRunAt } from './scheduler'
@@ -24,7 +25,7 @@ export async function createClickFarmTask(
   const scheduledStartDate =
     input.scheduled_start_date || getDateInTimezone(new Date(), taskTimezone)
 
-  console.log('[createClickFarmTask] 开始插入任务:', {
+  logger.debug('[createClickFarmTask] 开始插入任务:', {
     userId,
     offer_id: input.offer_id,
     daily_click_count: input.daily_click_count,
@@ -36,7 +37,7 @@ export async function createClickFarmTask(
     // 使用标准 UUID 格式（带 -），PostgreSQL 的 uuid 类型可以正确识别
     const taskId = crypto.randomUUID().toLowerCase()
 
-    console.log('[createClickFarmTask] 生成任务ID:', taskId)
+    logger.debug('[createClickFarmTask] 生成任务ID:', taskId)
 
     // PostgreSQL JSONB 传原生数组，避免双重编码
     const hourlyDistributionJson = toDbJsonObjectField(input.hourly_distribution, [])
@@ -64,15 +65,15 @@ export async function createClickFarmTask(
       ]
     )
 
-    console.log('[createClickFarmTask] INSERT结果:', result)
+    logger.debug('[createClickFarmTask] INSERT结果:', result)
 
     const insertedId = taskId
-    console.log('[createClickFarmTask] 使用生成的ID:', insertedId)
+    logger.debug('[createClickFarmTask] 使用生成的ID:', insertedId)
 
     const task = (await getClickFarmTaskById(insertedId, userId))!
 
     // 详细日志追踪问题
-    console.log('[createClickFarmTask] 任务对象:', {
+    logger.debug('[createClickFarmTask] 任务对象:', {
       id: task?.id,
       id_type: typeof task?.id,
       start_time: task?.start_time,

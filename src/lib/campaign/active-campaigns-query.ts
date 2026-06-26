@@ -4,6 +4,7 @@
  * 使用真实的Google Ads API查询，结合命名规范建立关联关系
  */
 
+import { logger } from '@/lib/common/server'
 import { enums } from '@/lib/google-ads/api/api'
 import { getDatabase } from '../db'
 import { listGoogleAdsCampaigns } from '@/lib/google-ads/api/api'
@@ -121,7 +122,7 @@ export async function queryActiveCampaigns(
     oauthLoginCustomerId,
   } = await loadGoogleAdsQueryAuth(userId, adsAccount.service_account_id)
 
-  console.log(`🔍 查询Google Ads账号 ${adsAccount.customer_id} 中的广告系列...`)
+  logger.debug(`🔍 查询Google Ads账号 ${adsAccount.customer_id} 中的广告系列...`)
   const allCampaigns = await runWithLoginCustomerFallbackForAccount({
     adsAccount: {
       customer_id: adsAccount.customer_id,
@@ -162,11 +163,11 @@ export async function queryActiveCampaigns(
   // 5. 分类广告系列
   const categorized = categorizeCampaigns(campaigns, offerId)
 
-  console.log(`📊 广告系列分类结果:`)
-  console.log(`   - 总启用广告系列: ${campaigns.filter((c) => c.status === 'ENABLED').length}`)
-  console.log(`   - 属于当前Offer: ${categorized.ownCampaigns.length}`)
-  console.log(`   - 用户手动创建: ${categorized.manualCampaigns.length}`)
-  console.log(`   - 属于其他Offer: ${categorized.otherCampaigns.length}`)
+  logger.debug(`📊 广告系列分类结果:`)
+  logger.debug(`   - 总启用广告系列: ${campaigns.filter((c) => c.status === 'ENABLED').length}`)
+  logger.debug(`   - 属于当前Offer: ${categorized.ownCampaigns.length}`)
+  logger.debug(`   - 用户手动创建: ${categorized.manualCampaigns.length}`)
+  logger.debug(`   - 属于其他Offer: ${categorized.otherCampaigns.length}`)
 
   return {
     ownCampaigns: categorized.ownCampaigns,
@@ -236,7 +237,7 @@ export async function pauseCampaigns(
 
   for (const campaign of campaigns) {
     try {
-      console.log(`⏸️ 暂停广告系列: ${campaign.name} (${campaign.id})`)
+      logger.debug(`⏸️ 暂停广告系列: ${campaign.name} (${campaign.id})`)
 
       await runWithLoginCustomerFallbackForAccount({
         adsAccount: {

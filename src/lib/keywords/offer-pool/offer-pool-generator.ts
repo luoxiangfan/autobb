@@ -2,6 +2,7 @@
  * Offer 级关键词池生成主流程
  */
 
+import { logger } from '@/lib/common/server'
 import { findOfferById, type Offer } from '../../offers/server'
 
 import {
@@ -84,7 +85,7 @@ export async function generateOfferKeywordPool(
   progress?: KeywordPoolProgressReporter,
   preparedExpand?: KeywordPoolExpandLoadResult
 ): Promise<OfferKeywordPool> {
-  console.log(`\n📦 开始生成 Offer #${offerId} 的关键词池`)
+  logger.debug(`\n📦 开始生成 Offer #${offerId} 的关键词池`)
   await progress?.({ phase: 'seed-volume', message: '开始生成关键词池' })
 
   // 1. 获取 Offer 信息
@@ -170,7 +171,7 @@ export async function generateOfferKeywordPool(
         }
       })()
       offer.extraction_metadata = JSON.stringify({ ...existing, brandOfficialSite: official })
-      console.log(`🌐 已补全品牌官网(origin): ${official.origin}`)
+      logger.debug(`🌐 已补全品牌官网(origin): ${official.origin}`)
     }
   } catch (e: any) {
     console.warn(`⚠️ 品牌官网补全失败（不影响关键词池生成）: ${e?.message || String(e)}`)
@@ -180,7 +181,7 @@ export async function generateOfferKeywordPool(
   let initialKeywords: PoolKeywordData[]
   if (allKeywords) {
     // 如果提供了关键词列表，查询搜索量而不是硬编码为 0
-    console.log(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
+    logger.debug(`📊 查询 ${allKeywords.length} 个提供的关键词的搜索量...`)
 
     try {
       await progress?.({ phase: 'seed-volume', message: `初始关键词搜索量查询中` })
@@ -220,7 +221,7 @@ export async function generateOfferKeywordPool(
       }))
 
       const withVolume = initialKeywords.filter((kw) => kw.searchVolume > 0).length
-      console.log(`✅ 搜索量查询完成: ${withVolume}/${allKeywords.length} 个关键词有搜索量`)
+      logger.debug(`✅ 搜索量查询完成: ${withVolume}/${allKeywords.length} 个关键词有搜索量`)
     } catch (error) {
       console.warn(`⚠️ 搜索量查询失败，使用默认值 0: ${error}`)
       // 降级处理：使用默认值
@@ -239,7 +240,7 @@ export async function generateOfferKeywordPool(
     throw new Error('无可用关键词，请先生成关键词')
   }
 
-  console.log(`📝 初始关键词数: ${initialKeywords.length}`)
+  logger.debug(`📝 初始关键词数: ${initialKeywords.length}`)
 
   // 2.5 优化种子词过滤策略
   // 核心问题: 52→12个种子词过滤率太高，导致关键词扩展不足
@@ -279,7 +280,7 @@ export async function generateOfferKeywordPool(
 
     // 过滤条件1：长度限制（与最终质量过滤对齐，≤8个单词）
     if (wordCount > SEED_MAX_WORD_COUNT) {
-      console.log(
+      logger.debug(
         `   ⊗ 种子词长度过滤: "${keyword}" (${wordCount}个单词, 限制≤${SEED_MAX_WORD_COUNT})`
       )
       return false
@@ -312,7 +313,7 @@ export async function generateOfferKeywordPool(
     const hasInvalidPattern = invalidPatterns.some((pattern) => keywordLower.includes(pattern))
     if (hasInvalidPattern) {
       const matchedPattern = invalidPatterns.find((p) => keywordLower.includes(p))
-      console.log(`   ⊗ 种子词无效模式过滤: "${keyword}" (包含: ${matchedPattern})`)
+      logger.debug(`   ⊗ 种子词无效模式过滤: "${keyword}" (包含: ${matchedPattern})`)
       return false
     }
 
@@ -321,7 +322,7 @@ export async function generateOfferKeywordPool(
       keywordLower.includes(pattern)
     )
     if (matchedInfoPattern) {
-      console.log(`   ⊗ 种子词信息查询过滤: "${keyword}" (包含: ${matchedInfoPattern})`)
+      logger.debug(`   ⊗ 种子词信息查询过滤: "${keyword}" (包含: ${matchedInfoPattern})`)
       return false
     }
 
@@ -330,7 +331,7 @@ export async function generateOfferKeywordPool(
       const keywordPlatforms = detectPlatformsInKeyword(keywordLower)
       const mismatchedPlatforms = keywordPlatforms.filter((platform) => platform !== offerPlatform)
       if (mismatchedPlatforms.length > 0) {
-        console.log(
+        logger.debug(
           `   ⊗ 种子词平台冲突过滤: "${keyword}" (关键词平台: ${mismatchedPlatforms.join('/')}, 目标平台: ${offerPlatform})`
         )
         return false
@@ -352,11 +353,11 @@ export async function generateOfferKeywordPool(
   })
 
   if (addedCount > 0) {
-    console.log(`   ✅ 从长尾种子词中提取: ${addedCount} 个短语种子词`)
+    logger.debug(`   ✅ 从长尾种子词中提取: ${addedCount} 个短语种子词`)
   }
 
   if (beforeFilterCount !== initialKeywords.length) {
-    console.log(`📊 种子词质量过滤: ${beforeFilterCount} → ${initialKeywords.length}`)
+    logger.debug(`📊 种子词质量过滤: ${beforeFilterCount} → ${initialKeywords.length}`)
   }
 
   // 3. 全量扩展（v2.0：根据认证类型分发）
@@ -406,7 +407,7 @@ export async function generateOfferKeywordPool(
     }
   )
 
-  console.log(`📝 第一次过滤后关键词数: ${filteredKeywords.length}`)
+  logger.debug(`📝 第一次过滤后关键词数: ${filteredKeywords.length}`)
 
   // 关键词质量过滤
   // 过滤品牌变体词（如 eurekaddl）和语义查询词（如 significato）
@@ -438,7 +439,7 @@ export async function generateOfferKeywordPool(
 
   // 生成过滤报告
   const filterReport = generateFilterReport(filteredKeywords.length, qualityFiltered.removed)
-  console.log(filterReport)
+  logger.debug(filterReport)
 
   // 使用过滤后的关键词
   let finalFilteredKeywords = qualityFiltered.filtered
@@ -524,12 +525,12 @@ export async function generateOfferKeywordPool(
 
       if (rescuedKeywords.length > 0) {
         finalFilteredKeywords = [...finalFilteredKeywords, ...rescuedKeywords]
-        console.log(
+        logger.debug(
           `🧩 product页放宽补齐: +${rescuedKeywords.length} 个高意图词(品牌前置改写) ` +
             `(strict_non_pure=${strictNonPureCount}, relaxed_candidates=${relaxedCandidates.length})`
         )
       } else {
-        console.log(`ℹ️ product页放宽补齐未命中可用词 (strict_non_pure=${strictNonPureCount})`)
+        logger.debug(`ℹ️ product页放宽补齐未命中可用词 (strict_non_pure=${strictNonPureCount})`)
       }
     }
   }
@@ -545,12 +546,12 @@ export async function generateOfferKeywordPool(
       (kw) => kw.searchVolume > 0 || isPureBrandKeyword(kw.keyword, pureBrandKeywordsForFilter)
     )
     if (beforeVolumeFilter !== finalFilteredKeywords.length) {
-      console.log(
+      logger.debug(
         `📉 搜索量过滤(保留纯品牌): ${beforeVolumeFilter} → ${finalFilteredKeywords.length}`
       )
     }
   } else if (hasAnyVolume && volumeUnavailable) {
-    console.log('⚠️ 搜索量数据不可用（Planner 权限受限），跳过非纯品牌 0 搜索量关键词强制移除')
+    logger.debug('⚠️ 搜索量数据不可用（Planner 权限受限），跳过非纯品牌 0 搜索量关键词强制移除')
   }
 
   // 约束：最终关键词顺序始终前置纯品牌词，避免后续截断时品牌词被挤压
@@ -559,7 +560,7 @@ export async function generateOfferKeywordPool(
     pureBrandKeywordsForFilter
   )
 
-  console.log(`📝 最终过滤后关键词数: ${finalFilteredKeywords.length}`)
+  logger.debug(`📝 最终过滤后关键词数: ${finalFilteredKeywords.length}`)
   await progress?.({ phase: 'filter', message: '关键词过滤完成' })
 
   // 5. 分离纯品牌词和非品牌词
@@ -586,7 +587,7 @@ export async function generateOfferKeywordPool(
         const normalized = normalizeGoogleAdsKeyword(k)
         return normalized ? !missingNormalized.has(normalized) : true
       })
-      console.log(`✅ 补充纯品牌词: ${missingPureBrands.join(', ')}`)
+      logger.debug(`✅ 补充纯品牌词: ${missingPureBrands.join(', ')}`)
     }
   }
 
@@ -627,7 +628,7 @@ export async function generateOfferKeywordPool(
     const cappedSet = new Set(capped.map((item) => item.keyword))
     nonBrandKeywordsData = nonBrandKeywordsData.filter((item) => cappedSet.has(item.keyword))
     nonBrandKwStrings = capped.map((item) => item.keyword)
-    console.log(
+    logger.debug(
       `✂️ 聚类输入裁剪: ${prioritized.length} → ${capped.length} (Top ${KEYWORD_CLUSTERING_INPUT_LIMIT} by source+volume)`
     )
   }
@@ -717,7 +718,7 @@ export async function generateOfferKeywordPool(
   }
 
   // v4.16: 确定页面类型
-  console.log(`📊 页面类型: ${pageType}`)
+  logger.debug(`📊 页面类型: ${pageType}`)
 
   // 6. AI 语义聚类（传递国家和语言参数用于查询商品需求扩展词搜索量）
   // v4.16: 传递 pageType 参数
@@ -822,12 +823,12 @@ export async function generateOfferKeywordPool(
       storeBuckets.bucketS.keywords.length
     const filteredCount = mappedStoreCount
     if (originalCount !== filteredCount) {
-      console.log(
+      logger.debug(
         `ℹ️ 店铺关键词映射过滤: ${originalCount} → ${filteredCount} (过滤掉 ${originalCount - filteredCount} 个无搜索量数据的关键词)`
       )
     }
     if (verifiedStoreAdds > 0) {
-      console.log(
+      logger.debug(
         `🧩 店铺真实来源补词: +${verifiedStoreAdds} (title:${verifiedSourceKeywords.TITLE_EXTRACT.length}, about:${verifiedSourceKeywords.ABOUT_EXTRACT.length}, param:${verifiedSourceKeywords.PARAM_EXTRACT.length}, hot:${verifiedSourceKeywords.HOT_PRODUCT_AGGREGATE.length}, page:${verifiedSourceKeywords.PAGE_EXTRACT.length})`
       )
     }
@@ -848,7 +849,7 @@ export async function generateOfferKeywordPool(
       0
     )
     if (totalStoreRetainAdds > 0) {
-      console.log(
+      logger.debug(
         `🛟 店铺桶最小保留补齐: +${totalStoreRetainAdds} (A:${storeBucketMinRetainAdds.A || 0}, B:${storeBucketMinRetainAdds.B || 0}, C:${storeBucketMinRetainAdds.C || 0}, D:${storeBucketMinRetainAdds.D || 0}, S:${storeBucketMinRetainAdds.S || 0})`
       )
     }
@@ -978,12 +979,12 @@ export async function generateOfferKeywordPool(
       productBuckets.bucketD.keywords.length
     const filteredCount = mappedProductCount
     if (originalCount !== filteredCount) {
-      console.log(
+      logger.debug(
         `ℹ️ 关键词映射过滤: ${originalCount} → ${filteredCount} (过滤掉 ${originalCount - filteredCount} 个无搜索量数据的关键词)`
       )
     }
     if (verifiedProductAdds > 0) {
-      console.log(
+      logger.debug(
         `🧩 产品真实来源补词: +${verifiedProductAdds} (title:${verifiedSourceKeywords.TITLE_EXTRACT.length}, about:${verifiedSourceKeywords.ABOUT_EXTRACT.length}, param:${verifiedSourceKeywords.PARAM_EXTRACT.length}, hot:${verifiedSourceKeywords.HOT_PRODUCT_AGGREGATE.length}, page:${verifiedSourceKeywords.PAGE_EXTRACT.length})`
       )
     }
@@ -1003,7 +1004,7 @@ export async function generateOfferKeywordPool(
       0
     )
     if (totalProductRetainAdds > 0) {
-      console.log(
+      logger.debug(
         `🛟 产品桶最小保留补齐: +${totalProductRetainAdds} (A:${productBucketMinRetainAdds.A || 0}, B:${productBucketMinRetainAdds.B || 0}, C:${productBucketMinRetainAdds.C || 0}, D:${productBucketMinRetainAdds.D || 0})`
       )
     }

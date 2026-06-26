@@ -9,6 +9,7 @@
  * Auto-refresh and health monitoring
  */
 
+import { logger } from '@/lib/common/server'
 import os from 'os'
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'
@@ -189,10 +190,10 @@ class UserIsolatedProxyPoolManager {
    * 启动代理池管理器
    */
   async start(): Promise<void> {
-    console.log('🚀 启动用户隔离代理池管理器...')
-    console.log(`   刷新间隔: ${this.config.refreshIntervalMs / 1000}秒`)
-    console.log(`   最少健康代理: ${this.config.minHealthyProxies}个`)
-    console.log(`   最大池大小: ${this.config.maxPoolSize}个`)
+    logger.debug('🚀 启动用户隔离代理池管理器...')
+    logger.debug(`   刷新间隔: ${this.config.refreshIntervalMs / 1000}秒`)
+    logger.debug(`   最少健康代理: ${this.config.minHealthyProxies}个`)
+    logger.debug(`   最大池大小: ${this.config.maxPoolSize}个`)
 
     // 定期刷新所有用户的代理池
     this.refreshTimer = setInterval(() => {
@@ -201,7 +202,7 @@ class UserIsolatedProxyPoolManager {
       })
     }, this.config.refreshIntervalMs)
 
-    console.log('✅ 用户隔离代理池管理器已启动')
+    logger.debug('✅ 用户隔离代理池管理器已启动')
   }
 
   /**
@@ -211,7 +212,7 @@ class UserIsolatedProxyPoolManager {
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
       this.refreshTimer = null
-      console.log('🛑 用户隔离代理池管理器已停止')
+      logger.debug('🛑 用户隔离代理池管理器已停止')
     }
   }
 
@@ -241,7 +242,7 @@ class UserIsolatedProxyPoolManager {
     if (countryPool.healthyProxies.length > 0) {
       const proxy =
         countryPool.healthyProxies[Math.floor(Math.random() * countryPool.healthyProxies.length)]
-      console.log(
+      logger.debug(
         `✅ 用户${userId}代理池缓存命中 ${targetCountry} (${countryPool.healthyProxies.length}个可用)`
       )
       return proxy
@@ -284,7 +285,7 @@ class UserIsolatedProxyPoolManager {
     // 如果缓存足够，直接返回
     if (countryPool.healthyProxies.length >= count) {
       const proxies = countryPool.healthyProxies.slice(0, count)
-      console.log(
+      logger.debug(
         `✅ 用户${userId}代理池缓存命中 ${targetCountry} (需要${count}个, 可用${countryPool.healthyProxies.length}个)`
       )
       return proxies
@@ -361,7 +362,7 @@ class UserIsolatedProxyPoolManager {
       proxyConfigs,
     })
 
-    console.log(`✅ 用户${userId}代理池已初始化 (${proxyConfigs.length}个国家配置)`)
+    logger.debug(`✅ 用户${userId}代理池已初始化 (${proxyConfigs.length}个国家配置)`)
   }
 
   /**
@@ -413,7 +414,7 @@ class UserIsolatedProxyPoolManager {
       proxyUrl: proxyConfig.url,
     })
 
-    console.log(`✅ 用户${userId}的${targetCountry}代理池已初始化`)
+    logger.debug(`✅ 用户${userId}的${targetCountry}代理池已初始化`)
 
     // 立即刷新
     await this.refreshCountryPool(userId, targetCountry)
@@ -431,14 +432,14 @@ class UserIsolatedProxyPoolManager {
 
     // 防止重复刷新
     if (countryPool.refreshing) {
-      console.log(`⏳ 用户${userId}的${country}代理池正在刷新，跳过...`)
+      logger.debug(`⏳ 用户${userId}的${country}代理池正在刷新，跳过...`)
       return
     }
 
     countryPool.refreshing = true
 
     try {
-      console.log(`🔄 刷新用户${userId}的${country}代理池...`)
+      logger.debug(`🔄 刷新用户${userId}的${country}代理池...`)
 
       // 批量获取健康代理
       const proxies = await this.fetchHealthyProxyIPs(
@@ -451,7 +452,7 @@ class UserIsolatedProxyPoolManager {
       countryPool.healthyProxies = proxies
       countryPool.lastRefresh = new Date()
 
-      console.log(`✅ 用户${userId}的${country}代理池已刷新: ${proxies.length}个健康代理`)
+      logger.debug(`✅ 用户${userId}的${country}代理池已刷新: ${proxies.length}个健康代理`)
     } catch (error: any) {
       console.error(`❌ 刷新用户${userId}的${country}代理池失败:`, error.message)
     } finally {
@@ -494,13 +495,13 @@ class UserIsolatedProxyPoolManager {
    * 刷新所有用户的代理池
    */
   private async refreshAllUserPools(): Promise<void> {
-    console.log('🔥 刷新所有用户的代理池...')
+    logger.debug('🔥 刷新所有用户的代理池...')
 
     const refreshPromises: Promise<void>[] = []
 
     // 根据资源使用率动态调整并发数
     const concurrencyLimit = this.resourceMonitor.getConcurrencyLimit()
-    console.log(
+    logger.debug(
       `📊 资源状态: CPU=${this.resourceMonitor.getResourceStats().cpuUsage.toFixed(1)}%, ` +
         `Memory=${this.resourceMonitor.getResourceStats().memoryUsage.toFixed(1)}%, ` +
         `并发数=${concurrencyLimit}`
@@ -530,8 +531,8 @@ class UserIsolatedProxyPoolManager {
 
     await Promise.allSettled(refreshPromises)
 
-    console.log('✅ 所有用户代理池已刷新')
-    console.log('📊 池统计:', this.getStats())
+    logger.debug('✅ 所有用户代理池已刷新')
+    logger.debug('📊 池统计:', this.getStats())
   }
 
   /**
