@@ -1,3 +1,4 @@
+import { parseTruthyFlag } from '@/lib/common/parse-truthy-flag'
 import { getDatabase } from '@/lib/db'
 import { expireStaleCommandConfirmations } from './confirm-service'
 import { failStaleQueuedCommandRuns } from './queued-timeout'
@@ -264,7 +265,7 @@ export async function listOpenclawCommandRuns(
 
   const items = runRows.map((row) => {
     const confirm = confirmByRunId.get(row.id)
-    const confirmRequired = (row.confirm_required as any) === true
+    const confirmRequired = parseTruthyFlag(row.confirm_required)
 
     return {
       runId: row.id,
