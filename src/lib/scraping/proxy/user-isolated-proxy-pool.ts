@@ -14,9 +14,11 @@ import os from 'os'
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'
 import { getUserOnlySetting } from '../../common/server'
-import { normalizeCountryCode } from '../../common/server'
-
-// Types
+import {
+  expandProxyUrlCountries,
+  proxyCountryCodesOverlap,
+  resolvePrimaryProxyCountryCode,
+} from '../../common/proxy-country'
 
 interface ProxyConfig {
   country: string
@@ -42,70 +44,6 @@ interface ProxyPoolConfig {
   minHealthyProxies: number // 最少保持健康代理数
   maxPoolSize: number // 每个country最多缓存代理数
   maxConcurrentRefreshes: number // 最大并发刷新数
-}
-
-const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
-  GB: ['UK'],
-  UK: ['GB'],
-}
-
-function getCountryCandidates(country: string): Set<string> {
-  const raw = String(country || '').trim()
-  if (!raw) return new Set<string>()
-
-  const rawUpper = raw.toUpperCase()
-  const normalized = normalizeCountryCode(raw)
-  const candidates = new Set<string>()
-
-  if (normalized) candidates.add(normalized)
-  if (rawUpper) candidates.add(rawUpper)
-
-  const addAliases = (code: string) => {
-    const aliases = PROXY_COUNTRY_ALIAS_MAP[code]
-    if (!aliases) return
-    for (const alias of aliases) {
-      if (alias) candidates.add(alias)
-    }
-  }
-
-  if (normalized) addAliases(normalized)
-  if (rawUpper && rawUpper !== normalized) addAliases(rawUpper)
-
-  return candidates
-}
-
-function getPrimaryCountryCode(country: string): string {
-  const normalized = normalizeCountryCode(String(country || '').trim())
-  return (
-    normalized ||
-    String(country || '')
-      .trim()
-      .toUpperCase()
-  )
-}
-
-function expandProxyConfigs(proxyConfigs: ProxyConfig[]): ProxyConfig[] {
-  const expanded: ProxyConfig[] = []
-  const seen = new Set<string>()
-
-  for (const config of proxyConfigs) {
-    const rawCountry = String(config?.country || '').trim()
-    const url = String(config?.url || '').trim()
-    if (!rawCountry || !url) continue
-
-    const countryCandidates = getCountryCandidates(rawCountry)
-    const finalCandidates =
-      countryCandidates.size > 0 ? Array.from(countryCandidates) : [rawCountry.toUpperCase()]
-
-    for (const country of finalCandidates) {
-      const key = `${country}\u0000${url}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      expanded.push({ country, url })
-    }
-  }
-
-  return expanded
 }
 
 // Resource Monitor
@@ -220,7 +158,7 @@ class UserIsolatedProxyPoolManager {
    * 获取用户的健康代理（单个）
    */
   async getHealthyProxy(userId: number, country: string): Promise<ProxyIP | null> {
-    const targetCountry = getPrimaryCountryCode(country)
+    const targetCountry = resolvePrimaryProxyCountryCode(country)
     // 确保用户池已初始化
     await this.ensureUserPool(userId)
 
@@ -266,7 +204,7 @@ class UserIsolatedProxyPoolManager {
    * 获取用户的多个健康代理
    */
   async getHealthyProxies(userId: number, country: string, count: number): Promise<ProxyIP[]> {
-    const targetCountry = getPrimaryCountryCode(country)
+    const targetCountry = resolvePrimaryProxyCountryCode(country)
     await this.ensureUserPool(userId)
 
     const userPool = this.userPools.get(userId)
@@ -333,7 +271,7 @@ class UserIsolatedProxyPoolManager {
    * 强制刷新用户的国家池
    */
   async forceRefresh(userId: number, country: string): Promise<void> {
-    const targetCountry = getPrimaryCountryCode(country)
+    const targetCountry = resolvePrimaryProxyCountryCode(country)
     await this.refreshCountryPool(userId, targetCountry)
   }
 
@@ -379,7 +317,7 @@ class UserIsolatedProxyPoolManager {
 
       const configs = JSON.parse(setting.value) as ProxyConfig[]
       if (!Array.isArray(configs)) return []
-      return expandProxyConfigs(configs)
+      return expandProxyUrlCountries(configs)
     } catch (error: any) {
       console.error(`❌ 读取用户${userId}代理配置失败:`, error.message)
       return []
@@ -390,16 +328,14 @@ class UserIsolatedProxyPoolManager {
    * 初始化用户的国家代理池
    */
   private async initializeCountryPool(userId: number, country: string): Promise<void> {
-    const targetCountry = getPrimaryCountryCode(country)
+    const targetCountry = resolvePrimaryProxyCountryCode(country)
     const userPool = this.userPools.get(userId)
     if (!userPool) return
 
     // 查找该国家的代理URL
-    const targetCountryCandidates = getCountryCandidates(targetCountry)
-    const proxyConfig = userPool.proxyConfigs.find((c) => {
-      const proxyCountryCandidates = getCountryCandidates(c.country)
-      return Array.from(proxyCountryCandidates).some((code) => targetCountryCandidates.has(code))
-    })
+    const proxyConfig = userPool.proxyConfigs.find((c) =>
+      proxyCountryCodesOverlap(targetCountry, c.country)
+    )
     if (!proxyConfig) {
       console.warn(`⚠️  用户${userId}没有配置${targetCountry}的代理URL`)
       return

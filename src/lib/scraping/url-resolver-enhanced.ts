@@ -11,7 +11,10 @@ import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from './url-re
 import { getOptimalResolver, extractDomain } from './resolver-domains'
 import { REDIS_PREFIX_CONFIG } from '../common/server'
 import { maskProxyUrl } from './proxy/validate-url'
-import { normalizeCountryCode } from '../common/server'
+import {
+  resolvePrimaryProxyCountryCode,
+  resolveProxyCountryCandidates,
+} from '../common/proxy-country'
 import { isAffiliateLinkExpiredMessage, normalizeNestedResolveErrorMessage } from '../affiliate'
 
 // 类型定义
@@ -48,46 +51,6 @@ interface RetryConfig {
   baseDelay: number // 初始延迟（ms）
   maxDelay: number // 最大延迟（ms）
   retryableErrors: string[] // 可重试的错误类型
-}
-
-const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
-  GB: ['UK'],
-  UK: ['GB'],
-}
-
-function getCountryCandidates(country: string): Set<string> {
-  const raw = String(country || '').trim()
-  if (!raw) return new Set<string>()
-
-  const rawUpper = raw.toUpperCase()
-  const normalized = normalizeCountryCode(raw)
-  const candidates = new Set<string>()
-
-  if (normalized) candidates.add(normalized)
-  if (rawUpper) candidates.add(rawUpper)
-
-  const addAliases = (code: string) => {
-    const aliases = PROXY_COUNTRY_ALIAS_MAP[code]
-    if (!aliases) return
-    for (const alias of aliases) {
-      if (alias) candidates.add(alias)
-    }
-  }
-
-  if (normalized) addAliases(normalized)
-  if (rawUpper && rawUpper !== normalized) addAliases(rawUpper)
-
-  return candidates
-}
-
-function getPrimaryCountryCode(country: string): string {
-  const normalized = normalizeCountryCode(String(country || '').trim())
-  return (
-    normalized ||
-    String(country || '')
-      .trim()
-      .toUpperCase()
-  )
 }
 
 // 代理池管理
@@ -150,8 +113,8 @@ export class ProxyPoolManager {
    * 优先级：目标国家健康代理 > 目标国家不健康代理 > 其他国家健康代理 > 第一个代理（默认）
    */
   getBestProxyForCountry(targetCountry: string): ProxyConfig | null {
-    const normalizedTargetCountry = getPrimaryCountryCode(targetCountry)
-    const targetCountryCandidates = getCountryCandidates(targetCountry)
+    const normalizedTargetCountry = resolvePrimaryProxyCountryCode(targetCountry)
+    const targetCountryCandidates = new Set(resolveProxyCountryCandidates(targetCountry))
     const allProxies = Array.from(this.proxies.values())
 
     // 1. 优先使用目标国家的健康代理
@@ -202,7 +165,7 @@ export class ProxyPoolManager {
    * @returns 如果目标国家有代理返回 true，否则返回 false
    */
   hasProxyForCountry(targetCountry: string): boolean {
-    const targetCountryCandidates = getCountryCandidates(targetCountry)
+    const targetCountryCandidates = new Set(resolveProxyCountryCandidates(targetCountry))
     const allProxies = Array.from(this.proxies.values())
     return allProxies.some((p) => targetCountryCandidates.has(p.country))
   }
@@ -216,7 +179,7 @@ export class ProxyPoolManager {
     isTargetCountryMatch: boolean
     usedCountry: string | null
   } {
-    const targetCountryCandidates = getCountryCandidates(targetCountry)
+    const targetCountryCandidates = new Set(resolveProxyCountryCandidates(targetCountry))
     const proxy = this.getBestProxyForCountry(targetCountry)
     if (!proxy) {
       return { proxy: null, isTargetCountryMatch: false, usedCountry: null }

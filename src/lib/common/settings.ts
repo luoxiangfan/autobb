@@ -1,6 +1,10 @@
 import { getDatabase } from '../db'
 import { encrypt, decrypt } from '../auth'
-import { normalizeCountryCode } from './language-country-codes'
+import {
+  expandProxyUrlCountries,
+  proxyCountryCodesOverlap,
+  type ProxyCountryUrlConfig,
+} from './proxy-country'
 import {
   GEMINI_ACTIVE_MODEL,
   getSupportedModelsForProvider,
@@ -833,64 +837,7 @@ export async function validateGeminiConfig(
 }
 
 // 代理URL配置项接口
-interface ProxyUrlConfig {
-  country: string
-  url: string
-}
-
-const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
-  GB: ['UK'],
-  UK: ['GB'],
-}
-
-function resolveProxyCountryCandidates(country: string): string[] {
-  const raw = String(country || '').trim()
-  if (!raw) return []
-
-  const rawUpper = raw.toUpperCase()
-  const normalized = normalizeCountryCode(raw)
-  const candidates = new Set<string>()
-
-  if (normalized) candidates.add(normalized)
-  if (rawUpper) candidates.add(rawUpper)
-
-  const addAliases = (code: string) => {
-    const aliases = PROXY_COUNTRY_ALIAS_MAP[code]
-    if (!aliases) return
-    for (const alias of aliases) {
-      if (alias) candidates.add(alias)
-    }
-  }
-
-  if (normalized) addAliases(normalized)
-  if (rawUpper && rawUpper !== normalized) addAliases(rawUpper)
-
-  return Array.from(candidates)
-}
-
-function expandProxyUrlCountries(proxyUrls: ProxyUrlConfig[]): ProxyUrlConfig[] {
-  const expanded: ProxyUrlConfig[] = []
-  const seen = new Set<string>()
-
-  for (const item of proxyUrls) {
-    const rawCountry = String(item?.country || '').trim()
-    const url = String(item?.url || '')
-    if (!rawCountry || !url) continue
-
-    const countryCandidates = resolveProxyCountryCandidates(rawCountry)
-    const finalCandidates =
-      countryCandidates.length > 0 ? countryCandidates : [rawCountry.toUpperCase()]
-
-    for (const country of finalCandidates) {
-      const key = `${country}\u0000${url}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      expanded.push({ country, url })
-    }
-  }
-
-  return expanded
-}
+type ProxyUrlConfig = ProxyCountryUrlConfig
 
 /**
  * 获取指定国家的代理URL
@@ -909,14 +856,8 @@ export async function getProxyUrlForCountry(
     return undefined
   }
 
-  // 查找匹配的国家（支持 UK/GB 等别名）
-  const countryCandidates = new Set(resolveProxyCountryCandidates(targetCountry))
   const matched = proxyUrls.find((item) =>
-    countryCandidates.has(
-      String(item.country || '')
-        .trim()
-        .toUpperCase()
-    )
+    proxyCountryCodesOverlap(targetCountry, String(item.country || ''))
   )
 
   if (matched) {
@@ -925,7 +866,9 @@ export async function getProxyUrlForCountry(
 
   // 没有找到匹配的国家，返回第一个作为兜底
   return proxyUrls[0].url
-} /**
+}
+
+/**
  * 获取所有配置的代理URL列表
  *
  * @param userId - 用户ID

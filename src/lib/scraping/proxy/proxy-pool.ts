@@ -9,63 +9,7 @@ import { logger } from '@/lib/common/server'
 import type { ProxyIP } from './types'
 import { fetchProxyIp } from './fetch-proxy-ip'
 import { getDatabase } from '../../db'
-import { normalizeCountryCode } from '../../common/server'
-
-const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
-  GB: ['UK'],
-  UK: ['GB'],
-}
-
-function getCountryCandidates(country: string): Set<string> {
-  const raw = String(country || '').trim()
-  if (!raw) return new Set<string>()
-
-  const rawUpper = raw.toUpperCase()
-  const normalized = normalizeCountryCode(raw)
-  const candidates = new Set<string>()
-
-  if (normalized) candidates.add(normalized)
-  if (rawUpper) candidates.add(rawUpper)
-
-  const addAliases = (code: string) => {
-    const aliases = PROXY_COUNTRY_ALIAS_MAP[code]
-    if (!aliases) return
-    for (const alias of aliases) {
-      if (alias) candidates.add(alias)
-    }
-  }
-
-  if (normalized) addAliases(normalized)
-  if (rawUpper && rawUpper !== normalized) addAliases(rawUpper)
-
-  return candidates
-}
-
-function expandProxyUrlCountries(
-  proxyUrls: Array<{ country: string; url: string }>
-): Array<{ country: string; url: string }> {
-  const expanded: Array<{ country: string; url: string }> = []
-  const seen = new Set<string>()
-
-  for (const item of proxyUrls) {
-    const rawCountry = String(item?.country || '').trim()
-    const url = String(item?.url || '').trim()
-    if (!rawCountry || !url) continue
-
-    const countryCandidates = getCountryCandidates(rawCountry)
-    const finalCandidates =
-      countryCandidates.size > 0 ? Array.from(countryCandidates) : [rawCountry.toUpperCase()]
-
-    for (const candidate of finalCandidates) {
-      const key = `${candidate}\u0000${url}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      expanded.push({ country: candidate, url })
-    }
-  }
-
-  return expanded
-}
+import { expandProxyUrlCountries, proxyCountryCodesOverlap } from '../../common/proxy-country'
 
 // 临时实现：批量获取代理IP
 async function fetchHealthyProxyIPs(country: string, count: number): Promise<ProxyIP[]> {
@@ -96,11 +40,8 @@ async function fetchHealthyProxyIPs(country: string, count: number): Promise<Pro
             }))
         )
       : []
-    const targetCountryCandidates = getCountryCandidates(country)
     let proxyUrl = proxyConfigs.find((c: any) =>
-      Array.from(getCountryCandidates(String(c.country || ''))).some((code) =>
-        targetCountryCandidates.has(code)
-      )
+      proxyCountryCodesOverlap(country, String(c.country || ''))
     )?.url
 
     // 如果没有找到对应国家的配置，使用第一个作为默认值

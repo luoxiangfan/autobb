@@ -7,69 +7,13 @@
  * 重要：代理配置只使用用户自己的配置，不使用全局配置
  */
 
-import { normalizeCountryCode } from '@/lib/common/server'
+import {
+  expandProxyUrlCountries,
+  proxyCountryCodesOverlap,
+  type ProxyCountryUrlConfig,
+} from '@/lib/common/proxy-country'
 
-/**
- * 代理配置接口（与settings页面保持一致）
- */
-export interface ProxyUrlConfig {
-  country: string
-  url: string
-}
-
-const PROXY_COUNTRY_ALIAS_MAP: Readonly<Record<string, string[]>> = {
-  GB: ['UK'],
-  UK: ['GB'],
-}
-
-function getCountryCandidates(country: string): Set<string> {
-  const raw = String(country || '').trim()
-  if (!raw) return new Set<string>()
-
-  const rawUpper = raw.toUpperCase()
-  const normalized = normalizeCountryCode(raw)
-  const candidates = new Set<string>()
-
-  if (normalized) candidates.add(normalized)
-  if (rawUpper) candidates.add(rawUpper)
-
-  const addAliases = (code: string) => {
-    const aliases = PROXY_COUNTRY_ALIAS_MAP[code]
-    if (!aliases) return
-    for (const alias of aliases) {
-      if (alias) candidates.add(alias)
-    }
-  }
-
-  if (normalized) addAliases(normalized)
-  if (rawUpper && rawUpper !== normalized) addAliases(rawUpper)
-
-  return candidates
-}
-
-function expandProxyUrlCountries(proxyUrls: ProxyUrlConfig[]): ProxyUrlConfig[] {
-  const expanded: ProxyUrlConfig[] = []
-  const seen = new Set<string>()
-
-  for (const item of proxyUrls) {
-    const rawCountry = String(item?.country || '').trim()
-    const url = String(item?.url || '').trim()
-    if (!rawCountry || !url) continue
-
-    const countryCandidates = getCountryCandidates(rawCountry)
-    const finalCandidates =
-      countryCandidates.size > 0 ? Array.from(countryCandidates) : [rawCountry.toUpperCase()]
-
-    for (const country of finalCandidates) {
-      const key = `${country}\u0000${url}`
-      if (seen.has(key)) continue
-      seen.add(key)
-      expanded.push({ country, url })
-    }
-  }
-
-  return expanded
-}
+export type ProxyUrlConfig = ProxyCountryUrlConfig
 
 /**
  * 队列系统使用的代理配置格式
@@ -301,11 +245,8 @@ export async function getProxyForCountry(
   }
 
   // 查找匹配的国家
-  const targetCountryCandidates = getCountryCandidates(targetCountry)
   const matched = proxies.find((proxy) =>
-    Array.from(getCountryCandidates(String(proxy.country || ''))).some((code) =>
-      targetCountryCandidates.has(code)
-    )
+    proxyCountryCodesOverlap(targetCountry, String(proxy.country || ''))
   )
 
   if (matched) {
