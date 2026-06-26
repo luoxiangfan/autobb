@@ -19,6 +19,7 @@ import { isProxyRequiredForTaskType, getProxyForCountry } from './user-proxy-loa
 import { isBackgroundTaskType } from './task-category'
 import { logger } from '@/lib/common/server'
 import { runWithLogContext } from '@/lib/common/server'
+import { queueVerboseLog } from './queue-log'
 import { toDbJsonObjectField } from '@/lib/db'
 import {
   assertUserExecutionAllowed,
@@ -252,7 +253,7 @@ export class UnifiedQueueManager {
       try {
         await this.adapter.connect()
         console.log(`✅ 队列已初始化: ${this.adapter.constructor.name}`)
-        logger.info('queue_runtime_info', this.getRuntimeInfo())
+        queueVerboseLog('queue_runtime_info', this.getRuntimeInfo())
         this.initialized = true
       } catch (error: any) {
         console.error('❌ Redis连接失败，回退到内存队列:', error.message)
@@ -535,7 +536,7 @@ export class UnifiedQueueManager {
     }
 
     await this.adapter.enqueue(task)
-    logger.info('queue_task_enqueued', {
+    queueVerboseLog('queue_task_enqueued', {
       taskId: task.id,
       taskType: task.type,
       userId: task.userId,
@@ -792,7 +793,7 @@ export class UnifiedQueueManager {
 
     // 将任务上下文绑定到当前异步链路，确保执行器内部 console.* 也能带上 userId/taskId/requestId
     await runWithLogContext(context, async () => {
-      logger.info('queue_task_started', {
+      queueVerboseLog('queue_task_started', {
         taskId: task.id,
         taskType: task.type,
         userId: task.userId,
@@ -846,7 +847,7 @@ export class UnifiedQueueManager {
 
         // 更新任务状态
         await this.adapter.updateTaskStatus(task.id, 'completed')
-        logger.info('queue_task_completed', {
+        queueVerboseLog('queue_task_completed', {
           taskId: task.id,
           taskType: task.type,
           userId: task.userId,

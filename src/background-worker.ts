@@ -15,6 +15,7 @@ import type { QueueConfig } from './lib/queue/types'
 import { getDatabase } from './lib/db/database'
 import { getQueueRoutingDiagnostics } from './lib/queue/queue-routing'
 import { logger } from './lib/common/structured-logger'
+import { queueVerboseLog } from './lib/queue/queue-log'
 import {
   setBackgroundWorkerHeartbeat,
   getBackgroundWorkerHeartbeatKey,
@@ -74,9 +75,9 @@ async function loadQueueConfigFromDB(): Promise<Partial<QueueConfig> | null> {
 }
 
 async function main() {
-  logger.info('background_worker_boot', getQueueRoutingDiagnostics())
+  queueVerboseLog('background_worker_boot', getQueueRoutingDiagnostics())
   const heapLimitMb = Math.round(getHeapStatistics().heap_size_limit / 1024 / 1024)
-  logger.info('background_worker_runtime', {
+  queueVerboseLog('background_worker_runtime', {
     pid: process.pid,
     heapLimitMb,
     nodeOptions: process.env.NODE_OPTIONS || null,
@@ -93,7 +94,7 @@ async function main() {
   }
 
   await queue.initialize()
-  logger.info('queue_runtime_status', {
+  queueVerboseLog('queue_runtime_status', {
     ...queue.getRuntimeInfo(),
     ...getQueueRoutingDiagnostics(),
   })
@@ -171,7 +172,7 @@ async function main() {
         await import('./lib/queue/inactive-source-queue-sweep')
       const sweep = await sweepPendingQueueTasksForInactiveClickFarmAndUrlSwap()
       if (sweep.clickFarmQueueRemoved > 0 || sweep.urlSwapQueueRemoved > 0) {
-        logger.info('background_inactive_source_queue_sweep', { source, ...sweep })
+        queueVerboseLog('background_inactive_source_queue_sweep', { source, ...sweep })
       }
     } catch (error: any) {
       logger.warn('background_inactive_source_queue_sweep_failed', {
@@ -182,13 +183,13 @@ async function main() {
   }
 
   if (clickFarmSelfHealEnabled) {
-    logger.info('background_click_farm_self_heal_enabled', {
+    queueVerboseLog('background_click_farm_self_heal_enabled', {
       intervalMs: clickFarmSelfHealIntervalMs,
       overdueMinutes: clickFarmSelfHealOverdueMinutes,
     })
   }
   if (inactiveQueueSweepEnabled) {
-    logger.info('background_inactive_source_queue_sweep_enabled', {
+    queueVerboseLog('background_inactive_source_queue_sweep_enabled', {
       intervalMs: clickFarmSelfHealIntervalMs,
     })
   }

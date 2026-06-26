@@ -3,6 +3,32 @@ import { getLogContext } from './log-context'
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 type LogFields = Record<string, unknown>
 
+const LEVEL_RANK: Record<LogLevel, number> = {
+  debug: 0,
+  info: 1,
+  warn: 2,
+  error: 3,
+}
+
+function parseLogLevel(raw: string | undefined): LogLevel {
+  const normalized = (raw ?? '').trim().toLowerCase()
+  if (
+    normalized === 'debug' ||
+    normalized === 'info' ||
+    normalized === 'warn' ||
+    normalized === 'error'
+  ) {
+    return normalized
+  }
+  return process.env.NODE_ENV === 'production' ? 'warn' : 'info'
+}
+
+const configuredMinLevel = parseLogLevel(process.env.LOG_LEVEL)
+
+export function shouldLogLevel(level: LogLevel): boolean {
+  return LEVEL_RANK[level] >= LEVEL_RANK[configuredMinLevel]
+}
+
 function serializeError(error: unknown): Record<string, unknown> | undefined {
   if (!error) return undefined
   if (error instanceof Error) {
@@ -45,6 +71,8 @@ export const logger = {
 }
 
 export function log(level: LogLevel, msg: string, fields: LogFields = {}, error?: unknown) {
+  if (!shouldLogLevel(level)) return
+
   const context = getLogContext()
   const payload: Record<string, unknown> = {
     ...baseFields(),

@@ -46,6 +46,15 @@ services:
       CLICK_FARM_MAX_INFLIGHT: 120
       CLICK_FARM_HEAP_PRESSURE_PCT: 88
       CLICK_FARM_REQUIRE_REDIS_IN_PRODUCTION: 'true'
+
+      # 日志：生产默认 warn，队列任务生命周期默认 debug
+      LOG_LEVEL: warn
+      QUEUE_VERBOSE_LOG: 'false'
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'
     volumes:
       # 数据备份持久化
       - autoads_backups:/app/data/backups

@@ -4,6 +4,7 @@ import { getBackgroundQueueManager, getQueueManager } from './unified-queue-mana
 import type { UnifiedQueueManager } from './unified-queue-manager'
 import { logger } from '@/lib/common/server'
 import { isEnvTrue } from '@/lib/common/server'
+import { queueVerboseLog } from './queue-log'
 
 let splitDecisionLogged = false
 let splitMisconfigLogged = false
@@ -27,7 +28,7 @@ export function isBackgroundQueueSplitEnabled(): boolean {
 
   if (!splitDecisionLogged) {
     splitDecisionLogged = true
-    logger.info('queue_split_status', diagnostics)
+    queueVerboseLog('queue_split_status', diagnostics)
   }
 
   if (diagnostics.splitFlag && !diagnostics.redisUrlPresent && !splitMisconfigLogged) {

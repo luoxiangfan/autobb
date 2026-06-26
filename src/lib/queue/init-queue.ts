@@ -21,7 +21,7 @@ import { NODE_ENV, REDIS_PREFIX_CONFIG } from '../common/server'
 import type { UnifiedQueueManager } from './unified-queue-manager'
 import type { QueueConfig } from './types'
 import { getQueueRoutingDiagnostics } from './queue-routing'
-import { logger } from '@/lib/common/server'
+import { queueVerboseLog } from './queue-log'
 
 // 防止队列重复初始化
 let __queueInitialized = false
@@ -50,7 +50,7 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     console.log(`   - Redis Queue Prefix: ${REDIS_PREFIX_CONFIG.queue}`)
     console.log(`   - Redis Cache Prefix: ${REDIS_PREFIX_CONFIG.cache}`)
     console.log(`   - 任务队列隔离: ✅ 已启用`)
-    logger.info('queue_routing_diagnostics', getQueueRoutingDiagnostics())
+    queueVerboseLog('queue_routing_diagnostics', getQueueRoutingDiagnostics())
 
     // 获取队列管理器实例
     // 注意：不再在初始化时加载代理池，代理在任务执行时按需加载
@@ -70,7 +70,7 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
 
     // 连接存储适配器（Redis优先，失败则回退内存）
     await queue.initialize()
-    logger.info('queue_runtime_status', {
+    queueVerboseLog('queue_runtime_status', {
       ...queue.getRuntimeInfo(),
       ...getQueueRoutingDiagnostics(),
     })

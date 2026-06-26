@@ -18,6 +18,13 @@ services:
       - NEXT_TELEMETRY_DISABLED=1
       - REDIS_URL=${REDIS_URL}
       - QUEUE_SPLIT_BACKGROUND=true
+      - LOG_LEVEL=warn
+      - QUEUE_VERBOSE_LOG=false
+    logging:
+      driver: json-file
+      options:
+        max-size: '50m'
+        max-file: '3'
     volumes:
       - ./scripts:/app/scripts:ro
     healthcheck:
