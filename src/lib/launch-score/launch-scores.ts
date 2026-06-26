@@ -412,41 +412,20 @@ export async function createLaunchScore(
   const allIssues = extractAllIssues(analysis)
   const allSuggestions = extractAllSuggestions(analysis)
 
-  // 为兼容旧版本字段提供默认值（v3.0字段为NOT NULL）
-  // v3.0字段：keyword_score, market_fit_score, landing_page_score, budget_score, content_score
-  // v4.16字段：launch_viability_score, ad_quality_score, keyword_strategy_score, basic_config_score
-  const legacyKeywordScore = analysis.keywordStrategy.score || 0
-  const legacyMarketFitScore = analysis.launchViability.score || 0
-  const legacyLandingPageScore = analysis.basicConfig.finalUrl ? 5 : 0 // 基于Final URL存在性评估
-  const legacyBudgetScore = 0
-  const legacyContentScore = analysis.adQuality.score || 0
-
   const info = await db.exec(
     `
     INSERT INTO launch_scores (
       user_id, offer_id, total_score,
-      keyword_score, market_fit_score, landing_page_score, budget_score, content_score,
-      keyword_analysis_data, market_analysis_data, landing_page_analysis_data, budget_analysis_data, content_analysis_data,
       recommendations, calculated_at,
       launch_viability_score, ad_quality_score, keyword_strategy_score, basic_config_score,
       launch_viability_data, ad_quality_data, keyword_strategy_data, basic_config_data,
       ad_creative_id, issues, suggestions, content_hash, campaign_config_hash
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
     [
       userId,
       offerId,
       totalScore,
-      legacyKeywordScore,
-      legacyMarketFitScore,
-      legacyLandingPageScore,
-      legacyBudgetScore,
-      legacyContentScore,
-      JSON.stringify(analysis.keywordStrategy),
-      JSON.stringify(analysis.launchViability),
-      JSON.stringify(analysis.basicConfig),
-      JSON.stringify(analysis.basicConfig),
-      JSON.stringify(analysis.adQuality),
       JSON.stringify(analysis.overallRecommendations),
       new Date().toISOString(),
       analysis.launchViability.score,

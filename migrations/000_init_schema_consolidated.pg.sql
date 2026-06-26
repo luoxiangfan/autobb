@@ -669,18 +669,21 @@ CREATE TABLE launch_scores (
   user_id INTEGER NOT NULL,
   offer_id INTEGER NOT NULL,
   total_score INTEGER NOT NULL,
-  keyword_score INTEGER NOT NULL,
-  market_fit_score INTEGER NOT NULL,
-  landing_page_score INTEGER NOT NULL,
-  budget_score INTEGER NOT NULL,
-  content_score INTEGER NOT NULL,
-  keyword_analysis_data TEXT,
-  market_analysis_data TEXT,
-  landing_page_analysis_data TEXT,
-  budget_analysis_data TEXT,
-  content_analysis_data TEXT,
+  launch_viability_score INTEGER NOT NULL DEFAULT 0,
+  ad_quality_score INTEGER NOT NULL DEFAULT 0,
+  keyword_strategy_score INTEGER NOT NULL DEFAULT 0,
+  basic_config_score INTEGER NOT NULL DEFAULT 0,
+  launch_viability_data JSONB,
+  ad_quality_data JSONB,
+  keyword_strategy_data JSONB,
+  basic_config_data JSONB,
   recommendations TEXT,
   calculated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ad_creative_id INTEGER REFERENCES ad_creatives(id) ON DELETE SET NULL,
+  issues TEXT,
+  suggestions TEXT,
+  content_hash TEXT,
+  campaign_config_hash TEXT,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (offer_id) REFERENCES offers(id) ON DELETE CASCADE
 );
@@ -26569,7 +26572,8 @@ INSERT INTO migration_history (migration_name) VALUES
   ('259_drop_campaign_backups_campaign_data.pg.sql'),
   ('260_url_swap_sitelink_targets.pg.sql'),
   ('261_drop_offers_unlinked_columns.pg.sql'),
-  ('262_backfill_strategy_expand_keyword_coverage.pg.sql')
+  ('262_backfill_strategy_expand_keyword_coverage.pg.sql'),
+  ('263_drop_launch_scores_v3_columns.pg.sql')
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- ==========================================
