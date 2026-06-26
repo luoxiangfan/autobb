@@ -39,11 +39,6 @@ export async function syncCampaignsFromGoogleAds(
   try {
     googleAdsSyncLogger.info('sync_start', { userId })
 
-    // 获取该用户的所有活跃 Google Ads 账户（支持 MCC 过滤）
-    const isActiveCondition = 'is_active = TRUE'
-    const isManagerCondition = 'is_manager_account = FALSE'
-    const isDeletedCondition = 'is_deleted = FALSE'
-
     // 获取用户分配的 MCC 账号列表
     let mccCustomerIds: string[] = []
     const mccAssignments = (await db.query(
@@ -74,7 +69,7 @@ export async function syncCampaignsFromGoogleAds(
 
     const accounts = (await db.query(
       `SELECT id, customer_id, account_name, parent_mcc_id, auth_type, service_account_id FROM google_ads_accounts
-       WHERE user_id = ? AND ${isActiveCondition} AND ${isManagerCondition} AND ${isDeletedCondition} AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
+       WHERE user_id = ? AND is_active = true AND is_manager_account = false AND is_deleted = false AND status = 'ENABLED' AND customer_id IS NOT NULL AND customer_id != '' ${customerIdsFilter}
        ORDER BY id`,
       accountQueryParams
     )) as Array<{

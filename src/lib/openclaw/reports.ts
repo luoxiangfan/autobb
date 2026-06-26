@@ -2598,8 +2598,6 @@ async function sendDailyReportToFeishuInternal(params: SendDailyReportToFeishuPa
     ? await buildOpenclawDailyReport(params.userId, reportDate, { startDate: normalizedStartDate })
     : await getOrCreateDailyReport(params.userId, reportDate)
   const db = await getDatabase()
-  const nowSql = 'NOW()'
-
   if (!isRangeMode && params.deliveryTaskId) {
     const latestDelivery = await db.queryOne<{
       sent_status?: string
@@ -2683,7 +2681,7 @@ async function sendDailyReportToFeishuInternal(params: SendDailyReportToFeishuPa
     await db.exec(
       `UPDATE openclaw_daily_reports
        SET sent_status = ?,
-           sent_at = CASE WHEN ? THEN ${nowSql} ELSE sent_at END,
+           sent_at = CASE WHEN ? THEN NOW() ELSE sent_at END,
            delivery_error = ?,
            last_delivery_task_id = COALESCE(?, last_delivery_task_id)
        WHERE user_id = ? AND report_date = ?`,

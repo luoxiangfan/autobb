@@ -29,9 +29,6 @@ export async function upsertUserSystemSetting(params: {
   description: string
 }): Promise<void> {
   const db = await getDatabase()
-  const nowExpr = 'NOW()'
-  const falseValue = false
-
   const existing = await db.queryOne<{ id: number }>(
     `
       SELECT id
@@ -48,7 +45,7 @@ export async function upsertUserSystemSetting(params: {
     await db.exec(
       `
         UPDATE system_settings
-        SET value = ?, updated_at = ${nowExpr}
+        SET value = ?, updated_at = NOW()
         WHERE id = ?
       `,
       [params.value, existing.id]
@@ -69,7 +66,7 @@ export async function upsertUserSystemSetting(params: {
         description
       ) VALUES (?, 'system', ?, ?, 'string', ?, ?, ?)
     `,
-    [params.userId, params.key, params.value, falseValue, falseValue, params.description]
+    [params.userId, params.key, params.value, false, false, params.description]
   )
 }
 

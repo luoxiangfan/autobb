@@ -6,7 +6,7 @@ import {
 
 describe('url-swap urgent alerts SQL helpers', () => {
   it('builds enabled-campaign filter SQL for postgres', () => {
-    expect(requireEnabledCampaignForOfferSql()).toContain('c.is_deleted = FALSE')
+    expect(requireEnabledCampaignForOfferSql()).toContain('c.is_deleted = false')
   })
 
   it('builds disabled-task exclusion SQL', () => {

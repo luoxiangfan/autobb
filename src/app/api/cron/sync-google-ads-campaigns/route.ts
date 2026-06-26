@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
     if (isCronBatchRequest(request)) {
       const db = await getDatabase()
       const users = (await db.query(
-        `SELECT id FROM users WHERE role != 'admin' AND is_active = ${'TRUE'}`
+        `SELECT id FROM users WHERE role != 'admin' AND is_active = true`
       )) as { id: number }[]
       const targetUserIds = users.map((row) => row.id)
       return handleSyncEnqueue(targetUserIds, true, startTime)

@@ -38,7 +38,7 @@ export const GET = withAuth(async (request, user) => {
       LEFT JOIN ad_creative_performance acp ON ac.id = acp.ad_creative_id
         AND acp.sync_date >= CURRENT_DATE - INTERVAL '30 days'
       WHERE ac.user_id = ?
-        AND ac.is_selected = TRUE
+        AND ac.is_selected = true
       GROUP BY ac.id
       ORDER BY
         CASE

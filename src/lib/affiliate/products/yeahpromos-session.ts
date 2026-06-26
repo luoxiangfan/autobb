@@ -1,6 +1,5 @@
 import crypto from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { boolParam } from '@/lib/db'
 import { getUserOnlySetting } from '@/lib/common/server'
 import { encrypt } from '@/lib/auth'
 import { JWT_SECRET } from '@/lib/common/server'
@@ -57,8 +56,6 @@ async function upsertUserSystemSetting(params: {
   const db = await getDatabase()
   const dataType = params.dataType || 'string'
   const isSensitive = Boolean(params.isSensitive)
-  const nowExpr = 'NOW()'
-
   const existing = await db.queryOne<{ id: number }>(
     `
       SELECT id
@@ -78,10 +75,10 @@ async function upsertUserSystemSetting(params: {
     await db.exec(
       `
         UPDATE system_settings
-        SET value = ?, encrypted_value = ?, data_type = ?, is_sensitive = ?, updated_at = ${nowExpr}
+        SET value = ?, encrypted_value = ?, data_type = ?, is_sensitive = ?, updated_at = NOW()
         WHERE id = ?
       `,
-      [plainValue, encryptedValue, dataType, boolParam(isSensitive), existing.id]
+      [plainValue, encryptedValue, dataType, isSensitive, existing.id]
     )
     return
   }
@@ -107,8 +104,8 @@ async function upsertUserSystemSetting(params: {
       plainValue,
       encryptedValue,
       dataType,
-      boolParam(isSensitive),
-      boolParam(false),
+      isSensitive,
+      false,
       params.description || null,
     ]
   )

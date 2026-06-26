@@ -430,7 +430,7 @@ export async function promoteKeywordsToOfferKeywordPool(params: {
           store_bucket_s_keywords = ?,
           total_keywords = ?,
           balance_score = ?,
-          updated_at = ${'NOW()'}
+          updated_at = NOW()
       WHERE offer_id = ?
         AND user_id = ?
     `,

@@ -33,7 +33,6 @@ export const POST = withAuth(
       }
 
       // PostgreSQL
-      const deletedCheck = 'is_deleted = TRUE'
       const dateCheck = `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
 
       const results: Record<string, { count: number; success: boolean; error?: string }> = {}
@@ -45,7 +44,7 @@ export const POST = withAuth(
           const result = (await db.queryOne(`
           SELECT COUNT(*) as count
           FROM ${table}
-          WHERE ${deletedCheck}
+          WHERE is_deleted = true
             AND deleted_at IS NOT NULL
             AND ${dateCheck}
         `)) as { count: number }
@@ -70,7 +69,7 @@ export const POST = withAuth(
         try {
           const result = await db.exec(`
           DELETE FROM ${table}
-          WHERE ${deletedCheck}
+          WHERE is_deleted = true
             AND deleted_at IS NOT NULL
             AND ${dateCheck}
         `)
@@ -118,28 +117,27 @@ export const GET = withAuth(
   async () => {
     try {
       const db = await getDatabase()
-      const deletedFlag = 'TRUE'
       const retentionDays = 90
 
       // 统计所有软删除记录
       const scrapedProducts = (await db.queryOne(`
-      SELECT COUNT(*) as count FROM scraped_products WHERE is_deleted = ${deletedFlag}
+      SELECT COUNT(*) as count FROM scraped_products WHERE is_deleted = true
     `)) as { count: number }
 
       const adCreatives = (await db.queryOne(`
-      SELECT COUNT(*) as count FROM ad_creatives WHERE is_deleted = ${deletedFlag}
+      SELECT COUNT(*) as count FROM ad_creatives WHERE is_deleted = true
     `)) as { count: number }
 
       const googleAdsAccounts = (await db.queryOne(`
-      SELECT COUNT(*) as count FROM google_ads_accounts WHERE is_deleted = ${deletedFlag}
+      SELECT COUNT(*) as count FROM google_ads_accounts WHERE is_deleted = true
     `)) as { count: number }
 
       const campaigns = (await db.queryOne(`
-      SELECT COUNT(*) as count FROM campaigns WHERE is_deleted = ${deletedFlag}
+      SELECT COUNT(*) as count FROM campaigns WHERE is_deleted = true
     `)) as { count: number }
 
       const offers = (await db.queryOne(`
-      SELECT COUNT(*) as count FROM offers WHERE is_deleted = ${deletedFlag}
+      SELECT COUNT(*) as count FROM offers WHERE is_deleted = true
     `)) as { count: number }
 
       return NextResponse.json({

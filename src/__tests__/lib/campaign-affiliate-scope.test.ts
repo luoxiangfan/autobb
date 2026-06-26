@@ -7,7 +7,7 @@ import {
 describe('campaign-affiliate-scope', () => {
   it('campaignAffiliateAlignedFilterSql matches affiliate-platforms occupying + offer filters', () => {
     const sql = campaignAffiliateAlignedFilterSql('c', 'o')
-    expect(sql).toContain('o.is_deleted = FALSE')
+    expect(sql).toContain('o.is_deleted = false')
     expect(sql).toContain("creation_status != 'failed'")
     expect(sql).toContain("!= 'REMOVED'")
   })

@@ -24,10 +24,6 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbMock),
 }))
 
-vi.mock('@/lib/db', () => ({
-  nowFunc: vi.fn(() => 'NOW()'),
-}))
-
 vi.mock('@/lib/queue/queue-routing', () => ({
   getQueueManagerForTaskType: vi.fn(async () => queueMock),
 }))

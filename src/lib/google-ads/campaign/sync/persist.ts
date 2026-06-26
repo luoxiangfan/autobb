@@ -178,7 +178,7 @@ export async function saveCampaignToDatabase(params: {
         google_ad_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', ${'TRUE'}, ?, ${'TRUE'}, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', true, ?, true, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       googleAdsAccountId,
@@ -363,9 +363,9 @@ export async function createOfferFirst(params: {
       offerName,
       campaign.campaign_id,
       'google_ads_sync',
-      'TRUE', // 新创建的 Offer 标记为需要完善
+      true, // 新创建的 Offer 标记为需要完善
       'pending',
-      'TRUE',
+      true,
       pageType,
       now,
       now,

@@ -154,7 +154,7 @@ export async function backfillUrlSwapSitelinkTargets(
   const params: unknown[] = []
   let where = `
     ust.status != 'completed'
-    AND (ust.is_deleted = FALSE OR ust.is_deleted IS NULL)
+    AND (ust.is_deleted = false OR ust.is_deleted IS NULL)
     AND o.page_type = 'store'
     AND o.store_product_links IS NOT NULL
     AND TRIM(o.store_product_links) != ''

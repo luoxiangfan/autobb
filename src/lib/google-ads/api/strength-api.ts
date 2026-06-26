@@ -296,7 +296,7 @@ async function getAdStrengthRecommendations(
         recommendation.responsive_search_ad_improve_ad_strength_recommendation.recommended_ad_strength
       FROM recommendation
       WHERE recommendation.type = 'RESPONSIVE_SEARCH_AD_IMPROVE_AD_STRENGTH'
-        AND recommendation.dismissed = FALSE
+        AND recommendation.dismissed = false
       ORDER BY recommendation.impact DESC
       LIMIT 10
     `

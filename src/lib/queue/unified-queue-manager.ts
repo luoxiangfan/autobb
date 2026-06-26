@@ -991,7 +991,6 @@ export class UnifiedQueueManager {
       try {
         const { getDatabase } = await import('@/lib/db')
         const db = getDatabase()
-        const nowSql = 'NOW()'
         const message = error?.message || '任务执行失败'
         const errorPayload = toDbJsonObjectField(
           {
@@ -1006,8 +1005,8 @@ export class UnifiedQueueManager {
            SET status = 'failed',
                message = ?,
                error = ?,
-               completed_at = COALESCE(completed_at, ${nowSql}),
-               updated_at = ${nowSql}
+               completed_at = COALESCE(completed_at, NOW()),
+               updated_at = NOW()
            WHERE id = ?
              AND status IN ('pending', 'running')`,
           [message, errorPayload, task.id]
@@ -1296,7 +1295,6 @@ export class UnifiedQueueManager {
       )
 
       // 将超时任务标记为 failed
-      const nowFunc = 'NOW()'
       const timeoutErrorJson = toDbJsonObjectField(
         {
           timeout: true,
@@ -1310,8 +1308,8 @@ export class UnifiedQueueManager {
         SET status = 'failed',
             message = '任务超时',
             error = ?,
-            completed_at = COALESCE(completed_at, ${nowFunc}),
-            updated_at = ${nowFunc}
+            completed_at = COALESCE(completed_at, NOW()),
+            updated_at = NOW()
         WHERE status = 'running'
           AND started_at < ${timeoutThreshold}
       `,
@@ -1351,8 +1349,8 @@ export class UnifiedQueueManager {
             `
             UPDATE batch_tasks
             SET status = ?,
-                completed_at = ${nowFunc},
-                updated_at = ${nowFunc}
+                completed_at = NOW(),
+                updated_at = NOW()
             WHERE id = ?
           `,
             [newStatus, batchId]
@@ -1465,8 +1463,6 @@ export class UnifiedQueueManager {
       // 1. 获取数据库实例
       const { getDatabase } = await import('@/lib/db')
       const db = getDatabase()
-      const nowFunc = 'NOW()'
-
       // 2. 获取所有子任务（包括 pending 和 running 状态）
       const childTasks = await db.query<{
         id: string
@@ -1499,8 +1495,8 @@ export class UnifiedQueueManager {
         UPDATE offer_tasks
         SET status = 'failed',
             message = '因批次取消而终止',
-            error = jsonb_build_object('cancelled', true, 'message', 'Batch cancelled by user', 'cancelled_at', ${nowFunc}),
-            updated_at = ${nowFunc}
+            error = jsonb_build_object('cancelled', true, 'message', 'Batch cancelled by user', 'cancelled_at', NOW()),
+            updated_at = NOW()
         WHERE batch_id = ? AND status IN ('pending', 'running')
       `,
         [batchId]
@@ -1532,8 +1528,6 @@ export class UnifiedQueueManager {
     try {
       const { getDatabase } = await import('@/lib/db')
       const db = getDatabase()
-      const nowFunc = 'NOW()'
-
       let batches: { id: string; status: string }[]
 
       if (batchId) {
@@ -1597,8 +1591,8 @@ export class UnifiedQueueManager {
             SET status = ?,
                 completed_count = ?,
                 failed_count = ?,
-                completed_at = ${nowFunc},
-                updated_at = ${nowFunc}
+                completed_at = NOW(),
+                updated_at = NOW()
             WHERE id = ?
           `,
             [newStatus, stats.completed, stats.failed, batch.id]

@@ -51,8 +51,6 @@ async function getFeishuDocRow(userId: number): Promise<FeishuDocRow | null> {
 async function upsertFeishuDocRow(userId: number, updates: Partial<FeishuDocRow>) {
   const db = await getDatabase()
   const existing = await getFeishuDocRow(userId)
-  const nowFunc = 'NOW()'
-
   if (existing) {
     const fields: string[] = []
     const values: any[] = []
@@ -63,13 +61,13 @@ async function upsertFeishuDocRow(userId: number, updates: Partial<FeishuDocRow>
     }
     if (fields.length === 0) return
     await db.exec(
-      `UPDATE openclaw_feishu_docs SET ${fields.join(', ')}, updated_at = ${nowFunc} WHERE user_id = ?`,
+      `UPDATE openclaw_feishu_docs SET ${fields.join(', ')}, updated_at = NOW() WHERE user_id = ?`,
       [...values, userId]
     )
   } else {
     await db.exec(
       `INSERT INTO openclaw_feishu_docs (user_id, bitable_app_token, bitable_table_id, folder_token, last_doc_token, last_doc_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})`,
+       VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         userId,
         updates.bitable_app_token ?? null,

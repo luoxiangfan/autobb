@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { boolCondition, boolParam, getInsertedId } from '@/lib/db'
+import { getInsertedId } from '@/lib/db'
 import {
   createGoogleAdsKeywordsBatch,
   type OAuthApiCredentialsFields,
@@ -259,7 +259,6 @@ export const POST = withAuth(async (request, user, context) => {
 
     const body = (await request.json().catch(() => ({}))) as AddNegativeKeywordsRequestBody
     const db = await getDatabase()
-    const negativeCondition = boolCondition('k.is_negative', true)
 
     const campaign = await db.queryOne<{
       id: number
@@ -325,12 +324,11 @@ export const POST = withAuth(async (request, user, context) => {
         addNegativeKeywords: negativeKeywords,
       })
       if (!patch.changed) return
-      const nowExpr = 'NOW()'
       await db.exec(
         `
           UPDATE campaigns
           SET campaign_config = ?,
-              updated_at = ${nowExpr}
+              updated_at = NOW()
           WHERE id = ?
             AND user_id = ?
         `,
@@ -352,7 +350,7 @@ export const POST = withAuth(async (request, user, context) => {
         WHERE ag.campaign_id = ?
           AND ag.user_id = ?
           AND k.user_id = ?
-          AND ${negativeCondition}
+          AND k.is_negative = true
       `,
       [campaignId, userId, userId]
     )
@@ -463,8 +461,8 @@ export const POST = withAuth(async (request, user, context) => {
             created.keywordId || null,
             created.keywordText,
             created.matchType,
-            boolParam(true),
-            boolParam(false),
+            true,
+            false,
             now,
             now,
             now,

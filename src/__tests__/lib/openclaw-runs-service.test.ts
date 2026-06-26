@@ -7,7 +7,6 @@ const { getDatabaseMock, expireStaleCommandConfirmationsMock } = vi.hoisted(() =
 
 vi.mock('@/lib/db', () => ({
   getDatabase: getDatabaseMock,
-  nowFunc: () => 'NOW()',
 }))
 
 vi.mock('@/lib/openclaw/commands/confirm-service', () => ({

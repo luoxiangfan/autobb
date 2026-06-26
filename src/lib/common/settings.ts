@@ -1,5 +1,4 @@
 import { getDatabase } from '../db'
-import { nowFunc as sqlNowFunc } from '../db'
 import { encrypt, decrypt } from '../auth'
 import { normalizeCountryCode } from './language-country-codes'
 import {
@@ -330,8 +329,6 @@ export async function updateSetting(
   const normalizedValue = normalizeInputValue(category, key, value)
 
   const db = await getDatabase()
-  const nowSql = sqlNowFunc()
-
   // 获取配置元数据（从全局模板获取字段定义）
   const metadata = (await db.queryOne(
     `
@@ -373,7 +370,7 @@ export async function updateSetting(
       await db.exec(
         `
         UPDATE system_settings
-        SET value = ?, encrypted_value = ?, updated_at = ${nowSql}
+        SET value = ?, encrypted_value = ?, updated_at = NOW()
         WHERE id = ?
       `,
         [configValue, encryptedValue, userSetting.id]
@@ -398,7 +395,7 @@ export async function updateSetting(
     await db.exec(
       `
       UPDATE system_settings
-      SET value = ?, encrypted_value = ?, updated_at = ${nowSql}
+      SET value = ?, encrypted_value = ?, updated_at = NOW()
       WHERE category = ? AND key = ? AND user_id IS NULL
     `,
       [configValue, encryptedValue, category, key]

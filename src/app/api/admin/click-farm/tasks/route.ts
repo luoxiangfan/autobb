@@ -20,7 +20,7 @@ export const GET = withAuth(
       `
       SELECT COUNT(*) as count
       FROM click_farm_tasks
-      WHERE is_deleted = FALSE
+      WHERE is_deleted = false
     `,
       []
     )
@@ -36,7 +36,7 @@ export const GET = withAuth(
       FROM click_farm_tasks t
       JOIN users u ON t.user_id = u.id
       LEFT JOIN offers o ON t.offer_id = o.id
-      WHERE t.is_deleted = FALSE
+      WHERE t.is_deleted = false
       ORDER BY t.created_at DESC
       LIMIT ? OFFSET ?
     `,

@@ -25,16 +25,13 @@ export const POST = withAuth(
       thresholdDate.setDate(thresholdDate.getDate() - daysThreshold)
       const thresholdDateStr = thresholdDate.toISOString()
 
-      const isDeletedTrue = true
-      const dateComparison = 'deleted_at < ?::timestamp'
-
       // 1. 统计将要删除的数据
       const campaignsToDelete = (await db.query(
         `
       SELECT id, campaign_name, deleted_at
       FROM campaigns
-      WHERE is_deleted = ${isDeletedTrue}
-        AND ${dateComparison}
+      WHERE is_deleted = true
+        AND deleted_at < ?::timestamp
       ORDER BY deleted_at ASC
       LIMIT 100
     `,
@@ -45,8 +42,8 @@ export const POST = withAuth(
         `
       SELECT id, offer_name, deleted_at
       FROM offers
-      WHERE is_deleted = ${isDeletedTrue}
-        AND ${dateComparison}
+      WHERE is_deleted = true
+        AND deleted_at < ?::timestamp
       ORDER BY deleted_at ASC
       LIMIT 100
     `,
@@ -95,8 +92,8 @@ export const POST = withAuth(
         const result = await db.exec(
           `
         DELETE FROM campaigns
-        WHERE is_deleted = ${isDeletedTrue}
-          AND ${dateComparison}
+        WHERE is_deleted = true
+          AND deleted_at < ?::timestamp
       `,
           [thresholdDateStr]
         )
@@ -107,8 +104,8 @@ export const POST = withAuth(
         const result = await db.exec(
           `
         DELETE FROM offers
-        WHERE is_deleted = ${isDeletedTrue}
-          AND ${dateComparison}
+        WHERE is_deleted = true
+          AND deleted_at < ?::timestamp
       `,
           [thresholdDateStr]
         )
@@ -125,7 +122,7 @@ export const POST = withAuth(
         records_deleted,
         threshold_date,
         created_at
-      ) VALUES (?, ?, ?, ?, ${'NOW()'})
+      ) VALUES (?, ?, ?, ?, NOW())
     `,
           [user.userId, 'soft_deleted_cleanup', deletedCampaigns + deletedOffers, thresholdDateStr]
         )
@@ -168,17 +165,15 @@ export const GET = withAuth(
   async () => {
     try {
       const db = await getDatabase()
-      const isDeletedTrue = true
-
       // 统计软删除数据
       const stats = (await db.queryOne(`
       SELECT
-        (SELECT COUNT(*) FROM campaigns WHERE is_deleted = ${isDeletedTrue}) as deleted_campaigns,
-        (SELECT COUNT(*) FROM offers WHERE is_deleted = ${isDeletedTrue}) as deleted_offers,
+        (SELECT COUNT(*) FROM campaigns WHERE is_deleted = true) as deleted_campaigns,
+        (SELECT COUNT(*) FROM offers WHERE is_deleted = true) as deleted_offers,
         (SELECT COUNT(DISTINCT cp.campaign_id)
          FROM campaign_performance cp
          INNER JOIN campaigns c ON cp.campaign_id = c.id
-         WHERE c.is_deleted = ${isDeletedTrue}) as campaigns_with_performance
+         WHERE c.is_deleted = true) as campaigns_with_performance
     `)) as any
 
       // 按删除时间分组统计
@@ -192,7 +187,7 @@ export const GET = withAuth(
         END as age_group,
         COUNT(*) as count
       FROM campaigns
-      WHERE is_deleted = ${isDeletedTrue}
+      WHERE is_deleted = true
       GROUP BY age_group
     `)) as any[]
 

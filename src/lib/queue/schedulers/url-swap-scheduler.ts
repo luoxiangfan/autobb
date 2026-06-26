@@ -150,7 +150,7 @@ class UrlSwapScheduler {
           WHERE status = 'enabled'
             AND next_swap_at <= CURRENT_TIMESTAMP
             AND started_at <= CURRENT_TIMESTAMP
-            AND is_deleted = FALSE
+            AND is_deleted = false
           ORDER BY next_swap_at ASC
         `
 

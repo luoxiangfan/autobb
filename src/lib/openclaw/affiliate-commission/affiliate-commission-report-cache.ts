@@ -1,6 +1,5 @@
 import { createHash } from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db'
 import {
   compressJsonPayloadText,
   decompressJsonPayloadText,
@@ -178,7 +177,7 @@ export async function writeAffiliateCommissionLineItemsDbCache(params: {
       INSERT INTO openclaw_affiliate_commission_report_cache
         (cache_key, line_items_json, line_items_codec, source_updated_at, built_at)
       VALUES
-        (?, ?, ?, ?, ${nowFunc()})
+        (?, ?, ?, ?, NOW())
       ON CONFLICT(cache_key) DO UPDATE SET
         line_items_json = excluded.line_items_json,
         line_items_codec = excluded.line_items_codec,

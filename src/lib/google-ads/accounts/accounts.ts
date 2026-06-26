@@ -3,7 +3,7 @@ import { markUrlSwapTargetsRemovedByOfferAccount } from '../../url-swap'
 import { pauseOfferTasks } from '../../campaign/server'
 import { hasActiveCampaignForOffer } from '../../campaign/server'
 import { applyCampaignTransitionByIds } from '../../campaign/server'
-import { getInsertedId, nowFunc, toBool } from '../../db'
+import { getInsertedId, toBool } from '../../db'
 import { googleAdsAccountsLogger } from '../common/logger'
 
 export interface GoogleAdsAccount {
@@ -87,11 +87,10 @@ export async function findGoogleAdsAccountById(
 ): Promise<GoogleAdsAccount | null> {
   const db = await getDatabase()
 
-  const isDeletedCheck = 'is_deleted = FALSE'
   const row = (await db.queryOne(
     `
     SELECT * FROM google_ads_accounts
-    WHERE id = ? AND user_id = ? AND ${isDeletedCheck}
+    WHERE id = ? AND user_id = ? AND is_deleted = false
   `,
     [id, userId]
   )) as any
@@ -109,11 +108,10 @@ export async function findGoogleAdsAccountById(
 export async function findGoogleAdsAccountsByUserId(userId: number): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  const isDeletedCheck = 'is_deleted = FALSE'
   const rows = (await db.query(
     `
     SELECT * FROM google_ads_accounts
-    WHERE user_id = ? AND ${isDeletedCheck}
+    WHERE user_id = ? AND is_deleted = false
     ORDER BY created_at DESC
   `,
     [userId]
@@ -133,19 +131,15 @@ export async function findActiveGoogleAdsAccounts(
 ): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  // PostgreSQL 兼容性is_active 在 PostgreSQL 中是 BOOLEAN 类型
-  const isActiveCondition = 'is_active = true'
-  const isDeletedCheck = 'is_deleted = FALSE'
-  const isManagerCondition = 'is_manager_account = TRUE'
   let sqlStr = `
     SELECT * FROM google_ads_accounts
-    WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck}
+    WHERE user_id = ? AND is_active = true AND is_deleted = false
     ORDER BY created_at DESC
   `
   if (manager) {
     sqlStr = `
       SELECT * FROM google_ads_accounts
-      WHERE user_id = ? AND ${isActiveCondition} AND ${isDeletedCheck} AND ${isManagerCondition} AND parent_mcc_id IS NOT NULL AND parent_mcc_id != ''
+      WHERE user_id = ? AND is_active = true AND is_deleted = false AND is_manager_account = true AND parent_mcc_id IS NOT NULL AND parent_mcc_id != ''
       ORDER BY created_at DESC
     `
   }
@@ -161,23 +155,15 @@ export async function findActiveGoogleAdsAccounts(
 export async function findEnabledGoogleAdsAccounts(userId: number): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  // PostgreSQL 兼容性布尔字段在 PostgreSQL 中是 BOOLEAN 类型
-  // 使用 SQL 条件而非参数绑定，避免类型不匹配
-  const isActiveCondition = 'is_active = true'
-  const isManagerCondition = 'is_manager_account = false'
-  const identityVerificationOkCondition =
-    '(identity_verification_overdue IS NULL OR identity_verification_overdue = false)'
-  const isDeletedCheck = 'is_deleted = FALSE'
-
   const rows = (await db.query(
     `
     SELECT * FROM google_ads_accounts
     WHERE user_id = ?
-      AND ${isActiveCondition}
+      AND is_active = true
       AND status = 'ENABLED'
-      AND ${isManagerCondition}
-      AND ${identityVerificationOkCondition}
-      AND ${isDeletedCheck}
+      AND is_manager_account = false
+      AND (identity_verification_overdue IS NULL OR identity_verification_overdue = false)
+      AND is_deleted = false
     ORDER BY created_at DESC
   `,
     [userId]
@@ -200,16 +186,12 @@ export async function findGoogleAdsAccountsByUserMcc(
 ): Promise<GoogleAdsAccount[]> {
   const db = await getDatabase()
 
-  const isActiveCondition = 'is_active = true'
-  const isDeletedCheck = 'is_deleted = FALSE'
-  const isManagerCondition = 'is_manager_account = FALSE'
-
   // 基础查询：只返回用户 MCC 下的账号
   let sqlStr = `
     SELECT gaa.* FROM google_ads_accounts gaa
     WHERE gaa.user_id = ? 
-      AND ${isActiveCondition} 
-      AND ${isDeletedCheck}
+      AND is_active = true 
+      AND is_deleted = false
       AND gaa.parent_mcc_id IN (
         SELECT mcc_customer_id FROM user_mcc_assignments WHERE user_id = ?
       )
@@ -219,7 +201,7 @@ export async function findGoogleAdsAccountsByUserMcc(
 
   // 如果指定 manager=true，则只返回 Manager 账号
   if (manager) {
-    sqlStr += ` AND ${isManagerCondition}`
+    sqlStr += ` AND is_manager_account = false`
   }
 
   sqlStr += ` ORDER BY gaa.created_at DESC`
@@ -297,7 +279,7 @@ export async function updateGoogleAdsAccount(
     return account
   }
 
-  fields.push(`updated_at = ${nowFunc()}`)
+  fields.push(`updated_at = NOW()`)
   values.push(id, userId)
 
   await db.exec(
@@ -334,7 +316,6 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
   }
 
   const customerId = account.customer_id
-  const isDeletedFalse = 'FALSE'
 
   const linkedCampaigns = await db.query<{ id: number; offer_id: number }>(
     `
@@ -342,7 +323,7 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     FROM campaigns
     WHERE google_ads_account_id = ?
       AND user_id = ?
-      AND (is_deleted = ${isDeletedFalse} OR is_deleted IS NULL)
+      AND (is_deleted = false OR is_deleted IS NULL)
   `,
     [id, userId]
   )
@@ -375,9 +356,9 @@ export async function deleteGoogleAdsAccount(id: number, userId: number): Promis
     const accountResult = await db.exec(
       `
       UPDATE google_ads_accounts
-      SET is_deleted = ${'TRUE'},
-          is_active = ${'FALSE'},
-          deleted_at = ${'NOW()'}
+      SET is_deleted = true,
+          is_active = false,
+          deleted_at = NOW()
       WHERE id = ? AND user_id = ?
     `,
       [id, userId]

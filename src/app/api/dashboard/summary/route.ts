@@ -26,9 +26,6 @@ async function getKPIs(userId: number, days: number = 30) {
   // 这里调用kpis API的核心逻辑
   const db = await getDatabase()
 
-  // PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
-  const notDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-
   const startDateStr = resolveStartDateYmd(days)
 
   // 获取基础KPI数据
@@ -46,7 +43,7 @@ async function getKPIs(userId: number, days: number = 30) {
     LEFT JOIN campaign_performance cp ON c.id = cp.campaign_id AND cp.date >= ?
     LEFT JOIN offers o ON c.offer_id = o.id
     WHERE c.user_id = ?
-      AND ${notDeletedCondition}
+      AND (o.is_deleted = false OR o.is_deleted IS NULL)
   `,
     [startDateStr, userId]
   )) as any
@@ -110,9 +107,6 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
   const db = await getDatabase()
   const startDateStr = resolveStartDateYmd(7)
 
-  // PostgreSQL兼容性：生产库中 is_deleted 可能仍是 INTEGER，需同时兼容 BOOLEAN/INTEGER
-  const notDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-
   // 获取最近7天的风险警报
   const alerts = (await db.query(
     `
@@ -137,7 +131,7 @@ async function getRiskAlerts(userId: number, limit: number = 3) {
     INNER JOIN campaigns c ON cp.campaign_id = c.id
     INNER JOIN offers o ON c.offer_id = o.id
     WHERE c.user_id = ?
-      AND ${notDeletedCondition}
+      AND (o.is_deleted = false OR o.is_deleted IS NULL)
       AND cp.date >= ?
       AND (
         (cp.clicks > 0 AND (cp.clicks * 1.0 / cp.impressions) < 0.01)

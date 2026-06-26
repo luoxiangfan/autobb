@@ -1,5 +1,4 @@
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db'
 import type { AffiliateCommissionLineItem } from '@/lib/openclaw/affiliate-commission/affiliate-commission-types'
 import type { AffiliatePlatform } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
 
@@ -96,7 +95,7 @@ export async function replaceAffiliateCommissionLineFacts(params: {
           INSERT INTO openclaw_affiliate_commission_line_facts
             (user_id, report_date, platform, brand_key, brand_name, commission, advert_id, asin, rebuilt_at)
           VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc()})
+            (?, ?, ?, ?, ?, ?, ?, ?, NOW())
         `,
         [
           row.user_id,

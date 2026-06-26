@@ -8,7 +8,7 @@
  */
 
 import { getDatabase } from '@/lib/db'
-import { nowFunc, dateMinusDays } from '@/lib/db'
+import { dateMinusDays } from '@/lib/db'
 import { proxyHead } from '../../scraping'
 import { buildUserExecutionEligibleSql } from '@/lib/campaign/server'
 
@@ -161,7 +161,6 @@ async function saveLinkCheckResult(
       url,
       result.statusCode,
       result.responseTime,
-      // PostgreSQL兼容性：确保boolean转换为正确的值
       result.isAccessible,
       result.isRedirected,
       result.finalUrl,
@@ -269,7 +268,7 @@ export async function refreshActiveRiskAlertContent(
     SET title = ?,
         message = ?,
         details = ?,
-        updated_at = ${nowFunc()}
+        updated_at = NOW()
     WHERE id = ? AND user_id = ? AND alert_type = ? AND status = 'active'
   `,
     [title, message, details ? JSON.stringify(details) : null, alertId, userId, alertType]
@@ -375,8 +374,8 @@ export async function updateAlertStatus(
   const stmt = `
     UPDATE risk_alerts
     SET status = ?,
-        ${status === 'acknowledged' ? `acknowledged_at = ${nowFunc()}` : ''},
-        ${status === 'resolved' ? `resolved_at = ${nowFunc()}` : ''},
+        ${status === 'acknowledged' ? `acknowledged_at = NOW()` : ''},
+        ${status === 'resolved' ? `resolved_at = NOW()` : ''},
         resolution_note = ?
     WHERE id = ? AND user_id = ?
   `
@@ -398,9 +397,6 @@ export async function checkAllUserLinks(userId: number): Promise<{
 }> {
   const db = await getDatabase()
 
-  // PostgreSQL兼容性：布尔字段兼容性处理
-  const isDeletedFalse = false
-
   // 获取用户的所有活跃Offers（包含目标国家）
   const offers = (await db.query(
     `
@@ -409,9 +405,9 @@ export async function checkAllUserLinks(userId: number): Promise<{
     WHERE user_id = ?
       AND affiliate_link IS NOT NULL
       AND affiliate_link != ''
-      AND (is_deleted = ? OR is_deleted IS NULL)
+      AND (is_deleted = false OR is_deleted IS NULL)
   `,
-    [userId, isDeletedFalse]
+    [userId]
   )) as any[]
 
   let totalChecked = 0
@@ -505,16 +501,13 @@ async function checkAdsAccountStatus(userId: number): Promise<{
 }> {
   const db = await getDatabase()
 
-  // PostgreSQL兼容性is_active在PostgreSQL中是BOOLEAN类型
-  const isActiveCondition = 'is_active = true'
-
   // 获取用户的所有活跃Ads账号
   const accounts = (await db.query(
     `
     SELECT id, customer_id, account_name, is_active
     FROM google_ads_accounts
     WHERE user_id = ?
-      AND ${isActiveCondition}
+      AND is_active = true
   `,
     [userId]
   )) as any[]
@@ -683,9 +676,6 @@ export async function dailyLinkCheck(): Promise<{
   const db = await getDatabase()
   const userEligibleCondition = buildUserExecutionEligibleSql({ userAlias: 'u' })
 
-  // PostgreSQL兼容性：布尔字段兼容性处理
-  const isDeletedFalse = false
-
   // 获取所有有Offers的用户
   const users = (await db.query(
     `
@@ -694,10 +684,10 @@ export async function dailyLinkCheck(): Promise<{
     INNER JOIN users u ON u.id = o.user_id
     WHERE o.affiliate_link IS NOT NULL
       AND o.affiliate_link != ''
-      AND (o.is_deleted = ? OR o.is_deleted IS NULL)
+      AND (o.is_deleted = false OR o.is_deleted IS NULL)
       AND ${userEligibleCondition}
   `,
-    [isDeletedFalse]
+    []
   )) as { user_id: number }[]
 
   const results: Record<number, Awaited<ReturnType<typeof checkAllUserLinks>>> = {}

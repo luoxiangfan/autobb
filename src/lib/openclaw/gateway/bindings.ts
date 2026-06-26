@@ -156,8 +156,6 @@ async function ensureStrictFeishuBinding(params: {
   senderId: string
 }): Promise<boolean> {
   const db = await getDatabase()
-  const nowSql = 'NOW()'
-
   const existing = await db.queryOne<{ id: number; user_id: number }>(
     `SELECT id, user_id
      FROM openclaw_user_bindings
@@ -179,7 +177,7 @@ async function ensureStrictFeishuBinding(params: {
            open_id = ?,
            union_id = ?,
            status = 'active',
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE id = ?`,
       [params.tenantKey, params.senderId, params.senderId, existing.id]
     )
@@ -234,7 +232,7 @@ async function ensureStrictFeishuBinding(params: {
   await db.exec(
     `UPDATE openclaw_user_bindings
      SET status = 'active',
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE id = ?`,
     [legacyGlobal.id]
   )

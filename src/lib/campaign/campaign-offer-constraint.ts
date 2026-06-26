@@ -20,7 +20,7 @@ function campaignColumn(tableAlias: string | undefined, column: string): string 
 
 function activeCampaignNotDeletedSql(tableAlias?: string): string {
   const col = campaignColumn(tableAlias, 'is_deleted')
-  return `${col} = FALSE`
+  return `${col} = false`
 }
 
 function getStalePendingMinutes(): number {
@@ -68,12 +68,11 @@ export function offerOccupyingCampaignFilterSql(
   tableAlias?: string,
   staleThresholdIso: string | null = getStaleUpdatedAtThresholdIso()
 ): string {
-  const isDeletedCheck = activeCampaignNotDeletedSql(tableAlias)
   const creationStatus = campaignColumn(tableAlias, 'creation_status')
   const status = campaignColumn(tableAlias, 'status')
 
   return `
-    ${isDeletedCheck}
+    ${activeCampaignNotDeletedSql(tableAlias)}
     AND ${creationStatus} != 'failed'
     AND UPPER(COALESCE(${status}, '')) != 'REMOVED'
     ${stalePendingExcludeSql(tableAlias, staleThresholdIso)}
@@ -128,25 +127,21 @@ export async function abandonStalePendingCampaignsForOffer(
   }
 
   const db = await getDatabase()
-  const isDeletedCheck = activeCampaignNotDeletedSql()
-  const nowExpr = 'NOW()'
-  const isDeletedSet = 'TRUE'
-
   const result = await db.exec(
     `
     UPDATE campaigns
     SET
-      is_deleted = ${isDeletedSet},
-      deleted_at = ${nowExpr},
+      is_deleted = true,
+      deleted_at = NOW(),
       creation_status = 'failed',
       creation_error = ?,
       status = 'REMOVED',
       removed_reason = 'stale_pending_abandon',
-      updated_at = ${nowExpr}
+      updated_at = NOW()
     WHERE offer_id = ?
       AND user_id = ?
       AND creation_status = 'pending'
-      AND ${isDeletedCheck}
+      AND ${activeCampaignNotDeletedSql()}
       AND updated_at < ?
   `,
     [STALE_PENDING_ABANDON_REASON, offerId, userId, staleThresholdIso]
@@ -180,26 +175,23 @@ export async function abandonStalePendingCampaignsForOffers(
   }
 
   const db = await getDatabase()
-  const isDeletedCheck = activeCampaignNotDeletedSql()
-  const nowExpr = 'NOW()'
-  const isDeletedSet = 'TRUE'
   const placeholders = uniqueOfferIds.map(() => '?').join(', ')
 
   const result = await db.exec(
     `
     UPDATE campaigns
     SET
-      is_deleted = ${isDeletedSet},
-      deleted_at = ${nowExpr},
+      is_deleted = true,
+      deleted_at = NOW(),
       creation_status = 'failed',
       creation_error = ?,
       status = 'REMOVED',
       removed_reason = 'stale_pending_abandon',
-      updated_at = ${nowExpr}
+      updated_at = NOW()
     WHERE user_id = ?
       AND offer_id IN (${placeholders})
       AND creation_status = 'pending'
-      AND ${isDeletedCheck}
+      AND ${activeCampaignNotDeletedSql()}
       AND updated_at < ?
   `,
     [STALE_PENDING_ABANDON_REASON, userId, ...uniqueOfferIds, staleThresholdIso]
@@ -320,24 +312,20 @@ export async function rollbackPendingCampaignAfterEnqueueFailure(params: {
 }): Promise<boolean> {
   const { campaignId, offerId, userId, reason = DEFAULT_ENQUEUE_ROLLBACK_REASON } = params
   const db = await getDatabase()
-  const isDeletedCheck = activeCampaignNotDeletedSql()
-  const nowExpr = 'NOW()'
-  const isDeletedSet = 'TRUE'
-
   const result = await db.exec(
     `
     UPDATE campaigns
     SET
-      is_deleted = ${isDeletedSet},
-      deleted_at = ${nowExpr},
+      is_deleted = true,
+      deleted_at = NOW(),
       creation_status = 'failed',
       creation_error = ?,
-      updated_at = ${nowExpr}
+      updated_at = NOW()
     WHERE id = ?
       AND user_id = ?
       AND offer_id = ?
       AND creation_status = 'pending'
-      AND ${isDeletedCheck}
+      AND ${activeCampaignNotDeletedSql()}
   `,
     [reason, campaignId, userId, offerId]
   )

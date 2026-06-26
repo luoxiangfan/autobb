@@ -7,7 +7,7 @@
  * 3. 创建默认管理员账号
  * 4. 导入管理员配置（PostgreSQL 生产环境）
  * 5. 插入默认系统配置
- * 6. 自动执行增量迁移（新增）
+ * 6. 自动执行增量迁移
  */
 
 import { logger } from '@/lib/common/server'
@@ -157,7 +157,7 @@ async function createDefaultAdmin(): Promise<void> {
       logger.debug('⚠️  Admin account already exists, updating password...')
 
       await db.exec(
-        'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
+        'UPDATE users SET password_hash = ?, must_change_password = false, is_active = true, openclaw_enabled = true WHERE username = ? OR role = ?',
         [passwordHash, DEFAULT_ADMIN.username, 'admin']
       )
 
@@ -165,7 +165,7 @@ async function createDefaultAdmin(): Promise<void> {
     } else {
       await db.exec(
         `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, TRUE, TRUE)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, false, true, true)`,
         [
           DEFAULT_ADMIN.username,
           DEFAULT_ADMIN.email,
@@ -226,14 +226,14 @@ async function ensureAdminAccount(): Promise<void> {
         logger.debug('⚠️  Admin account exists, updating password from environment variable...')
 
         await db.exec(
-          'UPDATE users SET password_hash = ?, must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
+          'UPDATE users SET password_hash = ?, must_change_password = false, is_active = true, openclaw_enabled = true WHERE username = ? OR role = ?',
           [passwordHash, DEFAULT_ADMIN.username, 'admin']
         )
 
         logger.debug('✅ Admin password updated')
       } else {
         await db.exec(
-          'UPDATE users SET must_change_password = FALSE, is_active = TRUE, openclaw_enabled = TRUE WHERE username = ? OR role = ?',
+          'UPDATE users SET must_change_password = false, is_active = true, openclaw_enabled = true WHERE username = ? OR role = ?',
           [DEFAULT_ADMIN.username, 'admin']
         )
         logger.debug('✅ Admin account exists (password unchanged)')
@@ -243,7 +243,7 @@ async function ensureAdminAccount(): Promise<void> {
 
       await db.exec(
         `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, TRUE, TRUE)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, false, true, true)`,
         [
           DEFAULT_ADMIN.username,
           DEFAULT_ADMIN.email,

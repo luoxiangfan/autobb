@@ -234,7 +234,7 @@ export async function getClickFarmStats(
   const allTasksQuery = `
     SELECT timezone, daily_history
     FROM click_farm_tasks
-    WHERE user_id = ? AND is_deleted = FALSE AND started_at IS NOT NULL ${dateFilter}
+    WHERE user_id = ? AND is_deleted = false AND started_at IS NOT NULL ${dateFilter}
       AND updated_at >= ${recentCutoff}
   `
 
@@ -330,7 +330,7 @@ export async function getClickFarmStats(
       COALESCE(SUM(success_clicks), 0) as success_clicks,
       COALESCE(SUM(failed_clicks), 0) as failed_clicks
     FROM click_farm_tasks
-    WHERE user_id = ? AND is_deleted = FALSE ${cumulativeFilter}
+    WHERE user_id = ? AND is_deleted = false ${cumulativeFilter}
   `,
     cumulativeParams
   )
@@ -369,7 +369,7 @@ export async function getClickFarmStats(
     `
     SELECT status, COUNT(*) as count
     FROM click_farm_tasks
-    WHERE user_id = ? AND is_deleted = FALSE ${dateFilter.replace('started_at', 'created_at')}
+    WHERE user_id = ? AND is_deleted = false ${dateFilter.replace('started_at', 'created_at')}
     GROUP BY status
   `,
     [userId]
@@ -470,7 +470,7 @@ export async function getAdminClickFarmStats(): Promise<{
     `
     SELECT timezone, daily_history
     FROM click_farm_tasks
-    WHERE is_deleted = FALSE AND started_at IS NOT NULL
+    WHERE is_deleted = false AND started_at IS NOT NULL
       AND updated_at >= ${recentCutoff}
   `,
     []
@@ -519,7 +519,7 @@ export async function getAdminClickFarmStats(): Promise<{
     `
     SELECT status, COUNT(*) as count
     FROM click_farm_tasks
-    WHERE is_deleted = FALSE
+    WHERE is_deleted = false
     GROUP BY status
   `,
     []
@@ -610,7 +610,7 @@ export async function getHourlyDistribution(userId: number): Promise<HourlyDistr
     `
     SELECT hourly_distribution, timezone, daily_history
     FROM click_farm_tasks
-    WHERE user_id = ? AND is_deleted = FALSE AND status IN ('running', 'completed')
+    WHERE user_id = ? AND is_deleted = false AND status IN ('running', 'completed')
   `,
     [userId]
   )
@@ -634,7 +634,7 @@ export async function getAdminHourlyDistribution(): Promise<HourlyDistribution> 
     `
     SELECT hourly_distribution, timezone, daily_history
     FROM click_farm_tasks
-    WHERE is_deleted = FALSE AND status IN ('running', 'completed')
+    WHERE is_deleted = false AND status IN ('running', 'completed')
   `,
     []
   )

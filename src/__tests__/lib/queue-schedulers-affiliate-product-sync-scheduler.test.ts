@@ -482,7 +482,7 @@ describe('AffiliateProductSyncScheduler YP support', () => {
 
     expect(userIds).toEqual([9, 12])
     expect(dbQueryMock).toHaveBeenCalledWith(
-      expect.stringContaining('product_management_enabled = TRUE')
+      expect.stringContaining('product_management_enabled = true')
     )
   })
 

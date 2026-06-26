@@ -113,8 +113,6 @@ export async function evaluateExperiment(
   experimentId: number
 ): Promise<{ winner: string | null; confidence: number; conclusion: string }> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   const experiment = await db.queryOne<ExperimentResultRecord>(
     'SELECT * FROM openclaw_experiment_results WHERE id = ? AND user_id = ?',
     [experimentId, userId]
@@ -160,7 +158,7 @@ export async function evaluateExperiment(
 
   await db.exec(
     `UPDATE openclaw_experiment_results
-     SET winner = ?, confidence = ?, conclusion = ?, status = 'completed', ended_at = ${nowFunc}
+     SET winner = ?, confidence = ?, conclusion = ?, status = 'completed', ended_at = NOW()
      WHERE id = ? AND user_id = ?`,
     [winner, confidence, conclusion, experimentId, userId]
   )

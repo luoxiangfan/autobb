@@ -265,7 +265,7 @@ async function saveQueueConfigToDB(config: typeof DEFAULT_QUEUE_CONFIG): Promise
       INSERT INTO system_settings (
         user_id, category, key, value, data_type, is_sensitive, is_required, description
       ) VALUES (
-        NULL, 'queue', 'config', ?, 'json', FALSE, FALSE, '统一队列系统配置'
+        NULL, 'queue', 'config', ?, 'json', false, false, '统一队列系统配置'
       )
     `,
       [configJson]

@@ -2,7 +2,6 @@ import {
   persistAffiliateCommissionAttributions,
   type AffiliateCommissionRawEntry,
   type AffiliatePlatform } from '@/lib/openclaw/affiliate-commission/affiliate-commission-attribution'
-import { nowFunc } from '@/lib/db'
 import { getDatabase } from '@/lib/db'
 import { toDbJsonObjectField } from '@/lib/db'
 import { serializeJsonPayloadForStorage } from '@/lib/common/server'
@@ -515,7 +514,7 @@ async function persistAffiliateCommissionRawSnapshots(params: {
               response_payload = ?,
               request_payload_codec = ?,
               response_payload_codec = ?,
-              updated_at = ${nowFunc()}
+              updated_at = NOW()
           WHERE user_id = ?
             AND report_date = ?
             AND platform = ?

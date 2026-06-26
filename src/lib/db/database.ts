@@ -124,7 +124,7 @@ class PostgresAdapter implements DatabaseAdapter {
         !integerBooleanFields.has(field.toLowerCase()) &&
         (p === 0 || p === 1)
       ) {
-        return p === 1 ? true : false
+        return p === 1
       }
 
       return p

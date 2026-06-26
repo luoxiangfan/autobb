@@ -38,11 +38,10 @@ export const GET = withAuth(async (request, user, context) => {
     }
 
     // 查询该 Offer 关联的换链接任务（不包括已删除的任务）
-    // PostgreSQL 使用 is_deleted = FALSE
     const task = await db.queryOne<any>(
       `
       SELECT * FROM url_swap_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = FALSE
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = false
       ORDER BY created_at DESC
       LIMIT 1
     `,

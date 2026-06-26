@@ -1,5 +1,4 @@
 import { getDatabase } from '../../../db'
-import { nowFunc } from '../../../db'
 import { getGoogleAdsOAuthConfigValue } from '@/lib/google-ads/settings/settings-store'
 import {
   resolveGoogleAdsAuthReadyFailure,
@@ -98,20 +97,18 @@ export async function healAccountsRouteDeveloperToken(params: {
   }
 
   const db = await getDatabase()
-  const isActiveCondition = 'is_active = true'
 
   if (params.authType === 'oauth') {
     await db
       .exec(
-        `UPDATE google_ads_credentials SET developer_token = ? WHERE user_id = ? AND ${isActiveCondition}`,
+        `UPDATE google_ads_credentials SET developer_token = ? WHERE user_id = ? AND is_active = true`,
         [settingDeveloperToken, params.ownerUserId]
       )
       .catch(() => {})
   } else if (params.serviceAccountId) {
-    const nowSql = nowFunc()
     await db
       .exec(
-        `UPDATE google_ads_service_accounts SET developer_token = ?, updated_at = ${nowSql} WHERE user_id = ? AND id = ? AND ${isActiveCondition}`,
+        `UPDATE google_ads_service_accounts SET developer_token = ?, updated_at = NOW() WHERE user_id = ? AND id = ? AND is_active = true`,
         [settingDeveloperToken, params.ownerUserId, params.serviceAccountId]
       )
       .catch(() => {})

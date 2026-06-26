@@ -30,8 +30,6 @@ export async function executeCampaignBatchCreate(
 ): Promise<void> {
   const { batchId, backupIds, googleAdsAccountId, regenerateCreativeMap } = task.data
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   logger.debug(`🚀 开始执行批量创建广告系列：batch=${batchId}, count=${backupIds.length}`)
 
   if (!googleAdsAccountId) {
@@ -47,7 +45,7 @@ export async function executeCampaignBatchCreate(
     await db.exec(
       `
       UPDATE batch_tasks
-      SET status = 'running', started_at = ${nowFunc}, updated_at = ${nowFunc}
+      SET status = 'running', started_at = NOW(), updated_at = NOW()
       WHERE id = ?
     `,
       [batchId]
@@ -100,7 +98,7 @@ export async function executeCampaignBatchCreate(
             error: BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
           })
           await db.exec(
-            `UPDATE batch_tasks SET failed_count = ?, updated_at = ${nowFunc} WHERE id = ?`,
+            `UPDATE batch_tasks SET failed_count = ?, updated_at = NOW() WHERE id = ?`,
             [failed, batchId]
           )
           continue
@@ -118,7 +116,7 @@ export async function executeCampaignBatchCreate(
           failed++
           errors.push({ backupId, error: dbDetail.error || '数据库创建失败' })
           await db.exec(
-            `UPDATE batch_tasks SET failed_count = ?, updated_at = ${nowFunc} WHERE id = ?`,
+            `UPDATE batch_tasks SET failed_count = ?, updated_at = NOW() WHERE id = ?`,
             [failed, batchId]
           )
           continue
@@ -159,7 +157,7 @@ export async function executeCampaignBatchCreate(
         await db.exec(
           `
           UPDATE batch_tasks
-          SET completed_count = ?, failed_count = ?, updated_at = ${nowFunc}
+          SET completed_count = ?, failed_count = ?, updated_at = NOW()
           WHERE id = ?
         `,
           [completed, failed, batchId]
@@ -176,10 +174,10 @@ export async function executeCampaignBatchCreate(
         failed++
         errors.push({ backupId, error: error.message })
         console.error(`❌ 创建失败：backupId=${backupId}:`, error.message)
-        await db.exec(
-          `UPDATE batch_tasks SET failed_count = ?, updated_at = ${nowFunc} WHERE id = ?`,
-          [failed, batchId]
-        )
+        await db.exec(`UPDATE batch_tasks SET failed_count = ?, updated_at = NOW() WHERE id = ?`, [
+          failed,
+          batchId,
+        ])
       }
     }
 
@@ -197,8 +195,8 @@ export async function executeCampaignBatchCreate(
       UPDATE batch_tasks
       SET
         status = ?,
-        completed_at = ${nowFunc},
-        updated_at = ${nowFunc},
+        completed_at = NOW(),
+        updated_at = NOW(),
         metadata = ?
       WHERE id = ?
     `,
@@ -219,14 +217,13 @@ export async function executeCampaignBatchCreate(
     )
   } catch (error: any) {
     console.error(`❌ 批量创建失败：batch=${batchId}:`, error.message)
-    const nowFuncErr = 'NOW()'
     await db.exec(
       `
       UPDATE batch_tasks
       SET
         status = 'failed',
-        completed_at = ${nowFuncErr},
-        updated_at = ${nowFuncErr},
+        completed_at = NOW(),
+        updated_at = NOW(),
         metadata = ?
       WHERE id = ?
     `,

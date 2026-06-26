@@ -306,11 +306,10 @@ export async function triggerTaskScheduling(
     )
     // 同时更新 completed_at 字段
     const db = getDatabase()
-    const nowSql = 'NOW()'
     await db.exec(
       `
       UPDATE click_farm_tasks
-      SET completed_at = ${nowSql}, updated_at = ${nowSql}
+      SET completed_at = NOW(), updated_at = NOW()
       WHERE id = ?
     `,
       [task.id]
@@ -455,11 +454,10 @@ export async function triggerTaskScheduling(
 
   // 第一次执行时设置 started_at
   if (!task.started_at) {
-    const nowSql = 'NOW()'
     await db.exec(
       `
       UPDATE click_farm_tasks
-      SET started_at = ${nowSql}, updated_at = ${nowSql}
+      SET started_at = NOW(), updated_at = NOW()
       WHERE id = ?
     `,
       [task.id]

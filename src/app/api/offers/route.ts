@@ -2,7 +2,6 @@ import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { listOffers } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
-import { boolCondition } from '@/lib/db'
 import { toNumber } from '@/lib/common/server'
 import { apiCache, generateCacheKey, parseQueryBooleanParam } from '@/lib/common/server'
 import { withPerformanceMonitoring } from '@/lib/common/server'
@@ -95,7 +94,6 @@ const get = withAuth(async (request, user) => {
       const db = await getDatabase()
       const userIdNum = userId
       const notDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
-      const isActiveCondition = boolCondition('is_active', true)
 
       const row = await db.queryOne<{
         total: number
@@ -105,7 +103,7 @@ const get = withAuth(async (request, user) => {
         `
           SELECT
             COUNT(*) as total,
-            COALESCE(SUM(CASE WHEN ${isActiveCondition} THEN 1 ELSE 0 END), 0) as active,
+            COALESCE(SUM(CASE WHEN is_active = true THEN 1 ELSE 0 END), 0) as active,
             COALESCE(SUM(CASE WHEN scrape_status = 'pending' THEN 1 ELSE 0 END), 0) as pendingScrape
           FROM offers
           WHERE user_id = ?

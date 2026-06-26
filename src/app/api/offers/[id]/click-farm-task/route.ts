@@ -66,7 +66,7 @@ export const GET = withAuth(async (request, user, context) => {
         created_at,
         updated_at
       FROM click_farm_tasks
-      WHERE offer_id = ? AND user_id = ? AND is_deleted = FALSE
+      WHERE offer_id = ? AND user_id = ? AND is_deleted = false
       ORDER BY created_at DESC
       LIMIT 1
     `,

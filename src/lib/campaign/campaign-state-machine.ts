@@ -218,14 +218,11 @@ const normalizeGoogleCampaignIds = (ids: string[]) => {
   return Array.from(uniq)
 }
 
-const sqlNowExpr = () => 'NOW()'
-
 const sqlPublishedAtNowExpr = () => "COALESCE(NULLIF(published_at::text, '')::timestamptz, NOW())"
 
 type PatchSqlField = { sql: string; type: 'param'; value: any } | { sql: string; type: 'raw' }
 
 const toPatchSqlFields = (patch: CampaignStatePatch): PatchSqlField[] => {
-  const nowExpr = sqlNowExpr()
   const fields: PatchSqlField[] = []
 
   if (patch.status !== undefined) {
@@ -246,7 +243,7 @@ const toPatchSqlFields = (patch: CampaignStatePatch): PatchSqlField[] => {
 
   if (patch.deletedAt !== undefined) {
     if (patch.deletedAt === nowToken) {
-      fields.push({ sql: `deleted_at = ${nowExpr}`, type: 'raw' })
+      fields.push({ sql: 'deleted_at = NOW()', type: 'raw' })
     } else if (patch.deletedAt === null) {
       fields.push({ sql: 'deleted_at = NULL', type: 'raw' })
     } else {
@@ -269,7 +266,7 @@ const toPatchSqlFields = (patch: CampaignStatePatch): PatchSqlField[] => {
 
   if (patch.lastSyncAt !== undefined) {
     if (patch.lastSyncAt === nowToken) {
-      fields.push({ sql: `last_sync_at = ${nowExpr}`, type: 'raw' })
+      fields.push({ sql: 'last_sync_at = NOW()', type: 'raw' })
     } else if (patch.lastSyncAt === null) {
       fields.push({ sql: 'last_sync_at = NULL', type: 'raw' })
     } else {
@@ -297,7 +294,7 @@ const toPatchSqlFields = (patch: CampaignStatePatch): PatchSqlField[] => {
     fields.push({ sql: 'removed_reason = ?', type: 'param', value: patch.removedReason })
   }
 
-  fields.push({ sql: `updated_at = ${nowExpr}`, type: 'raw' })
+  fields.push({ sql: 'updated_at = NOW()', type: 'raw' })
 
   return fields
 }

@@ -93,7 +93,6 @@ export async function checkCreativePublishTimeouts(
 
   const staleBeforeExpr = datetimeMinusMinutes(thresholdMinutes)
   const lookbackExpr = datetimeMinusHours(lookbackHours)
-  const isDeletedFalse = false
 
   const candidates = await db.query<CandidateRow>(
     `
@@ -140,7 +139,7 @@ export async function checkCreativePublishTimeouts(
     ORDER BY lc.latest_completed_at ASC
     LIMIT ?
     `,
-    [isDeletedFalse, isDeletedFalse, limit]
+    [false, false, limit]
   )
 
   const publishLogs = await db.query<PublishLogRow>(

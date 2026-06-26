@@ -12,9 +12,6 @@ export const GET = withAuth(
     try {
       const db = getDatabase()
 
-      // PostgreSQL兼容性：布尔字段兼容性处理
-      const isActiveValue = true
-
       // 获取所有激活的Prompt版本
       const activePrompts = await db.query<any>(
         `
@@ -31,7 +28,7 @@ export const GET = withAuth(
       WHERE pv.is_active = ?
       ORDER BY pv.category, pv.name
     `,
-        [isActiveValue]
+        [true]
       )
 
       // 按分类分组
@@ -160,12 +157,9 @@ export const POST = withAuth(
       // 如果是第一个版本，或者请求激活此版本，则取消其他版本的激活状态
       const isActive = body.isActive !== undefined ? body.isActive : true
 
-      // PostgreSQL兼容性：布尔字段兼容性处理
-      const isActiveFalse = false
-
       if (isActive) {
         await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
-          isActiveFalse,
+          false,
           promptId,
         ])
       }
@@ -187,7 +181,7 @@ export const POST = withAuth(
           promptContent,
           language,
           userId,
-          isActive ? 1 : 0,
+          isActive,
           changeNotes,
         ]
       )

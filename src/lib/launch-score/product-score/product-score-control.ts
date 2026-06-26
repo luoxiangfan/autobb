@@ -63,8 +63,6 @@ export async function setProductScoreCalculationPaused(
   }
 
   const db = await getDatabase()
-  const nowExpr = 'NOW()'
-  const falseValue = false
   const value = paused ? 'true' : 'false'
 
   const existing = await db.queryOne<{ id: number }>(
@@ -83,7 +81,7 @@ export async function setProductScoreCalculationPaused(
     await db.exec(
       `
         UPDATE system_settings
-        SET value = ?, updated_at = ${nowExpr}
+        SET value = ?, updated_at = NOW()
         WHERE id = ?
       `,
       [value, existing.id]
@@ -108,8 +106,8 @@ export async function setProductScoreCalculationPaused(
       userId,
       PRODUCT_SCORE_PAUSE_SETTING_KEY,
       value,
-      falseValue,
-      falseValue,
+      false,
+      false,
       PRODUCT_SCORE_PAUSE_SETTING_DESCRIPTION,
     ]
   )

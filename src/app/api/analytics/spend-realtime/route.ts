@@ -74,7 +74,6 @@ export const GET = withAuth(async (request, user) => {
       : 45
 
     const db = await getDatabase()
-    const isActiveCondition = 'is_active = true'
 
     const account = await db.queryOne<{
       id: number
@@ -86,7 +85,7 @@ export const GET = withAuth(async (request, user) => {
       `
         SELECT id, customer_id, currency, timezone, last_sync_at
         FROM google_ads_accounts
-        WHERE user_id = ? AND id = ? AND ${isActiveCondition}
+        WHERE user_id = ? AND id = ? AND is_active = true
         LIMIT 1
       `,
       [userId, accountId]

@@ -39,7 +39,7 @@ describe('GET /api/campaigns/affiliate-platforms', () => {
       if (sql.includes('FROM campaigns c')) {
         expect(sql).toContain("creation_status != 'failed'")
         expect(sql).toContain("!= 'REMOVED'")
-        expect(sql).toContain('o.is_deleted = FALSE')
+        expect(sql).toContain('o.is_deleted = false')
         expect(sql).toContain("creation_status != 'failed'")
         return [
           { id: 1, affiliate_link: 'https://yeahpromos.com/offer-a' },

@@ -157,11 +157,9 @@ export async function importAsinFile(params: {
 }): Promise<{ inputId: number; total: number; inserted: number }> {
   const db = await getDatabase()
   const checksum = computeChecksum(params.buffer)
-  const nowFunc = 'NOW()'
-
   const insertSql = `INSERT INTO openclaw_asin_inputs
        (user_id, source, filename, file_type, file_size, checksum, status, total_items, parsed_items, metadata_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ${nowFunc}, ${nowFunc}) RETURNING id`
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, NOW(), NOW()) RETURNING id`
 
   const result = await db.exec(insertSql, [
     params.userId,
@@ -190,7 +188,7 @@ export async function importAsinFile(params: {
   } catch (error: any) {
     await db.exec(
       `UPDATE openclaw_asin_inputs
-       SET status = 'failed', error_message = ?, updated_at = ${nowFunc}
+       SET status = 'failed', error_message = ?, updated_at = NOW()
        WHERE id = ?`,
       [error?.message || '解析失败', inputId]
     )
@@ -210,7 +208,7 @@ export async function importAsinFile(params: {
     await db.exec(
       `INSERT INTO openclaw_asin_items
        (input_id, user_id, asin, country_code, price, brand, title, affiliate_link, product_url, priority, source, status, data_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ${nowFunc}, ${nowFunc})`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW(), NOW())`,
       [
         inputId,
         params.userId,
@@ -231,7 +229,7 @@ export async function importAsinFile(params: {
 
   await db.exec(
     `UPDATE openclaw_asin_inputs
-     SET status = 'parsed', total_items = ?, parsed_items = ?, updated_at = ${nowFunc}
+     SET status = 'parsed', total_items = ?, parsed_items = ?, updated_at = NOW()
      WHERE id = ?`,
     [items.length, inserted, inputId]
   )

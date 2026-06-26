@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { boolParam, nowFunc } from '@/lib/db'
 import { getQueueManagerForTaskType, isBackgroundQueueSplitEnabled } from '@/lib/queue/queue-routing'
 import { getQueueManager } from '@/lib/queue'
 import { isBackgroundWorkerAlive } from '@/lib/queue/background-worker-heartbeat'
@@ -151,7 +150,6 @@ async function findRunById(params: {
 
 async function autoConfirmAndQueueCommandRun(params: {
   db: Awaited<ReturnType<typeof getDatabase>>
-  nowSql: string
   runId: string
   userId: number
   riskLevel: OpenclawCommandRiskLevel
@@ -209,7 +207,7 @@ async function autoConfirmAndQueueCommandRun(params: {
 
     await params.db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'queued', queue_task_id = ?, updated_at = ${params.nowSql}
+       SET status = 'queued', queue_task_id = ?, updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [taskId, params.runId, params.userId]
     )
@@ -223,7 +221,7 @@ async function autoConfirmAndQueueCommandRun(params: {
     const message = error?.message || 'enqueue failed'
     await params.db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'failed', error_message = ?, completed_at = ${params.nowSql}, updated_at = ${params.nowSql}
+       SET status = 'failed', error_message = ?, completed_at = NOW(), updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [message, params.runId, params.userId]
     )
@@ -233,8 +231,6 @@ async function autoConfirmAndQueueCommandRun(params: {
 
 export async function executeOpenclawCommand(input: ExecuteCommandInput): Promise<ExecuteCommandResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   await expireStaleCommandConfirmations({ userId: input.userId })
 
   const validated = assertOpenclawCommandRouteAllowed({
@@ -270,7 +266,6 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       if (existing.status === 'pending_confirm') {
         return autoConfirmAndQueueCommandRun({
           db,
-          nowSql,
           runId: existing.id,
           userId: input.userId,
           riskLevel: existing.risk_level,
@@ -297,7 +292,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       request_method, request_path, request_query_json, request_body_json,
       risk_level, status, confirm_required, idempotency_key, parent_request_id,
       created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowSql}, ${nowSql})`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       runId,
       input.userId,
@@ -311,7 +306,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
       normalizedCommandPayload.body === undefined ? null : JSON.stringify(normalizedCommandPayload.body),
       riskLevel,
       requireConfirm ? 'pending_confirm' : 'draft',
-      boolParam(requireConfirm),
+      requireConfirm,
       idempotencyKey,
       input.parentRequestId || null,
     ]
@@ -320,7 +315,6 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
   if (requireConfirm) {
     return autoConfirmAndQueueCommandRun({
       db,
-      nowSql,
       runId,
       userId: input.userId,
       riskLevel,
@@ -337,7 +331,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
 
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'queued', queue_task_id = ?, updated_at = ${nowSql}
+       SET status = 'queued', queue_task_id = ?, updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [taskId, runId, input.userId]
     )
@@ -351,7 +345,7 @@ export async function executeOpenclawCommand(input: ExecuteCommandInput): Promis
     const message = error?.message || 'enqueue failed'
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'failed', error_message = ?, completed_at = ${nowSql}, updated_at = ${nowSql}
+       SET status = 'failed', error_message = ?, completed_at = NOW(), updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [message, runId, input.userId]
     )
@@ -404,8 +398,6 @@ type ConfirmResult =
 
 export async function confirmOpenclawCommand(input: ConfirmInput): Promise<ConfirmResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   const staleQueuedCount = await failStaleQueuedCommandRuns({
     db,
     userId: input.userId })
@@ -484,7 +476,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
 
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'queued', queue_task_id = ?, updated_at = ${nowSql}
+       SET status = 'queued', queue_task_id = ?, updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [taskId, input.runId, input.userId]
     )
@@ -498,7 +490,7 @@ export async function confirmOpenclawCommand(input: ConfirmInput): Promise<Confi
     const message = error?.message || 'enqueue failed'
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'failed', error_message = ?, completed_at = ${nowSql}, updated_at = ${nowSql}
+       SET status = 'failed', error_message = ?, completed_at = NOW(), updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [message, input.runId, input.userId]
     )
@@ -515,8 +507,6 @@ type OwnerConfirmInput = {
 
 export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): Promise<ConfirmResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   const staleQueuedCount = await failStaleQueuedCommandRuns({
     db,
     userId: input.userId })
@@ -577,7 +567,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
 
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'queued', queue_task_id = ?, updated_at = ${nowSql}
+       SET status = 'queued', queue_task_id = ?, updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [taskId, input.runId, input.userId]
     )
@@ -591,7 +581,7 @@ export async function confirmOpenclawCommandByOwner(input: OwnerConfirmInput): P
     const message = error?.message || 'enqueue failed'
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET status = 'failed', error_message = ?, completed_at = ${nowSql}, updated_at = ${nowSql}
+       SET status = 'failed', error_message = ?, completed_at = NOW(), updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [message, input.runId, input.userId]
     )

@@ -40,7 +40,7 @@ function toPostgresDefault(
 ): string {
   if (value === null) return 'NULL'
   if (value === 'CURRENT_TIMESTAMP') return 'CURRENT_TIMESTAMP'
-  if (typeof value === 'boolean') return value ? 'TRUE' : 'FALSE'
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
   if (typeof value === 'number') return String(value)
   return `'${value}'`
 }
@@ -152,8 +152,8 @@ export function generatePostgresSchema(): string {
 
   const settingLines: string[] = []
   for (const setting of DEFAULT_SETTINGS) {
-    const isSensitive = setting.isSensitive ? 'TRUE' : 'FALSE'
-    const isRequired = setting.isRequired ? 'TRUE' : 'FALSE'
+    const isSensitive = setting.isSensitive ? 'true' : 'false'
+    const isRequired = setting.isRequired ? 'true' : 'false'
     const defaultValue = setting.defaultValue ? `'${setting.defaultValue}'` : 'NULL'
 
     settingLines.push(

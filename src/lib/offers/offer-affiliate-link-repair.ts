@@ -67,14 +67,11 @@ export async function repairOfferAffiliateLinksFromProducts(params: {
   const productIds = toPositiveIntegerList(params.productIds)
 
   const db = await getDatabase()
-  const isNotDeletedCondition =
-    "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-
   const whereClauses = [
     'l.user_id = ?',
     "p.platform = 'partnerboost'",
     "TRIM(COALESCE(p.short_promo_link, '')) <> ''",
-    isNotDeletedCondition,
+    '(o.is_deleted IS NULL OR o.is_deleted = false)',
   ]
   const queryParams: Array<number | string> = [userId]
 

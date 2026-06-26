@@ -3,7 +3,6 @@
  * system_settings 仅保留 user_id IS NULL 的字段元数据（及 campaign_sync 等非 OAuth 键）。
  */
 import { getDatabase, type DatabaseAdapter } from '../../db'
-import { nowFunc as sqlNowFunc } from '../../db'
 import {
   isGoogleAdsAuthShared,
   resolveGoogleAdsCredentialOwnerId,
@@ -435,13 +434,10 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
     return { synced: false, oauthClientCredentialsChanged: false }
   }
 
-  const nowSql = sqlNowFunc()
-  const isActiveValue = true
-
   if (existing) {
     await db.exec(
-      `UPDATE google_ads_credentials SET ${setClauses.join(', ')}, is_active = ?, updated_at = ${nowSql} WHERE user_id = ?`,
-      [...params, isActiveValue, userId]
+      `UPDATE google_ads_credentials SET ${setClauses.join(', ')}, is_active = true, updated_at = NOW() WHERE user_id = ?`,
+      [...params, userId]
     )
   } else {
     const merged = await getGoogleAdsOAuthConfigFields(userId, db)
@@ -456,7 +452,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
       `INSERT INTO google_ads_credentials (
         user_id, client_id, client_secret, refresh_token,
         developer_token, login_customer_id, is_active, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ${nowSql})`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         userId,
         merged.client_id,
@@ -464,7 +460,7 @@ export async function upsertGoogleAdsOAuthConfigFromSettings(
         '',
         merged.developer_token,
         merged.login_customer_id || '',
-        isActiveValue,
+        true,
       ]
     )
   }

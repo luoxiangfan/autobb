@@ -425,7 +425,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
           AND t.status = 'error'
-          AND t.is_deleted = FALSE
+          AND t.is_deleted = false
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
           ${urlSwapEnabledCampaignFilter}
           ${urlSwapDisabledFilter}
@@ -473,7 +473,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
           AND t.status = 'enabled'
-          AND t.is_deleted = FALSE
+          AND t.is_deleted = false
           AND t.url_changed_count > 0
           AND t.updated_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
         ORDER BY t.updated_at DESC
@@ -522,7 +522,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
           AND t.status = 'error'
-          AND t.is_deleted = FALSE
+          AND t.is_deleted = false
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND (
             t.error_message LIKE '%推广链接解析失败%'
@@ -605,7 +605,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
         INNER JOIN offers o ON t.offer_id = o.id
         WHERE t.user_id = ?
           AND t.status = 'error'
-          AND t.is_deleted = FALSE
+          AND t.is_deleted = false
           AND t.error_at >= CURRENT_TIMESTAMP - INTERVAL '48 hours'
           AND (
             t.error_message LIKE '%Google Ads API%'

@@ -208,8 +208,6 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       .trim()
       .slice(0, 240) || null
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = 'NOW()'
   const toDbJson = (value: any): any => toDbJsonObjectField(value, null)
 
   // � 占位记录 ID（声明在 try 外，确保 catch 块可访问）
@@ -221,7 +219,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       `
       UPDATE creative_tasks
       SET status = 'running',
-          started_at = ${nowFunc},
+          started_at = NOW(),
           message = '开始生成广告创意',
           max_retries = ?
       WHERE id = ?
@@ -281,7 +279,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       await db.exec(
         `
         UPDATE creative_tasks
-        SET stage = 'preparing', progress = 5, message = '正在准备关键词池...', updated_at = ${nowFunc}
+        SET stage = 'preparing', progress = 5, message = '正在准备关键词池...', updated_at = NOW()
         WHERE id = ?
       `,
         [task.id]
@@ -344,7 +342,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
             await db.exec(
               `
               UPDATE creative_tasks
-              SET stage = 'preparing', progress = ?, message = ?, updated_at = ${nowFunc}
+              SET stage = 'preparing', progress = ?, message = ?, updated_at = NOW()
               WHERE id = ?
             `,
               [nextProgress, message, task.id]
@@ -402,11 +400,11 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
               `
               UPDATE ad_creatives
               SET
-                is_deleted = ${'TRUE'},
-                deleted_at = ${nowFunc},
+                is_deleted = true,
+                deleted_at = NOW(),
                 creation_status = 'failed',
                 creation_error = ?,
-                updated_at = ${nowFunc}
+                updated_at = NOW()
               WHERE id = ? AND deleted_at IS NULL
             `,
               [
@@ -578,7 +576,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
             await db.exec(
               `
               UPDATE creative_tasks
-              SET stage = 'generating', progress = ?, message = ?, current_attempt = ?, updated_at = ${nowFunc}
+              SET stage = 'generating', progress = ?, message = ?, current_attempt = ?, updated_at = NOW()
               WHERE id = ?
             `,
               [
@@ -615,7 +613,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
             await db.exec(
               `
               UPDATE creative_tasks
-              SET stage = 'evaluating', progress = ?, message = ?, updated_at = ${nowFunc}
+              SET stage = 'evaluating', progress = ?, message = ?, updated_at = NOW()
               WHERE id = ?
             `,
               [attemptBaseProgress + 10, `${evaluationMessageBase} (${elapsedSeconds}s)`, task.id]
@@ -647,7 +645,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
           await db.exec(
             `
             UPDATE creative_tasks
-            SET progress = ?, message = ?, updated_at = ${nowFunc}
+            SET progress = ?, message = ?, updated_at = NOW()
             WHERE id = ?
           `,
             [attemptBaseProgress + 18, evaluationSummaryMessage, task.id]
@@ -744,7 +742,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
     await db.exec(
       `
       UPDATE creative_tasks
-      SET stage = 'saving', progress = 85, message = '正在保存创意到数据库...', updated_at = ${nowFunc}
+      SET stage = 'saving', progress = 85, message = '正在保存创意到数据库...', updated_at = NOW()
       WHERE id = ?
     `,
       [task.id]
@@ -786,7 +784,7 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
           creative_type = ?,
           generation_mode = ?,
           creation_status = 'draft',
-          updated_at = ${nowFunc}
+          updated_at = NOW()
         WHERE id = ?
       `,
         [
@@ -910,8 +908,8 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         creative_id = ?,
         result = ?,
         optimization_history = ?,
-        completed_at = ${nowFunc},
-        updated_at = ${nowFunc}
+        completed_at = NOW(),
+        updated_at = NOW()
       WHERE id = ?
     `,
       [
@@ -947,8 +945,6 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
       }
     }
 
-    // PostgreSQL兼容性：在catch块中也需要使用正确的NOW函数
-    const nowFuncErr = 'NOW()'
     const structuredError = normalizeCreativeTaskError(error, '创意生成任务失败')
     const errorMessage = structuredError.userMessage || structuredError.message || '任务失败'
 
@@ -960,8 +956,8 @@ export async function executeAdCreativeGeneration(task: Task<AdCreativeTaskData>
         status = 'failed',
         message = ?,
         error = ?,
-        completed_at = ${nowFuncErr},
-        updated_at = ${nowFuncErr}
+        completed_at = NOW(),
+        updated_at = NOW()
       WHERE id = ?
     `,
       [

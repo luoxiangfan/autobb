@@ -95,8 +95,6 @@ export async function pauseOfferTasks(
     urlSwapTaskCount: 0,
   }
 
-  const pausedCondition = 'NOW()'
-  const isDeletedFalse = 'FALSE'
   let updatedClickFarmTaskIds: string[] = []
   let updatedUrlSwapTaskIds: string[] = []
   let clickFarmUpdatedCount = 0
@@ -111,9 +109,9 @@ export async function pauseOfferTasks(
         SET status = 'stopped',
             pause_reason = ?,
             pause_message = ?,
-            paused_at = ${pausedCondition},
-            updated_at = ${pausedCondition}
-        WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
+            paused_at = NOW(),
+            updated_at = NOW()
+        WHERE user_id = ? AND offer_id = ? AND is_deleted = false
           AND status IN ('pending', 'running', 'paused')
         RETURNING id
       `,
@@ -133,8 +131,8 @@ export async function pauseOfferTasks(
       `
         UPDATE url_swap_tasks
         SET status = 'disabled',
-            updated_at = ${pausedCondition}
-        WHERE user_id = ? AND offer_id = ? AND is_deleted = ${isDeletedFalse}
+            updated_at = NOW()
+        WHERE user_id = ? AND offer_id = ? AND is_deleted = false
           AND status IN ('enabled', 'error')
         RETURNING id
       `,
@@ -194,12 +192,11 @@ export async function resumeOfferTasksOnCampaignEnable(
   userId: number
 ): Promise<ResumeOfferTasksResult> {
   const db = await getDatabase()
-  const isDeletedFalse = 'FALSE'
   const offerRow = await db.queryOne<{ target_country: string | null }>(
     `
     SELECT target_country
     FROM offers
-    WHERE id = ? AND user_id = ? AND is_deleted = ${isDeletedFalse}
+    WHERE id = ? AND user_id = ? AND is_deleted = false
     LIMIT 1
   `,
     [offerId, userId]

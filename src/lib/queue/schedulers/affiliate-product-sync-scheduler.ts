@@ -219,7 +219,7 @@ export class AffiliateProductSyncScheduler {
   private async listEligibleUsers(): Promise<number[]> {
     const db = await getDatabase()
     const userEligibleCondition = buildUserExecutionEligibleSql({})
-    const whereClause = `${userEligibleCondition} AND product_management_enabled = TRUE`
+    const whereClause = `${userEligibleCondition} AND product_management_enabled = true`
 
     const rows = await db.query<{ id: number }>(
       `
@@ -575,9 +575,6 @@ export class AffiliateProductSyncScheduler {
 
   private async upsertUserSystemSetting(userId: number, key: string, value: string): Promise<void> {
     const db = await getDatabase()
-    const nowExpr = 'NOW()'
-    const falseValue = false
-
     const existing = await db.queryOne<{ id: number }>(
       `
         SELECT id
@@ -594,7 +591,7 @@ export class AffiliateProductSyncScheduler {
       await db.exec(
         `
           UPDATE system_settings
-          SET value = ?, updated_at = ${nowExpr}
+          SET value = ?, updated_at = NOW()
           WHERE id = ?
         `,
         [value, existing.id]
@@ -624,7 +621,7 @@ export class AffiliateProductSyncScheduler {
           description
         ) VALUES (?, 'system', ?, ?, 'string', ?, ?, ?)
       `,
-      [userId, key, value, falseValue, falseValue, description]
+      [userId, key, value, false, false, description]
     )
   }
 }

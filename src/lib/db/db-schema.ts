@@ -22,7 +22,7 @@ export interface ColumnDef {
   generated?: { expression: string; stored: boolean } // PostgreSQL only
 }
 
-const INDEX_WHERE_NOT_DELETED = 'is_deleted = FALSE'
+const INDEX_WHERE_NOT_DELETED = 'is_deleted = false'
 
 export interface IndexDef {
   name: string

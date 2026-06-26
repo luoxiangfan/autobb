@@ -2,7 +2,6 @@ import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { encrypt } from '@/lib/auth'
-import { nowFunc as sqlNowFunc } from '@/lib/db'
 import { z } from 'zod'
 import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignment'
 import {
@@ -62,8 +61,6 @@ export const POST = withAuth(async (request, user) => {
 
     const { settings } = validationResult.data
     const db = await getDatabase()
-    const nowSql = sqlNowFunc()
-
     const blockedKeys = ['google_ads:refresh_token', 'google_ads:access_token']
 
     let imported = 0
@@ -133,7 +130,7 @@ export const POST = withAuth(async (request, user) => {
           await db.exec(
             `
                 UPDATE system_settings
-                SET encrypted_value = ?, value = NULL, updated_at = ${nowSql}
+                SET encrypted_value = ?, value = NULL, updated_at = NOW()
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
               `,
             [encrypt(value), category, configKey, userIdNum]
@@ -142,7 +139,7 @@ export const POST = withAuth(async (request, user) => {
           await db.exec(
             `
                 UPDATE system_settings
-                SET value = ?, updated_at = ${nowSql}
+                SET value = ?, updated_at = NOW()
                 WHERE category = ? AND key = ? AND (user_id IS NULL OR user_id = ?)
               `,
             [value, category, configKey, userIdNum]
@@ -152,7 +149,7 @@ export const POST = withAuth(async (request, user) => {
         await db.exec(
           `
               INSERT INTO system_settings (user_id, category, key, encrypted_value, data_type, is_sensitive, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 1, ${nowSql}, ${nowSql})
+              VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW())
             `,
           [userIdNum, category, configKey, encrypt(value), dataType || 'string']
         )
@@ -160,7 +157,7 @@ export const POST = withAuth(async (request, user) => {
         await db.exec(
           `
               INSERT INTO system_settings (user_id, category, key, value, data_type, is_sensitive, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, 0, ${nowSql}, ${nowSql})
+              VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
             `,
           [userIdNum, category, configKey, value, dataType || 'string']
         )

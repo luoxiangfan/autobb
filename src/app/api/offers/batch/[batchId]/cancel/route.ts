@@ -31,9 +31,6 @@ export const POST = withAuth(async (req, user, context) => {
   const db = getDatabase()
   const queue = getQueueManager()
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = 'NOW()'
-
   try {
     const userIdNum = user.userId
 
@@ -95,10 +92,10 @@ export const POST = withAuth(async (req, user, context) => {
       UPDATE batch_tasks
       SET
         status = 'cancelled',
-        cancelled_at = ${nowFunc},
+        cancelled_at = NOW(),
         cancelled_by = ?,
         cancellation_reason = ?,
-        updated_at = ${nowFunc}
+        updated_at = NOW()
       WHERE id = ?
     `,
       [userIdNum, reason, batchId]
@@ -112,7 +109,7 @@ export const POST = withAuth(async (req, user, context) => {
       UPDATE upload_records
       SET
         status = 'cancelled',
-        updated_at = ${nowFunc}
+        updated_at = NOW()
       WHERE batch_id = ? AND status IN ('pending', 'processing')
     `,
       [batchId]

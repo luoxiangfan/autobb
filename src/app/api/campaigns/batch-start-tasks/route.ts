@@ -56,8 +56,8 @@ export const POST = withAuth(async (request, user) => {
       SELECT DISTINCT o.id as offer_id, o.target_country
       FROM campaigns c
       INNER JOIN offers o ON c.offer_id = o.id
-      WHERE c.id IN (${campaignIdPlaceholders}) AND c.user_id = ? AND c.is_deleted = FALSE
-        AND o.is_deleted = FALSE
+      WHERE c.id IN (${campaignIdPlaceholders}) AND c.user_id = ? AND c.is_deleted = false
+        AND o.is_deleted = false
     `,
       [...normalizedCampaignIds, userId]
     )) as Array<{

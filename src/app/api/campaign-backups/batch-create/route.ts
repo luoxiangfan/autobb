@@ -92,8 +92,6 @@ export const POST = withAuth(async (request, user) => {
       .digest('hex')
       .slice(0, 16)
 
-    const nowFunc = 'NOW()'
-
     // 创建 batch_tasks 记录
     await db.exec(
       `
@@ -105,7 +103,7 @@ export const POST = withAuth(async (request, user) => {
         total_count,
         created_at,
         updated_at
-      ) VALUES (?, ?, 'campaign-batch-create', 'pending', ?, ${nowFunc}, ${nowFunc})
+      ) VALUES (?, ?, 'campaign-batch-create', 'pending', ?, NOW(), NOW())
     `,
       [batchId, userId, uniqueBackupIds.length]
     )
@@ -128,7 +126,7 @@ export const POST = withAuth(async (request, user) => {
       await db.exec(
         `
         UPDATE batch_tasks
-        SET status = 'failed', updated_at = ${nowFunc},
+        SET status = 'failed', updated_at = NOW(),
             metadata = ?
         WHERE id = ?
       `,

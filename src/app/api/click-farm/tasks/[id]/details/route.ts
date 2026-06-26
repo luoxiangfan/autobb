@@ -49,7 +49,7 @@ export const GET = withAuth(async (_request, user, context) => {
         o.affiliate_link
       FROM click_farm_tasks t
       LEFT JOIN offers o ON t.offer_id = o.id
-      WHERE t.id = ? AND t.user_id = ? AND t.is_deleted = FALSE
+      WHERE t.id = ? AND t.user_id = ? AND t.is_deleted = false
     `,
     [id, user.userId]
   )

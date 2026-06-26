@@ -1,6 +1,6 @@
 import { logger } from '@/lib/common/server'
 import { getDatabase } from '../db'
-import { nowFunc, notDeletedClause } from '../db'
+import { notDeletedClause } from '../db'
 import { getInsertedId } from '../db'
 import {
   markUrlSwapTargetsRemovedByCampaignId,
@@ -148,14 +148,10 @@ export async function findCampaignById(id: number, userId: number): Promise<Camp
 export async function findCampaignsByOfferId(offerId: number, userId: number): Promise<Campaign[]> {
   const db = await getDatabase()
 
-  // PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
-  // 避免 prepared statement 中的 boolean = integer 类型不匹配问题
-  const isDeletedCheck = 'is_deleted = FALSE'
-
   const rows = (await db.query(
     `
     SELECT * FROM campaigns
-    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCheck}
+    WHERE offer_id = ? AND user_id = ? AND is_deleted = false
     ORDER BY created_at DESC
   `,
     [offerId, userId]
@@ -170,12 +166,9 @@ export async function findCampaignsByOfferId(offerId: number, userId: number): P
 export async function findCampaignsByUserId(userId: number, limit?: number): Promise<Campaign[]> {
   const db = await getDatabase()
 
-  // PostgreSQL兼容性 - 使用BOOLEAN类型字面量直接嵌入SQL
-  const isDeletedCheck = 'is_deleted = FALSE'
-
   let sql = `
     SELECT * FROM campaigns
-    WHERE user_id = ? AND ${isDeletedCheck}
+    WHERE user_id = ? AND is_deleted = false
     ORDER BY created_at DESC
   `
 
@@ -286,8 +279,7 @@ export async function updateCampaign(
     return campaign
   }
 
-  const nowSql = nowFunc()
-  fields.push(`updated_at = ${nowSql}`)
+  fields.push(`updated_at = NOW()`)
   values.push(id, userId)
 
   await db.exec(

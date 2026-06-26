@@ -1,6 +1,4 @@
 import type { DatabaseAdapter } from '@/lib/db'
-import { nowFunc } from '@/lib/db'
-
 const OPENCLAW_QUEUED_STALE_SECONDS_DEFAULT = 15 * 60
 const OPENCLAW_QUEUED_STALE_SECONDS_MIN = 60
 const OPENCLAW_QUEUED_STALE_SECONDS_MAX = 24 * 60 * 60
@@ -33,9 +31,8 @@ export async function failStaleQueuedCommandRuns(params: {
     OPENCLAW_QUEUED_STALE_SECONDS_MIN,
     OPENCLAW_QUEUED_STALE_SECONDS_MAX
   )
-  const nowSql = nowFunc()
   const staleMessage = `队列任务超过 ${staleSeconds}s 未开始执行，系统已自动标记失败，请重试`
-  const staleCondition = `created_at <= (${nowSql} - (? * INTERVAL '1 second'))`
+  const staleCondition = `created_at <= (NOW() - (? * INTERVAL '1 second'))`
 
   const hasUserScope = Number.isFinite(Number(params.userId))
   const userFilterSql = hasUserScope ? 'AND user_id = ?' : ''
@@ -52,8 +49,8 @@ export async function failStaleQueuedCommandRuns(params: {
            WHEN error_message IS NULL OR TRIM(error_message) = '' THEN ?
            ELSE error_message
          END,
-         completed_at = ${nowSql},
-         updated_at = ${nowSql}
+         completed_at = NOW(),
+         updated_at = NOW()
      WHERE status = 'queued'
        AND started_at IS NULL
        AND completed_at IS NULL

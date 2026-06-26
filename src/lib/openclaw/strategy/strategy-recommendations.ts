@@ -2383,8 +2383,6 @@ async function repairLegacyExpandKeywordCoverage(params: {
   }
 
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   await Promise.allSettled(
     Array.from(updates.entries()).map(async ([recommendationId, payload]) => {
       await db.exec(
@@ -2392,7 +2390,7 @@ async function repairLegacyExpandKeywordCoverage(params: {
           UPDATE strategy_center_recommendations
           SET data_json = ?,
               summary = ?,
-              updated_at = ${nowFunc}
+              updated_at = NOW()
           WHERE id = ?
             AND user_id = ?
             AND report_date = ?
@@ -2450,12 +2448,11 @@ export async function persistStrategyRecommendationExecutionRuntime(params: {
   executionResult: Record<string, any>
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   await db.exec(
     `
       UPDATE strategy_center_recommendations
       SET execution_result_json = ?,
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE id = ?
         AND user_id = ?
     `,
@@ -2483,9 +2480,9 @@ export async function refreshStrategyRecommendations(params: {
 
   const task = (async () => {
     const db = await getDatabase()
-    const isDeletedCondition = 'c.is_deleted = FALSE'
-    const adsAccountIsActiveCondition = 'gaa.is_active = TRUE'
-    const adsAccountIsDeletedCondition = 'gaa.is_deleted = FALSE'
+    const isDeletedCondition = 'c.is_deleted = false'
+    const adsAccountIsActiveCondition = 'gaa.is_active = true'
+    const adsAccountIsDeletedCondition = 'gaa.is_deleted = false'
 
     const campaigns = await db.query<CampaignRow>(
       `
@@ -2803,7 +2800,6 @@ export async function refreshStrategyRecommendations(params: {
         snapshotHash: row.snapshot_hash ? String(row.snapshot_hash) : null })
     }
 
-    const nowFunc = 'NOW()'
     const generatedIds: string[] = []
     for (const draft of drafts) {
       const existing = existingByKey.get(draft.key)
@@ -2832,7 +2828,7 @@ export async function refreshStrategyRecommendations(params: {
               created_at,
               updated_at
             )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
           ON CONFLICT(user_id, report_date, campaign_id, recommendation_type)
           DO UPDATE SET
             google_campaign_id = excluded.google_campaign_id,
@@ -2853,7 +2849,7 @@ export async function refreshStrategyRecommendations(params: {
                 THEN strategy_center_recommendations.status
               ELSE excluded.status
             END,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         `,
         [
           recommendationId,
@@ -2903,7 +2899,7 @@ export async function refreshStrategyRecommendations(params: {
         `
           UPDATE strategy_center_recommendations
           SET status = 'stale',
-              updated_at = ${nowFunc}
+              updated_at = NOW()
           WHERE user_id = ?
             AND report_date = ?
             AND status NOT IN ('pending', 'executed', 'dismissed', 'stale')
@@ -2926,7 +2922,7 @@ export async function refreshStrategyRecommendations(params: {
         `
           UPDATE strategy_center_recommendations
           SET status = 'stale',
-              updated_at = ${nowFunc}
+              updated_at = NOW()
           WHERE user_id = ?
             AND report_date = ?
             AND status NOT IN ('pending', 'executed', 'dismissed', 'stale')
@@ -3043,8 +3039,6 @@ export async function dismissStrategyRecommendation(params: {
   recommendationId: string
 }): Promise<StrategyRecommendation> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   const existing = await getRecommendationById({
     userId: params.userId,
     recommendationId: params.recommendationId })
@@ -3059,7 +3053,7 @@ export async function dismissStrategyRecommendation(params: {
     `
       UPDATE strategy_center_recommendations
       SET status = 'dismissed',
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE id = ?
         AND user_id = ?
     `,
@@ -3158,7 +3152,6 @@ export async function markStrategyRecommendationQueued(params: {
   taskStartedAt?: number | null
 }): Promise<StrategyRecommendation> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const recommendation = await getRecommendationById({
     userId: params.userId,
     recommendationId: params.recommendationId })
@@ -3198,7 +3191,7 @@ export async function markStrategyRecommendationQueued(params: {
       UPDATE strategy_center_recommendations
       SET status = 'pending',
           execution_result_json = ?,
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE id = ?
         AND user_id = ?
     `,
@@ -3234,7 +3227,6 @@ export async function markStrategyRecommendationReviewQueued(params: {
   scheduledAt: string
 }) {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const recommendation = await getRecommendationById({
     userId: params.userId,
     recommendationId: params.recommendationId })
@@ -3256,7 +3248,7 @@ export async function markStrategyRecommendationReviewQueued(params: {
       UPDATE strategy_center_recommendations
       SET data_json = ?,
           execution_result_json = ?,
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE id = ?
         AND user_id = ?
     `,
@@ -3447,7 +3439,6 @@ export async function reviewStrategyRecommendationEffect(params: {
   force?: boolean
 }): Promise<StrategyRecommendation> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const recommendation = await getRecommendationById({
     userId: params.userId,
     recommendationId: params.recommendationId })
@@ -3479,7 +3470,7 @@ export async function reviewStrategyRecommendationEffect(params: {
       `
         UPDATE strategy_center_recommendations
         SET data_json = ?,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         WHERE id = ?
           AND user_id = ?
       `,
@@ -3589,7 +3580,7 @@ export async function reviewStrategyRecommendationEffect(params: {
       UPDATE strategy_center_recommendations
       SET data_json = ?,
           execution_result_json = ?,
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE id = ?
         AND user_id = ?
     `,
@@ -3983,7 +3974,6 @@ export async function executeStrategyRecommendation(params: {
   }
 
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const existingExecutionResult = parseExecutionResultObject(recommendation.executionResult)
   const queueTaskId = String(params.queueTaskId || existingExecutionResult.queueTaskId || '').trim() || null
 
@@ -4011,9 +4001,9 @@ export async function executeStrategyRecommendation(params: {
       `
         UPDATE strategy_center_recommendations
         SET status = 'executed',
-            executed_at = ${nowFunc},
+            executed_at = NOW(),
             execution_result_json = ?,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         WHERE id = ?
           AND user_id = ?
       `,
@@ -4052,7 +4042,7 @@ export async function executeStrategyRecommendation(params: {
         UPDATE strategy_center_recommendations
         SET status = 'failed',
             execution_result_json = ?,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         WHERE id = ?
           AND user_id = ?
       `,

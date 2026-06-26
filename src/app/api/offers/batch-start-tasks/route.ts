@@ -53,7 +53,7 @@ export const POST = withAuth(async (request, user) => {
       `
       SELECT id, target_country
       FROM offers
-      WHERE id IN (${offerIdPlaceholders}) AND user_id = ? AND is_deleted = FALSE
+      WHERE id IN (${offerIdPlaceholders}) AND user_id = ? AND is_deleted = false
     `,
       [...normalizedOfferIds, userId]
     )) as Array<{

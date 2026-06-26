@@ -6,7 +6,6 @@
  * 已持有 `GoogleAdsAuthContext` 时：heal/sync 前须 `googleAdsAuthContextDualStackError`。
  */
 import { getDatabase } from '../../db'
-import { boolCondition, nowFunc } from '../../db'
 import type { GoogleAdsCredentials } from '@/lib/google-ads/oauth/oauth'
 
 export type GoogleAdsAuthAssignmentMode = 'own' | 'shared_admin'
@@ -131,10 +130,9 @@ export async function assertUserCanModifyGoogleAdsAuth(
 
 async function getRawGoogleAdsCredentials(userId: number): Promise<GoogleAdsCredentials | null> {
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true)
   const credentials = await db.queryOne<GoogleAdsCredentials>(
     `SELECT * FROM google_ads_credentials
-     WHERE user_id = ? AND ${isActiveCondition}`,
+     WHERE user_id = ? AND is_active = true`,
     [userId]
   )
   return credentials || null
@@ -148,7 +146,6 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
   api_access_level?: string | null
 } | null> {
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true)
   const account = await db.queryOne<{
     id: string
     mcc_customer_id: string
@@ -158,7 +155,7 @@ async function getRawActiveServiceAccount(userId: number): Promise<{
   }>(
     `SELECT id, mcc_customer_id, developer_token, service_account_email, api_access_level
      FROM google_ads_service_accounts
-     WHERE user_id = ? AND ${isActiveCondition}
+     WHERE user_id = ? AND is_active = true
      ORDER BY created_at DESC
      LIMIT 1`,
     [userId]
@@ -324,7 +321,6 @@ export async function upsertGoogleAdsAuthAssignment(params: {
   configuredBy: number
 }): Promise<GoogleAdsAuthAssignment> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
   const existing = await getGoogleAdsAuthAssignment(params.userId)
 
   if (existing) {
@@ -334,7 +330,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
            shared_admin_user_id = ?,
            auth_type = ?,
            configured_by = ?,
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE user_id = ?`,
       [
         params.assignmentMode,
@@ -348,7 +344,7 @@ export async function upsertGoogleAdsAuthAssignment(params: {
     await db.exec(
       `INSERT INTO google_ads_auth_assignments (
          user_id, assignment_mode, shared_admin_user_id, auth_type, configured_by, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ${nowSql}, ${nowSql})`,
+       ) VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         params.userId,
         params.assignmentMode,

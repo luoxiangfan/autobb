@@ -254,7 +254,6 @@ async function upsertOfferTaskRow(params: {
   skipWarmup: boolean
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const skipCacheVal = params.skipCache
   const skipWarmupVal = params.skipWarmup
 
@@ -284,7 +283,7 @@ async function upsertOfferTaskRow(params: {
           error = NULL,
           completed_at = NULL,
           started_at = NULL,
-          updated_at = ${nowFunc}
+          updated_at = NOW()
         WHERE id = ?
       `,
       [
@@ -326,7 +325,7 @@ async function upsertOfferTaskRow(params: {
         skip_warmup,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, 'pending', 'resolving_link', 0, '准备开始提取...', ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
+      ) VALUES (?, ?, ?, 'pending', 'resolving_link', 0, '准备开始提取...', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `,
     [
       params.taskId,
@@ -404,8 +403,6 @@ export async function compensateOfferExtractionEnqueueFailure(params: {
 }): Promise<void> {
   const db = getDatabase()
   const queue = getQueueManager()
-  const nowFunc = 'NOW()'
-
   try {
     await queue.removeTask(params.taskId)
   } catch (removeError) {
@@ -420,8 +417,8 @@ export async function compensateOfferExtractionEnqueueFailure(params: {
           status = 'failed',
           message = ?,
           error = ?,
-          completed_at = ${nowFunc},
-          updated_at = ${nowFunc}
+          completed_at = NOW(),
+          updated_at = NOW()
         WHERE id = ?
       `,
       [
@@ -485,8 +482,6 @@ export async function createOfferExtractionTaskForExistingOffer(
 ): Promise<string> {
   const db = await getDatabase()
   const queue = getQueueManager()
-  const nowFunc = 'NOW()'
-
   const affiliateLink = (params.affiliateLink || '').trim()
   if (!affiliateLink) {
     throw new Error('Offer缺少可用于提取的链接')
@@ -579,8 +574,8 @@ export async function createOfferExtractionTaskForExistingOffer(
           status = 'failed',
           message = ?,
           error = ?,
-          completed_at = ${nowFunc},
-          updated_at = ${nowFunc}
+          completed_at = NOW(),
+          updated_at = NOW()
         WHERE id = ?
       `,
       [
@@ -626,8 +621,6 @@ export async function createOfferExtractionTaskForNewOffer(
 ): Promise<string> {
   const db = await getDatabase()
   const queue = getQueueManager()
-  const nowFunc = 'NOW()'
-
   const affiliateLink = (params.affiliateLink || '').trim()
   if (!affiliateLink) {
     throw new Error('affiliate_link is required')
@@ -676,7 +669,7 @@ export async function createOfferExtractionTaskForNewOffer(
         skip_warmup,
         created_at,
         updated_at
-      ) VALUES (?, ?, 'pending', 'resolving_link', 0, '准备开始提取...', ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})
+      ) VALUES (?, ?, 'pending', 'resolving_link', 0, '准备开始提取...', ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `,
     [
       taskId,
@@ -726,8 +719,8 @@ export async function createOfferExtractionTaskForNewOffer(
           status = 'failed',
           message = ?,
           error = ?,
-          completed_at = ${nowFunc},
-          updated_at = ${nowFunc}
+          completed_at = NOW(),
+          updated_at = NOW()
         WHERE id = ?
       `,
       [

@@ -176,7 +176,7 @@ export async function updateClickFarmTask(
     `
     UPDATE click_farm_tasks
     SET ${fields.join(', ')}
-    WHERE id = ? AND user_id = ? AND is_deleted = FALSE
+    WHERE id = ? AND user_id = ? AND is_deleted = false
   `,
     values
   )
@@ -193,7 +193,7 @@ export async function deleteClickFarmTask(id: number | string, userId: number): 
   await db.exec(
     `
     UPDATE click_farm_tasks
-    SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW()
+    SET is_deleted = true, deleted_at = NOW(), updated_at = NOW()
     WHERE id = ? AND user_id = ?
   `,
     [id, userId]
@@ -299,14 +299,13 @@ export async function pauseClickFarmTasksByOfferId(
   }
 ): Promise<number> {
   const db = await getDatabase()
-  const nowSql = 'NOW()'
   const reason = options?.reason ?? 'offer_deactivated'
   const message = options?.message ?? 'Offer 关联的广告系列已删除'
 
   const pendingRows = await db.query<{ id: string | number }>(
     `
     SELECT id FROM click_farm_tasks
-    WHERE offer_id = ? AND status IN ('pending', 'running') AND is_deleted = FALSE
+    WHERE offer_id = ? AND status IN ('pending', 'running') AND is_deleted = false
   `,
     [offerId]
   )
@@ -318,9 +317,9 @@ export async function pauseClickFarmTasksByOfferId(
     SET status = 'paused',
         pause_reason = ?,
         pause_message = ?,
-        updated_at = ${nowSql},
-        paused_at = ${nowSql}
-    WHERE offer_id = ? AND status IN ('pending', 'running') AND is_deleted = FALSE
+        updated_at = NOW(),
+        paused_at = NOW()
+    WHERE offer_id = ? AND status IN ('pending', 'running') AND is_deleted = false
   `,
     [reason, message, offerId]
   )

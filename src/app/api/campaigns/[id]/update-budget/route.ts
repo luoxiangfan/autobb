@@ -198,13 +198,12 @@ export const PUT = withAuth(async (request, user, context) => {
         }),
     })
 
-    const nowFunc = 'NOW()'
     await db.exec(
       `
         UPDATE campaigns
         SET budget_amount = ?,
             budget_type = ?,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         WHERE user_id = ?
           AND status != 'REMOVED'
           AND (google_campaign_id = ? OR campaign_id = ?)

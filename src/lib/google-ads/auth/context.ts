@@ -19,7 +19,7 @@ import {
   resolveGoogleAdsApiAccessLevelFromContext,
   type GoogleAdsAuthAssignment,
 } from '@/lib/google-ads/auth/assignment'
-import { boolCondition, isDbRowActive } from '../../db'
+import { isDbRowActive } from '../../db'
 import { getDatabase } from '../../db'
 import {
   getGoogleAdsCredentials,
@@ -104,9 +104,8 @@ async function resolveDualStackOnOwner(
     hasActiveServiceAccount = options.hasActiveServiceAccount
   } else {
     const db = await getDatabase()
-    const isActiveCondition = boolCondition('is_active', true)
     const existingSa = await db.queryOne<{ id: string }>(
-      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND is_active = true LIMIT 1`,
       [ownerUserId]
     )
     hasActiveServiceAccount = Boolean(existingSa)
@@ -802,11 +801,10 @@ export async function assertNoConflictingGoogleAdsAuth(
 ): Promise<void> {
   const { ownerUserId } = await resolveGoogleAdsCredentialOwnerId(userId)
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true)
 
   if (targetAuthType === 'oauth') {
     const existingSa = await db.queryOne<{ id: string }>(
-      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND ${isActiveCondition} LIMIT 1`,
+      `SELECT id FROM google_ads_service_accounts WHERE user_id = ? AND is_active = true LIMIT 1`,
       [ownerUserId]
     )
     if (existingSa) {

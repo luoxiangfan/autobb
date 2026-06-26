@@ -1,7 +1,7 @@
 /**
  * Url-swap task read/query operations.
  */
-import { getDatabase, boolParam } from '@/lib/db'
+import { getDatabase } from '@/lib/db'
 import { filterRowsByUserPackageExpiry } from '@/lib/common/task-scheduling'
 import type { UrlSwapTask, UrlSwapTaskStatus, UrlSwapTaskListItem } from './url-swap-types'
 import { parseUrlSwapTask } from './url-swap-row'
@@ -12,7 +12,7 @@ import { parseUrlSwapTask } from './url-swap-row'
 export async function getUrlSwapTaskById(id: string, userId: number): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const task =
     userId === 0
@@ -45,7 +45,7 @@ export async function getUrlSwapTaskByOfferId(
 ): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const task = await db.queryOne<any>(
     `
@@ -86,7 +86,7 @@ export async function getUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition = 'ust.is_deleted = FALSE'
+  const isDeletedCondition = 'ust.is_deleted = false'
   let whereClause = 'ust.user_id = ?'
   const params: any[] = [userId]
 
@@ -139,10 +139,9 @@ export async function getUrlSwapTasks(
 export async function getPendingTasks(): Promise<UrlSwapTask[]> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(ust.is_deleted = FALSE OR ust.is_deleted IS NULL)'
-  const nowCondition = 'CURRENT_TIMESTAMP'
+  const isDeletedCondition = '(ust.is_deleted = false OR ust.is_deleted IS NULL)'
 
-  // � 用户禁用/过期后不再调度其任务（避免继续入队）
+  // 用户禁用/过期后不再调度其任务（避免继续入队）
   const rows = await db.query<any>(
     `
     SELECT
@@ -151,13 +150,13 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
     FROM url_swap_tasks ust
     INNER JOIN users u ON u.id = ust.user_id
     WHERE ust.status = 'enabled'
-      AND ust.next_swap_at <= ${nowCondition}
-      AND ust.started_at <= ${nowCondition}
+      AND ust.next_swap_at <= NOW()
+      AND ust.started_at <= NOW()
       AND ${isDeletedCondition}
-      AND u.is_active = ?
+      AND u.is_active = true
     ORDER BY ust.next_swap_at ASC
   `,
-    [boolParam(true)]
+    []
   )
 
   const tasks = filterRowsByUserPackageExpiry(rows)
@@ -180,7 +179,7 @@ export async function getAllUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition = 'ust.is_deleted = FALSE'
+  const isDeletedCondition = 'ust.is_deleted = false'
   let whereClause = isDeletedCondition
   const params: any[] = []
 

@@ -200,7 +200,6 @@ export async function findResumablePublishCampaignForOffer(
   userId: number
 ): Promise<ResumablePublishCampaignRow | null> {
   const db = await getDatabase()
-  const isDeletedCheck = 'is_deleted = FALSE'
 
   const { getStaleUpdatedAtThresholdIso } = await import('./campaign-offer-constraint')
   const staleThresholdIso = getStaleUpdatedAtThresholdIso()
@@ -234,7 +233,7 @@ export async function findResumablePublishCampaignForOffer(
         AND (
           (
             creation_status = 'pending'
-            AND ${isDeletedCheck}
+            AND is_deleted = false
             AND UPPER(COALESCE(status, '')) != 'REMOVED'
             ${stalePendingExclude}
           )
@@ -364,7 +363,6 @@ export async function persistPublishGoogleAdsIds(params: {
   }
 
   const db = await getDatabase()
-  const nowExpr = 'NOW()'
   const assignments: string[] = []
   const values: Array<string | number> = []
 
@@ -381,7 +379,7 @@ export async function persistPublishGoogleAdsIds(params: {
     values.push(googleAdId)
   }
 
-  assignments.push(`updated_at = ${nowExpr}`)
+  assignments.push(`updated_at = NOW()`)
 
   const result = await db.exec(
     `
@@ -422,9 +420,6 @@ export async function reactivateCampaignForPublishResume(params: {
   maxCpc: number | null
 }): Promise<void> {
   const db = await getDatabase()
-  const isDeletedSet = 'FALSE'
-  const nowExpr = 'NOW()'
-
   await applyCampaignTransition({
     userId: params.userId,
     campaignId: params.campaignId,
@@ -435,7 +430,7 @@ export async function reactivateCampaignForPublishResume(params: {
     `
       UPDATE campaigns
       SET
-        is_deleted = ${isDeletedSet},
+        is_deleted = false,
         deleted_at = NULL,
         offer_id = ?,
         google_ads_account_id = ?,
@@ -447,7 +442,7 @@ export async function reactivateCampaignForPublishResume(params: {
         max_cpc = ?,
         creation_error = NULL,
         removed_reason = NULL,
-        updated_at = ${nowExpr}
+        updated_at = NOW()
       WHERE id = ?
         AND user_id = ?
     `,

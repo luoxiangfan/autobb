@@ -115,7 +115,6 @@ export const POST = withAuth(async (request, user) => {
   const db = getDatabase()
   const queue = getQueueManager()
   const parentRequestId = request.headers.get('x-request-id') || undefined
-  const nowFunc = 'NOW()'
   let authCache: CreativeGenerationAuthCache | undefined
 
   try {
@@ -365,7 +364,7 @@ export const POST = withAuth(async (request, user) => {
           `INSERT INTO creative_tasks (
             id, user_id, offer_id, status, stage, progress, message,
             max_retries, target_rating, generation_mode, created_at, updated_at
-          ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, ${nowFunc}, ${nowFunc})`,
+          ) VALUES (?, ?, ?, 'pending', 'init', 0, '准备开始生成...', ?, ?, ?, NOW(), NOW())`,
           [taskId, userIdNum, offerId, batchMaxRetries, 'GOOD', generationMode]
         )
 
@@ -401,7 +400,7 @@ export const POST = withAuth(async (request, user) => {
         try {
           await db.exec(
             `UPDATE creative_tasks
-             SET status = 'failed', message = ?, error = ?, completed_at = ${nowFunc}, updated_at = ${nowFunc}
+             SET status = 'failed', message = ?, error = ?, completed_at = NOW(), updated_at = NOW()
              WHERE id = ? AND user_id = ?`,
             [
               error?.message || '任务入队失败',

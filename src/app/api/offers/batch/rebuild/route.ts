@@ -61,11 +61,9 @@ export const POST = withAuth(async (request, user) => {
       )
     }
 
-    const notDeletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
-
     const placeholders = offerIds.map(() => '?').join(',')
     const offers = await db.query<OfferRow>(
-      `SELECT id FROM offers WHERE id IN (${placeholders}) AND user_id = ? AND ${notDeletedCondition}`,
+      `SELECT id FROM offers WHERE id IN (${placeholders}) AND user_id = ? AND (is_deleted IS NULL OR is_deleted = false)`,
       [...offerIds, userIdNum]
     )
 

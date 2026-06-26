@@ -308,7 +308,6 @@ export const PUT = withAuth(async (request, user, context) => {
         invalidateDashboardCache(numericUserId)
       }
     }
-    const nowFunc = 'NOW()'
     const syncLocalConfiguredMaxCpc = async (nextMaxCpc: number) => {
       const normalized = toPositiveNumberOrNull(nextMaxCpc)
       if (normalized === null) return
@@ -318,7 +317,7 @@ export const PUT = withAuth(async (request, user, context) => {
           UPDATE campaigns
           SET
             max_cpc = ?,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
           WHERE user_id = ?
             AND google_campaign_id = ?
             AND status != 'REMOVED'
@@ -349,7 +348,7 @@ export const PUT = withAuth(async (request, user, context) => {
                 failure_count,
                 error_message,
                 created_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc})
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             `,
             [
               numericUserId,
@@ -380,7 +379,7 @@ export const PUT = withAuth(async (request, user, context) => {
                   failure_count,
                   error_message,
                   created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc})
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
               `,
               [
                 numericUserId,

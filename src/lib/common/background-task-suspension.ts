@@ -1,5 +1,5 @@
 import { getDatabase } from '@/lib/db'
-import { boolParam, nowFunc, toBool } from '@/lib/db'
+import { toBool } from '@/lib/db'
 import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 import { ALL_TASK_TYPES, type TaskType } from '@/lib/queue/types'
 import { pauseUrlSwapTargetsByUserIds } from '@/lib/url-swap'
@@ -45,30 +45,28 @@ export async function suspendUserBackgroundTasks(
   queuePurged: number
 }> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   const clickFarmStopped = (
     await db.exec(
       `
         UPDATE click_farm_tasks
         SET status = 'stopped',
-            updated_at = ${nowSql}
+            updated_at = NOW()
         WHERE user_id = ?
           AND status IN ('pending', 'running', 'paused')
-          AND is_deleted = FALSE
+          AND is_deleted = false
       `,
       [userId]
     )
   ).changes
 
-  const urlSwapNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
+  const urlSwapNotDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const urlSwapDisabled = (
     await db.exec(
       `
         UPDATE url_swap_tasks
         SET status = 'disabled',
-            updated_at = ${nowSql}
+            updated_at = NOW()
         WHERE user_id = ?
           AND status = 'enabled'
           AND ${urlSwapNotDeletedCondition}
@@ -110,10 +108,10 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
     `
       SELECT id, is_active, package_expires_at
       FROM users
-      WHERE is_active = ?
+      WHERE is_active = false
          OR package_expires_at IS NOT NULL
     `,
-    [boolParam(false)]
+    []
   )
 
   const affectedUserIds = Array.from(
@@ -129,30 +127,28 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
   }
 
   const placeholders = affectedUserIds.map(() => '?').join(', ')
-  const nowSql = nowFunc()
-
   const clickFarmStopped = (
     await db.exec(
       `
         UPDATE click_farm_tasks
         SET status = 'stopped',
-            updated_at = ${nowSql}
+            updated_at = NOW()
         WHERE user_id IN (${placeholders})
           AND status IN ('pending', 'running', 'paused')
-          AND is_deleted = FALSE
+          AND is_deleted = false
       `,
       [...affectedUserIds]
     )
   ).changes
 
-  const urlSwapNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
+  const urlSwapNotDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const urlSwapDisabled = (
     await db.exec(
       `
         UPDATE url_swap_tasks
         SET status = 'disabled',
-            updated_at = ${nowSql}
+            updated_at = NOW()
         WHERE user_id IN (${placeholders})
           AND status = 'enabled'
           AND ${urlSwapNotDeletedCondition}

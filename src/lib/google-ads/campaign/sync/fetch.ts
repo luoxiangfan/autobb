@@ -25,7 +25,7 @@ function resolveCampaignExtensionAssetType(row: any): CampaignExtensionAssetType
     return assetType
   }
 
-  // Python MessageToDict may omit asset.type even when sitelink/callout sub-assets are present.
+  // Python MessageToDict may omit asset.type even WHEN sitelink/callout sub-assets are present.
   if (row.asset?.sitelink_asset?.link_text) {
     return 'SITELINK'
   }

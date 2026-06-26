@@ -5,7 +5,7 @@ import {
 } from './ad-creative-generation-mode'
 import { normalizeSitelinkList } from './sitelink-utils'
 import { getDatabase } from '../db'
-import { getInsertedId, nowFunc } from '../db'
+import { getInsertedId } from '../db'
 import { GEMINI_ACTIVE_MODEL } from '../ai/server'
 import {
   CREATIVE_BRAND_KEYWORD_RESERVE,
@@ -882,9 +882,6 @@ export async function createAdCreative(
     explanation: data.explanation || '由Ad Strength评估系统生成',
   }
 
-  const isDeletedFalseSql = 'is_deleted = FALSE'
-  const isDeletedFalseValueSql = 'FALSE'
-  const nowSql = nowFunc()
   const generationModeForStorage = normalizeAdCreativeGenerationMode(
     data.generation_mode ?? undefined
   )
@@ -928,7 +925,7 @@ export async function createAdCreative(
         AND user_id = ?
         AND keyword_bucket = ?
         AND deleted_at IS NULL
-        AND ${isDeletedFalseSql}
+        AND is_deleted = false
       ORDER BY updated_at DESC, id DESC
       LIMIT 1
     `,
@@ -968,9 +965,9 @@ export async function createAdCreative(
         generation_mode = ?,
         creation_status = 'draft',
         creation_error = NULL,
-        is_deleted = ${isDeletedFalseValueSql},
+        is_deleted = false,
         deleted_at = NULL,
-        updated_at = ${nowSql}
+        updated_at = NOW()
       WHERE id = ? AND user_id = ?
     `,
       [
@@ -1095,11 +1092,10 @@ export async function createAdCreative(
  */
 export async function findAdCreativeById(id: number, userId: number): Promise<AdCreative | null> {
   const db = await getDatabase()
-  const isDeletedCheck = 'is_deleted = FALSE'
   const row = (await db.queryOne(
     `
     SELECT * FROM ad_creatives
-    WHERE id = ? AND user_id = ? AND ${isDeletedCheck}
+    WHERE id = ? AND user_id = ? AND is_deleted = false
   `,
     [id, userId]
   )) as any
@@ -1154,8 +1150,7 @@ async function listAdCreativesByOffer(
 ): Promise<AdCreative[]> {
   const db = await getDatabase()
 
-  const isDeletedCheck = 'is_deleted = FALSE'
-  let whereConditions = ['offer_id = ?', 'user_id = ?', isDeletedCheck]
+  let whereConditions = ['offer_id = ?', 'user_id = ?', 'is_deleted = false']
   const params: any[] = [offerId, userId]
 
   if (options?.generation_round) {
@@ -1201,7 +1196,7 @@ export async function selectAdCreative(id: number, userId: number): Promise<void
     `
     UPDATE ad_creatives
     SET ${isSelectedFalse},
-        updated_at = ${nowFunc()}
+        updated_at = NOW()
     WHERE offer_id = ? AND user_id = ? AND ${isSelectedTrue}
   `,
     [creative.offer_id, userId]
@@ -1212,7 +1207,7 @@ export async function selectAdCreative(id: number, userId: number): Promise<void
     `
     UPDATE ad_creatives
     SET ${isSelectedTrue},
-        updated_at = ${nowFunc()}
+        updated_at = NOW()
     WHERE id = ? AND user_id = ?
   `,
     [id, userId]
@@ -1479,8 +1474,8 @@ export async function deleteAdCreative(id: number, userId: number): Promise<bool
   const result = await db.exec(
     `
     UPDATE ad_creatives
-    SET is_deleted = ${'TRUE'},
-        deleted_at = ${'NOW()'}
+    SET is_deleted = true,
+        deleted_at = NOW()
     WHERE id = ? AND user_id = ?
   `,
     [id, userId]
@@ -1508,10 +1503,9 @@ export async function findAdCreativesByUserId(
 ): Promise<AdCreative[]> {
   const db = await getDatabase()
 
-  const isDeletedCheck = 'is_deleted = FALSE'
   let sql = `
     SELECT * FROM ad_creatives
-    WHERE user_id = ? AND ${isDeletedCheck}
+    WHERE user_id = ? AND is_deleted = false
     ORDER BY created_at DESC
   `
 

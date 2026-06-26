@@ -1,5 +1,4 @@
 import { getDatabase } from '../../db'
-import { nowFunc } from '../../db'
 import { REDIS_PREFIX_CONFIG } from '../../common/server'
 import { getRedisClient } from '../../common/server'
 import { normalizeCountryCode, normalizeLanguageCode } from '../../common/server'
@@ -190,8 +189,6 @@ export async function updateBrandCoreKeywordSearchVolumes(
   const normalizedLanguage = normalizeLanguageCode(language || 'en')
 
   const db = await getDatabase()
-  const updatedAt = nowFunc()
-
   await db.transaction(async () => {
     for (const update of updates) {
       const keywordNorm = update.keywordNorm
@@ -199,7 +196,7 @@ export async function updateBrandCoreKeywordSearchVolumes(
       await db.exec(
         `
         UPDATE brand_core_keywords
-        SET search_volume = ?, updated_at = ${updatedAt}
+        SET search_volume = ?, updated_at = NOW()
         WHERE brand_key = ? AND target_country = ? AND target_language = ? AND keyword_norm = ?
       `,
         [

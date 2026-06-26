@@ -11,7 +11,6 @@ import { logger } from '@/lib/common/server'
 import { createHash } from 'crypto'
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
 import { calculateHybridProductRecommendationScores } from '@/lib/ai/server'
 import type { AffiliateProduct } from '@/lib/affiliate/products'
@@ -165,7 +164,6 @@ export async function executeProductScoreCalculation(
 
   const db = await getDatabase()
   const startTime = Date.now()
-  const nowSql = nowFunc()
   const queue = await getQueueManagerForTaskType('product-score-calculation')
   const lockTtlMs =
     Math.max(queue.getConfig().taskTimeout || 900000, 15 * 60 * 1000) + 5 * 60 * 1000
@@ -313,8 +311,8 @@ export async function executeProductScoreCalculation(
                    recommendation_reasons = ?,
                    seasonality_score = ?,
                    product_analysis = ?,
-                   score_calculated_at = ${nowSql},
-                   updated_at = ${nowSql}
+                   score_calculated_at = NOW(),
+                   updated_at = NOW()
                WHERE id = ?`,
               [
                 cached.recommendationScore,
@@ -379,8 +377,8 @@ export async function executeProductScoreCalculation(
                  seasonality_score = ?,
                  seasonality_analysis = ?,
                  product_analysis = ?,
-                 score_calculated_at = ${nowSql},
-                 updated_at = ${nowSql}
+                 score_calculated_at = NOW(),
+                 updated_at = NOW()
              WHERE id = ?`,
             [
               score.starRating,

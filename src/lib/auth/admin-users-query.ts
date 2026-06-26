@@ -26,7 +26,7 @@ export function buildAdminUsersOrderBy(params: {
     case 'status': {
       const statusRank = `
         CASE
-          WHEN is_active = FALSE THEN 0
+          WHEN is_active = false THEN 0
           WHEN ${lockedAfterNowExpr} THEN 1
           ELSE 2
         END

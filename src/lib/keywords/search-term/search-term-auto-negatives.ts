@@ -1,5 +1,4 @@
 import { getDatabase } from '@/lib/db'
-import { boolCondition, boolParam } from '@/lib/db'
 import { createGoogleAdsKeywordsBatch } from '@/lib/google-ads/api/api'
 import {
   createGoogleAdsLinkedAccountPrepareCache,
@@ -354,10 +353,6 @@ async function loadSearchTermAggregates(options: {
   const startDate = formatDateYmd(start)
 
   const db = await getDatabase()
-  const campaignNotDeleted = boolCondition('c.is_deleted', false)
-  const campaignNotTestVariant = boolCondition('c.is_test_variant', false)
-  const accountActive = boolCondition('gaa.is_active', true)
-  const accountNotDeleted = boolCondition('gaa.is_deleted', false)
 
   const params: Array<string | number> = [startDate, endDate]
   const userFilterSql = options.userId ? 'AND str.user_id = ?' : ''
@@ -391,11 +386,11 @@ async function loadSearchTermAggregates(options: {
         AND str.google_ad_group_id IS NOT NULL
         AND TRIM(str.search_term) <> ''
         AND c.status IN ('ENABLED', 'PAUSED')
-        AND ${campaignNotDeleted}
-        AND ${campaignNotTestVariant}
+        AND c.is_deleted = false
+        AND c.is_test_variant = false
         AND gaa.status = 'ENABLED'
-        AND ${accountActive}
-        AND ${accountNotDeleted}
+        AND gaa.is_active = true
+        AND gaa.is_deleted = false
         ${userFilterSql}
         ${offerFilterSql}
       GROUP BY
@@ -429,7 +424,7 @@ async function loadExistingKeywordSet(params: {
   const whereNegative = params.onlyNegative === undefined ? '' : 'AND is_negative = ?'
   const queryParams: unknown[] = []
   if (params.onlyNegative !== undefined) {
-    queryParams.push(boolParam(params.onlyNegative))
+    queryParams.push(params.onlyNegative)
   }
 
   const existingRows = await db.query<{ ad_group_id: number; keyword_text: string }>(
@@ -605,8 +600,8 @@ export async function runSearchTermAutoNegatives(
             action.searchTerm,
             'EXACT',
             'ENABLED',
-            boolParam(true),
-            boolParam(true),
+            true,
+            true,
             AUTO_NEGATIVE_SOURCE,
             'synced',
             null,
@@ -637,8 +632,8 @@ export async function runSearchTermAutoNegatives(
                 action.searchTerm,
                 'EXACT',
                 'ENABLED',
-                boolParam(true),
-                boolParam(true),
+                true,
+                true,
                 AUTO_NEGATIVE_SOURCE,
                 'synced',
                 'already_exists_in_google_ads',
@@ -840,8 +835,8 @@ export async function runSearchTermAutoPositiveKeywords(
             action.searchTerm,
             action.matchType,
             'ENABLED',
-            boolParam(false),
-            boolParam(true),
+            false,
+            true,
             AUTO_POSITIVE_SOURCE,
             'synced',
             null,
@@ -872,8 +867,8 @@ export async function runSearchTermAutoPositiveKeywords(
                 action.searchTerm,
                 action.matchType,
                 'ENABLED',
-                boolParam(false),
-                boolParam(true),
+                false,
+                true,
                 AUTO_POSITIVE_SOURCE,
                 'synced',
                 'already_exists_in_google_ads',

@@ -6,13 +6,11 @@ const dbFns = vi.hoisted(() => ({
 
 const dbHelperFns = vi.hoisted(() => ({
   datetimeMinusHours: vi.fn(),
-  nowFunc: vi.fn(),
 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
   datetimeMinusHours: dbHelperFns.datetimeMinusHours,
-  nowFunc: dbHelperFns.nowFunc,
 }))
 
 import {
@@ -27,7 +25,6 @@ describe('feishu chat health lib', () => {
     dbHelperFns.datetimeMinusHours.mockImplementation((hours: number) => {
       return `CURRENT_TIMESTAMP - INTERVAL '${hours} hours'`
     })
-    dbHelperFns.nowFunc.mockImplementation(() => 'NOW()')
   })
 
   it('lists logs with excerpt and grouped stats', async () => {

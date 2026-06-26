@@ -87,7 +87,6 @@ export async function pauseClickFarmTasksWithoutEnabledCampaign(params?: {
   const message =
     params?.pauseMessage || '未检测到可用Campaign，系统自动暂停，请先发布广告后重启任务'
   const taskNotDeleted = notDeletedClause('click_farm_tasks')
-  const nowSql = 'CURRENT_TIMESTAMP'
 
   const tasks = await findClickFarmTasksWithoutEnabledCampaign({
     userId: params?.userId,
@@ -113,8 +112,8 @@ export async function pauseClickFarmTasksWithoutEnabledCampaign(params?: {
        SET status = 'paused',
            pause_reason = ?,
            pause_message = ?,
-           paused_at = ${nowSql},
-           updated_at = ${nowSql}
+           paused_at = NOW(),
+           updated_at = NOW()
        WHERE id = ?
          AND user_id = ?
          AND status IN ('pending', 'running')

@@ -73,8 +73,13 @@ npm run type-check
 ### 设计与迁移
 
 1. **Schema 变更**：在 `migrations/{N}_*.pg.sql` 添加增量迁移，并同步更新 `migrations/000_init_schema_consolidated.pg.sql`（全新库）。见 `migrations/README.md`。
-2. **优先复用** `src/lib/db-helpers.ts`（如 `nowFunc`、`getInsertedId`、`boolParam`），避免散落方言专用 SQL。
+2. **优先复用** `src/lib/db/db-helpers.ts`（如 `getInsertedId`、`notDeletedClause`、`datetimeMinusHours`），避免重复手写相同 SQL 片段。
 3. **占位符**：经 `DatabaseAdapter` 的 SQL 统一用 `?`；勿在应用层混用未转换的 `$1` 风格（适配层会自动转换）。
+4. **PostgreSQL 写法（应用层 SQL）**：
+   - 布尔条件与字面量：SQL 内联 `true` / `false`（小写）；`params` 绑定布尔值时直接传 `true` / `false`，勿用 `boolParam` 等包装。
+   - 当前时间：SQL 内联 `NOW()`，勿定义 `const xxx = 'NOW()'` 再插值。
+   - 相对时间：用 `datetimeMinusHours` / `datetimeMinusDays` 等 helper，或 `CURRENT_TIMESTAMP - INTERVAL '…'`。
+   - 禁止 SQLite 风格兼容（如 `::text IN ('1','t','true')`、`INTEGER` 布尔混写注释）。
 
 ### SQL 语法与语义正确性（必须）
 
@@ -87,7 +92,7 @@ npm run type-check
 | **表与列**        | 表名、列名与当前 schema 一致；`JOIN`/`WHERE`/`ORDER BY`/`GROUP BY` 引用的列存在且归属正确                                                                            |
 | **表别名**        | 多表查询为每张表定义唯一别名；`SELECT`/`ON`/`WHERE` 中只用别名或全限定名，避免歧义列名                                                                               |
 | **占位符**        | 经 `DatabaseAdapter` 的 SQL 统一用 `?`，`params` 顺序与个数一致（`db.ts` 转为 `$1,$2,...`）                                                                          |
-| **数据类型**      | 布尔用 `TRUE/FALSE` 或 `boolParam`；时间用 `nowFunc` / `NOW()`；JSON 列用 JSONB；使用 PostgreSQL 标准语法 |
+| **数据类型**      | 布尔列 SQL 用 `true`/`false`（小写）；绑定参数传 boolean；时间戳用 `NOW()` 或 `datetimeMinus*` helper；JSON 列用 JSONB |
 | **INSERT/UPDATE** | 需 `RETURNING id` 时与 `getInsertedId` 约定一致；`UPDATE`/`DELETE` 条件完整，避免误伤全表                                                                              |
 | **聚合与子查询**  | `GROUP BY` 含非聚合列；子查询别名、相关子查询关联字段正确                                                                                                            |
 | **迁移脚本**      | `migrations/*.pg.sql` 使用 PostgreSQL 语法                                                                                                                           |

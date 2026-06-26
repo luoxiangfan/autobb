@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { boolParam, getInsertedId } from '@/lib/db'
+import { getInsertedId } from '@/lib/db'
 import {
   createGoogleAdsKeywordsBatch,
   type OAuthApiCredentialsFields,
@@ -395,12 +395,11 @@ export const POST = withAuth(async (request, user, context) => {
         addKeywords: keywordRows,
       })
       if (!patch.changed) return
-      const nowExpr = 'NOW()'
       await db.exec(
         `
           UPDATE campaigns
           SET campaign_config = ?,
-              updated_at = ${nowExpr}
+              updated_at = NOW()
           WHERE id = ?
             AND user_id = ?
         `,
@@ -554,8 +553,8 @@ export const POST = withAuth(async (request, user, context) => {
             created.keywordText,
             matchType,
             status,
-            boolParam(false),
-            boolParam(false),
+            false,
+            false,
             now,
             now,
             now,

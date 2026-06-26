@@ -771,14 +771,13 @@ export function clampDateRangeToBounds(params: {
 
 export async function listActiveNonAdminUsers(): Promise<ActiveNonAdminUser[]> {
   const db = await getDatabase()
-  const isActiveCondition = 'is_active = TRUE'
 
   return db.query<ActiveNonAdminUser>(
     `
       SELECT id, username
       FROM users
       WHERE role != 'admin'
-        AND ${isActiveCondition}
+        AND is_active = true
       ORDER BY username ASC
     `
   )
@@ -788,7 +787,6 @@ async function filterActiveNonAdminUserIds(userIds: number[]): Promise<Set<numbe
   if (userIds.length === 0) return new Set()
 
   const db = await getDatabase()
-  const isActiveCondition = 'is_active = TRUE'
   const allowedIds = new Set<number>()
 
   for (const userIdChunk of chunkArray(userIds, 200)) {
@@ -799,7 +797,7 @@ async function filterActiveNonAdminUserIds(userIds: number[]): Promise<Set<numbe
         FROM users
         WHERE id IN (${placeholders})
           AND role != 'admin'
-          AND ${isActiveCondition}
+          AND is_active = true
       `,
       userIdChunk
     )

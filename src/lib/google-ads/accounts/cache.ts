@@ -36,8 +36,6 @@ export async function getCachedAccounts(params: {
   serviceAccountId?: string | null
 }): Promise<CachedAccount[]> {
   const db = await getDatabase()
-  const isActiveCondition = 'is_active = true'
-  const isDeletedCheck = 'is_deleted = FALSE'
 
   const scopeSqlParts: string[] = []
   const scopeParams: any[] = []
@@ -65,8 +63,8 @@ export async function getCachedAccounts(params: {
            last_sync_at
     FROM google_ads_accounts
     WHERE user_id = ?
-      AND ${isActiveCondition}
-      AND ${isDeletedCheck}
+      AND is_active = true
+      AND is_deleted = false
       AND ${scopeSql}
     ORDER BY is_manager_account DESC, account_name ASC
   `,
@@ -105,8 +103,6 @@ export async function upsertAccount(
     throw new Error('upsertAccount requires authScope.authType')
   }
   const db = await getDatabase()
-  const activeValue = true
-  const notDeletedValue = false
 
   // 检查是否已存在
   const existing = (await db.queryOne(
@@ -149,8 +145,8 @@ export async function upsertAccount(
         account.currency_code,
         account.time_zone,
         account.manager,
-        activeValue,
-        notDeletedValue,
+        true,
+        false,
         account.test_account,
         account.status,
         account.account_balance ?? null,
@@ -191,8 +187,8 @@ export async function upsertAccount(
         account.currency_code,
         account.time_zone,
         account.manager,
-        activeValue,
-        notDeletedValue,
+        true,
+        false,
         account.test_account,
         account.status,
         account.account_balance ?? null,
@@ -221,9 +217,6 @@ export async function deactivateMissingAccounts(params: {
   if (!params.seenCustomerIds || params.seenCustomerIds.size === 0) return
 
   const db = await getDatabase()
-  const inactiveValue = false
-  const isActiveCondition = 'is_active = true'
-  const isDeletedCheck = 'is_deleted = FALSE'
 
   const scopeSqlParts: string[] = []
   const scopeParams: any[] = []
@@ -244,8 +237,8 @@ export async function deactivateMissingAccounts(params: {
     SELECT customer_id
     FROM google_ads_accounts
     WHERE user_id = ?
-      AND ${isActiveCondition}
-      AND ${isDeletedCheck}
+      AND is_active = true
+      AND is_deleted = false
       AND ${scopeSql}
   `,
     [params.userId, ...scopeParams]
@@ -264,11 +257,11 @@ export async function deactivateMissingAccounts(params: {
     UPDATE google_ads_accounts
     SET is_active = ?, updated_at = NOW()
     WHERE user_id = ?
-      AND ${isDeletedCheck}
+      AND is_deleted = false
       AND ${scopeSql}
       AND customer_id IN (${placeholders})
   `,
-    [inactiveValue, params.userId, ...scopeParams, ...missing]
+    [false, params.userId, ...scopeParams, ...missing]
   )
 
   googleAdsAccountsLogger.info('accounts_deactivated', {

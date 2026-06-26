@@ -16,13 +16,12 @@ export const GET = withAuth(
       const db = await getDatabase()
       const retentionDays = 90 // 保留90天内的软删除记录
 
-      const deletedCheck = 'is_deleted = TRUE'
       const dateCheck = `deleted_at < NOW() - INTERVAL '${retentionDays} days'`
 
       const scrapedProductsCount = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM scraped_products
-      WHERE ${deletedCheck}
+      WHERE is_deleted = true
         AND deleted_at IS NOT NULL
         AND ${dateCheck}
     `)) as { count: number }
@@ -30,7 +29,7 @@ export const GET = withAuth(
       const adCreativesCount = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM ad_creatives
-      WHERE ${deletedCheck}
+      WHERE is_deleted = true
         AND deleted_at IS NOT NULL
         AND ${dateCheck}
     `)) as { count: number }
@@ -38,7 +37,7 @@ export const GET = withAuth(
       const googleAdsAccountsCount = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM google_ads_accounts
-      WHERE ${deletedCheck}
+      WHERE is_deleted = true
         AND deleted_at IS NOT NULL
         AND ${dateCheck}
     `)) as { count: number }
@@ -46,19 +45,19 @@ export const GET = withAuth(
       const totalScrapedProducts = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM scraped_products
-      WHERE ${deletedCheck}
+      WHERE is_deleted = true
     `)) as { count: number }
 
       const totalAdCreatives = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM ad_creatives
-      WHERE ${deletedCheck}
+      WHERE is_deleted = true
     `)) as { count: number }
 
       const totalGoogleAdsAccounts = (await db.queryOne(`
       SELECT COUNT(*) as count
       FROM google_ads_accounts
-      WHERE ${deletedCheck}
+      WHERE is_deleted = true
     `)) as { count: number }
 
       return NextResponse.json({

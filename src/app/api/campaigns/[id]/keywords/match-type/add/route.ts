@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withAuth } from '@/lib/auth'
 import { getDatabase } from '@/lib/db'
-import { boolCondition, boolParam, getInsertedId } from '@/lib/db'
+import { getInsertedId } from '@/lib/db'
 import {
   createGoogleAdsKeywordsBatch,
   updateGoogleAdsKeywordStatus,
@@ -320,7 +320,6 @@ async function pauseExistingKeywords(params: {
     return { pausedCount: 0, pausedKeywords: [], failures: [] }
   }
 
-  const positiveCondition = boolCondition('k.is_negative', false)
   const keywordMatchConditions = params.oldKeywords
     .map(() => `(LOWER(TRIM(k.keyword_text)) = ? AND UPPER(COALESCE(k.match_type, 'PHRASE')) = ?)`)
     .join(' OR ')
@@ -350,7 +349,7 @@ async function pauseExistingKeywords(params: {
       WHERE ag.campaign_id = ?
         AND ag.user_id = ?
         AND k.user_id = ?
-        AND ${positiveCondition}
+        AND k.is_negative = false
         AND (${keywordMatchConditions})
     `,
     queryParams
@@ -437,7 +436,6 @@ export const POST = withAuth(async (request, user, context) => {
 
     const body = (await request.json().catch(() => ({}))) as AddKeywordsRequestBody
     const db = await getDatabase()
-    const positiveCondition = boolCondition('k.is_negative', false)
 
     const campaign = await db.queryOne<{
       id: number
@@ -509,12 +507,11 @@ export const POST = withAuth(async (request, user, context) => {
         removeKeywords,
       })
       if (!patch.changed) return
-      const nowExpr = 'NOW()'
       await db.exec(
         `
           UPDATE campaigns
           SET campaign_config = ?,
-              updated_at = ${nowExpr}
+              updated_at = NOW()
           WHERE id = ?
             AND user_id = ?
         `,
@@ -538,7 +535,7 @@ export const POST = withAuth(async (request, user, context) => {
         WHERE ag.campaign_id = ?
           AND ag.user_id = ?
           AND k.user_id = ?
-          AND ${positiveCondition}
+          AND k.is_negative = false
       `,
       [campaignId, userId, userId]
     )
@@ -657,8 +654,8 @@ export const POST = withAuth(async (request, user, context) => {
             created.keywordText,
             created.matchType,
             status,
-            boolParam(false),
-            boolParam(false),
+            false,
+            false,
             now,
             now,
             now,

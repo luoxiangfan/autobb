@@ -181,7 +181,7 @@ export async function loadOfferStoreProductLinksForUrlSwap(
     SELECT page_type, store_product_links
     FROM offers
     WHERE id = ? AND user_id = ?
-      AND (is_deleted = FALSE OR is_deleted IS NULL)
+      AND (is_deleted = false OR is_deleted IS NULL)
   `,
     [offerId, userId]
   )

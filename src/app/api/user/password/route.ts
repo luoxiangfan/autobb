@@ -67,12 +67,10 @@ export async function PUT(request: NextRequest) {
 
     // 更新密码，同时取消首次修改密码标记
     const db = await getDatabase()
-    const nowFunc = 'NOW()'
-    const falseValue = 'false'
     await db.exec(
       `
       UPDATE users
-      SET password_hash = ?, must_change_password = ${falseValue}, updated_at = ${nowFunc}
+      SET password_hash = ?, must_change_password = false, updated_at = NOW()
       WHERE id = ?
     `,
       [newPasswordHash, user.id]

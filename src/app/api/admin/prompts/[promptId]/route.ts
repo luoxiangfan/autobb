@@ -12,9 +12,6 @@ export const GET = withAuth(
       const promptId = context?.params?.promptId
       const db = getDatabase()
 
-      // PostgreSQL 兼容性：布尔字段兼容性处理
-      const isActiveValue = true
-
       // 获取当前激活版本
       const activeVersion = await db.queryOne<any>(
         `SELECT
@@ -23,7 +20,7 @@ export const GET = withAuth(
        FROM prompt_versions pv
        LEFT JOIN users u ON pv.created_by = u.id
        WHERE pv.prompt_id = ? AND pv.is_active = ?`,
-        [promptId, isActiveValue]
+        [promptId, true]
       )
 
       if (!activeVersion) {
@@ -101,10 +98,6 @@ export const PUT = withAuth(
       const body = await request.json()
       const db = getDatabase()
 
-      // PostgreSQL 兼容性：布尔字段兼容性处理
-      const isActiveFalse = false
-      const isActiveTrue = true
-
       // 判断是激活版本还是编辑创建新版本
       const isEditOperation = body.promptContent !== undefined
 
@@ -132,7 +125,7 @@ export const PUT = withAuth(
         // 1. 获取当前版本信息作为基础
         const currentVersion = await db.queryOne<any>(
           'SELECT * FROM prompt_versions WHERE prompt_id = ? AND is_active = ?',
-          [promptId, isActiveTrue]
+          [promptId, true]
         )
 
         if (!currentVersion) {
@@ -174,7 +167,7 @@ export const PUT = withAuth(
         // 4. 如果激活新版本，先取消其他版本的激活状态
         if (isActive) {
           await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
-            isActiveFalse,
+            false,
             promptId,
           ])
         }
@@ -198,7 +191,7 @@ export const PUT = withAuth(
             promptContent,
             currentVersion.language,
             userId || null,
-            isActive ? 1 : 0,
+            isActive,
             changeNotes || '',
           ]
         )
@@ -235,14 +228,14 @@ export const PUT = withAuth(
 
         // 取消其他版本的激活状态
         await db.exec('UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ?', [
-          isActiveFalse,
+          false,
           promptId,
         ])
 
         // 激活指定版本
         await db.exec(
           'UPDATE prompt_versions SET is_active = ? WHERE prompt_id = ? AND version = ?',
-          [isActiveTrue, promptId, version]
+          [true, promptId, version]
         )
 
         return NextResponse.json({

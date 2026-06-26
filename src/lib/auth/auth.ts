@@ -227,8 +227,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
  */
 async function updateLastLogin(userId: number): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-  await db.exec(`UPDATE users SET last_login_at = ${nowFunc} WHERE id = ?`, [userId])
+  await db.exec(`UPDATE users SET last_login_at = NOW() WHERE id = ?`, [userId])
 }
 
 /**
@@ -335,11 +334,10 @@ export async function loginWithGoogle(googleProfile: {
     if (existingUser) {
       // 绑定Google ID到现有账户
       const db = await getDatabase()
-      const nowFunc = 'NOW()'
       await db.exec(
         `
         UPDATE users
-        SET google_id = ?, profile_picture = ?, updated_at = ${nowFunc}
+        SET google_id = ?, profile_picture = ?, updated_at = NOW()
         WHERE id = ?
       `,
         [googleProfile.id, googleProfile.picture || null, existingUser.id]

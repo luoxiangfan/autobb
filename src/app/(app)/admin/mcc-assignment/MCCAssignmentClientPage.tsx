@@ -393,7 +393,7 @@ export default function MCCAssignmentClientPage() {
           <div className="space-y-1">
             <p className="text-sm">请检查 MCC 账号是否正确</p>
             <p className="text-xs text-gray-600">
-              💡 提示：MCC 账号必须是有效的经理账号（is_manager_account = TRUE）
+              💡 提示：MCC 账号必须是有效的经理账号（is_manager_account = true）
             </p>
           </div>
         )

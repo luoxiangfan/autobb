@@ -31,7 +31,7 @@ export const GET = withAuth(async (request: NextRequest, user) => {
       LEFT JOIN (
         SELECT customer_id, MAX(account_name) as account_name
         FROM google_ads_accounts
-        WHERE is_manager_account = ${'TRUE'}
+        WHERE is_manager_account = true
         GROUP BY customer_id
       ) gaa ON uma.mcc_customer_id = gaa.customer_id
       WHERE uma.user_id = ?
@@ -93,14 +93,13 @@ export const POST = withAuth(
         return NextResponse.json({ error: '目标用户不存在' }, { status: 404 })
       }
 
-      // 验证 MCC 账号是否存在（必须是 is_manager_account = TRUE）
-      const isManagerCondition = 'is_manager_account = TRUE'
+      // 验证 MCC 账号是否存在（必须是经理账号）
       const mccAccounts = (await db.query(
         `
       SELECT customer_id, MAX(account_name) AS account_name
       FROM google_ads_accounts
       WHERE customer_id IN (${mccCustomerIds.map(() => '?').join(',')})
-      AND ${isManagerCondition}
+      AND is_manager_account = true
       GROUP BY customer_id
     `,
         mccCustomerIds

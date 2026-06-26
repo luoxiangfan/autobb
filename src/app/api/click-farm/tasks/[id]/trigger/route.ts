@@ -95,12 +95,11 @@ export const POST = withAuth(async (request: NextRequest, user, context) => {
   }
 
   const db = getDatabase()
-  const nowSql = 'NOW()'
   const oneHourAgoSql = "NOW() - INTERVAL '1 hour'"
   const updated = await db.exec(
     `
       UPDATE click_farm_tasks
-      SET next_run_at = ${oneHourAgoSql}, updated_at = ${nowSql}
+      SET next_run_at = ${oneHourAgoSql}, updated_at = NOW()
       WHERE id = ? AND user_id = ?
     `,
     [id, user.userId]

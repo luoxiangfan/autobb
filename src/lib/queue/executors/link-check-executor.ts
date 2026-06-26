@@ -176,14 +176,11 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
       if (useUrlResolver) {
         const db = await getDatabase()
 
-        // PostgreSQL BOOLEAN 兼容性
-        const isActiveCondition = 'o.is_active = true'
-
         // 构建查询条件
         let query = `
           SELECT o.id, o.affiliate_link, o.target_country, o.user_id, o.brand, o.offer_name
           FROM offers o
-          WHERE ${isActiveCondition} AND o.affiliate_link IS NOT NULL
+          WHERE o.is_active = true AND o.affiliate_link IS NOT NULL
         `
         const params: any[] = []
 
@@ -309,7 +306,6 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
 
           logger.debug(`   ❌ ${displayName}: 链接失效 - ${result.error}`)
 
-          const isDeletedFalse = 'FALSE'
           let campaignsToSyncGoogle: Array<{
             campaign_id: string
             google_ads_account_id: number
@@ -322,7 +318,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
               FROM campaigns
               WHERE offer_id = ?
                 AND status != 'PAUSED'
-                AND is_deleted = ${isDeletedFalse}
+                AND is_deleted = false
                 AND campaign_id IS NOT NULL
                 AND campaign_id != ''
             `,
@@ -347,7 +343,7 @@ export function createLinkCheckExecutor(): TaskExecutor<LinkCheckTaskData, LinkC
                       updated_at = ?
                   WHERE offer_id = ?
                     AND status != 'PAUSED'
-                    AND is_deleted = ${isDeletedFalse}
+                    AND is_deleted = false
                 `,
                 [new Date(), offer.id]
               )

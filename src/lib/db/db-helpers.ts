@@ -25,21 +25,9 @@ export function isDbRowActive(value: unknown): boolean {
   return value === true || value === 1
 }
 
-export function boolCondition(field: string, value: boolean): string {
-  return `${field} = ${String(value)}`
-}
-
-export function boolParam(value: boolean): boolean {
-  return value
-}
-
 /* * SQL fragment: row not soft-deleted (BOOLEAN is_deleted). */
 export function notDeletedClause(alias: string): string {
-  return `(${alias}.is_deleted = FALSE OR ${alias}.is_deleted IS NULL)`
-}
-
-export function nowFunc(): string {
-  return 'NOW()'
+  return `(${alias}.is_deleted = false OR ${alias}.is_deleted IS NULL)`
 }
 
 export function dateMinusDays(days: number): string {

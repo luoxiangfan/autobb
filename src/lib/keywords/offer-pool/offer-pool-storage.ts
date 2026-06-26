@@ -30,11 +30,10 @@ async function resolveActivePromptVersion(
   fallbackVersion: string
 ): Promise<string> {
   try {
-    const isActiveCondition = 'is_active = TRUE'
     const activePrompt = await db.queryOne<{ version: string }>(
       `SELECT version
        FROM prompt_versions
-       WHERE prompt_id = ? AND ${isActiveCondition}
+       WHERE prompt_id = ? AND is_active = true
        ORDER BY created_at DESC
        LIMIT 1`,
       [promptId]
@@ -113,7 +112,7 @@ export async function saveKeywordPool(
         clustering_model = ?,
         clustering_prompt_version = ?,
         balance_score = ?,
-        updated_at = ${'NOW()'}
+        updated_at = NOW()
       WHERE offer_id = ?`,
       [
         brandKwJson,
@@ -282,7 +281,7 @@ export async function saveKeywordPoolWithData(
       'store_bucket_c_intent = ?',
       'store_bucket_d_intent = ?',
       'store_bucket_s_intent = ?',
-      `updated_at = ${'NOW()'}`,
+      `updated_at = NOW()`,
     ]
 
     const updateValues = [

@@ -1,5 +1,4 @@
-import { getDatabase } from '@/lib/db'
-import { boolCondition, toBool } from '@/lib/db'
+import { getDatabase, toBool } from '@/lib/db'
 
 export const USER_EXECUTION_SUSPENDED_ERROR_CODE = 'USER_EXECUTION_SUSPENDED' as const
 
@@ -37,7 +36,7 @@ export function buildUserExecutionEligibleSql(params: {
   nowExpr?: string
 }): string {
   const userRef = normalizeAlias(params.userAlias)
-  const activeExpr = boolCondition(`${userRef}is_active`, true)
+  const activeExpr = `${userRef}is_active = true`
   const nowExpr = params.nowExpr || 'NOW()'
   const packageExpiresAtExpr = `${userRef}package_expires_at`
   const packageExpr = `(${packageExpiresAtExpr} IS NULL OR NULLIF(BTRIM(${packageExpiresAtExpr}), '')::timestamptz >= ${nowExpr})`

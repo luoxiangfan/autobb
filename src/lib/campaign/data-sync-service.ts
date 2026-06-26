@@ -22,7 +22,7 @@ import {
   preparedAuthContextField,
 } from '@/lib/google-ads/accounts/auth/index'
 import { executeGAQLQueryPython } from './python-ads-client'
-import { getInsertedId, nowFunc } from '../db'
+import { getInsertedId } from '../db'
 import { createRiskAlert } from './optimization'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { normalizeGoogleAdsKeyword } from '@/lib/google-ads/keyword/normalizer'
@@ -365,9 +365,6 @@ class DataSyncService {
         serviceAccountJobCredentials = syncCredentialsResolved.userCredentials
       }
 
-      // PostgreSQL兼容性is_active在PostgreSQL中是BOOLEAN类型
-      const isActiveCondition = 'is_active = true'
-
       // 1. 获取用户的所有Google Ads账户
       // 添加currency字段以支持多货币账户
       // 添加account_name字段用于风险警报显示
@@ -375,7 +372,7 @@ class DataSyncService {
         `
         SELECT id, customer_id, parent_mcc_id, account_name, user_id, service_account_id, currency
         FROM google_ads_accounts
-        WHERE user_id = ? AND ${isActiveCondition}
+        WHERE user_id = ? AND is_active = true
       `,
         [userId]
       )) as Array<{
@@ -586,7 +583,7 @@ class DataSyncService {
                 UPDATE google_ads_accounts
                 SET currency = COALESCE(?, currency),
                     timezone = COALESCE(?, timezone),
-                    updated_at = ${'NOW()'}
+                    updated_at = NOW()
                 WHERE id = ?
               `,
                 [shouldUpdateCurrency ? derivedCurrency : null, derivedTimeZone, account.id]
@@ -1434,8 +1431,6 @@ class DataSyncService {
     ])
 
     const db = await getDatabase()
-    const nowSql = nowFunc()
-
     const campaignIds = campaigns.map((c) => c.id)
     if (campaignIds.length > 0) {
       const placeholders = campaignIds.map(() => '?').join(',')
@@ -1767,7 +1762,7 @@ class DataSyncService {
               keyword_norm, keyword_display, source_mask,
               impressions_total, clicks_total, last_seen_at,
               created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowSql}, ${nowSql})
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ON CONFLICT(brand_key, target_country, target_language, keyword_norm)
             DO UPDATE SET
               impressions_total = excluded.impressions_total,
@@ -1776,7 +1771,7 @@ class DataSyncService {
               source_mask = excluded.source_mask,
               brand_display = COALESCE(brand_core_keywords.brand_display, excluded.brand_display),
               keyword_display = COALESCE(brand_core_keywords.keyword_display, excluded.keyword_display),
-              updated_at = ${nowSql}
+              updated_at = NOW()
           `,
             [
               scope.brandKey,

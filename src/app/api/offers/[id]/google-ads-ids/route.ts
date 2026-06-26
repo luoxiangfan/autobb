@@ -28,8 +28,6 @@ export const GET = withAuth(async (request, user, context) => {
     }
 
     // campaigns.is_deleted 为 BOOLEAN
-    const isDeletedCheck = 'c.is_deleted = FALSE'
-
     const row = (await db.queryOne(
       `
         SELECT
@@ -39,7 +37,7 @@ export const GET = withAuth(async (request, user, context) => {
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         WHERE c.offer_id = ? AND c.user_id = ?
-          AND ${isDeletedCheck}
+          AND c.is_deleted = false
           AND c.status != 'REMOVED'
           AND (
             (c.google_campaign_id IS NOT NULL AND c.google_campaign_id != '')

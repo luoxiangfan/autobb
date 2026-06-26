@@ -2,7 +2,7 @@
  * Click-farm task read/query operations.
  */
 import { logger } from '@/lib/common/server'
-import { getDatabase, boolParam } from '@/lib/db'
+import { getDatabase } from '@/lib/db'
 import { filterRowsByUserPackageExpiry } from '@/lib/common/task-scheduling'
 import type { ClickFarmTask, ClickFarmTaskListItem, TaskFilters } from './click-farm-types'
 import { parseClickFarmTask } from './click-farm-row'
@@ -16,7 +16,7 @@ export async function getClickFarmTaskById(
   const task = await db.queryOne<any>(
     `
     SELECT * FROM click_farm_tasks
-    WHERE id = ? AND user_id = ? AND is_deleted = FALSE
+    WHERE id = ? AND user_id = ? AND is_deleted = false
   `,
     [id, userId]
   )
@@ -39,7 +39,7 @@ export async function getClickFarmTasks(
   const params: any[] = [userId]
 
   if (!filters.include_deleted) {
-    whereConditions.push('cft.is_deleted = FALSE')
+    whereConditions.push('cft.is_deleted = false')
   }
 
   if (filters.status) {
@@ -104,16 +104,16 @@ export async function getPendingTasks(): Promise<ClickFarmTask[]> {
     FROM click_farm_tasks cft
     INNER JOIN users u ON u.id = cft.user_id
     WHERE cft.status IN ('pending', 'running')
-      AND cft.is_deleted = FALSE
+      AND cft.is_deleted = false
       AND (cft.next_run_at IS NULL OR cft.next_run_at <= NOW())
-      AND u.is_active = ?
+      AND u.is_active = true
     ORDER BY
       CASE WHEN cft.next_run_at IS NULL THEN 0 ELSE 1 END,
       cft.next_run_at ASC,
       cft.created_at ASC
     LIMIT ${pendingLimit}
   `,
-    [boolParam(true)]
+    []
   )
 
   const tasks = filterRowsByUserPackageExpiry(rows)
@@ -145,12 +145,10 @@ export async function getClickFarmTaskByOfferId(
 ): Promise<ClickFarmTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
-
   const task = (await db.queryOne(
     `
     SELECT * FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
+    WHERE offer_id = ? AND user_id = ? AND (is_deleted = false OR is_deleted IS NULL)
     ORDER BY created_at DESC
     LIMIT 1
   `,

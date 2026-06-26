@@ -1,7 +1,6 @@
 import { logger } from '@/lib/common/server'
 import type { Task } from '@/lib/queue/types'
 import { getDatabase } from '@/lib/db'
-import { nowFunc } from '@/lib/db'
 import { fetchAutoadsAsUser } from '@/lib/openclaw/runtime/autoads-client'
 import { recordOpenclawAction } from '@/lib/openclaw/runtime/action-logs'
 import { buildEffectiveCreative } from '@/lib/campaign/publish/effective-creative'
@@ -1650,8 +1649,6 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
   }
 
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   const run = await db.queryOne<{
     id: string
     user_id: number
@@ -1701,9 +1698,9 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
   await db.exec(
     `UPDATE openclaw_command_runs
      SET status = 'running',
-         started_at = COALESCE(started_at, ${nowSql}),
+         started_at = COALESCE(started_at, NOW()),
          error_message = NULL,
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE id = ? AND user_id = ?`,
     [data.runId, data.userId]
   )
@@ -1727,13 +1724,13 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
   const updateRunHeartbeat = async () => {
     await db.exec(
       `UPDATE openclaw_command_runs
-       SET updated_at = ${nowSql}
+       SET updated_at = NOW()
        WHERE id = ? AND user_id = ? AND status = 'running'`,
       [data.runId, data.userId]
     )
     await db.exec(
       `UPDATE openclaw_command_steps
-       SET updated_at = ${nowSql}
+       SET updated_at = NOW()
        WHERE run_id = ? AND step_index = 0 AND status = 'running'`,
       [data.runId]
     )
@@ -1789,7 +1786,7 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
       await db.exec(
         `UPDATE openclaw_command_runs
          SET request_body_json = ?,
-             updated_at = ${nowSql}
+             updated_at = NOW()
          WHERE id = ? AND user_id = ?`,
         [requestBodyForAudit, data.runId, data.userId]
       )
@@ -1805,14 +1802,14 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
     await db.exec(
       `INSERT INTO openclaw_command_steps
        (run_id, step_index, action_type, request_json, status, created_at, updated_at)
-       VALUES (?, 0, 'proxy', ?, 'running', ${nowSql}, ${nowSql})
+       VALUES (?, 0, 'proxy', ?, 'running', NOW(), NOW())
        ON CONFLICT(run_id, step_index)
        DO UPDATE SET
          action_type = excluded.action_type,
          request_json = excluded.request_json,
          status = 'running',
          error_message = NULL,
-         updated_at = ${nowSql}`,
+         updated_at = NOW()`,
       [data.runId, JSON.stringify(requestPayload)]
     )
 
@@ -1885,7 +1882,7 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
            response_json = ?,
            latency_ms = ?,
            error_message = NULL,
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE run_id = ? AND step_index = 0`,
       [responseBody, latencyMs, data.runId]
     )
@@ -1896,8 +1893,8 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
            response_status = ?,
            response_body = ?,
            error_message = NULL,
-           completed_at = ${nowSql},
-           updated_at = ${nowSql}
+           completed_at = NOW(),
+           updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [responseStatus, responseBody, data.runId, data.userId]
     )
@@ -1938,7 +1935,7 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
            response_json = ?,
            latency_ms = ?,
            error_message = ?,
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE run_id = ? AND step_index = 0`,
       [responseBody, latencyMs, message, data.runId]
     )
@@ -1949,8 +1946,8 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
            response_status = ?,
            response_body = ?,
            error_message = ?,
-           completed_at = ${nowSql},
-           updated_at = ${nowSql}
+           completed_at = NOW(),
+           updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [responseStatus, responseBody, message, data.runId, data.userId]
     )

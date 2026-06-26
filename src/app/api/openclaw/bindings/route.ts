@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
   }
 
   const db = await getDatabase()
-  const nowSql = 'NOW()'
   const channel = parsed.data.channel.trim()
   const openId = parsed.data.openId.trim()
   const unionId = (parsed.data.unionId || '').trim() || null
@@ -57,7 +56,7 @@ export async function POST(request: NextRequest) {
            tenant_key = ?,
            union_id = ?,
            status = 'active',
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE channel = ?
          AND tenant_key = ?
          AND open_id = ?`
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
            tenant_key = NULL,
            union_id = ?,
            status = 'active',
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE channel = ?
          AND tenant_key IS NULL
          AND open_id = ?`

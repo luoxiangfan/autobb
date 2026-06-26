@@ -189,8 +189,6 @@ export async function saveOfferScore(
   score: OfferScore
 ): Promise<number> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   const result = await db.exec(
     `INSERT INTO openclaw_offer_scores
      (user_id, offer_id, asin, platform, commission_rate, product_rating,
@@ -198,7 +196,7 @@ export async function saveOfferScore(
       score_total, score_commission, score_demand, score_competition, score_conversion,
       profit_probability, suggested_cpc_min, suggested_cpc_max, estimated_roas,
       priority, raw_data, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}, ${nowFunc})`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
     [
       userId,
       product.offer_id ?? null,

@@ -216,7 +216,6 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
   let apiSuccess = false
   let apiErrorMessage: string | undefined
   let totalApiOperations = 0
-  const nowExpr = 'NOW()'
   const campaignPublishHeartbeatMs = getPositiveIntFromEnv('CAMPAIGN_PUBLISH_HEARTBEAT_MS', 15000)
   const campaignPublishQuotaRetryMaxRetries = getPositiveIntFromEnv(
     'CAMPAIGN_PUBLISH_QUOTA_MAX_RETRIES',
@@ -242,7 +241,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     await db.exec(
       `
         UPDATE campaigns
-        SET updated_at = ${nowExpr}
+        SET updated_at = NOW()
         WHERE id = ? AND user_id = ? AND creation_status = 'pending'
       `,
       [campaignId, userId]
@@ -1324,7 +1323,6 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
         }
       }
 
-      const nowExpr = 'CURRENT_TIMESTAMP'
       const setConfigSql = nextCampaignConfig !== null ? ', campaign_config = ?' : ''
       const params: Array<string | number> = [
         authoritativeCampaignName,
@@ -1336,7 +1334,7 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
       await db.exec(
         `
           UPDATE campaigns
-          SET campaign_name = ?${setConfigSql}, updated_at = ${nowExpr}
+          SET campaign_name = ?${setConfigSql}, updated_at = NOW()
           WHERE id = ? AND user_id = ?
         `,
         params

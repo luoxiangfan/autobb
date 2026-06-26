@@ -17,13 +17,11 @@ async function saveScrapedProducts(
   if (!Array.isArray(products) || products.length === 0) return
 
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   await db.exec(
     `
     UPDATE scraped_products
-    SET is_deleted = ${'TRUE'},
-        deleted_at = ${'NOW()'}
+    SET is_deleted = true,
+        deleted_at = NOW()
     WHERE offer_id = ? AND user_id = ?
   `,
     [offerId, userId]
@@ -45,7 +43,7 @@ async function saveScrapedProducts(
         ?, ?, ?, ?,
         ?, ?,
         ?, ?, ?,
-        ${nowFunc}, ${nowFunc}
+        NOW(), NOW()
       )
     `,
       [

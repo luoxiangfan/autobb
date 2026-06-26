@@ -324,8 +324,6 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
   const modeProfile = getOfferExtractionModeProfile(extractionMode)
   const db = getDatabase()
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = 'NOW()'
   const toDbJson = (value: any): any => toDbJsonObjectField(value, null)
 
   const taskLinkRow = await db.queryOne<{ offer_id: number | null }>(
@@ -339,7 +337,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
     await db.exec(
       `
       UPDATE offer_tasks
-      SET status = 'running', started_at = ${nowFunc}, message = '开始提取Offer信息'
+      SET status = 'running', started_at = NOW(), message = '开始提取Offer信息'
       WHERE id = ?
     `,
       [task.id]
@@ -383,7 +381,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         await db.exec(
           `
           UPDATE offer_tasks
-          SET stage = ?, message = ?, progress = ?, updated_at = ${nowFunc}
+          SET stage = ?, message = ?, progress = ?, updated_at = NOW()
           WHERE id = ?
         `,
           [stage, message, progress, task.id]
@@ -565,7 +563,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
     await db.exec(
       `
       UPDATE offer_tasks
-      SET stage = 'ai_analysis', message = '正在进行AI分析...', progress = 90, updated_at = ${nowFunc}
+      SET stage = 'ai_analysis', message = '正在进行AI分析...', progress = 90, updated_at = NOW()
       WHERE id = ?
     `,
       [task.id]
@@ -591,7 +589,7 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         SET stage = 'ai_analysis',
             message = ?,
             progress = 90,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         WHERE id = ?
       `,
         [`正在进行AI分析... (${elapsedSeconds}s)`, task.id]
@@ -815,8 +813,8 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         message = '提取完成',
         result = ?,
         offer_id = ?,
-        completed_at = ${nowFunc},
-        updated_at = ${nowFunc}
+        completed_at = NOW(),
+        updated_at = NOW()
       WHERE id = ?
     `,
       [toDbJson(resultWithOfferId), createdOfferId, task.id]
@@ -836,8 +834,8 @@ export async function executeOfferExtraction(task: Task<OfferExtractionTaskData>
         status = 'failed',
         message = ?,
         error = ?,
-        completed_at = ${nowFunc},
-        updated_at = ${nowFunc}
+        completed_at = NOW(),
+        updated_at = NOW()
       WHERE id = ?
     `,
       [error.message, toDbJson({ message: error.message, stack: error.stack }), task.id]

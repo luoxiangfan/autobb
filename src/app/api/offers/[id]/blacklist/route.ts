@@ -91,7 +91,6 @@ export const DELETE = withAuth(async (request, user, context) => {
       [userId, offer.brand, offer.target_country]
     )
 
-    // PostgreSQL BOOLEAN 语法
     const deletedCount =
       (result.changes !== undefined ? result.changes : (result as any).rowCount) || 0
     if (deletedCount === 0) {

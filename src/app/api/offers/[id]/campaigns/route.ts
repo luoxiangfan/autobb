@@ -127,8 +127,6 @@ export const GET = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: 'Offer ID无效' }, { status: 400 })
     }
 
-    const isDeletedCheck = 'c.is_deleted = FALSE'
-
     // 从数据库获取该Offer关联的已发布campaign列表（google_campaign_id非空）
     // 注意：campaigns 有软删除字段 is_deleted，同时 status='REMOVED' 也可视为解除关联/移除标记
     const localCampaigns = (await db.query(
@@ -152,7 +150,7 @@ export const GET = withAuth(async (request, user, context) => {
       LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
       WHERE c.offer_id = ?
         AND c.user_id = ?
-        AND ${isDeletedCheck}
+        AND c.is_deleted = false
         AND c.status != 'REMOVED'
         AND c.google_campaign_id IS NOT NULL
         AND c.google_campaign_id != ''

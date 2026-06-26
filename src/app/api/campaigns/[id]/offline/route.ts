@@ -186,8 +186,6 @@ export const POST = withAuth(async (request, user, context) => {
     }
 
     // 先执行本地标记下线，避免外部接口阻塞
-    const nowFunc = 'NOW()'
-
     await applyCampaignTransition({
       userId,
       campaignId: campaignRow.id,
@@ -224,12 +222,12 @@ export const POST = withAuth(async (request, user, context) => {
             SET status = 'paused',
                 pause_reason = 'offline',
                 pause_message = '广告系列下线，任务已暂停',
-                paused_at = ${nowFunc},
-                updated_at = ${nowFunc}
+                paused_at = NOW(),
+                updated_at = NOW()
             WHERE offer_id = ?
               AND user_id = ?
               AND status IN ('pending', 'running', 'paused')
-              AND is_deleted = FALSE
+              AND is_deleted = false
           `,
           [campaignRow.offer_id, userId]
         )
@@ -245,7 +243,7 @@ export const POST = withAuth(async (request, user, context) => {
               AND user_id = ?
               AND status = 'paused'
               AND pause_reason = 'offline'
-              AND is_deleted = FALSE
+              AND is_deleted = false
           `,
           [campaignRow.offer_id, userId]
         )
@@ -264,14 +262,14 @@ export const POST = withAuth(async (request, user, context) => {
     // 可选：暂停换链接任务
     let urlSwapPaused = 0
     if (pauseUrlSwapTasks) {
-      const urlSwapNotDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
+      const urlSwapNotDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
       urlSwapPaused = (
         await db.exec(
           `
             UPDATE url_swap_tasks
             SET status = 'disabled',
                 error_message = '广告系列下线，任务已暂停',
-                updated_at = ${nowFunc}
+                updated_at = NOW()
             WHERE offer_id = ?
               AND user_id = ?
               AND status != 'disabled'

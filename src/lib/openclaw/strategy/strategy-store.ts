@@ -10,12 +10,11 @@ export async function createStrategyRun(params: {
   configJson?: unknown
 }): Promise<string> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const runId = crypto.randomUUID()
 
   const insertSql = `INSERT INTO strategy_center_runs
      (id, user_id, mode, status, run_date, config_json, created_at, updated_at)
-     VALUES (?, ?, ?, 'pending', ?, ?, ${nowFunc}, ${nowFunc})`
+     VALUES (?, ?, ?, 'pending', ?, ?, NOW(), NOW())`
 
   await db.exec(insertSql, [
     runId,
@@ -38,7 +37,6 @@ export async function updateStrategyRun(params: {
   completedAt?: string | null
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const fields: string[] = []
   const values: any[] = []
 
@@ -67,7 +65,7 @@ export async function updateStrategyRun(params: {
 
   await db.exec(
     `UPDATE strategy_center_runs
-     SET ${fields.join(', ')}, updated_at = ${nowFunc}
+     SET ${fields.join(', ')}, updated_at = NOW()
      WHERE id = ? AND user_id = ?`,
     [...values, params.runId, params.userId]
   )
@@ -78,11 +76,9 @@ export async function touchStrategyRun(params: {
   userId: number
 }): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   await db.exec(
     `UPDATE strategy_center_runs
-     SET updated_at = ${nowFunc}
+     SET updated_at = NOW()
      WHERE id = ? AND user_id = ?`,
     [params.runId, params.userId]
   )
@@ -100,10 +96,9 @@ export async function recordStrategyAction(params: {
   errorMessage?: string | null
 }): Promise<number> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
   const insertSql = `INSERT INTO strategy_center_actions
        (run_id, user_id, action_type, target_type, target_id, status, request_json, response_json, error_message, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${nowFunc}) RETURNING id`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()) RETURNING id`
 
   const result = await db.exec(insertSql, [
     params.runId,

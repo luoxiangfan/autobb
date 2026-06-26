@@ -133,14 +133,13 @@ export async function runCampaignPausedTaskCheck(
 ): Promise<CampaignPausedTaskCheckResult> {
   const checkStartedAt = Date.now()
   const db = await getDatabase()
-  const isDeletedFalse = 'FALSE'
 
   const pausedOfferPairs = await db.query<PausedCampaignOfferPair>(`
     WITH paused_campaigns AS (
       SELECT c.user_id, c.offer_id
       FROM campaigns c
       WHERE c.status = 'PAUSED'
-        AND c.is_deleted = ${isDeletedFalse}
+        AND c.is_deleted = false
         AND c.offer_id IS NOT NULL
     ),
     paused_campaign_totals AS (

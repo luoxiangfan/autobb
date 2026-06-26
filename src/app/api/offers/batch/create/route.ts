@@ -49,9 +49,6 @@ export const POST = withAuth(async (req, user) => {
   const queue = getQueueManager()
   const parentRequestId = req.headers.get('x-request-id') || undefined
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowFunc = 'NOW()'
-
   try {
     // 1. 验证用户身份
     const userIdNum = user.userId
@@ -383,7 +380,7 @@ export const POST = withAuth(async (req, user) => {
         metadata,
         created_at,
         updated_at
-      ) VALUES (?, ?, 'offer-creation', 'pending', ?, ?, ?, ${nowFunc}, ${nowFunc})
+      ) VALUES (?, ?, 'offer-creation', 'pending', ?, ?, ?, NOW(), NOW())
     `,
       [
         batchId,
@@ -421,7 +418,7 @@ export const POST = withAuth(async (req, user) => {
         uploaded_at,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ${nowFunc}, ${nowFunc}, ${nowFunc})
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW(), NOW(), NOW())
     `,
       [
         uploadRecordId,

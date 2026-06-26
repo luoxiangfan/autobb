@@ -63,7 +63,6 @@ export interface Offer {
   scrape_status: string
   scrape_error: string | null
   scraped_at: string | null
-  // 注意：PostgreSQL 返回 boolean
   is_active: number | boolean
   industry_code: string | null // 行业代码（数据库字段，之前遗漏）
   google_ads_campaign_id: string | null
@@ -251,7 +250,6 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
   // 生成offer_name: 品牌名称_推广国家_序号（如 Reolink_US_01）
   const offerName = await generateOfferName(brandValue, normalizedTargetCountry, userId)
 
-  // Debug logging for PostgreSQL
   if (process.env.DEBUG_OFFERS) {
     logger.debug('[DEBUG] offerName:', offerName)
     logger.debug('[DEBUG] offerName type:', typeof offerName)
@@ -388,7 +386,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
  */
 export async function findOfferById(id: number, userId: number): Promise<Offer | null> {
   const db = await getDatabase()
-  const deletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
+  const deletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const offer = (await db.queryOne(
     `
@@ -428,7 +426,7 @@ export async function listOffers(
 
   // 默认排除已删除的Offer（需求25）
   if (!options?.includeDeleted) {
-    whereConditions.push("(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))")
+    whereConditions.push('(o.is_deleted = false OR o.is_deleted IS NULL)')
   }
 
   // 如果提供了ids参数，只查询特定ID的Offers（用于批量上传进度显示）
@@ -536,16 +534,11 @@ export async function listOffers(
   const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql('o.id', 'o.user_id')
   const listColumnsWithCampaign = `${listColumns}, ${occupyingCampaignIdSubquery} as campaign_id`
 
-  const isManagerCondition =
-    "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-  const isActiveAccountCondition = "gaa.is_active::text IN ('1', 't', 'true')"
-  const isNotDeletedAccountCondition =
-    "(gaa.is_deleted IS NULL OR gaa.is_deleted::text IN ('0', 'f', 'false'))"
   const linkedAccountCampaignFiltersSql = `
       AND c.status != 'REMOVED'
-      AND ${isManagerCondition}
-      AND ${isActiveAccountCondition}
-      AND ${isNotDeletedAccountCondition}
+      AND (gaa.is_manager_account IS NULL OR gaa.is_manager_account = false)
+      AND gaa.is_active = true
+      AND (gaa.is_deleted IS NULL OR gaa.is_deleted = false)
       AND c.google_campaign_id IS NOT NULL
       AND c.google_campaign_id != ''`
   const linkedAccountCountSubquery = `(SELECT COUNT(DISTINCT gaa.id)
@@ -690,8 +683,6 @@ export async function updateOffer(
   input: UpdateOfferInput
 ): Promise<Offer> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   // 验证Offer存在且属于该用户
   const existing = await findOfferById(id, userId)
   if (!existing) {
@@ -920,7 +911,7 @@ export async function updateOffer(
     return existing
   }
 
-  updates.push(`updated_at = ${nowFunc}`)
+  updates.push(`updated_at = NOW()`)
 
   const updateQuery = `
     UPDATE offers
@@ -953,13 +944,11 @@ export async function updateOfferExtractionMetadata(
   extractionMetadata: string
 ): Promise<void> {
   const db = await getDatabase()
-  const nowFunc = 'NOW()'
-
   const { invalidateOfferCache } = await import('../common/server')
   invalidateOfferCache(userId, id)
 
   await db.exec(
-    `UPDATE offers SET extraction_metadata = ?, updated_at = ${nowFunc} WHERE id = ? AND user_id = ?`,
+    `UPDATE offers SET extraction_metadata = ?, updated_at = NOW() WHERE id = ? AND user_id = ?`,
     [extractionMetadata, id, userId]
   )
 }
@@ -1008,10 +997,6 @@ export async function deleteOffer(
 ): Promise<DeleteOfferResult> {
   const db = await getDatabase()
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数和布尔值
-  const nowFunc = 'NOW()'
-  const isDeletedTrue = true
-  const isActiveFalse = false
   let autoPausedCampaignCount = 0
   let autoRemovedCampaignCount = 0
 
@@ -1235,12 +1220,11 @@ export async function deleteOffer(
   // 需求：终止并软删除关联的补点击任务
   // 1. 停止所有运行中/待执行的补点击任务
   // 2. 软删除任务（保留历史统计数据）
-  const isDeletedCondition = "(is_deleted IS NULL OR is_deleted::text IN ('0', 'f', 'false'))"
   const clickFarmTasks = await db.query<any>(
     `
     SELECT id, status
     FROM click_farm_tasks
-    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
+    WHERE offer_id = ? AND user_id = ? AND (is_deleted = false OR is_deleted IS NULL)
   `,
     [id, userId]
   )
@@ -1254,8 +1238,8 @@ export async function deleteOffer(
         WHEN status IN ('running', 'pending', 'paused') THEN 'stopped'
         ELSE status
       END,
-      updated_at = ${nowFunc}
-      WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
+      updated_at = NOW()
+      WHERE offer_id = ? AND user_id = ? AND (is_deleted = false OR is_deleted IS NULL)
     `,
       [id, userId]
     )
@@ -1265,11 +1249,11 @@ export async function deleteOffer(
       `
       UPDATE click_farm_tasks
       SET is_deleted = ?,
-          deleted_at = ${nowFunc},
-          updated_at = ${nowFunc}
+          deleted_at = NOW(),
+          updated_at = NOW()
       WHERE offer_id = ? AND user_id = ?
     `,
-      [isDeletedTrue, id, userId]
+      [true, id, userId]
     )
 
     try {
@@ -1289,7 +1273,7 @@ export async function deleteOffer(
     `
     SELECT id, status
     FROM url_swap_tasks
-    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
+    WHERE offer_id = ? AND user_id = ? AND (is_deleted = false OR is_deleted IS NULL)
   `,
     [id, userId]
   )
@@ -1301,9 +1285,9 @@ export async function deleteOffer(
       UPDATE url_swap_tasks
       SET status = 'disabled',
           error_message = 'Offer已删除，任务自动禁用',
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE offer_id = ? AND user_id = ?
-        AND ${isDeletedCondition}
+        AND (is_deleted = false OR is_deleted IS NULL)
         AND status != 'disabled'
     `,
       [id, userId]
@@ -1332,12 +1316,12 @@ export async function deleteOffer(
     `
     UPDATE offers
     SET is_deleted = ?,
-        deleted_at = ${nowFunc},
+        deleted_at = NOW(),
         is_active = ?,
-        updated_at = ${nowFunc}
+        updated_at = NOW()
     WHERE id = ? AND user_id = ?
   `,
-    [isDeletedTrue, isActiveFalse, id, userId]
+    [true, false, id, userId]
   )
 
   const campaignNoticeParts: string[] = []
@@ -1420,27 +1404,21 @@ export async function unlinkOfferFromAccount(
 export async function getIdleAdsAccounts(userId: number): Promise<any[]> {
   const db = await getDatabase()
 
-  const isActiveCondition = "gaa.is_active::text IN ('1', 't', 'true')"
-  const isManagerCondition =
-    "(gaa.is_manager_account IS NULL OR gaa.is_manager_account::text IN ('0', 'f', 'false'))"
-  const isDeletedCondition = "(o.is_deleted IS NULL OR o.is_deleted::text IN ('0', 'f', 'false'))"
-
-  // 通过子查询判断账号是否闲置（没有活跃的Campaign关联）
   return await db.query(
     `
     SELECT gaa.*
     FROM google_ads_accounts gaa
     WHERE gaa.user_id = ?
-      AND ${isActiveCondition}
+      AND gaa.is_active = true
       AND gaa.status = 'ENABLED'
-      AND ${isManagerCondition}
+      AND (gaa.is_manager_account IS NULL OR gaa.is_manager_account = false)
       AND NOT EXISTS (
         SELECT 1
         FROM campaigns c
         JOIN offers o ON c.offer_id = o.id
         WHERE c.google_ads_account_id = gaa.id
           AND c.user_id = gaa.user_id
-          AND ${isDeletedCondition}
+          AND (o.is_deleted IS NULL OR o.is_deleted = false)
           AND c.status != 'REMOVED'
       )
     ORDER BY gaa.updated_at DESC
@@ -1733,21 +1711,17 @@ export async function updateOfferScrapeStatus(
       // 继续使用原有的offer_name
     }
 
-    // PostgreSQL兼容性使用NOW()替代NOW()
-    const nowFunc = 'NOW()'
     const effectiveUrl = urlForWrite ?? currentOffer?.url ?? null
     const effectiveFinalUrl = finalUrlForWrite ?? currentOffer?.final_url ?? null
     const asinForWrite = extractAsinFromOfferUrls(effectiveUrl, effectiveFinalUrl)
 
-    // 移除不存在的列 reviews 和 competitive_edges
-    // PostgreSQL offers表中没有这两个字段，导致UPDATE语句失败
     // reviews数据应该存储在 review_analysis 或 ai_reviews 字段
     // competitive_edges数据应该存储在 competitor_analysis 或 ai_competitive_edges 字段
     await db.exec(
       `
       UPDATE offers
       SET scrape_status = ?,
-          scraped_at = ${nowFunc},
+          scraped_at = NOW(),
           brand = COALESCE(?, brand),
           offer_name = COALESCE(?, offer_name),
           url = COALESCE(?, url),
@@ -1776,7 +1750,7 @@ export async function updateOfferScrapeStatus(
           ai_analysis_v32 = COALESCE(?, ai_analysis_v32),
           ai_keywords = COALESCE(?, ai_keywords),
           ai_competitive_edges = COALESCE(?, ai_competitive_edges),
-          updated_at = ${nowFunc}
+          updated_at = NOW()
       WHERE id = ? AND user_id = ?
     `,
       [
@@ -1814,19 +1788,15 @@ export async function updateOfferScrapeStatus(
       ]
     )
   } else {
-    // 为了兼容PostgreSQL，使用条件更新而不是CASE表达式
-    // scraped_at 为 TIMESTAMP，CASE 分支须保持类型一致
-    // PostgreSQL兼容性使用NOW()替代NOW()
-    const nowFunc = 'NOW()'
-
+    // scraped_at 为 TIMESTAMP，分支更新避免 CASE 表达式类型不一致
     if (status === 'completed') {
       await db.exec(
         `
         UPDATE offers
         SET scrape_status = ?,
             scrape_error = ?,
-            scraped_at = ${nowFunc},
-            updated_at = ${nowFunc}
+            scraped_at = NOW(),
+            updated_at = NOW()
         WHERE id = ? AND user_id = ?
       `,
         [status, error || null, id, userId]
@@ -1837,7 +1807,7 @@ export async function updateOfferScrapeStatus(
         UPDATE offers
         SET scrape_status = ?,
             scrape_error = ?,
-            updated_at = ${nowFunc}
+            updated_at = NOW()
         WHERE id = ? AND user_id = ?
       `,
         [status, error || null, id, userId]

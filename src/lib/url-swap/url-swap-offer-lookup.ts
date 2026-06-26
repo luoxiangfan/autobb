@@ -14,7 +14,7 @@ export type UrlSwapTargetInput = {
  */
 export async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition = '(is_deleted = FALSE OR is_deleted IS NULL)'
+  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   return db.queryOne(
     `
@@ -30,7 +30,7 @@ export async function getOfferCampaignTargets(
   userId: number
 ): Promise<UrlSwapTargetInput[]> {
   const db = await getDatabase()
-  const isDeletedCondition = 'c.is_deleted = FALSE'
+  const isDeletedCondition = 'c.is_deleted = false'
 
   const params: any[] = [offerId]
   let userCondition = ''
@@ -81,7 +81,7 @@ export async function findGoogleAdsAccountIdByCustomerId(
   userId: number
 ): Promise<number | null> {
   const db = await getDatabase()
-  const isDeletedCondition = 'is_deleted = FALSE'
+  const isDeletedCondition = 'is_deleted = false'
   const row = await db.queryOne<{ id: number }>(
     `
     SELECT id

@@ -91,7 +91,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
   const db = await getDatabase()
   const now = new Date().toISOString()
 
-  const isDeletedCondition = 'is_deleted = FALSE'
+  const isDeletedCondition = 'is_deleted = false'
 
   const tasks = await db.query<any>(`
     SELECT * FROM url_swap_tasks

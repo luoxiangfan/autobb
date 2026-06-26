@@ -14,10 +14,6 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/db', () => ({
-  boolCondition: () => 'is_active = 1',
-}))
-
 vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
   return {

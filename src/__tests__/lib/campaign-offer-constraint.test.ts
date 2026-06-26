@@ -72,13 +72,13 @@ describe('campaign-offer-constraint', () => {
   it('offerOccupyingCampaignWhereClause uses unqualified columns (no phantom alias)', () => {
     const sql = offerOccupyingCampaignWhereClause()
     expect(sql).toContain('offer_id = ?')
-    expect(sql).toContain('is_deleted = FALSE')
+    expect(sql).toContain('is_deleted = false')
     expect(sql).not.toMatch(/\bc\./)
   })
 
   it('offerOccupyingCampaignFilterSql still qualifies columns when alias is provided', () => {
     const sql = offerOccupyingCampaignFilterSql('c', null)
-    expect(sql).toContain('c.is_deleted = FALSE')
+    expect(sql).toContain('c.is_deleted = false')
     expect(sql).toContain("c.creation_status != 'failed'")
   })
 

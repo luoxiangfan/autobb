@@ -1,5 +1,4 @@
 import { getDatabase } from '../../db'
-import { boolCondition, nowFunc as sqlNowFunc } from '../../db'
 import {
   resolveGoogleAdsCredentialOwnerId,
   type GoogleAdsCredentialOwnerResolutionInput,
@@ -23,13 +22,12 @@ export async function getUserAuthType(
 ): Promise<GoogleAdsUserAuthType> {
   const db = await getDatabase()
   const { ownerUserId, assignment } = resolved ?? (await resolveGoogleAdsCredentialOwnerId(userId))
-  const isActiveCondition = boolCondition('is_active', true)
 
   if (assignment?.assignmentMode === 'shared_admin') {
     if (assignment.authType === 'service_account') {
       const serviceAccount = (await db.queryOne(
         `SELECT id FROM google_ads_service_accounts
-         WHERE user_id = ? AND ${isActiveCondition}
+         WHERE user_id = ? AND is_active = true
          ORDER BY created_at DESC LIMIT 1`,
         [ownerUserId]
       )) as { id: string } | undefined
@@ -41,7 +39,7 @@ export async function getUserAuthType(
     }
 
     const credentials = (await db.queryOne(
-      `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
+      `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND is_active = true`,
       [ownerUserId]
     )) as { refresh_token: string | null } | undefined
 
@@ -54,7 +52,7 @@ export async function getUserAuthType(
   }
 
   const credentials = (await db.queryOne(
-    `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND ${isActiveCondition}`,
+    `SELECT refresh_token FROM google_ads_credentials WHERE user_id = ? AND is_active = true`,
     [ownerUserId]
   )) as { refresh_token: string | null } | undefined
 
@@ -64,7 +62,7 @@ export async function getUserAuthType(
 
   const serviceAccount = (await db.queryOne(
     `SELECT id FROM google_ads_service_accounts
-     WHERE user_id = ? AND ${isActiveCondition}
+     WHERE user_id = ? AND is_active = true
      ORDER BY created_at DESC LIMIT 1`,
     [ownerUserId]
   )) as { id: string } | undefined
@@ -160,12 +158,6 @@ export async function saveGoogleAdsCredentials(
     'login_customer_id'
   )
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowSql = sqlNowFunc()
-
-  // is_active 列为 BOOLEAN
-  const isActiveValue = true
-
   // 检查是否已存在
   const existing = await db.queryOne<GoogleAdsCredentials>(
     `
@@ -187,8 +179,8 @@ export async function saveGoogleAdsCredentials(
           access_token = ?,
           access_token_expires_at = ?,
           is_active = ?,
-          last_verified_at = ${nowSql},
-          updated_at = ${nowSql}
+          last_verified_at = NOW(),
+          updated_at = NOW()
       WHERE user_id = ?
     `,
       [
@@ -199,7 +191,7 @@ export async function saveGoogleAdsCredentials(
         formattedLoginCustomerId, // 正确的参数顺序
         cleanedCredentials.access_token || null,
         cleanedCredentials.access_token_expires_at || null,
-        isActiveValue,
+        true,
         userId,
       ]
     )
@@ -211,7 +203,7 @@ export async function saveGoogleAdsCredentials(
         user_id, client_id, client_secret, refresh_token,
         developer_token, login_customer_id, access_token, access_token_expires_at,
         last_verified_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${nowSql})
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
     `,
       [
         userId,
@@ -245,12 +237,11 @@ export async function getGoogleAdsCredentialsRaw(
   userId: number
 ): Promise<GoogleAdsCredentials | null> {
   const db = await getDatabase()
-  const isActiveCondition = 'is_active = true'
 
   const credentials = await db.queryOne<GoogleAdsCredentials>(
     `
     SELECT * FROM google_ads_credentials
-    WHERE user_id = ? AND ${isActiveCondition}
+    WHERE user_id = ? AND is_active = true
   `,
     [userId]
   )
@@ -293,7 +284,6 @@ export async function getGoogleAdsCredentialsMetadata(
   }
 
   const db = await getDatabase()
-  const isActiveCondition = boolCondition('is_active', true)
   const row = await db.queryOne<{
     client_id: string | null
     login_customer_id: string | null
@@ -302,7 +292,7 @@ export async function getGoogleAdsCredentialsMetadata(
   }>(
     `SELECT client_id, login_customer_id, api_access_level, refresh_token
      FROM google_ads_credentials
-     WHERE user_id = ? AND ${isActiveCondition}`,
+     WHERE user_id = ? AND is_active = true`,
     [ownerUserId]
   )
 
@@ -342,12 +332,6 @@ export function googleAdsCredentialsFromMetadata(
 export async function deleteGoogleAdsCredentials(userId: number): Promise<void> {
   const db = await getDatabase()
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowSql = sqlNowFunc()
-
-  // is_active 列为 BOOLEAN
-  const isActiveValue = false
-
   await db.exec(
     `
     UPDATE google_ads_credentials
@@ -360,10 +344,10 @@ export async function deleteGoogleAdsCredentials(userId: number): Promise<void> 
         access_token = NULL,
         access_token_expires_at = NULL,
         last_verified_at = NULL,
-        updated_at = ${nowSql}
+        updated_at = NOW()
     WHERE user_id = ?
   `,
-    [isActiveValue, userId]
+    [false, userId]
   )
 
   const { invalidateGoogleAdsAuthContextForCredentialUser } =
@@ -423,15 +407,12 @@ export async function refreshAccessToken(userId: number): Promise<{
   // 更新数据库
   const db = await getDatabase()
 
-  // PostgreSQL兼容性：根据数据库类型选择NOW函数
-  const nowSql = sqlNowFunc()
-
   await db.exec(
     `
     UPDATE google_ads_credentials
     SET access_token = ?,
         access_token_expires_at = ?,
-        updated_at = ${nowSql}
+        updated_at = NOW()
     WHERE user_id = ?
   `,
     [data.access_token, expiresAt, ownerUserId]
@@ -475,7 +456,6 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 
     const { ctx, apiAuth } = resolved
     const db = await getDatabase()
-    const nowSql = sqlNowFunc()
 
     if (apiAuth.authType === 'service_account') {
       const serviceAccount = ctx.serviceAccountConfig
@@ -503,7 +483,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         const firstCustomerId = resourceNames[0].split('/').pop() || ''
 
         await db
-          .exec(`UPDATE google_ads_service_accounts SET updated_at = ${nowSql} WHERE id = ?`, [
+          .exec(`UPDATE google_ads_service_accounts SET updated_at = NOW() WHERE id = ?`, [
             serviceAccount.id,
           ])
           .catch(() => {})
@@ -570,7 +550,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
 
     await db.exec(
       `UPDATE google_ads_credentials
-       SET last_verified_at = ${nowSql}, updated_at = ${nowSql}
+       SET last_verified_at = NOW(), updated_at = NOW()
        WHERE user_id = ?`,
       [ctx.ownerUserId]
     )

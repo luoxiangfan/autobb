@@ -276,11 +276,7 @@ export interface UsageTrend {
 export async function getUsageTrend(userId: number, days: number = 7): Promise<UsageTrend[]> {
   const db = getDatabase()
 
-  // 根据数据库类型调整 SQL
-  const isSuccessCondition = 'CASE WHEN is_success = true THEN 1 ELSE 0 END'
-
-  // 使用 PostgreSQL 日期函数
-  // 由于 date 字段是 TEXT 类型（存储 'YYYY-MM-DD' 格式），需要返回相同格式进行比较
+  // date 为 TEXT（'YYYY-MM-DD'），与 to_char 输出格式对齐后再比较
   const dateCondition = `date >= to_char(CURRENT_DATE - INTERVAL '${days} days', 'YYYY-MM-DD')`
 
   const rows = (await db.query(
@@ -288,7 +284,7 @@ export async function getUsageTrend(userId: number, days: number = 7): Promise<U
     SELECT
       date,
       SUM(request_count) as total_requests,
-      SUM(${isSuccessCondition}) * 100.0 / COUNT(*) as success_rate
+      SUM(CASE WHEN is_success = true THEN 1 ELSE 0 END) * 100.0 / COUNT(*) as success_rate
     FROM google_ads_api_usage
     WHERE user_id = ?
       AND ${dateCondition}

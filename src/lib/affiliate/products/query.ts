@@ -248,7 +248,7 @@ export function buildAffiliateLandingTypeConditionSql(alias: string = 'p'): {
 }
 
 export function buildConfirmedInvalidSql(columnSql: string = 'p.is_confirmed_invalid'): string {
-  return `(COALESCE(${columnSql}, FALSE) = TRUE)`
+  return `(COALESCE(${columnSql}, false) = true)`
 }
 
 export function parseDateToTimestamp(input: string | null): number | null {
@@ -1012,7 +1012,7 @@ export async function listAffiliateProducts(
             SELECT
               link.product_id,
               COUNT(DISTINCT CASE
-                WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, FALSE) = FALSE THEN link.offer_id
+                WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, false) = false THEN link.offer_id
                 ELSE NULL
               END) AS active_offer_count,
               COUNT(DISTINCT CASE
@@ -1051,7 +1051,7 @@ export async function listAffiliateProducts(
             SELECT
               link.product_id,
               COUNT(DISTINCT CASE
-                WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, FALSE) = FALSE THEN link.offer_id
+                WHEN c.status = 'ENABLED' AND COALESCE(c.is_deleted, false) = false THEN link.offer_id
                 ELSE NULL
               END) AS active_offer_count,
               COUNT(DISTINCT CASE
@@ -1471,7 +1471,7 @@ export async function listAffiliateProducts(
           SUM(CASE WHEN baseline.baseline_started_at IS NOT NULL AND p.last_seen_at IS NOT NULL AND p.last_seen_at >= baseline.baseline_started_at THEN 1 ELSE 0 END) AS active_products_count,
           SUM(CASE WHEN baseline.baseline_started_at IS NOT NULL AND (p.last_seen_at IS NULL OR p.last_seen_at < baseline.baseline_started_at) THEN 1 ELSE 0 END) AS sync_missing_products_count,
           SUM(CASE WHEN baseline.baseline_started_at IS NULL THEN 1 ELSE 0 END) AS unknown_products_count,
-          SUM(CASE WHEN COALESCE(p.is_blacklisted, FALSE) = TRUE THEN 1 ELSE 0 END) AS blacklisted_count,
+          SUM(CASE WHEN COALESCE(p.is_blacklisted, false) = true THEN 1 ELSE 0 END) AS blacklisted_count,
           SUM(
             CASE
               WHEN COALESCE(NULLIF(TRIM(p.short_promo_link), ''), NULLIF(TRIM(p.promo_link), '')) IS NOT NULL THEN 1
@@ -1507,7 +1507,7 @@ export async function listAffiliateProducts(
           SUM(CASE WHEN baseline.baseline_started_at IS NOT NULL AND p.last_seen_at IS NOT NULL AND p.last_seen_at >= baseline.baseline_started_at THEN 1 ELSE 0 END) AS active_products_count,
           SUM(CASE WHEN baseline.baseline_started_at IS NOT NULL AND (p.last_seen_at IS NULL OR p.last_seen_at < baseline.baseline_started_at) THEN 1 ELSE 0 END) AS sync_missing_products_count,
           SUM(CASE WHEN baseline.baseline_started_at IS NULL THEN 1 ELSE 0 END) AS unknown_products_count,
-          SUM(CASE WHEN COALESCE(p.is_blacklisted, FALSE) = TRUE THEN 1 ELSE 0 END) AS blacklisted_count,
+          SUM(CASE WHEN COALESCE(p.is_blacklisted, false) = true THEN 1 ELSE 0 END) AS blacklisted_count,
           SUM(
             CASE
               WHEN COALESCE(NULLIF(TRIM(p.short_promo_link), ''), NULLIF(TRIM(p.promo_link), '')) IS NOT NULL THEN 1

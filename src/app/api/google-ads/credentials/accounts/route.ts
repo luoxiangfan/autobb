@@ -451,10 +451,10 @@ const get = withAuth(async (request, user) => {
     // 关联Offer查询使用更稳健的“未删除”判定
     // 兼容历史数据（is_deleted 为空）并兜底 deleted_at 软删除标记，避免已删除Offer仍显示在关联列表中。
     const offerNotDeletedCondition =
-      '(o.is_deleted = FALSE OR o.is_deleted IS NULL) AND o.deleted_at IS NULL'
+      '(o.is_deleted = false OR o.is_deleted IS NULL) AND o.deleted_at IS NULL'
 
     const campaignNotDeletedCondition =
-      '(c.is_deleted = FALSE OR c.is_deleted IS NULL) AND c.deleted_at IS NULL'
+      '(c.is_deleted = false OR c.is_deleted IS NULL) AND c.deleted_at IS NULL'
 
     const accountsWithOffers = await Promise.all(
       allAccounts.map(async (account) => {
@@ -496,7 +496,7 @@ const get = withAuth(async (request, user) => {
           o.brand,
           o.target_country,
           CASE
-            WHEN o.is_deleted = TRUE OR o.deleted_at IS NOT NULL THEN 0
+            WHEN o.is_deleted = true OR o.deleted_at IS NOT NULL THEN 0
             ELSE 1
           END as is_active,
           COUNT(DISTINCT c.id) as campaign_count

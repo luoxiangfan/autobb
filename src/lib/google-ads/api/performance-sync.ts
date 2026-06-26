@@ -252,7 +252,6 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
     }
 
     const db = await getDatabase()
-    const isActiveCondition = 'is_active = true'
 
     const account = await db.queryOne<{
       id: number
@@ -263,7 +262,7 @@ export async function syncUserPerformanceData(userId: string): Promise<SyncResul
       `
       SELECT id, customer_id, parent_mcc_id, service_account_id
       FROM google_ads_accounts
-      WHERE user_id = ? AND ${isActiveCondition}
+      WHERE user_id = ? AND is_active = true
       LIMIT 1
     `,
       [userIdNum]

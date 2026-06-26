@@ -1,6 +1,5 @@
 import { getDatabase } from '../db'
-import { getInsertedId, nowFunc } from '../db'
-
+import { getInsertedId } from '../db'
 export interface AdGroup {
   id: number
   userId: number
@@ -174,7 +173,7 @@ export async function updateAdGroup(
     return adGroup
   }
 
-  fields.push(`updated_at = ${nowFunc()}`)
+  fields.push(`updated_at = NOW()`)
   values.push(id, userId)
 
   await db.exec(

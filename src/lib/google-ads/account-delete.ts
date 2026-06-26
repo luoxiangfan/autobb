@@ -62,7 +62,6 @@ export async function listDeletableRemoteCampaignsForAccount(
   userId: number
 ): Promise<DeletableRemoteCampaignRow[]> {
   const db = await getDatabase()
-  const isDeletedFalse = 'FALSE'
 
   return (await db.query(
     `
@@ -70,7 +69,7 @@ export async function listDeletableRemoteCampaignsForAccount(
     FROM campaigns
     WHERE google_ads_account_id = ?
       AND user_id = ?
-      AND (is_deleted = ${isDeletedFalse} OR is_deleted IS NULL)
+      AND (is_deleted = false OR is_deleted IS NULL)
       AND status != 'REMOVED'
       AND google_campaign_id IS NOT NULL
       AND google_campaign_id != ''

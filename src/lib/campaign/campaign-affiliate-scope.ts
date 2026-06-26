@@ -2,7 +2,7 @@ import { offerOccupyingCampaignFilterSql } from '@/lib/campaign/server'
 
 /* * 与 affiliate-platforms 计数、performance/trends 联盟筛选共用的 Offer 未删除条件 */
 function offerNotDeletedSql(offerAlias = 'o'): string {
-  return `${offerAlias}.is_deleted = FALSE`
+  return `${offerAlias}.is_deleted = false`
 }
 
 /**

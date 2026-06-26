@@ -141,7 +141,7 @@ export const GET = withAuth(async (request, user) => {
     const startDate = parseLocalYmdToDate(startDateStr)
     const endDate = parseLocalYmdToDate(endDateStr)
 
-    // 格式化日期函数（PostgreSQL返回的DATE类型需要提取YYYY-MM-DD）
+    // DATE 列可能为 Date 对象，需提取 YYYY-MM-DD
     const formatDate = (dateValue: any): string => {
       if (!dateValue) return ''
       // 如果是 Date 对象，提取 YYYY-MM-DD
@@ -154,11 +154,6 @@ export const GET = withAuth(async (request, user) => {
       // 如果已经是字符串，直接返回
       return String(dateValue)
     }
-
-    // PostgreSQL条件
-    const isSelectedTrue = 'is_selected = true'
-    const isSelectedFalse = 'is_selected = false'
-    const isDeletedCheck = 'is_deleted = FALSE'
 
     const dateFunc = '(created_at::date)'
 
@@ -173,7 +168,7 @@ export const GET = withAuth(async (request, user) => {
         SUM(CASE WHEN score >= 60 AND score < 80 THEN 1 ELSE 0 END) as mediumQuality,
         SUM(CASE WHEN score < 60 OR score IS NULL THEN 1 ELSE 0 END) as lowQuality
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
         AND ${dateFunc} >= ?
         AND ${dateFunc} <= ?
     `
@@ -237,12 +232,12 @@ export const GET = withAuth(async (request, user) => {
     let statusQuery = `
       SELECT
         CASE
-          WHEN ${isSelectedTrue} THEN 'selected'
+          WHEN is_selected = true THEN 'selected'
           ELSE 'draft'
         END as status,
         COUNT(*) as count
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
     `
     const statusParams: any[] = [userId]
 
@@ -262,7 +257,7 @@ export const GET = withAuth(async (request, user) => {
         ${adStrengthExpr} as ad_strength,
         COUNT(*) as count
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
     `
     const adStrengthParams: any[] = [userId]
 
@@ -279,7 +274,7 @@ export const GET = withAuth(async (request, user) => {
     let keywordAuditQuery = `
       SELECT ad_strength_data
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
     `
     const keywordAuditParams: any[] = [userId]
     if (offerId) {
@@ -360,7 +355,7 @@ export const GET = withAuth(async (request, user) => {
         END as quality_level,
         COUNT(*) as count
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
     `
     const qualityParams: any[] = [userId]
 
@@ -379,7 +374,7 @@ export const GET = withAuth(async (request, user) => {
         COALESCE(theme, 'unknown') as theme,
         COUNT(*) as count
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
     `
     const themeParams: any[] = [userId]
 
@@ -395,11 +390,11 @@ export const GET = withAuth(async (request, user) => {
     // 8. 查询创意使用情况
     let usageQuery = `
       SELECT
-        SUM(CASE WHEN ${isSelectedTrue} THEN 1 ELSE 0 END) as selected,
-        SUM(CASE WHEN ${isSelectedFalse} OR is_selected IS NULL THEN 1 ELSE 0 END) as notSelected,
+        SUM(CASE WHEN is_selected = true THEN 1 ELSE 0 END) as selected,
+        SUM(CASE WHEN is_selected = false OR is_selected IS NULL THEN 1 ELSE 0 END) as notSelected,
         COUNT(*) as total
       FROM ad_creatives
-      WHERE user_id = ? AND ${isDeletedCheck}
+      WHERE user_id = ? AND is_deleted = false
     `
     const usageParams: any[] = [userId]
 

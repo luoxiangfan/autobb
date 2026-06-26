@@ -42,7 +42,7 @@ export async function getUrlSwapTaskStats(
 export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobalStats> {
   const db = await getDatabase()
 
-  const isDeletedCondition = 'is_deleted = FALSE'
+  const isDeletedCondition = 'is_deleted = false'
 
   const stats = await db.queryOne<any>(
     `
@@ -85,7 +85,7 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
 export async function getUrlSwapGlobalStats(): Promise<UrlSwapGlobalStats> {
   const db = await getDatabase()
 
-  const isDeletedCondition = 'is_deleted = FALSE'
+  const isDeletedCondition = 'is_deleted = false'
 
   const stats = await db.queryOne<any>(`
     SELECT

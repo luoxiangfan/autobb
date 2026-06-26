@@ -151,7 +151,7 @@ export async function listActivePartnerboostAsins(
 ): Promise<string[]> {
   const db = await getDatabase()
   const recentDays = Math.max(1, activeDays)
-  const isBlacklistedCondition = 'p.is_blacklisted = FALSE'
+  const isBlacklistedCondition = 'p.is_blacklisted = false'
   const recentUpdatedCondition = `p.updated_at >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
   const recentReportDateCondition = `report_date >= CURRENT_DATE - INTERVAL '${Math.max(0, recentDays - 1)} days'`
 
@@ -284,7 +284,7 @@ export async function listActiveYeahPromosScopes(params: {
 
   const db = await getDatabase()
   const recentDays = Math.max(1, params.activeDays)
-  const isBlacklistedCondition = 'p.is_blacklisted = FALSE'
+  const isBlacklistedCondition = 'p.is_blacklisted = false'
   const recentSeenCondition = `COALESCE(p.last_seen_at, p.last_synced_at, p.updated_at) >= CURRENT_TIMESTAMP - INTERVAL '${recentDays} days'`
 
   const rows = await db.query<{

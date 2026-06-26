@@ -1,7 +1,5 @@
 import crypto from 'crypto'
 import { getDatabase } from '@/lib/db'
-import { boolParam, nowFunc } from '@/lib/db'
-
 const DEFAULT_CONFIRM_TTL_SECONDS = 10 * 60
 
 type ConfirmDecision = 'confirm' | 'cancel'
@@ -56,12 +54,10 @@ export async function expireStaleCommandConfirmations(params?: {
   userId?: number
 }): Promise<number> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   const confirmWhere = [
     `status = 'pending'`,
     'expires_at IS NOT NULL',
-    `expires_at <= ${nowSql}`,
+    `expires_at <= NOW()`,
   ]
   const confirmParams: Array<number | string> = []
   if (typeof params?.userId === 'number' && Number.isFinite(params.userId)) {
@@ -72,7 +68,7 @@ export async function expireStaleCommandConfirmations(params?: {
   const expiredConfirms = await db.exec(
     `UPDATE openclaw_command_confirms
      SET status = 'expired',
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE ${confirmWhere.join(' AND ')}`,
     confirmParams
   )
@@ -80,10 +76,10 @@ export async function expireStaleCommandConfirmations(params?: {
   const runWhere = [
     `status = 'pending_confirm'`,
     'confirm_expires_at IS NOT NULL',
-    `confirm_expires_at <= ${nowSql}`,
-    'confirm_required = ?',
+    `confirm_expires_at <= NOW()`,
+    'confirm_required = true',
   ]
-  const runParams: Array<number | string | boolean> = [boolParam(true)]
+  const runParams: Array<number | string> = []
   if (typeof params?.userId === 'number' && Number.isFinite(params.userId)) {
     runWhere.push('user_id = ?')
     runParams.push(params.userId)
@@ -92,7 +88,7 @@ export async function expireStaleCommandConfirmations(params?: {
   await db.exec(
     `UPDATE openclaw_command_runs
      SET status = 'expired',
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE ${runWhere.join(' AND ')}`,
     runParams
   )
@@ -106,8 +102,6 @@ export async function createOrRefreshCommandConfirmation(params: {
   ttlSeconds?: number
 }): Promise<{ confirmToken: string; expiresAt: string }> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   await expireStaleCommandConfirmations({ userId: params.userId })
 
   const confirmToken = generateConfirmToken()
@@ -118,7 +112,7 @@ export async function createOrRefreshCommandConfirmation(params: {
   await db.exec(
     `INSERT INTO openclaw_command_confirms
      (run_id, user_id, confirm_token_hash, status, expires_at, created_at, updated_at)
-     VALUES (?, ?, ?, 'pending', ?, ${nowSql}, ${nowSql})
+     VALUES (?, ?, ?, 'pending', ?, NOW(), NOW())
      ON CONFLICT(run_id)
      DO UPDATE SET
        user_id = excluded.user_id,
@@ -128,18 +122,18 @@ export async function createOrRefreshCommandConfirmation(params: {
        confirmed_at = NULL,
        canceled_at = NULL,
        callback_event_id = NULL,
-       updated_at = ${nowSql}`,
+       updated_at = NOW()`,
     [params.runId, params.userId, tokenHash, expiresAt]
   )
 
   await db.exec(
     `UPDATE openclaw_command_runs
      SET status = 'pending_confirm',
-         confirm_required = ?,
+         confirm_required = true,
          confirm_expires_at = ?,
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE id = ? AND user_id = ?`,
-    [boolParam(true), expiresAt, params.runId, params.userId]
+    [expiresAt, params.runId, params.userId]
   )
 
   return {
@@ -184,8 +178,6 @@ async function consumeCommandConfirmationInternal(params: {
   requireTokenCheck: boolean
 }): Promise<ConsumeConfirmResult> {
   const db = await getDatabase()
-  const nowSql = nowFunc()
-
   await expireStaleCommandConfirmations({ userId: params.userId })
 
   const row = await db.queryOne<{
@@ -229,7 +221,7 @@ async function consumeCommandConfirmationInternal(params: {
     await db.exec(
       `UPDATE openclaw_command_confirms
        SET status = 'expired',
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE run_id = ? AND user_id = ?`,
       [params.runId, params.userId]
     )
@@ -237,7 +229,7 @@ async function consumeCommandConfirmationInternal(params: {
     await db.exec(
       `UPDATE openclaw_command_runs
        SET status = 'expired',
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [params.runId, params.userId]
     )
@@ -256,9 +248,9 @@ async function consumeCommandConfirmationInternal(params: {
     await db.exec(
       `UPDATE openclaw_command_confirms
        SET status = 'canceled',
-           canceled_at = ${nowSql},
+           canceled_at = NOW(),
            callback_event_id = COALESCE(?, callback_event_id),
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE run_id = ? AND user_id = ?`,
       [params.callbackEventId || null, params.runId, params.userId]
     )
@@ -266,7 +258,7 @@ async function consumeCommandConfirmationInternal(params: {
     await db.exec(
       `UPDATE openclaw_command_runs
        SET status = 'canceled',
-           updated_at = ${nowSql}
+           updated_at = NOW()
        WHERE id = ? AND user_id = ?`,
       [params.runId, params.userId]
     )
@@ -283,9 +275,9 @@ async function consumeCommandConfirmationInternal(params: {
   await db.exec(
     `UPDATE openclaw_command_confirms
      SET status = 'confirmed',
-         confirmed_at = ${nowSql},
+         confirmed_at = NOW(),
          callback_event_id = COALESCE(?, callback_event_id),
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE run_id = ? AND user_id = ?`,
     [params.callbackEventId || null, params.runId, params.userId]
   )
@@ -293,7 +285,7 @@ async function consumeCommandConfirmationInternal(params: {
   await db.exec(
     `UPDATE openclaw_command_runs
      SET status = 'confirmed',
-         updated_at = ${nowSql}
+         updated_at = NOW()
      WHERE id = ? AND user_id = ?`,
     [params.runId, params.userId]
   )

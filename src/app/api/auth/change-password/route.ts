@@ -60,15 +60,13 @@ export async function POST(request: NextRequest) {
     // 生成新密码哈希
     const newPasswordHash = await hashPassword(newPassword)
 
-    // 更新密码并将must_change_password设为false (PostgreSQL)
-    const nowFunc = 'NOW()'
-    const falseValue = 'false'
+    // 更新密码并将 must_change_password 设为 false
     await db.exec(
       `
       UPDATE users
       SET password_hash = ?,
-          must_change_password = ${falseValue},
-          updated_at = ${nowFunc}
+          must_change_password = false,
+          updated_at = NOW()
       WHERE id = ?
     `,
       [newPasswordHash, payload.userId]

@@ -90,12 +90,9 @@ export async function resolveLinkedServiceAccountIdForOffer(
     if (linkedFromCampaign) return linkedFromCampaign
   }
 
-  const isActiveCondition = 'is_active = true'
-  const isManagerCondition = 'is_manager_account = false'
-
   const account = await db.queryOne<{ service_account_id: string | null }>(
     `SELECT service_account_id FROM google_ads_accounts
-     WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
+     WHERE user_id = ? AND is_active = true AND status = 'ENABLED' AND is_manager_account = false
      ORDER BY created_at DESC
      LIMIT 1`,
     [userId]
@@ -208,8 +205,6 @@ export async function queryGoogleAdsAccountForOfferExpand(
   offerId: number
 ): Promise<{ id: number; customer_id: string } | undefined> {
   const db = await getDatabase()
-  const isActiveCondition = 'is_active = true'
-  const isManagerCondition = 'is_manager_account = false'
 
   const fromCampaign = await db.queryOne<{ id: number; customer_id: string }>(
     `SELECT ga.id, ga.customer_id
@@ -217,8 +212,8 @@ export async function queryGoogleAdsAccountForOfferExpand(
      INNER JOIN campaigns c ON c.google_ads_account_id = ga.id AND c.user_id = ?
      WHERE c.offer_id = ?
        AND ga.status = 'ENABLED'
-       AND ${isActiveCondition}
-       AND ${isManagerCondition}
+       AND ga.is_active = true
+       AND ga.is_manager_account = false
      ORDER BY c.updated_at DESC
      LIMIT 1`,
     [userId, offerId]
@@ -229,7 +224,7 @@ export async function queryGoogleAdsAccountForOfferExpand(
 
   return db.queryOne<{ id: number; customer_id: string }>(
     `SELECT id, customer_id FROM google_ads_accounts
-     WHERE user_id = ? AND ${isActiveCondition} AND status = 'ENABLED' AND ${isManagerCondition}
+     WHERE user_id = ? AND is_active = true AND status = 'ENABLED' AND is_manager_account = false
      ORDER BY created_at DESC
      LIMIT 1`,
     [userId]

@@ -45,7 +45,7 @@ async function detectClickFarmStall(overdueMinutes: number): Promise<number> {
       SELECT COUNT(*)::int AS count
       FROM click_farm_tasks
       WHERE status IN ('pending', 'running')
-        AND is_deleted = FALSE
+        AND is_deleted = false
         AND next_run_at <= CURRENT_TIMESTAMP - INTERVAL '${minutes} minutes'
     `
 

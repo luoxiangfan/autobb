@@ -48,11 +48,10 @@ async function queryCurrentPromptVersion(
   db: DatabaseAdapter,
   promptId: string
 ): Promise<string | undefined> {
-  const isActiveCondition = 'is_active = true'
   const active = await db.queryOne<{ version: string }>(
     `SELECT version
      FROM prompt_versions
-     WHERE prompt_id = ? AND ${isActiveCondition}
+     WHERE prompt_id = ? AND is_active = true
      ORDER BY created_at DESC, id DESC
      LIMIT 1`,
     [promptId]
@@ -82,12 +81,10 @@ async function queryPromptWithFallback(
   db: DatabaseAdapter,
   promptId: string
 ): Promise<{ prompt: PromptVersionRecord; source: 'active' | 'latest' } | undefined> {
-  const isActiveCondition = 'is_active = true'
-
   const activePrompt = await db.queryOne<PromptVersionRecord>(
     `SELECT prompt_content, version, name
      FROM prompt_versions
-     WHERE prompt_id = ? AND ${isActiveCondition}
+     WHERE prompt_id = ? AND is_active = true
      ORDER BY created_at DESC, id DESC
      LIMIT 1`,
     [promptId]

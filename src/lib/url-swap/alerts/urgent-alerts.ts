@@ -4,7 +4,6 @@
  */
 
 import { getDatabase } from '@/lib/db'
-import { boolParam, nowFunc } from '@/lib/db'
 import {
   createRiskAlertWithDedupMeta,
   refreshActiveRiskAlertContent,
@@ -39,7 +38,7 @@ export function requireEnabledCampaignForOfferSql(): string {
             WHERE c.user_id = t.user_id
               AND c.offer_id = t.offer_id
               AND c.status IN ('ENABLED', 'ACTIVE')
-              AND c.is_deleted = FALSE
+              AND c.is_deleted = false
           )`
 }
 
@@ -51,7 +50,7 @@ function buildUrgentAlertsBaseWhere(): string {
   return `
     WHERE t.user_id = ?
       AND t.status = 'error'
-      AND t.is_deleted = FALSE
+      AND t.is_deleted = false
       AND ${lookbackSql()}
       ${requireEnabledCampaignForOfferSql()}
       ${excludeDisabledUrlSwapTasksSql()}
@@ -147,7 +146,7 @@ async function offerHasEnabledCampaign(userId: number, offerId: number): Promise
     WHERE c.user_id = ?
       AND c.offer_id = ?
       AND c.status IN ('ENABLED', 'ACTIVE')
-      AND c.is_deleted = ${boolParam(false)}
+      AND c.is_deleted = false
   `,
     [userId, offerId]
   )
@@ -226,9 +225,9 @@ export async function resolveUrlSwapUrgentRiskAlertsForOffer(
     `
     UPDATE risk_alerts
     SET status = 'resolved',
-        resolved_at = ${nowFunc()},
+        resolved_at = NOW(),
         resolution_note = ?,
-        updated_at = ${nowFunc()}
+        updated_at = NOW()
     WHERE user_id = ?
       AND alert_type = ?
       AND resource_type = 'offer'

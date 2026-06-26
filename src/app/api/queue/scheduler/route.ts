@@ -77,7 +77,7 @@ async function checkClickFarmSchedulerHealth(db: Awaited<ReturnType<typeof getDa
     SELECT COUNT(*) as count
     FROM click_farm_tasks
     WHERE status IN ('running', 'pending')
-      AND ${'is_deleted = FALSE'}
+      AND ${'is_deleted = false'}
   `
   const enabledTasksResult = (await db.queryOne(enabledTasksQuery)) as { count: number } | undefined
   const enabledTasksCount = Number(enabledTasksResult?.count || 0)
@@ -125,7 +125,7 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
       WHERE status = 'enabled'
         AND next_swap_at <= CURRENT_TIMESTAMP
         AND started_at <= CURRENT_TIMESTAMP
-        AND is_deleted = FALSE
+        AND is_deleted = false
     `
 
   const overdueResult = (await db.queryOne(overdueQuery)) as { count: number } | undefined
@@ -136,7 +136,7 @@ async function checkUrlSwapSchedulerHealth(db: Awaited<ReturnType<typeof getData
     SELECT COUNT(*) as count
     FROM url_swap_tasks
     WHERE status = 'enabled'
-      AND ${'is_deleted = FALSE'}
+      AND ${'is_deleted = false'}
   `
   const enabledTasksResult = (await db.queryOne(enabledTasksQuery)) as { count: number } | undefined
   const enabledTasksCount = Number(enabledTasksResult?.count || 0)
@@ -240,7 +240,7 @@ async function checkAffiliateSyncSchedulerHealth(db: Awaited<ReturnType<typeof g
   const enabledUsersQuery = `
     SELECT COUNT(*) as count
     FROM users
-    WHERE product_management_enabled = TRUE
+    WHERE product_management_enabled = true
   `
   const enabledUsersResult = (await db.queryOne(enabledUsersQuery)) as { count: number } | undefined
   const enabledUsersCount = Number(enabledUsersResult?.count || 0)
@@ -339,7 +339,7 @@ async function checkOpenclawStrategySchedulerHealth(db: Awaited<ReturnType<typeo
     SELECT COUNT(DISTINCT u.id) as count
     FROM users u
     INNER JOIN system_settings ss ON ss.user_id = u.id
-    WHERE u.strategy_center_enabled = TRUE
+    WHERE u.strategy_center_enabled = true
       AND ss.category = 'openclaw'
       AND ss.key = 'openclaw_strategy_enabled'
       AND ss.value IN ('true', '1', 'yes', 'on')
