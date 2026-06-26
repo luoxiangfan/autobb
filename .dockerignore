@@ -137,7 +137,6 @@ data/
 openclaw-v1/
 openclaw-prebuilt.backup-*/
 .delete-staging-openclaw-prebuilt-backup/
-python-service/test_service.py
 # OpenClaw 源码不参与镜像构建（使用预编译产物）
 openclaw/*
 !openclaw/package.json

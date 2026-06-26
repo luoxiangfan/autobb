@@ -11,21 +11,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
+    bash \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY package.json package-lock.json .npmrc ./
-COPY scripts/docker-prune-node-modules.sh /tmp/docker-prune-node-modules.sh
+COPY package.json package-lock.json ./
 
-ENV NPM_CONFIG_CACHE=/tmp/.npm
-
-RUN --mount=type=cache,target=/tmp/.npm,sharing=private \
-    npm ci --omit=dev --no-audit --no-fund && \
-    npm cache clean --force && \
-    chmod +x /tmp/docker-prune-node-modules.sh && \
-    /tmp/docker-prune-node-modules.sh /app/node_modules && \
-    rm -f /tmp/docker-prune-node-modules.sh
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production && \
+    npm cache clean --force
 
 # ============================================
 # Stage 2: 构建阶段
@@ -40,10 +36,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 安装所有依赖（包括 devDependencies）；不使用 BuildKit npm 缓存，避免 GHA 缓存污染导致 npm ci 254
-COPY package.json package-lock.json .npmrc ./
-ENV NPM_CONFIG_CACHE=/tmp/.npm
-RUN npm ci --no-audit --no-fund
+# 安装所有依赖（包括devDependencies）
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # 复制源代码
 COPY . .
@@ -116,15 +111,16 @@ FROM node:24-bookworm-slim AS runner
 
 WORKDIR /app
 
-ARG PLAYWRIGHT_ONLY_SHELL=true
-
 # 安装Nginx、Supervisor、Python和Playwright依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     curl \
+    wget \
+    unzip \
     python3 \
     python3-pip \
+    python3-venv \
     # Playwright浏览器依赖
     libnss3 \
     libnspr4 \
@@ -175,12 +171,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# standalone 自带 trace 后的 node_modules，会被生产依赖整体替换；先删避免重复占层。
-RUN rm -rf node_modules
-
-# 生产依赖（Playwright / 原生模块 / 调度器 external 包）
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
-
 # 复制打包后的调度器
 COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 
@@ -200,23 +190,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/migrations ./migrations
 COPY --from=builder --chown=root:root /app/scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# 复制生产依赖（调度器与 Playwright 等原生模块）
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+
 # 设置Playwright缓存目录到应用目录
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
 
-# headless shell 体积远小于完整 Chromium，常规抓取场景足够
-RUN if [ "$PLAYWRIGHT_ONLY_SHELL" = "true" ]; then \
-      node ./node_modules/playwright/cli.js install chromium --only-shell; \
-    else \
-      node ./node_modules/playwright/cli.js install chromium; \
-    fi && \
+# 安装Playwright浏览器（系统依赖已在上方 apt 安装；勿用 --with-deps 避免 CI 二次 apt 卡住）
+RUN node ./node_modules/playwright/cli.js install chromium && \
     chown -R nextjs:nodejs /app/.playwright
 
 # 安装Python依赖（Google Ads API服务）
 COPY python-service/requirements.txt /app/python-service/
 RUN python3 -m pip install --no-cache-dir --break-system-packages -r /app/python-service/requirements.txt
 
-# 仅复制运行时需要的 Python 源码
-COPY --chown=nextjs:nodejs python-service/main.py /app/python-service/main.py
+# 复制Python服务代码
+COPY --chown=nextjs:nodejs python-service /app/python-service
 
 # 创建必要的目录（避免对 /app 整体递归 chown 产生超大 layer）
 RUN mkdir -p /var/log/nginx /var/lib/nginx/tmp /var/run /app/data /app/.openclaw/workspace && \

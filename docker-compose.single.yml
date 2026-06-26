@@ -60,7 +60,7 @@ services:
       # 数据备份持久化
       - autoads_backups:/app/data/backups
     healthcheck:
-      test: ['CMD', 'curl', '-fsS', 'http://localhost/api/health']
+      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost/api/health']
       interval: 30s
       timeout: 10s
       retries: 3
