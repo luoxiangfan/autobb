@@ -809,19 +809,6 @@ describe('openclaw strategy recommendations rules', () => {
     ).toBe(false)
   })
 
-  it('patches legacy expand summary keyword coverage in text', () => {
-    const patched = __testUtils.patchExpandKeywordsSummaryCoverage(
-      '当前关键词 0 个，建议新增 28 个关键词提升覆盖（目标 20-30 个）。',
-      12
-    )
-    expect(patched).toBe('当前关键词 12 个，建议新增 28 个关键词提升覆盖（目标 20-30 个）。')
-  })
-
-  it('keeps summary unchanged when pattern does not match', () => {
-    const summary = '建议新增 28 个关键词提升覆盖（目标 20-30 个）。'
-    expect(__testUtils.patchExpandKeywordsSummaryCoverage(summary, 12)).toBe(summary)
-  })
-
   it('normalizes report_date values returned as Date/timestamp into YYYY-MM-DD', () => {
     const dateObject = new Date('2026-02-25T00:00:00.000Z')
     expect(__testUtils.normalizeRecommendationReportDate(dateObject)).toBe('2026-02-25')

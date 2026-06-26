@@ -12,6 +12,7 @@ import { containsPureBrand, getPureBrandKeywords } from '@/lib/keywords/server'
 import {
   extractCampaignConfigKeywords,
   extractCampaignConfigNegativeKeywords } from '@/lib/campaign/server'
+import { patchExpandKeywordsSummaryCoverage } from './expand-keyword-coverage'
 
 export type StrategyRecommendationType =
   | 'adjust_cpc'
@@ -718,13 +719,6 @@ function resolveCampaignCurrentCpc(campaign: CampaignRow): number | null {
   }
   return resolveCampaignConfigMaxCpc(campaign.campaign_config)
 }
-
-function patchExpandKeywordsSummaryCoverage(summary: string | null, keywordCoverageCount: number): string | null {
-  if (!summary) return summary
-  if (!Number.isFinite(keywordCoverageCount) || keywordCoverageCount < 0) return summary
-  return summary.replace(/当前关键词\s+\d+\s+个/, `当前关键词 ${Math.floor(keywordCoverageCount)} 个`)
-}
-
 
 function shouldGenerateExpandKeywordsRecommendation(params: {
   runDays: number
@@ -2268,156 +2262,6 @@ async function listRecommendations(params: {
     updatedAt: String(row.updated_at || '') }))
 }
 
-async function fetchKeywordCoverageByCampaign(params: {
-  userId: number
-  campaignIds: number[]
-}): Promise<Map<number, number>> {
-  const campaignIds = Array.from(new Set(
-    (params.campaignIds || [])
-      .map((item) => Number(item))
-      .filter((item) => Number.isFinite(item) && item > 0)
-  ))
-  if (campaignIds.length === 0) {
-    return new Map<number, number>()
-  }
-
-  const db = await getDatabase()
-  const placeholders = campaignIds.map(() => '?').join(', ')
-  const [keywordRows, campaignRows] = await Promise.all([
-    db.query<KeywordInventoryRow>(
-      `
-        SELECT
-          ag.campaign_id,
-          k.keyword_text,
-          k.match_type,
-          k.is_negative
-        FROM ad_groups ag
-        INNER JOIN keywords k ON k.ad_group_id = ag.id AND k.user_id = ?
-        WHERE ag.user_id = ?
-          AND ag.campaign_id IN (${placeholders})
-      `,
-      [params.userId, params.userId, ...campaignIds]
-    ),
-    db.query<{
-      id: number
-      campaign_config: unknown
-    }>(
-      `
-        SELECT
-          id,
-          campaign_config
-        FROM campaigns
-        WHERE user_id = ?
-          AND id IN (${placeholders})
-      `,
-      [params.userId, ...campaignIds]
-    ),
-  ])
-
-  const keywordsByCampaign = new Map<number, Set<string>>()
-
-  for (const row of keywordRows || []) {
-    const campaignId = Number(row.campaign_id)
-    const keywordText = sanitizeKeyword(String(row.keyword_text || ''))
-    if (!Number.isFinite(campaignId) || !keywordText) continue
-    if (normalizeBoolean(row.is_negative)) continue
-    const normalized = normalizeKeywordKey(keywordText)
-    if (!normalized) continue
-    const bucket = keywordsByCampaign.get(campaignId) || new Set<string>()
-    bucket.add(normalized)
-    keywordsByCampaign.set(campaignId, bucket)
-  }
-
-  for (const row of campaignRows || []) {
-    const campaignId = Number(row.id)
-    if (!Number.isFinite(campaignId)) continue
-    const bucket = keywordsByCampaign.get(campaignId) || new Set<string>()
-    const configKeywordSet = extractCampaignConfigKeywordSet(row.campaign_config)
-    for (const item of configKeywordSet) {
-      bucket.add(item)
-    }
-    keywordsByCampaign.set(campaignId, bucket)
-  }
-
-  const coverageByCampaign = new Map<number, number>()
-  for (const campaignId of campaignIds) {
-    coverageByCampaign.set(campaignId, (keywordsByCampaign.get(campaignId) || new Set<string>()).size)
-  }
-  return coverageByCampaign
-}
-
-async function repairLegacyExpandKeywordCoverage(params: {
-  userId: number
-  reportDate: string
-  recommendations: StrategyRecommendation[]
-}): Promise<StrategyRecommendation[]> {
-  const targetRecommendations = params.recommendations.filter((item) => (
-    item.recommendationType === 'expand_keywords'
-    && toNumber(item.data?.keywordCoverageCount, 0) <= 0
-  ))
-  if (targetRecommendations.length === 0) {
-    return params.recommendations
-  }
-
-  const coverageByCampaign = await fetchKeywordCoverageByCampaign({
-    userId: params.userId,
-    campaignIds: targetRecommendations.map((item) => item.campaignId) })
-  if (coverageByCampaign.size === 0) {
-    return params.recommendations
-  }
-
-  const updates = new Map<string, { summary: string | null; data: StrategyRecommendationData }>()
-  for (const item of targetRecommendations) {
-    const keywordCoverageCount = Number(coverageByCampaign.get(item.campaignId) || 0)
-    if (!Number.isFinite(keywordCoverageCount) || keywordCoverageCount <= 0) continue
-    const nextData = {
-      ...item.data,
-      keywordCoverageCount: Math.floor(keywordCoverageCount) }
-    updates.set(item.id, {
-      summary: patchExpandKeywordsSummaryCoverage(item.summary, keywordCoverageCount),
-      data: nextData })
-  }
-
-  if (updates.size === 0) {
-    return params.recommendations
-  }
-
-  const db = await getDatabase()
-  await Promise.allSettled(
-    Array.from(updates.entries()).map(async ([recommendationId, payload]) => {
-      await db.exec(
-        `
-          UPDATE strategy_center_recommendations
-          SET data_json = ?,
-              summary = ?,
-              updated_at = NOW()
-          WHERE id = ?
-            AND user_id = ?
-            AND report_date = ?
-        `,
-        [
-          toDbJsonObjectField(payload.data, payload.data),
-          payload.summary,
-          recommendationId,
-          params.userId,
-          params.reportDate,
-        ]
-      )
-    })
-  )
-
-  const nowIso = new Date().toISOString()
-  return params.recommendations.map((item) => {
-    const patched = updates.get(item.id)
-    if (!patched) return item
-    return {
-      ...item,
-      summary: patched.summary,
-      data: patched.data,
-      updatedAt: nowIso }
-  })
-}
-
 async function appendRecommendationEvent(params: {
   recommendationId: string
   userId: number
@@ -2966,10 +2810,7 @@ export async function getStrategyRecommendations(params: {
     reportDate,
     limit: params.limit })
   if (existing.length > 0) {
-    return repairLegacyExpandKeywordCoverage({
-      userId: params.userId,
-      reportDate,
-      recommendations: existing })
+    return existing
   }
 
   return refreshStrategyRecommendations({

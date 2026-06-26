@@ -26567,7 +26567,9 @@ INSERT INTO migration_history (migration_name) VALUES
   ('257_purge_legacy_google_ads_oauth_system_settings.pg.sql'),
   ('258_ad_creatives_keyword_bucket_abd_only.pg.sql'),
   ('259_drop_campaign_backups_campaign_data.pg.sql'),
-  ('260_url_swap_sitelink_targets.pg.sql')
+  ('260_url_swap_sitelink_targets.pg.sql'),
+  ('261_drop_offers_unlinked_columns.pg.sql'),
+  ('262_backfill_strategy_expand_keyword_coverage.pg.sql')
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- ==========================================
