@@ -15,11 +15,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 COPY scripts/docker-prune-node-modules.sh /tmp/docker-prune-node-modules.sh
 
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev && \
+ENV NPM_CONFIG_CACHE=/tmp/.npm
+
+RUN --mount=type=cache,target=/tmp/.npm,sharing=private \
+    npm ci --omit=dev --no-audit --no-fund && \
     npm cache clean --force && \
     chmod +x /tmp/docker-prune-node-modules.sh && \
     /tmp/docker-prune-node-modules.sh /app/node_modules && \
@@ -38,10 +40,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# 安装所有依赖（包括devDependencies）
-COPY package.json package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+# 安装所有依赖（包括 devDependencies）；不使用 BuildKit npm 缓存，避免 GHA 缓存污染导致 npm ci 254
+COPY package.json package-lock.json .npmrc ./
+ENV NPM_CONFIG_CACHE=/tmp/.npm
+RUN npm ci --no-audit --no-fund
 
 # 复制源代码
 COPY . .
