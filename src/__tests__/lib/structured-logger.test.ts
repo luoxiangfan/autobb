@@ -36,6 +36,64 @@ describe('structured-logger', () => {
     expect(shouldLogLevel('info')).toBe(false)
     expect(shouldLogLevel('warn')).toBe(true)
   })
+
+  it('samples info logs when LOG_SAMPLE_RATE is set', async () => {
+    vi.stubEnv('LOG_LEVEL', 'info')
+    vi.stubEnv('LOG_SAMPLE_RATE', '0.01')
+    vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
+    const { log } = await import('@/lib/common/structured-logger')
+
+    log('info', 'sampled-out')
+    expect(writeSpy).not.toHaveBeenCalled()
+
+    vi.mocked(Math.random).mockReturnValue(0.001)
+    log('info', 'sampled-in')
+    expect(writeSpy).toHaveBeenCalledTimes(1)
+    const payload = JSON.parse(String(writeSpy.mock.calls[0][0]))
+    expect(payload.sampled).toBe(true)
+    expect(payload.sampleRate).toBe(0.01)
+  })
+
+  it('never samples warn and error logs', async () => {
+    vi.stubEnv('LOG_LEVEL', 'warn')
+    vi.stubEnv('LOG_SAMPLE_RATE', '0.01')
+    vi.spyOn(Math, 'random').mockReturnValue(0.99)
+
+    const { log } = await import('@/lib/common/structured-logger')
+
+    log('warn', 'always-visible')
+    expect(writeSpy).toHaveBeenCalledTimes(1)
+    const payload = JSON.parse(String(writeSpy.mock.calls[0][0]))
+    expect(payload.sampled).toBeUndefined()
+  })
+})
+
+describe('console-json', () => {
+  let writeSpy: ReturnType<typeof vi.spyOn>
+
+  beforeEach(() => {
+    writeSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+  })
+
+  afterEach(() => {
+    writeSpy.mockRestore()
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('maps console.log to debug in production', async () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('LOG_LEVEL', 'debug')
+
+    const { patchConsoleToJsonOnce } = await import('@/lib/common/console-json')
+    patchConsoleToJsonOnce()
+    console.log('legacy debug output')
+
+    expect(writeSpy).toHaveBeenCalledTimes(1)
+    const payload = JSON.parse(String(writeSpy.mock.calls[0][0]))
+    expect(payload.level).toBe('debug')
+  })
 })
 
 describe('queue-log', () => {

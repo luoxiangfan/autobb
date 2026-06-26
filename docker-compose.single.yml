@@ -50,6 +50,7 @@ services:
       # 日志：生产默认 warn，队列任务生命周期默认 debug
       LOG_LEVEL: warn
       QUEUE_VERBOSE_LOG: 'false'
+      OPENCLAW_CONSOLE_LEVEL: warn
     logging:
       driver: json-file
       options:

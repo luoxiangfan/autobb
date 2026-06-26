@@ -20,6 +20,7 @@ services:
       - QUEUE_SPLIT_BACKGROUND=true
       - LOG_LEVEL=warn
       - QUEUE_VERBOSE_LOG=false
+      - OPENCLAW_CONSOLE_LEVEL=warn
     logging:
       driver: json-file
       options:

@@ -70,9 +70,51 @@ _handler.addFilter(ContextFilter())
 
 _root = logging.getLogger()
 _root.handlers = [_handler]
-_root.setLevel(logging.INFO)
+
+def _resolve_log_level() -> int:
+    raw = (os.getenv("LOG_LEVEL") or "").strip().lower()
+    mapping = {
+        "debug": logging.DEBUG,
+        "info": logging.INFO,
+        "warn": logging.WARNING,
+        "warning": logging.WARNING,
+        "error": logging.ERROR,
+    }
+    if raw in mapping:
+        return mapping[raw]
+    env = os.getenv("NODE_ENV") or os.getenv("ENV") or os.getenv("APP_ENV") or "development"
+    return logging.WARNING if env == "production" else logging.INFO
+
+_root.setLevel(_resolve_log_level())
 
 logger = logging.getLogger(__name__)
+
+def _resolve_slow_request_ms() -> int:
+    raw = os.getenv("PYTHON_HTTP_SLOW_MS", "1000")
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 1000
+
+SLOW_REQUEST_MS = _resolve_slow_request_ms()
+SKIP_REQUEST_LOG_PATHS = frozenset({"/health", "/healthz"})
+
+
+def _log_http_request(*, method: str, path: str, status: int, duration_ms: int) -> None:
+    extra = {
+        "method": method,
+        "path": path,
+        "status": status,
+        "durationMs": duration_ms,
+    }
+    if status >= 500:
+        logger.error("http_request", extra=extra)
+    elif status >= 400:
+        logger.warning("http_request", extra=extra)
+    elif duration_ms >= SLOW_REQUEST_MS:
+        logger.info("http_request", extra=extra)
+    else:
+        logger.debug("http_request", extra=extra)
 
 app = FastAPI(title="Google Ads Service Account API")
 
@@ -100,15 +142,14 @@ async def request_context_middleware(request: Request, call_next):
                 pass
 
         try:
-            logger.info(
-                "http_request",
-                extra={
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status": getattr(response, "status_code", 500),
-                    "durationMs": duration_ms,
-                },
-            )
+            path = request.url.path
+            if path not in SKIP_REQUEST_LOG_PATHS:
+                _log_http_request(
+                    method=request.method,
+                    path=path,
+                    status=getattr(response, "status_code", 500),
+                    duration_ms=duration_ms,
+                )
         except Exception:
             pass
 
