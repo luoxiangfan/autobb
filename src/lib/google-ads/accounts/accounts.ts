@@ -3,7 +3,7 @@ import { markUrlSwapTargetsRemovedByOfferAccount } from '../../url-swap'
 import { pauseOfferTasks } from '../../campaign/server'
 import { hasActiveCampaignForOffer } from '../../campaign/server'
 import { applyCampaignTransitionByIds } from '../../campaign/server'
-import { getInsertedId, toBool } from '../../db'
+import { getInsertedId } from '../../db'
 import { googleAdsAccountsLogger } from '../common/logger'
 
 export interface GoogleAdsAccount {
@@ -445,16 +445,16 @@ function mapRowToGoogleAdsAccount(row: any): GoogleAdsAccount {
     accountName: row.account_name,
     currency: row.currency,
     timezone: row.timezone,
-    isManagerAccount: toBool(row.is_manager_account),
-    isActive: toBool(row.is_active),
+    isManagerAccount: row.is_manager_account === true,
+    isActive: row.is_active === true,
     status: row.status || null,
-    testAccount: toBool(row.test_account),
+    testAccount: row.test_account === true,
     parentMccId: row.parent_mcc_id || null,
     identityVerificationProgramStatus: row.identity_verification_program_status ?? null,
     identityVerificationStartDeadlineTime: row.identity_verification_start_deadline_time ?? null,
     identityVerificationCompletionDeadlineTime:
       row.identity_verification_completion_deadline_time ?? null,
-    identityVerificationOverdue: toBool(row.identity_verification_overdue),
+    identityVerificationOverdue: row.identity_verification_overdue === true,
     identityVerificationCheckedAt: row.identity_verification_checked_at ?? null,
     accessToken: row.access_token,
     refreshToken: row.refresh_token,

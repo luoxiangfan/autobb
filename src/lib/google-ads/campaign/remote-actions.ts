@@ -75,8 +75,8 @@ function resolveAccountEligibility(
   adsAccount: GoogleAdsAccountRemoteRef,
   skipAccountEligibilityCheck?: boolean
 ): boolean {
-  const accountIsActive = adsAccount.is_active === true || adsAccount.is_active === 1
-  const accountIsDeleted = adsAccount.is_deleted === true || adsAccount.is_deleted === 1
+  const accountIsActive = adsAccount.is_active === true
+  const accountIsDeleted = adsAccount.is_deleted === true
   if (skipAccountEligibilityCheck) {
     return Boolean(adsAccount.customer_id && !accountIsDeleted)
   }

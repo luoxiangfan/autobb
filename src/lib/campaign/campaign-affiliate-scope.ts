@@ -31,10 +31,10 @@ type CampaignAffiliateScopeRow = {
 
 /* * 内存过滤：与 campaignAffiliateAlignedFilterSql 语义一致 */
 export function isCampaignAffiliateAlignedRow(row: CampaignAffiliateScopeRow): boolean {
-  const offerDeleted = row.offer_is_deleted === true || row.offer_is_deleted === 1
+  const offerDeleted = row.offer_is_deleted === true
   if (offerDeleted) return false
 
-  const campaignDeleted = row.is_deleted === true || row.is_deleted === 1
+  const campaignDeleted = row.is_deleted === true
   if (campaignDeleted) return false
 
   if (String(row.creation_status || '').toLowerCase() === 'failed') return false

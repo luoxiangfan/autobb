@@ -1,4 +1,4 @@
-import { getDatabase, toBool } from '@/lib/db'
+import { getDatabase } from '@/lib/db'
 
 export const USER_EXECUTION_SUSPENDED_ERROR_CODE = 'USER_EXECUTION_SUSPENDED' as const
 
@@ -78,7 +78,7 @@ function resolveUserEligibility(params: {
     return { userId, eligible: false, reason: 'user_not_found' }
   }
 
-  if (!toBool(userRow.is_active)) {
+  if (userRow.is_active !== true) {
     return { userId, eligible: false, reason: 'inactive' }
   }
 

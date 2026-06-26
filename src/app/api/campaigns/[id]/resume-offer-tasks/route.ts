@@ -52,7 +52,7 @@ export const POST = withAuth(async (_request: NextRequest, user, context) => {
       return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
-    const isDeleted = campaign.is_deleted === true || campaign.is_deleted === 1
+    const isDeleted = campaign.is_deleted === true
     if (isDeleted || String(campaign.status || '').toUpperCase() === 'REMOVED') {
       return NextResponse.json(
         { error: '该广告系列已删除/移除，无法执行关联任务开启' },

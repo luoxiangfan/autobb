@@ -1516,8 +1516,7 @@ async function assertUpdateCpcRouteIdSemantic(params: {
 
   const isRemoved =
     String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
-    localCampaign.is_deleted === true ||
-    localCampaign.is_deleted === 1
+    localCampaign.is_deleted === true
   if (isRemoved) {
     throw new OpenclawCommandValidationError(400, {
       error: '该广告系列已下线/删除，无法调整CPC',
@@ -1595,8 +1594,7 @@ async function assertUpdateBudgetRouteIdSemantic(params: {
 
   const isRemoved =
     String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
-    localCampaign.is_deleted === true ||
-    localCampaign.is_deleted === 1
+    localCampaign.is_deleted === true
   if (isRemoved) {
     throw new OpenclawCommandValidationError(400, {
       error: '该广告系列已下线/删除，无法调整预算',
@@ -1708,10 +1706,7 @@ export async function executeOpenclawCommandTask(task: Task<OpenclawCommandTaskD
   const requestQuery = parseJsonObject(run.request_query_json)
   let requestBody = parseJsonAny(run.request_body_json)
   let requestBodyForAudit = requestBody === undefined ? null : JSON.stringify(requestBody)
-  let confirmStatus =
-    (run.confirm_required as any) === 1 || (run.confirm_required as any) === true
-      ? 'required'
-      : 'not_required'
+  let confirmStatus = (run.confirm_required as any) === true ? 'required' : 'not_required'
 
   const startedAt = Date.now()
   let responseStatus: number | null = null

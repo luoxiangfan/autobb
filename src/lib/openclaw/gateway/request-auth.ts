@@ -55,7 +55,7 @@ async function getUserFeatureAccessFlags(userId: number): Promise<UserFeatureAcc
   )
   if (!user) return null
 
-  const isActive = (user.is_active as any) === true || (user.is_active as any) === 1
+  const isActive = (user.is_active as any) === true
   if (!isActive || hasPackageExpired(user.package_expires_at, new Date(), { invalidAsExpired: true })) {
     return {
       isActive: false,
@@ -64,9 +64,9 @@ async function getUserFeatureAccessFlags(userId: number): Promise<UserFeatureAcc
       strategyCenterEnabled: false }
   }
 
-  const openclawEnabled = (user.openclaw_enabled as any) === true || (user.openclaw_enabled as any) === 1
-  const productManagementEnabled = (user.product_management_enabled as any) === true || (user.product_management_enabled as any) === 1
-  const strategyCenterEnabled = (user.strategy_center_enabled as any) === true || (user.strategy_center_enabled as any) === 1
+  const openclawEnabled = (user.openclaw_enabled as any) === true
+  const productManagementEnabled = (user.product_management_enabled as any) === true
+  const strategyCenterEnabled = (user.strategy_center_enabled as any) === true
 
   return {
     isActive: true,

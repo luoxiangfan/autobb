@@ -268,7 +268,7 @@ export function resolveConfiguredMaxCpc(maxCpc: unknown, campaignConfig: unknown
 // "Deleted" here仅表示软删除(is_deleted)，而不是业务上的“下线(REMOVED)”
 // 下线后的广告系列仍然需要出现在 /campaigns 列表中，因此只按 isDeleted 过滤
 export function isCampaignRemovedOrDeleted(campaign: any): boolean {
-  const deletedFlag = campaign?.isDeleted === true || campaign?.isDeleted === 1
+  const deletedFlag = campaign?.isDeleted === true
   return deletedFlag
 }
 

@@ -92,11 +92,7 @@ export const GET = withAuth(
           type: 'login_attempt',
           id: record.id,
           // 使用双重检查确保正确识别成功记录
-          success:
-            record.success === 1 ||
-            record.success === true ||
-            record.success === '1' ||
-            record.success === 'true',
+          success: record.success === true || record.success === '1' || record.success === 'true',
           ipAddress: record.ip_address,
           userAgent: record.user_agent,
           failureReason: record.failure_reason,

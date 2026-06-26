@@ -22,7 +22,7 @@ export const GET = withAuth(async (_request, user) => {
         id: account.id,
         customerId: account.customer_id,
         accountName: account.account_name,
-        isActive: account.is_active === 1 || account.is_active === true,
+        isActive: account.is_active === true,
         isIdle: true, // 由getIdleAdsAccounts查询逻辑保证返回的都是闲置账号
         createdAt: account.created_at,
         updatedAt: account.updated_at,

@@ -175,8 +175,8 @@ export async function validateGoogleAdsAccountForRestore(
     return { ok: false, message: 'Google Ads 账号不存在或无权访问' }
   }
 
-  const isActive = adsAccount.is_active === true || adsAccount.is_active === 1
-  const isDeleted = adsAccount.is_deleted === true || adsAccount.is_deleted === 1
+  const isActive = adsAccount.is_active === true
+  const isDeleted = adsAccount.is_deleted === true
 
   if (!isActive || isDeleted) {
     return { ok: false, message: 'Google Ads 账号已禁用或删除' }

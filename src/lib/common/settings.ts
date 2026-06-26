@@ -97,7 +97,7 @@ export async function getAllSettings(userId?: number): Promise<SettingValue[]> {
   // 转换为返回格式
   // 注意：PostgreSQL 返回 boolean
   return Array.from(settingsMap.values()).map((setting) => {
-    const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
+    const isSensitive = setting.is_sensitive === true
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
     return {
       category: setting.category,
@@ -105,7 +105,7 @@ export async function getAllSettings(userId?: number): Promise<SettingValue[]> {
       value: isSensitive && setting.encrypted_value ? decrypt(setting.encrypted_value) : rawValue,
       dataType: setting.data_type,
       isSensitive,
-      isRequired: setting.is_required === true || setting.is_required === 1,
+      isRequired: setting.is_required === true,
       validationStatus: setting.validation_status,
       validationMessage: setting.validation_message,
       lastValidatedAt: setting.last_validated_at,
@@ -145,7 +145,7 @@ export async function getSettingsByCategory(
   // 转换为返回格式
   // 注意：PostgreSQL 返回 boolean
   return Array.from(settingsMap.values()).map((setting) => {
-    const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
+    const isSensitive = setting.is_sensitive === true
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
     return {
       category: setting.category,
@@ -153,7 +153,7 @@ export async function getSettingsByCategory(
       value: isSensitive && setting.encrypted_value ? decrypt(setting.encrypted_value) : rawValue,
       dataType: setting.data_type,
       isSensitive,
-      isRequired: setting.is_required === true || setting.is_required === 1,
+      isRequired: setting.is_required === true,
       validationStatus: setting.validation_status,
       validationMessage: setting.validation_message,
       lastValidatedAt: setting.last_validated_at,
@@ -180,7 +180,7 @@ export async function getUserOnlySettingsByCategory(
   )) as SystemSetting[]
 
   return settings.map((setting) => {
-    const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
+    const isSensitive = setting.is_sensitive === true
     const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
     return {
       category: setting.category,
@@ -188,7 +188,7 @@ export async function getUserOnlySettingsByCategory(
       value: isSensitive && setting.encrypted_value ? decrypt(setting.encrypted_value) : rawValue,
       dataType: setting.data_type,
       isSensitive,
-      isRequired: setting.is_required === true || setting.is_required === 1,
+      isRequired: setting.is_required === true,
       validationStatus: setting.validation_status,
       validationMessage: setting.validation_message,
       lastValidatedAt: setting.last_validated_at,
@@ -222,7 +222,7 @@ export async function getSetting(
   const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
 
   // 注意：PostgreSQL 返回 boolean
-  const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
+  const isSensitive = setting.is_sensitive === true
 
   let value: string | null = rawValue
   if (isSensitive && setting.encrypted_value) {
@@ -244,7 +244,7 @@ export async function getSetting(
     value,
     dataType: setting.data_type,
     isSensitive,
-    isRequired: setting.is_required === true || setting.is_required === 1,
+    isRequired: setting.is_required === true,
     validationStatus: setting.validation_status,
     validationMessage: setting.validation_message,
     lastValidatedAt: setting.last_validated_at,
@@ -287,7 +287,7 @@ export async function getUserOnlySetting(
   const rawValue = normalizeSettingValue(setting.category, setting.key, setting.value)
 
   // 注意：PostgreSQL 返回 boolean
-  const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
+  const isSensitive = setting.is_sensitive === true
 
   let value: string | null = rawValue
   if (isSensitive && setting.encrypted_value) {
@@ -309,7 +309,7 @@ export async function getUserOnlySetting(
     value,
     dataType: setting.data_type,
     isSensitive,
-    isRequired: setting.is_required === true || setting.is_required === 1,
+    isRequired: setting.is_required === true,
     validationStatus: setting.validation_status,
     validationMessage: setting.validation_message,
     lastValidatedAt: setting.last_validated_at,
@@ -345,7 +345,7 @@ export async function updateSetting(
 
   // 确定是否需要加密
   // 注意：PostgreSQL 返回 boolean
-  const isSensitive = metadata.is_sensitive === true || metadata.is_sensitive === 1
+  const isSensitive = metadata.is_sensitive === true
 
   // 阻止保存空的敏感字段（防止加密空字符串导致验证失败）
   if (isSensitive && (!normalizedValue || normalizedValue.trim() === '')) {

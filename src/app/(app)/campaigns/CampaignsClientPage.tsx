@@ -563,11 +563,10 @@ export default function CampaignsClientPage({
 
   // 仅将软删除(isDeleted)视为"已删除"，REMOVED 视为"已下线"仍展示
   const isCampaignDeleted = (campaign: Campaign) => {
-    const deletedFlag = campaign.isDeleted === true || campaign.isDeleted === 1
+    const deletedFlag = campaign.isDeleted === true
     return deletedFlag
   }
-  const isOfferDeleted = (campaign: Campaign) =>
-    campaign.offerIsDeleted === true || campaign.offerIsDeleted === 1
+  const isOfferDeleted = (campaign: Campaign) => campaign.offerIsDeleted === true
   const getCampaignGoogleId = (campaign: Campaign) =>
     campaign.googleCampaignId || campaign.campaignId
 
@@ -1904,8 +1903,8 @@ export default function CampaignsClientPage({
   }
 
   const openToggleStatusConfirm = (campaign: Campaign) => {
-    const isDeleted = campaign.isDeleted === true || campaign.isDeleted === 1
-    const offerDeleted = campaign.offerIsDeleted === true || campaign.offerIsDeleted === 1
+    const isDeleted = campaign.isDeleted === true
+    const offerDeleted = campaign.offerIsDeleted === true
     const googleCampaignId = getCampaignGoogleId(campaign)
 
     if (isDeleted || offerDeleted) {
@@ -1950,8 +1949,8 @@ export default function CampaignsClientPage({
   }
 
   const openOfflineDialog = (campaign: Campaign) => {
-    const isDeleted = campaign.isDeleted === true || campaign.isDeleted === 1
-    const offerDeleted = campaign.offerIsDeleted === true || campaign.offerIsDeleted === 1
+    const isDeleted = campaign.isDeleted === true
+    const offerDeleted = campaign.offerIsDeleted === true
     const googleCampaignId = getCampaignGoogleId(campaign)
     const normalizedCreationStatus = String(campaign.creationStatus || '').toLowerCase()
     const canOfflineWithoutGoogleCampaign =
@@ -2505,8 +2504,8 @@ export default function CampaignsClientPage({
     campaign: Campaign,
     nextStatusOverride?: 'PAUSED' | 'ENABLED'
   ) => {
-    const isDeleted = campaign.isDeleted === true || campaign.isDeleted === 1
-    const offerDeleted = campaign.offerIsDeleted === true || campaign.offerIsDeleted === 1
+    const isDeleted = campaign.isDeleted === true
+    const offerDeleted = campaign.offerIsDeleted === true
     const googleCampaignId = getCampaignGoogleId(campaign)
 
     if (isDeleted || offerDeleted) {

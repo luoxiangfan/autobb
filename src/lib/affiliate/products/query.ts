@@ -1,5 +1,4 @@
 import { getDatabase, type DatabaseAdapter } from '@/lib/db'
-import { toBool } from '@/lib/db'
 import {
   buildProductSummaryCacheHash,
   getCachedProductSummary,
@@ -1838,7 +1837,7 @@ export function mapAffiliateProductRow(
     activeOfferCount: Number(row.active_offer_count || 0),
     historicalOfferCount: Number(row.historical_offer_count || 0),
     relatedOfferCount: Number(row.related_offer_count || 0),
-    isBlacklisted: toBool(row.is_blacklisted),
+    isBlacklisted: row.is_blacklisted === true,
     recommendationScore: recommendationScoreIsFresh ? row.recommendation_score || null : null,
     recommendationReasons:
       recommendationScoreIsFresh && row.recommendation_reasons

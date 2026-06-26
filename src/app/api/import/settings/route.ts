@@ -122,8 +122,7 @@ export const POST = withAuth(async (request, user) => {
         [category, configKey, userIdNum]
       )
 
-      const isSensitive =
-        configSensitive || existing?.is_sensitive === 1 || existing?.is_sensitive === true
+      const isSensitive = configSensitive || existing?.is_sensitive === true
 
       if (existing) {
         if (isSensitive) {

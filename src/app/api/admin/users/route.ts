@@ -23,7 +23,7 @@ function getClientIP(request: NextRequest): string {
  * 规范: API响应使用 camelCase，数据库字段使用 snake_case
  */
 function transformUserToApiResponse(user: any, now: Date) {
-  const isActive = user.is_active === true || user.is_active === 1
+  const isActive = user.is_active === true
   const disableSuggested = isActive && isExpiredOverDays(user.package_expires_at, 30, now)
 
   return {
@@ -35,11 +35,9 @@ function transformUserToApiResponse(user: any, now: Date) {
     packageType: user.package_type,
     packageExpiresAt: user.package_expires_at,
     isActive,
-    openclawEnabled: user.openclaw_enabled === true || user.openclaw_enabled === 1,
-    productManagementEnabled:
-      user.product_management_enabled === true || user.product_management_enabled === 1,
-    strategyCenterEnabled:
-      user.strategy_center_enabled === true || user.strategy_center_enabled === 1,
+    openclawEnabled: user.openclaw_enabled === true,
+    productManagementEnabled: user.product_management_enabled === true,
+    strategyCenterEnabled: user.strategy_center_enabled === true,
     disableSuggested,
     disableSuggestedReason: disableSuggested ? 'expired_over_30d' : null,
     lastLoginAt: user.last_login_at,

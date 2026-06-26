@@ -1010,8 +1010,7 @@ async function executeStrategyRecommendationAnalyzeTask(
     [userId]
   )
   const strategyCenterEnabled = userAccess
-    ? (userAccess.strategy_center_enabled as any) === true ||
-      (userAccess.strategy_center_enabled as any) === 1
+    ? (userAccess.strategy_center_enabled as any) === true
     : false
   if (!strategyCenterEnabled) {
     return { success: true, skipped: true }

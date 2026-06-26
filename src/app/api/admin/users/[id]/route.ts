@@ -85,8 +85,7 @@ export const PATCH = withAuth(
       if (isActive !== undefined) {
         // PostgreSQL 返回 boolean
         // 使用类型断言避免TypeScript错误，但保持原有的运行时判断逻辑
-        const currentIsActive =
-          (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
+        const currentIsActive = (beforeUser.is_active as any) === true
         const isActiveBoolean = Boolean(isActive)
         if (isActiveBoolean !== currentIsActive) {
           const valueToSet = isActiveBoolean
@@ -96,9 +95,7 @@ export const PATCH = withAuth(
       }
 
       if (openclawEnabled !== undefined) {
-        const currentOpenclawEnabled =
-          (beforeUser.openclaw_enabled as any) === true ||
-          (beforeUser.openclaw_enabled as any) === 1
+        const currentOpenclawEnabled = (beforeUser.openclaw_enabled as any) === true
         const openclawEnabledBoolean = Boolean(openclawEnabled)
         if (openclawEnabledBoolean !== currentOpenclawEnabled) {
           const valueToSet = openclawEnabledBoolean
@@ -109,8 +106,7 @@ export const PATCH = withAuth(
 
       if (productManagementEnabled !== undefined) {
         const currentProductManagementEnabled =
-          (beforeUser.product_management_enabled as any) === true ||
-          (beforeUser.product_management_enabled as any) === 1
+          (beforeUser.product_management_enabled as any) === true
         const productManagementEnabledBoolean = Boolean(productManagementEnabled)
         if (productManagementEnabledBoolean !== currentProductManagementEnabled) {
           const valueToSet = productManagementEnabledBoolean
@@ -120,9 +116,7 @@ export const PATCH = withAuth(
       }
 
       if (strategyCenterEnabled !== undefined) {
-        const currentStrategyCenterEnabled =
-          (beforeUser.strategy_center_enabled as any) === true ||
-          (beforeUser.strategy_center_enabled as any) === 1
+        const currentStrategyCenterEnabled = (beforeUser.strategy_center_enabled as any) === true
         const strategyCenterEnabledBoolean = Boolean(strategyCenterEnabled)
         if (strategyCenterEnabledBoolean !== currentStrategyCenterEnabled) {
           const valueToSet = strategyCenterEnabledBoolean
@@ -190,10 +184,8 @@ export const PATCH = withAuth(
         clearUserExecutionEligibilityCache(userId)
 
         // PostgreSQL 返回 boolean
-        const wasActive =
-          (beforeUser.is_active as any) === true || (beforeUser.is_active as any) === 1
-        const isNowActive =
-          (updatedUser.is_active as any) === true || (updatedUser.is_active as any) === 1
+        const wasActive = (beforeUser.is_active as any) === true
+        const isNowActive = (updatedUser.is_active as any) === true
         if (!wasActive && isNowActive) {
           await logUserEnabled(auditContext)
         } else if (wasActive && !isNowActive) {
@@ -257,7 +249,7 @@ export const DELETE = withAuth(
 
       // Prevent deleting active users
       // PostgreSQL 返回 boolean
-      if ((user.is_active as any) === true || (user.is_active as any) === 1) {
+      if ((user.is_active as any) === true) {
         return NextResponse.json(
           { error: '无法删除启用状态的用户，请先禁用该用户' },
           { status: 400 }

@@ -90,7 +90,7 @@ export const PUT = withAuth(async (request: NextRequest, user, context) => {
       return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
-    const isDeleted = campaignRow.is_deleted === true || campaignRow.is_deleted === 1
+    const isDeleted = campaignRow.is_deleted === true
     if (isDeleted || String(campaignRow.status || '').toUpperCase() === 'REMOVED') {
       return NextResponse.json({ error: '该广告系列已删除/移除，无法修改名称' }, { status: 400 })
     }
@@ -129,8 +129,8 @@ export const PUT = withAuth(async (request: NextRequest, user, context) => {
           }
         | undefined
 
-      const isAccountActive = adsAccountRow?.is_active === true || adsAccountRow?.is_active === 1
-      const isAccountDeleted = adsAccountRow?.is_deleted === true || adsAccountRow?.is_deleted === 1
+      const isAccountActive = adsAccountRow?.is_active === true
+      const isAccountDeleted = adsAccountRow?.is_deleted === true
 
       if (adsAccountRow && isAccountActive && !isAccountDeleted) {
         const accountStatus = String(adsAccountRow.status || 'UNKNOWN').toUpperCase()

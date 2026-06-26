@@ -522,7 +522,7 @@ const get = withAuth(async (request, user) => {
           offerName: offer.offer_name,
           brand: offer.brand,
           targetCountry: offer.target_country,
-          isActive: offer.is_active === 1,
+          isActive: offer.is_active === true,
           campaignCount: offer.campaign_count,
         }))
 

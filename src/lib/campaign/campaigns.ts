@@ -356,10 +356,8 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
   const hasLinkedAdsAccountId =
     campaign.google_ads_account_id !== null && campaign.google_ads_account_id !== undefined
   const hasAccountRow = campaign.ads_account_id !== null && campaign.ads_account_id !== undefined
-  const adsAccountIsActive =
-    campaign.ads_account_is_active === true || campaign.ads_account_is_active === 1
-  const adsAccountIsDeleted =
-    campaign.ads_account_is_deleted === true || campaign.ads_account_is_deleted === 1
+  const adsAccountIsActive = campaign.ads_account_is_active === true
+  const adsAccountIsDeleted = campaign.ads_account_is_deleted === true
   const adsAccountAvailable =
     hasLinkedAdsAccountId && hasAccountRow && adsAccountIsActive && !adsAccountIsDeleted
   const canDeleteDueToAdsUnavailable = !adsAccountAvailable
@@ -386,7 +384,7 @@ export async function deleteCampaign(id: number, userId: number): Promise<Delete
     return { success: true }
   }
 
-  const isDeleted = campaign.is_deleted === true || campaign.is_deleted === 1
+  const isDeleted = campaign.is_deleted === true
   if (isDeleted) {
     return { success: false, reason: 'ALREADY_DELETED' }
   }

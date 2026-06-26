@@ -301,7 +301,7 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: '广告系列不存在或无权限访问' }, { status: 404 })
     }
 
-    const isDeleted = campaign.is_deleted === true || campaign.is_deleted === 1
+    const isDeleted = campaign.is_deleted === true
     if (isDeleted || String(campaign.status || '').toUpperCase() === 'REMOVED') {
       return NextResponse.json({ error: '该广告系列已下线/删除，无法新增否词' }, { status: 400 })
     }
@@ -310,9 +310,8 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: '广告系列未绑定有效的Google Ads账号' }, { status: 400 })
     }
 
-    const accountIsActive = campaign.account_is_active === true || campaign.account_is_active === 1
-    const accountIsDeleted =
-      campaign.account_is_deleted === true || campaign.account_is_deleted === 1
+    const accountIsActive = campaign.account_is_active === true
+    const accountIsDeleted = campaign.account_is_deleted === true
     if (!accountIsActive || accountIsDeleted) {
       return NextResponse.json({ error: '关联Ads账号不可用（可能已停用或解绑）' }, { status: 400 })
     }

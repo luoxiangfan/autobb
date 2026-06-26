@@ -2,7 +2,6 @@ import { createOffer, deleteOffer, findOfferById } from '@/lib/offers/server'
 import { getDatabase } from '@/lib/db'
 import { enqueueExistingOfferExtractionAndMarkQueued } from '@/lib/offers/server'
 
-import { toBool } from '@/lib/db'
 import type {
   AffiliateProduct,
   AffiliateProductOfferLinkCreatedVia,
@@ -570,7 +569,7 @@ export async function createOfferFromAffiliateProduct(params: {
     throw new Error('商品不存在')
   }
 
-  if (toBool(product.is_blacklisted)) {
+  if (product.is_blacklisted === true) {
     throw new Error('商品已下线，无法创建Offer')
   }
 

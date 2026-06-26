@@ -85,7 +85,7 @@ export async function resolveUserFeishuAccountId(userId: number): Promise<string
 }
 
 function resolveSettingValue(setting: Pick<SystemSetting, 'value' | 'encrypted_value' | 'is_sensitive'>): string {
-  const isSensitive = setting.is_sensitive === true || setting.is_sensitive === 1
+  const isSensitive = setting.is_sensitive === true
   if (isSensitive && setting.encrypted_value) {
     return decrypt(setting.encrypted_value) ?? ''
   }

@@ -101,12 +101,12 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: '广告系列不存在或无权访问' }, { status: 404 })
     }
 
-    const isDeleted = campaignRow.is_deleted === true || campaignRow.is_deleted === 1
+    const isDeleted = campaignRow.is_deleted === true
     if (isDeleted || String(campaignRow.status || '').toUpperCase() === 'REMOVED') {
       return NextResponse.json({ error: '该广告系列已下线/删除' }, { status: 400 })
     }
 
-    const offerDeleted = campaignRow.offer_is_deleted === true || campaignRow.offer_is_deleted === 1
+    const offerDeleted = campaignRow.offer_is_deleted === true
     if (offerDeleted) {
       return NextResponse.json({ error: '关联Offer已删除，无法下线' }, { status: 400 })
     }
@@ -143,10 +143,8 @@ export const POST = withAuth(async (request, user, context) => {
         return NextResponse.json({ error: '未找到关联的Ads账号，无法下线' }, { status: 400 })
       }
 
-      const accountIsActive =
-        campaignRow.ads_account_active === true || campaignRow.ads_account_active === 1
-      const accountIsDeleted =
-        campaignRow.ads_account_deleted === true || campaignRow.ads_account_deleted === 1
+      const accountIsActive = campaignRow.ads_account_active === true
+      const accountIsDeleted = campaignRow.ads_account_deleted === true
       if (!accountIsActive || accountIsDeleted) {
         return NextResponse.json(
           { error: '关联的Ads账号不可用（可能已解除关联或停用）' },

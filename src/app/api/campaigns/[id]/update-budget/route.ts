@@ -143,8 +143,8 @@ export const PUT = withAuth(async (request, user, context) => {
       )
     }
 
-    const accountIsActive = linked.account_is_active === true || linked.account_is_active === 1
-    const accountIsDeleted = linked.account_is_deleted === true || linked.account_is_deleted === 1
+    const accountIsActive = linked.account_is_active === true
+    const accountIsDeleted = linked.account_is_deleted === true
     if (!accountIsActive || accountIsDeleted) {
       return NextResponse.json({ error: '关联的Ads账号不可用（已停用或已删除）' }, { status: 400 })
     }

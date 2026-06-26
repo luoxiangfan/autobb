@@ -97,7 +97,7 @@ export async function executeUrlSwapTask(
     }
 
     const status = String(taskRow.status || '').toLowerCase()
-    const isDeleted = taskRow.is_deleted === true || Number(taskRow.is_deleted) === 1
+    const isDeleted = taskRow.is_deleted === true
     if (isDeleted || status !== 'enabled') {
       logger.debug(
         `[url-swap-executor] 跳过执行: taskId=${taskId}, status=${status || 'unknown'}, isDeleted=${isDeleted}`

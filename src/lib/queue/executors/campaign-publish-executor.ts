@@ -347,7 +347,6 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
     const campaignAlreadyRemoved =
       campaignSnapshot?.is_deleted === true ||
-      campaignSnapshot?.is_deleted === 1 ||
       String(campaignSnapshot?.status || '').toUpperCase() === 'REMOVED'
 
     if (!campaignSnapshot || campaignAlreadyRemoved) {
@@ -1229,7 +1228,6 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
 
     const wasOfflinedDuringPublish =
       campaignStateBeforePersist?.is_deleted === true ||
-      campaignStateBeforePersist?.is_deleted === 1 ||
       String(campaignStateBeforePersist?.status || '').toUpperCase() === 'REMOVED'
 
     const buildBackupSyncSnapshot = () =>

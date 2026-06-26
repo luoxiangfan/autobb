@@ -502,9 +502,8 @@ export async function handleCampaignPerformanceGet(
       const hasLinkedAdsAccountId =
         c.google_ads_account_id !== null && c.google_ads_account_id !== undefined
       const hasAccountRow = c.ads_account_id !== null && c.ads_account_id !== undefined
-      const adsAccountIsActive = c.ads_account_is_active === true || c.ads_account_is_active === 1
-      const adsAccountIsDeleted =
-        c.ads_account_is_deleted === true || c.ads_account_is_deleted === 1
+      const adsAccountIsActive = c.ads_account_is_active === true
+      const adsAccountIsDeleted = c.ads_account_is_deleted === true
       const adsAccountAvailable =
         hasLinkedAdsAccountId && hasAccountRow && adsAccountIsActive && !adsAccountIsDeleted
 

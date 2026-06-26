@@ -152,7 +152,7 @@ export function mapOfferToPutResponse(offer: Offer) {
     storeProductLinks: offer.store_product_links,
     extractionMode: normalizeOfferExtractionMode(offer.extraction_mode),
     scrapeStatus: offer.scrape_status,
-    isActive: offer.is_active === true || offer.is_active === 1,
+    isActive: offer.is_active === true,
     createdAt: offer.created_at,
     updatedAt: offer.updated_at,
   }

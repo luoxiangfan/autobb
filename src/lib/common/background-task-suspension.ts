@@ -1,5 +1,4 @@
 import { getDatabase } from '@/lib/db'
-import { toBool } from '@/lib/db'
 import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 import { ALL_TASK_TYPES, type TaskType } from '@/lib/queue/types'
 import { pauseUrlSwapTargetsByUserIds } from '@/lib/url-swap'
@@ -117,7 +116,7 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
   const affectedUserIds = Array.from(
     new Set(
       candidates
-        .filter((u) => !toBool(u.is_active) || isExpired(u.package_expires_at, now))
+        .filter((u) => u.is_active !== true || isExpired(u.package_expires_at, now))
         .map((u) => u.id)
     )
   )

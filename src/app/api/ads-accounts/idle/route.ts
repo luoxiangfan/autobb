@@ -56,7 +56,7 @@ export const GET = withAuth(async (_request, user) => {
           accountName: account.account_name,
           currency: account.currency,
           timezone: account.timezone,
-          isActive: account.is_active === 1,
+          isActive: account.is_active === true,
           lastSyncAt: account.last_sync_at,
           lastOffer: lastOffer || null,
           statistics: {

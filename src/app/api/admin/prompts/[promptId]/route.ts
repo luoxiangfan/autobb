@@ -69,7 +69,7 @@ export const GET = withAuth(
             language: v.language,
             createdBy: v.created_by_name,
             createdAt: v.created_at,
-            isActive: v.is_active === 1,
+            isActive: v.is_active === true,
             changeNotes: v.change_notes,
             totalCalls: 0, // Feature offline: prompt_usage_stats table removed
             totalCost: 0, // Feature offline: prompt_usage_stats table removed

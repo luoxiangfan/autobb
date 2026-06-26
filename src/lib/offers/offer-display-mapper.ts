@@ -311,7 +311,7 @@ export function mapOfferToGetResponse(offer: Offer): OfferGetDisplayPayload {
     scrapeStatus: offer.scrape_status,
     scrapeError: offer.scrape_error,
     scrapedAt: offer.scraped_at,
-    isActive: offer.is_active === true || offer.is_active === 1,
+    isActive: offer.is_active === true,
     createdAt: offer.created_at,
     updatedAt: offer.updated_at,
     reviewAnalysis: offer.review_analysis,

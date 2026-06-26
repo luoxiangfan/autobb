@@ -250,8 +250,7 @@ export const PUT = withAuth(async (request, user, context) => {
       if (localCampaign) {
         const isRemoved =
           String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
-          localCampaign.is_deleted === true ||
-          localCampaign.is_deleted === 1
+          localCampaign.is_deleted === true
         if (isRemoved) {
           return NextResponse.json({ error: '该广告系列已下线/删除，无法调整CPC' }, { status: 400 })
         }
@@ -412,8 +411,8 @@ export const PUT = withAuth(async (request, user, context) => {
       }
     }
 
-    const isAccountActive = adsAccountRow?.is_active === true || adsAccountRow?.is_active === 1
-    const isAccountDeleted = adsAccountRow?.is_deleted === true || adsAccountRow?.is_deleted === 1
+    const isAccountActive = adsAccountRow?.is_active === true
+    const isAccountDeleted = adsAccountRow?.is_deleted === true
 
     if (!adsAccountRow || !isAccountActive || isAccountDeleted) {
       return NextResponse.json(

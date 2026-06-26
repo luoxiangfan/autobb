@@ -515,8 +515,8 @@ async function importAdminConfig(): Promise<void> {
             setting.value,
             setting.encrypted_value,
             setting.data_type,
-            setting.is_sensitive === 1,
-            setting.is_required === 1,
+            setting.is_sensitive === true,
+            setting.is_required === true,
             setting.default_value,
             setting.description,
           ]

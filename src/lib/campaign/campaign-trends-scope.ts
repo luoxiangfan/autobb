@@ -50,7 +50,7 @@ type CampaignRowForScope = {
 }
 
 function isCampaignRemovedOrDeleted(campaign: { is_deleted?: unknown }): boolean {
-  const deletedFlag = campaign?.is_deleted === true || campaign?.is_deleted === 1
+  const deletedFlag = campaign?.is_deleted === true
   return deletedFlag
 }
 

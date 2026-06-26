@@ -70,7 +70,7 @@ export const GET = withAuth(async (request, user) => {
       }
 
       let value = setting.value
-      const isSensitive = setting.is_sensitive === 1 || setting.is_sensitive === true
+      const isSensitive = setting.is_sensitive === true
 
       if (isSensitive) {
         if (includeSensitive && setting.encrypted_value) {

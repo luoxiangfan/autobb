@@ -19,7 +19,6 @@ import {
   resolveGoogleAdsApiAccessLevelFromContext,
   type GoogleAdsAuthAssignment,
 } from '@/lib/google-ads/auth/assignment'
-import { isDbRowActive } from '../../db'
 import { getDatabase } from '../../db'
 import {
   getGoogleAdsCredentials,
@@ -932,9 +931,7 @@ export function resolveGoogleAdsCredentialStatusFields(ctx: GoogleAdsAuthContext
     lastVerifiedAt: isServiceAccountAuth
       ? (serviceAccount?.updatedAt ?? null)
       : (credentials?.last_verified_at ?? null),
-    isActive: isServiceAccountAuth
-      ? Boolean(serviceAccount)
-      : isDbRowActive(credentials?.is_active),
+    isActive: isServiceAccountAuth ? Boolean(serviceAccount) : credentials?.is_active === true,
     createdAt: isServiceAccountAuth ? serviceAccount?.createdAt : credentials?.created_at,
     updatedAt: isServiceAccountAuth ? serviceAccount?.updatedAt : credentials?.updated_at,
   }
@@ -971,9 +968,7 @@ export function resolveGoogleAdsCredentialStatusFieldsFromMetadata(
     lastVerifiedAt: isServiceAccountAuth
       ? (serviceAccount?.updatedAt ?? null)
       : (credentials?.last_verified_at ?? null),
-    isActive: isServiceAccountAuth
-      ? Boolean(serviceAccount)
-      : isDbRowActive(credentials?.is_active),
+    isActive: isServiceAccountAuth ? Boolean(serviceAccount) : credentials?.is_active === true,
     createdAt: isServiceAccountAuth ? serviceAccount?.createdAt : credentials?.created_at,
     updatedAt: isServiceAccountAuth ? serviceAccount?.updatedAt : credentials?.updated_at,
   }

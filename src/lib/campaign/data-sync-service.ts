@@ -1467,7 +1467,7 @@ class DataSyncService {
     >()
 
     for (const campaign of campaigns) {
-      const isTestVariant = campaign.is_test_variant === true || campaign.is_test_variant === 1
+      const isTestVariant = campaign.is_test_variant === true
       if (isTestVariant) continue
       const brandKey = normalizeBrandKey(campaign.brand)
       if (!brandKey) continue
@@ -1595,7 +1595,7 @@ class DataSyncService {
       if (!row.search_term) continue
       const campaign = campaignMap.get(row.campaign_id)
       if (!campaign) continue
-      const isTestVariant = campaign.is_test_variant === true || campaign.is_test_variant === 1
+      const isTestVariant = campaign.is_test_variant === true
       if (isTestVariant) continue
 
       const keywordText = row.search_term.trim()
@@ -1632,7 +1632,7 @@ class DataSyncService {
       if (!row.keyword_text) continue
       const campaign = campaignMap.get(row.campaign_id)
       if (!campaign) continue
-      const isTestVariant = campaign.is_test_variant === true || campaign.is_test_variant === 1
+      const isTestVariant = campaign.is_test_variant === true
       if (isTestVariant) continue
 
       const keywordText = row.keyword_text.trim()

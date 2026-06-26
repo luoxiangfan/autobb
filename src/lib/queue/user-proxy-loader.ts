@@ -253,7 +253,7 @@ async function getUserOnlyProxyUrls(userId: number): Promise<ProxyUrlConfig[]> {
     }
 
     // 获取配置值（处理加密情况）
-    const isSensitive = row.is_sensitive === true || row.is_sensitive === 1
+    const isSensitive = row.is_sensitive === true
     let value = row.value
 
     if (isSensitive && row.encrypted_value) {

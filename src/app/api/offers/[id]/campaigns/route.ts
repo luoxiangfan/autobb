@@ -202,8 +202,8 @@ export const GET = withAuth(async (request, user, context) => {
     const localCampaignNameByGoogleCampaignId = new Map<string, string>()
     for (const row of localCampaigns) {
       if (!row.customer_id) continue
-      const isActive = row.is_active === true || row.is_active === 1
-      const isDeleted = row.is_deleted === true || row.is_deleted === 1
+      const isActive = row.is_active === true
+      const isDeleted = row.is_deleted === true
       if (!isActive || isDeleted) continue
 
       const campaignIdNum = Number(row.google_campaign_id)
@@ -616,8 +616,8 @@ export const GET = withAuth(async (request, user, context) => {
     const seenLocal = new Set<string>()
     const formattedCampaigns = localCampaigns
       .filter((row) => {
-        const isActive = row.is_active === true || row.is_active === 1
-        const isDeleted = row.is_deleted === true || row.is_deleted === 1
+        const isActive = row.is_active === true
+        const isDeleted = row.is_deleted === true
         if (!Boolean(row.customer_id) || !isActive || isDeleted) return false
         if (!row.google_campaign_id) return false
         if (seenLocal.has(row.google_campaign_id)) return false

@@ -114,7 +114,7 @@ export interface GoogleAdsCredentials {
   developer_token: string // 必填 - 独立账号模式，每用户独立配置
   login_customer_id: string // 必填 - MCC账户ID
   access_token_expires_at?: string
-  is_active: number
+  is_active: boolean
   last_verified_at?: string
   api_access_level?: string
   created_at: string
@@ -320,7 +320,7 @@ export function googleAdsCredentialsFromMetadata(
     developer_token: '',
     login_customer_id: meta.login_customer_id,
     api_access_level: meta.api_access_level,
-    is_active: 1,
+    is_active: true,
     created_at: '',
     updated_at: '',
   }

@@ -21,10 +21,6 @@ export function getInsertedId(result: { changes: number; lastInsertRowid?: numbe
   throw new Error('PostgreSQL INSERT 未返回 id (请确保 SQL 包含 RETURNING id 或 db.exec 自动添加)')
 }
 
-export function isDbRowActive(value: unknown): boolean {
-  return value === true || value === 1
-}
-
 export function dateMinusDays(days: number): string {
   return `CURRENT_DATE - INTERVAL '${days} days'`
 }
@@ -50,13 +46,6 @@ export function datetimeMinusDaysParam(param = '?'): string {
 /* * Parameterized: CURRENT_TIMESTAMP - (? * INTERVAL '1 hour'). */
 export function datetimeMinusHoursParam(param = '?'): string {
   return `CURRENT_TIMESTAMP - (${param} * INTERVAL '1 hour')`
-}
-
-export function toBool(value: any): boolean {
-  if (typeof value === 'boolean') {
-    return value
-  }
-  return value === 1 || value === '1' || value === true
 }
 
 export function generateUpsertSql(

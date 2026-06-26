@@ -173,8 +173,7 @@ export const GET = withAuth(async (request: NextRequest, user, context) => {
       if (localCampaign) {
         const isRemoved =
           String(localCampaign.status || '').toUpperCase() === 'REMOVED' ||
-          localCampaign.is_deleted === true ||
-          localCampaign.is_deleted === 1
+          localCampaign.is_deleted === true
         if (isRemoved) {
           return NextResponse.json({ error: '该广告系列已下线/删除，无法查询CPC' }, { status: 400 })
         }
@@ -206,8 +205,8 @@ export const GET = withAuth(async (request: NextRequest, user, context) => {
       return NextResponse.json({ error: '未找到关联的Ads账号或Campaign未发布' }, { status: 404 })
     }
 
-    const isActive = linked.is_active === true || linked.is_active === 1
-    const isDeleted = linked.is_deleted === true || linked.is_deleted === 1
+    const isActive = linked.is_active === true
+    const isDeleted = linked.is_deleted === true
     if (!isActive || isDeleted) {
       return NextResponse.json({ error: '关联的Ads账号不可用（可能已解除关联）' }, { status: 400 })
     }

@@ -1023,7 +1023,7 @@ function evaluatePublishStep(params: {
   if (campaignRows.length > 0) {
     const hasSynced = campaignRows.some((campaign) => {
       const creationStatus = String(campaign.creation_status || '').trim().toLowerCase()
-      const isDeleted = campaign.is_deleted === true || Number(campaign.is_deleted) === 1
+      const isDeleted = campaign.is_deleted === true
       return creationStatus === 'synced' && !isDeleted
     })
     if (hasSynced) {
