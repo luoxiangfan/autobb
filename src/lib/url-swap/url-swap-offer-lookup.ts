@@ -14,13 +14,12 @@ export type UrlSwapTargetInput = {
  */
 export async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   return db.queryOne(
     `
     SELECT id, user_id, affiliate_link, target_country, final_url, final_url_suffix
     FROM offers
-    WHERE id = ? AND ${isDeletedCondition}
+    WHERE id = ? AND (is_deleted = false OR is_deleted IS NULL)
   `,
     [offerId]
   )
@@ -30,7 +29,6 @@ export async function getOfferCampaignTargets(
   userId: number
 ): Promise<UrlSwapTargetInput[]> {
   const db = await getDatabase()
-  const isDeletedCondition = 'c.is_deleted = false'
 
   const params: any[] = [offerId]
   let userCondition = ''
@@ -49,7 +47,7 @@ export async function getOfferCampaignTargets(
     LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
     WHERE c.offer_id = ?
       ${userCondition}
-      AND ${isDeletedCondition}
+      AND c.is_deleted = false
       AND c.status != 'REMOVED'
       AND c.google_ads_account_id IS NOT NULL
       AND (
@@ -81,12 +79,11 @@ export async function findGoogleAdsAccountIdByCustomerId(
   userId: number
 ): Promise<number | null> {
   const db = await getDatabase()
-  const isDeletedCondition = 'is_deleted = false'
   const row = await db.queryOne<{ id: number }>(
     `
     SELECT id
     FROM google_ads_accounts
-    WHERE user_id = ? AND customer_id = ? AND ${isDeletedCondition}
+    WHERE user_id = ? AND customer_id = ? AND is_deleted = false
     ORDER BY created_at DESC
     LIMIT 1
   `,

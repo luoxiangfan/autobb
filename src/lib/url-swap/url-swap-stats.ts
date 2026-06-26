@@ -42,8 +42,6 @@ export async function getUrlSwapTaskStats(
 export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobalStats> {
   const db = await getDatabase()
 
-  const isDeletedCondition = 'is_deleted = false'
-
   const stats = await db.queryOne<any>(
     `
     SELECT
@@ -57,7 +55,7 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
       COALESCE(SUM(failed_swaps), 0) as failed_swaps,
       COALESCE(SUM(url_changed_count), 0) as url_changed_count
     FROM url_swap_tasks
-    WHERE user_id = ? AND ${isDeletedCondition}
+    WHERE user_id = ? AND is_deleted = false
   `,
     [userId]
   )
@@ -85,8 +83,6 @@ export async function getUrlSwapUserStats(userId: number): Promise<UrlSwapGlobal
 export async function getUrlSwapGlobalStats(): Promise<UrlSwapGlobalStats> {
   const db = await getDatabase()
 
-  const isDeletedCondition = 'is_deleted = false'
-
   const stats = await db.queryOne<any>(`
     SELECT
       COUNT(*) as total_tasks,
@@ -99,7 +95,7 @@ export async function getUrlSwapGlobalStats(): Promise<UrlSwapGlobalStats> {
       COALESCE(SUM(failed_swaps), 0) as failed_swaps,
       COALESCE(SUM(url_changed_count), 0) as url_changed_count
     FROM url_swap_tasks
-    WHERE ${isDeletedCondition}
+    WHERE is_deleted = false
   `)
 
   const successRate =

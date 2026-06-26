@@ -2480,7 +2480,6 @@ export async function refreshStrategyRecommendations(params: {
 
   const task = (async () => {
     const db = await getDatabase()
-    const isDeletedCondition = 'c.is_deleted = false'
     const adsAccountIsActiveCondition = 'gaa.is_active = true'
     const adsAccountIsDeletedCondition = 'gaa.is_deleted = false'
 
@@ -2511,7 +2510,7 @@ export async function refreshStrategyRecommendations(params: {
         LEFT JOIN google_ads_accounts gaa ON gaa.id = c.google_ads_account_id
         WHERE c.user_id = ?
           AND c.status = 'ENABLED'
-          AND ${isDeletedCondition}
+          AND c.is_deleted = false
           AND (
             c.google_ads_account_id IS NULL
             OR (gaa.id IS NOT NULL AND ${adsAccountIsActiveCondition} AND ${adsAccountIsDeletedCondition})

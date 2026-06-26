@@ -392,8 +392,6 @@ async function getUserBrandLevelHighPerformingTerms(params: {
   const maxTerms = Math.max(5, Math.min(20, params.maxTerms ?? 10))
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
-  const isDeletedCondition = 'COALESCE(c.is_deleted, false) = false'
-
   const rows = await db.query<SearchTermFeedbackAggregateRow>(
     `SELECT
        str.search_term,
@@ -409,7 +407,7 @@ async function getUserBrandLevelHighPerformingTerms(params: {
        AND o.id != ?
        AND o.target_country = COALESCE(?, o.target_country)
        AND o.target_language = COALESCE(?, o.target_language)
-       AND ${isDeletedCondition}
+       AND COALESCE(c.is_deleted, false) = false
      GROUP BY str.search_term
      HAVING SUM(str.clicks) >= ${HIGH_PERFORMING_MIN_CLICKS}
      ORDER BY SUM(str.clicks) DESC`,
@@ -471,8 +469,6 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
   const minUsers = Math.max(1, params.minUsers ?? 1)
   const pureBrandKeywords = getPureBrandKeywords(params.brandName)
 
-  const isDeletedCondition = 'COALESCE(c.is_deleted, false) = false'
-
   // 聚合查询：计算平均 CTR 和用户数
   const avgCtrExpr = 'AVG(str.clicks::float / NULLIF(str.impressions, 0))'
 
@@ -495,7 +491,7 @@ async function getGlobalBrandLevelHighPerformingTerms(params: {
      WHERE o.brand = ?
        AND o.target_country = COALESCE(?, o.target_country)
        AND o.target_language = COALESCE(?, o.target_language)
-       AND ${isDeletedCondition}
+       AND COALESCE(c.is_deleted, false) = false
      GROUP BY str.search_term
      HAVING COUNT(DISTINCT str.user_id) >= ?
        AND SUM(str.clicks) >= 15

@@ -304,7 +304,6 @@ export async function pauseUrlSwapTargetsByUserIds(userIds: number[]): Promise<n
   const db = await getDatabase()
   const now = new Date().toISOString()
   const placeholders = userIds.map(() => '?').join(', ')
-  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   const result = await db.exec(
     `
@@ -315,7 +314,7 @@ export async function pauseUrlSwapTargetsByUserIds(userIds: number[]): Promise<n
       AND task_id IN (
         SELECT id FROM url_swap_tasks
         WHERE user_id IN (${placeholders})
-          AND ${isDeletedCondition}
+          AND (is_deleted = false OR is_deleted IS NULL)
       )
   `,
     [now, ...userIds]

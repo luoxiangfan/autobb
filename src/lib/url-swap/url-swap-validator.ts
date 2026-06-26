@@ -113,13 +113,12 @@ function checkDomainType(affiliateLink: string): string | null {
 }
 async function getOfferById(offerId: number): Promise<any | null> {
   const db = await getDatabase()
-  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
 
   return db.queryOne(
     `
     SELECT id, user_id, target_country, affiliate_link
     FROM offers
-    WHERE id = ? AND ${isDeletedCondition}
+    WHERE id = ? AND (is_deleted = false OR is_deleted IS NULL)
   `,
     [offerId]
   )

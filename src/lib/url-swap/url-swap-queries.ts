@@ -12,24 +12,15 @@ import { parseUrlSwapTask } from './url-swap-row'
 export async function getUrlSwapTaskById(id: string, userId: number): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
-
-  const task =
-    userId === 0
-      ? await db.queryOne<any>(
-          `
-        SELECT * FROM url_swap_tasks
-        WHERE id = ? AND ${isDeletedCondition}
-      `,
-          [id]
-        )
-      : await db.queryOne<any>(
-          `
-        SELECT * FROM url_swap_tasks
-        WHERE id = ? AND user_id = ? AND ${isDeletedCondition}
-      `,
-          [id, userId]
-        )
+  const task = await db.queryOne<any>(
+    `
+    SELECT * FROM url_swap_tasks
+    WHERE id = ?
+      AND (? = 0 OR user_id = ?)
+      AND (is_deleted = false OR is_deleted IS NULL)
+    `,
+    [id, userId, userId]
+  )
 
   if (!task) return null
 
@@ -45,12 +36,10 @@ export async function getUrlSwapTaskByOfferId(
 ): Promise<UrlSwapTask | null> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(is_deleted = false OR is_deleted IS NULL)'
-
   const task = await db.queryOne<any>(
     `
     SELECT * FROM url_swap_tasks
-    WHERE offer_id = ? AND user_id = ? AND ${isDeletedCondition}
+    WHERE offer_id = ? AND user_id = ? AND (is_deleted = false OR is_deleted IS NULL)
     ORDER BY created_at DESC
   `,
     [offerId, userId]
@@ -86,12 +75,11 @@ export async function getUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition = 'ust.is_deleted = false'
   let whereClause = 'ust.user_id = ?'
   const params: any[] = [userId]
 
   if (!options.include_deleted) {
-    whereClause += ` AND ${isDeletedCondition}`
+    whereClause += ' AND ust.is_deleted = false'
   }
 
   if (options.status) {
@@ -139,8 +127,6 @@ export async function getUrlSwapTasks(
 export async function getPendingTasks(): Promise<UrlSwapTask[]> {
   const db = await getDatabase()
 
-  const isDeletedCondition = '(ust.is_deleted = false OR ust.is_deleted IS NULL)'
-
   // 用户禁用/过期后不再调度其任务（避免继续入队）
   const rows = await db.query<any>(
     `
@@ -152,7 +138,7 @@ export async function getPendingTasks(): Promise<UrlSwapTask[]> {
     WHERE ust.status = 'enabled'
       AND ust.next_swap_at <= NOW()
       AND ust.started_at <= NOW()
-      AND ${isDeletedCondition}
+      AND (ust.is_deleted = false OR ust.is_deleted IS NULL)
       AND u.is_active = true
     ORDER BY ust.next_swap_at ASC
   `,
@@ -179,8 +165,7 @@ export async function getAllUrlSwapTasks(
   const limit = options.limit || 20
   const offset = (page - 1) * limit
 
-  const isDeletedCondition = 'ust.is_deleted = false'
-  let whereClause = isDeletedCondition
+  let whereClause = 'ust.is_deleted = false'
   const params: any[] = []
 
   if (options.status) {
