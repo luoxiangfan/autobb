@@ -62,6 +62,7 @@ npm run validate-schema
 | **258** | `ad_creatives.keyword_bucket` 约束收紧为 A/B/D | 须 `npm run db:migrate` |
 | **259** | 移除冗余列 `campaign_backups.campaign_data` | 须 `npm run db:migrate` |
 | **263** | 移除 `launch_scores` v3 维度列（已由 v4 字段替代） | 须 `npm run db:migrate` |
+| **265** | `risk_alerts.resolution_note`（确认/解决备注） | 须 `npm run db:migrate` |
 
 创意生成模式 API 与 UI 依赖上述列；未迁移时入队/列表可能报错。
 

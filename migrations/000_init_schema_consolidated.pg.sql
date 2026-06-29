@@ -822,6 +822,7 @@ CREATE TABLE risk_alerts (
   status TEXT NOT NULL DEFAULT 'active',
   resolved_at TEXT,
   resolved_by INTEGER,
+  resolution_note TEXT,
   detected_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
