@@ -186,7 +186,6 @@ export const TABLES: TableDef[] = [
       { name: 'idx_offers_is_deleted', columns: ['is_deleted'] },
       { name: 'idx_offers_deleted_at', columns: ['deleted_at'] },
       { name: 'idx_offers_google_ads_campaign_id', columns: ['google_ads_campaign_id'] }, // Google Ads 同步索引
-      { name: 'idx_offers_needs_completion', columns: ['needs_completion'] }, // 需要完善的索引
     ],
   },
 
@@ -300,7 +299,6 @@ export const TABLES: TableDef[] = [
         check: 'traffic_allocation >= 0 AND traffic_allocation <= 1',
       },
       { name: 'synced_from_google_ads', type: 'BOOLEAN', notNull: true, default: false }, // 是否从 Google Ads 同步
-      { name: 'needs_offer_completion', type: 'BOOLEAN', notNull: true, default: false }, // 是否需要完善 Offer 信息
       { name: 'is_deleted', type: 'BOOLEAN', notNull: true, default: false },
       { name: 'deleted_at', type: 'TIMESTAMP' },
       { name: 'created_at', type: 'TIMESTAMP', notNull: true, default: 'CURRENT_TIMESTAMP' },

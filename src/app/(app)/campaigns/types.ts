@@ -24,7 +24,6 @@ export interface Campaign {
   deletedAt?: string | null
   offerIsDeleted?: boolean | number
   offerSyncSource: string
-  needsOfferCompletion: boolean
   clickFarmTaskStatus: string | null
   urlSwapTaskStatus: string | null
   statusCategory: string

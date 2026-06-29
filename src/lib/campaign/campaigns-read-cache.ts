@@ -21,7 +21,6 @@ export type CampaignPerformanceCachePayload = {
   sortBy: string
   sortOrder: 'asc' | 'desc' | null
   ids: number[]
-  needsOfferCompletion: string | null
   statusCategory: string | null
   userId?: number
   userIds?: number[]
@@ -37,7 +36,6 @@ export type CampaignTrendsCachePayload = {
   /* * Same list-scoping as /api/campaigns/performance (excluding limit/offset/sort). */
   search: string
   status: string
-  needsOfferCompletion: string
   statusCategory: string
   showDeleted: boolean | null
   userIds: number[] | null

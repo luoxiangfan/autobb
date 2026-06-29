@@ -32,7 +32,6 @@ export interface OfferListItem {
   isBlacklisted?: boolean
   googleAdsCampaignId?: string | null
   syncSource?: string | null
-  needsCompletion?: boolean
   // 关联的广告系列 ID（用于一对一约束检查）
   campaignId?: number | null
 }

@@ -67,7 +67,6 @@ export interface Offer {
   industry_code: string | null // 行业代码（数据库字段，之前遗漏）
   google_ads_campaign_id: string | null
   sync_source: string | null
-  needs_completion: boolean | number
   // 分析结果字段
   review_analysis: string | null
   competitor_analysis: string | null
@@ -135,7 +134,6 @@ export interface OfferListRow {
   commission_value: string | null
   commission_currency: string | null
   scrape_status: string
-  needs_completion: boolean | number
   scrape_error: string | null
   scraped_at: string | null
   is_active: number | boolean
@@ -410,7 +408,6 @@ export async function listOffers(
     targetCountry?: string
     searchQuery?: string
     scrapeStatus?: string
-    needsCompletion?: boolean
     /* * true: 有非空联盟链接；false: 无或仅空白 */
     hasAffiliateLink?: boolean
     sortBy?: string
@@ -481,11 +478,6 @@ export async function listOffers(
     params.push(options.scrapeStatus)
   }
 
-  if (options?.needsCompletion !== undefined) {
-    whereConditions.push('o.needs_completion = ?')
-    params.push(options.needsCompletion)
-  }
-
   if (options?.hasAffiliateLink === true) {
     whereConditions.push("(o.affiliate_link IS NOT NULL AND TRIM(o.affiliate_link) != '')")
   } else if (options?.hasAffiliateLink === false) {
@@ -528,7 +520,6 @@ export async function listOffers(
     'o.updated_at',
     'o.google_ads_campaign_id',
     'o.sync_source',
-    'o.needs_completion',
   ].join(', ')
 
   const occupyingCampaignIdSubquery = offerOccupyingCampaignIdSubquerySql('o.id', 'o.user_id')
@@ -555,7 +546,6 @@ export async function listOffers(
     targetCountry: 'o.target_country',
     targetLanguage: 'o.target_language',
     scrapeStatus: 'o.scrape_status',
-    needsCompletion: 'o.needs_completion',
     createdAt: 'o.created_at',
     updatedAt: 'o.updated_at',
     linkedAccounts: linkedAccountCountSubquery,

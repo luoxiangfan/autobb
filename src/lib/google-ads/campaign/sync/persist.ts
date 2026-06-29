@@ -171,14 +171,13 @@ export async function saveCampaignToDatabase(params: {
         creation_status,
         synced_from_google_ads,
         offer_id,
-        needs_offer_completion,
         max_cpc,
         google_campaign_id,
         google_ad_group_id,
         google_ad_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', true, ?, true, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 'published', true, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       googleAdsAccountId,
@@ -344,13 +343,12 @@ export async function createOfferFirst(params: {
       offer_name,
       google_ads_campaign_id,
       sync_source,
-      needs_completion,
       scrape_status,
       is_active,
       page_type,
       created_at,
       updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       userId,
       url,
@@ -363,7 +361,6 @@ export async function createOfferFirst(params: {
       offerName,
       campaign.campaign_id,
       'google_ads_sync',
-      true, // 新创建的 Offer 标记为需要完善
       'pending',
       true,
       pageType,

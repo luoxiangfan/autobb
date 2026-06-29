@@ -4,7 +4,6 @@ export const OFFERS_SERVER_SUPPORTED_SORTS = new Set([
   'targetCountry',
   'targetLanguage',
   'scrapeStatus',
-  'needsCompletion',
   'createdAt',
   'updatedAt',
   'linkedAccounts',

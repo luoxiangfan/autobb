@@ -48,7 +48,6 @@ const mockTrendsScopeCampaignRow = {
   is_deleted: 0,
   ads_account_name: null,
   ads_account_customer_id: null,
-  offer_needs_completion: false,
 }
 
 function scopeThen(

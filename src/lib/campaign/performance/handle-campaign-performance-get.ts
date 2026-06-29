@@ -75,9 +75,6 @@ export async function handleCampaignPerformanceGet(
     const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw)
       ? statusFilterRaw
       : ''
-    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '')
-      .trim()
-      .toUpperCase()
     const statusCategoryFilter = (searchParams.get('statusCategory') || '').trim().toLowerCase()
     const showDeletedParam = parseOptionalBoolean(searchParams.get('showDeleted'))
     const refresh = parseOptionalBoolean(searchParams.get('refresh')) === true
@@ -173,7 +170,6 @@ export async function handleCampaignPerformanceGet(
       offset,
       search: searchQuery,
       status: statusFilter || 'ALL',
-      needsOfferCompletion: needsOfferCompletionFilter || 'ALL',
       statusCategory: statusCategoryFilter || 'all',
       showDeleted: showDeletedParam,
       sortBy,
@@ -238,8 +234,6 @@ export async function handleCampaignPerformanceGet(
           o.brand as offer_brand,
           o.url as offer_url,
           o.is_deleted as offer_is_deleted,
-          o.is_deleted as offer_is_deleted,
-          o.needs_completion as offer_needs_completion,
           o.sync_source as offer_sync_source,
           o.google_ads_campaign_id as offer_google_ads_campaign_id,
           (SELECT status FROM click_farm_tasks WHERE offer_id = c.offer_id AND ${'is_deleted = false'} ORDER BY created_at DESC LIMIT 1) as click_farm_task_status,
@@ -537,7 +531,6 @@ export async function handleCampaignPerformanceGet(
         offerId: c.offer_id,
         offerBrand: c.offer_brand,
         offerUrl: c.offer_url,
-        offerNeedsCompletion: c.offer_needs_completion,
         offerSyncSource: c.offer_sync_source,
         offerGoogleAdsCampaignId: c.offer_google_ads_campaign_id,
         clickFarmTaskStatus: c.click_farm_task_status ?? null,
@@ -620,13 +613,6 @@ export async function handleCampaignPerformanceGet(
     if (statusFilter && statusFilter !== 'ALL') {
       listCampaigns = listCampaigns.filter(
         (campaign) => String(campaign.status || '').toUpperCase() === statusFilter
-      )
-    }
-
-    if (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') {
-      listCampaigns = listCampaigns.filter(
-        (campaign) =>
-          String(campaign.offerNeedsCompletion || '').toUpperCase() === needsOfferCompletionFilter
       )
     }
 
@@ -1101,7 +1087,6 @@ export async function handleCampaignPerformanceGet(
       showDeletedParam === false ||
       Boolean(searchQuery) ||
       (statusFilter && statusFilter !== 'ALL') ||
-      (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') ||
       (statusCategoryFilter && statusCategoryFilter !== 'all')
     if (hasCampaignScopeFilter) {
       changes.impressions = null

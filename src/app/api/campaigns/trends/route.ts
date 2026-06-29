@@ -152,9 +152,6 @@ export const GET = withAuth(async (request, user) => {
     const statusFilter = ['ENABLED', 'PAUSED', 'REMOVED', 'ALL'].includes(statusFilterRaw)
       ? statusFilterRaw
       : ''
-    const needsOfferCompletionFilter = (searchParams.get('needsOfferCompletion') || '')
-      .trim()
-      .toUpperCase()
     const statusCategoryFilter = (searchParams.get('statusCategory') || '').trim().toLowerCase()
     const showDeletedParam = parseOptionalBooleanParam(searchParams.get('showDeleted'))
     const idsParam = (searchParams.get('ids') || '').trim()
@@ -214,7 +211,6 @@ export const GET = withAuth(async (request, user) => {
       affiliate: affiliateFilter || null,
       search: searchQuery,
       status: statusFilter || 'ALL',
-      needsOfferCompletion: needsOfferCompletionFilter || 'ALL',
       statusCategory: statusCategoryFilter || 'all',
       showDeleted: showDeletedParam,
       userIds: effectiveUserIds === null ? null : [...effectiveUserIds].sort((a, b) => a - b),
@@ -242,7 +238,6 @@ export const GET = withAuth(async (request, user) => {
     const scopedIds = filterCampaignRowIdsForTrendsScope(campaignRows, {
       searchQuery,
       statusFilter,
-      needsOfferCompletionFilter,
       statusCategoryFilter,
       showDeletedParam,
       idsFilter,

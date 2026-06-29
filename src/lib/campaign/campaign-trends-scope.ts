@@ -39,7 +39,6 @@ type CampaignRowForScope = {
   id: number
   status: string | null
   status_category: string | null
-  offer_needs_completion: unknown
   is_deleted: unknown
   campaign_name: string | null
   custom_name: string | null
@@ -88,8 +87,7 @@ export async function queryCampaignRowsForTrendsScope(
           c.google_ads_account_id,
           c.is_deleted,
           gaa.account_name as ads_account_name,
-          gaa.customer_id as ads_account_customer_id,
-          o.needs_completion as offer_needs_completion
+          gaa.customer_id as ads_account_customer_id
         FROM campaigns c
         LEFT JOIN google_ads_accounts gaa ON c.google_ads_account_id = gaa.id
         LEFT JOIN offers o ON c.offer_id = o.id
@@ -116,20 +114,12 @@ export function filterCampaignRowIdsForTrendsScope(
   filters: {
     searchQuery: string
     statusFilter: string
-    needsOfferCompletionFilter: string
     statusCategoryFilter: string
     showDeletedParam: boolean | null
     idsFilter: number[]
   }
 ): number[] {
-  const {
-    searchQuery,
-    statusFilter,
-    needsOfferCompletionFilter,
-    statusCategoryFilter,
-    showDeletedParam,
-    idsFilter,
-  } = filters
+  const { searchQuery, statusFilter, statusCategoryFilter, showDeletedParam, idsFilter } = filters
 
   let list = rows
 
@@ -158,12 +148,6 @@ export function filterCampaignRowIdsForTrendsScope(
 
   if (statusFilter && statusFilter !== 'ALL') {
     list = list.filter((row) => String(row.status || '').toUpperCase() === statusFilter)
-  }
-
-  if (needsOfferCompletionFilter && needsOfferCompletionFilter !== 'ALL') {
-    list = list.filter(
-      (row) => String(row.offer_needs_completion || '').toUpperCase() === needsOfferCompletionFilter
-    )
   }
 
   if (statusCategoryFilter && statusCategoryFilter !== 'all') {

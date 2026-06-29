@@ -117,7 +117,6 @@ export default function OffersClientPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [needsCompletionFilter, setNeedsCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [affiliateLinkFilter, setAffiliateLinkFilter] = useState<string>('all') // 'all' | 'true' | 'false' 是否有联盟推广链接
 
   // P2-5: 排序状态（默认按创建时间降序）
@@ -156,7 +155,6 @@ export default function OffersClientPage() {
   const serverSearchQuery = debouncedSearchQuery.trim()
   const serverCountry = countryFilter !== 'all' ? countryFilter : ''
   const serverScrapeStatus = statusFilter !== 'all' ? statusFilter : ''
-  const serverNeedsCompletion = needsCompletionFilter !== 'all' ? needsCompletionFilter : ''
   const serverHasAffiliateLink = affiliateLinkFilter !== 'all' ? affiliateLinkFilter : ''
 
   useEffect(() => {
@@ -246,7 +244,6 @@ export default function OffersClientPage() {
       if (serverSearchQuery) params.set('search', serverSearchQuery)
       if (serverCountry) params.set('targetCountry', serverCountry)
       if (serverScrapeStatus) params.set('scrapeStatus', serverScrapeStatus)
-      if (serverNeedsCompletion) params.set('needsCompletion', serverNeedsCompletion)
       if (serverHasAffiliateLink) params.set('hasAffiliateLink', serverHasAffiliateLink)
 
       if (sortBy) {
@@ -262,7 +259,6 @@ export default function OffersClientPage() {
       serverSearchQuery,
       serverCountry,
       serverScrapeStatus,
-      serverNeedsCompletion,
       serverHasAffiliateLink,
       sortBy,
       sortOrder,
@@ -569,7 +565,6 @@ export default function OffersClientPage() {
       searchQuery: debouncedSearchQuery,
       countryFilter,
       statusFilter,
-      needsCompletionFilter,
       affiliateLinkFilter,
       sortBy,
       sortOrder,
@@ -589,7 +584,6 @@ export default function OffersClientPage() {
     debouncedSearchQuery,
     countryFilter,
     statusFilter,
-    needsCompletionFilter,
     affiliateLinkFilter,
     sortBy,
     sortOrder,
@@ -1029,7 +1023,6 @@ export default function OffersClientPage() {
     searchQuery ||
     countryFilter !== 'all' ||
     statusFilter !== 'all' ||
-    needsCompletionFilter !== 'all' ||
     affiliateLinkFilter !== 'all'
   )
   // P2-2: 导出Offer数据
@@ -1309,7 +1302,6 @@ export default function OffersClientPage() {
                     setSearchQuery('')
                     setCountryFilter('all')
                     setStatusFilter('all')
-                    setNeedsCompletionFilter('all')
                     setAffiliateLinkFilter('all')
                   }}
                 >

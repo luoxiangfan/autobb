@@ -42,12 +42,6 @@ const get = withAuth(async (request, user) => {
     const targetCountry = searchParams.get('targetCountry') || undefined
     const searchQuery = searchParams.get('search') || undefined
     const scrapeStatus = searchParams.get('scrapeStatus') || undefined
-    const needsCompletion =
-      searchParams.get('needsCompletion') === 'true'
-        ? true
-        : searchParams.get('needsCompletion') === 'false'
-          ? false
-          : undefined
     const hasAffiliateLink =
       searchParams.get('hasAffiliateLink') === 'true'
         ? true
@@ -80,7 +74,6 @@ const get = withAuth(async (request, user) => {
           id: offer.id,
           brand: offer.brand,
           scrapeStatus: offer.scrape_status,
-          needsCompletion: offer.needs_completion,
           scrapeError: offer.scrape_error,
           affiliateLink: offer.affiliate_link,
           targetCountry: offer.target_country,
@@ -130,7 +123,6 @@ const get = withAuth(async (request, user) => {
       targetCountry,
       searchQuery,
       scrapeStatus,
-      needsCompletion,
       hasAffiliateLink,
       sortBy: requestedSortBy,
       sortOrder,
@@ -144,7 +136,6 @@ const get = withAuth(async (request, user) => {
         targetCountry,
         searchQuery,
         scrapeStatus,
-        needsCompletion,
         hasAffiliateLink,
         sortBy,
         sortOrder,
@@ -167,7 +158,6 @@ const get = withAuth(async (request, user) => {
           finalUrl: offer.final_url,
           finalUrlSuffix: offer.final_url_suffix,
           scrapeStatus: offer.scrape_status,
-          needsCompletion: offer.needs_completion,
           scrapeError: offer.scrape_error,
           scrapedAt: offer.scraped_at,
           isActive: offer.is_active === true,

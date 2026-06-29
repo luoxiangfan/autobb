@@ -97,7 +97,6 @@ interface Campaign {
   deletedAt?: string | null
   offerIsDeleted?: boolean | number
   offerSyncSource: string
-  needsOfferCompletion: boolean
   clickFarmTaskStatus: string | null
   urlSwapTaskStatus: string | null
   statusCategory: string
@@ -294,7 +293,6 @@ export default function CampaignsClientPage({
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>(DEFAULT_STATUS_FILTER)
-  const [needsOfferCompletionFilter, setNeedsOfferCompletionFilter] = useState<string>('all') // 'all' | 'true' | 'false'
   const [statusCategoryFilter, setStatusCategoryFilter] = useState<string>('all') // 'all' | 'pending' | 'watching' | 'qualified'
   const [selectedUserFilters, setSelectedUserFilters] = useState<string[]>([]) // [] => all users
   const [pendingUserFilters, setPendingUserFilters] = useState<string[]>([])
@@ -771,7 +769,6 @@ export default function CampaignsClientPage({
     searchQuery: debouncedSearchQuery.trim(),
     statusFilter,
     statusCategoryFilter,
-    needsOfferCompletionFilter,
     sortField,
     sortDirection,
     showDeletedCampaigns,
@@ -788,14 +785,12 @@ export default function CampaignsClientPage({
     searchQuery.trim().length > 0 ||
     statusFilter !== DEFAULT_STATUS_FILTER ||
     statusCategoryFilter !== 'all' ||
-    needsOfferCompletionFilter !== 'all' ||
     userFilterApplied ||
     affiliateFilter !== 'all'
   const trendsFilterDepsKey = JSON.stringify({
     search: debouncedSearchQuery.trim(),
     statusFilter,
     statusCategoryFilter,
-    needsOfferCompletionFilter,
     showDeletedCampaigns,
     selectedUserFilters: selectedUserFilters.slice().sort(),
     affiliateFilter,
@@ -941,7 +936,6 @@ export default function CampaignsClientPage({
     setDebouncedSearchQuery('')
     setStatusFilter(DEFAULT_STATUS_FILTER)
     setStatusCategoryFilter('all')
-    setNeedsOfferCompletionFilter('all')
     const allUserIds = users.map((user) => String(user.id))
     setSelectedUserFilters(allUserIds)
     setPendingUserFilters(allUserIds)
@@ -1210,10 +1204,6 @@ export default function CampaignsClientPage({
       params.set('status', statusFilter)
     }
 
-    if (needsOfferCompletionFilter !== 'all') {
-      params.set('needsOfferCompletion', needsOfferCompletionFilter)
-    }
-
     if (statusCategoryFilter !== 'all') {
       params.set('statusCategory', statusCategoryFilter)
     }
@@ -1359,10 +1349,6 @@ export default function CampaignsClientPage({
 
     if (statusFilter !== 'all') {
       params.set('status', statusFilter)
-    }
-
-    if (needsOfferCompletionFilter !== 'all') {
-      params.set('needsOfferCompletion', needsOfferCompletionFilter)
     }
 
     if (statusCategoryFilter !== 'all') {
