@@ -21,6 +21,7 @@ import { getDatabase } from '@/lib/db'
 import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 import { hasEnabledCampaignForOffer } from '@/lib/campaign/campaign-health-guard'
+import { reconcileUrlSwapSitelinkAffiliateLinks } from '@/lib/url-swap/reconcile-sitelink-affiliate-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,6 +49,21 @@ export const GET = withAuth(async (_request, user, context) => {
       const message = syncError instanceof Error ? syncError.message : String(syncError)
       sitelink_sync = { upserted: 0, skipped: false, errors: [message] }
       console.warn(`[url-swap] 详情页 Sitelink 映射同步失败（非致命）: ${message}`)
+    }
+  }
+
+  if (sitelink_targets.length > 0) {
+    try {
+      const reconciled = await reconcileUrlSwapSitelinkAffiliateLinks({
+        taskId: id,
+        offerId: task.offer_id,
+        userId: user.userId,
+      })
+      sitelink_targets = reconciled.targets
+    } catch (reconcileError: unknown) {
+      const message =
+        reconcileError instanceof Error ? reconcileError.message : String(reconcileError)
+      console.warn(`[url-swap] Sitelink affiliate_link 对齐失败（非致命）: ${message}`)
     }
   }
   const taskWithTargets = { ...task, targets, sitelink_targets }

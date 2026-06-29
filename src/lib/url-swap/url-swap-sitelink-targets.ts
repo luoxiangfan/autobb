@@ -112,6 +112,77 @@ function mapSitelinkTargetRow(row: any): UrlSwapSitelinkTarget {
  * 发布 Sitelink 成功后，将 store_product_links 与 Asset 映射写入换链任务。
  * 若 Offer 无换链任务则跳过（不阻塞发布）。
  */
+export interface UpsertUrlSwapSitelinkTargetInput {
+  taskId: string
+  offerId: number
+  userId: number
+  sortIndex: number
+  affiliateLink: string
+  googleAdsAccountId: number
+  googleCustomerId: string
+  googleCampaignId: string
+  assetResourceName: string
+  assetId: string
+  linkText: string
+  currentFinalUrl: string
+  currentFinalUrlSuffix: string | null
+  status: Extract<UrlSwapSitelinkTargetStatus, 'active' | 'paused'>
+}
+
+export async function upsertUrlSwapSitelinkTarget(
+  input: UpsertUrlSwapSitelinkTargetInput
+): Promise<void> {
+  const db = await getDatabase()
+  const now = new Date().toISOString()
+
+  await db.exec(
+    `
+    INSERT INTO url_swap_sitelink_targets (
+      id, task_id, offer_id, user_id,
+      sort_index, affiliate_link,
+      google_ads_account_id, google_customer_id, google_campaign_id,
+      asset_resource_name, asset_id, link_text,
+      current_final_url, current_final_url_suffix,
+      status, consecutive_failures, last_error,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)
+    ON CONFLICT (task_id, sort_index) DO UPDATE SET
+      affiliate_link = EXCLUDED.affiliate_link,
+      google_ads_account_id = EXCLUDED.google_ads_account_id,
+      google_customer_id = EXCLUDED.google_customer_id,
+      google_campaign_id = EXCLUDED.google_campaign_id,
+      asset_resource_name = EXCLUDED.asset_resource_name,
+      asset_id = EXCLUDED.asset_id,
+      link_text = EXCLUDED.link_text,
+      current_final_url = EXCLUDED.current_final_url,
+      current_final_url_suffix = EXCLUDED.current_final_url_suffix,
+      status = EXCLUDED.status,
+      consecutive_failures = 0,
+      last_error = NULL,
+      updated_at = EXCLUDED.updated_at
+  `,
+    [
+      crypto.randomUUID().toLowerCase(),
+      input.taskId,
+      input.offerId,
+      input.userId,
+      input.sortIndex,
+      input.affiliateLink,
+      input.googleAdsAccountId,
+      input.googleCustomerId,
+      input.googleCampaignId,
+      input.assetResourceName,
+      input.assetId,
+      input.linkText,
+      input.currentFinalUrl,
+      input.currentFinalUrlSuffix,
+      input.status,
+      now,
+      now,
+    ]
+  )
+}
+
 export async function syncUrlSwapSitelinkTargetsAfterPublish(
   input: SyncUrlSwapSitelinkTargetsInput
 ): Promise<number> {
@@ -151,52 +222,22 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
     const currentFinalUrl = split.base
     const currentFinalUrlSuffix = explicitSuffix ?? split.suffix
 
-    await db.exec(
-      `
-      INSERT INTO url_swap_sitelink_targets (
-        id, task_id, offer_id, user_id,
-        sort_index, affiliate_link,
-        google_ads_account_id, google_customer_id, google_campaign_id,
-        asset_resource_name, asset_id, link_text,
-        current_final_url, current_final_url_suffix,
-        status, consecutive_failures, last_error,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)
-      ON CONFLICT (task_id, sort_index) DO UPDATE SET
-        affiliate_link = EXCLUDED.affiliate_link,
-        google_ads_account_id = EXCLUDED.google_ads_account_id,
-        google_customer_id = EXCLUDED.google_customer_id,
-        google_campaign_id = EXCLUDED.google_campaign_id,
-        asset_resource_name = EXCLUDED.asset_resource_name,
-        asset_id = EXCLUDED.asset_id,
-        link_text = EXCLUDED.link_text,
-        current_final_url = EXCLUDED.current_final_url,
-        current_final_url_suffix = EXCLUDED.current_final_url_suffix,
-        status = EXCLUDED.status,
-        consecutive_failures = 0,
-        last_error = NULL,
-        updated_at = EXCLUDED.updated_at
-    `,
-      [
-        crypto.randomUUID().toLowerCase(),
-        task.id,
-        input.offerId,
-        input.userId,
-        index,
-        affiliateLink,
-        input.googleAdsAccountId,
-        input.googleCustomerId,
-        input.googleCampaignId,
-        assetResourceName,
-        assetId,
-        sitelink.text,
-        currentFinalUrl,
-        currentFinalUrlSuffix,
-        targetStatus,
-        now,
-        now,
-      ]
-    )
+    await upsertUrlSwapSitelinkTarget({
+      taskId: task.id,
+      offerId: input.offerId,
+      userId: input.userId,
+      sortIndex: index,
+      affiliateLink,
+      googleAdsAccountId: input.googleAdsAccountId,
+      googleCustomerId: input.googleCustomerId,
+      googleCampaignId: input.googleCampaignId,
+      assetResourceName,
+      assetId,
+      linkText: sitelink.text,
+      currentFinalUrl,
+      currentFinalUrlSuffix,
+      status: targetStatus,
+    })
     upserted++
   }
 

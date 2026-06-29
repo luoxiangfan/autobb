@@ -12,14 +12,18 @@ import { oauthGetCustomerParams } from '@/lib/google-ads/oauth/customer-params'
 import { getCustomerWithCredentials } from '@/lib/google-ads/api/customer'
 import { ApiOperationType } from '@/lib/google-ads/api/tracker'
 import { trackOAuthApiCall } from '@/lib/google-ads/api/shared'
-import { mapRemoteSitelinkRowToPublishInput } from '@/lib/creatives/sitelink-store-product-links'
+import { splitUrlBaseAndSuffix } from '@/lib/creatives/sitelink-utils'
 import {
   getActiveUrlSwapSitelinkTargets,
   loadOfferStoreProductLinksForUrlSwap,
-  syncUrlSwapSitelinkTargetsAfterPublish,
+  resolveUrlSwapSitelinkTargetStatusForTaskStatus,
+  upsertUrlSwapSitelinkTarget,
 } from './url-swap-sitelink-targets'
 import { resolveCampaignTargetsForSitelinkBackfill } from './url-swap-targets'
 import { getUrlSwapTaskByOfferId } from './url-swap-queries'
+import { getOfferById } from './url-swap-offer-lookup'
+import { resolveStoreProductLinkFinalUrls } from './resolve-store-product-link-finals'
+import { findStoreProductLinkIndexForSitelinkFinalUrl } from './sitelink-affiliate-matching'
 
 export interface BackfillUrlSwapSitelinkTargetsOptions {
   offerId?: number
@@ -135,10 +139,7 @@ async function fetchCampaignSitelinkAssets(params: {
     )
   }
 
-  return rows
-    .map(parseGaqlRow)
-    .filter((row): row is RemoteSitelinkAsset => row !== null)
-    .sort((a, b) => a.linkText.localeCompare(b.linkText))
+  return rows.map(parseGaqlRow).filter((row): row is RemoteSitelinkAsset => row !== null)
 }
 
 export async function backfillUrlSwapSitelinkTargets(
@@ -205,6 +206,19 @@ export async function backfillUrlSwapSitelinkTargets(
       continue
     }
 
+    const offer = await getOfferById(row.offer_id)
+    if (!offer?.target_country) {
+      result.errors.push(`task=${row.task_id}: Offer 缺少 target_country，无法解析单品链接`)
+      continue
+    }
+
+    const resolvedStoreLinks = await resolveStoreProductLinkFinalUrls({
+      storeProductLinks,
+      targetCountry: offer.target_country,
+      userId: row.user_id,
+      skipCache: false,
+    })
+
     const campaignTargets = await resolveCampaignTargetsForSitelinkBackfill(
       row.task_id,
       row.user_id
@@ -233,41 +247,81 @@ export async function backfillUrlSwapSitelinkTargets(
           continue
         }
 
-        const pairCount = Math.min(storeProductLinks.length, remoteAssets.length)
-        const assetResourceNames = remoteAssets.slice(0, pairCount).map((a) => a.assetResourceName)
-        const publishedSitelinks = remoteAssets.slice(0, pairCount).map((asset) =>
-          mapRemoteSitelinkRowToPublishInput({
-            linkText: asset.linkText,
-            finalUrl: asset.finalUrl,
-            finalUrlSuffix: asset.finalUrlSuffix,
-          })
-        )
-
-        if (dryRun) {
-          logger.debug(
-            `[dry-run] task=${row.task_id} campaign=${campaignTarget.google_campaign_id} would upsert ${pairCount} sitelink mapping(s)`
-          )
-          result.upsertedMappings += pairCount
-          continue
-        }
-
         const task = await getUrlSwapTaskByOfferId(row.offer_id, row.user_id)
         if (!task) {
           result.errors.push(`task=${row.task_id}: 换链任务不存在`)
           continue
         }
 
-        const upserted = await syncUrlSwapSitelinkTargetsAfterPublish({
-          offerId: row.offer_id,
-          userId: row.user_id,
-          googleAdsAccountId: campaignTarget.google_ads_account_id,
-          googleCustomerId: campaignTarget.google_customer_id,
-          googleCampaignId: campaignTarget.google_campaign_id,
-          assetResourceNames,
-          publishedSitelinks,
-          storeProductLinks,
-        })
-        result.upsertedMappings += upserted
+        const targetStatus = resolveUrlSwapSitelinkTargetStatusForTaskStatus(task.status)
+        const matchedSortIndexes = new Set<number>()
+
+        if (dryRun) {
+          for (const asset of remoteAssets) {
+            const sortIndex = findStoreProductLinkIndexForSitelinkFinalUrl(
+              asset.finalUrl,
+              resolvedStoreLinks
+            )
+            if (sortIndex >= 0) {
+              matchedSortIndexes.add(sortIndex)
+            }
+          }
+          logger.debug(
+            `[dry-run] task=${row.task_id} campaign=${campaignTarget.google_campaign_id} would upsert ${matchedSortIndexes.size} sitelink mapping(s)`
+          )
+          result.upsertedMappings += matchedSortIndexes.size
+          continue
+        }
+
+        for (const asset of remoteAssets) {
+          const sortIndex = findStoreProductLinkIndexForSitelinkFinalUrl(
+            asset.finalUrl,
+            resolvedStoreLinks
+          )
+          if (sortIndex < 0) continue
+
+          const affiliateLink = storeProductLinks[sortIndex]?.trim()
+          if (!affiliateLink) continue
+
+          const split = splitUrlBaseAndSuffix(asset.finalUrl)
+          const explicitSuffix = asset.finalUrlSuffix?.trim()
+
+          await upsertUrlSwapSitelinkTarget({
+            taskId: task.id,
+            offerId: row.offer_id,
+            userId: row.user_id,
+            sortIndex,
+            affiliateLink,
+            googleAdsAccountId: campaignTarget.google_ads_account_id,
+            googleCustomerId: campaignTarget.google_customer_id,
+            googleCampaignId: campaignTarget.google_campaign_id,
+            assetResourceName: asset.assetResourceName,
+            assetId: asset.assetId,
+            linkText: asset.linkText,
+            currentFinalUrl: split.base,
+            currentFinalUrlSuffix: explicitSuffix || split.suffix || null,
+            status: targetStatus,
+          })
+          matchedSortIndexes.add(sortIndex)
+          result.upsertedMappings++
+        }
+
+        if (matchedSortIndexes.size > 0) {
+          const db = await getDatabase()
+          const now = new Date().toISOString()
+          const maxSortIndex = Math.max(...matchedSortIndexes)
+          await db.exec(
+            `
+            UPDATE url_swap_sitelink_targets
+            SET status = 'removed', updated_at = ?
+            WHERE task_id = ?
+              AND google_campaign_id = ?
+              AND status IN ('active', 'paused')
+              AND sort_index > ?
+          `,
+            [now, task.id, campaignTarget.google_campaign_id, maxSortIndex]
+          )
+        }
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error)
         result.errors.push(

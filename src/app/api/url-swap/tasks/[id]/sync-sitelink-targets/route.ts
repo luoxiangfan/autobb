@@ -6,6 +6,7 @@ import {
   getUrlSwapTaskById,
   getUrlSwapSitelinkTargets,
   syncStoreSitelinkTargetsForOffer,
+  reconcileUrlSwapSitelinkAffiliateLinks,
 } from '@/lib/url-swap'
 
 export const dynamic = 'force-dynamic'
@@ -24,7 +25,16 @@ export const POST = withAuth(async (_request, user, context) => {
   const syncResult = await syncStoreSitelinkTargetsForOffer(task.offer_id, user.userId, {
     force: true,
   })
-  const sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+  let sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+
+  if (sitelink_targets.length > 0) {
+    const reconciled = await reconcileUrlSwapSitelinkAffiliateLinks({
+      taskId: id,
+      offerId: task.offer_id,
+      userId: user.userId,
+    })
+    sitelink_targets = reconciled.targets
+  }
 
   return NextResponse.json({
     success: sitelink_targets.length > 0 || syncResult.upserted > 0,

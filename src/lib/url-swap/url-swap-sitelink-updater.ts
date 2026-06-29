@@ -27,6 +27,8 @@ import {
   markUrlSwapSitelinkTargetSuccess,
   type UrlSwapSitelinkTarget,
 } from './url-swap-sitelink-targets'
+import { resolveStoreProductLinkFinalUrls } from './resolve-store-product-link-finals'
+import { resolveAffiliateLinkForSitelinkTarget } from './reconcile-sitelink-affiliate-links'
 
 export const URL_SWAP_SITELINK_ENABLED = process.env.URL_SWAP_SITELINK_ENABLED !== 'false'
 
@@ -209,6 +211,20 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
     return emptyResult
   }
 
+  const offerRow = await db.queryOne<{ target_country: string | null }>(
+    'SELECT target_country FROM offers WHERE id = ? AND user_id = ?',
+    [params.offerId, params.userId]
+  )
+  const resolvedStoreLinks =
+    offerRow?.target_country && storeProductLinks.length > 0
+      ? await resolveStoreProductLinkFinalUrls({
+          storeProductLinks,
+          targetCountry: offerRow.target_country,
+          userId: params.userId,
+          skipCache: false,
+        })
+      : []
+
   const accountMetaById = new Map<number, UrlSwapAccountMeta>()
   const prepareCache = createGoogleAdsLinkedAccountPrepareCache()
 
@@ -227,8 +243,11 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
     )
 
     for (const target of sitelinkTargets) {
-      const affiliateLink =
-        storeProductLinks[target.sort_index]?.trim() || target.affiliate_link?.trim() || ''
+      const affiliateLink = resolveAffiliateLinkForSitelinkTarget(
+        target,
+        storeProductLinks,
+        resolvedStoreLinks
+      )
 
       const baseUpdate: SwapHistorySitelinkUpdate = {
         sort_index: target.sort_index,

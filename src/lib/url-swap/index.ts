@@ -92,6 +92,12 @@ export {
 } from './sync-store-sitelink-targets'
 
 export {
+  reconcileUrlSwapSitelinkAffiliateLinks,
+  resolveAffiliateLinkForSitelinkTarget,
+  type ReconcileUrlSwapSitelinkAffiliateLinksResult,
+} from './reconcile-sitelink-affiliate-links'
+
+export {
   removePendingUrlSwapQueueTasksByTaskIds,
   suspendUrlSwapTaskChildTargets,
   suspendUrlSwapTaskExecution,
