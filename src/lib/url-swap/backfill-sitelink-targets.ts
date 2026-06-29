@@ -86,6 +86,9 @@ async function fetchCampaignSitelinkAssets(params: {
 
   const query = `
     SELECT
+      campaign.id,
+      campaign_asset.field_type,
+      campaign_asset.status,
       asset.resource_name,
       asset.id,
       asset.final_urls,
