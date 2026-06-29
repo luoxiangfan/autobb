@@ -18,31 +18,12 @@ vi.mock('@/lib/click-farm/queue-cleanup', () => ({
 }))
 
 import {
-  hasEnabledCampaignForOffer,
   pauseClickFarmTasksWithoutEnabledCampaign,
 } from '@/lib/click-farm/campaign-health-guard'
 
 describe('click-farm campaign health guard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  it('detects enabled campaign by user + offer', async () => {
-    const db = {
-      queryOne: vi.fn(async () => ({ id: 77 })),
-      query: vi.fn(),
-      exec: vi.fn(),
-    }
-
-    mocks.getDatabase.mockResolvedValue(db)
-
-    const hasEnabled = await hasEnabledCampaignForOffer({
-      userId: 1,
-      offerId: 3343,
-    })
-
-    expect(hasEnabled).toBe(true)
-    expect(db.queryOne).toHaveBeenCalledTimes(1)
   })
 
   it('returns task ids only in dry-run mode', async () => {

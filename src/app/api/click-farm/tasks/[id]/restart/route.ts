@@ -3,7 +3,11 @@
 import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { getClickFarmTaskById, restartClickFarmTask } from '@/lib/click-farm'
-import { hasEnabledCampaignForOffer } from '@/lib/click-farm/campaign-health-guard'
+import {
+  ENABLED_CAMPAIGN_REQUIRED_MESSAGE,
+  ENABLED_CAMPAIGN_REQUIRED_SUGGESTION,
+  hasEnabledCampaignForOffer,
+} from '@/lib/campaign/campaign-health-guard'
 import { notifyTaskResumed } from '@/lib/click-farm'
 import { getDatabase } from '@/lib/db'
 import { getAllProxyUrls, getDateInTimezone } from '@/lib/common/server'
@@ -34,9 +38,8 @@ export const POST = withAuth(async (_request: NextRequest, user, context) => {
     return NextResponse.json(
       {
         error: 'campaign_required',
-        message:
-          '当前 Offer 没有可用的已启用 Campaign，请先发布并启用至少一个 Campaign 后再重启任务',
-        suggestion: '请前往 Campaign 页面确认该 Offer 至少有一个状态为 ENABLED 的 Campaign',
+        message: ENABLED_CAMPAIGN_REQUIRED_MESSAGE,
+        suggestion: ENABLED_CAMPAIGN_REQUIRED_SUGGESTION,
       },
       { status: 400 }
     )

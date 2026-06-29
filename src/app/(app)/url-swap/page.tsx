@@ -47,6 +47,10 @@ import {
   TableActionSlot,
 } from '@/components/ui/table-action-buttons'
 import type { UrlSwapTaskListItem, UrlSwapGlobalStats } from '@/lib/url-swap/url-swap-types'
+import {
+  canStartOfferLinkedTask,
+  OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE,
+} from '@/lib/offers'
 import UrlSwapTaskModal from '@/components/UrlSwapTaskModal'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
 
@@ -315,7 +319,7 @@ export default function UrlSwapPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '恢复任务失败')
+        throw new Error(data.message || data.error || '恢复任务失败')
       }
 
       toast.success('任务已恢复')
@@ -702,26 +706,31 @@ export default function UrlSwapPage() {
                             <TableActionSlot>
                               <TableActionIconButton
                                 icon={<Play className="w-4 h-4" />}
-                                title={
-                                  task.status === 'enabled'
-                                    ? '立即执行'
-                                    : task.status === 'disabled'
-                                      ? '恢复任务'
-                                      : task.status === 'error'
-                                        ? '任务异常，无法执行'
-                                        : task.status === 'completed'
-                                          ? '任务已完成'
-                                          : '当前状态不可用'
-                                }
+                                title={(() => {
+                                  const campaignBlocked = !canStartOfferLinkedTask(
+                                    task.has_enabled_campaign
+                                  )
+                                  if (campaignBlocked) {
+                                    return OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE
+                                  }
+                                  if (task.status === 'enabled') return '立即执行'
+                                  if (task.status === 'disabled') return '恢复任务'
+                                  if (task.status === 'error') return '任务异常，无法执行'
+                                  if (task.status === 'completed') return '任务已完成'
+                                  return '当前状态不可用'
+                                })()}
                                 onClick={
+                                  canStartOfferLinkedTask(task.has_enabled_campaign) &&
                                   task.status === 'enabled'
                                     ? () => handleSwapNow(task.id)
-                                    : task.status === 'disabled'
+                                    : canStartOfferLinkedTask(task.has_enabled_campaign) &&
+                                        task.status === 'disabled'
                                       ? () => handleEnableTask(task.id)
                                       : undefined
                                 }
                                 disabled={
                                   actionLoading === task.id ||
+                                  !canStartOfferLinkedTask(task.has_enabled_campaign) ||
                                   (task.status !== 'enabled' && task.status !== 'disabled')
                                 }
                                 className={

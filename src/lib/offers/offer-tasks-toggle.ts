@@ -67,6 +67,14 @@ export function isCampaignEnabled(status: string | null | undefined): boolean {
   )
 }
 
+export const OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE =
+  '关联广告系列未启用，请先在 Campaign 页面启用至少一个关联 Campaign'
+
+/** 列表/详情页：无已启用 Campaign 时不允许开启、恢复或重新运行任务 */
+export function canStartOfferLinkedTask(hasEnabledCampaign: boolean | undefined): boolean {
+  return hasEnabledCampaign !== false
+}
+
 /* * 是否展示「补点击任务 / 换链接任务」单独入口（暂停中的广告系列不展示） */
 export function shouldShowIndividualOfferTaskMenuItems(
   campaignStatus: string | null | undefined

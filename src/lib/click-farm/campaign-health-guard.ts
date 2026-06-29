@@ -1,5 +1,7 @@
-import { getDatabase, type DatabaseAdapter } from '@/lib/db'
+import { getDatabase } from '@/lib/db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
+
+export { hasEnabledCampaignForOffer } from '@/lib/campaign/campaign-health-guard'
 
 type ClickFarmTaskCandidate = {
   id: string
@@ -8,32 +10,10 @@ type ClickFarmTaskCandidate = {
   status: string
 }
 
-export async function hasEnabledCampaignForOffer(params: {
-  userId: number
-  offerId: number
-  db?: DatabaseAdapter
-}): Promise<boolean> {
-  const db = params.db || (await getDatabase())
-
-  const row = await db.queryOne(
-    `SELECT c.id
-     FROM campaigns c
-     WHERE c.user_id = ?
-       AND c.offer_id = ?
-       AND c.status = 'ENABLED'
-       AND (c.is_deleted = false OR c.is_deleted IS NULL)
-     ORDER BY c.updated_at DESC
-     LIMIT 1`,
-    [params.userId, params.offerId]
-  )
-
-  return Boolean((row as any)?.id)
-}
-
 async function findClickFarmTasksWithoutEnabledCampaign(params: {
   userId?: number
   limit?: number
-  db?: DatabaseAdapter
+  db?: Awaited<ReturnType<typeof getDatabase>>
 }): Promise<ClickFarmTaskCandidate[]> {
   const db = params.db || (await getDatabase())
   const limit = Math.max(1, Math.min(Number(params.limit || 200), 1000))

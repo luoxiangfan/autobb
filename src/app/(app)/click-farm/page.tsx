@@ -52,6 +52,10 @@ import {
   TableActionSlot,
 } from '@/components/ui/table-action-buttons'
 import type { ClickFarmTaskListItem, ClickFarmStats } from '@/lib/click-farm/click-farm-types'
+import {
+  canStartOfferLinkedTask,
+  OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE,
+} from '@/lib/offers'
 import { safeJsonParse } from '@/lib/common'
 
 export default function ClickFarmPage() {
@@ -409,14 +413,18 @@ export default function ClickFarmPage() {
   }
 
   const getClickFarmControlAction = (task: ClickFarmTaskListItem) => {
+    const campaignBlocked = !canStartOfferLinkedTask(task.has_enabled_campaign)
+
     switch (task.status) {
       case 'pending':
         return {
           icon: <Zap className="w-4 h-4" />,
-          title: '立即触发',
-          onClick: () => handleTriggerTask(task.id),
-          disabled: false,
-          className: 'text-purple-600 hover:text-purple-700 hover:bg-purple-50',
+          title: campaignBlocked ? OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE : '立即触发',
+          onClick: campaignBlocked ? undefined : () => handleTriggerTask(task.id),
+          disabled: campaignBlocked,
+          className: campaignBlocked
+            ? 'text-gray-400'
+            : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50',
         }
       case 'running':
         return {
@@ -430,10 +438,10 @@ export default function ClickFarmPage() {
       case 'paused':
         return {
           icon: <Play className="w-4 h-4" />,
-          title: '重启任务',
-          onClick: () => handleRestartTask(task.id),
-          disabled: false,
-          className: 'text-green-600',
+          title: campaignBlocked ? OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE : '重启任务',
+          onClick: campaignBlocked ? undefined : () => handleRestartTask(task.id),
+          disabled: campaignBlocked,
+          className: campaignBlocked ? 'text-gray-400' : 'text-green-600',
         }
       case 'completed':
         return {

@@ -20,6 +20,7 @@ import type { UpdateUrlSwapTaskRequest } from '@/lib/url-swap/url-swap-types'
 import { getDatabase } from '@/lib/db'
 import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
+import { hasEnabledCampaignForOffer } from '@/lib/campaign/campaign-health-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,11 +51,16 @@ export const GET = withAuth(async (_request, user, context) => {
     }
   }
   const taskWithTargets = { ...task, targets, sitelink_targets }
+  const has_enabled_campaign = await hasEnabledCampaignForOffer({
+    userId: user.userId,
+    offerId: task.offer_id,
+  })
+  const taskWithCampaign = { ...taskWithTargets, has_enabled_campaign }
 
   return NextResponse.json({
     success: true,
-    data: taskWithTargets,
-    task: taskWithTargets,
+    data: taskWithCampaign,
+    task: taskWithCampaign,
     stats,
     targets,
     sitelink_targets,

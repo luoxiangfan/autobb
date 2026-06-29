@@ -120,6 +120,9 @@ export interface UrlSwapTask {
   created_at: string
   updated_at: string
 
+  /** 列表/详情：Offer 是否有关联且已启用的 Campaign */
+  has_enabled_campaign?: boolean
+
   // === 多目标支持（可选） ===
   targets?: UrlSwapTaskTarget[]
   sitelink_targets?: UrlSwapSitelinkTarget[]

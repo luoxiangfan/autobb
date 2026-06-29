@@ -55,7 +55,17 @@ export async function getClickFarmTasks(
   const whereClause = whereConditions.join(' AND ')
 
   let query = `
-    SELECT cft.*, o.target_country, o.offer_name
+    SELECT cft.*,
+           o.target_country,
+           o.offer_name,
+           EXISTS (
+             SELECT 1
+             FROM campaigns c
+             WHERE c.user_id = cft.user_id
+               AND c.offer_id = cft.offer_id
+               AND c.status = 'ENABLED'
+               AND (c.is_deleted = false OR c.is_deleted IS NULL)
+           ) AS has_enabled_campaign
     FROM click_farm_tasks cft
     LEFT JOIN offers o ON cft.offer_id = o.id
     WHERE ${whereClause}

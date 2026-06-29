@@ -115,6 +115,9 @@ export interface ClickFarmTask {
   next_run_at: string | null
   created_at: string
   updated_at: string
+
+  /** 列表/详情：Offer 是否有关联且已启用的 Campaign */
+  has_enabled_campaign?: boolean
 }
 
 /**

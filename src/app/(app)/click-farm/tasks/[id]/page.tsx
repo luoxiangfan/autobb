@@ -10,6 +10,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ArrowLeft, Clock, TrendingUp, CheckCircle, Activity, Play, Square } from 'lucide-react'
 import { toast } from 'sonner'
 import { getDateInTimezone } from '@/lib/common'
+import {
+  canStartOfferLinkedTask,
+  OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE,
+} from '@/lib/offers'
 
 const TaskDetailAnalyticsSection = dynamic(() => import('./TaskDetailAnalyticsSection'), {
   ssr: false,
@@ -227,6 +231,7 @@ export default function TaskDetailPage() {
   }
 
   const { task, statistics, offer } = details
+  const campaignBlocked = !canStartOfferLinkedTask(task.has_enabled_campaign)
 
   // Prepare distribution chart data
   // hourly_breakdown 格式: [{actual, success, failed}, ...] (24小时)
@@ -284,7 +289,16 @@ export default function TaskDetailPage() {
                 </Button>
               )}
               {(task.status === 'stopped' || task.status === 'paused') && (
-                <Button variant="outline" onClick={handleRestartTask} disabled={actionLoading}>
+                <Button
+                  variant="outline"
+                  onClick={handleRestartTask}
+                  disabled={actionLoading || campaignBlocked}
+                  title={
+                    campaignBlocked
+                      ? OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE
+                      : undefined
+                  }
+                >
                   <Play className="mr-2 h-4 w-4" />
                   重启任务
                 </Button>

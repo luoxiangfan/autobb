@@ -101,7 +101,16 @@ export async function getUrlSwapTasks(
   // 获取任务列表
   const tasks = await db.query<any>(
     `
-    SELECT ust.*, o.offer_name
+    SELECT ust.*,
+           o.offer_name,
+           EXISTS (
+             SELECT 1
+             FROM campaigns c
+             WHERE c.user_id = ust.user_id
+               AND c.offer_id = ust.offer_id
+               AND c.status = 'ENABLED'
+               AND (c.is_deleted = false OR c.is_deleted IS NULL)
+           ) AS has_enabled_campaign
     FROM url_swap_tasks ust
     LEFT JOIN offers o ON ust.offer_id = o.id
     WHERE ${whereClause}

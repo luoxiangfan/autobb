@@ -161,5 +161,9 @@ export function parseClickFarmTask(row: any): ClickFarmTaskListItem {
     task.offer_name = row.offer_name
   }
 
+  if (row.has_enabled_campaign !== undefined && row.has_enabled_campaign !== null) {
+    task.has_enabled_campaign = Boolean(row.has_enabled_campaign)
+  }
+
   return task
 }

@@ -4,6 +4,7 @@ import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { getDatabase } from '@/lib/db'
 import { estimateTraffic } from '@/lib/click-farm/distribution'
+import { hasEnabledCampaignForOffer } from '@/lib/campaign/campaign-health-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,11 @@ export const GET = withAuth(async (_request, user, context) => {
   const durationHours =
     durationMs > 0 ? Math.floor((durationMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)) : 0
 
+  const has_enabled_campaign = await hasEnabledCampaignForOffer({
+    userId: user.userId,
+    offerId: task.offer_id,
+  })
+
   const response = {
     task: {
       ...task,
@@ -83,6 +89,7 @@ export const GET = withAuth(async (_request, user, context) => {
       daily_history: dailyHistory,
       referer_config: refererConfig,
       is_deleted: Boolean(task.is_deleted),
+      has_enabled_campaign,
     },
     statistics: {
       success_rate: parseFloat(successRate.toFixed(2)),

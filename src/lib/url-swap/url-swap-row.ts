@@ -30,6 +30,16 @@ export function calculateUrlSwapProgress(row: any): number {
   return Math.min(100, Math.round((elapsedDays / durationDays) * 100))
 }
 
+function attachHasEnabledCampaign<T extends { has_enabled_campaign?: boolean }>(
+  task: T,
+  row: { has_enabled_campaign?: unknown }
+): T {
+  if (row.has_enabled_campaign !== undefined && row.has_enabled_campaign !== null) {
+    task.has_enabled_campaign = Boolean(row.has_enabled_campaign)
+  }
+  return task
+}
+
 export function parseUrlSwapTask(row: any): UrlSwapTask {
   const swapMode = normalizeUrlSwapMode(row.swap_mode)
   const manualAffiliateLinks = parseStringArrayJson(row.manual_affiliate_links)
@@ -39,7 +49,7 @@ export function parseUrlSwapTask(row: any): UrlSwapTask {
       ? manualCursorRaw
       : parseInt(String(manualCursorRaw ?? '0'), 10)
 
-  return {
+  const task: UrlSwapTask = {
     id: row.id,
     user_id: row.user_id,
     offer_id: row.offer_id,
@@ -72,6 +82,8 @@ export function parseUrlSwapTask(row: any): UrlSwapTask {
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
+
+  return attachHasEnabledCampaign(task, row)
 }
 
 export function normalizeNullableString(input: unknown): string | null {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   campaignHasBoundOffer,
+  canStartOfferLinkedTask,
   clickFarmTaskNeedsPause,
   clickFarmTaskNeedsStart,
   getOfferTasksMenuLabel,
@@ -41,6 +42,17 @@ describe('getOfferTasksMenuLabel', () => {
   it('returns action-specific labels', () => {
     expect(getOfferTasksMenuLabel('pause')).toBe('暂停关联 Offer 任务')
     expect(getOfferTasksMenuLabel('start')).toBe('开启关联 Offer 任务')
+  })
+})
+
+describe('canStartOfferLinkedTask', () => {
+  it('blocks start when campaign flag is explicitly false', () => {
+    expect(canStartOfferLinkedTask(false)).toBe(false)
+  })
+
+  it('allows start when campaign flag is true or unknown', () => {
+    expect(canStartOfferLinkedTask(true)).toBe(true)
+    expect(canStartOfferLinkedTask(undefined)).toBe(true)
   })
 })
 

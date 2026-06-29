@@ -18,6 +18,10 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap/url-swap-types'
+import {
+  canStartOfferLinkedTask,
+  OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE,
+} from '@/lib/offers'
 import type { SyncStoreSitelinkTargetsForOfferResult } from '@/lib/url-swap/sync-store-sitelink-targets'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
 import UrlSwapSitelinkTargetsSection from '@/components/UrlSwapSitelinkTargetsSection'
@@ -188,7 +192,7 @@ export default function UrlSwapTaskDetailPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '恢复任务失败')
+        throw new Error(data.message || data.error || '恢复任务失败')
       }
 
       toast.success('任务已恢复')
@@ -293,6 +297,8 @@ export default function UrlSwapTaskDetailPage() {
     return null
   }
 
+  const campaignBlocked = !canStartOfferLinkedTask(task.has_enabled_campaign)
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -319,7 +325,12 @@ export default function UrlSwapTaskDetailPage() {
                   <Button
                     variant="outline"
                     onClick={handleSwapNow}
-                    disabled={actionLoading === 'swap-now'}
+                    disabled={actionLoading === 'swap-now' || campaignBlocked}
+                    title={
+                      campaignBlocked
+                        ? OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE
+                        : undefined
+                    }
                     className="flex items-center gap-2"
                   >
                     <Play className="w-4 h-4" />
@@ -340,7 +351,12 @@ export default function UrlSwapTaskDetailPage() {
                 <Button
                   variant="default"
                   onClick={handleEnableTask}
-                  disabled={actionLoading === 'enable'}
+                  disabled={actionLoading === 'enable' || campaignBlocked}
+                  title={
+                    campaignBlocked
+                      ? OFFER_LINKED_TASK_REQUIRES_ENABLED_CAMPAIGN_MESSAGE
+                      : undefined
+                  }
                   className="flex items-center gap-2"
                 >
                   <Play className="w-4 h-4" />

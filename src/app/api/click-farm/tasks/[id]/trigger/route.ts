@@ -3,6 +3,7 @@
 import { withAuth } from '@/lib/auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { enqueueClickFarmTriggerRequest } from '@/lib/click-farm/click-farm-scheduler-trigger'
+import { getClickFarmTaskById } from '@/lib/click-farm'
 import { getDatabase } from '@/lib/db'
 import { getQueueManagerForTaskType } from '@/lib/queue'
 import { getQueueRoutingDiagnostics } from '@/lib/queue/queue-routing'
@@ -11,6 +12,11 @@ import {
   isBackgroundWorkerAlive,
 } from '@/lib/queue/background-worker-heartbeat'
 import { getHeapStatistics } from 'v8'
+import {
+  ENABLED_CAMPAIGN_REQUIRED_MESSAGE,
+  ENABLED_CAMPAIGN_REQUIRED_SUGGESTION,
+  hasEnabledCampaignForOffer,
+} from '@/lib/campaign/campaign-health-guard'
 
 const CLICK_FARM_TRIGGER_HEAP_PRESSURE_PCT = (() => {
   const value = parseFloat(
@@ -40,6 +46,34 @@ export const POST = withAuth(async (request: NextRequest, user, context) => {
   }
 
   console.log(`[API] 手动触发任务 ${id} 执行`)
+
+  const existingTask = await getClickFarmTaskById(id, user.userId)
+  if (!existingTask) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'not_found',
+        message: '任务不存在或无权限触发',
+      },
+      { status: 404 }
+    )
+  }
+
+  const enabledCampaignExists = await hasEnabledCampaignForOffer({
+    userId: user.userId,
+    offerId: existingTask.offer_id,
+  })
+  if (!enabledCampaignExists) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'campaign_required',
+        message: ENABLED_CAMPAIGN_REQUIRED_MESSAGE,
+        suggestion: ENABLED_CAMPAIGN_REQUIRED_SUGGESTION,
+      },
+      { status: 400 }
+    )
+  }
 
   const queueManager = getQueueManagerForTaskType('click-farm-trigger')
   await queueManager.ensureInitialized()

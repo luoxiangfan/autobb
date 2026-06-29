@@ -4,6 +4,11 @@ import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { getUrlSwapTaskById, enableUrlSwapTask } from '@/lib/url-swap'
 import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
+import {
+  ENABLED_CAMPAIGN_REQUIRED_MESSAGE,
+  ENABLED_CAMPAIGN_REQUIRED_SUGGESTION,
+  hasEnabledCampaignForOffer,
+} from '@/lib/campaign/campaign-health-guard'
 
 export const POST = withAuth(async (_request, user, context) => {
   const id = context?.params?.id
@@ -19,6 +24,21 @@ export const POST = withAuth(async (_request, user, context) => {
   if (existingTask.status === 'enabled') {
     return NextResponse.json(
       { error: 'invalid_state', message: '任务已经是启用状态' },
+      { status: 400 }
+    )
+  }
+
+  const enabledCampaignExists = await hasEnabledCampaignForOffer({
+    userId: user.userId,
+    offerId: existingTask.offer_id,
+  })
+  if (!enabledCampaignExists) {
+    return NextResponse.json(
+      {
+        error: 'campaign_required',
+        message: ENABLED_CAMPAIGN_REQUIRED_MESSAGE,
+        suggestion: ENABLED_CAMPAIGN_REQUIRED_SUGGESTION,
+      },
       { status: 400 }
     )
   }
