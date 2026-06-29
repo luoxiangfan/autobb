@@ -25,6 +25,7 @@ function getSitelinkStatusBadge(status: UrlSwapSitelinkTarget['status']) {
     }
   > = {
     active: { label: '启用', variant: 'default', className: 'bg-green-600' },
+    paused: { label: '暂停', variant: 'secondary', className: 'bg-yellow-100 text-yellow-700' },
     invalid: { label: '无效', variant: 'destructive', className: '' },
     removed: { label: '已移除', variant: 'outline', className: 'text-gray-500' },
   }
@@ -51,6 +52,7 @@ export default function UrlSwapSitelinkTargetsSection({
   resyncLoading = false,
 }: UrlSwapSitelinkTargetsSectionProps) {
   const activeCount = sitelinkTargets.filter((t) => t.status === 'active').length
+  const pausedCount = sitelinkTargets.filter((t) => t.status === 'paused').length
   const invalidCount = sitelinkTargets.filter((t) => t.status === 'invalid').length
   const syncErrors = sitelinkSync?.errors?.filter(Boolean) ?? []
 
@@ -99,6 +101,7 @@ export default function UrlSwapSitelinkTargetsSection({
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
               <span>子目标数：{sitelinkTargets.length}</span>
               <span className="text-green-700">启用 {activeCount}</span>
+              {pausedCount > 0 && <span className="text-yellow-700">暂停 {pausedCount}</span>}
               {invalidCount > 0 && <span className="text-red-600">无效 {invalidCount}</span>}
             </div>
             <div className="border rounded-lg divide-y bg-white overflow-x-auto">

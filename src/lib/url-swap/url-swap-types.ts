@@ -39,7 +39,7 @@ export type TriggerResultStatus =
 /**
  * Store Offer Sitelink 子目标（store_product_links[i] ↔ Google Ads Sitelink Asset）
  */
-export type UrlSwapSitelinkTargetStatus = 'active' | 'invalid' | 'removed'
+export type UrlSwapSitelinkTargetStatus = 'active' | 'paused' | 'invalid' | 'removed'
 
 export interface UrlSwapSitelinkTarget {
   id: string

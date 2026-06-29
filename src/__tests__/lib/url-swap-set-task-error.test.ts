@@ -18,6 +18,14 @@ vi.mock('@/lib/url-swap/alerts/urgent-alerts', () => ({
   resolveUrlSwapUrgentRiskAlertsForOffer: vi.fn().mockResolvedValue(undefined),
 }))
 
+const suspendUrlSwapTaskExecution = vi.fn().mockResolvedValue({
+  removedCount: 1,
+  scannedCount: 1,
+})
+vi.mock('@/lib/url-swap/queue-cleanup', () => ({
+  suspendUrlSwapTaskExecution,
+}))
+
 describe('setTaskError', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -75,5 +83,6 @@ describe('setTaskError', () => {
     const [_sql, params] = mockDb.exec.mock.calls[0]
     expect(params[0]).toBe('error')
     expect(params[3]).toBe(3)
+    expect(suspendUrlSwapTaskExecution).toHaveBeenCalledWith('task-1', 1)
   })
 })

@@ -13,8 +13,7 @@ import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import type { UrlSwapTask } from '@/lib/url-swap/url-swap-types'
-import { pauseUrlSwapTargetsByTaskId } from '@/lib/url-swap/url-swap-targets'
-import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
+import { suspendUrlSwapTaskExecution } from '@/lib/url-swap/queue-cleanup'
 import { notifySwapError, notifyUrlSwapTaskPaused } from './notifications'
 
 export type HealthLevel = 'healthy' | 'warning' | 'critical'
@@ -269,17 +268,10 @@ async function autoDisableHighFailureTask(taskId: string): Promise<boolean> {
       [`任务失败率过高 (${failureRate.toFixed(1)}%)，已自动禁用`, now, taskId]
     )
 
-    await pauseUrlSwapTargetsByTaskId(taskId)
-
-    try {
-      const userId = Number(task.user_id)
-      await removePendingUrlSwapQueueTasksByTaskIds(
-        [taskId],
-        Number.isFinite(userId) && userId > 0 ? userId : undefined
-      )
-    } catch (error) {
-      console.warn(`[url-swap] 自动禁用后清理队列失败: ${taskId}`, error)
-    }
+    await suspendUrlSwapTaskExecution(
+      taskId,
+      Number.isFinite(Number(task.user_id)) ? Number(task.user_id) : undefined
+    )
 
     await notifyUrlSwapTaskPaused(
       taskId,

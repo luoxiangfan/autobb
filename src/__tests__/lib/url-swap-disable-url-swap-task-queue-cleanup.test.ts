@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const exec = vi.fn(async () => ({ changes: 1 }))
+const exec = vi.fn(async () => ({ changes: 2 }))
 
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
@@ -10,29 +10,28 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-const removePendingUrlSwapQueueTasksByTaskIds = vi.fn(async () => ({
+const suspendUrlSwapTaskExecution = vi.fn(async () => ({
   removedCount: 1,
   scannedCount: 2,
 }))
 vi.mock('@/lib/url-swap/queue-cleanup', () => ({
-  removePendingUrlSwapQueueTasksByTaskIds,
+  suspendUrlSwapTaskExecution,
 }))
 
-describe('disableUrlSwapTask queue cleanup', () => {
+describe('disableUrlSwapTask child target suspension', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     exec.mockResolvedValue({ changes: 1 })
-    removePendingUrlSwapQueueTasksByTaskIds.mockResolvedValue({ removedCount: 1, scannedCount: 2 })
+    suspendUrlSwapTaskExecution.mockResolvedValue({ removedCount: 1, scannedCount: 2 })
   })
 
-  it('removes pending queue tasks for disabled url-swap task', async () => {
+  it('suspends campaign/sitelink child targets and clears queue when disabled', async () => {
     const { disableUrlSwapTask } = await import('@/lib/url-swap')
 
     await disableUrlSwapTask('us-task-1001', 8)
 
-    expect(exec).toHaveBeenCalledTimes(2)
+    expect(exec).toHaveBeenCalledTimes(1)
     expect(exec.mock.calls[0][0]).toContain('UPDATE url_swap_tasks')
-    expect(exec.mock.calls[1][0]).toContain('UPDATE url_swap_task_targets')
-    expect(removePendingUrlSwapQueueTasksByTaskIds).toHaveBeenCalledWith(['us-task-1001'], 8)
+    expect(suspendUrlSwapTaskExecution).toHaveBeenCalledWith('us-task-1001', 8)
   })
 })

@@ -6,7 +6,7 @@ import { getDatabase, toDbJsonObjectField } from '@/lib/db'
 import { resolveAffiliateLink } from '@/lib/scraping'
 import { calculateNextSwapAt } from './url-swap-time'
 import { validateUrlSwapTask, validateTaskConfig } from './url-swap-validator'
-import { removePendingUrlSwapQueueTasksByTaskIds } from './queue-cleanup'
+import { suspendUrlSwapTaskExecution } from './queue-cleanup'
 import { isAffiliateLinkExpiredMessage } from '@/lib/affiliate'
 import {
   resolveUrlSwapUrgentRiskAlertsForOffer,
@@ -34,6 +34,7 @@ import {
 import { ensureUrlSwapTaskTargets, getUrlSwapTaskTargets } from './url-swap-targets'
 import { getUrlSwapTaskById } from './url-swap-queries'
 import { syncStoreSitelinkTargetsForOffer } from './sync-store-sitelink-targets'
+import { resumeUrlSwapSitelinkTargetsByTaskId } from './url-swap-sitelink-targets'
 
 const INITIAL_URL_RESOLVE_TIMEOUT_MS = 8000
 
@@ -379,20 +380,10 @@ export async function disableUrlSwapTask(id: string, userId: number): Promise<vo
     [now, id, userId]
   )
 
-  // 同步暂停所有目标（除已移除/无效）
-  await db.exec(
-    `
-    UPDATE url_swap_task_targets
-    SET status = 'paused', updated_at = ?
-    WHERE task_id = ? AND status NOT IN ('removed', 'invalid')
-  `,
-    [now, id]
-  )
-
   try {
-    await removePendingUrlSwapQueueTasksByTaskIds([id], userId)
+    await suspendUrlSwapTaskExecution(id, userId)
   } catch (error) {
-    console.warn(`[url-swap] 禁用任务后清理队列失败: ${id}`, error)
+    console.warn(`[url-swap] 禁用任务后暂停子目标/清理队列失败: ${id}`, error)
   }
 
   const task = await getUrlSwapTaskById(id, userId)
@@ -440,6 +431,8 @@ export async function enableUrlSwapTask(id: string, userId: number): Promise<voi
   `,
     [now, id]
   )
+
+  await resumeUrlSwapSitelinkTargetsByTaskId(id)
 
   try {
     await resolveUrlSwapUrgentRiskAlertsForOffer(userId, task.offer_id)
@@ -533,6 +526,12 @@ export async function setTaskError(
 
   if (shouldMarkError) {
     console.warn(`[url-swap] ⚠️ 任务进入错误状态（连续失败${newConsecutiveFailures}次）: ${id}`)
+    try {
+      await suspendUrlSwapTaskExecution(id, task.user_id)
+    } catch (suspendError: unknown) {
+      const message = suspendError instanceof Error ? suspendError.message : String(suspendError)
+      console.warn(`[url-swap] 任务错误后暂停子目标/清理队列失败: ${id}`, message)
+    }
   } else {
     console.warn(
       `[url-swap] ⚠️ 任务失败但保持启用（连续失败${newConsecutiveFailures}/${URL_SWAP_ERROR_THRESHOLD}）: ${id}`

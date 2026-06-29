@@ -65,6 +65,9 @@ export {
   getUrlSwapSitelinkTargets,
   markUrlSwapSitelinkTargetSuccess,
   markUrlSwapSitelinkTargetFailure,
+  pauseUrlSwapSitelinkTargetsByTaskId,
+  resumeUrlSwapSitelinkTargetsByTaskId,
+  resolveUrlSwapSitelinkTargetStatusForTaskStatus,
   type UrlSwapSitelinkTargetStatus,
 } from './url-swap-sitelink-targets'
 
@@ -87,5 +90,11 @@ export {
   syncStoreSitelinkTargetsForOffer,
   type SyncStoreSitelinkTargetsForOfferResult,
 } from './sync-store-sitelink-targets'
+
+export {
+  removePendingUrlSwapQueueTasksByTaskIds,
+  suspendUrlSwapTaskChildTargets,
+  suspendUrlSwapTaskExecution,
+} from './queue-cleanup'
 
 export { getUrlSwapTaskStats, getUrlSwapUserStats, getUrlSwapGlobalStats } from './url-swap-stats'

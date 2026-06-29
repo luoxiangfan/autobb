@@ -4,8 +4,12 @@
 import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { splitUrlBaseAndSuffix, type PublishSitelinkInput } from '@/lib/creatives/sitelink-utils'
-import type { UrlSwapSitelinkTarget, UrlSwapSitelinkTargetStatus } from './url-swap-types'
-import { getUrlSwapTaskByOfferId } from './url-swap-queries'
+import type {
+  UrlSwapSitelinkTarget,
+  UrlSwapSitelinkTargetStatus,
+  UrlSwapTaskStatus,
+} from './url-swap-types'
+import { getUrlSwapTaskByOfferId, getUrlSwapTaskById } from './url-swap-queries'
 
 export type { UrlSwapSitelinkTarget, UrlSwapSitelinkTargetStatus } from './url-swap-types'
 
@@ -36,6 +40,47 @@ function parseStoreProductLinks(raw: unknown): string[] {
     }
   }
   return []
+}
+
+export function resolveUrlSwapSitelinkTargetStatusForTaskStatus(
+  taskStatus: UrlSwapTaskStatus
+): Extract<UrlSwapSitelinkTargetStatus, 'active' | 'paused'> {
+  return taskStatus === 'enabled' ? 'active' : 'paused'
+}
+
+export async function pauseUrlSwapSitelinkTargetsByTaskId(taskId: string): Promise<number> {
+  const db = await getDatabase()
+  const now = new Date().toISOString()
+  const result = await db.exec(
+    `
+    UPDATE url_swap_sitelink_targets
+    SET status = 'paused', updated_at = ?
+    WHERE task_id = ?
+      AND status NOT IN ('removed', 'invalid')
+  `,
+    [now, taskId]
+  )
+  return Number((result as { changes?: number })?.changes) || 0
+}
+
+export async function resumeUrlSwapSitelinkTargetsByTaskId(taskId: string): Promise<number> {
+  const task = await getUrlSwapTaskById(taskId, 0)
+  if (!task || task.status !== 'enabled') {
+    return 0
+  }
+
+  const db = await getDatabase()
+  const now = new Date().toISOString()
+  const result = await db.exec(
+    `
+    UPDATE url_swap_sitelink_targets
+    SET status = 'active', consecutive_failures = 0, last_error = NULL, updated_at = ?
+    WHERE task_id = ?
+      AND status NOT IN ('removed', 'invalid')
+  `,
+    [now, taskId]
+  )
+  return Number((result as { changes?: number })?.changes) || 0
 }
 
 function mapSitelinkTargetRow(row: any): UrlSwapSitelinkTarget {
@@ -90,6 +135,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
 
   const db = await getDatabase()
   const now = new Date().toISOString()
+  const targetStatus = resolveUrlSwapSitelinkTargetStatusForTaskStatus(task.status)
   let upserted = 0
 
   for (let index = 0; index < pairCount; index++) {
@@ -115,7 +161,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
         current_final_url, current_final_url_suffix,
         status, consecutive_failures, last_error,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, NULL, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)
       ON CONFLICT (task_id, sort_index) DO UPDATE SET
         affiliate_link = EXCLUDED.affiliate_link,
         google_ads_account_id = EXCLUDED.google_ads_account_id,
@@ -126,7 +172,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
         link_text = EXCLUDED.link_text,
         current_final_url = EXCLUDED.current_final_url,
         current_final_url_suffix = EXCLUDED.current_final_url_suffix,
-        status = 'active',
+        status = EXCLUDED.status,
         consecutive_failures = 0,
         last_error = NULL,
         updated_at = EXCLUDED.updated_at
@@ -146,6 +192,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
         sitelink.text,
         currentFinalUrl,
         currentFinalUrlSuffix,
+        targetStatus,
         now,
         now,
       ]
@@ -159,7 +206,7 @@ export async function syncUrlSwapSitelinkTargetsAfterPublish(
     SET status = 'removed', updated_at = ?
     WHERE task_id = ?
       AND google_campaign_id = ?
-      AND status = 'active'
+      AND status IN ('active', 'paused')
       AND sort_index >= ?
   `,
     [now, task.id, input.googleCampaignId, pairCount]
@@ -216,7 +263,7 @@ export async function getUrlSwapSitelinkTargets(
   }
 
   const statusClause =
-    options?.includeRemoved === true ? '' : "AND ust.status IN ('active', 'invalid')"
+    options?.includeRemoved === true ? '' : "AND ust.status IN ('active', 'paused', 'invalid')"
 
   const rows = await db.query<any>(
     `
