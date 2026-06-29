@@ -82,4 +82,9 @@ export {
   type BackfillUrlSwapSitelinkTargetsResult,
 } from './backfill-sitelink-targets'
 
+export {
+  syncStoreSitelinkTargetsForOffer,
+  type SyncStoreSitelinkTargetsForOfferResult,
+} from './sync-store-sitelink-targets'
+
 export { getUrlSwapTaskStats, getUrlSwapUserStats, getUrlSwapGlobalStats } from './url-swap-stats'

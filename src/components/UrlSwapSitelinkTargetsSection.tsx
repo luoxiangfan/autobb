@@ -58,8 +58,9 @@ export default function UrlSwapSitelinkTargetsSection({
           <div className="text-sm text-gray-500 space-y-1">
             <p>暂无 Sitelink 映射。</p>
             <p className="text-xs">
-              Store 类型 Offer 需先创建换链任务，再发布或重新发布 Sitelink；已有 Campaign 可运行
-              backfill 脚本补全映射。
+              Store 类型 Offer 需配置商品推广链接（store_product_links）。Campaign 已发布 Sitelink
+              时，创建换链任务后会自动从 Google Ads 同步映射；若仍为空，请确认远端 Campaign 已有
+              Sitelink 或重新发布 Sitelink。
             </p>
           </div>
         ) : (

@@ -10,6 +10,7 @@ import {
   updateUrlSwapTask,
   getUrlSwapTaskTargets,
   getUrlSwapSitelinkTargets,
+  syncStoreSitelinkTargetsForOffer,
 } from '@/lib/url-swap'
 import {
   findInvalidAffiliateLinks,
@@ -35,7 +36,17 @@ export const GET = withAuth(async (_request, user, context) => {
 
   const stats = await getUrlSwapTaskStats(id, user.userId)
   const targets = await getUrlSwapTaskTargets(id, user.userId)
-  const sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+  let sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+
+  if (sitelink_targets.length === 0) {
+    try {
+      await syncStoreSitelinkTargetsForOffer(task.offer_id, user.userId)
+      sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+    } catch (syncError: unknown) {
+      const message = syncError instanceof Error ? syncError.message : String(syncError)
+      console.warn(`[url-swap] 详情页 Sitelink 映射同步失败（非致命）: ${message}`)
+    }
+  }
   const taskWithTargets = { ...task, targets, sitelink_targets }
 
   return NextResponse.json({

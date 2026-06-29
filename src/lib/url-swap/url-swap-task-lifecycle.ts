@@ -33,6 +33,7 @@ import {
 } from './url-swap-offer-lookup'
 import { ensureUrlSwapTaskTargets, getUrlSwapTaskTargets } from './url-swap-targets'
 import { getUrlSwapTaskById } from './url-swap-queries'
+import { syncStoreSitelinkTargetsForOffer } from './sync-store-sitelink-targets'
 
 const INITIAL_URL_RESOLVE_TIMEOUT_MS = 8000
 
@@ -224,6 +225,12 @@ export async function createUrlSwapTask(
   await ensureUrlSwapTaskTargets(taskId, input.offer_id, userId, targets)
 
   logger.debug(`[url-swap] 创建换链接任务成功: ${taskId}`)
+
+  // Store Offer：Campaign 已发布 Sitelink 时，发布阶段因尚无换链任务会跳过映射，创建后异步回填
+  void syncStoreSitelinkTargetsForOffer(input.offer_id, userId).catch((syncError: unknown) => {
+    const message = syncError instanceof Error ? syncError.message : String(syncError)
+    console.warn(`[url-swap] 创建任务后 Sitelink 映射同步失败（非致命）: ${message}`)
+  })
 
   const task = await getUrlSwapTaskById(taskId, userId)
   if (!task) {
