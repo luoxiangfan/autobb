@@ -605,7 +605,16 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
     'net::ERR_HTTP2_PROTOCOL_ERROR', // Playwright格式的HTTP2协议错误
     'TimeoutError', // Playwright TimeoutError应该可以重试
     'waiting until', // Playwright waiting until错误应该可以重试
+    '没有可用的代理', // 代理池尚未加载时的瞬时竞态，initializeProxyPool 后重试可恢复
   ],
+}
+
+/**
+ * 确保用户级代理池已从 settings 加载（动态 import 避免与 offer-utils 循环依赖）
+ */
+async function ensureProxyPoolInitialized(userId: number, targetCountry: string): Promise<void> {
+  const { initializeProxyPool } = await import('@/lib/offers/offer-utils')
+  await initializeProxyPool(userId, targetCountry)
 }
 
 /**
@@ -819,6 +828,8 @@ export async function resolveAffiliateLink(
   options: ResolveOptions
 ): Promise<ResolvedUrlData> {
   const { targetCountry, userId, skipCache = true, retryConfig: customRetryConfig } = options // 默认禁用缓存
+
+  await ensureProxyPoolInitialized(userId, targetCountry)
 
   // 检测短链接服务，使用更激进的重试策略
   const isShortLink =

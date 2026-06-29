@@ -1,9 +1,11 @@
 import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import { resolveAffiliateLink, getProxyPool } from '@/lib/scraping' // 使用新的增强版API
-import { findOfferById } from '@/lib/offers/server'
-import { getAllProxyUrls } from '@/lib/common/server'
-import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
+import { resolveAffiliateLink } from '@/lib/scraping'
+import {
+  findOfferById,
+  initializeProxyPool,
+  parsePositiveIntegerOfferId,
+} from '@/lib/offers/server'
 
 /**
  * POST /api/offers/:id/resolve-url
@@ -25,23 +27,16 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: 'Offer不存在或无权访问' }, { status: 404 })
     }
 
-    // 加载代理池配置（使用新的增强版API）
-    const userIdNum = userId
     const targetCountry = offer.target_country || 'US'
 
-    const proxySettings = await getAllProxyUrls(userIdNum)
-    if (!proxySettings || proxySettings.length === 0) {
-      return NextResponse.json({ error: '未配置代理，无法解析推广链接' }, { status: 400 })
+    try {
+      await initializeProxyPool(userId, targetCountry)
+    } catch (error: any) {
+      if (error?.code === 'PROXY_NOT_CONFIGURED') {
+        return NextResponse.json({ error: '未配置代理，无法解析推广链接' }, { status: 400 })
+      }
+      throw error
     }
-
-    // 加载代理到代理池
-    const proxyPool = getProxyPool()
-    const proxiesWithDefault = proxySettings.map((p: any, index: number) => ({
-      url: p.url,
-      country: p.country,
-      is_default: index === proxySettings.length - 1, // 最后一个作为默认代理
-    }))
-    await proxyPool.loadProxies(proxiesWithDefault)
 
     if (!offer.affiliate_link) {
       return NextResponse.json({ error: 'Offer没有配置推广链接' }, { status: 400 })
@@ -51,11 +46,10 @@ export const POST = withAuth(async (request, user, context) => {
     console.log(`目标国家: ${targetCountry}`)
     console.log(`🔥 强制跳过缓存，确保获取最新重定向数据`)
 
-    // 使用新的增强版API，强制skipCache确保获取最新数据
     const resolved = await resolveAffiliateLink(offer.affiliate_link, {
       targetCountry,
       userId: userId,
-      skipCache: true, // 关键：强制跳过缓存
+      skipCache: true,
     })
 
     return NextResponse.json({
@@ -69,7 +63,7 @@ export const POST = withAuth(async (request, user, context) => {
         redirectCount: resolved.redirectCount,
         redirectChain: resolved.redirectChain,
         proxyUsed: resolved.proxyUsed,
-        method: resolved.resolveMethod, // 'http' or 'playwright' or 'cache'
+        method: resolved.resolveMethod,
         pageTitle: resolved.pageTitle || null,
       },
     })

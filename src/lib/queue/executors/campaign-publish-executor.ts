@@ -45,7 +45,11 @@ import {
 } from '@/lib/campaign/server'
 import { setCampaignPageViewGoalWithCredentials } from '@/lib/google-ads/conversion/conversion-goals'
 import { trackApiUsage, ApiOperationType } from '@/lib/google-ads/api/tracker'
-import { formatSitelinkForPublish, normalizeSitelinkItem } from '@/lib/creatives/sitelink-utils'
+import {
+  formatSitelinkForPublish,
+  normalizeSitelinkItem,
+  type PublishSitelinkInput,
+} from '@/lib/creatives/sitelink-utils'
 import { type NamingScheme } from '@/lib/campaign/naming-convention'
 import { invalidateOfferCache } from '@/lib/common/server'
 import { formatGoogleAdsApiError } from '@/lib/google-ads/api/error'
@@ -55,6 +59,7 @@ import {
   syncUrlSwapSitelinkTargetsAfterPublish,
 } from '@/lib/url-swap/url-swap-sitelink-targets'
 import { resolveStoreProductSitelinksForPublish } from '@/lib/creatives/sitelink-store-product-links'
+import { initializeProxyPool } from '@/lib/offers/server'
 import { applyCampaignTransition } from '@/lib/campaign/server'
 import { backfillOfferProductLinkForPublishedCampaign } from '@/lib/affiliate/products'
 import {
@@ -96,6 +101,47 @@ import { getPositiveIntFromEnv } from '@/lib/common/server'
 
 export type { CampaignPublishRollbackContext } from '@/lib/campaign/server'
 export { pauseOrphanGoogleAdsCampaignAfterPublishFailure } from '@/lib/campaign/server'
+
+/**
+ * 店铺 Offer 发布前：初始化代理池并解析 store_product_links 对应的 Sitelink URL
+ */
+export async function resolveFormattedStoreSitelinksForPublish(params: {
+  offerId: number
+  userId: number
+  targetCountry: string
+  formattedSitelinks: PublishSitelinkInput[]
+  fallbackUrl: string | null
+}): Promise<PublishSitelinkInput[]> {
+  await initializeProxyPool(params.userId, params.targetCountry)
+
+  const { pageType, storeProductLinks } = await loadOfferStoreProductLinksForUrlSwap(
+    params.offerId,
+    params.userId
+  )
+
+  if (
+    pageType !== 'store' ||
+    storeProductLinks.length === 0 ||
+    params.formattedSitelinks.length === 0
+  ) {
+    return params.formattedSitelinks
+  }
+
+  const resolved = await resolveStoreProductSitelinksForPublish({
+    sitelinks: params.formattedSitelinks,
+    storeProductLinks,
+    fallbackUrl: params.fallbackUrl,
+    targetCountry: params.targetCountry,
+    userId: params.userId,
+    skipCache: true,
+  })
+
+  logger.debug(
+    `  🔗 店铺 Sitelink：已解析 ${Math.min(resolved.length, storeProductLinks.length)} 条单品联盟链接`
+  )
+
+  return resolved
+}
 
 export interface CampaignPublishTaskData {
   // 基础信息
@@ -1035,23 +1081,13 @@ export async function executeCampaignPublish(task: Task<CampaignPublishTaskData>
     let formattedSitelinks = finalSitelinks
 
     try {
-      const { pageType, storeProductLinks } = await loadOfferStoreProductLinksForUrlSwap(
+      formattedSitelinks = await resolveFormattedStoreSitelinksForPublish({
         offerId,
-        userId
-      )
-      if (pageType === 'store' && storeProductLinks.length > 0 && formattedSitelinks.length > 0) {
-        formattedSitelinks = await resolveStoreProductSitelinksForPublish({
-          sitelinks: formattedSitelinks,
-          storeProductLinks,
-          fallbackUrl: extensionCreative.finalUrl || null,
-          targetCountry: campaignConfig.targetCountry,
-          userId,
-          skipCache: true,
-        })
-        logger.debug(
-          `  🔗 店铺 Sitelink：已解析 ${Math.min(formattedSitelinks.length, storeProductLinks.length)} 条单品联盟链接`
-        )
-      }
+        userId,
+        targetCountry: campaignConfig.targetCountry,
+        formattedSitelinks,
+        fallbackUrl: extensionCreative.finalUrl || null,
+      })
     } catch (resolveSitelinkError: any) {
       console.warn(
         `  ⚠️ 店铺 Sitelink 单品链接解析失败（回退主链 URL）: ${resolveSitelinkError?.message || resolveSitelinkError}`
