@@ -386,7 +386,9 @@ export default function UrlSwapTaskDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">持续天数</p>
-                  <p className="font-medium">{task.duration_days} 天</p>
+                  <p className="font-medium">
+                    {task.duration_days === -1 ? '不限期' : `${task.duration_days} 天`}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">执行状态</p>
@@ -394,15 +396,19 @@ export default function UrlSwapTaskDetailPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">完成进度</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${task.progress}%` }}
-                      />
+                  {task.duration_days === -1 ? (
+                    <p className="text-sm text-muted-foreground mt-1">不限期</p>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{ width: `${task.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-sm">{task.progress}%</span>
                     </div>
-                    <span className="text-sm">{task.progress}%</span>
-                  </div>
+                  )}
                 </div>
               </div>
             </CardContent>

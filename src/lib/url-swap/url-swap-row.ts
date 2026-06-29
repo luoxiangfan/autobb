@@ -14,8 +14,9 @@ export function calculateUrlSwapProgress(row: any): number {
     typeof durationDaysRaw === 'number'
       ? durationDaysRaw
       : parseInt(String(durationDaysRaw ?? ''), 10)
-  if (!Number.isFinite(durationDays) || durationDays <= 0) return 0
+  if (!Number.isFinite(durationDays)) return 0
   if (durationDays === -1) return 0
+  if (durationDays <= 0) return 0
 
   const startedAtRaw = row?.started_at
   if (!startedAtRaw) return 0
