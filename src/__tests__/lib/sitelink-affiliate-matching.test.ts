@@ -25,6 +25,14 @@ describe('sitelinkLandingKeysMatch', () => {
   })
 })
 
+describe('normalizeAffiliateLinkKey', () => {
+  it('normalizes protocol and trailing slash for promo link lookup', async () => {
+    const { normalizeAffiliateLinkKey } = await import('@/lib/url-swap/sitelink-affiliate-matching')
+    expect(normalizeAffiliateLinkKey('https://pboost.me/r2aECf1tv/')).toBe('pboost.me/r2aECf1tv')
+    expect(normalizeAffiliateLinkKey('http://www.pboost.me/r2aECf1tv')).toBe('pboost.me/r2aECf1tv')
+  })
+})
+
 describe('findStoreProductLinkIndexForSitelinkFinalUrl', () => {
   it('finds the store_product_links index by resolved landing page', () => {
     const resolvedLinks = [

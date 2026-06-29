@@ -36,6 +36,7 @@ vi.mock('@/lib/db', () => ({
 }))
 
 import {
+  enrichUrlSwapSitelinkTargetsAffiliateLinks,
   reconcileUrlSwapSitelinkAffiliateLinks,
   resolveAffiliateLinkForSitelinkTarget,
 } from '@/lib/url-swap/reconcile-sitelink-affiliate-links'
@@ -94,11 +95,38 @@ describe('reconcileUrlSwapSitelinkAffiliateLinks', () => {
 
     expect(result.updated).toBe(1)
     expect(result.targets[0].affiliate_link).toBe('https://pboost.me/r2aECf1tv')
-    expect(result.targets[0].sort_index).toBe(1)
     expect(dbFns.exec).toHaveBeenCalledWith(
       expect.stringContaining('UPDATE url_swap_sitelink_targets'),
-      ['https://pboost.me/r2aECf1tv', 1, expect.any(String), 'target-1']
+      ['https://pboost.me/r2aECf1tv', expect.any(String), 'target-1']
     )
+  })
+})
+
+describe('enrichUrlSwapSitelinkTargetsAffiliateLinks', () => {
+  it('returns corrected affiliate_link in memory without DB writes', () => {
+    const resolvedLinks = [
+      {
+        affiliateLink: 'https://pboost.me/V2aE0bkta',
+        finalUrl: 'https://www.amazon.com/dp/B0OTHER111',
+      },
+      {
+        affiliateLink: 'https://pboost.me/r2aECf1tv',
+        finalUrl: 'https://www.amazon.com/dp/B0CZ9GF4VY',
+      },
+    ]
+
+    const enriched = enrichUrlSwapSitelinkTargetsAffiliateLinks(
+      [
+        {
+          id: 'target-1',
+          affiliate_link: 'https://pboost.me/V2aE0bkta',
+          current_final_url: 'https://www.amazon.com/dp/B0CZ9GF4VY',
+        } as any,
+      ],
+      resolvedLinks
+    )
+
+    expect(enriched[0].affiliate_link).toBe('https://pboost.me/r2aECf1tv')
   })
 })
 

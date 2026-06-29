@@ -8,6 +8,20 @@ export interface ResolvedStoreProductLink {
   finalUrl: string | null
 }
 
+export function normalizeAffiliateLinkKey(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return ''
+
+  try {
+    const parsed = new URL(trimmed)
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase()
+    const path = parsed.pathname.replace(/\/$/, '') || ''
+    return `${host}${path}`
+  } catch {
+    return trimmed
+  }
+}
+
 export function normalizeSitelinkLandingUrl(url: string | null | undefined): string | null {
   const trimmed = url?.trim()
   if (!trimmed) return null

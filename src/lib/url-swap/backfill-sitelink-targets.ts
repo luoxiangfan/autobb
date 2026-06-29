@@ -216,6 +216,7 @@ export async function backfillUrlSwapSitelinkTargets(
       storeProductLinks,
       targetCountry: offer.target_country,
       userId: row.user_id,
+      offerId: row.offer_id,
       skipCache: false,
     })
 

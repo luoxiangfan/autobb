@@ -20,6 +20,22 @@ export interface ReconcileUrlSwapSitelinkAffiliateLinksResult {
   targets: UrlSwapSitelinkTarget[]
 }
 
+export function enrichUrlSwapSitelinkTargetsAffiliateLinks(
+  targets: UrlSwapSitelinkTarget[],
+  resolvedLinks: Awaited<ReturnType<typeof resolveStoreProductLinkFinalUrls>>
+): UrlSwapSitelinkTarget[] {
+  return targets.map((target) => {
+    const matchedAffiliateLink = findAffiliateLinkForSitelinkFinalUrl(
+      target.current_final_url,
+      resolvedLinks
+    )
+    if (!matchedAffiliateLink || matchedAffiliateLink === target.affiliate_link?.trim()) {
+      return target
+    }
+    return { ...target, affiliate_link: matchedAffiliateLink }
+  })
+}
+
 export async function reconcileUrlSwapSitelinkAffiliateLinks(params: {
   taskId: string
   offerId: number
@@ -47,14 +63,16 @@ export async function reconcileUrlSwapSitelinkAffiliateLinks(params: {
     storeProductLinks,
     targetCountry: offer.target_country,
     userId: params.userId,
+    offerId: params.offerId,
     skipCache: false,
   })
 
+  const enrichedTargets = enrichUrlSwapSitelinkTargetsAffiliateLinks(targets, resolvedLinks)
   const db = await getDatabase()
   const now = new Date().toISOString()
   let updated = 0
 
-  for (const target of targets) {
+  for (const target of enrichedTargets) {
     const matchedIndex = findStoreProductLinkIndexForSitelinkFinalUrl(
       target.current_final_url,
       resolvedLinks
@@ -64,26 +82,29 @@ export async function reconcileUrlSwapSitelinkAffiliateLinks(params: {
     const matchedAffiliateLink = resolvedLinks[matchedIndex]?.affiliateLink?.trim() || ''
     if (!matchedAffiliateLink) continue
 
-    const needsUpdate =
-      target.affiliate_link?.trim() !== matchedAffiliateLink || target.sort_index !== matchedIndex
+    const original = targets.find((item) => item.id === target.id)
+    if (!original || original.affiliate_link?.trim() === matchedAffiliateLink) {
+      continue
+    }
 
-    if (!needsUpdate) continue
-
-    await db.exec(
-      `
-      UPDATE url_swap_sitelink_targets
-      SET affiliate_link = ?,
-          sort_index = ?,
-          updated_at = ?
-      WHERE id = ?
-    `,
-      [matchedAffiliateLink, matchedIndex, now, target.id]
-    )
-
-    target.affiliate_link = matchedAffiliateLink
-    target.sort_index = matchedIndex
-    target.updated_at = now
-    updated++
+    try {
+      await db.exec(
+        `
+        UPDATE url_swap_sitelink_targets
+        SET affiliate_link = ?,
+            updated_at = ?
+        WHERE id = ?
+      `,
+        [matchedAffiliateLink, now, target.id]
+      )
+      target.updated_at = now
+      updated++
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(
+        `[url-swap] Sitelink affiliate_link 持久化失败（仍返回校正结果）: target=${target.id}, error=${message}`
+      )
+    }
   }
 
   if (updated > 0) {
@@ -94,7 +115,7 @@ export async function reconcileUrlSwapSitelinkAffiliateLinks(params: {
 
   return {
     updated,
-    targets: targets.sort((a, b) => a.sort_index - b.sort_index),
+    targets: enrichedTargets.sort((a, b) => a.sort_index - b.sort_index),
   }
 }
 

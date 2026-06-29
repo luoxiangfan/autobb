@@ -10,6 +10,7 @@ import type {
   UrlSwapTaskStatus,
 } from './url-swap-types'
 import { getUrlSwapTaskByOfferId, getUrlSwapTaskById } from './url-swap-queries'
+import { normalizeStoreProductLinkList } from '@/lib/offers/store-product-links'
 
 export type { UrlSwapSitelinkTarget, UrlSwapSitelinkTargetStatus } from './url-swap-types'
 
@@ -27,9 +28,7 @@ export interface SyncUrlSwapSitelinkTargetsInput {
 function parseStoreProductLinks(raw: unknown): string[] {
   if (!raw) return []
   if (Array.isArray(raw)) {
-    return raw
-      .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
-      .map((v) => v.trim())
+    return normalizeStoreProductLinkList(raw)
   }
   if (typeof raw === 'string') {
     try {
