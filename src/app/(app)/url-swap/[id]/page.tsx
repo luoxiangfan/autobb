@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import type { UrlSwapTask, UrlSwapTaskTarget } from '@/lib/url-swap/url-swap-types'
+import type { SyncStoreSitelinkTargetsForOfferResult } from '@/lib/url-swap/sync-store-sitelink-targets'
 import UrlSwapHistory from '@/components/UrlSwapHistory'
 import UrlSwapSitelinkTargetsSection from '@/components/UrlSwapSitelinkTargetsSection'
 
@@ -47,8 +48,12 @@ export default function UrlSwapTaskDetailPage() {
 
   // Data states
   const [task, setTask] = useState<UrlSwapTask | null>(null)
+  const [sitelinkSync, setSitelinkSync] = useState<SyncStoreSitelinkTargetsForOfferResult | null>(
+    null
+  )
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [sitelinkResyncLoading, setSitelinkResyncLoading] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
 
   const loadTask = useCallback(async () => {
@@ -63,6 +68,7 @@ export default function UrlSwapTaskDetailPage() {
 
       const data = await response.json()
       setTask(data.data)
+      setSitelinkSync(data.sitelink_sync ?? null)
     } catch (error: any) {
       console.error('加载任务失败:', error)
       toast.error(error.message || '加载任务失败')
@@ -77,6 +83,33 @@ export default function UrlSwapTaskDetailPage() {
       void loadTask()
     }
   }, [taskId, loadTask])
+
+  const handleResyncSitelinkTargets = async () => {
+    try {
+      setSitelinkResyncLoading(true)
+      const response = await fetch(`/api/url-swap/tasks/${taskId}/sync-sitelink-targets`, {
+        method: 'POST',
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.message || '同步 Sitelink 映射失败')
+      }
+      setSitelinkSync(data.sitelink_sync ?? null)
+      setTask((prev) =>
+        prev ? { ...prev, sitelink_targets: data.sitelink_targets ?? prev.sitelink_targets } : prev
+      )
+      if ((data.sitelink_targets?.length ?? 0) > 0) {
+        toast.success(data.message || 'Sitelink 映射已同步')
+      } else {
+        toast.error(data.message || '未能同步 Sitelink 映射')
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '同步 Sitelink 映射失败'
+      toast.error(message)
+    } finally {
+      setSitelinkResyncLoading(false)
+    }
+  }
 
   const formatDateTime = (dateValue: string | null): string => {
     if (!dateValue) return '-'
@@ -556,6 +589,9 @@ export default function UrlSwapTaskDetailPage() {
         <UrlSwapSitelinkTargetsSection
           sitelinkTargets={sitelinkTargets}
           formatDateTime={formatDateTime}
+          sitelinkSync={sitelinkSync}
+          onResync={handleResyncSitelinkTargets}
+          resyncLoading={sitelinkResyncLoading}
         />
 
         {/* Error Info */}

@@ -18,7 +18,7 @@ import {
   loadOfferStoreProductLinksForUrlSwap,
   syncUrlSwapSitelinkTargetsAfterPublish,
 } from './url-swap-sitelink-targets'
-import { getUrlSwapTaskTargets } from './url-swap-targets'
+import { resolveCampaignTargetsForSitelinkBackfill } from './url-swap-targets'
 import { getUrlSwapTaskByOfferId } from './url-swap-queries'
 
 export interface BackfillUrlSwapSitelinkTargetsOptions {
@@ -202,11 +202,14 @@ export async function backfillUrlSwapSitelinkTargets(
       continue
     }
 
-    const campaignTargets = await getUrlSwapTaskTargets(row.task_id, row.user_id, {
-      status: 'active',
-    })
+    const campaignTargets = await resolveCampaignTargetsForSitelinkBackfill(
+      row.task_id,
+      row.user_id
+    )
     if (campaignTargets.length === 0) {
-      result.errors.push(`task=${row.task_id}: 无 active Campaign 目标`)
+      result.errors.push(
+        `task=${row.task_id}: 无法解析 Campaign 目标（请确认 Campaign 已发布并关联到 Offer）`
+      )
       continue
     }
 

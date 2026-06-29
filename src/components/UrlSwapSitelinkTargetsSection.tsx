@@ -1,13 +1,18 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Link2 } from 'lucide-react'
+import { Link2, RefreshCw } from 'lucide-react'
 import type { UrlSwapSitelinkTarget } from '@/lib/url-swap/url-swap-types'
+import type { SyncStoreSitelinkTargetsForOfferResult } from '@/lib/url-swap/sync-store-sitelink-targets'
 
 interface UrlSwapSitelinkTargetsSectionProps {
   sitelinkTargets: UrlSwapSitelinkTarget[]
   formatDateTime: (dateValue: string | null) => string
+  sitelinkSync?: SyncStoreSitelinkTargetsForOfferResult | null
+  onResync?: () => void | Promise<void>
+  resyncLoading?: boolean
 }
 
 function getSitelinkStatusBadge(status: UrlSwapSitelinkTarget['status']) {
@@ -41,27 +46,53 @@ function truncateLink(link: string, maxLength = 48): string {
 export default function UrlSwapSitelinkTargetsSection({
   sitelinkTargets,
   formatDateTime,
+  sitelinkSync,
+  onResync,
+  resyncLoading = false,
 }: UrlSwapSitelinkTargetsSectionProps) {
   const activeCount = sitelinkTargets.filter((t) => t.status === 'active').length
   const invalidCount = sitelinkTargets.filter((t) => t.status === 'invalid').length
+  const syncErrors = sitelinkSync?.errors?.filter(Boolean) ?? []
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle className="text-lg flex items-center gap-2">
           <Link2 className="w-5 h-5" />
           Sitelink 子目标
         </CardTitle>
+        {onResync && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void onResync()}
+            disabled={resyncLoading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-1 ${resyncLoading ? 'animate-spin' : ''}`} />
+            重新同步
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {sitelinkTargets.length === 0 ? (
-          <div className="text-sm text-gray-500 space-y-1">
+          <div className="text-sm text-gray-500 space-y-2">
             <p>暂无 Sitelink 映射。</p>
             <p className="text-xs">
               Store 类型 Offer 需配置商品推广链接（store_product_links）。Campaign 已发布 Sitelink
-              时，创建换链任务后会自动从 Google Ads 同步映射；若仍为空，请确认远端 Campaign 已有
-              Sitelink 或重新发布 Sitelink。
+              时，打开详情页会自动从 Google Ads 同步；若仍为空，可点击「重新同步」或确认远端
+              Campaign 已有 Sitelink。
             </p>
+            {syncErrors.length > 0 && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 space-y-1">
+                <p className="font-medium">同步未成功，可能原因：</p>
+                {syncErrors.map((error) => (
+                  <p key={error} className="break-all">
+                    {error}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <>

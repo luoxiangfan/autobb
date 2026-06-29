@@ -35,6 +35,7 @@ export {
   ensureUrlSwapTaskTargets,
   addUrlSwapTargetForOfferCampaign,
   refreshUrlSwapTaskTargets,
+  resolveCampaignTargetsForSitelinkBackfill,
   markUrlSwapTargetSuccess,
   markUrlSwapTargetFailure,
   pauseUrlSwapTargetsByTaskId,

@@ -201,6 +201,55 @@ export async function refreshUrlSwapTaskTargets(params: {
 }
 
 /**
+ * 回填 Sitelink 映射前解析 Campaign 目标：先刷新 task_targets，再回退 Offer Campaign / 任务 legacy 字段。
+ */
+export async function resolveCampaignTargetsForSitelinkBackfill(
+  taskId: string,
+  userId: number
+): Promise<UrlSwapTargetInput[]> {
+  try {
+    await refreshUrlSwapTaskTargets({ taskId, userId })
+  } catch {
+    // 刷新失败时仍尝试用已有目标或 legacy 字段解析
+  }
+
+  const activeRows = await getUrlSwapTaskTargets(taskId, userId, { status: 'active' })
+  const fromTaskTargets = activeRows
+    .filter((t) => t.google_ads_account_id && t.google_customer_id && t.google_campaign_id)
+    .map((t) => ({
+      google_ads_account_id: t.google_ads_account_id,
+      google_customer_id: t.google_customer_id,
+      google_campaign_id: t.google_campaign_id,
+    }))
+  if (fromTaskTargets.length > 0) {
+    return fromTaskTargets
+  }
+
+  const task = await getUrlSwapTaskById(taskId, userId)
+  if (!task) return []
+
+  const fromOffer = await getOfferCampaignTargets(task.offer_id, userId)
+  if (fromOffer.length > 0) {
+    return fromOffer
+  }
+
+  if (task.google_customer_id && task.google_campaign_id) {
+    const accountId = await findGoogleAdsAccountIdByCustomerId(task.google_customer_id, userId)
+    if (accountId) {
+      return [
+        {
+          google_ads_account_id: accountId,
+          google_customer_id: task.google_customer_id,
+          google_campaign_id: task.google_campaign_id,
+        },
+      ]
+    }
+  }
+
+  return []
+}
+
+/**
  * 记录目标成功
  */
 export async function markUrlSwapTargetSuccess(targetId: string): Promise<void> {

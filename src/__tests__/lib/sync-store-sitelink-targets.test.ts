@@ -53,6 +53,7 @@ describe('syncStoreSitelinkTargetsForOffer', () => {
 
     expect(result.skipped).toBe(true)
     expect(result.upserted).toBe(0)
+    expect(result.errors[0]).toContain('store_product_links')
     expect(backfillFns.backfillUrlSwapSitelinkTargets).not.toHaveBeenCalled()
   })
 

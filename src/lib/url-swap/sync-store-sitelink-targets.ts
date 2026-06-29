@@ -20,23 +20,28 @@ export interface SyncStoreSitelinkTargetsForOfferResult {
  */
 export async function syncStoreSitelinkTargetsForOffer(
   offerId: number,
-  userId: number
+  userId: number,
+  options?: { force?: boolean }
 ): Promise<SyncStoreSitelinkTargetsForOfferResult> {
   const { pageType, storeProductLinks } = await loadOfferStoreProductLinksForUrlSwap(
     offerId,
     userId
   )
   if (pageType !== 'store' || storeProductLinks.length === 0) {
-    return { upserted: 0, skipped: true, errors: [] }
+    return {
+      upserted: 0,
+      skipped: true,
+      errors: ['Offer 不是 Store 类型或未配置 store_product_links'],
+    }
   }
 
   const task = await getUrlSwapTaskByOfferId(offerId, userId)
   if (!task) {
-    return { upserted: 0, skipped: true, errors: [] }
+    return { upserted: 0, skipped: true, errors: ['未找到换链任务'] }
   }
 
   const existingTargets = await getActiveUrlSwapSitelinkTargets(task.id, userId)
-  if (existingTargets.length > 0) {
+  if (existingTargets.length > 0 && !options?.force) {
     return { upserted: 0, skipped: true, errors: [] }
   }
 
@@ -49,6 +54,10 @@ export async function syncStoreSitelinkTargetsForOffer(
   if (result.upsertedMappings > 0) {
     logger.debug(
       `[url-swap] Store Sitelink 映射已回填: offer=${offerId}, count=${result.upsertedMappings}`
+    )
+  } else if (result.errors.length > 0) {
+    console.warn(
+      `[url-swap] Store Sitelink 映射回填未写入: offer=${offerId}, errors=${result.errors.join('; ')}`
     )
   }
 

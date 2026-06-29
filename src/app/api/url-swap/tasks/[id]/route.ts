@@ -37,13 +37,15 @@ export const GET = withAuth(async (_request, user, context) => {
   const stats = await getUrlSwapTaskStats(id, user.userId)
   const targets = await getUrlSwapTaskTargets(id, user.userId)
   let sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+  let sitelink_sync: Awaited<ReturnType<typeof syncStoreSitelinkTargetsForOffer>> | null = null
 
   if (sitelink_targets.length === 0) {
     try {
-      await syncStoreSitelinkTargetsForOffer(task.offer_id, user.userId)
+      sitelink_sync = await syncStoreSitelinkTargetsForOffer(task.offer_id, user.userId)
       sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
     } catch (syncError: unknown) {
       const message = syncError instanceof Error ? syncError.message : String(syncError)
+      sitelink_sync = { upserted: 0, skipped: false, errors: [message] }
       console.warn(`[url-swap] 详情页 Sitelink 映射同步失败（非致命）: ${message}`)
     }
   }
@@ -56,6 +58,7 @@ export const GET = withAuth(async (_request, user, context) => {
     stats,
     targets,
     sitelink_targets,
+    sitelink_sync,
   })
 })
 
