@@ -64,7 +64,6 @@ export async function reconcileUrlSwapSitelinkAffiliateLinks(params: {
     targetCountry: offer.target_country,
     userId: params.userId,
     offerId: params.offerId,
-    skipCache: false,
   })
 
   const enrichedTargets = enrichUrlSwapSitelinkTargetsAffiliateLinks(targets, resolvedLinks)

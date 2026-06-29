@@ -1,9 +1,10 @@
 /**
  * Resolve store_product_links to final landing URLs for Sitelink ↔ affiliate pairing.
  */
-import { resolveAffiliateLink } from '@/lib/scraping'
 import { getDatabase } from '@/lib/db'
+import { initializeProxyPool } from '@/lib/offers/server'
 import type { SupplementalProductResult } from '@/lib/offers/offer-supplemental-product-types'
+import { resolveAffiliateLinkForUrlSwap } from './url-swap-resolve-config'
 import {
   normalizeAffiliateLinkKey,
   type ResolvedStoreProductLink,
@@ -28,6 +29,21 @@ function parseSupplementalProductsFromScrapedData(raw: unknown): SupplementalPro
       typeof item === 'object' &&
       typeof (item as SupplementalProductResult).sourceAffiliateLink === 'string'
   )
+}
+
+function extractPartnerboostLinkFromRawJson(raw: unknown): string | null {
+  if (!raw) return null
+  let parsed: unknown = raw
+  if (typeof raw === 'string') {
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      return null
+    }
+  }
+  if (!parsed || typeof parsed !== 'object') return null
+  const link = (parsed as { partnerboost_link?: unknown }).partnerboost_link
+  return typeof link === 'string' && link.trim() ? link.trim() : null
 }
 
 async function loadSupplementalFinalUrlMap(params: {
@@ -71,9 +87,10 @@ async function loadAffiliateProductFinalUrlMap(params: {
     short_promo_link: string | null
     promo_link: string | null
     asin: string | null
+    raw_json: string | null
   }>(
     `
-    SELECT product_url, short_promo_link, promo_link, asin
+    SELECT product_url, short_promo_link, promo_link, asin, raw_json
     FROM affiliate_products
     WHERE user_id = ?
   `,
@@ -87,7 +104,12 @@ async function loadAffiliateProductFinalUrlMap(params: {
       (row.asin?.trim() ? `https://www.amazon.com/dp/${row.asin.trim()}` : null)
     if (!finalUrl) continue
 
-    for (const promoLink of [row.short_promo_link, row.promo_link]) {
+    const promoCandidates = [
+      row.short_promo_link,
+      row.promo_link,
+      extractPartnerboostLinkFromRawJson(row.raw_json),
+    ]
+    for (const promoLink of promoCandidates) {
       const key = normalizeAffiliateLinkKey(promoLink || '')
       if (key && wanted.has(key)) {
         map.set(key, finalUrl)
@@ -98,12 +120,73 @@ async function loadAffiliateProductFinalUrlMap(params: {
   return map
 }
 
+async function loadOpenclawAffiliateProductFinalUrlMap(params: {
+  userId: number
+  storeProductLinks: string[]
+}): Promise<Map<string, string>> {
+  const wanted = new Set(
+    params.storeProductLinks.map((link) => normalizeAffiliateLinkKey(link)).filter(Boolean)
+  )
+  if (wanted.size === 0) return new Map()
+
+  const db = await getDatabase()
+  const rows = await db.query<{
+    product_url: string | null
+    tracking_url: string | null
+    asin: string | null
+  }>(
+    `
+    SELECT product_url, tracking_url, asin
+    FROM openclaw_affiliate_products
+    WHERE user_id = ?
+  `,
+    [params.userId]
+  )
+
+  const map = new Map<string, string>()
+  for (const row of rows) {
+    const finalUrl =
+      row.product_url?.trim() ||
+      (row.asin?.trim() ? `https://www.amazon.com/dp/${row.asin.trim()}` : null)
+    if (!finalUrl) continue
+
+    const key = normalizeAffiliateLinkKey(row.tracking_url || '')
+    if (key && wanted.has(key)) {
+      map.set(key, finalUrl)
+    }
+  }
+
+  return map
+}
+
+async function ensureProxyPoolForStoreLinkResolution(
+  userId: number,
+  targetCountry: string
+): Promise<boolean> {
+  try {
+    await initializeProxyPool(userId, targetCountry)
+    return true
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.warn(`[url-swap] 无法初始化代理池，跳过 store_product_links 实时解析: ${message}`)
+    return false
+  }
+}
+
+function needsLiveStoreLinkResolution(
+  affiliateLink: string,
+  maps: Array<Map<string, string>>
+): boolean {
+  const affiliateKey = normalizeAffiliateLinkKey(affiliateLink)
+  if (!affiliateKey) return false
+  return !maps.some((map) => map.has(affiliateKey))
+}
+
 export async function resolveStoreProductLinkFinalUrls(params: {
   storeProductLinks: string[]
   targetCountry: string
   userId: number
   offerId?: number
-  skipCache?: boolean
 }): Promise<ResolvedStoreProductLink[]> {
   const supplementalMap =
     params.offerId !== undefined
@@ -113,6 +196,18 @@ export async function resolveStoreProductLinkFinalUrls(params: {
     userId: params.userId,
     storeProductLinks: params.storeProductLinks,
   })
+  const openclawProductMap = await loadOpenclawAffiliateProductFinalUrlMap({
+    userId: params.userId,
+    storeProductLinks: params.storeProductLinks,
+  })
+
+  const staticMaps = [supplementalMap, affiliateProductMap, openclawProductMap]
+  const needsLiveResolution = params.storeProductLinks.some((link) =>
+    needsLiveStoreLinkResolution(link, staticMaps)
+  )
+  const proxyReady = needsLiveResolution
+    ? await ensureProxyPoolForStoreLinkResolution(params.userId, params.targetCountry)
+    : false
 
   const resolved: ResolvedStoreProductLink[] = []
 
@@ -125,23 +220,32 @@ export async function resolveStoreProductLinkFinalUrls(params: {
 
     const affiliateKey = normalizeAffiliateLinkKey(trimmed)
     const cachedFinalUrl =
-      supplementalMap.get(affiliateKey) || affiliateProductMap.get(affiliateKey)
+      supplementalMap.get(affiliateKey) ||
+      affiliateProductMap.get(affiliateKey) ||
+      openclawProductMap.get(affiliateKey)
     if (cachedFinalUrl) {
       resolved.push({ affiliateLink: trimmed, finalUrl: cachedFinalUrl })
       continue
     }
 
+    if (!proxyReady) {
+      resolved.push({ affiliateLink: trimmed, finalUrl: null })
+      continue
+    }
+
     try {
-      const parsed = await resolveAffiliateLink(trimmed, {
+      const parsed = await resolveAffiliateLinkForUrlSwap({
+        affiliateLink: trimmed,
         targetCountry: params.targetCountry,
         userId: params.userId,
-        skipCache: params.skipCache ?? false,
       })
       resolved.push({
         affiliateLink: trimmed,
         finalUrl: parsed.finalUrl || null,
       })
-    } catch {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(`[url-swap] store_product_links 解析失败: link=${trimmed}, error=${message}`)
       resolved.push({ affiliateLink: trimmed, finalUrl: null })
     }
   }

@@ -217,7 +217,6 @@ export async function backfillUrlSwapSitelinkTargets(
       targetCountry: offer.target_country,
       userId: row.user_id,
       offerId: row.offer_id,
-      skipCache: false,
     })
 
     const campaignTargets = await resolveCampaignTargetsForSitelinkBackfill(

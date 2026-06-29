@@ -222,7 +222,6 @@ export async function runUrlSwapSitelinkSuffixPhase(params: {
           targetCountry: offerRow.target_country,
           userId: params.userId,
           offerId: params.offerId,
-          skipCache: false,
         })
       : []
 
