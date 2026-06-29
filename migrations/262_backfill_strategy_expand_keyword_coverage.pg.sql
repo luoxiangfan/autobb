@@ -20,8 +20,10 @@ WITH keyword_inventory AS (
   FROM campaigns c
   CROSS JOIN LATERAL jsonb_array_elements(
     CASE
-      WHEN jsonb_typeof(c.campaign_config->'keywords') = 'array'
-      THEN c.campaign_config->'keywords'
+      WHEN c.campaign_config IS NOT NULL
+        AND NULLIF(trim(c.campaign_config), '') IS NOT NULL
+        AND jsonb_typeof(c.campaign_config::jsonb->'keywords') = 'array'
+      THEN c.campaign_config::jsonb->'keywords'
       ELSE '[]'::jsonb
     END
   ) AS kw(elem)
