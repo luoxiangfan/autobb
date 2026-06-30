@@ -9,20 +9,22 @@ vi.mock('@/lib/db', () => ({
   getDatabase: () => mockDb,
 }))
 
-vi.mock('@/lib/keywords/server', () => ({
+vi.mock('@/lib/keywords/planner/unified-keyword-service', () => ({
   expandKeywordsWithSeeds: (...args: any[]) => mockExpandKeywordsWithSeeds(...args),
 }))
 
-vi.mock('@/lib/keywords/server', () => ({
-  getKeywordSearchVolumes: (...args: any[]) => mockGetKeywordSearchVolumes(...args),
-}))
-
-vi.mock('@/lib/keywords/server', () => ({
-  detectCountryInKeyword: vi.fn(() => []),
-  filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),
-  filterMismatchedGeoKeywords: vi.fn((keywords: string[]) => keywords),
-  getBrandSearchSuggestions: vi.fn(async () => []),
-}))
+vi.mock('@/lib/keywords/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords/server')>()
+  return {
+    ...actual,
+    expandKeywordsWithSeeds: (...args: any[]) => mockExpandKeywordsWithSeeds(...args),
+    getKeywordSearchVolumes: (...args: any[]) => mockGetKeywordSearchVolumes(...args),
+    detectCountryInKeyword: vi.fn(() => []),
+    filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),
+    filterMismatchedGeoKeywords: vi.fn((keywords: string[]) => keywords),
+    getBrandSearchSuggestions: vi.fn(async () => []),
+  }
+})
 
 // Avoid native bcrypt binary issues in some test runners.
 vi.mock('bcrypt', () => {

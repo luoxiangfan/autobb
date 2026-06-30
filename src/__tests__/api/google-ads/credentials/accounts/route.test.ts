@@ -64,8 +64,8 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
 
-vi.mock('@/lib/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/db')>()
+vi.mock('@/lib/db/database', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/database')>()
   return {
     ...actual,
     getDatabase: vi.fn(async () => ({

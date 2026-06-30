@@ -84,7 +84,7 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/campaign', () => ({
+vi.mock('@/lib/campaign/server', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
   updateCampaignPython: pythonFns.updateCampaignPython,
   updateAdGroupPython: pythonFns.updateAdGroupPython,
@@ -204,8 +204,8 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
           customer_id: '1234567890',
           parent_mcc_id: '9988776655',
           service_account_id: null,
-          is_active: 1,
-          is_deleted: 0,
+          is_active: true,
+          is_deleted: false,
         }
       }
       return undefined
@@ -291,8 +291,8 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
           customer_id: '1234567890',
           parent_mcc_id: '2233445566',
           service_account_id: 'sa-1',
-          is_active: 1,
-          is_deleted: 0,
+          is_active: true,
+          is_deleted: false,
         }
       }
       return undefined
@@ -368,8 +368,8 @@ describe('PUT /api/campaigns/:id/update-cpc', () => {
           customer_id: '1234567890',
           parent_mcc_id: '2233445566',
           service_account_id: 'sa-1',
-          is_active: 1,
-          is_deleted: 0,
+          is_active: true,
+          is_deleted: false,
         }
       }
       return undefined

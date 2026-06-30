@@ -41,7 +41,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/campaign', () => ({
+vi.mock('@/lib/campaign/server', () => ({
   findCampaignById: campaignFns.findCampaignById,
   applyCampaignTransition: transitionFns.applyCampaignTransition,
   pauseOfferTasks: offerTaskFns.pauseOfferTasks,
@@ -101,7 +101,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
           google_ads_account_id: 10,
           offer_id: 99,
           status: 'ENABLED',
-          is_deleted: 0,
+          is_deleted: false,
         }
       }
       if (sql.includes('FROM google_ads_accounts')) {
@@ -110,8 +110,8 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
           customer_id: '1122334455',
           parent_mcc_id: null,
           service_account_id: null,
-          is_active: 1,
-          is_deleted: 0,
+          is_active: true,
+          is_deleted: false,
           status: 'ENABLED',
         }
       }
@@ -310,7 +310,7 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
           google_campaign_id: '1234567890',
           google_ads_account_id: 10,
           status: 'ENABLED',
-          is_deleted: 0,
+          is_deleted: false,
         }
       }
       if (sql.includes('FROM google_ads_accounts')) {
@@ -319,8 +319,8 @@ describe('PUT /api/campaigns/:id/toggle-status', () => {
           customer_id: '1122334455',
           parent_mcc_id: null,
           service_account_id: null,
-          is_active: 1,
-          is_deleted: 0,
+          is_active: true,
+          is_deleted: false,
           status: 'ENABLED',
         }
       }

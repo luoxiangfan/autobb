@@ -8,16 +8,24 @@ const mockBatchCacheVolumes = vi.fn()
 const mockGenerateKeywordHistoricalMetrics = vi.fn()
 const mockResolveGoogleAdsApiAccessLevel = vi.fn()
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: () => mockDb,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: () => mockDb,
+  }
+})
 
-vi.mock('@/lib/common/server', () => ({
-  getCachedKeywordVolume: vi.fn(),
-  cacheKeywordVolume: vi.fn(),
-  getBatchCachedVolumes: (...args: any[]) => mockGetBatchCachedVolumes(...args),
-  batchCacheVolumes: (...args: any[]) => mockBatchCacheVolumes(...args),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getCachedKeywordVolume: vi.fn(),
+    cacheKeywordVolume: vi.fn(),
+    getBatchCachedVolumes: (...args: any[]) => mockGetBatchCachedVolumes(...args),
+    batchCacheVolumes: (...args: any[]) => mockBatchCacheVolumes(...args),
+  }
+})
 
 vi.mock('@/lib/google-ads/oauth/oauth', () => ({
   refreshAccessToken: vi.fn().mockResolvedValue(undefined),
@@ -36,13 +44,9 @@ const oauthCredentialsFixture = {
   api_access_level: 'explorer',
 }
 
-vi.mock('@/lib/google-ads/auth/assignment', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/assignment')>()
-  return {
-    ...actual,
-    resolveGoogleAdsApiAccessLevel: (...args: any[]) => mockResolveGoogleAdsApiAccessLevel(...args),
-  }
-})
+vi.mock('@/lib/google-ads/auth/assignment', () => ({
+  resolveGoogleAdsApiAccessLevel: (...args: any[]) => mockResolveGoogleAdsApiAccessLevel(...args),
+}))
 
 vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()

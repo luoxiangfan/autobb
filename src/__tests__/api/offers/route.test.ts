@@ -61,7 +61,7 @@ function createOfferRow() {
     scrape_status: 'in_progress',
     scrape_error: null,
     scraped_at: '2026-03-03T00:00:00.000Z',
-    is_active: 1,
+    is_active: true,
     created_at: '2026-02-01T00:00:00.000Z',
     updated_at: '2026-03-01T00:00:00.000Z',
     offer_name: 'DemoBrand_US_01',

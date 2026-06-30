@@ -38,6 +38,14 @@ vi.mock('google-ads-api', () => {
   }
 })
 
+vi.mock('@/lib/google-ads/accounts/auth/route-auth', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/route-auth')>()
+  return {
+    ...actual,
+    resolveOAuthClientCredentialsForUser: accountsAuthFns.resolveOAuthClientCredentialsForUser,
+  }
+})
+
 vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/google-ads/accounts/auth/index')>()
   return {

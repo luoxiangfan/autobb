@@ -12,7 +12,7 @@ import {
   generateSmartOptimizationCampaignName,
   generateNamingScheme,
   NAMING_CONFIG,
-} from '@/lib/campaign/server'
+} from '@/lib/campaign/naming-convention'
 
 describe('Google Ads Naming Convention', () => {
   describe('generateCampaignName', () => {

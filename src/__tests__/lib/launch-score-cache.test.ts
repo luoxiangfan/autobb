@@ -1,30 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { computeContentHash } from '@/lib/launch-score/launch-scores'
+import {
+  buildLaunchScoreHashes,
+  pickBestAdCreativeByScore,
+} from '@/lib/launch-score/launch-score-cache'
 
 const findCachedLaunchScoreMock = vi.fn()
 const createLaunchScoreMock = vi.fn()
 const findLatestLaunchScoreMock = vi.fn()
 const resolveLaunchScoreForCreativeCompareMock = vi.fn()
 
-vi.mock('@/lib/launch-score', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/launch-score/server')>()
-  return {
-    ...actual,
-    findCachedLaunchScore: (...args: unknown[]) => findCachedLaunchScoreMock(...args),
-    createLaunchScore: (...args: unknown[]) => createLaunchScoreMock(...args),
-    findLatestLaunchScore: (...args: unknown[]) => findLatestLaunchScoreMock(...args),
-    resolveLaunchScoreForCreativeCompare: (...args: unknown[]) =>
-      resolveLaunchScoreForCreativeCompareMock(...args),
-  }
-})
+type LaunchScoreCacheModule = typeof import('@/lib/launch-score/launch-score-cache')
 
-import { computeContentHash } from '@/lib/launch-score/server'
-import {
-  buildLaunchScoreHashes,
-  pickBestAdCreativeByScore,
-  readLaunchScoreForCreative,
-  resolveLaunchScoreGetForCreative,
-  saveLaunchScoreWithContentCache,
-} from '@/lib/launch-score/server'
+async function loadLaunchScoreCacheWithMocks(): Promise<LaunchScoreCacheModule> {
+  vi.resetModules()
+  const scores = await import('@/lib/launch-score/launch-scores')
+  vi.spyOn(scores, 'findCachedLaunchScore').mockImplementation(findCachedLaunchScoreMock)
+  vi.spyOn(scores, 'createLaunchScore').mockImplementation(createLaunchScoreMock)
+  vi.spyOn(scores, 'findLatestLaunchScore').mockImplementation(findLatestLaunchScoreMock)
+  vi.spyOn(scores, 'resolveLaunchScoreForCreativeCompare').mockImplementation(
+    resolveLaunchScoreForCreativeCompareMock
+  )
+  return import('@/lib/launch-score/launch-score-cache')
+}
 
 describe('buildLaunchScoreHashes', () => {
   const offer = {
@@ -129,10 +127,13 @@ describe('readLaunchScoreForCreative', () => {
     final_url: 'https://example.com/c',
   } as any
 
-  beforeEach(() => {
+  let readLaunchScoreForCreative: LaunchScoreCacheModule['readLaunchScoreForCreative']
+
+  beforeEach(async () => {
     findCachedLaunchScoreMock.mockReset()
     findLatestLaunchScoreMock.mockReset()
     resolveLaunchScoreForCreativeCompareMock.mockReset()
+    ;({ readLaunchScoreForCreative } = await loadLaunchScoreCacheWithMocks())
   })
 
   it('returns hash-matched score when cache hits', async () => {
@@ -212,9 +213,12 @@ describe('saveLaunchScoreWithContentCache', () => {
     overallRecommendations: [],
   } as any
 
-  beforeEach(() => {
+  let saveLaunchScoreWithContentCache: LaunchScoreCacheModule['saveLaunchScoreWithContentCache']
+
+  beforeEach(async () => {
     findCachedLaunchScoreMock.mockReset()
     createLaunchScoreMock.mockReset()
+    ;({ saveLaunchScoreWithContentCache } = await loadLaunchScoreCacheWithMocks())
   })
 
   it('returns existing row without insert when hash matches', async () => {
@@ -287,12 +291,15 @@ describe('resolveLaunchScoreGetForCreative', () => {
     final_url: 'https://example.com/c',
   } as any
 
-  beforeEach(() => {
+  let resolveLaunchScoreGetForCreative: LaunchScoreCacheModule['resolveLaunchScoreGetForCreative']
+
+  beforeEach(async () => {
     findCachedLaunchScoreMock.mockReset()
     findLatestLaunchScoreMock.mockReset()
     resolveLaunchScoreForCreativeCompareMock.mockReset()
     findAdCreativesByOfferIdMock.mockReset()
     findAdCreativesByOfferIdMock.mockResolvedValue([creative])
+    ;({ resolveLaunchScoreGetForCreative } = await loadLaunchScoreCacheWithMocks())
   })
 
   it('returns hash-matched score without auto calculate', async () => {
