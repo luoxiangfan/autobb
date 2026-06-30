@@ -78,7 +78,7 @@ npm run validate-schema
 
 ## Agent workflow (mandatory after code edits)
 
-After changing application code, run **`npm run format:changed`**, **`npm run lint:changed`**, and **`npm run type-check`** in the repo root; all must pass before reporting work complete. Use `format:changed` (not full-repo `format`) and `lint:changed` (not full-repo `lint`) so only modified or new files are checked.
+After changing application code, run **`npm run format:changed`**, **`npm run lint:changed`**, **`npm run type-check`**, and **targeted `npm test`** for affected modules in the repo root; all must pass before reporting work complete. Use `format:changed` (not full-repo `format`) and `lint:changed` (not full-repo `lint`) so only modified or new files are checked. Run tests under `src/__tests__/` that import or cover the changed source (same path mapping as in AGENTS.md); if behavior changed and no test exists, add one before finishing.
 
 If the change touches SQL or the database layer (`migrations/`, raw SQL, `db-helpers`), review SQL correctness (table aliases, `?` placeholders vs `params`, column types) and run **`npm run db:migrate`**, **`npm run validate-schema`**, and targeted **`npm test`**. See [AGENTS.md](./AGENTS.md) —「代码修改后的质量门禁（必须）」and「数据库 / SQL 修改后的检查（必须）」.
 
