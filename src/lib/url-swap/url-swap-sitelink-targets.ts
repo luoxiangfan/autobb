@@ -134,6 +134,17 @@ export async function upsertUrlSwapSitelinkTarget(
   const db = await getDatabase()
   const now = new Date().toISOString()
 
+  // task_id+sort_index 与 task_id+asset_resource_name 各有一条唯一约束；
+  // 仅 ON CONFLICT sort_index 会在 asset 换槽位时触发 uq_url_swap_sitelink_task_asset。
+  await db.exec(
+    `
+    DELETE FROM url_swap_sitelink_targets
+    WHERE task_id = ?
+      AND (sort_index = ? OR asset_resource_name = ?)
+  `,
+    [input.taskId, input.sortIndex, input.assetResourceName]
+  )
+
   await db.exec(
     `
     INSERT INTO url_swap_sitelink_targets (
@@ -145,20 +156,6 @@ export async function upsertUrlSwapSitelinkTarget(
       status, consecutive_failures, last_error,
       created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)
-    ON CONFLICT (task_id, sort_index) DO UPDATE SET
-      affiliate_link = EXCLUDED.affiliate_link,
-      google_ads_account_id = EXCLUDED.google_ads_account_id,
-      google_customer_id = EXCLUDED.google_customer_id,
-      google_campaign_id = EXCLUDED.google_campaign_id,
-      asset_resource_name = EXCLUDED.asset_resource_name,
-      asset_id = EXCLUDED.asset_id,
-      link_text = EXCLUDED.link_text,
-      current_final_url = EXCLUDED.current_final_url,
-      current_final_url_suffix = EXCLUDED.current_final_url_suffix,
-      status = EXCLUDED.status,
-      consecutive_failures = 0,
-      last_error = NULL,
-      updated_at = EXCLUDED.updated_at
   `,
     [
       crypto.randomUUID().toLowerCase(),
