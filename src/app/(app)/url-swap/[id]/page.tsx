@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -45,6 +45,24 @@ function groupTargetsByAccount(targets: UrlSwapTaskTarget[]) {
   return Array.from(groups.values())
 }
 
+const SITELINK_SYNC_POLL_INTERVAL_MS = 2500
+const SITELINK_SYNC_POLL_DEADLINE_MS = 15 * 60 * 1000
+
+type SitelinkSyncPollPayload = {
+  sitelink_sync?: SyncStoreSitelinkTargetsForOfferResult | null
+  sitelink_targets?: UrlSwapTask['sitelink_targets']
+  message?: string
+  success?: boolean
+  status?: string
+  already_running?: boolean
+  poll_interval_ms?: number
+  poll_url?: string
+}
+
+function buildSitelinkSyncPollUrl(taskId: string): string {
+  return `/api/url-swap/tasks/${taskId}/sync-sitelink-targets`
+}
+
 export default function UrlSwapTaskDetailPage() {
   const router = useRouter()
   const params = useParams()
@@ -59,6 +77,105 @@ export default function UrlSwapTaskDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [sitelinkResyncLoading, setSitelinkResyncLoading] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const sitelinkPollGenerationRef = useRef(0)
+  const sitelinkResumeCheckedTaskIdRef = useRef<string | null>(null)
+
+  const applySitelinkSyncResult = useCallback(
+    (result: SitelinkSyncPollPayload, options?: { showToast?: boolean }) => {
+      setSitelinkSync(result.sitelink_sync ?? null)
+      setTask((prev) =>
+        prev
+          ? { ...prev, sitelink_targets: result.sitelink_targets ?? prev.sitelink_targets }
+          : prev
+      )
+      if (options?.showToast === false) return
+      if ((result.sitelink_targets?.length ?? 0) > 0 || result.success) {
+        toast.success(result.message || 'Sitelink 映射已同步')
+      } else {
+        toast.error(result.message || '未能同步 Sitelink 映射')
+      }
+    },
+    []
+  )
+
+  const pollSitelinkSyncUntilDone = useCallback(
+    async (params: {
+      pollUrl: string
+      pollIntervalMs?: number
+      startToastMessage?: string | null
+    }) => {
+      const generation = ++sitelinkPollGenerationRef.current
+      const pollIntervalMs = params.pollIntervalMs ?? SITELINK_SYNC_POLL_INTERVAL_MS
+
+      if (params.startToastMessage) {
+        toast.info(params.startToastMessage)
+      }
+      setSitelinkResyncLoading(true)
+
+      try {
+        const deadline = Date.now() + SITELINK_SYNC_POLL_DEADLINE_MS
+        while (Date.now() < deadline) {
+          if (sitelinkPollGenerationRef.current !== generation) return
+
+          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+          if (sitelinkPollGenerationRef.current !== generation) return
+
+          const pollResponse = await fetch(params.pollUrl)
+          const pollData = (await pollResponse.json()) as SitelinkSyncPollPayload
+
+          if (pollData.status === 'completed') {
+            applySitelinkSyncResult(pollData)
+            return
+          }
+          if (pollData.status === 'failed') {
+            throw new Error(pollData.message || '同步 Sitelink 映射失败')
+          }
+          if (pollData.status === 'idle') {
+            throw new Error('Sitelink 同步状态丢失，请重试')
+          }
+        }
+
+        throw new Error('Sitelink 同步超时，请稍后刷新页面查看结果')
+      } catch (error: unknown) {
+        if (sitelinkPollGenerationRef.current !== generation) return
+        const message = error instanceof Error ? error.message : '同步 Sitelink 映射失败'
+        toast.error(message)
+      } finally {
+        if (sitelinkPollGenerationRef.current === generation) {
+          setSitelinkResyncLoading(false)
+        }
+      }
+    },
+    [applySitelinkSyncResult]
+  )
+
+  const resumeSitelinkSyncIfRunning = useCallback(async () => {
+    if (!taskId) return
+
+    const pollUrl = buildSitelinkSyncPollUrl(taskId)
+    const statusResponse = await fetch(pollUrl)
+    if (!statusResponse.ok) return
+
+    const statusData = (await statusResponse.json()) as SitelinkSyncPollPayload
+    if (statusData.status === 'running') {
+      await pollSitelinkSyncUntilDone({
+        pollUrl,
+        pollIntervalMs: statusData.poll_interval_ms,
+        startToastMessage: '检测到进行中的 Sitelink 同步，继续等待…',
+      })
+      return
+    }
+
+    if (statusData.status === 'completed') {
+      applySitelinkSyncResult(statusData, { showToast: false })
+    }
+  }, [taskId, pollSitelinkSyncUntilDone, applySitelinkSyncResult])
+
+  useEffect(() => {
+    return () => {
+      sitelinkPollGenerationRef.current += 1
+    }
+  }, [])
 
   const loadTask = useCallback(async () => {
     try {
@@ -88,71 +205,48 @@ export default function UrlSwapTaskDetailPage() {
     }
   }, [taskId, loadTask])
 
+  useEffect(() => {
+    sitelinkResumeCheckedTaskIdRef.current = null
+  }, [taskId])
+
+  useEffect(() => {
+    if (!taskId || loading || !task) return
+    if (sitelinkResumeCheckedTaskIdRef.current === taskId) return
+    sitelinkResumeCheckedTaskIdRef.current = taskId
+    void resumeSitelinkSyncIfRunning()
+  }, [taskId, loading, task, resumeSitelinkSyncIfRunning])
+
   const handleResyncSitelinkTargets = async () => {
+    if (sitelinkResyncLoading) return
+
     try {
-      setSitelinkResyncLoading(true)
-      const response = await fetch(`/api/url-swap/tasks/${taskId}/sync-sitelink-targets`, {
+      const response = await fetch(buildSitelinkSyncPollUrl(taskId), {
         method: 'POST',
       })
-      const data = await response.json()
+      const data = (await response.json()) as SitelinkSyncPollPayload
       if (!response.ok && response.status !== 202) {
         throw new Error(data.message || '同步 Sitelink 映射失败')
       }
 
-      const pollIntervalMs = Number(data.poll_interval_ms) || 2500
-      const pollUrl =
-        typeof data.poll_url === 'string'
-          ? data.poll_url
-          : `/api/url-swap/tasks/${taskId}/sync-sitelink-targets`
-
-      const applySyncResult = (result: {
-        sitelink_sync?: SyncStoreSitelinkTargetsForOfferResult | null
-        sitelink_targets?: UrlSwapTask['sitelink_targets']
-        message?: string
-        success?: boolean
-      }) => {
-        setSitelinkSync(result.sitelink_sync ?? null)
-        setTask((prev) =>
-          prev
-            ? { ...prev, sitelink_targets: result.sitelink_targets ?? prev.sitelink_targets }
-            : prev
-        )
-        if ((result.sitelink_targets?.length ?? 0) > 0 || result.success) {
-          toast.success(result.message || 'Sitelink 映射已同步')
-        } else {
-          toast.error(result.message || '未能同步 Sitelink 映射')
-        }
-      }
-
       if (response.status !== 202 && data.status === 'completed') {
-        applySyncResult(data)
+        applySitelinkSyncResult(data)
         return
       }
 
-      const deadline = Date.now() + 15 * 60 * 1000
-      while (Date.now() < deadline) {
-        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
-        const pollResponse = await fetch(pollUrl)
-        const pollData = await pollResponse.json()
+      const pollUrl =
+        typeof data.poll_url === 'string' ? data.poll_url : buildSitelinkSyncPollUrl(taskId)
+      const startToastMessage = data.already_running
+        ? 'Sitelink 同步进行中，请稍候…'
+        : 'Sitelink 同步已开始，请稍候…'
 
-        if (pollData.status === 'completed') {
-          applySyncResult(pollData)
-          return
-        }
-        if (pollData.status === 'failed') {
-          throw new Error(pollData.message || '同步 Sitelink 映射失败')
-        }
-        if (pollData.status === 'idle') {
-          throw new Error('Sitelink 同步状态丢失，请重试')
-        }
-      }
-
-      throw new Error('Sitelink 同步超时，请稍后刷新页面查看结果')
+      await pollSitelinkSyncUntilDone({
+        pollUrl,
+        pollIntervalMs: data.poll_interval_ms,
+        startToastMessage,
+      })
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '同步 Sitelink 映射失败'
       toast.error(message)
-    } finally {
-      setSitelinkResyncLoading(false)
     }
   }
 

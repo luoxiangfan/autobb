@@ -98,6 +98,7 @@ describe('POST /api/url-swap/tasks/[id]/sync-sitelink-targets', () => {
 
     expect(res.status).toBe(202)
     expect(data.status).toBe('running')
+    expect(data.already_running).toBe(true)
     expect(syncJobFns.executeUrlSwapSitelinkTargetsSyncJob).not.toHaveBeenCalled()
   })
 })

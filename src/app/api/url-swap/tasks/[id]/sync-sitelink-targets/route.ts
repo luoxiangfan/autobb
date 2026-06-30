@@ -18,17 +18,24 @@ function buildPollResponsePath(taskId: string): string {
   return `/api/url-swap/tasks/${taskId}/sync-sitelink-targets`
 }
 
-function buildAcceptedResponse(taskId: string, status: 'running' | 'completed' | 'failed') {
+function buildAcceptedResponse(
+  taskId: string,
+  status: 'running' | 'completed' | 'failed',
+  options?: { alreadyRunning?: boolean }
+) {
   return NextResponse.json(
     {
       success: status === 'completed',
       status,
       async: true,
+      already_running: options?.alreadyRunning === true,
       poll_url: buildPollResponsePath(taskId),
       poll_interval_ms: POLL_INTERVAL_MS,
       message:
         status === 'running'
-          ? 'Sitelink 同步已在后台执行，请稍候…'
+          ? options?.alreadyRunning
+            ? 'Sitelink 同步进行中，请稍候…'
+            : 'Sitelink 同步已在后台执行，请稍候…'
           : status === 'completed'
             ? 'Sitelink 同步已完成'
             : 'Sitelink 同步失败',
@@ -107,7 +114,7 @@ export const POST = withAuth(async (_request, user, context) => {
 
   const startResult = await tryStartUrlSwapSitelinkSync(id, user.userId)
   if (!startResult.started) {
-    return buildAcceptedResponse(id, 'running')
+    return buildAcceptedResponse(id, 'running', { alreadyRunning: true })
   }
 
   void executeUrlSwapSitelinkTargetsSyncJob({

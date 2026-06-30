@@ -77,13 +77,19 @@ export default function UrlSwapSitelinkTargetsSection({
         )}
       </CardHeader>
       <CardContent className="space-y-4">
+        {resyncLoading && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800 flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 shrink-0 animate-spin" />
+            <span>正在从 Google Ads 同步 Sitelink 映射，请勿关闭页面…</span>
+          </div>
+        )}
         {sitelinkTargets.length === 0 ? (
           <div className="text-sm text-gray-500 space-y-2">
             <p>暂无 Sitelink 映射。</p>
             <p className="text-xs">
               Store 类型 Offer 需配置商品推广链接（store_product_links）。Campaign 已发布 Sitelink
-              时，打开详情页会自动从 Google Ads 同步；若仍为空，可点击「重新同步」或确认远端
-              Campaign 已有 Sitelink。
+              后，请点击「重新同步」从 Google Ads 拉取映射；若仍为空，请确认远端 Campaign 已有
+              Sitelink。
             </p>
             {syncErrors.length > 0 && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 space-y-1">
