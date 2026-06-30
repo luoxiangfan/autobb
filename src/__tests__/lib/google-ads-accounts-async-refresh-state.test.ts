@@ -16,16 +16,24 @@ const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getRedisClient: vi.fn(() => redisFns.client),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getRedisClient: vi.fn(() => redisFns.client),
+  }
+})
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    queryOne: dbFns.queryOne,
-    exec: dbFns.exec,
-  })),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => ({
+      queryOne: dbFns.queryOne,
+      exec: dbFns.exec,
+    })),
+  }
+})
 
 import { getRedisClient } from '@/lib/common/server'
 import {
