@@ -643,7 +643,7 @@ export function getAutoFixSuggestions(issue: ComplianceIssue, originalText: stri
 
     case 'R_REPEATED_PUNCTUATION':
       // 移除重复标点
-      return originalText.replace(/[!?。，,.]{2 }/g, (match) => match[0])
+      return originalText.replace(/[!?。，,.]{2,}/g, (match) => match[0])
 
     case 'R_EXCESSIVE_EXCLAMATION':
       // 保留最多1个感叹号

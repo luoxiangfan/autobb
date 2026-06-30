@@ -14,7 +14,7 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/campaign', () => ({
+vi.mock('@/lib/campaign/batch-start-tasks', () => ({
   batchStartTasksForOffers: batchStartFns.batchStartTasksForOffers,
 }))
 

@@ -3,29 +3,36 @@
  * 见 docs/offer-extract-api.md
  */
 
-import { describe, expect, it } from 'vitest'
-import { normalizeOfferExtractRequestBody } from '@/lib/common/server'
-import { resolveExtractionModeInput } from '@/lib/offers/server'
-import { resolveExtractPageInput } from '@/lib/offers/server'
-import { applyOfferUpdateFromBody } from '@/lib/offers/server'
-import {
-  OfferExtractRequestError,
-  parseNewOfferExtractRequest,
-  validateExistingOfferForExtraction,
-} from '@/lib/offers/server'
-import { vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/offers', () => ({
+const offerDbFns = vi.hoisted(() => ({
   findOfferById: vi.fn(),
   updateOffer: vi.fn(),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  invalidateOfferCache: vi.fn(),
+vi.mock('@/lib/offers/offers', () => ({
+  findOfferById: offerDbFns.findOfferById,
+  updateOffer: offerDbFns.updateOffer,
 }))
 
-import { findOfferById, updateOffer } from '@/lib/offers/server'
-import { invalidateOfferCache } from '@/lib/common/server'
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    invalidateOfferCache: vi.fn(),
+  }
+})
+
+import { normalizeOfferExtractRequestBody, invalidateOfferCache } from '@/lib/common/server'
+import {
+  resolveExtractionModeInput,
+  resolveExtractPageInput,
+  applyOfferUpdateFromBody,
+  OfferExtractRequestError,
+  parseNewOfferExtractRequest,
+  validateExistingOfferForExtraction,
+} from '@/lib/offers/server'
+import { findOfferById, updateOffer } from '@/lib/offers/offers'
 
 const mockOffer = {
   id: 1,

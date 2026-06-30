@@ -11,9 +11,18 @@ const redisFns = vi.hoisted(() => ({
   } | null,
 }))
 
-vi.mock('@/lib/common/server', () => ({
+vi.mock('@/lib/common/redis-client', () => ({
   getRedisClient: vi.fn(() => redisFns.client),
+  isRedisAvailable: vi.fn(() => Boolean(redisFns.client)),
 }))
+
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getRedisClient: vi.fn(() => redisFns.client),
+  }
+})
 
 import { getRedisClient } from '@/lib/common/server'
 import {

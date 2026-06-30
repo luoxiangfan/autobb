@@ -3,25 +3,25 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mockQuery = vi.fn()
 const mockQueryOne = vi.fn()
 
+const mockExec = vi.fn()
+
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     query: mockQuery,
     queryOne: mockQueryOne,
+    exec: mockExec,
   })),
 }))
 
 const mockAbandonStaleForOffers = vi.fn()
 const mockGetConflictsForOffers = vi.fn()
 
-vi.mock('@/lib/campaign', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/campaign/server')>()
-  return {
-    ...actual,
-    abandonStalePendingCampaignsForOffers: (...args: unknown[]) =>
-      mockAbandonStaleForOffers(...args),
-    getActiveCampaignConflictsForOffers: (...args: unknown[]) => mockGetConflictsForOffers(...args),
-  }
-})
+vi.mock('@/lib/campaign/campaign-offer-constraint', () => ({
+  abandonStalePendingCampaignsForOffers: (...args: unknown[]) => mockAbandonStaleForOffers(...args),
+  getActiveCampaignConflictsForOffers: (...args: unknown[]) => mockGetConflictsForOffers(...args),
+  CAMPAIGN_OFFER_ONE_TO_ONE_MESSAGE: '同一 Offer 只能有一个广告系列',
+  isCampaignOfferUniqueViolation: vi.fn(() => false),
+}))
 
 import {
   BACKUP_CREATE_BLOCKED_BY_ACTIVE_CAMPAIGN_MESSAGE,
@@ -32,11 +32,13 @@ describe('validateCampaignBackupsForBatchCreate', () => {
   beforeEach(() => {
     mockQuery.mockReset()
     mockQueryOne.mockReset()
+    mockExec.mockReset()
     mockAbandonStaleForOffers.mockReset()
     mockGetConflictsForOffers.mockReset()
     mockAbandonStaleForOffers.mockResolvedValue(0)
     mockGetConflictsForOffers.mockResolvedValue(new Map())
-    mockQueryOne.mockResolvedValue({ is_active: 1, is_deleted: 0 })
+    mockExec.mockResolvedValue({ changes: 0 })
+    mockQueryOne.mockResolvedValue({ is_active: true, is_deleted: false })
   })
 
   it('rejects when offer already has an active campaign', async () => {

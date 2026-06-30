@@ -26,14 +26,18 @@ vi.mock('@/lib/affiliate/products', () => ({
   normalizeAffiliateProductStatusFilter: (value: string | null) => value || 'all',
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  buildProductListCacheHash: cacheFns.buildProductListCacheHash,
-  buildProductSummaryCacheHash: cacheFns.buildProductSummaryCacheHash,
-  getCachedProductList: cacheFns.getCachedProductList,
-  setCachedProductSummary: cacheFns.setCachedProductSummary,
-  setLatestProductListQuery: cacheFns.setLatestProductListQuery,
-  setCachedProductList: cacheFns.setCachedProductList,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    buildProductListCacheHash: cacheFns.buildProductListCacheHash,
+    buildProductSummaryCacheHash: cacheFns.buildProductSummaryCacheHash,
+    getCachedProductList: cacheFns.getCachedProductList,
+    setCachedProductSummary: cacheFns.setCachedProductSummary,
+    setLatestProductListQuery: cacheFns.setLatestProductListQuery,
+    setCachedProductList: cacheFns.setCachedProductList,
+  }
+})
 
 vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   isProductManagementEnabledForUser: authFns.isProductManagementEnabledForUser,

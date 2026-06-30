@@ -35,13 +35,17 @@ vi.mock('@/lib/db', () => ({
   })),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  buildProductSummaryCacheHash: cacheFns.buildProductSummaryCacheHash,
-  buildProductSummaryRouteCacheHash: cacheFns.buildProductSummaryRouteCacheHash,
-  getCachedProductSummaryRoute: cacheFns.getCachedProductSummaryRoute,
-  setCachedProductSummary: cacheFns.setCachedProductSummary,
-  setCachedProductSummaryRoute: cacheFns.setCachedProductSummaryRoute,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    buildProductSummaryCacheHash: cacheFns.buildProductSummaryCacheHash,
+    buildProductSummaryRouteCacheHash: cacheFns.buildProductSummaryRouteCacheHash,
+    getCachedProductSummaryRoute: cacheFns.getCachedProductSummaryRoute,
+    setCachedProductSummary: cacheFns.setCachedProductSummary,
+    setCachedProductSummaryRoute: cacheFns.setCachedProductSummaryRoute,
+  }
+})
 
 vi.mock('@/lib/openclaw/gateway/request-auth', () => ({
   isProductManagementEnabledForUser: authFns.isProductManagementEnabledForUser,

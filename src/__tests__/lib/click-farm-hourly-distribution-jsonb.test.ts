@@ -3,9 +3,13 @@ import { getDateInTimezone } from '@/lib/common/server'
 
 let mockDb: any
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: () => mockDb,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: () => mockDb,
+  }
+})
 
 function buildHourlyBreakdown(
   actualAtHour0: number

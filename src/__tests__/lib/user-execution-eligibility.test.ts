@@ -39,7 +39,7 @@ describe('user-execution-eligibility', () => {
 
   it('blocks inactive users', async () => {
     queryOne.mockResolvedValueOnce({
-      is_active: 0,
+      is_active: false,
       package_expires_at: null,
     })
 
@@ -54,7 +54,7 @@ describe('user-execution-eligibility', () => {
   it('blocks expired users and throws suspended error with code', async () => {
     const expired = new Date(Date.now() - 60_000).toISOString()
     queryOne.mockResolvedValue({
-      is_active: 1,
+      is_active: true,
       package_expires_at: expired,
     })
 

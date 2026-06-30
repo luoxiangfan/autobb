@@ -7,33 +7,41 @@ const dbState = vi.hoisted(() => ({
   insertParams: null as any[] | null,
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    queryOne: dbState.queryOne,
-    exec: dbState.exec,
-  })),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => ({
+      queryOne: dbState.queryOne,
+      exec: dbState.exec,
+    })),
+  }
+})
 
-vi.mock('@/lib/keywords/server', () => ({
-  getSearchTermAutoNegativeConfigFromEnv: vi.fn(() => ({
-    enabled: false,
-    lookbackDays: 7,
-    minClicks: 1,
-    minCost: 0,
-    maxPerAdGroup: 5,
-    maxPerUser: 5,
-  })),
-  getSearchTermAutoPositiveConfigFromEnv: vi.fn(() => ({
-    enabled: false,
-    lookbackDays: 7,
-    minClicks: 1,
-    minConversions: 1,
-    maxPerAdGroup: 3,
-    maxPerUser: 3,
-  })),
-  runSearchTermAutoNegatives: vi.fn(),
-  runSearchTermAutoPositiveKeywords: vi.fn(),
-}))
+vi.mock('@/lib/keywords/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords/server')>()
+  return {
+    ...actual,
+    getSearchTermAutoNegativeConfigFromEnv: vi.fn(() => ({
+      enabled: false,
+      lookbackDays: 7,
+      minClicks: 1,
+      minCost: 0,
+      maxPerAdGroup: 5,
+      maxPerUser: 5,
+    })),
+    getSearchTermAutoPositiveConfigFromEnv: vi.fn(() => ({
+      enabled: false,
+      lookbackDays: 7,
+      minClicks: 1,
+      minConversions: 1,
+      maxPerAdGroup: 3,
+      maxPerUser: 3,
+    })),
+    runSearchTermAutoNegatives: vi.fn(),
+    runSearchTermAutoPositiveKeywords: vi.fn(),
+  }
+})
 
 describe('createAdCreative keyword metadata', () => {
   beforeEach(() => {

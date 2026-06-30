@@ -25,21 +25,29 @@ vi.mock('@/lib/auth', () => ({
   },
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  apiCache: {
-    get: cacheFns.get,
-    set: cacheFns.set,
-  },
-  generateCacheKey: cacheFns.generateCacheKey,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    apiCache: {
+      get: cacheFns.get,
+      set: cacheFns.set,
+    },
+    generateCacheKey: cacheFns.generateCacheKey,
+  }
+})
 
 vi.mock('@/lib/db', () => ({
   getDatabase: dbFns.getDatabase,
 }))
 
-vi.mock('@/lib/offers', () => ({
-  listOffers: offerFns.listOffers,
-}))
+vi.mock('@/lib/offers/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/offers/server')>()
+  return {
+    ...actual,
+    listOffers: offerFns.listOffers,
+  }
+})
 
 import { GET } from '@/app/api/dashboard/summary/route'
 

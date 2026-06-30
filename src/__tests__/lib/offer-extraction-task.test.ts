@@ -27,11 +27,15 @@ const queueFns = vi.hoisted(() => ({
   removeTask: vi.fn(),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: dbFns.getDatabase,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: dbFns.getDatabase,
+  }
+})
 
-vi.mock('@/lib/offers', () => ({
+vi.mock('@/lib/offers/offers', () => ({
   updateOffer: vi.fn(),
   updateOfferScrapeStatus: offerStatusFns.updateOfferScrapeStatus,
 }))
