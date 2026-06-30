@@ -30,6 +30,11 @@ describe('normalizeAffiliateLinkKey', () => {
     const { normalizeAffiliateLinkKey } = await import('@/lib/url-swap/sitelink-affiliate-matching')
     expect(normalizeAffiliateLinkKey('https://pboost.me/r2aECf1tv/')).toBe('pboost.me/r2aECf1tv')
     expect(normalizeAffiliateLinkKey('http://www.pboost.me/r2aECf1tv')).toBe('pboost.me/r2aECf1tv')
+    expect(
+      normalizeAffiliateLinkKey(
+        'https://yeahpromos.com/index/index/openurl?track=938d05453d92bf1c&url='
+      )
+    ).toBe('yeahpromos.com/index/index/openurl?track=938d05453d92bf1c')
   })
 })
 

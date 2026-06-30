@@ -142,6 +142,8 @@ async function fetchCampaignSitelinkAssets(params: {
   return rows.map(parseGaqlRow).filter((row): row is RemoteSitelinkAsset => row !== null)
 }
 
+export const fetchCampaignSitelinkAssetsForUrlSwap = fetchCampaignSitelinkAssets
+
 export async function backfillUrlSwapSitelinkTargets(
   options: BackfillUrlSwapSitelinkTargetsOptions = {}
 ): Promise<BackfillUrlSwapSitelinkTargetsResult> {
@@ -274,17 +276,47 @@ export async function backfillUrlSwapSitelinkTargets(
         }
 
         for (const asset of remoteAssets) {
+          const split = splitUrlBaseAndSuffix(asset.finalUrl)
+          const explicitSuffix = asset.finalUrlSuffix?.trim()
+          const currentFinalUrl = split.base
+          const currentFinalUrlSuffix = explicitSuffix || split.suffix || null
+
           const sortIndex = findStoreProductLinkIndexForSitelinkFinalUrl(
             asset.finalUrl,
             resolvedStoreLinks
           )
-          if (sortIndex < 0) continue
+
+          if (sortIndex < 0) {
+            const db = await getDatabase()
+            const now = new Date().toISOString()
+            const refreshed = await db.exec(
+              `
+              UPDATE url_swap_sitelink_targets
+              SET current_final_url = ?,
+                  current_final_url_suffix = ?,
+                  link_text = ?,
+                  updated_at = ?
+              WHERE task_id = ?
+                AND asset_resource_name = ?
+                AND status IN ('active', 'paused', 'invalid')
+            `,
+              [
+                currentFinalUrl,
+                currentFinalUrlSuffix,
+                asset.linkText,
+                now,
+                task.id,
+                asset.assetResourceName,
+              ]
+            )
+            if (Number((refreshed as { changes?: number })?.changes) > 0) {
+              result.upsertedMappings++
+            }
+            continue
+          }
 
           const affiliateLink = storeProductLinks[sortIndex]?.trim()
           if (!affiliateLink) continue
-
-          const split = splitUrlBaseAndSuffix(asset.finalUrl)
-          const explicitSuffix = asset.finalUrlSuffix?.trim()
 
           await upsertUrlSwapSitelinkTarget({
             taskId: task.id,
@@ -298,8 +330,8 @@ export async function backfillUrlSwapSitelinkTargets(
             assetResourceName: asset.assetResourceName,
             assetId: asset.assetId,
             linkText: asset.linkText,
-            currentFinalUrl: split.base,
-            currentFinalUrlSuffix: explicitSuffix || split.suffix || null,
+            currentFinalUrl,
+            currentFinalUrlSuffix,
             status: targetStatus,
           })
           matchedSortIndexes.add(sortIndex)

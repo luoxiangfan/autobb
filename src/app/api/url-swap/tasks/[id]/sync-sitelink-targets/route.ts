@@ -32,6 +32,7 @@ export const POST = withAuth(async (_request, user, context) => {
       taskId: id,
       offerId: task.offer_id,
       userId: user.userId,
+      refreshFromGoogleAds: true,
     })
     sitelink_targets = reconciled.targets
   }

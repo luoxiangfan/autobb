@@ -79,6 +79,36 @@ describe('resolveStoreProductLinkFinalUrls', () => {
     dbFns.query
       .mockResolvedValueOnce([
         {
+          product_url: 'https://www.amazon.com/dp/B0B6B51RXC',
+          short_promo_link: null,
+          promo_link: 'https://yeahpromos.com/index/index/openurl?track=938d05453d92bf1c&url=',
+          asin: 'B0B6B51RXC',
+          raw_json: null,
+        },
+      ])
+      .mockResolvedValueOnce([])
+
+    const resolved = await resolveStoreProductLinkFinalUrls({
+      storeProductLinks: ['https://yeahpromos.com/index/index/openurl?track=938d05453d92bf1c&url='],
+      targetCountry: 'US',
+      userId: 1,
+      offerId: 10,
+    })
+
+    expect(resolved).toEqual([
+      {
+        affiliateLink: 'https://yeahpromos.com/index/index/openurl?track=938d05453d92bf1c&url=',
+        finalUrl: 'https://www.amazon.com/dp/B0B6B51RXC',
+      },
+    ])
+    expect(proxyFns.initializeProxyPool).not.toHaveBeenCalled()
+    expect(resolveFns.resolveAffiliateLinkForUrlSwap).not.toHaveBeenCalled()
+  })
+
+  it('uses affiliate_products mapping by pboost short link when scraped_data is null', async () => {
+    dbFns.query
+      .mockResolvedValueOnce([
+        {
           product_url: 'https://www.amazon.com/dp/B0CZ9GF4VY',
           short_promo_link: 'https://pboost.me/r2aECf1tv',
           promo_link: null,

@@ -94,8 +94,14 @@ export {
 export {
   reconcileUrlSwapSitelinkAffiliateLinks,
   resolveAffiliateLinkForSitelinkTarget,
+  enrichUrlSwapSitelinkTargetsAffiliateLinks,
   type ReconcileUrlSwapSitelinkAffiliateLinksResult,
 } from './reconcile-sitelink-affiliate-links'
+
+export {
+  refreshUrlSwapSitelinkTargetsFromGoogleAds,
+  type RefreshUrlSwapSitelinkTargetsFromGoogleAdsResult,
+} from './refresh-sitelink-targets-from-ads'
 
 export {
   removePendingUrlSwapQueueTasksByTaskIds,

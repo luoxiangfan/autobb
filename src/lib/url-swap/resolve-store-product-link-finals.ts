@@ -6,6 +6,7 @@ import { initializeProxyPool } from '@/lib/offers/server'
 import type { SupplementalProductResult } from '@/lib/offers/offer-supplemental-product-types'
 import { resolveAffiliateLinkForUrlSwap } from './url-swap-resolve-config'
 import {
+  extractYeahpromosTrackKey,
   normalizeAffiliateLinkKey,
   type ResolvedStoreProductLink,
 } from './sitelink-affiliate-matching'
@@ -66,8 +67,10 @@ async function loadSupplementalFinalUrlMap(params: {
   for (const item of parseSupplementalProductsFromScrapedData(row.scraped_data)) {
     const affiliateKey = normalizeAffiliateLinkKey(item.sourceAffiliateLink)
     const finalUrl = item.finalUrl?.trim()
-    if (!affiliateKey || !finalUrl || item.error) continue
-    map.set(affiliateKey, finalUrl)
+    if (!finalUrl || item.error) continue
+    if (affiliateKey) map.set(affiliateKey, finalUrl)
+    const track = extractYeahpromosTrackKey(item.sourceAffiliateLink)
+    if (track) map.set(`yeahpromos:track:${track.toLowerCase()}`, finalUrl)
   }
   return map
 }
@@ -79,7 +82,12 @@ async function loadAffiliateProductFinalUrlMap(params: {
   const wanted = new Set(
     params.storeProductLinks.map((link) => normalizeAffiliateLinkKey(link)).filter(Boolean)
   )
-  if (wanted.size === 0) return new Map()
+  const wantedTracks = new Set(
+    params.storeProductLinks
+      .map((link) => extractYeahpromosTrackKey(link)?.toLowerCase())
+      .filter((track): track is string => Boolean(track))
+  )
+  if (wanted.size === 0 && wantedTracks.size === 0) return new Map()
 
   const db = await getDatabase()
   const rows = await db.query<{
@@ -113,6 +121,10 @@ async function loadAffiliateProductFinalUrlMap(params: {
       const key = normalizeAffiliateLinkKey(promoLink || '')
       if (key && wanted.has(key)) {
         map.set(key, finalUrl)
+      }
+      const track = extractYeahpromosTrackKey(promoLink || '')
+      if (track && wantedTracks.has(track.toLowerCase())) {
+        map.set(`yeahpromos:track:${track.toLowerCase()}`, finalUrl)
       }
     }
   }
@@ -182,6 +194,25 @@ function needsLiveStoreLinkResolution(
   return !maps.some((map) => map.has(affiliateKey))
 }
 
+function lookupCachedStoreLinkFinalUrl(
+  affiliateLink: string,
+  maps: {
+    supplementalMap: Map<string, string>
+    affiliateProductMap: Map<string, string>
+    openclawProductMap: Map<string, string>
+  }
+): string | undefined {
+  const affiliateKey = normalizeAffiliateLinkKey(affiliateLink)
+  const track = extractYeahpromosTrackKey(affiliateLink)?.toLowerCase()
+
+  return (
+    maps.supplementalMap.get(affiliateKey) ||
+    maps.affiliateProductMap.get(affiliateKey) ||
+    (track ? maps.affiliateProductMap.get(`yeahpromos:track:${track}`) : undefined) ||
+    maps.openclawProductMap.get(affiliateKey)
+  )
+}
+
 export async function resolveStoreProductLinkFinalUrls(params: {
   storeProductLinks: string[]
   targetCountry: string
@@ -218,11 +249,11 @@ export async function resolveStoreProductLinkFinalUrls(params: {
       continue
     }
 
-    const affiliateKey = normalizeAffiliateLinkKey(trimmed)
-    const cachedFinalUrl =
-      supplementalMap.get(affiliateKey) ||
-      affiliateProductMap.get(affiliateKey) ||
-      openclawProductMap.get(affiliateKey)
+    const cachedFinalUrl = lookupCachedStoreLinkFinalUrl(trimmed, {
+      supplementalMap,
+      affiliateProductMap,
+      openclawProductMap,
+    })
     if (cachedFinalUrl) {
       resolved.push({ affiliateLink: trimmed, finalUrl: cachedFinalUrl })
       continue
