@@ -29,17 +29,19 @@ export const GET = withAuth(async (_request, user, context) => {
     return NextResponse.json({ error: 'validation_error', message: '缺少任务 ID' }, { status: 400 })
   }
 
-  const task = await getUrlSwapTaskById(id, user.userId)
+  // 管理员健康告警会链接到任意用户的任务，需跳过 user_id 归属校验
+  const lookupUserId = user.role === 'admin' ? 0 : user.userId
+  const task = await getUrlSwapTaskById(id, lookupUserId)
   if (!task) {
     return NextResponse.json({ error: 'not_found', message: '任务不存在' }, { status: 404 })
   }
 
-  const stats = await getUrlSwapTaskStats(id, user.userId)
-  const targets = await getUrlSwapTaskTargets(id, user.userId)
-  const sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
+  const stats = await getUrlSwapTaskStats(id, lookupUserId)
+  const targets = await getUrlSwapTaskTargets(id, lookupUserId)
+  const sitelink_targets = await getUrlSwapSitelinkTargets(id, lookupUserId)
   const taskWithTargets = { ...task, targets, sitelink_targets }
   const has_enabled_campaign = await hasEnabledCampaignForOffer({
-    userId: user.userId,
+    userId: task.user_id,
     offerId: task.offer_id,
   })
   const taskWithCampaign = { ...taskWithTargets, has_enabled_campaign }

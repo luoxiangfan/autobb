@@ -13,6 +13,7 @@ import { logger } from '@/lib/common/server'
 import { getDatabase } from '@/lib/db'
 import { parseJsonField } from '@/lib/db'
 import type { UrlSwapTask } from '@/lib/url-swap/url-swap-types'
+import { URL_SWAP_TASK_NOT_DELETED_CLAUSE } from '@/lib/url-swap/url-swap-queries'
 import { suspendUrlSwapTaskExecution } from '@/lib/url-swap/queue-cleanup'
 import { notifySwapError, notifyUrlSwapTaskPaused } from './notifications'
 
@@ -92,7 +93,7 @@ export async function getUrlSwapHealth(): Promise<UrlSwapHealthStatus> {
 
   const tasks = await db.query<any>(`
     SELECT * FROM url_swap_tasks
-    WHERE is_deleted = false
+    WHERE ${URL_SWAP_TASK_NOT_DELETED_CLAUSE}
   `)
 
   const parsedTasks: UrlSwapTask[] = tasks.map((row) => ({
@@ -213,7 +214,9 @@ async function autoFixStuckTask(taskId: string): Promise<boolean> {
   try {
     const task = await db.queryOne<any>(
       `
-      SELECT * FROM url_swap_tasks WHERE id = ?
+      SELECT * FROM url_swap_tasks
+      WHERE id = ?
+        AND ${URL_SWAP_TASK_NOT_DELETED_CLAUSE}
     `,
       [taskId]
     )
@@ -248,7 +251,9 @@ async function autoDisableHighFailureTask(taskId: string): Promise<boolean> {
   try {
     const task = await db.queryOne<any>(
       `
-      SELECT * FROM url_swap_tasks WHERE id = ?
+      SELECT * FROM url_swap_tasks
+      WHERE id = ?
+        AND ${URL_SWAP_TASK_NOT_DELETED_CLAUSE}
     `,
       [taskId]
     )

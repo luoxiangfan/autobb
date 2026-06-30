@@ -6,6 +6,9 @@ import { filterRowsByUserPackageExpiry } from '@/lib/common/task-scheduling'
 import type { UrlSwapTask, UrlSwapTaskStatus, UrlSwapTaskListItem } from './url-swap-types'
 import { parseUrlSwapTask } from './url-swap-row'
 
+/** 未软删除任务 SQL 条件，与 getUrlSwapTaskById 语义一致 */
+export const URL_SWAP_TASK_NOT_DELETED_CLAUSE = '(is_deleted IS NOT TRUE) AND deleted_at IS NULL'
+
 /**
  * 获取任务（带权限验证）
  */
@@ -17,7 +20,7 @@ export async function getUrlSwapTaskById(id: string, userId: number): Promise<Ur
     SELECT * FROM url_swap_tasks
     WHERE id = ?
       AND (? = 0 OR user_id = ?)
-      AND (is_deleted = false OR is_deleted IS NULL)
+      AND ${URL_SWAP_TASK_NOT_DELETED_CLAUSE}
     `,
     [id, userId, userId]
   )

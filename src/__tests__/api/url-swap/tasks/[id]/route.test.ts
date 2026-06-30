@@ -26,6 +26,7 @@ const urlSwapFns = vi.hoisted(() => ({
   getUrlSwapTaskStats: vi.fn(async () => ({})),
   updateUrlSwapTask: vi.fn(async () => ({})),
   getUrlSwapTaskTargets: vi.fn(async () => []),
+  getUrlSwapSitelinkTargets: vi.fn(async () => []),
 }))
 
 vi.mock('@/lib/auth', () => ({
@@ -46,6 +47,11 @@ vi.mock('@/lib/url-swap', () => ({
   getUrlSwapTaskStats: urlSwapFns.getUrlSwapTaskStats,
   updateUrlSwapTask: urlSwapFns.updateUrlSwapTask,
   getUrlSwapTaskTargets: urlSwapFns.getUrlSwapTaskTargets,
+  getUrlSwapSitelinkTargets: urlSwapFns.getUrlSwapSitelinkTargets,
+}))
+
+vi.mock('@/lib/campaign/campaign-health-guard', () => ({
+  hasEnabledCampaignForOffer: vi.fn(async () => true),
 }))
 
 vi.mock('@/lib/db', () => ({
@@ -64,11 +70,56 @@ vi.mock('@/lib/url-swap/url-swap-scheduler', () => ({
   triggerUrlSwapScheduling: vi.fn(async () => {}),
 }))
 
-import { DELETE } from '@/app/api/url-swap/tasks/[id]/route'
+import { DELETE, GET } from '@/app/api/url-swap/tasks/[id]/route'
+
+describe('GET /api/url-swap/tasks/[id]', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    authUser.role = 'user'
+    authUser.userId = 1
+    urlSwapFns.getUrlSwapTaskById.mockResolvedValue({
+      id: 'us-task-1',
+      user_id: 42,
+      offer_id: 100,
+      status: 'enabled',
+    })
+  })
+
+  it('uses owner userId for normal users', async () => {
+    const req = new NextRequest('http://localhost/api/url-swap/tasks/us-task-1', {
+      method: 'GET',
+      headers: { 'x-user-id': '1' },
+    })
+
+    const res = await GET(req, { params: Promise.resolve({ id: 'us-task-1' }) })
+
+    expect(res.status).toBe(200)
+    expect(urlSwapFns.getUrlSwapTaskById).toHaveBeenCalledWith('us-task-1', 1)
+    expect(urlSwapFns.getUrlSwapTaskStats).toHaveBeenCalledWith('us-task-1', 1)
+    expect(urlSwapFns.getUrlSwapTaskTargets).toHaveBeenCalledWith('us-task-1', 1)
+  })
+
+  it('skips owner check when admin views another users task', async () => {
+    authUser.role = 'admin'
+
+    const req = new NextRequest('http://localhost/api/url-swap/tasks/us-task-1', {
+      method: 'GET',
+    })
+
+    const res = await GET(req, { params: Promise.resolve({ id: 'us-task-1' }) })
+
+    expect(res.status).toBe(200)
+    expect(urlSwapFns.getUrlSwapTaskById).toHaveBeenCalledWith('us-task-1', 0)
+    expect(urlSwapFns.getUrlSwapTaskStats).toHaveBeenCalledWith('us-task-1', 0)
+    expect(urlSwapFns.getUrlSwapTaskTargets).toHaveBeenCalledWith('us-task-1', 0)
+  })
+})
 
 describe('DELETE /api/url-swap/tasks/[id]', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authUser.role = 'user'
+    authUser.userId = 1
     urlSwapFns.getUrlSwapTaskById.mockResolvedValue({
       id: 'us-task-1',
       user_id: 1,
