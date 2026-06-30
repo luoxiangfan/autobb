@@ -10,7 +10,6 @@ import {
   updateUrlSwapTask,
   getUrlSwapTaskTargets,
   getUrlSwapSitelinkTargets,
-  syncStoreSitelinkTargetsForOffer,
 } from '@/lib/url-swap'
 import {
   findInvalidAffiliateLinks,
@@ -21,7 +20,6 @@ import { getDatabase } from '@/lib/db'
 import { triggerUrlSwapScheduling } from '@/lib/url-swap/url-swap-scheduler'
 import { removePendingUrlSwapQueueTasksByTaskIds } from '@/lib/url-swap/queue-cleanup'
 import { hasEnabledCampaignForOffer } from '@/lib/campaign/campaign-health-guard'
-import { reconcileUrlSwapSitelinkAffiliateLinks } from '@/lib/url-swap/reconcile-sitelink-affiliate-links'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,35 +36,7 @@ export const GET = withAuth(async (_request, user, context) => {
 
   const stats = await getUrlSwapTaskStats(id, user.userId)
   const targets = await getUrlSwapTaskTargets(id, user.userId)
-  let sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
-  let sitelink_sync: Awaited<ReturnType<typeof syncStoreSitelinkTargetsForOffer>> | null = null
-
-  if (sitelink_targets.length === 0) {
-    try {
-      sitelink_sync = await syncStoreSitelinkTargetsForOffer(task.offer_id, user.userId)
-      sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
-    } catch (syncError: unknown) {
-      const message = syncError instanceof Error ? syncError.message : String(syncError)
-      sitelink_sync = { upserted: 0, skipped: false, errors: [message] }
-      console.warn(`[url-swap] 详情页 Sitelink 映射同步失败（非致命）: ${message}`)
-    }
-  }
-
-  if (sitelink_targets.length > 0) {
-    try {
-      const reconciled = await reconcileUrlSwapSitelinkAffiliateLinks({
-        taskId: id,
-        offerId: task.offer_id,
-        userId: user.userId,
-        refreshFromGoogleAds: true,
-      })
-      sitelink_targets = reconciled.targets
-    } catch (reconcileError: unknown) {
-      const message =
-        reconcileError instanceof Error ? reconcileError.message : String(reconcileError)
-      console.warn(`[url-swap] Sitelink affiliate_link 对齐失败（非致命）: ${message}`)
-    }
-  }
+  const sitelink_targets = await getUrlSwapSitelinkTargets(id, user.userId)
   const taskWithTargets = { ...task, targets, sitelink_targets }
   const has_enabled_campaign = await hasEnabledCampaignForOffer({
     userId: user.userId,
@@ -81,7 +51,6 @@ export const GET = withAuth(async (_request, user, context) => {
     stats,
     targets,
     sitelink_targets,
-    sitelink_sync,
   })
 })
 
