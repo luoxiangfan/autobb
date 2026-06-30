@@ -95,18 +95,59 @@ export default function UrlSwapTaskDetailPage() {
         method: 'POST',
       })
       const data = await response.json()
-      if (!response.ok) {
+      if (!response.ok && response.status !== 202) {
         throw new Error(data.message || '同步 Sitelink 映射失败')
       }
-      setSitelinkSync(data.sitelink_sync ?? null)
-      setTask((prev) =>
-        prev ? { ...prev, sitelink_targets: data.sitelink_targets ?? prev.sitelink_targets } : prev
-      )
-      if ((data.sitelink_targets?.length ?? 0) > 0) {
-        toast.success(data.message || 'Sitelink 映射已同步')
-      } else {
-        toast.error(data.message || '未能同步 Sitelink 映射')
+
+      const pollIntervalMs = Number(data.poll_interval_ms) || 2500
+      const pollUrl =
+        typeof data.poll_url === 'string'
+          ? data.poll_url
+          : `/api/url-swap/tasks/${taskId}/sync-sitelink-targets`
+
+      const applySyncResult = (result: {
+        sitelink_sync?: SyncStoreSitelinkTargetsForOfferResult | null
+        sitelink_targets?: UrlSwapTask['sitelink_targets']
+        message?: string
+        success?: boolean
+      }) => {
+        setSitelinkSync(result.sitelink_sync ?? null)
+        setTask((prev) =>
+          prev
+            ? { ...prev, sitelink_targets: result.sitelink_targets ?? prev.sitelink_targets }
+            : prev
+        )
+        if ((result.sitelink_targets?.length ?? 0) > 0 || result.success) {
+          toast.success(result.message || 'Sitelink 映射已同步')
+        } else {
+          toast.error(result.message || '未能同步 Sitelink 映射')
+        }
       }
+
+      if (response.status !== 202 && data.status === 'completed') {
+        applySyncResult(data)
+        return
+      }
+
+      const deadline = Date.now() + 15 * 60 * 1000
+      while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+        const pollResponse = await fetch(pollUrl)
+        const pollData = await pollResponse.json()
+
+        if (pollData.status === 'completed') {
+          applySyncResult(pollData)
+          return
+        }
+        if (pollData.status === 'failed') {
+          throw new Error(pollData.message || '同步 Sitelink 映射失败')
+        }
+        if (pollData.status === 'idle') {
+          throw new Error('Sitelink 同步状态丢失，请重试')
+        }
+      }
+
+      throw new Error('Sitelink 同步超时，请稍后刷新页面查看结果')
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '同步 Sitelink 映射失败'
       toast.error(message)
