@@ -45,7 +45,6 @@
     "db:backup": "tsx scripts/backup-database.ts",
     "admin:ensure": "tsx scripts/ensure-admin-account.ts",
     "validate-schema": "tsx scripts/validate-db-schema.ts",
-    "validate:regex-quantifiers": "node scripts/validate-regex-quantifiers.mjs",
     "type-check": "tsc --noEmit",
     "proxy:diagnose": "tsx scripts/diagnose-proxy-connectivity.ts"
   },
