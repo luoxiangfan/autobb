@@ -5,7 +5,7 @@ import {
   resolveStoreProductLinksForUpdate,
 } from '@/lib/offers/server'
 
-vi.mock('@/lib/offers', () => ({
+vi.mock('@/lib/offers/offers', () => ({
   findOfferById: vi.fn(),
   updateOffer: vi.fn(),
 }))
@@ -14,7 +14,7 @@ vi.mock('@/lib/common/server', () => ({
   invalidateOfferCache: vi.fn(),
 }))
 
-import { findOfferById, updateOffer } from '@/lib/offers/server'
+import { findOfferById, updateOffer } from '@/lib/offers/offers'
 import { invalidateOfferCache } from '@/lib/common/server'
 
 const mockOffer = {

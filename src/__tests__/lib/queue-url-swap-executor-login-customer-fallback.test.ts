@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const urlSwapTargetFns = vi.hoisted(() => ({
+  markUrlSwapTargetSuccess: vi.fn(),
+  markUrlSwapTargetFailure: vi.fn(),
+}))
+
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(),
 }))
@@ -8,11 +13,20 @@ vi.mock('@/lib/scraping', () => ({
   resolveAffiliateLink: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
+vi.mock('@/lib/offers/server', () => ({
   initializeProxyPool: vi.fn(),
 }))
 
-vi.mock('@/lib/campaign', () => ({
+vi.mock('@/lib/url-swap/url-swap-targets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/url-swap/url-swap-targets')>()
+  return {
+    ...actual,
+    markUrlSwapTargetSuccess: urlSwapTargetFns.markUrlSwapTargetSuccess,
+    markUrlSwapTargetFailure: urlSwapTargetFns.markUrlSwapTargetFailure,
+  }
+})
+
+vi.mock('@/lib/campaign/server', () => ({
   assertUserExecutionAllowed: vi.fn(),
 }))
 
@@ -59,12 +73,7 @@ import {
 } from '@/lib/google-ads/auth/context'
 import { prepareGoogleAdsApiCallForLinkedAccount } from '@/lib/google-ads/accounts/auth/index'
 import { defaultPreparedGoogleAdsApiCallForLinkedAccount } from '@/__tests__/lib/helpers/campaign-route-auth-context-mock'
-import {
-  getUrlSwapTaskTargets,
-  markUrlSwapTargetFailure,
-  markUrlSwapTargetSuccess,
-  updateTaskAfterSwap,
-} from '@/lib/url-swap'
+import { getUrlSwapTaskTargets, updateTaskAfterSwap } from '@/lib/url-swap'
 import { executeUrlSwapTask } from '@/lib/queue/executors/url-swap-executor'
 
 describe('executeUrlSwapTask login_customer_id fallback', () => {
@@ -180,8 +189,8 @@ describe('executeUrlSwapTask login_customer_id fallback', () => {
       loginCustomerId: '2222222222',
     })
 
-    expect(markUrlSwapTargetSuccess).toHaveBeenCalledTimes(1)
-    expect(markUrlSwapTargetFailure).not.toHaveBeenCalled()
+    expect(urlSwapTargetFns.markUrlSwapTargetSuccess).toHaveBeenCalledTimes(1)
+    expect(urlSwapTargetFns.markUrlSwapTargetFailure).not.toHaveBeenCalled()
     expect(updateTaskAfterSwap).toHaveBeenCalledTimes(1)
   })
 })

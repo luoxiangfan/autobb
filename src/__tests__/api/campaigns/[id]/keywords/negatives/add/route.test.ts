@@ -93,14 +93,14 @@ describe('POST /api/campaigns/:id/keywords/negatives/add', () => {
           id: 12,
           campaign_name: 'Dreo_US_3653',
           status: 'ENABLED',
-          is_deleted: 0,
+          is_deleted: false,
           google_ads_account_id: 8,
           google_ad_group_id: '9001',
           customer_id: '1234567890',
           parent_mcc_id: null,
           service_account_id: null,
-          account_is_active: 1,
-          account_is_deleted: 0,
+          account_is_active: true,
+          account_is_deleted: false,
         }
       }
       if (sql.includes('FROM ad_groups')) {

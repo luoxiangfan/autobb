@@ -1,6 +1,9 @@
+import { config } from 'dotenv'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { getSearchTermFeedbackHints } from '@/lib/keywords/server'
 import { getDatabase } from '@/lib/db'
+
+config({ path: '.env.local' })
 
 describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   let db: Awaited<ReturnType<typeof getDatabase>>
@@ -10,8 +13,31 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   let offer2Id: number
   let offer3Id: number
   let offer4Id: number
+  let googleAdsAccountId: number
+  let googleAdsAccount2Id: number
   let recentDate: string
   let oldDate: string
+
+  async function insertCampaign(params: {
+    ownerUserId: number
+    offerId: number
+    googleAdsAccountId: number
+    campaignName?: string
+  }): Promise<number> {
+    const result = await db.query(
+      `INSERT INTO campaigns (user_id, offer_id, google_ads_account_id, campaign_name, budget_amount, status)
+       VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
+      [
+        params.ownerUserId,
+        params.offerId,
+        params.googleAdsAccountId,
+        params.campaignName ?? 'Test Campaign',
+        100,
+        'ENABLED',
+      ]
+    )
+    return result[0].id
+  }
 
   beforeEach(async () => {
     db = await getDatabase()
@@ -25,6 +51,13 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
       [`test-${uniqueSuffix}@example.com`, `testuser-${uniqueSuffix}`]
     )
     userId = userResult[0].id
+
+    const account1Result = await db.query(
+      `INSERT INTO google_ads_accounts (user_id, customer_id, account_name)
+       VALUES (?, ?, ?) RETURNING id`,
+      [userId, `cust-${uniqueSuffix}-1`, 'Test Account 1']
+    )
+    googleAdsAccountId = account1Result[0].id
 
     // 创建测试 Offer 1 (SolarBrand 花园灯)
     const offer1Result = await db.query(
@@ -49,6 +82,13 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     )
     user2Id = user2Result[0].id
 
+    const account2Result = await db.query(
+      `INSERT INTO google_ads_accounts (user_id, customer_id, account_name)
+       VALUES (?, ?, ?) RETURNING id`,
+      [user2Id, `cust-${uniqueSuffix}-2`, 'Test Account 2']
+    )
+    googleAdsAccount2Id = account2Result[0].id
+
     const offer3Result = await db.query(
       `INSERT INTO offers (user_id, url, brand, product_name, target_country, target_language)
        VALUES (?, ?, ?, ?, ?, ?) RETURNING id`,
@@ -70,18 +110,18 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     await db.exec('DELETE FROM search_term_reports WHERE user_id = ?', [user2Id])
     await db.exec('DELETE FROM campaigns WHERE user_id = ?', [userId])
     await db.exec('DELETE FROM campaigns WHERE user_id = ?', [user2Id])
+    await db.exec('DELETE FROM google_ads_accounts WHERE user_id = ?', [userId])
+    await db.exec('DELETE FROM google_ads_accounts WHERE user_id = ?', [user2Id])
     await db.exec('DELETE FROM offers WHERE user_id = ?', [userId])
     await db.exec('DELETE FROM offers WHERE user_id = ?', [user2Id])
   })
 
   it('should use offer-level data when available', async () => {
-    // 创建 Campaign
-    const campaignResult = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer1Id, 'Test Campaign', 100, 'ENABLED']
-    )
-    const campaignId = campaignResult[0].id
+    const campaignId = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer1Id,
+      googleAdsAccountId,
+    })
 
     // 添加 Offer 级别高性能搜索词
     await db.exec(
@@ -104,12 +144,12 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     // Offer 1: 没有数据
     // Offer 2: 有高性能搜索词
 
-    const campaign2Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer2Id, 'Test Campaign 2', 100, 'ENABLED']
-    )
-    const campaign2Id = campaign2Result[0].id
+    const campaign2Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer2Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Test Campaign 2',
+    })
 
     // 添加 Offer 2 的高性能搜索词
     await db.exec(
@@ -133,12 +173,12 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     // Offer 3 (其他用户): 有高性能搜索词
 
     // 获取 user2Id
-    const campaign3Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [user2Id, offer3Id, 'Test Campaign 3', 100, 'ENABLED']
-    )
-    const campaign3Id = campaign3Result[0].id
+    const campaign3Id = await insertCampaign({
+      ownerUserId: user2Id,
+      offerId: offer3Id,
+      googleAdsAccountId: googleAdsAccount2Id,
+      campaignName: 'Test Campaign 3',
+    })
 
     // 添加 Offer 3 的高性能搜索词
     await db.exec(
@@ -161,19 +201,19 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     // Offer 1: 有 "solar lights"
     // Offer 2: 也有 "solar lights"（应该去重）
 
-    const campaign1Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer1Id, 'Test Campaign 1', 100, 'ENABLED']
-    )
-    const campaign1Id = campaign1Result[0].id
+    const campaign1Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer1Id,
+      googleAdsAccountId,
+      campaignName: 'Test Campaign 1',
+    })
 
-    const campaign2Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer2Id, 'Test Campaign 2', 100, 'ENABLED']
-    )
-    const campaign2Id = campaign2Result[0].id
+    const campaign2Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer2Id,
+      googleAdsAccountId,
+      campaignName: 'Test Campaign 2',
+    })
 
     // Offer 1 和 Offer 2 都有相同的搜索词
     await db.exec(
@@ -201,26 +241,26 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   })
 
   it('should include global brand terms even when offer-level already has enough terms', async () => {
-    const campaign1Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer1Id, 'Offer1 Campaign', 100, 'ENABLED']
-    )
-    const campaign1Id = campaign1Result[0].id
+    const campaign1Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer1Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Offer1 Campaign',
+    })
 
-    const campaign2Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer2Id, 'Offer2 Campaign', 100, 'ENABLED']
-    )
-    const campaign2Id = campaign2Result[0].id
+    const campaign2Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer2Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Offer2 Campaign',
+    })
 
-    const campaign3Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [user2Id, offer3Id, 'Offer3 Campaign', 100, 'ENABLED']
-    )
-    const campaign3Id = campaign3Result[0].id
+    const campaign3Id = await insertCampaign({
+      ownerUserId: user2Id,
+      offerId: offer3Id,
+      googleAdsAccountId: googleAdsAccount2Id,
+      campaignName: 'Offer3 Campaign',
+    })
 
     const offerTerms = [
       'solarbrand garden lights',
@@ -263,26 +303,26 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   })
 
   it('should prioritize global brand terms before offer/user brand layers', async () => {
-    const campaign1Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer1Id, 'Offer1 Priority Campaign', 100, 'ENABLED']
-    )
-    const campaign1Id = campaign1Result[0].id
+    const campaign1Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer1Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Offer1 Priority Campaign',
+    })
 
-    const campaign2Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer2Id, 'Offer2 Priority Campaign', 100, 'ENABLED']
-    )
-    const campaign2Id = campaign2Result[0].id
+    const campaign2Id = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer2Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Offer2 Priority Campaign',
+    })
 
-    const campaign3Result = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [user2Id, offer3Id, 'Offer3 Priority Campaign', 100, 'ENABLED']
-    )
-    const campaign3Id = campaign3Result[0].id
+    const campaign3Id = await insertCampaign({
+      ownerUserId: user2Id,
+      offerId: offer3Id,
+      googleAdsAccountId: googleAdsAccount2Id,
+      campaignName: 'Offer3 Priority Campaign',
+    })
 
     // Offer层专属词
     await db.exec(
@@ -351,12 +391,12 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   })
 
   it('should keep only brand-related high-performing terms', async () => {
-    const campaignResult = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer1Id, 'Brand Relevance Campaign', 100, 'ENABLED']
-    )
-    const campaignId = campaignResult[0].id
+    const campaignId = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer1Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Brand Relevance Campaign',
+    })
 
     await db.exec(
       `INSERT INTO search_term_reports
@@ -381,12 +421,12 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   })
 
   it('should include historical high-performing terms without lookback window filtering', async () => {
-    const campaignResult = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, offer1Id, 'Historical Campaign', 100, 'ENABLED']
-    )
-    const campaignId = campaignResult[0].id
+    const campaignId = await insertCampaign({
+      ownerUserId: userId,
+      offerId: offer1Id,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Historical Campaign',
+    })
 
     await db.exec(
       `INSERT INTO search_term_reports
@@ -411,12 +451,12 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
     )
     const ourPlaceOfferId = offerResult[0].id
 
-    const campaignResult = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [userId, ourPlaceOfferId, 'Our Place Campaign', 100, 'ENABLED']
-    )
-    const campaignId = campaignResult[0].id
+    const campaignId = await insertCampaign({
+      ownerUserId: userId,
+      offerId: ourPlaceOfferId,
+      googleAdsAccountId: googleAdsAccountId,
+      campaignName: 'Our Place Campaign',
+    })
 
     await db.exec(
       `INSERT INTO search_term_reports
@@ -434,12 +474,12 @@ describe('getSearchTermFeedbackHints - Layered Fallback', () => {
   })
 
   it('should not mix global brand terms across different target language', async () => {
-    const zhCampaignResult = await db.query(
-      `INSERT INTO campaigns (user_id, offer_id, campaign_name, budget_amount, status)
-       VALUES (?, ?, ?, ?, ?) RETURNING id`,
-      [user2Id, offer4Id, 'ZH Campaign', 100, 'ENABLED']
-    )
-    const zhCampaignId = zhCampaignResult[0].id
+    const zhCampaignId = await insertCampaign({
+      ownerUserId: user2Id,
+      offerId: offer4Id,
+      googleAdsAccountId: googleAdsAccount2Id,
+      campaignName: 'ZH Campaign',
+    })
 
     await db.exec(
       `INSERT INTO search_term_reports

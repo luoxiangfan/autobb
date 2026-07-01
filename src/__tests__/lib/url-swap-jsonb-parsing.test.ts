@@ -1,14 +1,37 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-let mockDb: any
+const dbRef = vi.hoisted(() => ({
+  current: null as any,
+}))
+
+function parseJsonField<T>(value: unknown, fallback: T): T {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'object') return value as T
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  if (!trimmed || trimmed === 'null' || trimmed === 'undefined') return fallback
+  try {
+    let parsed: unknown = JSON.parse(trimmed)
+    for (let i = 0; i < 2; i += 1) {
+      if (typeof parsed !== 'string') break
+      const nested = parsed.trim()
+      if (!nested || nested === 'null' || nested === 'undefined') break
+      parsed = JSON.parse(nested)
+    }
+    return (parsed ?? fallback) as T
+  } catch {
+    return fallback
+  }
+}
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: () => mockDb,
+  getDatabase: vi.fn(async () => dbRef.current),
+  parseJsonField,
 }))
 
 describe('url-swap json parsing compatibility', () => {
   beforeEach(() => {
-    mockDb = {
+    dbRef.current = {
       queryOne: vi.fn(),
     }
   })
@@ -25,7 +48,7 @@ describe('url-swap json parsing compatibility', () => {
     ]
     const links = ['https://affiliate.example.com/?a=1']
 
-    mockDb.queryOne.mockResolvedValueOnce({
+    dbRef.current.queryOne.mockResolvedValueOnce({
       id: 'task-1',
       user_id: 1,
       offer_id: 448,

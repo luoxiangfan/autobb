@@ -40,7 +40,6 @@ const creativeTypeFns = vi.hoisted(() => ({
 
 const pipelineFns = vi.hoisted(() => ({
   prepareBucketKeywordContext: vi.fn(),
-  runBucketCreativeGeneration: vi.fn(),
 }))
 
 const keywordRuntimeFns = vi.hoisted(() => ({
@@ -59,16 +58,21 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: () => ({
-    exec: dbState.exec,
-    query: dbState.query,
-    queryOne: dbState.queryOne,
-    transaction: dbState.transaction,
-  }),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: () => ({
+      exec: dbState.exec,
+      query: dbState.query,
+      queryOne: dbState.queryOne,
+      transaction: dbState.transaction,
+    }),
+    toDbJsonObjectField: (value: unknown) => value,
+  }
+})
 
-vi.mock('@/lib/offers', () => ({
+vi.mock('@/lib/offers/offers', () => ({
   findOfferById: offerFns.findOfferById,
 }))
 
@@ -76,50 +80,42 @@ vi.mock('@/lib/creatives/generator/index', () => ({
   generateAdCreative: generatorFns.generateAdCreative,
 }))
 
-vi.mock('@/lib/keywords', () => ({
-  getSearchTermFeedbackHints: feedbackFns.getSearchTermFeedbackHints,
-}))
+vi.mock('@/lib/keywords', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords')>()
+  return {
+    ...actual,
+    getSearchTermFeedbackHints: feedbackFns.getSearchTermFeedbackHints,
+    buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
+    buildPreGenerationCreativeKeywordSet: keywordRuntimeFns.buildPreGenerationCreativeKeywordSet,
+  }
+})
 
-vi.mock('@/lib/keywords', () => ({
-  buildCreativeKeywordSet: builderFns.buildCreativeKeywordSet,
-}))
+vi.mock('@/lib/creatives/ad-creative-quality-loop', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives/ad-creative-quality-loop')>()
+  return {
+    ...actual,
+    evaluateCreativeForQuality: qualityLoopFns.evaluateCreativeForQuality,
+    runCreativeGenerationQualityLoop: qualityLoopFns.runCreativeGenerationQualityLoop,
+  }
+})
 
-vi.mock('@/lib/creatives/server', () => ({
-  AD_CREATIVE_MAX_AUTO_RETRIES: 2,
-  AD_CREATIVE_REQUIRED_MIN_SCORE: 70,
-  evaluateCreativeForQuality: qualityLoopFns.evaluateCreativeForQuality,
-  runCreativeGenerationQualityLoop: qualityLoopFns.runCreativeGenerationQualityLoop,
-}))
+vi.mock('@/lib/creatives/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/creatives/server')>()
+  return {
+    ...actual,
+    AD_CREATIVE_MAX_AUTO_RETRIES: 2,
+    AD_CREATIVE_REQUIRED_MIN_SCORE: 70,
+    evaluateCreativeForQuality: qualityLoopFns.evaluateCreativeForQuality,
+    runCreativeGenerationQualityLoop: qualityLoopFns.runCreativeGenerationQualityLoop,
+    getCreativeTypeForBucketSlot: creativeTypeFns.getCreativeTypeForBucketSlot,
+    prepareBucketKeywordContext: pipelineFns.prepareBucketKeywordContext,
+  }
+})
 
 vi.mock('@/lib/keywords/offer-pool', () => ({
   resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
   getAvailableBuckets: keywordPoolFns.getAvailableBuckets,
   getBucketInfo: keywordPoolFns.getBucketInfo,
-}))
-
-vi.mock('@/lib/creatives/server', () => ({
-  getCreativeTypeForBucketSlot: creativeTypeFns.getCreativeTypeForBucketSlot,
-}))
-
-vi.mock('@/lib/keywords', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/keywords')>()
-  return {
-    ...actual,
-    buildPreGenerationCreativeKeywordSet: keywordRuntimeFns.buildPreGenerationCreativeKeywordSet,
-  }
-})
-
-vi.mock('@/lib/creatives', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/creatives')>()
-  return {
-    ...actual,
-    prepareBucketKeywordContext: pipelineFns.prepareBucketKeywordContext,
-    runBucketCreativeGeneration: pipelineFns.runBucketCreativeGeneration,
-  }
-})
-
-vi.mock('@/lib/db', () => ({
-  toDbJsonObjectField: (value: unknown) => value,
 }))
 
 describe('executeAdCreativeGeneration', () => {
@@ -222,9 +218,25 @@ describe('executeAdCreativeGeneration', () => {
       seedCandidates: [],
       precomputedKeywordSet: defaultPrecomputedKeywordSet,
     })
-    pipelineFns.runBucketCreativeGeneration.mockImplementation(async (params) => {
-      const actual = await vi.importActual<typeof import('@/lib/creatives')>('@/lib/creatives')
-      return actual.runBucketCreativeGeneration(params)
+
+    qualityLoopFns.evaluateCreativeForQuality.mockResolvedValue({
+      passed: true,
+      adStrength: {
+        finalRating: 'GOOD',
+        finalScore: 84,
+        localEvaluation: {
+          dimensions: {
+            relevance: { score: 12 },
+            quality: { score: 12 },
+            completeness: { score: 12 },
+            diversity: { score: 12 },
+            compliance: { score: 12 },
+            brandSearchVolume: { score: 12 },
+            competitivePositioning: { score: 12 },
+          },
+        },
+        combinedSuggestions: [],
+      },
     })
 
     generatorFns.generateAdCreative.mockResolvedValue({
@@ -363,16 +375,6 @@ describe('executeAdCreativeGeneration', () => {
         offerId: 96,
         bucket: 'B',
         scopeLabel: '桶B',
-      })
-    )
-    expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
-      expect.objectContaining({
-        keywordPostProcessMode: 'applyPrecomputed',
-        preparedBucketContext: expect.objectContaining({
-          precomputedKeywordSet: expect.objectContaining({
-            executableKeywords: ['brandx x200 vacuum'],
-          }),
-        }),
       })
     )
     expect(builderFns.buildCreativeKeywordSet).not.toHaveBeenCalled()

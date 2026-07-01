@@ -31,10 +31,10 @@ describe('campaign-affiliate-scope', () => {
     ).toBe(false)
     expect(
       isCampaignAffiliateAlignedRow({
-        is_deleted: 0,
+        is_deleted: false,
         creation_status: 'synced',
         status: 'PAUSED',
-        offer_is_deleted: 1,
+        offer_is_deleted: true,
       })
     ).toBe(false)
   })

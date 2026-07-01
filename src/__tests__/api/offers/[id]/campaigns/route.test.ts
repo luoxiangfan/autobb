@@ -68,7 +68,7 @@ vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
   }
 })
 
-vi.mock('@/lib/campaign', () => ({
+vi.mock('@/lib/campaign/server', () => ({
   executeGAQLQueryPython: pythonFns.executeGAQLQueryPython,
 }))
 
@@ -121,8 +121,8 @@ describe('GET /api/offers/:id/campaigns', () => {
             currency: 'USD',
             parent_mcc_id: null,
             service_account_id: 'sa-1',
-            is_active: 1,
-            is_deleted: 0,
+            is_active: true,
+            is_deleted: false,
             created_at: '2026-03-16T00:00:00.000Z',
           },
         ]

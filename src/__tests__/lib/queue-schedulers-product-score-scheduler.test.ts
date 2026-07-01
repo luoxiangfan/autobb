@@ -14,19 +14,23 @@ vi.mock('@/lib/queue/queue-routing', () => ({
   getQueueManagerForTaskType: vi.fn(async () => queueMock),
 }))
 
-vi.mock('@/lib/launch-score', () => ({
-  findExistingProductScoreTask: vi.fn(async (queue: any, userId: number) => {
-    await queue.initialize()
-    const [running, pending] = await Promise.all([queue.getRunningTasks(), queue.getPendingTasks()])
-    return [...running, ...pending].find((task: any) => task.userId === userId) || null
-  }),
-  markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
-}))
-
-vi.mock('@/lib/launch-score', () => ({
-  isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,
-  ProductScoreCalculationPausedError: class ProductScoreCalculationPausedError extends Error {},
-}))
+vi.mock('@/lib/launch-score/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/launch-score/server')>()
+  return {
+    ...actual,
+    findExistingProductScoreTask: vi.fn(async (queue: any, userId: number) => {
+      await queue.initialize()
+      const [running, pending] = await Promise.all([
+        queue.getRunningTasks(),
+        queue.getPendingTasks(),
+      ])
+      return [...running, ...pending].find((task: any) => task.userId === userId) || null
+    }),
+    markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
+    isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,
+    ProductScoreCalculationPausedError: class ProductScoreCalculationPausedError extends Error {},
+  }
+})
 
 describe('scheduleProductScoreCalculation', () => {
   beforeEach(() => {

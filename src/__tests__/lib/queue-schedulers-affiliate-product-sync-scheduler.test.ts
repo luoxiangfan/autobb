@@ -16,7 +16,7 @@ vi.mock('@/lib/db', () => ({
   getDatabase: mocks.getDatabase,
 }))
 
-vi.mock('@/lib/affiliate', () => ({
+vi.mock('@/lib/affiliate/products/index', () => ({
   checkAffiliatePlatformConfig: mocks.checkAffiliatePlatformConfig,
   createAffiliateProductSyncRun: mocks.createAffiliateProductSyncRun,
   getLatestFailedAffiliateProductSyncRun: mocks.getLatestFailedAffiliateProductSyncRun,
@@ -25,13 +25,13 @@ vi.mock('@/lib/affiliate', () => ({
   updateAffiliateProductSyncRun: mocks.updateAffiliateProductSyncRun,
 }))
 
-vi.mock('@/lib/queue/queue-routing', () => ({
-  getQueueManagerForTaskType: mocks.getQueueManagerForTaskType,
-}))
-
-vi.mock('@/lib/affiliate', () => ({
+vi.mock('@/lib/affiliate/server', () => ({
   isYeahPromosManualSyncOnly: mocks.isYeahPromosManualSyncOnly,
   getYeahPromosSessionState: mocks.getYeahPromosSessionState,
+}))
+
+vi.mock('@/lib/queue/queue-routing', () => ({
+  getQueueManagerForTaskType: mocks.getQueueManagerForTaskType,
 }))
 
 import { AffiliateProductSyncScheduler } from '@/lib/queue/schedulers/affiliate-product-sync-scheduler'

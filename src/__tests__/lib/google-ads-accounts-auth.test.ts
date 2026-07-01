@@ -1,9 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   defaultOAuthApiAuth,
   defaultOAuthAuthContext,
 } from './helpers/campaign-route-auth-context-mock'
-import { invalidateGoogleAdsAuthContextCache } from '@/lib/google-ads/auth/context'
+import * as googleAdsAuthContextModule from '@/lib/google-ads/auth/context'
+
+const { invalidateGoogleAdsAuthContextCache } = googleAdsAuthContextModule
 import {
   createGoogleAdsLinkedAccountPrepareCache,
   clearGoogleAdsLinkedAccountPrepareCache,
@@ -33,6 +35,7 @@ const serviceAccountFns = vi.hoisted(() => ({
 
 const dbFns = vi.hoisted(() => ({
   exec: vi.fn(),
+  queryOne: vi.fn(),
 }))
 
 const settingsStoreFns = vi.hoisted(() => ({
@@ -43,16 +46,6 @@ vi.mock('@/lib/google-ads/settings/settings-store', () => ({
   getGoogleAdsOAuthConfigValue: settingsStoreFns.getGoogleAdsOAuthConfigValue,
 }))
 
-vi.mock('@/lib/google-ads/auth/context', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/google-ads/auth/context')>()
-  return {
-    ...actual,
-    getGoogleAdsAuthContext: authContextFns.getGoogleAdsAuthContext,
-    resolveGoogleAdsApiAuthFromContext: authContextFns.resolveGoogleAdsApiAuthFromContext,
-    resolveGoogleAdsApiAuthForAccount: authContextFns.resolveGoogleAdsApiAuthForAccount,
-  }
-})
-
 vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
 }))
@@ -60,6 +53,7 @@ vi.mock('@/lib/google-ads/service-account/service-account', () => ({
 vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => ({
     exec: dbFns.exec,
+    queryOne: dbFns.queryOne,
   })),
 }))
 
@@ -73,12 +67,31 @@ const oauthCredentialsFull = {
 
 const oauthAuthContextFull = {
   ...defaultOAuthAuthContext,
+  oauthHasRefreshToken: true,
   oauthCredentials: oauthCredentialsFull,
 }
 
 function healAuthContext(overrides?: Partial<typeof oauthAuthContextFull>) {
-  return { ...oauthAuthContextFull, userId: 1, ownerUserId: 1, ...overrides }
+  return {
+    ...oauthAuthContextFull,
+    userId: 1,
+    ownerUserId: 1,
+    oauthHasRefreshToken: true,
+    ...overrides,
+  }
 }
+
+beforeAll(() => {
+  vi.spyOn(googleAdsAuthContextModule, 'getGoogleAdsAuthContext').mockImplementation(
+    authContextFns.getGoogleAdsAuthContext
+  )
+  vi.spyOn(googleAdsAuthContextModule, 'resolveGoogleAdsApiAuthFromContext').mockImplementation(
+    authContextFns.resolveGoogleAdsApiAuthFromContext
+  )
+  vi.spyOn(googleAdsAuthContextModule, 'resolveGoogleAdsApiAuthForAccount').mockImplementation(
+    authContextFns.resolveGoogleAdsApiAuthForAccount
+  )
+})
 
 describe('resolveOAuthRefreshToken', () => {
   it('prefers apiAuth refresh over oauth credentials row', () => {
@@ -154,6 +167,7 @@ describe('resolveAccountsRouteAuthBundle', () => {
       userId: 1,
       authContext: {
         ...oauthAuthContextFull,
+        oauthHasRefreshToken: false,
         oauthCredentials: { ...oauthCredentialsFull, refresh_token: '' },
       },
       authType: 'oauth',
@@ -512,15 +526,21 @@ describe('resolveAndHealSyncUserCredentials', () => {
 describe('resolveOAuthApiCredentialsForUser', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(oauthAuthContextFull)
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(healAuthContext())
     authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue(defaultOAuthApiAuth)
     dbFns.exec.mockResolvedValue(undefined)
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue(
+      'abcdefghijklmnopqrstuvwxyz1234567890ab'
+    )
   })
 
   it('returns oauth client credentials with login_customer_id', async () => {
-    const result = await resolveOAuthApiCredentialsForUser(1)
+    const result = await resolveOAuthClientCredentialsForUser(1, {
+      requireLoginCustomerId: true,
+      existingAuthContext: healAuthContext(),
+    })
 
-    expect(authContextFns.getGoogleAdsAuthContext).toHaveBeenCalledWith(1)
+    expect(authContextFns.getGoogleAdsAuthContext).not.toHaveBeenCalled()
     expect(result).toEqual({
       client_id: oauthCredentialsFull.client_id,
       client_secret: oauthCredentialsFull.client_secret,
@@ -530,34 +550,50 @@ describe('resolveOAuthApiCredentialsForUser', () => {
   })
 
   it('throws when user is configured for service account', async () => {
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      ...oauthAuthContextFull,
-      auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
-    })
-
-    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/服务账号认证/)
+    await expect(
+      resolveOAuthClientCredentialsForUser(1, {
+        requireLoginCustomerId: true,
+        existingAuthContext: healAuthContext({
+          auth: { authType: 'service_account', serviceAccountId: 'sa-1' },
+        }),
+      })
+    ).rejects.toThrow(/服务账号认证/)
   })
 
   it('throws dual-stack error before heal', async () => {
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      ...oauthAuthContextFull,
-      dualStack: true,
-    })
-
-    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/OAuth 与服务账号同时存在/)
+    await expect(
+      resolveOAuthClientCredentialsForUser(1, {
+        requireLoginCustomerId: true,
+        existingAuthContext: healAuthContext({ dualStack: true }),
+      })
+    ).rejects.toThrow(/OAuth 与服务账号同时存在/)
   })
 
   it('throws when login_customer_id is missing', async () => {
-    authContextFns.resolveGoogleAdsApiAuthFromContext.mockResolvedValue({
-      ...defaultOAuthApiAuth,
-      oauthLoginCustomerId: undefined,
-    })
-    authContextFns.getGoogleAdsAuthContext.mockResolvedValue({
-      ...oauthAuthContextFull,
-      oauthCredentials: { ...oauthCredentialsFull, login_customer_id: '' },
-    })
+    await expect(
+      resolveOAuthClientCredentialsForUser(1, {
+        requireLoginCustomerId: true,
+        existingAuthContext: healAuthContext({
+          oauthCredentials: { ...oauthCredentialsFull, login_customer_id: '' },
+        }),
+      })
+    ).rejects.toThrow(/login_customer_id/)
+  })
 
-    await expect(resolveOAuthApiCredentialsForUser(1)).rejects.toThrow(/login_customer_id/)
+  it('resolveOAuthApiCredentialsForUser loads OAuth client credentials when auth context is ready', async () => {
+    authContextFns.getGoogleAdsAuthContext.mockResolvedValue(healAuthContext())
+    settingsStoreFns.getGoogleAdsOAuthConfigValue.mockResolvedValue(
+      'abcdefghijklmnopqrstuvwxyz1234567890ab'
+    )
+
+    const result = await resolveOAuthApiCredentialsForUser(1)
+
+    expect(result).toEqual({
+      client_id: oauthCredentialsFull.client_id,
+      client_secret: oauthCredentialsFull.client_secret,
+      developer_token: oauthCredentialsFull.developer_token,
+      login_customer_id: '9988776655',
+    })
   })
 })
 
@@ -634,8 +670,10 @@ describe('resolveOAuthClientCredentialsForUser OAuth path alignment', () => {
     const saContext = {
       ...oauthAuthContextFull,
       auth: { authType: 'service_account' as const, serviceAccountId: 'sa-1' },
+      oauthHasRefreshToken: false,
       oauthCredentials: null,
       serviceAccountConfig: { id: 'sa-1', mccCustomerId: '111', developerToken: 'tok' },
+      serviceAccountConfigured: true,
     }
 
     await expect(

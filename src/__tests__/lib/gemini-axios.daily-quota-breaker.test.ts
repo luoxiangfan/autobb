@@ -14,13 +14,14 @@ vi.mock('axios', () => ({
   create: createMock,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getUserOnlySetting: getUserOnlySettingMock,
-}))
-
-vi.mock('@/lib/common/server', () => ({
-  getRedisClient: vi.fn(() => null),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getUserOnlySetting: getUserOnlySettingMock,
+    getRedisClient: vi.fn(() => null),
+  }
+})
 
 describe('gemini-axios daily quota breaker', () => {
   beforeEach(() => {
