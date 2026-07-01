@@ -1824,7 +1824,7 @@ function extractFeaturesFromOffer(offer: Offer): string[] {
   // 尝试从产品名称提取型号信息
   if (offer.product_name) {
     // 提取型号信息，如 "J15 Pro", "E20S" 等
-    const modelMatch = offer.product_name.match(/([A-Z]\d{2 }[A-Z]?)/)
+    const modelMatch = offer.product_name.match(/([A-Z]\d{2}[A-Z]?)/)
     if (modelMatch) {
       features.push(modelMatch[1])
     }

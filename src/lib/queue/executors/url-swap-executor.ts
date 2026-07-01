@@ -28,6 +28,7 @@ import { shouldRunUrlSwapSitelinkPhase } from '@/lib/url-swap/url-swap-sitelink-
 import { getDatabase } from '@/lib/db'
 import { initializeProxyPool } from '@/lib/offers/server'
 import { assertUserExecutionAllowed } from '@/lib/campaign/server'
+import { isTruthyFlag } from '@/lib/campaign/publish/publish-route-helpers'
 import { isAffiliateLinkExpiredMessage } from '@/lib/affiliate'
 import { validateUrlSwapDomainChange } from '@/lib/url-swap/url-swap-domain-validation'
 import {
@@ -97,7 +98,7 @@ export async function executeUrlSwapTask(
     }
 
     const status = String(taskRow.status || '').toLowerCase()
-    const isDeleted = taskRow.is_deleted === true
+    const isDeleted = isTruthyFlag(taskRow.is_deleted)
     if (isDeleted || status !== 'enabled') {
       logger.debug(
         `[url-swap-executor] 跳过执行: taskId=${taskId}, status=${status || 'unknown'}, isDeleted=${isDeleted}`

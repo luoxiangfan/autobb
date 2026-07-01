@@ -85,7 +85,7 @@ function sanitizeGoogleAdsNamePart(value: string): string {
 function sanitize(text: string): string {
   return text
     .replace(/[^a-zA-Z0-9_]/g, '') // 移除所有非字母数字下划线的字符
-    .replace(/_{2 }/g, '_') // 合并多个下划线
+    .replace(/_{2,}/g, '_') // 合并多个下划线
     .replace(/^_|_$/g, '') // 移除首尾下划线
 }
 

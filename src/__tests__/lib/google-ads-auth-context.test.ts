@@ -66,17 +66,18 @@ vi.mock('@/lib/db', () => ({
   getDatabase: vi.fn(async () => dbFns),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    invalidateGadsApiCacheForUser: cacheFns.invalidateGadsApiCacheForUser,
+    getRedisClient: vi.fn(() => null),
+  }
+})
 
 vi.mock('@/lib/google-ads/service-account/service-account', () => ({
   getServiceAccountConfig: serviceAccountFns.getServiceAccountConfig,
   getServiceAccountConfigMetadata: serviceAccountFns.getServiceAccountConfigMetadata,
-}))
-
-vi.mock('@/lib/common/server', () => ({
-  getRedisClient: vi.fn(() => null),
 }))
 
 import { defaultOAuthAuthContext } from './helpers/campaign-route-auth-context-mock'

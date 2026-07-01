@@ -47,7 +47,7 @@ export function hasBrandAnchorInHeadline(
 export function stripRepeatedBrandPrefix(text: string, brandName: string): string {
   const normalizedBrand = normalizeBrandNameForHeadline(brandName)
   if (!normalizedBrand) return normalizeHeadlineCandidateText(text)
-  const repeatedPattern = new RegExp(`^(?:${escapeRegex(normalizedBrand)}\\s+){2 }`, 'i')
+  const repeatedPattern = new RegExp(`^(?:${escapeRegex(normalizedBrand)}\\s+){2,}`, 'i')
   return normalizeHeadlineCandidateText(text).replace(repeatedPattern, `${normalizedBrand} `).trim()
 }
 

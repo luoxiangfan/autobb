@@ -207,10 +207,10 @@ export function validateCompressionQuality(
     .toLowerCase()
 
   const originalWords = new Set(
-    originalText.match(/\b\w{4 }\b/g) || [] // 4字母以上的单词
+    originalText.match(/\b\w{4,}\b/g) || [] // 4字母以上的单词
   )
 
-  const compressedWords = new Set(compressed.toLowerCase().match(/\b\w{4 }\b/g) || [])
+  const compressedWords = new Set(compressed.toLowerCase().match(/\b\w{4,}\b/g) || [])
 
   // 关键词保留率
   const retainedWords = Array.from(originalWords).filter((w) => compressedWords.has(w)).length

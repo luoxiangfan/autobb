@@ -311,7 +311,7 @@ export async function fetchBrandSearchSupplement(options: {
             undefined
 
           const displayUrl = lines.find(
-            (l) => /\b(www\.)?[\w-]+\.[a-z]{2 }\b/i.test(l) && l.length <= 80
+            (l) => /\b(www\.)?[\w-]+\.[a-z]{2}\b/i.test(l) && l.length <= 80
           )
 
           // descriptions：去掉headlines/展示URL后，保留较长行

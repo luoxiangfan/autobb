@@ -44,7 +44,7 @@ export function parseDbDateTimeAsUtc(value: string): Date {
   }
 
   // Normalize fractional seconds to milliseconds (Date only keeps ms).
-  base = base.replace(/\.(\d{1 })$/, (_, digits: string) => {
+  base = base.replace(/\.(\d{1,})$/, (_, digits: string) => {
     const ms = digits.slice(0, 3).padEnd(3, '0')
     return `.${ms}`
   })

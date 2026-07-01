@@ -13,6 +13,7 @@ import {
 } from '@/lib/google-ads/accounts/auth/index'
 import { runWithLoginCustomerFallbackForAccount } from '@/lib/google-ads/oauth/login-customer'
 import { patchCampaignConfigKeywords, type CampaignConfigKeyword } from '@/lib/campaign/server'
+import { isTruthyFlag } from '@/lib/campaign/publish/publish-route-helpers'
 
 type KeywordInput =
   | string
@@ -478,7 +479,7 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: '广告系列不存在或无权限访问' }, { status: 404 })
     }
 
-    const isDeleted = campaign.is_deleted === true
+    const isDeleted = isTruthyFlag(campaign.is_deleted)
     if (isDeleted || String(campaign.status || '').toUpperCase() === 'REMOVED') {
       return NextResponse.json({ error: '该广告系列已下线/删除，无法新增关键词' }, { status: 400 })
     }
@@ -487,8 +488,8 @@ export const POST = withAuth(async (request, user, context) => {
       return NextResponse.json({ error: '广告系列未绑定有效的Google Ads账号' }, { status: 400 })
     }
 
-    const accountIsActive = campaign.account_is_active === true
-    const accountIsDeleted = campaign.account_is_deleted === true
+    const accountIsActive = isTruthyFlag(campaign.account_is_active)
+    const accountIsDeleted = isTruthyFlag(campaign.account_is_deleted)
     if (!accountIsActive || accountIsDeleted) {
       return NextResponse.json({ error: '关联Ads账号不可用（可能已停用或解绑）' }, { status: 400 })
     }

@@ -4,8 +4,15 @@
  */
 import fs from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
+import {
+  countBrokenRegexQuantifiers,
+  maskRegexQuantifiers,
+  unmaskRegexQuantifiers,
+} from './lib/regex-quantifier-guard.mjs'
 
 const ROOT = path.resolve(import.meta.dirname, '..')
+const SCRIPT_PATH = fileURLToPath(import.meta.url)
 const TARGET_DIRS = [path.join(ROOT, 'src')]
 
 const EXT = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs'])
@@ -71,22 +78,49 @@ function applyPhraseReplacements(text) {
 }
 
 function processCommentBody(body) {
-  let t = cleanCommentText(body)
+  const { masked, tokens } = maskRegexQuantifiers(body)
+  let t = cleanCommentText(masked)
   t = applyPhraseReplacements(t)
+  t = unmaskRegexQuantifiers(t, tokens)
   return t
 }
 
-/** Split line into code + trailing comment (last ` //` segment, not inside strings) */
-function splitTrailingComment(line) {
+function canStartRegexLiteral(line, index) {
+  if (index === 0) return true
+  const prev = line[index - 1]
+  return /[\s(,=:[!&|?{;]/.test(prev)
+}
+
+/** Split line into code + trailing comment (last ` //` segment, not inside strings/regex) */
+export function splitTrailingComment(line) {
   let inSingle = false
   let inDouble = false
   let inTemplate = false
+  let inRegex = false
   let escape = false
   let lastCommentIdx = -1
 
   for (let i = 0; i < line.length - 1; i++) {
     const ch = line[i]
     const next = line[i + 1]
+
+    if (inRegex) {
+      if (escape) {
+        escape = false
+        continue
+      }
+      if (ch === '\\') {
+        escape = true
+        continue
+      }
+      if (ch === '/') {
+        let j = i + 1
+        while (j < line.length && /[gimsuy]/.test(line[j])) j++
+        inRegex = false
+        i = j - 1
+      }
+      continue
+    }
 
     if (escape) {
       escape = false
@@ -108,10 +142,17 @@ function splitTrailingComment(line) {
       inTemplate = !inTemplate
       continue
     }
-    if (!inSingle && !inDouble && !inTemplate && ch === '/' && next === '/') {
-      if (i === 0 || /\s/.test(line[i - 1])) {
-        lastCommentIdx = i
+    if (!inSingle && !inDouble && !inTemplate && ch === '/') {
+      if (next === '/') {
+        if (i === 0 || /\s/.test(line[i - 1])) {
+          lastCommentIdx = i
+        }
+        continue
       }
+      if (canStartRegexLiteral(line, i)) {
+        inRegex = true
+      }
+      continue
     }
   }
 
@@ -122,7 +163,7 @@ function splitTrailingComment(line) {
   }
 }
 
-function processLine(line) {
+export function processLine(line) {
   const trimmed = line.trimStart()
 
   // JSX block comment {/* ... */}
@@ -218,20 +259,37 @@ function processFile(absPath) {
 
   const result = collapsed.join('\n')
   if (result !== original) {
+    const beforeBroken = countBrokenRegexQuantifiers(original)
+    const afterBroken = countBrokenRegexQuantifiers(result)
+    if (afterBroken > beforeBroken) {
+      console.warn(
+        `SKIP ${path.relative(ROOT, absPath)}: would introduce corrupted regex quantifiers (${beforeBroken} -> ${afterBroken})`
+      )
+      return false
+    }
     fs.writeFileSync(absPath, result)
     return true
   }
   return false
 }
 
-let changed = 0
-for (const dir of TARGET_DIRS) {
-  const files = walk(dir)
-  for (const f of files) {
-    if (processFile(f)) {
-      changed++
-      console.log(path.relative(ROOT, f))
+function main() {
+  let changed = 0
+  for (const dir of TARGET_DIRS) {
+    const files = walk(dir)
+    for (const f of files) {
+      if (processFile(f)) {
+        changed++
+        console.log(path.relative(ROOT, f))
+      }
     }
   }
+  console.log(`\nDone: ${changed} file(s) updated`)
 }
-console.log(`\nDone: ${changed} file(s) updated`)
+
+const invokedDirectly =
+  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(SCRIPT_PATH)
+
+if (invokedDirectly) {
+  main()
+}

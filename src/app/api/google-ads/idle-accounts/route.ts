@@ -2,6 +2,7 @@ import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { logGoogleAdsAccountsError } from '@/lib/google-ads/auth/route-logger'
 import { getIdleAdsAccounts } from '@/lib/offers/server'
+import { isTruthyFlag } from '@/lib/campaign/publish/publish-route-helpers'
 
 /**
  * GET /api/google-ads/idle-accounts
@@ -22,7 +23,7 @@ export const GET = withAuth(async (_request, user) => {
         id: account.id,
         customerId: account.customer_id,
         accountName: account.account_name,
-        isActive: account.is_active === true,
+        isActive: isTruthyFlag(account.is_active),
         isIdle: true, // 由getIdleAdsAccounts查询逻辑保证返回的都是闲置账号
         createdAt: account.created_at,
         updatedAt: account.updated_at,

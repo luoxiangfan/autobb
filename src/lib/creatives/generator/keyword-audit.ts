@@ -32,7 +32,6 @@ import {
   getStoreProductNameCandidate,
   normalizeCreativeBucketType,
 } from './bucket'
-import { MAX_STORE_PRODUCT_LINKS } from '@/lib/offers/store-product-links'
 import { countBrandContainingKeywords } from './prompt-keywords'
 import { extractModelAnchorsForPrompt } from './prompts'
 import type {
@@ -45,6 +44,8 @@ import type {
   NormalizedCreativeBucket,
 } from './types'
 import { safeParseJson } from './utils'
+
+const MAX_VERIFIED_HOT_PRODUCTS = 3
 
 export function evaluateStoreModelIntentReadiness(params: {
   bucket: NormalizedCreativeBucket
@@ -93,7 +94,10 @@ export function evaluateStoreModelIntentReadiness(params: {
     'offer.store_product_links'
   )
 
-  const verifiedHotProducts = dedupeStoreProductNames(hotProductCandidates, MAX_STORE_PRODUCT_LINKS)
+  const verifiedHotProducts = dedupeStoreProductNames(hotProductCandidates).slice(
+    0,
+    MAX_VERIFIED_HOT_PRODUCTS
+  )
   if (verifiedHotProducts.length === 0) {
     return {
       isReady: false,

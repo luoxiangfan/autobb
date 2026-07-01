@@ -292,7 +292,7 @@ function extractCapitalizedPhrases(text: string): string[] {
 
   // Word = TitleCase token or ALLCAPS token; phrase length <= 5 words.
   const re =
-    /\b((?:[A-Z][A-Za-z0-9&'’.\-]{1 }|[A-Z]{2 })(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]{1 }|[A-Z]{2 })){0,4})\b/g
+    /\b((?:[A-Z][A-Za-z0-9&'’.\-]{1,}|[A-Z]{2,})(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]{1,}|[A-Z]{2,})){0,4})\b/g
   let match: RegExpExecArray | null
   while ((match = re.exec(cleaned))) {
     if (match[1]) results.push(match[1])
@@ -371,7 +371,7 @@ export function extractLandingProductName($: any, url: string): string | null {
     for (const phrase of extractCapitalizedPhrases(text)) addCandidate(phrase, 90)
 
     const offMatch = text.match(
-      /\bOFF\s+([A-Z][A-Za-z0-9&'’.\-]+(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]+|[A-Z]{2 })){0,3})\b/
+      /\bOFF\s+([A-Z][A-Za-z0-9&'’.\-]+(?:\s+(?:[A-Z][A-Za-z0-9&'’.\-]+|[A-Z]{2,})){0,3})\b/
     )
     if (offMatch?.[1]) addCandidate(offMatch[1], 95)
   })

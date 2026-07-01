@@ -120,7 +120,7 @@ function hasExcessiveCapitalization(text: string): boolean {
   const upperCount = (text.match(/[A-Z]/g) || []).length
   if (upperCount / letters.length < 0.6) return false
 
-  const uppercaseWords = text.match(/\b[A-Z]{2 }\b/g) || []
+  const uppercaseWords = text.match(/\b[A-Z]{2,}\b/g) || []
   return uppercaseWords.length >= 2
 }
 

@@ -832,7 +832,7 @@ function collectProminentTitleLineTerms(params: {
       if (containsAsinLikeToken(token)) continue
       if (/^\d/.test(token)) continue
 
-      const looksProminent = /[A-Z]{2 }/.test(rawToken) || /[a-z][A-Z]/.test(rawToken)
+      const looksProminent = /[A-Z]{2,}/.test(rawToken) || /[a-z][A-Z]/.test(rawToken)
       const prevToken = rawTokens[index - 1] || ''
       const nextToken = rawTokens[index + 1] || ''
       const nearNumericCue = /^\d+[a-z]*$/i.test(prevToken) || /^\d+[a-z]*$/i.test(nextToken)

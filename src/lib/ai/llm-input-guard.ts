@@ -1,5 +1,5 @@
 const CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g
-const MULTI_BLANK_LINES_PATTERN = /\n{3 }/g
+const MULTI_BLANK_LINES_PATTERN = /\n{3,}/g
 
 const PROMPT_INJECTION_PATTERNS: Array<{ signal: string; pattern: RegExp }> = [
   {
@@ -36,14 +36,14 @@ const SECRET_LIKE_PATTERNS: Array<{ signal: string; pattern: RegExp }> = [
     pattern:
       /\b(client[_ -]?secret|password|private[_ -]?key|encryption[_ -]?key|jwt[_ -]?secret)\b/i,
   },
-  { signal: 'google_api_key_shape', pattern: /\bAIza[0-9A-Za-z\-_]{20 }\b/ },
-  { signal: 'openai_key_shape', pattern: /\bsk-[A-Za-z0-9]{20 }\b/ },
+  { signal: 'google_api_key_shape', pattern: /\bAIza[0-9A-Za-z\-_]{20,}\b/ },
+  { signal: 'openai_key_shape', pattern: /\bsk-[A-Za-z0-9]{20,}\b/ },
 ]
 
 const SECRET_KEY_VALUE_PATTERN =
   /\b(api[_ -]?key|access[_ -]?token|refresh[_ -]?token|developer[_ -]?token|client[_ -]?secret|password|private[_ -]?key|encryption[_ -]?key|jwt[_ -]?secret)\b(\s*[:=]\s*)(["']?)([^\s"',;]+)\3/gi
 const BEARER_TOKEN_PATTERN = /\bBearer\s+[A-Za-z0-9\-._~+/]+=*\b/gi
-const SECRET_SHAPE_PATTERNS = [/\bAIza[0-9A-Za-z\-_]{20 }\b/g, /\bsk-[A-Za-z0-9]{20 }\b/g]
+const SECRET_SHAPE_PATTERNS = [/\bAIza[0-9A-Za-z\-_]{20,}\b/g, /\bsk-[A-Za-z0-9]{20,}\b/g]
 
 export interface InputReview {
   label: string

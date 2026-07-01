@@ -3,6 +3,7 @@ import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 import { ALL_TASK_TYPES, type TaskType } from '@/lib/queue/types'
 import { pauseUrlSwapTargetsByUserIds } from '@/lib/url-swap'
 import { clearUserExecutionEligibilityCache } from '@/lib/campaign/server'
+import { isTruthyFlag } from '@/lib/campaign/publish/publish-route-helpers'
 
 // 队列止血默认覆盖所有用户任务类型；通过 userId 维度删除，不影响系统任务（userId<=0）。
 export const USER_SUSPENDED_TASK_TYPES: TaskType[] = [...ALL_TASK_TYPES]
@@ -116,7 +117,7 @@ export async function suspendBackgroundTasksForInactiveOrExpiredUsers(opts?: {
   const affectedUserIds = Array.from(
     new Set(
       candidates
-        .filter((u) => u.is_active !== true || isExpired(u.package_expires_at, now))
+        .filter((u) => !isTruthyFlag(u.is_active) || isExpired(u.package_expires_at, now))
         .map((u) => u.id)
     )
   )

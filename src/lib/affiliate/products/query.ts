@@ -819,7 +819,7 @@ export async function listAffiliateProducts(
   const mid = midRaw.toLowerCase()
   const hasMerchantIdColumn = midRaw ? await hasAffiliateProductsMerchantIdColumn(db) : false
   if (midRaw) {
-    const prefersPartnerboostMerchantExact = hasMerchantIdColumn && /^\d{5 }$/.test(midRaw)
+    const prefersPartnerboostMerchantExact = hasMerchantIdColumn && /^\d{5}$/.test(midRaw)
 
     if (prefersPartnerboostMerchantExact) {
       // 典型场景：输入 PartnerBoost 商家ID（纯数字），走 merchant_id 精确匹配避免扫描。

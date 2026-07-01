@@ -709,7 +709,7 @@ export function buildDkiFirstHeadline(
 ): string {
   const normalizedBrand = String(brandName || '')
     .replace(/[{}]/g, '')
-    .replace(/\s{2 }/g, ' ')
+    .replace(/\s{2,}/g, ' ')
     .trim()
 
   if (!normalizedBrand) {
@@ -736,7 +736,7 @@ export function buildDkiFirstHeadline(
 export function buildDkiKeywordHeadline(defaultText: string, maxLength = 30): string {
   const normalized = String(defaultText || '')
     .replace(/[{}]/g, '')
-    .replace(/\s{2 }/g, ' ')
+    .replace(/\s{2,}/g, ' ')
     .trim()
 
   if (!normalized) return `{KeyWord:Keyword}`

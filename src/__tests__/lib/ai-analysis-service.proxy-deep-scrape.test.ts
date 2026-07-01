@@ -21,9 +21,13 @@ vi.mock('@/lib/ai/ai', () => ({
   })),
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getProxyUrlForCountry: vi.fn(async () => 'https://proxy-provider.example/api?cc=US'),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getProxyUrlForCountry: vi.fn(async () => 'https://proxy-provider.example/api?cc=US'),
+  }
+})
 
 vi.mock('@/lib/creatives/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/creatives/server')>()
