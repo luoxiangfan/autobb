@@ -12,19 +12,26 @@ import { CliproxyProvider } from './cliproxy-provider'
  * 移除 GenericProxyProvider，不再支持"其他通用代理"
  */
 export class ProxyProviderRegistry {
-  private static providers: ProxyProvider[] = [
-    new IPRocketProvider(),
-    new OxylabsProvider(),
-    new KookeeyProvider(),
-    new CliproxyProvider(),
-  ]
+  private static providers: ProxyProvider[] | null = null
+
+  private static getProviders(): ProxyProvider[] {
+    if (!this.providers) {
+      this.providers = [
+        new IPRocketProvider(),
+        new OxylabsProvider(),
+        new KookeeyProvider(),
+        new CliproxyProvider(),
+      ]
+    }
+    return this.providers
+  }
 
   /**
    * 注册新的Provider
    * @param provider - 代理提供商实例
    */
   static register(provider: ProxyProvider): void {
-    this.providers.push(provider)
+    this.getProviders().push(provider)
     logger.debug(`✅ 已注册代理Provider: ${provider.name}`)
   }
 
@@ -35,10 +42,11 @@ export class ProxyProviderRegistry {
    * @throws 如果没有找到匹配的Provider
    */
   static getProvider(url: string): ProxyProvider {
-    const provider = this.providers.find((p) => p.canHandle(url))
+    const providers = this.getProviders()
+    const provider = providers.find((p) => p.canHandle(url))
 
     if (!provider) {
-      const supportedFormats = this.providers.map((p) => p.name).join(', ')
+      const supportedFormats = providers.map((p) => p.name).join(', ')
       throw new Error(
         `不支持的代理URL格式。当前仅支持以下格式：${supportedFormats}。\n` +
           `请使用对应的代理服务商URL格式。`
@@ -53,7 +61,7 @@ export class ProxyProviderRegistry {
    * @returns Provider列表
    */
   static getAllProviders(): ProxyProvider[] {
-    return [...this.providers]
+    return [...this.getProviders()]
   }
 
   /**
@@ -62,6 +70,6 @@ export class ProxyProviderRegistry {
    * @returns true if URL format is supported
    */
   static isSupported(url: string): boolean {
-    return this.providers.some((p) => p.canHandle(url))
+    return this.getProviders().some((p) => p.canHandle(url))
   }
 }

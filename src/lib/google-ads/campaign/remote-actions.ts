@@ -71,12 +71,16 @@ export interface ExecuteGoogleAdsCampaignRemoteActionsParams {
   onCampaignOutcome?: (event: GoogleAdsCampaignRemoteActionOutcomeEvent) => void | Promise<void>
 }
 
+function isAccountFlagTruthy(value: boolean | number | null | undefined): boolean {
+  return value === true || value === 1
+}
+
 function resolveAccountEligibility(
   adsAccount: GoogleAdsAccountRemoteRef,
   skipAccountEligibilityCheck?: boolean
 ): boolean {
-  const accountIsActive = adsAccount.is_active === true
-  const accountIsDeleted = adsAccount.is_deleted === true
+  const accountIsActive = isAccountFlagTruthy(adsAccount.is_active)
+  const accountIsDeleted = isAccountFlagTruthy(adsAccount.is_deleted)
   if (skipAccountEligibilityCheck) {
     return Boolean(adsAccount.customer_id && !accountIsDeleted)
   }

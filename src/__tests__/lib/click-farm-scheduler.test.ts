@@ -16,10 +16,9 @@ import type { ClickFarmTask } from '@/lib/click-farm/click-farm-types'
 // Mock timezone-utils
 vi.mock('@/lib/common/server', () => ({
   createDateInTimezone: vi.fn((dateStr: string, timeStr: string, _timezone: string) => {
-    // 返回一个基于输入构造的Date对象
     const [year, month, day] = dateStr.split('-').map(Number)
     const [hour, minute] = timeStr.split(':').map(Number)
-    return new Date(year, month - 1, day, hour, minute, 0, 0)
+    return new Date(Date.UTC(year, month - 1, day, hour, minute ?? 0, 0, 0))
   }),
   getDateInTimezone: vi.fn((date: Date, _timezone: string) => {
     // 模拟返回UTC日期字符串

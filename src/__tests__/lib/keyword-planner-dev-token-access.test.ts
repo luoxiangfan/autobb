@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { getKeywordSearchVolumes } from '@/lib/keywords/planner/keyword-planner'
 
 let mockDb: any
-let getKeywordSearchVolumes: typeof import('@/lib/keywords/server').getKeywordSearchVolumes
 
 const mockGetBatchCachedVolumes = vi.fn()
 const mockBatchCacheVolumes = vi.fn()
@@ -103,14 +103,9 @@ describe('KeywordPlanner developer token access handling', () => {
     }
     mockResolveGoogleAdsApiAccessLevel.mockReset()
     mockResolveGoogleAdsApiAccessLevel.mockResolvedValue(null)
-  })
-
-  beforeEach(async () => {
-    vi.resetModules()
     mockGetBatchCachedVolumes.mockReset()
     mockBatchCacheVolumes.mockReset()
     mockGenerateKeywordHistoricalMetrics.mockReset()
-    ;({ getKeywordSearchVolumes } = await import('@/lib/keywords/server'))
   })
 
   afterEach(() => {

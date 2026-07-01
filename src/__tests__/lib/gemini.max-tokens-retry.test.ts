@@ -13,15 +13,21 @@ const getSettingValue = (category: string, key: string, userId?: number): Settin
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('@/lib/common/server', () => ({
-  getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
-    return getSettingValue(category, key, userId)
-  }),
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
+      return getSettingValue(category, key, userId)
+    }),
+  }
+})
+
+const { axiosGenerate } = vi.hoisted(() => ({
+  axiosGenerate: vi.fn(),
 }))
 
-const axiosGenerate = vi.fn()
-
-vi.mock('@/lib/ai/ai', () => ({
+vi.mock('@/lib/ai/gemini-axios', () => ({
   generateContent: axiosGenerate,
 }))
 

@@ -13,25 +13,31 @@ const getSettingValue = (category: string, key: string, userId?: number): Settin
   return { value: settingStore.get(storeKey) }
 }
 
-vi.mock('@/lib/common/server', () => ({
-  getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
-    return getSettingValue(category, key, userId)
-  }),
-  getSetting: vi.fn(async (category: string, key: string, userId?: number) => {
-    return getSettingValue(category, key, userId)
-  }),
-}))
-
-const axiosGenerate = vi.fn(async (...args: any[]) => {
-  const params = args[0]
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
   return {
-    text: 'ok-from-relay',
-    usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
-    model: params.model,
+    ...actual,
+    getUserOnlySetting: vi.fn(async (category: string, key: string, userId: number) => {
+      return getSettingValue(category, key, userId)
+    }),
+    getSetting: vi.fn(async (category: string, key: string, userId?: number) => {
+      return getSettingValue(category, key, userId)
+    }),
   }
 })
 
-vi.mock('@/lib/ai/ai', () => ({
+const { axiosGenerate } = vi.hoisted(() => ({
+  axiosGenerate: vi.fn(async (...args: any[]) => {
+    const params = args[0]
+    return {
+      text: 'ok-from-relay',
+      usage: { inputTokens: 1, outputTokens: 2, totalTokens: 3 },
+      model: params.model,
+    }
+  }),
+}))
+
+vi.mock('@/lib/ai/gemini-axios', () => ({
   generateContent: axiosGenerate,
 }))
 
