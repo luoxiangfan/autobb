@@ -48,25 +48,29 @@ function createPool(overrides: Record<string, any> = {}) {
 }
 
 describe('resolveCreativeBucketPoolKeywords', () => {
-  it('maps legacy bucket C to canonical model-intent keywords', () => {
+  it('rejects legacy bucket C', () => {
+    const pool = createPool()
+
+    expect(() => resolveCreativeBucketPoolKeywords(pool, 'C', 'A')).toThrow(
+      'Invalid bucket type: C'
+    )
+  })
+
+  it('rejects legacy bucket S', () => {
+    const pool = createPool()
+
+    expect(() => resolveCreativeBucketPoolKeywords(pool, 'S', 'A')).toThrow(
+      'Invalid bucket type: S'
+    )
+  })
+
+  it('returns canonical B keywords', () => {
     const pool = createPool()
 
     const bucketB = resolveCreativeBucketPoolKeywords(pool, 'B', 'A').map((item) => item.keyword)
-    const bucketC = resolveCreativeBucketPoolKeywords(pool, 'C', 'A').map((item) => item.keyword)
 
-    expect(bucketC).toEqual(bucketB)
     expect(bucketB).toContain('acme x10 vacuum')
     expect(bucketB).toContain('x10 robot vacuum')
-  })
-
-  it('maps legacy bucket S to canonical product-intent coverage keywords', () => {
-    const pool = createPool()
-
-    const bucketD = resolveCreativeBucketPoolKeywords(pool, 'D', 'A').map((item) => item.keyword)
-    const bucketS = resolveCreativeBucketPoolKeywords(pool, 'S', 'A').map((item) => item.keyword)
-
-    expect(bucketS).toEqual(bucketD)
-    expect(bucketD).toContain('acme vacuum deals')
   })
 
   it('uses the provided fallback bucket when no bucket is specified', () => {
@@ -105,10 +109,8 @@ describe('resolveCreativeBucketPoolKeywords', () => {
 })
 
 describe('getThemeByBucket', () => {
-  it('normalizes legacy C and S buckets to canonical B and D themes', () => {
-    expect(getThemeByBucket('C', 'product')).toBe(getThemeByBucket('B', 'product'))
-    expect(getThemeByBucket('S', 'product')).toBe(getThemeByBucket('D', 'product'))
-    expect(getThemeByBucket('C', 'store')).toBe(getThemeByBucket('B', 'store'))
-    expect(getThemeByBucket('S', 'store')).toBe(getThemeByBucket('D', 'store'))
+  it('returns empty theme for legacy C and S buckets', () => {
+    expect(getThemeByBucket('C', 'product')).toBe('')
+    expect(getThemeByBucket('S', 'product')).toBe('')
   })
 })

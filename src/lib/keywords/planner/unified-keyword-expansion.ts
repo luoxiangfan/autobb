@@ -61,7 +61,6 @@ export async function getMultiRoundIntentAwareKeywords(
     authType = 'oauth',
     offerId,
     linkedServiceAccountId,
-    serviceAccountId,
     plannerSession,
     minSearchVolume = 100, // 多轮扩展使用较低阈值
     maxKeywords = 500,
@@ -79,7 +78,6 @@ export async function getMultiRoundIntentAwareKeywords(
   const plannerAuth = await prepareKeywordPlannerSessionForServiceParams(userId, {
     offerId,
     linkedServiceAccountId,
-    serviceAccountId,
     plannerSession,
   })
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined

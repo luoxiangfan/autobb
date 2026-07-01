@@ -74,8 +74,8 @@ function normalizeRequestedBucket(value: unknown): BucketType | null {
     .toUpperCase()
   if (!upper) return null
   if (upper === 'A') return 'A'
-  if (upper === 'B' || upper === 'C') return 'B'
-  if (upper === 'D' || upper === 'S') return 'D'
+  if (upper === 'B') return 'B'
+  if (upper === 'D') return 'D'
   return null
 }
 

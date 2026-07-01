@@ -109,10 +109,7 @@ export function keywordPlannerIdeasBlockedReason(
 
 async function prepareKeywordPlannerSessionForServiceParams(
   userId: number | undefined,
-  params: Pick<
-    KeywordServiceParams,
-    'offerId' | 'linkedServiceAccountId' | 'serviceAccountId' | 'plannerSession'
-  >
+  params: Pick<KeywordServiceParams, 'offerId' | 'linkedServiceAccountId' | 'plannerSession'>
 ): Promise<KeywordPlannerSessionAuthResult | null> {
   if (!userId) return null
   if (params.plannerSession) {
@@ -122,7 +119,6 @@ async function prepareKeywordPlannerSessionForServiceParams(
     userId,
     offerId: params.offerId,
     linkedServiceAccountId: params.linkedServiceAccountId,
-    serviceAccountId: params.serviceAccountId ?? null,
   })
   return prepareKeywordPlannerSessionAuth(userId, linkedSa)
 }

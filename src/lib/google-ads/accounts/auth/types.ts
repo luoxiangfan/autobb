@@ -179,7 +179,6 @@ export type ResolveKeywordPlannerLinkedSaParams = {
   userId: number
   offerId?: number
   linkedServiceAccountId?: string | null
-  serviceAccountId?: string | null
 }
 
 export type KeywordPoolExpandLoadResult =

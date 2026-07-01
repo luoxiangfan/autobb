@@ -46,12 +46,11 @@ describe('resolveKeywordPlannerLinkedServiceAccountId', () => {
     expect(linked).toBe('sa-from-offer')
   })
 
-  it('falls back to legacy serviceAccountId when no offerId', async () => {
+  it('returns null when neither linkedServiceAccountId nor offerId is provided', async () => {
     const linked = await resolveKeywordPlannerLinkedServiceAccountId({
       userId: 7,
-      serviceAccountId: ' sa-legacy ',
     })
-    expect(linked).toBe('sa-legacy')
+    expect(linked).toBeNull()
     expect(dbFns.queryOne).not.toHaveBeenCalled()
   })
 })

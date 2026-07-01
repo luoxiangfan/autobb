@@ -196,8 +196,7 @@ export async function resolveKeywordPlannerLinkedServiceAccountId(
   if (params.offerId) {
     return resolveLinkedServiceAccountIdForOffer(params.userId, params.offerId)
   }
-  const legacy = params.serviceAccountId?.trim()
-  return legacy || null
+  return null
 }
 
 export async function queryGoogleAdsAccountForOfferExpand(

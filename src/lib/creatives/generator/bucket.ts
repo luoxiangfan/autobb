@@ -13,13 +13,13 @@ import {
 // 导入关键词质量过滤函数 补充导入纯品牌词函数 改为 shouldUseExactMatch 策略函数 补充导入品牌变体和语义查询过滤函数
 // 导入纯品牌词判断函数
 
-import { normalizeKeywordPoolBucketQuery } from '../server'
+import { normalizeCreativeBucketSlot } from '../server'
 import type { BucketType, NormalizedCreativeBucket } from './types'
 import { decodeUriComponentSafe, safeParseJson } from './utils'
 import { MAX_STORE_PRODUCT_LINKS } from '@/lib/offers/store-product-links'
 
 export function normalizeCreativeBucketType(bucket?: string | null): NormalizedCreativeBucket {
-  return normalizeKeywordPoolBucketQuery(bucket)
+  return normalizeCreativeBucketSlot(bucket)
 }
 
 export function resolveCreativeBucketPoolKeywords(
@@ -27,8 +27,13 @@ export function resolveCreativeBucketPoolKeywords(
   bucket?: string | null,
   fallbackBucket: Exclude<NormalizedCreativeBucket, null> = 'A'
 ): PoolKeywordData[] {
-  const normalizedBucket = normalizeCreativeBucketType(bucket) ?? fallbackBucket
-  return getBucketInfo(pool, normalizedBucket).keywords
+  const rawBucket = bucket == null ? '' : String(bucket).trim()
+  const normalizedBucket = rawBucket ? normalizeCreativeBucketType(rawBucket) : null
+  if (rawBucket && !normalizedBucket) {
+    throw new Error(`Invalid bucket type: ${bucket}`)
+  }
+  const effectiveBucket = normalizedBucket ?? fallbackBucket
+  return getBucketInfo(pool, effectiveBucket).keywords
 }
 
 export function getStoreProductNameCandidate(product: any): string {
@@ -276,7 +281,7 @@ export function dedupeStoreProductNames(
 }
 
 export function getThemeByBucket(bucket: BucketType, linkType: 'product' | 'store'): string {
-  const normalizedBucket = normalizeKeywordPoolBucketQuery(bucket)
+  const normalizedBucket = normalizeCreativeBucketSlot(bucket)
   if (!normalizedBucket) {
     return ''
   }

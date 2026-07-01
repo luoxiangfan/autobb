@@ -50,6 +50,18 @@ describe('normalizeSingleCreativeSelection', () => {
     expect(result.requestedBucket).toBeNull()
   })
 
+  it('rejects legacy creativeType aliases', () => {
+    const result = normalizeSingleCreativeSelection({
+      creativeType: 'brand_focus',
+      bucket: undefined,
+      hasExplicitCreativeType: true,
+      hasExplicitBucket: false,
+    })
+
+    expect(result.errorCode).toBe('invalid-creative-type')
+    expect(result.requestedBucket).toBeNull()
+  })
+
   it('rejects creativeType and bucket conflicts', () => {
     const result = normalizeSingleCreativeSelection({
       creativeType: 'model_intent',

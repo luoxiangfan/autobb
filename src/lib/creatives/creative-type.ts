@@ -3,14 +3,13 @@ import { hasModelAnchorInText } from './model-anchor-evidence'
 
 export type CanonicalCreativeType = 'brand_intent' | 'model_intent' | 'product_intent'
 
-export type LegacyCreativeType = 'brand_focus' | 'model_focus' | 'brand_product'
-
-export type CreativeTypeValue = CanonicalCreativeType | LegacyCreativeType
-
 export type CreativeBucketSlot = 'A' | 'B' | 'D'
 
-/* * keyword_pool 查询参数仍可能传入历史桶 C/S（非 ad_creatives 字段） */
-export type LegacyKeywordPoolBucketQuery = 'C' | 'S'
+const STORED_CREATIVE_TYPE_ALIASES: Record<string, CanonicalCreativeType> = {
+  brand_focus: 'brand_intent',
+  model_focus: 'model_intent',
+  brand_product: 'product_intent',
+}
 
 function normalizeTextArray(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -63,33 +62,44 @@ export function normalizeCreativeBucketSlot(value: unknown): CreativeBucketSlot 
   return null
 }
 
-/* * keyword_pool 查询：历史 C→B、S→D（不影响 ad_creatives 存储） */
-export function normalizeKeywordPoolBucketQuery(value: unknown): CreativeBucketSlot | null {
+/* * 读取历史 DB/API 响应中的 keyword_bucket（C/S 仅在此处归一化，不接受为新入参） */
+export function normalizeStoredCreativeBucketSlot(value: unknown): CreativeBucketSlot | null {
+  const canonical = normalizeCreativeBucketSlot(value)
+  if (canonical) return canonical
+
   const upper = String(value || '')
     .trim()
     .toUpperCase()
   if (upper === 'C') return 'B'
   if (upper === 'S') return 'D'
-  return normalizeCreativeBucketSlot(upper)
+  return null
 }
 
+/* * API 入参：仅接受 canonical creativeType */
 export function normalizeCanonicalCreativeType(value: unknown): CanonicalCreativeType | null {
   const normalized = String(value || '')
     .trim()
     .toLowerCase()
   if (!normalized) return null
 
-  if (normalized === 'brand_intent' || normalized === 'brand_focus') {
-    return 'brand_intent'
-  }
-  if (normalized === 'model_intent' || normalized === 'model_focus') {
-    return 'model_intent'
-  }
-  if (normalized === 'product_intent' || normalized === 'brand_product') {
-    return 'product_intent'
-  }
+  if (normalized === 'brand_intent') return 'brand_intent'
+  if (normalized === 'model_intent') return 'model_intent'
+  if (normalized === 'product_intent') return 'product_intent'
 
   return null
+}
+
+/* * 读取历史 DB 中的 creative_type（含旧别名） */
+export function normalizeStoredCreativeType(value: unknown): CanonicalCreativeType | null {
+  const canonical = normalizeCanonicalCreativeType(value)
+  if (canonical) return canonical
+
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+  if (!normalized) return null
+
+  return STORED_CREATIVE_TYPE_ALIASES[normalized] ?? null
 }
 
 export function mapCreativeTypeToBucketSlot(
@@ -142,13 +152,20 @@ export function deriveCanonicalCreativeType(params: {
   theme?: unknown
   bucketIntent?: unknown
 }): CanonicalCreativeType | null {
-  const normalizedCreativeType = normalizeCanonicalCreativeType(params.creativeType)
+  const normalizedCreativeType = normalizeStoredCreativeType(params.creativeType)
   if (normalizedCreativeType) {
     return normalizedCreativeType
   }
 
-  const bucketSlot = normalizeCreativeBucketSlot(params.keywordBucket)
+  const rawBucket = String(params.keywordBucket || '')
+    .trim()
+    .toUpperCase()
+  const bucketSlot = normalizeStoredCreativeBucketSlot(params.keywordBucket)
   if (!bucketSlot) return null
+
+  // 历史 keyword_bucket 别名在读取时保留原槽位意图，不经过 B 槽位的锚点推断
+  if (rawBucket === 'C') return 'model_intent'
+  if (rawBucket === 'S') return 'product_intent'
 
   if (bucketSlot === 'A') return 'brand_intent'
   if (bucketSlot === 'D') return 'product_intent'

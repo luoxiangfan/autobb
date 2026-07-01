@@ -89,8 +89,6 @@ export interface KeywordServiceParams {
   offerId?: number
   /* * 显式 linked SA；未传且提供 offerId 时自动解析 */
   linkedServiceAccountId?: string | null
-  /** @deprecated 请用 linkedServiceAccountId；未传 linked 时作为显式 SA */
-  serviceAccountId?: string
   /* * 已由 loadKeywordPoolExpandCredentialsForOffer prepare 时传入，避免重复 heal */
   plannerSession?: KeywordPlannerSessionAuth
   // 可选配置

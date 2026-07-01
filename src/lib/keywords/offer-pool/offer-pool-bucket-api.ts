@@ -12,7 +12,7 @@ import {
   getCreativeTypeForBucketSlot,
   mapCreativeTypeToBucketSlot,
   normalizeCanonicalCreativeType,
-  normalizeKeywordPoolBucketQuery,
+  normalizeCreativeBucketSlot,
   type CanonicalCreativeType,
   type CreativeBucketSlot,
 } from '../../creatives/server'
@@ -70,7 +70,7 @@ export function getBucketInfo(
   pool: OfferKeywordPool,
   bucket: BucketType
 ): { keywords: PoolKeywordData[]; intent: string; intentEn: string } {
-  const slot = normalizeKeywordPoolBucketQuery(bucket)
+  const slot = normalizeCreativeBucketSlot(bucket)
   if (!slot) {
     throw new Error(`Invalid bucket type: ${bucket}`)
   }
@@ -347,16 +347,26 @@ export function calculateKeywordOverlapRate(keywords1: string[], keywords2: stri
 
 type CanonicalGetKeywordsBucket = 'A' | 'B' | 'D' | 'ALL'
 
+function isLegacyKeywordPoolBucketQuery(value: string): boolean {
+  const upper = value.trim().toUpperCase()
+  return upper === 'C' || upper === 'S'
+}
+
 function resolveCanonicalGetKeywordsBucket(
   bucket: GetKeywordsOptions['bucket'],
   intent?: GetKeywordsOptions['intent'],
   creativeType?: GetKeywordsOptions['creativeType']
 ): CanonicalGetKeywordsBucket {
   if (bucket && bucket !== 'ALL') {
-    const normalizedBucket = normalizeKeywordPoolBucketQuery(bucket)
+    const rawBucket = String(bucket).trim()
+    if (isLegacyKeywordPoolBucketQuery(rawBucket)) {
+      throw new Error(`Invalid bucket type: ${bucket}`)
+    }
+    const normalizedBucket = normalizeCreativeBucketSlot(bucket)
     if (normalizedBucket) {
       return normalizedBucket
     }
+    throw new Error(`Invalid bucket type: ${bucket}`)
   }
 
   const canonicalCreativeType = normalizeCanonicalCreativeType(creativeType)
@@ -379,7 +389,6 @@ function buildCanonicalKeywordView(keywordPool: OfferKeywordPool) {
   return {
     A: bucketA,
     B: bucketB,
-    C: bucketB,
     D: bucketD,
     ALL: mergeKeywordDataLists([bucketA.keywords, bucketB.keywords, bucketD.keywords]),
   }
@@ -549,7 +558,6 @@ export async function getKeywords(
       totalCount: keywords.length,
       bucketACount: canonicalView.A.keywords.length,
       bucketBCount: canonicalView.B.keywords.length,
-      bucketCCount: canonicalView.C.keywords.length,
       bucketDCount: canonicalView.D.keywords.length,
       searchVolumeRange:
         keywords.length > 0
@@ -571,7 +579,6 @@ export async function getKeywords(
     result.buckets = {
       A: { intent: canonicalView.A.intent, keywords: canonicalView.A.keywords },
       B: { intent: canonicalView.B.intent, keywords: canonicalView.B.keywords },
-      C: { intent: canonicalView.C.intent, keywords: canonicalView.C.keywords },
       D: { intent: canonicalView.D.intent, keywords: canonicalView.D.keywords },
     }
   }
@@ -587,7 +594,7 @@ export async function getKeywords(
  *
  * @param offerId - Offer ID
  * @param linkType - 链接类型 ('product' | 'store')
- * @param bucket - 创意桶类型 ('A' | 'B' | 'C' | 'D' | 'S')
+ * @param bucket - 创意桶类型 ('A' | 'B' | 'D')
  * @returns 关键词数组和意图描述
  */
 export async function getKeywordsByLinkTypeAndBucket(
@@ -605,7 +612,7 @@ export async function getKeywordsByLinkTypeAndBucket(
   const effectivePool =
     keywordPool.linkType === linkType ? keywordPool : { ...keywordPool, linkType }
   const bucketInfo = getBucketInfo(effectivePool as OfferKeywordPool, bucket)
-  const effectiveBucket = normalizeKeywordPoolBucketQuery(bucket)
+  const effectiveBucket = normalizeCreativeBucketSlot(bucket)
   if (!effectiveBucket) {
     throw new Error(`Invalid bucket type: ${bucket}`)
   }

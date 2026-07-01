@@ -41,7 +41,8 @@ import { CreativeTypeProgress } from '@/components/CreativeTypeProgress'
 import {
   deriveCanonicalCreativeType,
   mapCreativeTypeToBucketSlot,
-  normalizeCanonicalCreativeType,
+  normalizeStoredCreativeBucketSlot,
+  normalizeStoredCreativeType,
   type CanonicalCreativeType,
 } from '@/lib/creatives/creative-type'
 import { normalizeCreativeTaskError } from '@/lib/creatives/creative-task-error'
@@ -125,8 +126,8 @@ interface Creative {
   aiModel: string
   generationMode?: AdCreativeGenerationMode | string | null
 
-  // canonical creativeType（兼容历史旧 key）
-  creativeType?: CanonicalCreativeType | 'brand_focus' | 'model_focus' | 'brand_product' | null
+  // canonical creativeType
+  creativeType?: CanonicalCreativeType | null
   // 关键词分桶字段 (v4.10)
   keywordBucket?: 'A' | 'B' | 'D'
   bucketIntent?: string // 创意类型说明（KISS-3：A=品牌意图，B=商品型号/产品族意图，D=商品需求意图）
@@ -249,11 +250,9 @@ const normalizeCreativeBucket = (
   bucket: string | null | undefined,
   creativeType?: unknown
 ): NormalizedCreativeBucket | null => {
-  const upper = String(bucket || '').toUpperCase()
-  if (upper === 'A') return 'A'
-  if (upper === 'B' || upper === 'C') return 'B'
-  if (upper === 'D' || upper === 'S') return 'D'
-  const canonicalType = normalizeCanonicalCreativeType(creativeType)
+  const fromBucket = normalizeStoredCreativeBucketSlot(bucket)
+  if (fromBucket) return fromBucket
+  const canonicalType = normalizeStoredCreativeType(creativeType)
   return mapCreativeTypeToBucketSlot(canonicalType)
 }
 
@@ -312,13 +311,7 @@ const toNumberOrNull = (value: unknown): number | null => {
 }
 
 const normalizeQualityGateBucket = (value: unknown): NormalizedCreativeBucket | null => {
-  const upper = String(value || '')
-    .trim()
-    .toUpperCase()
-  if (upper === 'A') return 'A'
-  if (upper === 'B' || upper === 'C') return 'B'
-  if (upper === 'D' || upper === 'S') return 'D'
-  return null
+  return normalizeStoredCreativeBucketSlot(value)
 }
 
 const formatQualityGateReason = (rawReason: string): string => {

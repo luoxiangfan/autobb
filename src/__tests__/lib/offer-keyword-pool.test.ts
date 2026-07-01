@@ -184,23 +184,16 @@ describe('OfferKeywordPool', () => {
       expect(keywords).toEqual([])
     })
 
-    it('should return correct info for bucket C', () => {
-      const info = getBucketInfo(mockKeywordPool, 'C')
-      const keywords = getKeywordTexts(info.keywords)
-
-      expect(info.intent).toBe('商品型号/产品族意图')
-      expect(info.intentEn).toBe('Model Intent')
-      expect(keywords).toEqual([])
+    it('rejects legacy bucket C queries', () => {
+      expect(() => getBucketInfo(mockKeywordPool, 'C')).toThrow('Invalid bucket type: C')
     })
 
     it('should keep brand keywords only in canonical brand intent when no model anchors exist', () => {
       const bucketAKeywords = getKeywordTexts(getBucketInfo(mockKeywordPool, 'A').keywords)
       const bucketBKeywords = getKeywordTexts(getBucketInfo(mockKeywordPool, 'B').keywords)
-      const bucketCKeywords = getKeywordTexts(getBucketInfo(mockKeywordPool, 'C').keywords)
 
       expect(bucketAKeywords).toContain('eufy')
       expect(bucketBKeywords).toEqual([])
-      expect(bucketCKeywords).toEqual([])
     })
 
     it('should return full coverage for bucket D', () => {

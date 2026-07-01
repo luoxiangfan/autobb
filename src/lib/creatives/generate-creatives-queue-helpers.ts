@@ -35,8 +35,7 @@ const CREATIVE_SELECTION_ERROR_PAYLOADS: Record<
 > = {
   'invalid-creative-type': {
     error: 'Invalid creativeType',
-    message:
-      'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
+    message: 'creativeType 仅支持 brand_intent / model_intent / product_intent',
     errorCode: 'CREATIVE_TYPE_INVALID',
     errorCategory: 'validation',
     retryable: false,

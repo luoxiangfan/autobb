@@ -26,10 +26,11 @@ export async function getKeywordVolumesForExisting(params: {
   language: string
   userId?: number
   brandName?: string
-  serviceAccountId?: string
   offerId?: number
+  linkedServiceAccountId?: string | null
 }): Promise<UnifiedKeywordData[]> {
-  const { baseKeywords, country, language, userId, brandName, serviceAccountId, offerId } = params
+  const { baseKeywords, country, language, userId, brandName, offerId, linkedServiceAccountId } =
+    params
 
   if (!baseKeywords || baseKeywords.length === 0) {
     return []
@@ -42,7 +43,7 @@ export async function getKeywordVolumesForExisting(params: {
       ? await resolveKeywordPlannerLinkedServiceAccountId({
           userId,
           offerId,
-          serviceAccountId: serviceAccountId ?? null,
+          linkedServiceAccountId,
         })
       : null
 
@@ -137,8 +138,6 @@ export async function expandKeywordsWithSeeds(params: {
   authType?: 'oauth' | 'service_account'
   offerId?: number
   linkedServiceAccountId?: string | null
-  /** @deprecated 请用 linkedServiceAccountId */
-  serviceAccountId?: string
   /* * 已由关键词池 expand 单次 prepare 时传入，避免每轮重复 heal */
   plannerSession?: KeywordPlannerSessionAuth
   minSearchVolume?: number
@@ -157,7 +156,6 @@ export async function expandKeywordsWithSeeds(params: {
     authType = 'oauth',
     offerId,
     linkedServiceAccountId,
-    serviceAccountId,
     plannerSession: preloadedPlannerSession,
     minSearchVolume = 500,
     maxKeywords = 100,
@@ -210,7 +208,6 @@ export async function expandKeywordsWithSeeds(params: {
     : await prepareKeywordPlannerSessionForServiceParams(userId, {
         offerId,
         linkedServiceAccountId,
-        serviceAccountId,
       })
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined
   const plannerIdeasBlocked = keywordPlannerIdeasBlockedReason(plannerAuth)

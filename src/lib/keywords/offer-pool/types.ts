@@ -249,9 +249,9 @@ export interface ClusteringStrategy {
 }
 
 export interface GetKeywordsOptions {
-  bucket?: 'A' | 'B' | 'C' | 'D' | 'S' | 'ALL'
+  bucket?: 'A' | 'B' | 'D' | 'ALL'
   intent?: 'brand' | 'scenario' | 'feature' | 'demand' | CanonicalCreativeType
-  creativeType?: CanonicalCreativeType | 'brand_focus' | 'model_focus' | 'brand_product'
+  creativeType?: CanonicalCreativeType
   minSearchVolume?: number
   maxKeywords?: number
 }

@@ -89,9 +89,9 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
         .trim()
         .toLowerCase()
       if (!normalized) return null
-      if (normalized === 'brand_focus' || normalized === 'brand_intent') return 'brand_intent'
-      if (normalized === 'model_focus' || normalized === 'model_intent') return 'model_intent'
-      if (normalized === 'brand_product' || normalized === 'product_intent') return 'product_intent'
+      if (normalized === 'brand_intent') return 'brand_intent'
+      if (normalized === 'model_intent') return 'model_intent'
+      if (normalized === 'product_intent') return 'product_intent'
       return null
     })
 
@@ -109,8 +109,8 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
         .trim()
         .toUpperCase()
       if (bucket === 'A') return 'brand_intent'
-      if (bucket === 'B' || bucket === 'C') return 'model_intent'
-      if (bucket === 'D' || bucket === 'S') return 'product_intent'
+      if (bucket === 'B') return 'model_intent'
+      if (bucket === 'D') return 'product_intent'
       return null
     })
   })
@@ -280,13 +280,7 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
-  it('accepts legacy creativeType and maps to canonical bucket slot', async () => {
-    dbFns.query
-      .mockResolvedValueOnce([{ id: 102, scrape_status: 'completed' }])
-      .mockResolvedValueOnce([])
-    dbFns.exec.mockResolvedValue(undefined)
-    keywordPoolFns.getAvailableBuckets.mockResolvedValueOnce(['D'])
-
+  it('rejects legacy creativeType aliases', async () => {
     const req = new NextRequest('http://localhost/api/offers/batch/generate-creatives-queue', {
       method: 'POST',
       headers: {
@@ -302,21 +296,10 @@ describe('POST /api/offers/batch/generate-creatives-queue', () => {
     const res = await POST(req)
     const data = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(queueFns.enqueue).toHaveBeenCalledWith(
-      'ad-creative',
-      expect.objectContaining({
-        offerId: 102,
-        bucket: 'D',
-        forceGenerateOnQualityGate: true,
-        qualityGateBypassReason: 'offers_batch_auto_bypass_quality_gate',
-      }),
-      1,
-      expect.objectContaining({
-        taskId: 'task-102',
-      })
-    )
-    expect(data.enqueuedCount).toBe(1)
+    expect(res.status).toBe(400)
+    expect(data.errorCode).toBe('CREATIVE_TYPE_INVALID')
+    expect(dbFns.query).not.toHaveBeenCalled()
+    expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
   it('allows explicitly disabling quality-gate bypass for a batch request', async () => {

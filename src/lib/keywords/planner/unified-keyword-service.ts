@@ -71,7 +71,6 @@ export async function getUnifiedKeywordData(
     authType = 'oauth',
     offerId,
     linkedServiceAccountId,
-    serviceAccountId,
     plannerSession,
     minSearchVolume = 500,
     maxKeywords = 500,
@@ -88,7 +87,6 @@ export async function getUnifiedKeywordData(
   const plannerAuth = await prepareKeywordPlannerSessionForServiceParams(userId, {
     offerId,
     linkedServiceAccountId,
-    serviceAccountId,
     plannerSession,
   })
   const volumeSession = plannerAuth?.ok ? plannerAuth.session : undefined

@@ -169,41 +169,27 @@ describe('getKeywords canonical retrieval', () => {
     vi.restoreAllMocks()
   })
 
-  it('maps legacy bucket C to canonical model intent keywords', async () => {
-    const result = await getKeywords(77, {
-      bucket: 'C',
-      minSearchVolume: 0,
-      maxKeywords: 20,
-    })
-
-    const keywords = result.keywords.map((item) => item.keyword)
-
-    expect(keywords).toContain('brandx x200 vacuum')
-    expect(keywords).toContain('x200 vacuum')
-    expect(keywords).not.toContain('brandx series x100 vacuum')
-    expect(keywords).not.toContain('brandx')
-    expect(keywords).not.toContain('brandx vacuum')
-    expect(result.stats.bucketBCount).toBe(result.stats.bucketCCount)
+  it('rejects legacy bucket C queries', async () => {
+    await expect(
+      getKeywords(77, {
+        bucket: 'C',
+        minSearchVolume: 0,
+        maxKeywords: 20,
+      })
+    ).rejects.toThrow('Invalid bucket type: C')
   })
 
-  it('maps legacy bucket S to canonical product intent keywords', async () => {
-    const resultByLegacyBucket = await getKeywords(77, {
-      bucket: 'S' as any,
-      minSearchVolume: 0,
-      maxKeywords: 20,
-    })
-    const resultByCanonicalBucket = await getKeywords(77, {
-      bucket: 'D',
-      minSearchVolume: 0,
-      maxKeywords: 20,
-    })
-
-    expect(resultByLegacyBucket.keywords.map((item) => item.keyword)).toEqual(
-      resultByCanonicalBucket.keywords.map((item) => item.keyword)
-    )
+  it('rejects legacy bucket S queries', async () => {
+    await expect(
+      getKeywords(77, {
+        bucket: 'S' as any,
+        minSearchVolume: 0,
+        maxKeywords: 20,
+      })
+    ).rejects.toThrow('Invalid bucket type: S')
   })
 
-  it('returns canonical ALL view with deduped A/B/D keywords and compatibility buckets', async () => {
+  it('returns canonical ALL view with deduped A/B/D keywords', async () => {
     const result = await getKeywords(77, {
       bucket: 'ALL',
       minSearchVolume: 0,
@@ -212,7 +198,6 @@ describe('getKeywords canonical retrieval', () => {
 
     const keywords = result.keywords.map((item) => item.keyword)
     const bucketBKeywords = result.buckets?.B?.keywords.map((item) => item.keyword)
-    const bucketCKeywords = result.buckets?.C?.keywords.map((item) => item.keyword)
 
     expect(keywords[0]).toBe('brandx')
     expect(keywords).toContain('brandx vacuum')
@@ -223,9 +208,9 @@ describe('getKeywords canonical retrieval', () => {
     expect(keywords).not.toContain('brandx official store')
     expect(result.buckets?.A?.intent).toBe('品牌意图')
     expect(result.buckets?.B?.intent).toBe('商品型号/产品族意图')
-    expect(result.buckets?.C?.intent).toBe('商品型号/产品族意图')
     expect(result.buckets?.D?.intent).toBe('商品需求意图')
-    expect(bucketBKeywords).toEqual(bucketCKeywords)
+    expect(result.buckets?.C).toBeUndefined()
+    expect(bucketBKeywords).toContain('brandx x200 vacuum')
   })
 
   it('narrows ALL queries to canonical brand intent while keeping branded model anchors', async () => {
@@ -999,7 +984,7 @@ describe('getKeywords canonical retrieval', () => {
   it('prefers creativeType narrowing over intent when both are provided', async () => {
     const resultByCreativeType = await getKeywords(77, {
       intent: 'brand',
-      creativeType: 'brand_product',
+      creativeType: 'product_intent',
       minSearchVolume: 0,
       maxKeywords: 20,
     })

@@ -99,9 +99,9 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
         .trim()
         .toLowerCase()
       if (!normalized) return null
-      if (normalized === 'brand_focus' || normalized === 'brand_intent') return 'brand_intent'
-      if (normalized === 'model_focus' || normalized === 'model_intent') return 'model_intent'
-      if (normalized === 'brand_product' || normalized === 'product_intent') return 'product_intent'
+      if (normalized === 'brand_intent') return 'brand_intent'
+      if (normalized === 'model_intent') return 'model_intent'
+      if (normalized === 'product_intent') return 'product_intent'
       return null
     })
 
@@ -119,8 +119,8 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
         .trim()
         .toUpperCase()
       if (bucket === 'A') return 'brand_intent'
-      if (bucket === 'B' || bucket === 'C') return 'model_intent'
-      if (bucket === 'D' || bucket === 'S') return 'product_intent'
+      if (bucket === 'B') return 'model_intent'
+      if (bucket === 'D') return 'product_intent'
       return null
     })
   })
@@ -274,9 +274,8 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     expect(data.bucket).toBe('B')
   })
 
-  it('accepts canonical/legacy creativeType and maps to the expected bucket', async () => {
+  it('rejects legacy creativeType aliases', async () => {
     keywordPoolFns.getAvailableBuckets.mockResolvedValue(['B', 'D'])
-    dbFns.exec.mockResolvedValue(undefined)
 
     const req = new NextRequest('http://localhost/api/offers/96/generate-creatives-queue', {
       method: 'POST',
@@ -292,19 +291,9 @@ describe('POST /api/offers/:id/generate-creatives-queue', () => {
     const res = await POST(req, { params: Promise.resolve({ id: '96' }) })
     const data = await res.json()
 
-    expect(res.status).toBe(200)
-    expect(queueFns.enqueue).toHaveBeenCalledWith(
-      'ad-creative',
-      expect.objectContaining({
-        offerId: 96,
-        bucket: 'B',
-      }),
-      1,
-      expect.objectContaining({
-        taskId: expect.any(String),
-      })
-    )
-    expect(data.bucket).toBe('B')
+    expect(res.status).toBe(400)
+    expect(data.errorCode).toBe('CREATIVE_TYPE_INVALID')
+    expect(queueFns.enqueue).not.toHaveBeenCalled()
   })
 
   it('rejects inconsistent creativeType and bucket combinations', async () => {
