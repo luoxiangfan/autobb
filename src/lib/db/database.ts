@@ -10,6 +10,31 @@ export interface DatabaseAdapter {
   close(): Promise<void> | void
 }
 
+// 无 id 列的表（主键为 cache_key / sync_key / user_id 等），INSERT 不可追加 RETURNING id
+const INSERT_TABLES_WITHOUT_ID_COLUMN = new Set([
+  'affiliate_product_raw_json_retirement',
+  'brand_core_keyword_daily',
+  'google_ads_accounts_async_refresh_state',
+  'google_ads_auth_assignments',
+  'openclaw_affiliate_commission_report_cache',
+  'usd_exchange_rates',
+])
+
+export function prepareExecInsertSql(sql: string): string {
+  let pgSql = sql.replace(/;\s*$/, '')
+  const isInsert = /^\s*INSERT\s+INTO\s+/i.test(pgSql)
+  const hasReturning = /\bRETURNING\b/i.test(pgSql)
+
+  if (isInsert && !hasReturning) {
+    const tableName = extractTableName(pgSql)
+    if (!INSERT_TABLES_WITHOUT_ID_COLUMN.has(tableName)) {
+      pgSql += ' RETURNING id'
+    }
+  }
+
+  return pgSql
+}
+
 function requireDatabaseUrl(): string {
   const databaseUrl = process.env.DATABASE_URL
   if (
@@ -184,17 +209,7 @@ class PostgresAdapter implements DatabaseAdapter {
       })
     }
 
-    const isInsert = /^\s*INSERT\s+INTO\s+/i.test(pgSql)
-    const hasReturning = /\bRETURNING\b/i.test(pgSql)
-
-    if (isInsert && !hasReturning) {
-      const noIdTables = new Set(['brand_core_keyword_daily', 'usd_exchange_rates'])
-      const tableName = extractTableName(pgSql)
-
-      if (!noIdTables.has(tableName)) {
-        pgSql = pgSql.replace(/;\s*$/, '') + ' RETURNING id'
-      }
-    }
+    pgSql = prepareExecInsertSql(pgSql)
 
     let pgResult: any
     try {
@@ -203,7 +218,9 @@ class PostgresAdapter implements DatabaseAdapter {
         console.log('✅ [PostgreSQL exec] 完成:', { changes: pgResult?.count ?? pgResult?.length })
       }
     } catch (error: any) {
-      console.error('❌ [PostgreSQL exec] 失败:', error.message)
+      console.error('❌ [PostgreSQL exec] 失败:', error.message, {
+        table: extractTableName(sql),
+      })
       throw error
     }
 
