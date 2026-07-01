@@ -5,7 +5,7 @@ import {
   normalizeOfferCommissionPayoutInput,
   normalizeOfferProductPriceInput,
   parseCommissionPayoutValue,
-  resolveLegacyBareNumericMode,
+  resolveCommissionNumericMode,
 } from '@/lib/offers/server'
 
 describe('offer monetization helpers', () => {
@@ -19,22 +19,22 @@ describe('offer monetization helpers', () => {
     expect(normalizeOfferProductPriceInput('€349.99', 'US')).toBe('€349.99')
   })
 
-  it('resolveLegacyBareNumericMode prefers explicit numericCommissionMode', () => {
-    expect(resolveLegacyBareNumericMode({ numericCommissionMode: 'amount' })).toBe('amount')
-    expect(resolveLegacyBareNumericMode({ numericCommissionMode: 'percent' })).toBe('percent')
+  it('resolveCommissionNumericMode prefers explicit numericCommissionMode', () => {
+    expect(resolveCommissionNumericMode({ numericCommissionMode: 'amount' })).toBe('amount')
+    expect(resolveCommissionNumericMode({ numericCommissionMode: 'percent' })).toBe('percent')
   })
 
-  it('resolveLegacyBareNumericMode uses percent for payout-only and undefined for structured', () => {
-    expect(resolveLegacyBareNumericMode({ commissionPayout: '30' })).toBe('percent')
-    expect(resolveLegacyBareNumericMode({ commissionPayout: '105.00' })).toBe('percent')
+  it('resolveCommissionNumericMode uses percent for payout-only and undefined for structured', () => {
+    expect(resolveCommissionNumericMode({ commissionPayout: '30' })).toBe('percent')
+    expect(resolveCommissionNumericMode({ commissionPayout: '105.00' })).toBe('percent')
     expect(
-      resolveLegacyBareNumericMode({
+      resolveCommissionNumericMode({
         numericCommissionMode: 'amount',
         commissionPayout: '105.00',
       })
     ).toBe('amount')
     expect(
-      resolveLegacyBareNumericMode({
+      resolveCommissionNumericMode({
         commissionType: 'percent',
         commissionValue: '7.5',
       })
@@ -136,7 +136,7 @@ describe('offer monetization helpers', () => {
       normalizeOfferCommissionInput({
         targetCountry: 'US',
         commissionPayout: '30',
-        legacyBareNumericMode: 'percent',
+        numericCommissionMode: 'percent',
       })
     ).toEqual({
       commissionType: null,

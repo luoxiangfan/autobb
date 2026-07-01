@@ -2,7 +2,7 @@ import {
   normalizeOfferCommissionInput,
   normalizeOfferCommissionPayoutInput,
   normalizeOfferProductPriceInput,
-  resolveLegacyBareNumericMode,
+  resolveCommissionNumericMode,
 } from '@/lib/offers/server'
 import { inferOfferPageType } from '@/lib/offers/server'
 import { pickFirstTwoLetterCountryCode } from './two-letter-country-code'
@@ -477,7 +477,7 @@ export function normalizeOfferExtractRequestBody(
   const shouldNormalizeMonetization = options?.normalizeMonetization !== false
   if (shouldNormalizeMonetization) {
     const targetCountry = normalized.target_country
-    const legacyBareNumericMode = resolveLegacyBareNumericMode({
+    const numericCommissionMode = resolveCommissionNumericMode({
       numericCommissionMode: options?.numericCommissionMode,
       commissionType: normalized.commission_type,
       commissionValue: normalized.commission_value,
@@ -509,7 +509,7 @@ export function normalizeOfferExtractRequestBody(
         commissionValue: normalized.commission_value,
         commissionCurrency: normalized.commission_currency,
         commissionPayout: normalized.commission_payout,
-        legacyBareNumericMode,
+        numericCommissionMode,
       })
 
       if (normalizedCommission.commissionType !== null)

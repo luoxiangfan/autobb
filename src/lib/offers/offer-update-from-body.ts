@@ -8,7 +8,7 @@ import { compactCategoryLabel } from '@/lib/offers/offer-category'
 import { findOfferById, updateOffer, type Offer } from '@/lib/offers/offers'
 import {
   normalizeOfferCommissionInput,
-  resolveLegacyBareNumericMode,
+  resolveCommissionNumericMode,
 } from '@/lib/offers/offer-monetization'
 import { inferOfferPageType } from '@/lib/offers/offer-extraction-task'
 import {
@@ -245,7 +245,7 @@ export async function applyOfferUpdateFromBody(
         commissionType: data.commission_type,
         commissionValue: data.commission_value,
         commissionCurrency: data.commission_currency,
-        legacyBareNumericMode: resolveLegacyBareNumericMode({
+        numericCommissionMode: resolveCommissionNumericMode({
           commissionType: data.commission_type,
           commissionValue: data.commission_value,
           commissionPayout: data.commission_payout,

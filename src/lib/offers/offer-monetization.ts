@@ -337,7 +337,7 @@ export function normalizeOfferCommissionPayoutInput(
 
 export type CommissionType = 'percent' | 'amount'
 
-export type ResolveLegacyBareNumericModeParams = {
+export type ResolveCommissionNumericModeParams = {
   numericCommissionMode?: 'amount' | 'percent'
   commissionType?: unknown
   commissionValue?: unknown
@@ -345,13 +345,11 @@ export type ResolveLegacyBareNumericModeParams = {
 }
 
 /**
- * 推断 legacy commission_payout 裸数字语义（extract / PUT 共用）
- * 显式 numericCommissionMode 优先
- * 有结构化 commission_type/value 时走默认 amount 推断
- * 仅有 commission_payout 时保留裸数字（percent）
+ * 推断 commission_payout 裸数字（>1 且无 %/货币）语义
+ * 显式 numericCommissionMode 优先；有结构化字段时默认 amount；仅 payout 时保留裸值
  */
-export function resolveLegacyBareNumericMode(
-  params: ResolveLegacyBareNumericModeParams
+export function resolveCommissionNumericMode(
+  params: ResolveCommissionNumericModeParams
 ): 'amount' | 'percent' | undefined {
   if (params.numericCommissionMode === 'amount' || params.numericCommissionMode === 'percent') {
     return params.numericCommissionMode
@@ -383,7 +381,7 @@ export type NormalizeOfferCommissionInputParams = {
    * amount（默认）：推断为固定佣金金额
    * percent：保留原字符串，不自动加 $ 或 %
    */
-  legacyBareNumericMode?: 'amount' | 'percent'
+  numericCommissionMode?: 'amount' | 'percent'
 }
 
 export type NormalizedOfferCommission = {
@@ -503,86 +501,55 @@ function parseStructuredCommission(
   }
 }
 
-function parseLegacyCommission(
+function commissionFromPayoutOnly(
   commissionPayout: string | null | undefined,
   targetCountry?: string | null,
-  options?: { bareNumericMode?: 'amount' | 'percent' }
+  options?: { numericCommissionMode?: 'amount' | 'percent' }
 ): NormalizedOfferCommission | null {
   const raw = normalizeSpacing(String(commissionPayout || ''))
   if (!raw) return null
 
-  if (hasExplicitCurrencyMarker(raw)) {
-    const parsedMoney = parseMoneyValue(raw, {
-      targetCountry,
-      defaultCurrency: getCurrencyCodeByCountry(targetCountry),
-    })
-    if (!parsedMoney || parsedMoney.amount <= 0) {
-      throw new Error('commission_payout 金额格式非法')
-    }
-    const normalizedAmount = formatCompactNumber(parsedMoney.amount)
+  const numericMode = options?.numericCommissionMode ?? 'amount'
+  const parsedNumeric = parseNumberish(raw)
+
+  if (
+    !raw.includes('%') &&
+    !hasExplicitCurrencyMarker(raw) &&
+    parsedNumeric !== null &&
+    parsedNumeric > 1 &&
+    numericMode === 'percent'
+  ) {
     return {
-      commissionType: 'amount',
-      commissionValue: normalizedAmount,
-      commissionCurrency: parsedMoney.currency,
-      commissionPayout: `${getCurrencySymbolByCode(parsedMoney.currency)}${normalizedAmount}`,
+      commissionType: null,
+      commissionValue: null,
+      commissionCurrency: null,
+      commissionPayout: raw,
     }
   }
 
-  const parsedPercentRaw = parseNumberish(raw)
-  if (parsedPercentRaw === null || parsedPercentRaw <= 0) {
-    throw new Error('commission_payout 百分比格式非法')
+  const parsed = parseCommissionPayoutValue(raw, { targetCountry })
+  if (!parsed) {
+    if (raw.includes('%') || parsedNumeric === null || parsedNumeric <= 0) {
+      throw new Error('commission_payout 百分比格式非法')
+    }
+    throw new Error('commission_payout 金额格式非法')
   }
 
-  if (!raw.includes('%')) {
-    if (parsedPercentRaw <= 1) {
-      const ratioDisplayRate = parsedPercentRaw * 100
-      return {
-        commissionType: 'percent',
-        commissionValue: formatCompactNumber(ratioDisplayRate),
-        commissionCurrency: null,
-        commissionPayout: `${formatCompactNumber(ratioDisplayRate)}%`,
-      }
-    }
-
-    if (options?.bareNumericMode === 'percent') {
-      return {
-        commissionType: null,
-        commissionValue: null,
-        commissionCurrency: null,
-        commissionPayout: raw,
-      }
-    }
-
-    const parsedMoney = parseMoneyValue(raw, {
-      targetCountry,
-      defaultCurrency: getCurrencyCodeByCountry(targetCountry),
-    })
-    if (!parsedMoney || parsedMoney.amount <= 0) {
-      throw new Error('commission_payout 金额格式非法')
-    }
-
-    const normalizedAmount = formatCompactNumber(parsedMoney.amount)
+  if (parsed.mode === 'percent') {
     return {
-      commissionType: 'amount',
-      commissionValue: normalizedAmount,
-      commissionCurrency: parsedMoney.currency,
-      commissionPayout: `${getCurrencySymbolByCode(parsedMoney.currency)}${normalizedAmount}`,
+      commissionType: 'percent',
+      commissionValue: formatCompactNumber(parsed.displayRate),
+      commissionCurrency: null,
+      commissionPayout: `${formatCompactNumber(parsed.displayRate)}%`,
     }
   }
 
-  const normalizedPercent = normalizeOfferCommissionPayoutInput(raw, targetCountry, {
-    numericMode: 'percent',
-  })
-  const percentValue = parseNumberish(String(normalizedPercent || ''))
-  if (percentValue === null || percentValue <= 0) {
-    throw new Error('commission_payout 百分比格式非法')
-  }
-
+  const normalizedAmount = formatCompactNumber(parsed.amount)
   return {
-    commissionType: 'percent',
-    commissionValue: formatCompactNumber(percentValue),
-    commissionCurrency: null,
-    commissionPayout: `${formatCompactNumber(percentValue)}%`,
+    commissionType: 'amount',
+    commissionValue: normalizedAmount,
+    commissionCurrency: parsed.currency,
+    commissionPayout: `${getCurrencySymbolByCode(parsed.currency)}${normalizedAmount}`,
   }
 }
 
@@ -614,11 +581,11 @@ export function normalizeOfferCommissionInput(
   params: NormalizeOfferCommissionInputParams
 ): NormalizedOfferCommission {
   const structured = parseStructuredCommission(params)
-  const legacy = parseLegacyCommission(params.commissionPayout, params.targetCountry, {
-    bareNumericMode: params.legacyBareNumericMode,
+  const fromPayout = commissionFromPayoutOnly(params.commissionPayout, params.targetCountry, {
+    numericCommissionMode: params.numericCommissionMode ?? 'amount',
   })
 
-  if (!structured && !legacy) {
+  if (!structured && !fromPayout) {
     return {
       commissionType: null,
       commissionValue: null,
@@ -627,13 +594,13 @@ export function normalizeOfferCommissionInput(
     }
   }
 
-  if (structured && legacy && !areCommissionSemanticallyEqual(structured, legacy)) {
+  if (structured && fromPayout && !areCommissionSemanticallyEqual(structured, fromPayout)) {
     throw new Error('commission_type/commission_value 与 commission_payout 语义冲突')
   }
 
   return (
     structured ||
-    legacy || {
+    fromPayout || {
       commissionType: null,
       commissionValue: null,
       commissionCurrency: null,
