@@ -680,6 +680,9 @@ async function resolveWithHttp(
   }
 }
 
+const TRACKING_URL_PATTERN =
+  /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i
+
 function buildFullUrl(finalUrl: string, finalUrlSuffix: string | null | undefined): string {
   const suffix = (finalUrlSuffix || '').trim()
   if (!suffix) return finalUrl
@@ -696,10 +699,7 @@ function isBlockedHttpResolution(result: ResolvedUrlData): boolean {
     const path = urlObj.pathname.toLowerCase()
 
     // 已解析到tracking/中间页时，仍需降级Playwright继续追踪
-    const isTrackingUrl =
-      /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
-        fullResolvedUrl
-      )
+    const isTrackingUrl = TRACKING_URL_PATTERN.test(fullResolvedUrl)
     if (isTrackingUrl) return true
 
     // 明显错误页路径仍视为阻断
@@ -810,6 +810,110 @@ async function resolveWithPlaywright(
   }
 }
 
+function mergeHttpPlaywrightResults(
+  httpResult: ResolvedUrlData,
+  playwrightResult: ResolvedUrlData
+): ResolvedUrlData {
+  return {
+    ...playwrightResult,
+    redirectChain: [...httpResult.redirectChain, ...playwrightResult.redirectChain.slice(1)],
+    redirectCount: httpResult.redirectCount + playwrightResult.redirectCount,
+  }
+}
+
+async function resolveHttpWithPlaywrightFallback(params: {
+  affiliateLink: string
+  proxyUrl: string
+  userId: number
+  targetCountry: string
+  forceRefreshProxy: boolean
+  verifySilentRedirects: boolean
+  logLabel: string
+}): Promise<ResolvedUrlData> {
+  const {
+    affiliateLink,
+    proxyUrl,
+    userId,
+    targetCountry,
+    forceRefreshProxy,
+    verifySilentRedirects,
+    logLabel,
+  } = params
+
+  try {
+    logger.debug(`   尝试HTTP解析（${logLabel}）`)
+    let result = await resolveWithHttp(affiliateLink, proxyUrl, userId, forceRefreshProxy)
+
+    if (isBlockedHttpResolution(result)) {
+      const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
+      logger.debug(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
+      const playwrightResult = await resolveWithPlaywright(
+        fullResolvedUrl,
+        proxyUrl,
+        targetCountry,
+        userId,
+        forceRefreshProxy
+      )
+      return mergeHttpPlaywrightResults(result, playwrightResult)
+    }
+
+    const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
+    if (TRACKING_URL_PATTERN.test(fullResolvedUrl)) {
+      logger.debug(`   ⚠️ 检测到tracking URL，降级到Playwright继续解析...`)
+      const playwrightResult = await resolveWithPlaywright(
+        fullResolvedUrl,
+        proxyUrl,
+        targetCountry,
+        userId,
+        forceRefreshProxy
+      )
+      return mergeHttpPlaywrightResults(result, playwrightResult)
+    }
+
+    if (verifySilentRedirects) {
+      if (result.redirectCount === 0 && affiliateLink !== result.finalUrl) {
+        logger.debug(`   检测到可能的JavaScript重定向，降级到Playwright`)
+        return resolveWithPlaywright(
+          affiliateLink,
+          proxyUrl,
+          targetCountry,
+          userId,
+          forceRefreshProxy
+        )
+      }
+
+      if (result.redirectCount === 0) {
+        logger.debug(`   ⚠️ 无重定向检测到，尝试Playwright验证`)
+        const playwrightResult = await resolveWithPlaywright(
+          affiliateLink,
+          proxyUrl,
+          targetCountry,
+          userId,
+          forceRefreshProxy
+        )
+        if (playwrightResult.finalUrl !== result.finalUrl || playwrightResult.redirectCount > 0) {
+          logger.debug(`   ✅ Playwright发现了额外的重定向`)
+          return playwrightResult
+        }
+      }
+    }
+
+    return result
+  } catch (httpError: any) {
+    logger.debug(`   HTTP失败: ${httpError.message}`)
+    if (shouldFailFastWithoutPlaywrightFallback(httpError)) {
+      logger.debug(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
+      throw httpError
+    }
+    if (shouldRetryHttpInsteadOfFallbackToPlaywright(httpError)) {
+      logger.debug(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
+      throw httpError
+    }
+    logger.debug(`   降级到Playwright...`)
+    return resolveWithPlaywright(affiliateLink, proxyUrl, targetCountry, userId, forceRefreshProxy)
+  }
+}
+
 // 核心解析函数（集成所有优化）
 
 export interface ResolveOptions {
@@ -901,180 +1005,25 @@ export async function resolveAffiliateLink(
           attempt > 0
         )
       } else if (resolverMethod === 'http') {
-        // 已知HTTP重定向域名（包括Meta Refresh），先使用HTTP
-        try {
-          logger.debug(`   尝试HTTP解析（已知HTTP/Meta Refresh重定向）`)
-          // 重试时刷新代理 IP
-          result = await resolveWithHttp(affiliateLink, proxy.url, userId, attempt > 0)
-
-          const blocked = isBlockedHttpResolution(result)
-          if (blocked) {
-            const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            logger.debug(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
-            const playwrightResult = await resolveWithPlaywright(
-              fullResolvedUrl,
-              proxy.url,
-              targetCountry,
-              userId,
-              attempt > 0
-            )
-            result = {
-              ...playwrightResult,
-              redirectChain: [...result.redirectChain, ...playwrightResult.redirectChain.slice(1)],
-              redirectCount: result.redirectCount + playwrightResult.redirectCount,
-            }
-          } else {
-            // KISS降级策略：检查是否停在了tracking URL
-            const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            const isTrackingUrl =
-              /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
-                fullResolvedUrl
-              )
-
-            if (isTrackingUrl) {
-              logger.debug(`   ⚠️ 检测到tracking URL，可能需要继续追踪`)
-              logger.debug(`   降级到Playwright完成后续重定向...`)
-              // 重试须保留 HTTP 解析的 suffix（如 partnermatic ?url=）
-              const fullTrackingUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-              const playwrightResult = await resolveWithPlaywright(
-                fullTrackingUrl,
-                proxy.url,
-                targetCountry,
-                userId,
-                attempt > 0
-              )
-
-              // 合并重定向链
-              result = {
-                ...playwrightResult,
-                redirectChain: [
-                  ...result.redirectChain,
-                  ...playwrightResult.redirectChain.slice(1),
-                ],
-                redirectCount: result.redirectCount + playwrightResult.redirectCount,
-              }
-            }
-          }
-        } catch (httpError: any) {
-          // HTTP失败时降级到Playwright
-          logger.debug(`   HTTP失败: ${httpError.message}`)
-          if (shouldFailFastWithoutPlaywrightFallback(httpError)) {
-            logger.debug(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
-            throw httpError
-          }
-          if (shouldRetryHttpInsteadOfFallbackToPlaywright(httpError)) {
-            logger.debug(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
-            throw httpError
-          }
-          logger.debug(`   降级到Playwright...`)
-          result = await resolveWithPlaywright(
-            affiliateLink,
-            proxy.url,
-            targetCountry,
-            userId,
-            attempt > 0
-          )
-        }
+        result = await resolveHttpWithPlaywrightFallback({
+          affiliateLink,
+          proxyUrl: proxy.url,
+          userId,
+          targetCountry,
+          forceRefreshProxy: attempt > 0,
+          verifySilentRedirects: false,
+          logLabel: '已知HTTP/Meta Refresh重定向',
+        })
       } else {
-        // 未知域名，先尝试HTTP，失败则降级到Playwright
-        try {
-          logger.debug(`   尝试HTTP解析（未知域名）...`)
-          // 重试时刷新代理 IP
-          result = await resolveWithHttp(affiliateLink, proxy.url, userId, attempt > 0)
-
-          const blocked = isBlockedHttpResolution(result)
-          if (blocked) {
-            const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            logger.debug(`   ⚠️ HTTP解析命中拦截/错误页，改用Playwright（解析结果）`)
-            const playwrightResult = await resolveWithPlaywright(
-              fullResolvedUrl,
-              proxy.url,
-              targetCountry,
-              userId,
-              attempt > 0
-            )
-            result = {
-              ...playwrightResult,
-              redirectChain: [...result.redirectChain, ...playwrightResult.redirectChain.slice(1)],
-              redirectCount: result.redirectCount + playwrightResult.redirectCount,
-            }
-          } else {
-            // HTTP 可能停在 tracking 中间页，需 Playwright 继续追踪
-            const fullResolvedUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-            const isTrackingUrl =
-              /\/track|\/click|\/redirect|\/go|\/out|partnermatic|tradedoubler|awin|impact|cj\.com|[?&](?:url|redirect|target|destination|goto|link|new)=/i.test(
-                fullResolvedUrl
-              )
-            if (isTrackingUrl) {
-              logger.debug(`   ⚠️ 检测到tracking URL（未知域名路径），降级到Playwright继续解析...`)
-              const fullTrackingUrl = buildFullUrl(result.finalUrl, result.finalUrlSuffix)
-              const playwrightResult = await resolveWithPlaywright(
-                fullTrackingUrl,
-                proxy.url,
-                targetCountry,
-                userId,
-                attempt > 0
-              )
-              result = {
-                ...playwrightResult,
-                redirectChain: [
-                  ...result.redirectChain,
-                  ...playwrightResult.redirectChain.slice(1),
-                ],
-                redirectCount: result.redirectCount + playwrightResult.redirectCount,
-              }
-            }
-
-            // 检查是否真的有重定向（如果redirectCount=0可能需要Playwright）
-            if (result.redirectCount === 0 && affiliateLink !== result.finalUrl) {
-              // URL改变了但redirectCount为0，可能是JavaScript重定向
-              logger.debug(`   检测到可能的JavaScript重定向，降级到Playwright`)
-              result = await resolveWithPlaywright(
-                affiliateLink,
-                proxy.url,
-                targetCountry,
-                userId,
-                attempt > 0
-              )
-            } else if (result.redirectCount === 0) {
-              // URL没变且无重定向，可能是短链接服务
-              logger.debug(`   ⚠️ 无重定向检测到，尝试Playwright验证`)
-              const playwrightResult = await resolveWithPlaywright(
-                affiliateLink,
-                proxy.url,
-                targetCountry,
-                userId,
-                attempt > 0
-              )
-              // 如果Playwright获得了不同的结果，使用Playwright结果
-              if (
-                playwrightResult.finalUrl !== result.finalUrl ||
-                playwrightResult.redirectCount > 0
-              ) {
-                logger.debug(`   ✅ Playwright发现了额外的重定向`)
-                result = playwrightResult
-              }
-            }
-          }
-        } catch (httpError: any) {
-          logger.debug(`   HTTP失败: ${httpError.message}`)
-          if (shouldFailFastWithoutPlaywrightFallback(httpError)) {
-            logger.debug(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
-            throw httpError
-          }
-          if (shouldRetryHttpInsteadOfFallbackToPlaywright(httpError)) {
-            logger.debug(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
-            throw httpError
-          }
-          logger.debug(`   降级到Playwright...`)
-          result = await resolveWithPlaywright(
-            affiliateLink,
-            proxy.url,
-            targetCountry,
-            userId,
-            attempt > 0
-          )
-        }
+        result = await resolveHttpWithPlaywrightFallback({
+          affiliateLink,
+          proxyUrl: proxy.url,
+          userId,
+          targetCountry,
+          forceRefreshProxy: attempt > 0,
+          verifySilentRedirects: true,
+          logLabel: '未知域名',
+        })
       }
 
       const responseTime = Date.now() - startTime

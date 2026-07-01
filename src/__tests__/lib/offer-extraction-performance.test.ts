@@ -53,4 +53,10 @@ describe('offer-extraction-performance', () => {
       )
     ).toBe(false)
   })
+
+  it('requests playwright when scraped data is missing', () => {
+    expect(
+      shouldFallbackToRenderedIndependentProductForOffer(null, 'https://shop.com/products/widget')
+    ).toBe(true)
+  })
 })

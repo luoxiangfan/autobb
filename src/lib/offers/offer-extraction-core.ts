@@ -11,7 +11,6 @@
 import { logger } from '@/lib/common/server'
 import { resolveAffiliateLink, BATCH_MODE_RETRY_CONFIG, getProxyPool } from '@/lib/scraping'
 import { extractProductInfo } from '@/lib/scraping'
-import type { ScrapedProductData } from '@/lib/scraping'
 import {
   scrapeAmazonStoreDeep,
   scrapeIndependentStoreDeep, // 修改：使用深度抓取版本，与Amazon Store保持一致
@@ -419,64 +418,6 @@ function isAmazonProductDataInsufficient(
     data.aboutThisItem.some((item) => typeof item === 'string' && item.trim().length > 0)
 
   return !hasValidBrand && !hasFeatures && !hasAboutThisItem
-}
-
-function looksLikeIndependentProductDetailUrl(url: string | null | undefined): boolean {
-  if (!url) return false
-  try {
-    const pathname = new URL(url).pathname.toLowerCase()
-    if (!pathname || pathname === '/') return false
-    return /\/(products?|product|item|goods)\//.test(pathname) || /\/p\/[a-z0-9]/.test(pathname)
-  } catch {
-    return false
-  }
-}
-
-function shouldFallbackToRenderedIndependentProduct(
-  data: ScrapedProductData | null | undefined,
-  targetUrl?: string
-): boolean {
-  if (!data) return true
-
-  const hasBrand =
-    typeof data.brandName === 'string' &&
-    data.brandName.trim().length > 0 &&
-    !isLikelyInvalidBrandName(data.brandName)
-  const hasProductName = typeof data.productName === 'string' && data.productName.trim().length > 0
-  const hasImages =
-    Array.isArray(data.imageUrls) &&
-    data.imageUrls.some((item) => typeof item === 'string' && item.trim().length > 0)
-  const hasFeatureContent =
-    Array.isArray(data.productFeatures) &&
-    data.productFeatures.some((item) => typeof item === 'string' && item.trim().length > 0)
-  const hasStructuredReviews = Array.isArray(data.reviews) && data.reviews.length > 0
-  const ratingValue =
-    typeof data.rating === 'string'
-      ? Number.parseFloat(data.rating.replace(/[^0-9.]/g, ''))
-      : Number.NaN
-  const reviewCountValue =
-    typeof data.reviewCount === 'string'
-      ? Number.parseInt(data.reviewCount.replace(/[^0-9]/g, ''), 10)
-      : Number.NaN
-  const hasRatingSignal = Number.isFinite(ratingValue) && ratingValue > 0
-  const hasReviewCountSignal = Number.isFinite(reviewCountValue) && reviewCountValue > 0
-  const hasReviewSignals =
-    hasStructuredReviews ||
-    hasRatingSignal ||
-    hasReviewCountSignal ||
-    !!(Array.isArray(data.topReviews) && data.topReviews.length > 0)
-  const hasSpecifications = !!(data.specifications && Object.keys(data.specifications).length > 0)
-  const hasDescription =
-    typeof data.productDescription === 'string' && data.productDescription.trim().length >= 80
-  const likelyProductDetailUrl = looksLikeIndependentProductDetailUrl(targetUrl)
-
-  if (!hasProductName) return true
-  if (!hasBrand) return true
-  if (!hasImages) return true
-
-  if (!hasReviewSignals && likelyProductDetailUrl) return true
-
-  return !hasFeatureContent && !hasReviewSignals && !hasSpecifications && !hasDescription
 }
 
 /**
@@ -1035,9 +976,10 @@ export async function extractOffer(options: ExtractOfferOptions): Promise<Extrac
           logger.debug('✅ 独立站轻量抓取已满足创建 Offer 基础字段，跳过 Playwright 渲染')
         }
 
-        const needsPlaywrightFallback = modeProfile.useLegacyIndependentPlaywrightFallback
-          ? shouldFallbackToRenderedIndependentProduct(scrapedData, fullTargetUrl)
-          : shouldFallbackToRenderedIndependentProductForOffer(scrapedData, fullTargetUrl)
+        const needsPlaywrightFallback = shouldFallbackToRenderedIndependentProductForOffer(
+          scrapedData,
+          fullTargetUrl
+        )
 
         if (
           !(

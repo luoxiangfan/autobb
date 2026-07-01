@@ -7,6 +7,44 @@ import {
   getOfferExtractionModeProfile,
   type OfferExtractionMode,
 } from '@/lib/offers/server'
+import { isLikelyInvalidBrandName } from '@/lib/scraping'
+
+function looksLikeIndependentProductDetailUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  try {
+    const pathname = new URL(url).pathname.toLowerCase()
+    if (!pathname || pathname === '/') return false
+    return /\/(products?|product|item|goods)\//.test(pathname) || /\/p\/[a-z0-9]/.test(pathname)
+  } catch {
+    return false
+  }
+}
+
+function hasIndependentReviewSignals(record: Record<string, unknown>): boolean {
+  const structuredReviews = record.reviews
+  if (Array.isArray(structuredReviews) && structuredReviews.length > 0) return true
+
+  const topReviews = record.topReviews
+  if (Array.isArray(topReviews) && topReviews.length > 0) return true
+
+  const ratingRaw = record.rating
+  const ratingValue =
+    typeof ratingRaw === 'string'
+      ? Number.parseFloat(ratingRaw.replace(/[^0-9.]/g, ''))
+      : typeof ratingRaw === 'number'
+        ? ratingRaw
+        : Number.NaN
+  if (Number.isFinite(ratingValue) && ratingValue > 0) return true
+
+  const reviewCountRaw = record.reviewCount
+  const reviewCountValue =
+    typeof reviewCountRaw === 'string'
+      ? Number.parseInt(reviewCountRaw.replace(/[^0-9]/g, ''), 10)
+      : typeof reviewCountRaw === 'number'
+        ? reviewCountRaw
+        : Number.NaN
+  return Number.isFinite(reviewCountValue) && reviewCountValue > 0
+}
 
 function profileFor(mode?: OfferExtractionMode | string | null) {
   return getOfferExtractionModeProfile(mode ?? getDefaultOfferExtractionMode())
@@ -180,6 +218,11 @@ export function shouldFallbackToRenderedIndependentProductForOffer(
         imageUrls?: string[] | null
         productFeatures?: string[] | null
         productDescription?: string | null
+        reviews?: unknown[] | null
+        topReviews?: unknown[] | null
+        rating?: string | number | null
+        reviewCount?: string | number | null
+        specifications?: Record<string, unknown> | null
       }
     | null
     | undefined,
@@ -190,28 +233,23 @@ export function shouldFallbackToRenderedIndependentProductForOffer(
 
   const record = data as unknown as Record<string, unknown>
   const hasProductName = hasNonEmptyStringField(record, 'productName')
-  const hasBrand = hasNonEmptyStringField(record, 'brandName')
+  const hasBrand =
+    hasNonEmptyStringField(record, 'brandName') &&
+    !isLikelyInvalidBrandName(String(record.brandName))
   const hasImages = hasNonEmptyStringArrayField(record, 'imageUrls')
   const hasFeatureContent = hasNonEmptyStringArrayField(record, 'productFeatures')
   const hasDescription =
     hasNonEmptyStringField(record, 'productDescription') &&
-    (record.productDescription as string).trim().length >= 80
+    String(record.productDescription).trim().length >= 80
+  const hasReviewSignals = hasIndependentReviewSignals(record)
+  const specifications = record.specifications
+  const hasSpecifications =
+    !!specifications && typeof specifications === 'object' && Object.keys(specifications).length > 0
 
-  if (!hasProductName) return true
-  if (!hasBrand) return true
-  if (!hasImages) return true
+  if (!hasProductName || !hasBrand || !hasImages) return true
 
-  const likelyProductDetailUrl = (() => {
-    if (!targetUrl) return false
-    try {
-      const pathname = new URL(targetUrl).pathname.toLowerCase()
-      if (!pathname || pathname === '/') return false
-      return /\/(products?|product|item|goods)\//.test(pathname) || /\/p\/[a-z0-9]/.test(pathname)
-    } catch {
-      return false
-    }
-  })()
+  const likelyProductDetailUrl = looksLikeIndependentProductDetailUrl(targetUrl)
+  if (likelyProductDetailUrl && !hasReviewSignals) return true
 
-  if (likelyProductDetailUrl && !hasFeatureContent && !hasDescription) return true
-  return false
+  return !hasFeatureContent && !hasReviewSignals && !hasSpecifications && !hasDescription
 }

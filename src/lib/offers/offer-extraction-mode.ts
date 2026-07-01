@@ -37,8 +37,6 @@ export interface OfferExtractionModeProfile {
   lightScrapeTimeoutMs: number
   /* * 基础字段齐全时跳过 Playwright（仅快速模式） */
   skipPlaywrightWhenMinimalBaseline: boolean
-  /* * 使用旧版「丰富度」Playwright 回退判断（更完整） */
-  useLegacyIndependentPlaywrightFallback: boolean
   /* * 店铺深度抓取商品数 */
   deepScrapeTopN: number
   deepScrapeConcurrency: number
@@ -67,7 +65,6 @@ const MODE_PROFILES: Record<OfferExtractionMode, OfferExtractionModeProfile> = {
     skipAmazonCompetitorExtraction: true,
     lightScrapeTimeoutMs: 15_000,
     skipPlaywrightWhenMinimalBaseline: true,
-    useLegacyIndependentPlaywrightFallback: false,
     deepScrapeTopN: 3,
     deepScrapeConcurrency: 3,
     aiPlaywrightDeepScrapeEnabled: true,
@@ -89,7 +86,6 @@ const MODE_PROFILES: Record<OfferExtractionMode, OfferExtractionModeProfile> = {
     skipAmazonCompetitorExtraction: false,
     lightScrapeTimeoutMs: 20_000,
     skipPlaywrightWhenMinimalBaseline: false,
-    useLegacyIndependentPlaywrightFallback: true,
     deepScrapeTopN: 4,
     deepScrapeConcurrency: 3,
     aiPlaywrightDeepScrapeEnabled: true,
@@ -111,7 +107,6 @@ const MODE_PROFILES: Record<OfferExtractionMode, OfferExtractionModeProfile> = {
     skipAmazonCompetitorExtraction: false,
     lightScrapeTimeoutMs: 30_000,
     skipPlaywrightWhenMinimalBaseline: false,
-    useLegacyIndependentPlaywrightFallback: true,
     deepScrapeTopN: 5,
     deepScrapeConcurrency: 3,
     aiPlaywrightDeepScrapeEnabled: true,
