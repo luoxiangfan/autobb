@@ -4,33 +4,36 @@ const generateContentMock = vi.fn()
 const recordTokenUsageMock = vi.fn()
 const estimateTokenCostMock = vi.fn(() => 0.01)
 
-vi.mock('@/lib/ai/ai', () => ({
-  generateContent: generateContentMock,
-}))
+vi.mock('@/lib/ai/prompt-loader', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai/prompt-loader')>()
+  return {
+    ...actual,
+    loadPrompt: vi.fn(async (promptId: string) => {
+      if (promptId === 'keyword_gap_analysis') {
+        return ['{{inputGuardrail}}', 'Existing keywords:', '{{existingKeywords}}'].join('\n')
+      }
+      return [
+        '{{inputGuardrail}}',
+        'Brand: {{brand}}',
+        'Budget: {{budget}}',
+        'Max CPC: {{maxCpc}}',
+        'Page type: {{pageType}}',
+        'Keywords:',
+        '{{keywordsWithVolume}}',
+      ].join('\n')
+    }),
+  }
+})
 
-vi.mock('@/lib/ai-token-tracker', () => ({
-  recordTokenUsage: recordTokenUsageMock,
-  estimateTokenCost: estimateTokenCostMock,
-}))
-
-vi.mock('@/lib/ai/ai', () => ({
-  loadPrompt: vi.fn(async (promptId: string) => {
-    if (promptId === 'keyword_gap_analysis') {
-      return ['{{inputGuardrail}}', 'Existing keywords:', '{{existingKeywords}}'].join('\n')
-    }
-    return [
-      '{{inputGuardrail}}',
-      'Brand: {{brand}}',
-      'Budget: {{budget}}',
-      'Max CPC: {{maxCpc}}',
-      'Page type: {{pageType}}',
-      'Keywords:',
-      '{{keywordsWithVolume}}',
-    ].join('\n')
-  }),
-  interpolateTemplate: (template: string, variables: Record<string, string>) =>
-    template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => variables[key] ?? ''),
-}))
+vi.mock('@/lib/ai/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai/server')>()
+  return {
+    ...actual,
+    generateContent: generateContentMock,
+    recordTokenUsage: recordTokenUsageMock,
+    estimateTokenCost: estimateTokenCostMock,
+  }
+})
 
 function buildLaunchScoreAiPayload() {
   return {

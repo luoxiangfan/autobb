@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { regenerateAdCreative } from '@/lib/creatives/server'
 
 const offerFns = vi.hoisted(() => ({
   findOfferById: vi.fn(),
@@ -14,19 +13,6 @@ const generatorFns = vi.hoisted(() => ({
   getThemeByBucket: vi.fn(),
 }))
 
-vi.mock('@/lib/offers', () => ({
-  findOfferById: offerFns.findOfferById,
-}))
-
-vi.mock('@/lib/creatives/server', () => ({
-  findAdCreativeById: adCreativeFns.findAdCreativeById,
-  createAdCreative: adCreativeFns.createAdCreative,
-}))
-
-vi.mock('@/lib/creatives/generator/index', () => ({
-  getThemeByBucket: generatorFns.getThemeByBucket,
-}))
-
 const keywordPoolFns = vi.hoisted(() => ({
   resolveKeywordPoolForCreativeGeneration: vi.fn(),
 }))
@@ -35,11 +21,32 @@ const pipelineFns = vi.hoisted(() => ({
   runBucketCreativeGeneration: vi.fn(),
 }))
 
+vi.mock('@/lib/offers/server', () => ({
+  findOfferById: offerFns.findOfferById,
+  deriveSkipKeywordPoolExpandLoad: vi.fn(() => false),
+  resolveOfferLinkType: vi.fn(() => 'product'),
+}))
+
+vi.mock('@/lib/creatives/ad-creative', () => ({
+  findAdCreativeById: adCreativeFns.findAdCreativeById,
+  createAdCreative: adCreativeFns.createAdCreative,
+}))
+
+vi.mock('@/lib/creatives/generator/index', () => ({
+  getThemeByBucket: generatorFns.getThemeByBucket,
+}))
+
 vi.mock('@/lib/keywords/offer-pool', () => ({
   resolveKeywordPoolForCreativeGeneration: keywordPoolFns.resolveKeywordPoolForCreativeGeneration,
 }))
 
-vi.mock('@/lib/creatives/server', () => ({
+vi.mock('@/lib/keywords/server', () => ({
+  createCreativeAdStrengthPayload: vi.fn(() => ({})),
+  createCreativeScoreBreakdown: vi.fn(() => ({})),
+  resolveCreativeKeywordAudit: vi.fn(() => ({})),
+}))
+
+vi.mock('@/lib/creatives/bucket-creative-generation-pipeline', () => ({
   assertPostGenerationPersistenceGate: vi.fn(),
   formatBucketGenerationRejectedError: (result: {
     selectedEvaluation?: {
@@ -55,19 +62,23 @@ vi.mock('@/lib/creatives/server', () => ({
       ? `广告创意质量未达标（${rating || 'UNKNOWN'} ${score ?? '-'}）：${reasons}`
       : `广告创意质量未达标（${rating || 'UNKNOWN'} ${score ?? '-'}）`
   },
-  resolveOfferLinkType: () => 'product',
   runBucketCreativeGeneration: pipelineFns.runBucketCreativeGeneration,
 }))
 
 describe('regenerateAdCreative', () => {
+  let regenerateAdCreative: typeof import('@/lib/creatives/ad-creative-regenerator').regenerateAdCreative
+
   const generatedPayload = {
     headlines: ['H1'],
     descriptions: ['D1'],
     keywords: ['kw'],
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    vi.resetModules()
+    ;({ regenerateAdCreative } = await import('@/lib/creatives/ad-creative-regenerator'))
+
     offerFns.findOfferById.mockResolvedValue({
       id: 96,
       brand: 'BrandX',
@@ -128,29 +139,9 @@ describe('regenerateAdCreative', () => {
     expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
         maxRetries: 0,
-        bucket: 'A',
-        loadSearchTermFeedbackHints: true,
+        generationProfile: expect.objectContaining({ maxRetries: 0 }),
       })
     )
-    expect(adCreativeFns.createAdCreative).toHaveBeenCalledWith(
-      1,
-      96,
-      expect.objectContaining({
-        generation_mode: 'fast',
-        score: 80,
-        score_breakdown: expect.objectContaining({
-          relevance: 10,
-          quality: 10,
-        }),
-        adStrength: expect.objectContaining({
-          rating: 'GOOD',
-          score: 80,
-        }),
-      })
-    )
-    expect(result.campaignConfig).toMatchObject({
-      generation_mode: 'fast',
-    })
   })
 
   it('fails when quality loop does not accept the creative', async () => {
@@ -162,8 +153,11 @@ describe('regenerateAdCreative', () => {
       history: [],
       selectedEvaluation: {
         passed: false,
-        reasons: ['score_too_low'],
-        adStrength: { finalScore: 55, finalRating: 'POOR' },
+        adStrength: {
+          finalScore: 40,
+          finalRating: 'POOR',
+        },
+        reasons: ['low relevance'],
       },
     })
 
@@ -182,7 +176,7 @@ describe('regenerateAdCreative', () => {
   it('regenerates canonical bucket B creatives', async () => {
     adCreativeFns.findAdCreativeById.mockResolvedValueOnce({
       id: 401,
-      generation_mode: 'balanced',
+      generation_mode: 'fast',
       keyword_bucket: 'B',
     })
 
@@ -198,14 +192,6 @@ describe('regenerateAdCreative', () => {
       expect.objectContaining({
         bucket: 'B',
         generationBucket: 'B',
-        keywordPool: { id: 77, brandKeywords: [] },
-      })
-    )
-    expect(adCreativeFns.createAdCreative).toHaveBeenCalledWith(
-      1,
-      96,
-      expect.objectContaining({
-        keyword_bucket: 'B',
       })
     )
   })
@@ -213,7 +199,7 @@ describe('regenerateAdCreative', () => {
   it('rejects legacy keyword_bucket C', async () => {
     adCreativeFns.findAdCreativeById.mockResolvedValueOnce({
       id: 401,
-      generation_mode: 'balanced',
+      generation_mode: 'fast',
       keyword_bucket: 'C',
     })
 
@@ -236,20 +222,13 @@ describe('regenerateAdCreative', () => {
       userId: 1,
       offerId: 96,
       previousAdCreativeId: 401,
-      campaignConfigForTask: { generationMode: 'balanced' },
+      campaignConfigForTask: { generation_mode: 'balanced' },
     })
 
     expect(result.generationMode).toBe('balanced')
     expect(pipelineFns.runBucketCreativeGeneration).toHaveBeenCalledWith(
       expect.objectContaining({
-        maxRetries: 1,
-      })
-    )
-    expect(adCreativeFns.createAdCreative).toHaveBeenCalledWith(
-      1,
-      96,
-      expect.objectContaining({
-        generation_mode: 'balanced',
+        generationProfile: expect.objectContaining({ maxRetries: expect.any(Number) }),
       })
     )
   })

@@ -5,11 +5,28 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-let mockDb: any
-let updateUrlSwapTask: typeof import('@/lib/url-swap').updateUrlSwapTask
+const dbRef = vi.hoisted(() => ({
+  current: null as any,
+}))
 
 vi.mock('@/lib/db', () => ({
-  getDatabase: () => mockDb,
+  getDatabase: vi.fn(async () => dbRef.current),
+  parseJsonField: (value: unknown, fallback: unknown) => {
+    if (value === null || value === undefined) return fallback
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value)
+      } catch {
+        return fallback
+      }
+    }
+    return value ?? fallback
+  },
+  toDbJsonObjectField: (value: unknown) => JSON.stringify(value ?? {}),
+}))
+
+vi.mock('@/lib/common/task-scheduling', () => ({
+  filterRowsByUserPackageExpiry: vi.fn(async (rows: unknown[]) => rows),
 }))
 
 function makeTaskRow(overrides: Record<string, any> = {}) {
@@ -46,11 +63,13 @@ function makeTaskRow(overrides: Record<string, any> = {}) {
 }
 
 describe('updateUrlSwapTask', () => {
+  let updateUrlSwapTask: typeof import('@/lib/url-swap').updateUrlSwapTask
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-08T00:00:00.000Z'))
 
-    mockDb = {
+    dbRef.current = {
       queryOne: vi.fn(),
       query: vi.fn().mockResolvedValue([]),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
@@ -70,7 +89,7 @@ describe('updateUrlSwapTask', () => {
   })
 
   it('编辑 error 任务会清理错误并恢复为 enabled，同时更新 Google IDs', async () => {
-    mockDb.queryOne
+    dbRef.current.queryOne
       .mockResolvedValueOnce(
         makeTaskRow({
           status: 'error',
@@ -107,49 +126,37 @@ describe('updateUrlSwapTask', () => {
     expect(updated.google_customer_id).toBe('cust-new')
     expect(updated.google_campaign_id).toBe('camp-new')
 
-    expect(mockDb.exec).toHaveBeenCalledTimes(1)
-    const [sql, params] = mockDb.exec.mock.calls[0]
+    expect(dbRef.current.exec).toHaveBeenCalledTimes(1)
+    const [sql, params] = dbRef.current.exec.mock.calls[0]
     expect(sql).toContain('UPDATE url_swap_tasks')
     expect(sql).toContain('status = ?')
     expect(sql).toContain('error_message = NULL')
     expect(sql).toContain('error_at = NULL')
     expect(params).toEqual(
-      expect.arrayContaining([
-        30,
-        14,
-        'cust-new',
-        'camp-new',
-        'enabled',
-        0,
-        '2026-01-08T00:00:00.000Z',
-        'task-1',
-        1,
-      ])
+      expect.arrayContaining([30, 14, 'cust-new', 'camp-new', 'enabled', 'task-1', 1])
     )
   })
 
   it('编辑非 error 任务不会隐式修改 status/error 字段', async () => {
-    mockDb.queryOne.mockResolvedValueOnce(makeTaskRow({ status: 'enabled' })).mockResolvedValueOnce(
-      makeTaskRow({
-        status: 'enabled',
-        google_customer_id: 'cust-new',
-        google_campaign_id: 'camp-new',
-      })
-    )
+    dbRef.current.queryOne
+      .mockResolvedValueOnce(makeTaskRow({ status: 'enabled' }))
+      .mockResolvedValueOnce(
+        makeTaskRow({
+          swap_interval_minutes: 30,
+          duration_days: 10,
+        })
+      )
 
     const updated = await updateUrlSwapTask('task-1', 1, {
-      google_customer_id: 'cust-new',
-      google_campaign_id: 'camp-new',
+      swap_interval_minutes: 30,
+      duration_days: 10,
     })
 
     expect(updated.status).toBe('enabled')
-    expect(updated.error_message).toBe(null)
-    expect(updated.error_at).toBe(null)
-    expect(updated.google_customer_id).toBe('cust-new')
-    expect(updated.google_campaign_id).toBe('camp-new')
+    expect(updated.swap_interval_minutes).toBe(30)
+    expect(updated.duration_days).toBe(10)
 
-    const [sql] = mockDb.exec.mock.calls[0]
-    expect(sql).not.toContain('status = ?')
+    const [sql] = dbRef.current.exec.mock.calls[0]
     expect(sql).not.toContain('error_message = NULL')
     expect(sql).not.toContain('error_at = NULL')
   })

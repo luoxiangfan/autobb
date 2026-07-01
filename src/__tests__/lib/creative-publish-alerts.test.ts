@@ -12,9 +12,13 @@ const { createRiskAlertMock } = vi.hoisted(() => ({
   createRiskAlertMock: vi.fn(),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: async () => stubDb,
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: async () => stubDb,
+  }
+})
 
 vi.mock('@/lib/campaign/optimization', () => ({
   createRiskAlert: createRiskAlertMock,

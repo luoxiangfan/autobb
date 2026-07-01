@@ -11,13 +11,14 @@ vi.mock('axios', () => ({
   create: createMock,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getUserOnlySetting: getUserOnlySettingMock,
-}))
-
-vi.mock('@/lib/common/server', () => ({
-  getRedisClient: vi.fn(() => null),
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getUserOnlySetting: getUserOnlySettingMock,
+    getRedisClient: vi.fn(() => null),
+  }
+})
 
 describe('gemini-axios usage parsing', () => {
   beforeEach(() => {
@@ -29,6 +30,7 @@ describe('gemini-axios usage parsing', () => {
       .mockImplementation(async (_category: string, key: string) => {
         if (key === 'gemini_provider') return { value: 'relay' }
         if (key === 'gemini_relay_api_key') return { value: 'relay-key' }
+        if (key === 'gemini_model') return { value: 'gemini-3-flash-preview' }
         return null
       })
   })
@@ -64,6 +66,13 @@ describe('gemini-axios usage parsing', () => {
   })
 
   it('parses camelCase usage from relay /v1/responses SSE completed event', async () => {
+    getUserOnlySettingMock.mockImplementation(async (_category: string, key: string) => {
+      if (key === 'gemini_provider') return { value: 'relay' }
+      if (key === 'gemini_relay_api_key') return { value: 'relay-key' }
+      if (key === 'gemini_model') return { value: 'gpt-5.2' }
+      return null
+    })
+
     postMock.mockResolvedValueOnce({
       data: [
         'data: {"type":"response.output_text.delta","delta":"hel"}',
@@ -92,6 +101,13 @@ describe('gemini-axios usage parsing', () => {
   })
 
   it('keeps usage when relay SSE omits completed event but includes usage in stream payload', async () => {
+    getUserOnlySettingMock.mockImplementation(async (_category: string, key: string) => {
+      if (key === 'gemini_provider') return { value: 'relay' }
+      if (key === 'gemini_relay_api_key') return { value: 'relay-key' }
+      if (key === 'gemini_model') return { value: 'gpt-5.2' }
+      return null
+    })
+
     postMock.mockResolvedValueOnce({
       data: [
         'data: {"type":"response.output_text.done","text":"fallback text","usage":{"prompt_tokens":9,"completion_tokens":4,"total_tokens":13}}',

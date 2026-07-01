@@ -114,10 +114,10 @@ describe('executeOpenclawStrategy analyze-only mode', () => {
 
     dbFns.db.queryOne.mockImplementation(async (sql: string) => {
       if (sql.includes('SELECT is_active, package_expires_at FROM users')) {
-        return { is_active: 1, package_expires_at: null }
+        return { is_active: true, package_expires_at: null }
       }
       if (sql.includes('SELECT strategy_center_enabled FROM users')) {
-        return { strategy_center_enabled: 1 }
+        return { strategy_center_enabled: true }
       }
       return null
     })

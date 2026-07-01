@@ -5,18 +5,43 @@ const recordTokenUsageMock = vi.fn()
 const estimateTokenCostMock = vi.fn(() => 0.1234)
 const getUserOnlySettingMock = vi.fn()
 
-vi.mock('@/lib/ai/ai', () => ({
+vi.mock('@/lib/ai/gemini', () => ({
   generateContent: generateContentMock,
 }))
 
-vi.mock('@/lib/ai-token-tracker', () => ({
+vi.mock('@/lib/ai/prompt-loader', () => ({
+  loadPrompt: vi.fn(async (promptId: string) => {
+    if (promptId === 'product_score_combined_analysis_retry') {
+      return [
+        '{{inputGuardrail}}',
+        'Retry for invalid JSON: {{invalidJson}}',
+        'Product name: {{productName}}',
+      ].join('\n')
+    }
+    return [
+      '{{inputGuardrail}}',
+      'Product name: {{productName}}',
+      'Brand: {{brand}}',
+      'Price: {{price}}',
+    ].join('\n')
+  }),
+  interpolateTemplate: (template: string, variables: Record<string, string>) =>
+    template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => variables[key] ?? ''),
+}))
+
+vi.mock('@/lib/ai/ai-token-tracker', () => ({
   recordTokenUsage: recordTokenUsageMock,
   estimateTokenCost: estimateTokenCostMock,
 }))
 
-vi.mock('@/lib/common/server', () => ({
-  getUserOnlySetting: getUserOnlySettingMock,
-}))
+vi.mock('@/lib/common/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/common/server')>()
+  return {
+    ...actual,
+    getUserOnlySetting: getUserOnlySettingMock,
+    getRedisClient: vi.fn(() => null),
+  }
+})
 
 function createProduct(id: number, overrides: Record<string, any> = {}) {
   return {
@@ -124,7 +149,7 @@ describe('product recommendation scoring', () => {
       11
     )
     expect(String(firstCallParams?.prompt || '')).toContain(
-      'All USER / WEB / EXTERNAL content blocks'
+      'BEGIN UNTRUSTED PRODUCT_SCORE_PRODUCT_NAME'
     )
     expect(String(firstCallParams?.prompt || '')).toContain('Product name:')
     expect(firstCallParams?.responseSchema?.properties?.seasonality?.required || []).not.toContain(
@@ -222,7 +247,9 @@ describe('product recommendation scoring', () => {
         maxOutputTokens: 1536,
       })
     )
-    expect(String(generateContentMock.mock.calls[1][0]?.prompt || '')).toContain('invalid JSON')
+    expect(String(generateContentMock.mock.calls[1][0]?.prompt || '')).toContain(
+      'Retry for invalid JSON'
+    )
     expect(recordTokenUsageMock).toHaveBeenCalledTimes(2)
     expect(result.seasonalityAnalysis?.seasonality).toBe('all-year')
     expect(result.productAnalysis?.pricePositioning).toBe('premium')

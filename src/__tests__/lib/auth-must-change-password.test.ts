@@ -5,17 +5,26 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-let mockDb: any
-let loginWithPassword: typeof import('@/lib/auth').loginWithPassword
-let generateTokenMock: any
-
-vi.mock('@/lib/db', () => ({
-  getDatabase: async () => mockDb,
+const dbRef = vi.hoisted(() => ({
+  current: null as any,
 }))
 
-vi.mock('@/lib/auth', () => ({
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => dbRef.current),
+  }
+})
+
+vi.mock('@/lib/auth/crypto', () => ({
   verifyPassword: vi.fn(async () => true),
   hashPassword: vi.fn(async () => 'hash'),
+}))
+
+vi.mock('@/lib/auth/jwt', () => ({
+  generateToken: vi.fn(() => 'token'),
+  verifyToken: vi.fn(() => null),
 }))
 
 vi.mock('@/lib/auth-security', () => ({
@@ -23,11 +32,6 @@ vi.mock('@/lib/auth-security', () => ({
   recordFailedLogin: vi.fn(async () => undefined),
   resetFailedAttempts: vi.fn(async () => undefined),
   logLoginAttempt: vi.fn(async () => undefined),
-}))
-
-vi.mock('@/lib/auth', () => ({
-  generateToken: vi.fn(() => 'token'),
-  verifyToken: vi.fn(() => null),
 }))
 
 function makeUser(overrides: Partial<import('@/lib/auth').User> = {}): import('@/lib/auth').User {
@@ -55,8 +59,11 @@ function makeUser(overrides: Partial<import('@/lib/auth').User> = {}): import('@
 }
 
 describe('loginWithPassword mustChangePassword', () => {
+  let loginWithPassword: typeof import('@/lib/auth').loginWithPassword
+  let generateTokenMock: any
+
   beforeEach(() => {
-    mockDb = {
+    dbRef.current = {
       queryOne: vi.fn(),
       exec: vi.fn().mockResolvedValue({ changes: 1 }),
     }
@@ -65,7 +72,7 @@ describe('loginWithPassword mustChangePassword', () => {
   beforeEach(async () => {
     vi.resetModules()
     ;({ loginWithPassword } = await import('@/lib/auth'))
-    ;({ generateToken: generateTokenMock } = await import('@/lib/auth'))
+    ;({ generateToken: generateTokenMock } = await import('@/lib/auth/jwt'))
   })
 
   afterEach(() => {
@@ -73,7 +80,9 @@ describe('loginWithPassword mustChangePassword', () => {
   })
 
   it('管理员账号不强制修改密码', async () => {
-    mockDb.queryOne.mockResolvedValueOnce(makeUser({ role: 'admin', must_change_password: 1 }))
+    dbRef.current.queryOne.mockResolvedValueOnce(
+      makeUser({ role: 'admin', must_change_password: 1 })
+    )
 
     const resp = await loginWithPassword('autoads', 'pw')
 
@@ -85,9 +94,11 @@ describe('loginWithPassword mustChangePassword', () => {
   })
 
   it('非管理员账号会强制修改密码', async () => {
-    mockDb.queryOne.mockResolvedValueOnce(makeUser({ role: 'user', must_change_password: 1 }))
+    dbRef.current.queryOne.mockResolvedValueOnce(
+      makeUser({ role: 'user', must_change_password: 1 })
+    )
 
-    const resp = await loginWithPassword('user', 'pw')
+    const resp = await loginWithPassword('autoads', 'pw')
 
     expect(resp.mustChangePassword).toBe(true)
     expect(generateTokenMock).toHaveBeenCalledWith(

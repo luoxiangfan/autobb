@@ -29,7 +29,7 @@ describe('pauseOfferTasksBatch', () => {
     dbFns.exec.mockResolvedValue({ changes: 0 })
     dbFns.transaction.mockImplementation(async (fn: () => Promise<unknown>) => fn())
     dbFns.query.mockImplementation(async (_sql: string, params?: any[]) => {
-      const offerId = Number(params?.[0] ?? 0)
+      const offerId = Number(params?.[3] ?? 0)
       if (offerId === 2) {
         throw new Error('db query failed for offer 2')
       }

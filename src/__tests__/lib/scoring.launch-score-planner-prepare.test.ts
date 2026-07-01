@@ -4,19 +4,20 @@ const generateContentMock = vi.fn()
 const loadKeywordPoolExpandMock = vi.fn()
 const loadPromptMock = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/ai/ai', () => ({
-  generateContent: generateContentMock,
-}))
-
-vi.mock('@/lib/ai/ai', () => ({
+vi.mock('@/lib/ai/prompt-loader', () => ({
   loadPrompt: loadPromptMock,
-  interpolateTemplate: (template: string) => template,
+  interpolateTemplate: (template: string, variables: Record<string, string>) =>
+    template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => variables[key] ?? ''),
 }))
 
-vi.mock('@/lib/ai-token-tracker', () => ({
-  recordTokenUsage: vi.fn(),
-  estimateTokenCost: vi.fn(() => 0.01),
-}))
+vi.mock('@/lib/ai/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai/server')>()
+  return {
+    ...actual,
+    generateContent: generateContentMock,
+    loadPrompt: loadPromptMock,
+  }
+})
 
 vi.mock('@/lib/google-ads/accounts/auth/index', () => ({
   loadKeywordPoolExpandCredentialsForOffer: loadKeywordPoolExpandMock,

@@ -15,7 +15,6 @@ const qualityFns = vi.hoisted(() => ({
 
 const keywordRuntimeFns = vi.hoisted(() => ({
   evaluateCreativePersistenceHardGate: vi.fn(),
-  createCreativeQualityEvaluationInput: vi.fn((input: unknown) => input),
 }))
 
 vi.mock('@/lib/creatives/server', async (importOriginal) => {
@@ -31,7 +30,6 @@ vi.mock('@/lib/keywords/server', async (importOriginal) => {
   return {
     ...actual,
     evaluateCreativePersistenceHardGate: keywordRuntimeFns.evaluateCreativePersistenceHardGate,
-    createCreativeQualityEvaluationInput: keywordRuntimeFns.createCreativeQualityEvaluationInput,
   }
 })
 

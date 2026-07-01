@@ -20,11 +20,9 @@ vi.mock('@/lib/google-ads/accounts/auth/index', async (importOriginal) => {
   }
 })
 
-import { buildKeywordPlannerSessionFromPrepared } from '@/lib/google-ads/accounts/auth/index'
-import { prepareKeywordPlannerSessionAuth } from '@/lib/keywords/server'
-
 describe('prepareKeywordPlannerSessionAuth', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules()
     vi.clearAllMocks()
     accountsAuthFns.prepareGoogleAdsApiCallForLinkedAccount.mockResolvedValue({
       ...defaultPreparedGoogleAdsApiCallForLinkedAccount,
@@ -44,6 +42,10 @@ describe('prepareKeywordPlannerSessionAuth', () => {
   })
 
   it('returns session with preparedOAuth and volumeAuth on success', async () => {
+    const { prepareKeywordPlannerSessionAuth } = await import('@/lib/keywords/server')
+    const { buildKeywordPlannerSessionFromPrepared } =
+      await import('@/lib/google-ads/accounts/auth/index')
+
     const result = await prepareKeywordPlannerSessionAuth(7, null)
 
     expect(result.ok).toBe(true)
@@ -65,6 +67,7 @@ describe('prepareKeywordPlannerSessionAuth', () => {
       message: 'Google Ads OAuth 授权已过期',
     })
 
+    const { prepareKeywordPlannerSessionAuth } = await import('@/lib/keywords/server')
     const result = await prepareKeywordPlannerSessionAuth(7, null)
 
     expect(result).toEqual({
@@ -87,6 +90,8 @@ describe('prepareKeywordPlannerSessionAuth', () => {
       },
       refreshToken: '',
     })
+
+    const { prepareKeywordPlannerSessionAuth } = await import('@/lib/keywords/server')
     const result = await prepareKeywordPlannerSessionAuth(7, 'sa-1')
 
     expect(result.ok).toBe(true)

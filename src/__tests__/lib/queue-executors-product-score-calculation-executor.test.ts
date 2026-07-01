@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const dbMock = {
   query: vi.fn(),
+  queryOne: vi.fn(),
   exec: vi.fn(),
 }
 
@@ -28,26 +29,21 @@ vi.mock('@/lib/queue/queue-routing', () => ({
   getQueueManagerForTaskType: vi.fn(async () => queueMock),
 }))
 
-vi.mock('@/lib/ai', () => ({
+vi.mock('@/lib/ai/server', () => ({
   calculateHybridProductRecommendationScores: calculateHybridProductRecommendationScoresMock,
 }))
 
-vi.mock('@/lib/launch-score', () => ({
-  batchGetCachedProductRecommendationScores: batchGetCachedProductRecommendationScoresMock,
-  cacheProductRecommendationScore: cacheProductRecommendationScoreMock,
-}))
-
-vi.mock('@/lib/launch-score', () => ({
-  acquireProductScoreExecutionMutex: acquireProductScoreExecutionMutexMock,
-  consumeProductScoreRequeueRequest: consumeProductScoreRequeueRequestMock,
-  findExistingProductScoreTask: findExistingProductScoreTaskMock,
-  markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
-}))
-
-vi.mock('@/lib/launch-score', async (importOriginal) => {
+vi.mock('@/lib/launch-score/server', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/launch-score/server')>()
   return {
     ...actual,
+    calculateHybridProductRecommendationScores: calculateHybridProductRecommendationScoresMock,
+    batchGetCachedProductRecommendationScores: batchGetCachedProductRecommendationScoresMock,
+    cacheProductRecommendationScore: cacheProductRecommendationScoreMock,
+    acquireProductScoreExecutionMutex: acquireProductScoreExecutionMutexMock,
+    consumeProductScoreRequeueRequest: consumeProductScoreRequeueRequestMock,
+    findExistingProductScoreTask: findExistingProductScoreTaskMock,
+    markProductScoreRequeueNeeded: markProductScoreRequeueNeededMock,
     isProductScoreCalculationPaused: isProductScoreCalculationPausedMock,
   }
 })
@@ -126,6 +122,7 @@ describe('executeProductScoreCalculation', () => {
     delete process.env.PRODUCT_SCORE_AI_RERANK_TOP_K_BACKGROUND
 
     dbMock.query.mockReset().mockResolvedValue([])
+    dbMock.queryOne.mockReset().mockResolvedValue(null)
     dbMock.exec.mockReset().mockResolvedValue(undefined)
     queueMock.getConfig.mockClear()
     queueMock.enqueue.mockReset().mockResolvedValue('next-task-id')

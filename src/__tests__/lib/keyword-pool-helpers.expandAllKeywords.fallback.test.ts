@@ -10,27 +10,35 @@ vi.mock('bcrypt', () => {
   return { default: stub, ...stub }
 })
 
-vi.mock('@/lib/keywords/server', () => ({
-  detectCountryInKeyword: vi.fn(() => []),
-  filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),
-  filterMismatchedGeoKeywords: vi.fn((keywords: string[]) => keywords),
-  getBrandSearchSuggestions: vi.fn(async () => [
-    { keyword: 'midland weather radio' },
-    { keyword: 'midland emergency radio' },
-  ]),
-}))
+vi.mock('@/lib/keywords/google-suggestions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/keywords/google-suggestions')>()
+  return {
+    ...actual,
+    detectCountryInKeyword: vi.fn(() => []),
+    filterLowIntentKeywords: vi.fn((keywords: string[]) => keywords),
+    filterMismatchedGeoKeywords: vi.fn((keywords: string[]) => keywords),
+    getBrandSearchSuggestions: vi.fn(async () => [
+      { keyword: 'midland weather radio' },
+      { keyword: 'midland emergency radio' },
+    ]),
+  }
+})
 
-vi.mock('@/lib/keywords/server', () => ({
+vi.mock('@/lib/keywords/enhanced-keyword-extractor', () => ({
   extractKeywordsEnhanced: vi.fn(async () => [
     { keyword: 'midland all hazards radio', competition: 'UNKNOWN' },
   ]),
 }))
 
-vi.mock('@/lib/db', () => ({
-  getDatabase: vi.fn(async () => ({
-    query: vi.fn(async () => []),
-  })),
-}))
+vi.mock('@/lib/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db')>()
+  return {
+    ...actual,
+    getDatabase: vi.fn(async () => ({
+      query: vi.fn(async () => []),
+    })),
+  }
+})
 
 describe('keyword-pool-helpers.expandAllKeywords (OAuth fallback)', () => {
   it('falls back to initialKeywords when customerId is missing (prevents empty pool)', async () => {
