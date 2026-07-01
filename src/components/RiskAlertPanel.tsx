@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 风险提示面板组件 - P1-4优化版
+ * 风险提示面板组件
  *
  * 功能
  * 显示风险提示列表
@@ -239,7 +239,7 @@ export default function RiskAlertPanel() {
 
   return (
     <div className="space-y-6">
-      {/* 统计卡片 - P1-4优化版 */}
+      {/* 统计卡片 */}
       {statistics && statistics.active > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Card className="border-red-200 bg-linear-to-br from-red-50 to-red-100/50 hover:shadow-lg transition-shadow">
@@ -326,7 +326,7 @@ export default function RiskAlertPanel() {
         </div>
       </div>
 
-      {/* 风险提示列表 - P1-4优化版 */}
+      {/* 风险提示列表 */}
       {Object.entries(groupedAlerts).map(([severity, severityAlerts]) => {
         if (severityAlerts.length === 0) return null
 
@@ -535,7 +535,7 @@ export default function RiskAlertPanel() {
         )
       })}
 
-      {/* 空状态 - P1-4优化版 */}
+      {/* 空状态 */}
       {alerts.length === 0 && (
         <Card className="border-green-200 bg-linear-to-br from-green-50 to-green-100/50">
           <CardContent className="py-12">

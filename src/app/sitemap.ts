@@ -1,6 +1,6 @@
 /**
  * 动态生成sitemap
- * P0-4: SEO优化 - 使用环境变量
+ * SEO优化 - 使用环境变量
  */
 
 import { MetadataRoute } from 'next'

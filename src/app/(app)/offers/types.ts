@@ -11,7 +11,7 @@ export interface OfferListItem {
   targetCountry: string
   affiliateLink: string | null
   brandDescription: string | null
-  scrapeStatus: string // snake_case → camelCase
+  scrapeStatus: string
   scrapeError?: string | null
   isActive: boolean
   createdAt: string
@@ -22,8 +22,7 @@ export interface OfferListItem {
   commissionType?: 'percent' | 'amount' | null
   commissionValue?: string | null
   commissionCurrency?: string | null
-  // P1-11: 关联的Google Ads账号信息（只显示非MCC账号）
-  // snake_case → camelCase
+  // 关联的Google Ads账号信息（只显示非MCC账号）
   linkedAccounts?: Array<{
     accountId: number
     customerId: string

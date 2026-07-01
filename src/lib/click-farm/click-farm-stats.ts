@@ -702,7 +702,7 @@ export async function initializeDailyHistory(task: ClickFarmTask): Promise<void>
     // 计算该天的目标点击数（基于hourly_distribution）
     const targetClicks = task.hourly_distribution.reduce((sum, count) => sum + count, 0)
 
-    // P1-5：初始化hourly_breakdown用于跟踪每小时的执行情况
+    // 初始化hourly_breakdown用于跟踪每小时的执行情况
     const hourlyBreakdown = task.hourly_distribution.map((target) => ({
       target,
       actual: 0,

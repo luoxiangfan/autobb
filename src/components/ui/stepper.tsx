@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Stepper Component - P1-3优化
+ * Stepper Component
  * 使用shadcn/ui风格的步骤导航组件
  */
 

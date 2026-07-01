@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Offer列表页 - P1-2优化版 + P2-2导出功能 + 分页 + 批量删除
+ * Offer列表页 - 导出功能 + 分页 + 批量删除
  * 使用shadcn/ui Table组件 + 筛选器 + CSV导出
  *
  * 使用usePagination Hook统一分页逻辑
@@ -109,14 +109,14 @@ export default function OffersClientPage() {
     offersRef.current = offers
   }, [offers])
 
-  // P1-2: 筛选器状态
+  // 筛选器状态
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [countryFilter, setCountryFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [affiliateLinkFilter, setAffiliateLinkFilter] = useState<string>('all') // 'all' | 'true' | 'false' 是否有联盟推广链接
 
-  // P2-5: 排序状态（默认按创建时间降序）
+  // 排序状态（默认按创建时间降序）
   const [sortBy, setSortBy] = useState<string>('createdAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const filterKeyRef = useRef<string>('')
@@ -202,7 +202,7 @@ export default function OffersClientPage() {
   const [deleteAccountCount, setDeleteAccountCount] = useState(0)
   const [deleteCampaignCount, setDeleteCampaignCount] = useState(0)
 
-  // P1-11: 解除关联状态
+  // 解除关联状态
   const [isUnlinkDialogOpen, setIsUnlinkDialogOpen] = useState(false)
   const [offerToUnlink, setOfferToUnlink] = useState<UnlinkTarget | null>(null)
   const [unlinking, setUnlinking] = useState(false)
@@ -556,7 +556,7 @@ export default function OffersClientPage() {
     return () => clearInterval(pollInterval)
   }, [buildOffersListUrl, handleUnauthorized])
 
-  // P1-2 + P2-5: 筛选/排序变更时重置分页
+  // 筛选/排序变更时重置分页
   useEffect(() => {
     const filterKey = JSON.stringify({
       searchQuery: debouncedSearchQuery,
@@ -589,7 +589,7 @@ export default function OffersClientPage() {
     setPage,
   ])
 
-  // P2-5: 排序处理函数
+  // 排序处理函数
   const handleSort = (field: string) => {
     if (sortBy === field) {
       if (sortOrder === 'desc') {
@@ -903,7 +903,7 @@ export default function OffersClientPage() {
     setSelectedOfferIds(newSelected)
   }
 
-  // P1-11: 解除关联处理函数
+  // 解除关联处理函数
   const handleUnlinkAccount = async () => {
     if (!offerToUnlink) return
 
@@ -1022,7 +1022,7 @@ export default function OffersClientPage() {
     statusFilter !== 'all' ||
     affiliateLinkFilter !== 'all'
   )
-  // P2-2: 导出Offer数据
+  // 导出Offer数据
   const handleExport = async () => {
     try {
       const { exportOffers } = await import('@/lib/common')
@@ -1122,7 +1122,7 @@ export default function OffersClientPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header - P2-4移动端优化 */}
+      {/* Header - 移动端优化 */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 sm:h-16 gap-3 sm:gap-0">
@@ -1230,7 +1230,7 @@ export default function OffersClientPage() {
       </div>
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* P1-2 + P2-4: 筛选器（移动端优化） */}
+        {/* 筛选器（移动端优化） */}
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -1316,7 +1316,7 @@ export default function OffersClientPage() {
           </div>
         )}
 
-        {/* P2-7: 统一空状态 */}
+        {/* 统一空状态 */}
         {paginatedOffers.length === 0 ? (
           totalItems === 0 && !hasActiveFilters ? (
             <NoOffersStateDynamic onAction={() => setIsCreateModalOpen(true)} />
@@ -1501,7 +1501,7 @@ export default function OffersClientPage() {
                         </TableCell>
                         <TableCell>
                           <div className={offer.isBlacklisted ? 'opacity-50' : ''}>
-                            {/* P1-11: 显示关联的Google Ads账号（只显示非MCC账号） */}
+                            {/* 显示关联的Google Ads账号（只显示非MCC账号） */}
                             {offer.linkedAccounts && offer.linkedAccounts.length > 0 ? (
                               <div className="space-y-1">
                                 {/* snake_case → camelCase */}

@@ -8,7 +8,7 @@ import { isTruthyFlag } from '@/lib/campaign/publish/publish-route-helpers'
 
 /**
  * GET /api/google-ads/idle-accounts
- * P1-12: 获取闲置的Google Ads账号列表
+ * 获取闲置的Google Ads账号列表
  * 便于用户识别未被任何Offer使用的账号
  */
 export const dynamic = 'force-dynamic'

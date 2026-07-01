@@ -98,7 +98,7 @@ export interface Offer {
   page_type: string | null // 页面类型：'product' | 'store'
   extraction_mode: string | null // 提取模式：fast | balanced | original
   generated_buckets: string | null // v4.16: 已生成的创意类型列表（JSON数组）
-  // P1-11: 关联的Google Ads账号信息（运行时计算字段，非数据库字段）
+  // 关联的Google Ads账号信息（运行时计算字段，非数据库字段）
   // snake_case → camelCase
   linked_accounts?: Array<{
     accountId: number
@@ -318,7 +318,7 @@ export async function createOffer(userId: number, input: CreateOfferInput): Prom
     input.extracted_headlines || null,
     input.extracted_descriptions || null,
     input.extraction_metadata || null,
-    // P1-3如果有任何AI分析或广告元素提取结果，记录提取时间
+    // 如果有任何AI分析或广告元素提取结果，记录提取时间
     input.review_analysis ||
     input.competitor_analysis ||
     input.extracted_keywords ||

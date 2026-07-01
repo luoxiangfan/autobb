@@ -224,9 +224,7 @@ CREATE TABLE ad_creatives (
   keywords_with_volume TEXT DEFAULT NULL,
   negative_keywords TEXT DEFAULT NULL,
   explanation TEXT DEFAULT NULL,
-  -- P0-1修复: 添加launch_score字段（从launch_scores表冗余）
   launch_score INTEGER DEFAULT NULL,
-  -- P1-1修复: 添加Google Ads同步字段
   ad_group_id INTEGER DEFAULT NULL,
   ad_id TEXT DEFAULT NULL,
   creation_status TEXT NOT NULL DEFAULT 'draft',
@@ -293,7 +291,6 @@ CREATE TABLE campaigns (
   is_test_variant BOOLEAN DEFAULT FALSE,
   ab_test_id INTEGER,
   traffic_allocation NUMERIC DEFAULT 1 CHECK(traffic_allocation >= 0 AND traffic_allocation <= 1),
-  -- P1-2修复: 添加软删除字段（与offers表保持一致）
   is_deleted BOOLEAN DEFAULT FALSE,
   deleted_at TEXT DEFAULT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -948,7 +945,6 @@ CREATE TABLE system_settings (
   id SERIAL PRIMARY KEY,
   user_id INTEGER,
   category TEXT NOT NULL,
-  -- P0-2修复: 字段命名统一为key/value，与代码保持一致
   key TEXT NOT NULL,
   value TEXT,
   encrypted_value TEXT,
@@ -1078,15 +1074,15 @@ CREATE INDEX idx_ad_creatives_orientation ON ad_creatives(orientation);
 CREATE INDEX idx_ad_creatives_user_id ON ad_creatives(user_id);
 
 
--- Index: idx_ad_creatives_launch_score (on table: ad_creatives) -- P0-1修复
+-- Index: idx_ad_creatives_launch_score (on table: ad_creatives)
 CREATE INDEX idx_ad_creatives_launch_score ON ad_creatives(launch_score DESC);
 
 
--- Index: idx_ad_creatives_creation_status (on table: ad_creatives) -- P1-1修复
+-- Index: idx_ad_creatives_creation_status (on table: ad_creatives)
 CREATE INDEX idx_ad_creatives_creation_status ON ad_creatives(creation_status);
 
 
--- Index: idx_ad_creatives_ad_id (on table: ad_creatives) -- P1-1修复
+-- Index: idx_ad_creatives_ad_id (on table: ad_creatives)
 CREATE INDEX idx_ad_creatives_ad_id ON ad_creatives(ad_id);
 
 
@@ -1164,7 +1160,7 @@ CREATE INDEX idx_backup_logs_status ON backup_logs(status);
 CREATE INDEX idx_backup_logs_type ON backup_logs(backup_type);
 
 
--- Index: idx_campaigns_is_deleted (on table: campaigns) -- P1-2修复
+-- Index: idx_campaigns_is_deleted (on table: campaigns)
 CREATE INDEX idx_campaigns_is_deleted ON campaigns(is_deleted);
 
 
@@ -1611,7 +1607,7 @@ ON brand_core_keyword_daily(date);
 CREATE INDEX idx_sync_logs_user ON sync_logs(user_id, started_at);
 
 
--- Index: idx_settings_category_key (on table: system_settings) -- P0-2修复: config_key → key
+-- Index: idx_settings_category_key (on table: system_settings)
 CREATE INDEX idx_settings_category_key
 ON system_settings(category, key);
 

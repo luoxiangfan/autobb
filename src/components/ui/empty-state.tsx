@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * EmptyState - P2-7优化
+ * EmptyState
  * 统一的空状态组件，提供友好的空状态体验
  */
 

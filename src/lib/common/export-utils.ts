@@ -2,7 +2,6 @@
 
 /**
  * 数据导出工具函数
- * P2-2优化新增
  */
 
 import { showWarning } from './toast-utils'

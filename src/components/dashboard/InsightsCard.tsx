@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * InsightsCard - P1-5优化版
+ * InsightsCard
  * 使用shadcn/ui Card, Button, Badge组件
  */
 

@@ -44,7 +44,7 @@ function buildYmdDateRange(startYmd: string, endYmd: string): string[] {
 /**
  * GET /api/dashboard/trends
  * 获取广告表现数据趋势
- * P2-1优化新增
+ * 优化新增
  */
 export const dynamic = 'force-dynamic'
 

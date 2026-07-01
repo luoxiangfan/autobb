@@ -1217,7 +1217,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // P0-2: 销售排名和徽章（社会证明）
+  // 销售排名和徽章（社会证明）
   let salesRank: string | null = null
   let badge = null
   if (offer.scraped_data) {
@@ -1242,7 +1242,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`BADGE: ${badge}`)
   }
 
-  // P0-3: Prime资格和库存状态
+  // Prime资格和库存状态
   let primeEligible = false
   let availability = null
   if (offer.scraped_data) {
@@ -1259,7 +1259,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`STOCK: ${availability}`)
   }
 
-  // P1-1: 用户评论洞察（基础）
+  // 用户评论洞察（基础）
   let reviewHighlights: string[] = []
   if (offer.scraped_data) {
     try {
@@ -1331,7 +1331,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // P1-1+: 用户评论深度分析（增强版 - 充分利用所有评论分析字段）
+  // 用户评论深度分析（增强版 - 充分利用所有评论分析字段）
   let commonPraises: string[] = []
   let purchaseReasons: string[] = []
   let useCases: string[] = []
@@ -1465,7 +1465,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     }
   }
 
-  // P1-2: 技术规格（关键参数）
+  // 技术规格（关键参数）
   let technicalDetails: Record<string, string> = {}
   if (offer.scraped_data) {
     try {
@@ -1529,7 +1529,7 @@ This creative focuses on "${intent || intentEn}" user intent.
     extras.push(`ABOUT CORE CLAIMS: ${titleAndAboutSignals.aboutClaims.slice(0, 5).join(' | ')}`)
   }
 
-  // P1-3: Store热销数据（新增优化 - 用于Amazon Store或独立站店铺页）
+  // Store热销数据（新增优化 - 用于Amazon Store或独立站店铺页）
   let hotInsights: { avgRating: number; avgReviews: number; topProductsCount: number } | null = null
   let topProducts: string[] = []
   // 提取销售热度数据

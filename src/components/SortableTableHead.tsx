@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * SortableTableHead - P2-5优化
+ * SortableTableHead
  * 可排序的表格列头组件
  */
 

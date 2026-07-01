@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Cron] Generated campaign optimization tasks:', campaignResult)
 
-    // 运行创意优化闭环（P0-1: 迭代优化机制）
+    // 运行创意优化闭环（迭代优化机制）
     console.log('[Cron] Starting creative optimization loop...')
 
     const db = await getDatabase()

@@ -1,5 +1,5 @@
 /**
- * SEO Metadata Configuration - P2-1优化
+ * SEO Metadata Configuration
  * 统一管理网站SEO信息，确保品牌一致性
  */
 

@@ -459,7 +459,7 @@ export class OptimizationRulesEngine {
   }
 
   /**
-   * 规则10: 广告疲劳检测 (P1-1优化)
+   * 广告疲劳检测
    *
    * 检测条件
    * 运行超过30天
