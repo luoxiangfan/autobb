@@ -16538,7 +16538,7 @@ CREATE TABLE IF NOT EXISTS url_swap_tasks (
   offer_id INTEGER NOT NULL,
 
   -- === 任务配置 ===
-  swap_interval_minutes INTEGER NOT NULL DEFAULT 5,  -- 换链间隔（分钟）：5, 10, 30, 60, 120, 240, 480, 1440
+  swap_interval_minutes INTEGER NOT NULL DEFAULT 5,  -- 换链间隔（分钟）：5, 10, 15, 30, 60, 120, 360, 720, 1440
   enabled BOOLEAN DEFAULT TRUE,             -- 是否启用
   duration_days INTEGER NOT NULL DEFAULT 7, -- 持续天数：-1表示无限期
 
@@ -26564,7 +26564,8 @@ INSERT INTO migration_history (migration_name) VALUES
   ('260_url_swap_sitelink_targets.pg.sql'),
   ('261_drop_offers_unlinked_columns.pg.sql'),
   ('262_backfill_strategy_expand_keyword_coverage.pg.sql'),
-  ('263_drop_launch_scores_v3_columns.pg.sql')
+  ('263_drop_launch_scores_v3_columns.pg.sql'),
+  ('266_url_swap_normalize_legacy_intervals.pg.sql')
 ON CONFLICT (migration_name) DO NOTHING;
 
 -- ==========================================

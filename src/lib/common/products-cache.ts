@@ -49,10 +49,6 @@ function getLatestQueryKey(userId: number): string {
   return `${REDIS_PREFIX_CONFIG.cache}products:user:${userId}:latest-query`
 }
 
-function getLegacyLatestQueryKey(userId: number): string {
-  return `${REDIS_PREFIX_CONFIG.cache}products:user:${userId}:list:last-query`
-}
-
 export type ProductListCachePayload = {
   page: number
   pageSize: number
@@ -370,16 +366,12 @@ export async function getLatestProductListQuery(
   try {
     const redis = getRedisClient()
     if (!redis) return null
-    const [raw, legacyRaw] = await Promise.all([
-      redis.get(getLatestQueryKey(userId)),
-      redis.get(getLegacyLatestQueryKey(userId)),
-    ])
-    const value = raw || legacyRaw
-    if (!value) {
+    const raw = await redis.get(getLatestQueryKey(userId))
+    if (!raw) {
       return null
     }
 
-    return normalizeProductListCachePayload(JSON.parse(value))
+    return normalizeProductListCachePayload(JSON.parse(raw))
   } catch {
     return null
   }

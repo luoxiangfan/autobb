@@ -74,7 +74,7 @@ export interface UrlSwapTask {
   offer_id: number // 关联的Offer ID
 
   // === 任务配置 ===
-  swap_interval_minutes: number // 换链间隔（分钟）：5, 10, 15, 30, 60, 120, 240, 360, 480, 720, 1440
+  swap_interval_minutes: number // 换链间隔（分钟）：5, 10, 15, 30, 60, 120, 360, 720, 1440
   enabled: boolean // 是否启用
   duration_days: number // 任务持续天数：-1表示无限期
 

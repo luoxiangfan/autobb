@@ -32,4 +32,13 @@ describe('validateTaskConfig', () => {
     expect(result.error).toContain(URL_SWAP_ALLOWED_INTERVALS_MINUTES.join(', '))
     expect(result.error).toContain('分钟')
   })
+
+  it('拒绝 legacy 换链间隔 240 和 480 分钟', async () => {
+    const { validateTaskConfig } = await import('@/lib/url-swap/url-swap-validator')
+    for (const interval of [240, 480]) {
+      const result = validateTaskConfig(interval, 7)
+      expect(result.valid).toBe(false)
+      expect(result.error).toContain('换链间隔必须是以下值之一')
+    }
+  })
 })
