@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
-import { getBackgroundQueueManager } from '@/lib/queue'
+import { getBackgroundQueueManager, getQueueManager } from '@/lib/queue'
 
 const ENV_KEYS = [
   'QUEUE_SPLIT_BACKGROUND',
   'QUEUE_BACKGROUND_WORKER',
   'QUEUE_ALLOW_BACKGROUND_EXECUTORS_IN_WEB',
+  'QUEUE_CORE_PRODUCER_ONLY',
   'REDIS_URL',
 ] as const
 
@@ -13,6 +14,7 @@ const ORIGINAL_ENV: Record<(typeof ENV_KEYS)[number], string | undefined> = {
   QUEUE_SPLIT_BACKGROUND: process.env.QUEUE_SPLIT_BACKGROUND,
   QUEUE_BACKGROUND_WORKER: process.env.QUEUE_BACKGROUND_WORKER,
   QUEUE_ALLOW_BACKGROUND_EXECUTORS_IN_WEB: process.env.QUEUE_ALLOW_BACKGROUND_EXECUTORS_IN_WEB,
+  QUEUE_CORE_PRODUCER_ONLY: process.env.QUEUE_CORE_PRODUCER_ONLY,
   REDIS_URL: process.env.REDIS_URL,
 }
 
@@ -69,5 +71,15 @@ describe.sequential('background queue guard', () => {
 
     expect(routed).toBe(background)
     expect(routed.getConfig().autoStartOnEnqueue).toBe(false)
+  })
+
+  it('forces producer-only mode for core queue when QUEUE_CORE_PRODUCER_ONLY=true', () => {
+    process.env.QUEUE_CORE_PRODUCER_ONLY = 'true'
+    delete process.env.QUEUE_SPLIT_BACKGROUND
+    delete process.env.QUEUE_BACKGROUND_WORKER
+    delete process.env.REDIS_URL
+
+    const queue = getQueueManager({ autoStartOnEnqueue: true })
+    expect(queue.getConfig().autoStartOnEnqueue).toBe(false)
   })
 })

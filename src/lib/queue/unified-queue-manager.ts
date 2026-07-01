@@ -1757,17 +1757,33 @@ declare global {
   var __backgroundQueueManager: UnifiedQueueManager | undefined
 }
 
+function isCoreQueueProducerOnly(): boolean {
+  return getBooleanFromEnv('QUEUE_CORE_PRODUCER_ONLY', false)
+}
+
 /**
  * 获取统一队列管理器单例
  * 使用 globalThis 存储实例，防止 Next.js 热重载时重新初始化
  */
 export function getQueueManager(config?: Partial<QueueConfig>): UnifiedQueueManager {
+  const forceProducerMode = isCoreQueueProducerOnly()
+  const requestedAutoStart = config?.autoStartOnEnqueue ?? true
+  const effectiveAutoStartOnEnqueue = forceProducerMode ? false : requestedAutoStart !== false
+
   if (!globalThis.__queueManager) {
     logger.debug('🚀 创建统一队列管理器单例...')
     globalThis.__queueManager = new UnifiedQueueManager({
       instanceName: 'core',
       ...config,
+      autoStartOnEnqueue: effectiveAutoStartOnEnqueue,
     })
+  } else {
+    const currentAutoStart = globalThis.__queueManager.getConfig().autoStartOnEnqueue !== false
+    if (currentAutoStart !== effectiveAutoStartOnEnqueue) {
+      globalThis.__queueManager.updateConfig({
+        autoStartOnEnqueue: effectiveAutoStartOnEnqueue,
+      })
+    }
   }
   return globalThis.__queueManager
 }

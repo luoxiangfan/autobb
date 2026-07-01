@@ -19,6 +19,7 @@ import {
 import { shouldCompleteTask } from '../click-farm/scheduler'
 import { getProxyPool } from '../scraping'
 import { initializeProxyPool } from '../offers/server'
+import { invalidateProxyPoolCache } from '../offers/offer-utils'
 import { getQueueManagerForTaskType } from '../queue/index'
 import type { UrlSwapTaskData, TriggerResult } from './url-swap-types'
 
@@ -38,72 +39,77 @@ export async function triggerAllUrlSwapTasks(): Promise<{
   const results = { processed: 0, executed: 0, skipped: 0, errors: 0 }
   const queueManager = getQueueManagerForTaskType('url-swap')
 
-  for (const task of tasks) {
-    try {
-      // 1. 检查是否应该完成（duration_days）
-      if (shouldCompleteTask(task as any)) {
-        await updateTaskStatus(task.id, 'completed')
-        logger.debug(`[url-swap-scheduler] 任务已完成: ${task.id}`)
-        results.skipped++
-        continue
-      }
-
-      // 2. 代理验证（必须）- 检查Offer目标国家是否有代理
-      const offer = await getOfferById(task.offer_id)
-      if (!offer) {
-        await setTaskError(task.id, '关联的Offer已删除')
-        results.skipped++
-        continue
-      }
-
-      const swapMode = task.swap_mode === 'manual' ? 'manual' : 'auto'
-      if (swapMode === 'auto' || swapMode === 'manual') {
-        // 确保代理池已按该用户的设置加载（否则可能误报“缺少代理配置”）
-        try {
-          await initializeProxyPool(task.user_id, offer.target_country)
-        } catch (e: any) {
-          await setTaskError(task.id, e?.message || `缺少 ${offer.target_country} 国家的代理配置`)
+  try {
+    for (const task of tasks) {
+      try {
+        // 1. 检查是否应该完成（duration_days）
+        if (shouldCompleteTask(task as any)) {
+          await updateTaskStatus(task.id, 'completed')
+          logger.debug(`[url-swap-scheduler] 任务已完成: ${task.id}`)
           results.skipped++
           continue
         }
 
-        const proxyPool = getProxyPool(task.user_id)
-        if (!proxyPool.hasProxyForCountry(offer.target_country)) {
-          await setTaskError(task.id, `缺少 ${offer.target_country} 国家的代理配置`)
+        // 2. 代理验证（必须）- 检查Offer目标国家是否有代理
+        const offer = await getOfferById(task.offer_id)
+        if (!offer) {
+          await setTaskError(task.id, '关联的Offer已删除')
           results.skipped++
           continue
         }
+
+        const swapMode = task.swap_mode === 'manual' ? 'manual' : 'auto'
+        if (swapMode === 'auto' || swapMode === 'manual') {
+          // 确保代理池已按该用户的设置加载（否则可能误报“缺少代理配置”）
+          try {
+            await initializeProxyPool(task.user_id, offer.target_country)
+          } catch (e: any) {
+            await setTaskError(task.id, e?.message || `缺少 ${offer.target_country} 国家的代理配置`)
+            results.skipped++
+            continue
+          }
+
+          const proxyPool = getProxyPool(task.user_id)
+          if (!proxyPool.hasProxyForCountry(offer.target_country)) {
+            await setTaskError(task.id, `缺少 ${offer.target_country} 国家的代理配置`)
+            results.skipped++
+            continue
+          }
+        }
+
+        // 3. 构建任务数据并加入队列
+        const taskData: UrlSwapTaskData = {
+          taskId: task.id,
+          offerId: task.offer_id,
+          affiliateLink: offer.affiliate_link || '',
+          targetCountry: offer.target_country,
+          googleCustomerId: task.google_customer_id,
+          googleCampaignId: task.google_campaign_id,
+          currentFinalUrl: task.current_final_url,
+          currentFinalUrlSuffix: task.current_final_url_suffix,
+        }
+
+        await queueManager.enqueue('url-swap', taskData, task.user_id, {
+          priority: 'normal',
+          maxRetries: 0, // 单次失败不立刻重试，等待下个时间点再执行
+        })
+
+        // 4. 更新下次执行时间
+        const nextSwapAt = calculateNextSwapAt(task.swap_interval_minutes)
+        await updateTaskStatus(task.id, 'enabled', nextSwapAt.toISOString())
+
+        results.executed++
+        logger.debug(`[url-swap-scheduler] 任务已入队: ${task.id}`)
+      } catch (error: any) {
+        console.error(`[url-swap-scheduler] 任务处理失败: ${task.id}`, error)
+        results.errors++
       }
 
-      // 3. 构建任务数据并加入队列
-      const taskData: UrlSwapTaskData = {
-        taskId: task.id,
-        offerId: task.offer_id,
-        affiliateLink: offer.affiliate_link || '',
-        targetCountry: offer.target_country,
-        googleCustomerId: task.google_customer_id,
-        googleCampaignId: task.google_campaign_id,
-        currentFinalUrl: task.current_final_url,
-        currentFinalUrlSuffix: task.current_final_url_suffix,
-      }
-
-      await queueManager.enqueue('url-swap', taskData, task.user_id, {
-        priority: 'normal',
-        maxRetries: 0, // 单次失败不立刻重试，等待下个时间点再执行
-      })
-
-      // 4. 更新下次执行时间
-      const nextSwapAt = calculateNextSwapAt(task.swap_interval_minutes)
-      await updateTaskStatus(task.id, 'enabled', nextSwapAt.toISOString())
-
-      results.executed++
-      logger.debug(`[url-swap-scheduler] 任务已入队: ${task.id}`)
-    } catch (error: any) {
-      console.error(`[url-swap-scheduler] 任务处理失败: ${task.id}`, error)
-      results.errors++
+      results.processed++
     }
-
-    results.processed++
+  } finally {
+    // scheduler 每分钟 tick 会按 userId 初始化代理池；进程内无 LRU，需在 tick 结束后释放
+    invalidateProxyPoolCache()
   }
 
   logger.debug(
