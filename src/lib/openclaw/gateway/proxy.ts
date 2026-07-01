@@ -32,14 +32,6 @@ type ResolvedOpenclawUser = {
   authType: 'user-token' | 'gateway-binding'
 }
 
-type ProxyQuery = Record<string, string | number | boolean | null | undefined>
-
-type NormalizedProxyTarget = {
-  path: string
-  query: ProxyQuery | undefined
-  rewritten: boolean
-}
-
 type OpenclawPollingRouteKind = 'offer-extract-status' | 'creative-task-status'
 
 const OPENCLAW_TERMINAL_TASK_STATUSES = new Set(['completed', 'failed', 'canceled', 'cancelled', 'expired'])
@@ -93,88 +85,6 @@ async function resolveOpenclawUser(params: {
   const tokenRecord = await verifyOpenclawUserToken(token)
   if (!tokenRecord) return null
   return { userId: tokenRecord.user_id, authType: 'user-token' }
-}
-
-function withQueryPatch(
-  baseQuery: ProxyQuery | undefined,
-  patch: ProxyQuery
-): ProxyQuery | undefined {
-  const merged: ProxyQuery = {
-    ...(baseQuery || {}) }
-
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === null || value === undefined || String(value).trim() === '') {
-      continue
-    }
-    merged[key] = value
-  }
-
-  return Object.keys(merged).length > 0 ? merged : undefined
-}
-
-export function normalizeOpenclawProxyTarget(params: {
-  path: string
-  query?: ProxyQuery
-}): NormalizedProxyTarget {
-  const path = (params.path || '').trim()
-  const query = params.query
-
-  // Legacy Google Ads account listing aliases (read-only):
-  // map them to canonical /api/google-ads-accounts to avoid
-  // accidental match with /api/campaigns/:id (NaN id errors).
-  if (
-    path === '/api/google-ads/accounts'
-    || path === '/api/campaigns/accounts'
-    || path === '/api/campaigns/google-ads-accounts'
-  ) {
-    return {
-      path: '/api/google-ads-accounts',
-      query,
-      rewritten: true }
-  }
-
-  const googleAdsAccountDetailMatch = path.match(/^\/api\/google-ads\/accounts\/(\d+)$/)
-  if (googleAdsAccountDetailMatch) {
-    return {
-      path: `/api/google-ads-accounts/${googleAdsAccountDetailMatch[1]}`,
-      query,
-      rewritten: true }
-  }
-
-  if (path === '/api/reports/campaigns' || path === '/api/google-ads/reports') {
-    return {
-      path: '/api/campaigns/performance',
-      query,
-      rewritten: true }
-  }
-
-  if (path === '/api/google-ads/campaigns') {
-    return {
-      path: '/api/campaigns',
-      query,
-      rewritten: true }
-  }
-
-  const accountCampaignsMatch = path.match(/^\/api\/google-ads\/accounts\/(\d+)\/campaigns$/)
-  if (accountCampaignsMatch) {
-    return {
-      path: '/api/campaigns',
-      query: withQueryPatch(query, { googleAdsAccountId: accountCampaignsMatch[1] }),
-      rewritten: true }
-  }
-
-  const campaignMetricsMatch = path.match(/^\/api\/campaigns\/(\d+)\/(metrics|performance)$/)
-  if (campaignMetricsMatch) {
-    return {
-      path: '/api/campaigns/performance',
-      query: withQueryPatch(query, { campaignId: campaignMetricsMatch[1] }),
-      rewritten: true }
-  }
-
-  return {
-    path,
-    query,
-    rewritten: false }
 }
 
 function deriveTarget(path: string): { targetType?: string; targetId?: string } {
@@ -472,22 +382,15 @@ export async function handleOpenclawProxyRequest(params: {
     )
   }
 
-  const normalizedTarget = normalizeOpenclawProxyTarget({
-    path: requestedTarget.path,
-    query: request.query })
-
   const canonicalTarget = assertOpenclawProxyRouteAllowed({
     method: requestedTarget.method,
-    path: normalizedTarget.path })
+    path: requestedTarget.path })
 
   const method = canonicalTarget.method
   const finalPath = canonicalTarget.normalizedPath
 
   const { targetType, targetId } = deriveTarget(finalPath)
-  const actionPath = normalizedTarget.rewritten
-    ? `${requestedTarget.path} -> ${finalPath}`
-    : finalPath
-  const action = `${method} ${actionPath}`
+  const action = `${method} ${finalPath}`
   const requestBodyString = request.body ? JSON.stringify(request.body) : null
   const startedAt = Date.now()
   const timeoutMs = finalPath.includes('/stream')
@@ -500,7 +403,7 @@ export async function handleOpenclawProxyRequest(params: {
       userId: resolved.userId,
       path: finalPath,
       method,
-      query: normalizedTarget.query,
+      query: request.query,
       body: request.body,
       timeoutMs })
   } catch (error: any) {
