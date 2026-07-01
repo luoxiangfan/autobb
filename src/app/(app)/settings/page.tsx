@@ -899,7 +899,6 @@ export default function SettingsPage() {
 
       // 验证后不刷新整个配置，避免覆盖用户未保存的修改
       // 只需要显示验证成功的toast即可，验证状态会在下次保存后自动更新
-      // await fetchSettings()
     } catch (err: any) {
       toast.error(err.message || '验证失败')
     } finally {

@@ -22,15 +22,7 @@ import {
   getBackgroundWorkerHeartbeatTtlSeconds,
 } from './lib/queue/background-worker-heartbeat'
 import { getHeapStatistics } from 'v8'
-
-function parseBooleanEnv(value: string | null | undefined, fallback: boolean): boolean {
-  if (value === undefined || value === null || value === '') return fallback
-  const normalized = String(value).trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-  return fallback
-}
-
+import { parseBooleanEnv } from './lib/common/parse-env'
 function parsePositiveIntEnv(value: string | null | undefined, fallback: number): number {
   const parsed = Number.parseInt(String(value ?? ''), 10)
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback

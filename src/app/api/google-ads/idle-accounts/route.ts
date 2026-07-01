@@ -1,6 +1,8 @@
 import { withAuth } from '@/lib/auth'
 import { NextResponse } from 'next/server'
-import { logGoogleAdsAccountsError } from '@/lib/google-ads/auth/route-logger'
+import { createGoogleAdsLogger } from '@/lib/google-ads/common/logger'
+
+const accountsLog = createGoogleAdsLogger('accounts')
 import { getIdleAdsAccounts } from '@/lib/offers/server'
 import { isTruthyFlag } from '@/lib/campaign/publish/publish-route-helpers'
 
@@ -31,7 +33,7 @@ export const GET = withAuth(async (_request, user) => {
       total: idleAccounts.length,
     })
   } catch (error: any) {
-    logGoogleAdsAccountsError('get_idle_accounts_failed', error, { userId })
+    accountsLog.error('get_idle_accounts_failed', { userId }, error)
 
     return NextResponse.json(
       {

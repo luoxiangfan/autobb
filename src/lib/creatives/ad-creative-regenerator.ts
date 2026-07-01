@@ -8,6 +8,7 @@
  */
 
 import { logger } from '@/lib/common/server'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
 import { createAdCreative, findAdCreativeById } from './ad-creative'
 import {
   getAdCreativeGenerationModeProfile,
@@ -52,16 +53,6 @@ export interface RegenerateAdCreativeParams {
   offerId: number
   previousAdCreativeId: number
   campaignConfigForTask: Record<string, any> // 来自任务的 campaignConfig，包含原始的创意元素等信息
-}
-
-function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-  if (!normalized) return fallback
-  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
-  return fallback
 }
 
 function resolveRegenerationBucketContext(

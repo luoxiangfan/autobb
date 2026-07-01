@@ -1,5 +1,6 @@
 import { getDatabase } from '@/lib/db'
 import { isUniqueConstraintViolation } from '@/lib/db'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
 import {
   collectUserFeishuBindingAccounts,
   parseFeishuAccountUserId } from '@/lib/openclaw/feishu/feishu-accounts'
@@ -44,15 +45,6 @@ export type OpenclawBindingResolution = {
   accountId?: string
   tenantKeyProvided: boolean
   authMode?: FeishuAuthMode
-}
-
-function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
-  if (value === undefined) return fallback
-  const normalized = value.trim().toLowerCase()
-  if (!normalized) return fallback
-  if (['true', '1', 'yes', 'on'].includes(normalized)) return true
-  if (['false', '0', 'no', 'off'].includes(normalized)) return false
-  return fallback
 }
 
 function resolveFeishuAuthMode(): FeishuAuthMode {

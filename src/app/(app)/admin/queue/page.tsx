@@ -776,9 +776,6 @@ export default function QueueManagementPage() {
       }
 
       toast.success('配置已保存并生效')
-
-      // 刷新统计信息（但不覆盖刚保存的配置）
-      // await fetchStats() // 移除：避免用旧配置覆盖新配置
     } catch (error: any) {
       console.error('保存配置失败:', error)
       toast.error('保存配置时发生未知错误')

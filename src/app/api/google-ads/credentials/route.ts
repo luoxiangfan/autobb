@@ -21,10 +21,9 @@ import {
   serviceAccountConfiguredFromContext,
 } from '@/lib/google-ads/auth/context'
 import { resolveGoogleAdsCredentialFieldsForReadOnlyApi } from '@/lib/google-ads/settings/settings-store'
-import {
-  logGoogleAdsCredentialsError,
-  logGoogleAdsCredentialsInfo,
-} from '@/lib/google-ads/auth/route-logger'
+import { createGoogleAdsLogger } from '@/lib/google-ads/common/logger'
+
+const credentialsLog = createGoogleAdsLogger('credentials')
 
 /**
  * GET /api/google-ads/credentials
@@ -120,7 +119,7 @@ export const GET = withAuth(async (_request, user) => {
       },
     })
   } catch (error: any) {
-    logGoogleAdsCredentialsError('get_credentials_failed', error)
+    credentialsLog.error('get_credentials_failed', {}, error)
 
     const { formatPythonAdsServiceUnavailableError } = await import('@/lib/campaign/server')
     const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
@@ -163,14 +162,14 @@ export const DELETE = withAuth(async (_request, user) => {
     // 1) 停用/清空 OAuth 凭证（google_ads_credentials）
     await deleteGoogleAdsCredentials(userId)
 
-    logGoogleAdsCredentialsInfo('credentials_deleted', { userId })
+    credentialsLog.info('credentials_deleted', { userId })
 
     return NextResponse.json({
       success: true,
       message: 'Google Ads凭证已删除',
     })
   } catch (error: any) {
-    logGoogleAdsCredentialsError('delete_credentials_failed', error)
+    credentialsLog.error('delete_credentials_failed', {}, error)
 
     return NextResponse.json(
       {
@@ -224,7 +223,7 @@ export const PATCH = withAuth(async (request, user) => {
     )
 
     const authType = resolveConfiguredGoogleAdsAuthType(authContext)
-    logGoogleAdsCredentialsInfo('api_access_level_updated', { userId, apiAccessLevel, authType })
+    credentialsLog.info('api_access_level_updated', { userId, apiAccessLevel, authType })
 
     return NextResponse.json({
       success: true,
@@ -232,7 +231,7 @@ export const PATCH = withAuth(async (request, user) => {
       data: { apiAccessLevel },
     })
   } catch (error: any) {
-    logGoogleAdsCredentialsError('update_api_access_level_failed', error)
+    credentialsLog.error('update_api_access_level_failed', {}, error)
 
     return NextResponse.json(
       {

@@ -1,5 +1,6 @@
+import { parseBooleanEnv } from './parse-env'
+
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on'])
-const FALSE_VALUES = new Set(['0', 'false', 'no', 'off'])
 
 export function isEnvTrue(value?: string | null): boolean {
   if (!value) return false
@@ -7,12 +8,7 @@ export function isEnvTrue(value?: string | null): boolean {
 }
 
 export function getBooleanFromEnv(key: string, fallback: boolean): boolean {
-  const raw = process.env[key]
-  if (!raw) return fallback
-  const normalized = raw.trim().toLowerCase()
-  if (TRUE_VALUES.has(normalized)) return true
-  if (FALSE_VALUES.has(normalized)) return false
-  return fallback
+  return parseBooleanEnv(process.env[key], fallback)
 }
 
 export function getPositiveIntFromEnv(key: string, fallback: number): number {

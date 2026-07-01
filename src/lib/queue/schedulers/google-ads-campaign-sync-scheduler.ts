@@ -13,6 +13,7 @@
  */
 
 import { logger } from '@/lib/common/server'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
 import { getDatabase } from '../../db'
 import {
   GOOGLE_ADS_CAMPAIGN_SYNC_LOG_TYPE,
@@ -32,16 +33,6 @@ interface GoogleAdsCampaignSyncTaskData {
   syncType: 'manual' | 'auto'
   customerId?: string // 指定同步特定账户
   dryRun?: boolean // 仅预览，不实际写入
-}
-
-function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
-  if (rawValue === undefined) return defaultValue
-
-  const normalized = rawValue.trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-
-  return defaultValue
 }
 
 function parseNonNegativeIntEnv(rawValue: string | undefined, defaultValue: number): number {

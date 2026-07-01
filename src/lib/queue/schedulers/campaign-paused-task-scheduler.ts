@@ -16,18 +16,8 @@
  */
 
 import { logger } from '@/lib/common/server'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
 import { runCampaignPausedTaskCheck } from '@/lib/campaign/server'
-
-function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
-  if (rawValue === undefined) return defaultValue
-
-  const normalized = rawValue.trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-
-  return defaultValue
-}
-
 function parseNonNegativeIntEnv(
   rawValue: string | undefined,
   defaultValue: number,

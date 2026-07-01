@@ -8,6 +8,7 @@
  */
 
 import { logger } from '@/lib/common/server'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
 import type { Task } from '../types'
 import {
   getAdCreativeGenerationModeProfile,
@@ -82,16 +83,6 @@ function parsePositiveIntEnv(value: string | undefined, fallback: number): numbe
   const parsed = Number.parseInt(String(value || '').trim(), 10)
   if (!Number.isFinite(parsed) || parsed <= 0) return fallback
   return parsed
-}
-
-function parseBooleanEnv(value: string | undefined, fallback: boolean): boolean {
-  const normalized = String(value || '')
-    .trim()
-    .toLowerCase()
-  if (!normalized) return fallback
-  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false
-  return fallback
 }
 
 const staleGeneratingPlaceholderMinutes = parsePositiveIntEnv(

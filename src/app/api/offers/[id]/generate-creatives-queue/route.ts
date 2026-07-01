@@ -19,71 +19,16 @@ import { getAvailableBuckets } from '@/lib/keywords/offer-pool'
 import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-executor'
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
-  resolveCreativeGenerationRuntime,
-} from '@/lib/creatives/server'
-import { normalizeSingleCreativeSelection } from '@/lib/creatives/server'
-import {
+  CREATIVE_QUEUE_JSON_HEADERS,
+  createQueueErrorResponse,
   normalizeCreativeTaskError,
+  normalizeSingleCreativeSelection,
+  resolveCreativeGenerationRuntime,
+  resolveCreativeSelectionQueueError,
+  resolveGoogleAdsConfigQueueError,
   toCreativeTaskErrorResponseFields,
-  type CreativeTaskErrorCategory,
 } from '@/lib/creatives/server'
 import { parsePositiveIntegerOfferId } from '@/lib/offers/server'
-
-type QueueErrorResponseInput = {
-  status: number
-  error: string
-  message?: string
-  details?: unknown
-  errorCode?: string
-  errorCategory?: CreativeTaskErrorCategory
-  retryable?: boolean
-  userMessage?: string
-  extra?: Record<string, unknown>
-}
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' } as const
-
-function toStructuredDetails(details: unknown): Record<string, unknown> | null {
-  if (!details) return null
-  if (typeof details === 'object' && !Array.isArray(details)) {
-    return details as Record<string, unknown>
-  }
-  if (Array.isArray(details)) {
-    return { items: details }
-  }
-  if (typeof details === 'string') {
-    return { message: details }
-  }
-  return null
-}
-
-function createQueueErrorResponse(input: QueueErrorResponseInput): Response {
-  const normalizedError = normalizeCreativeTaskError(
-    {
-      code: input.errorCode,
-      category: input.errorCategory,
-      message: input.message || input.error,
-      userMessage: input.userMessage || input.message || input.error,
-      retryable: input.retryable ?? false,
-      details: toStructuredDetails(input.details),
-    },
-    input.message || input.error
-  )
-
-  return new Response(
-    JSON.stringify({
-      error: input.error,
-      message: normalizedError.userMessage,
-      details: input.details ?? null,
-      ...toCreativeTaskErrorResponseFields(normalizedError),
-      ...(input.extra || {}),
-    }),
-    {
-      status: input.status,
-      headers: JSON_HEADERS,
-    }
-  )
-}
 
 export const POST = withAuth(async (request, user, context) => {
   const offerId = parsePositiveIntegerOfferId(context?.params?.id)
@@ -98,7 +43,6 @@ export const POST = withAuth(async (request, user, context) => {
     })
   }
 
-  // 验证用户身份
   const userId = user.userId
   const parentRequestId = request.headers.get('x-request-id') || undefined
   if (!userId) {
@@ -115,8 +59,8 @@ export const POST = withAuth(async (request, user, context) => {
 
   const body = await request.json()
   const {
-    synthetic = false, // 向后兼容：旧版“综合创意”标记（KISS-3类型方案中不再生成S桶）
-    coverage = false, // 新命名：coverage 模式，本质仍映射到 D / product_intent
+    synthetic = false,
+    coverage = false,
     bucket,
     creativeType,
     forceGenerate,
@@ -155,41 +99,11 @@ export const POST = withAuth(async (request, user, context) => {
   const requestedBucketFromCreativeType = normalizedSelection.bucketFromCreativeType
   const normalizedCoverage = Boolean(coverage || synthetic)
 
-  if (normalizedSelection.errorCode === 'invalid-creative-type') {
-    return createQueueErrorResponse({
-      status: 400,
-      error: 'Invalid creativeType',
-      message:
-        'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
-      errorCode: 'CREATIVE_TYPE_INVALID',
-      errorCategory: 'validation',
-      retryable: false,
-    })
+  const selectionError = resolveCreativeSelectionQueueError(normalizedSelection)
+  if (selectionError) {
+    return createQueueErrorResponse(selectionError)
   }
 
-  if (normalizedSelection.errorCode === 'invalid-bucket') {
-    return createQueueErrorResponse({
-      status: 400,
-      error: 'Invalid bucket',
-      message: 'bucket 仅支持 A / B / D',
-      errorCode: 'CREATIVE_BUCKET_INVALID',
-      errorCategory: 'validation',
-      retryable: false,
-    })
-  }
-
-  if (normalizedSelection.errorCode === 'creative-type-bucket-conflict') {
-    return createQueueErrorResponse({
-      status: 400,
-      error: 'creativeType-bucket-conflict',
-      message: 'creativeType 与 bucket 不一致，请传入同一创意类型对应的槽位',
-      errorCode: 'CREATIVE_TYPE_BUCKET_CONFLICT',
-      errorCategory: 'validation',
-      retryable: false,
-    })
-  }
-
-  // 验证Offer存在
   const offer = await findOfferById(offerId, userId)
   if (!offer) {
     return createQueueErrorResponse({
@@ -213,7 +127,6 @@ export const POST = withAuth(async (request, user, context) => {
     })
   }
 
-  // 2. 验证 Google Ads API 配置并入队（Offer linked SA + prepare/heal）
   const authCache = createCreativeGenerationAuthCache()
   try {
     let authValidation
@@ -234,41 +147,13 @@ export const POST = withAuth(async (request, user, context) => {
         retryable: false,
       })
     }
-    if (!authValidation.ok) {
-      const isNotConfigured =
-        !authValidation.missingFields || authValidation.missingFields.length === 0
-      if (isNotConfigured) {
-        console.warn(`[CreativeGeneration] User ${userId} has no configured Google Ads auth`)
-        return createQueueErrorResponse({
-          status: 400,
-          error: '广告创意生成需要完整的 Google Ads API 配置',
-          message: authValidation.message,
-          errorCode: 'CREATIVE_GOOGLE_ADS_NOT_CONFIGURED',
-          errorCategory: 'config',
-          retryable: false,
-        })
-      }
 
-      console.warn(
-        `[CreativeGeneration] User ${userId} has incomplete Google Ads config (authType: ${authValidation.authType})`
-      )
-      const details =
-        authValidation.authType === 'service_account'
-          ? '请前往【设置】→【服务账号配置】页面检查服务账号配置，确保 Developer Token 和 MCC Customer ID 已正确配置。'
-          : '请前往【设置】页面配置 Google Ads API 凭证（Developer Token、Refresh Token、Customer ID）以启用关键词搜索量查询功能。'
-      return createQueueErrorResponse({
-        status: 400,
-        error: authValidation.message,
-        message: authValidation.message,
-        details,
-        errorCode: 'GOOGLE_ADS_CONFIG_INCOMPLETE',
-        errorCategory: 'config',
-        retryable: false,
-        extra: {
-          missingFields: authValidation.missingFields,
-          authType: authValidation.authType,
-        },
-      })
+    const googleAdsConfigError = resolveGoogleAdsConfigQueueError({
+      authValidation,
+      userId,
+    })
+    if (googleAdsConfigError) {
+      return createQueueErrorResponse(googleAdsConfigError)
     }
 
     const availableBuckets = await getAvailableBuckets(offerId)
@@ -302,7 +187,7 @@ export const POST = withAuth(async (request, user, context) => {
         }),
         {
           status: error.httpStatus,
-          headers: JSON_HEADERS,
+          headers: CREATIVE_QUEUE_JSON_HEADERS,
         }
       )
     }
@@ -334,7 +219,7 @@ export const POST = withAuth(async (request, user, context) => {
         }),
         {
           status: error.httpStatus,
-          headers: JSON_HEADERS,
+          headers: CREATIVE_QUEUE_JSON_HEADERS,
         }
       )
     }
@@ -342,7 +227,6 @@ export const POST = withAuth(async (request, user, context) => {
     const db = getDatabase()
     const queue = getQueueManager()
 
-    // 创建creative_tasks记录
     const taskId = crypto.randomUUID()
     await db.exec(
       `INSERT INTO creative_tasks (
@@ -352,14 +236,13 @@ export const POST = withAuth(async (request, user, context) => {
       [taskId, userId, offerId, normalizedMaxRetries, normalizedTargetRating, generationMode]
     )
 
-    // 将任务加入队列
     const taskData: AdCreativeTaskData = {
       offerId: offerId,
       maxRetries: normalizedMaxRetries,
       targetRating: normalizedTargetRating,
       generationMode,
       coverage: normalizedCoverage,
-      synthetic: normalizedCoverage, // 双写旧字段，确保旧执行器/半部署状态仍映射为 D
+      synthetic: normalizedCoverage,
       bucket: requestedType || undefined,
       ...(forceGenerateOnQualityGate
         ? {
@@ -374,7 +257,7 @@ export const POST = withAuth(async (request, user, context) => {
       parentRequestId,
       priority: 'high',
       taskId,
-      maxRetries: 0, // 禁用队列重试，由执行器内部控制多轮生成
+      maxRetries: 0,
     })
 
     console.log(`🚀 创意生成任务已入队: ${taskId}`)
@@ -387,7 +270,7 @@ export const POST = withAuth(async (request, user, context) => {
       }),
       {
         status: 200,
-        headers: JSON_HEADERS,
+        headers: CREATIVE_QUEUE_JSON_HEADERS,
       }
     )
   } catch (error: any) {

@@ -1,8 +1,11 @@
 import { getDatabase } from '../../db'
+import { createGoogleAdsLogger } from '@/lib/google-ads/common/logger'
 import {
   resolveGoogleAdsCredentialOwnerId,
   type GoogleAdsCredentialOwnerResolutionInput,
 } from '@/lib/google-ads/auth/assignment'
+
+const verifyLog = createGoogleAdsLogger('verify')
 /**
  * 获取用户的 Google Ads 授权方式（产品上 OAuth / 服务账号二选一，切换前须删除另一种配置）。
  *
@@ -438,9 +441,6 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
   authType?: 'oauth' | 'service_account'
   authContext?: import('@/lib/google-ads/auth/context').GoogleAdsAuthContext
 }> {
-  const { logGoogleAdsVerifyDebug, logGoogleAdsVerifyError } =
-    await import('@/lib/google-ads/auth/route-logger')
-
   try {
     const { googleAdsApiAuthValidationErrorMessage, resolveGoogleAdsApiAuthForAccount } =
       await import('@/lib/google-ads/auth/context')
@@ -463,7 +463,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         return { valid: false, error: '未找到服务账号配置', authType: 'service_account' }
       }
 
-      logGoogleAdsVerifyDebug('service_account_verify_started', {
+      verifyLog.debug('service_account_verify_started', {
         userId,
         serviceAccountId: String(serviceAccount.id),
       })
@@ -502,14 +502,14 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
         const { formatPythonAdsServiceUnavailableError } = await import('../../campaign/server')
         const serviceUnavailable = formatPythonAdsServiceUnavailableError(error)
         if (serviceUnavailable) {
-          logGoogleAdsVerifyError('python_ads_service_unavailable', serviceUnavailable, { userId })
+          verifyLog.error('python_ads_service_unavailable', { userId }, serviceUnavailable)
           return {
             valid: false,
             error: serviceUnavailable,
             authType: 'service_account',
           }
         }
-        logGoogleAdsVerifyError('service_account_verify_failed', error, { userId })
+        verifyLog.error('service_account_verify_failed', { userId }, error)
         const message = error instanceof Error ? error.message : '服务账号验证失败'
         return {
           valid: false,
@@ -566,7 +566,7 @@ export async function verifyGoogleAdsCredentials(userId: number): Promise<{
       authContext: ctx,
     }
   } catch (error: any) {
-    logGoogleAdsVerifyError('verify_unhandled_error', error, { userId })
+    verifyLog.error('verify_unhandled_error', { userId }, error)
     return {
       valid: false,
       error: error.message || '未知错误',

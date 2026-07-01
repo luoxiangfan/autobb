@@ -1,34 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { resolveStrategyCenterRequestUser } from '@/lib/openclaw/gateway/request-auth'
-import { dismissStrategyRecommendation } from '@/lib/openclaw/strategy/strategy-recommendations'
+import { createStrategyRecommendationDismissHandler } from '@/lib/openclaw/strategy/strategy-recommendations-route-handlers'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
-  const params = await props.params
-  const auth = await resolveStrategyCenterRequestUser(request)
-  if (!auth) {
-    return NextResponse.json({ error: '策略中心功能未开启或未授权' }, { status: 403 })
-  }
-
-  const recommendationId = String(params.id || '').trim()
-  if (!recommendationId) {
-    return NextResponse.json({ error: '缺少建议ID' }, { status: 400 })
-  }
-
-  try {
-    const recommendation = await dismissStrategyRecommendation({
-      userId: auth.userId,
-      recommendationId,
-    })
-
-    return NextResponse.json({
-      success: true,
-      recommendation,
-    })
-  } catch (error: any) {
-    const message = error?.message || '设置暂不执行失败'
-    const status = message.includes('不存在') ? 404 : message.includes('已执行') ? 409 : 400
-    return NextResponse.json({ error: message }, { status })
-  }
-}
+export const POST = createStrategyRecommendationDismissHandler({
+  resolveRequestUser: resolveStrategyCenterRequestUser,
+  unauthorizedError: '策略中心功能未开启或未授权',
+})

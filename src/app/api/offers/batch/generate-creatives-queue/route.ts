@@ -26,10 +26,12 @@ import type { AdCreativeTaskData } from '@/lib/queue/executors/ad-creative-execu
 import { toDbJsonObjectField } from '@/lib/db'
 import {
   CREATIVE_GENERATION_MODE_INVALID_MESSAGE,
+  normalizeSingleCreativeSelection,
   resolveCreativeGenerationRuntime,
+  resolveCreativeSelectionJsonError,
+  resolveGoogleAdsConfigJsonError,
 } from '@/lib/creatives/server'
 import { getAvailableBuckets } from '@/lib/keywords/offer-pool'
-import { normalizeSingleCreativeSelection } from '@/lib/creatives/server'
 
 export const maxDuration = 60
 
@@ -156,35 +158,9 @@ export const POST = withAuth(async (request, user) => {
     const requestedBucket = normalizedSelection.requestedBucket
     const requestedBucketFromCreativeType = normalizedSelection.bucketFromCreativeType
 
-    if (normalizedSelection.errorCode === 'invalid-creative-type') {
-      return NextResponse.json(
-        {
-          error: 'Invalid creativeType',
-          message:
-            'creativeType 仅支持 brand_intent / model_intent / product_intent（兼容旧值：brand_focus / model_focus / brand_product）',
-        },
-        { status: 400 }
-      )
-    }
-
-    if (normalizedSelection.errorCode === 'invalid-bucket') {
-      return NextResponse.json(
-        {
-          error: 'Invalid bucket',
-          message: 'bucket 仅支持 A / B / D',
-        },
-        { status: 400 }
-      )
-    }
-
-    if (normalizedSelection.errorCode === 'creative-type-bucket-conflict') {
-      return NextResponse.json(
-        {
-          error: 'creativeType-bucket-conflict',
-          message: 'creativeType 与 bucket 不一致，请传入同一创意类型对应的槽位',
-        },
-        { status: 400 }
-      )
+    const selectionError = resolveCreativeSelectionJsonError(normalizedSelection)
+    if (selectionError) {
+      return NextResponse.json(selectionError.body, { status: selectionError.status })
     }
 
     if (offerIds.length === 0) {
@@ -207,29 +183,9 @@ export const POST = withAuth(async (request, user) => {
         undefined,
         authCache
       )
-      if (!userAuth.ok) {
-        const isNotConfigured = !userAuth.missingFields || userAuth.missingFields.length === 0
-        if (isNotConfigured) {
-          return NextResponse.json(
-            {
-              error: '广告创意生成需要完整的 Google Ads API 配置',
-              message: userAuth.message,
-              errorCode: 'CREATIVE_GOOGLE_ADS_NOT_CONFIGURED',
-            },
-            { status: 400 }
-          )
-        }
-        return NextResponse.json(
-          {
-            error: '广告创意生成需要完整的 Google Ads API 配置',
-            message: userAuth.message,
-            details:
-              userAuth.authType === 'service_account'
-                ? '请前往【设置】→【服务账号配置】页面检查服务账号配置。'
-                : '请前往【设置】页面配置 Google Ads API 凭证。',
-          },
-          { status: 400 }
-        )
+      const googleAdsConfigError = resolveGoogleAdsConfigJsonError({ authValidation: userAuth })
+      if (googleAdsConfigError) {
+        return NextResponse.json(googleAdsConfigError.body, { status: googleAdsConfigError.status })
       }
     } catch (error: any) {
       console.error(

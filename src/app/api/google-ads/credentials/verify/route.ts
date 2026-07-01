@@ -10,12 +10,9 @@ import {
   resolveGoogleAdsAuthReadyFailure,
   getGoogleAdsAuthContextMetadata,
 } from '@/lib/google-ads/auth/context'
-import {
-  logGoogleAdsVerifyDebug,
-  logGoogleAdsVerifyError,
-  logGoogleAdsVerifyInfo,
-  logGoogleAdsVerifyWarn,
-} from '@/lib/google-ads/auth/route-logger'
+import { createGoogleAdsLogger } from '@/lib/google-ads/common/logger'
+
+const verifyLog = createGoogleAdsLogger('verify')
 
 /**
  * POST /api/google-ads/credentials/verify
@@ -33,12 +30,12 @@ export const POST = withAuth(async (_request, user) => {
       })
     }
 
-    logGoogleAdsVerifyDebug('verify_started', { userId, readOnly: !metadataCtx.canModify })
+    verifyLog.debug('verify_started', { userId, readOnly: !metadataCtx.canModify })
 
     const result = await verifyGoogleAdsCredentials(userId)
 
     if (result.valid) {
-      logGoogleAdsVerifyInfo('verify_succeeded', {
+      verifyLog.info('verify_succeeded', {
         userId,
         authType: result.authType,
         customerId: result.customer_id,
@@ -50,9 +47,9 @@ export const POST = withAuth(async (_request, user) => {
           userId,
           resolveConfiguredGoogleAdsAuthType(authContext)
         )
-        logGoogleAdsVerifyDebug('access_level_detected', { userId, accessLevel })
+        verifyLog.debug('access_level_detected', { userId, accessLevel })
       } catch (detectError) {
-        logGoogleAdsVerifyWarn('access_level_detect_failed', detectError, { userId })
+        verifyLog.warn('access_level_detect_failed', { userId }, detectError)
       }
 
       // snake_case → camelCase
@@ -65,7 +62,7 @@ export const POST = withAuth(async (_request, user) => {
         },
       })
     } else {
-      logGoogleAdsVerifyInfo('verify_failed', {
+      verifyLog.info('verify_failed', {
         userId,
         authType: result.authType,
         error: result.error,
@@ -84,7 +81,7 @@ export const POST = withAuth(async (_request, user) => {
       )
     }
   } catch (error: any) {
-    logGoogleAdsVerifyError('verify_unhandled_error', error)
+    verifyLog.error('verify_unhandled_error', {}, error)
 
     return NextResponse.json(
       {

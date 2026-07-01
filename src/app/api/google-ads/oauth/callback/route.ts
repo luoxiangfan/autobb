@@ -7,11 +7,9 @@ import { getGoogleAdsAuthAssignment, isGoogleAdsAuthShared } from '@/lib/google-
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads/auth/context'
 import { verifyGoogleAdsOAuthState } from '@/lib/google-ads/oauth/state'
-import {
-  logGoogleAdsOAuthDebug,
-  logGoogleAdsOAuthError,
-  logGoogleAdsOAuthInfo,
-} from '@/lib/google-ads/auth/route-logger'
+import { createGoogleAdsLogger } from '@/lib/google-ads/common/logger'
+
+const oauthLog = createGoogleAdsLogger('oauth')
 
 export const dynamic = 'force-dynamic'
 
@@ -50,7 +48,7 @@ export async function GET(request: NextRequest) {
     const error = searchParams.get('error')
 
     if (error) {
-      logGoogleAdsOAuthError('callback_provider_error', error)
+      oauthLog.error('callback_provider_error', {}, error)
       return redirectToGoogleAdsSettings({ error })
     }
 
@@ -107,7 +105,7 @@ export async function GET(request: NextRequest) {
       return redirectToGoogleAdsSettings({ error: 'developer_token_invalid' })
     }
 
-    logGoogleAdsOAuthDebug('callback_processing', { userId })
+    oauthLog.debug('callback_processing', { userId })
 
     try {
       await assertNoConflictingGoogleAdsAuth(userId, 'oauth')
@@ -118,7 +116,7 @@ export async function GET(request: NextRequest) {
     const redirectUri = getGoogleAdsOAuthRedirectUri()
     const tokens = await exchangeCodeForTokens(code, clientId, clientSecret, redirectUri)
 
-    logGoogleAdsOAuthDebug('callback_tokens_exchanged', { userId })
+    oauthLog.debug('callback_tokens_exchanged', { userId })
 
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 
@@ -132,14 +130,14 @@ export async function GET(request: NextRequest) {
       access_token_expires_at: expiresAt,
     })
 
-    logGoogleAdsOAuthInfo('callback_credentials_saved', {
+    oauthLog.info('callback_credentials_saved', {
       userId,
       credentialsId: savedCredentials.id,
     })
 
     return redirectToGoogleAdsSettings({ oauth_success: 'true' })
   } catch (error: any) {
-    logGoogleAdsOAuthError('callback_failed', error)
+    oauthLog.error('callback_failed', {}, error)
     return redirectToGoogleAdsSettings({ error: 'callback_failed' })
   }
 }

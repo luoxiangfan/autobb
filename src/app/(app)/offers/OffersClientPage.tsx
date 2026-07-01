@@ -109,9 +109,6 @@ export default function OffersClientPage() {
     offersRef.current = offers
   }, [offers])
 
-  // P2-4: 移动端检测 - 已移除，统一使用表格视图
-  // const isMobile = useIsMobile()
-
   // P1-2: 筛选器状态
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')

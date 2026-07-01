@@ -8,6 +8,10 @@ import {
   persistStrategyRecommendationExecutionRuntime,
 } from '@/lib/openclaw/strategy/strategy-recommendations'
 import { getQueueManagerForTaskType } from '@/lib/queue/queue-routing'
+import {
+  dismissStrategyRecommendation,
+  queueStrategyRecommendationExecution,
+} from '@/lib/openclaw/strategy/strategy-recommendations'
 
 const STRATEGY_QUEUE_TASK_MISS_THRESHOLD = 3
 
@@ -313,4 +317,108 @@ export function createStrategyRecommendationsRouteHandlers(config: StrategyRecom
   }
 
   return { GET, POST }
+}
+
+function resolveStrategyExecutionErrorStatus(message: string): number {
+  if (message.includes('不存在')) return 404
+  if (
+    message.includes('重新分析') ||
+    message.includes('已暂不执行') ||
+    message.includes('已执行') ||
+    message.includes('仅支持执行') ||
+    message.includes('T-1建议仅支持执行')
+  ) {
+    return 409
+  }
+  return 400
+}
+
+function resolveStrategyDismissErrorStatus(message: string): number {
+  if (message.includes('不存在')) return 404
+  if (message.includes('已执行')) return 409
+  return 400
+}
+
+export function createStrategyRecommendationExecuteHandler(config: StrategyRecommendationsRouteConfig) {
+  return async function POST(
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
+  ) {
+    const params = await props.params
+    const auth = await config.resolveRequestUser(request)
+    if (!auth) {
+      return NextResponse.json({ error: config.unauthorizedError }, { status: 403 })
+    }
+
+    const recommendationId = String(params.id || '').trim()
+    if (!recommendationId) {
+      return NextResponse.json({ error: '缺少建议ID' }, { status: 400 })
+    }
+
+    const body = (await request.json().catch(() => ({}))) as { confirm?: boolean }
+    if (body.confirm !== true) {
+      return NextResponse.json({ error: '执行前需要二次确认（confirm=true）' }, { status: 400 })
+    }
+
+    try {
+      const result = await queueStrategyRecommendationExecution({
+        userId: auth.userId,
+        recommendationId,
+        confirm: true,
+        parentRequestId: request.headers.get('x-request-id') || undefined,
+      })
+
+      return NextResponse.json({
+        success: true,
+        queued: true,
+        deduplicated: result.deduplicated,
+        taskId: result.taskId,
+        recommendation: result.recommendation,
+      })
+    } catch (error: any) {
+      const message = error?.message || '执行建议失败'
+      return NextResponse.json(
+        { error: message },
+        { status: resolveStrategyExecutionErrorStatus(message) }
+      )
+    }
+  }
+}
+
+export function createStrategyRecommendationDismissHandler(
+  config: StrategyRecommendationsRouteConfig
+) {
+  return async function POST(
+    request: NextRequest,
+    props: { params: Promise<{ id: string }> }
+  ) {
+    const params = await props.params
+    const auth = await config.resolveRequestUser(request)
+    if (!auth) {
+      return NextResponse.json({ error: config.unauthorizedError }, { status: 403 })
+    }
+
+    const recommendationId = String(params.id || '').trim()
+    if (!recommendationId) {
+      return NextResponse.json({ error: '缺少建议ID' }, { status: 400 })
+    }
+
+    try {
+      const recommendation = await dismissStrategyRecommendation({
+        userId: auth.userId,
+        recommendationId,
+      })
+
+      return NextResponse.json({
+        success: true,
+        recommendation,
+      })
+    } catch (error: any) {
+      const message = error?.message || '设置暂不执行失败'
+      return NextResponse.json(
+        { error: message },
+        { status: resolveStrategyDismissErrorStatus(message) }
+      )
+    }
+  }
 }

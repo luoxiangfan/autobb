@@ -10,6 +10,7 @@
  */
 
 import { logger } from '@/lib/common/server'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
 import { getDatabase } from '../../db'
 import {
   checkAffiliatePlatformConfig,
@@ -41,14 +42,6 @@ const YP_LAST_FULL_SYNC_KEY = 'affiliate_yp_last_full_sync_at'
 
 const CHECK_INTERVAL_MS = 10 * 60 * 1000
 const DEFAULT_STARTUP_DELAY_MS = 45 * 1000
-
-function parseBooleanEnv(rawValue: string | undefined, defaultValue: boolean): boolean {
-  if (rawValue === undefined) return defaultValue
-  const normalized = rawValue.trim().toLowerCase()
-  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true
-  if (['0', 'false', 'no', 'off'].includes(normalized)) return false
-  return defaultValue
-}
 
 function parseNonNegativeIntEnv(rawValue: string | undefined, defaultValue: number): number {
   if (rawValue === undefined) return defaultValue

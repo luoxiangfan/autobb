@@ -7,11 +7,9 @@ import { assertUserCanModifyGoogleAdsAuth } from '@/lib/google-ads/auth/assignme
 import { assertNoConflictingGoogleAdsAuth } from '@/lib/google-ads/auth/context'
 import { getGoogleAdsOAuthRedirectUri } from '@/lib/google-ads/oauth/redirect'
 import { createGoogleAdsOAuthState } from '@/lib/google-ads/oauth/state'
-import {
-  logGoogleAdsOAuthDebug,
-  logGoogleAdsOAuthError,
-  logGoogleAdsOAuthInfo,
-} from '@/lib/google-ads/auth/route-logger'
+import { createGoogleAdsLogger } from '@/lib/google-ads/common/logger'
+
+const oauthLog = createGoogleAdsLogger('oauth')
 
 /**
  * GET /api/google-ads/oauth/start
@@ -35,12 +33,12 @@ export const GET = withAuth(async (_request, user) => {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
 
-    logGoogleAdsOAuthDebug('start_requested', { userId })
+    oauthLog.debug('start_requested', { userId })
 
     const oauthConfig = await getGoogleAdsOAuthConfigFields(userId)
     const userLoginCustomerId = oauthConfig.login_customer_id
     if (!userLoginCustomerId) {
-      logGoogleAdsOAuthDebug('start_missing_login_customer_id', { userId })
+      oauthLog.debug('start_missing_login_customer_id', { userId })
       return NextResponse.json(
         {
           error:
@@ -54,7 +52,7 @@ export const GET = withAuth(async (_request, user) => {
     const userClientSecret = oauthConfig.client_secret
     const userDeveloperToken = oauthConfig.developer_token
 
-    logGoogleAdsOAuthDebug('start_config_presence', {
+    oauthLog.debug('start_config_presence', {
       userId,
       hasClientId: Boolean(userClientId),
       hasClientSecret: Boolean(userClientSecret),
@@ -100,11 +98,11 @@ export const GET = withAuth(async (_request, user) => {
     const redirectUri = getGoogleAdsOAuthRedirectUri()
     const authUrl = generateOAuthUrl(userClientId, redirectUri, state)
 
-    logGoogleAdsOAuthInfo('start_redirect_prepared', {
+    oauthLog.info('start_redirect_prepared', {
       userId,
       hasLoginCustomerId: true,
     })
-    logGoogleAdsOAuthDebug('start_redirect_details', {
+    oauthLog.debug('start_redirect_details', {
       userId,
       loginCustomerId: userLoginCustomerId,
       redirectUri,
@@ -118,7 +116,7 @@ export const GET = withAuth(async (_request, user) => {
       },
     })
   } catch (error: any) {
-    logGoogleAdsOAuthError('start_failed', error)
+    oauthLog.error('start_failed', {}, error)
 
     return NextResponse.json(
       {
