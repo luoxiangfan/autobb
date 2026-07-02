@@ -7,8 +7,7 @@
 import postgres from 'postgres'
 import { readFileSync, existsSync, readdirSync } from 'fs'
 import { resolve } from 'path'
-import crypto from 'crypto'
-import { hashPassword } from '@/lib/auth/crypto'
+import { getDatabase, closeDatabase } from '@/lib/db'
 import { splitSqlStatements } from '@/lib/db/sql-splitter'
 import {
   applyConsolidatedSchemaStatements,
@@ -16,6 +15,9 @@ import {
   isIgnorablePostgresSchemaError,
   resolveConsolidatedSchemaPath,
 } from '@/lib/db/apply-consolidated-schema'
+import { ensureDefaultAdminAccount } from '@/lib/db/db-init-admin'
+import { DOCKER_SCHEMA_PROBE_TABLES } from '@/lib/db/db-init-constants'
+import { calculateMigrationFileHash } from '@/lib/db/db-init-migration-utils'
 
 const DATABASE_URL = process.env.DATABASE_URL
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD
@@ -131,7 +133,7 @@ async function waitForDatabase(
 async function checkDatabaseInitialized(sql: ReturnType<typeof postgres>): Promise<boolean> {
   try {
     // 检查多个核心表是否存在，确保数据库完整初始化
-    const coreTables = ['users', 'offers', 'ad_creatives', 'campaigns', 'prompt_versions']
+    const coreTables = [...DOCKER_SCHEMA_PROBE_TABLES]
 
     const result = await sql`
       SELECT COUNT(*) as count
@@ -186,10 +188,6 @@ async function initializeDatabase(_sql: ReturnType<typeof postgres>): Promise<vo
   } finally {
     await initSql.end({ timeout: 5 })
   }
-}
-
-function calculateFileHash(content: string): string {
-  return crypto.createHash('md5').update(content).digest('hex')
 }
 
 async function ensureMigrationHistorySchema(sql: ReturnType<typeof postgres>): Promise<void> {
@@ -277,7 +275,7 @@ async function runPendingMigrations(sql: ReturnType<typeof postgres>): Promise<v
   const pending: Array<{ file: string; hash: string; reason: 'new' | 'changed' }> = []
   for (const file of migrationFiles) {
     const content = readFileSync(resolve(migrationsPath, file), 'utf8')
-    const hash = calculateFileHash(content)
+    const hash = calculateMigrationFileHash(content)
     const recorded = applied.get(file)
     if (recorded == null) {
       pending.push({ file, hash, reason: 'new' })
@@ -391,50 +389,22 @@ async function runPendingMigrations(sql: ReturnType<typeof postgres>): Promise<v
   }
 }
 
-async function ensureAdminAccount(sql: ReturnType<typeof postgres>): Promise<void> {
+async function ensureDockerAdminAccount(): Promise<void> {
   if (!DEFAULT_ADMIN_PASSWORD) {
     console.log('⚠️  警告: DEFAULT_ADMIN_PASSWORD 未设置，跳过管理员账号初始化')
     return
   }
 
   console.log('👤 检查管理员账号...')
-
-  // 检查管理员是否存在
-  const existingAdmin = await sql`
-    SELECT id, username, email FROM users WHERE username = 'autoads'
-  `
-
-  const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD)
-
-  if (existingAdmin.length === 0) {
-    // 创建新管理员
-    console.log('➕ 管理员账号不存在，正在创建...')
-
-    await sql`
-      INSERT INTO users (
-        username, email, password_hash, display_name, role,
-        package_type, package_expires_at, must_change_password,
-        is_active, created_at, updated_at
-      ) VALUES (
-        'autoads', 'admin@autoads.com', ${passwordHash}, 'AutoAds Administrator', 'admin',
-        'lifetime', '2099-12-31 23:59:59', false,
-        true, NOW(), NOW()
-      )
-    `
-
-    console.log('✅ 管理员账号创建成功')
-    console.log('   用户名: autoads')
-    console.log('   邮箱: admin@autoads.com')
-  } else {
-    // 重置密码
-    console.log('🔄 管理员账号已存在，正在重置密码...')
-
-    await sql`
-      UPDATE users SET password_hash = ${passwordHash}, updated_at = NOW()
-      WHERE username = 'autoads'
-    `
-
-    console.log('✅ 管理员密码已重置')
+  const db = getDatabase()
+  try {
+    await ensureDefaultAdminAccount(db, {
+      password: DEFAULT_ADMIN_PASSWORD,
+      onExisting: 'reset-password',
+      logCredentials: 'console',
+    })
+  } finally {
+    await closeDatabase()
   }
 }
 
@@ -539,7 +509,7 @@ async function main() {
     console.log('✅ 增量迁移检查完成')
 
     // 确保管理员账号存在
-    await ensureAdminAccount(targetSql)
+    await ensureDockerAdminAccount()
 
     const totalTime = Date.now() - startTime
     console.log('')

@@ -12,7 +12,6 @@
 
 import { logger } from '@/lib/common/server'
 import { getDatabase } from './database'
-import { hashPassword } from '../auth'
 import {
   applyConsolidatedSchemaStatements,
   loadConsolidatedSchemaStatements,
@@ -24,22 +23,13 @@ import {
   resolveMigrationFilePath,
 } from './migration-file-discovery'
 import { normalizeMigrationSql } from './migration-sql-preprocess'
+import { ensureDefaultAdminAccount, defaultAdminAccountExists } from './db-init-admin'
+import { areAllCriticalTablesPresent } from './db-init-critical-tables'
+import { resolveDefaultAdminPassword } from './db-init-constants'
+import { calculateMigrationFileHash } from './db-init-migration-utils'
 import fs from 'fs'
 import path from 'path'
 import postgres from 'postgres'
-
-// 默认管理员信息
-// 安全说明：密码从环境变量读取，如果未设置则生成32位随机密码
-const crypto = require('crypto')
-const DEFAULT_ADMIN = {
-  username: 'autoads',
-  email: 'admin@autoads.com',
-  password: process.env.DEFAULT_ADMIN_PASSWORD || crypto.randomBytes(32).toString('base64'),
-  display_name: 'AutoAds Administrator',
-  role: 'admin',
-  package_type: 'lifetime',
-  package_expires_at: '2099-12-31T23:59:59.000Z',
-}
 
 // 配置导出文件路径
 const CONFIG_EXPORT_PATH = path.join(process.cwd(), 'secrets', 'admin-config-export.json')
@@ -53,31 +43,12 @@ const CONFIG_EXPORT_PATH = path.join(process.cwd(), 'secrets', 'admin-config-exp
 async function isDatabaseInitialized(): Promise<boolean> {
   const db = await getDatabase()
 
-  // 定义关键表列表 - 这些表必须全部存在才认为数据库已初始化
-  const criticalTables = [
-    'users', // 用户表
-    'offers', // Offer 表
-    'campaigns', // Campaign 表
-    'system_settings', // 系统设置表
-    'industry_benchmarks', // 行业基准表
-    'batch_tasks', // 批量任务表
-    'upload_records', // 上传记录表
-    'offer_tasks', // Offer提取任务表
-  ]
-
   try {
-    for (const table of criticalTables) {
-      const result = await db.query<{ exists: boolean }>(
-        'SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = ?)',
-        [table]
-      )
-      if (!result[0].exists) {
-        logger.debug(`⚠️ 数据库初始化检查: 缺少关键表 '${table}'`)
-        return false
-      }
+    const ready = await areAllCriticalTablesPresent(db)
+    if (ready) {
+      logger.debug('✅ 数据库初始化检查: 所有关键表都存在')
     }
-    logger.debug('✅ 数据库初始化检查: 所有关键表都存在')
-    return true
+    return ready
   } catch (error) {
     console.error('❌ 数据库初始化检查失败:', error)
     return false
@@ -142,55 +113,15 @@ async function initializePostgreSQL(): Promise<void> {
  */
 async function createDefaultAdmin(): Promise<void> {
   logger.debug('\n👤 Creating default admin account...')
-
   const db = await getDatabase()
-
   try {
-    const existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
-      DEFAULT_ADMIN.username,
-      'admin',
-    ])
-
-    const passwordHash = await hashPassword(DEFAULT_ADMIN.password)
-
-    if (existingAdmin) {
-      logger.debug('⚠️  Admin account already exists, updating password...')
-
-      await db.exec(
-        'UPDATE users SET password_hash = ?, must_change_password = false, is_active = true, openclaw_enabled = true WHERE username = ? OR role = ?',
-        [passwordHash, DEFAULT_ADMIN.username, 'admin']
-      )
-
-      logger.debug('✅ Admin password updated')
-    } else {
-      await db.exec(
-        `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, false, true, true)`,
-        [
-          DEFAULT_ADMIN.username,
-          DEFAULT_ADMIN.email,
-          passwordHash,
-          DEFAULT_ADMIN.display_name,
-          DEFAULT_ADMIN.role,
-          DEFAULT_ADMIN.package_type,
-          DEFAULT_ADMIN.package_expires_at,
-        ]
-      )
-
-      logger.debug('✅ Default admin account created')
-      logger.debug('\n🔑 Admin credentials:')
-      logger.debug(`   Username: ${DEFAULT_ADMIN.username}`)
-      logger.debug(`   Password: ${DEFAULT_ADMIN.password}`)
-      logger.debug(`   Email: ${DEFAULT_ADMIN.email}`)
-      logger.debug('\n⚠️  Security Notice:')
-      if (process.env.DEFAULT_ADMIN_PASSWORD) {
-        logger.debug('   ✅ Using password from DEFAULT_ADMIN_PASSWORD environment variable')
-      } else {
-        logger.debug('   ⚠️  Random password generated! Please save it immediately:')
-        logger.debug(`   👉 ${DEFAULT_ADMIN.password}`)
-        logger.debug('   Recommended: Set DEFAULT_ADMIN_PASSWORD in production environment')
-      }
-    }
+    await ensureDefaultAdminAccount(db, {
+      password: resolveDefaultAdminPassword(),
+      onExisting: 'reset-password',
+      setOpenclawEnabled: true,
+      lookupByRole: true,
+      logCredentials: 'logger',
+    })
   } catch (error) {
     console.error('❌ Failed to create admin account:', error)
     throw error
@@ -210,65 +141,49 @@ async function createDefaultAdmin(): Promise<void> {
  */
 async function ensureAdminAccount(): Promise<void> {
   logger.debug('\n👤 Checking admin account...')
-
   const db = await getDatabase()
 
   try {
-    const existingAdmin = await db.queryOne('SELECT id FROM users WHERE username = ? OR role = ?', [
-      DEFAULT_ADMIN.username,
-      'admin',
-    ])
+    const password = resolveDefaultAdminPassword()
+    const lookupByRole = true
 
-    const passwordHash = await hashPassword(DEFAULT_ADMIN.password)
-
-    if (existingAdmin) {
-      if (process.env.DEFAULT_ADMIN_PASSWORD) {
+    if (process.env.DEFAULT_ADMIN_PASSWORD) {
+      const exists = await defaultAdminAccountExists(db, lookupByRole)
+      if (exists) {
         logger.debug('⚠️  Admin account exists, updating password from environment variable...')
-
-        await db.exec(
-          'UPDATE users SET password_hash = ?, must_change_password = false, is_active = true, openclaw_enabled = true WHERE username = ? OR role = ?',
-          [passwordHash, DEFAULT_ADMIN.username, 'admin']
-        )
-
-        logger.debug('✅ Admin password updated')
-      } else {
-        await db.exec(
-          'UPDATE users SET must_change_password = false, is_active = true, openclaw_enabled = true WHERE username = ? OR role = ?',
-          [DEFAULT_ADMIN.username, 'admin']
-        )
-        logger.debug('✅ Admin account exists (password unchanged)')
       }
-    } else {
-      logger.debug('⚠️  Admin account not found, creating...')
-
-      await db.exec(
-        `INSERT INTO users (username, email, password_hash, display_name, role, package_type, package_expires_at, must_change_password, is_active, openclaw_enabled)
-         VALUES (?, ?, ?, ?, ?, ?, ?, false, true, true)`,
-        [
-          DEFAULT_ADMIN.username,
-          DEFAULT_ADMIN.email,
-          passwordHash,
-          DEFAULT_ADMIN.display_name,
-          DEFAULT_ADMIN.role,
-          DEFAULT_ADMIN.package_type,
-          DEFAULT_ADMIN.package_expires_at,
-        ]
-      )
-
-      logger.debug('✅ Admin account created')
-      logger.debug('\n🔑 Admin credentials:')
-      logger.debug(`   Username: ${DEFAULT_ADMIN.username}`)
-      logger.debug(`   Password: ${DEFAULT_ADMIN.password}`)
-      logger.debug(`   Email: ${DEFAULT_ADMIN.email}`)
-      logger.debug('\n⚠️  Security Notice:')
-      if (process.env.DEFAULT_ADMIN_PASSWORD) {
-        logger.debug('   ✅ Using password from DEFAULT_ADMIN_PASSWORD environment variable')
-      } else {
-        logger.debug('   ⚠️  Random password generated! Please save it immediately:')
-        logger.debug(`   👉 ${DEFAULT_ADMIN.password}`)
-        logger.debug('   Recommended: Set DEFAULT_ADMIN_PASSWORD in .env.local')
-      }
+      await ensureDefaultAdminAccount(db, {
+        password,
+        onExisting: 'reset-password',
+        setOpenclawEnabled: true,
+        lookupByRole,
+        logCredentials: 'logger',
+      })
+      return
     }
+
+    const exists = await defaultAdminAccountExists(db, lookupByRole)
+    if (exists) {
+      await ensureDefaultAdminAccount(db, {
+        password,
+        onExisting: 'ensure-active-only',
+        setOpenclawEnabled: true,
+        lookupByRole,
+        logCredentials: 'none',
+      })
+      logger.debug('✅ Admin account exists (password unchanged)')
+      return
+    }
+
+    logger.debug('⚠️  Admin account not found, creating...')
+    await ensureDefaultAdminAccount(db, {
+      password,
+      onExisting: 'reset-password',
+      setOpenclawEnabled: true,
+      lookupByRole,
+      logCredentials: 'logger',
+    })
+    logger.debug('✅ Admin account created')
   } catch (error) {
     console.error('❌ Failed to ensure admin account:', error)
     throw error
@@ -850,13 +765,6 @@ async function initializeQueueSystem(): Promise<void> {
 }
 
 /**
- * 计算文件内容的 MD5 hash
- */
-function calculateFileHash(content: string): string {
-  return crypto.createHash('md5').update(content).digest('hex')
-}
-
-/**
  * PostgreSQL: 对齐关键序列，避免因 seed 数据显式 id 导致的主键冲突
  */
 async function alignPostgresSequences(): Promise<void> {
@@ -927,7 +835,7 @@ async function runPendingMigrations(): Promise<void> {
     const historyName = migrationHistoryName(file)
     const filePath = resolveMigrationFilePath(migrationsDir, file)
     const content = fs.readFileSync(filePath, 'utf-8')
-    const currentHash = calculateFileHash(content)
+    const currentHash = calculateMigrationFileHash(content)
 
     if (!executedMigrations.has(historyName) && !executedMigrations.has(file)) {
       // 新迁移文件
@@ -969,7 +877,7 @@ async function runPendingMigrations(): Promise<void> {
     const historyName = migrationHistoryName(migrationFile)
     const filePath = resolveMigrationFilePath(migrationsDir, migrationFile)
     const sqlContent = fs.readFileSync(filePath, 'utf-8')
-    const fileHash = calculateFileHash(sqlContent)
+    const fileHash = calculateMigrationFileHash(sqlContent)
 
     const reasonIcon = reason === 'new' ? '🆕' : '🔄'
     logger.debug(`${reasonIcon} Executing: ${migrationFile}`)
