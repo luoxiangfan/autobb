@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   isAffiliatePlatformResolveLink,
+  isAffiliateResolveDirectFirstEnabled,
   isProxyTransportError,
 } from '@/lib/scraping/affiliate-direct-http-fallback'
 
@@ -29,5 +30,12 @@ describe('affiliate-direct-http-fallback', () => {
       )
     ).toBe(true)
     expect(isProxyTransportError(new Error('推广链接已失效：Invalid Link'))).toBe(false)
+  })
+
+  it('parses AFFILIATE_RESOLVE_DIRECT_FIRST with default true', () => {
+    expect(isAffiliateResolveDirectFirstEnabled(undefined)).toBe(true)
+    expect(isAffiliateResolveDirectFirstEnabled('false')).toBe(false)
+    expect(isAffiliateResolveDirectFirstEnabled('0')).toBe(false)
+    expect(isAffiliateResolveDirectFirstEnabled('true')).toBe(true)
   })
 })

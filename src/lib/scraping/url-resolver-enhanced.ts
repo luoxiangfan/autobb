@@ -12,6 +12,7 @@ import { getOptimalResolver, extractDomain } from './resolver-domains'
 import {
   isAffiliatePlatformResolveLink,
   isProxyTransportError,
+  readAffiliateResolveDirectFirstEnabled,
   resolveAffiliateLinkViaDirectHttp,
 } from './affiliate-direct-http-fallback'
 import { REDIS_PREFIX_CONFIG } from '../common/server'
@@ -1007,8 +1008,8 @@ export async function resolveAffiliateLink(
     logger.debug(`🔄 跳过缓存，直接解析URL（确保获取最新追踪参数）`)
   }
 
-  // 联盟跟踪域（YeahPromos / pboost 等）优先直连 HTTP，避免代理 SSL/ECONNRESET 误伤
-  if (isAffiliateTrackingLink) {
+  // 联盟跟踪域（YeahPromos / pboost 等）可配置为优先直连 HTTP（AFFILIATE_RESOLVE_DIRECT_FIRST）
+  if (isAffiliateTrackingLink && readAffiliateResolveDirectFirstEnabled()) {
     logger.debug('联盟跟踪链接优先直连HTTP解析')
     const directFirst = await tryDirectAffiliatePlatformHttpResolve(affiliateLink)
     if (directFirst) {

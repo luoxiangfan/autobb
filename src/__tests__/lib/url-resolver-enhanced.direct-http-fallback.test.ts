@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { initializeProxyPoolMock, resolveAffiliateLinkWithHttpMock } = vi.hoisted(() => ({
   initializeProxyPoolMock: vi.fn(async (userId: number) => {
@@ -38,6 +38,11 @@ describe('resolveAffiliateLink direct HTTP fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     clearProxyPool()
+    vi.stubEnv('AFFILIATE_RESOLVE_DIRECT_FIRST', 'true')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it('resolves yeahpromos via direct HTTP before touching proxy', async () => {
@@ -103,5 +108,35 @@ describe('resolveAffiliateLink direct HTTP fallback', () => {
       'https://proxy-provider.example/api?cc=US'
     )
     expect(resolveAffiliateLinkWithHttpMock.mock.calls[2][1]).toBeUndefined()
+  })
+
+  it('skips direct-first when AFFILIATE_RESOLVE_DIRECT_FIRST=false', async () => {
+    vi.stubEnv('AFFILIATE_RESOLVE_DIRECT_FIRST', 'false')
+    resolveAffiliateLinkWithHttpMock.mockResolvedValueOnce({
+      finalUrl: 'https://www.amazon.com/stores/page/ABC',
+      finalUrlSuffix: 'tag=abc',
+      redirectChain: [
+        'https://yeahpromos.com/index/index/openurl?track=abc',
+        'https://www.amazon.com/stores/page/ABC?tag=abc',
+      ],
+      redirectCount: 1,
+      statusCode: 200,
+    })
+
+    const result = await resolveAffiliateLink(
+      'https://yeahpromos.com/index/index/openurl?track=abc&url=',
+      {
+        targetCountry: 'US',
+        userId: 7,
+        skipCache: true,
+        retryConfig: { maxRetries: 0 },
+      }
+    )
+
+    expect(result.finalUrl).toBe('https://www.amazon.com/stores/page/ABC')
+    expect(resolveAffiliateLinkWithHttpMock).toHaveBeenCalledTimes(1)
+    expect(resolveAffiliateLinkWithHttpMock.mock.calls[0][1]).toBe(
+      'https://proxy-provider.example/api?cc=US'
+    )
   })
 })

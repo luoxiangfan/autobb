@@ -4,6 +4,8 @@
  */
 
 import { logger } from '@/lib/common/server'
+import { parseBooleanEnv } from '@/lib/common/parse-env'
+import { runWithAffiliateDirectHttpConcurrency } from './affiliate-direct-http-concurrency'
 import { resolveAffiliateLinkWithHttp, type HttpResolvedUrl } from './url-resolver-http'
 
 const AFFILIATE_DIRECT_HTTP_HOST_KEYWORDS = [
@@ -65,6 +67,15 @@ export function isProxyTransportError(error: unknown): boolean {
   return PROXY_TRANSPORT_ERROR_PATTERNS.some((pattern) => msg.includes(pattern))
 }
 
+/** 默认 true：联盟跟踪链接先直连 HTTP；false 时仅代理失败后再直连。 */
+export function isAffiliateResolveDirectFirstEnabled(envValue: string | undefined): boolean {
+  return parseBooleanEnv(envValue, true)
+}
+
+export function readAffiliateResolveDirectFirstEnabled(): boolean {
+  return isAffiliateResolveDirectFirstEnabled(process.env.AFFILIATE_RESOLVE_DIRECT_FIRST)
+}
+
 function mapHttpResult(result: HttpResolvedUrl) {
   return {
     finalUrl: result.finalUrl,
@@ -88,7 +99,9 @@ export async function resolveAffiliateLinkViaDirectHttp(affiliateLink: string) {
   }
 
   try {
-    const result = await resolveAffiliateLinkWithHttp(affiliateLink, undefined, 10)
+    const result = await runWithAffiliateDirectHttpConcurrency(() =>
+      resolveAffiliateLinkWithHttp(affiliateLink, undefined, 10)
+    )
     return mapHttpResult(result)
   } catch (error) {
     logger.debug('[affiliate-direct-http] 直连解析失败', {
