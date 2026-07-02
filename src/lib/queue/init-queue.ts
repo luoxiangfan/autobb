@@ -94,6 +94,10 @@ export async function initializeQueue(): Promise<UnifiedQueueManager> {
     logger.debug('⏭️ 跳过内置联盟商品同步调度器（由独立 scheduler 进程负责）')
 
     logger.debug('✅ 统一队列系统已启动')
+    logger.info('queue_consumer_started', {
+      instanceName: queue.getConfig().instanceName || 'core',
+      redisKeyPrefix: queue.getConfig().redisKeyPrefix || 'memory',
+    })
     logger.debug('📝 代理配置：任务执行时按需从用户设置加载')
     logger.debug('🔄 所有调度器已迁移至独立 scheduler 进程')
 

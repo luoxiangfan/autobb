@@ -35,7 +35,12 @@ export function createSyncExecutor(): TaskExecutor<SyncTaskData> {
   return async (task: Task<SyncTaskData>) => {
     const { userId, syncType, googleAdsAccountId, startDate, endDate } = task.data
 
-    logger.debug(`🔄 [SyncExecutor] 开始同步任务: 用户 #${userId}, 类型: ${syncType}`)
+    logger.info('[SyncExecutor] sync_task_started', {
+      userId,
+      syncType,
+      taskId: task.id,
+      googleAdsAccountId: googleAdsAccountId ?? null,
+    })
     logger.debug(
       `   账户ID: ${googleAdsAccountId || '全部'}, 期间: ${startDate || '默认'} - ${endDate || '默认'}`
     )
@@ -47,13 +52,22 @@ export function createSyncExecutor(): TaskExecutor<SyncTaskData> {
       // 注意：现有服务会处理所有账户的同步，不需要传入特定账户ID
       const syncLog: SyncLog = await dataSyncService.syncPerformanceData(userId, syncType)
 
-      logger.debug(
-        `✅ [SyncExecutor] 同步任务完成: 用户 #${userId}, 记录数: ${syncLog.recordCount}, 耗时: ${syncLog.durationMs}ms`
-      )
+      logger.info('[SyncExecutor] sync_task_completed', {
+        userId,
+        syncType,
+        taskId: task.id,
+        recordCount: syncLog.recordCount,
+        durationMs: syncLog.durationMs,
+      })
 
       return syncLog
     } catch (error: any) {
-      console.error(`❌ [SyncExecutor] 同步任务失败: 用户 #${userId}`, error.message)
+      logger.error('[SyncExecutor] sync_task_failed', {
+        userId,
+        syncType,
+        taskId: task.id,
+        message: error?.message || String(error),
+      })
       throw error
     }
   }

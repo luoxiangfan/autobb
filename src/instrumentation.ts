@@ -20,6 +20,13 @@ export async function register() {
       console.log(
         '⏭️ SKIP_RUNTIME_DB_INIT=true，跳过 Next.js runtime 数据库初始化（由 entrypoint 负责）'
       )
+      // entrypoint 仅做 DB 迁移，核心队列 consumer 仍须在 Web 进程启动（sync 等任务由 autoads-web 消费）
+      try {
+        const { initializeQueue } = await import('./lib/queue/init-queue')
+        await initializeQueue()
+      } catch (error) {
+        console.error('❌ Queue initialization failed during server startup:', error)
+      }
     } else {
       try {
         await initializeDatabase()
@@ -45,9 +52,7 @@ export async function register() {
       setInterval(tick, intervalMs)
     }
 
-    // 移除重复的队列初始化
-    // initializeDatabase() 内部已调用 initializeQueueSystem()，此处无需重复调用
-    // 原来重复调用会导致日志重复输出
+    // initializeDatabase() 路径已内含队列初始化；SKIP_RUNTIME_DB_INIT 路径在上方单独 initializeQueue()
 
     // 恢复未完成的批量任务状态
     // 解决服务重启后，upload_records状态一直停留在"processing"的问题
