@@ -34,6 +34,35 @@ interface TriggerResult {
   status: 'queued' | 'skipped' | 'paused' | 'completed' | 'error'
   clickCount?: number
   message?: string
+  /** 稳定分类键，供 triggerAllPendingTasks 汇总 skip 原因 */
+  reason?: string
+}
+
+export type TriggerAllPendingTasksResult = {
+  processed: number
+  queued: number
+  paused: number
+  skipped: number
+  skipReasons: Record<string, number>
+}
+
+/** 将单次 trigger 结果计入批量调度汇总 */
+export function accumulateTriggerAllOutcome(
+  totals: TriggerAllPendingTasksResult,
+  result: TriggerResult
+): void {
+  totals.processed += 1
+  if (result.status === 'queued') {
+    totals.queued += result.clickCount || 0
+    return
+  }
+  if (result.status === 'paused') {
+    totals.paused += 1
+    return
+  }
+  totals.skipped += 1
+  const reason = result.reason || result.status || 'unknown'
+  totals.skipReasons[reason] = (totals.skipReasons[reason] || 0) + 1
 }
 
 const CLICK_FARM_BATCH_SIZE = (() => {
@@ -255,7 +284,7 @@ export async function triggerTaskScheduling(
   )
 
   if (!taskRow) {
-    return { taskId, status: 'error', message: '任务不存在' }
+    return { taskId, status: 'error', reason: 'task_not_found', message: '任务不存在' }
   }
 
   // 解析任务数据，确保字段类型正确（hourly_distribution、referer_config 等）
@@ -263,7 +292,12 @@ export async function triggerTaskScheduling(
 
   // 检查任务状态
   if (task.status !== 'pending' && task.status !== 'running') {
-    return { taskId, status: 'skipped', message: `任务状态为 ${task.status}，无需调度` }
+    return {
+      taskId,
+      status: 'skipped',
+      reason: 'invalid_status',
+      message: `任务状态为 ${task.status}，无需调度`,
+    }
   }
 
   const hasEnabledCampaign = await hasEnabledCampaignForOffer({
@@ -291,7 +325,12 @@ export async function triggerTaskScheduling(
   if (task.scheduled_start_date) {
     const todayInTaskTimezone = getDateInTimezone(new Date(), task.timezone)
     if (todayInTaskTimezone < task.scheduled_start_date) {
-      return { taskId, status: 'skipped', message: `尚未到开始日期 ${task.scheduled_start_date}` }
+      return {
+        taskId,
+        status: 'skipped',
+        reason: 'before_start_date',
+        message: `尚未到开始日期 ${task.scheduled_start_date}`,
+      }
     }
   }
 
@@ -314,7 +353,7 @@ export async function triggerTaskScheduling(
     `,
       [task.id]
     )
-    return { taskId, status: 'completed', message: '任务已完成' }
+    return { taskId, status: 'completed', reason: 'task_completed', message: '任务已完成' }
   }
 
   // 获取Offer信息
@@ -376,13 +415,19 @@ export async function triggerTaskScheduling(
     return {
       taskId,
       status: 'skipped',
+      reason: 'outside_time_range',
       message: `当前时间 ${timeInTaskTimezone}（${task.timezone}）不在执行时间范围内`,
     }
   }
 
   if (isHeapPressureHigh()) {
     await updateTaskStatus(task.id, 'running', generateNextRunAt(task.timezone, task))
-    return { taskId, status: 'skipped', message: '服务器内存压力过高，已延后调度' }
+    return {
+      taskId,
+      status: 'skipped',
+      reason: 'heap_pressure',
+      message: '服务器内存压力过高，已延后调度',
+    }
   }
 
   // 获取该小时应该执行的点击数
@@ -411,6 +456,7 @@ export async function triggerTaskScheduling(
     return {
       taskId,
       status: 'skipped',
+      reason: clickCount <= 0 ? 'no_hourly_clicks' : 'hourly_quota_done',
       message: clickCount <= 0 ? '当前小时无需执行点击' : '当前小时配额已完成，跳过重复调度',
     }
   }
@@ -446,6 +492,7 @@ export async function triggerTaskScheduling(
     return {
       taskId,
       status: 'skipped',
+      reason: 'queue_unavailable',
       message: batchEnqueue.error || '队列后端不可用，已延后调度',
     }
   }
@@ -479,36 +526,44 @@ export async function triggerTaskScheduling(
  * 触发所有待处理任务的调度
  * 用于定时任务调用
  */
-export async function triggerAllPendingTasks(): Promise<{
-  processed: number
-  queued: number
-  paused: number
-  skipped: number
-}> {
+export async function triggerAllPendingTasks(): Promise<TriggerAllPendingTasksResult> {
   const tasks = await getPendingTasks()
   logger.debug(
     `[TriggerAll] 开始执行，找到 ${tasks.length} 个待处理任务，当前时间: ${new Date().toISOString()}`
   )
 
-  const results = { processed: 0, queued: 0, paused: 0, skipped: 0 }
+  const results: TriggerAllPendingTasksResult = {
+    processed: 0,
+    queued: 0,
+    paused: 0,
+    skipped: 0,
+    skipReasons: {},
+  }
 
   for (const task of tasks) {
-    results.processed++
     try {
       const result = await triggerTaskScheduling(task.id)
-      if (result.status === 'queued') {
-        results.queued += result.clickCount || 0
-      } else if (result.status === 'paused') {
-        results.paused += 1
-      } else {
-        results.skipped += 1
-      }
+      accumulateTriggerAllOutcome(results, result)
     } catch (error) {
       console.error(`[TriggerAll] 任务 ${task.id} 调度失败:`, error)
-      results.skipped += 1
+      accumulateTriggerAllOutcome(results, {
+        taskId: String(task.id),
+        status: 'error',
+        reason: 'schedule_error',
+      })
     }
   }
 
-  logger.debug(`[TriggerAll] 执行完成:`, results)
+  if (results.skipped > 0) {
+    logger.warn('click_farm_trigger_all_skip_summary', {
+      processed: results.processed,
+      queued: results.queued,
+      paused: results.paused,
+      skipped: results.skipped,
+      skipReasons: results.skipReasons,
+    })
+  } else {
+    logger.debug(`[TriggerAll] 执行完成:`, results)
+  }
   return results
 }
