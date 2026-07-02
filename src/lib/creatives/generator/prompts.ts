@@ -31,7 +31,7 @@ import {
   RETAINED_KEYWORD_DESCRIPTION_SLOT_START_INDEX,
   RETAINED_KEYWORD_HEADLINE_SLOT_START_INDEX,
   buildCreativeKeywordUsagePlan,
-} from './contract'
+} from './contract/index'
 import {
   REVIEW_QUOTE_BLOCKLIST_PATTERN,
   SALES_RANK_PROMPT_MAX,

@@ -29,7 +29,7 @@ import {
   resolveDescriptionKeywordTargets,
   resolveHeadlineKeywordTargets,
   syncHeadlineMetadataSlot,
-} from './contract'
+} from './contract/index'
 import type {
   CopyPatternSet,
   CreativeTargetLanguageResolution,

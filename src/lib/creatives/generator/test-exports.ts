@@ -15,7 +15,7 @@ import {
   resolveAdCreativeRetryPlan,
   softlyReinforceTypeCopy,
   validateGeneratedAdCreativeBusinessLimits,
-} from './contract'
+} from './contract/index'
 import { resolveCreativePriceEvidence, resolveCreativeSalesRankSignal } from './evidence'
 import {
   evaluateStoreModelIntentReadiness,

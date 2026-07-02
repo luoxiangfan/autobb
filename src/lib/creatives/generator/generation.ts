@@ -62,7 +62,7 @@ import {
   resolveEffectiveKeywordUsagePlan,
   softlyReinforceTypeCopy,
   validateGeneratedAdCreativeBusinessLimits,
-} from './contract'
+} from './contract/index'
 import {
   evaluateStoreModelIntentReadiness,
   finalizeKeywordsWithSingleExit,
