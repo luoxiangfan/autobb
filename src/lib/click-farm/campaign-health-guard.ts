@@ -1,8 +1,6 @@
 import { getDatabase } from '@/lib/db'
 import { removePendingClickFarmQueueTasksByTaskIds } from '@/lib/click-farm/queue-cleanup'
 
-export { hasEnabledCampaignForOffer } from '@/lib/campaign/campaign-health-guard'
-
 type ClickFarmTaskCandidate = {
   id: string
   user_id: number

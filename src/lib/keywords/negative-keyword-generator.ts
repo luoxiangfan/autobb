@@ -1,7 +1,6 @@
 /**
- * 关键词生成器 v2.0 (精简版)
- *
- * 正向关键词请使用 unified-keyword-service.ts 的 getUnifiedKeywordData()
+ * 否定关键词生成：固定模板 + 多语言扩展。
+ * 正向关键词请使用 unified-keyword-service.ts 的 getUnifiedKeywordData()。
  */
 import { logger } from '@/lib/common/server'
 import type { Offer } from '../offers/server'
