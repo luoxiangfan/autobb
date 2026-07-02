@@ -1,4 +1,5 @@
 // Public barrel for @/lib/scraping
+export * from './affiliate-direct-http-fallback'
 export * from './amazon-brand-utils'
 export * from './amazon-url-utils'
 export * from './brand-name-utils'

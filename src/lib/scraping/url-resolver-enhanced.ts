@@ -9,6 +9,11 @@ import { getRedisClient } from '../common/server'
 import { resolveAffiliateLinkWithPlaywright } from './url-resolver-playwright'
 import { extractEmbeddedTargetUrl, resolveAffiliateLinkWithHttp } from './url-resolver-http'
 import { getOptimalResolver, extractDomain } from './resolver-domains'
+import {
+  isAffiliatePlatformResolveLink,
+  isProxyTransportError,
+  resolveAffiliateLinkViaDirectHttp,
+} from './affiliate-direct-http-fallback'
 import { REDIS_PREFIX_CONFIG } from '../common/server'
 import { maskProxyUrl } from './proxy/validate-url'
 import {
@@ -599,6 +604,8 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
     'ERR_NAME_NOT_RESOLVED',
     'ERR_EMPTY_RESPONSE', // 服务器无响应（可能是代理IP被封）
     'ERR_CONNECTION_CLOSED', // 连接被关闭
+    'ERR_CONNECTION_RESET',
+    'net::ERR_CONNECTION_RESET',
     'ERR_HTTP2_PROTOCOL_ERROR', // HTTP2协议错误（代理/中间链路常见）
     'ERR_PROXY_CONNECTION_FAILED', // 代理连接失败
     'net::ERR_EMPTY_RESPONSE', // Playwright格式的空响应错误
@@ -905,6 +912,13 @@ async function resolveHttpWithPlaywrightFallback(params: {
       logger.debug(`   HTTP命中代理业务错误（不可恢复），终止当前尝试`)
       throw httpError
     }
+    if (isProxyTransportError(httpError)) {
+      const directResult = await tryDirectAffiliatePlatformHttpResolve(affiliateLink)
+      if (directResult) {
+        logger.debug(`   代理HTTP传输失败，直连HTTP解析成功`)
+        return directResult
+      }
+    }
     if (shouldRetryHttpInsteadOfFallbackToPlaywright(httpError)) {
       logger.debug(`   HTTP临时失败（优先换代理重试），不降级到Playwright`)
       throw httpError
@@ -912,6 +926,29 @@ async function resolveHttpWithPlaywrightFallback(params: {
     logger.debug(`   降级到Playwright...`)
     return resolveWithPlaywright(affiliateLink, proxyUrl, targetCountry, userId, forceRefreshProxy)
   }
+}
+
+function acceptDirectAffiliateHttpResult(result: ResolvedUrlData | null): ResolvedUrlData | null {
+  if (!result) return null
+  if (isBlockedHttpResolution(result)) return null
+
+  const resolved = applyEmbeddedTargetFallback(result)
+  const fullUrl = buildFullUrl(resolved.finalUrl, resolved.finalUrlSuffix)
+  if (TRACKING_URL_PATTERN.test(fullUrl) && !extractEmbeddedTargetUrl(fullUrl)) {
+    return null
+  }
+
+  return resolved
+}
+
+async function tryDirectAffiliatePlatformHttpResolve(
+  affiliateLink: string
+): Promise<ResolvedUrlData | null> {
+  if (!isAffiliatePlatformResolveLink(affiliateLink)) {
+    return null
+  }
+
+  return acceptDirectAffiliateHttpResult(await resolveAffiliateLinkViaDirectHttp(affiliateLink))
 }
 
 // 核心解析函数（集成所有优化）
@@ -941,14 +978,22 @@ export async function resolveAffiliateLink(
       affiliateLink
     )
 
+  const isAffiliateTrackingLink = isAffiliatePlatformResolveLink(affiliateLink)
+  const isAggressiveRetryLink = isShortLink || isAffiliateTrackingLink
+
   const retryConfig = {
     ...DEFAULT_RETRY_CONFIG,
-    ...(isShortLink ? { maxRetries: 5 } : {}), // 短链接 maxRetries=5
+    ...(isAggressiveRetryLink ? { maxRetries: 5 } : {}),
     ...customRetryConfig,
+    ...(isAggressiveRetryLink && customRetryConfig?.maxRetries !== undefined
+      ? { maxRetries: Math.max(5, customRetryConfig.maxRetries) }
+      : {}),
   }
 
   if (isShortLink) {
     logger.debug(`🔗 检测到短链接服务，增加重试次数到${retryConfig.maxRetries}次`)
+  } else if (isAffiliateTrackingLink) {
+    logger.debug(`🔗 检测到联盟跟踪链接，增加重试次数到${retryConfig.maxRetries}次`)
   }
 
   // 步骤1: 检查Redis缓存（默认禁用，确保获取最新追踪参数）
@@ -960,6 +1005,17 @@ export async function resolveAffiliateLink(
     }
   } else {
     logger.debug(`🔄 跳过缓存，直接解析URL（确保获取最新追踪参数）`)
+  }
+
+  // 联盟跟踪域（YeahPromos / pboost 等）优先直连 HTTP，避免代理 SSL/ECONNRESET 误伤
+  if (isAffiliateTrackingLink) {
+    logger.debug('联盟跟踪链接优先直连HTTP解析')
+    const directFirst = await tryDirectAffiliatePlatformHttpResolve(affiliateLink)
+    if (directFirst) {
+      logger.debug(`✅ 直连HTTP解析成功: ${directFirst.finalUrl}`)
+      return directFirst
+    }
+    logger.debug('直连HTTP未得到有效落地页，回退代理解析')
   }
 
   // 步骤2: 获取代理池
@@ -1042,6 +1098,14 @@ export async function resolveAffiliateLink(
       lastError = error
       console.error(`❌ 解析失败 (尝试 ${attempt + 1}):`, error.message)
 
+      if (isProxyTransportError(error)) {
+        const directResult = await tryDirectAffiliatePlatformHttpResolve(affiliateLink)
+        if (directResult) {
+          logger.debug(`✅ 代理失败后直连HTTP解析成功: ${directResult.finalUrl}`)
+          return directResult
+        }
+      }
+
       // 获取当前使用的代理并记录失败
       if (usedProxyForAttempt) {
         proxyPool.recordFailure(usedProxyForAttempt.url, error.message)
@@ -1067,7 +1131,13 @@ export async function resolveAffiliateLink(
     }
   }
 
-  // 所有重试都失败
+  // 所有代理重试都失败：联盟跟踪域名再尝试一次直连 HTTP
+  const directFallback = await tryDirectAffiliatePlatformHttpResolve(affiliateLink)
+  if (directFallback) {
+    logger.debug(`✅ 代理重试耗尽后直连HTTP解析成功: ${directFallback.finalUrl}`)
+    return directFallback
+  }
+
   const normalizedError = normalizeNestedResolveErrorMessage(lastError?.message || '未知错误')
   if (isAffiliateLinkExpiredMessage(normalizedError)) {
     throw new Error(normalizedError)

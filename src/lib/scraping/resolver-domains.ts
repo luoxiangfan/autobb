@@ -64,7 +64,6 @@ const JS_REDIRECT_DOMAINS = [
   // LinkBux (JS redirect / anti-bot)
   'linkbux.com',
   // Modern Link Shorteners
-  'pboost.me',
   'linktree.com',
   'linktr.ee',
   'beacons.ai',

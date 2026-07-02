@@ -22,10 +22,18 @@ export function isProxyConnectionError(error: Error): boolean {
     return true
   }
 
+  if (msg.includes('ERR_CONNECTION_RESET') || msg.includes('net::ERR_CONNECTION_RESET')) {
+    return true
+  }
+
   if (
     (msg.includes('ECONNRESET') || msg.includes('ECONNREFUSED')) &&
     msg.toLowerCase().includes('proxy')
   ) {
+    return true
+  }
+
+  if (msg.includes('EPROTO') || msg.includes('wrong version number')) {
     return true
   }
 
