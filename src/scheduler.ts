@@ -33,6 +33,10 @@ import { resolveGoogleAdsSyncCredentialGate } from '@/lib/google-ads/auth/contex
 import { buildUserExecutionEligibleSql } from './lib/campaign/user-execution-eligibility'
 import { detectAndFixZombieSyncTasks } from './lib/affiliate/affiliate-sync-zombie-detector'
 import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/launch-score/product-score/product-score-control'
+import {
+  preparePerformanceSyncScheduling,
+  userHasActivePerformanceSyncWork,
+} from './lib/campaign/performance-sync-pipeline-status'
 
 // 日志函数
 function log(message: string) {
@@ -123,27 +127,6 @@ let syncDataTaskRunning = false
 let syncGoogleAdsTaskRunning = false
 let isShuttingDown = false
 const schedulerShutdownGraceMs = parsePositiveInt(process.env.SCHEDULER_SHUTDOWN_GRACE_MS, 6000)
-
-async function getUsersWithActiveSyncTasks(): Promise<Set<number>> {
-  const userIds = new Set<number>()
-  try {
-    const queue = getQueueManagerForTaskType('sync')
-    await queue.ensureInitialized()
-
-    const [pendingTasks, runningTasks] = await Promise.all([
-      queue.getPendingTasks(),
-      queue.getRunningTasks(),
-    ])
-
-    for (const task of [...pendingTasks, ...runningTasks]) {
-      if (task.type !== 'sync') continue
-      userIds.add(Number(task.userId))
-    }
-  } catch (error) {
-    logError('⚠️ 读取同步队列状态失败（将继续按时间窗口触发）:', error)
-  }
-  return userIds
-}
 
 async function hasValidSyncCredentials(userId: number): Promise<{ ok: boolean; reason?: string }> {
   try {
@@ -469,7 +452,30 @@ async function syncDataTask() {
 
     const now = new Date()
     let queuedCount = 0
-    const usersWithActiveSyncTasks = await getUsersWithActiveSyncTasks()
+
+    const prep = await preparePerformanceSyncScheduling(activeUsers.map((user) => user.id))
+    if (
+      prep.staleLogsClosed > 0 ||
+      prep.staleRunningTasksCleaned > 0 ||
+      prep.stalePendingRemoved > 0
+    ) {
+      log(
+        `🧹 性能同步队列已清理: logs=${prep.staleLogsClosed}, running=${prep.staleRunningTasksCleaned}, pending=${prep.stalePendingRemoved}`
+      )
+    }
+
+    const usersWithActiveSyncTasks = new Set<number>()
+    for (const user of activeUsers) {
+      try {
+        const activeWork = await userHasActivePerformanceSyncWork(user.id)
+        if (activeWork.active) {
+          usersWithActiveSyncTasks.add(user.id)
+        }
+      } catch (error) {
+        logError(`⚠️ 读取用户 ${user.username} 同步队列状态失败（将继续按时间窗口触发）:`, error)
+      }
+    }
+
     if (usersWithActiveSyncTasks.size > 0) {
       log(`⏭️ 当前有 ${usersWithActiveSyncTasks.size} 个用户存在进行中的同步任务，将跳过重复入队`)
     }
