@@ -424,10 +424,12 @@ async function syncDataTask() {
           '${DEFAULT_DATA_SYNC_INTERVAL_HOURS}'
         ) as sync_interval_hours,
         (
-          SELECT MAX(started_at)
+          SELECT MAX(completed_at)
           FROM sync_logs
           WHERE user_id = u.id
             AND sync_type = 'auto'
+            AND status IN ('success', 'partial')
+            AND completed_at IS NOT NULL
         ) as last_sync_at
       FROM users u
       INNER JOIN google_ads_accounts ga ON u.id = ga.user_id

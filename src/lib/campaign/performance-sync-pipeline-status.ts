@@ -9,7 +9,8 @@ export const PERFORMANCE_SYNC_LOG_TYPES = ['auto', 'manual'] as const
 
 const DEFAULT_STALE_RUNNING_LOG_MINUTES = 45
 const DEFAULT_ACTIVE_RUNNING_LOG_MINUTES = 30
-const DEFAULT_STALE_PENDING_SYNC_TASK_MS = 120_000
+// Scheduler 默认每 5 分钟检查一次；pending 未消费阈值须明显长于检查周期，避免反复清队再入队
+const DEFAULT_STALE_PENDING_SYNC_TASK_MS = 30 * 60 * 1000
 
 function parsePositiveIntEnv(raw: string | undefined, defaultValue: number): number {
   if (raw === undefined) return defaultValue
