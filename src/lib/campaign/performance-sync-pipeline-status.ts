@@ -74,8 +74,56 @@ async function removePerformanceSyncTaskFromQueue(taskId: string): Promise<boole
  * 移除已被 sync_logs 覆盖或长期未执行的 pending 性能同步任务（Scheduler 重复入队 / Web Worker 未消费残留）。
  * 仅在该用户无 running 队列任务且无近期 running 日志时执行。
  */
+async function getLastAutoPerformanceSyncCompletedMs(userId: number): Promise<number | null> {
+  const db = await getDatabase()
+  const lastCompleted = (await db.queryOne(
+    `
+      SELECT completed_at
+      FROM sync_logs
+      WHERE user_id = ?
+        AND sync_type = 'auto'
+        AND status IN ('success', 'partial')
+        AND completed_at IS NOT NULL
+      ORDER BY completed_at DESC
+      LIMIT 1
+    `,
+    [userId]
+  )) as { completed_at: string } | null
+
+  if (!lastCompleted?.completed_at) {
+    return null
+  }
+
+  const completedAtMs = Date.parse(lastCompleted.completed_at)
+  return Number.isFinite(completedAtMs) ? completedAtMs : null
+}
+
+/**
+ * 调度间隔锚点：上次 auto 成功完成时间与队列中 sync 任务（pending/running）时间的较晚者。
+ * 用于 settings 中的 data_sync_interval_hours，避免仅看 completed_at 时在 Web 未消费队列任务的情况下重复入队。
+ */
+export async function getPerformanceSyncIntervalAnchorMs(userId: number): Promise<number | null> {
+  const anchors: number[] = []
+
+  const completedMs = await getLastAutoPerformanceSyncCompletedMs(userId)
+  if (completedMs !== null) {
+    anchors.push(completedMs)
+  }
+
+  const { pending, running } = await listPerformanceSyncTasksForUser(userId)
+  for (const task of [...pending, ...running]) {
+    const taskMs = task.startedAt ?? task.createdAt
+    if (Number.isFinite(taskMs) && taskMs > 0) {
+      anchors.push(taskMs)
+    }
+  }
+
+  return anchors.length > 0 ? Math.max(...anchors) : null
+}
+
 export async function reconcileStalePerformanceSyncPendingTasks(
-  userId: number
+  userId: number,
+  options?: { minStaleMs?: number }
 ): Promise<{ removed: number }> {
   const { running } = await getPerformanceSyncQueueCountsForUser(userId)
   if (running > 0) {
@@ -127,10 +175,11 @@ export async function reconcileStalePerformanceSyncPendingTasks(
     : Number.NaN
   const hasValidCompletedAt = Number.isFinite(completedAtMs)
 
-  const stalePendingMs = parsePositiveIntEnv(
+  const envStalePendingMs = parsePositiveIntEnv(
     process.env.PERFORMANCE_SYNC_STALE_PENDING_MS,
     DEFAULT_STALE_PENDING_SYNC_TASK_MS
   )
+  const stalePendingMs = Math.max(envStalePendingMs, options?.minStaleMs ?? 0)
   const now = Date.now()
 
   const { pending } = await listPerformanceSyncTasksForUser(userId)
@@ -247,25 +296,20 @@ export async function userHasActivePerformanceSyncWork(userId: number): Promise<
 }
 
 /**
- * 调度器入队前：清理僵尸日志/队列任务，并 reconcile 各用户 stale pending。
+ * 调度器入队前：清理僵尸 sync_logs 与超时 running 队列任务（不触碰 pending，pending 由 per-user 间隔逻辑处理）。
  */
-export async function preparePerformanceSyncScheduling(userIds: number[]): Promise<{
+export async function preparePerformanceSyncQueueHealth(): Promise<{
   staleLogsClosed: number
   staleRunningTasksCleaned: number
-  stalePendingRemoved: number
 }> {
   const staleLogsClosed = await markStalePerformanceSyncLogs()
 
   const queue = getQueueManager()
   await queue.ensureInitialized()
   const zombieCleanup = await queue.cleanupZombieTasks('runtime')
-  const staleRunningTasksCleaned = zombieCleanup.cleaned
 
-  let stalePendingRemoved = 0
-  for (const userId of userIds) {
-    const { removed } = await reconcileStalePerformanceSyncPendingTasks(userId)
-    stalePendingRemoved += removed
+  return {
+    staleLogsClosed,
+    staleRunningTasksCleaned: zombieCleanup.cleaned,
   }
-
-  return { staleLogsClosed, staleRunningTasksCleaned, stalePendingRemoved }
 }

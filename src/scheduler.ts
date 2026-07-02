@@ -34,7 +34,9 @@ import { buildUserExecutionEligibleSql } from './lib/campaign/user-execution-eli
 import { detectAndFixZombieSyncTasks } from './lib/affiliate/affiliate-sync-zombie-detector'
 import { LEGACY_AMAZON_MISCLASSIFIED_SQL_CONDITION } from './lib/launch-score/product-score/product-score-control'
 import {
-  preparePerformanceSyncScheduling,
+  getPerformanceSyncIntervalAnchorMs,
+  preparePerformanceSyncQueueHealth,
+  reconcileStalePerformanceSyncPendingTasks,
   userHasActivePerformanceSyncWork,
 } from './lib/campaign/performance-sync-pipeline-status'
 
@@ -405,7 +407,6 @@ async function syncDataTask() {
       username: string
       email: string | null
       sync_interval_hours: string | null
-      last_sync_at: string | null
     }>(
       `
       SELECT DISTINCT
@@ -422,15 +423,7 @@ async function syncDataTask() {
             LIMIT 1
           ),
           '${DEFAULT_DATA_SYNC_INTERVAL_HOURS}'
-        ) as sync_interval_hours,
-        (
-          SELECT MAX(completed_at)
-          FROM sync_logs
-          WHERE user_id = u.id
-            AND sync_type = 'auto'
-            AND status IN ('success', 'partial')
-            AND completed_at IS NOT NULL
-        ) as last_sync_at
+        ) as sync_interval_hours
       FROM users u
       INNER JOIN google_ads_accounts ga ON u.id = ga.user_id
       WHERE ${userEligibleCondition}
@@ -454,42 +447,17 @@ async function syncDataTask() {
 
     const now = new Date()
     let queuedCount = 0
+    let stalePendingRemoved = 0
 
-    const prep = await preparePerformanceSyncScheduling(activeUsers.map((user) => user.id))
-    if (
-      prep.staleLogsClosed > 0 ||
-      prep.staleRunningTasksCleaned > 0 ||
-      prep.stalePendingRemoved > 0
-    ) {
+    const health = await preparePerformanceSyncQueueHealth()
+    if (health.staleLogsClosed > 0 || health.staleRunningTasksCleaned > 0) {
       log(
-        `🧹 性能同步队列已清理: logs=${prep.staleLogsClosed}, running=${prep.staleRunningTasksCleaned}, pending=${prep.stalePendingRemoved}`
+        `🧹 性能同步队列已清理: logs=${health.staleLogsClosed}, running=${health.staleRunningTasksCleaned}, pending=0`
       )
-    }
-
-    const usersWithActiveSyncTasks = new Set<number>()
-    for (const user of activeUsers) {
-      try {
-        const activeWork = await userHasActivePerformanceSyncWork(user.id)
-        if (activeWork.active) {
-          usersWithActiveSyncTasks.add(user.id)
-        }
-      } catch (error) {
-        logError(`⚠️ 读取用户 ${user.username} 同步队列状态失败（将继续按时间窗口触发）:`, error)
-      }
-    }
-
-    if (usersWithActiveSyncTasks.size > 0) {
-      log(`⏭️ 当前有 ${usersWithActiveSyncTasks.size} 个用户存在进行中的同步任务，将跳过重复入队`)
     }
 
     // 为每个用户检查是否需要同步
     for (const user of activeUsers) {
-      if (usersWithActiveSyncTasks.has(user.id)) {
-        log(`⏭️ 用户 ${user.username} 跳过同步（队列中已有 pending/running sync 任务）`)
-        continue
-      }
-
-      // 获取用户配置的同步间隔（默认4小时）
       const parsedInterval = parseInt(
         String(user.sync_interval_hours || DEFAULT_DATA_SYNC_INTERVAL_HOURS),
         10
@@ -498,18 +466,40 @@ async function syncDataTask() {
         Number.isFinite(parsedInterval) && parsedInterval > 0
           ? parsedInterval
           : DEFAULT_DATA_SYNC_INTERVAL_HOURS
+      const syncIntervalMs = syncIntervalHours * 60 * 60 * 1000
 
-      // 检查是否需要同步（距离上次同步超过配置的间隔）
-      if (user.last_sync_at) {
-        const lastSyncTime = new Date(user.last_sync_at)
-        const hoursSinceLastSync = (now.getTime() - lastSyncTime.getTime()) / (1000 * 60 * 60)
+      try {
+        const intervalAnchorMs = await getPerformanceSyncIntervalAnchorMs(user.id)
+        if (intervalAnchorMs !== null) {
+          const hoursSinceLastSync = (now.getTime() - intervalAnchorMs) / (1000 * 60 * 60)
+          if (hoursSinceLastSync < syncIntervalHours) {
+            log(
+              `⏭️ 用户 ${user.username} 跳过同步（距上次同步 ${hoursSinceLastSync.toFixed(1)} 小时，配置间隔 ${syncIntervalHours} 小时）`
+            )
+            continue
+          }
+        }
+      } catch (error) {
+        logError(`⚠️ 读取用户 ${user.username} 同步间隔锚点失败（将继续按时间窗口触发）:`, error)
+      }
 
-        if (hoursSinceLastSync < syncIntervalHours) {
-          log(
-            `⏭️ 用户 ${user.username} 跳过同步（距上次同步 ${hoursSinceLastSync.toFixed(1)} 小时，配置间隔 ${syncIntervalHours} 小时）`
-          )
+      try {
+        const reconcileResult = await reconcileStalePerformanceSyncPendingTasks(user.id, {
+          minStaleMs: syncIntervalMs,
+        })
+        stalePendingRemoved += reconcileResult.removed
+      } catch (error) {
+        logError(`⚠️ 清理用户 ${user.username} stale pending 失败:`, error)
+      }
+
+      try {
+        const activeWork = await userHasActivePerformanceSyncWork(user.id)
+        if (activeWork.active) {
+          log(`⏭️ 用户 ${user.username} 跳过同步（队列中已有 pending/running sync 任务）`)
           continue
         }
+      } catch (error) {
+        logError(`⚠️ 读取用户 ${user.username} 同步队列状态失败（将继续按时间窗口触发）:`, error)
       }
 
       const credentialCheck = await hasValidSyncCredentials(user.id)
@@ -533,6 +523,10 @@ async function syncDataTask() {
         // 继续处理下一个用户
         continue
       }
+    }
+
+    if (stalePendingRemoved > 0) {
+      log(`🧹 性能同步 stale pending 已清理: pending=${stalePendingRemoved}`)
     }
 
     log(`📊 数据同步任务入队完成 - 已入队: ${queuedCount}/${activeUsers.length}`)

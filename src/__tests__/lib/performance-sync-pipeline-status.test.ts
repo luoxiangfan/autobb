@@ -33,9 +33,10 @@ vi.mock('@/lib/queue', () => ({
 
 import {
   PERFORMANCE_SYNC_TASK_TYPE,
+  getPerformanceSyncIntervalAnchorMs,
   getPerformanceSyncQueueCountsForUser,
   markStalePerformanceSyncLogs,
-  preparePerformanceSyncScheduling,
+  preparePerformanceSyncQueueHealth,
   reconcileStalePerformanceSyncPendingTasks,
   userHasActivePerformanceSyncWork,
 } from '@/lib/campaign/performance-sync-pipeline-status'
@@ -101,6 +102,23 @@ describe('@/lib/campaign/performance-sync-pipeline-status', () => {
     expect(result).toEqual({ pending: 1, running: 1 })
   })
 
+  it('getPerformanceSyncIntervalAnchorMs prefers latest queue task over older completed sync', async () => {
+    dbMocks.queryOne.mockResolvedValue({ completed_at: '2026-07-01T10:00:00.000Z' })
+    queueMocks.getPendingTasksForType.mockResolvedValue([
+      {
+        id: 'pending-1',
+        type: PERFORMANCE_SYNC_TASK_TYPE,
+        userId: 2,
+        status: 'pending',
+        createdAt: Date.parse('2026-07-02T05:35:00.000Z'),
+      },
+    ])
+
+    const anchorMs = await getPerformanceSyncIntervalAnchorMs(2)
+
+    expect(anchorMs).toBe(Date.parse('2026-07-02T05:35:00.000Z'))
+  })
+
   it('reconcileStalePerformanceSyncPendingTasks removes pending tasks superseded by completed sync_log', async () => {
     queueMocks.getPendingTasksForType.mockResolvedValue([
       {
@@ -140,6 +158,26 @@ describe('@/lib/campaign/performance-sync-pipeline-status', () => {
     expect(queueMocks.removeTask).toHaveBeenCalledWith('stale-timeout')
   })
 
+  it('reconcileStalePerformanceSyncPendingTasks keeps pending younger than minStaleMs', async () => {
+    queueMocks.getPendingTasksForType.mockResolvedValue([
+      {
+        id: 'fresh-pending',
+        type: PERFORMANCE_SYNC_TASK_TYPE,
+        userId: 2,
+        status: 'pending',
+        createdAt: Date.now() - 31 * 60 * 1000,
+      },
+    ])
+    dbMocks.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
+
+    const result = await reconcileStalePerformanceSyncPendingTasks(2, {
+      minStaleMs: 4 * 60 * 60 * 1000,
+    })
+
+    expect(result.removed).toBe(0)
+    expect(queueMocks.removeTask).not.toHaveBeenCalled()
+  })
+
   it('reconcileStalePerformanceSyncPendingTasks keeps recent pending tasks', async () => {
     queueMocks.getPendingTasksForType.mockResolvedValue([
       {
@@ -158,24 +196,14 @@ describe('@/lib/campaign/performance-sync-pipeline-status', () => {
     expect(queueMocks.removeTask).not.toHaveBeenCalled()
   })
 
-  it('preparePerformanceSyncScheduling runs log cleanup, zombie cleanup, and pending reconcile', async () => {
-    queueMocks.getPendingTasksForType.mockResolvedValue([
-      {
-        id: 'stale-timeout',
-        type: PERFORMANCE_SYNC_TASK_TYPE,
-        userId: 2,
-        status: 'pending',
-        createdAt: Date.now() - 31 * 60 * 1000,
-      },
-    ])
+  it('preparePerformanceSyncQueueHealth runs log cleanup and zombie cleanup only', async () => {
     queueMocks.cleanupZombieTasks.mockResolvedValue({ cleaned: 1, details: 'task-1' })
-    dbMocks.queryOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null)
 
-    const result = await preparePerformanceSyncScheduling([2])
+    const result = await preparePerformanceSyncQueueHealth()
 
     expect(result.staleLogsClosed).toBe(2)
     expect(result.staleRunningTasksCleaned).toBe(1)
-    expect(result.stalePendingRemoved).toBe(1)
     expect(queueMocks.cleanupZombieTasks).toHaveBeenCalledWith('runtime')
+    expect(queueMocks.removeTask).not.toHaveBeenCalled()
   })
 })
